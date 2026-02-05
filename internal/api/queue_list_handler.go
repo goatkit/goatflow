@@ -9,12 +9,13 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/services"
 )
 
 // HandleListQueuesAPI handles GET /api/v1/queues.
 //
 //	@Summary		List queues
-//	@Description	Retrieve all queues
+//	@Description	Retrieve all queues the user has access to (RBAC filtered)
 //	@Tags			Queues
 //	@Accept			json
 //	@Produce		json
@@ -26,11 +27,32 @@ import (
 //	@Router			/queues [get]
 func HandleListQueuesAPI(c *gin.Context) {
 	// Check authentication
-	_, exists := c.Get("user_id")
+	userIDVal, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "Authentication required",
+		})
+		return
+	}
+
+	// Get user ID for RBAC filtering
+	var userID int
+	switch v := userIDVal.(type) {
+	case int:
+		userID = v
+	case int64:
+		userID = int(v)
+	case uint:
+		userID = int(v)
+	case uint64:
+		userID = int(v)
+	case float64:
+		userID = int(v)
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Invalid user context",
 		})
 		return
 	}
@@ -47,6 +69,32 @@ func HandleListQueuesAPI(c *gin.Context) {
 			"error":   "Database connection not available",
 		})
 		return
+	}
+
+	// RBAC: Get user's queue permissions to filter results
+	permSvc := services.NewPermissionService(db)
+	userQueuePerms, err := permSvc.GetUserQueuePermissions(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to check permissions",
+		})
+		return
+	}
+
+	// If user has no queue permissions, return empty list
+	if len(userQueuePerms) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data":    []map[string]interface{}{},
+		})
+		return
+	}
+
+	// Build list of accessible queue IDs for SQL IN clause
+	accessibleQueueIDs := make([]interface{}, 0, len(userQueuePerms))
+	for queueID := range userQueuePerms {
+		accessibleQueueIDs = append(accessibleQueueIDs, queueID)
 	}
 
 	// Build the query incrementally so placeholders convert correctly
@@ -71,6 +119,14 @@ func HandleListQueuesAPI(c *gin.Context) {
 
 	args := []interface{}{}
 	conditions := []string{}
+
+	// RBAC: Filter to only queues the user has access to
+	placeholders := make([]string, len(accessibleQueueIDs))
+	for i := range accessibleQueueIDs {
+		placeholders[i] = "?"
+	}
+	conditions = append(conditions, "q.id IN ("+strings.Join(placeholders, ",")+")")
+	args = append(args, accessibleQueueIDs...)
 
 	// Add valid filter if specified
 	if validFilter != "" {

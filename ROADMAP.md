@@ -13,7 +13,9 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - **GoatKit Plugin Platform** — Dual-runtime (WASM + gRPC), HostAPI, admin UI, CLI tooling
 - **API Tokens** — Personal access tokens for agents and customers
 - **REST API v1 Enhanced** — OpenAPI 3.0, Swagger UI, rate limiting, webhooks
+- **MCP Server** — AI assistant integration via JSON-RPC (`/api/mcp`) with multi-user proxy RBAC
 - **Granular RBAC** — OTRS-compatible permission service with 1,300+ lines of auth tests
+- **RBAC Security Hardening** — All statistics and queue endpoints now enforce queue-level permissions (prevents data leakage)
 
 ### What Works
 - Agent Interface: Full ticket management with bulk actions and multi-theme UI (4 themes)
@@ -22,7 +24,7 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - Database: MySQL/MariaDB and PostgreSQL with cross-database compatibility
 - Automation: GenericAgent, ACLs, SLA escalations, ticket attribute relations
 - Integration: GenericInterface with REST/SOAP transports, webservice dynamic fields
-- Security: Group-based queue permissions, session management, auth middleware, **API tokens**
+- Security: Group-based queue permissions, session management, auth middleware, **API tokens**, **RBAC-filtered statistics**
 - i18n: 15 languages including RTL support (ar, he, fa, ur)
 - Deployment: Docker Compose and Kubernetes Helm chart with multi-arch support
 - Admin Modules: 30+ admin interfaces including ticket attribute relations, dynamic fields, templates
@@ -159,6 +161,7 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 **Statistics & Reporting Plugin** *(first-party, dogfooding)*
 - [x] Dashboard statistics API endpoints
 - [x] CSV/Excel export
+- [x] RBAC filtering on all statistics endpoints (queue-level permission enforcement)
 - [ ] Dashboard widgets with Chart.js
 - [ ] Built-in report templates (tickets by queue, agent, SLA compliance)
 - [ ] Scheduled report delivery via email
@@ -179,6 +182,21 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - [x] Structured error responses (`internal/apierrors/`)
 - [x] Rate limiting per endpoint/user
 - [x] Webhook subscriptions (HMAC-signed)
+
+**MCP Server (AI Assistant Integration)**
+- [x] JSON-RPC 2.0 endpoint at `/api/mcp`
+- [x] Bearer token authentication (via API tokens)
+- [x] `list_tickets` — with filters (queue, state, owner, customer) + RBAC
+- [x] `get_ticket` — by ID or ticket number, with articles + RBAC
+- [x] `search_tickets` — full-text search + RBAC
+- [x] `list_queues` — user's accessible queues only (RBAC filtered)
+- [x] `list_users` — agent users
+- [x] `get_statistics` — dashboard stats (RBAC filtered)
+- [x] `execute_sql` — SELECT only, admin group required, read-only tables
+- [x] Documentation: `docs/api/MCP.md`
+- [x] `create_ticket` — create new tickets
+- [x] `update_ticket` — update ticket attributes
+- [x] `add_article` — add notes to tickets
 
 **Mobile Optimization**
 - [ ] Responsive mobile layouts for all pages

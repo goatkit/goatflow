@@ -7,6 +7,21 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [0.6.5-dev]
 
+### Security
+- **RBAC Enforcement on Statistics & Queue Endpoints**: Complete RBAC filtering across all data-leaking endpoints
+  - `GET /api/v1/queues` — Only returns queues user has permission to access
+  - `GET /api/v1/queues/:id/stats` — Returns 404 for inaccessible queues (prevents existence disclosure)
+  - `GET /api/v1/statistics/dashboard` — Ticket counts filtered by accessible queues
+  - `GET /api/v1/statistics/queues` — Queue metrics limited to permitted queues
+  - `GET /api/v1/statistics/trends` — Trend data filtered by queue access
+  - `GET /api/v1/statistics/agents` — Agent performance based on accessible tickets only
+  - `GET /api/v1/statistics/customers` — Customer stats filtered by queue permissions
+  - `GET /api/v1/statistics/export` — Export only includes permitted data
+  - Dashboard HTMX (`/dashboard`) — Stats widget now uses RBAC filtering
+  - Added helper functions: `extractUserIDForRBAC()`, `getAccessibleQueueIDs()`, `buildQueueFilterClause()`
+  - New security test file: `internal/api/rbac_security_test.go` with attack tests verifying data isolation
+  - Files: `internal/api/queue_list_handler.go`, `internal/api/queue_stats_handler.go`, `internal/api/statistics_handlers.go`, `internal/api/dashboard_htmx_handlers.go`
+
 ### Added
 - **GoatKit Plugin Platform**: Complete plugin system with dual runtime support
   - **WASM Runtime** (wazero): Portable, sandboxed plugins for cross-platform distribution
@@ -90,6 +105,17 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - **User Delete Handler**: Soft delete for user accounts
   - Files: `internal/api/user_delete_handler.go`
 - **i18n**: Added `common.year` translation key to all 15 languages
+- **MCP Server Multi-User Proxy**: AI assistant integration with full RBAC enforcement
+  - Multi-user proxy architecture: each API token owner's permissions apply to all operations
+  - 10 fully-implemented tools: `list_tickets`, `get_ticket`, `search_tickets`, `create_ticket`, `update_ticket`, `add_article`, `list_queues`, `list_users`, `get_statistics`, `execute_sql`
+  - Queue-based RBAC filtering on all ticket operations (read and write)
+  - Write operations enforce granular permissions: `create`, `note`, `priority`, `owner`, `move_into`
+  - Admin group gating for `execute_sql` tool (bypasses API layer, requires admin membership)
+  - `IsInGroup(userID, groupName)` permission service method for group membership checks
+  - Security: returns 404 (not 403) for unauthorized ticket access (don't reveal existence)
+  - 750+ lines of authorization tests covering admin gating, queue access, write permissions, multi-user isolation
+  - Documentation: `docs/api/MCP.md` with architecture diagram and permission model
+  - Files: `internal/mcp/server.go`, `internal/mcp/authorization_test.go`, `internal/services/permission_service.go`
 
 ## [0.6.4] - 2026-02-01
 

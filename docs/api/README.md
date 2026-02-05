@@ -2,10 +2,11 @@
 
 ## Overview
 
-GOTRS provides two API layers:
+GOTRS provides three API layers:
 
 1. **v1 API** (`/api/v1/*`) - RESTful JSON API for programmatic access
-2. **Internal API** (`/api/*`) - Used by the HTMX web interface
+2. **MCP Server** (`/api/mcp`) - AI assistant integration via JSON-RPC
+3. **Internal API** (`/api/*`) - Used by the HTMX web interface
 
 ## Quick Start
 
@@ -158,6 +159,28 @@ All API responses follow this structure:
 | GET | `/api/v1/admin/ldap/groups` | List LDAP groups |
 | POST | `/api/v1/admin/ldap/sync/users` | Sync users |
 | GET | `/api/v1/admin/ldap/sync/status` | Sync status |
+
+## MCP Server (AI Integration)
+
+The MCP (Model Context Protocol) server enables AI assistants to interact with GOTRS. See [MCP.md](MCP.md) for full documentation.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/mcp` | JSON-RPC 2.0 endpoint |
+| GET | `/api/mcp` | Server info and tool list |
+
+**Key Features:**
+- Multi-user proxy: token owner's RBAC permissions apply to all operations
+- 10 tools: `list_tickets`, `get_ticket`, `search_tickets`, `list_queues`, `list_users`, `get_statistics`, `execute_sql`, etc.
+- Admin-only tools: `execute_sql` requires admin group membership
+- Bearer token authentication via API tokens
+
+```bash
+curl -X POST https://your-gotrs/api/mcp \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
 
 ## Health Checks
 

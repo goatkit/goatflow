@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/services"
 )
 
 // HandleGetQueueStatsAPI handles GET /api/v1/queues/:id/stats.
@@ -24,8 +25,27 @@ import (
 //	@Router			/queues/{id}/stats [get]
 func HandleGetQueueStatsAPI(c *gin.Context) {
 	// Auth
-	if _, ok := c.Get("user_id"); !ok {
+	userIDVal, ok := c.Get("user_id")
+	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Authentication required"})
+		return
+	}
+
+	// Get user ID for RBAC check
+	var userID int
+	switch v := userIDVal.(type) {
+	case int:
+		userID = v
+	case int64:
+		userID = int(v)
+	case uint:
+		userID = int(v)
+	case uint64:
+		userID = int(v)
+	case float64:
+		userID = int(v)
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Invalid user context"})
 		return
 	}
 
@@ -38,6 +58,19 @@ func HandleGetQueueStatsAPI(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database unavailable"})
+		return
+	}
+
+	// RBAC: Verify user has access to this queue
+	permSvc := services.NewPermissionService(db)
+	canRead, err := permSvc.CanReadQueue(userID, queueID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to check permissions"})
+		return
+	}
+	if !canRead {
+		// Return 404 to avoid revealing queue existence (security best practice)
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Queue not found"})
 		return
 	}
 

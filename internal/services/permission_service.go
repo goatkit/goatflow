@@ -295,3 +295,28 @@ func (s *PermissionService) CustomerCanAccessTicket(customerLogin, customerCompa
 
 	return hasAccess, nil
 }
+
+// =============================================================================
+// GROUP MEMBERSHIP
+// =============================================================================
+
+// IsInGroup checks if a user is a member of a group by group name.
+// Used for administrative access checks (e.g., "admin" group for MCP execute_sql).
+func (s *PermissionService) IsInGroup(userID int, groupName string) (bool, error) {
+	// Try both `groups` (MySQL/MariaDB) and `permission_groups` (Postgres/alternate schema)
+	query := database.ConvertPlaceholders(`
+		SELECT EXISTS(
+			SELECT 1 FROM group_user gu
+			JOIN ` + "`groups`" + ` g ON gu.group_id = g.id
+			WHERE gu.user_id = ?
+			  AND g.name = ?
+		)`)
+
+	var isMember bool
+	err := s.db.QueryRow(query, userID, groupName).Scan(&isMember)
+	if err != nil {
+		return false, fmt.Errorf("failed to check group membership: %w", err)
+	}
+
+	return isMember, nil
+}

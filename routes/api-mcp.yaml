@@ -1,0 +1,24 @@
+---
+# MCP (Model Context Protocol) routes
+# Enables AI assistants to interact with GOTRS via API tokens
+apiVersion: v1
+kind: RouteGroup
+metadata:
+    name: api-mcp
+    description: "Model Context Protocol endpoint for AI assistant integration"
+    namespace: default
+    enabled: true
+spec:
+    prefix: /api
+    routes:
+        - path: /mcp
+          method: POST
+          handler: HandleMCP
+          middleware:
+              - api_token
+          description: "MCP JSON-RPC endpoint"
+
+        - path: /mcp
+          method: GET
+          handler: HandleMCPInfo
+          description: "MCP endpoint info"

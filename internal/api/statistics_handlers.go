@@ -15,12 +15,67 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/services"
 )
+
+// extractUserIDForRBAC extracts user ID from gin context for RBAC checks
+// Returns 0 if not authenticated
+func extractUserIDForRBAC(c *gin.Context) int {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		return 0
+	}
+
+	switch v := userIDVal.(type) {
+	case int:
+		return v
+	case int64:
+		return int(v)
+	case uint:
+		return int(v)
+	case uint64:
+		return int(v)
+	case float64:
+		return int(v)
+	default:
+		return 0
+	}
+}
+
+// getAccessibleQueueIDs returns list of queue IDs the user can access
+func getAccessibleQueueIDs(db *sql.DB, userID int) ([]int, error) {
+	permSvc := services.NewPermissionService(db)
+	perms, err := permSvc.GetUserQueuePermissions(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]int, 0, len(perms))
+	for queueID := range perms {
+		ids = append(ids, queueID)
+	}
+	return ids, nil
+}
+
+// buildQueueFilterClause creates SQL WHERE clause fragment for RBAC queue filtering
+func buildQueueFilterClause(queueIDs []int, queueIDColumn string) (string, []interface{}) {
+	if len(queueIDs) == 0 {
+		return queueIDColumn + " IN (NULL)", nil // Will match nothing
+	}
+
+	placeholders := make([]string, len(queueIDs))
+	args := make([]interface{}, len(queueIDs))
+	for i, id := range queueIDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+	return queueIDColumn + " IN (" + strings.Join(placeholders, ",") + ")", args
+}
 
 // HandleDashboardStatisticsAPI handles GET /api/v1/statistics/dashboard.
 //
 //	@Summary		Get dashboard statistics
-//	@Description	Retrieve dashboard statistics (ticket counts, trends)
+//	@Description	Retrieve dashboard statistics (ticket counts, trends) - RBAC filtered
 //	@Tags			Statistics
 //	@Accept			json
 //	@Produce		json
@@ -29,13 +84,12 @@ import (
 //	@Security		BearerAuth
 //	@Router			/statistics/dashboard [get]
 func HandleDashboardStatisticsAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
+	// Check authentication and get user ID for RBAC
+	userID := extractUserIDForRBAC(c)
+	if userID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	_ = userID
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -43,7 +97,17 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 		return
 	}
 
-	// Overview counts using portable queries
+	// RBAC: Get accessible queue IDs
+	accessibleQueueIDs, err := getAccessibleQueueIDs(db, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check permissions"})
+		return
+	}
+
+	// Build queue filter for all ticket queries
+	queueFilter, queueArgs := buildQueueFilterClause(accessibleQueueIDs, "queue_id")
+
+	// Overview counts using portable queries - RBAC filtered
 	var overview struct {
 		TotalTickets   int
 		OpenTickets    int
@@ -51,7 +115,9 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 		PendingTickets int
 	}
 
-	if err := db.QueryRow("SELECT COUNT(*) FROM ticket").Scan(&overview.TotalTickets); err != nil {
+	// Total tickets in accessible queues
+	totalQuery := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE " + queueFilter)
+	if err := db.QueryRow(totalQuery, queueArgs...).Scan(&overview.TotalTickets); err != nil {
 		overview.TotalTickets = 0
 	}
 
@@ -64,36 +130,43 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 		return id
 	}
 
+	// Build state+queue filter
 	if id := stateID("open"); id > 0 {
-		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?")
-		if err := db.QueryRow(query, id).Scan(&overview.OpenTickets); err != nil {
+		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ? AND " + queueFilter)
+		args := append([]interface{}{id}, queueArgs...)
+		if err := db.QueryRow(query, args...).Scan(&overview.OpenTickets); err != nil {
 			overview.OpenTickets = 0
 		}
 	}
 	if id := stateID("closed"); id > 0 {
-		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?")
-		if err := db.QueryRow(query, id).Scan(&overview.ClosedTickets); err != nil {
+		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ? AND " + queueFilter)
+		args := append([]interface{}{id}, queueArgs...)
+		if err := db.QueryRow(query, args...).Scan(&overview.ClosedTickets); err != nil {
 			overview.ClosedTickets = 0
 		}
 	}
 	if id := stateID("pending"); id > 0 {
-		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?")
-		if err := db.QueryRow(query, id).Scan(&overview.PendingTickets); err != nil {
+		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ? AND " + queueFilter)
+		args := append([]interface{}{id}, queueArgs...)
+		if err := db.QueryRow(query, args...).Scan(&overview.PendingTickets); err != nil {
 			overview.PendingTickets = 0
 		}
 	}
 
-	// Tickets by queue
+	// Build queue ID filter for queue query (filter queues themselves)
+	queueIDFilter, queueIDArgs := buildQueueFilterClause(accessibleQueueIDs, "q.id")
+
+	// Tickets by queue - RBAC filtered
 	byQueue := []gin.H{}
-	queueQuery := `
+	queueQuery := database.ConvertPlaceholders(`
 		SELECT q.id, q.name, COUNT(t.id) AS cnt
 		FROM queue q
 		LEFT JOIN ticket t ON q.id = t.queue_id
-		WHERE q.valid_id = 1
+		WHERE q.valid_id = 1 AND ` + queueIDFilter + `
 		GROUP BY q.id, q.name
 		ORDER BY cnt DESC
-	`
-	if rows, err := db.Query(queueQuery); err == nil {
+	`)
+	if rows, err := db.Query(queueQuery, queueIDArgs...); err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var (
@@ -114,17 +187,17 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 		}
 	}
 
-	// Tickets by priority
+	// Tickets by priority - RBAC filtered (only count tickets in accessible queues)
 	byPriority := []gin.H{}
-	priorityQuery := `
+	priorityQuery := database.ConvertPlaceholders(`
 		SELECT p.id, p.name, COUNT(t.id) AS cnt
 		FROM ticket_priority p
-		LEFT JOIN ticket t ON p.id = t.ticket_priority_id
+		LEFT JOIN ticket t ON p.id = t.ticket_priority_id AND ` + queueFilter + `
 		WHERE p.valid_id = 1
 		GROUP BY p.id, p.name
 		ORDER BY p.id
-	`
-	if rows, err := db.Query(priorityQuery); err == nil {
+	`)
+	if rows, err := db.Query(priorityQuery, queueArgs...); err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var (
@@ -145,15 +218,16 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 		}
 	}
 
-	// Recent activity
+	// Recent activity - RBAC filtered
 	recentActivity := []gin.H{}
-	activityQuery := `
+	activityQuery := database.ConvertPlaceholders(`
 		SELECT 'created' AS type, t.id, t.tn, t.create_time
 		FROM ticket t
+		WHERE ` + queueFilter + `
 		ORDER BY t.create_time DESC
 		LIMIT 10
-	`
-	if rows, err := db.Query(activityQuery); err == nil {
+	`)
+	if rows, err := db.Query(activityQuery, queueArgs...); err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var (
@@ -202,13 +276,12 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 //	@Security		BearerAuth
 //	@Router			/statistics/trends [get]
 func HandleTicketTrendsAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
+	// Check authentication and get user ID for RBAC
+	userID := extractUserIDForRBAC(c)
+	if userID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	_ = userID
 
 	period := c.DefaultQuery("period", "daily")
 	days := c.DefaultQuery("days", "7")
@@ -219,6 +292,16 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
 		return
 	}
+
+	// RBAC: Get accessible queue IDs
+	accessibleQueueIDs, err := getAccessibleQueueIDs(db, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check permissions"})
+		return
+	}
+
+	// Build queue filter for ticket queries
+	queueFilter, queueArgs := buildQueueFilterClause(accessibleQueueIDs, "t.queue_id")
 
 	trends := []gin.H{}
 	var totalCreated, totalClosed int
@@ -239,13 +322,16 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 			typeID  int
 		}, 0)
 
+		// RBAC: Filter to accessible queues only
 		query := database.ConvertPlaceholders(`
 			SELECT t.create_time, t.change_time, ts.type_id
 			FROM ticket t
 			JOIN ticket_state ts ON t.ticket_state_id = ts.id
-			WHERE t.create_time >= ? OR (t.change_time IS NOT NULL AND t.change_time >= ?)
+			WHERE (t.create_time >= ? OR (t.change_time IS NOT NULL AND t.change_time >= ?))
+			AND ` + queueFilter + `
 		`)
-		rows, err := db.Query(query, start)
+		args := append([]interface{}{start, start}, queueArgs...)
+		rows, err := db.Query(query, args...)
 		if err == nil {
 			defer rows.Close()
 			for rows.Next() {
@@ -338,13 +424,16 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 		typeID  int
 	}, 0)
 
+	// RBAC: Filter to accessible queues only
 	query := database.ConvertPlaceholders(`
 		SELECT t.create_time, t.change_time, ts.type_id
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		WHERE t.create_time >= ? OR (t.change_time IS NOT NULL AND t.change_time >= ?)
+		WHERE (t.create_time >= ? OR (t.change_time IS NOT NULL AND t.change_time >= ?))
+		AND ` + queueFilter + `
 	`)
-	if rows, err := db.Query(query, firstOfMonth); err == nil {
+	monthlyArgs := append([]interface{}{firstOfMonth, firstOfMonth}, queueArgs...)
+	if rows, err := db.Query(query, monthlyArgs...); err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var (
@@ -435,13 +524,12 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 //	@Security		BearerAuth
 //	@Router			/statistics/agents [get]
 func HandleAgentPerformanceAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
+	// Check authentication and get user ID for RBAC
+	userID := extractUserIDForRBAC(c)
+	if userID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	_ = userID
 
 	period := c.DefaultQuery("period", "7d")
 
@@ -450,6 +538,16 @@ func HandleAgentPerformanceAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
 		return
 	}
+
+	// RBAC: Get accessible queue IDs
+	accessibleQueueIDs, err := getAccessibleQueueIDs(db, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check permissions"})
+		return
+	}
+
+	// Build queue filter for ticket queries
+	queueFilter, queueArgs := buildQueueFilterClause(accessibleQueueIDs, "t.queue_id")
 
 	// Determine interval
 	var interval time.Duration
@@ -501,15 +599,17 @@ func HandleAgentPerformanceAPI(c *gin.Context) {
 		return
 	}
 
-	// Aggregate ticket assignments and closures
+	// Aggregate ticket assignments and closures - RBAC filtered
 	ticketQuery := database.ConvertPlaceholders(`
 		SELECT t.responsible_user_id, t.create_time, t.change_time, ts.type_id
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		WHERE t.responsible_user_id IS NOT NULL
 		AND (t.create_time >= ? OR (t.change_time IS NOT NULL AND t.change_time >= ?))
+		AND ` + queueFilter + `
 	`)
-	ticketRows, err := db.Query(ticketQuery, start)
+	ticketArgs := append([]interface{}{start, start}, queueArgs...)
+	ticketRows, err := db.Query(ticketQuery, ticketArgs...)
 	if err == nil {
 		defer ticketRows.Close()
 		for ticketRows.Next() {
@@ -538,14 +638,18 @@ func HandleAgentPerformanceAPI(c *gin.Context) {
 		}
 	}
 
-	// Aggregate article counts per agent
+	// Aggregate article counts per agent - RBAC filtered (only articles on accessible tickets)
+	articleQueueFilter, articleQueueArgs := buildQueueFilterClause(accessibleQueueIDs, "t.queue_id")
 	articleQuery := database.ConvertPlaceholders(`
-		SELECT create_by, COUNT(*)
-		FROM article
-		WHERE create_by IS NOT NULL AND create_time >= ?
-		GROUP BY create_by
+		SELECT a.create_by, COUNT(*)
+		FROM article a
+		JOIN ticket t ON a.ticket_id = t.id
+		WHERE a.create_by IS NOT NULL AND a.create_time >= ?
+		AND ` + articleQueueFilter + `
+		GROUP BY a.create_by
 	`)
-	articleRows, err := db.Query(articleQuery, start)
+	articleArgs := append([]interface{}{start}, articleQueueArgs...)
+	articleRows, err := db.Query(articleQuery, articleArgs...)
 	if err == nil {
 		defer articleRows.Close()
 		for articleRows.Next() {
@@ -623,13 +727,12 @@ func HandleAgentPerformanceAPI(c *gin.Context) {
 //	@Security		BearerAuth
 //	@Router			/statistics/queues [get]
 func HandleQueueMetricsAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
+	// Check authentication and get user ID for RBAC
+	userID := extractUserIDForRBAC(c)
+	if userID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	_ = userID
 
 	db, err := database.GetDB()
 	if err != nil {
@@ -637,8 +740,19 @@ func HandleQueueMetricsAPI(c *gin.Context) {
 		return
 	}
 
-	// Load queues
-	queueRows, err := db.Query("SELECT id, name FROM queue WHERE valid_id = 1")
+	// RBAC: Get accessible queue IDs
+	accessibleQueueIDs, err := getAccessibleQueueIDs(db, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check permissions"})
+		return
+	}
+
+	// Build queue filter
+	queueFilter, queueArgs := buildQueueFilterClause(accessibleQueueIDs, "id")
+
+	// Load queues - RBAC filtered
+	queueQuery := database.ConvertPlaceholders("SELECT id, name FROM queue WHERE valid_id = 1 AND " + queueFilter)
+	queueRows, err := db.Query(queueQuery, queueArgs...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load queues"})
 		return
@@ -671,11 +785,15 @@ func HandleQueueMetricsAPI(c *gin.Context) {
 	}
 
 	threshold := time.Now().UTC().Add(-24 * time.Hour)
-	ticketRows, err := db.Query(`
+	// RBAC: Filter tickets by accessible queues
+	ticketFilter, ticketArgs := buildQueueFilterClause(accessibleQueueIDs, "t.queue_id")
+	ticketQuery := database.ConvertPlaceholders(`
 		SELECT t.queue_id, t.create_time, ts.type_id
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
+		WHERE ` + ticketFilter + `
 	`)
+	ticketRows, err := db.Query(ticketQuery, ticketArgs...)
 	if err == nil {
 		defer ticketRows.Close()
 		for ticketRows.Next() {
@@ -758,13 +876,16 @@ func HandleQueueMetricsAPI(c *gin.Context) {
 //	@Security		BearerAuth
 //	@Router			/statistics/analytics [get]
 func HandleTimeBasedAnalyticsAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
+	// Check authentication and get user ID for RBAC
+	userID := extractUserIDForRBAC(c)
+	if userID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	_ = userID
+
+	// NOTE: This handler currently returns simplified/mock data.
+	// When real data queries are added, they must be RBAC-filtered
+	// using getAccessibleQueueIDs(db, userID) and buildQueueFilterClause()
 
 	analysisType := c.DefaultQuery("type", "hourly")
 
@@ -850,13 +971,12 @@ func HandleTimeBasedAnalyticsAPI(c *gin.Context) {
 //	@Security		BearerAuth
 //	@Router			/statistics/customers [get]
 func HandleCustomerStatisticsAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
+	// Check authentication and get user ID for RBAC
+	userID := extractUserIDForRBAC(c)
+	if userID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	_ = userID
 
 	top := c.DefaultQuery("top", "10")
 	topInt, err := strconv.Atoi(top)
@@ -870,13 +990,25 @@ func HandleCustomerStatisticsAPI(c *gin.Context) {
 		return
 	}
 
-	// Aggregate customer statistics in code for portability
-	rows, err := db.Query(`
+	// RBAC: Get accessible queue IDs
+	accessibleQueueIDs, err := getAccessibleQueueIDs(db, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check permissions"})
+		return
+	}
+
+	// Build queue filter for ticket queries
+	queueFilter, queueArgs := buildQueueFilterClause(accessibleQueueIDs, "t.queue_id")
+
+	// Aggregate customer statistics in code for portability - RBAC filtered
+	query := database.ConvertPlaceholders(`
 		SELECT t.customer_user_id, t.create_time, ts.type_id
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		WHERE t.customer_user_id IS NOT NULL AND t.customer_user_id <> ''
+		AND ` + queueFilter + `
 	`)
+	rows, err := db.Query(query, queueArgs...)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"top_customers": []gin.H{},
@@ -1027,13 +1159,12 @@ func HandleCustomerStatisticsAPI(c *gin.Context) {
 //	@Security		BearerAuth
 //	@Router			/statistics/export [get]
 func HandleExportStatisticsAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
+	// Check authentication and get user ID for RBAC
+	userID := extractUserIDForRBAC(c)
+	if userID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	_ = userID
 
 	format := c.DefaultQuery("format", "json")
 	exportType := c.DefaultQuery("type", "summary")
@@ -1044,6 +1175,16 @@ func HandleExportStatisticsAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
 		return
 	}
+
+	// RBAC: Get accessible queue IDs
+	accessibleQueueIDs, err := getAccessibleQueueIDs(db, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check permissions"})
+		return
+	}
+
+	// Build queue filter for ticket queries
+	queueFilter, queueArgs := buildQueueFilterClause(accessibleQueueIDs, "t.queue_id")
 
 	// Get data based on export type
 	var data interface{}
@@ -1061,6 +1202,7 @@ func HandleExportStatisticsAPI(c *gin.Context) {
 		}
 		start := time.Now().UTC().Add(-lookback)
 
+		// RBAC: Filter to accessible queues only
 		query := database.ConvertPlaceholders(`
 			SELECT t.tn, t.title, q.name as queue, ts.name as state,
 			       tp.name as priority, t.customer_user_id, t.create_time
@@ -1069,10 +1211,12 @@ func HandleExportStatisticsAPI(c *gin.Context) {
 			JOIN ticket_state ts ON t.ticket_state_id = ts.id
 			JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
 			WHERE t.create_time >= ?
+			AND ` + queueFilter + `
 			ORDER BY t.create_time DESC
 		`)
 
-		rows, err := db.Query(query, start)
+		exportArgs := append([]interface{}{start}, queueArgs...)
+		rows, err := db.Query(query, exportArgs...)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load tickets"})
 			return

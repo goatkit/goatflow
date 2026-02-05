@@ -66,22 +66,58 @@ func handleDashboard(c *gin.Context) {
 	// Use repository for database operations
 	ticketRepo := repository.NewTicketRepository(db)
 
-	// Get ticket statistics using repository methods
+	// RBAC: Queue permission filtering - use context values from middleware
+	var queueFilter string
+	var queueArgs []interface{}
+
+	isQueueAdmin := false
+	if val, exists := c.Get("is_queue_admin"); exists {
+		if admin, ok := val.(bool); ok {
+			isQueueAdmin = admin
+		}
+	}
+
+	if !isQueueAdmin {
+		if accessibleQueueIDs, exists := c.Get("accessible_queue_ids"); exists {
+			if queueIDs, ok := accessibleQueueIDs.([]uint); ok && len(queueIDs) > 0 {
+				placeholders := make([]string, len(queueIDs))
+				for i, qid := range queueIDs {
+					placeholders[i] = "?"
+					queueArgs = append(queueArgs, qid)
+				}
+				queueFilter = " AND queue_id IN (" + strings.Join(placeholders, ",") + ")"
+			}
+		}
+	}
+
+	// Get ticket statistics - RBAC filtered
 	var openTickets, pendingTickets, closedToday int
 
-	openTickets, err = ticketRepo.CountByStateID(2) // state_id = 2 for open
-	if err != nil {
-		openTickets = 0
+	// Get actual ticket state IDs from database
+	var openStateID, pendingStateID, closedStateID int
+	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'open'").Scan(&openStateID)       //nolint:errcheck
+	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'pending'").Scan(&pendingStateID) //nolint:errcheck
+	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'closed'").Scan(&closedStateID)   //nolint:errcheck
+
+	// Count open tickets (with RBAC queue filter)
+	if openStateID > 0 {
+		query := "SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?" + queueFilter
+		args := append([]interface{}{openStateID}, queueArgs...)
+		_ = db.QueryRow(database.ConvertPlaceholders(query), args...).Scan(&openTickets) //nolint:errcheck
 	}
 
-	pendingTickets, err = ticketRepo.CountByStateID(5) // state_id = 5 for pending
-	if err != nil {
-		pendingTickets = 0
+	// Count pending tickets (with RBAC queue filter)
+	if pendingStateID > 0 {
+		query := "SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?" + queueFilter
+		args := append([]interface{}{pendingStateID}, queueArgs...)
+		_ = db.QueryRow(database.ConvertPlaceholders(query), args...).Scan(&pendingTickets) //nolint:errcheck
 	}
 
-	closedToday, err = ticketRepo.CountClosedToday()
-	if err != nil {
-		closedToday = 0
+	// Count tickets closed today (with RBAC queue filter)
+	if closedStateID > 0 {
+		query := `SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ? AND DATE(change_time) = CURDATE()` + queueFilter
+		args := append([]interface{}{closedStateID}, queueArgs...)
+		_ = db.QueryRow(database.ConvertPlaceholders(query), args...).Scan(&closedToday) //nolint:errcheck
 	}
 
 	stats := gin.H{
@@ -100,14 +136,7 @@ func handleDashboard(c *gin.Context) {
 		SortOrder: "desc",
 	}
 
-	// Queue permission filtering - use context values from middleware
-	isQueueAdmin := false
-	if val, exists := c.Get("is_queue_admin"); exists {
-		if admin, ok := val.(bool); ok {
-			isQueueAdmin = admin
-		}
-	}
-
+	// Queue permission filtering for recent tickets - reuse isQueueAdmin from above
 	if !isQueueAdmin {
 		if accessibleQueueIDs, exists := c.Get("accessible_queue_ids"); exists {
 			if queueIDs, ok := accessibleQueueIDs.([]uint); ok {
