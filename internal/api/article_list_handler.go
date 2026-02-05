@@ -40,6 +40,22 @@ func loadArticleAttachments(db *sql.DB, articleID int) []gin.H {
 }
 
 // HandleListArticlesAPI handles GET /api/v1/tickets/:ticket_id/articles.
+//
+//	@Summary		List ticket articles
+//	@Description	Retrieve all articles for a ticket
+//	@Tags			Articles
+//	@Accept			json
+//	@Produce		json
+//	@Param			ticket_id	path		int		true	"Ticket ID"
+//	@Param			page		query		int		false	"Page number"				default(1)
+//	@Param			per_page	query		int		false	"Items per page"			default(20)
+//	@Param			limit		query		int		false	"Alias for per_page"
+//	@Param			offset		query		int		false	"Offset for pagination"
+//	@Success		200			{object}	map[string]interface{}	"List of articles"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404			{object}	map[string]interface{}	"Ticket not found"
+//	@Security		BearerAuth
+//	@Router			/tickets/{ticket_id}/articles [get]
 func HandleListArticlesAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

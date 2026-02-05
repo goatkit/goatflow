@@ -10,6 +10,19 @@ import (
 )
 
 // HandleDeleteArticleAPI handles DELETE /api/v1/tickets/:ticket_id/articles/:id.
+//
+//	@Summary		Delete article
+//	@Description	Delete an article from a ticket
+//	@Tags			Articles
+//	@Accept			json
+//	@Produce		json
+//	@Param			ticket_id	path	int	true	"Ticket ID"
+//	@Param			id			path	int	true	"Article ID"
+//	@Success		200			{object}	map[string]interface{}	"Article deleted"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404			{object}	map[string]interface{}	"Article not found"
+//	@Security		BearerAuth
+//	@Router			/tickets/{ticket_id}/articles/{id} [delete]
 func HandleDeleteArticleAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

@@ -179,7 +179,7 @@
                         </div>
                     </div>
 
-                    <div class="border-t pt-4" style="border-color: var(--gk-border);">
+                    <div class="border-t pt-4" style="border-color: var(--gk-border-default);">
                         <h3 class="text-base font-medium mb-3" style="color: var(--gk-text-primary);">{{ t("admin.modules.generic_agent.fields.schedule") }}</h3>
                         <div class="grid grid-cols-3 gap-4">
                             <div>
@@ -203,7 +203,7 @@
                         </div>
                     </div>
 
-                    <div class="border-t pt-4" style="border-color: var(--gk-border);">
+                    <div class="border-t pt-4" style="border-color: var(--gk-border-default);">
                         <h3 class="text-base font-medium mb-2" style="color: var(--gk-text-primary);">{{ t("admin.modules.generic_agent.fields.config") }}</h3>
                         <p class="text-sm mb-3" style="color: var(--gk-text-muted);">{{ t("admin.modules.generic_agent.help.config") }}</p>
                         <textarea id="jobConfig" name="config" rows="8"

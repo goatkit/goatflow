@@ -338,3 +338,23 @@ func (s *Service) RegisterHandler(name string, handler Handler) {
 	}
 	s.handlers[name] = handler
 }
+
+// AddJob dynamically adds a job to the scheduler.
+// The job's Handler field should match a registered handler name.
+// Can be called after the scheduler has started.
+func (s *Service) AddJob(job *models.ScheduledJob) error {
+	if job == nil || job.Slug == "" || job.Schedule == "" {
+		return fmt.Errorf("invalid job: slug and schedule required")
+	}
+
+	// Set the handler name to match the slug if not specified
+	if job.Handler == "" {
+		job.Handler = job.Slug
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// If scheduler is already running, add the job immediately
+	return s.addJobLocked(job.Clone())
+}

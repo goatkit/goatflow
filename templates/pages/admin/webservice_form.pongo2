@@ -6,7 +6,7 @@
 <div class="container mx-auto px-4 py-8 min-h-screen" x-data="webserviceForm()">
     <div class="gk-card-glow rounded-lg">
         <!-- Header -->
-        <div class="p-6 border-b" style="border-color: var(--gk-border);">
+        <div class="p-6 border-b" style="border-color: var(--gk-border-default);">
             <div class="flex justify-between items-center">
                 <div>
                     <nav class="flex mb-2" aria-label="Breadcrumb">
@@ -172,7 +172,7 @@
                     <div>
                         <label class="flex items-center mt-6 cursor-pointer">
                             <input type="checkbox" x-model="testMode"
-                                   class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border);">
+                                   class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border-default);">
                             <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.test_mode") }}</span>
                         </label>
                     </div>

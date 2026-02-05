@@ -40,7 +40,7 @@
 
     <!-- Module Comparison Table -->
     <div class="gk-card-glow rounded-lg overflow-hidden">
-        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
             <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">
                 Available Modules for Testing
             </h3>
@@ -122,7 +122,7 @@
 
     <!-- Test Results Section -->
     <div class="mt-8 gk-card-glow rounded-lg hidden" id="test-results">
-        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
             <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">
                 Test Results
             </h3>
@@ -187,11 +187,11 @@ function runComparison(module) {
             <div class="font-medium" style="color: var(--gk-text-primary);">Manual Test Checklist for ${module}:</div>
             ${tests.map(test => `
                 <label class="flex items-center space-x-3">
-                    <input type="checkbox" class="h-4 w-4 rounded focus:ring-2" style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                    <input type="checkbox" class="h-4 w-4 rounded focus:ring-2" style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
                     <span class="text-sm" style="color: var(--gk-text-secondary);">${test}</span>
                 </label>
             `).join('')}
-            <div class="mt-4 pt-4" style="border-top: 1px solid var(--gk-border);">
+            <div class="mt-4 pt-4" style="border-top: 1px solid var(--gk-border-default);">
                 <button onclick="saveTestResults('${module}')" class="gk-btn-neon">
                     Save Test Results
                 </button>

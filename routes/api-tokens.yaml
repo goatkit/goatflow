@@ -1,0 +1,124 @@
+---
+# API Tokens - Agent Routes
+apiVersion: v1
+kind: RouteGroup
+metadata:
+    name: api-tokens-agent
+    description: "API token management for agents"
+    namespace: default
+    enabled: true
+spec:
+    prefix: /api/v1/tokens
+    middleware:
+        - unified_auth
+    routes:
+        - path: /
+          method: GET
+          handler: HandleListTokens
+          description: "List my API tokens"
+
+        - path: /
+          method: POST
+          handler: HandleCreateToken
+          description: "Create a new API token"
+
+        - path: /:id
+          method: DELETE
+          handler: HandleRevokeToken
+          description: "Revoke an API token"
+
+        - path: /scopes
+          method: GET
+          handler: HandleGetScopes
+          description: "List available token scopes"
+
+---
+# API Tokens - Admin Routes
+apiVersion: v1
+kind: RouteGroup
+metadata:
+    name: api-tokens-admin
+    description: "API token admin management"
+    namespace: default
+    enabled: true
+spec:
+    prefix: /api/v1/admin
+    middleware:
+        - unified_auth
+        - admin
+    routes:
+        - path: /tokens
+          method: GET
+          handler: HandleAdminListAllTokens
+          description: "List all API tokens (admin)"
+
+        - path: /tokens/:id
+          method: DELETE
+          handler: HandleAdminRevokeToken
+          description: "Revoke any API token (admin)"
+
+        # Per-user token management (agents)
+        - path: /users/:userId/tokens
+          method: GET
+          handler: HandleAdminListUserTokens
+          description: "List a specific user's API tokens"
+
+        - path: /users/:userId/tokens
+          method: POST
+          handler: HandleAdminCreateUserToken
+          description: "Create API token for a user"
+
+        - path: /users/:userId/tokens/:tokenId
+          method: DELETE
+          handler: HandleAdminRevokeUserToken
+          description: "Revoke a specific user's token"
+
+        # Per-user token management (customers)
+        - path: /customer-users/:customerId/tokens
+          method: GET
+          handler: HandleAdminListCustomerTokens
+          description: "List a specific customer's API tokens"
+
+        - path: /customer-users/:customerId/tokens
+          method: POST
+          handler: HandleAdminCreateCustomerToken
+          description: "Create API token for a customer"
+
+        - path: /customer-users/:customerId/tokens/:tokenId
+          method: DELETE
+          handler: HandleAdminRevokeCustomerToken
+          description: "Revoke a specific customer's token"
+
+---
+# API Tokens - Customer Routes
+apiVersion: v1
+kind: RouteGroup
+metadata:
+    name: api-tokens-customer
+    description: "API token management for customers"
+    namespace: default
+    enabled: true
+spec:
+    prefix: /customer/api/v1/tokens
+    middleware:
+        - customer_auth
+    routes:
+        - path: /
+          method: GET
+          handler: HandleCustomerListTokens
+          description: "List my API tokens (customer)"
+
+        - path: /
+          method: POST
+          handler: HandleCustomerCreateToken
+          description: "Create a new API token (customer)"
+
+        - path: /:id
+          method: DELETE
+          handler: HandleCustomerRevokeToken
+          description: "Revoke an API token (customer)"
+
+        - path: /scopes
+          method: GET
+          handler: HandleGetScopes
+          description: "List available token scopes (customer)"

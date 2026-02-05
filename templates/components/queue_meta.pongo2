@@ -69,7 +69,7 @@
     {% endif %}
 </div>
 {% else %}
-<div class="rounded-lg border-dashed p-4 text-sm" style="border: 1px dashed var(--gk-border); color: var(--gk-text-muted);">
+<div class="rounded-lg border-dashed p-4 text-sm" style="border: 1px dashed var(--gk-border-default); color: var(--gk-text-muted);">
     Queue information unavailable.
 </div>
 {% endif %}

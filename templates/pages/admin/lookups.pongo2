@@ -13,7 +13,7 @@
     </header>
 
     <!-- Tabs for different lookup types -->
-    <div class="border-b mb-6" style="border-color: var(--gk-border);">
+    <div class="border-b mb-6" style="border-color: var(--gk-border-default);">
         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
             <button onclick="switchTab('priorities')" id="tab-priorities"
                 class="tab-button whitespace-nowrap border-b-2 py-2 px-1 text-sm font-medium transition-colors">
@@ -45,7 +45,7 @@
             </div>
 
             <div class="gk-card-glow overflow-hidden rounded-lg">
-                <ul class="divide-y" style="border-color: var(--gk-border);" id="priorities-list">
+                <ul class="divide-y" style="border-color: var(--gk-border-default);" id="priorities-list">
                     {% for priority in Priorities %}
                     <li class="px-4 py-4 sm:px-6 hover:bg-white/5 transition-colors">
                         <div class="flex items-center justify-between">
@@ -92,7 +92,7 @@
             </div>
 
             <div class="gk-card-glow overflow-hidden rounded-lg">
-                <ul class="divide-y" style="border-color: var(--gk-border);" id="states-list">
+                <ul class="divide-y" style="border-color: var(--gk-border-default);" id="states-list">
                     {% for state in TicketStates %}
                     <li class="px-4 py-4 sm:px-6 hover:bg-white/5 transition-colors">
                         <div class="flex items-center justify-between">
@@ -136,7 +136,7 @@
             </div>
 
             <div class="gk-card-glow overflow-hidden rounded-lg">
-                <ul class="divide-y" style="border-color: var(--gk-border);" id="types-list">
+                <ul class="divide-y" style="border-color: var(--gk-border-default);" id="types-list">
                     {% for type in TicketTypes %}
                     <li class="px-4 py-4 sm:px-6 hover:bg-white/5 transition-colors">
                         <div class="flex items-center justify-between">
@@ -194,7 +194,7 @@
                         </div>
                         <div>
                             <label for="priorityColor" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">Color</label>
-                            <input type="color" name="color" id="priorityColor" class="h-10 w-20 rounded cursor-pointer" style="background: transparent; border: 1px solid var(--gk-border);">
+                            <input type="color" name="color" id="priorityColor" class="h-10 w-20 rounded cursor-pointer" style="background: transparent; border: 1px solid var(--gk-border-default);">
                         </div>
                     </div>
                 </div>

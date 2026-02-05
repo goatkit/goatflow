@@ -1,0 +1,358 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("admin.plugins") }} - {{ t("app.name") }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <header class="mb-8 flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-bold gk-heading">
+                <span class="gk-text-gradient">{{ t("admin.plugins")|default:"Plugins" }}</span>
+            </h1>
+            <p class="mt-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.plugins_description")|default:"Manage installed plugins and extensions" }}</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="/admin/plugins/logs" class="btn btn-ghost">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                {{ t("admin.view_logs")|default:"View Logs" }}
+            </a>
+            <button class="btn btn-primary" onclick="document.getElementById('upload-modal').showModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                {{ t("admin.upload_plugin")|default:"Upload Plugin" }}
+            </button>
+        </div>
+    </header>
+
+    <!-- Stats Overview -->
+    <section class="mb-8">
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <article class="gk-stat-card">
+                <h3 class="gk-stat-label">{{ t("admin.plugins_total")|default:"Total Plugins" }}</h3>
+                <p class="gk-stat-value mt-2">{{ Plugins|length|default:"0" }}</p>
+            </article>
+            <article class="gk-stat-card">
+                <h3 class="gk-stat-label">{{ t("admin.plugins_enabled")|default:"Enabled" }}</h3>
+                <p class="gk-stat-value mt-2 text-success">{{ EnabledCount|default:"0" }}</p>
+            </article>
+            <article class="gk-stat-card">
+                <h3 class="gk-stat-label">{{ t("admin.plugins_disabled")|default:"Disabled" }}</h3>
+                <p class="gk-stat-value mt-2 text-warning">{{ DisabledCount|default:"0" }}</p>
+            </article>
+        </div>
+    </section>
+
+    <!-- Plugin List -->
+    <section>
+        <div class="gk-card">
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <thead>
+                        <tr>
+                            <th>{{ t("admin.plugin_name")|default:"Plugin" }}</th>
+                            <th>{{ t("admin.plugin_version")|default:"Version" }}</th>
+                            <th>{{ t("admin.plugin_author")|default:"Author" }}</th>
+                            <th>{{ t("admin.plugin_routes")|default:"Routes" }}</th>
+                            <th>{{ t("admin.plugin_widgets")|default:"Widgets" }}</th>
+                            <th>{{ t("admin.plugin_status")|default:"Status" }}</th>
+                            <th class="text-right">{{ t("admin.actions")|default:"Actions" }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plugin in Plugins %}
+                        <tr>
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="avatar placeholder">
+                                        <div class="bg-primary text-primary-content rounded-lg w-10">
+                                            <span class="text-lg">🔌</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold">{{ plugin.Name }}</div>
+                                        <div class="text-sm opacity-50">{{ plugin.Description|truncatechars:50 }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge badge-ghost">{{ plugin.Version|default:"1.0.0" }}</span>
+                            </td>
+                            <td>{{ plugin.Author|default:"Unknown" }}</td>
+                            <td>
+                                {% if plugin.Routes %}
+                                <span class="badge badge-info badge-sm">{{ plugin.Routes|length }}</span>
+                                {% else %}
+                                <span class="text-base-content/50">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if plugin.Widgets %}
+                                <span class="badge badge-info badge-sm">{{ plugin.Widgets|length }}</span>
+                                {% else %}
+                                <span class="text-base-content/50">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if plugin.Enabled %}
+                                <span class="badge badge-success">{{ t("admin.enabled")|default:"Enabled" }}</span>
+                                {% else %}
+                                <span class="badge badge-warning">{{ t("admin.disabled")|default:"Disabled" }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-right">
+                                <div class="join">
+                                    <button class="btn btn-ghost btn-xs join-item" 
+                                            onclick="showPluginDetails('{{ plugin.Name }}')"
+                                            title="{{ t('admin.view_details')|default:'View Details' }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </button>
+                                    {% if plugin.Enabled %}
+                                    <button class="btn btn-ghost btn-xs join-item text-warning"
+                                            onclick="togglePlugin('{{ plugin.Name }}', false)"
+                                            title="{{ t('buttons.disable')|default:'Disable' }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                        </svg>
+                                    </button>
+                                    {% else %}
+                                    <button class="btn btn-ghost btn-xs join-item text-success"
+                                            onclick="togglePlugin('{{ plugin.Name }}', true)"
+                                            title="{{ t('buttons.enable')|default:'Enable' }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-8 text-base-content/50">
+                                {{ t("admin.no_plugins")|default:"No plugins installed" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Plugin Details Modal -->
+<div id="plugin-details-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-plugin-name" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closePluginModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full max-h-[90vh] overflow-y-auto">
+            <div class="gk-modal-header">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center justify-center rounded-lg w-10 h-10" style="background: var(--gk-primary-subtle);">
+                        <span class="text-lg">🔌</span>
+                    </div>
+                    <h3 class="gk-modal-title" id="modal-plugin-name">{{ t("admin.plugin_details")|default:"Plugin Details" }}</h3>
+                </div>
+                <button type="button" class="gk-modal-close" onclick="closePluginModal()">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="gk-modal-body" id="modal-plugin-content">
+                <!-- Populated by JavaScript -->
+            </div>
+            <div class="gk-modal-footer">
+                <button type="button" class="gk-btn-secondary" onclick="closePluginModal()">{{ t("common.close")|default:"Close" }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const plugins = {{ PluginsJSON|safe }};
+const i18n = {
+    selectFile: "{{ t('admin.please_select_file')|default:'Please select a file' }}",
+    wasmOnly: "{{ t('admin.wasm_only_error')|default:'Only .wasm files are supported' }}",
+    failedToPlugin: "{{ t('admin.failed_to_plugin')|default:'Failed to {action} plugin' }}",
+    uploadFailed: "{{ t('admin.upload_failed')|default:'Upload failed' }}",
+    error: "{{ t('common.error')|default:'Error' }}"
+};
+
+function showPluginDetails(name) {
+    const plugin = plugins.find(p => p.Name === name);
+    if (!plugin) return;
+    
+    const modal = document.getElementById('plugin-details-modal');
+    document.getElementById('modal-plugin-name').textContent = plugin.Name;
+    
+    const muted = 'color: var(--gk-text-muted)';
+    let html = `
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-2 text-sm">
+                <div style="${muted}">Version</div>
+                <div><span class="gk-badge gk-badge-muted">${plugin.Version || '1.0.0'}</span></div>
+                <div style="${muted}">Author</div>
+                <div class="font-medium">${plugin.Author || 'Unknown'}</div>
+                <div style="${muted}">License</div>
+                <div>${plugin.License || 'Not specified'}</div>
+            </div>
+            <div class="gk-divider"></div>
+            <div>
+                <div class="text-sm font-semibold mb-1" style="${muted}">Description</div>
+                <p class="text-sm">${plugin.Description || 'No description'}</p>
+            </div>
+    `;
+    
+    if (plugin.Routes && plugin.Routes.length > 0) {
+        html += `
+            <div class="gk-divider"></div>
+            <div>
+                <div class="text-sm font-semibold mb-2" style="${muted}">Routes</div>
+                <ul class="space-y-1">
+                    ${plugin.Routes.map(r => `<li class="text-sm flex items-start gap-2"><span class="gk-badge gk-badge-primary font-mono">${r.method}</span><code class="gk-link-neon">${r.path}</code><span style="${muted}">- ${r.description || r.handler}</span></li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    if (plugin.Widgets && plugin.Widgets.length > 0) {
+        html += `
+            <div class="gk-divider"></div>
+            <div>
+                <div class="text-sm font-semibold mb-2" style="${muted}">Widgets</div>
+                <ul class="space-y-1">
+                    ${plugin.Widgets.map(w => `<li class="text-sm flex items-center gap-2"><span class="gk-badge gk-badge-secondary">${w.location}</span><span>${w.title || w.id}</span></li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    if (plugin.Jobs && plugin.Jobs.length > 0) {
+        html += `
+            <div class="gk-divider"></div>
+            <div>
+                <div class="text-sm font-semibold mb-2" style="${muted}">Scheduled Jobs</div>
+                <ul class="space-y-1">
+                    ${plugin.Jobs.map(j => `<li class="text-sm flex items-center gap-2"><span class="gk-badge gk-badge-muted font-mono">${j.schedule}</span><span>${j.description || j.id}</span></li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    document.getElementById('modal-plugin-content').innerHTML = html;
+    modal.classList.remove('hidden');
+}
+
+function closePluginModal() {
+    document.getElementById('plugin-details-modal').classList.add('hidden');
+}
+
+async function togglePlugin(name, enable) {
+    const action = enable ? 'enable' : 'disable';
+    console.log(`[Plugin] Attempting to ${action} plugin: ${name}`);
+    try {
+        const response = await fetch(`/api/v1/plugins/${name}/${action}`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        console.log(`[Plugin] Response status: ${response.status}`);
+        if (response.ok) {
+            console.log(`[Plugin] Success, reloading...`);
+            window.location.reload();
+        } else {
+            const data = await response.json();
+            console.error(`[Plugin] Error:`, data);
+            alert(data.error || i18n.failedToPlugin.replace('{action}', action));
+        }
+    } catch (err) {
+        console.error(`[Plugin] Exception:`, err);
+        alert(`${i18n.error}: ${err.message}`);
+    }
+}
+
+async function uploadPlugin() {
+    const fileInput = document.getElementById('plugin-file');
+    const file = fileInput.files[0];
+    if (!file) {
+        alert(i18n.selectFile);
+        return;
+    }
+    
+    if (!file.name.endsWith('.wasm')) {
+        alert(i18n.wasmOnly);
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('plugin', file);
+    
+    const uploadBtn = document.getElementById('upload-btn');
+    const originalText = uploadBtn.innerHTML;
+    uploadBtn.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Uploading...';
+    uploadBtn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/v1/plugins/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            document.getElementById('upload-modal').close();
+            window.location.reload();
+        } else {
+            alert(data.error || i18n.uploadFailed);
+        }
+    } catch (err) {
+        alert(`${i18n.error}: ${err.message}`);
+    } finally {
+        uploadBtn.innerHTML = originalText;
+        uploadBtn.disabled = false;
+    }
+}
+</script>
+
+<!-- Upload Plugin Modal -->
+<dialog id="upload-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg">{{ t("admin.upload_plugin")|default:"Upload Plugin" }}</h3>
+        <div class="py-4">
+            <div class="form-control w-full">
+                <label class="label">
+                    <span class="label-text">{{ t("admin.select_wasm_file")|default:"Select WASM file" }}</span>
+                </label>
+                <input type="file" id="plugin-file" accept=".wasm,.zip" class="file-input file-input-bordered w-full" />
+                <label class="label">
+                    <span class="label-text-alt text-base-content/50">{{ t("admin.wasm_only")|default:"Only .wasm files are supported" }}</span>
+                </label>
+            </div>
+        </div>
+        <div class="modal-action">
+            <form method="dialog">
+                <button class="btn btn-ghost">{{ t("common.cancel")|default:"Cancel" }}</button>
+            </form>
+            <button id="upload-btn" class="btn btn-primary" onclick="uploadPlugin()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                {{ t("buttons.upload")|default:"Upload" }}
+            </button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+{% endblock %}

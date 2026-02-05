@@ -2,6 +2,8 @@ package plugin
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 )
 
@@ -73,4 +75,9 @@ func (h *DefaultHostAPI) ConfigGet(ctx context.Context, key string) (string, err
 func (h *DefaultHostAPI) Translate(ctx context.Context, key string, args ...any) string {
 	// TODO: Wire to i18n system
 	return ""
+}
+
+// CallPlugin calls a function in another plugin.
+func (h *DefaultHostAPI) CallPlugin(ctx context.Context, pluginName, fn string, args json.RawMessage) (json.RawMessage, error) {
+	return nil, fmt.Errorf("plugin calls not available in default host")
 }

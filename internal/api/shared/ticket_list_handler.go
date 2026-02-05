@@ -66,6 +66,24 @@ func HandleListTicketsAPI(c *gin.Context) {
 		}
 	}
 
+	// Support 'limit' as alias for 'per_page'
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if lim, err := strconv.Atoi(limitStr); err == nil && lim > 0 {
+			perPage = lim
+			if perPage > 100 {
+				perPage = 100
+			}
+		}
+	}
+
+	// Support 'offset' - converts to page number
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if off, err := strconv.Atoi(offsetStr); err == nil && off >= 0 {
+			// Convert offset to page: page = (offset / perPage) + 1
+			page = (off / perPage) + 1
+		}
+	}
+
 	// Parse filter parameters
 	filters := make(map[string]interface{})
 
@@ -133,12 +151,37 @@ func HandleListTicketsAPI(c *gin.Context) {
 	}
 
 	// Check if user is a customer (limit to their tickets only)
-	isCustomer, _ := c.Get("is_customer") //nolint:errcheck // Boolean defaults to false
-	if isCustomer == true {
+	// Handles both JWT auth (is_customer) and API token auth (user_role = "Customer")
+	isCustomer := false
+	if ic, exists := c.Get("is_customer"); exists {
+		if b, ok := ic.(bool); ok && b {
+			isCustomer = true
+		}
+	}
+	if role, exists := c.Get("user_role"); exists {
+		if r, ok := role.(string); ok && r == "Customer" {
+			isCustomer = true
+		}
+	}
+
+	if isCustomer {
 		// Customers can only see their own tickets
+		// Try user_email first (JWT auth), then look up by customer_user_id (API token auth)
 		if email, exists := c.Get("user_email"); exists {
 			if emailStr, ok := email.(string); ok {
 				filters["customer_user_id"] = emailStr
+			}
+		} else if custID, exists := c.Get("customer_user_id"); exists {
+			// API token auth - need to look up customer login from numeric ID
+			if custIDInt, ok := custID.(int); ok {
+				// Query customer_user table to get login
+				if db, err := database.GetDB(); err == nil && db != nil {
+					var login string
+					row := db.QueryRow(database.ConvertPlaceholders(`SELECT login FROM customer_user WHERE id = ?`), custIDInt)
+					if err := row.Scan(&login); err == nil && login != "" {
+						filters["customer_user_id"] = login
+					}
+				}
 			}
 		}
 	}

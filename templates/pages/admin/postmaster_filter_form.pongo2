@@ -6,7 +6,7 @@
 <div class="container mx-auto px-4 py-8 min-h-screen">
     <div class="gk-card-glow rounded-lg max-w-4xl mx-auto">
         <!-- Header -->
-        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-xl font-semibold gk-heading">
@@ -54,14 +54,14 @@
                        name="stop"
                        {% if Filter and Filter.Stop %}checked{% endif %}
                        class="h-4 w-4 rounded focus:ring-2"
-                       style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                       style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
                 <label for="filterStop" class="ml-2 text-sm" style="color: var(--gk-text-secondary);">
                     {{ t("admin.modules.postmaster_filter.stop_processing") }}
                 </label>
             </div>
 
             <!-- Match Conditions Section -->
-            <div class="pt-6" style="border-top: 1px solid var(--gk-border);">
+            <div class="pt-6" style="border-top: 1px solid var(--gk-border-default);">
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin.modules.postmaster_filter.match_conditions") }}</h3>
@@ -83,7 +83,7 @@
             </div>
 
             <!-- Set Actions Section -->
-            <div class="pt-6" style="border-top: 1px solid var(--gk-border);">
+            <div class="pt-6" style="border-top: 1px solid var(--gk-border-default);">
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin.modules.postmaster_filter.set_actions") }}</h3>
@@ -105,7 +105,7 @@
             </div>
 
             <!-- Form Actions -->
-            <div class="pt-6 flex justify-end space-x-3" style="border-top: 1px solid var(--gk-border);">
+            <div class="pt-6 flex justify-end space-x-3" style="border-top: 1px solid var(--gk-border-default);">
                 <a href="/admin/postmaster-filters" class="gk-btn-secondary">
                     {{ t("buttons.cancel") }}
                 </a>
@@ -299,7 +299,7 @@ function addMatchRow(key = '', value = '', not = false) {
     notLabel.className = 'flex items-center space-x-1 min-w-[60px]';
     notLabel.innerHTML = `
         <input type="checkbox" class="match-not h-4 w-4 rounded focus:ring-2"
-               style="accent-color: var(--gk-error); border-color: var(--gk-border);"
+               style="accent-color: var(--gk-error); border-color: var(--gk-border-default);"
                ${not ? 'checked' : ''}>
         <span class="text-sm" style="color: var(--gk-text-muted);">${escapeHtml(i18n.not)}</span>
     `;

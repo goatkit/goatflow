@@ -413,7 +413,7 @@ function showToast(type, message) {
     const toast = document.createElement('div');
     toast.className = 'transform transition-all duration-300 translate-x-full max-w-sm w-full shadow-lg rounded-lg pointer-events-auto overflow-hidden';
     toast.style.background = 'var(--gk-bg-surface)';
-    toast.style.border = '1px solid var(--gk-border)';
+    toast.style.border = '1px solid var(--gk-border-default)';
 
     const iconColor = type === 'success' ? 'var(--gk-success)' : 'var(--gk-error)';
     const icon = type === 'success'

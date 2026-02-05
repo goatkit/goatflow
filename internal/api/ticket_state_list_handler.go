@@ -9,6 +9,16 @@ import (
 )
 
 // HandleListTicketStatesAPI handles GET /api/v1/ticket-states.
+//
+//	@Summary		List ticket states
+//	@Description	Retrieve all ticket states (alias for /states)
+//	@Tags			States
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"List of states"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/ticket-states [get]
 func HandleListTicketStatesAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

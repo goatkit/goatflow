@@ -5,7 +5,7 @@
 {% block content %}
 <div class="min-h-screen">
     <!-- Dashboard Header -->
-    <div class="gk-card-glow shadow-sm border-b " style="border-color: var(--gk-border);">
+    <div class="gk-card-glow shadow-sm border-b " style="border-color: var(--gk-border-default);">
         <div class="container mx-auto py-4">
             <div class="flex items-center justify-between">
                 <div>
@@ -134,7 +134,7 @@
 
         <!-- Queue Status Table -->
         <div class="gk-card-glow rounded-lg shadow mt-6">
-            <div class="px-6 py-4 border-b " style="border-color: var(--gk-border);">
+            <div class="px-6 py-4 border-b " style="border-color: var(--gk-border-default);">
                 <h3 class="text-lg font-semibold " style="color: var(--gk-text-primary);">{{ t("realtime.queue_status")|default:"Queue Status" }}</h3>
             </div>
             <div class="overflow-x-auto">
@@ -148,7 +148,7 @@
                             <th class="px-4 py-3 text-left text-xs font-medium" style="color: var(--gk-text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Rate</th>
                         </tr>
                     </thead>
-                    <tbody id="queueTableBody" class="gk-card-glow divide-y divide-y" style="border-color: var(--gk-border);">
+                    <tbody id="queueTableBody" class="gk-card-glow divide-y divide-y" style="border-color: var(--gk-border-default);">
                         <!-- Queue rows will be populated here -->
                     </tbody>
                 </table>
@@ -158,7 +158,7 @@
         <!-- Alerts Section -->
         <div class="mt-6">
             <div class="gk-card-glow rounded-lg shadow">
-                <div class="px-6 py-4 border-b " style="border-color: var(--gk-border); flex items-center justify-between">
+                <div class="px-6 py-4 border-b " style="border-color: var(--gk-border-default); flex items-center justify-between">
                     <h3 class="text-lg font-semibold " style="color: var(--gk-text-primary);">{{ t("realtime.active_alerts")|default:"Active Alerts" }}</h3>
                     <span id="alertCount" class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full">0</span>
                 </div>

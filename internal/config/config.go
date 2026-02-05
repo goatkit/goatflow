@@ -51,6 +51,13 @@ type ServerConfig struct {
 	WriteTimeout    time.Duration `mapstructure:"write_timeout"`
 	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
 	CORS            CORSConfig    `mapstructure:"cors"`
+	Swagger         SwaggerConfig `mapstructure:"swagger"`
+}
+
+// SwaggerConfig controls API documentation exposure.
+type SwaggerConfig struct {
+	Enabled bool `mapstructure:"enabled"` // Whether to serve Swagger UI at /swagger/
+	Public  bool `mapstructure:"public"`  // If true, no auth required; if false, requires login
 }
 
 type CORSConfig struct {

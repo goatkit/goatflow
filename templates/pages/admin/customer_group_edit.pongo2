@@ -41,7 +41,7 @@
     <!-- Permissions Form -->
     <form method="post" action="/admin/customer-groups/customer/{{ Customer.CustomerID }}">
         <div class="gk-card-glow overflow-hidden rounded-lg">
-            <div class="px-6 py-4 border-b" style="border-color: var(--gk-border);">
+            <div class="px-6 py-4 border-b" style="border-color: var(--gk-border-default);">
                 <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("customer_group.group_permissions")|default:"Group Permissions" }}</h3>
                 <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("customer_group.select_groups")|default:"Select which groups this customer company has access to" }}</p>
             </div>
@@ -71,7 +71,7 @@
                                         value="1"
                                         {% if group.Permissions[perm] %}checked{% endif %}
                                         class="h-4 w-4 rounded focus:ring-2"
-                                        style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
+                                        style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);"
                                     >
                                 </td>
                                 {% endfor %}
@@ -91,7 +91,7 @@
                 </table>
             </div>
 
-            <div class="px-6 py-4 flex justify-end gap-3 border-t" style="border-color: var(--gk-border); background: var(--gk-bg-tertiary);">
+            <div class="px-6 py-4 flex justify-end gap-3 border-t" style="border-color: var(--gk-border-default); background: var(--gk-bg-tertiary);">
                 <a href="/admin/customer-groups" class="gk-btn-secondary">
                     {{ t("common.cancel") }}
                 </a>

@@ -4,9 +4,16 @@ Current status, past releases, and future plans for GOTRS.
 
 ## 🚀 Current Status
 
-**Version**: 0.6.4 (February 2026) - GoatKit Plugin Platform Roadmap
+**Version**: 0.6.5-dev (February 2026) - GoatKit Plugin Platform
 
 GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed as an OTRS-compatible replacement.
+
+### What's New in 0.6.5-dev
+See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlights:
+- **GoatKit Plugin Platform** — Dual-runtime (WASM + gRPC), HostAPI, admin UI, CLI tooling
+- **API Tokens** — Personal access tokens for agents and customers
+- **REST API v1 Enhanced** — OpenAPI 3.0, Swagger UI, rate limiting, webhooks
+- **Granular RBAC** — OTRS-compatible permission service with 1,300+ lines of auth tests
 
 ### What Works
 - Agent Interface: Full ticket management with bulk actions and multi-theme UI (4 themes)
@@ -15,10 +22,13 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 - Database: MySQL/MariaDB and PostgreSQL with cross-database compatibility
 - Automation: GenericAgent, ACLs, SLA escalations, ticket attribute relations
 - Integration: GenericInterface with REST/SOAP transports, webservice dynamic fields
-- Security: Group-based queue permissions, session management, auth middleware
+- Security: Group-based queue permissions, session management, auth middleware, **API tokens**
 - i18n: 15 languages including RTL support (ar, he, fa, ur)
 - Deployment: Docker Compose and Kubernetes Helm chart with multi-arch support
 - Admin Modules: 30+ admin interfaces including ticket attribute relations, dynamic fields, templates
+- **Plugins**: Dual-runtime (WASM + gRPC) plugin system with admin UI and state persistence
+- **API Documentation**: OpenAPI 3.0 spec with Swagger UI (94 endpoints, 71% coverage)
+- **RBAC**: Granular permission service with authorization tests
 
 ---
 
@@ -123,72 +133,64 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 
 ## 🔮 Future Roadmap
 
-### Unreleased (In Progress)
-
-**Bug Fixes & Improvements**
-- Handler registry dual registration resolution
-- 90s theme button contrast in dark mode
-- Customer user lookup by login or email
-- Queue access improvements in tests
-
-### 0.7.0 - May 2026
+### 0.7.0 - Target: May 2026
 
 **GoatKit Plugin Platform**
-
-*Dual Runtime Support*
-- WASM runtime via wazero (pure Go, no CGO) — for portable, sandboxed plugins
-- gRPC runtime via go-plugin (HashiCorp pattern) — for native, I/O-heavy plugins
-- Unified `Plugin` interface: core doesn't care which runtime
-- Self-describing plugins via `gk_register()` protocol
-
-*Host Function API*
-- `db_query` / `db_exec` — database access
-- `http_request` — outbound HTTP calls
-- `send_email` — SMTP integration
-- `cache_get` / `cache_set` — shared cache
-- `schedule_job` — cron/timer registration
-- `log` — structured logging
-
-*Plugin Packaging*
-- ZIP distribution: manifest.yaml + wasm/binary + templates + assets + i18n
-- Plugin lifecycle: load, register, hot-reload, unload
-- Plugin isolation: memory limits, timeouts, sandboxing
-- Signed plugin verification (optional)
-
-*Developer Experience*
-- Admin UI for plugin management (enable/disable/inspect/logs)
-- Plugin development SDK with example plugins (WASM + gRPC)
-- `gk plugin init` scaffolding CLI
-- Local development mode with hot reload
+- [x] WASM runtime via wazero (pure Go, no CGO)
+- [x] gRPC runtime via go-plugin (HashiCorp pattern)
+- [x] Unified `Plugin` interface
+- [x] Self-describing plugins via `gk_register()` protocol
+- [x] `db_query` / `db_exec` — database access (ConvertPlaceholders enforced)
+- [x] `http_request` — outbound HTTP calls
+- [x] `send_email` — SMTP integration
+- [x] `cache_get` / `cache_set` — shared cache
+- [x] `schedule_job` — cron/timer registration
+- [x] `log` — structured logging
+- [x] ZIP distribution: manifest.yaml + wasm/binary + templates + assets + i18n
+- [x] Plugin lifecycle: load, register, unload
+- [x] Admin UI for plugin management (enable/disable/inspect/logs)
+- [x] Example plugins (WASM + gRPC)
+- [x] `gk init` scaffolding CLI
+- [x] Plugin SDK documentation (AUTHOR_GUIDE, HOST_API, tutorials)
+- [ ] Hot reload for local development
+- [ ] Plugin isolation: memory limits, timeouts, sandboxing
+- [ ] Signed plugin verification (optional)
 
 **Statistics & Reporting Plugin** *(first-party, dogfooding)*
-- Dashboard widgets with ticket metrics
-- Built-in report templates (tickets by queue, agent, SLA compliance)
-- Chart visualizations (line, bar, pie)
-- CSV/Excel export
-- Scheduled report delivery via email
-- Time tracking reports and analytics
-- *Ships as WASM plugin — proves the platform*
+- [x] Dashboard statistics API endpoints
+- [x] CSV/Excel export
+- [ ] Dashboard widgets with Chart.js
+- [ ] Built-in report templates (tickets by queue, agent, SLA compliance)
+- [ ] Scheduled report delivery via email
+- [ ] Time tracking reports and analytics
+- [ ] Ships as standalone WASM plugin
 
-**REST API v2**
-- OpenAPI 3.0 specification
-- Versioned endpoints (`/api/v2/`)
-- Improved error responses with structured messages
-- Rate limiting per endpoint/user
-- API key authentication option
-- Webhook subscriptions for events
+**API Tokens (Personal Access Tokens)**
+- [x] Token management UI for agents AND customers
+- [x] Scoped permissions (`tickets:read`, `tickets:write`, `admin:*`)
+- [x] Configurable expiration (30d, 90d, 1yr, never)
+- [x] Rate limiting per token
+- [x] RBAC-inherited permissions with scope filtering
+- [x] Design spec: `docs/design/API_TOKENS.md`
+
+**REST API v1 (Enhanced)**
+- [x] OpenAPI 3.0 specification (4,845 lines, 94 endpoints)
+- [x] Swagger UI at `/swagger/`
+- [x] Structured error responses (`internal/apierrors/`)
+- [x] Rate limiting per endpoint/user
+- [x] Webhook subscriptions (HMAC-signed)
 
 **Mobile Optimization**
-- Responsive mobile layouts for all pages
-- Touch-optimized controls
-- Mobile ticket creation flow
-- Push notifications (PWA)
+- [ ] Responsive mobile layouts for all pages
+- [ ] Touch-optimized controls
+- [ ] Mobile ticket creation flow
+- [ ] Push notifications (PWA)
 
 **Quality**
-- 70% test coverage target
-- Performance benchmarks established
-- Plugin SDK documentation
-- API documentation site
+- [x] 70% test coverage target (71.2% achieved)
+- [x] API documentation site (Swagger UI)
+- [ ] Performance benchmarks established
+- [ ] Load testing harness
 
 ---
 

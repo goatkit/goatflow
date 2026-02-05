@@ -1,0 +1,17 @@
+#!/bin/bash
+# Build the {{.Name}} gRPC plugin
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+echo "🔨 Building {{.Name}} gRPC plugin..."
+go build -o {{.Name}} .
+
+echo "✅ Built: {{.Name}}"
+echo ""
+echo "To run the plugin, configure GOTRS to load it:"
+echo "  plugins:"
+echo "    {{.Name}}:"
+echo "      type: grpc"
+echo "      path: $(pwd)/{{.Name}}"

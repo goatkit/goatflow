@@ -9,9 +9,23 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/services"
 )
 
+// HandleDeleteTicketAPI handles DELETE /api/v1/tickets/:id.
 // In OTRS, tickets are never hard deleted, only archived.
+//
+//	@Summary		Delete (archive) ticket
+//	@Description	Archive a ticket (soft delete - tickets are never hard deleted)
+//	@Tags			Tickets
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Ticket ID"
+//	@Success		200	{object}	map[string]interface{}	"Ticket archived"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Ticket not found"
+//	@Security		BearerAuth
+//	@Router			/tickets/{id} [delete]
 func HandleDeleteTicketAPI(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {
@@ -63,9 +77,10 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 	// Check if ticket exists and get current state
 	var currentStateID int
 	var customerUserID string
+	var queueID int
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT ticket_state_id, customer_user_id FROM ticket WHERE id = ?",
-	), ticketID).Scan(&currentStateID, &customerUserID)
+		"SELECT ticket_state_id, customer_user_id, queue_id FROM ticket WHERE id = ?",
+	), ticketID).Scan(&currentStateID, &customerUserID, &queueID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -88,6 +103,25 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{
 			"success": false,
 			"error":   "Customers cannot delete tickets",
+		})
+		return
+	}
+
+	// Check agent has write permission on the ticket's queue
+	permSvc := services.NewPermissionService(db)
+	canWrite, err := permSvc.CanWriteQueue(userID, queueID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to check permissions",
+		})
+		return
+	}
+	// Security: return 404 (not 403) to avoid revealing ticket existence
+	if !canWrite {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   "Ticket not found",
 		})
 		return
 	}

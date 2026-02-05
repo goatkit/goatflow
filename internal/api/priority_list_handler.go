@@ -14,6 +14,18 @@ import (
 // Supports optional filtering via ticket attribute relations:
 //   - filter_attribute: The attribute to filter by (e.g., "Queue", "State")
 //   - filter_value: The value of that attribute (e.g., "Sales", "new")
+//
+// HandleListPrioritiesAPI handles GET /api/v1/priorities.
+//
+//	@Summary		List priorities
+//	@Description	Retrieve all ticket priorities
+//	@Tags			Priorities
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"List of priorities"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/priorities [get]
 func HandleListPrioritiesAPI(c *gin.Context) {
 	// Require authentication similar to other admin lookups
 	if _, exists := c.Get("user_id"); !exists {

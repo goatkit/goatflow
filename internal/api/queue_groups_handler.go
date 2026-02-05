@@ -10,6 +10,19 @@ import (
 )
 
 // HandleAssignQueueGroupAPI handles POST /api/v1/queues/:id/groups.
+//
+//	@Summary		Assign group to queue
+//	@Description	Assign a group to a queue
+//	@Tags			Queues
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int		true	"Queue ID"
+//	@Param			group	body		object	true	"Group assignment (group_id, permission)"
+//	@Success		200		{object}	map[string]interface{}	"Group assigned"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/queues/{id}/groups [post]
 func HandleAssignQueueGroupAPI(c *gin.Context) {
 	// Auth
 	if _, ok := c.Get("user_id"); !ok {
@@ -78,6 +91,19 @@ func HandleAssignQueueGroupAPI(c *gin.Context) {
 }
 
 // HandleRemoveQueueGroupAPI handles DELETE /api/v1/queues/:id/groups/:group_id.
+//
+//	@Summary		Remove group from queue
+//	@Description	Remove a group assignment from a queue
+//	@Tags			Queues
+//	@Accept			json
+//	@Produce		json
+//	@Param			id			path		int	true	"Queue ID"
+//	@Param			group_id	path		int	true	"Group ID"
+//	@Success		200			{object}	map[string]interface{}	"Group removed"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404			{object}	map[string]interface{}	"Not found"
+//	@Security		BearerAuth
+//	@Router			/queues/{id}/groups/{group_id} [delete]
 func HandleRemoveQueueGroupAPI(c *gin.Context) {
 	// Auth
 	if _, ok := c.Get("user_id"); !ok {

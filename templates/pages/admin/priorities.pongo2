@@ -112,7 +112,7 @@
                             <input type="text" id="priorityColor" name="color" class="gk-input-neon flex-1"
                                 placeholder="#FF0000" pattern="^#[0-9A-Fa-f]{6}$"
                                 onchange="updateColorPreview()">
-                            <div id="colorPreview" class="w-10 h-10 rounded" style="border: 1px solid var(--gk-border); background: var(--gk-bg-tertiary);"></div>
+                            <div id="colorPreview" class="w-10 h-10 rounded" style="border: 1px solid var(--gk-border-default); background: var(--gk-bg-tertiary);"></div>
                         </div>
                         <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">
                             {{ t("priorities.color_hint")|default:"Optional: Visual indicator color for this priority" }}

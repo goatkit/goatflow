@@ -6,7 +6,7 @@
 <div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Header -->
     <div class="gk-card-glow rounded-lg mb-6">
-        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
             <div class="flex justify-between items-center">
                 <div>
                     <h1 class="text-2xl font-bold gk-heading">
@@ -102,7 +102,7 @@
                                 {% if groupPerm.Permissions.ro %}checked{% endif %}
                                 onchange="handlePermissionChange(this, {{ groupPerm.Group.ID }}, 'ro')"
                                 class="h-4 w-4 rounded focus:ring-2"
-                                style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
+                                style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);"
                             >
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
@@ -112,7 +112,7 @@
                                 {% if groupPerm.Permissions.move_into %}checked{% endif %}
                                 onchange="handlePermissionChange(this, {{ groupPerm.Group.ID }}, 'move_into')"
                                 class="h-4 w-4 rounded focus:ring-2"
-                                style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
+                                style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);"
                             >
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
@@ -122,7 +122,7 @@
                                 {% if groupPerm.Permissions.create %}checked{% endif %}
                                 onchange="handlePermissionChange(this, {{ groupPerm.Group.ID }}, 'create')"
                                 class="h-4 w-4 rounded focus:ring-2"
-                                style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
+                                style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);"
                             >
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
@@ -132,7 +132,7 @@
                                 {% if groupPerm.Permissions.note %}checked{% endif %}
                                 onchange="handlePermissionChange(this, {{ groupPerm.Group.ID }}, 'note')"
                                 class="h-4 w-4 rounded focus:ring-2"
-                                style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
+                                style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);"
                             >
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
@@ -142,7 +142,7 @@
                                 {% if groupPerm.Permissions.owner %}checked{% endif %}
                                 onchange="handlePermissionChange(this, {{ groupPerm.Group.ID }}, 'owner')"
                                 class="h-4 w-4 rounded focus:ring-2"
-                                style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
+                                style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);"
                             >
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
@@ -152,7 +152,7 @@
                                 {% if groupPerm.Permissions.priority %}checked{% endif %}
                                 onchange="handlePermissionChange(this, {{ groupPerm.Group.ID }}, 'priority')"
                                 class="h-4 w-4 rounded focus:ring-2"
-                                style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
+                                style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);"
                             >
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
@@ -162,7 +162,7 @@
                                 {% if groupPerm.Permissions.rw %}checked{% endif %}
                                 onchange="handlePermissionChange(this, {{ groupPerm.Group.ID }}, 'rw')"
                                 class="h-4 w-4 rounded focus:ring-2"
-                                style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
+                                style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);"
                                 title="{{ t("permissions.tooltips.grant_all")|default:"Selecting this will grant all permissions" }}"
                             >
                         </td>
@@ -446,7 +446,7 @@ function showToast(type, message) {
     const toast = document.createElement('div');
     toast.className = 'pointer-events-auto max-w-sm w-full shadow-lg rounded-lg mb-4';
     toast.style.background = 'var(--gk-bg-surface)';
-    toast.style.border = '1px solid var(--gk-border)';
+    toast.style.border = '1px solid var(--gk-border-default)';
 
     const iconColor = type === 'success' ? 'var(--gk-success)' : 'var(--gk-error)';
     const icon = type === 'success'

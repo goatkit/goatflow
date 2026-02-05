@@ -10,6 +10,18 @@ import (
 )
 
 // HandleGetQueueStatsAPI handles GET /api/v1/queues/:id/stats.
+//
+//	@Summary		Get queue statistics
+//	@Description	Get ticket statistics for a queue
+//	@Tags			Queues
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Queue ID"
+//	@Success		200	{object}	map[string]interface{}	"Queue statistics"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Queue not found"
+//	@Security		BearerAuth
+//	@Router			/queues/{id}/stats [get]
 func HandleGetQueueStatsAPI(c *gin.Context) {
 	// Auth
 	if _, ok := c.Get("user_id"); !ok {

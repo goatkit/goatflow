@@ -168,6 +168,16 @@ func handleSettings(c *gin.Context) {
 	})
 }
 
+// handleApiTokensPage shows the API tokens management page.
+func handleApiTokensPage(c *gin.Context) {
+	user := getUserMapForTemplate(c)
+
+	getPongo2Renderer().HTML(c, http.StatusOK, "pages/settings/api_tokens.pongo2", pongo2.Context{
+		"User":       user,
+		"ActivePage": "settings",
+	})
+}
+
 // SetupAPIv1Routes configures the v1 API routes.
 func SetupAPIv1Routes(r *gin.Engine, jwtManager *auth.JWTManager, ldapProvider *ldap.Provider, i18nSvc interface{}) {
 	// Create RBAC instance

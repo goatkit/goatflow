@@ -1,0 +1,3093 @@
+basePath: /api/v1
+host: localhost:8080
+info:
+  contact:
+    email: support@gotrs.io
+    name: GOTRS Support
+    url: https://gotrs.io/support
+  description: GOTRS Ticket System REST API
+  license:
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+  termsOfService: https://gotrs.io/terms/
+  title: GOTRS API
+  version: "1.0"
+paths:
+  /api/v1/i18n/coverage:
+    get:
+      responses: {}
+  /api/v1/i18n/export/{lang}:
+    get:
+      responses: {}
+  /api/v1/i18n/language:
+    post:
+      responses: {}
+  /api/v1/i18n/languages:
+    get:
+      responses: {}
+  /api/v1/i18n/missing/{lang}:
+    get:
+      responses: {}
+  /api/v1/i18n/stats:
+    get:
+      responses: {}
+  /api/v1/i18n/translate:
+    post:
+      responses: {}
+  /api/v1/i18n/translations:
+    get:
+      responses: {}
+  /api/v1/i18n/translations/{lang}:
+    get:
+      responses: {}
+  /api/v1/i18n/validate/{lang}:
+    get:
+      responses: {}
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with login/password and return JWT tokens
+      parameters:
+      - description: Login credentials (login, password)
+        in: body
+        name: credentials
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JWT tokens (access_token, refresh_token)
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login
+      tags:
+      - Authentication
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Logout user (invalidates session, client should discard tokens)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout successful
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Logout
+      tags:
+      - Authentication
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchange a refresh token for a new access token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: token
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: New access token
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid or expired refresh token
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Refresh token
+      tags:
+      - Authentication
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user (if self-registration is enabled)
+      parameters:
+      - description: User registration data
+        in: body
+        name: user
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Registered user
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or registration disabled
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register user
+      tags:
+      - Authentication
+  /groups:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all groups
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of groups
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List groups
+      tags:
+      - Groups
+  /priorities:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all ticket priorities
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of priorities
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List priorities
+      tags:
+      - Priorities
+    post:
+      consumes:
+      - application/json
+      description: Create a new ticket priority
+      parameters:
+      - description: Priority data
+        in: body
+        name: priority
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created priority
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create priority
+      tags:
+      - Priorities
+  /priorities/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a priority
+      parameters:
+      - description: Priority ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Priority deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Priority not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete priority
+      tags:
+      - Priorities
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single priority
+      parameters:
+      - description: Priority ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Priority details
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Priority not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get priority by ID
+      tags:
+      - Priorities
+    put:
+      consumes:
+      - application/json
+      description: Update an existing priority
+      parameters:
+      - description: Priority ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Priority update data
+        in: body
+        name: priority
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated priority
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Priority not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update priority
+      tags:
+      - Priorities
+  /queues:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all queues
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of queues
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List queues
+      tags:
+      - Queues
+    post:
+      consumes:
+      - application/json
+      description: Create a new queue
+      parameters:
+      - description: Queue data (name, group_id, etc.)
+        in: body
+        name: queue
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created queue
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create queue
+      tags:
+      - Queues
+  /queues/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a queue (soft delete)
+      parameters:
+      - description: Queue ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Queue deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Queue not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete queue
+      tags:
+      - Queues
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single queue by its ID
+      parameters:
+      - description: Queue ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Queue details
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Queue not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get queue by ID
+      tags:
+      - Queues
+    put:
+      consumes:
+      - application/json
+      description: Update an existing queue
+      parameters:
+      - description: Queue ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Queue update data
+        in: body
+        name: queue
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated queue
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Queue not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update queue
+      tags:
+      - Queues
+  /queues/{id}/agents:
+    get:
+      consumes:
+      - application/json
+      description: List agents assigned to a queue
+      parameters:
+      - description: Queue ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of agents
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Queue not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get queue agents
+      tags:
+      - Queues
+  /queues/{id}/details:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed queue information including ticket counts
+      parameters:
+      - description: Queue ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Queue details with stats
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Queue not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get queue details
+      tags:
+      - Queues
+  /queues/{id}/groups:
+    post:
+      consumes:
+      - application/json
+      description: Assign a group to a queue
+      parameters:
+      - description: Queue ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Group assignment (group_id, permission)
+        in: body
+        name: group
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Group assigned
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Assign group to queue
+      tags:
+      - Queues
+  /queues/{id}/groups/{group_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a group assignment from a queue
+      parameters:
+      - description: Queue ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Group ID
+        in: path
+        name: group_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Group removed
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove group from queue
+      tags:
+      - Queues
+  /queues/{id}/stats:
+    get:
+      consumes:
+      - application/json
+      description: Get ticket statistics for a queue
+      parameters:
+      - description: Queue ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Queue statistics
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Queue not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get queue statistics
+      tags:
+      - Queues
+  /queues/{id}/status:
+    get:
+      consumes:
+      - application/json
+      description: Get queue status and metrics
+      parameters:
+      - description: Queue ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Queue status
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Queue not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get queue status
+      tags:
+      - Queues
+  /salutations:
+    get:
+      consumes:
+      - application/json
+      description: List all email salutations
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of salutations
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List salutations
+      tags:
+      - Email Identity
+    post:
+      consumes:
+      - application/json
+      description: Create a new email salutation
+      parameters:
+      - description: Salutation data
+        in: body
+        name: salutation
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created salutation
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create salutation
+      tags:
+      - Email Identity
+  /salutations/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update an email salutation
+      parameters:
+      - description: Salutation ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Salutation update data
+        in: body
+        name: salutation
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated salutation
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update salutation
+      tags:
+      - Email Identity
+  /search:
+    post:
+      consumes:
+      - application/json
+      description: Full-text search across tickets
+      parameters:
+      - description: Search query
+        in: body
+        name: query
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Search results
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Search tickets
+      tags:
+      - Search
+  /search/health:
+    get:
+      consumes:
+      - application/json
+      description: Check search engine health status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Search health status
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Search health
+      tags:
+      - Search
+  /search/reindex:
+    post:
+      consumes:
+      - application/json
+      description: Trigger a search index rebuild
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Reindex started
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reindex search
+      tags:
+      - Search
+  /search/suggestions:
+    get:
+      consumes:
+      - application/json
+      description: Get autocomplete suggestions for search
+      parameters:
+      - description: Search query prefix
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Suggestions
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get search suggestions
+      tags:
+      - Search
+  /services:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all services
+      parameters:
+      - description: Filter by validity (1=valid, 2=invalid, all)
+        in: query
+        name: valid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of services
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List services
+      tags:
+      - Services
+  /signatures:
+    get:
+      consumes:
+      - application/json
+      description: List all email signatures
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of signatures
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List signatures
+      tags:
+      - Email Identity
+    post:
+      consumes:
+      - application/json
+      description: Create a new email signature
+      parameters:
+      - description: Signature data
+        in: body
+        name: signature
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created signature
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create signature
+      tags:
+      - Email Identity
+  /signatures/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update an email signature
+      parameters:
+      - description: Signature ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Signature update data
+        in: body
+        name: signature
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated signature
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update signature
+      tags:
+      - Email Identity
+  /slas:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all SLA definitions
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of SLAs
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List SLAs
+      tags:
+      - SLAs
+    post:
+      consumes:
+      - application/json
+      description: Create a new SLA definition
+      parameters:
+      - description: SLA data
+        in: body
+        name: sla
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created SLA
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create SLA
+      tags:
+      - SLAs
+  /slas/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an SLA definition
+      parameters:
+      - description: SLA ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SLA deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: SLA not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete SLA
+      tags:
+      - SLAs
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single SLA definition
+      parameters:
+      - description: SLA ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SLA details
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: SLA not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get SLA by ID
+      tags:
+      - SLAs
+    put:
+      consumes:
+      - application/json
+      description: Update an existing SLA definition
+      parameters:
+      - description: SLA ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: SLA update data
+        in: body
+        name: sla
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated SLA
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: SLA not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update SLA
+      tags:
+      - SLAs
+  /slas/{id}/metrics:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve performance metrics for an SLA
+      parameters:
+      - description: SLA ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SLA metrics
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: SLA not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get SLA metrics
+      tags:
+      - SLAs
+  /states:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all ticket states
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of states
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List states
+      tags:
+      - States
+  /statistics/agents:
+    get:
+      consumes:
+      - application/json
+      description: Get agent performance statistics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Agent performance data
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get agent performance
+      tags:
+      - Statistics
+  /statistics/analytics:
+    get:
+      consumes:
+      - application/json
+      description: Get time-based ticket analytics
+      parameters:
+      - description: Time period
+        in: query
+        name: period
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Analytics data
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get time-based analytics
+      tags:
+      - Statistics
+  /statistics/customers:
+    get:
+      consumes:
+      - application/json
+      description: Get customer-related statistics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Customer statistics
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get customer statistics
+      tags:
+      - Statistics
+  /statistics/dashboard:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve dashboard statistics (ticket counts, trends)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dashboard statistics
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get dashboard statistics
+      tags:
+      - Statistics
+  /statistics/export:
+    get:
+      consumes:
+      - application/json
+      description: Export statistics data
+      parameters:
+      - description: Export format (csv, json)
+        in: query
+        name: format
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Exported data
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Export statistics
+      tags:
+      - Statistics
+  /statistics/queues:
+    get:
+      consumes:
+      - application/json
+      description: Get queue performance metrics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Queue metrics
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get queue metrics
+      tags:
+      - Statistics
+  /statistics/trends:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve ticket creation/resolution trends over time
+      parameters:
+      - description: Time period (day, week, month)
+        in: query
+        name: period
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Trend data
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get ticket trends
+      tags:
+      - Statistics
+  /system-addresses:
+    get:
+      consumes:
+      - application/json
+      description: List all system email addresses
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of system addresses
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List system addresses
+      tags:
+      - Email Identity
+    post:
+      consumes:
+      - application/json
+      description: Create a new system email address
+      parameters:
+      - description: System address data
+        in: body
+        name: address
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created address
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create system address
+      tags:
+      - Email Identity
+  /system-addresses/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update a system email address
+      parameters:
+      - description: Address ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Address update data
+        in: body
+        name: address
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated address
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Address not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update system address
+      tags:
+      - Email Identity
+  /ticket-states:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all ticket states (alias for /states)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of states
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List ticket states
+      tags:
+      - States
+    post:
+      consumes:
+      - application/json
+      description: Create a new ticket state
+      parameters:
+      - description: State data
+        in: body
+        name: state
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created state
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create ticket state
+      tags:
+      - States
+  /ticket-states/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a ticket state
+      parameters:
+      - description: State ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: State deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: State not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete ticket state
+      tags:
+      - States
+    get:
+      consumes:
+      - application/json
+      description: Get a ticket state by ID
+      parameters:
+      - description: State ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: State details
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: State not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get ticket state
+      tags:
+      - States
+    put:
+      consumes:
+      - application/json
+      description: Update a ticket state
+      parameters:
+      - description: State ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: State update data
+        in: body
+        name: state
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated state
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: State not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update ticket state
+      tags:
+      - States
+  /ticket-states/statistics:
+    get:
+      consumes:
+      - application/json
+      description: Get ticket counts by state
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: State statistics
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get state statistics
+      tags:
+      - States
+  /tickets:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of tickets with optional filtering, sorting,
+        and search
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page (max 100)
+        in: query
+        name: per_page
+        type: integer
+      - default: 20
+        description: Alias for per_page (max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset for pagination (alternative to page)
+        in: query
+        name: offset
+        type: integer
+      - description: Filter by status
+        enum:
+        - open
+        - closed
+        - pending
+        in: query
+        name: status
+        type: string
+      - description: Filter by queue ID
+        in: query
+        name: queue_id
+        type: integer
+      - description: Filter by priority ID
+        in: query
+        name: priority_id
+        type: integer
+      - description: Filter by customer user ID/login
+        in: query
+        name: customer_user_id
+        type: string
+      - description: Filter by assigned agent user ID
+        in: query
+        name: assigned_user_id
+        type: integer
+      - description: Search in ticket number, title, customer
+        in: query
+        name: search
+        type: string
+      - default: created
+        description: Sort field
+        enum:
+        - created
+        - updated
+        - priority
+        - tn
+        in: query
+        name: sort
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: order
+        type: string
+      - description: 'Include related data (comma-separated: article_count, last_article)'
+        in: query
+        name: include
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of tickets with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List tickets
+      tags:
+      - Tickets
+    post:
+      consumes:
+      - application/json
+      description: Create a new ticket with optional initial article
+      parameters:
+      - description: Ticket data (title, queue_id, priority_id, customer_user_id,
+          article)
+        in: body
+        name: ticket
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created ticket
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create ticket
+      tags:
+      - Tickets
+  /tickets/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Archive a ticket (soft delete - tickets are never hard deleted)
+      parameters:
+      - description: Ticket ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ticket archived
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ticket not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete (archive) ticket
+      tags:
+      - Tickets
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single ticket by its ID with optional related data
+      parameters:
+      - description: Ticket ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 'Include related data (comma-separated: articles, customer, queue)'
+        in: query
+        name: include
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ticket details
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ticket not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get ticket by ID
+      tags:
+      - Tickets
+    put:
+      consumes:
+      - application/json
+      description: Update an existing ticket's properties
+      parameters:
+      - description: Ticket ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Ticket update data (title, queue_id, priority_id, state_id, etc.)
+        in: body
+        name: ticket
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated ticket
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ticket not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update ticket
+      tags:
+      - Tickets
+  /tickets/{id}/assign:
+    post:
+      consumes:
+      - application/json
+      description: Assign a ticket to an agent
+      parameters:
+      - description: Ticket ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Assignment data (user_id)
+        in: body
+        name: assign
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ticket assigned
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ticket not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Assign ticket
+      tags:
+      - Ticket Actions
+  /tickets/{id}/close:
+    post:
+      consumes:
+      - application/json
+      description: Close a ticket with a specific close state
+      parameters:
+      - description: Ticket ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Close data (state_id, note)
+        in: body
+        name: close
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ticket closed
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ticket not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Close ticket
+      tags:
+      - Ticket Actions
+  /tickets/{id}/reopen:
+    post:
+      consumes:
+      - application/json
+      description: Reopen a closed ticket
+      parameters:
+      - description: Ticket ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ticket reopened
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ticket not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reopen ticket
+      tags:
+      - Ticket Actions
+  /tickets/{ticket_id}/articles:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all articles for a ticket
+      parameters:
+      - description: Ticket ID
+        in: path
+        name: ticket_id
+        required: true
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Alias for per_page
+        in: query
+        name: limit
+        type: integer
+      - description: Offset for pagination
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of articles
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ticket not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List ticket articles
+      tags:
+      - Articles
+    post:
+      consumes:
+      - application/json
+      description: Add a new article (reply/note) to a ticket
+      parameters:
+      - description: Ticket ID
+        in: path
+        name: ticket_id
+        required: true
+        type: integer
+      - description: Article data (body, subject, article_type, sender_type, etc.)
+        in: body
+        name: article
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created article
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ticket not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create article
+      tags:
+      - Articles
+  /tickets/{ticket_id}/articles/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an article from a ticket
+      parameters:
+      - description: Ticket ID
+        in: path
+        name: ticket_id
+        required: true
+        type: integer
+      - description: Article ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Article deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Article not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete article
+      tags:
+      - Articles
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single article by its ID
+      parameters:
+      - description: Ticket ID
+        in: path
+        name: ticket_id
+        required: true
+        type: integer
+      - description: Article ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Article details
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Article not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get article by ID
+      tags:
+      - Articles
+    put:
+      consumes:
+      - application/json
+      description: Update an existing article
+      parameters:
+      - description: Ticket ID
+        in: path
+        name: ticket_id
+        required: true
+        type: integer
+      - description: Article ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Article update data
+        in: body
+        name: article
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated article
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Article not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update article
+      tags:
+      - Articles
+  /tokens:
+    get:
+      consumes:
+      - application/json
+      description: List all API tokens for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of tokens
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List my API tokens
+      tags:
+      - API Tokens
+    post:
+      consumes:
+      - application/json
+      description: Create a new API token for the authenticated user
+      parameters:
+      - description: Token data (name, scopes, expires_at)
+        in: body
+        name: token
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created token (includes raw token - save it!)
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create API token
+      tags:
+      - API Tokens
+  /tokens/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Revoke an API token (user can only revoke own tokens)
+      parameters:
+      - description: Token ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token revoked
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Token not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Revoke API token
+      tags:
+      - API Tokens
+  /tokens/scopes:
+    get:
+      consumes:
+      - application/json
+      description: List available scopes for token creation (filtered by user role)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of available scopes
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get available scopes
+      tags:
+      - API Tokens
+  /types:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all ticket types
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of types
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List types
+      tags:
+      - Types
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of users (agents)
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Search in login, name, email
+        in: query
+        name: search
+        type: string
+      - description: Filter by group membership
+        in: query
+        name: group_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of users
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List users
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Create a new agent user
+      parameters:
+      - description: User data (login, email, first_name, last_name, password)
+        in: body
+        name: user
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created user
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create user
+      tags:
+      - Users
+  /users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a user (deactivate)
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user
+      tags:
+      - Users
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single user by their ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User details
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user by ID
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      description: Update an existing user's properties
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: User update data
+        in: body
+        name: user
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated user
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user
+      tags:
+      - Users
+  /users/{id}/groups:
+    get:
+      consumes:
+      - application/json
+      description: List groups a user belongs to
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of groups
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user groups
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Add a user to a group
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Group data (group_id, permission)
+        in: body
+        name: group
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User added to group
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add user to group
+      tags:
+      - Users
+  /users/{id}/groups/{group_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a user from a group
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Group ID
+        in: path
+        name: group_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User removed from group
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove user from group
+      tags:
+      - Users
+  /users/me:
+    get:
+      consumes:
+      - application/json
+      description: Get the authenticated user's profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User profile
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - Users
+  /webhooks:
+    get:
+      consumes:
+      - application/json
+      description: List all registered webhooks
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of webhooks
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List webhooks
+      tags:
+      - Webhooks
+    post:
+      consumes:
+      - application/json
+      description: Register a new webhook endpoint
+      parameters:
+      - description: Webhook data (url, events, secret)
+        in: body
+        name: webhook
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Webhook registered
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Register webhook
+      tags:
+      - Webhooks
+  /webhooks/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a webhook
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Webhook deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Webhook not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete webhook
+      tags:
+      - Webhooks
+    get:
+      consumes:
+      - application/json
+      description: Get webhook by ID
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Webhook details
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Webhook not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get webhook
+      tags:
+      - Webhooks
+    put:
+      consumes:
+      - application/json
+      description: Update a webhook
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Webhook update data
+        in: body
+        name: webhook
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated webhook
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Webhook not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update webhook
+      tags:
+      - Webhooks
+  /webhooks/{id}/deliveries:
+    get:
+      consumes:
+      - application/json
+      description: List delivery history for a webhook
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of deliveries
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Webhook not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List webhook deliveries
+      tags:
+      - Webhooks
+  /webhooks/{id}/test:
+    post:
+      consumes:
+      - application/json
+      description: Send a test event to a webhook
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Test result
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Webhook not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Test webhook
+      tags:
+      - Webhooks
+  /webhooks/deliveries/{id}/retry:
+    post:
+      consumes:
+      - application/json
+      description: Retry a failed webhook delivery
+      parameters:
+      - description: Delivery ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Retry result
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Delivery not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retry webhook delivery
+      tags:
+      - Webhooks
+securityDefinitions:
+  BearerAuth:
+    description: API token (Bearer gf_xxx) or JWT token
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

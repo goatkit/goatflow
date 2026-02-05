@@ -4,13 +4,23 @@ import (
 	"context"
 	"fmt"
 	"sync"
+
+	"github.com/gotrs-io/gotrs-ce/internal/apierrors"
+	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 )
+
+// LazyLoader is the interface for lazy-loading plugins on demand.
+type LazyLoader interface {
+	EnsureLoaded(ctx context.Context, name string) error
+	Discovered() []string
+}
 
 // Manager handles plugin lifecycle: loading, registration, and invocation.
 type Manager struct {
-	mu      sync.RWMutex
-	plugins map[string]*registeredPlugin
-	host    HostAPI
+	mu         sync.RWMutex
+	plugins    map[string]*registeredPlugin
+	host       HostAPI
+	lazyLoader LazyLoader // Optional: for lazy loading support
 }
 
 type registeredPlugin struct {
@@ -25,6 +35,87 @@ func NewManager(host HostAPI) *Manager {
 		plugins: make(map[string]*registeredPlugin),
 		host:    host,
 	}
+}
+
+// pluginConfigKey returns the sysconfig key for a plugin's enabled state.
+func pluginConfigKey(name string) string {
+	return "Plugin::" + name + "::Enabled"
+}
+
+// loadPluginEnabled checks if a plugin is enabled via sysconfig.
+// Returns true (enabled) by default if no setting exists.
+func (m *Manager) loadPluginEnabled(ctx context.Context, name string) bool {
+	if m.host == nil {
+		return true // Default enabled if no host API
+	}
+
+	key := pluginConfigKey(name)
+	
+	// Query sysconfig_modified first (user overrides)
+	query := `
+		SELECT effective_value FROM sysconfig_modified 
+		WHERE name = ? AND is_valid = 1 
+		ORDER BY change_time DESC LIMIT 1
+	`
+	rows, err := m.host.DBQuery(ctx, query, key)
+	if err == nil && len(rows) > 0 {
+		if val, ok := rows[0]["effective_value"].(string); ok {
+			return val != "0" && val != "false"
+		}
+	}
+	
+	// Fall back to sysconfig_default
+	query = `
+		SELECT effective_value FROM sysconfig_default 
+		WHERE name = ? AND is_valid = 1 
+		LIMIT 1
+	`
+	rows, err = m.host.DBQuery(ctx, query, key)
+	if err == nil && len(rows) > 0 {
+		if val, ok := rows[0]["effective_value"].(string); ok {
+			return val != "0" && val != "false"
+		}
+	}
+	
+	return true // Default enabled if not configured
+}
+
+// savePluginEnabled persists a plugin's enabled state to sysconfig_modified.
+func (m *Manager) savePluginEnabled(ctx context.Context, name string, enabled bool) error {
+	if m.host == nil {
+		return nil // No host API, can't persist
+	}
+
+	key := pluginConfigKey(name)
+	val := "1"
+	if !enabled {
+		val = "0"
+	}
+
+	// Use DBExec to upsert into sysconfig_modified
+	// First try to get the sysconfig_default_id (may not exist for dynamic plugins)
+	query := `
+		INSERT INTO sysconfig_modified (sysconfig_default_id, name, effective_value, is_valid, create_by, change_by, create_time, change_time)
+		VALUES (0, ?, ?, 1, 1, 1, NOW(), NOW())
+		ON DUPLICATE KEY UPDATE effective_value = ?, change_time = NOW(), change_by = 1
+	`
+	_, err := m.host.DBExec(ctx, query, key, val, val)
+	return err
+}
+
+// SetLazyLoader sets the lazy loader for on-demand plugin loading.
+func (m *Manager) SetLazyLoader(loader LazyLoader) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.lazyLoader = loader
+}
+
+// Discovered returns the names of discovered but not necessarily loaded plugins.
+func (m *Manager) Discovered() []string {
+	if m.lazyLoader == nil {
+		return nil
+	}
+	return m.lazyLoader.Discovered()
 }
 
 // Register loads and initializes a plugin.
@@ -43,13 +134,65 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 		return fmt.Errorf("plugin %q init failed: %w", manifest.Name, err)
 	}
 
+	// Check if this plugin is enabled via sysconfig
+	isEnabled := m.loadPluginEnabled(ctx, manifest.Name)
+
 	m.plugins[manifest.Name] = &registeredPlugin{
 		plugin:   p,
 		manifest: manifest,
-		enabled:  true,
+		enabled:  isEnabled,
+	}
+
+	// Load plugin translations if provided
+	if manifest.I18n != nil && len(manifest.I18n.Translations) > 0 {
+		m.loadPluginTranslations(manifest.Name, manifest.I18n)
+	}
+
+	// Register plugin error codes if provided
+	if len(manifest.ErrorCodes) > 0 {
+		m.loadPluginErrorCodes(manifest.Name, manifest.ErrorCodes)
+	}
+
+	// Register template overrides if provided
+	if len(manifest.Templates) > 0 {
+		if registry := GetTemplateOverrides(); registry != nil {
+			registry.Register(manifest.Name, manifest.Templates)
+		}
 	}
 
 	return nil
+}
+
+// loadPluginTranslations adds plugin-provided translations to the i18n system.
+func (m *Manager) loadPluginTranslations(pluginName string, i18nSpec *I18nSpec) {
+	i18nInst := i18n.GetInstance()
+	if i18nInst == nil {
+		return
+	}
+
+	namespace := i18nSpec.Namespace
+	if namespace == "" {
+		namespace = pluginName // Default to plugin name as namespace
+	}
+
+	// Add each translation with the plugin namespace prefix
+	for lang, translations := range i18nSpec.Translations {
+		for key, value := range translations {
+			fullKey := namespace + "." + key
+			i18nInst.AddTranslation(lang, fullKey, value)
+		}
+	}
+}
+
+// loadPluginErrorCodes registers plugin-provided API error codes.
+func (m *Manager) loadPluginErrorCodes(pluginName string, codes []ErrorCodeSpec) {
+	for _, spec := range codes {
+		apierrors.Registry.Register(apierrors.ErrorCode{
+			Code:       pluginName + ":" + spec.Code,
+			Message:    spec.Message,
+			HTTPStatus: spec.HTTPStatus,
+		})
+	}
 }
 
 // Unregister shuts down and removes a plugin.
@@ -82,17 +225,98 @@ func (m *Manager) Get(name string) (Plugin, bool) {
 	return rp.plugin, true
 }
 
+// PluginNotFoundError is returned when a plugin dependency is missing.
+type PluginNotFoundError struct {
+	PluginName   string // The missing plugin
+	CallerPlugin string // The plugin that tried to call it (if known)
+	Function     string // The function that was called
+}
+
+func (e *PluginNotFoundError) Error() string {
+	if e.CallerPlugin != "" {
+		return fmt.Sprintf("plugin %q not found (required by %q to call %q)", 
+			e.PluginName, e.CallerPlugin, e.Function)
+	}
+	return fmt.Sprintf("plugin %q not found", e.PluginName)
+}
+
+// PluginDisabledError is returned when trying to call a disabled plugin.
+type PluginDisabledError struct {
+	PluginName   string
+	CallerPlugin string
+}
+
+func (e *PluginDisabledError) Error() string {
+	if e.CallerPlugin != "" {
+		return fmt.Sprintf("plugin %q is disabled (required by %q)", e.PluginName, e.CallerPlugin)
+	}
+	return fmt.Sprintf("plugin %q is disabled", e.PluginName)
+}
+
 // Call invokes a function on a specific plugin.
+// If lazy loading is enabled and the plugin isn't loaded yet, it will be loaded first.
 func (m *Manager) Call(ctx context.Context, pluginName, fn string, args []byte) ([]byte, error) {
 	m.mu.RLock()
 	rp, exists := m.plugins[pluginName]
+	lazyLoader := m.lazyLoader
 	m.mu.RUnlock()
 
+	// Try lazy loading if plugin not found
+	if !exists && lazyLoader != nil {
+		if err := lazyLoader.EnsureLoaded(ctx, pluginName); err != nil {
+			return nil, &PluginNotFoundError{PluginName: pluginName, Function: fn}
+		}
+		// Re-check after lazy load
+		m.mu.RLock()
+		rp, exists = m.plugins[pluginName]
+		m.mu.RUnlock()
+	}
+
 	if !exists {
-		return nil, fmt.Errorf("plugin %q not found", pluginName)
+		return nil, &PluginNotFoundError{PluginName: pluginName, Function: fn}
 	}
 	if !rp.enabled {
-		return nil, fmt.Errorf("plugin %q is disabled", pluginName)
+		return nil, &PluginDisabledError{PluginName: pluginName}
+	}
+
+	return rp.plugin.Call(ctx, fn, args)
+}
+
+// CallFrom invokes a function on a plugin, with caller context for better errors.
+// If lazy loading is enabled and the plugin isn't loaded yet, it will be loaded first.
+func (m *Manager) CallFrom(ctx context.Context, callerPlugin, targetPlugin, fn string, args []byte) ([]byte, error) {
+	m.mu.RLock()
+	rp, exists := m.plugins[targetPlugin]
+	lazyLoader := m.lazyLoader
+	m.mu.RUnlock()
+
+	// Try lazy loading if plugin not found
+	if !exists && lazyLoader != nil {
+		if err := lazyLoader.EnsureLoaded(ctx, targetPlugin); err != nil {
+			return nil, &PluginNotFoundError{
+				PluginName:   targetPlugin,
+				CallerPlugin: callerPlugin,
+				Function:     fn,
+			}
+		}
+		// Re-check after lazy load
+		m.mu.RLock()
+		rp, exists = m.plugins[targetPlugin]
+		m.mu.RUnlock()
+	}
+
+	if !exists {
+		return nil, &PluginNotFoundError{
+			PluginName:   targetPlugin,
+			CallerPlugin: callerPlugin,
+			Function:     fn,
+		}
+	}
+	if !rp.enabled {
+		return nil, &PluginDisabledError{
+			PluginName:   targetPlugin,
+			CallerPlugin: callerPlugin,
+		}
 	}
 
 	return rp.plugin.Call(ctx, fn, args)
@@ -110,16 +334,51 @@ func (m *Manager) List() []GKRegistration {
 	return manifests
 }
 
-// Enable enables a previously disabled plugin.
-func (m *Manager) Enable(name string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+// IsEnabled returns whether a plugin is enabled.
+func (m *Manager) IsEnabled(name string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	rp, exists := m.plugins[name]
 	if !exists {
+		return false
+	}
+	return rp.enabled
+}
+
+// Enable enables a previously disabled plugin.
+// If the plugin is lazy-loaded and not yet registered, it will be loaded first.
+func (m *Manager) Enable(name string) error {
+	m.mu.Lock()
+	rp, exists := m.plugins[name]
+	m.mu.Unlock()
+
+	// Try lazy loading if not registered
+	if !exists && m.lazyLoader != nil {
+		if err := m.lazyLoader.EnsureLoaded(context.Background(), name); err != nil {
+			return fmt.Errorf("plugin %q not found", name)
+		}
+		// Re-check after loading
+		m.mu.Lock()
+		rp, exists = m.plugins[name]
+		m.mu.Unlock()
+		if !exists {
+			return fmt.Errorf("plugin %q not found", name)
+		}
+	} else if !exists {
 		return fmt.Errorf("plugin %q not found", name)
 	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	rp.enabled = true
+
+	// Persist state to sysconfig
+	ctx := context.Background()
+	if err := m.savePluginEnabled(ctx, name, true); err != nil {
+		// Log but don't fail - in-memory state is still correct
+		fmt.Printf("Warning: failed to save plugin state: %v\n", err)
+	}
 	return nil
 }
 
@@ -133,6 +392,13 @@ func (m *Manager) Disable(name string) error {
 		return fmt.Errorf("plugin %q not found", name)
 	}
 	rp.enabled = false
+
+	// Persist state to sysconfig
+	ctx := context.Background()
+	if err := m.savePluginEnabled(ctx, name, false); err != nil {
+		// Log but don't fail - in-memory state is still correct
+		fmt.Printf("Warning: failed to save plugin state: %v\n", err)
+	}
 	return nil
 }
 
@@ -216,6 +482,22 @@ func (m *Manager) Widgets(location string) []PluginWidget {
 type PluginWidget struct {
 	PluginName string
 	WidgetSpec
+}
+
+// AllWidgets returns widgets from all plugins (including lazy-loaded) for a location.
+// This triggers lazy loading for all discovered plugins to ensure complete widget list.
+func (m *Manager) AllWidgets(location string) []PluginWidget {
+	// First, trigger lazy loading for all discovered plugins
+	if m.lazyLoader != nil {
+		ctx := context.Background()
+		for _, name := range m.lazyLoader.Discovered() {
+			// Try to load each discovered plugin (errors are ignored)
+			_ = m.lazyLoader.EnsureLoaded(ctx, name)
+		}
+	}
+
+	// Now return widgets from all loaded plugins
+	return m.Widgets(location)
 }
 
 // Jobs returns all jobs from all enabled plugins.

@@ -1,0 +1,28 @@
+---
+# Swagger UI Routes
+# API documentation endpoint serving OpenAPI spec via Swagger UI.
+#
+# Access control:
+#   - Default: public (no auth required)
+#   - To require login: change middleware to [unified_auth]
+#   - To disable: set GOTRS_SWAGGER_ENABLED=false or enabled: false
+#
+# Dark mode: enabled by default (handleSwaggerDark)
+# Light mode: change handler to handleSwagger
+#
+apiVersion: v1
+kind: RouteGroup
+metadata:
+  name: swagger-ui
+  description: "Swagger UI API documentation"
+  namespace: default
+  enabled: true
+spec:
+  prefix: /swagger
+  middleware: []  # Public by default; change to [unified_auth] for protected access
+  routes:
+    - path: /*any
+      method: GET
+      handler: handleSwaggerDark
+      description: "Serve Swagger UI for API documentation (dark mode)"
+      condition: "${GOTRS_SWAGGER_ENABLED:true}"

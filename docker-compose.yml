@@ -80,7 +80,7 @@ services:
         GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
-    image: localhost/gotrs-backend:latest
+    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_VERSION:-latest}
     command: >
       sh -c "
         # Generate self-signed certificates if they don't exist
@@ -122,6 +122,9 @@ services:
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}
       ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-pdf,doc,docx,txt,png,jpg,jpeg,gif,zip}
+      # Plugin system (defaults set in Dockerfile, override here if needed)
+      # GOTRS_PLUGIN_LAZY_LOAD: ${GOTRS_PLUGIN_LAZY_LOAD:-true}
+      # GOTRS_PLUGIN_HOT_RELOAD: ${GOTRS_PLUGIN_HOT_RELOAD:-false}
       # TLS configuration
       TLS_CERT_FILE: /app/certs/server.crt
       TLS_KEY_FILE: /app/certs/server.key
@@ -149,7 +152,7 @@ services:
         GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
-    image: localhost/gotrs-backend:latest
+    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_VERSION:-latest}
     container_name: gotrs-customer-fe
     command: >
       sh -c "
@@ -206,7 +209,7 @@ services:
 
   # GOTRS Runner - Background task processor
   runner:
-    image: localhost/gotrs-backend:latest
+    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_VERSION:-latest}
     container_name: gotrs-runner
     command: ["./goats", "-mode", "runner"]
     environment:
@@ -279,7 +282,7 @@ services:
         GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
-    image: localhost/gotrs-backend:latest
+    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_VERSION:-latest}
     container_name: gotrs-backend-test
     command: >
       sh -c "
@@ -337,7 +340,7 @@ services:
 
   # GOTRS Runner Test - Background task processor for test environment
   runner-test:
-    image: localhost/gotrs-backend:latest
+    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_VERSION:-latest}
     container_name: gotrs-runner-test
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     command: ["./goats", "-mode", "runner"]
@@ -375,7 +378,7 @@ services:
         GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
-    image: localhost/gotrs-backend:latest
+    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_VERSION:-latest}
     container_name: gotrs-customer-fe-test
     command: >
       sh -c "
@@ -581,7 +584,7 @@ services:
         GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
-    image: gotrs-toolbox:latest
+    image: ghcr.io/gotrs-io/gotrs-ce/toolbox:${GOTRS_VERSION:-latest}
     container_name: gotrs-toolbox
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}" # Match host user to avoid root-owned artifacts
     environment:

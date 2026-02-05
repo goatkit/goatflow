@@ -12,6 +12,18 @@ import (
 )
 
 // HandleGetQueueAPI handles GET /api/v1/queues/:id.
+//
+//	@Summary		Get queue by ID
+//	@Description	Retrieve a single queue by its ID
+//	@Tags			Queues
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Queue ID"
+//	@Success		200	{object}	map[string]interface{}	"Queue details"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Queue not found"
+//	@Security		BearerAuth
+//	@Router			/queues/{id} [get]
 func HandleGetQueueAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -35,6 +47,18 @@ func HandleGetQueueAPI(c *gin.Context) {
 }
 
 // HandleGetQueueAgentsAPI handles GET /api/v1/queues/:id/agents.
+//
+//	@Summary		Get queue agents
+//	@Description	List agents assigned to a queue
+//	@Tags			Queues
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Queue ID"
+//	@Success		200	{object}	map[string]interface{}	"List of agents"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Queue not found"
+//	@Security		BearerAuth
+//	@Router			/queues/{id}/agents [get]
 func HandleGetQueueAgentsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

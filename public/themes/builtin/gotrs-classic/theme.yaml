@@ -1,0 +1,53 @@
+# =============================================================================
+# GOTRS Classic Theme - Clean & Professional
+# =============================================================================
+name: Classic
+id: gotrs-classic
+description: Clean & professional blue styling
+version: 1.0.0
+author: GOTRS Team
+license: MIT
+
+# =============================================================================
+# Theme Selector Preview
+# =============================================================================
+preview:
+  gradient: "linear-gradient(135deg, #3b82f6, #4f46e5)"
+
+# =============================================================================
+# Mode Support
+# =============================================================================
+modes:
+  dark: true
+  light: true
+  default: light
+
+# =============================================================================
+# Assets Configuration
+# =============================================================================
+assets:
+  fonts:
+    enabled: false  # Uses system fonts
+
+  images:
+    enabled: false
+
+  sounds:
+    enabled: false
+
+# =============================================================================
+# Feature Flags
+# =============================================================================
+features:
+  glowEffects: false
+  gridBackground: false
+  animations: false
+  bevels3d: false
+  terminalMode: false
+
+# =============================================================================
+# Compatibility
+# =============================================================================
+compatibility:
+  minVersion: "1.0.0"
+  maxVersion: null

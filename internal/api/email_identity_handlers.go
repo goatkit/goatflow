@@ -142,6 +142,17 @@ func handleAdminEmailIdentities(c *gin.Context) {
 	})
 }
 
+// HandleListSystemAddressesAPI handles GET /api/v1/system-addresses.
+//
+//	@Summary		List system addresses
+//	@Description	List all system email addresses
+//	@Tags			Email Identity
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"List of system addresses"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/system-addresses [get]
 func HandleListSystemAddressesAPI(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -158,6 +169,19 @@ func HandleListSystemAddressesAPI(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": addresses})
 }
 
+// HandleCreateSystemAddressAPI handles POST /api/v1/system-addresses.
+//
+//	@Summary		Create system address
+//	@Description	Create a new system email address
+//	@Tags			Email Identity
+//	@Accept			json
+//	@Produce		json
+//	@Param			address	body		object	true	"System address data"
+//	@Success		201		{object}	map[string]interface{}	"Created address"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/system-addresses [post]
 func HandleCreateSystemAddressAPI(c *gin.Context) {
 	userID := resolveContextUserID(c)
 
@@ -224,6 +248,21 @@ func HandleCreateSystemAddressAPI(c *gin.Context) {
 	})
 }
 
+// HandleUpdateSystemAddressAPI handles PUT /api/v1/system-addresses/:id.
+//
+//	@Summary		Update system address
+//	@Description	Update a system email address
+//	@Tags			Email Identity
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int		true	"Address ID"
+//	@Param			address	body		object	true	"Address update data"
+//	@Success		200		{object}	map[string]interface{}	"Updated address"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404		{object}	map[string]interface{}	"Address not found"
+//	@Security		BearerAuth
+//	@Router			/system-addresses/{id} [put]
 func HandleUpdateSystemAddressAPI(c *gin.Context) {
 	userID := resolveContextUserID(c)
 	id, err := strconv.Atoi(c.Param("id"))
@@ -292,6 +331,17 @@ func HandleUpdateSystemAddressAPI(c *gin.Context) {
 	})
 }
 
+// HandleListSalutationsAPI handles GET /api/v1/salutations.
+//
+//	@Summary		List salutations
+//	@Description	List all email salutations
+//	@Tags			Email Identity
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"List of salutations"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/salutations [get]
 func HandleListSalutationsAPI(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -308,6 +358,19 @@ func HandleListSalutationsAPI(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": items})
 }
 
+// HandleCreateSalutationAPI handles POST /api/v1/salutations.
+//
+//	@Summary		Create salutation
+//	@Description	Create a new email salutation
+//	@Tags			Email Identity
+//	@Accept			json
+//	@Produce		json
+//	@Param			salutation	body		object	true	"Salutation data"
+//	@Success		201			{object}	map[string]interface{}	"Created salutation"
+//	@Failure		400			{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/salutations [post]
 func HandleCreateSalutationAPI(c *gin.Context) {
 	userID := resolveContextUserID(c)
 
@@ -370,10 +433,35 @@ func HandleCreateSalutationAPI(c *gin.Context) {
 	})
 }
 
+// HandleUpdateSalutationAPI handles PUT /api/v1/salutations/:id.
+//
+//	@Summary		Update salutation
+//	@Description	Update an email salutation
+//	@Tags			Email Identity
+//	@Accept			json
+//	@Produce		json
+//	@Param			id			path		int		true	"Salutation ID"
+//	@Param			salutation	body		object	true	"Salutation update data"
+//	@Success		200			{object}	map[string]interface{}	"Updated salutation"
+//	@Failure		400			{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/salutations/{id} [put]
 func HandleUpdateSalutationAPI(c *gin.Context) {
 	handleTextEntityUpdate(c, "salutation", "salutation")
 }
 
+// HandleListSignaturesAPI handles GET /api/v1/signatures.
+//
+//	@Summary		List signatures
+//	@Description	List all email signatures
+//	@Tags			Email Identity
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"List of signatures"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/signatures [get]
 func HandleListSignaturesAPI(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -390,6 +478,19 @@ func HandleListSignaturesAPI(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": items})
 }
 
+// HandleCreateSignatureAPI handles POST /api/v1/signatures.
+//
+//	@Summary		Create signature
+//	@Description	Create a new email signature
+//	@Tags			Email Identity
+//	@Accept			json
+//	@Produce		json
+//	@Param			signature	body		object	true	"Signature data"
+//	@Success		201			{object}	map[string]interface{}	"Created signature"
+//	@Failure		400			{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/signatures [post]
 func HandleCreateSignatureAPI(c *gin.Context) {
 	userID := resolveContextUserID(c)
 
@@ -452,6 +553,20 @@ func HandleCreateSignatureAPI(c *gin.Context) {
 	})
 }
 
+// HandleUpdateSignatureAPI handles PUT /api/v1/signatures/:id.
+//
+//	@Summary		Update signature
+//	@Description	Update an email signature
+//	@Tags			Email Identity
+//	@Accept			json
+//	@Produce		json
+//	@Param			id			path		int		true	"Signature ID"
+//	@Param			signature	body		object	true	"Signature update data"
+//	@Success		200			{object}	map[string]interface{}	"Updated signature"
+//	@Failure		400			{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/signatures/{id} [put]
 func HandleUpdateSignatureAPI(c *gin.Context) {
 	handleTextEntityUpdate(c, "signature", "signature")
 }

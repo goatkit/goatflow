@@ -1,0 +1,33 @@
+#!/bin/bash
+# Build the {{.Name}} WASM plugin
+# Requires TinyGo: https://tinygo.org/getting-started/install/
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Check for TinyGo
+if ! command -v tinygo &> /dev/null; then
+    echo "TinyGo not found. Trying Docker..."
+    
+    if command -v docker &> /dev/null; then
+        echo "🐳 Building with Docker..."
+        docker run --rm -v "$(pwd)":/src tinygo/tinygo:0.32.0 \
+            tinygo build -o /src/{{.Name}}.wasm -target wasi -no-debug -scheduler=none /src/main.go
+    else
+        echo "❌ Neither TinyGo nor Docker found."
+        echo ""
+        echo "Install TinyGo: https://tinygo.org/getting-started/install/"
+        echo "Or install Docker and try again."
+        exit 1
+    fi
+else
+    echo "🔨 Building with TinyGo..."
+    tinygo build -o {{.Name}}.wasm -target wasi -no-debug -scheduler=none main.go
+fi
+
+echo "✅ Built: {{.Name}}.wasm ($(wc -c < {{.Name}}.wasm | tr -d ' ') bytes)"
+echo ""
+echo "To install, copy to your GOTRS plugins directory:"
+echo "  cp {{.Name}}.wasm /path/to/gotrs/config/plugins/"

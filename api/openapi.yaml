@@ -42,6 +42,65 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /api/v1/health:
+    get:
+      summary: API health check
+      description: Returns health status of the v1 API
+      operationId: getApiHealth
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      service:
+                        type: string
+                      version:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+
+  /api/v1/info:
+    get:
+      summary: API information
+      description: Returns API version and capabilities
+      operationId: getApiInfo
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: API information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      version:
+                        type: string
+                      api_version:
+                        type: string
+
   /api/v1/status:
     get:
       summary: API status endpoint
@@ -186,6 +245,3608 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+    put:
+      summary: Update ticket
+      description: Update an existing ticket's details
+      operationId: updateTicket
+      tags:
+        - Tickets
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTicketRequest'
+      responses:
+        '200':
+          description: Ticket updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      summary: Delete (archive) ticket
+      description: Archive a ticket. Requires rw permission on the ticket's queue.
+      operationId: deleteTicket
+      tags:
+        - Tickets
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ticket archived successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/tickets/{ticketId}/assign:
+    post:
+      summary: Assign ticket to agent
+      description: Assign or reassign a ticket to an agent
+      operationId: assignTicket
+      tags:
+        - Tickets
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - assignee_id
+              properties:
+                assignee_id:
+                  type: integer
+                  description: ID of the agent to assign
+      responses:
+        '200':
+          description: Ticket assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tickets/{ticketId}/close:
+    post:
+      summary: Close ticket
+      description: Close a ticket
+      operationId: closeTicket
+      tags:
+        - Tickets
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ticket closed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tickets/{ticketId}/reopen:
+    post:
+      summary: Reopen ticket
+      description: Reopen a closed ticket
+      operationId: reopenTicket
+      tags:
+        - Tickets
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ticket reopened successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tickets/{ticketId}/priority:
+    post:
+      summary: Update ticket priority
+      description: Change the priority of a ticket
+      operationId: updateTicketPriority
+      tags:
+        - Tickets
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - priority_id
+              properties:
+                priority_id:
+                  type: integer
+      responses:
+        '200':
+          description: Priority updated
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tickets/{ticketId}/queue:
+    post:
+      summary: Move ticket to queue
+      description: Move a ticket to a different queue
+      operationId: moveTicketQueue
+      tags:
+        - Tickets
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - queue_id
+              properties:
+                queue_id:
+                  type: integer
+      responses:
+        '200':
+          description: Ticket moved
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tickets/{ticketId}/articles:
+    get:
+      summary: List ticket articles
+      description: Retrieve all articles (messages/notes) for a ticket
+      operationId: listTicketArticles
+      tags:
+        - Articles
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of articles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    post:
+      summary: Add article to ticket
+      description: Add a new article (reply/note) to a ticket
+      operationId: createTicketArticle
+      tags:
+        - Articles
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateArticleRequest'
+      responses:
+        '201':
+          description: Article created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tickets/{ticketId}/articles/{articleId}:
+    get:
+      summary: Get article
+      description: Get a specific article by ID
+      operationId: getTicketArticle
+      tags:
+        - Articles
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: articleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Article details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_id:
+                        type: integer
+                      from:
+                        type: string
+                      to:
+                        type: string
+                      subject:
+                        type: string
+                      body:
+                        type: string
+                      sender_type:
+                        type: string
+                      visible:
+                        type: boolean
+                      created_at:
+                        type: string
+                        format: date-time
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/queues:
+    get:
+      summary: List queues
+      description: Retrieve all available queues the user has access to
+      operationId: listQueues
+      tags:
+        - Queues
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of queues
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      summary: Create queue
+      description: Create a new queue (admin only)
+      operationId: createQueue
+      tags:
+        - Queues
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                parent_id:
+                  type: integer
+                system_address_id:
+                  type: integer
+                comment:
+                  type: string
+      responses:
+        '201':
+          description: Queue created
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /api/v1/queues/{queueId}:
+    get:
+      summary: Get queue
+      description: Get a specific queue by ID
+      operationId: getQueue
+      tags:
+        - Queues
+      parameters:
+        - name: queueId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Queue details
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    put:
+      summary: Update queue
+      description: Update a queue (admin only)
+      operationId: updateQueue
+      tags:
+        - Queues
+      parameters:
+        - name: queueId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: Queue updated
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      summary: Delete queue
+      description: Delete a queue (admin only)
+      operationId: deleteQueue
+      tags:
+        - Queues
+      parameters:
+        - name: queueId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Queue deleted
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/queues/{queueId}/tickets:
+    get:
+      summary: Get queue tickets
+      description: Get tickets in a specific queue
+      operationId: getQueueTickets
+      tags:
+        - Queues
+      parameters:
+        - name: queueId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 25
+      responses:
+        '200':
+          description: List of tickets in queue
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/queues/{queueId}/stats:
+    get:
+      summary: Get queue statistics
+      description: Get statistics for a specific queue
+      operationId: getQueueStats
+      tags:
+        - Queues
+      parameters:
+        - name: queueId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Queue statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      total_tickets:
+                        type: integer
+                      open_tickets:
+                        type: integer
+                      pending_tickets:
+                        type: integer
+                      avg_resolution_time:
+                        type: string
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/priorities:
+    get:
+      summary: List priorities
+      description: Retrieve all ticket priorities
+      operationId: listPriorities
+      tags:
+        - Priorities
+      responses:
+        '200':
+          description: List of priorities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        color:
+                          type: string
+                        valid_id:
+                          type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      summary: Create priority
+      description: Create a new ticket priority (admin only)
+      operationId: createPriority
+      tags:
+        - Priorities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+      responses:
+        '201':
+          description: Priority created
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /api/v1/priorities/{priorityId}:
+    get:
+      summary: Get priority
+      description: Get a specific priority by ID
+      operationId: getPriority
+      tags:
+        - Priorities
+      parameters:
+        - name: priorityId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Priority details
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    put:
+      summary: Update priority
+      description: Update a priority (admin only)
+      operationId: updatePriority
+      tags:
+        - Priorities
+      parameters:
+        - name: priorityId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+      responses:
+        '200':
+          description: Priority updated
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      summary: Delete priority
+      description: Delete a priority (admin only)
+      operationId: deletePriority
+      tags:
+        - Priorities
+      parameters:
+        - name: priorityId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Priority deleted
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tickets/{ticketId}/history:
+    get:
+      summary: Get ticket history
+      description: Retrieve the history/timeline of changes for a ticket
+      operationId: getTicketHistory
+      tags:
+        - Tickets
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          description: Maximum number of history entries to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ticket history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketHistoryResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tickets/{ticketId}/links:
+    get:
+      summary: Get linked tickets
+      description: Retrieve tickets linked to this ticket
+      operationId: getTicketLinks
+      tags:
+        - Tickets
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Linked tickets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketLinksResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tickets/bulk/assign:
+    post:
+      summary: Bulk assign tickets
+      description: Assign multiple tickets to an agent
+      operationId: bulkAssignTickets
+      tags:
+        - Tickets
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ticket_ids
+                - assigned_to
+              properties:
+                ticket_ids:
+                  type: array
+                  items:
+                    type: integer
+                assigned_to:
+                  type: integer
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: Tickets assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkOperationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/tickets/bulk/close:
+    post:
+      summary: Bulk close tickets
+      description: Close multiple tickets
+      operationId: bulkCloseTickets
+      tags:
+        - Tickets
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ticket_ids
+                - resolution
+              properties:
+                ticket_ids:
+                  type: array
+                  items:
+                    type: integer
+                resolution:
+                  type: string
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: Tickets closed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkOperationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/tickets/bulk/priority:
+    post:
+      summary: Bulk update priority
+      description: Update priority for multiple tickets
+      operationId: bulkUpdatePriority
+      tags:
+        - Tickets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ticket_ids
+                - priority_id
+              properties:
+                ticket_ids:
+                  type: array
+                  items:
+                    type: integer
+                priority_id:
+                  type: integer
+      responses:
+        '200':
+          description: Priorities updated
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+
+  /api/v1/tickets/bulk/queue:
+    post:
+      summary: Bulk move to queue
+      description: Move multiple tickets to a queue
+      operationId: bulkMoveQueue
+      tags:
+        - Tickets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ticket_ids
+                - queue_id
+              properties:
+                ticket_ids:
+                  type: array
+                  items:
+                    type: integer
+                queue_id:
+                  type: integer
+      responses:
+        '200':
+          description: Tickets moved
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+
+  /api/v1/users/me:
+    get:
+      summary: Get current user profile
+      description: Returns the profile of the authenticated user
+      operationId: getCurrentUser
+      tags:
+        - Users
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      login:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      email:
+                        type: string
+                      is_admin:
+                        type: boolean
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    put:
+      summary: Update current user profile
+      description: Update the authenticated user's profile
+      operationId: updateCurrentUser
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                phone:
+                  type: string
+      responses:
+        '200':
+          description: Profile updated
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/users/me/preferences:
+    get:
+      summary: Get user preferences
+      description: Returns user preferences from user_preferences table
+      operationId: getUserPreferences
+      tags:
+        - Users
+      responses:
+        '200':
+          description: User preferences
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    additionalProperties: true
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    put:
+      summary: Update user preferences
+      description: Update user preferences
+      operationId: updateUserPreferences
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Preferences updated
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/users/me/password:
+    post:
+      summary: Change password
+      description: Change the current user's password
+      operationId: changePassword
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - current_password
+                - new_password
+              properties:
+                current_password:
+                  type: string
+                new_password:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Password changed
+        '401':
+          description: Current password incorrect
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+
+  /api/v1/users/me/sessions:
+    get:
+      summary: Get user sessions
+      description: Returns active sessions for the current user
+      operationId: getUserSessions
+      tags:
+        - Users
+      responses:
+        '200':
+          description: List of active sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        user_id:
+                          type: integer
+                        ip_address:
+                          type: string
+                        user_agent:
+                          type: string
+                        current:
+                          type: boolean
+                        created_at:
+                          type: string
+                        last_seen:
+                          type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/users/me/sessions/{sessionId}:
+    delete:
+      summary: Revoke session
+      description: Revoke a specific user session
+      operationId: revokeSession
+      tags:
+        - Users
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session revoked
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/dashboard/stats:
+    get:
+      summary: Get dashboard statistics
+      description: Returns aggregated statistics for the dashboard
+      operationId: getDashboardStats
+      tags:
+        - Dashboard
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      total_tickets:
+                        type: integer
+                      open_tickets:
+                        type: integer
+                      pending_tickets:
+                        type: integer
+                      closed_today:
+                        type: integer
+                      avg_response_time:
+                        type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/dashboard/charts/tickets-by-status:
+    get:
+      summary: Get tickets by status chart data
+      description: Returns ticket counts grouped by status for charting
+      operationId: getTicketsByStatusChart
+      tags:
+        - Dashboard
+      responses:
+        '200':
+          description: Chart data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      labels:
+                        type: array
+                        items:
+                          type: string
+                      values:
+                        type: array
+                        items:
+                          type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/dashboard/charts/tickets-by-priority:
+    get:
+      summary: Get tickets by priority chart data
+      description: Returns ticket counts grouped by priority for charting
+      operationId: getTicketsByPriorityChart
+      tags:
+        - Dashboard
+      responses:
+        '200':
+          description: Chart data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      labels:
+                        type: array
+                        items:
+                          type: string
+                      values:
+                        type: array
+                        items:
+                          type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/dashboard/charts/tickets-over-time:
+    get:
+      summary: Get tickets over time chart data
+      description: Returns ticket creation trends over time
+      operationId: getTicketsOverTimeChart
+      tags:
+        - Dashboard
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        '200':
+          description: Chart data with daily ticket counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      labels:
+                        type: array
+                        items:
+                          type: string
+                      created:
+                        type: array
+                        items:
+                          type: integer
+                      closed:
+                        type: array
+                        items:
+                          type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/dashboard/activity:
+    get:
+      summary: Get recent activity
+      description: Returns recent ticket activity for the current user
+      operationId: getRecentActivity
+      tags:
+        - Dashboard
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Recent activity list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        ticket_id:
+                          type: integer
+                        ticket_number:
+                          type: string
+                        action:
+                          type: string
+                        timestamp:
+                          type: string
+                          format: date-time
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/dashboard/my-tickets:
+    get:
+      summary: Get my assigned tickets
+      description: Returns tickets assigned to the current user
+      operationId: getMyTickets
+      tags:
+        - Dashboard
+      responses:
+        '200':
+          description: List of assigned tickets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Ticket'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/dashboard/notifications:
+    get:
+      summary: Get notifications
+      description: Returns notifications for the current user
+      operationId: getNotifications
+      tags:
+        - Dashboard
+      parameters:
+        - name: unread_only
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        type:
+                          type: string
+                        message:
+                          type: string
+                        ticket_id:
+                          type: integer
+                        read:
+                          type: boolean
+                        created_at:
+                          type: string
+                          format: date-time
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/dashboard/notifications/{notificationId}/read:
+    post:
+      summary: Mark notification as read
+      description: Mark a specific notification as read
+      operationId: markNotificationRead
+      tags:
+        - Dashboard
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Notification marked as read
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/search:
+    get:
+      summary: Global search
+      description: Search across tickets, users, and articles
+      operationId: globalSearch
+      tags:
+        - Search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query string
+          schema:
+            type: string
+            minLength: 1
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/tickets/{ticketId}/merge:
+    post:
+      summary: Merge tickets
+      description: Merge child tickets into this parent ticket
+      operationId: mergeTickets
+      tags:
+        - Tickets
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          description: Parent ticket ID
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MergeTicketsRequest'
+      responses:
+        '200':
+          description: Tickets merged successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MergeTicketsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tickets/{ticketId}/split:
+    post:
+      summary: Split ticket
+      description: Create a new ticket from selected articles of this ticket
+      operationId: splitTicket
+      tags:
+        - Tickets
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          description: Source ticket ID
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SplitTicketRequest'
+      responses:
+        '201':
+          description: Ticket split successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SplitTicketResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tickets/{ticketId}/merge-history:
+    get:
+      summary: Get merge history
+      description: Retrieve the merge/split history for a ticket
+      operationId: getTicketMergeHistory
+      tags:
+        - Tickets
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Merge history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      merges:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            action:
+                              type: string
+                            created_at:
+                              type: string
+                              format: date-time
+                            created_by:
+                              type: string
+                      total:
+                        type: integer
+
+  /api/v1/tickets/{ticketId}/sla:
+    get:
+      summary: Get ticket SLA status
+      description: Returns the current SLA status for a ticket including deadline and time remaining
+      operationId: getTicketSLA
+      tags:
+        - SLA
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ticket SLA status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketSLAResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/slas:
+    get:
+      summary: List SLA definitions
+      description: Retrieve all active SLA definitions
+      operationId: listSLAs
+      tags:
+        - SLA
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of SLAs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLAListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/slas/{slaId}:
+    get:
+      summary: Get SLA definition
+      description: Retrieve a specific SLA definition
+      operationId: getSLA
+      tags:
+        - SLA
+      parameters:
+        - name: slaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: SLA definition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLAResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/canned-responses:
+    get:
+      summary: List canned responses
+      description: Retrieve all available canned response templates
+      operationId: listCannedResponses
+      tags:
+        - Templates
+      parameters:
+        - name: type
+          in: query
+          description: Filter by template type (Answer, Create, Note, etc.)
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of canned responses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CannedResponseListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      summary: Create canned response
+      description: Create a new canned response template
+      operationId: createCannedResponse
+      tags:
+        - Templates
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCannedResponseRequest'
+      responses:
+        '201':
+          description: Canned response created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CannedResponseResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/canned-responses/{responseId}:
+    get:
+      summary: Get canned response
+      description: Retrieve a specific canned response template
+      operationId: getCannedResponse
+      tags:
+        - Templates
+      parameters:
+        - name: responseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Canned response details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CannedResponseResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      summary: Update canned response
+      description: Update a canned response template
+      operationId: updateCannedResponse
+      tags:
+        - Templates
+      parameters:
+        - name: responseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCannedResponseRequest'
+      responses:
+        '200':
+          description: Canned response updated
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      summary: Delete canned response
+      description: Soft-delete a canned response template
+      operationId: deleteCannedResponse
+      tags:
+        - Templates
+      parameters:
+        - name: responseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Canned response deleted
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/canned-responses/categories:
+    get:
+      summary: List canned response categories
+      description: Get available template types/categories
+      operationId: listCannedResponseCategories
+      tags:
+        - Templates
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        description:
+                          type: string
+
+  /api/v1/ticket-templates:
+    get:
+      summary: List ticket templates
+      description: Retrieve all available ticket creation templates
+      operationId: listTicketTemplates
+      tags:
+        - Templates
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of ticket templates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketTemplateListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      summary: Create ticket template
+      description: Create a new ticket creation template
+      operationId: createTicketTemplate
+      tags:
+        - Templates
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTicketTemplateRequest'
+      responses:
+        '201':
+          description: Ticket template created
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+
+  /api/v1/ticket-templates/{templateId}:
+    get:
+      summary: Get ticket template
+      description: Get a specific ticket template by ID
+      operationId: getTicketTemplate
+      tags:
+        - Templates
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Template details
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    put:
+      summary: Update ticket template
+      description: Update a ticket template
+      operationId: updateTicketTemplate
+      tags:
+        - Templates
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                content:
+                  type: object
+      responses:
+        '200':
+          description: Template updated
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      summary: Delete ticket template
+      description: Delete a ticket template
+      operationId: deleteTicketTemplate
+      tags:
+        - Templates
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Template deleted
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/agent/stats/my-performance:
+    get:
+      summary: Get my performance metrics
+      description: Returns performance statistics for the current agent
+      operationId: getMyPerformance
+      tags:
+        - Agent
+      responses:
+        '200':
+          description: Performance metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      tickets_resolved:
+                        type: integer
+                      avg_response_time:
+                        type: string
+                      satisfaction_score:
+                        type: number
+                      tickets_in_progress:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/agent/stats/workload:
+    get:
+      summary: Get my workload
+      description: Returns current workload metrics for the agent
+      operationId: getMyWorkload
+      tags:
+        - Agent
+      responses:
+        '200':
+          description: Workload metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      assigned_tickets:
+                        type: integer
+                      overdue_tickets:
+                        type: integer
+                      due_today:
+                        type: integer
+                      escalated:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/agent/stats/response-times:
+    get:
+      summary: Get my response times
+      description: Returns response time metrics over recent days
+      operationId: getMyResponseTimes
+      tags:
+        - Agent
+      responses:
+        '200':
+          description: Response time metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        avg_min:
+                          type: integer
+                        min_min:
+                          type: integer
+                        max_min:
+                          type: integer
+                        responses:
+                          type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/admin/webhooks:
+    get:
+      summary: List webhooks
+      description: Retrieve all configured webhooks
+      operationId: listWebhooks
+      tags:
+        - Webhooks
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of webhooks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    post:
+      summary: Create webhook
+      description: Create a new webhook configuration
+      operationId: createWebhook
+      tags:
+        - Webhooks
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+      responses:
+        '201':
+          description: Webhook created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /api/v1/admin/webhooks/{webhookId}:
+    get:
+      summary: Get webhook
+      description: Retrieve a specific webhook configuration
+      operationId: getWebhook
+      tags:
+        - Webhooks
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Webhook details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      summary: Update webhook
+      description: Update a webhook configuration
+      operationId: updateWebhook
+      tags:
+        - Webhooks
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+      responses:
+        '200':
+          description: Webhook updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      summary: Delete webhook
+      description: Delete a webhook configuration
+      operationId: deleteWebhook
+      tags:
+        - Webhooks
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Webhook deleted successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/admin/webhooks/{webhookId}/test:
+    post:
+      summary: Test webhook
+      description: Send a test payload to verify webhook configuration
+      operationId: testWebhook
+      tags:
+        - Webhooks
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Test result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  response_code:
+                    type: integer
+                  response_time_ms:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/admin/webhooks/{webhookId}/deliveries:
+    get:
+      summary: Get webhook deliveries
+      description: Get delivery history for a webhook
+      operationId: getWebhookDeliveries
+      tags:
+        - Webhooks
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Delivery history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        event:
+                          type: string
+                        status:
+                          type: string
+                          enum: [pending, success, failed]
+                        response_code:
+                          type: integer
+                        created_at:
+                          type: string
+                          format: date-time
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/admin/webhooks/{webhookId}/deliveries/{deliveryId}:
+    get:
+      summary: Get webhook delivery
+      description: Get details of a specific delivery
+      operationId: getWebhookDelivery
+      tags:
+        - Webhooks
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: deliveryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Delivery details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      webhook_id:
+                        type: integer
+                      event:
+                        type: string
+                      status:
+                        type: string
+                      request_body:
+                        type: string
+                      response_code:
+                        type: integer
+                      response_body:
+                        type: string
+                      duration_ms:
+                        type: integer
+                      created_at:
+                        type: string
+                        format: date-time
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/admin/webhooks/deliveries/cleanup:
+    delete:
+      summary: Cleanup old deliveries
+      description: Delete old webhook delivery records
+      operationId: cleanupWebhookDeliveries
+      tags:
+        - Webhooks
+      parameters:
+        - name: older_than_days
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        '200':
+          description: Cleanup completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  deleted:
+                    type: integer
+
+  /api/v1/admin/webhooks/{webhookId}/stats:
+    get:
+      summary: Get webhook stats
+      description: Get statistics for a specific webhook
+      operationId: getWebhookStats
+      tags:
+        - Webhooks
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Webhook statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      total_deliveries:
+                        type: integer
+                      successful:
+                        type: integer
+                      failed:
+                        type: integer
+                      avg_response_time_ms:
+                        type: integer
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/admin/webhooks/stats:
+    get:
+      summary: Get global webhook stats
+      description: Get statistics for all webhooks
+      operationId: getGlobalWebhookStats
+      tags:
+        - Webhooks
+      responses:
+        '200':
+          description: Global webhook statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      total_webhooks:
+                        type: integer
+                      active_webhooks:
+                        type: integer
+                      total_deliveries:
+                        type: integer
+                      success_rate:
+                        type: number
+
+  /api/v1/admin/webhooks/test-all:
+    post:
+      summary: Test all webhooks
+      description: Send test payload to all active webhooks
+      operationId: testAllWebhooks
+      tags:
+        - Webhooks
+      responses:
+        '200':
+          description: Test results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      tested:
+                        type: integer
+                      successful:
+                        type: integer
+                      failed:
+                        type: integer
+
+  /api/v1/admin/webhooks/events:
+    get:
+      summary: List webhook events
+      description: Get list of available events that can trigger webhooks
+      operationId: listWebhookEvents
+      tags:
+        - Webhooks
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of available events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: string
+                    example: ["ticket.created", "ticket.updated", "ticket.closed", "article.created"]
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/files/upload:
+    post:
+      summary: Upload file
+      description: Upload a file (redirects to article attachment)
+      operationId: uploadFile
+      tags:
+        - Files
+      responses:
+        '501':
+          description: Use article attachment endpoints
+
+  /api/v1/files/{fileId}:
+    get:
+      summary: Download file
+      description: Download a file by ID
+      operationId: downloadFile
+      tags:
+        - Files
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: File content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      summary: Delete file
+      description: Delete a file by ID
+      operationId: deleteFile
+      tags:
+        - Files
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: File deleted
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/files/{fileId}/info:
+    get:
+      summary: Get file info
+      description: Get metadata about a file
+      operationId: getFileInfo
+      tags:
+        - Files
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: File metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      article_id:
+                        type: integer
+                      filename:
+                        type: string
+                      content_type:
+                        type: string
+                      size:
+                        type: integer
+                      created_at:
+                        type: string
+                        format: date-time
+                      download_url:
+                        type: string
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/admin/system:
+    get:
+      summary: Get system information
+      description: Returns system stats including ticket counts, user counts, and version info
+      operationId: getSystemInfo
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: System information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      version:
+                        type: string
+                      go:
+                        type: string
+                      platform:
+                        type: string
+                      database:
+                        type: string
+                      tickets:
+                        type: integer
+                      users:
+                        type: integer
+                      queues:
+                        type: integer
+                      uptime_ms:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/admin/settings:
+    get:
+      summary: Get system settings
+      description: Returns system configuration from sysconfig_modified table
+      operationId: getSystemSettings
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: System settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    additionalProperties: true
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    put:
+      summary: Update system settings
+      description: Update system configuration settings
+      operationId: updateSystemSettings
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Settings updated
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/admin/users:
+    get:
+      summary: List all users
+      description: List all users (admin only)
+      operationId: listAllUsers
+      tags:
+        - Admin
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 25
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        login:
+                          type: string
+                        first_name:
+                          type: string
+                        last_name:
+                          type: string
+                        email:
+                          type: string
+                        valid_id:
+                          type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+    post:
+      summary: Create user
+      description: Create a new user (admin only)
+      operationId: createUser
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - login
+                - first_name
+                - last_name
+                - email
+              properties:
+                login:
+                  type: string
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '201':
+          description: User created
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /api/v1/admin/users/{userId}:
+    get:
+      summary: Get user
+      description: Get a specific user by ID
+      operationId: getUser
+      tags:
+        - Admin
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User details
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    put:
+      summary: Update user
+      description: Update a user (admin only)
+      operationId: updateUser
+      tags:
+        - Admin
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+      responses:
+        '200':
+          description: User updated
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      summary: Delete user
+      description: Delete a user (admin only)
+      operationId: deleteUser
+      tags:
+        - Admin
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: User deleted
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/admin/users/{userId}/activate:
+    post:
+      summary: Activate user
+      description: Activate a user account
+      operationId: activateUser
+      tags:
+        - Admin
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User activated
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/admin/users/{userId}/deactivate:
+    post:
+      summary: Deactivate user
+      description: Deactivate a user account
+      operationId: deactivateUser
+      tags:
+        - Admin
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User deactivated
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/admin/users/{userId}/reset-password:
+    post:
+      summary: Reset user password
+      description: Reset a user's password (admin only)
+      operationId: resetUserPassword
+      tags:
+        - Admin
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                new_password:
+                  type: string
+      responses:
+        '200':
+          description: Password reset
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/admin/reports/tickets:
+    get:
+      summary: Get ticket reports
+      description: Returns ticket statistics by state, priority, and queue
+      operationId: getTicketReports
+      tags:
+        - Reports
+      responses:
+        '200':
+          description: Ticket statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      total_tickets:
+                        type: integer
+                      by_state:
+                        type: object
+                        additionalProperties:
+                          type: integer
+                      by_priority:
+                        type: object
+                        additionalProperties:
+                          type: integer
+                      by_queue:
+                        type: object
+                        additionalProperties:
+                          type: integer
+                      created_this_month:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/admin/reports/users:
+    get:
+      summary: Get user reports
+      description: Returns user statistics and top agents
+      operationId: getUserReports
+      tags:
+        - Reports
+      responses:
+        '200':
+          description: User statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      total_active_users:
+                        type: integer
+                      by_role:
+                        type: object
+                        additionalProperties:
+                          type: integer
+                      top_agents:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            login:
+                              type: string
+                            ticket_count:
+                              type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/admin/reports/sla:
+    get:
+      summary: Get SLA reports
+      description: Returns SLA compliance statistics
+      operationId: getSLAReports
+      tags:
+        - Reports
+      responses:
+        '200':
+          description: SLA statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      by_sla:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            sla:
+                              type: string
+                            ticket_count:
+                              type: integer
+                      escalated_tickets:
+                        type: integer
+                      active_slas:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/admin/reports/performance:
+    get:
+      summary: Get performance reports
+      description: Returns system performance statistics
+      operationId: getPerformanceReports
+      tags:
+        - Reports
+      responses:
+        '200':
+          description: Performance statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      tickets_per_day:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            date:
+                              type: string
+                              format: date
+                            count:
+                              type: integer
+                      avg_articles_per_ticket:
+                        type: number
+                      active_sessions:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/admin/reports/export:
+    post:
+      summary: Export report
+      description: Export a report in specified format
+      operationId: exportReport
+      tags:
+        - Reports
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - report_type
+              properties:
+                report_type:
+                  type: string
+                  enum: [tickets, users, sla, performance]
+                format:
+                  type: string
+                  enum: [pdf, csv, excel]
+                  default: pdf
+                date_from:
+                  type: string
+                  format: date
+                date_to:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Report file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            text/csv:
+              schema:
+                type: string
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+
+  /api/v1/admin/system/config:
+    get:
+      summary: Get system config
+      description: Get system configuration (alias for settings)
+      operationId: getSystemConfig
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: System configuration
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    put:
+      summary: Update system config
+      description: Update system configuration
+      operationId: updateSystemConfig
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Config updated
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/admin/system/stats:
+    get:
+      summary: Get system stats
+      description: Get system statistics (alias for system info)
+      operationId: getSystemStats
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: System statistics
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/admin/system/maintenance:
+    post:
+      summary: Toggle maintenance mode
+      description: Enable or disable maintenance mode
+      operationId: toggleMaintenanceMode
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                message:
+                  type: string
+      responses:
+        '200':
+          description: Maintenance mode updated
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/admin/system/logs:
+    get:
+      summary: Get system logs
+      description: Retrieve system log entries
+      operationId: getSystemLogs
+      tags:
+        - Admin
+      parameters:
+        - name: level
+          in: query
+          schema:
+            type: string
+            enum: [debug, info, warning, error]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: System log entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        timestamp:
+                          type: string
+                          format: date-time
+                        level:
+                          type: string
+                        message:
+                          type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/admin/system/backup:
+    post:
+      summary: Create backup
+      description: Create a new system backup
+      operationId: createBackup
+      tags:
+        - Admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [full, incremental]
+                  default: full
+      responses:
+        '202':
+          description: Backup creation initiated
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/admin/system/backups:
+    get:
+      summary: List backups
+      description: List available system backups
+      operationId: listBackups
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: List of backups
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        size:
+                          type: integer
+                        type:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/admin/system/restore/{backupId}:
+    post:
+      summary: Restore backup
+      description: Restore system from a backup
+      operationId: restoreBackup
+      tags:
+        - Admin
+      parameters:
+        - name: backupId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '202':
+          description: Restore initiated
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/admin/audit:
+    get:
+      summary: Get audit logs
+      description: Returns ticket history audit trail
+      operationId: getAuditLogs
+      tags:
+        - Admin
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        ticket_id:
+                          type: integer
+                        action:
+                          type: string
+                        user:
+                          type: string
+                        timestamp:
+                          type: string
+                          format: date-time
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/admin/audit/stats:
+    get:
+      summary: Get audit statistics
+      description: Returns audit event statistics
+      operationId: getAuditStats
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: Audit statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      total_events:
+                        type: integer
+                      events_today:
+                        type: integer
+                      most_active_user:
+                        type: string
+                      most_common_action:
+                        type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/search/tickets:
+    get:
+      summary: Search tickets
+      description: Search for tickets matching a query
+      operationId: searchTickets
+      tags:
+        - Search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query string
+          schema:
+            type: string
+            minLength: 1
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ticket search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/search/suggestions:
+    get:
+      summary: Get search suggestions
+      description: Get autocomplete suggestions for search
+      operationId: getSearchSuggestions
+      tags:
+        - Search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Search suggestions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          enum: [ticket, user, queue]
+                        id:
+                          type: integer
+                        label:
+                          type: string
+                        url:
+                          type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/search/saved:
+    get:
+      summary: List saved searches
+      description: Get all saved search profiles for the current user
+      operationId: listSavedSearches
+      tags:
+        - Search
+      responses:
+        '200':
+          description: List of saved searches
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      searches:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            type:
+                              type: string
+                      total:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      summary: Create saved search
+      description: Create a new saved search profile
+      operationId: createSavedSearch
+      tags:
+        - Search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                  default: TicketSearch
+                parameters:
+                  type: object
+                  additionalProperties:
+                    type: string
+      responses:
+        '201':
+          description: Saved search created
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/search/saved/{searchName}:
+    get:
+      summary: Get saved search
+      description: Get details of a specific saved search
+      operationId: getSavedSearch
+      tags:
+        - Search
+      parameters:
+        - name: searchName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Saved search details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      type:
+                        type: string
+                      parameters:
+                        type: object
+                        additionalProperties:
+                          type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    put:
+      summary: Update saved search
+      description: Update parameters of a saved search
+      operationId: updateSavedSearch
+      tags:
+        - Search
+      parameters:
+        - name: searchName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  additionalProperties:
+                    type: string
+      responses:
+        '200':
+          description: Saved search updated
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      summary: Delete saved search
+      description: Delete a saved search profile
+      operationId: deleteSavedSearch
+      tags:
+        - Search
+      parameters:
+        - name: searchName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Saved search deleted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/search/saved/{searchName}/execute:
+    post:
+      summary: Execute saved search
+      description: Run a saved search and return matching tickets
+      operationId: executeSavedSearch
+      tags:
+        - Search
+      parameters:
+        - name: searchName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      parameters:
+                        type: object
+                        additionalProperties:
+                          type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tickets/{ticketId}/attachments:
+    get:
+      summary: List ticket attachments
+      description: Retrieve all attachments across all articles of a ticket
+      operationId: listTicketAttachments
+      tags:
+        - Attachments
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of attachments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    post:
+      summary: Upload attachment
+      description: Upload a new attachment to a ticket article
+      operationId: uploadTicketAttachment
+      tags:
+        - Attachments
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File to upload
+                article_id:
+                  type: integer
+                  description: Article ID to attach to (defaults to latest article)
+      responses:
+        '201':
+          description: Attachment uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tickets/{ticketId}/attachments/{attachmentId}:
+    get:
+      summary: Download attachment
+      description: Download an attachment file
+      operationId: downloadTicketAttachment
+      tags:
+        - Attachments
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: attachmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: File content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      summary: Delete attachment
+      description: Delete an attachment from a ticket
+      operationId: deleteTicketAttachment
+      tags:
+        - Attachments
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: attachmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Attachment deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tickets/{ticketId}/articles/{articleId}/attachments:
+    get:
+      summary: Get article attachments
+      description: Get attachments for a specific article
+      operationId: getArticleAttachments
+      tags:
+        - Attachments
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: articleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of article attachments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        filename:
+                          type: string
+                        content_type:
+                          type: string
+                        size:
+                          type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -223,6 +3884,16 @@ components:
           example:
             success: false
             error: "Resource not found"
+
+    ForbiddenError:
+      description: Access denied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: "Access denied"
 
     InternalServerError:
       description: Internal server error
@@ -336,8 +4007,7 @@ components:
       type: object
       required:
         - title
-        - description
-        - priority
+        - queue_id
       properties:
         title:
           type: string
@@ -352,7 +4022,746 @@ components:
           default: normal
         queue_id:
           type: integer
-          description: Queue to create ticket in (defaults to user's default queue)
+          description: Queue to create ticket in
+
+    UpdateTicketRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        priority:
+          type: string
+          enum: [low, normal, high, critical]
+        status:
+          type: string
+          enum: [new, open, pending, resolved, closed]
+        assignee_id:
+          type: integer
+          nullable: true
+
+    Article:
+      type: object
+      required:
+        - id
+        - ticket_id
+        - body
+        - created_at
+      properties:
+        id:
+          type: integer
+        ticket_id:
+          type: integer
+        subject:
+          type: string
+        body:
+          type: string
+        content_type:
+          type: string
+          enum: [text/plain, text/html]
+          default: text/plain
+        sender_type:
+          type: string
+          enum: [agent, customer, system]
+        is_visible_for_customer:
+          type: boolean
+          default: true
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    CreateArticleRequest:
+      type: object
+      required:
+        - body
+      properties:
+        subject:
+          type: string
+          maxLength: 255
+        body:
+          type: string
+          description: Article content
+        content_type:
+          type: string
+          enum: [text/plain, text/html]
+          default: text/plain
+        is_visible_for_customer:
+          type: boolean
+          default: true
+          description: Whether the customer can see this article
+
+    ArticleResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Article'
+
+    ArticleListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Article'
+
+    Queue:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        group_id:
+          type: integer
+        comment:
+          type: string
+        valid:
+          type: boolean
+
+    QueueListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Queue'
+
+    Attachment:
+      type: object
+      required:
+        - id
+        - article_id
+        - filename
+        - content_type
+        - content_size
+      properties:
+        id:
+          type: integer
+        article_id:
+          type: integer
+        filename:
+          type: string
+        content_type:
+          type: string
+          example: "application/pdf"
+        content_size:
+          type: integer
+          description: File size in bytes
+        disposition:
+          type: string
+          enum: [inline, attachment]
+          default: attachment
+        create_time:
+          type: string
+          format: date-time
+        create_by:
+          type: integer
+
+    AttachmentResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Attachment'
+
+    TicketHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        history_type:
+          type: string
+          description: Type of history entry (e.g., StateUpdate, OwnerUpdate)
+        name:
+          type: string
+          description: Human-readable description of the change
+        creator_login:
+          type: string
+        creator_full_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        article_subject:
+          type: string
+        queue_name:
+          type: string
+        state_name:
+          type: string
+        priority_name:
+          type: string
+
+    TicketHistoryResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            ticket_id:
+              type: integer
+            count:
+              type: integer
+            history:
+              type: array
+              items:
+                $ref: '#/components/schemas/TicketHistoryEntry'
+
+    TicketLink:
+      type: object
+      properties:
+        related_ticket_id:
+          type: integer
+        related_ticket_tn:
+          type: string
+        related_ticket_title:
+          type: string
+        link_type:
+          type: string
+          description: Type of link (e.g., Parent, Child, Normal)
+        link_state:
+          type: string
+        direction:
+          type: string
+          enum: [source, target]
+        creator_login:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    TicketLinksResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            ticket_id:
+              type: integer
+            count:
+              type: integer
+            links:
+              type: array
+              items:
+                $ref: '#/components/schemas/TicketLink'
+
+    BulkOperationResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            ticket_ids:
+              type: array
+              items:
+                type: integer
+            count:
+              type: integer
+
+    MergeTicketsRequest:
+      type: object
+      required:
+        - child_ticket_ids
+        - reason
+      properties:
+        child_ticket_ids:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+          description: IDs of tickets to merge into the parent
+        reason:
+          type: string
+          description: Reason for the merge
+        notes:
+          type: string
+        merge_messages:
+          type: boolean
+          default: true
+        merge_attachments:
+          type: boolean
+          default: true
+        close_children:
+          type: boolean
+          default: true
+          description: Whether to close the child tickets after merging
+
+    MergeTicketsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            parent_ticket_id:
+              type: integer
+            merged_tickets:
+              type: array
+              items:
+                type: integer
+            merged_count:
+              type: integer
+            reason:
+              type: string
+            merged_at:
+              type: string
+              format: date-time
+            merged_by:
+              type: integer
+
+    SplitTicketRequest:
+      type: object
+      required:
+        - article_ids
+        - new_ticket_title
+        - new_ticket_queue
+      properties:
+        article_ids:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+          description: IDs of articles to move to the new ticket
+        new_ticket_title:
+          type: string
+          description: Title for the new ticket
+        new_ticket_queue:
+          type: integer
+          description: Queue ID for the new ticket
+        copy_attachments:
+          type: boolean
+          default: true
+        link_tickets:
+          type: boolean
+          default: true
+          description: Whether to link the new ticket to the source
+
+    SplitTicketResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            source_ticket_id:
+              type: integer
+            new_ticket_id:
+              type: integer
+            new_ticket_tn:
+              type: string
+            articles_moved:
+              type: integer
+            created_at:
+              type: string
+              format: date-time
+            created_by:
+              type: integer
+
+    CannedResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        template_type:
+          type: string
+          enum: [Answer, Create, Email, Note, Forward, PhoneCall]
+        content:
+          type: string
+        content_type:
+          type: string
+          enum: [text/plain, text/html]
+        valid_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateCannedResponseRequest:
+      type: object
+      required:
+        - name
+        - content
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        content:
+          type: string
+        template_type:
+          type: string
+          default: Answer
+        content_type:
+          type: string
+          default: text/plain
+
+    CannedResponseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/CannedResponse'
+
+    CannedResponseListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            responses:
+              type: array
+              items:
+                $ref: '#/components/schemas/CannedResponse'
+            total:
+              type: integer
+
+    TicketTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        content:
+          type: string
+        content_type:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateTicketTemplateRequest:
+      type: object
+      required:
+        - name
+        - content
+      properties:
+        name:
+          type: string
+        content:
+          type: string
+        content_type:
+          type: string
+          default: text/plain
+
+    TicketTemplateListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            templates:
+              type: array
+              items:
+                $ref: '#/components/schemas/TicketTemplate'
+            total:
+              type: integer
+
+    TicketSLAStatus:
+      type: object
+      properties:
+        ticket_id:
+          type: integer
+        sla_status:
+          type: string
+          enum: [ok, warning, breached, not_applicable]
+        sla_active:
+          type: boolean
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+        time_remaining_secs:
+          type: integer
+          description: Seconds remaining until SLA breach (negative if breached)
+        percent_used:
+          type: integer
+          description: Percentage of SLA time used (0-100)
+        priority_id:
+          type: integer
+        target_hours:
+          type: integer
+        reason:
+          type: string
+          description: Reason if SLA not applicable
+
+    TicketSLAResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/TicketSLAStatus'
+
+    SLADefinition:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        calendar_name:
+          type: string
+          nullable: true
+        first_response_time:
+          type: integer
+          nullable: true
+          description: Minutes for first response
+        first_response_notify:
+          type: integer
+          nullable: true
+          description: Minutes before first response to notify
+        update_time:
+          type: integer
+          nullable: true
+          description: Minutes between updates
+        update_notify:
+          type: integer
+          nullable: true
+        solution_time:
+          type: integer
+          nullable: true
+          description: Minutes to solution
+        solution_notify:
+          type: integer
+          nullable: true
+        valid_id:
+          type: integer
+        comments:
+          type: string
+          nullable: true
+
+    SLAResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/SLADefinition'
+
+    SLAListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            slas:
+              type: array
+              items:
+                $ref: '#/components/schemas/SLADefinition'
+            total:
+              type: integer
+
+    Webhook:
+      type: object
+      required:
+        - id
+        - name
+        - url
+        - events
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          description: Friendly name for the webhook
+        url:
+          type: string
+          format: uri
+          description: Target URL to receive webhook payloads
+        events:
+          type: array
+          items:
+            type: string
+          description: List of events this webhook subscribes to
+        secret:
+          type: string
+          description: Secret used to sign webhook payloads (HMAC-SHA256)
+        active:
+          type: boolean
+          default: true
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Custom headers to include in webhook requests
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateWebhookRequest:
+      type: object
+      required:
+        - name
+        - url
+        - events
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        secret:
+          type: string
+          description: Optional secret for payload signing
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+
+    WebhookResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Webhook'
+
+    WebhookListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Webhook'
+
+    GlobalSearchResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            tickets:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  title:
+                    type: string
+                  type:
+                    type: string
+            users:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  type:
+                    type: string
+            articles:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  subject:
+                    type: string
+                  type:
+                    type: string
+
+    AttachmentListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
 
     TicketResponse:
       type: object
@@ -406,3 +4815,31 @@ tags:
     description: System health and status endpoints
   - name: Tickets
     description: Ticket management operations
+  - name: Articles
+    description: Ticket article (message/note) operations
+  - name: Attachments
+    description: File attachment operations
+  - name: SLA
+    description: Service Level Agreement management
+  - name: Templates
+    description: Canned responses and ticket templates
+  - name: Search
+    description: Search operations
+  - name: Webhooks
+    description: Webhook management (admin)
+  - name: Queues
+    description: Queue management operations
+  - name: Admin
+    description: System administration endpoints
+  - name: Reports
+    description: Analytics and reporting endpoints
+  - name: Dashboard
+    description: Dashboard widgets and statistics
+  - name: Agent
+    description: Agent-specific endpoints and statistics
+  - name: Users
+    description: User profile and session management
+  - name: Priorities
+    description: Ticket priority management
+  - name: Files
+    description: File download and info endpoints

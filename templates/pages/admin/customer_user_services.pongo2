@@ -6,7 +6,7 @@
 <div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Header -->
     <div class="gk-card-glow rounded-lg mb-6">
-        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-semibold gk-heading">
@@ -22,7 +22,7 @@
 
     <!-- Default Services Card -->
     <div class="gk-card-glow rounded-lg mb-6">
-        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-lg font-semibold" style="color: var(--gk-text-primary);">
@@ -65,7 +65,7 @@
             </div>
             <div class="flex items-center gap-2">
                 <span class="text-sm" style="color: var(--gk-text-muted);">View:</span>
-                <div class="inline-flex rounded-lg overflow-hidden" style="border: 1px solid var(--gk-border);">
+                <div class="inline-flex rounded-lg overflow-hidden" style="border: 1px solid var(--gk-border-default);">
                     <button type="button"
                             onclick="setView('customers')"
                             class="px-4 py-2 text-sm font-medium transition-colors {% if View == 'customers' %}{% else %}hover:bg-white/5{% endif %}"
@@ -87,7 +87,7 @@
     <div id="content-area" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Customer Users Column -->
         <div class="gk-card-glow rounded-lg overflow-hidden">
-            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border); background: var(--gk-bg-tertiary);">
+            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default); background: var(--gk-bg-tertiary);">
                 <h2 class="text-lg font-semibold" style="color: var(--gk-text-primary);">
                     Customer Users ({{ CustomerUsers|length }})
                 </h2>
@@ -98,7 +98,7 @@
                     <div class="px-6 py-4 cursor-pointer transition-colors hover:bg-white/5"
                          onclick="selectCustomerUser('{{ user.login }}')"
                          id="customer-{{ user.login }}"
-                         style="border-bottom: 1px solid var(--gk-border);">
+                         style="border-bottom: 1px solid var(--gk-border-default);">
                         <div class="flex items-center justify-between">
                             <div>
                                 <div class="font-medium" style="color: var(--gk-text-primary);">
@@ -134,7 +134,7 @@
 
         <!-- Services Column -->
         <div class="gk-card-glow rounded-lg overflow-hidden">
-            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border); background: var(--gk-bg-tertiary);">
+            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default); background: var(--gk-bg-tertiary);">
                 <h2 class="text-lg font-semibold" style="color: var(--gk-text-primary);">
                     Services ({{ Services|length }})
                 </h2>
@@ -145,7 +145,7 @@
                     <div class="px-6 py-4 cursor-pointer transition-colors hover:bg-white/5"
                          onclick="selectService('{{ service.id }}')"
                          id="service-{{ service.id }}"
-                         style="border-bottom: 1px solid var(--gk-border);">
+                         style="border-bottom: 1px solid var(--gk-border-default);">
                         <div class="flex items-center justify-between">
                             <div>
                                 <div class="font-medium" style="color: var(--gk-text-primary);">
@@ -251,7 +251,7 @@ function openDefaultServices() {
                     <label class="flex items-center p-2 rounded cursor-pointer transition-colors hover:bg-white/5">
                         <input type="checkbox" name="default_services" value="${service.id}" ${service.assigned ? 'checked' : ''}
                                class="default-service-checkbox h-4 w-4 rounded focus:ring-2"
-                               style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                               style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
                         <span class="ml-3" style="color: var(--gk-text-secondary);">${service.name}</span>
                         ${service.comments ? `<span class="ml-2 text-xs" style="color: var(--gk-text-muted);">(${service.comments})</span>` : ''}
                     </label>
@@ -299,7 +299,7 @@ function selectCustomerUser(login) {
                     <label class="flex items-center p-2 rounded cursor-pointer transition-colors hover:bg-white/5">
                         <input type="checkbox" name="services" value="${service.id}" ${service.assigned ? 'checked' : ''}
                                class="service-checkbox h-4 w-4 rounded focus:ring-2"
-                               style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                               style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
                         <span class="ml-3" style="color: var(--gk-text-secondary);">${service.name}</span>
                         ${service.comments ? `<span class="ml-2 text-xs" style="color: var(--gk-text-muted);">(${service.comments})</span>` : ''}
                     </label>
@@ -341,7 +341,7 @@ function selectService(id) {
                     <label class="flex items-center p-2 rounded cursor-pointer transition-colors hover:bg-white/5">
                         <input type="checkbox" name="customer_users" value="${user.login}" ${user.assigned ? 'checked' : ''}
                                class="customer-checkbox h-4 w-4 rounded focus:ring-2"
-                               style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                               style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
                         <span class="ml-3" style="color: var(--gk-text-secondary);">${user.first_name} ${user.last_name}</span>
                         <span class="ml-2 text-xs" style="color: var(--gk-text-muted);">(${user.email})</span>
                         ${user.company_name ? `<span class="ml-2 text-xs" style="color: var(--gk-text-muted);">- ${user.company_name}</span>` : ''}

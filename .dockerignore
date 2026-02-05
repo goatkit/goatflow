@@ -13,6 +13,7 @@
 # Keep docs except large churn; allow Markdown (improves reproducible layer hashing when README changes seldom)
 !README.md
 docs/
+!docs/api/
 *.txt
 !requirements.txt
 

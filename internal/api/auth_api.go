@@ -25,6 +25,17 @@ func getJWTManager() *auth.JWTManager {
 }
 
 // HandleLoginAPI authenticates a user and returns JWT tokens.
+//
+//	@Summary		Login
+//	@Description	Authenticate user with login/password and return JWT tokens
+//	@Tags			Authentication
+//	@Accept			json
+//	@Produce		json
+//	@Param			credentials	body		object	true	"Login credentials (login, password)"
+//	@Success		200			{object}	map[string]interface{}	"JWT tokens (access_token, refresh_token)"
+//	@Failure		400			{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401			{object}	map[string]interface{}	"Invalid credentials"
+//	@Router			/auth/login [post]
 func HandleLoginAPI(c *gin.Context) {
 	var loginRequest struct {
 		Login    string `json:"login" binding:"required"`
@@ -108,6 +119,17 @@ func HandleLoginAPI(c *gin.Context) {
 }
 
 // HandleRefreshTokenAPI refreshes an expired JWT token.
+//
+//	@Summary		Refresh token
+//	@Description	Exchange a refresh token for a new access token
+//	@Tags			Authentication
+//	@Accept			json
+//	@Produce		json
+//	@Param			token	body		object	true	"Refresh token"
+//	@Success		200		{object}	map[string]interface{}	"New access token"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Invalid or expired refresh token"
+//	@Router			/auth/refresh [post]
 func HandleRefreshTokenAPI(c *gin.Context) {
 	var refreshRequest struct {
 		RefreshToken string `json:"refresh_token" binding:"required"`
@@ -153,6 +175,15 @@ func HandleRefreshTokenAPI(c *gin.Context) {
 }
 
 // HandleLogoutAPI logs out a user (client-side token removal).
+//
+//	@Summary		Logout
+//	@Description	Logout user (invalidates session, client should discard tokens)
+//	@Tags			Authentication
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"Logout successful"
+//	@Security		BearerAuth
+//	@Router			/auth/logout [post]
 func HandleLogoutAPI(c *gin.Context) {
 	// In a JWT-based system, logout is typically handled client-side
 	// We could implement token blacklisting here if needed
@@ -164,6 +195,16 @@ func HandleLogoutAPI(c *gin.Context) {
 }
 
 // HandleRegisterAPI registers a new user (if enabled).
+//
+//	@Summary		Register user
+//	@Description	Register a new user (if self-registration is enabled)
+//	@Tags			Authentication
+//	@Accept			json
+//	@Produce		json
+//	@Param			user	body		object	true	"User registration data"
+//	@Success		201		{object}	map[string]interface{}	"Registered user"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request or registration disabled"
+//	@Router			/auth/register [post]
 func HandleRegisterAPI(c *gin.Context) {
 	// Registration is typically disabled in OTRS-style systems
 	// Users are created by administrators
@@ -173,20 +214,30 @@ func HandleRegisterAPI(c *gin.Context) {
 	})
 }
 
-// ExtractToken extracts the JWT token from the Authorization header.
+// ExtractToken extracts the JWT token from the Authorization header or cookies.
 func ExtractToken(c *gin.Context) string {
+	// Check Authorization header first
 	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		return ""
+	if authHeader != "" {
+		// Check for Bearer token
+		parts := strings.Split(authHeader, " ")
+		if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+			return parts[1]
+		}
 	}
 
-	// Check for Bearer token
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-		return ""
+	// Check cookies (used by admin pages)
+	if cookie, err := c.Cookie("auth_token"); err == nil && cookie != "" {
+		return cookie
+	}
+	if cookie, err := c.Cookie("access_token"); err == nil && cookie != "" {
+		return cookie
+	}
+	if cookie, err := c.Cookie("token"); err == nil && cookie != "" {
+		return cookie
 	}
 
-	return parts[1]
+	return ""
 }
 
 // JWTAuthMiddleware is a middleware that requires JWT authentication.
@@ -218,6 +269,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		c.Set("user_email", claims.Email)
 		c.Set("user_role", claims.Role)
 		c.Set("claims", claims)
+		c.Set("isInAdminGroup", claims.IsAdmin)
 
 		c.Next()
 	}

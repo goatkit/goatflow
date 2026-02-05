@@ -10,7 +10,8 @@ metadata:
 spec:
     prefix: /api/tickets
     middleware:
-        - auth
+        - unified_auth
+        - scope_tickets_read  # API tokens need tickets:read or higher
         - queue_ro # Require read access to at least one queue
     routes:
         # Core CRUD
@@ -23,7 +24,8 @@ spec:
           method: POST
           handler: handleCreateTicket
           middleware:
-              - auth
+              - unified_auth
+              - scope_tickets_write  # API tokens need tickets:write
               - queue_access_create # Require create access to target queue
           description: "Create new ticket"
 
@@ -31,7 +33,8 @@ spec:
           method: GET
           handler: handleGetTicket
           middleware:
-              - auth
+              - unified_auth
+              - scope_tickets_read
               - ticket_access_ro # Require read access to ticket's queue
           description: "Get ticket by ID"
 
@@ -39,7 +42,8 @@ spec:
           method: PUT
           handler: handleUpdateTicket
           middleware:
-              - auth
+              - unified_auth
+              - scope_tickets_write
               - ticket_access_rw # Require read-write access to ticket's queue
           description: "Update ticket"
 
@@ -47,7 +51,8 @@ spec:
           method: DELETE
           handler: handleDeleteTicket
           middleware:
-              - auth
+              - unified_auth
+              - scope_tickets_delete
               - ticket_access_rw # Require read-write access to ticket's queue
           description: "Delete ticket"
 
@@ -56,7 +61,8 @@ spec:
           method: POST
           handler: handleAddTicketNote
           middleware:
-              - auth
+              - unified_auth
+              - scope_articles_write
               - ticket_access_note # Require note permission
           description: "Add note to ticket"
 
@@ -64,7 +70,8 @@ spec:
           method: GET
           handler: handleGetTicketHistory
           middleware:
-              - auth
+              - unified_auth
+              - scope_tickets_read
               - ticket_access_ro # Require read access
           description: "Get ticket history"
 
@@ -72,7 +79,8 @@ spec:
           method: GET
           handler: handleGetAvailableAgents
           middleware:
-              - auth
+              - unified_auth
+              - scope_users_read
               - ticket_access_ro # Require read access
           description: "Get available agents for assignment"
 
@@ -80,7 +88,8 @@ spec:
           method: POST
           handler: handleAssignTicket
           middleware:
-              - auth
+              - unified_auth
+              - scope_tickets_write
               - ticket_access_owner # Require owner permission
           description: "Assign ticket to agent"
 
@@ -88,7 +97,8 @@ spec:
           method: POST
           handler: handleCloseTicket
           middleware:
-              - auth
+              - unified_auth
+              - scope_tickets_write
               - ticket_access_rw # Require read-write access
           description: "Close ticket"
 
@@ -96,7 +106,8 @@ spec:
           method: POST
           handler: handleReopenTicket
           middleware:
-              - auth
+              - unified_auth
+              - scope_tickets_write
               - ticket_access_rw # Require read-write access
           description: "Reopen closed ticket"
 
@@ -104,7 +115,8 @@ spec:
           method: POST
           handler: handleUpdateTicketStatus
           middleware:
-              - auth
+              - unified_auth
+              - scope_tickets_write
               - ticket_access_rw # Require read-write access
           description: "Update ticket status (supports pending reminders)"
 
@@ -112,7 +124,8 @@ spec:
           method: POST
           handler: handleAddTicketTime
           middleware:
-              - auth
+              - unified_auth
+              - scope_articles_write
               - ticket_access_note # Require note permission
           description: "Add time accounting entry"
 
@@ -120,7 +133,8 @@ spec:
           method: POST
           handler: handleTicketReply
           middleware:
-              - auth
+              - unified_auth
+              - scope_articles_write
               - ticket_access_note # Require note permission
           description: "Reply to ticket"
 
@@ -128,7 +142,8 @@ spec:
           method: POST
           handler: handleUpdateTicketPriority
           middleware:
-              - auth
+              - unified_auth
+              - scope_tickets_write
               - ticket_access_priority # Require priority permission
           description: "Update ticket priority"
 
@@ -136,7 +151,8 @@ spec:
           method: POST
           handler: handleUpdateTicketQueue
           middleware:
-              - auth
+              - unified_auth
+              - scope_tickets_write
               - ticket_access_move_into # Require move_into permission
           description: "Update ticket queue"
 

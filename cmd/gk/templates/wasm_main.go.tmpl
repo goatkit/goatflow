@@ -1,0 +1,113 @@
+//go:build tinygo.wasm
+
+// Package main implements the {{.Name}} WASM plugin for GoatKit.
+// Build with: tinygo build -o {{.Name}}.wasm -target wasi -no-debug -scheduler=none main.go
+package main
+
+import (
+	"encoding/json"
+	"unsafe"
+)
+
+// Manifest - customize this for your plugin
+var manifestJSON = `{
+  "name": "{{.Name}}",
+  "version": "1.0.0",
+  "description": "{{.Description}}",
+  "author": "Your Name",
+  "license": "Apache-2.0",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/plugins/{{.Name}}",
+      "handler": "hello",
+      "description": "Returns a greeting"
+    }
+  ],
+  "widgets": [
+    {
+      "id": "{{.NameSnake}}_widget",
+      "title": "{{.NameTitle}} Widget",
+      "handler": "widget",
+      "location": "dashboard",
+      "size": "small",
+      "refreshable": true
+    }
+  ]
+}`
+
+//export gk_malloc
+func gk_malloc(size uint32) uint32 {
+	buf := make([]byte, size)
+	return uint32(uintptr(unsafe.Pointer(&buf[0])))
+}
+
+//export gk_free
+func gk_free(ptr uint32) {}
+
+//export gk_register
+func gk_register() uint64 {
+	ptr := gk_malloc(uint32(len(manifestJSON)))
+	dst := unsafe.Slice((*byte)(unsafe.Pointer(uintptr(ptr))), len(manifestJSON))
+	copy(dst, manifestJSON)
+	return (uint64(ptr) << 32) | uint64(len(manifestJSON))
+}
+
+//export gk_call
+func gk_call(fnPtr, fnLen, argsPtr, argsLen uint32) uint64 {
+	fn := readString(fnPtr, fnLen)
+	args := readString(argsPtr, argsLen)
+
+	var result string
+	switch fn {
+	case "hello":
+		result = handleHello(args)
+	case "widget":
+		result = handleWidget()
+	default:
+		result = `{"error":"unknown function: ` + fn + `"}`
+	}
+
+	ptr := gk_malloc(uint32(len(result)))
+	dst := unsafe.Slice((*byte)(unsafe.Pointer(uintptr(ptr))), len(result))
+	copy(dst, result)
+	return (uint64(ptr) << 32) | uint64(len(result))
+}
+
+func readString(ptr, length uint32) string {
+	if ptr == 0 || length == 0 {
+		return ""
+	}
+	return unsafe.String((*byte)(unsafe.Pointer(uintptr(ptr))), length)
+}
+
+func handleHello(argsJSON string) string {
+	name := "World"
+	if argsJSON != "" {
+		var args map[string]any
+		if err := json.Unmarshal([]byte(argsJSON), &args); err == nil {
+			if n, ok := args["name"].(string); ok && n != "" {
+				name = n
+			}
+		}
+	}
+
+	result := map[string]any{
+		"message": "Hello from {{.NameTitle}}, " + name + "!",
+		"plugin":  "{{.Name}}",
+	}
+	data, _ := json.Marshal(result)
+	return string(data)
+}
+
+func handleWidget() string {
+	html := `<div class="{{.NameSnake}}-widget">
+		<p class="text-lg font-semibold">🔌 {{.NameTitle}} Plugin</p>
+		<p class="text-sm text-gray-500">Edit main.go to customize this widget.</p>
+	</div>`
+	result := map[string]string{"html": html}
+	data, _ := json.Marshal(result)
+	return string(data)
+}
+
+func main() {}

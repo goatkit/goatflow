@@ -50,7 +50,7 @@
     <!-- Ticket Form -->
     <form method="post" action="/customer/tickets/create" enctype="multipart/form-data" class="space-y-6">
         <div class="gk-card-glow rounded-lg">
-            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
                 <h2 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("customer.new_ticket.ticket_info") }}</h2>
             </div>
 
@@ -113,7 +113,7 @@
 
                 <!-- Dynamic Fields -->
                 {% if CustomerDynamicFields %}
-                <div class="pt-4" style="border-top: 1px solid var(--gk-border);">
+                <div class="pt-4" style="border-top: 1px solid var(--gk-border-default);">
                     <h3 class="text-sm font-medium mb-4" style="color: var(--gk-text-secondary);">{{ t("tickets.additional_fields")|default:"Additional Information" }}</h3>
                     {% for df in CustomerDynamicFields %}
                     <div class="mb-4">
@@ -131,7 +131,7 @@
                         {% elif df.Field.FieldType == "Checkbox" %}
                         <div class="flex items-center">
                             <input type="checkbox" id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}" value="1"
-                                class="rounded" style="border-color: var(--gk-border); accent-color: var(--gk-primary);">
+                                class="rounded" style="border-color: var(--gk-border-default); accent-color: var(--gk-primary);">
                             <span class="ml-2 text-sm" style="color: var(--gk-text-muted);">{{ df.Field.Label }}</span>
                         </div>
                         {% elif df.Field.FieldType == "Dropdown" %}
@@ -177,7 +177,7 @@
                 </div>
 
                 <!-- Attachments -->
-                <div class="pt-4" style="border-top: 1px solid var(--gk-border);">
+                <div class="pt-4" style="border-top: 1px solid var(--gk-border-default);">
                     <label class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
                         {{ t("attachments.title")|default:"Attachments" }}
                     </label>

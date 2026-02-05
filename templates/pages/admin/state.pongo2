@@ -32,7 +32,7 @@
 
     <!-- Data Table -->
     <div class="gk-card-glow rounded-lg overflow-hidden">
-        <div class="p-4" style="border-bottom: 1px solid var(--gk-border);">
+        <div class="p-4" style="border-bottom: 1px solid var(--gk-border-default);">
             <div class="flex justify-between items-center">
                 <input type="text"
                        id="searchInput"

@@ -12,14 +12,50 @@ Purpose: Provide clear, enforceable rules and a practical workflow for engineeri
   - `make restart` - rebuild and restart containers (for code changes)
   - `make down` - stop containers
   - `make logs` - view logs
-- SQL portability: Always wrap SQL strings with `database.ConvertPlaceholders(...)`. Never use raw `$n` placeholders directly.
-- Schema freeze: Do not modify existing OTRS tables and do not add new tables before v1.0. See [SCHEMA_FREEZE.md](../architecture/SCHEMA_FREEZE.md).
-- Security first: Rootless containers, Alpine base, SELinux labels, secrets only via environment variables (generated via synthesize). Never hardcode secrets.
-- No self-attribution: Do not add assistant/AI attribution to commits, code, or docs. Follow repository commit conventions.
-- TDD discipline: Write tests where practicable, run them, verify passing before claiming completion.
-- Professional UX: No browser dialogs; use branded toasts/modals. Ensure dark mode and accessibility standards.
-- Templating policy: Use Pongo2 templates only; never use Go's `html/template`. Do not generate HTML in handlers for user-facing views; render via Pongo2 with base layout and proper context.
-- Routing policy: Define all HTTP routes in `routes/*.yaml` (YAML router). Do not register routes directly in Go code.
+- **SQL portability**: Always wrap SQL strings with `database.ConvertPlaceholders(...)`. Never use raw `$n` placeholders directly.
+- **Security first** Rootless containers, Alpine base, SELinux labels, secrets only via environment variables (generated via synthesize). Never hardcode secrets.
+- **No self-attribution**: Do not add assistant/AI attribution to commits, code, or docs. Follow repository commit conventions.
+- **TDD discipline**: Write tests that test behaviour where practicable, run them, verify passing before claiming completion.
+- **Professional UX with multi-themed support**: No browser dialogs; use branded toasts/modals. Ensure thtmes support in dark and light mode adhering to accessibility standards.
+- **Templating policy**: Use Pongo2 templates only; never use Go's `html/template`. Do not generate HTML in handlers for user-facing views; render via Pongo2 with base layout and proper context.
+- **Routing policy**: Define all HTTP routes in `routes/*.yaml` (YAML router). Do not register routes directly in Go code.
+- **Full i18n support for 15 languages** must be maintained in every code change or addition.
+- **Always write DRY code**: Do Not Repeat Yourself writing code, use or refactor existing code to be more flexible instead.
+- **Commit discipline**: Interactive mode = stage only, ask before committing. CI mode = commit and push automatically. See [Commit Discipline](#commit-discipline) section.
+
+## Commit Discipline
+
+Commit behaviour depends on the execution context:
+
+### Interactive Mode (Working with Human Reviewer)
+When working directly with a human (chat sessions, pair programming):
+- **Stage changes only** — do not commit or push without explicit permission
+- Human batches and squashes commits for clean history
+- Ask before running `git commit` or `git push`
+- Reason: Humans prefer to review, squash, and craft meaningful commit messages
+
+### CI/Automated Mode (GitHub Actions, scheduled tasks)
+When running in CI pipelines or automated workflows:
+- **Commit and push automatically** — no human approval needed
+- Use conventional commit format (`feat:`, `fix:`, `docs:`, etc.)
+- Include `[automated]` or `[ci]` tag if helpful for filtering
+- Reason: CI is unattended; blocking on approval defeats the purpose
+
+### How to Detect Context
+- **Interactive**: Direct chat session, human messages in conversation
+- **CI/Automated**: `CI=true` environment variable, GitHub Actions context, cron-triggered tasks
+
+### Git Operations Reference
+```bash
+# Stage only (interactive mode default)
+git add -A
+
+# Commit (CI mode, or after human approval)
+git commit -m "feat(module): description"
+
+# Push (CI mode, or after human approval)
+git push origin HEAD
+```
 
 ## Required Workflow
 1. Plan (if multi-step): Outline non-trivial tasks and confirm scope.

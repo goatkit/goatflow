@@ -5,7 +5,7 @@ import { BASE_URL } from "./tests/acceptance/base-url.js";
 
 const resultsDir = process.env.PLAYWRIGHT_RESULTS_DIR || "test-results";
 const outputDir = process.env.PLAYWRIGHT_OUTPUT_DIR || path.join(resultsDir, "artifacts");
-const htmlReportDir = process.env.PLAYWRIGHT_HTML_REPORT_DIR || "playwright-report";
+const htmlReportDir = process.env.PLAYWRIGHT_HTML_REPORT_DIR || "generated/playwright-report";
 
 /**
  * @see https://playwright.dev/docs/test-configuration

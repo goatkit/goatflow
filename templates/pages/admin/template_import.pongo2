@@ -41,7 +41,7 @@
                 <label for="file" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
                     {{ t("admin.modules.template.import.file_label") }} <span style="color: var(--gk-error);">*</span>
                 </label>
-                <div class="flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md" style="border-color: var(--gk-border); background: var(--gk-bg-surface);">
+                <div class="flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md" style="border-color: var(--gk-border-default); background: var(--gk-bg-surface);">
                     <div class="space-y-1 text-center">
                         <svg class="mx-auto h-12 w-12" style="color: var(--gk-text-muted);" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                             <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -70,7 +70,7 @@
                         type="checkbox"
                         value="1"
                         class="h-4 w-4 rounded"
-                        style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);"
+                        style="border-color: var(--gk-border-default); background: var(--gk-bg-surface); accent-color: var(--gk-primary);"
                     >
                 </div>
                 <div class="ml-3 text-sm">
@@ -113,7 +113,7 @@ templates:
             </div>
 
             <!-- Form Actions -->
-            <div class="flex justify-end space-x-3 pt-6 border-t" style="border-color: var(--gk-border);">
+            <div class="flex justify-end space-x-3 pt-6 border-t" style="border-color: var(--gk-border-default);">
                 <a href="/admin/templates" class="gk-btn-secondary">
                     {{ t("admin.modules.template.actions.cancel") }}
                 </a>

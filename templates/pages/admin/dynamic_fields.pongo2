@@ -44,7 +44,7 @@
 
     <!-- Object Type Tabs -->
     <div x-data="{ activeTab: 'Ticket' }" class="mb-6">
-        <div class="border-b" style="border-color: var(--gk-border);">
+        <div class="border-b" style="border-color: var(--gk-border-default);">
             <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                 {% for objectType in ObjectTypes %}
                 <button

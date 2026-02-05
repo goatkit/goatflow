@@ -19,6 +19,19 @@ func init() {
 //   - filter_attribute: The attribute to filter by (e.g., "Queue", "Type")
 //   - filter_value: The value of that attribute (e.g., "Sales", "incident")
 //   - valid: Filter by valid_id (1 = valid, 2 = invalid, "all" = no filter)
+//
+// HandleListServicesAPI handles GET /api/v1/services.
+//
+//	@Summary		List services
+//	@Description	Retrieve all services
+//	@Tags			Services
+//	@Accept			json
+//	@Produce		json
+//	@Param			valid	query		string	false	"Filter by validity (1=valid, 2=invalid, all)"
+//	@Success		200		{object}	map[string]interface{}	"List of services"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/services [get]
 func HandleListServicesAPI(c *gin.Context) {
 	// Require authentication
 	if _, exists := c.Get("user_id"); !exists {

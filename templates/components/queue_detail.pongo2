@@ -1,6 +1,6 @@
 <div class="gk-card-glow overflow-hidden sm:rounded-lg">
     <!-- Queue header -->
-    <div class="px-4 py-5 sm:px-6" style="border-bottom: 1px solid var(--gk-border);">
+    <div class="px-4 py-5 sm:px-6" style="border-bottom: 1px solid var(--gk-border-default);">
         <h3 class="text-lg leading-6 font-medium" style="color: var(--gk-text-primary);">
             {{ Queue.name }}
         </h3>
@@ -30,7 +30,7 @@
     </div>
 
     <!-- Queue tickets -->
-    <div style="border-top: 1px solid var(--gk-border);">
+    <div style="border-top: 1px solid var(--gk-border-default);">
         <div class="px-4 py-5 sm:px-6">
             <h4 class="text-md font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("queue_detail.tickets_in_queue")|default:"Tickets in this queue" }}</h4>
 

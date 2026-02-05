@@ -28,48 +28,42 @@ metadata:
 spec:
     prefix: /api/v1
     middleware:
-        - auth
+        - unified_auth
     routes:
         - path: /tickets
           method: GET
           handler: HandleListTicketsAPI
           middleware:
-              - auth
               - queue_ro # Require read access to at least one queue
           description: "List tickets"
         - path: /tickets
           method: POST
           handler: HandleCreateTicketAPI
           middleware:
-              - auth
               - queue_access_create # Require create access to target queue
           description: "Create ticket"
         - path: /tickets/:id
           method: GET
           handler: HandleGetTicketAPI
           middleware:
-              - auth
               - ticket_access_ro # Require read access to ticket's queue
           description: "Get ticket by ID"
         - path: /tickets/:id
           method: PUT
           handler: HandleUpdateTicketAPI
           middleware:
-              - auth
               - ticket_access_rw # Require read-write access to ticket's queue
           description: "Update ticket"
         - path: /tickets/:id
           method: DELETE
           handler: HandleDeleteTicketAPI
           middleware:
-              - auth
               - ticket_access_rw # Require read-write access to ticket's queue
           description: "Delete ticket"
         - path: /tickets/:id/reopen
           method: POST
           handler: HandleReopenTicketAPI
           middleware:
-              - auth
               - ticket_access_rw # Require read-write access
           description: "Reopen ticket"
         # Time accounting endpoint
@@ -77,7 +71,6 @@ spec:
           method: POST
           handler: handleAddTicketTime
           middleware:
-              - auth
               - ticket_access_note # Require note permission
           description: "Add time accounting entry to ticket"
         # Article endpoints
@@ -85,21 +78,18 @@ spec:
           method: GET
           handler: HandleListArticlesAPI
           middleware:
-              - auth
               - ticket_access_ro # Require read access
           description: "Get ticket articles"
         - path: /tickets/:id/articles
           method: POST
           handler: HandleCreateArticleAPI
           middleware:
-              - auth
               - ticket_access_note # Require note permission
           description: "Add article to ticket"
         - path: /tickets/:id/articles/:article_id
           method: GET
           handler: HandleGetArticleAPI
           middleware:
-              - auth
               - ticket_access_ro # Require read access
           description: "Get specific article"
         # Internal notes endpoints
@@ -107,28 +97,24 @@ spec:
           method: GET
           handler: HandleGetInternalNotes
           middleware:
-              - auth
               - ticket_access_ro # Require read access
           description: "Get internal notes for a ticket"
         - path: /tickets/:id/internal-notes
           method: POST
           handler: HandleCreateInternalNote
           middleware:
-              - auth
               - ticket_access_note # Require note permission
           description: "Create internal note for a ticket"
         - path: /tickets/:id/internal-notes/:note_id
           method: PUT
           handler: HandleUpdateInternalNote
           middleware:
-              - auth
               - ticket_access_note # Require note permission
           description: "Update internal note"
         - path: /tickets/:id/internal-notes/:note_id
           method: DELETE
           handler: HandleDeleteInternalNote
           middleware:
-              - auth
               - ticket_access_note # Require note permission
           description: "Delete internal note"
         # User endpoints
@@ -154,21 +140,18 @@ spec:
           method: GET
           handler: HandleListQueuesAPI
           middleware:
-              - auth
               - queue_ro # Require read access to at least one queue
           description: "List queues"
         - path: /queues/:id
           method: GET
           handler: HandleGetQueueAPI
           middleware:
-              - auth
               - queue_access_ro # Require read access to the specific queue
           description: "Get queue by ID"
         - path: /queues/:id/agents
           method: GET
           handler: HandleGetQueueAgentsAPI
           middleware:
-              - auth
               - queue_access_ro # Require read access to the specific queue
           description: "Get agents with permissions for queue"
         # Priority endpoints
@@ -176,186 +159,156 @@ spec:
           method: GET
           handler: HandleListPrioritiesAPI
           middleware:
-              - auth
           description: "List priorities"
         - path: /priorities/:id
           method: GET
           handler: HandleGetPriorityAPI
           middleware:
-              - auth
           description: "Get priority by ID"
         # Types, states, and services
         - path: /types
           method: GET
           handler: HandleListTypesAPI
           middleware:
-              - auth
           description: "List ticket types"
         - path: /states
           method: GET
           handler: HandleListStatesAPI
           middleware:
-              - auth
           description: "List ticket states"
         - path: /services
           method: GET
           handler: HandleListServicesAPI
           middleware:
-              - auth
           description: "List services"
         # Ticket attribute relations evaluation (for form filtering)
         - path: /ticket-attribute-relations/evaluate
           method: GET
           handler: handleAPITicketAttributeRelationsEvaluate
           middleware:
-              - auth
           description: "Evaluate ticket attribute relations for filtering dropdowns"
         # Search endpoints
         - path: /search
           method: POST
           handler: HandleSearchAPI
           middleware:
-              - auth
           description: "Search tickets"
         - path: /search/suggestions
           method: GET
           handler: HandleSearchSuggestionsAPI
           middleware:
-              - auth
           description: "Search suggestions"
         - path: /search/reindex
           method: POST
           handler: HandleReindexAPI
           middleware:
-              - auth
           description: "Trigger search reindex"
         - path: /search/health
           method: GET
           handler: HandleSearchHealthAPI
           middleware:
-              - auth
           description: "Search health"
         # User mutations
         - path: /users
           method: POST
           handler: HandleCreateUserAPI
           middleware:
-              - auth
           description: "Create user"
         - path: /users/:id
           method: PUT
           handler: HandleUpdateUserAPI
           middleware:
-              - auth
           description: "Update user"
         - path: /users/:id
           method: DELETE
           handler: HandleDeleteUserAPI
           middleware:
-              - auth
           description: "Delete user"
         # Article mutations
         - path: /tickets/:id/articles/:article_id
           method: PUT
           handler: HandleUpdateArticleAPI
           middleware:
-              - auth
           description: "Update article"
         - path: /tickets/:id/articles/:article_id
           method: DELETE
           handler: HandleDeleteArticleAPI
           middleware:
-              - auth
           description: "Delete article"
         # Queue mutations and extras
         - path: /queues
           method: POST
           handler: HandleCreateQueueAPI
           middleware:
-              - auth
           description: "Create queue"
         - path: /queues/:id
           method: PUT
           handler: HandleUpdateQueueAPI
           middleware:
-              - auth
           description: "Update queue"
         - path: /queues/:id
           method: DELETE
           handler: HandleDeleteQueueAPI
           middleware:
-              - auth
           description: "Delete queue"
         - path: /queues/:id/stats
           method: GET
           handler: HandleGetQueueStatsAPI
           middleware:
-              - auth
           description: "Queue ticket statistics"
         - path: /queues/:id/groups
           method: POST
           handler: HandleAssignQueueGroupAPI
           middleware:
-              - auth
           description: "Assign group to queue"
         - path: /queues/:id/groups/:group_id
           method: DELETE
           handler: HandleRemoveQueueGroupAPI
           middleware:
-              - auth
           description: "Remove group from queue"
         # Email identity endpoints
         - path: /system-addresses
           method: GET
           handler: HandleListSystemAddressesAPI
           middleware:
-              - auth
           description: "List system addresses"
         - path: /system-addresses
           method: POST
           handler: HandleCreateSystemAddressAPI
           middleware:
-              - auth
           description: "Create system address"
         - path: /system-addresses/:id
           method: PUT
           handler: HandleUpdateSystemAddressAPI
           middleware:
-              - auth
           description: "Update system address"
         - path: /salutations
           method: GET
           handler: HandleListSalutationsAPI
           middleware:
-              - auth
           description: "List salutations"
         - path: /salutations
           method: POST
           handler: HandleCreateSalutationAPI
           middleware:
-              - auth
           description: "Create salutation"
         - path: /salutations/:id
           method: PUT
           handler: HandleUpdateSalutationAPI
           middleware:
-              - auth
           description: "Update salutation"
         - path: /signatures
           method: GET
           handler: HandleListSignaturesAPI
           middleware:
-              - auth
           description: "List signatures"
         - path: /signatures
           method: POST
           handler: HandleCreateSignatureAPI
           middleware:
-              - auth
           description: "Create signature"
         - path: /signatures/:id
           method: PUT
           handler: HandleUpdateSignatureAPI
           middleware:
-              - auth
           description: "Update signature"

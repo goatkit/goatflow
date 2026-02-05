@@ -193,13 +193,13 @@
                         <label class="flex items-center cursor-pointer">
                             <input type="checkbox" id="aclStopAfterMatch" name="stop_after_match"
                                 class="w-4 h-4 rounded border-2 bg-transparent"
-                                style="border-color: var(--gk-border); accent-color: var(--gk-primary);"
+                                style="border-color: var(--gk-border-default); accent-color: var(--gk-primary);"
                             >
                             <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">Stop after match (don't process further ACLs)</span>
                         </label>
                     </div>
 
-                    <div class="border-t pt-4" style="border-color: var(--gk-border);">
+                    <div class="border-t pt-4" style="border-color: var(--gk-border-default);">
                         <h3 class="text-base font-medium mb-2" style="color: var(--gk-text-primary);">{{ t("acl.modal.match_conditions")|default:"Match Conditions (Properties)" }}</h3>
                         <p class="text-sm mb-3" style="color: var(--gk-text-muted);">Define conditions that must match for this ACL to apply. Enter as JSON.</p>
                         <textarea id="aclConfigMatch" name="config_match" rows="6"
@@ -207,7 +207,7 @@
                             class="gk-input-neon w-full font-mono text-sm"></textarea>
                     </div>
 
-                    <div class="border-t pt-4" style="border-color: var(--gk-border);">
+                    <div class="border-t pt-4" style="border-color: var(--gk-border-default);">
                         <h3 class="text-base font-medium mb-2" style="color: var(--gk-text-primary);">{{ t("acl.modal.change_actions")|default:"Change Actions" }}</h3>
                         <p class="text-sm mb-3" style="color: var(--gk-text-muted);">Define what changes this ACL makes when conditions match. Enter as JSON.</p>
                         <textarea id="aclConfigChange" name="config_change" rows="6"

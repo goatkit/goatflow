@@ -11,6 +11,21 @@ import (
 )
 
 // HandleUpdateArticleAPI handles PUT /api/v1/tickets/:ticket_id/articles/:id.
+//
+//	@Summary		Update article
+//	@Description	Update an existing article
+//	@Tags			Articles
+//	@Accept			json
+//	@Produce		json
+//	@Param			ticket_id	path		int		true	"Ticket ID"
+//	@Param			id			path		int		true	"Article ID"
+//	@Param			article		body		object	true	"Article update data"
+//	@Success		200			{object}	map[string]interface{}	"Updated article"
+//	@Failure		400			{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404			{object}	map[string]interface{}	"Article not found"
+//	@Security		BearerAuth
+//	@Router			/tickets/{ticket_id}/articles/{id} [put]
 func HandleUpdateArticleAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

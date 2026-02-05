@@ -46,11 +46,13 @@ type GKRegistration struct {
 	Homepage    string `json:"homepage"`    // URL to plugin docs/repo
 
 	// Capabilities - what the plugin exposes to the host
-	Routes    []RouteSpec    `json:"routes,omitempty"`     // HTTP routes to register
-	MenuItems []MenuItemSpec `json:"menu_items,omitempty"` // navigation menu entries
-	Widgets   []WidgetSpec   `json:"widgets,omitempty"`    // dashboard widgets
-	Jobs      []JobSpec      `json:"jobs,omitempty"`       // scheduled/cron tasks
-	Templates []TemplateSpec `json:"templates,omitempty"`  // template overrides/additions
+	Routes     []RouteSpec     `json:"routes,omitempty"`      // HTTP routes to register
+	MenuItems  []MenuItemSpec  `json:"menu_items,omitempty"`  // navigation menu entries
+	Widgets    []WidgetSpec    `json:"widgets,omitempty"`     // dashboard widgets
+	Jobs       []JobSpec       `json:"jobs,omitempty"`        // scheduled/cron tasks
+	Templates  []TemplateSpec  `json:"templates,omitempty"`   // template overrides/additions
+	I18n       *I18nSpec       `json:"i18n,omitempty"`        // translations provided by plugin
+	ErrorCodes []ErrorCodeSpec `json:"error_codes,omitempty"` // API error codes provided by plugin
 
 	// Requirements
 	MinHostVersion string   `json:"min_host_version,omitempty"` // minimum GOTRS version
@@ -108,6 +110,26 @@ type TemplateSpec struct {
 	Override bool   `json:"override,omitempty"` // if true, overrides host template of same name
 }
 
+// I18nSpec defines internationalization resources provided by the plugin.
+type I18nSpec struct {
+	// Namespace prefix for plugin translations (e.g., "stats" -> "stats.dashboard.title")
+	Namespace string `json:"namespace,omitempty"`
+	// Languages supported by this plugin
+	Languages []string `json:"languages,omitempty"`
+	// Inline translations (language -> key -> value)
+	// For small plugins, translations can be embedded in the manifest
+	Translations map[string]map[string]string `json:"translations,omitempty"`
+}
+
+// ErrorCodeSpec defines an API error code provided by the plugin.
+// The plugin name is automatically prefixed to the code by the host
+// (e.g., code "export_failed" in plugin "stats" becomes "stats:export_failed").
+type ErrorCodeSpec struct {
+	Code       string `json:"code"`        // error code without prefix, e.g. "export_failed"
+	Message    string `json:"message"`     // default English message
+	HTTPStatus int    `json:"http_status"` // suggested HTTP status code
+}
+
 // HostAPI is the interface plugins use to access host services.
 // Passed to Plugin.Init() - plugins store this for later use.
 type HostAPI interface {
@@ -134,4 +156,8 @@ type HostAPI interface {
 
 	// i18n
 	Translate(ctx context.Context, key string, args ...any) string
+
+	// Plugin-to-plugin calls
+	// Allows one plugin to call functions in another plugin
+	CallPlugin(ctx context.Context, pluginName, fn string, args json.RawMessage) (json.RawMessage, error)
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/services"
 )
 
 // HandleUpdateTicketAPI handles PUT /api/v1/tickets/:id.
@@ -185,6 +186,39 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 				})
 				return
 			}
+		}
+	} else {
+		// Agent user - check group permissions (need 'rw' to update)
+		userIDInt, ok := userID.(int)
+		if !ok {
+			// Try uint conversion (from JWT claims)
+			if uid, ok2 := userID.(uint); ok2 {
+				userIDInt = int(uid)
+			} else if uid64, ok3 := userID.(int64); ok3 {
+				userIDInt = int(uid64)
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"success": false,
+					"error":   "Invalid user ID type",
+				})
+				return
+			}
+		}
+		permSvc := services.NewPermissionService(db)
+		canWrite, err := permSvc.CanWriteTicket(userIDInt, ticketID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to check permissions: " + err.Error(),
+			})
+			return
+		}
+		if !canWrite {
+			c.JSON(http.StatusForbidden, gin.H{
+				"success": false,
+				"error":   "Write access denied - requires 'rw' permission on queue",
+			})
+			return
 		}
 	}
 

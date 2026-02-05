@@ -47,13 +47,13 @@
                         <tr>
                             <th scope="col" class="text-center">
                                 <label class="flex items-center justify-center cursor-pointer">
-                                    <input type="checkbox" id="selectAllFields" class="h-4 w-4 rounded" style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);">
+                                    <input type="checkbox" id="selectAllFields" class="h-4 w-4 rounded" style="border-color: var(--gk-border-default); background: var(--gk-bg-surface); accent-color: var(--gk-primary);">
                                     <span class="ml-2">{{ t("admin.dynamic_fields.import_export.select_all_fields") }}</span>
                                 </label>
                             </th>
                             <th scope="col" class="text-center">
                                 <label class="flex items-center justify-center cursor-pointer">
-                                    <input type="checkbox" id="selectAllScreens" class="h-4 w-4 rounded" style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);">
+                                    <input type="checkbox" id="selectAllScreens" class="h-4 w-4 rounded" style="border-color: var(--gk-border-default); background: var(--gk-bg-surface); accent-color: var(--gk-primary);">
                                     <span class="ml-2">{{ t("admin.dynamic_fields.import_export.select_all_screens") }}</span>
                                 </label>
                             </th>
@@ -71,11 +71,11 @@
                             <tr class="field-row" data-name="{{ field.Name|lower }}">
                                 <td class="text-center">
                                     <input type="checkbox" name="field_config" value="{{ field.Name }}"
-                                        class="field-checkbox h-4 w-4 rounded" style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
+                                        class="field-checkbox h-4 w-4 rounded" style="border-color: var(--gk-border-default); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
                                 </td>
                                 <td class="text-center">
                                     <input type="checkbox" name="screen_config" value="{{ field.Name }}"
-                                        class="screen-checkbox h-4 w-4 rounded" style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
+                                        class="screen-checkbox h-4 w-4 rounded" style="border-color: var(--gk-border-default); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
                                 </td>
                                 <td style="color: var(--gk-text-primary);">
                                     {{ field.Name }}

@@ -10,6 +10,18 @@ import (
 )
 
 // HandleDeletePriorityAPI handles DELETE /api/v1/priorities/:id.
+//
+//	@Summary		Delete priority
+//	@Description	Delete a priority
+//	@Tags			Priorities
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Priority ID"
+//	@Success		200	{object}	map[string]interface{}	"Priority deleted"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Priority not found"
+//	@Security		BearerAuth
+//	@Router			/priorities/{id} [delete]
 func HandleDeletePriorityAPI(c *gin.Context) {
 	// Check authentication
 	userIDRaw, exists := c.Get("user_id")

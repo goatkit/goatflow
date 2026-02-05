@@ -83,7 +83,7 @@
                 <div class="flex items-start">
                     <div class="flex items-center h-5">
                         <input type="checkbox" name="overwrite" value="1" id="overwrite"
-                            class="h-4 w-4 rounded" style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);">
+                            class="h-4 w-4 rounded" style="border-color: var(--gk-border-default); background: var(--gk-bg-surface); accent-color: var(--gk-primary);">
                     </div>
                     <div class="ml-3 text-sm">
                         <label for="overwrite" class="font-medium" style="color: var(--gk-text-secondary);">
@@ -99,7 +99,7 @@
 
         <!-- Fields Preview Table -->
         <div class="gk-card-glow rounded-lg overflow-hidden">
-            <div class="px-4 py-5 sm:px-6 border-b" style="border-color: var(--gk-border);">
+            <div class="px-4 py-5 sm:px-6 border-b" style="border-color: var(--gk-border-default);">
                 <h3 class="text-lg leading-6 font-medium" style="color: var(--gk-text-primary);">
                     {{ t("admin.dynamic_fields.import_export.fields_to_import") }}
                 </h3>
@@ -110,14 +110,14 @@
                         <tr>
                             <th scope="col" class="text-center">
                                 <label class="flex items-center justify-center cursor-pointer">
-                                    <input type="checkbox" id="selectAllFields" class="h-4 w-4 rounded" style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
+                                    <input type="checkbox" id="selectAllFields" class="h-4 w-4 rounded" style="border-color: var(--gk-border-default); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
                                     <span class="ml-2">{{ t("admin.dynamic_fields.import_export.field_configuration") }}</span>
                                 </label>
                             </th>
                             {% if HasScreenConfig %}
                             <th scope="col" class="text-center">
                                 <label class="flex items-center justify-center cursor-pointer">
-                                    <input type="checkbox" id="selectAllScreens" class="h-4 w-4 rounded" style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
+                                    <input type="checkbox" id="selectAllScreens" class="h-4 w-4 rounded" style="border-color: var(--gk-border-default); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
                                     <span class="ml-2">{{ t("admin.dynamic_fields.import_export.screen_configuration") }}</span>
                                 </label>
                             </th>
@@ -134,13 +134,13 @@
                         <tr>
                             <td class="text-center">
                                 <input type="checkbox" name="field_config" value="{{ item.Name }}"
-                                    class="field-checkbox h-4 w-4 rounded" style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
+                                    class="field-checkbox h-4 w-4 rounded" style="border-color: var(--gk-border-default); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
                             </td>
                             {% if HasScreenConfig %}
                             <td class="text-center">
                                 {% if item.HasScreens %}
                                 <input type="checkbox" name="screen_config" value="{{ item.Name }}"
-                                    class="screen-checkbox h-4 w-4 rounded" style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
+                                    class="screen-checkbox h-4 w-4 rounded" style="border-color: var(--gk-border-default); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
                                 {% else %}
                                 <span style="color: var(--gk-text-muted);">-</span>
                                 {% endif %}

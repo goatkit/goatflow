@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/webhook"
 )
 
@@ -247,7 +249,25 @@ func (h *WebhookHandlers) handleActivateWebhook(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement webhook activation
+	db, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	now := time.Now()
+	query := database.ConvertQuery(`UPDATE webhook SET valid_id = 1, change_time = ? WHERE id = ?`)
+	result, err := db.Exec(query, now, id)
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to activate webhook")
+		return
+	}
+
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		sendError(c, http.StatusNotFound, "Webhook not found")
+		return
+	}
+
 	sendSuccess(c, gin.H{
 		"id":      id,
 		"status":  "active",
@@ -263,7 +283,25 @@ func (h *WebhookHandlers) handleDeactivateWebhook(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement webhook deactivation
+	db, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	now := time.Now()
+	query := database.ConvertQuery(`UPDATE webhook SET valid_id = 2, change_time = ? WHERE id = ?`)
+	result, err := db.Exec(query, now, id)
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to deactivate webhook")
+		return
+	}
+
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		sendError(c, http.StatusNotFound, "Webhook not found")
+		return
+	}
+
 	sendSuccess(c, gin.H{
 		"id":      id,
 		"status":  "inactive",

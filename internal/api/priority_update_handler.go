@@ -11,6 +11,20 @@ import (
 )
 
 // HandleUpdatePriorityAPI handles PUT /api/v1/priorities/:id.
+//
+//	@Summary		Update priority
+//	@Description	Update an existing priority
+//	@Tags			Priorities
+//	@Accept			json
+//	@Produce		json
+//	@Param			id			path		int		true	"Priority ID"
+//	@Param			priority	body		object	true	"Priority update data"
+//	@Success		200			{object}	map[string]interface{}	"Updated priority"
+//	@Failure		400			{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404			{object}	map[string]interface{}	"Priority not found"
+//	@Security		BearerAuth
+//	@Router			/priorities/{id} [put]
 func HandleUpdatePriorityAPI(c *gin.Context) {
 	// Check authentication
 	userIDRaw, exists := c.Get("user_id")

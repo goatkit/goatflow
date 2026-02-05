@@ -96,9 +96,10 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/system_maintenance.pongo2":           true,
 	"pages/admin/system_maintenance_form.pongo2":      true,
 	"pages/admin/ticket_attribute_relations.pongo2":   true,
+	"pages/admin/plugins.pongo2":                      true,
+	"pages/admin/plugin_logs.pongo2":                  true,
 
 	// Agent templates
-	"pages/agent/dashboard.pongo2":   true,
 	"pages/agent/queues.pongo2":      true,
 	"pages/agent/ticket_view.pongo2": true,
 	"pages/agent/tickets.pongo2":     true,
@@ -139,10 +140,11 @@ var AllPageTemplates = map[string]bool{
 	"pages/error.pongo2":              true,
 	"pages/login.pongo2":              true,
 	"pages/password_form.pongo2":      true,
-	"pages/profile.pongo2":            true,
-	"pages/register.pongo2":           true,
-	"pages/settings.pongo2":           true,
-	"pages/under_construction.pongo2": true,
+	"pages/profile.pongo2":              true,
+	"pages/register.pongo2":             true,
+	"pages/settings.pongo2":             true,
+	"pages/settings/api_tokens.pongo2":  true,
+	"pages/under_construction.pongo2":   true,
 }
 
 // =============================================================================
@@ -1229,6 +1231,26 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 				return ctx
 			}(),
 		},
+		{
+			name:     "admin/plugins",
+			template: "pages/admin/plugins.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Plugins"] = []map[string]interface{}{}
+				ctx["PluginsJSON"] = "[]"
+				ctx["EnabledCount"] = 0
+				ctx["DisabledCount"] = 0
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/plugin_logs",
+			template: "pages/admin/plugin_logs.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				return ctx
+			}(),
+		},
 	}
 
 	for _, tt := range tests {
@@ -1252,20 +1274,6 @@ func TestAllAgentTemplatesRender(t *testing.T) {
 		template string
 		ctx      pongo2.Context
 	}{
-		{
-			name:     "agent/dashboard",
-			template: "pages/agent/dashboard.pongo2",
-			ctx: func() pongo2.Context {
-				ctx := agentContext()
-				ctx["Stats"] = map[string]interface{}{
-					"OpenTickets":    10,
-					"MyTickets":      5,
-					"PendingTickets": 3,
-				}
-				ctx["RecentTickets"] = []map[string]interface{}{sampleTicket()}
-				return ctx
-			}(),
-		},
 		{
 			name:     "agent/queues",
 			template: "pages/agent/queues.pongo2",
@@ -1728,6 +1736,15 @@ func TestAllMiscTemplatesRender(t *testing.T) {
 			ctx: func() pongo2.Context {
 				ctx := baseContext()
 				ctx["Settings"] = map[string]interface{}{}
+				return ctx
+			}(),
+		},
+		{
+			name:     "settings_api_tokens",
+			template: "pages/settings/api_tokens.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := baseContext()
+				ctx["Tokens"] = []map[string]interface{}{}
 				return ctx
 			}(),
 		},

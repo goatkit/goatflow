@@ -13,9 +13,24 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/core"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/services"
 )
 
 // HandleCreateArticleAPI handles POST /api/v1/tickets/:ticket_id/articles.
+//
+//	@Summary		Create article
+//	@Description	Add a new article (reply/note) to a ticket
+//	@Tags			Articles
+//	@Accept			json
+//	@Produce		json
+//	@Param			ticket_id	path		int		true	"Ticket ID"
+//	@Param			article		body		object	true	"Article data (body, subject, article_type, sender_type, etc.)"
+//	@Success		201			{object}	map[string]interface{}	"Created article"
+//	@Failure		400			{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404			{object}	map[string]interface{}	"Ticket not found"
+//	@Security		BearerAuth
+//	@Router			/tickets/{ticket_id}/articles [post]
 func HandleCreateArticleAPI(c *gin.Context) {
 	// Get ticket ID from URL (accept :ticket_id or :id)
 	ticketIDStr := c.Param("ticket_id")
@@ -118,10 +133,30 @@ func HandleCreateArticleAPI(c *gin.Context) {
 	}
 
 	// Check permissions for customer users
-	if isCustomer, _ := c.Get("is_customer"); isCustomer == true { //nolint:errcheck // Defaults to nil
+	// Check both is_customer flag and user_role (API tokens set user_role, not is_customer)
+	isCustomer := false
+	if ic, _ := c.Get("is_customer"); ic == true {
+		isCustomer = true
+	} else if role, _ := c.Get("user_role"); role == "Customer" {
+		isCustomer = true
+	}
+	
+	if isCustomer {
 		customerEmail, _ := c.Get("customer_email") //nolint:errcheck // Defaults to nil
-		if emailStr, ok := customerEmail.(string); ok {
+		customerLogin, _ := c.Get("customer_login") //nolint:errcheck // Defaults to nil
+		// Check email or login matches
+		emailStr, _ := customerEmail.(string)
+		loginStr, _ := customerLogin.(string)
+		if emailStr != "" {
 			if !customerUserID.Valid || customerUserID.String != emailStr {
+				c.JSON(http.StatusForbidden, gin.H{
+					"success": false,
+					"error":   "Access denied",
+				})
+				return
+			}
+		} else if loginStr != "" {
+			if !customerUserID.Valid || customerUserID.String != loginStr {
 				c.JSON(http.StatusForbidden, gin.H{
 					"success": false,
 					"error":   "Access denied",
@@ -131,6 +166,19 @@ func HandleCreateArticleAPI(c *gin.Context) {
 		}
 		// Customer users use system user for create_by (FK to users table)
 		userID = 1
+	} else {
+		// Agent users need 'note' or 'rw' permission on the ticket's queue
+		permSvc := services.NewPermissionService(db)
+		canNote, err := permSvc.CanAddNote(userID, ticketID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to check permissions"})
+			return
+		}
+		// Security: return 404 to avoid revealing ticket existence
+		if !canNote {
+			c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Ticket not found"})
+			return
+		}
 	}
 
 	// Validate body presence for non-test path

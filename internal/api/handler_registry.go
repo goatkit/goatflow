@@ -115,6 +115,7 @@ func ensureCoreHandlers() {
 		// Optional customer info partial used by YAML
 		"HandleCustomerInfoPanel":     func(c *gin.Context) { c.String(200, "") },
 		"handleSettings":              handleSettings,
+		"handleApiTokensPage":         handleApiTokensPage,
 		"handleProfile":               handleProfile,
 		"HandleGetSessionTimeout":     HandleGetSessionTimeout,
 		"HandleSetSessionTimeout":     HandleSetSessionTimeout,

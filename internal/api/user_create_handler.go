@@ -24,6 +24,18 @@ type CreateUserRequest struct {
 }
 
 // HandleCreateUserAPI handles POST /api/v1/users.
+//
+//	@Summary		Create user
+//	@Description	Create a new agent user
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Param			user	body		object	true	"User data (login, email, first_name, last_name, password)"
+//	@Success		201		{object}	map[string]interface{}	"Created user"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/users [post]
 func HandleCreateUserAPI(c *gin.Context) {
 	// Check authentication
 	currentUserID, exists := c.Get("user_id")

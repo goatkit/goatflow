@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/gotrs-io/gotrs-ce/internal/plugin"
 	"github.com/tetratelabs/wazero"
@@ -42,27 +43,69 @@ type WASMPlugin struct {
 	gkCall     api.Function
 	gkMalloc   api.Function
 	gkFree     api.Function
+
+	// Resource limits
+	callTimeout time.Duration
+}
+
+// LoadOption is a functional option for loading WASM plugins.
+type LoadOption func(*loadOptions)
+
+type loadOptions struct {
+	memoryLimitPages uint32        // Memory limit in pages (64KB each)
+	callTimeout      time.Duration // Timeout for plugin function calls
+}
+
+func defaultLoadOptions() loadOptions {
+	return loadOptions{
+		memoryLimitPages: 256,              // 16MB default
+		callTimeout:      30 * time.Second, // 30s default timeout
+	}
+}
+
+// WithMemoryLimit sets the maximum memory in pages (64KB each).
+// Default is 256 pages (16MB).
+func WithMemoryLimit(pages uint32) LoadOption {
+	return func(o *loadOptions) {
+		o.memoryLimitPages = pages
+	}
+}
+
+// WithCallTimeout sets the timeout for plugin function calls.
+// Default is 30 seconds.
+func WithCallTimeout(d time.Duration) LoadOption {
+	return func(o *loadOptions) {
+		o.callTimeout = d
+	}
 }
 
 // LoadFromFile loads a WASM plugin from a file path.
-func LoadFromFile(ctx context.Context, path string) (*WASMPlugin, error) {
+func LoadFromFile(ctx context.Context, path string, opts ...LoadOption) (*WASMPlugin, error) {
 	wasmBytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read wasm file: %w", err)
 	}
-	return Load(ctx, wasmBytes)
+	return Load(ctx, wasmBytes, opts...)
 }
 
 // Load creates a WASM plugin from raw bytes.
-func Load(ctx context.Context, wasmBytes []byte) (*WASMPlugin, error) {
-	// Create runtime with default config
-	r := wazero.NewRuntime(ctx)
+func Load(ctx context.Context, wasmBytes []byte, opts ...LoadOption) (*WASMPlugin, error) {
+	options := defaultLoadOptions()
+	for _, opt := range opts {
+		opt(&options)
+	}
+
+	// Create runtime with memory limits
+	runtimeConfig := wazero.NewRuntimeConfig().
+		WithMemoryLimitPages(options.memoryLimitPages)
+	r := wazero.NewRuntimeWithConfig(ctx, runtimeConfig)
 
 	// Instantiate WASI for plugins that need it (filesystem, env, etc.)
 	wasi_snapshot_preview1.MustInstantiate(ctx, r)
 
 	p := &WASMPlugin{
-		runtime: r,
+		runtime:     r,
+		callTimeout: options.callTimeout,
 	}
 
 	// Define host functions before compiling the module
@@ -139,11 +182,16 @@ func (p *WASMPlugin) hostCall(ctx context.Context, fnPtr, fnLen, argsPtr, argsLe
 		return 0
 	}
 
+	// Set caller plugin name in context for better error messages
+	ctx = context.WithValue(ctx, plugin.PluginCallerKey, p.name)
+
 	// Dispatch to host API
 	result, err := p.dispatchHostCall(ctx, fnName, args)
 	if err != nil {
-		// TODO: better error handling
-		p.host.Log(ctx, "error", fmt.Sprintf("host_call %s failed: %v", fnName, err), nil)
+		// Log with caller context for debugging
+		p.host.Log(ctx, "error", fmt.Sprintf("host_call %s failed: %v", fnName, err), map[string]any{
+			"caller": p.name,
+		})
 		return 0
 	}
 
@@ -293,6 +341,21 @@ func (p *WASMPlugin) dispatchHostCall(ctx context.Context, fn string, args []byt
 		val := p.host.Translate(ctx, req.Key, req.Args...)
 		return json.Marshal(map[string]string{"value": val})
 
+	case "plugin_call":
+		var req struct {
+			Plugin   string          `json:"plugin"`
+			Function string          `json:"function"`
+			Args     json.RawMessage `json:"args"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		result, err := p.host.CallPlugin(ctx, req.Plugin, req.Function, req.Args)
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
+
 	default:
 		return nil, fmt.Errorf("unknown host function: %s", fn)
 	}
@@ -343,6 +406,13 @@ func (p *WASMPlugin) Init(ctx context.Context, host plugin.HostAPI) error {
 func (p *WASMPlugin) Call(ctx context.Context, fn string, args json.RawMessage) (json.RawMessage, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+
+	// Apply timeout if configured and not already set on context
+	if p.callTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, p.callTimeout)
+		defer cancel()
+	}
 
 	// Allocate and write function name
 	fnPtr := p.writeString(fn)

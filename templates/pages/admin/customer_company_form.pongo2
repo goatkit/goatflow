@@ -42,7 +42,7 @@
 
   <div class="gk-card-glow rounded-lg overflow-hidden">
     <!-- Tabs -->
-    <div style="border-bottom: 1px solid var(--gk-border);">
+    <div style="border-bottom: 1px solid var(--gk-border-default);">
       <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
         <button onclick="switchTab('general')" id="tab-general" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" style="border-color: transparent; color: var(--gk-text-muted);">
           General
@@ -129,7 +129,7 @@
     <!-- Portal Settings Tab -->
     <div id="content-portal" class="tab-content p-6 hidden">
       {% if IsNew %}
-      <div class="rounded-md p-4 text-sm" style="border: 1px dashed var(--gk-border); background: var(--gk-bg-tertiary); color: var(--gk-text-secondary);">
+      <div class="rounded-md p-4 text-sm" style="border: 1px dashed var(--gk-border-default); background: var(--gk-bg-tertiary); color: var(--gk-text-secondary);">
         Save the company before configuring portal settings.
       </div>
       {% else %}
@@ -156,19 +156,19 @@
             <div>
               <label for="primary_color" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Primary Color</label>
               <input type="color" name="primary_color" id="primary_color" value="{{ PortalConfig.primary_color|default:'#1e40af' }}"
-                     class="mt-1 h-10 w-20 rounded-md shadow-sm" style="border: 1px solid var(--gk-border); background: var(--gk-bg-surface);">
+                     class="mt-1 h-10 w-20 rounded-md shadow-sm" style="border: 1px solid var(--gk-border-default); background: var(--gk-bg-surface);">
             </div>
 
             <div>
               <label for="secondary_color" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Secondary Color</label>
               <input type="color" name="secondary_color" id="secondary_color" value="{{ PortalConfig.secondary_color|default:'#64748b' }}"
-                     class="mt-1 h-10 w-20 rounded-md shadow-sm" style="border: 1px solid var(--gk-border); background: var(--gk-bg-surface);">
+                     class="mt-1 h-10 w-20 rounded-md shadow-sm" style="border: 1px solid var(--gk-border-default); background: var(--gk-bg-surface);">
             </div>
 
             <div>
               <label for="header_bg" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Header Background</label>
               <input type="color" name="header_bg" id="header_bg" value="{{ PortalConfig.header_bg|default:'#ffffff' }}"
-                     class="mt-1 h-10 w-20 rounded-md shadow-sm" style="border: 1px solid var(--gk-border); background: var(--gk-bg-surface);">
+                     class="mt-1 h-10 w-20 rounded-md shadow-sm" style="border: 1px solid var(--gk-border-default); background: var(--gk-bg-surface);">
             </div>
           </div>
 
@@ -196,7 +196,7 @@
             <div class="flex items-center">
               <input type="checkbox" name="enable_kb" id="enable_kb" value="1" {% if PortalConfig.enable_kb %}checked{% endif %}
                      class="h-4 w-4 rounded focus:ring-2"
-                     style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                     style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
               <label for="enable_kb" class="ml-2 block text-sm" style="color: var(--gk-text-secondary);">
                 Enable Knowledge Base
               </label>
@@ -205,7 +205,7 @@
             <div class="flex items-center">
               <input type="checkbox" name="enable_downloads" id="enable_downloads" value="1" {% if PortalConfig.enable_downloads %}checked{% endif %}
                      class="h-4 w-4 rounded focus:ring-2"
-                     style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                     style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
               <label for="enable_downloads" class="ml-2 block text-sm" style="color: var(--gk-text-secondary);">
                 Enable File Downloads
               </label>
@@ -289,11 +289,11 @@ function loadServices() {
       data.services.forEach(service => {
         const div = document.createElement('div');
         div.className = 'flex items-center p-3 rounded-lg';
-        div.style.border = '1px solid var(--gk-border)';
+        div.style.border = '1px solid var(--gk-border-default)';
         div.innerHTML = `
           <input type="checkbox" name="services" value="${service.id}" ${service.assigned ? 'checked' : ''}
                  class="h-4 w-4 rounded focus:ring-2"
-                 style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                 style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
           <div class="ml-3">
             <div class="text-sm font-medium" style="color: var(--gk-text-primary);">${service.name}</div>
             <div class="text-xs" style="color: var(--gk-text-muted);">${service.description || 'No description'}</div>

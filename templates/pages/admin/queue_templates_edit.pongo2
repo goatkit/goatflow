@@ -58,7 +58,7 @@
                         <button type="button" onclick="selectAll()" class="text-sm transition-colors" style="color: var(--gk-primary);">
                             {{ t("labels.select_all") }}
                         </button>
-                        <span style="color: var(--gk-border);">|</span>
+                        <span style="color: var(--gk-border-default);">|</span>
                         <button type="button" onclick="selectNone()" class="text-sm transition-colors" style="color: var(--gk-primary);">
                             {{ t("labels.deselect_all") }}
                         </button>
@@ -70,7 +70,7 @@
                 </p>
 
                 {% if Templates %}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto p-2 rounded-md" style="border: 1px solid var(--gk-border); background: var(--gk-bg-surface);">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto p-2 rounded-md" style="border: 1px solid var(--gk-border-default); background: var(--gk-bg-surface);">
                     {% for template in Templates %}
                     <label class="relative flex items-start py-2 px-3 rounded-md cursor-pointer transition-colors hover:bg-white/5">
                         <div class="min-w-0 flex-1 text-sm flex items-center">
@@ -80,7 +80,7 @@
                                 value="{{ template.ID }}"
                                 {% if template.Selected %}checked{% endif %}
                                 class="template-checkbox h-4 w-4 rounded"
-                                style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);"
+                                style="border-color: var(--gk-border-default); background: var(--gk-bg-surface); accent-color: var(--gk-primary);"
                             >
                             {% for ttype in template.TemplateType|split:"," %}
                             <span class="gk-badge ml-1
@@ -108,7 +108,7 @@
             </div>
 
             <!-- Form Actions -->
-            <div class="flex justify-end space-x-3 pt-6 border-t" style="border-color: var(--gk-border);">
+            <div class="flex justify-end space-x-3 pt-6 border-t" style="border-color: var(--gk-border-default);">
                 <a href="/admin/queue-templates" class="gk-btn-secondary">
                     {{ t("common.cancel") }}
                 </a>

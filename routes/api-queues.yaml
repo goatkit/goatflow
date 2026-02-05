@@ -10,7 +10,7 @@ metadata:
 spec:
     prefix: /api/queues
     middleware:
-        - auth
+        - unified_auth
         - queue_ro # Require read access to at least one queue
     routes:
         - path: /
@@ -22,7 +22,7 @@ spec:
           method: POST
           handler: handleCreateQueueWrapper
           middleware:
-              - auth
+              - unified_auth
               - admin # Queue creation requires admin access
           description: "Create new queue"
 
@@ -30,7 +30,7 @@ spec:
           method: GET
           handler: HandleAPIQueueGet
           middleware:
-              - auth
+              - unified_auth
               - queue_access_ro # Require read access to specific queue
           description: "Get queue by ID"
 
@@ -38,7 +38,7 @@ spec:
           method: GET
           handler: HandleAPIQueueDetails
           middleware:
-              - auth
+              - unified_auth
               - queue_access_ro # Require read access to specific queue
           description: "Get queue details"
 
@@ -46,6 +46,6 @@ spec:
           method: PUT
           handler: HandleAPIQueueStatus
           middleware:
-              - auth
+              - unified_auth
               - admin # Queue status update requires admin access
           description: "Update queue status"

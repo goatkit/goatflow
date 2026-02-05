@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/services"
 )
 
 func handleTicketUpdateTestFallback(c *gin.Context, ticketID int64, updateRequest map[string]interface{}, userID int) bool {
@@ -99,6 +100,20 @@ func handleTicketUpdateTestFallback(c *gin.Context, ticketID int64, updateReques
 }
 
 // HandleUpdateTicketAPI handles PUT /api/v1/tickets/:id.
+//
+//	@Summary		Update ticket
+//	@Description	Update an existing ticket's properties
+//	@Tags			Tickets
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int		true	"Ticket ID"
+//	@Param			ticket	body		object	true	"Ticket update data (title, queue_id, priority_id, state_id, etc.)"
+//	@Success		200		{object}	map[string]interface{}	"Updated ticket"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404		{object}	map[string]interface{}	"Ticket not found"
+//	@Security		BearerAuth
+//	@Router			/tickets/{id} [put]
 func HandleUpdateTicketAPI(c *gin.Context) {
 	// Get ticket ID from URL
 	ticketIDStr := c.Param("id")
@@ -217,9 +232,76 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 				return
 			}
 		}
+	} else {
+		// Agent user - check group permissions
+		permSvc := services.NewPermissionService(db)
+
+		// Check basic write access (ro users can't update at all)
+		canWrite, err := permSvc.CanWriteTicket(userID, ticketID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to check permissions",
+			})
+			return
+		}
+		if !canWrite {
+			c.JSON(http.StatusForbidden, gin.H{
+				"success": false,
+				"error":   "Write access denied - requires 'rw' permission on queue",
+			})
+			return
+		}
+
+		// Check granular permissions for specific field updates
+		// If changing priority, need 'priority' or 'rw' permission
+		if _, hasPriority := updateRequest["priority_id"]; hasPriority {
+			canPriority, err := permSvc.CanChangePriority(userID, ticketID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to check permissions"})
+				return
+			}
+			if !canPriority {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "No permission to change priority"})
+				return
+			}
+		}
+
+		// If changing owner (user_id), need 'owner' or 'rw' permission
+		if _, hasOwner := updateRequest["user_id"]; hasOwner {
+			// Get current queue to check owner permission
+			var queueID int
+			db.QueryRow(database.ConvertPlaceholders("SELECT queue_id FROM ticket WHERE id = ?"), ticketID).Scan(&queueID)
+			canOwn, err := permSvc.CanBeOwner(userID, queueID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to check permissions"})
+				return
+			}
+			if !canOwn {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "No permission to change ticket owner"})
+				return
+			}
+		}
 	}
 
 	// Validate fields that reference other tables
+	// If changing queue, check move_into permission on the NEW queue
+	if queueID, ok := updateRequest["queue_id"].(float64); ok {
+		// Check move_into permission on target queue (agents only)
+		if isCustomer, _ := c.Get("is_customer"); isCustomer != true {
+			permSvc := services.NewPermissionService(db)
+			canMove, err := permSvc.CanMoveInto(userID, int(queueID))
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to check permissions"})
+				return
+			}
+			if !canMove {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "No permission to move tickets into this queue"})
+				return
+			}
+		}
+	}
+
 	if queueID, ok := updateRequest["queue_id"].(float64); ok {
 		var exists bool
 		err := db.QueryRow(database.ConvertPlaceholders(

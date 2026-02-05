@@ -11,6 +11,18 @@ import (
 )
 
 // HandleGetUserAPI handles GET /api/v1/users/:id.
+//
+//	@Summary		Get user by ID
+//	@Description	Retrieve a single user by their ID
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"User ID"
+//	@Success		200	{object}	map[string]interface{}	"User details"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"User not found"
+//	@Security		BearerAuth
+//	@Router			/users/{id} [get]
 func HandleGetUserAPI(c *gin.Context) {
 	// Check authentication
 	_, exists := c.Get("user_id")

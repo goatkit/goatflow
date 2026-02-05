@@ -237,6 +237,16 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                                 </svg>
                             </button>
+                            <button
+                                onclick="manageUserTokens({{ user.ID }}, '{{ user.UserLogin }}')"
+                                title="{{ t("admin.manage_api_tokens")|default:"Manage API Tokens" }}"
+                                class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-success-subtle)]"
+                                style="color: var(--gk-success);"
+                            >
+                                <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                </svg>
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -873,9 +883,109 @@ function showGuruMeditation(title, message) {
     </div>
 </div>
 
+<!-- API Tokens Modal -->
+<div id="tokensModal" class="hidden fixed z-10 inset-0 overflow-y-auto">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0 transition-opacity" onclick="closeTokensModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+            <div class="gk-modal-header">
+                <h3 class="gk-modal-title" id="tokensModalTitle">
+                    {{ t("admin.manage_api_tokens")|default:"Manage API Tokens" }}
+                </h3>
+                <button type="button" onclick="closeTokensModal()" class="gk-modal-close">
+                    <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="gk-modal-body max-h-[70vh] overflow-y-auto">
+                <!-- Token list -->
+                <div id="tokensList" class="space-y-3 mb-4">
+                    <div class="text-center py-4" style="color: var(--gk-text-muted);">
+                        {{ t("common.loading")|default:"Loading..." }}
+                    </div>
+                </div>
+
+                <!-- Create new token form -->
+                <div class="border-t pt-4 mt-4" style="border-color: var(--gk-border-default);">
+                    <h4 class="font-medium mb-3" style="color: var(--gk-text-primary);">
+                        {{ t("admin.create_token_for_user")|default:"Create Token for User" }}
+                    </h4>
+                    <form id="createTokenForm" onsubmit="createTokenForUser(event); return false;">
+                        <div class="space-y-3">
+                            <div>
+                                <label for="tokenName" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                    {{ t("settings.token_name")|default:"Token Name" }} *
+                                </label>
+                                <input type="text" id="tokenName" name="name" required
+                                    class="gk-input-neon w-full"
+                                    placeholder="{{ t("settings.token_name_placeholder")|default:"e.g., Integration API" }}">
+                            </div>
+                            <div>
+                                <label for="tokenScopes" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                    {{ t("settings.token_scopes")|default:"Scopes" }}
+                                    <span class="text-xs" style="color: var(--gk-text-muted);">({{ t("settings.leave_empty_full_access")|default:"leave empty for full access" }})</span>
+                                </label>
+                                <select id="tokenScopes" name="scopes" multiple class="gk-select-neon w-full" size="4">
+                                    <!-- Loaded dynamically -->
+                                </select>
+                            </div>
+                            <div>
+                                <label for="tokenExpiry" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                    {{ t("settings.token_expiry")|default:"Expiration" }}
+                                </label>
+                                <select id="tokenExpiry" name="expires_in" class="gk-select-neon w-full">
+                                    <option value="30d">30 days</option>
+                                    <option value="90d">90 days</option>
+                                    <option value="1y">1 year</option>
+                                    <option value="never">Never</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="gk-btn-neon w-full">
+                                {{ t("settings.create_token")|default:"Create Token" }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- New token display (hidden by default) -->
+                <div id="newTokenDisplay" class="hidden mt-4 p-4 rounded-lg" style="background: var(--gk-bg-elevated); border: 1px solid var(--gk-success);">
+                    <div class="flex items-center gap-2 mb-2">
+                        <svg class="icon-md" style="color: var(--gk-success);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="font-medium" style="color: var(--gk-success);">{{ t("settings.token_created")|default:"Token Created!" }}</span>
+                    </div>
+                    <p class="text-sm mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("settings.token_warning")|default:"Copy this token now. It won't be shown again." }}
+                    </p>
+                    <div class="flex gap-2">
+                        <input type="text" id="newTokenValue" readonly
+                            class="gk-input-neon flex-1 font-mono text-sm"
+                            style="background: var(--gk-bg-surface);">
+                        <button type="button" onclick="copyToken()" class="gk-btn-ghost px-3">
+                            <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="gk-modal-footer">
+                <button type="button" onclick="closeTokensModal()" class="gk-btn-ghost">
+                    {{ t("buttons.close")|default:"Close" }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 let currentConfirmAction = null;
 let currentUserId = null;
+let currentTokenUserId = null;
+let currentTokenUsername = null;
 let passwordPolicy = {
     minLength: 8,
     requireUppercase: true,
@@ -1201,6 +1311,206 @@ function showNotification(message, type = 'info') {
         notification.style.opacity = '0';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
+}
+
+// ==================== API Token Management ====================
+
+let availableScopes = [];
+
+function manageUserTokens(userId, username) {
+    currentTokenUserId = userId;
+    currentTokenUsername = username;
+    document.getElementById('tokensModalTitle').textContent = `API Tokens - ${username}`;
+    document.getElementById('tokensModal').classList.remove('hidden');
+    document.getElementById('newTokenDisplay').classList.add('hidden');
+    document.getElementById('createTokenForm').reset();
+    loadUserTokens(userId);
+    loadAvailableScopes();
+}
+
+async function loadAvailableScopes() {
+    const select = document.getElementById('tokenScopes');
+    if (availableScopes.length > 0) {
+        // Already loaded
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/v1/tokens/scopes', { credentials: 'include' });
+        if (!response.ok) throw new Error('Failed to load scopes');
+        const data = await response.json();
+        availableScopes = data.scopes || [];
+
+        select.innerHTML = availableScopes
+            .filter(s => s.scope !== '*') // Don't show full access as a selectable option
+            .map(s => `<option value="${s.scope}">${s.scope} - ${s.description}</option>`)
+            .join('');
+    } catch (error) {
+        console.error('Error loading scopes:', error);
+        // Fallback to basic scopes
+        select.innerHTML = `
+            <option value="tickets:read">tickets:read - View tickets</option>
+            <option value="tickets:write">tickets:write - Create/update tickets</option>
+        `;
+    }
+}
+
+function closeTokensModal() {
+    document.getElementById('tokensModal').classList.add('hidden');
+    currentTokenUserId = null;
+    currentTokenUsername = null;
+}
+
+async function loadUserTokens(userId) {
+    const tokensList = document.getElementById('tokensList');
+    tokensList.innerHTML = '<div class="text-center py-4" style="color: var(--gk-text-muted);">Loading...</div>';
+
+    try {
+        const response = await fetch(`/api/v1/admin/users/${userId}/tokens`, {
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load tokens');
+        }
+
+        const data = await response.json();
+        renderTokensList(data.tokens || []);
+    } catch (error) {
+        tokensList.innerHTML = `<div class="text-center py-4" style="color: var(--gk-error);">Error loading tokens</div>`;
+        console.error('Error loading tokens:', error);
+    }
+}
+
+function renderTokensList(tokens) {
+    const tokensList = document.getElementById('tokensList');
+
+    if (tokens.length === 0) {
+        tokensList.innerHTML = `
+            <div class="text-center py-4" style="color: var(--gk-text-muted);">
+                No API tokens found for this user.
+            </div>
+        `;
+        return;
+    }
+
+    tokensList.innerHTML = tokens.map(token => `
+        <div class="flex items-center justify-between p-3 rounded-lg" style="background: var(--gk-bg-elevated);">
+            <div class="flex-1">
+                <div class="flex items-center gap-2">
+                    <span class="font-medium" style="color: var(--gk-text-primary);">${escapeHtml(token.name)}</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full ${token.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                        ${token.is_active ? 'Active' : 'Revoked'}
+                    </span>
+                </div>
+                <div class="text-xs mt-1" style="color: var(--gk-text-muted);">
+                    <span class="font-mono">gf_${token.prefix}...</span>
+                    ${token.scopes && token.scopes.length > 0 ? ` • ${token.scopes.join(', ')}` : ' • Full access'}
+                </div>
+                <div class="text-xs" style="color: var(--gk-text-muted);">
+                    Created: ${formatDate(token.created_at)}
+                    ${token.last_used_at ? ` • Last used: ${formatDate(token.last_used_at)}` : ''}
+                    ${token.expires_at ? ` • Expires: ${formatDate(token.expires_at)}` : ''}
+                </div>
+            </div>
+            ${token.is_active ? `
+                <button onclick="revokeUserToken(${token.id})" class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-error-subtle)]" style="color: var(--gk-error);" title="{{ t("buttons.revoke_token")|default:"Revoke token" }}">
+                    <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </button>
+            ` : ''}
+        </div>
+    `).join('');
+}
+
+async function createTokenForUser(event) {
+    event.preventDefault();
+
+    const name = document.getElementById('tokenName').value.trim();
+    const scopesSelect = document.getElementById('tokenScopes');
+    const scopes = Array.from(scopesSelect.selectedOptions).map(opt => opt.value);
+    const expiresIn = document.getElementById('tokenExpiry').value;
+
+    if (!name) {
+        showNotification('{{ t("settings.enter_token_name")|default:"Please enter a token name" }}', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/v1/admin/users/${currentTokenUserId}/tokens`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                name: name,
+                scopes: scopes,
+                expires_in: expiresIn
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create token');
+        }
+
+        const data = await response.json();
+
+        // Show the new token
+        document.getElementById('newTokenValue').value = data.token;
+        document.getElementById('newTokenDisplay').classList.remove('hidden');
+
+        // Reset form and reload list
+        document.getElementById('createTokenForm').reset();
+        loadUserTokens(currentTokenUserId);
+
+        showNotification('Token created successfully', 'success');
+    } catch (error) {
+        showNotification(error.message, 'error');
+        console.error('Error creating token:', error);
+    }
+}
+
+async function revokeUserToken(tokenId) {
+    if (!confirm('{{ t("settings.revoke_token_confirm")|default:"Are you sure you want to revoke this token? This action cannot be undone." }}')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/v1/admin/users/${currentTokenUserId}/tokens/${tokenId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to revoke token');
+        }
+
+        loadUserTokens(currentTokenUserId);
+        showNotification('Token revoked successfully', 'success');
+    } catch (error) {
+        showNotification(error.message, 'error');
+        console.error('Error revoking token:', error);
+    }
+}
+
+function copyToken() {
+    const tokenInput = document.getElementById('newTokenValue');
+    tokenInput.select();
+    document.execCommand('copy');
+    showNotification('Token copied to clipboard', 'success');
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 </script>
 {% endblock %}

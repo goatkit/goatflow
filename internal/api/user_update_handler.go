@@ -23,6 +23,20 @@ type UpdateUserRequest struct {
 }
 
 // HandleUpdateUserAPI handles PUT /api/v1/users/:id.
+//
+//	@Summary		Update user
+//	@Description	Update an existing user's properties
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int		true	"User ID"
+//	@Param			user	body		object	true	"User update data"
+//	@Success		200		{object}	map[string]interface{}	"Updated user"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404		{object}	map[string]interface{}	"User not found"
+//	@Security		BearerAuth
+//	@Router			/users/{id} [put]
 func HandleUpdateUserAPI(c *gin.Context) {
 	// Check authentication
 	currentUserID, exists := c.Get("user_id")

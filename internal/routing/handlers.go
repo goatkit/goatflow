@@ -61,7 +61,14 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 		"auth": func(c *gin.Context) {
 			// Public (unauthenticated) paths bypass auth
 			path := c.Request.URL.Path
-			if path == "/login" || path == "/api/auth/login" || path == "/api/auth/customer/login" || path == "/health" || path == "/metrics" || path == "/favicon.ico" || strings.HasPrefix(path, "/static/") || path == "/customer/login" || path == "/auth/customer" || path == "/api/languages" || path == "/api/themes" {
+			if path == "/login" || path == "/api/auth/login" || path == "/api/auth/customer/login" || path == "/health" || path == "/metrics" || path == "/favicon.ico" || strings.HasPrefix(path, "/static/") || path == "/customer/login" || path == "/auth/customer" || path == "/api/languages" || path == "/api/themes" || strings.HasPrefix(path, "/swagger/") {
+				c.Next()
+				return
+			}
+
+			// API tokens (gf_*) bypass this middleware - handled by unified_auth
+			authHeader := c.GetHeader("Authorization")
+			if authHeader != "" && strings.Contains(authHeader, "gf_") {
 				c.Next()
 				return
 			}
@@ -313,6 +320,20 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 		"ticket_access_owner":     middleware.RequireQueueAccessFromTicket("owner"),
 		"ticket_access_priority":  middleware.RequireQueueAccessFromTicket("priority"),
 		"ticket_access_move_into": middleware.RequireQueueAccessFromTicket("move_into"),
+
+		// API token authentication
+		"api_token":    middleware.APITokenAuthMiddleware(),
+		"unified_auth": middleware.UnifiedAuthMiddleware(shared.GetJWTManager()),
+
+		// API token scope middleware - restricts API token access
+		"scope_tickets_read":   middleware.RequireScope("tickets:read"),
+		"scope_tickets_write":  middleware.RequireScope("tickets:write"),
+		"scope_tickets_delete": middleware.RequireScope("tickets:delete"),
+		"scope_articles_read":  middleware.RequireScope("articles:read"),
+		"scope_articles_write": middleware.RequireScope("articles:write"),
+		"scope_users_read":     middleware.RequireScope("users:read"),
+		"scope_queues_read":    middleware.RequireScope("queues:read"),
+		"scope_admin":          middleware.RequireScope("admin:*"),
 	}
 
 	// Register all middleware

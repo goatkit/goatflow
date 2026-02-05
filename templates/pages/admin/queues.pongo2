@@ -272,7 +272,7 @@
 
                         <div class="sm:col-span-2">
                             <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin_queues.salutation_preview")|default:"Salutation Preview" }}</label>
-                            <div id="salutationPreview" class="rounded-md border border-dashed px-3 py-2 text-sm" style="border-color: var(--gk-border); background: var(--gk-bg-tertiary); color: var(--gk-text-muted);">
+                            <div id="salutationPreview" class="rounded-md border border-dashed px-3 py-2 text-sm" style="border-color: var(--gk-border-default); background: var(--gk-bg-tertiary); color: var(--gk-text-muted);">
                                 {{ t("admin_queues.no_salutation")|default:"No salutation selected" }}
                             </div>
                         </div>
@@ -289,7 +289,7 @@
 
                         <div class="sm:col-span-2">
                             <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin_queues.signature_preview")|default:"Signature Preview" }}</label>
-                            <div id="signaturePreview" class="rounded-md border border-dashed px-3 py-2 text-sm" style="border-color: var(--gk-border); background: var(--gk-bg-tertiary); color: var(--gk-text-muted);">
+                            <div id="signaturePreview" class="rounded-md border border-dashed px-3 py-2 text-sm" style="border-color: var(--gk-border-default); background: var(--gk-bg-tertiary); color: var(--gk-text-muted);">
                                 {{ t("admin_queues.no_signature")|default:"No signature selected" }}
                             </div>
                         </div>

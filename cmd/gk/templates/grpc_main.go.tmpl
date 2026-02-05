@@ -1,0 +1,94 @@
+// Package main implements the {{.Name}} gRPC plugin for GoatKit.
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"log"
+
+	"github.com/gotrs-io/gotrs-ce/internal/plugin"
+	"github.com/gotrs-io/gotrs-ce/internal/plugin/grpc"
+)
+
+type {{.NameTitle}}Plugin struct {
+	config map[string]string
+}
+
+func (p *{{.NameTitle}}Plugin) GKRegister() (*plugin.GKRegistration, error) {
+	return &plugin.GKRegistration{
+		Name:        "{{.Name}}",
+		Version:     "1.0.0",
+		Description: "{{.Description}}",
+		Author:      "Your Name",
+		License:     "Apache-2.0",
+		Routes: []plugin.RouteSpec{
+			{
+				Method:      "GET",
+				Path:        "/api/plugins/{{.Name}}",
+				Handler:     "hello",
+				Description: "Returns a greeting",
+			},
+		},
+		Widgets: []plugin.WidgetSpec{
+			{
+				ID:          "{{.NameSnake}}_widget",
+				Title:       "{{.NameTitle}} Widget",
+				Handler:     "widget",
+				Location:    "dashboard",
+				Size:        "small",
+				Refreshable: true,
+			},
+		},
+	}, nil
+}
+
+func (p *{{.NameTitle}}Plugin) Init(config map[string]string) error {
+	p.config = config
+	log.Printf("{{.NameTitle}} plugin initialized with config: %v", config)
+	return nil
+}
+
+func (p *{{.NameTitle}}Plugin) Call(fn string, args json.RawMessage) (json.RawMessage, error) {
+	switch fn {
+	case "hello":
+		return p.handleHello(args)
+	case "widget":
+		return p.handleWidget()
+	default:
+		return json.Marshal(map[string]string{"error": "unknown function: " + fn})
+	}
+}
+
+func (p *{{.NameTitle}}Plugin) Shutdown() error {
+	log.Println("{{.NameTitle}} plugin shutting down")
+	return nil
+}
+
+func (p *{{.NameTitle}}Plugin) handleHello(args json.RawMessage) (json.RawMessage, error) {
+	var params struct {
+		Name string `json:"name"`
+	}
+	if len(args) > 0 {
+		json.Unmarshal(args, &params)
+	}
+	if params.Name == "" {
+		params.Name = "World"
+	}
+
+	return json.Marshal(map[string]any{
+		"message": "Hello from {{.NameTitle}}, " + params.Name + "!",
+		"plugin":  "{{.Name}}",
+	})
+}
+
+func (p *{{.NameTitle}}Plugin) handleWidget() (json.RawMessage, error) {
+	html := `<div class="{{.NameSnake}}-widget">
+		<p class="text-lg font-semibold">🔌 {{.NameTitle}} Plugin (gRPC)</p>
+		<p class="text-sm text-gray-500">Edit main.go to customize this widget.</p>
+	</div>`
+	return json.Marshal(map[string]string{"html": html})
+}
+
+func main() {
+	grpc.ServePlugin(&{{.NameTitle}}Plugin{})
+}

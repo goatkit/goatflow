@@ -157,7 +157,7 @@
                                    file:rounded-md file:border-0
                                    file:text-sm file:font-medium
                                    file:cursor-pointer file:transition-colors"
-                            style="color: var(--gk-text-muted); background: var(--gk-bg-surface); border: 1px solid var(--gk-border);"
+                            style="color: var(--gk-text-muted); background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default);"
                         >
                         {% if Mode == "edit" %}
                         <a href="/admin/ticket-attribute-relations/{{ Relation.ID }}/download" class="gk-btn-secondary">
@@ -199,7 +199,7 @@
                             id="dynamic_field_config_update"
                             value="1"
                             class="h-4 w-4 rounded focus:ring-2"
-                            style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
+                            style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);"
                         >
                     </div>
                     <div class="ml-3">
@@ -214,7 +214,7 @@
             </div>
 
             <!-- Form actions -->
-            <div class="px-6 py-4 flex items-center justify-end space-x-3 border-t" style="border-color: var(--gk-border); background: var(--gk-bg-tertiary);">
+            <div class="px-6 py-4 flex items-center justify-end space-x-3 border-t" style="border-color: var(--gk-border-default); background: var(--gk-bg-tertiary);">
                 <!-- Loading spinner -->
                 <div id="save-spinner" class="htmx-indicator mr-2">
                     <svg class="animate-spin h-5 w-5" style="color: var(--gk-primary);" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -247,7 +247,7 @@
     {% if Mode == "edit" and Relation.Data %}
     <!-- Attribute values preview -->
     <div class="mt-8 gk-card-glow overflow-hidden rounded-lg">
-        <div class="px-6 py-4 border-b" style="border-color: var(--gk-border);">
+        <div class="px-6 py-4 border-b" style="border-color: var(--gk-border-default);">
             <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin.ticket_attribute_relations.attribute_values") }}</h3>
         </div>
         <div class="overflow-x-auto">
@@ -273,7 +273,7 @@
             </table>
         </div>
         {% if MissingValues %}
-        <div class="px-6 py-4 border-t" style="border-color: var(--gk-border); background: rgba(var(--gk-warning-rgb), 0.1);">
+        <div class="px-6 py-4 border-t" style="border-color: var(--gk-border-default); background: rgba(var(--gk-warning-rgb), 0.1);">
             <div class="flex">
                 <div class="flex-shrink-0">
                     <svg class="h-5 w-5" style="color: var(--gk-warning);" fill="none" stroke="currentColor" viewBox="0 0 24 24">

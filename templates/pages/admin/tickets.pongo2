@@ -71,7 +71,7 @@
 
     <!-- Tickets Table -->
     <div class="gk-card-glow rounded-lg overflow-hidden">
-        <div class="px-4 py-3 border-b" style="border-color: var(--gk-border);">
+        <div class="px-4 py-3 border-b" style="border-color: var(--gk-border-default);">
             <div class="flex justify-between items-center">
                 <span class="text-sm" style="color: var(--gk-text-secondary);">
                     {{ t("tickets.showing")|default:"Showing" }} {{ tickets|length }} {{ t("tickets.of")|default:"of" }} {{ totalCount }} {{ t("tickets.tickets")|default:"tickets" }}
@@ -176,7 +176,7 @@
 
         <!-- Pagination -->
         {% if totalPages > 1 %}
-        <div class="px-4 py-3 border-t sm:px-6" style="border-color: var(--gk-border);">
+        <div class="px-4 py-3 border-t sm:px-6" style="border-color: var(--gk-border-default);">
             <div class="flex items-center justify-between">
                 <div class="flex-1 flex justify-between sm:hidden">
                     {% if currentPage > 1 %}
@@ -203,7 +203,7 @@
                             {% if currentPage > 1 %}
                             <a href="?page={{ currentPage - 1 }}&status={{ statusFilter }}&queue={{ queueFilter }}&search={{ searchQuery }}"
                                class="relative inline-flex items-center px-2 py-2 rounded-l-md border text-sm font-medium transition-colors hover:bg-white/10"
-                               style="border-color: var(--gk-border); color: var(--gk-text-secondary);">
+                               style="border-color: var(--gk-border-default); color: var(--gk-text-secondary);">
                                 {{ t("common.previous")|default:"Previous" }}
                             </a>
                             {% endif %}
@@ -217,12 +217,12 @@
                                 {% elif page_num <= 3 or page_num > totalPages - 3 or (page_num >= currentPage - 1 and page_num <= currentPage + 1) %}
                                 <a href="?page={{ page_num }}&status={{ statusFilter }}&queue={{ queueFilter }}&search={{ searchQuery }}"
                                    class="relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors hover:bg-white/10"
-                                   style="border-color: var(--gk-border); color: var(--gk-text-secondary);">
+                                   style="border-color: var(--gk-border-default); color: var(--gk-text-secondary);">
                                     {{ page_num }}
                                 </a>
                                 {% elif page_num == 4 or page_num == totalPages - 3 %}
                                 <span class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
-                                      style="border-color: var(--gk-border); color: var(--gk-text-muted);">
+                                      style="border-color: var(--gk-border-default); color: var(--gk-text-muted);">
                                     ...
                                 </span>
                                 {% endif %}
@@ -231,7 +231,7 @@
                             {% if currentPage < totalPages %}
                             <a href="?page={{ currentPage + 1 }}&status={{ statusFilter }}&queue={{ queueFilter }}&search={{ searchQuery }}"
                                class="relative inline-flex items-center px-2 py-2 rounded-r-md border text-sm font-medium transition-colors hover:bg-white/10"
-                               style="border-color: var(--gk-border); color: var(--gk-text-secondary);">
+                               style="border-color: var(--gk-border-default); color: var(--gk-text-secondary);">
                                 {{ t("common.next")|default:"Next" }}
                             </a>
                             {% endif %}
