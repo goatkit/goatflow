@@ -75,8 +75,8 @@ curl -X POST "http://localhost:8080/admin/MODULE/ID/update" \
   -d "name=Updated&valid_id=3"
 
 # 7. Verify in database
-PGPASSWORD=$DB_PASSWORD ./scripts/container-wrapper.sh exec gotrs-postgres \
-  psql -h localhost -U gotrs_user -d gotrs -c "SELECT * FROM table_name WHERE ..."
+PGPASSWORD=$DB_PASSWORD ./scripts/container-wrapper.sh exec goatflow-postgres \
+  psql -h localhost -U goatflow_user -d goatflow -c "SELECT * FROM table_name WHERE ..."
 
 # 8. Check browser console for JavaScript errors
 Open browser DevTools Console - MUST show zero errors

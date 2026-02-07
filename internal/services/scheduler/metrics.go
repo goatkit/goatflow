@@ -6,7 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/email/inbound/connector"
 )
 
 type emailPollMetrics struct {
@@ -31,25 +31,25 @@ func globalEmailPollMetrics() *emailPollMetrics {
 func newEmailPollMetrics() *emailPollMetrics {
 	return &emailPollMetrics{
 		runs: promauto.NewCounter(prometheus.CounterOpts{
-			Namespace: "gotrs",
+			Namespace: "goatflow",
 			Subsystem: "scheduler",
 			Name:      "email_poll_runs_total",
 			Help:      "Total email poller executions",
 		}),
 		activeAccounts: promauto.NewGauge(prometheus.GaugeOpts{
-			Namespace: "gotrs",
+			Namespace: "goatflow",
 			Subsystem: "scheduler",
 			Name:      "email_poll_active_accounts",
 			Help:      "Active mailboxes observed during the latest poll",
 		}),
 		processed: promauto.NewCounterVec(prometheus.CounterOpts{
-			Namespace: "gotrs",
+			Namespace: "goatflow",
 			Subsystem: "scheduler",
 			Name:      "email_poll_accounts_total",
 			Help:      "Accounts processed by the email poller, labeled by result and connector",
 		}, []string{"status", "connector"}),
 		durations: promauto.NewHistogram(prometheus.HistogramOpts{
-			Namespace: "gotrs",
+			Namespace: "goatflow",
 			Subsystem: "scheduler",
 			Name:      "email_poll_duration_seconds",
 			Help:      "Duration of email poller executions",

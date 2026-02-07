@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
+	"github.com/goatkit/goatflow/internal/plugin"
 )
 
 // PluginPackage represents a packaged plugin (ZIP file).

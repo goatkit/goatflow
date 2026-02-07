@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
+	"github.com/goatkit/goatflow/internal/auth"
 )
 
 func TestAuthMiddlewareSetsIsCustomerFlag(t *testing.T) {
@@ -191,7 +191,7 @@ func TestAuthMiddlewareSetsIsCustomerFlag(t *testing.T) {
 func TestAuthMiddlewareHonorsBypassDisable(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 	t.Setenv("APP_ENV", "test")
-	t.Setenv("GOTRS_DISABLE_TEST_AUTH_BYPASS", "1")
+	t.Setenv("GOATFLOW_DISABLE_TEST_AUTH_BYPASS", "1")
 
 	registry := NewHandlerRegistry()
 	RegisterExistingHandlers(registry)

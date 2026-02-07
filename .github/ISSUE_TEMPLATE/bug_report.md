@@ -25,7 +25,7 @@ If applicable, add screenshots to help explain your problem.
 **Environment (please complete the following information):**
  - OS: [e.g. Ubuntu 22.04]
  - Browser [e.g. chrome, safari]
- - GOTRS Version [e.g. 1.0.0]
+ - GoatFlow Version [e.g. 1.0.0]
  - Deployment Method: [e.g. Docker, Kubernetes, Bare Metal]
 
 **Additional context**

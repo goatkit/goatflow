@@ -83,7 +83,7 @@
                     </label>
                     <textarea id="footer_text" name="footer_text" rows="2"
                         class="gk-input-neon w-full"
-                        placeholder="{{ t('customer_portal.placeholders.footer')|default:'Powered by GOTRS' }}">{{ Settings.FooterText }}</textarea>
+                        placeholder="{{ t('customer_portal.placeholders.footer')|default:'Powered by GoatFlow' }}">{{ Settings.FooterText }}</textarea>
                 </div>
 
                 <!-- Landing Page -->

@@ -1844,7 +1844,7 @@ func universalContext() pongo2.Context {
 		// Base context
 		"t":           func(key string, args ...interface{}) string { return key },
 		"CurrentYear": now.Year(),
-		"Config":      map[string]interface{}{"AppName": "GOTRS", "Maintenance": map[string]interface{}{"DefaultLoginMessage": ""}},
+		"Config":      map[string]interface{}{"AppName": "GoatFlow", "Maintenance": map[string]interface{}{"DefaultLoginMessage": ""}},
 		"Labels":      map[string]string{}, // Empty map, pongo2 will return empty string for missing keys
 
 		// User context

@@ -1,6 +1,6 @@
 # OTRS Default Data Reference
 
-This document lists all default data that is included in GoTRS migrations to match OTRS standard installation.
+This document lists all default data that is included in GoatFlow migrations to match OTRS standard installation.
 
 ## Migration Files Overview
 
@@ -141,7 +141,7 @@ To apply all defaults on a fresh installation:
 for i in {1..23}; do
     migration=$(printf "%06d" $i)
     if [ -f migrations/${migration}_*.up.sql ]; then
-        cat migrations/${migration}_*.up.sql | psql -h localhost -U gotrs_user -d gotrs
+        cat migrations/${migration}_*.up.sql | psql -h localhost -U goatflow_user -d goatflow
     fi
 done
 ```

@@ -6,20 +6,20 @@ import (
 	"log"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/sdk/go/types"
+	"github.com/goatkit/goatflow/sdk/go/types"
 )
 
 func main() {
 	// Initialize client with API key
-	client := gotrs.NewClientWithAPIKey("https://your-gotrs-instance.com", "your-api-key")
+	client := goatflow.NewClientWithAPIKey("https://your-goatflow-instance.com", "your-api-key")
 
 	ctx := context.Background()
 
 	// Test connection
 	if err := client.Ping(ctx); err != nil {
-		log.Fatalf("Failed to connect to GOTRS: %v", err)
+		log.Fatalf("Failed to connect to GoatFlow: %v", err)
 	}
-	fmt.Println("✅ Connected to GOTRS successfully")
+	fmt.Println("✅ Connected to GoatFlow successfully")
 
 	// List tickets
 	fmt.Println("\n📋 Listing tickets...")
@@ -126,21 +126,21 @@ func main() {
 }
 
 // Example of error handling
-func handleTicketOperations(client *gotrs.Client) {
+func handleTicketOperations(client *goatflow.Client) {
 	ctx := context.Background()
 
 	// Example with proper error handling
 	ticket, err := client.Tickets.Get(ctx, 12345)
 	if err != nil {
-		if gotrs.IsNotFound(err) {
+		if goatflow.IsNotFound(err) {
 			fmt.Println("Ticket not found")
 			return
 		}
-		if gotrs.IsUnauthorized(err) {
+		if goatflow.IsUnauthorized(err) {
 			fmt.Println("Authentication failed")
 			return
 		}
-		if gotrs.IsRateLimited(err) {
+		if goatflow.IsRateLimited(err) {
 			fmt.Println("Rate limit exceeded, retrying later...")
 			time.Sleep(time.Minute)
 			return
@@ -154,16 +154,16 @@ func handleTicketOperations(client *gotrs.Client) {
 // Example of using different authentication methods
 func authenticationExamples() {
 	// API Key authentication
-	client1 := gotrs.NewClientWithAPIKey("https://gotrs.example.com", "your-api-key")
+	client1 := goatflow.NewClientWithAPIKey("https://goatflow.example.com", "your-api-key")
 
 	// JWT authentication
 	expiresAt := time.Now().Add(24 * time.Hour)
-	client2 := gotrs.NewClientWithJWT("https://gotrs.example.com", "jwt-token", "refresh-token", expiresAt)
+	client2 := goatflow.NewClientWithJWT("https://goatflow.example.com", "jwt-token", "refresh-token", expiresAt)
 
 	// OAuth2 authentication
-	oauth2Auth := gotrs.NewOAuth2Auth("access-token", "refresh-token", "Bearer", expiresAt)
-	client3 := gotrs.NewClient(&gotrs.Config{
-		BaseURL: "https://gotrs.example.com",
+	oauth2Auth := goatflow.NewOAuth2Auth("access-token", "refresh-token", "Bearer", expiresAt)
+	client3 := goatflow.NewClient(&goatflow.Config{
+		BaseURL: "https://goatflow.example.com",
 		Auth:    oauth2Auth,
 		Timeout: 30 * time.Second,
 		Debug:   true,
@@ -176,7 +176,7 @@ func authenticationExamples() {
 }
 
 // Example of concurrent operations
-func concurrentOperations(client *gotrs.Client) {
+func concurrentOperations(client *goatflow.Client) {
 	ctx := context.Background()
 
 	// Create multiple tickets concurrently

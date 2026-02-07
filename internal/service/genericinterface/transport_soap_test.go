@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // mockSOAPServer creates a test SOAP server that handles various operations.

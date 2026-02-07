@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
-	grpcplugin "github.com/gotrs-io/gotrs-ce/internal/plugin/grpc"
+	"github.com/goatkit/goatflow/internal/plugin"
+	grpcplugin "github.com/goatkit/goatflow/internal/plugin/grpc"
 )
 
 // mockHostAPI for integration tests

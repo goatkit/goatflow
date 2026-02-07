@@ -12,7 +12,7 @@
     <script>
         (function() {
             // Built-in themes - community themes go to .cache/
-            var BUILTIN = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe'];
+            var BUILTIN = ['synthwave', 'goatflow-classic', 'seventies-vibes', 'nineties-vibe'];
 
             // Helper to get cookie value
             function getCookie(name) {
@@ -27,8 +27,8 @@
             }
 
             // Check cookies first (server-side user preferences take precedence)
-            var cookieTheme = getCookie('gotrs_theme');
-            var cookieMode = getCookie('gotrs_mode');
+            var cookieTheme = getCookie('goatflow_theme');
+            var cookieMode = getCookie('goatflow_mode');
 
             // Get localStorage values as fallback
             var storedMode = localStorage.getItem('gk-theme-mode');
@@ -278,10 +278,9 @@
                 <div class="flex h-16 justify-between">
                     <div class="flex">
                         <div class="flex flex-shrink-0 items-center">
-                            <div class="gk-logo-glow h-8 w-8 mr-2" style="color: var(--gk-primary);">
-                                <img src="/static/favicon.svg" alt="GOTRS Logo" class="h-full w-full">
-                            </div>
-                            <span class="gk-navbar-brand">GOTRS</span>
+                            <a href="{{ dashboardHref }}" class="gk-logo-glow flex items-center" style="color: var(--gk-primary);">
+                                <img src="/static/images/goatflow-logo.svg" alt="GoatFlow" class="h-8">
+                            </a>
                         </div>
                         <div class="hidden sm:ml-6 sm:flex sm:space-x-2 sm:items-center">
                             <a href="{{ dashboardHref }}" class="gk-nav-link {% if ActivePage == 'dashboard' %}active{% endif %}">
@@ -392,9 +391,9 @@
                                     <span class="w-5 h-5 rounded-full" style="background: linear-gradient(135deg, #00E5FF, #FF2FD4);"></span>
                                     {{ t('theme.synthwave')|default:'Synthwave' }}
                                 </button>
-                                <button onclick="ThemeManager.applyTheme('gotrs-classic'); document.dispatchEvent(new CustomEvent('theme-changed'));"
+                                <button onclick="ThemeManager.applyTheme('goatflow-classic'); document.dispatchEvent(new CustomEvent('theme-changed'));"
                                         class="mobile-theme-btn flex items-center gap-3 px-3 py-2 rounded-md text-sm"
-                                        data-theme="gotrs-classic" style="color: var(--gk-text-primary);">
+                                        data-theme="goatflow-classic" style="color: var(--gk-text-primary);">
                                     <span class="w-5 h-5 rounded-full" style="background: linear-gradient(135deg, #3b82f6, #4f46e5);"></span>
                                     {{ t('theme.classic')|default:'Classic' }}
                                 </button>

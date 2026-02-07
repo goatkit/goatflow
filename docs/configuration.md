@@ -1,6 +1,6 @@
 # Configuration System
 
-This document explains how GOTRS configuration is structured, how precedence works, and how to inspect and change settings (including ticket number generators).
+This document explains how GoatFlow configuration is structured, how precedence works, and how to inspect and change settings (including ticket number generators).
 
 ## Layers & Precedence (Current)
 1. default.yaml (static operational defaults shipped with the binary/container; contains no real secrets)
@@ -59,7 +59,7 @@ At startup a scan will log a warning if duplicate setting names are detected in 
 
 ## Future Enhancements
 - Persist runtime edits (UI) into versioned config history
-- Env var injection (e.g. GOTRS__Ticket__NumberGenerator)
+- Env var injection (e.g. GOATFLOW__Ticket__NumberGenerator)
 - Hot reload with audit log of changes
 
 ## Operational Verification

@@ -1,6 +1,6 @@
 # Configuration Management
 
-GOTRS uses a layered YAML configuration system with Viper for flexible configuration management with hot reload support.
+GoatFlow uses a layered YAML configuration system with Viper for flexible configuration management with hot reload support.
 
 ## Configuration Hierarchy
 
@@ -8,7 +8,7 @@ Configuration is loaded in the following order (later sources override earlier o
 
 1. **default.yaml** - Base configuration with all default values (committed to repo)
 2. **config.yaml** - Local environment overrides (gitignored)
-3. **Environment variables** - Runtime overrides with `GOTRS_` prefix
+3. **Environment variables** - Runtime overrides with `GOATFLOW_` prefix
 4. **Command-line flags** - Highest priority (when implemented)
 
 ## File Structure
@@ -30,17 +30,17 @@ Local override file for development. Copy `config.yaml.example` to `config.yaml`
 
 ## Environment Variables
 
-All configuration values can be overridden using environment variables with the `GOTRS_` prefix. Nested keys use underscores:
+All configuration values can be overridden using environment variables with the `GOATFLOW_` prefix. Nested keys use underscores:
 
 ```bash
 # Override app.debug
-export GOTRS_APP_DEBUG=false
+export GOATFLOW_APP_DEBUG=false
 
 # Override database.host
-export GOTRS_DATABASE_HOST=postgres.example.com
+export GOATFLOW_DATABASE_HOST=postgres.example.com
 
 # Override auth.jwt.secret
-export GOTRS_AUTH_JWT_SECRET="production-secret-key"
+export GOATFLOW_AUTH_JWT_SECRET="production-secret-key"
 ```
 
 ## Hot Reload
@@ -57,7 +57,7 @@ The configuration system supports hot reload without restarting the application:
 ## Usage in Code
 
 ```go
-import "github.com/gotrs-io/gotrs-ce/internal/config"
+import "github.com/goatkit/goatflow/internal/config"
 
 // Load configuration on startup
 config.MustLoad("./config")
@@ -142,7 +142,7 @@ The YAML configuration integrates seamlessly with Kubernetes:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: gotrs-config
+  name: goatflow-config
 data:
   config.yaml: |
     app:
@@ -157,27 +157,27 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: gotrs-secrets
+  name: goatflow-secrets
 stringData:
-  GOTRS_DATABASE_PASSWORD: "secure-password"
-  GOTRS_AUTH_JWT_SECRET: "production-secret"
+  GOATFLOW_DATABASE_PASSWORD: "secure-password"
+  GOATFLOW_AUTH_JWT_SECRET: "production-secret"
 ```
 
 ### Deployment
 ```yaml
 spec:
   containers:
-  - name: gotrs
+  - name: goatflow
     envFrom:
     - secretRef:
-        name: gotrs-secrets
+        name: goatflow-secrets
     volumeMounts:
     - name: config
       mountPath: /app/config
   volumes:
   - name: config
     configMap:
-      name: gotrs-config
+      name: goatflow-config
 ```
 
 ## Security Best Practices
@@ -204,7 +204,7 @@ spec:
 - Check console for error messages
 
 ### Environment variables not working
-- Ensure `GOTRS_` prefix is used
+- Ensure `GOATFLOW_` prefix is used
 - Use underscores for nested keys
 - Check for typos in variable names
 
@@ -246,15 +246,15 @@ logging:
 
 ```bash
 # Production environment variables
-export GOTRS_APP_ENV=production
-export GOTRS_APP_DEBUG=false
-export GOTRS_DATABASE_HOST=postgres.internal
-export GOTRS_DATABASE_PASSWORD="${DB_PASSWORD}"
-export GOTRS_VALKEY_HOST=valkey.internal
-export GOTRS_VALKEY_PASSWORD="${VALKEY_PASSWORD}"
-export GOTRS_AUTH_JWT_SECRET="${JWT_SECRET}"
-export GOTRS_AUTH_SESSION_SECURE=true
-export GOTRS_EMAIL_SMTP_HOST=smtp.sendgrid.net
-export GOTRS_EMAIL_SMTP_USER=apikey
-export GOTRS_EMAIL_SMTP_PASSWORD="${SENDGRID_API_KEY}"
+export GOATFLOW_APP_ENV=production
+export GOATFLOW_APP_DEBUG=false
+export GOATFLOW_DATABASE_HOST=postgres.internal
+export GOATFLOW_DATABASE_PASSWORD="${DB_PASSWORD}"
+export GOATFLOW_VALKEY_HOST=valkey.internal
+export GOATFLOW_VALKEY_PASSWORD="${VALKEY_PASSWORD}"
+export GOATFLOW_AUTH_JWT_SECRET="${JWT_SECRET}"
+export GOATFLOW_AUTH_SESSION_SECURE=true
+export GOATFLOW_EMAIL_SMTP_HOST=smtp.sendgrid.net
+export GOATFLOW_EMAIL_SMTP_USER=apikey
+export GOATFLOW_EMAIL_SMTP_PASSWORD="${SENDGRID_API_KEY}"
 ```

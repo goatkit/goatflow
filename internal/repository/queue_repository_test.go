@@ -146,7 +146,7 @@ func defaultUser(driver string) string {
 	case "mysql", "mariadb":
 		return "otrs"
 	default:
-		return "gotrs_user"
+		return "goatflow_user"
 	}
 }
 
@@ -174,7 +174,7 @@ func defaultDBName(driver string) string {
 	case "mysql", "mariadb":
 		return "otrs_test"
 	default:
-		return "gotrs_test"
+		return "goatflow_test"
 	}
 }
 

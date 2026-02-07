@@ -1,6 +1,6 @@
 package auth
 
-import "github.com/gotrs-io/gotrs-ce/internal/models"
+import "github.com/goatkit/goatflow/internal/models"
 
 type Permission string
 

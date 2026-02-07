@@ -2,28 +2,28 @@
 
 ## Overview
 
-GOTRS uses Zinc as its search engine, providing Elasticsearch-compatible APIs for full-text search across tickets, knowledge base articles, and other content. Zinc is lightweight, requires no JVM, and offers excellent performance for ticketing system needs.
+GoatFlow uses Zinc as its search engine, providing Elasticsearch-compatible APIs for full-text search across tickets, knowledge base articles, and other content. Zinc is lightweight, requires no JVM, and offers excellent performance for ticketing system needs.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│             GOTRS Application                │
-│                                              │
+┌────────────────────────────────────────────┐
+│             GoatFlow Application           │
+│                                            │
 │  ┌──────────────────────────────────────┐  │
-│  │         Search Service                │  │
-│  │  - Index tickets on create/update     │  │
-│  │  - Execute search queries             │  │
-│  │  - Manage search indices               │  │
+│  │         Search Service               │  │
+│  │  - Index tickets on create/update    │  │
+│  │  - Execute search queries            │  │
+│  │  - Manage search indices             │  │
 │  └─────────────┬────────────────────────┘  │
-│                │                            │
+│                │                           │
 │  ┌─────────────▼────────────────────────┐  │
 │  │      Zinc Client (ES Compatible)     │  │
 │  │  - HTTP/REST API                     │  │
 │  │  - Bulk indexing                     │  │
 │  │  - Query DSL                         │  │
 │  └─────────────┬────────────────────────┘  │
-└────────────────┼────────────────────────────┘
+└────────────────┼───────────────────────────┘
                  │
     ┌────────────▼─────────────┐
     │      Zinc Server         │
@@ -41,7 +41,7 @@ GOTRS uses Zinc as its search engine, providing Elasticsearch-compatible APIs fo
 ```yaml
 zinc:
   image: public.ecr.aws/zinclabs/zinc:0.4.9
-  container_name: gotrs-zinc
+  container_name: goatflow-zinc
   ports:
     - "4080:4080"
   environment:
@@ -51,7 +51,7 @@ zinc:
   volumes:
     - zinc-data:/data
   networks:
-    - gotrs-network
+    - goatflow-network
   restart: unless-stopped
 ```
 
@@ -62,7 +62,7 @@ zinc:
 ZINC_URL=http://zinc:4080
 ZINC_USER=your_zinc_admin_user
 ZINC_PASSWORD=your_secure_zinc_password
-ZINC_INDEX_PREFIX=gotrs_
+ZINC_INDEX_PREFIX=goatflow_
 ```
 
 ## Search Service Implementation
@@ -237,7 +237,7 @@ func (z *ZincClient) IndexTicket(ticket *models.Ticket) error {
         "updated_at":    ticket.UpdatedAt,
     }
 
-    path := fmt.Sprintf("/api/%s/_doc/%s", "gotrs_tickets", ticket.ID)
+    path := fmt.Sprintf("/api/%s/_doc/%s", "goatflow_tickets", ticket.ID)
     resp, err := z.request("PUT", path, doc)
     if err != nil {
         return err
@@ -340,7 +340,7 @@ func (z *ZincClient) SearchTickets(query string, filters map[string]interface{})
         }
     }
 
-    resp, err := z.request("POST", "/api/gotrs_tickets/_search", searchQuery)
+    resp, err := z.request("POST", "/api/goatflow_tickets/_search", searchQuery)
     if err != nil {
         return nil, err
     }
@@ -388,7 +388,7 @@ func (z *ZincClient) GetTicketStats() (*TicketStats, error) {
         },
     }
 
-    resp, err := z.request("POST", "/api/gotrs_tickets/_search", query)
+    resp, err := z.request("POST", "/api/goatflow_tickets/_search", query)
     if err != nil {
         return nil, err
     }
@@ -425,7 +425,7 @@ func (z *ZincClient) Autocomplete(prefix string, field string) ([]string, error)
         "_source": []string{field},
     }
 
-    resp, err := z.request("POST", "/api/gotrs_tickets/_search", query)
+    resp, err := z.request("POST", "/api/goatflow_tickets/_search", query)
     if err != nil {
         return nil, err
     }
@@ -553,12 +553,12 @@ func (z *ZincClient) GetIndexStats(indexName string) (*IndexStats, error) {
 ```go
 func (z *ZincClient) ReindexAllTickets(tickets []*models.Ticket) error {
     // Delete existing index
-    if err := z.DeleteIndex("gotrs_tickets"); err != nil {
+    if err := z.DeleteIndex("goatflow_tickets"); err != nil {
         return err
     }
     
     // Create new index with updated mappings
-    if err := z.CreateIndex("gotrs_tickets"); err != nil {
+    if err := z.CreateIndex("goatflow_tickets"); err != nil {
         return err
     }
     
@@ -568,7 +568,7 @@ func (z *ZincClient) ReindexAllTickets(tickets []*models.Ticket) error {
         documents[i] = ticketToDocument(ticket)
     }
     
-    return z.BulkIndex("gotrs_tickets", documents)
+    return z.BulkIndex("goatflow_tickets", documents)
 }
 ```
 
@@ -592,7 +592,7 @@ func indexTicketsBatch(client *ZincClient, tickets []*models.Ticket) error {
             documents[j] = ticketToDocument(ticket)
         }
         
-        if err := client.BulkIndex("gotrs_tickets", documents); err != nil {
+        if err := client.BulkIndex("goatflow_tickets", documents); err != nil {
             return fmt.Errorf("batch %d failed: %w", i/batchSize, err)
         }
     }
@@ -648,7 +648,7 @@ if err != nil {
 
 // Use standard Elasticsearch APIs
 res, err := es.Search(
-    es.Search.WithIndex("gotrs_tickets"),
+    es.Search.WithIndex("goatflow_tickets"),
     es.Search.WithBody(strings.NewReader(query)),
 )
 ```

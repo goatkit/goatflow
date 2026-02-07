@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package goatkit.plugin.v1;
 
-option go_package = "github.com/gotrs-io/gotrs-ce/internal/plugin/grpc";
+option go_package = "github.com/goatkit/goatflow/internal/plugin/grpc";
 
 // GKPlugin is the main plugin service interface.
 // Implemented by plugin processes, called by the host.

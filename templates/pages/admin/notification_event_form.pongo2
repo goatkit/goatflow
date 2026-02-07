@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{% if IsNew %}{{ t("admin.modules.notification_event.create_title") }}{% else %}{{ t("admin.modules.notification_event.edit_title") }}{% endif %} - GOTRS Admin{% endblock %}
+{% block title %}{% if IsNew %}{{ t("admin.modules.notification_event.create_title") }}{% else %}{{ t("admin.modules.notification_event.edit_title") }}{% endif %} - GoatFlow Admin{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8 min-h-screen">

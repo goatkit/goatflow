@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
+	"github.com/goatkit/goatflow/internal/yamlmgmt"
 )
 
 type SetupResult struct {

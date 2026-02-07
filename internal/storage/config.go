@@ -30,7 +30,7 @@ type Config struct {
 func NewConfigFromEnv(db *sql.DB) *Config {
 	config := &Config{
 		Backend:            getEnv("ARTICLE_STORAGE_BACKEND", "DB"),
-		FSBasePath:         getEnv("ARTICLE_STORAGE_FS_PATH", "/opt/gotrs/var/article"),
+		FSBasePath:         getEnv("ARTICLE_STORAGE_FS_PATH", "/opt/goatflow/var/article"),
 		CheckAllBackends:   getEnvBool("ARTICLE_STORAGE_CHECK_ALL", false),
 		MigrationBatchSize: getEnvInt("ARTICLE_STORAGE_MIGRATION_BATCH", 100),
 		MigrationSleepMs:   getEnvInt("ARTICLE_STORAGE_MIGRATION_SLEEP_MS", 10),

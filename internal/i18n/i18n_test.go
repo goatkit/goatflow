@@ -52,14 +52,14 @@ func TestTranslationKeys(t *testing.T) {
 		shouldExist bool
 	}{
 		// English translations
-		{"English app name", "en", "app.name", "GOTRS", true},
+		{"English app name", "en", "app.name", "GoatFlow", true},
 		{"English dashboard", "en", "navigation.dashboard", "Dashboard", true},
 		{"English queues", "en", "navigation.queues", "Queues", true},
 		{"English admin dashboard", "en", "admin.dashboard", "Admin Dashboard", true},
 		{"English queue new", "en", "queues.new_queue", "New Queue", true},
 
 		// German translations
-		{"German app name", "de", "app.name", "GOTRS", true},
+		{"German app name", "de", "app.name", "GoatFlow", true},
 		{"German dashboard", "de", "navigation.dashboard", "Übersicht", true},
 		{"German queues", "de", "navigation.queues", "Warteschlangen", true},
 		{"German admin dashboard", "de", "admin.dashboard", "Admin-Dashboard", true},
@@ -127,7 +127,7 @@ func TestFallbackToEnglish(t *testing.T) {
 
 	// Test fallback for unsupported language
 	result := i18n.T("fr", "app.name")
-	if result != "GOTRS" {
+	if result != "GoatFlow" {
 		t.Errorf("Should fallback to English for unsupported language, got %q", result)
 	}
 }

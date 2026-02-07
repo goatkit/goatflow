@@ -135,7 +135,7 @@ func TestRouteMetadata_Fields(t *testing.T) {
 		Enabled:     true,
 		Version:     "1.0.0",
 		Labels: map[string]string{
-			"app":     "gotrs",
+			"app":     "goatflow",
 			"version": "1.0",
 		},
 		Tenants: []string{"tenant1", "tenant2"},

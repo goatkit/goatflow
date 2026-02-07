@@ -5,9 +5,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/ldap"
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
+	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/ldap"
+	"github.com/goatkit/goatflow/internal/middleware"
 )
 
 // getContextUserID extracts user_id from context safely.

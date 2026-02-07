@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
+	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/middleware"
 )
 
 // I18nHandlers handles internationalization-related requests.

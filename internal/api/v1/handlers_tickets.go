@@ -11,11 +11,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	api "github.com/gotrs-io/gotrs-ce/internal/api"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/service/ticket_number"
+	api "github.com/goatkit/goatflow/internal/api"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/service/ticket_number"
 )
 
 // HandleListTickets returns a paginated list of tickets (exported for tests).

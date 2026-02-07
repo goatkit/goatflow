@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // DynamicFieldFilter represents a filter condition for dynamic field values.

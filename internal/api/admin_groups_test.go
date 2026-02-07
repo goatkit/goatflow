@@ -3,7 +3,7 @@ package api
 import (
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 func TestMakeAdminGroupEntryIncludesComments(t *testing.T) {

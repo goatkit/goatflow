@@ -66,7 +66,7 @@ func TestUniversalLinter_Lint_MissingName(t *testing.T) {
 	ul := NewUniversalLinter()
 
 	doc := &YAMLDocument{
-		APIVersion: "gotrs.io/v1",
+		APIVersion: "goatflow.io/v1",
 		Kind:       "Route",
 		Metadata:   Metadata{Name: ""},
 	}
@@ -97,7 +97,7 @@ func TestUniversalLinter_Lint_InvalidNameFormat(t *testing.T) {
 	ul := NewUniversalLinter()
 
 	doc := &YAMLDocument{
-		APIVersion: "gotrs.io/v1",
+		APIVersion: "goatflow.io/v1",
 		Kind:       "Route",
 		Metadata:   Metadata{Name: "InvalidCamelCase"},
 	}
@@ -125,7 +125,7 @@ func TestUniversalLinter_Lint_MissingDescription(t *testing.T) {
 	ul := NewUniversalLinter()
 
 	doc := &YAMLDocument{
-		APIVersion: "gotrs.io/v1",
+		APIVersion: "goatflow.io/v1",
 		Kind:       "Route",
 		Metadata:   Metadata{Name: "valid-name", Description: ""},
 	}
@@ -181,7 +181,7 @@ func TestUniversalLinter_Lint_ValidDocument(t *testing.T) {
 	ul := NewUniversalLinter()
 
 	doc := &YAMLDocument{
-		APIVersion: "gotrs.io/v1",
+		APIVersion: "goatflow.io/v1",
 		Kind:       "Route",
 		Metadata: Metadata{
 			Name:        "valid-name",

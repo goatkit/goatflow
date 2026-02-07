@@ -6,7 +6,7 @@
 
 ## Why This Matters
 
-GOTRS supports the same database backends as OTRS to ensure seamless migration and deployment flexibility. Direct SQL queries bypass this abstraction and break compatibility.
+GoatFlow supports the same database backends as OTRS to ensure seamless migration and deployment flexibility. Direct SQL queries bypass this abstraction and break compatibility.
 
 ## The Abstraction Layer
 
@@ -22,7 +22,7 @@ Located in `internal/database/`, the abstraction layer provides:
 ### Getting the Database Instance
 
 ```go
-import "github.com/gotrs-io/gotrs-ce/internal/database"
+import "github.com/goatkit/goatflow/internal/database"
 
 // Get the abstracted database instance
 db := database.GetInstance()

@@ -130,6 +130,13 @@ project adheres to [Semantic Versioning](https://semver.org/).
   - Documentation: `docs/api/MCP.md` with architecture diagram and permission model
   - Files: `internal/mcp/server.go`, `internal/mcp/authorization_test.go`, `internal/services/permission_service.go`
 
+### Changed
+- **Product Rebrand**: GOTRS is now **GoatFlow**
+  - New repository: `github.com/goatkit/goatflow`
+  - New domain: `goatflow.io`
+  - All internal references updated (packages, configs, assets)
+  - Part of GoatKit platform unification
+
 ## [0.6.4] - 2026-02-01
 
 ### Added

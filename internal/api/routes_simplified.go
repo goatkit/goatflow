@@ -10,8 +10,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 // NewSimpleRouter creates a router with basic routes.
@@ -162,7 +162,7 @@ func setupYAMLRouting(r *gin.Engine, db *sql.DB) error {
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"data": []gin.H{
-				{"id": 1, "title": "Sample Response", "content": "Thank you for contacting GOTRS support."},
+				{"id": 1, "title": "Sample Response", "content": "Thank you for contacting GoatFlow support."},
 			},
 		})
 	})

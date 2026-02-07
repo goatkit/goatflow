@@ -10,8 +10,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/services"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/services"
 )
 
 // HandleGetTicketAPI handles GET /api/v1/tickets/:id.
@@ -146,7 +146,7 @@ func HandleGetTicketAPI(c *gin.Context) {
 		return
 	}
 
-	// Query for ticket details with related information (GOTRS/OTRS schema)
+	// Query for ticket details with related information (GoatFlow/OTRS schema)
 	typeSelect := fmt.Sprintf("%s AS type_id", database.QualifiedTicketTypeColumn("t"))
 	query := database.ConvertPlaceholders(fmt.Sprintf(`
 		SELECT 

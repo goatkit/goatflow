@@ -1,6 +1,6 @@
 package mcp
 
-// ToolRegistry contains all available MCP tools for GOTRS.
+// ToolRegistry contains all available MCP tools for GoatFlow.
 var ToolRegistry = []Tool{
 	{
 		Name:        "list_tickets",

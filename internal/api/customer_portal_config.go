@@ -3,7 +3,7 @@ package api
 import (
 	"database/sql"
 
-	"github.com/gotrs-io/gotrs-ce/internal/sysconfig"
+	"github.com/goatkit/goatflow/internal/sysconfig"
 )
 
 // Alias helpers to shared sysconfig implementations to avoid duplicate logic.

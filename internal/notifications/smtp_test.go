@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
+	"github.com/goatkit/goatflow/internal/config"
 )
 
 func startFakeSMTPServer(t *testing.T) (string, int) {

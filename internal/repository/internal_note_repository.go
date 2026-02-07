@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // InternalNoteRepository defines the interface for internal note persistence.

@@ -16,8 +16,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/repository"
 	_ "github.com/lib/pq"
 )
 
@@ -101,7 +101,7 @@ func TestPostmasterFilterAPI_Create(t *testing.T) {
 				{Key: "From", Value: ".*@test\\.com", Not: false},
 			},
 			Sets: []repository.FilterSet{
-				{Key: "X-GOTRS-Queue", Value: "Test Queue"},
+				{Key: "X-GoatFlow-Queue", Value: "Test Queue"},
 			},
 		}
 
@@ -135,7 +135,7 @@ func TestPostmasterFilterAPI_Create(t *testing.T) {
 				{Key: "To", Value: "support@", Not: false},
 			},
 			Sets: []repository.FilterSet{
-				{Key: "X-GOTRS-Queue", Value: "Another Queue"},
+				{Key: "X-GoatFlow-Queue", Value: "Another Queue"},
 			},
 		}
 
@@ -158,7 +158,7 @@ func TestPostmasterFilterAPI_Create(t *testing.T) {
 				{Key: "From", Value: ".*", Not: false},
 			},
 			Sets: []repository.FilterSet{
-				{Key: "X-GOTRS-Queue", Value: "Test"},
+				{Key: "X-GoatFlow-Queue", Value: "Test"},
 			},
 		}
 
@@ -179,7 +179,7 @@ func TestPostmasterFilterAPI_Create(t *testing.T) {
 			Name:    "APITestNoMatches",
 			Matches: []repository.FilterMatch{},
 			Sets: []repository.FilterSet{
-				{Key: "X-GOTRS-Queue", Value: "Test"},
+				{Key: "X-GoatFlow-Queue", Value: "Test"},
 			},
 		}
 
@@ -236,7 +236,7 @@ func TestPostmasterFilterAPI_Get(t *testing.T) {
 			{Key: "From", Value: ".*@example\\.com", Not: false},
 		},
 		Sets: []repository.FilterSet{
-			{Key: "X-GOTRS-Queue", Value: "Example Queue"},
+			{Key: "X-GoatFlow-Queue", Value: "Example Queue"},
 		},
 	}
 	if err := repo.Create(context.Background(), filter); err != nil {
@@ -301,7 +301,7 @@ func TestPostmasterFilterAPI_Update(t *testing.T) {
 			{Key: "From", Value: ".*@old\\.com", Not: false},
 		},
 		Sets: []repository.FilterSet{
-			{Key: "X-GOTRS-Queue", Value: "Old Queue"},
+			{Key: "X-GoatFlow-Queue", Value: "Old Queue"},
 		},
 	}
 	if err := repo.Create(context.Background(), filter); err != nil {
@@ -318,8 +318,8 @@ func TestPostmasterFilterAPI_Update(t *testing.T) {
 				{Key: "From", Value: ".*@new\\.com", Not: true},
 			},
 			Sets: []repository.FilterSet{
-				{Key: "X-GOTRS-Queue", Value: "New Queue"},
-				{Key: "X-GOTRS-PriorityID", Value: "4"},
+				{Key: "X-GoatFlow-Queue", Value: "New Queue"},
+				{Key: "X-GoatFlow-PriorityID", Value: "4"},
 			},
 		}
 
@@ -358,7 +358,7 @@ func TestPostmasterFilterAPI_Update(t *testing.T) {
 				{Key: "From", Value: ".*", Not: false},
 			},
 			Sets: []repository.FilterSet{
-				{Key: "X-GOTRS-Queue", Value: "Test"},
+				{Key: "X-GoatFlow-Queue", Value: "Test"},
 			},
 		}
 
@@ -394,7 +394,7 @@ func TestPostmasterFilterAPI_Delete(t *testing.T) {
 			{Key: "From", Value: ".*@delete\\.com", Not: false},
 		},
 		Sets: []repository.FilterSet{
-			{Key: "X-GOTRS-Queue", Value: "Delete Queue"},
+			{Key: "X-GoatFlow-Queue", Value: "Delete Queue"},
 		},
 	}
 	if err := repo.Create(context.Background(), filter); err != nil {
@@ -466,7 +466,7 @@ func defaultPostmasterUser(driver string) string {
 	case "mysql", "mariadb":
 		return "otrs"
 	default:
-		return "gotrs_user"
+		return "goatflow_user"
 	}
 }
 
@@ -492,7 +492,7 @@ func defaultPostmasterDBName(driver string) string {
 	case "mysql", "mariadb":
 		return "otrs_test"
 	default:
-		return "gotrs_test"
+		return "goatflow_test"
 	}
 }
 

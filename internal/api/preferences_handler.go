@@ -10,12 +10,12 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
-	"github.com/gotrs-io/gotrs-ce/internal/sysconfig"
+	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/sysconfig"
 )
 
 // HandleGetAvailableLanguages returns the list of supported languages (public, no auth required).
@@ -40,7 +40,7 @@ func HandleGetAvailableLanguages(c *gin.Context) {
 	}
 
 	// Get current language from cookie if set
-	currentLang, _ := c.Cookie("gotrs_lang")
+	currentLang, _ := c.Cookie("goatflow_lang")
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":   true,
@@ -84,9 +84,9 @@ func HandleSetPreLoginLanguage(c *gin.Context) {
 
 	// Set cookie (30 day expiry)
 	if request.Value != "" {
-		c.SetCookie("gotrs_lang", request.Value, 86400*30, "/", "", false, false)
+		c.SetCookie("goatflow_lang", request.Value, 86400*30, "/", "", false, false)
 	} else {
-		c.SetCookie("gotrs_lang", "", -1, "/", "", false, false)
+		c.SetCookie("goatflow_lang", "", -1, "/", "", false, false)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -469,7 +469,7 @@ func HandleUpdateProfile(c *gin.Context) {
 func getAvailableThemes() []string {
 	var themes []string
 
-	// Scan builtin themes (shipped with GOTRS)
+	// Scan builtin themes (shipped with GoatFlow)
 	builtinDir := "static/themes/builtin"
 	if entries, err := os.ReadDir(builtinDir); err == nil {
 		for _, entry := range entries {
@@ -502,7 +502,7 @@ func getAvailableThemes() []string {
 	// Fallback to known themes if nothing found
 	if len(themes) == 0 {
 		log.Printf("Warning: no themes found in theme directories, using defaults")
-		return []string{"synthwave", "gotrs-classic", "seventies-vibes", "nineties-vibe"}
+		return []string{"synthwave", "goatflow-classic", "seventies-vibes", "nineties-vibe"}
 	}
 
 	// Sort for consistent ordering
@@ -523,8 +523,8 @@ func HandleGetAvailableThemes(c *gin.Context) {
 	}
 
 	// Get current theme and mode from cookies if set
-	currentTheme, _ := c.Cookie("gotrs_theme")
-	currentMode, _ := c.Cookie("gotrs_mode")
+	currentTheme, _ := c.Cookie("goatflow_theme")
+	currentMode, _ := c.Cookie("goatflow_mode")
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":       true,
@@ -578,12 +578,12 @@ func HandleSetPreLoginTheme(c *gin.Context) {
 
 	// Set theme cookie (30 day expiry)
 	if request.Theme != "" {
-		c.SetCookie("gotrs_theme", request.Theme, 86400*30, "/", "", false, false)
+		c.SetCookie("goatflow_theme", request.Theme, 86400*30, "/", "", false, false)
 	}
 
 	// Set mode cookie (30 day expiry)
 	if request.Mode != "" {
-		c.SetCookie("gotrs_mode", request.Mode, 86400*30, "/", "", false, false)
+		c.SetCookie("goatflow_mode", request.Mode, 86400*30, "/", "", false, false)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -744,7 +744,7 @@ func HandleSetTheme(c *gin.Context) {
 				})
 				return
 			}
-			c.SetCookie("gotrs_theme", request.Theme, 86400*30, "/", "", false, false)
+			c.SetCookie("goatflow_theme", request.Theme, 86400*30, "/", "", false, false)
 		}
 
 		// Save mode preference to customer_preferences table
@@ -756,7 +756,7 @@ func HandleSetTheme(c *gin.Context) {
 				})
 				return
 			}
-			c.SetCookie("gotrs_mode", request.Mode, 86400*30, "/", "", false, false)
+			c.SetCookie("goatflow_mode", request.Mode, 86400*30, "/", "", false, false)
 		}
 	} else {
 		// Agent/Admin user - uses numeric ID and user_preferences table
@@ -780,7 +780,7 @@ func HandleSetTheme(c *gin.Context) {
 				})
 				return
 			}
-			c.SetCookie("gotrs_theme", request.Theme, 86400*30, "/", "", false, false)
+			c.SetCookie("goatflow_theme", request.Theme, 86400*30, "/", "", false, false)
 		}
 
 		// Save mode preference to user_preferences table
@@ -792,7 +792,7 @@ func HandleSetTheme(c *gin.Context) {
 				})
 				return
 			}
-			c.SetCookie("gotrs_mode", request.Mode, 86400*30, "/", "", false, false)
+			c.SetCookie("goatflow_mode", request.Mode, 86400*30, "/", "", false, false)
 		}
 	}
 

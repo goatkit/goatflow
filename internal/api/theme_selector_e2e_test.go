@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 // setupThemeSelectorTestRouter creates a test router with theme endpoints.
@@ -88,7 +88,7 @@ func TestGetAvailableThemes(t *testing.T) {
 	}
 
 	// Check for expected themes
-	expectedThemes := []string{"synthwave", "gotrs-classic", "seventies-vibes"}
+	expectedThemes := []string{"synthwave", "goatflow-classic", "seventies-vibes"}
 	for _, id := range expectedThemes {
 		assert.True(t, themeIDs[id], "Should include theme: %s", id)
 	}
@@ -119,13 +119,13 @@ func TestSetPreLoginTheme(t *testing.T) {
 	cookies := w.Result().Cookies()
 	var themeCookie *http.Cookie
 	for _, c := range cookies {
-		if c.Name == "gotrs_theme" {
+		if c.Name == "goatflow_theme" {
 			themeCookie = c
 			break
 		}
 	}
 
-	require.NotNil(t, themeCookie, "Should set gotrs_theme cookie")
+	require.NotNil(t, themeCookie, "Should set goatflow_theme cookie")
 	assert.Equal(t, "seventies-vibes", themeCookie.Value, "Cookie should have value 'seventies-vibes'")
 	assert.Equal(t, "/", themeCookie.Path, "Cookie should be set for root path")
 }
@@ -155,13 +155,13 @@ func TestSetPreLoginMode(t *testing.T) {
 	cookies := w.Result().Cookies()
 	var modeCookie *http.Cookie
 	for _, c := range cookies {
-		if c.Name == "gotrs_mode" {
+		if c.Name == "goatflow_mode" {
 			modeCookie = c
 			break
 		}
 	}
 
-	require.NotNil(t, modeCookie, "Should set gotrs_mode cookie")
+	require.NotNil(t, modeCookie, "Should set goatflow_mode cookie")
 	assert.Equal(t, "light", modeCookie.Value, "Cookie should have value 'light'")
 	assert.Equal(t, "/", modeCookie.Path, "Cookie should be set for root path")
 }
@@ -170,7 +170,7 @@ func TestSetPreLoginThemeAndMode(t *testing.T) {
 	r := setupThemeSelectorTestRouter(t)
 
 	// Test setting both theme and mode
-	body := strings.NewReader(`{"theme":"gotrs-classic","mode":"light"}`)
+	body := strings.NewReader(`{"theme":"goatflow-classic","mode":"light"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/themes", body)
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -182,18 +182,18 @@ func TestSetPreLoginThemeAndMode(t *testing.T) {
 	cookies := w.Result().Cookies()
 	var themeCookie, modeCookie *http.Cookie
 	for _, c := range cookies {
-		if c.Name == "gotrs_theme" {
+		if c.Name == "goatflow_theme" {
 			themeCookie = c
 		}
-		if c.Name == "gotrs_mode" {
+		if c.Name == "goatflow_mode" {
 			modeCookie = c
 		}
 	}
 
-	require.NotNil(t, themeCookie, "Should set gotrs_theme cookie")
-	assert.Equal(t, "gotrs-classic", themeCookie.Value)
+	require.NotNil(t, themeCookie, "Should set goatflow_theme cookie")
+	assert.Equal(t, "goatflow-classic", themeCookie.Value)
 
-	require.NotNil(t, modeCookie, "Should set gotrs_mode cookie")
+	require.NotNil(t, modeCookie, "Should set goatflow_mode cookie")
 	assert.Equal(t, "light", modeCookie.Value)
 }
 
@@ -245,8 +245,8 @@ func TestGetAvailableThemesWithExistingCookies(t *testing.T) {
 	r := setupThemeSelectorTestRouter(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/themes", nil)
-	req.AddCookie(&http.Cookie{Name: "gotrs_theme", Value: "seventies-vibes"})
-	req.AddCookie(&http.Cookie{Name: "gotrs_mode", Value: "light"})
+	req.AddCookie(&http.Cookie{Name: "goatflow_theme", Value: "seventies-vibes"})
+	req.AddCookie(&http.Cookie{Name: "goatflow_mode", Value: "light"})
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
@@ -307,10 +307,10 @@ func TestThemeSelectorE2EFlow(t *testing.T) {
 	// Verify cookies were set
 	var themeCookie, modeCookie string
 	for _, c := range w2.Result().Cookies() {
-		if c.Name == "gotrs_theme" {
+		if c.Name == "goatflow_theme" {
 			themeCookie = c.Value
 		}
-		if c.Name == "gotrs_mode" {
+		if c.Name == "goatflow_mode" {
 			modeCookie = c.Value
 		}
 	}
@@ -319,8 +319,8 @@ func TestThemeSelectorE2EFlow(t *testing.T) {
 
 	// Step 3: Verify GET returns the set values
 	req3 := httptest.NewRequest(http.MethodGet, "/api/themes", nil)
-	req3.AddCookie(&http.Cookie{Name: "gotrs_theme", Value: "seventies-vibes"})
-	req3.AddCookie(&http.Cookie{Name: "gotrs_mode", Value: "light"})
+	req3.AddCookie(&http.Cookie{Name: "goatflow_theme", Value: "seventies-vibes"})
+	req3.AddCookie(&http.Cookie{Name: "goatflow_mode", Value: "light"})
 	w3 := httptest.NewRecorder()
 	r.ServeHTTP(w3, req3)
 

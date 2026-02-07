@@ -12,15 +12,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/constants"
-	"github.com/gotrs-io/gotrs-ce/internal/core"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/notifications"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/utils"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/constants"
+	"github.com/goatkit/goatflow/internal/core"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/mailqueue"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/utils"
 )
 
 // HandleAgentCreateTicket creates a new ticket from the agent interface.
@@ -361,7 +361,7 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 				subject := fmt.Sprintf("Ticket Created: %s", ticketModel.TicketNumber)
 				body := fmt.Sprintf("Your ticket has been created successfully.\n\n"+
 					"Ticket Number: %s\nTitle: %s\n\nMessage:\n%s\n\n"+
-					"You can view your ticket at: /tickets/%s\n\nBest regards,\nGOTRS Support Team",
+					"You can view your ticket at: /tickets/%s\n\nBest regards,\nGoatFlow Support Team",
 					ticketModel.TicketNumber, ticketModel.Title, message, ticketModel.TicketNumber)
 
 				// Queue the email for processing by EmailQueueTask

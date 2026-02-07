@@ -32,7 +32,7 @@ test.describe('Dynamic Module System - Side by Side Comparison', () => {
       await page.goto(`${BASE_URL}/admin/users`);
       
       // Check page loads
-      await expect(page).toHaveTitle(/Users.*GOTRS/);
+      await expect(page).toHaveTitle(/Users.*GoatFlow/);
       await expect(page.locator('h1')).toContainText('Users');
       
       // Check basic structure

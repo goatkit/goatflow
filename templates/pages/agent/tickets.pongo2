@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{{ t("pages.agent.tickets.title")|default:"Ticket Management" }} - GOTRS{% endblock %}
+{% block title %}{{ t("pages.agent.tickets.title")|default:"Ticket Management" }} - GoatFlow{% endblock %}
 
 {% block content %}
 <div class="min-h-screen">
@@ -55,7 +55,7 @@
 
 <script>
 // Selected tickets storage - persisted in sessionStorage for cross-page selections
-const STORAGE_KEY = 'gotrs_bulk_selected_tickets';
+const STORAGE_KEY = 'goatflow_bulk_selected_tickets';
 
 // Load persisted selections from sessionStorage
 function loadPersistedSelections() {

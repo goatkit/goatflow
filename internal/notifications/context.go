@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"strings"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // BuildRenderContext fetches agent and customer names for placeholder interpolation.

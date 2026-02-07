@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-// TrustedHeadersFilter captures X-GOTRS-* overrides when the mailbox allows trusted headers.
+// TrustedHeadersFilter captures X-GoatFlow-* overrides when the mailbox allows trusted headers.
 // It mirrors the OTRS PostMaster behavior where select headers may override routing metadata.
 type TrustedHeadersFilter struct {
 	logger       *log.Logger
@@ -137,13 +137,13 @@ func (f *TrustedHeadersFilter) logf(format string, args ...any) {
 }
 
 var (
-	queueIDHeaders      = canonicalHeaderList("X-GOTRS-QueueID", "X-OTRS-QueueID")
-	queueNameHeaders    = canonicalHeaderList("X-GOTRS-Queue", "X-GOTRS-QueueName", "X-OTRS-Queue", "X-OTRS-QueueName")
-	priorityIDHeaders   = canonicalHeaderList("X-GOTRS-PriorityID", "X-OTRS-PriorityID")
-	titleHeaders        = canonicalHeaderList("X-GOTRS-Title", "X-OTRS-Title")
-	customerIDHeaders   = canonicalHeaderList("X-GOTRS-CustomerID", "X-OTRS-CustomerID")
-	customerUserHeaders = canonicalHeaderList("X-GOTRS-CustomerUser", "X-GOTRS-CustomerUserID", "X-OTRS-CustomerUser", "X-OTRS-CustomerUserID")
-	ignoreHeaders       = canonicalHeaderList("X-GOTRS-Ignore", "X-OTRS-Ignore")
+	queueIDHeaders      = canonicalHeaderList("X-GoatFlow-QueueID", "X-OTRS-QueueID")
+	queueNameHeaders    = canonicalHeaderList("X-GoatFlow-Queue", "X-GoatFlow-QueueName", "X-OTRS-Queue", "X-OTRS-QueueName")
+	priorityIDHeaders   = canonicalHeaderList("X-GoatFlow-PriorityID", "X-OTRS-PriorityID")
+	titleHeaders        = canonicalHeaderList("X-GoatFlow-Title", "X-OTRS-Title")
+	customerIDHeaders   = canonicalHeaderList("X-GoatFlow-CustomerID", "X-OTRS-CustomerID")
+	customerUserHeaders = canonicalHeaderList("X-GoatFlow-CustomerUser", "X-GoatFlow-CustomerUserID", "X-OTRS-CustomerUser", "X-OTRS-CustomerUserID")
+	ignoreHeaders       = canonicalHeaderList("X-GoatFlow-Ignore", "X-OTRS-Ignore")
 )
 
 func firstHeaderValue(header mail.Header, names []string) string {

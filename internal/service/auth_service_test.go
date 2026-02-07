@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
+	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/yamlmgmt"
 )
 
 // helper to build a minimal config adapter with Auth::Providers list.
@@ -44,8 +44,8 @@ func testJWTManager(t *testing.T) *auth.JWTManager {
 }
 
 func TestAuthService_UsesStaticProviderFirst(t *testing.T) {
-	os.Setenv("GOTRS_STATIC_USERS", "alpha:pw:Agent")
-	defer os.Unsetenv("GOTRS_STATIC_USERS")
+	os.Setenv("GOATFLOW_STATIC_USERS", "alpha:pw:Agent")
+	defer os.Unsetenv("GOATFLOW_STATIC_USERS")
 
 	ca := testConfigAdapter(t, []string{"static", "database"})
 	SetConfigAdapter(ca)

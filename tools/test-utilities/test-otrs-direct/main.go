@@ -116,7 +116,7 @@ func main() {
 		}
 	}
 
-	fmt.Println("\n🎉 GOTRS can directly connect to OTRS MySQL database!")
-	fmt.Println("This means we can run GOTRS against the existing OTRS database")
+	fmt.Println("\n🎉 GoatFlow can directly connect to OTRS MySQL database!")
+	fmt.Println("This means we can run GoatFlow against the existing OTRS database")
 	fmt.Println("without any migration - true drop-in replacement capability!")
 }

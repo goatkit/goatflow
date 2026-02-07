@@ -2,15 +2,15 @@ basePath: /api/v1
 host: localhost:8080
 info:
   contact:
-    email: support@gotrs.io
-    name: GOTRS Support
-    url: https://gotrs.io/support
-  description: GOTRS Ticket System REST API
+    email: hello@goatflow.io
+    name: GoatFlow Support
+    url: https://goatflow.io/support
+  description: GoatFlow Ticket System REST API
   license:
     name: AGPL-3.0
     url: https://www.gnu.org/licenses/agpl-3.0.html
-  termsOfService: https://gotrs.io/terms/
-  title: GOTRS API
+  termsOfService: https://goatflow.io/terms/
+  title: GoatFlow API
   version: "1.0"
 paths:
   /api/v1/i18n/coverage:

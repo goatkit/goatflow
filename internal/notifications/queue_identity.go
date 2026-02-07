@@ -7,13 +7,13 @@ import (
 	"net/mail"
 	"strings"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 const (
-	defaultSenderEmail  = "support@gotrs.local"
-	defaultSenderDomain = "gotrs.local"
+	defaultSenderEmail  = "support@goatflow.local"
+	defaultSenderDomain = "goatflow.local"
 )
 
 // Snippet describes a reusable text block such as a salutation or signature.

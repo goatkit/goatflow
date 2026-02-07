@@ -159,9 +159,9 @@ func LoadConfigFromEnv() DatabaseConfig {
 		Type:     PostgreSQL, // Default to PostgreSQL
 		Host:     getEnvWithDefault("DB_HOST", "postgres"),
 		Port:     getEnvWithDefault("DB_PORT", "5432"),
-		Database: getEnvWithDefault("DB_NAME", "gotrs"),
-		Username: getEnvWithDefault("DB_USER", "gotrs"),
-		Password: getEnvWithDefault("DB_PASSWORD", "gotrs_password"),
+		Database: getEnvWithDefault("DB_NAME", "goatflow"),
+		Username: getEnvWithDefault("DB_USER", "goatflow"),
+		Password: getEnvWithDefault("DB_PASSWORD", "goatflow_password"),
 		SSLMode:  getEnvWithDefault("DB_SSLMODE", "disable"),
 
 		// Connection pool defaults

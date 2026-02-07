@@ -212,7 +212,7 @@
         "skipped": "نادیده گرفته شده (از قبل وجود دارد)",
         "updated": "به‌روز شده",
         "upload_and_preview": "بارگذاری و پیش‌نمایش",
-        "upload_description": "یک فایل YAML صادر شده از GOTRS یا OTRS را برای واردات پیکربندی فیلدهای پویا انتخاب کنید.",
+        "upload_description": "یک فایل YAML صادر شده از GoatFlow یا OTRS را برای واردات پیکربندی فیلدهای پویا انتخاب کنید.",
         "upload_file": "بارگذاری فایل YAML",
         "will_create": "ایجاد خواهد شد",
         "will_overwrite": "بازنویسی خواهد شد"
@@ -504,7 +504,7 @@
           "valid_id": "اعتبار"
         },
         "help": {
-          "allow_trusted_headers": "قبول پیش‌فرض‌های صف از هدرهای X-OTRS-Queue / X-GOTRS برای این صندوق.",
+          "allow_trusted_headers": "قبول پیش‌فرض‌های صف از هدرهای X-OTRS-Queue / X-GoatFlow برای این صندوق.",
           "poll_interval_seconds": "Override کردن فاصله زمانی scheduler برای این صندوق.",
           "queue_id": "پیام‌های ورودی را به این صف اختصاص دهید.",
           "valid_id": "انتخاب کنید که آیا این صندوق فعال است."
@@ -616,16 +616,16 @@
       },
       "postmaster_filter": {
         "actions": {
-          "customer_id": "X-GOTRS-CustomerID (تنظیم شناسه مشتری)",
-          "customer_user": "X-GOTRS-CustomerUser (تنظیم کاربر مشتری)",
-          "ignore": "X-GOTRS-Ignore (رد کردن ایجاد تیکت)",
-          "priority": "X-GOTRS-Priority (تنظیم اولویت با نام)",
-          "priority_id": "X-GOTRS-PriorityID (تنظیم اولویت)",
-          "queue": "X-GOTRS-Queue (مسیر به صف)",
-          "queue_id": "X-GOTRS-QueueID (مسیر به صف با ID)",
-          "state": "X-GOTRS-State (تنظیم وضعیت تیکت)",
-          "title": "X-GOTRS-Title (override عنوان تیکت)",
-          "type": "X-GOTRS-Type (تنظیم نوع تیکت)"
+          "customer_id": "X-GoatFlow-CustomerID (تنظیم شناسه مشتری)",
+          "customer_user": "X-GoatFlow-CustomerUser (تنظیم کاربر مشتری)",
+          "ignore": "X-GoatFlow-Ignore (رد کردن ایجاد تیکت)",
+          "priority": "X-GoatFlow-Priority (تنظیم اولویت با نام)",
+          "priority_id": "X-GoatFlow-PriorityID (تنظیم اولویت)",
+          "queue": "X-GoatFlow-Queue (مسیر به صف)",
+          "queue_id": "X-GoatFlow-QueueID (مسیر به صف با ID)",
+          "state": "X-GoatFlow-State (تنظیم وضعیت تیکت)",
+          "title": "X-GoatFlow-Title (override عنوان تیکت)",
+          "type": "X-GoatFlow-Type (تنظیم نوع تیکت)"
         },
         "add_action": "افزودن عملیات",
         "add_condition": "افزودن شرط",
@@ -1015,7 +1015,7 @@
         },
         "import": {
           "back_to_list": "بازگشت به قالب‌ها",
-          "description": "وارد کردن قالب‌ها از فایل YAML صادر شده از GOTRS یا ساخته شده دستی",
+          "description": "وارد کردن قالب‌ها از فایل YAML صادر شده از GoatFlow یا ساخته شده دستی",
           "file_label": "فایل YAML",
           "file_types": "فقط فایل‌های YAML (.yaml, .yml)",
           "format_description": "فایل وارد باید از این ساختار پیروی کند:",
@@ -1479,8 +1479,8 @@
   },
   "app": {
     "description": "پلتفرم مدرن مدیریت خدمات IT",
-    "name": "GOTRS",
-    "title": "GOTRS - سیستم تیکتینگ"
+    "name": "GoatFlow",
+    "title": "GoatFlow - سیستم تیکتینگ"
   },
   "assets": {
     "asset_tag": "برچسب دارایی",
@@ -1919,7 +1919,7 @@
   },
   "customer_portal": {
     "placeholders": {
-      "footer": "Powered by GOTRS",
+      "footer": "Powered by GoatFlow",
       "title": "مشتری Portal"
     }
   },
@@ -3338,7 +3338,7 @@
     "subtitle": "سیستم مدیریت تیکت و خدمات مشتری",
     "support": "پشتیبانی",
     "tagline": "پلتفرم مدرن مدیریت خدمات IT",
-    "title": "به GOTRS خوش آمدید"
+    "title": "به GoatFlow خوش آمدید"
   },
   "theme": {
     "select_theme": "قالب",

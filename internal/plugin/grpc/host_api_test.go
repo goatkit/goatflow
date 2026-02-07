@@ -7,7 +7,7 @@ import (
 	"net/rpc"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
+	"github.com/goatkit/goatflow/internal/plugin"
 )
 
 // mockHostAPI for testing
@@ -24,7 +24,7 @@ func newMockHostAPI() *mockHostAPI {
 		queryResults: []map[string]any{{"id": 1, "name": "test"}},
 		execAffected: 1,
 		cacheData:    make(map[string][]byte),
-		configData:   map[string]string{"app.name": "GOTRS"},
+		configData:   map[string]string{"app.name": "GoatFlow"},
 	}
 }
 
@@ -204,8 +204,8 @@ func TestDispatchHostCall(t *testing.T) {
 
 		var resp map[string]string
 		json.Unmarshal(result, &resp)
-		if resp["value"] != "GOTRS" {
-			t.Errorf("expected GOTRS, got %s", resp["value"])
+		if resp["value"] != "GoatFlow" {
+			t.Errorf("expected GoatFlow, got %s", resp["value"])
 		}
 	})
 

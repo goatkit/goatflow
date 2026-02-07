@@ -4,7 +4,7 @@ set -euo pipefail
 # Detect raw 'go ' or 'golangci-lint' usage in Makefile outside approved contexts.
 # Approved patterns (regex allowlist):
 #  - toolbox-exec ARGS="go ..."
-#  - gotrs-toolbox:latest (container run) followed by go
+#  - ghcr.io/goatkit/goatflow/toolbox:latest (container run) followed by go
 #  - go build/test inside bash -lc within a single explicit container run block
 # For simplicity we flag any standalone lines starting with a tab + go / golangci-lint.
 

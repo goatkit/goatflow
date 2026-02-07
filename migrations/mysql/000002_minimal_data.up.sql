@@ -62,10 +62,10 @@ INSERT IGNORE INTO groups (id, name, comments, valid_id, create_time, create_by,
 (3, 'stats', 'Stats access group', 1, NOW(), 1, NOW(), 1);
 
 INSERT IGNORE INTO system_address (id, value0, value1, comments, valid_id, queue_id, create_time, create_by, change_time, change_by) VALUES
-(1, 'postmaster@gotrs.local', 'GOTRS Postmaster', 'System address for the Postmaster queue', 1, 1, NOW(), 1, NOW(), 1),
-(2, 'intake@gotrs.local', 'GOTRS Intake', 'Raw/unprocessed queue system address', 1, 2, NOW(), 1, NOW(), 1),
-(3, 'junk@gotrs.local', 'GOTRS Junk Monitor', 'Spam quarantine queue address', 1, 3, NOW(), 1, NOW(), 1),
-(4, 'misc@gotrs.local', 'GOTRS Misc', 'Miscellaneous work queue address', 1, 4, NOW(), 1, NOW(), 1);
+(1, 'postmaster@goatflow.local', 'GoatFlow Postmaster', 'System address for the Postmaster queue', 1, 1, NOW(), 1, NOW(), 1),
+(2, 'intake@goatflow.local', 'GoatFlow Intake', 'Raw/unprocessed queue system address', 1, 2, NOW(), 1, NOW(), 1),
+(3, 'junk@goatflow.local', 'GoatFlow Junk Monitor', 'Spam quarantine queue address', 1, 3, NOW(), 1, NOW(), 1),
+(4, 'misc@goatflow.local', 'GoatFlow Misc', 'Miscellaneous work queue address', 1, 4, NOW(), 1, NOW(), 1);
 
 INSERT IGNORE INTO salutation (id, name, text, content_type, comments, valid_id, create_time, create_by, change_time, change_by) VALUES
 (1, 'Default', 'Dear Customer,', 'text/plain', 'Default salutation', 1, NOW(), 1, NOW(), 1);

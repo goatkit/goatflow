@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# GoatKit Demo - YAML Configuration Management for GOTRS
+# GoatKit Demo - YAML Configuration Management for GoatFlow
 set -e
 
 echo "   ___________  ___  _________ __ __ ______ "
@@ -13,7 +13,7 @@ echo "🐐 GoatKit Demo - YAML Configuration Management"
 echo "=============================================="
 echo ""
 echo "GoatKit brings enterprise-grade configuration management"
-echo "to GOTRS with version control, validation, and hot reload."
+echo "to GoatFlow with version control, validation, and hot reload."
 echo ""
 
 # Build GoatKit
@@ -24,7 +24,7 @@ echo ""
 
 # Helper to run GoatKit
 gk() {
-    docker run --rm -v /home/nigel/git/gotrs-io/gotrs-ce:/workspace:ro goatkit "$@"
+    docker run --rm -v /home/nigel/git/goatkit/goatflow:/workspace:ro goatkit "$@"
 }
 
 # 1. Show help
@@ -81,5 +81,5 @@ echo "  🐐 Hot reload capabilities"
 echo "  🐐 GitOps-ready workflows"
 echo "  🐐 100% container-based"
 echo ""
-echo "Part of the GOTRS suite - The GOAT of configuration management!"
+echo "Part of the GoatFlow suite - The GOAT of configuration management!"
 echo ""

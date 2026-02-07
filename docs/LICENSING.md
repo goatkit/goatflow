@@ -1,8 +1,8 @@
-# GOTRS Licensing Strategy
+# GoatFlow Licensing Strategy
 
 ## Overview
 
-GOTRS employs a dual licensing model that balances open source principles with sustainable business development. This approach ensures the project remains accessible to all while providing a path for commercial sustainability.
+GoatFlow employs a dual licensing model that balances open source principles with sustainable business development. This approach ensures the project remains accessible to all while providing a path for commercial sustainability.
 
 ## Dual License Model
 
@@ -140,7 +140,7 @@ To maintain the dual licensing model, contributors must sign a CLA that:
 
 ### Repository Structure
 ```
-gotrs/
+goatflow/
 ├── core/           # Apache 2.0 - All CE code
 ├── enterprise/     # Commercial - EE-only features
 ├── shared/         # Apache 2.0 - Shared libraries
@@ -155,7 +155,7 @@ gotrs/
 make build-ce
 
 # Build Enterprise Edition (requires license key)
-GOTRS_LICENSE_KEY=xxx make build-ee
+GOATFLOW_LICENSE_KEY=xxx make build-ee
 ```
 
 ## Revenue Allocation
@@ -185,7 +185,7 @@ GOTRS_LICENSE_KEY=xxx make build-ee
 - ✅ Create proprietary plugins
 - ⚠️ Must preserve copyright notices
 - ⚠️ Must include license text
-- ❌ Cannot use GOTRS trademarks without permission
+- ❌ Cannot use GoatFlow trademarks without permission
 
 #### Using EE
 - ✅ All rights granted by commercial license
@@ -204,8 +204,8 @@ GOTRS_LICENSE_KEY=xxx make build-ee
 ## Trademark Policy
 
 ### Protected Marks
-- "GOTRS" name and logo
-- "Go Open Ticket Request System"
+- "GoatFlow" name and logo
+- "GoatKit" name and logo
 - Associated service marks
 
 ### Permitted Use
@@ -218,7 +218,7 @@ GOTRS_LICENSE_KEY=xxx make build-ee
 - Commercial training services
 - Hosted service offerings
 - Modified distributions
-- Product names including "GOTRS"
+- Product names including "GoatFlow" or "GoatKit"
 
 ## Migration from Other Licenses
 
@@ -228,12 +228,12 @@ GOTRS_LICENSE_KEY=xxx make build-ee
 - No code reuse from OTRS
 - Database schema compatibility only
 
-### To GOTRS CE
+### To GoatFlow CE
 - Apache 2.0 compatible with most licenses
 - Can integrate with proprietary systems
 - No viral license effects
 
-### To GOTRS EE
+### To GoatFlow EE
 - Commercial license supersedes Apache 2.0
 - Additional rights and features
 - Professional support included
@@ -242,13 +242,13 @@ GOTRS_LICENSE_KEY=xxx make build-ee
 
 ### General Licensing
 
-**Q: Can I use GOTRS CE in my commercial product?**
+**Q: Can I use GoatFlow CE in my commercial product?**
 A: Yes, Apache 2.0 allows commercial use.
 
 **Q: Do I need to open source my modifications?**
 A: No, Apache 2.0 doesn't require this.
 
-**Q: Can I remove the GOTRS branding?**
+**Q: Can I remove the GoatFlow branding?**
 A: In CE, you must preserve copyright notices. In EE with white-label license, yes.
 
 ### Enterprise Edition
@@ -287,18 +287,18 @@ Enterprise Edition includes indemnification terms in the commercial agreement.
 ## Contact
 
 ### Licensing Inquiries
-- Email: licensing@gotrs.io
-- Phone: +1-555-GOTRS-LIC
-- Web: https://gotrs.io/licensing
+- Email: hello@goatflow.io
+- Phone: +1-555-GoatFlow-LIC
+- Web: https://goatflow.io/licensing
 
 ### Legal Questions
-- Email: legal@gotrs.io
-- Address: GOTRS Legal Dept, [Address]
+- Email: hello@goatflow.io
+- Address: GoatFlow Legal Dept, [Address]
 
 ### Sales
-- Email: sales@gotrs.io
-- Phone: +1-555-GOTRS-BUY
-- Web: https://gotrs.io/pricing
+- Email: hello@goatflow.io
+- Phone: +1-555-GoatFlow-BUY
+- Web: https://goatflow.io/pricing
 
 ---
 

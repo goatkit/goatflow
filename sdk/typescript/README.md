@@ -1,24 +1,24 @@
-# GOTRS TypeScript SDK
+# GoatFlow TypeScript SDK
 
-The official TypeScript/JavaScript SDK for the GOTRS ticketing system API.
+The official TypeScript/JavaScript SDK for the GoatFlow ticketing system API.
 
 ## Installation
 
 ```bash
-npm install @gotrs/sdk
+npm install @goatflow/sdk
 # or
-yarn add @gotrs/sdk
+yarn add @goatflow/sdk
 # or
-pnpm add @gotrs/sdk
+pnpm add @goatflow/sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import { GotrsClient } from '@gotrs/sdk';
+import { GoatflowClient } from '@goatflow/sdk';
 
 // Create client with API key
-const client = GotrsClient.withApiKey('https://your-gotrs-instance.com', 'your-api-key');
+const client = GoatflowClient.withApiKey('https://your-goatflow-instance.com', 'your-api-key');
 
 // List tickets
 const tickets = await client.tickets.list({
@@ -34,15 +34,15 @@ console.log(`Found ${tickets.total_count} tickets`);
 ### API Key (Recommended for server-to-server)
 
 ```typescript
-const client = GotrsClient.withApiKey('https://gotrs.example.com', 'your-api-key');
+const client = GoatflowClient.withApiKey('https://goatflow.example.com', 'your-api-key');
 ```
 
 ### JWT Token
 
 ```typescript
 const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-const client = GotrsClient.withJWT(
-  'https://gotrs.example.com',
+const client = GoatflowClient.withJWT(
+  'https://goatflow.example.com',
   'jwt-token',
   'refresh-token',
   expiresAt
@@ -52,8 +52,8 @@ const client = GotrsClient.withJWT(
 ### OAuth2
 
 ```typescript
-const client = GotrsClient.withOAuth2(
-  'https://gotrs.example.com',
+const client = GoatflowClient.withOAuth2(
+  'https://goatflow.example.com',
   'access-token',
   'refresh-token',
   expiresAt
@@ -64,7 +64,7 @@ const client = GotrsClient.withOAuth2(
 
 ```typescript
 // Create client without auth
-const client = new GotrsClient({ baseURL: 'https://gotrs.example.com' });
+const client = new GoatflowClient({ baseURL: 'https://goatflow.example.com' });
 
 // Login with credentials
 await client.login('user@example.com', 'password');
@@ -76,8 +76,8 @@ const profile = await client.auth.getProfile();
 ### Custom Configuration
 
 ```typescript
-const client = new GotrsClient({
-  baseURL: 'https://gotrs.example.com',
+const client = new GoatflowClient({
+  baseURL: 'https://goatflow.example.com',
   auth: {
     type: 'api-key',
     apiKey: 'your-api-key',
@@ -304,7 +304,7 @@ import {
   isValidationError,
   isNetworkError,
   isTimeoutError,
-} from '@gotrs/sdk';
+} from '@goatflow/sdk';
 
 try {
   const ticket = await client.tickets.get(ticketId);
@@ -370,7 +370,7 @@ console.log(`Loaded ${allTickets.length} tickets total`);
 The SDK is written in TypeScript and provides full type safety:
 
 ```typescript
-import { Ticket, TicketCreateRequest, TicketListOptions } from '@gotrs/sdk';
+import { Ticket, TicketCreateRequest, TicketListOptions } from '@goatflow/sdk';
 
 // Type-safe ticket creation
 const ticketData: TicketCreateRequest = {
@@ -400,9 +400,9 @@ The SDK works in both Node.js and browser environments:
 
 ```html
 <script type="module">
-  import { GotrsClient } from 'https://unpkg.com/@gotrs/sdk@latest/dist/index.esm.js';
+  import { GoatflowClient } from 'https://unpkg.com/@goatflow/sdk@latest/dist/index.esm.js';
   
-  const client = GotrsClient.withApiKey('https://your-gotrs.com', 'api-key');
+  const client = GoatflowClient.withApiKey('https://your-goatflow.com', 'api-key');
   const tickets = await client.tickets.list();
   console.log(tickets);
 </script>
@@ -412,10 +412,10 @@ The SDK works in both Node.js and browser environments:
 
 ```javascript
 // CommonJS
-const { GotrsClient } = require('@gotrs/sdk');
+const { GoatflowClient } = require('@goatflow/sdk');
 
 // ES Modules
-import { GotrsClient } from '@gotrs/sdk';
+import { GoatflowClient } from '@goatflow/sdk';
 ```
 
 ## Rate Limiting
@@ -424,8 +424,8 @@ The SDK automatically handles rate limiting with exponential backoff:
 
 ```typescript
 // Configure retry behavior
-const client = new GotrsClient({
-  baseURL: 'https://gotrs.example.com',
+const client = new GoatflowClient({
+  baseURL: 'https://goatflow.example.com',
   auth: { type: 'api-key', apiKey: 'your-key' },
   retries: 5, // Retry up to 5 times
   timeout: 30000, // 30 second timeout
@@ -477,8 +477,8 @@ npm run test:watch
 For integration tests:
 
 ```bash
-export GOTRS_BASE_URL="https://your-test-instance.com"
-export GOTRS_API_KEY="your-test-api-key"
+export GOATFLOW_BASE_URL="https://your-test-instance.com"
+export GOATFLOW_API_KEY="your-test-api-key"
 npm run test:integration
 ```
 
@@ -531,6 +531,6 @@ MIT License - see LICENSE file for details.
 
 ## Support
 
-- Documentation: https://docs.gotrs.io/sdk/typescript
-- Issues: https://github.com/gotrs-io/gotrs-ce/issues
-- Discussions: https://github.com/gotrs-io/gotrs-ce/discussions
+- Documentation: https://docs.goatflow.io/sdk/typescript
+- Issues: https://github.com/goatkit/goatflow/issues
+- Discussions: https://github.com/goatkit/goatflow/discussions

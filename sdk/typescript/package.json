@@ -1,7 +1,7 @@
 {
-  "name": "@gotrs/sdk",
+  "name": "@goatflow/sdk",
   "version": "1.0.0",
-  "description": "TypeScript/JavaScript SDK for the GOTRS ticketing system API",
+  "description": "TypeScript/JavaScript SDK for the GoatFlow ticketing system API",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
@@ -22,7 +22,7 @@
     "prepublishOnly": "npm run build && npm run test"
   },
   "keywords": [
-    "gotrs",
+    "goatflow",
     "ticketing",
     "support",
     "api",
@@ -30,16 +30,16 @@
     "typescript",
     "javascript"
   ],
-  "author": "GOTRS Team",
+  "author": "GoatFlow Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/gotrs-io/gotrs-ce.git",
+    "url": "https://github.com/goatkit/goatflow.git",
     "directory": "sdk/typescript"
   },
-  "homepage": "https://gotrs.io",
+  "homepage": "https://goatflow.io",
   "bugs": {
-    "url": "https://github.com/gotrs-io/gotrs-ce/issues"
+    "url": "https://github.com/goatkit/goatflow/issues"
   },
   "dependencies": {
     "axios": "^1.6.0",

@@ -6,7 +6,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 func TestWebserviceRepository_CRUD(t *testing.T) {

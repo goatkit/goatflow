@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // LookupRepository defines the interface for lookup data persistence.

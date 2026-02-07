@@ -1,5 +1,5 @@
 #!/bin/bash
-# GOTRS API Testing Script
+# GoatFlow API Testing Script
 # Handles authentication and makes API calls with proper TLS
 
 set -euo pipefail
@@ -28,7 +28,7 @@ if [[ -f ".env" ]]; then
     fi
 fi
 
-if [[ "${GOTRS_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
+if [[ "${GOATFLOW_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
     echo "DEBUG: BACKEND_URL=${BACKEND_URL:-<not set>}"
     echo "DEBUG: ADMIN_USER=${ADMIN_USER:-<not set>}"
     echo "DEBUG: ADMIN_PASSWORD=${ADMIN_PASSWORD:-<not set>}"
@@ -48,8 +48,8 @@ fi
 
 # Infer BACKEND_URL if not set: prefer https container name else http localhost
 if [[ -z "${BACKEND_URL:-}" ]]; then
-    if getent hosts gotrs-backend >/dev/null 2>&1; then
-        BACKEND_URL="https://gotrs-backend:8080"
+    if getent hosts goatflow-backend >/dev/null 2>&1; then
+        BACKEND_URL="https://goatflow-backend:8080"
     else
         BACKEND_URL="http://localhost:8080"
     fi
@@ -81,7 +81,7 @@ auth_json() {
     for e in "${endpoints[@]}"; do
         response=$(curl -k -s -w '\n%{http_code}' -X POST "$BACKEND_URL$e" -H 'Content-Type: application/json' -H 'Accept: application/json' -d "$payload" || true)
         body="${response%$'\n'*}"; http_code="${response##*$'\n'}"
-                if [[ "${GOTRS_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
+                if [[ "${GOATFLOW_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
                     echo "DEBUG: (POST $e) HTTP $http_code body: $body" >&2
                 fi
         if [[ "$http_code" != "200" ]]; then continue; fi
@@ -99,23 +99,23 @@ make_api_call() {
     local method="$1" endpoint="$2" body="${3:-}" attempts=0 max_attempts=2 token csrf header_args response status_line resp_body http_code
     while (( attempts < max_attempts )); do
         attempts=$((attempts+1))
-                if [[ "${GOTRS_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
+                if [[ "${GOATFLOW_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
                     echo "DEBUG: Auth attempt $attempts" >&2
                 fi
         token=$(auth_json) || { echo "DEBUG: auth failed" >&2; return 1; }
     header_args=(-H "Authorization: Bearer $token" -H 'Content-Type: application/json' -H 'Accept: application/json')
-        if [[ "${GOTRS_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
+        if [[ "${GOATFLOW_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
             echo "DEBUG: Using token=$token" >&2
         fi
         local curl_parts=(-k -s -w '\n%{http_code}' -X "$method" "$BACKEND_URL$endpoint" "${header_args[@]}")
         if [[ -n "$body" ]]; then curl_parts+=(-d "$body"); fi
         status_line=$(curl "${curl_parts[@]}") || true
         resp_body="${status_line%$'\n'*}"; http_code="${status_line##*$'\n'}"
-                if [[ "${GOTRS_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
+                if [[ "${GOATFLOW_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
                     echo "DEBUG: ($method $endpoint) HTTP $http_code body: $resp_body" >&2
                 fi
         if [[ "$http_code" == "401" && $attempts -lt $max_attempts ]]; then
-                        if [[ "${GOTRS_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
+                        if [[ "${GOATFLOW_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
                             echo "DEBUG: 401 received, retrying auth" >&2
                         fi
             continue
@@ -132,7 +132,7 @@ make_api_call() {
 }
 
 # Main script
-if [[ "${GOTRS_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
+if [[ "${GOATFLOW_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
     echo "DEBUG: Starting main script"
 fi
 if [[ $# -lt 2 ]]; then
@@ -148,7 +148,7 @@ if [[ -z "$METHOD" ]]; then METHOD="GET"; fi
 # Use API_BODY env var (preserves quotes) or fall back to third positional arg
 BODY="${API_BODY:-${3:-}}"
 
-if [[ "${GOTRS_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
+if [[ "${GOATFLOW_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
     echo "DEBUG: METHOD=$METHOD, ENDPOINT=$ENDPOINT, BODY=$BODY"
 fi
 

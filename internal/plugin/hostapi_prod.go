@@ -11,11 +11,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/cache"
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
-	"github.com/gotrs-io/gotrs-ce/internal/notifications"
+	"github.com/goatkit/goatflow/internal/cache"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/notifications"
 )
 
 // PluginLanguageKey is the context key for plugin request language.

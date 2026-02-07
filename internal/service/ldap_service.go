@@ -12,8 +12,8 @@ import (
 
 	"github.com/go-ldap/ldap/v3"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/repository/memory"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/repository/memory"
 )
 
 // LDAPService handles LDAP/Active Directory integration.
@@ -65,7 +65,7 @@ type LDAPConfig struct {
 	UserGroups           []string         `json:"user_groups,omitempty"`
 }
 
-// LDAPAttributeMap maps LDAP attributes to GOTRS user fields.
+// LDAPAttributeMap maps LDAP attributes to GoatFlow user fields.
 type LDAPAttributeMap struct {
 	Username    string `json:"username"`     // sAMAccountName, uid
 	Email       string `json:"email"`        // mail, userPrincipalName

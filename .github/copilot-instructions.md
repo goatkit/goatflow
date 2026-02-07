@@ -190,10 +190,10 @@ A well-maintained memory bank should:
 
 Remember: Memory is not just documentation - it's the foundation of effective assistance. Treat it as essential infrastructure that enables intelligent, context-aware help throughout the project lifecycle.
 
-# GitHub Copilot Instructions for GOTRS
+# GitHub Copilot Instructions for GoatFlow
 
 ## Project Context
-Building GOTRS - a modern ticketing system in Go and React.
+Building GoatFlow - a modern ticketing system in Go and React.
 
 ## Code Style
 - Minimal comments
@@ -232,10 +232,10 @@ Building GOTRS - a modern ticketing system in Go and React.
 - **Command generation**: When suggesting commands to run, always use make targets and container operations - never suggest direct tool execution on host.
 - **No direct docker/podman commands**: Even in examples or instructions, use `make` targets instead of `docker compose run` or similar.
 - **Toolbox for everything**: All Go, database, and development operations must route through the toolbox container via make targets.
-</markdown># GitHub Copilot Instructions for GOTRS
+</markdown># GitHub Copilot Instructions for GoatFlow
 
 ## Project Context
-Building GOTRS - a modern ticketing system in Go and React.
+Building GoatFlow - a modern ticketing system in Go and React.
 
 ## Code Style
 - Minimal comments

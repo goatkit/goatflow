@@ -1,8 +1,8 @@
-# Database Access Patterns - GOTRS MySQL Compatibility
+# Database Access Patterns - GoatFlow MySQL Compatibility
 
 ## 🎯 Critical Achievement: MySQL Compatibility Restored (August 29, 2025)
 
-GOTRS now has **full MySQL compatibility** with zero placeholder conversion errors. This document establishes the **mandatory patterns** for all database access going forward.
+GoatFlow now has **full MySQL compatibility** with zero placeholder conversion errors. This document establishes the **mandatory patterns** for all database access going forward.
 
 ## 🚨 MANDATORY: No Direct SQL Without ConvertPlaceholders
 
@@ -128,9 +128,9 @@ DB_PORT=3306
 # PostgreSQL (development)
 DB_DRIVER=postgres
 DB_HOST=postgres
-DB_USER=gotrs_user
+DB_USER=goatflow_user
 DB_PASSWORD=your_postgres_password_here
-DB_NAME=gotrs
+DB_NAME=goatflow
 DB_PORT=5432
 ```
 
@@ -340,7 +340,7 @@ tickets, err := queryBuilder.
 
 **⚠️ CRITICAL REMINDER**: Every single database query MUST use `database.ConvertPlaceholders()`. No exceptions. This ensures MySQL compatibility and prevents the "$1" placeholder errors that took significant effort to fix.
 
-*This pattern is now mandatory for all GOTRS development going forward.*
+*This pattern is now mandatory for all GoatFlow development going forward.*
 
 ## Guardrails
 

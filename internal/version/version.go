@@ -1,4 +1,4 @@
-// Package version provides build-time version information for GOTRS.
+// Package version provides build-time version information for GoatFlow.
 // These variables are set at build time via -ldflags.
 package version
 

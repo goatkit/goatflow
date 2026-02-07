@@ -49,8 +49,8 @@ bin/
 *.so
 *.dylib
 goats
-gotrs
-gotrs-*
+goatflow
+goatflow-*
 server
 migrate
 generator

@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // SessionRepository defines the interface for session operations.
@@ -399,9 +399,9 @@ func (r *SessionSQLRepository) DeleteByMaxAge(maxAge time.Duration) (int, error)
 }
 
 // parseTime tries to parse a time string in various formats.
-// OTRS uses "2006-01-02 15:04:05" format, while GOTRS uses RFC3339.
+// OTRS uses "2006-01-02 15:04:05" format, while GoatFlow uses RFC3339.
 func parseTime(value string) (time.Time, bool) {
-	// Try RFC3339 first (GOTRS format)
+	// Try RFC3339 first (GoatFlow format)
 	if t, err := time.Parse(time.RFC3339, value); err == nil {
 		return t, true
 	}

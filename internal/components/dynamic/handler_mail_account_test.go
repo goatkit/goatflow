@@ -3,7 +3,7 @@ package dynamic
 import (
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/mailaccountmeta"
+	"github.com/goatkit/goatflow/internal/mailaccountmeta"
 )
 
 func TestApplyMailAccountWriteTransform(t *testing.T) {

@@ -12,15 +12,15 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/notifications"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/shared"
 
 	"github.com/xeonx/timeago"
 	"golang.org/x/text/cases"
@@ -54,7 +54,7 @@ func handleDashboard(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
 		getPongo2Renderer().HTML(c, http.StatusOK, "pages/dashboard.pongo2", pongo2.Context{
-			"Title":         "Dashboard - GOTRS",
+			"Title":         "Dashboard - GoatFlow",
 			"Stats":         gin.H{"openTickets": 0, "pendingTickets": 0, "closedToday": 0},
 			"RecentTickets": []gin.H{},
 			"User":          getUserMapForTemplate(c),
@@ -504,28 +504,31 @@ func handleRecentTickets(c *gin.Context) {
 				priorityName = priorityRow.Name
 			}
 
-			// Synthwave badge styles
+			// Badge styles using theme variables
 			priorityStyle := "background: var(--gk-success-subtle); color: var(--gk-success);"
 			switch strings.ToLower(priorityName) {
-			case "1 very low", "2 low":
-				priorityStyle = "background: var(--gk-bg-elevated); color: var(--gk-text-secondary);"
+			case "1 very low":
+				priorityStyle = "background: var(--gk-info-subtle); color: var(--gk-info);"
+			case "2 low":
+				priorityStyle = "background: var(--gk-info-subtle); color: var(--gk-info);"
 			case "3 normal":
 				priorityStyle = "background: var(--gk-success-subtle); color: var(--gk-success);"
-			case "4 high", "5 very high":
+			case "4 high":
 				priorityStyle = "background: var(--gk-warning-subtle); color: var(--gk-warning);"
-			case "critical":
+			case "5 very high":
 				priorityStyle = "background: var(--gk-error-subtle); color: var(--gk-error);"
 			}
 
 			statusStyle := "background: var(--gk-primary-subtle); color: var(--gk-primary);"
-			switch strings.ToLower(statusLabel) {
-			case "new":
+			statusLower := strings.ToLower(statusLabel)
+			switch {
+			case statusLower == "new":
 				statusStyle = "background: var(--gk-secondary-subtle); color: var(--gk-secondary);"
-			case "open":
+			case statusLower == "open":
 				statusStyle = "background: var(--gk-success-subtle); color: var(--gk-success);"
-			case "pending":
+			case strings.HasPrefix(statusLower, "pending"):
 				statusStyle = "background: var(--gk-warning-subtle); color: var(--gk-warning);"
-			case "closed":
+			case strings.HasPrefix(statusLower, "closed"), strings.HasPrefix(statusLower, "merged"), strings.HasPrefix(statusLower, "removed"):
 				statusStyle = "background: var(--gk-bg-elevated); color: var(--gk-text-secondary);"
 			}
 

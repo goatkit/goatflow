@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{{ t("schema_monitoring.title")|default:"Schema Monitoring" }} - Admin - GOTRS{% endblock %}
+{% block title %}{{ t("schema_monitoring.title")|default:"Schema Monitoring" }} - Admin - GoatFlow{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8 min-h-screen">

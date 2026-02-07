@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
+	"github.com/goatkit/goatflow/internal/plugin"
 )
 
 // HelloPlugin is a simple example plugin that demonstrates the plugin interface.
@@ -28,9 +28,9 @@ func (p *HelloPlugin) GKRegister() plugin.GKRegistration {
 		Name:        "hello",
 		Version:     "1.0.0",
 		Description: "A simple hello world plugin for testing",
-		Author:      "GOTRS Team",
+		Author:      "GoatFlow Team",
 		License:     "Apache-2.0",
-		Homepage:    "https://github.com/gotrs-io/gotrs-ce",
+		Homepage:    "https://github.com/goatkit/goatflow",
 
 		Routes: []plugin.RouteSpec{
 			{

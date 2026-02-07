@@ -1,4 +1,4 @@
-# Container for GOTRS route management tools
+# Container for GoatFlow route management tools
 # syntax=docker/dockerfile:1
 
 # Global build arg - must be before any FROM that uses it
@@ -49,14 +49,14 @@ COPY --from=route-builder /usr/local/bin/route-* /usr/local/bin/
 RUN cat > /usr/local/bin/route-manager << 'EOF'
 #!/bin/bash
 
-# GOTRS Route Management Suite
+# GoatFlow Route Management Suite
 set -e
 
 ROUTES_DIR=${ROUTES_DIR:-/app/routes}
-GOTRS_HOST=${GOTRS_HOST:-http://gotrs-backend:8080}
+GOATFLOW_HOST=${GOATFLOW_HOST:-http://goatflow-backend:8080}
 
 show_help() {
-    echo "🚀 GOTRS Route Management Suite"
+    echo "🚀 GoatFlow Route Management Suite"
     echo "================================"
     echo ""
     echo "Commands:"
@@ -79,7 +79,7 @@ show_help() {
     echo ""
     echo "Environment Variables:"
     echo "  ROUTES_DIR    Directory containing route files (default: /app/routes)"
-    echo "  GOTRS_HOST    GOTRS backend URL (default: http://gotrs-backend:8080)"
+    echo "  GOATFLOW_HOST    GoatFlow backend URL (default: http://goatflow-backend:8080)"
 }
 
 case "$1" in
@@ -87,7 +87,7 @@ case "$1" in
         shift
         echo "🧪 Running Route Tests"
         echo "====================="
-        route-test "$ROUTES_DIR" "$GOTRS_HOST" "$@"
+        route-test "$ROUTES_DIR" "$GOATFLOW_HOST" "$@"
         ;;
         
     docs)
@@ -116,7 +116,7 @@ case "$1" in
         echo "==========================="
         
         # Get performance data from analytics endpoint
-        curl -s "$GOTRS_HOST/metrics/stats" | jq '.route_stats' | \
+        curl -s "$GOATFLOW_HOST/metrics/stats" | jq '.route_stats' | \
         jq -r 'to_entries | sort_by(-.value.avg_duration) | 
                .[] | "\(.key): \(.value.avg_duration)ms (count: \(.value.count))"' | 
         head -20
@@ -160,13 +160,13 @@ case "$1" in
         
         # Test summary
         echo "🧪 Test Summary:"
-        route-test "$ROUTES_DIR" "$GOTRS_HOST" | tail -10
+        route-test "$ROUTES_DIR" "$GOATFLOW_HOST" | tail -10
         echo ""
         
         # Performance summary if available
-        if curl -s "$GOTRS_HOST/health" > /dev/null 2>&1; then
+        if curl -s "$GOATFLOW_HOST/health" > /dev/null 2>&1; then
             echo "📊 Performance Summary:"
-            curl -s "$GOTRS_HOST/metrics/stats" | jq '.summary'
+            curl -s "$GOATFLOW_HOST/metrics/stats" | jq '.summary'
         fi
         
         echo ""

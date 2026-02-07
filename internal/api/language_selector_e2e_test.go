@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 // setupLanguageSelectorTestRouter creates a test router with i18n middleware and language endpoints.
@@ -125,13 +125,13 @@ func TestSetPreLoginLanguage(t *testing.T) {
 	cookies := w.Result().Cookies()
 	var langCookie *http.Cookie
 	for _, c := range cookies {
-		if c.Name == "gotrs_lang" {
+		if c.Name == "goatflow_lang" {
 			langCookie = c
 			break
 		}
 	}
 
-	require.NotNil(t, langCookie, "Should set gotrs_lang cookie")
+	require.NotNil(t, langCookie, "Should set goatflow_lang cookie")
 	assert.Equal(t, "pl", langCookie.Value, "Cookie should have value 'pl'")
 	assert.Equal(t, "/", langCookie.Path, "Cookie should be set for root path")
 }
@@ -279,7 +279,7 @@ func TestLoginPageTranslationWithLanguageCookie(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/login", nil)
-			req.AddCookie(&http.Cookie{Name: "gotrs_lang", Value: tc.langCookie})
+			req.AddCookie(&http.Cookie{Name: "goatflow_lang", Value: tc.langCookie})
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
 
@@ -370,7 +370,7 @@ func TestLanguageSelectorE2EFlow(t *testing.T) {
 	// Get the cookie that was set
 	var setCookie string
 	for _, c := range w2.Result().Cookies() {
-		if c.Name == "gotrs_lang" {
+		if c.Name == "goatflow_lang" {
 			setCookie = c.Value
 			break
 		}
@@ -379,7 +379,7 @@ func TestLanguageSelectorE2EFlow(t *testing.T) {
 
 	// Step 3: Verify login page now shows Polish
 	req3 := httptest.NewRequest(http.MethodGet, "/login", nil)
-	req3.AddCookie(&http.Cookie{Name: "gotrs_lang", Value: "pl"})
+	req3.AddCookie(&http.Cookie{Name: "goatflow_lang", Value: "pl"})
 	w3 := httptest.NewRecorder()
 	r.ServeHTTP(w3, req3)
 
@@ -413,7 +413,7 @@ func TestLanguagePersistenceAfterPageReload(t *testing.T) {
 	// Simulate multiple page reloads with the cookie
 	for i := 0; i < 3; i++ {
 		req := httptest.NewRequest(http.MethodGet, "/login", nil)
-		req.AddCookie(&http.Cookie{Name: "gotrs_lang", Value: "de"})
+		req.AddCookie(&http.Cookie{Name: "goatflow_lang", Value: "de"})
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
@@ -430,12 +430,12 @@ func TestLanguagePersistenceAfterPageReload(t *testing.T) {
 func TestLanguageSelectorWithBothCookies(t *testing.T) {
 	r := setupLanguageSelectorTestRouter(t)
 
-	// Test priority: lang cookie should take precedence over gotrs_lang
+	// Test priority: lang cookie should take precedence over goatflow_lang
 	// (This matches the middleware behavior)
 
 	req := httptest.NewRequest(http.MethodGet, "/login", nil)
 	req.AddCookie(&http.Cookie{Name: "lang", Value: "fr"})
-	req.AddCookie(&http.Cookie{Name: "gotrs_lang", Value: "de"})
+	req.AddCookie(&http.Cookie{Name: "goatflow_lang", Value: "de"})
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 

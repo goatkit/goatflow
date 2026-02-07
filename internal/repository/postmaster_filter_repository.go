@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // FilterMatch represents a match condition in a postmaster filter.
@@ -18,7 +18,7 @@ type FilterMatch struct {
 
 // FilterSet represents a set action in a postmaster filter.
 type FilterSet struct {
-	Key   string // X-GOTRS-Queue, X-GOTRS-Priority, etc.
+	Key   string // X-GoatFlow-Queue, X-GoatFlow-Priority, etc.
 	Value string // Value to set
 }
 

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 var (

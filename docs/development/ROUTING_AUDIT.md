@@ -12,7 +12,7 @@ Script: `scripts/check_routes_manifest.sh` (invoked by governance targets) print
 
 Machine-friendly diff: `cmd/routes-diff` outputs JSON object `{added, removed, changed}` for CI or tooling.
 
-Runtime directory is mounted as a named volume (`gotrs_runtime`) to ensure writes from toolbox and backend containers are consistent without permission fallbacks.
+Runtime directory is mounted as a named volume (`goatflow_runtime`) to ensure writes from toolbox and backend containers are consistent without permission fallbacks.
 
 ## Single Source of Truth
 All business and API routes must be defined in YAML route files under `routes/`.

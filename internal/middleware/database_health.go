@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // and returns a friendly error page if the database is down.
@@ -66,7 +66,7 @@ func handleDatabaseError(c *gin.Context, message, details, suggestion string) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Database Connection Error - GOTRS</title>
+    <title>Database Connection Error - GoatFlow</title>
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
@@ -100,8 +100,8 @@ func handleDatabaseError(c *gin.Context, message, details, suggestion string) {
             <!-- Logo and Product Name -->
             <div class="text-center mb-8">
                 <div class="flex justify-center items-center mb-4">
-                    <img src="/static/favicon.svg" alt="GOTRS Logo" class="h-12 w-12 mr-3">
-                    <span class="text-4xl font-bold text-gotrs-600 dark:text-gotrs-400">GOTRS</span>
+                    <img src="/static/favicon.svg" alt="GoatFlow Logo" class="h-12 w-12 mr-3">
+                    <span class="text-4xl font-bold text-goatflow-600 dark:text-goatflow-400">GoatFlow</span>
                 </div>
                 
                 <!-- Dark mode toggle -->
@@ -131,7 +131,7 @@ func handleDatabaseError(c *gin.Context, message, details, suggestion string) {
                 </div>
                 
                 <div class="mt-6">
-                    <button onclick="location.reload()" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700 dark:bg-gotrs-500 dark:hover:bg-gotrs-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
+                    <button onclick="location.reload()" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-goatflow-600 hover:bg-goatflow-700 dark:bg-goatflow-500 dark:hover:bg-goatflow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-goatflow-500">
                         <i class="fas fa-sync-alt mr-2"></i>
                         Retry Connection
                     </button>

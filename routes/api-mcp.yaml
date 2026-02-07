@@ -1,6 +1,6 @@
 ---
 # MCP (Model Context Protocol) routes
-# Enables AI assistants to interact with GOTRS via API tokens
+# Enables AI assistants to interact with GoatFlow via API tokens
 apiVersion: v1
 kind: RouteGroup
 metadata:

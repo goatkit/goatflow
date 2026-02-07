@@ -10,7 +10,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // CustomerPortalConfig holds global portal settings stored in sysconfig tables.
@@ -34,7 +34,7 @@ func portalKeyDefs() []portalKeyDef {
 		{"CustomerPortal::Enabled", "Allow customers to access the portal and ticket UI.", `{"type":"boolean","default":true}`, "true"},
 		{"CustomerPortal::LoginRequired", "Require customer authentication before accessing the portal.", `{"type":"boolean","default":true}`, "true"},
 		{"CustomerPortal::Title", "Portal title shown in header and HTML title.", `{"type":"string","default":"Customer Portal"}`, "Customer Portal"},
-		{"CustomerPortal::FooterText", "Footer text displayed on customer portal pages.", `{"type":"string","default":"Powered by GOTRS"}`, "Powered by GOTRS"},
+		{"CustomerPortal::FooterText", "Footer text displayed on customer portal pages.", `{"type":"string","default":"Powered by GoatFlow"}`, "Powered by GoatFlow"},
 		{"CustomerPortal::LandingPage", "Relative path used after login (or on portal entry).", `{"type":"string","default":"/customer"}`, "/customer"},
 	}
 }
@@ -45,7 +45,7 @@ func DefaultCustomerPortalConfig() CustomerPortalConfig {
 		Enabled:       true,
 		LoginRequired: true,
 		Title:         "Customer Portal",
-		FooterText:    "Powered by GOTRS",
+		FooterText:    "Powered by GoatFlow",
 		LandingPage:   "/customer/tickets",
 	}
 }

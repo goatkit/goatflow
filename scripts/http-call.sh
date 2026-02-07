@@ -17,7 +17,7 @@ BODY="${BODY:-${3:-}}"
 CONTENT_TYPE="${CONTENT_TYPE:-${4:-text/html}}"
 
 if [[ -z "${BACKEND_URL:-}" ]]; then
-  for host in gotrs-backend backend gotrs-ce-backend-1; do
+  for host in goatflow-backend backend goatflow-backend-1; do
     if getent hosts "$host" >/dev/null 2>&1; then
       BACKEND_URL="http://$host:8080"; break
     fi

@@ -1,5 +1,5 @@
 /**
- * Common JavaScript utilities for GOTRS
+ * Common JavaScript utilities for GoatFlow
  */
 
 /**

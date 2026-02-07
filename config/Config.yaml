@@ -1,5 +1,5 @@
 ---
-# GoTRS Master Configuration Definition
+# GoatFlow Master Configuration Definition
 # This file defines all available configuration settings for the system
 # Similar to OTRS's XML configuration files but in YAML format
 # DO NOT EDIT deployed/config.yaml - it will be overwritten!
@@ -7,7 +7,7 @@
 ---
 version: "1.0"
 metadata:
-  description: "GoTRS System Configuration Definition"
+  description: "GoatFlow System Configuration Definition"
   last_updated: "2025-08-24"
 
 settings:
@@ -35,7 +35,7 @@ settings:
     description: "Fully Qualified Domain Name of the system"
     group: "Framework"
     type: "string"
-    default: "gotrs.local"
+    default: "goatflow.local"
     required: true
     readonly: false
     invisible: false
@@ -61,7 +61,7 @@ settings:
     description: "Email address of the system administrator"
     group: "Framework"
     type: "email"
-    default: "admin@gotrs.local"
+    default: "admin@goatflow.local"
     required: true
     readonly: false
     invisible: false
@@ -203,7 +203,7 @@ settings:
     description: "Name used for system notification emails"
     group: "Framework"
     type: "string"
-    default: "GoTRS Notification System"
+    default: "GoatFlow Notification System"
     required: true
     readonly: false
     invisible: false
@@ -215,7 +215,7 @@ settings:
     description: "Email address used for system notifications"
     group: "Framework"
     type: "email"
-    default: "noreply@gotrs.local"
+    default: "noreply@goatflow.local"
     required: true
     readonly: false
     invisible: false
@@ -485,7 +485,7 @@ settings:
     description: "Database name"
     group: "Framework"
     type: "string"
-    default: "gotrs"
+    default: "goatflow"
     required: true
     readonly: true
     invisible: false

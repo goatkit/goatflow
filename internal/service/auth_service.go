@@ -8,9 +8,9 @@ import (
 	"log"
 	"strings"
 
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
+	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/yamlmgmt"
 )
 
 // AuthService handles authentication and authorization.

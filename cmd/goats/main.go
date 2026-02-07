@@ -1,13 +1,13 @@
 // Package main provides the GOATS CLI tool.
 //
-//	@title			GOTRS API
+//	@title			GoatFlow API
 //	@version		1.0
-//	@description	GOTRS Ticket System REST API
-//	@termsOfService	https://gotrs.io/terms/
+//	@description	GoatFlow Ticket System REST API
+//	@termsOfService	https://goatflow.io/terms/
 //
-//	@contact.name	GOTRS Support
-//	@contact.url	https://gotrs.io/support
-//	@contact.email	support@gotrs.io
+//	@contact.name	GoatFlow Support
+//	@contact.url	https://goatflow.io/support
+//	@contact.email	hello@goatflow.io
 //
 //	@license.name	AGPL-3.0
 //	@license.url	https://www.gnu.org/licenses/agpl-3.0.html
@@ -37,32 +37,32 @@ import (
 	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/api"
+	"github.com/goatkit/goatflow/internal/api"
 
-	"github.com/gotrs-io/gotrs-ce/internal/cache"
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/filters"
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/postmaster"
-	"github.com/gotrs-io/gotrs-ce/internal/lookups"
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
-	"github.com/gotrs-io/gotrs-ce/internal/notifications"
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
-	"github.com/gotrs-io/gotrs-ce/internal/plugin/core"
-	"github.com/gotrs-io/gotrs-ce/internal/plugin/example"
-	pluginloader "github.com/gotrs-io/gotrs-ce/internal/plugin/loader"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
-	"github.com/gotrs-io/gotrs-ce/internal/runner"
-	"github.com/gotrs-io/gotrs-ce/internal/runner/tasks"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
-	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
-	"github.com/gotrs-io/gotrs-ce/internal/services/k8s"
-	"github.com/gotrs-io/gotrs-ce/internal/services/scheduler"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
-	"github.com/gotrs-io/gotrs-ce/internal/ticketnumber"
-	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
+	"github.com/goatkit/goatflow/internal/cache"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/email/inbound/filters"
+	"github.com/goatkit/goatflow/internal/email/inbound/postmaster"
+	"github.com/goatkit/goatflow/internal/lookups"
+	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/plugin"
+	"github.com/goatkit/goatflow/internal/plugin/core"
+	"github.com/goatkit/goatflow/internal/plugin/example"
+	pluginloader "github.com/goatkit/goatflow/internal/plugin/loader"
+	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/runner"
+	"github.com/goatkit/goatflow/internal/runner/tasks"
+	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/services/adapter"
+	"github.com/goatkit/goatflow/internal/services/k8s"
+	"github.com/goatkit/goatflow/internal/services/scheduler"
+	"github.com/goatkit/goatflow/internal/shared"
+	"github.com/goatkit/goatflow/internal/ticketnumber"
+	"github.com/goatkit/goatflow/internal/yamlmgmt"
 )
 
 var valkeyCache *cache.RedisCache
@@ -370,7 +370,7 @@ func main() {
 
 	// Configure loader options
 	var loaderOpts []pluginloader.LoaderOption
-	if os.Getenv("GOTRS_PLUGIN_LAZY_LOAD") == "true" {
+	if os.Getenv("GOATFLOW_PLUGIN_LAZY_LOAD") == "true" {
 		loaderOpts = append(loaderOpts, pluginloader.WithLazyLoading())
 	}
 
@@ -380,7 +380,7 @@ func main() {
 	// Wire lazy loader to manager for on-demand loading
 	pluginMgr.SetLazyLoader(pluginLoader)
 
-	if os.Getenv("GOTRS_PLUGIN_LAZY_LOAD") == "true" {
+	if os.Getenv("GOATFLOW_PLUGIN_LAZY_LOAD") == "true" {
 		log.Printf("🔌 Discovered %d WASM plugin(s) (lazy loading enabled)", loadedCount)
 	} else if loadedCount > 0 {
 		log.Printf("✅ Loaded %d WASM plugin(s) from %s", loadedCount, pluginDir)
@@ -390,7 +390,7 @@ func main() {
 	}
 
 	// Enable hot reload for plugins in development mode
-	if os.Getenv("GOTRS_PLUGIN_HOT_RELOAD") == "true" || os.Getenv("GOTRS_ENV") == "development" {
+	if os.Getenv("GOATFLOW_PLUGIN_HOT_RELOAD") == "true" || os.Getenv("GOATFLOW_ENV") == "development" {
 		if err := pluginLoader.WatchDir(context.Background()); err != nil {
 			log.Printf("⚠️  Plugin hot reload disabled: %v", err)
 		}
@@ -553,7 +553,7 @@ func main() {
 		port = "8080"
 	}
 
-	fmt.Printf("Starting GOTRS HTMX server on port %s\n", port)
+	fmt.Printf("Starting GoatFlow HTMX server on port %s\n", port)
 	fmt.Println("Available routes:")
 	fmt.Printf("  GET  /          -> Redirect to %s\n", api.RootRedirectTarget())
 	fmt.Println("  GET  /customer  -> Customer dashboard")
@@ -629,7 +629,7 @@ func initValkeyCache(cfg *config.Config) *cache.RedisCache {
 
 // runRunner starts the background task runner.
 func runRunner(db *sql.DB) {
-	log.Println("Starting GOTRS background task runner...")
+	log.Println("Starting GoatFlow background task runner...")
 
 	// Create task registry
 	registry := runner.NewTaskRegistry()

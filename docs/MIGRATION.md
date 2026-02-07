@@ -1,8 +1,8 @@
-# OTRS to GOTRS Migration Guide
+# OTRS to GoatFlow Migration Guide
 
 ## Overview
 
-GOTRS provides `gotrs-migrate` to import data from OTRS SQL dumps into GOTRS. The tool handles schema translation between different database engines and migrates core ticket data, users, and article storage.
+GoatFlow provides `goatflow-migrate` to import data from OTRS SQL dumps into GoatFlow. The tool handles schema translation between different database engines and migrates core ticket data, users, and article storage.
 
 > **Note**: Migration tooling is under active development. This document reflects current capabilities.
 
@@ -31,8 +31,8 @@ GOTRS provides `gotrs-migrate` to import data from OTRS SQL dumps into GOTRS. Th
 - [ ] SQL dump exported (see export commands below)
 - [ ] Article storage location identified
 
-### 2. GOTRS Preparation
-- [ ] GOTRS installed and running (`make up`)
+### 2. GoatFlow Preparation
+- [ ] GoatFlow installed and running (`make up`)
 - [ ] Database connection verified
 - [ ] Storage paths configured for article attachments
 
@@ -118,8 +118,8 @@ ls -la /opt/otrs/var/article/
 ### Copy Article Storage
 
 ```bash
-# Copy to GOTRS storage location
-rsync -avz /opt/otrs/var/article/ /path/to/gotrs/storage/articles/
+# Copy to GoatFlow storage location
+rsync -avz /opt/otrs/var/article/ /path/to/goatflow/storage/articles/
 
 # Or via container volume
 make toolbox-exec ARGS="cp -r /source/articles /app/storage/articles"
@@ -145,30 +145,30 @@ make migrate-validate
 
 ## Direct Tool Usage
 
-For advanced usage, scripting, or CI/CD pipelines, `gotrs-migrate` can be called directly inside containers:
+For advanced usage, scripting, or CI/CD pipelines, `goatflow-migrate` can be called directly inside containers:
 
 ```bash
 # Analyze dump
-gotrs-migrate -cmd=analyze -sql=/path/to/dump.sql
+goatflow-migrate -cmd=analyze -sql=/path/to/dump.sql
 
 # Import with dry run
-gotrs-migrate -cmd=import \
+goatflow-migrate -cmd=import \
   -sql=/path/to/dump.sql \
-  -db="postgres://user:pass@host:5432/gotrs?sslmode=disable" \
+  -db="postgres://user:pass@host:5432/goatflow?sslmode=disable" \
   -dry-run -v
 
 # Force import (clears existing data)
-gotrs-migrate -cmd=import \
+goatflow-migrate -cmd=import \
   -sql=/path/to/dump.sql \
-  -db="postgres://user:pass@host:5432/gotrs?sslmode=disable" \
+  -db="postgres://user:pass@host:5432/goatflow?sslmode=disable" \
   -force -v
 
 # Validate imported data
-gotrs-migrate -cmd=validate \
-  -db="postgres://user:pass@host:5432/gotrs?sslmode=disable" -v
+goatflow-migrate -cmd=validate \
+  -db="postgres://user:pass@host:5432/goatflow?sslmode=disable" -v
 ```
 
-### gotrs-migrate Options
+### goatflow-migrate Options
 
 | Option | Description |
 |--------|-------------|
@@ -193,7 +193,7 @@ gotrs-migrate -cmd=validate \
 
 ### Core Tables
 
-| OTRS Table | GOTRS Table | Notes |
+| OTRS Table | GoatFlow Table | Notes |
 |------------|-------------|-------|
 | ticket | tickets | Core ticket data |
 | article | ticket_messages | Ticket communications |
@@ -206,7 +206,7 @@ gotrs-migrate -cmd=validate \
 
 ### Status Mapping
 
-| OTRS Status | GOTRS Status |
+| OTRS Status | GoatFlow Status |
 |-------------|--------------|
 | new | new |
 | open | open |
@@ -270,7 +270,7 @@ For very large databases, the import may take significant time. Use `-v` to see 
 Current migration tool limitations:
 - Article attachments require separate filesystem copy (see Article Storage Migration above)
 - Custom fields (DynamicFields) require manual mapping review
-- Workflows/processes need to be recreated in GOTRS
+- Workflows/processes need to be recreated in GoatFlow
 - GenericInterface configurations are not migrated
 - OTRS-specific modules and customizations are not migrated
 
@@ -278,7 +278,7 @@ Current migration tool limitations:
 
 ## Database Schema Migrations
 
-GOTRS uses [golang-migrate](https://github.com/golang-migrate/migrate) for database schema versioning. The `migrate` tool is available in the backend container.
+GoatFlow uses [golang-migrate](https://github.com/golang-migrate/migrate) for database schema versioning. The `migrate` tool is available in the backend container.
 
 ### Usage
 
@@ -328,8 +328,8 @@ GOTRS uses [golang-migrate](https://github.com/golang-migrate/migrate) for datab
 
 ## Support
 
-- **Documentation**: https://gotrs.io/docs
-- **GitHub Issues**: https://github.com/gotrs-io/gotrs-ce/issues
+- **Documentation**: https://goatflow.io/docs
+- **GitHub Issues**: https://github.com/goatkit/goatflow/issues
 - **Community**: See CONTRIBUTING.md
 
 ---

@@ -1,8 +1,8 @@
-# GOTRS Agent Manual
+# GoatFlow Agent Manual
 
 ## Coming Soon
 
-Complete guide for support agents using GOTRS.
+Complete guide for support agents using GoatFlow.
 
 ## Planned Content
 

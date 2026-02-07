@@ -1,4 +1,4 @@
-module github.com/gotrs-io/gotrs-ce
+module github.com/goatkit/goatflow
 
 go 1.24.0
 

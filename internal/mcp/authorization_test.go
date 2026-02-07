@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // =============================================================================
@@ -26,7 +26,7 @@ type MCPTestFixtures struct {
 	mu sync.Mutex
 
 	// Groups
-	GroupAdmin   int // Admin group (ID 2 in standard GOTRS)
+	GroupAdmin   int // Admin group (ID 2 in standard GoatFlow)
 	GroupSupport int
 	GroupBilling int
 
@@ -96,7 +96,7 @@ func (f *MCPTestFixtures) setup() error {
 	}
 
 	// Use high IDs to avoid conflicts (80000+ range for MCP tests)
-	f.GroupAdmin = 2 // Standard admin group in GOTRS
+	f.GroupAdmin = 2 // Standard admin group in GoatFlow
 	f.GroupSupport = 80001
 	f.GroupBilling = 80002
 	f.QueueSupport = 80001

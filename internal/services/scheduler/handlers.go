@@ -11,13 +11,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/adapter"
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/notifications"
-	"github.com/gotrs-io/gotrs-ce/internal/services/escalation"
-	"github.com/gotrs-io/gotrs-ce/internal/services/genericagent"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/email/inbound/adapter"
+	"github.com/goatkit/goatflow/internal/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/services/escalation"
+	"github.com/goatkit/goatflow/internal/services/genericagent"
 )
 
 func (s *Service) registerBuiltinHandlers() {

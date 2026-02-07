@@ -77,7 +77,7 @@ func (v *SecretValidator) validateDatabasePassword(isProduction bool) {
 	}
 
 	// Check for example value
-	if password == "gotrs_password" {
+	if password == "goatflow_password" {
 		v.addError("DB_PASSWORD is using the default example value", isProduction)
 		return
 	}

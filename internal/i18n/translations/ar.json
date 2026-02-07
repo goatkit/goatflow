@@ -212,7 +212,7 @@
         "skipped": "تم التخطي (موجود بالفعل)",
         "updated": "تم التحديث",
         "upload_and_preview": "رفع ومعاينة",
-        "upload_description": "حدد ملف YAML المصدر من GOTRS أو OTRS لاستيراد تكوينات الحقول الديناميكية.",
+        "upload_description": "حدد ملف YAML المصدر من GoatFlow أو OTRS لاستيراد تكوينات الحقول الديناميكية.",
         "upload_file": "رفع ملف YAML",
         "will_create": "سيتم إنشاؤه",
         "will_overwrite": "سيتم الكتابة فوقه"
@@ -504,7 +504,7 @@
           "valid_id": "الصلاحية"
         },
         "help": {
-          "allow_trusted_headers": "قبول تجاوزات القائمة من رؤوس X-OTRS-Queue / X-GOTRS لهذا الصندوق.",
+          "allow_trusted_headers": "قبول تجاوزات القائمة من رؤوس X-OTRS-Queue / X-GoatFlow لهذا الصندوق.",
           "poll_interval_seconds": "تجاوز فاصل المجدول لهذا الصندوق. اترك 0 لوراثة الإيقاع العام.",
           "queue_id": "تعيين الرسائل الواردة لهذه القائمة.",
           "valid_id": "اختر ما إذا كان هذا الصندوق نشطًا."
@@ -616,16 +616,16 @@
       },
       "postmaster_filter": {
         "actions": {
-          "customer_id": "X-GOTRS-CustomerID (تعيين معرّف العميل)",
-          "customer_user": "X-GOTRS-CustomerUser (تعيين مستخدم العميل)",
-          "ignore": "X-GOTRS-Ignore (تخطي إنشاء التذكرة)",
-          "priority": "X-GOTRS-Priority (تعيين الأولوية بالاسم)",
-          "priority_id": "X-GOTRS-PriorityID (تعيين الأولوية)",
-          "queue": "X-GOTRS-Queue (التوجيه إلى قائمة الانتظار)",
-          "queue_id": "X-GOTRS-QueueID (التوجيه إلى قائمة الانتظار بالمعرّف)",
-          "state": "X-GOTRS-State (تعيين حالة التذكرة)",
-          "title": "X-GOTRS-Title (استبدال عنوان التذكرة)",
-          "type": "X-GOTRS-Type (تعيين نوع التذكرة)"
+          "customer_id": "X-GoatFlow-CustomerID (تعيين معرّف العميل)",
+          "customer_user": "X-GoatFlow-CustomerUser (تعيين مستخدم العميل)",
+          "ignore": "X-GoatFlow-Ignore (تخطي إنشاء التذكرة)",
+          "priority": "X-GoatFlow-Priority (تعيين الأولوية بالاسم)",
+          "priority_id": "X-GoatFlow-PriorityID (تعيين الأولوية)",
+          "queue": "X-GoatFlow-Queue (التوجيه إلى قائمة الانتظار)",
+          "queue_id": "X-GoatFlow-QueueID (التوجيه إلى قائمة الانتظار بالمعرّف)",
+          "state": "X-GoatFlow-State (تعيين حالة التذكرة)",
+          "title": "X-GoatFlow-Title (استبدال عنوان التذكرة)",
+          "type": "X-GoatFlow-Type (تعيين نوع التذكرة)"
         },
         "add_action": "إضافة إجراء",
         "add_condition": "إضافة شرط",
@@ -1015,7 +1015,7 @@
         },
         "import": {
           "back_to_list": "العودة للقوالب",
-          "description": "استيراد القوالب من ملف YAML مُصدَّر من GOTRS أو تم إنشاؤه يدويًا",
+          "description": "استيراد القوالب من ملف YAML مُصدَّر من GoatFlow أو تم إنشاؤه يدويًا",
           "file_label": "ملف YAML",
           "file_types": "ملفات YAML فقط (.yaml, .yml)",
           "format_description": "يجب أن يتبع ملف الاستيراد هذه البنية:",
@@ -1479,8 +1479,8 @@
   },
   "app": {
     "description": "منصة حديثة لإدارة خدمات تكنولوجيا المعلومات",
-    "name": "GOTRS",
-    "title": "GOTRS - نظام التذاكر"
+    "name": "GoatFlow",
+    "title": "GoatFlow - نظام التذاكر"
   },
   "assets": {
     "asset_tag": "علامة الأصل",
@@ -1919,7 +1919,7 @@
   },
   "customer_portal": {
     "placeholders": {
-      "footer": "مدعوم من GOTRS",
+      "footer": "مدعوم من GoatFlow",
       "title": "بوابة العملاء"
     }
   },

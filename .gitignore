@@ -1,4 +1,4 @@
-# GOTRS .gitignore
+# GoatFlow .gitignore
 
 # ============================================
 # Security - NEVER commit secrets!
@@ -47,8 +47,8 @@ charts/*/*.tgz
 
 # Individual binaries (in case they're built in root by mistake)
 goats          # Main server binary - should be in container only
-gotrs          # CLI tool - should be in container only
-gotrs-*        # Any gotrs-prefixed binaries
+goatflow          # CLI tool - should be in container only
+goatflow-*        # Any goatflow-prefixed binaries
 generator      # Code generator
 migrate        # Database migration tool
 server         # Legacy server name
@@ -311,7 +311,7 @@ id_ed25519
 id_ed25519.pub
 # Secrets
 secrets/
-!charts/gotrs/templates/secrets/
+!charts/goatflow/templates/secrets/
 .secrets/
 *.secret
 *.private

@@ -1,8 +1,8 @@
-# GOTRS Contributor License Agreement
+# GoatFlow Contributor License Agreement
 
 ## Individual Contributor License Agreement
 
-Thank you for your interest in contributing to GOTRS ("We" or "Us"). This Contributor License Agreement ("Agreement") documents the rights granted by contributors to Gibbsoft Ltd. To make this document effective, please sign it and send it to Us by electronic submission, following the instructions at https://gotrs.io/cla. This is a legally binding document, so please read it carefully before agreeing to it.
+Thank you for your interest in contributing to GoatFlow ("We" or "Us"). This Contributor License Agreement ("Agreement") documents the rights granted by contributors to Gibbsoft Ltd. To make this document effective, please sign it and send it to Us by electronic submission, following the instructions at https://goatflow.io/cla. This is a legally binding document, so please read it carefully before agreeing to it.
 
 ### 1. Definitions
 
@@ -58,7 +58,7 @@ You confirm that:
 
 (c) The grant of rights under Section 2 does not violate any grant of rights which You have made to third parties, including Your employer. If You are an employee, You have had Your employer approve this Agreement or sign the Entity version of this document. If You are less than eighteen years old, please have Your parents or guardian sign the Agreement.
 
-(d) You have followed the instructions in https://gotrs.io/cla, if You do not own the Copyright in the entire work of authorship Submitted.
+(d) You have followed the instructions in https://goatflow.io/cla, if You do not own the Copyright in the entire work of authorship Submitted.
 
 ### 4. Disclaimer
 
@@ -84,7 +84,7 @@ TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT WILL YOU BE LIABL
 
 ## Corporate Contributor License Agreement
 
-If you are contributing on behalf of a corporation, please use the Corporate CLA available at: https://gotrs.io/cla-corporate
+If you are contributing on behalf of a corporation, please use the Corporate CLA available at: https://goatflow.io/cla-corporate
 
 ---
 
@@ -103,7 +103,7 @@ If you prefer to sign manually:
 1. Download this agreement
 2. Fill in your information below
 3. Sign and scan the document
-4. Email to: cla@gotrs.io
+4. Email to: hello@goatflow.io
 
 ```
 Full Name: _________________________________
@@ -132,7 +132,7 @@ Date: ______________________________________
 ## Questions?
 
 If you have questions about the CLA, please contact:
-- Email: legal@gotrs.io
-- GitHub Issues: https://github.com/gotrs/gotrs/issues
+- Email: hello@goatflow.io
+- GitHub Issues: https://github.com/goatflow/goatflow/issues
 
-Thank you for contributing to GOTRS!
+Thank you for contributing to GoatFlow!

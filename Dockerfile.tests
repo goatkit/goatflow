@@ -1,4 +1,4 @@
-# Container-first testing environment for GOTRS
+# Container-first testing environment for GoatFlow
 # syntax=docker/dockerfile:1
 
 # Global build arg - must be before any FROM that uses it
@@ -51,19 +51,19 @@ COPY --chown=tester:tester ./routes /app/routes
 RUN cat > /usr/local/bin/test-runner << 'EOF'
 #!/bin/bash
 
-# GOTRS Container-First Test Runner
+# GoatFlow Container-First Test Runner
 set -e
 
-GOTRS_HOST=${GOTRS_HOST:-http://gotrs-backend:8080}
+GOATFLOW_HOST=${GOATFLOW_HOST:-http://goatflow-backend:8080}
 ROUTES_DIR=${ROUTES_DIR:-/app/routes}
 VERBOSE=${VERBOSE:-false}
 OUTPUT_DIR=${OUTPUT_DIR:-/app/results}
 RETRY_COUNT=${RETRY_COUNT:-3}
 RETRY_DELAY=${RETRY_DELAY:-5}
 
-echo "🐳 GOTRS Container Test Runner"
+echo "🐳 GoatFlow Container Test Runner"
 echo "================================"
-echo "Target: $GOTRS_HOST"
+echo "Target: $GOATFLOW_HOST"
 echo "Routes: $ROUTES_DIR" 
 echo "Output: $OUTPUT_DIR"
 echo ""
@@ -71,11 +71,11 @@ echo ""
 # Create output directory
 mkdir -p "$OUTPUT_DIR"
 
-# Wait for GOTRS to be ready
-echo "⏳ Waiting for GOTRS to be ready..."
+# Wait for GoatFlow to be ready
+echo "⏳ Waiting for GoatFlow to be ready..."
 for i in $(seq 1 $RETRY_COUNT); do
-    if curl -s "$GOTRS_HOST/health" > /dev/null 2>&1; then
-        echo "✅ GOTRS is ready!"
+    if curl -s "$GOATFLOW_HOST/health" > /dev/null 2>&1; then
+        echo "✅ GoatFlow is ready!"
         break
     fi
     
@@ -83,7 +83,7 @@ for i in $(seq 1 $RETRY_COUNT); do
     sleep $RETRY_DELAY
     
     if [ $i -eq $RETRY_COUNT ]; then
-        echo "❌ GOTRS failed to start after $RETRY_COUNT attempts"
+        echo "❌ GoatFlow failed to start after $RETRY_COUNT attempts"
         exit 1
     fi
 done
@@ -99,7 +99,7 @@ if [ "$VERBOSE" = "true" ]; then
     VERBOSE_FLAG="--verbose"
 fi
 
-route-test "$ROUTES_DIR" "$GOTRS_HOST" $VERBOSE_FLAG 2>&1 | tee "$OUTPUT_DIR/test-results.log"
+route-test "$ROUTES_DIR" "$GOATFLOW_HOST" $VERBOSE_FLAG 2>&1 | tee "$OUTPUT_DIR/test-results.log"
 TEST_EXIT_CODE=${PIPESTATUS[0]}
 
 echo ""
@@ -115,7 +115,7 @@ echo ""
 # Get system metrics
 echo "📊 Collecting System Metrics"
 echo "============================"
-curl -s "$GOTRS_HOST/metrics/stats" > "$OUTPUT_DIR/metrics.json" 2>/dev/null || echo "No metrics available"
+curl -s "$GOATFLOW_HOST/metrics/stats" > "$OUTPUT_DIR/metrics.json" 2>/dev/null || echo "No metrics available"
 
 # Create test report
 echo "📋 Creating Test Report"
@@ -124,7 +124,7 @@ cat > "$OUTPUT_DIR/test-report.html" << 'HTML_EOF'
 <!DOCTYPE html>
 <html>
 <head>
-    <title>GOTRS Test Report</title>
+    <title>GoatFlow Test Report</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 2rem; }
         .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 8px; }
@@ -137,9 +137,9 @@ cat > "$OUTPUT_DIR/test-report.html" << 'HTML_EOF'
 </head>
 <body>
     <div class="header">
-        <h1>🐳 GOTRS Container Test Report</h1>
+        <h1>🐳 GoatFlow Container Test Report</h1>
         <p>Generated: $(date)</p>
-        <p>Target: $GOTRS_HOST</p>
+        <p>Target: $GOATFLOW_HOST</p>
     </div>
 
     <div class="section">

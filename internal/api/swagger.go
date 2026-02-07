@@ -8,13 +8,13 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	// Import generated docs - this registers SwaggerInfo via init()
-	"github.com/gotrs-io/gotrs-ce/docs/api"
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
+	"github.com/goatkit/goatflow/docs/api"
+	"github.com/goatkit/goatflow/internal/routing"
 )
 
 // Dark mode CSS for Swagger UI - injected into index.html
 const swaggerDarkModeCSS = `<style>
-/* GOTRS Swagger Dark Mode */
+/* GoatFlow Swagger Dark Mode */
 body { background: #1a1a2e !important; }
 .swagger-ui { background: #1a1a2e; }
 .swagger-ui .topbar { background: #16213e; }
@@ -89,11 +89,11 @@ const swaggerDarkIndexHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>GOTRS API Documentation</title>
+  <title>GoatFlow API Documentation</title>
   <link rel="stylesheet" type="text/css" href="./swagger-ui.css" >
   <link rel="icon" type="image/png" href="./favicon-32x32.png" sizes="32x32" />
   <style>
-    /* GOTRS Swagger Dark Mode */
+    /* GoatFlow Swagger Dark Mode */
     html { box-sizing: border-box; overflow-y: scroll; }
     body { margin: 0; background: #1a1a2e !important; }
     .swagger-ui { background: #1a1a2e; }

@@ -232,7 +232,7 @@
         "skipped": "چھوڑ دیا گیا (پہلے سے موجود)",
         "updated": "اپ ڈیٹ کیا گیا",
         "upload_and_preview": "اپ لوڈ کریں اور پیش نظارہ",
-        "upload_description": "متحرک فیلڈ ترتیبات درآمد کرنے کے لیے GOTRS یا OTRS سے برآمد شدہ YAML فائل منتخب کریں۔",
+        "upload_description": "متحرک فیلڈ ترتیبات درآمد کرنے کے لیے GoatFlow یا OTRS سے برآمد شدہ YAML فائل منتخب کریں۔",
         "upload_file": "YAML فائل اپ لوڈ کریں",
         "will_create": "بنایا جائے گا",
         "will_overwrite": "اوور رائٹ کیا جائے گا"
@@ -524,7 +524,7 @@
           "valid_id": "درستگی"
         },
         "help": {
-          "allow_trusted_headers": "اس میل باکس کے لیے X-OTRS-Queue / X-GOTRS ہیڈرز سے قطار کی اوور رائیڈز قبول کریں۔",
+          "allow_trusted_headers": "اس میل باکس کے لیے X-OTRS-Queue / X-GoatFlow ہیڈرز سے قطار کی اوور رائیڈز قبول کریں۔",
           "poll_interval_seconds": "اس میل باکس کے لیے شیڈیولر وقفے کو اوور رائیڈ کریں۔ عالمی تال وراثت کے لیے 0 چھوڑیں۔",
           "queue_id": "ان باؤنڈ پیغامات کو اس قطار میں تفویض کریں۔",
           "valid_id": "منتخب کریں کہ یہ میل باکس فعال ہے یا نہیں۔"
@@ -636,16 +636,16 @@
       },
       "postmaster_filter": {
         "actions": {
-          "customer_id": "X-GOTRS-CustomerID (گاہک ID سیٹ کریں)",
-          "customer_user": "X-GOTRS-CustomerUser (گاہک صارف سیٹ کریں)",
-          "ignore": "X-GOTRS-Ignore (ٹکٹ تخلیق چھوڑیں)",
-          "priority": "X-GOTRS-Priority (نام سے ترجیح سیٹ کریں)",
-          "priority_id": "X-GOTRS-PriorityID (ترجیح سیٹ کریں)",
-          "queue": "X-GOTRS-Queue (قطار میں روٹ کریں)",
-          "queue_id": "X-GOTRS-QueueID (ID سے قطار میں روٹ کریں)",
-          "state": "X-GOTRS-State (ٹکٹ کی حالت سیٹ کریں)",
-          "title": "X-GOTRS-Title (ٹکٹ کا عنوان اوور رائیڈ کریں)",
-          "type": "X-GOTRS-Type (ٹکٹ کی قسم سیٹ کریں)"
+          "customer_id": "X-GoatFlow-CustomerID (گاہک ID سیٹ کریں)",
+          "customer_user": "X-GoatFlow-CustomerUser (گاہک صارف سیٹ کریں)",
+          "ignore": "X-GoatFlow-Ignore (ٹکٹ تخلیق چھوڑیں)",
+          "priority": "X-GoatFlow-Priority (نام سے ترجیح سیٹ کریں)",
+          "priority_id": "X-GoatFlow-PriorityID (ترجیح سیٹ کریں)",
+          "queue": "X-GoatFlow-Queue (قطار میں روٹ کریں)",
+          "queue_id": "X-GoatFlow-QueueID (ID سے قطار میں روٹ کریں)",
+          "state": "X-GoatFlow-State (ٹکٹ کی حالت سیٹ کریں)",
+          "title": "X-GoatFlow-Title (ٹکٹ کا عنوان اوور رائیڈ کریں)",
+          "type": "X-GoatFlow-Type (ٹکٹ کی قسم سیٹ کریں)"
         },
         "add_action": "عمل شامل کریں",
         "add_condition": "شرط شامل کریں",
@@ -1044,7 +1044,7 @@
         },
         "import": {
           "back_to_list": "ٹیمپلیٹس پر واپس جائیں",
-          "description": "GOTRS سے برآمد شدہ یا دستی طور پر بنائی گئی YAML فائل سے ٹیمپلیٹس درآمد کریں",
+          "description": "GoatFlow سے برآمد شدہ یا دستی طور پر بنائی گئی YAML فائل سے ٹیمپلیٹس درآمد کریں",
           "file_label": "YAML فائل",
           "file_types": "صرف YAML فائلیں (.yaml, .yml)",
           "format_description": "درآمد فائل اس ڈھانچے کی پیروی کرے:",
@@ -1508,8 +1508,8 @@
   },
   "app": {
     "description": "جدید IT سروس مینجمنٹ پلیٹ فارم",
-    "name": "GOTRS",
-    "title": "GOTRS - ٹکٹنگ سسٹم"
+    "name": "GoatFlow",
+    "title": "GoatFlow - ٹکٹنگ سسٹم"
   },
   "assets": {
     "asset_tag": "اثاثہ ٹیگ",
@@ -1948,7 +1948,7 @@
   },
   "customer_portal": {
     "placeholders": {
-      "footer": "Powered by GOTRS",
+      "footer": "Powered by GoatFlow",
       "title": "گاہک Portal"
     }
   },

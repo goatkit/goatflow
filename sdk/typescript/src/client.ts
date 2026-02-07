@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import {
   ClientConfig,
   AuthConfig,
-  GotrsError,
+  GoatflowError,
   NetworkError,
   TimeoutError,
   APIResponse,
@@ -10,7 +10,7 @@ import {
 } from './types';
 
 /**
- * HTTP client for making requests to the GOTRS API
+ * HTTP client for making requests to the GoatFlow API
  */
 export class HttpClient {
   private axios: AxiosInstance;
@@ -24,7 +24,7 @@ export class HttpClient {
       timeout: config.timeout || 30000,
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': config.userAgent || 'gotrs-ts-sdk/1.0.0',
+        'User-Agent': config.userAgent || 'goatflow-ts-sdk/1.0.0',
       },
     });
 
@@ -93,7 +93,7 @@ export class HttpClient {
    */
   private async refreshToken(): Promise<void> {
     if (!this.auth || !this.auth.refreshFunction || !this.auth.refreshToken) {
-      throw new GotrsError('Cannot refresh token: no refresh function or refresh token available');
+      throw new GoatflowError('Cannot refresh token: no refresh function or refresh token available');
     }
 
     try {
@@ -102,13 +102,13 @@ export class HttpClient {
       this.auth.refreshToken = result.refreshToken;
       this.auth.expiresAt = result.expiresAt;
     } catch (error) {
-      throw new GotrsError('Failed to refresh token', undefined, 'TOKEN_REFRESH_FAILED', 
+      throw new GoatflowError('Failed to refresh token', undefined, 'TOKEN_REFRESH_FAILED', 
         error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
   /**
-   * Handle HTTP errors and convert them to GotrsError instances
+   * Handle HTTP errors and convert them to GoatflowError instances
    */
   private handleError(error: any): Error {
     if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
@@ -137,14 +137,14 @@ export class HttpClient {
         }
       }
 
-      return new GotrsError(message, statusCode, code, details);
+      return new GoatflowError(message, statusCode, code, details);
     }
 
     if (error.request) {
       return new NetworkError('request', error.config?.url || '', 'No response received');
     }
 
-    return new GotrsError(error.message || 'Unknown error');
+    return new GoatflowError(error.message || 'Unknown error');
   }
 
   /**
@@ -244,7 +244,7 @@ export class HttpClient {
     // Handle standard API response format
     if (typeof data === 'object' && 'success' in data) {
       if (!data.success) {
-        throw new GotrsError(
+        throw new GoatflowError(
           data.error || 'API request failed',
           response.status,
           'API_ERROR',

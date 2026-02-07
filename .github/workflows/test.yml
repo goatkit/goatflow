@@ -49,20 +49,20 @@ jobs:
 
           # Pre-create Docker volumes and initialize with correct ownership
           # Note: There are TWO naming schemes used:
-          #   - gotrs-ce_* (compose-prefixed) for docker compose services
-          #   - gotrs_* (non-prefixed) for standalone docker run commands in Makefile
+          #   - goatflow_* (compose-prefixed) for docker compose services
+          #   - goatflow_* (non-prefixed) for standalone docker run commands in Makefile
 
           # Compose volumes (prefixed with project name)
-          docker volume create gotrs-ce_gotrs_cache
-          docker volume create gotrs-ce_gotrs_runtime
+          docker volume create goatflow_goatflow_cache
+          docker volume create goatflow_goatflow_runtime
 
           # Standalone volumes (used by MOD_CACHE_MOUNT in Makefile)
-          docker volume create gotrs_cache
+          docker volume create goatflow_cache
 
           # Initialize all volumes with correct permissions using helper containers
-          docker run --rm -v gotrs-ce_gotrs_cache:/vol alpine:3.19 sh -c "mkdir -p /vol/go-build /vol/go-mod /vol/xdg /vol/bun /vol/golangci-lint && chown -R 1000:1000 /vol && chmod -R 775 /vol"
-          docker run --rm -v gotrs-ce_gotrs_runtime:/vol alpine:3.19 sh -c "chown -R 1000:1000 /vol && chmod 775 /vol"
-          docker run --rm -v gotrs_cache:/vol alpine:3.19 sh -c "mkdir -p /vol/go-build /vol/go-mod /vol/xdg /vol/bun /vol/golangci-lint /vol/ms-playwright && chown -R 1000:1000 /vol && chmod -R 775 /vol"
+          docker run --rm -v goatflow_goatflow_cache:/vol alpine:3.19 sh -c "mkdir -p /vol/go-build /vol/go-mod /vol/xdg /vol/bun /vol/golangci-lint && chown -R 1000:1000 /vol && chmod -R 775 /vol"
+          docker run --rm -v goatflow_goatflow_runtime:/vol alpine:3.19 sh -c "chown -R 1000:1000 /vol && chmod 775 /vol"
+          docker run --rm -v goatflow_cache:/vol alpine:3.19 sh -c "mkdir -p /vol/go-build /vol/go-mod /vol/xdg /vol/bun /vol/golangci-lint /vol/ms-playwright && chown -R 1000:1000 /vol && chmod -R 775 /vol"
 
       - name: Run containerized tests
         run: make test
@@ -87,7 +87,7 @@ jobs:
         with:
           name: test-artifacts
           path: |
-            /tmp/gotrs-test-*/
+            /tmp/goatflow-test-*/
             tests/e2e/playwright/screenshots/
             tests/e2e/playwright/videos/
           retention-days: 7

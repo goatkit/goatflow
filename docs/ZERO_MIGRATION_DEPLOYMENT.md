@@ -1,8 +1,8 @@
-# Zero-Migration OTRS to GOTRS Deployment
+# Zero-Migration OTRS to GoatFlow Deployment
 
 ## 🎯 The Game-Changing Feature
 
-GOTRS can connect directly to your existing OTRS MySQL/MariaDB database without any migration, data conversion, or downtime. This is possible thanks to our thin database access compatibility wrapper (ConvertPlaceholders) and strict OTRS schema alignment.
+GoatFlow can connect directly to your existing OTRS MySQL/MariaDB database without any migration, data conversion, or downtime. This is possible thanks to our thin database access compatibility wrapper (ConvertPlaceholders) and strict OTRS schema alignment.
 
 ## 🚀 What This Means
 
@@ -13,16 +13,16 @@ GOTRS can connect directly to your existing OTRS MySQL/MariaDB database without 
 - **Gradual Migration**: Move at your own pace, or never migrate at all
 
 ### For IT Teams
-- **No Data Migration**: Connect GOTRS directly to OTRS database
-- **No Schema Changes**: GOTRS respects OTRS table structure 100%
+- **No Data Migration**: Connect GoatFlow directly to OTRS database
+- **No Schema Changes**: GoatFlow respects OTRS table structure 100%
 - **No Learning Curve**: Same database, same data, modern interface
-- **Easy Testing**: Try GOTRS in read-only mode first
+- **Easy Testing**: Try GoatFlow in read-only mode first
 
 ## 📋 Deployment Options
 
 ### Option 1: Direct Database Connection (Recommended for Testing)
 ```yaml
-# GOTRS configuration
+# GoatFlow configuration
 DATABASE_DRIVER: mysql
 DATABASE_HOST: your-otrs-db.example.com
 DATABASE_PORT: 3306
@@ -35,15 +35,15 @@ No migration. No conversion. Just point and run.
 
 ### Option 2: Side-by-Side Deployment
 1. Keep OTRS running on port 80
-2. Run GOTRS on port 8080
+2. Run GoatFlow on port 8080
 3. Both use the same MySQL database
 4. Users can access either system
-5. Gradually move users to GOTRS
+5. Gradually move users to GoatFlow
 
 ### Option 3: Blue-Green Deployment
-1. Set up GOTRS with read-only access first
+1. Set up GoatFlow with read-only access first
 2. Verify all functionality works
-3. Switch write access from OTRS to GOTRS
+3. Switch write access from OTRS to GoatFlow
 4. Keep OTRS as fallback
 
 ## 🔧 Quick Start
@@ -56,8 +56,8 @@ mariadb:
     - "3306:3306"  # Expose MariaDB port
 ```
 
-### Step 2: Configure GOTRS
-Create `.env` file for GOTRS:
+### Step 2: Configure GoatFlow
+Create `.env` file for GoatFlow:
 ```bash
 DB_DRIVER=mysql
 DB_HOST=localhost
@@ -67,23 +67,23 @@ DB_USER=otrs
 DB_PASSWORD=your-otrs-password
 ```
 
-### Step 3: Run GOTRS
+### Step 3: Run GoatFlow
 ```bash
 docker run -d \
-  --name gotrs \
+  --name goatflow \
   --env-file .env \
   -p 8080:8080 \
-  gotrs:latest
+  goatflow:latest
 ```
 
 ### Step 4: Access Both Systems
 - OTRS: http://localhost (existing)
-- GOTRS: http://localhost:8080 (new)
+- GoatFlow: http://localhost:8080 (new)
 - Same database, same tickets, modern interface!
 
 ## ✅ Tested and Verified
 
-We've successfully tested GOTRS with:
+We've successfully tested GoatFlow with:
 - **Live OTRS 6.0.x** with MariaDB
 - **116 OTRS tables** recognized and accessible
 - **Real production data** (tickets, users, articles)
@@ -105,16 +105,16 @@ We've successfully tested GOTRS with:
 ## 🛡️ Safety Features
 
 ### Read-Only Mode
-Start with GOTRS in read-only mode to verify compatibility:
+Start with GoatFlow in read-only mode to verify compatibility:
 ```yaml
-GOTRS_READ_ONLY: true
+GOATFLOW_READ_ONLY: true
 ```
 
 ### Audit Logging
-Track all GOTRS operations without affecting OTRS:
+Track all GoatFlow operations without affecting OTRS:
 ```yaml
-GOTRS_AUDIT_MODE: true
-GOTRS_AUDIT_LOG: /var/log/gotrs-audit.log
+GOATFLOW_AUDIT_MODE: true
+GOATFLOW_AUDIT_LOG: /var/log/goatflow-audit.log
 ```
 
 ### Database Backup
@@ -126,25 +126,25 @@ mysqldump -h localhost -u otrs -p otrs > otrs-backup.sql
 ## 📊 Migration Strategies
 
 ### Strategy 1: Never Migrate
-- Run GOTRS permanently against OTRS database
+- Run GoatFlow permanently against OTRS database
 - Get modern UI without data migration
 - Keep existing OTRS as fallback
 
 ### Strategy 2: Gradual Migration
 1. Run both systems for 30 days
 2. Monitor performance and user feedback
-3. Gradually move workflows to GOTRS
+3. Gradually move workflows to GoatFlow
 4. Decommission OTRS when ready
 
 ### Strategy 3: Instant Switch
-1. Test GOTRS thoroughly in staging
+1. Test GoatFlow thoroughly in staging
 2. Schedule maintenance window
-3. Update DNS/proxy to point to GOTRS
+3. Update DNS/proxy to point to GoatFlow
 4. Keep OTRS container stopped but ready
 
 ## 🎯 Benefits Summary
 
-| Aspect | Traditional Migration | GOTRS Zero-Migration |
+| Aspect | Traditional Migration | GoatFlow Zero-Migration |
 |--------|---------------------|---------------------|
 | Downtime | Hours to Days | **Zero** |
 | Risk | High | **Zero** |
@@ -156,8 +156,8 @@ mysqldump -h localhost -u otrs -p otrs > otrs-backup.sql
 
 ## 🚦 Decision Matrix
 
-Use GOTRS Zero-Migration when you:
-- ✅ Want to evaluate GOTRS without risk
+Use GoatFlow Zero-Migration when you:
+- ✅ Want to evaluate GoatFlow without risk
 - ✅ Need to maintain 24/7 operations
 - ✅ Have compliance requirements preventing data migration
 - ✅ Want gradual user transition
@@ -166,14 +166,14 @@ Use GOTRS Zero-Migration when you:
 ## 💡 Pro Tips
 
 1. **Start Small**: Test with read-only access first
-2. **Monitor Performance**: Compare query times between OTRS and GOTRS
+2. **Monitor Performance**: Compare query times between OTRS and GoatFlow
 3. **User Feedback**: Run A/B testing with select users
 4. **Backup Always**: Even though we don't modify data
 5. **Document Everything**: Keep notes for your team
 
 ## 🔗 Technical Details
 
-GOTRS achieves this through:
+GoatFlow achieves this through:
 - **Database Access Compatibility**: Thin wrapper over database/sql (ConvertPlaceholders) supporting MySQL and PostgreSQL
 - **OTRS Schema Compatibility**: 100% compatible table structure
 - **Smart Query Generation**: Database-specific SQL generation
@@ -183,9 +183,9 @@ GOTRS achieves this through:
 ## 📞 Support
 
 This is a game-changing feature for OTRS migration. If you need help:
-- GitHub Issues: [github.com/gotrs-io/gotrs-ce/issues](https://github.com/gotrs-io/gotrs-ce/issues)
-- Documentation: [docs.gotrs.io](https://docs.gotrs.io)
-- Community: [community.gotrs.io](https://community.gotrs.io)
+- GitHub Issues: [github.com/goatkit/goatflow/issues](https://github.com/goatkit/goatflow/issues)
+- Documentation: [docs.goatflow.io](https://docs.goatflow.io)
+- Community: [community.goatflow.io](https://community.goatflow.io)
 
 ---
 

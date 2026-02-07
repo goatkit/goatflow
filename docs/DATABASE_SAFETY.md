@@ -2,14 +2,14 @@
 
 ## Overview
 
-GOTRS implements multiple layers of safety to prevent accidental data loss, especially in production environments. This document explains the safety mechanisms in place.
+GoatFlow implements multiple layers of safety to prevent accidental data loss, especially in production environments. This document explains the safety mechanisms in place.
 
 ## Database Structure
 
 When you run `make up` or `docker compose up`, the following databases are created:
 
-1. **Main Database** (`gotrs`) - For development work
-2. **Test Database** (`gotrs_test`) - For running tests (dev/test environments only)
+1. **Main Database** (`goatflow`) - For development work
+2. **Test Database** (`goatflow_test`) - For running tests (dev/test environments only)
 3. **User Database** (matches DB_USER) - Prevents "database does not exist" errors
 
 ## Safety Mechanisms
@@ -35,7 +35,7 @@ When running tests with `make test`:
 1. **Automatic Test Database Selection**:
    - Tests automatically use `${DB_NAME}_test` database
    - Never touches the main development database
-   - Example: If `DB_NAME=gotrs`, tests use `gotrs_test`
+   - Example: If `DB_NAME=goatflow`, tests use `goatflow_test`
 
 2. **Environment Override**:
    - `APP_ENV` is set to `test` during test execution
@@ -60,8 +60,8 @@ The `docker-compose.prod.yml` file provides additional production safeguards:
 
 The system handles ANY username gracefully:
 
-- `DB_USER=gotrs` ✅
-- `DB_USER=gotrs_user` ✅
+- `DB_USER=goatflow` ✅
+- `DB_USER=goatflow_user` ✅
 - `DB_USER=admin` ✅
 - `DB_USER=custom_name` ✅
 
@@ -112,15 +112,15 @@ Before deploying to production:
 | Variable | Development | Test | Production |
 |----------|------------|------|------------|
 | `APP_ENV` | `development` | `test` | `production` |
-| `DB_NAME` | `gotrs` | `gotrs_test` | `gotrs` |
+| `DB_NAME` | `goatflow` | `goatflow_test` | `goatflow` |
 | `GIN_MODE` | `debug` | `test` | `release` |
 
 ### Database Configuration
 
 | Variable | Description | Example | Safety Impact |
 |----------|-------------|---------|---------------|
-| `DB_NAME` | Main database name | `gotrs` | Tests use `${DB_NAME}_test` |
-| `DB_USER` | Database username | `gotrs_user` | Any value works |
+| `DB_NAME` | Main database name | `goatflow` | Tests use `${DB_NAME}_test` |
+| `DB_USER` | Database username | `goatflow_user` | Any value works |
 | `DB_HOST` | Database hostname | `postgres` | Tests restricted to localhost |
 | `APP_ENV` | Environment mode | `development` | Controls test DB creation |
 
@@ -129,8 +129,8 @@ Before deploying to production:
 ### Scenario 1: Fresh Development Setup
 ```bash
 cp .env.example .env
-make up                    # Creates: gotrs, gotrs_test, gotrs_user
-make test                  # Uses: gotrs_test only
+make up                    # Creates: goatflow, goatflow_test, goatflow_user
+make test                  # Uses: goatflow_test only
 ```
 
 ### Scenario 2: Custom Username
@@ -156,7 +156,7 @@ APP_ENV=production docker compose up
 **Solution**: The init script now handles this automatically by creating a database matching the username.
 
 ### Tests Affecting Development Data
-**Solution**: Tests automatically use `_test` database. Check that `make test` shows "Using test database: gotrs_test"
+**Solution**: Tests automatically use `_test` database. Check that `make test` shows "Using test database: goatflow_test"
 
 ### Can't Run Tests in Production
 **Solution**: This is intentional! Tests should never run against production data. Use a staging environment for production-like testing.
@@ -198,7 +198,7 @@ APP_ENV=production docker compose up
     ▼                 ▼
 ┌──────────┐    ┌──────────┐
 │   Dev    │    │   Test   │
-│  gotrs   │    │gotrs_test│
+│  goatflow   │    │goatflow_test│
 └──────────┘    └──────────┘
     │                 │
     │                 │

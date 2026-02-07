@@ -74,7 +74,7 @@ func NewSchemaConverter(db IDatabase) *SchemaConverter {
 // ExportToXML exports the current database schema to XML format.
 func (c *SchemaConverter) ExportToXML(outputPath string) error {
 	schema := &XMLSchema{
-		Name:    "gotrs_otrs_schema",
+		Name:    "goatflow_otrs_schema",
 		Version: "1.0",
 	}
 

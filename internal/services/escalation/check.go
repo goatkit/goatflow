@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // CheckService handles escalation event triggering, matching OTRS EscalationCheck.

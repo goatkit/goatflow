@@ -237,7 +237,7 @@
   color: #87CEEB !important;
 }
 
-/* Brand name (GOTRS) in navbar - light blue, Hack font, no glow */
+/* Brand name (GoatFlow) in navbar - light blue, Hack font, no glow */
 [data-theme="nineties-vibe"].dark .gk-navbar-brand,
 [data-theme="nineties-vibe"] .dark .gk-navbar-brand,
 [data-theme="nineties-vibe"].dark .gk-navbar [class*="brand"],

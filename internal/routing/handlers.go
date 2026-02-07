@@ -11,10 +11,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 // DynamicFieldLoader is a function type for loading dynamic fields to avoid import cycles.
@@ -381,7 +381,7 @@ func HandleCustomerInfoPanel(c *gin.Context) {
 			}
 		}
 	}
-	if login != orig && os.Getenv("GOTRS_DEBUG") == "1" {
+	if login != orig && os.Getenv("GOATFLOW_DEBUG") == "1" {
 		log.Printf("customer-info: normalized '%s' -> '%s'", orig, login)
 	}
 

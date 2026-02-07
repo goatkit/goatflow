@@ -12,8 +12,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/service"
 )
 
 // HandleAgentNewTicket displays the agent ticket creation form with necessary data.
@@ -139,7 +139,7 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 				isInAdminGroup = v
 			}
 			renderer.HTML(c, http.StatusOK, "pages/tickets/new.pongo2", gin.H{
-				"Title":             "New Ticket - GOTRS",
+				"Title":             "New Ticket - GoatFlow",
 				"User":              user,
 				"ActivePage":        "tickets",
 				"IsInAdminGroup":    isInAdminGroup,

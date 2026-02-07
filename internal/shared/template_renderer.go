@@ -12,14 +12,14 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
-	"github.com/gotrs-io/gotrs-ce/internal/lookups"
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/version"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/lookups"
+	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/version"
 )
 
 // TemplateOverrideProvider allows plugins to override templates without import cycles.
@@ -55,7 +55,7 @@ func NewTemplateRenderer(templateDir string) (*TemplateRenderer, error) {
 	abs, _ := filepath.Abs(templateDir)
 
 	// Create template set
-	templateSet := pongo2.NewSet("gotrs", pongo2.MustNewLocalFileSystemLoader(abs))
+	templateSet := pongo2.NewSet("goatflow", pongo2.MustNewLocalFileSystemLoader(abs))
 
 	return &TemplateRenderer{
 		templateSet: templateSet,
@@ -144,7 +144,7 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 	// Get the template (fallback for tests when templates missing)
 	if r == nil || r.templateSet == nil {
 		// Minimal safe fallback for tests: render a tiny stub
-		c.String(code, "GOTRS")
+		c.String(code, "GoatFlow")
 		return
 	}
 	tmpl, err := r.templateSet.FromFile(name)

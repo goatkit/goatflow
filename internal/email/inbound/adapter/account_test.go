@@ -3,8 +3,8 @@ package adapter
 import (
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 func TestAccountFromModelDefaults(t *testing.T) {

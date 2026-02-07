@@ -3,10 +3,10 @@
 ## Database Schema is Frozen for OTRS Compatibility
 
 **Effective Date:** 2025-08-19  
-**Status:** FROZEN - DO NOT MODIFY
+**Status:** FROZEN — OTRS baseline tables must not be modified
 
 ### Critical Requirement
-This database schema is 100% compatible with OTRS Community Edition and MUST remain so.
+The OTRS baseline tables (116 tables) must remain structurally compatible with OTRS Community Edition. GoatFlow extends functionality via separate tables — see Extension Strategy below.
 
 ### Guard Rails - Why Schema Cannot Change
 
@@ -16,8 +16,8 @@ This database schema is 100% compatible with OTRS Community Edition and MUST rem
    - All OTRS tables must exist with identical structure
 
 2. **Migration Path**
-   - Organizations must be able to migrate from OTRS to GOTRS
-   - Tools built for OTRS database must work with GOTRS
+   - Organizations must be able to migrate from OTRS to GoatFlow
+   - Tools built for OTRS database must work with GoatFlow
    - SQL queries from OTRS must run unchanged
 
 3. **Legal Compliance**
@@ -61,14 +61,16 @@ This database schema is 100% compatible with OTRS Community Edition and MUST rem
 - `groups` (OTRS format)
 
 ### Extension Strategy
-**NOT ALLOWED UNTIL PRODUCTION RELEASE**
-After production release, if you need additional functionality:
-1. Create new tables prefixed with `gotrs_`
-2. Use foreign keys to reference OTRS tables
-3. Document in `/docs/extensions/`
-4. Never modify core OTRS tables
 
-For now: Work within OTRS schema constraints only.
+GoatFlow extends beyond OTRS using **separate tables** alongside the frozen baseline. The rules:
+
+1. **Never modify** existing OTRS table structures
+2. **New tables** for GoatFlow-specific features (e.g., `user_api_tokens`, `canned_response`, `admin_action_log`)
+3. **Existing OTRS tables** can be reused for new features where appropriate (e.g., TOTP secrets in `user_preferences`)
+4. **Column additions** only where Znuny-compatible (e.g., `color` on `ticket_priority` / `ticket_state`)
+5. Document all extensions in `docs/development/DATABASE.md`
+
+Current extension tables: `dynamic_field_screen_config`, `canned_response`, `canned_response_category`, `user_api_tokens`, `admin_action_type`, `admin_action_log`.
 
 ### Verification Command
 ```bash
@@ -93,12 +95,12 @@ Changes to the frozen schema require:
 - OTRS Community Edition uses `utf8mb3` (limited Unicode support)
 - Modern applications require full Unicode support (emojis, international characters)
 - Without this change, articles containing Unicode characters fail to save
-- This affects user experience and limits GOTRS adoption
+- This affects user experience and limits GoatFlow adoption
 
 **Impact Assessment:**
 - ✅ **Forward Compatible:** utf8mb4 can read utf8mb3 data
 - ✅ **OTRS Compatible:** OTRS can work with utf8mb4 tables
-- ⚠️ **Migration Required:** Existing OTRS databases need this change to work with GOTRS
+- ⚠️ **Migration Required:** Existing OTRS databases need this change to work with GoatFlow
 - ⚠️ **Cannot Revert:** Unicode data now exists that prevents rollback
 
 **Migration Path:**
@@ -110,14 +112,14 @@ Changes to the frozen schema require:
 **Date:** 2025-09-26  
 **Status:** IMPLEMENTED
 
-To balance modern Unicode requirements with OTRS compatibility, GOTRS implements a hybrid approach:
+To balance modern Unicode requirements with OTRS compatibility, GoatFlow implements a hybrid approach:
 
 **Configuration-Based Unicode Support:**
 - `UNICODE_SUPPORT=true`: Full Unicode support (utf8mb4 + all characters)
 - `UNICODE_SUPPORT=false` (default): OTRS-compatible mode (utf8mb4 + filtered characters)
 
 **Application-Level Unicode Filtering:**
-When `UNICODE_SUPPORT=false`, GOTRS automatically filters out:
+When `UNICODE_SUPPORT=false`, GoatFlow automatically filters out:
 - Emojis and symbols (U+10000 and above)
 - Extended Unicode characters incompatible with OTRS
 - Mathematical symbols and rare Unicode blocks
@@ -138,4 +140,4 @@ When `UNICODE_SUPPORT=false`, GOTRS automatically filters out:
 
 ---
 
-**Remember:** Users choose GOTRS because it's a drop-in OTRS replacement. Breaking compatibility breaks trust.
+**Remember:** Users choose GoatFlow because it's a drop-in OTRS replacement. Breaking compatibility breaks trust.

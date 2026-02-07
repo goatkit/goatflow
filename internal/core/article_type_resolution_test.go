@@ -3,7 +3,7 @@ package core
 import (
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/constants"
+	"github.com/goatkit/goatflow/internal/constants"
 )
 
 func TestDetermineArticleTypeBasicMappings(t *testing.T) {

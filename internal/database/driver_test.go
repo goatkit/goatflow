@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	_ "github.com/gotrs-io/gotrs-ce/internal/database/drivers/mysql"
-	_ "github.com/gotrs-io/gotrs-ce/internal/database/drivers/postgres"
-	_ "github.com/gotrs-io/gotrs-ce/internal/database/drivers/sqlite"
-	"github.com/gotrs-io/gotrs-ce/internal/database/schema"
+	"github.com/goatkit/goatflow/internal/database"
+	_ "github.com/goatkit/goatflow/internal/database/drivers/mysql"
+	_ "github.com/goatkit/goatflow/internal/database/drivers/postgres"
+	_ "github.com/goatkit/goatflow/internal/database/drivers/sqlite"
+	"github.com/goatkit/goatflow/internal/database/schema"
 )
 
 func TestDatabaseAbstraction(t *testing.T) {

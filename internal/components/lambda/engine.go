@@ -10,7 +10,7 @@ import (
 
 	"github.com/dop251/goja"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // ExecutionContext provides safe access to data and operations for lambda functions.

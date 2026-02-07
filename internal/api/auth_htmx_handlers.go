@@ -13,12 +13,12 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/constants"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/constants"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 // handleLoginPage shows the login page.
@@ -163,7 +163,7 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		auth.DefaultLoginRateLimiter.RecordSuccess(clientIP, username)
 
 		// Check if 2FA is enabled for this user
-		totpService := service.NewTOTPService(db, "GOTRS")
+		totpService := service.NewTOTPService(db, "GoatFlow")
 		if totpService.IsEnabled(int(userID)) {
 			// 2FA is enabled - don't complete login yet
 			// SECURITY FIX (V3/V4/V5/V7): Use session manager instead of raw cookies
@@ -219,15 +219,15 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		c.SetCookie("auth_token", token, sessionTimeout, "/", "", false, true)
 		// Set a non-httpOnly indicator so JavaScript can detect authentication
 		// (auth tokens are httpOnly for security, but JS needs to know user is logged in)
-		c.SetCookie("gotrs_logged_in", "1", sessionTimeout, "/", "", false, false)
+		c.SetCookie("goatflow_logged_in", "1", sessionTimeout, "/", "", false, false)
 
 		// Set theme cookies from database preferences (if user has saved preferences)
 		// These will override any login-page localStorage values in the browser
 		if userTheme != "" {
-			c.SetCookie("gotrs_theme", userTheme, sessionTimeout, "/", "", false, false)
+			c.SetCookie("goatflow_theme", userTheme, sessionTimeout, "/", "", false, false)
 		}
 		if userThemeMode != "" {
-			c.SetCookie("gotrs_mode", userThemeMode, sessionTimeout, "/", "", false, false)
+			c.SetCookie("goatflow_mode", userThemeMode, sessionTimeout, "/", "", false, false)
 		}
 
 		// Create session record in database for admin session management
@@ -358,13 +358,13 @@ func handleLogout(c *gin.Context) {
 	c.SetCookie("auth_token", "", -1, "/", "", false, true)
 	c.SetCookie("token", "", -1, "/", "", false, true)
 	c.SetCookie("session_id", "", -1, "/", "", false, true)
-	c.SetCookie("gotrs_logged_in", "", -1, "/", "", false, false)
+	c.SetCookie("goatflow_logged_in", "", -1, "/", "", false, false)
 
 	// Clear all customer-specific auth cookies
 	c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
 	c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
 	c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
-	c.SetCookie("gotrs_customer_logged_in", "", -1, "/", "", false, false)
+	c.SetCookie("goatflow_customer_logged_in", "", -1, "/", "", false, false)
 
 	c.Redirect(http.StatusFound, loginRedirectPath(c))
 }
@@ -473,7 +473,7 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			return
 		}
 
-		totpService := service.NewTOTPService(db, "GOTRS")
+		totpService := service.NewTOTPService(db, "GoatFlow")
 		valid, err := totpService.ValidateCode(userID, code)
 		if err != nil || !valid {
 			// Record failed attempt
@@ -526,13 +526,13 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 
 		c.SetCookie("access_token", token, sessionTimeout, "/", "", false, true)
 		c.SetCookie("auth_token", token, sessionTimeout, "/", "", false, true)
-		c.SetCookie("gotrs_logged_in", "1", sessionTimeout, "/", "", false, false)
+		c.SetCookie("goatflow_logged_in", "1", sessionTimeout, "/", "", false, false)
 
 		if userTheme != "" {
-			c.SetCookie("gotrs_theme", userTheme, sessionTimeout, "/", "", false, false)
+			c.SetCookie("goatflow_theme", userTheme, sessionTimeout, "/", "", false, false)
 		}
 		if userThemeMode != "" {
-			c.SetCookie("gotrs_mode", userThemeMode, sessionTimeout, "/", "", false, false)
+			c.SetCookie("goatflow_mode", userThemeMode, sessionTimeout, "/", "", false, false)
 		}
 
 		// Create session record

@@ -30,7 +30,7 @@ var manifestJSON = `{
   "name":"test-hostapi",
   "version":"1.0.0",
   "description":"Test plugin that exercises host API calls",
-  "author":"GOTRS Team",
+  "author":"GoatFlow Team",
   "license":"Apache-2.0",
   "routes":[
     {"method":"GET","path":"/api/plugins/test-hostapi/test","handler":"test"}

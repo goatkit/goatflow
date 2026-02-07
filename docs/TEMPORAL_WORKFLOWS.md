@@ -2,34 +2,34 @@
 
 ## Overview
 
-GOTRS uses Temporal for orchestrating complex business processes, particularly around ticket lifecycle management, SLA enforcement, and automated notifications. Temporal provides durable execution, automatic retries, and visibility into long-running processes.
+GoatFlow uses Temporal for orchestrating complex business processes, particularly around ticket lifecycle management, SLA enforcement, and automated notifications. Temporal provides durable execution, automatic retries, and visibility into long-running processes.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────┐
-│             GOTRS Application                │
-│                                              │
-│  ┌──────────────────────────────────────┐  │
-│  │         Temporal Client              │  │
-│  │  - Start workflows                   │  │
-│  │  - Query workflow state              │  │
-│  │  - Send signals to workflows         │  │
-│  └─────────────┬────────────────────────┘  │
+│             GoatFlow Application            │
+│                                             │
+│  ┌──────────────────────────────────────┐   │
+│  │         Temporal Client              │   │
+│  │  - Start workflows                   │   │
+│  │  - Query workflow state              │   │
+│  │  - Send signals to workflows         │   │
+│  └─────────────┬────────────────────────┘   │
 │                │                            │
-│  ┌─────────────▼────────────────────────┐  │
-│  │         Temporal Worker              │  │
-│  │  - Execute workflow definitions      │  │
-│  │  - Execute activity functions        │  │
-│  │  - Handle retries and failures       │  │
-│  └──────────────────────────────────────┘  │
-└─────────────────┬────────────────────────────┘
+│  ┌─────────────▼────────────────────────┐   │
+│  │         Temporal Worker              │   │
+│  │  - Execute workflow definitions      │   │
+│  │  - Execute activity functions        │   │
+│  │  - Handle retries and failures       │   │
+│  └──────────────────────────────────────┘   │
+└─────────────────┬───────────────────────────┘
                   │
     ┌─────────────▼────────────────┐
     │    Temporal Server           │
     │  - Workflow state storage    │
     │  - Task queues               │
-    │  - History management         │
+    │  - History management        │
     └──────────────────────────────┘
 ```
 
@@ -234,7 +234,7 @@ func (a *Activities) SendEmailActivity(ctx context.Context, notification Notific
 // Worker setup in main.go
 func startTemporalWorker(temporalClient client.Client) error {
     // Create worker
-    w := worker.New(temporalClient, "gotrs-task-queue", worker.Options{
+    w := worker.New(temporalClient, "goatflow-task-queue", worker.Options{
         MaxConcurrentActivityExecutionSize: 10,
         MaxConcurrentWorkflowExecutionSize: 10,
     })
@@ -268,7 +268,7 @@ func handleTicketCreation(c *gin.Context, temporalClient client.Client) {
     // Start ticket lifecycle workflow
     workflowOptions := client.StartWorkflowOptions{
         ID:        "ticket-" + ticketID,
-        TaskQueue: "gotrs-task-queue",
+        TaskQueue: "goatflow-task-queue",
     }
     
     we, err := temporalClient.ExecuteWorkflow(
@@ -284,7 +284,7 @@ func handleTicketCreation(c *gin.Context, temporalClient client.Client) {
     // Start SLA workflow
     slaOptions := client.StartWorkflowOptions{
         ID:        "sla-" + ticketID,
-        TaskQueue: "gotrs-task-queue",
+        TaskQueue: "goatflow-task-queue",
     }
     
     _, err = temporalClient.ExecuteWorkflow(
@@ -343,7 +343,7 @@ Access Temporal UI at http://localhost:8088 to:
 temporal:
   host: temporal:7233
   namespace: default
-  task_queue: gotrs-task-queue
+  task_queue: goatflow-task-queue
   worker:
     max_concurrent_activities: 10
     max_concurrent_workflows: 10

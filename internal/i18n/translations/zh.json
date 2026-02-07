@@ -212,7 +212,7 @@
         "skipped": "已跳过（已存在）",
         "updated": "已更新",
         "upload_and_preview": "上传并预览",
-        "upload_description": "选择从GOTRS或OTRS导出的YAML文件以导入动态字段配置。",
+        "upload_description": "选择从GoatFlow或OTRS导出的YAML文件以导入动态字段配置。",
         "upload_file": "上传YAML文件",
         "will_create": "将创建",
         "will_overwrite": "将覆盖"
@@ -504,7 +504,7 @@
           "valid_id": "有效性"
         },
         "help": {
-          "allow_trusted_headers": "为此邮箱接受来自X-OTRS-Queue / X-GOTRS头的队列覆盖。",
+          "allow_trusted_headers": "为此邮箱接受来自X-OTRS-Queue / X-GoatFlow头的队列覆盖。",
           "poll_interval_seconds": "覆盖此邮箱的计划间隔。留空为0则继承全局周期。",
           "queue_id": "将入站消息分配到此队列。",
           "valid_id": "选择此邮箱是否激活。"
@@ -616,16 +616,16 @@
       },
       "postmaster_filter": {
         "actions": {
-          "customer_id": "X-GOTRS-CustomerID（设置客户ID）",
-          "customer_user": "X-GOTRS-CustomerUser（设置客户用户）",
-          "ignore": "X-GOTRS-Ignore（跳过工单创建）",
-          "priority": "X-GOTRS-Priority（按名称设置优先级）",
-          "priority_id": "X-GOTRS-PriorityID（设置优先级）",
-          "queue": "X-GOTRS-Queue（路由到队列）",
-          "queue_id": "X-GOTRS-QueueID（按ID路由到队列）",
-          "state": "X-GOTRS-State（设置工单状态）",
-          "title": "X-GOTRS-Title（覆盖工单标题）",
-          "type": "X-GOTRS-Type（设置工单类型）"
+          "customer_id": "X-GoatFlow-CustomerID（设置客户ID）",
+          "customer_user": "X-GoatFlow-CustomerUser（设置客户用户）",
+          "ignore": "X-GoatFlow-Ignore（跳过工单创建）",
+          "priority": "X-GoatFlow-Priority（按名称设置优先级）",
+          "priority_id": "X-GoatFlow-PriorityID（设置优先级）",
+          "queue": "X-GoatFlow-Queue（路由到队列）",
+          "queue_id": "X-GoatFlow-QueueID（按ID路由到队列）",
+          "state": "X-GoatFlow-State（设置工单状态）",
+          "title": "X-GoatFlow-Title（覆盖工单标题）",
+          "type": "X-GoatFlow-Type（设置工单类型）"
         },
         "add_action": "添加操作",
         "add_condition": "添加条件",
@@ -1015,7 +1015,7 @@
         },
         "import": {
           "back_to_list": "返回模板",
-          "description": "从GOTRS导出的YAML文件或手动创建的YAML文件导入模板",
+          "description": "从GoatFlow导出的YAML文件或手动创建的YAML文件导入模板",
           "file_label": "YAML文件",
           "file_types": "仅YAML文件（.yaml, .yml）",
           "format_description": "导入文件应遵循此结构：",
@@ -1479,8 +1479,8 @@
   },
   "app": {
     "description": "现代IT服务管理平台",
-    "name": "GOTRS",
-    "title": "GOTRS - 工单系统"
+    "name": "GoatFlow",
+    "title": "GoatFlow - 工单系统"
   },
   "assets": {
     "asset_tag": "资产标签",
@@ -1919,7 +1919,7 @@
   },
   "customer_portal": {
     "placeholders": {
-      "footer": "Powered by GOTRS",
+      "footer": "Powered by GoatFlow",
       "title": "客户门户"
     }
   },

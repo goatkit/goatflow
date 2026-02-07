@@ -5,7 +5,7 @@ import (
 	"net/textproto"
 	"testing"
 
-	api "github.com/gotrs-io/gotrs-ce/internal/api"
+	api "github.com/goatkit/goatflow/internal/api"
 )
 
 func TestValidateFile_AllowsJPEGAliases(t *testing.T) {

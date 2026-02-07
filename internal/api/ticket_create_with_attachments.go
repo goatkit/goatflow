@@ -15,16 +15,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/constants"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/history"
-	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/notifications"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
-	"github.com/gotrs-io/gotrs-ce/internal/utils"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/constants"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/history"
+	"github.com/goatkit/goatflow/internal/mailqueue"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/utils"
 )
 
 // This fixes the 500 error when users try to create tickets with attachments.
@@ -467,7 +467,7 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 			subject := fmt.Sprintf("Ticket Created: %s", ticket.TicketNumber)
 			body := fmt.Sprintf(
 				"Your ticket has been created successfully.\n\nTicket Number: %s\nTitle: %s\n\n"+
-					"Message:\n%s\n\nYou can view your ticket at: /tickets/%d\n\nBest regards,\nGOTRS Support Team",
+					"Message:\n%s\n\nYou can view your ticket at: /tickets/%d\n\nBest regards,\nGoatFlow Support Team",
 				ticket.TicketNumber, ticket.Title, req.Body, ticket.ID)
 
 			// Queue the email for processing by EmailQueueTask

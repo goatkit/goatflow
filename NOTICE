@@ -1,8 +1,8 @@
-GOTRS - Go Open Ticket Request System
+GoatFlow
 Copyright 2025 Gibbsoft Ltd and Contributors
 
 This product includes software developed by Gibbsoft Ltd
-(https://www.gibbsoft.com) and the GOTRS community (https://gotrs.io).
+(https://www.gibbsoft.com) and the GoatFlow community (https://goatflow.io).
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -61,11 +61,11 @@ https://github.com/containers/podman/blob/main/LICENSE
 Attribution Notices
 =========================================================================
 
-GOTRS was created and is maintained by Gibbsoft Ltd with contributions
+GoatFlow was created and is maintained by Gibbsoft Ltd with contributions
 from the open source community. Special thanks to all contributors who
-help make GOTRS better.
+help make GoatFlow better.
 
-The GOTRS name and logo are trademarks of Gibbsoft Ltd.
+The GoatFlow name and logo are trademarks of Gibbsoft Ltd.
 
 For a complete list of contributors, see the AUTHORS file.
 
@@ -77,10 +77,10 @@ Gibbsoft Ltd
 United Kingdom
 Company Registration: [To be provided]
 
-Project Website: https://gotrs.io
-GitHub: https://github.com/gotrs/gotrs
-Email: info@gotrs.io
+Project Website: https://goatflow.io
+GitHub: https://github.com/goatflow/goatflow
+Email: hello@goatflow.io
 
-For licensing inquiries: licensing@gotrs.io
-For security issues: security@gotrs.io
-For general support: support@gotrs.io
+For licensing inquiries: hello@goatflow.io
+For security issues: security@goatflow.io
+For general support: hello@goatflow.io

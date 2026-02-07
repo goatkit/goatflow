@@ -1,6 +1,6 @@
 # LDAP/Active Directory Integration
 
-GOTRS supports enterprise authentication through LDAP and Active Directory integration. This allows users to authenticate using their existing directory credentials and automatically maps groups to GOTRS roles.
+GoatFlow supports enterprise authentication through LDAP and Active Directory integration. This allows users to authenticate using their existing directory credentials and automatically maps groups to GoatFlow roles.
 
 ## Features
 
@@ -30,7 +30,7 @@ LDAP_SKIP_TLS_VERIFY=false  # Set to true for self-signed certificates
 LDAP_TIMEOUT=30
 
 # Bind credentials (service account)
-LDAP_BIND_DN=cn=gotrs-service,ou=Service Accounts,dc=company,dc=com
+LDAP_BIND_DN=cn=goatflow-service,ou=Service Accounts,dc=company,dc=com
 LDAP_BIND_PASSWORD=your-bind-password
 
 # Search settings
@@ -47,7 +47,7 @@ LDAP_DISPLAY_NAME_ATTRIBUTE=displayName
 LDAP_GROUP_ATTRIBUTE=cn
 
 # Role mappings
-LDAP_ADMIN_GROUPS=Domain Admins,GOTRS Administrators
+LDAP_ADMIN_GROUPS=Domain Admins,GoatFlow Administrators
 LDAP_AGENT_GROUPS=Support Team,IT Helpdesk
 
 # Active Directory specific
@@ -57,7 +57,7 @@ LDAP_DOMAIN=company.com
 
 ### Configuration Templates
 
-GOTRS includes pre-configured templates for common LDAP servers:
+GoatFlow includes pre-configured templates for common LDAP servers:
 
 #### Active Directory
 ```bash
@@ -109,7 +109,7 @@ LDAP_GROUP_FILTER=(&(objectClass=groupOfUniqueNames)(uniqueMember=%s))
 
 ## Role Mapping
 
-GOTRS maps LDAP groups to three roles:
+GoatFlow maps LDAP groups to three roles:
 
 ### Admin Role
 - Full system access
@@ -203,7 +203,7 @@ curl -X GET http://localhost:8080/api/v1/admin/ldap/users/testuser/groups \
 ## Performance Considerations
 
 ### Connection Pooling
-GOTRS creates new connections for each authentication to avoid connection state issues. For high-volume environments, consider:
+GoatFlow creates new connections for each authentication to avoid connection state issues. For high-volume environments, consider:
 
 - Dedicated LDAP read replicas
 - Load balancers for LDAP servers
@@ -263,11 +263,11 @@ LDAP_USE_TLS=false
 ### Docker Compose
 ```yaml
 services:
-  gotrs:
+  goatflow:
     environment:
       - LDAP_ENABLED=true
       - LDAP_HOST=dc.company.com
-      - LDAP_BIND_DN=cn=gotrs,cn=Users,dc=company,dc=com
+      - LDAP_BIND_DN=cn=goatflow,cn=Users,dc=company,dc=com
       - LDAP_BIND_PASSWORD=${LDAP_PASSWORD}
       - LDAP_BASE_DN=dc=company,dc=com
     secrets:
@@ -289,7 +289,7 @@ spec:
   template:
     spec:
       containers:
-      - name: gotrs
+      - name: goatflow
         env:
         - name: LDAP_BIND_PASSWORD
           valueFrom:
@@ -304,7 +304,7 @@ spec:
 OTRS LDAP configurations can be migrated:
 
 1. Export OTRS LDAP settings
-2. Map to GOTRS environment variables
+2. Map to GoatFlow environment variables
 3. Test configuration before go-live
 4. Verify user role mappings
 

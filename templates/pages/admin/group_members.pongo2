@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{{ t("group_members.title")|default:"Group Members" }} - GOTRS Admin{% endblock %}
+{% block title %}{{ t("group_members.title")|default:"Group Members" }} - GoatFlow Admin{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8 min-h-screen">

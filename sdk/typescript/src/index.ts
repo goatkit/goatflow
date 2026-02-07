@@ -13,9 +13,9 @@ import {
 import { ClientConfig, AuthConfig } from './types';
 
 /**
- * Main GOTRS API client
+ * Main GoatFlow API client
  */
-export class GotrsClient {
+export class GoatflowClient {
   private httpClient: HttpClient;
   private eventsClient?: EventsClient;
 
@@ -44,10 +44,10 @@ export class GotrsClient {
   }
 
   /**
-   * Create a GOTRS client with API key authentication
+   * Create a GoatFlow client with API key authentication
    */
-  static withApiKey(baseURL: string, apiKey: string, options?: Partial<ClientConfig>): GotrsClient {
-    return new GotrsClient({
+  static withApiKey(baseURL: string, apiKey: string, options?: Partial<ClientConfig>): GoatflowClient {
+    return new GoatflowClient({
       baseURL,
       auth: {
         type: 'api-key',
@@ -58,7 +58,7 @@ export class GotrsClient {
   }
 
   /**
-   * Create a GOTRS client with JWT authentication
+   * Create a GoatFlow client with JWT authentication
    */
   static withJWT(
     baseURL: string,
@@ -66,8 +66,8 @@ export class GotrsClient {
     refreshToken?: string,
     expiresAt?: Date,
     options?: Partial<ClientConfig>
-  ): GotrsClient {
-    return new GotrsClient({
+  ): GoatflowClient {
+    return new GoatflowClient({
       baseURL,
       auth: {
         type: 'jwt',
@@ -80,7 +80,7 @@ export class GotrsClient {
   }
 
   /**
-   * Create a GOTRS client with OAuth2 authentication
+   * Create a GoatFlow client with OAuth2 authentication
    */
   static withOAuth2(
     baseURL: string,
@@ -88,8 +88,8 @@ export class GotrsClient {
     refreshToken?: string,
     expiresAt?: Date,
     options?: Partial<ClientConfig>
-  ): GotrsClient {
-    return new GotrsClient({
+  ): GoatflowClient {
+    return new GoatflowClient({
       baseURL,
       auth: {
         type: 'oauth2',
@@ -129,7 +129,7 @@ export class GotrsClient {
   }
 
   /**
-   * Test the connection to the GOTRS API
+   * Test the connection to the GoatFlow API
    */
   async ping(): Promise<boolean> {
     try {
@@ -195,27 +195,27 @@ export * from './events';
 export * from './services';
 
 // Default export for convenience
-export default GotrsClient;
+export default GoatflowClient;
 
 // Helper functions for error checking
-export function isGotrsError(error: any): error is import('./types').GotrsError {
-  return error && error.name === 'GotrsError';
+export function isGoatflowError(error: any): error is import('./types').GoatflowError {
+  return error && error.name === 'GoatflowError';
 }
 
 export function isNotFoundError(error: any): boolean {
-  return isGotrsError(error) && error.statusCode === 404;
+  return isGoatflowError(error) && error.statusCode === 404;
 }
 
 export function isUnauthorizedError(error: any): boolean {
-  return isGotrsError(error) && error.statusCode === 401;
+  return isGoatflowError(error) && error.statusCode === 401;
 }
 
 export function isForbiddenError(error: any): boolean {
-  return isGotrsError(error) && error.statusCode === 403;
+  return isGoatflowError(error) && error.statusCode === 403;
 }
 
 export function isRateLimitError(error: any): boolean {
-  return isGotrsError(error) && error.statusCode === 429;
+  return isGoatflowError(error) && error.statusCode === 429;
 }
 
 export function isValidationError(error: any): error is import('./types').ValidationError {

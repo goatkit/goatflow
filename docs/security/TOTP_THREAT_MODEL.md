@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the threat model for GOTRS Two-Factor Authentication (TOTP-based) for both agents and customers.
+This document describes the threat model for GoatFlow Two-Factor Authentication (TOTP-based) for both agents and customers.
 
 **Last Updated:** 2026-02-06
 
@@ -37,7 +37,7 @@ This document describes the threat model for GOTRS Two-Factor Authentication (TO
 ┌─────────┼──────────────────┼──────────────────┼─────────────┐
 │         ▼                  ▼                  ▼   TRUSTED   │
 │  ┌─────────────────────────────────────────────────────────┐│
-│  │                    GOTRS API                            ││
+│  │                    GoatFlow API                         ││
 │  │  ┌───────────┐  ┌───────────┐  ┌───────────────┐        ││
 │  │  │ Auth Flow │  │ TOTP Svc  │  │ Session Mgr   │        ││
 │  │  └───────────┘  └───────────┘  └───────────────┘        ││

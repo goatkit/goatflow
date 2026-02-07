@@ -1,5 +1,5 @@
 {
-  "name": "gotrs-ce",
+  "name": "goatflow",
   "version": "0.1.0",
   "description": "Modern Open Source Ticketing System",
   "private": true,
@@ -33,10 +33,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/gotrs-io/gotrs-ce.git"
+    "url": "https://github.com/goatkit/goatflow.git"
   },
   "license": "AGPL-3.0",
-  "author": "GOTRS Team",
+  "author": "GoatFlow Team",
   "dependencies": {
     "@playwright/test": "^1.57.0",
     "@tailwindcss/forms": "^0.5.11",

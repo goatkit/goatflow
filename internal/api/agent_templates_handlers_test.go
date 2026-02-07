@@ -19,8 +19,8 @@ func TestSubstituteTemplateVariables_OTRS(t *testing.T) {
 	}
 }
 
-func TestSubstituteTemplateVariables_GOTRS(t *testing.T) {
-	text := "Ticket: <GOTRS_TICKET_TicketNumber> - <GOTRS_TICKET_Title>"
+func TestSubstituteTemplateVariables_GoatFlow(t *testing.T) {
+	text := "Ticket: <GOATFLOW_TICKET_TicketNumber> - <GOATFLOW_TICKET_Title>"
 	vars := map[string]string{
 		"TICKET_TicketNumber": "2025010112345678",
 		"TICKET_Title":        "Test Issue",
@@ -35,7 +35,7 @@ func TestSubstituteTemplateVariables_GOTRS(t *testing.T) {
 }
 
 func TestSubstituteTemplateVariables_Mixed(t *testing.T) {
-	text := "Dear <OTRS_CUSTOMER_UserFullname>, Your ticket <GOTRS_TICKET_TicketNumber> has been updated."
+	text := "Dear <OTRS_CUSTOMER_UserFullname>, Your ticket <GOATFLOW_TICKET_TicketNumber> has been updated."
 	vars := map[string]string{
 		"CUSTOMER_UserFullname": "Jane Smith",
 		"TICKET_TicketNumber":   "2025010187654321",

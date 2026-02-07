@@ -23,8 +23,8 @@ if [ -z "$DB_PASSWORD" ]; then
   exit 1
 fi
 
-TOOLBOX_IMAGE="${TOOLBOX_IMAGE:-gotrs-toolbox:latest}"
-NETWORK="${DB_CONTAINER_NETWORK:-gotrs-ce_gotrs-network}"
+TOOLBOX_IMAGE="${TOOLBOX_IMAGE:-ghcr.io/goatkit/goatflow/toolbox:latest}"
+NETWORK="${DB_CONTAINER_NETWORK:-goatflow_goatflow-network}"
 
 uid=$(id -u)
 gid=$(id -g)
@@ -41,4 +41,4 @@ gid=$(id -g)
   -e DB_USER="$DB_USER" \
   -e DB_PASSWORD="$DB_PASSWORD" \
   "$TOOLBOX_IMAGE" \
-  gotrs reset-user --username="$USERNAME" --password="$PASSWORD" --enable
+  goatflow reset-user --username="$USERNAME" --password="$PASSWORD" --enable

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Extract data (INSERT statements) from OTRS MySQL dump for import
 
-INPUT_FILE="/home/nigel/git/gotrs-io/otrs_sqldump_ng20250825_1732.sql"
+INPUT_FILE="/home/nigel/git/goatkit/otrs_sqldump_ng20250825_1732.sql"
 OUTPUT_FILE="schema/import/otrs_data.sql"
 
 echo "Extracting data from OTRS dump..."

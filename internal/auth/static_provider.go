@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // StaticAuthProvider offers simple in-memory users for demos/tests.
@@ -80,7 +80,7 @@ func (p *StaticAuthProvider) Priority() int { return p.priority }
 func init() {
 	_ = RegisterProvider("static", func(deps ProviderDependencies) (AuthProvider, error) {
 		// Accept either CONFIG env or STATIC_USERS env variable for now.
-		raw := os.Getenv("GOTRS_STATIC_USERS")
+		raw := os.Getenv("GOATFLOW_STATIC_USERS")
 		if raw == "" {
 			// No static users defined, return error so caller can skip.
 			return nil, errors.New("no static users configured")

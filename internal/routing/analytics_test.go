@@ -391,7 +391,7 @@ func TestGenerateDashboardHTML(t *testing.T) {
 
 	html := rm.generateDashboardHTML()
 
-	if !contains(html, "GOTRS Route Analytics") {
+	if !contains(html, "GoatFlow Route Analytics") {
 		t.Error("expected title in dashboard HTML")
 	}
 	if !contains(html, "Total Requests") {

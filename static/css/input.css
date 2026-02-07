@@ -5,7 +5,7 @@
 /* Import GoatKit base theme - classic provides clean defaults with no glows */
 /* Synthwave remains the DEFAULT selected theme (ThemeManager.DEFAULT_THEME) */
 /* This base just ensures non-glow themes don't need to fight CSS specificity */
-@import 'themes/gotrs-classic.css';
+@import 'themes/goatflow-classic.css';
 
 /* Custom component styles */
 @layer components {

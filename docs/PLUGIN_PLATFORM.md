@@ -8,7 +8,7 @@
 
 ## Overview
 
-GoatKit will evolve from a modular monolith to a true plugin platform, enabling third-party developers to extend GOTRS without modifying core code.
+GoatKit will evolve from a modular monolith to a true plugin platform, enabling third-party developers to extend GoatFlow without modifying core code.
 
 ## Architecture
 

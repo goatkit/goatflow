@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // MemoryTicketRepository implements TicketRepository with in-memory storage

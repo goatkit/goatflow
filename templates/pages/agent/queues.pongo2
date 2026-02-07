@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{{ t("pages.agent.queues.title")|default:"Queue Management" }} - GOTRS{% endblock %}
+{% block title %}{{ t("pages.agent.queues.title")|default:"Queue Management" }} - GoatFlow{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8 min-h-screen">

@@ -1,10 +1,10 @@
-# GOTRS Vision
+# GoatFlow Vision
 
 ## Mission Statement
 
 To build the world's most powerful open-source platform for service management, workflow automation, and customer support—empowering organizations of all sizes to create exceptional experiences while maintaining complete control over their data and infrastructure.
 
-GOTRS is the flagship product built on the **GoatKit platform**. GoatKit provides the foundation—authentication, database abstraction, plugin runtime, scheduling, and UI framework—while GOTRS delivers enterprise-grade ITSM capabilities on top of it.
+GoatFlow is the flagship product built on the **GoatKit platform**. GoatKit provides the foundation—authentication, database abstraction, plugin runtime, scheduling, and UI framework—while GoatFlow delivers enterprise-grade ITSM capabilities on top of it.
 
 ## Core Values
 
@@ -18,7 +18,7 @@ We are committed to building a truly open platform where the community drives in
 Complex systems don't need complicated interfaces. We obsess over user experience for agents, administrators, and customers alike.
 
 ### 4. Scalable by Design
-From a single support agent to enterprise-scale operations, GOTRS grows with your needs without architectural limitations.
+From a single support agent to enterprise-scale operations, GoatFlow grows with your needs without architectural limitations.
 
 ### 5. Data Sovereignty
 Your data belongs to you. Self-hosted deployment ensures complete control over sensitive customer information.
@@ -26,7 +26,7 @@ Your data belongs to you. Self-hosted deployment ensures complete control over s
 ## Long-Term Vision (5-Year Horizon)
 
 ### Year 1 (2025-2027): Foundation & Adoption
-**Goal**: Establish GOTRS as a viable OTRS alternative
+**Goal**: Establish GoatFlow as a viable OTRS alternative
 
 - Launch production-ready version 1.0 (April 2027)
 - Achieve 100+ production deployments
@@ -49,7 +49,7 @@ Your data belongs to you. Self-hosted deployment ensures complete control over s
 - Introduce AI-powered automation suite
 - Launch industry-specific solutions (healthcare, finance, education)
 - Achieve 10,000+ deployments globally
-- Establish GOTRS certification program
+- Establish GoatFlow certification program
 - Partner with major cloud providers (AWS, Azure, GCP)
 
 ### Year 4 (2029-2030): Platform Expansion
@@ -133,7 +133,7 @@ Your data belongs to you. Self-hosted deployment ensures complete control over s
 
 ### Platform Architecture
 
-GoatKit is a **platform**, not just an application framework. GOTRS is the first product built on GoatKit, but the architecture supports multiple products and third-party extensions.
+GoatKit is a **platform**, not just an application framework. GoatFlow is the first product built on GoatKit, but the architecture supports multiple products and third-party extensions.
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -156,7 +156,7 @@ GoatKit is a **platform**, not just an application framework. GOTRS is the first
 ├─────────────────────────────────────────────────────┤
 │  Products (built on GoatKit)                        │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
-│  │   GOTRS     │  │   Future    │  │  3rd Party  │ │
+│  │   GoatFlow     │  │   Future    │  │  3rd Party  │ │
 │  │   (ITSM)    │  │  Products   │  │  Products   │ │
 │  └─────────────┘  └─────────────┘  └─────────────┘ │
 └─────────────────────────────────────────────────────┘
@@ -171,7 +171,7 @@ GoatKit is a **platform**, not just an application framework. GOTRS is the first
 2028+:      Multi-Product Platform + Enterprise Scale
 ```
 
-The GoatKit Plugin Platform transforms GOTRS from an application into an extensible platform. Core provides infrastructure (routing, auth, templates, plugin runtime); features ship as plugins. This enables a thriving third-party ecosystem while keeping the platform stable and secure—and opens the door to entirely new products built on the same foundation.
+The GoatKit Plugin Platform transforms GoatFlow from an application into an extensible platform. Core provides infrastructure (routing, auth, templates, plugin runtime); features ship as plugins. This enables a thriving third-party ecosystem while keeping the platform stable and secure—and opens the door to entirely new products built on the same foundation.
 
 ### AI/ML Integration
 - **Phase 1**: Basic categorization and routing
@@ -193,7 +193,7 @@ The GoatKit Plugin Platform transforms GOTRS from an application into an extensi
 - **Contributors**: 500+ active contributors
 - **Translations**: 50+ languages
 - **Plugins**: 1,000+ community plugins
-- **Events**: Annual GOTRS Conference
+- **Events**: Annual GoatFlow Conference
 - **Education**: Free training materials
 
 ### Commercial Ecosystem
@@ -255,7 +255,7 @@ The GoatKit Plugin Platform transforms GOTRS from an application into an extensi
 
 ## Call to Action
 
-GOTRS is more than software—it's a movement to democratize enterprise-grade service management. We invite you to join us in building the future of customer support:
+GoatFlow is more than software—it's a movement to democratize enterprise-grade service management. We invite you to join us in building the future of customer support:
 
 - **Developers**: Contribute code and ideas
 - **Organizations**: Deploy and provide feedback
@@ -269,4 +269,4 @@ Together, we're not just building better software; we're building a better way f
 
 *"Excellence in service, freedom in choice, community in action."*
 
-**The GOTRS Team**
+**The GoatFlow Team**

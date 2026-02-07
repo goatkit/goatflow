@@ -20,7 +20,7 @@ func setupTestRouter() *gin.Engine {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "healthy",
-			"service": "gotrs-backend",
+			"service": "goatflow-backend",
 		})
 	})
 
@@ -31,7 +31,7 @@ func setupTestRouter() *gin.Engine {
 			c.JSON(http.StatusOK, gin.H{
 				"success": true,
 				"data": gin.H{
-					"message": "GOTRS API is running",
+					"message": "GoatFlow API is running",
 					"version": "0.1.0",
 				},
 			})
@@ -58,7 +58,7 @@ func TestHealthEndpoint(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, "healthy", response["status"])
-		assert.Equal(t, "gotrs-backend", response["service"])
+		assert.Equal(t, "goatflow-backend", response["service"])
 	})
 }
 
@@ -83,7 +83,7 @@ func TestAPIStatusEndpoint(t *testing.T) {
 		data, ok := response["data"].(map[string]interface{})
 		require.True(t, ok, "data should be a map")
 
-		assert.Equal(t, "GOTRS API is running", data["message"])
+		assert.Equal(t, "GoatFlow API is running", data["message"])
 		assert.Equal(t, "0.1.0", data["version"])
 	})
 }

@@ -16,7 +16,7 @@
                 <label for="first_name" class="block text-sm font-medium leading-6 text-gray-900">{{ t("user.first_name") }}</label>
                 <div class="mt-2">
                     <input id="first_name" name="first_name" type="text" required 
-                           class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 sm:text-sm sm:leading-6">
+                           class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-goatflow-600 sm:text-sm sm:leading-6">
                 </div>
             </div>
 
@@ -24,7 +24,7 @@
                 <label for="last_name" class="block text-sm font-medium leading-6 text-gray-900">{{ t("user.last_name") }}</label>
                 <div class="mt-2">
                     <input id="last_name" name="last_name" type="text" required 
-                           class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 sm:text-sm sm:leading-6">
+                           class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-goatflow-600 sm:text-sm sm:leading-6">
                 </div>
             </div>
 
@@ -32,7 +32,7 @@
                 <label for="email" class="block text-sm font-medium leading-6 text-gray-900">{{ t("auth.email") }}</label>
                 <div class="mt-2">
                     <input id="email" name="email" type="email" autocomplete="email" required 
-                           class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 sm:text-sm sm:leading-6">
+                           class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-goatflow-600 sm:text-sm sm:leading-6">
                 </div>
             </div>
 
@@ -40,7 +40,7 @@
                 <label for="password" class="block text-sm font-medium leading-6 text-gray-900">{{ t("auth.password") }}</label>
                 <div class="mt-2">
                     <input id="password" name="password" type="password" autocomplete="new-password" required 
-                           class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 sm:text-sm sm:leading-6">
+                           class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-goatflow-600 sm:text-sm sm:leading-6">
                 </div>
             </div>
 
@@ -48,7 +48,7 @@
 
             <div>
                 <button type="submit" 
-                        class="flex w-full justify-center rounded-md bg-gotrs-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600">
+                        class="flex w-full justify-center rounded-md bg-goatflow-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-goatflow-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-goatflow-600">
                     {{ t("auth.signup") }}
                 </button>
             </div>
@@ -56,7 +56,7 @@
 
         <p class="mt-10 text-center text-sm text-gray-500">
             {{ t("auth.already_member") }}
-            <a href="/login" class="font-semibold leading-6 text-gotrs-600 hover:text-gotrs-500">{{ t("auth.signin") }}</a>
+            <a href="/login" class="font-semibold leading-6 text-goatflow-600 hover:text-goatflow-500">{{ t("auth.signin") }}</a>
         </p>
     </div>
 </div>

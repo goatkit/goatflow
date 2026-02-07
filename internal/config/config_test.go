@@ -233,20 +233,20 @@ func TestAuthConfig(t *testing.T) {
 	t.Run("JWT configuration", func(t *testing.T) {
 		authConfig := AuthConfig{}
 		authConfig.JWT.Secret = "test-secret"
-		authConfig.JWT.Issuer = "gotrs"
-		authConfig.JWT.Audience = "gotrs-api"
+		authConfig.JWT.Issuer = "goatflow"
+		authConfig.JWT.Audience = "goatflow-api"
 		authConfig.JWT.AccessTokenTTL = 15 * time.Minute
 		authConfig.JWT.RefreshTokenTTL = 7 * 24 * time.Hour
 
 		assert.Equal(t, "test-secret", authConfig.JWT.Secret)
-		assert.Equal(t, "gotrs", authConfig.JWT.Issuer)
+		assert.Equal(t, "goatflow", authConfig.JWT.Issuer)
 		assert.Equal(t, 15*time.Minute, authConfig.JWT.AccessTokenTTL)
 		assert.Equal(t, 7*24*time.Hour, authConfig.JWT.RefreshTokenTTL)
 	})
 
 	t.Run("Session configuration", func(t *testing.T) {
 		authConfig := AuthConfig{}
-		authConfig.Session.CookieName = "gotrs_session"
+		authConfig.Session.CookieName = "goatflow_session"
 		authConfig.Session.Secure = true
 		authConfig.Session.HTTPOnly = true
 		authConfig.Session.SameSite = "strict"
@@ -254,7 +254,7 @@ func TestAuthConfig(t *testing.T) {
 		authConfig.Session.SessionMaxTime = 57600
 		authConfig.Session.SessionMaxIdleTime = 7200
 
-		assert.Equal(t, "gotrs_session", authConfig.Session.CookieName)
+		assert.Equal(t, "goatflow_session", authConfig.Session.CookieName)
 		assert.True(t, authConfig.Session.Secure)
 		assert.True(t, authConfig.Session.HTTPOnly)
 		assert.Equal(t, "strict", authConfig.Session.SameSite)
@@ -285,8 +285,8 @@ func TestEmailConfig(t *testing.T) {
 	t.Run("SMTP configuration", func(t *testing.T) {
 		emailConfig := EmailConfig{
 			Enabled:  true,
-			From:     "noreply@gotrs.io",
-			FromName: "GOTRS System",
+			From:     "noreply@goatflow.io",
+			FromName: "GoatFlow System",
 		}
 		emailConfig.SMTP.Host = "smtp.example.com"
 		emailConfig.SMTP.Port = 587
@@ -295,8 +295,8 @@ func TestEmailConfig(t *testing.T) {
 		emailConfig.SMTP.TLS = true
 
 		assert.True(t, emailConfig.Enabled)
-		assert.Equal(t, "noreply@gotrs.io", emailConfig.From)
-		assert.Equal(t, "GOTRS System", emailConfig.FromName)
+		assert.Equal(t, "noreply@goatflow.io", emailConfig.From)
+		assert.Equal(t, "GoatFlow System", emailConfig.FromName)
 		assert.Equal(t, "smtp.example.com", emailConfig.SMTP.Host)
 		assert.Equal(t, 587, emailConfig.SMTP.Port)
 		assert.True(t, emailConfig.SMTP.TLS)
@@ -321,11 +321,11 @@ func TestStorageConfig(t *testing.T) {
 		storageConfig := StorageConfig{
 			Type: "local",
 		}
-		storageConfig.Local.Path = "/var/lib/gotrs/uploads"
+		storageConfig.Local.Path = "/var/lib/goatflow/uploads"
 		storageConfig.Local.PublicPath = "/uploads"
 
 		assert.Equal(t, "local", storageConfig.Type)
-		assert.Equal(t, "/var/lib/gotrs/uploads", storageConfig.Local.Path)
+		assert.Equal(t, "/var/lib/goatflow/uploads", storageConfig.Local.Path)
 		assert.Equal(t, "/uploads", storageConfig.Local.PublicPath)
 	})
 
@@ -333,14 +333,14 @@ func TestStorageConfig(t *testing.T) {
 		storageConfig := StorageConfig{
 			Type: "s3",
 		}
-		storageConfig.S3.Bucket = "gotrs-attachments"
+		storageConfig.S3.Bucket = "goatflow-attachments"
 		storageConfig.S3.Region = "us-east-1"
 		storageConfig.S3.AccessKey = "access-key"
 		storageConfig.S3.SecretKey = "secret-key"
 		storageConfig.S3.Endpoint = "https://s3.amazonaws.com"
 
 		assert.Equal(t, "s3", storageConfig.Type)
-		assert.Equal(t, "gotrs-attachments", storageConfig.S3.Bucket)
+		assert.Equal(t, "goatflow-attachments", storageConfig.S3.Bucket)
 		assert.Equal(t, "us-east-1", storageConfig.S3.Region)
 		assert.Equal(t, "https://s3.amazonaws.com", storageConfig.S3.Endpoint)
 	})
@@ -493,7 +493,7 @@ func TestLoadFromFile(t *testing.T) {
 
 		configContent := `
 app:
-  name: GOTRS Test
+  name: GoatFlow Test
   version: 1.0.0
   env: test
   debug: true
@@ -505,7 +505,7 @@ server:
 database:
   host: localhost
   port: 5432
-  name: gotrs_test
+  name: goatflow_test
   user: test_user
   password: test_pass
   ssl_mode: disable
@@ -526,13 +526,13 @@ database:
 		// Verify the loaded config
 		loadedCfg := Get()
 		assert.NotNil(t, loadedCfg)
-		assert.Equal(t, "GOTRS Test", loadedCfg.App.Name)
+		assert.Equal(t, "GoatFlow Test", loadedCfg.App.Name)
 		assert.Equal(t, "1.0.0", loadedCfg.App.Version)
 		assert.Equal(t, "test", loadedCfg.App.Env)
 		assert.True(t, loadedCfg.App.Debug)
 		assert.Equal(t, "localhost", loadedCfg.Server.Host)
 		assert.Equal(t, 8080, loadedCfg.Server.Port)
-		assert.Equal(t, "gotrs_test", loadedCfg.Database.Name)
+		assert.Equal(t, "goatflow_test", loadedCfg.Database.Name)
 	})
 
 	t.Run("Error on non-existent file", func(t *testing.T) {

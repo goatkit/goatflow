@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
+	"github.com/goatkit/goatflow/internal/i18n"
 )
 
 func main() {

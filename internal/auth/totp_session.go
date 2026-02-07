@@ -1,4 +1,4 @@
-// Package auth provides authentication utilities for GOTRS.
+// Package auth provides authentication utilities for GoatFlow.
 package auth
 
 import (

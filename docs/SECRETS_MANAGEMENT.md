@@ -1,8 +1,8 @@
-# GOTRS Secrets Management Guide
+# GoatFlow Secrets Management Guide
 
 ## Overview
 
-GOTRS uses a strict secrets management policy to ensure sensitive credentials never appear in code and are properly secured in all environments. All secrets are managed exclusively through environment variables.
+GoatFlow uses a strict secrets management policy to ensure sensitive credentials never appear in code and are properly secured in all environments. All secrets are managed exclusively through environment variables.
 
 ## Quick Start
 
@@ -10,7 +10,7 @@ GOTRS uses a strict secrets management policy to ensure sensitive credentials ne
 
 ```bash
 # First time setup - generates .env with secure random secrets
-gotrs synthesize
+goatflow synthesize
 
 # Or using make
 make synthesize
@@ -26,7 +26,7 @@ This command:
 
 ```bash
 # Rotate only secret values, keeping other settings
-gotrs synthesize --rotate-secrets
+goatflow synthesize --rotate-secrets
 
 # Or using make
 make rotate-secrets
@@ -54,7 +54,7 @@ The codebase contains:
 
 ### Automatic Generation
 
-The `gotrs synthesize` command generates:
+The `goatflow synthesize` command generates:
 
 | Secret | Type | Length | Format |
 |--------|------|--------|--------|
@@ -85,7 +85,7 @@ uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '-'
 
 ### Startup Validation
 
-GOTRS validates secrets at startup and will:
+GoatFlow validates secrets at startup and will:
 - **Development**: Warn about weak/default values
 - **Production**: Fail to start with insecure secrets
 
@@ -100,7 +100,7 @@ GOTRS validates secrets at startup and will:
 
 ### Pre-commit Hooks
 
-Automatically installed by `gotrs synthesize`:
+Automatically installed by `goatflow synthesize`:
 
 ```bash
 # Manual installation
@@ -140,7 +140,7 @@ make security-scan
 Use the provided test utilities in `internal/testutil/secrets.go`:
 
 ```go
-import "github.com/gotrs-io/gotrs-ce/internal/testutil"
+import "github.com/goatkit/goatflow/internal/testutil"
 
 func TestSomething(t *testing.T) {
     // Setup test environment with safe test secrets
@@ -169,7 +169,7 @@ Test files may contain:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: gotrs-secrets
+  name: goatflow-secrets
 type: Opaque
 data:
   JWT_SECRET: <base64-encoded-secret>
@@ -180,7 +180,7 @@ data:
 
 ```yaml
 services:
-  gotrs:
+  goatflow:
     env_file:
       - .env.production  # Never commit this file
     environment:
@@ -191,7 +191,7 @@ services:
 
 ```bash
 aws secretsmanager create-secret \
-  --name gotrs/production/jwt-secret \
+  --name goatflow/production/jwt-secret \
   --secret-string "$(openssl rand -hex 32)"
 ```
 
@@ -201,12 +201,12 @@ aws secretsmanager create-secret \
 
 ```bash
 # Rotate all secrets quarterly
-0 0 1 */3 * gotrs synthesize --rotate-secrets --output .env.production
+0 0 1 */3 * goatflow synthesize --rotate-secrets --output .env.production
 ```
 
 #### Manual Rotation
 
-1. Generate new secrets: `gotrs synthesize --rotate-secrets`
+1. Generate new secrets: `goatflow synthesize --rotate-secrets`
 2. Update production secret store
 3. Deploy with new secrets
 4. Monitor for issues
@@ -216,7 +216,7 @@ aws secretsmanager create-secret \
 
 ### DO ✅
 
-- Use `gotrs synthesize` for initial setup
+- Use `goatflow synthesize` for initial setup
 - Store production secrets in dedicated secret management systems
 - Rotate secrets regularly (quarterly minimum)
 - Use different secrets for each environment
@@ -239,7 +239,7 @@ aws secretsmanager create-secret \
 #### "Secret validation failed" on startup
 
 **Cause**: Insecure or default secret detected
-**Solution**: Run `gotrs synthesize` to generate secure values
+**Solution**: Run `goatflow synthesize` to generate secure values
 
 #### Pre-commit hook blocking commits
 
@@ -252,7 +252,7 @@ aws secretsmanager create-secret \
 #### Can't find .env file
 
 **Cause**: File not created yet
-**Solution**: Run `gotrs synthesize` to create initial configuration
+**Solution**: Run `goatflow synthesize` to create initial configuration
 
 ### False Positives
 
@@ -269,7 +269,7 @@ If secrets are exposed:
 
 1. **Immediate Actions**:
    - Rotate affected secrets immediately
-   - Run `gotrs synthesize --rotate-secrets`
+   - Run `goatflow synthesize --rotate-secrets`
    - Deploy new secrets to production
 
 2. **Investigation**:

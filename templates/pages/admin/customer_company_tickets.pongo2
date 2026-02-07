@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{{ t("customer_company_tickets.title")|default:"Customer Company Tickets" }} - GOTRS Admin{% endblock %}
+{% block title %}{{ t("customer_company_tickets.title")|default:"Customer Company Tickets" }} - GoatFlow Admin{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8 min-h-screen">

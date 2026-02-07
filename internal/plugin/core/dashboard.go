@@ -1,4 +1,4 @@
-// Package core provides core built-in plugins for GOTRS.
+// Package core provides core built-in plugins for GoatFlow.
 package core
 
 import (
@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
+	"github.com/goatkit/goatflow/internal/plugin"
 )
 
 // DashboardPlugin provides core dashboard widgets.
@@ -27,10 +27,10 @@ func (p *DashboardPlugin) GKRegister() plugin.GKRegistration {
 	return plugin.GKRegistration{
 		Name:        "dashboard-core",
 		Version:     "1.0.0",
-		Description: "Core dashboard widgets for GOTRS",
-		Author:      "GOTRS Team",
+		Description: "Core dashboard widgets for GoatFlow",
+		Author:      "GoatFlow Team",
 		License:     "Apache-2.0",
-		Homepage:    "https://github.com/gotrs-io/gotrs-ce",
+		Homepage:    "https://github.com/goatkit/goatflow",
 
 		Widgets: []plugin.WidgetSpec{
 			{
@@ -130,52 +130,84 @@ func (p *DashboardPlugin) handleRecentTickets(ctx context.Context) (json.RawMess
 			status := toString(row["status"])
 			priority := toString(row["priority"])
 			customer := toString(row["customer_user_id"])
-			changeTime := toTime(row["change_time"])
-			timeAgo := formatTimeAgo(changeTime)
 
 			// Truncate title if too long
 			if len(title) > 50 {
 				title = title[:47] + "..."
 			}
 
-			// Status badge color
-			statusColor := "var(--gk-text-muted)"
-			switch strings.ToLower(status) {
-			case "open", "new":
-				statusColor = "var(--gk-success)"
-			case "pending", "pending reminder", "pending auto":
-				statusColor = "var(--gk-warning)"
-			case "closed", "merged":
-				statusColor = "var(--gk-text-muted)"
+			// Priority badge style (matches static Recent Tickets)
+			priorityStyle := "background: var(--gk-success-subtle); color: var(--gk-success);"
+			switch strings.ToLower(priority) {
+			case "1 very low":
+				priorityStyle = "background: var(--gk-info-subtle); color: var(--gk-info);"
+			case "2 low":
+				priorityStyle = "background: var(--gk-info-subtle); color: var(--gk-info);"
+			case "3 normal":
+				priorityStyle = "background: var(--gk-success-subtle); color: var(--gk-success);"
+			case "4 high":
+				priorityStyle = "background: var(--gk-warning-subtle); color: var(--gk-warning);"
+			case "5 very high":
+				priorityStyle = "background: var(--gk-error-subtle); color: var(--gk-error);"
+			}
+
+			// Status badge style (matches static Recent Tickets)
+			statusStyle := "background: var(--gk-primary-subtle); color: var(--gk-primary);"
+			statusLower := strings.ToLower(status)
+			switch {
+			case statusLower == "new":
+				statusStyle = "background: var(--gk-secondary-subtle); color: var(--gk-secondary);"
+			case statusLower == "open":
+				statusStyle = "background: var(--gk-success-subtle); color: var(--gk-success);"
+			case strings.HasPrefix(statusLower, "pending"):
+				statusStyle = "background: var(--gk-warning-subtle); color: var(--gk-warning);"
+			case strings.HasPrefix(statusLower, "closed"), strings.HasPrefix(statusLower, "merged"), strings.HasPrefix(statusLower, "removed"):
+				statusStyle = "background: var(--gk-bg-elevated); color: var(--gk-text-secondary);"
 			}
 
 			html.WriteString(fmt.Sprintf(`
-				<li class="py-4">
-					<div class="flex items-center space-x-4">
+				<li class="py-4 transition-all duration-200 hover:translate-x-1" style="border-color: var(--gk-border-default);">
+					<div class="flex items-start space-x-4">
 						<div class="min-w-0 flex-1">
-							<a href="/tickets/%s" class="truncate text-sm font-medium gk-link-neon" style="color: var(--gk-text-primary);">
-								#%s - %s
+							<a href="/tickets/%s" class="gk-link-neon text-sm font-medium">
+								%s: %s
 							</a>
-							<p class="truncate text-sm" style="color: var(--gk-text-muted);">
-								<span class="gk-badge" style="color: %s;">%s</span>
-								<span class="mx-1">·</span>
-								<span>%s</span>
-								<span class="mx-1">·</span>
-								<span>%s</span>
-							</p>
+							<div class="mt-2 flex flex-wrap gap-1">
+								<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style="%s">
+									%s
+								</span>
+								<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style="%s">
+									%s
+								</span>
+								<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style="background: var(--gk-bg-elevated); color: var(--gk-text-secondary);">
+									Customer: %s
+								</span>
+							</div>
 						</div>
-						<div class="text-sm" style="color: var(--gk-text-muted);">%s</div>
 					</div>
 				</li>`,
-				ticketNum, ticketNum, escapeHTML(title),
-				statusColor, escapeHTML(status),
-				escapeHTML(priority), escapeHTML(customer),
-				timeAgo,
+				ticketNum,
+				escapeHTML(ticketNum), escapeHTML(title),
+				priorityStyle, escapeHTML(priority),
+				statusStyle, escapeHTML(status),
+				escapeHTML(customer),
 			))
 		}
 	}
 
 	html.WriteString(`</ul>`)
+
+	// View All link
+	viewAll := p.host.Translate(ctx, "common.view_all")
+	if viewAll == "" {
+		viewAll = "View All"
+	}
+	html.WriteString(fmt.Sprintf(`
+		<div class="mt-6">
+			<a href="/tickets" class="gk-link-neon flex w-full items-center justify-center rounded-md px-3 py-2 text-sm font-semibold" style="border: 1px solid var(--gk-border-default);">
+				%s
+			</a>
+		</div>`, escapeHTML(viewAll)))
 
 	return json.Marshal(map[string]string{
 		"html": html.String(),

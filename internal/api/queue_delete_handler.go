@@ -1,4 +1,4 @@
-// Package api provides HTTP handlers for the GOTRS application.
+// Package api provides HTTP handlers for the GoatFlow application.
 package api
 
 import (
@@ -9,7 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // deleteQueueInTransaction performs the queue deletion within a transaction.

@@ -72,8 +72,8 @@ module.exports = {
           'info': 'var(--gk-info)',
           'info-subtle': 'var(--gk-info-subtle)',
         },
-        // Legacy gotrs colors - now mapped to theme variables for backwards compatibility
-        'gotrs': {
+        // Legacy goatflow colors - now mapped to theme variables for backwards compatibility
+        'goatflow': {
           50: 'var(--gk-primary-subtle)',
           100: 'var(--gk-primary-subtle)',
           200: 'var(--gk-primary-subtle)',

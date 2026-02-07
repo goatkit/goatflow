@@ -102,7 +102,7 @@ func (ul *UniversalLinter) applyUniversalRules(doc *YAMLDocument) []LintIssue {
 			issues = append(issues, LintIssue{
 				Severity: "warning",
 				Rule:     "universal-004",
-				Message:  fmt.Sprintf("API version '%s' should follow format: domain/version (e.g., gotrs.io/v1)", doc.APIVersion),
+				Message:  fmt.Sprintf("API version '%s' should follow format: domain/version (e.g., goatflow.io/v1)", doc.APIVersion),
 				Path:     "apiVersion",
 			})
 		}

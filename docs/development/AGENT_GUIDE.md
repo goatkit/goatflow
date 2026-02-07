@@ -2,7 +2,7 @@
 
 Status: Canonical. This document supersedes CLAUDE.md.
 
-Purpose: Provide clear, enforceable rules and a practical workflow for engineering assistants working in the GOTRS codebase. Follow this document as the single source of truth for operating procedures, quality bars, and guardrails.
+Purpose: Provide clear, enforceable rules and a practical workflow for engineering assistants working in the GoatFlow codebase. Follow this document as the single source of truth for operating procedures, quality bars, and guardrails.
 
 ## Golden Rules
 - **All operations in containers**: Go toolchain and database clients are not installed on host. Use `make toolbox-*` targets for Go operations and `make db-*` targets for database operations. Never attempt to run `go`, `mysql`, or `psql` commands directly on host.
@@ -343,11 +343,11 @@ To keep drift from reintroducing host `go` usage low:
 
 - Macro: `TOOLBOX_GO` (defined in `Makefile`) wraps commands: `$(MAKE) toolbox-exec ARGS=`. Use it only in simple targets; avoid nesting it inside already long `podman run` invocations.
 - Verification: `make verify-container-first` runs `scripts/tools/check-container-go.sh` and fails if raw host `go` or `golangci-lint` lines are detected (tab-prefixed) in the `Makefile`.
-- Acceptable exceptions: Inside a single explicit `gotrs-toolbox:latest` container run block (already containerized), direct `go build/test` is fine—do not wrap again.
+- Acceptable exceptions: Inside a single explicit `goatflow-toolbox:latest` container run block (already containerized), direct `go build/test` is fine—do not wrap again.
 - Add new Go-related targets by default via `toolbox-exec` pattern; if performance requires a single large container run, keep all `go` invocations inside that one block.
 
 Checklist before committing new Go targets:
-1. No plain `\tgo test` or `\tgo build` lines unless inside an existing `podman/docker run gotrs-toolbox` block.
+1. No plain `\tgo test` or `\tgo build` lines unless inside an existing `podman/docker run goatflow-toolbox` block.
 2. `make verify-container-first` returns green.
 3. For multi-step script-like flows prefer a dedicated script invoked via `toolbox-exec` instead of many Makefile inline commands.
 4. CI runs `Container-First Guard` workflow on PRs/push to block violations automatically.
@@ -575,7 +575,7 @@ Handler must load fields via `GetFieldsForScreenWithConfig(screenKey, objectType
 - **DB error**: Ensure migration 000004 has run (`dynamic_field_screen_config` table exists)
 
 ## Legal & Compliance
-- GOTRS-CE is an original implementation; maintain compatibility without copying upstream code
+- GoatFlow-CE is an original implementation; maintain compatibility without copying upstream code
 - Keep all secrets in environment variables; generate via project tooling; do not commit
 
 ## This Document vs CLAUDE.md
@@ -926,7 +926,7 @@ echo "SELECT * FROM users WHERE id = 1;" | make db-shell
 
 ### The Correct Pattern
 ```go
-import "github.com/gotrs-io/gotrs-ce/internal/database"
+import "github.com/goatkit/goatflow/internal/database"
 
 // Write SQL with ? placeholders, convert before execution
 query := database.ConvertPlaceholders(`
@@ -1077,8 +1077,8 @@ Reference: `static/themes/builtin/synthwave/theme.css`
 Edit `static/js/theme-manager.js`:
 
 ```javascript
-const AVAILABLE_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe', 'your-new-theme'];
-const BUILTIN_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe', 'your-new-theme'];
+const AVAILABLE_THEMES = ['synthwave', 'goatflow-classic', 'seventies-vibes', 'nineties-vibe', 'your-new-theme'];
+const BUILTIN_THEMES = ['synthwave', 'goatflow-classic', 'seventies-vibes', 'nineties-vibe', 'your-new-theme'];
 
 const THEME_METADATA = {
   'your-new-theme': {

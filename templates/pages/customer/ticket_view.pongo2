@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{{ t("customer.tickets.ticket_number") }}{{ Ticket.tn }} - GOTRS{% endblock %}
+{% block title %}{{ t("customer.tickets.ticket_number") }}{{ Ticket.tn }} - GoatFlow{% endblock %}
 
 {% block scripts %}
 {{ block.super }}

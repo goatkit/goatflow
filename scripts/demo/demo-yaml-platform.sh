@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# GOTRS Unified YAML-as-a-Service Platform Demo
+# GoatFlow Unified YAML-as-a-Service Platform Demo
 # Demonstrates comprehensive configuration management with version control
 
 set -e
 
-echo "🔧 GOTRS Unified YAML-as-a-Service Platform Demo"
+echo "🔧 GoatFlow Unified YAML-as-a-Service Platform Demo"
 echo "================================================"
 echo ""
 echo "This demo showcases the unified configuration management system"
@@ -14,23 +14,23 @@ echo ""
 
 # Build the config manager container
 echo "📦 Building Config Manager Container..."
-docker build -f Dockerfile.config-manager -t gotrs-config-manager . > /dev/null 2>&1
+docker build -f Dockerfile.config-manager -t goatflow-config-manager . > /dev/null 2>&1
 echo "✅ Container built successfully"
 echo ""
 
 # Create a persistent volume for demonstration
 echo "📁 Creating persistent storage for demo..."
-docker volume create gotrs-config-demo > /dev/null 2>&1
+docker volume create goatflow-config-demo > /dev/null 2>&1
 echo ""
 
 # Helper function to run config manager with persistent storage
 run_config() {
     docker run --rm \
-        -v gotrs-config-demo:/app/.versions \
-        -v /home/nigel/git/gotrs-io/gotrs-ce:/workspace:ro \
-        -v /home/nigel/git/gotrs-io/gotrs-ce/routes:/app/routes:ro \
-        -v /home/nigel/git/gotrs-io/gotrs-ce/config:/app/config:ro \
-        gotrs-config-manager "$@"
+        -v goatflow-config-demo:/app/.versions \
+        -v /home/nigel/git/goatkit/goatflow:/workspace:ro \
+        -v /home/nigel/git/goatkit/goatflow/routes:/app/routes:ro \
+        -v /home/nigel/git/goatkit/goatflow/config:/app/config:ro \
+        goatflow-config-manager "$@"
 }
 
 # 1. Import existing configurations
@@ -85,7 +85,7 @@ echo ""
 
 # Create a test configuration change
 cat > /tmp/test-config.yaml << 'EOF'
-apiVersion: gotrs.io/v1
+apiVersion: goatflow.io/v1
 kind: Config
 metadata:
   name: test-settings
@@ -109,7 +109,7 @@ echo ""
 
 echo "Modifying configuration..."
 cat > /tmp/test-config-v2.yaml << 'EOF'
-apiVersion: gotrs.io/v1
+apiVersion: goatflow.io/v1
 kind: Config
 metadata:
   name: test-settings
@@ -198,7 +198,7 @@ Example output when file changes:
 [14:32:24] ❌ config/invalid-config - Error: Validation failed
 
 To enable hot reload in production:
-  gotrs-config watch &
+  goatflow-config watch &
 EOF
 echo ""
 read -p "Press Enter to continue..."
@@ -249,7 +249,7 @@ echo ""
 
 # Cleanup
 echo "🧹 Cleaning up demo resources..."
-docker volume rm gotrs-config-demo > /dev/null 2>&1 || true
+docker volume rm goatflow-config-demo > /dev/null 2>&1 || true
 rm -f /tmp/test-config*.yaml
 rm -rf /tmp/export
 
@@ -258,7 +258,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "🎉 Demo Complete!"
 echo ""
-echo "The GOTRS Unified YAML-as-a-Service Platform provides:"
+echo "The GoatFlow Unified YAML-as-a-Service Platform provides:"
 echo ""
 echo "• Version control for ALL configurations"
 echo "• Hot reload without service restarts"
@@ -267,7 +267,7 @@ echo "• GitOps-ready workflows"
 echo "• 100% containerized management"
 echo ""
 echo "To use in your environment:"
-echo "  docker run --rm gotrs-config-manager <command>"
+echo "  docker run --rm goatflow-config-manager <command>"
 echo ""
 echo "This platform dramatically improves configuration safety,"
 echo "developer productivity, and operational reliability!"

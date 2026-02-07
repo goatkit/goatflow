@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/data"
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
+	"github.com/goatkit/goatflow/internal/data"
+	"github.com/goatkit/goatflow/internal/i18n"
 )
 
 // LookupOption represents a single option in a dropdown/select field.

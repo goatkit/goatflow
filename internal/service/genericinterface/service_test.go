@@ -15,7 +15,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // testDB wraps a database connection for tests.
@@ -38,9 +38,9 @@ func getTestDB() (*testDB, error) {
 	}
 
 	host := firstNonEmpty(os.Getenv("TEST_DB_HOST"), os.Getenv("DB_HOST"), "localhost")
-	user := firstNonEmpty(os.Getenv("TEST_DB_USER"), os.Getenv("DB_USER"), "gotrs")
-	password := firstNonEmpty(os.Getenv("TEST_DB_PASSWORD"), os.Getenv("DB_PASSWORD"), "gotrs")
-	dbName := firstNonEmpty(os.Getenv("TEST_DB_NAME"), os.Getenv("DB_NAME"), "gotrs")
+	user := firstNonEmpty(os.Getenv("TEST_DB_USER"), os.Getenv("DB_USER"), "goatflow")
+	password := firstNonEmpty(os.Getenv("TEST_DB_PASSWORD"), os.Getenv("DB_PASSWORD"), "goatflow")
+	dbName := firstNonEmpty(os.Getenv("TEST_DB_NAME"), os.Getenv("DB_NAME"), "goatflow")
 	port := firstNonEmpty(os.Getenv("TEST_DB_PORT"), os.Getenv("DB_PORT"), "5432")
 
 	var db *sql.DB

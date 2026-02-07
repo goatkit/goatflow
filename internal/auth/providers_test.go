@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // test helper: capture registry then restore.
@@ -99,8 +99,8 @@ func TestProviderOrderFromConfig(t *testing.T) {
 func TestStaticProviderAuth(t *testing.T) {
 	saved := saveRegistry()
 	defer restoreRegistry(saved)
-	os.Setenv("GOTRS_STATIC_USERS", "alice:pw:Agent,bob:pw:Customer")
-	defer os.Unsetenv("GOTRS_STATIC_USERS")
+	os.Setenv("GOATFLOW_STATIC_USERS", "alice:pw:Agent,bob:pw:Customer")
+	defer os.Unsetenv("GOATFLOW_STATIC_USERS")
 	// Ensure static provider factory is present (init() should have registered). Re-register if missing.
 	if _, ok := providerRegistry["static"]; !ok {
 		t.Fatalf("static provider not registered")

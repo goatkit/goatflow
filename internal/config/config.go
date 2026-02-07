@@ -325,7 +325,7 @@ func Load(configPath string) error {
 		}
 
 		// Environment variable overrides
-		v.SetEnvPrefix("GOTRS")
+		v.SetEnvPrefix("GoatFlow")
 		v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 		v.AutomaticEnv()
 

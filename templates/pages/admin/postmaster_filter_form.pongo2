@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{% if IsNew %}{{ t("admin.modules.postmaster_filter.new_filter") }}{% else %}{{ t("admin.modules.postmaster_filter.edit_filter") }}{% endif %} - GOTRS Admin{% endblock %}
+{% block title %}{% if IsNew %}{{ t("admin.modules.postmaster_filter.new_filter") }}{% else %}{{ t("admin.modules.postmaster_filter.edit_filter") }}{% endif %} - GoatFlow Admin{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8 min-h-screen">
@@ -152,16 +152,16 @@ const i18n = {
         setRequired: '{{ t("admin.modules.postmaster_filter.validation.set_required")|escapejs }}'
     },
     actions: {
-        'X-GOTRS-Queue': '{{ t("admin.modules.postmaster_filter.actions.queue")|escapejs }}',
-        'X-GOTRS-QueueID': '{{ t("admin.modules.postmaster_filter.actions.queue_id")|escapejs }}',
-        'X-GOTRS-Priority': '{{ t("admin.modules.postmaster_filter.actions.priority")|escapejs }}',
-        'X-GOTRS-PriorityID': '{{ t("admin.modules.postmaster_filter.actions.priority_id")|escapejs }}',
-        'X-GOTRS-State': '{{ t("admin.modules.postmaster_filter.actions.state")|escapejs }}',
-        'X-GOTRS-Type': '{{ t("admin.modules.postmaster_filter.actions.type")|escapejs }}',
-        'X-GOTRS-Title': '{{ t("admin.modules.postmaster_filter.actions.title")|escapejs }}',
-        'X-GOTRS-CustomerID': '{{ t("admin.modules.postmaster_filter.actions.customer_id")|escapejs }}',
-        'X-GOTRS-CustomerUser': '{{ t("admin.modules.postmaster_filter.actions.customer_user")|escapejs }}',
-        'X-GOTRS-Ignore': '{{ t("admin.modules.postmaster_filter.actions.ignore")|escapejs }}'
+        'X-GoatFlow-Queue': '{{ t("admin.modules.postmaster_filter.actions.queue")|escapejs }}',
+        'X-GoatFlow-QueueID': '{{ t("admin.modules.postmaster_filter.actions.queue_id")|escapejs }}',
+        'X-GoatFlow-Priority': '{{ t("admin.modules.postmaster_filter.actions.priority")|escapejs }}',
+        'X-GoatFlow-PriorityID': '{{ t("admin.modules.postmaster_filter.actions.priority_id")|escapejs }}',
+        'X-GoatFlow-State': '{{ t("admin.modules.postmaster_filter.actions.state")|escapejs }}',
+        'X-GoatFlow-Type': '{{ t("admin.modules.postmaster_filter.actions.type")|escapejs }}',
+        'X-GoatFlow-Title': '{{ t("admin.modules.postmaster_filter.actions.title")|escapejs }}',
+        'X-GoatFlow-CustomerID': '{{ t("admin.modules.postmaster_filter.actions.customer_id")|escapejs }}',
+        'X-GoatFlow-CustomerUser': '{{ t("admin.modules.postmaster_filter.actions.customer_user")|escapejs }}',
+        'X-GoatFlow-Ignore': '{{ t("admin.modules.postmaster_filter.actions.ignore")|escapejs }}'
     }
 };
 
@@ -172,18 +172,18 @@ const headerKeys = [
     'Content-Type', 'X-Mailer', 'Return-Path'
 ];
 
-// Common set keys (X-GOTRS-* headers) - using translated labels
+// Common set keys (X-GoatFlow-* headers) - using translated labels
 const setKeys = [
-    { value: 'X-GOTRS-Queue', label: i18n.actions['X-GOTRS-Queue'] },
-    { value: 'X-GOTRS-QueueID', label: i18n.actions['X-GOTRS-QueueID'] },
-    { value: 'X-GOTRS-PriorityID', label: i18n.actions['X-GOTRS-PriorityID'] },
-    { value: 'X-GOTRS-Priority', label: i18n.actions['X-GOTRS-Priority'] },
-    { value: 'X-GOTRS-Title', label: i18n.actions['X-GOTRS-Title'] },
-    { value: 'X-GOTRS-State', label: i18n.actions['X-GOTRS-State'] },
-    { value: 'X-GOTRS-Type', label: i18n.actions['X-GOTRS-Type'] },
-    { value: 'X-GOTRS-CustomerID', label: i18n.actions['X-GOTRS-CustomerID'] },
-    { value: 'X-GOTRS-CustomerUser', label: i18n.actions['X-GOTRS-CustomerUser'] },
-    { value: 'X-GOTRS-Ignore', label: i18n.actions['X-GOTRS-Ignore'] }
+    { value: 'X-GoatFlow-Queue', label: i18n.actions['X-GoatFlow-Queue'] },
+    { value: 'X-GoatFlow-QueueID', label: i18n.actions['X-GoatFlow-QueueID'] },
+    { value: 'X-GoatFlow-PriorityID', label: i18n.actions['X-GoatFlow-PriorityID'] },
+    { value: 'X-GoatFlow-Priority', label: i18n.actions['X-GoatFlow-Priority'] },
+    { value: 'X-GoatFlow-Title', label: i18n.actions['X-GoatFlow-Title'] },
+    { value: 'X-GoatFlow-State', label: i18n.actions['X-GoatFlow-State'] },
+    { value: 'X-GoatFlow-Type', label: i18n.actions['X-GoatFlow-Type'] },
+    { value: 'X-GoatFlow-CustomerID', label: i18n.actions['X-GoatFlow-CustomerID'] },
+    { value: 'X-GoatFlow-CustomerUser', label: i18n.actions['X-GoatFlow-CustomerUser'] },
+    { value: 'X-GoatFlow-Ignore', label: i18n.actions['X-GoatFlow-Ignore'] }
 ];
 
 // HTML escape helper
@@ -211,7 +211,7 @@ function buildSearchableSelect(data, displayField, currentValue = '') {
     return html;
 }
 
-// Build boolean select for X-GOTRS-Ignore
+// Build boolean select for X-GoatFlow-Ignore
 function buildBooleanSelect(currentValue = '') {
     const isTrue = currentValue === '1' || currentValue === 'true' || currentValue === 'yes';
     return `<select class="set-value gk-select-neon flex-1">
@@ -231,25 +231,25 @@ function buildTextInput(currentValue = '') {
 // Update value input based on selected action
 function updateValueInput(container, selectedKey, currentValue = '') {
     switch(selectedKey) {
-        case 'X-GOTRS-Queue':
+        case 'X-GoatFlow-Queue':
             container.innerHTML = buildSearchableSelect(lookupData.queues, 'name', currentValue);
             break;
-        case 'X-GOTRS-QueueID':
+        case 'X-GoatFlow-QueueID':
             container.innerHTML = buildSearchableSelect(lookupData.queues, 'id', currentValue);
             break;
-        case 'X-GOTRS-Priority':
+        case 'X-GoatFlow-Priority':
             container.innerHTML = buildSearchableSelect(lookupData.priorities, 'name', currentValue);
             break;
-        case 'X-GOTRS-PriorityID':
+        case 'X-GoatFlow-PriorityID':
             container.innerHTML = buildSearchableSelect(lookupData.priorities, 'id', currentValue);
             break;
-        case 'X-GOTRS-State':
+        case 'X-GoatFlow-State':
             container.innerHTML = buildSearchableSelect(lookupData.states, 'name', currentValue);
             break;
-        case 'X-GOTRS-Type':
+        case 'X-GoatFlow-Type':
             container.innerHTML = buildSearchableSelect(lookupData.types, 'name', currentValue);
             break;
-        case 'X-GOTRS-Ignore':
+        case 'X-GoatFlow-Ignore':
             container.innerHTML = buildBooleanSelect(currentValue);
             break;
         default:

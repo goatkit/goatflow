@@ -1,4 +1,4 @@
-// Package api provides HTTP handlers for the GOTRS application.
+// Package api provides HTTP handlers for the GoatFlow application.
 package api
 
 import (
@@ -14,7 +14,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // jsonError sends a JSON error response.

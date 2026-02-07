@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/apierrors"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/apierrors"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // RateLimiter implements a token bucket rate limiter

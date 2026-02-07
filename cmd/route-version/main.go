@@ -11,7 +11,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
+	"github.com/goatkit/goatflow/internal/routing"
 )
 
 func main() {
@@ -81,7 +81,7 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println("🔄 GOTRS Route Version Manager")
+	fmt.Println("🔄 GoatFlow Route Version Manager")
 	fmt.Println("")
 	fmt.Println("Usage: route-version <command> [options]")
 	fmt.Println("")

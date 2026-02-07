@@ -14,8 +14,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 DB_HOST="${DB_CONN_HOST:-${DB_HOST:-postgres}}"
 DB_PORT="${DB_CONN_PORT:-${DB_PORT:-5432}}"
-DB_NAME="${DB_CONN_NAME:-${DB_NAME:-gotrs}}"
-DB_USER="${DB_CONN_USER:-${DB_USER:-gotrs_user}}"
+DB_NAME="${DB_CONN_NAME:-${DB_NAME:-goatflow}}"
+DB_USER="${DB_CONN_USER:-${DB_USER:-goatflow_user}}"
 DB_PASSWORD="${DB_CONN_PASSWORD:-${DB_PASSWORD:-}}"
 
 if [ -z "$DB_PASSWORD" ]; then
@@ -23,8 +23,8 @@ if [ -z "$DB_PASSWORD" ]; then
   exit 1
 fi
 
-TOOLBOX_IMAGE="${TOOLBOX_IMAGE:-gotrs-toolbox:latest}"
-NETWORK="${DB_CONTAINER_NETWORK:-gotrs-ce_gotrs-network}"
+TOOLBOX_IMAGE="${TOOLBOX_IMAGE:-ghcr.io/goatkit/goatflow/toolbox:latest}"
+NETWORK="${DB_CONTAINER_NETWORK:-goatflow_goatflow-network}"
 
 uid=$(id -u)
 gid=$(id -g)
@@ -41,4 +41,4 @@ gid=$(id -g)
     -e DB_USER="$DB_USER" \
     -e DB_PASSWORD="$DB_PASSWORD" \
     "$TOOLBOX_IMAGE" \
-    gotrs reset-user --username="$USERNAME" --password="$PASSWORD" --enable
+    goatflow reset-user --username="$USERNAME" --password="$PASSWORD" --enable

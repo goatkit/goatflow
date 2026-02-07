@@ -5,14 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/email/inbound/connector"
 )
 
-func TestHeaderTokenFilterDetectsGOTRSHeader(t *testing.T) {
+func TestHeaderTokenFilterDetectsGoatFlowHeader(t *testing.T) {
 	filter := NewHeaderTokenFilter(nil)
 	raw := strings.Join([]string{
 		"Subject: Hi",
-		"X-GOTRS-TicketNumber: 20259001",
+		"X-GoatFlow-TicketNumber: 20259001",
 		"",
 		"Body",
 	}, "\r\n")
@@ -45,7 +45,7 @@ func TestHeaderTokenFilterHandlesBracketedValue(t *testing.T) {
 func TestHeaderTokenFilterRespectsExistingAnnotation(t *testing.T) {
 	filter := NewHeaderTokenFilter(nil)
 	ctx := &MessageContext{
-		Message:     &connector.FetchedMessage{Raw: []byte("Subject: Hi\r\nX-GOTRS-TicketNumber: 111\r\n\r\nBody")},
+		Message:     &connector.FetchedMessage{Raw: []byte("Subject: Hi\r\nX-GoatFlow-TicketNumber: 111\r\n\r\nBody")},
 		Annotations: map[string]any{AnnotationFollowUpTicketNumber: "555"},
 	}
 	if err := filter.Apply(context.Background(), ctx); err != nil {

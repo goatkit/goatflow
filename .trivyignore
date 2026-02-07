@@ -1,4 +1,4 @@
-# Trivy ignore file for GOTRS
+# Trivy ignore file for GoatFlow
 # https://aquasecurity.github.io/trivy/latest/docs/configuration/filtering/#by-finding-ids
 
 # Test credentials - not real secrets

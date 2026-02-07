@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/services/scheduler"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/services/scheduler"
 )
 
 // RegisterPluginJobs registers all plugin-defined jobs with the scheduler.

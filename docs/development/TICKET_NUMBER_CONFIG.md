@@ -11,14 +11,14 @@ OTRS provides several built-in generators:
 3. **DateChecksum** - Date with checksum (20250821-000001-31)
 4. **Random** - Random alphanumeric strings
 
-## Current GOTRS Implementation
+## Current GoatFlow Implementation
 Currently hardcoded to date-based format: `YYYYMMDD-NNNNNN` (e.g., 20250821-000007)
 
 ## Proposed Configuration Structure
 
 ### Using Viper/YAML (as per project decision)
 ```yaml
-# config/gotrs.yaml
+# config/goatflow.yaml
 ticket:
   number_generator:
     type: "date"  # Options: auto_increment, date, date_checksum, random, custom

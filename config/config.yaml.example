@@ -1,4 +1,4 @@
-# GOTRS Local Configuration Override
+# GoatFlow Local Configuration Override
 # Copy this file to config.yaml for local development overrides
 # These values override default.yaml
 # DO NOT commit config.yaml to version control
@@ -27,7 +27,7 @@ valkey:
 
 auth:
   jwt:
-    # Local-only secret; production should set GOTRS_JWT_SECRET env var.
+    # Local-only secret; production should set GOATFLOW_JWT_SECRET env var.
     secret: "my-local-development-secret-key-change-in-production"
 
 email:

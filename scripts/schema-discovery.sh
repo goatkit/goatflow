@@ -16,11 +16,11 @@ else
 fi
 
 # Default values
-DB_HOST="gotrs-postgres"
+DB_HOST="goatflow-postgres"
 DB_PORT="5432"
-DB_USER="gotrs_user"
+DB_USER="goatflow_user"
 DB_PASSWORD="${DB_PASSWORD:-}"
-DB_NAME="gotrs"
+DB_NAME="goatflow"
 OUTPUT_DIR="/app/modules/generated"
 VERBOSE=""
 TABLE=""
@@ -63,11 +63,11 @@ while [[ $# -gt 0 ]]; do
         --help)
             echo "Usage: $0 [options]"
             echo "Options:"
-            echo "  --host HOST        Database host (default: gotrs-postgres)"
+            echo "  --host HOST        Database host (default: goatflow-postgres)"
             echo "  --port PORT        Database port (default: 5432)"
-            echo "  --user USER        Database user (default: gotrs_user)"
+            echo "  --user USER        Database user (default: goatflow_user)"
             echo "  --password PASS    Database password"
-            echo "  --database DB      Database name (default: gotrs)"
+            echo "  --database DB      Database name (default: goatflow)"
             echo "  --output DIR       Output directory (default: /app/modules/generated)"
             echo "  --table TABLE      Specific table to generate (empty for all)"
             echo "  --verbose          Verbose output"
@@ -109,7 +109,7 @@ fi
 
 # Run the schema discovery tool in container with network access to database
 $CONTAINER_CMD run --rm \
-    --network gotrs-ce_gotrs-network \
+    --network goatflow_goatflow-network \
     -v "$PROJECT_ROOT:/app" \
     -w /app \
     alpine:latest \

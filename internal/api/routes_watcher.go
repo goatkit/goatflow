@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
+	"github.com/goatkit/goatflow/internal/routing"
 )
 
 // hotReloadableEngine holds an *gin.Engine atomically swapped during hot reload.

@@ -232,7 +232,7 @@
         "skipped": "lojlu'ta' (taH)",
         "updated": "choHlu'ta'",
         "upload_and_preview": "ngeH 'ej cha'",
-        "upload_description": "GOTRS pagh OTRS vo' YAML teywI' yIwIv yItlhegh DuHIvDI' chenmoHwI' Hev.",
+        "upload_description": "GoatFlow pagh OTRS vo' YAML teywI' yIwIv yItlhegh DuHIvDI' chenmoHwI' Hev.",
         "upload_file": "YAML teywI' ngeH",
         "will_create": "chenmoHlu'",
         "will_overwrite": "choHlu'"
@@ -524,7 +524,7 @@
           "valid_id": "val'ghach"
         },
         "help": {
-          "allow_trusted_headers": "tlhegh choH nachDaq X-OTRS-Queue / X-GOTRS lajchu' QIn paqvamvaD.",
+          "allow_trusted_headers": "tlhegh choH nachDaq X-OTRS-Queue / X-GoatFlow lajchu' QIn paqvamvaD.",
           "poll_interval_seconds": "QIn paqvamvaD Qapla'moHwI' poH choH. pagh lo' Hoch tlhoS.",
           "queue_id": "el QInmey tlheghvamDaq lan.",
           "valid_id": "QIn paq Qap 'e' wIv."
@@ -636,16 +636,16 @@
       },
       "postmaster_filter": {
         "actions": {
-          "customer_id": "X-GOTRS-CustomerID (SuywI' mI' cher)",
-          "customer_user": "X-GOTRS-CustomerUser (SuywI' lo'wI' cher)",
-          "ignore": "X-GOTRS-Ignore (ta chenmoHbe')",
-          "priority": "X-GOTRS-Priority (potlh pong cher)",
-          "priority_id": "X-GOTRS-PriorityID (potlh cher)",
-          "queue": "X-GOTRS-Queue (lut'a' He)",
-          "queue_id": "X-GOTRS-QueueID (lut'a' mI' He)",
-          "state": "X-GOTRS-State (ta Dotlh cher)",
-          "title": "X-GOTRS-Title (ta pong choH)",
-          "type": "X-GOTRS-Type (ta Segh cher)"
+          "customer_id": "X-GoatFlow-CustomerID (SuywI' mI' cher)",
+          "customer_user": "X-GoatFlow-CustomerUser (SuywI' lo'wI' cher)",
+          "ignore": "X-GoatFlow-Ignore (ta chenmoHbe')",
+          "priority": "X-GoatFlow-Priority (potlh pong cher)",
+          "priority_id": "X-GoatFlow-PriorityID (potlh cher)",
+          "queue": "X-GoatFlow-Queue (lut'a' He)",
+          "queue_id": "X-GoatFlow-QueueID (lut'a' mI' He)",
+          "state": "X-GoatFlow-State (ta Dotlh cher)",
+          "title": "X-GoatFlow-Title (ta pong choH)",
+          "type": "X-GoatFlow-Type (ta Segh cher)"
         },
         "add_action": "ta' chel",
         "add_condition": "Dotlh chel",
@@ -1035,7 +1035,7 @@
         },
         "import": {
           "back_to_list": "ra'mey chegh",
-          "description": "GOTRS YAML teywI'vo' pagh nItlh chenmoHlu'bogh ra'mey el",
+          "description": "GoatFlow YAML teywI'vo' pagh nItlh chenmoHlu'bogh ra'mey el",
           "file_label": "YAML teywI'",
           "file_types": "YAML teywI'mey neH (.yaml, .yml)",
           "format_description": "el teywI' mIwvam tlha' net poQ:",
@@ -1499,8 +1499,8 @@
   },
   "app": {
     "description": "chu' IT toy'taH SeH pat",
-    "name": "GOTRS",
-    "title": "GOTRS - chaw' pat"
+    "name": "GoatFlow",
+    "title": "GoatFlow - chaw' pat"
   },
   "assets": {
     "asset_tag": "Doch per",
@@ -1939,7 +1939,7 @@
   },
   "customer_portal": {
     "placeholders": {
-      "footer": "Powered by GOTRS",
+      "footer": "Powered by GoatFlow",
       "title": "je'wI' Portal"
     }
   },

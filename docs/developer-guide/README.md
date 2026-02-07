@@ -1,6 +1,6 @@
 # Developer Guide
 
-GOTRS is container-first and primarily server-rendered (HTMX). This guide is the entry point for developers.
+GoatFlow is container-first and primarily server-rendered (HTMX). This guide is the entry point for developers.
 
 ## Quick start
 

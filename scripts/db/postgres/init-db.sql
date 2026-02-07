@@ -1,16 +1,16 @@
--- Initial database setup for GOTRS
+-- Initial database setup for GoatFlow
 -- This script runs automatically when PostgreSQL container starts
 
 -- Create Temporal databases (required for workflow engine)
 CREATE DATABASE temporal;
 CREATE DATABASE temporal_visibility;
 
--- Grant permissions to gotrs_user for Temporal databases
-GRANT ALL PRIVILEGES ON DATABASE temporal TO gotrs_user;
-GRANT ALL PRIVILEGES ON DATABASE temporal_visibility TO gotrs_user;
+-- Grant permissions to goatflow_user for Temporal databases
+GRANT ALL PRIVILEGES ON DATABASE temporal TO goatflow_user;
+GRANT ALL PRIVILEGES ON DATABASE temporal_visibility TO goatflow_user;
 
--- Switch to main database for GOTRS tables
-\c gotrs_db;
+-- Switch to main database for GoatFlow tables
+\c goatflow_db;
 
 -- Enable extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

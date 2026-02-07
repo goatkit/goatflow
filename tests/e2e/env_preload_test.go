@@ -6,8 +6,8 @@ package e2e
 // It deliberately triggers config.GetConfig() which performs a one-time .env parse.
 
 import (
-	"github.com/gotrs-io/gotrs-ce/tests/e2e/config"
-	_ "github.com/gotrs-io/gotrs-ce/tests/e2e/config" // import for side-effect: init + GetConfig invocation below
+	"github.com/goatkit/goatflow/tests/e2e/config"
+	_ "github.com/goatkit/goatflow/tests/e2e/config" // import for side-effect: init + GetConfig invocation below
 )
 
 func init() {

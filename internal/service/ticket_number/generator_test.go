@@ -51,9 +51,9 @@ func getTestDB(t *testing.T) *sql.DB {
 		if dsn == "" {
 			host := envOrDefault("TEST_DB_HOST", "localhost")
 			port := envOrDefault("TEST_DB_PORT", "5432")
-			user := envOrDefault("TEST_DB_USER", "gotrs_user")
+			user := envOrDefault("TEST_DB_USER", "goatflow_user")
 			pass := envOrDefault("TEST_DB_PASSWORD", "")
-			name := envOrDefault("TEST_DB_NAME", "gotrs")
+			name := envOrDefault("TEST_DB_NAME", "goatflow")
 			sslMode := envOrDefault("TEST_DB_SSLMODE", "disable")
 			dsn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", user, pass, host, port, name, sslMode)
 		}

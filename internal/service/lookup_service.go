@@ -9,10 +9,10 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/gotrs-io/gotrs-ce/internal/data"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/data"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // LookupService provides lookup data for forms and dropdowns.

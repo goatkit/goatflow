@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/tests/e2e/helpers"
+	"github.com/goatkit/goatflow/tests/e2e/helpers"
 	"github.com/playwright-community/playwright-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

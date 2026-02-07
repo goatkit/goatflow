@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // MemoryTicketTemplateRepository is an in-memory implementation of TicketTemplateRepository.

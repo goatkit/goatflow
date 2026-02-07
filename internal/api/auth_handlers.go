@@ -11,11 +11,11 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/constants"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/constants"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 // HandleAuthLogin handles the login form submission.
@@ -112,7 +112,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 
 	// Check if 2FA is enabled for this user
 	if db, err := database.GetDB(); err == nil && db != nil {
-		totpService := service.NewTOTPService(db, "GOTRS")
+		totpService := service.NewTOTPService(db, "GoatFlow")
 		is2FAEnabled := totpService.IsEnabled(int(user.ID))
 		if is2FAEnabled {
 			// 2FA is enabled - don't complete login yet
@@ -155,7 +155,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 		}
 
 		// Persist pre-login language selection to user preferences
-		if preLoginLang, err := c.Cookie("gotrs_lang"); err == nil && preLoginLang != "" {
+		if preLoginLang, err := c.Cookie("goatflow_lang"); err == nil && preLoginLang != "" {
 			if setErr := prefService.SetLanguage(int(user.ID), preLoginLang); setErr != nil {
 				log.Printf("Failed to save language preference: %v", setErr)
 			}
@@ -224,7 +224,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 
 	// Set a non-httpOnly indicator so JavaScript can detect authentication
 	// (auth tokens are httpOnly for security, but JS needs to know user is logged in)
-	c.SetCookie("gotrs_logged_in", "1", sessionTimeout, "/", "", false, false)
+	c.SetCookie("goatflow_logged_in", "1", sessionTimeout, "/", "", false, false)
 
 	redirectTarget := "/dashboard"
 	if strings.EqualFold(user.Role, "customer") {
@@ -262,7 +262,7 @@ var HandleAuthLogout = func(c *gin.Context) {
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
 	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
 	c.SetCookie("session_id", "", -1, "/", "", false, true)
-	c.SetCookie("gotrs_logged_in", "", -1, "/", "", false, false)
+	c.SetCookie("goatflow_logged_in", "", -1, "/", "", false, false)
 
 	// Redirect to login
 	c.Redirect(http.StatusSeeOther, "/login")

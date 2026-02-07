@@ -1,5 +1,5 @@
-// Package mcp implements the Model Context Protocol server for GOTRS.
-// This enables AI assistants to interact with GOTRS via API tokens.
+// Package mcp implements the Model Context Protocol server for GoatFlow.
+// This enables AI assistants to interact with GoatFlow via API tokens.
 package mcp
 
 import (

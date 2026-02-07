@@ -1,10 +1,10 @@
 # Plugin Author Guide
 
-This guide covers everything you need to know to build plugins for GOTRS.
+This guide covers everything you need to know to build plugins for GoatFlow.
 
 ## Overview
 
-GOTRS supports two plugin types:
+GoatFlow supports two plugin types:
 
 | Type | Language | Use Case | Performance |
 |------|----------|----------|-------------|
@@ -114,7 +114,7 @@ Every plugin needs a `manifest.json`:
 
 ## Host API
 
-Plugins interact with GOTRS through the Host API:
+Plugins interact with GoatFlow through the Host API:
 
 ### Database
 
@@ -360,8 +360,8 @@ zip -r my-plugin.zip manifest.json plugin.wasm assets/ i18n/
 Upload via Admin → Plugins → Upload Plugin, or:
 
 ```bash
-cp my-plugin.zip /path/to/gotrs/plugins/
-# GOTRS auto-extracts on next load (or immediately with hot reload)
+cp my-plugin.zip /path/to/goatflow/plugins/
+# GoatFlow auto-extracts on next load (or immediately with hot reload)
 ```
 
 ## Best Practices
@@ -438,7 +438,7 @@ host.Log(ctx, "debug", "Processing item", map[string]any{
 
 ### Hot Reload (Development)
 
-Set `GOTRS_PLUGIN_HOT_RELOAD=true` to auto-reload plugins when files change.
+Set `GOATFLOW_PLUGIN_HOT_RELOAD=true` to auto-reload plugins when files change.
 
 ## Example Plugins
 
@@ -453,4 +453,4 @@ See the `plugins/` directory for examples:
 - [Host API Reference](./HOST_API.md)
 - [WASM Plugin Tutorial](./WASM_TUTORIAL.md)
 - [gRPC Plugin Tutorial](./GRPC_TUTORIAL.md)
-- [GitHub Issues](https://github.com/gotrs-io/gotrs-ce/issues)
+- [GitHub Issues](https://github.com/goatkit/goatflow/issues)

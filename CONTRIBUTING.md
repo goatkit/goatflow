@@ -1,10 +1,10 @@
-# Contributing to GOTRS
+# Contributing to GoatFlow
 
 Engineering assistants: See [docs/development/AGENT_GUIDE.md](docs/development/AGENT_GUIDE.md) for the canonical operating manual and workflow.
 
 ## Coming Soon
 
-Thank you for your interest in contributing to GOTRS! 
+Thank you for your interest in contributing to GoatFlow! 
 
 This document will contain:
 - Code of Conduct
@@ -35,7 +35,7 @@ While we prepare comprehensive contribution guidelines, here are the basics:
 
 - GitHub Issues: [Report bugs or request features]
 - Discord: [Join our community]
-- Email: contribute@gotrs.io
+- Email: hello@goatflow.io
 
 ---
 

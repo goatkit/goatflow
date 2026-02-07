@@ -4,7 +4,7 @@ import (
 	"html"
 	"strings"
 
-	"github.com/gotrs-io/gotrs-ce/internal/utils"
+	"github.com/goatkit/goatflow/internal/utils"
 )
 
 // RenderContext carries values used to interpolate legacy placeholders.

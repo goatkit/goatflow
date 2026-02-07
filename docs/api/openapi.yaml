@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: GOTRS API
+  title: GoatFlow API
   description: |
-    GOTRS (GO Ticket Request System) is a modern, cloud-native ticketing system built with Go and HTMX.
+    GoatFlow (GO Ticket Request System) is a modern, cloud-native ticketing system built with Go and HTMX.
 
     This API provides comprehensive ticket management, user authentication, queue management, and enterprise integrations including LDAP/Active Directory.
 
@@ -28,9 +28,9 @@ info:
 
   version: 1.0.0
   contact:
-    name: GOTRS Support
-    url: https://github.com/gotrs-io/gotrs-ce
-    email: support@gotrs.io
+    name: GoatFlow Support
+    url: https://github.com/goatkit/goatflow
+    email: hello@goatflow.io
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
@@ -38,7 +38,7 @@ info:
 servers:
   - url: http://localhost:8080
     description: Development server
-  - url: https://api.gotrs.io
+  - url: https://api.goatflow.io
     description: Production server
 
 security:
@@ -143,7 +143,7 @@ paths:
                     example: "1.0"
                   name:
                     type: string
-                    example: "GOTRS API"
+                    example: "GoatFlow API"
 
   /api/v1/status:
     get:
@@ -2456,7 +2456,7 @@ components:
     sessionAuth:
       type: apiKey
       in: cookie
-      name: gotrs_session
+      name: goatflow_session
       description: Session-based authentication using cookies
 
     jwtAuth:

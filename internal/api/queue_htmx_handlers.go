@@ -12,10 +12,10 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/routing"
 )
 
 func init() {
@@ -206,7 +206,7 @@ func renderQueuesTestFallback(c *gin.Context) {
 
 	var sb strings.Builder
 	sb.Grow(2048)
-	sb.WriteString(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Queues - GOTRS</title></head>`)
+	sb.WriteString(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Queues - GoatFlow</title></head>`)
 	sb.WriteString(`<body class="bg-white text-gray-900 text-2xl sm:text-3xl dark:bg-gray-800 dark:text-white">`)
 	sb.WriteString(`<main class="max-w-4xl mx-auto px-4 py-6">`)
 	const statBox = `rounded-md bg-gray-100 p-3 dark:bg-gray-900`
@@ -228,7 +228,7 @@ func renderQueuesTestFallback(c *gin.Context) {
 	sb.WriteString(`<div class="` + statBox + ` sm:col-span-2"><span class="` + statLabel + `">Total</span>` +
 		`<span class="` + statVal + `">20</span></div>`)
 	sb.WriteString(`</section>`)
-	const btnPrimary = `inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm ` +
+	const btnPrimary = `inline-flex items-center rounded-md bg-goatflow-600 px-3 py-2 text-sm ` +
 		`font-semibold text-white dark:bg-gray-700 dark:hover:bg-gray-700`
 	sb.WriteString(`<a href="/queues/new" class="` + btnPrimary + `">New Queue</a>`)
 	sb.WriteString(`<section class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">`)
@@ -322,7 +322,7 @@ func renderDashboardTestFallback(c *gin.Context) {
 	sb.WriteString("<nav class=\"bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700\">")
 	sb.WriteString("<div class=\"mx-auto max-w-7xl px-4 sm:px-6 lg:px-8\">")
 	sb.WriteString("<div class=\"flex h-16 items-center justify-between\">")
-	sb.WriteString("<div class=\"flex items-center space-x-4\"><span class=\"text-lg font-semibold\">GOTRS</span>")
+	sb.WriteString("<div class=\"flex items-center space-x-4\"><span class=\"text-lg font-semibold\">GoatFlow</span>")
 	sb.WriteString("<div class=\"hidden sm:flex sm:space-x-4\">")
 	for _, link := range links {
 		if !link.show {
@@ -334,7 +334,7 @@ func renderDashboardTestFallback(c *gin.Context) {
 	sb.WriteString("</div></div>")
 	sb.WriteString("<div class=\"-mr-2 flex items-center sm:hidden\">")
 	const menuBtn = `sm:hidden inline-flex items-center justify-center rounded-md p-2 ` +
-		`text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gotrs-500`
+		`text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-goatflow-500`
 	sb.WriteString("<button @click=\"mobileMenuOpen = !mobileMenuOpen\" class=\"" + menuBtn +
 		"\" type=\"button\" aria-label=\"Toggle navigation\">")
 	sb.WriteString("<span>Menu</span>")

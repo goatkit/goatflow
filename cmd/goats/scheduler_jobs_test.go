@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 func TestBuildSchedulerJobsFromConfigDefaultsWhenNil(t *testing.T) {

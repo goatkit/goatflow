@@ -1,13 +1,13 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "GOTRS Ticket System REST API",
-        "title": "GOTRS API",
-        "termsOfService": "https://gotrs.io/terms/",
+        "description": "GoatFlow Ticket System REST API",
+        "title": "GoatFlow API",
+        "termsOfService": "https://goatflow.io/terms/",
         "contact": {
-            "name": "GOTRS Support",
-            "url": "https://gotrs.io/support",
-            "email": "support@gotrs.io"
+            "name": "GoatFlow Support",
+            "url": "https://goatflow.io/support",
+            "email": "hello@goatflow.io"
         },
         "license": {
             "name": "AGPL-3.0",

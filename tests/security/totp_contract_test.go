@@ -1,4 +1,4 @@
-// Package security contains security-focused contract tests for GOTRS.
+// Package security contains security-focused contract tests for GoatFlow.
 // These tests verify security behaviours without needing a full database connection.
 package security
 

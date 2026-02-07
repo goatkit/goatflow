@@ -167,7 +167,7 @@ func main() {
 		routesDir = os.Args[1]
 	}
 
-	fmt.Println("🔍 GOTRS Route Linter")
+	fmt.Println("🔍 GoatFlow Route Linter")
 	fmt.Println("====================")
 	fmt.Printf("Scanning: %s\n\n", routesDir)
 
@@ -292,9 +292,9 @@ func checkAPIVersion(config *RouteConfig, path string) []LintIssue {
 		issues = append(issues, LintIssue{
 			Message: "Missing apiVersion field",
 		})
-	} else if !strings.HasPrefix(config.APIVersion, "gotrs.io/") {
+	} else if !strings.HasPrefix(config.APIVersion, "goatflow.io/") {
 		issues = append(issues, LintIssue{
-			Message: fmt.Sprintf("apiVersion should start with 'gotrs.io/', got '%s'", config.APIVersion),
+			Message: fmt.Sprintf("apiVersion should start with 'goatflow.io/', got '%s'", config.APIVersion),
 		})
 	}
 

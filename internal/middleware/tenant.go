@@ -6,14 +6,14 @@ import (
 	"strings"
 )
 
-// ResolveTenantFromHost maps the request host to a tenant ID using GOTRS_CUSTOMER_HOSTMAP.
+// ResolveTenantFromHost maps the request host to a tenant ID using GOATFLOW_CUSTOMER_HOSTMAP.
 // Format: "host1=1,host2=2". Unknown hosts return 0.
 func ResolveTenantFromHost(host string) uint {
 	if host == "" {
 		return 0
 	}
 	host = stripPort(host)
-	mapping := os.Getenv("GOTRS_CUSTOMER_HOSTMAP")
+	mapping := os.Getenv("GOATFLOW_CUSTOMER_HOSTMAP")
 	if mapping == "" {
 		return 0
 	}

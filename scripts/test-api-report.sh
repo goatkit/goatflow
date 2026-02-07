@@ -25,9 +25,9 @@ test_api() {
     
     # Run test and capture output
     if docker run --rm \
-        -v "/home/nigel/git/gotrs-io/gotrs-ce:/workspace" \
+        -v "/home/nigel/git/goatkit/goatflow:/workspace" \
         -w /workspace \
-        --network gotrs-ce_gotrs-network \
+        --network goatflow_goatflow-network \
         "${GO_IMAGE:-golang:1.24.11-alpine}" \
         sh -c "go test -v ./internal/api -run '$pattern' -count=1 2>&1" > /tmp/test_output.txt 2>&1; then
         

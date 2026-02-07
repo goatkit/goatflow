@@ -34,11 +34,11 @@ make schema-table TABLE=ticket_priority
 
 ```bash
 ./scripts/schema-discovery.sh [options]
-  --host HOST        Database host (default: gotrs-postgres)
+  --host HOST        Database host (default: goatflow-postgres)
   --port PORT        Database port (default: 5432)
-  --user USER        Database user (default: gotrs_user)
+  --user USER        Database user (default: goatflow_user)
   --password PASS    Database password
-  --database DB      Database name (default: gotrs)
+  --database DB      Database name (default: goatflow)
   --output DIR       Output directory (default: modules/generated)
   --table TABLE      Specific table to generate (empty for all)
   --verbose          Verbose output
@@ -198,15 +198,15 @@ fields:
 ## Troubleshooting
 
 ### Network Not Found
-If you see "network gotrs-ce_default not found":
+If you see "network goatflow_default not found":
 ```bash
 # Check actual network name
-docker network ls | grep gotrs
+docker network ls | grep goatflow
 
 # Update script with correct network
 vim scripts/schema-discovery.sh
-# Change: --network gotrs-ce_default
-# To: --network gotrs-ce_gotrs-network
+# Change: --network goatflow_default
+# To: --network goatflow_goatflow-network
 ```
 
 ### Permission Denied

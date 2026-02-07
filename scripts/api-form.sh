@@ -1,5 +1,5 @@
 #!/bin/bash
-# GOTRS API Testing Script (form-urlencoded)
+# GoatFlow API Testing Script (form-urlencoded)
 # Authenticates with JSON login, then sends application/x-www-form-urlencoded body.
 
 set -euo pipefail
@@ -24,8 +24,8 @@ fi
 
 # Infer BACKEND_URL if not set
 if [[ -z "${BACKEND_URL:-}" ]]; then
-    if getent hosts gotrs-backend >/dev/null 2>&1; then
-        BACKEND_URL="https://gotrs-backend:8080"
+    if getent hosts goatflow-backend >/dev/null 2>&1; then
+        BACKEND_URL="https://goatflow-backend:8080"
     else
         BACKEND_URL="http://localhost:8080"
     fi
@@ -39,7 +39,7 @@ auth_json() {
     for e in "${endpoints[@]}"; do
         response=$(curl -k -s -w '\n%{http_code}' -X POST "$BACKEND_URL$e" -H 'Content-Type: application/json' -H 'Accept: application/json' -d "$payload" || true)
         body="${response%$'\n'*}"; http_code="${response##*$'\n'}"
-        if [[ "${GOTRS_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
+        if [[ "${GOATFLOW_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
             echo "DEBUG: (POST $e) HTTP $http_code body: $body" >&2
         fi
         if [[ "$http_code" != "200" ]]; then continue; fi
@@ -72,7 +72,7 @@ if [[ -n "$BODY" ]]; then args+=( -d "$BODY" ); fi
 
 resp=$(curl "${args[@]}") || true
 body="${resp%$'\n'*}"; code="${resp##*$'\n'}"
-if [[ "${GOTRS_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
+if [[ "${GOATFLOW_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
     echo "DEBUG: ($METHOD $ENDPOINT) HTTP $code body: $body" >&2
 fi
 if echo "$body" | jq . >/dev/null 2>&1; then

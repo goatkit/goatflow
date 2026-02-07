@@ -189,7 +189,7 @@ GROUPS: List[Dict[str, object]] = [
         "title": "i18n (Babelfish)",
         "emoji": "🐠",
         "entries": [
-            {"name": "babelfish", "description": "Build gotrs‑babelfish translation binary"},
+            {"name": "babelfish", "description": "Build goatflow‑babelfish translation binary"},
             {"name": "babelfish-coverage", "description": "Show translation coverage stats"},
             {
                 "name": "babelfish-validate",
@@ -329,14 +329,14 @@ GROUPS: List[Dict[str, object]] = [
         "emoji": "⎈",
         "entries": [
             {"name": "helm-setup", "description": "Configure Helm repos (valkey)"},
-            {"name": "helm-lint", "description": "Lint the GOTRS Helm chart (included in make lint)"},
+            {"name": "helm-lint", "description": "Lint the GoatFlow Helm chart (included in make lint)"},
             {"name": "helm-template", "description": "Render chart templates (dry-run)"},
             {"name": "helm-template-pg", "description": "Render chart with PostgreSQL values"},
             {"name": "helm-deps", "description": "Update chart dependencies (valkey subchart)"},
             {"name": "helm-package", "description": "Package chart for distribution"},
             {
                 "name": "helm",
-                "usage": "make helm ARGS='template gotrs charts/gotrs'",
+                "usage": "make helm ARGS='template goatflow charts/goatflow'",
                 "description": "Run arbitrary helm command in toolbox",
             },
         ],
@@ -353,7 +353,7 @@ def read_logo() -> str:
     try:
         return LOGO_PATH.read_text()
     except FileNotFoundError:
-        return "  🐐 GOTRS - Go Open Ticketing Resource System"
+        return "  🐐 GoatFlow - Go Open Ticketing Resource System"
 
 
 def iter_targets_from_makefile() -> Set[str]:
@@ -474,7 +474,7 @@ def main() -> None:
         ]
         print(render_group("Other Targets", "🧩", other_entries, width))
 
-    print(f"  {CYAN}🐐 Happy coding with GOTRS!{RESET}")
+    print(f"  {CYAN}🐐 Happy coding with GoatFlow!{RESET}")
     container_cmd = os.environ.get("CONTAINER_CMD") or "configure CONTAINER_CMD"
     compose_cmd = os.environ.get("COMPOSE_CMD") or "configure COMPOSE_CMD"
     print(

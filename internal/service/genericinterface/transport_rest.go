@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // RESTTransport implements the Transport interface for HTTP REST APIs.

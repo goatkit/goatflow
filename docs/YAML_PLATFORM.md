@@ -1,8 +1,8 @@
-# GOTRS Unified YAML-as-a-Service Platform
+# GoatFlow Unified YAML-as-a-Service Platform
 
 ## Overview
 
-The GOTRS YAML Platform provides enterprise-grade configuration management for all YAML-based configurations in the system. It brings Git-like version control, schema validation, hot reload capabilities, and comprehensive tooling to every configuration file.
+The GoatFlow YAML Platform provides enterprise-grade configuration management for all YAML-based configurations in the system. It brings Git-like version control, schema validation, hot reload capabilities, and comprehensive tooling to every configuration file.
 
 ## Architecture
 
@@ -53,7 +53,7 @@ The GOTRS YAML Platform provides enterprise-grade configuration management for a
 - Setting management functions
 - Backward compatibility
 
-### 6. CLI Tool (`cmd/gotrs-config/main.go`)
+### 6. CLI Tool (`cmd/goatflow-config/main.go`)
 - Unified interface for all operations
 - Container-based execution
 - Zero host dependencies
@@ -62,7 +62,7 @@ The GOTRS YAML Platform provides enterprise-grade configuration management for a
 
 ### Routes
 ```yaml
-apiVersion: gotrs.io/v1
+apiVersion: goatflow.io/v1
 kind: Route
 metadata:
   name: api-endpoints
@@ -77,7 +77,7 @@ spec:
 
 ### Configuration
 ```yaml
-apiVersion: gotrs.io/v1
+apiVersion: goatflow.io/v1
 kind: Config
 metadata:
   name: system-config
@@ -91,7 +91,7 @@ data:
 
 ### Dashboards
 ```yaml
-apiVersion: gotrs.io/v1
+apiVersion: goatflow.io/v1
 kind: Dashboard
 metadata:
   name: admin-dashboard
@@ -109,53 +109,53 @@ spec:
 
 ```bash
 # List all configurations
-gotrs-config list
+goatflow-config list
 
 # Show specific configuration
-gotrs-config show config system-config
+goatflow-config show config system-config
 
 # Validate a YAML file
-gotrs-config validate config.yaml
+goatflow-config validate config.yaml
 
 # Lint for best practices
-gotrs-config lint ./configs/
+goatflow-config lint ./configs/
 
 # View version history
-gotrs-config version list config system-config
+goatflow-config version list config system-config
 
 # Rollback to previous version
-gotrs-config rollback config system-config v1.0
+goatflow-config rollback config system-config v1.0
 
 # Show differences between versions
-gotrs-config diff config system-config v1.0 v1.1
+goatflow-config diff config system-config v1.0 v1.1
 
 # Apply a configuration
-gotrs-config apply new-config.yaml
+goatflow-config apply new-config.yaml
 
 # Watch for changes (hot reload)
-gotrs-config watch
+goatflow-config watch
 
 # Export configurations
-gotrs-config export config ./backup/
+goatflow-config export config ./backup/
 
 # Import configurations
-gotrs-config import ./configs/
+goatflow-config import ./configs/
 ```
 
 ### Container Usage
 
 ```bash
 # Run with Docker
-docker run --rm -v $(pwd):/app gotrs-config-manager <command>
+docker run --rm -v $(pwd):/app goatflow-config-manager <command>
 
 # Run with Podman
-podman run --rm -v $(pwd):/app:Z gotrs-config-manager <command>
+podman run --rm -v $(pwd):/app:Z goatflow-config-manager <command>
 
 # With persistent storage
 docker run --rm \
   -v config-data:/app/.versions \
   -v $(pwd):/app \
-  gotrs-config-manager <command>
+  goatflow-config-manager <command>
 ```
 
 ## Version Management
@@ -309,12 +309,12 @@ hotReload.RegisterHandler(KindMyType, myReloadHandler)
 3. Set up persistent storage for versions
 
 ### Phase 2: Import
-1. Import existing routes: `gotrs-config import ./routes`
-2. Import system config: `gotrs-config import ./config`
-3. Verify imports: `gotrs-config list`
+1. Import existing routes: `goatflow-config import ./routes`
+2. Import system config: `goatflow-config import ./config`
+3. Verify imports: `goatflow-config list`
 
 ### Phase 3: Integration
-1. Enable hot reload: `gotrs-config watch &`
+1. Enable hot reload: `goatflow-config watch &`
 2. Update services to use versioned configs
 3. Train team on new tooling
 
@@ -356,13 +356,13 @@ hotReload.RegisterHandler(KindMyType, myReloadHandler)
 **Container can't access files**
 ```bash
 # Use absolute paths or proper volume mounts
-docker run -v $(pwd):/app:Z gotrs-config-manager list
+docker run -v $(pwd):/app:Z goatflow-config-manager list
 ```
 
 **Validation failures**
 ```bash
 # Check schema compliance
-gotrs-config validate config.yaml
+goatflow-config validate config.yaml
 # Fix based on error messages
 ```
 
@@ -376,8 +376,8 @@ gotrs-config validate config.yaml
 **Version history lost**
 ```bash
 # Use persistent volume for .versions directory
-docker volume create gotrs-config-data
-docker run -v gotrs-config-data:/app/.versions ...
+docker volume create goatflow-config-data
+docker run -v goatflow-config-data:/app/.versions ...
 ```
 
 ## Future Enhancements
@@ -400,6 +400,6 @@ docker run -v gotrs-config-data:/app/.versions ...
 
 ## Conclusion
 
-The GOTRS Unified YAML Platform transforms configuration management from a risky, manual process into a safe, automated, version-controlled system. With hot reload, validation, and comprehensive tooling, it provides enterprise-grade configuration management while maintaining the simplicity of YAML files.
+The GoatFlow Unified YAML Platform transforms configuration management from a risky, manual process into a safe, automated, version-controlled system. With hot reload, validation, and comprehensive tooling, it provides enterprise-grade configuration management while maintaining the simplicity of YAML files.
 
 The platform's container-first architecture ensures it works consistently across all environments, from local development to production Kubernetes clusters. By treating configuration as code with full version control, the platform enables GitOps workflows and provides the safety net of instant rollback for any configuration change.

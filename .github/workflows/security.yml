@@ -113,7 +113,7 @@ jobs:
           go mod tidy
           go mod download
         env:
-          GOPRIVATE: github.com/gotrs-io/*
+          GOPRIVATE: github.com/goatkit/*
 
       - name: Install go-licenses
         run: go install github.com/google/go-licenses@latest

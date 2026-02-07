@@ -1,6 +1,6 @@
 package core
 
-import "github.com/gotrs-io/gotrs-ce/internal/constants"
+import "github.com/goatkit/goatflow/internal/constants"
 
 // MapCommunicationChannel derives communication_channel_id from article_type_id.
 // Channel IDs (OTRS-aligned intent):

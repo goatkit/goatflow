@@ -2,7 +2,7 @@
 
 ## Coming Soon
 
-This guide will provide comprehensive instructions for deploying GOTRS on Kubernetes.
+This guide will provide comprehensive instructions for deploying GoatFlow on Kubernetes.
 
 ## Planned Content
 
@@ -35,21 +35,21 @@ This guide will provide comprehensive instructions for deploying GOTRS on Kubern
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gotrs
-  namespace: gotrs
+  name: goatflow
+  namespace: goatflow
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: gotrs
+      app: goatflow
   template:
     metadata:
       labels:
-        app: gotrs
+        app: goatflow
     spec:
       containers:
-      - name: gotrs
-        image: gotrs/gotrs:latest
+      - name: goatflow
+        image: goatflow/goatflow:latest
         ports:
         - containerPort: 8080
 ```
@@ -57,8 +57,8 @@ spec:
 ## Helm Installation (Coming Soon)
 
 ```bash
-helm repo add gotrs https://charts.gotrs.io
-helm install gotrs gotrs/gotrs --namespace gotrs --create-namespace
+helm repo add goatflow https://charts.goatflow.io
+helm install goatflow goatflow/goatflow --namespace goatflow --create-namespace
 ```
 
 ## See Also

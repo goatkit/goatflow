@@ -212,7 +212,7 @@
         "skipped": "Пропущено (уже существует)",
         "updated": "Обновлено",
         "upload_and_preview": "Загрузить и просмотреть",
-        "upload_description": "Выберите YAML-файл, экспортированный из GOTRS или OTRS, для импорта конфигураций динамических полей.",
+        "upload_description": "Выберите YAML-файл, экспортированный из GoatFlow или OTRS, для импорта конфигураций динамических полей.",
         "upload_file": "Загрузить YAML-файл",
         "will_create": "Будет создано",
         "will_overwrite": "Будет перезаписано"
@@ -504,7 +504,7 @@
           "valid_id": "Активность"
         },
         "help": {
-          "allow_trusted_headers": "Принимать переопределение очереди из заголовков X-OTRS-Queue / X-GOTRS для этого ящика.",
+          "allow_trusted_headers": "Принимать переопределение очереди из заголовков X-OTRS-Queue / X-GoatFlow для этого ящика.",
           "poll_interval_seconds": "Переопределить интервал планировщика для этого ящика. Оставьте 0 для наследования глобальных настроек.",
           "queue_id": "Назначить входящие сообщения в эту очередь.",
           "valid_id": "Выберите, активен ли этот почтовый ящик."
@@ -616,16 +616,16 @@
       },
       "postmaster_filter": {
         "actions": {
-          "customer_id": "X-GOTRS-CustomerID (Установить ID клиента)",
-          "customer_user": "X-GOTRS-CustomerUser (Установить пользователя-клиента)",
-          "ignore": "X-GOTRS-Ignore (Пропустить создание заявки)",
-          "priority": "X-GOTRS-Priority (Установить приоритет по имени)",
-          "priority_id": "X-GOTRS-PriorityID (Установить приоритет)",
-          "queue": "X-GOTRS-Queue (Маршрутизация в очередь)",
-          "queue_id": "X-GOTRS-QueueID (Маршрутизация в очередь по ID)",
-          "state": "X-GOTRS-State (Установить состояние заявки)",
-          "title": "X-GOTRS-Title (Переопределить заголовок заявки)",
-          "type": "X-GOTRS-Type (Установить тип заявки)"
+          "customer_id": "X-GoatFlow-CustomerID (Установить ID клиента)",
+          "customer_user": "X-GoatFlow-CustomerUser (Установить пользователя-клиента)",
+          "ignore": "X-GoatFlow-Ignore (Пропустить создание заявки)",
+          "priority": "X-GoatFlow-Priority (Установить приоритет по имени)",
+          "priority_id": "X-GoatFlow-PriorityID (Установить приоритет)",
+          "queue": "X-GoatFlow-Queue (Маршрутизация в очередь)",
+          "queue_id": "X-GoatFlow-QueueID (Маршрутизация в очередь по ID)",
+          "state": "X-GoatFlow-State (Установить состояние заявки)",
+          "title": "X-GoatFlow-Title (Переопределить заголовок заявки)",
+          "type": "X-GoatFlow-Type (Установить тип заявки)"
         },
         "add_action": "Добавить действие",
         "add_condition": "Добавить условие",
@@ -1015,7 +1015,7 @@
         },
         "import": {
           "back_to_list": "Назад к шаблонам",
-          "description": "Импорт шаблонов из YAML файла, экспортированного из GOTRS или созданного вручную",
+          "description": "Импорт шаблонов из YAML файла, экспортированного из GoatFlow или созданного вручную",
           "file_label": "YAML файл",
           "file_types": "Только YAML файлы (.yaml, .yml)",
           "format_description": "Файл импорта должен следовать этой структуре:",
@@ -1479,8 +1479,8 @@
   },
   "app": {
     "description": "Современная платформа управления IT-услугами",
-    "name": "GOTRS",
-    "title": "GOTRS - Система заявок"
+    "name": "GoatFlow",
+    "title": "GoatFlow - Система заявок"
   },
   "assets": {
     "asset_tag": "Инвентарный номер",
@@ -1919,7 +1919,7 @@
   },
   "customer_portal": {
     "placeholders": {
-      "footer": "Powered by GOTRS",
+      "footer": "Powered by GoatFlow",
       "title": "Портал клиента"
     }
   },

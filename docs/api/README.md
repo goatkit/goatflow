@@ -1,8 +1,8 @@
-# GOTRS API Reference
+# GoatFlow API Reference
 
 ## Overview
 
-GOTRS provides three API layers:
+GoatFlow provides three API layers:
 
 1. **v1 API** (`/api/v1/*`) - RESTful JSON API for programmatic access
 2. **MCP Server** (`/api/mcp`) - AI assistant integration via JSON-RPC
@@ -162,7 +162,7 @@ All API responses follow this structure:
 
 ## MCP Server (AI Integration)
 
-The MCP (Model Context Protocol) server enables AI assistants to interact with GOTRS. See [MCP.md](MCP.md) for full documentation.
+The MCP (Model Context Protocol) server enables AI assistants to interact with GoatFlow. See [MCP.md](MCP.md) for full documentation.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -176,7 +176,7 @@ The MCP (Model Context Protocol) server enables AI assistants to interact with G
 - Bearer token authentication via API tokens
 
 ```bash
-curl -X POST https://your-gotrs/api/mcp \
+curl -X POST https://your-goatflow/api/mcp \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'

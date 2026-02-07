@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/filters"
+	"github.com/goatkit/goatflow/internal/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/email/inbound/filters"
 )
 
 type stubProcessor struct {

@@ -1,4 +1,4 @@
-# GOTRS MVP Status & Delivery Schedule
+# GoatFlow MVP Status & Delivery Schedule
 
 This document tracks MVP completion and the delivery schedule.
 
@@ -188,5 +188,5 @@ Confirm:
 
 ## Notes
 
-- GOTRS is HTMX-first / server-rendered.
+- GoatFlow is HTMX-first / server-rendered.
 - Local dev is container-first; prefer `make api-call` and other Makefile helpers over host tooling.

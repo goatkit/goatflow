@@ -1,5 +1,5 @@
 {
-  "description": "GOSEC configuration for GOTRS",
+  "description": "GOSEC configuration for GoatFlow",
   "severity": "medium",
   "confidence": "medium",
   "excludes": [

@@ -38,7 +38,7 @@
   /* Text colors - Terminal white/gray spectrum */
   --gk-text-primary: #FFFFFF;
   --gk-text-secondary: #AAAAAA;
-  --gk-text-muted: #555555;
+  --gk-text-muted: #888888;
   --gk-text-inverse: #000000;
 
   /* Border colors - Subtle terminal grays */
@@ -259,7 +259,7 @@
   color: #87CEEB !important;
 }
 
-/* Brand name (GOTRS) in navbar - light blue, Hack font, no glow */
+/* Brand name (GoatFlow) in navbar - light blue, Hack font, no glow */
 [data-theme="nineties-vibe"].dark .gk-navbar-brand,
 [data-theme="nineties-vibe"] .dark .gk-navbar-brand,
 [data-theme="nineties-vibe"].dark .gk-navbar [class*="brand"],
@@ -547,4 +547,48 @@
   box-shadow:
     inset -1px -1px 0 var(--bevel-shadow),
     inset 1px 1px 0 var(--bevel-highlight);
+}
+
+/* ===========================================
+   Reminder Deck - Terminal-appropriate styling
+   Override blanket button color rules for
+   reminder snooze/action buttons
+   =========================================== */
+
+/* Snooze buttons in reminder cards - keep warning color */
+[data-theme="nineties-vibe"].dark #reminder-deck button,
+[data-theme="nineties-vibe"] .dark #reminder-deck button {
+  color: var(--gk-warning) !important;
+  background: transparent !important;
+  border: 1px solid var(--gk-border-default) !important;
+  box-shadow: none !important;
+}
+
+[data-theme="nineties-vibe"].dark #reminder-deck button:hover,
+[data-theme="nineties-vibe"] .dark #reminder-deck button:hover {
+  background: var(--gk-warning-subtle) !important;
+}
+
+/* "Open Ticket" link styled as terminal button */
+[data-theme="nineties-vibe"].dark #reminder-deck a,
+[data-theme="nineties-vibe"] .dark #reminder-deck a {
+  background: transparent !important;
+  color: var(--gk-secondary) !important;
+  border: 1px solid var(--gk-secondary) !important;
+  box-shadow: none !important;
+}
+
+[data-theme="nineties-vibe"].dark #reminder-deck a:hover,
+[data-theme="nineties-vibe"] .dark #reminder-deck a:hover {
+  background: var(--gk-secondary-subtle) !important;
+}
+
+/* Dismiss X buttons - muted, no border */
+[data-theme="nineties-vibe"].dark #reminder-deck button.text-lg,
+[data-theme="nineties-vibe"] .dark #reminder-deck button.text-lg,
+[data-theme="nineties-vibe"].dark #reminder-deck button.ml-1,
+[data-theme="nineties-vibe"] .dark #reminder-deck button.ml-1 {
+  color: var(--gk-text-muted) !important;
+  border: none !important;
+  background: transparent !important;
 }

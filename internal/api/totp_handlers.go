@@ -14,13 +14,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp"
 
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/notifications"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 func init() {
@@ -58,7 +58,7 @@ func handleTOTPStatus(c *gin.Context) {
 		return
 	}
 
-	totpService := service.NewTOTPService(db, "GOTRS")
+	totpService := service.NewTOTPService(db, "GoatFlow")
 	enabled := totpService.IsEnabled(userID)
 	remaining := totpService.GetRemainingRecoveryCodes(userID)
 
@@ -106,10 +106,10 @@ func handleTOTPSetup(c *gin.Context) {
 
 	userEmail := getTOTPUserEmail(c)
 	if userEmail == "" {
-		userEmail = "user@gotrs.local"
+		userEmail = "user@goatflow.local"
 	}
 
-	totpService := service.NewTOTPService(db, "GOTRS")
+	totpService := service.NewTOTPService(db, "GoatFlow")
 
 	// Check if already enabled
 	if totpService.IsEnabled(userID) {
@@ -190,7 +190,7 @@ func handleTOTPConfirm(c *gin.Context) {
 		return
 	}
 
-	totpService := service.NewTOTPService(db, "GOTRS")
+	totpService := service.NewTOTPService(db, "GoatFlow")
 
 	if err := totpService.ConfirmSetup(userID, req.Code); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
@@ -242,7 +242,7 @@ func handleTOTPDisable(c *gin.Context) {
 		return
 	}
 
-	totpService := service.NewTOTPService(db, "GOTRS")
+	totpService := service.NewTOTPService(db, "GoatFlow")
 
 	if err := totpService.Disable(userID, req.Code); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
@@ -270,7 +270,7 @@ func send2FADisabledNotification(db *sql.DB, userID uint, clientIP string) {
 	subject := "Security Alert: Two-Factor Authentication Disabled"
 	body := fmt.Sprintf(`Hello %s,
 
-Two-factor authentication has been disabled on your GOTRS account.
+Two-factor authentication has been disabled on your GoatFlow account.
 
 Details:
 - Time: %s
@@ -278,7 +278,7 @@ Details:
 
 If you did not make this change, please contact your administrator immediately and consider changing your password.
 
-This is an automated security notification from GOTRS.
+This is an automated security notification from GoatFlow.
 `, user.FirstName, time.Now().Format("2006-01-02 15:04:05 MST"), clientIP)
 
 	if err := notifications.SendEmail(user.Email, subject, body); err != nil {
@@ -300,7 +300,7 @@ func send2FAEnabledNotification(db *sql.DB, userID uint, clientIP string) {
 	subject := "Security Alert: Two-Factor Authentication Enabled"
 	body := fmt.Sprintf(`Hello %s,
 
-Two-factor authentication has been enabled on your GOTRS account.
+Two-factor authentication has been enabled on your GoatFlow account.
 
 Details:
 - Time: %s
@@ -310,7 +310,7 @@ Your account is now more secure. You will need to enter a verification code from
 
 If you did not make this change, please contact your administrator immediately.
 
-This is an automated security notification from GOTRS.
+This is an automated security notification from GoatFlow.
 `, user.FirstName, time.Now().Format("2006-01-02 15:04:05 MST"), clientIP)
 
 	if err := notifications.SendEmail(user.Email, subject, body); err != nil {
@@ -337,7 +337,7 @@ Details:
 
 If you did not request this change, please contact your administrator immediately.
 
-This is an automated security notification from GOTRS.
+This is an automated security notification from GoatFlow.
 `, username, time.Now().Format("2006-01-02 15:04:05 MST"))
 
 	if err := notifications.SendEmail(email, subject, body); err != nil {
@@ -381,7 +381,7 @@ func handleTOTPVerify(c *gin.Context) {
 		return
 	}
 
-	totpService := service.NewTOTPService(db, "GOTRS")
+	totpService := service.NewTOTPService(db, "GoatFlow")
 	valid, err := totpService.ValidateCode(session.UserID, req.Code)
 
 	if err != nil || !valid {
@@ -424,7 +424,7 @@ func handleTOTPVerify(c *gin.Context) {
 	sessionTimeout := 86400 // 24 hours
 	c.SetCookie("access_token", jwtToken, sessionTimeout, "/", "", false, true)
 	c.SetCookie("auth_token", jwtToken, sessionTimeout, "/", "", false, true)
-	c.SetCookie("gotrs_logged_in", "1", sessionTimeout, "/", "", false, false)
+	c.SetCookie("goatflow_logged_in", "1", sessionTimeout, "/", "", false, false)
 
 	c.Header("HX-Redirect", "/dashboard")
 	c.JSON(http.StatusOK, gin.H{
@@ -493,7 +493,7 @@ func handleCustomerTOTPStatus(c *gin.Context) {
 		return
 	}
 
-	totpService := service.NewTOTPService(db, "GOTRS")
+	totpService := service.NewTOTPService(db, "GoatFlow")
 	enabled := totpService.IsEnabledForCustomer(customerLogin)
 	remaining := totpService.GetRemainingRecoveryCodesForCustomer(customerLogin)
 
@@ -533,7 +533,7 @@ func handleCustomerTOTPSetup(c *gin.Context) {
 		return
 	}
 
-	totpService := service.NewTOTPService(db, "GOTRS")
+	totpService := service.NewTOTPService(db, "GoatFlow")
 
 	// Check if already enabled
 	if totpService.IsEnabledForCustomer(customerLogin) {
@@ -620,7 +620,7 @@ func handleCustomerTOTPConfirm(c *gin.Context) {
 		return
 	}
 
-	totpService := service.NewTOTPService(db, "GOTRS")
+	totpService := service.NewTOTPService(db, "GoatFlow")
 
 	if err := totpService.ConfirmSetupForCustomer(customerLogin, req.Code); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
@@ -666,7 +666,7 @@ func handleCustomerTOTPDisable(c *gin.Context) {
 		return
 	}
 
-	totpService := service.NewTOTPService(db, "GOTRS")
+	totpService := service.NewTOTPService(db, "GoatFlow")
 
 	if err := totpService.DisableForCustomer(customerLogin, req.Code); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
@@ -805,7 +805,7 @@ func handleCustomer2FAVerify(c *gin.Context) {
 	}
 
 	// Validate the 2FA code using customer login from server-side session
-	totpService := service.NewTOTPService(db, "GOTRS")
+	totpService := service.NewTOTPService(db, "GoatFlow")
 	valid, err := totpService.ValidateCodeForCustomer(session.UserLogin, code)
 
 	if err != nil || !valid {
@@ -858,7 +858,7 @@ func handleCustomer2FAVerify(c *gin.Context) {
 	sessionTimeout := 86400 // 24 hours
 	c.SetCookie("customer_access_token", jwtToken, sessionTimeout, "/", "", false, true)
 	c.SetCookie("customer_auth_token", jwtToken, sessionTimeout, "/", "", false, true)
-	c.SetCookie("gotrs_customer_logged_in", "1", sessionTimeout, "/", "", false, false)
+	c.SetCookie("goatflow_customer_logged_in", "1", sessionTimeout, "/", "", false, false)
 
 	// Redirect to customer dashboard
 	c.Header("HX-Redirect", "/customer")
@@ -913,7 +913,7 @@ func handleAdmin2FAOverride(c *gin.Context) {
 	}
 
 	// Check if 2FA is enabled
-	totpService := service.NewTOTPService(db, "GOTRS")
+	totpService := service.NewTOTPService(db, "GoatFlow")
 	if !totpService.IsEnabled(targetUserID) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "2FA is not enabled for this user"})
 		return
@@ -974,7 +974,7 @@ func handleAdminCustomer2FAOverride(c *gin.Context) {
 	}
 
 	// Check if 2FA is enabled
-	totpService := service.NewTOTPService(db, "GOTRS")
+	totpService := service.NewTOTPService(db, "GoatFlow")
 	if !totpService.IsEnabledForCustomer(customerLogin) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "2FA is not enabled for this customer"})
 		return

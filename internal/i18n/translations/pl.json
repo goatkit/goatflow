@@ -212,7 +212,7 @@
         "skipped": "Pominięto (już istnieje)",
         "updated": "Zaktualizowano",
         "upload_and_preview": "Prześlij i podejrzyj",
-        "upload_description": "Wybierz plik YAML wyeksportowany z GOTRS lub OTRS, aby zaimportować konfiguracje pól dynamicznych.",
+        "upload_description": "Wybierz plik YAML wyeksportowany z GoatFlow lub OTRS, aby zaimportować konfiguracje pól dynamicznych.",
         "upload_file": "Prześlij plik YAML",
         "will_create": "Zostanie utworzone",
         "will_overwrite": "Zostanie nadpisane"
@@ -504,7 +504,7 @@
           "valid_id": "Ważność"
         },
         "help": {
-          "allow_trusted_headers": "Akceptuj nadpisania kolejki z nagłówków X-OTRS-Queue / X-GOTRS dla tej skrzynki.",
+          "allow_trusted_headers": "Akceptuj nadpisania kolejki z nagłówków X-OTRS-Queue / X-GoatFlow dla tej skrzynki.",
           "poll_interval_seconds": "Nadpisz interwał harmonogramu dla tej skrzynki. Pozostaw 0, aby dziedziczyć globalny rytm.",
           "queue_id": "Przypisz przychodzące wiadomości do tej kolejki.",
           "valid_id": "Wybierz, czy ta skrzynka jest aktywna."
@@ -616,16 +616,16 @@
       },
       "postmaster_filter": {
         "actions": {
-          "customer_id": "X-GOTRS-CustomerID (Ustaw ID klienta)",
-          "customer_user": "X-GOTRS-CustomerUser (Ustaw użytkownika klienta)",
-          "ignore": "X-GOTRS-Ignore (Pomiń utworzenie zgłoszenia)",
-          "priority": "X-GOTRS-Priority (Ustaw priorytet według nazwy)",
-          "priority_id": "X-GOTRS-PriorityID (Ustaw priorytet)",
-          "queue": "X-GOTRS-Queue (Kieruj do kolejki)",
-          "queue_id": "X-GOTRS-QueueID (Kieruj do kolejki według ID)",
-          "state": "X-GOTRS-State (Ustaw stan zgłoszenia)",
-          "title": "X-GOTRS-Title (Nadpisz tytuł zgłoszenia)",
-          "type": "X-GOTRS-Type (Ustaw typ zgłoszenia)"
+          "customer_id": "X-GoatFlow-CustomerID (Ustaw ID klienta)",
+          "customer_user": "X-GoatFlow-CustomerUser (Ustaw użytkownika klienta)",
+          "ignore": "X-GoatFlow-Ignore (Pomiń utworzenie zgłoszenia)",
+          "priority": "X-GoatFlow-Priority (Ustaw priorytet według nazwy)",
+          "priority_id": "X-GoatFlow-PriorityID (Ustaw priorytet)",
+          "queue": "X-GoatFlow-Queue (Kieruj do kolejki)",
+          "queue_id": "X-GoatFlow-QueueID (Kieruj do kolejki według ID)",
+          "state": "X-GoatFlow-State (Ustaw stan zgłoszenia)",
+          "title": "X-GoatFlow-Title (Nadpisz tytuł zgłoszenia)",
+          "type": "X-GoatFlow-Type (Ustaw typ zgłoszenia)"
         },
         "add_action": "Dodaj akcję",
         "add_condition": "Dodaj warunek",
@@ -1015,7 +1015,7 @@
         },
         "import": {
           "back_to_list": "Wróć do szablonów",
-          "description": "Importuj szablony z pliku YAML wyeksportowanego z GOTRS lub utworzonego ręcznie",
+          "description": "Importuj szablony z pliku YAML wyeksportowanego z GoatFlow lub utworzonego ręcznie",
           "file_label": "Plik YAML",
           "file_types": "Tylko pliki YAML (.yaml, .yml)",
           "format_description": "Plik importu powinien mieć następującą strukturę:",
@@ -1479,8 +1479,8 @@
   },
   "app": {
     "description": "Nowoczesna platforma zarządzania usługami IT",
-    "name": "GOTRS",
-    "title": "GOTRS - System zgłoszeń"
+    "name": "GoatFlow",
+    "title": "GoatFlow - System zgłoszeń"
   },
   "assets": {
     "asset_tag": "Tag zasobu",
@@ -1919,7 +1919,7 @@
   },
   "customer_portal": {
     "placeholders": {
-      "footer": "Powered by GOTRS",
+      "footer": "Powered by GoatFlow",
       "title": "Portal klienta"
     }
   },

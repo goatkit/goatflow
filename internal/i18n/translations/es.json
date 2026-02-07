@@ -212,7 +212,7 @@
         "skipped": "Omitidos (ya existen)",
         "updated": "Actualizados",
         "upload_and_preview": "Subir y previsualizar",
-        "upload_description": "Seleccione un archivo YAML exportado desde GOTRS o OTRS para importar configuraciones de campos dinámicos.",
+        "upload_description": "Seleccione un archivo YAML exportado desde GoatFlow o OTRS para importar configuraciones de campos dinámicos.",
         "upload_file": "Subir archivo YAML",
         "will_create": "Se creará",
         "will_overwrite": "Se sobrescribirá"
@@ -504,7 +504,7 @@
           "valid_id": "Validez"
         },
         "help": {
-          "allow_trusted_headers": "Aceptar anulaciones de cola desde cabeceras X-OTRS-Queue / X-GOTRS para este buzón.",
+          "allow_trusted_headers": "Aceptar anulaciones de cola desde cabeceras X-OTRS-Queue / X-GoatFlow para este buzón.",
           "poll_interval_seconds": "Anular el intervalo del planificador para este buzón. Dejar en 0 para heredar la cadencia global.",
           "queue_id": "Asignar mensajes entrantes a esta cola.",
           "valid_id": "Elegir si este buzón está activo."
@@ -616,16 +616,16 @@
       },
       "postmaster_filter": {
         "actions": {
-          "customer_id": "X-GOTRS-CustomerID (Establecer ID de cliente)",
-          "customer_user": "X-GOTRS-CustomerUser (Establecer usuario cliente)",
-          "ignore": "X-GOTRS-Ignore (Omitir creación de ticket)",
-          "priority": "X-GOTRS-Priority (Establecer prioridad por nombre)",
-          "priority_id": "X-GOTRS-PriorityID (Establecer prioridad)",
-          "queue": "X-GOTRS-Queue (Enrutar a cola)",
-          "queue_id": "X-GOTRS-QueueID (Enrutar a cola por ID)",
-          "state": "X-GOTRS-State (Establecer estado del ticket)",
-          "title": "X-GOTRS-Title (Sobrescribir título del ticket)",
-          "type": "X-GOTRS-Type (Establecer tipo de ticket)"
+          "customer_id": "X-GoatFlow-CustomerID (Establecer ID de cliente)",
+          "customer_user": "X-GoatFlow-CustomerUser (Establecer usuario cliente)",
+          "ignore": "X-GoatFlow-Ignore (Omitir creación de ticket)",
+          "priority": "X-GoatFlow-Priority (Establecer prioridad por nombre)",
+          "priority_id": "X-GoatFlow-PriorityID (Establecer prioridad)",
+          "queue": "X-GoatFlow-Queue (Enrutar a cola)",
+          "queue_id": "X-GoatFlow-QueueID (Enrutar a cola por ID)",
+          "state": "X-GoatFlow-State (Establecer estado del ticket)",
+          "title": "X-GoatFlow-Title (Sobrescribir título del ticket)",
+          "type": "X-GoatFlow-Type (Establecer tipo de ticket)"
         },
         "add_action": "Añadir Acción",
         "add_condition": "Añadir Condición",
@@ -1015,7 +1015,7 @@
         },
         "import": {
           "back_to_list": "Volver a Plantillas",
-          "description": "Importar plantillas desde un archivo YAML exportado de GOTRS o creado manualmente",
+          "description": "Importar plantillas desde un archivo YAML exportado de GoatFlow o creado manualmente",
           "file_label": "Archivo YAML",
           "file_types": "Solo archivos YAML (.yaml, .yml)",
           "format_description": "El archivo de importación debe seguir esta estructura:",
@@ -1479,8 +1479,8 @@
   },
   "app": {
     "description": "Plataforma Moderna de Gestión de Servicios de TI",
-    "name": "GOTRS",
-    "title": "GOTRS - Sistema de Tickets"
+    "name": "GoatFlow",
+    "title": "GoatFlow - Sistema de Tickets"
   },
   "assets": {
     "asset_tag": "Etiqueta de Activo",
@@ -1919,7 +1919,7 @@
   },
   "customer_portal": {
     "placeholders": {
-      "footer": "Powered by GOTRS",
+      "footer": "Powered by GoatFlow",
       "title": "Portal del cliente"
     }
   },
