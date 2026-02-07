@@ -237,17 +237,6 @@
                     </div>
                 </div>
             </a>
-            <a href="/admin/settings" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-sliders text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.system_config")|default:"System Configuration" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.system_config_desc")|default:"Tune platform preferences" }}</p>
-                    </div>
-                </div>
-            </a>
             <a href="/admin/reports" class="gk-admin-card group">
                 <div class="flex items-start">
                     <div class="gk-admin-card-icon">
@@ -259,7 +248,7 @@
                     </div>
                 </div>
             </a>
-            <a href="/admin/logs" class="gk-admin-card group">
+            <a href="/admin/modules/admin_audit_log" class="gk-admin-card group">
                 <div class="flex items-start">
                     <div class="gk-admin-card-icon">
                         <i class="fa-solid fa-clipboard-list text-xl" aria-hidden="true"></i>

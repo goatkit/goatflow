@@ -281,7 +281,8 @@ func GetPluginWidgets(ctx context.Context, location string) []PluginWidgetData {
 		return nil
 	}
 
-	widgets := pluginManager.Widgets(location)
+	// Use AllWidgets to trigger lazy loading of discovered plugins
+	widgets := pluginManager.AllWidgets(location)
 	log.Printf("🔌 GetPluginWidgets(%s): found %d widgets from manager", location, len(widgets))
 	results := make([]PluginWidgetData, 0, len(widgets))
 
@@ -289,6 +290,7 @@ func GetPluginWidgets(ctx context.Context, location string) []PluginWidgetData {
 		// Call the widget handler to get HTML (ctx should already have language if from gin)
 		result, err := pluginManager.Call(ctx, w.PluginName, w.Handler, nil)
 		if err != nil {
+			log.Printf("🔌 Widget %s:%s call failed: %v", w.PluginName, w.Handler, err)
 			continue
 		}
 
@@ -296,6 +298,7 @@ func GetPluginWidgets(ctx context.Context, location string) []PluginWidgetData {
 			HTML string `json:"html"`
 		}
 		if err := json.Unmarshal(result, &data); err != nil {
+			log.Printf("🔌 Widget %s:%s unmarshal failed: %v (raw: %s)", w.PluginName, w.Handler, err, string(result))
 			continue
 		}
 

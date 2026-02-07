@@ -116,6 +116,7 @@
                         <th>Contact</th>
                         <th>Tickets</th>
                         <th>Status</th>
+                        <th>2FA</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -156,6 +157,17 @@
                                 <span class="gk-badge gk-badge-success">Valid</span>
                             {% else %}
                                 <span class="gk-badge gk-badge-error">Invalid</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if customer.totp_2fa_enabled %}
+                            <span class="gk-badge gk-badge-success" title="{{ t("admin.2fa_enabled")|default:"2FA Enabled" }}">
+                                <i class="fas fa-shield-alt mr-1"></i>Enabled
+                            </span>
+                            {% else %}
+                            <span class="gk-badge gk-badge-muted" title="{{ t("admin.2fa_disabled")|default:"2FA Not Enabled" }}">
+                                <i class="fas fa-shield-alt mr-1" style="opacity: 0.5;"></i>Off
+                            </span>
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -206,6 +218,17 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                                     </svg>
                                 </button>
+
+                                {% if customer.totp_2fa_enabled %}
+                                <button onclick="disableCustomer2FA('{{ customer.login }}')"
+                                        class="p-1 rounded transition-colors hover:bg-white/10"
+                                        style="color: var(--gk-error);"
+                                        title="{{ t("admin.disable_2fa")|default:"Disable 2FA" }}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                    </svg>
+                                </button>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -650,6 +673,28 @@ function deleteCustomer(id) {
                 setTimeout(() => { window.location.reload(); }, 1000);
             } else {
                 showToast(data.error, 'error');
+            }
+        })
+        .catch(error => {
+            showToast('Error: ' + error.message, 'error');
+        });
+    }
+}
+
+function disableCustomer2FA(login) {
+    if (confirm('{{ t("messages.confirm.disable_customer_2fa")|default:"Are you sure you want to disable 2FA for this customer? They will need to set it up again." }}')) {
+        fetch(`/admin/api/customers/${login}/2fa/disable`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: 'Admin override' })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message || '{{ t("admin.2fa_disabled_success")|default:"2FA has been disabled for this customer" }}');
+                setTimeout(() => { window.location.reload(); }, 1000);
+            } else {
+                showToast(data.error || '{{ t("admin.2fa_disable_failed")|default:"Failed to disable 2FA" }}', 'error');
             }
         })
         .catch(error => {

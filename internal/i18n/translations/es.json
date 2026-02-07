@@ -1351,7 +1351,16 @@
     "close": "Cerrar",
     "manage_api_tokens": "Gestionar Tokens de API",
     "create_token_for_user": "Crear Token para Usuario",
-    "create_token_for_customer": "Crear Token para Cliente"
+    "create_token_for_customer": "Crear Token para Cliente",
+    "disable_2fa": "Disable 2FA",
+    "disable_2fa_title": "Disable Two-Factor Authentication",
+    "disable_2fa_warning": "You are about to disable 2FA for user:",
+    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
+    "reason_required": "Reason (required)",
+    "reason_placeholder": "Enter the reason for disabling 2FA...",
+    "reason_required_error": "Please enter a reason for this action",
+    "2fa_disabled_success": "2FA has been disabled for this user",
+    "2fa_disable_failed": "Failed to disable 2FA"
   },
   "admin_dashboard": {
     "activity": "Actividad",
@@ -1513,7 +1522,14 @@
     "too_many_attempts": "Parao many failed attempts. Please wait",
     "username": "Nombre de Usuario",
     "username_placeholder": "Ingrese su nombre de usuario",
-    "password_placeholder": "Ingrese su contraseña"
+    "password_placeholder": "Ingrese su contraseña",
+    "2fa_title": "Autenticación de dos factores",
+    "2fa_description": "Ingrese el código de 6 dígitos de su aplicación de autenticación",
+    "2fa_verify": "Verificar",
+    "2fa_recovery_hint": "¿Perdió el acceso? Use un código de recuperación",
+    "verification_code": "Código de verificación",
+    "back_to_login": "Volver al inicio de sesión",
+    "verify": "Verificar"
   },
   "bulk_actions": {
     "all_selected": "Todos seleccionados",
@@ -1608,7 +1624,8 @@
     "save_changes": "Guardar cambios",
     "done": "Hecho",
     "revoke": "Revocar",
-    "revoke_token": "Revocar token"
+    "revoke_token": "Revocar token",
+    "continue": "Continuar"
   },
   "changes": {
     "backout_plan": "Plan de Reversión",
@@ -1710,7 +1727,8 @@
     "creating": "Creando...",
     "never": "Nunca",
     "revoked": "Revocado",
-    "year": "año"
+    "year": "año",
+    "verifying": "Verificando..."
   },
   "customer": {
     "auth": {
@@ -1970,7 +1988,11 @@
     "title": "Panel de Control",
     "unassigned_count": "sin asignar",
     "welcome_back": "Bienvenido de nuevo",
-    "welcome_message": "Esto es lo que está pasando con sus tickets hoy"
+    "welcome_message": "Esto es lo que está pasando con sus tickets hoy",
+    "configure_widgets": "Configurar widgets",
+    "widget_config_desc": "Elija qué widgets aparecen en su panel. Arrastre para reordenar.",
+    "no_widgets": "No hay widgets habilitados",
+    "no_widgets_desc": "Haga clic en el icono de engranaje de arriba para habilitar widgets del panel."
   },
   "dynamic_field_form": {
     "basic_information": "Básico Inparamaciónrmation",
@@ -2788,7 +2810,34 @@
     "your_token": "Tu Token",
     "your_tokens": "Tus Tokens",
     "revoke_token_confirm": "¿Está seguro de que desea revocar este token?",
-    "enter_token_name": "Por favor, introduzca un nombre para su token"
+    "enter_token_name": "Por favor, introduzca un nombre para su token",
+    "2fa": {
+      "title": "Autenticación de dos factores",
+      "description": "Añade una capa extra de seguridad a tu cuenta usando una aplicación de autenticación",
+      "enabled": "Activado",
+      "disabled": "Desactivado",
+      "enable": "Activar 2FA",
+      "disable": "Desactivar 2FA",
+      "setup_title": "Configurar autenticación de dos factores",
+      "disable_title": "Desactivar autenticación de dos factores",
+      "scan_qr": "Escanea este código QR con tu aplicación de autenticación",
+      "manual_entry": "O introduce este código manualmente:",
+      "enter_code": "Introduce el código de 6 dígitos de tu aplicación",
+      "verify": "Verificar y activar",
+      "password_required": "Se requiere contraseña",
+      "password_to_setup": "Introduce tu contraseña para configurar 2FA",
+      "confirm_password": "Confirma tu contraseña:",
+      "code_and_password_required": "Se requieren código de verificación y contraseña",
+      "invalid_code": "Código de verificación inválido",
+      "recovery_codes_remaining": "Códigos de recuperación restantes:",
+      "recovery_codes_warning": "Guarda estos códigos en un lugar seguro. Cada código solo puede usarse una vez.",
+      "disable_warning": "Desactivar 2FA eliminará la capa extra de seguridad de tu cuenta.",
+      "password_placeholder": "Introduce tu contraseña",
+      "save_recovery_codes": "Guardar códigos de recuperación",
+      "scan_instructions": "Escanea este código QR con tu aplicación de autenticación",
+      "setup_failed": "Error al configurar 2FA",
+      "verify_enable": "Verificar y activar"
+    }
   },
   "severity": {
     "critical": "Crítica",

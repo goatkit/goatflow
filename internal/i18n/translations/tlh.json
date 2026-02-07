@@ -1371,7 +1371,16 @@
     "close": "SoQmoH",
     "manage_api_tokens": "API pat SeH",
     "create_token_for_user": "lo wI pat chenmoH",
-    "create_token_for_customer": "mach pat chenmoH"
+    "create_token_for_customer": "mach pat chenmoH",
+    "disable_2fa": "Disable 2FA",
+    "disable_2fa_title": "Disable Two-Factor Authentication",
+    "disable_2fa_warning": "You are about to disable 2FA for user:",
+    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
+    "reason_required": "Reason (required)",
+    "reason_placeholder": "Enter the reason for disabling 2FA...",
+    "reason_required_error": "Please enter a reason for this action",
+    "2fa_disabled_success": "2FA has been disabled for this user",
+    "2fa_disable_failed": "Failed to disable 2FA"
   },
   "admin_dashboard": {
     "activity": "vum",
@@ -1533,7 +1542,14 @@
     "too_many_attempts": "Too many failed attempts. Please wait",
     "username": "lo'wI' pong",
     "username_placeholder": "lo'wI' pong yIngu'",
-    "password_placeholder": "pegh mu' yIngu'"
+    "password_placeholder": "pegh mu' yIngu'",
+    "2fa_title": "cha' patlh chut",
+    "2fa_description": "jav mI' ngoq yIcha' lulIgh app vo'",
+    "2fa_verify": "chut",
+    "2fa_recovery_hint": "Suq lojmIt? chetvI' ngoq yIlo'",
+    "verification_code": "chut ngoq",
+    "back_to_login": "logIn Dung chegh",
+    "verify": "chut"
   },
   "bulk_actions": {
     "all_selected": "Hoch wIvlu'",
@@ -1628,7 +1644,8 @@
     "save_changes": "choHwI' pol",
     "done": "pItlh",
     "revoke": "qIl",
-    "revoke_token": "woD permey"
+    "revoke_token": "woD permey",
+    "continue": "taH"
   },
   "changes": {
     "backout_plan": "Dob mIw",
@@ -1730,7 +1747,8 @@
     "creating": "chenmoH...",
     "never": "not",
     "revoked": "qIl ta",
-    "year": "DIS"
+    "year": "DIS",
+    "verifying": "chutlI'..."
   },
   "customer": {
     "auth": {
@@ -1989,7 +2007,11 @@
     "title": "HaSta",
     "unassigned_count": "noblu'be'",
     "welcome_back": "nuqneH chegh",
-    "welcome_message": "DaHjaj chaw'lIj vangmey legh"
+    "welcome_message": "DaHjaj chaw'lIj vangmey legh",
+    "configure_widgets": "jan mIw yISeH",
+    "widget_config_desc": "jan DaqDaq 'ang jan yIwIv. yIqengHa'moH.",
+    "no_widgets": "jan tu'lu'be'",
+    "no_widgets_desc": "jan yIchu'meH, Dung jan Degh yIqIp."
   },
   "dynamic_field_form": {
     "basic_information": "Basic De'rmation",
@@ -2806,7 +2828,34 @@
     "your_token": "pat lI",
     "your_tokens": "pat lI",
     "revoke_token_confirm": "bIHar'a'? permey DawoD DaneH'a'?",
-    "enter_token_name": "permey ponglIj yIngu'"
+    "enter_token_name": "permey ponglIj yIngu'",
+    "2fa": {
+      "title": "cha' buv toblu'meH mIw",
+      "description": "ngoQlIj Hung chel toblu'meH jan lo'",
+      "enabled": "chu'lu'pu'",
+      "disabled": "Qotlhlu'pu'",
+      "enable": "2FA yIchu'",
+      "disable": "2FA yIQotlh",
+      "setup_title": "cha' buv toblu'meH mIw yIqel",
+      "disable_title": "cha' buv toblu'meH mIw yIQotlh",
+      "scan_qr": "QR mIllogh yIHotlh",
+      "manual_entry": "ghap mIw yI'el:",
+      "enter_code": "jav mI' yI'el",
+      "verify": "yItob 'ej yIchu'",
+      "password_required": "mu'qaD HoS poQ",
+      "password_to_setup": "2FA qelmeH mu'qaD HoS yI'el",
+      "confirm_password": "mu'qaD HoS yItob:",
+      "code_and_password_required": "toblu'meH mIw mu'qaD HoS je poQlu'",
+      "invalid_code": "toblu'meH mIw muj",
+      "recovery_codes_remaining": "chegh mIw mI':",
+      "recovery_codes_warning": "mIwvam tI'oj Hung Daq. wa' mIw wa'logh neH lo'laH.",
+      "disable_warning": "2FA DaQotlhchugh ngoQlIj Hung teqlu'.",
+      "password_placeholder": "mu'qaD HoS yI'el",
+      "save_recovery_codes": "chegh mIw yI'oj",
+      "scan_instructions": "QR mIllogh yIHotlh",
+      "setup_failed": "2FA qellu'be'",
+      "verify_enable": "yItob 'ej yIchu'"
+    }
   },
   "severity": {
     "critical": "Qob'a'",

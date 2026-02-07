@@ -1351,7 +1351,16 @@
     "close": "閉じる",
     "manage_api_tokens": "APIトークンを管理",
     "create_token_for_user": "ユーザー用トークンを作成",
-    "create_token_for_customer": "顧客用トークンを作成"
+    "create_token_for_customer": "顧客用トークンを作成",
+    "disable_2fa": "Disable 2FA",
+    "disable_2fa_title": "Disable Two-Factor Authentication",
+    "disable_2fa_warning": "You are about to disable 2FA for user:",
+    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
+    "reason_required": "Reason (required)",
+    "reason_placeholder": "Enter the reason for disabling 2FA...",
+    "reason_required_error": "Please enter a reason for this action",
+    "2fa_disabled_success": "2FA has been disabled for this user",
+    "2fa_disable_failed": "Failed to disable 2FA"
   },
   "admin_dashboard": {
     "activity": "アクティビティ",
@@ -1513,7 +1522,14 @@
     "too_many_attempts": "試行回数が多すぎます。しばらくお待ちください",
     "username": "ユーザー名",
     "username_placeholder": "ユーザー名を入力",
-    "password_placeholder": "パスワードを入力"
+    "password_placeholder": "パスワードを入力",
+    "2fa_title": "二要素認証",
+    "2fa_description": "認証アプリの6桁のコードを入力してください",
+    "2fa_verify": "確認",
+    "2fa_recovery_hint": "アクセスできない場合は、リカバリーコードを使用してください",
+    "verification_code": "確認コード",
+    "back_to_login": "ログインに戻る",
+    "verify": "確認"
   },
   "bulk_actions": {
     "all_selected": "すべて選択済み",
@@ -1608,7 +1624,8 @@
     "save_changes": "変更を保存",
     "done": "完了",
     "revoke": "取り消す",
-    "revoke_token": "トークンを取り消す"
+    "revoke_token": "トークンを取り消す",
+    "continue": "続行"
   },
   "changes": {
     "backout_plan": "バックアウト計画",
@@ -1710,7 +1727,8 @@
     "creating": "作成中...",
     "never": "なし",
     "revoked": "取り消し済み",
-    "year": "年"
+    "year": "年",
+    "verifying": "確認中..."
   },
   "customer": {
     "auth": {
@@ -1971,7 +1989,11 @@
     "title": "ダッシュボード",
     "unassigned_count": "未割り当て",
     "welcome_back": "おかえりなさい",
-    "welcome_message": "本日のチケット状況です"
+    "welcome_message": "本日のチケット状況です",
+    "configure_widgets": "ウィジェットを設定",
+    "widget_config_desc": "ダッシュボードに表示するウィジェットを選択します。ドラッグして並べ替え。",
+    "no_widgets": "有効なウィジェットがありません",
+    "no_widgets_desc": "上の歯車アイコンをクリックしてダッシュボードウィジェットを有効にしてください。"
   },
   "dynamic_field_form": {
     "basic_information": "基本情報",
@@ -2789,7 +2811,34 @@
     "your_token": "あなたのトークン",
     "your_tokens": "あなたのトークン",
     "revoke_token_confirm": "このトークンを取り消してもよろしいですか？",
-    "enter_token_name": "トークンの名前を入力してください"
+    "enter_token_name": "トークンの名前を入力してください",
+    "2fa": {
+      "title": "二要素認証",
+      "description": "認証アプリを使用してアカウントにセキュリティレイヤーを追加",
+      "enabled": "有効",
+      "disabled": "無効",
+      "enable": "2FAを有効化",
+      "disable": "2FAを無効化",
+      "setup_title": "二要素認証の設定",
+      "disable_title": "二要素認証の無効化",
+      "scan_qr": "認証アプリでこのQRコードをスキャン",
+      "manual_entry": "または手動でこのコードを入力:",
+      "enter_code": "認証アプリの6桁のコードを入力",
+      "verify": "確認して有効化",
+      "password_required": "パスワードが必要です",
+      "password_to_setup": "2FAを設定するにはパスワードを入力",
+      "confirm_password": "パスワードを確認:",
+      "code_and_password_required": "確認コードとパスワードの両方が必要です",
+      "invalid_code": "確認コードが無効です",
+      "recovery_codes_remaining": "残りのリカバリーコード:",
+      "recovery_codes_warning": "これらのコードを安全な場所に保存してください。各コードは一度だけ使用できます。",
+      "disable_warning": "2FAを無効にすると、アカウントから追加のセキュリティレイヤーが削除されます。",
+      "password_placeholder": "パスワードを入力",
+      "save_recovery_codes": "リカバリーコードを保存",
+      "scan_instructions": "認証アプリでこのQRコードをスキャンしてください",
+      "setup_failed": "2FAの設定に失敗しました",
+      "verify_enable": "確認して有効化"
+    }
   },
   "severity": {
     "critical": "重大",

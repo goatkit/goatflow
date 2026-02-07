@@ -1351,7 +1351,16 @@
     "close": "关闭",
     "manage_api_tokens": "管理API令牌",
     "create_token_for_user": "为用户创建令牌",
-    "create_token_for_customer": "为客户创建令牌"
+    "create_token_for_customer": "为客户创建令牌",
+    "disable_2fa": "Disable 2FA",
+    "disable_2fa_title": "Disable Two-Factor Authentication",
+    "disable_2fa_warning": "You are about to disable 2FA for user:",
+    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
+    "reason_required": "Reason (required)",
+    "reason_placeholder": "Enter the reason for disabling 2FA...",
+    "reason_required_error": "Please enter a reason for this action",
+    "2fa_disabled_success": "2FA has been disabled for this user",
+    "2fa_disable_failed": "Failed to disable 2FA"
   },
   "admin_dashboard": {
     "activity": "活动",
@@ -1513,7 +1522,14 @@
     "too_many_attempts": "Too many failed attempts. Please wait",
     "username": "用户名",
     "username_placeholder": "请输入用户名",
-    "password_placeholder": "请输入密码"
+    "password_placeholder": "请输入密码",
+    "2fa_title": "双重身份验证",
+    "2fa_description": "输入您身份验证器应用中的6位数代码",
+    "2fa_verify": "验证",
+    "2fa_recovery_hint": "无法访问？使用恢复代码",
+    "verification_code": "验证码",
+    "back_to_login": "返回登录",
+    "verify": "验证"
   },
   "bulk_actions": {
     "all_selected": "全部已选",
@@ -1608,7 +1624,8 @@
     "save_changes": "保存更改",
     "done": "完成",
     "revoke": "撤销",
-    "revoke_token": "撤销令牌"
+    "revoke_token": "撤销令牌",
+    "continue": "继续"
   },
   "changes": {
     "backout_plan": "回退计划",
@@ -1710,7 +1727,8 @@
     "creating": "创建中...",
     "never": "从不",
     "revoked": "已撤销",
-    "year": "年"
+    "year": "年",
+    "verifying": "验证中..."
   },
   "customer": {
     "auth": {
@@ -1971,7 +1989,11 @@
     "title": "控制台",
     "unassigned_count": "unassigned",
     "welcome_back": "欢迎回来",
-    "welcome_message": "以下是您今天工单的情况"
+    "welcome_message": "以下是您今天工单的情况",
+    "configure_widgets": "配置小组件",
+    "widget_config_desc": "选择在仪表板上显示哪些小组件。拖动以重新排序。",
+    "no_widgets": "没有启用的小组件",
+    "no_widgets_desc": "点击上方的齿轮图标以启用仪表板小组件。"
   },
   "dynamic_field_form": {
     "basic_information": "Basic 信息rmation",
@@ -2789,7 +2811,34 @@
     "your_token": "您的令牌",
     "your_tokens": "您的令牌",
     "revoke_token_confirm": "您确定要撤销此令牌吗？",
-    "enter_token_name": "请输入令牌名称"
+    "enter_token_name": "请输入令牌名称",
+    "2fa": {
+      "title": "双重认证",
+      "description": "使用身份验证器应用为您的账户添加额外的安全层",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "enable": "启用双重认证",
+      "disable": "禁用双重认证",
+      "setup_title": "设置双重认证",
+      "disable_title": "禁用双重认证",
+      "scan_qr": "使用身份验证器应用扫描此二维码",
+      "manual_entry": "或手动输入此代码：",
+      "enter_code": "输入应用中的6位验证码",
+      "verify": "验证并启用",
+      "password_required": "需要密码",
+      "password_to_setup": "输入密码以设置双重认证",
+      "confirm_password": "确认您的密码：",
+      "code_and_password_required": "需要验证码和密码",
+      "invalid_code": "验证码无效",
+      "recovery_codes_remaining": "剩余恢复码：",
+      "recovery_codes_warning": "请将这些代码保存在安全的地方。每个代码只能使用一次。",
+      "disable_warning": "禁用双重认证将移除您账户的额外安全层。",
+      "password_placeholder": "输入您的密码",
+      "save_recovery_codes": "保存恢复码",
+      "scan_instructions": "使用身份验证器应用扫描此二维码",
+      "setup_failed": "设置双重认证失败",
+      "verify_enable": "验证并启用"
+    }
   },
   "severity": {
     "critical": "紧急",

@@ -1,0 +1,122 @@
+# Admin Audit Log Module - View admin actions with audit trail
+module:
+  name: admin_audit_log
+  singular: Audit Log Entry
+  plural: Audit Logs
+  table: admin_action_log
+  description: View administrative actions and changes
+  route_prefix: /admin/dynamic/audit_logs
+  icon: fa-clipboard-list
+  read_only: true
+
+  # Default sort by newest first
+  default_sort: create_time
+  default_sort_dir: desc
+  
+  # Items per page
+  page_size: 50
+
+fields:
+  - name: id
+    type: int
+    db_column: id
+    label: ID
+    show_in_list: true
+    show_in_form: false
+    sortable: true
+
+  - name: action_type_id
+    type: select
+    db_column: action_type_id
+    label: Action
+    show_in_list: true
+    show_in_form: false
+    sortable: true
+    lookup:
+      table: admin_action_type
+      value_column: id
+      display_column: name
+
+  - name: target_type
+    type: string
+    db_column: target_type
+    label: Target Type
+    show_in_list: true
+    show_in_form: false
+    sortable: true
+
+  - name: target_identifier
+    type: string
+    db_column: target_identifier
+    label: Target
+    show_in_list: true
+    show_in_form: false
+    sortable: true
+
+  - name: reason
+    type: textarea
+    db_column: reason
+    label: Reason
+    show_in_list: true
+    show_in_form: false
+    truncate: 50
+
+  - name: create_by
+    type: select
+    db_column: create_by
+    label: Admin
+    show_in_list: true
+    show_in_form: false
+    sortable: true
+    lookup:
+      table: users
+      value_column: id
+      display_column: login
+
+  - name: create_time
+    type: datetime
+    db_column: create_time
+    label: Date/Time
+    show_in_list: true
+    show_in_form: false
+    sortable: true
+    format: "2006-01-02 15:04:05"
+
+  - name: details
+    type: json
+    db_column: details
+    label: Details
+    show_in_list: false
+    show_in_form: true
+
+# Filters for the list view
+filters:
+  - field: action_type_id
+    type: select
+    label: Action Type
+    lookup_table: admin_action_type
+    lookup_key: id
+    lookup_display: name
+      
+  - field: target_type
+    type: select
+    label: Target Type
+    options:
+      - value: user
+        label: User (Agent/Admin)
+      - value: customer
+        label: Customer
+      - value: system
+        label: System
+        
+  - field: create_by
+    type: select
+    label: Admin
+    lookup_table: users
+    lookup_key: id
+    lookup_display: login
+    query: "valid_id = 1"
+
+  - field: create_time
+    type: date_range
+    label: Date Range

@@ -76,6 +76,7 @@ func ensureCoreHandlers() {
 	// Minimal duplication: only names used in YAML currently.
 	pairs := map[string]gin.HandlerFunc{
 		"handleLoginPage":           handleLoginPage,
+		"handle2FAPage":             handle2FAPage,
 		"handleDashboard":           handleDashboard,
 		"handleAuthLogin":           HandleAuthLogin,
 		"handleTickets":             handleTickets,
@@ -114,7 +115,6 @@ func ensureCoreHandlers() {
 		"HandleInvalidateLookupCache": HandleInvalidateLookupCache,
 		// Optional customer info partial used by YAML
 		"HandleCustomerInfoPanel":     func(c *gin.Context) { c.String(200, "") },
-		"handleSettings":              handleSettings,
 		"handleApiTokensPage":         handleApiTokensPage,
 		"handleProfile":               handleProfile,
 		"HandleGetSessionTimeout":     HandleGetSessionTimeout,
@@ -172,6 +172,9 @@ func ensureCoreHandlers() {
 		"handleCustomerLoginPage": handleCustomerLoginPage,
 		"handleCustomerLogin": func(c *gin.Context) {
 			handleCustomerLogin(shared.GetJWTManager())(c)
+		},
+		"handle2FAVerify": func(c *gin.Context) {
+			handle2FAVerify(shared.GetJWTManager())(c)
 		},
 		"handleCustomerDashboard": func(c *gin.Context) {
 			db, ok := mustGetDB(c)
@@ -477,7 +480,6 @@ func ensureCoreHandlers() {
 		"dashboard_recent_tickets":                  handleRecentTickets,
 		"dashboard_activity":                        handleActivity,
 		"dashboard_activity_stream":                 handleActivityStream,
-		"dashboard_queue_status":                    dashboard_queue_status,
 
 		// Customer company handlers - full implementations
 		"handleAdminCustomerCompanies": HandleAdminCustomerCompanies,

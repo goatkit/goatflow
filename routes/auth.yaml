@@ -81,3 +81,27 @@ spec:
       method: GET
       handler: handleCustomerLogout
       description: "Customer logout - clears cookies and redirects"
+
+    # Two-Factor Authentication page and verification during login (Agent)
+    - path: /login/2fa
+      method: GET
+      handler: handle2FAPage
+      template: pages/login_2fa.pongo2
+      description: "Display 2FA verification page during login"
+
+    - path: /api/auth/2fa/verify
+      method: POST
+      handler: handle2FAVerify
+      description: "Verify 2FA code and complete login"
+
+    # Customer Two-Factor Authentication during login
+    - path: /customer/login/2fa
+      method: GET
+      handler: handleCustomer2FAPage
+      template: pages/customer/login_2fa.pongo2
+      description: "Display customer 2FA verification page during login"
+
+    - path: /api/auth/customer/2fa/verify
+      method: POST
+      handler: handleCustomer2FAVerify
+      description: "Verify customer 2FA code and complete login"

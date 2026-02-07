@@ -170,6 +170,26 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 		return
 	}
 
+	// Prefetch 2FA status for all customer users
+	totp2fa := map[string]bool{}
+	if tr, terr := db.Query(`
+		SELECT user_id FROM customer_preferences 
+		WHERE preferences_key = 'UserTOTPEnabled' 
+		AND preferences_value = '1'`); terr == nil {
+		defer tr.Close()
+		for tr.Next() {
+			var login string
+			if err := tr.Scan(&login); err == nil {
+				totp2fa[login] = true
+			}
+		}
+	}
+	// Add 2FA status to each customer
+	for i := range customers {
+		login := customers[i]["login"].(string)
+		customers[i]["totp_2fa_enabled"] = totp2fa[login]
+	}
+
 	// Get companies for filter dropdown
 	companiesQuery := "SELECT DISTINCT customer_id, name FROM customer_company WHERE valid_id = 1 ORDER BY name"
 	companyRows, err := db.Query(companiesQuery)

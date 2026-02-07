@@ -1351,7 +1351,16 @@
     "close": "סגור",
     "manage_api_tokens": "נהל אסימוני API",
     "create_token_for_user": "צור אסימון למשתמש",
-    "create_token_for_customer": "צור אסימון ללקוח"
+    "create_token_for_customer": "צור אסימון ללקוח",
+    "disable_2fa": "Disable 2FA",
+    "disable_2fa_title": "Disable Two-Factor Authentication",
+    "disable_2fa_warning": "You are about to disable 2FA for user:",
+    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
+    "reason_required": "Reason (required)",
+    "reason_placeholder": "Enter the reason for disabling 2FA...",
+    "reason_required_error": "Please enter a reason for this action",
+    "2fa_disabled_success": "2FA has been disabled for this user",
+    "2fa_disable_failed": "Failed to disable 2FA"
   },
   "admin_dashboard": {
     "activity": "פעילות",
@@ -1513,7 +1522,14 @@
     "too_many_attempts": "Too many failed attempts. Please wait",
     "username": "שם משתמש",
     "username_placeholder": "הזן שם משתמש",
-    "password_placeholder": "הזן סיסמה"
+    "password_placeholder": "הזן סיסמה",
+    "2fa_title": "אימות דו-שלבי",
+    "2fa_description": "הזן את הקוד בן 6 הספרות מאפליקציית האימות שלך",
+    "2fa_verify": "אמת",
+    "2fa_recovery_hint": "איבדת גישה? השתמש בקוד שחזור",
+    "verification_code": "קוד אימות",
+    "back_to_login": "חזרה להתחברות",
+    "verify": "אמת"
   },
   "bulk_actions": {
     "all_selected": "הכל נבחר",
@@ -1608,7 +1624,8 @@
     "save_changes": "שמור שינויים",
     "done": "בוצע",
     "revoke": "בטל",
-    "revoke_token": "ביטול אסימון"
+    "revoke_token": "ביטול אסימון",
+    "continue": "המשך"
   },
   "changes": {
     "backout_plan": "תוכנית חזרה",
@@ -1710,7 +1727,8 @@
     "creating": "יוצר...",
     "never": "אף פעם",
     "revoked": "בוטל",
-    "year": "שנה"
+    "year": "שנה",
+    "verifying": "מאמת..."
   },
   "customer": {
     "auth": {
@@ -1969,7 +1987,11 @@
     "title": "לוח בקרה",
     "unassigned_count": "לא הוקצו",
     "welcome_back": "ברוך שוב",
-    "welcome_message": "הנה מה שקורה עם הכרטיסים שלך היום"
+    "welcome_message": "הנה מה שקורה עם הכרטיסים שלך היום",
+    "configure_widgets": "הגדרת יישומונים",
+    "widget_config_desc": "בחר אילו יישומונים יופיעו בלוח הבקרה שלך. גרור לסידור מחדש.",
+    "no_widgets": "אין יישומונים מופעלים",
+    "no_widgets_desc": "לחץ על סמל גלגל השיניים למעלה כדי להפעיל יישומוני לוח בקרה."
   },
   "dynamic_field_form": {
     "basic_information": "Basic מידעrmation",
@@ -2796,7 +2818,34 @@
     "your_token": "הטוקן שלך",
     "your_tokens": "הטוקנים שלך",
     "revoke_token_confirm": "האם אתה בטוח שברצונך לבטל אסימון זה?",
-    "enter_token_name": "אנא הזן שם לאסימון שלך"
+    "enter_token_name": "אנא הזן שם לאסימון שלך",
+    "2fa": {
+      "title": "אימות דו-שלבי",
+      "description": "הוסף שכבת אבטחה נוספת לחשבונך באמצעות אפליקציית אימות",
+      "enabled": "מופעל",
+      "disabled": "מושבת",
+      "enable": "הפעל 2FA",
+      "disable": "השבת 2FA",
+      "setup_title": "הגדרת אימות דו-שלבי",
+      "disable_title": "השבתת אימות דו-שלבי",
+      "scan_qr": "סרוק קוד QR זה עם אפליקציית האימות שלך",
+      "manual_entry": "או הזן קוד זה ידנית:",
+      "enter_code": "הזן קוד בן 6 ספרות מאפליקציית האימות",
+      "verify": "אמת והפעל",
+      "password_required": "נדרשת סיסמה",
+      "password_to_setup": "הזן את הסיסמה שלך להגדרת 2FA",
+      "confirm_password": "אשר את הסיסמה שלך:",
+      "code_and_password_required": "נדרשים קוד אימות וסיסמה",
+      "invalid_code": "קוד אימות לא חוקי",
+      "recovery_codes_remaining": "קודי שחזור שנותרו:",
+      "recovery_codes_warning": "שמור קודים אלה במקום בטוח. כל קוד ניתן לשימוש פעם אחת בלבד.",
+      "disable_warning": "השבתת 2FA תסיר את שכבת האבטחה הנוספת מחשבונך.",
+      "password_placeholder": "הזן את הסיסמה שלך",
+      "save_recovery_codes": "שמור קודי שחזור",
+      "scan_instructions": "סרוק קוד QR זה עם אפליקציית האימות שלך",
+      "setup_failed": "הגדרת 2FA נכשלה",
+      "verify_enable": "אמת והפעל"
+    }
   },
   "severity": {
     "critical": "קריטי",

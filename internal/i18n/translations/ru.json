@@ -1351,7 +1351,16 @@
     "close": "Закрыть",
     "manage_api_tokens": "Управление API-токенами",
     "create_token_for_user": "Создать токен для пользователя",
-    "create_token_for_customer": "Создать токен для клиента"
+    "create_token_for_customer": "Создать токен для клиента",
+    "disable_2fa": "Disable 2FA",
+    "disable_2fa_title": "Disable Two-Factor Authentication",
+    "disable_2fa_warning": "You are about to disable 2FA for user:",
+    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
+    "reason_required": "Reason (required)",
+    "reason_placeholder": "Enter the reason for disabling 2FA...",
+    "reason_required_error": "Please enter a reason for this action",
+    "2fa_disabled_success": "2FA has been disabled for this user",
+    "2fa_disable_failed": "Failed to disable 2FA"
   },
   "admin_dashboard": {
     "activity": "Активность",
@@ -1513,7 +1522,14 @@
     "too_many_attempts": "Too many failed attempts. Please wait",
     "username": "Имя пользователя",
     "username_placeholder": "Введите имя пользователя",
-    "password_placeholder": "Введите пароль"
+    "password_placeholder": "Введите пароль",
+    "2fa_title": "Двухфакторная аутентификация",
+    "2fa_description": "Введите 6-значный код из приложения аутентификатора",
+    "2fa_verify": "Подтвердить",
+    "2fa_recovery_hint": "Потеряли доступ? Используйте код восстановления",
+    "verification_code": "Код подтверждения",
+    "back_to_login": "Вернуться к входу",
+    "verify": "Подтвердить"
   },
   "bulk_actions": {
     "all_selected": "Все выбраны",
@@ -1608,7 +1624,8 @@
     "save_changes": "Сохранить изменения",
     "done": "Готово",
     "revoke": "Отозвать",
-    "revoke_token": "Отозвать токен"
+    "revoke_token": "Отозвать токен",
+    "continue": "Продолжить"
   },
   "changes": {
     "backout_plan": "План отката",
@@ -1710,7 +1727,8 @@
     "creating": "Создание...",
     "never": "Никогда",
     "revoked": "Отозван",
-    "year": "год"
+    "year": "год",
+    "verifying": "Проверка..."
   },
   "customer": {
     "auth": {
@@ -1971,7 +1989,11 @@
     "title": "Панель управления",
     "unassigned_count": "unassigned",
     "welcome_back": "С возвращением",
-    "welcome_message": "Вот что происходит с вашими заявками сегодня"
+    "welcome_message": "Вот что происходит с вашими заявками сегодня",
+    "configure_widgets": "Настройка виджетов",
+    "widget_config_desc": "Выберите, какие виджеты отображать на панели. Перетащите для изменения порядка.",
+    "no_widgets": "Нет включенных виджетов",
+    "no_widgets_desc": "Нажмите на значок шестерёнки выше, чтобы включить виджеты панели."
   },
   "dynamic_field_form": {
     "basic_information": "Basic Информацияrmation",
@@ -2789,7 +2811,34 @@
     "your_token": "Ваш токен",
     "your_tokens": "Ваши токены",
     "revoke_token_confirm": "Вы уверены, что хотите отозвать этот токен?",
-    "enter_token_name": "Пожалуйста, введите название для вашего токена"
+    "enter_token_name": "Пожалуйста, введите название для вашего токена",
+    "2fa": {
+      "title": "Двухфакторная аутентификация",
+      "description": "Добавьте дополнительный уровень безопасности с помощью приложения-аутентификатора",
+      "enabled": "Включено",
+      "disabled": "Отключено",
+      "enable": "Включить 2FA",
+      "disable": "Отключить 2FA",
+      "setup_title": "Настройка двухфакторной аутентификации",
+      "disable_title": "Отключение двухфакторной аутентификации",
+      "scan_qr": "Отсканируйте этот QR-код приложением-аутентификатором",
+      "manual_entry": "Или введите этот код вручную:",
+      "enter_code": "Введите 6-значный код из приложения",
+      "verify": "Подтвердить и включить",
+      "password_required": "Требуется пароль",
+      "password_to_setup": "Введите пароль для настройки 2FA",
+      "confirm_password": "Подтвердите пароль:",
+      "code_and_password_required": "Требуются код подтверждения и пароль",
+      "invalid_code": "Неверный код подтверждения",
+      "recovery_codes_remaining": "Оставшиеся коды восстановления:",
+      "recovery_codes_warning": "Сохраните эти коды в надёжном месте. Каждый код можно использовать только один раз.",
+      "disable_warning": "Отключение 2FA удалит дополнительный уровень безопасности вашей учётной записи.",
+      "password_placeholder": "Введите пароль",
+      "save_recovery_codes": "Сохранить коды восстановления",
+      "scan_instructions": "Отсканируйте этот QR-код приложением-аутентификатором",
+      "setup_failed": "Не удалось настроить 2FA",
+      "verify_enable": "Подтвердить и включить"
+    }
   },
   "severity": {
     "critical": "Критическая",

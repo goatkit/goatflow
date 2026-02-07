@@ -68,6 +68,7 @@ type ModuleConfig struct {
 		Table       string `yaml:"table"`
 		Description string `yaml:"description"`
 		RoutePrefix string `yaml:"route_prefix"`
+		ReadOnly    bool   `yaml:"read_only"`
 	} `yaml:"module"`
 
 	Fields []Field `yaml:"fields"`

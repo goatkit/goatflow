@@ -129,6 +129,9 @@
                             </span>
                         </div>
                     </th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-muted);">
+                        {{ t("admin.2fa")|default:"2FA" }}
+                    </th>
                     <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('lastLogin')">
                         <div class="flex items-center gap-1">
                             {{ t("admin.last_login") }}
@@ -192,6 +195,19 @@
                         </span>
                         {% endif %}
                     </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        {% if user.TOTP2FAEnabled %}
+                        <span class="gk-badge gk-badge-success" title="{{ t("admin.2fa_enabled")|default:"2FA Enabled" }}">
+                            <i class="fas fa-shield-alt mr-1"></i>
+                            {{ t("admin.enabled")|default:"Enabled" }}
+                        </span>
+                        {% else %}
+                        <span class="gk-badge gk-badge-muted" title="{{ t("admin.2fa_disabled")|default:"2FA Not Enabled" }}">
+                            <i class="fas fa-shield-alt mr-1" style="opacity: 0.5;"></i>
+                            {{ t("admin.disabled")|default:"Disabled" }}
+                        </span>
+                        {% endif %}
+                    </td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm" style="color: var(--gk-text-muted);">
                         {% if user.LastLogin %}
                             {{ user.LastLogin|date:"Jan 2, 2006 15:04" }}
@@ -245,6 +261,16 @@
                             >
                                 <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                </svg>
+                            </button>
+                            <button
+                                onclick="disable2FA({{ user.ID }}, '{{ user.UserLogin }}')"
+                                title="{{ t("admin.disable_2fa")|default:"Disable 2FA" }}"
+                                class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-error-subtle)]"
+                                style="color: var(--gk-error);"
+                            >
+                                <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
                             </button>
                         </div>
@@ -981,6 +1007,52 @@ function showGuruMeditation(title, message) {
     </div>
 </div>
 
+<!-- 2FA Disable Modal -->
+<div id="disable2FAModal" class="hidden fixed z-50 inset-0 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0 transition-opacity" onclick="close2FAModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+            <div class="gk-modal-header">
+                <h3 class="gk-modal-title">
+                    <i class="fas fa-shield-alt mr-2"></i>{{ t("admin.disable_2fa_title")|default:"Disable Two-Factor Authentication" }}
+                </h3>
+                <button type="button" onclick="close2FAModal()" class="gk-modal-close">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="gk-modal-body">
+                <p class="text-sm mb-4" style="color: var(--gk-text-secondary);">
+                    {{ t("admin.disable_2fa_warning")|default:"You are about to disable 2FA for user:" }}
+                    <strong id="disable2FAUsername" style="color: var(--gk-text-primary);"></strong>
+                </p>
+                <div class="p-3 rounded-lg mb-4" style="background: var(--gk-warning-subtle); border: 1px solid var(--gk-warning);">
+                    <p class="text-sm" style="color: var(--gk-warning);">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        {{ t("admin.disable_2fa_audit_notice")|default:"This action will be logged in the audit trail." }}
+                    </p>
+                </div>
+                <div>
+                    <label class="gk-form-label">{{ t("admin.reason_required")|default:"Reason (required)" }}</label>
+                    <textarea id="disable2FAReason" rows="3" class="gk-input-neon mt-1 w-full"
+                        placeholder="{{ t('admin.reason_placeholder')|default:'Enter the reason for disabling 2FA...' }}"></textarea>
+                    <p id="disable2FAError" class="hidden mt-2 text-sm" style="color: var(--gk-error);"></p>
+                </div>
+            </div>
+            <div class="gk-modal-footer">
+                <button type="button" onclick="close2FAModal()" class="gk-btn-secondary">
+                    {{ t("buttons.cancel")|default:"Cancel" }}
+                </button>
+                <button type="button" onclick="confirmDisable2FA()" id="disable2FABtn" class="gk-btn-neon" style="background: var(--gk-error); border-color: var(--gk-error);">
+                    {{ t("admin.disable_2fa")|default:"Disable 2FA" }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 let currentConfirmAction = null;
 let currentUserId = null;
@@ -1359,6 +1431,67 @@ function closeTokensModal() {
     document.getElementById('tokensModal').classList.add('hidden');
     currentTokenUserId = null;
     currentTokenUsername = null;
+}
+
+// 2FA Disable functions
+let current2FAUserId = null;
+let current2FAUsername = null;
+
+function disable2FA(userId, username) {
+    current2FAUserId = userId;
+    current2FAUsername = username;
+    document.getElementById('disable2FAUsername').textContent = username;
+    document.getElementById('disable2FAReason').value = '';
+    document.getElementById('disable2FAError').classList.add('hidden');
+    document.getElementById('disable2FAModal').classList.remove('hidden');
+}
+
+function close2FAModal() {
+    document.getElementById('disable2FAModal').classList.add('hidden');
+    current2FAUserId = null;
+    current2FAUsername = null;
+}
+
+async function confirmDisable2FA() {
+    const reason = document.getElementById('disable2FAReason').value.trim();
+    const errorEl = document.getElementById('disable2FAError');
+    const btn = document.getElementById('disable2FABtn');
+    
+    if (!reason) {
+        errorEl.textContent = '{{ t("admin.reason_required_error")|default:"Please enter a reason for this action" }}';
+        errorEl.classList.remove('hidden');
+        return;
+    }
+    
+    btn.disabled = true;
+    errorEl.classList.add('hidden');
+    
+    try {
+        const response = await fetch(`/admin/api/users/${current2FAUserId}/2fa/disable`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ reason: reason })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            close2FAModal();
+            showNotification('{{ t("admin.2fa_disabled_success")|default:"2FA has been disabled for this user" }}', 'success');
+            // Refresh page to update 2FA status
+            setTimeout(() => location.reload(), 500);
+        } else {
+            errorEl.textContent = data.error || '{{ t("admin.2fa_disable_failed")|default:"Failed to disable 2FA" }}';
+            errorEl.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Error disabling 2FA:', error);
+        errorEl.textContent = '{{ t("messages.error")|default:"An error occurred. Please try again." }}';
+        errorEl.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 async function loadUserTokens(userId) {

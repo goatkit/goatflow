@@ -10,6 +10,7 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 
 ### What's New in 0.6.5-dev
 See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlights:
+- **Two-Factor Authentication (TOTP)** — 2FA for agents and customers with QR setup, recovery codes, admin override
 - **GoatKit Plugin Platform** — Dual-runtime (WASM + gRPC), HostAPI, admin UI, CLI tooling
 - **API Tokens** — Personal access tokens for agents and customers
 - **REST API v1 Enhanced** — OpenAPI 3.0, Swagger UI, rate limiting, webhooks
@@ -24,7 +25,7 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - Database: MySQL/MariaDB and PostgreSQL with cross-database compatibility
 - Automation: GenericAgent, ACLs, SLA escalations, ticket attribute relations
 - Integration: GenericInterface with REST/SOAP transports, webservice dynamic fields
-- Security: Group-based queue permissions, session management, auth middleware, **API tokens**, **RBAC-filtered statistics**
+- Security: Group-based queue permissions, session management, auth middleware, **API tokens**, **RBAC-filtered statistics**, **Two-factor authentication (TOTP)**
 - i18n: 15 languages including RTL support (ar, he, fa, ur)
 - Deployment: Docker Compose and Kubernetes Helm chart with multi-arch support
 - Admin Modules: 30+ admin interfaces including ticket attribute relations, dynamic fields, templates
@@ -168,6 +169,21 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - [ ] Time tracking reports and analytics
 - [ ] Ships as standalone WASM plugin
 
+**Two-Factor Authentication (TOTP)**
+- [x] Agent 2FA setup/disable via Settings page
+- [x] Customer 2FA setup/disable via Profile page
+- [x] QR code generation for authenticator app enrollment
+- [x] Recovery codes (8 codes, 128-bit entropy, single-use)
+- [x] 2FA verification during login flow
+- [x] Password re-verification before 2FA setup/disable
+- [x] Admin override to disable 2FA for locked-out users
+- [x] Audit logging for all 2FA events
+- [x] Session security: 256-bit tokens, IP binding, rate limiting
+- [x] i18n: All 15 languages translated
+- [x] Security documentation: `docs/security/TOTP_THREAT_MODEL.md`
+- [x] Test coverage: 75 tests (unit, security, E2E, Playwright)
+- [ ] Hardware key support (WebAuthn/FIDO2) — Deferred, see threat model
+
 **API Tokens (Personal Access Tokens)**
 - [x] Token management UI for agents AND customers
 - [x] Scoped permissions (`tickets:read`, `tickets:write`, `admin:*`)
@@ -244,7 +260,7 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - Customer sign-up/registration UI with approval workflow
 - Email verification for new accounts
 - CAPTCHA integration (reCAPTCHA v3, hCaptcha)
-- Two-factor authentication (TOTP)
+- ~~Two-factor authentication (TOTP)~~ → Moved to 0.6.5 ✅
 
 **Enhancements**
 - Keyboard navigation accessibility (WCAG 2.1 AA compliance)

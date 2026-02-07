@@ -22,7 +22,6 @@ func TestAllStubRoutesReturn200(t *testing.T) {
 	}{
 		// User pages
 		{"GET", "/profile", "Profile page"},
-		{"GET", "/settings", "Settings page"},
 
 		// Admin pages (only those guaranteed in minimal router)
 		{"GET", "/admin/users", "User management"},

@@ -1,0 +1,128 @@
+{% extends "layouts/auth.pongo2" %}
+
+{% block title %}{{ t("auth.2fa_verify")|default:"Two-Factor Authentication" }} - GOTRS{% endblock %}
+
+{% block content %}
+<div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-sm relative z-10">
+        <div class="gk-logo-glow gk-float mx-auto w-24 h-24" style="color: var(--gk-primary);">
+            <img class="w-full h-full" src="/static/favicon.svg" alt="GOTRS Logo">
+        </div>
+        <h2 class="mt-6 text-center text-3xl gk-heading gk-text-gradient">
+            {{ t("auth.2fa_title")|default:"Two-Factor Authentication" }}
+        </h2>
+        <p class="mt-2 text-center text-sm" style="color: var(--gk-text-secondary);">
+            {{ t("auth.2fa_description")|default:"Enter the code from your authenticator app" }}
+        </p>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        <div class="gk-login-card">
+            <div id="error-message" class="hidden rounded-md bg-red-50 dark:bg-red-900/20 p-4 mb-4">
+                <div class="text-sm text-red-800 dark:text-red-200" id="error-text"></div>
+            </div>
+
+            <form id="2fa-form" class="space-y-5">
+                <div>
+                    <label for="code" class="form-label">{{ t("auth.verification_code")|default:"Verification Code" }}</label>
+                    <div class="mt-2">
+                        <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]*" 
+                               autocomplete="one-time-code" required autofocus
+                               maxlength="8"
+                               class="gk-input-neon text-center text-2xl tracking-widest"
+                               placeholder="000000"
+                               style="letter-spacing: 0.5em;">
+                    </div>
+                    <p class="mt-2 text-xs" style="color: var(--gk-text-muted);">
+                        {{ t("auth.2fa_recovery_hint")|default:"You can also use a recovery code" }}
+                    </p>
+                </div>
+
+                <div>
+                    <button type="submit" id="verify-btn" class="gk-btn-neon w-full">
+                        <span id="btn-text">{{ t("auth.verify")|default:"Verify" }}</span>
+                        <span id="btn-loading" class="hidden">
+                            <svg class="animate-spin h-5 w-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            {{ t("common.verifying")|default:"Verifying..." }}
+                        </span>
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-6 text-center">
+                <a href="/login" class="text-sm gk-link-neon">
+                    ← {{ t("auth.back_to_login")|default:"Back to login" }}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('2fa-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const code = document.getElementById('code').value.trim();
+    const errorDiv = document.getElementById('error-message');
+    const errorText = document.getElementById('error-text');
+    const btnText = document.getElementById('btn-text');
+    const btnLoading = document.getElementById('btn-loading');
+    const verifyBtn = document.getElementById('verify-btn');
+    
+    // Hide previous error
+    errorDiv.classList.add('hidden');
+    
+    // Show loading state
+    btnText.classList.add('hidden');
+    btnLoading.classList.remove('hidden');
+    verifyBtn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/auth/2fa/verify', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ code: code })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Redirect to dashboard
+            window.location.href = data.redirect || '/dashboard';
+        } else {
+            // Show error
+            errorText.textContent = data.error || 'Invalid code';
+            errorDiv.classList.remove('hidden');
+            
+            // Clear the input for retry
+            document.getElementById('code').value = '';
+            document.getElementById('code').focus();
+        }
+    } catch (err) {
+        errorText.textContent = 'An error occurred. Please try again.';
+        errorDiv.classList.remove('hidden');
+    } finally {
+        // Reset button state
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
+        verifyBtn.disabled = false;
+    }
+});
+
+// Auto-submit when 6 digits entered
+document.getElementById('code').addEventListener('input', function(e) {
+    // Remove non-numeric characters (except for recovery codes which have letters)
+    const value = e.target.value;
+    
+    // Auto-submit if exactly 6 digits
+    if (/^\d{6}$/.test(value)) {
+        document.getElementById('2fa-form').dispatchEvent(new Event('submit'));
+    }
+});
+</script>
+{% endblock %}

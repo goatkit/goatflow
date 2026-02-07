@@ -11,6 +11,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
@@ -107,6 +108,42 @@ var HandleAuthLogin = func(c *gin.Context) {
 			c.Redirect(http.StatusSeeOther, "/login?error=Invalid+username+or+password")
 		}
 		return
+	}
+
+	// Check if 2FA is enabled for this user
+	if db, err := database.GetDB(); err == nil && db != nil {
+		totpService := service.NewTOTPService(db, "GOTRS")
+		is2FAEnabled := totpService.IsEnabled(int(user.ID))
+		if is2FAEnabled {
+			// 2FA is enabled - don't complete login yet
+			sessionMgr := auth.GetTOTPSessionManager()
+			token, err := sessionMgr.CreateAgentSession(int(user.ID), username, c.ClientIP(), c.Request.UserAgent())
+			if err != nil {
+				if strings.Contains(contentType, "application/json") {
+					c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create 2FA session"})
+				} else {
+					c.Redirect(http.StatusSeeOther, "/login?error=2FA+session+error")
+				}
+				return
+			}
+
+			// Store token in cookie - user data is server-side
+			c.SetCookie("2fa_pending", token, 300, "/", "", false, true) // 5 min expiry
+
+			if c.GetHeader("HX-Request") == "true" {
+				// HTMX boosted form - use 302 redirect (hx-boost follows standard redirects)
+				c.Redirect(http.StatusFound, "/login/2fa")
+			} else if strings.Contains(contentType, "application/json") {
+				c.JSON(http.StatusOK, gin.H{
+					"success":      true,
+					"requires_2fa": true,
+					"redirect":     "/login/2fa",
+				})
+			} else {
+				c.Redirect(http.StatusFound, "/login/2fa")
+			}
+			return
+		}
 	}
 
 	// Get user's preferred session timeout

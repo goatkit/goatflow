@@ -10,7 +10,7 @@
     <nav>
         <a href="/dashboard">{{ t("navigation.dashboard") }}</a> |
         <a href="/tickets">{{ t("navigation.tickets") }}</a> |
-        <a href="/settings">{{ t("navigation.settings") }}</a>
+        <a href="/profile">{{ t("navigation.profile") }}</a>
     </nav>
     <hr>
     <div>

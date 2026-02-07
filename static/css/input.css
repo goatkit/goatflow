@@ -344,6 +344,43 @@
         cursor: not-allowed;
     }
 
+    /* Themed checkbox with brand colors */
+    .gk-checkbox {
+        @apply w-4 h-4 rounded;
+        appearance: none;
+        -webkit-appearance: none;
+        background: var(--gk-bg-surface);
+        border: 1px solid var(--gk-border-strong);
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+    }
+
+    .gk-checkbox:hover,
+    .gk-checkbox:focus {
+        border-color: var(--gk-primary);
+    }
+
+    .gk-checkbox:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--gk-primary-subtle);
+    }
+
+    .gk-checkbox:checked {
+        background: var(--gk-primary) !important;
+        border-color: var(--gk-primary) !important;
+    }
+
+    .gk-checkbox:checked::after {
+        content: '';
+        display: block;
+        width: 4px;
+        height: 8px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+        margin: 1px 0 0 5px;
+    }
+
     /* ============================================
        ICON COLORS - Theme-aware
        ============================================ */
@@ -792,6 +829,20 @@
         box-shadow: var(--gk-glow-primary);
     }
 
+    /* Icon-only button */
+    .gk-btn-icon {
+        @apply inline-flex items-center justify-center rounded-md p-2 transition-all duration-200;
+        background: transparent;
+        color: var(--gk-text-muted);
+        border: none;
+    }
+
+    .gk-btn-icon:hover {
+        background: var(--gk-error-subtle);
+        color: var(--gk-error);
+        box-shadow: var(--gk-glow-error);
+    }
+
     /* Outline button - transparent with border */
     .gk-btn-outline {
         @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-all duration-200 w-full;
@@ -1147,6 +1198,12 @@
 
     .gk-card-body {
         @apply p-6;
+    }
+
+    .gk-card-footer {
+        @apply px-6 py-4;
+        background: var(--gk-bg-elevated);
+        border-top: 1px solid var(--gk-border-default);
     }
 
     /* ============================================

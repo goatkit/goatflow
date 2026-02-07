@@ -421,12 +421,15 @@ func (p *WASMPlugin) Call(ctx context.Context, fn string, args json.RawMessage) 
 	}
 	defer p.free(uint32(fnPtr >> 32))
 
-	// Allocate and write args
-	argsPtr := p.writeBytes(args)
-	if argsPtr == 0 {
-		return nil, fmt.Errorf("failed to allocate memory for args")
+	// Allocate and write args (nil/empty args is valid - pass 0, 0)
+	var argsPtr uint64
+	if len(args) > 0 {
+		argsPtr = p.writeBytes(args)
+		if argsPtr == 0 {
+			return nil, fmt.Errorf("failed to allocate memory for args")
+		}
+		defer p.free(uint32(argsPtr >> 32))
 	}
-	defer p.free(uint32(argsPtr >> 32))
 
 	// Call gk_call(fn_ptr, fn_len, args_ptr, args_len)
 	results, err := p.gkCall.Call(ctx,

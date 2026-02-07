@@ -41,7 +41,7 @@
                     <label class="label">
                         <span class="label-text">{{ t("admin.filter_plugin")|default:"Plugin" }}</span>
                     </label>
-                    <select id="filter-plugin" class="select select-bordered" onchange="refreshLogs()">
+                    <select id="filter-plugin" class="gk-select-neon" onchange="refreshLogs()">
                         <option value="">{{ t("admin.all_plugins")|default:"All Plugins" }}</option>
                     </select>
                 </div>
@@ -49,7 +49,7 @@
                     <label class="label">
                         <span class="label-text">{{ t("admin.filter_level")|default:"Level" }}</span>
                     </label>
-                    <select id="filter-level" class="select select-bordered" onchange="refreshLogs()">
+                    <select id="filter-level" class="gk-select-neon" onchange="refreshLogs()">
                         <option value="">{{ t("admin.all_levels")|default:"All Levels" }}</option>
                         <option value="debug">Debug</option>
                         <option value="info">Info</option>
@@ -61,7 +61,7 @@
                     <label class="label">
                         <span class="label-text">{{ t("admin.limit")|default:"Limit" }}</span>
                     </label>
-                    <select id="filter-limit" class="select select-bordered" onchange="refreshLogs()">
+                    <select id="filter-limit" class="gk-select-neon" onchange="refreshLogs()">
                         <option value="50">50</option>
                         <option value="100" selected>100</option>
                         <option value="250">250</option>

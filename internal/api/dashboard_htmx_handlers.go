@@ -19,6 +19,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
+	"github.com/gotrs-io/gotrs-ce/internal/service"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
 
 	"github.com/xeonx/timeago"
@@ -30,7 +31,6 @@ func init() {
 	routing.RegisterHandler("handleDashboard", handleDashboard)
 	routing.RegisterHandler("handleDashboardStats", handleDashboardStats)
 	routing.RegisterHandler("handleRecentTickets", handleRecentTickets)
-	routing.RegisterHandler("dashboard_queue_status", dashboard_queue_status)
 	routing.RegisterHandler("handleNotifications", handleNotifications)
 	routing.RegisterHandler("handlePendingReminderFeed", handlePendingReminderFeed)
 	routing.RegisterHandler("handleQuickActions", handleQuickActions)
@@ -190,9 +190,48 @@ func handleDashboard(c *gin.Context) {
 		}
 	}
 
-	// Get plugin widgets for dashboard
-	pluginWidgets := GetPluginWidgets(c.Request.Context(), "dashboard")
-	fmt.Printf("🔌 Dashboard: found %d plugin widgets\n", len(pluginWidgets))
+	// Get plugin widgets for dashboard - filtered by user preferences
+	allPluginWidgets := GetPluginWidgets(c.Request.Context(), "dashboard")
+	
+	// Get user's widget config to filter
+	var dashboardUserID int
+	if val, exists := c.Get("user_id"); exists {
+		dashboardUserID = shared.ToInt(val, 0)
+	}
+	
+	pluginWidgets := allPluginWidgets
+	if dashboardUserID > 0 && db != nil {
+		prefService := service.NewUserPreferencesService(db)
+		widgetConfig, _ := prefService.GetDashboardWidgets(dashboardUserID)
+		
+		if widgetConfig != nil && len(widgetConfig) > 0 {
+			// Build map of widget configs
+			configMap := make(map[string]bool)
+			for _, cfg := range widgetConfig {
+				configMap[cfg.WidgetID] = cfg.Enabled
+			}
+			
+			// Filter widgets based on config
+			filtered := make([]PluginWidgetData, 0, len(allPluginWidgets))
+			for _, w := range allPluginWidgets {
+				fullID := w.PluginName + ":" + w.ID
+				
+				// Check if widget is in config
+				if enabled, inConfig := configMap[fullID]; inConfig {
+					if enabled {
+						filtered = append(filtered, w)
+					}
+					// If disabled, skip it
+				} else {
+					// Not in config = enabled by default
+					filtered = append(filtered, w)
+				}
+			}
+			pluginWidgets = filtered
+		}
+	}
+	
+	fmt.Printf("🔌 Dashboard: showing %d of %d plugin widgets\n", len(pluginWidgets), len(allPluginWidgets))
 
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/dashboard.pongo2", pongo2.Context{
 		"Stats":         stats,
@@ -530,224 +569,6 @@ func handleRecentTickets(c *gin.Context) {
 
 	c.Header("Content-Type", "text/html")
 	c.String(http.StatusOK, html.String())
-}
-
-// dashboard_queue_status returns queue status for dashboard.
-func dashboard_queue_status(c *gin.Context) {
-	// Get user language for i18n
-	lang := "en"
-	if l, exists := c.Get(middleware.LanguageContextKey); exists {
-		if langStr, ok := l.(string); ok {
-			lang = langStr
-		}
-	}
-	i18nInstance := i18n.GetInstance()
-	t := func(key string) string {
-		return i18nInstance.T(lang, key)
-	}
-
-	if htmxHandlerSkipDB() {
-		renderDashboardQueueStatusFallback(c, t)
-		return
-	}
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		renderDashboardQueueStatusFallback(c, t)
-		return
-	}
-
-	// Queue permission filtering - use context values from middleware
-	var accessibleQueueIDs []uint
-	isQueueAdmin := false
-	if val, exists := c.Get("is_queue_admin"); exists {
-		if admin, ok := val.(bool); ok {
-			isQueueAdmin = admin
-		}
-	}
-
-	if !isQueueAdmin {
-		if queueIDs, exists := c.Get("accessible_queue_ids"); exists {
-			if ids, ok := queueIDs.([]uint); ok {
-				accessibleQueueIDs = ids
-			}
-		}
-	}
-
-	// Build query with optional queue filtering
-	query := `
-		SELECT q.id, q.name,
-		       SUM(CASE WHEN t.ticket_state_id = 1 THEN 1 ELSE 0 END) as new_count,
-		       SUM(CASE WHEN t.ticket_state_id = 2 THEN 1 ELSE 0 END) as open_count,
-		       SUM(CASE WHEN t.ticket_state_id = 3 THEN 1 ELSE 0 END) as pending_count,
-		       SUM(CASE WHEN t.ticket_state_id = 4 THEN 1 ELSE 0 END) as closed_count
-		FROM queue q
-		LEFT JOIN ticket t ON t.queue_id = q.id
-		WHERE q.valid_id = 1`
-
-	var args []interface{}
-	if len(accessibleQueueIDs) > 0 {
-		placeholders := make([]string, len(accessibleQueueIDs))
-		for i, qid := range accessibleQueueIDs {
-			placeholders[i] = "?"
-			args = append(args, qid)
-		}
-		query += " AND q.id IN (" + strings.Join(placeholders, ",") + ")"
-	}
-
-	query += `
-		GROUP BY q.id, q.name
-		ORDER BY q.name
-		LIMIT 10`
-
-	// Query queues with ticket counts by state
-	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
-
-	if err != nil {
-		// Return JSON error on query failure
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to load queue status",
-		})
-		return
-	}
-	defer rows.Close()
-
-	// Build HTML response with table format using GoatKit CSS variables
-	const thClass = "px-3 py-2 text-left text-xs font-medium uppercase"
-	const thQueueClass = "px-3 py-2 text-left text-xs font-medium uppercase"
-	var html strings.Builder
-	html.WriteString(fmt.Sprintf(`<style>
-		.gk-queue-table { border-color: var(--gk-border-default); width: 100%%; table-layout: fixed; }
-		.gk-queue-table th { color: var(--gk-text-muted); }
-		.gk-queue-table td { color: var(--gk-text-primary); }
-		.gk-queue-table thead { background: var(--gk-bg-elevated); }
-		.gk-queue-table tbody { background: var(--gk-bg-surface); }
-		.gk-queue-table tbody tr { border-color: var(--gk-border-default); }
-		.gk-queue-table tbody tr:hover { background: var(--gk-bg-elevated); }
-		.gk-queue-table a { color: var(--gk-text-primary); }
-		.gk-queue-table a:hover { color: var(--gk-primary); }
-		.gk-queue-table .queue-name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-	</style>
-	<div class="mt-4">
-		<table class="gk-queue-table divide-y">
-			<thead>
-				<tr>
-					<th scope="col" class="`+thQueueClass+`" style="width: 40%%;">%s</th>
-					<th scope="col" class="`+thClass+`" style="width: 12%%;">%s</th>
-					<th scope="col" class="`+thClass+`" style="width: 12%%;">%s</th>
-					<th scope="col" class="`+thClass+`" style="width: 12%%;">%s</th>
-					<th scope="col" class="`+thClass+`" style="width: 12%%;">%s</th>
-					<th scope="col" class="`+thClass+`" style="width: 12%%;">%s</th>
-				</tr>
-			</thead>
-			<tbody class="divide-y">`,
-		t("labels.queue"), t("ticket.states.new"), t("ticket.states.open"),
-		t("ticket.states.pending"), t("ticket.states.closed"), t("labels.total")))
-
-	queueCount := 0
-	for rows.Next() {
-		var queueID int
-		var queueName string
-		var newCount, openCount, pendingCount, closedCount int
-		if err := rows.Scan(&queueID, &queueName, &newCount, &openCount, &pendingCount, &closedCount); err != nil {
-			continue
-		}
-
-		totalCount := newCount + openCount + pendingCount + closedCount
-
-		const tdClass = "px-3 py-2 whitespace-nowrap text-sm"
-		const badgeClass = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-		html.WriteString(fmt.Sprintf(`
-		<tr>
-			<td class="px-3 py-2 queue-name" title="%s">
-				<a href="/queues/%d" class="text-sm font-medium">%s</a>
-			</td>
-			<td class="`+tdClass+`">
-				<span class="`+badgeClass+`" style="background: var(--gk-info-subtle); color: var(--gk-info);">%d</span>
-			</td>
-			<td class="`+tdClass+`">
-				<span class="`+badgeClass+`" style="background: var(--gk-success-subtle); color: var(--gk-success);">%d</span>
-			</td>
-			<td class="`+tdClass+`">
-				<span class="`+badgeClass+`" style="background: var(--gk-warning-subtle); color: var(--gk-warning);">%d</span>
-			</td>
-			<td class="`+tdClass+`">
-				<span class="`+badgeClass+`" style="background: var(--gk-bg-elevated); color: var(--gk-text-muted);">%d</span>
-			</td>
-			<td class="px-3 py-2 whitespace-nowrap text-sm font-medium">%d</td>
-		</tr>`, queueName, queueID, queueName, newCount, openCount, pendingCount, closedCount, totalCount))
-		queueCount++
-	}
-	if err := rows.Err(); err != nil {
-		log.Printf("error iterating queue rows: %v", err)
-	}
-
-	// If no queues found, show a message
-	if queueCount == 0 {
-		html.WriteString(fmt.Sprintf(`
-				<tr>
-					<td colspan="6" class="px-3 py-4 text-center text-sm" style="color: var(--gk-text-muted);">
-						%s
-					</td>
-				</tr>`, t("queues.no_queues_found")))
-	}
-
-	html.WriteString(`
-			</tbody>
-		</table>
-	</div>`)
-
-	c.Header("Content-Type", "text/html")
-	c.String(http.StatusOK, html.String())
-}
-
-func renderDashboardQueueStatusFallback(c *gin.Context, t func(string) string) {
-	// Provide deterministic HTML so link checks have stable content without DB access
-	const thClass = "px-3 py-2 text-left text-xs font-medium uppercase"
-	const tdClass = "px-3 py-2 whitespace-nowrap text-sm"
-	const tdName = "px-3 py-2 whitespace-nowrap text-sm font-medium"
-	stub := fmt.Sprintf(`<style>
-		.gk-queue-table { border-color: var(--gk-border-default); width: 100%%; table-layout: fixed; }
-		.gk-queue-table th { color: var(--gk-text-muted); }
-		.gk-queue-table td { color: var(--gk-text-primary); }
-		.gk-queue-table thead { background: var(--gk-bg-elevated); }
-		.gk-queue-table tbody { background: var(--gk-bg-surface); }
-		.gk-queue-table tbody tr { border-color: var(--gk-border-default); }
-		.gk-queue-table tbody tr:hover { background: var(--gk-bg-elevated); }
-		.gk-queue-table .queue-name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-	</style>
-<div class="mt-4">
-	<table class="gk-queue-table divide-y">
-		<thead>
-			<tr>
-				<th scope="col" class="`+thClass+`" style="width: 40%%;">%s</th>
-				<th scope="col" class="`+thClass+`" style="width: 15%%;">%s</th>
-				<th scope="col" class="`+thClass+`" style="width: 15%%;">%s</th>
-				<th scope="col" class="`+thClass+`" style="width: 15%%;">%s</th>
-				<th scope="col" class="`+thClass+`" style="width: 15%%;">%s</th>
-			</tr>
-		</thead>
-		<tbody class="divide-y">
-			<tr>
-				<td class="`+tdName+` queue-name" title="Raw">Raw</td>
-				<td class="`+tdClass+`">2</td>
-				<td class="`+tdClass+`">4</td>
-				<td class="`+tdClass+`">1</td>
-				<td class="`+tdClass+`">0</td>
-			</tr>
-			<tr>
-				<td class="`+tdName+` queue-name" title="Support">Support</td>
-				<td class="`+tdClass+`">0</td>
-				<td class="`+tdClass+`">3</td>
-				<td class="`+tdClass+`">1</td>
-				<td class="`+tdClass+`">5</td>
-			</tr>
-		</tbody>
-	</table>
-</div>`, t("labels.queue"), t("ticket.states.new"), t("ticket.states.open"),
-		t("ticket.states.pending"), t("ticket.states.closed"))
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	c.String(http.StatusOK, stub)
 }
 
 // handleNotifications returns user notifications.

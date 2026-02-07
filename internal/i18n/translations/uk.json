@@ -1352,7 +1352,16 @@
     "close": "Закрити",
     "manage_api_tokens": "Керування API-токенами",
     "create_token_for_user": "Створити токен для користувача",
-    "create_token_for_customer": "Створити токен для клієнта"
+    "create_token_for_customer": "Створити токен для клієнта",
+    "disable_2fa": "Disable 2FA",
+    "disable_2fa_title": "Disable Two-Factor Authentication",
+    "disable_2fa_warning": "You are about to disable 2FA for user:",
+    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
+    "reason_required": "Reason (required)",
+    "reason_placeholder": "Enter the reason for disabling 2FA...",
+    "reason_required_error": "Please enter a reason for this action",
+    "2fa_disabled_success": "2FA has been disabled for this user",
+    "2fa_disable_failed": "Failed to disable 2FA"
   },
   "agent": {
     "ticket": {
@@ -1406,7 +1415,14 @@
     "too_many_attempts": "Забагато невдалих спроб. Зачекайте",
     "and_try_again": "і спробуйте знову.",
     "username_placeholder": "Введіть ім'я користувача",
-    "password_placeholder": "Введіть пароль"
+    "password_placeholder": "Введіть пароль",
+    "2fa_title": "Двофакторна автентифікація",
+    "2fa_description": "Введіть 6-значний код з вашого додатку автентифікації",
+    "2fa_verify": "Підтвердити",
+    "2fa_recovery_hint": "Втратили доступ? Використайте код відновлення",
+    "verification_code": "Код підтвердження",
+    "back_to_login": "Повернутися до входу",
+    "verify": "Підтвердити"
   },
   "buttons": {
     "add": "Додати",
@@ -1458,7 +1474,8 @@
     "save_changes": "Зберегти зміни",
     "done": "Готово",
     "revoke": "Відкликати",
-    "revoke_token": "Відкликати токен"
+    "revoke_token": "Відкликати токен",
+    "continue": "Продовжити"
   },
   "bulk_actions": {
     "change_status_title": "Змінити Статус Заявки",
@@ -1603,7 +1620,8 @@
     "creating": "Створення...",
     "never": "Ніколи",
     "revoked": "Відкликано",
-    "year": "рік"
+    "year": "рік",
+    "verifying": "Перевірка..."
   },
   "customer": {
     "company": "Компанія",
@@ -1801,7 +1819,11 @@
     "unassigned_count": "непризначені",
     "realtime": {
       "title": "Панель у реальному часі"
-    }
+    },
+    "configure_widgets": "Налаштувати віджети",
+    "widget_config_desc": "Виберіть, які віджети відображати на панелі. Перетягніть для зміни порядку.",
+    "no_widgets": "Немає увімкнених віджетів",
+    "no_widgets_desc": "Натисніть на значок шестерні вище, щоб увімкнути віджети панелі."
   },
   "dynamic_fields": {
     "title": "Додаткові поля",
@@ -2287,7 +2309,34 @@
     "your_token": "Ваш токен",
     "your_tokens": "Ваші токени",
     "revoke_token_confirm": "Ви впевнені, що хочете відкликати цей токен?",
-    "enter_token_name": "Будь ласка, введіть назву для вашого токена"
+    "enter_token_name": "Будь ласка, введіть назву для вашого токена",
+    "2fa": {
+      "title": "Двофакторна автентифікація",
+      "description": "Додайте додатковий рівень безпеки за допомогою програми автентифікації",
+      "enabled": "Увімкнено",
+      "disabled": "Вимкнено",
+      "enable": "Увімкнути 2FA",
+      "disable": "Вимкнути 2FA",
+      "setup_title": "Налаштування двофакторної автентифікації",
+      "disable_title": "Вимкнення двофакторної автентифікації",
+      "scan_qr": "Відскануйте цей QR-код програмою автентифікації",
+      "manual_entry": "Або введіть цей код вручну:",
+      "enter_code": "Введіть 6-значний код з програми",
+      "verify": "Підтвердити та увімкнути",
+      "password_required": "Потрібен пароль",
+      "password_to_setup": "Введіть пароль для налаштування 2FA",
+      "confirm_password": "Підтвердіть пароль:",
+      "code_and_password_required": "Потрібні код підтвердження та пароль",
+      "invalid_code": "Недійсний код підтвердження",
+      "recovery_codes_remaining": "Залишилось кодів відновлення:",
+      "recovery_codes_warning": "Збережіть ці коди в надійному місці. Кожен код можна використати лише один раз.",
+      "disable_warning": "Вимкнення 2FA видалить додатковий рівень безпеки з вашого облікового запису.",
+      "password_placeholder": "Введіть пароль",
+      "save_recovery_codes": "Зберегти коди відновлення",
+      "scan_instructions": "Відскануйте цей QR-код програмою автентифікації",
+      "setup_failed": "Не вдалося налаштувати 2FA",
+      "verify_enable": "Підтвердити та увімкнути"
+    }
   },
   "severity": {
     "critical": "Критична",
@@ -3187,7 +3236,11 @@
       "open_tickets": "Відкриті заявки",
       "avg_response_time": "Сер. час відповіді",
       "active_agents": "Активні агенти"
-    }
+    },
+    "configure_widgets": "Configure Widgets",
+    "widget_config_desc": "Choose which widgets appear on your dashboard. Drag to reorder.",
+    "no_widgets": "No widgets enabled",
+    "no_widgets_desc": "Click the gear icon above to enable dashboard widgets."
   },
   "profile": {
     "settings": "Налаштування"

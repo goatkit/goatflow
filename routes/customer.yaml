@@ -98,6 +98,27 @@ spec:
       handler: HandleSetTheme
       description: "Set customer theme preference"
 
+    # Two-Factor Authentication (2FA/TOTP) for customers
+    - path: /api/preferences/2fa/status
+      method: GET
+      handler: handleCustomerTOTPStatus
+      description: "Get 2FA status for current customer"
+
+    - path: /api/preferences/2fa/setup
+      method: POST
+      handler: handleCustomerTOTPSetup
+      description: "Initiate 2FA setup for customer - returns secret and QR code"
+
+    - path: /api/preferences/2fa/confirm
+      method: POST
+      handler: handleCustomerTOTPConfirm
+      description: "Confirm 2FA setup with verification code"
+
+    - path: /api/preferences/2fa/disable
+      method: POST
+      handler: handleCustomerTOTPDisable
+      description: "Disable 2FA for customer (requires valid code)"
+
     # Password management
     - path: /password/form
       method: GET

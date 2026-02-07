@@ -18,7 +18,6 @@ var (
 	HandleDashboard           = handleDashboard
 	HandleDashboardStats      = handleDashboardStats
 	HandleRecentTickets       = handleRecentTickets
-	DashboardQueueStatus      = dashboard_queue_status
 	HandleActivityStream      = handleActivityStream
 	HandlePendingReminderFeed = handlePendingReminderFeed
 	HandleUpdateTicketStatus  = handleUpdateTicketStatus

@@ -51,7 +51,7 @@
                     <label for="timeUnits" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
                         {{ t("tickets.time_units_minutes")|default:"Time Units (minutes)" }}
                     </label>
-                    <input type="number" id="timeUnits" name="timeUnits" min="0" step="1"
+                    <input type="number" id="timeUnits" name="timeUnits" min="0" step="1" value="5"
                         placeholder="{{ t('tickets.time_spent_placeholder')|default:'Time spent on resolution' }}"
                         class="gk-input-neon w-full">
                 </div>

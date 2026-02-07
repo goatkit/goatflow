@@ -503,7 +503,7 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="gk-form-label">Time Units (minutes)</label>
-                            <input type="number" name="time_units" min="0" step="1" placeholder="0"
+                            <input type="number" name="time_units" min="0" step="1" value="5" placeholder="5"
                                    class="gk-input-neon mt-1">
                         </div>
                         <div>
@@ -568,7 +568,7 @@
                     </div>
                     <div class="flex items-center">
                         <input type="checkbox" name="is_visible_for_customer" id="noteVisibility" value="1"
-                               class="mr-2 rounded" style="border-color: var(--gk-border-strong);">
+                               class="mr-2 rounded" style="border-color: var(--gk-border-strong);" checked>
                         <label for="noteVisibility" class="text-sm" style="color: var(--gk-text-secondary);">
                             Visible to Customer
                         </label>

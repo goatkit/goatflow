@@ -226,7 +226,6 @@ func TestAdminView(t *testing.T) {
 			checkAlternatives: []checkAlternatives{
 				{"System Administration", "admin_dashboard.system_administration"},
 				{"User Management", "admin_dashboard.user_management"},
-				{"System Configuration", "admin_dashboard.system_configuration"},
 				{"Reports &amp; Analytics", "Reports & Analytics", "admin_dashboard.reports_analytics"},
 				{"Audit Logs", "admin_dashboard.audit_logs"},
 			},

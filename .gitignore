@@ -514,3 +514,4 @@ go/
 !deploy/.env.example
 !deploy/README.md
 *.wasm
+public/

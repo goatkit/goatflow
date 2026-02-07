@@ -24,3 +24,24 @@ INSERT INTO ticket (tn, title, queue_id, ticket_lock_id, type_id, user_id, respo
 SELECT '20251230000001', 'E2E Test Ticket', 1, 1, 1, 1, 1, 3, 1, '', '', 0, 0, 0, 0, 0, 0, NOW(), 1, NOW(), 1
 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM ticket WHERE tn = '20251230000001');
+
+-- 2FA Test Fixtures
+-- Customer for 2FA setup testing (2FA NOT enabled)
+-- Password is 'Test2FA!' (SHA256)
+INSERT INTO customer_user (login, email, customer_id, pw, title, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+SELECT 'e2e.2fa.setup', 'e2e.2fa.setup@gotrs.local', 'e2e-test-company', SHA2('Test2FA!', 256), '', '2FA', 'SetupTest', 1, NOW(), 1, NOW(), 1
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM customer_user WHERE login = 'e2e.2fa.setup');
+
+-- Customer for 2FA enabled testing (2FA IS enabled - will be set up by migration)
+INSERT INTO customer_user (login, email, customer_id, pw, title, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+SELECT 'e2e.2fa.enabled', 'e2e.2fa.enabled@gotrs.local', 'e2e-test-company', SHA2('Test2FA!', 256), '', '2FA', 'EnabledTest', 1, NOW(), 1, NOW(), 1
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM customer_user WHERE login = 'e2e.2fa.enabled');
+
+-- Agent for 2FA testing
+-- Password is 'AgentTest123!' 
+INSERT INTO users (login, pw, title, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+SELECT 'e2e.2fa.agent', SHA2('AgentTest123!', 256), '', 'Agent', '2FATest', 1, NOW(), 1, NOW(), 1
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE login = 'e2e.2fa.agent');

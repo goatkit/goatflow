@@ -49,6 +49,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
 	"github.com/gotrs-io/gotrs-ce/internal/plugin"
+	"github.com/gotrs-io/gotrs-ce/internal/plugin/core"
 	"github.com/gotrs-io/gotrs-ce/internal/plugin/example"
 	pluginloader "github.com/gotrs-io/gotrs-ce/internal/plugin/loader"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
@@ -350,6 +351,14 @@ func main() {
 		log.Printf("⚠️  Failed to register hello plugin: %v", err)
 	} else {
 		log.Printf("✅ Plugin registered: %s v%s", helloPlugin.GKRegister().Name, helloPlugin.GKRegister().Version)
+	}
+
+	// Register core dashboard widgets plugin
+	dashboardPlugin := core.NewDashboardPlugin()
+	if err := pluginMgr.Register(context.Background(), dashboardPlugin); err != nil {
+		log.Printf("⚠️  Failed to register dashboard-core plugin: %v", err)
+	} else {
+		log.Printf("✅ Plugin registered: %s v%s", dashboardPlugin.GKRegister().Name, dashboardPlugin.GKRegister().Version)
 	}
 
 	// Load WASM plugins from plugins directory

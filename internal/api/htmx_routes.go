@@ -146,28 +146,6 @@ func handleProfile(c *gin.Context) {
 	})
 }
 
-// handleSettings shows settings page.
-func handleSettings(c *gin.Context) {
-	user := getUserMapForTemplate(c)
-
-	// TODO: Load actual user settings from database
-	// For now, use default settings
-	settings := gin.H{
-		"emailNotifications": true,
-		"autoRefresh":        false,
-		"refreshInterval":    60,
-		"theme":              "auto",
-		"language":           "en",
-		"timezone":           "UTC",
-	}
-
-	getPongo2Renderer().HTML(c, http.StatusOK, "pages/settings.pongo2", pongo2.Context{
-		"User":       user,
-		"Settings":   settings,
-		"ActivePage": "settings",
-	})
-}
-
 // handleApiTokensPage shows the API tokens management page.
 func handleApiTokensPage(c *gin.Context) {
 	user := getUserMapForTemplate(c)

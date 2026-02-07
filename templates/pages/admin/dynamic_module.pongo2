@@ -93,11 +93,13 @@
     <!-- Action Bar -->
     <div class="mb-4 flex justify-between items-center">
         <div class="flex space-x-2">
+            {% if not module.ReadOnly %}
             <button onclick="openCreateModal()"
                     class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
                 <i class="fas fa-plus icon-sm mr-2"></i>
                 New {{ module.Singular }}
             </button>
+            {% endif %}
 
             <!-- Bulk Actions (hidden by default) -->
             <div id="bulkActions" class="hidden flex gap-2">
@@ -118,13 +120,15 @@
                     Export Selected
                 </button>
                 {% endif %}
+                {% if not module.ReadOnly %}
                 <button onclick="bulkDelete()"
                         class="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm">
                     <i class="fas fa-trash icon-sm mr-1"></i>
                     Delete Selected
                 </button>
+                {% endif %}
             </div>
-            {% if features.ImportCSV %}
+            {% if features.ImportCSV and not module.ReadOnly %}
             <button onclick="openImportModal()"
                     class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
                 <i class="fas fa-file-upload icon-sm mr-2"></i>
@@ -415,10 +419,12 @@
             <table id="dataTable" class="min-w-full divide-y" style="border-color: var(--gk-border-default);">
                 <thead class="" style="background: var(--gk-bg-tertiary);">
                     <tr>
+                        {% if not module.ReadOnly %}
                         <th class="px-3 py-3 text-left">
                             <input type="checkbox" id="selectAll" onclick="toggleSelectAll()"
                                    class="h-4 w-4 rounded focus:ring-2" style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
                         </th>
+                        {% endif %}
                         {% if allFields %}
                             {% for field in allFields %}
                             <th class="px-6 py-3 text-left text-xs font-medium " style="color: var(--gk-text-muted); uppercase tracking-wider">
@@ -446,9 +452,11 @@
                             </th>
                             {% endif %}
                         {% endif %}
+                        {% if not module.ReadOnly %}
                         <th class="px-6 py-3 text-right text-xs font-medium " style="color: var(--gk-text-muted); uppercase tracking-wider">
                             Actions
                         </th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody class="" style="background: var(--gk-bg-surface); divide-y" style="border-color: var(--gk-border-default);">
@@ -458,10 +466,12 @@
                         data-valid_id="{{ item.valid_id|default:'1' }}"
                         data-group_id="{{ item.group_id|default:'' }}"
                         {% if module.Name == 'mail_account' %}onclick="handleMailAccountRowSelect('{{ item.id }}', this, event)"{% endif %}>
+                        {% if not module.ReadOnly %}
                         <td class="px-3 py-4">
                             <input type="checkbox" class="item-checkbox h-4 w-4 rounded focus:ring-2" style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);"
                                    value="{{ item.id }}" onchange="updateBulkActions()">
                         </td>
+                        {% endif %}
                         {% if allFields %}
                             {% for field in allFields %}
                             <td class="px-6 py-4 whitespace-nowrap text-sm " style="color: var(--gk-text-primary);">
@@ -629,6 +639,7 @@
                             </td>
                             {% endif %}
                         {% endif %}
+                        {% if not module.ReadOnly %}
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button onclick="editItem('{{ item.id }}')"
                                     title="{{ t("admin.common.tooltips.edit")|default:"Edit" }}"
@@ -657,6 +668,7 @@
                                 </button>
                             {% endif %}
                         </td>
+                        {% endif %}
                     </tr>
                     {% empty %}
                     <tr>

@@ -162,6 +162,35 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 
 		auth.DefaultLoginRateLimiter.RecordSuccess(clientIP, username)
 
+		// Check if 2FA is enabled for this user
+		totpService := service.NewTOTPService(db, "GOTRS")
+		if totpService.IsEnabled(int(userID)) {
+			// 2FA is enabled - don't complete login yet
+			// SECURITY FIX (V3/V4/V5/V7): Use session manager instead of raw cookies
+			sessionMgr := auth.GetTOTPSessionManager()
+			token, err := sessionMgr.CreateAgentSession(int(userID), username, c.ClientIP(), c.Request.UserAgent())
+			if err != nil {
+				sendErrorResponse(c, http.StatusInternalServerError, "Failed to create 2FA session")
+				return
+			}
+			
+			// Only store the token in cookie - user data is server-side
+			c.SetCookie("2fa_pending", token, 300, "/", "", false, true) // 5 min expiry
+			
+			if c.GetHeader("HX-Request") == "true" {
+				c.Header("HX-Redirect", "/login/2fa")
+				c.JSON(http.StatusOK, gin.H{
+					"success":      true,
+					"requires_2fa": true,
+					"redirect":     "/login/2fa",
+				})
+				return
+			}
+			
+			c.Redirect(http.StatusFound, "/login/2fa")
+			return
+		}
+
 		var token string
 		if jwtManager != nil {
 			tokenStr, err := jwtManager.GenerateToken(userID, username, "user", 1)
@@ -376,4 +405,170 @@ func loginRedirectPath(c *gin.Context) string {
 	}
 
 	return "/login"
+}
+
+// handle2FAPage shows the 2FA verification page.
+func handle2FAPage(c *gin.Context) {
+	if _, err := c.Cookie("2fa_pending"); err != nil {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+	getPongo2Renderer().HTML(c, http.StatusOK, "pages/login_2fa.pongo2", pongo2.Context{})
+}
+
+// handle2FAVerify processes the 2FA verification during login.
+func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get pending 2FA token from cookie
+		pendingToken, err := c.Cookie("2fa_pending")
+		if err != nil || pendingToken == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error":   "No pending 2FA session - please login again",
+			})
+			return
+		}
+
+		// SECURITY: Get user data from server-side session manager, NOT cookies
+		sessionMgr := auth.GetTOTPSessionManager()
+		session := sessionMgr.ValidateAndGetSession(pendingToken, c.ClientIP(), c.Request.UserAgent())
+		if session == nil {
+			c.SetCookie("2fa_pending", "", -1, "/", "", false, true)
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error":   "Invalid or expired session - please login again",
+			})
+			return
+		}
+
+		userID := session.UserID
+		username := session.Username
+
+		// Get the TOTP code from request
+		code := c.PostForm("code")
+		if code == "" {
+			var req struct {
+				Code string `json:"code"`
+			}
+			if err := c.ShouldBindJSON(&req); err == nil {
+				code = req.Code
+			}
+		}
+
+		if code == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Verification code is required",
+			})
+			return
+		}
+
+		// Verify the TOTP code
+		db, err := database.GetDB()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Database unavailable",
+			})
+			return
+		}
+
+		totpService := service.NewTOTPService(db, "GOTRS")
+		valid, err := totpService.ValidateCode(userID, code)
+		if err != nil || !valid {
+			// Record failed attempt
+			remaining := sessionMgr.RecordFailedAttempt(pendingToken)
+			if remaining <= 0 {
+				sessionMgr.InvalidateSession(pendingToken)
+				c.SetCookie("2fa_pending", "", -1, "/", "", false, true)
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"success": false,
+					"error":   "Too many failed attempts - please login again",
+				})
+				return
+			}
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success":            false,
+				"error":              "Invalid verification code",
+				"attempts_remaining": remaining,
+			})
+			return
+		}
+
+		// 2FA verified - clear session and cookie
+		sessionMgr.InvalidateSession(pendingToken)
+		c.SetCookie("2fa_pending", "", -1, "/", "", false, true)
+
+		// Complete the login - generate token and set cookies
+		var token string
+		if jwtManager != nil {
+			tokenStr, err := jwtManager.GenerateToken(uint(userID), username, "user", 1)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"success": false,
+					"error":   "Failed to generate token",
+				})
+				return
+			}
+			token = tokenStr
+		} else {
+			token = fmt.Sprintf("demo_session_%d_%d", userID, time.Now().Unix())
+		}
+
+		sessionTimeout := constants.DefaultSessionTimeout
+		var userTheme, userThemeMode string
+		prefService := service.NewUserPreferencesService(db)
+		if userTimeout := prefService.GetSessionTimeout(userID); userTimeout > 0 {
+			sessionTimeout = userTimeout
+		}
+		userTheme = prefService.GetTheme(userID)
+		userThemeMode = prefService.GetThemeMode(userID)
+
+		c.SetCookie("access_token", token, sessionTimeout, "/", "", false, true)
+		c.SetCookie("auth_token", token, sessionTimeout, "/", "", false, true)
+		c.SetCookie("gotrs_logged_in", "1", sessionTimeout, "/", "", false, false)
+
+		if userTheme != "" {
+			c.SetCookie("gotrs_theme", userTheme, sessionTimeout, "/", "", false, false)
+		}
+		if userThemeMode != "" {
+			c.SetCookie("gotrs_mode", userThemeMode, sessionTimeout, "/", "", false, false)
+		}
+
+		// Create session record
+		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
+			sessionID, err := sessionSvc.CreateSession(
+				userID,
+				username,
+				"User",
+				c.ClientIP(),
+				c.Request.UserAgent(),
+			)
+			if err != nil {
+				log.Printf("Failed to create session record: %v", err)
+			} else {
+				c.SetCookie("session_id", sessionID, sessionTimeout, "/", "", false, true)
+			}
+		}
+
+		// Respond based on request type
+		contentType := c.GetHeader("Content-Type")
+		if c.GetHeader("HX-Request") == "true" {
+			c.Header("HX-Redirect", "/dashboard")
+			c.JSON(http.StatusOK, gin.H{
+				"success":  true,
+				"redirect": "/dashboard",
+			})
+			return
+		} else if strings.Contains(contentType, "application/json") {
+			// JSON fetch request (from login_2fa.pongo2 form)
+			c.JSON(http.StatusOK, gin.H{
+				"success":  true,
+				"redirect": "/dashboard",
+			})
+			return
+		}
+
+		c.Redirect(http.StatusFound, "/dashboard")
+	}
 }

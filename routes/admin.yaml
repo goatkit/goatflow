@@ -548,11 +548,7 @@ spec:
           template: pages/under_construction.pongo2
           description: "Display reports overview"
 
-        - path: /logs
-          method: GET
-          handler: handleAdminLogs
-          template: pages/under_construction.pongo2
-          description: "Display audit logs placeholder"
+        # /logs is now handled by admin_audit_log.yaml module
 
         - path: /backup
           method: GET
@@ -1250,3 +1246,14 @@ spec:
           handler: HandleAdminPluginLogs
           template: pages/admin/plugin_logs.pongo2
           description: "Display plugin logs viewer"
+
+        # Admin 2FA Override (with audit logging)
+        - path: /api/users/:id/2fa/disable
+          method: POST
+          handler: handleAdmin2FAOverride
+          description: "Admin override: disable 2FA for a user (requires reason)"
+
+        - path: /api/customers/:login/2fa/disable
+          method: POST
+          handler: handleAdminCustomer2FAOverride
+          description: "Admin override: disable 2FA for a customer (requires reason)"

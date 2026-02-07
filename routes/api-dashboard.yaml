@@ -46,3 +46,18 @@ spec:
       method: GET
       handler: handlePerformance
       description: "Performance metrics widget"
+
+    - path: /widgets
+      method: GET
+      handler: handleDashboardWidgetsList
+      description: "List all available dashboard widgets with config"
+
+    - path: /widgets/config
+      method: GET
+      handler: handleDashboardWidgetsConfig
+      description: "Get user's dashboard widget configuration"
+
+    - path: /widgets/config
+      method: POST
+      handler: handleDashboardWidgetsUpdate
+      description: "Update user's dashboard widget configuration"

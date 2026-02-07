@@ -47,7 +47,6 @@ func TestAllLinksReturn200(t *testing.T) {
 			"/queues/new":                     {http.StatusBadRequest: {}},
 			"/register":                       {http.StatusNotFound: {}},
 			"/dev":                            {http.StatusNotFound: {}},
-			"/admin/settings":                 {http.StatusNotFound: {}},
 			"/admin/reports":                  {http.StatusNotFound: {}},
 			"/admin/logs":                     {http.StatusNotFound: {}},
 			"/admin/templates":                {http.StatusNotFound: {}}, // YAML-routed, requires full router

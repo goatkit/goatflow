@@ -1351,7 +1351,16 @@
     "close": "Zamknij",
     "manage_api_tokens": "Zarządzaj tokenami API",
     "create_token_for_user": "Utwórz token dla użytkownika",
-    "create_token_for_customer": "Utwórz token dla klienta"
+    "create_token_for_customer": "Utwórz token dla klienta",
+    "disable_2fa": "Disable 2FA",
+    "disable_2fa_title": "Disable Two-Factor Authentication",
+    "disable_2fa_warning": "You are about to disable 2FA for user:",
+    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
+    "reason_required": "Reason (required)",
+    "reason_placeholder": "Enter the reason for disabling 2FA...",
+    "reason_required_error": "Please enter a reason for this action",
+    "2fa_disabled_success": "2FA has been disabled for this user",
+    "2fa_disable_failed": "Failed to disable 2FA"
   },
   "admin_dashboard": {
     "activity": "Aktywność",
@@ -1513,7 +1522,14 @@
     "too_many_attempts": "Zbyt wiele nieudanych prób. Proszę czekać",
     "username": "Nazwa użytkownika",
     "username_placeholder": "Wprowadź nazwę użytkownika",
-    "password_placeholder": "Wprowadź hasło"
+    "password_placeholder": "Wprowadź hasło",
+    "2fa_title": "Uwierzytelnianie dwuskładnikowe",
+    "2fa_description": "Wprowadź 6-cyfrowy kod z aplikacji uwierzytelniającej",
+    "2fa_verify": "Zweryfikuj",
+    "2fa_recovery_hint": "Utracono dostęp? Użyj kodu odzyskiwania",
+    "verification_code": "Kod weryfikacyjny",
+    "back_to_login": "Powrót do logowania",
+    "verify": "Zweryfikuj"
   },
   "bulk_actions": {
     "all_selected": "Wszystko wybrane",
@@ -1608,7 +1624,8 @@
     "save_changes": "Zapisz zmiany",
     "done": "Gotowe",
     "revoke": "Unieważnij",
-    "revoke_token": "Unieważnij token"
+    "revoke_token": "Unieważnij token",
+    "continue": "Kontynuuj"
   },
   "changes": {
     "backout_plan": "Plan wycofania",
@@ -1710,7 +1727,8 @@
     "creating": "Tworzenie...",
     "never": "Nigdy",
     "revoked": "Unieważniony",
-    "year": "rok"
+    "year": "rok",
+    "verifying": "Weryfikacja..."
   },
   "customer": {
     "auth": {
@@ -1971,7 +1989,11 @@
     "title": "Panel",
     "unassigned_count": "nieprzypisane",
     "welcome_back": "Witaj ponownie",
-    "welcome_message": "Oto, co dzisiaj dzieje się z Twoimi zgłoszeniami"
+    "welcome_message": "Oto, co dzisiaj dzieje się z Twoimi zgłoszeniami",
+    "configure_widgets": "Konfiguruj widżety",
+    "widget_config_desc": "Wybierz, które widżety pojawią się na pulpicie. Przeciągnij, aby zmienić kolejność.",
+    "no_widgets": "Brak włączonych widżetów",
+    "no_widgets_desc": "Kliknij ikonę koła zębatego powyżej, aby włączyć widżety pulpitu."
   },
   "dynamic_field_form": {
     "basic_information": "Podstawowe informacje",
@@ -2903,7 +2925,34 @@
     "your_token": "Twój token",
     "your_tokens": "Twoje tokeny",
     "revoke_token_confirm": "Czy na pewno chcesz unieważnić ten token?",
-    "enter_token_name": "Proszę podać nazwę dla swojego tokena"
+    "enter_token_name": "Proszę podać nazwę dla swojego tokena",
+    "2fa": {
+      "title": "Uwierzytelnianie dwuskładnikowe",
+      "description": "Dodaj dodatkową warstwę zabezpieczeń do swojego konta za pomocą aplikacji uwierzytelniającej",
+      "enabled": "Włączone",
+      "disabled": "Wyłączone",
+      "enable": "Włącz 2FA",
+      "disable": "Wyłącz 2FA",
+      "setup_title": "Konfiguracja uwierzytelniania dwuskładnikowego",
+      "disable_title": "Wyłączanie uwierzytelniania dwuskładnikowego",
+      "scan_qr": "Zeskanuj ten kod QR aplikacją uwierzytelniającą",
+      "manual_entry": "Lub wprowadź ten kod ręcznie:",
+      "enter_code": "Wprowadź 6-cyfrowy kod z aplikacji",
+      "verify": "Zweryfikuj i włącz",
+      "password_required": "Wymagane hasło",
+      "password_to_setup": "Wprowadź hasło, aby skonfigurować 2FA",
+      "confirm_password": "Potwierdź hasło:",
+      "code_and_password_required": "Wymagany jest kod weryfikacyjny i hasło",
+      "invalid_code": "Nieprawidłowy kod weryfikacyjny",
+      "recovery_codes_remaining": "Pozostałe kody odzyskiwania:",
+      "recovery_codes_warning": "Zapisz te kody w bezpiecznym miejscu. Każdy kod może być użyty tylko raz.",
+      "disable_warning": "Wyłączenie 2FA usunie dodatkową warstwę zabezpieczeń z Twojego konta.",
+      "password_placeholder": "Wprowadź hasło",
+      "save_recovery_codes": "Zapisz kody odzyskiwania",
+      "scan_instructions": "Zeskanuj ten kod QR aplikacją uwierzytelniającą",
+      "setup_failed": "Nie udało się skonfigurować 2FA",
+      "verify_enable": "Zweryfikuj i włącz"
+    }
   },
   "severity": {
     "critical": "Krytyczny",

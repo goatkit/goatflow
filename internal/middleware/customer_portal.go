@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -15,6 +16,7 @@ import (
 // CustomerPortalGate loads portal config, enforces enable/disable, and applies optional login rules.
 func CustomerPortalGate(jwtManager *auth.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		log.Printf("[CUST-PORTAL] path=%s jwtManager=%v", c.Request.URL.Path, jwtManager != nil)
 		db, err := database.GetDB()
 		if err != nil || db == nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "customer portal unavailable"})

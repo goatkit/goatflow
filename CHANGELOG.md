@@ -8,6 +8,19 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.6.5-dev]
 
 ### Security
+- **Two-Factor Authentication (TOTP)**: Complete 2FA implementation for agents and customers
+  - **Agent 2FA**: Setup/disable via Settings page with QR code and recovery codes
+  - **Customer 2FA**: Setup/disable via Profile page with password verification
+  - **Login Flow**: 2FA prompt after password authentication, supports authenticator apps (Google Authenticator, Authy, etc.)
+  - **Recovery Codes**: 8 single-use codes with 128-bit entropy for account recovery
+  - **Admin Override**: Admins can disable 2FA for locked-out users (Customer Users and Users pages)
+  - **Audit Trail**: All 2FA events logged (setup, disable, verify, recovery code use)
+  - **Session Security**: 256-bit random tokens, 5-minute expiry, IP binding, rate limiting (5 attempts)
+  - **i18n**: Full translations for all 15 supported languages
+  - **Test Coverage**: 75 tests (15 unit, 35 security/contract, 2 Go E2E, 23 Playwright behavioral)
+  - Security documentation: `docs/security/TOTP_THREAT_MODEL.md`
+  - Files: `internal/service/totp_service.go`, `internal/auth/totp_session.go`, `internal/api/totp_handlers.go`
+
 - **RBAC Enforcement on Statistics & Queue Endpoints**: Complete RBAC filtering across all data-leaking endpoints
   - `GET /api/v1/queues` — Only returns queues user has permission to access
   - `GET /api/v1/queues/:id/stats` — Returns 404 for inaccessible queues (prevents existence disclosure)

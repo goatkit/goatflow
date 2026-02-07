@@ -3,7 +3,7 @@ apiVersion: v1
 kind: RouteGroup
 metadata:
   name: settings
-  description: "User settings and preferences routes"
+  description: "User preferences API routes (used by profile page)"
   namespace: default
   enabled: true
 spec:
@@ -11,12 +11,6 @@ spec:
   middleware:
     - auth
   routes:
-    - path: /settings
-      method: GET
-      handler: handleSettings
-      template: pages/settings.pongo2
-      description: "Display user settings page"
-
     # Session timeout preference (GET current value)
     - path: /api/preferences/session-timeout
       method: GET
@@ -59,3 +53,24 @@ spec:
       handler: handleApiTokensPage
       template: pages/settings/api_tokens.pongo2
       description: "Manage personal API tokens"
+
+    # Two-Factor Authentication (2FA/TOTP) endpoints
+    - path: /api/preferences/2fa/status
+      method: GET
+      handler: handleTOTPStatus
+      description: "Get 2FA status for current user"
+
+    - path: /api/preferences/2fa/setup
+      method: POST
+      handler: handleTOTPSetup
+      description: "Initiate 2FA setup - returns secret and QR code"
+
+    - path: /api/preferences/2fa/confirm
+      method: POST
+      handler: handleTOTPConfirm
+      description: "Confirm 2FA setup with verification code"
+
+    - path: /api/preferences/2fa/disable
+      method: POST
+      handler: handleTOTPDisable
+      description: "Disable 2FA (requires valid code)"

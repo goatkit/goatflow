@@ -1351,7 +1351,16 @@
     "close": "إغلاق",
     "manage_api_tokens": "إدارة رموز API",
     "create_token_for_user": "إنشاء رمز للمستخدم",
-    "create_token_for_customer": "إنشاء رمز للعميل"
+    "create_token_for_customer": "إنشاء رمز للعميل",
+    "disable_2fa": "Disable 2FA",
+    "disable_2fa_title": "Disable Two-Factor Authentication",
+    "disable_2fa_warning": "You are about to disable 2FA for user:",
+    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
+    "reason_required": "Reason (required)",
+    "reason_placeholder": "Enter the reason for disabling 2FA...",
+    "reason_required_error": "Please enter a reason for this action",
+    "2fa_disabled_success": "2FA has been disabled for this user",
+    "2fa_disable_failed": "Failed to disable 2FA"
   },
   "admin_dashboard": {
     "activity": "النشاط",
@@ -1513,7 +1522,14 @@
     "too_many_attempts": "محاولات فاشلة كثيرة جداً. يرجى الانتظار",
     "username": "اسم المستخدم",
     "username_placeholder": "أدخل اسم المستخدم",
-    "password_placeholder": "أدخل كلمة المرور"
+    "password_placeholder": "أدخل كلمة المرور",
+    "2fa_title": "المصادقة الثنائية",
+    "2fa_description": "أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة",
+    "2fa_verify": "تحقق",
+    "2fa_recovery_hint": "فقدت الوصول؟ استخدم رمز الاسترداد",
+    "verification_code": "رمز التحقق",
+    "back_to_login": "العودة إلى تسجيل الدخول",
+    "verify": "تحقق"
   },
   "bulk_actions": {
     "all_selected": "تم تحديد الكل",
@@ -1608,7 +1624,8 @@
     "save_changes": "حفظ التغييرات",
     "done": "تم",
     "revoke": "إلغاء",
-    "revoke_token": "إلغاء الرمز"
+    "revoke_token": "إلغاء الرمز",
+    "continue": "متابعة"
   },
   "changes": {
     "backout_plan": "خطة التراجع",
@@ -1710,7 +1727,8 @@
     "creating": "جاري الإنشاء...",
     "never": "أبداً",
     "revoked": "ملغى",
-    "year": "سنة"
+    "year": "سنة",
+    "verifying": "جارٍ التحقق..."
   },
   "customer": {
     "auth": {
@@ -1971,7 +1989,11 @@
     "title": "لوحة التحكم",
     "unassigned_count": "غير معينة",
     "welcome_back": "مرحبًا بعودتك",
-    "welcome_message": "إليك ما يحدث مع تذاكرك اليوم"
+    "welcome_message": "إليك ما يحدث مع تذاكرك اليوم",
+    "configure_widgets": "تكوين الأدوات",
+    "widget_config_desc": "اختر الأدوات التي تظهر في لوحة التحكم. اسحب لإعادة الترتيب.",
+    "no_widgets": "لا توجد أدوات مفعّلة",
+    "no_widgets_desc": "انقر على أيقونة الترس أعلاه لتفعيل أدوات لوحة التحكم."
   },
   "dynamic_field_form": {
     "basic_information": "المعلومات الأساسية",
@@ -2789,7 +2811,34 @@
     "your_token": "رمزك",
     "your_tokens": "رموزك",
     "revoke_token_confirm": "هل أنت متأكد من أنك تريد إلغاء هذا الرمز؟",
-    "enter_token_name": "يرجى إدخال اسم للرمز الخاص بك"
+    "enter_token_name": "يرجى إدخال اسم للرمز الخاص بك",
+    "2fa": {
+      "title": "المصادقة الثنائية",
+      "description": "أضف طبقة إضافية من الأمان لحسابك باستخدام تطبيق المصادقة",
+      "enabled": "مفعّل",
+      "disabled": "معطّل",
+      "enable": "تفعيل المصادقة الثنائية",
+      "disable": "تعطيل المصادقة الثنائية",
+      "setup_title": "إعداد المصادقة الثنائية",
+      "disable_title": "تعطيل المصادقة الثنائية",
+      "scan_qr": "امسح رمز QR هذا بتطبيق المصادقة",
+      "manual_entry": "أو أدخل هذا الرمز يدوياً:",
+      "enter_code": "أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة",
+      "verify": "تحقق وتفعيل",
+      "password_required": "كلمة المرور مطلوبة",
+      "password_to_setup": "أدخل كلمة المرور لإعداد المصادقة الثنائية",
+      "confirm_password": "تأكيد كلمة المرور:",
+      "code_and_password_required": "رمز التحقق وكلمة المرور مطلوبان",
+      "invalid_code": "رمز التحقق غير صالح",
+      "recovery_codes_remaining": "رموز الاسترداد المتبقية:",
+      "recovery_codes_warning": "احفظ هذه الرموز في مكان آمن. كل رمز يمكن استخدامه مرة واحدة فقط.",
+      "disable_warning": "تعطيل المصادقة الثنائية سيزيل طبقة الأمان الإضافية من حسابك.",
+      "password_placeholder": "أدخل كلمة المرور",
+      "save_recovery_codes": "حفظ رموز الاسترداد",
+      "scan_instructions": "امسح رمز QR هذا بتطبيق المصادقة",
+      "setup_failed": "فشل إعداد المصادقة الثنائية",
+      "verify_enable": "تحقق وتفعيل"
+    }
   },
   "severity": {
     "critical": "حرج",

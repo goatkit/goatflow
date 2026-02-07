@@ -1351,7 +1351,16 @@
     "close": "Schließen",
     "manage_api_tokens": "API-Token verwalten",
     "create_token_for_user": "Token für Benutzer erstellen",
-    "create_token_for_customer": "Token für Kunde erstellen"
+    "create_token_for_customer": "Token für Kunde erstellen",
+    "disable_2fa": "Disable 2FA",
+    "disable_2fa_title": "Disable Two-Factor Authentication",
+    "disable_2fa_warning": "You are about to disable 2FA for user:",
+    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
+    "reason_required": "Reason (required)",
+    "reason_placeholder": "Enter the reason for disabling 2FA...",
+    "reason_required_error": "Please enter a reason for this action",
+    "2fa_disabled_success": "2FA has been disabled for this user",
+    "2fa_disable_failed": "Failed to disable 2FA"
   },
   "admin_dashboard": {
     "activity": "Aktivität",
@@ -1513,7 +1522,14 @@
     "too_many_attempts": "Zu viele fehlgeschlagene Versuche. Bitte warten Sie",
     "username": "Benutzername",
     "username_placeholder": "Benutzernamen eingeben",
-    "password_placeholder": "Passwort eingeben"
+    "password_placeholder": "Passwort eingeben",
+    "2fa_title": "Zwei-Faktor-Authentifizierung",
+    "2fa_description": "Geben Sie den 6-stelligen Code aus Ihrer Authenticator-App ein",
+    "2fa_verify": "Bestätigen",
+    "2fa_recovery_hint": "Zugang verloren? Verwenden Sie einen Wiederherstellungscode",
+    "verification_code": "Bestätigungscode",
+    "back_to_login": "Zurück zur Anmeldung",
+    "verify": "Bestätigen"
   },
   "bulk_actions": {
     "all_selected": "Alle ausgewählt",
@@ -1608,7 +1624,8 @@
     "save_changes": "Änderungen speichern",
     "done": "Fertig",
     "revoke": "Widerrufen",
-    "revoke_token": "Token widerrufen"
+    "revoke_token": "Token widerrufen",
+    "continue": "Weiter"
   },
   "changes": {
     "backout_plan": "Rückfallplan",
@@ -1710,7 +1727,8 @@
     "creating": "Erstellen...",
     "never": "Nie",
     "revoked": "Widerrufen",
-    "year": "Jahr"
+    "year": "Jahr",
+    "verifying": "Wird überprüft..."
   },
   "customer": {
     "auth": {
@@ -1971,7 +1989,11 @@
     "title": "Übersicht",
     "unassigned_count": "nicht zugewiesen",
     "welcome_back": "Willkommen zurück",
-    "welcome_message": "Hier sehen Sie, was heute mit Ihren Tickets passiert"
+    "welcome_message": "Hier sehen Sie, was heute mit Ihren Tickets passiert",
+    "configure_widgets": "Widgets konfigurieren",
+    "widget_config_desc": "Wählen Sie aus, welche Widgets auf Ihrem Dashboard erscheinen. Ziehen zum Neuordnen.",
+    "no_widgets": "Keine Widgets aktiviert",
+    "no_widgets_desc": "Klicken Sie auf das Zahnradsymbol oben, um Dashboard-Widgets zu aktivieren."
   },
   "dynamic_field_form": {
     "basic_information": "Grundinformationen",
@@ -2790,7 +2812,34 @@
     "your_token": "Ihr Token",
     "your_tokens": "Ihre Token",
     "revoke_token_confirm": "Möchten Sie diesen Token wirklich widerrufen?",
-    "enter_token_name": "Bitte geben Sie einen Namen für Ihren Token ein"
+    "enter_token_name": "Bitte geben Sie einen Namen für Ihren Token ein",
+    "2fa": {
+      "title": "Zwei-Faktor-Authentifizierung",
+      "description": "Fügen Sie Ihrem Konto mit einer Authenticator-App eine zusätzliche Sicherheitsebene hinzu",
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert",
+      "enable": "2FA aktivieren",
+      "disable": "2FA deaktivieren",
+      "setup_title": "Zwei-Faktor-Authentifizierung einrichten",
+      "disable_title": "Zwei-Faktor-Authentifizierung deaktivieren",
+      "scan_qr": "Scannen Sie diesen QR-Code mit Ihrer Authenticator-App",
+      "manual_entry": "Oder geben Sie diesen Code manuell ein:",
+      "enter_code": "Geben Sie den 6-stelligen Code aus Ihrer Authenticator-App ein",
+      "verify": "Verifizieren & Aktivieren",
+      "password_required": "Passwort erforderlich",
+      "password_to_setup": "Geben Sie Ihr Passwort ein, um 2FA einzurichten",
+      "confirm_password": "Bestätigen Sie Ihr Passwort:",
+      "code_and_password_required": "Verifizierungscode und Passwort sind erforderlich",
+      "invalid_code": "Ungültiger Verifizierungscode",
+      "recovery_codes_remaining": "Verbleibende Wiederherstellungscodes:",
+      "recovery_codes_warning": "Bewahren Sie diese Codes an einem sicheren Ort auf. Jeder Code kann nur einmal verwendet werden.",
+      "disable_warning": "Das Deaktivieren von 2FA entfernt die zusätzliche Sicherheitsebene von Ihrem Konto.",
+      "password_placeholder": "Passwort eingeben",
+      "save_recovery_codes": "Wiederherstellungscodes speichern",
+      "scan_instructions": "Scannen Sie diesen QR-Code mit Ihrer Authenticator-App",
+      "setup_failed": "2FA-Einrichtung fehlgeschlagen",
+      "verify_enable": "Verifizieren & Aktivieren"
+    }
   },
   "severity": {
     "critical": "Kritisch",

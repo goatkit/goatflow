@@ -69,15 +69,32 @@ func HandleAdminUsers(c *gin.Context) {
 				}
 				_ = gr.Err() //nolint:errcheck // Iteration errors don't affect UI
 			}
+			// Prefetch 2FA status for all users
+			totp2fa := map[int]bool{}
+			if tr, terr := db.Query(database.ConvertPlaceholders(`
+				SELECT user_id FROM user_preferences 
+				WHERE preferences_key = 'UserTOTPEnabled' 
+				AND preferences_value = '1'`)); terr == nil {
+				defer tr.Close()
+				for tr.Next() {
+					var uid int
+					if err := tr.Scan(&uid); err == nil {
+						totp2fa[uid] = true
+					}
+				}
+				_ = tr.Err()
+			}
+
 			for _, r := range list {
 				users = append(users, gin.H{
-					"ID":        r.id,
-					"Login":     r.login,
-					"Title":     r.title,
-					"FirstName": r.fn,
-					"LastName":  r.ln,
-					"ValidID":   r.valid,
-					"Groups":    gm[r.id],
+					"ID":          r.id,
+					"Login":       r.login,
+					"Title":       r.title,
+					"FirstName":   r.fn,
+					"LastName":    r.ln,
+					"ValidID":     r.valid,
+					"Groups":      gm[r.id],
+					"TOTP2FAEnabled": totp2fa[r.id],
 				})
 			}
 		}

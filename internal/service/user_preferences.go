@@ -2,6 +2,7 @@ package service
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -221,4 +222,62 @@ func (s *UserPreferencesService) GetAllPreferences(userID int) (map[string]strin
 	}
 
 	return prefs, nil
+}
+
+// DashboardWidgetConfig represents the configuration for a dashboard widget.
+type DashboardWidgetConfig struct {
+	WidgetID   string `json:"widget_id"`   // Format: "plugin_name:widget_id"
+	Enabled    bool   `json:"enabled"`
+	Position   int    `json:"position"`    // Order on dashboard (lower = first)
+}
+
+// GetDashboardWidgets returns the user's dashboard widget configuration.
+// Returns nil if no configuration is set (show all widgets with defaults).
+func (s *UserPreferencesService) GetDashboardWidgets(userID int) ([]DashboardWidgetConfig, error) {
+	value, err := s.GetPreference(userID, "DashboardWidgets")
+	if err != nil {
+		return nil, err
+	}
+	if value == "" {
+		return nil, nil // No config = show defaults
+	}
+
+	var config []DashboardWidgetConfig
+	if err := json.Unmarshal([]byte(value), &config); err != nil {
+		return nil, fmt.Errorf("failed to parse dashboard widget config: %w", err)
+	}
+
+	return config, nil
+}
+
+// SetDashboardWidgets saves the user's dashboard widget configuration.
+func (s *UserPreferencesService) SetDashboardWidgets(userID int, config []DashboardWidgetConfig) error {
+	if len(config) == 0 {
+		return s.DeletePreference(userID, "DashboardWidgets")
+	}
+
+	data, err := json.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal dashboard widget config: %w", err)
+	}
+
+	return s.SetPreference(userID, "DashboardWidgets", string(data))
+}
+
+// IsWidgetEnabled checks if a specific widget is enabled for the user.
+// If no config exists, returns true (all widgets enabled by default).
+func (s *UserPreferencesService) IsWidgetEnabled(userID int, pluginName, widgetID string) bool {
+	config, err := s.GetDashboardWidgets(userID)
+	if err != nil || config == nil {
+		return true // Default: all widgets enabled
+	}
+
+	fullID := pluginName + ":" + widgetID
+	for _, w := range config {
+		if w.WidgetID == fullID {
+			return w.Enabled
+		}
+	}
+
+	return true // Widget not in config = enabled by default
 }

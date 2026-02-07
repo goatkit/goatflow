@@ -14,8 +14,18 @@
                 {{ t("dashboard.welcome_back") }}, {{ User.FirstName }}!
             </p>
         </div>
-        <div class="mt-4 flex md:ml-4 md:mt-0">
-            <a href="/tickets/new" class="gk-btn-neon ml-3">
+        <div class="mt-4 flex md:ml-4 md:mt-0 gap-2">
+            <!-- Widget Settings Button -->
+            <button type="button" 
+                    onclick="openWidgetSettings()"
+                    class="gk-btn-secondary flex items-center"
+                    title="{{ t('dashboard.configure_widgets')|default:'Configure Widgets' }}">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+            </button>
+            <a href="/tickets/new" class="gk-btn-neon">
                 <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                 </svg>
@@ -49,8 +59,8 @@
         </div>
     </div>
 
-    <!-- Recent activity and queue status -->
-    <div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
+    <!-- Recent activity -->
+    <div class="mt-8 max-w-2xl">
         <!-- Recent tickets -->
         <div class="gk-card-glow">
             <div class="gk-card-header">
@@ -81,32 +91,11 @@
                 </div>
             </div>
         </div>
-
-        <!-- Queue status -->
-        <div class="gk-card-glow">
-            <div class="gk-card-header">
-                <h3 class="gk-card-title">{{ t("queues.queue_status") }}</h3>
-            </div>
-            <div class="gk-card-body">
-                <div hx-get="/dashboard/api/queue-status"
-                     hx-trigger="load"
-                     hx-target="this"
-                     hx-swap="innerHTML">
-                    <!-- Loading placeholder -->
-                    <dl class="space-y-4">
-                        <div class="flex items-center justify-between">
-                            <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("labels.loading")|default:"Loading..." }}</dt>
-                            <dd class="text-sm" style="color: var(--gk-text-primary);">-</dd>
-                        </div>
-                    </dl>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Plugin Widgets -->
     {% if PluginWidgets %}
-    <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2" id="plugin-widgets-container">
         {% for widget in PluginWidgets %}
         <div class="gk-card-glow plugin-widget" 
              data-plugin="{{ widget.PluginName }}" 
@@ -125,5 +114,203 @@
         {% endfor %}
     </div>
     {% endif %}
+
+    <!-- Empty state when no widgets -->
+    {% if not PluginWidgets %}
+    <div class="mt-8 text-center py-12 gk-card-glow">
+        <svg class="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--gk-text-muted);">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-semibold" style="color: var(--gk-text-primary);">{{ t("dashboard.no_widgets")|default:"No widgets enabled" }}</h3>
+        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("dashboard.no_widgets_desc")|default:"Click the gear icon above to enable dashboard widgets." }}</p>
+    </div>
+    {% endif %}
 </div>
+
+<!-- Widget Settings Modal -->
+<div id="widget-settings-modal" class="fixed inset-0 z-50 hidden" aria-modal="true">
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeWidgetSettings()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="gk-card-glow w-full max-w-lg relative" style="max-height: 80vh; overflow: hidden;">
+            <div class="gk-card-header flex items-center justify-between">
+                <h3 class="gk-card-title">{{ t("dashboard.configure_widgets")|default:"Configure Dashboard Widgets" }}</h3>
+                <button type="button" onclick="closeWidgetSettings()" class="gk-btn-icon" aria-label="Close">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="gk-card-body" style="max-height: 60vh; overflow-y: auto;">
+                <p class="text-sm mb-4" style="color: var(--gk-text-muted);">
+                    {{ t("dashboard.widget_config_desc")|default:"Choose which widgets appear on your dashboard. Drag to reorder." }}
+                </p>
+                <div id="widget-list" class="space-y-2">
+                    <!-- Populated by JS -->
+                    <div class="text-center py-4" style="color: var(--gk-text-muted);">
+                        {{ t("labels.loading")|default:"Loading..." }}
+                    </div>
+                </div>
+            </div>
+            <div class="gk-card-footer flex justify-end gap-2" style="border-top: 1px solid var(--gk-border-default);">
+                <button type="button" onclick="closeWidgetSettings()" class="gk-btn-secondary">
+                    {{ t("common.cancel")|default:"Cancel" }}
+                </button>
+                <button type="button" onclick="saveWidgetSettings()" class="gk-btn-neon">
+                    {{ t("common.save")|default:"Save" }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Widget settings state
+let widgetSettings = [];
+
+function openWidgetSettings() {
+    const modal = document.getElementById('widget-settings-modal');
+    modal.classList.remove('hidden');
+    loadWidgetSettings();
+}
+
+function closeWidgetSettings() {
+    const modal = document.getElementById('widget-settings-modal');
+    modal.classList.add('hidden');
+}
+
+async function loadWidgetSettings() {
+    const list = document.getElementById('widget-list');
+    list.innerHTML = '<div class="text-center py-4" style="color: var(--gk-text-muted);">Loading...</div>';
+    
+    try {
+        const resp = await fetch('/api/dashboard/widgets');
+        const data = await resp.json();
+        
+        if (!data.success || !data.widgets) {
+            list.innerHTML = '<div class="text-center py-4" style="color: var(--gk-text-muted);">No widgets available</div>';
+            return;
+        }
+        
+        widgetSettings = data.widgets;
+        renderWidgetList();
+    } catch (err) {
+        list.innerHTML = '<div class="text-center py-4" style="color: var(--gk-error);">Failed to load widgets</div>';
+        console.error('Failed to load widgets:', err);
+    }
+}
+
+function renderWidgetList() {
+    const list = document.getElementById('widget-list');
+    
+    if (widgetSettings.length === 0) {
+        list.innerHTML = '<div class="text-center py-4" style="color: var(--gk-text-muted);">No widgets available</div>';
+        return;
+    }
+    
+    list.innerHTML = widgetSettings.map((w, idx) => `
+        <div class="widget-item flex items-center gap-3 p-3 rounded-lg" 
+             style="background: var(--gk-bg-secondary); border: 1px solid var(--gk-border-default);"
+             draggable="true"
+             data-index="${idx}">
+            <div class="drag-handle cursor-move" style="color: var(--gk-text-muted);">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
+                </svg>
+            </div>
+            <label class="flex items-center gap-3 flex-1 cursor-pointer">
+                <input type="checkbox" 
+                       class="widget-checkbox gk-checkbox"
+                       data-widget-id="${w.id}"
+                       ${w.enabled ? 'checked' : ''}>
+                <div>
+                    <div class="font-medium" style="color: var(--gk-text-primary);">${escapeHtml(w.title)}</div>
+                    <div class="text-xs" style="color: var(--gk-text-muted);">${escapeHtml(w.plugin_name)}</div>
+                </div>
+            </label>
+        </div>
+    `).join('');
+    
+    // Setup drag and drop
+    setupDragDrop();
+}
+
+function setupDragDrop() {
+    const list = document.getElementById('widget-list');
+    const items = list.querySelectorAll('.widget-item');
+    let draggedItem = null;
+    
+    items.forEach(item => {
+        item.addEventListener('dragstart', (e) => {
+            draggedItem = item;
+            item.style.opacity = '0.5';
+        });
+        
+        item.addEventListener('dragend', (e) => {
+            item.style.opacity = '1';
+            draggedItem = null;
+        });
+        
+        item.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (draggedItem && draggedItem !== item) {
+                const rect = item.getBoundingClientRect();
+                const midY = rect.top + rect.height / 2;
+                if (e.clientY < midY) {
+                    item.parentNode.insertBefore(draggedItem, item);
+                } else {
+                    item.parentNode.insertBefore(draggedItem, item.nextSibling);
+                }
+            }
+        });
+    });
+}
+
+async function saveWidgetSettings() {
+    const list = document.getElementById('widget-list');
+    const items = list.querySelectorAll('.widget-item');
+    
+    const widgets = [];
+    items.forEach((item, position) => {
+        const checkbox = item.querySelector('.widget-checkbox');
+        widgets.push({
+            widget_id: checkbox.dataset.widgetId,
+            enabled: checkbox.checked,
+            position: position
+        });
+    });
+    
+    try {
+        const resp = await fetch('/api/dashboard/widgets/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ widgets })
+        });
+        
+        const data = await resp.json();
+        if (data.success) {
+            closeWidgetSettings();
+            // Reload the page to show updated widgets
+            window.location.reload();
+        } else {
+            alert('{{ t("messages.error_saving")|default:"Failed to save" }}: ' + (data.error || '{{ t("messages.unknown_error")|default:"Unknown error" }}'));
+        }
+    } catch (err) {
+        console.error('Failed to save widget settings:', err);
+        alert('{{ t("dashboard.widget_settings_save_error")|default:"Failed to save widget settings" }}');
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeWidgetSettings();
+    }
+});
+</script>
 {% endblock %}

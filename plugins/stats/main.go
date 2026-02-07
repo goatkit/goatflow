@@ -685,7 +685,7 @@ func handleWidgetChart() string {
 	html := fmt.Sprintf(`
 <div class="stats-chart">
   <canvas id="statsChart" height="200"></canvas>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/static/vendor/chart.min.js"></script>
   <script>
     (function() {
       const ctx = document.getElementById('statsChart').getContext('2d');

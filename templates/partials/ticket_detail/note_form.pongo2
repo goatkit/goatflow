@@ -20,10 +20,10 @@
             <div class="flex items-center gap-2">
                 <input type="checkbox" id="note_visible_customer" name="is_visible_for_customer" value="1"
                        data-testid="note-visible-checkbox" aria-label="Make note visible to customer"
-                       class="h-4 w-4 rounded" style="accent-color: var(--gk-primary);">
+                       class="h-4 w-4 rounded" style="accent-color: var(--gk-primary);" checked>
                 <label for="note_visible_customer" class="text-sm" style="color: var(--gk-text-secondary);">{{ t("tickets.visible_for_customer")|default:"Visible to customer" }}</label>
             </div>
-            <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("tickets.visible_for_customer_help")|default:"Leave unchecked to keep this note internal." }}</p>
+            <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("tickets.visible_for_customer_help")|default:"Uncheck to keep this note internal." }}</p>
         </div>
 
         <div>
@@ -63,7 +63,7 @@
                 {{ t("tickets.time_units_minutes")|default:"Time Units (minutes)" }}{% if RequireNoteTimeUnits %}<span class="ml-1" style="color: var(--gk-error);">*</span>{% endif %}
             </label>
             <input type="number" id="note_time_units" name="time_units" min="{% if RequireNoteTimeUnits %}1{% else %}0{% endif %}" step="1"
-                   placeholder="{% if RequireNoteTimeUnits %}1{% else %}0{% endif %}"{% if RequireNoteTimeUnits %} required aria-required="true"{% endif %}
+                   value="5" placeholder="5"{% if RequireNoteTimeUnits %} required aria-required="true"{% endif %}
                    class="gk-input-neon w-40" />
             <p class="mt-1 text-xs" style="color: {% if RequireNoteTimeUnits %}var(--gk-error){% else %}var(--gk-text-muted){% endif %};">
                 {% if RequireNoteTimeUnits %}

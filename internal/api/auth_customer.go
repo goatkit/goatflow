@@ -91,6 +91,33 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		// Clear rate limit on successful login
 		auth.DefaultLoginRateLimiter.RecordSuccess(clientIP, login)
 
+		// Check if 2FA is enabled for this customer
+		totpService := service.NewTOTPService(db, "GOTRS")
+		if totpService.IsEnabledForCustomer(user.Login) {
+			// SECURITY FIX (V3/V4/V5/V7): Use session manager - customer login stored server-side
+			sessionMgr := auth.GetTOTPSessionManager()
+			token, err := sessionMgr.CreateCustomerSession(user.Login, c.ClientIP(), c.Request.UserAgent())
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to create 2FA session"})
+				return
+			}
+			// V4 FIX: Only store token in cookie, NOT the customer's login
+			c.SetCookie("customer_2fa_pending", token, 300, "/", "", false, true) // 5 min expiry
+
+			// Handle HTMX vs regular request
+			if c.GetHeader("HX-Request") == "true" {
+				c.Header("HX-Redirect", "/customer/login/2fa")
+				c.JSON(http.StatusOK, gin.H{
+					"success":      false,
+					"requires_2fa": true,
+					"redirect":     "/customer/login/2fa",
+				})
+				return
+			}
+			c.Redirect(http.StatusFound, "/customer/login/2fa")
+			return
+		}
+
 		tenantID := middleware.ResolveTenantFromHost(c.Request.Host)
 		token, err := jwtManager.GenerateTokenWithLogin(user.ID, user.Login, user.Email, "Customer", false, tenantID)
 		if err != nil {

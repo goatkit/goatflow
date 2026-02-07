@@ -112,6 +112,7 @@ var AllPageTemplates = map[string]bool{
 	"pages/customer/kb_search.pongo2":      true,
 	"pages/customer/knowledge_base.pongo2": true,
 	"pages/customer/login.pongo2":          true,
+	"pages/customer/login_2fa.pongo2":      true,
 	"pages/customer/new_ticket.pongo2":     true,
 	"pages/customer/password_form.pongo2":  true,
 	"pages/customer/profile.pongo2":        true,
@@ -139,10 +140,10 @@ var AllPageTemplates = map[string]bool{
 	// Auth/Misc templates
 	"pages/error.pongo2":              true,
 	"pages/login.pongo2":              true,
+	"pages/login_2fa.pongo2":          true,
 	"pages/password_form.pongo2":      true,
 	"pages/profile.pongo2":              true,
 	"pages/register.pongo2":             true,
-	"pages/settings.pongo2":             true,
 	"pages/settings/api_tokens.pongo2":  true,
 	"pages/under_construction.pongo2":   true,
 }
@@ -1407,6 +1408,15 @@ func TestAllCustomerTemplatesRender(t *testing.T) {
 			}(),
 		},
 		{
+			name:     "customer/login_2fa",
+			template: "pages/customer/login_2fa.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := baseContext()
+				ctx["Error"] = ""
+				return ctx
+			}(),
+		},
+		{
 			name:     "customer/new_ticket",
 			template: "pages/customer/new_ticket.pongo2",
 			ctx: func() pongo2.Context {
@@ -1696,6 +1706,15 @@ func TestAllMiscTemplatesRender(t *testing.T) {
 			}(),
 		},
 		{
+			name:     "login_2fa",
+			template: "pages/login_2fa.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := baseContext()
+				ctx["Error"] = ""
+				return ctx
+			}(),
+		},
+		{
 			name:     "password_form",
 			template: "pages/password_form.pongo2",
 			ctx: func() pongo2.Context {
@@ -1727,15 +1746,6 @@ func TestAllMiscTemplatesRender(t *testing.T) {
 			ctx: func() pongo2.Context {
 				ctx := baseContext()
 				ctx["Error"] = ""
-				return ctx
-			}(),
-		},
-		{
-			name:     "settings",
-			template: "pages/settings.pongo2",
-			ctx: func() pongo2.Context {
-				ctx := baseContext()
-				ctx["Settings"] = map[string]interface{}{}
 				return ctx
 			}(),
 		},

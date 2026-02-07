@@ -1380,7 +1380,16 @@
     "close": "بند کریں",
     "manage_api_tokens": "API ٹوکنز کا انتظام",
     "create_token_for_user": "صارف کے لیے ٹوکن بنائیں",
-    "create_token_for_customer": "گاہک کے لیے ٹوکن بنائیں"
+    "create_token_for_customer": "گاہک کے لیے ٹوکن بنائیں",
+    "disable_2fa": "Disable 2FA",
+    "disable_2fa_title": "Disable Two-Factor Authentication",
+    "disable_2fa_warning": "You are about to disable 2FA for user:",
+    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
+    "reason_required": "Reason (required)",
+    "reason_placeholder": "Enter the reason for disabling 2FA...",
+    "reason_required_error": "Please enter a reason for this action",
+    "2fa_disabled_success": "2FA has been disabled for this user",
+    "2fa_disable_failed": "Failed to disable 2FA"
   },
   "admin_dashboard": {
     "activity": "سرگرمی",
@@ -1542,7 +1551,14 @@
     "too_many_attempts": "Too many failed attempts. Please wait",
     "username": "صارف نام",
     "username_placeholder": "اپنا صارف نام درج کریں",
-    "password_placeholder": "اپنا پاس ورڈ درج کریں"
+    "password_placeholder": "اپنا پاس ورڈ درج کریں",
+    "2fa_title": "دو عنصری تصدیق",
+    "2fa_description": "اپنی تصدیق کنندہ ایپ سے 6 ہندسوں کا کوڈ درج کریں",
+    "2fa_verify": "تصدیق کریں",
+    "2fa_recovery_hint": "رسائی کھو دی؟ ریکوری کوڈ استعمال کریں",
+    "verification_code": "تصدیقی کوڈ",
+    "back_to_login": "لاگ ان پر واپس جائیں",
+    "verify": "تصدیق کریں"
   },
   "bulk_actions": {
     "all_selected": "سب منتخب",
@@ -1637,7 +1653,8 @@
     "save_changes": "تبدیلیاں محفوظ کریں",
     "done": "ہو گیا",
     "revoke": "منسوخ",
-    "revoke_token": "ٹوکن منسوخ کریں"
+    "revoke_token": "ٹوکن منسوخ کریں",
+    "continue": "جاری رکھیں"
   },
   "changes": {
     "backout_plan": "واپسی کا منصوبہ",
@@ -1739,7 +1756,8 @@
     "creating": "بنا رہا ہے...",
     "never": "کبھی نہیں",
     "revoked": "منسوخ",
-    "year": "سال"
+    "year": "سال",
+    "verifying": "تصدیق ہو رہی ہے..."
   },
   "customer": {
     "auth": {
@@ -1998,7 +2016,11 @@
     "title": "ڈیش بورڈ",
     "unassigned_count": "غیر تفویض شدہ",
     "welcome_back": "خوش آمدید",
-    "welcome_message": "آج آپ کے ٹکٹس کے ساتھ کیا ہو رہا ہے یہ رہا"
+    "welcome_message": "آج آپ کے ٹکٹس کے ساتھ کیا ہو رہا ہے یہ رہا",
+    "configure_widgets": "ویجٹس کنفیگر کریں",
+    "widget_config_desc": "منتخب کریں کہ آپ کے ڈیش بورڈ پر کون سے ویجٹس ظاہر ہوں۔ ترتیب بدلنے کے لیے گھسیٹیں۔",
+    "no_widgets": "کوئی ویجٹ فعال نہیں",
+    "no_widgets_desc": "ڈیش بورڈ ویجٹس کو فعال کرنے کے لیے اوپر گیئر آئیکن پر کلک کریں۔"
   },
   "dynamic_field_form": {
     "basic_information": "Basic معلوماتrmation",
@@ -2815,7 +2837,34 @@
     "your_token": "آپ کا ٹوکن",
     "your_tokens": "آپ کے ٹوکنز",
     "revoke_token_confirm": "کیا آپ واقعی اس ٹوکن کو منسوخ کرنا چاہتے ہیں؟",
-    "enter_token_name": "براہ کرم اپنے ٹوکن کے لیے نام درج کریں"
+    "enter_token_name": "براہ کرم اپنے ٹوکن کے لیے نام درج کریں",
+    "2fa": {
+      "title": "دو عنصری توثیق",
+      "description": "تصدیقی ایپ کا استعمال کرتے ہوئے اپنے اکاؤنٹ میں سیکیورٹی کی اضافی پرت شامل کریں",
+      "enabled": "فعال",
+      "disabled": "غیر فعال",
+      "enable": "2FA فعال کریں",
+      "disable": "2FA غیر فعال کریں",
+      "setup_title": "دو عنصری توثیق مرتب کریں",
+      "disable_title": "دو عنصری توثیق غیر فعال کریں",
+      "scan_qr": "اس QR کوڈ کو اپنی تصدیقی ایپ سے اسکین کریں",
+      "manual_entry": "یا یہ کوڈ دستی طور پر درج کریں:",
+      "enter_code": "اپنی ایپ سے 6 ہندسوں کا کوڈ درج کریں",
+      "verify": "تصدیق کریں اور فعال کریں",
+      "password_required": "پاس ورڈ درکار ہے",
+      "password_to_setup": "2FA مرتب کرنے کے لیے اپنا پاس ورڈ درج کریں",
+      "confirm_password": "اپنے پاس ورڈ کی تصدیق کریں:",
+      "code_and_password_required": "تصدیقی کوڈ اور پاس ورڈ دونوں درکار ہیں",
+      "invalid_code": "غلط تصدیقی کوڈ",
+      "recovery_codes_remaining": "بقیہ ریکوری کوڈز:",
+      "recovery_codes_warning": "ان کوڈز کو محفوظ جگہ پر رکھیں۔ ہر کوڈ صرف ایک بار استعمال ہو سکتا ہے۔",
+      "disable_warning": "2FA غیر فعال کرنے سے آپ کے اکاؤنٹ سے اضافی سیکیورٹی پرت ہٹ جائے گی۔",
+      "password_placeholder": "اپنا پاس ورڈ درج کریں",
+      "save_recovery_codes": "ریکوری کوڈز محفوظ کریں",
+      "scan_instructions": "اس QR کوڈ کو اپنی تصدیقی ایپ سے اسکین کریں",
+      "setup_failed": "2FA مرتب کرنے میں ناکامی",
+      "verify_enable": "تصدیق کریں اور فعال کریں"
+    }
   },
   "severity": {
     "critical": "اہم",
