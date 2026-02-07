@@ -41,4 +41,4 @@ gid=$(id -g)
     -e DB_USER="$DB_USER" \
     -e DB_PASSWORD="$DB_PASSWORD" \
     "$TOOLBOX_IMAGE" \
-    goatflow reset-user --username="$USERNAME" --password="$PASSWORD" --enable
+    goats reset-user --username="$USERNAME" --password="$PASSWORD" --enable
