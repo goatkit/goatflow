@@ -203,7 +203,7 @@ plugin-build-wasm:
 			name=$$(basename $$dir); \
 			wasm_name=$$(echo $$name | sed 's/-wasm$$//'); \
 			echo "  Building $$name -> $${wasm_name}.wasm..."; \
-			$(CONTAINER_CMD) run --rm --user "$$(id -u):$$(id -g)" -v "$$PWD/$$dir:/src" -w /src tinygo/tinygo:0.32.0 \
+			$(CONTAINER_CMD) run --rm --user "$$(id -u):$$(id -g)" -e HOME=/tmp -v "$$PWD/$$dir:/src" -w /src tinygo/tinygo:0.32.0 \
 				tinygo build -o $${wasm_name}.wasm -target wasi -scheduler=none main.go; \
 		fi; \
 	done
