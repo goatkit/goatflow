@@ -112,7 +112,7 @@ ARG BUILD_DATE=unknown
 # -p uses all available cores for parallel compilation
 RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=1 GOOS=linux \
-    go build -p $(nproc) -ldflags="-w -s \
+    go build -p "$(nproc)" -ldflags="-w -s \
         -X github.com/goatkit/goatflow/internal/version.Version=${VERSION} \
         -X github.com/goatkit/goatflow/internal/version.GitCommit=${GIT_COMMIT} \
         -X github.com/goatkit/goatflow/internal/version.GitBranch=${GIT_BRANCH} \

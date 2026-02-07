@@ -50,6 +50,9 @@ ifndef CONTAINER_CMD
 CONTAINER_CMD := $(shell command -v podman 2> /dev/null || command -v docker 2> /dev/null || echo docker)
 endif
 
+# Run containers as current user to avoid root-owned files and permission issues in CI
+CONTAINER_USER := --user "$$(id -u):$$(id -g)"
+
 # Detect compose command - try multiple variants in order of preference
 # Priority based on detected container runtime
 ifeq ($(findstring podman,$(CONTAINER_CMD)),podman)
@@ -200,7 +203,7 @@ plugin-build-wasm:
 			name=$$(basename $$dir); \
 			wasm_name=$$(echo $$name | sed 's/-wasm$$//'); \
 			echo "  Building $$name -> $${wasm_name}.wasm..."; \
-			$(CONTAINER_CMD) run --rm -v "$$PWD/$$dir:/src" -w /src tinygo/tinygo:0.32.0 \
+			$(CONTAINER_CMD) run --rm --user "$$(id -u):$$(id -g)" -v "$$PWD/$$dir:/src" -w /src tinygo/tinygo:0.32.0 \
 				tinygo build -o $${wasm_name}.wasm -target wasi -scheduler=none main.go; \
 		fi; \
 	done
@@ -222,6 +225,7 @@ test-legacy: toolbox-build
 	@$(MAKE) test-stack-up >/dev/null 2>&1 || true
 	$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		--network host \
 		$(MOD_CACHE_MOUNT) \
@@ -302,7 +306,7 @@ synthesize-credentials:
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
 		$(TOOLBOX_IMAGE) \
-		goatflow synthesize --test-data-only
+		goats synthesize --test-data-only
 
 # Show development credentials from generated SQL file
 show-dev-creds:
@@ -326,11 +330,12 @@ db-apply-test-data:
 			printf "🔐 Applying admin password from environment (MariaDB)...\n"; \
 			$(CONTAINER_CMD) run --rm \
 				--network goatflow_goatflow-network \
+				$(CONTAINER_USER) \
 				-e DB_DRIVER=$(DB_DRIVER) -e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 				-e DB_NAME=$(DB_NAME) -e DB_USER=$(DB_USER) -e DB_PASSWORD=$(DB_PASSWORD) \
 				-e ADMIN_PASSWORD=$(ADMIN_PASSWORD) -e ADMIN_USER=$(ADMIN_USER) \
 				$(TOOLBOX_IMAGE) \
-				sh -c 'goatflow reset-user --username="$${ADMIN_USER:-root@localhost}" --password="$$ADMIN_PASSWORD" --enable'; \
+				sh -c 'goats reset-user --username="$${ADMIN_USER:-root@localhost}" --password="$$ADMIN_PASSWORD" --enable'; \
 			printf "✅ Root user enabled with configured credentials.\n"; \
 		else \
 			printf "⚠️  root@localhost remains disabled. Run 'make reset-password' after choosing a password.\n"; \
@@ -352,7 +357,7 @@ synthesize:
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
 		$(TOOLBOX_IMAGE) \
-		goatflow synthesize $(SYNTH_ARGS)
+		goats synthesize $(SYNTH_ARGS)
 	@if [ -z "$(SYNTH_ARGS)" ]; then \
 		echo "📝 Test credentials saved to test_credentials.csv" >&2; \
 	fi
@@ -373,7 +378,7 @@ rotate-secrets:
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
 		$(TOOLBOX_IMAGE) \
-		goatflow synthesize --rotate-secrets
+		goats synthesize --rotate-secrets
 
 # Force regenerate .env file (runs in container)
 synthesize-force:
@@ -384,7 +389,7 @@ synthesize-force:
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
 		$(TOOLBOX_IMAGE) \
-		goatflow synthesize --force
+		goats synthesize --force
 
 # Generate only test data (SQL and CSV)
 gen-test-data:
@@ -395,7 +400,7 @@ gen-test-data:
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
 		$(TOOLBOX_IMAGE) \
-		goatflow synthesize --test-data-only
+		goats synthesize --test-data-only
 
 # Generate Kubernetes secrets from template with secure random values
 k8s-secrets:
@@ -526,6 +531,7 @@ http-call:
 	@printf "\n🔧 Making authenticated HTTP call: $(or $(METHOD),GET) $(ENDPOINT)\n";
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
@@ -551,6 +557,7 @@ api-upload:
 	else \
 		$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
@@ -567,6 +574,7 @@ toolbox-compile:
 	@printf "\n🔨 Checking compilation...\n"
 	$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
+		$(CONTAINER_USER) \
         -v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
@@ -581,6 +589,7 @@ toolbox-compile-api:
 	@printf "\n🔨 Compiling API and goats packages only...\n"
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
+		$(CONTAINER_USER) \
         -v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
@@ -596,6 +605,7 @@ compile: toolbox-build
 	@mkdir -p bin
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
         -v "$$(pwd):/workspace" \
 		-v "$$(pwd)/bin:/workspace/bin$(VZ)" \
 		-w /workspace \
@@ -627,6 +637,7 @@ toolbox-test-api: toolbox-build
 	@$(COMPOSE_CMD) up -d valkey >/dev/null 2>&1 || true
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
+		$(CONTAINER_USER) \
         -v "$$PWD:/workspace" \
 		--network host \
 		$(MOD_CACHE_MOUNT) \
@@ -662,6 +673,7 @@ toolbox-test-api-host: toolbox-build
 	@$(COMPOSE_CMD) up -d valkey >/dev/null 2>&1 || true
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
+		$(CONTAINER_USER) \
         -v "$$PWD:/workspace" \
 		--network host \
 		$(MOD_CACHE_MOUNT) \
@@ -699,6 +711,7 @@ toolbox-test:
 	@$(COMPOSE_CMD) up -d valkey >/dev/null 2>&1 || true
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
+		$(CONTAINER_USER) \
         -v "$$PWD:/workspace" \
 		--network host \
 		$(MOD_CACHE_MOUNT) \
@@ -738,6 +751,7 @@ openapi-lint:
 	@echo "📜 Linting OpenAPI spec with Bun (Redocly)..."
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD/api:/spec"$(VZ) \
 		-v goatflow_cache:/cache \
 		-e BUN_INSTALL_CACHE_DIR=/cache/bun \
@@ -749,6 +763,7 @@ openapi-bundle:
 	@echo "📦 Bundling OpenAPI spec with Redocly..."
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD/api:/spec"$(VZ) \
 		-v goatflow_cache:/cache \
 		-e BUN_INSTALL_CACHE_DIR=/cache/bun \
@@ -772,6 +787,7 @@ toolbox-test-all:
 	@$(COMPOSE_CMD) up -d mariadb valkey >/dev/null 2>&1 || true
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		--network host \
 		$(MOD_CACHE_MOUNT) \
@@ -816,6 +832,7 @@ test-e2e:
 	 DEMO_ADMIN_PASSWORD=${DEMO_ADMIN_PASSWORD:-} \
 	 $(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
@@ -838,6 +855,7 @@ toolbox-test-integration:
 	@$(MAKE) test-stack-up >/dev/null 2>&1 || true
 	$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		--network host \
 		-w /workspace \
@@ -878,6 +896,7 @@ toolbox-test-email-integration:
 	@$(COMPOSE_CMD) up -d postgres valkey smtp4dev >/dev/null 2>&1 || true
 	$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		--network host \
 		-w /workspace \
@@ -905,6 +924,7 @@ toolbox-test-run:
 	@printf "\n🧪 Running specific test: $(TEST)\n"
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
+		$(CONTAINER_USER) \
         -v "$$PWD:/workspace" \
 		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
@@ -926,6 +946,7 @@ toolbox-mod-tidy:
 	@printf "\n🧹 Running go mod tidy in toolbox...\n"
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
@@ -940,6 +961,7 @@ toolbox-gofmt:
 	@printf "\n🧹 Running gofmt in toolbox...\n"
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
@@ -954,6 +976,7 @@ toolbox-test-pkg:
 	@printf "\n🧪 Running package tests in toolbox: PKG=$(PKG) TEST=$(TEST)\n"
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
@@ -989,6 +1012,7 @@ toolbox-test-files:
 	@printf "\n🧪 Running test files in toolbox: FILES=$(FILES) TEST=$(TEST)\n"
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
@@ -1022,6 +1046,7 @@ toolbox-staticcheck:
 	@printf "\n🔎 Running staticcheck in toolbox...\n"
 	$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
@@ -1050,6 +1075,7 @@ toolbox-run-file:
 	@printf "\n🚀 Running Go file: $(FILE)\n"
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
+		$(CONTAINER_USER) \
         -v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
@@ -1671,7 +1697,7 @@ db-init:
 			-e DB_DRIVER=$(DB_DRIVER) -e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 			-e DB_NAME=$(DB_NAME) -e DB_USER=$(DB_USER) -e DB_PASSWORD=$(DB_PASSWORD) \
 			$(TOOLBOX_IMAGE) \
-			goatflow reset-user --username="root@localhost" --password="$(GOATFLOW_ADMIN_PASSWORD)" --enable; \
+			goats reset-user --username="root@localhost" --password="$(GOATFLOW_ADMIN_PASSWORD)" --enable; \
 		printf "✅ Database initialized (MariaDB minimal schema; root user created).\n"; \
 	fi
 
@@ -1693,11 +1719,12 @@ db-init-test:
 		fi; \
 		$(CONTAINER_CMD) run --rm \
 			--security-opt label=disable \
+		$(CONTAINER_USER) \
 			--network goatflow_goatflow-network \
 			-e DB_DRIVER=$(TEST_DB_DRIVER) -e DB_HOST=$(TEST_DB_MYSQL_HOST) -e DB_PORT=$(TEST_DB_MYSQL_CONTAINER_PORT) \
 			-e DB_NAME=$(TEST_DB_MYSQL_NAME) -e DB_USER=$(TEST_DB_MYSQL_USER) -e DB_PASSWORD=$(TEST_DB_MYSQL_PASSWORD) \
 			$(TOOLBOX_IMAGE) \
-			goatflow reset-user --username="root@localhost" --password="$(GOATFLOW_ADMIN_PASSWORD)" --enable; \
+			goats reset-user --username="root@localhost" --password="$(GOATFLOW_ADMIN_PASSWORD)" --enable; \
 		printf "✅ Test database initialized (MariaDB)\n"; \
 	fi
 # Initialize for OTRS import (structure only, no data)
@@ -1845,6 +1872,7 @@ otrs-import:
 	@if [ "$(DB_DRIVER)" = "postgres" ]; then \
 		$(CONTAINER_CMD) run --rm \
 			--security-opt label=disable \
+		$(CONTAINER_USER) \
 			-v "$(dir $(abspath $(SQL))):/data:ro" \
 			-u "$(shell id -u):$(shell id -g)" \
 			--network goatflow_goatflow-network \
@@ -1856,6 +1884,7 @@ otrs-import:
 		printf "🧹 Preparing MariaDB schema (dropping all tables in $(DB_NAME))...\n"; \
 		$(CONTAINER_CMD) run --rm \
 			--security-opt label=disable \
+		$(CONTAINER_USER) \
 			--network goatflow_goatflow-network \
 			$(TOOLBOX_IMAGE) \
 			bash -lc 'mysql -h"$(DB_HOST)" -u"$(DB_USER)" -p"$(DB_PASSWORD)" -D"$(DB_NAME)" -e '\''\
@@ -1870,6 +1899,7 @@ SET FOREIGN_KEY_CHECKS=1;\
 		printf "📦 Loading dump into MariaDB...\n"; \
 		$(CONTAINER_CMD) run --rm \
 			--security-opt label=disable \
+		$(CONTAINER_USER) \
 			-v "$(dir $(abspath $(SQL))):/data:ro" \
 			--network goatflow_goatflow-network \
 			$(TOOLBOX_IMAGE) \
@@ -1889,6 +1919,7 @@ import-test-data:
 	@mkdir -p bin
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$(pwd):/workspace" \
 		-w /workspace \
 		-e GOCACHE=/tmp/.cache/go-build \
@@ -1902,6 +1933,7 @@ import-test-data:
 	@printf "📦 Running import...\n"
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$(pwd)/bin:/bin:ro" \
 		--network goatflow_goatflow-network \
 		alpine:3.19 \
@@ -2015,6 +2047,7 @@ babelfish: toolbox-build
 	@printf "Building goatflow-babelfish (toolbox)...\n"
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
@@ -2027,6 +2060,7 @@ babelfish: toolbox-build
 babelfish-run: toolbox-build
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
@@ -2038,6 +2072,7 @@ babelfish-run: toolbox-build
 babelfish-coverage: toolbox-build
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
@@ -2049,6 +2084,7 @@ babelfish-coverage: toolbox-build
 babelfish-validate: toolbox-build
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
@@ -2060,6 +2096,7 @@ babelfish-validate: toolbox-build
 babelfish-missing: toolbox-build
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
@@ -2242,6 +2279,7 @@ test-e2e-playwright-go:
 	$(CONTAINER_CMD) run --rm \
 		--platform $(NATIVE_PLATFORM) \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-u "$$(id -u):$$(id -g)" \
 		-v "$$PWD:/workspace" \
 		-v goatflow_cache:/cache \
@@ -2270,6 +2308,7 @@ test-e2e-go:
 	$(CONTAINER_CMD) run --rm \
 		--platform $(NATIVE_PLATFORM) \
 		--security-opt label=disable \
+		$(CONTAINER_USER) \
 		-u "$$UID:$$GID" \
 		-v "$$PWD:/workspace" \
 		-v goatflow_cache:/cache \
@@ -2826,6 +2865,7 @@ frontend-perms-fix:
 css-watch: css-deps
 	@printf "👁️  Watching for CSS changes...\n"
 	@$(CONTAINER_CMD) run --rm -it --security-opt label=disable -u $(shell id -u):$(shell id -g) \
+		$(CONTAINER_USER) \
 		-v $(PWD):/app -v goatflow_cache:/cache -e BUN_INSTALL_CACHE_DIR=/cache/bun \
 		-w /app oven/bun:1.1-alpine bun run watch-css
 
@@ -2842,6 +2882,7 @@ test-specific:
 	@printf "🧪 Running specific test: $(TEST)\n"
 	@$(CONTAINER_CMD) run --rm \
 		--network goatflow_goatflow-network \
+		$(CONTAINER_USER) \
 		-e DB_HOST=postgres \
 		-e DB_USER=$(DB_USER) \
 		-e DB_PASSWORD=$(DB_PASSWORD) \

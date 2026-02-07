@@ -48,7 +48,7 @@ func TestDarkThemeContrast(t *testing.T) {
 			shouldContain: []string{
 				"--gk-text-",           // GoatKit text color variables
 				"--gk-bg-",             // GoatKit background variables
-				"gk-link-neon",         // GoatKit styled links
+				"gk-nav-link",          // GoatKit navigation links
 			},
 		},
 		{
