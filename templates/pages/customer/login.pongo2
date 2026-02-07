@@ -1,6 +1,6 @@
 {% extends "layouts/auth.pongo2" %}
 
-{% block title %}{{ t("customer.portal.login_title") }} - GOTRS{% endblock %}
+{% block title %}{{ t("customer.portal.login_title") }} - GoatFlow{% endblock %}
 
 {% block content %}
 <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
@@ -12,7 +12,7 @@
 
     <div class="sm:mx-auto sm:w-full sm:max-w-sm relative z-10">
         <div class="gk-logo-glow gk-float mx-auto w-24 h-24" style="color: var(--gk-primary);">
-            <img class="w-full h-full" src="/static/favicon.svg" alt="GOTRS Logo">
+            <img class="w-full h-full" src="/static/favicon.svg" alt="GoatFlow Logo">
         </div>
         <h2 class="mt-6 text-center text-3xl gk-heading gk-text-gradient">
             {{ t("customer.portal.login_title") }}

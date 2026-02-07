@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-// APIError represents an error from the GOTRS API
+// APIError represents an error from the GoatFlow API
 type APIError struct {
 	StatusCode int    `json:"status_code"`
 	Message    string `json:"message"`
@@ -15,9 +15,9 @@ type APIError struct {
 
 func (e *APIError) Error() string {
 	if e.Details != "" {
-		return fmt.Sprintf("GOTRS API error (%d): %s - %s", e.StatusCode, e.Message, e.Details)
+		return fmt.Sprintf("GoatFlow API error (%d): %s - %s", e.StatusCode, e.Message, e.Details)
 	}
-	return fmt.Sprintf("GOTRS API error (%d): %s", e.StatusCode, e.Message)
+	return fmt.Sprintf("GoatFlow API error (%d): %s", e.StatusCode, e.Message)
 }
 
 // NewAPIError creates a new API error

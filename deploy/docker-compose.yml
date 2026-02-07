@@ -1,9 +1,9 @@
-# GOTRS Reference Deployment
+# GoatFlow Reference Deployment
 # Copy this file and .env.example, customize .env for your environment
 #
 # Usage:
-#   curl -O https://raw.githubusercontent.com/gotrs-io/gotrs-ce/main/deploy/docker-compose.yml
-#   curl -O https://raw.githubusercontent.com/gotrs-io/gotrs-ce/main/deploy/.env.example
+#   curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/docker-compose.yml
+#   curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/.env.example
 #   cp .env.example .env
 #   # Edit .env with your values
 #   docker compose up -d
@@ -33,9 +33,9 @@ services:
     image: docker.io/mariadb:11-jammy
     environment:
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}
-      MARIADB_USER: ${DB_USER:-gotrs}
+      MARIADB_USER: ${DB_USER:-goatflow}
       MARIADB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-      MARIADB_DATABASE: ${DB_NAME:-gotrs}
+      MARIADB_DATABASE: ${DB_NAME:-goatflow}
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:
@@ -55,7 +55,7 @@ services:
     restart: unless-stopped
 
   app:
-    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_TAG:-latest}
+    image: ghcr.io/goatkit/goatflow:${GOATFLOW_TAG:-latest}
     environment:
       APP_ENV: ${APP_ENV:-production}
       GIN_MODE: ${GIN_MODE:-release}
@@ -63,9 +63,9 @@ services:
       DB_DRIVER: mysql
       DB_HOST: mariadb
       DB_PORT: 3306
-      DB_USER: ${DB_USER:-gotrs}
+      DB_USER: ${DB_USER:-goatflow}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-      DB_NAME: ${DB_NAME:-gotrs}
+      DB_NAME: ${DB_NAME:-goatflow}
       REDIS_HOST: valkey:6379
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       BASE_URL: ${BASE_URL:-http://localhost:8080}
@@ -79,7 +79,7 @@ services:
     restart: unless-stopped
 
   customer-fe:
-    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_TAG:-latest}
+    image: ghcr.io/goatkit/goatflow:${GOATFLOW_TAG:-latest}
     environment:
       APP_ENV: ${APP_ENV:-production}
       GIN_MODE: ${GIN_MODE:-release}
@@ -87,9 +87,9 @@ services:
       DB_DRIVER: mysql
       DB_HOST: mariadb
       DB_PORT: 3306
-      DB_USER: ${DB_USER:-gotrs}
+      DB_USER: ${DB_USER:-goatflow}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-      DB_NAME: ${DB_NAME:-gotrs}
+      DB_NAME: ${DB_NAME:-goatflow}
       REDIS_HOST: valkey:6379
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       BASE_URL: ${BASE_URL:-http://localhost:8080}
@@ -105,15 +105,15 @@ services:
     restart: unless-stopped
 
   runner:
-    image: ghcr.io/gotrs-io/gotrs-ce-runner:${GOTRS_TAG:-latest}
+    image: ghcr.io/goatkit/goatflow-runner:${GOATFLOW_TAG:-latest}
     environment:
       APP_ENV: ${APP_ENV:-production}
       DB_DRIVER: mysql
       DB_HOST: mariadb
       DB_PORT: 3306
-      DB_USER: ${DB_USER:-gotrs}
+      DB_USER: ${DB_USER:-goatflow}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-      DB_NAME: ${DB_NAME:-gotrs}
+      DB_NAME: ${DB_NAME:-goatflow}
       REDIS_HOST: valkey:6379
     depends_on:
       mariadb:

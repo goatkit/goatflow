@@ -1,5 +1,5 @@
 import WebSocket from 'ws';
-import { WebSocketEvent, TicketEvent, MessageEvent, GotrsError } from './types';
+import { WebSocketEvent, TicketEvent, MessageEvent, GoatflowError } from './types';
 
 export interface EventSubscription {
   unsubscribe(): void;
@@ -8,7 +8,7 @@ export interface EventSubscription {
 export type EventHandler<T = any> = (event: T) => void;
 
 /**
- * Real-time event client for GOTRS WebSocket connections
+ * Real-time event client for GoatFlow WebSocket connections
  */
 export class EventsClient {
   private ws?: WebSocket;
@@ -78,7 +78,7 @@ export class EventsClient {
           this.isConnecting = false;
           this.isConnected = false;
           this.emit('error', error);
-          reject(new GotrsError('WebSocket connection failed', undefined, 'WEBSOCKET_ERROR', error.message));
+          reject(new GoatflowError('WebSocket connection failed', undefined, 'WEBSOCKET_ERROR', error.message));
         });
 
         // Connection timeout
@@ -88,7 +88,7 @@ export class EventsClient {
             if (this.ws) {
               this.ws.close();
             }
-            reject(new GotrsError('WebSocket connection timeout', undefined, 'WEBSOCKET_TIMEOUT'));
+            reject(new GoatflowError('WebSocket connection timeout', undefined, 'WEBSOCKET_TIMEOUT'));
           }
         }, 10000);
 
@@ -284,7 +284,7 @@ export class EventsClient {
    */
   send(message: any): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new GotrsError('WebSocket is not connected', undefined, 'WEBSOCKET_NOT_CONNECTED');
+      throw new GoatflowError('WebSocket is not connected', undefined, 'WEBSOCKET_NOT_CONNECTED');
     }
 
     this.ws.send(JSON.stringify(message));

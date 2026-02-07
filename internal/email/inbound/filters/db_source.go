@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // DBSourceFilter loads postmaster filters from the database and applies them.
@@ -230,7 +230,7 @@ func (f *DBSourceFilter) applySetRules(filter dbFilter, m *MessageContext) {
 	}
 }
 
-// applySetRule applies a single Set rule by mapping X-GOTRS-* headers to annotations.
+// applySetRule applies a single Set rule by mapping X-GoatFlow-* headers to annotations.
 func (f *DBSourceFilter) applySetRule(set dbSet, m *MessageContext) {
 	if m.Annotations == nil {
 		m.Annotations = make(map[string]any)
@@ -243,35 +243,35 @@ func (f *DBSourceFilter) applySetRule(set dbSet, m *MessageContext) {
 		return
 	}
 
-	// Map X-GOTRS-* headers to annotations
+	// Map X-GoatFlow-* headers to annotations
 	switch strings.ToLower(key) {
-	case "x-gotrs-queue", "x-otrs-queue", "x-gotrs-queuename", "x-otrs-queuename":
+	case "x-goatflow-queue", "x-otrs-queue", "x-goatflow-queuename", "x-otrs-queuename":
 		m.Annotations[AnnotationQueueNameOverride] = value
 
-	case "x-gotrs-queueid", "x-otrs-queueid":
+	case "x-goatflow-queueid", "x-otrs-queueid":
 		if id, err := strconv.Atoi(value); err == nil && id > 0 {
 			m.Annotations[AnnotationQueueIDOverride] = id
 		}
 
-	case "x-gotrs-priority", "x-otrs-priority":
+	case "x-goatflow-priority", "x-otrs-priority":
 		// Priority by name - store as string
 		m.Annotations[AnnotationPriorityNameOverride] = value
 
-	case "x-gotrs-priorityid", "x-otrs-priorityid":
+	case "x-goatflow-priorityid", "x-otrs-priorityid":
 		if id, err := strconv.Atoi(value); err == nil && id > 0 {
 			m.Annotations[AnnotationPriorityIDOverride] = id
 		}
 
-	case "x-gotrs-title", "x-otrs-title":
+	case "x-goatflow-title", "x-otrs-title":
 		m.Annotations[AnnotationTitleOverride] = value
 
-	case "x-gotrs-customerid", "x-otrs-customerid":
+	case "x-goatflow-customerid", "x-otrs-customerid":
 		m.Annotations[AnnotationCustomerIDOverride] = value
 
-	case "x-gotrs-customeruser", "x-otrs-customeruser", "x-gotrs-customeruserid", "x-otrs-customeruserid":
+	case "x-goatflow-customeruser", "x-otrs-customeruser", "x-goatflow-customeruserid", "x-otrs-customeruserid":
 		m.Annotations[AnnotationCustomerUserOverride] = value
 
-	case "x-gotrs-ignore", "x-otrs-ignore":
+	case "x-goatflow-ignore", "x-otrs-ignore":
 		switch strings.ToLower(value) {
 		case "1", "true", "yes", "y":
 			m.Annotations[AnnotationIgnoreMessage] = true
@@ -279,10 +279,10 @@ func (f *DBSourceFilter) applySetRule(set dbSet, m *MessageContext) {
 			m.Annotations[AnnotationIgnoreMessage] = false
 		}
 
-	case "x-gotrs-state", "x-otrs-state":
+	case "x-goatflow-state", "x-otrs-state":
 		m.Annotations[AnnotationStateOverride] = value
 
-	case "x-gotrs-type", "x-otrs-type":
+	case "x-goatflow-type", "x-otrs-type":
 		m.Annotations[AnnotationTypeOverride] = value
 
 	default:

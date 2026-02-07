@@ -17,17 +17,17 @@ echo "Setting up test admin user..."
 # Get compose command from environment or detect it
 COMPOSE_CMD="${COMPOSE_CMD:-docker compose}"
 
-# Try gotrs CLI first (if available in backend container)
+# Try goatflow CLI first (if available in backend container)
 if $COMPOSE_CMD -f docker-compose.yml -f docker-compose.testdb.yml -f docker-compose.test.yaml \
-    exec -T backend-test gotrs reset-user \
+    exec -T backend-test goatflow reset-user \
     --username="${TEST_USERNAME:-root@localhost}" \
     --password="$TEST_PASSWORD" \
     --enable 2>/dev/null; then
-    echo "Admin user setup via gotrs CLI"
+    echo "Admin user setup via goatflow CLI"
     exit 0
 fi
 
-echo "gotrs CLI not available, using direct SQL..."
+echo "goatflow CLI not available, using direct SQL..."
 
 # Calculate password hash
 PW_HASH=$(printf '%s' "$TEST_PASSWORD" | sha256sum | awk '{print $1}')

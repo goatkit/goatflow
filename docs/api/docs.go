@@ -9,11 +9,11 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "termsOfService": "https://gotrs.io/terms/",
+        "termsOfService": "https://goatflow.io/terms/",
         "contact": {
-            "name": "GOTRS Support",
-            "url": "https://gotrs.io/support",
-            "email": "support@gotrs.io"
+            "name": "GoatFlow Support",
+            "url": "https://goatflow.io/support",
+            "email": "hello@goatflow.io"
         },
         "license": {
             "name": "AGPL-3.0",
@@ -4729,8 +4729,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
-	Title:            "GOTRS API",
-	Description:      "GOTRS Ticket System REST API",
+	Title:            "GoatFlow API",
+	Description:      "GoatFlow Ticket System REST API",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -12,8 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v3"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 // StandardTemplate represents a response template in the system.

@@ -243,7 +243,7 @@ jobs:
       - name: Get base chart version
         id: chart_base
         run: |
-          VERSION=$(grep '^version:' charts/gotrs/Chart.yaml | awk '{print $2}')
+          VERSION=$(grep '^version:' charts/goatflow/Chart.yaml | awk '{print $2}')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Update chart version and appVersion for OCI push
@@ -263,13 +263,13 @@ jobs:
           fi
 
           # Update both version and appVersion in Chart.yaml
-          sed -i "s/^version:.*/version: ${CHART_VERSION}/" charts/gotrs/Chart.yaml
-          sed -i "s/^appVersion:.*/appVersion: \"${TAG}\"/" charts/gotrs/Chart.yaml
+          sed -i "s/^version:.*/version: ${CHART_VERSION}/" charts/goatflow/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"${TAG}\"/" charts/goatflow/Chart.yaml
 
           echo "version=$CHART_VERSION" >> $GITHUB_OUTPUT
           echo "Updated chart version to: $CHART_VERSION"
           echo "Updated appVersion to: $TAG"
-          grep -E '^(version|appVersion):' charts/gotrs/Chart.yaml
+          grep -E '^(version|appVersion):' charts/goatflow/Chart.yaml
 
       - name: Add Helm repositories
         run: |
@@ -277,18 +277,18 @@ jobs:
           helm repo update
 
       - name: Update chart dependencies
-        run: helm dependency update charts/gotrs
+        run: helm dependency update charts/goatflow
 
       - name: Lint chart
-        run: helm lint charts/gotrs
+        run: helm lint charts/goatflow
 
       - name: Package chart
         run: |
           mkdir -p dist
-          helm package charts/gotrs -d dist
+          helm package charts/goatflow -d dist
           # Rename to make it clear this is a Helm chart (for GitHub release assets)
-          mv dist/gotrs-${{ steps.chart.outputs.version }}.tgz \
-             dist/gotrs-helm-chart-${{ steps.chart.outputs.version }}.tgz
+          mv dist/goatflow-${{ steps.chart.outputs.version }}.tgz \
+             dist/goatflow-helm-chart-${{ steps.chart.outputs.version }}.tgz
 
       - name: Push chart to OCI registry
         if: github.event.inputs.push_to_registry == 'true' || github.event_name == 'push'
@@ -296,21 +296,21 @@ jobs:
           # Push chart - version is embedded in the package from Chart.yaml
           # For branches: 0.1.0-main, 0.1.0-dev
           # For releases: 0.5.0, 1.0.0
-          helm push dist/gotrs-helm-chart-${{ steps.chart.outputs.version }}.tgz \
+          helm push dist/goatflow-helm-chart-${{ steps.chart.outputs.version }}.tgz \
             oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
           echo "Pushed chart version: ${{ steps.chart.outputs.version }}"
 
       - name: Create latest symlink for permalink
         run: |
           # Create a copy with stable name for permalink access
-          cp dist/gotrs-helm-chart-${{ steps.chart.outputs.version }}.tgz \
-             dist/gotrs-helm-chart-latest.tgz
+          cp dist/goatflow-helm-chart-${{ steps.chart.outputs.version }}.tgz \
+             dist/goatflow-helm-chart-latest.tgz
 
       - name: Upload chart artifact
         uses: actions/upload-artifact@v4
         with:
           name: helm-chart
-          path: dist/gotrs-helm-chart-*.tgz
+          path: dist/goatflow-helm-chart-*.tgz
           retention-days: 30
 
   create-release:
@@ -342,7 +342,7 @@ jobs:
         id: release_notes
         run: |
           cat > release_notes.md << 'EOF'
-          ## GOTRS ${{ steps.version.outputs.VERSION }}
+          ## GoatFlow ${{ steps.version.outputs.VERSION }}
 
           ### Container Images
           ```bash
@@ -356,14 +356,14 @@ jobs:
           ### Helm Chart
           ```bash
           # Install from OCI registry (recommended)
-          helm install gotrs oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts/gotrs --version ${{ needs.helm-chart.outputs.chart_version }}
+          helm install goatflow oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts/goatflow --version ${{ needs.helm-chart.outputs.chart_version }}
 
           # Or download this specific version
-          curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/gotrs-helm-chart-${{ needs.helm-chart.outputs.chart_version }}.tgz
-          helm install gotrs ./gotrs-helm-chart-${{ needs.helm-chart.outputs.chart_version }}.tgz
+          curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/goatflow-helm-chart-${{ needs.helm-chart.outputs.chart_version }}.tgz
+          helm install goatflow ./goatflow-helm-chart-${{ needs.helm-chart.outputs.chart_version }}.tgz
 
           # Permalink to latest release
-          curl -LO https://github.com/${{ github.repository }}/releases/latest/download/gotrs-helm-chart-latest.tgz
+          curl -LO https://github.com/${{ github.repository }}/releases/latest/download/goatflow-helm-chart-latest.tgz
           ```
 
           ### Security
@@ -391,23 +391,23 @@ jobs:
           ### Air-Gapped Deployment
           Download the air-gapped bundle for offline deployments:
           \`\`\`bash
-          curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/gotrs-airgap-container-bundle-${{ needs.helm-chart.outputs.chart_version }}.tar.gz
-          tar -xzf gotrs-airgap-container-bundle-*.tar.gz
+          curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/goatflow-airgap-container-bundle-${{ needs.helm-chart.outputs.chart_version }}.tar.gz
+          tar -xzf goatflow-airgap-container-bundle-*.tar.gz
           ./load-images.sh
           \`\`\`
           See bundle README.md for Kubernetes deployment with local registry.
 
           ### Deployment
-          See [charts/gotrs/README.md](charts/gotrs/README.md) for installation instructions.
+          See [charts/goatflow/README.md](charts/goatflow/README.md) for installation instructions.
           EOF
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.VERSION }}
-          name: GOTRS ${{ steps.version.outputs.VERSION }}
+          name: GoatFlow ${{ steps.version.outputs.VERSION }}
           body_path: release_notes.md
-          files: dist/gotrs-helm-chart-*.tgz
+          files: dist/goatflow-helm-chart-*.tgz
           draft: false
           prerelease: ${{ contains(steps.version.outputs.VERSION, '-') }}
           generate_release_notes: true
@@ -457,11 +457,11 @@ jobs:
           for ARCH in amd64 arm64; do
             echo "Pulling $IMAGE:$VERSION for $ARCH..."
             docker pull --platform linux/$ARCH $IMAGE:$VERSION
-            docker save $IMAGE:$VERSION | gzip > bundle/images/gotrs-${{ steps.version.outputs.VERSION_NUM }}-${ARCH}.tar.gz
+            docker save $IMAGE:$VERSION | gzip > bundle/images/goatflow-${{ steps.version.outputs.VERSION_NUM }}-${ARCH}.tar.gz
 
             echo "Pulling $RUNNER_IMAGE:$VERSION for $ARCH..."
             docker pull --platform linux/$ARCH $RUNNER_IMAGE:$VERSION
-            docker save $RUNNER_IMAGE:$VERSION | gzip > bundle/images/gotrs-runner-${{ steps.version.outputs.VERSION_NUM }}-${ARCH}.tar.gz
+            docker save $RUNNER_IMAGE:$VERSION | gzip > bundle/images/goatflow-runner-${{ steps.version.outputs.VERSION_NUM }}-${ARCH}.tar.gz
           done
 
           ls -lh bundle/images/
@@ -472,7 +472,7 @@ jobs:
         run: |
           cat > bundle/load-images.sh << 'SCRIPT'
           #!/bin/bash
-          # GOTRS Air-Gapped Image Loader
+          # GoatFlow Air-Gapped Image Loader
           # Detects container runtime and loads images for your architecture
 
           set -e
@@ -508,7 +508,7 @@ jobs:
           echo ""
 
           # Load images
-          for IMAGE in gotrs gotrs-runner; do
+          for IMAGE in goatflow goatflow-runner; do
               FILE="$SCRIPT_DIR/images/${IMAGE}-${VERSION}-${ARCH}.tar.gz"
               if [[ -f "$FILE" ]]; then
                   echo "Loading $IMAGE..."
@@ -520,7 +520,7 @@ jobs:
 
           echo ""
           echo "Done. Loaded images:"
-          $RUNTIME images | grep -E "gotrs|REPOSITORY" | head -5
+          $RUNTIME images | grep -E "goatflow|REPOSITORY" | head -5
           SCRIPT
 
           sed -i "s/__VERSION__/$VERSION/" bundle/load-images.sh
@@ -534,23 +534,23 @@ jobs:
           RUNNER_IMAGE: ${{ needs.build-runner.outputs.image }}
         run: |
           cat > bundle/README.md << EOF
-          # GOTRS Air-Gapped Container Bundle
+          # GoatFlow Air-Gapped Container Bundle
 
           Version: $VERSION
 
-          This bundle contains everything needed to deploy GOTRS in an air-gapped environment.
+          This bundle contains everything needed to deploy GoatFlow in an air-gapped environment.
 
           ## Contents
 
           \`\`\`
-          gotrs-airgap-container-bundle-${VERSION#v}/
+          goatflow-airgap-container-bundle-${VERSION#v}/
           ├── images/
-          │   ├── gotrs-${VERSION#v}-amd64.tar.gz
-          │   ├── gotrs-${VERSION#v}-arm64.tar.gz
-          │   ├── gotrs-runner-${VERSION#v}-amd64.tar.gz
-          │   └── gotrs-runner-${VERSION#v}-arm64.tar.gz
+          │   ├── goatflow-${VERSION#v}-amd64.tar.gz
+          │   ├── goatflow-${VERSION#v}-arm64.tar.gz
+          │   ├── goatflow-runner-${VERSION#v}-amd64.tar.gz
+          │   └── goatflow-runner-${VERSION#v}-arm64.tar.gz
           ├── helm/
-          │   └── gotrs-helm-chart-*.tgz
+          │   └── goatflow-helm-chart-*.tgz
           ├── load-images.sh
           ├── SHA256SUMS
           └── README.md
@@ -572,34 +572,34 @@ jobs:
 
           \`\`\`bash
           # Docker
-          gunzip -c images/gotrs-${VERSION#v}-amd64.tar.gz | docker load
-          gunzip -c images/gotrs-runner-${VERSION#v}-amd64.tar.gz | docker load
+          gunzip -c images/goatflow-${VERSION#v}-amd64.tar.gz | docker load
+          gunzip -c images/goatflow-runner-${VERSION#v}-amd64.tar.gz | docker load
 
           # Podman
-          gunzip -c images/gotrs-${VERSION#v}-amd64.tar.gz | podman load
+          gunzip -c images/goatflow-${VERSION#v}-amd64.tar.gz | podman load
 
           # containerd (k3s, etc.)
-          gunzip -c images/gotrs-${VERSION#v}-amd64.tar.gz | nerdctl load
+          gunzip -c images/goatflow-${VERSION#v}-amd64.tar.gz | nerdctl load
           \`\`\`
 
           ### 3. Push to Local Registry (Kubernetes)
 
           \`\`\`bash
           # Tag and push to your local registry
-          docker tag $IMAGE:$VERSION_NUM my-registry.local/gotrs:$VERSION_NUM
-          docker push my-registry.local/gotrs:$VERSION_NUM
+          docker tag $IMAGE:$VERSION_NUM my-registry.local/goatflow:$VERSION_NUM
+          docker push my-registry.local/goatflow:$VERSION_NUM
 
-          docker tag $RUNNER_IMAGE:$VERSION_NUM my-registry.local/gotrs-runner:$VERSION_NUM
-          docker push my-registry.local/gotrs-runner:$VERSION_NUM
+          docker tag $RUNNER_IMAGE:$VERSION_NUM my-registry.local/goatflow-runner:$VERSION_NUM
+          docker push my-registry.local/goatflow-runner:$VERSION_NUM
           \`\`\`
 
           ### 4. Install with Helm
 
           \`\`\`bash
-          helm install gotrs helm/gotrs-helm-chart-*.tgz \\
-            --set image.repository=my-registry.local/gotrs \\
+          helm install goatflow helm/goatflow-helm-chart-*.tgz \\
+            --set image.repository=my-registry.local/goatflow \\
             --set image.tag=$VERSION_NUM \\
-            --set runner.image.repository=my-registry.local/gotrs-runner \\
+            --set runner.image.repository=my-registry.local/goatflow-runner \\
             --set runner.image.tag=$VERSION_NUM
           \`\`\`
 
@@ -613,8 +613,8 @@ jobs:
 
           ## Support
 
-          Documentation: https://github.com/gotrs-io/gotrs-ce
-          Issues: https://github.com/gotrs-io/gotrs-ce/issues
+          Documentation: https://github.com/goatkit/goatflow
+          Issues: https://github.com/goatkit/goatflow/issues
           EOF
 
       - name: Generate checksums
@@ -627,14 +627,14 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.VERSION_NUM }}
         run: |
-          tar -czvf gotrs-airgap-container-bundle-${VERSION}.tar.gz -C bundle .
-          ls -lh gotrs-airgap-container-bundle-${VERSION}.tar.gz
+          tar -czvf goatflow-airgap-container-bundle-${VERSION}.tar.gz -C bundle .
+          ls -lh goatflow-airgap-container-bundle-${VERSION}.tar.gz
 
       - name: Upload bundle to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.VERSION }}
-          files: gotrs-airgap-container-bundle-*.tar.gz
+          files: goatflow-airgap-container-bundle-*.tar.gz
 
   deploy-demo:
     name: Deploy to Demo Site
@@ -646,18 +646,18 @@ jobs:
       - name: Deploy to demo server
         uses: appleboy/ssh-action@v1
         with:
-          host: gotrs-demo.gibbsoft.com
+          host: goatflow-demo.gibbsoft.com
           username: ubuntu
           key: ${{ secrets.DEMO_SSH_KEY }}
           script: |
-            cd ~/gotrs-ce
+            cd ~/goatflow
             docker compose pull
             docker compose down
             docker compose up -d --force-recreate
             source .env
             # Restore full dump using root (dump includes all databases)
             # Skip line 1 (MariaDB sandbox comment that breaks import)
-            zcat gotrs_demo.sql.gz | tail -n +2 | docker compose exec -T mariadb \
+            zcat goatflow_demo.sql.gz | tail -n +2 | docker compose exec -T mariadb \
               mariadb -uroot -p"$DB_ROOT_PASSWORD"
 
       - name: Checkout for smoke test
@@ -672,7 +672,7 @@ jobs:
             attempt=$((attempt + 1))
             echo "Health check attempt $attempt of $max_attempts..."
             
-            http_code=$(curl -sL -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 https://gotrs-demo.gibbsoft.com 2>/dev/null || echo "000")
+            http_code=$(curl -sL -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 https://goatflow-demo.gibbsoft.com 2>/dev/null || echo "000")
             if [ "$http_code" = "200" ]; then
               echo "✓ Demo site is healthy and responding (HTTP $http_code)"
               exit 0
@@ -695,7 +695,7 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             -e PLAYWRIGHT_SKIP_WEBSERVER=1 \
-            -e DEMO_URL=https://gotrs-demo.gibbsoft.com \
+            -e DEMO_URL=https://goatflow-demo.gibbsoft.com \
             mcr.microsoft.com/playwright:v1.57.0-jammy \
             sh -c "npm install && npx playwright test demo-smoke --project=chromium"
 
@@ -730,9 +730,9 @@ jobs:
           echo "| Component | Status | Artifact |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|--------|----------|" >> $GITHUB_STEP_SUMMARY
           if [[ "$BUILD_RESULT" == "success" ]]; then
-            echo "| GOTRS | ✅ Success | \`$IMAGE\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| GoatFlow | ✅ Success | \`$IMAGE\` |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| GOTRS | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
+            echo "| GoatFlow | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           fi
           if [[ "$RUNNER_RESULT" == "success" ]]; then
             echo "| Runner | ✅ Success | \`$RUNNER_IMAGE\` |" >> $GITHUB_STEP_SUMMARY
@@ -740,12 +740,12 @@ jobs:
             echo "| Runner | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           fi
           if [[ "$HELM_RESULT" == "success" ]]; then
-            echo "| Helm Chart | ✅ Success | \`gotrs-helm-chart-$CHART_VERSION.tgz\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| Helm Chart | ✅ Success | \`goatflow-helm-chart-$CHART_VERSION.tgz\` |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Helm Chart | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           fi
           if [[ "$DEPLOY_RESULT" == "success" ]]; then
-            echo "| Demo Deploy | ✅ Success | gotrs-demo.gibbsoft.com |" >> $GITHUB_STEP_SUMMARY
+            echo "| Demo Deploy | ✅ Success | goatflow-demo.gibbsoft.com |" >> $GITHUB_STEP_SUMMARY
           elif [[ "$DEPLOY_RESULT" == "skipped" ]]; then
             echo "| Demo Deploy | ⏭️ Skipped | (not a version tag) |" >> $GITHUB_STEP_SUMMARY
           elif [[ -n "$DEPLOY_RESULT" ]]; then

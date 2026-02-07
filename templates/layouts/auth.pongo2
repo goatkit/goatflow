@@ -12,7 +12,7 @@
     <script>
         (function() {
             // Built-in themes - community themes go to .cache/
-            var BUILTIN = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe'];
+            var BUILTIN = ['synthwave', 'goatflow-classic', 'seventies-vibes', 'nineties-vibe'];
 
             // Helper to get cookie value
             function getCookie(name) {
@@ -27,8 +27,8 @@
             }
 
             // Check cookies first (in case returning user with saved prefs)
-            var cookieTheme = getCookie('gotrs_theme');
-            var cookieMode = getCookie('gotrs_mode');
+            var cookieTheme = getCookie('goatflow_theme');
+            var cookieMode = getCookie('goatflow_mode');
 
             // Get localStorage values as fallback
             var storedMode = localStorage.getItem('gk-theme-mode');

@@ -24,7 +24,7 @@
         },
         "help": {
           "queue_id": "Assign inbound messages to this queue.",
-          "allow_trusted_headers": "Accept queue overrides from X-OTRS-Queue / X-GOTRS headers for this mailbox.",
+          "allow_trusted_headers": "Accept queue overrides from X-OTRS-Queue / X-GoatFlow headers for this mailbox.",
           "poll_interval_seconds": "Override the scheduler interval for this mailbox. Leave 0 to inherit the global cadence.",
           "valid_id": "Choose whether this mailbox is active."
         },
@@ -442,7 +442,7 @@
         },
         "import": {
           "title": "Import Templates",
-          "description": "Import templates from a YAML file exported from GOTRS or created manually",
+          "description": "Import templates from a YAML file exported from GoatFlow or created manually",
           "back_to_list": "Back to Templates",
           "file_label": "YAML File",
           "upload_file": "Upload a file",
@@ -604,16 +604,16 @@
           "set_required": "At least one set action is required"
         },
         "actions": {
-          "queue": "X-GOTRS-Queue (Route to queue)",
-          "queue_id": "X-GOTRS-QueueID (Route to queue by ID)",
-          "priority": "X-GOTRS-Priority (Set priority by name)",
-          "priority_id": "X-GOTRS-PriorityID (Set priority)",
-          "state": "X-GOTRS-State (Set ticket state)",
-          "type": "X-GOTRS-Type (Set ticket type)",
-          "title": "X-GOTRS-Title (Override ticket title)",
-          "customer_id": "X-GOTRS-CustomerID (Set customer ID)",
-          "customer_user": "X-GOTRS-CustomerUser (Set customer user)",
-          "ignore": "X-GOTRS-Ignore (Skip ticket creation)"
+          "queue": "X-GoatFlow-Queue (Route to queue)",
+          "queue_id": "X-GoatFlow-QueueID (Route to queue by ID)",
+          "priority": "X-GoatFlow-Priority (Set priority by name)",
+          "priority_id": "X-GoatFlow-PriorityID (Set priority)",
+          "state": "X-GoatFlow-State (Set ticket state)",
+          "type": "X-GoatFlow-Type (Set ticket type)",
+          "title": "X-GoatFlow-Title (Override ticket title)",
+          "customer_id": "X-GoatFlow-CustomerID (Set customer ID)",
+          "customer_user": "X-GoatFlow-CustomerUser (Set customer user)",
+          "ignore": "X-GoatFlow-Ignore (Skip ticket creation)"
         }
       },
       "role": {
@@ -894,7 +894,7 @@
         "overwrite_existing": "Overwrite existing configurations",
         "overwrite_description": "If checked, existing fields with the same name will be updated. Otherwise, they will be skipped.",
         "upload_file": "Upload YAML File",
-        "upload_description": "Select a YAML file exported from GOTRS or OTRS to import dynamic field configurations.",
+        "upload_description": "Select a YAML file exported from GoatFlow or OTRS to import dynamic field configurations.",
         "upload_and_preview": "Upload and Preview",
         "choose_file": "Choose file",
         "no_file_selected": "No file selected",
@@ -1403,8 +1403,8 @@
   },
   "app": {
     "description": "Modern IT Service Management Platform",
-    "name": "GOTRS",
-    "title": "GOTRS - Ticketing System"
+    "name": "GoatFlow",
+    "title": "GoatFlow - Ticketing System"
   },
   "assets": {
     "asset_tag": "Asset Tag",
@@ -3570,7 +3570,7 @@
   "customer_portal": {
     "placeholders": {
       "title": "Customer Portal",
-      "footer": "Powered by GOTRS"
+      "footer": "Powered by GoatFlow"
     }
   },
   "queue": {

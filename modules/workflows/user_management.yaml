@@ -20,7 +20,7 @@ workflows:
         order: 1
         config:
           to: "{{email}}"
-          subject: "Welcome to GOTRS!"
+          subject: "Welcome to GoatFlow!"
           template: welcome_email
       - type: create_record
         order: 2

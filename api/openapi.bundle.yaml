@@ -1,18 +1,18 @@
 openapi: 3.0.3
 info:
-  title: GOTRS API
+  title: GoatFlow API
   description: Modern Open Source Ticketing System API
   version: 0.1.0
   contact:
-    name: GOTRS Team
-    url: https://github.com/gotrs-io/gotrs-ce
+    name: GoatFlow Team
+    url: https://github.com/goatkit/goatflow
   license:
     name: AGPL-3.0
     url: https://opensource.org/licenses/AGPL-3.0
 servers:
   - url: http://localhost:8081
     description: Development server
-  - url: https://api.gotrs.io
+  - url: https://api.goatflow.io
     description: Production server
 tags:
   - name: System
@@ -37,7 +37,7 @@ paths:
                 $ref: '#/components/schemas/HealthResponse'
               example:
                 status: healthy
-                service: gotrs-backend
+                service: goatflow-backend
         '500':
           description: Server is unhealthy
           content:
@@ -62,7 +62,7 @@ paths:
               example:
                 success: true
                 data:
-                  message: GOTRS API is running
+                  message: GoatFlow API is running
                   version: 0.1.0
         '500':
           description: Internal server error
@@ -250,7 +250,7 @@ components:
             - unhealthy
         service:
           type: string
-          example: gotrs-backend
+          example: goatflow-backend
     ApiStatusResponse:
       type: object
       required:

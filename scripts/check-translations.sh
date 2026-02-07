@@ -5,7 +5,7 @@
 
 set -e
 
-echo "🔍 Checking for untranslated keys in GOTRS UI..."
+echo "🔍 Checking for untranslated keys in GoatFlow UI..."
 echo "================================================"
 
 # Colors for output
@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 
 # Login and get session
 echo "📝 Logging in as admin..."
-LOGIN_RESPONSE=$(curl -s -c /tmp/gotrs_cookies.txt -X POST http://localhost:8080/api/auth/login \
+LOGIN_RESPONSE=$(curl -s -c /tmp/goatflow_cookies.txt -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "email=admin@demo.com&password=demo123" \
   -L -w "\n%{http_code}")
@@ -37,10 +37,10 @@ check_page() {
   echo -e "\n📄 Checking $PAGE_NAME..."
   
   # Fetch the page
-  PAGE_CONTENT=$(curl -s -b /tmp/gotrs_cookies.txt -L "http://localhost:8080$PAGE_URL")
+  PAGE_CONTENT=$(curl -s -b /tmp/goatflow_cookies.txt -L "http://localhost:8080$PAGE_URL")
   
   # Check if we got redirected to login
-  if echo "$PAGE_CONTENT" | grep -q "Login to GOTRS"; then
+  if echo "$PAGE_CONTENT" | grep -q "Login to GoatFlow"; then
     echo -e "${RED}❌ Redirected to login page - session might have expired${NC}"
     return 1
   fi
@@ -104,7 +104,7 @@ if ! check_page "Users Management" "/admin/users"; then
 fi
 
 # Clean up
-rm -f /tmp/gotrs_cookies.txt
+rm -f /tmp/goatflow_cookies.txt
 
 echo -e "\n================================================"
 if [ $FAILED -eq 0 ]; then

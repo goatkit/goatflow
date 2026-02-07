@@ -23,8 +23,8 @@ case "$scope" in
       fi
     fi
     host_port=$port
-    name=${DB_NAME:-gotrs}
-    user=${DB_USER:-gotrs_user}
+    name=${DB_NAME:-goatflow}
+    user=${DB_USER:-goatflow_user}
     password=${DB_PASSWORD:-}
     if [ -z "$password" ]; then
       echo "ERROR: DB_PASSWORD must be set in .env" >&2
@@ -39,8 +39,8 @@ case "$scope" in
     host=${TEST_DB_POSTGRES_HOST:-postgres-test}
     host_port=${TEST_DB_POSTGRES_PORT:-5433}
     port=${TEST_DB_POSTGRES_INTERNAL_PORT:-5432}
-    name=${TEST_DB_POSTGRES_NAME:-gotrs_test}
-    user=${TEST_DB_POSTGRES_USER:-gotrs_user}
+    name=${TEST_DB_POSTGRES_NAME:-goatflow_test}
+    user=${TEST_DB_POSTGRES_USER:-goatflow_user}
     password=${TEST_DB_POSTGRES_PASSWORD:-}
     if [ -z "$password" ]; then
       echo "ERROR: TEST_DB_POSTGRES_PASSWORD must be set in .env" >&2

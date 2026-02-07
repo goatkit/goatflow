@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/service"
+	"github.com/goatkit/goatflow/internal/service"
 )
 
 // LDAPHandler handles LDAP-related API endpoints.

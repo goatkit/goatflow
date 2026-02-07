@@ -13,8 +13,8 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
-	"github.com/gotrs-io/gotrs-ce/internal/services/database"
-	"github.com/gotrs-io/gotrs-ce/internal/services/registry"
+	"github.com/goatkit/goatflow/internal/services/database"
+	"github.com/goatkit/goatflow/internal/services/registry"
 )
 
 var (
@@ -109,7 +109,7 @@ func AutoConfigureDatabase() error {
 
 	binding := &registry.ServiceBinding{
 		ID:        "default-db-binding",
-		AppID:     "gotrs",
+		AppID:     "goatflow",
 		ServiceID: config.ID,
 		Name:      "Primary Database",
 		Purpose:   "primary",
@@ -204,9 +204,9 @@ func buildDatabaseConfig() *registry.ServiceConfig {
 			defaultPort = 5432
 		}
 		config.Port = getEnvAsIntOrDefault("TEST_DB_PORT", getEnvAsIntOrDefault("DB_PORT", defaultPort))
-		config.Username = getEnvOrDefault("TEST_DB_USER", getEnvOrDefault("DB_USER", "gotrs_user"))
-		config.Password = getEnvOrDefault("TEST_DB_PASSWORD", getEnvOrDefault("DB_PASSWORD", "gotrs_password"))
-		config.Database = getEnvOrDefault("TEST_DB_NAME", getEnvOrDefault("DB_NAME", "gotrs"))
+		config.Username = getEnvOrDefault("TEST_DB_USER", getEnvOrDefault("DB_USER", "goatflow_user"))
+		config.Password = getEnvOrDefault("TEST_DB_PASSWORD", getEnvOrDefault("DB_PASSWORD", "goatflow_password"))
+		config.Database = getEnvOrDefault("TEST_DB_NAME", getEnvOrDefault("DB_NAME", "goatflow"))
 
 		// SSL mode
 		if sslMode := os.Getenv("TEST_DB_SSLMODE"); sslMode != "" {

@@ -586,7 +586,7 @@ func resolveRoutesDir(initial string) (string, error) {
 	candidates := []string{initial}
 
 	// Check environment variable
-	if env := os.Getenv("GOTRS_ROUTES_DIR"); env != "" {
+	if env := os.Getenv("GOATFLOW_ROUTES_DIR"); env != "" {
 		candidates = append([]string{env}, candidates...)
 	}
 

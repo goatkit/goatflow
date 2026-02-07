@@ -1,6 +1,6 @@
 # Ticket Number Generators
 
-This document provides an authoritative, task‑focused reference for selecting and operating ticket number generators in GOTRS.
+This document provides an authoritative, task‑focused reference for selecting and operating ticket number generators in GoatFlow.
 
 ## Overview
 The generator is chosen via the configuration setting `Ticket::NumberGenerator`. It is resolved at service startup and wired into the `TicketRepository` so all ticket creation paths use a single, consistent source of truth.

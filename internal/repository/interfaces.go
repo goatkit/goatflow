@@ -1,6 +1,6 @@
 package repository
 
-import "github.com/gotrs-io/gotrs-ce/internal/models"
+import "github.com/goatkit/goatflow/internal/models"
 
 // ITicketRepository defines the interface for ticket data operations.
 type ITicketRepository interface {

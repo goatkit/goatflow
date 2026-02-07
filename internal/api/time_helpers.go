@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/history"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/history"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/repository"
 )
 
 // saveTimeEntry persists a time accounting entry if inputs are valid.

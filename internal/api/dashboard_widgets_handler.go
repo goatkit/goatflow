@@ -6,10 +6,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/plugin"
+	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/service"
 )
 
 func init() {

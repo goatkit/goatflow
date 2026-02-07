@@ -1,7 +1,7 @@
 #!/bin/bash
 # Extract clean schema from OTRS MySQL dump and convert to PostgreSQL
 
-INPUT_FILE="/home/nigel/git/gotrs-io/otrs_sqldump_ng20250825_1732.sql"
+INPUT_FILE="/home/nigel/git/goatkit/otrs_sqldump_ng20250825_1732.sql"
 OUTPUT_MYSQL="schema/baseline/otrs_mysql_structure.sql"
 OUTPUT_PG="schema/baseline/otrs_complete.sql"
 

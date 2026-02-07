@@ -269,7 +269,7 @@ func (rm *RouteMetrics) generateDashboardHTML() string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GOTRS Route Analytics</title>
+    <title>GoatFlow Route Analytics</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; }
@@ -297,7 +297,7 @@ func (rm *RouteMetrics) generateDashboardHTML() string {
 </head>
 <body>
     <div class="header">
-        <h1>🚀 GOTRS Route Analytics</h1>
+        <h1>🚀 GoatFlow Route Analytics</h1>
         <p>Real-time performance monitoring for YAML-defined routes</p>
     </div>
     

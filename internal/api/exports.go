@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
+	"github.com/goatkit/goatflow/internal/services/adapter"
 )
 
 // Exported handlers for use by the routing system

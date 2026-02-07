@@ -11,5 +11,5 @@ WORKSPACE_DIR=$(pwd)
 exec $CONTAINER_CMD run --rm \
     -v "$WORKSPACE_DIR:/workspace" \
     -w /workspace \
-    gotrs-toolbox:latest \
+    ghcr.io/goatkit/goatflow/toolbox:latest \
     go test -v ./internal/api/ "$@"

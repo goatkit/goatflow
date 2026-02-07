@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/gotrs-io/gotrs-ce/internal/service"
+	"github.com/goatkit/goatflow/internal/service"
 )
 
 func main() {

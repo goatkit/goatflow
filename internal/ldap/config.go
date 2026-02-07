@@ -175,7 +175,7 @@ func GetEnvironmentTemplate(ldapType string) map[string]string {
 		"LDAP_BASE_DN":         "dc=example,dc=com",
 		"LDAP_USER_BASE_DN":    "", // Optional, uses BASE_DN if empty
 		"LDAP_GROUP_BASE_DN":   "ou=groups,dc=example,dc=com",
-		"LDAP_ADMIN_GROUPS":    "Domain Admins,GOTRS Admins",
+		"LDAP_ADMIN_GROUPS":    "Domain Admins,GoatFlow Admins",
 		"LDAP_AGENT_GROUPS":    "Support Team,Helpdesk",
 	}
 
@@ -209,7 +209,7 @@ LDAP_TYPE=active_directory
 LDAP_HOST=dc.company.com
 LDAP_PORT=389
 LDAP_USE_TLS=true
-LDAP_BIND_DN=cn=gotrs-service,ou=Service Accounts,dc=company,dc=com
+LDAP_BIND_DN=cn=goatflow-service,ou=Service Accounts,dc=company,dc=com
 LDAP_BIND_PASSWORD=your-bind-password
 LDAP_BASE_DN=dc=company,dc=com
 LDAP_USER_FILTER=(sAMAccountName=%s)
@@ -222,7 +222,7 @@ LDAP_DISPLAY_NAME_ATTRIBUTE=displayName
 LDAP_GROUP_ATTRIBUTE=cn
 LDAP_IS_ACTIVE_DIRECTORY=true
 LDAP_DOMAIN=company.com
-LDAP_ADMIN_GROUPS=Domain Admins,GOTRS Administrators
+LDAP_ADMIN_GROUPS=Domain Admins,GoatFlow Administrators
 LDAP_AGENT_GROUPS=Support Team,IT Helpdesk`,
 
 	"openldap": `# OpenLDAP Configuration
@@ -231,7 +231,7 @@ LDAP_TYPE=openldap
 LDAP_HOST=ldap.company.com
 LDAP_PORT=389
 LDAP_USE_TLS=true
-LDAP_BIND_DN=cn=gotrs,ou=system,dc=company,dc=com
+LDAP_BIND_DN=cn=goatflow,ou=system,dc=company,dc=com
 LDAP_BIND_PASSWORD=your-bind-password
 LDAP_BASE_DN=dc=company,dc=com
 LDAP_USER_FILTER=(uid=%s)
@@ -242,8 +242,8 @@ LDAP_FIRST_NAME_ATTRIBUTE=givenName
 LDAP_LAST_NAME_ATTRIBUTE=sn
 LDAP_DISPLAY_NAME_ATTRIBUTE=cn
 LDAP_GROUP_ATTRIBUTE=cn
-LDAP_ADMIN_GROUPS=gotrs-admins,system-admins
-LDAP_AGENT_GROUPS=gotrs-agents,support-team`,
+LDAP_ADMIN_GROUPS=goatflow-admins,system-admins
+LDAP_AGENT_GROUPS=goatflow-agents,support-team`,
 
 	"389ds": `# 389 Directory Server Configuration
 LDAP_ENABLED=true
@@ -251,7 +251,7 @@ LDAP_TYPE=389ds
 LDAP_HOST=ldap.company.com
 LDAP_PORT=389
 LDAP_USE_TLS=true
-LDAP_BIND_DN=uid=gotrs,cn=sysaccounts,cn=etc,dc=company,dc=com
+LDAP_BIND_DN=uid=goatflow,cn=sysaccounts,cn=etc,dc=company,dc=com
 LDAP_BIND_PASSWORD=your-bind-password
 LDAP_BASE_DN=dc=company,dc=com
 LDAP_USER_FILTER=(uid=%s)
@@ -262,6 +262,6 @@ LDAP_FIRST_NAME_ATTRIBUTE=givenName
 LDAP_LAST_NAME_ATTRIBUTE=sn
 LDAP_DISPLAY_NAME_ATTRIBUTE=cn
 LDAP_GROUP_ATTRIBUTE=cn
-LDAP_ADMIN_GROUPS=gotrs-admins,admins
-LDAP_AGENT_GROUPS=gotrs-agents,support`,
+LDAP_ADMIN_GROUPS=goatflow-admins,admins
+LDAP_AGENT_GROUPS=goatflow-agents,support`,
 }

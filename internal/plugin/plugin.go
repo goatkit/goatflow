@@ -55,7 +55,7 @@ type GKRegistration struct {
 	ErrorCodes []ErrorCodeSpec `json:"error_codes,omitempty"` // API error codes provided by plugin
 
 	// Requirements
-	MinHostVersion string   `json:"min_host_version,omitempty"` // minimum GOTRS version
+	MinHostVersion string   `json:"min_host_version,omitempty"` // minimum GoatFlow version
 	Permissions    []string `json:"permissions,omitempty"`      // required host permissions
 }
 

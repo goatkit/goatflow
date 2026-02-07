@@ -1,9 +1,9 @@
 #!/bin/bash
-# GOTRS Database Fix Script
-# Resolves the "database gotrs_user does not exist" error
+# GoatFlow Database Fix Script
+# Resolves the "database goatflow_user does not exist" error
 
 echo "======================================"
-echo "    GOTRS Database Fix Script        "
+echo "    GoatFlow Database Fix Script        "
 echo "======================================"
 echo ""
 
@@ -67,22 +67,22 @@ fi
 current_db_user=$(grep "^DB_USER=" .env | cut -d'=' -f2)
 echo "Current DB_USER in .env: $current_db_user"
 
-if [ "$current_db_user" = "gotrs_user" ]; then
-    echo -e "${YELLOW}Found incorrect DB_USER value: gotrs_user${NC}"
-    echo "Fixing DB_USER to 'gotrs'..."
+if [ "$current_db_user" = "goatflow_user" ]; then
+    echo -e "${YELLOW}Found incorrect DB_USER value: goatflow_user${NC}"
+    echo "Fixing DB_USER to 'goatflow'..."
     
     # Backup .env
     cp .env .env.backup
     echo "Created backup: .env.backup"
     
     # Fix DB_USER
-    sed -i 's/^DB_USER=gotrs_user/DB_USER=gotrs/' .env
+    sed -i 's/^DB_USER=goatflow_user/DB_USER=goatflow/' .env
     
     # Also fix DATABASE_URL if present
-    sed -i 's|postgres://gotrs_user:|postgres://gotrs:|' .env
+    sed -i 's|postgres://goatflow_user:|postgres://goatflow:|' .env
     
     echo -e "${GREEN}✓ Fixed DB_USER in .env${NC}"
-elif [ "$current_db_user" = "gotrs" ]; then
+elif [ "$current_db_user" = "goatflow" ]; then
     echo -e "${GREEN}✓ DB_USER is already correct${NC}"
 else
     echo -e "${YELLOW}Warning: DB_USER has custom value: $current_db_user${NC}"
@@ -97,20 +97,20 @@ $COMPOSE_CMD down 2>/dev/null || true
 
 # Remove specific volumes
 echo "Removing old database volumes..."
-$CONTAINER_CMD volume rm gotrs-ce_postgres_data 2>/dev/null || true
-$CONTAINER_CMD volume rm gotrs_postgres_data 2>/dev/null || true
+$CONTAINER_CMD volume rm goatflow_postgres_data 2>/dev/null || true
+$CONTAINER_CMD volume rm goatflow_postgres_data 2>/dev/null || true
 $CONTAINER_CMD volume rm postgres_data 2>/dev/null || true
 
-# List and remove any gotrs-related volumes
-echo "Cleaning up any remaining gotrs volumes..."
-$CONTAINER_CMD volume ls | grep -i gotrs | awk '{print $2}' | while read vol; do
+# List and remove any goatflow-related volumes
+echo "Cleaning up any remaining goatflow volumes..."
+$CONTAINER_CMD volume ls | grep -i goatflow | awk '{print $2}' | while read vol; do
     echo "  Removing volume: $vol"
     $CONTAINER_CMD volume rm "$vol" 2>/dev/null || true
 done
 
 # Remove any stopped containers
 echo "Removing stopped containers..."
-$CONTAINER_CMD ps -a | grep -i gotrs | awk '{print $1}' | while read container; do
+$CONTAINER_CMD ps -a | grep -i goatflow | awk '{print $1}' | while read container; do
     echo "  Removing container: $container"
     $CONTAINER_CMD rm -f "$container" 2>/dev/null || true
 done
@@ -123,9 +123,9 @@ echo "    Ready to start fresh!             "
 echo "======================================"
 echo ""
 echo "Your database configuration is now:"
-echo "  DB_NAME: gotrs"
-echo "  DB_USER: gotrs"
-echo "  DB_PASSWORD: gotrs_password"
+echo "  DB_NAME: goatflow"
+echo "  DB_USER: goatflow"
+echo "  DB_PASSWORD: goatflow_password"
 echo ""
 echo "To start the services, run:"
 echo -e "  ${GREEN}make up${NC}"

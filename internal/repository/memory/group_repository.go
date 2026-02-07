@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // GroupRepository provides an in-memory implementation of the GroupRepository interface.

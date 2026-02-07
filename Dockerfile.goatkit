@@ -1,4 +1,4 @@
-# GoatKit - Container for GOTRS Configuration Management
+# GoatKit - Container for GoatFlow Configuration Management
 # syntax=docker/dockerfile:1
 
 # Global build arg - must be before any FROM that uses it
@@ -8,7 +8,7 @@ ARG GO_IMAGE=golang:1.24-alpine
 # ============================================
 # Reuse backend binaries from artifacts image
 # ============================================
-FROM gotrs-artifacts:latest AS artifacts
+FROM goatflow-artifacts:latest AS artifacts
 
 # ============================================
 # Build GoatKit tools
@@ -58,7 +58,7 @@ RUN mkdir -p /app/config /app/routes /app/dashboards /app/.versions && \
 RUN cat <<'EOF' >/usr/local/bin/goatkit
 #!/bin/bash
 
-# GoatKit - YAML Configuration Management for GOTRS
+# GoatKit - YAML Configuration Management for GoatFlow
 set -e
 
 # Show banner on first run or help

@@ -8,9 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 // with the existing handler functions.
@@ -80,7 +80,7 @@ func registerExistingHandlers(registry *HandlerRegistry, db *sql.DB, jwtManager 
 
 		"handleMetrics": func(c *gin.Context) {
 			// Placeholder for Prometheus metrics
-			c.String(http.StatusOK, "# HELP gotrs_up GOTRS is up\n# TYPE gotrs_up gauge\ngotrs_up 1\n")
+			c.String(http.StatusOK, "# HELP goatflow_up GoatFlow is up\n# TYPE goatflow_up gauge\ngoatflow_up 1\n")
 		},
 
 		"handleStaticFiles": func(c *gin.Context) {

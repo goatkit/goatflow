@@ -8,12 +8,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/constants"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/constants"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 // HandleCustomerLogin is the exported handler for customer login POST requests.
@@ -92,7 +92,7 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		auth.DefaultLoginRateLimiter.RecordSuccess(clientIP, login)
 
 		// Check if 2FA is enabled for this customer
-		totpService := service.NewTOTPService(db, "GOTRS")
+		totpService := service.NewTOTPService(db, "GoatFlow")
 		if totpService.IsEnabledForCustomer(user.Login) {
 			// SECURITY FIX (V3/V4/V5/V7): Use session manager - customer login stored server-side
 			sessionMgr := auth.GetTOTPSessionManager()
@@ -132,13 +132,13 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		c.SetCookie("customer_auth_token", token, sessionTimeout, "/", "", false, true)
 		// Set a non-httpOnly indicator so JavaScript can detect authentication
 		// (auth tokens are httpOnly for security, but JS needs to know user is logged in)
-		c.SetCookie("gotrs_customer_logged_in", "1", sessionTimeout, "/", "", false, false)
+		c.SetCookie("goatflow_customer_logged_in", "1", sessionTimeout, "/", "", false, false)
 
 		// Use CustomerPreferencesService - keyed by login, not numeric ID
 		prefService := service.NewCustomerPreferencesService(db)
 
 		// Persist pre-login language selection to customer preferences
-		if preLoginLang, err := c.Cookie("gotrs_lang"); err == nil && preLoginLang != "" {
+		if preLoginLang, err := c.Cookie("goatflow_lang"); err == nil && preLoginLang != "" {
 			if setErr := prefService.SetLanguage(user.Login, preLoginLang); setErr != nil {
 				log.Printf("Failed to save customer language preference: %v", setErr)
 			}
@@ -146,10 +146,10 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 
 		// Load customer's saved theme preferences from database and set cookies
 		if userTheme := prefService.GetTheme(user.Login); userTheme != "" {
-			c.SetCookie("gotrs_theme", userTheme, sessionTimeout, "/", "", false, false)
+			c.SetCookie("goatflow_theme", userTheme, sessionTimeout, "/", "", false, false)
 		}
 		if userThemeMode := prefService.GetThemeMode(user.Login); userThemeMode != "" {
-			c.SetCookie("gotrs_mode", userThemeMode, sessionTimeout, "/", "", false, false)
+			c.SetCookie("goatflow_mode", userThemeMode, sessionTimeout, "/", "", false, false)
 		}
 
 		// Create session record in database for admin session management

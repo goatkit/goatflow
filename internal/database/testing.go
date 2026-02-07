@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
+	"github.com/goatkit/goatflow/internal/services/adapter"
 )
 
 // testDB is kept for API compatibility; we do not own the lifecycle.

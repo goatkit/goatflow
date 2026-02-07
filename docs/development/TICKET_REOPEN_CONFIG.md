@@ -23,11 +23,11 @@ $Self->{'Ticket::Frontend::AgentTicketClose'}->{'Permission'} = 'close';
 $Self->{'Ticket::Frontend::AgentTicketReopen'} = 1;  # 1 = allow, 0 = disallow
 ```
 
-## Proposed GOTRS Configuration
+## Proposed GoatFlow Configuration
 
 ### Using Viper/YAML (as per project decision)
 ```yaml
-# config/gotrs.yaml
+# config/goatflow.yaml
 ticket:
   # Ticket state change controls
   state_changes:

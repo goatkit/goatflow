@@ -9,7 +9,7 @@
 
 ## Reporting a Vulnerability
 
-Please report security vulnerabilities to: **security@gotrs.io**
+Please report security vulnerabilities to: **security@goatflow.io**
 
 Do not report security issues through public GitHub issues.
 
@@ -28,7 +28,7 @@ Do not report security issues through public GitHub issues.
 
 ## Security Best Practices
 
-1. Keep GOTRS updated to the latest version
+1. Keep GoatFlow updated to the latest version
 2. Use HTTPS for all connections
 3. Run containers as non-root users
 4. Enable audit logging
@@ -37,7 +37,7 @@ Do not report security issues through public GitHub issues.
 
 ## Contact
 
-* Security issues: security@gotrs.io
-* General support: support@gotrs.io
+* Security issues: security@goatflow.io
+* General support: hello@goatflow.io
 
-Thank you for helping keep GOTRS secure.
+Thank you for helping keep GoatFlow secure.

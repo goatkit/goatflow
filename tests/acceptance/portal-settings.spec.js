@@ -12,7 +12,7 @@ const defaultPortal = {
   enabled: true,
   loginRequired: true,
   title: 'Customer Portal',
-  footer: 'Powered by GOTRS',
+  footer: 'Powered by GoatFlow',
   landing: '/customer/tickets',
 };
 
@@ -147,7 +147,7 @@ test.describe('Admin Portal Settings', () => {
     expect(resp.ok()).toBeTruthy();
     body = await resp.json();
     expect(body.settings.title).toBe(defaultPortal.title);
-    expect(body.settings.footerText || body.settings.footer_text || body.settings.footer).toContain('Powered by GOTRS');
+    expect(body.settings.footerText || body.settings.footer_text || body.settings.footer).toContain('Powered by GoatFlow');
     expect(body.settings.enabled).toBe(defaultPortal.enabled);
     expect(body.settings.loginRequired).toBe(defaultPortal.loginRequired);
   });

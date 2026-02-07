@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"log"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/services/acl"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/services/acl"
 )
 
 // ACLHelper provides ACL filtering for ticket-related data.

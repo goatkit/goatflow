@@ -1,6 +1,6 @@
-# GOTRS Quick Start Guide
+# GoatFlow Quick Start Guide
 
-This guide gets you from `git clone` → running GOTRS locally → creating your first ticket.
+This guide gets you from `git clone` → running GoatFlow locally → creating your first ticket.
 
 ## Prerequisites
 
@@ -8,11 +8,11 @@ This guide gets you from `git clone` → running GOTRS locally → creating your
 - `make`
 - Modern browser
 
-## 1) Start GOTRS (local dev)
+## 1) Start GoatFlow (local dev)
 
 ```bash
-git clone https://github.com/gotrs-io/gotrs-ce.git
-cd gotrs-ce
+git clone https://github.com/goatkit/goatflow.git
+cd goatflow
 
 # Local dev (safe demo credentials; matches compose defaults)
 cp .env.development .env

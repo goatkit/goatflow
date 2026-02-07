@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	. "github.com/gotrs-io/gotrs-ce/internal/api"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	. "github.com/goatkit/goatflow/internal/api"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 func TestAddArticle_BasicArticle(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // verifyCustomerOwnsTicket checks if the authenticated customer owns the specified ticket.
@@ -479,7 +479,7 @@ func renderAttachmentViewerHTML(filename, contentType, downloadURL string) strin
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>%s - GOTRS</title>
+	<title>%s - GoatFlow</title>
 	<link rel="stylesheet" href="/static/css/output.css">
 	<link rel="stylesheet" href="/static/themes/builtin/synthwave/theme.css">
 	<style>

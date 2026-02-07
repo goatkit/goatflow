@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
+	"github.com/goatkit/goatflow/internal/plugin"
 )
 
 // Handshake is the shared handshake config for host and plugins.

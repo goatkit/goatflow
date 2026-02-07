@@ -32,7 +32,7 @@ run_test() {
     if docker run --rm \
         -v "$(pwd):/workspace" \
         -w /workspace \
-        --network gotrs-ce_gotrs-network \
+        --network goatflow_goatflow-network \
         "${GO_IMAGE:-golang:1.24.11-alpine}" \
         sh -c "go test -v ./internal/api -run '$test_pattern' -count=1 2>&1" | grep -q "PASS"; then
         echo -e "${GREEN}✓ $test_name: PASSED${NC}"

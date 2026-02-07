@@ -99,7 +99,7 @@ CREATE_RESULT=$(curl -s -X POST \
     --data-urlencode "name=Standard Support" \
     --data-urlencode "text=Best regards,
 Support Team
-GOTRS Inc." \
+GoatFlow Inc." \
     --data-urlencode "content_type=text/plain" \
     --data-urlencode "comments=Default signature for support team" \
     "$BASE_URL/admin/dynamic/$TABLE_NAME")
@@ -139,7 +139,7 @@ UPDATE_RESULT=$(curl -s -X PUT \
     --data-urlencode "name=Premium Support" \
     --data-urlencode "text=Best regards,
 Premium Support Team
-GOTRS Inc.
+GoatFlow Inc.
 24/7 Support Available" \
     --data-urlencode "content_type=text/plain" \
     --data-urlencode "comments=Signature for premium support customers" \

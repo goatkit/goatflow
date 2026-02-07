@@ -141,7 +141,7 @@ func TestQueueView(t *testing.T) {
 				"<!DOCTYPE html>",
 				"<html",
 				"<head>",
-				"<title>Queues - GOTRS</title>",
+				"<title>Queues - GoatFlow</title>",
 				"<body",
 			},
 		},
@@ -241,7 +241,7 @@ func TestAdminView(t *testing.T) {
 				"<body",
 			},
 			checkAlternatives: []checkAlternatives{
-				{"<title>Admin Dashboard - GOTRS</title>", "pages.admin.dashboard.title"},
+				{"<title>Admin Dashboard - GoatFlow</title>", "pages.admin.dashboard.title"},
 			},
 		},
 		{

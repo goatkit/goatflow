@@ -1,0 +1,33 @@
+{{- if .Values.backend.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "goatflow.fullname" . }}-backend-config
+  labels:
+    {{- include "goatflow.backend.labels" . | nindent 4 }}
+data:
+  # Database
+  DB_TYPE: {{ .Values.database.type | quote }}
+  DB_HOST: {{ include "goatflow.database.host" . | quote }}
+  DB_PORT: {{ include "goatflow.database.port" . | quote }}
+  DB_NAME: {{ include "goatflow.database.name" . | quote }}
+
+  {{- if or .Values.valkey.enabled .Values.externalValkey.enabled }}
+  # Cache
+  REDIS_HOST: {{ include "goatflow.valkey.host" . | quote }}
+  REDIS_PORT: {{ include "goatflow.valkey.port" . | quote }}
+  CACHE_ENABLED: "true"
+  {{- else }}
+  CACHE_ENABLED: "false"
+  {{- end }}
+
+  # Application
+  APP_ENV: "production"
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  SERVER_PORT: "8080"
+  SESSION_TIMEOUT: {{ .Values.config.session.lifetime | quote }}
+
+  # Storage
+  STORAGE_TYPE: {{ .Values.config.storage.type | quote }}
+  STORAGE_PATH: {{ .Values.config.storage.path | quote }}
+{{- end }}

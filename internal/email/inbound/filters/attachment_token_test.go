@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/email/inbound/connector"
 )
 
 func TestAttachmentTokenFilterDetectsFilenameToken(t *testing.T) {

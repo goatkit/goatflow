@@ -3,9 +3,9 @@ package shared
 import (
 	"sync"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/service"
 )
 
 var (

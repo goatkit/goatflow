@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{% if IsNew %}{{ t("admin.modules.template.form.create_title") }}{% else %}{{ t("admin.modules.template.form.edit_title") }}{% endif %} - GOTRS Admin{% endblock %}
+{% block title %}{% if IsNew %}{{ t("admin.modules.template.form.create_title") }}{% else %}{{ t("admin.modules.template.form.edit_title") }}{% endif %} - GoatFlow Admin{% endblock %}
 
 {% block head %}
 {{ block.super }}
@@ -85,7 +85,7 @@
                                     name="template_type"
                                     value="{{ tt.Key }}"
                                     {% if tt.Key in Template.TemplateType %}checked{% endif %}
-                                    class="rounded text-gotrs-600 focus:ring-gotrs-500 h-4 w-4"
+                                    class="rounded text-goatflow-600 focus:ring-goatflow-500 h-4 w-4"
                                     style="border-color: var(--gk-border-default); background: var(--gk-bg-surface);"
                                 >
                                 <span class="ml-2 text-sm font-medium" style="color: var(--gk-text-secondary);">{{ tt.Label }}</span>
@@ -156,16 +156,16 @@
                     <!-- Available placeholders -->
                     <div class="mb-4 p-4 rounded-lg" style="background: var(--gk-bg-tertiary); border: 1px solid var(--gk-border-default);">
                         <p class="text-sm mb-2" style="color: var(--gk-text-secondary);">{{ t("admin.modules.template.form.available_placeholders") }}:</p>
-                        <p class="text-xs mb-3" style="color: var(--gk-primary);">Both <code class="px-1 rounded" style="background: var(--gk-bg-surface);">&lt;GOTRS_*&gt;</code> and <code class="px-1 rounded" style="background: var(--gk-bg-surface);">&lt;OTRS_*&gt;</code> prefixes are supported.</p>
+                        <p class="text-xs mb-3" style="color: var(--gk-primary);">Both <code class="px-1 rounded" style="background: var(--gk-bg-surface);">&lt;GOATFLOW_*&gt;</code> and <code class="px-1 rounded" style="background: var(--gk-bg-surface);">&lt;OTRS_*&gt;</code> prefixes are supported.</p>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_OWNER_Salutation&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_OWNER_Salutation&gt;</button>
-                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_OWNER_FirstName&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_OWNER_FirstName&gt;</button>
-                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_OWNER_LastName&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_OWNER_LastName&gt;</button>
-                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_TICKET_TicketNumber&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_TICKET_TicketNumber&gt;</button>
-                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_TICKET_Title&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_TICKET_Title&gt;</button>
-                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_CUSTOMER_UserEmail&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_CUSTOMER_UserEmail&gt;</button>
-                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_CUSTOMER_UserFirstname&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_CUSTOMER_UserFirstname&gt;</button>
-                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_CUSTOMER_UserLastname&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_CUSTOMER_UserLastname&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOATFLOW_OWNER_Salutation&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOATFLOW_OWNER_Salutation&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOATFLOW_OWNER_FirstName&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOATFLOW_OWNER_FirstName&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOATFLOW_OWNER_LastName&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOATFLOW_OWNER_LastName&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOATFLOW_TICKET_TicketNumber&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOATFLOW_TICKET_TicketNumber&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOATFLOW_TICKET_Title&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOATFLOW_TICKET_Title&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOATFLOW_CUSTOMER_UserEmail&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOATFLOW_CUSTOMER_UserEmail&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOATFLOW_CUSTOMER_UserFirstname&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOATFLOW_CUSTOMER_UserFirstname&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOATFLOW_CUSTOMER_UserLastname&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOATFLOW_CUSTOMER_UserLastname&gt;</button>
                         </div>
                         <p class="mt-2 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.modules.template.form.placeholder_click_hint") }}</p>
                     </div>

@@ -4,7 +4,7 @@
 # Tests HTTP API functionality with positive and negative cases
 # IMPORTANT: Only runs against the dedicated TEST backend (port 18081)
 #
-# NOTE: Test backend runs with GOTRS_DISABLE_TEST_AUTH_BYPASS=0
+# NOTE: Test backend runs with GOATFLOW_DISABLE_TEST_AUTH_BYPASS=0
 # This auto-authenticates requests as user_id=1 (Admin), so login
 # tests verify endpoint behavior but auth isn't required for API access.
 #
@@ -154,7 +154,7 @@ trap cleanup EXIT
 
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║           GOTRS INTEGRATION TEST SUITE                   ║${NC}"
+echo -e "${CYAN}║           GoatFlow INTEGRATION TEST SUITE                   ║${NC}"
 echo -e "${CYAN}║              (Test Backend Only)                         ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════════════════════╝${NC}"
 echo ""

@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 func TestParseExpiration(t *testing.T) {

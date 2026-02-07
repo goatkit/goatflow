@@ -9,7 +9,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/components/dynamic"
+	"github.com/goatkit/goatflow/internal/components/dynamic"
 )
 
 var dynamicHandler *dynamic.DynamicModuleHandler

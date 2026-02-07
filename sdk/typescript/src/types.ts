@@ -1,5 +1,5 @@
 /**
- * TypeScript types for the GOTRS API
+ * TypeScript types for the GoatFlow API
  */
 
 export interface Ticket {
@@ -334,21 +334,21 @@ export interface MessageEvent extends WebSocketEvent {
 }
 
 // Error types
-export class GotrsError extends Error {
+export class GoatflowError extends Error {
   public statusCode?: number;
   public code?: string;
   public details?: string;
 
   constructor(message: string, statusCode?: number, code?: string, details?: string) {
     super(message);
-    this.name = 'GotrsError';
+    this.name = 'GoatflowError';
     this.statusCode = statusCode;
     this.code = code;
     this.details = details;
   }
 }
 
-export class ValidationError extends GotrsError {
+export class ValidationError extends GoatflowError {
   public field: string;
   public value?: any;
 
@@ -360,7 +360,7 @@ export class ValidationError extends GotrsError {
   }
 }
 
-export class NetworkError extends GotrsError {
+export class NetworkError extends GoatflowError {
   public operation: string;
   public url: string;
 
@@ -372,7 +372,7 @@ export class NetworkError extends GotrsError {
   }
 }
 
-export class TimeoutError extends GotrsError {
+export class TimeoutError extends GoatflowError {
   public timeout: number;
 
   constructor(operation: string, timeout: number) {

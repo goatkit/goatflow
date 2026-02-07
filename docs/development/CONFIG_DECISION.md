@@ -21,7 +21,7 @@
 
 ## Future Implementation Notes
 When implementing:
-1. Use Viper to read from `/etc/gotrs/config.yaml` (production) or `./config.yaml` (development)
+1. Use Viper to read from `/etc/goatflow/config.yaml` (production) or `./config.yaml` (development)
 2. Allow environment variables to override any config value
 3. Use structured config with type-safe structs
 4. Provide sensible defaults for all values

@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{{ t("roles.title")|default:"Role Management" }} - GOTRS Admin{% endblock %}
+{% block title %}{{ t("roles.title")|default:"Role Management" }} - GoatFlow Admin{% endblock %}
 
 {% block content %}
 <style>

@@ -1,6 +1,6 @@
 # external_ticket_rules.yaml example
 # Define regex-based partner follow-up rules. Each rule must include at least one search target
-# (subject, body, or headers) and the regex must provide a capturing group with the GOTRS ticket
+# (subject, body, or headers) and the regex must provide a capturing group with the GoatFlow ticket
 # number. Rules are evaluated in file order.
 
 rules:

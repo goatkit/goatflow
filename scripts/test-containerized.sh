@@ -107,9 +107,9 @@ check_container_commands() {
     echo "-------------------------------"
     
     # Check synthesize commands use containers
-    if grep -q "go run cmd/gotrs/main.go" Makefile; then
+    if grep -q "go run cmd/goatflow/main.go" Makefile; then
         # Check if these go commands are inside sh -c (which means they're in a container)
-        non_containerized=$(grep "go run cmd/gotrs/main.go" Makefile | grep -v "sh -c" | grep -vE "CONTAINER_CMD|golang:|docker|podman" || true)
+        non_containerized=$(grep "go run cmd/goatflow/main.go" Makefile | grep -v "sh -c" | grep -vE "CONTAINER_CMD|golang:|docker|podman" || true)
         if [ -n "$non_containerized" ]; then
             echo -e "${RED}✗${NC} Found non-containerized Go commands"
             FAILED_TESTS+=("Non-containerized Go execution")

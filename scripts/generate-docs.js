@@ -20,7 +20,7 @@ function generateHTMLDocs(spec) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GOTRS API Documentation</title>
+    <title>GoatFlow API Documentation</title>
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
     <style>
         .swagger-ui .topbar { display: none; }
@@ -224,9 +224,9 @@ function generateDocs() {
     console.log(`   - Markdown documentation for version control`);
 
     // Create a simple README for the docs
-    const docsReadme = `# GOTRS API Documentation
+    const docsReadme = `# GoatFlow API Documentation
 
-This directory contains the auto-generated API documentation for GOTRS.
+This directory contains the auto-generated API documentation for GoatFlow.
 
 ## Files
 

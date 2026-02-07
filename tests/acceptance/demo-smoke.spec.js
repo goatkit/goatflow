@@ -6,12 +6,12 @@
  * 2. Checking the tickets page loads with data
  *
  * Run against production demo:
- *   PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=https://gotrs-demo.gibbsoft.com npx playwright test demo-smoke
+ *   PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=https://goatflow-demo.gibbsoft.com npx playwright test demo-smoke
  */
 import { test, expect } from '@playwright/test';
 import { BASE_URL } from './base-url.js';
 
-// Demo credentials are public - shown on gotrs.io demo page
+// Demo credentials are public - shown on goatflow.io demo page
 const DEMO_EMAIL = process.env.DEMO_EMAIL || 'Saul';
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD || 'Saul';
 const DEMO_URL = process.env.DEMO_URL || BASE_URL;

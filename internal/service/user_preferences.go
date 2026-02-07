@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/gotrs-io/gotrs-ce/internal/constants"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/constants"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // UserPreferencesService handles user preference operations.

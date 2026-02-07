@@ -16,8 +16,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
-	"github.com/gotrs-io/gotrs-ce/internal/plugin/example"
+	"github.com/goatkit/goatflow/internal/plugin"
+	"github.com/goatkit/goatflow/internal/plugin/example"
 )
 
 func init() {

@@ -2,7 +2,7 @@
 
 ## Overview
 
-GOTRS implements automated security scanning to prevent accidental exposure of secrets, credentials, and sensitive information. We use industry-standard tools that run at multiple stages of the development lifecycle.
+GoatFlow implements automated security scanning to prevent accidental exposure of secrets, credentials, and sensitive information. We use industry-standard tools that run at multiple stages of the development lifecycle.
 
 ## Tools Used
 
@@ -256,7 +256,7 @@ make scan-secrets-precommit
 
 ```bash
 # Schedule weekly scans via cron
-0 0 * * 0 cd /path/to/gotrs && make security-scan
+0 0 * * 0 cd /path/to/goatflow && make security-scan
 ```
 
 ### Audit Trail

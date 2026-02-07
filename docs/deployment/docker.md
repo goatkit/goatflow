@@ -1,6 +1,6 @@
 # Docker Deployment Guide
 
-GOTRS provides two deployment methods depending on your needs.
+GoatFlow provides two deployment methods depending on your needs.
 
 ## Method 1: Quick Deploy (Production)
 
@@ -8,17 +8,17 @@ Download just the deployment files and run. Best for production servers where yo
 
 ```bash
 # Create deployment directory
-mkdir gotrs && cd gotrs
+mkdir goatflow && cd goatflow
 
 # Download deployment files
-curl -O https://raw.githubusercontent.com/gotrs-io/gotrs-ce/main/deploy/docker-compose.yml
-curl -O https://raw.githubusercontent.com/gotrs-io/gotrs-ce/main/deploy/.env.example
+curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/docker-compose.yml
+curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/.env.example
 
 # Configure environment
 cp .env.example .env
 # Edit .env with your values (DOMAIN, DB_PASSWORD, JWT_SECRET, etc.)
 
-# Start GOTRS
+# Start GoatFlow
 docker compose up -d
 ```
 
@@ -40,9 +40,9 @@ The deployment stack includes:
 - **Caddy** - Reverse proxy with automatic HTTPS via Let's Encrypt
 - **MariaDB** - Database server
 - **Valkey** - Cache server (Redis-compatible)
-- **GOTRS App** - Main application (agent interface)
-- **GOTRS Customer-FE** - Customer portal
-- **GOTRS Runner** - Background job processor
+- **GoatFlow App** - Main application (agent interface)
+- **GoatFlow Customer-FE** - Customer portal
+- **GoatFlow Runner** - Background job processor
 
 All services are configured with `restart: unless-stopped` so they automatically start on boot.
 
@@ -71,8 +71,8 @@ Clone the full repository for development or customization. Uses Makefile target
 
 ```bash
 # Clone repository
-git clone https://github.com/gotrs-io/gotrs-ce.git
-cd gotrs-ce
+git clone https://github.com/goatkit/goatflow.git
+cd goatflow
 
 # Copy environment template
 cp .env.example .env
@@ -124,15 +124,15 @@ See [Development Guide](../development/MVP.md) for more details.
 
 ## Podman Support
 
-GOTRS works with Podman as a drop-in replacement for Docker. Podman runs rootless by default, which aligns with GOTRS's security model.
+GoatFlow works with Podman as a drop-in replacement for Docker. Podman runs rootless by default, which aligns with GoatFlow's security model.
 
 ### Quick Deploy with Podman
 
 ```bash
 # Download deployment files
-mkdir gotrs && cd gotrs
-curl -O https://raw.githubusercontent.com/gotrs-io/gotrs-ce/main/deploy/docker-compose.yml
-curl -O https://raw.githubusercontent.com/gotrs-io/gotrs-ce/main/deploy/.env.example
+mkdir goatflow && cd goatflow
+curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/docker-compose.yml
+curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/.env.example
 
 # Configure environment
 cp .env.example .env

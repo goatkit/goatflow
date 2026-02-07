@@ -1,7 +1,7 @@
 services:
   postgres-test:
     image: docker.io/postgres:15-alpine
-    container_name: gotrs-postgres-test
+    container_name: goatflow-postgres-test
     user: "999:999"
     environment:
       APP_ENV: ${APP_ENV:-test}
@@ -28,11 +28,11 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - gotrs-network
+      - goatflow-network
 
   mariadb-test:
     image: docker.io/mariadb:11
-    container_name: gotrs-mariadb-test
+    container_name: goatflow-mariadb-test
     user: "999:999"
     environment:
       MARIADB_DATABASE: ${TEST_DB_MYSQL_NAME}
@@ -59,12 +59,12 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - gotrs-network
+      - goatflow-network
 
 
 
 networks:
-  gotrs-network:
+  goatflow-network:
     driver: bridge
 
 

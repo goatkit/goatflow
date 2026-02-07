@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Dynamic Module System revolutionizes how admin modules are created and managed in GOTRS. Instead of generating static code for each module, a single handler serves infinite modules based on YAML configurations. This achieves true DRY (Don't Repeat Yourself) principles.
+The Dynamic Module System revolutionizes how admin modules are created and managed in GoatFlow. Instead of generating static code for each module, a single handler serves infinite modules based on YAML configurations. This achieves true DRY (Don't Repeat Yourself) principles.
 
 ## Key Features
 
@@ -183,7 +183,7 @@ All endpoints support both JSON (for API) and HTML (for UI) responses.
 Example:
 ```bash
 # Terminal 1 - Watch logs
-./scripts/container-wrapper.sh logs -f gotrs-backend
+./scripts/container-wrapper.sh logs -f goatflow-backend
 
 # Terminal 2 - Edit module
 vim modules/priority.yaml
@@ -247,7 +247,7 @@ Example field configuration:
 ### Schema Discovery (Coming Soon)
 ```bash
 # Generate YAML from existing table
-gotrs discover-schema --table=my_table > modules/my_table.yaml
+goatflow discover-schema --table=my_table > modules/my_table.yaml
 ```
 
 ### Computed Fields
@@ -360,7 +360,7 @@ See [Plugin Platform](PLUGIN_PLATFORM.md) for the full roadmap.
 
 ## Conclusion
 
-The Dynamic Module System transforms GOTRS from a traditional monolithic application into a flexible, extensible platform. By eliminating code generation and compilation, we've achieved:
+The Dynamic Module System transforms GoatFlow from a traditional monolithic application into a flexible, extensible platform. By eliminating code generation and compilation, we've achieved:
 
 - **90% less code** to maintain
 - **Instant module creation** without coding

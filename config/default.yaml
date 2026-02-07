@@ -1,5 +1,5 @@
 ---
-# GOTRS Default Configuration
+# GoatFlow Default Configuration
 # Non-secret baseline defaults shipped with the project.
 # Precedence (low→high): default.yaml < config/config.yaml (gitignored)
 # < environment vars.
@@ -14,7 +14,7 @@
 #       secret: ${DEV_JWT_SECRET}
 
 app:
-    name: GOTRS
+    name: GoatFlow
     version: 0.1.0
     env: development # development, staging, production
     debug: true
@@ -49,8 +49,8 @@ server:
 database:
     host: postgres
     port: 5432
-    name: gotrs
-    user: gotrs # Non-secret default username
+    name: goatflow
+    user: goatflow # Non-secret default username
     password: "" # Blank; set in config/config.yaml or via DB_PASSWORD env
     ssl_mode: disable
     max_open_conns: 25
@@ -78,14 +78,14 @@ valkey:
 
 auth:
     jwt:
-        # Placeholder only; override with GOTRS_JWT_SECRET or config/config.yaml
+        # Placeholder only; override with GOATFLOW_JWT_SECRET or config/config.yaml
         secret: "development-placeholder-not-for-production"
-        issuer: gotrs
-        audience: gotrs-api
+        issuer: goatflow
+        audience: goatflow-api
         access_token_ttl: 15m
         refresh_token_ttl: 168h
     session:
-        cookie_name: gotrs_session
+        cookie_name: goatflow_session
         secure: false # Set to true in production with HTTPS
         http_only: true
         same_site: lax
@@ -102,8 +102,8 @@ auth:
 
 email:
     enabled: true
-    from: noreply@gotrs.local
-    from_name: GOTRS System
+    from: noreply@goatflow.local
+    from_name: GoatFlow System
     smtp:
         host: mailhog
         port: 1025
@@ -125,7 +125,7 @@ email:
         worker_count: 2
         max_accounts: 5
         trusted_headers:
-            - X-GOTRS-TicketNumber
+            - X-GoatFlow-TicketNumber
             - X-OTRS-TicketNumber
 
 storage:
@@ -204,7 +204,7 @@ logging:
     output: stdout # stdout, file, both
     file:
         path: /app/logs
-        filename: gotrs.log
+        filename: goatflow.log
         max_size: 100 # MB
         max_backups: 7
         max_age: 30 # days
@@ -226,7 +226,7 @@ metrics:
     opentelemetry:
         enabled: false
         endpoint: ""
-        service_name: gotrs
+        service_name: goatflow
         trace_ratio: 0.1
 
 rate_limiting:

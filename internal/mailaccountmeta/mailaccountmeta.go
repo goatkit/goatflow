@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const Separator = "\n\n-- GOTRS META --\n"
+const Separator = "\n\n-- GoatFlow META --\n"
 
 type Metadata struct {
 	DispatchingMode     string `json:"dispatching_mode,omitempty"`

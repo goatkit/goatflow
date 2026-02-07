@@ -1,17 +1,17 @@
 # WASM Plugin Tutorial
 
-Build your first WebAssembly plugin for GOTRS using TinyGo.
+Build your first WebAssembly plugin for GoatFlow using TinyGo.
 
 ## Prerequisites
 
 - [TinyGo](https://tinygo.org/getting-started/install/) 0.30+
 - [Go](https://golang.org/dl/) 1.21+
-- GOTRS running locally
+- GoatFlow running locally
 
 ## Step 1: Scaffold the Plugin
 
 ```bash
-cd /path/to/gotrs/plugins
+cd /path/to/goatflow/plugins
 gk plugin init ticket-counter --type wasm
 cd ticket-counter
 ```
@@ -75,7 +75,7 @@ import (
 	"fmt"
 )
 
-// Host API imports - provided by GOTRS runtime
+// Host API imports - provided by GoatFlow runtime
 //
 //go:wasmimport host db_query
 func hostDBQuery(queryPtr, queryLen, argsPtr, argsLen uint32) uint64
@@ -262,10 +262,10 @@ Output: `ticket-counter.wasm` (~50KB)
 
 Copy to plugins directory:
 ```bash
-cp ticket-counter.wasm /path/to/gotrs/plugins/
+cp ticket-counter.wasm /path/to/goatflow/plugins/
 ```
 
-With hot reload enabled, the plugin loads automatically. Otherwise restart GOTRS.
+With hot reload enabled, the plugin loads automatically. Otherwise restart GoatFlow.
 
 ## Step 6: Test
 
@@ -295,7 +295,7 @@ package main
 import (
 	"encoding/json"
 	
-	"github.com/gotrs-io/goatkit-sdk/wasm"
+	"github.com/goatkit/goatkit-sdk/wasm"
 )
 
 var host = wasm.GetHost()
@@ -325,7 +325,7 @@ func getCounts(reqPtr, reqLen uint32) uint64 {
 
 Install SDK:
 ```bash
-go get github.com/gotrs-io/goatkit-sdk@latest
+go get github.com/goatkit/goatkit-sdk@latest
 ```
 
 ## Debugging Tips
@@ -347,8 +347,8 @@ host.Log(ctx, "debug", "Starting query", map[string]any{
 ### 3. Test Locally
 
 ```bash
-# Run GOTRS with hot reload
-GOTRS_PLUGIN_HOT_RELOAD=true ./goats serve
+# Run GoatFlow with hot reload
+GOATFLOW_PLUGIN_HOT_RELOAD=true ./goats serve
 ```
 
 ### 4. Check WASM Size

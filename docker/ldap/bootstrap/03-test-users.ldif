@@ -1,7 +1,7 @@
-# Test Users for GOTRS LDAP Integration
+# Test Users for GoatFlow LDAP Integration
 
 # System Administrator
-dn: cn=John Admin,ou=Users,dc=gotrs,dc=local
+dn: cn=John Admin,ou=Users,dc=goatflow,dc=local
 objectClass: inetOrgPerson
 objectClass: posixAccount
 objectClass: shadowAccount
@@ -14,7 +14,7 @@ uidNumber: 1001
 gidNumber: 1001
 homeDirectory: /home/jadmin
 loginShell: /bin/bash
-mail: john.admin@gotrs.local
+mail: john.admin@goatflow.local
 telephoneNumber: +1-555-0101
 departmentNumber: IT
 title: System Administrator
@@ -24,7 +24,7 @@ employeeType: fulltime
 employeeNumber: EMP001
 
 # IT Manager
-dn: cn=Sarah Mitchell,ou=Users,dc=gotrs,dc=local
+dn: cn=Sarah Mitchell,ou=Users,dc=goatflow,dc=local
 objectClass: inetOrgPerson
 objectClass: posixAccount
 objectClass: shadowAccount
@@ -37,7 +37,7 @@ uidNumber: 1002
 gidNumber: 1002
 homeDirectory: /home/smitchell
 loginShell: /bin/bash
-mail: sarah.mitchell@gotrs.local
+mail: sarah.mitchell@goatflow.local
 telephoneNumber: +1-555-0102
 departmentNumber: IT
 title: IT Manager
@@ -45,10 +45,10 @@ description: IT department manager
 userPassword: {SSHA}password123
 employeeType: fulltime
 employeeNumber: EMP002
-manager: cn=John Admin,ou=Users,dc=gotrs,dc=local
+manager: cn=John Admin,ou=Users,dc=goatflow,dc=local
 
 # Senior Support Agent
-dn: cn=Mike Wilson,ou=Users,dc=gotrs,dc=local
+dn: cn=Mike Wilson,ou=Users,dc=goatflow,dc=local
 objectClass: inetOrgPerson
 objectClass: posixAccount
 objectClass: shadowAccount
@@ -61,7 +61,7 @@ uidNumber: 1003
 gidNumber: 1003
 homeDirectory: /home/mwilson
 loginShell: /bin/bash
-mail: mike.wilson@gotrs.local
+mail: mike.wilson@goatflow.local
 telephoneNumber: +1-555-0103
 departmentNumber: Support
 title: Senior Support Agent
@@ -69,10 +69,10 @@ description: Experienced customer support agent
 userPassword: {SSHA}password123
 employeeType: fulltime
 employeeNumber: EMP003
-manager: cn=Sarah Mitchell,ou=Users,dc=gotrs,dc=local
+manager: cn=Sarah Mitchell,ou=Users,dc=goatflow,dc=local
 
 # Support Agent
-dn: cn=Lisa Chen,ou=Users,dc=gotrs,dc=local
+dn: cn=Lisa Chen,ou=Users,dc=goatflow,dc=local
 objectClass: inetOrgPerson
 objectClass: posixAccount
 objectClass: shadowAccount
@@ -85,7 +85,7 @@ uidNumber: 1004
 gidNumber: 1004
 homeDirectory: /home/lchen
 loginShell: /bin/bash
-mail: lisa.chen@gotrs.local
+mail: lisa.chen@goatflow.local
 telephoneNumber: +1-555-0104
 departmentNumber: Support
 title: Support Agent
@@ -93,10 +93,10 @@ description: Customer support representative
 userPassword: {SSHA}password123
 employeeType: fulltime
 employeeNumber: EMP004
-manager: cn=Mike Wilson,ou=Users,dc=gotrs,dc=local
+manager: cn=Mike Wilson,ou=Users,dc=goatflow,dc=local
 
 # Junior Support Agent
-dn: cn=David Johnson,ou=Users,dc=gotrs,dc=local
+dn: cn=David Johnson,ou=Users,dc=goatflow,dc=local
 objectClass: inetOrgPerson
 objectClass: posixAccount
 objectClass: shadowAccount
@@ -109,7 +109,7 @@ uidNumber: 1005
 gidNumber: 1005
 homeDirectory: /home/djohnson
 loginShell: /bin/bash
-mail: david.johnson@gotrs.local
+mail: david.johnson@goatflow.local
 telephoneNumber: +1-555-0105
 departmentNumber: Support
 title: Junior Support Agent
@@ -117,10 +117,10 @@ description: Entry-level support agent
 userPassword: {SSHA}password123
 employeeType: fulltime
 employeeNumber: EMP005
-manager: cn=Mike Wilson,ou=Users,dc=gotrs,dc=local
+manager: cn=Mike Wilson,ou=Users,dc=goatflow,dc=local
 
 # Developer
-dn: cn=Alex Rodriguez,ou=Users,dc=gotrs,dc=local
+dn: cn=Alex Rodriguez,ou=Users,dc=goatflow,dc=local
 objectClass: inetOrgPerson
 objectClass: posixAccount
 objectClass: shadowAccount
@@ -133,7 +133,7 @@ uidNumber: 1006
 gidNumber: 1006
 homeDirectory: /home/arodriguez
 loginShell: /bin/bash
-mail: alex.rodriguez@gotrs.local
+mail: alex.rodriguez@goatflow.local
 telephoneNumber: +1-555-0106
 departmentNumber: IT
 title: Senior Developer
@@ -141,10 +141,10 @@ description: Full-stack software developer
 userPassword: {SSHA}password123
 employeeType: fulltime
 employeeNumber: EMP006
-manager: cn=Sarah Mitchell,ou=Users,dc=gotrs,dc=local
+manager: cn=Sarah Mitchell,ou=Users,dc=goatflow,dc=local
 
 # QA Engineer
-dn: cn=Emma Thompson,ou=Users,dc=gotrs,dc=local
+dn: cn=Emma Thompson,ou=Users,dc=goatflow,dc=local
 objectClass: inetOrgPerson
 objectClass: posixAccount
 objectClass: shadowAccount
@@ -157,7 +157,7 @@ uidNumber: 1007
 gidNumber: 1007
 homeDirectory: /home/ethompson
 loginShell: /bin/bash
-mail: emma.thompson@gotrs.local
+mail: emma.thompson@goatflow.local
 telephoneNumber: +1-555-0107
 departmentNumber: IT
 title: QA Engineer
@@ -165,10 +165,10 @@ description: Quality assurance engineer
 userPassword: {SSHA}password123
 employeeType: fulltime
 employeeNumber: EMP007
-manager: cn=Sarah Mitchell,ou=Users,dc=gotrs,dc=local
+manager: cn=Sarah Mitchell,ou=Users,dc=goatflow,dc=local
 
 # Part-time Contractor
-dn: cn=Robert Taylor,ou=Users,dc=gotrs,dc=local
+dn: cn=Robert Taylor,ou=Users,dc=goatflow,dc=local
 objectClass: inetOrgPerson
 objectClass: posixAccount
 objectClass: shadowAccount
@@ -181,7 +181,7 @@ uidNumber: 1008
 gidNumber: 1008
 homeDirectory: /home/rtaylor
 loginShell: /bin/bash
-mail: robert.taylor@contractor.gotrs.local
+mail: robert.taylor@contractor.goatflow.local
 telephoneNumber: +1-555-0108
 departmentNumber: IT
 title: Contractor
@@ -191,7 +191,7 @@ employeeType: contractor
 employeeNumber: CTR001
 
 # Sales Manager
-dn: cn=Jennifer Davis,ou=Users,dc=gotrs,dc=local
+dn: cn=Jennifer Davis,ou=Users,dc=goatflow,dc=local
 objectClass: inetOrgPerson
 objectClass: posixAccount
 objectClass: shadowAccount
@@ -204,7 +204,7 @@ uidNumber: 1009
 gidNumber: 1009
 homeDirectory: /home/jdavis
 loginShell: /bin/bash
-mail: jennifer.davis@gotrs.local
+mail: jennifer.davis@goatflow.local
 telephoneNumber: +1-555-0109
 departmentNumber: Sales
 title: Sales Manager
@@ -214,7 +214,7 @@ employeeType: fulltime
 employeeNumber: EMP008
 
 # Customer Success Manager
-dn: cn=Chris Anderson,ou=Users,dc=gotrs,dc=local
+dn: cn=Chris Anderson,ou=Users,dc=goatflow,dc=local
 objectClass: inetOrgPerson
 objectClass: posixAccount
 objectClass: shadowAccount
@@ -227,7 +227,7 @@ uidNumber: 1010
 gidNumber: 1010
 homeDirectory: /home/canderson
 loginShell: /bin/bash
-mail: chris.anderson@gotrs.local
+mail: chris.anderson@goatflow.local
 telephoneNumber: +1-555-0110
 departmentNumber: Support
 title: Customer Success Manager
@@ -235,4 +235,4 @@ description: Handles major client relationships
 userPassword: {SSHA}password123
 employeeType: fulltime
 employeeNumber: EMP009
-manager: cn=Jennifer Davis,ou=Users,dc=gotrs,dc=local
+manager: cn=Jennifer Davis,ou=Users,dc=goatflow,dc=local

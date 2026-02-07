@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/search"
+	"github.com/goatkit/goatflow/internal/search"
 )
 
 var searchManager *search.SearchManager

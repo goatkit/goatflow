@@ -7,9 +7,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
-	"github.com/gotrs-io/gotrs-ce/internal/zinc"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/zinc"
 )
 
 // SearchHandlers handles search-related API endpoints.

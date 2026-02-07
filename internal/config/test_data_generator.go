@@ -63,7 +63,7 @@ func (g *TestDataGenerator) Generate() error {
 		{
 			Username:  "agent.smith",
 			Password:  g.generatePassword(),
-			Email:     "smith@gotrs.local",
+			Email:     "smith@goatflow.local",
 			FirstName: "Agent",
 			LastName:  "Smith",
 			Role:      "agent",
@@ -72,7 +72,7 @@ func (g *TestDataGenerator) Generate() error {
 		{
 			Username:  "agent.jones",
 			Password:  g.generatePassword(),
-			Email:     "jones@gotrs.local",
+			Email:     "jones@goatflow.local",
 			FirstName: "Agent",
 			LastName:  "Jones",
 			Role:      "agent",

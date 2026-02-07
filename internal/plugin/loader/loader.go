@@ -13,8 +13,8 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
-	"github.com/gotrs-io/gotrs-ce/internal/plugin/wasm"
+	"github.com/goatkit/goatflow/internal/plugin"
+	"github.com/goatkit/goatflow/internal/plugin/wasm"
 )
 
 // DiscoveredPlugin holds info about a plugin found but not yet loaded.
@@ -357,18 +357,23 @@ func (l *Loader) StopWatch() {
 
 // watchLoop processes file system events.
 func (l *Loader) watchLoop() {
+	if l.watcher == nil {
+		return
+	}
+	events := l.watcher.Events
+	errors := l.watcher.Errors
 	for {
 		select {
 		case <-l.watchCtx.Done():
 			return
 
-		case event, ok := <-l.watcher.Events:
+		case event, ok := <-events:
 			if !ok {
 				return
 			}
 			l.handleFSEvent(event)
 
-		case err, ok := <-l.watcher.Errors:
+		case err, ok := <-errors:
 			if !ok {
 				return
 			}

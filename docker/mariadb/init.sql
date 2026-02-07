@@ -1,4 +1,4 @@
--- MariaDB initialization script for GOTRS
+-- MariaDB initialization script for GoatFlow
 -- Creates database and user if they don't exist
 -- NOTE: User password is set via MYSQL_PASSWORD env var in docker-compose.yml
 -- This script only grants privileges; MariaDB image creates user automatically

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install comprehensive git hooks for GOTRS project
+# Install comprehensive git hooks for GoatFlow project
 # This script sets up pre-commit hooks for security, quality, and legal compliance
 
 set -e
@@ -14,7 +14,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}Installing comprehensive GOTRS git hooks...${NC}"
+echo -e "${BLUE}Installing comprehensive GoatFlow git hooks...${NC}"
 
 # Ensure we're in a git repository
 if [ ! -d ".git" ]; then
@@ -28,7 +28,7 @@ mkdir -p "$HOOKS_DIR"
 # Create comprehensive pre-commit hook
 cat > "$PRE_COMMIT_HOOK" << 'EOF'
 #!/bin/bash
-# GOTRS Pre-commit hook - Comprehensive security and quality checks
+# GoatFlow Pre-commit hook - Comprehensive security and quality checks
 
 set -e  # Exit on any error
 
@@ -106,7 +106,7 @@ if [ -n "$STAGED_FILES" ]; then
     
     # Common binary file names (without extension)
     BINARY_NAMES=(
-        'server' 'goats' 'gotrs' 'generator' 'gotrs-babelfish'
+        'server' 'goats' 'goatflow' 'generator' 'goatflow-babelfish'
         'a\.out' 'core' 'core\.[0-9]+'
     )
     

@@ -1,7 +1,7 @@
 # AdminCustomerUser Module Documentation
 
 ## Overview
-The AdminCustomerUser module provides comprehensive customer user management functionality for GOTRS-CE. This module follows OTRS schema compatibility and implements full CRUD operations with professional UI/UX standards.
+The AdminCustomerUser module provides comprehensive customer user management functionality for GoatFlow-CE. This module follows OTRS schema compatibility and implements full CRUD operations with professional UI/UX standards.
 
 ## Status: ✅ Complete (Implementation Only)
 - Template: **Complete** 
@@ -84,7 +84,7 @@ The main codebase has compilation errors in unrelated files that prevent full in
 All development and testing should be done in containers:
 ```bash
 # Run tests in container
-./scripts/container-wrapper.sh exec gotrs-backend go test ./internal/api -run CustomerUser
+make toolbox-exec ARGS="go test ./internal/api -run CustomerUser"
 
 # Development workflow
 make up                    # Start containers

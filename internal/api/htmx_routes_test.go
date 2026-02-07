@@ -33,7 +33,7 @@ func setupTestRouter() *gin.Engine {
 				return
 			}
 			// Test credentials - use env or test constants
-			testEmail := getEnvDefault("TEST_AUTH_EMAIL", "admin@gotrs.local")
+			testEmail := getEnvDefault("TEST_AUTH_EMAIL", "admin@goatflow.local")
 			testPass := getEnvDefault("TEST_AUTH_PASSWORD", "test-password-from-env")
 			if payload.Email == testEmail && payload.Password == testPass {
 				c.Header("HX-Redirect", "/dashboard")
@@ -42,10 +42,10 @@ func setupTestRouter() *gin.Engine {
 			}
 			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Invalid credentials"})
 		})
-		r.GET("/dashboard", func(c *gin.Context) { c.String(http.StatusOK, "Dashboard\nWelcome back\nTickets\nGOTRS\n<nav>") })
-		r.GET("/tickets", func(c *gin.Context) { c.String(http.StatusOK, "Tickets\nFilters\nDashboard\nGOTRS\n<nav>") })
+		r.GET("/dashboard", func(c *gin.Context) { c.String(http.StatusOK, "Dashboard\nWelcome back\nTickets\nGoatFlow\n<nav>") })
+		r.GET("/tickets", func(c *gin.Context) { c.String(http.StatusOK, "Tickets\nFilters\nDashboard\nGoatFlow\n<nav>") })
 		r.GET("/tickets/new", func(c *gin.Context) {
-			c.String(http.StatusOK, "Create New Ticket\nSubject\nCustomer Email\nDashboard\nTickets\nGOTRS\n<nav>")
+			c.String(http.StatusOK, "Create New Ticket\nSubject\nCustomer Email\nDashboard\nTickets\nGoatFlow\n<nav>")
 		})
 		r.GET("/tickets/:id", func(c *gin.Context) {
 			id := c.Param("id")
@@ -53,7 +53,7 @@ func setupTestRouter() *gin.Engine {
 				c.Status(http.StatusBadRequest)
 				return
 			}
-			c.String(http.StatusOK, "Ticket #"+id+"\nMessages\nDashboard\nTickets\nGOTRS\n<nav>")
+			c.String(http.StatusOK, "Ticket #"+id+"\nMessages\nDashboard\nTickets\nGoatFlow\n<nav>")
 		})
 		r.POST("/api/tickets", func(c *gin.Context) {
 			subject := strings.TrimSpace(c.PostForm("subject"))
@@ -250,7 +250,7 @@ func TestHTMXLogin(t *testing.T) {
 	router := setupTestRouter()
 
 	// Get test credentials from env or use test defaults
-	testEmail := getEnvDefault("TEST_AUTH_EMAIL", "admin@gotrs.local")
+	testEmail := getEnvDefault("TEST_AUTH_EMAIL", "admin@goatflow.local")
 	testPass := getEnvDefault("TEST_AUTH_PASSWORD", "test-password-from-env")
 
 	tests := []struct {
@@ -575,7 +575,7 @@ func TestNavigationPresence(t *testing.T) {
 			// Check for navigation elements
 			assert.Contains(t, body, "Dashboard")
 			assert.Contains(t, body, "Tickets")
-			assert.Contains(t, body, "GOTRS") // Logo in nav
+			assert.Contains(t, body, "GoatFlow") // Logo in nav
 			assert.Contains(t, body, "nav")   // Navigation element present
 		})
 	}

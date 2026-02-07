@@ -8,9 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/convert"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/convert"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // contextKey is a private type to avoid key collisions in context.

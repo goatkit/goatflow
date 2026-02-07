@@ -1,6 +1,6 @@
 # LDAP/Active Directory Integration
 
-GOTRS provides comprehensive LDAP and Active Directory integration for enterprise authentication and user management.
+GoatFlow provides comprehensive LDAP and Active Directory integration for enterprise authentication and user management.
 
 ## Features
 
@@ -19,7 +19,7 @@ GOTRS provides comprehensive LDAP and Active Directory integration for enterpris
 
 ### 1. Development Setup with OpenLDAP
 
-GOTRS includes a pre-configured OpenLDAP container for development and testing:
+GoatFlow includes a pre-configured OpenLDAP container for development and testing:
 
 ```bash
 # Start the full stack including OpenLDAP
@@ -30,10 +30,10 @@ docker-compose --profile tools up -d
 ```
 
 The development LDAP server includes:
-- **Domain**: `gotrs.local`
-- **Base DN**: `dc=gotrs,dc=local`
-- **Admin User**: `cn=admin,dc=gotrs,dc=local` (password: set `LDAP_ADMIN_PASSWORD` in `.env`)
-- **Readonly User**: `cn=readonly,dc=gotrs,dc=local` (password: set `LDAP_READONLY_PASSWORD` in `.env`)
+- **Domain**: `goatflow.local`
+- **Base DN**: `dc=goatflow,dc=local`
+- **Admin User**: `cn=admin,dc=goatflow,dc=local` (password: set `LDAP_ADMIN_PASSWORD` in `.env`)
+- **Readonly User**: `cn=readonly,dc=goatflow,dc=local` (password: set `LDAP_READONLY_PASSWORD` in `.env`)
 - **phpLDAPadmin**: http://localhost:8091 (for browsing LDAP data)
 
 ### 2. Test Users
@@ -42,16 +42,16 @@ The development LDAP server comes with sample users:
 
 | Username | Email | Role | Department | Groups |
 |----------|-------|------|------------|--------|
-| `jadmin` | john.admin@gotrs.local | System Administrator | IT | Domain Admins, IT Team, Users |
-| `smitchell` | sarah.mitchell@gotrs.local | IT Manager | IT | IT Team, Agents, Managers, Users |
-| `mwilson` | mike.wilson@gotrs.local | Senior Support Agent | Support | Support Team, Agents, Managers, Users |
-| `lchen` | lisa.chen@gotrs.local | Support Agent | Support | Support Team, Agents, Users |
-| `djohnson` | david.johnson@gotrs.local | Junior Support Agent | Support | Support Team, Agents, Users |
-| `arodriguez` | alex.rodriguez@gotrs.local | Senior Developer | IT | IT Team, Developers, Users |
-| `ethompson` | emma.thompson@gotrs.local | QA Engineer | IT | IT Team, QA Team, Users |
-| `rtaylor` | robert.taylor@contractor.gotrs.local | Contractor | IT | Developers, Users |
-| `jdavis` | jennifer.davis@gotrs.local | Sales Manager | Sales | Managers, Users |
-| `canderson` | chris.anderson@gotrs.local | Customer Success Manager | Support | Support Team, Agents, Managers, Users |
+| `jadmin` | john.admin@goatflow.local | System Administrator | IT | Domain Admins, IT Team, Users |
+| `smitchell` | sarah.mitchell@goatflow.local | IT Manager | IT | IT Team, Agents, Managers, Users |
+| `mwilson` | mike.wilson@goatflow.local | Senior Support Agent | Support | Support Team, Agents, Managers, Users |
+| `lchen` | lisa.chen@goatflow.local | Support Agent | Support | Support Team, Agents, Users |
+| `djohnson` | david.johnson@goatflow.local | Junior Support Agent | Support | Support Team, Agents, Users |
+| `arodriguez` | alex.rodriguez@goatflow.local | Senior Developer | IT | IT Team, Developers, Users |
+| `ethompson` | emma.thompson@goatflow.local | QA Engineer | IT | IT Team, QA Team, Users |
+| `rtaylor` | robert.taylor@contractor.goatflow.local | Contractor | IT | Developers, Users |
+| `jdavis` | jennifer.davis@goatflow.local | Sales Manager | Sales | Managers, Users |
+| `canderson` | chris.anderson@goatflow.local | Customer Success Manager | Support | Support Team, Agents, Managers, Users |
 
 All test users use the password: `password123`
 
@@ -63,16 +63,16 @@ Configure LDAP integration via environment variables or the API:
 # Environment variables (.env file)
 LDAP_HOST=openldap
 LDAP_PORT=389
-LDAP_BASE_DN=dc=gotrs,dc=local
-LDAP_BIND_DN=cn=readonly,dc=gotrs,dc=local
+LDAP_BASE_DN=dc=goatflow,dc=local
+LDAP_BIND_DN=cn=readonly,dc=goatflow,dc=local
 LDAP_BIND_PASSWORD=readonly123
 
 # User search configuration
-LDAP_USER_SEARCH_BASE=ou=Users,dc=gotrs,dc=local
+LDAP_USER_SEARCH_BASE=ou=Users,dc=goatflow,dc=local
 LDAP_USER_FILTER=(&(objectClass=inetOrgPerson)(uid={username}))
 
 # Group search configuration
-LDAP_GROUP_SEARCH_BASE=ou=Groups,dc=gotrs,dc=local
+LDAP_GROUP_SEARCH_BASE=ou=Groups,dc=goatflow,dc=local
 LDAP_GROUP_FILTER=(objectClass=groupOfNames)
 
 # Attribute mapping
@@ -103,10 +103,10 @@ curl -X POST http://localhost:8080/api/v1/ldap/configure \
   -d '{
     "host": "openldap",
     "port": 389,
-    "base_dn": "dc=gotrs,dc=local",
-    "bind_dn": "cn=readonly,dc=gotrs,dc=local",
+    "base_dn": "dc=goatflow,dc=local",
+    "bind_dn": "cn=readonly,dc=goatflow,dc=local",
     "bind_password": "readonly123",
-    "user_search_base": "ou=Users,dc=gotrs,dc=local",
+    "user_search_base": "ou=Users,dc=goatflow,dc=local",
     "user_filter": "(&(objectClass=inetOrgPerson)(uid={username}))",
     "auto_create_users": true,
     "auto_update_users": true,
@@ -128,8 +128,8 @@ curl -X POST http://localhost:8080/api/v1/ldap/test \
   -d '{
     "host": "openldap",
     "port": 389,
-    "base_dn": "dc=gotrs,dc=local",
-    "bind_dn": "cn=readonly,dc=gotrs,dc=local",
+    "base_dn": "dc=goatflow,dc=local",
+    "bind_dn": "cn=readonly,dc=goatflow,dc=local",
     "bind_password": "readonly123"
   }'
 ```
@@ -212,7 +212,7 @@ make toolbox-exec ARGS="go tool cover -html=coverage.out"
 LDAP_HOST=ad.company.com
 LDAP_PORT=389
 LDAP_BASE_DN=dc=company,dc=com
-LDAP_BIND_DN=cn=gotrs-service,ou=Service Accounts,dc=company,dc=com
+LDAP_BIND_DN=cn=goatflow-service,ou=Service Accounts,dc=company,dc=com
 LDAP_BIND_PASSWORD=secure-service-password
 
 # User search
@@ -237,8 +237,8 @@ LDAP_START_TLS=false
 LDAP_INSECURE_SKIP_VERIFY=false
 
 # Role mapping based on AD groups
-LDAP_ADMIN_GROUPS=Domain Admins,GOTRS Administrators
-LDAP_AGENT_GROUPS=GOTRS Agents,Help Desk,Support Team
+LDAP_ADMIN_GROUPS=Domain Admins,GoatFlow Administrators
+LDAP_AGENT_GROUPS=GoatFlow Agents,Help Desk,Support Team
 LDAP_USER_GROUPS=Domain Users
 ```
 
@@ -249,7 +249,7 @@ LDAP_USER_GROUPS=Domain Users
 LDAP_HOST=ldap.company.com
 LDAP_PORT=389
 LDAP_BASE_DN=dc=company,dc=com
-LDAP_BIND_DN=cn=gotrs-bind,ou=System,dc=company,dc=com
+LDAP_BIND_DN=cn=goatflow-bind,ou=System,dc=company,dc=com
 LDAP_BIND_PASSWORD=secure-bind-password
 
 # User search
@@ -286,7 +286,7 @@ LDAP_USER_GROUPS=users,employees
 ### Access Control
 
 - **Principle of least privilege**: Service account should only have read access
-- **Network security**: Restrict LDAP server access to GOTRS servers only
+- **Network security**: Restrict LDAP server access to GoatFlow servers only
 - **Audit logging**: Monitor all LDAP authentication attempts
 - **Account lockout**: Implement account lockout policies
 
@@ -445,18 +445,18 @@ LDAP_FAILOVER_TIMEOUT=10s
 {
   "role_mappings": [
     {
-      "ldap_groups": ["Domain Admins", "GOTRS Administrators"],
-      "gotrs_role": "admin",
+      "ldap_groups": ["Domain Admins", "GoatFlow Administrators"],
+      "goatflow_role": "admin",
       "priority": 1
     },
     {
       "ldap_groups": ["Support Team", "Help Desk"],
-      "gotrs_role": "agent", 
+      "goatflow_role": "agent", 
       "priority": 2
     },
     {
       "ldap_groups": ["Domain Users", "Employees"],
-      "gotrs_role": "user",
+      "goatflow_role": "user",
       "priority": 3
     }
   ]
@@ -475,7 +475,7 @@ LDAP_FAILOVER_TIMEOUT=10s
 ### From Other LDAP Solutions
 
 1. **Export user mappings** from existing system
-2. **Configure GOTRS LDAP** with same/similar schema
+2. **Configure GoatFlow LDAP** with same/similar schema
 3. **Import user mappings** using bulk import API
 4. **Test authentication** with sample users
 5. **Switch over** during maintenance window
@@ -487,5 +487,5 @@ For LDAP integration support:
 - **Documentation**: Check this guide and API documentation
 - **Logs**: Enable debug logging for detailed troubleshooting
 - **Testing**: Use provided integration tests to validate setup
-- **Community**: Ask questions in GOTRS community forums
+- **Community**: Ask questions in GoatFlow community forums
 - **Enterprise**: Contact support for enterprise LDAP assistance

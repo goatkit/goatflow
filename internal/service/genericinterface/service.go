@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/repository"
 )
 
 // Transport defines the interface for HTTP transports (REST, SOAP).

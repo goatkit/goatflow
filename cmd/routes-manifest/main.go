@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/gotrs-io/gotrs-ce/internal/api"
+	"github.com/goatkit/goatflow/internal/api"
 )
 
 func main() {

@@ -1,7 +1,7 @@
 # Gitleaks Configuration
 # https://github.com/gitleaks/gitleaks
 
-title = "GOTRS Gitleaks Configuration"
+title = "GoatFlow Gitleaks Configuration"
 
 # Extend the default configuration
 [extend]

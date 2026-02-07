@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1
-# GOTRS Toolbox - All-in-one container for development tasks
+# GoatFlow Toolbox - All-in-one container for development tasks
 
 # Global build arg - must be before any FROM that uses it
 # Default provided for docker build without --build-arg; compose/make override from .env
 ARG GO_IMAGE=golang:1.24-alpine
 
 # Reuse compiled binaries from dedicated artifacts image
-FROM gotrs-artifacts:latest AS artifacts
+FROM goatflow-artifacts:latest AS artifacts
 
 # Build additional toolbox utilities
 FROM docker.io/${GO_IMAGE} AS toolbox-builder
@@ -65,10 +65,10 @@ RUN if [ -f package.json ]; then \
 # Build additional toolbox utilities with optimization
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs cmd/gotrs/main.go 2>/dev/null || true && \
-    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs-babelfish cmd/gotrs-babelfish/main.go 2>/dev/null || true && \
-    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs-migrate ./cmd/gotrs-migrate/*.go 2>/dev/null || true && \
-    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs-db cmd/gotrs-db/main.go 2>/dev/null || true && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/goatflow cmd/goatflow/main.go 2>/dev/null || true && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/goatflow-babelfish cmd/goatflow-babelfish/main.go 2>/dev/null || true && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/goatflow-migrate ./cmd/goatflow-migrate/*.go 2>/dev/null || true && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/goatflow-db cmd/goatflow-db/main.go 2>/dev/null || true && \
     CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/schema-discovery cmd/schema-discovery/main.go 2>/dev/null || true
 
 # Install Go development tools (pinned for reproducibility)
@@ -160,7 +160,7 @@ COPY --from=artifacts --chown=appuser:appgroup /artifacts/goats /usr/local/bin/g
 COPY --from=artifacts --chown=appuser:appgroup /artifacts/migrate /usr/local/bin/migrate
 
 # Copy additional tools from builder
-COPY --from=toolbox-builder /usr/local/bin/gotrs* /usr/local/bin/
+COPY --from=toolbox-builder /usr/local/bin/goatflow* /usr/local/bin/
 COPY --from=toolbox-builder /go/bin/* /usr/local/bin/
 
 # Copy Go toolchain from builder (match go.mod toolchain)

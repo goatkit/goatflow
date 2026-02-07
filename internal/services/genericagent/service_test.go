@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 func TestService_shouldRun(t *testing.T) {

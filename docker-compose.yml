@@ -5,7 +5,7 @@ services:
   # MariaDB Database - Secure non-root container for OTRS compatibility
   mariadb:
     image: docker.io/mariadb:11
-    container_name: gotrs-mariadb
+    container_name: goatflow-mariadb
     user: "999:999" # Run as mysql user (standard for MariaDB)
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -30,10 +30,10 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - gotrs-network
+      - goatflow-network
   # postgres:
   #   image: postgres:15-alpine
-  #   container_name: gotrs-postgres
+  #   container_name: goatflow-postgres
   #   environment:
   #     POSTGRES_DB: ${DB_NAME}
   #     POSTGRES_USER: ${DB_USER}
@@ -52,12 +52,12 @@ services:
   #     timeout: 5s
   #     retries: 5
   #   networks:
-  #     - gotrs-network
+  #     - goatflow-network
 
   # Valkey Cache - High-performance Redis-compatible cache
   valkey:
     image: docker.io/valkey/valkey:7-alpine
-    container_name: gotrs-valkey
+    container_name: goatflow-valkey
     user: "999:1000" # Run as valkey user (standard for Valkey)
     ports:
       - "${VALKEY_PORT:-6388}:6379"
@@ -69,9 +69,9 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - gotrs-network
+      - goatflow-network
 
-  # GOTRS Backend - Main application server
+  # GoatFlow Backend - Main application server
   backend:
     build:
       context: .
@@ -80,14 +80,14 @@ services:
         GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
-    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_VERSION:-latest}
+    image: ghcr.io/goatkit/goatflow:${GOATFLOW_VERSION:-latest}
     command: >
       sh -c "
         # Generate self-signed certificates if they don't exist
         if [ ! -f /app/certs/server.crt ] || [ ! -f /app/certs/server.key ]; then
           echo '🔐 Generating self-signed TLS certificates...'
           mkdir -p /app/certs
-          openssl req -x509 -newkey rsa:4096 -keyout /app/certs/server.key -out /app/certs/server.crt -days 365 -nodes -subj '/CN=gotrs-backend'
+          openssl req -x509 -newkey rsa:4096 -keyout /app/certs/server.key -out /app/certs/server.crt -days 365 -nodes -subj '/CN=goatflow-backend'
           echo '✅ TLS certificates generated'
         fi
         # Run database migrations automatically
@@ -123,8 +123,8 @@ services:
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}
       ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-pdf,doc,docx,txt,png,jpg,jpeg,gif,zip}
       # Plugin system (defaults set in Dockerfile, override here if needed)
-      # GOTRS_PLUGIN_LAZY_LOAD: ${GOTRS_PLUGIN_LAZY_LOAD:-true}
-      # GOTRS_PLUGIN_HOT_RELOAD: ${GOTRS_PLUGIN_HOT_RELOAD:-false}
+      # GOATFLOW_PLUGIN_LAZY_LOAD: ${GOATFLOW_PLUGIN_LAZY_LOAD:-true}
+      # GOATFLOW_PLUGIN_HOT_RELOAD: ${GOATFLOW_PLUGIN_HOT_RELOAD:-false}
       # TLS configuration
       TLS_CERT_FILE: /app/certs/server.crt
       TLS_KEY_FILE: /app/certs/server.key
@@ -132,18 +132,18 @@ services:
       - "${BACKEND_PORT:-8081}:8080"
     volumes:
       - ./storage:${STORAGE_PATH:-/app/storage}:Z
-      - gotrs_certs:/app/certs
+      - goatflow_certs:/app/certs
     depends_on:
       mariadb:
         condition: service_healthy
       valkey:
         condition: service_healthy
     networks:
-      - gotrs-network
+      - goatflow-network
     # Production binary runs automatically from Dockerfile CMD
     # For development hot reload, volume mount handles code changes
 
-  # GOTRS Customer Frontend - Dedicated customer-facing instance
+  # GoatFlow Customer Frontend - Dedicated customer-facing instance
   customer-fe:
     build:
       context: .
@@ -152,14 +152,14 @@ services:
         GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
-    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_VERSION:-latest}
-    container_name: gotrs-customer-fe
+    image: ghcr.io/goatkit/goatflow:${GOATFLOW_VERSION:-latest}
+    container_name: goatflow-customer-fe
     command: >
       sh -c "
         if [ ! -f /app/certs/server.crt ] || [ ! -f /app/certs/server.key ]; then
           echo '🔐 Generating self-signed TLS certificates...'
           mkdir -p /app/certs
-          openssl req -x509 -newkey rsa:4096 -keyout /app/certs/server.key -out /app/certs/server.crt -days 365 -nodes -subj '/CN=gotrs-customer-fe'
+          openssl req -x509 -newkey rsa:4096 -keyout /app/certs/server.key -out /app/certs/server.crt -days 365 -nodes -subj '/CN=goatflow-customer-fe'
           echo '✅ TLS certificates generated'
         fi
         ./goats
@@ -192,14 +192,14 @@ services:
     volumes:
       - ./storage:${STORAGE_PATH:-/app/storage}:Z
       - ./docker/frontend/healthcheck.sh:/usr/local/bin/healthcheck.sh:ro,Z
-      - gotrs_certs:/app/certs
+      - goatflow_certs:/app/certs
     depends_on:
       mariadb:
         condition: service_healthy
       valkey:
         condition: service_healthy
     networks:
-      - gotrs-network
+      - goatflow-network
     healthcheck:
       test: ["CMD", "healthcheck.sh"]
       start_period: 10s
@@ -207,10 +207,10 @@ services:
       timeout: 5s
       retries: 5
 
-  # GOTRS Runner - Background task processor
+  # GoatFlow Runner - Background task processor
   runner:
-    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_VERSION:-latest}
-    container_name: gotrs-runner
+    image: ghcr.io/goatkit/goatflow:${GOATFLOW_VERSION:-latest}
+    container_name: goatflow-runner
     command: ["./goats", "-mode", "runner"]
     environment:
       DB_DRIVER: ${DB_DRIVER:-mariadb}
@@ -220,30 +220,30 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       # Email configuration for queue processing
-      GOTRS_EMAIL_SMTP_HOST: ${SMTP_HOST:-smtp4dev}
-      GOTRS_EMAIL_SMTP_PORT: ${SMTP_PORT:-25}
-      GOTRS_EMAIL_SMTP_USER: ${SMTP_USER}
-      GOTRS_EMAIL_SMTP_PASSWORD: ${SMTP_PASSWORD}
-      GOTRS_EMAIL_SMTP_TLS: ${SMTP_TLS:-false}
-      GOTRS_EMAIL_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-true}
-      GOTRS_EMAIL_FROM: ${EMAIL_FROM:-noreply@gotrs.local}
-      GOTRS_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+      GOATFLOW_EMAIL_SMTP_HOST: ${SMTP_HOST:-smtp4dev}
+      GOATFLOW_EMAIL_SMTP_PORT: ${SMTP_PORT:-25}
+      GOATFLOW_EMAIL_SMTP_USER: ${SMTP_USER}
+      GOATFLOW_EMAIL_SMTP_PASSWORD: ${SMTP_PASSWORD}
+      GOATFLOW_EMAIL_SMTP_TLS: ${SMTP_TLS:-false}
+      GOATFLOW_EMAIL_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-true}
+      GOATFLOW_EMAIL_FROM: ${EMAIL_FROM:-noreply@goatflow.local}
+      GOATFLOW_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
     depends_on:
       mariadb:
         condition: service_healthy
       smtp4dev:
         condition: service_started
     networks:
-      - gotrs-network
+      - goatflow-network
     restart: unless-stopped
 
   # smtp4dev - Full email sandbox (SMTP/IMAP/POP3 + Web UI)
   smtp4dev:
     image: docker.io/rnwood/smtp4dev:latest
-    container_name: gotrs-smtp4dev
+    container_name: goatflow-smtp4dev
     environment:
       # Persist mail data on restarts
-      ServerOptions__HostName: ${SMTP4DEV_HOSTNAME:-gotrs.local}
+      ServerOptions__HostName: ${SMTP4DEV_HOSTNAME:-goatflow.local}
       ServerOptions__TlsOptions__EnableStartTls: "true"
     ports:
       - "${SMTP4DEV_SMTP_PORT:-1025}:25"   # SMTP
@@ -253,12 +253,12 @@ services:
     volumes:
       - smtp4dev_data:/smtp4dev
     networks:
-      - gotrs-network
+      - goatflow-network
 
   # Valkey Test Cache - Separate cache for test environment
   valkey-test:
     image: docker.io/valkey/valkey:7-alpine
-    container_name: gotrs-valkey-test
+    container_name: goatflow-valkey-test
     user: "999:1000" # Run as valkey user (standard for Valkey)
     ports:
       - "${VALKEY_TEST_PORT:-6389}:6379"
@@ -270,10 +270,10 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - gotrs-network
+      - goatflow-network
     profiles: ["testdb"]
 
-  # GOTRS Backend Test - Dedicated test backend connecting to test databases
+  # GoatFlow Backend Test - Dedicated test backend connecting to test databases
   backend-test:
     build:
       context: .
@@ -282,15 +282,15 @@ services:
         GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
-    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_VERSION:-latest}
-    container_name: gotrs-backend-test
+    image: ghcr.io/goatkit/goatflow:${GOATFLOW_VERSION:-latest}
+    container_name: goatflow-backend-test
     command: >
       sh -c "
         # Generate self-signed certificates if they don't exist
         if [ ! -f /app/certs/server.crt ] || [ ! -f /app/certs/server.key ]; then
           echo '🔐 Generating self-signed TLS certificates...'
           mkdir -p /app/certs
-          openssl req -x509 -newkey rsa:4096 -keyout /app/certs/server.key -out /app/certs/server.crt -days 365 -nodes -subj '/CN=gotrs-backend-test'
+          openssl req -x509 -newkey rsa:4096 -keyout /app/certs/server.key -out /app/certs/server.crt -days 365 -nodes -subj '/CN=goatflow-backend-test'
           echo '✅ TLS certificates generated'
         fi
         # Start the application
@@ -326,7 +326,7 @@ services:
       - "${BACKEND_TEST_PORT:-8082}:8080"
     volumes:
       - ./storage:${STORAGE_PATH:-/app/storage}:Z
-      - gotrs_certs:/app/certs
+      - goatflow_certs:/app/certs
     depends_on:
       mariadb-test:
         condition: service_healthy
@@ -335,13 +335,13 @@ services:
       valkey-test:
         condition: service_healthy
     networks:
-      - gotrs-network
+      - goatflow-network
     profiles: ["testdb"]
 
-  # GOTRS Runner Test - Background task processor for test environment
+  # GoatFlow Runner Test - Background task processor for test environment
   runner-test:
-    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_VERSION:-latest}
-    container_name: gotrs-runner-test
+    image: ghcr.io/goatkit/goatflow:${GOATFLOW_VERSION:-latest}
+    container_name: goatflow-runner-test
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     command: ["./goats", "-mode", "runner"]
     environment:
@@ -353,23 +353,23 @@ services:
       DB_USER: ${TEST_DB_MYSQL_USER}
       DB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD}
       # Email configuration for queue processing
-      GOTRS_EMAIL_SMTP_HOST: ${SMTP_HOST:-smtp4dev}
-      GOTRS_EMAIL_SMTP_PORT: ${SMTP_PORT:-25}
-      GOTRS_EMAIL_SMTP_USER: ${SMTP_USER}
-      GOTRS_EMAIL_SMTP_PASSWORD: ${SMTP_PASSWORD}
-      GOTRS_EMAIL_SMTP_TLS: ${SMTP_TLS:-false}
-      GOTRS_EMAIL_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-true}
-      GOTRS_EMAIL_FROM: ${EMAIL_FROM:-noreply@gotrs.local}
-      GOTRS_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+      GOATFLOW_EMAIL_SMTP_HOST: ${SMTP_HOST:-smtp4dev}
+      GOATFLOW_EMAIL_SMTP_PORT: ${SMTP_PORT:-25}
+      GOATFLOW_EMAIL_SMTP_USER: ${SMTP_USER}
+      GOATFLOW_EMAIL_SMTP_PASSWORD: ${SMTP_PASSWORD}
+      GOATFLOW_EMAIL_SMTP_TLS: ${SMTP_TLS:-false}
+      GOATFLOW_EMAIL_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-true}
+      GOATFLOW_EMAIL_FROM: ${EMAIL_FROM:-noreply@goatflow.local}
+      GOATFLOW_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
     depends_on:
       mariadb-test:
         condition: service_healthy
     networks:
-      - gotrs-network
+      - goatflow-network
     restart: unless-stopped
     profiles: ["testdb"]
 
-  # GOTRS Customer Frontend Test - Dedicated customer-facing instance for test stack
+  # GoatFlow Customer Frontend Test - Dedicated customer-facing instance for test stack
   customer-fe-test:
     build:
       context: .
@@ -378,14 +378,14 @@ services:
         GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
-    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_VERSION:-latest}
-    container_name: gotrs-customer-fe-test
+    image: ghcr.io/goatkit/goatflow:${GOATFLOW_VERSION:-latest}
+    container_name: goatflow-customer-fe-test
     command: >
       sh -c "
         if [ ! -f /app/certs/server.crt ] || [ ! -f /app/certs/server.key ]; then
           echo '🔐 Generating self-signed TLS certificates...'
           mkdir -p /app/certs
-          openssl req -x509 -newkey rsa:4096 -keyout /app/certs/server.key -out /app/certs/server.crt -days 365 -nodes -subj '/CN=gotrs-customer-fe-test'
+          openssl req -x509 -newkey rsa:4096 -keyout /app/certs/server.key -out /app/certs/server.crt -days 365 -nodes -subj '/CN=goatflow-customer-fe-test'
           echo '✅ TLS certificates generated'
         fi
         ./goats
@@ -418,20 +418,20 @@ services:
       - "${CUSTOMER_FE_TEST_PORT:-8084}:${CUSTOMER_FE_TEST_APP_PORT:-8080}"
     volumes:
       - ./storage:${STORAGE_PATH:-/app/storage}:Z
-      - gotrs_certs:/app/certs
+      - goatflow_certs:/app/certs
     depends_on:
       valkey-test:
         condition: service_healthy
       mariadb-test:
         condition: service_healthy
     networks:
-      - gotrs-network
+      - goatflow-network
     profiles: ["testdb"]
 
   # Temporal Workflow Engine - COMMENTED OUT until code is implemented
   # temporal:
   #   image: temporalio/auto-setup:1.22.4
-  #   container_name: gotrs-temporal
+  #   container_name: goatflow-temporal
   #   depends_on:
   #     - postgres
   #   environment:
@@ -446,12 +446,12 @@ services:
   #   volumes:
   #     - ./docker/temporal/dynamicconfig.yaml:/etc/temporal/config/dynamicconfig.yaml:ro,Z
   #   networks:
-  #     - gotrs-network
+  #     - goatflow-network
 
   # Temporal Web UI - COMMENTED OUT until code is implemented
   # temporal-ui:
   #   image: temporalio/ui:2.21.3
-  #   container_name: gotrs-temporal-ui
+  #   container_name: goatflow-temporal-ui
   #   depends_on:
   #     - temporal
   #   environment:
@@ -460,12 +460,12 @@ services:
   #   ports:
   #     - "${TEMPORAL_UI_PORT:-8088}:8080"
   #   networks:
-  #     - gotrs-network
+  #     - goatflow-network
 
   # Zinc Search Engine (Elasticsearch compatible) - COMMENTED OUT until code is implemented
   # zinc:
   #   image: public.ecr.aws/zinclabs/zincsearch:latest
-  #   container_name: gotrs-zinc
+  #   container_name: goatflow-zinc
   #   environment:
   #     - ZINC_FIRST_ADMIN_USER=${ZINC_USER}
   #     - ZINC_FIRST_ADMIN_PASSWORD=${ZINC_PASSWORD}
@@ -475,7 +475,7 @@ services:
   #   volumes:
   #     - zinc_data:/data
   #   networks:
-  #     - gotrs-network
+  #     - goatflow-network
   #   healthcheck:
   #     test: ["CMD", "curl", "-f", "http://localhost:4080/health"]
   #     interval: 10s
@@ -485,10 +485,10 @@ services:
   # OpenLDAP Server for Testing - COMMENTED OUT until code is implemented
   # openldap:
   #   image: osixia/openldap:1.5.0
-  #   container_name: gotrs-openldap
+  #   container_name: goatflow-openldap
   #   environment:
-  #     - LDAP_ORGANISATION=GOTRS Test Corp
-  #     - LDAP_DOMAIN=gotrs.local
+  #     - LDAP_ORGANISATION=GoatFlow Test Corp
+  #     - LDAP_DOMAIN=goatflow.local
   #     - LDAP_ADMIN_PASSWORD=${LDAP_ADMIN_PASSWORD}
   #     - LDAP_CONFIG_PASSWORD=${LDAP_CONFIG_PASSWORD}
   #     - LDAP_READONLY_USER=true
@@ -518,9 +518,9 @@ services:
   #     - ./docker/ldap/bootstrap:/container/service/slapd/assets/config/bootstrap/ldif/custom:Z
   #   command: --copy-service --loglevel debug
   #   networks:
-  #     - gotrs-network
+  #     - goatflow-network
   #   healthcheck:
-  #     test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost", "-b", "dc=gotrs,dc=local", "-D", "cn=admin,dc=gotrs,dc=local", "-w", "${LDAP_ADMIN_PASSWORD}", "(objectclass=*)", "dn"]
+  #     test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost", "-b", "dc=goatflow,dc=local", "-D", "cn=admin,dc=goatflow,dc=local", "-w", "${LDAP_ADMIN_PASSWORD}", "(objectclass=*)", "dn"]
   #     interval: 30s
   #     timeout: 10s
   #     retries: 5
@@ -529,7 +529,7 @@ services:
   # phpLDAPadmin for LDAP Management (Optional) - COMMENTED OUT until code is implemented
   # phpldapadmin:
   #   image: osixia/phpldapadmin:latest
-  #   container_name: gotrs-phpldapadmin
+  #   container_name: goatflow-phpldapadmin
   #   environment:
   #     - PHPLDAPADMIN_LDAP_HOSTS=openldap
   #     - PHPLDAPADMIN_HTTPS=false
@@ -538,33 +538,33 @@ services:
   #   depends_on:
   #     - openldap
   #   networks:
-  #     - gotrs-network
+  #     - goatflow-network
   #   profiles:
   #     - tools
 
     # Adminer - Database management tool
   adminer:
     image: docker.io/adminer:latest
-    container_name: gotrs-adminer
+    container_name: goatflow-adminer
     ports:
       - "${ADMINER_PORT:-8090}:8080"
     depends_on:
       - mariadb
     networks:
-      - gotrs-network
+      - goatflow-network
     profiles:
       - tools
 
   # Container-first test runner
-  gotrs-tests:
+  goatflow-tests:
     build:
       context: .
       dockerfile: Dockerfile.tests
       args:
         GO_IMAGE: ${GO_IMAGE}
-    container_name: gotrs-tests
+    container_name: goatflow-tests
     environment:
-      GOTRS_HOST: http://gotrs-backend:8080
+      GOATFLOW_HOST: http://goatflow-backend:8080
       VERBOSE: "true"
       OUTPUT_DIR: /app/results
     volumes:
@@ -572,7 +572,7 @@ services:
     depends_on:
       - backend
     networks:
-      - gotrs-network
+      - goatflow-network
     profiles: ["testing"]
 
   # Development toolbox with all-in-one development tools
@@ -584,8 +584,8 @@ services:
         GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
-    image: ghcr.io/gotrs-io/gotrs-ce/toolbox:${GOTRS_VERSION:-latest}
-    container_name: gotrs-toolbox
+    image: ghcr.io/goatkit/goatflow/toolbox:${GOATFLOW_VERSION:-latest}
+    container_name: goatflow-toolbox
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}" # Match host user to avoid root-owned artifacts
     environment:
       # Go development environment - cache in separate volume (not overlaid on workspace)
@@ -610,13 +610,13 @@ services:
       TEST_DB_NAME: ${TEST_DB_MYSQL_NAME}
       TEST_DB_USER: ${TEST_DB_MYSQL_USER}
       TEST_DB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD}
-      GOTRS_TEST_DB_READY: "1"
+      GOATFLOW_TEST_DB_READY: "1"
     volumes:
       - .:/workspace:Z
-      - gotrs_cache:/cache
+      - goatflow_cache:/cache
     working_dir: /workspace
     networks:
-      - gotrs-network
+      - goatflow-network
     profiles: ["toolbox"]
     # Interactive shell by default
     stdin_open: true
@@ -624,7 +624,7 @@ services:
     command: ["/bin/bash"]
 
 networks:
-  gotrs-network:
+  goatflow-network:
     driver: bridge
 
 volumes:
@@ -632,8 +632,8 @@ volumes:
   # postgres_data:     # Commented out - using MariaDB instead
   valkey_data:
   valkey_test_data:
-  gotrs_cache:
-  gotrs_certs:
+  goatflow_cache:
+  goatflow_certs:
   smtp4dev_data:
   # zinc_data:         # Commented out - zinc service disabled
   # temporal_data:     # Commented out - temporal service disabled

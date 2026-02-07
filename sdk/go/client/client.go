@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/gotrs-io/gotrs-ce/sdk/go/auth"
-	"github.com/gotrs-io/gotrs-ce/sdk/go/errors"
-	"github.com/gotrs-io/gotrs-ce/sdk/go/types"
+	"github.com/goatkit/goatflow/sdk/go/auth"
+	"github.com/goatkit/goatflow/sdk/go/errors"
+	"github.com/goatkit/goatflow/sdk/go/types"
 )
 
-// Client represents the GOTRS API client
+// Client represents the GoatFlow API client
 type Client struct {
 	httpClient *resty.Client
 	baseURL    string
@@ -41,10 +41,10 @@ type Config struct {
 	Debug      bool
 }
 
-// NewClient creates a new GOTRS API client
+// NewClient creates a new GoatFlow API client
 func NewClient(config *Config) *Client {
 	if config.UserAgent == "" {
-		config.UserAgent = "gotrs-go-sdk/1.0.0"
+		config.UserAgent = "goatflow-go-sdk/1.0.0"
 	}
 	if config.Timeout == 0 {
 		config.Timeout = 30 * time.Second

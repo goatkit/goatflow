@@ -5,7 +5,7 @@ package e2e
 import (
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/tests/e2e/helpers"
+	"github.com/goatkit/goatflow/tests/e2e/helpers"
 	"github.com/stretchr/testify/require"
 )
 

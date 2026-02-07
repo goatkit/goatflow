@@ -1,14 +1,14 @@
-# GOTRS Troubleshooting Guide
+# GoatFlow Troubleshooting Guide
 
 > **Reminder:** All operational commands should flow through the Makefile or provided helper scripts. Avoid running raw `docker`/`podman` commands on the host—use the container-first wrappers instead.
 
 ## Common Issues and Solutions
 
-### 1. Database Connection Error: "database gotrs_user does not exist"
+### 1. Database Connection Error: "database goatflow_user does not exist"
 
 **Problem:** You see an error like:
 ```
-FATAL: database "gotrs_user" does not exist
+FATAL: database "goatflow_user" does not exist
 ```
 
 **Cause:** The `.env` file has incorrect database user configuration that doesn't match the database name.
@@ -27,15 +27,15 @@ FATAL: database "gotrs_user" does not exist
    make clean
 
    # Edit .env file and change:
-   # DB_USER=gotrs_user  → DB_USER=gotrs
+   # DB_USER=goatflow_user  → DB_USER=goatflow
 
    # Start fresh
    make up
    ```
 
 3. **Verify the fix:**
-   - Check `.env` has `DB_USER=gotrs`
-   - Check `.env` has `DB_NAME=gotrs`
+   - Check `.env` has `DB_USER=goatflow`
+   - Check `.env` has `DB_NAME=goatflow`
    - Both should match for PostgreSQL to initialize correctly
 
 ### 2. Compose Command Not Found
@@ -247,7 +247,7 @@ If you continue to experience issues:
 1. Check the logs: `make logs`
 2. Review your `.env` file configuration
 3. Ensure Docker/Podman daemon is running
-4. Check the [GitHub Issues](https://github.com/gotrs-io/gotrs-ce/issues)
+4. Check the [GitHub Issues](https://github.com/goatkit/goatflow/issues)
 5. Run `make debug-env` to see your environment setup
 
 ## Prevention Tips

@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/repository/memory"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
+	"github.com/goatkit/goatflow/internal/repository/memory"
+	"github.com/goatkit/goatflow/internal/service"
 )
 
 // Global LDAP service instance.

@@ -3,7 +3,7 @@ package repository
 import (
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // WorkflowRepository defines the interface for workflow data operations.

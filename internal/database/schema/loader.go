@@ -9,7 +9,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // YAMLSchema represents the structure of a YAML schema file.

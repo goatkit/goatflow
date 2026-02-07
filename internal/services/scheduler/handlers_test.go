@@ -10,10 +10,10 @@ import (
 
 	"github.com/robfig/cron/v3"
 
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/notifications"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
+	"github.com/goatkit/goatflow/internal/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/repository"
 )
 
 type stubTicketRepository struct {

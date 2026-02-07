@@ -14,7 +14,7 @@
         <div class="mt-4 flex md:ml-4 md:mt-0">
             <button hx-get="/queues/new"
                hx-target="#main-content"
-               class="ml-3 inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">
+               class="ml-3 inline-flex items-center rounded-md bg-goatflow-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-goatflow-500">
                 <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                 </svg>
@@ -38,7 +38,7 @@
                            name="search"
                            id="search"
                            value="{{ SearchTerm }}"
-                           class="block w-full rounded-md border-gray-300 pl-10 focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                           class="block w-full rounded-md border-gray-300 pl-10 focus:border-goatflow-500 focus:ring-goatflow-500 sm:text-sm"
                            placeholder="{{ t('queues.search_placeholder') }}"
                            hx-get="/queues"
                            hx-trigger="keyup changed delay:500ms"
@@ -50,7 +50,7 @@
                 <label for="status" class="sr-only">{{ t("common.status") }}</label>
                 <select id="status"
                         name="status"
-                        class="block w-full rounded-md border-gray-300 focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                        class="block w-full rounded-md border-gray-300 focus:border-goatflow-500 focus:ring-goatflow-500 sm:text-sm"
                         hx-get="/queues"
                         hx-trigger="change"
                         hx-target="#queue-list"
@@ -69,7 +69,7 @@
         <div class="border-b " style="border-color: var(--gk-border-default); px-4 py-3" id="bulk-actions-toolbar" style="display: none">
             <div class="flex items-center justify-between">
                 <div class="flex items-center">
-                    <input type="checkbox" id="select-all-queues" class="h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 rounded">
+                    <input type="checkbox" id="select-all-queues" class="h-4 w-4 text-goatflow-600 focus:ring-goatflow-500 border-gray-300 rounded">
                     <label for="select-all-queues" class="ml-2 text-sm " style="color: var(--gk-text-secondary);">{{ t("buttons.select_all")|default:"Select All" }}</label>
                 </div>
                 <div class="flex items-center space-x-2">
@@ -90,17 +90,17 @@
                     <li class="py-4">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center min-w-0">
-                                <input type="checkbox" name="queue-select" value="{{ queue.id }}" class="h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 rounded mr-3">
+                                <input type="checkbox" name="queue-select" value="{{ queue.id }}" class="h-4 w-4 text-goatflow-600 focus:ring-goatflow-500 border-gray-300 rounded mr-3">
                                 <div class="flex-shrink-0">
-                                    <div class="h-10 w-10 rounded-full bg-gotrs-100 dark:bg-gotrs-900 flex items-center justify-center">
-                                        <svg class="h-6 w-6 text-gotrs-600 dark:text-gotrs-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <div class="h-10 w-10 rounded-full bg-goatflow-100 dark:bg-goatflow-900 flex items-center justify-center">
+                                        <svg class="h-6 w-6 text-goatflow-600 dark:text-goatflow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                                         </svg>
                                     </div>
                                 </div>
                                 <div class="ml-4 truncate">
                                     <p class="truncate text-sm font-medium gk-heading" style="color: var(--gk-text-primary);">
-                                        <a href="/queues/{{ queue.id }}" class="hover:text-gotrs-600">
+                                        <a href="/queues/{{ queue.id }}" class="hover:text-goatflow-600">
                                             {{ queue.name }}
                                         </a>
                                     </p>
@@ -145,7 +145,7 @@
                 <h3 class="mt-2 text-sm font-medium gk-heading" style="color: var(--gk-text-primary);">{{ t("queues.no_queues") }}</h3>
                 <p class="mt-1 text-sm " style="color: var(--gk-text-muted);">{{ t("queues.no_queues_description") }}</p>
                 <div class="mt-6">
-                    <a href="/queues/new" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gotrs-600 hover:bg-gotrs-700">
+                    <a href="/queues/new" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-goatflow-600 hover:bg-goatflow-700">
                         <svg class="-ml-1 mr-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
                         </svg>

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 func getTestDBForQueueAccess(t *testing.T) *sql.DB {

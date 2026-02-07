@@ -1,32 +1,32 @@
-# GOTRS OTRS Migration Guide
+# GoatFlow OTRS Migration Guide
 
 ## Overview
 
-GOTRS provides comprehensive compatibility with OTRS systems through the `gotrs-migrate` tool, enabling seamless migration of production OTRS databases to GOTRS. This guide documents the complete migration process, capabilities, and results.
+GoatFlow provides comprehensive compatibility with OTRS systems through the `goatflow-migrate` tool, enabling seamless migration of production OTRS databases to GoatFlow. This guide documents the complete migration process, capabilities, and results.
 
-## Migration Tool: `gotrs-migrate`
+## Migration Tool: `goatflow-migrate`
 
 ### Installation
 
 ```bash
 # Build the migration tool
-make toolbox-exec ARGS="go build -o bin/gotrs-migrate ./cmd/gotrs-migrate"
+make toolbox-exec ARGS="go build -o bin/goatflow-migrate ./cmd/goatflow-migrate"
 ```
 
 ### Usage
 
 ```bash
 # Analyze OTRS SQL dump
-./bin/gotrs-migrate -cmd=analyze -sql=otrs_dump.sql
+./bin/goatflow-migrate -cmd=analyze -sql=otrs_dump.sql
 
 # Import OTRS data (dry run)
-./bin/gotrs-migrate -cmd=import -sql=otrs_dump.sql -db=postgres://user:pass@localhost/gotrs -dry-run
+./bin/goatflow-migrate -cmd=import -sql=otrs_dump.sql -db=postgres://user:pass@localhost/goatflow -dry-run
 
 # Import OTRS data
-./bin/gotrs-migrate -cmd=import -sql=otrs_dump.sql -db=postgres://user:pass@localhost/gotrs
+./bin/goatflow-migrate -cmd=import -sql=otrs_dump.sql -db=postgres://user:pass@localhost/goatflow
 
 # Validate imported data
-./bin/gotrs-migrate -cmd=validate -db=postgres://user:pass@localhost/gotrs
+./bin/goatflow-migrate -cmd=validate -db=postgres://user:pass@localhost/goatflow
 ```
 
 ## Supported OTRS Features
@@ -61,14 +61,14 @@ make toolbox-exec ARGS="go build -o bin/gotrs-migrate ./cmd/gotrs-migrate"
 
 **Total OTRS Tables**: 116  
 **Tables with Data**: 61  
-**GOTRS Compatible Tables**: 68  
+**GoatFlow Compatible Tables**: 68  
 **Successfully Imported**: 59 tables
 
 ### Key Schema Alignments
 
 #### Ticket System
 ```sql
--- OTRS uses 'type_id', GOTRS aligned automatically (COMPLETED)
+-- OTRS uses 'type_id', GoatFlow aligned automatically (COMPLETED)
 -- Migration applied: ticket_type_id → type_id
 -- All code references updated to use type_id column
 ```
@@ -164,7 +164,7 @@ Successfully imported production OTRS data including:
 ## Migration Best Practices
 
 ### Pre-Migration Checklist
-1. **Backup existing GOTRS database**
+1. **Backup existing GoatFlow database**
 2. **Verify OTRS dump integrity** with analyze command
 3. **Test with dry-run first** to identify potential issues
 4. **Review confidentiality requirements** for sensitive data
@@ -175,16 +175,16 @@ Successfully imported production OTRS data including:
 make db-reset
 
 # 2. Analyze the OTRS dump
-./bin/gotrs-migrate -cmd=analyze -sql=otrs_production.sql
+./bin/goatflow-migrate -cmd=analyze -sql=otrs_production.sql
 
 # 3. Test import (dry run)
-./bin/gotrs-migrate -cmd=import -sql=otrs_production.sql -db="$DB_URL" -dry-run
+./bin/goatflow-migrate -cmd=import -sql=otrs_production.sql -db="$DB_URL" -dry-run
 
 # 4. Perform actual import
-./bin/gotrs-migrate -cmd=import -sql=otrs_production.sql -db="$DB_URL"
+./bin/goatflow-migrate -cmd=import -sql=otrs_production.sql -db="$DB_URL"
 
 # 5. Validate results
-./bin/gotrs-migrate -cmd=validate -db="$DB_URL"
+./bin/goatflow-migrate -cmd=validate -db="$DB_URL"
 ```
 
 ### Post-Migration Validation
@@ -211,28 +211,28 @@ make db-reset
 
 ## Conclusion
 
-The GOTRS OTRS migration system provides enterprise-grade compatibility with existing OTRS installations, enabling organizations to migrate with confidence. The tool has been validated with real production data including confidential customer information, demonstrating both technical capability and security compliance.
+The GoatFlow OTRS migration system provides enterprise-grade compatibility with existing OTRS installations, enabling organizations to migrate with confidence. The tool has been validated with real production data including confidential customer information, demonstrating both technical capability and security compliance.
 
 **Migration confidence level: 95%+**  
 **Recommended for production use: ✅ Yes**  
 **Data security validated: ✅ Confirmed**  
 **OTRS compatibility claims: ✅ Verified**
 
-For technical support or migration assistance, refer to the GOTRS documentation or contact the development team.
+For technical support or migration assistance, refer to the GoatFlow documentation or contact the development team.
 
 ## Mounting an Existing OTRS Filesystem (Attachments)
 
-GOTRS now uses the OTRS filesystem layout for attachments:
+GoatFlow now uses the OTRS filesystem layout for attachments:
 
 - var/article/YYYY/MM/DD/<TicketID>/<ArticleID>/<filename>
 
-This means you can bind-mount your existing OTRS attachment store and GOTRS will read old attachments and write new ones in the same structure.
+This means you can bind-mount your existing OTRS attachment store and GoatFlow will read old attachments and write new ones in the same structure.
 
 ### Recommended docker-compose configuration
 
 In `docker-compose.yml` for the backend service:
 
-1) Keep a base storage mount for GOTRS caches/thumbs
+1) Keep a base storage mount for GoatFlow caches/thumbs
 
 - ./storage:/app/storage:Z
 
@@ -258,7 +258,7 @@ services:
 
 ### Notes
 
-- Read-only option: Use `:ro,Z` on the OTRS mount if you want GOTRS to read from OTRS but not write to it.
-- Full write compatibility: Use `:Z` to allow GOTRS to write new attachments in OTRS format and location.
+- Read-only option: Use `:ro,Z` on the OTRS mount if you want GoatFlow to read from OTRS but not write to it.
+- Full write compatibility: Use `:Z` to allow GoatFlow to write new attachments in OTRS format and location.
 - Permissions: Containers run as UID 1000; ensure the host path allows read/write as needed. On SELinux systems, `:Z` is required (already included above).
-- Alternate approach: If your host folder already contains `var/article` at its root, you can mount that folder directly at `/app/storage` instead of a nested mount. Be aware this will also store GOTRS thumbnails under that host folder.
+- Alternate approach: If your host folder already contains `var/article` at its root, you can mount that folder directly at `/app/storage` instead of a nested mount. Be aware this will also store GoatFlow thumbnails under that host folder.

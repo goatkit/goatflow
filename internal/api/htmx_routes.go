@@ -10,12 +10,12 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/ldap"
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/ldap"
+	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 // SetupHTMXRoutes sets up all HTMX routes on the given router.

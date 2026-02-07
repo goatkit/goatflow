@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
-	"github.com/gotrs-io/gotrs-ce/internal/plugin/loader"
+	"github.com/goatkit/goatflow/internal/plugin"
+	"github.com/goatkit/goatflow/internal/plugin/loader"
 )
 
 // mockHostAPI implements plugin.HostAPI for testing.

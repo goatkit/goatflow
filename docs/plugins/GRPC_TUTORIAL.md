@@ -18,12 +18,12 @@ Trade-off: Slightly higher latency than WASM (~1ms per call).
 
 - Go 1.21+
 - Protocol Buffers compiler (`protoc`)
-- GOTRS running locally
+- GoatFlow running locally
 
 ## Step 1: Scaffold the Plugin
 
 ```bash
-cd /path/to/gotrs/plugins
+cd /path/to/goatflow/plugins
 gk plugin init analytics --type grpc
 cd analytics
 ```
@@ -118,14 +118,14 @@ import (
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	
-	pb "github.com/gotrs-io/gotrs-ce/pkg/plugin/proto"
+	pb "github.com/goatkit/goatflow/pkg/plugin/proto"
 )
 
 func main() {
 	// Get socket path from environment
-	socketPath := os.Getenv("GOTRS_PLUGIN_SOCKET")
+	socketPath := os.Getenv("GOATFLOW_PLUGIN_SOCKET")
 	if socketPath == "" {
-		socketPath = "/tmp/gotrs-plugin-analytics.sock"
+		socketPath = "/tmp/goatflow-plugin-analytics.sock"
 	}
 	
 	// Clean up old socket
@@ -168,7 +168,7 @@ import (
 	"fmt"
 	"time"
 	
-	pb "github.com/gotrs-io/gotrs-ce/pkg/plugin/proto"
+	pb "github.com/goatkit/goatflow/pkg/plugin/proto"
 )
 
 type AnalyticsPlugin struct {
@@ -180,7 +180,7 @@ func NewAnalyticsPlugin() *AnalyticsPlugin {
 	return &AnalyticsPlugin{}
 }
 
-// SetHost is called by GOTRS to provide Host API access
+// SetHost is called by GoatFlow to provide Host API access
 func (p *AnalyticsPlugin) SetHost(client pb.HostServiceClient) {
 	p.host = client
 }
@@ -194,7 +194,7 @@ func (p *AnalyticsPlugin) Register(ctx context.Context, req *pb.Empty) (*pb.Regi
 	}, nil
 }
 
-// Call handles function calls from GOTRS
+// Call handles function calls from GoatFlow
 func (p *AnalyticsPlugin) Call(ctx context.Context, req *pb.CallRequest) (*pb.CallResponse, error) {
 	switch req.Function {
 	case "list_reports":
@@ -407,13 +407,13 @@ Output: `analytics` binary (~10MB)
 
 ```bash
 # Copy binary and manifest
-cp analytics manifest.json /path/to/gotrs/plugins/analytics/
+cp analytics manifest.json /path/to/goatflow/plugins/analytics/
 
 # Make executable
-chmod +x /path/to/gotrs/plugins/analytics/analytics
+chmod +x /path/to/goatflow/plugins/analytics/analytics
 ```
 
-GOTRS will start the plugin process automatically.
+GoatFlow will start the plugin process automatically.
 
 ## Step 6: Test
 
@@ -474,7 +474,7 @@ class AnalyticsPlugin(plugin_pb2_grpc.PluginServiceServicer):
 
 def serve():
     import os
-    socket_path = os.environ.get('GOTRS_PLUGIN_SOCKET', '/tmp/gotrs-plugin-analytics.sock')
+    socket_path = os.environ.get('GOATFLOW_PLUGIN_SOCKET', '/tmp/goatflow-plugin-analytics.sock')
     
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     plugin_pb2_grpc.add_PluginServiceServicer_to_server(AnalyticsPlugin(), server)
@@ -532,7 +532,7 @@ const plugin = {
 const server = new grpc.Server();
 server.addService(pluginProto.PluginService.service, plugin);
 
-const socketPath = process.env.GOTRS_PLUGIN_SOCKET || '/tmp/gotrs-plugin-analytics.sock';
+const socketPath = process.env.GOATFLOW_PLUGIN_SOCKET || '/tmp/goatflow-plugin-analytics.sock';
 server.bindAsync(`unix://${socketPath}`, grpc.ServerCredentials.createInsecure(), () => {
   console.log(`Plugin listening on ${socketPath}`);
   server.start();
@@ -609,7 +609,7 @@ func main() {
 
 ```bash
 # Set environment and run directly
-export GOTRS_PLUGIN_SOCKET=/tmp/test-plugin.sock
+export GOATFLOW_PLUGIN_SOCKET=/tmp/test-plugin.sock
 ./analytics
 ```
 

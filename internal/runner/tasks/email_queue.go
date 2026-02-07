@@ -15,9 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
-	"github.com/gotrs-io/gotrs-ce/internal/runner"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/mailqueue"
+	"github.com/goatkit/goatflow/internal/runner"
 )
 
 const (

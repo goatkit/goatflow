@@ -1,10 +1,10 @@
 #!/bin/bash
-# GOTRS Test Runner Script
+# GoatFlow Test Runner Script
 # This script runs all tests and generates a coverage report
 # Works both inside containers and on the host (using docker compose exec)
 
 echo "======================================"
-echo "    GOTRS Unit Test Coverage Report   "
+echo "    GoatFlow Unit Test Coverage Report   "
 echo "======================================"
 echo ""
 
@@ -228,8 +228,8 @@ initialize_test_db_env() {
 
     local default_name default_user default_password default_host default_port
     if [ "$driver_family" = "postgres" ]; then
-        default_name="${TEST_DB_POSTGRES_NAME:-gotrs_test}"
-        default_user="${TEST_DB_POSTGRES_USER:-gotrs_user}"
+        default_name="${TEST_DB_POSTGRES_NAME:-goatflow_test}"
+        default_user="${TEST_DB_POSTGRES_USER:-goatflow_user}"
         default_password="${TEST_DB_POSTGRES_PASSWORD:-}"
         if [ "$IN_CONTAINER" = true ]; then
             default_host="${TEST_DB_POSTGRES_HOST:-postgres-test}"
@@ -358,7 +358,7 @@ echo "Detailed Package Coverage:"
 echo "========================="
 
 # Show coverage by package
-run_command "go tool cover -func=generated/coverage.out | grep -E '^github.com/gotrs-io/gotrs-ce' | sort"
+run_command "go tool cover -func=generated/coverage.out | grep -E '^github.com/goatkit/goatflow' | sort"
 
 echo ""
 echo "======================================"

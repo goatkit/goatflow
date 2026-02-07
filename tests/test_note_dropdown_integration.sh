@@ -91,7 +91,7 @@ fi
 
 # 6. Verify notes were saved to database with correct types
 echo "6. Verifying notes in database..."
-ARTICLE_COUNT=$(docker exec gotrs-postgres psql -U gotrs_user -d gotrs -t -c "
+ARTICLE_COUNT=$(docker exec goatflow-postgres psql -U goatflow_user -d goatflow -t -c "
     SELECT COUNT(*) 
     FROM article a 
     JOIN article_data_mime m ON a.id = m.article_id 
@@ -106,7 +106,7 @@ fi
 
 # 7. Verify communication channel IDs are correct
 echo "7. Verifying communication channel IDs..."
-CHANNELS=$(docker exec gotrs-postgres psql -U gotrs_user -d gotrs -t -c "
+CHANNELS=$(docker exec goatflow-postgres psql -U goatflow_user -d goatflow -t -c "
     SELECT DISTINCT a.communication_channel_id, c.name 
     FROM article a 
     JOIN communication_channel c ON a.communication_channel_id = c.id
@@ -123,7 +123,7 @@ fi
 
 # 8. Verify visibility flags
 echo "8. Verifying customer visibility flags..."
-VISIBLE_COUNT=$(docker exec gotrs-postgres psql -U gotrs_user -d gotrs -t -c "
+VISIBLE_COUNT=$(docker exec goatflow-postgres psql -U goatflow_user -d goatflow -t -c "
     SELECT COUNT(*) 
     FROM article a 
     JOIN article_data_mime m ON a.id = m.article_id 

@@ -2,7 +2,7 @@
 
 ## Button and Action Colors
 
-This document defines the standard color scheme for all interactive elements across the GOTRS application. These colors must be consistently applied throughout the entire project.
+This document defines the standard color scheme for all interactive elements across the GoatFlow application. These colors must be consistently applied throughout the entire project.
 
 ## Color Conventions
 

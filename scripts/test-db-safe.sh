@@ -1,5 +1,5 @@
 #!/bin/bash
-# GOTRS Safe Test Database Script
+# GoatFlow Safe Test Database Script
 # This script ensures tests ONLY run against test databases
 # It includes multiple safety checks to prevent production data loss
 # Works both inside containers and on the host (using docker compose exec)
@@ -82,8 +82,8 @@ normalize_test_db_env() {
 
     local default_name default_user default_password default_host default_port
     if [ "$driver_family" = "postgres" ]; then
-        default_name="${TEST_DB_POSTGRES_NAME:-gotrs_test}"
-        default_user="${TEST_DB_POSTGRES_USER:-gotrs_user}"
+        default_name="${TEST_DB_POSTGRES_NAME:-goatflow_test}"
+        default_user="${TEST_DB_POSTGRES_USER:-goatflow_user}"
         default_password="${TEST_DB_POSTGRES_PASSWORD:-}"
         default_host="${TEST_DB_POSTGRES_HOST:-postgres-test}"
         if [ "$IN_CONTAINER" = true ]; then
@@ -189,7 +189,7 @@ resolve_container_db_port() {
 }
 
 echo "======================================"
-echo "    GOTRS Safe Test Runner            "
+echo "    GoatFlow Safe Test Runner            "
 echo "======================================"
 
 # Detect Docker/Podman compose command

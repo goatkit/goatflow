@@ -212,7 +212,7 @@
         "skipped": "Ignorados (já existem)",
         "updated": "Atualizados",
         "upload_and_preview": "Enviar e pré-visualizar",
-        "upload_description": "Selecione um arquivo YAML exportado do GOTRS ou OTRS para importar configurações de campos dinâmicos.",
+        "upload_description": "Selecione um arquivo YAML exportado do GoatFlow ou OTRS para importar configurações de campos dinâmicos.",
         "upload_file": "Enviar arquivo YAML",
         "will_create": "Será criado",
         "will_overwrite": "Será sobrescrito"
@@ -504,7 +504,7 @@
           "valid_id": "Validade"
         },
         "help": {
-          "allow_trusted_headers": "Aceitar substituições de fila dos cabeçalhos X-OTRS-Queue / X-GOTRS para esta caixa de correio.",
+          "allow_trusted_headers": "Aceitar substituições de fila dos cabeçalhos X-OTRS-Queue / X-GoatFlow para esta caixa de correio.",
           "poll_interval_seconds": "Substituir o intervalo do agendador para esta caixa de correio. Deixe 0 para herdar a cadência global.",
           "queue_id": "Atribuir mensagens de entrada a esta fila.",
           "valid_id": "Escolha se esta caixa de correio está ativa."
@@ -616,16 +616,16 @@
       },
       "postmaster_filter": {
         "actions": {
-          "customer_id": "X-GOTRS-CustomerID (Definir ID do cliente)",
-          "customer_user": "X-GOTRS-CustomerUser (Definir usuário do cliente)",
-          "ignore": "X-GOTRS-Ignore (Pular criação do chamado)",
-          "priority": "X-GOTRS-Priority (Definir prioridade por nome)",
-          "priority_id": "X-GOTRS-PriorityID (Definir prioridade)",
-          "queue": "X-GOTRS-Queue (Rotear para fila)",
-          "queue_id": "X-GOTRS-QueueID (Rotear para fila por ID)",
-          "state": "X-GOTRS-State (Definir estado do chamado)",
-          "title": "X-GOTRS-Title (Substituir título do chamado)",
-          "type": "X-GOTRS-Type (Definir tipo do chamado)"
+          "customer_id": "X-GoatFlow-CustomerID (Definir ID do cliente)",
+          "customer_user": "X-GoatFlow-CustomerUser (Definir usuário do cliente)",
+          "ignore": "X-GoatFlow-Ignore (Pular criação do chamado)",
+          "priority": "X-GoatFlow-Priority (Definir prioridade por nome)",
+          "priority_id": "X-GoatFlow-PriorityID (Definir prioridade)",
+          "queue": "X-GoatFlow-Queue (Rotear para fila)",
+          "queue_id": "X-GoatFlow-QueueID (Rotear para fila por ID)",
+          "state": "X-GoatFlow-State (Definir estado do chamado)",
+          "title": "X-GoatFlow-Title (Substituir título do chamado)",
+          "type": "X-GoatFlow-Type (Definir tipo do chamado)"
         },
         "add_action": "Adicionar Ação",
         "add_condition": "Adicionar Condição",
@@ -1015,7 +1015,7 @@
         },
         "import": {
           "back_to_list": "Voltar para Modelos",
-          "description": "Importar modelos de um arquivo YAML exportado do GOTRS ou criado manualmente",
+          "description": "Importar modelos de um arquivo YAML exportado do GoatFlow ou criado manualmente",
           "file_label": "Arquivo YAML",
           "file_types": "Apenas arquivos YAML (.yaml, .yml)",
           "format_description": "O arquivo de importação deve seguir esta estrutura:",
@@ -1479,8 +1479,8 @@
   },
   "app": {
     "description": "Plataforma Moderna de Gerenciamento de Serviços de TI",
-    "name": "GOTRS",
-    "title": "GOTRS - Sistema de Chamados"
+    "name": "GoatFlow",
+    "title": "GoatFlow - Sistema de Chamados"
   },
   "assets": {
     "asset_tag": "Tag de Ativo",
@@ -1919,7 +1919,7 @@
   },
   "customer_portal": {
     "placeholders": {
-      "footer": "Powered by GOTRS",
+      "footer": "Powered by GoatFlow",
       "title": "Portal do Cliente"
     }
   },

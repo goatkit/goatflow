@@ -1,4 +1,4 @@
-# Container for GOTRS Unified Configuration Manager
+# Container for GoatFlow Unified Configuration Manager
 # syntax=docker/dockerfile:1
 
 # Global build arg - must be before any FROM that uses it
@@ -8,7 +8,7 @@ ARG GO_IMAGE=golang:1.24-alpine
 # ============================================
 # Reuse backend binaries from artifacts image
 # ============================================
-FROM gotrs-artifacts:latest AS artifacts
+FROM goatflow-artifacts:latest AS artifacts
 
 # ============================================
 # Build config manager
@@ -32,7 +32,7 @@ COPY . .
 # Build the config manager with optimization
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs-config ./cmd/gotrs-config 2>/dev/null || true
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/goatflow-config ./cmd/goatflow-config 2>/dev/null || true
 
 # ============================================
 # Minimal runtime
@@ -45,7 +45,7 @@ RUN apk add --no-cache ca-certificates bash git
 RUN adduser -D -s /bin/sh -u 1000 configmgr
 
 # Copy binaries from builders
-COPY --from=config-builder /usr/local/bin/gotrs-config /usr/local/bin/
+COPY --from=config-builder /usr/local/bin/goatflow-config /usr/local/bin/
 COPY --from=artifacts /artifacts/goats /usr/local/bin/goats
 
 # Create config directories
@@ -56,24 +56,24 @@ RUN mkdir -p /app/config /app/routes /app/dashboards /app/.versions && \
 RUN cat <<'EOF' >/usr/local/bin/config-manager
 #!/bin/bash
 
-# GOTRS Unified Configuration Manager
+# GoatFlow Unified Configuration Manager
 set -e
 
-export GOTRS_CONFIG_DIR=${GOTRS_CONFIG_DIR:-/app/config}
+export GOATFLOW_CONFIG_DIR=${GOATFLOW_CONFIG_DIR:-/app/config}
 
 # Show banner
-echo "🔧 GOTRS Unified Configuration Manager"
+echo "🔧 GoatFlow Unified Configuration Manager"
 echo "======================================"
 echo ""
 
 # If no arguments, show help
 if [ $# -eq 0 ]; then
-    gotrs-config help
+    goatflow-config help
     exit 0
 fi
 
-# Pass through to gotrs-config
-gotrs-config "$@"
+# Pass through to goatflow-config
+goatflow-config "$@"
 EOF
 
 RUN chmod +x /usr/local/bin/config-manager

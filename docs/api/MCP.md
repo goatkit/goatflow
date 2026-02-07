@@ -1,6 +1,6 @@
-# GOTRS MCP Server
+# GoatFlow MCP Server
 
-GOTRS includes a Model Context Protocol (MCP) server that enables AI assistants to interact with the ticketing system programmatically.
+GoatFlow includes a Model Context Protocol (MCP) server that enables AI assistants to interact with the ticketing system programmatically.
 
 ## Overview
 
@@ -62,7 +62,7 @@ POST /api/mcp
 Requires a valid API token with Bearer authentication:
 
 ```bash
-curl -X POST https://your-gotrs-instance/api/mcp \
+curl -X POST https://your-goatflow-instance/api/mcp \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'

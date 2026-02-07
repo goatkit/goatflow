@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // TemplateForAgent represents a template available to agents.
@@ -79,20 +79,20 @@ func GetTemplatesForQueue(queueID int, templateType string) ([]TemplateForAgent,
 func SubstituteTemplateVariables(text string, vars map[string]string) string {
 	result := text
 	for key, value := range vars {
-		// Support both <OTRS_*> and <GOTRS_*> style variables (raw)
+		// Support both <OTRS_*> and <GOATFLOW_*> style variables (raw)
 		result = strings.ReplaceAll(result, "<OTRS_"+key+">", value)
-		result = strings.ReplaceAll(result, "<GOTRS_"+key+">", value)
-		// Support HTML-encoded versions (&lt;OTRS_*&gt; and &lt;GOTRS_*&gt;)
+		result = strings.ReplaceAll(result, "<GOATFLOW_"+key+">", value)
+		// Support HTML-encoded versions (&lt;OTRS_*&gt; and &lt;GOATFLOW_*&gt;)
 		result = strings.ReplaceAll(result, "&lt;OTRS_"+key+"&gt;", value)
-		result = strings.ReplaceAll(result, "&lt;GOTRS_"+key+"&gt;", value)
+		result = strings.ReplaceAll(result, "&lt;GOATFLOW_"+key+"&gt;", value)
 	}
 
 	// Clean up any remaining unmatched template variables (like OTRS does)
-	// OTRS replaces unmatched <OTRS_*> and <GOTRS_*> tags with "-"
+	// OTRS replaces unmatched <OTRS_*> and <GOATFLOW_*> tags with "-"
 	// Handle both raw and HTML-encoded versions
-	unmatchedPattern := regexp.MustCompile(`<(?:OTRS|GOTRS)_[A-Za-z0-9_]+>`)
+	unmatchedPattern := regexp.MustCompile(`(?i)<(?:OTRS|GOATFLOW)_[A-Za-z0-9_]+>`)
 	result = unmatchedPattern.ReplaceAllString(result, "-")
-	unmatchedEncodedPattern := regexp.MustCompile(`&lt;(?:OTRS|GOTRS)_[A-Za-z0-9_]+&gt;`)
+	unmatchedEncodedPattern := regexp.MustCompile(`(?i)&lt;(?:OTRS|GOATFLOW)_[A-Za-z0-9_]+&gt;`)
 	result = unmatchedEncodedPattern.ReplaceAllString(result, "-")
 
 	return result

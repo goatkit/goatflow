@@ -11,9 +11,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/constants"
-	"github.com/gotrs-io/gotrs-ce/internal/core"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/constants"
+	"github.com/goatkit/goatflow/internal/core"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // HandleCreateArticleAPI handles POST /api/v1/tickets/:ticket_id/articles.

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/repository"
 )
 
 // DatabaseAuthProvider provides authentication against the database.
@@ -54,7 +54,7 @@ func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, passw
 
 	// Verify password using our configurable hasher
 	if !isCustomer {
-		// Use our hasher which auto-detects hash type (SHA256 for OTRS, bcrypt for GOTRS)
+		// Use our hasher which auto-detects hash type (SHA256 for OTRS, bcrypt for GoatFlow)
 		if !p.hasher.VerifyPassword(password, user.Password) {
 			return nil, ErrInvalidCredentials
 		}

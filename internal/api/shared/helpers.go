@@ -3,7 +3,7 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/convert"
+	"github.com/goatkit/goatflow/internal/convert"
 )
 
 // GetUserIDFromCtx extracts the user ID from the gin context with proper type handling.

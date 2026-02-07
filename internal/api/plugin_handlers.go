@@ -13,9 +13,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
-	"github.com/gotrs-io/gotrs-ce/internal/plugin/packaging"
+	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/plugin"
+	"github.com/goatkit/goatflow/internal/plugin/packaging"
 )
 
 // pluginContextWithLanguage adds the request language to the context for i18n support.

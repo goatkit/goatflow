@@ -212,7 +212,7 @@
         "skipped": "スキップ済み（既に存在）",
         "updated": "更新済み",
         "upload_and_preview": "アップロードしてプレビュー",
-        "upload_description": "GOTRSまたはOTRSからエクスポートされたYAMLファイルを選択して、ダイナミックフィールド設定をインポートします。",
+        "upload_description": "GoatFlowまたはOTRSからエクスポートされたYAMLファイルを選択して、ダイナミックフィールド設定をインポートします。",
         "upload_file": "YAMLファイルをアップロード",
         "will_create": "作成されます",
         "will_overwrite": "上書きされます"
@@ -504,7 +504,7 @@
           "valid_id": "有効性"
         },
         "help": {
-          "allow_trusted_headers": "このメールボックスでX-OTRS-Queue / X-GOTRSヘッダーによるキュー上書きを許可します。",
+          "allow_trusted_headers": "このメールボックスでX-OTRS-Queue / X-GoatFlowヘッダーによるキュー上書きを許可します。",
           "poll_interval_seconds": "このメールボックスのスケジューラー間隔を上書きします。0でグローバル設定を継承します。",
           "queue_id": "受信メッセージをこのキューに割り当てます。",
           "valid_id": "このメールボックスを有効にするか選択します。"
@@ -616,16 +616,16 @@
       },
       "postmaster_filter": {
         "actions": {
-          "customer_id": "X-GOTRS-CustomerID（顧客IDを設定）",
-          "customer_user": "X-GOTRS-CustomerUser（顧客ユーザーを設定）",
-          "ignore": "X-GOTRS-Ignore（チケット作成をスキップ）",
-          "priority": "X-GOTRS-Priority（名前で優先度を設定）",
-          "priority_id": "X-GOTRS-PriorityID（優先度を設定）",
-          "queue": "X-GOTRS-Queue（キューにルーティング）",
-          "queue_id": "X-GOTRS-QueueID（IDでキューにルーティング）",
-          "state": "X-GOTRS-State（チケットステートを設定）",
-          "title": "X-GOTRS-Title（チケットタイトルを上書き）",
-          "type": "X-GOTRS-Type（チケットタイプを設定）"
+          "customer_id": "X-GoatFlow-CustomerID（顧客IDを設定）",
+          "customer_user": "X-GoatFlow-CustomerUser（顧客ユーザーを設定）",
+          "ignore": "X-GoatFlow-Ignore（チケット作成をスキップ）",
+          "priority": "X-GoatFlow-Priority（名前で優先度を設定）",
+          "priority_id": "X-GoatFlow-PriorityID（優先度を設定）",
+          "queue": "X-GoatFlow-Queue（キューにルーティング）",
+          "queue_id": "X-GoatFlow-QueueID（IDでキューにルーティング）",
+          "state": "X-GoatFlow-State（チケットステートを設定）",
+          "title": "X-GoatFlow-Title（チケットタイトルを上書き）",
+          "type": "X-GoatFlow-Type（チケットタイプを設定）"
         },
         "add_action": "アクションを追加",
         "add_condition": "条件を追加",
@@ -1015,7 +1015,7 @@
         },
         "import": {
           "back_to_list": "テンプレートに戻る",
-          "description": "GOTRSからエクスポートしたYAMLファイルまたは手動作成したファイルからテンプレートをインポート",
+          "description": "GoatFlowからエクスポートしたYAMLファイルまたは手動作成したファイルからテンプレートをインポート",
           "file_label": "YAMLファイル",
           "file_types": "YAMLファイルのみ（.yaml, .yml）",
           "format_description": "インポートファイルは以下の構造に従う必要があります：",
@@ -1479,8 +1479,8 @@
   },
   "app": {
     "description": "モダンなITサービス管理プラットフォーム",
-    "name": "GOTRS",
-    "title": "GOTRS - チケットシステム"
+    "name": "GoatFlow",
+    "title": "GoatFlow - チケットシステム"
   },
   "assets": {
     "asset_tag": "資産タグ",
@@ -1919,7 +1919,7 @@
   },
   "customer_portal": {
     "placeholders": {
-      "footer": "Powered by GOTRS",
+      "footer": "Powered by GoatFlow",
       "title": "顧客ポータル"
     }
   },

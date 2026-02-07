@@ -1,35 +1,35 @@
 # Create Organizational Units
-dn: ou=Users,dc=gotrs,dc=local
+dn: ou=Users,dc=goatflow,dc=local
 objectClass: organizationalUnit
 ou: Users
-description: All GOTRS users
+description: All GoatFlow users
 
-dn: ou=Groups,dc=gotrs,dc=local
+dn: ou=Groups,dc=goatflow,dc=local
 objectClass: organizationalUnit
 ou: Groups
-description: All GOTRS groups
+description: All GoatFlow groups
 
-dn: ou=Departments,dc=gotrs,dc=local
+dn: ou=Departments,dc=goatflow,dc=local
 objectClass: organizationalUnit
 ou: Departments
 description: Company departments
 
-dn: ou=IT,ou=Departments,dc=gotrs,dc=local
+dn: ou=IT,ou=Departments,dc=goatflow,dc=local
 objectClass: organizationalUnit
 ou: IT
 description: Information Technology Department
 
-dn: ou=Support,ou=Departments,dc=gotrs,dc=local
+dn: ou=Support,ou=Departments,dc=goatflow,dc=local
 objectClass: organizationalUnit
 ou: Support
 description: Customer Support Department
 
-dn: ou=Sales,ou=Departments,dc=gotrs,dc=local
+dn: ou=Sales,ou=Departments,dc=goatflow,dc=local
 objectClass: organizationalUnit
 ou: Sales
 description: Sales Department
 
-dn: ou=Management,ou=Departments,dc=gotrs,dc=local
+dn: ou=Management,ou=Departments,dc=goatflow,dc=local
 objectClass: organizationalUnit
 ou: Management
 description: Management Team

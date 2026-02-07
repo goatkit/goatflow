@@ -44,7 +44,7 @@ if [ -d "$CACHE_DIR" ]; then
         echo "  make cache-fix" >&2
         echo "" >&2
         echo "Or recreate the volume:" >&2
-        echo "  docker volume rm gotrs-ce_gotrs_cache" >&2
+        echo "  docker volume rm goatflow_goatflow_cache" >&2
         echo "============================================================" >&2
         exit 1
     fi

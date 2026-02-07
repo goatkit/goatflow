@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/ticketutil"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/ticketutil"
 )
 
 // Service coordinates Generic Agent job execution.

@@ -205,7 +205,7 @@ func TestExportTranslations(t *testing.T) {
 				content := string(body)
 				assert.Contains(t, content, "key,value")
 				assert.Contains(t, content, "app.name")
-				assert.Contains(t, content, "GOTRS")
+				assert.Contains(t, content, "GoatFlow")
 			},
 		},
 	}

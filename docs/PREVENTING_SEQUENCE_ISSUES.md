@@ -39,7 +39,7 @@ SELECT setval('ticket_id_seq', (SELECT MAX(id) FROM ticket));
 ### 5. Check Sequence Status
 ```bash
 # Check if sequences are in sync:
-docker exec gotrs-postgres psql -U gotrs_user -d gotrs -c "
+docker exec goatflow-postgres psql -U goatflow_user -d goatflow -c "
     SELECT 
         'article' as table,
         MAX(id) as max_id,

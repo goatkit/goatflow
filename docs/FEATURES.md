@@ -1,4 +1,4 @@
-# GOTRS Features
+# GoatFlow Features
 
 ## Core Features (Targetted for v0.1.0)
 
@@ -87,7 +87,7 @@
 - ❌ Custom report builder (TODO)
 - ✅ Real-time metrics (WebSocket dashboard)
 - ❌ Historical analytics (TODO)
-- ❌ Export (CSV, PDF, Excel) (TODO)
+- ✅ Export (CSV, Excel) (PDF TODO)
 - ❌ Scheduled reports (TODO)
 - ❌ Report sharing (TODO)
 
@@ -127,9 +127,9 @@
 - ✅ OAuth 2.0 (OAuth2 provider implemented)
 - ❌ OpenID Connect (TODO)
 - ✅ LDAP/Active Directory (LDAP provider implemented)
-- ❌ Multi-factor authentication (MFA) (2FA config exists, no TOTP implementation)
+- ✅ Multi-factor authentication (TOTP) — QR setup, recovery codes, admin override, audit logging
 - ❌ Biometric authentication (TODO)
-- ❌ API key management (TODO)
+- ✅ API key management (personal access tokens with scoped permissions, expiration, rate limiting)
 
 ### Collaboration Features
 - ❌ Team inbox (TODO)
@@ -182,7 +182,7 @@
 ### Advanced Security
 - ❌ Field-level encryption (TODO)
 - ❌ Data loss prevention (DLP) (TODO)
-- ❌ Advanced audit logging (audit log handlers TODO)
+- ⚠️ Advanced audit logging (2FA audit events implemented, full audit TODO)
 - ❌ Session recording (TODO)
 - ❌ Compliance reporting (GDPR, HIPAA) (TODO)
 - ❌ Security incident response (TODO)
@@ -252,23 +252,24 @@
 ## Platform Features
 
 ### Developer Tools
-- ✅ REST API
+- ✅ REST API v1 (OpenAPI 3.0 spec, 94 endpoints, Swagger UI)
 - ✅ GraphQL API (schema + resolver implemented)
 - ✅ WebSocket support (dashboard metrics)
 - ✅ Webhook system
 - ✅ SDK (Go, Python, TypeScript)
-- ✅ CLI tools (multiple commands available)
-- ❌ API documentation (TODO)
+- ✅ CLI tools (multiple commands available, `gk init` plugin scaffolding)
+- ✅ API documentation (OpenAPI 3.0 + Swagger UI at `/swagger/`)
+- ✅ MCP Server (AI assistant integration via JSON-RPC with multi-user RBAC proxy)
 - ❌ Postman collections (TODO)
 
 ### Extension Framework
-- ❌ Plugin architecture (TODO)
+- ✅ Plugin architecture (dual-runtime: WASM via wazero + gRPC via go-plugin)
 - ❌ Plugin marketplace (TODO)
 - ✅ Theme system (4 built-in themes, package structure, dark/light modes)
-- ❌ Custom widgets (TODO)
+- ✅ Custom widgets (plugin-provided widgets via HostAPI)
 - ❌ Hook system (TODO)
 - ❌ Event bus (TODO)
-- ❌ Sandboxed execution (TODO)
+- ⚠️ Sandboxed execution (WASM sandboxed, isolation limits TODO)
 - ❌ Hot reload (TODO)
 
 ### Monitoring & Observability
@@ -376,21 +377,24 @@
 - ✅ Rate limiting (login rate limiter implemented)
 - ❌ Circuit breakers (TODO)
 
-## Comparison Matrix as of v0.6.2
+## Comparison Matrix as of v0.6.5
 
-| Feature Category | GOTRS | OTRS | Zendesk | ServiceNow |
+| Feature Category | GoatFlow | OTRS | Zendesk | ServiceNow |
 |-----------------|-------|------|---------|------------|
 | Core Ticketing | ✅ | ✅ | ✅ | ✅ |
 | Email Integration | ✅ | ✅ | ✅ | ✅ |
 | Knowledge Base | ✅ | ✅ | ✅ | ✅ |
 | SLA Management | ⚠️ | ✅ | ✅ | ✅ |
 | Workflow Automation | ⚠️ | ✅ | ✅ | ✅ |
+| Plugin Platform | ✅ | ❌ | ⚠️ | ✅ |
 | Theme Engine | ✅ | ❌ | ⚠️ | ⚠️ |
 | Dark Mode | ✅ | ❌ | ⚠️ | ⚠️ |
 | API Access | ✅ | ⚠️ | ✅ | ✅ |
+| API Documentation | ✅ | ⚠️ | ✅ | ✅ |
+| MFA/2FA | ✅ | ⚠️ | ✅ | ✅ |
 | Multi-Channel | ⚠️ | ⚠️ | ✅ | ✅ |
 | ITSM Suite | ❌ | ✅ | ❌ | ✅ |
-| AI/ML Features | ❌ | ❌ | ✅ | ✅ |
+| AI/ML Features | ⚠️ | ❌ | ✅ | ✅ |
 | Multi-Tenancy | ❌ | ❌ | ✅ | ✅ |
 | High Availability | ❌ | ⚠️ | ✅ | ✅ |
 | Source Code Access | ✅ | ✅ | ❌ | ❌ |

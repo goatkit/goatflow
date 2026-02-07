@@ -1,4 +1,4 @@
-module github.com/gotrs-io/gotrs-ce/sdk/go
+module github.com/goatkit/goatflow/sdk/go
 
 go 1.23.0
 

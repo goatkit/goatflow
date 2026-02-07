@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/services/registry"
+	"github.com/goatkit/goatflow/internal/services/registry"
 )
 
 // DatabaseService extends the base ServiceInterface with database-specific methods.

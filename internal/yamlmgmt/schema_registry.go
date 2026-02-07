@@ -115,7 +115,7 @@ func (sr *SchemaRegistry) registerDefaultSchemas() {
 		Properties: map[string]interface{}{
 			"apiVersion": map[string]interface{}{
 				"type":    "string",
-				"pattern": "^(routes|gotrs\\.io)/v[0-9]+",
+				"pattern": "^(routes|goatflow\\.io)/v[0-9]+",
 			},
 			"kind": map[string]interface{}{
 				"type": "string",

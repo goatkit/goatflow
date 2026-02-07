@@ -1,5 +1,5 @@
 #!/bin/bash
-# GOTRS Compose Wrapper Script
+# GoatFlow Compose Wrapper Script
 # Automatically detects and uses the right compose command
 # Supports: docker compose, docker-compose, podman compose, podman-compose
 
@@ -52,7 +52,7 @@ fi
 
 # If no arguments, show help
 if [ $# -eq 0 ]; then
-    echo "GOTRS Compose Wrapper"
+    echo "GoatFlow Compose Wrapper"
     echo ""
     echo "Usage: ./compose.sh [compose-command] [args...]"
     echo ""

@@ -100,7 +100,7 @@ type TestResult struct {
 
 func main() {
 	if len(os.Args) < 3 {
-		fmt.Println("🧪 GOTRS Route Testing Framework")
+		fmt.Println("🧪 GoatFlow Route Testing Framework")
 		fmt.Println("")
 		fmt.Println("Usage: route-test <routes-dir> <base-url> [options]")
 		fmt.Println("")

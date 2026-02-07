@@ -1,14 +1,14 @@
 services:
   playwright:
     image: mcr.microsoft.com/playwright:v1.55.1-jammy
-    container_name: gotrs-playwright
+    container_name: goatflow-playwright
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     networks:
-      - gotrs-network
+      - goatflow-network
     volumes:
       - ./:/workspace
-      - gotrs_node_modules:/workspace/node_modules
-      - gotrs_cache:/cache
+      - goatflow_node_modules:/workspace/node_modules
+      - goatflow_cache:/cache
     working_dir: /workspace
     command: tail -f /dev/null  # Keep container running
     environment:
@@ -18,10 +18,10 @@ services:
       - NODE_ENV=test
 
 networks:
-  gotrs-network:
+  goatflow-network:
     external: true
-    name: gotrs-ce_gotrs-network
+    name: goatflow_goatflow-network
 
 volumes:
-  gotrs_node_modules:
-  gotrs_cache:
+  goatflow_node_modules:
+  goatflow_cache:

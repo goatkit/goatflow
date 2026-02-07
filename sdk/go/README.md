@@ -1,11 +1,11 @@
-# GOTRS Go SDK
+# GoatFlow Go SDK
 
-The official Go SDK for the GOTRS ticketing system API.
+The official Go SDK for the GoatFlow ticketing system API.
 
 ## Installation
 
 ```bash
-go get github.com/gotrs-io/gotrs-ce/sdk/go
+go get github.com/goatkit/goatflow/sdk/go
 ```
 
 ## Quick Start
@@ -18,13 +18,13 @@ import (
     "fmt"
     "log"
 
-    "github.com/gotrs-io/gotrs-ce/sdk/go"
-    "github.com/gotrs-io/gotrs-ce/sdk/go/types"
+    "github.com/goatkit/goatflow/sdk/go"
+    "github.com/goatkit/goatflow/sdk/go/types"
 )
 
 func main() {
     // Create client with API key
-    client := gotrs.NewClientWithAPIKey("https://your-gotrs-instance.com", "your-api-key")
+    client := goatflow.NewClientWithAPIKey("https://your-goatflow-instance.com", "your-api-key")
 
     ctx := context.Background()
 
@@ -46,22 +46,22 @@ func main() {
 ### API Key (Recommended for server-to-server)
 
 ```go
-client := gotrs.NewClientWithAPIKey("https://gotrs.example.com", "your-api-key")
+client := goatflow.NewClientWithAPIKey("https://goatflow.example.com", "your-api-key")
 ```
 
 ### JWT Token
 
 ```go
 expiresAt := time.Now().Add(24 * time.Hour)
-client := gotrs.NewClientWithJWT("https://gotrs.example.com", "jwt-token", "refresh-token", expiresAt)
+client := goatflow.NewClientWithJWT("https://goatflow.example.com", "jwt-token", "refresh-token", expiresAt)
 ```
 
 ### OAuth2
 
 ```go
-oauth2Auth := gotrs.NewOAuth2Auth("access-token", "refresh-token", "Bearer", expiresAt)
-client := gotrs.NewClient(&gotrs.Config{
-    BaseURL: "https://gotrs.example.com",
+oauth2Auth := goatflow.NewOAuth2Auth("access-token", "refresh-token", "Bearer", expiresAt)
+client := goatflow.NewClient(&goatflow.Config{
+    BaseURL: "https://goatflow.example.com",
     Auth:    oauth2Auth,
 })
 ```
@@ -69,9 +69,9 @@ client := gotrs.NewClient(&gotrs.Config{
 ### Custom Configuration
 
 ```go
-client := gotrs.NewClient(&gotrs.Config{
-    BaseURL:    "https://gotrs.example.com",
-    Auth:       gotrs.NewAPIKeyAuth("your-api-key"),
+client := goatflow.NewClient(&goatflow.Config{
+    BaseURL:    "https://goatflow.example.com",
+    Auth:       goatflow.NewAPIKeyAuth("your-api-key"),
     UserAgent:  "my-app/1.0.0",
     Timeout:    30 * time.Second,
     RetryCount: 3,
@@ -207,15 +207,15 @@ The SDK provides structured error handling:
 ```go
 ticket, err := client.Tickets.Get(ctx, ticketID)
 if err != nil {
-    if gotrs.IsNotFound(err) {
+    if goatflow.IsNotFound(err) {
         fmt.Println("Ticket not found")
         return
     }
-    if gotrs.IsUnauthorized(err) {
+    if goatflow.IsUnauthorized(err) {
         fmt.Println("Authentication failed")
         return
     }
-    if gotrs.IsRateLimited(err) {
+    if goatflow.IsRateLimited(err) {
         fmt.Println("Rate limit exceeded")
         return
     }
@@ -226,11 +226,11 @@ if err != nil {
 
 ### Error Types
 
-- `gotrs.IsNotFound(err)` - 404 Not Found
-- `gotrs.IsUnauthorized(err)` - 401 Unauthorized  
-- `gotrs.IsForbidden(err)` - 403 Forbidden
-- `gotrs.IsRateLimited(err)` - 429 Too Many Requests
-- `gotrs.IsAPIError(err)` - Any API error
+- `goatflow.IsNotFound(err)` - 404 Not Found
+- `goatflow.IsUnauthorized(err)` - 401 Unauthorized  
+- `goatflow.IsForbidden(err)` - 403 Forbidden
+- `goatflow.IsRateLimited(err)` - 429 Too Many Requests
+- `goatflow.IsAPIError(err)` - Any API error
 
 ## Pagination
 
@@ -307,9 +307,9 @@ The SDK automatically handles rate limiting with exponential backoff:
 
 ```go
 // Configure retry behavior
-client := gotrs.NewClient(&gotrs.Config{
-    BaseURL:    "https://gotrs.example.com",
-    Auth:       gotrs.NewAPIKeyAuth("your-api-key"),
+client := goatflow.NewClient(&goatflow.Config{
+    BaseURL:    "https://goatflow.example.com",
+    Auth:       goatflow.NewAPIKeyAuth("your-api-key"),
     RetryCount: 5, // Retry up to 5 times
 })
 ```
@@ -325,8 +325,8 @@ go test ./...
 For integration tests against a live API:
 
 ```bash
-export GOTRS_BASE_URL="https://your-test-instance.com"
-export GOTRS_API_KEY="your-test-api-key"
+export GOATFLOW_BASE_URL="https://your-test-instance.com"
+export GOATFLOW_API_KEY="your-test-api-key"
 go test -tags=integration ./...
 ```
 
@@ -353,6 +353,6 @@ MIT License - see LICENSE file for details.
 
 ## Support
 
-- Documentation: https://docs.gotrs.io/sdk/go
-- Issues: https://github.com/gotrs-io/gotrs-ce/issues
-- Discussions: https://github.com/gotrs-io/gotrs-ce/discussions
+- Documentation: https://docs.goatflow.io/sdk/go
+- Issues: https://github.com/goatkit/goatflow/issues
+- Discussions: https://github.com/goatkit/goatflow/discussions

@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ConfigAdapter provides a simplified interface for accessing GOTRS configuration settings.
+// ConfigAdapter provides a simplified interface for accessing GoatFlow configuration settings.
 // It wraps the VersionManager and provides methods to read config values.
 type ConfigAdapter struct {
 	vm       *VersionManager

@@ -14,7 +14,7 @@ var manifestJSON = `{
   "name":"hello-wasm",
   "version":"1.0.0",
   "description":"A simple hello world WASM plugin",
-  "author":"GOTRS Team",
+  "author":"GoatFlow Team",
   "license":"Apache-2.0",
   "routes":[{"method":"GET","path":"/api/plugins/hello-wasm","handler":"hello","description":"Returns a hello message"}],
   "widgets":[{"id":"hello-wasm-widget","title":"Hello WASM","handler":"widget","location":"dashboard","size":"small","refreshable":true}],

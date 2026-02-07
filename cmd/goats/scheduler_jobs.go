@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/services/scheduler"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/services/scheduler"
 )
 
 func buildSchedulerJobsFromConfig(cfg *config.Config) []*models.ScheduledJob {

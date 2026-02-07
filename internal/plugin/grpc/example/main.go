@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
-	grpcplugin "github.com/gotrs-io/gotrs-ce/internal/plugin/grpc"
+	"github.com/goatkit/goatflow/internal/plugin"
+	grpcplugin "github.com/goatkit/goatflow/internal/plugin/grpc"
 )
 
 // HelloGRPCPlugin is a simple example gRPC plugin.
@@ -23,9 +23,9 @@ func (p *HelloGRPCPlugin) GKRegister() (*plugin.GKRegistration, error) {
 		Name:        "hello-grpc",
 		Version:     "1.0.0",
 		Description: "Example gRPC plugin for GoatKit",
-		Author:      "GOTRS Team",
+		Author:      "GoatFlow Team",
 		License:     "Apache-2.0",
-		Homepage:    "https://gotrs.io",
+		Homepage:    "https://goatflow.io",
 
 		Widgets: []plugin.WidgetSpec{
 			{

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
+	"github.com/goatkit/goatflow/internal/auth"
 )
 
 func main() {

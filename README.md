@@ -1,14 +1,14 @@
-# GOTRS - Modern Open Source Ticketing System
+# GoatFlow - Modern Open Source Ticketing System
 
-[![Security & Code Quality](https://github.com/gotrs-io/gotrs-ce/actions/workflows/security.yml/badge.svg)](https://github.com/gotrs-io/gotrs-ce/actions/workflows/security.yml)
-[![Tests](https://github.com/gotrs-io/gotrs-ce/actions/workflows/test.yml/badge.svg)](https://github.com/gotrs-io/gotrs-ce/actions/workflows/test.yml)
-[![Build & Release](https://github.com/gotrs-io/gotrs-ce/actions/workflows/build.yml/badge.svg)](https://github.com/gotrs-io/gotrs-ce/actions/workflows/build.yml)
-[![codecov](https://codecov.io/github/gotrs-io/gotrs-ce/graph/badge.svg?token=P2ID45BMU4)](https://codecov.io/github/gotrs-io/gotrs-ce)
+[![Security & Code Quality](https://github.com/goatkit/goatflow/actions/workflows/security.yml/badge.svg)](https://github.com/goatkit/goatflow/actions/workflows/security.yml)
+[![Tests](https://github.com/goatkit/goatflow/actions/workflows/test.yml/badge.svg)](https://github.com/goatkit/goatflow/actions/workflows/test.yml)
+[![Build & Release](https://github.com/goatkit/goatflow/actions/workflows/build.yml/badge.svg)](https://github.com/goatkit/goatflow/actions/workflows/build.yml)
+[![codecov](https://codecov.io/github/goatkit/goatflow/graph/badge.svg?token=P2ID45BMU4)](https://codecov.io/github/goatkit/goatflow)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://go.dev/)
 [![SLSA 2](https://slsa.dev/images/gh-badge-level2.svg)](https://slsa.dev)
 
-GOTRS (Go Open Ticket Request System) is a modern, secure, cloud-native ticketing and service management platform built as a next-generation replacement for OTRS. Written in Go with a modular monolith architecture, GOTRS provides enterprise-grade support ticketing, ITSM capabilities, and extensive customization options.
+GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ticketing and service management platform. Although it offers a seamless upgrade path for OTRS installations, it is built as a premier standalone solution for all organizations. Written in Go with a modular monolith architecture, GoatFlow provides enterprise-grade support ticketing, ITSM capabilities, and extensive customization options.
 
 ## Key Features
 
@@ -35,7 +35,7 @@ GOTRS (Go Open Ticket Request System) is a modern, secure, cloud-native ticketin
 
 ### Container Runtime Support
 
-GOTRS is designed for container-first workflows and supports the following runtimes:
+GoatFlow is designed for container-first workflows and supports the following runtimes:
 
 - **Docker Engine**
   - Docker Compose v1 (`docker-compose`) and v2 (Compose plugin: `docker compose`)
@@ -52,8 +52,8 @@ All `make` targets (for example, `make up`, `make down`, `make restart`) automat
 
 ```bash
 # Clone the repository
-git clone https://github.com/gotrs-io/gotrs-ce.git
-cd gotrs-ce
+git clone https://github.com/goatkit/goatflow.git
+cd goatflow
 
 # Set up environment variables (REQUIRED - containers won't start without this!)
 cp .env.development .env    # For local development (includes safe demo credentials)
@@ -115,13 +115,13 @@ make podman-systemd
 
 ### Demo Instance
 
-Try GOTRS without installation at [https://try.gotrs.io](https://try.gotrs.io)
+Try GoatFlow without installation at [https://try.goatflow.io](https://try.goatflow.io)
 
 *Demo data resets daily*
 
 ### Testing
 
-GOTRS has comprehensive test coverage across multiple layers:
+GoatFlow has comprehensive test coverage across multiple layers:
 
 ```bash
 # Fast unit/integration tests (Alpine toolbox, ~1 minute)
@@ -138,7 +138,7 @@ Browser tests use Go + Playwright with the `//go:build playwright` tag and run i
 
 ## Architecture
 
-GOTRS uses a modern, hypermedia-driven architecture that scales from single-server deployments to large enterprise clusters:
+GoatFlow uses a modern, hypermedia-driven architecture that scales from single-server deployments to large enterprise clusters:
 
 - **Core Services**: Authentication, Tickets, Users, Notifications, Workflow Engine
 - **Data Layer**: MariaDB/MySQL (default) or PostgreSQL, Valkey (cache), Zinc (search), S3-compatible storage (attachments)
@@ -158,10 +158,10 @@ Authentication supports an ordered provider list configured via the `Auth::Provi
 - `ldap` (optional; enable with environment variables `LDAP_ENABLED=true` and related LDAP settings)
 - `static` (in-memory users for demos/tests)
 
-Static users are enabled by setting the environment variable `GOTRS_STATIC_USERS` at runtime (NOT committed). Format:
+Static users are enabled by setting the environment variable `GOATFLOW_STATIC_USERS` at runtime (NOT committed). Format:
 
 ```
-GOTRS_STATIC_USERS="alice:password:Agent,bob:secret:Customer,carol:adminpass:Admin"
+GOATFLOW_STATIC_USERS="alice:password:Agent,bob:secret:Customer,carol:adminpass:Admin"
 ```
 
 Notes:
@@ -190,7 +190,7 @@ Implementation note: the `Auth::Providers` list is read at startup via the unifi
 
 ## CI/CD & Quality
 
-GOTRS maintains high code quality and security standards through comprehensive automated testing:
+GoatFlow maintains high code quality and security standards through comprehensive automated testing:
 
 ### 🔒 Security Pipeline
 - **Vulnerability Scanning**: Go (`govulncheck`), NPM dependencies (`npm audit`), container images (Trivy)
@@ -265,7 +265,7 @@ For production deployments, see our comprehensive guides:
 
 ## Migration from OTRS
 
-GOTRS maintains database schema compatibility with OTRS, enabling migration from existing installations. The `gotrs-migrate` tool handles database import from OTRS 5.x and 6.x SQL dumps.
+GoatFlow maintains database schema compatibility with OTRS, enabling migration from existing installations. The `goatflow-migrate` tool handles database import from OTRS 5.x and 6.x SQL dumps.
 
 ```bash
 # Analyze your OTRS dump
@@ -287,7 +287,7 @@ See [docs/MIGRATION.md](docs/MIGRATION.md) for the complete migration guide.
 
 ## Internationalization (i18n)
 
-GOTRS provides comprehensive multi-language support:
+GoatFlow provides comprehensive multi-language support:
 
 ### Language Support
 
@@ -327,7 +327,7 @@ See [i18n Contributing Guide](docs/i18n/CONTRIBUTING.md) for detailed instructio
 
 ## Features Comparison
 
-See [FEATURES.md](docs/FEATURES.md) for a comprehensive comparison matrix of GOTRS vs OTRS, Zendesk, and ServiceNow across 19 feature categories including:
+See [FEATURES.md](docs/FEATURES.md) for a comprehensive comparison matrix of GoatFlow vs OTRS, Zendesk, and ServiceNow across 19 feature categories including:
 
 - ✅ Core ticketing, email integration, knowledge base
 - ✅ Theme engine with 4 built-in themes and dark mode
@@ -352,11 +352,11 @@ See our [Contributing Guide](CONTRIBUTING.md) for details on:
 ## Community
 
 - 💬 [Discord Community](https://discord.gg/kE4XVyX9gF)
--  [Issue Tracker](https://github.com/gotrs-io/gotrs-ce/issues)
+-  [Issue Tracker](https://github.com/goatkit/goatflow/issues)
 
 ## License
 
-GOTRS Community Edition is licensed under the [Apache License 2.0](LICENSE).
+GoatFlow Community Edition is licensed under the [Apache License 2.0](LICENSE).
 
 For enterprise licensing options, see [LICENSING.md](docs/LICENSING.md).
 
@@ -371,25 +371,25 @@ See the [Community](#community) section above for forums, chat, and issue tracki
 - Custom development
 - Training and certification
 
-Contact: support@gotrs.io
+Contact: hello@goatflow.io
 
 ## Security
 
-Security is our top priority. Please report security vulnerabilities to security@gotrs.io.
+Security is our top priority. Please report security vulnerabilities to security@goatflow.io.
 
 See [SECURITY.md](docs/SECURITY.md) for our security policies and practices.
 
 
 ## Legal and Compatibility Notice
 
-GOTRS-CE is an **independent, original implementation** of a ticket management system. While we maintain database compatibility for interoperability purposes, all code is originally written. We are not affiliated with OTRS AG. See [LEGAL.md](LEGAL.md) for important legal information.
+GoatFlow-CE is an **independent, original implementation** of a ticket management system. While we maintain database compatibility for interoperability purposes, all code is originally written. We are not affiliated with OTRS AG. See [LEGAL.md](LEGAL.md) for important legal information.
 
 ## Acknowledgments
 
-GOTRS builds upon decades of open source ticketing system innovation. We acknowledge the contributions of the OTRS community and other open source projects that have paved the way.
+GoatFlow builds upon decades of open source ticketing system innovation. We acknowledge the contributions of the OTRS community and other open source projects that have paved the way.
 
 ---
 
-**GOTRS** - Enterprise Ticketing, Community Driven
+**GoatFlow** - Enterprise Ticketing, Community Driven
 
 Copyright © 2025-2026 Gibbsoft Ltd and Contributors

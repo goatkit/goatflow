@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
+	"github.com/goatkit/goatflow/internal/routing"
 )
 
 // dynamicEngine holds only YAML routes (selective mode) and can be swapped without impacting static routes.

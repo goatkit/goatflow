@@ -65,7 +65,7 @@ volumes:
       o: bind
       type: none
       # Mount to a specific production data directory
-      device: /var/lib/gotrs/postgres
+      device: /var/lib/goatflow/postgres
 
 # Embedded Caddyfile configuration
 configs:

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // SystemMaintenanceRepository handles database operations for system maintenance records.

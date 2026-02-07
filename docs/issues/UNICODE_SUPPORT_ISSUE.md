@@ -1,7 +1,7 @@
 # Unicode Support Issue - Article Content
 
 ## Problem
-GOTRS cannot save articles containing Unicode characters (emojis, international characters) when using MySQL/MariaDB with `utf8mb3` character set.
+GoatFlow cannot save articles containing Unicode characters (emojis, international characters) when using MySQL/MariaDB with `utf8mb3` character set.
 
 **Error:** `Incorrect string value: '\xF0\x9F\x9A\x80...' for column 'otrs.article_data_mime.a_body'`
 

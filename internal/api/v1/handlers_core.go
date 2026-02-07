@@ -7,15 +7,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/middleware"
 )
 
 // handleHealth returns API health status.
 func (router *APIRouter) handleHealth(c *gin.Context) {
 	sendSuccess(c, gin.H{
 		"status":    "healthy",
-		"service":   "gotrs-api",
+		"service":   "goatflow-api",
 		"version":   "1.0.0",
 		"timestamp": time.Now().UTC(),
 	})
@@ -24,7 +24,7 @@ func (router *APIRouter) handleHealth(c *gin.Context) {
 // handleAPIInfo returns API information.
 func (router *APIRouter) handleAPIInfo(c *gin.Context) {
 	sendSuccess(c, gin.H{
-		"name":        "GOTRS API",
+		"name":        "GoatFlow API",
 		"version":     "1.0.0",
 		"description": "Modern Open Source Ticketing System API",
 		"endpoints": gin.H{

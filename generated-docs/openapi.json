@@ -9,7 +9,7 @@
   },
   "info": {
     "description": "API documentation generated from YAML routing definitions",
-    "title": "GOTRS API",
+    "title": "GoatFlow API",
     "version": "1.0.0"
   },
   "openapi": "3.0.0",

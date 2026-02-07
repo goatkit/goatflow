@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Ticket #{{ ticket.tn }} - {{ ticket.title }} - GOTRS{% endblock %}
+{% block title %}Ticket #{{ ticket.tn }} - {{ ticket.title }} - GoatFlow{% endblock %}
 
 {% block styles %}
 <style>

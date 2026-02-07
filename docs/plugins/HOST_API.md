@@ -1,6 +1,6 @@
 # Host API Reference
 
-The Host API is how plugins interact with GOTRS. All functions are available to both WASM and gRPC plugins.
+The Host API is how plugins interact with GoatFlow. All functions are available to both WASM and gRPC plugins.
 
 ## Database
 

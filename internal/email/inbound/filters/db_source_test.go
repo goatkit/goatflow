@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/email/inbound/connector"
 	_ "github.com/lib/pq"
 )
 
@@ -66,21 +66,21 @@ func seedFilters(t *testing.T, db *sql.DB) {
 
 	// 001 - VIP routing runs first (has stop=true)
 	insertFilter(t, db, "001-VIPRouting", true, "Match", "From", ".*@vip\\.example\\.com", false)
-	insertFilter(t, db, "001-VIPRouting", true, "Set", "X-GOTRS-Queue", "VIP Support", false)
-	insertFilter(t, db, "001-VIPRouting", true, "Set", "X-GOTRS-PriorityID", "4", false)
+	insertFilter(t, db, "001-VIPRouting", true, "Set", "X-GoatFlow-Queue", "VIP Support", false)
+	insertFilter(t, db, "001-VIPRouting", true, "Set", "X-GoatFlow-PriorityID", "4", false)
 
 	// 002 - Spam filter runs second (won't run if VIP matches due to stop flag)
 	insertFilter(t, db, "002-SpamFilter", false, "Match", "Subject", "(?i)buy now|free offer", false)
-	insertFilter(t, db, "002-SpamFilter", false, "Set", "X-GOTRS-Ignore", "1", false)
+	insertFilter(t, db, "002-SpamFilter", false, "Set", "X-GoatFlow-Ignore", "1", false)
 
 	// 003 - Not from spammer filter
 	insertFilter(t, db, "003-NotFromSpammer", false, "Match", "From", "spammer@bad\\.com", true) // NOT match
-	insertFilter(t, db, "003-NotFromSpammer", false, "Set", "X-GOTRS-Queue", "Clean Queue", false)
+	insertFilter(t, db, "003-NotFromSpammer", false, "Set", "X-GoatFlow-Queue", "Clean Queue", false)
 
 	// 004 - Multi-match filter (requires all conditions)
 	insertFilter(t, db, "004-MultiMatch", false, "Match", "From", ".*@example\\.com", false)
 	insertFilter(t, db, "004-MultiMatch", false, "Match", "Subject", "\\[URGENT\\]", false)
-	insertFilter(t, db, "004-MultiMatch", false, "Set", "X-GOTRS-PriorityID", "5", false)
+	insertFilter(t, db, "004-MultiMatch", false, "Set", "X-GoatFlow-PriorityID", "5", false)
 }
 
 func insertFilter(t *testing.T, db *sql.DB, name string, stop bool, fType, key, value string, not bool) {
@@ -397,7 +397,7 @@ func defaultUser(driver string) string {
 	case "mysql", "mariadb":
 		return "otrs"
 	default:
-		return "gotrs_user"
+		return "goatflow_user"
 	}
 }
 
@@ -423,7 +423,7 @@ func defaultDBName(driver string) string {
 	case "mysql", "mariadb":
 		return "otrs_test"
 	default:
-		return "gotrs_test"
+		return "goatflow_test"
 	}
 }
 

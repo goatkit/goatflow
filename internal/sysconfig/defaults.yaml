@@ -2,5 +2,5 @@
 CustomerPortal::Enabled: "true"
 CustomerPortal::LoginRequired: "true"
 CustomerPortal::Title: "Customer Portal"
-CustomerPortal::FooterText: "Powered by GOTRS"
+CustomerPortal::FooterText: "Powered by GoatFlow"
 CustomerPortal::LandingPage: "/customer/tickets"

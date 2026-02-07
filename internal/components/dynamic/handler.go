@@ -24,11 +24,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v3"
 
-	"github.com/gotrs-io/gotrs-ce/internal/components/lambda"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
-	"github.com/gotrs-io/gotrs-ce/internal/mailaccountmeta"
-	"github.com/gotrs-io/gotrs-ce/internal/middleware"
+	"github.com/goatkit/goatflow/internal/components/lambda"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/mailaccountmeta"
+	"github.com/goatkit/goatflow/internal/middleware"
 )
 
 // Format: sha256$salt$hash (similar to OTRS format).

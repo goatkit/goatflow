@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/repository"
 )
 
 func resolveTicketState(repo *repository.TicketRepository, nextState string, nextStateID int) (int, *models.TicketState, error) {

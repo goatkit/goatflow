@@ -11,9 +11,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 // Simple global handler registry to decouple YAML route loader from hardcoded map.
@@ -158,13 +158,13 @@ func ensureCoreHandlers() {
 			c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
 			c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
 			c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
-			c.SetCookie("gotrs_customer_logged_in", "", -1, "/", "", false, false)
+			c.SetCookie("goatflow_customer_logged_in", "", -1, "/", "", false, false)
 			// Also clear legacy cookies for backwards compatibility
 			c.SetCookie("auth_token", "", -1, "/", "", false, true)
 			c.SetCookie("access_token", "", -1, "/", "", false, true)
 			c.SetCookie("token", "", -1, "/", "", false, true)
 			c.SetCookie("session_id", "", -1, "/", "", false, true)
-			c.SetCookie("gotrs_logged_in", "", -1, "/", "", false, false)
+			c.SetCookie("goatflow_logged_in", "", -1, "/", "", false, false)
 			c.Header("HX-Redirect", "/customer/login")
 			c.Redirect(http.StatusSeeOther, "/customer/login")
 		},
@@ -377,7 +377,7 @@ func ensureCoreHandlers() {
 			})
 		},
 		"handleMetrics": func(c *gin.Context) {
-			c.String(http.StatusOK, "# HELP gotrs_up GOTRS is up\n# TYPE gotrs_up gauge\ngotrs_up 1\n")
+			c.String(http.StatusOK, "# HELP goatflow_up GoatFlow is up\n# TYPE goatflow_up gauge\ngoatflow_up 1\n")
 		},
 
 		// Redirect helpers

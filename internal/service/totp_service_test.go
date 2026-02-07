@@ -36,7 +36,7 @@ func TestTOTP_BruteForceProtection_InvalidCodesRejected(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 	userID := 123
 
 	// Setup: user has 2FA enabled with known secret
@@ -65,7 +65,7 @@ func TestTOTP_ValidCodeAccepted(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 	userID := 123
 	secret := "JBSWY3DPEHPK3PXP"
 
@@ -89,7 +89,7 @@ func TestTOTP_RecoveryCodeSingleUse(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 	userID := 123
 	secret := "JBSWY3DPEHPK3PXP"
 	recoveryCodes := []string{"abc12345", "def67890", "ghi11111"}
@@ -129,7 +129,7 @@ func TestTOTP_RecoveryCodesCaseInsensitive(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 	userID := 123
 	secret := "JBSWY3DPEHPK3PXP"
 	recoveryCodes := []string{"abcd1234"}
@@ -158,7 +158,7 @@ func TestTOTP_NoTokenWithoutValidCode(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 	userID := 123
 	secret := "JBSWY3DPEHPK3PXP"
 
@@ -189,7 +189,7 @@ func TestTOTP_CrossUserValidationFails(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 
 	// User A's secret
 	userAID := 100
@@ -230,7 +230,7 @@ func TestTOTP_DisableRequiresValidCode(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 	userID := 123
 	secret := "JBSWY3DPEHPK3PXP"
 
@@ -251,7 +251,7 @@ func TestTOTP_DisableSucceedsWithValidCode(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 	userID := 123
 	secret := "JBSWY3DPEHPK3PXP"
 	validCode := generateValidCode(secret)
@@ -281,7 +281,7 @@ func TestTOTP_SetupReturnsSecretOnlyOnce(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 	userID := 123
 
 	// First setup call - should return secret
@@ -314,7 +314,7 @@ func TestTOTP_ConcurrentEnableDisable(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 	userID := 123
 	secret := "JBSWY3DPEHPK3PXP"
 
@@ -355,7 +355,7 @@ func TestTOTP_CustomerBackendIsolation(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 
 	// Agent user ID
 	agentUserID := 100
@@ -382,7 +382,7 @@ func TestTOTP_CustomerCannotUseAgentCode(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 
 	// Agent has 2FA with this secret
 	agentSecret := "AGENTSECRETAGENT"
@@ -414,7 +414,7 @@ func TestTOTP_EmptyCodeRejected(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 	userID := 123
 	secret := "JBSWY3DPEHPK3PXP"
 
@@ -433,7 +433,7 @@ func TestTOTP_NoSecretConfigured(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 	userID := 123
 
 	// No secret in DB
@@ -451,7 +451,7 @@ func TestTOTP_RecoveryCodesGenerated(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
-	svc := NewTOTPService(db, "GOTRS")
+	svc := NewTOTPService(db, "GoatFlow")
 	userID := 123
 
 	// Setup expectations

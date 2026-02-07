@@ -5,7 +5,7 @@
 # Access control:
 #   - Default: public (no auth required)
 #   - To require login: change middleware to [unified_auth]
-#   - To disable: set GOTRS_SWAGGER_ENABLED=false or enabled: false
+#   - To disable: set GOATFLOW_SWAGGER_ENABLED=false or enabled: false
 #
 # Dark mode: enabled by default (handleSwaggerDark)
 # Light mode: change handler to handleSwagger
@@ -25,4 +25,4 @@ spec:
       method: GET
       handler: handleSwaggerDark
       description: "Serve Swagger UI for API documentation (dark mode)"
-      condition: "${GOTRS_SWAGGER_ENABLED:true}"
+      condition: "${GOATFLOW_SWAGGER_ENABLED:true}"

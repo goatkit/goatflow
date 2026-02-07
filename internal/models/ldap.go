@@ -59,7 +59,7 @@ type LDAPSyncHistory struct {
 	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
 }
 
-// LDAPUserMapping represents mapping between LDAP and GOTRS users.
+// LDAPUserMapping represents mapping between LDAP and GoatFlow users.
 type LDAPUserMapping struct {
 	ID             int       `json:"id" db:"id"`
 	UserID         int       `json:"user_id" db:"user_id"`
@@ -75,7 +75,7 @@ type LDAPUserMapping struct {
 	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
 }
 
-// LDAPGroupMapping represents mapping between LDAP and GOTRS groups.
+// LDAPGroupMapping represents mapping between LDAP and GoatFlow groups.
 type LDAPGroupMapping struct {
 	ID             int       `json:"id" db:"id"`
 	GroupID        int       `json:"group_id" db:"group_id"`

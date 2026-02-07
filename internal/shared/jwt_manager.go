@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/config"
+	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/config"
 )
 
 var (

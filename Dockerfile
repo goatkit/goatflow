@@ -107,17 +107,17 @@ ARG GIT_COMMIT=unknown
 ARG GIT_BRANCH=unknown
 ARG BUILD_DATE=unknown
 
-# Build with optimizations and cache mounts
+# Build with optimizations
 # -ldflags injects version info and strips debug info for smaller binary
+# -p uses all available cores for parallel compilation
 RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=1 GOOS=linux \
-    go build -ldflags="-w -s \
-        -X github.com/gotrs-io/gotrs-ce/internal/version.Version=${VERSION} \
-        -X github.com/gotrs-io/gotrs-ce/internal/version.GitCommit=${GIT_COMMIT} \
-        -X github.com/gotrs-io/gotrs-ce/internal/version.GitBranch=${GIT_BRANCH} \
-        -X github.com/gotrs-io/gotrs-ce/internal/version.BuildDate=${BUILD_DATE}" \
-    -a -installsuffix cgo -o goats ./cmd/goats
+    go build -p $(nproc) -ldflags="-w -s \
+        -X github.com/goatkit/goatflow/internal/version.Version=${VERSION} \
+        -X github.com/goatkit/goatflow/internal/version.GitCommit=${GIT_COMMIT} \
+        -X github.com/goatkit/goatflow/internal/version.GitBranch=${GIT_BRANCH} \
+        -X github.com/goatkit/goatflow/internal/version.BuildDate=${BUILD_DATE}" \
+    -installsuffix cgo -o goats ./cmd/goats
 
 # ============================================
 # Stage 4: Export build artifacts
@@ -223,8 +223,8 @@ COPY --from=frontend --chown=appuser:appgroup /build/static/css/output.css ./sta
 COPY --from=frontend --chown=appuser:appgroup /build/static/js/tiptap.min.js ./static/js/
 
 # Plugin system defaults (can be overridden in compose.yml)
-ENV GOTRS_PLUGIN_LAZY_LOAD=true
-ENV GOTRS_PLUGIN_HOT_RELOAD=false
+ENV GOATFLOW_PLUGIN_LAZY_LOAD=true
+ENV GOATFLOW_PLUGIN_HOT_RELOAD=false
 
 # Expose port
 EXPOSE 8080

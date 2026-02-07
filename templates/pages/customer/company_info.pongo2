@@ -1,5 +1,5 @@
 {% extends "layouts/base.pongo2" %}
-{% block title %}{{ t("customer.placeholder_pages.company_info_title") }} - GOTRS{% endblock %}
+{% block title %}{{ t("customer.placeholder_pages.company_info_title") }} - GoatFlow{% endblock %}
 {% block content %}
 <div class="container mx-auto py-8">
     <h1 class="text-2xl font-bold gk-heading mb-4"><span class="gk-text-gradient">{{ t("customer.placeholder_pages.company_info_title") }}</span></h1>

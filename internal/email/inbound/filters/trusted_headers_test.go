@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/email/inbound/connector"
 )
 
 func TestTrustedHeadersFilterAppliesOverrides(t *testing.T) {
 	filter := NewTrustedHeadersFilter(nil)
-	msg := &connector.FetchedMessage{Raw: []byte("X-OTRS-QueueName: Support\r\nX-GOTRS-QueueID: 12\r\nX-OTRS-PriorityID: 5\r\nX-GOTRS-Title: =?utf-8?B?VGVzdA==?=\r\nX-OTRS-CustomerUserID: vip@example.com\r\nX-OTRS-CustomerID: VIP\r\n\r\nbody")}
+	msg := &connector.FetchedMessage{Raw: []byte("X-OTRS-QueueName: Support\r\nX-GoatFlow-QueueID: 12\r\nX-OTRS-PriorityID: 5\r\nX-GoatFlow-Title: =?utf-8?B?VGVzdA==?=\r\nX-OTRS-CustomerUserID: vip@example.com\r\nX-OTRS-CustomerID: VIP\r\n\r\nbody")}
 	msg.WithAccount(connector.Account{AllowTrustedHeaders: true})
 	ctx := &MessageContext{Account: msg.AccountSnapshot(), Message: msg, Annotations: map[string]any{}}
 	if err := filter.Apply(context.Background(), ctx); err != nil {
@@ -37,7 +37,7 @@ func TestTrustedHeadersFilterAppliesOverrides(t *testing.T) {
 
 func TestTrustedHeadersFilterSkipsWhenNotAllowed(t *testing.T) {
 	filter := NewTrustedHeadersFilter(nil)
-	msg := &connector.FetchedMessage{Raw: []byte("X-GOTRS-Queue: Support\r\n\r\nBody")}
+	msg := &connector.FetchedMessage{Raw: []byte("X-GoatFlow-Queue: Support\r\n\r\nBody")}
 	msg.WithAccount(connector.Account{AllowTrustedHeaders: false})
 	ctx := &MessageContext{Account: msg.AccountSnapshot(), Message: msg, Annotations: map[string]any{}}
 	if err := filter.Apply(context.Background(), ctx); err != nil {
@@ -67,14 +67,14 @@ func TestTrustedHeadersFilterCapturesIgnoreFlag(t *testing.T) {
 }
 
 func TestTrustedHeadersFilterCapturesCustomHeaders(t *testing.T) {
-	filter := NewTrustedHeadersFilter(nil, "X-GOTRS-Tag", "x-custom-flag")
-	msg := &connector.FetchedMessage{Raw: []byte("X-GOTRS-Tag: vip\r\nx-custom-flag: true\r\n\r\nBody")}
+	filter := NewTrustedHeadersFilter(nil, "X-GoatFlow-Tag", "x-custom-flag")
+	msg := &connector.FetchedMessage{Raw: []byte("X-GoatFlow-Tag: vip\r\nx-custom-flag: true\r\n\r\nBody")}
 	msg.WithAccount(connector.Account{AllowTrustedHeaders: true})
 	ctx := &MessageContext{Account: msg.AccountSnapshot(), Message: msg, Annotations: map[string]any{}}
 	if err := filter.Apply(context.Background(), ctx); err != nil {
 		t.Fatalf("Apply returned error: %v", err)
 	}
-	if got := ctx.Annotations[annotationTrustedHeaderKey("X-GOTRS-Tag")]; got != "vip" {
+	if got := ctx.Annotations[annotationTrustedHeaderKey("X-GoatFlow-Tag")]; got != "vip" {
 		t.Fatalf("expected custom header tag, got %v", got)
 	}
 	if got := ctx.Annotations[annotationTrustedHeaderKey("x-custom-flag")]; got != "true" {

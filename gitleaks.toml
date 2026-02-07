@@ -1,7 +1,7 @@
-# Gitleaks Configuration for GOTRS
+# Gitleaks Configuration for GoatFlow
 # https://github.com/gitleaks/gitleaks
 
-title = "GOTRS Gitleaks Configuration"
+title = "GoatFlow Gitleaks Configuration"
 
 # Extend the base configuration
 [extend]
@@ -100,21 +100,21 @@ paths = [
     '''README\.md$''',
 ]
 
-# Custom rules for GOTRS-specific patterns
+# Custom rules for GoatFlow-specific patterns
 [[rules]]
-id = "gotrs-jwt-secret"
-description = "GOTRS JWT Secret"
+id = "goatflow-jwt-secret"
+description = "GoatFlow JWT Secret"
 regex = '''JWT_SECRET\s*=\s*["']?[A-Za-z0-9+/=]{32,}["']?'''
-tags = ["jwt", "secret", "gotrs"]
+tags = ["jwt", "secret", "goatflow"]
 
 [[rules]]
-id = "gotrs-db-password"
-description = "GOTRS Database Password"
+id = "goatflow-db-password"
+description = "GoatFlow Database Password"
 regex = '''DB_PASSWORD\s*=\s*["']?[^"'\s]{8,}["']?'''
-tags = ["database", "password", "gotrs"]
+tags = ["database", "password", "goatflow"]
 
 [[rules]]
-id = "gotrs-api-key"
-description = "GOTRS API Key"
-regex = '''GOTRS_API_KEY\s*=\s*["']?[A-Za-z0-9]{32,}["']?'''
-tags = ["api", "key", "gotrs"]
+id = "goatflow-api-key"
+description = "GoatFlow API Key"
+regex = '''GOATFLOW_API_KEY\s*=\s*["']?[A-Za-z0-9]{32,}["']?'''
+tags = ["api", "key", "goatflow"]

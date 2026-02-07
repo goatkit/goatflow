@@ -10,6 +10,7 @@ endif
 # Fallback if .env doesn't exist or doesn't define GO_IMAGE
 GO_IMAGE ?= golang:1.24.11-alpine
 export GO_IMAGE
+TOOLBOX_IMAGE ?= ghcr.io/goatkit/goatflow/toolbox:latest
 
 # Version information from git (used in docker build)
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -40,7 +41,7 @@ routes-baseline-update:
 	@[ -f generated/routes-manifest.json ] || (echo "manifest missing; run server/tests first" && exit 1)
 	cp generated/routes-manifest.json generated/routes-manifest.baseline.json
 	@echo "Updated route manifest baseline."
-# GOTRS Makefile - Docker/Podman compatible development
+# GoatFlow Makefile - Docker/Podman compatible development
 
 # Detect container runtime and compose command (single source of truth)
 # Allow override via environment (e.g., CI sets CONTAINER_CMD=docker)
@@ -111,14 +112,14 @@ export COMPOSE_CMD
 TOOLBOX_GO := $(MAKE) toolbox-exec ARGS=
 
 # Cache mount: always use named Docker volume at /cache (not overlaid on workspace)
-MOD_CACHE_MOUNT := -v gotrs_cache:/cache
+MOD_CACHE_MOUNT := -v goatflow_cache:/cache
 
 # Helper targets for cache volumes
 .PHONY: cache-prune
 cache-prune:
-	@echo "Pruning shared cache volume (gotrs_cache)..."
-	@$(CONTAINER_CMD) volume rm -f gotrs_cache >/dev/null 2>&1 || true
-	@$(CONTAINER_CMD) volume rm -f gotrs_go_build_cache gotrs_go_mod_cache gotrs_golangci_cache >/dev/null 2>&1 || true
+	@echo "Pruning shared cache volume (goatflow_cache)..."
+	@$(CONTAINER_CMD) volume rm -f goatflow_cache >/dev/null 2>&1 || true
+	@$(CONTAINER_CMD) volume rm -f goatflow_go_build_cache goatflow_go_mod_cache goatflow_golangci_cache >/dev/null 2>&1 || true
 	@echo "Done."
 
 # Common run flags
@@ -243,7 +244,7 @@ test-legacy: toolbox-build
 		-e TEST_DB_NAME=$(TEST_DB_NAME) \
 		-e TEST_DB_USER=$(TEST_DB_USER) \
 		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
-		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
+		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		-e BASE_URL=http://localhost:$(BACKEND_PORT) \
 		-e TEST_BACKEND_BASE_URL=http://localhost:$(TEST_BACKEND_PORT) \
@@ -251,7 +252,7 @@ test-legacy: toolbox-build
 		-e TEST_BACKEND_SERVICE_HOST=localhost \
 		-e TEST_BACKEND_PORT=$(TEST_BACKEND_PORT) \
 		-e TEST_BACKEND_CONTAINER_PORT=$(TEST_BACKEND_PORT) \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
 		echo "Running template tests (fail-fast)"; go test -count=1 -timeout=1m -buildvcs=false ./internal/template/...; \
 		CORE_PKGS=$$(go list ./... | rg -v "tests/e2e|tests/integration|internal/email/integration|internal/template"); \
@@ -300,8 +301,8 @@ synthesize-credentials:
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
-		gotrs-toolbox:latest \
-		gotrs synthesize --test-data-only
+		$(TOOLBOX_IMAGE) \
+		goatflow synthesize --test-data-only
 
 # Show development credentials from generated SQL file
 show-dev-creds:
@@ -324,12 +325,12 @@ db-apply-test-data:
 		if [ -n "$(ADMIN_PASSWORD)" ]; then \
 			printf "🔐 Applying admin password from environment (MariaDB)...\n"; \
 			$(CONTAINER_CMD) run --rm \
-				--network gotrs-ce_gotrs-network \
+				--network goatflow_goatflow-network \
 				-e DB_DRIVER=$(DB_DRIVER) -e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 				-e DB_NAME=$(DB_NAME) -e DB_USER=$(DB_USER) -e DB_PASSWORD=$(DB_PASSWORD) \
 				-e ADMIN_PASSWORD=$(ADMIN_PASSWORD) -e ADMIN_USER=$(ADMIN_USER) \
-				gotrs-toolbox:latest \
-				sh -c 'gotrs reset-user --username="$${ADMIN_USER:-root@localhost}" --password="$$ADMIN_PASSWORD" --enable'; \
+				$(TOOLBOX_IMAGE) \
+				sh -c 'goatflow reset-user --username="$${ADMIN_USER:-root@localhost}" --password="$$ADMIN_PASSWORD" --enable'; \
 			printf "✅ Root user enabled with configured credentials.\n"; \
 		else \
 			printf "⚠️  root@localhost remains disabled. Run 'make reset-password' after choosing a password.\n"; \
@@ -350,8 +351,8 @@ synthesize:
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
-		gotrs-toolbox:latest \
-		gotrs synthesize $(SYNTH_ARGS)
+		$(TOOLBOX_IMAGE) \
+		goatflow synthesize $(SYNTH_ARGS)
 	@if [ -z "$(SYNTH_ARGS)" ]; then \
 		echo "📝 Test credentials saved to test_credentials.csv" >&2; \
 	fi
@@ -371,8 +372,8 @@ rotate-secrets:
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
-		gotrs-toolbox:latest \
-		gotrs synthesize --rotate-secrets
+		$(TOOLBOX_IMAGE) \
+		goatflow synthesize --rotate-secrets
 
 # Force regenerate .env file (runs in container)
 synthesize-force:
@@ -382,8 +383,8 @@ synthesize-force:
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
-		gotrs-toolbox:latest \
-		gotrs synthesize --force
+		$(TOOLBOX_IMAGE) \
+		goatflow synthesize --force
 
 # Generate only test data (SQL and CSV)
 gen-test-data:
@@ -393,8 +394,8 @@ gen-test-data:
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
-		gotrs-toolbox:latest \
-		gotrs synthesize --test-data-only
+		$(TOOLBOX_IMAGE) \
+		goatflow synthesize --test-data-only
 
 # Generate Kubernetes secrets from template with secure random values
 k8s-secrets:
@@ -404,7 +405,7 @@ k8s-secrets:
 # =============================================================================
 # Helm Chart Targets
 # =============================================================================
-# Uses the gotrs_cache Docker volume mounted at /cache
+# Uses the goatflow_cache Docker volume mounted at /cache
 # XDG_CACHE_HOME is already set to /cache/xdg in docker-compose.yml
 
 # Fix cache permissions if any dir is root-owned (runs as root in container to fix ownership)
@@ -412,7 +413,7 @@ k8s-secrets:
 .PHONY: cache-fix
 cache-fix:
 	@printf "\n🔧 Fixing cache permissions in Docker volume...\n"
-	@$(CONTAINER_CMD) run --rm -v gotrs-ce_gotrs_cache:/cache alpine:3.19 \
+	@$(CONTAINER_CMD) run --rm -v goatflow_goatflow_cache:/cache alpine:3.19 \
 		sh -c 'chown -R 1000:1000 /cache && mkdir -p /cache/go-build /cache/go-mod /cache/xdg/helm/repository /cache/xdg/helm/cache /cache/xdg/helm/config /cache/bun /cache/golangci-lint && chown -R 1000:1000 /cache'
 	@printf "✅ Cache permissions fixed\n"
 
@@ -423,51 +424,51 @@ helm-setup: toolbox-build
 	@$(MAKE) toolbox-exec ARGS="helm repo add valkey https://valkey.io/valkey-helm/ 2>/dev/null || true && helm repo update"
 	@printf "✅ Helm repos configured\n"
 
-# Run helm command in toolbox (usage: make helm ARGS="lint charts/gotrs")
+# Run helm command in toolbox (usage: make helm ARGS="lint charts/goatflow")
 .PHONY: helm
 helm: toolbox-build
-	@[ -n "$(ARGS)" ] || (echo "Usage: make helm ARGS=\"<helm command>\"" && echo "Examples:" && echo "  make helm ARGS=\"lint charts/gotrs\"" && echo "  make helm ARGS=\"template gotrs charts/gotrs\"" && echo "  make helm ARGS=\"dependency update charts/gotrs\"" && exit 2)
+	@[ -n "$(ARGS)" ] || (echo "Usage: make helm ARGS=\"<helm command>\"" && echo "Examples:" && echo "  make helm ARGS=\"lint charts/goatflow\"" && echo "  make helm ARGS=\"template goatflow charts/goatflow\"" && echo "  make helm ARGS=\"dependency update charts/goatflow\"" && exit 2)
 	@$(MAKE) toolbox-exec ARGS="helm $(ARGS)"
 
-# Lint the GOTRS Helm chart
+# Lint the GoatFlow Helm chart
 .PHONY: helm-lint
 helm-lint: helm-setup
 	@printf "\n🔍 Linting Helm chart...\n"
-	@$(MAKE) toolbox-exec ARGS="helm lint charts/gotrs"
+	@$(MAKE) toolbox-exec ARGS="helm lint charts/goatflow"
 
 # Render Helm chart templates (dry-run)
 .PHONY: helm-template
 helm-template: helm-deps
 	@printf "\n📄 Rendering Helm chart templates...\n"
-	@$(MAKE) toolbox-exec ARGS="helm template gotrs charts/gotrs"
+	@$(MAKE) toolbox-exec ARGS="helm template goatflow charts/goatflow"
 
 # Render Helm chart with PostgreSQL values
 .PHONY: helm-template-pg
 helm-template-pg: helm-deps
 	@printf "\n📄 Rendering Helm chart with PostgreSQL...\n"
-	@$(MAKE) toolbox-exec ARGS="helm template gotrs charts/gotrs -f charts/gotrs/values-postgresql.yaml"
+	@$(MAKE) toolbox-exec ARGS="helm template goatflow charts/goatflow -f charts/goatflow/values-postgresql.yaml"
 
 # Update Helm chart dependencies (valkey subchart)
 .PHONY: helm-deps
 helm-deps: helm-setup
 	@printf "\n📦 Updating Helm chart dependencies...\n"
-	@$(MAKE) toolbox-exec ARGS="helm dependency update charts/gotrs"
+	@$(MAKE) toolbox-exec ARGS="helm dependency update charts/goatflow"
 
 # Package the Helm chart for distribution
 .PHONY: helm-package
 helm-package: helm-deps
 	@printf "\n📦 Packaging Helm chart...\n"
-	@$(MAKE) toolbox-exec ARGS="helm package charts/gotrs -d dist"
+	@$(MAKE) toolbox-exec ARGS="helm package charts/goatflow -d dist"
 
 # =============================================================================
 
 # Build toolbox image
 toolbox-build: build-artifacts
-	@printf "\n🔧 Building GOTRS toolbox container...\n"
+	@printf "\n🔧 Building GoatFlow toolbox container...\n"
 	@if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
 		echo "⚠️  compose not available; falling back to direct docker build"; \
 		command -v docker >/dev/null 2>&1 || (echo "docker not installed" && exit 1); \
-		docker build --build-arg GO_IMAGE=$(GO_IMAGE) -f Dockerfile.toolbox -t gotrs-toolbox:latest .; \
+		docker build --build-arg GO_IMAGE=$(GO_IMAGE) -f Dockerfile.toolbox -t $(TOOLBOX_IMAGE) .; \
 	else \
 		if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
 			COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) build $(COMPOSE_BUILD_FLAGS) toolbox; \
@@ -528,7 +529,7 @@ http-call:
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		--network gotrs-ce_gotrs-network \
+		--network goatflow_goatflow-network \
 		-e METHOD="$(METHOD)" \
 		-e ENDPOINT="$(ENDPOINT)" \
 		-e BODY="$(BODY)" \
@@ -537,7 +538,7 @@ http-call:
 		-e AUTH_TOKEN="$(AUTH_TOKEN)" \
 		-e LOGIN="$(or $(LOGIN),$(ADMIN_USER))" \
 		-e PASSWORD="$(or $(PASSWORD),$(ADMIN_PASSWORD))" \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'chmod +x scripts/http-call.sh 2>/dev/null || true; scripts/http-call.sh'
 
 # File upload with JWT auth
@@ -553,8 +554,8 @@ api-upload:
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		--network gotrs-ce_gotrs-network \
-		gotrs-toolbox:latest \
+		--network goatflow_goatflow-network \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'chmod +x scripts/api-upload.sh; BACKEND_URL=$${BACKEND_URL:-http://backend:8080} scripts/api-upload.sh '"$(ENDPOINT)"' '"$(FILE)"''; \
 	fi
 
@@ -571,7 +572,7 @@ toolbox-compile:
 		-u "$$UID:$$GID" \
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go version && go build -buildvcs=false ./...'
 
 # Compile only API and goats (faster)
@@ -585,7 +586,7 @@ toolbox-compile-api:
 		-u "$$UID:$$GID" \
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go version && go build -buildvcs=false ./internal/api ./cmd/goats'
 
 # Compile the main goats binary in container
@@ -599,21 +600,21 @@ compile: toolbox-build
 		-v "$$(pwd)/bin:/workspace/bin$(VZ)" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && mkdir -p bin && go build -buildvcs=false -ldflags="-w -s" -o bin/goats ./cmd/goats'
 	@printf "✅ Binary compiled to bin/goats\n"
 # Safe compile without bind-mounts (avoids SELinux relabel issues)
 .PHONY: compile-safe
 compile-safe: toolbox-build
 	@printf "🔒 Compiling goats binary in isolated toolbox container...\n"
-	-@$(CONTAINER_CMD) rm -f gotrs-compile >/dev/null 2>&1 || true
-	@$(CONTAINER_CMD) create --name gotrs-compile gotrs-toolbox:latest sleep infinity >/dev/null
-	@$(CONTAINER_CMD) cp . gotrs-compile:/workspace
-	@$(CONTAINER_CMD) start gotrs-compile >/dev/null
-	@$(CONTAINER_CMD) exec gotrs-compile bash -lc 'export PATH=/usr/local/go/bin:$$PATH && mkdir -p /workspace/bin && go build -buildvcs=false -ldflags="-w -s" -o /workspace/bin/goats ./cmd/goats'
+	-@$(CONTAINER_CMD) rm -f goatflow-compile >/dev/null 2>&1 || true
+	@$(CONTAINER_CMD) create --name goatflow-compile $(TOOLBOX_IMAGE) sleep infinity >/dev/null
+	@$(CONTAINER_CMD) cp . goatflow-compile:/workspace
+	@$(CONTAINER_CMD) start goatflow-compile >/dev/null
+	@$(CONTAINER_CMD) exec goatflow-compile bash -lc 'export PATH=/usr/local/go/bin:$$PATH && mkdir -p /workspace/bin && go build -buildvcs=false -ldflags="-w -s" -o /workspace/bin/goats ./cmd/goats'
 	@mkdir -p bin
-	@$(CONTAINER_CMD) cp gotrs-compile:/workspace/bin/goats ./bin/goats
-	@$(CONTAINER_CMD) rm -f gotrs-compile >/dev/null
+	@$(CONTAINER_CMD) cp goatflow-compile:/workspace/bin/goats ./bin/goats
+	@$(CONTAINER_CMD) rm -f goatflow-compile >/dev/null
 	@printf "✅ Binary compiled to bin/goats (compile-safe)\n"
 
 # Run internal/api tests (bind mounts + caches; DB-less-safe)
@@ -648,8 +649,8 @@ toolbox-test-api: toolbox-build
 		-e TEST_DB_NAME=$(TEST_DB_NAME) \
 		-e TEST_DB_USER=$(TEST_DB_USER) \
 		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
-		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
-		gotrs-toolbox:latest \
+		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -buildvcs=false -v ./internal/api -run ^Test\(BuildRoutesManifest\|Queue\|Article\|Search\|Priority\|User\|CustomerGroup\|GroupCustomer\|LoadHelper\|PermissionContext\)'
 
 # Run internal/api tests binding to host-published test DB
@@ -683,8 +684,8 @@ toolbox-test-api-host: toolbox-build
 		-e TEST_DB_NAME=$(TEST_DB_NAME) \
 		-e TEST_DB_USER=$(TEST_DB_USER) \
 		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
-		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
-		gotrs-toolbox:latest \
+		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -buildvcs=false -v ./internal/api -run ^Test\(BuildRoutesManifest\|Queue\|Article\|Search\|Priority\|User\|AdminCustomerCompan\|CustomerGroup\|GroupCustomer\|LoadHelper\|PermissionContext\)'
 
 # Run core tests (cmd/goats + internal/api + internal/service)
@@ -720,9 +721,9 @@ toolbox-test:
 		-e TEST_DB_NAME=$(TEST_DB_NAME) \
 		-e TEST_DB_USER=$(TEST_DB_USER) \
 		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
-		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
+		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
 		echo Running: ./cmd/goats; go test -buildvcs=false -v ./cmd/goats; \
 		echo Running: ./internal/i18n; go test -buildvcs=false -v ./internal/i18n; \
@@ -738,7 +739,7 @@ openapi-lint:
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD/api:/spec"$(VZ) \
-		-v gotrs_cache:/cache \
+		-v goatflow_cache:/cache \
 		-e BUN_INSTALL_CACHE_DIR=/cache/bun \
 		oven/bun:1.1-alpine \
 		sh -lc 'bun add -g @redocly/cli >/dev/null 2>&1 && redocly lint /spec/openapi.yaml'
@@ -749,7 +750,7 @@ openapi-bundle:
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD/api:/spec"$(VZ) \
-		-v gotrs_cache:/cache \
+		-v goatflow_cache:/cache \
 		-e BUN_INSTALL_CACHE_DIR=/cache/bun \
 		oven/bun:1.1-alpine \
 		sh -lc 'bun add -g @redocly/cli >/dev/null 2>&1 && redocly bundle /spec/openapi.yaml -o /spec/openapi.bundle.yaml'
@@ -783,8 +784,8 @@ toolbox-test-all:
 		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 		-e DB_DRIVER=$(DB_DRIVER) \
 		-e DB_NAME=$(DB_NAME) -e DB_USER=$(DB_USER) -e DB_PASSWORD=$(DB_PASSWORD) \
-		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
-		gotrs-toolbox:latest \
+		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
 		echo Running curated set: cmd/goats internal/api internal/service; \
 		$(TOOLBOX_GO)"go test -buildvcs=false -v ./cmd/goats"; \
@@ -825,7 +826,7 @@ test-e2e:
 		-e BASE_URL \
 		-e DEMO_ADMIN_EMAIL \
 		-e DEMO_ADMIN_PASSWORD \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; \
 		go test -tags e2e -count=1 -buildvcs=false -v ./tests/e2e -run "$(TEST)" | tee generated/test-results/e2e_$(shell echo $(TEST) | tr ' ' '_').log'
 
@@ -860,10 +861,10 @@ toolbox-test-integration:
 		-e TEST_DB_NAME=$(TEST_DB_NAME) \
 		-e TEST_DB_USER=$(TEST_DB_USER) \
 		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
-		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
+		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		-e INT_PKGS \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; export GOFLAGS="-buildvcs=false"; set -e; \
 		PKGS="$${INT_PKGS:-./internal/middleware}"; \
 		echo "Running integration-tagged tests for packages: $$PKGS"; \
@@ -885,7 +886,7 @@ toolbox-test-email-integration:
 		-e GOMODCACHE=/cache/go-mod \
 		-e GOFLAGS=-buildvcs=false \
 		-e APP_ENV=test \
-		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
+		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
 		-e SMTP4DEV_API_BASE \
 		-e SMTP4DEV_SMTP_ADDR \
 		-e SMTP4DEV_POP_HOST \
@@ -894,7 +895,7 @@ toolbox-test-email-integration:
 		-e SMTP4DEV_PASS \
 		-e SMTP4DEV_FROM \
 		-e SMTP4DEV_SYSTEM_ADDRESS \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; export GOFLAGS="-buildvcs=false"; set -e; \
 		go test -tags=integration -buildvcs=false -count=1 ./internal/email/integration'
 
@@ -911,11 +912,11 @@ toolbox-test-run:
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
 		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
-		-e DB_NAME=gotrs_test -e DB_USER=gotrs_test -e DB_PASSWORD=gotrs_test_password \
+		-e DB_NAME=goatflow_test -e DB_USER=goatflow_test -e DB_PASSWORD=goatflow_test_password \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		-e APP_ENV=test \
-		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
-		gotrs-toolbox:latest \
+		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -v -run "$(TEST)" ./...'
 
 # Tidy Go modules inside toolbox (fetches missing deps and updates go.sum)
@@ -930,7 +931,7 @@ toolbox-mod-tidy:
 		-u "$$UID:$$GID" \
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go mod tidy && go mod download'
 
 .PHONY: toolbox-gofmt
@@ -942,7 +943,7 @@ toolbox-gofmt:
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; if [ -n "$(FILES)" ]; then gofmt -w $(FILES); else find . -path "./vendor" -prune -o -name "*.go" -print | xargs gofmt -w; fi'
 
 # Run tests for a specific package (PKG=./internal/api) with optional TEST pattern
@@ -976,8 +977,8 @@ toolbox-test-pkg:
 		-e TEST_DB_NAME=$(TEST_DB_NAME) \
 		-e TEST_DB_USER=$(TEST_DB_USER) \
 		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
-		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
-		gotrs-toolbox:latest \
+		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; if [ -n "$(TEST)" ]; then go test -v -run "$(TEST)" $(PKG); else go test -v $(PKG); fi'
 
 # Run tests for explicit files (FILES="./internal/api/attachment_validation_webp_svg_test.go ./internal/api/attachment_validation_jpeg_test.go")
@@ -1011,8 +1012,8 @@ toolbox-test-files:
 		-e TEST_DB_NAME=$(TEST_DB_NAME) \
 		-e TEST_DB_USER=$(TEST_DB_USER) \
 		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
-		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
-		gotrs-toolbox:latest \
+		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; if [ -n "$(TEST)" ]; then go test -v -run "$(TEST)" $(FILES); else go test -v $(FILES); fi'
 
 # Run static analysis using staticcheck inside toolbox
@@ -1027,11 +1028,11 @@ toolbox-staticcheck:
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
 		-e GOFLAGS=-buildvcs=false \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'set -e; export PATH=/usr/local/go/bin:/usr/local/bin:$$PATH; export GOFLAGS="-buildvcs=false"; go version; \
 		go install honnef.co/go/tools/cmd/staticcheck@master >/dev/null 2>&1 || true; \
 		staticcheck -version; \
-		PKGS=$$(go list ./... | rg -v "^(github.com/gotrs-io/gotrs-ce/(tests/e2e))"); \
+		PKGS=$$(go list ./... | rg -v "^(github.com/goatkit/goatflow/(tests/e2e))"); \
 		echo "Staticchecking packages:"; echo "$$PKGS" | tr "\n" " "\; echo; \
 		set +e; OUT=$$(GOTOOLCHAIN=local staticcheck -f=stylish -checks=all,-U1000,-ST1000,-ST1003,-SA9003,-ST1020,-ST1021,-ST1022,-ST1023 $$PKGS 2>&1); RC=$$?; set -e; \
 		if [ $$RC -ne 0 ]; then \
@@ -1060,7 +1061,7 @@ toolbox-run-file:
 		-e PGPASSWORD=$(DB_PASSWORD) \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		-e APP_ENV=development \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run $(FILE)'
 
 # Run all linters (Go, YAML, OpenAPI, Helm)
@@ -1074,14 +1075,14 @@ toolbox-lint:
 	@printf "🔍 Running linters...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
-		-v gotrs_cache:/cache \
+		-v goatflow_cache:/cache \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
 		-e GOPATH=/cache/gopath \
 		-e GOLANGCI_LINT_CACHE=/cache/golangci-lint \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		golangci-lint run ./...
 
 # Run YAML linting with toolbox
@@ -1092,7 +1093,7 @@ yaml-lint:
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		bash -lc 'tmpr=$$(mktemp -u); tmpr=$$(mktemp "$$tmpr.XXXXXX"); (find routes -type f -name "*.yaml" -print0; find config -type f -name "*.yaml" -print0; find .github -type f -name "*.yaml" -print0) > "$$tmpr"; if [ ! -s "$$tmpr" ]; then echo "⚠️  no YAML files found"; rm -f "$$tmpr"; exit 0; fi; echo "🔧 Linting YAML files with .yamllint"; rc=0; xargs -0 yamllint -c .yamllint < "$$tmpr" || rc=$$?; rm -f "$$tmpr"; if [ $$rc -ne 0 ]; then echo "⚠️  yamllint found issues"; exit $$rc; fi'
 # Run security scan with toolbox
 toolbox-security:
@@ -1102,7 +1103,7 @@ toolbox-security:
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		gosec ./...
 
 # Run Trivy vulnerability scan locally
@@ -1111,7 +1112,7 @@ trivy-scan:
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v gotrs_cache:/cache \
+		-v goatflow_cache:/cache \
 		-e TRIVY_CACHE_DIR=/cache/trivy \
 		aquasec/trivy:latest \
 		fs --severity CRITICAL,HIGH,MEDIUM /workspace
@@ -1121,17 +1122,17 @@ trivy-images:
 	@printf "🔍 Scanning backend image...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v gotrs_cache:/cache \
+		-v goatflow_cache:/cache \
 		-e TRIVY_CACHE_DIR=/cache/trivy \
 		aquasec/trivy:latest \
-		image gotrs-backend:latest
+		image goatflow-backend:latest
 	@printf "🔍 Scanning frontend image...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v gotrs_cache:/cache \
+		-v goatflow_cache:/cache \
 		-e TRIVY_CACHE_DIR=/cache/trivy \
 		aquasec/trivy:latest \
-		image gotrs-frontend:latest
+		image goatflow-frontend:latest
 
 # Schema discovery - generate YAML modules from database
 schema-discovery:
@@ -1151,8 +1152,8 @@ schema-table:
 .PHONY: clean-host-binaries
 clean-host-binaries:
 	@printf "🧹 Cleaning host binaries after container build...\n"
-	@rm -f bin/goats bin/gotrs bin/server bin/migrate bin/generator bin/gotrs-migrate bin/schema-discovery 2>/dev/null || true
-	@rm -f goats gotrs gotrs-* generator migrate server 2>/dev/null || true
+	@rm -f bin/goats bin/goatflow bin/server bin/migrate bin/generator bin/goatflow-migrate bin/schema-discovery 2>/dev/null || true
+	@rm -f goats goatflow goatflow-* generator migrate server 2>/dev/null || true
 	@printf "✅ Host binaries cleaned - containers have the only copies\n"
 
 # Start core services interactively (and clean host binaries after build)
@@ -1253,7 +1254,7 @@ test-stack-up:
 	@$(MAKE) test-setup-admin
 
 
-# Reset admin password in test database using gotrs CLI via backend container
+# Reset admin password in test database using goatflow CLI via backend container
 # This ensures the admin user exists with a known password for E2E tests
 test-setup-admin:
 	@./scripts/setup-test-admin.sh
@@ -1288,8 +1289,8 @@ test-stack-teardown:
 	fi
 	# Stop only test-specific containers - do NOT use 'down' with docker-compose.yml
 	# as that would bring down the dev/prod stack too
-	@docker stop gotrs-backend-test gotrs-runner-test gotrs-customer-fe-test 2>/dev/null || true
-	@docker rm gotrs-backend-test gotrs-runner-test gotrs-customer-fe-test 2>/dev/null || true
+	@docker stop goatflow-backend-test goatflow-runner-test goatflow-customer-fe-test 2>/dev/null || true
+	@docker rm goatflow-backend-test goatflow-runner-test goatflow-customer-fe-test 2>/dev/null || true
 
 test-up:
 	@printf "🚀 Starting test environment...\n"
@@ -1663,14 +1664,14 @@ db-init:
 		printf "📡 Starting dependencies (mariadb)...\n"; \
 		$(COMPOSE_CMD) up -d mariadb >/dev/null 2>&1 || true; \
 		printf "🧰 Ensuring minimal users table exists (MariaDB)...\n"; \
-		if [ -z "$(GOTRS_ADMIN_PASSWORD)" ]; then \
-			printf "❌ Error: GOTRS_ADMIN_PASSWORD not set. Add it to .env\n"; exit 1; \
+		if [ -z "$(GOATFLOW_ADMIN_PASSWORD)" ]; then \
+			printf "❌ Error: GOATFLOW_ADMIN_PASSWORD not set. Add it to .env\n"; exit 1; \
 		fi; \
-		$(CONTAINER_CMD) run --rm --network gotrs-ce_gotrs-network \
+		$(CONTAINER_CMD) run --rm --network goatflow_goatflow-network \
 			-e DB_DRIVER=$(DB_DRIVER) -e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 			-e DB_NAME=$(DB_NAME) -e DB_USER=$(DB_USER) -e DB_PASSWORD=$(DB_PASSWORD) \
-			gotrs-toolbox:latest \
-			gotrs reset-user --username="root@localhost" --password="$(GOTRS_ADMIN_PASSWORD)" --enable; \
+			$(TOOLBOX_IMAGE) \
+			goatflow reset-user --username="root@localhost" --password="$(GOATFLOW_ADMIN_PASSWORD)" --enable; \
 		printf "✅ Database initialized (MariaDB minimal schema; root user created).\n"; \
 	fi
 
@@ -1687,16 +1688,16 @@ db-init-test:
 		printf "📡 Starting dependencies (mariadb-test)...\n"; \
 		APP_ENV=test $(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml up -d mariadb-test >/dev/null 2>&1 || true; \
 		printf "🧰 Ensuring minimal users table exists (MariaDB test)...\n"; \
-		if [ -z "$(GOTRS_ADMIN_PASSWORD)" ]; then \
-			printf "❌ Error: GOTRS_ADMIN_PASSWORD not set. Add it to .env\n"; exit 1; \
+		if [ -z "$(GOATFLOW_ADMIN_PASSWORD)" ]; then \
+			printf "❌ Error: GOATFLOW_ADMIN_PASSWORD not set. Add it to .env\n"; exit 1; \
 		fi; \
 		$(CONTAINER_CMD) run --rm \
 			--security-opt label=disable \
-			--network gotrs-ce_gotrs-network \
+			--network goatflow_goatflow-network \
 			-e DB_DRIVER=$(TEST_DB_DRIVER) -e DB_HOST=$(TEST_DB_MYSQL_HOST) -e DB_PORT=$(TEST_DB_MYSQL_CONTAINER_PORT) \
 			-e DB_NAME=$(TEST_DB_MYSQL_NAME) -e DB_USER=$(TEST_DB_MYSQL_USER) -e DB_PASSWORD=$(TEST_DB_MYSQL_PASSWORD) \
-			gotrs-toolbox:latest \
-			gotrs reset-user --username="root@localhost" --password="$(GOTRS_ADMIN_PASSWORD)" --enable; \
+			$(TOOLBOX_IMAGE) \
+			goatflow reset-user --username="root@localhost" --password="$(GOATFLOW_ADMIN_PASSWORD)" --enable; \
 		printf "✅ Test database initialized (MariaDB)\n"; \
 	fi
 # Initialize for OTRS import (structure only, no data)
@@ -1779,8 +1780,8 @@ migrate-analyze:
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(dirname $(SQL)):/data:ro" \
 		-u "$$(id -u):$$(id -g)" \
-		gotrs-toolbox:latest \
-		gotrs-migrate -cmd=analyze -sql="/data/$$(basename $(SQL))"
+		$(TOOLBOX_IMAGE) \
+		goatflow-migrate -cmd=analyze -sql="/data/$$(basename $(SQL))"
 
 # Import OTRS data (dry run by default)
 migrate-import:
@@ -1798,9 +1799,9 @@ migrate-import:
 	$(CONTAINER_CMD) run --rm \
 		-v "$$(dirname $(SQL)):/data:ro" \
 		-u "$$(id -u):$$(id -g)" \
-		--network gotrs-ce_gotrs-network \
-		gotrs-toolbox:latest \
-		gotrs-migrate -cmd=import -sql="/data/$$(basename $(SQL))" \
+		--network goatflow_goatflow-network \
+		$(TOOLBOX_IMAGE) \
+		goatflow-migrate -cmd=import -sql="/data/$$(basename $(SQL))" \
 			-db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" \
 			$$DRY_RUN_FLAG -v
 
@@ -1816,9 +1817,9 @@ migrate-import-force:
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(dirname $(SQL)):/data:ro" \
 		-u "$$(id -u):$$(id -g)" \
-		--network gotrs-ce_gotrs-network \
-		gotrs-toolbox:latest \
-		gotrs-migrate -cmd=import -sql="/data/$$(basename $(SQL))" \
+		--network goatflow_goatflow-network \
+		$(TOOLBOX_IMAGE) \
+		goatflow-migrate -cmd=import -sql="/data/$$(basename $(SQL))" \
 			-db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" \
 			-force -v || true
 	@printf "✅ Force import completed successfully!\n"
@@ -1828,9 +1829,9 @@ migrate-validate:
 	@printf "🔍 Validating imported OTRS data\n"
 	@$(CONTAINER_CMD) run --rm \
 		-u "$$(id -u):$$(id -g)" \
-		--network gotrs-ce_gotrs-network \
-		gotrs-toolbox:latest \
-		gotrs-migrate -cmd=validate \
+		--network goatflow_goatflow-network \
+		$(TOOLBOX_IMAGE) \
+		goatflow-migrate -cmd=validate \
 			-db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" -v
 
 .PHONY: otrs-import
@@ -1846,17 +1847,17 @@ otrs-import:
 			--security-opt label=disable \
 			-v "$(dir $(abspath $(SQL))):/data:ro" \
 			-u "$(shell id -u):$(shell id -g)" \
-			--network gotrs-ce_gotrs-network \
-			gotrs-toolbox:latest \
-			gotrs-migrate -cmd=import -sql="/data/$(notdir $(SQL))" \
+			--network goatflow_goatflow-network \
+			$(TOOLBOX_IMAGE) \
+			goatflow-migrate -cmd=import -sql="/data/$(notdir $(SQL))" \
 				-db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" \
 				$${DRY_RUN:+-dry-run} $${FORCE:+-force} -v; \
 	else \
 		printf "🧹 Preparing MariaDB schema (dropping all tables in $(DB_NAME))...\n"; \
 		$(CONTAINER_CMD) run --rm \
 			--security-opt label=disable \
-			--network gotrs-ce_gotrs-network \
-			gotrs-toolbox:latest \
+			--network goatflow_goatflow-network \
+			$(TOOLBOX_IMAGE) \
 			bash -lc 'mysql -h"$(DB_HOST)" -u"$(DB_USER)" -p"$(DB_PASSWORD)" -D"$(DB_NAME)" -e '\''\
 SET SESSION group_concat_max_len = 1000000;\
 SET FOREIGN_KEY_CHECKS=0;\
@@ -1870,8 +1871,8 @@ SET FOREIGN_KEY_CHECKS=1;\
 		$(CONTAINER_CMD) run --rm \
 			--security-opt label=disable \
 			-v "$(dir $(abspath $(SQL))):/data:ro" \
-			--network gotrs-ce_gotrs-network \
-			gotrs-toolbox:latest \
+			--network goatflow_goatflow-network \
+			$(TOOLBOX_IMAGE) \
 			bash -lc 'mysql -h"$(DB_HOST)" -u"$(DB_USER)" -p"$(DB_PASSWORD)" "$(DB_NAME)" < "/data/$(notdir $(SQL))"'; \
 	fi
 	@printf "✅ OTRS dump import completed\n"
@@ -1902,7 +1903,7 @@ import-test-data:
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$(pwd)/bin:/bin:ro" \
-		--network gotrs-ce_gotrs-network \
+		--network goatflow_goatflow-network \
 		alpine:3.19 \
 		/bin/import-otrs -db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable"
 	@printf "✅ Test data imported successfully with correct article mappings!\n"
@@ -1974,8 +1975,8 @@ reset-password:
 	DB_CONN_NAME="$$DB_CONN_NAME" \
 	DB_CONN_USER="$$DB_CONN_USER" \
 	DB_CONN_PASSWORD="$$DB_CONN_PASSWORD" \
-	DB_CONTAINER_NETWORK="gotrs-ce_gotrs-network" \
-	TOOLBOX_IMAGE="gotrs-toolbox:latest" \
+	DB_CONTAINER_NETWORK="goatflow_goatflow-network" \
+	TOOLBOX_IMAGE="$(TOOLBOX_IMAGE)" \
 	./scripts/reset-user-password.sh "$$username" "$$password"; \
 	status=$$?; \
 	if [ $$status -ne 0 ]; then \
@@ -2011,7 +2012,7 @@ valkey-cli:
 # i18n Tools (run via toolbox to ensure Go toolchain is available)
 BF_FLAGS ?= -v
 babelfish: toolbox-build
-	@printf "Building gotrs-babelfish (toolbox)...\n"
+	@printf "Building goatflow-babelfish (toolbox)...\n"
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD:/workspace" \
@@ -2019,9 +2020,9 @@ babelfish: toolbox-build
 		-u "$$UID:$$GID" \
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
-		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && mkdir -p /workspace/tmp/bin && go build -buildvcs=false -o /workspace/tmp/bin/gotrs-babelfish cmd/gotrs-babelfish/main.go'
-	@printf "✨ gotrs-babelfish built at tmp/bin/gotrs-babelfish\n"
+		$(TOOLBOX_IMAGE) \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && mkdir -p /workspace/tmp/bin && go build -buildvcs=false -o /workspace/tmp/bin/goatflow-babelfish cmd/goatflow-babelfish/main.go'
+	@printf "✨ goatflow-babelfish built at tmp/bin/goatflow-babelfish\n"
 	@printf "Run with: make babelfish-run ARGS='-help'\n"
 babelfish-run: toolbox-build
 	@$(CONTAINER_CMD) run --rm \
@@ -2031,8 +2032,8 @@ babelfish-run: toolbox-build
 		-u "$$UID:$$GID" \
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
-		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/gotrs-babelfish/main.go $(ARGS)'
+		$(TOOLBOX_IMAGE) \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/goatflow-babelfish/main.go $(ARGS)'
 
 babelfish-coverage: toolbox-build
 	@$(CONTAINER_CMD) run --rm \
@@ -2042,8 +2043,8 @@ babelfish-coverage: toolbox-build
 		-u "$$UID:$$GID" \
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
-		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/gotrs-babelfish/main.go -action=coverage'
+		$(TOOLBOX_IMAGE) \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/goatflow-babelfish/main.go -action=coverage'
 
 babelfish-validate: toolbox-build
 	@$(CONTAINER_CMD) run --rm \
@@ -2053,8 +2054,8 @@ babelfish-validate: toolbox-build
 		-u "$$UID:$$GID" \
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
-		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/gotrs-babelfish/main.go -action=validate -lang=$(LANG) $(BF_FLAGS)'
+		$(TOOLBOX_IMAGE) \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/goatflow-babelfish/main.go -action=validate -lang=$(LANG) $(BF_FLAGS)'
 
 babelfish-missing: toolbox-build
 	@$(CONTAINER_CMD) run --rm \
@@ -2064,19 +2065,19 @@ babelfish-missing: toolbox-build
 		-u "$$UID:$$GID" \
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
-		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/gotrs-babelfish/main.go -action=missing -lang=$(LANG) $(BF_FLAGS)'
+		$(TOOLBOX_IMAGE) \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/goatflow-babelfish/main.go -action=missing -lang=$(LANG) $(BF_FLAGS)'
 
 test-short:
-	$(COMPOSE_CMD) exec -e DB_NAME=$${DB_NAME:-gotrs}_test -e APP_ENV=test backend go test -short ./...
+	$(COMPOSE_CMD) exec -e DB_NAME=$${DB_NAME:-goatflow}_test -e APP_ENV=test backend go test -short ./...
 
 test-coverage: toolbox-build
 	@printf "Running test coverage analysis...\n"
-	@printf "Using test database: $${DB_NAME:-gotrs}_test\n"
+	@printf "Using test database: $${DB_NAME:-goatflow}_test\n"
 	@printf "📡 Ensuring database/cache services are available...\n"
 	@$(COMPOSE_CMD) up -d mariadb valkey >/dev/null 2>&1 || true
 	@mkdir -p generated
-	@DB_NAME=$${DB_NAME:-gotrs}_test \
+	@DB_NAME=$${DB_NAME:-goatflow}_test \
 	APP_ENV=test \
 	STORAGE_PATH=/tmp \
 	TEMPLATES_DIR=/workspace/templates \
@@ -2172,11 +2173,11 @@ test-db-down:
 
 test-coverage-html: toolbox-build
 	@printf "Running test coverage (HTML) analysis...\n"
-	@printf "Using test database: $${DB_NAME:-gotrs}_test\n"
+	@printf "Using test database: $${DB_NAME:-goatflow}_test\n"
 	@printf "📡 Ensuring database/cache services are available...\n"
 	@$(COMPOSE_CMD) up -d mariadb valkey >/dev/null 2>&1 || true
 	@mkdir -p generated
-	@DB_NAME=$${DB_NAME:-gotrs}_test \
+	@DB_NAME=$${DB_NAME:-goatflow}_test \
 	APP_ENV=test \
 	STORAGE_PATH=/tmp \
 	TEMPLATES_DIR=/workspace/templates \
@@ -2201,7 +2202,7 @@ test-contracts: toolbox-build
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
 		--network host \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 		go test -v ./internal/testing/contracts/...
 
 test-all: test test-frontend test-contracts test-e2e-playwright
@@ -2230,20 +2231,20 @@ endif
 test-e2e-playwright-go:
 	@printf "\n🎭 Running Go Playwright-tagged e2e tests in dedicated container...\n"
 	@printf "   Platform: $(NATIVE_PLATFORM)\n"
-	$(CONTAINER_CMD) build --platform $(NATIVE_PLATFORM) -f Dockerfile.playwright-go -t gotrs-playwright-go:latest . >/dev/null
+	$(CONTAINER_CMD) build --platform $(NATIVE_PLATFORM) -f Dockerfile.playwright-go -t goatflow-playwright-go:latest . >/dev/null
 	@# Ensure cache volume directories exist with correct ownership
 	@HOST_UID=$$(id -u); HOST_GID=$$(id -g); \
-	$(CONTAINER_CMD) run --rm --platform $(NATIVE_PLATFORM) -u 0:0 -e HOST_UID=$$HOST_UID -e HOST_GID=$$HOST_GID -v gotrs_cache:/cache alpine sh -c "mkdir -p /cache/xdg /cache/go-build /cache/go-mod /cache/ms-playwright && chown -R $$HOST_UID:$$HOST_GID /cache"
+	$(CONTAINER_CMD) run --rm --platform $(NATIVE_PLATFORM) -u 0:0 -e HOST_UID=$$HOST_UID -e HOST_GID=$$HOST_GID -v goatflow_cache:/cache alpine sh -c "mkdir -p /cache/xdg /cache/go-build /cache/go-mod /cache/ms-playwright && chown -R $$HOST_UID:$$HOST_GID /cache"
 	# Prefer explicit BASE_URL provided on invocation; ignore .env for this target
 	@if [ -n "$(BASE_URL)" ]; then echo "[playwright-go] (explicit) BASE_URL=$(BASE_URL)"; else echo "[playwright-go] (default) BASE_URL=$${BASE_URL:-http://localhost:8080}"; fi
-	# Allow overriding network (e.g. PLAYWRIGHT_NETWORK=gotrs-ce_default) to access compose service DNS
+	# Allow overriding network (e.g. PLAYWRIGHT_NETWORK=goatflow_default) to access compose service DNS
 	@if [ -n "$(PLAYWRIGHT_NETWORK)" ]; then echo "[playwright-go] Using network '$(PLAYWRIGHT_NETWORK)'"; else echo "[playwright-go] Using host network (override with PLAYWRIGHT_NETWORK=...)"; fi
 	$(CONTAINER_CMD) run --rm \
 		--platform $(NATIVE_PLATFORM) \
 		--security-opt label=disable \
 		-u "$$(id -u):$$(id -g)" \
 		-v "$$PWD:/workspace" \
-		-v gotrs_cache:/cache \
+		-v goatflow_cache:/cache \
 		-w /workspace \
 		$$( [ -n "$(PLAYWRIGHT_NETWORK)" ] && printf -- "--network $(PLAYWRIGHT_NETWORK)" || printf -- "--network host" ) \
 		-e HOME=/workspace \
@@ -2257,13 +2258,13 @@ test-e2e-playwright-go:
 		-e XDG_CACHE_HOME=/cache/xdg \
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
-		 gotrs-playwright-go:latest bash -lc "go test -tags e2e -v ./tests/e2e/playwright $${ARGS}"
+		 goatflow-playwright-go:latest bash -lc "go test -tags e2e -v ./tests/e2e/playwright $${ARGS}"
 
 .PHONY: test-e2e-go
 test-e2e-go:
 	@printf "\n🎭 Running Go E2E tests (Playwright) via dedicated container...\n"
 	@printf "   Platform: $(NATIVE_PLATFORM)\n"
-	$(CONTAINER_CMD) build --platform $(NATIVE_PLATFORM) -f Dockerfile.playwright-go -t gotrs-playwright-go:latest . >/dev/null
+	$(CONTAINER_CMD) build --platform $(NATIVE_PLATFORM) -f Dockerfile.playwright-go -t goatflow-playwright-go:latest . >/dev/null
 	@if [ -n "$(BASE_URL)" ]; then echo "[e2e-go] (explicit) BASE_URL=$(BASE_URL)"; else echo "[e2e-go] (default) BASE_URL=$${BASE_URL:-http://localhost:8080}"; fi
 	@TEST_PATTERN=$${TEST:-CustomerTicket}; echo "[e2e-go] Running pattern: $$TEST_PATTERN";
 	$(CONTAINER_CMD) run --rm \
@@ -2271,7 +2272,7 @@ test-e2e-go:
 		--security-opt label=disable \
 		-u "$$UID:$$GID" \
 		-v "$$PWD:/workspace" \
-		-v gotrs_cache:/cache \
+		-v goatflow_cache:/cache \
 		-w /workspace \
 		--network host \
 		-e HOME=/workspace \
@@ -2285,7 +2286,7 @@ test-e2e-go:
 		-e XDG_CACHE_HOME=/cache/xdg \
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
-		 gotrs-playwright-go:latest bash -lc "go test -tags e2e -v ./tests/e2e -run \"$${TEST:-CustomerTicket}\""
+		 goatflow-playwright-go:latest bash -lc "go test -tags e2e -v ./tests/e2e -run \"$${TEST:-CustomerTicket}\""
 
 PLAYWRIGHT_RESULTS_DIR ?= /tmp/playwright-results
 PLAYWRIGHT_OUTPUT_DIR ?= /tmp/playwright-artifacts
@@ -2329,11 +2330,6 @@ check-translations:
 	@./scripts/check-translations.sh
 
 CHECK_I18N_ARGS ?=
-
-.PHONY: check-i18n
-check-i18n:
-	@printf "🌐 Checking for hardcoded UI text...\n"
-	@./scripts/check-hardcoded-text.sh $(CHECK_I18N_ARGS)
 
 # Run E2E tests with headed browser for debugging
 test-e2e-playwright-debug: playwright-build
@@ -2395,7 +2391,7 @@ scan-vulnerabilities: toolbox-build
 	@printf "🔍 Scanning container/config for vulnerabilities...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
-		-v gotrs_cache:/cache \
+		-v goatflow_cache:/cache \
 		-e TRIVY_CACHE_DIR=/cache/trivy \
 		-w /workspace \
 		aquasec/trivy:latest \
@@ -2411,20 +2407,25 @@ security-scan: scan-secrets scan-vulnerabilities
 .PHONY: build-artifacts
 build-artifacts:
 	@printf "🎯 Building backend artifacts image...\n"
-	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) --target artifacts -t gotrs-artifacts:latest .
+	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) --target artifacts -t goatflow-artifacts:latest .
 # Build for production (Dockerfile handles CSS/JS via frontend stage)
 build: build-artifacts pre-build helm-package
 	@printf "🔨 Building backend container ($(VERSION) @ $(GIT_COMMIT))...\n" \
-		&& $(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) -f Dockerfile -t gotrs:latest .
+		&& $(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) -f Dockerfile -t goatflow:latest .
 	@printf "🧹 Cleaning host binaries...\n"
-	@rm -f goats gotrs gotrs-* generator migrate server  # Clean root directory
+	@rm -f goats goatflow goatflow-* generator migrate server  # Clean root directory
 	@rm -f bin/* 2>/dev/null || true  # Clean bin directory
 	@printf "✅ Build complete - CSS, JS, Helm chart compiled, containers ready\n"
 
-.PHONY: pre-build generate-route-map validate-routes
+.PHONY: pre-build generate-route-map generate-route-docs validate-routes
 
-# Pre-build chain: ensure API map + static route audit executed every build
-pre-build: generate-route-map validate-routes
+# Pre-build chain: ensure API map + static route audit + docs executed every build
+pre-build: generate-route-map generate-route-docs validate-routes
+
+generate-route-docs:
+	@printf "📝 Generating API route documentation...\n"
+	@$(MAKE) toolbox-exec ARGS='go run cmd/route-docs/main.go routes docs/api'
+	@printf "   Route docs complete (docs/api/api.md)\n"
 
 generate-route-map:
 	@printf "📡 Generating API map artifacts...\n"
@@ -2450,7 +2451,7 @@ endif
 # Build with caching (70% faster rebuilds)
 build-cached: build-artifacts
 	@printf "🚀 Building backend image ($(VERSION) @ $(GIT_COMMIT))...\n"
-	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) -t gotrs:latest .
+	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) -t goatflow:latest .
 	@printf "✅ Build complete\n"
 # Security scan build (CI/CD)
 build-secure: build-artifacts
@@ -2465,23 +2466,23 @@ build-multi: build-artifacts
 	@printf "🌍 Building for multiple platforms...\n"
 	@$(CONTAINER_CMD) buildx build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) \
 		--platform linux/amd64,linux/arm64 \
-		-t gotrs:latest .
+		-t goatflow:latest .
 	@printf "✅ Multi-platform build complete\n"
 # Analyze image size with dive
 analyze-size:
 	@printf "📏 Analyzing Docker image size...\n"
 	@if command -v dive > /dev/null 2>&1; then \
-		dive gotrs:latest; \
+		dive goatflow:latest; \
 	else \
 		$(CONTAINER_CMD) run --rm -it \
 			-v /var/run/docker.sock:/var/run/docker.sock \
-			wagoodman/dive:latest gotrs:latest; \
+			wagoodman/dive:latest goatflow:latest; \
 	fi
 
 # Build without cache (clean build)
 build-clean: build-artifacts
 	@printf "🧹 Clean build without cache ($(VERSION) @ $(GIT_COMMIT))...\n"
-	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) --no-cache -t gotrs:latest .
+	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) --no-cache -t goatflow:latest .
 	@printf "✅ Clean build complete\n"
 # Show build cache usage
 show-cache:
@@ -2500,29 +2501,29 @@ build-all-tools: build-cached toolbox-build
 	@printf "🛠️ Building all specialized tool containers...\n"
 	@$(CONTAINER_CMD) build \
 		--build-arg GO_IMAGE=$(GO_IMAGE) \
-		--cache-from gotrs-tests:latest \
+		--cache-from goatflow-tests:latest \
 		--build-arg BUILDKIT_INLINE_CACHE=1 \
-		-f Dockerfile.tests -t gotrs-tests:latest .
+		-f Dockerfile.tests -t goatflow-tests:latest .
 	@$(CONTAINER_CMD) build \
 		--build-arg GO_IMAGE=$(GO_IMAGE) \
-		--cache-from gotrs-route-tools:latest \
+		--cache-from goatflow-route-tools:latest \
 		--build-arg BUILDKIT_INLINE_CACHE=1 \
-		-f Dockerfile.route-tools -t gotrs-route-tools:latest .
+		-f Dockerfile.route-tools -t goatflow-route-tools:latest .
 	@$(CONTAINER_CMD) build \
 		--build-arg GO_IMAGE=$(GO_IMAGE) \
-		--cache-from gotrs-goatkit:latest \
+		--cache-from goatflow-goatkit:latest \
 		--build-arg BUILDKIT_INLINE_CACHE=1 \
-		-f Dockerfile.goatkit -t gotrs-goatkit:latest .
+		-f Dockerfile.goatkit -t goatflow-goatkit:latest .
 	@$(CONTAINER_CMD) build \
 		--build-arg GO_IMAGE=$(GO_IMAGE) \
-		--cache-from gotrs-config-manager:latest \
+		--cache-from goatflow-config-manager:latest \
 		--build-arg BUILDKIT_INLINE_CACHE=1 \
-		-f Dockerfile.config-manager -t gotrs-config-manager:latest .
+		-f Dockerfile.config-manager -t goatflow-config-manager:latest .
 	@printf "✅ All tool containers built successfully\n"
 # Show image sizes
 show-sizes:
 	@printf "📏 Docker image sizes:\n"
-	@$(CONTAINER_CMD) images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | grep -E "(REPOSITORY|gotrs)" | column -t
+	@$(CONTAINER_CMD) images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | grep -E "(REPOSITORY|goatflow)" | column -t
 
 # Check service health (runs in container)
 health:
@@ -2566,10 +2567,10 @@ exec-frontend:
 podman-systemd:
 	@printf "Generating systemd units for podman...\n"
 	@if command -v podman > /dev/null 2>&1; then \
-		podman generate systemd --new --files --name gotrs-postgres; \
-		podman generate systemd --new --files --name gotrs-valkey; \
-		podman generate systemd --new --files --name gotrs-backend; \
-		podman generate systemd --new --files --name gotrs-frontend; \
+		podman generate systemd --new --files --name goatflow-postgres; \
+		podman generate systemd --new --files --name goatflow-valkey; \
+		podman generate systemd --new --files --name goatflow-backend; \
+		podman generate systemd --new --files --name goatflow-frontend; \
 		echo "Systemd unit files generated. Move to ~/.config/systemd/user/"; \
 	else \
 		echo "Error: podman not found. This command requires podman."; \
@@ -2615,7 +2616,7 @@ ldap-admin:
 	$(COMPOSE_CMD) --profile tools up -d phpldapadmin
 	@printf "Opening phpLDAPadmin at http://localhost:8091\n"
 	@printf "Login with:\n"
-	@printf "  Login DN: cn=admin,dc=gotrs,dc=local\n"
+	@printf "  Login DN: cn=admin,dc=goatflow,dc=local\n"
 	@printf "  Password: (LDAP_ADMIN_PASSWORD from .env)\n"
 	@open http://localhost:8091 || xdg-open http://localhost:8091 || echo "Open http://localhost:8091"
 
@@ -2631,7 +2632,7 @@ ldap-setup:
 	@printf "Waiting for LDAP server to initialize (this may take up to 60 seconds)...\n"
 	@timeout=60; \
 	while [ $$timeout -gt 0 ]; do \
-		if $(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost -b "dc=gotrs,dc=local" -D "cn=admin,dc=gotrs,dc=local" -w "$${LDAP_ADMIN_PASSWORD}" "(objectclass=*)" dn > /dev/null 2>&1; then \
+		if $(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost -b "dc=goatflow,dc=local" -D "cn=admin,dc=goatflow,dc=local" -w "$${LDAP_ADMIN_PASSWORD}" "(objectclass=*)" dn > /dev/null 2>&1; then \
 			echo "✓ LDAP server is ready!"; \
 			break; \
 		else \
@@ -2648,19 +2649,19 @@ ldap-setup:
 	@printf "LDAP Server Configuration:\n"
 	@printf "=========================\n"
 	@printf "Host: localhost:389\n"
-	@printf "Base DN: dc=gotrs,dc=local\n"
-	@printf "Admin DN: cn=admin,dc=gotrs,dc=local\n"
+	@printf "Base DN: dc=goatflow,dc=local\n"
+	@printf "Admin DN: cn=admin,dc=goatflow,dc=local\n"
 	@printf "Admin Password: (LDAP_ADMIN_PASSWORD from .env)\n"
-	@printf "Readonly DN: cn=readonly,dc=gotrs,dc=local\n"
+	@printf "Readonly DN: cn=readonly,dc=goatflow,dc=local\n"
 	@printf "Readonly Password: (LDAP_READONLY_PASSWORD from .env)\n"
 	@printf "\n"
 	@printf "Test Users (password from LDAP_TEST_USER_PASSWORD):\n"
 	@printf "===================================\n"
-	@printf "jadmin     - john.admin@gotrs.local (System Administrator)\n"
-	@printf "smitchell  - sarah.mitchell@gotrs.local (IT Manager)\n"
-	@printf "mwilson    - mike.wilson@gotrs.local (Senior Support Agent)\n"
-	@printf "lchen      - lisa.chen@gotrs.local (Support Agent)\n"
-	@printf "djohnson   - david.johnson@gotrs.local (Junior Support Agent)\n"
+	@printf "jadmin     - john.admin@goatflow.local (System Administrator)\n"
+	@printf "smitchell  - sarah.mitchell@goatflow.local (IT Manager)\n"
+	@printf "mwilson    - mike.wilson@goatflow.local (Senior Support Agent)\n"
+	@printf "lchen      - lisa.chen@goatflow.local (Support Agent)\n"
+	@printf "djohnson   - david.johnson@goatflow.local (Junior Support Agent)\n"
 	@printf "\n"
 	@printf "Web Interface:\n"
 	@printf "==============\n"
@@ -2672,8 +2673,8 @@ ldap-test-user:
 	read username; \
 	echo "Testing LDAP authentication for user: $$username"; \
 	$(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost \
-		-D "cn=readonly,dc=gotrs,dc=local" -w "$${LDAP_READONLY_PASSWORD}" \
-		-b "ou=Users,dc=gotrs,dc=local" \
+		-D "cn=readonly,dc=goatflow,dc=local" -w "$${LDAP_READONLY_PASSWORD}" \
+		-b "ou=Users,dc=goatflow,dc=local" \
 		"(&(objectClass=inetOrgPerson)(uid=$$username))" \
 		uid mail displayName telephoneNumber departmentNumber title
 
@@ -2682,8 +2683,8 @@ ldap-test:
 	@if [ -z "$${LDAP_ADMIN_PASSWORD}" ]; then echo "ERROR: LDAP_ADMIN_PASSWORD must be set in .env"; exit 1; fi
 	@printf "Testing LDAP connectivity...\n"
 	$(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost \
-		-D "cn=admin,dc=gotrs,dc=local" -w "$${LDAP_ADMIN_PASSWORD}" \
-		-b "dc=gotrs,dc=local" \
+		-D "cn=admin,dc=goatflow,dc=local" -w "$${LDAP_ADMIN_PASSWORD}" \
+		-b "dc=goatflow,dc=local" \
 		"(objectclass=*)" dn | head -20
 
 # Test that all Makefile commands are properly containerized
@@ -2825,7 +2826,7 @@ frontend-perms-fix:
 css-watch: css-deps
 	@printf "👁️  Watching for CSS changes...\n"
 	@$(CONTAINER_CMD) run --rm -it --security-opt label=disable -u $(shell id -u):$(shell id -g) \
-		-v $(PWD):/app -v gotrs_cache:/cache -e BUN_INSTALL_CACHE_DIR=/cache/bun \
+		-v $(PWD):/app -v goatflow_cache:/cache -e BUN_INSTALL_CACHE_DIR=/cache/bun \
 		-w /app oven/bun:1.1-alpine bun run watch-css
 
 #########################################
@@ -2840,14 +2841,14 @@ test-specific:
 	fi
 	@printf "🧪 Running specific test: $(TEST)\n"
 	@$(CONTAINER_CMD) run --rm \
-		--network gotrs-ce_gotrs-network \
+		--network goatflow_goatflow-network \
 		-e DB_HOST=postgres \
 		-e DB_USER=$(DB_USER) \
 		-e DB_PASSWORD=$(DB_PASSWORD) \
 		-e DB_NAME=$(DB_NAME) \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
-		gotrs-toolbox:latest \
+		$(TOOLBOX_IMAGE) \
 			bash -lc 'export PATH=/usr/local/go/bin:$$PATH; echo "Testing with DB_HOST=$$DB_HOST"; go test -buildvcs=false -v ./internal/repository -run $(TEST)'
 
 .PHONY: verify-container-first

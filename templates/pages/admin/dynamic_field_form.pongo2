@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{% if IsNew %}{{ t("admin.dynamic_fields.new_title")|default:"New Dynamic Field" }}{% else %}{{ t("admin.dynamic_fields.edit_title")|default:"Edit Dynamic Field" }}{% endif %} - GOTRS Admin{% endblock %}
+{% block title %}{% if IsNew %}{{ t("admin.dynamic_fields.new_title")|default:"New Dynamic Field" }}{% else %}{{ t("admin.dynamic_fields.edit_title")|default:"Edit Dynamic Field" }}{% endif %} - GoatFlow Admin{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8 min-h-screen">
@@ -169,7 +169,7 @@
                             name="auto_config"
                             value="1"
                             x-model="autoConfig"
-                            class="rounded text-gotrs-600 focus:ring-gotrs-500"
+                            class="rounded text-goatflow-600 focus:ring-goatflow-500"
                             style="border-color: var(--gk-border-default); background: var(--gk-bg-surface);"
                         >
                         <span class="ml-2 text-sm font-medium" style="color: var(--gk-text-secondary);">{{ t("admin.dynamic_fields.use_auto_config")|default:"Use default configuration" }}</span>
@@ -232,7 +232,7 @@
                                     name="possible_none"
                                     value="1"
                                     {% if Field.Config and Field.Config.PossibleNone == 1 %}checked{% endif %}
-                                    class="rounded text-gotrs-600 focus:ring-gotrs-500"
+                                    class="rounded text-goatflow-600 focus:ring-goatflow-500"
                                     style="border-color: var(--gk-border-default); background: var(--gk-bg-surface);"
                                 >
                                 <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.dynamic_fields.allow_empty")|default:"Allow empty selection" }}</span>
@@ -244,7 +244,7 @@
                                     name="translatable_values"
                                     value="1"
                                     {% if Field.Config and Field.Config.TranslatableValues == 1 %}checked{% endif %}
-                                    class="rounded text-gotrs-600 focus:ring-gotrs-500"
+                                    class="rounded text-goatflow-600 focus:ring-goatflow-500"
                                     style="border-color: var(--gk-border-default); background: var(--gk-bg-surface);"
                                 >
                                 <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.dynamic_fields.translatable")|default:"Values are translatable" }}</span>

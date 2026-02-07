@@ -6,10 +6,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/convert"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
+	"github.com/goatkit/goatflow/internal/convert"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/service"
 )
 
 const (
@@ -69,13 +69,13 @@ func (m *I18nMiddleware) detectLanguage(c *gin.Context) string {
 		}
 	}
 
-	// 2. Check cookie (check both "lang" and "gotrs_lang" for pre-login selection)
+	// 2. Check cookie (check both "lang" and "goatflow_lang" for pre-login selection)
 	if lang, err := c.Cookie("lang"); err == nil && lang != "" {
 		if m.isSupported(lang) {
 			return lang
 		}
 	}
-	if lang, err := c.Cookie("gotrs_lang"); err == nil && lang != "" {
+	if lang, err := c.Cookie("goatflow_lang"); err == nil && lang != "" {
 		if m.isSupported(lang) {
 			return lang
 		}
@@ -194,8 +194,8 @@ func GetLanguage(c *gin.Context) string {
 	if lang, err := c.Cookie("lang"); err == nil && lang != "" && isSupported(lang) {
 		return lang
 	}
-	// Check gotrs_lang cookie (pre-login selection)
-	if lang, err := c.Cookie("gotrs_lang"); err == nil && lang != "" && isSupported(lang) {
+	// Check goatflow_lang cookie (pre-login selection)
+	if lang, err := c.Cookie("goatflow_lang"); err == nil && lang != "" && isSupported(lang) {
 		return lang
 	}
 

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/rpc"
 
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
+	"github.com/goatkit/goatflow/internal/plugin"
 )
 
 // HostAPIRPCServer exposes HostAPI to plugins via RPC.

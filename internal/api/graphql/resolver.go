@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/cache"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
+	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/cache"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/service"
 )
 
 // Resolver is the root resolver

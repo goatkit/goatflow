@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{{ t("admin.customer_user_groups.edit_user_title") }}: {% if CustomerUser.FirstName or CustomerUser.LastName %}{{ CustomerUser.FirstName }} {{ CustomerUser.LastName }}{% else %}{{ CustomerUser.Login }}{% endif %} - GOTRS Admin{% endblock %}
+{% block title %}{{ t("admin.customer_user_groups.edit_user_title") }}: {% if CustomerUser.FirstName or CustomerUser.LastName %}{{ CustomerUser.FirstName }} {{ CustomerUser.LastName }}{% else %}{{ CustomerUser.Login }}{% endif %} - GoatFlow Admin{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8 min-h-screen">

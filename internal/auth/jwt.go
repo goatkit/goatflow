@@ -57,7 +57,7 @@ func (m *JWTManager) GenerateTokenWithLogin(userID uint, login, email, role stri
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.tokenDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    "gotrs",
+			Issuer:    "goatflow",
 			Subject:   login,
 		},
 	}
@@ -95,7 +95,7 @@ func (m *JWTManager) GenerateRefreshToken(userID uint, email string) (string, er
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)), // 7 days
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
 		NotBefore: jwt.NewNumericDate(time.Now()),
-		Issuer:    "gotrs",
+		Issuer:    "goatflow",
 		Subject:   email,
 		ID:        fmt.Sprintf("%d", userID), // Store user ID in JWT ID field
 	}

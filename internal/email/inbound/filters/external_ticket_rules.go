@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ExternalTicketRule defines a regex that extracts a GOTRS ticket number from partner emails.
+// ExternalTicketRule defines a regex that extracts a GoatFlow ticket number from partner emails.
 type ExternalTicketRule struct {
 	Name          string
 	Pattern       *regexp.Regexp

@@ -1,19 +1,19 @@
-import { GotrsClient, isNotFoundError, isUnauthorizedError } from '../src';
+import { GoatflowClient, isNotFoundError, isUnauthorizedError } from '../src';
 
 // Example 1: Basic usage with API key
 async function basicExample() {
-  console.log('🚀 Basic GOTRS SDK Example');
+  console.log('🚀 Basic GoatFlow SDK Example');
 
   // Initialize client with API key
-  const client = GotrsClient.withApiKey('https://your-gotrs-instance.com', 'your-api-key');
+  const client = GoatflowClient.withApiKey('https://your-goatflow-instance.com', 'your-api-key');
 
   try {
     // Test connection
     const isConnected = await client.ping();
     if (!isConnected) {
-      throw new Error('Failed to connect to GOTRS API');
+      throw new Error('Failed to connect to GoatFlow API');
     }
-    console.log('✅ Connected to GOTRS successfully');
+    console.log('✅ Connected to GoatFlow successfully');
 
     // Get dashboard stats
     const stats = await client.dashboard.getStats();
@@ -85,8 +85,8 @@ async function authenticationExample() {
   console.log('\n🔐 Authentication Example');
 
   // Create client without authentication first
-  const client = new GotrsClient({
-    baseURL: 'https://your-gotrs-instance.com',
+  const client = new GoatflowClient({
+    baseURL: 'https://your-goatflow-instance.com',
   });
 
   try {
@@ -119,7 +119,7 @@ async function authenticationExample() {
 async function errorHandlingExample() {
   console.log('\n🚨 Error Handling Example');
 
-  const client = GotrsClient.withApiKey('https://your-gotrs-instance.com', 'your-api-key');
+  const client = GoatflowClient.withApiKey('https://your-goatflow-instance.com', 'your-api-key');
 
   try {
     // Try to get a non-existent ticket
@@ -151,7 +151,7 @@ async function errorHandlingExample() {
 async function realTimeExample() {
   console.log('\n⚡ Real-time Events Example');
 
-  const client = GotrsClient.withApiKey('https://your-gotrs-instance.com', 'your-api-key');
+  const client = GoatflowClient.withApiKey('https://your-goatflow-instance.com', 'your-api-key');
 
   try {
     // Connect to real-time events
@@ -202,7 +202,7 @@ async function realTimeExample() {
 async function concurrentExample() {
   console.log('\n🚀 Concurrent Operations Example');
 
-  const client = GotrsClient.withApiKey('https://your-gotrs-instance.com', 'your-api-key');
+  const client = GoatflowClient.withApiKey('https://your-goatflow-instance.com', 'your-api-key');
 
   try {
     // Perform multiple operations concurrently
@@ -246,7 +246,7 @@ async function concurrentExample() {
 async function fileUploadExample() {
   console.log('\n📎 File Upload Example');
 
-  const client = GotrsClient.withApiKey('https://your-gotrs-instance.com', 'your-api-key');
+  const client = GoatflowClient.withApiKey('https://your-goatflow-instance.com', 'your-api-key');
 
   try {
     // First create a ticket

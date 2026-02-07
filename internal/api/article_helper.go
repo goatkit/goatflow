@@ -1,10 +1,10 @@
-// Package api provides HTTP API handlers for GOTRS.
+// Package api provides HTTP API handlers for GoatFlow.
 package api
 
 import (
 	"database/sql"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // ArticleInsertParams holds parameters for creating an article.

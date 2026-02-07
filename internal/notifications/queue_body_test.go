@@ -9,7 +9,7 @@ func TestApplyBrandingPlainText(t *testing.T) {
 	identity := &QueueIdentity{
 		SalutationText:        "Dear Customer,",
 		SalutationContentType: "text/plain",
-		SignatureText:         "Your GOTRS Team",
+		SignatureText:         "Your GoatFlow Team",
 		SignatureContentType:  "text/plain",
 	}
 	body := ApplyBranding("Thanks for reaching out.", false, identity, nil)
@@ -17,7 +17,7 @@ func TestApplyBrandingPlainText(t *testing.T) {
 	if !strings.Contains(body, "Dear Customer,") {
 		t.Fatalf("expected salutation in body: %s", body)
 	}
-	if !strings.Contains(body, "Your GOTRS Team") {
+	if !strings.Contains(body, "Your GoatFlow Team") {
 		t.Fatalf("expected signature in body: %s", body)
 	}
 	if strings.Count(body, "Dear Customer,") != 1 {

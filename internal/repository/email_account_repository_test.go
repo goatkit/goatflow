@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/mailaccountmeta"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/mailaccountmeta"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 func TestEncodeDecodeMailAccountComment(t *testing.T) {
@@ -18,7 +18,7 @@ func TestEncodeDecodeMailAccountComment(t *testing.T) {
 	}
 
 	raw := mailaccountmeta.EncodeComment("Demo mailbox", meta)
-	if !strings.Contains(raw, "-- GOTRS META --") {
+	if !strings.Contains(raw, "-- GoatFlow META --") {
 		t.Fatalf("encoded comment missing metadata marker: %q", raw)
 	}
 

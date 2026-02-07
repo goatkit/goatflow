@@ -22,7 +22,7 @@
     {
       "type": "modify",
       "path": "metadata.description",
-      "old_value": "GoTRS System Configuration Definition",
+      "old_value": "GoatFlow System Configuration Definition",
       "new_value": ""
     }
   ],

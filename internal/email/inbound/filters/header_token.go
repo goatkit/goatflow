@@ -9,8 +9,8 @@ import (
 )
 
 var headerTokenKeys = []string{
-	"X-GOTRS-TicketNumber",
-	"X-GOTRS-ExternalTicketNumber",
+	"X-GoatFlow-TicketNumber",
+	"X-GoatFlow-ExternalTicketNumber",
 	"X-OTRS-TicketNumber",
 	"X-OTRS-FollowUp-TicketNumber",
 	"X-Znuny-TicketNumber",

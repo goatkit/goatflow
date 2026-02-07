@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // TestACLIntegration tests ACL loading and evaluation against a real database.

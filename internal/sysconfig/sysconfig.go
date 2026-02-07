@@ -420,7 +420,7 @@ func (m *Manager) Deploy(outputPath string) error {
 		Timestamp: time.Now(),
 		Settings:  make(map[string]interface{}),
 		Metadata: map[string]interface{}{
-			"generated_by":   "GoTRS SysConfig Manager",
+			"generated_by":   "GoatFlow SysConfig Manager",
 			"total_settings": len(m.settings),
 		},
 	}

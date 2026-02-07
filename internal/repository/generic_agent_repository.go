@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // GenericAgentRepository handles database operations for generic agent jobs.

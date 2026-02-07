@@ -28,7 +28,7 @@
                         </div>
                     </div>
                     <button type="button" onclick="window.{{ id }}Selector.close()"
-                            class="rounded-md p-1 focus:outline-none focus:ring-2 focus:ring-gotrs-500 transition-colors"
+                            class="rounded-md p-1 focus:outline-none focus:ring-2 focus:ring-goatflow-500 transition-colors"
                             style="color: var(--gk-text-muted);"
                             onmouseover="this.style.color='var(--gk-text-primary)'"
                             onmouseout="this.style.color='var(--gk-text-muted)'"
@@ -56,7 +56,7 @@
                             <input type="text"
                                    id="{{ id }}-member-filter"
                                    placeholder="Filter..."
-                                   class="w-full px-3 py-2 pl-10 text-sm border " style="border-color: var(--gk-border-default); rounded-md bg-white gk-input-neon " style="color: var(--gk-text-primary); focus:outline-none focus:ring-2 focus:ring-gotrs-500"
+                                   class="w-full px-3 py-2 pl-10 text-sm border " style="border-color: var(--gk-border-default); rounded-md bg-white gk-input-neon " style="color: var(--gk-text-primary); focus:outline-none focus:ring-2 focus:ring-goatflow-500"
                                    autocomplete="off">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg class="h-4 w-4 " style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -80,7 +80,7 @@
                             <input type="text"
                                    id="{{ id }}-search"
                                    placeholder="Search..."
-                                   class="w-full px-3 py-2 pl-10 pr-10 text-sm border " style="border-color: var(--gk-border-default); rounded-md bg-white gk-input-neon " style="color: var(--gk-text-primary); focus:outline-none focus:ring-2 focus:ring-gotrs-500"
+                                   class="w-full px-3 py-2 pl-10 pr-10 text-sm border " style="border-color: var(--gk-border-default); rounded-md bg-white gk-input-neon " style="color: var(--gk-text-primary); focus:outline-none focus:ring-2 focus:ring-goatflow-500"
                                    autocomplete="off">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg class="h-4 w-4 " style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,7 +88,7 @@
                                 </svg>
                             </div>
                             <div id="{{ id }}-search-spinner" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center">
-                                <svg class="animate-spin h-4 w-4 text-gotrs-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <svg class="animate-spin h-4 w-4 text-goatflow-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
@@ -132,7 +132,7 @@
 <div id="{{ id }}-undo-toast" class="hidden fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
     <div class="gk-card-glow" style="background: var(--gk-bg-surface); text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-4">
         <span id="{{ id }}-undo-message" class="text-sm"></span>
-        <button id="{{ id }}-undo-btn" class="text-gotrs-400 hover:text-gotrs-300 font-medium text-sm focus:outline-none">
+        <button id="{{ id }}-undo-btn" class="text-goatflow-400 hover:text-goatflow-300 font-medium text-sm focus:outline-none">
             Undo
         </button>
         <button onclick="document.getElementById('{{ id }}-undo-toast').classList.add('hidden')"

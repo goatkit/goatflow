@@ -59,40 +59,6 @@
         </div>
     </div>
 
-    <!-- Recent activity -->
-    <div class="mt-8 max-w-2xl">
-        <!-- Recent tickets -->
-        <div class="gk-card-glow">
-            <div class="gk-card-header">
-                <h3 class="gk-card-title">{{ t("dashboard.recent_tickets") }}</h3>
-            </div>
-            <div class="gk-card-body">
-                <div class="flow-root"
-                     hx-get="/dashboard/api/recent-tickets"
-                     hx-trigger="load"
-                     hx-target="this"
-                     hx-swap="innerHTML">
-                    <!-- Loading placeholder -->
-                    <ul role="list" class="-my-5 divide-y" style="border-color: var(--gk-border-default);">
-                        <li class="py-4">
-                            <div class="flex items-center space-x-4">
-                                <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-medium" style="color: var(--gk-text-primary);">{{ t("labels.loading")|default:"Loading..." }}</p>
-                                    <p class="truncate text-sm" style="color: var(--gk-text-muted);">{{ t("labels.loading")|default:"Loading..." }}</p>
-                                </div>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-                <div class="mt-6">
-                    <a href="/tickets" class="gk-link-neon flex w-full items-center justify-center rounded-md px-3 py-2 text-sm font-semibold" style="border: 1px solid var(--gk-border-default);">
-                        {{ t("common.view_all") }}
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Plugin Widgets -->
     {% if PluginWidgets %}
     <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2" id="plugin-widgets-container">
@@ -103,7 +69,7 @@
              {% if widget.Refreshable %}data-refresh-sec="{{ widget.RefreshSec }}"{% endif %}>
             <div class="gk-card-header flex items-center justify-between">
                 <h3 class="gk-card-title">{{ widget.Title }}</h3>
-                <span class="text-xs px-2 py-1 rounded" style="background: var(--gk-primary); color: white;">
+                <span class="text-xs px-2 py-1 rounded" style="background: var(--gk-bg-elevated); color: var(--gk-text-muted); border: 1px solid var(--gk-border-default);">
                     {{ widget.PluginName }}
                 </span>
             </div>

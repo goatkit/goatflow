@@ -376,9 +376,9 @@ func (m *Manager) createDelivery(webhook *Webhook, event WebhookEvent, data inte
 			Version string `json:"version"`
 			URL     string `json:"url"`
 		}{
-			Name:    "GOTRS",
+			Name:    "GoatFlow",
 			Version: "1.0.0",
-			URL:     "https://github.com/gotrs-io/gotrs-ce",
+			URL:     "https://github.com/goatkit/goatflow",
 		},
 		Data:         data,
 		PreviousData: previousData,
@@ -442,7 +442,7 @@ func (m *Manager) processDelivery(delivery *WebhookDelivery) {
 
 	// Set headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "GOTRS-Webhook/1.0")
+	req.Header.Set("User-Agent", "GoatFlow-Webhook/1.0")
 	req.Header.Set("X-Webhook-ID", fmt.Sprintf("%d", webhook.ID))
 	req.Header.Set("X-Webhook-Event", string(delivery.Event))
 	req.Header.Set("X-Webhook-Delivery", fmt.Sprintf("%d", delivery.ID))
@@ -648,9 +648,9 @@ func (m *Manager) TestWebhook(webhookID uint) (*WebhookTestResult, error) {
 			Version string `json:"version"`
 			URL     string `json:"url"`
 		}{
-			Name:    "GOTRS",
+			Name:    "GoatFlow",
 			Version: "1.0.0",
-			URL:     "https://github.com/gotrs-io/gotrs-ce",
+			URL:     "https://github.com/goatkit/goatflow",
 		},
 		Data: map[string]interface{}{
 			"test":    true,
@@ -678,7 +678,7 @@ func (m *Manager) TestWebhook(webhookID uint) (*WebhookTestResult, error) {
 
 	// Set headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "GOTRS-Webhook/1.0")
+	req.Header.Set("User-Agent", "GoatFlow-Webhook/1.0")
 	req.Header.Set("X-Webhook-Test", "true")
 
 	// Add custom headers

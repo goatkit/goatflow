@@ -1,6 +1,6 @@
 
 
-    [1;36m🐐 GOTRS - Go Open Ticketing Resource System[0m
+    [1;36m🐐 GoatFlow - GoatKit based ITSM system[0m
 
 
 

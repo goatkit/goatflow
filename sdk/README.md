@@ -1,30 +1,30 @@
-# GOTRS SDK
+# GoatFlow SDK
 
-Software Development Kits (SDKs) for interacting with the GOTRS API. These SDKs provide type-safe client libraries for various programming languages.
+Software Development Kits (SDKs) for interacting with the GoatFlow API. These SDKs provide type-safe client libraries for various programming languages.
 
 ## Available SDKs
 
 ### Go SDK
 - **Path**: `./go/`
-- **Package**: `github.com/gotrs-io/gotrs-ce/sdk/go`
+- **Package**: `github.com/goatkit/goatflow/sdk/go`
 - **Go Version**: 1.21+
 - **Features**: Full type safety, context support, concurrent operations
 
 ### TypeScript/JavaScript SDK  
 - **Path**: `./typescript/`
-- **Package**: `@gotrs/sdk`
+- **Package**: `@goatflow/sdk`
 - **Node Version**: 18+
 - **Features**: TypeScript definitions, Promise-based, browser/Node.js support
 
 ### Python SDK
 - **Path**: `./python/`
-- **Package**: `gotrs-sdk`
+- **Package**: `goatflow-sdk`
 - **Python Version**: 3.8+
 - **Features**: Async/await support, type hints, Pydantic models
 
 ### PHP SDK
 - **Path**: `./php/`
-- **Package**: `gotrs/sdk`
+- **Package**: `goatflow/sdk`
 - **PHP Version**: 8.1+
 - **Features**: PSR-4 autoloading, type declarations, Guzzle HTTP client
 
@@ -32,33 +32,33 @@ Software Development Kits (SDKs) for interacting with the GOTRS API. These SDKs 
 
 ### Go
 ```go
-import "github.com/gotrs-io/gotrs-ce/sdk/go"
+import "github.com/goatkit/goatflow/sdk/go"
 
-client := gotrs.NewClient("https://your-gotrs-instance.com", "your-api-key")
-tickets, err := client.Tickets.List(ctx, &gotrs.TicketListOptions{})
+client := goatflow.NewClient("https://your-goatflow-instance.com", "your-api-key")
+tickets, err := client.Tickets.List(ctx, &goatflow.TicketListOptions{})
 ```
 
 ### TypeScript
 ```typescript
-import { GotrsClient } from '@gotrs/sdk';
+import { GoatflowClient } from '@goatflow/sdk';
 
-const client = new GotrsClient('https://your-gotrs-instance.com', 'your-api-key');
+const client = new GoatflowClient('https://your-goatflow-instance.com', 'your-api-key');
 const tickets = await client.tickets.list();
 ```
 
 ### Python
 ```python
-from gotrs_sdk import GotrsClient
+from goatflow_sdk import GoatflowClient
 
-client = GotrsClient('https://your-gotrs-instance.com', 'your-api-key')
+client = GoatflowClient('https://your-goatflow-instance.com', 'your-api-key')
 tickets = await client.tickets.list()
 ```
 
 ### PHP
 ```php
-use Gotrs\SDK\Client;
+use Goatflow\SDK\Client;
 
-$client = new Client('https://your-gotrs-instance.com', 'your-api-key');
+$client = new Client('https://your-goatflow-instance.com', 'your-api-key');
 $tickets = $client->tickets()->list();
 ```
 
@@ -72,7 +72,7 @@ All SDKs support multiple authentication methods:
 
 ## API Coverage
 
-All SDKs provide complete coverage of the GOTRS API:
+All SDKs provide complete coverage of the GoatFlow API:
 
 - ✅ Authentication & Session Management
 - ✅ Ticket Management (CRUD, search, attachments)
@@ -89,7 +89,7 @@ All SDKs implement consistent error handling:
 
 - **Network errors**: Connection timeouts, DNS failures
 - **HTTP errors**: 4xx/5xx status codes with detailed messages
-- **API errors**: GOTRS-specific error codes and descriptions
+- **API errors**: GoatFlow-specific error codes and descriptions
 - **Validation errors**: Client-side validation before API calls
 
 ## Rate Limiting

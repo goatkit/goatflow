@@ -159,7 +159,7 @@ func createGRPCPlugin(name string) {
 	fmt.Printf("  cd %s\n", dir)
 	fmt.Println("  go build -o plugin")
 	fmt.Println()
-	fmt.Println("Configure GOTRS to load the binary from this directory.")
+	fmt.Println("Configure GoatFlow to load the binary from this directory.")
 }
 
 func writeTemplate(path, tmplPath string, data any) {

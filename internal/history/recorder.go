@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // HistoryType constants for common ticket history events.

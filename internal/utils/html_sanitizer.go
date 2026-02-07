@@ -14,7 +14,7 @@ type HTMLSanitizer struct {
 	policy *bluemonday.Policy
 }
 
-// NewHTMLSanitizer creates a new HTML sanitizer with GOTRS-specific policy.
+// NewHTMLSanitizer creates a new HTML sanitizer with GoatFlow-specific policy.
 func NewHTMLSanitizer() *HTMLSanitizer {
 	// Create a policy that allows common formatting but prevents XSS
 	p := bluemonday.NewPolicy()

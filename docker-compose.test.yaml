@@ -4,11 +4,11 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runtime
-    container_name: gotrs-backend-test
+    container_name: goatflow-backend-test
     user: "1000:1000"
     environment:
       APP_ENV: integration
-      GOTRS_DISABLE_TEST_AUTH_BYPASS: "0"
+      GOATFLOW_DISABLE_TEST_AUTH_BYPASS: "0"
       DB_DRIVER: ${TEST_DB_DRIVER:-mysql}
       DB_HOST: ${TEST_DB_MYSQL_HOST:-mariadb-test}
       DB_PORT: 3306
@@ -40,18 +40,18 @@ services:
       retries: 3
       start_period: 30s
     networks:
-      - gotrs-network
+      - goatflow-network
 
   runner-test:
     build:
       context: .
       dockerfile: Dockerfile
       target: runner-runtime
-    container_name: gotrs-runner-test
+    container_name: goatflow-runner-test
     user: "1000:1000"
     environment:
       APP_ENV: integration
-      GOTRS_DISABLE_TEST_AUTH_BYPASS: "0"
+      GOATFLOW_DISABLE_TEST_AUTH_BYPASS: "0"
       DB_DRIVER: ${TEST_DB_DRIVER:-mysql}
       DB_HOST: ${TEST_DB_MYSQL_HOST:-mariadb-test}
       DB_PORT: 3306
@@ -70,18 +70,18 @@ services:
       customer-fe-test:
         condition: service_healthy
     networks:
-      - gotrs-network
+      - goatflow-network
 
   customer-fe-test:
     build:
       context: .
       dockerfile: Dockerfile
       target: runtime
-    container_name: gotrs-customer-fe-test
+    container_name: goatflow-customer-fe-test
     user: "1000:1000"
     environment:
       APP_ENV: integration
-      GOTRS_DISABLE_TEST_AUTH_BYPASS: "0"
+      GOATFLOW_DISABLE_TEST_AUTH_BYPASS: "0"
       DB_DRIVER: ${TEST_DB_DRIVER:-mysql}
       DB_HOST: ${TEST_DB_MYSQL_HOST:-mariadb-test}
       DB_PORT: 3306
@@ -109,8 +109,8 @@ services:
       retries: 3
       start_period: 30s
     networks:
-      - gotrs-network
+      - goatflow-network
 
 networks:
-  gotrs-network:
+  goatflow-network:
     driver: bridge

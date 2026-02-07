@@ -9,13 +9,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 func TestQueueDetailSimple(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	if !dbAvailable() {
-		t.Skip("DB not available (GOTRS_TEST_DB_READY!=1) - skipping queue detail HTML tests")
+		t.Skip("DB not available (GOATFLOW_TEST_DB_READY!=1) - skipping queue detail HTML tests")
 	}
 
 	queueName := getQueueNameForTest(t, 1)

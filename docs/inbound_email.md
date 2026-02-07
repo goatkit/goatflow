@@ -1,6 +1,6 @@
 # Inbound Email Architecture (OTRS Parity)
 
-This document captures the inbound-email plan for GOTRS based on the proven OTRS PostMaster
+This document captures the inbound-email plan for GoatFlow based on the proven OTRS PostMaster
 pipeline. The goal is to collect mail from POP3/IMAP mailboxes, run them through a PostMaster-style
 processor, and create or update tickets just as OTRS does.
 
@@ -40,7 +40,7 @@ surfaces via metrics so operators can act.
 - Admin UI mirrors these fields so operators can manage ingestion without SQL:
   - `Login`, `Host`, and `Account Type` inputs replace the previous SMTP/IMAP split.
   - `Dispatching Mode` radio (`Queue` vs `From`) writes `queue_id` (0 means from-based routing).
-  - `Allow Trusted Headers` toggle maps to the `trusted` column so PostMaster knows whether to honor `X-GOTRS-*` overrides.
+  - `Allow Trusted Headers` toggle maps to the `trusted` column so PostMaster knows whether to honor `X-GoatFlow-*` overrides.
   - `IMAP Folder` text box defaults to `INBOX` for IMAP accounts; POP3 ignores it.
   - `Poll Interval (seconds)` accepts a per-account cadence and falls back to the scheduler default when empty. Today we store the value in the repository struct so the scheduler can vary concurrency per mailbox.
 - Exposed via service layer for admin UI/API.
@@ -82,7 +82,7 @@ surfaces via metrics so operators can act.
      metadata (Message-ID, References, thread tokens, attachments).
   3. Execute PreFilter modules (see below).
   4. Run follow-up detection strategies.
-  5. Decide action: ignore (`X-GOTRS-Ignore`), follow-up, new ticket, reject.
+  5. Decide action: ignore (`X-GoatFlow-Ignore`), follow-up, new ticket, reject.
   6. Call ticket service APIs (existing `internal/service/ticket_service.go`) to create/update tickets
      and append articles.
   7. Request autoresponses (auto-reply, bounce, reject) from notification service as needed.
@@ -126,14 +126,14 @@ surfaces via metrics so operators can act.
   readable text part (plain preferred, HTML falls back to stripped text) and extracts `[Ticket#]`
   markers embedded in the message content, enabling signatures or templates that embed the token
   outside the subject line to remain threaded.
-- Header token follow-ups honor trusted headers like `X-GOTRS-TicketNumber`/`X-OTRS-TicketNumber`
-  so upstream systems that can’t alter the subject/body can still pass the GOTRS ticket number
+- Header token follow-ups honor trusted headers like `X-GoatFlow-TicketNumber`/`X-OTRS-TicketNumber`
+  so upstream systems that can’t alter the subject/body can still pass the GoatFlow ticket number
   explicitly.
 - Attachment metadata follow-ups scan attachment filenames, descriptions, and name parameters for
   `[Ticket#]` markers so forwarded threads whose subjects/bodies were rewritten by gateways can
   still resolve to the original tickets when partners only preserve the tag inside attached logs.
 - External ticket number recognition loads partner-specific regex rules from
-  `config/external_ticket_rules.yaml` (see the `.example` file in `config/`) so we can extract GOTRS ticket numbers from arbitrary
+  `config/external_ticket_rules.yaml` (see the `.example` file in `config/`) so we can extract GoatFlow ticket numbers from arbitrary
   subject/body/header formats without depending on the `[Ticket#]` token.
 - Each strategy returns `(ticketID, followUpType)`; the processor picks the first confident match,
   falling back to "new ticket".
@@ -141,13 +141,13 @@ surfaces via metrics so operators can act.
   whether to accept follow-ups, force new ticket, or reject.
 
 ### 3.7 Loop Protection & Bounce Handling
-- Loop guard store (DB table `mail_loop_protection` keyed by Message-ID + sender) to prevent GOTRS
+- Loop guard store (DB table `mail_loop_protection` keyed by Message-ID + sender) to prevent GoatFlow
   from replying repeatedly to autoresponders.
 - Bounce detection filter sets `isBounce=true`; follow-up logic uses queue settings and config
   `postmaster.bounceAsFollowUp` to mimic OTRS's `PostmasterBounceEmailAsFollowUp`.
 
 ### 3.8 Trusted Headers
-- Per-account boolean `allow_trusted_headers` decides whether we honor inbound `X-GOTRS-*` overrides
+- Per-account boolean `allow_trusted_headers` decides whether we honor inbound `X-GoatFlow-*` overrides
   (queue, priority, state, dynamic fields). Default false except for service-to-service mailboxes.
 - When enabled, dynamic field definitions are reflected into allowed header names, same as OTRS's
   addition of `X-OTRS-DynamicField-*`.
@@ -164,7 +164,7 @@ surfaces via metrics so operators can act.
       poll_interval: 30s
       worker_count: 4
       max_accounts: 5
-      trusted_headers: ["X-GOTRS-Priority", ...]
+      trusted_headers: ["X-GoatFlow-Priority", ...]
       filters:
         pre:
           - id: match
@@ -206,7 +206,7 @@ surfaces via metrics so operators can act.
   production environments load values from `.env` kept outside version control).
 - **Kubernetes alignment**: operators mirror the `.env` content into native `Secret` manifests and
   mount them via `envFrom` or projected volumes. No code changes are required; the inbound poller
-  reads from `os.Getenv` the same way the rest of GOTRS already does.
+  reads from `os.Getenv` the same way the rest of GoatFlow already does.
 - **Enterprise roadmap**: later offer optional vault-backed secret adapters (HashiCorp Vault Agent, AWS
   Secrets Manager, etc.) that hydrate the same environment variables at runtime. This matches the
   roadmap epic captured in `ROADMAP.md` and keeps schema-freeze intact.
@@ -262,7 +262,7 @@ surfaces via metrics so operators can act.
 5. Follow-up detection finds Ticket #202510050001 in subject, queue allows follow-ups.
 6. Processor calls ticket service to append article, optionally unlock/lock depending on queue
    follow-up lock policy.
-7. If message matched `X-GOTRS-Ignore: yes`, the processor logs and skips.
+7. If message matched `X-GoatFlow-Ignore: yes`, the processor logs and skips.
 8. Once processing succeeds, connector marks UID as read/deleted based on account type.
 
 ## 5. Open Questions
@@ -276,5 +276,5 @@ surfaces via metrics so operators can act.
 4. Add filters/follow-up gradually until parity.
 
 This design mirrors OTRS's architecture so teams migrating from OTRS know where to hook in their
-existing automations while staying idiomatic to GOTRS (Go packages, containerized scheduler,
+existing automations while staying idiomatic to GoatFlow (Go packages, containerized scheduler,
 pluggable services).

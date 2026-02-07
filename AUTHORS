@@ -1,6 +1,6 @@
 # Authors
 
-This file lists the authors and contributors to GOTRS. It is maintained
+This file lists the authors and contributors to GoatFlow. It is maintained
 in chronological order of first contribution.
 
 The format is: Name <email> (github_username) [Role/Company]
@@ -22,9 +22,9 @@ Please add yourself in the format above when contributing.
 
 * The OTRS community for pioneering open source ticketing systems
 * All users who provide feedback and bug reports
-* Open source projects that GOTRS builds upon (see NOTICE file)
+* Open source projects that GoatFlow builds upon (see NOTICE file)
 
 ---
 
 To be included in this file, contributors must sign the Contributor License
-Agreement (CLA) available at https://gotrs.io/cla
+Agreement (CLA) available at https://goatflow.io/cla

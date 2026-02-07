@@ -7,7 +7,7 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 func TestPostmasterFilterRepository_CRUD(t *testing.T) {
@@ -34,8 +34,8 @@ func TestPostmasterFilterRepository_CRUD(t *testing.T) {
 				{Key: "Subject", Value: "\\[TEST\\]", Not: false},
 			},
 			Sets: []FilterSet{
-				{Key: "X-GOTRS-Queue", Value: "Test Queue"},
-				{Key: "X-GOTRS-PriorityID", Value: "3"},
+				{Key: "X-GoatFlow-Queue", Value: "Test Queue"},
+				{Key: "X-GoatFlow-PriorityID", Value: "3"},
 			},
 		}
 
@@ -76,7 +76,7 @@ func TestPostmasterFilterRepository_CRUD(t *testing.T) {
 				{Key: "To", Value: "support@", Not: false},
 			},
 			Sets: []FilterSet{
-				{Key: "X-GOTRS-Title", Value: "Support Request"},
+				{Key: "X-GoatFlow-Title", Value: "Support Request"},
 			},
 		}
 		err := repo.Create(ctx, filter2)
@@ -117,7 +117,7 @@ func TestPostmasterFilterRepository_CRUD(t *testing.T) {
 				{Key: "From", Value: ".*@updated\\.com", Not: true},
 			},
 			Sets: []FilterSet{
-				{Key: "X-GOTRS-Queue", Value: "Updated Queue"},
+				{Key: "X-GoatFlow-Queue", Value: "Updated Queue"},
 			},
 		}
 
@@ -240,9 +240,9 @@ func TestPostmasterFilterRepository_FilterGrouping(t *testing.T) {
 			{Key: "Subject", Value: "\\[URGENT\\]", Not: false},
 		},
 		Sets: []FilterSet{
-			{Key: "X-GOTRS-Queue", Value: "Priority"},
-			{Key: "X-GOTRS-PriorityID", Value: "5"},
-			{Key: "X-GOTRS-Title", Value: "Urgent Request"},
+			{Key: "X-GoatFlow-Queue", Value: "Priority"},
+			{Key: "X-GoatFlow-PriorityID", Value: "5"},
+			{Key: "X-GoatFlow-Title", Value: "Urgent Request"},
 		},
 	}
 

@@ -1,8 +1,8 @@
-# GOTRS Security Architecture
+# GoatFlow Security Architecture
 
 ## Security Philosophy
 
-GOTRS is built with a **Security-First** mindset, implementing defense-in-depth strategies and following the principle of least privilege. Every architectural decision considers security implications, and we maintain transparency in our security practices.
+GoatFlow is built with a **Security-First** mindset, implementing defense-in-depth strategies and following the principle of least privilege. Every architectural decision considers security implications, and we maintain transparency in our security practices.
 
 ## Security Principles
 
@@ -310,7 +310,7 @@ zap-cli quick-scan --self-contained http://localhost:8080
 nancy sleuth -p go.sum
 
 # Container scanning
-trivy image gotrs:latest
+trivy image goatflow:latest
 ```
 
 ### 8. Incident Response
@@ -417,17 +417,17 @@ data_retention:
 
 ### Responsible Disclosure Policy
 
-We appreciate security researchers who help us maintain GOTRS security.
+We appreciate security researchers who help us maintain GoatFlow security.
 
 **Reporting Process:**
-1. Email security@gotrs.io with details
+1. Email security@goatflow.io with details
 2. Include proof of concept if available
 3. Allow 90 days for patch development
 4. Coordinate disclosure timing
 
 **Rewards:**
 - Credit in security advisories
-- GOTRS Security Hall of Fame
+- GoatFlow Security Hall of Fame
 - Bug bounty program (coming soon)
 
 ### Security Updates
@@ -441,13 +441,13 @@ We appreciate security researchers who help us maintain GOTRS security.
 **Update Process:**
 ```bash
 # Check for security updates
-gotrs-cli security check
+goatflow-cli security check
 
 # Apply security patches
-gotrs-cli security update --apply
+goatflow-cli security update --apply
 
 # Verify security posture
-gotrs-cli security audit
+goatflow-cli security audit
 ```
 
 ## Security Roadmap

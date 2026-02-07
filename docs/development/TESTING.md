@@ -1,8 +1,8 @@
-# GOTRS Testing Documentation
+# GoatFlow Testing Documentation
 
 ## Overview
 
-This document describes the testing strategy and implementation for the GOTRS ticketing system. We've implemented comprehensive unit tests for all core functionality to ensure code quality and reliability.
+This document describes the testing strategy and implementation for the GoatFlow ticketing system. We've implemented comprehensive unit tests for all core functionality to ensure code quality and reliability.
 
 ## Test Coverage
 
@@ -110,7 +110,7 @@ go tool cover -html=coverage.out -o coverage.html
 
 ### Auth Bypass Controls
 
-The regression harness disables the legacy test auth bypass to match production behavior. Set `GOTRS_DISABLE_TEST_AUTH_BYPASS=1` when running focused suites (for example `make toolbox-test-pkg`) so admin routes require real authentication. Compose-based targets (`make test`, `make test-comprehensive`) export this flag by default.
+The regression harness disables the legacy test auth bypass to match production behavior. Set `GOATFLOW_DISABLE_TEST_AUTH_BYPASS=1` when running focused suites (for example `make toolbox-test-pkg`) so admin routes require real authentication. Compose-based targets (`make test`, `make test-comprehensive`) export this flag by default.
 
 ## Test Organization
 

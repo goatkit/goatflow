@@ -268,7 +268,7 @@ func generateFileID() string {
 	return fmt.Sprintf("%d_%d", time.Now().Unix(), time.Now().Nanosecond())
 }
 
-// (Legacy GOTRS layout removed)
+// (Legacy GoatFlow layout removed)
 
 // GenerateOTRSStoragePath creates an OTRS-style path for storing files
 // Format: var/article/{year}/{month}/{day}/{ticket_id}/{article_id}/{filename}

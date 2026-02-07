@@ -2,7 +2,7 @@
 
 ## Overview
 
-GOTRS has first-class support for Podman, including rootless containers and SELinux compatibility. All containers run as non-root users for enhanced security.
+GoatFlow has first-class support for Podman, including rootless containers and SELinux compatibility. All containers run as non-root users for enhanced security.
 
 ## Container Security Principles
 
@@ -29,9 +29,9 @@ podman-compose up
 sudo rpm-ostree install podman-compose
 systemctl reboot  # Required for rpm-ostree
 
-# Clone and start GOTRS
-git clone https://github.com/gotrs/gotrs
-cd gotrs
+# Clone and start GoatFlow
+git clone https://github.com/goatflow/goatflow
+cd goatflow
 make setup
 make up
 ```
@@ -72,8 +72,8 @@ cp container-*.service ~/.config/systemd/user/
 
 # Enable and start
 systemctl --user daemon-reload
-systemctl --user enable container-gotrs-backend.service
-systemctl --user start container-gotrs-backend.service
+systemctl --user enable container-goatflow-backend.service
+systemctl --user start container-goatflow-backend.service
 ```
 
 ## Network Configuration
@@ -84,16 +84,16 @@ systemctl --user start container-gotrs-backend.service
 cat /proc/sys/net/ipv4/ip_unprivileged_port_start
 
 # For ports below 1024, use higher ports and map:
-podman-compose -p gotrs up
+podman-compose -p goatflow up
 ```
 
 ### Pod Networking
 ```bash
 # Create a pod for shared networking
-podman pod create --name gotrs -p 80:80 -p 8025:8025
+podman pod create --name goatflow -p 80:80 -p 8025:8025
 
 # Run containers in the pod
-podman run -d --pod gotrs --name gotrs-backend gotrs-backend
+podman run -d --pod goatflow --name goatflow-backend goatflow-backend
 ```
 
 ## Storage Optimization
@@ -101,14 +101,14 @@ podman run -d --pod gotrs --name gotrs-backend gotrs-backend
 ### Using Podman Volumes
 ```bash
 # Create named volumes
-podman volume create gotrs-postgres
-podman volume create gotrs-valkey
+podman volume create goatflow-postgres
+podman volume create goatflow-valkey
 
 # List volumes
 podman volume ls
 
 # Inspect volume
-podman volume inspect gotrs-postgres
+podman volume inspect goatflow-postgres
 ```
 
 ### Overlay Storage Driver
@@ -130,7 +130,7 @@ driver = "overlay"
 podman unshare chown -R 1000:1000 ./
 
 # Check container user
-podman exec gotrs-backend id
+podman exec goatflow-backend id
 ```
 
 ### SELinux Denials
@@ -174,7 +174,7 @@ usermod --add-subgids 100000-165535 $USER
 ### Resource Limits
 ```bash
 # Set CPU and memory limits
-podman run --cpus="2" --memory="2g" gotrs-backend
+podman run --cpus="2" --memory="2g" goatflow-backend
 
 # In compose file:
 deploy:

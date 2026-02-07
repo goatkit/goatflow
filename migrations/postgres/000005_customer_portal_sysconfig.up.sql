@@ -125,10 +125,10 @@ BEGIN
             navigation,
             0, 0, 0, 1,
             0, 1, 1, NULL,
-            '{"type":"string","default":"Powered by GOTRS"}',
-            '{"type":"string","default":"Powered by GOTRS"}',
+            '{"type":"string","default":"Powered by GoatFlow"}',
+            '{"type":"string","default":"Powered by GoatFlow"}',
             xml_file,
-            'Powered by GOTRS',
+            'Powered by GoatFlow',
             0,
             '', NULL, NULL,
             now_ts, author, now_ts, author

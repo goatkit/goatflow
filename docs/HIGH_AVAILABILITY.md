@@ -1,394 +1,219 @@
-# High Availability Setup
+# High Availability & Production Deployment
 
 ## Overview
 
-GOTRS high availability (HA) setup ensures zero downtime, automatic failover, and horizontal scalability. The architecture includes:
-
-- **Multi-region deployment** with geo-replication
-- **Database clustering** with automatic failover
-- **Message queue clustering** for reliable event processing
-- **Load balancing** across multiple application instances
-- **Auto-scaling** based on load metrics
-- **Disaster recovery** with automated backups
+GoatFlow supports production deployments via Docker Compose (single-node) and Kubernetes with Helm (multi-node, auto-scaling). This document covers what's actually implemented and how to deploy for reliability.
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                      Load Balancer                        │
-│                    (AWS NLB / GCP LB)                     │
-└────────────┬──────────────────────────┬──────────────────┘
-             │                          │
-    ┌────────▼────────┐        ┌───────▼────────┐
-    │   Region 1      │        │    Region 2     │
-    │                 │        │                 │
-    │  ┌───────────┐  │        │  ┌───────────┐  │
-    │  │  GOTRS    │  │        │  │  GOTRS    │  │
-    │  │ Instances │  │        │  │ Instances │  │
-    │  │  (3-20)   │  │        │  │  (3-20)   │  │
-    │  └─────┬─────┘  │        │  └─────┬─────┘  │
-    │        │        │        │        │        │
-    │  ┌─────▼─────┐  │        │  ┌─────▼─────┐  │
-    │  │PostgreSQL │  │        │  │PostgreSQL │  │
-    │  │  Cluster  │◄─┼────────┼─►│  Cluster  │  │
-    │  │    (3)    │  │        │  │    (3)    │  │
-    │  └───────────┘  │        │  └───────────┘  │
-    │                 │        │                 │
-    │  ┌───────────┐  │        │  ┌───────────┐  │
-    │  │   Redis   │◄─┼────────┼─►│   Redis   │  │
-    │  │  Cluster  │  │        │  │  Cluster  │  │
-    │  │    (6)    │  │        │  │    (6)    │  │
-    │  └───────────┘  │        │  └───────────┘  │
-    │                 │        │                 │
-    │  ┌───────────┐  │        │  ┌───────────┐  │
-    │  │ RabbitMQ  │◄─┼────────┼─►│ RabbitMQ  │  │
-    │  │  Cluster  │  │        │  │  Cluster  │  │
-    │  │    (3)    │  │        │  │    (3)    │  │
-    │  └───────────┘  │        │  └───────────┘  │
-    └─────────────────┘        └─────────────────┘
+                    ┌─────────────────┐
+                    │  Load Balancer  │
+                    │  / Ingress      │
+                    └────────┬────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              │              │              │
+        ┌─────▼─────┐ ┌─────▼─────┐ ┌─────▼─────┐
+        │ GoatFlow  │ │ GoatFlow  │ │ GoatFlow  │
+        │  Pod 1    │ │  Pod 2    │ │  Pod N    │
+        └─────┬─────┘ └──────┬────┘ └───────┬───┘
+              │              │              │
+              └──────────────┼──────────────┘
+                     ┌───────┴───────┐
+                     │               │
+               ┌─────▼──────┐  ┌─────▼─────┐
+               │  Database  │  │  Valkey   │
+               │ MySQL/     │  │  (Cache)  │
+               │ MariaDB/   │  │           │
+               │ PostgreSQL │  │           │
+               └────────────┘  └───────────┘
 ```
 
-## Components
+## What's Implemented
 
-### 1. PostgreSQL High Availability
+| Capability | Status | Notes |
+|---|---|---|
+| Multiple app replicas | ✅ | Default: 2 backend pods |
+| Horizontal Pod Autoscaler | ✅ | CPU 70% / Memory 80% targets, 2-10 pods |
+| Health checks (liveness/readiness) | ✅ | Built-in probes |
+| Rolling updates | ✅ | Zero-downtime deploys via Kubernetes |
+| Valkey/Redis caching | ✅ | Session + query cache |
+| External database support | ✅ | RDS, Cloud SQL, managed MariaDB, etc. |
+| External cache support | ✅ | ElastiCache, Memorystore, etc. |
+| Multi-arch images | ✅ | amd64 + arm64 |
+| TLS/Ingress | ✅ | Via Kubernetes ingress controller |
+| Connection pooling | ✅ | Configurable MaxOpenConns/MaxIdleConns |
+| Rate limiting | ✅ | Login + API token rate limiting |
 
-**Features:**
-- 3-node cluster with automatic failover
-- Synchronous replication for zero data loss
-- Read replicas for load distribution
-- Point-in-time recovery (PITR)
-- Automated backups to S3
+## What's NOT Implemented
 
-**Configuration:**
-```yaml
-spec:
-  instances: 3
-  primaryUpdateStrategy: unsupervised
-  postgresql:
-    parameters:
-      synchronous_commit: "on"
-      synchronous_standby_names: "*"
-      max_connections: 200
+Be honest with yourself about what you're deploying:
+
+- ❌ Multi-region / geo-replication
+- ❌ Database clustering or replication (use your cloud provider's managed service)
+- ❌ Message queues (no RabbitMQ, no event bus)
+- ❌ Distributed tracing (OpenTelemetry)
+- ❌ Active-active clustering
+- ❌ Automated disaster recovery
+- ❌ Built-in backup automation
+
+For database HA, use a managed service (RDS Multi-AZ, Cloud SQL HA, etc.) rather than trying to run your own cluster.
+
+## Deployment Options
+
+### Docker Compose (Single Node)
+
+Best for: small teams, dev/staging, single-server deployments.
+
+```bash
+docker compose up -d
 ```
 
-**Connection Strings:**
-- Write operations: `postgres-cluster-rw:5432`
-- Read operations: `postgres-cluster-ro:5432`
-- Read replicas only: `postgres-cluster-r:5432`
+This gives you GoatFlow + database + Valkey on one machine. Simple, easy to back up, easy to restore. For many teams, this is all you need.
 
-### 2. Redis Cluster
+### Kubernetes + Helm (Multi-Node)
 
-**Features:**
-- 6-node cluster (3 masters, 3 replicas)
-- Automatic sharding across nodes
-- Automatic failover
-- Data persistence with AOF
-- Configurable eviction policies
-
-**Configuration:**
-```yaml
-spec:
-  replicas: 6
-  cluster-enabled: yes
-  cluster-replicas: 1
-  maxmemory-policy: allkeys-lru
-```
-
-### 3. RabbitMQ Cluster
-
-**Features:**
-- 3-node cluster with quorum queues
-- Message persistence
-- Automatic partition healing
-- Dead letter exchanges
-- Management interface
-
-**Queue Types:**
-- **Quorum Queues**: For critical messages requiring consistency
-- **Classic Mirrored**: For high-throughput scenarios
-
-### 4. Application Layer
-
-**Features:**
-- Horizontal auto-scaling (3-20 pods)
-- Rolling updates with zero downtime
-- Health checks and automatic restarts
-- Session affinity for WebSocket connections
-- Distributed tracing
-
-**Auto-scaling Triggers:**
-- CPU > 70%
-- Memory > 80%
-- Request rate > 1000 req/s
-
-## Deployment
-
-### Prerequisites
-
-1. Kubernetes cluster (1.25+)
-2. Helm 3.12+
-3. Ingress controller (nginx-ingress recommended)
-4. Storage class with SSD support
-5. (Optional) Prometheus operator for monitoring
-
-### Installation with Helm
-
-Deploy GOTRS using the Helm chart:
+Best for: larger deployments, auto-scaling, cloud-native environments.
 
 ```bash
 # Basic installation
-helm install gotrs ./charts/gotrs
+helm install goatflow ./charts/goatflow
 
 # With PostgreSQL instead of MySQL
-helm install gotrs ./charts/gotrs -f charts/gotrs/values-postgresql.yaml
+helm install goatflow ./charts/goatflow -f charts/goatflow/values-postgresql.yaml
 
-# Production configuration with autoscaling
-helm install gotrs ./charts/gotrs \
+# Production with autoscaling
+helm install goatflow ./charts/goatflow \
   --set backend.replicaCount=3 \
   --set backend.autoscaling.enabled=true \
   --set backend.autoscaling.minReplicas=3 \
   --set backend.autoscaling.maxReplicas=10
 ```
 
-### External Database (Production)
+### External Database (Recommended for Production)
 
-For production HA, use a managed database service:
+Don't run your own database in Kubernetes. Use a managed service:
 
 ```bash
-helm install gotrs ./charts/gotrs \
+helm install goatflow ./charts/goatflow \
   --set database.external.enabled=true \
   --set database.external.host=your-rds-endpoint.amazonaws.com \
-  --set database.external.existingSecret=gotrs-db-credentials
+  --set database.external.existingSecret=goatflow-db-credentials
 ```
 
-### External Cache (Production)
-
-For production HA, use a managed Redis/Valkey service:
+### External Cache (Optional)
 
 ```bash
-helm install gotrs ./charts/gotrs \
+helm install goatflow ./charts/goatflow \
   --set valkey.enabled=false \
   --set externalValkey.enabled=true \
   --set externalValkey.host=your-elasticache-endpoint
 ```
 
+## Resource Sizing
+
+### Small (< 50 agents)
+
+```yaml
+backend:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+```
+
+### Medium (50-200 agents)
+
+```yaml
+backend:
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 6
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+    limits:
+      cpu: "2000m"
+      memory: "2Gi"
+```
+
+### Large (200+ agents)
+
+```yaml
+backend:
+  replicaCount: 5
+  autoscaling:
+    enabled: true
+    minReplicas: 5
+    maxReplicas: 10
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "1Gi"
+    limits:
+      cpu: "4000m"
+      memory: "4Gi"
+```
+
 ## Monitoring
 
-### Key Metrics
+GoatFlow exposes a `/health` endpoint for liveness and readiness probes. For production monitoring:
 
-**Application:**
-- Request rate and latency
-- Error rate
-- Active connections
-- Cache hit ratio
+- Use your cloud provider's monitoring (CloudWatch, Stackdriver, etc.)
+- Monitor database metrics via your managed service dashboard
+- Set up alerts on pod restarts, error rates, and response latency
 
-**Database:**
-- Replication lag
-- Connection pool usage
-- Query performance
-- Transaction rate
+## Backup Strategy
 
-**Message Queue:**
-- Queue depth
-- Message rate
-- Consumer lag
-- Connection count
+GoatFlow doesn't handle backups — your database does. Recommended approach:
 
-### Dashboards
-
-Access monitoring dashboards:
-- Grafana: `http://monitoring.gotrs.local`
-- RabbitMQ: `http://rabbitmq.gotrs.local`
-- PostgreSQL: Custom Grafana dashboard
-
-## Failover Scenarios
-
-### 1. Application Pod Failure
-
-- **Detection**: Liveness probe failure (3 consecutive failures)
-- **Recovery**: Automatic pod restart
-- **Time to Recovery**: < 30 seconds
-- **Data Loss**: None
-
-### 2. PostgreSQL Primary Failure
-
-- **Detection**: Patroni health check
-- **Recovery**: Automatic promotion of synchronous standby
-- **Time to Recovery**: < 60 seconds
-- **Data Loss**: None (synchronous replication)
-
-### 3. Redis Node Failure
-
-- **Detection**: Cluster health check
-- **Recovery**: Automatic failover to replica
-- **Time to Recovery**: < 10 seconds
-- **Data Loss**: Minimal (depends on replication lag)
-
-### 4. Zone/Region Failure
-
-- **Detection**: Health check failures across zone
-- **Recovery**: Traffic redirect to healthy zone
-- **Time to Recovery**: < 2 minutes
-- **Data Loss**: None (multi-region replication)
-
-## Backup and Recovery
-
-### Backup Schedule
-
-- **PostgreSQL**: Daily full backup, hourly WAL archiving
-- **Redis**: Hourly RDB snapshots
-- **Configuration**: Version controlled in Git
-
-### Recovery Procedures
-
-**Point-in-Time Recovery:**
-```bash
-# Restore PostgreSQL to specific time
-kubectl cnpg recover postgres-cluster \
-  --target-time "2024-01-15 14:30:00" \
-  --backup-name postgres-backup-20240115
-```
-
-**Disaster Recovery:**
-```bash
-# Full cluster restore from backup
-./scripts/disaster-recovery.sh --region us-west-2 --backup-date 2024-01-15
-```
-
-## Performance Tuning
-
-### Database Optimization
-
-```sql
--- Connection pooling
-max_connections = 200
-shared_buffers = 256MB
-effective_cache_size = 1GB
-work_mem = 4MB
-
--- Write performance
-checkpoint_completion_target = 0.9
-wal_buffers = 16MB
-max_wal_size = 4GB
-
--- Query performance
-random_page_cost = 1.1
-effective_io_concurrency = 200
-```
-
-### Application Tuning
-
-```yaml
-resources:
-  requests:
-    memory: 512Mi
-    cpu: 500m
-  limits:
-    memory: 2Gi
-    cpu: 2000m
-```
-
-### Cache Configuration
-
-```yaml
-cache:
-  default_ttl: 5m
-  query_cache_ttl: 1m
-  compression_enabled: true
-  compression_threshold: 1024
-```
-
-## Security Considerations
-
-### Network Policies
-
-- Restrict pod-to-pod communication
-- Enforce TLS for all connections
-- Implement network segmentation
-
-### Secrets Management
-
-- Use Kubernetes secrets for credentials
-- Enable encryption at rest
-- Rotate credentials regularly
-
-### Access Control
-
-- RBAC for Kubernetes resources
-- Database user permissions
-- API rate limiting
+1. **Managed database**: Enable automated backups (RDS snapshots, Cloud SQL backups)
+2. **Self-hosted database**: Set up `mysqldump` / `pg_dump` on a cron schedule
+3. **Test restores regularly** — untested backups aren't backups
 
 ## Maintenance
 
 ### Rolling Updates
 
 ```bash
-# Update application with zero downtime
-kubectl set image deployment/gotrs-ha gotrs=gotrs/gotrs:v2.0.0
-kubectl rollout status deployment/gotrs-ha
+# Update via Helm
+helm upgrade goatflow ./charts/goatflow --set backend.image.tag=v0.6.5
+
+# Check rollout status
+kubectl rollout status deployment/goatflow-backend
 ```
 
-### Scaling Operations
+### Scaling
 
 ```bash
 # Manual scaling
-kubectl scale deployment/gotrs-ha --replicas=10
+kubectl scale deployment/goatflow-backend --replicas=5
 
-# Update auto-scaling limits
-kubectl patch hpa gotrs-ha-hpa --patch '{"spec":{"maxReplicas":30}}'
-```
-
-### Health Checks
-
-```bash
-# Check cluster health
-kubectl get pods -l app=gotrs
-kubectl get pods -l postgresql=postgres-cluster
-kubectl get pods -l app.kubernetes.io/name=rabbitmq-cluster
-
-# Check replication status
-kubectl exec -it postgres-cluster-1 -- psql -c "SELECT * FROM pg_stat_replication;"
+# Or enable autoscaling
+helm upgrade goatflow ./charts/goatflow \
+  --set backend.autoscaling.enabled=true
 ```
 
 ## Troubleshooting
 
-### Common Issues
-
-**High Memory Usage:**
 ```bash
-# Check memory usage
-kubectl top pods -l app=gotrs
+# Check pod status
+kubectl get pods -l app.kubernetes.io/name=goatflow
 
-# Increase memory limits
-kubectl patch deployment gotrs-ha --patch '{"spec":{"template":{"spec":{"containers":[{"name":"gotrs","resources":{"limits":{"memory":"4Gi"}}}]}}}}'
+# Check logs
+kubectl logs -l app.kubernetes.io/name=goatflow --tail=100
+
+# Check resource usage
+kubectl top pods -l app.kubernetes.io/name=goatflow
+
+# Check HPA status
+kubectl get hpa
 ```
-
-**Slow Queries:**
-```bash
-# Check slow query log
-kubectl exec -it postgres-cluster-1 -- psql -c "SELECT * FROM pg_stat_statements ORDER BY mean_time DESC LIMIT 10;"
-```
-
-**Message Queue Backlog:**
-```bash
-# Check queue depth
-kubectl exec -it rabbitmq-cluster-0 -- rabbitmqctl list_queues name messages consumers
-```
-
-## Best Practices
-
-1. **Regular Testing**: Conduct monthly failover tests
-2. **Capacity Planning**: Monitor growth trends and scale proactively
-3. **Documentation**: Keep runbooks updated
-4. **Monitoring**: Set up comprehensive alerting
-5. **Backup Verification**: Test restore procedures regularly
-6. **Security Updates**: Apply patches promptly
-7. **Performance Baselines**: Establish and monitor against baselines
-
-## Cost Optimization
-
-- Use spot instances for non-critical workloads
-- Implement pod autoscaling based on actual load
-- Right-size resource requests and limits
-- Use reserved instances for predictable workloads
-- Implement data lifecycle policies for backups

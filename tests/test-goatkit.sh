@@ -94,7 +94,7 @@ echo "------------------"
 
 # Create test YAML files
 cat > /tmp/test-valid-route.yaml << 'EOF'
-apiVersion: gotrs.io/v1
+apiVersion: goatflow.io/v1
 kind: Route
 metadata:
   name: test-route
@@ -128,7 +128,7 @@ settings:
 EOF
 
 cat > /tmp/test-valid-dashboard.yaml << 'EOF'
-apiVersion: gotrs.io/v1
+apiVersion: goatflow.io/v1
 kind: Dashboard
 metadata:
   name: test-dashboard

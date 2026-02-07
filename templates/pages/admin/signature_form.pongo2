@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{% if isNew %}{{ t("admin.modules.signature.form.create_title") }}{% else %}{{ t("admin.modules.signature.form.edit_title") }}{% endif %} - GOTRS Admin{% endblock %}
+{% block title %}{% if isNew %}{{ t("admin.modules.signature.form.create_title") }}{% else %}{{ t("admin.modules.signature.form.edit_title") }}{% endif %} - GoatFlow Admin{% endblock %}
 
 {% block head %}
 {{ block.super }}
@@ -157,27 +157,27 @@
             <div class="gk-card-glow rounded-lg p-6 sticky top-4">
                 <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.modules.signature.form.variables_title") }}</h3>
                 <p class="text-xs mb-4" style="color: var(--gk-text-muted);">{{ t("admin.modules.signature.form.variables_help") }}</p>
-                <p class="text-xs mb-4" style="color: var(--gk-primary);">Both <code class="px-1 rounded" style="background: var(--gk-bg-tertiary);">&lt;GOTRS_*&gt;</code> and <code class="px-1 rounded" style="background: var(--gk-bg-tertiary);">&lt;OTRS_*&gt;</code> prefixes are supported.</p>
+                <p class="text-xs mb-4" style="color: var(--gk-primary);">Both <code class="px-1 rounded" style="background: var(--gk-bg-tertiary);">&lt;GOATFLOW_*&gt;</code> and <code class="px-1 rounded" style="background: var(--gk-bg-tertiary);">&lt;OTRS_*&gt;</code> prefixes are supported.</p>
 
                 <div class="space-y-4">
                     <!-- Agent Variables -->
                     <div>
                         <h4 class="text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">{{ t("admin.modules.signature.variables.current_agent") }}</h4>
                         <div class="space-y-1">
-                            <button type="button" onclick="insertVariable('GOTRS', 'CURRENT_UserFirstname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
-                                &lt;GOTRS_CURRENT_UserFirstname&gt;
+                            <button type="button" onclick="insertVariable('GoatFlow', 'CURRENT_UserFirstname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
+                                &lt;GOATFLOW_CURRENT_UserFirstname&gt;
                             </button>
                             <button type="button" onclick="insertVariable('OTRS', 'CURRENT_UserFirstname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
                                 &lt;OTRS_CURRENT_UserFirstname&gt;
                             </button>
-                            <button type="button" onclick="insertVariable('GOTRS', 'CURRENT_UserLastname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
-                                &lt;GOTRS_CURRENT_UserLastname&gt;
+                            <button type="button" onclick="insertVariable('GoatFlow', 'CURRENT_UserLastname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
+                                &lt;GOATFLOW_CURRENT_UserLastname&gt;
                             </button>
                             <button type="button" onclick="insertVariable('OTRS', 'CURRENT_UserLastname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
                                 &lt;OTRS_CURRENT_UserLastname&gt;
                             </button>
-                            <button type="button" onclick="insertVariable('GOTRS', 'CURRENT_UserFullname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
-                                &lt;GOTRS_CURRENT_UserFullname&gt;
+                            <button type="button" onclick="insertVariable('GoatFlow', 'CURRENT_UserFullname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
+                                &lt;GOATFLOW_CURRENT_UserFullname&gt;
                             </button>
                             <button type="button" onclick="insertVariable('OTRS', 'CURRENT_UserFullname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
                                 &lt;OTRS_CURRENT_UserFullname&gt;
@@ -189,14 +189,14 @@
                     <div>
                         <h4 class="text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">{{ t("admin.modules.signature.variables.ticket_owner") }}</h4>
                         <div class="space-y-1">
-                            <button type="button" onclick="insertVariable('GOTRS', 'OWNER_UserFirstname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
-                                &lt;GOTRS_OWNER_UserFirstname&gt;
+                            <button type="button" onclick="insertVariable('GoatFlow', 'OWNER_UserFirstname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
+                                &lt;GOATFLOW_OWNER_UserFirstname&gt;
                             </button>
                             <button type="button" onclick="insertVariable('OTRS', 'OWNER_UserFirstname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
                                 &lt;OTRS_OWNER_UserFirstname&gt;
                             </button>
-                            <button type="button" onclick="insertVariable('GOTRS', 'OWNER_UserLastname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
-                                &lt;GOTRS_OWNER_UserLastname&gt;
+                            <button type="button" onclick="insertVariable('GoatFlow', 'OWNER_UserLastname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
+                                &lt;GOATFLOW_OWNER_UserLastname&gt;
                             </button>
                             <button type="button" onclick="insertVariable('OTRS', 'OWNER_UserLastname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
                                 &lt;OTRS_OWNER_UserLastname&gt;
@@ -208,20 +208,20 @@
                     <div>
                         <h4 class="text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">{{ t("admin.modules.signature.variables.ticket") }}</h4>
                         <div class="space-y-1">
-                            <button type="button" onclick="insertVariable('GOTRS', 'TICKET_TicketNumber')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
-                                &lt;GOTRS_TICKET_TicketNumber&gt;
+                            <button type="button" onclick="insertVariable('GoatFlow', 'TICKET_TicketNumber')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
+                                &lt;GOATFLOW_TICKET_TicketNumber&gt;
                             </button>
                             <button type="button" onclick="insertVariable('OTRS', 'TICKET_TicketNumber')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
                                 &lt;OTRS_TICKET_TicketNumber&gt;
                             </button>
-                            <button type="button" onclick="insertVariable('GOTRS', 'TICKET_Title')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
-                                &lt;GOTRS_TICKET_Title&gt;
+                            <button type="button" onclick="insertVariable('GoatFlow', 'TICKET_Title')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
+                                &lt;GOATFLOW_TICKET_Title&gt;
                             </button>
                             <button type="button" onclick="insertVariable('OTRS', 'TICKET_Title')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
                                 &lt;OTRS_TICKET_Title&gt;
                             </button>
-                            <button type="button" onclick="insertVariable('GOTRS', 'TICKET_Queue')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
-                                &lt;GOTRS_TICKET_Queue&gt;
+                            <button type="button" onclick="insertVariable('GoatFlow', 'TICKET_Queue')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
+                                &lt;GOATFLOW_TICKET_Queue&gt;
                             </button>
                             <button type="button" onclick="insertVariable('OTRS', 'TICKET_Queue')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
                                 &lt;OTRS_TICKET_Queue&gt;
@@ -233,20 +233,20 @@
                     <div>
                         <h4 class="text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">{{ t("admin.modules.signature.variables.customer") }}</h4>
                         <div class="space-y-1">
-                            <button type="button" onclick="insertVariable('GOTRS', 'CUSTOMER_UserFirstname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
-                                &lt;GOTRS_CUSTOMER_UserFirstname&gt;
+                            <button type="button" onclick="insertVariable('GoatFlow', 'CUSTOMER_UserFirstname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
+                                &lt;GOATFLOW_CUSTOMER_UserFirstname&gt;
                             </button>
                             <button type="button" onclick="insertVariable('OTRS', 'CUSTOMER_UserFirstname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
                                 &lt;OTRS_CUSTOMER_UserFirstname&gt;
                             </button>
-                            <button type="button" onclick="insertVariable('GOTRS', 'CUSTOMER_UserLastname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
-                                &lt;GOTRS_CUSTOMER_UserLastname&gt;
+                            <button type="button" onclick="insertVariable('GoatFlow', 'CUSTOMER_UserLastname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
+                                &lt;GOATFLOW_CUSTOMER_UserLastname&gt;
                             </button>
                             <button type="button" onclick="insertVariable('OTRS', 'CUSTOMER_UserLastname')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
                                 &lt;OTRS_CUSTOMER_UserLastname&gt;
                             </button>
-                            <button type="button" onclick="insertVariable('GOTRS', 'CUSTOMER_UserEmail')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
-                                &lt;GOTRS_CUSTOMER_UserEmail&gt;
+                            <button type="button" onclick="insertVariable('GoatFlow', 'CUSTOMER_UserEmail')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-primary);">
+                                &lt;GOATFLOW_CUSTOMER_UserEmail&gt;
                             </button>
                             <button type="button" onclick="insertVariable('OTRS', 'CUSTOMER_UserEmail')" class="text-xs block transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
                                 &lt;OTRS_CUSTOMER_UserEmail&gt;

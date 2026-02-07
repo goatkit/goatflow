@@ -1,4 +1,4 @@
-# GOTRS Theme Packages
+# GoatFlow Theme Packages
 
 ## Implementation Status
 
@@ -21,7 +21,7 @@
 
 ## Overview
 
-GOTRS Theme Packages are self-contained bundles that include all theme assets, enabling:
+GoatFlow Theme Packages are self-contained bundles that include all theme assets, enabling:
 
 - **Community sharing** - Themes distributed as zip files (planned)
 - **Easy installation** - Upload a zip, it just works (planned)
@@ -36,14 +36,14 @@ GOTRS Theme Packages are self-contained bundles that include all theme assets, e
 
 ```
 static/themes/
-├── builtin/                     # ✅ Ships with GOTRS
+├── builtin/                     # ✅ Ships with GoatFlow
 │   ├── synthwave/
 │   │   ├── theme.yaml           # Theme metadata
 │   │   ├── theme.css            # Main stylesheet
 │   │   └── fonts/
 │   │       ├── fonts.css        # @font-face with relative paths
 │   │       └── space-grotesk/   # Font files
-│   ├── gotrs-classic/
+│   ├── goatflow-classic/
 │   │   ├── theme.yaml
 │   │   ├── theme.css
 │   │   └── fonts/               # Empty - uses system fonts
@@ -103,7 +103,7 @@ func getAvailableThemes() []string {
 
 ```javascript
 // static/js/theme-manager.js
-const BUILTIN_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe'];
+const BUILTIN_THEMES = ['synthwave', 'goatflow-classic', 'seventies-vibes', 'nineties-vibe'];
 
 function getThemeBasePath(themeId) {
     if (BUILTIN_THEMES.includes(themeId)) {
@@ -126,7 +126,7 @@ name: Synthwave
 id: synthwave
 description: Neon retro vibes with glowing effects
 version: 1.0.0
-author: GOTRS Team
+author: GoatFlow Team
 license: MIT
 
 preview:
@@ -391,8 +391,8 @@ Create `fonts/fonts.css` with **relative paths**:
 Edit `static/js/theme-manager.js`:
 
 ```javascript
-const AVAILABLE_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe', 'my-theme'];
-const BUILTIN_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe', 'my-theme'];
+const AVAILABLE_THEMES = ['synthwave', 'goatflow-classic', 'seventies-vibes', 'nineties-vibe', 'my-theme'];
+const BUILTIN_THEMES = ['synthwave', 'goatflow-classic', 'seventies-vibes', 'nineties-vibe', 'my-theme'];
 
 const THEME_METADATA = {
   // ... existing themes ...
@@ -422,7 +422,7 @@ Add to all 15 language files in `internal/i18n/translations/*.json`:
 
 ## Future Enhancements
 
-- **Theme Marketplace** - Online repository at themes.gotrs.io
+- **Theme Marketplace** - Online repository at themes.goatflow.io
 - **Theme Editor** - In-browser theme customization tool
 - **Theme Variants** - Child themes that extend base themes
 - **Live Preview** - Preview theme before applying

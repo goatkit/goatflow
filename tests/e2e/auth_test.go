@@ -5,7 +5,7 @@ package e2e
 import (
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/tests/e2e/helpers"
+	"github.com/goatkit/goatflow/tests/e2e/helpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,7 +24,7 @@ func TestAuthenticationFlow(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check for logo
-		logo := browser.Page.Locator("img[alt='GOTRS Logo']")
+		logo := browser.Page.Locator("img[alt='GoatFlow Logo']")
 		count, _ := logo.Count()
 		assert.Greater(t, count, 0, "Logo should be visible")
 

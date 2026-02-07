@@ -2,7 +2,7 @@
 
 ## Overview
 
-GOTRS implements a multi-layered caching strategy to optimize performance and reduce database load. The caching system consists of:
+GoatFlow implements a multi-layered caching strategy to optimize performance and reduce database load. The caching system consists of:
 
 1. **Redis Distributed Cache** - Primary cache layer
 2. **Query Result Caching** - Database query optimization
@@ -49,7 +49,7 @@ config := &CacheConfig{
     RedisAddr:     []string{"redis-cluster:6379"},
     ClusterMode:   true,
     DefaultTTL:    5 * time.Minute,
-    KeyPrefix:     "gotrs",
+    KeyPrefix:     "goatflow",
     Compression:   true,
     MaxRetries:    3,
     PoolSize:      100,
@@ -280,11 +280,11 @@ queryCache.WarmUp(ctx, warmupQueries)
 
 ### Valkey (Redis-compatible)
 
-GOTRS uses Valkey for caching. Deploy via Helm chart:
+GoatFlow uses Valkey for caching. Deploy via Helm chart:
 
 ```bash
-# Deploy GOTRS with Valkey enabled (default)
-helm install gotrs ./charts/gotrs
+# Deploy GoatFlow with Valkey enabled (default)
+helm install goatflow ./charts/goatflow
 
 # Check Valkey status
 kubectl get pods -l app.kubernetes.io/name=valkey

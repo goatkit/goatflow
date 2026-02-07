@@ -13,11 +13,11 @@ We release patches for security vulnerabilities. Which versions are eligible for
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-If you believe you have found a security vulnerability in GOTRS, please report it to us through coordinated disclosure.
+If you believe you have found a security vulnerability in GoatFlow, please report it to us through coordinated disclosure.
 
 ### Where to Report
 
-Please report security vulnerabilities to: **security@gotrs.io**
+Please report security vulnerabilities to: **security@goatflow.io**
 
 Please include the following information (as much as you can provide) to help us better understand the nature and scope of the possible issue:
 
@@ -43,7 +43,7 @@ We prefer all communications to be in English.
 
 ## Security Best Practices
 
-When deploying GOTRS:
+When deploying GoatFlow:
 
 1. **Keep Updated**: Always run the latest stable version
 2. **Use HTTPS**: Enable TLS/SSL for all connections
@@ -56,7 +56,7 @@ When deploying GOTRS:
 
 ## Security Features
 
-GOTRS includes several security features:
+GoatFlow includes several security features:
 
 * **Authentication**: Multi-factor authentication support
 * **Authorization**: Role-based access control (RBAC)
@@ -82,20 +82,20 @@ We recognize researchers in our Hall of Fame and provide public acknowledgment.
 
 Security updates will be announced through:
 
-* Security mailing list: security-announce@gotrs.io
+* Security mailing list: hello@goatflow.io
 * GitHub Security Advisories
 * Release notes
-* Official blog: https://gotrs.io/blog
+* Official blog: https://goatflow.io/blog
 
 ## Contact
 
-* Security issues: security@gotrs.io
-* General support: support@gotrs.io
-* PGP Key: Available at https://gotrs.io/security/pgp-key.asc
+* Security issues: security@goatflow.io
+* General support: hello@goatflow.io
+* PGP Key: Available at https://goatflow.io/security/pgp-key.asc
 
 ## Commitment
 
-Gibbsoft Ltd and the GOTRS team are committed to ensuring the security of GOTRS and its users. We appreciate your help in keeping GOTRS secure.
+Gibbsoft Ltd and the GoatFlow team are committed to ensuring the security of GoatFlow and its users. We appreciate your help in keeping GoatFlow secure.
 
 ---
 

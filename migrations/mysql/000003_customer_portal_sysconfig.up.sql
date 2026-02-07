@@ -130,10 +130,10 @@ INSERT INTO sysconfig_default (
     @cfg_navigation,
     0, 0, 0, 1,
     0, 1, 1, NULL,
-    '{"type":"string","default":"Powered by GOTRS"}',
-    '{"type":"string","default":"Powered by GOTRS"}',
+    '{"type":"string","default":"Powered by GoatFlow"}',
+    '{"type":"string","default":"Powered by GoatFlow"}',
     @cfg_file,
-    'Powered by GOTRS',
+    'Powered by GoatFlow',
     0,
     '', NULL, NULL,
     @now, @author, @now, @author

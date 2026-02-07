@@ -7,7 +7,7 @@ import (
 
 	goplugin "github.com/hashicorp/go-plugin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
+	"github.com/goatkit/goatflow/internal/plugin"
 )
 
 // mockPlugin implements GKPluginInterface for testing

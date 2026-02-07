@@ -1,4 +1,4 @@
-# GOTRS Microservices Architecture
+# GoatFlow Microservices Architecture
 
 > **Status**: Design Document (Future Consideration)
 >
@@ -271,7 +271,7 @@ spec:
     spec:
       containers:
       - name: ticket-service
-        image: gotrs/ticket-service:latest
+        image: goatflow/ticket-service:latest
         ports:
         - containerPort: 50051  # gRPC
         - containerPort: 8080   # Metrics

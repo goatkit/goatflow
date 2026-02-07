@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
+	"github.com/goatkit/goatflow/internal/yamlmgmt"
 )
 
 // HandleDebugConfigSources lists configuration settings with their source.

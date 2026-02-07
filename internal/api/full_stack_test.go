@@ -21,7 +21,7 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // NOTE: Do not force override DB host/port here; rely on environment.

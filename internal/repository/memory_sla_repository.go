@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // SLARepository defines the interface for SLA operations.

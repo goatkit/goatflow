@@ -1,8 +1,10 @@
-# GOTRS Database Schema Documentation
+# GoatFlow Database Schema Documentation
 
 ## Overview
 
-GOTRS uses a **100% OTRS-compatible database schema** to ensure seamless migration and interoperability. The schema is frozen (see [SCHEMA_FREEZE.md](../architecture/SCHEMA_FREEZE.md)) and uses the exact OTRS table structures with integer primary keys, not UUIDs.
+GoatFlow's database schema is **rooted in OTRS compatibility** — the baseline 116 tables match OTRS Community Edition exactly, enabling direct migration from OTRS to GoatFlow. As GoatFlow adds features beyond OTRS's scope, new tables are added alongside the original schema without modifying it.
+
+**Compatibility status:** OTRS baseline tables are frozen and unmodified. GoatFlow extensions use separate tables (see [Schema Extensions](#schema-extensions) below).
 
 ## Database Access Policy
 
@@ -23,7 +25,7 @@ The targets route through `scripts/reset-user-password.sh`, which dispatches to 
 ## Schema Management Approach
 
 ### Baseline Schema (Current)
-As of August 2025, GOTRS uses a baseline schema initialization approach instead of sequential migrations:
+As of August 2025, GoatFlow uses a baseline schema initialization approach instead of sequential migrations:
 
 ```bash
 # Fast initialization (<1 second)
@@ -36,15 +38,18 @@ make db-apply-test-data  # Apply generated test data
 ```
 migrations/
 ├── mysql/
-│   ├── 000001_schema_alignment.up.sql   # MySQL schema (OTRS baseline)
-│   └── 000002_minimal_data.up.sql       # Essential lookup data
+│   ├── 000001_schema_alignment.up.sql   # MySQL schema (OTRS baseline, 127 tables)
+│   ├── 000002_minimal_data.up.sql       # Essential lookup data
+│   ├── 000003_customer_portal_sysconfig.up.sql
+│   ├── 000004_dynamic_field_screen_config.up.sql
+│   ├── 000005_canned_response.up.sql    # GoatFlow extension tables
+│   ├── 000006_znuny_color_columns.up.sql # Znuny-compatible additions
+│   ├── 000007_api_tokens.up.sql         # GoatFlow extension: API tokens
+│   └── 000008_admin_audit_log.up.sql    # GoatFlow extension: audit logging
 ├── postgres/
 │   ├── 000001_schema_alignment.up.sql   # PostgreSQL schema alignment
 │   └── 000004_generated_test_data.up.sql  # Dynamically generated test data (optional)
 └── legacy/                              # Old sequential migrations (archived)
-    ├── 000001_otrs_schema.up.sql
-    ├── 000002_otrs_initial_data.up.sql
-    └── ... (28 migration files)
 
 schema/
 ├── baseline/
@@ -53,6 +58,47 @@ schema/
 └── seed/
     └── minimal.sql             # Minimal seed data for development
 ```
+
+## Schema Architecture
+
+### OTRS Baseline (Frozen)
+
+The 116 original OTRS tables are **frozen** — no modifications to structure, column types, or field names. See [SCHEMA_FREEZE.md](../architecture/SCHEMA_FREEZE.md) for the full policy.
+
+This means:
+- ✅ An OTRS database dump can be imported directly into GoatFlow
+- ✅ SQL queries written for OTRS work unchanged against GoatFlow
+- ✅ Third-party OTRS tools and reporting continue to work
+
+### Schema Extensions
+
+GoatFlow adds new tables for features that go beyond OTRS. These **never modify** existing OTRS tables:
+
+| Table | Migration | Purpose |
+|---|---|---|
+| `dynamic_field_screen_config` | 000004 | Dynamic field screen assignments |
+| `canned_response` | 000005 | Canned response templates |
+| `canned_response_category` | 000005 | Canned response categorisation |
+| `user_api_tokens` | 000007 | Personal access tokens for API auth |
+| `admin_action_type` | 000008 | Audit log action type definitions |
+| `admin_action_log` | 000008 | Admin action audit trail |
+
+**Column additions to existing tables** (Znuny-compatible):
+
+| Table | Column | Migration | Notes |
+|---|---|---|---|
+| `ticket_priority` | `color VARCHAR(25)` | 000006 | Znuny extension, not breaking |
+| `ticket_state` | `color VARCHAR(25)` | 000006 | Znuny extension, not breaking |
+
+### Features Using Existing OTRS Tables
+
+Some GoatFlow features are built entirely on existing OTRS infrastructure:
+
+- **Two-Factor Auth (TOTP):** Secrets and recovery codes stored in `user_preferences` / `customer_preferences`
+- **SLA Management:** Uses existing `sla`, `sla_preferences`, `service_sla` tables
+- **Knowledge Base:** Uses existing `faq_*` tables
+- **GenericAgent:** Uses existing `generic_agent_jobs` table
+- **Plugin state:** Uses existing `sysconfig_default` / `sysconfig_modified` tables
 
 ## Core Tables (OTRS-Compatible)
 
@@ -228,7 +274,7 @@ CREATE TABLE ticket_priority (
     id SMALLSERIAL PRIMARY KEY,
     name varchar(200) NOT NULL,
     valid_id SMALLINT NOT NULL,
-    color varchar(25) NOT NULL,
+    color varchar(25) NOT NULL,         -- Znuny extension
     create_time TIMESTAMP NOT NULL,
     create_by INTEGER NOT NULL,
     change_time TIMESTAMP NOT NULL,
@@ -255,7 +301,7 @@ CREATE TABLE queue (
 
 ## Important Schema Constraints
 
-1. **Integer Primary Keys**: All tables use SERIAL/BIGSERIAL, not UUIDs
+1. **Integer Primary Keys**: All OTRS tables use SERIAL/BIGSERIAL, not UUIDs
 2. **OTRS Field Names**: Exact field names preserved (e.g., `pw` not `password`)
 3. **Valid ID Pattern**: `valid_id` field where 1=valid, 2=invalid, 3=invalid-temporarily
 4. **Audit Fields**: All tables include `create_time`, `create_by`, `change_time`, `change_by`
@@ -279,12 +325,12 @@ make db-apply-test-data  # Applies test data
 make db-shell
 
 # Direct connection
-PGPASSWORD=$YOUR_PASSWORD psql -h localhost -p 5432 -U gotrs_user -d gotrs
+PGPASSWORD=$YOUR_PASSWORD psql -h localhost -p 5432 -U goatflow_user -d goatflow
 ```
 
 ### View Schema
 ```sql
--- List all tables (116 OTRS tables)
+-- List all tables
 \dt
 
 -- View table structure
@@ -335,6 +381,28 @@ The compose file (`docker-compose.testdb.yml`) mounts the same OTRS-aligned fixt
 
 Each container runs its respective init script (`docker/postgres/testdb/10-apply-migrations.sh` or `docker/mariadb/testdb/10-apply-migrations.sh`) which applies `000001_schema_alignment.up.sql`, the minimal lookup data, and the integration fixtures. This keeps the API and HTMX suites database-agnostic—if it passes against one driver, it should pass against the other.
 
+## Migration from OTRS
+
+GoatFlow's OTRS baseline tables are structurally identical, so migration is straightforward:
+
+1. **Direct Import**: OTRS database dumps can be imported directly — the baseline tables match
+2. **No Schema Translation**: Core table structures are compatible
+3. **Data Preservation**: All OTRS data relationships maintained
+4. **Extension tables**: GoatFlow's additional tables (`user_api_tokens`, `canned_response`, etc.) are created by running migrations after import
+
+```bash
+# Import OTRS dump
+psql -U goatflow_user -d goatflow < otrs_backup.sql
+
+# Apply GoatFlow extension migrations
+make db-migrate
+
+# Or use the migration tool
+make otrs-import DUMP=path/to/otrs_backup.sql
+```
+
+**Note:** GoatFlow features that use extension tables (API tokens, canned responses, audit logging) will initialise with empty data after migration. Features built on existing OTRS tables (TOTP via `user_preferences`, SLA, queues, etc.) will work immediately with migrated data.
+
 ## Performance Considerations
 
 1. **Indexes**: All foreign keys and commonly queried fields are indexed
@@ -342,30 +410,12 @@ Each container runs its respective init script (`docker/postgres/testdb/10-apply
 3. **Vacuum**: Regular VACUUM ANALYZE recommended for PostgreSQL
 4. **Connection Pooling**: Use PgBouncer for high-traffic deployments
 
-## Migration from OTRS
-
-Since GOTRS uses the exact OTRS schema:
-
-1. **Direct Import**: OTRS database dumps can be imported directly
-2. **No Schema Translation**: Table structures are 100% compatible
-3. **Data Preservation**: All OTRS data relationships maintained
-4. **Backward Compatible**: Can switch between OTRS and GOTRS
-
-```bash
-# Import OTRS dump
-psql -U gotrs_user -d gotrs < otrs_backup.sql
-
-# Or use the migration tool
-make otrs-import DUMP=path/to/otrs_backup.sql
-```
-
 ## Schema Freeze Policy
 
-**CRITICAL**: The database schema is FROZEN for OTRS compatibility:
-- NO modifications to existing OTRS tables
-- NO new columns in OTRS tables  
-- NO changing data types
-- NO renaming fields
-- New features must use separate tables or JSONB columns
+The OTRS baseline schema is **frozen** for compatibility:
+- NO modifications to existing OTRS table structures
+- NO renaming fields or changing data types
+- New GoatFlow features use **separate extension tables** or existing infrastructure (e.g., `user_preferences`)
+- Column additions only where Znuny-compatible (e.g., `color` on priority/state)
 
-See [SCHEMA_FREEZE.md](../architecture/SCHEMA_FREEZE.md) for detailed policy.
+See [SCHEMA_FREEZE.md](../architecture/SCHEMA_FREEZE.md) for the detailed policy.

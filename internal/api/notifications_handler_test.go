@@ -11,7 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/notifications"
+	"github.com/goatkit/goatflow/internal/notifications"
 )
 
 type stubHub struct {

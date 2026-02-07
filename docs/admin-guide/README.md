@@ -1,8 +1,8 @@
-# GOTRS Administrator Guide
+# GoatFlow Administrator Guide
 
 ## Coming Soon
 
-Comprehensive documentation for GOTRS system administrators.
+Comprehensive documentation for GoatFlow system administrators.
 
 ## Planned Content
 
@@ -83,24 +83,24 @@ Comprehensive documentation for GOTRS system administrators.
 ## Quick Reference
 
 ### Default Paths
-- Configuration: `/etc/gotrs/`
-- Logs: `/var/log/gotrs/`
-- Data: `/var/lib/gotrs/`
-- Attachments: `/var/lib/gotrs/attachments/`
+- Configuration: `/etc/goatflow/`
+- Logs: `/var/log/goatflow/`
+- Data: `/var/lib/goatflow/`
+- Attachments: `/var/lib/goatflow/attachments/`
 
 ### Important Commands
 ```bash
 # Check system status
-gotrs-cli status
+goatflow-cli status
 
 # Run database migrations
-gotrs-cli migrate up
+goatflow-cli migrate up
 
 # Create admin user
-gotrs-cli user create --admin
+goatflow-cli user create --admin
 
 # Backup database
-gotrs-cli backup create
+goatflow-cli backup create
 ```
 
 ## See Also

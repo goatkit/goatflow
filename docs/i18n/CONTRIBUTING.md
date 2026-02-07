@@ -1,6 +1,6 @@
 # i18n Contributing Guide
 
-This guide explains how to add new language support or improve existing translations in GOTRS.
+This guide explains how to add new language support or improve existing translations in GoatFlow.
 
 ## Table of Contents
 - [Quick Start](#quick-start)
@@ -38,8 +38,8 @@ Translation files are JSON files with nested structure located in `internal/i18n
 ```json
 {
   "app": {
-    "name": "GOTRS",
-    "title": "GOTRS - Ticketing System"
+    "name": "GoatFlow",
+    "title": "GoatFlow - Ticketing System"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -315,7 +315,7 @@ Language metadata is centralized in `internal/i18n/rtl.go`:
 This prevents duplication of language names across:
 - Backend API responses
 - Frontend templates
-- CLI tools (gotrs-babelfish)
+- CLI tools (goatflow-babelfish)
 
 ### Embedded Translations
 

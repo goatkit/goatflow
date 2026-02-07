@@ -16,12 +16,12 @@ const ThemeManager = (function() {
   const STORAGE_KEY_THEME = 'gk-theme-name';
 
   // Available themes - add new themes here
-  const AVAILABLE_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe'];
+  const AVAILABLE_THEMES = ['synthwave', 'goatflow-classic', 'seventies-vibes', 'nineties-vibe'];
   const DEFAULT_THEME = 'synthwave';
 
   // Built-in themes are in /static/themes/builtin/
   // Community themes are in /static/themes/.cache/ (extracted from ZIP packages)
-  const BUILTIN_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe'];
+  const BUILTIN_THEMES = ['synthwave', 'goatflow-classic', 'seventies-vibes', 'nineties-vibe'];
 
   /**
    * Get the base path for a theme
@@ -47,7 +47,7 @@ const ThemeManager = (function() {
       gradient: 'linear-gradient(135deg, #00E5FF, #FF2FD4)',
       hasFonts: true
     },
-    'gotrs-classic': {
+    'goatflow-classic': {
       name: 'Classic',
       nameKey: 'theme.classic',
       description: 'Clean & professional',
@@ -102,12 +102,12 @@ const ThemeManager = (function() {
   /**
    * Check if user is authenticated (has logged-in indicator cookie)
    * Note: auth tokens are httpOnly (invisible to JS), so we use a separate indicator
-   * Checks both agent (gotrs_logged_in) and customer (gotrs_customer_logged_in) cookies
+   * Checks both agent (goatflow_logged_in) and customer (goatflow_customer_logged_in) cookies
    * @returns {boolean}
    */
   function isAuthenticated() {
-    return document.cookie.includes('gotrs_logged_in=') ||
-           document.cookie.includes('gotrs_customer_logged_in=');
+    return document.cookie.includes('goatflow_logged_in=') ||
+           document.cookie.includes('goatflow_customer_logged_in=');
   }
 
   /**

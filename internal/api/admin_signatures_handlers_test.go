@@ -17,7 +17,7 @@ func TestSignatureStruct(t *testing.T) {
 	sig := Signature{
 		ID:          1,
 		Name:        "Test Signature",
-		Text:        "Best regards,\n<GOTRS_CURRENT_UserFullname>",
+		Text:        "Best regards,\n<GOATFLOW_CURRENT_UserFullname>",
 		ContentType: "text/plain",
 		Comments:    "Test comment",
 		ValidID:     1,
@@ -79,8 +79,8 @@ func TestSubstituteSignatureVariables(t *testing.T) {
 			expected: "Best regards",
 		},
 		{
-			name: "user variable - GOTRS style",
-			text: "Best regards,\n<GOTRS_CURRENT_UserFullname>",
+			name: "user variable - GoatFlow style",
+			text: "Best regards,\n<GOATFLOW_CURRENT_UserFullname>",
 			vars: map[string]string{
 				"CURRENT_UserFullname": "John Doe",
 			},
@@ -96,7 +96,7 @@ func TestSubstituteSignatureVariables(t *testing.T) {
 		},
 		{
 			name: "multiple variables",
-			text: "<GOTRS_CURRENT_UserFullname>\n<GOTRS_TICKET_Queue>\nSupport Team",
+			text: "<GOATFLOW_CURRENT_UserFullname>\n<GOATFLOW_TICKET_Queue>\nSupport Team",
 			vars: map[string]string{
 				"CURRENT_UserFullname": "Jane Smith",
 				"TICKET_Queue":         "Sales",
@@ -105,7 +105,7 @@ func TestSubstituteSignatureVariables(t *testing.T) {
 		},
 		{
 			name:     "variable not found - replaced with dash (OTRS behavior)",
-			text:     "Hello <GOTRS_UNKNOWN_Variable>",
+			text:     "Hello <GOATFLOW_UNKNOWN_Variable>",
 			vars:     map[string]string{},
 			expected: "Hello -",
 		},

@@ -1,12 +1,12 @@
-# GOTRS Architecture
+# GoatFlow Architecture
 
 ## Overview
 
-GOTRS (Go Open Ticket Request System) is a modern, open-source ITSM solution built on the **GoatKit platform**. It employs a modular monolith architecture with server-side rendering and hypermedia-driven design using HTMX.
+GoatFlow is a modern, open-source ITSM solution built on the **GoatKit platform**. It employs a modular monolith architecture with server-side rendering and hypermedia-driven design using HTMX.
 
 ## GoatKit Platform
 
-GoatKit is the **platform layer** that powers GOTRS—and can power other products. Think of GoatKit as the engine and GOTRS as the first vehicle built on it.
+GoatKit is the **platform layer** that powers GoatFlow—and can power other products. Think of GoatKit as the engine and GoatFlow as the first vehicle built on it.
 
 ### Platform vs Product
 
@@ -14,7 +14,7 @@ GoatKit is the **platform layer** that powers GOTRS—and can power other produc
 |-------|------------|----------|
 | **GoatKit Core** | Shared infrastructure | Auth, DB, Email, Scheduler, Admin UI, Plugin Runtime |
 | **Modules** | Pluggable features | Stats, FAQ, Calendar, Process Management |
-| **Products** | Complete applications | GOTRS (ITSM), future products |
+| **Products** | Complete applications | GoatFlow (ITSM), future products |
 
 This separation enables:
 - **Third-party developers** to build plugins without touching core
@@ -40,7 +40,7 @@ This separation enables:
 ┌─────────────────────────────▼────────────────────────────────┐
 │                    goats binary                              │
 │  ┌────────────────────────────────────────────────────────┐  │
-│  │  GOTRS Product Layer                                   │  │
+│  │  GoatFlow Product Layer                                │  │
 │  │  • Ticket management, queues, SLAs                     │  │
 │  │  • Agent & customer interfaces                         │  │
 │  │  • ITSM-specific business logic                        │  │
@@ -57,7 +57,7 @@ This separation enables:
 │  │  │ (Gin + HTMX) │ │ (JWT, LDAP)  │ │ (WASM, gRPC)   │  │  │
 │  │  └──────────────┘ └──────────────┘ └────────────────┘  │  │
 │  │  ┌──────────────┐ ┌──────────────┐ ┌────────────────┐  │  │
-│  │  │ YAML Router  │ │ Templates   │ │ Email System   │  │  │
+│  │  │ YAML Router  │ │ Templates    │ │ Email System   │  │  │
 │  │  │              │ │ (Pongo2)     │ │ (SMTP/IMAP)    │  │  │
 │  │  └──────────────┘ └──────────────┘ └────────────────┘  │  │
 │  │  ┌──────────────┐ ┌──────────────┐ ┌────────────────┐  │  │
@@ -100,9 +100,9 @@ rows, err := db.Query("SELECT * FROM ticket WHERE id = $1", id)
 
 | Image | Size | Purpose |
 |-------|------|---------|
-| gotrs | ~45MB | Main application |
-| gotrs-toolbox | ~136MB | Development tools |
-| gotrs-tests | ~29MB | Test runner |
+| goatflow | ~45MB | Main application |
+| goatflow-toolbox | ~136MB | Development tools |
+| goatflow-tests | ~29MB | Test runner |
 
 ## Implemented Features (0.5.0 MVP)
 

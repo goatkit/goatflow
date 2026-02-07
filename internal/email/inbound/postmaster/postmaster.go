@@ -4,8 +4,8 @@ package postmaster
 import (
 	"context"
 
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/filters"
+	"github.com/goatkit/goatflow/internal/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/email/inbound/filters"
 )
 
 // Processor orchestrates PostMaster-style parsing, filtering, and dispatching.

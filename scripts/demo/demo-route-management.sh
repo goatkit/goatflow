@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# GOTRS Advanced Route Management Demo
+# GoatFlow Advanced Route Management Demo
 # Showcases the complete container-first route management system
 
 set -e
 
-echo "🚀 GOTRS Advanced Route Management System Demo"
+echo "🚀 GoatFlow Advanced Route Management System Demo"
 echo "=============================================="
 echo ""
 echo "This demo showcases the comprehensive YAML-based routing system"
@@ -14,7 +14,7 @@ echo ""
 
 # Build the route tools container
 echo "📦 Building Route Management Tools Container..."
-docker build -f Dockerfile.route-tools -t gotrs-route-tools . > /dev/null 2>&1
+docker build -f Dockerfile.route-tools -t goatflow-route-tools . > /dev/null 2>&1
 echo "✅ Container built successfully"
 echo ""
 
@@ -23,7 +23,7 @@ echo "1️⃣ Route Quality Analysis"
 echo "========================"
 echo "Running comprehensive linting on all route definitions..."
 echo ""
-docker run --rm -v $(pwd)/routes:/app/routes:ro gotrs-route-tools route-manager lint | head -30
+docker run --rm -v $(pwd)/routes:/app/routes:ro goatflow-route-tools route-manager lint | head -30
 echo ""
 echo "💡 The linter checks for naming conventions, security, performance, and documentation"
 echo ""
@@ -35,10 +35,10 @@ echo "2️⃣ Route Version Management"
 echo "=========================="
 echo "Creating a new version of our routes..."
 echo ""
-docker run --rm -v $(pwd)/routes:/app/routes gotrs-route-tools route-manager version commit "Demo version for showcase"
+docker run --rm -v $(pwd)/routes:/app/routes goatflow-route-tools route-manager version commit "Demo version for showcase"
 echo ""
 echo "Listing recent versions:"
-docker run --rm -v $(pwd)/routes:/app/routes:ro gotrs-route-tools route-manager version list | head -15
+docker run --rm -v $(pwd)/routes:/app/routes:ro goatflow-route-tools route-manager version list | head -15
 echo ""
 echo "💡 Versions allow safe rollback and change tracking"
 echo ""
@@ -51,7 +51,7 @@ echo "=============================="
 echo "Generating comprehensive API documentation from YAML routes..."
 echo ""
 mkdir -p generated-docs
-docker run --rm -v $(pwd)/routes:/app/routes:ro -v $(pwd)/generated-docs:/app/docs gotrs-route-tools route-manager docs /app/docs
+docker run --rm -v $(pwd)/routes:/app/routes:ro -v $(pwd)/generated-docs:/app/docs goatflow-route-tools route-manager docs /app/docs
 echo ""
 echo "Generated files:"
 ls -la generated-docs/ | head -10
@@ -231,7 +231,7 @@ echo ""
 echo "8️⃣ Comprehensive Route Report"
 echo "============================="
 echo ""
-docker run --rm -v $(pwd)/routes:/app/routes:ro gotrs-route-tools bash -c "
+docker run --rm -v $(pwd)/routes:/app/routes:ro goatflow-route-tools bash -c "
 echo '📁 Total route files: 5'
 echo '📊 Total endpoints: 68'
 echo '✅ Enabled routes: 65'
@@ -269,7 +269,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "🎉 Demo Complete!"
 echo ""
-echo "The GOTRS Advanced Route Management System provides:"
+echo "The GoatFlow Advanced Route Management System provides:"
 echo ""
 echo "✅ Kubernetes-style YAML route definitions"
 echo "✅ Complete version control with rollback capability"
@@ -285,7 +285,7 @@ echo ""
 echo "All tools run in containers with zero host dependencies!"
 echo ""
 echo "To explore further:"
-echo "  docker run --rm gotrs-route-tools route-manager help"
+echo "  docker run --rm goatflow-route-tools route-manager help"
 echo ""
 echo "Generated documentation available in: ./generated-docs/"
 echo ""

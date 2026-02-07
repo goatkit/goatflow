@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/gotrs-io/gotrs-ce/internal/apierrors"
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
+	"github.com/goatkit/goatflow/internal/apierrors"
+	"github.com/goatkit/goatflow/internal/i18n"
 )
 
 // LazyLoader is the interface for lazy-loading plugins on demand.

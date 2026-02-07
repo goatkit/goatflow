@@ -10,7 +10,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
-	"github.com/gotrs-io/gotrs-ce/internal/services/registry"
+	"github.com/goatkit/goatflow/internal/services/registry"
 )
 
 // MySQLService implements DatabaseService for MySQL.

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/shared"
 	"github.com/rickar/cal/v2"
 	"gopkg.in/yaml.v3"
 )

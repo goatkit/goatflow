@@ -1,6 +1,6 @@
 # E2E Testing with Playwright
 
-This directory contains end-to-end tests for GOTRS using Playwright with Go bindings.
+This directory contains end-to-end tests for GoatFlow using Playwright with Go bindings.
 
 ## Overview
 

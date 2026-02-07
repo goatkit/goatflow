@@ -58,7 +58,7 @@ DELETE FROM dynamic_field_value WHERE id > 0;
 DELETE FROM dynamic_field WHERE id > 10;
 
 -- Clean test customer users  
-DELETE FROM customer_user WHERE login NOT IN ('test@example.com', 'customer@gotrs.local');
+DELETE FROM customer_user WHERE login NOT IN ('test@example.com', 'customer@goatflow.local');
 
 -- Restore canonical state names (OTRS standard)
 UPDATE ticket_state SET name = 'new' WHERE id = 1;

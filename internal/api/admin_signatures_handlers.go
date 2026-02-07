@@ -12,8 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v3"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 // Signature represents an email signature in the system.
@@ -752,8 +752,8 @@ func ImportSignatures(data []byte, overwrite bool) (imported int, skipped int, e
 	}
 
 	userID := 1 // Default to admin
-	if os.Getenv("GOTRS_IMPORT_USER_ID") != "" {
-		if id, err := strconv.Atoi(os.Getenv("GOTRS_IMPORT_USER_ID")); err == nil {
+	if os.Getenv("GOATFLOW_IMPORT_USER_ID") != "" {
+		if id, err := strconv.Atoi(os.Getenv("GOATFLOW_IMPORT_USER_ID")); err == nil {
 			userID = id
 		}
 	}

@@ -3,7 +3,7 @@ package repository
 import (
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // LDAPRepository defines the interface for LDAP configuration and sync data.

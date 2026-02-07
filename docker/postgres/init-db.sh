@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-# This script ensures the GOTRS database is properly initialized
+# This script ensures the GoatFlow database is properly initialized
 # It runs when the PostgreSQL container starts for the first time
 
-echo "Initializing GOTRS database..."
+echo "Initializing GoatFlow database..."
 
 # Create the database if it doesn't exist
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL

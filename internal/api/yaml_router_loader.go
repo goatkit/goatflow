@@ -347,7 +347,7 @@ func registerYAMLRoutes(r *gin.Engine, authMW interface{}) {
 
 func resolveRoutesDir(initial string) (string, error) {
 	candidates := []string{initial}
-	if env := os.Getenv("GOTRS_ROUTES_DIR"); env != "" {
+	if env := os.Getenv("GOATFLOW_ROUTES_DIR"); env != "" {
 		candidates = append([]string{env}, candidates...)
 	}
 	if wd, err := os.Getwd(); err == nil {

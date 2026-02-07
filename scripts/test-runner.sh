@@ -25,7 +25,7 @@ E2E_FAILED=0
 E2E_SKIPPED=0
 
 # Configuration
-LOG_DIR="/tmp/gotrs-test-$(date +%Y%m%d_%H%M%S)"
+LOG_DIR="/tmp/goatflow-test-$(date +%Y%m%d_%H%M%S)"
 MAIN_LOG="$LOG_DIR/test-comprehensive.log"
 UNIT_LOG="$LOG_DIR/unit-tests.log"
 E2E_LOG="$LOG_DIR/e2e-tests.log"
@@ -67,7 +67,7 @@ warning() {
 #########################################
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║          GOTRS COMPREHENSIVE TEST SUITE                      ║${NC}"
+echo -e "${CYAN}║          GoatFlow COMPREHENSIVE TEST SUITE                      ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo "  Started:   $(date '+%Y-%m-%d %H:%M:%S')"
@@ -222,7 +222,7 @@ parse_e2e_test_results() {
 
 if make test-e2e-playwright-go \
     BASE_URL=http://backend-test:8080 \
-    PLAYWRIGHT_NETWORK=gotrs-ce_gotrs-network \
+    PLAYWRIGHT_NETWORK=goatflow_goatflow-network \
     TEST_USERNAME="${TEST_USERNAME:-root@localhost}" \
     TEST_PASSWORD="${TEST_PASSWORD}" > "$E2E_LOG" 2>&1; then
 

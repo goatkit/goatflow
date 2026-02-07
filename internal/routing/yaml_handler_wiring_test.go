@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	// Import api package to trigger init() registrations.
-	_ "github.com/gotrs-io/gotrs-ce/internal/api"
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
+	_ "github.com/goatkit/goatflow/internal/api"
+	"github.com/goatkit/goatflow/internal/routing"
 
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"

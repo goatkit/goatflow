@@ -1,8 +1,8 @@
 package shared
 
 import (
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/constants"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/constants"
 )
 
 // GetSystemSessionMaxTime returns the configured session lifetime in seconds.

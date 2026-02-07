@@ -21,8 +21,8 @@ func TestHelloGRPCPlugin_GKRegister(t *testing.T) {
 	if reg.Description == "" {
 		t.Error("expected non-empty description")
 	}
-	if reg.Author != "GOTRS Team" {
-		t.Errorf("expected author 'GOTRS Team', got %s", reg.Author)
+	if reg.Author != "GoatFlow Team" {
+		t.Errorf("expected author 'GoatFlow Team', got %s", reg.Author)
 	}
 	if len(reg.Widgets) != 1 {
 		t.Errorf("expected 1 widget, got %d", len(reg.Widgets))

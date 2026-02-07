@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // HandleDeleteArticleAPI handles DELETE /api/v1/tickets/:ticket_id/articles/:id.

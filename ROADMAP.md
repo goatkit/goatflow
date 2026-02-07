@@ -1,12 +1,12 @@
-# GOTRS Roadmap
+# GoatFlow Roadmap
 
-Current status, past releases, and future plans for GOTRS.
+Current status, past releases, and future plans for GoatFlow.
 
 ## 🚀 Current Status
 
 **Version**: 0.6.5-dev (February 2026) - GoatKit Plugin Platform
 
-GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed as an OTRS-compatible replacement.
+GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ticketing and service management platform. It is built as a premier standalone solution for all organizations. Written in Go with a modular monolith architecture, GoatFlow provides enterprise-grade support ticketing, ITSM capabilities, and extensive customization options.
 
 ### What's New in 0.6.5-dev
 See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlights:
@@ -64,7 +64,7 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 
 **Theming & UX**
 
-- Multi-theme system: Synthwave (default), GOTRS Classic, Seventies Vibes, Nineties Vibe
+- Multi-theme system: Synthwave (default), GoatFlow Classic, Seventies Vibes, Nineties Vibe
 - Vendored fonts for offline/air-gapped deployments
 - Ticket detail page refactoring (17 modular partials)
 - Bulk ticket actions (assign, merge, priority, queue, status)
@@ -380,4 +380,4 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 
 ## Get Involved
 
-Want to influence the roadmap? [Join our Discord](https://discord.gg/gotrs) or open a [GitHub Discussion](https://github.com/gotrs-io/gotrs-ce/discussions).
+Want to influence the roadmap? [Join our Discord](https://discord.gg/goatflow) or open a [GitHub Discussion](https://github.com/goatkit/goatflow/discussions).

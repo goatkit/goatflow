@@ -17,7 +17,7 @@ var manifestJSON = `{
   "name": "stats",
   "version": "1.1.0",
   "description": "Ticket statistics and analytics",
-  "author": "GOTRS Team",
+  "author": "GoatFlow Team",
   "license": "Apache-2.0",
   "routes": [
     {

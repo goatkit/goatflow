@@ -10,11 +10,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 var (
@@ -221,7 +221,7 @@ func resolveStoragePath(cfg *config.Config) string {
 	}
 
 	if isTestProcess() {
-		if tmp, err := os.MkdirTemp("", "gotrs-storage-"); err == nil {
+		if tmp, err := os.MkdirTemp("", "goatflow-storage-"); err == nil {
 			return tmp
 		}
 	}

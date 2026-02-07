@@ -12,9 +12,9 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/history"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/history"
+	"github.com/goatkit/goatflow/internal/repository"
 )
 
 // HandleTicketHistoryFragment is an HTMX handler for ticket history fragment in tab panel.

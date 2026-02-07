@@ -1,6 +1,6 @@
 package api
 
-import "github.com/gotrs-io/gotrs-ce/internal/routing"
+import "github.com/goatkit/goatflow/internal/routing"
 
 func init() {
 	// Register postmaster filter handlers into the global routing registry

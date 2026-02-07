@@ -14,15 +14,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/history"
-	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/notifications"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
-	"github.com/gotrs-io/gotrs-ce/internal/utils"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/history"
+	"github.com/goatkit/goatflow/internal/mailqueue"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/utils"
 )
 
 func init() {
@@ -175,7 +175,7 @@ func handleAddTicketNote(c *gin.Context) {
 
 				subject := fmt.Sprintf("Update on Ticket %s", ticket.TicketNumber)
 				body := fmt.Sprintf(
-					"A new update has been added to your ticket.\n\n%s\n\nBest regards,\nGOTRS Support Team",
+					"A new update has been added to your ticket.\n\n%s\n\nBest regards,\nGoatFlow Support Team",
 					noteData.Content)
 
 				// Queue the email for processing by EmailQueueTask

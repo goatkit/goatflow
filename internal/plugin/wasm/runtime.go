@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/plugin"
+	"github.com/goatkit/goatflow/internal/plugin"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/gotrs-io/gotrs-ce/internal/repository/memory"
+	"github.com/goatkit/goatflow/internal/repository/memory"
 )
 
 // LDAPIntegrationTestSuite runs integration tests against a real OpenLDAP server.
@@ -40,12 +40,12 @@ func (suite *LDAPIntegrationTestSuite) SetupSuite() {
 	suite.config = &LDAPConfig{
 		Host:                 getEnvOrDefault("LDAP_HOST", "localhost"),
 		Port:                 389,
-		BaseDN:               "dc=gotrs,dc=local",
-		BindDN:               "cn=readonly,dc=gotrs,dc=local",
+		BaseDN:               "dc=goatflow,dc=local",
+		BindDN:               "cn=readonly,dc=goatflow,dc=local",
 		BindPassword:         getEnvOrDefault("LDAP_READONLY_PASSWORD", "readonly123"),
-		UserSearchBase:       "ou=Users,dc=gotrs,dc=local",
+		UserSearchBase:       "ou=Users,dc=goatflow,dc=local",
 		UserFilter:           "(&(objectClass=inetOrgPerson)(uid={username}))",
-		GroupSearchBase:      "ou=Groups,dc=gotrs,dc=local",
+		GroupSearchBase:      "ou=Groups,dc=goatflow,dc=local",
 		GroupFilter:          "(objectClass=groupOfNames)",
 		UseTLS:               false,
 		StartTLS:             false,
@@ -177,21 +177,21 @@ func (suite *LDAPIntegrationTestSuite) TestUserLookup() {
 	}{
 		{
 			username:      "jadmin",
-			expectedEmail: "john.admin@gotrs.local",
+			expectedEmail: "john.admin@goatflow.local",
 			expectedName:  "John Admin",
 			expectedTitle: "System Administrator",
 			expectedDept:  "IT",
 		},
 		{
 			username:      "smitchell",
-			expectedEmail: "sarah.mitchell@gotrs.local",
+			expectedEmail: "sarah.mitchell@goatflow.local",
 			expectedName:  "Sarah Mitchell",
 			expectedTitle: "IT Manager",
 			expectedDept:  "IT",
 		},
 		{
 			username:      "mwilson",
-			expectedEmail: "mike.wilson@gotrs.local",
+			expectedEmail: "mike.wilson@goatflow.local",
 			expectedName:  "Mike Wilson",
 			expectedTitle: "Senior Support Agent",
 			expectedDept:  "Support",
@@ -472,10 +472,10 @@ func BenchmarkLDAPOperations(b *testing.B) {
 	config := &LDAPConfig{
 		Host:           "localhost",
 		Port:           389,
-		BaseDN:         "dc=gotrs,dc=local",
-		BindDN:         "cn=readonly,dc=gotrs,dc=local",
+		BaseDN:         "dc=goatflow,dc=local",
+		BindDN:         "cn=readonly,dc=goatflow,dc=local",
 		BindPassword:   getEnvOrDefault("LDAP_READONLY_PASSWORD", "readonly123"),
-		UserSearchBase: "ou=Users,dc=gotrs,dc=local",
+		UserSearchBase: "ou=Users,dc=goatflow,dc=local",
 		UserFilter:     "(&(objectClass=inetOrgPerson)(uid={username}))",
 		AttributeMap: LDAPAttributeMap{
 			Username: "uid",

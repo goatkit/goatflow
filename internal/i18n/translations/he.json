@@ -212,7 +212,7 @@
         "skipped": "דולגו (כבר קיימים)",
         "updated": "עודכנו",
         "upload_and_preview": "העלה וצפה בתצוגה מקדימה",
-        "upload_description": "בחר קובץ YAML שיוצא מ-GOTRS או OTRS לייבוא תצורות שדות דינמיים.",
+        "upload_description": "בחר קובץ YAML שיוצא מ-GoatFlow או OTRS לייבוא תצורות שדות דינמיים.",
         "upload_file": "העלה קובץ YAML",
         "will_create": "ייווצר",
         "will_overwrite": "יוחלף"
@@ -504,7 +504,7 @@
           "valid_id": "תוקף"
         },
         "help": {
-          "allow_trusted_headers": "קבל עקיפות תור מכותרות X-OTRS-Queue / X-GOTRS עבור תיבת דואר זו.",
+          "allow_trusted_headers": "קבל עקיפות תור מכותרות X-OTRS-Queue / X-GoatFlow עבור תיבת דואר זו.",
           "poll_interval_seconds": "דרוס את מרווח המתזמן עבור תיבת דואר זו. השאר 0 לרשת את הקדימה הגלובלית.",
           "queue_id": "הקצה הודעות נכנסות לתור זה.",
           "valid_id": "בחר האם תיבת דואר זו פעילה."
@@ -616,16 +616,16 @@
       },
       "postmaster_filter": {
         "actions": {
-          "customer_id": "X-GOTRS-CustomerID (הגדר מזהה לקוח)",
-          "customer_user": "X-GOTRS-CustomerUser (הגדר משתמש לקוח)",
-          "ignore": "X-GOTRS-Ignore (דלג על יצירת כרטיס)",
-          "priority": "X-GOTRS-Priority (הגדר עדיפות לפי שם)",
-          "priority_id": "X-GOTRS-PriorityID (הגדר עדיפות)",
-          "queue": "X-GOTRS-Queue (נתב לתור)",
-          "queue_id": "X-GOTRS-QueueID (נתב לתור לפי ID)",
-          "state": "X-GOTRS-State (הגדר מצב כרטיס)",
-          "title": "X-GOTRS-Title (דרוס כותרת כרטיס)",
-          "type": "X-GOTRS-Type (הגדר סוג כרטיס)"
+          "customer_id": "X-GoatFlow-CustomerID (הגדר מזהה לקוח)",
+          "customer_user": "X-GoatFlow-CustomerUser (הגדר משתמש לקוח)",
+          "ignore": "X-GoatFlow-Ignore (דלג על יצירת כרטיס)",
+          "priority": "X-GoatFlow-Priority (הגדר עדיפות לפי שם)",
+          "priority_id": "X-GoatFlow-PriorityID (הגדר עדיפות)",
+          "queue": "X-GoatFlow-Queue (נתב לתור)",
+          "queue_id": "X-GoatFlow-QueueID (נתב לתור לפי ID)",
+          "state": "X-GoatFlow-State (הגדר מצב כרטיס)",
+          "title": "X-GoatFlow-Title (דרוס כותרת כרטיס)",
+          "type": "X-GoatFlow-Type (הגדר סוג כרטיס)"
         },
         "add_action": "הוסף פעולה",
         "add_condition": "הוסף תנאי",
@@ -1015,7 +1015,7 @@
         },
         "import": {
           "back_to_list": "חזור לתבניות",
-          "description": "ייבוא תבניות מקובץ YAML שיוצא מ-GOTRS או נוצר ידנית",
+          "description": "ייבוא תבניות מקובץ YAML שיוצא מ-GoatFlow או נוצר ידנית",
           "file_label": "קובץ YAML",
           "file_types": "קבצי YAML בלבד (.yaml, .yml)",
           "format_description": "קובץ הייבוא צריך לעקוב אחר מבנה זה:",
@@ -1479,8 +1479,8 @@
   },
   "app": {
     "description": "פלטפורמת ניהול שירותי IT מודרנית",
-    "name": "GOTRS",
-    "title": "GOTRS - מערכת כרטיסים"
+    "name": "GoatFlow",
+    "title": "GoatFlow - מערכת כרטיסים"
   },
   "assets": {
     "asset_tag": "תג נכס",
@@ -1919,7 +1919,7 @@
   },
   "customer_portal": {
     "placeholders": {
-      "footer": "Powered by GOTRS",
+      "footer": "Powered by GoatFlow",
       "title": "לקוח Portal"
     }
   },

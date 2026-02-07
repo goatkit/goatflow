@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# GOTRS YAML Platform Integration Test
+# GoatFlow YAML Platform Integration Test
 # Verifies all components of the unified configuration management system
 
 set -e
 
-echo "🧪 GOTRS YAML Platform Integration Test"
+echo "🧪 GoatFlow YAML Platform Integration Test"
 echo "========================================"
 echo ""
 
@@ -39,7 +39,7 @@ run_test() {
 
 # Build the container
 echo "📦 Building container..."
-if docker build -f Dockerfile.config-manager -t gotrs-config-manager . > /dev/null 2>&1; then
+if docker build -f Dockerfile.config-manager -t goatflow-config-manager . > /dev/null 2>&1; then
     echo -e "${GREEN}✅ Container build successful${NC}"
 else
     echo -e "${RED}❌ Container build failed${NC}"
@@ -52,11 +52,11 @@ echo "----------------------------"
 
 # Test 1: CLI Help
 run_test "CLI help command" \
-    "docker run --rm gotrs-config-manager help | grep -q 'GOTRS Unified Configuration Manager'"
+    "docker run --rm goatflow-config-manager help | grep -q 'GoatFlow Unified Configuration Manager'"
 
 # Test 2: YAML validation
 cat > /tmp/test-valid.yaml << 'EOF'
-apiVersion: gotrs.io/v1
+apiVersion: goatflow.io/v1
 kind: Route
 metadata:
   name: test-route
@@ -71,7 +71,7 @@ spec:
 EOF
 
 run_test "Valid YAML validation" \
-    "docker run --rm -v /tmp:/data gotrs-config-manager validate /data/test-valid.yaml | grep -q 'Schema validation: PASSED'"
+    "docker run --rm -v /tmp:/data goatflow-config-manager validate /data/test-valid.yaml | grep -q 'Schema validation: PASSED'"
 
 # Test 3: Invalid YAML detection
 cat > /tmp/test-invalid.yaml << 'EOF'
@@ -82,20 +82,20 @@ metadata:
 EOF
 
 run_test "Invalid YAML detection" \
-    "! docker run --rm -v /tmp:/data gotrs-config-manager validate /data/test-invalid.yaml 2>&1 | grep -q 'PASSED'"
+    "! docker run --rm -v /tmp:/data goatflow-config-manager validate /data/test-invalid.yaml 2>&1 | grep -q 'PASSED'"
 
 # Test 4: Linting
 run_test "Linting functionality" \
-    "docker run --rm -v /tmp:/data gotrs-config-manager lint /data/test-valid.yaml | grep -q 'Summary'"
+    "docker run --rm -v /tmp:/data goatflow-config-manager lint /data/test-valid.yaml | grep -q 'Summary'"
 
 # Test 5: Version management commands
 run_test "Version list command" \
-    "docker run --rm gotrs-config-manager version list config test 2>&1 | grep -q 'Version History'"
+    "docker run --rm goatflow-config-manager version list config test 2>&1 | grep -q 'Version History'"
 
 # Test 6: Config import/export
 mkdir -p /tmp/test-configs
 cat > /tmp/test-configs/sample.yaml << 'EOF'
-apiVersion: gotrs.io/v1
+apiVersion: goatflow.io/v1
 kind: Config
 metadata:
   name: sample-config
@@ -108,11 +108,11 @@ data:
 EOF
 
 run_test "Config import" \
-    "docker run --rm -v /tmp/test-configs:/data gotrs-config-manager import /data 2>&1 | grep -q 'Import complete'"
+    "docker run --rm -v /tmp/test-configs:/data goatflow-config-manager import /data 2>&1 | grep -q 'Import complete'"
 
 # Test 7: Schema registry
 run_test "Schema registry initialization" \
-    "docker run --rm gotrs-config-manager validate /dev/null 2>&1 | grep -q 'Error'"
+    "docker run --rm goatflow-config-manager validate /dev/null 2>&1 | grep -q 'Error'"
 
 # Test 8: Hot reload components
 echo "
@@ -123,7 +123,7 @@ cat > /tmp/test_platform_compile.go << 'EOF'
 package main
 
 import (
-    _ "github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
+    _ "github.com/goatkit/goatflow/internal/yamlmgmt"
     "fmt"
 )
 
@@ -133,21 +133,21 @@ func main() {
 EOF
 
 run_test "Platform package compilation" \
-    "cd /home/nigel/git/gotrs-io/gotrs-ce && go build -o /tmp/test_platform /tmp/test_platform_compile.go"
+    "cd /home/nigel/git/goatkit/goatflow && go build -o /tmp/test_platform /tmp/test_platform_compile.go"
 
 # Test 9: Container health
 run_test "Container runs without errors" \
-    "docker run --rm gotrs-config-manager list config"
+    "docker run --rm goatflow-config-manager list config"
 
 # Test 10: Multi-kind support
 run_test "Route kind support" \
-    "docker run --rm gotrs-config-manager list route 2>&1 | grep -q 'Configuration List'"
+    "docker run --rm goatflow-config-manager list route 2>&1 | grep -q 'Configuration List'"
 
 run_test "Config kind support" \
-    "docker run --rm gotrs-config-manager list config 2>&1 | grep -q 'Configuration List'"
+    "docker run --rm goatflow-config-manager list config 2>&1 | grep -q 'Configuration List'"
 
 run_test "Dashboard kind support" \
-    "docker run --rm gotrs-config-manager list dashboard 2>&1 | grep -q 'Configuration List'"
+    "docker run --rm goatflow-config-manager list dashboard 2>&1 | grep -q 'Configuration List'"
 
 echo ""
 echo "🔬 Component Tests"
@@ -155,22 +155,22 @@ echo "-----------------"
 
 # Test core components exist and are functional
 run_test "Version manager exists" \
-    "test -f /home/nigel/git/gotrs-io/gotrs-ce/internal/yamlmgmt/version_manager.go"
+    "test -f /home/nigel/git/goatkit/goatflow/internal/yamlmgmt/version_manager.go"
 
 run_test "Hot reload manager exists" \
-    "test -f /home/nigel/git/gotrs-io/gotrs-ce/internal/yamlmgmt/hot_reload.go"
+    "test -f /home/nigel/git/goatkit/goatflow/internal/yamlmgmt/hot_reload.go"
 
 run_test "Schema registry exists" \
-    "test -f /home/nigel/git/gotrs-io/gotrs-ce/internal/yamlmgmt/schema_registry.go"
+    "test -f /home/nigel/git/goatkit/goatflow/internal/yamlmgmt/schema_registry.go"
 
 run_test "Universal linter exists" \
-    "test -f /home/nigel/git/gotrs-io/gotrs-ce/internal/yamlmgmt/linter.go"
+    "test -f /home/nigel/git/goatkit/goatflow/internal/yamlmgmt/linter.go"
 
 run_test "Config adapter exists" \
-    "test -f /home/nigel/git/gotrs-io/gotrs-ce/internal/yamlmgmt/config_adapter.go"
+    "test -f /home/nigel/git/goatkit/goatflow/internal/yamlmgmt/config_adapter.go"
 
 run_test "CLI tool exists" \
-    "test -f /home/nigel/git/gotrs-io/gotrs-ce/cmd/gotrs-config/main.go"
+    "test -f /home/nigel/git/goatkit/goatflow/cmd/goatflow-config/main.go"
 
 echo ""
 echo "🎯 Advanced Feature Tests"
@@ -178,7 +178,7 @@ echo "------------------------"
 
 # Test version creation and rollback
 cat > /tmp/test-versioned.yaml << 'EOF'
-apiVersion: gotrs.io/v1
+apiVersion: goatflow.io/v1
 kind: Config
 metadata:
   name: versioned-test

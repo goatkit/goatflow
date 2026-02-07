@@ -14,14 +14,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/history"
-	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/notifications"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/utils"
+	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/history"
+	"github.com/goatkit/goatflow/internal/mailqueue"
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/utils"
 )
 
 // noteNotificationParams holds parameters for customer note email notifications.
@@ -91,10 +91,10 @@ func buildNoteEmailBody(subject, body string) string {
 		subject != "Email Note" && subject != "Phone Note" && subject != "Chat Note"
 	if hasCustomSubject {
 		return fmt.Sprintf("A new update has been added to your ticket.\n\n"+
-			"Subject: %s\n\n%s\n\nBest regards,\nGOTRS Support Team", subject, body)
+			"Subject: %s\n\n%s\n\nBest regards,\nGoatFlow Support Team", subject, body)
 	}
 	return fmt.Sprintf("A new update has been added to your ticket.\n\n"+
-		"%s\n\nBest regards,\nGOTRS Support Team", body)
+		"%s\n\nBest regards,\nGoatFlow Support Team", body)
 }
 
 func getThreadingHeaders(db *sql.DB, ticketID uint) (inReplyTo, references string) {
@@ -171,7 +171,7 @@ func queueArticleNotificationEmail(db *sql.DB, ticketID int, articleID int64, cu
 	if ticketNumber.Valid && ticketNumber.String != "" {
 		subject = fmt.Sprintf("Update on Ticket %s", ticketNumber.String)
 	}
-	body := fmt.Sprintf("A new update has been added to your ticket.\n\n%s\n\nBest regards,\nGOTRS Support Team", articleBody)
+	body := fmt.Sprintf("A new update has been added to your ticket.\n\n%s\n\nBest regards,\nGoatFlow Support Team", articleBody)
 
 	var emailCfg *config.EmailConfig
 	if cfg := config.Get(); cfg != nil {

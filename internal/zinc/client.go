@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // Client interface for Zinc search operations.

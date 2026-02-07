@@ -9,7 +9,7 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"github.com/gotrs-io/gotrs-ce/internal/services/registry"
+	"github.com/goatkit/goatflow/internal/services/registry"
 )
 
 // PostgresService implements DatabaseService for PostgreSQL.

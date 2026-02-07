@@ -1,48 +1,48 @@
 # Create Groups
-dn: cn=Domain Admins,ou=Groups,dc=gotrs,dc=local
+dn: cn=Domain Admins,ou=Groups,dc=goatflow,dc=local
 objectClass: groupOfNames
 cn: Domain Admins
 description: System administrators with full access
-member: cn=admin,dc=gotrs,dc=local
+member: cn=admin,dc=goatflow,dc=local
 
-dn: cn=IT Team,ou=Groups,dc=gotrs,dc=local
+dn: cn=IT Team,ou=Groups,dc=goatflow,dc=local
 objectClass: groupOfNames
 cn: IT Team
 description: Information Technology staff
-member: cn=admin,dc=gotrs,dc=local
+member: cn=admin,dc=goatflow,dc=local
 
-dn: cn=Support Team,ou=Groups,dc=gotrs,dc=local
+dn: cn=Support Team,ou=Groups,dc=goatflow,dc=local
 objectClass: groupOfNames
 cn: Support Team
 description: Customer support representatives
-member: cn=admin,dc=gotrs,dc=local
+member: cn=admin,dc=goatflow,dc=local
 
-dn: cn=Agents,ou=Groups,dc=gotrs,dc=local
+dn: cn=Agents,ou=Groups,dc=goatflow,dc=local
 objectClass: groupOfNames
 cn: Agents
 description: Ticket handling agents
-member: cn=admin,dc=gotrs,dc=local
+member: cn=admin,dc=goatflow,dc=local
 
-dn: cn=Managers,ou=Groups,dc=gotrs,dc=local
+dn: cn=Managers,ou=Groups,dc=goatflow,dc=local
 objectClass: groupOfNames
 cn: Managers
 description: Team managers and supervisors
-member: cn=admin,dc=gotrs,dc=local
+member: cn=admin,dc=goatflow,dc=local
 
-dn: cn=Users,ou=Groups,dc=gotrs,dc=local
+dn: cn=Users,ou=Groups,dc=goatflow,dc=local
 objectClass: groupOfNames
 cn: Users
 description: Regular system users
-member: cn=admin,dc=gotrs,dc=local
+member: cn=admin,dc=goatflow,dc=local
 
-dn: cn=Developers,ou=Groups,dc=gotrs,dc=local
+dn: cn=Developers,ou=Groups,dc=goatflow,dc=local
 objectClass: groupOfNames
 cn: Developers
 description: Software developers
-member: cn=admin,dc=gotrs,dc=local
+member: cn=admin,dc=goatflow,dc=local
 
-dn: cn=QA Team,ou=Groups,dc=gotrs,dc=local
+dn: cn=QA Team,ou=Groups,dc=goatflow,dc=local
 objectClass: groupOfNames
 cn: QA Team
 description: Quality assurance team
-member: cn=admin,dc=gotrs,dc=local
+member: cn=admin,dc=goatflow,dc=local

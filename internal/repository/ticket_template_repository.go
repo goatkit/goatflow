@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/goatkit/goatflow/internal/models"
 )
 
 // TicketTemplateRepository defines the interface for ticket template persistence.

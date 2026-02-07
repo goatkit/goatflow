@@ -1,6 +1,6 @@
 # Stats Plugin
 
-Ticket statistics and analytics plugin for GOTRS.
+Ticket statistics and analytics plugin for GoatFlow.
 
 ## Features
 

@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// ExternalTicketNumberFilter applies custom regex rules to extract GOTRS ticket numbers.
+// ExternalTicketNumberFilter applies custom regex rules to extract GoatFlow ticket numbers.
 type ExternalTicketNumberFilter struct {
 	logger     *log.Logger
 	rules      []ExternalTicketRule

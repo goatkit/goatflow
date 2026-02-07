@@ -1,4 +1,4 @@
-// GOTRS Tiptap Rich Text Editor
+// GoatFlow Tiptap Rich Text Editor
 // Based on Tiptap Simple Editor Template - MIT Licensed
 
 let editors = {};

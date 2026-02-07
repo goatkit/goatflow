@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/services"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/services"
 )
 
 const (
 	ProtocolVersion = "2024-11-05"
-	ServerName      = "gotrs-mcp"
+	ServerName      = "goatflow-mcp"
 	ServerVersion   = "0.6.5"
 )
 

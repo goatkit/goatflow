@@ -1,13 +1,13 @@
-# GOTRS Deployment
+# GoatFlow Deployment
 
-Reference Docker Compose configuration for deploying GOTRS.
+Reference Docker Compose configuration for deploying GoatFlow.
 
 ## Quick Start
 
 ```bash
 # Download files
-curl -O https://raw.githubusercontent.com/gotrs-io/gotrs-ce/main/deploy/docker-compose.yml
-curl -O https://raw.githubusercontent.com/gotrs-io/gotrs-ce/main/deploy/.env.example
+curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/docker-compose.yml
+curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/.env.example
 
 # Configure
 cp .env.example .env
@@ -23,11 +23,11 @@ All configuration is via environment variables in `.env`:
 
 | Variable | Required | Description | Default |
 |----------|----------|-------------|---------|
-| `GOTRS_TAG` | No | Image tag to use | `latest` |
+| `GOATFLOW_TAG` | No | Image tag to use | `latest` |
 | `DB_ROOT_PASSWORD` | **Yes** | MariaDB root password | - |
-| `DB_USER` | No | MariaDB username | `gotrs` |
+| `DB_USER` | No | MariaDB username | `goatflow` |
 | `DB_PASSWORD` | **Yes** | MariaDB user password | - |
-| `DB_NAME` | No | Database name | `gotrs` |
+| `DB_NAME` | No | Database name | `goatflow` |
 | `JWT_SECRET` | **Yes** | JWT signing secret (32+ chars) | - |
 | `APP_PORT` | No | Host port for web UI | `8080` |
 | `BASE_URL` | No | Public URL for the application | `http://localhost:8080` |
@@ -45,7 +45,7 @@ All configuration is via environment variables in `.env`:
 
 | Service | Purpose |
 |---------|---------|
-| `app` | Main GOTRS application |
+| `app` | Main GoatFlow application |
 | `runner` | Background job processor |
 | `mariadb` | MariaDB database |
 | `valkey` | Redis-compatible cache |
@@ -64,7 +64,7 @@ docker compose pull
 docker compose up -d
 
 # Backup database
-docker compose exec mariadb mariadb-dump -u root -p gotrs > backup.sql
+docker compose exec mariadb mariadb-dump -u root -p goatflow > backup.sql
 ```
 
 ## Production Considerations

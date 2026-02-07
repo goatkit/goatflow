@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gotrs-io/gotrs-ce/sdk/go/types"
+	"github.com/goatkit/goatflow/sdk/go/types"
 )
 
 // UsersService handles user-related API operations

@@ -1,4 +1,4 @@
-// Package service provides business logic services for GOTRS.
+// Package service provides business logic services for GoatFlow.
 package service
 
 import (
@@ -12,7 +12,7 @@ import (
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // PreferencesBackend abstracts preference storage for TOTP.
@@ -228,7 +228,7 @@ type TOTPService struct {
 // NewTOTPService creates a TOTP service for agent/admin users (numeric ID).
 func NewTOTPService(db *sql.DB, issuer string) *TOTPService {
 	if issuer == "" {
-		issuer = "GOTRS"
+		issuer = "GoatFlow"
 	}
 	return &TOTPService{db: db, issuer: issuer}
 }
@@ -236,7 +236,7 @@ func NewTOTPService(db *sql.DB, issuer string) *TOTPService {
 // NewCustomerTOTPService creates a TOTP service for customer users (string login).
 func NewCustomerTOTPService(db *sql.DB, issuer string, userLogin string) *TOTPService {
 	if issuer == "" {
-		issuer = "GOTRS"
+		issuer = "GoatFlow"
 	}
 	return &TOTPService{
 		db:      db,

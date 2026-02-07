@@ -13,16 +13,16 @@ import (
 	_ "github.com/lib/pq"
 	"gopkg.in/yaml.v2"
 
-	"github.com/gotrs-io/gotrs-ce/internal/components/dynamic"
+	"github.com/goatkit/goatflow/internal/components/dynamic"
 )
 
 func main() {
 	var (
 		dbHost     = flag.String("host", "localhost", "Database host")
 		dbPort     = flag.Int("port", 5432, "Database port")
-		dbUser     = flag.String("user", "gotrs_user", "Database user")
+		dbUser     = flag.String("user", "goatflow_user", "Database user")
 		dbPassword = flag.String("password", os.Getenv("DB_PASSWORD"), "Database password")
-		dbName     = flag.String("database", "gotrs", "Database name")
+		dbName     = flag.String("database", "goatflow", "Database name")
 		outputDir  = flag.String("output", "modules/generated", "Output directory for YAML files")
 		tableName  = flag.String("table", "", "Specific table to generate (empty for all)")
 		verbose    = flag.Bool("verbose", false, "Verbose output")

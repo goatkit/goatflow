@@ -1,0 +1,18 @@
+{{- if and (not .Values.database.external.enabled) (eq .Values.database.type "mysql") }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "goatflow.fullname" . }}-database-config
+  labels:
+    {{- include "goatflow.database.labels" . | nindent 4 }}
+data:
+  goatflow.cnf: |
+    [mysqld]
+    max_connections = {{ .Values.database.mysql.config.maxConnections }}
+    innodb_buffer_pool_size = {{ .Values.database.mysql.config.innodbBufferPoolSize }}
+    character-set-server = utf8mb4
+    collation-server = utf8mb4_unicode_ci
+
+    [client]
+    default-character-set = utf8mb4
+{{- end }}
