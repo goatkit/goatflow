@@ -3,6 +3,7 @@ package v1
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,31 @@ import (
 	. "github.com/goatkit/goatflow/internal/api"
 	"github.com/goatkit/goatflow/internal/database"
 )
+
+// ensureArticleTestPermissions grants user 1 rw+note permission on the given ticket's queue group.
+// Required because RBAC enforcement checks CanAddNote before allowing article creation.
+// Uses SELECT-before-INSERT to avoid duplicates (no unique constraint on group_user).
+func ensureArticleTestPermissions(t *testing.T, db *sql.DB, ticketID int) {
+	t.Helper()
+	var groupID int
+	err := db.QueryRow(database.ConvertPlaceholders(
+		"SELECT q.group_id FROM ticket t JOIN queue q ON t.queue_id = q.id WHERE t.id = ?",
+	), ticketID).Scan(&groupID)
+	if err != nil {
+		return // best effort — test will skip or fail with a clearer error
+	}
+	for _, perm := range []string{"rw", "note"} {
+		var count int
+		_ = db.QueryRow(database.ConvertPlaceholders(
+			"SELECT COUNT(*) FROM group_user WHERE user_id = 1 AND group_id = ? AND permission_key = ?",
+		), groupID, perm).Scan(&count)
+		if count == 0 {
+			_, _ = db.Exec(database.ConvertPlaceholders(
+				"INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by) VALUES (1, ?, ?, 1, NOW(), 1, NOW(), 1)",
+			), groupID, perm)
+		}
+	}
+}
 
 func TestAddArticle_BasicArticle(t *testing.T) {
 	requireDatabase(t)
@@ -32,6 +58,8 @@ func TestAddArticle_BasicArticle(t *testing.T) {
 		t.Skipf("No seeded ticket available: %v", err)
 	}
 	testTicketIDStr := strconv.Itoa(seedTicketID)
+
+	ensureArticleTestPermissions(t, db, seedTicketID)
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -170,6 +198,7 @@ func TestAddArticle_ArticleTypes(t *testing.T) {
 	if err != nil {
 		t.Skipf("No seeded ticket available: %v", err)
 	}
+	ensureArticleTestPermissions(t, db, seedTicketID)
 	testTicketID := strconv.Itoa(seedTicketID)
 
 	gin.SetMode(gin.TestMode)
@@ -315,6 +344,7 @@ func TestAddArticle_Validation(t *testing.T) {
 	err = db.QueryRow("SELECT id FROM ticket ORDER BY id LIMIT 1").Scan(&seedTicketID)
 	validTicketID := "1" // fallback
 	if err == nil {
+		ensureArticleTestPermissions(t, db, seedTicketID)
 		validTicketID = strconv.Itoa(seedTicketID)
 	}
 
@@ -469,6 +499,7 @@ func TestAddArticle_Permissions(t *testing.T) {
 	)).Scan(&testTicketID)
 	require.NoError(t, err)
 	testTicketIDStr := strconv.Itoa(testTicketID)
+	ensureArticleTestPermissions(t, db, testTicketID)
 
 	// Clean up after test
 	t.Cleanup(func() {
@@ -564,6 +595,12 @@ func TestAddArticle_Permissions(t *testing.T) {
 
 func TestAddArticle_EmailHeaders(t *testing.T) {
 	requireDatabase(t)
+
+	db, err := database.GetDB()
+	if err == nil && db != nil {
+		ensureArticleTestPermissions(t, db, 1)
+	}
+
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 

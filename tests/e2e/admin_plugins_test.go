@@ -139,7 +139,7 @@ func TestAdminPluginLogs(t *testing.T) {
 		visible, _ := levelSelect.IsVisible()
 		if visible {
 			// Select error level
-			err := levelSelect.SelectOption(playwright.SelectOptionValues{
+			_, err := levelSelect.SelectOption(playwright.SelectOptionValues{
 				Values: playwright.StringSlice("error"),
 			})
 			if err == nil {
