@@ -38,6 +38,11 @@ jobs:
       VALKEY_TEST_PORT: "6389"
 
     steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          docker system prune -af
+
       - name: Checkout code
         uses: actions/checkout@v4
 
