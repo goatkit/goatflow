@@ -83,6 +83,24 @@ func (b *BrowserHelper) Setup() error {
 	}
 	b.Page = page
 
+	// Dismiss all coachmarks so tooltips/backdrops don't block E2E interactions.
+	// The coachmark backdrop (z-index:9998, position:fixed, inset:0) covers the
+	// entire viewport and intercepts clicks, causing Playwright timeouts.
+	err = page.AddInitScript(playwright.Script{
+		Content: playwright.String(`
+			// Pre-dismiss all known coachmarks and prevent new ones
+			(function() {
+				var state = {"theme-switcher":{"dismissed":true,"at":0}};
+				localStorage.setItem('gk_coachmarks', JSON.stringify(state));
+				// Monkey-patch to auto-dismiss any future registrations
+				if (typeof GoatCoach !== 'undefined') { GoatCoach.init = function(){}; }
+			})();
+		`),
+	})
+	if err != nil {
+		return fmt.Errorf("could not add init script: %w", err)
+	}
+
 	// Set default timeout
 	page.SetDefaultTimeout(float64(b.Config.Timeout.Milliseconds()))
 
