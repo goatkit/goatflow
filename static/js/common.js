@@ -3,6 +3,34 @@
  */
 
 /**
+ * Track which submit button was clicked on any form.
+ * After a successful save via fetch(), call shouldCloseAfterSave(form)
+ * to check if the user clicked "Save & Close" (continue=0).
+ *
+ * Usage in form handlers:
+ *   const closeAfterSave = shouldCloseAfterSave(form);
+ *   // ... do the save ...
+ *   if (closeAfterSave) window.location.href = '/admin/list-page';
+ */
+(function() {
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('button[type="submit"][name="continue"]');
+        if (btn && btn.form) {
+            btn.form._lastContinueValue = btn.value;
+        }
+    });
+})();
+
+function shouldCloseAfterSave(formOrEl) {
+    var form = formOrEl;
+    if (form && form.tagName !== 'FORM') form = form.closest('form');
+    if (!form) return false;
+    var val = form._lastContinueValue;
+    form._lastContinueValue = undefined; // reset
+    return val === '0';
+}
+
+/**
  * Copy text to clipboard and show toast notification
  * @param {string} text - The text to copy to clipboard
  * @param {boolean} showNotification - Whether to show toast notification (default: true)

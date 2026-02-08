@@ -134,11 +134,11 @@
 }
 
 /* ============================================
-   CLEAN SOLID BACKGROUND
-   No patterns for classic theme - easy on the eyes
+   WALLPAPER BACKGROUND
+   Branded tiling wallpaper - toggleable via user preference
    ============================================ */
 
-/* Solid background only */
+/* Solid background - no wallpaper for classic theme */
 [data-theme="goatflow-classic"] body {
   background-color: var(--gk-bg-base);
   background-image: none;

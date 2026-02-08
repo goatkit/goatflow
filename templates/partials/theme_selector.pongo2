@@ -2,6 +2,7 @@
 {# Themes are loaded dynamically from ThemeManager.AVAILABLE_THEMES #}
 <div class="relative" x-data="{ open: false }">
     <button @click="open = !open"
+            id="theme-selector-btn"
             type="button"
             class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200"
             style="color: var(--gk-text-secondary); background: var(--gk-bg-elevated);"
@@ -73,6 +74,16 @@
                     </svg>
                     {{ t('theme.dark')|default:'Dark' }}
                 </button>
+            </div>
+
+            <!-- Wallpaper Toggle -->
+            <div class="mt-2 px-3 py-1.5">
+                <label id="wallpaper-toggle-label" class="flex items-center gap-2 cursor-pointer text-sm" style="color: var(--gk-text-secondary);">
+                    <input type="checkbox" id="wallpaper-toggle" class="rounded"
+                           style="accent-color: var(--gk-primary);"
+                           onchange="toggleWallpaper(this.checked)">
+                    <span>{{ t('theme.show_wallpaper')|default:'Show wallpaper' }}</span>
+                </label>
             </div>
         </div>
     </div>
@@ -192,8 +203,94 @@
     }
 
     // Listen for theme changes
-    document.addEventListener('theme-changed', updateThemeOptions);
-    document.addEventListener('gk:theme-change', updateThemeOptions);
-    document.addEventListener('gk:theme-mode-change', updateModeButtons);
+    document.addEventListener('theme-changed', function() {
+        updateThemeOptions();
+        updateWallpaperToggle();
+    });
+    document.addEventListener('gk:theme-change', function() {
+        updateThemeOptions();
+        updateWallpaperToggle();
+    });
+    document.addEventListener('gk:theme-mode-change', function() {
+        updateModeButtons();
+        updateWallpaperToggle();
+    });
+
+    // ---- Wallpaper toggle ----
+
+    // Check if current theme+mode has a wallpaper defined
+    // We detect this by checking if body has a background-image other than 'none'
+    function themeHasWallpaper() {
+        var style = window.getComputedStyle(document.body);
+        var bg = style.backgroundImage;
+        return bg && bg !== 'none';
+    }
+
+    window.toggleWallpaper = function(enabled) {
+        var root = document.documentElement;
+        if (enabled) {
+            root.classList.remove('gk-no-wallpaper');
+        } else {
+            root.classList.add('gk-no-wallpaper');
+        }
+
+        // Persist preference
+        var maxAge = 86400 * 365;
+        document.cookie = 'goatflow_wallpaper=' + (enabled ? '1' : '0') + ';path=/;max-age=' + maxAge + ';SameSite=Lax';
+
+        // Save to server (best-effort)
+        if (typeof ThemeManager !== 'undefined') {
+            fetch(window.GK_PREFERENCES_BASE ? window.GK_PREFERENCES_BASE + '/wallpaper' : '/api/preferences/wallpaper', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value: enabled ? '1' : '0' })
+            }).catch(function() {});
+        }
+    };
+
+    function updateWallpaperToggle() {
+        var toggle = document.getElementById('wallpaper-toggle');
+        var label = document.getElementById('wallpaper-toggle-label');
+        if (!toggle || !label) return;
+
+        // Temporarily remove no-wallpaper to test if theme has one
+        var wasHidden = document.documentElement.classList.contains('gk-no-wallpaper');
+        if (wasHidden) document.documentElement.classList.remove('gk-no-wallpaper');
+
+        // Need a repaint to get accurate computed style
+        requestAnimationFrame(function() {
+            var hasWP = themeHasWallpaper();
+
+            if (wasHidden) document.documentElement.classList.add('gk-no-wallpaper');
+
+            if (hasWP) {
+                label.style.opacity = '1';
+                label.style.pointerEvents = 'auto';
+                toggle.disabled = false;
+                toggle.checked = !wasHidden;
+            } else {
+                label.style.opacity = '0.4';
+                label.style.pointerEvents = 'none';
+                toggle.disabled = true;
+                toggle.checked = false;
+            }
+        });
+    }
+
+    // Initialize wallpaper state from cookie
+    function initWallpaper() {
+        var match = document.cookie.match(/goatflow_wallpaper=(\d)/);
+        var enabled = match ? match[1] === '1' : true; // default ON
+        if (!enabled) {
+            document.documentElement.classList.add('gk-no-wallpaper');
+        }
+        updateWallpaperToggle();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initWallpaper);
+    } else {
+        initWallpaper();
+    }
 })();
 </script>

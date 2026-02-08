@@ -1622,10 +1622,13 @@
     "disable": "غیرفعال",
     "enable": "فعال",
     "save_changes": "ذخیره تغییرات",
+    "save_close": "ذخیره و بستن",
+    "apply_close": "اعمال و بستن",
     "done": "انجام شد",
     "revoke": "لغو",
     "revoke_token": "لغو توکن",
-    "continue": "ادامه"
+    "continue": "ادامه",
+    "save_and_close": "ذخیره و بستن"
   },
   "changes": {
     "backout_plan": "طرح بازگشت",
@@ -1689,6 +1692,8 @@
     "last_update": "آخرین به‌روزرسانی",
     "save_and_finish": "ذخیره و پایان",
     "save_changes": "ذخیره تغییرات",
+    "save_close": "ذخیره و بستن",
+    "apply_close": "اعمال و بستن",
     "saved": "ذخیره شد",
     "none": "هیچ",
     "not_closed": "بسته نشده",
@@ -2835,7 +2840,9 @@
       "scan_instructions": "این کد QR را با برنامه احراز هویت اسکن کنید",
       "setup_failed": "خطا در راه‌اندازی 2FA",
       "verify_enable": "تأیید و فعال‌سازی"
-    }
+    },
+    "reset_highlights": "بازنشانی راهنمای ویژگی‌ها",
+    "highlights_reset": "راهنمای ویژگی‌ها بازنشانی شد"
   },
   "severity": {
     "critical": "بحرانی",
@@ -3352,7 +3359,8 @@
     "seventies": "حال و هوای دهه ۷۰",
     "seventies_desc": "رنگ‌های زمینی گرم",
     "nineties": "فضای دهه ۹۰",
-    "nineties_desc": "دسکتاپ رترو (روشن) / ترمینال (تیره)"
+    "nineties_desc": "دسکتاپ رترو (روشن) / ترمینال (تیره)",
+    "show_wallpaper": "نمایش تصویر زمینه"
   },
   "attachments": {
     "title": "پیوست‌ها",
@@ -3368,5 +3376,8 @@
     "view": "مشاهده",
     "download": "دانلود",
     "delete": "حذف"
+  },
+  "demo": {
+    "security_disabled": "تغییر رمز عبور و احراز هویت دو مرحله‌ای در حالت نمایشی غیرفعال است."
   }
 }

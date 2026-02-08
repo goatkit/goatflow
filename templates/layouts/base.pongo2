@@ -51,6 +51,12 @@
             document.documentElement.classList.add(mode);
             document.documentElement.setAttribute('data-theme', theme);
 
+            // Apply wallpaper preference (prevent flash of wallpaper if disabled)
+            var wpMatch = document.cookie.match(/goatflow_wallpaper=(\d)/);
+            if (wpMatch && wpMatch[1] === '0') {
+                document.documentElement.classList.add('gk-no-wallpaper');
+            }
+
             // Write the correct theme stylesheet link dynamically
             document.write('<link id="gk-theme-stylesheet" rel="stylesheet" href="' + getThemePath(theme) + '/theme.css">');
         })();
@@ -133,6 +139,8 @@
     <script src="/static/js/goatkit-autocomplete.js"></script>
     <script src="/static/js/goatkit-validate.js"></script>
     <script src="/static/js/entity-selector.js"></script>
+    <!-- GoatKit Coachmarks - feature spotlights -->
+    <script src="/static/js/coachmarks.js"></script>
 
     <!-- Custom styles -->
     <style>
@@ -511,5 +519,26 @@
     {% block scripts %}{% endblock %}
 
     {% block script %}{% endblock %}
+
+    <!-- Coachmark tips -->
+    <script>
+    (function() {
+        GoatCoach.register({
+            id: 'theme-switcher',
+            target: '#theme-selector-btn',
+            title: '🎨 Make it yours!',
+            message: 'GoatFlow comes with several themes and colour modes. Click here to find your style!',
+            position: 'bottom',
+            maxViews: 3,
+            delay: 2000
+        });
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', GoatCoach.init);
+        } else {
+            GoatCoach.init();
+        }
+    })();
+    </script>
 </body>
 </html>

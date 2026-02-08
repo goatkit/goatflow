@@ -5805,6 +5805,20 @@
         ]
       }
     },
+    "/api/preferences/coachmarks/dismiss": {
+      "post": {
+        "description": "Dismiss a coachmark tip for current user",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/api/preferences/language": {
       "get": {
         "description": "Get current language preference and available languages",
@@ -5872,6 +5886,20 @@
       },
       "post": {
         "description": "Update theme preference (persists to database)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/preferences/wallpaper": {
+      "post": {
+        "description": "Set wallpaper on/off preference",
         "responses": {
           "200": {
             "description": "Success"
@@ -6711,6 +6739,20 @@
         ]
       }
     },
+    "/customer/api/preferences/coachmarks/dismiss": {
+      "post": {
+        "description": "Dismiss a coachmark tip for current customer",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/customer/api/preferences/language": {
       "get": {
         "description": "Get customer language preference",
@@ -6778,6 +6820,20 @@
       },
       "post": {
         "description": "Set customer theme preference",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/api/preferences/wallpaper": {
+      "post": {
+        "description": "Set wallpaper on/off preference for customer",
         "responses": {
           "200": {
             "description": "Success"

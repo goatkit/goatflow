@@ -1622,10 +1622,13 @@
     "disable": "השבת",
     "enable": "הפעל",
     "save_changes": "שמור שינויים",
+    "save_close": "שמור וסגור",
+    "apply_close": "החל וסגור",
     "done": "בוצע",
     "revoke": "בטל",
     "revoke_token": "ביטול אסימון",
-    "continue": "המשך"
+    "continue": "המשך",
+    "save_and_close": "שמור וסגור"
   },
   "changes": {
     "backout_plan": "תוכנית חזרה",
@@ -1689,6 +1692,8 @@
     "last_update": "עדכון אחרון",
     "save_and_finish": "שמור וסיים",
     "save_changes": "שמור שינויים",
+    "save_close": "שמור וסגור",
+    "apply_close": "החל וסגור",
     "saved": "נשמר",
     "none": "אין",
     "not_closed": "לא סגור",
@@ -2845,7 +2850,9 @@
       "scan_instructions": "סרוק קוד QR זה עם אפליקציית האימות שלך",
       "setup_failed": "הגדרת 2FA נכשלה",
       "verify_enable": "אמת והפעל"
-    }
+    },
+    "reset_highlights": "אפס הדגשות תכונות",
+    "highlights_reset": "הדגשות התכונות אופסו"
   },
   "severity": {
     "critical": "קריטי",
@@ -3305,7 +3312,8 @@
     "seventies": "וייבס שנות ה-70",
     "seventies_desc": "גוונים חמים ואדמתיים",
     "nineties": "וייב שנות ה-90",
-    "nineties_desc": "שולחן עבודה רטרו (בהיר) / מסוף (כהה)"
+    "nineties_desc": "שולחן עבודה רטרו (בהיר) / מסוף (כהה)",
+    "show_wallpaper": "הצג טפט"
   },
   "attachments": {
     "title": "קבצים מצורפים",
@@ -3321,5 +3329,8 @@
     "view": "הצג",
     "download": "הורד",
     "delete": "מחק"
+  },
+  "demo": {
+    "security_disabled": "שינויי סיסמה ואימות דו-שלבי מושבתים במצב הדגמה."
   }
 }

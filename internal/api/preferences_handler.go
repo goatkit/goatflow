@@ -314,6 +314,22 @@ func HandleSetLanguage(c *gin.Context) {
 		return
 	}
 
+	// In demo mode, only set the cookie (session-scoped) - don't persist to DB
+	// This lets demo users try different languages without affecting others.
+	isDemo, _ := c.Get("is_demo")
+	if isDemo == true {
+		if request.Value != "" {
+			c.SetCookie("lang", request.Value, 0, "/", "", false, true) // session cookie (expires on browser close)
+		} else {
+			c.SetCookie("lang", "", -1, "/", "", false, true)
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Language preference set for this session",
+		})
+		return
+	}
+
 	prefService := service.NewUserPreferencesService(db)
 
 	if err := prefService.SetLanguage(userID, request.Value); err != nil {
@@ -708,6 +724,22 @@ func HandleSetTheme(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "Mode must be 'light' or 'dark'",
+		})
+		return
+	}
+
+	// In demo mode, only set cookies (session-scoped) - don't persist to DB
+	isDemo, _ := c.Get("is_demo")
+	if isDemo == true {
+		if request.Theme != "" {
+			c.SetCookie("goatflow_theme", request.Theme, 0, "/", "", false, false) // session cookie
+		}
+		if request.Mode != "" {
+			c.SetCookie("goatflow_mode", request.Mode, 0, "/", "", false, false) // session cookie
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Theme preferences set for this session",
 		})
 		return
 	}

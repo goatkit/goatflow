@@ -1622,10 +1622,13 @@
     "disable": "Desativar",
     "enable": "Ativar",
     "save_changes": "Guardar alterações",
+    "save_close": "Salvar e fechar",
+    "apply_close": "Aplicar e fechar",
     "done": "Concluído",
     "revoke": "Revogar",
     "revoke_token": "Revogar token",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "save_and_close": "Salvar e fechar"
   },
   "changes": {
     "backout_plan": "Plano de Reversão",
@@ -1689,6 +1692,8 @@
     "last_update": "Última atualização",
     "save_and_finish": "Salvar e concluir",
     "save_changes": "Salvar Alterações",
+    "save_close": "Salvar e fechar",
+    "apply_close": "Aplicar e fechar",
     "saved": "Salvo",
     "none": "Nenhum",
     "not_closed": "Não Fechado",
@@ -2951,7 +2956,9 @@
       "scan_instructions": "Escaneie este código QR com seu aplicativo autenticador",
       "setup_failed": "Falha ao configurar 2FA",
       "verify_enable": "Verificar e ativar"
-    }
+    },
+    "reset_highlights": "Redefinir destaques",
+    "highlights_reset": "Destaques foram redefinidos"
   },
   "severity": {
     "critical": "Crítico",
@@ -3823,7 +3830,8 @@
     "seventies": "Vibes dos anos 70",
     "seventies_desc": "Tons terrosos quentes",
     "nineties": "Vibe dos anos 90",
-    "nineties_desc": "Desktop retrô (claro) / Terminal (escuro)"
+    "nineties_desc": "Desktop retrô (claro) / Terminal (escuro)",
+    "show_wallpaper": "Mostrar papel de parede"
   },
   "attachments": {
     "title": "Anexos",
@@ -3839,5 +3847,8 @@
     "view": "Ver",
     "download": "Baixar",
     "delete": "Excluir"
+  },
+  "demo": {
+    "security_disabled": "Alterações de senha e MFA estão desativadas no modo demo."
   }
 }

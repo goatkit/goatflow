@@ -1622,10 +1622,13 @@
     "disable": "Deshabilitar",
     "enable": "Habilitar",
     "save_changes": "Guardar cambios",
+    "save_close": "Guardar y cerrar",
+    "apply_close": "Aplicar y cerrar",
     "done": "Hecho",
     "revoke": "Revocar",
     "revoke_token": "Revocar token",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "save_and_close": "Guardar y cerrar"
   },
   "changes": {
     "backout_plan": "Plan de Reversión",
@@ -1689,6 +1692,8 @@
     "last_update": "Última actualización",
     "save_and_finish": "Guardar y finalizar",
     "save_changes": "Guardar Cambios",
+    "save_close": "Guardar y cerrar",
+    "apply_close": "Aplicar y cerrar",
     "saved": "Guardado",
     "none": "Ninguno",
     "not_closed": "No Cerrado",
@@ -2837,7 +2842,9 @@
       "scan_instructions": "Escanea este código QR con tu aplicación de autenticación",
       "setup_failed": "Error al configurar 2FA",
       "verify_enable": "Verificar y activar"
-    }
+    },
+    "reset_highlights": "Restablecer destacados",
+    "highlights_reset": "Los destacados se han restablecido"
   },
   "severity": {
     "critical": "Crítica",
@@ -3252,7 +3259,8 @@
     "seventies": "Vibraciones de los 70",
     "seventies_desc": "Tonos terrosos cálidos",
     "nineties": "Vibra de los 90",
-    "nineties_desc": "Escritorio retro (claro) / Terminal (oscuro)"
+    "nineties_desc": "Escritorio retro (claro) / Terminal (oscuro)",
+    "show_wallpaper": "Mostrar fondo de pantalla"
   },
   "attachments": {
     "title": "Archivos adjuntos",
@@ -3268,5 +3276,8 @@
     "view": "Ver",
     "download": "Descargar",
     "delete": "Eliminar"
+  },
+  "demo": {
+    "security_disabled": "Los cambios de contraseña y MFA están desactivados en modo demo."
   }
 }

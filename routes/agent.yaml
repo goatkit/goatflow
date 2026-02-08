@@ -271,9 +271,11 @@ spec:
           method: GET
           handler: HandleAgentPasswordForm
           template: pages/password_form.pongo2
+          middleware: [demo-guard]
           description: "Display password change form"
 
         - path: /password/change
           method: POST
           handler: HandleAgentChangePassword
+          middleware: [demo-guard]
           description: "Process password change"

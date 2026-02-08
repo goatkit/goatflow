@@ -1622,10 +1622,13 @@
     "disable": "تعطيل",
     "enable": "تفعيل",
     "save_changes": "حفظ التغييرات",
+    "save_close": "حفظ وإغلاق",
+    "apply_close": "تطبيق وإغلاق",
     "done": "تم",
     "revoke": "إلغاء",
     "revoke_token": "إلغاء الرمز",
-    "continue": "متابعة"
+    "continue": "متابعة",
+    "save_and_close": "حفظ وإغلاق"
   },
   "changes": {
     "backout_plan": "خطة التراجع",
@@ -1689,6 +1692,8 @@
     "last_update": "آخر تحديث",
     "save_and_finish": "حفظ وإنهاء",
     "save_changes": "حفظ التغييرات",
+    "save_close": "حفظ وإغلاق",
+    "apply_close": "تطبيق وإغلاق",
     "saved": "تم الحفظ",
     "none": "لا شيء",
     "not_closed": "غير مغلق",
@@ -2838,7 +2843,9 @@
       "scan_instructions": "امسح رمز QR هذا بتطبيق المصادقة",
       "setup_failed": "فشل إعداد المصادقة الثنائية",
       "verify_enable": "تحقق وتفعيل"
-    }
+    },
+    "reset_highlights": "إعادة تعيين إبرازات الميزات",
+    "highlights_reset": "تمت إعادة تعيين إبرازات الميزات"
   },
   "severity": {
     "critical": "حرج",
@@ -3271,7 +3278,8 @@
     "seventies": "أجواء السبعينات",
     "seventies_desc": "درجات الألوان الترابية الدافئة",
     "nineties": "أجواء التسعينيات",
-    "nineties_desc": "سطح مكتب كلاسيكي (فاتح) / طرفية (داكن)"
+    "nineties_desc": "سطح مكتب كلاسيكي (فاتح) / طرفية (داكن)",
+    "show_wallpaper": "إظهار خلفية الشاشة"
   },
   "attachments": {
     "title": "المرفقات",
@@ -3287,5 +3295,8 @@
     "view": "عرض",
     "download": "تحميل",
     "delete": "حذف"
+  },
+  "demo": {
+    "security_disabled": "تم تعطيل تغيير كلمة المرور والمصادقة الثنائية في وضع العرض التوضيحي."
   }
 }

@@ -17,6 +17,7 @@ app:
     name: GoatFlow
     version: 0.1.0
     env: development # development, staging, production
+    demo_mode: false  # When true: non-admin users cannot change passwords/MFA, preference changes are session-only
     debug: true
     timezone: UTC
 

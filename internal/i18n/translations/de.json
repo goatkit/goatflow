@@ -1622,10 +1622,13 @@
     "disable": "Deaktivieren",
     "enable": "Aktivieren",
     "save_changes": "Änderungen speichern",
+    "save_close": "Speichern und Schließen",
+    "apply_close": "Anwenden und Schließen",
     "done": "Fertig",
     "revoke": "Widerrufen",
     "revoke_token": "Token widerrufen",
-    "continue": "Weiter"
+    "continue": "Weiter",
+    "save_and_close": "Speichern und Schließen"
   },
   "changes": {
     "backout_plan": "Rückfallplan",
@@ -1689,6 +1692,8 @@
     "last_update": "Letzte Aktualisierung",
     "save_and_finish": "Speichern und Abschließen",
     "save_changes": "Änderungen speichern",
+    "save_close": "Speichern und Schließen",
+    "apply_close": "Anwenden und Schließen",
     "saved": "Gespeichert",
     "none": "Keine",
     "not_closed": "Nicht geschlossen",
@@ -2839,7 +2844,9 @@
       "scan_instructions": "Scannen Sie diesen QR-Code mit Ihrer Authenticator-App",
       "setup_failed": "2FA-Einrichtung fehlgeschlagen",
       "verify_enable": "Verifizieren & Aktivieren"
-    }
+    },
+    "reset_highlights": "Feature-Hinweise zurücksetzen",
+    "highlights_reset": "Feature-Hinweise wurden zurückgesetzt"
   },
   "severity": {
     "critical": "Kritisch",
@@ -3256,7 +3263,8 @@
     "seventies": "70er Vibes",
     "seventies_desc": "Warme Erdtöne",
     "nineties": "90er Vibes",
-    "nineties_desc": "Retro-Desktop (hell) / Terminal (dunkel)"
+    "nineties_desc": "Retro-Desktop (hell) / Terminal (dunkel)",
+    "show_wallpaper": "Hintergrundbild anzeigen"
   },
   "attachments": {
     "title": "Anhänge",
@@ -3272,5 +3280,8 @@
     "view": "Ansehen",
     "download": "Herunterladen",
     "delete": "Löschen"
+  },
+  "demo": {
+    "security_disabled": "Passwort- und MFA-Änderungen sind im Demomodus deaktiviert."
   }
 }

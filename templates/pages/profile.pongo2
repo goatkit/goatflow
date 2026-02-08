@@ -96,9 +96,35 @@
                     </select>
                 </div>
             </div>
+
+            <!-- Reset Feature Highlights -->
+            <div class="mt-4 flex items-center gap-3">
+                <label class="flex items-center gap-2 cursor-pointer text-sm" style="color: var(--gk-text-secondary);">
+                    <input type="checkbox" id="reset-coachmarks" class="rounded"
+                           style="accent-color: var(--gk-primary);"
+                           onchange="handleCoachmarkReset(this)">
+                    {{ t("settings.reset_highlights")|default:"Reset feature highlights" }}
+                </label>
+                <span id="coachmark-reset-confirm" class="hidden text-xs" style="color: var(--gk-success);">
+                    <svg class="inline h-3.5 w-3.5 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    {{ t("settings.highlights_reset")|default:"Feature highlights have been reset" }}
+                </span>
+            </div>
         </div>
 
         <!-- Two-Factor Authentication -->
+        {% if User.IsDemo %}
+        <div class="gk-card-body" style="border-top: 1px solid var(--gk-border-default);">
+            <p class="text-sm" style="color: var(--gk-text-muted);">
+                <svg class="inline-block h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                {{ t("demo.security_disabled")|default:"Password and MFA changes are disabled in demo mode." }}
+            </p>
+        </div>
+        {% else %}
         <div class="gk-card-body" style="border-top: 1px solid var(--gk-border-default);">
             <div id="2fa-section">
                 <div class="flex items-center justify-between mb-3">
@@ -169,7 +195,7 @@
                         {{ t("buttons.cancel")|default:"Cancel" }}
                     </a>
                     <button type="submit" id="save-btn" class="gk-btn-neon min-w-[120px]">
-                        <span id="save-text">{{ t("common.save_changes")|default:"Save Changes" }}</span>
+                        <span id="save-text">{% if User.IsDemo %}{{ t("common.apply_close")|default:"Apply and Close" }}{% else %}{{ t("common.save_close")|default:"Save and Close" }}{% endif %}</span>
                         <svg id="save-spinner" class="hidden animate-spin ml-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -178,6 +204,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </form>
 
     <!-- Error Toast -->
@@ -190,12 +217,43 @@
 </div>
 
 <script>
+function handleCoachmarkReset(checkbox) {
+    if (!checkbox.checked) return;
+
+    // Reset local state
+    if (typeof GoatCoach !== 'undefined') {
+        GoatCoach.reset();
+    }
+
+    // Reset server state (best-effort)
+    fetch('/api/preferences/coachmarks/dismiss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: '__reset_all__' })
+    }).catch(function() {});
+
+    // Show confirmation
+    var confirm = document.getElementById('coachmark-reset-confirm');
+    if (confirm) confirm.classList.remove('hidden');
+
+    // Clear checkbox after brief moment
+    setTimeout(function() {
+        checkbox.checked = false;
+    }, 300);
+
+    // Hide confirmation after 5 seconds
+    setTimeout(function() {
+        if (confirm) confirm.classList.add('hidden');
+    }, 5000);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('profile-form');
     const saveBtn = document.getElementById('save-btn');
     const saveText = document.getElementById('save-text');
     const saveSpinner = document.getElementById('save-spinner');
     const saveStatus = document.getElementById('save-status');
+    const cancelBtn = form.querySelector('a.gk-btn-secondary');
     const errorToast = document.getElementById('error-toast');
     const errorMessage = document.getElementById('error-message');
     const avatar = document.querySelector('#avatar span');
@@ -203,6 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Track original values for dirty checking
     let originalValues = {};
     let languageChanged = false;
+    let saving = false;
 
     function getFormValues() {
         return {
@@ -227,7 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function setBusy(busy) {
         saveBtn.disabled = busy;
-        saveText.textContent = busy ? '{{ t("common.saving")|default:"Saving..." }}' : '{{ t("common.save_changes")|default:"Save Changes" }}';
+        saveText.textContent = busy ? '{{ t("common.saving")|default:"Saving..." }}' : '{% if User.IsDemo %}{{ t("common.apply_close")|default:"Apply and Close" }}{% else %}{{ t("common.save_close")|default:"Save and Close" }}{% endif %}';
         if (busy) {
             saveSpinner.classList.remove('hidden');
         } else {
@@ -283,6 +342,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle form submission
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
+        if (saving) return;
+        saving = true;
         setBusy(true);
 
         const values = getFormValues();
@@ -337,19 +398,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!hasError) {
                 showSuccess();
-                originalValues = { ...getFormValues() };
+                // Keep buttons disabled — we're navigating away
+                saveBtn.disabled = true;
+                if (cancelBtn) cancelBtn.style.pointerEvents = 'none';
 
-                // Reload if language changed to apply translations
-                if (languageChanged) {
-                    setTimeout(() => window.location.reload(), 1000);
-                }
+                // Redirect back after a brief success flash
+                setTimeout(() => {
+                    if (languageChanged) {
+                        window.location.reload();
+                    } else {
+                        window.location.href = '/dashboard';
+                    }
+                }, 800);
+                return; // Don't re-enable buttons
             }
         } catch (error) {
             console.error('Error saving:', error);
             showError('{{ t("messages.error_saving")|default:"Error saving changes" }}');
-        } finally {
-            setBusy(false);
         }
+        // Only re-enable on error
+        saving = false;
+        setBusy(false);
     });
 
     // Load 2FA status

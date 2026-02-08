@@ -1622,10 +1622,13 @@
     "disable": "無効",
     "enable": "有効",
     "save_changes": "変更を保存",
+    "save_close": "保存して閉じる",
+    "apply_close": "適用して閉じる",
     "done": "完了",
     "revoke": "取り消す",
     "revoke_token": "トークンを取り消す",
-    "continue": "続行"
+    "continue": "続行",
+    "save_and_close": "保存して閉じる"
   },
   "changes": {
     "backout_plan": "バックアウト計画",
@@ -1689,6 +1692,8 @@
     "last_update": "最終更新",
     "save_and_finish": "保存して終了",
     "save_changes": "変更を保存",
+    "save_close": "保存して閉じる",
+    "apply_close": "適用して閉じる",
     "saved": "保存済み",
     "none": "なし",
     "not_closed": "未クローズ",
@@ -2838,7 +2843,9 @@
       "scan_instructions": "認証アプリでこのQRコードをスキャンしてください",
       "setup_failed": "2FAの設定に失敗しました",
       "verify_enable": "確認して有効化"
-    }
+    },
+    "reset_highlights": "機能ハイライトをリセット",
+    "highlights_reset": "機能ハイライトがリセットされました"
   },
   "severity": {
     "critical": "重大",
@@ -3253,7 +3260,8 @@
     "seventies": "70年代ヴァイブス",
     "seventies_desc": "温かみのあるアーストーン",
     "nineties": "90年代バイブ",
-    "nineties_desc": "レトロデスクトップ（ライト）/ ターミナル（ダーク）"
+    "nineties_desc": "レトロデスクトップ（ライト）/ ターミナル（ダーク）",
+    "show_wallpaper": "壁紙を表示"
   },
   "attachments": {
     "title": "添付ファイル",
@@ -3269,5 +3277,8 @@
     "view": "表示",
     "download": "ダウンロード",
     "delete": "削除"
+  },
+  "demo": {
+    "security_disabled": "デモモードではパスワードとMFAの変更は無効です。"
   }
 }

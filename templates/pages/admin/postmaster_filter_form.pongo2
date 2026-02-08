@@ -109,7 +109,10 @@
                 <a href="/admin/postmaster-filters" class="gk-btn-secondary">
                     {{ t("buttons.cancel") }}
                 </a>
-                <button type="submit" class="gk-btn-neon">
+                <button type="submit" name="continue" value="0" class="gk-btn-secondary">
+                    {{ t("buttons.save_and_close")|default:"Save & Close" }}
+                </button>
+                <button type="submit" name="continue" value="1" class="gk-btn-neon">
                     {% if IsNew %}{{ t("buttons.create") }}{% else %}{{ t("buttons.save") }}{% endif %}
                 </button>
             </div>
@@ -458,9 +461,11 @@ function saveFilter(event) {
     .then(result => {
         if (result.success) {
             showSuccess(isNew ? i18n.createSuccess : i18n.updateSuccess);
-            setTimeout(() => {
-                window.location.href = '/admin/postmaster-filters';
-            }, 1000);
+            if (shouldCloseAfterSave(document.getElementById('filterForm'))) {
+                setTimeout(() => {
+                    window.location.href = '/admin/postmaster-filters';
+                }, 1000);
+            }
         } else {
             showError(result.error || 'Failed to save filter');
         }

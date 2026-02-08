@@ -192,7 +192,10 @@
                     {{ t("admin.webservices.test_connection") }}
                 </button>
                 {% endif %}
-                <button type="submit" class="gk-btn-neon" :disabled="saving">
+                <button type="submit" name="continue" value="0" class="gk-btn-secondary">
+                    {{ t("buttons.save_and_close")|default:"Save & Close" }}
+                </button>
+                <button type="submit" name="continue" value="1" class="gk-btn-neon" :disabled="saving">
                     <svg x-show="!saving" class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
@@ -265,7 +268,11 @@ function webserviceForm() {
                 const result = await response.json();
 
                 if (result.success) {
-                    window.location.href = '/admin/webservices';
+                    if (shouldCloseAfterSave(this.$refs.form || document.querySelector('form'))) {
+                        window.location.href = '/admin/webservices';
+                    } else {
+                        this.showToast('Saved successfully', 'success');
+                    }
                 } else {
                     this.showToast('Error: ' + (result.error || 'Unknown error'), 'error');
                 }

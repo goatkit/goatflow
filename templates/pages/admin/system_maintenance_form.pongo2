@@ -163,7 +163,10 @@
                         <a href="/admin/system-maintenance" class="gk-btn-secondary">
                             {{ t("common.cancel") }}
                         </a>
-                        <button type="submit" class="gk-btn-neon">
+                        <button type="submit" name="continue" value="0" class="gk-btn-secondary">
+                            {{ t("buttons.save_and_close")|default:"Save & Close" }}
+                        </button>
+                        <button type="submit" name="continue" value="1" class="gk-btn-neon">
                             <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                             </svg>
@@ -339,9 +342,11 @@ document.getElementById('maintenanceForm').addEventListener('submit', function(e
     .then(data => {
         if (data.success) {
             showToast(isNew ? '{{ t("admin.system_maintenance.created") }}' : '{{ t("admin.system_maintenance.updated") }}', 'success');
-            setTimeout(() => {
-                window.location.href = '/admin/system-maintenance';
-            }, 1000);
+            if (shouldCloseAfterSave(document.getElementById('maintenanceForm'))) {
+                setTimeout(() => {
+                    window.location.href = '/admin/system-maintenance';
+                }, 1000);
+            }
         } else {
             showToast(data.error || 'Failed to save maintenance record', 'error');
         }
