@@ -94,6 +94,26 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go install -tags 'postgres,mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
 # ============================================
+# Stage 2b: Build WASM plugins
+# ============================================
+FROM docker.io/tinygo/tinygo:0.32.0 AS wasm-builder
+
+WORKDIR /plugins
+COPY plugins/ ./
+
+# Build all TinyGo WASM plugins
+RUN for dir in */; do \
+        if [ -f "${dir}main.go" ] && grep -q "tinygo.wasm" "${dir}main.go" 2>/dev/null; then \
+            name=$(basename "$dir"); \
+            wasm_name=$(echo "$name" | sed 's/-wasm$//'); \
+            echo "Building ${name} -> ${wasm_name}.wasm..."; \
+            cd "/plugins/${dir}" && \
+            tinygo build -o "${wasm_name}.wasm" -target wasi -scheduler=none main.go && \
+            cd /plugins; \
+        fi; \
+    done
+
+# ============================================
 # Stage 3: Build application
 # ============================================
 FROM deps AS builder
@@ -185,6 +205,7 @@ COPY --chown=appuser:appgroup modules ./modules/
 COPY --chown=appuser:appgroup migrations ./migrations/
 COPY --chown=appuser:appgroup config ./config/
 COPY --chown=appuser:appgroup plugins ./config/plugins/
+COPY --from=wasm-builder --chown=appuser:appgroup /plugins/ ./config/plugins/
 
 # Overlay downloaded third-party assets
 COPY --from=assets --chown=appuser:appgroup /assets/js/*.js ./static/js/
@@ -212,6 +233,7 @@ COPY --chown=appuser:appgroup modules ./modules/
 COPY --chown=appuser:appgroup migrations ./migrations/
 COPY --chown=appuser:appgroup config ./config/
 COPY --chown=appuser:appgroup plugins ./config/plugins/
+COPY --from=wasm-builder --chown=appuser:appgroup /plugins/ ./config/plugins/
 
 # Overlay downloaded third-party assets
 COPY --from=assets --chown=appuser:appgroup /assets/js/*.js ./static/js/

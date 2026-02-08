@@ -595,6 +595,7 @@ services:
       BUN_INSTALL_CACHE_DIR: /cache/bun
       XDG_CACHE_HOME: /cache/xdg
       GOTOOLCHAIN: local
+      GOTELEMETRY: off
       PATH: /usr/local/go/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
       # Test database environment for integration tests - credentials must be in .env
       APP_ENV: test

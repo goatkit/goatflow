@@ -253,6 +253,25 @@ func seedLookupTables(db *sql.DB) error {
 		return err
 	}
 
+	// Grant user 1 (root/admin) full rw permission on group 1 (Raw)
+	// Required for RBAC checks in article creation and other handlers
+	// Uses SELECT-before-INSERT to avoid duplicates (no unique constraint on group_user)
+	permissionKeys := []string{"rw", "create", "note", "owner", "priority", "move_into"}
+	for _, perm := range permissionKeys {
+		var count int
+		_ = tx.QueryRow(database.ConvertPlaceholders(
+			"SELECT COUNT(*) FROM group_user WHERE user_id = 1 AND group_id = 1 AND permission_key = ?",
+		), perm).Scan(&count)
+		if count == 0 {
+			if err := exec(`
+				INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
+				VALUES (?, 1, ?, 1, NOW(), 1, NOW(), 1)
+			`, 1, perm); err != nil {
+				return err
+			}
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return err
 	}
