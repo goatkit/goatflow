@@ -127,6 +127,8 @@ func ensureCoreHandlers() {
 		"HandleSetPreLoginTheme":      HandleSetPreLoginTheme,
 		"HandleGetTheme":              HandleGetTheme,
 		"HandleSetTheme":              HandleSetTheme,
+		"HandleDismissCoachmark":      HandleDismissCoachmark,
+		"HandleSetWallpaper":          HandleSetWallpaper,
 		"HandleGetProfile":            HandleGetProfile,
 		"HandleUpdateProfile":         HandleUpdateProfile,
 		"HandleAgentPasswordForm":     HandleAgentPasswordForm,

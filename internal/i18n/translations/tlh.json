@@ -1642,10 +1642,13 @@
     "disable": "mev",
     "enable": "paw'",
     "save_changes": "choHwI' pol",
+    "save_close": "choq 'ej SoQmoH",
+    "apply_close": "lo' 'ej SoQmoH",
     "done": "pItlh",
     "revoke": "qIl",
     "revoke_token": "woD permey",
-    "continue": "taH"
+    "continue": "taH",
+    "save_and_close": "choq 'ej SoQmoH"
   },
   "changes": {
     "backout_plan": "Dob mIw",
@@ -1709,6 +1712,8 @@
     "last_update": "Qav choHmeH poH",
     "save_and_finish": "Qop 'ej rIn",
     "save_changes": "choHmey pol",
+    "save_close": "choq 'ej SoQmoH",
+    "apply_close": "lo' 'ej SoQmoH",
     "saved": "pollu'pu'",
     "none": "pagh",
     "not_closed": "SoQbe'",
@@ -2855,7 +2860,9 @@
       "scan_instructions": "QR mIllogh yIHotlh",
       "setup_failed": "2FA qellu'be'",
       "verify_enable": "yItob 'ej yIchu'"
-    }
+    },
+    "reset_highlights": "ngo'wI' tIchenmoH",
+    "highlights_reset": "ngo'wI' chenmoHlu'pu'"
   },
   "severity": {
     "critical": "Qob'a'",
@@ -3269,7 +3276,8 @@
     "seventies": "70s vIb",
     "seventies_desc": "tuj puS rItlh",
     "nineties": "90s vIb",
-    "nineties_desc": "nItlh mIw (wov) / De'wI' (Hurgh)"
+    "nineties_desc": "nItlh mIw (wov) / De'wI' (Hurgh)",
+    "show_wallpaper": "HaSta yIcha'"
   },
   "attachments": {
     "title": "ngoqmey",
@@ -3285,5 +3293,8 @@
     "view": "legh",
     "download": "Suq",
     "delete": "DoH"
+  },
+  "demo": {
+    "security_disabled": "Demo SeHlaw: ngu'wI' choH pagh MFA choH chaw'be'lu'."
   }
 }

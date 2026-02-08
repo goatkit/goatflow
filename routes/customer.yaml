@@ -98,6 +98,18 @@ spec:
       handler: HandleSetTheme
       description: "Set customer theme preference"
 
+    # Wallpaper preference
+    - path: /api/preferences/wallpaper
+      method: POST
+      handler: HandleSetWallpaper
+      description: "Set wallpaper on/off preference for customer"
+
+    # Coachmarks (feature spotlights) - dismiss tracking
+    - path: /api/preferences/coachmarks/dismiss
+      method: POST
+      handler: HandleDismissCoachmark
+      description: "Dismiss a coachmark tip for current customer"
+
     # Two-Factor Authentication (2FA/TOTP) for customers
     - path: /api/preferences/2fa/status
       method: GET
@@ -107,16 +119,19 @@ spec:
     - path: /api/preferences/2fa/setup
       method: POST
       handler: handleCustomerTOTPSetup
+      middleware: [demo-guard]
       description: "Initiate 2FA setup for customer - returns secret and QR code"
 
     - path: /api/preferences/2fa/confirm
       method: POST
       handler: handleCustomerTOTPConfirm
+      middleware: [demo-guard]
       description: "Confirm 2FA setup with verification code"
 
     - path: /api/preferences/2fa/disable
       method: POST
       handler: handleCustomerTOTPDisable
+      middleware: [demo-guard]
       description: "Disable 2FA for customer (requires valid code)"
 
     # Password management
@@ -124,11 +139,13 @@ spec:
       method: GET
       handler: handleCustomerPasswordForm
       template: pages/customer/password_form.pongo2
+      middleware: [demo-guard]
       description: "Display password change form"
 
     - path: /password/change
       method: POST
       handler: handleCustomerChangePassword
+      middleware: [demo-guard]
       description: "Process password change"
 
     # Knowledge base access

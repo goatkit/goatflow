@@ -144,7 +144,10 @@
                         <a href="/admin/signatures" class="gk-btn-secondary">
                             {{ t("admin.modules.signature.actions.cancel") }}
                         </a>
-                        <button type="submit" class="gk-btn-neon">
+                        <button type="submit" name="continue" value="0" class="gk-btn-secondary">
+                            {{ t("buttons.save_and_close")|default:"Save & Close" }}
+                        </button>
+                        <button type="submit" name="continue" value="1" class="gk-btn-neon">
                             {% if isNew %}{{ t("admin.modules.signature.actions.create") }}{% else %}{{ t("admin.modules.signature.actions.save") }}{% endif %}
                         </button>
                     </div>
@@ -307,6 +310,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update hidden input with editor content
         if (editor) {
             textInput.value = editor.getContent();
+        }
+    });
+
+    form.addEventListener('htmx:afterRequest', function(evt) {
+        if (evt.detail.successful && shouldCloseAfterSave(form)) {
+            window.location.href = '/admin/signatures';
         }
     });
 });

@@ -1622,10 +1622,13 @@
     "disable": "Désactiver",
     "enable": "Activer",
     "save_changes": "Enregistrer les modifications",
+    "save_close": "Enregistrer et fermer",
+    "apply_close": "Appliquer et fermer",
     "done": "Terminé",
     "revoke": "Révoquer",
     "revoke_token": "Révoquer le jeton",
-    "continue": "Continuer"
+    "continue": "Continuer",
+    "save_and_close": "Enregistrer et fermer"
   },
   "changes": {
     "backout_plan": "Plan de retour arrière",
@@ -1689,6 +1692,8 @@
     "last_update": "Dernière mise à jour",
     "save_and_finish": "Enregistrer et terminer",
     "save_changes": "Enregistrer les Modifications",
+    "save_close": "Enregistrer et fermer",
+    "apply_close": "Appliquer et fermer",
     "saved": "Enregistré",
     "none": "Aucun",
     "not_closed": "Non fermé",
@@ -2838,7 +2843,9 @@
       "scan_instructions": "Scannez ce code QR avec votre application d'authentification",
       "setup_failed": "Échec de la configuration 2FA",
       "verify_enable": "Vérifier et activer"
-    }
+    },
+    "reset_highlights": "Réinitialiser les guides",
+    "highlights_reset": "Les guides ont été réinitialisés"
   },
   "severity": {
     "critical": "Critique",
@@ -3253,7 +3260,8 @@
     "seventies": "Ambiance années 70",
     "seventies_desc": "Tons chauds de terre",
     "nineties": "Vibe des années 90",
-    "nineties_desc": "Bureau rétro (clair) / Terminal (sombre)"
+    "nineties_desc": "Bureau rétro (clair) / Terminal (sombre)",
+    "show_wallpaper": "Afficher le fond d'écran"
   },
   "attachments": {
     "title": "Pièces jointes",
@@ -3269,5 +3277,8 @@
     "view": "Voir",
     "download": "Télécharger",
     "delete": "Supprimer"
+  },
+  "demo": {
+    "security_disabled": "Les modifications de mot de passe et MFA sont désactivées en mode démo."
   }
 }

@@ -1279,6 +1279,21 @@ func handleCustomerSetLanguage(db *sql.DB) gin.HandlerFunc {
 			}
 		}
 
+		// In demo mode, only set the cookie (session-scoped) - don't persist to DB
+		isDemo, _ := c.Get("is_demo")
+		if isDemo == true {
+			if request.Value != "" {
+				c.SetCookie("lang", request.Value, 0, "/", "", false, true)
+			} else {
+				c.SetCookie("lang", "", -1, "/", "", false, true)
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": "Language preference set for this session",
+			})
+			return
+		}
+
 		prefService := service.NewCustomerPreferencesService(db)
 		if err := prefService.SetLanguage(username, request.Value); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{

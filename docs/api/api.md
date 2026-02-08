@@ -5952,6 +5952,28 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/api/preferences/wallpaper`
+- **Method:** `POST`
+- **Description:** Set wallpaper on/off preference for customer
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/preferences/coachmarks/dismiss`
+- **Method:** `POST`
+- **Description:** Dismiss a coachmark tip for current customer
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/api/preferences/2fa/status`
 - **Method:** `GET`
 - **Description:** Get 2FA status for current customer
@@ -6288,6 +6310,28 @@ Generated from YAML route definitions
 - **Path:** `/settings/tokens`
 - **Method:** `GET`
 - **Description:** Manage personal API tokens
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/preferences/wallpaper`
+- **Method:** `POST`
+- **Description:** Set wallpaper on/off preference
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/preferences/coachmarks/dismiss`
+- **Method:** `POST`
+- **Description:** Dismiss a coachmark tip for current user
 
 
 

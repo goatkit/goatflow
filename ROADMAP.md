@@ -4,11 +4,11 @@ Current status, past releases, and future plans for GoatFlow.
 
 ## 🚀 Current Status
 
-**Version**: 0.6.5-dev (February 2026) - GoatKit Plugin Platform
+**Version**: 0.6.5 (February 8, 2026) - GoatKit Plugin Platform
 
 GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ticketing and service management platform. It is built as a premier standalone solution for all organizations. Written in Go with a modular monolith architecture, GoatFlow provides enterprise-grade support ticketing, ITSM capabilities, and extensive customization options.
 
-### What's New in 0.6.5-dev
+### What's New in 0.6.5
 See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlights:
 - **Two-Factor Authentication (TOTP)** — 2FA for agents and customers with QR setup, recovery codes, admin override
 - **GoatKit Plugin Platform** — Dual-runtime (WASM + gRPC), HostAPI, admin UI, CLI tooling
@@ -17,9 +17,13 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - **MCP Server** — AI assistant integration via JSON-RPC (`/api/mcp`) with multi-user proxy RBAC
 - **Granular RBAC** — OTRS-compatible permission service with 1,300+ lines of auth tests
 - **RBAC Security Hardening** — All statistics and queue endpoints now enforce queue-level permissions (prevents data leakage)
+- **Demo Mode** — Restricted mode for public demos (session-only prefs, blocked password/MFA changes)
+- **Coachmarks** — Declarative onboarding tooltips with view tracking and dismissal persistence
+- **Wallpaper Toggle** — Per-theme background wallpaper control with cookie persistence
+- **Dark Theme Contrast Fix** — 338 CSS overrides for proper contrast across all dark themes
 
 ### What Works
-- Agent Interface: Full ticket management with bulk actions and multi-theme UI (4 themes)
+- Agent Interface: Full ticket management with bulk actions and multi-theme UI (4 themes with wallpaper toggle)
 - Customer Portal: Complete self-service with profile management, password changes
 - Email Integration: POP3/IMAP + RFC-compliant threading + auto-responses
 - Database: MySQL/MariaDB and PostgreSQL with cross-database compatibility
@@ -27,7 +31,7 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - Integration: GenericInterface with REST/SOAP transports, webservice dynamic fields
 - Security: Group-based queue permissions, session management, auth middleware, **API tokens**, **RBAC-filtered statistics**, **Two-factor authentication (TOTP)**
 - i18n: 15 languages including RTL support (ar, he, fa, ur)
-- Deployment: Docker Compose and Kubernetes Helm chart with multi-arch support
+- Deployment: Docker Compose and Kubernetes Helm chart with multi-arch support, **demo mode**
 - Admin Modules: 30+ admin interfaces including ticket attribute relations, dynamic fields, templates
 - **Plugins**: Dual-runtime (WASM + gRPC) plugin system with admin UI and state persistence
 - **API Documentation**: OpenAPI 3.0 spec with Swagger UI (94 endpoints, 71% coverage)
@@ -219,6 +223,29 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - [ ] Touch-optimized controls
 - [ ] Mobile ticket creation flow
 - [ ] Push notifications (PWA)
+
+**Demo Mode**
+- [x] `DemoMode` middleware (sets `is_demo` flag on all requests)
+- [x] `DemoGuard` middleware (blocks password/MFA changes, returns 403)
+- [x] Session-only preferences (cookie-based, no DB writes)
+- [x] Profile page restrictions (hides 2FA/password sections in demo)
+- [x] Config: `app.demo_mode` / `GOATFLOW_APP_DEMO_MODE=true`
+
+**Coachmarks (Onboarding Feature Spotlight)**
+- [x] Declarative tip registration (`GoatFlow.coachmarks.register()`)
+- [x] Auto-positioned balloons with arrow pointers
+- [x] View tracking (localStorage) + server-side dismissal persistence
+- [x] Theme-aware CSS variable styling
+- [x] "Reset feature highlights" on profile pages
+- [x] First tip: theme switcher introduction
+- [ ] Additional tips for key features (ticket creation, queue management)
+
+**Wallpaper Toggle**
+- [x] Checkbox in theme selector dropdown
+- [x] Cookie + server-side preference persistence
+- [x] Flash prevention (inline `<head>` script)
+- [x] Smart disable for themes without wallpaper
+- [x] GoatFlow Classic light and dark wallpaper images
 
 **Quality**
 - [x] 70% test coverage target (71.2% achieved)

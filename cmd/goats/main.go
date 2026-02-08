@@ -292,6 +292,9 @@ func main() {
 		})
 	}
 
+	// Demo mode middleware (sets is_demo context on all requests when enabled)
+	r.Use(middleware.DemoMode())
+
 	// Global i18n middleware (language detection via ?lang=, cookie, user, Accept-Language)
 	i18nMW := middleware.NewI18nMiddleware()
 	r.Use(i18nMW.Handle())

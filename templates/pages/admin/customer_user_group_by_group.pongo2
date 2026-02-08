@@ -57,7 +57,10 @@
                     >
                 </div>
             </div>
-            <button type="submit" class="gk-btn-neon">
+            <button type="submit" name="continue" value="0" class="gk-btn-secondary">
+                {{ t("buttons.save_and_close")|default:"Save & Close" }}
+            </button>
+            <button type="submit" name="continue" value="1" class="gk-btn-neon">
                 {{ t("common.search") }}
             </button>
         </form>
@@ -121,7 +124,10 @@
             <a href="/admin/customer-user-groups" class="gk-btn-secondary">
                 {{ t("common.cancel") }}
             </a>
-            <button type="submit" class="gk-btn-neon">
+            <button type="submit" name="continue" value="0" class="gk-btn-secondary">
+                {{ t("buttons.save_and_close")|default:"Save & Close" }}
+            </button>
+            <button type="submit" name="continue" value="1" class="gk-btn-neon">
                 {{ t("common.save") }}
             </button>
         </div>

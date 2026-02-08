@@ -1938,3 +1938,264 @@
         transition: opacity 0.2s ease-in-out;
     }
 }
+
+/* ============================================
+   WALLPAPER TOGGLE - Global override
+   When .gk-no-wallpaper is on <html>, suppress all theme wallpapers/patterns
+   ============================================ */
+
+html.gk-no-wallpaper body,
+html.gk-no-wallpaper .gk-pattern-bg,
+html.gk-no-wallpaper .gk-grid-bg::before,
+[data-theme].gk-no-wallpaper body,
+[data-theme].gk-no-wallpaper.dark body,
+[data-theme].gk-no-wallpaper.light body,
+[data-theme].gk-no-wallpaper .auth-background,
+[data-theme].gk-no-wallpaper .login-background {
+    background-image: none !important;
+}
+
+/* ============================================
+   COACHMARKS - Feature spotlight tooltips
+   ============================================ */
+
+#gk-coachmark-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    background: rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+}
+
+.gk-coachmark {
+    position: absolute;
+    z-index: 9999;
+    max-width: 320px;
+    min-width: 220px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: auto;
+}
+
+.gk-coachmark.gk-coachmark-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.gk-coachmark-top.gk-coachmark-visible {
+    transform: translateY(0);
+}
+
+.gk-coachmark-top {
+    transform: translateY(-8px);
+}
+
+.gk-coachmark-left {
+    transform: translateX(-8px) translateY(0);
+}
+
+.gk-coachmark-left.gk-coachmark-visible {
+    transform: translateX(0) translateY(0);
+}
+
+.gk-coachmark-right {
+    transform: translateX(8px) translateY(0);
+}
+
+.gk-coachmark-right.gk-coachmark-visible {
+    transform: translateX(0) translateY(0);
+}
+
+.gk-coachmark-content {
+    background: var(--gk-bg-surface, #111827) !important;
+    color: var(--gk-text-primary, #f3f4f6) !important;
+    border: 1px solid var(--gk-primary, #3b82f6) !important;
+    border-radius: var(--gk-radius-lg, 8px);
+    padding: 1rem 1.25rem;
+    box-shadow: var(--gk-glow-primary, none), var(--gk-shadow-lg, 0 10px 15px rgba(0,0,0,0.2));
+    position: relative;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.gk-coachmark-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.35rem;
+    color: var(--gk-text-primary, #f3f4f6) !important;
+}
+
+.gk-coachmark-message {
+    font-size: 0.825rem;
+    line-height: 1.4;
+    color: var(--gk-text-secondary, #9ca3af) !important;
+}
+
+.gk-coachmark-actions {
+    margin-top: 0.75rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.gk-coachmark-dismiss {
+    background: var(--gk-primary, #3b82f6) !important;
+    color: var(--gk-text-inverse, #ffffff) !important;
+    border: none !important;
+    border-radius: var(--gk-radius-md, 6px);
+    padding: 0.35rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.gk-coachmark-dismiss:hover {
+    background: var(--gk-primary-hover, #2563eb) !important;
+}
+
+/* Arrow */
+.gk-coachmark-arrow {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: var(--gk-bg-surface, #111827) !important;
+    border: 1px solid var(--gk-primary, #3b82f6) !important;
+    transform: rotate(45deg);
+    z-index: 1;
+}
+
+/* Hide the arrow border edge that overlaps the content */
+.gk-coachmark-bottom .gk-coachmark-arrow {
+    border-bottom: none !important;
+    border-right: none !important;
+}
+
+.gk-coachmark-top .gk-coachmark-arrow {
+    border-top: none !important;
+    border-left: none !important;
+}
+
+.gk-coachmark-left .gk-coachmark-arrow {
+    border-left: none !important;
+    border-bottom: none !important;
+}
+
+.gk-coachmark-right .gk-coachmark-arrow {
+    border-right: none !important;
+    border-top: none !important;
+}
+
+.gk-coachmark-bottom .gk-coachmark-arrow {
+    top: -6px;
+    left: 50%;
+    margin-left: -6px;
+}
+
+.gk-coachmark-top .gk-coachmark-arrow {
+    bottom: -6px;
+    left: 50%;
+    margin-left: -6px;
+}
+
+.gk-coachmark-left .gk-coachmark-arrow {
+    right: -6px;
+    top: 50%;
+    margin-top: -6px;
+}
+
+.gk-coachmark-right .gk-coachmark-arrow {
+    left: -6px;
+    top: 50%;
+    margin-top: -6px;
+}
+
+/* ============================================
+   DARK MODE OVERRIDES FOR HARDCODED TAILWIND CLASSES
+   Many templates use light-mode Tailwind utilities (bg-white, text-gray-700, etc.)
+   without dark: variants. These overrides remap them to theme variables in dark mode
+   so all themes work without touching every template.
+   ============================================ */
+
+/* Background overrides */
+.dark .bg-white {
+    background-color: var(--gk-bg-elevated) !important;
+}
+.dark .bg-gray-50,
+.dark .bg-gray-100 {
+    background-color: var(--gk-bg-surface) !important;
+}
+.dark .bg-gray-400,
+.dark .bg-gray-500,
+.dark .bg-gray-600,
+.dark .bg-gray-700 {
+    background-color: var(--gk-bg-elevated) !important;
+}
+
+/* Text color overrides */
+.dark .text-gray-300 {
+    color: var(--gk-text-secondary) !important;
+}
+.dark .text-gray-400,
+.dark .text-gray-500 {
+    color: var(--gk-text-muted) !important;
+}
+.dark .text-gray-600 {
+    color: var(--gk-text-secondary) !important;
+}
+.dark .text-gray-700,
+.dark .text-gray-800,
+.dark .text-gray-900 {
+    color: var(--gk-text-primary) !important;
+}
+
+/* Border overrides */
+.dark .border-gray-200,
+.dark .border-gray-300 {
+    border-color: var(--gk-border-default) !important;
+}
+.dark .border-gray-600,
+.dark .border-gray-800 {
+    border-color: var(--gk-border-strong) !important;
+}
+
+/* Status color backgrounds - keep semantic but adjust for dark contrast */
+.dark .bg-red-50,
+.dark .bg-red-100 {
+    background-color: var(--gk-error-subtle) !important;
+}
+.dark .bg-red-900 {
+    background-color: var(--gk-error-subtle) !important;
+}
+.dark .bg-green-100 {
+    background-color: var(--gk-success-subtle) !important;
+}
+
+/* Status text colors */
+.dark .text-red-200,
+.dark .text-red-300,
+.dark .text-red-400 {
+    color: var(--gk-error) !important;
+}
+.dark .text-red-500,
+.dark .text-red-600,
+.dark .text-red-700,
+.dark .text-red-800 {
+    color: var(--gk-error) !important;
+}
+.dark .text-green-300,
+.dark .text-green-400 {
+    color: var(--gk-success) !important;
+}
+.dark .text-green-600,
+.dark .text-green-800 {
+    color: var(--gk-success) !important;
+}
+
+/* Hover state overrides */
+.dark .hover\:bg-gray-50:hover {
+    background-color: var(--gk-bg-surface) !important;
+}
+.dark .hover\:bg-red-50:hover {
+    background-color: var(--gk-error-subtle) !important;
+}

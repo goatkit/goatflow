@@ -1489,6 +1489,8 @@
     "reset": "Reset",
     "save": "Save",
     "save_changes": "Save Changes",
+    "save_close": "Save and Close",
+    "apply_close": "Apply and Close",
     "search": "Search",
     "see_more": "See More",
     "select": "Select",
@@ -1509,7 +1511,8 @@
     "done": "Done",
     "revoke": "Revoke",
     "revoke_token": "Revoke Token",
-    "continue": "Continue"
+    "continue": "Continue",
+    "save_and_close": "Save and Close"
   },
   "bulk_actions": {
     "change_status_title": "Change Ticket Status",
@@ -1649,6 +1652,8 @@
     "last_update": "Last Update",
     "save_and_finish": "Save and Finish",
     "save_changes": "Save Changes",
+    "save_close": "Save and Close",
+    "apply_close": "Apply and Close",
     "saved": "Saved",
     "page": "Page",
     "tickets": "Tickets",
@@ -2034,7 +2039,7 @@
     "confirm_delete": "Are you sure you want to delete this item?",
     "error": "Error",
     "error_occurred": "An error occurred",
-    "error_saving": "Failed to save",
+    "error_saving": "Error saving changes",
     "unknown_error": "Unknown error",
     "info": "Information",
     "item_created": "Item created successfully",
@@ -2085,7 +2090,6 @@
     "loading_customer_users": "Loading customer users...",
     "error_saving_profile": "Error saving profile",
     "error_saving_preferences": "Error saving preferences",
-    "error_saving": "Error saving changes",
     "confirm": {
       "delete_customer_user": "Are you sure you want to delete this customer user? This action cannot be undone.",
       "toggle_customer_status": "Are you sure you want to {action} this customer user?",
@@ -2152,7 +2156,6 @@
     "save_company_before_services": "Save the company before assigning services.",
     "services_updated_success": "Services updated successfully",
     "failed_update_services": "Failed to update services",
-    "unknown_error": "Unknown error",
     "failed_delete_signature": "Failed to delete signature",
     "connection_test_failed": "Connection test failed",
     "error_testing_connection": "Error testing connection",
@@ -2441,7 +2444,9 @@
       "scan_instructions": "Scan this QR code with your authenticator app",
       "setup_failed": "Failed to set up 2FA",
       "verify_enable": "Verify & Enable"
-    }
+    },
+    "reset_highlights": "Reset feature highlights",
+    "highlights_reset": "Feature highlights have been reset"
   },
   "severity": {
     "critical": "Critical",
@@ -3593,7 +3598,8 @@
     "seventies": "70s Vibes",
     "seventies_desc": "Warm earth tones",
     "nineties": "90s Vibe",
-    "nineties_desc": "Retro desktop (light) / Terminal (dark)"
+    "nineties_desc": "Retro desktop (light) / Terminal (dark)",
+    "show_wallpaper": "Show wallpaper"
   },
   "attachments": {
     "title": "Attachments",
@@ -3609,5 +3615,8 @@
     "view": "View",
     "download": "Download",
     "delete": "Delete"
+  },
+  "demo": {
+    "security_disabled": "Password and MFA changes are disabled in demo mode."
   }
 }

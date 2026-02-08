@@ -1622,10 +1622,13 @@
     "disable": "Wyłącz",
     "enable": "Włącz",
     "save_changes": "Zapisz zmiany",
+    "save_close": "Zapisz i zamknij",
+    "apply_close": "Zastosuj i zamknij",
     "done": "Gotowe",
     "revoke": "Unieważnij",
     "revoke_token": "Unieważnij token",
-    "continue": "Kontynuuj"
+    "continue": "Kontynuuj",
+    "save_and_close": "Zapisz i zamknij"
   },
   "changes": {
     "backout_plan": "Plan wycofania",
@@ -1689,6 +1692,8 @@
     "last_update": "Ostatnia aktualizacja",
     "save_and_finish": "Zapisz i zakończ",
     "save_changes": "Zapisz Zmiany",
+    "save_close": "Zapisz i zamknij",
+    "apply_close": "Zastosuj i zamknij",
     "saved": "Zapisano",
     "none": "Brak",
     "not_closed": "Niezamknięte",
@@ -2952,7 +2957,9 @@
       "scan_instructions": "Zeskanuj ten kod QR aplikacją uwierzytelniającą",
       "setup_failed": "Nie udało się skonfigurować 2FA",
       "verify_enable": "Zweryfikuj i włącz"
-    }
+    },
+    "reset_highlights": "Resetuj podpowiedzi",
+    "highlights_reset": "Podpowiedzi zostały zresetowane"
   },
   "severity": {
     "critical": "Krytyczny",
@@ -3824,7 +3831,8 @@
     "seventies": "Klimat lat 70.",
     "seventies_desc": "Ciepłe, ziemiste tony",
     "nineties": "Klimat lat 90.",
-    "nineties_desc": "Pulpit retro (jasny) / Terminal (ciemny)"
+    "nineties_desc": "Pulpit retro (jasny) / Terminal (ciemny)",
+    "show_wallpaper": "Pokaż tapetę"
   },
   "attachments": {
     "title": "Załączniki",
@@ -3840,5 +3848,8 @@
     "view": "Zobacz",
     "download": "Pobierz",
     "delete": "Usuń"
+  },
+  "demo": {
+    "security_disabled": "Zmiany hasła i MFA są wyłączone w trybie demo."
   }
 }

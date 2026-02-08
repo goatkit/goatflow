@@ -1622,10 +1622,13 @@
     "disable": "禁用",
     "enable": "启用",
     "save_changes": "保存更改",
+    "save_close": "保存并关闭",
+    "apply_close": "应用并关闭",
     "done": "完成",
     "revoke": "撤销",
     "revoke_token": "撤销令牌",
-    "continue": "继续"
+    "continue": "继续",
+    "save_and_close": "保存并关闭"
   },
   "changes": {
     "backout_plan": "回退计划",
@@ -1689,6 +1692,8 @@
     "last_update": "最后更新",
     "save_and_finish": "保存并完成",
     "save_changes": "保存更改",
+    "save_close": "保存并关闭",
+    "apply_close": "应用并关闭",
     "saved": "已保存",
     "none": "无",
     "not_closed": "未关闭",
@@ -2838,7 +2843,9 @@
       "scan_instructions": "使用身份验证器应用扫描此二维码",
       "setup_failed": "设置双重认证失败",
       "verify_enable": "验证并启用"
-    }
+    },
+    "reset_highlights": "重置功能提示",
+    "highlights_reset": "功能提示已重置"
   },
   "severity": {
     "critical": "紧急",
@@ -3253,7 +3260,8 @@
     "seventies": "70年代风格",
     "seventies_desc": "温暖的大地色调",
     "nineties": "90年代风格",
-    "nineties_desc": "复古桌面（浅色）/ 终端（深色）"
+    "nineties_desc": "复古桌面（浅色）/ 终端（深色）",
+    "show_wallpaper": "显示壁纸"
   },
   "attachments": {
     "title": "附件",
@@ -3269,5 +3277,8 @@
     "view": "查看",
     "download": "下载",
     "delete": "删除"
+  },
+  "demo": {
+    "security_disabled": "演示模式下密码和MFA更改已禁用。"
   }
 }

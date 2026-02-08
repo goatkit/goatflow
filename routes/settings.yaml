@@ -54,6 +54,18 @@ spec:
       template: pages/settings/api_tokens.pongo2
       description: "Manage personal API tokens"
 
+    # Wallpaper preference
+    - path: /api/preferences/wallpaper
+      method: POST
+      handler: HandleSetWallpaper
+      description: "Set wallpaper on/off preference"
+
+    # Coachmarks (feature spotlights) - dismiss tracking
+    - path: /api/preferences/coachmarks/dismiss
+      method: POST
+      handler: HandleDismissCoachmark
+      description: "Dismiss a coachmark tip for current user"
+
     # Two-Factor Authentication (2FA/TOTP) endpoints
     - path: /api/preferences/2fa/status
       method: GET
@@ -63,14 +75,17 @@ spec:
     - path: /api/preferences/2fa/setup
       method: POST
       handler: handleTOTPSetup
+      middleware: [demo-guard]
       description: "Initiate 2FA setup - returns secret and QR code"
 
     - path: /api/preferences/2fa/confirm
       method: POST
       handler: handleTOTPConfirm
+      middleware: [demo-guard]
       description: "Confirm 2FA setup with verification code"
 
     - path: /api/preferences/2fa/disable
       method: POST
       handler: handleTOTPDisable
+      middleware: [demo-guard]
       description: "Disable 2FA (requires valid code)"

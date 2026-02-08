@@ -243,7 +243,13 @@ func handleAdminCustomerUserGroupUpdate(c *gin.Context) {
 		return
 	}
 
-	c.Redirect(http.StatusFound, "/admin/customer-user-groups")
+	// "Save & Close" (continue=0) goes to list, "Save" (continue=1) stays on edit
+	if c.PostForm("continue") == "1" {
+		login := c.Param("login")
+		c.Redirect(http.StatusFound, "/admin/customer-user-groups/user/"+login+"?saved=1")
+	} else {
+		c.Redirect(http.StatusFound, "/admin/customer-user-groups")
+	}
 }
 
 // handleAdminCustomerUserGroupByGroup shows customer users for a specific group
@@ -380,7 +386,12 @@ func handleAdminCustomerUserGroupByGroupUpdate(c *gin.Context) {
 		return
 	}
 
-	c.Redirect(http.StatusFound, "/admin/customer-user-groups")
+	if c.PostForm("continue") == "1" {
+		groupIDStr := c.Param("id")
+		c.Redirect(http.StatusFound, "/admin/customer-user-groups/group/"+groupIDStr+"?saved=1")
+	} else {
+		c.Redirect(http.StatusFound, "/admin/customer-user-groups")
+	}
 }
 
 // handleGetCustomerUserGroupPermissions returns permissions as JSON for API use

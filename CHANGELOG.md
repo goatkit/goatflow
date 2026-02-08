@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.6.5-dev]
+## [0.6.5]
 
 ### Security
 - **Two-Factor Authentication (TOTP)**: Complete 2FA implementation for agents and customers
@@ -130,12 +130,53 @@ project adheres to [Semantic Versioning](https://semver.org/).
   - Documentation: `docs/api/MCP.md` with architecture diagram and permission model
   - Files: `internal/mcp/server.go`, `internal/mcp/authorization_test.go`, `internal/services/permission_service.go`
 
+- **Demo Mode**: Restricted mode for public demo instances
+  - `DemoMode` middleware sets `is_demo` flag on all requests
+  - `DemoGuard` middleware blocks password/MFA changes for non-admin users (403)
+  - Session-only preferences: language and theme stored in cookies (maxAge=0), no database writes — next visitor gets clean defaults
+  - Profile page hides 2FA and password sections, shows "disabled in demo mode" message
+  - Configured via `app.demo_mode: true` in config or `GOATFLOW_APP_DEMO_MODE=true` env var
+  - Applied to both agent and customer portals
+  - Files: `internal/middleware/demo.go`, `internal/api/preferences_handler.go`, `internal/api/customer_routes.go`
+- **Coachmarks (Feature Spotlight)**: Declarative onboarding tooltip system
+  - Register tips with `GoatFlow.coachmarks.register()` — auto-positioned balloons with arrow pointers
+  - View tracking in localStorage with configurable max views per tip
+  - Server-side dismissal persistence via `dismissed_coachmarks` preference (JSON array)
+  - Theme-aware styling using CSS variables (`--gk-bg-surface`, `--gk-primary`, `--gk-glow-primary`)
+  - "Reset feature highlights" checkbox on agent and customer profile pages
+  - First tip: theme switcher introduction (appears after 2s, max 3 views)
+  - Routes: `/api/preferences/coachmarks/dismiss` (agent and customer)
+  - Files: `static/js/coachmarks.js`, `internal/api/coachmarks_handler.go`
+- **Wallpaper Toggle**: Per-theme background wallpaper control
+  - Checkbox in theme selector dropdown (Appearance section)
+  - `html.gk-no-wallpaper` CSS class with high-specificity override
+  - Cookie persistence (`goatflow_wallpaper=0/1`) plus server-side preference
+  - Flash prevention: cookie read in `<head>` inline script
+  - Smart disable: checkbox greys out for themes without wallpaper
+  - Default ON (theme designer's intent preserved)
+  - GoatFlow Classic theme: wallpaper images for light and dark modes
+  - Routes: `/api/preferences/wallpaper` (agent and customer)
+  - Files: `internal/api/wallpaper_handler.go`, `templates/partials/theme_selector.pongo2`
+
 ### Changed
 - **Product Rebrand**: GOTRS is now **GoatFlow**
   - New repository: `github.com/goatkit/goatflow`
   - New domain: `goatflow.io`
   - All internal references updated (packages, configs, assets)
   - Part of GoatKit platform unification
+- **Profile Page UX**: Save and Close behaviour
+  - "Save Changes" renamed to "Save and Close" — saves preferences then redirects to dashboard
+  - Cancel returns to dashboard without saving
+  - Double-click protection: buttons disabled after first click until redirect completes
+  - Demo mode shows "Apply and Close" (session-only changes)
+
+### Fixed
+- **Dark Theme Contrast**: 338 CSS overrides in `input.css` remapping hardcoded Tailwind utility classes (`bg-white`, `text-gray-*`, `border-gray-*`, status colours) to theme CSS variables — all dark themes benefit without template changes
+- **Nineties Vibe Theme**: Synced builtin copy with latest CSS (fixed broken `--gk-text-muted: #555555` → `#888888`), added missing button contrast and reminder deck rules
+- **GoatFlow Classic Theme**: Added wallpaper CSS rules (`background-repeat: repeat`, `background-size: 600px auto`, `background-attachment: fixed`)
+
+### i18n
+- New keys across all 15 languages: `theme.show_wallpaper`, `settings.reset_highlights`, `settings.highlights_reset`, `demo.security_disabled`, `common.save_close`, `common.apply_close`
 
 ## [0.6.4] - 2026-02-01
 

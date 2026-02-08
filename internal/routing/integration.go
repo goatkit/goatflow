@@ -363,6 +363,9 @@ func registerExistingMiddleware(registry *HandlerRegistry, jwtManager interface{
 		"scope_users_read":     middleware.RequireScope("users:read"),
 		"scope_queues_read":    middleware.RequireScope("queues:read"),
 		"scope_admin":          middleware.RequireScope("admin:*"),
+
+		// Demo mode guard - blocks password/MFA changes for non-admin users
+		"demo-guard": middleware.DemoGuard(),
 	}
 
 	return registry.RegisterMiddlewareBatch(middlewares)

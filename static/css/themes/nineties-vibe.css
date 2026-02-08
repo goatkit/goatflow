@@ -38,7 +38,7 @@
   /* Text colors - Terminal white/gray spectrum */
   --gk-text-primary: #FFFFFF;
   --gk-text-secondary: #AAAAAA;
-  --gk-text-muted: #555555;
+  --gk-text-muted: #888888;
   --gk-text-inverse: #000000;
 
   /* Border colors - Subtle terminal grays */
@@ -197,6 +197,28 @@
 [data-theme="nineties-vibe"] .dark .gk-btn-outline {
   color: #FFFFFF !important;
   text-shadow: none !important;
+}
+
+/* Buttons with bright ANSI color backgrounds need dark text for contrast.
+   The general button rule forces white, but bright backgrounds need black text.
+   Covers both CSS classes (.gk-btn-*) and inline styles (style="...gk-*..."). */
+[data-theme="nineties-vibe"].dark .gk-btn-success,
+[data-theme="nineties-vibe"] .dark .gk-btn-success,
+[data-theme="nineties-vibe"].dark .gk-btn-danger,
+[data-theme="nineties-vibe"] .dark .gk-btn-danger,
+[data-theme="nineties-vibe"].dark button[style*="gk-success"],
+[data-theme="nineties-vibe"] .dark button[style*="gk-success"],
+[data-theme="nineties-vibe"].dark button[style*="gk-warning"],
+[data-theme="nineties-vibe"] .dark button[style*="gk-warning"],
+[data-theme="nineties-vibe"].dark button[style*="gk-error"],
+[data-theme="nineties-vibe"] .dark button[style*="gk-error"],
+[data-theme="nineties-vibe"].dark button[style*="gk-tertiary"],
+[data-theme="nineties-vibe"] .dark button[style*="gk-tertiary"],
+[data-theme="nineties-vibe"].dark button[style*="gk-secondary"],
+[data-theme="nineties-vibe"] .dark button[style*="gk-secondary"],
+[data-theme="nineties-vibe"].dark button[style*="gk-info"],
+[data-theme="nineties-vibe"] .dark button[style*="gk-info"] {
+  color: #000000 !important;
 }
 
 /* Primary action buttons - cyan accent, no glow */
@@ -525,4 +547,48 @@
   box-shadow:
     inset -1px -1px 0 var(--bevel-shadow),
     inset 1px 1px 0 var(--bevel-highlight);
+}
+
+/* ===========================================
+   Reminder Deck - Terminal-appropriate styling
+   Override blanket button color rules for
+   reminder snooze/action buttons
+   =========================================== */
+
+/* Snooze buttons in reminder cards - keep warning color */
+[data-theme="nineties-vibe"].dark #reminder-deck button,
+[data-theme="nineties-vibe"] .dark #reminder-deck button {
+  color: var(--gk-warning) !important;
+  background: transparent !important;
+  border: 1px solid var(--gk-border-default) !important;
+  box-shadow: none !important;
+}
+
+[data-theme="nineties-vibe"].dark #reminder-deck button:hover,
+[data-theme="nineties-vibe"] .dark #reminder-deck button:hover {
+  background: var(--gk-warning-subtle) !important;
+}
+
+/* "Open Ticket" link styled as terminal button */
+[data-theme="nineties-vibe"].dark #reminder-deck a,
+[data-theme="nineties-vibe"] .dark #reminder-deck a {
+  background: transparent !important;
+  color: var(--gk-secondary) !important;
+  border: 1px solid var(--gk-secondary) !important;
+  box-shadow: none !important;
+}
+
+[data-theme="nineties-vibe"].dark #reminder-deck a:hover,
+[data-theme="nineties-vibe"] .dark #reminder-deck a:hover {
+  background: var(--gk-secondary-subtle) !important;
+}
+
+/* Dismiss X buttons - muted, no border */
+[data-theme="nineties-vibe"].dark #reminder-deck button.text-lg,
+[data-theme="nineties-vibe"] .dark #reminder-deck button.text-lg,
+[data-theme="nineties-vibe"].dark #reminder-deck button.ml-1,
+[data-theme="nineties-vibe"] .dark #reminder-deck button.ml-1 {
+  color: var(--gk-text-muted) !important;
+  border: none !important;
+  background: transparent !important;
 }

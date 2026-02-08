@@ -100,7 +100,10 @@
                 <!-- Form Actions -->
                 <div class="flex items-center justify-between pt-2">
                     <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("customer_portal_settings.per_company_note")|default:"Per-company portal customization is not available in this build." }}</p>
-                    <button type="submit" class="gk-btn-neon">
+                    <button type="submit" name="continue" value="0" class="gk-btn-secondary">
+                        {{ t("buttons.save_and_close")|default:"Save & Close" }}
+                    </button>
+                    <button type="submit" name="continue" value="1" class="gk-btn-neon">
                         <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
@@ -111,4 +114,17 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.querySelector('form[hx-post]');
+    if (form) {
+        form.addEventListener('htmx:afterRequest', function(evt) {
+            if (evt.detail.successful && shouldCloseAfterSave(form)) {
+                window.location.href = '/admin';
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

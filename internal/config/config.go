@@ -42,6 +42,7 @@ type AppConfig struct {
 	Env      string `mapstructure:"env"`
 	Debug    bool   `mapstructure:"debug"`
 	Timezone string `mapstructure:"timezone"`
+	DemoMode bool   `mapstructure:"demo_mode"`
 }
 
 type ServerConfig struct {
