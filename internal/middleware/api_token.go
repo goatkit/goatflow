@@ -236,25 +236,48 @@ func RequireScope(scope string) gin.HandlerFunc {
 }
 
 // extractToken extracts token from Authorization header or cookies
-func extractToken(c *gin.Context) string {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader != "" {
+// ExtractToken extracts an auth token from the request. It checks the
+// Authorization header first (Bearer JWT or raw API token), then falls
+// back to cookies. On /customer paths customer-specific cookies are
+// checked before agent cookies to avoid session conflicts in the same
+// browser. The query parameter "token" is also accepted for WebSocket
+// connections.
+func ExtractToken(c *gin.Context) string {
+	// 1. Authorization header
+	if authHeader := c.GetHeader("Authorization"); authHeader != "" {
 		parts := strings.Split(authHeader, " ")
-		if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+		if len(parts) == 2 && strings.EqualFold(parts[0], "bearer") {
 			return parts[1]
 		}
-		// Also accept raw API tokens without "Bearer " prefix (convenience for Swagger UI)
+		// Raw API token without "Bearer " prefix (convenience for Swagger UI)
 		if len(parts) == 1 && IsAPIToken(parts[0]) {
 			return parts[0]
 		}
 	}
 
-	if cookie, err := c.Cookie("auth_token"); err == nil && cookie != "" {
-		return cookie
+	// 2. Query parameter (WebSocket connections)
+	if token := c.Query("token"); token != "" {
+		return token
 	}
-	if cookie, err := c.Cookie("access_token"); err == nil && cookie != "" {
-		return cookie
+
+	// 3. Cookies — customer-specific first on /customer paths
+	if strings.HasPrefix(c.Request.URL.Path, "/customer") {
+		for _, name := range []string{"customer_auth_token", "customer_access_token"} {
+			if cookie, err := c.Cookie(name); err == nil && cookie != "" {
+				return cookie
+			}
+		}
+	}
+
+	// 4. Standard cookies (agent portal + fallback for all paths)
+	for _, name := range []string{"auth_token", "access_token", "customer_auth_token", "token"} {
+		if cookie, err := c.Cookie(name); err == nil && cookie != "" {
+			return cookie
+		}
 	}
 
 	return ""
 }
+
+// extractToken is an unexported alias kept for internal callers.
+func extractToken(c *gin.Context) string { return ExtractToken(c) }
