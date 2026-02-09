@@ -19,38 +19,7 @@ type contextKey string
 // SessionMiddleware validates JWT tokens from cookies or Authorization header.
 func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var token string
-
-		// For customer portal paths, check customer-specific cookies first
-		// This prevents agent/customer session conflicts in the same browser
-		if strings.HasPrefix(c.Request.URL.Path, "/customer") {
-			if ct, err := c.Cookie("customer_access_token"); err == nil && ct != "" {
-				token = ct
-			} else if ct, err := c.Cookie("customer_auth_token"); err == nil && ct != "" {
-				token = ct
-			}
-		}
-
-		// If no customer token found (or not a customer path), check standard cookies
-		if token == "" {
-			var err error
-			token, err = c.Cookie("access_token")
-			if err != nil || token == "" {
-				// Fallback to legacy cookie name used by some login flows
-				if at, err2 := c.Cookie("auth_token"); err2 == nil && at != "" {
-					token = at
-				} else {
-					// Check Authorization header as fallback
-					authHeader := c.GetHeader("Authorization")
-					if authHeader != "" {
-						parts := strings.Split(authHeader, " ")
-						if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
-							token = parts[1]
-						}
-					}
-				}
-			}
-		}
+		token := ExtractToken(c)
 
 		// If no token found, redirect to the appropriate login page
 		if token == "" {
@@ -257,23 +226,7 @@ func isAPIRequest(c *gin.Context) bool {
 // OptionalAuth is middleware that validates tokens if present but doesn't require them.
 func OptionalAuth(jwtManager *auth.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Check for token in cookie first
-		token, err := c.Cookie("access_token")
-		if err != nil || token == "" {
-			// Fallback to legacy cookie name used by some login flows
-			if at, err2 := c.Cookie("auth_token"); err2 == nil && at != "" {
-				token = at
-			} else {
-				// Check Authorization header as fallback
-				authHeader := c.GetHeader("Authorization")
-				if authHeader != "" {
-					parts := strings.Split(authHeader, " ")
-					if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
-						token = parts[1]
-					}
-				}
-			}
-		}
+		token := ExtractToken(c)
 
 		// If token found, validate it
 		if token != "" {

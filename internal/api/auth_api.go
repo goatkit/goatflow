@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/auth"
 	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/shared"
 )
@@ -214,30 +214,9 @@ func HandleRegisterAPI(c *gin.Context) {
 	})
 }
 
-// ExtractToken extracts the JWT token from the Authorization header or cookies.
+// ExtractToken delegates to the canonical middleware.ExtractToken.
 func ExtractToken(c *gin.Context) string {
-	// Check Authorization header first
-	authHeader := c.GetHeader("Authorization")
-	if authHeader != "" {
-		// Check for Bearer token
-		parts := strings.Split(authHeader, " ")
-		if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
-			return parts[1]
-		}
-	}
-
-	// Check cookies (used by admin pages)
-	if cookie, err := c.Cookie("auth_token"); err == nil && cookie != "" {
-		return cookie
-	}
-	if cookie, err := c.Cookie("access_token"); err == nil && cookie != "" {
-		return cookie
-	}
-	if cookie, err := c.Cookie("token"); err == nil && cookie != "" {
-		return cookie
-	}
-
-	return ""
+	return middleware.ExtractToken(c)
 }
 
 // JWTAuthMiddleware is a middleware that requires JWT authentication.

@@ -76,40 +76,7 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 				return
 			}
 
-			// Check for token in cookie (auth_token) or Authorization header
-			var token string
-
-			// For customer portal paths, check customer-specific cookies first
-			// This prevents agent/customer session conflicts in the same browser
-			if strings.HasPrefix(path, "/customer") {
-				if ct, err := c.Cookie("customer_auth_token"); err == nil && ct != "" {
-					token = ct
-				} else if ct, err := c.Cookie("customer_access_token"); err == nil && ct != "" {
-					token = ct
-				}
-			}
-
-			// If no customer token found, check standard cookies
-			if token == "" {
-				var err error
-				token, err = c.Cookie("auth_token")
-				if err != nil || token == "" {
-					// Accept legacy cookie name used by non-YAML routes
-					if alt, err2 := c.Cookie("access_token"); err2 == nil && alt != "" {
-						token = alt
-					}
-				}
-				if token == "" {
-					// Check Authorization header as fallback
-					authHeader := c.GetHeader("Authorization")
-					if authHeader != "" {
-						parts := strings.Split(authHeader, " ")
-						if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
-							token = parts[1]
-						}
-					}
-				}
-			}
+			token := middleware.ExtractToken(c)
 
 			// If no token found, redirect for HTML requests, JSON for APIs
 			if token == "" {

@@ -201,44 +201,7 @@ func (m *AuthMiddleware) OptionalAuth() gin.HandlerFunc {
 }
 
 func (m *AuthMiddleware) extractToken(c *gin.Context) string {
-	// Check Authorization header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader != "" {
-		// Bearer token format: "Bearer <token>"
-		parts := strings.Split(authHeader, " ")
-		if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
-			return parts[1]
-		}
-	}
-
-	// Check query parameter (useful for WebSocket connections)
-	if token := c.Query("token"); token != "" {
-		return token
-	}
-
-	// For customer portal paths, check customer-specific cookies first
-	// This prevents agent/customer session conflicts in the same browser
-	if strings.HasPrefix(c.Request.URL.Path, "/customer") {
-		if cookie, err := c.Cookie("customer_auth_token"); err == nil && cookie != "" {
-			return cookie
-		}
-		if cookie, err := c.Cookie("customer_access_token"); err == nil && cookie != "" {
-			return cookie
-		}
-	}
-
-	// Check standard cookies (used by agent portal)
-	if cookie, err := c.Cookie("auth_token"); err == nil && cookie != "" {
-		return cookie
-	}
-	if cookie, err := c.Cookie("access_token"); err == nil && cookie != "" {
-		return cookie
-	}
-	if cookie, err := c.Cookie("token"); err == nil && cookie != "" {
-		return cookie
-	}
-
-	return ""
+	return ExtractToken(c)
 }
 
 func (m *AuthMiddleware) unauthorizedResponse(c *gin.Context, message string) {
