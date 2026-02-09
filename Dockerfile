@@ -99,19 +99,28 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM docker.io/tinygo/tinygo:0.32.0 AS wasm-builder
 
 WORKDIR /plugins
-COPY plugins/ ./
+COPY --chown=tinygo:tinygo plugins/ ./
 
-# Build all TinyGo WASM plugins
-RUN for dir in */; do \
+# Build all TinyGo WASM plugins (subshell per plugin to avoid cd issues)
+RUN set -e; failed=0; \
+    for dir in */; do \
         if [ -f "${dir}main.go" ] && grep -q "tinygo.wasm" "${dir}main.go" 2>/dev/null; then \
             name=$(basename "$dir"); \
             wasm_name=$(echo "$name" | sed 's/-wasm$//'); \
             echo "Building ${name} -> ${wasm_name}.wasm..."; \
-            cd "/plugins/${dir}" && \
-            tinygo build -o "${wasm_name}.wasm" -target wasi -scheduler=none main.go && \
-            cd /plugins; \
+            if (cd "/plugins/${dir}" && tinygo build -o "${wasm_name}.wasm" -target wasi -scheduler=none main.go); then \
+                echo "  ✓ ${wasm_name}.wasm built successfully"; \
+            else \
+                echo "  ✗ FAILED to build ${name}"; failed=1; \
+            fi; \
         fi; \
-    done
+    done; \
+    echo "--- WASM build results ---"; \
+    find /plugins -name "*.wasm" -ls; \
+    wasm_count=$(find /plugins -name "*.wasm" | wc -l); \
+    echo "Total WASM plugins built: ${wasm_count}"; \
+    if [ "$wasm_count" -eq 0 ]; then echo "ERROR: No WASM plugins built!" && exit 1; fi; \
+    if [ "$failed" -eq 1 ]; then echo "ERROR: One or more WASM plugins failed to build" && exit 1; fi
 
 # ============================================
 # Stage 3: Build application
