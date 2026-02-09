@@ -15,6 +15,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - **Makefile unit test command** — skip `./generated/...` package when no generated Go files exist (avoids `no Go files` build error on clean checkouts); also ensures `generated/test-results/` dir is created before running
 - **test-runner.sh hardening** — add `set -eo pipefail`, fail fast if test stack doesn't start, detect missing `docker-buildx`, guard against zero-tests-ran scenario, and fix package pass/fail grep patterns to ignore bare summary lines
 - **setup-test-admin.sh** — suppress CLI output via `>/dev/null 2>&1` and clarify fallback message to reference correct `goats` binary name
+- **Public plugin interfaces** (`pkg/plugin/`): Extracted plugin types (`Plugin`, `GKRegistration`, `HostAPI`, all spec types) from `internal/plugin` to `pkg/plugin/plugin.go` so external plugin authors can import them directly. Internal code uses type aliases for backwards compatibility.
+- **Public gRPC plugin utilities** (`pkg/plugin/grpcutil/`): Extracted `ServePlugin()` helper and related types to `pkg/plugin/grpcutil/serve.go` for use by external gRPC plugins.
+- **Refactored token extraction middleware**: Centralised token extraction logic in `internal/middleware/api_token.go`, removing duplicate code from auth, session, and routing packages.
 
 ## [0.6.5]
 

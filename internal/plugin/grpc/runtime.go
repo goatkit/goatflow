@@ -3,6 +3,10 @@
 // This enables native Go plugins to run as separate processes, communicating
 // with the host via gRPC. Useful for I/O-heavy plugins that benefit from
 // native performance and direct system access.
+//
+// Shared types (handshake, RPC structs, ServePlugin) live in
+// pkg/plugin/grpcutil so external plugins can import them. This package
+// adds the host-side loading, HostAPI bridging, and bidirectional calls.
 package grpc
 
 import (
@@ -17,19 +21,27 @@ import (
 	goplugin "github.com/hashicorp/go-plugin"
 
 	"github.com/goatkit/goatflow/internal/plugin"
+	"github.com/goatkit/goatflow/pkg/plugin/grpcutil"
 )
 
-// Handshake is the shared handshake config for host and plugins.
-// Plugins must use the same values to connect.
-var Handshake = goplugin.HandshakeConfig{
-	ProtocolVersion:  1,
-	MagicCookieKey:   "GOATKIT_PLUGIN",
-	MagicCookieValue: "goatkit-v1",
-}
+// Re-export shared types so existing internal callers don't break.
+type GKPluginInterface = grpcutil.GKPluginInterface
+type GKPluginPlugin = grpcutil.GKPluginPlugin
+type GKPluginRPCServer = grpcutil.GKPluginRPCServer
+type GKPluginRPCClient = grpcutil.GKPluginRPCClient
+type CallRequest = grpcutil.CallRequest
+type CallResponse = grpcutil.CallResponse
+type InitRequest = grpcutil.InitRequest
+
+// ServePlugin re-exports the public ServePlugin for internal use.
+var ServePlugin = grpcutil.ServePlugin
+
+// Handshake re-exports the shared handshake config.
+var Handshake = grpcutil.Handshake
 
 // PluginMap is the map of plugin types we support.
 var PluginMap = map[string]goplugin.Plugin{
-	"gkplugin": &GKPluginPlugin{},
+	"gkplugin": &GKPluginPluginHost{},
 }
 
 // GRPCPlugin wraps a go-plugin client to implement plugin.Plugin.
@@ -41,53 +53,45 @@ type GRPCPlugin struct {
 	host         plugin.HostAPI
 }
 
-// GKPluginInterface is the interface that gRPC plugins implement.
-// This is the RPC interface - the actual implementation runs in the plugin process.
-type GKPluginInterface interface {
-	GKRegister() (*plugin.GKRegistration, error)
-	Init(config map[string]string) error
-	Call(fn string, args json.RawMessage) (json.RawMessage, error)
-	Shutdown() error
-}
-
-// GKPluginPlugin is the go-plugin.Plugin implementation.
-type GKPluginPlugin struct {
+// GKPluginPluginHost is the host-side go-plugin.Plugin implementation.
+// It extends the base plugin with HostAPI bidirectional call support.
+type GKPluginPluginHost struct {
 	goplugin.Plugin
 	Impl GKPluginInterface
 	Host plugin.HostAPI // For bidirectional calls
 }
 
 // Server returns the RPC server for the plugin (plugin side).
-func (p *GKPluginPlugin) Server(b *goplugin.MuxBroker) (interface{}, error) {
-	return &GKPluginRPCServer{Impl: p.Impl, broker: b}, nil
+func (p *GKPluginPluginHost) Server(b *goplugin.MuxBroker) (interface{}, error) {
+	return &GKPluginRPCServerHost{Impl: p.Impl, broker: b}, nil
 }
 
 // Client returns the RPC client for the plugin (host side).
-func (p *GKPluginPlugin) Client(b *goplugin.MuxBroker, c *rpc.Client) (interface{}, error) {
+func (p *GKPluginPluginHost) Client(b *goplugin.MuxBroker, c *rpc.Client) (interface{}, error) {
 	// Start a server for the host API that the plugin can call back to
 	hostAPIServer := &HostAPIRPCServer{Host: p.Host}
-	
+
 	// Get an ID for the host API server
 	id := b.NextId()
 	go b.AcceptAndServe(id, hostAPIServer)
-	
-	return &GKPluginRPCClient{client: c, broker: b, hostAPIID: id}, nil
+
+	return &GKPluginRPCClientHost{client: c, broker: b, hostAPIID: id}, nil
 }
 
-// GKPluginRPCClient is the RPC client implementation (host side).
-type GKPluginRPCClient struct {
+// GKPluginRPCClientHost is the host-side RPC client with HostAPI bridging.
+type GKPluginRPCClientHost struct {
 	client    *rpc.Client
 	broker    *goplugin.MuxBroker
 	hostAPIID uint32
 }
 
-func (c *GKPluginRPCClient) GKRegister() (*plugin.GKRegistration, error) {
+func (c *GKPluginRPCClientHost) GKRegister() (*plugin.GKRegistration, error) {
 	var resp plugin.GKRegistration
 	err := c.client.Call("Plugin.GKRegister", new(interface{}), &resp)
 	return &resp, err
 }
 
-func (c *GKPluginRPCClient) Init(config map[string]string) error {
+func (c *GKPluginRPCClientHost) Init(config map[string]string) error {
 	// Pass the host API broker ID so the plugin can call back
 	req := InitRequest{
 		Config:    config,
@@ -97,13 +101,7 @@ func (c *GKPluginRPCClient) Init(config map[string]string) error {
 	return c.client.Call("Plugin.Init", req, &resp)
 }
 
-// InitRequest contains initialization data for the plugin.
-type InitRequest struct {
-	Config    map[string]string
-	HostAPIID uint32 // Broker ID for calling back to host
-}
-
-func (c *GKPluginRPCClient) Call(fn string, args json.RawMessage) (json.RawMessage, error) {
+func (c *GKPluginRPCClientHost) Call(fn string, args json.RawMessage) (json.RawMessage, error) {
 	req := CallRequest{Function: fn, Args: args}
 	var resp CallResponse
 	err := c.client.Call("Plugin.Call", req, &resp)
@@ -116,31 +114,19 @@ func (c *GKPluginRPCClient) Call(fn string, args json.RawMessage) (json.RawMessa
 	return resp.Result, nil
 }
 
-func (c *GKPluginRPCClient) Shutdown() error {
+func (c *GKPluginRPCClientHost) Shutdown() error {
 	var resp interface{}
 	return c.client.Call("Plugin.Shutdown", new(interface{}), &resp)
 }
 
-// CallRequest is the RPC request for Call.
-type CallRequest struct {
-	Function string
-	Args     json.RawMessage
+// GKPluginRPCServerHost is the host-side RPC server with HostAPI bridging.
+type GKPluginRPCServerHost struct {
+	Impl    GKPluginInterface
+	broker  *goplugin.MuxBroker
+	hostAPI *HostAPIRPCClient // Set after Init connects back to host
 }
 
-// CallResponse is the RPC response for Call.
-type CallResponse struct {
-	Result json.RawMessage
-	Error  string
-}
-
-// GKPluginRPCServer is the RPC server implementation (plugin side).
-type GKPluginRPCServer struct {
-	Impl      GKPluginInterface
-	broker    *goplugin.MuxBroker
-	hostAPI   *HostAPIRPCClient // Set after Init connects back to host
-}
-
-func (s *GKPluginRPCServer) GKRegister(args interface{}, resp *plugin.GKRegistration) error {
+func (s *GKPluginRPCServerHost) GKRegister(args interface{}, resp *plugin.GKRegistration) error {
 	reg, err := s.Impl.GKRegister()
 	if err != nil {
 		return err
@@ -149,7 +135,7 @@ func (s *GKPluginRPCServer) GKRegister(args interface{}, resp *plugin.GKRegistra
 	return nil
 }
 
-func (s *GKPluginRPCServer) Init(req InitRequest, resp *interface{}) error {
+func (s *GKPluginRPCServerHost) Init(req InitRequest, resp *interface{}) error {
 	// Connect back to the host's HostAPI server
 	if req.HostAPIID > 0 && s.broker != nil {
 		conn, err := s.broker.Dial(req.HostAPIID)
@@ -160,7 +146,7 @@ func (s *GKPluginRPCServer) Init(req InitRequest, resp *interface{}) error {
 	return s.Impl.Init(req.Config)
 }
 
-func (s *GKPluginRPCServer) Call(req CallRequest, resp *CallResponse) error {
+func (s *GKPluginRPCServerHost) Call(req CallRequest, resp *CallResponse) error {
 	result, err := s.Impl.Call(req.Function, req.Args)
 	if err != nil {
 		resp.Error = err.Error()
@@ -170,7 +156,7 @@ func (s *GKPluginRPCServer) Call(req CallRequest, resp *CallResponse) error {
 	return nil
 }
 
-func (s *GKPluginRPCServer) Shutdown(args interface{}, resp *interface{}) error {
+func (s *GKPluginRPCServerHost) Shutdown(args interface{}, resp *interface{}) error {
 	return s.Impl.Shutdown()
 }
 
@@ -184,11 +170,11 @@ func LoadGRPCPlugin(execPath string, host plugin.HostAPI) (*GRPCPlugin, error) {
 
 	// Create plugin map with host API for bidirectional calls
 	pluginMap := map[string]goplugin.Plugin{
-		"gkplugin": &GKPluginPlugin{Host: host},
+		"gkplugin": &GKPluginPluginHost{Host: host},
 	}
 
 	client := goplugin.NewClient(&goplugin.ClientConfig{
-		HandshakeConfig: Handshake,
+		HandshakeConfig: grpcutil.Handshake,
 		Plugins:         pluginMap,
 		Cmd:             exec.Command(execPath),
 		Logger:          logger,
@@ -256,15 +242,4 @@ func (p *GRPCPlugin) Shutdown(ctx context.Context) error {
 	err := p.impl.Shutdown()
 	p.client.Kill()
 	return err
-}
-
-// ServePlugin is called by plugin executables to serve the plugin.
-// Plugin main() should call this with their implementation.
-func ServePlugin(impl GKPluginInterface) {
-	goplugin.Serve(&goplugin.ServeConfig{
-		HandshakeConfig: Handshake,
-		Plugins: map[string]goplugin.Plugin{
-			"gkplugin": &GKPluginPlugin{Impl: impl},
-		},
-	})
 }
