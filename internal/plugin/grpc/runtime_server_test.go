@@ -166,7 +166,7 @@ func TestGKPluginRPCServer_Shutdown(t *testing.T) {
 
 func TestGKPluginPlugin_Server(t *testing.T) {
 	host := newMockHostAPI()
-	pp := &GKPluginPlugin{Host: host}
+	pp := &GKPluginPluginHost{Host: host}
 
 	// Server should return an RPC server
 	broker := (*goplugin.MuxBroker)(nil) // nil is ok for this test

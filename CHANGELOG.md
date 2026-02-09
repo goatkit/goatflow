@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- **Public plugin interfaces** (`pkg/plugin/`): Extracted plugin types (`Plugin`, `GKRegistration`, `HostAPI`, all spec types) from `internal/plugin` to `pkg/plugin/plugin.go` so external plugin authors can import them directly. Internal code uses type aliases for backwards compatibility.
+- **Public gRPC plugin utilities** (`pkg/plugin/grpcutil/`): Extracted `ServePlugin()` helper and related types to `pkg/plugin/grpcutil/serve.go` for use by external gRPC plugins.
+- **Refactored token extraction middleware**: Centralised token extraction logic in `internal/middleware/api_token.go`, removing duplicate code from auth, session, and routing packages.
+
 ## [0.6.5]
 
 ### Security
