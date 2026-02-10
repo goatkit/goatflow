@@ -221,6 +221,50 @@
   color: #000000 !important;
 }
 
+/* Login card - needs visible contrast against terminal black */
+[data-theme="nineties-vibe"].dark .gk-login-card,
+[data-theme="nineties-vibe"] .dark .gk-login-card {
+  background: #1a1a1a !important;
+  border: 1px solid #555555 !important;
+}
+
+[data-theme="nineties-vibe"].dark .gk-login-card .form-label,
+[data-theme="nineties-vibe"] .dark .gk-login-card .form-label {
+  color: #AAAAAA !important;
+}
+
+[data-theme="nineties-vibe"].dark .gk-input-neon,
+[data-theme="nineties-vibe"] .dark .gk-input-neon {
+  background: #0a0a0a !important;
+  border: 1px solid #888888 !important;
+  color: #FFFFFF !important;
+}
+
+[data-theme="nineties-vibe"].dark .gk-btn-neon,
+[data-theme="nineties-vibe"] .dark .gk-btn-neon {
+  background: var(--gk-primary) !important;
+  color: #000000 !important;
+  border: 1px solid var(--gk-primary) !important;
+}
+
+/* Checkboxes - visible against dark terminal background */
+[data-theme="nineties-vibe"].dark input[type="checkbox"],
+[data-theme="nineties-vibe"] .dark input[type="checkbox"] {
+  background: #1a1a1a !important;
+  border: 1px solid #888888 !important;
+}
+
+[data-theme="nineties-vibe"].dark input[type="checkbox"]:hover,
+[data-theme="nineties-vibe"] .dark input[type="checkbox"]:hover {
+  border-color: var(--gk-primary) !important;
+}
+
+[data-theme="nineties-vibe"].dark input[type="checkbox"]:checked,
+[data-theme="nineties-vibe"] .dark input[type="checkbox"]:checked {
+  background: var(--gk-primary) !important;
+  border-color: var(--gk-primary) !important;
+}
+
 /* Primary action buttons - cyan accent, no glow */
 [data-theme="nineties-vibe"].dark .gk-btn-primary,
 [data-theme="nineties-vibe"] .dark .gk-btn-primary,
