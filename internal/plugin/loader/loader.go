@@ -134,6 +134,7 @@ func (l *Loader) DiscoverAll() (int, error) {
 			l.mu.Unlock()
 			discovered++
 			l.logger.Debug("discovered WASM plugin", "name", name, "path", path)
+			plugin.GetLogBuffer().Log(name, "info", fmt.Sprintf("Plugin discovered: %s (type: wasm)", name), nil)
 		}
 		return nil
 	})
@@ -189,6 +190,7 @@ func (l *Loader) discoverGRPCPlugins() (int, error) {
 		l.mu.Unlock()
 		discovered++
 		l.logger.Debug("discovered gRPC plugin", "name", manifest.Name, "path", filepath.Join(l.pluginDir, entry.Name()))
+		plugin.GetLogBuffer().Log(manifest.Name, "info", fmt.Sprintf("Plugin discovered: %s (type: grpc)", manifest.Name), nil)
 	}
 
 	return discovered, nil
@@ -470,6 +472,7 @@ func (l *Loader) loadGRPCPlugin(ctx context.Context, pluginDir string, manifest 
 		"version", manifest.Version,
 	)
 
+	plugin.GetLogBuffer().Log(manifest.Name, "info", fmt.Sprintf("Plugin loaded: %s", manifest.Name), nil)
 	return nil
 }
 
@@ -492,13 +495,13 @@ func (l *Loader) loadWASMPlugin(ctx context.Context, path string) error {
 	}
 
 	// Load the WASM module
-	plugin, err := wasm.LoadFromFile(ctx, path)
+	wp, err := wasm.LoadFromFile(ctx, path)
 	if err != nil {
 		return fmt.Errorf("load wasm: %w", err)
 	}
 
 	// Get the manifest to log what we loaded
-	manifest := plugin.GKRegister()
+	manifest := wp.GKRegister()
 	l.logger.Info("loaded plugin",
 		"name", manifest.Name,
 		"version", manifest.Version,
@@ -508,12 +511,13 @@ func (l *Loader) loadWASMPlugin(ctx context.Context, path string) error {
 	)
 
 	// Register with the manager
-	if err := l.manager.Register(ctx, plugin); err != nil {
+	if err := l.manager.Register(ctx, wp); err != nil {
 		// Shutdown the plugin if registration fails
-		plugin.Shutdown(ctx)
+		wp.Shutdown(ctx)
 		return fmt.Errorf("register: %w", err)
 	}
 
+	plugin.GetLogBuffer().Log(manifest.Name, "info", fmt.Sprintf("Plugin loaded: %s", manifest.Name), nil)
 	return nil
 }
 
@@ -530,7 +534,11 @@ func (l *Loader) LoadWASMFromPath(ctx context.Context, path string) error {
 
 // Unload unloads a plugin by name.
 func (l *Loader) Unload(ctx context.Context, name string) error {
-	return l.manager.Unregister(ctx, name)
+	err := l.manager.Unregister(ctx, name)
+	if err == nil {
+		plugin.GetLogBuffer().Log(name, "info", fmt.Sprintf("Plugin unloaded: %s", name), nil)
+	}
+	return err
 }
 
 // Reload unloads and reloads a plugin by name using atomic replacement to avoid race conditions.
