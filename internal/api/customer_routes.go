@@ -555,6 +555,23 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 		`), username)
 		_ = row.Scan(&customerID) //nolint:errcheck // Defaults to empty
 
+		// Resolve the customer's org queue. If the customer's company has a
+		// group_customer mapping to a queue, route the ticket there. Otherwise
+		// fall back to Postmaster (queue 1).
+		queueID := 1 // Default: Postmaster
+		if customerID.Valid && customerID.String != "" {
+			var orgQueueID int
+			queueRow := db.QueryRow(database.ConvertPlaceholders(`
+				SELECT q.id FROM queue q
+				JOIN group_customer gc ON q.group_id = gc.group_id
+				WHERE gc.customer_id = ?
+				ORDER BY q.id ASC LIMIT 1
+			`), customerID.String)
+			if err := queueRow.Scan(&orgQueueID); err == nil && orgQueueID > 0 {
+				queueID = orgQueueID
+			}
+		}
+
 		// Set defaults
 		if priorityID == "" {
 			priorityID = "3" // Normal priority
@@ -582,7 +599,7 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 				escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time,
 				create_time, create_by, change_time, change_by
 			) VALUES (
-				?, ?, 1, 1, ?,
+				?, ?, ?, 1, ?,
 				1, ?, 1,
 				?, ?,
 				?, ?,
@@ -590,7 +607,7 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 				0, 0, 0, 0,
 				NOW(), ?, NOW(), ?
 			)
-		`, typeColumn)), tn, title, serviceIDVal, priorityID, systemUserID, systemUserID, customerID, username, systemUserID, systemUserID)
+		`, typeColumn)), tn, title, queueID, serviceIDVal, priorityID, systemUserID, systemUserID, customerID, username, systemUserID, systemUserID)
 
 		if err != nil {
 			log.Printf("Customer create ticket error: %v", err)
