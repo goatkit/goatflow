@@ -22,3 +22,9 @@ type TemplateSpec = pkgplugin.TemplateSpec
 type I18nSpec = pkgplugin.I18nSpec
 type ErrorCodeSpec = pkgplugin.ErrorCodeSpec
 type HostAPI = pkgplugin.HostAPI
+type ResourceRequest = pkgplugin.ResourceRequest
+type Permission = pkgplugin.Permission
+type ResourcePolicy = pkgplugin.ResourcePolicy
+
+// DefaultResourcePolicy re-exports the default policy constructor.
+var DefaultResourcePolicy = pkgplugin.DefaultResourcePolicy

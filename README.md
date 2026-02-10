@@ -12,14 +12,15 @@ GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ti
 
 ## Key Features
 
-- 🔒 **Security-First Design** - Built with zero-trust principles, comprehensive audit logging, and enterprise security standards
+- 🔒 **Security-First Design** - Built with zero-trust principles, comprehensive audit logging, enterprise security standards, and hardened plugin sandbox (OS-level isolation, ed25519 signing, SQL table whitelisting)
 - 🚀 **High Performance** - Go-based backend with optimized database queries and caching
 - 🌐 **Cloud Native** - Containerized deployment supporting Docker, Podman, and Kubernetes
 - 📱 **Responsive UI** - Modern HTMX-powered interface with progressive enhancement
 - 🔄 **OTRS Compatible** - Database schema superset enables seamless migration from OTRS 5.x and 6.x
 - 🌍 **Multi-Language** - Full i18n with 15 languages at 100% coverage including RTL support, even supports Klingon! 🖖
 - 🎨 **Theme Engine** - 4 distinct themes (Synthwave, Classic, 70s Vibes, 90s Vibe) with dark/light modes and custom fonts
-- 🔌 **Extensible** - REST/SOAP APIs, webhooks, and theme customization
+- 🔌 **Plugin Platform** - Dual-runtime (WASM + gRPC) plugin system with sandboxed execution, hot reload, admin UI, ed25519 plugin signing, OS-level process isolation, SQL table whitelisting, and live policy updates
+- 🔗 **Extensible** - REST/SOAP APIs, webhooks, and theme customization
 
 ## Screenshot
 

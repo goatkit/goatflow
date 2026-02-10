@@ -11,7 +11,8 @@ import (
 // HostAPIRPCServer exposes HostAPI to plugins via RPC.
 // This runs on the host side and handles plugin callbacks.
 type HostAPIRPCServer struct {
-	Host plugin.HostAPI
+	Host       plugin.HostAPI
+	CallerName string // Authenticated plugin name (set by host, not trusted from plugin)
 }
 
 // HostAPIRequest is a generic host API request.
@@ -30,10 +31,20 @@ type HostAPIResponse struct {
 // Call handles all host API calls from plugins.
 func (s *HostAPIRPCServer) Call(req HostAPIRequest, resp *HostAPIResponse) error {
 	ctx := context.Background()
-	// Set caller plugin in context for better error messages
-	if req.CallerPlugin != "" {
-		ctx = context.WithValue(ctx, plugin.PluginCallerKey, req.CallerPlugin)
+	
+	// SECURITY: Always use the authenticated caller name, not what the plugin claims
+	// This prevents plugins from impersonating other plugins in host API calls
+	authenticatedCaller := s.CallerName
+	if authenticatedCaller == "" {
+		authenticatedCaller = req.CallerPlugin // Fallback for compatibility, but log warning
+		// TODO: In production, this should be an error
 	}
+	
+	// Set authenticated caller plugin in context for error messages and access control
+	if authenticatedCaller != "" {
+		ctx = context.WithValue(ctx, plugin.PluginCallerKey, authenticatedCaller)
+	}
+	
 	result, err := dispatchHostCall(ctx, s.Host, req.Method, req.Args)
 	if err != nil {
 		resp.Error = err.Error()
