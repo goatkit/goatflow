@@ -10,6 +10,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 - **Universal plugin package format**: Plugin packaging now uses `plugin.yaml` (YAML) instead of `manifest.json` (JSON) as the standard manifest. ZIP uploads support three runtime types: `wasm` (WebAssembly binary), `grpc` (native binary), and `template` (pure YAML routes + templates, no runtime). gRPC binaries are automatically made executable on extraction.
 - **Shared `PluginManifest` type**: Moved to `pkg/plugin/manifest.go` so both the loader and packaging systems use the same struct. Added `description`, `author`, `license`, `homepage`, and `wasm` fields.
+- **Test/example plugins disabled by default**: `hello`, `hello-wasm`, `hello-grpc`, and `test-hostapi` plugins are now disabled by default. Can be enabled via admin UI/API; state persists to sysconfig.
+- **Plugin management audit logging**: Plugin uploads, enables, disables, discovery, load/unload, and errors now log to the Plugin Logs page.
 
 ### Fixed
 - **Parallel test interference in article_create_test** — re-ensure RBAC permissions before each subtest and skip gracefully if a 404 is returned due to parallel `group_user` removal, preventing flaky failures in CI
