@@ -3,51 +3,54 @@ package packaging
 
 import (
 	"archive/zip"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/goatkit/goatflow/internal/plugin"
+	"gopkg.in/yaml.v3"
+
+	pkgplugin "github.com/goatkit/goatflow/pkg/plugin"
 )
 
 const (
 	// Security limits for ZIP extraction
-	MaxFileSize       = 100 << 20 // 100 MB per file
-	MaxTotalSize      = 500 << 20 // 500 MB total extraction
-	MaxFileCount      = 1000      // Maximum number of files in archive
+	MaxFileSize  = 100 << 20 // 100 MB per file
+	MaxTotalSize = 500 << 20 // 500 MB total extraction
+	MaxFileCount = 1000      // Maximum number of files in archive
 )
 
 // PluginPackage represents a packaged plugin (ZIP file).
 type PluginPackage struct {
-	Manifest plugin.GKRegistration
-	WASMPath string            // Path to .wasm file within package
-	Assets   map[string]string // asset name -> path within package
+	Manifest    pkgplugin.PluginManifest
+	RuntimeType string            // "wasm", "grpc", or "template"
+	BinaryPath  string            // Path to binary/wasm file (empty for template plugins)
+	Assets      map[string]string // asset name -> path within package
 }
 
 // PackagePlugin creates a ZIP package from a plugin directory.
 // The directory should contain:
-//   - manifest.json (required)
-//   - *.wasm file (required for WASM plugins)
+//   - plugin.yaml (required)
+//   - *.wasm file (required for wasm runtime)
+//   - binary (required for grpc runtime)
 //   - assets/ directory (optional)
 //   - i18n/ directory (optional)
 func PackagePlugin(pluginDir, outputPath string) error {
 	// Read manifest
-	manifestPath := filepath.Join(pluginDir, "manifest.json")
+	manifestPath := filepath.Join(pluginDir, "plugin.yaml")
 	manifestData, err := os.ReadFile(manifestPath)
 	if err != nil {
-		return fmt.Errorf("failed to read manifest.json: %w", err)
+		return fmt.Errorf("failed to read plugin.yaml: %w", err)
 	}
 
-	var manifest plugin.GKRegistration
-	if err := json.Unmarshal(manifestData, &manifest); err != nil {
-		return fmt.Errorf("invalid manifest.json: %w", err)
+	var manifest pkgplugin.PluginManifest
+	if err := yaml.Unmarshal(manifestData, &manifest); err != nil {
+		return fmt.Errorf("invalid plugin.yaml: %w", err)
 	}
 
 	if manifest.Name == "" {
-		return fmt.Errorf("manifest.json missing required 'name' field")
+		return fmt.Errorf("plugin.yaml missing required 'name' field")
 	}
 
 	// Create output file
@@ -97,7 +100,7 @@ func PackagePlugin(pluginDir, outputPath string) error {
 }
 
 // ExtractPlugin extracts a plugin package to the target directory.
-// Returns the manifest and path to the extracted WASM file.
+// Returns the package info including manifest and detected runtime type.
 func ExtractPlugin(packagePath, targetDir string) (*PluginPackage, error) {
 	reader, err := zip.OpenReader(packagePath)
 	if err != nil {
@@ -113,17 +116,17 @@ func ExtractPlugin(packagePath, targetDir string) (*PluginPackage, error) {
 	var totalSize int64
 	var fileCount int
 
-	// First pass: find and validate manifest
+	// First pass: find and validate manifest (plugin.yaml)
 	var manifestFile *zip.File
 	for _, f := range reader.File {
-		if f.Name == "manifest.json" || filepath.Base(f.Name) == "manifest.json" {
+		if f.Name == "plugin.yaml" || filepath.Base(f.Name) == "plugin.yaml" {
 			manifestFile = f
 			break
 		}
 	}
 
 	if manifestFile == nil {
-		return nil, fmt.Errorf("package missing manifest.json")
+		return nil, fmt.Errorf("package missing plugin.yaml")
 	}
 
 	// Read manifest
@@ -137,12 +140,25 @@ func ExtractPlugin(packagePath, targetDir string) (*PluginPackage, error) {
 		return nil, fmt.Errorf("failed to read manifest: %w", err)
 	}
 
-	if err := json.Unmarshal(manifestData, &pkg.Manifest); err != nil {
-		return nil, fmt.Errorf("invalid manifest.json: %w", err)
+	if err := yaml.Unmarshal(manifestData, &pkg.Manifest); err != nil {
+		return nil, fmt.Errorf("invalid plugin.yaml: %w", err)
 	}
 
 	if pkg.Manifest.Name == "" {
 		return nil, fmt.Errorf("manifest missing required 'name' field")
+	}
+
+	// Determine runtime type
+	runtime := strings.ToLower(pkg.Manifest.Runtime)
+	switch runtime {
+	case "wasm":
+		pkg.RuntimeType = "wasm"
+	case "grpc":
+		pkg.RuntimeType = "grpc"
+	case "template", "":
+		pkg.RuntimeType = "template"
+	default:
+		return nil, fmt.Errorf("unsupported runtime type: %s", pkg.Manifest.Runtime)
 	}
 
 	// Create plugin directory
@@ -186,7 +202,7 @@ func ExtractPlugin(packagePath, targetDir string) (*PluginPackage, error) {
 		}
 
 		destPath := filepath.Join(pluginDir, cleanName)
-		
+
 		// Additional security: ensure destination is within plugin directory
 		if !strings.HasPrefix(destPath, pluginDir+string(os.PathSeparator)) {
 			return nil, fmt.Errorf("path traversal detected: %s resolves outside plugin directory", f.Name)
@@ -204,7 +220,7 @@ func ExtractPlugin(packagePath, targetDir string) (*PluginPackage, error) {
 
 		// Track WASM file
 		if strings.HasSuffix(cleanName, ".wasm") {
-			pkg.WASMPath = destPath
+			pkg.BinaryPath = destPath
 		}
 
 		// Track assets
@@ -214,24 +230,56 @@ func ExtractPlugin(packagePath, targetDir string) (*PluginPackage, error) {
 		}
 	}
 
+	// Post-extraction: handle runtime-specific setup
+	switch pkg.RuntimeType {
+	case "wasm":
+		// If no .wasm found during extraction, try manifest's wasm field or name-based default
+		if pkg.BinaryPath == "" {
+			wasmFile := pkg.Manifest.WASMFile
+			if wasmFile == "" {
+				wasmFile = pkg.Manifest.Name + ".wasm"
+			}
+			candidate := filepath.Join(pluginDir, wasmFile)
+			if _, err := os.Stat(candidate); err == nil {
+				pkg.BinaryPath = candidate
+			}
+		}
+	case "grpc":
+		binaryName := pkg.Manifest.Binary
+		if binaryName == "" {
+			binaryName = pkg.Manifest.Name
+		}
+		binaryPath := filepath.Join(pluginDir, binaryName)
+		if _, err := os.Stat(binaryPath); err == nil {
+			// Make binary executable
+			os.Chmod(binaryPath, 0755)
+			pkg.BinaryPath = binaryPath
+		}
+	}
+
 	return pkg, nil
 }
 
 // ValidatePackage checks if a ZIP file is a valid plugin package.
-func ValidatePackage(packagePath string) (*plugin.GKRegistration, error) {
+func ValidatePackage(packagePath string) (*pkgplugin.PluginManifest, error) {
 	reader, err := zip.OpenReader(packagePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open package: %w", err)
 	}
 	defer reader.Close()
 
-	var hasManifest, hasWasm bool
-	var manifest plugin.GKRegistration
+	var hasManifest bool
+	var manifest pkgplugin.PluginManifest
+
+	// Track what files are present for runtime validation
+	var hasWasm bool
+	fileNames := make([]string, 0)
 
 	for _, f := range reader.File {
 		name := filepath.Base(f.Name)
+		fileNames = append(fileNames, f.Name)
 
-		if name == "manifest.json" {
+		if name == "plugin.yaml" {
 			hasManifest = true
 			rc, err := f.Open()
 			if err != nil {
@@ -242,8 +290,8 @@ func ValidatePackage(packagePath string) (*plugin.GKRegistration, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to read manifest: %w", err)
 			}
-			if err := json.Unmarshal(data, &manifest); err != nil {
-				return nil, fmt.Errorf("invalid manifest.json: %w", err)
+			if err := yaml.Unmarshal(data, &manifest); err != nil {
+				return nil, fmt.Errorf("invalid plugin.yaml: %w", err)
 			}
 		}
 
@@ -253,15 +301,17 @@ func ValidatePackage(packagePath string) (*plugin.GKRegistration, error) {
 	}
 
 	if !hasManifest {
-		return nil, fmt.Errorf("package missing manifest.json")
+		return nil, fmt.Errorf("package missing plugin.yaml")
 	}
 
 	if manifest.Name == "" {
 		return nil, fmt.Errorf("manifest missing required 'name' field")
 	}
 
-	if !hasWasm {
-		return nil, fmt.Errorf("package missing .wasm file")
+	// Only require .wasm when runtime is wasm
+	runtime := strings.ToLower(manifest.Runtime)
+	if runtime == "wasm" && !hasWasm {
+		return nil, fmt.Errorf("package missing .wasm file (required for wasm runtime)")
 	}
 
 	return &manifest, nil
@@ -314,7 +364,7 @@ func extractZipFileWithLimits(f *zip.File, destPath string) error {
 
 	// Use LimitReader to prevent files from expanding beyond their declared size
 	limitedReader := io.LimitReader(rc, MaxFileSize)
-	
+
 	written, err := io.Copy(outFile, limitedReader)
 	if err != nil {
 		return err
@@ -322,7 +372,7 @@ func extractZipFileWithLimits(f *zip.File, destPath string) error {
 
 	// Verify that the extracted size matches the expected size
 	if written != int64(f.UncompressedSize64) {
-		return fmt.Errorf("extracted size mismatch for %s: expected %d, got %d", 
+		return fmt.Errorf("extracted size mismatch for %s: expected %d, got %d",
 			f.Name, f.UncompressedSize64, written)
 	}
 
