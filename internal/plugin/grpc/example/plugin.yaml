@@ -1,0 +1,4 @@
+name: hello-grpc
+version: "1.0.0"
+runtime: grpc
+binary: hello-grpc

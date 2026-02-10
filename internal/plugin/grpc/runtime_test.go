@@ -75,7 +75,7 @@ func TestLoadGRPCPlugin(t *testing.T) {
 	host := &mockHostAPI{}
 
 	t.Run("load and register", func(t *testing.T) {
-		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, host)
+		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
 		if err != nil {
 			t.Fatalf("LoadGRPCPlugin failed: %v", err)
 		}
@@ -91,7 +91,7 @@ func TestLoadGRPCPlugin(t *testing.T) {
 	})
 
 	t.Run("init", func(t *testing.T) {
-		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, host)
+		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
 		if err != nil {
 			t.Fatalf("LoadGRPCPlugin failed: %v", err)
 		}
@@ -105,7 +105,7 @@ func TestLoadGRPCPlugin(t *testing.T) {
 	})
 
 	t.Run("call function", func(t *testing.T) {
-		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, host)
+		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
 		if err != nil {
 			t.Fatalf("LoadGRPCPlugin failed: %v", err)
 		}
@@ -130,7 +130,7 @@ func TestLoadGRPCPlugin(t *testing.T) {
 	})
 
 	t.Run("call render_widget", func(t *testing.T) {
-		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, host)
+		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
 		if err != nil {
 			t.Fatalf("LoadGRPCPlugin failed: %v", err)
 		}
@@ -153,7 +153,7 @@ func TestLoadGRPCPlugin(t *testing.T) {
 	})
 
 	t.Run("call unknown function", func(t *testing.T) {
-		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, host)
+		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
 		if err != nil {
 			t.Fatalf("LoadGRPCPlugin failed: %v", err)
 		}
@@ -167,7 +167,7 @@ func TestLoadGRPCPlugin(t *testing.T) {
 	})
 
 	t.Run("shutdown", func(t *testing.T) {
-		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, host)
+		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
 		if err != nil {
 			t.Fatalf("LoadGRPCPlugin failed: %v", err)
 		}
@@ -183,7 +183,7 @@ func TestLoadGRPCPlugin(t *testing.T) {
 func TestLoadGRPCPlugin_InvalidPath(t *testing.T) {
 	host := &mockHostAPI{}
 
-	_, err := grpcplugin.LoadGRPCPlugin("/nonexistent/plugin", host)
+	_, err := grpcplugin.LoadGRPCPlugin("/nonexistent/plugin", "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
 	if err == nil {
 		t.Error("expected error for nonexistent plugin")
 	}
@@ -196,7 +196,7 @@ func TestLoadGRPCPlugin_NotExecutable(t *testing.T) {
 	tmpFile := filepath.Join(t.TempDir(), "not-a-plugin")
 	os.WriteFile(tmpFile, []byte("not executable"), 0644)
 
-	_, err := grpcplugin.LoadGRPCPlugin(tmpFile, host)
+	_, err := grpcplugin.LoadGRPCPlugin(tmpFile, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
 	if err == nil {
 		t.Error("expected error for non-executable file")
 	}
@@ -209,7 +209,7 @@ func TestGRPCPluginWithManager(t *testing.T) {
 
 	ctx := context.Background()
 
-	p, err := grpcplugin.LoadGRPCPlugin(pluginPath, host)
+	p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
 	if err != nil {
 		t.Fatalf("LoadGRPCPlugin failed: %v", err)
 	}
@@ -252,7 +252,7 @@ func TestGRPCPluginConcurrent(t *testing.T) {
 	pluginPath := buildGRPCPlugin(t)
 	host := &mockHostAPI{}
 
-	p, err := grpcplugin.LoadGRPCPlugin(pluginPath, host)
+	p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
 	if err != nil {
 		t.Fatalf("LoadGRPCPlugin failed: %v", err)
 	}

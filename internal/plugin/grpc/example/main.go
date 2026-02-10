@@ -1,7 +1,15 @@
 // Example gRPC plugin for GoatKit.
 //
-// Build: go build -o hello-grpc-plugin ./internal/plugin/grpc/example
-// The host will launch this executable and communicate via RPC.
+// Build: go build -o hello-grpc ./internal/plugin/grpc/example
+//
+// Deploy to the plugins directory alongside plugin.yaml:
+//
+//	plugins/hello-grpc/
+//	  ├── plugin.yaml   # name, version, runtime: grpc, binary: hello-grpc
+//	  └── hello-grpc    # the executable
+//
+// The host discovers plugin.yaml, launches the binary, and communicates via RPC.
+// Hot reload: updating the binary triggers automatic unload → reload.
 package main
 
 import (

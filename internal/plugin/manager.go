@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -21,6 +22,12 @@ type Manager struct {
 	plugins    map[string]*registeredPlugin
 	host       HostAPI
 	lazyLoader LazyLoader // Optional: for lazy loading support
+
+	// Per-plugin resource policies (name -> policy)
+	policies map[string]*ResourcePolicy
+
+	// Per-plugin sandboxed HostAPIs (name -> sandbox)
+	sandboxes map[string]*SandboxedHostAPI
 }
 
 type registeredPlugin struct {
@@ -32,9 +39,104 @@ type registeredPlugin struct {
 // NewManager creates a plugin manager with the given host API.
 func NewManager(host HostAPI) *Manager {
 	return &Manager{
-		plugins: make(map[string]*registeredPlugin),
-		host:    host,
+		plugins:   make(map[string]*registeredPlugin),
+		host:      host,
+		policies:  make(map[string]*ResourcePolicy),
+		sandboxes: make(map[string]*SandboxedHostAPI),
 	}
+}
+
+// Host returns the manager's HostAPI instance.
+func (m *Manager) Host() HostAPI {
+	return m.host
+}
+
+// --- Policy management ---
+
+// getOrCreatePolicy returns the existing policy for a plugin, or creates a default one.
+// If the plugin declares resources, they're used as the initial request (but
+// platform defaults still apply as the effective policy until admin approves).
+func (m *Manager) getOrCreatePolicy(name string, requested *ResourceRequest) *ResourcePolicy {
+	if p, ok := m.policies[name]; ok {
+		return p
+	}
+	
+	// Try to load from database first
+	ctx := context.Background()
+	if policy, err := m.loadPolicy(ctx, name); err == nil {
+		m.policies[name] = policy
+		return policy
+	}
+	
+	// Create default policy if not found in database
+	policy := DefaultResourcePolicy(name)
+	m.policies[name] = &policy
+	return &policy
+}
+
+// SetPolicy sets the resource policy for a plugin (admin override).
+// Policy changes take effect immediately and are persisted to the database.
+func (m *Manager) SetPolicy(name string, policy ResourcePolicy) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	policy.PluginName = name
+	m.policies[name] = &policy
+
+	// Persist policy to database
+	ctx := context.Background()
+	if err := m.savePolicy(ctx, name, &policy); err != nil {
+		// Log but don't fail - in-memory state is still correct
+		fmt.Printf("Warning: failed to persist plugin policy for %s: %v\n", name, err)
+	}
+
+	// If plugin is already loaded, update its sandbox policy immediately
+	if sandbox, ok := m.sandboxes[name]; ok {
+		sandbox.UpdatePolicy(policy)
+	}
+}
+
+// GetPolicy returns the current policy for a plugin.
+func (m *Manager) GetPolicy(name string) (ResourcePolicy, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	p, ok := m.policies[name]
+	if !ok {
+		return ResourcePolicy{}, false
+	}
+	return *p, true
+}
+
+// AllPolicies returns all current policies.
+func (m *Manager) AllPolicies() map[string]ResourcePolicy {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	result := make(map[string]ResourcePolicy, len(m.policies))
+	for k, v := range m.policies {
+		result[k] = *v
+	}
+	return result
+}
+
+// PluginStats returns resource usage stats for a plugin.
+func (m *Manager) PluginStats(name string) (StatsSnapshot, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	s, ok := m.sandboxes[name]
+	if !ok {
+		return StatsSnapshot{}, false
+	}
+	return s.Stats(), true
+}
+
+// AllPluginStats returns resource usage stats for all plugins.
+func (m *Manager) AllPluginStats() []StatsSnapshot {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	result := make([]StatsSnapshot, 0, len(m.sandboxes))
+	for _, s := range m.sandboxes {
+		result = append(result, s.Stats())
+	}
+	return result
 }
 
 // pluginConfigKey returns the sysconfig key for a plugin's enabled state.
@@ -129,8 +231,14 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 		return fmt.Errorf("plugin %q already registered", manifest.Name)
 	}
 
-	// Initialize the plugin with host API access
-	if err := p.Init(ctx, m.host); err != nil {
+	// Create sandboxed HostAPI for this plugin
+	policy := m.getOrCreatePolicy(manifest.Name, manifest.Resources)
+	sandbox := NewSandboxedHostAPI(m.host, manifest.Name, *policy)
+	m.sandboxes[manifest.Name] = sandbox
+
+	// Initialize the plugin with sandboxed host API access
+	if err := p.Init(ctx, sandbox); err != nil {
+		delete(m.sandboxes, manifest.Name)
 		return fmt.Errorf("plugin %q init failed: %w", manifest.Name, err)
 	}
 
@@ -210,6 +318,8 @@ func (m *Manager) Unregister(ctx context.Context, name string) error {
 	}
 
 	delete(m.plugins, name)
+	delete(m.sandboxes, name)
+	// Note: policy is preserved across reloads so admin settings persist
 	return nil
 }
 
@@ -320,6 +430,48 @@ func (m *Manager) CallFrom(ctx context.Context, callerPlugin, targetPlugin, fn s
 	}
 
 	return rp.plugin.Call(ctx, fn, args)
+}
+
+// ReplacePlugin atomically replaces an existing plugin with a new one.
+// This prevents race conditions during hot reload.
+func (m *Manager) ReplacePlugin(ctx context.Context, oldName string, newPlugin Plugin) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Check if old plugin exists
+	oldRp, exists := m.plugins[oldName]
+	if !exists {
+		return fmt.Errorf("plugin %q not found for replacement", oldName)
+	}
+
+	newManifest := newPlugin.GKRegister()
+	if newManifest.Name != oldName {
+		return fmt.Errorf("new plugin name %q doesn't match old name %q", newManifest.Name, oldName)
+	}
+
+	// Initialize new plugin with existing policy and settings
+	policy := m.getOrCreatePolicy(newManifest.Name, newManifest.Resources)
+	sandbox := NewSandboxedHostAPI(m.host, newManifest.Name, *policy)
+
+	if err := newPlugin.Init(ctx, sandbox); err != nil {
+		return fmt.Errorf("new plugin %q init failed: %w", newManifest.Name, err)
+	}
+
+	// Shutdown old plugin
+	if err := oldRp.plugin.Shutdown(ctx); err != nil {
+		// Log error but continue - we want to replace it anyway
+		fmt.Printf("Warning: old plugin %q shutdown error: %v\n", oldName, err)
+	}
+
+	// Atomically replace the plugin
+	m.plugins[oldName] = &registeredPlugin{
+		plugin:   newPlugin,
+		manifest: newManifest,
+		enabled:  oldRp.enabled, // Preserve enabled state
+	}
+	m.sandboxes[oldName] = sandbox
+
+	return nil
 }
 
 // List returns all registered plugin manifests.
@@ -524,6 +676,65 @@ func (m *Manager) Jobs() []PluginJob {
 type PluginJob struct {
 	PluginName string
 	JobSpec
+}
+
+// policyConfigKey returns the sysconfig key for a plugin's policy.
+func policyConfigKey(name string) string {
+	return "Plugin::" + name + "::Policy"
+}
+
+// loadPolicy loads a plugin's resource policy from the database.
+func (m *Manager) loadPolicy(ctx context.Context, name string) (*ResourcePolicy, error) {
+	if m.host == nil {
+		return nil, fmt.Errorf("no host API available")
+	}
+
+	key := policyConfigKey(name)
+	
+	// Query sysconfig_modified first (admin overrides)
+	query := `
+		SELECT effective_value FROM sysconfig_modified 
+		WHERE name = ? AND is_valid = 1 
+		ORDER BY change_time DESC LIMIT 1
+	`
+	rows, err := m.host.DBQuery(ctx, query, key)
+	if err == nil && len(rows) > 0 {
+		if jsonStr, ok := rows[0]["effective_value"].(string); ok {
+			var policy ResourcePolicy
+			if err := json.Unmarshal([]byte(jsonStr), &policy); err != nil {
+				return nil, fmt.Errorf("invalid policy JSON in database: %w", err)
+			}
+			return &policy, nil
+		}
+	}
+	
+	return nil, fmt.Errorf("policy not found in database")
+}
+
+// savePolicy persists a plugin's resource policy to the database.
+func (m *Manager) savePolicy(ctx context.Context, name string, policy *ResourcePolicy) error {
+	if m.host == nil {
+		return nil // No host API, can't persist
+	}
+
+	key := policyConfigKey(name)
+	
+	// Serialize policy as JSON
+	jsonData, err := json.Marshal(policy)
+	if err != nil {
+		return fmt.Errorf("failed to serialize policy: %w", err)
+	}
+	
+	jsonStr := string(jsonData)
+
+	// Upsert into sysconfig_modified
+	query := `
+		INSERT INTO sysconfig_modified (sysconfig_default_id, name, effective_value, is_valid, create_by, change_by, create_time, change_time)
+		VALUES (0, ?, ?, 1, 1, 1, NOW(), NOW())
+		ON DUPLICATE KEY UPDATE effective_value = ?, change_time = NOW(), change_by = 1
+	`
+	_, err = m.host.DBExec(ctx, query, key, jsonStr, jsonStr)
+	return err
 }
 
 // ShutdownAll shuts down all plugins gracefully.

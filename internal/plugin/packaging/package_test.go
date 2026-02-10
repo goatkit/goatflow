@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -176,16 +177,16 @@ func TestExtractPluginPathTraversal(t *testing.T) {
 	w.Close()
 	zipFile.Close()
 	
-	// Extract
+	// Extract - should fail due to path traversal security check
 	targetDir := filepath.Join(tmpDir, "extracted")
 	_, err := ExtractPlugin(zipPath, targetDir)
-	if err != nil {
-		t.Fatalf("ExtractPlugin failed: %v", err)
+	if err == nil {
+		t.Fatal("ExtractPlugin should have failed due to path traversal")
 	}
 	
-	// Verify path traversal file was not created
-	if _, err := os.Stat(filepath.Join(tmpDir, "etc", "passwd")); !os.IsNotExist(err) {
-		t.Error("path traversal file should not exist")
+	// Verify the error message mentions path traversal
+	if !strings.Contains(err.Error(), "path traversal") {
+		t.Errorf("Expected path traversal error, got: %v", err)
 	}
 }
 

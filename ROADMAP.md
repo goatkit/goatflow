@@ -159,9 +159,20 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - [x] Example plugins (WASM + gRPC)
 - [x] `gk init` scaffolding CLI
 - [x] Plugin SDK documentation (AUTHOR_GUIDE, HOST_API, tutorials)
-- [ ] Hot reload for local development
-- [ ] Plugin isolation: memory limits, timeouts, sandboxing
-- [ ] Signed plugin verification (optional)
+- [x] Hot reload for local development (fsnotify-based, WASM + gRPC binary watching)
+- [x] Plugin isolation: per-plugin SandboxedHostAPI with permission enforcement, rate limiting, resource accounting
+- [x] Resource policies: plugins declare ResourceRequest, platform enforces ResourcePolicy (admin-configurable)
+- [x] Signed plugin verification (optional, ed25519 signatures with `.sig` files)
+- [x] OS-level gRPC process isolation (Linux namespace isolation, Pdeathsig, minimal environment)
+- [x] SQL table whitelisting (query parsing, scope enforcement)
+- [x] Live policy updates (RWMutex-protected, immediate effect without restart)
+- [x] Call depth limiting (max 10 for plugin-to-plugin chains)
+- [x] Config key blacklist (sensitive patterns blocked by default)
+- [x] Email domain scoping and rate limiting (10/min per plugin)
+- [x] Caller identity stamping (host-side, prevents impersonation)
+- [x] ZIP extraction security (symlink detection, size/count limits)
+- [x] Atomic blue-green plugin reload (no request-dropping window)
+- [x] Policy persistence (JSON in sysconfig_modified table)
 
 **Statistics & Reporting Plugin** *(first-party, dogfooding)*
 - [x] Dashboard statistics API endpoints

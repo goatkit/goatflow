@@ -55,8 +55,9 @@ type GKRegistration struct {
 	ErrorCodes []ErrorCodeSpec `json:"error_codes,omitempty"` // API error codes provided by plugin
 
 	// Requirements
-	MinHostVersion string   `json:"min_host_version,omitempty"` // minimum GoatFlow version
-	Permissions    []string `json:"permissions,omitempty"`      // required host permissions
+	MinHostVersion string              `json:"min_host_version,omitempty"` // minimum GoatFlow version
+	Permissions    []string            `json:"permissions,omitempty"`      // required host permissions (legacy, use ResourceRequest)
+	Resources      *ResourceRequest    `json:"resources,omitempty"`        // requested resource limits
 }
 
 // RouteSpec defines an HTTP route the plugin wants to handle.
@@ -160,4 +161,77 @@ type HostAPI interface {
 	// Plugin-to-plugin calls
 	// Allows one plugin to call functions in another plugin
 	CallPlugin(ctx context.Context, pluginName, fn string, args json.RawMessage) (json.RawMessage, error)
+}
+
+// ResourceRequest describes what a plugin asks for from the platform.
+// These are requests/defaults — the platform may grant less via ResourcePolicy.
+type ResourceRequest struct {
+	// Process limits (gRPC plugins only, ignored for WASM)
+	MemoryMB       int    `json:"memory_mb,omitempty" yaml:"memory_mb,omitempty"`             // Requested RSS limit in MB
+	CallTimeout    string `json:"call_timeout,omitempty" yaml:"call_timeout,omitempty"`        // Per-call deadline, e.g. "30s"
+	InitTimeout    string `json:"init_timeout,omitempty" yaml:"init_timeout,omitempty"`        // Init must complete within, e.g. "10s"
+	ShutdownTimeout string `json:"shutdown_timeout,omitempty" yaml:"shutdown_timeout,omitempty"` // Shutdown grace period, e.g. "5s"
+
+	// HostAPI permissions requested
+	Permissions []Permission `json:"permissions,omitempty" yaml:"permissions,omitempty"`
+}
+
+// Permission declares a specific capability a plugin requests.
+type Permission struct {
+	// Type is the permission category: "db", "cache", "http", "email", "config", "plugin_call"
+	Type string `json:"type" yaml:"type"`
+
+	// Access level: "read", "write", "readwrite" (for db/cache)
+	Access string `json:"access,omitempty" yaml:"access,omitempty"`
+
+	// Scope constrains the permission. Meaning depends on type:
+	//   db:     table allowlist, e.g. ["fictus_*", "ticket"]
+	//   http:   URL patterns, e.g. ["*.tenor.com", "api.giphy.com"]
+	//   cache:  key prefix (auto-namespaced if empty)
+	//   plugin_call: plugin names allowed to call, e.g. ["stats"]
+	Scope []string `json:"scope,omitempty" yaml:"scope,omitempty"`
+}
+
+// ResourcePolicy is the platform-enforced limits for a plugin.
+// Set by admin, stored in sysconfig. Overrides ResourceRequest.
+type ResourcePolicy struct {
+	// Plugin name this policy applies to
+	PluginName string `json:"plugin_name"`
+
+	// Status: "pending_review", "approved", "restricted", "blocked"
+	Status string `json:"status"`
+
+	// Process limits (overrides plugin request)
+	MemoryMB        int    `json:"memory_mb,omitempty"`
+	CallTimeout     string `json:"call_timeout,omitempty"`
+	InitTimeout     string `json:"init_timeout,omitempty"`
+	ShutdownTimeout string `json:"shutdown_timeout,omitempty"`
+
+	// Granted permissions (may be subset of requested)
+	Permissions []Permission `json:"permissions,omitempty"`
+
+	// Rate limits
+	MaxCallsPerSecond int `json:"max_calls_per_second,omitempty"` // 0 = unlimited
+	MaxDBQueriesPerMin int `json:"max_db_queries_per_min,omitempty"`
+	MaxHTTPReqPerMin  int `json:"max_http_req_per_min,omitempty"`
+}
+
+// DefaultResourcePolicy returns a restrictive default policy for new plugins.
+// Plugins start with minimal access until an admin reviews them.
+func DefaultResourcePolicy(pluginName string) ResourcePolicy {
+	return ResourcePolicy{
+		PluginName:      pluginName,
+		Status:          "pending_review",
+		MemoryMB:        256,
+		CallTimeout:     "30s",
+		InitTimeout:     "10s",
+		ShutdownTimeout: "5s",
+		Permissions: []Permission{
+			{Type: "db", Access: "read"},
+			{Type: "cache", Access: "readwrite"},
+		},
+		MaxCallsPerSecond:  100,
+		MaxDBQueriesPerMin: 600,
+		MaxHTTPReqPerMin:   60,
+	}
 }

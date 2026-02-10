@@ -7,10 +7,41 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+- **OS-Level gRPC Process Isolation** (`internal/plugin/grpc/sandbox_linux.go`): Linux namespace isolation (CLONE_NEWNS, CLONE_NEWPID), Pdeathsig to kill orphans, minimal environment (no DB credentials leaked to plugins). Non-Linux platforms log a warning.
+- **Plugin Signing** (`internal/plugin/signing/signing.go`): Ed25519 signature verification for plugin binaries. `SignBinary()` creates `.sig` files with SHA-256 hash signatures; `VerifyBinary()` checks against trusted public keys. Opt-in via `GOATFLOW_REQUIRE_SIGNATURES=1`.
+- **SQL Table Whitelisting**: `extractTableNames()` parses SQL queries and validates table names against the `db` permission scope. Queries touching unallowed tables are rejected.
+- **Call Depth Limiting**: Plugin-to-plugin call chains tracked via context with maximum depth of 10, preventing infinite recursion loops.
+- **Config Key Blacklist**: Sensitive configuration patterns (database.*, password, secret, token, auth, ldap.*, smtp.*, aws.*, etc.) are blocked from plugin access by default.
+- **Email Domain Scoping**: Email permission scope supports domain patterns (e.g. `["@example.com"]`); recipients outside allowed domains are rejected. Rate limited to 10 emails/minute per plugin.
+- **Caller Identity Stamping**: gRPC HostAPI server stamps the authenticated plugin name on all calls; plugins cannot impersonate other plugins.
+- **ZIP Extraction Security** (`internal/plugin/packaging/`): Symlink detection and rejection, 100MB per-file limit, 500MB total extraction limit, 1000 file maximum.
+- **Live Policy Updates**: `SandboxedHostAPI.UpdatePolicy()` with RWMutex-protected policy pointer; policy changes take effect immediately without plugin restart.
+- **Atomic Blue-Green Plugin Reload**: `Manager.ReplacePlugin()` initializes the new plugin before shutting down the old one, with atomic swap under mutex — no request-dropping window during hot reload.
+- **Policy Persistence**: Resource policies serialized as JSON to `sysconfig_modified` table (key: `Plugin::<name>::Policy`); survives restarts.
+- **WASM Security Verified**: Confirmed `SandboxedHostAPI` is correctly applied to WASM plugins, enforcing the same permission/rate-limit/accounting model as gRPC.
+
+### Added
+- **gRPC Plugin Hot Reload**: Loader now discovers gRPC plugins via `plugin.yaml` in subdirectories, watches binaries via fsnotify, and auto-reloads on change with 500ms debounce. New `plugin.yaml` files trigger discovery and loading; removing them triggers unload.
+- **Plugin Isolation / SandboxedHostAPI** (`internal/plugin/sandbox.go`): Per-plugin permission enforcement wrapper around HostAPI
+  - Permission checks on every HostAPI call (db read/write, cache, HTTP, email, config, plugin-to-plugin calls)
+  - DDL blocking for read-only plugins (DROP, ALTER, TRUNCATE, CREATE, GRANT, REVOKE)
+  - HTTP URL pattern filtering with wildcard subdomain matching
+  - Cache key auto-namespacing (`plugin:<name>:<key>`) to prevent cross-plugin collisions
+  - Plugin-to-plugin call scoping (allowlist of callable plugins)
+  - Blocked status kills all HostAPI access
+- **Rate Limiting per Plugin**: Sliding window rate limiters for DB queries/min, HTTP requests/min, and calls/sec. Configurable per plugin via ResourcePolicy.
+- **Resource Accounting**: Atomic counters tracking DB queries, DB execs, cache ops, HTTP requests, plugin calls, errors, and last call timestamp per plugin. Accessible via `Manager.PluginStats()` and `Manager.AllPluginStats()`.
+- **ResourceRequest / Permission / ResourcePolicy types** (`pkg/plugin/plugin.go`): Plugins declare what they need (`ResourceRequest` with `Permission` entries); platform enforces what they get (`ResourcePolicy` set by admin). `DefaultResourcePolicy()` provides restrictive defaults for new plugins (pending_review, DB read-only, cache RW, rate limited).
+- **Manager policy integration**: Every plugin gets a SandboxedHostAPI on registration. Admin can set/get policies via `Manager.SetPolicy()` / `Manager.GetPolicy()`. Policy changes take full effect on next plugin reload.
+- **gRPC call timeouts**: Context-based per-call deadlines with goroutine + select pattern in `GRPCPlugin.Call()`.
+- **plugin.yaml format** for gRPC plugins: Declares name, version, runtime, binary path, and resource requests (memory, timeouts, permissions).
+
 ### Changed
 - **Public plugin interfaces** (`pkg/plugin/`): Extracted plugin types (`Plugin`, `GKRegistration`, `HostAPI`, all spec types) from `internal/plugin` to `pkg/plugin/plugin.go` so external plugin authors can import them directly. Internal code uses type aliases for backwards compatibility.
 - **Public gRPC plugin utilities** (`pkg/plugin/grpcutil/`): Extracted `ServePlugin()` helper and related types to `pkg/plugin/grpcutil/serve.go` for use by external gRPC plugins.
 - **Refactored token extraction middleware**: Centralised token extraction logic in `internal/middleware/api_token.go`, removing duplicate code from auth, session, and routing packages.
+- **Plugin documentation updated**: All 7 plugin docs rewritten to reflect implemented features — removed "planned"/"not yet implemented" language, added sandbox/security model documentation, corrected Host API signatures.
 
 ## [0.6.5]
 

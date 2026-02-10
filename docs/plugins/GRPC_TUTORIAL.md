@@ -1,644 +1,361 @@
 # gRPC Plugin Tutorial
 
-Build a full-featured plugin using gRPC for maximum flexibility.
+Build a native Go plugin using HashiCorp go-plugin for maximum flexibility.
 
-## Why gRPC?
+## Why gRPC Plugins?
 
 gRPC plugins run as separate processes, giving you:
 
-- **Full Go stdlib** - All packages, goroutines, channels
-- **Any language** - Go, Python, Node.js, Rust, etc.
-- **Direct network** - No Host API restrictions
-- **Unlimited memory** - Not sandboxed
-- **Easy debugging** - Standard debuggers work
+- **Full Go stdlib** — All packages, goroutines, channels
+- **Process isolation** — Plugin crashes don't affect core
+- **Hot reload** — Binary changes trigger automatic reload via fsnotify
+- **Bidirectional RPC** — Plugins can call back to the HostAPI
+- **Easy debugging** — Standard Go debuggers work
 
 Trade-off: Slightly higher latency than WASM (~1ms per call).
+
+**Important:** Despite the name "gRPC", the actual wire protocol is HashiCorp go-plugin with **net/rpc** — no protoc, proto files, or gRPC wire protocol needed.
 
 ## Prerequisites
 
 - Go 1.21+
-- Protocol Buffers compiler (`protoc`)
 - GoatFlow running locally
 
 ## Step 1: Scaffold the Plugin
 
 ```bash
-cd /path/to/goatflow/plugins
-gk plugin init analytics --type grpc
-cd analytics
+gk init my-plugin --type grpc
+cd my-plugin
 ```
 
-This creates:
+Or create the directory structure manually:
+
 ```
-analytics/
-├── manifest.json
-├── main.go
-├── plugin.go
-├── build.sh
-├── proto/
-│   └── plugin.proto
-└── README.md
+plugins/my-plugin/
+├── plugin.yaml    # Plugin manifest (required)
+├── main.go        # Entry point
+└── build.sh       # Build script
 ```
 
-## Step 2: Define the Manifest
+## Step 2: Create plugin.yaml
 
-Edit `manifest.json`:
+Every gRPC plugin needs a `plugin.yaml` in its directory:
 
-```json
-{
-  "name": "analytics",
-  "version": "1.0.0",
-  "description": "Advanced ticket analytics and reporting",
-  "author": "Your Name",
-  "license": "Apache-2.0",
-  
-  "type": "grpc",
-  "grpc": {
-    "binary": "analytics",
-    "health_check": true
-  },
-  
-  "routes": [
-    {
-      "method": "GET",
-      "path": "/api/plugins/analytics/reports",
-      "handler": "list_reports",
-      "middleware": ["auth", "admin"]
-    },
-    {
-      "method": "GET",
-      "path": "/api/plugins/analytics/reports/:id",
-      "handler": "get_report",
-      "middleware": ["auth", "admin"]
-    },
-    {
-      "method": "POST",
-      "path": "/api/plugins/analytics/reports/:id/run",
-      "handler": "run_report",
-      "middleware": ["auth", "admin"]
-    }
-  ],
-  
-  "widgets": [
-    {
-      "id": "analytics-summary",
-      "title": "Analytics Summary",
-      "handler": "render_summary",
-      "location": "admin_home",
-      "size": "large"
-    }
-  ],
-  
-  "jobs": [
-    {
-      "id": "daily-report",
-      "schedule": "0 6 * * *",
-      "handler": "generate_daily_report",
-      "description": "Generates daily analytics report"
-    }
-  ],
-  
-  "permissions": ["db:read", "http:external", "cache:read", "cache:write"]
-}
+```yaml
+name: my-plugin
+version: "1.0.0"
+runtime: grpc
+binary: my-plugin
+resources:
+  memory_mb: 512
+  call_timeout: 30s
+  permissions:
+    - type: db
+      access: read
+    - type: cache
+      access: readwrite
+    - type: http
+      scope: ["api.example.com"]
 ```
+
+Fields:
+- `name` — Unique plugin identifier
+- `version` — Semver version string
+- `runtime` — Must be `grpc`
+- `binary` — Path to executable (relative to plugin directory)
+- `resources` — Requested resource limits and permissions
 
 ## Step 3: Implement the Plugin
 
-### main.go - Entry Point
+Create `main.go`:
 
 ```go
 package main
 
 import (
-	"log"
-	"net"
-	"os"
-	
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/health"
-	"google.golang.org/grpc/health/grpc_health_v1"
-	
-	pb "github.com/goatkit/goatflow/pkg/plugin/proto"
-)
-
-func main() {
-	// Get socket path from environment
-	socketPath := os.Getenv("GOATFLOW_PLUGIN_SOCKET")
-	if socketPath == "" {
-		socketPath = "/tmp/goatflow-plugin-analytics.sock"
-	}
-	
-	// Clean up old socket
-	os.Remove(socketPath)
-	
-	// Listen on Unix socket
-	lis, err := net.Listen("unix", socketPath)
-	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
-	}
-	
-	// Create gRPC server
-	server := grpc.NewServer()
-	
-	// Register plugin service
-	plugin := NewAnalyticsPlugin()
-	pb.RegisterPluginServiceServer(server, plugin)
-	
-	// Register health check
-	healthServer := health.NewServer()
-	grpc_health_v1.RegisterHealthServer(server, healthServer)
-	healthServer.SetServingStatus("plugin", grpc_health_v1.HealthCheckResponse_SERVING)
-	
-	log.Printf("Analytics plugin listening on %s", socketPath)
-	
-	if err := server.Serve(lis); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
-	}
-}
-```
-
-### plugin.go - Business Logic
-
-```go
-package main
-
-import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"time"
-	
-	pb "github.com/goatkit/goatflow/pkg/plugin/proto"
+
+	"github.com/goatkit/goatflow/pkg/plugin"
+	"github.com/goatkit/goatflow/pkg/plugin/grpcutil"
 )
 
-type AnalyticsPlugin struct {
-	pb.UnimplementedPluginServiceServer
-	host pb.HostServiceClient
+type MyPlugin struct {
+	config map[string]string
 }
 
-func NewAnalyticsPlugin() *AnalyticsPlugin {
-	return &AnalyticsPlugin{}
-}
-
-// SetHost is called by GoatFlow to provide Host API access
-func (p *AnalyticsPlugin) SetHost(client pb.HostServiceClient) {
-	p.host = client
-}
-
-// Register returns plugin manifest
-func (p *AnalyticsPlugin) Register(ctx context.Context, req *pb.Empty) (*pb.RegisterResponse, error) {
-	return &pb.RegisterResponse{
-		Name:        "analytics",
+// GKRegister returns plugin metadata and capabilities.
+func (p *MyPlugin) GKRegister() (*plugin.GKRegistration, error) {
+	return &plugin.GKRegistration{
+		Name:        "my-plugin",
 		Version:     "1.0.0",
-		Description: "Advanced ticket analytics",
+		Description: "My custom gRPC plugin",
+		Author:      "Your Name",
+		License:     "Apache-2.0",
+
+		Routes: []plugin.RouteSpec{
+			{
+				Method:      "GET",
+				Path:        "/api/plugins/my-plugin/status",
+				Handler:     "get_status",
+				Middleware:  []string{"auth"},
+				Description: "Get plugin status",
+			},
+		},
+
+		Widgets: []plugin.WidgetSpec{
+			{
+				ID:       "my-widget",
+				Title:    "My Widget",
+				Handler:  "render_widget",
+				Location: "agent_home",
+				Size:     "medium",
+			},
+		},
 	}, nil
 }
 
-// Call handles function calls from GoatFlow
-func (p *AnalyticsPlugin) Call(ctx context.Context, req *pb.CallRequest) (*pb.CallResponse, error) {
-	switch req.Function {
-	case "list_reports":
-		return p.listReports(ctx, req)
-	case "get_report":
-		return p.getReport(ctx, req)
-	case "run_report":
-		return p.runReport(ctx, req)
-	case "render_summary":
-		return p.renderSummary(ctx, req)
-	case "generate_daily_report":
-		return p.generateDailyReport(ctx, req)
+// Init is called once when the plugin is loaded.
+func (p *MyPlugin) Init(config map[string]string) error {
+	p.config = config
+	fmt.Println("[my-plugin] Initialized")
+	return nil
+}
+
+// Call handles function calls from the host.
+func (p *MyPlugin) Call(fn string, args json.RawMessage) (json.RawMessage, error) {
+	switch fn {
+	case "get_status":
+		return json.Marshal(map[string]any{
+			"status":  "running",
+			"version": "1.0.0",
+		})
+
+	case "render_widget":
+		html := `<div class="text-center p-4">
+			<h3>🔌 My Plugin</h3>
+			<p>Running as a native Go process.</p>
+		</div>`
+		return json.Marshal(map[string]string{"html": html})
+
 	default:
-		return nil, fmt.Errorf("unknown function: %s", req.Function)
+		return nil, fmt.Errorf("unknown function: %s", fn)
 	}
 }
 
-// Report represents an analytics report
-type Report struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	LastRun     time.Time `json:"last_run,omitempty"`
-}
-
-func (p *AnalyticsPlugin) listReports(ctx context.Context, req *pb.CallRequest) (*pb.CallResponse, error) {
-	reports := []Report{
-		{ID: "ticket-volume", Name: "Ticket Volume", Description: "Daily ticket creation trends"},
-		{ID: "resolution-time", Name: "Resolution Time", Description: "Average time to resolve tickets"},
-		{ID: "agent-performance", Name: "Agent Performance", Description: "Tickets handled per agent"},
-	}
-	
-	result, _ := json.Marshal(reports)
-	return &pb.CallResponse{Result: result}, nil
-}
-
-func (p *AnalyticsPlugin) getReport(ctx context.Context, req *pb.CallRequest) (*pb.CallResponse, error) {
-	var params struct {
-		ID string `json:"id"`
-	}
-	json.Unmarshal(req.Args, &params)
-	
-	// Query database for report data
-	query := `
-		SELECT DATE(create_time) as date, COUNT(*) as count 
-		FROM tickets 
-		WHERE create_time > DATE_SUB(NOW(), INTERVAL 30 DAY)
-		GROUP BY DATE(create_time)
-		ORDER BY date
-	`
-	
-	resp, err := p.host.DBQuery(ctx, &pb.DBQueryRequest{
-		Query: query,
-	})
-	if err != nil {
-		return nil, err
-	}
-	
-	return &pb.CallResponse{Result: resp.Rows}, nil
-}
-
-func (p *AnalyticsPlugin) runReport(ctx context.Context, req *pb.CallRequest) (*pb.CallResponse, error) {
-	var params struct {
-		ID        string            `json:"id"`
-		DateRange map[string]string `json:"date_range"`
-	}
-	json.Unmarshal(req.Args, &params)
-	
-	// Log the report run
-	p.host.Log(ctx, &pb.LogRequest{
-		Level:   "info",
-		Message: "Running report",
-		Fields:  map[string]string{"report_id": params.ID},
-	})
-	
-	// Execute report logic based on ID
-	var data interface{}
-	switch params.ID {
-	case "ticket-volume":
-		data = p.calculateTicketVolume(ctx, params.DateRange)
-	case "resolution-time":
-		data = p.calculateResolutionTime(ctx, params.DateRange)
-	default:
-		return nil, fmt.Errorf("unknown report: %s", params.ID)
-	}
-	
-	// Cache results
-	cacheKey := fmt.Sprintf("report_%s_%v", params.ID, time.Now().Format("2006-01-02"))
-	resultJSON, _ := json.Marshal(data)
-	p.host.CacheSet(ctx, &pb.CacheSetRequest{
-		Key:   cacheKey,
-		Value: resultJSON,
-		Ttl:   3600, // 1 hour
-	})
-	
-	return &pb.CallResponse{Result: resultJSON}, nil
-}
-
-func (p *AnalyticsPlugin) renderSummary(ctx context.Context, req *pb.CallRequest) (*pb.CallResponse, error) {
-	// Get summary stats
-	stats := p.getSummaryStats(ctx)
-	
-	html := fmt.Sprintf(`
-		<div class="grid grid-cols-4 gap-4">
-			<div class="stat bg-base-200 rounded-lg p-4">
-				<div class="stat-title">Today's Tickets</div>
-				<div class="stat-value">%d</div>
-				<div class="stat-desc">%+d from yesterday</div>
-			</div>
-			<div class="stat bg-base-200 rounded-lg p-4">
-				<div class="stat-title">Avg Resolution</div>
-				<div class="stat-value">%.1fh</div>
-				<div class="stat-desc">Target: 24h</div>
-			</div>
-			<div class="stat bg-base-200 rounded-lg p-4">
-				<div class="stat-title">Open Tickets</div>
-				<div class="stat-value">%d</div>
-				<div class="stat-desc">Across all queues</div>
-			</div>
-			<div class="stat bg-base-200 rounded-lg p-4">
-				<div class="stat-title">SLA Compliance</div>
-				<div class="stat-value">%.0f%%</div>
-				<div class="stat-desc">Last 7 days</div>
-			</div>
-		</div>
-	`, stats.TodayTickets, stats.TicketDelta, stats.AvgResolution, 
-	   stats.OpenTickets, stats.SLACompliance)
-	
-	return &pb.CallResponse{Result: []byte(html)}, nil
-}
-
-func (p *AnalyticsPlugin) generateDailyReport(ctx context.Context, req *pb.CallRequest) (*pb.CallResponse, error) {
-	p.host.Log(ctx, &pb.LogRequest{
-		Level:   "info",
-		Message: "Generating daily analytics report",
-	})
-	
-	// Generate comprehensive daily report
-	report := p.buildDailyReport(ctx)
-	
-	// Could send via email, store in DB, etc.
-	reportJSON, _ := json.Marshal(report)
-	
-	return &pb.CallResponse{Result: reportJSON}, nil
-}
-
-// Helper methods
-
-type SummaryStats struct {
-	TodayTickets  int     `json:"today_tickets"`
-	TicketDelta   int     `json:"ticket_delta"`
-	AvgResolution float64 `json:"avg_resolution_hours"`
-	OpenTickets   int     `json:"open_tickets"`
-	SLACompliance float64 `json:"sla_compliance_percent"`
-}
-
-func (p *AnalyticsPlugin) getSummaryStats(ctx context.Context) SummaryStats {
-	// Query for today's tickets
-	todayResp, _ := p.host.DBQuery(ctx, &pb.DBQueryRequest{
-		Query: "SELECT COUNT(*) as count FROM tickets WHERE DATE(create_time) = CURDATE()",
-	})
-	
-	// Query for yesterday's tickets
-	yesterdayResp, _ := p.host.DBQuery(ctx, &pb.DBQueryRequest{
-		Query: "SELECT COUNT(*) as count FROM tickets WHERE DATE(create_time) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)",
-	})
-	
-	// Parse results and calculate stats
-	// ... implementation details
-	
-	return SummaryStats{
-		TodayTickets:  42,
-		TicketDelta:   5,
-		AvgResolution: 18.5,
-		OpenTickets:   127,
-		SLACompliance: 94.2,
-	}
-}
-
-func (p *AnalyticsPlugin) calculateTicketVolume(ctx context.Context, dateRange map[string]string) interface{} {
-	// Implementation
+// Shutdown is called before the plugin is unloaded.
+func (p *MyPlugin) Shutdown() error {
+	fmt.Println("[my-plugin] Shutting down")
 	return nil
 }
 
-func (p *AnalyticsPlugin) calculateResolutionTime(ctx context.Context, dateRange map[string]string) interface{} {
-	// Implementation
-	return nil
-}
-
-func (p *AnalyticsPlugin) buildDailyReport(ctx context.Context) interface{} {
-	// Implementation
-	return nil
+func main() {
+	grpcutil.ServePlugin(&MyPlugin{})
 }
 ```
+
+### Key Points
+
+- Import `pkg/plugin` for types (`GKRegistration`, etc.)
+- Import `pkg/plugin/grpcutil` for `ServePlugin()`
+- Implement the `grpcutil.GKPluginInterface`: `GKRegister()`, `Init()`, `Call()`, `Shutdown()`
+- `main()` just calls `grpcutil.ServePlugin(&YourPlugin{})`
+- No proto files, no protoc, no gRPC imports needed
 
 ## Step 4: Build
 
 ```bash
-./build.sh
+go build -o my-plugin .
 ```
 
-Or manually:
-```bash
-go build -o analytics .
-```
+Output: `my-plugin` binary.
 
-Output: `analytics` binary (~10MB)
-
-## Step 5: Install
+## Step 5: Deploy
 
 ```bash
+# Create plugin directory in GoatFlow's plugins folder
+mkdir -p /path/to/goatflow/plugins/my-plugin
+
 # Copy binary and manifest
-cp analytics manifest.json /path/to/goatflow/plugins/analytics/
+cp my-plugin plugin.yaml /path/to/goatflow/plugins/my-plugin/
 
 # Make executable
-chmod +x /path/to/goatflow/plugins/analytics/analytics
+chmod +x /path/to/goatflow/plugins/my-plugin/my-plugin
 ```
 
-GoatFlow will start the plugin process automatically.
+Final layout:
+```
+plugins/my-plugin/
+├── plugin.yaml    # Manifest
+└── my-plugin      # Executable
+```
+
+GoatFlow discovers `plugin.yaml` during startup (or immediately via hot reload) and launches the binary.
 
 ## Step 6: Test
 
-### Check Plugin Status
 ```bash
-curl http://localhost:8080/api/v1/plugins | jq '.[] | select(.Name=="analytics")'
-```
-
-### Test API
-```bash
-# List reports
+# Check plugin status
 curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8080/api/plugins/analytics/reports
+  http://localhost:8080/api/v1/plugins | jq '.[] | select(.Name=="my-plugin")'
 
-# Run a report
-curl -X POST -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"date_range": {"start": "2024-01-01", "end": "2024-01-31"}}' \
-  http://localhost:8080/api/plugins/analytics/reports/ticket-volume/run
+# Call your route
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/plugins/my-plugin/status
 ```
 
-## Using Other Languages
+## Hot Reload
 
-### Python
+The loader watches the plugin directory via fsnotify. To reload your plugin during development:
 
-```python
-# plugin.py
-import grpc
-from concurrent import futures
-import plugin_pb2
-import plugin_pb2_grpc
+1. Rebuild the binary: `go build -o my-plugin .`
+2. Copy to plugins dir (overwriting the old binary)
+3. GoatFlow detects the change, unloads the old plugin, and loads the new one
 
-class AnalyticsPlugin(plugin_pb2_grpc.PluginServiceServicer):
-    def __init__(self):
-        self.host = None
-    
-    def SetHost(self, stub):
-        self.host = stub
-    
-    def Register(self, request, context):
-        return plugin_pb2.RegisterResponse(
-            name="analytics",
-            version="1.0.0",
-            description="Analytics plugin in Python"
-        )
-    
-    def Call(self, request, context):
-        if request.function == "list_reports":
-            return self.list_reports(request)
-        # ... other handlers
-    
-    def list_reports(self, request):
-        import json
-        reports = [
-            {"id": "volume", "name": "Ticket Volume"},
-        ]
-        return plugin_pb2.CallResponse(result=json.dumps(reports).encode())
+Changes are debounced by 500ms to handle rapid rebuilds.
 
-def serve():
-    import os
-    socket_path = os.environ.get('GOATFLOW_PLUGIN_SOCKET', '/tmp/goatflow-plugin-analytics.sock')
-    
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    plugin_pb2_grpc.add_PluginServiceServicer_to_server(AnalyticsPlugin(), server)
-    server.add_insecure_port(f'unix://{socket_path}')
-    server.start()
-    server.wait_for_termination()
+You can also modify `plugin.yaml` — the loader picks up manifest changes too. Removing `plugin.yaml` unloads the plugin.
 
-if __name__ == '__main__':
-    serve()
+## How It Works Under the Hood
+
+1. **Discovery**: Loader scans `plugins/` for directories containing `plugin.yaml`
+2. **Launch**: Loader runs the binary as a child process via `exec.Command`
+3. **Handshake**: HashiCorp go-plugin establishes a net/rpc connection (magic cookie: `GOATKIT_PLUGIN=goatkit-v1`)
+4. **Registration**: Host calls `GKRegister()` to get plugin capabilities
+5. **Initialization**: Host calls `Init()` with host version info
+6. **Sandboxing**: Plugin gets a `SandboxedHostAPI` enforcing its `ResourcePolicy`
+7. **Serving**: Host routes calls to `Call()` with function name and JSON args
+8. **Call timeouts**: Context-based deadlines with goroutine + select pattern
+9. **Shutdown**: Host calls `Shutdown()` then kills the process
+
+## Process Isolation & Security
+
+### OS-Level Sandboxing (Linux)
+
+On Linux, gRPC plugin processes are launched with OS-level restrictions:
+
+- **PID and mount namespace isolation** (`CLONE_NEWNS | CLONE_NEWPID`) — plugins can't see host processes or mounts
+- **Parent death signal** (`Pdeathsig: SIGKILL`) — if GoatFlow crashes, plugin processes are killed immediately (no orphans)
+- **Minimal environment** — your process receives only:
+  - `PATH=/usr/local/bin:/usr/bin:/bin`
+  - `HOME=/tmp/goatflow-plugin-<name>` (plugin-specific temp dir)
+  - `TMPDIR=/tmp/goatflow-plugin-<name>`
+  - `TZ` (if set on host)
+  - `GOATFLOW_NO_NETWORK=1` (if you don't have `http` permission)
+
+**Important:** Database credentials, API keys, and other host environment variables are **not** passed to plugin processes. Access host resources through the HostAPI only.
+
+On non-Linux platforms (macOS, Windows), process sandboxing is not available. A warning is logged and the plugin runs with full system access.
+
+### Plugin Signing
+
+You can sign your plugin binary with ed25519 for tamper detection:
+
+```bash
+# During your build/release process:
+# 1. Build the binary
+go build -o my-plugin .
+
+# 2. Sign it (using the signing package or CLI tool)
+# This creates my-plugin.sig containing the hex-encoded ed25519 signature
 ```
 
-### Node.js
+Ship both `my-plugin` and `my-plugin.sig` in your plugin directory. The host verifies the signature against trusted public keys on load.
 
-```javascript
-// plugin.js
-const grpc = require('@grpc/grpc-js');
-const protoLoader = require('@grpc/proto-loader');
+Signing is opt-in by default. Set `GOATFLOW_REQUIRE_SIGNATURES=1` on the host to enforce it.
 
-const packageDefinition = protoLoader.loadSync('plugin.proto');
-const pluginProto = grpc.loadPackageDefinition(packageDefinition).plugin;
+### Caller Identity
 
-let hostClient = null;
+The host stamps your plugin's authenticated name on all HostAPI RPC calls. This is set server-side — your plugin cannot impersonate another plugin when making host API calls.
 
-const plugin = {
-  SetHost(call, callback) {
-    hostClient = call.request;
-    callback(null, {});
-  },
-  
-  Register(call, callback) {
-    callback(null, {
-      name: 'analytics',
-      version: '1.0.0',
-      description: 'Analytics plugin in Node.js'
-    });
-  },
-  
-  Call(call, callback) {
-    const { function: fn, args } = call.request;
-    
-    switch (fn) {
-      case 'list_reports':
-        callback(null, {
-          result: JSON.stringify([
-            { id: 'volume', name: 'Ticket Volume' }
-          ])
-        });
-        break;
-      default:
-        callback(new Error(`Unknown function: ${fn}`));
-    }
-  }
-};
+## Bidirectional Calls (HostAPI from Plugin)
 
-const server = new grpc.Server();
-server.addService(pluginProto.PluginService.service, plugin);
-
-const socketPath = process.env.GOATFLOW_PLUGIN_SOCKET || '/tmp/goatflow-plugin-analytics.sock';
-server.bindAsync(`unix://${socketPath}`, grpc.ServerCredentials.createInsecure(), () => {
-  console.log(`Plugin listening on ${socketPath}`);
-  server.start();
-});
-```
+The go-plugin MuxBroker enables plugins to call back to the host's HostAPI. The host starts a HostAPI RPC server, and the plugin receives the broker ID during `Init()`. This allows plugins to make DB queries, cache operations, HTTP requests, etc. from within their handlers.
 
 ## Advanced Patterns
 
-### Concurrent Processing
+### Using Host Database
 
 ```go
-func (p *AnalyticsPlugin) runBatchReports(ctx context.Context, reportIDs []string) {
-	var wg sync.WaitGroup
-	results := make(chan ReportResult, len(reportIDs))
-	
-	for _, id := range reportIDs {
-		wg.Add(1)
-		go func(reportID string) {
-			defer wg.Done()
-			result := p.runSingleReport(ctx, reportID)
-			results <- result
-		}(id)
-	}
-	
-	wg.Wait()
-	close(results)
-	
-	// Collect results
-	var allResults []ReportResult
-	for r := range results {
-		allResults = append(allResults, r)
+func (p *MyPlugin) Call(fn string, args json.RawMessage) (json.RawMessage, error) {
+	switch fn {
+	case "get_ticket_count":
+		// This calls back to the host via the bidirectional RPC connection
+		rows, err := p.hostAPI.DBQuery(ctx, "SELECT COUNT(*) as count FROM tickets WHERE state_id = ?", 1)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(rows)
 	}
 }
 ```
 
-### External API Integration
+### Concurrent Processing
 
 ```go
-func (p *AnalyticsPlugin) fetchExternalData(ctx context.Context) ([]byte, error) {
-	// gRPC plugins can make direct HTTP calls
-	resp, err := http.Get("https://api.external-service.com/data")
-	if err != nil {
-		return nil, err
+func (p *MyPlugin) runBatchReports(reportIDs []string) []ReportResult {
+	var wg sync.WaitGroup
+	results := make(chan ReportResult, len(reportIDs))
+	for _, id := range reportIDs {
+		wg.Add(1)
+		go func(reportID string) {
+			defer wg.Done()
+			results <- p.runSingleReport(reportID)
+		}(id)
 	}
-	defer resp.Body.Close()
-	
-	return io.ReadAll(resp.Body)
+	wg.Wait()
+	close(results)
+	// collect results...
 }
 ```
 
 ### Graceful Shutdown
 
 ```go
-func main() {
-	// ... setup ...
-	
-	// Handle shutdown signals
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	
-	go func() {
-		<-sigCh
-		log.Println("Shutting down...")
-		server.GracefulStop()
-	}()
-	
-	server.Serve(lis)
+func (p *MyPlugin) Shutdown() error {
+	// Clean up resources, flush buffers, close connections
+	p.db.Close()
+	return nil
 }
 ```
 
 ## Debugging
 
-### Run Standalone
+### Run Standalone (won't connect to host, but tests compilation)
 
 ```bash
-# Set environment and run directly
-export GOATFLOW_PLUGIN_SOCKET=/tmp/test-plugin.sock
-./analytics
+go build -o my-plugin . && ./my-plugin
 ```
 
 ### Use Delve Debugger
 
 ```bash
-dlv exec ./analytics -- 
+dlv exec ./my-plugin
 ```
 
-### Add Verbose Logging
+### Verbose Logging
 
 ```go
-func (p *AnalyticsPlugin) Call(ctx context.Context, req *pb.CallRequest) (*pb.CallResponse, error) {
-	log.Printf("Call received: function=%s args=%s", req.Function, string(req.Args))
-	
-	result, err := p.dispatch(ctx, req)
-	
+func (p *MyPlugin) Call(fn string, args json.RawMessage) (json.RawMessage, error) {
+	log.Printf("Call: fn=%s args=%s", fn, string(args))
+	result, err := p.dispatch(fn, args)
 	if err != nil {
 		log.Printf("Call failed: %v", err)
-	} else {
-		log.Printf("Call succeeded: %d bytes", len(result.Result))
 	}
-	
 	return result, err
 }
 ```
 
+## Real-World Example
+
+See `internal/plugin/grpc/example/main.go` for the built-in hello-grpc plugin that demonstrates:
+- Widget rendering with GoatKit CSS variables
+- API route handling
+- Plugin metadata declaration
+
 ## Next Steps
 
-- [Host API Reference](./HOST_API.md) - Full API documentation
-- [Plugin Author Guide](./AUTHOR_GUIDE.md) - Best practices
-- [WASM Tutorial](./WASM_TUTORIAL.md) - Lighter-weight alternative
+- [Host API Reference](./HOST_API.md) — Full API documentation
+- [Plugin Author Guide](./AUTHOR_GUIDE.md) — Best practices and security model
+- [WASM Tutorial](./WASM_TUTORIAL.md) — Lighter-weight alternative
+- [Plugin Platform Overview](../PLUGIN_PLATFORM.md) — Architecture details

@@ -1,180 +1,330 @@
 # GoatKit Plugin Platform
 
-> **Status**: Design Document (planned for v0.7.0, May 2026)
->
-> This document describes the **planned** plugin architecture for GoatKit. 
-> The features described here are **not yet implemented** — this is a design specification
-> that will guide development of the 0.7.0 release.
-
 ## Overview
 
-GoatKit will evolve from a modular monolith to a true plugin platform, enabling third-party developers to extend GoatFlow without modifying core code.
+GoatKit provides a full plugin platform that enables third-party developers to extend GoatFlow without modifying core code. The platform supports two runtimes — WASM for portable, sandboxed plugins and gRPC for native, I/O-heavy workloads — managed uniformly through a single `Plugin` interface.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     GoatKit Core                            │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │   Router    │  │  Template   │  │   Plugin Runtime    │  │
-│  │   (Gin)     │  │  (Pongo2)   │  │  ┌──────┐ ┌──────┐  │  │
-│  │             │  │             │  │  │ WASM │ │ gRPC │  │  │
-│  └─────────────┘  └─────────────┘  │  └──────┘ └──────┘  │  │
-│                                    └─────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              Host Function API                       │   │
-│  │  db_query │ http_request │ send_email │ cache │ log  │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                        GoatKit Core                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────────────┐  │
+│  │   Router    │  │  Template   │  │     Plugin Runtime       │  │
+│  │   (Gin)     │  │  (Pongo2)   │  │  ┌──────┐  ┌──────────┐  │  │
+│  │             │  │             │  │  │ WASM │  │   gRPC   │  │  │
+│  └─────────────┘  └─────────────┘  │  │wazero│  │go-plugin │  │  │
+│                                    │  └──────┘  └──────────┘  │  │
+│                                    └──────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │              Plugin Manager                              │    │
+│  │  register │ unregister │ enable/disable │ lazy loading   │    │
+│  │  policy CRUD │ per-plugin stats │ sandboxed HostAPI      │    │
+│  └──────────────────────────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │         SandboxedHostAPI (per-plugin isolation)          │    │
+│  │  permission enforcement │ rate limiting │ accounting     │    │
+│  └──────────────────────────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │              Host Function API (ProdHostAPI)             │    │
+│  │  DBQuery │ DBExec │ HTTPRequest │ SendEmail │ Cache      │    │
+│  │  Log │ ConfigGet │ Translate │ CallPlugin                │    │
+│  └──────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
         ▼                     ▼                     ▼
 ┌───────────────┐   ┌───────────────┐   ┌───────────────┐
-│ Stats Plugin  │   │  FAQ Plugin   │   │ 3rd Party     │
-│   (WASM)      │   │   (WASM)      │   │   (gRPC)      │
+│ Stats Plugin  │   │  Hello gRPC   │   │ 3rd Party     │
+│   (WASM)      │   │  (gRPC/RPC)   │   │   (either)    │
 └───────────────┘   └───────────────┘   └───────────────┘
 ```
 
-## Planned Dual Runtime Support
+## Dual Runtime Support
 
 ### WASM Plugins (Default)
 
-Portable, sandboxed plugins will use [wazero](https://wazero.io/) (pure Go, no CGO):
+Portable, sandboxed plugins using [wazero](https://wazero.io/) (pure Go, no CGO):
 
-- **Single binary distribution** — one `.wasm` file will run everywhere
-- **Sandboxed execution** — memory limits, timeouts, no direct I/O
-- **Cross-platform** — no OS/arch-specific builds required
+- **Single binary distribution** — one `.wasm` file runs everywhere
+- **Sandboxed execution** — memory limits, call timeouts, no direct I/O
+- **Cross-platform** — no OS/arch-specific builds
 - **Best for**: Most plugins, especially UI extensions and business logic
+
+Implementation: `internal/plugin/wasm/`
 
 ### gRPC Plugins (Power Users)
 
-Native integrations will use [go-plugin](https://github.com/hashicorp/go-plugin) (HashiCorp pattern):
+Native Go plugins running as separate processes via [HashiCorp go-plugin](https://github.com/hashicorp/go-plugin) with **net/rpc** (not protobuf/gRPC wire protocol):
 
-- **Full I/O access** — native libraries, hardware, network
-- **Language agnostic** — write in any language with gRPC support
-- **Process isolation** — plugin crashes won't affect core
-- **Best for**: Heavy integrations, existing gRPC services, native dependencies
+- **Full Go stdlib** — all packages, goroutines, channels
+- **Process isolation** — plugin crashes don't affect core
+- **Bidirectional RPC** — plugins can call back to the HostAPI via MuxBroker
+- **Hot reload** — fsnotify watches binaries and auto-reloads on change
+- **Best for**: Heavy integrations, native dependencies, I/O-heavy workloads
 
-## Planned Plugin Package Format
+Implementation: `internal/plugin/grpc/`, `pkg/plugin/grpcutil/`
 
-Plugins will be distributed as ZIP files:
+**Note:** Despite the package name "grpc", the actual wire protocol is HashiCorp's net/rpc — no protoc or proto files are needed.
 
-```
-my-plugin.zip
-├── manifest.yaml          # Plugin metadata and exports
-├── plugin.wasm            # WASM binary (or plugin binary for gRPC)
-├── templates/             # Pongo2 templates
-│   └── my-feature/
-│       └── index.html
-├── static/                # CSS, JS, images
-│   └── my-plugin.css
-└── i18n/                  # Translations
-    ├── en.yaml
-    └── de.yaml
-```
+## Plugin Interface
 
-## Planned Self-Describing Registration
+Both runtimes implement a unified interface (`pkg/plugin/plugin.go`):
 
-Plugins will export a `gk_register()` function that returns their capabilities:
-
-```json
-{
-  "name": "my-plugin",
-  "version": "1.0.0",
-  "runtime": "wasm",
-  "functions": [
-    {
-      "name": "calculate_something",
-      "args": [{"name": "input", "type": "string"}],
-      "returns": "json",
-      "description": "Calculates something useful"
-    }
-  ],
-  "hooks": ["before_render", "after_save"],
-  "menu_items": [
-    {"label": "My Feature", "path": "/admin/my-feature", "icon": "star"}
-  ],
-  "permissions": ["my_plugin.view", "my_plugin.edit"]
+```go
+type Plugin interface {
+    GKRegister() GKRegistration            // Self-describe capabilities
+    Init(ctx context.Context, host HostAPI) error  // Initialize with host services
+    Call(ctx context.Context, fn string, args json.RawMessage) (json.RawMessage, error)
+    Shutdown(ctx context.Context) error
 }
 ```
 
-## Planned Host Function API
+## Self-Describing Registration
 
-Plugins will access core capabilities through host functions:
+Plugins return a `GKRegistration` from `GKRegister()` declaring their identity and capabilities:
 
-| Function | Description |
-|----------|-------------|
-| `db_query(sql, params)` | Execute SELECT queries, returns rows |
-| `db_exec(sql, params)` | Execute INSERT/UPDATE/DELETE, returns affected |
-| `http_request(method, url, headers, body)` | Outbound HTTP calls |
-| `send_email(to, subject, body, attachments)` | SMTP integration |
-| `cache_get(key)` / `cache_set(key, val, ttl)` | Shared cache access |
-| `schedule_job(cron, callback)` | Register scheduled tasks |
-| `log(level, message)` | Structured logging |
+- **Identity**: Name, version, description, author, license, homepage
+- **Routes**: HTTP endpoints the plugin handles (method, path, handler, middleware)
+- **Widgets**: Dashboard widgets (location, size, handler, refresh settings)
+- **Menu Items**: Navigation entries (admin, agent, customer locations)
+- **Jobs**: Scheduled cron tasks (schedule, handler, timeout)
+- **Templates**: Template overrides/additions
+- **I18n**: Translations with namespace support
+- **Error Codes**: API error codes (auto-prefixed with plugin name)
+- **Resources**: Requested resource limits and permissions (`ResourceRequest`)
 
-## Planned Template Integration
+## Plugin Manager
 
-Plugin functions will be callable from templates using the `use` directive:
+The Manager (`internal/plugin/manager.go`) handles the full plugin lifecycle:
 
-```html
-{% use my_plugin %}
+- **Register/Unregister** — loads plugins, creates sandboxed HostAPI, initializes
+- **Enable/Disable** — state persisted to sysconfig tables (not separate files)
+- **Lazy Loading** — plugins discovered on startup but loaded on first use
+- **Policy CRUD** — admin can set/get resource policies per plugin
+- **Stats** — per-plugin resource usage counters (DB queries, HTTP requests, cache ops, errors)
+- **Plugin-to-plugin calls** — `CallPlugin()` and `CallFrom()` with caller tracking
 
-<div class="stats-widget">
-  {% with stats=calculate_something("input") %}
-    <p>Result: {{ stats.value }}</p>
-  {% endwith %}
-</div>
+## Loader & Discovery
+
+The Loader (`internal/plugin/loader/loader.go`) handles filesystem discovery:
+
+- Scans `plugins/` directory for `.wasm` files and subdirectories with `plugin.yaml`
+- Supports lazy loading (discover without loading) or eager loading
+- Hot reload via fsnotify file watcher with 500ms debounce:
+  - WASM: watches for `.wasm` file create/modify/delete
+  - gRPC: watches `plugin.yaml` and binary files for changes
+  - New `plugin.yaml` files trigger discovery and loading
+  - Binary changes trigger unload → reload
+  - Removed files trigger unload
+
+### gRPC Plugin Layout
+
+gRPC plugins are deployed as directories with a `plugin.yaml` manifest:
+
+```
+plugins/
+├── stats.wasm              # WASM plugin (single file)
+└── hello-grpc/             # gRPC plugin (directory)
+    ├── plugin.yaml         # Required manifest
+    └── hello-grpc          # Executable binary
 ```
 
-The `use` directive will be idempotent: first encounter loads the plugin; subsequent `use` calls will be no-ops. Plugins will be lazy-loaded on demand, not at startup.
+### plugin.yaml Format
 
-## Planned Lifecycle
+```yaml
+name: hello-grpc
+version: "1.0.0"
+runtime: grpc
+binary: hello-grpc
+resources:
+  memory_mb: 512
+  call_timeout: 30s
+  permissions:
+    - type: db
+      access: readwrite
+    - type: http
+      scope: ["*.tenor.com"]
+```
 
-1. **Discover**: Core will scan `plugins/` directory on startup, reading manifests
-2. **Lazy Load**: Plugin loaded on first `{% use %}` in a template
-3. **Register**: Plugin's `gk_register()` called, routes/menus/permissions activated
-4. **Run**: Plugin functions become available to templates and handlers
-5. **Hot Reload**: File watcher will trigger reload on plugin changes
-6. **Unload**: Managed by platform, not templates:
-   - Admin UI: manual unload/reload controls
-   - Idle timeout: auto-unload after configurable inactivity
-   - Memory pressure: LRU eviction when nearing limits
-   - Graceful shutdown: clean release on process exit
+## Host API
 
-## Planned Security Model
+The HostAPI interface (`pkg/plugin/plugin.go`) provides access to host services:
 
-- **Sandboxing**: WASM plugins will run in isolated memory space
-- **Timeouts**: Maximum execution time per function call
-- **Memory limits**: Configurable per-plugin memory cap
-- **Signed plugins**: Optional verification for marketplace plugins
-- **Permission system**: Plugins will declare required permissions
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `DBQuery` | `(ctx, query, args...) → ([]map[string]any, error)` | SELECT queries with `?` placeholders |
+| `DBExec` | `(ctx, query, args...) → (int64, error)` | INSERT/UPDATE/DELETE, returns rows affected |
+| `CacheGet` | `(ctx, key) → ([]byte, bool, error)` | Retrieve cached value |
+| `CacheSet` | `(ctx, key, value, ttlSeconds) → error` | Store with TTL |
+| `CacheDelete` | `(ctx, key) → error` | Remove cached value |
+| `HTTPRequest` | `(ctx, method, url, headers, body) → (int, []byte, error)` | Outbound HTTP calls |
+| `SendEmail` | `(ctx, to, subject, body, html) → error` | Email via configured provider |
+| `Log` | `(ctx, level, message, fields)` | Structured logging (debug/info/warn/error) |
+| `ConfigGet` | `(ctx, key) → (string, error)` | Read host config values |
+| `Translate` | `(ctx, key, args...) → string` | i18n translation |
+| `CallPlugin` | `(ctx, pluginName, fn, args) → (json.RawMessage, error)` | Plugin-to-plugin calls |
 
-## First-Party Plugins (Roadmap)
+The production implementation (`ProdHostAPI` in `internal/plugin/hostapi_prod.go`) wires these to real database, cache (Redis/Valkey), email, and other services. It supports multiple named databases with `@dbname:` query prefix syntax.
 
-| Plugin | Version | Runtime | Description |
-|--------|---------|---------|-------------|
-| Statistics & Reporting | 0.7.0 | WASM | Dashboards, charts, scheduled reports |
-| FAQ / Knowledge Base | 0.8.0 | WASM | Articles, search, customer portal |
-| Calendar & Appointments | 0.8.0 | WASM | Scheduling, iCal, reminders |
-| Process Management | 0.9.0 | WASM | Visual workflow designer |
+## Sandbox & Security Model
 
-## Planned Developer Experience
+Every plugin receives a **SandboxedHostAPI** (`internal/plugin/sandbox.go`) that wraps the real HostAPI with per-plugin enforcement:
 
-- **Admin UI**: Enable/disable/inspect plugins, view logs
-- **SDK**: Example plugins for both WASM and gRPC
-- **CLI**: `gk plugin init` will scaffold new plugins
-- **Hot reload**: Changes will apply without restart
-- **Local dev mode**: Test plugins against running instance
+### OS-Level Process Isolation (gRPC)
 
-## Current Foundation
+On Linux, gRPC plugin processes run with OS-level restrictions (`internal/plugin/grpc/sandbox_linux.go`):
 
-The plugin platform builds on existing GoatKit capabilities:
+- **Namespace isolation** — `CLONE_NEWNS` and `CLONE_NEWPID` separate the plugin's mount and PID namespaces from the host
+- **Pdeathsig** — `SIGKILL` ensures plugin processes die when the host dies (no orphans)
+- **Minimal environment** — plugins receive a stripped-down environment: `PATH`, `HOME`, `TMPDIR` (plugin-specific under `/tmp/goatflow-plugin-<name>`), and `TZ`. No database credentials, secrets, or host environment variables are passed through
+- **Network hint** — plugins without `http` permission get `GOATFLOW_NO_NETWORK=1` set in their environment
 
-- **Dynamic Modules** (today): YAML-based CRUD generation
-- **Lambda Functions** (today): V8 JavaScript for computed fields
-- **Plugin Platform** (0.7.0): Full WASM + gRPC runtime
+On non-Linux platforms, process sandboxing is not available and a warning is logged. Use containers or limit gRPC plugins to trusted code on these platforms.
 
-See also:
-- [Dynamic Modules](DYNAMIC_MODULES.md) — Current YAML module system
-- [Lambda Functions](LAMBDA_FUNCTIONS.md) — Embedded JavaScript
+### Plugin Signing
+
+Optional ed25519 signature verification for plugin binaries (`internal/plugin/signing/signing.go`):
+
+- **Key generation** — `GenerateKeyPair()` creates ed25519 key pairs for signing
+- **Signing** — `SignBinary()` computes SHA-256 hash of the binary and signs with ed25519, writing hex-encoded signature to `<binary>.sig`
+- **Verification** — `VerifyBinary()` checks binary against its `.sig` file using a list of trusted public keys
+- **Opt-in enforcement** — set `GOATFLOW_REQUIRE_SIGNATURES=1` to require valid signatures; without it, unsigned plugins load with a warning
+- **Tamper detection** — any modification to the binary after signing invalidates the signature
+
+### Permission System
+
+Plugins declare what they need via `ResourceRequest` with `Permission` entries. The platform enforces what they get via `ResourcePolicy` (set by admin).
+
+Permission types:
+
+| Type | Access Levels | Scope |
+|------|--------------|-------|
+| `db` | `read`, `write`, `readwrite` | Table allowlist patterns |
+| `cache` | `read`, `write`, `readwrite` | Auto-namespaced keys |
+| `http` | (any) | URL patterns, e.g. `["*.tenor.com"]` |
+| `email` | (any) | Domain allowlist, e.g. `["@example.com"]` |
+| `config` | `read` | Key patterns (sensitive keys blocked) |
+| `plugin_call` | (any) | Plugin name allowlist |
+
+### Enforcement
+
+- **Permission checks** — every HostAPI call checks the plugin's granted permissions
+- **DDL blocking** — plugins without write access cannot execute DROP, ALTER, TRUNCATE, CREATE, GRANT, REVOKE
+- **SQL table whitelisting** — `extractTableNames()` parses SQL queries and validates each table against the `db` permission scope. Queries touching unallowed tables are rejected
+- **HTTP URL filtering** — outbound requests checked against allowed URL patterns (wildcard subdomain matching)
+- **Cache namespacing** — keys auto-prefixed with `plugin:<name>:` to prevent cross-plugin collisions
+- **Plugin call scoping** — CallPlugin checks which target plugins are in the caller's allowed scope
+- **Call depth limiting** — plugin-to-plugin calls are tracked via context; maximum depth of 10 prevents infinite recursion
+- **Config key blacklist** — sensitive configuration keys are blocked by default (patterns: `database.*`, `password`, `secret`, `token`, `key`, `auth`, `ldap.*`, `smtp.*`, `aws.*`, `gcp.*`, `azure.*`, etc.)
+- **Email domain scoping** — if the `email` permission has a scope (e.g. `["@example.com"]`), recipients are validated against the allowed domains
+- **Email rate limiting** — 10 emails per minute per plugin (hardcoded sliding window)
+- **Caller identity stamping** — the host sets the authenticated caller name on all gRPC HostAPI calls; plugins cannot impersonate other plugins
+- **Blocked status** — a "blocked" policy kills all HostAPI access
+
+### Rate Limiting
+
+Sliding window rate limiters per plugin:
+
+- **DB queries/min** — limits DBQuery + DBExec combined
+- **HTTP requests/min** — limits outbound HTTP calls
+- **Calls/sec** — limits overall call rate
+- **Emails/min** — 10 per minute per plugin
+
+Default policy (`DefaultResourcePolicy`):
+- Status: `pending_review`
+- Memory: 256 MB
+- Call timeout: 30s
+- Permissions: DB read-only + cache read/write
+- Rate limits: 100 calls/sec, 600 DB queries/min, 60 HTTP requests/min
+
+### Resource Accounting
+
+Atomic counters track per-plugin usage:
+- DB queries, DB execs, cache operations, HTTP requests, plugin calls, errors
+- Last call timestamp
+- Accessible via `Manager.PluginStats()` and `Manager.AllPluginStats()`
+
+### Atomic Plugin Reload
+
+`ReplacePlugin()` in the Manager performs blue-green replacement: the new plugin is fully initialized before the old one is shut down, with the swap happening under a single mutex lock. This eliminates request-dropping windows during hot reload.
+
+### Live Policy Updates
+
+Policies can be updated at runtime via `SandboxedHostAPI.UpdatePolicy()`. The sandbox uses a `sync.RWMutex` to protect the policy pointer — reads acquire RLock, updates acquire full Lock. Changes take effect immediately on the next HostAPI call without requiring plugin restart.
+
+### Policy Persistence
+
+Policies are serialized as JSON and stored in the `sysconfig_modified` table (key: `Plugin::<name>::Policy`). Policies survive restarts and are loaded when the plugin is registered.
+
+### Policy Lifecycle
+
+1. Plugin registers → gets `DefaultResourcePolicy` (restrictive)
+2. Admin reviews plugin's `ResourceRequest`
+3. Admin sets `ResourcePolicy` via `Manager.SetPolicy()` — approving, restricting, or blocking
+4. Policy persisted to database and sandbox updated immediately via `UpdatePolicy()`
+
+### ZIP Package Security
+
+Plugin ZIP extraction (`internal/plugin/packaging/`) enforces strict limits:
+
+- **Symlink rejection** — symlinks in archives are rejected (prevents path traversal)
+- **File size limit** — 100 MB per file maximum
+- **Total size limit** — 500 MB total extracted content
+- **File count limit** — maximum 1,000 files per archive
+
+## Scheduler Integration
+
+Plugin-defined cron jobs are registered with the scheduler (`internal/plugin/scheduler.go`). Jobs declared in `GKRegistration.Jobs` are automatically wired to the scheduler service with configurable timeouts.
+
+## Packaging
+
+Plugin packages (`internal/plugin/packaging/`) support ZIP distribution:
+
+```
+my-plugin.zip
+├── manifest.yaml
+├── plugin.wasm (or binary for gRPC)
+├── templates/
+├── static/
+└── i18n/
+```
+
+## Template Integration
+
+Plugin functions are callable from Pongo2 templates via the `{% use %}` directive:
+
+```html
+{% use "my_plugin" %}
+```
+
+The directive is idempotent — first encounter triggers lazy loading; subsequent calls are no-ops.
+
+## Admin UI
+
+Plugin management is available at `/admin/plugins`:
+
+- Enable/disable plugins with state persisted to sysconfig
+- View plugin logs (in-memory ring buffer per plugin)
+- Inspect registered routes, widgets, jobs, and menu items
+- JWT-authenticated API endpoints for programmatic management
+
+## Example Plugins
+
+- **Stats** (`plugins/stats/`) — WASM plugin providing dashboard widgets
+- **Hello gRPC** (`internal/plugin/grpc/example/`) — gRPC plugin demonstrating routes and widgets
+
+## Developer Experience
+
+- **CLI scaffolding**: `gk init my-plugin --type wasm|grpc`
+- **Hot reload**: File watcher auto-reloads on plugin changes (no env var needed)
+- **Public SDK types**: `pkg/plugin/` for the Plugin interface and types; `pkg/plugin/grpcutil/` for gRPC plugin serving
+- **Documentation**: Author Guide, Host API Reference, WASM Tutorial, gRPC Tutorial
+
+## See Also
+
+- [Plugin Author Guide](plugins/AUTHOR_GUIDE.md) — How to build plugins
+- [Host API Reference](plugins/HOST_API.md) — Full API documentation
+- [gRPC Tutorial](plugins/GRPC_TUTORIAL.md) — Step-by-step gRPC plugin guide
+- [WASM Tutorial](plugins/WASM_TUTORIAL.md) — Step-by-step WASM plugin guide
 - [ROADMAP](../ROADMAP.md) — Release timeline
