@@ -19,16 +19,11 @@ import (
 	"github.com/goatkit/goatflow/internal/plugin/grpc"
 	"github.com/goatkit/goatflow/internal/plugin/signing"
 	"github.com/goatkit/goatflow/internal/plugin/wasm"
+	pkgplugin "github.com/goatkit/goatflow/pkg/plugin"
 )
 
-// PluginManifest represents a plugin.yaml file for gRPC plugins.
-type PluginManifest struct {
-	Name      string                  `yaml:"name"`
-	Version   string                  `yaml:"version"`
-	Runtime   string                  `yaml:"runtime"`             // "grpc" or "wasm"
-	Binary    string                  `yaml:"binary"`              // Relative path to executable
-	Resources *plugin.ResourceRequest `yaml:"resources,omitempty"` // Requested resource limits
-}
+// PluginManifest is an alias for the shared manifest type.
+type PluginManifest = pkgplugin.PluginManifest
 
 // DiscoveredPlugin holds info about a plugin found but not yet loaded.
 type DiscoveredPlugin struct {

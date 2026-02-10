@@ -447,11 +447,10 @@ func createTestZIP(t *testing.T, path string) {
 	
 	zw := zip.NewWriter(f)
 	
-	// Add manifest
-	manifest := map[string]any{"name": "test-plugin", "version": "1.0.0"}
-	manifestData, _ := json.Marshal(manifest)
-	mw, _ := zw.Create("manifest.json")
-	mw.Write(manifestData)
+	// Add plugin.yaml manifest
+	manifestYAML := "name: test-plugin\nversion: \"1.0.0\"\nruntime: wasm\n"
+	mw, _ := zw.Create("plugin.yaml")
+	mw.Write([]byte(manifestYAML))
 	
 	// Add WASM
 	ww, _ := zw.Create("plugin.wasm")
