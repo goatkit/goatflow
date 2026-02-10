@@ -571,8 +571,17 @@ func HandlePluginUpload(c *gin.Context) {
 			return
 		}
 		pluginName = pkg.Manifest.Name
-		destPath = pkg.WASMPath
-		log.Printf("🔌 Plugin package extracted: %s v%s", pluginName, pkg.Manifest.Version)
+		destPath = pkg.BinaryPath
+		runtimeType := pkg.RuntimeType
+		log.Printf("🔌 Plugin package extracted: %s v%s (runtime: %s)", pluginName, pkg.Manifest.Version, runtimeType)
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Plugin uploaded successfully",
+			"name":    pluginName,
+			"path":    destPath,
+			"runtime": runtimeType,
+		})
+		return
 	} else {
 		// Direct WASM upload
 		destPath = filepath.Join(pluginDir, filename)
