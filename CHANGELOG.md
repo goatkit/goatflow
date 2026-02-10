@@ -10,6 +10,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 - **Parallel test interference in article_create_test** — re-ensure RBAC permissions before each subtest and skip gracefully if a 404 is returned due to parallel `group_user` removal, preventing flaky failures in CI
 - **Escalation integration test flakiness** — always create a fresh ticket in `ensureTestTicket` instead of reusing existing shared state, eliminating race conditions across parallel test runs
+- **Customer ticket queue routing**: Tickets created via the customer portal were always routed to Postmaster (queue_id hardcoded to 1). Now resolves the customer's organisation queue via `group_customer` → `queue.group_id`, falling back to Postmaster only if no org queue mapping exists. (`internal/api/customer_routes.go`)
 
 ### Security
 - **OS-Level gRPC Process Isolation** (`internal/plugin/grpc/sandbox_linux.go`): Linux namespace isolation (CLONE_NEWNS, CLONE_NEWPID), Pdeathsig to kill orphans, minimal environment (no DB credentials leaked to plugins). Non-Linux platforms log a warning.
