@@ -218,7 +218,6 @@ func TestGRPCPluginWithManager(t *testing.T) {
 	if err := mgr.Register(ctx, p); err != nil {
 		t.Fatalf("Register failed: %v", err)
 	}
-	mgr.Enable("hello-grpc") // hello-grpc is default-disabled; enable for test
 
 	// List should include the plugin
 	plugins := mgr.List()

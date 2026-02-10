@@ -100,7 +100,6 @@ func TestPluginManager(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Register failed: %v", err)
 		}
-		mgr.Enable("hello") // hello is default-disabled; enable for test
 
 		// Verify init was called (check logs)
 		if len(host.logs) == 0 {
@@ -325,7 +324,6 @@ func TestPluginManagerGetRoutes(t *testing.T) {
 
 	hello := example.NewHelloPlugin()
 	mgr.Register(ctx, hello)
-	mgr.Enable("hello") // hello is default-disabled; enable for test
 
 	routes := mgr.Routes()
 	
@@ -377,7 +375,6 @@ func TestPluginManagerShutdownAll(t *testing.T) {
 
 	hello := example.NewHelloPlugin()
 	mgr.Register(ctx, hello)
-	mgr.Enable("hello") // hello is default-disabled; enable for test
 
 	// Verify plugin exists
 	_, ok := mgr.Get("hello")
