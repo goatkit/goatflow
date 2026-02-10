@@ -7,15 +7,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
-- **Universal plugin package format**: Plugin packaging now uses `plugin.yaml` (YAML) instead of `manifest.json` (JSON) as the standard manifest. ZIP uploads support three runtime types: `wasm` (WebAssembly binary), `grpc` (native binary), and `template` (pure YAML routes + templates, no runtime). gRPC binaries are automatically made executable on extraction.
-- **Shared `PluginManifest` type**: Moved to `pkg/plugin/manifest.go` so both the loader and packaging systems use the same struct. Added `description`, `author`, `license`, `homepage`, and `wasm` fields.
-- **Test/example plugins disabled by default**: `hello`, `hello-wasm`, `hello-grpc`, and `test-hostapi` plugins are now disabled by default. Can be enabled via admin UI/API; state persists to sysconfig.
-- **Plugin management audit logging**: Plugin uploads, enables, disables, discovery, load/unload, and errors now log to the Plugin Logs page.
-
 ### Fixed
 - **Parallel test interference in article_create_test** — re-ensure RBAC permissions before each subtest and skip gracefully if a 404 is returned due to parallel `group_user` removal, preventing flaky failures in CI
 - **Escalation integration test flakiness** — always create a fresh ticket in `ensureTestTicket` instead of reusing existing shared state, eliminating race conditions across parallel test runs
+- **Plugin admin page missing sidebar**: `HandleAdminPlugins` and `HandleAdminPluginLogs` now pass `ActivePage: "admin"` to the template context, restoring the admin navigation sidebar on plugin pages.
 - **Nineties-vibe dark mode login styling**: Added theme-specific overrides for login card, form inputs, buttons, and checkboxes to ensure proper contrast against the terminal-black background. Login card gets `#1a1a1a` background with visible border, inputs get dark background with light borders, and buttons use the primary colour.
 - **Customer ticket queue routing**: Tickets created via the customer portal were always routed to Postmaster (queue_id hardcoded to 1). Now resolves the customer's organisation queue via `group_customer` → `queue.group_id`, falling back to Postmaster only if no org queue mapping exists. (`internal/api/customer_routes.go`)
 
@@ -57,6 +52,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - **Public gRPC plugin utilities** (`pkg/plugin/grpcutil/`): Extracted `ServePlugin()` helper and related types to `pkg/plugin/grpcutil/serve.go` for use by external gRPC plugins.
 - **Refactored token extraction middleware**: Centralised token extraction logic in `internal/middleware/api_token.go`, removing duplicate code from auth, session, and routing packages.
 - **Plugin documentation updated**: All 7 plugin docs rewritten to reflect implemented features — removed "planned"/"not yet implemented" language, added sandbox/security model documentation, corrected Host API signatures.
+- **Universal plugin package format**: Plugin packaging now uses `plugin.yaml` (YAML) instead of `manifest.json` (JSON) as the standard manifest. ZIP uploads support three runtime types: `wasm` (WebAssembly binary), `grpc` (native binary), and `template` (pure YAML routes + templates, no runtime). gRPC binaries are automatically made executable on extraction.
+- **Shared `PluginManifest` type**: Moved to `pkg/plugin/manifest.go` so both the loader and packaging systems use the same struct. Added `description`, `author`, `license`, `homepage`, and `wasm` fields.
+- **Test/example plugins disabled by default**: `hello`, `hello-wasm`, `hello-grpc`, and `test-hostapi` plugins are now disabled by default via sysconfig seeding on first registration. Can be enabled via admin UI/API; state persists to sysconfig.
+- **Plugin management audit logging**: Plugin uploads, enables, disables, discovery, load/unload, and errors now log to the Plugin Logs page.
+- **Plugin API dual auth**: Plugin management endpoints (`/api/v1/plugins/...`) now accept both session-based (cookie) and JWT authentication via `SessionOrJWTAuth()` middleware. Previously only JWT was accepted, blocking admin actions from the web UI.
 
 ## [0.6.5]
 

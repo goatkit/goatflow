@@ -653,6 +653,223 @@ func TestHandlePluginUploadNoFile(t *testing.T) {
 	}
 }
 
+// --- Session-based auth tests ---
+
+// sessionAuthMiddleware simulates session middleware by setting user_id and user_role.
+func sessionAuthMiddleware(userID int, role string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set("user_id", userID)
+		c.Set("user_role", role)
+		c.Next()
+	}
+}
+
+// setupSessionAuthRouter creates a router with session auth (no JWT) for testing.
+func setupSessionAuthRouter(sessionMW gin.HandlerFunc) *gin.Engine {
+	host := &mockHostAPI{}
+	mgr := plugin.NewManager(host)
+	SetPluginManager(mgr)
+	SetPluginDir(os.TempDir())
+
+	hello := example.NewHelloPlugin()
+	mgr.Register(context.Background(), hello)
+	mgr.Enable("hello") // hello is default-disabled for dev plugins
+
+	r := gin.New()
+	if sessionMW != nil {
+		r.Use(sessionMW)
+	}
+	api := r.Group("/api/v1")
+	RegisterPluginAPIRoutes(api)
+
+	return r
+}
+
+// pluginAdminRoutes returns the admin-only plugin routes dynamically by
+// inspecting what RegisterPluginAPIRoutes registers with RequireAdmin.
+// We register on a fresh router and diff against the known auth-only routes.
+func pluginAdminRoutes() []gin.RouteInfo {
+	r := gin.New()
+	api := r.Group("/api/v1")
+	RegisterPluginAPIRoutes(api)
+
+	// The admin routes are: enable, disable, upload, logs (GET), logs (DELETE).
+	// Discover them by finding routes that have RequireAdmin in the handler chain.
+	// Since gin doesn't expose middleware names, we use a different approach:
+	// register twice — once with admin group, once with auth-only group — and diff.
+	// Simpler: just extract routes that match the admin group patterns.
+	var adminRoutes []gin.RouteInfo
+	for _, route := range r.Routes() {
+		path := route.Path
+		// Admin routes are: enable, disable, upload, logs
+		// They are NOT: list, call, widgets — those are auth-only
+		if strings.Contains(path, "/enable") ||
+			strings.Contains(path, "/disable") ||
+			strings.Contains(path, "/upload") ||
+			strings.Contains(path, "/logs") {
+			adminRoutes = append(adminRoutes, route)
+		}
+	}
+	return adminRoutes
+}
+
+// pluginAuthRoutes returns the auth-only (non-admin) plugin routes.
+func pluginAuthRoutes() []gin.RouteInfo {
+	r := gin.New()
+	api := r.Group("/api/v1")
+	RegisterPluginAPIRoutes(api)
+
+	var authRoutes []gin.RouteInfo
+	for _, route := range r.Routes() {
+		path := route.Path
+		if !strings.Contains(path, "/enable") &&
+			!strings.Contains(path, "/disable") &&
+			!strings.Contains(path, "/upload") &&
+			!strings.Contains(path, "/logs") {
+			authRoutes = append(authRoutes, route)
+		}
+	}
+	return authRoutes
+}
+
+func TestPluginSessionAuth_AdminCanAccessAdminRoutes(t *testing.T) {
+	r := setupSessionAuthRouter(sessionAuthMiddleware(1, "Admin"))
+	adminRoutes := pluginAdminRoutes()
+
+	if len(adminRoutes) == 0 {
+		t.Fatal("no admin routes discovered — RegisterPluginAPIRoutes may have changed")
+	}
+
+	for _, route := range adminRoutes {
+		t.Run(route.Method+" "+route.Path, func(t *testing.T) {
+			// Replace :name param with test plugin name
+			path := strings.ReplaceAll(route.Path, ":name", "hello")
+			var req *http.Request
+			if route.Method == "POST" && strings.Contains(path, "/upload") {
+				// Upload needs multipart body
+				var b bytes.Buffer
+				mw := multipart.NewWriter(&b)
+				fw, _ := mw.CreateFormFile("plugin", "test.wasm")
+				fw.Write([]byte("fake wasm"))
+				mw.Close()
+				req = httptest.NewRequest(route.Method, path, &b)
+				req.Header.Set("Content-Type", mw.FormDataContentType())
+			} else {
+				req = httptest.NewRequest(route.Method, path, nil)
+			}
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			// Admin should NOT get 401 or 403
+			if w.Code == http.StatusUnauthorized {
+				t.Errorf("admin session user got 401 on %s %s", route.Method, path)
+			}
+			if w.Code == http.StatusForbidden {
+				t.Errorf("admin session user got 403 on %s %s", route.Method, path)
+			}
+		})
+	}
+}
+
+func TestPluginSessionAuth_NonAdminGetsForbiddenOnAdminRoutes(t *testing.T) {
+	r := setupSessionAuthRouter(sessionAuthMiddleware(2, "Agent"))
+	adminRoutes := pluginAdminRoutes()
+
+	if len(adminRoutes) == 0 {
+		t.Fatal("no admin routes discovered")
+	}
+
+	for _, route := range adminRoutes {
+		t.Run(route.Method+" "+route.Path, func(t *testing.T) {
+			path := strings.ReplaceAll(route.Path, ":name", "hello")
+			req := httptest.NewRequest(route.Method, path, nil)
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			if w.Code != http.StatusForbidden {
+				t.Errorf("expected 403 for non-admin on %s %s, got %d", route.Method, path, w.Code)
+			}
+		})
+	}
+}
+
+func TestPluginSessionAuth_UnauthenticatedGets401(t *testing.T) {
+	// No session middleware — no user_id, no JWT
+	r := setupSessionAuthRouter(nil)
+
+	// Collect ALL plugin routes (admin + auth-only)
+	allRoutes := append(pluginAdminRoutes(), pluginAuthRoutes()...)
+
+	if len(allRoutes) == 0 {
+		t.Fatal("no routes discovered")
+	}
+
+	for _, route := range allRoutes {
+		t.Run(route.Method+" "+route.Path, func(t *testing.T) {
+			path := strings.ReplaceAll(route.Path, ":name", "hello")
+			path = strings.ReplaceAll(path, ":fn", "test")
+			path = strings.ReplaceAll(path, ":id", "test")
+			req := httptest.NewRequest(route.Method, path, nil)
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			if w.Code != http.StatusUnauthorized {
+				t.Errorf("expected 401 for unauthenticated on %s %s, got %d", route.Method, path, w.Code)
+			}
+		})
+	}
+}
+
+func TestPluginSessionAuth_NonAdminCanAccessAuthRoutes(t *testing.T) {
+	r := setupSessionAuthRouter(sessionAuthMiddleware(2, "Agent"))
+	authRoutes := pluginAuthRoutes()
+
+	if len(authRoutes) == 0 {
+		t.Fatal("no auth-only routes discovered")
+	}
+
+	for _, route := range authRoutes {
+		t.Run(route.Method+" "+route.Path, func(t *testing.T) {
+			path := strings.ReplaceAll(route.Path, ":name", "hello")
+			path = strings.ReplaceAll(path, ":fn", "hello")
+			path = strings.ReplaceAll(path, ":id", "test")
+			var req *http.Request
+			if route.Method == "POST" {
+				req = httptest.NewRequest(route.Method, path, strings.NewReader(`{"name":"test"}`))
+				req.Header.Set("Content-Type", "application/json")
+			} else {
+				req = httptest.NewRequest(route.Method, path, nil)
+			}
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			// Non-admin should NOT get 401 or 403 on auth-only routes
+			if w.Code == http.StatusUnauthorized {
+				t.Errorf("authenticated agent got 401 on %s %s: %s", route.Method, path, w.Body.String())
+			}
+			if w.Code == http.StatusForbidden {
+				t.Errorf("authenticated agent got 403 on %s %s: %s", route.Method, path, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestPluginSessionAuth_AdminRouteCount(t *testing.T) {
+	// Sanity check: ensure we discover the expected number of admin routes
+	adminRoutes := pluginAdminRoutes()
+	// Currently: POST enable, POST disable, POST upload, GET logs, DELETE logs = 5
+	if len(adminRoutes) < 5 {
+		t.Errorf("expected at least 5 admin routes, discovered %d:", len(adminRoutes))
+		for _, r := range adminRoutes {
+			t.Logf("  %s %s", r.Method, r.Path)
+		}
+	}
+	t.Logf("Discovered %d admin routes:", len(adminRoutes))
+	for _, r := range adminRoutes {
+		t.Logf("  %s %s", r.Method, r.Path)
+	}
+}
+
 func TestHandlePluginUploadNoDir(t *testing.T) {
 	// Don't set plugin dir
 	SetPluginDir("")
