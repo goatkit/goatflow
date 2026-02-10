@@ -218,10 +218,17 @@ func (m *Manager) seedDefaultDisabled(ctx context.Context, name string) {
 		return // DB error (mock/test) or entry already exists
 	}
 
-	// Seed disabled state
+	// Seed disabled state — fill all NOT NULL columns
 	m.host.DBExec(ctx, `
-		INSERT INTO sysconfig_default (name, effective_value, is_valid, create_by, change_by, create_time, change_time)
-		VALUES (?, '0', 1, 1, 1, NOW(), NOW())
+		INSERT INTO sysconfig_default 
+		(name, description, navigation, is_invisible, is_readonly, is_required, is_valid, 
+		 has_configlevel, user_modification_possible, user_modification_active,
+		 xml_content_raw, xml_content_parsed, xml_filename, effective_value, 
+		 is_dirty, exclusive_lock_guid, create_by, change_by, create_time, change_time)
+		VALUES (?, 'Plugin enabled state', 'Admin::Plugins', 1, 0, 0, 1,
+		 0, 1, 0,
+		 '', '', '', '0',
+		 0, '', 1, 1, NOW(), NOW())
 	`, key)
 }
 
@@ -237,11 +244,12 @@ func (m *Manager) savePluginEnabled(ctx context.Context, name string, enabled bo
 		val = "0"
 	}
 
-	// Use DBExec to upsert into sysconfig_modified
-	// First try to get the sysconfig_default_id (may not exist for dynamic plugins)
+	// Use DBExec to upsert into sysconfig_modified — fill all NOT NULL columns
 	query := `
-		INSERT INTO sysconfig_modified (sysconfig_default_id, name, effective_value, is_valid, create_by, change_by, create_time, change_time)
-		VALUES (0, ?, ?, 1, 1, 1, NOW(), NOW())
+		INSERT INTO sysconfig_modified 
+		(sysconfig_default_id, name, effective_value, is_valid, user_modification_active, 
+		 is_dirty, reset_to_default, create_by, change_by, create_time, change_time)
+		VALUES (0, ?, ?, 1, 0, 0, 0, 1, 1, NOW(), NOW())
 		ON DUPLICATE KEY UPDATE effective_value = ?, change_time = NOW(), change_by = 1
 	`
 	_, err := m.host.DBExec(ctx, query, key, val, val)
