@@ -15,8 +15,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - **Plugin API dual auth**: Plugin management endpoints (`/api/v1/plugins/...`) now accept both session-based (cookie) and JWT authentication via `SessionOrJWTAuth()` middleware. Previously only JWT was accepted, blocking admin actions from the web UI.
 
 ### Fixed
-- **Plugin admin page missing sidebar**: `HandleAdminPlugins` and `HandleAdminPluginLogs` now pass `ActivePage: "admin"` to the template context, restoring the admin navigation sidebar on plugin pages.
+- **Plugin admin page missing sidebar and context**: `HandleAdminPlugins` and `HandleAdminPluginLogs` now pass `ActivePage: "admin"`, `User`, and `IsInAdminGroup` to the template context, restoring the admin navigation sidebar and user-aware rendering on plugin pages.
 - **Nineties-vibe dark mode login styling**: Added theme-specific overrides for login card, form inputs, buttons, and checkboxes to ensure proper contrast against the terminal-black background. Login card gets `#1a1a1a` background with visible border, inputs get dark background with light borders, and buttons use the primary colour.
+- **sysconfig INSERT failures**: `seedDefaultDisabled` and `savePluginEnabled` now fill all NOT NULL columns for `sysconfig_default` and `sysconfig_modified` tables, preventing "Field 'X' doesn't have a default value" errors on strict-mode MySQL/MariaDB.
 - **Customer ticket queue routing**: Tickets created via the customer portal were always routed to Postmaster (queue_id hardcoded to 1). Now resolves the customer's organisation queue via `group_customer` → `queue.group_id`, falling back to Postmaster only if no org queue mapping exists. (`internal/api/customer_routes.go`)
 
 ### Security
@@ -34,6 +35,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - **WASM Security Verified**: Confirmed `SandboxedHostAPI` is correctly applied to WASM plugins, enforcing the same permission/rate-limit/accounting model as gRPC.
 
 ### Added
+- **Session auth tests for plugin management**: Tests verifying that plugin enable/disable and plugin log endpoints work correctly with session-based (cookie) authentication, complementing existing JWT auth coverage.
 - **gRPC Plugin Hot Reload**: Loader now discovers gRPC plugins via `plugin.yaml` in subdirectories, watches binaries via fsnotify, and auto-reloads on change with 500ms debounce. New `plugin.yaml` files trigger discovery and loading; removing them triggers unload.
 - **Plugin Isolation / SandboxedHostAPI** (`internal/plugin/sandbox.go`): Per-plugin permission enforcement wrapper around HostAPI
   - Permission checks on every HostAPI call (db read/write, cache, HTTP, email, config, plugin-to-plugin calls)
