@@ -129,7 +129,6 @@ func TestWASMPluginWithManager(t *testing.T) {
 	if err := mgr.Register(ctx, p); err != nil {
 		t.Fatalf("Failed to register plugin: %v", err)
 	}
-	mgr.Enable("hello-wasm") // hello-wasm is default-disabled; enable for test
 
 	// List plugins
 	plugins := mgr.List()

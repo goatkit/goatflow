@@ -462,10 +462,24 @@ func buildPluginArgs(c *gin.Context) json.RawMessage {
 // GET  /api/v1/plugins/:name/widgets/:id  - Get widget HTML (authenticated, HTMX-friendly)
 // POST /api/v1/plugins/:name/enable       - Enable a plugin (admin only)
 // POST /api/v1/plugins/:name/disable      - Disable a plugin (admin only)
+// SessionOrJWTAuth middleware accepts either session-based auth (cookie) or JWT token auth.
+// Session auth is checked first (user_id already set by session middleware), then falls back to JWT.
+func SessionOrJWTAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// If session middleware already authenticated the user, continue
+		if _, exists := c.Get("user_id"); exists {
+			c.Next()
+			return
+		}
+		// Fall back to JWT auth
+		JWTAuthMiddleware()(c)
+	}
+}
+
 func RegisterPluginAPIRoutes(r *gin.RouterGroup) {
-	// Plugin list and call - require authentication
+	// Plugin list and call - require authentication (session or JWT)
 	plugins := r.Group("/plugins")
-	plugins.Use(JWTAuthMiddleware())
+	plugins.Use(SessionOrJWTAuth())
 	{
 		plugins.GET("", HandlePluginList)
 		plugins.POST("/:name/call/:fn", HandlePluginCall)
@@ -473,9 +487,9 @@ func RegisterPluginAPIRoutes(r *gin.RouterGroup) {
 		plugins.GET("/:name/widgets/:id", HandlePluginWidget)
 	}
 
-	// Plugin management - require admin
+	// Plugin management - require admin (session or JWT)
 	pluginAdmin := r.Group("/plugins")
-	pluginAdmin.Use(JWTAuthMiddleware(), RequireAdmin())
+	pluginAdmin.Use(SessionOrJWTAuth(), RequireAdmin())
 	{
 		pluginAdmin.POST("/:name/enable", HandlePluginEnable)
 		pluginAdmin.POST("/:name/disable", HandlePluginDisable)
@@ -486,16 +500,21 @@ func RegisterPluginAPIRoutes(r *gin.RouterGroup) {
 }
 
 // RequireAdmin middleware checks if the user is an admin.
+// Supports both session-based auth (user_role) and JWT auth (isInAdminGroup).
 func RequireAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Check if user is in admin group (set by auth middleware)
-		isAdmin, exists := c.Get("isInAdminGroup")
-		if !exists || isAdmin != true {
-			c.JSON(http.StatusForbidden, gin.H{"error": "admin access required"})
-			c.Abort()
+		// Check session-based auth (user_role set by YAML route middleware)
+		if role, exists := c.Get("user_role"); exists && role == "Admin" {
+			c.Next()
 			return
 		}
-		c.Next()
+		// Check JWT-based auth (isInAdminGroup set by JWT/API token middleware)
+		if isAdmin, exists := c.Get("isInAdminGroup"); exists && isAdmin == true {
+			c.Next()
+			return
+		}
+		c.JSON(http.StatusForbidden, gin.H{"error": "admin access required"})
+		c.Abort()
 	}
 }
 

@@ -155,12 +155,16 @@ func pluginConfigKey(name string) string {
 }
 
 // loadPluginEnabled checks if a plugin is enabled via sysconfig.
-// Returns true (enabled) by default for most plugins. Development/example
-// plugins listed in defaultDisabledPlugins return false unless explicitly
-// enabled via sysconfig.
+// Queries sysconfig_modified then sysconfig_default for an explicit
+// enabled/disabled setting. If a valid "effective_value" is found,
+// that value is authoritative. If no valid sysconfig entry exists
+// (no DB, mock DB, fresh install without seed data), defaults to enabled.
+//
+// To disable example plugins in production, seed sysconfig_default with
+// effective_value="0" for Plugin::<name>::Enabled during DB migration.
 func (m *Manager) loadPluginEnabled(ctx context.Context, name string) bool {
 	if m.host == nil {
-		return !defaultDisabledPlugins[name]
+		return true
 	}
 
 	key := pluginConfigKey(name)
@@ -191,7 +195,34 @@ func (m *Manager) loadPluginEnabled(ctx context.Context, name string) bool {
 		}
 	}
 	
-	return !defaultDisabledPlugins[name]
+	// No sysconfig entry found — default to enabled.
+	// Example plugins are disabled via sysconfig seed data in DB migrations,
+	// not via hardcoded logic here.
+	return true
+}
+
+// seedDefaultDisabled inserts a sysconfig_default entry to disable example
+// plugins on first registration. Only runs when the DB is reachable and
+// no entry already exists. This is a no-op for non-example plugins and
+// for test environments with mock hosts.
+func (m *Manager) seedDefaultDisabled(ctx context.Context, name string) {
+	if m.host == nil || !defaultDisabledPlugins[name] {
+		return
+	}
+
+	key := pluginConfigKey(name)
+
+	// Check if an entry already exists in sysconfig_default
+	rows, err := m.host.DBQuery(ctx, `SELECT 1 FROM sysconfig_default WHERE name = ? LIMIT 1`, key)
+	if err != nil || len(rows) > 0 {
+		return // DB error (mock/test) or entry already exists
+	}
+
+	// Seed disabled state
+	m.host.DBExec(ctx, `
+		INSERT INTO sysconfig_default (name, effective_value, is_valid, create_by, change_by, create_time, change_time)
+		VALUES (?, '0', 1, 1, 1, NOW(), NOW())
+	`, key)
 }
 
 // savePluginEnabled persists a plugin's enabled state to sysconfig_modified.
@@ -253,6 +284,9 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 		delete(m.sandboxes, manifest.Name)
 		return fmt.Errorf("plugin %q init failed: %w", manifest.Name, err)
 	}
+
+	// Seed default-disabled state for example plugins on first registration
+	m.seedDefaultDisabled(ctx, manifest.Name)
 
 	// Check if this plugin is enabled via sysconfig
 	isEnabled := m.loadPluginEnabled(ctx, manifest.Name)

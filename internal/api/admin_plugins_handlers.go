@@ -18,12 +18,28 @@ func init() {
 // HandleAdminPluginLogs renders the plugin logs viewer page.
 // GET /admin/plugins/logs
 func HandleAdminPluginLogs(c *gin.Context) {
-	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/plugin_logs.pongo2", pongo2.Context{})
+	user := getUserMapForTemplate(c)
+	isInAdminGroup := false
+	if v, ok := user["IsInAdminGroup"].(bool); ok {
+		isInAdminGroup = v
+	}
+
+	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/plugin_logs.pongo2", pongo2.Context{
+		"ActivePage":     "admin",
+		"User":           user,
+		"IsInAdminGroup": isInAdminGroup,
+	})
 }
 
 // HandleAdminPlugins renders the admin plugin management page.
 // GET /admin/plugins
 func HandleAdminPlugins(c *gin.Context) {
+	user := getUserMapForTemplate(c)
+	isInAdminGroup := false
+	if v, ok := user["IsInAdminGroup"].(bool); ok {
+		isInAdminGroup = v
+	}
+
 	// Get plugin list
 	var plugins []map[string]any
 	var enabledCount, disabledCount int
@@ -58,12 +74,13 @@ func HandleAdminPlugins(c *gin.Context) {
 	// Serialize plugins to JSON for JavaScript
 	pluginsJSON, _ := json.Marshal(plugins)
 
-	ctx := pongo2.Context{
-		"Plugins":       plugins,
-		"PluginsJSON":   string(pluginsJSON),
-		"EnabledCount":  enabledCount,
-		"DisabledCount": disabledCount,
-	}
-
-	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/plugins.pongo2", ctx)
+	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/plugins.pongo2", pongo2.Context{
+		"ActivePage":     "admin",
+		"User":           user,
+		"IsInAdminGroup": isInAdminGroup,
+		"Plugins":        plugins,
+		"PluginsJSON":    string(pluginsJSON),
+		"EnabledCount":   enabledCount,
+		"DisabledCount":  disabledCount,
+	})
 }
