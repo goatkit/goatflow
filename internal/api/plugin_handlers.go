@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -139,6 +140,7 @@ func HandlePluginEnable(c *gin.Context) {
 
 	name := c.Param("name")
 	if err := pluginManager.Enable(name); err != nil {
+		plugin.GetLogBuffer().Log(name, "error", fmt.Sprintf("Failed to enable plugin: %s", err.Error()), nil)
 		// Return 404 for plugin not found errors
 		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "not registered") {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -148,6 +150,7 @@ func HandlePluginEnable(c *gin.Context) {
 		return
 	}
 
+	plugin.GetLogBuffer().Log(name, "info", fmt.Sprintf("Plugin enabled: %s", name), nil)
 	c.JSON(http.StatusOK, gin.H{"status": "enabled"})
 }
 
@@ -161,6 +164,7 @@ func HandlePluginDisable(c *gin.Context) {
 
 	name := c.Param("name")
 	if err := pluginManager.Disable(name); err != nil {
+		plugin.GetLogBuffer().Log(name, "error", fmt.Sprintf("Failed to disable plugin: %s", err.Error()), nil)
 		// Return 404 for plugin not found errors
 		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "not registered") {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -170,6 +174,7 @@ func HandlePluginDisable(c *gin.Context) {
 		return
 	}
 
+	plugin.GetLogBuffer().Log(name, "info", fmt.Sprintf("Plugin disabled: %s", name), nil)
 	c.JSON(http.StatusOK, gin.H{"status": "disabled"})
 }
 
@@ -514,6 +519,7 @@ func HandlePluginUpload(c *gin.Context) {
 	// Get uploaded file
 	file, header, err := c.Request.FormFile("plugin")
 	if err != nil {
+		plugin.GetLogBuffer().Log("system", "error", fmt.Sprintf("Plugin upload failed: %s", err.Error()), nil)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
 		return
 	}
@@ -567,6 +573,7 @@ func HandlePluginUpload(c *gin.Context) {
 		pkg, err := packaging.ExtractPlugin(tempPath, pluginDir)
 		os.Remove(tempPath) // Clean up temp file
 		if err != nil {
+			plugin.GetLogBuffer().Log("system", "error", fmt.Sprintf("Plugin upload failed: invalid package: %s", err.Error()), nil)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plugin package: " + err.Error()})
 			return
 		}
@@ -574,6 +581,7 @@ func HandlePluginUpload(c *gin.Context) {
 		destPath = pkg.BinaryPath
 		runtimeType := pkg.RuntimeType
 		log.Printf("🔌 Plugin package extracted: %s v%s (runtime: %s)", pluginName, pkg.Manifest.Version, runtimeType)
+		plugin.GetLogBuffer().Log(pluginName, "info", fmt.Sprintf("Plugin uploaded: %s (runtime: %s, size: %d bytes)", pluginName, runtimeType, header.Size), nil)
 
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Plugin uploaded successfully",
@@ -592,6 +600,7 @@ func HandlePluginUpload(c *gin.Context) {
 		}
 		pluginName = strings.TrimSuffix(filename, ".wasm")
 		log.Printf("🔌 Plugin uploaded: %s", pluginName)
+		plugin.GetLogBuffer().Log(pluginName, "info", fmt.Sprintf("Plugin uploaded: %s (runtime: wasm, size: %d bytes)", pluginName, header.Size), nil)
 	}
 
 	c.JSON(http.StatusOK, gin.H{

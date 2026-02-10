@@ -139,16 +139,28 @@ func (m *Manager) AllPluginStats() []StatsSnapshot {
 	return result
 }
 
+// defaultDisabledPlugins lists plugins that are disabled by default.
+// These are development/example plugins not intended for production use.
+// They can still be enabled via the admin UI or API.
+var defaultDisabledPlugins = map[string]bool{
+	"hello":        true,
+	"hello-wasm":   true,
+	"hello-grpc":   true,
+	"test-hostapi": true,
+}
+
 // pluginConfigKey returns the sysconfig key for a plugin's enabled state.
 func pluginConfigKey(name string) string {
 	return "Plugin::" + name + "::Enabled"
 }
 
 // loadPluginEnabled checks if a plugin is enabled via sysconfig.
-// Returns true (enabled) by default if no setting exists.
+// Returns true (enabled) by default for most plugins. Development/example
+// plugins listed in defaultDisabledPlugins return false unless explicitly
+// enabled via sysconfig.
 func (m *Manager) loadPluginEnabled(ctx context.Context, name string) bool {
 	if m.host == nil {
-		return true // Default enabled if no host API
+		return !defaultDisabledPlugins[name]
 	}
 
 	key := pluginConfigKey(name)
@@ -179,7 +191,7 @@ func (m *Manager) loadPluginEnabled(ctx context.Context, name string) bool {
 		}
 	}
 	
-	return true // Default enabled if not configured
+	return !defaultDisabledPlugins[name]
 }
 
 // savePluginEnabled persists a plugin's enabled state to sysconfig_modified.
