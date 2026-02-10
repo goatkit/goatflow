@@ -227,6 +227,10 @@ func (p *WASMPlugin) hostLog(ctx context.Context, level uint32, msgPtr, msgLen u
 }
 
 // dispatchHostCall routes host API calls to the appropriate method.
+// SECURITY: This function calls through p.host, which is set during Init() 
+// to a SandboxedHostAPI instance. This ensures that WASM plugins are subject
+// to the same permission checks, rate limiting, and resource accounting as
+// gRPC plugins. The sandbox is applied at the Manager level during registration.
 func (p *WASMPlugin) dispatchHostCall(ctx context.Context, fn string, args []byte) ([]byte, error) {
 	switch fn {
 	case "db_query":

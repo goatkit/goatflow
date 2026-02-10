@@ -13,6 +13,13 @@ import (
 	"github.com/goatkit/goatflow/internal/plugin"
 )
 
+const (
+	// Security limits for ZIP extraction
+	MaxFileSize       = 100 << 20 // 100 MB per file
+	MaxTotalSize      = 500 << 20 // 500 MB total extraction
+	MaxFileCount      = 1000      // Maximum number of files in archive
+)
+
 // PluginPackage represents a packaged plugin (ZIP file).
 type PluginPackage struct {
 	Manifest plugin.GKRegistration
@@ -102,6 +109,10 @@ func ExtractPlugin(packagePath, targetDir string) (*PluginPackage, error) {
 		Assets: make(map[string]string),
 	}
 
+	// Security counters to prevent zip bombs
+	var totalSize int64
+	var fileCount int
+
 	// First pass: find and validate manifest
 	var manifestFile *zip.File
 	for _, f := range reader.File {
@@ -140,27 +151,54 @@ func ExtractPlugin(packagePath, targetDir string) (*PluginPackage, error) {
 		return nil, fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
-	// Extract all files
+	// Extract all files with security checks
 	for _, f := range reader.File {
 		if f.FileInfo().IsDir() {
 			continue
 		}
 
+		// Security: Check file count limit
+		fileCount++
+		if fileCount > MaxFileCount {
+			return nil, fmt.Errorf("archive contains too many files (max %d)", MaxFileCount)
+		}
+
+		// Security: Check for symlinks
+		if f.Mode()&os.ModeSymlink != 0 {
+			return nil, fmt.Errorf("archive contains symbolic links, which are not allowed")
+		}
+
+		// Security: Check individual file size
+		if f.UncompressedSize64 > MaxFileSize {
+			return nil, fmt.Errorf("file %s too large: %d bytes (max %d)", f.Name, f.UncompressedSize64, MaxFileSize)
+		}
+
+		// Security: Check total extraction size
+		totalSize += int64(f.UncompressedSize64)
+		if totalSize > MaxTotalSize {
+			return nil, fmt.Errorf("archive too large when extracted: %d bytes (max %d)", totalSize, MaxTotalSize)
+		}
+
 		// Security: prevent path traversal
 		cleanName := filepath.Clean(f.Name)
-		if strings.HasPrefix(cleanName, "..") {
-			continue
+		if strings.HasPrefix(cleanName, "..") || strings.Contains(cleanName, "..") {
+			return nil, fmt.Errorf("archive contains path traversal: %s", f.Name)
 		}
 
 		destPath := filepath.Join(pluginDir, cleanName)
+		
+		// Additional security: ensure destination is within plugin directory
+		if !strings.HasPrefix(destPath, pluginDir+string(os.PathSeparator)) {
+			return nil, fmt.Errorf("path traversal detected: %s resolves outside plugin directory", f.Name)
+		}
 
 		// Create parent directories
 		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
 			return nil, fmt.Errorf("failed to create directory: %w", err)
 		}
 
-		// Extract file
-		if err := extractZipFile(f, destPath); err != nil {
+		// Extract file with size limit
+		if err := extractZipFileWithLimits(f, destPath); err != nil {
 			return nil, fmt.Errorf("failed to extract %s: %w", f.Name, err)
 		}
 
@@ -258,6 +296,10 @@ func addFileToZip(w *zip.Writer, srcPath, zipPath string) error {
 }
 
 func extractZipFile(f *zip.File, destPath string) error {
+	return extractZipFileWithLimits(f, destPath)
+}
+
+func extractZipFileWithLimits(f *zip.File, destPath string) error {
 	rc, err := f.Open()
 	if err != nil {
 		return err
@@ -270,6 +312,19 @@ func extractZipFile(f *zip.File, destPath string) error {
 	}
 	defer outFile.Close()
 
-	_, err = io.Copy(outFile, rc)
-	return err
+	// Use LimitReader to prevent files from expanding beyond their declared size
+	limitedReader := io.LimitReader(rc, MaxFileSize)
+	
+	written, err := io.Copy(outFile, limitedReader)
+	if err != nil {
+		return err
+	}
+
+	// Verify that the extracted size matches the expected size
+	if written != int64(f.UncompressedSize64) {
+		return fmt.Errorf("extracted size mismatch for %s: expected %d, got %d", 
+			f.Name, f.UncompressedSize64, written)
+	}
+
+	return nil
 }

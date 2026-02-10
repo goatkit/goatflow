@@ -2,6 +2,7 @@ package loader
 
 import (
 	"context"
+	"crypto/ed25519"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -12,15 +13,27 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"gopkg.in/yaml.v3"
 
 	"github.com/goatkit/goatflow/internal/plugin"
+	"github.com/goatkit/goatflow/internal/plugin/grpc"
+	"github.com/goatkit/goatflow/internal/plugin/signing"
 	"github.com/goatkit/goatflow/internal/plugin/wasm"
 )
 
+// PluginManifest represents a plugin.yaml file for gRPC plugins.
+type PluginManifest struct {
+	Name      string                  `yaml:"name"`
+	Version   string                  `yaml:"version"`
+	Runtime   string                  `yaml:"runtime"`             // "grpc" or "wasm"
+	Binary    string                  `yaml:"binary"`              // Relative path to executable
+	Resources *plugin.ResourceRequest `yaml:"resources,omitempty"` // Requested resource limits
+}
+
 // DiscoveredPlugin holds info about a plugin found but not yet loaded.
 type DiscoveredPlugin struct {
-	Name     string // Derived from filename
-	Path     string // Full path to .wasm file
+	Name     string // Derived from filename or manifest
+	Path     string // Full path to .wasm file or plugin directory
 	Type     string // "wasm" or "grpc"
 	Loaded   bool   // Whether it's been loaded
 	LoadedAt time.Time
@@ -35,7 +48,15 @@ type Loader struct {
 	// Lazy loading
 	mu         sync.RWMutex
 	discovered map[string]*DiscoveredPlugin // name -> discovery info
-	lazy       bool                         // If true, don't load on discover
+
+	// gRPC plugin manifests (name -> manifest)
+	manifests map[string]*PluginManifest
+
+	lazy bool // If true, don't load on discover
+
+	// Signature verification
+	signatureVerification bool
+	trustedKeys          []ed25519.PublicKey
 
 	// Hot reload
 	watcher     *fsnotify.Watcher
@@ -55,6 +76,15 @@ func WithLazyLoading() LoaderOption {
 	}
 }
 
+// WithSignatureVerification enables plugin binary signature verification.
+// Only plugins signed with one of the trusted keys will be allowed to load.
+func WithSignatureVerification(trustedKeys []ed25519.PublicKey) LoaderOption {
+	return func(l *Loader) {
+		l.signatureVerification = true
+		l.trustedKeys = trustedKeys
+	}
+}
+
 // NewLoader creates a plugin loader for the given directory.
 func NewLoader(pluginDir string, manager *plugin.Manager, logger *slog.Logger, opts ...LoaderOption) *Loader {
 	if logger == nil {
@@ -65,6 +95,7 @@ func NewLoader(pluginDir string, manager *plugin.Manager, logger *slog.Logger, o
 		manager:    manager,
 		logger:     logger,
 		discovered: make(map[string]*DiscoveredPlugin),
+		manifests:  make(map[string]*PluginManifest),
 		debounce:   make(map[string]*time.Timer),
 	}
 	for _, opt := range opts {
@@ -74,7 +105,7 @@ func NewLoader(pluginDir string, manager *plugin.Manager, logger *slog.Logger, o
 }
 
 // DiscoverAll scans the plugin directory and records available plugins without loading them.
-// Use with lazy loading - plugins will be loaded on first use.
+// Discovers both .wasm files and gRPC plugins (directories with plugin.yaml).
 func (l *Loader) DiscoverAll() (int, error) {
 	// Ensure plugin directory exists
 	if _, err := os.Stat(l.pluginDir); os.IsNotExist(err) {
@@ -86,6 +117,8 @@ func (l *Loader) DiscoverAll() (int, error) {
 	}
 
 	discovered := 0
+
+	// Walk for .wasm files
 	err := filepath.WalkDir(l.pluginDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -105,12 +138,78 @@ func (l *Loader) DiscoverAll() (int, error) {
 			}
 			l.mu.Unlock()
 			discovered++
-			l.logger.Debug("discovered plugin", "name", name, "path", path)
+			l.logger.Debug("discovered WASM plugin", "name", name, "path", path)
 		}
 		return nil
 	})
+	if err != nil {
+		return discovered, err
+	}
 
-	return discovered, err
+	// Scan top-level directories for plugin.yaml (gRPC plugins)
+	grpcCount, grpcErr := l.discoverGRPCPlugins()
+	discovered += grpcCount
+
+	if grpcErr != nil {
+		return discovered, grpcErr
+	}
+
+	return discovered, nil
+}
+
+// discoverGRPCPlugins scans for directories containing plugin.yaml.
+func (l *Loader) discoverGRPCPlugins() (int, error) {
+	entries, err := os.ReadDir(l.pluginDir)
+	if err != nil {
+		return 0, fmt.Errorf("read plugin dir: %w", err)
+	}
+
+	discovered := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		manifestPath := filepath.Join(l.pluginDir, entry.Name(), "plugin.yaml")
+		manifest, err := loadManifest(manifestPath)
+		if err != nil {
+			continue // No valid plugin.yaml, skip
+		}
+
+		if manifest.Runtime != "grpc" {
+			continue
+		}
+
+		if manifest.Name == "" {
+			manifest.Name = entry.Name()
+		}
+
+		l.mu.Lock()
+		l.discovered[manifest.Name] = &DiscoveredPlugin{
+			Name: manifest.Name,
+			Path: filepath.Join(l.pluginDir, entry.Name()),
+			Type: "grpc",
+		}
+		l.manifests[manifest.Name] = manifest
+		l.mu.Unlock()
+		discovered++
+		l.logger.Debug("discovered gRPC plugin", "name", manifest.Name, "path", filepath.Join(l.pluginDir, entry.Name()))
+	}
+
+	return discovered, nil
+}
+
+// loadManifest reads and parses a plugin.yaml file.
+func loadManifest(path string) (*PluginManifest, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var m PluginManifest
+	if err := yaml.Unmarshal(data, &m); err != nil {
+		return nil, fmt.Errorf("parse plugin.yaml: %w", err)
+	}
+	return &m, nil
 }
 
 // Discovered returns the names of discovered (but possibly not loaded) plugins.
@@ -118,7 +217,7 @@ func (l *Loader) DiscoverAll() (int, error) {
 func (l *Loader) Discovered() []string {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
-	
+
 	result := make([]string, 0, len(l.discovered))
 	for name := range l.discovered {
 		result = append(result, name)
@@ -130,7 +229,7 @@ func (l *Loader) Discovered() []string {
 func (l *Loader) DiscoveredPlugins() []*DiscoveredPlugin {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
-	
+
 	result := make([]*DiscoveredPlugin, 0, len(l.discovered))
 	for _, d := range l.discovered {
 		result = append(result, d)
@@ -159,8 +258,23 @@ func (l *Loader) EnsureLoaded(ctx context.Context, name string) error {
 		return nil
 	}
 
-	l.logger.Info("lazy loading plugin", "name", name)
-	if err := l.loadWASMPlugin(ctx, d.Path); err != nil {
+	l.logger.Info("lazy loading plugin", "name", name, "type", d.Type)
+
+	var err error
+	switch d.Type {
+	case "wasm":
+		err = l.loadWASMPlugin(ctx, d.Path)
+	case "grpc":
+		manifest := l.manifests[name]
+		if manifest == nil {
+			return fmt.Errorf("plugin %q missing manifest", name)
+		}
+		err = l.loadGRPCPlugin(ctx, d.Path, manifest)
+	default:
+		return fmt.Errorf("plugin %q has unknown type %q", name, d.Type)
+	}
+
+	if err != nil {
 		return err
 	}
 
@@ -195,7 +309,7 @@ func (l *Loader) LoadAll(ctx context.Context) (int, []error) {
 		return 0, nil
 	}
 
-	// Walk the plugin directory
+	// Walk the plugin directory for WASM files
 	err := filepath.WalkDir(l.pluginDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -239,12 +353,148 @@ func (l *Loader) LoadAll(ctx context.Context) (int, []error) {
 		errors = append(errors, fmt.Errorf("walk plugin dir: %w", err))
 	}
 
+	// Load gRPC plugins from directories with plugin.yaml
+	grpcLoaded, grpcErrors := l.loadGRPCPlugins(ctx)
+	loaded += grpcLoaded
+	errors = append(errors, grpcErrors...)
+
 	return loaded, errors
+}
+
+// loadGRPCPlugins discovers and loads all gRPC plugins.
+func (l *Loader) loadGRPCPlugins(ctx context.Context) (int, []error) {
+	entries, err := os.ReadDir(l.pluginDir)
+	if err != nil {
+		return 0, []error{fmt.Errorf("read plugin dir for gRPC: %w", err)}
+	}
+
+	loaded := 0
+	var errors []error
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		pluginDir := filepath.Join(l.pluginDir, entry.Name())
+		manifestPath := filepath.Join(pluginDir, "plugin.yaml")
+
+		manifest, err := loadManifest(manifestPath)
+		if err != nil {
+			continue // No valid plugin.yaml, skip
+		}
+
+		if manifest.Runtime != "grpc" {
+			continue
+		}
+
+		if manifest.Name == "" {
+			manifest.Name = entry.Name()
+		}
+
+		l.mu.Lock()
+		l.manifests[manifest.Name] = manifest
+		l.mu.Unlock()
+
+		if err := l.loadGRPCPlugin(ctx, pluginDir, manifest); err != nil {
+			errors = append(errors, fmt.Errorf("load gRPC plugin %s: %w", manifest.Name, err))
+		} else {
+			l.mu.Lock()
+			l.discovered[manifest.Name] = &DiscoveredPlugin{
+				Name:     manifest.Name,
+				Path:     pluginDir,
+				Type:     "grpc",
+				Loaded:   true,
+				LoadedAt: time.Now(),
+			}
+			l.mu.Unlock()
+			loaded++
+		}
+	}
+
+	return loaded, errors
+}
+
+// loadGRPCPlugin loads a single gRPC plugin from its directory.
+func (l *Loader) loadGRPCPlugin(ctx context.Context, pluginDir string, manifest *PluginManifest) error {
+	binaryPath := manifest.Binary
+	if binaryPath == "" {
+		binaryPath = manifest.Name
+	}
+
+	// Resolve relative binary path against plugin directory
+	if !filepath.IsAbs(binaryPath) {
+		binaryPath = filepath.Join(pluginDir, binaryPath)
+	}
+
+	// Check binary exists and is executable
+	info, err := os.Stat(binaryPath)
+	if err != nil {
+		return fmt.Errorf("binary not found at %s: %w", binaryPath, err)
+	}
+	if info.Mode()&0111 == 0 {
+		return fmt.Errorf("binary %s is not executable", binaryPath)
+	}
+
+	// Verify binary signature if verification is enabled
+	if l.signatureVerification || signing.IsSignatureRequired() {
+		sigPath := signing.DefaultSignaturePath(binaryPath)
+		if err := signing.VerifyBinary(binaryPath, sigPath, l.trustedKeys); err != nil {
+			return fmt.Errorf("signature verification failed for %s: %w", manifest.Name, err)
+		}
+		l.logger.Info("plugin signature verified", "name", manifest.Name, "binary", binaryPath)
+	} else {
+		// Log warning about unsigned plugin
+		l.logger.Warn("loading unsigned plugin (signature verification disabled)", 
+			"name", manifest.Name, 
+			"binary", binaryPath,
+			"recommendation", "enable signature verification in production")
+	}
+
+	l.logger.Info("loading gRPC plugin", "name", manifest.Name, "binary", binaryPath)
+
+	// Get or create the resource policy for this plugin
+	policy, _ := l.manager.GetPolicy(manifest.Name)
+	if policy.PluginName == "" {
+		// Create default policy if none exists
+		policy = plugin.DefaultResourcePolicy(manifest.Name)
+	}
+
+	gp, err := grpc.LoadGRPCPlugin(binaryPath, manifest.Name, l.manager.Host(), policy)
+	if err != nil {
+		return fmt.Errorf("load gRPC plugin: %w", err)
+	}
+
+	if err := l.manager.Register(ctx, gp); err != nil {
+		gp.Shutdown(ctx)
+		return fmt.Errorf("register gRPC plugin: %w", err)
+	}
+
+	l.logger.Info("loaded gRPC plugin",
+		"name", manifest.Name,
+		"version", manifest.Version,
+	)
+
+	return nil
 }
 
 // loadWASMPlugin loads a single WASM plugin file.
 func (l *Loader) loadWASMPlugin(ctx context.Context, path string) error {
 	l.logger.Info("loading WASM plugin", "path", path)
+
+	// Verify WASM signature if verification is enabled
+	if l.signatureVerification || signing.IsSignatureRequired() {
+		sigPath := signing.DefaultSignaturePath(path)
+		if err := signing.VerifyBinary(path, sigPath, l.trustedKeys); err != nil {
+			return fmt.Errorf("signature verification failed for WASM plugin %s: %w", filepath.Base(path), err)
+		}
+		l.logger.Info("WASM plugin signature verified", "path", path)
+	} else {
+		// Log warning about unsigned plugin
+		l.logger.Warn("loading unsigned WASM plugin (signature verification disabled)", 
+			"path", path,
+			"recommendation", "enable signature verification in production")
+	}
 
 	// Load the WASM module
 	plugin, err := wasm.LoadFromFile(ctx, path)
@@ -288,27 +538,93 @@ func (l *Loader) Unload(ctx context.Context, name string) error {
 	return l.manager.Unregister(ctx, name)
 }
 
-// Reload unloads and reloads a plugin by name.
+// Reload unloads and reloads a plugin by name using atomic replacement to avoid race conditions.
 func (l *Loader) Reload(ctx context.Context, name string) error {
-	// Find the plugin file
+	l.mu.RLock()
+	d, exists := l.discovered[name]
+	manifest := l.manifests[name]
+	l.mu.RUnlock()
+
+	if !exists {
+		// Fall back to legacy WASM reload for backwards compatibility
+		return l.reloadWASM(ctx, name)
+	}
+
+	// Load the new plugin version first
+	var newPlugin plugin.Plugin
+	var err error
+
+	switch d.Type {
+	case "wasm":
+		newPlugin, err = wasm.LoadFromFile(ctx, d.Path)
+		if err != nil {
+			return fmt.Errorf("failed to load new WASM plugin: %w", err)
+		}
+	case "grpc":
+		if manifest == nil {
+			return fmt.Errorf("plugin %q missing manifest", name)
+		}
+		
+		// Get or create the resource policy for this plugin
+		policy, _ := l.manager.GetPolicy(manifest.Name)
+		if policy.PluginName == "" {
+			// Create default policy if none exists
+			policy = plugin.DefaultResourcePolicy(manifest.Name)
+		}
+
+		binaryPath := manifest.Binary
+		if binaryPath == "" {
+			binaryPath = manifest.Name
+		}
+		if !filepath.IsAbs(binaryPath) {
+			binaryPath = filepath.Join(d.Path, binaryPath)
+		}
+
+		newPlugin, err = grpc.LoadGRPCPlugin(binaryPath, manifest.Name, l.manager.Host(), policy)
+		if err != nil {
+			return fmt.Errorf("failed to load new gRPC plugin: %w", err)
+		}
+	default:
+		return fmt.Errorf("unknown plugin type %q", d.Type)
+	}
+
+	// Check if plugin is currently registered
+	if _, found := l.manager.Get(name); found {
+		// Use atomic replacement to avoid race conditions
+		if err := l.manager.ReplacePlugin(ctx, name, newPlugin); err != nil {
+			// Shutdown the new plugin since replacement failed
+			newPlugin.Shutdown(ctx)
+			return fmt.Errorf("atomic replacement failed: %w", err)
+		}
+	} else {
+		// Plugin not currently registered, just register the new one
+		if err := l.manager.Register(ctx, newPlugin); err != nil {
+			newPlugin.Shutdown(ctx)
+			return fmt.Errorf("register new plugin: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// reloadWASM is the legacy reload path for WASM plugins not yet discovered.
+func (l *Loader) reloadWASM(ctx context.Context, name string) error {
 	path := filepath.Join(l.pluginDir, name+".wasm")
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return fmt.Errorf("plugin file not found: %s", path)
 	}
 
-	// Unload if currently loaded
 	if _, exists := l.manager.Get(name); exists {
 		if err := l.manager.Unregister(ctx, name); err != nil {
 			return fmt.Errorf("unload: %w", err)
 		}
 	}
 
-	// Load fresh
 	return l.loadWASMPlugin(ctx, path)
 }
 
 // WatchDir sets up a file watcher for hot reload.
-// When WASM files are created, modified, or removed, the corresponding plugin is reloaded.
+// Watches for .wasm file changes and gRPC binary changes (via plugin.yaml).
 func (l *Loader) WatchDir(ctx context.Context) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -326,7 +642,7 @@ func (l *Loader) WatchDir(ctx context.Context) error {
 		return fmt.Errorf("watch plugin dir: %w", err)
 	}
 
-	// Also watch subdirectories (for plugins in folders)
+	// Also watch subdirectories (for gRPC plugin binaries and WASM in folders)
 	filepath.WalkDir(l.pluginDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || !d.IsDir() {
 			return nil
@@ -384,23 +700,231 @@ func (l *Loader) watchLoop() {
 
 // handleFSEvent processes a single file system event with debouncing.
 func (l *Loader) handleFSEvent(event fsnotify.Event) {
-	// Only care about WASM files
-	if !strings.HasSuffix(strings.ToLower(event.Name), ".wasm") {
+	path := event.Name
+	baseName := filepath.Base(path)
+
+	// Check if this is a WASM file
+	isWASM := strings.HasSuffix(strings.ToLower(baseName), ".wasm")
+
+	// Check if this is a gRPC plugin binary change
+	isGRPC := l.isGRPCBinaryPath(path)
+
+	// Check if a new plugin.yaml was added (new gRPC plugin)
+	isManifest := baseName == "plugin.yaml"
+
+	if !isWASM && !isGRPC && !isManifest {
 		return
 	}
 
 	// Debounce rapid changes (e.g., during build)
 	l.watchMu.Lock()
-	if timer, exists := l.debounce[event.Name]; exists {
+	if timer, exists := l.debounce[path]; exists {
 		timer.Stop()
 	}
-	l.debounce[event.Name] = time.AfterFunc(500*time.Millisecond, func() {
-		l.processFileChange(event)
+	l.debounce[path] = time.AfterFunc(500*time.Millisecond, func() {
+		if isManifest {
+			l.processManifestChange(event)
+		} else if isGRPC {
+			l.processGRPCBinaryChange(event)
+		} else {
+			l.processFileChange(event)
+		}
 	})
 	l.watchMu.Unlock()
 }
 
-// processFileChange handles the actual plugin reload after debounce.
+// isGRPCBinaryPath checks if the changed file is a known gRPC plugin binary.
+func (l *Loader) isGRPCBinaryPath(path string) bool {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	for _, manifest := range l.manifests {
+		binaryName := manifest.Binary
+		if binaryName == "" {
+			binaryName = manifest.Name
+		}
+
+		// Check if this path matches any known gRPC binary
+		dir := filepath.Dir(path)
+		pluginDir := filepath.Join(l.pluginDir, manifest.Name)
+
+		// Match by directory + binary name
+		if dir == pluginDir && filepath.Base(path) == filepath.Base(binaryName) {
+			return true
+		}
+
+		// Also match by full resolved path
+		resolvedBinary := binaryName
+		if !filepath.IsAbs(resolvedBinary) {
+			resolvedBinary = filepath.Join(pluginDir, resolvedBinary)
+		}
+		if path == resolvedBinary {
+			return true
+		}
+	}
+
+	return false
+}
+
+// pluginNameForBinaryPath returns the plugin name for a gRPC binary path.
+func (l *Loader) pluginNameForBinaryPath(path string) string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	for name, manifest := range l.manifests {
+		binaryName := manifest.Binary
+		if binaryName == "" {
+			binaryName = manifest.Name
+		}
+
+		dir := filepath.Dir(path)
+		pluginDir := filepath.Join(l.pluginDir, name)
+
+		if dir == pluginDir && filepath.Base(path) == filepath.Base(binaryName) {
+			return name
+		}
+
+		resolvedBinary := binaryName
+		if !filepath.IsAbs(resolvedBinary) {
+			resolvedBinary = filepath.Join(pluginDir, resolvedBinary)
+		}
+		if path == resolvedBinary {
+			return name
+		}
+	}
+
+	return ""
+}
+
+// processManifestChange handles plugin.yaml create/modify events.
+func (l *Loader) processManifestChange(event fsnotify.Event) {
+	path := event.Name
+	pluginDir := filepath.Dir(path)
+
+	switch {
+	case event.Op&(fsnotify.Create|fsnotify.Write) != 0:
+		manifest, err := loadManifest(path)
+		if err != nil {
+			l.logger.Error("failed to parse new plugin.yaml", "path", path, "error", err)
+			return
+		}
+
+		if manifest.Runtime != "grpc" {
+			return
+		}
+
+		if manifest.Name == "" {
+			manifest.Name = filepath.Base(pluginDir)
+		}
+
+		l.logger.Info("🔌 new gRPC plugin detected", "name", manifest.Name)
+
+		l.mu.Lock()
+		l.manifests[manifest.Name] = manifest
+		l.discovered[manifest.Name] = &DiscoveredPlugin{
+			Name: manifest.Name,
+			Path: pluginDir,
+			Type: "grpc",
+		}
+		l.mu.Unlock()
+
+		// Try to load it
+		if err := l.loadGRPCPlugin(l.watchCtx, pluginDir, manifest); err != nil {
+			l.logger.Error("failed to load new gRPC plugin", "name", manifest.Name, "error", err)
+		} else {
+			l.mu.Lock()
+			d := l.discovered[manifest.Name]
+			d.Loaded = true
+			d.LoadedAt = time.Now()
+			l.mu.Unlock()
+			l.logger.Info("✅ gRPC plugin loaded", "name", manifest.Name)
+		}
+
+		// Watch the plugin subdirectory for binary changes
+		if l.watcher != nil {
+			l.watcher.Add(pluginDir)
+		}
+
+	case event.Op&fsnotify.Remove != 0:
+		// plugin.yaml removed — unload the plugin
+		name := filepath.Base(pluginDir)
+
+		l.mu.RLock()
+		// Try to find by directory name matching a known plugin
+		for n, d := range l.discovered {
+			if d.Path == pluginDir {
+				name = n
+				break
+			}
+		}
+		l.mu.RUnlock()
+
+		l.logger.Info("🗑️ gRPC plugin manifest removed", "name", name)
+		if err := l.manager.Unregister(l.watchCtx, name); err != nil {
+			l.logger.Warn("failed to unregister removed gRPC plugin", "name", name, "error", err)
+		}
+
+		l.mu.Lock()
+		delete(l.discovered, name)
+		delete(l.manifests, name)
+		l.mu.Unlock()
+	}
+
+	// Clean up debounce timer
+	l.watchMu.Lock()
+	delete(l.debounce, event.Name)
+	l.watchMu.Unlock()
+}
+
+// processGRPCBinaryChange handles gRPC plugin binary create/modify events.
+func (l *Loader) processGRPCBinaryChange(event fsnotify.Event) {
+	// Check if watch context is cancelled before processing
+	select {
+	case <-l.watchCtx.Done():
+		return
+	default:
+	}
+
+	name := l.pluginNameForBinaryPath(event.Name)
+	if name == "" {
+		return
+	}
+
+	switch {
+	case event.Op&(fsnotify.Create|fsnotify.Write) != 0:
+		l.logger.Info("🔄 gRPC plugin binary changed, reloading", "name", name)
+		if err := l.Reload(l.watchCtx, name); err != nil {
+			l.logger.Error("failed to reload gRPC plugin", "name", name, "error", err)
+		} else {
+			l.mu.Lock()
+			if d, ok := l.discovered[name]; ok {
+				d.Loaded = true
+				d.LoadedAt = time.Now()
+			}
+			l.mu.Unlock()
+			l.logger.Info("✅ gRPC plugin reloaded", "name", name)
+		}
+
+	case event.Op&fsnotify.Remove != 0:
+		l.logger.Info("🗑️ gRPC plugin binary removed", "name", name)
+		if err := l.manager.Unregister(l.watchCtx, name); err != nil {
+			l.logger.Warn("failed to unregister gRPC plugin", "name", name, "error", err)
+		}
+
+		l.mu.Lock()
+		if d, ok := l.discovered[name]; ok {
+			d.Loaded = false
+		}
+		l.mu.Unlock()
+	}
+
+	// Clean up debounce timer
+	l.watchMu.Lock()
+	delete(l.debounce, event.Name)
+	l.watchMu.Unlock()
+}
+
+// processFileChange handles WASM file changes (original behaviour).
 func (l *Loader) processFileChange(event fsnotify.Event) {
 	path := event.Name
 	name := strings.TrimSuffix(filepath.Base(path), ".wasm")

@@ -16,6 +16,7 @@ import (
 	"net/rpc"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
@@ -51,14 +52,16 @@ type GRPCPlugin struct {
 	impl         GKPluginInterface
 	registration plugin.GKRegistration
 	host         plugin.HostAPI
+	callTimeout  time.Duration // Per-call deadline (0 = no timeout)
 }
 
 // GKPluginPluginHost is the host-side go-plugin.Plugin implementation.
 // It extends the base plugin with HostAPI bidirectional call support.
 type GKPluginPluginHost struct {
 	goplugin.Plugin
-	Impl GKPluginInterface
-	Host plugin.HostAPI // For bidirectional calls
+	Impl       GKPluginInterface
+	Host       plugin.HostAPI // For bidirectional calls
+	PluginName string          // Plugin name for caller authentication
 }
 
 // Server returns the RPC server for the plugin (plugin side).
@@ -69,7 +72,7 @@ func (p *GKPluginPluginHost) Server(b *goplugin.MuxBroker) (interface{}, error) 
 // Client returns the RPC client for the plugin (host side).
 func (p *GKPluginPluginHost) Client(b *goplugin.MuxBroker, c *rpc.Client) (interface{}, error) {
 	// Start a server for the host API that the plugin can call back to
-	hostAPIServer := &HostAPIRPCServer{Host: p.Host}
+	hostAPIServer := &HostAPIRPCServer{Host: p.Host, CallerName: p.PluginName}
 
 	// Get an ID for the host API server
 	id := b.NextId()
@@ -160,8 +163,8 @@ func (s *GKPluginRPCServerHost) Shutdown(args interface{}, resp *interface{}) er
 	return s.Impl.Shutdown()
 }
 
-// LoadGRPCPlugin loads a gRPC plugin from an executable path.
-func LoadGRPCPlugin(execPath string, host plugin.HostAPI) (*GRPCPlugin, error) {
+// LoadGRPCPlugin loads a gRPC plugin from an executable path with OS-level sandboxing.
+func LoadGRPCPlugin(execPath, pluginName string, host plugin.HostAPI, policy plugin.ResourcePolicy) (*GRPCPlugin, error) {
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:   "plugin",
 		Output: os.Stdout,
@@ -170,13 +173,19 @@ func LoadGRPCPlugin(execPath string, host plugin.HostAPI) (*GRPCPlugin, error) {
 
 	// Create plugin map with host API for bidirectional calls
 	pluginMap := map[string]goplugin.Plugin{
-		"gkplugin": &GKPluginPluginHost{Host: host},
+		"gkplugin": &GKPluginPluginHost{Host: host, PluginName: pluginName},
+	}
+
+	// Create command with OS-level sandboxing
+	cmd := exec.Command(execPath)
+	if err := applyProcessSandbox(cmd, policy, pluginName); err != nil {
+		return nil, fmt.Errorf("failed to apply process sandbox: %w", err)
 	}
 
 	client := goplugin.NewClient(&goplugin.ClientConfig{
 		HandshakeConfig: grpcutil.Handshake,
 		Plugins:         pluginMap,
-		Cmd:             exec.Command(execPath),
+		Cmd:             cmd,
 		Logger:          logger,
 		AllowedProtocols: []goplugin.Protocol{
 			goplugin.ProtocolNetRPC,
@@ -234,7 +243,34 @@ func (p *GRPCPlugin) Init(ctx context.Context, host plugin.HostAPI) error {
 
 // Call implements plugin.Plugin.
 func (p *GRPCPlugin) Call(ctx context.Context, fn string, args json.RawMessage) (json.RawMessage, error) {
-	return p.impl.Call(fn, args)
+	if p.callTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, p.callTimeout)
+		defer cancel()
+	}
+
+	// Run the call in a goroutine so we can respect context cancellation
+	type result struct {
+		data json.RawMessage
+		err  error
+	}
+	ch := make(chan result, 1)
+	go func() {
+		data, err := p.impl.Call(fn, args)
+		ch <- result{data, err}
+	}()
+
+	select {
+	case r := <-ch:
+		return r.data, r.err
+	case <-ctx.Done():
+		return nil, fmt.Errorf("plugin %q call %q: %w", p.registration.Name, fn, ctx.Err())
+	}
+}
+
+// SetCallTimeout sets the per-call timeout for this plugin.
+func (p *GRPCPlugin) SetCallTimeout(d time.Duration) {
+	p.callTimeout = d
 }
 
 // Shutdown implements plugin.Plugin.
