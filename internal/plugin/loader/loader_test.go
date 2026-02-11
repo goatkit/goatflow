@@ -43,6 +43,10 @@ func (m *mockHostAPI) CallPlugin(ctx context.Context, pluginName, function strin
 	return nil, nil
 }
 
+func (m *mockHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
+	return nil
+}
+
 func TestLoader(t *testing.T) {
 	ctx := context.Background()
 	host := &mockHostAPI{}

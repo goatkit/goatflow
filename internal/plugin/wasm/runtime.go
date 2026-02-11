@@ -360,6 +360,19 @@ func (p *WASMPlugin) dispatchHostCall(ctx context.Context, fn string, args []byt
 		}
 		return result, nil
 
+	case "publish_event":
+		var req struct {
+			EventType string `json:"event_type"`
+			Data      string `json:"data"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		if err := p.host.PublishEvent(ctx, req.EventType, req.Data); err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]string{"status": "ok"})
+
 	default:
 		return nil, fmt.Errorf("unknown host function: %s", fn)
 	}

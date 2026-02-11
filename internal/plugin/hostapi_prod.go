@@ -38,7 +38,8 @@ type ProdHostAPI struct {
 	cache         *cache.RedisCache
 	httpClient    *http.Client
 	logger        *slog.Logger
-	PluginManager *Manager // For plugin-to-plugin calls
+	PluginManager *Manager    // For plugin-to-plugin calls
+	SSEBroker     *SSEBroker  // For publishing SSE events to browsers
 }
 
 // ProdHostAPIOption is a functional option for ProdHostAPI.
@@ -404,4 +405,21 @@ func (h *ProdHostAPI) CallPlugin(ctx context.Context, pluginName, fn string, arg
 		return h.PluginManager.CallFrom(ctx, callerPlugin, pluginName, fn, args)
 	}
 	return h.PluginManager.Call(ctx, pluginName, fn, args)
+}
+
+// PublishEvent sends an SSE event to all connected browser clients.
+func (h *ProdHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
+	if h.SSEBroker == nil {
+		return fmt.Errorf("SSE broker not available")
+	}
+	pluginName := ""
+	if caller, ok := ctx.Value(PluginCallerKey).(string); ok {
+		pluginName = caller
+	}
+	h.SSEBroker.Publish(SSEEvent{
+		Plugin: pluginName,
+		Type:   eventType,
+		Data:   data,
+	})
+	return nil
 }

@@ -43,6 +43,10 @@ func (m *mockHostAPI) CallPlugin(ctx context.Context, pluginName, function strin
 	return nil, nil
 }
 
+func (m *mockHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
+	return nil
+}
+
 // requireWASMPlugin skips the test if the WASM plugin file doesn't exist.
 // WASM plugins require TinyGo to build, which may not be available in all environments.
 func requireWASMPlugin(t *testing.T, wasmPath string) {
@@ -480,6 +484,10 @@ func (h *trackingHostAPI) Translate(ctx context.Context, key string, args ...any
 func (h *trackingHostAPI) CallPlugin(ctx context.Context, pluginName, function string, args json.RawMessage) (json.RawMessage, error) {
 	h.callPluginCalled = true
 	return json.Marshal(map[string]string{"result": "ok"})
+}
+
+func (h *trackingHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
+	return nil
 }
 
 func TestLoadFromBytes(t *testing.T) {
