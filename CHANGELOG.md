@@ -7,36 +7,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
-- **Universal plugin package format**: Plugin packaging now uses `plugin.yaml` (YAML) instead of `manifest.json` (JSON) as the standard manifest. ZIP uploads support three runtime types: `wasm` (WebAssembly binary), `grpc` (native binary), and `template` (pure YAML routes + templates, no runtime). gRPC binaries are automatically made executable on extraction.
-- **Shared `PluginManifest` type**: Moved to `pkg/plugin/manifest.go` so both the loader and packaging systems use the same struct. Added `description`, `author`, `license`, `homepage`, and `wasm` fields.
-- **Test/example plugins disabled by default**: `hello`, `hello-wasm`, `hello-grpc`, and `test-hostapi` plugins are now disabled by default via sysconfig seeding on first registration. Can be enabled via admin UI/API; state persists to sysconfig.
-- **Plugin management audit logging**: Plugin uploads, enables, disables, discovery, load/unload, and errors now log to the Plugin Logs page.
-- **Plugin API dual auth**: Plugin management endpoints (`/api/v1/plugins/...`) now accept both session-based (cookie) and JWT authentication via `SessionOrJWTAuth()` middleware. Previously only JWT was accepted, blocking admin actions from the web UI.
-
-### Fixed
-- **Plugin admin page missing sidebar and context**: `HandleAdminPlugins` and `HandleAdminPluginLogs` now pass `ActivePage: "admin"`, `User`, and `IsInAdminGroup` to the template context, restoring the admin navigation sidebar and user-aware rendering on plugin pages.
-- **Nineties-vibe dark mode login styling**: Added theme-specific overrides for login card, form inputs, buttons, and checkboxes to ensure proper contrast against the terminal-black background. Login card gets `#1a1a1a` background with visible border, inputs get dark background with light borders, and buttons use the primary colour.
-- **sysconfig INSERT failures**: `seedDefaultDisabled` and `savePluginEnabled` now fill all NOT NULL columns for `sysconfig_default` and `sysconfig_modified` tables, preventing "Field 'X' doesn't have a default value" errors on strict-mode MySQL/MariaDB.
-- **Customer ticket queue routing**: Tickets created via the customer portal were always routed to Postmaster (queue_id hardcoded to 1). Now resolves the customer's organisation queue via `group_customer` → `queue.group_id`, falling back to Postmaster only if no org queue mapping exists. (`internal/api/customer_routes.go`)
-
-### Security
-- **OS-Level gRPC Process Isolation** (`internal/plugin/grpc/sandbox_linux.go`): Linux namespace isolation (CLONE_NEWNS, CLONE_NEWPID), Pdeathsig to kill orphans, minimal environment (no DB credentials leaked to plugins). Non-Linux platforms log a warning.
-- **Plugin Signing** (`internal/plugin/signing/signing.go`): Ed25519 signature verification for plugin binaries. `SignBinary()` creates `.sig` files with SHA-256 hash signatures; `VerifyBinary()` checks against trusted public keys. Opt-in via `GOATFLOW_REQUIRE_SIGNATURES=1`.
-- **SQL Table Whitelisting**: `extractTableNames()` parses SQL queries and validates table names against the `db` permission scope. Queries touching unallowed tables are rejected.
-- **Call Depth Limiting**: Plugin-to-plugin call chains tracked via context with maximum depth of 10, preventing infinite recursion loops.
-- **Config Key Blacklist**: Sensitive configuration patterns (database.*, password, secret, token, auth, ldap.*, smtp.*, aws.*, etc.) are blocked from plugin access by default.
-- **Email Domain Scoping**: Email permission scope supports domain patterns (e.g. `["@example.com"]`); recipients outside allowed domains are rejected. Rate limited to 10 emails/minute per plugin.
-- **Caller Identity Stamping**: gRPC HostAPI server stamps the authenticated plugin name on all calls; plugins cannot impersonate other plugins.
-- **ZIP Extraction Security** (`internal/plugin/packaging/`): Symlink detection and rejection, 100MB per-file limit, 500MB total extraction limit, 1000 file maximum.
-- **Live Policy Updates**: `SandboxedHostAPI.UpdatePolicy()` with RWMutex-protected policy pointer; policy changes take effect immediately without plugin restart.
-- **Atomic Blue-Green Plugin Reload**: `Manager.ReplacePlugin()` initializes the new plugin before shutting down the old one, with atomic swap under mutex — no request-dropping window during hot reload.
-- **Policy Persistence**: Resource policies serialized as JSON to `sysconfig_modified` table (key: `Plugin::<name>::Policy`); survives restarts.
-- **WASM Security Verified**: Confirmed `SandboxedHostAPI` is correctly applied to WASM plugins, enforcing the same permission/rate-limit/accounting model as gRPC.
-
 ### Added
-- **Session auth tests for plugin management**: Tests verifying that plugin enable/disable and plugin log endpoints work correctly with session-based (cookie) authentication, complementing existing JWT auth coverage.
-- **gRPC Plugin Hot Reload**: Loader now discovers gRPC plugins via `plugin.yaml` in subdirectories, watches binaries via fsnotify, and auto-reloads on change with 500ms debounce. New `plugin.yaml` files trigger discovery and loading; removing them triggers unload.
+- **gRPC Plugin Hot Reload**: Loader discovers gRPC plugins via `plugin.yaml` in subdirectories, watches binaries via fsnotify, auto-reloads on change with 500ms debounce. New `plugin.yaml` files trigger discovery and loading; removing them triggers unload.
 - **Plugin Isolation / SandboxedHostAPI** (`internal/plugin/sandbox.go`): Per-plugin permission enforcement wrapper around HostAPI
   - Permission checks on every HostAPI call (db read/write, cache, HTTP, email, config, plugin-to-plugin calls)
   - DDL blocking for read-only plugins (DROP, ALTER, TRUNCATE, CREATE, GRANT, REVOKE)
@@ -50,12 +22,56 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - **Manager policy integration**: Every plugin gets a SandboxedHostAPI on registration. Admin can set/get policies via `Manager.SetPolicy()` / `Manager.GetPolicy()`. Policy changes take full effect on next plugin reload.
 - **gRPC call timeouts**: Context-based per-call deadlines with goroutine + select pattern in `GRPCPlugin.Call()`.
 - **plugin.yaml format** for gRPC plugins: Declares name, version, runtime, binary path, and resource requests (memory, timeouts, permissions).
+- **Session auth tests for plugin management**: 26 subtests with dynamic route discovery verifying admin access, non-admin 403s, and unauthenticated 401s for plugin enable/disable and log endpoints with session-based (cookie) authentication.
+- **i18n keys for plugin admin**: `admin.select_plugin_file` and `admin.plugin_file_types` with proper translations across all 15 languages.
+- **Unified dynamic engine** (`MountDynamicEngine`): YAML routes and plugin routes merged into a single hot-reloadable Gin engine mounted via `NoRoute`. Replaces the old `ROUTES_SELECTIVE` env var approach and separate `RegisterPluginRoutes` call. Rebuilt atomically when YAML files change or plugins are loaded/reloaded.
+- **Plugin layout wrapping**: Plugin route responses returning `{html, title}` are automatically wrapped in the base layout template (`plugin_wrapper.pongo2`) with full sidebar/nav. Plugins can opt out with `{raw: true}` for bare HTML.
+- **Plugin menu items in navigation**: Plugins register `MenuItemSpec` entries (with icon, label, path, location, order). These appear in the agent/customer nav bar and admin sidebar via `PluginMenuProvider` injection into all templates.
+- **Dashboard plugin admin section**: Admin dashboard shows a "Plugin Administration" card grid for plugins that register admin menu items, with icon and plugin name.
+- **HostAPI client for plugins** (`pkg/plugin/grpcutil/hostapi.go`): Full plugin-side HostAPI RPC client implementation. Plugins import this package to call back to the host for DB queries, cache, HTTP, email, config, and i18n — no need to hand-roll RPC boilerplate.
+- **Plugin config via environment variables**: Plugins receive configuration from `GOATFLOW_PLUGIN_<NAME>_<KEY>` env vars, passed as lowercase keys in the `Init(config)` map. Documented in `docker-compose.yml`.
 
 ### Changed
+- **Plugin admin pages converted to self-hydrating templates**: `HandleAdminPlugins` and `HandleAdminPluginLogs` no longer fetch data server-side. Templates self-hydrate via client-side API calls (`GET /api/v1/plugins`, `GET /api/v1/plugins/logs`), following GoatKit's "YAML route + dynamic template" philosophy. Enable/disable and upload actions update the page without full reload. Go handlers reduced to a generic `renderAdminPage()` that passes standard admin context only.
+- **Universal plugin package format**: Plugin packaging now uses `plugin.yaml` (YAML) instead of `manifest.json` (JSON) as the standard manifest. ZIP uploads support three runtime types: `wasm` (WebAssembly binary), `grpc` (native binary), and `template` (pure YAML routes + templates, no runtime). gRPC binaries are automatically made executable on extraction.
+- **Shared `PluginManifest` type**: Moved to `pkg/plugin/manifest.go` so both the loader and packaging systems use the same struct. Added `description`, `author`, `license`, `homepage`, and `wasm` fields.
+- **Test/example plugins disabled by default**: `hello`, `hello-wasm`, `hello-grpc`, and `test-hostapi` plugins are now disabled by default via sysconfig seeding on first registration. Can be enabled via admin UI/API; state persists to sysconfig.
+- **Plugin management audit logging**: Plugin uploads, enables, disables, discovery, load/unload, and errors now log to the Plugin Logs page.
+- **Plugin API dual auth**: Plugin management endpoints (`/api/v1/plugins/...`) now accept both session-based (cookie) and JWT authentication via `SessionOrJWTAuth()` middleware. Previously only JWT was accepted, blocking admin actions from the web UI.
+- **Plugin handler tests use real test DB**: Removed `mockHostAPI` from plugin handler tests. All tests now use `ProdHostAPI` with `getTestDB(t)`, following the same patterns as every other test in the package.
 - **Public plugin interfaces** (`pkg/plugin/`): Extracted plugin types (`Plugin`, `GKRegistration`, `HostAPI`, all spec types) from `internal/plugin` to `pkg/plugin/plugin.go` so external plugin authors can import them directly. Internal code uses type aliases for backwards compatibility.
 - **Public gRPC plugin utilities** (`pkg/plugin/grpcutil/`): Extracted `ServePlugin()` helper and related types to `pkg/plugin/grpcutil/serve.go` for use by external gRPC plugins.
 - **Refactored token extraction middleware**: Centralised token extraction logic in `internal/middleware/api_token.go`, removing duplicate code from auth, session, and routing packages.
 - **Plugin documentation updated**: All 7 plugin docs rewritten to reflect implemented features — removed "planned"/"not yet implemented" language, added sandbox/security model documentation, corrected Host API signatures.
+- **MCP test fixtures hardened**: Removed `sync.Once` caching (fixtures recreated each run to handle DB state contamination), replaced `t.Skip` with `t.Fatal` for missing DB, stronger assertions with `require`.
+- **gRPC RPC encoding switched from gob to JSON**: `GKRegister` and HostAPI calls now use JSON serialization instead of Go's `encoding/gob`, enabling cross-language plugin development. Both client and server sides updated.
+- **gRPC plugins eagerly loaded in lazy mode**: When `GOATFLOW_PLUGIN_LAZY_LOAD=true`, gRPC plugins are still eagerly loaded at startup because they register routes that Gin needs before accepting requests. WASM plugins remain lazy.
+- **Plugin hot reload enabled by default**: No longer requires `GOATFLOW_PLUGIN_HOT_RELOAD=true` or `GOATFLOW_ENV=development`. Disable explicitly with `GOATFLOW_PLUGIN_HOT_RELOAD=false`.
+- **Plugin loader watches new directories**: `handleFSEvent` now watches newly created subdirectories and checks them for `plugin.yaml`, enabling discovery of plugins added after startup.
+- **Plugin LoadOrReload**: New `Loader.LoadOrReload()` method re-discovers plugins and reloads by name — used after ZIP upload to pick up newly extracted plugins without restart.
+
+### Fixed
+- **JWT missing admin role on login**: Login handler generated JWTs with `role: "user"` and `isAdmin: false` regardless of actual group membership. YAML route auth middleware compensated with a DB lookup, but plugin routes (dynamic engine) trust JWT claims directly — causing "admin access required" errors for admin users on plugin pages. Now checks `admin` group membership at login and bakes correct role/isAdmin into the JWT. Also fixed in 2FA completion path.
+- **Dashboard widget ordering ignored saved position**: Plugin widgets rendered in discovery order rather than user-configured position. The handler filtered by enabled/disabled but discarded the `Position` field. Now sorts widgets by saved position after filtering.
+- **Unified dynamic engine plugin route auth**: Plugin routes on the dynamic sub-engine now use `SessionOrJWTAuth()` instead of bare `JWTAuthMiddleware()`, consistent with plugin API routes.
+- **Plugin log filter ignored level when filtering by plugin**: `HandlePluginLogs` used mutually exclusive `if/else if` for plugin name and level filters — specifying both `plugin=X&level=error` silently ignored the level. Now applies both filters together.
+- **savePluginEnabled FK constraint violation**: Was inserting `sysconfig_default_id=0` into `sysconfig_modified`, which violates the foreign key constraint. Now looks up the actual `sysconfig_default` ID first.
+- **Nineties-vibe dark mode login styling**: Added theme-specific overrides for login card, form inputs, buttons, and checkboxes to ensure proper contrast against the terminal-black background.
+- **Customer ticket queue routing**: Tickets created via the customer portal were always routed to Postmaster (queue_id hardcoded to 1). Now resolves the customer's organisation queue via `group_customer` → `queue.group_id`, falling back to Postmaster only if no org queue mapping exists.
+
+### Security
+- **OS-Level gRPC Process Isolation** (`internal/plugin/grpc/sandbox_linux.go`): Linux namespace isolation (CLONE_NEWNS, CLONE_NEWPID), Pdeathsig to kill orphans, minimal environment (no DB credentials leaked to plugins). Container-aware: detects Docker/Podman/LXC/K8s environments and gracefully skips namespace creation where it would fail (EPERM). Non-Linux platforms log a warning.
+- **Plugin Signing** (`internal/plugin/signing/signing.go`): Ed25519 signature verification for plugin binaries. `SignBinary()` creates `.sig` files with SHA-256 hash signatures; `VerifyBinary()` checks against trusted public keys. Opt-in via `GOATFLOW_REQUIRE_SIGNATURES=1`.
+- **SQL Table Whitelisting**: `extractTableNames()` parses SQL queries and validates table names against the `db` permission scope. Queries touching unallowed tables are rejected.
+- **Call Depth Limiting**: Plugin-to-plugin call chains tracked via context with maximum depth of 10, preventing infinite recursion loops.
+- **Config Key Blacklist**: Sensitive configuration patterns (database.*, password, secret, token, auth, ldap.*, smtp.*, aws.*, etc.) are blocked from plugin access by default.
+- **Email Domain Scoping**: Email permission scope supports domain patterns (e.g. `["@example.com"]`); recipients outside allowed domains are rejected. Rate limited to 10 emails/minute per plugin.
+- **Caller Identity Stamping**: gRPC HostAPI server stamps the authenticated plugin name on all calls; plugins cannot impersonate other plugins.
+- **ZIP Extraction Security** (`internal/plugin/packaging/`): Symlink detection and rejection, 100MB per-file limit, 500MB total extraction limit, 1000 file maximum.
+- **Live Policy Updates**: `SandboxedHostAPI.UpdatePolicy()` with RWMutex-protected policy pointer; policy changes take effect immediately without plugin restart.
+- **Atomic Blue-Green Plugin Reload**: `Manager.ReplacePlugin()` initializes the new plugin before shutting down the old one, with atomic swap under mutex — no request-dropping window during hot reload.
+- **Policy Persistence**: Resource policies serialized as JSON to `sysconfig_modified` table (key: `Plugin::<name>::Policy`); survives restarts.
+- **WASM Security Verified**: Confirmed `SandboxedHostAPI` is correctly applied to WASM plugins, enforcing the same permission/rate-limit/accounting model as gRPC.
 
 ## [0.6.5]
 

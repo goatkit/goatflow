@@ -13,9 +13,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/rpc"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -89,9 +91,16 @@ type GKPluginRPCClientHost struct {
 }
 
 func (c *GKPluginRPCClientHost) GKRegister() (*plugin.GKRegistration, error) {
-	var resp plugin.GKRegistration
-	err := c.client.Call("Plugin.GKRegister", new(interface{}), &resp)
-	return &resp, err
+	var respBytes []byte
+	err := c.client.Call("Plugin.GKRegister", new(interface{}), &respBytes)
+	if err != nil {
+		return nil, err
+	}
+	var reg plugin.GKRegistration
+	if err := json.Unmarshal(respBytes, &reg); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal registration: %w", err)
+	}
+	return &reg, nil
 }
 
 func (c *GKPluginRPCClientHost) Init(config map[string]string) error {
@@ -129,12 +138,16 @@ type GKPluginRPCServerHost struct {
 	hostAPI *HostAPIRPCClient // Set after Init connects back to host
 }
 
-func (s *GKPluginRPCServerHost) GKRegister(args interface{}, resp *plugin.GKRegistration) error {
+func (s *GKPluginRPCServerHost) GKRegister(args interface{}, resp *[]byte) error {
 	reg, err := s.Impl.GKRegister()
 	if err != nil {
 		return err
 	}
-	*resp = *reg
+	data, err := json.Marshal(reg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal registration: %w", err)
+	}
+	*resp = data
 	return nil
 }
 
@@ -216,6 +229,8 @@ func LoadGRPCPlugin(execPath, pluginName string, host plugin.HostAPI, policy plu
 		client.Kill()
 		return nil, fmt.Errorf("failed to get plugin registration: %w", err)
 	}
+	log.Printf("🔌 Plugin %q registration: %d routes, %d widgets, %d menu items",
+		reg.Name, len(reg.Routes), len(reg.Widgets), len(reg.MenuItems))
 
 	return &GRPCPlugin{
 		client:       client,
@@ -234,11 +249,34 @@ func (p *GRPCPlugin) GKRegister() plugin.GKRegistration {
 // Init implements plugin.Plugin.
 func (p *GRPCPlugin) Init(ctx context.Context, host plugin.HostAPI) error {
 	p.host = host
-	// Pass minimal config to the plugin
+	config := buildPluginConfig(p.registration.Name)
+	return p.impl.Init(config)
+}
+
+// buildPluginConfig collects configuration for a plugin from environment variables.
+// Variables prefixed with GOATFLOW_PLUGIN_<NAME>_ are included with the prefix stripped
+// and the key lowercased. For example, GOATFLOW_PLUGIN_GOATFICTUS_LLM_URL becomes "llm_url".
+func buildPluginConfig(pluginName string) map[string]string {
 	config := map[string]string{
 		"host_version": "0.6.4",
+		"plugin_name":  pluginName,
 	}
-	return p.impl.Init(config)
+
+	// Collect env vars with prefix GOATFLOW_PLUGIN_<NAME>_
+	prefix := "GOATFLOW_PLUGIN_" + strings.ToUpper(strings.ReplaceAll(pluginName, "-", "_")) + "_"
+	for _, env := range os.Environ() {
+		if !strings.HasPrefix(env, prefix) {
+			continue
+		}
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.ToLower(strings.TrimPrefix(parts[0], prefix))
+		config[key] = parts[1]
+	}
+
+	return config
 }
 
 // Call implements plugin.Plugin.

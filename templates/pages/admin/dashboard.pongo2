@@ -455,6 +455,27 @@
         </div>
     </section>
 
+    {% if PluginAdminMenuItems %}
+    <section class="mt-10" aria-labelledby="plugin-admin">
+        <h2 id="plugin-admin" class="text-xl font-semibold gk-heading" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.plugin_administration")|default:"Plugin Administration" }}</h2>
+        <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {% for item in PluginAdminMenuItems %}
+            <a href="{{ item.Path }}" class="gk-admin-card group">
+                <div class="flex items-start">
+                    <div class="gk-admin-card-icon">
+                        {% if item.Icon %}<span class="text-xl" aria-hidden="true">{{ item.Icon }}</span>{% else %}<i class="fa-solid fa-puzzle-piece text-xl" aria-hidden="true"></i>{% endif %}
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ item.Label }}</h3>
+                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ item.PluginName }}</p>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
     <section class="mt-10" aria-labelledby="recent-activity">
         <h2 id="recent-activity" class="text-xl font-semibold gk-heading" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.recent_activity")|default:"Recent Admin Activity" }}</h2>
         <div class="mt-4 gk-card-glow">

@@ -313,6 +313,16 @@
                                 {{ navAdmin }}
                             </a>
                             {% endif %}
+                            {% if not isCustomer and PluginAgentMenuItems %}{% for pmi in PluginAgentMenuItems %}
+                            <a href="{{ pmi.Path }}" class="gk-nav-link">
+                                {% if pmi.Icon %}{{ pmi.Icon }} {% endif %}{{ pmi.Label }}
+                            </a>
+                            {% endfor %}{% endif %}
+                            {% if isCustomer and PluginCustomerMenuItems %}{% for pmi in PluginCustomerMenuItems %}
+                            <a href="{{ pmi.Path }}" class="gk-nav-link">
+                                {% if pmi.Icon %}{{ pmi.Icon }} {% endif %}{{ pmi.Label }}
+                            </a>
+                            {% endfor %}{% endif %}
                         </div>
                     </div>
                     <div class="hidden sm:ml-6 sm:flex sm:items-center">
@@ -366,6 +376,16 @@
                                     {{ navAdmin }}
                         </a>
                         {% endif %}
+                        {% if not isCustomer and PluginAgentMenuItems %}{% for pmi in PluginAgentMenuItems %}
+                        <a href="{{ pmi.Path }}" class="gk-sidebar-link">
+                            {% if pmi.Icon %}{{ pmi.Icon }} {% endif %}{{ pmi.Label }}
+                        </a>
+                        {% endfor %}{% endif %}
+                        {% if isCustomer and PluginCustomerMenuItems %}{% for pmi in PluginCustomerMenuItems %}
+                        <a href="{{ pmi.Path }}" class="gk-sidebar-link">
+                            {% if pmi.Icon %}{{ pmi.Icon }} {% endif %}{{ pmi.Label }}
+                        </a>
+                        {% endfor %}{% endif %}
                     </div>
                     {% if User or Customer %}
                     <div class="pb-3 pt-4" style="border-top: 1px solid var(--gk-border-default);">

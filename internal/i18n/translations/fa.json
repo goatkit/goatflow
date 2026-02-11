@@ -1352,15 +1352,17 @@
     "manage_api_tokens": "مدیریت توکن‌های API",
     "create_token_for_user": "ایجاد توکن برای کاربر",
     "create_token_for_customer": "ایجاد توکن برای مشتری",
-    "disable_2fa": "Disable 2FA",
-    "disable_2fa_title": "Disable Two-Factor Authentication",
-    "disable_2fa_warning": "You are about to disable 2FA for user:",
-    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
-    "reason_required": "Reason (required)",
-    "reason_placeholder": "Enter the reason for disabling 2FA...",
-    "reason_required_error": "Please enter a reason for this action",
-    "2fa_disabled_success": "2FA has been disabled for this user",
-    "2fa_disable_failed": "Failed to disable 2FA"
+    "disable_2fa": "غیرفعال کردن احراز هویت دو مرحله‌ای",
+    "disable_2fa_title": "غیرفعال کردن احراز هویت دو مرحله‌ای",
+    "disable_2fa_warning": "شما در حال غیرفعال کردن احراز هویت دو مرحله‌ای برای کاربر زیر هستید:",
+    "disable_2fa_audit_notice": "این عمل در گزارش بازرسی ثبت خواهد شد.",
+    "reason_required": "دلیل (الزامی)",
+    "reason_placeholder": "دلیل غیرفعال کردن احراز هویت دو مرحله‌ای را وارد کنید...",
+    "reason_required_error": "لطفاً دلیلی برای این عمل وارد کنید",
+    "2fa_disabled_success": "احراز هویت دو مرحله‌ای برای این کاربر غیرفعال شد",
+    "2fa_disable_failed": "غیرفعال کردن احراز هویت دو مرحله‌ای ناموفق بود",
+    "select_plugin_file": "فایل افزونه را انتخاب کنید",
+    "plugin_file_types": "پشتیبانی: .wasm، .zip (بسته افزونه)"
   },
   "admin_dashboard": {
     "activity": "فعالیت",
@@ -3379,5 +3381,6 @@
   },
   "demo": {
     "security_disabled": "تغییر رمز عبور و احراز هویت دو مرحله‌ای در حالت نمایشی غیرفعال است."
-  }
+  },
+  "admin_dashboard.plugin_administration": "مدیریت افزونه‌ها"
 }

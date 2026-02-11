@@ -125,6 +125,8 @@ services:
       # Plugin system (defaults set in Dockerfile, override here if needed)
       # GOATFLOW_PLUGIN_LAZY_LOAD: ${GOATFLOW_PLUGIN_LAZY_LOAD:-true}
       # GOATFLOW_PLUGIN_HOT_RELOAD: ${GOATFLOW_PLUGIN_HOT_RELOAD:-false}
+      # Plugin-specific config: set GOATFLOW_PLUGIN_<NAME>_<KEY> env vars as needed
+      # e.g. GOATFLOW_PLUGIN_GOATFICTUS_LLM_URL=http://host.docker.internal:11434
       # TLS configuration
       TLS_CERT_FILE: /app/certs/server.crt
       TLS_KEY_FILE: /app/certs/server.key

@@ -244,15 +244,23 @@ func (m *Manager) savePluginEnabled(ctx context.Context, name string, enabled bo
 		val = "0"
 	}
 
-	// Use DBExec to upsert into sysconfig_modified — fill all NOT NULL columns
+	// Look up the sysconfig_default ID for this key
+	rows, err := m.host.DBQuery(ctx, `SELECT id FROM sysconfig_default WHERE name = ? LIMIT 1`, key)
+	if err != nil || len(rows) == 0 {
+		return fmt.Errorf("no sysconfig_default entry for %q — seed it first via seedDefaultDisabled", key)
+	}
+
+	defaultID := rows[0]["id"]
+
+	// Upsert into sysconfig_modified with the correct FK reference
 	query := `
 		INSERT INTO sysconfig_modified 
 		(sysconfig_default_id, name, effective_value, is_valid, user_modification_active, 
 		 is_dirty, reset_to_default, create_by, change_by, create_time, change_time)
-		VALUES (0, ?, ?, 1, 0, 0, 0, 1, 1, NOW(), NOW())
+		VALUES (?, ?, ?, 1, 0, 0, 0, 1, 1, NOW(), NOW())
 		ON DUPLICATE KEY UPDATE effective_value = ?, change_time = NOW(), change_by = 1
 	`
-	_, err := m.host.DBExec(ctx, query, key, val, val)
+	_, err = m.host.DBExec(ctx, query, defaultID, key, val, val)
 	return err
 }
 

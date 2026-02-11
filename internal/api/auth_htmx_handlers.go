@@ -193,7 +193,19 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 
 		var token string
 		if jwtManager != nil {
-			tokenStr, err := jwtManager.GenerateToken(userID, username, "user", 1)
+			// Determine role and admin status from group membership
+			role := "Agent"
+			isAdmin := false
+			if db != nil {
+				var cnt int
+				_ = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(
+					`SELECT COUNT(*) FROM group_user gu JOIN `+"`groups`"+` g ON gu.group_id = g.id WHERE gu.user_id = ? AND LOWER(g.name) = 'admin'`), userID).Scan(&cnt)
+				if cnt > 0 {
+					role = "Admin"
+					isAdmin = true
+				}
+			}
+			tokenStr, err := jwtManager.GenerateTokenWithLogin(userID, username, username, role, isAdmin, 1)
 			if err != nil {
 				sendErrorResponse(c, http.StatusInternalServerError, "Failed to generate token")
 				return

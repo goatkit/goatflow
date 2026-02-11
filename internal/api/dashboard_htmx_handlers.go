@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -205,10 +206,14 @@ func handleDashboard(c *gin.Context) {
 		widgetConfig, _ := prefService.GetDashboardWidgets(dashboardUserID)
 		
 		if widgetConfig != nil && len(widgetConfig) > 0 {
-			// Build map of widget configs
-			configMap := make(map[string]bool)
+			// Build map of widget configs (enabled + position)
+			type widgetCfg struct {
+				Enabled  bool
+				Position int
+			}
+			configMap := make(map[string]widgetCfg)
 			for _, cfg := range widgetConfig {
-				configMap[cfg.WidgetID] = cfg.Enabled
+				configMap[cfg.WidgetID] = widgetCfg{Enabled: cfg.Enabled, Position: cfg.Position}
 			}
 			
 			// Filter widgets based on config
@@ -217,8 +222,8 @@ func handleDashboard(c *gin.Context) {
 				fullID := w.PluginName + ":" + w.ID
 				
 				// Check if widget is in config
-				if enabled, inConfig := configMap[fullID]; inConfig {
-					if enabled {
+				if cfg, inConfig := configMap[fullID]; inConfig {
+					if cfg.Enabled {
 						filtered = append(filtered, w)
 					}
 					// If disabled, skip it
@@ -227,6 +232,21 @@ func handleDashboard(c *gin.Context) {
 					filtered = append(filtered, w)
 				}
 			}
+			
+			// Sort by saved position
+			sort.SliceStable(filtered, func(i, j int) bool {
+				idI := filtered[i].PluginName + ":" + filtered[i].ID
+				idJ := filtered[j].PluginName + ":" + filtered[j].ID
+				posI, posJ := len(filtered), len(filtered) // default: end
+				if cfg, ok := configMap[idI]; ok {
+					posI = cfg.Position
+				}
+				if cfg, ok := configMap[idJ]; ok {
+					posJ = cfg.Position
+				}
+				return posI < posJ
+			})
+			
 			pluginWidgets = filtered
 		}
 	}

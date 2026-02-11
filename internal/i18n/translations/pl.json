@@ -1352,15 +1352,17 @@
     "manage_api_tokens": "Zarządzaj tokenami API",
     "create_token_for_user": "Utwórz token dla użytkownika",
     "create_token_for_customer": "Utwórz token dla klienta",
-    "disable_2fa": "Disable 2FA",
-    "disable_2fa_title": "Disable Two-Factor Authentication",
-    "disable_2fa_warning": "You are about to disable 2FA for user:",
-    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
-    "reason_required": "Reason (required)",
-    "reason_placeholder": "Enter the reason for disabling 2FA...",
-    "reason_required_error": "Please enter a reason for this action",
-    "2fa_disabled_success": "2FA has been disabled for this user",
-    "2fa_disable_failed": "Failed to disable 2FA"
+    "disable_2fa": "Wyłącz 2FA",
+    "disable_2fa_title": "Wyłącz uwierzytelnianie dwuskładnikowe",
+    "disable_2fa_warning": "Zamierzasz wyłączyć 2FA dla użytkownika:",
+    "disable_2fa_audit_notice": "Ta czynność zostanie odnotowana w dzienniku audytu.",
+    "reason_required": "Powód (wymagany)",
+    "reason_placeholder": "Podaj powód wyłączenia 2FA...",
+    "reason_required_error": "Proszę podać powód tej czynności",
+    "2fa_disabled_success": "2FA zostało wyłączone dla tego użytkownika",
+    "2fa_disable_failed": "Nie udało się wyłączyć 2FA",
+    "select_plugin_file": "Wybierz plik wtyczki",
+    "plugin_file_types": "Obsługiwane: .wasm, .zip (pakiet wtyczki)"
   },
   "admin_dashboard": {
     "activity": "Aktywność",
@@ -3851,5 +3853,6 @@
   },
   "demo": {
     "security_disabled": "Zmiany hasła i MFA są wyłączone w trybie demo."
-  }
+  },
+  "admin_dashboard.plugin_administration": "Zarządzanie wtyczkami"
 }

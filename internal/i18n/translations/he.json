@@ -1352,15 +1352,17 @@
     "manage_api_tokens": "נהל אסימוני API",
     "create_token_for_user": "צור אסימון למשתמש",
     "create_token_for_customer": "צור אסימון ללקוח",
-    "disable_2fa": "Disable 2FA",
-    "disable_2fa_title": "Disable Two-Factor Authentication",
-    "disable_2fa_warning": "You are about to disable 2FA for user:",
-    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
-    "reason_required": "Reason (required)",
-    "reason_placeholder": "Enter the reason for disabling 2FA...",
-    "reason_required_error": "Please enter a reason for this action",
-    "2fa_disabled_success": "2FA has been disabled for this user",
-    "2fa_disable_failed": "Failed to disable 2FA"
+    "disable_2fa": "השבת אימות דו-שלבי",
+    "disable_2fa_title": "השבתת אימות דו-שלבי",
+    "disable_2fa_warning": "אתה עומד להשבית אימות דו-שלבי עבור המשתמש:",
+    "disable_2fa_audit_notice": "פעולה זו תירשם ביומן הביקורת.",
+    "reason_required": "סיבה (חובה)",
+    "reason_placeholder": "הזן את הסיבה להשבתת האימות הדו-שלבי...",
+    "reason_required_error": "אנא הזן סיבה לפעולה זו",
+    "2fa_disabled_success": "האימות הדו-שלבי הושבת עבור משתמש זה",
+    "2fa_disable_failed": "השבתת האימות הדו-שלבי נכשלה",
+    "select_plugin_file": "בחר קובץ תוסף",
+    "plugin_file_types": "נתמך: .wasm, .zip (חבילת תוסף)"
   },
   "admin_dashboard": {
     "activity": "פעילות",
@@ -3332,5 +3334,6 @@
   },
   "demo": {
     "security_disabled": "שינויי סיסמה ואימות דו-שלבי מושבתים במצב הדגמה."
-  }
+  },
+  "admin_dashboard.plugin_administration": "ניהול תוספים"
 }

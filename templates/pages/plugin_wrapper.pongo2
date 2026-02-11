@@ -1,0 +1,7 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ PluginTitle|default:"Plugin" }} - {{ t("app.name") }}{% endblock %}
+
+{% block content %}
+{{ PluginHTML|safe }}
+{% endblock %}

@@ -53,7 +53,6 @@ import (
 	"github.com/goatkit/goatflow/internal/plugin/example"
 	pluginloader "github.com/goatkit/goatflow/internal/plugin/loader"
 	"github.com/goatkit/goatflow/internal/repository"
-	"github.com/goatkit/goatflow/internal/routing"
 	"github.com/goatkit/goatflow/internal/runner"
 	"github.com/goatkit/goatflow/internal/runner/tasks"
 	"github.com/goatkit/goatflow/internal/service"
@@ -348,6 +347,36 @@ func main() {
 	plugin.SetTemplateOverrides(templateOverrides)
 	shared.SetTemplateOverrideProvider(templateOverrides) // Enable template overrides
 
+	// Provide plugin menu items to all templates (sidebar/nav)
+	shared.SetPluginMenuProvider(func(location string) []map[string]any {
+		items := pluginMgr.MenuItems(location)
+		result := make([]map[string]any, 0, len(items))
+		for _, item := range items {
+			entry := map[string]any{
+				"PluginName": item.PluginName,
+				"ID":         item.MenuItemSpec.ID,
+				"Label":      item.MenuItemSpec.Label,
+				"Icon":       item.MenuItemSpec.Icon,
+				"Path":       item.MenuItemSpec.Path,
+				"Order":      item.MenuItemSpec.Order,
+			}
+			if len(item.MenuItemSpec.Children) > 0 {
+				children := make([]map[string]any, 0, len(item.MenuItemSpec.Children))
+				for _, child := range item.MenuItemSpec.Children {
+					children = append(children, map[string]any{
+						"ID":    child.ID,
+						"Label": child.Label,
+						"Icon":  child.Icon,
+						"Path":  child.Path,
+					})
+				}
+				entry["Children"] = children
+			}
+			result = append(result, entry)
+		}
+		return result
+	})
+
 	// Register built-in example plugin (for development/testing)
 	helloPlugin := example.NewHelloPlugin()
 	if err := pluginMgr.Register(context.Background(), helloPlugin); err != nil {
@@ -369,7 +398,7 @@ func main() {
 	if pluginDir == "" {
 		pluginDir = filepath.Join(configDir, "plugins")
 	}
-	api.SetPluginDir(pluginDir) // Enable plugin uploads
+	api.SetPluginDir(pluginDir)      // Enable plugin uploads
 
 	// Configure loader options
 	var loaderOpts []pluginloader.LoaderOption
@@ -382,6 +411,7 @@ func main() {
 
 	// Wire lazy loader to manager for on-demand loading
 	pluginMgr.SetLazyLoader(pluginLoader)
+	api.SetPluginReloader(pluginLoader.LoadOrReload) // Enable load/reload on upload
 
 	if os.Getenv("GOATFLOW_PLUGIN_LAZY_LOAD") == "true" {
 		log.Printf("🔌 Discovered %d WASM plugin(s) (lazy loading enabled)", loadedCount)
@@ -393,7 +423,8 @@ func main() {
 	}
 
 	// Enable hot reload for plugins in development mode
-	if os.Getenv("GOATFLOW_PLUGIN_HOT_RELOAD") == "true" || os.Getenv("GOATFLOW_ENV") == "development" {
+	// Hot reload: enabled by default, disable with GOATFLOW_PLUGIN_HOT_RELOAD=false
+	if os.Getenv("GOATFLOW_PLUGIN_HOT_RELOAD") != "false" {
 		if err := pluginLoader.WatchDir(context.Background()); err != nil {
 			log.Printf("⚠️  Plugin hot reload disabled: %v", err)
 		}
@@ -408,17 +439,8 @@ func main() {
 		routesDir = "/app/routes"
 	}
 
-	if err := routing.LoadYAMLRoutesFromGlobalMap(r, routesDir); err != nil {
-		log.Printf("❌ Failed to load YAML routes: %v", err)
-		log.Fatalf("🚨 YAML routes failed to load - cannot continue without routing configuration")
-	}
-
-	log.Println("✅ YAML routes loaded successfully")
-
-	// Register plugin-defined routes
-	if pluginRouteCount := api.RegisterPluginRoutes(r); pluginRouteCount > 0 {
-		log.Printf("✅ Registered %d plugin route(s)", pluginRouteCount)
-	}
+	// Mount unified dynamic engine (YAML routes + plugin routes, hot-reloadable)
+	api.MountDynamicEngine(r, routesDir)
 
 	if dbErr == nil && db != nil {
 		if err := api.SetupDynamicModules(db); err != nil {

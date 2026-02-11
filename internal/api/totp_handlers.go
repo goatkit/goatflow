@@ -414,7 +414,19 @@ func handleTOTPVerify(c *gin.Context) {
 		return
 	}
 
-	jwtToken, err := jwtManager.GenerateToken(uint(session.UserID), session.Username, "user", 1)
+	// Determine role and admin status from group membership
+	totpRole := "Agent"
+	totpIsAdmin := false
+	if db != nil {
+		var cnt int
+		_ = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(
+			`SELECT COUNT(*) FROM group_user gu JOIN `+"`groups`"+` g ON gu.group_id = g.id WHERE gu.user_id = ? AND LOWER(g.name) = 'admin'`), session.UserID).Scan(&cnt)
+		if cnt > 0 {
+			totpRole = "Admin"
+			totpIsAdmin = true
+		}
+	}
+	jwtToken, err := jwtManager.GenerateTokenWithLogin(uint(session.UserID), session.Username, session.Username, totpRole, totpIsAdmin, 1)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to generate token"})
 		return

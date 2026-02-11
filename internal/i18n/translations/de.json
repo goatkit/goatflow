@@ -1336,13 +1336,13 @@
     "clear_logs": "Logs löschen",
     "refresh": "Aktualisieren",
     "filter_plugin": "Plugin",
-    "filter_level": "Level",
+    "filter_level": "Stufe",
     "all_plugins": "Alle Plugins",
     "all_levels": "Alle Levels",
     "limit": "Limit",
     "auto_refresh": "Auto-Aktualisierung (10s)",
     "timestamp": "Zeitstempel",
-    "level": "Level",
+    "level": "Stufe",
     "plugin": "Plugin",
     "message": "Nachricht",
     "loading": "Laden...",
@@ -1352,15 +1352,17 @@
     "manage_api_tokens": "API-Token verwalten",
     "create_token_for_user": "Token für Benutzer erstellen",
     "create_token_for_customer": "Token für Kunde erstellen",
-    "disable_2fa": "Disable 2FA",
-    "disable_2fa_title": "Disable Two-Factor Authentication",
-    "disable_2fa_warning": "You are about to disable 2FA for user:",
-    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
-    "reason_required": "Reason (required)",
-    "reason_placeholder": "Enter the reason for disabling 2FA...",
-    "reason_required_error": "Please enter a reason for this action",
-    "2fa_disabled_success": "2FA has been disabled for this user",
-    "2fa_disable_failed": "Failed to disable 2FA"
+    "disable_2fa": "2FA deaktivieren",
+    "disable_2fa_title": "Zwei-Faktor-Authentifizierung deaktivieren",
+    "disable_2fa_warning": "Sie sind dabei, 2FA für folgenden Benutzer zu deaktivieren:",
+    "disable_2fa_audit_notice": "Diese Aktion wird im Audit-Protokoll erfasst.",
+    "reason_required": "Grund (erforderlich)",
+    "reason_placeholder": "Grund für die Deaktivierung der 2FA eingeben...",
+    "reason_required_error": "Bitte geben Sie einen Grund für diese Aktion an",
+    "2fa_disabled_success": "2FA wurde für diesen Benutzer deaktiviert",
+    "2fa_disable_failed": "2FA konnte nicht deaktiviert werden",
+    "select_plugin_file": "Plugin-Datei auswählen",
+    "plugin_file_types": "Unterstützt: .wasm, .zip (Plugin-Paket)"
   },
   "admin_dashboard": {
     "activity": "Aktivität",
@@ -3283,5 +3285,6 @@
   },
   "demo": {
     "security_disabled": "Passwort- und MFA-Änderungen sind im Demomodus deaktiviert."
-  }
+  },
+  "admin_dashboard.plugin_administration": "Plugin-Verwaltung"
 }
