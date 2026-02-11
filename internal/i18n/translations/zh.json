@@ -1352,15 +1352,17 @@
     "manage_api_tokens": "管理API令牌",
     "create_token_for_user": "为用户创建令牌",
     "create_token_for_customer": "为客户创建令牌",
-    "disable_2fa": "Disable 2FA",
-    "disable_2fa_title": "Disable Two-Factor Authentication",
-    "disable_2fa_warning": "You are about to disable 2FA for user:",
-    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
-    "reason_required": "Reason (required)",
-    "reason_placeholder": "Enter the reason for disabling 2FA...",
-    "reason_required_error": "Please enter a reason for this action",
-    "2fa_disabled_success": "2FA has been disabled for this user",
-    "2fa_disable_failed": "Failed to disable 2FA"
+    "disable_2fa": "禁用双因素认证",
+    "disable_2fa_title": "禁用双因素认证",
+    "disable_2fa_warning": "您即将为以下用户禁用双因素认证：",
+    "disable_2fa_audit_notice": "此操作将记录在审计日志中。",
+    "reason_required": "原因（必填）",
+    "reason_placeholder": "请输入禁用双因素认证的原因...",
+    "reason_required_error": "请输入此操作的原因",
+    "2fa_disabled_success": "已为该用户禁用双因素认证",
+    "2fa_disable_failed": "禁用双因素认证失败",
+    "select_plugin_file": "选择插件文件",
+    "plugin_file_types": "支持格式：.wasm、.zip（插件包）"
   },
   "admin_dashboard": {
     "activity": "活动",
@@ -3280,5 +3282,6 @@
   },
   "demo": {
     "security_disabled": "演示模式下密码和MFA更改已禁用。"
-  }
+  },
+  "admin_dashboard.plugin_administration": "插件管理"
 }

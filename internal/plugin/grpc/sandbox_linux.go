@@ -76,11 +76,34 @@ func buildPluginEnv(policy plugin.ResourcePolicy, pluginName string) []string {
 	return env
 }
 
-// supportsNamespaces checks if the Linux kernel supports the namespaces we want to use.
+// supportsNamespaces checks if namespace isolation is available and permitted.
+// Inside Docker containers, namespace creation is usually denied (EPERM)
+// even though the kernel supports it.
 func supportsNamespaces() bool {
-	// Check if /proc/sys/user/max_user_namespaces exists (user namespaces support)
-	_, err := os.Stat("/proc/sys/user/max_user_namespaces")
-	return err == nil
+	// Check kernel support
+	if _, err := os.Stat("/proc/sys/user/max_user_namespaces"); err != nil {
+		return false
+	}
+
+	// Detect container environment where namespace creation is typically denied.
+	// Check /.dockerenv (Docker) or /run/.containerenv (Podman).
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return false
+	}
+	if _, err := os.Stat("/run/.containerenv"); err == nil {
+		return false
+	}
+
+	// Check cgroup for container signatures
+	if data, err := os.ReadFile("/proc/1/cgroup"); err == nil {
+		s := string(data)
+		if strings.Contains(s, "docker") || strings.Contains(s, "containerd") ||
+			strings.Contains(s, "kubepods") || strings.Contains(s, "lxc") {
+			return false
+		}
+	}
+
+	return true
 }
 
 // isTestEnvironment detects if we're running in a test environment.

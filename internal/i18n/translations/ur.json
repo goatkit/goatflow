@@ -1381,15 +1381,17 @@
     "manage_api_tokens": "API ٹوکنز کا انتظام",
     "create_token_for_user": "صارف کے لیے ٹوکن بنائیں",
     "create_token_for_customer": "گاہک کے لیے ٹوکن بنائیں",
-    "disable_2fa": "Disable 2FA",
-    "disable_2fa_title": "Disable Two-Factor Authentication",
-    "disable_2fa_warning": "You are about to disable 2FA for user:",
-    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
-    "reason_required": "Reason (required)",
-    "reason_placeholder": "Enter the reason for disabling 2FA...",
-    "reason_required_error": "Please enter a reason for this action",
-    "2fa_disabled_success": "2FA has been disabled for this user",
-    "2fa_disable_failed": "Failed to disable 2FA"
+    "disable_2fa": "دو عنصری تصدیق غیر فعال کریں",
+    "disable_2fa_title": "دو عنصری تصدیق غیر فعال کریں",
+    "disable_2fa_warning": "آپ اس صارف کے لیے دو عنصری تصدیق غیر فعال کرنے والے ہیں:",
+    "disable_2fa_audit_notice": "یہ عمل آڈٹ لاگ میں ریکارڈ ہوگا۔",
+    "reason_required": "وجہ (ضروری)",
+    "reason_placeholder": "دو عنصری تصدیق غیر فعال کرنے کی وجہ درج کریں...",
+    "reason_required_error": "براہ کرم اس عمل کی وجہ درج کریں",
+    "2fa_disabled_success": "اس صارف کے لیے دو عنصری تصدیق غیر فعال کر دی گئی",
+    "2fa_disable_failed": "دو عنصری تصدیق غیر فعال کرنے میں ناکامی",
+    "select_plugin_file": "پلگ ان فائل منتخب کریں",
+    "plugin_file_types": "معاون فارمیٹ: .wasm، .zip (پلگ ان پیکیج)"
   },
   "admin_dashboard": {
     "activity": "سرگرمی",
@@ -3305,5 +3307,6 @@
   },
   "demo": {
     "security_disabled": "ڈیمو موڈ میں پاس ورڈ اور MFA تبدیلیاں غیر فعال ہیں۔"
-  }
+  },
+  "admin_dashboard.plugin_administration": "پلگ ان انتظامیہ"
 }

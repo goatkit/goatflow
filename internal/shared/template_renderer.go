@@ -34,6 +34,17 @@ func SetTemplateOverrideProvider(p TemplateOverrideProvider) {
 	globalTemplateOverrideProvider = p
 }
 
+// PluginMenuProvider returns plugin menu items for a given location (e.g. "admin", "agent").
+// This avoids import cycles between shared and api/plugin packages.
+type PluginMenuProvider func(location string) []map[string]any
+
+var globalPluginMenuProvider PluginMenuProvider
+
+// SetPluginMenuProvider sets the global provider for plugin menu items in templates.
+func SetPluginMenuProvider(p PluginMenuProvider) {
+	globalPluginMenuProvider = p
+}
+
 // TemplateRenderer handles template rendering with pongo2.
 type TemplateRenderer struct {
 	templateSet *pongo2.TemplateSet
@@ -121,6 +132,19 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 	if _, hasUser := ctx["User"]; !hasUser {
 		if user := getUserFromContext(c, isAdmin); user != nil {
 			ctx["User"] = user
+		}
+	}
+
+	// Inject plugin menu items for navigation
+	if globalPluginMenuProvider != nil {
+		if _, hasIt := ctx["PluginAdminMenuItems"]; !hasIt {
+			ctx["PluginAdminMenuItems"] = globalPluginMenuProvider("admin")
+		}
+		if _, hasIt := ctx["PluginAgentMenuItems"]; !hasIt {
+			ctx["PluginAgentMenuItems"] = globalPluginMenuProvider("agent")
+		}
+		if _, hasIt := ctx["PluginCustomerMenuItems"]; !hasIt {
+			ctx["PluginCustomerMenuItems"] = globalPluginMenuProvider("customer")
 		}
 	}
 

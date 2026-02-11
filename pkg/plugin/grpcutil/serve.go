@@ -13,6 +13,7 @@ package grpcutil
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/rpc"
 
 	goplugin "github.com/hashicorp/go-plugin"
@@ -29,11 +30,20 @@ var Handshake = goplugin.HandshakeConfig{
 }
 
 // GKPluginInterface is the interface that gRPC plugins implement.
+// Plugins that need HostAPI access should also implement GKPluginWithHost.
 type GKPluginInterface interface {
 	GKRegister() (*plugin.GKRegistration, error)
 	Init(config map[string]string) error
 	Call(fn string, args json.RawMessage) (json.RawMessage, error)
 	Shutdown() error
+}
+
+// GKPluginWithHost is an optional interface plugins implement to receive
+// the host's HostAPI during initialization. This allows plugins to use
+// the platform's database, cache, HTTP, email, and other services.
+type GKPluginWithHost interface {
+	GKPluginInterface
+	InitWithHost(config map[string]string, host plugin.HostAPI) error
 }
 
 // ServePlugin is called by plugin executables to serve the plugin.
@@ -70,9 +80,16 @@ type GKPluginRPCClient struct {
 }
 
 func (c *GKPluginRPCClient) GKRegister() (*plugin.GKRegistration, error) {
-	var resp plugin.GKRegistration
-	err := c.client.Call("Plugin.GKRegister", new(interface{}), &resp)
-	return &resp, err
+	var respBytes []byte
+	err := c.client.Call("Plugin.GKRegister", new(interface{}), &respBytes)
+	if err != nil {
+		return nil, err
+	}
+	var reg plugin.GKRegistration
+	if err := json.Unmarshal(respBytes, &reg); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal registration: %w", err)
+	}
+	return &reg, nil
 }
 
 func (c *GKPluginRPCClient) Init(config map[string]string) error {
@@ -123,16 +140,33 @@ type GKPluginRPCServer struct {
 	broker *goplugin.MuxBroker
 }
 
-func (s *GKPluginRPCServer) GKRegister(args interface{}, resp *plugin.GKRegistration) error {
+func (s *GKPluginRPCServer) GKRegister(args interface{}, resp *[]byte) error {
 	reg, err := s.Impl.GKRegister()
 	if err != nil {
 		return err
 	}
-	*resp = *reg
+	data, err := json.Marshal(reg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal registration: %w", err)
+	}
+	*resp = data
 	return nil
 }
 
 func (s *GKPluginRPCServer) Init(req InitRequest, resp *interface{}) error {
+	// If the plugin implements GKPluginWithHost and the host provided a HostAPI
+	// broker ID, connect back to the host and pass the HostAPI to the plugin.
+	if withHost, ok := s.Impl.(GKPluginWithHost); ok && req.HostAPIID > 0 && s.broker != nil {
+		conn, err := s.broker.Dial(req.HostAPIID)
+		if err != nil {
+			log.Printf("[plugin] failed to dial host API: %v", err)
+			// Fall back to Init without host
+			return s.Impl.Init(req.Config)
+		}
+		hostClient := NewHostAPIClient(rpc.NewClient(conn), req.Config["plugin_name"])
+		return withHost.InitWithHost(req.Config, hostClient)
+	}
+
 	return s.Impl.Init(req.Config)
 }
 

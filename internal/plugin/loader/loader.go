@@ -281,17 +281,48 @@ func (l *Loader) EnsureLoaded(ctx context.Context, name string) error {
 }
 
 // LoadAll discovers and loads all plugins from the plugin directory.
-// If lazy loading is enabled, only discovers plugins without loading them.
+// If lazy loading is enabled, WASM plugins are only discovered (loaded on first call).
+// gRPC plugins are always eagerly loaded because they register routes that must
+// exist before the HTTP server starts accepting requests.
 // Returns the number of successfully loaded/discovered plugins and any errors encountered.
 func (l *Loader) LoadAll(ctx context.Context) (int, []error) {
-	// If lazy loading, just discover
+	// If lazy loading, discover all then eagerly load gRPC plugins
 	if l.lazy {
 		count, err := l.DiscoverAll()
 		if err != nil {
 			return count, []error{err}
 		}
 		l.logger.Info("lazy loading enabled", "discovered", count)
-		return count, nil
+
+		// Eagerly load gRPC plugins — they define routes that Gin needs at startup
+		var grpcErrors []error
+		l.mu.RLock()
+		grpcPlugins := make([]*DiscoveredPlugin, 0)
+		for _, d := range l.discovered {
+			if d.Type == "grpc" && !d.Loaded {
+				grpcPlugins = append(grpcPlugins, d)
+			}
+		}
+		l.mu.RUnlock()
+
+		for _, d := range grpcPlugins {
+			manifest := l.manifests[d.Name]
+			if manifest == nil {
+				continue
+			}
+			if err := l.loadGRPCPlugin(ctx, d.Path, manifest); err != nil {
+				l.logger.Error("failed to eager-load gRPC plugin", "name", d.Name, "error", err)
+				grpcErrors = append(grpcErrors, fmt.Errorf("load gRPC plugin %s: %w", d.Name, err))
+			} else {
+				l.mu.Lock()
+				d.Loaded = true
+				d.LoadedAt = time.Now()
+				l.mu.Unlock()
+				l.logger.Info("eager-loaded gRPC plugin (routes required at startup)", "name", d.Name)
+			}
+		}
+
+		return count, grpcErrors
 	}
 
 	var errors []error
@@ -610,6 +641,29 @@ func (l *Loader) Reload(ctx context.Context, name string) error {
 	return nil
 }
 
+// LoadOrReload re-discovers plugins and then loads or reloads the named plugin.
+// Use after uploading a new plugin to ensure it's picked up even if it wasn't
+// present at startup.
+func (l *Loader) LoadOrReload(ctx context.Context, name string) error {
+	// Re-discover to pick up newly uploaded plugins
+	if _, err := l.DiscoverAll(); err != nil {
+		return fmt.Errorf("re-discover: %w", err)
+	}
+
+	// Also update the fsnotify watcher for new subdirectories
+	l.watchMu.Lock()
+	watcher := l.watcher
+	l.watchMu.Unlock()
+	if watcher != nil {
+		pluginSubDir := filepath.Join(l.pluginDir, name)
+		if info, err := os.Stat(pluginSubDir); err == nil && info.IsDir() {
+			watcher.Add(pluginSubDir)
+		}
+	}
+
+	return l.Reload(ctx, name)
+}
+
 // reloadWASM is the legacy reload path for WASM plugins not yet discovered.
 func (l *Loader) reloadWASM(ctx context.Context, name string) error {
 	path := filepath.Join(l.pluginDir, name+".wasm")
@@ -705,6 +759,24 @@ func (l *Loader) watchLoop() {
 func (l *Loader) handleFSEvent(event fsnotify.Event) {
 	path := event.Name
 	baseName := filepath.Base(path)
+
+	// New subdirectory created — watch it and check for plugin.yaml
+	if event.Op&fsnotify.Create != 0 {
+		if info, err := os.Stat(path); err == nil && info.IsDir() {
+			if l.watcher != nil {
+				l.watcher.Add(path)
+			}
+			// Check if the new directory already contains a plugin.yaml
+			manifestPath := filepath.Join(path, "plugin.yaml")
+			if _, err := os.Stat(manifestPath); err == nil {
+				l.handleFSEvent(fsnotify.Event{
+					Name: manifestPath,
+					Op:   fsnotify.Create,
+				})
+			}
+			return
+		}
+	}
 
 	// Check if this is a WASM file
 	isWASM := strings.HasSuffix(strings.ToLower(baseName), ".wasm")
