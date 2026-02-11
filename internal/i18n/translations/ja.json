@@ -1352,15 +1352,17 @@
     "manage_api_tokens": "APIトークンを管理",
     "create_token_for_user": "ユーザー用トークンを作成",
     "create_token_for_customer": "顧客用トークンを作成",
-    "disable_2fa": "Disable 2FA",
-    "disable_2fa_title": "Disable Two-Factor Authentication",
-    "disable_2fa_warning": "You are about to disable 2FA for user:",
-    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
-    "reason_required": "Reason (required)",
-    "reason_placeholder": "Enter the reason for disabling 2FA...",
-    "reason_required_error": "Please enter a reason for this action",
-    "2fa_disabled_success": "2FA has been disabled for this user",
-    "2fa_disable_failed": "Failed to disable 2FA"
+    "disable_2fa": "2FAを無効化",
+    "disable_2fa_title": "二要素認証を無効化",
+    "disable_2fa_warning": "次のユーザーの2FAを無効化しようとしています：",
+    "disable_2fa_audit_notice": "この操作は監査ログに記録されます。",
+    "reason_required": "理由（必須）",
+    "reason_placeholder": "2FA無効化の理由を入力してください...",
+    "reason_required_error": "この操作の理由を入力してください",
+    "2fa_disabled_success": "このユーザーの2FAが無効化されました",
+    "2fa_disable_failed": "2FAの無効化に失敗しました",
+    "select_plugin_file": "プラグインファイルを選択",
+    "plugin_file_types": "対応形式：.wasm、.zip（プラグインパッケージ）"
   },
   "admin_dashboard": {
     "activity": "アクティビティ",
@@ -3280,5 +3282,6 @@
   },
   "demo": {
     "security_disabled": "デモモードではパスワードとMFAの変更は無効です。"
-  }
+  },
+  "admin_dashboard.plugin_administration": "プラグイン管理"
 }

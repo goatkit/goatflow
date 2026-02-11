@@ -273,6 +273,7 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - Plugin dependency resolution
 - Theme-as-plugin support (themes distributed via plugin system)
 - Plugin update notifications and auto-update
+- Kubernetes pod isolation for plugins (plugin-per-pod, network policies, resource quotas via K8s-native primitives — replaces namespace/Docker socket approaches)
 
 **FAQ / Knowledge Base Plugin** *(first-party plugin)*
 - Public and internal article categories with permissions

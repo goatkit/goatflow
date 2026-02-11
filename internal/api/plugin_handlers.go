@@ -340,84 +340,11 @@ func GetPluginMenuItems(location string) []plugin.PluginMenuItem {
 	return pluginManager.MenuItems(location)
 }
 
-// RegisterPluginRoutes registers all plugin-defined routes with the Gin router.
-// Call this after plugins are loaded and before starting the server.
+// RegisterPluginRoutes is a no-op kept for backwards compatibility.
+// Plugin routes are now handled by the unified dynamic engine (MountDynamicEngine).
+// Deprecated: Use MountDynamicEngine instead.
 func RegisterPluginRoutes(r *gin.Engine) int {
-	if pluginManager == nil {
-		return 0
-	}
-
-	routes := pluginManager.Routes()
-	registered := 0
-
-	for _, route := range routes {
-		// Create a handler that dispatches to the plugin
-		pluginName := route.PluginName
-		handlerName := route.RouteSpec.Handler
-		middlewares := route.RouteSpec.Middleware
-
-		// Build middleware chain based on manifest
-		var mwChain []gin.HandlerFunc
-		for _, mw := range middlewares {
-			switch mw {
-			case "auth":
-				mwChain = append(mwChain, JWTAuthMiddleware())
-			case "admin":
-				mwChain = append(mwChain, JWTAuthMiddleware(), RequireAdmin())
-			// Add more middleware types as needed
-			}
-		}
-
-		handler := func(c *gin.Context) {
-			// Build args from request
-			args := buildPluginArgs(c)
-
-			// Use context with language for i18n support
-			ctx := pluginContextWithLanguage(c)
-			result, err := pluginManager.Call(ctx, pluginName, handlerName, args)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-
-			// Check if result contains HTML (for template responses)
-			var response map[string]any
-			if err := json.Unmarshal(result, &response); err == nil {
-				if html, ok := response["html"].(string); ok {
-					c.Header("Content-Type", "text/html; charset=utf-8")
-					c.String(http.StatusOK, html)
-					return
-				}
-			}
-
-			// Default: return as JSON
-			c.Data(http.StatusOK, "application/json", result)
-		}
-
-		// Register with appropriate HTTP method, including middleware
-		path := route.RouteSpec.Path
-		handlers := append(mwChain, handler)
-		switch route.RouteSpec.Method {
-		case "GET":
-			r.GET(path, handlers...)
-		case "POST":
-			r.POST(path, handlers...)
-		case "PUT":
-			r.PUT(path, handlers...)
-		case "DELETE":
-			r.DELETE(path, handlers...)
-		case "PATCH":
-			r.PATCH(path, handlers...)
-		default:
-			r.GET(path, handlers...) // Default to GET
-		}
-
-		log.Printf("🔌 Registered plugin route: %s %s -> %s.%s",
-			route.RouteSpec.Method, path, pluginName, handlerName)
-		registered++
-	}
-
-	return registered
+	return 0
 }
 
 // buildPluginArgs extracts request data into JSON args for the plugin.
@@ -451,6 +378,26 @@ func buildPluginArgs(c *gin.Context) json.RawMessage {
 	// Include request metadata
 	args["_method"] = c.Request.Method
 	args["_path"] = c.Request.URL.Path
+
+	// Include authenticated user context
+	if userID, exists := c.Get("user_id"); exists {
+		args["_user_id"] = userID
+	}
+	if email, exists := c.Get("user_email"); exists {
+		args["_user_email"] = email
+	}
+	// user_login is set by session auth; for JWT, fall back to email
+	if login, exists := c.Get("user_login"); exists {
+		args["_user_login"] = login
+	} else if email, exists := c.Get("user_email"); exists {
+		args["_user_login"] = email
+	}
+	if role, exists := c.Get("user_role"); exists {
+		args["_user_role"] = role
+	}
+	if isAdmin, exists := c.Get("isInAdminGroup"); exists {
+		args["_is_admin"] = isAdmin
+	}
 
 	result, _ := json.Marshal(args)
 	return result
@@ -522,9 +469,17 @@ func RequireAdmin() gin.HandlerFunc {
 // Set via SetPluginDir during app initialization.
 var pluginDir string
 
+// pluginReloader is called after a plugin is uploaded to trigger a load/reload.
+var pluginReloader func(ctx context.Context, name string) error
+
 // SetPluginDir sets the plugin directory for uploads.
 func SetPluginDir(dir string) {
 	pluginDir = dir
+}
+
+// SetPluginReloader sets the callback used to load/reload a plugin after upload.
+func SetPluginReloader(fn func(ctx context.Context, name string) error) {
+	pluginReloader = fn
 }
 
 // HandlePluginUpload handles uploading a new WASM plugin.
@@ -602,6 +557,21 @@ func HandlePluginUpload(c *gin.Context) {
 		log.Printf("🔌 Plugin package extracted: %s v%s (runtime: %s)", pluginName, pkg.Manifest.Version, runtimeType)
 		plugin.GetLogBuffer().Log(pluginName, "info", fmt.Sprintf("Plugin uploaded: %s (runtime: %s, size: %d bytes)", pluginName, runtimeType, header.Size), nil)
 
+		// Trigger load/reload of the uploaded plugin
+		if pluginReloader != nil {
+			go func() {
+				if err := pluginReloader(context.Background(), pluginName); err != nil {
+					log.Printf("⚠️  Plugin reload failed for %s: %v", pluginName, err)
+					plugin.GetLogBuffer().Log(pluginName, "error", fmt.Sprintf("Reload failed: %v", err), nil)
+				} else {
+					log.Printf("✅ Plugin %s loaded/reloaded after upload", pluginName)
+					plugin.GetLogBuffer().Log(pluginName, "info", "Plugin loaded/reloaded after upload", nil)
+					// Rebuild dynamic engine to pick up new/changed routes
+					RebuildDynamicEngine()
+				}
+			}()
+		}
+
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Plugin uploaded successfully",
 			"name":    pluginName,
@@ -638,18 +608,34 @@ func HandlePluginLogs(c *gin.Context) {
 	level := c.Query("level")
 	limitStr := c.DefaultQuery("limit", "100")
 
+	limit := 100
+	if n, err := parseInt(limitStr); err == nil && n > 0 {
+		limit = n
+	}
+
+	// Start with all entries, then filter
 	var entries []plugin.LogEntry
 
 	if pluginName != "" {
 		entries = logBuffer.GetByPlugin(pluginName)
-	} else if level != "" {
-		entries = logBuffer.GetByLevel(level)
 	} else {
-		limit := 100
-		if n, err := parseInt(limitStr); err == nil && n > 0 {
-			limit = n
-		}
 		entries = logBuffer.GetRecent(limit)
+	}
+
+	// Apply level filter if specified
+	if level != "" {
+		filtered := make([]plugin.LogEntry, 0, len(entries))
+		for _, e := range entries {
+			if e.Level == level {
+				filtered = append(filtered, e)
+			}
+		}
+		entries = filtered
+	}
+
+	// Apply limit
+	if len(entries) > limit {
+		entries = entries[:limit]
 	}
 
 	c.JSON(http.StatusOK, gin.H{

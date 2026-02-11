@@ -1353,15 +1353,17 @@
     "manage_api_tokens": "Керування API-токенами",
     "create_token_for_user": "Створити токен для користувача",
     "create_token_for_customer": "Створити токен для клієнта",
-    "disable_2fa": "Disable 2FA",
-    "disable_2fa_title": "Disable Two-Factor Authentication",
-    "disable_2fa_warning": "You are about to disable 2FA for user:",
-    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
-    "reason_required": "Reason (required)",
-    "reason_placeholder": "Enter the reason for disabling 2FA...",
-    "reason_required_error": "Please enter a reason for this action",
-    "2fa_disabled_success": "2FA has been disabled for this user",
-    "2fa_disable_failed": "Failed to disable 2FA"
+    "disable_2fa": "Вимкнути 2FA",
+    "disable_2fa_title": "Вимкнути двофакторну автентифікацію",
+    "disable_2fa_warning": "Ви збираєтесь вимкнути 2FA для користувача:",
+    "disable_2fa_audit_notice": "Ця дія буде записана в журнал аудиту.",
+    "reason_required": "Причина (обов'язково)",
+    "reason_placeholder": "Вкажіть причину вимкнення 2FA...",
+    "reason_required_error": "Будь ласка, вкажіть причину цієї дії",
+    "2fa_disabled_success": "2FA вимкнено для цього користувача",
+    "2fa_disable_failed": "Не вдалося вимкнути 2FA",
+    "select_plugin_file": "Виберіть файл плагіна",
+    "plugin_file_types": "Підтримуються: .wasm, .zip (пакет плагіна)"
   },
   "agent": {
     "ticket": {
@@ -3309,5 +3311,6 @@
   },
   "demo": {
     "security_disabled": "Зміна пароля та MFA вимкнена в демо-режимі."
-  }
+  },
+  "admin_dashboard.plugin_administration": "Керування плагінами"
 }

@@ -1392,7 +1392,9 @@
     "reason_placeholder": "Enter the reason for disabling 2FA...",
     "reason_required_error": "Please enter a reason for this action",
     "2fa_disabled_success": "2FA has been disabled for this customer",
-    "2fa_disable_failed": "Failed to disable 2FA"
+    "2fa_disable_failed": "Failed to disable 2FA",
+    "select_plugin_file": "Select plugin file",
+    "plugin_file_types": "Supported: .wasm, .zip (plugin package)"
   },
   "agent": {
     "ticket": {
@@ -3618,5 +3620,6 @@
   },
   "demo": {
     "security_disabled": "Password and MFA changes are disabled in demo mode."
-  }
+  },
+  "admin_dashboard.plugin_administration": "Plugin Administration"
 }

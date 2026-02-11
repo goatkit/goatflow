@@ -3,29 +3,38 @@ package mcp
 import (
 	"fmt"
 	"os"
-	"sync"
 	"testing"
 
 	"github.com/goatkit/goatflow/internal/database"
 )
 
-var (
-	initDBOnce sync.Once
-	initDBErr  error
-)
-
 func TestMain(m *testing.M) {
 	// Ensure test environment
 	if os.Getenv("TEST_DB_PASSWORD") == "" && os.Getenv("TEST_DB_MYSQL_PASSWORD") == "" {
-		fmt.Fprintln(os.Stderr, "WARNING: TEST_DB_PASSWORD not set, integration tests will be skipped")
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintln(os.Stderr, "╔══════════════════════════════════════════════════════════════════╗")
+		fmt.Fprintln(os.Stderr, "║  FATAL: TEST DATABASE UNAVAILABLE                               ║")
+		fmt.Fprintln(os.Stderr, "╠══════════════════════════════════════════════════════════════════╣")
+		fmt.Fprintln(os.Stderr, "║  MCP tests require the test database to be running.             ║")
+		fmt.Fprintln(os.Stderr, "║  Tests cannot be skipped - a real database is required.         ║")
+		fmt.Fprintln(os.Stderr, "║                                                                 ║")
+		fmt.Fprintln(os.Stderr, "║  To start the database:                                         ║")
+		fmt.Fprintln(os.Stderr, "║    make test-db-up                                              ║")
+		fmt.Fprintln(os.Stderr, "║                                                                 ║")
+		fmt.Fprintln(os.Stderr, "║  Then run tests:                                                ║")
+		fmt.Fprintln(os.Stderr, "║    make toolbox-exec ARGS=\"go test ./internal/mcp/...\"          ║")
+		fmt.Fprintln(os.Stderr, "╚══════════════════════════════════════════════════════════════════╝")
+		fmt.Fprintln(os.Stderr, "")
+		os.Exit(1)
 	}
 	if os.Getenv("TEST_DB_PASSWORD") == "" && os.Getenv("TEST_DB_MYSQL_PASSWORD") != "" {
 		os.Setenv("TEST_DB_PASSWORD", os.Getenv("TEST_DB_MYSQL_PASSWORD"))
 	}
 
-	// Initialize test database
+	// Initialize test database — fail hard, don't skip
 	if err := database.InitTestDB(); err != nil {
-		fmt.Fprintf(os.Stderr, "WARNING: Failed to init test DB: %v\n", err)
+		fmt.Fprintf(os.Stderr, "FATAL: Failed to init test DB: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Run tests
@@ -33,28 +42,4 @@ func TestMain(m *testing.M) {
 
 	database.CloseTestDB()
 	os.Exit(code)
-}
-
-// requireDatabase skips the test if database is not available
-func requireDatabase(t *testing.T) {
-	t.Helper()
-	if testing.Short() {
-		t.Skip("skipping integration test in short mode")
-	}
-
-	if db, err := database.GetDB(); err == nil && db != nil {
-		return
-	}
-
-	initDBOnce.Do(func() {
-		initDBErr = database.InitTestDB()
-	})
-
-	if initDBErr != nil {
-		t.Skipf("skipping integration test: %v", initDBErr)
-	}
-
-	if db, err := database.GetDB(); err != nil || db == nil {
-		t.Skip("Database not available, skipping MCP authorization tests")
-	}
 }

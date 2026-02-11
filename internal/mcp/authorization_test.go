@@ -56,28 +56,28 @@ type MCPTestFixtures struct {
 }
 
 var (
-	mcpFixtures     *MCPTestFixtures
-	mcpFixturesOnce sync.Once
-	mcpFixturesErr  error
+	mcpFixtures    *MCPTestFixtures
+	mcpFixturesErr error
 )
 
-// getMCPFixtures returns shared test fixtures, creating them once
+// getMCPFixtures returns shared test fixtures, creating them fresh if needed.
+// No sync.Once — fixtures are recreated each test run to handle DB state
+// contamination from other packages (e.g. internal/api resetTestDatabase).
 func getMCPFixtures(t *testing.T) *MCPTestFixtures {
 	t.Helper()
-	requireDatabase(t)
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		t.Skip("Database not available, skipping MCP authorization tests")
+		t.Fatal("Test database not available — run: make test-db-up")
 	}
 
-	mcpFixturesOnce.Do(func() {
+	if mcpFixtures == nil {
 		mcpFixtures = &MCPTestFixtures{db: db}
 		mcpFixturesErr = mcpFixtures.setup()
-	})
+	}
 
 	if mcpFixturesErr != nil {
-		t.Skipf("Failed to setup MCP fixtures: %v", mcpFixturesErr)
+		t.Fatalf("Failed to setup MCP fixtures: %v", mcpFixturesErr)
 	}
 
 	return mcpFixtures
@@ -725,7 +725,7 @@ func TestCreateTicket_QueuePermissions(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.False(t, result.IsError, "Admin should create ticket in Support queue")
+		require.False(t, result.IsError, "Admin should create ticket in Support queue, got: %s", getResultText(result))
 		
 		// Verify ticket was actually created with correct values
 		text := getResultText(result)
@@ -735,7 +735,8 @@ func TestCreateTicket_QueuePermissions(t *testing.T) {
 		
 		// Parse result to get ticket ID and verify in DB
 		var resultMap map[string]any
-		json.Unmarshal([]byte(text), &resultMap)
+		require.NoError(t, json.Unmarshal([]byte(text), &resultMap), "failed to parse result JSON")
+		require.Contains(t, resultMap, "ticket_id", "result should contain ticket_id")
 		ticketID := int64(resultMap["ticket_id"].(float64))
 		
 		// Verify ticket exists with correct title and queue

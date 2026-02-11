@@ -1372,15 +1372,17 @@
     "manage_api_tokens": "API pat SeH",
     "create_token_for_user": "lo wI pat chenmoH",
     "create_token_for_customer": "mach pat chenmoH",
-    "disable_2fa": "Disable 2FA",
-    "disable_2fa_title": "Disable Two-Factor Authentication",
-    "disable_2fa_warning": "You are about to disable 2FA for user:",
-    "disable_2fa_audit_notice": "This action will be logged in the audit trail.",
-    "reason_required": "Reason (required)",
-    "reason_placeholder": "Enter the reason for disabling 2FA...",
-    "reason_required_error": "Please enter a reason for this action",
-    "2fa_disabled_success": "2FA has been disabled for this user",
-    "2fa_disable_failed": "Failed to disable 2FA"
+    "disable_2fa": "2FA yImev",
+    "disable_2fa_title": "cha' ngoQ toblu'meH mIw yImev",
+    "disable_2fa_warning": "lo'wI'vam 2FA DamevrupmoH:",
+    "disable_2fa_audit_notice": "ta'vam qonlu'bej.",
+    "reason_required": "meq (poQlu')",
+    "reason_placeholder": "2FA mevmeH meq yIngu'...",
+    "reason_required_error": "ta'vam meq yIngu'",
+    "2fa_disabled_success": "lo'wI'vam 2FA mevlu'pu'",
+    "2fa_disable_failed": "2FA mevlaHbe'",
+    "select_plugin_file": "plugin teywI'  yIwIv",
+    "plugin_file_types": ".wasm, .zip (plugin naQ) lulo'lu'"
   },
   "admin_dashboard": {
     "activity": "vum",
@@ -3296,5 +3298,6 @@
   },
   "demo": {
     "security_disabled": "Demo SeHlaw: ngu'wI' choH pagh MFA choH chaw'be'lu'."
-  }
+  },
+  "admin_dashboard.plugin_administration": "chu'wI' SeH"
 }
