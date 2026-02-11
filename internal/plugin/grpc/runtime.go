@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"log"
 	"net/rpc"
 	"os"
@@ -257,9 +258,20 @@ func (p *GRPCPlugin) Init(ctx context.Context, host plugin.HostAPI) error {
 // Variables prefixed with GOATFLOW_PLUGIN_<NAME>_ are included with the prefix stripped
 // and the key lowercased. For example, GOATFLOW_PLUGIN_GOATFICTUS_LLM_URL becomes "llm_url".
 func buildPluginConfig(pluginName string) map[string]string {
+	// Provide standard paths for the plugin.
+	// plugin_dir: where the plugin binary + assets live (read-only)
+	// work_dir:   persistent writable directory for plugin data (screenshots, media, etc.)
+	pluginDir := filepath.Join("config", "plugins", pluginName)
+	workDir := filepath.Join("data", "plugins", pluginName)
+
+	// Ensure work_dir exists.
+	os.MkdirAll(workDir, 0755)
+
 	config := map[string]string{
 		"host_version": "0.6.4",
 		"plugin_name":  pluginName,
+		"plugin_dir":   pluginDir,
+		"work_dir":     workDir,
 	}
 
 	// Collect env vars with prefix GOATFLOW_PLUGIN_<NAME>_

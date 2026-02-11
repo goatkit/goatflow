@@ -49,6 +49,12 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - **Plugin hot reload enabled by default**: No longer requires `GOATFLOW_PLUGIN_HOT_RELOAD=true` or `GOATFLOW_ENV=development`. Disable explicitly with `GOATFLOW_PLUGIN_HOT_RELOAD=false`.
 - **Plugin loader watches new directories**: `handleFSEvent` now watches newly created subdirectories and checks them for `plugin.yaml`, enabling discovery of plugins added after startup.
 - **Plugin LoadOrReload**: New `Loader.LoadOrReload()` method re-discovers plugins and reloads by name — used after ZIP upload to pick up newly extracted plugins without restart.
+- **SSE (Server-Sent Events) for plugins** (`internal/plugin/sse.go`): Real-time server→browser event push for plugin UIs. `SSEBroker` with pub/sub channels, per-plugin event filtering, non-blocking publish (buffered channels, slow clients drop events). `PublishEvent(ctx, eventType, data)` added to HostAPI interface — plugins call it to push updates to connected browsers. Endpoint at `GET /api/v1/sse?plugin=<name>`. Supported by gRPC, WASM, and sandboxed HostAPI implementations. Includes htmx SSE extension (`static/js/htmx-sse.js`) for declarative UI binding via `sse-connect` / `sse-swap`.
+- **Plugin work_dir and plugin_dir**: `buildPluginConfig()` now automatically provides `work_dir` (`data/plugins/<name>/`) and `plugin_dir` (`config/plugins/<name>/`) to every plugin. `work_dir` is auto-created on init for persistent writable storage (screenshots, media, etc.).
+- **Plugin data persistence**: Docker Compose adds `goatflow_plugins` volume at `/app/config/plugins` so plugin binaries survive container restarts.
+
+### Changed
+- **Dockerfile**: Creates `/app/data/plugins` directory owned by `appuser:appgroup` for plugin runtime data.
 
 ### Fixed
 - **JWT missing admin role on login**: Login handler generated JWTs with `role: "user"` and `isAdmin: false` regardless of actual group membership. YAML route auth middleware compensated with a DB lookup, but plugin routes (dynamic engine) trust JWT claims directly — causing "admin access required" errors for admin users on plugin pages. Now checks `admin` group membership at login and bakes correct role/isAdmin into the JWT. Also fixed in 2FA completion path.

@@ -91,6 +91,7 @@
 
     <!-- HTMX extensions (vendored) -->
     <script src="/static/js/htmx-json-enc.js"></script>
+    <script src="/static/js/htmx-sse.js"></script>
 
     <!-- i18n data blocks - MUST be before common.js which reads them -->
     <!-- Validation i18n (only current language) -->

@@ -338,6 +338,8 @@ func main() {
 		pluginHostOpts = append(pluginHostOpts, plugin.WithCache(valkeyCache))
 	}
 	pluginHost := plugin.NewProdHostAPI(pluginHostOpts...)
+	sseBroker := plugin.NewSSEBroker()
+	pluginHost.SSEBroker = sseBroker
 	pluginMgr := plugin.NewManager(pluginHost)
 	// Wire PluginManager back to HostAPI for plugin-to-plugin calls
 	pluginHost.PluginManager = pluginMgr
@@ -568,6 +570,9 @@ func main() {
 	r.GET("/admin/debug/ticket-number", api.HandleDebugTicketNumber)
 	// Config sources introspection
 	r.GET("/admin/debug/config-sources", api.HandleDebugConfigSources)
+
+	// SSE endpoint for real-time plugin updates
+	r.GET("/api/v1/sse", gin.WrapF(sseBroker.ServeHTTP))
 
 	// Example of using generator early (warm path) – ensure repository updated elsewhere to accept it
 	_ = ticketNumGen

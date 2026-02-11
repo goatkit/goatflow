@@ -187,5 +187,14 @@ func (c *HostAPIClient) CallPlugin(_ context.Context, pluginName, fn string, arg
 	})
 }
 
+// PublishEvent sends an SSE event to connected browser clients.
+func (c *HostAPIClient) PublishEvent(_ context.Context, eventType string, data string) error {
+	_, err := c.call("publish_event", map[string]any{
+		"event_type": eventType,
+		"data":       data,
+	})
+	return err
+}
+
 // Verify HostAPIClient implements plugin.HostAPI at compile time.
 var _ plugin.HostAPI = (*HostAPIClient)(nil)

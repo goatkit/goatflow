@@ -43,6 +43,10 @@ func (m *mockHostAPIForUnit) CallPlugin(ctx context.Context, pluginName, functio
 	return nil, nil
 }
 
+func (m *mockHostAPIForUnit) PublishEvent(ctx context.Context, eventType string, data string) error {
+	return nil
+}
+
 func TestHostCallWithNilHost(t *testing.T) {
 	p := &WASMPlugin{
 		host: nil, // nil host

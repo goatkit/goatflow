@@ -81,3 +81,8 @@ func (h *DefaultHostAPI) Translate(ctx context.Context, key string, args ...any)
 func (h *DefaultHostAPI) CallPlugin(ctx context.Context, pluginName, fn string, args json.RawMessage) (json.RawMessage, error) {
 	return nil, fmt.Errorf("plugin calls not available in default host")
 }
+
+// PublishEvent sends an SSE event to connected browser clients.
+func (h *DefaultHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
+	return fmt.Errorf("SSE not available in default host")
+}

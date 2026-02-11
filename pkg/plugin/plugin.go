@@ -161,6 +161,11 @@ type HostAPI interface {
 	// Plugin-to-plugin calls
 	// Allows one plugin to call functions in another plugin
 	CallPlugin(ctx context.Context, pluginName, fn string, args json.RawMessage) (json.RawMessage, error)
+
+	// SSE (Server-Sent Events)
+	// Publishes an event to all connected browser clients.
+	// eventType is the SSE event name (e.g. "device-table"); data is the payload (typically HTML).
+	PublishEvent(ctx context.Context, eventType string, data string) error
 }
 
 // ResourceRequest describes what a plugin asks for from the platform.
