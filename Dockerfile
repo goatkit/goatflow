@@ -190,7 +190,7 @@ RUN apk add --no-cache \
 # Create non-root user and cache directories
 RUN addgroup -g ${GID} -S appgroup && \
     adduser -u ${UID} -S appuser -G appgroup && \
-    mkdir -p /app /app/tmp /home/appuser/.cache && \
+    mkdir -p /app /app/tmp /app/data/plugins /home/appuser/.cache && \
     chown -R appuser:appgroup /app /home/appuser/.cache
 
 # Set cache-related envs (Go build cache mostly relevant in toolbox, but harmless here)

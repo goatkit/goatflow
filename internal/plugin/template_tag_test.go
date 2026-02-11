@@ -367,3 +367,7 @@ func (m *mockHostAPIForTag) Translate(ctx context.Context, key string, args ...a
 func (m *mockHostAPIForTag) CallPlugin(ctx context.Context, pluginName, function string, args json.RawMessage) (json.RawMessage, error) {
 	return nil, nil
 }
+
+func (m *mockHostAPIForTag) PublishEvent(ctx context.Context, eventType string, data string) error {
+	return nil
+}

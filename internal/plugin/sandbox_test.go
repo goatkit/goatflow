@@ -64,6 +64,10 @@ func (m *mockInnerHostAPI) CallPlugin(_ context.Context, _, _ string, _ json.Raw
 	return nil, nil
 }
 
+func (m *mockInnerHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
+	return nil
+}
+
 func TestSandbox_DBReadOnly(t *testing.T) {
 	inner := &mockInnerHostAPI{}
 	policy := ResourcePolicy{

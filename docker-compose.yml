@@ -135,6 +135,7 @@ services:
     volumes:
       - ./storage:${STORAGE_PATH:-/app/storage}:Z
       - goatflow_certs:/app/certs
+      - goatflow_plugins:/app/config/plugins
     depends_on:
       mariadb:
         condition: service_healthy
@@ -637,6 +638,7 @@ volumes:
   valkey_test_data:
   goatflow_cache:
   goatflow_certs:
+  goatflow_plugins:
   smtp4dev_data:
   # zinc_data:         # Commented out - zinc service disabled
   # temporal_data:     # Commented out - temporal service disabled
