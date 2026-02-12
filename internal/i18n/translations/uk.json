@@ -1363,7 +1363,8 @@
     "2fa_disabled_success": "2FA вимкнено для цього користувача",
     "2fa_disable_failed": "Не вдалося вимкнути 2FA",
     "select_plugin_file": "Виберіть файл плагіна",
-    "plugin_file_types": "Підтримуються: .wasm, .zip (пакет плагіна)"
+    "plugin_file_types": "Підтримуються: .wasm, .zip (пакет плагіна)",
+    "confirm_delete_plugin": "Ви впевнені, що хочете видалити плагін \"{name}\"?"
   },
   "agent": {
     "ticket": {

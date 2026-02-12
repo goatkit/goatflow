@@ -1362,7 +1362,8 @@
     "2fa_disabled_success": "2FA zostało wyłączone dla tego użytkownika",
     "2fa_disable_failed": "Nie udało się wyłączyć 2FA",
     "select_plugin_file": "Wybierz plik wtyczki",
-    "plugin_file_types": "Obsługiwane: .wasm, .zip (pakiet wtyczki)"
+    "plugin_file_types": "Obsługiwane: .wasm, .zip (pakiet wtyczki)",
+    "confirm_delete_plugin": "Czy na pewno chcesz usunąć wtyczkę \"{name}\"?"
   },
   "admin_dashboard": {
     "activity": "Aktywność",

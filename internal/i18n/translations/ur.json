@@ -1391,7 +1391,8 @@
     "2fa_disabled_success": "اس صارف کے لیے دو عنصری تصدیق غیر فعال کر دی گئی",
     "2fa_disable_failed": "دو عنصری تصدیق غیر فعال کرنے میں ناکامی",
     "select_plugin_file": "پلگ ان فائل منتخب کریں",
-    "plugin_file_types": "معاون فارمیٹ: .wasm، .zip (پلگ ان پیکیج)"
+    "plugin_file_types": "معاون فارمیٹ: .wasm، .zip (پلگ ان پیکیج)",
+    "confirm_delete_plugin": "کیا آپ واقعی پلگ ان \"{name}\" کو حذف کرنا چاہتے ہیں؟"
   },
   "admin_dashboard": {
     "activity": "سرگرمی",
