@@ -52,10 +52,14 @@ func TestGKPluginRPCServer_GKRegister(t *testing.T) {
 	}
 	server := &GKPluginRPCServer{Impl: impl}
 
-	var resp plugin.GKRegistration
-	err := server.GKRegister(nil, &resp)
+	var respBytes []byte
+	err := server.GKRegister(nil, &respBytes)
 	if err != nil {
 		t.Errorf("GKRegister error: %v", err)
+	}
+	var resp plugin.GKRegistration
+	if err := json.Unmarshal(respBytes, &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
 	}
 	if resp.Name != "test-plugin" {
 		t.Errorf("expected name 'test-plugin', got %s", resp.Name)
