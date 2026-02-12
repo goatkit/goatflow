@@ -2847,7 +2847,9 @@
       "verify_enable": "验证并启用"
     },
     "reset_highlights": "重置功能提示",
-    "highlights_reset": "功能提示已重置"
+    "highlights_reset": "功能提示已重置",
+    "reminders_enabled": "工单提醒",
+    "reminders_enabled_help": "在仪表板上显示待处理的工单提醒通知"
   },
   "severity": {
     "critical": "紧急",

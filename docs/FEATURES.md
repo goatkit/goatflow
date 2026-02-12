@@ -18,6 +18,7 @@
 - ✅ User registration and login
 - ✅ Role-based access control (Admin, Agent, Customer)
 - ✅ User profiles
+- ✅ User preferences (language, theme, session timeout, reminder notifications)
 - ✅ Password reset
 - ✅ Session management
 - ✅ Basic permissions

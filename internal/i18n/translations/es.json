@@ -2846,7 +2846,9 @@
       "verify_enable": "Verificar y activar"
     },
     "reset_highlights": "Restablecer destacados",
-    "highlights_reset": "Los destacados se han restablecido"
+    "highlights_reset": "Los destacados se han restablecido",
+    "reminders_enabled": "Recordatorios de tickets",
+    "reminders_enabled_help": "Mostrar notificaciones de recordatorio de tickets pendientes en el panel"
   },
   "severity": {
     "critical": "Crítica",

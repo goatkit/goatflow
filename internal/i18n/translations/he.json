@@ -2854,7 +2854,9 @@
       "verify_enable": "אמת והפעל"
     },
     "reset_highlights": "אפס הדגשות תכונות",
-    "highlights_reset": "הדגשות התכונות אופסו"
+    "highlights_reset": "הדגשות התכונות אופסו",
+    "reminders_enabled": "תזכורות כרטיסים",
+    "reminders_enabled_help": "הצג התראות תזכורת כרטיסים ממתינים בלוח המחוונים"
   },
   "severity": {
     "critical": "קריטי",

@@ -2847,7 +2847,9 @@
       "verify_enable": "تحقق وتفعيل"
     },
     "reset_highlights": "إعادة تعيين إبرازات الميزات",
-    "highlights_reset": "تمت إعادة تعيين إبرازات الميزات"
+    "highlights_reset": "تمت إعادة تعيين إبرازات الميزات",
+    "reminders_enabled": "تذكيرات التذاكر",
+    "reminders_enabled_help": "عرض إشعارات تذكير التذاكر المعلقة على لوحة المعلومات"
   },
   "severity": {
     "critical": "حرج",

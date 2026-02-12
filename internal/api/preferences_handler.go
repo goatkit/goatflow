@@ -353,6 +353,99 @@ func HandleSetLanguage(c *gin.Context) {
 	})
 }
 
+// HandleGetRemindersEnabled retrieves the user's reminders enabled preference.
+func HandleGetRemindersEnabled(c *gin.Context) {
+	if _, exists := c.Get("user_id"); !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "User not authenticated",
+		})
+		return
+	}
+
+	userID := GetUserIDFromCtx(c, 0)
+	if userID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid user ID",
+		})
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database connection error",
+		})
+		return
+	}
+
+	prefService := service.NewUserPreferencesService(db)
+	enabled := prefService.GetRemindersEnabled(userID)
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"enabled": enabled,
+	})
+}
+
+// HandleSetRemindersEnabled sets the user's reminders enabled preference.
+func HandleSetRemindersEnabled(c *gin.Context) {
+	if _, exists := c.Get("user_id"); !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "User not authenticated",
+		})
+		return
+	}
+
+	userID := GetUserIDFromCtx(c, 0)
+	if userID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid user ID",
+		})
+		return
+	}
+
+	var request struct {
+		Enabled bool `json:"enabled"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid request format",
+		})
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database connection error",
+		})
+		return
+	}
+
+	prefService := service.NewUserPreferencesService(db)
+
+	if err := prefService.SetRemindersEnabled(userID, request.Enabled); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to save preference",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Reminders preference saved successfully",
+	})
+}
+
 // HandleGetProfile retrieves the current user's profile information.
 func HandleGetProfile(c *gin.Context) {
 	if _, exists := c.Get("user_id"); !exists {
