@@ -1362,7 +1362,8 @@
     "2fa_disabled_success": "已为该用户禁用双因素认证",
     "2fa_disable_failed": "禁用双因素认证失败",
     "select_plugin_file": "选择插件文件",
-    "plugin_file_types": "支持格式：.wasm、.zip（插件包）"
+    "plugin_file_types": "支持格式：.wasm、.zip（插件包）",
+    "confirm_delete_plugin": "您确定要删除插件\"{name}\"吗？"
   },
   "admin_dashboard": {
     "activity": "活动",

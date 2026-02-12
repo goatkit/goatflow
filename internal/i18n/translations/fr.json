@@ -1362,7 +1362,8 @@
     "2fa_disabled_success": "La 2FA a été désactivée pour cet utilisateur",
     "2fa_disable_failed": "Échec de la désactivation de la 2FA",
     "select_plugin_file": "Sélectionner le fichier plugin",
-    "plugin_file_types": "Formats acceptés : .wasm, .zip (paquet plugin)"
+    "plugin_file_types": "Formats acceptés : .wasm, .zip (paquet plugin)",
+    "confirm_delete_plugin": "Êtes-vous sûr de vouloir supprimer le plugin \"{name}\" ?"
   },
   "admin_dashboard": {
     "activity": "Activité",
