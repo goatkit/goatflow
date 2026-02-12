@@ -88,6 +88,7 @@ Plugins return a `GKRegistration` from `GKRegister()` declaring their identity a
 - **Routes**: HTTP endpoints the plugin handles (method, path, handler, middleware)
 - **Widgets**: Dashboard widgets (location, size, handler, refresh settings)
 - **Menu Items**: Navigation entries (admin, agent, customer locations)
+- **Navigation Control**: Hide default menu items (`HideMenuItems`) and set custom landing page (`LandingPage`) — enables plugin-as-app experiences
 - **Jobs**: Scheduled cron tasks (schedule, handler, timeout)
 - **Templates**: Template overrides/additions
 - **I18n**: Translations with namespace support
