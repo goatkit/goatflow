@@ -143,6 +143,10 @@ return &plugin.GKRegistration{
         {Code: "sync_failed", Message: "Sync operation failed", HTTPStatus: 500},
     },
 
+    // Navigation control — hide default menu items and set a custom landing page
+    HideMenuItems: []string{"dashboard", "tickets", "queues"},
+    LandingPage:   "/my-plugin",
+
     Resources: &plugin.ResourceRequest{
         MemoryMB:    512,
         CallTimeout: "30s",
@@ -303,6 +307,61 @@ On Linux, gRPC plugins run with OS-level restrictions:
 - **Parent death signal** — plugin is killed if the host process dies
 - **Minimal environment** — only `PATH`, `HOME`, `TMPDIR`, and `TZ` are set. **No database credentials or secrets are passed to plugin processes**
 - **Network hint** — `GOATFLOW_NO_NETWORK=1` is set for plugins without HTTP permission
+
+## Navigation Control
+
+Plugins can customize the GoatFlow navigation to create focused, single-purpose experiences — for example, a plugin that replaces the helpdesk UI entirely with its own interface.
+
+### Hiding Default Menu Items
+
+Use `HideMenuItems` to remove built-in navigation entries when your plugin is enabled:
+
+```go
+HideMenuItems: []string{"dashboard", "tickets", "queues", "phone_ticket", "email_ticket", "admin"},
+```
+
+Available menu item IDs:
+
+| ID | Menu Entry |
+|----|------------|
+| `dashboard` | Agent dashboard |
+| `tickets` | Ticket list |
+| `queues` | Queue view |
+| `phone_ticket` | New phone ticket |
+| `email_ticket` | New email ticket |
+| `admin` | Admin panel |
+
+Hidden items are removed from both desktop and mobile navigation. Multiple plugins can hide items — the union of all `HideMenuItems` from enabled plugins is applied.
+
+### Custom Landing Page
+
+Use `LandingPage` to redirect users to your plugin's page after login instead of the default dashboard:
+
+```go
+LandingPage: "/my-plugin",
+```
+
+When set, non-customer users are redirected to this path after successful login. If multiple plugins define a landing page, the first one registered takes effect.
+
+### Example: Plugin-as-App
+
+To make your plugin the primary application (hiding the helpdesk entirely):
+
+```go
+return &plugin.GKRegistration{
+    Name:          "my-app",
+    HideMenuItems: []string{"dashboard", "tickets", "queues", "phone_ticket", "email_ticket"},
+    LandingPage:   "/my-app",
+    MenuItems: []plugin.MenuItemSpec{
+        {ID: "my-app-home", Label: "Home", Icon: "home", Path: "/my-app", Location: "agent"},
+    },
+    Routes: []plugin.RouteSpec{
+        {Method: "GET", Path: "/my-app", Handler: "render_home", Middleware: []string{"auth"}},
+    },
+}
+```
+
+This pattern is ideal for standalone products built on the GoatKit platform — the plugin becomes the entire user experience while still leveraging GoatKit's auth, database, and plugin infrastructure.
 
 ## Routes
 
