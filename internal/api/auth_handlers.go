@@ -231,6 +231,11 @@ var HandleAuthLogin = func(c *gin.Context) {
 		redirectTarget = "/customer"
 	}
 
+	// Check if a plugin has set a custom landing page
+	if lp := shared.GetLandingPage(); lp != "" && redirectTarget == "/dashboard" {
+		redirectTarget = lp
+	}
+
 	if strings.Contains(contentType, "application/json") {
 		c.JSON(http.StatusOK, gin.H{
 			"success": true, "access_token": accessToken, "refresh_token": refreshToken,

@@ -379,6 +379,21 @@ func main() {
 		return result
 	})
 
+	// Provide hidden menu items to all templates (nav control by plugins)
+	shared.SetHiddenMenuProvider(func() map[string]bool {
+		items := pluginMgr.HiddenMenuItems()
+		result := make(map[string]bool, len(items))
+		for _, id := range items {
+			result[id] = true
+		}
+		return result
+	})
+
+	// Provide plugin landing page for post-login redirect
+	shared.SetLandingPageProvider(func() string {
+		return pluginMgr.LandingPage()
+	})
+
 	// Register built-in example plugin (for development/testing)
 	helloPlugin := example.NewHelloPlugin()
 	if err := pluginMgr.Register(context.Background(), helloPlugin); err != nil {
