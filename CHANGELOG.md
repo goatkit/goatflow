@@ -8,6 +8,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Plugin Navigation Control**: Plugins can now hide built-in nav items (`HideMenuItems` field in `GKRegistration`) and set a custom landing page (`LandingPage` field). Well-known nav item IDs: `dashboard`, `tickets`, `queues`, `phone_ticket`, `email_ticket`, `admin`. Hidden items are removed from both desktop and mobile navigation. Landing page overrides the default post-login redirect for non-customer users.
 - **Reminder Preferences**: Per-user toggle to enable/disable pending ticket reminder notifications. Default: enabled. Available on the agent profile page under Preferences. API: `GET/POST /agent/api/preferences/reminders-enabled`. When disabled, the reminder feed returns empty without deleting any data.
 - **gRPC Plugin Hot Reload**: Loader discovers gRPC plugins via `plugin.yaml` in subdirectories, watches binaries via fsnotify, auto-reloads on change with 500ms debounce. New `plugin.yaml` files trigger discovery and loading; removing them triggers unload.
 - **Plugin Isolation / SandboxedHostAPI** (`internal/plugin/sandbox.go`): Per-plugin permission enforcement wrapper around HostAPI

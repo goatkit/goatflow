@@ -268,6 +268,7 @@
 - ❌ Plugin marketplace (TODO)
 - ✅ Theme system (4 built-in themes, package structure, dark/light modes)
 - ✅ Custom widgets (plugin-provided widgets via HostAPI)
+- ✅ Plugin navigation control (hide built-in nav items, custom landing page)
 - ❌ Hook system (TODO)
 - ❌ Event bus (TODO)
 - ⚠️ Sandboxed execution (WASM sandboxed, isolation limits TODO)

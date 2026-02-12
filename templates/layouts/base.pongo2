@@ -292,27 +292,39 @@
                             </a>
                         </div>
                         <div class="hidden sm:ml-6 sm:flex sm:space-x-2 sm:items-center">
+                            {% if not HiddenNavItems.dashboard %}
                             <a href="{{ dashboardHref }}" class="gk-nav-link {% if ActivePage == 'dashboard' %}active{% endif %}">
                                 {{ navDashboard }}
                             </a>
+                            {% endif %}
+                            {% if not HiddenNavItems.tickets %}
                             <a href="{{ ticketsHref }}" class="gk-nav-link {% if ActivePage == 'tickets' %}active{% endif %}">
                                 {{ navTickets }}
                             </a>
+                            {% endif %}
                             {% if not isCustomer %}
+                            {% if not HiddenNavItems.queues %}
                             <a href="{{ queuesHref }}" rel="nofollow" class="gk-nav-link {% if ActivePage == 'queues' %}active{% endif %}">
                                 {{ navQueues }}
                             </a>
+                            {% endif %}
+                            {% if not HiddenNavItems.phone_ticket %}
                             <a href="/tickets/new?type=phone" class="gk-nav-link">
                                 <i class="fa-solid fa-phone mr-1"></i> {{ t("tickets.new.phone_ticket") }}
                             </a>
+                            {% endif %}
+                            {% if not HiddenNavItems.email_ticket %}
                             <a href="/tickets/new?type=email" class="gk-nav-link">
                                 <i class="fa-solid fa-envelope mr-1"></i> {{ t("tickets.new.email_ticket") }}
                             </a>
                             {% endif %}
+                            {% endif %}
+                            {% if not HiddenNavItems.admin %}
                             {% if not isCustomer and (User and (User.Role == "Admin" or User.IsInAdminGroup or IsInAdminGroup)) %}
                             <a href="/admin" class="gk-nav-link {% if ActivePage == 'admin' %}active{% endif %}">
                                 {{ navAdmin }}
                             </a>
+                            {% endif %}
                             {% endif %}
                             {% if not isCustomer and PluginAgentMenuItems %}{% for pmi in PluginAgentMenuItems %}
                             <a href="{{ pmi.Path }}" class="gk-nav-link">
@@ -355,27 +367,39 @@
                 </div>
                 <div x-show="mobileMenuOpen" class="sm:hidden" x-transition style="background: var(--gk-bg-surface);">
                     <div class="space-y-1 pb-3 pt-2">
+                            {% if not HiddenNavItems.dashboard %}
                             <a href="{{ dashboardHref }}" class="gk-sidebar-link {% if ActivePage == 'dashboard' %}active{% endif %}">
                                 {{ navDashboard }}
                             </a>
+                            {% endif %}
+                            {% if not HiddenNavItems.tickets %}
                             <a href="{{ ticketsHref }}" class="gk-sidebar-link {% if ActivePage == 'tickets' %}active{% endif %}">
                                 {{ navTickets }}
                             </a>
+                            {% endif %}
                             {% if not isCustomer %}
+                            {% if not HiddenNavItems.queues %}
                             <a href="{{ queuesHref }}" class="gk-sidebar-link {% if ActivePage == 'queues' %}active{% endif %}">
                                 {{ navQueues }}
                             </a>
+                            {% endif %}
+                            {% if not HiddenNavItems.phone_ticket %}
                             <a href="/tickets/new?type=phone" class="gk-sidebar-link">
                                 <i class="fa-solid fa-phone mr-2"></i> {{ t("tickets.new.phone_ticket") }}
                             </a>
+                            {% endif %}
+                            {% if not HiddenNavItems.email_ticket %}
                             <a href="/tickets/new?type=email" class="gk-sidebar-link">
                                 <i class="fa-solid fa-envelope mr-2"></i> {{ t("tickets.new.email_ticket") }}
                             </a>
                             {% endif %}
+                            {% endif %}
+                        {% if not HiddenNavItems.admin %}
                         {% if not isCustomer and (User and (User.Role == "Admin" or User.IsInAdminGroup or IsInAdminGroup)) %}
                         <a href="/admin" class="gk-sidebar-link {% if ActivePage == 'admin' %}active{% endif %}">
                                     {{ navAdmin }}
                         </a>
+                        {% endif %}
                         {% endif %}
                         {% if not isCustomer and PluginAgentMenuItems %}{% for pmi in PluginAgentMenuItems %}
                         <a href="{{ pmi.Path }}" class="gk-sidebar-link">

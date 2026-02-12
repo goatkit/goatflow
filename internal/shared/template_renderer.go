@@ -45,6 +45,34 @@ func SetPluginMenuProvider(p PluginMenuProvider) {
 	globalPluginMenuProvider = p
 }
 
+// HiddenMenuProvider returns a map of menu item IDs that should be hidden.
+type HiddenMenuProvider func() map[string]bool
+
+var globalHiddenMenuProvider HiddenMenuProvider
+
+// SetHiddenMenuProvider sets the global provider for hidden menu items in templates.
+func SetHiddenMenuProvider(p HiddenMenuProvider) {
+	globalHiddenMenuProvider = p
+}
+
+// LandingPageProvider returns the plugin-defined landing page URL, or empty string.
+type LandingPageProvider func() string
+
+var globalLandingPageProvider LandingPageProvider
+
+// SetLandingPageProvider sets the global provider for the plugin landing page.
+func SetLandingPageProvider(p LandingPageProvider) {
+	globalLandingPageProvider = p
+}
+
+// GetLandingPage returns the plugin-defined landing page URL, or empty string.
+func GetLandingPage() string {
+	if globalLandingPageProvider != nil {
+		return globalLandingPageProvider()
+	}
+	return ""
+}
+
 // TemplateRenderer handles template rendering with pongo2.
 type TemplateRenderer struct {
 	templateSet *pongo2.TemplateSet
@@ -145,6 +173,13 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 		}
 		if _, hasIt := ctx["PluginCustomerMenuItems"]; !hasIt {
 			ctx["PluginCustomerMenuItems"] = globalPluginMenuProvider("customer")
+		}
+	}
+
+	// Inject hidden nav items for navigation control
+	if globalHiddenMenuProvider != nil {
+		if _, hasIt := ctx["HiddenNavItems"]; !hasIt {
+			ctx["HiddenNavItems"] = globalHiddenMenuProvider()
 		}
 	}
 

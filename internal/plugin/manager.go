@@ -799,6 +799,38 @@ func (m *Manager) savePolicy(ctx context.Context, name string, policy *ResourceP
 	return err
 }
 
+// HiddenMenuItems returns all menu item IDs that enabled plugins want hidden.
+func (m *Manager) HiddenMenuItems() []string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var items []string
+	for _, rp := range m.plugins {
+		if !rp.enabled {
+			continue
+		}
+		items = append(items, rp.manifest.HideMenuItems...)
+	}
+	return items
+}
+
+// LandingPage returns the landing page URL from the first enabled plugin that declares one.
+// If no plugin sets a landing page, returns empty string.
+func (m *Manager) LandingPage() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for _, rp := range m.plugins {
+		if !rp.enabled && rp.manifest.LandingPage != "" {
+			continue
+		}
+		if rp.manifest.LandingPage != "" {
+			return rp.manifest.LandingPage
+		}
+	}
+	return ""
+}
+
 // ShutdownAll shuts down all plugins gracefully.
 func (m *Manager) ShutdownAll(ctx context.Context) error {
 	m.mu.Lock()

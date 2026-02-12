@@ -54,6 +54,10 @@ type GKRegistration struct {
 	I18n       *I18nSpec       `json:"i18n,omitempty"`        // translations provided by plugin
 	ErrorCodes []ErrorCodeSpec `json:"error_codes,omitempty"` // API error codes provided by plugin
 
+	// Navigation control
+	HideMenuItems []string `json:"hide_menu_items,omitempty"` // IDs of default menu items to hide (dashboard, tickets, queues, phone_ticket, email_ticket, admin)
+	LandingPage   string   `json:"landing_page,omitempty"`    // URL path to redirect to after login (e.g. "/fictus")
+
 	// Requirements
 	MinHostVersion string              `json:"min_host_version,omitempty"` // minimum GoatFlow version
 	Permissions    []string            `json:"permissions,omitempty"`      // required host permissions (legacy, use ResourceRequest)
