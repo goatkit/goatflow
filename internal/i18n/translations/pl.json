@@ -2961,7 +2961,9 @@
       "verify_enable": "Zweryfikuj i włącz"
     },
     "reset_highlights": "Resetuj podpowiedzi",
-    "highlights_reset": "Podpowiedzi zostały zresetowane"
+    "highlights_reset": "Podpowiedzi zostały zresetowane",
+    "reminders_enabled": "Przypomnienia o zgłoszeniach",
+    "reminders_enabled_help": "Pokaż powiadomienia o przypomnieniach oczekujących zgłoszeń na pulpicie"
   },
   "severity": {
     "critical": "Krytyczny",

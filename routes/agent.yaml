@@ -245,6 +245,16 @@ spec:
           handler: HandleSetLanguage
           description: "Update language preference"
 
+        - path: /api/preferences/reminders-enabled
+          method: GET
+          handler: HandleGetRemindersEnabled
+          description: "Get current reminders enabled preference"
+
+        - path: /api/preferences/reminders-enabled
+          method: POST
+          handler: HandleSetRemindersEnabled
+          description: "Update reminders enabled preference"
+
         - path: /api/preferences/theme
           method: GET
           handler: HandleGetTheme

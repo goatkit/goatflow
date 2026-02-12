@@ -2848,7 +2848,9 @@
       "verify_enable": "Verifizieren & Aktivieren"
     },
     "reset_highlights": "Feature-Hinweise zurücksetzen",
-    "highlights_reset": "Feature-Hinweise wurden zurückgesetzt"
+    "highlights_reset": "Feature-Hinweise wurden zurückgesetzt",
+    "reminders_enabled": "Ticket-Erinnerungen",
+    "reminders_enabled_help": "Ausstehende Ticket-Erinnerungsbenachrichtigungen auf dem Dashboard anzeigen"
   },
   "severity": {
     "critical": "Kritisch",

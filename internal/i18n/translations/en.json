@@ -2448,7 +2448,9 @@
       "verify_enable": "Verify & Enable"
     },
     "reset_highlights": "Reset feature highlights",
-    "highlights_reset": "Feature highlights have been reset"
+    "highlights_reset": "Feature highlights have been reset",
+    "reminders_enabled": "Ticket Reminders",
+    "reminders_enabled_help": "Show pending ticket reminder notifications on the dashboard"
   },
   "severity": {
     "critical": "Critical",

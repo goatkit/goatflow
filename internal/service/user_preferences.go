@@ -192,6 +192,25 @@ func (s *UserPreferencesService) SetThemeMode(userID int, mode string) error {
 	return s.SetPreference(userID, "ThemeMode", mode)
 }
 
+// GetRemindersEnabled returns whether pending reminders are enabled for the user.
+// Returns true if no preference is set (default: enabled).
+func (s *UserPreferencesService) GetRemindersEnabled(userID int) bool {
+	value, err := s.GetPreference(userID, "RemindersEnabled")
+	if err != nil || value == "" {
+		return true // Default: enabled
+	}
+	return value != "0"
+}
+
+// SetRemindersEnabled sets whether pending reminders are enabled for the user.
+func (s *UserPreferencesService) SetRemindersEnabled(userID int, enabled bool) error {
+	value := "1"
+	if !enabled {
+		value = "0"
+	}
+	return s.SetPreference(userID, "RemindersEnabled", value)
+}
+
 // GetAllPreferences returns all preferences for a user.
 func (s *UserPreferencesService) GetAllPreferences(userID int) (map[string]string, error) {
 	query := database.ConvertPlaceholders(`

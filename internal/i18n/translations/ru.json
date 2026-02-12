@@ -2847,7 +2847,9 @@
       "verify_enable": "Подтвердить и включить"
     },
     "reset_highlights": "Сбросить подсказки",
-    "highlights_reset": "Подсказки сброшены"
+    "highlights_reset": "Подсказки сброшены",
+    "reminders_enabled": "Напоминания о заявках",
+    "reminders_enabled_help": "Показывать уведомления о напоминаниях по ожидающим заявкам на панели"
   },
   "severity": {
     "critical": "Критическая",

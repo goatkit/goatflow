@@ -2847,7 +2847,9 @@
       "verify_enable": "Vérifier et activer"
     },
     "reset_highlights": "Réinitialiser les guides",
-    "highlights_reset": "Les guides ont été réinitialisés"
+    "highlights_reset": "Les guides ont été réinitialisés",
+    "reminders_enabled": "Rappels de tickets",
+    "reminders_enabled_help": "Afficher les notifications de rappel de tickets en attente sur le tableau de bord"
   },
   "severity": {
     "critical": "Critique",

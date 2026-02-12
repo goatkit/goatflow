@@ -6382,6 +6382,28 @@ Generated from YAML route definitions
 
 ---
 
+#### 
+
+- **Path:** `/api/preferences/reminders-enabled`
+- **Method:** `GET`
+- **Description:** Get current reminder notification preference. Returns `{"enabled": true}` by default.
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/preferences/reminders-enabled`
+- **Method:** `POST`
+- **Description:** Enable or disable pending ticket reminder notifications. Body: `{"enabled": true|false}`. Default: enabled.
+
+
+
+
+---
+
 
 
 ### Default: static

@@ -23,6 +23,18 @@ spec:
       handler: HandleSetSessionTimeout
       description: "Update session timeout preference"
 
+    # Reminders enabled preference (GET current value)
+    - path: /api/preferences/reminders-enabled
+      method: GET
+      handler: HandleGetRemindersEnabled
+      description: "Get current reminders enabled preference"
+
+    # Reminders enabled preference (POST update)
+    - path: /api/preferences/reminders-enabled
+      method: POST
+      handler: HandleSetRemindersEnabled
+      description: "Update reminders enabled preference"
+
     # Language preference (GET current value and available languages)
     - path: /api/preferences/language
       method: GET
