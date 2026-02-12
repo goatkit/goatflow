@@ -2960,7 +2960,9 @@
       "verify_enable": "Verificar e ativar"
     },
     "reset_highlights": "Redefinir destaques",
-    "highlights_reset": "Destaques foram redefinidos"
+    "highlights_reset": "Destaques foram redefinidos",
+    "reminders_enabled": "Lembretes de tickets",
+    "reminders_enabled_help": "Mostrar notificações de lembrete de tickets pendentes no painel"
   },
   "severity": {
     "critical": "Crítico",

@@ -2864,7 +2864,9 @@
       "verify_enable": "yItob 'ej yIchu'"
     },
     "reset_highlights": "ngo'wI' tIchenmoH",
-    "highlights_reset": "ngo'wI' chenmoHlu'pu'"
+    "highlights_reset": "ngo'wI' chenmoHlu'pu'",
+    "reminders_enabled": "naDevmeH qIn",
+    "reminders_enabled_help": "Dashboard-Daq loS qIn qaw'meH De' cha'"
   },
   "severity": {
     "critical": "Qob'a'",

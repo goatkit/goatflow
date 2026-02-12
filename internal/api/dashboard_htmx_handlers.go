@@ -615,6 +615,21 @@ func handlePendingReminderFeed(c *gin.Context) {
 		return
 	}
 
+	// Check if reminders are enabled for this user
+	db, dbErr := database.GetDB()
+	if dbErr == nil {
+		prefService := service.NewUserPreferencesService(db)
+		if !prefService.GetRemindersEnabled(userID) {
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"data": gin.H{
+					"reminders": []gin.H{},
+				},
+			})
+			return
+		}
+	}
+
 	hub := notifications.GetHub()
 	items := hub.Consume(userID)
 	reminders := make([]gin.H, 0, len(items))

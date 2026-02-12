@@ -2844,7 +2844,9 @@
       "verify_enable": "تأیید و فعال‌سازی"
     },
     "reset_highlights": "بازنشانی راهنمای ویژگی‌ها",
-    "highlights_reset": "راهنمای ویژگی‌ها بازنشانی شد"
+    "highlights_reset": "راهنمای ویژگی‌ها بازنشانی شد",
+    "reminders_enabled": "یادآوری‌های تیکت",
+    "reminders_enabled_help": "نمایش اعلان‌های یادآوری تیکت‌های معلق در داشبورد"
   },
   "severity": {
     "critical": "بحرانی",

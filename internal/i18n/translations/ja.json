@@ -2847,7 +2847,9 @@
       "verify_enable": "確認して有効化"
     },
     "reset_highlights": "機能ハイライトをリセット",
-    "highlights_reset": "機能ハイライトがリセットされました"
+    "highlights_reset": "機能ハイライトがリセットされました",
+    "reminders_enabled": "チケットリマインダー",
+    "reminders_enabled_help": "ダッシュボードに保留中のチケットリマインダー通知を表示する"
   },
   "severity": {
     "critical": "重大",

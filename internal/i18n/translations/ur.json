@@ -2873,7 +2873,9 @@
       "verify_enable": "تصدیق کریں اور فعال کریں"
     },
     "reset_highlights": "فیچر ہائی لائٹس ری سیٹ کریں",
-    "highlights_reset": "فیچر ہائی لائٹس ری سیٹ ہو گئیں"
+    "highlights_reset": "فیچر ہائی لائٹس ری سیٹ ہو گئیں",
+    "reminders_enabled": "ٹکٹ یاد دہانیاں",
+    "reminders_enabled_help": "ڈیش بورڈ پر زیر التوا ٹکٹ یاد دہانی اطلاعات دکھائیں"
   },
   "severity": {
     "critical": "اہم",

@@ -2345,7 +2345,9 @@
       "verify_enable": "Підтвердити та увімкнути"
     },
     "reset_highlights": "Скинути підказки",
-    "highlights_reset": "Підказки скинуто"
+    "highlights_reset": "Підказки скинуто",
+    "reminders_enabled": "Нагадування про заявки",
+    "reminders_enabled_help": "Показувати сповіщення про нагадування щодо очікуваних заявок на панелі"
   },
   "severity": {
     "critical": "Критична",
