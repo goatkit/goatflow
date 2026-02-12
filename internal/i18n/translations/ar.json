@@ -1362,7 +1362,8 @@
     "2fa_disabled_success": "تم تعطيل المصادقة الثنائية لهذا المستخدم",
     "2fa_disable_failed": "فشل تعطيل المصادقة الثنائية",
     "select_plugin_file": "اختر ملف الإضافة",
-    "plugin_file_types": "المدعوم: .wasm، .zip (حزمة الإضافة)"
+    "plugin_file_types": "المدعوم: .wasm، .zip (حزمة الإضافة)",
+    "confirm_delete_plugin": "هل أنت متأكد أنك تريد حذف الإضافة \"{name}\"؟"
   },
   "admin_dashboard": {
     "activity": "النشاط",

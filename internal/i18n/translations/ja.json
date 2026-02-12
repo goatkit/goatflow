@@ -1362,7 +1362,8 @@
     "2fa_disabled_success": "このユーザーの2FAが無効化されました",
     "2fa_disable_failed": "2FAの無効化に失敗しました",
     "select_plugin_file": "プラグインファイルを選択",
-    "plugin_file_types": "対応形式：.wasm、.zip（プラグインパッケージ）"
+    "plugin_file_types": "対応形式：.wasm、.zip（プラグインパッケージ）",
+    "confirm_delete_plugin": "プラグイン「{name}」を削除してもよろしいですか？"
   },
   "admin_dashboard": {
     "activity": "アクティビティ",

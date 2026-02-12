@@ -1362,7 +1362,8 @@
     "2fa_disabled_success": "احراز هویت دو مرحله‌ای برای این کاربر غیرفعال شد",
     "2fa_disable_failed": "غیرفعال کردن احراز هویت دو مرحله‌ای ناموفق بود",
     "select_plugin_file": "فایل افزونه را انتخاب کنید",
-    "plugin_file_types": "پشتیبانی: .wasm، .zip (بسته افزونه)"
+    "plugin_file_types": "پشتیبانی: .wasm، .zip (بسته افزونه)",
+    "confirm_delete_plugin": "آیا مطمئن هستید که می‌خواهید افزونه \"{name}\" را حذف کنید؟"
   },
   "admin_dashboard": {
     "activity": "فعالیت",

@@ -1362,7 +1362,8 @@
     "2fa_disabled_success": "האימות הדו-שלבי הושבת עבור משתמש זה",
     "2fa_disable_failed": "השבתת האימות הדו-שלבי נכשלה",
     "select_plugin_file": "בחר קובץ תוסף",
-    "plugin_file_types": "נתמך: .wasm, .zip (חבילת תוסף)"
+    "plugin_file_types": "נתמך: .wasm, .zip (חבילת תוסף)",
+    "confirm_delete_plugin": "האם אתה בטוח שברצונך למחוק את התוסף \"{name}\"?"
   },
   "admin_dashboard": {
     "activity": "פעילות",

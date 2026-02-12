@@ -1394,7 +1394,8 @@
     "2fa_disabled_success": "2FA has been disabled for this customer",
     "2fa_disable_failed": "Failed to disable 2FA",
     "select_plugin_file": "Select plugin file",
-    "plugin_file_types": "Supported: .wasm, .zip (plugin package)"
+    "plugin_file_types": "Supported: .wasm, .zip (plugin package)",
+    "confirm_delete_plugin": "Are you sure you want to delete the plugin \"{name}\"?"
   },
   "agent": {
     "ticket": {

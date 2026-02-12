@@ -312,7 +312,8 @@ const i18n = {
     disable: "{{ t('buttons.disable')|default:'Disable' }}",
     enable: "{{ t('buttons.enable')|default:'Enable' }}",
     deletePlugin: "{{ t('admin.delete_plugin')|default:'Delete' }}",
-    error: "{{ t('common.error')|default:'Error' }}"
+    error: "{{ t('common.error')|default:'Error' }}",
+    confirmDeletePlugin: "{{ t('admin.confirm_delete_plugin')|default:'Are you sure you want to delete the plugin \"{name}\"?' }}"
 };
 
 function escapeHtml(text) {
@@ -678,7 +679,7 @@ let pluginToDelete = null;
 function confirmDeletePlugin(name) {
     pluginToDelete = name;
     document.getElementById('delete-modal-message').textContent =
-        `Are you sure you want to delete the plugin "${name}"?`;
+        i18n.confirmDeletePlugin.replace('{name}', name);
     document.getElementById('deleteModal').classList.remove('hidden');
 }
 

@@ -1382,7 +1382,8 @@
     "2fa_disabled_success": "lo'wI'vam 2FA mevlu'pu'",
     "2fa_disable_failed": "2FA mevlaHbe'",
     "select_plugin_file": "plugin teywI'  yIwIv",
-    "plugin_file_types": ".wasm, .zip (plugin naQ) lulo'lu'"
+    "plugin_file_types": ".wasm, .zip (plugin naQ) lulo'lu'",
+    "confirm_delete_plugin": "bIlughbe''a'? \"{name}\" plugin DabuSQo'meH?"
   },
   "admin_dashboard": {
     "activity": "vum",

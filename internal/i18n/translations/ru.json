@@ -1362,7 +1362,8 @@
     "2fa_disabled_success": "2FA отключена для этого пользователя",
     "2fa_disable_failed": "Не удалось отключить 2FA",
     "select_plugin_file": "Выберите файл плагина",
-    "plugin_file_types": "Поддерживаются: .wasm, .zip (пакет плагина)"
+    "plugin_file_types": "Поддерживаются: .wasm, .zip (пакет плагина)",
+    "confirm_delete_plugin": "Вы уверены, что хотите удалить плагин \"{name}\"?"
   },
   "admin_dashboard": {
     "activity": "Активность",
