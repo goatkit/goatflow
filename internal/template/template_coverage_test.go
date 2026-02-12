@@ -98,6 +98,7 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/ticket_attribute_relations.pongo2":   true,
 	"pages/admin/plugins.pongo2":                      true,
 	"pages/admin/plugin_logs.pongo2":                  true,
+	"pages/plugin_wrapper.pongo2":                     true,
 
 	// Agent templates
 	"pages/agent/queues.pongo2":      true,
@@ -1762,6 +1763,16 @@ func TestAllMiscTemplatesRender(t *testing.T) {
 			name:     "under_construction",
 			template: "pages/under_construction.pongo2",
 			ctx:      baseContext(),
+		},
+		{
+			name:     "plugin_wrapper",
+			template: "pages/plugin_wrapper.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := baseContext()
+				ctx["PluginTitle"] = "Test Plugin"
+				ctx["PluginHTML"] = "<p>Plugin content</p>"
+				return ctx
+			}(),
 		},
 	}
 
