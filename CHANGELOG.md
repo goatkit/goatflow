@@ -8,6 +8,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Dashboard Widget Grid (gridstack.js)**: Agent dashboard now uses [gridstack.js](https://gridstackjs.com/) for drag-and-resize widget layout. 12-column grid with lock/unlock toggle (locked by default). Layout auto-saves per user and restores on reload. Bundled locally in `static/vendor/` for offline use.
+- **Stats Plugin — expanded widgets**: Stats WASM plugin now provides 6 dashboard widgets: Total Tickets, Open, Closed, New Today, Pending, and Overdue. Displayed in two rows of three.
+- **Stats Plugin — RBAC queue filtering**: `GetPluginWidgets()` receives the caller's queue admin status and accessible queue IDs via Gin context, so non-admin agents only see stats for their own queues.
+- **Admin Dashboard — Recent Activity**: Shows real entries from `admin_action_log` with action, target, actor, and human-readable relative timestamps ("5 minutes ago", "yesterday"). Falls back to "No recent admin activity" when empty.
+- **Admin Dashboard — redesign**: Collapsible accordion sections (Platform, GoatFlow, Customers, Plugin Administration, Recent Activity) with localStorage-persisted open/close state. Rotating ticket activity metrics (created/closed by day/week/month, open right now).
 - **Plugin Navigation Control**: Plugins can now hide built-in nav items (`HideMenuItems` field in `GKRegistration`) and set a custom landing page (`LandingPage` field). Well-known nav item IDs: `dashboard`, `tickets`, `queues`, `phone_ticket`, `email_ticket`, `admin`. Hidden items are removed from both desktop and mobile navigation. Landing page overrides the default post-login redirect for non-customer users.
 - **Reminder Preferences**: Per-user toggle to enable/disable pending ticket reminder notifications. Default: enabled. Available on the agent profile page under Preferences. API: `GET/POST /agent/api/preferences/reminders-enabled`. When disabled, the reminder feed returns empty without deleting any data.
 - **gRPC Plugin Hot Reload**: Loader discovers gRPC plugins via `plugin.yaml` in subdirectories, watches binaries via fsnotify, auto-reloads on change with 500ms debounce. New `plugin.yaml` files trigger discovery and loading; removing them triggers unload.
@@ -58,7 +63,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 - **Dockerfile**: Creates `/app/data/plugins` directory owned by `appuser:appgroup` for plugin runtime data.
 
+### Changed
+- **Dashboard stats migrated to WASM plugin**: Hardcoded ticket statistics grid removed from the agent dashboard template. Stats are now served entirely by the `stats` WASM plugin, making the dashboard extensible without code changes.
+- **Dashboard "New Ticket" respects plugin nav hiding**: The "New Ticket" button is conditionally rendered based on `HiddenNavItems.tickets`, so plugins that hide the tickets nav item also hide the button.
+
 ### Fixed
+- **`LandingPage()` skipped wrong plugins**: Plugin manager's landing page resolver had an inverted condition — it was skipping the plugin that *did* declare a landing page and checking ones that didn't.
+- **Reminders preference route missing**: `GET/POST /agent/api/preferences/reminders-enabled` returned Guru Meditation (404) because the routes were absent from `routes/agent.yaml`. Added routes and registered handlers.
+- **Stats plugin Overdue query wrong column**: Was querying `escalation_destination_date` (doesn't exist in default schema). Changed to `escalation_time` (epoch int) with correct `> 0 AND < UNIX_TIMESTAMP()` logic.
+- **Gridstack CSS not loading**: Initial integration used `column: 2` but GoatKit only ships `gs-12` CSS rules. Changed to 12-column grid with correct size mappings (small=6×2, medium=6×3, large=12×4, full=12×2).
 - **JWT missing admin role on login**: Login handler generated JWTs with `role: "user"` and `isAdmin: false` regardless of actual group membership. YAML route auth middleware compensated with a DB lookup, but plugin routes (dynamic engine) trust JWT claims directly — causing "admin access required" errors for admin users on plugin pages. Now checks `admin` group membership at login and bakes correct role/isAdmin into the JWT. Also fixed in 2FA completion path.
 - **Dashboard widget ordering ignored saved position**: Plugin widgets rendered in discovery order rather than user-configured position. The handler filtered by enabled/disabled but discarded the `Position` field. Now sorts widgets by saved position after filtering.
 - **Unified dynamic engine plugin route auth**: Plugin routes on the dynamic sub-engine now use `SessionOrJWTAuth()` instead of bare `JWTAuthMiddleware()`, consistent with plugin API routes.

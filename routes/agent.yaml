@@ -255,6 +255,16 @@ spec:
           handler: HandleSetTheme
           description: "Update theme preference (persists to database)"
 
+        - path: /api/preferences/reminders-enabled
+          method: GET
+          handler: HandleGetRemindersEnabled
+          description: "Get ticket reminders enabled preference"
+
+        - path: /api/preferences/reminders-enabled
+          method: POST
+          handler: HandleSetRemindersEnabled
+          description: "Update ticket reminders enabled preference"
+
         # User profile API
         - path: /api/profile
           method: GET

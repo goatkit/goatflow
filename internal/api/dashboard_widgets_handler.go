@@ -24,8 +24,13 @@ type WidgetInfo struct {
 	PluginName string `json:"plugin_name"`
 	WidgetID   string `json:"widget_id"`
 	Title      string `json:"title"`
+	Size       string `json:"size"`
 	Enabled    bool   `json:"enabled"`
 	Position   int    `json:"position"`
+	X          int    `json:"x"`
+	Y          int    `json:"y"`
+	W          int    `json:"w"`
+	H          int    `json:"h"`
 }
 
 // handleDashboardWidgetsList returns all available widgets with their current config.
@@ -67,9 +72,21 @@ func handleDashboardWidgetsList(c *gin.Context) {
 		enabled := true
 		position := i
 
+		// Default grid dimensions based on widget size
+		gw, gh := sizeToGrid(w.Size)
+		gx, gy := 0, 0
+
 		if cfg, ok := configMap[fullID]; ok {
 			enabled = cfg.Enabled
 			position = cfg.Position
+			if cfg.W > 0 {
+				gw = cfg.W
+			}
+			if cfg.H > 0 {
+				gh = cfg.H
+			}
+			gx = cfg.X
+			gy = cfg.Y
 		}
 
 		widgets = append(widgets, WidgetInfo{
@@ -77,8 +94,13 @@ func handleDashboardWidgetsList(c *gin.Context) {
 			PluginName: w.PluginName,
 			WidgetID:   w.ID,
 			Title:      w.Title,
+			Size:       w.Size,
 			Enabled:    enabled,
 			Position:   position,
+			X:          gx,
+			Y:          gy,
+			W:          gw,
+			H:          gh,
 		})
 	}
 	
@@ -151,6 +173,21 @@ func handleDashboardWidgetsUpdate(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Dashboard widgets updated"})
+}
+
+// sizeToGrid converts a widget size hint to default grid dimensions (w, h)
+// on a 12-column grid.
+func sizeToGrid(size string) (int, int) {
+	switch size {
+	case "small":
+		return 6, 2
+	case "large":
+		return 12, 4
+	case "full":
+		return 12, 2
+	default: // "medium" or unset
+		return 6, 3
+	}
 }
 
 // getDashboardUserID extracts user ID from context for dashboard widgets.

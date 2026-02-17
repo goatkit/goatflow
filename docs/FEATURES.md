@@ -83,7 +83,7 @@
 - ❌ Load balancing (TODO)
 
 ### Reporting & Analytics
-- ✅ Dashboard widgets (statistics + HTMX handlers)
+- ✅ Dashboard widgets (statistics via WASM plugin, drag/resize via gridstack.js)
 - ⚠️ Standard reports (basic stats, full reports TODO)
 - ❌ Custom report builder (TODO)
 - ✅ Real-time metrics (WebSocket dashboard)
@@ -267,7 +267,8 @@
 - ✅ Plugin architecture (dual-runtime: WASM via wazero + gRPC via go-plugin)
 - ❌ Plugin marketplace (TODO)
 - ✅ Theme system (4 built-in themes, package structure, dark/light modes)
-- ✅ Custom widgets (plugin-provided widgets via HostAPI)
+- ✅ Custom widgets (plugin-provided widgets via HostAPI, RBAC-filtered)
+- ✅ Widget drag/resize (gridstack.js, 12-column grid, per-user layout persistence)
 - ✅ Plugin navigation control (hide built-in nav items, custom landing page)
 - ❌ Hook system (TODO)
 - ❌ Event bus (TODO)

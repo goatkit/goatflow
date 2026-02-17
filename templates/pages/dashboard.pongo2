@@ -2,6 +2,66 @@
 
 {% block title %}{{ t("navigation.dashboard") }} - {{ t("app.name") }}{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="/static/vendor/gridstack.min.css">
+<style>
+    /* GridStack theme overrides for GoatKit */
+    .grid-stack {
+        min-height: 200px;
+    }
+    .grid-stack-item-content {
+        inset: 6px !important;
+        display: flex;
+        flex-direction: column;
+    }
+    .grid-stack-item-content .gk-card-body {
+        flex: 1;
+        min-height: 0;
+    }
+    /* Placeholder styling */
+    .grid-stack-placeholder > .placeholder-content {
+        border: 2px dashed var(--gk-border-default) !important;
+        background: var(--gk-bg-secondary) !important;
+        border-radius: 0.75rem;
+        opacity: 0.5;
+    }
+    /* Resize handle */
+    .grid-stack > .grid-stack-item > .ui-resizable-se {
+        background: none;
+        width: 20px;
+        height: 20px;
+        bottom: 8px;
+        right: 8px;
+    }
+    .grid-stack > .grid-stack-item > .ui-resizable-se::after {
+        content: '';
+        display: block;
+        width: 12px;
+        height: 12px;
+        border-right: 2px solid var(--gk-text-muted);
+        border-bottom: 2px solid var(--gk-text-muted);
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    /* Show handles only when unlocked */
+    .grid-stack.gs-unlocked > .grid-stack-item > .ui-resizable-se::after {
+        opacity: 0.5;
+    }
+    .grid-stack.gs-unlocked > .grid-stack-item:hover > .ui-resizable-se::after {
+        opacity: 1;
+    }
+    .grid-stack.gs-unlocked .gs-drag-icon {
+        opacity: 0.4 !important;
+    }
+    .grid-stack.gs-unlocked .grid-stack-item:hover .gs-drag-icon {
+        opacity: 1 !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Page header -->
@@ -15,6 +75,18 @@
             </p>
         </div>
         <div class="mt-4 flex md:ml-4 md:mt-0 gap-2">
+            <!-- Grid Lock Toggle -->
+            <button type="button" id="grid-lock-toggle"
+                    onclick="toggleGridLock()"
+                    class="gk-btn-secondary flex items-center"
+                    title="Unlock widgets to drag & resize">
+                <svg id="lock-icon-locked" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+                <svg id="lock-icon-unlocked" class="h-5 w-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+                </svg>
+            </button>
             <!-- Widget Settings Button -->
             <button type="button" 
                     onclick="openWidgetSettings()"
@@ -25,56 +97,43 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
             </button>
+            {% if not HiddenNavItems.tickets %}
             <a href="/tickets/new" class="gk-btn-neon">
                 <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                 </svg>
                 {{ t("tickets.new_ticket") }}
             </a>
+            {% endif %}
         </div>
     </div>
 
-    <!-- Stats grid -->
-    <div class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
-         hx-get="/dashboard/api/stats"
-         hx-trigger="load"
-         hx-target="this"
-         hx-swap="innerHTML">
-        <!-- Loading placeholder -->
-        <div class="gk-stat-card">
-            <dt class="gk-stat-label">{{ t("labels.loading")|default:"Loading..." }}</dt>
-            <dd class="gk-stat-value mt-1">-</dd>
-        </div>
-        <div class="gk-stat-card">
-            <dt class="gk-stat-label">{{ t("labels.loading")|default:"Loading..." }}</dt>
-            <dd class="gk-stat-value mt-1">-</dd>
-        </div>
-        <div class="gk-stat-card">
-            <dt class="gk-stat-label">{{ t("labels.loading")|default:"Loading..." }}</dt>
-            <dd class="gk-stat-value mt-1">-</dd>
-        </div>
-        <div class="gk-stat-card">
-            <dt class="gk-stat-label">{{ t("labels.loading")|default:"Loading..." }}</dt>
-            <dd class="gk-stat-value mt-1">-</dd>
-        </div>
-    </div>
-
-    <!-- Plugin Widgets -->
+    <!-- Plugin Widgets (gridstack) -->
     {% if PluginWidgets %}
-    <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2" id="plugin-widgets-container">
+    <div class="mt-8 grid-stack" id="plugin-widgets-container">
         {% for widget in PluginWidgets %}
-        <div class="gk-card-glow plugin-widget" 
+        <div class="grid-stack-item"
+             gs-x="{{ widget.GridX }}" gs-y="{{ widget.GridY }}"
+             gs-w="{{ widget.GridW }}" gs-h="{{ widget.GridH }}"
+             gs-id="{{ widget.PluginName }}:{{ widget.ID }}"
              data-plugin="{{ widget.PluginName }}" 
              data-widget-id="{{ widget.ID }}"
              {% if widget.Refreshable %}data-refresh-sec="{{ widget.RefreshSec }}"{% endif %}>
-            <div class="gk-card-header flex items-center justify-between">
-                <h3 class="gk-card-title">{{ widget.Title }}</h3>
-                <span class="text-xs px-2 py-1 rounded" style="background: var(--gk-bg-elevated); color: var(--gk-text-muted); border: 1px solid var(--gk-border-default);">
-                    {{ widget.PluginName }}
-                </span>
-            </div>
-            <div class="gk-card-body plugin-widget-content">
-                {{ widget.HTML|safe }}
+            <div class="grid-stack-item-content gk-card-glow plugin-widget">
+                <div class="gk-card-header flex items-center justify-between">
+                    <div class="gs-drag-handle flex items-center gap-2 cursor-move flex-1" style="color: var(--gk-text-muted);">
+                        <svg class="h-4 w-4 gs-drag-icon opacity-0 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
+                        </svg>
+                        <h3 class="gk-card-title" style="color: var(--gk-text-primary);">{{ widget.Title }}</h3>
+                    </div>
+                    <span class="text-xs px-2 py-1 rounded" style="background: var(--gk-bg-elevated); color: var(--gk-text-muted); border: 1px solid var(--gk-border-default);">
+                        {{ widget.PluginName }}
+                    </span>
+                </div>
+                <div class="gk-card-body plugin-widget-content" style="overflow: auto;">
+                    {{ widget.HTML|safe }}
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -129,7 +188,102 @@
     </div>
 </div>
 
+<script src="/static/vendor/gridstack-all.min.js"></script>
 <script>
+// GridStack init
+let grid = null;
+let gridLocked = true;
+
+function initGridStack() {
+    const el = document.getElementById('plugin-widgets-container');
+    if (!el || !el.classList.contains('grid-stack')) return;
+
+    grid = GridStack.init({
+        column: 12,
+        cellHeight: 120,
+        margin: 6,
+        animate: true,
+        float: false,
+        disableResize: true,
+        disableDrag: true,
+        handle: '.gs-drag-handle',
+    }, el);
+
+    grid.on('change', function(event, items) {
+        autoSaveGridLayout();
+    });
+}
+
+function toggleGridLock() {
+    gridLocked = !gridLocked;
+    const lockedIcon = document.getElementById('lock-icon-locked');
+    const unlockedIcon = document.getElementById('lock-icon-unlocked');
+    const btn = document.getElementById('grid-lock-toggle');
+    const container = document.getElementById('plugin-widgets-container');
+
+    if (gridLocked) {
+        lockedIcon.classList.remove('hidden');
+        unlockedIcon.classList.add('hidden');
+        btn.title = 'Unlock widgets to drag & resize';
+        btn.classList.remove('gk-btn-neon');
+        btn.classList.add('gk-btn-secondary');
+        if (container) container.classList.remove('gs-unlocked');
+        if (grid) {
+            grid.enableMove(false);
+            grid.enableResize(false);
+        }
+    } else {
+        lockedIcon.classList.add('hidden');
+        unlockedIcon.classList.remove('hidden');
+        btn.title = 'Lock widgets in place';
+        btn.classList.remove('gk-btn-secondary');
+        btn.classList.add('gk-btn-neon');
+        if (container) container.classList.add('gs-unlocked');
+        if (grid) {
+            grid.enableMove(true);
+            grid.enableResize(true);
+        }
+    }
+}
+
+let saveTimeout = null;
+function autoSaveGridLayout() {
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(doSaveGridLayout, 500);
+}
+
+async function doSaveGridLayout() {
+    if (!grid) return;
+    const items = grid.getGridItems();
+    const widgets = [];
+
+    items.forEach((el, idx) => {
+        const node = el.gridstackNode;
+        if (!node) return;
+        widgets.push({
+            widget_id: node.id || '',
+            enabled: true,
+            position: idx,
+            x: node.x || 0,
+            y: node.y || 0,
+            w: node.w || 1,
+            h: node.h || 1,
+        });
+    });
+
+    try {
+        await fetch('/api/dashboard/widgets/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ widgets })
+        });
+    } catch (err) {
+        console.error('Failed to save grid layout:', err);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initGridStack);
+
 // Widget settings state
 let widgetSettings = [];
 

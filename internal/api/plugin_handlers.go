@@ -279,11 +279,31 @@ func HandlePluginWidget(c *gin.Context) {
 
 // GetPluginWidgets returns rendered widgets for a dashboard location.
 // Used by dashboard handlers to include plugin widgets.
-// Pass a gin.Context to enable i18n support in widgets.
-func GetPluginWidgets(ctx context.Context, location string) []PluginWidgetData {
+// Pass a gin.Context to enable i18n and RBAC support in widgets.
+func GetPluginWidgets(ctx context.Context, location string, ginCtx ...*gin.Context) []PluginWidgetData {
 	if pluginManager == nil {
 		log.Printf("🔌 GetPluginWidgets: pluginManager is nil!")
 		return nil
+	}
+
+	// Build widget args with RBAC context if gin context is available
+	widgetArgs := []byte("{}")
+	if len(ginCtx) > 0 && ginCtx[0] != nil {
+		c := ginCtx[0]
+		argsMap := map[string]any{}
+
+		if val, exists := c.Get("is_queue_admin"); exists {
+			argsMap["is_queue_admin"] = val
+		}
+		if val, exists := c.Get("accessible_queue_ids"); exists {
+			argsMap["accessible_queue_ids"] = val
+		}
+
+		if len(argsMap) > 0 {
+			if data, err := json.Marshal(argsMap); err == nil {
+				widgetArgs = data
+			}
+		}
 	}
 
 	// Use AllWidgets to trigger lazy loading of discovered plugins
@@ -293,7 +313,7 @@ func GetPluginWidgets(ctx context.Context, location string) []PluginWidgetData {
 
 	for _, w := range widgets {
 		// Call the widget handler to get HTML (ctx should already have language if from gin)
-		result, err := pluginManager.Call(ctx, w.PluginName, w.Handler, nil)
+		result, err := pluginManager.Call(ctx, w.PluginName, w.Handler, widgetArgs)
 		if err != nil {
 			log.Printf("🔌 Widget %s:%s call failed: %v", w.PluginName, w.Handler, err)
 			continue
@@ -330,6 +350,10 @@ type PluginWidgetData struct {
 	Size        string
 	Refreshable bool
 	RefreshSec  int
+	GridX       int
+	GridY       int
+	GridW       int
+	GridH       int
 }
 
 // GetPluginMenuItems returns menu items for a location.

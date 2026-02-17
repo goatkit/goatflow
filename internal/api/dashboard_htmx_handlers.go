@@ -192,7 +192,7 @@ func handleDashboard(c *gin.Context) {
 	}
 
 	// Get plugin widgets for dashboard - filtered by user preferences
-	allPluginWidgets := GetPluginWidgets(c.Request.Context(), "dashboard")
+	allPluginWidgets := GetPluginWidgets(c.Request.Context(), "dashboard", c)
 	
 	// Get user's widget config to filter
 	var dashboardUserID int
@@ -206,17 +206,13 @@ func handleDashboard(c *gin.Context) {
 		widgetConfig, _ := prefService.GetDashboardWidgets(dashboardUserID)
 		
 		if widgetConfig != nil && len(widgetConfig) > 0 {
-			// Build map of widget configs (enabled + position)
-			type widgetCfg struct {
-				Enabled  bool
-				Position int
-			}
-			configMap := make(map[string]widgetCfg)
+			// Build map of widget configs (enabled + position + grid)
+			configMap := make(map[string]service.DashboardWidgetConfig)
 			for _, cfg := range widgetConfig {
-				configMap[cfg.WidgetID] = widgetCfg{Enabled: cfg.Enabled, Position: cfg.Position}
+				configMap[cfg.WidgetID] = cfg
 			}
 			
-			// Filter widgets based on config
+			// Filter widgets based on config and apply grid coords
 			filtered := make([]PluginWidgetData, 0, len(allPluginWidgets))
 			for _, w := range allPluginWidgets {
 				fullID := w.PluginName + ":" + w.ID
@@ -224,12 +220,23 @@ func handleDashboard(c *gin.Context) {
 				// Check if widget is in config
 				if cfg, inConfig := configMap[fullID]; inConfig {
 					if cfg.Enabled {
+						w.GridX = cfg.X
+						w.GridY = cfg.Y
+						w.GridW = cfg.W
+						w.GridH = cfg.H
 						filtered = append(filtered, w)
 					}
 					// If disabled, skip it
 				} else {
 					// Not in config = enabled by default
 					filtered = append(filtered, w)
+				}
+			}
+			
+			// Apply default grid dimensions for widgets without saved config
+			for i := range filtered {
+				if filtered[i].GridW == 0 {
+					filtered[i].GridW, filtered[i].GridH = sizeToGrid(filtered[i].Size)
 				}
 			}
 			
@@ -251,6 +258,13 @@ func handleDashboard(c *gin.Context) {
 		}
 	}
 	
+	// Ensure all widgets have default grid dimensions
+	for i := range pluginWidgets {
+		if pluginWidgets[i].GridW == 0 {
+			pluginWidgets[i].GridW, pluginWidgets[i].GridH = sizeToGrid(pluginWidgets[i].Size)
+		}
+	}
+
 	fmt.Printf("🔌 Dashboard: showing %d of %d plugin widgets\n", len(pluginWidgets), len(allPluginWidgets))
 
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/dashboard.pongo2", pongo2.Context{

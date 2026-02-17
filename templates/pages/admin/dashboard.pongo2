@@ -3,6 +3,46 @@
 {% block title %}{{ t("admin.dashboard") }} - {{ t("app.name") }}{% endblock %}
 
 {% block content %}
+<style>
+    .admin-section { margin-top: 2.5rem; }
+    .admin-section:first-of-type { margin-top: 0; }
+    .admin-section-header {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1.25rem;
+        border: none;
+        border-radius: 0.75rem;
+        cursor: pointer;
+        background: var(--gk-bg-elevated);
+        box-shadow: 0 0 0 1px var(--gk-border-default);
+        transition: background 0.15s, box-shadow 0.15s;
+    }
+    .admin-section-header:hover {
+        background: var(--gk-bg-hover, var(--gk-bg-elevated));
+        box-shadow: 0 0 12px var(--gk-glow-color, rgba(99,102,241,0.15)), 0 0 0 1px var(--gk-border-default);
+    }
+    .section-chevron {
+        transition: transform 0.2s ease;
+        flex-shrink: 0;
+    }
+    .admin-section.collapsed .section-chevron {
+        transform: rotate(-90deg);
+    }
+    .admin-section-body {
+        overflow: hidden;
+        transition: max-height 0.3s ease, opacity 0.2s ease;
+        opacity: 1;
+    }
+    .admin-section.collapsed .admin-section-body {
+        max-height: 0 !important;
+        opacity: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+</style>
+
 <div class="container mx-auto px-4 py-8 min-h-screen">
     <header class="mb-8">
         <h1 class="text-3xl font-bold gk-heading">
@@ -13,491 +53,584 @@
         <span class="sr-only">Audit Logs</span>
     </header>
 
-    <section aria-labelledby="admin-stats">
-        <h2 id="admin-stats" class="sr-only">{{ t("admin_dashboard.key_metrics")|default:"Key metrics" }}</h2>
-        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            <article class="gk-stat-card">
-                <h3 class="gk-stat-label">{{ t("admin.total_users") }}</h3>
-                <p class="gk-stat-value mt-2">{{ UserCount|default:"0" }}</p>
-                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.active_users_customers")|default:"Active agents and customers" }}</p>
-            </article>
-            <article class="gk-stat-card">
-                <h3 class="gk-stat-label">{{ t("admin.total_groups") }}</h3>
-                <p class="gk-stat-value mt-2">{{ GroupCount|default:"0" }}</p>
-                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.group_management") }}</p>
-            </article>
-            <article class="gk-stat-card">
-                <h3 class="gk-stat-label">{{ t("admin.active_tickets") }}</h3>
-                <p class="gk-stat-value mt-2">{{ ActiveTickets|default:"0" }}</p>
-                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.queues_monitored")|default:"Queues monitored" }}: {{ QueueCount|default:"0" }}</p>
-            </article>
-            <article class="gk-stat-card" id="activity-metrics-card">
-                <h3 class="gk-stat-label">{{ t("admin_dashboard.activity")|default:"Activity" }}</h3>
-                <p class="mt-2 text-2xl font-semibold" style="color: var(--gk-primary);">
-                    <span id="activity-value">{% if TicketActivity.closed_day %}{{ TicketActivity.closed_day }}{% else %}0{% endif %}</span>
-                    <span id="activity-label" class="text-base font-normal" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.tickets_closed")|default:"tickets closed" }}</span>
-                </p>
-                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">
-                    <span id="activity-period">{{ t("admin_dashboard.last_24_hours")|default:"last 24 hours" }}</span>
-                </p>
-            </article>
+    {# ── 1. Platform (GoatKit) ── #}
+    <section class="admin-section" data-section="platform">
+        <button class="admin-section-header" onclick="toggleSection('platform')" type="button">
+            <div class="flex items-center gap-2">
+                <span class="text-lg">🔧</span>
+                <h2 class="text-xl font-semibold" style="color: var(--gk-text-primary); margin:0;">{{ t("admin_dashboard.platform")|default:"Platform" }}</h2>
+                <span class="text-xs" style="color: var(--gk-text-muted);">(9 items)</span>
+            </div>
+            <svg class="section-chevron h-5 w-5" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="admin-section-body" id="section-platform">
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mt-4 mb-4">
+                <article class="gk-stat-card">
+                    <h3 class="gk-stat-label">{{ t("admin.total_users") }}</h3>
+                    <p class="gk-stat-value mt-2">{{ UserCount|default:"0" }}</p>
+                    <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.active_users_customers")|default:"Active agents and customers" }}</p>
+                </article>
+                <article class="gk-stat-card">
+                    <h3 class="gk-stat-label">{{ t("admin.total_groups") }}</h3>
+                    <p class="gk-stat-value mt-2">{{ GroupCount|default:"0" }}</p>
+                    <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.group_management") }}</p>
+                </article>
+            </div>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <a href="/admin/users" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-users text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.user_management")|default:"User Management" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.user_management_desc")|default:"Manage agent and customer accounts" }}</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/admin/groups" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-people-group text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.group_management")|default:"Group Management" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.group_management_desc")|default:"Configure teams and escalation paths" }}</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/admin/permissions" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-user-shield text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.permissions")|default:"Permissions" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.permissions_desc")|default:"Adjust agent access levels" }}</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/admin/roles" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-user-tag text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.roles")|default:"Roles" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.roles_desc")|default:"Manage roles and role-group permissions" }}</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/admin/acl" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-lock text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.acl")|default:"Access Control Lists" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.acl_desc")|default:"Define conditional access rules" }}</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/admin/sessions" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-desktop text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin.sessions.title") }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.sessions.description") }}</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/admin/system-maintenance" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-wrench text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.system_maintenance")|default:"System Maintenance" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.system_maintenance_desc")|default:"Schedule maintenance windows and notify users" }}</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/admin/plugins" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-plug text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.plugins")|default:"Plugins" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.plugins_desc")|default:"Manage installed extensions" }}</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/admin/modules/admin_audit_log" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-clipboard-list text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.audit_logs")|default:"Audit Logs" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.audit_logs_desc")|default:"Review administrative actions" }}</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
         </div>
     </section>
 
-    <section class="mt-10" aria-labelledby="admin-actions">
-        <h2 id="admin-actions" class="text-xl font-semibold gk-heading" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.system_administration")|default:"System Administration" }}</h2>
-        <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {% macro admin_card(href, icon, title, description) %}
-            <a href="{{ href }}" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="{{ icon }} text-xl" aria-hidden="true"></i>
+    {# ── 2. GoatFlow (Helpdesk) ── #}
+    <section class="admin-section" data-section="goatflow">
+        <button class="admin-section-header" onclick="toggleSection('goatflow')" type="button">
+            <div class="flex items-center gap-2">
+                <span class="text-lg">📨</span>
+                <h2 class="text-xl font-semibold" style="color: var(--gk-text-primary); margin:0;">{{ t("admin_dashboard.goatflow")|default:"GoatFlow (Helpdesk)" }}</h2>
+                <span class="text-xs" style="color: var(--gk-text-muted);">(10 items)</span>
+            </div>
+            <svg class="section-chevron h-5 w-5" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="admin-section-body" id="section-goatflow">
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mt-4 mb-4">
+                <article class="gk-stat-card">
+                    <h3 class="gk-stat-label">{{ t("admin.active_tickets") }}</h3>
+                    <p class="gk-stat-value mt-2">{{ ActiveTickets|default:"0" }}</p>
+                    <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.queues_monitored")|default:"Queues monitored" }}: {{ QueueCount|default:"0" }}</p>
+                </article>
+                <article class="gk-stat-card" id="activity-metrics-card">
+                    <h3 class="gk-stat-label">{{ t("admin_dashboard.activity")|default:"Activity" }}</h3>
+                    <p class="mt-2 text-2xl font-semibold" style="color: var(--gk-primary);">
+                        <span id="activity-value">{% if TicketActivity.closed_day %}{{ TicketActivity.closed_day }}{% else %}0{% endif %}</span>
+                        <span id="activity-label" class="text-base font-normal" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.tickets_closed")|default:"tickets closed" }}</span>
+                    </p>
+                    <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">
+                        <span id="activity-period">{{ t("admin_dashboard.last_24_hours")|default:"last 24 hours" }}</span>
+                    </p>
+                </article>
+            </div>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <a href="/admin/ticket-attribute-relations" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-diagram-project text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.ticket_attribute_relations")|default:"Ticket Attribute Relations" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.ticket_attribute_relations_desc")|default:"Define attribute dependencies for ticket forms" }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ title }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ description }}</p>
+                </a>
+                <a href="/admin/email-identities" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-envelope-open-text text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.email_identities")|default:"Email Identities" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.email_identities_desc")|default:"Manage salutations, addresses, signatures" }}</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-            {% endmacro %}
-
-            <a href="/admin/users" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-users text-xl" aria-hidden="true"></i>
+                </a>
+                <a href="/admin/mail-accounts" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-envelope-circle-check text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.inbound_mail")|default:"Inbound Mail Accounts" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.inbound_mail_desc")|default:"Configure POP/IMAP polling and dispatch rules" }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.user_management")|default:"User Management" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.user_management_desc")|default:"Manage agent and customer accounts" }}</p>
+                </a>
+                <a href="/admin/postmaster-filters" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-filter text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.postmaster_filters")|default:"Postmaster Filters" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.postmaster_filters_desc")|default:"Configure email routing rules based on headers" }}</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-            <a href="/admin/groups" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-people-group text-xl" aria-hidden="true"></i>
+                </a>
+                <a href="/admin/auto-responses" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-reply-all text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.auto_responses")|default:"Auto Responses" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.auto_responses_desc")|default:"Configure automatic email replies" }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.group_management")|default:"Group Management" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.group_management_desc")|default:"Configure teams and escalation paths" }}</p>
+                </a>
+                <a href="/admin/queue-auto-responses" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-link text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.queue_auto_responses")|default:"Queue Auto Responses" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.queue_auto_responses_desc")|default:"Link auto responses to queues" }}</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-            <a href="/admin/permissions" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-user-shield text-xl" aria-hidden="true"></i>
+                </a>
+                <a href="/admin/notification-events" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-bell text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.ticket_notifications")|default:"Ticket Notifications" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.ticket_notifications_desc")|default:"Configure automated notifications for ticket events" }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.permissions")|default:"Permissions" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.permissions_desc")|default:"Adjust agent access levels" }}</p>
+                </a>
+                <a href="/admin/generic-agent" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-robot text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.generic_agent")|default:"Generic Agent" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.generic_agent_desc")|default:"Automated ticket actions and batch jobs" }}</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-            <a href="/admin/roles" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-user-tag text-xl" aria-hidden="true"></i>
+                </a>
+                <a href="/admin/signatures" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-signature text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.signatures")|default:"Signatures" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.signatures_desc")|default:"Manage email signature templates" }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.roles")|default:"Roles" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.roles_desc")|default:"Manage roles and role-group permissions" }}</p>
+                </a>
+                <a href="/admin/reports" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-chart-line text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.reports_analytics")|default:"Reports & Analytics" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.reports_analytics_desc")|default:"Track performance insights" }}</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-            <a href="/admin/acl" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-lock text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.acl")|default:"Access Control Lists" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.acl_desc")|default:"Define conditional access rules" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/ticket-attribute-relations" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-diagram-project text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.ticket_attribute_relations")|default:"Ticket Attribute Relations" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.ticket_attribute_relations_desc")|default:"Define attribute dependencies for ticket forms" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/sessions" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-desktop text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin.sessions.title") }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.sessions.description") }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/system-maintenance" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-wrench text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.system_maintenance")|default:"System Maintenance" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.system_maintenance_desc")|default:"Schedule maintenance windows and notify users" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/email-identities" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-envelope-open-text text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.email_identities")|default:"Email Identities" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.email_identities_desc")|default:"Manage salutations, addresses, signatures" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/mail-accounts" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-envelope-circle-check text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.inbound_mail")|default:"Inbound Mail Accounts" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.inbound_mail_desc")|default:"Configure POP/IMAP polling and dispatch rules" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/postmaster-filters" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-filter text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.postmaster_filters")|default:"Postmaster Filters" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.postmaster_filters_desc")|default:"Configure email routing rules based on headers" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/auto-responses" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-reply-all text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.auto_responses")|default:"Auto Responses" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.auto_responses_desc")|default:"Configure automatic email replies" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/queue-auto-responses" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-link text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.queue_auto_responses")|default:"Queue Auto Responses" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.queue_auto_responses_desc")|default:"Link auto responses to queues" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/notification-events" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-bell text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.ticket_notifications")|default:"Ticket Notifications" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.ticket_notifications_desc")|default:"Configure automated notifications for ticket events" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/generic-agent" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-robot text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.generic_agent")|default:"Generic Agent" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.generic_agent_desc")|default:"Automated ticket actions and batch jobs" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/signatures" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-signature text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.signatures")|default:"Signatures" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.signatures_desc")|default:"Manage email signature templates" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/reports" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-chart-line text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.reports_analytics")|default:"Reports & Analytics" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.reports_analytics_desc")|default:"Track performance insights" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/modules/admin_audit_log" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-clipboard-list text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.audit_logs")|default:"Audit Logs" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.audit_logs_desc")|default:"Review administrative actions" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/plugins" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-plug text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.plugins")|default:"Plugins" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.plugins_desc")|default:"Manage installed extensions" }}</p>
-                    </div>
-                </div>
-            </a>
+                </a>
+            </div>
         </div>
     </section>
 
-    <section class="mt-10" aria-labelledby="customer-admin">
-        <h2 id="customer-admin" class="text-xl font-semibold gk-heading" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.customer_administration")|default:"Customer Administration" }}</h2>
-        <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <a href="/admin/customer/companies" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-building text-xl" aria-hidden="true"></i>
+    {# ── 3. Customers ── #}
+    <section class="admin-section" data-section="customers">
+        <button class="admin-section-header" onclick="toggleSection('customers')" type="button">
+            <div class="flex items-center gap-2">
+                <span class="text-lg">👥</span>
+                <h2 class="text-xl font-semibold" style="color: var(--gk-text-primary); margin:0;">{{ t("admin_dashboard.customer_administration")|default:"Customers" }}</h2>
+                <span class="text-xs" style="color: var(--gk-text-muted);">(15 items)</span>
+            </div>
+            <svg class="section-chevron h-5 w-5" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="admin-section-body" id="section-customers">
+            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <a href="/admin/customer/companies" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-building text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.customer_organizations")|default:"Customer Organizations" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.customer_organizations_desc")|default:"Manage company records and branding" }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.customer_organizations")|default:"Customer Organizations" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.customer_organizations_desc")|default:"Manage company records and branding" }}</p>
+                </a>
+                <a href="/admin/customer-users" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-id-badge text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.customer_users")|default:"Customer Users" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.customer_users_desc")|default:"Maintain customer identities and access" }}</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-            <a href="/admin/customer-users" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-id-badge text-xl" aria-hidden="true"></i>
+                </a>
+                <a href="/admin/customer-user-services" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-user-cog text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.customer_user_services")|default:"Customer User Services" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.customer_user_services_desc")|default:"Assign services to individual customer users" }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.customer_users")|default:"Customer Users" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.customer_users_desc")|default:"Maintain customer identities and access" }}</p>
+                </a>
+                <a href="/admin/customer/portal/settings" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-earth-americas text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.customer_portal")|default:"Customer Portal" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.customer_portal_desc")|default:"Configure portal branding and access" }}</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-            <a href="/admin/customer-user-services" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-user-cog text-xl" aria-hidden="true"></i>
+                </a>
+                <a href="/admin/customer-groups" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-people-group text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.customer_groups")|default:"Customer Groups" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.customer_groups_desc")|default:"Configure customer company group permissions" }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.customer_user_services")|default:"Customer User Services" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.customer_user_services_desc")|default:"Assign services to individual customer users" }}</p>
+                </a>
+                <a href="/admin/customer-user-groups" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-user-group text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.customer_user_groups")|default:"Customer User Groups" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.customer_user_groups_desc")|default:"Configure individual customer user group permissions" }}</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-            <a href="/admin/customer/portal/settings" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-earth-americas text-xl" aria-hidden="true"></i>
+                </a>
+                <a href="/admin/queues" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-inbox text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.queues")|default:"Queues" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.queues_desc")|default:"Control ticket routing and ownership" }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.customer_portal")|default:"Customer Portal" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.customer_portal_desc")|default:"Configure portal branding and access" }}</p>
+                </a>
+                <a href="/admin/lookups" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-list-check text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.lookups")|default:"Lookups" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.lookups_desc")|default:"Manage states, priorities, and types" }}</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-            <a href="/admin/customer-groups" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-people-group text-xl" aria-hidden="true"></i>
+                </a>
+                <a href="/admin/services" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-concierge-bell text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.services")|default:"Services" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.services_desc")|default:"Define service catalog for ticket categorization" }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.customer_groups")|default:"Customer Groups" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.customer_groups_desc")|default:"Configure customer company group permissions" }}</p>
+                </a>
+                <a href="/admin/sla" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-stopwatch text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.sla")|default:"Service Level Agreements" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.sla_desc")|default:"Configure response and resolution times" }}</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-            <a href="/admin/customer-user-groups" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-user-group text-xl" aria-hidden="true"></i>
+                </a>
+                <a href="/admin/dynamic-fields" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-sliders text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.dynamic_fields")|default:"Dynamic Fields" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.dynamic_fields_desc")|default:"Add custom fields to tickets, articles, and customers" }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.customer_user_groups")|default:"Customer User Groups" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.customer_user_groups_desc")|default:"Configure individual customer user group permissions" }}</p>
+                </a>
+                <a href="/admin/templates" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-file-lines text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.templates")|default:"Templates" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.templates_desc")|default:"Create response templates for quick ticket replies" }}</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-            <a href="/admin/queues" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-inbox text-xl" aria-hidden="true"></i>
+                </a>
+                <a href="/admin/attachments" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-paperclip text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.attachments")|default:"Attachments" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.attachments_desc")|default:"Manage standard attachments for response templates" }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.queues")|default:"Queues" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.queues_desc")|default:"Control ticket routing and ownership" }}</p>
+                </a>
+                <a href="/admin/queue-templates" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-link text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.queue_templates")|default:"Queue Templates" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.queue_templates_desc")|default:"Manage queue to template assignments" }}</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-            <a href="/admin/lookups" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-list-check text-xl" aria-hidden="true"></i>
+                </a>
+                <a href="/admin/template-attachments" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-file-circle-plus text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.template_attachments")|default:"Template Attachments" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.template_attachments_desc")|default:"Manage template to attachment assignments" }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.lookups")|default:"Lookups" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.lookups_desc")|default:"Manage states, priorities, and types" }}</p>
+                </a>
+                <a href="/admin/article-colors" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-palette text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin.modules.article_color.plural") }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.modules.article_color.description") }}</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-            <a href="/admin/services" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-concierge-bell text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.services")|default:"Services" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.services_desc")|default:"Define service catalog for ticket categorization" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/sla" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-stopwatch text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.sla")|default:"Service Level Agreements" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.sla_desc")|default:"Configure response and resolution times" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/dynamic-fields" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-sliders text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.dynamic_fields")|default:"Dynamic Fields" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.dynamic_fields_desc")|default:"Add custom fields to tickets, articles, and customers" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/templates" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-file-lines text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.templates")|default:"Templates" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.templates_desc")|default:"Create response templates for quick ticket replies" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/attachments" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-paperclip text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.attachments")|default:"Attachments" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.attachments_desc")|default:"Manage standard attachments for response templates" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/queue-templates" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-link text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.queue_templates")|default:"Queue Templates" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.queue_templates_desc")|default:"Manage queue to template assignments" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/template-attachments" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-file-circle-plus text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.template_attachments")|default:"Template Attachments" }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.template_attachments_desc")|default:"Manage template to attachment assignments" }}</p>
-                    </div>
-                </div>
-            </a>
-            <a href="/admin/article-colors" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        <i class="fa-solid fa-palette text-xl" aria-hidden="true"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin.modules.article_color.plural") }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.modules.article_color.description") }}</p>
-                    </div>
-                </div>
-            </a>
+                </a>
+            </div>
         </div>
     </section>
 
+    {# ── 4. Plugin Administration ── #}
     {% if PluginAdminMenuItems %}
-    <section class="mt-10" aria-labelledby="plugin-admin">
-        <h2 id="plugin-admin" class="text-xl font-semibold gk-heading" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.plugin_administration")|default:"Plugin Administration" }}</h2>
-        <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {% for item in PluginAdminMenuItems %}
-            <a href="{{ item.Path }}" class="gk-admin-card group">
-                <div class="flex items-start">
-                    <div class="gk-admin-card-icon">
-                        {% if item.Icon %}<span class="text-xl" aria-hidden="true">{{ item.Icon }}</span>{% else %}<i class="fa-solid fa-puzzle-piece text-xl" aria-hidden="true"></i>{% endif %}
+    <section class="admin-section" data-section="plugins">
+        <button class="admin-section-header" onclick="toggleSection('plugins')" type="button">
+            <div class="flex items-center gap-2">
+                <span class="text-lg">🔌</span>
+                <h2 class="text-xl font-semibold" style="color: var(--gk-text-primary); margin:0;">{{ t("admin_dashboard.plugin_administration")|default:"Plugin Administration" }}</h2>
+            </div>
+            <svg class="section-chevron h-5 w-5" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="admin-section-body" id="section-plugins">
+            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {% for item in PluginAdminMenuItems %}
+                <a href="{{ item.Path }}" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            {% if item.Icon %}<span class="text-xl" aria-hidden="true">{{ item.Icon }}</span>{% else %}<i class="fa-solid fa-puzzle-piece text-xl" aria-hidden="true"></i>{% endif %}
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ item.Label }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ item.PluginName }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ item.Label }}</h3>
-                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ item.PluginName }}</p>
-                    </div>
-                </div>
-            </a>
-            {% endfor %}
+                </a>
+                {% endfor %}
+            </div>
         </div>
     </section>
     {% endif %}
 
-    <section class="mt-10" aria-labelledby="recent-activity">
-        <h2 id="recent-activity" class="text-xl font-semibold gk-heading" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.recent_activity")|default:"Recent Admin Activity" }}</h2>
-        <div class="mt-4 gk-card-glow">
-            <ul class="divide-y" style="border-color: var(--gk-border-default);">
-                <li class="flex items-center justify-between px-5 py-3" style="background: var(--gk-bg-elevated);">
-                    <span class="text-sm" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.recent_activity_items.user_created")|default:"User account created" }}</span>
-                    <span class="text-xs" style="color: var(--gk-text-muted);">5 {{ t("time.minutes_ago")|default:"minutes ago" }}</span>
-                </li>
-                <li class="flex items-center justify-between px-5 py-3">
-                    <span class="text-sm" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.recent_activity_items.config_updated")|default:"System configuration updated" }}</span>
-                    <span class="text-xs" style="color: var(--gk-text-muted);">12 {{ t("time.minutes_ago")|default:"minutes ago" }}</span>
-                </li>
-                <li class="flex items-center justify-between px-5 py-3">
-                    <span class="text-sm" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.recent_activity_items.logs_reviewed")|default:"Audit logs reviewed" }}</span>
-                    <span class="text-xs" style="color: var(--gk-text-muted);">30 {{ t("time.minutes_ago")|default:"minutes ago" }}</span>
-                </li>
-            </ul>
+    {# ── 5. Recent Activity ── #}
+    <section class="admin-section" data-section="activity">
+        <button class="admin-section-header" onclick="toggleSection('activity')" type="button">
+            <div class="flex items-center gap-2">
+                <span class="text-lg">📋</span>
+                <h2 class="text-xl font-semibold" style="color: var(--gk-text-primary); margin:0;">{{ t("admin_dashboard.recent_activity")|default:"Recent Admin Activity" }}</h2>
+            </div>
+            <svg class="section-chevron h-5 w-5" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="admin-section-body" id="section-activity">
+            <div class="mt-4 gk-card-glow">
+                {% if RecentActivity %}
+                <ul class="divide-y" style="border-color: var(--gk-border-default);">
+                    {% for entry in RecentActivity %}
+                    <li class="flex items-center justify-between px-5 py-3 {% if forloop.Counter|divisibleby:2 %}{% else %}{% endif %}" {% if forloop.First %}style="background: var(--gk-bg-elevated);"{% endif %}>
+                        <div class="flex-1">
+                            <span class="text-sm font-medium" style="color: var(--gk-text-primary);">{{ entry.action }}</span>
+                            {% if entry.target_id %}
+                            <span class="text-sm" style="color: var(--gk-text-muted);"> — {{ entry.target_id }}</span>
+                            {% endif %}
+                            {% if entry.admin %}
+                            <span class="text-xs ml-2" style="color: var(--gk-text-muted);">by {{ entry.admin }}</span>
+                            {% endif %}
+                        </div>
+                        <span class="text-xs whitespace-nowrap ml-4" style="color: var(--gk-text-muted);" title="{{ entry.time }}">{{ entry.time_human }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="px-5 py-8 text-center">
+                    <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.no_recent_activity")|default:"No recent admin activity" }}</p>
+                </div>
+                {% endif %}
+            </div>
         </div>
     </section>
 </div>
 
 <script>
+// Accordion toggle with localStorage persistence
+function toggleSection(name) {
+    const section = document.querySelector('[data-section="' + name + '"]');
+    if (!section) return;
+    section.classList.toggle('collapsed');
+    saveSectionState();
+}
+
+function saveSectionState() {
+    const state = {};
+    document.querySelectorAll('.admin-section').forEach(function(s) {
+        const name = s.getAttribute('data-section');
+        if (name) state[name] = !s.classList.contains('collapsed');
+    });
+    try { localStorage.setItem('goatflow_admin_sections', JSON.stringify(state)); } catch(e) {}
+}
+
+function restoreSectionState() {
+    let state = {};
+    try { state = JSON.parse(localStorage.getItem('goatflow_admin_sections')) || {}; } catch(e) {}
+
+    // Determine defaults: all expanded except goatflow when tickets hidden
+    const ticketsHidden = {% if HiddenNavItems.tickets %}true{% else %}false{% endif %};
+
+    document.querySelectorAll('.admin-section').forEach(function(s) {
+        const name = s.getAttribute('data-section');
+        if (!name) return;
+        let expanded;
+        if (name in state) {
+            expanded = state[name];
+        } else {
+            // Default: expanded, except goatflow when tickets hidden
+            expanded = (name === 'goatflow' && ticketsHidden) ? false : true;
+        }
+        if (!expanded) {
+            s.classList.add('collapsed');
+        }
+        // Set max-height for animation on non-collapsed sections
+        const body = s.querySelector('.admin-section-body');
+        if (body && expanded) {
+            body.style.maxHeight = 'none';
+        }
+    });
+}
+
+restoreSectionState();
+
 // Rotating ticket activity metrics display
 (function() {
     const metrics = [
@@ -534,7 +667,7 @@
             labelEl.style.opacity = '1';
             periodEl.style.opacity = '1';
         }, 200);
-    }, 5000); // Rotate every 5 seconds
+    }, 5000);
 })();
 </script>
 {% endblock %}
