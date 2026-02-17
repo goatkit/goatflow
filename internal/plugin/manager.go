@@ -821,7 +821,7 @@ func (m *Manager) LandingPage() string {
 	defer m.mu.RUnlock()
 
 	for _, rp := range m.plugins {
-		if !rp.enabled && rp.manifest.LandingPage != "" {
+		if !rp.enabled {
 			continue
 		}
 		if rp.manifest.LandingPage != "" {
