@@ -4265,6 +4265,28 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/api/preferences/reminders-enabled`
+- **Method:** `GET`
+- **Description:** Get ticket reminders enabled preference
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/preferences/reminders-enabled`
+- **Method:** `POST`
+- **Description:** Update ticket reminders enabled preference
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/api/profile`
 - **Method:** `GET`
 - **Description:** Get current user&#39;s profile information
@@ -6376,28 +6398,6 @@ Generated from YAML route definitions
 - **Path:** `/api/preferences/2fa/disable`
 - **Method:** `POST`
 - **Description:** Disable 2FA (requires valid code)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/reminders-enabled`
-- **Method:** `GET`
-- **Description:** Get current reminder notification preference. Returns `{"enabled": true}` by default.
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/reminders-enabled`
-- **Method:** `POST`
-- **Description:** Enable or disable pending ticket reminder notifications. Body: `{"enabled": true|false}`. Default: enabled.
 
 
 

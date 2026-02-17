@@ -4711,6 +4711,32 @@
         ]
       }
     },
+    "/agent/api/preferences/reminders-enabled": {
+      "get": {
+        "description": "Get ticket reminders enabled preference",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Update ticket reminders enabled preference",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/agent/api/preferences/session-timeout": {
       "get": {
         "description": "Get current session timeout preference",

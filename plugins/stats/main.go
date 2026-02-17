@@ -107,10 +107,10 @@ var manifestJSON = `{
     "en": {
       "stats.title": "Statistics",
       "stats.overview": "Overview",
-      "stats.total_tickets": "Total Tickets",
-      "stats.open_tickets": "Open",
+      "stats.open_tickets": "Open Tickets",
+      "stats.new_today": "New Today",
       "stats.pending_tickets": "Pending",
-      "stats.closed_tickets": "Closed",
+      "stats.overdue_tickets": "Overdue",
       "stats.by_status": "By Status",
       "stats.by_queue": "By Queue",
       "stats.by_priority": "By Priority",
@@ -125,10 +125,10 @@ var manifestJSON = `{
     "de": {
       "stats.title": "Statistiken",
       "stats.overview": "Übersicht",
-      "stats.total_tickets": "Tickets gesamt",
-      "stats.open_tickets": "Offen",
+      "stats.open_tickets": "Offene Tickets",
+      "stats.new_today": "Heute neu",
       "stats.pending_tickets": "Wartend",
-      "stats.closed_tickets": "Geschlossen",
+      "stats.overdue_tickets": "Überfällig",
       "stats.by_status": "Nach Status",
       "stats.by_queue": "Nach Warteschlange",
       "stats.by_priority": "Nach Priorität",
@@ -189,7 +189,7 @@ func gk_call(fnPtr, fnLen, argsPtr, argsLen uint32) uint64 {
 	case "timeline":
 		result = handleTimeline(args)
 	case "widget_overview":
-		result = handleWidgetOverview()
+		result = handleWidgetOverview(args)
 	case "widget_by_status":
 		result = handleWidgetByStatus()
 	case "widget_chart":
@@ -577,29 +577,101 @@ func handleTimeline(argsJSON string) string {
 
 // Widget Handlers
 
-func handleWidgetOverview() string {
-	rows, err := dbQuery(`
-		SELECT 
-			COUNT(*) as total,
-			SUM(CASE WHEN tst.name IN ('open', 'new') THEN 1 ELSE 0 END) as open_count,
-			SUM(CASE WHEN tst.name IN ('pending auto', 'pending reminder') THEN 1 ELSE 0 END) as pending_count,
-			SUM(CASE WHEN tst.name IN ('closed', 'merged', 'removed') THEN 1 ELSE 0 END) as closed_count
+func handleWidgetOverview(argsJSON string) string {
+	// Parse RBAC queue context from args (passed by host via GetPluginWidgets)
+	var widgetArgs struct {
+		IsQueueAdmin     bool   `json:"is_queue_admin"`
+		AccessibleQueues []any  `json:"accessible_queue_ids"`
+	}
+	json.Unmarshal([]byte(argsJSON), &widgetArgs)
+
+	// Build queue filter SQL fragment
+	queueFilter := ""
+	if !widgetArgs.IsQueueAdmin && len(widgetArgs.AccessibleQueues) > 0 {
+		ids := make([]string, 0, len(widgetArgs.AccessibleQueues))
+		for _, id := range widgetArgs.AccessibleQueues {
+			ids = append(ids, fmt.Sprintf("%d", toInt(id)))
+		}
+		queueFilter = " AND t.queue_id IN (" + strings.Join(ids, ",") + ")"
+	}
+
+	// Open tickets (state type 'open' or 'new')
+	openRows, err := dbQuery(fmt.Sprintf(`
+		SELECT COUNT(*) as cnt
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		JOIN ticket_state_type tst ON ts.type_id = tst.id
-	`)
+		WHERE tst.name IN ('open', 'new')%s
+	`, queueFilter))
+	open := 0
+	if err == nil && len(openRows) > 0 {
+		open = toInt(openRows[0]["cnt"])
+	}
 
-	total, open, pending, closed := 0, 0, 0, 0
-	if err == nil && len(rows) > 0 {
-		row := rows[0]
-		total = toInt(row["total"])
-		open = toInt(row["open_count"])
-		pending = toInt(row["pending_count"])
-		closed = toInt(row["closed_count"])
+	// New today (created today)
+	newTodayRows, err := dbQuery(fmt.Sprintf(`
+		SELECT COUNT(*) as cnt
+		FROM ticket t
+		WHERE DATE(t.create_time) = CURDATE()%s
+	`, queueFilter))
+	newToday := 0
+	if err == nil && len(newTodayRows) > 0 {
+		newToday = toInt(newTodayRows[0]["cnt"])
+	}
+
+	// Pending tickets
+	pendingRows, err := dbQuery(fmt.Sprintf(`
+		SELECT COUNT(*) as cnt
+		FROM ticket t
+		JOIN ticket_state ts ON t.ticket_state_id = ts.id
+		JOIN ticket_state_type tst ON ts.type_id = tst.id
+		WHERE tst.name IN ('pending auto', 'pending reminder')%s
+	`, queueFilter))
+	pending := 0
+	if err == nil && len(pendingRows) > 0 {
+		pending = toInt(pendingRows[0]["cnt"])
+	}
+
+	// Overdue: open/pending tickets past SLA escalation time
+	// escalation_time is an epoch int (0 = no escalation set)
+	overdueRows, err := dbQuery(fmt.Sprintf(`
+		SELECT COUNT(*) as cnt
+		FROM ticket t
+		JOIN ticket_state ts ON t.ticket_state_id = ts.id
+		JOIN ticket_state_type tst ON ts.type_id = tst.id
+		WHERE tst.name IN ('open', 'new', 'pending auto', 'pending reminder')
+		  AND t.escalation_time > 0
+		  AND t.escalation_time < UNIX_TIMESTAMP()%s
+	`, queueFilter))
+	overdue := 0
+	if err == nil && len(overdueRows) > 0 {
+		overdue = toInt(overdueRows[0]["cnt"])
+	}
+	// If query failed (e.g. column missing), overdue stays 0
+
+	// Total tickets
+	totalQuery := "SELECT COUNT(*) as cnt FROM ticket t WHERE 1=1" + queueFilter
+	totalRows, err := dbQuery(totalQuery)
+	total := 0
+	if err == nil && len(totalRows) > 0 {
+		total = toInt(totalRows[0]["cnt"])
+	}
+
+	// Closed tickets
+	closedRows, err := dbQuery(fmt.Sprintf(`
+		SELECT COUNT(*) as cnt
+		FROM ticket t
+		JOIN ticket_state ts ON t.ticket_state_id = ts.id
+		JOIN ticket_state_type tst ON ts.type_id = tst.id
+		WHERE tst.name IN ('closed', 'merged', 'removed')%s
+	`, queueFilter))
+	closed := 0
+	if err == nil && len(closedRows) > 0 {
+		closed = toInt(closedRows[0]["cnt"])
 	}
 
 	html := fmt.Sprintf(`
-<div class="stats-overview grid grid-cols-4 gap-4">
+<div class="stats-overview grid grid-cols-3 gap-4 mb-4">
   <div class="gk-stat-card text-center">
     <div class="gk-stat-value">%d</div>
     <div class="gk-stat-label">Total</div>
@@ -608,15 +680,25 @@ func handleWidgetOverview() string {
     <div class="gk-stat-value">%d</div>
     <div class="gk-stat-label">Open</div>
   </div>
-  <div class="gk-stat-card warning text-center">
-    <div class="gk-stat-value">%d</div>
-    <div class="gk-stat-label">Pending</div>
-  </div>
   <div class="gk-stat-card text-center">
     <div class="gk-stat-value">%d</div>
     <div class="gk-stat-label">Closed</div>
   </div>
-</div>`, total, open, pending, closed)
+</div>
+<div class="stats-overview grid grid-cols-3 gap-4">
+  <div class="gk-stat-card success text-center">
+    <div class="gk-stat-value">%d</div>
+    <div class="gk-stat-label">New Today</div>
+  </div>
+  <div class="gk-stat-card warning text-center">
+    <div class="gk-stat-value">%d</div>
+    <div class="gk-stat-label">Pending</div>
+  </div>
+  <div class="gk-stat-card error text-center">
+    <div class="gk-stat-value">%d</div>
+    <div class="gk-stat-label">Overdue</div>
+  </div>
+</div>`, total, open, closed, newToday, pending, overdue)
 
 	result := map[string]string{"html": html}
 	data, _ := json.Marshal(result)

@@ -245,9 +245,13 @@ func (s *UserPreferencesService) GetAllPreferences(userID int) (map[string]strin
 
 // DashboardWidgetConfig represents the configuration for a dashboard widget.
 type DashboardWidgetConfig struct {
-	WidgetID   string `json:"widget_id"`   // Format: "plugin_name:widget_id"
+	WidgetID   string `json:"widget_id"`          // Format: "plugin_name:widget_id"
 	Enabled    bool   `json:"enabled"`
-	Position   int    `json:"position"`    // Order on dashboard (lower = first)
+	Position   int    `json:"position"`            // Order on dashboard (lower = first)
+	X          int    `json:"x"`                   // Grid column position
+	Y          int    `json:"y"`                   // Grid row position
+	W          int    `json:"w,omitempty"`          // Grid width (columns)
+	H          int    `json:"h,omitempty"`          // Grid height (rows)
 }
 
 // GetDashboardWidgets returns the user's dashboard widget configuration.
