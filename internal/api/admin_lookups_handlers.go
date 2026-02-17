@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
@@ -430,12 +431,16 @@ func handleAdminDashboard(c *gin.Context) {
 	// Get ticket activity metrics from cache with fallback to calculation
 	ticketActivity := getTicketActivityFromCache(c, db)
 
+	// Get recent admin audit log entries
+	recentActivity := getRecentAdminActivity(db)
+
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/dashboard.pongo2", pongo2.Context{
 		"UserCount":       userCount,
 		"GroupCount":      groupCount,
 		"ActiveTickets":   activeTickets,
 		"QueueCount":      queueCount,
 		"TicketActivity":  ticketActivity,
+		"RecentActivity":  recentActivity,
 		"User":            getUserMapForTemplate(c),
 		"ActivePage":      "admin",
 	})
@@ -443,6 +448,79 @@ func handleAdminDashboard(c *gin.Context) {
 
 // getTicketActivityFromCache retrieves ticket activity metrics from Valkey cache,
 // falling back to direct calculation if cache is unavailable or empty.
+// getRecentAdminActivity fetches the most recent admin audit log entries.
+func getRecentAdminActivity(db *sql.DB) []map[string]string {
+	if db == nil {
+		return nil
+	}
+
+	query := database.ConvertQuery(`
+		SELECT aat.name AS action, al.target_type, al.target_identifier,
+			al.reason, al.create_time, u.login AS admin_login
+		FROM admin_action_log al
+		LEFT JOIN admin_action_type aat ON aat.id = al.action_type_id
+		LEFT JOIN users u ON u.id = al.create_by
+		ORDER BY al.create_time DESC
+		LIMIT 10
+	`)
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var results []map[string]string
+	for rows.Next() {
+		var action, targetType, targetID, reason, adminLogin sql.NullString
+		var createTime time.Time
+		if err := rows.Scan(&action, &targetType, &targetID, &reason, &createTime, &adminLogin); err != nil {
+			continue
+		}
+
+		entry := map[string]string{
+			"action":     action.String,
+			"target":     targetType.String,
+			"target_id":  targetID.String,
+			"reason":     reason.String,
+			"admin":      adminLogin.String,
+			"time":       createTime.Format("2006-01-02 15:04"),
+			"time_human": timeAgo(createTime),
+		}
+		results = append(results, entry)
+	}
+	return results
+}
+
+// timeAgo returns a human-readable relative time string.
+func timeAgo(t time.Time) string {
+	d := time.Since(t)
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		m := int(d.Minutes())
+		if m == 1 {
+			return "1 minute ago"
+		}
+		return fmt.Sprintf("%d minutes ago", m)
+	case d < 24*time.Hour:
+		h := int(d.Hours())
+		if h == 1 {
+			return "1 hour ago"
+		}
+		return fmt.Sprintf("%d hours ago", h)
+	case d < 7*24*time.Hour:
+		days := int(d.Hours() / 24)
+		if days == 1 {
+			return "yesterday"
+		}
+		return fmt.Sprintf("%d days ago", days)
+	default:
+		return t.Format("2 Jan 2006")
+	}
+}
+
 func getTicketActivityFromCache(c *gin.Context, db *sql.DB) map[string]int {
 	// Default values
 	metrics := map[string]int{
