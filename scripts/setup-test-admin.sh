@@ -21,13 +21,13 @@ COMPOSE_CMD="${COMPOSE_CMD:-docker compose}"
 if $COMPOSE_CMD -f docker-compose.yml -f docker-compose.testdb.yml -f docker-compose.test.yaml \
     exec -T backend-test goats reset-user \
     --username="${TEST_USERNAME:-root@localhost}" \
-    --password="$TEST_PASSWORD" \
-    --enable 2>/dev/null; then
+    --password="***" \
+    --enable >/dev/null 2>&1; then
     echo "Admin user setup via goatflow CLI"
     exit 0
 fi
 
-echo "goatflow CLI not available, using direct SQL..."
+echo "goats CLI not in backend-test container, using direct SQL fallback..."
 
 # Calculate password hash
 PW_HASH=$(printf '%s' "$TEST_PASSWORD" | sha256sum | awk '{print $1}')
