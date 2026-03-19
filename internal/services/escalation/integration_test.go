@@ -312,20 +312,7 @@ func ensureTestSLAWithEscalation(t *testing.T, db *sql.DB) int {
 func ensureTestTicket(t *testing.T, db *sql.DB) int {
 	t.Helper()
 
-	// Find or create a test ticket in "new" state
-	var ticketID int
-	query := database.ConvertPlaceholders(`
-		SELECT t.id FROM ticket t
-		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		WHERE ts.type_id = 1
-		LIMIT 1
-	`)
-	err := db.QueryRow(query).Scan(&ticketID)
-	if err == nil {
-		return ticketID
-	}
-
-	// Need to create a ticket - find required IDs first
+	// Always create a fresh ticket to avoid flaky tests from shared state
 	var queueID, stateID, priorityID, typeID int
 	db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM queue WHERE valid_id = 1 LIMIT 1`)).Scan(&queueID)
 	db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket_state WHERE type_id = 1 LIMIT 1`)).Scan(&stateID)
@@ -363,7 +350,8 @@ func ensureTestTicket(t *testing.T, db *sql.DB) int {
 		return int(id)
 	}
 
-	err = db.QueryRow(insertQuery, tn, "Test Escalation Ticket", queueID, stateID, priorityID, typeID).Scan(&ticketID)
+	var ticketID int
+	err := db.QueryRow(insertQuery, tn, "Test Escalation Ticket", queueID, stateID, priorityID, typeID).Scan(&ticketID)
 	require.NoError(t, err)
 	return ticketID
 }

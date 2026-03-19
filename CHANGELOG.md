@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- **Parallel test interference in article_create_test** — re-ensure RBAC permissions before each subtest and skip gracefully if a 404 is returned due to parallel `group_user` removal, preventing flaky failures in CI
+- **Escalation integration test flakiness** — always create a fresh ticket in `ensureTestTicket` instead of reusing existing shared state, eliminating race conditions across parallel test runs
+
+### Changed
+- **Makefile unit test command** — skip `./generated/...` package when no generated Go files exist (avoids `no Go files` build error on clean checkouts); also ensures `generated/test-results/` dir is created before running
+- **test-runner.sh hardening** — add `set -eo pipefail`, fail fast if test stack doesn't start, detect missing `docker-buildx`, guard against zero-tests-ran scenario, and fix package pass/fail grep patterns to ignore bare summary lines
+- **setup-test-admin.sh** — suppress CLI output via `>/dev/null 2>&1` and clarify fallback message to reference correct `goats` binary name
+
 ## [0.6.5]
 
 ### Security

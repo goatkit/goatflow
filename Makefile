@@ -819,7 +819,7 @@ test-unit:
 		-e GOMODCACHE=/cache/go-mod \
 		-e GOFLAGS=-buildvcs=false \
 		toolbox \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -count=1 -buildvcs=false -v ./cmd/goats ./internal/... ./generated/... | tee generated/test-results/unit_stable.log'
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; mkdir -p generated/test-results; PKGS="./cmd/goats ./internal/..."; if [ -d generated ] && ls generated/*.go >/dev/null 2>&1; then PKGS="$$PKGS ./generated/..."; fi; go test -count=1 -buildvcs=false -v $$PKGS | tee generated/test-results/unit_stable.log'
 
 .PHONY: test-e2e
 test-e2e:

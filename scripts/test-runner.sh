@@ -4,7 +4,7 @@
 # Orchestrates all test suites with formatted output and logging
 #
 
-set -e
+set -eo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -96,6 +96,14 @@ step "2/6  Environment Setup"
 if command -v docker &> /dev/null; then
     COMPOSE_CMD="docker compose"
     success "Docker available"
+
+    # BuildKit requires buildx - without it, all container builds silently fail
+    if ! docker buildx version &> /dev/null; then
+        fail "docker-buildx is not installed (required by BuildKit)"
+        echo -e "  ${YELLOW}→${NC} Install with: sudo apt install docker-buildx"
+        exit 1
+    fi
+    success "Docker BuildKit (buildx) available"
 elif command -v podman &> /dev/null; then
     COMPOSE_CMD="podman-compose"
     success "Podman available"
@@ -117,7 +125,10 @@ fi
 step "3/6  Starting Test Stack"
 
 log "Starting test containers..."
-make test-stack-up 2>&1 | tee -a "$MAIN_LOG"
+if ! make test-stack-up 2>&1 | tee -a "$MAIN_LOG"; then
+    fail "Test stack failed to start - cannot continue"
+    exit 1
+fi
 success "Test stack started"
 
 # Capture container logs in background
@@ -140,9 +151,10 @@ parse_unit_test_results() {
     local log_file="$1"
 
     # Parse package results from output
-    UNIT_PACKAGES_PASSED=$(grep -c "^ok" "$log_file" 2>/dev/null || true)
+    UNIT_PACKAGES_PASSED=$(grep -cE "^ok\s+" "$log_file" 2>/dev/null || true)
     UNIT_PACKAGES_PASSED=${UNIT_PACKAGES_PASSED:-0}
-    UNIT_PACKAGES_FAILED=$(grep -c "^FAIL" "$log_file" 2>/dev/null || true)
+    # Only count FAIL lines with a package path (ignore bare "FAIL" summary lines)
+    UNIT_PACKAGES_FAILED=$(grep -cE "^FAIL\s+" "$log_file" 2>/dev/null || true)
     UNIT_PACKAGES_FAILED=${UNIT_PACKAGES_FAILED:-0}
 
     # Count ALL tests including subtests using "=== RUN" lines
@@ -353,7 +365,15 @@ echo "    • E2E tests:     $E2E_LOG"
 echo "    • Container log: $CONTAINER_LOG"
 echo ""
 
-if [ "$TOTAL_TESTS_FAILED" = "0" ] && [ "$TOTAL_PACKAGES_FAILED" = "0" ]; then
+if [ "$TOTAL_TESTS_RUN" = "0" ]; then
+    echo -e "  ${RED}══════════════════════════════════════════════════════════${NC}"
+    echo -e "  ${RED}       NO TESTS RAN - something is broken                ${NC}"
+    echo -e "  ${RED}══════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo "  Check the log files above for build errors."
+    echo ""
+    exit 1
+elif [ "$TOTAL_TESTS_FAILED" = "0" ] && [ "$TOTAL_PACKAGES_FAILED" = "0" ]; then
     echo -e "  ${GREEN}══════════════════════════════════════════════════════════${NC}"
     echo -e "  ${GREEN}       ALL ${TOTAL_TESTS_PASSED} TESTS PASSED                           ${NC}"
     echo -e "  ${GREEN}══════════════════════════════════════════════════════════${NC}"
