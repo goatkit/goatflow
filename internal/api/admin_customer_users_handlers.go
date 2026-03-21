@@ -403,9 +403,9 @@ func HandleAdminCustomerUsersCreate(c *gin.Context) {
 		INSERT INTO customer_user (
 			login, email, customer_id, pw, title, first_name, last_name,
 			phone, fax, mobile, street, zip, city, country, comments,
-			valid_id, create_by, change_by
+			valid_id, create_time, change_time, create_by, change_by
 		) VALUES (
-			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, 1
 		) RETURNING id`
 	insertQuery = database.ConvertPlaceholders(insertQuery)
 	var newID int

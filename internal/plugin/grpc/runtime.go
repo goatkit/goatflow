@@ -201,6 +201,10 @@ func LoadGRPCPlugin(execPath, pluginName string, host plugin.HostAPI, policy plu
 		Plugins:         pluginMap,
 		Cmd:             cmd,
 		Logger:          logger,
+		// SkipHostEnv prevents go-plugin from appending os.Environ() to cmd.Env,
+		// which would leak host env vars (DB creds, JWT secrets) into the plugin
+		// and shadow the restricted env set by buildPluginEnv.
+		SkipHostEnv: true,
 		AllowedProtocols: []goplugin.Protocol{
 			goplugin.ProtocolNetRPC,
 		},

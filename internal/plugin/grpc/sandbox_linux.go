@@ -59,6 +59,21 @@ func buildPluginEnv(policy plugin.ResourcePolicy, pluginName string) []string {
 		env = append(env, "TZ="+tz)
 	}
 
+	// Forward plugin-specific env vars (GOATFLOW_PLUGIN_* prefix).
+	// Variables are forwarded as-is AND with the prefix stripped, so e.g.
+	// GOATFLOW_PLUGIN_ADB_SERVER_HOST=localhost appears in the plugin
+	// environment as both GOATFLOW_PLUGIN_ADB_SERVER_HOST and ADB_SERVER_HOST.
+	// This lets plugins use standard env var names while keeping the
+	// namespaced originals available for disambiguation.
+	for _, kv := range os.Environ() {
+		if strings.HasPrefix(kv, "GOATFLOW_PLUGIN_") {
+			env = append(env, kv)
+			// Strip prefix: GOATFLOW_PLUGIN_FOO=bar -> FOO=bar
+			stripped := strings.TrimPrefix(kv, "GOATFLOW_PLUGIN_")
+			env = append(env, stripped)
+		}
+	}
+
 	// Check if plugin has network permissions - if not, limit network access
 	hasHTTP := false
 	for _, perm := range policy.Permissions {

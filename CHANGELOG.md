@@ -60,6 +60,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - **Dashboard plugin admin section**: Admin dashboard shows a "Plugin Administration" card grid for plugins that register admin menu items, with icon and plugin name.
 - **HostAPI client for plugins** (`pkg/plugin/grpcutil/hostapi.go`): Full plugin-side HostAPI RPC client implementation. Plugins import this package to call back to the host for DB queries, cache, HTTP, email, config, and i18n — no need to hand-roll RPC boilerplate.
 - **Plugin config via environment variables**: Plugins receive configuration from `GOATFLOW_PLUGIN_<NAME>_<KEY>` env vars, passed as lowercase keys in the `Init(config)` map. Documented in `docker-compose.yml`.
+- **Plugin sandbox env forwarding**: gRPC plugin sandbox (`sandbox_linux.go`) now forwards `GOATFLOW_PLUGIN_*` environment variables to plugin subprocesses. Previously the sandbox's minimal environment stripped these, preventing plugins from receiving their configuration when running under OS-level isolation.
+- **Plugin sandbox SkipHostEnv**: Set `SkipHostEnv: true` on go-plugin `ClientConfig` to prevent the host process environment from leaking into plugin subprocesses. Without this, `os.Environ()` is appended by go-plugin, shadowing sandbox-controlled variables and exposing DB credentials/JWT secrets.
+- **Plugin group-based RBAC**: Plugins can declare access control groups via `GKRegistration.Groups` (`[]GroupSpec`). Groups are auto-created in the GoatFlow groups table on plugin load (`EnsurePluginGroups`). Routes reference groups with `group:<name>` middleware (e.g. `"group:fictus-users"`). `RequireGroup()` middleware checks `group_user` membership; admin users bypass group checks.
+- **Customer ID autocomplete**: Customer user creation form now uses the GoatKit autocomplete component (`data-gk-autocomplete`) with company seed data, replacing the plain text input. Supports typeahead search with `{name} ({customer_id})` display format.
 
 ### Changed
 - **Makefile unit test command** — skip `./generated/...` package when no generated Go files exist (avoids `no Go files` build error on clean checkouts); also ensures `generated/test-results/` dir is created before running
@@ -99,6 +103,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - **Dashboard "New Ticket" respects plugin nav hiding**: The "New Ticket" button is conditionally rendered based on `HiddenNavItems.tickets`, so plugins that hide the tickets nav item also hide the button.
 
 ### Fixed
+- **Customer user creation missing timestamps**: `INSERT INTO customer_user` was missing `create_time` and `change_time` columns, causing `Error 1364: Field 'create_time' doesn't have a default value` on MariaDB strict mode.
 - **`LandingPage()` skipped wrong plugins**: Plugin manager's landing page resolver had an inverted condition — it was skipping the plugin that *did* declare a landing page and checking ones that didn't.
 - **Reminders preference route missing**: `GET/POST /agent/api/preferences/reminders-enabled` returned Guru Meditation (404) because the routes were absent from `routes/agent.yaml`. Added routes and registered handlers.
 - **Stats plugin Overdue query wrong column**: Was querying `escalation_destination_date` (doesn't exist in default schema). Changed to `escalation_time` (epoch int) with correct `> 0 AND < UNIX_TIMESTAMP()` logic.

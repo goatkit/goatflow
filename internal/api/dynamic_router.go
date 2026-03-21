@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/flosch/pongo2/v6"
@@ -71,11 +72,14 @@ func RebuildDynamicEngine() {
 
 			var mwChain []gin.HandlerFunc
 			for _, mw := range middlewares {
-				switch mw {
-				case "auth":
+				switch {
+				case mw == "auth":
 					mwChain = append(mwChain, SessionOrJWTAuth())
-				case "admin":
+				case mw == "admin":
 					mwChain = append(mwChain, SessionOrJWTAuth(), RequireAdmin())
+				case strings.HasPrefix(mw, "group:"):
+					groupName := strings.TrimPrefix(mw, "group:")
+					mwChain = append(mwChain, SessionOrJWTAuth(), RequireGroup(groupName))
 				}
 			}
 
