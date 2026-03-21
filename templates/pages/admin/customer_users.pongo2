@@ -310,9 +310,21 @@
                             <input type="email" id="email" name="email" required class="gk-input-neon mt-1 block w-full">
                         </div>
 
-                        <div>
-                            <label for="customer_id" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Customer ID *</label>
-                            <input type="text" id="customer_id" name="customer_id" required class="gk-input-neon mt-1 block w-full">
+                        <div style="position: relative;">
+                            <label for="customer_id_display" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Customer ID *</label>
+                            <input type="text" id="customer_id_display"
+                                data-gk-autocomplete="companies"
+                                data-value-field="customer_id"
+                                data-display-template="{name} ({customer_id})"
+                                data-hidden-target="customer_id"
+                                data-min-chars="0"
+                                aria-controls="customer_id_suggestions"
+                                autocomplete="off"
+                                required
+                                class="gk-input-neon mt-1 block w-full"
+                                placeholder="Type to search companies...">
+                            <input type="hidden" id="customer_id" name="customer_id">
+                            <div id="customer_id_suggestions"></div>
                         </div>
 
                         <div>
@@ -483,6 +495,13 @@
     </div>
 </div>
 
+<script type="application/json" data-gk-seed="companies">[
+{% for company in companies %}{
+    "customer_id": "{{ company.customer_id|escapejs }}",
+    "name": "{{ company.name|escapejs }}"
+}{% if not loop.last %},{% endif %}{% endfor %}
+]</script>
+
 <script>
 // Toast notification function
 function showToast(message, type = 'success') {
@@ -506,6 +525,7 @@ function showCreateModal() {
     document.getElementById('modalTitle').textContent = 'Add Customer User';
     document.getElementById('customerForm').reset();
     document.getElementById('customerForm').removeAttribute('data-id');
+    document.getElementById('customer_id').value = '';
     document.getElementById('customerModal').classList.remove('hidden');
 }
 
@@ -528,6 +548,16 @@ function showEditModal(id) {
                         field.value = customer[key];
                     }
                 });
+
+                // Populate the autocomplete display field for customer_id
+                if (customer.customer_id) {
+                    var displayEl = document.getElementById('customer_id_display');
+                    if (displayEl) {
+                        var companies = window.GoatKitSeeds && window.GoatKitSeeds.companies || [];
+                        var match = companies.find(function(c) { return c.customer_id === customer.customer_id; });
+                        displayEl.value = match ? match.name + ' (' + match.customer_id + ')' : customer.customer_id;
+                    }
+                }
 
                 document.getElementById('customerModal').classList.remove('hidden');
             } else {
@@ -558,6 +588,17 @@ function hideTicketsModal() {
 // Form handlers
 document.getElementById('customerForm').addEventListener('submit', function(e) {
     e.preventDefault();
+
+    // Ensure customer_id is set from autocomplete (fall back to display value if typed manually)
+    var cidHidden = document.getElementById('customer_id');
+    var cidDisplay = document.getElementById('customer_id_display');
+    if (!cidHidden.value && cidDisplay.value) {
+        cidHidden.value = cidDisplay.value.trim();
+    }
+    if (!cidHidden.value) {
+        showToast('Please select a Customer ID', 'error');
+        return;
+    }
 
     const formData = new FormData(this);
     const id = this.getAttribute('data-id');

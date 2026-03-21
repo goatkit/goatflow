@@ -14,9 +14,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/plugin"
 	"github.com/goatkit/goatflow/internal/plugin/packaging"
+	"github.com/goatkit/goatflow/internal/repository"
 )
 
 // pluginContextWithLanguage adds the request language to the context for i18n support.
@@ -486,6 +489,111 @@ func RequireAdmin() gin.HandlerFunc {
 		}
 		c.JSON(http.StatusForbidden, gin.H{"error": "admin access required"})
 		c.Abort()
+	}
+}
+
+// RequireGroup checks that the authenticated user belongs to a specific group.
+// Admin users (role=Admin or isInAdminGroup) bypass group checks.
+// Used by plugins via "group:<name>" middleware, e.g. "group:fictus-users".
+func RequireGroup(groupName string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Admin users bypass group checks.
+		if role, exists := c.Get("user_role"); exists && role == "Admin" {
+			c.Next()
+			return
+		}
+		if isAdmin, exists := c.Get("isInAdminGroup"); exists && isAdmin == true {
+			c.Next()
+			return
+		}
+
+		userIDRaw, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "authentication required"})
+			c.Abort()
+			return
+		}
+
+		// Convert user_id to uint (may be stored as int, uint, float64, or string).
+		var userID uint
+		switch v := userIDRaw.(type) {
+		case uint:
+			userID = v
+		case int:
+			userID = uint(v)
+		case int64:
+			userID = uint(v)
+		case float64:
+			userID = uint(v)
+		default:
+			c.JSON(http.StatusForbidden, gin.H{"error": "invalid user identity"})
+			c.Abort()
+			return
+		}
+
+		db, err := database.GetDB()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "database unavailable"})
+			c.Abort()
+			return
+		}
+
+		groupRepo := repository.NewGroupRepository(db)
+		groups, err := groupRepo.GetUserGroups(userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check group membership"})
+			c.Abort()
+			return
+		}
+
+		for _, g := range groups {
+			if g == groupName {
+				c.Next()
+				return
+			}
+		}
+
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: requires group " + groupName})
+		c.Abort()
+	}
+}
+
+// EnsurePluginGroups auto-creates groups declared by plugins in their GKRegistration.
+// Called after plugin loading to ensure the groups exist in the GoatFlow groups table.
+// Idempotent — skips groups that already exist.
+func EnsurePluginGroups() {
+	if pluginManager == nil {
+		return
+	}
+	db, err := database.GetDB()
+	if err != nil {
+		log.Printf("⚠️  Cannot ensure plugin groups: database unavailable")
+		return
+	}
+	groupRepo := repository.NewGroupRepository(db)
+
+	for _, manifest := range pluginManager.List() {
+		for _, gs := range manifest.Groups {
+			if gs.Name == "" {
+				continue
+			}
+			existing, _ := groupRepo.GetByName(gs.Name)
+			if existing != nil {
+				continue // already exists
+			}
+			group := &models.Group{
+				Name:     gs.Name,
+				Comments: gs.Description,
+				ValidID:  1, // active
+				CreateBy: 1, // system user
+				ChangeBy: 1,
+			}
+			if err := groupRepo.Create(group); err != nil {
+				log.Printf("⚠️  Failed to create plugin group %q: %v", gs.Name, err)
+			} else {
+				log.Printf("✅ Auto-created plugin group %q (%s)", gs.Name, gs.Description)
+			}
+		}
 	}
 }
 

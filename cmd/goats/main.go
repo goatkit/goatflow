@@ -459,6 +459,9 @@ func main() {
 	// Mount unified dynamic engine (YAML routes + plugin routes, hot-reloadable)
 	api.MountDynamicEngine(r, routesDir)
 
+	// Auto-create groups declared by plugins (idempotent).
+	api.EnsurePluginGroups()
+
 	if dbErr == nil && db != nil {
 		if err := api.SetupDynamicModules(db); err != nil {
 			log.Printf("⚠️  Dynamic modules unavailable: %v", err)
