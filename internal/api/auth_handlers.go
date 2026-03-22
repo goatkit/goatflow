@@ -146,7 +146,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 		}
 	}
 
-	// Get user's preferred session timeout
+	// Get user's preferred session timeout and regenerate JWT with that duration.
 	sessionTimeout := shared.GetSystemSessionMaxTime()
 	if db, err := database.GetDB(); err == nil && db != nil {
 		prefService := service.NewUserPreferencesService(db)
@@ -163,6 +163,19 @@ var HandleAuthLogin = func(c *gin.Context) {
 	}
 	if sessionTimeout <= 0 {
 		sessionTimeout = constants.DefaultSessionTimeout
+	}
+
+	// Regenerate JWT with user's session duration so the token itself
+	// expires at the same time as the cookie, not at the system default.
+	{
+		jwtMgr := shared.GetJWTManager()
+		if tok, tokErr := jwtMgr.GenerateTokenWithDuration(
+			user.ID, user.Login, user.Email, user.Role, user.Role == "Admin", 0,
+			time.Duration(sessionTimeout)*time.Second); tokErr == nil {
+			accessToken = tok
+		} else {
+			log.Printf("Failed to regenerate JWT with user duration: %v", tokErr)
+		}
 	}
 
 	// Set cookies for tokens - set both names for compatibility across middlewares
