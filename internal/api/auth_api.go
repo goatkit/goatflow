@@ -114,7 +114,7 @@ func HandleLoginAPI(c *gin.Context) {
 		"access_token":  accessToken,
 		"refresh_token": refreshToken,
 		"token_type":    "Bearer",
-		"expires_in":    900, // 15 minutes in seconds
+		"expires_in":    int(shared.GetJWTManager().TokenDuration().Seconds()),
 	})
 }
 

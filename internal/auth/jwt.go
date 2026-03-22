@@ -24,14 +24,23 @@ type Claims struct {
 }
 
 type JWTManager struct {
-	secretKey     []byte
-	tokenDuration time.Duration
+	secretKey            []byte
+	tokenDuration        time.Duration
+	refreshTokenDuration time.Duration
 }
 
 func NewJWTManager(secretKey string, tokenDuration time.Duration) *JWTManager {
 	return &JWTManager{
-		secretKey:     []byte(secretKey),
-		tokenDuration: tokenDuration,
+		secretKey:            []byte(secretKey),
+		tokenDuration:        tokenDuration,
+		refreshTokenDuration: 7 * 24 * time.Hour, // default 7 days
+	}
+}
+
+// SetRefreshTokenDuration sets the refresh token TTL.
+func (m *JWTManager) SetRefreshTokenDuration(d time.Duration) {
+	if d > 0 {
+		m.refreshTokenDuration = d
 	}
 }
 
@@ -92,7 +101,7 @@ func (m *JWTManager) ValidateToken(tokenString string) (*Claims, error) {
 
 func (m *JWTManager) GenerateRefreshToken(userID uint, email string) (string, error) {
 	claims := jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)), // 7 days
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.refreshTokenDuration)),
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
 		NotBefore: jwt.NewNumericDate(time.Now()),
 		Issuer:    "goatflow",

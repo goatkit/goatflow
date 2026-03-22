@@ -115,8 +115,10 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       VALKEY_HOST: valkey
       VALKEY_PORT: 6379
-      # JWT secret must be provided via environment (.env or shell); no unsafe default here
+      # JWT configuration; must be provided via environment (.env or shell)
       JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY:-15m}
+      JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY:-7d}
       PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-sha256}
       MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
