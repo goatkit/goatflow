@@ -55,6 +55,15 @@ func (m *JWTManager) GenerateTokenWithAdmin(userID uint, email, role string, isA
 
 // GenerateTokenWithLogin creates a JWT with explicit login and email values.
 func (m *JWTManager) GenerateTokenWithLogin(userID uint, login, email, role string, isAdmin bool, tenantID uint) (string, error) {
+	return m.GenerateTokenWithDuration(userID, login, email, role, isAdmin, tenantID, m.tokenDuration)
+}
+
+// GenerateTokenWithDuration creates a JWT with a specific duration.
+// If duration is 0, the system default is used.
+func (m *JWTManager) GenerateTokenWithDuration(userID uint, login, email, role string, isAdmin bool, tenantID uint, duration time.Duration) (string, error) {
+	if duration <= 0 {
+		duration = m.tokenDuration
+	}
 	claims := Claims{
 		UserID:   userID,
 		Email:    email,
@@ -63,7 +72,7 @@ func (m *JWTManager) GenerateTokenWithLogin(userID uint, login, email, role stri
 		IsAdmin:  isAdmin,
 		TenantID: tenantID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.tokenDuration)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 			Issuer:    "goatflow",
