@@ -352,8 +352,8 @@ See our [Contributing Guide](CONTRIBUTING.md) for details on:
 
 ## Community
 
-- 💬 [Discord Community](https://discord.gg/kE4XVyX9gF)
--  [Issue Tracker](https://github.com/goatkit/goatflow/issues)
+- [GitHub Discussions](https://github.com/goatkit/goatflow/discussions)
+- [Issue Tracker](https://github.com/goatkit/goatflow/issues)
 
 ## License
 

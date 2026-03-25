@@ -72,9 +72,14 @@ func handleDashboardWidgetsList(c *gin.Context) {
 		enabled := true
 		position := i
 
-		// Default grid dimensions based on widget size
-		gw, gh := sizeToGrid(w.Size)
-		gx, gy := 0, 0
+		// Default grid dimensions: use curated layout if available,
+		// otherwise fall back to generic size-based defaults.
+		var gx, gy, gw, gh int
+		if dx, dy, dw, dh, ok := defaultWidgetLayout(fullID); ok {
+			gx, gy, gw, gh = dx, dy, dw, dh
+		} else {
+			gw, gh = sizeToGrid(w.Size)
+		}
 
 		if cfg, ok := configMap[fullID]; ok {
 			enabled = cfg.Enabled
@@ -188,6 +193,41 @@ func sizeToGrid(size string) (int, int) {
 	default: // "medium" or unset
 		return 6, 3
 	}
+}
+
+// defaultWidgetLayout returns sensible default (x, y, w, h) grid values for
+// known widgets so the dashboard looks good out of the box. Unknown widgets
+// return nil and fall back to sizeToGrid defaults at (0, 0).
+//
+// Default layout (12-column grid, cellHeight=120):
+//
+//   Row 0:  [Ticket Overview   6x3] [Recent Tickets     6x6]
+//   Row 3:  [Tickets by Status 6x3]                      |
+//   Row 6:  [Queue Status      6x4] [Ticket Chart       6x5]
+//   Row 10: [GoatFictus        6x3]                      |
+//
+// Design rationale — agent workflow priority:
+//   1. Overview numbers (top-left, first thing scanned)
+//   2. Recent tickets (top-right, tall — most actionable, shows more items)
+//   3. Status breakdown (below overview, completes the workload picture)
+//   4. Queue pressure (mid-left, which queues need attention)
+//   5. Trend chart (mid-right, contextual not urgent)
+//   6. Plugin widgets (bottom, supplementary information)
+//
+func defaultWidgetLayout(fullID string) (x, y, w, h int, ok bool) {
+	type layout struct{ x, y, w, h int }
+	defaults := map[string]layout{
+		"stats:stats_overview":            {0, 0, 6, 3},
+		"dashboard-core:recent_tickets":   {6, 0, 6, 6},
+		"stats:stats_by_status":           {0, 3, 6, 3},
+		"dashboard-core:queue_status":     {0, 6, 6, 4},
+		"stats:stats_chart":               {6, 6, 6, 5},
+		"goatfictus:goatfictus-status":    {0, 10, 6, 3},
+	}
+	if l, found := defaults[fullID]; found {
+		return l.x, l.y, l.w, l.h, true
+	}
+	return 0, 0, 0, 0, false
 }
 
 // getDashboardUserID extracts user ID from context for dashboard widgets.

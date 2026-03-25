@@ -67,7 +67,7 @@ warning() {
 #########################################
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║          GoatFlow COMPREHENSIVE TEST SUITE                      ║${NC}"
+echo -e "${CYAN}║          GoatFlow COMPREHENSIVE TEST SUITE                   ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo "  Started:   $(date '+%Y-%m-%d %H:%M:%S')"

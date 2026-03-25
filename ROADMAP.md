@@ -4,23 +4,21 @@ Current status, past releases, and future plans for GoatFlow.
 
 ## 🚀 Current Status
 
-**Version**: 0.6.5 (February 8, 2026) - GoatKit Plugin Platform
+**Version**: 0.7.0 (March 2026) - GoatKit Plugin Platform
 
 GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ticketing and service management platform. It is built as a premier standalone solution for all organizations. Written in Go with a modular monolith architecture, GoatFlow provides enterprise-grade support ticketing, ITSM capabilities, and extensive customization options.
 
-### What's New in 0.6.5
-See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlights:
+- **GoatKit Plugin Platform** — Dual-runtime (WASM + gRPC), HostAPI, admin UI, CLI tooling, hot reload, signed plugins
+- **Plugin Sandbox & Security** — Per-plugin isolation, resource policies, SQL whitelisting, namespace isolation, blue-green reload
+- **Statistics & Reporting** — Dashboard statistics API, CSV/Excel export, RBAC-filtered endpoints
 - **Two-Factor Authentication (TOTP)** — 2FA for agents and customers with QR setup, recovery codes, admin override
-- **GoatKit Plugin Platform** — Dual-runtime (WASM + gRPC), HostAPI, admin UI, CLI tooling
-- **API Tokens** — Personal access tokens for agents and customers
+- **API Tokens** — Personal access tokens with scoped permissions and configurable expiration
 - **REST API v1 Enhanced** — OpenAPI 3.0, Swagger UI, rate limiting, webhooks
 - **MCP Server** — AI assistant integration via JSON-RPC (`/api/mcp`) with multi-user proxy RBAC
 - **Granular RBAC** — OTRS-compatible permission service with 1,300+ lines of auth tests
-- **RBAC Security Hardening** — All statistics and queue endpoints now enforce queue-level permissions (prevents data leakage)
 - **Demo Mode** — Restricted mode for public demos (session-only prefs, blocked password/MFA changes)
 - **Coachmarks** — Declarative onboarding tooltips with view tracking and dismissal persistence
 - **Wallpaper Toggle** — Per-theme background wallpaper control with cookie persistence
-- **Dark Theme Contrast Fix** — 338 CSS overrides for proper contrast across all dark themes
 
 ### What Works
 - Agent Interface: Full ticket management with bulk actions and multi-theme UI (4 themes with wallpaper toggle)
@@ -33,13 +31,29 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - i18n: 15 languages including RTL support (ar, he, fa, ur)
 - Deployment: Docker Compose and Kubernetes Helm chart with multi-arch support, **demo mode**
 - Admin Modules: 30+ admin interfaces including ticket attribute relations, dynamic fields, templates
-- **Plugins**: Dual-runtime (WASM + gRPC) plugin system with admin UI and state persistence
+- **Plugins**: Dual-runtime (WASM + gRPC) plugin system with admin UI, sandbox isolation, signed verification, and state persistence
 - **API Documentation**: OpenAPI 3.0 spec with Swagger UI (94 endpoints, 71% coverage)
 - **RBAC**: Granular permission service with authorization tests
 
 ---
 
 ## 📜 Past Releases
+
+### [0.6.5] - February 8, 2026
+
+**GoatKit Plugin Platform**
+
+- Two-Factor Authentication (TOTP) for agents and customers with QR setup, recovery codes, admin override
+- GoatKit Plugin Platform: dual-runtime (WASM + gRPC), HostAPI, admin UI, CLI tooling
+- API Tokens: personal access tokens with scoped permissions
+- REST API v1 Enhanced: OpenAPI 3.0, Swagger UI, rate limiting, webhooks
+- MCP Server: AI assistant integration via JSON-RPC (`/api/mcp`) with multi-user proxy RBAC
+- Granular RBAC: OTRS-compatible permission service with 1,300+ lines of auth tests
+- RBAC Security Hardening: queue-level permission enforcement on all statistics endpoints
+- Demo Mode: restricted mode for public demos
+- Coachmarks: declarative onboarding tooltips with view tracking
+- Wallpaper Toggle: per-theme background wallpaper control
+- Dark Theme Contrast Fix: 338 CSS overrides for proper contrast across all dark themes
 
 ### [0.6.4] - February 1, 2026
 
@@ -178,11 +192,6 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - [x] Dashboard statistics API endpoints
 - [x] CSV/Excel export
 - [x] RBAC filtering on all statistics endpoints (queue-level permission enforcement)
-- [ ] Dashboard widgets with Chart.js
-- [ ] Built-in report templates (tickets by queue, agent, SLA compliance)
-- [ ] Scheduled report delivery via email
-- [ ] Time tracking reports and analytics
-- [ ] Ships as standalone WASM plugin
 
 **Two-Factor Authentication (TOTP)**
 - [x] Agent 2FA setup/disable via Settings page
@@ -197,7 +206,6 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - [x] i18n: All 15 languages translated
 - [x] Security documentation: `docs/security/TOTP_THREAT_MODEL.md`
 - [x] Test coverage: 75 tests (unit, security, E2E, Playwright)
-- [ ] Hardware key support (WebAuthn/FIDO2) — Deferred, see threat model
 
 **API Tokens (Personal Access Tokens)**
 - [x] Token management UI for agents AND customers
@@ -229,12 +237,6 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - [x] `update_ticket` — update ticket attributes
 - [x] `add_article` — add notes to tickets
 
-**Mobile Optimization**
-- [ ] Responsive mobile layouts for all pages
-- [ ] Touch-optimized controls
-- [ ] Mobile ticket creation flow
-- [ ] Push notifications (PWA)
-
 **Demo Mode**
 - [x] `DemoMode` middleware (sets `is_demo` flag on all requests)
 - [x] `DemoGuard` middleware (blocks password/MFA changes, returns 403)
@@ -249,7 +251,6 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - [x] Theme-aware CSS variable styling
 - [x] "Reset feature highlights" on profile pages
 - [x] First tip: theme switcher introduction
-- [ ] Additional tips for key features (ticket creation, queue management)
 
 **Wallpaper Toggle**
 - [x] Checkbox in theme selector dropdown
@@ -261,96 +262,202 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 **Quality**
 - [x] 70% test coverage target (71.2% achieved)
 - [x] API documentation site (Swagger UI)
+
+---
+
+### 0.8.0 - Target: September 2026
+
+**GoatKit PaaS Core — Custom Fields**
+
+Universal custom fields on every core entity. Plugins declare fields at registration; GoatKit handles storage, validation, UI rendering, and querying. Eliminates the need for plugin extension tables.
+
+- [ ] `gk_custom_field_def` + `gk_custom_field_value` tables (EAV with denormalised typed columns)
+- [ ] Supported entities: contact, agent, group, customer_group, queue, organisation
+- [ ] Field types: text, textarea, integer, decimal, boolean, date, datetime, select, multi_select, url, email, phone
+- [ ] GIS field types: point (lat/lng), polygon (GeoJSON), address (structured + auto-geocode)
+- [ ] Plugin registration: `CustomFieldSpec` in `GKRegistration`
+- [ ] HostAPI: `CustomFieldsGet()`, `CustomFieldsSet()`, `CustomFieldsQuery()`
+- [ ] Auto UI rendering on entity detail/edit pages (grouped by section, ordered, correct input controls)
+- [ ] Admin-defined custom fields (not just plugin-owned)
+- [ ] Searchable fields with indexed typed columns
+- [ ] Migration: existing ticket custom fields → unified system
+- [ ] Design spec: `docs/design/CUSTOM_FIELDS.md`
+
+**GoatKit PaaS Core — Plugin UI System**
+
+Plugins declare unlimited independent UIs (agent apps, customer portals, public pages, kiosks) that run in dedicated UI containers with their own domains, branding, auth, navigation, and PWA support.
+
+- [ ] `UISpec` in `GKRegistration` (name, type, routes, branding, layout, auth, PWA, offline)
+- [ ] UI types: admin_page, agent_app, customer_app, public_page, kiosk
+- [ ] Shell system: none (raw HTML), minimal (mobile-first), standard (full chrome)
+- [ ] Custom domain routing (reverse proxy config generation)
+- [ ] Per-UI branding (logo, colours, fonts, favicon, app name)
+- [ ] PWA manifest generation (installable on phone home screen)
+- [ ] Service worker / offline support with configurable caching strategy
+- [ ] Customer auth methods: email+password, magic link, SMS OTP, OAuth, PIN
+- [ ] Data scoping for customer UIs (self-only, org, all)
+- [ ] Rate limiting for public UIs
+- [ ] Bottom/top/side navigation with badge support
+- [ ] Agent and Customer UI containers become multi-UI-aware
+- [ ] Design spec: `docs/design/PLUGIN_UIS.md`
+
+**GoatKit PaaS Core — Organisations & Multi-Tenancy**
+
+Core `gk_organisation` entity with user membership, data isolation, and per-org settings. Every SaaS deployment needs this.
+
+- [ ] `gk_organisation` table (name, status, settings, created_at)
+- [ ] User ↔ org membership
+- [ ] All queries scopable to org (HostAPI enforcement)
+- [ ] Per-org settings and configuration
+- [ ] Org switching UI for multi-org users
+
+**GoatKit PaaS Core — Secure Settings**
+
+Encrypted configuration storage via HostAPI. Plugins store API keys, device PINs, secrets without handling crypto directly.
+
+- [ ] `host.SecureConfigGet()` / `host.SecureConfigSet()` HostAPI methods
+- [ ] Platform-managed encryption key
+- [ ] Masked display in admin UI (last-4 reveal)
+- [ ] Extract from existing plugin implementations to core
+
+**GoatKit PaaS Core — Entity Deletion**
+
+Two deletion patterns: soft delete + anonymisation (GDPR, preserve business records) and hard cascading delete (complete erasure). Recycle bin as the standard deletion pipeline.
+
+- [ ] Soft delete (move to recycle bin, hidden from normal views)
+- [ ] Anonymise PII on soft delete (configurable)
+- [ ] Restore from recycle bin
+- [ ] Hard cascading delete (purge — physical removal of entity + all linked data)
+- [ ] Batch/scope delete (delete everything in a project/exercise)
+- [ ] Plugin cascade handlers: `CascadeSpec` in `GKRegistration`
+- [ ] Tombstone logging (`gk_deletion_log` — records that deletion happened, not what was deleted)
+- [ ] Auto-purge scheduled job (configurable retention period per org/entity type)
+- [ ] Recycle bin admin UI
+- [ ] HostAPI: `EntitySoftDelete()`, `EntityRestore()`, `EntityHardDelete()`, `ScopeSoftDelete()`, `ScopeHardDelete()`, `RecycleBinList()`
+- [ ] RBAC: `entity.hard_delete` permission
+- [ ] Design spec: `docs/design/CUSTOM_FIELDS.md` → Entity Deletion section
+
+**GoatKit PaaS Core — Reusable UI Components**
+
+Shared UI components usable by any plugin. Server-rendered HTML building blocks.
+
+- [ ] `gk-daily-queue` — ordered task list with action buttons
+- [ ] `gk-week-calendar` — week-at-a-glance grid
+- [ ] `gk-progress-bar` — "3/5 completed" counter
+- [ ] `gk-stat-card` — dashboard metric card
+- [ ] `gk-quick-action` — big mobile-friendly tap targets
+- [ ] All components theme-aware (CSS variables)
+- [ ] WCAG 2.1 AA accessible by default
+
+**Plugin Ecosystem Expansion**
+- [ ] Plugin marketplace integration (browse, install, update)
+- [ ] Plugin dependency resolution (enterprise plugins can declare dependencies on each other)
+- [ ] Theme-as-plugin support (themes distributed via plugin system)
+- [ ] Plugin update notifications and auto-update
+- [ ] Kubernetes pod isolation for plugins
+
+**Self-Service Authentication**
+- [ ] Password recovery UI for customers (email-based reset)
+- [ ] Password recovery UI for agents (admin-initiated reset)
+- [ ] Customer sign-up/registration UI with approval workflow
+- [ ] Email verification for new accounts
+- [ ] CAPTCHA integration (reCAPTCHA v3, hCaptcha)
+
+**Enhancements**
+- [ ] Keyboard navigation accessibility (WCAG 2.1 AA compliance)
+- [ ] Drag-and-drop file uploads
+- [ ] Real-time collaborative ticket editing indicators
+
+**Quality**
+- [ ] 75% test coverage target
+- [ ] Accessibility audit and fixes
+
+---
+
+### 0.8.1 - Target: November 2026
+
+**Statistics & Reporting Plugin — UI & Shipping**
+- [ ] Dashboard widgets with Chart.js
+- [ ] Built-in report templates (tickets by queue, agent, SLA compliance)
+- [ ] Scheduled report delivery via email
+- [ ] Time tracking reports and analytics
+- [ ] Ships as standalone WASM plugin
+
+**Mobile Optimization**
+- [ ] Responsive mobile layouts for all pages
+- [ ] Touch-optimized controls
+- [ ] Mobile ticket creation flow
+- [ ] Push notifications (PWA)
+
+**Two-Factor Authentication — Hardware Keys**
+- [ ] Hardware key support (WebAuthn/FIDO2)
+
+**Coachmarks**
+- [ ] Additional tips for key features (ticket creation, queue management)
+
+**Quality**
 - [ ] Performance benchmarks established
 - [ ] Load testing harness
 
 ---
 
-### 0.8.0 - September 2026
+### 0.9.0 - Target: January 2027
 
-**Plugin Ecosystem Expansion**
-- Plugin marketplace integration (browse, install, update)
-- Plugin dependency resolution
-- Theme-as-plugin support (themes distributed via plugin system)
-- Plugin update notifications and auto-update
-- Kubernetes pod isolation for plugins (plugin-per-pod, network policies, resource quotas via K8s-native primitives — replaces namespace/Docker socket approaches)
+**FAQ / Knowledge Base Plugin** *(first-party, open source)*
+- [ ] Public and internal article categories with permissions
+- [ ] Rich text articles with attachments and images
+- [ ] Search with relevance ranking and filters
+- [ ] Article ratings, feedback, and usage analytics
+- [ ] Link articles to tickets for quick reference
+- [ ] Customer portal FAQ integration with search
+- [ ] Article approval workflow
 
-**FAQ / Knowledge Base Plugin** *(first-party plugin)*
-- Public and internal article categories with permissions
-- Rich text articles with attachments and images
-- Search with relevance ranking and filters
-- Article ratings, feedback, and usage analytics
-- Link articles to tickets for quick reference
-- Customer portal FAQ integration with search
-- Article approval workflow
+**Calendar & Appointments Plugin** *(first-party, open source)*
+- [ ] Agent calendar view (day/week/month)
+- [ ] Ticket-linked appointments with reminders
+- [ ] Recurring events (daily, weekly, monthly)
+- [ ] Calendar sharing between agents and teams
+- [ ] iCal export/subscription
+- [ ] Integration with ticket escalations
+- [ ] Resource scheduling (meeting rooms, equipment)
 
-**Calendar & Appointments Plugin** *(first-party plugin)*
-- Agent calendar view (day/week/month)
-- Ticket-linked appointments with reminders
-- Recurring events (daily, weekly, monthly)
-- Calendar sharing between agents and teams
-- iCal export/subscription
-- Integration with ticket escalations
-- Resource scheduling (meeting rooms, equipment)
-
-**Self-Service Authentication**
-- Password recovery UI for customers (email-based reset)
-- Password recovery UI for agents (admin-initiated reset)
-- Customer sign-up/registration UI with approval workflow
-- Email verification for new accounts
-- CAPTCHA integration (reCAPTCHA v3, hCaptcha)
-- ~~Two-factor authentication (TOTP)~~ → Moved to 0.6.5 ✅
-
-**Enhancements**
-- Keyboard navigation accessibility (WCAG 2.1 AA compliance)
-- Drag-and-drop file uploads
-- Real-time collaborative ticket editing indicators
-
-**Quality**
-- 75% test coverage target
-- Accessibility audit and fixes
-
----
-
-### 0.9.0 - January 2027
-
-**Process Management Plugin** *(first-party plugin)*
-- Visual process designer with drag-and-drop
-- Multi-step ticket workflows with validation
-- Conditional transitions based on ticket data
-- Custom activity dialogs with dynamic forms
-- Process ticket templates with pre-filled data
-- SLA integration with process steps and deadlines
-- Process analytics and bottleneck identification
+**Process Management Plugin** *(first-party, open source)*
+- [ ] Visual process designer with drag-and-drop
+- [ ] Multi-step ticket workflows with validation
+- [ ] Conditional transitions based on ticket data
+- [ ] Custom activity dialogs with dynamic forms
+- [ ] Process ticket templates with pre-filled data
+- [ ] SLA integration with process steps and deadlines
+- [ ] Process analytics and bottleneck identification
 
 **Theme & UX Enhancements**
-- Sound event support (notifications, alerts, ticket actions)
-- Custom CSS injection per theme
-- Theme preview in admin
+- [ ] Sound event support (notifications, alerts, ticket actions)
+- [ ] Custom CSS injection per theme
+- [ ] Theme preview in admin
 
 **Production Preparation**
-- Prometheus metrics endpoint with custom metrics
-- Structured JSON logging (configurable levels)
-- Health check endpoints (liveness, readiness, startup)
-- Graceful shutdown handling with connection draining
-- Distributed tracing (OpenTelemetry)
-- Circuit breakers for external dependencies
+- [ ] Prometheus metrics endpoint with custom metrics
+- [ ] Structured JSON logging (configurable levels)
+- [ ] Health check endpoints (liveness, readiness, startup)
+- [ ] Graceful shutdown handling with connection draining
+- [ ] Distributed tracing (OpenTelemetry)
+- [ ] Circuit breakers for external dependencies
 
 **Quality**
-- 80% test coverage target
-- Load testing harness (Gatling/k6)
-- Chaos engineering tests
+- [ ] 80% test coverage target
+- [ ] Load testing harness (Gatling/k6)
+- [ ] Chaos engineering tests
 
 ---
 
-### 1.0.0 - April 2027
+### 1.0.0 - Target: April 2027
 
 **Production Release**
 
 *Feature Complete*
-- GoatKit plugin platform GA (WASM + gRPC runtimes)
+- GoatKit PaaS platform GA (WASM + gRPC runtimes, custom fields, plugin UIs, multi-tenancy)
 - All OTRS core modules operational
-- First-party plugins shipped:
+- First-party open source plugins shipped:
   - Statistics & Reporting (dashboards, reports, charts)
   - FAQ/Knowledge Base (articles, search, portal)
   - Calendar & Appointments (scheduling, iCal)
@@ -377,6 +484,7 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - API reference (OpenAPI 3.0) with interactive docs
 - Deployment guides (Docker, Kubernetes, cloud providers)
 - Migration guide from OTRS 6.x with automation scripts
+- Plugin development guide (custom fields, UIs, enterprise plugin patterns)
 - Troubleshooting guide with common issues
 - Video tutorials and screencasts
 
@@ -387,12 +495,28 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 - Performance regression testing in CI
 - Automated smoke tests on production deployments
 
-*Enterprise Features*
-- High availability setup documentation
-- Backup and disaster recovery procedures
-- Multi-tenancy support
-- LDAP/AD/SAML/OAuth integration guides
-- Audit logging and compliance reporting
+---
+
+## 🏢 Enterprise Plugins
+
+Enterprise plugins are paid, reusable horizontal capabilities built on GoatKit core. They extend the platform with configurable business logic that any vertical plugin can consume.
+
+| Plugin | Description |
+|--------|-------------|
+| goatkit-subscriptions | Recurring service agreements, auto-ticket generation |
+| goatkit-invoicing | Invoice generation, numbering, lifecycle, PDF delivery |
+| goatkit-payments | Payment recording, reconciliation, Stripe, GoCardless |
+| goatkit-billing | Usage-based metering, credit/token balance, Stripe top-ups |
+| goatkit-media | Universal media management — file storage, GIF search, thumbnails |
+| goatkit-llm | LLM provider management, prompt templates, completion API |
+| goatkit-devices | Physical device fleet management, provisioning pipeline |
+| goatkit-workflows | Multi-stage job orchestration, DAG pipelines, progress tracking |
+| goatkit-audit | Immutable audit logging, compliance, tamper-evident records |
+| goatkit-content-feeds | RSS/scraping/API content ingestion, caching, RAG feeds |
+| goatkit-maps | Geocoding, route optimisation, area/territory management |
+| goatkit-notify | Templated SMS/WhatsApp/email notifications |
+
+Enterprise plugins are built as vertical plugins need them and prioritised by customer demand.
 
 ---
 
@@ -401,9 +525,11 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 | Version | Date | Status | Theme |
 |---------|------|--------|-------|
 | 1.0.0 | Apr 2027 | 🔮 Future | Production Release |
-| 0.9.0 | Jan 2027 | 🔮 Future | Process Management Plugin |
-| 0.8.0 | Sep 2026 | 🔮 Future | Plugin Marketplace, FAQ & Calendar Plugins |
-| 0.7.0 | May 2026 | 🔮 Future | GoatKit Plugin Platform, Stats Plugin, API v2, Mobile |
+| 0.9.0 | Jan 2027 | 🔮 Future | FAQ, Calendar, Process Management Plugins |
+| 0.8.1 | Nov 2026 | 🔮 Future | Stats Plugin UI, Mobile, WebAuthn, Quality |
+| 0.8.0 | Sep 2026 | 🔮 Future | **PaaS Core** — Custom Fields, Plugin UIs, Multi-Tenancy, Deletion |
+| 0.7.0 | Mar 2026 | 🚀 Current | Plugin Platform Complete, Sandbox & Security, Statistics API |
+| 0.6.5 | Feb 2026 | ✅ Released | 2FA, API Tokens, RBAC, Demo Mode, Plugin Platform, MCP Server |
 | 0.6.4 | Feb 2026 | ✅ Released | Plugin Platform Roadmap |
 | 0.6.3 | Jan 2026 | ✅ Released | Stability & Testing |
 | 0.6.2 | Jan 2026 | ✅ Released | Multi-Theme System |
@@ -419,4 +545,4 @@ See the [0.7.0 checklist](#070---target-may-2026) for detailed progress. Highlig
 
 ## Get Involved
 
-Want to influence the roadmap? [Join our Discord](https://discord.gg/goatflow) or open a [GitHub Discussion](https://github.com/goatkit/goatflow/discussions).
+Want to influence the roadmap? Open a [GitHub Discussion](https://github.com/goatkit/goatflow/discussions).

@@ -236,7 +236,15 @@ func handleDashboard(c *gin.Context) {
 			// Apply default grid dimensions for widgets without saved config
 			for i := range filtered {
 				if filtered[i].GridW == 0 {
-					filtered[i].GridW, filtered[i].GridH = sizeToGrid(filtered[i].Size)
+					fID := filtered[i].PluginName + ":" + filtered[i].ID
+					if dx, dy, dw, dh, ok := defaultWidgetLayout(fID); ok {
+						filtered[i].GridX = dx
+						filtered[i].GridY = dy
+						filtered[i].GridW = dw
+						filtered[i].GridH = dh
+					} else {
+						filtered[i].GridW, filtered[i].GridH = sizeToGrid(filtered[i].Size)
+					}
 				}
 			}
 			
@@ -258,10 +266,18 @@ func handleDashboard(c *gin.Context) {
 		}
 	}
 	
-	// Ensure all widgets have default grid dimensions
+	// Ensure all widgets have default grid dimensions and positions
 	for i := range pluginWidgets {
+		fullID := pluginWidgets[i].PluginName + ":" + pluginWidgets[i].ID
 		if pluginWidgets[i].GridW == 0 {
-			pluginWidgets[i].GridW, pluginWidgets[i].GridH = sizeToGrid(pluginWidgets[i].Size)
+			if dx, dy, dw, dh, ok := defaultWidgetLayout(fullID); ok {
+				pluginWidgets[i].GridX = dx
+				pluginWidgets[i].GridY = dy
+				pluginWidgets[i].GridW = dw
+				pluginWidgets[i].GridH = dh
+			} else {
+				pluginWidgets[i].GridW, pluginWidgets[i].GridH = sizeToGrid(pluginWidgets[i].Size)
+			}
 		}
 	}
 
