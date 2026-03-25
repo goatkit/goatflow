@@ -33,8 +33,8 @@ While we prepare comprehensive contribution guidelines, here are the basics:
 
 ## Contact
 
-- GitHub Issues: [Report bugs or request features]
-- Discord: [Join our community]
+- GitHub Issues: [Report bugs or request features](https://github.com/goatkit/goatflow/issues)
+- GitHub Discussions: [Ask questions and share ideas](https://github.com/goatkit/goatflow/discussions)
 - Email: hello@goatflow.io
 
 ---
