@@ -65,6 +65,10 @@ type GKRegistration struct {
 	// Field names are auto-prefixed with the plugin name to prevent collisions.
 	CustomFields []CustomFieldSpec `json:"custom_fields,omitempty"`
 
+	// UIs the plugin provides. Each UI is an independent application
+	// with its own routes, branding, navigation, and auth.
+	UIs []UISpec `json:"uis,omitempty"`
+
 	// Requirements
 	MinHostVersion string              `json:"min_host_version,omitempty"` // minimum GoatFlow version
 	Permissions    []string            `json:"permissions,omitempty"`      // required host permissions (legacy, use ResourceRequest)
@@ -220,6 +224,69 @@ type CustomFieldFilter struct {
 	Operator string `json:"operator"`           // eq, neq, gt, lt, gte, lte, like, in, between, near
 	Value    any    `json:"value"`              // comparison value
 	Value2   any    `json:"value2,omitempty"`   // second value for between (upper bound) and near (radius km)
+}
+
+// UISpec declares an independent UI that a plugin provides.
+// Each UI gets its own routes, shell, branding, auth, and optional PWA support.
+type UISpec struct {
+	ID          string          `json:"id"`                      // unique within plugin (auto-prefixed)
+	Name        string          `json:"name"`                    // display name
+	Description string          `json:"description,omitempty"`
+	Type        string          `json:"type"`                    // admin_page, agent_app, customer_app, public_page, kiosk
+	Icon        string          `json:"icon,omitempty"`          // FontAwesome class or SVG
+	Shell       string          `json:"shell,omitempty"`         // none, minimal, standard (defaults per type)
+	Routes      []UIRouteSpec   `json:"routes"`                  // routes relative to /ui/{plugin}_{id}/
+	Nav         *UINavSpec      `json:"nav,omitempty"`           // navigation for minimal/standard shells
+	Branding    *UIBrandingSpec `json:"branding,omitempty"`      // per-UI branding overrides
+	Auth        *UIAuthSpec     `json:"auth,omitempty"`          // auth configuration
+	PWA         *UIPWASpec      `json:"pwa,omitempty"`           // PWA manifest configuration
+	DataScope   string          `json:"data_scope,omitempty"`    // self, org, all (for customer UIs)
+	RateLimit   int             `json:"rate_limit,omitempty"`    // requests/min for public UIs (0 = default)
+}
+
+// UIRouteSpec defines a route within a plugin UI.
+type UIRouteSpec struct {
+	Path    string `json:"path"`              // relative path, e.g. "/", "/items/:id"
+	Method  string `json:"method,omitempty"`  // GET, POST, etc. (default: GET)
+	Handler string `json:"handler"`           // plugin function name
+}
+
+// UINavSpec defines navigation for a plugin UI shell.
+type UINavSpec struct {
+	Position string      `json:"position"` // bottom, top, side
+	Items    []UINavItem `json:"items"`
+}
+
+// UINavItem is a navigation entry in a plugin UI.
+type UINavItem struct {
+	Label string `json:"label"`           // display text (can be i18n key)
+	Icon  string `json:"icon"`            // FontAwesome class
+	Path  string `json:"path"`            // relative path within this UI
+	Badge string `json:"badge,omitempty"` // plugin function returning badge count
+	Order int    `json:"order,omitempty"`
+}
+
+// UIBrandingSpec holds per-UI branding overrides.
+type UIBrandingSpec struct {
+	AppName string `json:"app_name,omitempty"`
+	Logo    string `json:"logo,omitempty"`    // URL or base64 data URI
+	Favicon string `json:"favicon,omitempty"` // URL or base64 data URI
+	Color   string `json:"color,omitempty"`   // primary brand colour (hex)
+}
+
+// UIAuthSpec holds per-UI auth configuration.
+type UIAuthSpec struct {
+	Method string   `json:"method,omitempty"` // session, pin, token, none
+	Groups []string `json:"groups,omitempty"` // required groups
+}
+
+// UIPWASpec holds PWA manifest configuration for a plugin UI.
+type UIPWASpec struct {
+	Enabled     bool     `json:"enabled"`
+	StartURL    string   `json:"start_url,omitempty"`     // defaults to UI root
+	Display     string   `json:"display,omitempty"`       // standalone, fullscreen, minimal-ui
+	ThemeColor  string   `json:"theme_color,omitempty"`
+	CacheRoutes []string `json:"cache_routes,omitempty"`  // routes to pre-cache for offline
 }
 
 // ResourceRequest describes what a plugin asks for from the platform.

@@ -291,19 +291,21 @@ Universal custom fields on every core entity. Plugins declare fields at registra
 
 Plugins declare unlimited independent UIs (agent apps, customer portals, public pages, kiosks) that run in dedicated UI containers with their own domains, branding, auth, navigation, and PWA support.
 
-- [ ] `UISpec` in `GKRegistration` (name, type, routes, branding, layout, auth, PWA, offline)
-- [ ] UI types: admin_page, agent_app, customer_app, public_page, kiosk
-- [ ] Shell system: none (raw HTML), minimal (mobile-first), standard (full chrome)
-- [ ] Custom domain routing (reverse proxy config generation)
-- [ ] Per-UI branding (logo, colours, fonts, favicon, app name)
-- [ ] PWA manifest generation (installable on phone home screen)
-- [ ] Service worker / offline support with configurable caching strategy
-- [ ] Customer auth methods: email+password, magic link, SMS OTP, OAuth, PIN
-- [ ] Data scoping for customer UIs (self-only, org, all)
-- [ ] Rate limiting for public UIs
-- [ ] Bottom/top/side navigation with badge support
-- [ ] Agent and Customer UI containers become multi-UI-aware
-- [ ] Design spec: `docs/design/PLUGIN_UIS.md`
+- [x] `UISpec` in `GKRegistration` (name, type, routes, branding, auth, PWA, data scope, rate limit)
+- [x] UI types: admin_page, agent_app, customer_app, public_page, kiosk
+- [x] Shell system: none (raw HTML), minimal (mobile-first with bottom/top/side nav), standard (full GoatFlow chrome)
+- [x] Shell templates: `ui_standard.pongo2`, `ui_minimal.pongo2`, `ui_none.pongo2`
+- [x] Custom domain support (admin-assignable, reverse proxy config generation)
+- [x] Per-UI branding (logo, colour, fonts, favicon, app name) via `UIBrandingSpec`
+- [x] PWA manifest auto-generation (`/ui/{id}/manifest.json`) with configurable display mode
+- [x] Auth per UI type: session (agent/customer), PIN (kiosk), token, none (public)
+- [x] Data scoping for customer UIs (self, org, all) — passed to plugin handlers
+- [x] Rate limiting for public UIs (configurable per UI)
+- [x] Bottom/top/side navigation with badge counts (resolved via plugin function calls)
+- [x] Navigation integration — plugin UIs auto-appear in agent/customer/admin nav
+- [x] Plugin manager auto-registers UIs on plugin load (`gk_plugin_ui` table)
+- [x] Dynamic router registers all UI routes under `/ui/{plugin}_{ui_id}/`
+- [x] Design spec: `docs/design/PLUGIN_UIS.md`
 
 **GoatKit PaaS Core — Organisations & Multi-Tenancy**
 
@@ -386,6 +388,10 @@ Shared UI components usable by any plugin. Server-rendered HTML building blocks.
 - [ ] Scheduled report delivery via email
 - [ ] Time tracking reports and analytics
 - [ ] Ships as standalone WASM plugin
+
+**Plugin UI System — Offline & Admin**
+- [ ] Service worker / offline support with configurable caching strategy (per-plugin CacheRoutes)
+- [ ] Admin UI for managing plugin UIs (list, enable/disable, custom domain, branding override)
 
 **Mobile Optimization**
 - [ ] Responsive mobile layouts for all pages

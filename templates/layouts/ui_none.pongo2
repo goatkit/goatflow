@@ -1,0 +1,16 @@
+{# Raw shell for plugin UIs — no chrome, plugin controls entire page #}
+<!DOCTYPE html>
+<html lang="{{ getLang() }}" dir="{{ getDirection() }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <title>{{ ui_branding.app_name|default:AppName }}</title>
+    {% if ui_pwa_enabled %}<link rel="manifest" href="/ui/{{ ui_full_id }}/manifest.json">{% endif %}
+    {% if ui_branding.favicon %}<link rel="icon" href="{{ ui_branding.favicon }}">{% endif %}
+    <link rel="stylesheet" href="/static/css/output.css">
+    <link rel="stylesheet" href="/static/css/fontawesome/all.min.css">
+    <script src="/static/js/htmx.min.js" defer></script>
+    <script src="/static/js/alpine.min.js" defer></script>
+</head>
+<body>{{ PluginHTML|safe }}</body>
+</html>
