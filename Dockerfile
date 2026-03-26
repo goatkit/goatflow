@@ -225,6 +225,9 @@ COPY --from=assets --chown=appuser:appgroup /assets/css/webfonts/ ./static/css/w
 COPY --from=frontend --chown=appuser:appgroup /build/static/css/output.css ./static/css/
 COPY --from=frontend --chown=appuser:appgroup /build/static/js/tiptap.min.js ./static/js/
 
+# Default command
+CMD ["./goats"]
+
 # ============================================
 # Stage 7b: Final minimal backend runtime
 # ============================================

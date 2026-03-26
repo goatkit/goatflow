@@ -106,6 +106,7 @@ services:
 
   runner:
     image: ghcr.io/goatkit/goatflow-runner:${GOATFLOW_TAG:-latest}
+    command: ["./goats", "-mode", "runner"]
     environment:
       APP_ENV: ${APP_ENV:-production}
       DB_DRIVER: mysql
