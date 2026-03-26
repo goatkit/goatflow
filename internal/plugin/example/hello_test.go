@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+
+	"github.com/goatkit/goatflow/internal/plugin"
 )
 
 // mockHostAPI for testing
@@ -43,6 +45,18 @@ func (m *mockHostAPI) CallPlugin(ctx context.Context, pluginName, function strin
 
 func (m *mockHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
 	return nil
+}
+
+func (m *mockHostAPI) CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
+	return nil, nil
+}
+
+func (m *mockHostAPI) CustomFieldsSet(ctx context.Context, entityType string, objectID int64, values map[string]any) error {
+	return nil
+}
+
+func (m *mockHostAPI) CustomFieldsQuery(ctx context.Context, entityType string, filters []plugin.CustomFieldFilter) ([]int64, error) {
+	return nil, nil
 }
 
 func TestHelloPlugin(t *testing.T) {

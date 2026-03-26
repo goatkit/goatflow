@@ -31,8 +31,34 @@ func TestMain(m *testing.M) {
 	// Run tests
 	code := m.Run()
 
+	// Clean up api/v1 auth test fixtures so other packages aren't affected
+	cleanupV1TestData()
+
 	database.CloseTestDB()
 	os.Exit(code)
+}
+
+// cleanupV1TestData removes all v1 auth test fixtures from the shared test database.
+// This prevents cross-package test pollution when running the full suite.
+func cleanupV1TestData() {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		return
+	}
+	db.Exec("SET FOREIGN_KEY_CHECKS = 0")
+	db.Exec(database.ConvertPlaceholders("DELETE FROM user_api_tokens WHERE user_id >= 90000 OR name LIKE 'agent-%' OR name LIKE 'customer-%'"))
+	db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_history WHERE ticket_id >= 90000"))
+	db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime WHERE article_id IN (SELECT id FROM article WHERE ticket_id >= 90000)"))
+	db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE ticket_id >= 90000"))
+	db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id >= 90000"))
+	db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id >= 90000 OR group_id >= 90000"))
+	db.Exec(database.ConvertPlaceholders("DELETE FROM group_customer WHERE customer_id LIKE 'authtest-%'"))
+	db.Exec(database.ConvertPlaceholders("DELETE FROM customer_user WHERE login LIKE '%authtest%'"))
+	db.Exec(database.ConvertPlaceholders("DELETE FROM customer_company WHERE customer_id LIKE 'authtest-%'"))
+	db.Exec(database.ConvertPlaceholders("DELETE FROM queue WHERE id >= 90000 OR name LIKE 'AuthTest-%'"))
+	db.Exec(database.ConvertPlaceholders("DELETE FROM `groups` WHERE id >= 90000 OR name LIKE 'AuthTest-%'"))
+	db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id >= 90000 OR login LIKE 'authtest-%'"))
+	db.Exec("SET FOREIGN_KEY_CHECKS = 1")
 }
 
 // resetTestDatabase resets the test database to canonical state.

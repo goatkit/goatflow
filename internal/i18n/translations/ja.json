@@ -3302,5 +3302,11 @@
     },
     "demo": {
         "security_disabled": "デモモードではパスワードとMFAの変更は無効です。"
+    },
+    "custom_fields": {
+        "latitude": "緯度",
+        "longitude": "経度",
+        "region": "地域",
+        "postcode": "郵便番号"
     }
 }

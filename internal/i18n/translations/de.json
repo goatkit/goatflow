@@ -3305,5 +3305,11 @@
     },
     "demo": {
         "security_disabled": "Passwort- und MFA-Änderungen sind im Demomodus deaktiviert."
+    },
+    "custom_fields": {
+        "latitude": "Breitengrad",
+        "longitude": "Längengrad",
+        "region": "Region",
+        "postcode": "Postleitzahl"
     }
 }

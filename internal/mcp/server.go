@@ -142,6 +142,14 @@ func (s *Server) executeTool(ctx context.Context, name string, args map[string]a
 		return s.toolGetStatistics(ctx, args)
 	case "execute_sql":
 		return s.toolExecuteSQL(ctx, args)
+	case "custom_fields_get":
+		return s.toolCustomFieldsGet(ctx, args)
+	case "custom_fields_set":
+		return s.toolCustomFieldsSet(ctx, args)
+	case "custom_fields_query":
+		return s.toolCustomFieldsQuery(ctx, args)
+	case "custom_fields_list":
+		return s.toolCustomFieldsList(ctx, args)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", name)
 	}

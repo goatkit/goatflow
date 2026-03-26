@@ -3872,5 +3872,11 @@
     },
     "demo": {
         "security_disabled": "Alterações de senha e MFA estão desativadas no modo demo."
+    },
+    "custom_fields": {
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "region": "Região",
+        "postcode": "Código postal"
     }
 }

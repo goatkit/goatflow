@@ -86,3 +86,18 @@ func (h *DefaultHostAPI) CallPlugin(ctx context.Context, pluginName, fn string, 
 func (h *DefaultHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
 	return fmt.Errorf("SSE not available in default host")
 }
+
+// CustomFieldsGet retrieves custom field values for an entity.
+func (h *DefaultHostAPI) CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
+	return nil, nil
+}
+
+// CustomFieldsSet stores custom field values for an entity.
+func (h *DefaultHostAPI) CustomFieldsSet(ctx context.Context, entityType string, objectID int64, values map[string]any) error {
+	return nil
+}
+
+// CustomFieldsQuery finds entities by custom field values.
+func (h *DefaultHostAPI) CustomFieldsQuery(ctx context.Context, entityType string, filters []CustomFieldFilter) ([]int64, error) {
+	return nil, nil
+}

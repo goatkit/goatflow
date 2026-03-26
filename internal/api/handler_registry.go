@@ -455,6 +455,18 @@ func ensureCoreHandlers() {
 		"handleDeleteDynamicField":                  handleDeleteDynamicField,
 		"handleAdminDynamicFieldScreenConfigSave":   handleAdminDynamicFieldScreenConfigSave,
 		"handleAdminDynamicFieldScreenConfigSingle": handleAdminDynamicFieldScreenConfigSingle,
+		// Custom Fields (GoatKit PaaS Core) handlers
+		"handleAdminCustomFields":       handleAdminCustomFields,
+		"handleAdminCustomFieldNew":     handleAdminCustomFieldNew,
+		"handleAdminCustomFieldEdit":    handleAdminCustomFieldEdit,
+		"handleCreateCustomField":       handleCreateCustomField,
+		"handleUpdateCustomField":       handleUpdateCustomField,
+		"handleDeleteCustomField":       handleDeleteCustomField,
+		"handleAPIListCustomFieldDefs":  handleAPIListCustomFieldDefs,
+		"handleAPIGetCustomFieldDef":    handleAPIGetCustomFieldDef,
+		"handleAPIGetCustomFieldValues": handleAPIGetCustomFieldValues,
+		"handleAPISetCustomFieldValues": handleAPISetCustomFieldValues,
+		"handleAPIQueryCustomFields":    handleAPIQueryCustomFields,
 		// Dynamic Field Webservice AJAX handlers
 		"handleDynamicFieldAutocomplete":    handleDynamicFieldAutocomplete,
 		"handleDynamicFieldWebserviceTest":  handleDynamicFieldWebserviceTest,

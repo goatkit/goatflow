@@ -3331,5 +3331,11 @@
     },
     "demo": {
         "security_disabled": "Зміна пароля та MFA вимкнена в демо-режимі."
+    },
+    "custom_fields": {
+        "latitude": "Широта",
+        "longitude": "Довгота",
+        "region": "Регіон",
+        "postcode": "Поштовий індекс"
     }
 }

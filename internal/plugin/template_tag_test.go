@@ -371,3 +371,15 @@ func (m *mockHostAPIForTag) CallPlugin(ctx context.Context, pluginName, function
 func (m *mockHostAPIForTag) PublishEvent(ctx context.Context, eventType string, data string) error {
 	return nil
 }
+
+func (m *mockHostAPIForTag) CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
+	return nil, nil
+}
+
+func (m *mockHostAPIForTag) CustomFieldsSet(ctx context.Context, entityType string, objectID int64, values map[string]any) error {
+	return nil
+}
+
+func (m *mockHostAPIForTag) CustomFieldsQuery(ctx context.Context, entityType string, filters []CustomFieldFilter) ([]int64, error) {
+	return nil, nil
+}

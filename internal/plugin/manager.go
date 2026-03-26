@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/goatkit/goatflow/internal/apierrors"
+	"github.com/goatkit/goatflow/internal/customfields"
 	"github.com/goatkit/goatflow/internal/i18n"
 )
 
@@ -330,6 +332,97 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 		}
 	}
 
+	// Register custom fields if provided
+	if len(manifest.CustomFields) > 0 {
+		if err := m.registerCustomFields(ctx, manifest.Name, manifest.CustomFields); err != nil {
+			slog.Warn("failed to register custom fields", "plugin", manifest.Name, "error", err)
+		}
+	}
+
+	return nil
+}
+
+// registerCustomFields ensures all custom fields declared by a plugin exist in gk_custom_field_def.
+// Field names are auto-prefixed with the plugin name to prevent collisions.
+func (m *Manager) registerCustomFields(ctx context.Context, pluginName string, specs []CustomFieldSpec) error {
+	repo, err := customfields.NewRepository()
+	if err != nil {
+		return fmt.Errorf("get db: %w", err)
+	}
+
+	for _, spec := range specs {
+		prefixedName := pluginName + "_" + spec.Name
+
+		existing, err := repo.GetDefByEntityAndName(spec.EntityType, prefixedName)
+		if err != nil {
+			return fmt.Errorf("check field %q: %w", prefixedName, err)
+		}
+
+		ownerName := pluginName
+		section := spec.Section
+		if section == "" {
+			section = "custom"
+		}
+
+		if existing != nil {
+			// Update label, config, etc. if owner matches.
+			if existing.OwnerType == customfields.OwnerPlugin && existing.OwnerName != nil && *existing.OwnerName == pluginName {
+				existing.Label = spec.Label
+				existing.Section = section
+				existing.FieldOrder = spec.Order
+				existing.Required = spec.Required
+				if spec.Description != "" {
+					existing.Description = &spec.Description
+				}
+				if spec.Placeholder != "" {
+					existing.Placeholder = &spec.Placeholder
+				}
+				if spec.Config != nil {
+					cfg := json.RawMessage(spec.Config)
+					existing.Config = &cfg
+				}
+				existing.ValidID = 1 // Re-enable if it was soft-deleted.
+				if err := repo.UpdateDef(existing, 1); err != nil {
+					return fmt.Errorf("update field %q: %w", prefixedName, err)
+				}
+			}
+			continue
+		}
+
+		// Create new field.
+		def := &customfields.FieldDef{
+			Name:       prefixedName,
+			Label:      spec.Label,
+			EntityType: spec.EntityType,
+			FieldType:  spec.FieldType,
+			OwnerType:  customfields.OwnerPlugin,
+			OwnerName:  &ownerName,
+			Section:    section,
+			FieldOrder: spec.Order,
+			Required:   spec.Required,
+			ValidID:    1,
+		}
+		if spec.Description != "" {
+			def.Description = &spec.Description
+		}
+		if spec.Placeholder != "" {
+			def.Placeholder = &spec.Placeholder
+		}
+		if spec.Config != nil {
+			cfg := json.RawMessage(spec.Config)
+			def.Config = &cfg
+		}
+
+		if err := customfields.ValidateFieldDef(def); err != nil {
+			slog.Warn("invalid custom field spec, skipping", "plugin", pluginName, "field", spec.Name, "error", err)
+			continue
+		}
+
+		if _, err := repo.CreateDef(def, 1); err != nil {
+			return fmt.Errorf("create field %q: %w", prefixedName, err)
+		}
+		slog.Info("registered custom field", "plugin", pluginName, "field", prefixedName, "entity", spec.EntityType)
+	}
 	return nil
 }
 

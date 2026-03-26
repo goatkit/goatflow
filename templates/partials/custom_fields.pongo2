@@ -1,0 +1,302 @@
+{# Custom Fields Partial — renders GoatKit PaaS custom fields for any entity #}
+{# Usage: {% include "partials/custom_fields.pongo2" with custom_fields=fields mode="edit" %} #}
+{# Modes: "edit" (form inputs), "view" (read-only), "inline" (compact single-line) #}
+
+{% if custom_fields %}
+
+{# --- INLINE MODE: compact display for table rows --- #}
+{% if mode == "inline" %}
+<span class="gk-custom-fields-inline">
+    {% for cf in custom_fields %}
+    <span class="text-sm" style="color: var(--gk-text-muted);">
+        <strong>{{ cf.Def.Label }}:</strong>
+        {% if cf.Value == nil %}-
+        {% elif cf.Def.FieldType == "boolean" %}{% if cf.Value %}Yes{% else %}No{% endif %}
+        {% elif cf.Def.FieldType == "multi_select" %}{{ cf.DisplayValue }}
+        {% elif cf.Def.FieldType == "point" %}{{ cf.Value.Lat|floatformat:4 }}, {{ cf.Value.Lng|floatformat:4 }}
+        {% elif cf.Def.FieldType == "url" %}<a href="{{ cf.Value }}" target="_blank" style="color: var(--gk-primary);">{{ cf.Value }}</a>
+        {% elif cf.Def.FieldType == "email" %}<a href="mailto:{{ cf.Value }}" style="color: var(--gk-primary);">{{ cf.Value }}</a>
+        {% else %}{{ cf.DisplayValue }}
+        {% endif %}
+    </span>
+    {% if not forloop.Last %}<span style="color: var(--gk-border-default);"> | </span>{% endif %}
+    {% endfor %}
+</span>
+
+{# --- VIEW MODE: read-only display --- #}
+{% elif mode == "view" %}
+{% for section_name, section_fields in custom_fields_grouped %}
+<div class="space-y-4 pt-4 mt-4" style="border-top: 1px solid var(--gk-border-default);">
+    <h4 class="text-md font-medium" style="color: var(--gk-text-primary);">{{ section_name|title }}</h4>
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {% for cf in section_fields %}
+        <div>
+            <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ cf.Def.Label }}</dt>
+            <dd class="mt-1 text-sm" style="color: var(--gk-text-primary);">
+                {% if cf.Value == nil %}<span style="color: var(--gk-text-muted);">-</span>
+                {% elif cf.Def.FieldType == "boolean" %}
+                    {% if cf.Value %}<span style="color: var(--gk-success);">Yes</span>{% else %}No{% endif %}
+                {% elif cf.Def.FieldType == "url" %}
+                    <a href="{{ cf.Value }}" target="_blank" rel="noopener" style="color: var(--gk-primary);">{{ cf.Value }}</a>
+                {% elif cf.Def.FieldType == "email" %}
+                    <a href="mailto:{{ cf.Value }}" style="color: var(--gk-primary);">{{ cf.Value }}</a>
+                {% elif cf.Def.FieldType == "phone" %}
+                    <a href="tel:{{ cf.Value }}" style="color: var(--gk-primary);">{{ cf.Value }}</a>
+                {% elif cf.Def.FieldType == "point" %}
+                    {{ cf.Value.Lat|floatformat:6 }}, {{ cf.Value.Lng|floatformat:6 }}
+                {% elif cf.Def.FieldType == "address" %}
+                    {% if cf.Value.Line1 %}{{ cf.Value.Line1 }}<br>{% endif %}
+                    {% if cf.Value.Line2 %}{{ cf.Value.Line2 }}<br>{% endif %}
+                    {% if cf.Value.City %}{{ cf.Value.City }}{% endif %}
+                    {% if cf.Value.Region %}, {{ cf.Value.Region }}{% endif %}
+                    {% if cf.Value.Postcode %} {{ cf.Value.Postcode }}{% endif %}
+                    {% if cf.Value.Country %}<br>{{ cf.Value.Country }}{% endif %}
+                {% elif cf.Def.FieldType == "multi_select" %}
+                    {{ cf.DisplayValue }}
+                {% elif cf.Def.FieldType == "polygon" %}
+                    <span style="color: var(--gk-text-muted);">[GeoJSON polygon]</span>
+                {% else %}{{ cf.DisplayValue }}
+                {% endif %}
+            </dd>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+
+{# --- EDIT MODE: form inputs with validation --- #}
+{% else %}
+<div x-data="customFieldsValidation()">
+{% for section_name, section_fields in custom_fields_grouped %}
+<fieldset class="space-y-6 pt-6 mt-6" style="border-top: 1px solid var(--gk-border-default);">
+    <legend class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ section_name|title }}</legend>
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {% for cf in section_fields %}
+        <div>
+            <label for="cf_{{ cf.Def.Name }}" class="block text-sm font-medium" style="color: var(--gk-text-primary);">
+                {{ cf.Def.Label }}
+                {% if cf.Def.Required %}<span style="color: var(--gk-error);">*</span>{% endif %}
+            </label>
+            {% if cf.Def.Description %}
+            <p class="mt-0.5 text-xs" style="color: var(--gk-text-muted);">{{ cf.Def.Description }}</p>
+            {% endif %}
+            <div class="mt-2">
+
+                {# --- TEXT --- #}
+                {% if cf.Def.FieldType == "text" %}
+                <input type="text"
+                    name="cf_{{ cf.Def.Name }}"
+                    id="cf_{{ cf.Def.Name }}"
+                    value="{{ cf.Value }}"
+                    {% if cf.Def.Required %}required{% endif %}
+                    {% if cf.Def.Placeholder %}placeholder="{{ cf.Def.Placeholder }}"{% endif %}
+                    @blur="validateField($event.target)"
+                    class="gk-input-neon w-full"
+                />
+
+                {# --- TEXTAREA --- #}
+                {% elif cf.Def.FieldType == "textarea" %}
+                <textarea
+                    name="cf_{{ cf.Def.Name }}"
+                    id="cf_{{ cf.Def.Name }}"
+                    rows="4"
+                    {% if cf.Def.Required %}required{% endif %}
+                    {% if cf.Def.Placeholder %}placeholder="{{ cf.Def.Placeholder }}"{% endif %}
+                    @blur="validateField($event.target)"
+                    class="gk-input-neon w-full"
+                >{{ cf.Value }}</textarea>
+
+                {# --- INTEGER --- #}
+                {% elif cf.Def.FieldType == "integer" %}
+                <input type="number"
+                    name="cf_{{ cf.Def.Name }}"
+                    id="cf_{{ cf.Def.Name }}"
+                    value="{{ cf.Value }}"
+                    step="1"
+                    {% if cf.Def.Required %}required{% endif %}
+                    {% if cf.Def.Placeholder %}placeholder="{{ cf.Def.Placeholder }}"{% endif %}
+                    @blur="validateField($event.target)"
+                    class="gk-input-neon w-full"
+                />
+
+                {# --- DECIMAL --- #}
+                {% elif cf.Def.FieldType == "decimal" %}
+                <input type="number"
+                    name="cf_{{ cf.Def.Name }}"
+                    id="cf_{{ cf.Def.Name }}"
+                    value="{{ cf.Value }}"
+                    step="0.01"
+                    {% if cf.Def.Required %}required{% endif %}
+                    {% if cf.Def.Placeholder %}placeholder="{{ cf.Def.Placeholder }}"{% endif %}
+                    @blur="validateField($event.target)"
+                    class="gk-input-neon w-full"
+                />
+
+                {# --- BOOLEAN --- #}
+                {% elif cf.Def.FieldType == "boolean" %}
+                <div class="flex items-center">
+                    <input type="checkbox"
+                        name="cf_{{ cf.Def.Name }}"
+                        id="cf_{{ cf.Def.Name }}"
+                        value="1"
+                        {% if cf.Value %}checked{% endif %}
+                        class="h-4 w-4 rounded"
+                        style="border-color: var(--gk-border-default); accent-color: var(--gk-primary);"
+                    />
+                    <span class="ml-2 text-sm" style="color: var(--gk-text-muted);">{{ cf.Def.Label }}</span>
+                </div>
+
+                {# --- DATE --- #}
+                {% elif cf.Def.FieldType == "date" %}
+                <input type="date"
+                    name="cf_{{ cf.Def.Name }}"
+                    id="cf_{{ cf.Def.Name }}"
+                    value="{{ cf.Value }}"
+                    {% if cf.Def.Required %}required{% endif %}
+                    @change="validateField($event.target)"
+                    class="gk-input-neon w-full"
+                />
+
+                {# --- DATETIME --- #}
+                {% elif cf.Def.FieldType == "datetime" %}
+                <input type="datetime-local"
+                    name="cf_{{ cf.Def.Name }}"
+                    id="cf_{{ cf.Def.Name }}"
+                    value="{{ cf.Value }}"
+                    {% if cf.Def.Required %}required{% endif %}
+                    @change="validateField($event.target)"
+                    class="gk-input-neon w-full"
+                />
+
+                {# --- SELECT --- #}
+                {% elif cf.Def.FieldType == "select" %}
+                <select
+                    name="cf_{{ cf.Def.Name }}"
+                    id="cf_{{ cf.Def.Name }}"
+                    {% if cf.Def.Required %}required{% endif %}
+                    @change="validateField($event.target)"
+                    class="gk-select-neon w-full"
+                >
+                    <option value="">-- Select --</option>
+                    {% for opt in cf.Options %}
+                    <option value="{{ opt.Value }}" {% if cf.Value == opt.Value %}selected{% endif %}>{{ opt.Label }}</option>
+                    {% endfor %}
+                </select>
+
+                {# --- MULTI_SELECT --- #}
+                {% elif cf.Def.FieldType == "multi_select" %}
+                <div class="space-y-1">
+                    {% for opt in cf.Options %}
+                    <label class="flex items-center gap-2 text-sm cursor-pointer" style="color: var(--gk-text-primary);">
+                        <input type="checkbox"
+                            name="cf_{{ cf.Def.Name }}[]"
+                            value="{{ opt.Value }}"
+                            {% if opt.Value in cf.SelectedValues %}checked{% endif %}
+                            class="h-4 w-4 rounded"
+                            style="border-color: var(--gk-border-default); accent-color: var(--gk-primary);"
+                        />
+                        {{ opt.Label }}
+                    </label>
+                    {% endfor %}
+                </div>
+
+                {# --- URL --- #}
+                {% elif cf.Def.FieldType == "url" %}
+                <input type="url"
+                    name="cf_{{ cf.Def.Name }}"
+                    id="cf_{{ cf.Def.Name }}"
+                    value="{{ cf.Value }}"
+                    {% if cf.Def.Required %}required{% endif %}
+                    {% if cf.Def.Placeholder %}placeholder="{{ cf.Def.Placeholder }}"{% else %}placeholder="https://"{% endif %}
+                    @blur="validateField($event.target)"
+                    class="gk-input-neon w-full"
+                />
+
+                {# --- EMAIL --- #}
+                {% elif cf.Def.FieldType == "email" %}
+                <input type="email"
+                    name="cf_{{ cf.Def.Name }}"
+                    id="cf_{{ cf.Def.Name }}"
+                    value="{{ cf.Value }}"
+                    {% if cf.Def.Required %}required{% endif %}
+                    {% if cf.Def.Placeholder %}placeholder="{{ cf.Def.Placeholder }}"{% endif %}
+                    @blur="validateField($event.target)"
+                    class="gk-input-neon w-full"
+                />
+
+                {# --- PHONE --- #}
+                {% elif cf.Def.FieldType == "phone" %}
+                <input type="tel"
+                    name="cf_{{ cf.Def.Name }}"
+                    id="cf_{{ cf.Def.Name }}"
+                    value="{{ cf.Value }}"
+                    {% if cf.Def.Required %}required{% endif %}
+                    {% if cf.Def.Placeholder %}placeholder="{{ cf.Def.Placeholder }}"{% else %}placeholder="+44 7700 900000"{% endif %}
+                    @blur="validateField($event.target)"
+                    class="gk-input-neon w-full"
+                />
+
+                {# --- POINT (lat/lng) --- #}
+                {% elif cf.Def.FieldType == "point" %}
+                <div class="space-y-2">
+                    <div id="cf_map_{{ cf.Def.Name }}" class="h-48 rounded border" style="border-color: var(--gk-border-default);" data-cf-map="point" data-field="{{ cf.Def.Name }}"></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" step="0.000001"
+                            name="cf_{{ cf.Def.Name }}_lat"
+                            id="cf_{{ cf.Def.Name }}_lat"
+                            value="{{ cf.Value.Lat }}"
+                            placeholder="{{ t("custom_fields.latitude")|default:"Latitude" }}"
+                            class="gk-input-neon w-full text-sm"
+                        />
+                        <input type="number" step="0.000001"
+                            name="cf_{{ cf.Def.Name }}_lng"
+                            id="cf_{{ cf.Def.Name }}_lng"
+                            value="{{ cf.Value.Lng }}"
+                            placeholder="{{ t("custom_fields.longitude")|default:"Longitude" }}"
+                            class="gk-input-neon w-full text-sm"
+                        />
+                    </div>
+                </div>
+
+                {# --- ADDRESS --- #}
+                {% elif cf.Def.FieldType == "address" %}
+                <div class="space-y-2">
+                    <input type="text" name="cf_{{ cf.Def.Name }}_line1" value="{{ cf.Value.Line1 }}" placeholder="Address line 1" class="gk-input-neon w-full" />
+                    <input type="text" name="cf_{{ cf.Def.Name }}_line2" value="{{ cf.Value.Line2 }}" placeholder="Address line 2" class="gk-input-neon w-full" />
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" name="cf_{{ cf.Def.Name }}_city" value="{{ cf.Value.City }}" placeholder="City" class="gk-input-neon w-full" />
+                        <input type="text" name="cf_{{ cf.Def.Name }}_region" value="{{ cf.Value.Region }}" placeholder="{{ t("custom_fields.region")|default:"Region" }}" class="gk-input-neon w-full" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" name="cf_{{ cf.Def.Name }}_postcode" value="{{ cf.Value.Postcode }}" placeholder="{{ t("custom_fields.postcode")|default:"Postcode" }}" class="gk-input-neon w-full" />
+                        <input type="text" name="cf_{{ cf.Def.Name }}_country" value="{{ cf.Value.Country }}" placeholder="Country code (GB)" class="gk-input-neon w-full" />
+                    </div>
+                </div>
+
+                {# --- POLYGON --- #}
+                {% elif cf.Def.FieldType == "polygon" %}
+                <div class="space-y-2">
+                    <div id="cf_map_{{ cf.Def.Name }}" class="h-48 rounded border" style="border-color: var(--gk-border-default);" data-cf-map="polygon" data-field="{{ cf.Def.Name }}"></div>
+                    <textarea
+                        name="cf_{{ cf.Def.Name }}"
+                        id="cf_{{ cf.Def.Name }}"
+                        rows="3"
+                        placeholder='{"type":"Polygon","coordinates":[...]}'
+                        class="gk-input-neon w-full text-xs font-mono"
+                    >{{ cf.Value }}</textarea>
+                </div>
+
+                {% endif %}
+
+                {# Validation error message #}
+                <p x-show="errors['cf_{{ cf.Def.Name }}']" x-text="errors['cf_{{ cf.Def.Name }}']" class="mt-1 text-sm" style="color: var(--gk-error);"></p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</fieldset>
+{% endfor %}
+</div>
+{% endif %}
+
+{% endif %}

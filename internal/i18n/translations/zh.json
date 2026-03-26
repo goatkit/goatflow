@@ -3302,5 +3302,11 @@
     },
     "demo": {
         "security_disabled": "演示模式下密码和MFA更改已禁用。"
+    },
+    "custom_fields": {
+        "latitude": "纬度",
+        "longitude": "经度",
+        "region": "地区",
+        "postcode": "邮政编码"
     }
 }

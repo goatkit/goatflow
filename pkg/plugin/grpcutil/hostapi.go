@@ -196,5 +196,48 @@ func (c *HostAPIClient) PublishEvent(_ context.Context, eventType string, data s
 	return err
 }
 
+// CustomFieldsGet retrieves custom field values for an entity.
+func (c *HostAPIClient) CustomFieldsGet(_ context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
+	result, err := c.call("custom_fields_get", map[string]any{
+		"entity_type": entityType,
+		"object_id":   objectID,
+		"fields":      fields,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var vals map[string]any
+	if err := json.Unmarshal(result, &vals); err != nil {
+		return nil, err
+	}
+	return vals, nil
+}
+
+// CustomFieldsSet stores custom field values for an entity.
+func (c *HostAPIClient) CustomFieldsSet(_ context.Context, entityType string, objectID int64, values map[string]any) error {
+	_, err := c.call("custom_fields_set", map[string]any{
+		"entity_type": entityType,
+		"object_id":   objectID,
+		"values":      values,
+	})
+	return err
+}
+
+// CustomFieldsQuery finds entities by custom field values.
+func (c *HostAPIClient) CustomFieldsQuery(_ context.Context, entityType string, filters []plugin.CustomFieldFilter) ([]int64, error) {
+	result, err := c.call("custom_fields_query", map[string]any{
+		"entity_type": entityType,
+		"filters":     filters,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var ids []int64
+	if err := json.Unmarshal(result, &ids); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
 // Verify HostAPIClient implements plugin.HostAPI at compile time.
 var _ plugin.HostAPI = (*HostAPIClient)(nil)

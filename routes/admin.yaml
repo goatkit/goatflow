@@ -628,6 +628,37 @@ spec:
           handler: handleAdminDynamicFieldScreenConfigSingle
           description: "Toggle single screen configuration for a field"
 
+        # Custom Fields (GoatKit PaaS Core)
+        - path: /custom-fields
+          method: GET
+          handler: handleAdminCustomFields
+          description: "Custom fields management page"
+
+        - path: /custom-fields/new
+          method: GET
+          handler: handleAdminCustomFieldNew
+          description: "New custom field form"
+
+        - path: /custom-fields/:id
+          method: GET
+          handler: handleAdminCustomFieldEdit
+          description: "Edit custom field form"
+
+        - path: /api/custom-fields
+          method: POST
+          handler: handleCreateCustomField
+          description: "Create new custom field"
+
+        - path: /api/custom-fields/:id
+          method: PUT
+          handler: handleUpdateCustomField
+          description: "Update existing custom field"
+
+        - path: /api/custom-fields/:id
+          method: DELETE
+          handler: handleDeleteCustomField
+          description: "Soft-delete custom field"
+
         # Response templates management
         - path: /templates
           method: GET

@@ -3302,5 +3302,11 @@
     },
     "demo": {
         "security_disabled": "Les modifications de mot de passe et MFA sont désactivées en mode démo."
+    },
+    "custom_fields": {
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "region": "Région",
+        "postcode": "Code postal"
     }
 }
