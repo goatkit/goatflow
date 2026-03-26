@@ -227,4 +227,79 @@ var ToolRegistry = []Tool{
 			Required: []string{"query"},
 		},
 	},
+	{
+		Name:        "custom_fields_get",
+		Description: "Get custom field values for an entity (contact, agent, ticket, organisation, etc.).",
+		InputSchema: InputSchema{
+			Type: "object",
+			Properties: map[string]Property{
+				"entity_type": {
+					Type:        "string",
+					Description: "Entity type: ticket, article, contact, agent, group, customer_group, queue, organisation",
+				},
+				"object_id": {
+					Type:        "integer",
+					Description: "ID of the entity",
+				},
+				"fields": {
+					Type:        "array",
+					Description: "Optional list of field names to return (omit for all fields)",
+				},
+			},
+			Required: []string{"entity_type", "object_id"},
+		},
+	},
+	{
+		Name:        "custom_fields_set",
+		Description: "Set custom field values for an entity. Values are validated against field definitions.",
+		InputSchema: InputSchema{
+			Type: "object",
+			Properties: map[string]Property{
+				"entity_type": {
+					Type:        "string",
+					Description: "Entity type: ticket, article, contact, agent, group, customer_group, queue, organisation",
+				},
+				"object_id": {
+					Type:        "integer",
+					Description: "ID of the entity",
+				},
+				"values": {
+					Type:        "object",
+					Description: "Map of field_name to value",
+				},
+			},
+			Required: []string{"entity_type", "object_id", "values"},
+		},
+	},
+	{
+		Name:        "custom_fields_query",
+		Description: "Query entities by custom field values. Returns matching entity IDs.",
+		InputSchema: InputSchema{
+			Type: "object",
+			Properties: map[string]Property{
+				"entity_type": {
+					Type:        "string",
+					Description: "Entity type to search",
+				},
+				"filters": {
+					Type:        "array",
+					Description: "Array of filter objects: {field, operator, value, value2}. Operators: eq, neq, gt, lt, gte, lte, like, in, between, near",
+				},
+			},
+			Required: []string{"entity_type", "filters"},
+		},
+	},
+	{
+		Name:        "custom_fields_list",
+		Description: "List custom field definitions for an entity type.",
+		InputSchema: InputSchema{
+			Type: "object",
+			Properties: map[string]Property{
+				"entity_type": {
+					Type:        "string",
+					Description: "Entity type to list fields for (omit for all entity types)",
+				},
+			},
+		},
+	},
 }

@@ -25,6 +25,8 @@ type HostAPI = pkgplugin.HostAPI
 type ResourceRequest = pkgplugin.ResourceRequest
 type Permission = pkgplugin.Permission
 type ResourcePolicy = pkgplugin.ResourcePolicy
+type CustomFieldSpec = pkgplugin.CustomFieldSpec
+type CustomFieldFilter = pkgplugin.CustomFieldFilter
 
 // DefaultResourcePolicy re-exports the default policy constructor.
 var DefaultResourcePolicy = pkgplugin.DefaultResourcePolicy

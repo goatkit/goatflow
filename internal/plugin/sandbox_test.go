@@ -68,6 +68,18 @@ func (m *mockInnerHostAPI) PublishEvent(ctx context.Context, eventType string, d
 	return nil
 }
 
+func (m *mockInnerHostAPI) CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
+	return nil, nil
+}
+
+func (m *mockInnerHostAPI) CustomFieldsSet(ctx context.Context, entityType string, objectID int64, values map[string]any) error {
+	return nil
+}
+
+func (m *mockInnerHostAPI) CustomFieldsQuery(ctx context.Context, entityType string, filters []CustomFieldFilter) ([]int64, error) {
+	return nil, nil
+}
+
 func TestSandbox_DBReadOnly(t *testing.T) {
 	inner := &mockInnerHostAPI{}
 	policy := ResourcePolicy{

@@ -271,17 +271,21 @@ GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ti
 
 Universal custom fields on every core entity. Plugins declare fields at registration; GoatKit handles storage, validation, UI rendering, and querying. Eliminates the need for plugin extension tables.
 
-- [ ] `gk_custom_field_def` + `gk_custom_field_value` tables (EAV with denormalised typed columns)
-- [ ] Supported entities: contact, agent, group, customer_group, queue, organisation
-- [ ] Field types: text, textarea, integer, decimal, boolean, date, datetime, select, multi_select, url, email, phone
-- [ ] GIS field types: point (lat/lng), polygon (GeoJSON), address (structured + auto-geocode)
-- [ ] Plugin registration: `CustomFieldSpec` in `GKRegistration`
-- [ ] HostAPI: `CustomFieldsGet()`, `CustomFieldsSet()`, `CustomFieldsQuery()`
-- [ ] Auto UI rendering on entity detail/edit pages (grouped by section, ordered, correct input controls)
-- [ ] Admin-defined custom fields (not just plugin-owned)
-- [ ] Searchable fields with indexed typed columns
-- [ ] Migration: existing ticket custom fields → unified system
-- [ ] Design spec: `docs/design/CUSTOM_FIELDS.md`
+- [x] `gk_custom_field_def` + `gk_custom_field_value` tables (EAV with denormalised typed columns)
+- [x] Supported entities: ticket, article, contact, agent, group, customer_group, queue, organisation
+- [x] Field types: text, textarea, integer, decimal, boolean, date, datetime, select, multi_select, url, email, phone
+- [x] GIS field types: point (lat/lng), polygon (GeoJSON), address (structured + auto-geocode)
+- [x] Plugin registration: `CustomFieldSpec` in `GKRegistration` (auto-prefixed names, auto-create on load)
+- [x] HostAPI: `CustomFieldsGet()`, `CustomFieldsSet()`, `CustomFieldsQuery()` (with sandbox prefix enforcement)
+- [x] WASM + gRPC wire format for custom field host functions
+- [x] Auto UI rendering partial (`custom_fields.pongo2` — edit/view/inline modes, all 15 field types)
+- [x] Admin-defined custom fields (admin UI: list, create, edit, soft-delete)
+- [x] Searchable fields with indexed typed columns (text, int, decimal, date, datetime)
+- [x] Legacy auto-migration: copy `dynamic_field` → `gk_custom_field_def` on startup (idempotent, downgrade-safe)
+- [x] Validation engine: 15 type-specific validators (regex with timeout, ranges, option membership, GeoJSON, email/URL/phone)
+- [x] REST API v1 endpoints (definitions CRUD, entity values get/set, query by field values)
+- [x] MCP tools: `custom_fields_get`, `custom_fields_set`, `custom_fields_query`, `custom_fields_list`
+- [x] Design spec: `docs/design/CUSTOM_FIELDS.md`
 
 **GoatKit PaaS Core — Plugin UI System**
 

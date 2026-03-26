@@ -3643,5 +3643,11 @@
   },
   "demo": {
     "security_disabled": "Password and MFA changes are disabled in demo mode."
+  },
+  "custom_fields": {
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "region": "Region",
+    "postcode": "Postcode"
   }
 }

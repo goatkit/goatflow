@@ -181,6 +181,18 @@ func (h *testHostAPI) PublishEvent(ctx context.Context, eventType string, data s
 	return nil
 }
 
+func (h *testHostAPI) CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
+	return nil, nil
+}
+
+func (h *testHostAPI) CustomFieldsSet(ctx context.Context, entityType string, objectID int64, values map[string]any) error {
+	return nil
+}
+
+func (h *testHostAPI) CustomFieldsQuery(ctx context.Context, entityType string, filters []CustomFieldFilter) ([]int64, error) {
+	return nil, nil
+}
+
 func TestHostAPIUsage(t *testing.T) {
 	ctx := context.Background()
 	host := newTestHostAPI()

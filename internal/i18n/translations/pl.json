@@ -3873,5 +3873,11 @@
     },
     "demo": {
         "security_disabled": "Zmiany hasła i MFA są wyłączone w trybie demo."
+    },
+    "custom_fields": {
+        "latitude": "Szerokość geograficzna",
+        "longitude": "Długość geograficzna",
+        "region": "Region",
+        "postcode": "Kod pocztowy"
     }
 }

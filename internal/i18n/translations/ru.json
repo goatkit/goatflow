@@ -3302,5 +3302,11 @@
     },
     "demo": {
         "security_disabled": "Изменение пароля и MFA отключено в демо-режиме."
+    },
+    "custom_fields": {
+        "latitude": "Широта",
+        "longitude": "Долгота",
+        "region": "Регион",
+        "postcode": "Почтовый индекс"
     }
 }

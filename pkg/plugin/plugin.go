@@ -61,6 +61,10 @@ type GKRegistration struct {
 	// Access control — groups the plugin needs, auto-created on load
 	Groups []GroupSpec `json:"groups,omitempty"` // groups for RBAC (use "group:<name>" in route middleware)
 
+	// Custom fields the plugin needs on GoatKit entities.
+	// Field names are auto-prefixed with the plugin name to prevent collisions.
+	CustomFields []CustomFieldSpec `json:"custom_fields,omitempty"`
+
 	// Requirements
 	MinHostVersion string              `json:"min_host_version,omitempty"` // minimum GoatFlow version
 	Permissions    []string            `json:"permissions,omitempty"`      // required host permissions (legacy, use ResourceRequest)
@@ -181,6 +185,41 @@ type HostAPI interface {
 	// Publishes an event to all connected browser clients.
 	// eventType is the SSE event name (e.g. "device-table"); data is the payload (typically HTML).
 	PublishEvent(ctx context.Context, eventType string, data string) error
+
+	// Custom Fields
+	// Get retrieves custom field values for an entity. Plugin prefix is auto-stripped.
+	// Pass nil for fields to get all fields; pass specific names to filter.
+	CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error)
+
+	// Set stores custom field values for an entity. Plugin prefix is auto-stripped.
+	// Validates types and constraints before storing.
+	CustomFieldsSet(ctx context.Context, entityType string, objectID int64, values map[string]any) error
+
+	// Query finds entities by custom field values. Returns matching object IDs.
+	CustomFieldsQuery(ctx context.Context, entityType string, filters []CustomFieldFilter) ([]int64, error)
+}
+
+// CustomFieldSpec declares a custom field a plugin needs on a GoatKit entity.
+// The platform creates, stores, validates, indexes, and renders these fields.
+type CustomFieldSpec struct {
+	Name        string          `json:"name"`                    // machine name (auto-prefixed with plugin name)
+	Label       string          `json:"label"`                   // display label (can be i18n key)
+	EntityType  string          `json:"entity_type"`             // "contact", "agent", "organisation", etc.
+	FieldType   string          `json:"field_type"`              // "text", "select", "point", etc.
+	Section     string          `json:"section,omitempty"`       // UI section grouping (default: "custom")
+	Order       int             `json:"order,omitempty"`         // sort within section
+	Required    bool            `json:"required,omitempty"`
+	Description string          `json:"description,omitempty"`   // help text below input
+	Placeholder string          `json:"placeholder,omitempty"`
+	Config      json.RawMessage `json:"config,omitempty"`        // type-specific config (options, regex, etc.)
+}
+
+// CustomFieldFilter is a query filter used by CustomFieldsQuery.
+type CustomFieldFilter struct {
+	Field    string `json:"field"`              // field name (plugin prefix stripped)
+	Operator string `json:"operator"`           // eq, neq, gt, lt, gte, lte, like, in, between, near
+	Value    any    `json:"value"`              // comparison value
+	Value2   any    `json:"value2,omitempty"`   // second value for between (upper bound) and near (radius km)
 }
 
 // ResourceRequest describes what a plugin asks for from the platform.

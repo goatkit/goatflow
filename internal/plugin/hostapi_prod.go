@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/goatkit/goatflow/internal/cache"
+	"github.com/goatkit/goatflow/internal/customfields"
 	"github.com/goatkit/goatflow/internal/config"
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/i18n"
@@ -405,6 +406,70 @@ func (h *ProdHostAPI) CallPlugin(ctx context.Context, pluginName, fn string, arg
 		return h.PluginManager.CallFrom(ctx, callerPlugin, pluginName, fn, args)
 	}
 	return h.PluginManager.Call(ctx, pluginName, fn, args)
+}
+
+// customFieldsRepo returns a Repository using the ProdHostAPI's injected DB connection.
+func (h *ProdHostAPI) customFieldsRepo() (*customfields.Repository, error) {
+	db, err := h.getDB("")
+	if err != nil {
+		return nil, fmt.Errorf("custom fields: %w", err)
+	}
+	return customfields.NewRepositoryWithDB(db), nil
+}
+
+// CustomFieldsGet retrieves custom field values for an entity.
+func (h *ProdHostAPI) CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
+	repo, err := h.customFieldsRepo()
+	if err != nil {
+		return nil, err
+	}
+	return repo.GetValues(entityType, objectID, fields)
+}
+
+// CustomFieldsSet stores custom field values for an entity.
+func (h *ProdHostAPI) CustomFieldsSet(ctx context.Context, entityType string, objectID int64, values map[string]any) error {
+	repo, err := h.customFieldsRepo()
+	if err != nil {
+		return err
+	}
+
+	// Load defs for validation.
+	defs, err := repo.ListDefs(entityType, "", "", true)
+	if err != nil {
+		return fmt.Errorf("custom fields: load defs: %w", err)
+	}
+	defMap := make(map[string]*customfields.FieldDef, len(defs))
+	for i := range defs {
+		defMap[defs[i].Name] = &defs[i]
+	}
+
+	// Validate.
+	if errs := customfields.ValidateValues(defMap, values); errs != nil {
+		raw, _ := json.Marshal(errs)
+		return fmt.Errorf("validation failed: %s", string(raw))
+	}
+
+	return repo.SetValues(entityType, objectID, values)
+}
+
+// CustomFieldsQuery finds entities by custom field values.
+func (h *ProdHostAPI) CustomFieldsQuery(ctx context.Context, entityType string, filters []CustomFieldFilter) ([]int64, error) {
+	repo, err := h.customFieldsRepo()
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert plugin filter type to internal type.
+	internal := make([]customfields.FieldFilter, len(filters))
+	for i, f := range filters {
+		internal[i] = customfields.FieldFilter{
+			Field:    f.Field,
+			Operator: f.Operator,
+			Value:    f.Value,
+			Value2:   f.Value2,
+		}
+	}
+	return repo.QueryByFields(entityType, internal)
 }
 
 // PublishEvent sends an SSE event to all connected browser clients.

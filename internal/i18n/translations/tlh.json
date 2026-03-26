@@ -3318,5 +3318,11 @@
     },
     "demo": {
         "security_disabled": "Demo SeHlaw: ngu'wI' choH pagh MFA choH chaw'be'lu'."
+    },
+    "custom_fields": {
+        "latitude": "latitude",
+        "longitude": "longitude",
+        "region": "Sep",
+        "postcode": "QIn mI'"
     }
 }

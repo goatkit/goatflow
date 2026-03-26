@@ -373,6 +373,49 @@ func (p *WASMPlugin) dispatchHostCall(ctx context.Context, fn string, args []byt
 		}
 		return json.Marshal(map[string]string{"status": "ok"})
 
+	case "custom_fields_get":
+		var req struct {
+			EntityType string   `json:"entity_type"`
+			ObjectID   int64    `json:"object_id"`
+			Fields     []string `json:"fields"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		result, err := p.host.CustomFieldsGet(ctx, req.EntityType, req.ObjectID, req.Fields)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(result)
+
+	case "custom_fields_set":
+		var req struct {
+			EntityType string         `json:"entity_type"`
+			ObjectID   int64          `json:"object_id"`
+			Values     map[string]any `json:"values"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		if err := p.host.CustomFieldsSet(ctx, req.EntityType, req.ObjectID, req.Values); err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]string{"status": "ok"})
+
+	case "custom_fields_query":
+		var req struct {
+			EntityType string                     `json:"entity_type"`
+			Filters    []plugin.CustomFieldFilter  `json:"filters"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		ids, err := p.host.CustomFieldsQuery(ctx, req.EntityType, req.Filters)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(ids)
+
 	default:
 		return nil, fmt.Errorf("unknown host function: %s", fn)
 	}

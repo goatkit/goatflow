@@ -3354,5 +3354,11 @@
     },
     "demo": {
         "security_disabled": "שינויי סיסמה ואימות דו-שלבי מושבתים במצב הדגמה."
+    },
+    "custom_fields": {
+        "latitude": "קו רוחב",
+        "longitude": "קו אורך",
+        "region": "אזור",
+        "postcode": "מיקוד"
     }
 }

@@ -3327,5 +3327,11 @@
     },
     "demo": {
         "security_disabled": "ڈیمو موڈ میں پاس ورڈ اور MFA تبدیلیاں غیر فعال ہیں۔"
+    },
+    "custom_fields": {
+        "latitude": "عرض البلد",
+        "longitude": "طول البلد",
+        "region": "علاقہ",
+        "postcode": "پوسٹ کوڈ"
     }
 }

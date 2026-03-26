@@ -312,3 +312,43 @@ spec:
           handler: HandleUpdateSignatureAPI
           middleware:
           description: "Update signature"
+
+        # Custom Fields (GoatKit PaaS Core)
+        - path: /custom-fields/definitions
+          method: GET
+          handler: handleAPIListCustomFieldDefs
+          description: "List custom field definitions"
+        - path: /custom-fields/definitions/:id
+          method: GET
+          handler: handleAPIGetCustomFieldDef
+          description: "Get custom field definition"
+        - path: /custom-fields/definitions
+          method: POST
+          handler: handleCreateCustomField
+          middleware:
+              - admin
+          description: "Create custom field definition (admin only)"
+        - path: /custom-fields/definitions/:id
+          method: PUT
+          handler: handleUpdateCustomField
+          middleware:
+              - admin
+          description: "Update custom field definition (admin only)"
+        - path: /custom-fields/definitions/:id
+          method: DELETE
+          handler: handleDeleteCustomField
+          middleware:
+              - admin
+          description: "Soft-delete custom field definition (admin only)"
+        - path: /custom-fields/values/:entity_type/:id
+          method: GET
+          handler: handleAPIGetCustomFieldValues
+          description: "Get custom field values for entity"
+        - path: /custom-fields/values/:entity_type/:id
+          method: PUT
+          handler: handleAPISetCustomFieldValues
+          description: "Set custom field values for entity"
+        - path: /custom-fields/query
+          method: POST
+          handler: handleAPIQueryCustomFields
+          description: "Query entities by custom field values"

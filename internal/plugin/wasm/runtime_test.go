@@ -47,6 +47,18 @@ func (m *mockHostAPI) PublishEvent(ctx context.Context, eventType string, data s
 	return nil
 }
 
+func (m *mockHostAPI) CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
+	return nil, nil
+}
+
+func (m *mockHostAPI) CustomFieldsSet(ctx context.Context, entityType string, objectID int64, values map[string]any) error {
+	return nil
+}
+
+func (m *mockHostAPI) CustomFieldsQuery(ctx context.Context, entityType string, filters []plugin.CustomFieldFilter) ([]int64, error) {
+	return nil, nil
+}
+
 // requireWASMPlugin skips the test if the WASM plugin file doesn't exist.
 // WASM plugins require TinyGo to build, which may not be available in all environments.
 func requireWASMPlugin(t *testing.T, wasmPath string) {
@@ -488,6 +500,18 @@ func (h *trackingHostAPI) CallPlugin(ctx context.Context, pluginName, function s
 
 func (h *trackingHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
 	return nil
+}
+
+func (h *trackingHostAPI) CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
+	return nil, nil
+}
+
+func (h *trackingHostAPI) CustomFieldsSet(ctx context.Context, entityType string, objectID int64, values map[string]any) error {
+	return nil
+}
+
+func (h *trackingHostAPI) CustomFieldsQuery(ctx context.Context, entityType string, filters []plugin.CustomFieldFilter) ([]int64, error) {
+	return nil, nil
 }
 
 func TestLoadFromBytes(t *testing.T) {

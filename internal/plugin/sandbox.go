@@ -598,6 +598,108 @@ func (s *SandboxedHostAPI) isConfigKeyAllowed(key string) bool {
 	return true
 }
 
+// CustomFieldsGet retrieves custom field values, scoped to this plugin's prefixed fields + admin/legacy fields.
+func (s *SandboxedHostAPI) CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
+	if s.dbQueries.enabled() && !s.dbQueries.allow() {
+		s.stats.Errors.Add(1)
+		return nil, fmt.Errorf("plugin %q: DB query rate limit exceeded", s.pluginName)
+	}
+	s.stats.DBQueries.Add(1)
+	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+
+	// Prefix field names with plugin name for plugin-owned fields.
+	prefixed := s.prefixFieldNames(fields)
+	result, err := s.inner.CustomFieldsGet(ctx, entityType, objectID, prefixed)
+	if err != nil {
+		s.stats.Errors.Add(1)
+		return nil, err
+	}
+
+	// Strip plugin prefix from result keys.
+	return s.stripPrefixFromResults(result), nil
+}
+
+// CustomFieldsSet stores custom field values, scoped to this plugin's fields.
+func (s *SandboxedHostAPI) CustomFieldsSet(ctx context.Context, entityType string, objectID int64, values map[string]any) error {
+	if s.dbQueries.enabled() && !s.dbQueries.allow() {
+		s.stats.Errors.Add(1)
+		return fmt.Errorf("plugin %q: DB query rate limit exceeded", s.pluginName)
+	}
+	s.stats.DBExecs.Add(1)
+	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+
+	// Prefix field names.
+	prefixed := make(map[string]any, len(values))
+	for name, val := range values {
+		prefixed[s.prefixFieldName(name)] = val
+	}
+	if err := s.inner.CustomFieldsSet(ctx, entityType, objectID, prefixed); err != nil {
+		s.stats.Errors.Add(1)
+		return err
+	}
+	return nil
+}
+
+// CustomFieldsQuery finds entities by custom field values, scoped to this plugin's fields.
+func (s *SandboxedHostAPI) CustomFieldsQuery(ctx context.Context, entityType string, filters []CustomFieldFilter) ([]int64, error) {
+	if s.dbQueries.enabled() && !s.dbQueries.allow() {
+		s.stats.Errors.Add(1)
+		return nil, fmt.Errorf("plugin %q: DB query rate limit exceeded", s.pluginName)
+	}
+	s.stats.DBQueries.Add(1)
+	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+
+	// Prefix field names in filters.
+	prefixed := make([]CustomFieldFilter, len(filters))
+	for i, f := range filters {
+		prefixed[i] = CustomFieldFilter{
+			Field:    s.prefixFieldName(f.Field),
+			Operator: f.Operator,
+			Value:    f.Value,
+			Value2:   f.Value2,
+		}
+	}
+	result, err := s.inner.CustomFieldsQuery(ctx, entityType, prefixed)
+	if err != nil {
+		s.stats.Errors.Add(1)
+		return nil, err
+	}
+	return result, nil
+}
+
+// prefixFieldName adds the plugin name prefix to a field name.
+// If the name already has the prefix, or is an admin/legacy field, it's returned as-is.
+func (s *SandboxedHostAPI) prefixFieldName(name string) string {
+	prefix := s.pluginName + "_"
+	if strings.HasPrefix(name, prefix) {
+		return name
+	}
+	return prefix + name
+}
+
+// prefixFieldNames prefixes a slice of field names. nil input returns nil (get all).
+func (s *SandboxedHostAPI) prefixFieldNames(fields []string) []string {
+	if fields == nil {
+		return nil // Return all fields — inner layer handles it.
+	}
+	result := make([]string, len(fields))
+	for i, f := range fields {
+		result[i] = s.prefixFieldName(f)
+	}
+	return result
+}
+
+// stripPrefixFromResults removes the plugin prefix from result map keys.
+func (s *SandboxedHostAPI) stripPrefixFromResults(m map[string]any) map[string]any {
+	prefix := s.pluginName + "_"
+	result := make(map[string]any, len(m))
+	for k, v := range m {
+		stripped := strings.TrimPrefix(k, prefix)
+		result[stripped] = v
+	}
+	return result
+}
+
 // isEmailRecipientAllowed checks if an email recipient is allowed based on the email permission scope.
 func (s *SandboxedHostAPI) isEmailRecipientAllowed(recipient string) bool {
 	scope := s.permissionScope("email")
