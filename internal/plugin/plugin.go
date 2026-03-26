@@ -27,6 +27,13 @@ type Permission = pkgplugin.Permission
 type ResourcePolicy = pkgplugin.ResourcePolicy
 type CustomFieldSpec = pkgplugin.CustomFieldSpec
 type CustomFieldFilter = pkgplugin.CustomFieldFilter
+type UISpec = pkgplugin.UISpec
+type UIRouteSpec = pkgplugin.UIRouteSpec
+type UINavSpec = pkgplugin.UINavSpec
+type UINavItem = pkgplugin.UINavItem
+type UIBrandingSpec = pkgplugin.UIBrandingSpec
+type UIAuthSpec = pkgplugin.UIAuthSpec
+type UIPWASpec = pkgplugin.UIPWASpec
 
 // DefaultResourcePolicy re-exports the default policy constructor.
 var DefaultResourcePolicy = pkgplugin.DefaultResourcePolicy

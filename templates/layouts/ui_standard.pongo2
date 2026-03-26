@@ -1,0 +1,12 @@
+{# Standard shell for plugin UIs — full GoatFlow chrome, extends base layout #}
+{# This wraps plugin HTML in the normal GoatFlow page structure #}
+{% extends "layouts/base.pongo2" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    {% if ui_branding.app_name %}
+    <h1 class="text-2xl font-bold mb-6" style="color: var(--gk-text-primary);">{{ ui_branding.app_name }}</h1>
+    {% endif %}
+    {{ PluginHTML|safe }}
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{# Minimal shell for plugin UIs — mobile-first with optional bottom/top/side nav #}
+<!DOCTYPE html>
+<html lang="{{ getLang() }}" dir="{{ getDirection() }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ ui_branding.app_name|default:AppName }}</title>
+    {% if ui_pwa_enabled %}<link rel="manifest" href="/ui/{{ ui_full_id }}/manifest.json">{% endif %}
+    {% if ui_branding.favicon %}<link rel="icon" href="{{ ui_branding.favicon }}">{% endif %}
+    <link rel="stylesheet" href="/static/css/output.css">
+    <link rel="stylesheet" href="/static/css/fontawesome/all.min.css">
+    <script src="/static/js/htmx.min.js" defer></script>
+    <script src="/static/js/alpine.min.js" defer></script>
+    {% if ui_branding.color %}
+    <style>:root { --gk-ui-brand: {{ ui_branding.color }}; }</style>
+    {% endif %}
+</head>
+<body style="background: var(--gk-bg-base); color: var(--gk-text-primary);">
+    {# Minimal header #}
+    <header class="sticky top-0 z-40 px-4 py-3 flex items-center gap-3"
+            style="background: var(--gk-bg-surface); border-bottom: 1px solid var(--gk-border-default);">
+        {% if ui_nav_back %}<a href="{{ ui_nav_back }}" class="text-lg" style="color: var(--gk-text-primary);">&#8592;</a>{% endif %}
+        {% if ui_branding.logo %}
+        <img src="{{ ui_branding.logo }}" alt="" class="h-6 w-6 object-contain">
+        {% endif %}
+        <h1 class="text-lg font-semibold truncate" style="color: var(--gk-text-primary);">
+            {{ ui_branding.app_name|default:AppName }}
+        </h1>
+        <div class="flex-1"></div>
+        {% if User %}
+        <span class="text-sm" style="color: var(--gk-text-muted);">{{ User.login|default:User.Login }}</span>
+        {% endif %}
+    </header>
+
+    {# Top nav #}
+    {% if ui_nav and ui_nav.position == "top" %}
+    <nav class="flex gap-1 px-4 py-2 overflow-x-auto"
+         style="background: var(--gk-bg-surface); border-bottom: 1px solid var(--gk-border-default);">
+        {% for item in ui_nav_items %}
+        <a href="/ui/{{ ui_full_id }}{{ item.path }}"
+           class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm whitespace-nowrap"
+           style="color: {% if item.active %}var(--gk-ui-brand, var(--gk-primary)){% else %}var(--gk-text-muted){% endif %}; {% if item.active %}background: var(--gk-bg-elevated);{% endif %}">
+            <i class="fa-solid {{ item.icon }}"></i>
+            <span>{{ item.label }}</span>
+            {% if item.badge_count %}<span class="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{{ item.badge_count }}</span>{% endif %}
+        </a>
+        {% endfor %}
+    </nav>
+    {% endif %}
+
+    {# Side nav + content #}
+    {% if ui_nav and ui_nav.position == "side" %}
+    <div class="flex min-h-[calc(100vh-56px)]">
+        <nav class="w-56 shrink-0 py-4 px-2 space-y-1"
+             style="background: var(--gk-bg-surface); border-right: 1px solid var(--gk-border-default);">
+            {% for item in ui_nav_items %}
+            <a href="/ui/{{ ui_full_id }}{{ item.path }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-md text-sm"
+               style="color: {% if item.active %}var(--gk-ui-brand, var(--gk-primary)){% else %}var(--gk-text-muted){% endif %}; {% if item.active %}background: var(--gk-bg-elevated);{% endif %}">
+                <i class="fa-solid {{ item.icon }} w-5 text-center"></i>
+                <span class="flex-1">{{ item.label }}</span>
+                {% if item.badge_count %}<span class="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{{ item.badge_count }}</span>{% endif %}
+            </a>
+            {% endfor %}
+        </nav>
+        <main class="flex-1 p-4">{{ PluginHTML|safe }}</main>
+    </div>
+    {% else %}
+
+    {# Content (no side nav) #}
+    <main class="p-4 {% if ui_nav and ui_nav.position == "bottom" %}pb-20{% endif %}">
+        {{ PluginHTML|safe }}
+    </main>
+    {% endif %}
+
+    {# Bottom nav #}
+    {% if ui_nav and ui_nav.position == "bottom" %}
+    <nav class="fixed bottom-0 inset-x-0 z-40 flex justify-around py-2 safe-area-inset-bottom"
+         style="background: var(--gk-bg-surface); border-top: 1px solid var(--gk-border-default);">
+        {% for item in ui_nav_items %}
+        <a href="/ui/{{ ui_full_id }}{{ item.path }}"
+           class="relative flex flex-col items-center gap-0.5 text-xs px-3 py-1"
+           style="color: {% if item.active %}var(--gk-ui-brand, var(--gk-primary)){% else %}var(--gk-text-muted){% endif %};">
+            <span class="relative">
+                <i class="fa-solid {{ item.icon }} text-lg"></i>
+                {% if item.badge_count %}<span class="absolute -top-1.5 -right-2.5 bg-red-500 text-white text-[10px] rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5">{{ item.badge_count }}</span>{% endif %}
+            </span>
+            <span>{{ item.label }}</span>
+        </a>
+        {% endfor %}
+    </nav>
+    {% endif %}
+</body>
+</html>

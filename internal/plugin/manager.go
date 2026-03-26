@@ -10,6 +10,7 @@ import (
 	"github.com/goatkit/goatflow/internal/apierrors"
 	"github.com/goatkit/goatflow/internal/customfields"
 	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/pluginui"
 )
 
 // LazyLoader is the interface for lazy-loading plugins on demand.
@@ -339,6 +340,13 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 		}
 	}
 
+	// Register UIs if provided
+	if len(manifest.UIs) > 0 {
+		if err := m.registerPluginUIs(ctx, manifest.Name, manifest.UIs); err != nil {
+			slog.Warn("failed to register plugin UIs", "plugin", manifest.Name, "error", err)
+		}
+	}
+
 	return nil
 }
 
@@ -422,6 +430,90 @@ func (m *Manager) registerCustomFields(ctx context.Context, pluginName string, s
 			return fmt.Errorf("create field %q: %w", prefixedName, err)
 		}
 		slog.Info("registered custom field", "plugin", pluginName, "field", prefixedName, "entity", spec.EntityType)
+	}
+	return nil
+}
+
+// registerPluginUIs ensures all UIs declared by a plugin exist in gk_plugin_ui.
+func (m *Manager) registerPluginUIs(ctx context.Context, pluginName string, specs []UISpec) error {
+	repo, err := pluginui.NewRepository()
+	if err != nil {
+		return fmt.Errorf("get db: %w", err)
+	}
+
+	for _, spec := range specs {
+		fullID := pluginui.BuildFullID(pluginName, spec.ID)
+
+		if !pluginui.IsValidUIType(spec.Type) {
+			slog.Warn("invalid UI type, skipping", "plugin", pluginName, "ui", spec.ID, "type", spec.Type)
+			continue
+		}
+
+		shell := spec.Shell
+		if shell == "" {
+			shell = pluginui.DefaultShell(spec.Type)
+		}
+
+		existing, err := repo.GetByFullID(fullID)
+		if err != nil {
+			return fmt.Errorf("check UI %q: %w", fullID, err)
+		}
+
+		// Build config JSON from the spec.
+		cfgJSON, err := pluginui.UISpecToConfig(map[string]any{
+			"routes":     spec.Routes,
+			"nav":        spec.Nav,
+			"branding":   spec.Branding,
+			"auth":       spec.Auth,
+			"pwa":        spec.PWA,
+			"data_scope": spec.DataScope,
+			"rate_limit": spec.RateLimit,
+		})
+		if err != nil {
+			return fmt.Errorf("marshal UI config %q: %w", fullID, err)
+		}
+
+		if existing != nil {
+			// Update name, config, shell — preserve admin overrides (enabled, custom_domain).
+			existing.Name = spec.Name
+			existing.Shell = shell
+			existing.Config = cfgJSON
+			if spec.Description != "" {
+				existing.Description = &spec.Description
+			}
+			if spec.Icon != "" {
+				existing.Icon = &spec.Icon
+			}
+			existing.ValidID = 1
+			if err := repo.Update(existing, 1); err != nil {
+				return fmt.Errorf("update UI %q: %w", fullID, err)
+			}
+			continue
+		}
+
+		// Create new UI entry.
+		u := &pluginui.PluginUI{
+			PluginName: pluginName,
+			UIID:       spec.ID,
+			FullID:     fullID,
+			Name:       spec.Name,
+			UIType:     spec.Type,
+			Shell:      shell,
+			Config:     cfgJSON,
+			Enabled:    true,
+			ValidID:    1,
+		}
+		if spec.Description != "" {
+			u.Description = &spec.Description
+		}
+		if spec.Icon != "" {
+			u.Icon = &spec.Icon
+		}
+
+		if _, err := repo.Create(u, 1); err != nil {
+			return fmt.Errorf("create UI %q: %w", fullID, err)
+		}
+		slog.Info("registered plugin UI", "plugin", pluginName, "ui", fullID, "type", spec.Type)
 	}
 	return nil
 }
