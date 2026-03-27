@@ -1,0 +1,23 @@
+{# gk-quick-action — Big mobile-friendly tap targets #}
+{# Variables: #}
+{#   actions: [{label, icon, url, method, color, description}] #}
+{#   columns: grid columns (default: 2 on mobile, 4 on desktop) #}
+
+<div class="gk-quick-actions grid grid-cols-{{ columns|default:2 }} sm:grid-cols-{{ columns|default:2 }} md:grid-cols-4 gap-3"
+     role="toolbar" aria-label="Quick actions">
+    {% for action in actions %}
+    <{% if action.url and action.method %}button hx-{{ action.method }}="{{ action.url }}"{% elif action.url %}a href="{{ action.url }}"{% else %}button{% endif %}
+       class="flex flex-col items-center justify-center gap-2 p-4 rounded-xl text-center transition-all active:scale-95 min-h-[100px]"
+       style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default); color: {{ action.color|default:"var(--gk-primary)" }};"
+       role="button"
+       aria-label="{{ action.label }}{% if action.description %}: {{ action.description }}{% endif %}">
+        {% if action.icon %}
+        <i class="fa-solid {{ action.icon }} text-2xl" aria-hidden="true"></i>
+        {% endif %}
+        <span class="text-sm font-medium" style="color: var(--gk-text-primary);">{{ action.label }}</span>
+        {% if action.description %}
+        <span class="text-xs" style="color: var(--gk-text-muted);">{{ action.description }}</span>
+        {% endif %}
+    </{% if action.url and action.method %}button{% elif action.url %}a{% else %}button{% endif %}>
+    {% endfor %}
+</div>

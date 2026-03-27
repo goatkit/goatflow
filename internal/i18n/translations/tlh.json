@@ -3348,5 +3348,20 @@
         "confirm_restore": "Dochvam chegh'a'?",
         "confirm_purge": "reH Qaw'? choHlaHbe'.",
         "empty": "chIm nItlh QaQ"
+    },
+    "components": {
+        "daily_queue": {
+            "title": "Qu' tlhoy'",
+            "empty": "pagh Doch tlhoy'Daq tu'lu'"
+        },
+        "week_calendar": {
+            "title": "Hogh tIgh"
+        },
+        "progress_bar": {
+            "label": "nIv"
+        },
+        "stat_card": {
+            "no_change": "choH pagh"
+        }
     }
 }

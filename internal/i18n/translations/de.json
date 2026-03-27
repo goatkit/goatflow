@@ -3335,5 +3335,20 @@
         "confirm_restore": "Diesen Eintrag wiederherstellen?",
         "confirm_purge": "Endgültig löschen? Dies kann nicht rückgängig gemacht werden.",
         "empty": "Papierkorb ist leer"
+    },
+    "components": {
+        "daily_queue": {
+            "title": "Aufgabenliste",
+            "empty": "Keine Einträge in der Warteschlange"
+        },
+        "week_calendar": {
+            "title": "Wochenkalender"
+        },
+        "progress_bar": {
+            "label": "Fortschritt"
+        },
+        "stat_card": {
+            "no_change": "Keine Änderung"
+        }
     }
 }

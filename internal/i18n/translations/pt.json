@@ -3902,5 +3902,20 @@
         "confirm_restore": "Restaurar este item?",
         "confirm_purge": "Eliminar permanentemente? Esta ação não pode ser desfeita.",
         "empty": "A lixeira está vazia"
+    },
+    "components": {
+        "daily_queue": {
+            "title": "Fila de tarefas",
+            "empty": "Nenhum item na fila"
+        },
+        "week_calendar": {
+            "title": "Calendário semanal"
+        },
+        "progress_bar": {
+            "label": "Progresso"
+        },
+        "stat_card": {
+            "no_change": "Sem alterações"
+        }
     }
 }

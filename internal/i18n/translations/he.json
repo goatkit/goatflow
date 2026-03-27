@@ -3384,5 +3384,20 @@
         "confirm_restore": "לשחזר פריט זה?",
         "confirm_purge": "למחוק לצמיתות? לא ניתן לבטל פעולה זו.",
         "empty": "סל המיחזור ריק"
+    },
+    "components": {
+        "daily_queue": {
+            "title": "תור משימות",
+            "empty": "אין פריטים בתור"
+        },
+        "week_calendar": {
+            "title": "יומן שבועי"
+        },
+        "progress_bar": {
+            "label": "התקדמות"
+        },
+        "stat_card": {
+            "no_change": "ללא שינוי"
+        }
     }
 }

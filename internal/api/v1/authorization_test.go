@@ -82,7 +82,8 @@ var (
 	authFixturesErr  error
 )
 
-// getAuthFixtures returns shared test fixtures, creating them once
+// getAuthFixtures returns shared test fixtures, creating them if needed.
+// Verifies fixtures still exist in case another package cleaned up shared DB state.
 func getAuthFixtures(t *testing.T) *AuthTestFixtures {
 	t.Helper()
 	requireDatabase(t)
@@ -100,6 +101,15 @@ func getAuthFixtures(t *testing.T) *AuthTestFixtures {
 		}
 		authFixturesErr = authFixtures.setup()
 	})
+
+	// Verify fixtures still exist — another package may have cleaned up shared DB state.
+	if authFixtures != nil && authFixturesErr == nil {
+		var count int
+		if err := authFixtures.db.QueryRow(database.ConvertPlaceholders(
+			"SELECT COUNT(*) FROM `groups` WHERE id = ?"), authFixtures.GroupSupport).Scan(&count); err != nil || count == 0 {
+			authFixturesErr = authFixtures.setup()
+		}
+	}
 
 	if authFixturesErr != nil {
 		t.Skipf("skipping authorization test: %v", authFixturesErr)

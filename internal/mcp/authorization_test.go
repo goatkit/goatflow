@@ -74,6 +74,14 @@ func getMCPFixtures(t *testing.T) *MCPTestFixtures {
 	if mcpFixtures == nil {
 		mcpFixtures = &MCPTestFixtures{db: db}
 		mcpFixturesErr = mcpFixtures.setup()
+	} else {
+		// Verify fixtures still exist — another package may have cleaned up shared DB state.
+		var count int
+		if err := db.QueryRow(database.ConvertPlaceholders(
+			"SELECT COUNT(*) FROM users WHERE id = ?"), mcpFixtures.AgentAdmin).Scan(&count); err != nil || count == 0 {
+			// Fixtures were wiped — recreate them.
+			mcpFixturesErr = mcpFixtures.setup()
+		}
 	}
 
 	if mcpFixturesErr != nil {

@@ -3332,5 +3332,20 @@
         "confirm_restore": "Restaurer cet élément ?",
         "confirm_purge": "Supprimer définitivement ? Cette action est irréversible.",
         "empty": "La corbeille est vide"
+    },
+    "components": {
+        "daily_queue": {
+            "title": "File de tâches",
+            "empty": "Aucun élément dans la file"
+        },
+        "week_calendar": {
+            "title": "Calendrier hebdomadaire"
+        },
+        "progress_bar": {
+            "label": "Progression"
+        },
+        "stat_card": {
+            "no_change": "Aucun changement"
+        }
     }
 }

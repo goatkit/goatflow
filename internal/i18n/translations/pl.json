@@ -3903,5 +3903,20 @@
         "confirm_restore": "Przywrócić ten element?",
         "confirm_purge": "Usunąć trwale? Tej operacji nie można cofnąć.",
         "empty": "Kosz jest pusty"
+    },
+    "components": {
+        "daily_queue": {
+            "title": "Kolejka zadań",
+            "empty": "Brak elementów w kolejce"
+        },
+        "week_calendar": {
+            "title": "Kalendarz tygodniowy"
+        },
+        "progress_bar": {
+            "label": "Postęp"
+        },
+        "stat_card": {
+            "no_change": "Bez zmian"
+        }
     }
 }

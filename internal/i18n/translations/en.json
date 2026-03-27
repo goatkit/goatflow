@@ -3673,5 +3673,20 @@
     "confirm_restore": "Restore this item?",
     "confirm_purge": "Permanently delete? This cannot be undone.",
     "empty": "Recycle bin is empty"
+  },
+  "components": {
+    "daily_queue": {
+      "title": "Task Queue",
+      "empty": "No items in queue"
+    },
+    "week_calendar": {
+      "title": "Week Calendar"
+    },
+    "progress_bar": {
+      "label": "Progress"
+    },
+    "stat_card": {
+      "no_change": "No change"
+    }
   }
 }

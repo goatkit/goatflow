@@ -1,0 +1,30 @@
+{# gk-progress-bar — "3/5 completed" counter with visual bar #}
+{# Variables: #}
+{#   current: number completed #}
+{#   total: total number #}
+{#   percent: pre-calculated percentage (0-100) — use this OR current/total #}
+{#   label: optional text label #}
+{#   color: optional bar color (default: primary) #}
+{#   show_count: show "3/5" text (default: true) #}
+
+<div class="gk-progress-bar" role="progressbar"
+     aria-valuenow="{{ current|default:0 }}"
+     aria-valuemin="0"
+     aria-valuemax="{{ total|default:0 }}"
+     aria-label="{{ label|default:t("components.progress_bar.label")|default:"Progress" }}">
+    <div class="flex items-center justify-between mb-1">
+        {% if label %}
+        <span class="text-xs font-medium" style="color: var(--gk-text-secondary);">{{ label }}</span>
+        {% endif %}
+        {% if show_count != false %}
+        <span class="text-xs font-medium" style="color: var(--gk-text-muted);">
+            {{ current|default:0 }}/{{ total|default:0 }}
+        </span>
+        {% endif %}
+    </div>
+    <div class="w-full h-2 rounded-full overflow-hidden" style="background: var(--gk-bg-elevated);">
+        <div class="h-full rounded-full transition-all duration-300"
+             style="width: {{ percent|default:0 }}%; background: {{ color|default:"var(--gk-primary)" }};">
+        </div>
+    </div>
+</div>

@@ -3431,5 +3431,20 @@
         "confirm_restore": "بازیابی این مورد؟",
         "confirm_purge": "حذف دائمی؟ این عمل قابل بازگشت نیست.",
         "empty": "سطل زباله خالی است"
+    },
+    "components": {
+        "daily_queue": {
+            "title": "صف وظایف",
+            "empty": "هیچ موردی در صف نیست"
+        },
+        "week_calendar": {
+            "title": "تقویم هفتگی"
+        },
+        "progress_bar": {
+            "label": "پیشرفت"
+        },
+        "stat_card": {
+            "no_change": "بدون تغییر"
+        }
     }
 }
