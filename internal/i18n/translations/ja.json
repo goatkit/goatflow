@@ -3308,5 +3308,9 @@
         "longitude": "経度",
         "region": "地域",
         "postcode": "郵便番号"
+    },
+    "organisations": {
+        "select": "組織を選択",
+        "switch_org": "組織を切り替え"
     }
 }

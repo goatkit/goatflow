@@ -9,6 +9,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/goatkit/goatflow/internal/organisation"
 )
 
 // SandboxedHostAPI wraps a HostAPI with per-plugin permission enforcement
@@ -257,6 +259,8 @@ func (s *SandboxedHostAPI) DBQuery(ctx context.Context, query string, args ...an
 	}
 	s.stats.DBQueries.Add(1)
 	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	// Auto-scope query by active organisation if applicable.
+	query, args = organisation.ScopeQuery(query, args, s.inner.OrgID(ctx))
 	return s.inner.DBQuery(ctx, query, args...)
 }
 
@@ -275,6 +279,8 @@ func (s *SandboxedHostAPI) DBExec(ctx context.Context, query string, args ...any
 	}
 	s.stats.DBExecs.Add(1)
 	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	// Auto-scope query by active organisation if applicable.
+	query, args = organisation.ScopeQuery(query, args, s.inner.OrgID(ctx))
 	return s.inner.DBExec(ctx, query, args...)
 }
 
@@ -596,6 +602,11 @@ func (s *SandboxedHostAPI) isConfigKeyAllowed(key string) bool {
 	}
 	
 	return true
+}
+
+// OrgID returns the active organisation ID from the request context.
+func (s *SandboxedHostAPI) OrgID(ctx context.Context) int64 {
+	return s.inner.OrgID(ctx)
 }
 
 // CustomFieldsGet retrieves custom field values, scoped to this plugin's prefixed fields + admin/legacy fields.

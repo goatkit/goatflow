@@ -339,6 +339,9 @@
                         </div>
                     </div>
                     <div class="hidden sm:ml-6 sm:flex sm:items-center">
+                        <!-- Organisation switcher -->
+                        {% include "partials/org_switcher.pongo2" %}
+
                         <!-- Theme selector dropdown -->
                         {% include "partials/theme_selector.pongo2" %}
 

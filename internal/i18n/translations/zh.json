@@ -3308,5 +3308,9 @@
         "longitude": "经度",
         "region": "地区",
         "postcode": "邮政编码"
+    },
+    "organisations": {
+        "select": "选择组织",
+        "switch_org": "切换组织"
     }
 }

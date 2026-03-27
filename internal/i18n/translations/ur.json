@@ -3333,5 +3333,9 @@
         "longitude": "طول البلد",
         "region": "علاقہ",
         "postcode": "پوسٹ کوڈ"
+    },
+    "organisations": {
+        "select": "تنظیم منتخب کریں",
+        "switch_org": "تنظیم تبدیل کریں"
     }
 }

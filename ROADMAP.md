@@ -311,11 +311,22 @@ Plugins declare unlimited independent UIs (agent apps, customer portals, public 
 
 Core `gk_organisation` entity with user membership, data isolation, and per-org settings. Every SaaS deployment needs this.
 
-- [ ] `gk_organisation` table (name, status, settings, created_at)
-- [ ] User ↔ org membership
-- [ ] All queries scopable to org (HostAPI enforcement)
-- [ ] Per-org settings and configuration
-- [ ] Org switching UI for multi-org users
+- [x] `gk_organisation` table (name, slug, parent_id hierarchy, status, customer_company link)
+- [x] `gk_user_organisation` table (agents AND customers, roles: member/admin/owner, default org)
+- [x] `sysconfig_org` table (per-org sysconfig overrides using existing key names)
+- [x] Repository layer — full CRUD for orgs, memberships, per-org config with cascade resolution
+- [x] Org context middleware (`WithOrgID`/`OrgIDFromContext`) for request scoping
+- [x] HostAPI `OrgID()` method — plugins read active org from context
+- [x] WASM + gRPC wire format for `org_id` host function
+- [x] Backward compatible — zero orgs = single-org mode, everything works as today
+- [x] Design spec: `docs/design/ORGANISATIONS.md`
+- [x] Org switching API endpoint — POST `/api/v1/session/org` with membership verification
+- [x] Org listing endpoint — GET `/api/v1/session/orgs` with active org indicator
+- [x] Org switcher UI component — dropdown in navigation (`org_switcher.pongo2`)
+- [x] Org context middleware — resolves from cookie or default org, sets in gin + request context
+- [x] Admin API — full CRUD for organisations, members, per-org sysconfig overrides
+- [x] i18n — `organisations.select` and `organisations.switch_org` in all 15 languages
+- [x] HostAPI query scoping — auto-inject `org_id` filters in SandboxedHostAPI (opt-in per table via `OrgAwareTables` registry, alias-aware SQL rewriting, SELECT/UPDATE/DELETE scoped, INSERT pass-through)
 
 **GoatKit PaaS Core — Secure Settings**
 

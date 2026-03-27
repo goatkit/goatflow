@@ -1,0 +1,38 @@
+{# Organisation switcher dropdown — shown when user belongs to multiple orgs #}
+{% if UserOrgs and UserOrgs|length > 1 %}
+<div class="relative ml-3" x-data="{ open: false }">
+    <button @click="open = !open" type="button"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all"
+            style="color: var(--gk-text-secondary); border: 1px solid var(--gk-border-default);">
+        <i class="fa-solid fa-building text-xs"></i>
+        <span class="max-w-[120px] truncate">{{ ActiveOrgName|default:t("organisations.select")|default:"Select Org" }}</span>
+        <i class="fa-solid fa-chevron-down text-xs"></i>
+    </button>
+    <div x-show="open" @click.away="open = false" x-transition
+         class="absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-lg overflow-hidden"
+         style="background: var(--gk-bg-elevated); border: 1px solid var(--gk-border-default); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+        <div class="py-1">
+            <div class="px-3 py-1.5 text-xs font-medium" style="color: var(--gk-text-muted);">
+                {{ t("organisations.switch_org")|default:"Switch Organisation" }}
+            </div>
+            {% for org in UserOrgs %}
+            <button hx-post="/api/v1/session/org"
+                    hx-vals='{"org_id": {{ org.ID }}}'
+                    hx-headers='{"Content-Type": "application/json"}'
+                    hx-on::after-request="window.location.reload()"
+                    class="w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-all"
+                    style="color: var(--gk-text-primary); {% if org.ID == ActiveOrgID %}background: var(--gk-bg-surface);{% endif %}"
+                    onmouseover="this.style.background='var(--gk-bg-surface)'"
+                    onmouseout="this.style.background='{% if org.ID == ActiveOrgID %}var(--gk-bg-surface){% else %}transparent{% endif %}'">
+                {% if org.ID == ActiveOrgID %}
+                <i class="fa-solid fa-check text-xs" style="color: var(--gk-primary);"></i>
+                {% else %}
+                <span class="w-3"></span>
+                {% endif %}
+                <span class="truncate">{{ org.Name }}</span>
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}

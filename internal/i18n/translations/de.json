@@ -3311,5 +3311,9 @@
         "longitude": "Längengrad",
         "region": "Region",
         "postcode": "Postleitzahl"
+    },
+    "organisations": {
+        "select": "Organisation wählen",
+        "switch_org": "Organisation wechseln"
     }
 }

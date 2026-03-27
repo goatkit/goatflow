@@ -3879,5 +3879,9 @@
         "longitude": "Długość geograficzna",
         "region": "Region",
         "postcode": "Kod pocztowy"
+    },
+    "organisations": {
+        "select": "Wybierz organizację",
+        "switch_org": "Zmień organizację"
     }
 }
