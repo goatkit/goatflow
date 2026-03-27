@@ -3361,5 +3361,20 @@
         "confirm_restore": "Відновити цей елемент?",
         "confirm_purge": "Видалити назавжди? Цю дію неможливо скасувати.",
         "empty": "Кошик порожній"
+    },
+    "components": {
+        "daily_queue": {
+            "title": "Черга завдань",
+            "empty": "Немає елементів у черзі"
+        },
+        "week_calendar": {
+            "title": "Тижневий календар"
+        },
+        "progress_bar": {
+            "label": "Прогрес"
+        },
+        "stat_card": {
+            "no_change": "Без змін"
+        }
     }
 }

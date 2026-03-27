@@ -3350,5 +3350,20 @@
         "confirm_restore": "استعادة هذا العنصر؟",
         "confirm_purge": "حذف نهائي؟ لا يمكن التراجع عن هذا.",
         "empty": "سلة المحذوفات فارغة"
+    },
+    "components": {
+        "daily_queue": {
+            "title": "قائمة المهام",
+            "empty": "لا توجد عناصر في القائمة"
+        },
+        "week_calendar": {
+            "title": "تقويم الأسبوع"
+        },
+        "progress_bar": {
+            "label": "التقدم"
+        },
+        "stat_card": {
+            "no_change": "لا تغيير"
+        }
     }
 }

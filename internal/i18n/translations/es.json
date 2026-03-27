@@ -3331,5 +3331,20 @@
         "confirm_restore": "¿Restaurar este elemento?",
         "confirm_purge": "¿Eliminar permanentemente? Esto no se puede deshacer.",
         "empty": "La papelera está vacía"
+    },
+    "components": {
+        "daily_queue": {
+            "title": "Cola de tareas",
+            "empty": "No hay elementos en la cola"
+        },
+        "week_calendar": {
+            "title": "Calendario semanal"
+        },
+        "progress_bar": {
+            "label": "Progreso"
+        },
+        "stat_card": {
+            "no_change": "Sin cambios"
+        }
     }
 }

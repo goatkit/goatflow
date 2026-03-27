@@ -3332,5 +3332,20 @@
         "confirm_restore": "恢复此项目？",
         "confirm_purge": "永久删除？此操作无法撤销。",
         "empty": "回收站为空"
+    },
+    "components": {
+        "daily_queue": {
+            "title": "任务队列",
+            "empty": "队列中没有项目"
+        },
+        "week_calendar": {
+            "title": "周历"
+        },
+        "progress_bar": {
+            "label": "进度"
+        },
+        "stat_card": {
+            "no_change": "无变化"
+        }
     }
 }

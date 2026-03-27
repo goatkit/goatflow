@@ -3332,5 +3332,20 @@
         "confirm_restore": "このアイテムを復元しますか？",
         "confirm_purge": "完全に削除しますか？この操作は取り消せません。",
         "empty": "ごみ箱は空です"
+    },
+    "components": {
+        "daily_queue": {
+            "title": "タスクキュー",
+            "empty": "キューにアイテムがありません"
+        },
+        "week_calendar": {
+            "title": "週間カレンダー"
+        },
+        "progress_bar": {
+            "label": "進捗"
+        },
+        "stat_card": {
+            "no_change": "変更なし"
+        }
     }
 }

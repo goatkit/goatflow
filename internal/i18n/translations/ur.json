@@ -3357,5 +3357,20 @@
         "confirm_restore": "یہ آئٹم بحال کریں؟",
         "confirm_purge": "مستقل طور پر حذف کریں؟ یہ واپس نہیں ہو سکتا۔",
         "empty": "ری سائیکل بن خالی ہے"
+    },
+    "components": {
+        "daily_queue": {
+            "title": "ٹاسک قطار",
+            "empty": "قطار میں کوئی آئٹم نہیں"
+        },
+        "week_calendar": {
+            "title": "ہفتہ وار کیلنڈر"
+        },
+        "progress_bar": {
+            "label": "پیش رفت"
+        },
+        "stat_card": {
+            "no_change": "کوئی تبدیلی نہیں"
+        }
     }
 }

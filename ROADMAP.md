@@ -365,13 +365,13 @@ Two deletion patterns: soft delete + anonymisation (GDPR, preserve business reco
 
 Shared UI components usable by any plugin. Server-rendered HTML building blocks.
 
-- [ ] `gk-daily-queue` — ordered task list with action buttons
-- [ ] `gk-week-calendar` — week-at-a-glance grid
-- [ ] `gk-progress-bar` — "3/5 completed" counter
-- [ ] `gk-stat-card` — dashboard metric card
-- [ ] `gk-quick-action` — big mobile-friendly tap targets
-- [ ] All components theme-aware (CSS variables)
-- [ ] WCAG 2.1 AA accessible by default
+- [x] `gk-daily-queue` — ordered task list with priority indicators, status badges, and HTMX action buttons
+- [x] `gk-week-calendar` — week-at-a-glance grid with colour-coded events and click-through links
+- [x] `gk-progress-bar` — "3/5 completed" counter with animated bar and configurable colour
+- [x] `gk-stat-card` — dashboard metric card with icon, trend indicator (up/down/flat), and optional link
+- [x] `gk-quick-action` — big mobile-friendly tap targets with responsive grid (2-col mobile, 4-col desktop)
+- [x] All components theme-aware (CSS variables: `--gk-bg-surface`, `--gk-primary`, `--gk-text-*`, etc.)
+- [x] WCAG 2.1 AA accessible — `role` attributes, `aria-label`, `aria-valuenow`/`aria-valuemax` on progress bars
 
 **Plugin Ecosystem Expansion**
 - [ ] Plugin marketplace integration (browse, install, update)

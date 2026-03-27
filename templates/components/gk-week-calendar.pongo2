@@ -1,0 +1,46 @@
+{# gk-week-calendar — Week-at-a-glance grid #}
+{# Variables: #}
+{#   days: [{date, label, is_today, events: [{id, title, time, color, url}]}] #}
+{#   title: optional heading text #}
+
+<div class="gk-week-calendar" role="grid" aria-label="{{ title|default:t("components.week_calendar.title")|default:"Week Calendar" }}">
+    {% if title %}
+    <h3 class="text-sm font-semibold mb-3 px-1" style="color: var(--gk-text-muted);">{{ title }}</h3>
+    {% endif %}
+
+    <div class="grid grid-cols-7 gap-1 rounded-lg overflow-hidden" style="border: 1px solid var(--gk-border-default);">
+        {# Day headers #}
+        {% for day in days %}
+        <div class="px-2 py-1.5 text-center text-xs font-medium"
+             style="background: var(--gk-bg-elevated); color: var(--gk-text-muted);"
+             role="columnheader">
+            {{ day.label }}
+        </div>
+        {% endfor %}
+
+        {# Day cells #}
+        {% for day in days %}
+        <div class="min-h-[80px] p-1.5"
+             style="background: {% if day.is_today %}var(--gk-bg-elevated){% else %}var(--gk-bg-surface){% endif %}; {% if not forloop.Last %}border-right: 1px solid var(--gk-border-default);{% endif %}"
+             role="gridcell"
+             aria-label="{{ day.date }}">
+            <span class="text-xs font-medium {% if day.is_today %}font-bold{% endif %}"
+                  style="color: {% if day.is_today %}var(--gk-primary){% else %}var(--gk-text-secondary){% endif %};">
+                {{ day.date }}
+            </span>
+            {% if day.events %}
+            <div class="mt-1 space-y-0.5">
+                {% for event in day.events %}
+                <a {% if event.url %}href="{{ event.url }}"{% endif %}
+                   class="block px-1.5 py-0.5 rounded text-xs truncate transition-opacity hover:opacity-80"
+                   style="background: {{ event.color|default:"var(--gk-primary)" }}20; color: {{ event.color|default:"var(--gk-primary)" }}; border-left: 2px solid {{ event.color|default:"var(--gk-primary)" }};"
+                   title="{{ event.title }}{% if event.time %} — {{ event.time }}{% endif %}">
+                    {{ event.title }}
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>

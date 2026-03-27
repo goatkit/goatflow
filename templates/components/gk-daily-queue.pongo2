@@ -1,0 +1,63 @@
+{# gk-daily-queue — Ordered task list with action buttons #}
+{# Variables: #}
+{#   items: [{id, title, subtitle, status, priority, actions: [{label, url, method, icon, color}]}] #}
+{#   title: optional heading text #}
+{#   empty_message: optional message when no items #}
+
+<div class="gk-daily-queue" role="list" aria-label="{{ title|default:t("components.daily_queue.title")|default:"Task Queue" }}">
+    {% if title %}
+    <h3 class="text-sm font-semibold mb-3 px-1" style="color: var(--gk-text-muted);">{{ title }}</h3>
+    {% endif %}
+
+    {% if items %}
+    <div class="space-y-2">
+        {% for item in items %}
+        <div class="flex items-start gap-3 p-3 rounded-lg transition-colors"
+             style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default);"
+             role="listitem"
+             aria-label="{{ item.title }}">
+            {# Priority indicator #}
+            {% if item.priority %}
+            <span class="mt-1 w-2 h-2 rounded-full shrink-0" aria-hidden="true"
+                  style="background: {% if item.priority == 'high' %}var(--gk-error){% elif item.priority == 'medium' %}var(--gk-warning){% else %}var(--gk-text-muted){% endif %};"></span>
+            {% endif %}
+
+            {# Content #}
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium truncate" style="color: var(--gk-text-primary);">{{ item.title }}</p>
+                {% if item.subtitle %}
+                <p class="text-xs mt-0.5 truncate" style="color: var(--gk-text-muted);">{{ item.subtitle }}</p>
+                {% endif %}
+            </div>
+
+            {# Status badge #}
+            {% if item.status %}
+            <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                  style="background: var(--gk-bg-elevated); color: var(--gk-text-secondary);">
+                {{ item.status }}
+            </span>
+            {% endif %}
+
+            {# Action buttons #}
+            {% if item.actions %}
+            <div class="shrink-0 flex items-center gap-1">
+                {% for action in item.actions %}
+                <button {% if action.url %}hx-{{ action.method|default:"post" }}="{{ action.url }}"{% endif %}
+                        class="p-1.5 rounded transition-colors"
+                        style="color: {{ action.color|default:"var(--gk-text-muted)" }};"
+                        aria-label="{{ action.label }}"
+                        title="{{ action.label }}">
+                    {% if action.icon %}<i class="fa-solid {{ action.icon }} text-sm"></i>{% else %}{{ action.label }}{% endif %}
+                </button>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="p-6 text-center rounded-lg" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default);">
+        <p class="text-sm" style="color: var(--gk-text-muted);">{{ empty_message|default:t("components.daily_queue.empty")|default:"No items in queue" }}</p>
+    </div>
+    {% endif %}
+</div>
