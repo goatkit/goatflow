@@ -190,6 +190,11 @@ type HostAPI interface {
 	// eventType is the SSE event name (e.g. "device-table"); data is the payload (typically HTML).
 	PublishEvent(ctx context.Context, eventType string, data string) error
 
+	// Organisation
+	// OrgID returns the active organisation ID for the current request.
+	// Returns 0 if no organisation context (single-org mode).
+	OrgID(ctx context.Context) int64
+
 	// Custom Fields
 	// Get retrieves custom field values for an entity. Plugin prefix is auto-stripped.
 	// Pass nil for fields to get all fields; pass specific names to filter.

@@ -181,6 +181,10 @@ func (h *testHostAPI) PublishEvent(ctx context.Context, eventType string, data s
 	return nil
 }
 
+func (h *testHostAPI) OrgID(ctx context.Context) int64 {
+	return 0
+}
+
 func (h *testHostAPI) CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
 	return nil, nil
 }

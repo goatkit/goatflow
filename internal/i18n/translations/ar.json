@@ -3326,5 +3326,9 @@
         "longitude": "خط الطول",
         "region": "المنطقة",
         "postcode": "الرمز البريدي"
+    },
+    "organisations": {
+        "select": "اختر المؤسسة",
+        "switch_org": "تبديل المؤسسة"
     }
 }

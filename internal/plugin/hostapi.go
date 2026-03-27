@@ -87,6 +87,11 @@ func (h *DefaultHostAPI) PublishEvent(ctx context.Context, eventType string, dat
 	return fmt.Errorf("SSE not available in default host")
 }
 
+// OrgID returns 0 (no org context in default host).
+func (h *DefaultHostAPI) OrgID(ctx context.Context) int64 {
+	return 0
+}
+
 // CustomFieldsGet retrieves custom field values for an entity.
 func (h *DefaultHostAPI) CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
 	return nil, nil

@@ -13,6 +13,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/cache"
 	"github.com/goatkit/goatflow/internal/customfields"
+	"github.com/goatkit/goatflow/internal/organisation"
 	"github.com/goatkit/goatflow/internal/config"
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/i18n"
@@ -406,6 +407,11 @@ func (h *ProdHostAPI) CallPlugin(ctx context.Context, pluginName, fn string, arg
 		return h.PluginManager.CallFrom(ctx, callerPlugin, pluginName, fn, args)
 	}
 	return h.PluginManager.Call(ctx, pluginName, fn, args)
+}
+
+// OrgID returns the active organisation ID from the request context.
+func (h *ProdHostAPI) OrgID(ctx context.Context) int64 {
+	return organisation.OrgIDFromContext(ctx)
 }
 
 // customFieldsRepo returns a Repository using the ProdHostAPI's injected DB connection.

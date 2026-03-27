@@ -196,6 +196,19 @@ func (c *HostAPIClient) PublishEvent(_ context.Context, eventType string, data s
 	return err
 }
 
+// OrgID returns the active organisation ID.
+func (c *HostAPIClient) OrgID(_ context.Context) int64 {
+	result, err := c.call("org_id", map[string]any{})
+	if err != nil {
+		return 0
+	}
+	var id int64
+	if err := json.Unmarshal(result, &id); err != nil {
+		return 0
+	}
+	return id
+}
+
 // CustomFieldsGet retrieves custom field values for an entity.
 func (c *HostAPIClient) CustomFieldsGet(_ context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
 	result, err := c.call("custom_fields_get", map[string]any{

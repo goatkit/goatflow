@@ -3407,5 +3407,9 @@
         "longitude": "طول جغرافیایی",
         "region": "منطقه",
         "postcode": "کد پستی"
+    },
+    "organisations": {
+        "select": "انتخاب سازمان",
+        "switch_org": "تغییر سازمان"
     }
 }

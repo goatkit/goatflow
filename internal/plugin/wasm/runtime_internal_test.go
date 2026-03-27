@@ -47,6 +47,10 @@ func (m *mockHostAPIForUnit) PublishEvent(ctx context.Context, eventType string,
 	return nil
 }
 
+func (m *mockHostAPIForUnit) OrgID(ctx context.Context) int64 {
+	return 0
+}
+
 func (m *mockHostAPIForUnit) CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
 	return nil, nil
 }

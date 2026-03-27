@@ -3360,5 +3360,9 @@
         "longitude": "קו אורך",
         "region": "אזור",
         "postcode": "מיקוד"
+    },
+    "organisations": {
+        "select": "בחר ארגון",
+        "switch_org": "החלף ארגון"
     }
 }

@@ -3878,5 +3878,9 @@
         "longitude": "Longitude",
         "region": "Região",
         "postcode": "Código postal"
+    },
+    "organisations": {
+        "select": "Selecionar organização",
+        "switch_org": "Mudar organização"
     }
 }

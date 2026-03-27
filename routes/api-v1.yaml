@@ -352,3 +352,73 @@ spec:
           method: POST
           handler: handleAPIQueryCustomFields
           description: "Query entities by custom field values"
+
+        # Organisations
+        - path: /session/orgs
+          method: GET
+          handler: handleListUserOrgs
+          description: "List current user's organisations"
+        - path: /session/org
+          method: POST
+          handler: handleSwitchOrg
+          description: "Switch active organisation"
+        - path: /organisations
+          method: GET
+          handler: handleAPIListOrgs
+          middleware:
+              - admin
+          description: "List all organisations (admin only)"
+        - path: /organisations
+          method: POST
+          handler: handleAPICreateOrg
+          middleware:
+              - admin
+          description: "Create organisation (admin only)"
+        - path: /organisations/:id
+          method: PUT
+          handler: handleAPIUpdateOrg
+          middleware:
+              - admin
+          description: "Update organisation (admin only)"
+        - path: /organisations/:id
+          method: DELETE
+          handler: handleAPIDeleteOrg
+          middleware:
+              - admin
+          description: "Delete organisation (admin only)"
+        - path: /organisations/:id/members
+          method: GET
+          handler: handleAPIListMembers
+          middleware:
+              - admin
+          description: "List organisation members"
+        - path: /organisations/:id/members
+          method: POST
+          handler: handleAPIAddMember
+          middleware:
+              - admin
+          description: "Add member to organisation"
+        - path: /organisations/:id/members/:member_id
+          method: DELETE
+          handler: handleAPIRemoveMember
+          middleware:
+              - admin
+          description: "Remove member from organisation"
+        - path: /organisations/:id/config
+          method: GET
+          handler: handleAPIListOrgConfigs
+          middleware:
+              - admin
+          description: "List per-org config overrides"
+        - path: /organisations/:id/config
+          method: PUT
+          handler: handleAPISetOrgConfig
+          middleware:
+              - admin
+          description: "Set per-org config override"
+        - path: /organisations/:id/config/:name
+          method: DELETE
+          handler: handleAPIDeleteOrgConfig
+          middleware:
+              - admin
+          description: "Remove per-org config override"

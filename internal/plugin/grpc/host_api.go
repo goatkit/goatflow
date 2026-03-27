@@ -193,6 +193,10 @@ func dispatchHostCall(ctx context.Context, host plugin.HostAPI, method string, a
 		}
 		return json.Marshal(map[string]string{"status": "ok"})
 
+	case "org_id":
+		id := host.OrgID(ctx)
+		return json.Marshal(id)
+
 	case "custom_fields_get":
 		var req struct {
 			EntityType string   `json:"entity_type"`

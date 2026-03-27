@@ -373,6 +373,10 @@ func (p *WASMPlugin) dispatchHostCall(ctx context.Context, fn string, args []byt
 		}
 		return json.Marshal(map[string]string{"status": "ok"})
 
+	case "org_id":
+		id := p.host.OrgID(ctx)
+		return json.Marshal(id)
+
 	case "custom_fields_get":
 		var req struct {
 			EntityType string   `json:"entity_type"`

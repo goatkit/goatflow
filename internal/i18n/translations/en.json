@@ -3649,5 +3649,9 @@
     "longitude": "Longitude",
     "region": "Region",
     "postcode": "Postcode"
+  },
+  "organisations": {
+    "select": "Select Org",
+    "switch_org": "Switch Organisation"
   }
 }
