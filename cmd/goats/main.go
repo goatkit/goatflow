@@ -291,6 +291,9 @@ func main() {
 		})
 	}
 
+	// Security headers (CSP, X-Frame-Options, X-Content-Type-Options, etc.)
+	r.Use(middleware.SecurityHeaders())
+
 	// Demo mode middleware (sets is_demo context on all requests when enabled)
 	r.Use(middleware.DemoMode())
 
