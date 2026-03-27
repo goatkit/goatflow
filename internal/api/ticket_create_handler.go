@@ -162,6 +162,13 @@ func HandleCreateTicketAPI(c *gin.Context) {
 		}
 	}
 
+	// Sanitise HTML content to prevent stored XSS.
+	body := ticketRequest.Body
+	if utils.IsHTML(body) {
+		sanitizer := utils.NewHTMLSanitizer()
+		body = sanitizer.Sanitize(body)
+	}
+
 	repo := repository.NewTicketRepository(db)
 	articleRepo := repository.NewArticleRepository(db)
 	svc := service.NewTicketService(repo, service.WithArticleRepository(articleRepo))
@@ -172,7 +179,7 @@ func HandleCreateTicketAPI(c *gin.Context) {
 		PriorityID:                  ticketRequest.PriorityID,
 		StateID:                     ticketRequest.StateID,
 		UserID:                      userID,
-		Body:                        ticketRequest.Body,
+		Body:                        body,
 		ArticleSubject:              ticketRequest.Title,
 		ArticleSenderTypeID:         constants.ArticleSenderAgent,
 		ArticleTypeID:               constants.ArticleTypeEmailExternal,

@@ -20,6 +20,7 @@ import (
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/utils"
 )
 
 func init() {
@@ -138,18 +139,19 @@ func handleTicketDetail(c *gin.Context) {
 		if err != nil {
 			log.Printf("Error getting HTML body content for article %d: %v", article.ID, err)
 		}
+		// Sanitise all HTML content to prevent stored XSS (defence in depth).
+		htmlSanitizer := utils.NewHTMLSanitizer()
+
 		if htmlContent != "" {
-			bodyContent = htmlContent
+			bodyContent = htmlSanitizer.Sanitize(htmlContent)
 		} else if bodyStr, ok := article.Body.(string); ok {
 			// Check content type and render appropriately
 			contentType := article.MimeType
-			// preview logic removed (debug)
 
 			// Handle different content types
 			if strings.Contains(contentType, "text/html") || (strings.Contains(bodyStr, "<") && strings.Contains(bodyStr, ">")) {
-				// debug removed: rendering HTML article
-				// For HTML content, use it directly (assuming it's from a trusted editor like Tiptap)
-				bodyContent = bodyStr
+				// Sanitise HTML content — never trust stored HTML
+				bodyContent = htmlSanitizer.Sanitize(bodyStr)
 			} else if strings.Contains(contentType, "text/markdown") || isMarkdownContent(bodyStr) {
 				// debug removed: rendering markdown article
 				bodyContent = RenderMarkdown(bodyStr)
