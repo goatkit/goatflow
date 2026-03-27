@@ -91,6 +91,14 @@ func (m *mockHostAPI) PublishEvent(ctx context.Context, eventType string, data s
 	return nil
 }
 
+func (m *mockHostAPI) SecureConfigGet(ctx context.Context, key string) (string, error) {
+	return "", nil
+}
+
+func (m *mockHostAPI) SecureConfigSet(ctx context.Context, key string, value string) error {
+	return nil
+}
+
 func (m *mockHostAPI) OrgID(ctx context.Context) int64 {
 	return 0
 }

@@ -604,6 +604,18 @@ func (s *SandboxedHostAPI) isConfigKeyAllowed(key string) bool {
 	return true
 }
 
+// SecureConfigGet retrieves a decrypted secret, scoped to this plugin.
+func (s *SandboxedHostAPI) SecureConfigGet(ctx context.Context, key string) (string, error) {
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
+	return s.inner.SecureConfigGet(ctx, key)
+}
+
+// SecureConfigSet stores an encrypted secret, scoped to this plugin.
+func (s *SandboxedHostAPI) SecureConfigSet(ctx context.Context, key string, value string) error {
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
+	return s.inner.SecureConfigSet(ctx, key, value)
+}
+
 // OrgID returns the active organisation ID from the request context.
 func (s *SandboxedHostAPI) OrgID(ctx context.Context) int64 {
 	return s.inner.OrgID(ctx)

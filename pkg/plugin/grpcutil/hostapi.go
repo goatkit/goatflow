@@ -196,6 +196,27 @@ func (c *HostAPIClient) PublishEvent(_ context.Context, eventType string, data s
 	return err
 }
 
+// SecureConfigGet retrieves a decrypted secret.
+func (c *HostAPIClient) SecureConfigGet(_ context.Context, key string) (string, error) {
+	result, err := c.call("secure_config_get", map[string]any{"key": key})
+	if err != nil {
+		return "", err
+	}
+	var resp struct {
+		Value string `json:"value"`
+	}
+	if err := json.Unmarshal(result, &resp); err != nil {
+		return "", err
+	}
+	return resp.Value, nil
+}
+
+// SecureConfigSet stores an encrypted secret.
+func (c *HostAPIClient) SecureConfigSet(_ context.Context, key string, value string) error {
+	_, err := c.call("secure_config_set", map[string]any{"key": key, "value": value})
+	return err
+}
+
 // OrgID returns the active organisation ID.
 func (c *HostAPIClient) OrgID(_ context.Context) int64 {
 	result, err := c.call("org_id", map[string]any{})

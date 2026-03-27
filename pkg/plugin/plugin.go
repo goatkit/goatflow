@@ -190,6 +190,12 @@ type HostAPI interface {
 	// eventType is the SSE event name (e.g. "device-table"); data is the payload (typically HTML).
 	PublishEvent(ctx context.Context, eventType string, data string) error
 
+	// Secure Config
+	// SecureConfigGet retrieves a decrypted secret value for this plugin.
+	SecureConfigGet(ctx context.Context, key string) (string, error)
+	// SecureConfigSet stores an encrypted secret value for this plugin.
+	SecureConfigSet(ctx context.Context, key string, value string) error
+
 	// Organisation
 	// OrgID returns the active organisation ID for the current request.
 	// Returns 0 if no organisation context (single-org mode).

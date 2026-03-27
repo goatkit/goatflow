@@ -372,6 +372,14 @@ func (m *mockHostAPIForTag) PublishEvent(ctx context.Context, eventType string, 
 	return nil
 }
 
+func (m *mockHostAPIForTag) SecureConfigGet(ctx context.Context, key string) (string, error) {
+	return "", nil
+}
+
+func (m *mockHostAPIForTag) SecureConfigSet(ctx context.Context, key string, value string) error {
+	return nil
+}
+
 func (m *mockHostAPIForTag) OrgID(ctx context.Context) int64 {
 	return 0
 }

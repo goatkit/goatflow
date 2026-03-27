@@ -14,6 +14,7 @@ import (
 	"github.com/goatkit/goatflow/internal/cache"
 	"github.com/goatkit/goatflow/internal/customfields"
 	"github.com/goatkit/goatflow/internal/organisation"
+	"github.com/goatkit/goatflow/internal/secureconfig"
 	"github.com/goatkit/goatflow/internal/config"
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/i18n"
@@ -407,6 +408,58 @@ func (h *ProdHostAPI) CallPlugin(ctx context.Context, pluginName, fn string, arg
 		return h.PluginManager.CallFrom(ctx, callerPlugin, pluginName, fn, args)
 	}
 	return h.PluginManager.Call(ctx, pluginName, fn, args)
+}
+
+// SecureConfigGet retrieves and decrypts a secret value.
+func (h *ProdHostAPI) SecureConfigGet(ctx context.Context, key string) (string, error) {
+	pluginName, _ := ctx.Value(PluginCallerKey).(string)
+	if pluginName == "" {
+		return "", fmt.Errorf("secure config: no plugin context")
+	}
+	repo, err := secureconfig.NewRepository()
+	if err != nil {
+		return "", fmt.Errorf("secure config: %w", err)
+	}
+	orgID := organisation.OrgIDFromContext(ctx)
+	entry, err := repo.Get(pluginName, key, orgID)
+	if err != nil {
+		return "", err
+	}
+	if entry == nil {
+		return "", fmt.Errorf("secure config key %q not found", key)
+	}
+	encKey, err := secureconfig.GetKey()
+	if err != nil {
+		return "", fmt.Errorf("secure config: %w", err)
+	}
+	plaintext, err := secureconfig.Decrypt(entry.EncryptedValue, encKey)
+	if err != nil {
+		return "", fmt.Errorf("secure config: %w", err)
+	}
+	return string(plaintext), nil
+}
+
+// SecureConfigSet encrypts and stores a secret value.
+func (h *ProdHostAPI) SecureConfigSet(ctx context.Context, key string, value string) error {
+	pluginName, _ := ctx.Value(PluginCallerKey).(string)
+	if pluginName == "" {
+		return fmt.Errorf("secure config: no plugin context")
+	}
+	encKey, err := secureconfig.GetKey()
+	if err != nil {
+		return fmt.Errorf("secure config: %w", err)
+	}
+	encrypted, err := secureconfig.Encrypt([]byte(value), encKey)
+	if err != nil {
+		return fmt.Errorf("secure config: %w", err)
+	}
+	hint := secureconfig.ValueHint(value)
+	repo, err := secureconfig.NewRepository()
+	if err != nil {
+		return fmt.Errorf("secure config: %w", err)
+	}
+	orgID := organisation.OrgIDFromContext(ctx)
+	return repo.Set(pluginName, key, encrypted, hint, orgID, 1)
 }
 
 // OrgID returns the active organisation ID from the request context.
