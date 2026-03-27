@@ -301,7 +301,12 @@ func GenerateOTRSStoragePath(ticketID int, articleID int, filename string) strin
 
 // sanitizeFilename makes a filename safe for storage.
 func sanitizeFilename(filename string) string {
-	// Remove directory components
+	// SECURITY: Strip null bytes first — prevents null byte injection attacks
+	// where "shell.php\x00.jpg" passes extension checks but the OS truncates
+	// at the null byte, creating "shell.php".
+	filename = strings.ReplaceAll(filename, "\x00", "")
+
+	// Remove directory components (prevents path traversal)
 	filename = filepath.Base(filename)
 
 	// Replace problematic characters

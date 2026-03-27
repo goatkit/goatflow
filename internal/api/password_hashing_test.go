@@ -129,15 +129,17 @@ func testAgentPasswordReset(t *testing.T, db *sql.DB, hashType string, verify fu
 	testLogin := "agenthash_" + hashType + "_" + time.Now().Format("150405")
 	testPassword := "AgentPass456!"
 
-	// Insert test agent
-	result, err := db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (?, 'placeholder', 'Test', 'Agent', 1, NOW(), 1, NOW(), 1)
-	`), testLogin)
-	require.NoError(t, err, "Failed to create test agent")
+	// Use a fixed high ID (70000 range) to avoid collision with other test packages
+	// that clean up IDs >= 80000 (MCP) or >= 90000 (api/v1).
+	agentID := int64(70001)
+	_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), agentID)
 
-	agentID, err := result.LastInsertId()
-	require.NoError(t, err, "Failed to get agent ID")
+	// Insert test agent with fixed ID
+	_, err := db.Exec(database.ConvertPlaceholders(`
+		INSERT INTO users (id, login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, 'placeholder', 'Test', 'Agent', 1, NOW(), 1, NOW(), 1)
+	`), agentID, testLogin)
+	require.NoError(t, err, "Failed to create test agent")
 
 	// Cleanup after test
 	defer func() {
@@ -283,14 +285,15 @@ func TestAgentPasswordAlwaysBcrypt(t *testing.T) {
 	testLogin := "agentbcrypt_" + time.Now().Format("150405")
 	testPassword := "AgentSecure789!"
 
-	// Insert test agent
-	result, err := db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (?, 'placeholder', 'Test', 'Agent', 1, NOW(), 1, NOW(), 1)
-	`), testLogin)
-	require.NoError(t, err)
+	// Use fixed high ID to avoid collision with other test packages.
+	agentID := int64(70002)
+	_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), agentID)
 
-	agentID, err := result.LastInsertId()
+	// Insert test agent with fixed ID
+	_, err := db.Exec(database.ConvertPlaceholders(`
+		INSERT INTO users (id, login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, 'placeholder', 'Test', 'Agent', 1, NOW(), 1, NOW(), 1)
+	`), agentID, testLogin)
 	require.NoError(t, err)
 
 	defer func() {

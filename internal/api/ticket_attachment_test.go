@@ -635,6 +635,34 @@ func TestAttachmentSecurity(t *testing.T) {
 			wantBlocked: false,
 			reason:      "",
 		},
+		{
+			name:        "Null byte injection blocked",
+			filename:    "shell.php\x00.jpg",
+			content:     []byte("<?php system($_GET['cmd']); ?>"),
+			wantBlocked: true,
+			reason:      "illegal characters",
+		},
+		{
+			name:        "Null byte in middle blocked",
+			filename:    "test\x00.exe.txt",
+			content:     []byte("malicious"),
+			wantBlocked: true,
+			reason:      "illegal characters",
+		},
+		{
+			name:        "Path traversal sanitised to base",
+			filename:    "../../etc/passwd",
+			content:     []byte("root:x:0:0"),
+			wantBlocked: false, // filepath.Base strips to "passwd" which is a valid filename
+			reason:      "",
+		},
+		{
+			name:        "Hidden file after traversal blocked",
+			filename:    "../.hidden",
+			content:     []byte("secret"),
+			wantBlocked: true,
+			reason:      "hidden files",
+		},
 	}
 
 	for _, tt := range tests {

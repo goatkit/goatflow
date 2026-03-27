@@ -325,11 +325,14 @@ func handleUploadAttachment(c *gin.Context) {
 	// Determine uploader ID from auth context (default to 1)
 	uploaderID := GetUserIDFromCtx(c, 1)
 
+	// SECURITY: Sanitise filename — strip null bytes and path components.
+	safeFilename := filepath.Base(strings.ReplaceAll(header.Filename, "\x00", ""))
+
 	// Create attachment record
 	attachment := &Attachment{
 		ID:          nextAttachmentID,
 		TicketID:    ticketID,
-		Filename:    header.Filename,
+		Filename:    safeFilename,
 		ContentType: contentType,
 		Size:        header.Size,
 		StoragePath: storagePath,
@@ -1771,6 +1774,16 @@ func handleGetThumbnail(c *gin.Context) {
 // validateFile validates uploaded file.
 func validateFile(header *multipart.FileHeader) error {
 	filename := header.Filename
+
+	// SECURITY: Strip null bytes before any validation.
+	// Null byte injection: "shell.php\x00.jpg" passes extension check
+	// but OS truncates at null, creating "shell.php".
+	if strings.ContainsRune(filename, 0) {
+		return fmt.Errorf("filename contains illegal characters")
+	}
+
+	// Remove path components (anti-traversal).
+	filename = filepath.Base(filename)
 
 	// Check for hidden files
 	if strings.HasPrefix(filename, ".") {
