@@ -836,10 +836,17 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 					author = article.Author.String
 				}
 
-				articles = append(articles, map[string]interface{}{
+				// Sanitise article body to prevent stored XSS (defence in depth).
+			articleBody := article.Body.String
+			if utils.IsHTML(articleBody) {
+				articleSanitizer := utils.NewHTMLSanitizer()
+				articleBody = articleSanitizer.Sanitize(articleBody)
+			}
+
+			articles = append(articles, map[string]interface{}{
 					"id":          article.ID,
 					"subject":     article.Subject.String,
-					"body":        article.Body.String,
+					"body":        articleBody,
 					"author":      author,
 					"is_customer": isCustomer,
 					"created":     formatAge(article.CreateTime),

@@ -66,6 +66,12 @@ func handleAddTicketNote(c *gin.Context) {
 		}
 	}
 
+	// Sanitise HTML content to prevent stored XSS.
+	if utils.IsHTML(noteData.Content) {
+		sanitizer := utils.NewHTMLSanitizer()
+		noteData.Content = sanitizer.Sanitize(noteData.Content)
+	}
+
 	// Get database connection
 	db, err := database.GetDB()
 	if err != nil {

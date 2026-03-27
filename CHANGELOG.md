@@ -7,6 +7,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+- **Stored XSS in ticket notes (gotrs-io/gotrs-ce#176)**: HTML content in ticket articles and notes was rendered unsanitised via `|safe` in templates. Malicious `<script>` tags injected via the rich text editor were executed on page view. Fixed with defence-in-depth: (1) write-side sanitisation on ticket creation and note submission, (2) read-side sanitisation when loading article bodies for both agent and customer views. All paths now use bluemonday HTML sanitiser.
+
+## [0.7.0]
+
 ### Fixed
 - **Parallel test interference in article_create_test** — re-ensure RBAC permissions before each subtest and skip gracefully if a 404 is returned due to parallel `group_user` removal, preventing flaky failures in CI
 - **Escalation integration test flakiness** — always create a fresh ticket in `ensureTestTicket` instead of reusing existing shared state, eliminating race conditions across parallel test runs
@@ -17,7 +22,6 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - **Customer ticket queue routing**: Tickets created via the customer portal were always routed to Postmaster (queue_id hardcoded to 1). Now resolves the customer's organisation queue via `group_customer` → `queue.group_id`, falling back to Postmaster only if no org queue mapping exists. (`internal/api/customer_routes.go`)
 
 ### Security
-- **OS-Level gRPC Process Isolation** (`internal/plugin/grpc/sandbox_linux.go`): Linux namespace isolation (CLONE_NEWNS, CLONE_NEWPID), Pdeathsig to kill orphans, minimal environment (no DB credentials leaked to plugins). Non-Linux platforms log a warning.
 - **Plugin Signing** (`internal/plugin/signing/signing.go`): Ed25519 signature verification for plugin binaries. `SignBinary()` creates `.sig` files with SHA-256 hash signatures; `VerifyBinary()` checks against trusted public keys. Opt-in via `GOATFLOW_REQUIRE_SIGNATURES=1`.
 - **SQL Table Whitelisting**: `extractTableNames()` parses SQL queries and validates table names against the `db` permission scope. Queries touching unallowed tables are rejected.
 - **Call Depth Limiting**: Plugin-to-plugin call chains tracked via context with maximum depth of 10, preventing infinite recursion loops.
