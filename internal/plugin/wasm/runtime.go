@@ -373,6 +373,32 @@ func (p *WASMPlugin) dispatchHostCall(ctx context.Context, fn string, args []byt
 		}
 		return json.Marshal(map[string]string{"status": "ok"})
 
+	case "secure_config_get":
+		var req struct {
+			Key string `json:"key"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		val, err := p.host.SecureConfigGet(ctx, req.Key)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]string{"value": val})
+
+	case "secure_config_set":
+		var req struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		if err := p.host.SecureConfigSet(ctx, req.Key, req.Value); err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]string{"status": "ok"})
+
 	case "org_id":
 		id := p.host.OrgID(ctx)
 		return json.Marshal(id)

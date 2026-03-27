@@ -332,10 +332,13 @@ Core `gk_organisation` entity with user membership, data isolation, and per-org 
 
 Encrypted configuration storage via HostAPI. Plugins store API keys, device PINs, secrets without handling crypto directly.
 
-- [ ] `host.SecureConfigGet()` / `host.SecureConfigSet()` HostAPI methods
-- [ ] Platform-managed encryption key
-- [ ] Masked display in admin UI (last-4 reveal)
-- [ ] Extract from existing plugin implementations to core
+- [x] `host.SecureConfigGet()` / `host.SecureConfigSet()` HostAPI methods (with sandbox plugin-name enforcement)
+- [x] AES-256-GCM encryption with platform-managed key (`GOATFLOW_SECURE_KEY` env var or auto-generated)
+- [x] `gk_secure_config` table with org-scoped secrets (org-specific → global fallback)
+- [x] Masked display helpers (`ValueHint` last-4 chars, `MaskedDisplay` for admin UI)
+- [x] WASM + gRPC wire format for `secure_config_get` / `secure_config_set`
+- [x] Full repository CRUD (set, get with org fallback, delete, list per plugin)
+- [x] Design spec: `docs/design/SECURE_SETTINGS.md`
 
 **GoatKit PaaS Core — Entity Deletion**
 

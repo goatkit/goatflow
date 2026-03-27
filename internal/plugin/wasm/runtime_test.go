@@ -47,6 +47,14 @@ func (m *mockHostAPI) PublishEvent(ctx context.Context, eventType string, data s
 	return nil
 }
 
+func (m *mockHostAPI) SecureConfigGet(ctx context.Context, key string) (string, error) {
+	return "", nil
+}
+
+func (m *mockHostAPI) SecureConfigSet(ctx context.Context, key string, value string) error {
+	return nil
+}
+
 func (m *mockHostAPI) OrgID(ctx context.Context) int64 {
 	return 0
 }
@@ -503,6 +511,14 @@ func (h *trackingHostAPI) CallPlugin(ctx context.Context, pluginName, function s
 }
 
 func (h *trackingHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
+	return nil
+}
+
+func (h *trackingHostAPI) SecureConfigGet(ctx context.Context, key string) (string, error) {
+	return "", nil
+}
+
+func (h *trackingHostAPI) SecureConfigSet(ctx context.Context, key string, value string) error {
 	return nil
 }
 
