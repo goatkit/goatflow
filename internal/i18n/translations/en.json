@@ -3653,5 +3653,25 @@
   "organisations": {
     "select": "Select Org",
     "switch_org": "Switch Organisation"
+  },
+  "recycle_bin": {
+    "title": "Recycle Bin",
+    "all_types": "All Types",
+    "tickets": "Tickets",
+    "contacts": "Contacts",
+    "agents": "Agents",
+    "queues": "Queues",
+    "organisations": "Organisations",
+    "name": "Name",
+    "type": "Type",
+    "deleted_at": "Deleted",
+    "expires_at": "Expires",
+    "actions": "Actions",
+    "never": "Never",
+    "restore": "Restore",
+    "purge": "Purge",
+    "confirm_restore": "Restore this item?",
+    "confirm_purge": "Permanently delete? This cannot be undone.",
+    "empty": "Recycle bin is empty"
   }
 }

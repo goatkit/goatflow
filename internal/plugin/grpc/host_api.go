@@ -193,6 +193,60 @@ func dispatchHostCall(ctx context.Context, host plugin.HostAPI, method string, a
 		}
 		return json.Marshal(map[string]string{"status": "ok"})
 
+	case "entity_soft_delete":
+		var req struct {
+			EntityType string `json:"entity_type"`
+			EntityID   int64  `json:"entity_id"`
+			Reason     string `json:"reason"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		if err := host.EntitySoftDelete(ctx, req.EntityType, req.EntityID, req.Reason); err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]string{"status": "ok"})
+
+	case "entity_restore":
+		var req struct {
+			EntityType string `json:"entity_type"`
+			EntityID   int64  `json:"entity_id"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		if err := host.EntityRestore(ctx, req.EntityType, req.EntityID); err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]string{"status": "ok"})
+
+	case "entity_hard_delete":
+		var req struct {
+			EntityType string `json:"entity_type"`
+			EntityID   int64  `json:"entity_id"`
+			Reason     string `json:"reason"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		if err := host.EntityHardDelete(ctx, req.EntityType, req.EntityID, req.Reason); err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]string{"status": "ok"})
+
+	case "recycle_bin_list":
+		var req struct {
+			EntityType string `json:"entity_type"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		result, err := host.RecycleBinList(ctx, req.EntityType)
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
+
 	case "secure_config_get":
 		var req struct {
 			Key string `json:"key"`

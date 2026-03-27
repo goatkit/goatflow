@@ -3312,5 +3312,25 @@
     "organisations": {
         "select": "Sélectionner l'organisation",
         "switch_org": "Changer d'organisation"
+    },
+    "recycle_bin": {
+        "title": "Corbeille",
+        "all_types": "Tous les types",
+        "tickets": "Tickets",
+        "contacts": "Contacts",
+        "agents": "Agents",
+        "queues": "Files d'attente",
+        "organisations": "Organisations",
+        "name": "Nom",
+        "type": "Type",
+        "deleted_at": "Supprimé",
+        "expires_at": "Expire",
+        "actions": "Actions",
+        "never": "Jamais",
+        "restore": "Restaurer",
+        "purge": "Supprimer définitivement",
+        "confirm_restore": "Restaurer cet élément ?",
+        "confirm_purge": "Supprimer définitivement ? Cette action est irréversible.",
+        "empty": "La corbeille est vide"
     }
 }

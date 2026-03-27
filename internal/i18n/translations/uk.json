@@ -3341,5 +3341,25 @@
     "organisations": {
         "select": "Обрати організацію",
         "switch_org": "Змінити організацію"
+    },
+    "recycle_bin": {
+        "title": "Кошик",
+        "all_types": "Усі типи",
+        "tickets": "Заявки",
+        "contacts": "Контакти",
+        "agents": "Агенти",
+        "queues": "Черги",
+        "organisations": "Організації",
+        "name": "Назва",
+        "type": "Тип",
+        "deleted_at": "Видалено",
+        "expires_at": "Закінчується",
+        "actions": "Дії",
+        "never": "Ніколи",
+        "restore": "Відновити",
+        "purge": "Видалити назавжди",
+        "confirm_restore": "Відновити цей елемент?",
+        "confirm_purge": "Видалити назавжди? Цю дію неможливо скасувати.",
+        "empty": "Кошик порожній"
     }
 }

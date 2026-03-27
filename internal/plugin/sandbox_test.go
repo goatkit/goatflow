@@ -68,6 +68,22 @@ func (m *mockInnerHostAPI) PublishEvent(ctx context.Context, eventType string, d
 	return nil
 }
 
+func (m *mockInnerHostAPI) EntitySoftDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	return nil
+}
+
+func (m *mockInnerHostAPI) EntityRestore(ctx context.Context, entityType string, entityID int64) error {
+	return nil
+}
+
+func (m *mockInnerHostAPI) EntityHardDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	return nil
+}
+
+func (m *mockInnerHostAPI) RecycleBinList(ctx context.Context, entityType string) (json.RawMessage, error) {
+	return nil, nil
+}
+
 func (m *mockInnerHostAPI) SecureConfigGet(ctx context.Context, key string) (string, error) {
 	return "", nil
 }

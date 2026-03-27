@@ -69,6 +69,10 @@ type GKRegistration struct {
 	// with its own routes, branding, navigation, and auth.
 	UIs []UISpec `json:"uis,omitempty"`
 
+	// Cascade handlers for entity deletion.
+	// Called when platform entities are soft/hard deleted.
+	Cascades []CascadeSpec `json:"cascades,omitempty"`
+
 	// Requirements
 	MinHostVersion string              `json:"min_host_version,omitempty"` // minimum GoatFlow version
 	Permissions    []string            `json:"permissions,omitempty"`      // required host permissions (legacy, use ResourceRequest)
@@ -190,6 +194,16 @@ type HostAPI interface {
 	// eventType is the SSE event name (e.g. "device-table"); data is the payload (typically HTML).
 	PublishEvent(ctx context.Context, eventType string, data string) error
 
+	// Entity Deletion
+	// EntitySoftDelete soft-deletes an entity (recycle bin + PII anonymisation).
+	EntitySoftDelete(ctx context.Context, entityType string, entityID int64, reason string) error
+	// EntityRestore restores a soft-deleted entity from the recycle bin.
+	EntityRestore(ctx context.Context, entityType string, entityID int64) error
+	// EntityHardDelete permanently removes an entity and all linked data.
+	EntityHardDelete(ctx context.Context, entityType string, entityID int64, reason string) error
+	// RecycleBinList lists soft-deleted entities in the recycle bin.
+	RecycleBinList(ctx context.Context, entityType string) (json.RawMessage, error)
+
 	// Secure Config
 	// SecureConfigGet retrieves a decrypted secret value for this plugin.
 	SecureConfigGet(ctx context.Context, key string) (string, error)
@@ -298,6 +312,13 @@ type UIPWASpec struct {
 	Display     string   `json:"display,omitempty"`       // standalone, fullscreen, minimal-ui
 	ThemeColor  string   `json:"theme_color,omitempty"`
 	CacheRoutes []string `json:"cache_routes,omitempty"`  // routes to pre-cache for offline
+}
+
+// CascadeSpec declares a plugin's cascade handler for entity deletion.
+type CascadeSpec struct {
+	EntityType   string `json:"entity_type"`              // ticket, contact, agent, organisation, etc.
+	OnSoftDelete string `json:"on_soft_delete,omitempty"` // plugin function for soft delete
+	OnHardDelete string `json:"on_hard_delete,omitempty"` // plugin function for hard delete
 }
 
 // ResourceRequest describes what a plugin asks for from the platform.

@@ -13,6 +13,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/cache"
 	"github.com/goatkit/goatflow/internal/customfields"
+	"github.com/goatkit/goatflow/internal/deletion"
 	"github.com/goatkit/goatflow/internal/organisation"
 	"github.com/goatkit/goatflow/internal/secureconfig"
 	"github.com/goatkit/goatflow/internal/config"
@@ -408,6 +409,50 @@ func (h *ProdHostAPI) CallPlugin(ctx context.Context, pluginName, fn string, arg
 		return h.PluginManager.CallFrom(ctx, callerPlugin, pluginName, fn, args)
 	}
 	return h.PluginManager.Call(ctx, pluginName, fn, args)
+}
+
+// EntitySoftDelete soft-deletes an entity.
+func (h *ProdHostAPI) EntitySoftDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	svc, err := deletion.NewService()
+	if err != nil {
+		return err
+	}
+	userID := 1
+	if caller, ok := ctx.Value(PluginCallerKey).(string); ok {
+		_ = caller
+	}
+	return svc.SoftDelete(ctx, entityType, entityID, userID, reason)
+}
+
+// EntityRestore restores a soft-deleted entity.
+func (h *ProdHostAPI) EntityRestore(ctx context.Context, entityType string, entityID int64) error {
+	svc, err := deletion.NewService()
+	if err != nil {
+		return err
+	}
+	return svc.Restore(ctx, entityType, entityID, 1)
+}
+
+// EntityHardDelete permanently removes an entity.
+func (h *ProdHostAPI) EntityHardDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	svc, err := deletion.NewService()
+	if err != nil {
+		return err
+	}
+	return svc.HardDelete(ctx, entityType, entityID, 1, reason)
+}
+
+// RecycleBinList lists soft-deleted entities.
+func (h *ProdHostAPI) RecycleBinList(ctx context.Context, entityType string) (json.RawMessage, error) {
+	svc, err := deletion.NewService()
+	if err != nil {
+		return nil, err
+	}
+	entries, err := svc.RecycleBinList(ctx, entityType)
+	if err != nil {
+		return nil, err
+	}
+	return deletion.RecycleBinToJSON(entries)
 }
 
 // SecureConfigGet retrieves and decrypts a secret value.

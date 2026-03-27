@@ -372,6 +372,22 @@ func (m *mockHostAPIForTag) PublishEvent(ctx context.Context, eventType string, 
 	return nil
 }
 
+func (m *mockHostAPIForTag) EntitySoftDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	return nil
+}
+
+func (m *mockHostAPIForTag) EntityRestore(ctx context.Context, entityType string, entityID int64) error {
+	return nil
+}
+
+func (m *mockHostAPIForTag) EntityHardDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	return nil
+}
+
+func (m *mockHostAPIForTag) RecycleBinList(ctx context.Context, entityType string) (json.RawMessage, error) {
+	return nil, nil
+}
+
 func (m *mockHostAPIForTag) SecureConfigGet(ctx context.Context, key string) (string, error) {
 	return "", nil
 }

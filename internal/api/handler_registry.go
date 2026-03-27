@@ -467,6 +467,13 @@ func ensureCoreHandlers() {
 		"handleAPIGetCustomFieldValues": handleAPIGetCustomFieldValues,
 		"handleAPISetCustomFieldValues": handleAPISetCustomFieldValues,
 		"handleAPIQueryCustomFields":    handleAPIQueryCustomFields,
+		// Deletion / Recycle bin handlers
+		"handleAdminRecycleBinList":  handleAdminRecycleBinList,
+		"handleAdminRestore":         handleAdminRestore,
+		"handleAdminHardDelete":      handleAdminHardDelete,
+		"handleAdminBatchSoftDelete": handleAdminBatchSoftDelete,
+		"handleAdminBatchHardDelete": handleAdminBatchHardDelete,
+		"handleAdminDeletionLog":     handleAdminDeletionLog,
 		// Organisation handlers
 		"handleSwitchOrg":           handleSwitchOrg,
 		"handleListUserOrgs":        handleListUserOrgs,

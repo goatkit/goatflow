@@ -604,6 +604,26 @@ func (s *SandboxedHostAPI) isConfigKeyAllowed(key string) bool {
 	return true
 }
 
+// EntitySoftDelete soft-deletes an entity.
+func (s *SandboxedHostAPI) EntitySoftDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	return s.inner.EntitySoftDelete(ctx, entityType, entityID, reason)
+}
+
+// EntityRestore restores a soft-deleted entity.
+func (s *SandboxedHostAPI) EntityRestore(ctx context.Context, entityType string, entityID int64) error {
+	return s.inner.EntityRestore(ctx, entityType, entityID)
+}
+
+// EntityHardDelete permanently removes an entity.
+func (s *SandboxedHostAPI) EntityHardDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	return s.inner.EntityHardDelete(ctx, entityType, entityID, reason)
+}
+
+// RecycleBinList lists soft-deleted entities.
+func (s *SandboxedHostAPI) RecycleBinList(ctx context.Context, entityType string) (json.RawMessage, error) {
+	return s.inner.RecycleBinList(ctx, entityType)
+}
+
 // SecureConfigGet retrieves a decrypted secret, scoped to this plugin.
 func (s *SandboxedHostAPI) SecureConfigGet(ctx context.Context, key string) (string, error) {
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)

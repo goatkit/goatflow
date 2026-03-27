@@ -3883,5 +3883,25 @@
     "organisations": {
         "select": "Wybierz organizację",
         "switch_org": "Zmień organizację"
+    },
+    "recycle_bin": {
+        "title": "Kosz",
+        "all_types": "Wszystkie typy",
+        "tickets": "Zgłoszenia",
+        "contacts": "Kontakty",
+        "agents": "Agenci",
+        "queues": "Kolejki",
+        "organisations": "Organizacje",
+        "name": "Nazwa",
+        "type": "Typ",
+        "deleted_at": "Usunięto",
+        "expires_at": "Wygasa",
+        "actions": "Akcje",
+        "never": "Nigdy",
+        "restore": "Przywróć",
+        "purge": "Usuń trwale",
+        "confirm_restore": "Przywrócić ten element?",
+        "confirm_purge": "Usunąć trwale? Tej operacji nie można cofnąć.",
+        "empty": "Kosz jest pusty"
     }
 }

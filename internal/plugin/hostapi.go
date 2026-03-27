@@ -87,6 +87,26 @@ func (h *DefaultHostAPI) PublishEvent(ctx context.Context, eventType string, dat
 	return fmt.Errorf("SSE not available in default host")
 }
 
+// EntitySoftDelete is not available in default host.
+func (h *DefaultHostAPI) EntitySoftDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	return fmt.Errorf("entity deletion not available in default host")
+}
+
+// EntityRestore is not available in default host.
+func (h *DefaultHostAPI) EntityRestore(ctx context.Context, entityType string, entityID int64) error {
+	return fmt.Errorf("entity deletion not available in default host")
+}
+
+// EntityHardDelete is not available in default host.
+func (h *DefaultHostAPI) EntityHardDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	return fmt.Errorf("entity deletion not available in default host")
+}
+
+// RecycleBinList is not available in default host.
+func (h *DefaultHostAPI) RecycleBinList(ctx context.Context, entityType string) (json.RawMessage, error) {
+	return nil, fmt.Errorf("entity deletion not available in default host")
+}
+
 // SecureConfigGet returns empty (not available in default host).
 func (h *DefaultHostAPI) SecureConfigGet(ctx context.Context, key string) (string, error) {
 	return "", fmt.Errorf("secure config not available in default host")

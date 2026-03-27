@@ -196,6 +196,29 @@ func (c *HostAPIClient) PublishEvent(_ context.Context, eventType string, data s
 	return err
 }
 
+// EntitySoftDelete soft-deletes an entity.
+func (c *HostAPIClient) EntitySoftDelete(_ context.Context, entityType string, entityID int64, reason string) error {
+	_, err := c.call("entity_soft_delete", map[string]any{"entity_type": entityType, "entity_id": entityID, "reason": reason})
+	return err
+}
+
+// EntityRestore restores a soft-deleted entity.
+func (c *HostAPIClient) EntityRestore(_ context.Context, entityType string, entityID int64) error {
+	_, err := c.call("entity_restore", map[string]any{"entity_type": entityType, "entity_id": entityID})
+	return err
+}
+
+// EntityHardDelete permanently removes an entity.
+func (c *HostAPIClient) EntityHardDelete(_ context.Context, entityType string, entityID int64, reason string) error {
+	_, err := c.call("entity_hard_delete", map[string]any{"entity_type": entityType, "entity_id": entityID, "reason": reason})
+	return err
+}
+
+// RecycleBinList lists soft-deleted entities.
+func (c *HostAPIClient) RecycleBinList(_ context.Context, entityType string) (json.RawMessage, error) {
+	return c.call("recycle_bin_list", map[string]any{"entity_type": entityType})
+}
+
 // SecureConfigGet retrieves a decrypted secret.
 func (c *HostAPIClient) SecureConfigGet(_ context.Context, key string) (string, error) {
 	result, err := c.call("secure_config_get", map[string]any{"key": key})

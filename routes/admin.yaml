@@ -659,6 +659,37 @@ spec:
           handler: handleDeleteCustomField
           description: "Soft-delete custom field"
 
+        # Recycle Bin / Entity Deletion
+        - path: /recycle-bin
+          method: GET
+          handler: handleAdminRecycleBinList
+          description: "List recycle bin entries"
+
+        - path: /api/recycle-bin/restore
+          method: POST
+          handler: handleAdminRestore
+          description: "Restore entity from recycle bin"
+
+        - path: /api/recycle-bin/purge
+          method: POST
+          handler: handleAdminHardDelete
+          description: "Permanently delete entity from recycle bin"
+
+        - path: /api/recycle-bin/batch-delete
+          method: POST
+          handler: handleAdminBatchSoftDelete
+          description: "Batch soft-delete multiple entities"
+
+        - path: /api/recycle-bin/batch-purge
+          method: POST
+          handler: handleAdminBatchHardDelete
+          description: "Batch permanently delete multiple entities"
+
+        - path: /api/recycle-bin/log/:entity_type/:entity_id
+          method: GET
+          handler: handleAdminDeletionLog
+          description: "View deletion audit log for an entity"
+
         # Response templates management
         - path: /templates
           method: GET
