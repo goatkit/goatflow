@@ -181,6 +181,22 @@ func (h *testHostAPI) PublishEvent(ctx context.Context, eventType string, data s
 	return nil
 }
 
+func (h *testHostAPI) EntitySoftDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	return nil
+}
+
+func (h *testHostAPI) EntityRestore(ctx context.Context, entityType string, entityID int64) error {
+	return nil
+}
+
+func (h *testHostAPI) EntityHardDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	return nil
+}
+
+func (h *testHostAPI) RecycleBinList(ctx context.Context, entityType string) (json.RawMessage, error) {
+	return nil, nil
+}
+
 func (h *testHostAPI) SecureConfigGet(ctx context.Context, key string) (string, error) {
 	return "", nil
 }

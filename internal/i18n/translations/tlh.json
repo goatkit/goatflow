@@ -3328,5 +3328,25 @@
     "organisations": {
         "select": "DIvI' wIv",
         "switch_org": "DIvI' choH"
+    },
+    "recycle_bin": {
+        "title": "nItlh QaQ",
+        "all_types": "Hoch Segh",
+        "tickets": "chaw'mey",
+        "contacts": "ghot",
+        "agents": "DevwI'",
+        "queues": "tlhoy'",
+        "organisations": "DIvI'mey",
+        "name": "pong",
+        "type": "Segh",
+        "deleted_at": "Qaw'ta'",
+        "expires_at": "pIv",
+        "actions": "ta'",
+        "never": "not",
+        "restore": "chegh",
+        "purge": "Qaw' reH",
+        "confirm_restore": "Dochvam chegh'a'?",
+        "confirm_purge": "reH Qaw'? choHlaHbe'.",
+        "empty": "chIm nItlh QaQ"
     }
 }

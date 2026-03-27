@@ -3312,5 +3312,25 @@
     "organisations": {
         "select": "組織を選択",
         "switch_org": "組織を切り替え"
+    },
+    "recycle_bin": {
+        "title": "ごみ箱",
+        "all_types": "すべての種類",
+        "tickets": "チケット",
+        "contacts": "連絡先",
+        "agents": "エージェント",
+        "queues": "キュー",
+        "organisations": "組織",
+        "name": "名前",
+        "type": "種類",
+        "deleted_at": "削除日",
+        "expires_at": "有効期限",
+        "actions": "操作",
+        "never": "なし",
+        "restore": "復元",
+        "purge": "完全削除",
+        "confirm_restore": "このアイテムを復元しますか？",
+        "confirm_purge": "完全に削除しますか？この操作は取り消せません。",
+        "empty": "ごみ箱は空です"
     }
 }

@@ -3882,5 +3882,25 @@
     "organisations": {
         "select": "Selecionar organização",
         "switch_org": "Mudar organização"
+    },
+    "recycle_bin": {
+        "title": "Lixeira",
+        "all_types": "Todos os tipos",
+        "tickets": "Tickets",
+        "contacts": "Contactos",
+        "agents": "Agentes",
+        "queues": "Filas",
+        "organisations": "Organizações",
+        "name": "Nome",
+        "type": "Tipo",
+        "deleted_at": "Eliminado",
+        "expires_at": "Expira",
+        "actions": "Ações",
+        "never": "Nunca",
+        "restore": "Restaurar",
+        "purge": "Eliminar permanentemente",
+        "confirm_restore": "Restaurar este item?",
+        "confirm_purge": "Eliminar permanentemente? Esta ação não pode ser desfeita.",
+        "empty": "A lixeira está vazia"
     }
 }

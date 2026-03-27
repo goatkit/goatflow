@@ -3311,5 +3311,25 @@
     "organisations": {
         "select": "Seleccionar organización",
         "switch_org": "Cambiar organización"
+    },
+    "recycle_bin": {
+        "title": "Papelera",
+        "all_types": "Todos los tipos",
+        "tickets": "Tickets",
+        "contacts": "Contactos",
+        "agents": "Agentes",
+        "queues": "Colas",
+        "organisations": "Organizaciones",
+        "name": "Nombre",
+        "type": "Tipo",
+        "deleted_at": "Eliminado",
+        "expires_at": "Expira",
+        "actions": "Acciones",
+        "never": "Nunca",
+        "restore": "Restaurar",
+        "purge": "Eliminar permanentemente",
+        "confirm_restore": "¿Restaurar este elemento?",
+        "confirm_purge": "¿Eliminar permanentemente? Esto no se puede deshacer.",
+        "empty": "La papelera está vacía"
     }
 }

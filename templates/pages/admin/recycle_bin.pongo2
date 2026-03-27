@@ -1,0 +1,86 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold" style="color: var(--gk-text-primary);">
+            <i class="fa-solid fa-trash-can-arrow-up mr-2"></i>{{ t("recycle_bin.title")|default:"Recycle Bin" }}
+        </h1>
+        <div class="flex items-center gap-3">
+            <select id="entity-filter" class="gk-select-neon text-sm"
+                    hx-get="/admin/recycle-bin"
+                    hx-target="#recycle-bin-table"
+                    hx-include="this"
+                    name="entity_type">
+                <option value="">{{ t("recycle_bin.all_types")|default:"All Types" }}</option>
+                <option value="ticket">{{ t("recycle_bin.tickets")|default:"Tickets" }}</option>
+                <option value="contact">{{ t("recycle_bin.contacts")|default:"Contacts" }}</option>
+                <option value="agent">{{ t("recycle_bin.agents")|default:"Agents" }}</option>
+                <option value="queue">{{ t("recycle_bin.queues")|default:"Queues" }}</option>
+                <option value="organisation">{{ t("recycle_bin.organisations")|default:"Organisations" }}</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="recycle-bin-table" class="rounded-lg overflow-hidden" style="border: 1px solid var(--gk-border-default);">
+        <table class="w-full text-sm">
+            <thead>
+                <tr style="background: var(--gk-bg-surface);">
+                    <th class="px-4 py-3 text-left font-medium" style="color: var(--gk-text-muted);">{{ t("recycle_bin.name")|default:"Name" }}</th>
+                    <th class="px-4 py-3 text-left font-medium" style="color: var(--gk-text-muted);">{{ t("recycle_bin.type")|default:"Type" }}</th>
+                    <th class="px-4 py-3 text-left font-medium" style="color: var(--gk-text-muted);">{{ t("recycle_bin.deleted_at")|default:"Deleted" }}</th>
+                    <th class="px-4 py-3 text-left font-medium" style="color: var(--gk-text-muted);">{{ t("recycle_bin.expires_at")|default:"Expires" }}</th>
+                    <th class="px-4 py-3 text-right font-medium" style="color: var(--gk-text-muted);">{{ t("recycle_bin.actions")|default:"Actions" }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if entries %}
+                {% for entry in entries %}
+                <tr style="border-top: 1px solid var(--gk-border-default);">
+                    <td class="px-4 py-3" style="color: var(--gk-text-primary);">
+                        {{ entry.EntityName|default:"-" }}
+                        <span class="text-xs ml-1" style="color: var(--gk-text-muted);">#{{ entry.EntityID }}</span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                              style="background: var(--gk-bg-elevated); color: var(--gk-text-secondary);">
+                            {{ entry.EntityType }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3" style="color: var(--gk-text-muted);">{{ entry.DeletedAt }}</td>
+                    <td class="px-4 py-3" style="color: var(--gk-text-muted);">{{ entry.ExpiresAt|default:t("recycle_bin.never")|default:"Never" }}</td>
+                    <td class="px-4 py-3 text-right">
+                        <button hx-post="/admin/api/recycle-bin/restore"
+                                hx-vals='{"entity_type":"{{ entry.EntityType }}","entity_id":{{ entry.EntityID }}}'
+                                hx-headers='{"Content-Type": "application/json"}'
+                                hx-confirm="{{ t("recycle_bin.confirm_restore")|default:"Restore this item?" }}"
+                                hx-on::after-request="window.location.reload()"
+                                class="text-xs px-2 py-1 rounded"
+                                style="color: var(--gk-primary); border: 1px solid var(--gk-primary);">
+                            {{ t("recycle_bin.restore")|default:"Restore" }}
+                        </button>
+                        <button hx-post="/admin/api/recycle-bin/purge"
+                                hx-vals='{"entity_type":"{{ entry.EntityType }}","entity_id":{{ entry.EntityID }}}'
+                                hx-headers='{"Content-Type": "application/json"}'
+                                hx-confirm="{{ t("recycle_bin.confirm_purge")|default:"Permanently delete? This cannot be undone." }}"
+                                hx-on::after-request="window.location.reload()"
+                                class="text-xs px-2 py-1 rounded ml-1"
+                                style="color: var(--gk-error); border: 1px solid var(--gk-error);">
+                            {{ t("recycle_bin.purge")|default:"Purge" }}
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="5" class="px-4 py-8 text-center" style="color: var(--gk-text-muted);">
+                        <i class="fa-solid fa-check-circle text-2xl mb-2" style="color: var(--gk-success);"></i>
+                        <p>{{ t("recycle_bin.empty")|default:"Recycle bin is empty" }}</p>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

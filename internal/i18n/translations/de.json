@@ -3315,5 +3315,25 @@
     "organisations": {
         "select": "Organisation wählen",
         "switch_org": "Organisation wechseln"
+    },
+    "recycle_bin": {
+        "title": "Papierkorb",
+        "all_types": "Alle Typen",
+        "tickets": "Tickets",
+        "contacts": "Kontakte",
+        "agents": "Agenten",
+        "queues": "Warteschlangen",
+        "organisations": "Organisationen",
+        "name": "Name",
+        "type": "Typ",
+        "deleted_at": "Gelöscht",
+        "expires_at": "Verfällt",
+        "actions": "Aktionen",
+        "never": "Nie",
+        "restore": "Wiederherstellen",
+        "purge": "Endgültig löschen",
+        "confirm_restore": "Diesen Eintrag wiederherstellen?",
+        "confirm_purge": "Endgültig löschen? Dies kann nicht rückgängig gemacht werden.",
+        "empty": "Papierkorb ist leer"
     }
 }

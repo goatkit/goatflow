@@ -51,6 +51,7 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/priorities.pongo2":                true,
 	"pages/admin/priority.pongo2":                  true,
 	"pages/admin/queues.pongo2":                    true,
+	"pages/admin/recycle_bin.pongo2":               true,
 	"pages/admin/roadmap.pongo2":                   true,
 	"pages/admin/role_permissions.pongo2":          true,
 	"pages/admin/role_users.pongo2":                true,
@@ -716,6 +717,15 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 				ctx := adminContext()
 				ctx["Queues"] = []map[string]interface{}{sampleQueue()}
 				ctx["Search"] = ""
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/recycle_bin",
+			template: "pages/admin/recycle_bin.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["entries"] = []map[string]interface{}{}
 				return ctx
 			}(),
 		},

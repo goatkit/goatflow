@@ -3330,5 +3330,25 @@
     "organisations": {
         "select": "اختر المؤسسة",
         "switch_org": "تبديل المؤسسة"
+    },
+    "recycle_bin": {
+        "title": "سلة المحذوفات",
+        "all_types": "جميع الأنواع",
+        "tickets": "التذاكر",
+        "contacts": "جهات الاتصال",
+        "agents": "الوكلاء",
+        "queues": "قوائم الانتظار",
+        "organisations": "المؤسسات",
+        "name": "الاسم",
+        "type": "النوع",
+        "deleted_at": "تم الحذف",
+        "expires_at": "ينتهي",
+        "actions": "الإجراءات",
+        "never": "أبداً",
+        "restore": "استعادة",
+        "purge": "حذف نهائي",
+        "confirm_restore": "استعادة هذا العنصر؟",
+        "confirm_purge": "حذف نهائي؟ لا يمكن التراجع عن هذا.",
+        "empty": "سلة المحذوفات فارغة"
     }
 }

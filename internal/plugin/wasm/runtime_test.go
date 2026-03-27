@@ -47,6 +47,22 @@ func (m *mockHostAPI) PublishEvent(ctx context.Context, eventType string, data s
 	return nil
 }
 
+func (m *mockHostAPI) EntitySoftDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	return nil
+}
+
+func (m *mockHostAPI) EntityRestore(ctx context.Context, entityType string, entityID int64) error {
+	return nil
+}
+
+func (m *mockHostAPI) EntityHardDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	return nil
+}
+
+func (m *mockHostAPI) RecycleBinList(ctx context.Context, entityType string) (json.RawMessage, error) {
+	return nil, nil
+}
+
 func (m *mockHostAPI) SecureConfigGet(ctx context.Context, key string) (string, error) {
 	return "", nil
 }
@@ -512,6 +528,22 @@ func (h *trackingHostAPI) CallPlugin(ctx context.Context, pluginName, function s
 
 func (h *trackingHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
 	return nil
+}
+
+func (h *trackingHostAPI) EntitySoftDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	return nil
+}
+
+func (h *trackingHostAPI) EntityRestore(ctx context.Context, entityType string, entityID int64) error {
+	return nil
+}
+
+func (h *trackingHostAPI) EntityHardDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	return nil
+}
+
+func (h *trackingHostAPI) RecycleBinList(ctx context.Context, entityType string) (json.RawMessage, error) {
+	return nil, nil
 }
 
 func (h *trackingHostAPI) SecureConfigGet(ctx context.Context, key string) (string, error) {

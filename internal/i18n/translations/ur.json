@@ -3337,5 +3337,25 @@
     "organisations": {
         "select": "تنظیم منتخب کریں",
         "switch_org": "تنظیم تبدیل کریں"
+    },
+    "recycle_bin": {
+        "title": "ری سائیکل بن",
+        "all_types": "تمام اقسام",
+        "tickets": "ٹکٹ",
+        "contacts": "رابطے",
+        "agents": "ایجنٹ",
+        "queues": "قطاریں",
+        "organisations": "تنظیمیں",
+        "name": "نام",
+        "type": "قسم",
+        "deleted_at": "حذف شدہ",
+        "expires_at": "میعاد",
+        "actions": "اقدامات",
+        "never": "کبھی نہیں",
+        "restore": "بحال کریں",
+        "purge": "مستقل حذف",
+        "confirm_restore": "یہ آئٹم بحال کریں؟",
+        "confirm_purge": "مستقل طور پر حذف کریں؟ یہ واپس نہیں ہو سکتا۔",
+        "empty": "ری سائیکل بن خالی ہے"
     }
 }

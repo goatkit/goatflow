@@ -3364,5 +3364,25 @@
     "organisations": {
         "select": "בחר ארגון",
         "switch_org": "החלף ארגון"
+    },
+    "recycle_bin": {
+        "title": "סל מיחזור",
+        "all_types": "כל הסוגים",
+        "tickets": "כרטיסים",
+        "contacts": "אנשי קשר",
+        "agents": "סוכנים",
+        "queues": "תורים",
+        "organisations": "ארגונים",
+        "name": "שם",
+        "type": "סוג",
+        "deleted_at": "נמחק",
+        "expires_at": "פג תוקף",
+        "actions": "פעולות",
+        "never": "לעולם לא",
+        "restore": "שחזור",
+        "purge": "מחיקה לצמיתות",
+        "confirm_restore": "לשחזר פריט זה?",
+        "confirm_purge": "למחוק לצמיתות? לא ניתן לבטל פעולה זו.",
+        "empty": "סל המיחזור ריק"
     }
 }

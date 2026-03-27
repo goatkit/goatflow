@@ -3312,5 +3312,25 @@
     "organisations": {
         "select": "选择组织",
         "switch_org": "切换组织"
+    },
+    "recycle_bin": {
+        "title": "回收站",
+        "all_types": "所有类型",
+        "tickets": "工单",
+        "contacts": "联系人",
+        "agents": "客服",
+        "queues": "队列",
+        "organisations": "组织",
+        "name": "名称",
+        "type": "类型",
+        "deleted_at": "删除时间",
+        "expires_at": "过期时间",
+        "actions": "操作",
+        "never": "永不",
+        "restore": "恢复",
+        "purge": "永久删除",
+        "confirm_restore": "恢复此项目？",
+        "confirm_purge": "永久删除？此操作无法撤销。",
+        "empty": "回收站为空"
     }
 }

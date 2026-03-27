@@ -27,6 +27,9 @@ const (
 	PermissionReportView   Permission = "report:view"
 	PermissionReportCreate Permission = "report:create"
 
+	// Entity deletion permissions.
+	PermissionEntityHardDelete Permission = "entity:hard_delete"
+
 	// Customer permissions.
 	PermissionOwnTicketRead   Permission = "own:ticket:read"
 	PermissionOwnTicketCreate Permission = "own:ticket:create"
@@ -52,6 +55,7 @@ func (r *RBAC) initializePermissions() {
 		PermissionUserCreate, PermissionUserRead, PermissionUserUpdate, PermissionUserDelete,
 		PermissionAdminAccess, PermissionSystemConfig,
 		PermissionReportView, PermissionReportCreate,
+		PermissionEntityHardDelete,
 		PermissionOwnTicketRead, PermissionOwnTicketCreate,
 	}
 

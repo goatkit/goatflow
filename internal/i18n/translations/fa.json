@@ -3411,5 +3411,25 @@
     "organisations": {
         "select": "انتخاب سازمان",
         "switch_org": "تغییر سازمان"
+    },
+    "recycle_bin": {
+        "title": "سطل زباله",
+        "all_types": "همه انواع",
+        "tickets": "تیکت‌ها",
+        "contacts": "مخاطبین",
+        "agents": "نمایندگان",
+        "queues": "صف‌ها",
+        "organisations": "سازمان‌ها",
+        "name": "نام",
+        "type": "نوع",
+        "deleted_at": "حذف شده",
+        "expires_at": "منقضی می‌شود",
+        "actions": "اقدامات",
+        "never": "هرگز",
+        "restore": "بازیابی",
+        "purge": "حذف دائمی",
+        "confirm_restore": "بازیابی این مورد؟",
+        "confirm_purge": "حذف دائمی؟ این عمل قابل بازگشت نیست.",
+        "empty": "سطل زباله خالی است"
     }
 }

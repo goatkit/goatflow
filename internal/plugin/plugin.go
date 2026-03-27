@@ -25,6 +25,7 @@ type HostAPI = pkgplugin.HostAPI
 type ResourceRequest = pkgplugin.ResourceRequest
 type Permission = pkgplugin.Permission
 type ResourcePolicy = pkgplugin.ResourcePolicy
+type CascadeSpec = pkgplugin.CascadeSpec
 type CustomFieldSpec = pkgplugin.CustomFieldSpec
 type CustomFieldFilter = pkgplugin.CustomFieldFilter
 type UISpec = pkgplugin.UISpec

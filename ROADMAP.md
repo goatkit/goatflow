@@ -344,18 +344,22 @@ Encrypted configuration storage via HostAPI. Plugins store API keys, device PINs
 
 Two deletion patterns: soft delete + anonymisation (GDPR, preserve business records) and hard cascading delete (complete erasure). Recycle bin as the standard deletion pipeline.
 
-- [ ] Soft delete (move to recycle bin, hidden from normal views)
-- [ ] Anonymise PII on soft delete (configurable)
-- [ ] Restore from recycle bin
-- [ ] Hard cascading delete (purge — physical removal of entity + all linked data)
-- [ ] Batch/scope delete (delete everything in a project/exercise)
-- [ ] Plugin cascade handlers: `CascadeSpec` in `GKRegistration`
-- [ ] Tombstone logging (`gk_deletion_log` — records that deletion happened, not what was deleted)
-- [ ] Auto-purge scheduled job (configurable retention period per org/entity type)
-- [ ] Recycle bin admin UI
-- [ ] HostAPI: `EntitySoftDelete()`, `EntityRestore()`, `EntityHardDelete()`, `ScopeSoftDelete()`, `ScopeHardDelete()`, `RecycleBinList()`
-- [ ] RBAC: `entity.hard_delete` permission
-- [ ] Design spec: `docs/design/CUSTOM_FIELDS.md` → Entity Deletion section
+- [x] Soft delete (move to `gk_recycle_bin`, entity hidden via native mechanism: archive_flag/valid_id)
+- [x] Anonymise PII on soft delete (configurable per entity type, irreversible `[DELETED]` replacement)
+- [x] Restore from recycle bin (clears recycle bin entry, restores entity via native mechanism)
+- [x] Hard cascading delete (purge — physical removal of entity + linked data per entity type)
+- [x] Plugin cascade handlers: `CascadeSpec` in `GKRegistration` (OnSoftDelete, OnHardDelete per entity type)
+- [x] Tombstone logging (`gk_deletion_log` — immutable record of soft_delete/restore/hard_delete actions)
+- [x] Auto-purge (`PurgeExpired` — deletes entries past `expires_at`, configurable retention per entity type)
+- [x] HostAPI: `EntitySoftDelete()`, `EntityRestore()`, `EntityHardDelete()`, `RecycleBinList()`
+- [x] WASM + gRPC wire format for all deletion host functions
+- [x] Deletion service — orchestrates soft/hard delete, anonymisation, cascade, tombstone, recycle bin
+- [x] Design spec: `docs/design/ENTITY_DELETION.md`
+- [x] Recycle bin admin UI — template with HTMX restore/purge, entity type filter, deletion log viewer
+- [x] Batch/scope delete — `ScopeSoftDelete` and `ScopeHardDelete` for bulk entity deletion
+- [x] RBAC: `entity.hard_delete` permission (admin-only, added to RBAC permission system)
+- [x] Admin API routes — list bin, restore, purge, batch delete, batch purge, deletion log
+- [x] i18n — recycle bin UI translated to all 15 native languages (18 keys each)
 
 **GoatKit PaaS Core — Reusable UI Components**
 
