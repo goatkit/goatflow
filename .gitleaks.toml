@@ -26,6 +26,8 @@ paths = [
     '''web/src/types/api\.ts''',
     # Binary lockfiles (no secrets, just dependency metadata)
     '''bun\.lockb''',
+    # Design docs contain example/placeholder tokens (gf_EXAMPLE_, sk_live_xxx, etc.)
+    '''docs/design/.*\.md''',
 ]
 
 # Stop words to prevent false positives
@@ -35,4 +37,9 @@ stopwords = [
     "mock",
     "dummy",
     "sample",
+    "FAKE",
+    "DO_NOT_USE",
+    "placeholder",
+    "sk_live_xxx",
+    "sk_live_org",
 ]
