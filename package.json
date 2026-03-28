@@ -35,7 +35,7 @@
     "type": "git",
     "url": "https://github.com/goatkit/goatflow.git"
   },
-  "license": "AGPL-3.0",
+  "license": "Apache-2.0",
   "author": "GoatFlow Team",
   "dependencies": {
     "@playwright/test": "^1.57.0",
