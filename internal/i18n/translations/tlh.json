@@ -3363,5 +3363,31 @@
         "stat_card": {
             "no_change": "choH pagh"
         }
+    },
+    "self_service": {
+        "forgot_password": {
+            "title": "ngoDmoHlu' mu'wIj",
+            "email_label": "QIn nav",
+            "submit": "rarwI' ngeH",
+            "success": "jan tu'lu'chugh, rarwI' ngeHta'."
+        },
+        "reset_password": {
+            "title": "mu'wIj chu'",
+            "new_password": "mu'wIj chu'",
+            "confirm": "laj",
+            "submit": "choH",
+            "success": "mu'wIj choHta'."
+        },
+        "register": {
+            "title": "jan chenmoH",
+            "email": "QIn",
+            "first_name": "wa'DIch pong",
+            "last_name": "tuq pong",
+            "submit": "toD",
+            "success": "toD ngeHta'."
+        },
+        "verify_email": {
+            "success": "QIn 'ollu'."
+        }
     }
 }

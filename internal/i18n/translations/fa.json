@@ -3446,5 +3446,31 @@
         "stat_card": {
             "no_change": "بدون تغییر"
         }
+    },
+    "self_service": {
+        "forgot_password": {
+            "title": "فراموشی رمز عبور",
+            "email_label": "آدرس ایمیل",
+            "submit": "ارسال لینک",
+            "success": "در صورت وجود حساب، لینک ارسال شد."
+        },
+        "reset_password": {
+            "title": "بازنشانی رمز عبور",
+            "new_password": "رمز عبور جدید",
+            "confirm": "تأیید",
+            "submit": "بازنشانی",
+            "success": "رمز عبور بازنشانی شد."
+        },
+        "register": {
+            "title": "ایجاد حساب",
+            "email": "ایمیل",
+            "first_name": "نام",
+            "last_name": "نام خانوادگی",
+            "submit": "ثبت نام",
+            "success": "ثبت نام ارسال شد."
+        },
+        "verify_email": {
+            "success": "ایمیل تأیید شد."
+        }
     }
 }

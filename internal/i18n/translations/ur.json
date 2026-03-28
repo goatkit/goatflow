@@ -3372,5 +3372,31 @@
         "stat_card": {
             "no_change": "کوئی تبدیلی نہیں"
         }
+    },
+    "self_service": {
+        "forgot_password": {
+            "title": "پاسورڈ بھول گئے",
+            "email_label": "ای میل ایڈریس",
+            "submit": "لنک بھیجیں",
+            "success": "اگر اکاؤنٹ موجود ہے تو لنک بھیجا گیا۔"
+        },
+        "reset_password": {
+            "title": "پاسورڈ ری سیٹ",
+            "new_password": "نیا پاسورڈ",
+            "confirm": "تصدیق",
+            "submit": "ری سیٹ",
+            "success": "پاسورڈ ری سیٹ ہو گیا۔"
+        },
+        "register": {
+            "title": "اکاؤنٹ بنائیں",
+            "email": "ای میل",
+            "first_name": "پہلا نام",
+            "last_name": "آخری نام",
+            "submit": "رجسٹر",
+            "success": "رجسٹریشن جمع ہو گئی۔"
+        },
+        "verify_email": {
+            "success": "ای میل تصدیق ہو گئی۔"
+        }
     }
 }

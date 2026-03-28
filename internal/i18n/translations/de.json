@@ -3350,5 +3350,31 @@
         "stat_card": {
             "no_change": "Keine Änderung"
         }
+    },
+    "self_service": {
+        "forgot_password": {
+            "title": "Passwort vergessen",
+            "email_label": "E-Mail-Adresse",
+            "submit": "Link senden",
+            "success": "Falls ein Konto existiert, wurde ein Link gesendet."
+        },
+        "reset_password": {
+            "title": "Passwort zurücksetzen",
+            "new_password": "Neues Passwort",
+            "confirm": "Passwort bestätigen",
+            "submit": "Zurücksetzen",
+            "success": "Passwort erfolgreich zurückgesetzt."
+        },
+        "register": {
+            "title": "Konto erstellen",
+            "email": "E-Mail",
+            "first_name": "Vorname",
+            "last_name": "Nachname",
+            "submit": "Registrieren",
+            "success": "Registrierung eingereicht. Prüfen Sie Ihre E-Mail."
+        },
+        "verify_email": {
+            "success": "E-Mail erfolgreich verifiziert."
+        }
     }
 }

@@ -3688,5 +3688,31 @@
     "stat_card": {
       "no_change": "No change"
     }
+  },
+  "self_service": {
+    "forgot_password": {
+      "title": "Forgot Password",
+      "email_label": "Email Address",
+      "submit": "Send Reset Link",
+      "success": "If an account exists, a reset link has been sent."
+    },
+    "reset_password": {
+      "title": "Reset Password",
+      "new_password": "New Password",
+      "confirm": "Confirm Password",
+      "submit": "Reset Password",
+      "success": "Password reset successfully."
+    },
+    "register": {
+      "title": "Create Account",
+      "email": "Email",
+      "first_name": "First Name",
+      "last_name": "Last Name",
+      "submit": "Register",
+      "success": "Registration submitted. Check your email."
+    },
+    "verify_email": {
+      "success": "Email verified successfully."
+    }
   }
 }

@@ -3399,5 +3399,31 @@
         "stat_card": {
             "no_change": "ללא שינוי"
         }
+    },
+    "self_service": {
+        "forgot_password": {
+            "title": "שכחתי סיסמה",
+            "email_label": "כתובת אימייל",
+            "submit": "שלח קישור",
+            "success": "אם קיים חשבון, נשלח קישור."
+        },
+        "reset_password": {
+            "title": "איפוס סיסמה",
+            "new_password": "סיסמה חדשה",
+            "confirm": "אישור",
+            "submit": "איפוס",
+            "success": "הסיסמה אופסה."
+        },
+        "register": {
+            "title": "יצירת חשבון",
+            "email": "אימייל",
+            "first_name": "שם פרטי",
+            "last_name": "שם משפחה",
+            "submit": "הרשמה",
+            "success": "ההרשמה נשלחה."
+        },
+        "verify_email": {
+            "success": "האימייל אומת."
+        }
     }
 }

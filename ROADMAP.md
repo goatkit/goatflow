@@ -4,7 +4,7 @@ Current status, past releases, and future plans for GoatFlow.
 
 ## 🚀 Current Status
 
-**Version**: 0.7.0 (March 2026) - GoatKit Plugin Platform
+**Version**: 0.8.0 (April 2026) - GoatKit PaaS Core
 
 GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ticketing and service management platform. It is built as a premier standalone solution for all organizations. Written in Go with a modular monolith architecture, GoatFlow provides enterprise-grade support ticketing, ITSM capabilities, and extensive customization options.
 
@@ -265,7 +265,7 @@ GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ti
 
 ---
 
-### 0.8.0 - Target: September 2026
+### 0.8.0 - Target: April 2026
 
 **GoatKit PaaS Core — Custom Fields**
 
@@ -382,11 +382,13 @@ Shared UI components usable by any plugin. Server-rendered HTML building blocks.
 - [x] Design spec: `docs/design/PLUGIN_MARKETPLACE.md`
 
 **Self-Service Authentication**
-- [ ] Password recovery UI for customers (email-based reset)
-- [ ] Password recovery UI for agents (admin-initiated reset)
-- [ ] Customer sign-up/registration UI with approval workflow
-- [ ] Email verification for new accounts
-- [ ] CAPTCHA integration (reCAPTCHA v3, hCaptcha)
+- [x] Password recovery for customers — email-based reset with secure tokens (1hr expiry), anti-enumeration response
+- [x] Password recovery for agents — admin-initiated reset (existing `HandleAdminUserResetPassword`)
+- [x] Customer sign-up/registration — approval workflow with pending/approved/rejected status, admin review handlers
+- [x] Email verification — token-based verification links (24hr expiry), consumed on use
+- [x] CAPTCHA integration — reCAPTCHA v3 (score-based) and hCaptcha support, configurable provider/threshold
+- [x] Auth token system — `gk_auth_token` table, cryptographic token generation, expiry, single-use consumption
+- [x] i18n — forgot password, reset, registration, verification translated to all 15 languages
 
 **Enhancements**
 - [ ] Keyboard navigation accessibility (WCAG 2.1 AA compliance)
@@ -399,7 +401,7 @@ Shared UI components usable by any plugin. Server-rendered HTML building blocks.
 
 ---
 
-### 0.8.1 - Target: November 2026
+### 0.8.1 - Target: June 2026
 
 **Statistics & Reporting Plugin — UI & Shipping**
 - [ ] Dashboard widgets with Chart.js
@@ -430,7 +432,7 @@ Shared UI components usable by any plugin. Server-rendered HTML building blocks.
 
 ---
 
-### 0.9.0 - Target: January 2027
+### 0.9.0 - Target: August 2026
 
 **FAQ / Knowledge Base Plugin** *(first-party, open source)*
 - [ ] Public and internal article categories with permissions
@@ -479,7 +481,7 @@ Shared UI components usable by any plugin. Server-rendered HTML building blocks.
 
 ---
 
-### 1.0.0 - Target: April 2027
+### 1.0.0 - Target: November 2026
 
 **Production Release**
 
@@ -553,11 +555,11 @@ Enterprise plugins are built as vertical plugins need them and prioritised by cu
 
 | Version | Date | Status | Theme |
 |---------|------|--------|-------|
-| 1.0.0 | Apr 2027 | 🔮 Future | Production Release |
-| 0.9.0 | Jan 2027 | 🔮 Future | FAQ, Calendar, Process Management Plugins |
-| 0.8.1 | Nov 2026 | 🔮 Future | Stats Plugin UI, Mobile, WebAuthn, Quality |
-| 0.8.0 | Sep 2026 | 🔮 Future | **PaaS Core** — Custom Fields, Plugin UIs, Multi-Tenancy, Deletion |
-| 0.7.0 | Mar 2026 | 🚀 Current | Plugin Platform Complete, Sandbox & Security, Statistics API |
+| 1.0.0 | Nov 2026 | 🔮 Future | Production Release |
+| 0.9.0 | Aug 2026 | 🔮 Future | FAQ, Calendar, Process Management Plugins |
+| 0.8.1 | Jun 2026 | 🔮 Future | Stats Plugin UI, Mobile, WebAuthn, Quality |
+| 0.8.0 | Apr 2026 | 🚀 Current | **PaaS Core** — Custom Fields, Plugin UIs, Multi-Tenancy, Deletion |
+| 0.7.0 | Mar 2026 | ✅ Released | Plugin Platform Complete, Sandbox & Security, Statistics API |
 | 0.6.5 | Feb 2026 | ✅ Released | 2FA, API Tokens, RBAC, Demo Mode, Plugin Platform, MCP Server |
 | 0.6.4 | Feb 2026 | ✅ Released | Plugin Platform Roadmap |
 | 0.6.3 | Jan 2026 | ✅ Released | Stability & Testing |

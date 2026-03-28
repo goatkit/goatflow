@@ -3347,5 +3347,31 @@
         "stat_card": {
             "no_change": "変更なし"
         }
+    },
+    "self_service": {
+        "forgot_password": {
+            "title": "パスワードを忘れた",
+            "email_label": "メールアドレス",
+            "submit": "リンクを送信",
+            "success": "アカウントが存在する場合、リンクが送信されました。"
+        },
+        "reset_password": {
+            "title": "パスワードリセット",
+            "new_password": "新しいパスワード",
+            "confirm": "確認",
+            "submit": "リセット",
+            "success": "パスワードがリセットされました。"
+        },
+        "register": {
+            "title": "アカウント作成",
+            "email": "メール",
+            "first_name": "名",
+            "last_name": "姓",
+            "submit": "登録",
+            "success": "登録が送信されました。"
+        },
+        "verify_email": {
+            "success": "メールが確認されました。"
+        }
     }
 }
