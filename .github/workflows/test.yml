@@ -73,7 +73,7 @@ jobs:
 
       - name: Run gosec security scanner
         run: |
-          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.22.4
           mkdir -p security-artifacts
           gosec -fmt=json -out=security-artifacts/gosec-report.json ./... || true
           gosec -fmt=text ./... || echo "Security issues found - see gosec-report.json"
