@@ -114,6 +114,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 - **2FA login sets wrong JWT role**: The 2FA verification completion path generated JWTs with `role=user` and `isAdmin=false`, bypassing the admin group check. Admin users who logged in with 2FA were denied access to plugin management and other admin API endpoints. All login paths (direct, 2FA, demo) now use a shared `resolveUserRole()` function that checks admin group membership.
 - **Plugin API auth middleware**: `SessionOrJWTAuth()` relied on a prior middleware setting `user_id` in context, but plugin API routes had no session middleware. Now validates the session cookie JWT directly, matching the same flow as `JWTAuthMiddleware()`.
+- **Go 1.24.13 upgrade**: Updated from Go 1.24.0/1.24.11 to 1.24.13, fixing 6 stdlib vulnerabilities (html/template, os, net/url, crypto/tls).
+- **JS dependency vulnerabilities**: Updated picomatch via `npm audit fix`, resolving 4 Dependabot alerts (2 high ReDoS, 2 medium method injection).
 - **Test pollution across packages**: Added verify-and-recreate pattern for MCP and api/v1 test fixtures, TestMain teardown functions, fixed password hashing test to use fixed IDs (70000 range)
 
 ### Security
