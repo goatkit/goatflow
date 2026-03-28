@@ -440,13 +440,42 @@ func buildPluginArgs(c *gin.Context) json.RawMessage {
 // Session auth is checked first (user_id already set by session middleware), then falls back to JWT.
 func SessionOrJWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// If session middleware already authenticated the user, continue
+		// If a prior middleware (e.g. YAML session middleware) already authenticated, continue.
 		if _, exists := c.Get("user_id"); exists {
 			c.Next()
 			return
 		}
-		// Fall back to JWT auth
-		JWTAuthMiddleware()(c)
+
+		// Extract token from cookies or Authorization header and validate.
+		token := ExtractToken(c)
+		if token == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Authentication required"})
+			c.Abort()
+			return
+		}
+
+		jwtMgr := getJWTManager()
+		if jwtMgr == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Auth service unavailable"})
+			c.Abort()
+			return
+		}
+
+		claims, err := jwtMgr.ValidateToken(token)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Invalid or expired token"})
+			c.Abort()
+			return
+		}
+
+		// Set user context — same as JWTAuthMiddleware.
+		c.Set("user_id", int(claims.UserID))
+		c.Set("user_email", claims.Email)
+		c.Set("user_role", claims.Role)
+		c.Set("claims", claims)
+		c.Set("isInAdminGroup", claims.IsAdmin)
+
+		c.Next()
 	}
 }
 
