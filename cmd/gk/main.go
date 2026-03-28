@@ -33,10 +33,28 @@ func main() {
 			fmt.Printf("Unknown plugin command: %s\n", os.Args[2])
 			os.Exit(1)
 		}
+	case "install":
+		if len(os.Args) < 3 {
+			fmt.Println("Usage: gk install <plugin-name>")
+			os.Exit(1)
+		}
+		marketplaceInstall(os.Args[2])
+	case "update":
+		pluginName := ""
+		if len(os.Args) >= 3 {
+			pluginName = os.Args[2]
+		}
+		marketplaceUpdate(pluginName)
+	case "search":
+		if len(os.Args) < 3 {
+			fmt.Println("Usage: gk search <query>")
+			os.Exit(1)
+		}
+		marketplaceSearch(strings.Join(os.Args[2:], " "))
 	case "help", "-h", "--help":
 		printUsage()
 	case "version", "-v", "--version":
-		fmt.Println("gk version 0.7.0")
+		fmt.Println("gk version 0.8.0")
 	default:
 		fmt.Printf("Unknown command: %s\n", os.Args[1])
 		printUsage()
@@ -45,12 +63,19 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println("GoatKit CLI - Plugin Development Tool")
+	fmt.Println("GoatKit CLI - Plugin Development & Marketplace Tool")
 	fmt.Println()
 	fmt.Println("Usage: gk <command> [arguments]")
 	fmt.Println()
-	fmt.Println("Commands:")
+	fmt.Println("Development:")
 	fmt.Println("  plugin init    Create a new plugin from template")
+	fmt.Println()
+	fmt.Println("Marketplace:")
+	fmt.Println("  install <name> Install a plugin from the marketplace")
+	fmt.Println("  update [name]  Check for and apply plugin updates")
+	fmt.Println("  search <query> Search the marketplace for plugins")
+	fmt.Println()
+	fmt.Println("Other:")
 	fmt.Println("  help           Show this help message")
 	fmt.Println("  version        Show version information")
 }

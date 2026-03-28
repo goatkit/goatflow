@@ -374,11 +374,12 @@ Shared UI components usable by any plugin. Server-rendered HTML building blocks.
 - [x] WCAG 2.1 AA accessible — `role` attributes, `aria-label`, `aria-valuenow`/`aria-valuemax` on progress bars
 
 **Plugin Ecosystem Expansion**
-- [ ] Plugin marketplace integration (browse, install, update)
-- [ ] Plugin dependency resolution (enterprise plugins can declare dependencies on each other)
-- [ ] Theme-as-plugin support (themes distributed via plugin system)
-- [ ] Plugin update notifications and auto-update
-- [ ] Kubernetes pod isolation for plugins
+- [x] Plugin marketplace integration — `gk install/update/search` CLI commands, GitHub Releases backend, marketplace index client
+- [x] Plugin dependency resolution — `Dependencies` field in manifest, `ResolveDependencies()` with missing dep detection, `TopologicalSort()` for load ordering with circular dependency detection
+- [x] Theme-as-plugin support — `PluginType: "theme"` in manifest, `InstallTheme()` extracts CSS/fonts to `.cache/`, `UninstallTheme()` cleanup
+- [x] Plugin update notifications — `CheckUpdates()` compares installed versions against marketplace index
+- [x] Kubernetes pod isolation — `GOATFLOW_PLUGIN_ISOLATION=k8s` mode, `GeneratePodManifest()` generates Deployment + Service + NetworkPolicy YAML
+- [x] Design spec: `docs/design/PLUGIN_MARKETPLACE.md`
 
 **Self-Service Authentication**
 - [ ] Password recovery UI for customers (email-based reset)
