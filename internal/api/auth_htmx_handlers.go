@@ -21,6 +21,25 @@ import (
 	"github.com/goatkit/goatflow/internal/shared"
 )
 
+// resolveUserRole determines the role and admin status for a user by checking
+// their admin group membership. Used by all login paths (direct, 2FA, demo)
+// to ensure consistent JWT claims.
+func resolveUserRole(userID uint) (role string, isAdmin bool) {
+	role = "Agent"
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		return
+	}
+	var cnt int
+	_ = db.QueryRow(database.ConvertPlaceholders(
+		`SELECT COUNT(*) FROM group_user gu JOIN `+"`groups`"+` g ON gu.group_id = g.id WHERE gu.user_id = ? AND LOWER(g.name) = 'admin'`), userID).Scan(&cnt)
+	if cnt > 0 {
+		role = "Admin"
+		isAdmin = true
+	}
+	return
+}
+
 // handleLoginPage shows the login page.
 func handleLoginPage(c *gin.Context) {
 	if cookie, err := c.Cookie("access_token"); err == nil && cookie != "" {
@@ -193,18 +212,7 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 
 		var token string
 		if jwtManager != nil {
-			// Determine role and admin status from group membership
-			role := "Agent"
-			isAdmin := false
-			if db != nil {
-				var cnt int
-				_ = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(
-					`SELECT COUNT(*) FROM group_user gu JOIN `+"`groups`"+` g ON gu.group_id = g.id WHERE gu.user_id = ? AND LOWER(g.name) = 'admin'`), userID).Scan(&cnt)
-				if cnt > 0 {
-					role = "Admin"
-					isAdmin = true
-				}
-			}
+			role, isAdmin := resolveUserRole(userID)
 			tokenStr, err := jwtManager.GenerateTokenWithLogin(userID, username, username, role, isAdmin, 1)
 			if err != nil {
 				sendErrorResponse(c, http.StatusInternalServerError, "Failed to generate token")
@@ -514,7 +522,8 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		// Complete the login - generate token and set cookies
 		var token string
 		if jwtManager != nil {
-			tokenStr, err := jwtManager.GenerateToken(uint(userID), username, "user", 1)
+			role, isAdmin := resolveUserRole(uint(userID))
+			tokenStr, err := jwtManager.GenerateTokenWithLogin(uint(userID), username, username, role, isAdmin, 1)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"success": false,

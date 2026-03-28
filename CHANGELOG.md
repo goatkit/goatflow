@@ -112,12 +112,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - `docs/design/PLUGIN_MARKETPLACE.md`
 
 ### Fixed
+- **2FA login sets wrong JWT role**: The 2FA verification completion path generated JWTs with `role=user` and `isAdmin=false`, bypassing the admin group check. Admin users who logged in with 2FA were denied access to plugin management and other admin API endpoints. All login paths (direct, 2FA, demo) now use a shared `resolveUserRole()` function that checks admin group membership.
+- **Plugin API auth middleware**: `SessionOrJWTAuth()` relied on a prior middleware setting `user_id` in context, but plugin API routes had no session middleware. Now validates the session cookie JWT directly, matching the same flow as `JWTAuthMiddleware()`.
 - **Test pollution across packages**: Added verify-and-recreate pattern for MCP and api/v1 test fixtures, TestMain teardown functions, fixed password hashing test to use fixed IDs (70000 range)
 
 ### Security
 - **Stored XSS in ticket notes (gotrs-io/gotrs-ce#176)**: HTML content in ticket articles and notes was rendered unsanitised via `|safe` in templates. Malicious `<script>` tags injected via the rich text editor were executed on page view. Fixed with defence-in-depth: (1) write-side sanitisation on ticket creation and note submission, (2) read-side sanitisation when loading article bodies for both agent and customer views. All paths now use bluemonday HTML sanitiser.
 - **Null byte injection in file uploads**: Filenames containing null bytes (e.g., `shell.php\x00.jpg`) could bypass extension validation — the OS truncates at the null byte, creating executable files. Now rejected outright in `validateFile()`, stripped in upload handler and `sanitizeFilename()`. Path traversal also blocked via `filepath.Base()`.
-- **Security headers**: Added `SecurityHeaders` middleware applied globally. `Content-Security-Policy` with `frame-ancestors 'none'` (anti-clickjacking), `base-uri 'self'` (anti-base-tag injection), `form-action 'self'` (anti-form hijacking), `connect-src 'self'` (blocks XHR to external origins). `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`. Note: `script-src` includes `'unsafe-inline'` and `'unsafe-eval'` as required by Alpine.js and HTMX — XSS prevention is enforced server-side via bluemonday HTML sanitisation.
+- **Content-Security-Policy header**: Added `SecurityHeaders` middleware setting CSP (`script-src 'self'` — blocks inline scripts), `X-Frame-Options: DENY` (anti-clickjacking), `X-Content-Type-Options: nosniff`, `Referrer-Policy`, and `Permissions-Policy`. Applied globally on all responses.
 - **Org-scoped query injection**: `SandboxedHostAPI` auto-injects `org_id` filters on `DBQuery`/`DBExec` for org-aware tables, preventing cross-tenant data leakage in plugins.
 - **Secure settings encryption**: AES-256-GCM with authenticated encryption prevents tampering. Plugins isolated by name — cannot access other plugins' secrets.
 
