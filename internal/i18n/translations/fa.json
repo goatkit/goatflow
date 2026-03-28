@@ -3445,7 +3445,19 @@
         },
         "stat_card": {
             "no_change": "بدون تغییر"
-        }
+    },
+    "dropzone": {
+      "label": "ناحیه آپلود فایل",
+      "drag_here": "فایل‌ها را اینجا بکشید یا کلیک کنید",
+      "max_size": "حداکثر",
+      "choose_file": "انتخاب فایل"
+    },
+    "presence": {
+      "label": "کاربران فعال",
+      "users_viewing": "کاربر در حال مشاهده",
+      "is_editing": "در حال ویرایش",
+      "is_viewing": "در حال مشاهده"
+    }
     },
     "self_service": {
         "forgot_password": {
@@ -3472,5 +3484,9 @@
         "verify_email": {
             "success": "ایمیل تأیید شد."
         }
-    }
+  },
+  "accessibility": {
+    "skip_to_content": "رفتن به محتوای اصلی",
+    "main_navigation": "ناوبری اصلی"
+  }
 }

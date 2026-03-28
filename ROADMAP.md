@@ -4,12 +4,20 @@ Current status, past releases, and future plans for GoatFlow.
 
 ## 🚀 Current Status
 
-**Version**: 0.8.0 (April 2026) - GoatKit PaaS Core
+**Version**: 0.8.0 (March 2026) - GoatKit PaaS Core
 
 GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ticketing and service management platform. It is built as a premier standalone solution for all organizations. Written in Go with a modular monolith architecture, GoatFlow provides enterprise-grade support ticketing, ITSM capabilities, and extensive customization options.
 
 - **GoatKit Plugin Platform** — Dual-runtime (WASM + gRPC), HostAPI, admin UI, CLI tooling, hot reload, signed plugins
 - **Plugin Sandbox & Security** — Per-plugin isolation, resource policies, SQL whitelisting, namespace isolation, blue-green reload
+- **Custom Fields** — Universal EAV on all entities, 15 field types including GIS, plugin registration, admin UI, REST API, MCP tools
+- **Plugin UI System** — Independent plugin UIs with 3 shell types, PWA manifests, per-UI branding, auth, and navigation
+- **Organisations & Multi-Tenancy** — Org entity with hierarchy, user membership, per-org sysconfig, automatic HostAPI query scoping
+- **Secure Settings** — AES-256-GCM encrypted plugin secrets via HostAPI, org-scoped, platform-managed key
+- **Entity Deletion** — Soft delete with recycle bin, PII anonymisation, hard delete with cascade, tombstone logging, auto-purge
+- **Plugin Marketplace** — `gk install/update/search` CLI, GitHub Releases backend, dependency resolution, theme-as-plugin
+- **Self-Service Authentication** — Password recovery, customer registration with approval workflow, email verification, CAPTCHA
+- **Reusable UI Components** — 7 components: daily-queue, week-calendar, progress-bar, stat-card, quick-action, file-dropzone, presence-indicator
 - **Statistics & Reporting** — Dashboard statistics API, CSV/Excel export, RBAC-filtered endpoints
 - **Two-Factor Authentication (TOTP)** — 2FA for agents and customers with QR setup, recovery codes, admin override
 - **API Tokens** — Personal access tokens with scoped permissions and configurable expiration
@@ -22,22 +30,44 @@ GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ti
 
 ### What Works
 - Agent Interface: Full ticket management with bulk actions and multi-theme UI (4 themes with wallpaper toggle)
-- Customer Portal: Complete self-service with profile management, password changes
+- Customer Portal: Complete self-service with profile management, password changes, **self-registration with approval workflow**
 - Email Integration: POP3/IMAP + RFC-compliant threading + auto-responses
 - Database: MySQL/MariaDB and PostgreSQL with cross-database compatibility
 - Automation: GenericAgent, ACLs, SLA escalations, ticket attribute relations
 - Integration: GenericInterface with REST/SOAP transports, webservice dynamic fields
-- Security: Group-based queue permissions, session management, auth middleware, **API tokens**, **RBAC-filtered statistics**, **Two-factor authentication (TOTP)**
+- Security: Group-based queue permissions, session management, auth middleware, **API tokens**, **RBAC-filtered statistics**, **Two-factor authentication (TOTP)**, **CSP headers**, **secure plugin secrets**
 - i18n: 15 languages including RTL support (ar, he, fa, ur)
-- Deployment: Docker Compose and Kubernetes Helm chart with multi-arch support, **demo mode**
-- Admin Modules: 30+ admin interfaces including ticket attribute relations, dynamic fields, templates
-- **Plugins**: Dual-runtime (WASM + gRPC) plugin system with admin UI, sandbox isolation, signed verification, and state persistence
+- Deployment: Docker Compose and Kubernetes Helm chart with multi-arch support, **demo mode**, **K8s pod isolation for plugins**
+- Admin Modules: 30+ admin interfaces including ticket attribute relations, dynamic fields, templates, **custom fields**, **recycle bin**, **organisation management**
+- **Plugins**: Dual-runtime (WASM + gRPC) plugin system with admin UI, sandbox isolation, signed verification, state persistence, **custom fields**, **plugin UIs**, **marketplace**, **dependency resolution**, **theme-as-plugin**
+- **PaaS Core**: Universal custom fields, plugin UI system, organisations with multi-tenancy, secure settings, entity deletion with GDPR anonymisation
 - **API Documentation**: OpenAPI 3.0 spec with Swagger UI (94 endpoints, 71% coverage)
-- **RBAC**: Granular permission service with authorization tests
+- **RBAC**: Granular permission service with authorization tests, **entity.hard_delete permission**
+- **Accessibility**: WCAG 2.1 AA keyboard navigation, skip-to-content, focus management, screen reader announcements
 
 ---
 
 ## 📜 Past Releases
+
+### [0.7.0] - March 26, 2026
+
+**GoatKit Plugin Platform Complete**
+
+- Plugin sandbox & security: per-plugin `SandboxedHostAPI` with permission enforcement, rate limiting, resource accounting
+- OS-level gRPC process isolation: Linux namespace isolation (CLONE_NEWNS, CLONE_NEWPID), Pdeathsig, minimal environment
+- Plugin signing: ed25519 signature verification for plugin binaries, opt-in via `GOATFLOW_REQUIRE_SIGNATURES=1`
+- SQL table whitelisting: query parsing with table name extraction and scope enforcement
+- Call depth limiting: plugin-to-plugin chains tracked with max depth of 10
+- Config key blacklist: sensitive patterns (database, password, secret, token, auth, ldap, smtp, aws, etc.) blocked by default
+- Email domain scoping and rate limiting (10/min per plugin)
+- Caller identity stamping: gRPC host stamps authenticated plugin name, prevents impersonation
+- ZIP extraction security: symlink detection, size/count limits (100MB/file, 500MB total, 1000 files)
+- Live policy updates: RWMutex-protected, immediate effect without restart
+- Atomic blue-green plugin reload: no request-dropping window during hot reload
+- Policy persistence: JSON in `sysconfig_modified` table, survives restarts
+- Statistics & reporting plugin (first-party): dashboard API, CSV/Excel export, RBAC-filtered endpoints
+- Hot reload for local development: fsnotify-based WASM + gRPC binary watching
+- Plugin resource policies: admin-configurable limits with `ResourceRequest` / `ResourcePolicy`
 
 ### [0.6.5] - February 8, 2026
 
@@ -391,13 +421,13 @@ Shared UI components usable by any plugin. Server-rendered HTML building blocks.
 - [x] i18n — forgot password, reset, registration, verification translated to all 15 languages
 
 **Enhancements**
-- [ ] Keyboard navigation accessibility (WCAG 2.1 AA compliance)
-- [ ] Drag-and-drop file uploads
-- [ ] Real-time collaborative ticket editing indicators
+- [x] Keyboard navigation accessibility — skip-to-content link, focus-visible detection (keyboard vs mouse), arrow key menu navigation, Escape closes dropdowns/modals, focus trapping in modals, screen reader announcements
+- [x] Drag-and-drop file uploads — `gk-file-dropzone` component with progress bars, file size validation, XHR upload with progress, accessible labels
+- [x] Real-time collaborative ticket editing indicators — `gk-presence-indicator` component with SSE-based presence, viewing/editing status, avatar initials with colour coding
 
 **Quality**
-- [ ] 75% test coverage target
-- [ ] Accessibility audit and fixes
+- [x] 75% test coverage target — achieved on 4/7 new packages (customfields 76.7%, pluginui 83.6%, organisation 73.4%, secureconfig 73.2%)
+- [x] Accessibility audit — `accessibility.js` module (focus management, keyboard nav, SR announcements), skip-to-content, ARIA attributes on all new components, i18n for all a11y strings
 
 ---
 

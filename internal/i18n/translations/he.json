@@ -3398,7 +3398,19 @@
         },
         "stat_card": {
             "no_change": "ללא שינוי"
-        }
+    },
+    "dropzone": {
+      "label": "אזור העלאת קבצים",
+      "drag_here": "גרור קבצים לכאן או לחץ",
+      "max_size": "מקסימום",
+      "choose_file": "בחר קובץ"
+    },
+    "presence": {
+      "label": "משתמשים פעילים",
+      "users_viewing": "משתמשים צופים",
+      "is_editing": "עורך",
+      "is_viewing": "צופה"
+    }
     },
     "self_service": {
         "forgot_password": {
@@ -3425,5 +3437,9 @@
         "verify_email": {
             "success": "האימייל אומת."
         }
-    }
+  },
+  "accessibility": {
+    "skip_to_content": "דלג לתוכן הראשי",
+    "main_navigation": "ניווט ראשי"
+  }
 }

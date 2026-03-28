@@ -3346,7 +3346,19 @@
         },
         "stat_card": {
             "no_change": "无变化"
-        }
+    },
+    "dropzone": {
+      "label": "文件上传区域",
+      "drag_here": "拖拽文件到此处或点击浏览",
+      "max_size": "最大",
+      "choose_file": "选择文件"
+    },
+    "presence": {
+      "label": "在线用户",
+      "users_viewing": "位用户正在查看",
+      "is_editing": "正在编辑",
+      "is_viewing": "正在查看"
+    }
     },
     "self_service": {
         "forgot_password": {
@@ -3373,5 +3385,9 @@
         "verify_email": {
             "success": "邮箱验证成功。"
         }
-    }
+  },
+  "accessibility": {
+    "skip_to_content": "跳到主要内容",
+    "main_navigation": "主导航"
+  }
 }

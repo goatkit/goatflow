@@ -3917,7 +3917,19 @@
         },
         "stat_card": {
             "no_change": "Bez zmian"
-        }
+    },
+    "dropzone": {
+      "label": "Obszar przesyłania plików",
+      "drag_here": "Przeciągnij pliki tutaj lub kliknij",
+      "max_size": "Maksimum",
+      "choose_file": "Wybierz plik"
+    },
+    "presence": {
+      "label": "Aktywni użytkownicy",
+      "users_viewing": "użytkowników przegląda",
+      "is_editing": "edytuje",
+      "is_viewing": "przegląda"
+    }
     },
     "self_service": {
         "forgot_password": {
@@ -3944,5 +3956,9 @@
         "verify_email": {
             "success": "E-mail zweryfikowany."
         }
-    }
+  },
+  "accessibility": {
+    "skip_to_content": "Przejdź do głównej treści",
+    "main_navigation": "Nawigacja główna"
+  }
 }

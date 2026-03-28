@@ -3349,7 +3349,19 @@
         },
         "stat_card": {
             "no_change": "Keine Änderung"
-        }
+    },
+    "dropzone": {
+      "label": "Datei-Upload-Bereich",
+      "drag_here": "Dateien hierher ziehen oder klicken",
+      "max_size": "Maximum",
+      "choose_file": "Datei auswählen"
+    },
+    "presence": {
+      "label": "Aktive Benutzer",
+      "users_viewing": "Benutzer anzeigend",
+      "is_editing": "bearbeitet",
+      "is_viewing": "betrachtet"
+    }
     },
     "self_service": {
         "forgot_password": {
@@ -3376,5 +3388,9 @@
         "verify_email": {
             "success": "E-Mail erfolgreich verifiziert."
         }
-    }
+  },
+  "accessibility": {
+    "skip_to_content": "Zum Hauptinhalt springen",
+    "main_navigation": "Hauptnavigation"
+  }
 }

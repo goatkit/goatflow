@@ -1,0 +1,130 @@
+{# gk-file-dropzone — Drag-and-drop file upload area #}
+{# Variables: #}
+{#   upload_url: URL to POST files to (required) #}
+{#   accept: file type filter (e.g., "image/*,.pdf") #}
+{#   max_size_mb: max file size in MB (default: 10) #}
+{#   multiple: allow multiple files (default: true) #}
+{#   field_name: form field name (default: "file") #}
+
+<div class="gk-file-dropzone"
+     x-data="fileDropzone('{{ upload_url }}', '{{ field_name|default:"file" }}', {{ max_size_mb|default:10 }})"
+     @dragover.prevent="dragover = true"
+     @dragleave.prevent="dragover = false"
+     @drop.prevent="handleDrop($event)"
+     :class="{ 'gk-dropzone-active': dragover }"
+     role="region"
+     aria-label="{{ t("components.dropzone.label")|default:"File upload area" }}">
+
+    <div class="flex flex-col items-center justify-center py-8 px-4 rounded-lg border-2 border-dashed transition-colors cursor-pointer"
+         style="border-color: var(--gk-border-default); background: var(--gk-bg-surface);"
+         :style="dragover ? 'border-color: var(--gk-primary); background: var(--gk-bg-elevated);' : ''"
+         @click="$refs.fileInput.click()">
+
+        <i class="fa-solid fa-cloud-arrow-up text-3xl mb-3" style="color: var(--gk-text-muted);" aria-hidden="true"></i>
+
+        <p class="text-sm font-medium" style="color: var(--gk-text-primary);">
+            {{ t("components.dropzone.drag_here")|default:"Drag files here or click to browse" }}
+        </p>
+        <p class="text-xs mt-1" style="color: var(--gk-text-muted);">
+            {{ t("components.dropzone.max_size")|default:"Maximum" }} {{ max_size_mb|default:10 }}MB
+        </p>
+
+        <input type="file"
+               x-ref="fileInput"
+               @change="handleSelect($event)"
+               {% if accept %}accept="{{ accept }}"{% endif %}
+               {% if multiple != false %}multiple{% endif %}
+               class="hidden"
+               aria-label="{{ t("components.dropzone.choose_file")|default:"Choose file" }}" />
+    </div>
+
+    {# Upload progress #}
+    <template x-for="file in files" :key="file.name">
+        <div class="flex items-center gap-3 mt-2 p-2 rounded" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default);">
+            <i class="fa-solid fa-file text-sm" style="color: var(--gk-text-muted);" aria-hidden="true"></i>
+            <span class="text-sm flex-1 truncate" x-text="file.name" style="color: var(--gk-text-primary);"></span>
+            <span class="text-xs" x-text="formatSize(file.size)" style="color: var(--gk-text-muted);"></span>
+            <template x-if="file.uploading">
+                <div class="w-16 h-1.5 rounded-full overflow-hidden" style="background: var(--gk-bg-elevated);">
+                    <div class="h-full rounded-full transition-all" :style="'width:' + file.progress + '%; background: var(--gk-primary);'"></div>
+                </div>
+            </template>
+            <template x-if="file.done">
+                <i class="fa-solid fa-check text-sm" style="color: var(--gk-success);" aria-hidden="true"></i>
+            </template>
+            <template x-if="file.error">
+                <i class="fa-solid fa-xmark text-sm" style="color: var(--gk-error);" :title="file.error" aria-hidden="true"></i>
+            </template>
+        </div>
+    </template>
+</div>
+
+<script>
+function fileDropzone(uploadUrl, fieldName, maxSizeMB) {
+    return {
+        dragover: false,
+        files: [],
+
+        handleDrop(event) {
+            this.dragover = false;
+            this.uploadFiles(event.dataTransfer.files);
+        },
+
+        handleSelect(event) {
+            this.uploadFiles(event.target.files);
+            event.target.value = '';
+        },
+
+        uploadFiles(fileList) {
+            for (var i = 0; i < fileList.length; i++) {
+                var file = fileList[i];
+                if (file.size > maxSizeMB * 1024 * 1024) {
+                    this.files.push({ name: file.name, size: file.size, error: 'File too large', done: false, uploading: false, progress: 0 });
+                    continue;
+                }
+                this.upload(file);
+            }
+        },
+
+        upload(file) {
+            var entry = { name: file.name, size: file.size, uploading: true, done: false, error: null, progress: 0 };
+            this.files.push(entry);
+
+            var formData = new FormData();
+            formData.append(fieldName, file);
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', uploadUrl, true);
+
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    entry.progress = Math.round((e.loaded / e.total) * 100);
+                }
+            };
+
+            xhr.onload = function() {
+                entry.uploading = false;
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    entry.done = true;
+                    if (typeof announceToSR === 'function') announceToSR(file.name + ' uploaded');
+                } else {
+                    entry.error = 'Upload failed (' + xhr.status + ')';
+                }
+            };
+
+            xhr.onerror = function() {
+                entry.uploading = false;
+                entry.error = 'Network error';
+            };
+
+            xhr.send(formData);
+        },
+
+        formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+    };
+}
+</script>

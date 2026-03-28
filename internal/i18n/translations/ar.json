@@ -3364,7 +3364,19 @@
         },
         "stat_card": {
             "no_change": "لا تغيير"
-        }
+    },
+    "dropzone": {
+      "label": "منطقة رفع الملفات",
+      "drag_here": "اسحب الملفات هنا أو انقر للاستعراض",
+      "max_size": "الحد الأقصى",
+      "choose_file": "اختر ملف"
+    },
+    "presence": {
+      "label": "المستخدمون النشطون",
+      "users_viewing": "مستخدمون يشاهدون",
+      "is_editing": "يحرر",
+      "is_viewing": "يشاهد"
+    }
     },
     "self_service": {
         "forgot_password": {
@@ -3391,5 +3403,9 @@
         "verify_email": {
             "success": "تم التحقق من البريد."
         }
-    }
+  },
+  "accessibility": {
+    "skip_to_content": "تخطي إلى المحتوى الرئيسي",
+    "main_navigation": "التنقل الرئيسي"
+  }
 }

@@ -3346,7 +3346,19 @@
         },
         "stat_card": {
             "no_change": "Aucun changement"
-        }
+    },
+    "dropzone": {
+      "label": "Zone de téléchargement",
+      "drag_here": "Glissez les fichiers ici ou cliquez",
+      "max_size": "Maximum",
+      "choose_file": "Choisir un fichier"
+    },
+    "presence": {
+      "label": "Utilisateurs actifs",
+      "users_viewing": "utilisateurs consultent",
+      "is_editing": "modifie",
+      "is_viewing": "consulte"
+    }
     },
     "self_service": {
         "forgot_password": {
@@ -3373,5 +3385,9 @@
         "verify_email": {
             "success": "E-mail vérifié."
         }
-    }
+  },
+  "accessibility": {
+    "skip_to_content": "Aller au contenu principal",
+    "main_navigation": "Navigation principale"
+  }
 }

@@ -1,0 +1,64 @@
+{# gk-presence-indicator — Shows who else is viewing/editing this entity #}
+{# Variables: #}
+{#   entity_type: ticket, article, etc. #}
+{#   entity_id: the entity ID #}
+{#   sse_url: SSE endpoint for presence events (default: /api/v1/sse) #}
+
+<div class="gk-presence-indicator"
+     x-data="presenceIndicator('{{ entity_type }}', {{ entity_id }}, '{{ sse_url|default:"/api/v1/sse" }}')"
+     x-init="connect()"
+     aria-live="polite"
+     aria-label="{{ t("components.presence.label")|default:"Active users" }}">
+
+    <template x-if="viewers.length > 0">
+        <div class="flex items-center gap-1">
+            <template x-for="viewer in viewers" :key="viewer.id">
+                <div class="relative" :title="viewer.name + ' — ' + viewer.action">
+                    <span class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-medium"
+                          :style="'background:' + viewer.color + '20; color:' + viewer.color + '; border: 2px solid ' + viewer.color">
+                        <span x-text="viewer.initials"></span>
+                    </span>
+                    <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2"
+                          style="border-color: var(--gk-bg-surface);"
+                          :style="'background:' + (viewer.action === 'editing' ? 'var(--gk-warning)' : 'var(--gk-success)')"></span>
+                </div>
+            </template>
+            <span class="text-xs ml-1" style="color: var(--gk-text-muted);"
+                  x-text="viewers.length === 1 ? viewers[0].name + ' ' + viewerAction(viewers[0]) : viewers.length + ' ' + '{{ t("components.presence.users_viewing")|default:"users viewing" }}'">
+            </span>
+        </div>
+    </template>
+</div>
+
+<script>
+function presenceIndicator(entityType, entityId, sseUrl) {
+    return {
+        viewers: [],
+        eventSource: null,
+
+        connect: function() {
+            var self = this;
+            try {
+                this.eventSource = new EventSource(sseUrl);
+                this.eventSource.addEventListener('presence', function(e) {
+                    try {
+                        var data = JSON.parse(e.data);
+                        if (data.entity_type === entityType && data.entity_id === entityId) {
+                            self.viewers = data.viewers || [];
+                        }
+                    } catch(err) { /* ignore parse errors */ }
+                });
+            } catch(err) { /* SSE not available */ }
+        },
+
+        viewerAction: function(viewer) {
+            if (viewer.action === 'editing') return '{{ t("components.presence.is_editing")|default:"is editing" }}';
+            return '{{ t("components.presence.is_viewing")|default:"is viewing" }}';
+        },
+
+        destroy: function() {
+            if (this.eventSource) this.eventSource.close();
+        }
+    };
+}
+</script>

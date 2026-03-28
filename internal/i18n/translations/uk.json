@@ -3375,7 +3375,19 @@
         },
         "stat_card": {
             "no_change": "Без змін"
-        }
+    },
+    "dropzone": {
+      "label": "Область завантаження файлів",
+      "drag_here": "Перетягніть файли сюди або натисніть",
+      "max_size": "Максимум",
+      "choose_file": "Обрати файл"
+    },
+    "presence": {
+      "label": "Активні користувачі",
+      "users_viewing": "користувачів переглядають",
+      "is_editing": "редагує",
+      "is_viewing": "переглядає"
+    }
     },
     "self_service": {
         "forgot_password": {
@@ -3402,5 +3414,9 @@
         "verify_email": {
             "success": "Пошту підтверджено."
         }
-    }
+  },
+  "accessibility": {
+    "skip_to_content": "Перейти до основного вмісту",
+    "main_navigation": "Основна навігація"
+  }
 }

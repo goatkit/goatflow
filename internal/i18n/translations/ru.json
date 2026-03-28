@@ -3346,7 +3346,19 @@
         },
         "stat_card": {
             "no_change": "Без изменений"
-        }
+    },
+    "dropzone": {
+      "label": "Область загрузки файлов",
+      "drag_here": "Перетащите файлы сюда или нажмите",
+      "max_size": "Максимум",
+      "choose_file": "Выбрать файл"
+    },
+    "presence": {
+      "label": "Активные пользователи",
+      "users_viewing": "пользователей просматривают",
+      "is_editing": "редактирует",
+      "is_viewing": "просматривает"
+    }
     },
     "self_service": {
         "forgot_password": {
@@ -3373,5 +3385,9 @@
         "verify_email": {
             "success": "Почта подтверждена."
         }
-    }
+  },
+  "accessibility": {
+    "skip_to_content": "Перейти к основному содержанию",
+    "main_navigation": "Основная навигация"
+  }
 }
