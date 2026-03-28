@@ -26,6 +26,9 @@ func TestSecurityHeaders(t *testing.T) {
 		want   string
 	}{
 		{"Content-Security-Policy", "default-src 'self'"},
+		{"Content-Security-Policy", "frame-ancestors 'none'"},
+		{"Content-Security-Policy", "base-uri 'self'"},
+		{"Content-Security-Policy", "form-action 'self'"},
 		{"X-Frame-Options", "DENY"},
 		{"X-Content-Type-Options", "nosniff"},
 		{"X-XSS-Protection", "1; mode=block"},
@@ -34,7 +37,7 @@ func TestSecurityHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.header, func(t *testing.T) {
+		t.Run(tt.header+"/"+tt.want, func(t *testing.T) {
 			got := w.Header().Get(tt.header)
 			if got == "" {
 				t.Errorf("%s header missing", tt.header)
@@ -45,7 +48,7 @@ func TestSecurityHeaders(t *testing.T) {
 	}
 }
 
-func TestSecurityHeaders_CSPBlocksInlineScripts(t *testing.T) {
+func TestSecurityHeaders_CSPAllowsAlpineAndHTMX(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(SecurityHeaders())
@@ -59,23 +62,40 @@ func TestSecurityHeaders_CSPBlocksInlineScripts(t *testing.T) {
 
 	csp := w.Header().Get("Content-Security-Policy")
 
-	// script-src must NOT include 'unsafe-inline'
-	// Parse the script-src directive specifically (not the whole CSP string,
-	// since style-src legitimately uses 'unsafe-inline' for Tailwind).
+	// Alpine.js requires unsafe-eval (x-data expression evaluation).
+	if !strings.Contains(csp, "'unsafe-eval'") {
+		t.Error("CSP must include 'unsafe-eval' for Alpine.js")
+	}
+
+	// HTMX and Alpine require unsafe-inline (inline scripts and event handlers).
 	for _, directive := range strings.Split(csp, ";") {
 		directive = strings.TrimSpace(directive)
-		if strings.HasPrefix(directive, "script-src") && strings.Contains(directive, "'unsafe-inline'") {
-			t.Error("CSP script-src must not allow 'unsafe-inline' — this defeats XSS protection")
+		if strings.HasPrefix(directive, "script-src") {
+			if !strings.Contains(directive, "'unsafe-inline'") {
+				t.Error("script-src must include 'unsafe-inline' for HTMX/Alpine.js")
+			}
 		}
 	}
+}
 
-	// script-src should be 'self' only
-	if !strings.Contains(csp, "script-src 'self'") {
-		t.Errorf("CSP should contain script-src 'self', got: %s", csp)
+func TestSecurityHeaders_PreventsClickjacking(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(SecurityHeaders())
+	r.GET("/test", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/test", nil)
+	r.ServeHTTP(w, req)
+
+	csp := w.Header().Get("Content-Security-Policy")
+	if !strings.Contains(csp, "frame-ancestors 'none'") {
+		t.Error("CSP must block framing with frame-ancestors 'none'")
 	}
 
-	// frame-ancestors should be 'none' (anti-clickjacking)
-	if !strings.Contains(csp, "frame-ancestors 'none'") {
-		t.Errorf("CSP should contain frame-ancestors 'none', got: %s", csp)
+	if w.Header().Get("X-Frame-Options") != "DENY" {
+		t.Error("X-Frame-Options must be DENY")
 	}
 }
