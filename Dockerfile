@@ -4,7 +4,7 @@
 
 # Global build arg - must be before any FROM that uses it
 # Default provided for docker build without --build-arg; compose/make override from .env
-ARG GO_IMAGE=golang:1.24-alpine
+ARG GO_IMAGE=golang:1.24.13-alpine
 
 # ============================================
 # Stage 0: Download third-party assets
