@@ -79,6 +79,7 @@
 
     <!-- HTMX for dynamic updates (vendored) -->
     <script src="/static/js/htmx.min.js"></script>
+    <script defer src="/static/js/accessibility.js"></script>
 
     <!-- HTMX configuration for authentication -->
     <script>
@@ -281,8 +282,13 @@
         {% set logoutHref = "/customer/logout" %}
     {% endif %}
 
+    <!-- Skip to content (keyboard accessibility) -->
+    <a href="#main-content" class="skip-to-content sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-3 focus:text-sm focus:font-medium" style="background: var(--gk-primary); color: white; top: 0; left: 0;">
+        {{ t("accessibility.skip_to_content")|default:"Skip to main content" }}
+    </a>
+
     <!-- Navigation -->
-    <nav class="gk-navbar" role="navigation" aria-label="Main navigation" x-data="{ mobileMenuOpen: false }">
+    <nav class="gk-navbar" role="navigation" aria-label="{{ t("accessibility.main_navigation")|default:"Main navigation" }}" x-data="{ mobileMenuOpen: false }">
             <div class="mx-auto px-4 xl:px-8 2xl:px-12 sm:px-6 lg:px-8">
                 <div class="flex h-16 justify-between">
                     <div class="flex">

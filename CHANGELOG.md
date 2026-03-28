@@ -5,12 +5,121 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.8.0] - March 2026
+
+**GoatKit PaaS Core** — Universal custom fields, plugin UI system, multi-tenancy, secure settings, entity deletion, reusable components, plugin marketplace, self-service authentication, and accessibility.
+
+### Added
+
+**Custom Fields (GoatKit PaaS Core)**
+- Universal EAV custom fields on all entity types (ticket, article, contact, agent, group, queue, organisation)
+- 15 field types including GIS: text, textarea, integer, decimal, boolean, date, datetime, select, multi_select, url, email, phone, point (lat/lng), polygon (GeoJSON), address (structured + auto-geocode)
+- Plugin registration via `CustomFieldSpec` in `GKRegistration` with auto-prefixed names
+- HostAPI methods: `CustomFieldsGet()`, `CustomFieldsSet()`, `CustomFieldsQuery()` with sandbox prefix enforcement
+- Auto UI rendering partial (`custom_fields.pongo2`) with edit/view/inline modes
+- Admin-defined custom fields via admin UI
+- Legacy `dynamic_field` auto-migration on startup (copy, not move — downgrade-safe)
+- Validation engine: 15 type-specific validators with regex timeout, GeoJSON validation
+- REST API v1 endpoints for definitions CRUD, entity values, and field queries
+- MCP tools: `custom_fields_get`, `custom_fields_set`, `custom_fields_query`, `custom_fields_list`
+- Database migrations: `gk_custom_field_def` + `gk_custom_field_value` (MySQL + PostgreSQL)
+
+**Plugin UI System (GoatKit PaaS Core)**
+- Independent plugin UIs with dedicated routing under `/ui/{plugin}_{ui_id}/`
+- 5 UI types: admin_page, agent_app, customer_app, public_page, kiosk
+- 3 shell templates: standard (full GoatFlow chrome), minimal (mobile-first with bottom/top/side nav), none (raw HTML)
+- Per-UI branding (logo, colour, favicon, app name) via `UIBrandingSpec`
+- PWA manifest auto-generation at `/ui/{id}/manifest.json`
+- Auth per UI type: session, PIN, token, none
+- Navigation integration — plugin UIs auto-appear in agent/customer/admin nav bars
+- Badge counts on nav items resolved via plugin function calls
+- Data scoping for customer UIs (self, org, all)
+- Database migration: `gk_plugin_ui`
+
+**Organisations & Multi-Tenancy (GoatKit PaaS Core)**
+- `gk_organisation` table with hierarchy (parent_id), status, slug-based routing
+- `gk_user_organisation` membership for agents AND customers with roles (member, admin, owner)
+- Per-org sysconfig overrides via `sysconfig_org` table — extends existing sysconfig cascade
+- Config resolution: User Preference → Org Override → System Override → System Default
+- Org context middleware — resolves active org from cookie or default membership
+- Org switcher UI component in navigation bar (HTMX-powered)
+- HostAPI `OrgID()` method for plugins to read active org
+- Automatic org-scoped query rewriting in `SandboxedHostAPI` — `DBQuery`/`DBExec` auto-inject `org_id` filters for registered org-aware tables
+- `RegisterOrgAwareTable()` for plugins to opt their tables into org scoping
+- Org switching API: `POST /api/v1/session/org`, `GET /api/v1/session/orgs`
+- Admin API: full CRUD for organisations, members, per-org config overrides
+- Backward compatible — zero organisations = single-org mode
+
+**Secure Settings (GoatKit PaaS Core)**
+- AES-256-GCM encrypted key-value storage for plugin secrets
+- Platform-managed encryption key (`GOATFLOW_SECURE_KEY` env var or auto-generated)
+- HostAPI methods: `SecureConfigGet()`, `SecureConfigSet()` with sandbox plugin-name enforcement
+- Org-scoped secrets (org-specific → global fallback)
+- Masked display helpers (`ValueHint` last-4 chars, `MaskedDisplay` for admin UI)
+- Database migration: `gk_secure_config`
+
+**Entity Deletion (GoatKit PaaS Core)**
+- Soft delete → recycle bin with configurable retention periods per entity type
+- PII anonymisation on soft delete (configurable per entity type, irreversible `[DELETED]` replacement)
+- Hard delete (purge) — physical removal with cascading linked data
+- Restore from recycle bin
+- Plugin cascade handlers via `CascadeSpec` in `GKRegistration` (OnSoftDelete, OnHardDelete)
+- Immutable tombstone logging (`gk_deletion_log`)
+- Auto-purge scheduled job with configurable retention
+- Batch/scope delete: `ScopeSoftDelete()` and `ScopeHardDelete()` for bulk operations
+- RBAC `entity.hard_delete` permission (admin-only)
+- Recycle bin admin UI with HTMX restore/purge, entity type filter, deletion log viewer
+- Database migrations: `gk_recycle_bin` + `gk_deletion_log`
+
+**Reusable UI Components**
+- `gk-daily-queue` — ordered task list with priority indicators, status badges, HTMX action buttons
+- `gk-week-calendar` — week-at-a-glance grid with colour-coded events
+- `gk-progress-bar` — counter with animated bar and configurable colour
+- `gk-stat-card` — dashboard metric card with icon, trend indicator, optional link
+- `gk-quick-action` — mobile-friendly tap targets with responsive grid
+- `gk-file-dropzone` — drag-and-drop file upload with progress bars and XHR upload
+- `gk-presence-indicator` — real-time collaborative viewing/editing indicators via SSE
+- All components theme-aware (CSS variables) and WCAG 2.1 AA accessible
+
+**Plugin Ecosystem Expansion**
+- Plugin marketplace: `gk install/update/search` CLI commands with GitHub Releases backend
+- Plugin dependency resolution: `Dependencies` field in manifest, `ResolveDependencies()`, `TopologicalSort()` with circular dependency detection
+- Theme-as-plugin: `PluginType: "theme"` in manifest, auto-extraction to theme cache
+- Plugin update notifications: `CheckUpdates()` compares installed versions against marketplace index
+- Kubernetes pod isolation: `GOATFLOW_PLUGIN_ISOLATION=k8s`, generates Deployment + Service + NetworkPolicy YAML
+
+**Self-Service Authentication**
+- Customer password recovery with email-based reset tokens (1hr expiry, anti-enumeration)
+- Customer self-registration with approval workflow (pending/approved/rejected)
+- Email verification with token-based verification links (24hr expiry)
+- CAPTCHA integration: reCAPTCHA v3 (score-based) and hCaptcha support
+- Database migrations: `gk_auth_token` + `gk_registration_request`
+
+**Accessibility & Enhancements**
+- Keyboard navigation: skip-to-content link, focus-visible detection, arrow key menu nav, Escape closes dropdowns/modals, focus trapping in modals
+- Screen reader support: `announceToSR()` for dynamic content, ARIA attributes on all new components
+- `accessibility.js` module loaded globally
+
+**Internationalisation**
+- All new features translated to 15 native languages: Arabic, Chinese, English, Farsi, French, German, Hebrew, Japanese, Klingon, Polish, Portuguese, Russian, Ukrainian, Urdu
+
+**Design Specifications**
+- `docs/design/CUSTOM_FIELDS.md`
+- `docs/design/PLUGIN_UIS.md`
+- `docs/design/ORGANISATIONS.md`
+- `docs/design/SECURE_SETTINGS.md`
+- `docs/design/ENTITY_DELETION.md`
+- `docs/design/PLUGIN_MARKETPLACE.md`
+
+### Fixed
+- **Test pollution across packages**: Added verify-and-recreate pattern for MCP and api/v1 test fixtures, TestMain teardown functions, fixed password hashing test to use fixed IDs (70000 range)
 
 ### Security
 - **Stored XSS in ticket notes (gotrs-io/gotrs-ce#176)**: HTML content in ticket articles and notes was rendered unsanitised via `|safe` in templates. Malicious `<script>` tags injected via the rich text editor were executed on page view. Fixed with defence-in-depth: (1) write-side sanitisation on ticket creation and note submission, (2) read-side sanitisation when loading article bodies for both agent and customer views. All paths now use bluemonday HTML sanitiser.
 - **Null byte injection in file uploads**: Filenames containing null bytes (e.g., `shell.php\x00.jpg`) could bypass extension validation — the OS truncates at the null byte, creating executable files. Now rejected outright in `validateFile()`, stripped in upload handler and `sanitizeFilename()`. Path traversal also blocked via `filepath.Base()`.
 - **Content-Security-Policy header**: Added `SecurityHeaders` middleware setting CSP (`script-src 'self'` — blocks inline scripts), `X-Frame-Options: DENY` (anti-clickjacking), `X-Content-Type-Options: nosniff`, `Referrer-Policy`, and `Permissions-Policy`. Applied globally on all responses.
+- **Org-scoped query injection**: `SandboxedHostAPI` auto-injects `org_id` filters on `DBQuery`/`DBExec` for org-aware tables, preventing cross-tenant data leakage in plugins.
+- **Secure settings encryption**: AES-256-GCM with authenticated encryption prevents tampering. Plugins isolated by name — cannot access other plugins' secrets.
 
 ## [0.7.0]
 

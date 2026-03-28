@@ -76,10 +76,14 @@ func getMCPFixtures(t *testing.T) *MCPTestFixtures {
 		mcpFixturesErr = mcpFixtures.setup()
 	} else {
 		// Verify fixtures still exist — another package may have cleaned up shared DB state.
-		var count int
-		if err := db.QueryRow(database.ConvertPlaceholders(
-			"SELECT COUNT(*) FROM users WHERE id = ?"), mcpFixtures.AgentAdmin).Scan(&count); err != nil || count == 0 {
-			// Fixtures were wiped — recreate them.
+		// Check user AND group membership (both can be independently wiped).
+		var userCount, membershipCount int
+		db.QueryRow(database.ConvertPlaceholders(
+			"SELECT COUNT(*) FROM users WHERE id = ?"), mcpFixtures.AgentAdmin).Scan(&userCount)
+		db.QueryRow(database.ConvertPlaceholders(
+			"SELECT COUNT(*) FROM group_user WHERE user_id = ?"), mcpFixtures.AgentAdmin).Scan(&membershipCount)
+		if userCount == 0 || membershipCount == 0 {
+			// Fixtures were wiped or incomplete — recreate them.
 			mcpFixturesErr = mcpFixtures.setup()
 		}
 	}
@@ -110,8 +114,11 @@ func (f *MCPTestFixtures) setup() error {
 	f.QueueSupport = 80001
 	f.QueueBilling = 80002
 
-	// Clean up any existing test data
+	// Clean up any existing test data (thorough — covers all linked tables)
 	_, _ = f.db.Exec("SET FOREIGN_KEY_CHECKS=0")
+	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_history WHERE ticket_id >= 80000 AND ticket_id < 90000"))
+	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime WHERE article_id IN (SELECT id FROM article WHERE ticket_id >= 80000 AND ticket_id < 90000)"))
+	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE ticket_id >= 80000 AND ticket_id < 90000"))
 	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id >= 80000 AND id < 90000"))
 	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM queue WHERE id >= 80000 AND id < 90000"))
 	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id >= 80000 AND user_id < 90000"))

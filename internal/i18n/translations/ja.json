@@ -3346,7 +3346,19 @@
         },
         "stat_card": {
             "no_change": "変更なし"
-        }
+    },
+    "dropzone": {
+      "label": "ファイルアップロード領域",
+      "drag_here": "ファイルをドラッグまたはクリック",
+      "max_size": "最大",
+      "choose_file": "ファイルを選択"
+    },
+    "presence": {
+      "label": "アクティブユーザー",
+      "users_viewing": "人が閲覧中",
+      "is_editing": "編集中",
+      "is_viewing": "閲覧中"
+    }
     },
     "self_service": {
         "forgot_password": {
@@ -3373,5 +3385,9 @@
         "verify_email": {
             "success": "メールが確認されました。"
         }
-    }
+  },
+  "accessibility": {
+    "skip_to_content": "メインコンテンツにスキップ",
+    "main_navigation": "メインナビゲーション"
+  }
 }

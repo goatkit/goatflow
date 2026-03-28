@@ -3687,6 +3687,18 @@
     },
     "stat_card": {
       "no_change": "No change"
+    },
+    "dropzone": {
+      "label": "File upload area",
+      "drag_here": "Drag files here or click to browse",
+      "max_size": "Maximum",
+      "choose_file": "Choose file"
+    },
+    "presence": {
+      "label": "Active users",
+      "users_viewing": "users viewing",
+      "is_editing": "is editing",
+      "is_viewing": "is viewing"
     }
   },
   "self_service": {
@@ -3714,5 +3726,9 @@
     "verify_email": {
       "success": "Email verified successfully."
     }
+  },
+  "accessibility": {
+    "skip_to_content": "Skip to main content",
+    "main_navigation": "Main navigation"
   }
 }

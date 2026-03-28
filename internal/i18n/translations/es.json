@@ -3345,7 +3345,19 @@
         },
         "stat_card": {
             "no_change": "Sin cambios"
-        }
+    },
+    "dropzone": {
+      "label": "Área de carga de archivos",
+      "drag_here": "Arrastra archivos aquí o haz clic",
+      "max_size": "Máximo",
+      "choose_file": "Elegir archivo"
+    },
+    "presence": {
+      "label": "Usuarios activos",
+      "users_viewing": "usuarios viendo",
+      "is_editing": "está editando",
+      "is_viewing": "está viendo"
+    }
     },
     "self_service": {
         "forgot_password": {
@@ -3372,5 +3384,9 @@
         "verify_email": {
             "success": "Correo verificado."
         }
-    }
+  },
+  "accessibility": {
+    "skip_to_content": "Saltar al contenido principal",
+    "main_navigation": "Navegación principal"
+  }
 }

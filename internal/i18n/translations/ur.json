@@ -3371,7 +3371,19 @@
         },
         "stat_card": {
             "no_change": "کوئی تبدیلی نہیں"
-        }
+    },
+    "dropzone": {
+      "label": "فائل اپلوڈ ایریا",
+      "drag_here": "فائلیں یہاں کھینچیں یا کلک کریں",
+      "max_size": "زیادہ سے زیادہ",
+      "choose_file": "فائل منتخب کریں"
+    },
+    "presence": {
+      "label": "فعال صارفین",
+      "users_viewing": "صارفین دیکھ رہے ہیں",
+      "is_editing": "ترمیم کر رہا ہے",
+      "is_viewing": "دیکھ رہا ہے"
+    }
     },
     "self_service": {
         "forgot_password": {
@@ -3398,5 +3410,9 @@
         "verify_email": {
             "success": "ای میل تصدیق ہو گئی۔"
         }
-    }
+  },
+  "accessibility": {
+    "skip_to_content": "مرکزی مواد پر جائیں",
+    "main_navigation": "مرکزی نیویگیشن"
+  }
 }

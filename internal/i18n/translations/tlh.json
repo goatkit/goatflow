@@ -3362,7 +3362,19 @@
         },
         "stat_card": {
             "no_change": "choH pagh"
-        }
+    },
+    "dropzone": {
+      "label": "De'wI' ngeH Daq",
+      "drag_here": "De'wI' yIraQ pagh yIchel",
+      "max_size": "jen",
+      "choose_file": "De'wI' wIv"
+    },
+    "presence": {
+      "label": "taHbogh lo'wI'",
+      "users_viewing": "lo'wI' legh",
+      "is_editing": "choH",
+      "is_viewing": "legh"
+    }
     },
     "self_service": {
         "forgot_password": {
@@ -3389,5 +3401,9 @@
         "verify_email": {
             "success": "QIn 'ollu'."
         }
-    }
+  },
+  "accessibility": {
+    "skip_to_content": "potlh De' yIghoS",
+    "main_navigation": "potlh lIng"
+  }
 }
