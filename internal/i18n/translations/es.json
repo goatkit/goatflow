@@ -3346,5 +3346,31 @@
         "stat_card": {
             "no_change": "Sin cambios"
         }
+    },
+    "self_service": {
+        "forgot_password": {
+            "title": "Olvidé mi contraseña",
+            "email_label": "Correo electrónico",
+            "submit": "Enviar enlace",
+            "success": "Si existe una cuenta, se ha enviado un enlace."
+        },
+        "reset_password": {
+            "title": "Restablecer contraseña",
+            "new_password": "Nueva contraseña",
+            "confirm": "Confirmar contraseña",
+            "submit": "Restablecer",
+            "success": "Contraseña restablecida."
+        },
+        "register": {
+            "title": "Crear cuenta",
+            "email": "Correo",
+            "first_name": "Nombre",
+            "last_name": "Apellido",
+            "submit": "Registrarse",
+            "success": "Registro enviado. Revise su correo."
+        },
+        "verify_email": {
+            "success": "Correo verificado."
+        }
     }
 }

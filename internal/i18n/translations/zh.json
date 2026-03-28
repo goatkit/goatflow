@@ -3347,5 +3347,31 @@
         "stat_card": {
             "no_change": "无变化"
         }
+    },
+    "self_service": {
+        "forgot_password": {
+            "title": "忘记密码",
+            "email_label": "邮箱地址",
+            "submit": "发送重置链接",
+            "success": "如果账户存在，重置链接已发送。"
+        },
+        "reset_password": {
+            "title": "重置密码",
+            "new_password": "新密码",
+            "confirm": "确认密码",
+            "submit": "重置",
+            "success": "密码已重置。"
+        },
+        "register": {
+            "title": "创建账户",
+            "email": "邮箱",
+            "first_name": "名",
+            "last_name": "姓",
+            "submit": "注册",
+            "success": "注册已提交，请查收邮件。"
+        },
+        "verify_email": {
+            "success": "邮箱验证成功。"
+        }
     }
 }

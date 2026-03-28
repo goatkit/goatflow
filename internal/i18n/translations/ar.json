@@ -3365,5 +3365,31 @@
         "stat_card": {
             "no_change": "لا تغيير"
         }
+    },
+    "self_service": {
+        "forgot_password": {
+            "title": "نسيت كلمة المرور",
+            "email_label": "البريد الإلكتروني",
+            "submit": "إرسال رابط",
+            "success": "إذا كان الحساب موجوداً، تم إرسال رابط."
+        },
+        "reset_password": {
+            "title": "إعادة تعيين كلمة المرور",
+            "new_password": "كلمة مرور جديدة",
+            "confirm": "تأكيد",
+            "submit": "إعادة تعيين",
+            "success": "تم إعادة تعيين كلمة المرور."
+        },
+        "register": {
+            "title": "إنشاء حساب",
+            "email": "البريد",
+            "first_name": "الاسم الأول",
+            "last_name": "اسم العائلة",
+            "submit": "تسجيل",
+            "success": "تم تقديم التسجيل."
+        },
+        "verify_email": {
+            "success": "تم التحقق من البريد."
+        }
     }
 }

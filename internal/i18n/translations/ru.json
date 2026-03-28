@@ -3347,5 +3347,31 @@
         "stat_card": {
             "no_change": "Без изменений"
         }
+    },
+    "self_service": {
+        "forgot_password": {
+            "title": "Забыли пароль",
+            "email_label": "Электронная почта",
+            "submit": "Отправить ссылку",
+            "success": "Если аккаунт существует, ссылка отправлена."
+        },
+        "reset_password": {
+            "title": "Сброс пароля",
+            "new_password": "Новый пароль",
+            "confirm": "Подтвердить",
+            "submit": "Сбросить",
+            "success": "Пароль сброшен."
+        },
+        "register": {
+            "title": "Создать аккаунт",
+            "email": "Почта",
+            "first_name": "Имя",
+            "last_name": "Фамилия",
+            "submit": "Регистрация",
+            "success": "Регистрация отправлена."
+        },
+        "verify_email": {
+            "success": "Почта подтверждена."
+        }
     }
 }

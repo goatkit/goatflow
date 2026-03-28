@@ -44,7 +44,6 @@ func handleAdminCustomFields(c *gin.Context) {
 	}
 
 	renderer.HTML(c, http.StatusOK, "pages/admin/custom_fields.pongo2", gin.H{
-		"Title":        "Custom Fields",
 		"FieldsGrouped": grouped,
 		"EntityTypes":  customfields.ValidEntityTypes(),
 		"FieldTypes":   customfields.ValidFieldTypes(),
@@ -63,7 +62,6 @@ func handleAdminCustomFieldNew(c *gin.Context) {
 	}
 
 	renderer.HTML(c, http.StatusOK, "pages/admin/custom_field_form.pongo2", gin.H{
-		"Title":       "New Custom Field",
 		"IsNew":       true,
 		"EntityTypes": customfields.ValidEntityTypes(),
 		"FieldTypes":  customfields.ValidFieldTypes(),
@@ -99,7 +97,6 @@ func handleAdminCustomFieldEdit(c *gin.Context) {
 	}
 
 	renderer.HTML(c, http.StatusOK, "pages/admin/custom_field_form.pongo2", gin.H{
-		"Title":       "Edit Custom Field",
 		"Field":       def,
 		"IsNew":       false,
 		"ReadOnly":    def.OwnerType != customfields.OwnerAdmin,

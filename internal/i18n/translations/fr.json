@@ -3347,5 +3347,31 @@
         "stat_card": {
             "no_change": "Aucun changement"
         }
+    },
+    "self_service": {
+        "forgot_password": {
+            "title": "Mot de passe oublié",
+            "email_label": "Adresse e-mail",
+            "submit": "Envoyer le lien",
+            "success": "Si un compte existe, un lien a été envoyé."
+        },
+        "reset_password": {
+            "title": "Réinitialiser le mot de passe",
+            "new_password": "Nouveau mot de passe",
+            "confirm": "Confirmer",
+            "submit": "Réinitialiser",
+            "success": "Mot de passe réinitialisé."
+        },
+        "register": {
+            "title": "Créer un compte",
+            "email": "E-mail",
+            "first_name": "Prénom",
+            "last_name": "Nom",
+            "submit": "S'inscrire",
+            "success": "Inscription soumise. Vérifiez votre e-mail."
+        },
+        "verify_email": {
+            "success": "E-mail vérifié."
+        }
     }
 }
