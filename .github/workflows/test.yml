@@ -1,34 +1,109 @@
-name: Tests
+name: CI
 
 on:
   push:
     branches: [ main, dev ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev ]
+  schedule:
+    # Weekly security scan (Sundays midnight)
+    - cron: '0 0 * * 0'
   workflow_dispatch:
 
 permissions:
   contents: read
   packages: write
-  id-token: write  # Required for Codecov OIDC
+  id-token: write
+  issues: write
+  pull-requests: write
+  security-events: write
+  actions: read
 
 jobs:
+  # ─────────────────────────────────────────────
+  # Secret Scanning
+  # ─────────────────────────────────────────────
+  secrets:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    environment: Development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_ENABLE_COMMENTS: true
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: true
+          GITLEAKS_ENABLE_SUMMARY: true
+
+      - name: Upload Gitleaks Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: |
+            gitleaks-report.json
+            gitleaks-report.sarif
+          retention-days: 30
+
+  # ─────────────────────────────────────────────
+  # Security & Code Quality
+  # ─────────────────────────────────────────────
+  security:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    environment: Development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install libvips (required for govips)
+        run: sudo apt-get update && sudo apt-get install -y libvips-dev
+
+      - name: Run gosec security scanner
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          mkdir -p security-artifacts
+          gosec -fmt=json -out=security-artifacts/gosec-report.json ./... || true
+          gosec -fmt=text ./... || echo "Security issues found - see gosec-report.json"
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Upload security artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-artifacts
+          path: security-artifacts
+          retention-days: 30
+
+  # ─────────────────────────────────────────────
+  # Tests
+  # ─────────────────────────────────────────────
   test:
-    name: Container Tests
+    name: Tests
     runs-on: ubuntu-latest
     environment: Development
     env:
-      # Force Docker (GitHub runners have podman but not podman-compose)
       CONTAINER_CMD: docker
-      # Use Docker volumes for caching (CI environment)
       CACHE_USE_VOLUMES: "1"
-      # Required secrets from GitHub
       TEST_DB_MYSQL_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
       TEST_DB_ROOT_PASSWORD: ${{ secrets.TEST_DB_ROOT_PASSWORD }}
       TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
       SESSION_SECRET: ${{ secrets.JWT_SECRET }}
-      # Defaults
       TEST_DB_DRIVER: mysql
       TEST_DB_MYSQL_HOST: mariadb-test
       TEST_DB_MYSQL_PORT: "3308"
@@ -48,23 +123,11 @@ jobs:
 
       - name: Prepare directories and volumes
         run: |
-          # Create local directories with proper permissions for container user (uid 1000)
           mkdir -p .cache tmp generated/api-map
           chmod 777 .cache tmp generated generated/api-map
-
-          # Pre-create Docker volumes and initialize with correct ownership
-          # Note: There are TWO naming schemes used:
-          #   - goatflow_* (compose-prefixed) for docker compose services
-          #   - goatflow_* (non-prefixed) for standalone docker run commands in Makefile
-
-          # Compose volumes (prefixed with project name)
           docker volume create goatflow_goatflow_cache
           docker volume create goatflow_goatflow_runtime
-
-          # Standalone volumes (used by MOD_CACHE_MOUNT in Makefile)
           docker volume create goatflow_cache
-
-          # Initialize all volumes with correct permissions using helper containers
           docker run --rm -v goatflow_goatflow_cache:/vol alpine:3.19 sh -c "mkdir -p /vol/go-build /vol/go-mod /vol/xdg /vol/bun /vol/golangci-lint && chown -R 1000:1000 /vol && chmod -R 775 /vol"
           docker run --rm -v goatflow_goatflow_runtime:/vol alpine:3.19 sh -c "chown -R 1000:1000 /vol && chmod 775 /vol"
           docker run --rm -v goatflow_cache:/vol alpine:3.19 sh -c "mkdir -p /vol/go-build /vol/go-mod /vol/xdg /vol/bun /vol/golangci-lint /vol/ms-playwright && chown -R 1000:1000 /vol && chmod -R 775 /vol"
@@ -97,8 +160,11 @@ jobs:
             tests/e2e/playwright/videos/
           retention-days: 7
 
-  docker-build-push:
-    name: Build and Push Docker Images
+  # ─────────────────────────────────────────────
+  # Docker Build & Push (only after tests pass)
+  # ─────────────────────────────────────────────
+  docker:
+    name: Docker Build & Push
     runs-on: ubuntu-latest
     needs: [test]
     if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
@@ -127,7 +193,7 @@ jobs:
             type=sha,prefix=
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Determine version for build
+      - name: Determine version
         id: version
         run: |
           VERSION="${GITHUB_REF#refs/heads/}"
@@ -146,19 +212,9 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          # ARM builds are slow - only do multi-arch on main, amd64-only on dev
           platforms: ${{ github.ref == 'refs/heads/main' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
             GIT_COMMIT=${{ steps.version.outputs.commit }}
             GIT_BRANCH=${{ steps.version.outputs.branch }}
             BUILD_DATE=${{ steps.version.outputs.date }}
-
-      - name: Image digest
-        run: |
-          echo "## Docker Image Published" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
