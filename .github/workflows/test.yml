@@ -25,7 +25,7 @@ jobs:
   # ─────────────────────────────────────────────
   secrets:
     name: Secret Scanning
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     environment: Development
     steps:
       - name: Checkout code
@@ -57,7 +57,7 @@ jobs:
   # ─────────────────────────────────────────────
   security:
     name: Security Analysis
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     environment: Development
     steps:
       - name: Checkout code
@@ -94,7 +94,7 @@ jobs:
   # ─────────────────────────────────────────────
   test:
     name: Tests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     environment: Development
     env:
       CONTAINER_CMD: docker
@@ -113,11 +113,6 @@ jobs:
       VALKEY_TEST_PORT: "6389"
 
     steps:
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
-          docker system prune -af
-
       - name: Checkout code
         uses: actions/checkout@v5
 
@@ -165,7 +160,7 @@ jobs:
   # ─────────────────────────────────────────────
   docker:
     name: Docker Build & Push
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     needs: [test]
     if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
     environment: Development
