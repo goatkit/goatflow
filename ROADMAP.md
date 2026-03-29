@@ -577,7 +577,12 @@ Enterprise plugins are paid, reusable horizontal capabilities built on GoatKit c
 | goatkit-maps | Geocoding, route optimisation, area/territory management |
 | goatkit-notify | Templated SMS/WhatsApp/email notifications |
 
-Enterprise plugins are built as vertical plugins need them and prioritised by customer demand.
+**Status (March 2026):** 8 of 12 plugins scaffolded with schema, handlers, and Gitea repos. Driven by GoatFictus three-tier redistribution.
+
+| Status | Plugins |
+|--------|---------|
+| Scaffolded | goatkit-media, goatkit-llm, goatkit-billing, goatkit-devices, goatkit-workflows, goatkit-audit, goatkit-content-feeds, goatkit-notify |
+| Planning | goatkit-subscriptions, goatkit-invoicing, goatkit-payments, goatkit-maps |
 
 ---
 
