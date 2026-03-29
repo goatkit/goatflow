@@ -17,7 +17,7 @@ func testKey(t *testing.T) []byte {
 
 func TestEncryptDecrypt_RoundTrip(t *testing.T) {
 	key := testKey(t)
-	plaintext := []byte("sk_live_abc123def456")
+	plaintext := []byte("secret_abc123def456")
 
 	ciphertext, err := Encrypt(plaintext, key)
 	if err != nil {
@@ -116,7 +116,7 @@ func TestValueHint(t *testing.T) {
 		input string
 		want  string
 	}{
-		{"sk_live_abc123def456", "f456"},
+		{"secret_abc123def456", "f456"},
 		{"abcd", "abcd"},
 		{"abc", "abc"},
 		{"ab", "ab"},
