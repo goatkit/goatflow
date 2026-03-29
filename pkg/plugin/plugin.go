@@ -243,6 +243,25 @@ type CustomFieldSpec struct {
 	Config      json.RawMessage `json:"config,omitempty"`        // type-specific config (options, regex, etc.)
 }
 
+// FieldOp represents an atomic operation on a custom field value.
+// Pass a FieldOp as a value in CustomFieldsSet to perform an atomic update
+// instead of the default overwrite behaviour.
+//
+// Supported operations:
+//   - "increment": Atomically add Value to a numeric field (integer/decimal).
+//     Optional Floor/Ceiling enforce bounds; the update is rejected if breached.
+//   - "append": Add Value (string) to a multi_select field without overwriting.
+//   - "remove": Remove Value (string) from a multi_select field.
+//   - "cas": Compare-and-swap — set to Value only if current value equals Expect.
+//   - "toggle": Flip a boolean field (no Value needed).
+type FieldOp struct {
+	Op      string   `json:"op"`                // Operation name.
+	Value   any      `json:"value,omitempty"`   // Operand value.
+	Expect  any      `json:"expect,omitempty"`  // Expected current value (cas only).
+	Floor   *float64 `json:"floor,omitempty"`   // Minimum bound after increment.
+	Ceiling *float64 `json:"ceiling,omitempty"` // Maximum bound after increment.
+}
+
 // CustomFieldFilter is a query filter used by CustomFieldsQuery.
 type CustomFieldFilter struct {
 	Field    string `json:"field"`              // field name (plugin prefix stripped)

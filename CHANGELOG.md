@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+**Custom Fields — Atomic Operations**
+- `FieldOp` type for atomic custom field updates via `CustomFieldsSet()`
+- `increment` operation for integer/decimal fields with optional `Floor`/`Ceiling` bounds
+- `append` and `remove` operations for multi_select fields (duplicate-safe)
+- `cas` (compare-and-swap) operation for optimistic concurrency on any field type
+- `toggle` operation for boolean fields
+- Works transparently across gRPC and WASM plugins (detected as JSON map with `"op"` key)
+- Full validation: type checking, option membership for multi_select, bounds for numeric
+- Backward compatible — plain values continue to work as before
+
 ## [0.8.0] - March 2026
 
 **GoatKit PaaS Core** — Universal custom fields, plugin UI system, multi-tenancy, secure settings, entity deletion, reusable components, plugin marketplace, self-service authentication, and accessibility.

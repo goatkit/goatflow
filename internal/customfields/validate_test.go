@@ -1255,3 +1255,131 @@ func TestBuildFilterClause(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// ValidateFieldOp
+// ---------------------------------------------------------------------------
+
+func TestValidateFieldOp(t *testing.T) {
+	decimalDef := &FieldDef{Name: "balance", FieldType: FieldDecimal}
+	intDef := &FieldDef{Name: "counter", FieldType: FieldInteger}
+	boolDef := &FieldDef{Name: "active", FieldType: FieldBoolean}
+	textDef := &FieldDef{Name: "label", FieldType: FieldText}
+
+	optsCfg := json.RawMessage(`{"options":[{"value":"a","label":"A"},{"value":"b","label":"B"}]}`)
+	multiDef := &FieldDef{Name: "tags", FieldType: FieldMultiSelect, Config: &optsCfg}
+
+	selectCfg := json.RawMessage(`{"options":[{"value":"queued","label":"Q"},{"value":"running","label":"R"}]}`)
+	selectDef := &FieldDef{Name: "status", FieldType: FieldSelect, Config: &selectCfg}
+
+	tests := []struct {
+		name    string
+		def     *FieldDef
+		op      *FieldOp
+		wantErr bool
+	}{
+		{name: "increment on decimal", def: decimalDef, op: &FieldOp{Op: OpIncrement, Value: 5.0}},
+		{name: "increment on integer", def: intDef, op: &FieldOp{Op: OpIncrement, Value: int64(1)}},
+		{name: "increment on text fails", def: textDef, op: &FieldOp{Op: OpIncrement, Value: 1.0}, wantErr: true},
+		{name: "increment nil value fails", def: decimalDef, op: &FieldOp{Op: OpIncrement, Value: nil}, wantErr: true},
+		{name: "toggle on boolean", def: boolDef, op: &FieldOp{Op: OpToggle}},
+		{name: "toggle on text fails", def: textDef, op: &FieldOp{Op: OpToggle}, wantErr: true},
+		{name: "append on multi_select", def: multiDef, op: &FieldOp{Op: OpAppend, Value: "a"}},
+		{name: "append invalid option fails", def: multiDef, op: &FieldOp{Op: OpAppend, Value: "z"}, wantErr: true},
+		{name: "append on text fails", def: textDef, op: &FieldOp{Op: OpAppend, Value: "x"}, wantErr: true},
+		{name: "remove on multi_select", def: multiDef, op: &FieldOp{Op: OpRemove, Value: "b"}},
+		{name: "cas on select", def: selectDef, op: &FieldOp{Op: OpCAS, Value: "running", Expect: "queued"}},
+		{name: "cas invalid new value fails", def: selectDef, op: &FieldOp{Op: OpCAS, Value: "bogus", Expect: "queued"}, wantErr: true},
+		{name: "unknown op fails", def: decimalDef, op: &FieldOp{Op: "unknown"}, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateFieldOp(tt.def, tt.op)
+			if tt.wantErr && err == nil {
+				t.Error("expected error, got nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateValue_FieldOp(t *testing.T) {
+	// ValidateValue should detect FieldOp and delegate.
+	def := &FieldDef{Name: "counter", FieldType: FieldInteger}
+
+	// Via struct.
+	err := ValidateValue(def, FieldOp{Op: OpIncrement, Value: int64(1)})
+	if err != nil {
+		t.Errorf("expected nil, got %v", err)
+	}
+
+	// Via map (as arrives from gRPC).
+	err = ValidateValue(def, map[string]any{"op": "increment", "value": float64(1)})
+	if err != nil {
+		t.Errorf("expected nil, got %v", err)
+	}
+
+	// Invalid op via map.
+	err = ValidateValue(def, map[string]any{"op": "toggle"})
+	if err == nil {
+		t.Error("expected error for toggle on integer")
+	}
+}
+
+func TestAsFieldOp(t *testing.T) {
+	t.Run("struct", func(t *testing.T) {
+		op, ok := AsFieldOp(FieldOp{Op: OpIncrement, Value: 5.0})
+		if !ok || op.Op != OpIncrement {
+			t.Error("expected FieldOp struct detection")
+		}
+	})
+
+	t.Run("pointer", func(t *testing.T) {
+		op, ok := AsFieldOp(&FieldOp{Op: OpToggle})
+		if !ok || op.Op != OpToggle {
+			t.Error("expected *FieldOp detection")
+		}
+	})
+
+	t.Run("map with op key", func(t *testing.T) {
+		floor := 0.0
+		op, ok := AsFieldOp(map[string]any{"op": "increment", "value": -5.0, "floor": floor})
+		if !ok || op.Op != OpIncrement {
+			t.Error("expected map detection")
+		}
+		if op.Floor == nil || *op.Floor != 0.0 {
+			t.Errorf("floor = %v, want 0.0", op.Floor)
+		}
+	})
+
+	t.Run("map without op key", func(t *testing.T) {
+		_, ok := AsFieldOp(map[string]any{"value": 5})
+		if ok {
+			t.Error("should not detect map without op key")
+		}
+	})
+
+	t.Run("plain value", func(t *testing.T) {
+		_, ok := AsFieldOp("hello")
+		if ok {
+			t.Error("should not detect plain string")
+		}
+	})
+}
+
+func TestValidateValues_FieldOp_SkipsRequired(t *testing.T) {
+	// A FieldOp on a required field should not trigger "required" error.
+	defs := map[string]*FieldDef{
+		"balance": {Name: "balance", Label: "Balance", FieldType: FieldDecimal, Required: true},
+	}
+	values := map[string]any{
+		"balance": FieldOp{Op: OpIncrement, Value: 10.0},
+	}
+	errs := ValidateValues(defs, values)
+	if errs != nil {
+		t.Errorf("expected no errors, got %v", errs)
+	}
+}
