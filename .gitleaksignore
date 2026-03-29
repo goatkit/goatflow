@@ -5,3 +5,7 @@
 # NOTE: The web/ directory was removed from this project.
 # Historical fingerprints for removed files are no longer needed.
 # Path-based exclusions are configured in .gitleaks.toml
+
+# Test placeholder values in crypto_test.go (not real Stripe keys)
+7d9d723c4295a35c9eb7426ded59132249fcab87:internal/secureconfig/crypto_test.go:stripe-access-token:20
+7d9d723c4295a35c9eb7426ded59132249fcab87:internal/secureconfig/crypto_test.go:stripe-access-token:119
