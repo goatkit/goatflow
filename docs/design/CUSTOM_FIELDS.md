@@ -315,6 +315,72 @@ type CustomFieldFilter struct {
 }
 ```
 
+### Atomic Operations (FieldOp)
+
+`CustomFieldsSet` supports atomic operations via `FieldOp`. Instead of passing a plain
+value, pass a `FieldOp` struct (or JSON map with an `"op"` key for gRPC/WASM plugins):
+
+```go
+// Increment a decimal field with floor constraint (e.g. token balance).
+floor := 0.0
+host.CustomFieldsSet(ctx, "organisation", orgID, map[string]any{
+    "token_balance": plugin.FieldOp{Op: "increment", Value: -5.0, Floor: &floor},
+})
+
+// Append to a multi_select field (duplicate-safe).
+host.CustomFieldsSet(ctx, "contact", id, map[string]any{
+    "tags": plugin.FieldOp{Op: "append", Value: "processed"},
+})
+
+// Compare-and-swap on a select field.
+host.CustomFieldsSet(ctx, "contact", id, map[string]any{
+    "status": plugin.FieldOp{Op: "cas", Value: "running", Expect: "queued"},
+})
+
+// Toggle a boolean field.
+host.CustomFieldsSet(ctx, "contact", id, map[string]any{
+    "active": plugin.FieldOp{Op: "toggle"},
+})
+
+// Remove from a multi_select field.
+host.CustomFieldsSet(ctx, "contact", id, map[string]any{
+    "tags": plugin.FieldOp{Op: "remove", Value: "obsolete"},
+})
+```
+
+**Supported operations:**
+
+| Op | Field Types | Value | Description |
+|----|-------------|-------|-------------|
+| `increment` | integer, decimal | Numeric delta | Atomically add to current value. Optional `Floor`/`Ceiling` reject if bounds breached. Inserts delta as initial value if row missing. |
+| `append` | multi_select | String item | Add item to array (no-op if already present). |
+| `remove` | multi_select | String item | Remove item from array (no-op if absent). |
+| `cas` | Any | New value + `Expect` | Set to `Value` only if current equals `Expect`. Returns error if mismatch. |
+| `toggle` | boolean | (none) | Flip true↔false. Inserts `true` if row missing. |
+
+**FieldOp struct:**
+
+```go
+type FieldOp struct {
+    Op      string   `json:"op"`                // Operation name.
+    Value   any      `json:"value,omitempty"`   // Operand value.
+    Expect  any      `json:"expect,omitempty"`  // Expected current value (cas only).
+    Floor   *float64 `json:"floor,omitempty"`   // Minimum bound after increment.
+    Ceiling *float64 `json:"ceiling,omitempty"` // Maximum bound after increment.
+}
+```
+
+**Wire format (gRPC/WASM):**
+
+```json
+{"fn": "host.custom_fields_set", "args": {
+    "entity_type": "organisation", "object_id": 1,
+    "values": {"token_balance": {"op": "increment", "value": -5.0, "floor": 0}}
+}}
+```
+
+Plain values continue to work as before — `FieldOp` is opt-in.
+
 ### Sandbox Enforcement
 
 The sandboxed HostAPI enforces:

@@ -471,3 +471,332 @@ func containsID(ids []int64, target int64) bool {
 	}
 	return false
 }
+
+func TestRepository_AtomicIncrement(t *testing.T) {
+	db := getTestDB(t)
+	repo := NewRepositoryWithDB(db)
+	prefix := fmt.Sprintf("test_%d_", time.Now().UnixNano()%100000)
+	t.Cleanup(func() { cleanupTestFields(t, db, prefix) })
+
+	repo.CreateDef(&FieldDef{
+		Name: prefix + "balance", Label: "Balance", EntityType: EntityOrganisation,
+		FieldType: FieldDecimal, OwnerType: OwnerAdmin, Section: "billing", ValidID: 1,
+	}, 1)
+
+	objectID := int64(80001)
+
+	t.Run("increment inserts on missing row", func(t *testing.T) {
+		err := repo.SetValues(EntityOrganisation, objectID, map[string]any{
+			prefix + "balance": FieldOp{Op: OpIncrement, Value: 100.0},
+		})
+		if err != nil {
+			t.Fatalf("increment on missing row: %v", err)
+		}
+		vals, _ := repo.GetValues(EntityOrganisation, objectID, []string{prefix + "balance"})
+		if vals[prefix+"balance"] != 100.0 {
+			t.Errorf("balance = %v, want 100.0", vals[prefix+"balance"])
+		}
+	})
+
+	t.Run("increment adds to existing value", func(t *testing.T) {
+		err := repo.SetValues(EntityOrganisation, objectID, map[string]any{
+			prefix + "balance": FieldOp{Op: OpIncrement, Value: 50.0},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		vals, _ := repo.GetValues(EntityOrganisation, objectID, []string{prefix + "balance"})
+		if vals[prefix+"balance"] != 150.0 {
+			t.Errorf("balance = %v, want 150.0", vals[prefix+"balance"])
+		}
+	})
+
+	t.Run("negative increment (deduct)", func(t *testing.T) {
+		err := repo.SetValues(EntityOrganisation, objectID, map[string]any{
+			prefix + "balance": FieldOp{Op: OpIncrement, Value: -30.0},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		vals, _ := repo.GetValues(EntityOrganisation, objectID, []string{prefix + "balance"})
+		if vals[prefix+"balance"] != 120.0 {
+			t.Errorf("balance = %v, want 120.0", vals[prefix+"balance"])
+		}
+	})
+
+	t.Run("floor prevents overdraft", func(t *testing.T) {
+		floor := 0.0
+		err := repo.SetValues(EntityOrganisation, objectID, map[string]any{
+			prefix + "balance": FieldOp{Op: OpIncrement, Value: -999.0, Floor: &floor},
+		})
+		if err == nil {
+			t.Fatal("expected floor violation error")
+		}
+		// Value should remain unchanged.
+		vals, _ := repo.GetValues(EntityOrganisation, objectID, []string{prefix + "balance"})
+		if vals[prefix+"balance"] != 120.0 {
+			t.Errorf("balance = %v, want 120.0 (unchanged)", vals[prefix+"balance"])
+		}
+	})
+
+	t.Run("ceiling prevents overflow", func(t *testing.T) {
+		ceiling := 200.0
+		err := repo.SetValues(EntityOrganisation, objectID, map[string]any{
+			prefix + "balance": FieldOp{Op: OpIncrement, Value: 100.0, Ceiling: &ceiling},
+		})
+		if err == nil {
+			t.Fatal("expected ceiling violation error")
+		}
+		vals, _ := repo.GetValues(EntityOrganisation, objectID, []string{prefix + "balance"})
+		if vals[prefix+"balance"] != 120.0 {
+			t.Errorf("balance = %v, want 120.0 (unchanged)", vals[prefix+"balance"])
+		}
+	})
+
+	t.Run("increment within bounds succeeds", func(t *testing.T) {
+		floor := 0.0
+		ceiling := 200.0
+		err := repo.SetValues(EntityOrganisation, objectID, map[string]any{
+			prefix + "balance": FieldOp{Op: OpIncrement, Value: 50.0, Floor: &floor, Ceiling: &ceiling},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		vals, _ := repo.GetValues(EntityOrganisation, objectID, []string{prefix + "balance"})
+		if vals[prefix+"balance"] != 170.0 {
+			t.Errorf("balance = %v, want 170.0", vals[prefix+"balance"])
+		}
+	})
+}
+
+func TestRepository_AtomicIncrement_Integer(t *testing.T) {
+	db := getTestDB(t)
+	repo := NewRepositoryWithDB(db)
+	prefix := fmt.Sprintf("test_%d_", time.Now().UnixNano()%100000)
+	t.Cleanup(func() { cleanupTestFields(t, db, prefix) })
+
+	repo.CreateDef(&FieldDef{
+		Name: prefix + "counter", Label: "Counter", EntityType: EntityContact,
+		FieldType: FieldInteger, OwnerType: OwnerAdmin, Section: "custom", ValidID: 1,
+	}, 1)
+
+	objectID := int64(80010)
+
+	// Insert initial value.
+	repo.SetValues(EntityContact, objectID, map[string]any{prefix + "counter": int64(10)})
+
+	err := repo.SetValues(EntityContact, objectID, map[string]any{
+		prefix + "counter": FieldOp{Op: OpIncrement, Value: int64(5)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	vals, _ := repo.GetValues(EntityContact, objectID, []string{prefix + "counter"})
+	if vals[prefix+"counter"] != int64(15) {
+		t.Errorf("counter = %v (type %T), want 15", vals[prefix+"counter"], vals[prefix+"counter"])
+	}
+}
+
+func TestRepository_AtomicToggle(t *testing.T) {
+	db := getTestDB(t)
+	repo := NewRepositoryWithDB(db)
+	prefix := fmt.Sprintf("test_%d_", time.Now().UnixNano()%100000)
+	t.Cleanup(func() { cleanupTestFields(t, db, prefix) })
+
+	repo.CreateDef(&FieldDef{
+		Name: prefix + "active", Label: "Active", EntityType: EntityContact,
+		FieldType: FieldBoolean, OwnerType: OwnerAdmin, Section: "custom", ValidID: 1,
+	}, 1)
+
+	objectID := int64(80020)
+
+	t.Run("toggle inserts true on missing row", func(t *testing.T) {
+		err := repo.SetValues(EntityContact, objectID, map[string]any{
+			prefix + "active": FieldOp{Op: OpToggle},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		vals, _ := repo.GetValues(EntityContact, objectID, []string{prefix + "active"})
+		if vals[prefix+"active"] != true {
+			t.Errorf("active = %v, want true", vals[prefix+"active"])
+		}
+	})
+
+	t.Run("toggle flips true to false", func(t *testing.T) {
+		err := repo.SetValues(EntityContact, objectID, map[string]any{
+			prefix + "active": FieldOp{Op: OpToggle},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		vals, _ := repo.GetValues(EntityContact, objectID, []string{prefix + "active"})
+		if vals[prefix+"active"] != false {
+			t.Errorf("active = %v, want false", vals[prefix+"active"])
+		}
+	})
+}
+
+func TestRepository_AtomicCAS(t *testing.T) {
+	db := getTestDB(t)
+	repo := NewRepositoryWithDB(db)
+	prefix := fmt.Sprintf("test_%d_", time.Now().UnixNano()%100000)
+	t.Cleanup(func() { cleanupTestFields(t, db, prefix) })
+
+	optsCfg := json.RawMessage(`{"options":[{"value":"queued","label":"Queued"},{"value":"running","label":"Running"},{"value":"done","label":"Done"}]}`)
+	repo.CreateDef(&FieldDef{
+		Name: prefix + "status", Label: "Status", EntityType: EntityContact,
+		FieldType: FieldSelect, OwnerType: OwnerAdmin, Section: "custom", ValidID: 1,
+		Config: &optsCfg,
+	}, 1)
+
+	objectID := int64(80030)
+	repo.SetValues(EntityContact, objectID, map[string]any{prefix + "status": "queued"})
+
+	t.Run("cas succeeds when value matches", func(t *testing.T) {
+		err := repo.SetValues(EntityContact, objectID, map[string]any{
+			prefix + "status": FieldOp{Op: OpCAS, Value: "running", Expect: "queued"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		vals, _ := repo.GetValues(EntityContact, objectID, []string{prefix + "status"})
+		if vals[prefix+"status"] != "running" {
+			t.Errorf("status = %v, want 'running'", vals[prefix+"status"])
+		}
+	})
+
+	t.Run("cas fails when value differs", func(t *testing.T) {
+		err := repo.SetValues(EntityContact, objectID, map[string]any{
+			prefix + "status": FieldOp{Op: OpCAS, Value: "done", Expect: "queued"},
+		})
+		if err == nil {
+			t.Fatal("expected cas failure")
+		}
+		// Value should remain "running".
+		vals, _ := repo.GetValues(EntityContact, objectID, []string{prefix + "status"})
+		if vals[prefix+"status"] != "running" {
+			t.Errorf("status = %v, want 'running' (unchanged)", vals[prefix+"status"])
+		}
+	})
+}
+
+func TestRepository_AtomicAppendRemove(t *testing.T) {
+	db := getTestDB(t)
+	repo := NewRepositoryWithDB(db)
+	prefix := fmt.Sprintf("test_%d_", time.Now().UnixNano()%100000)
+	t.Cleanup(func() { cleanupTestFields(t, db, prefix) })
+
+	optsCfg := json.RawMessage(`{"options":[{"value":"go","label":"Go"},{"value":"rust","label":"Rust"},{"value":"python","label":"Python"}]}`)
+	repo.CreateDef(&FieldDef{
+		Name: prefix + "skills", Label: "Skills", EntityType: EntityContact,
+		FieldType: FieldMultiSelect, OwnerType: OwnerAdmin, Section: "custom", ValidID: 1,
+		Config: &optsCfg,
+	}, 1)
+
+	objectID := int64(80040)
+
+	t.Run("append to empty creates array", func(t *testing.T) {
+		err := repo.SetValues(EntityContact, objectID, map[string]any{
+			prefix + "skills": FieldOp{Op: OpAppend, Value: "go"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		vals, _ := repo.GetValues(EntityContact, objectID, []string{prefix + "skills"})
+		skills, ok := vals[prefix+"skills"].([]string)
+		if !ok || len(skills) != 1 || skills[0] != "go" {
+			t.Errorf("skills = %v, want [go]", vals[prefix+"skills"])
+		}
+	})
+
+	t.Run("append adds to existing array", func(t *testing.T) {
+		err := repo.SetValues(EntityContact, objectID, map[string]any{
+			prefix + "skills": FieldOp{Op: OpAppend, Value: "rust"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		vals, _ := repo.GetValues(EntityContact, objectID, []string{prefix + "skills"})
+		skills := vals[prefix+"skills"].([]string)
+		if len(skills) != 2 {
+			t.Errorf("expected 2 skills, got %v", skills)
+		}
+	})
+
+	t.Run("append duplicate is no-op", func(t *testing.T) {
+		err := repo.SetValues(EntityContact, objectID, map[string]any{
+			prefix + "skills": FieldOp{Op: OpAppend, Value: "go"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		vals, _ := repo.GetValues(EntityContact, objectID, []string{prefix + "skills"})
+		skills := vals[prefix+"skills"].([]string)
+		if len(skills) != 2 {
+			t.Errorf("expected 2 skills (no dup), got %v", skills)
+		}
+	})
+
+	t.Run("remove existing item", func(t *testing.T) {
+		err := repo.SetValues(EntityContact, objectID, map[string]any{
+			prefix + "skills": FieldOp{Op: OpRemove, Value: "go"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		vals, _ := repo.GetValues(EntityContact, objectID, []string{prefix + "skills"})
+		skills := vals[prefix+"skills"].([]string)
+		if len(skills) != 1 || skills[0] != "rust" {
+			t.Errorf("skills = %v, want [rust]", skills)
+		}
+	})
+
+	t.Run("remove non-existent item is no-op", func(t *testing.T) {
+		err := repo.SetValues(EntityContact, objectID, map[string]any{
+			prefix + "skills": FieldOp{Op: OpRemove, Value: "python"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		vals, _ := repo.GetValues(EntityContact, objectID, []string{prefix + "skills"})
+		skills := vals[prefix+"skills"].([]string)
+		if len(skills) != 1 || skills[0] != "rust" {
+			t.Errorf("skills = %v, want [rust]", skills)
+		}
+	})
+}
+
+func TestRepository_AtomicOps_ViaJSONMap(t *testing.T) {
+	db := getTestDB(t)
+	repo := NewRepositoryWithDB(db)
+	prefix := fmt.Sprintf("test_%d_", time.Now().UnixNano()%100000)
+	t.Cleanup(func() { cleanupTestFields(t, db, prefix) })
+
+	repo.CreateDef(&FieldDef{
+		Name: prefix + "tokens", Label: "Tokens", EntityType: EntityOrganisation,
+		FieldType: FieldDecimal, OwnerType: OwnerAdmin, Section: "billing", ValidID: 1,
+	}, 1)
+
+	objectID := int64(80050)
+
+	// Simulate gRPC transport: FieldOp arrives as map[string]any.
+	repo.SetValues(EntityOrganisation, objectID, map[string]any{
+		prefix + "tokens": map[string]any{"op": "increment", "value": 500.0},
+	})
+
+	vals, _ := repo.GetValues(EntityOrganisation, objectID, []string{prefix + "tokens"})
+	if vals[prefix+"tokens"] != 500.0 {
+		t.Errorf("tokens = %v, want 500.0", vals[prefix+"tokens"])
+	}
+
+	// Deduct with floor via JSON map.
+	repo.SetValues(EntityOrganisation, objectID, map[string]any{
+		prefix + "tokens": map[string]any{"op": "increment", "value": -200.0, "floor": 0.0},
+	})
+
+	vals, _ = repo.GetValues(EntityOrganisation, objectID, []string{prefix + "tokens"})
+	if vals[prefix+"tokens"] != 300.0 {
+		t.Errorf("tokens = %v, want 300.0", vals[prefix+"tokens"])
+	}
+}

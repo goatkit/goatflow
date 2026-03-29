@@ -69,9 +69,64 @@ func validateConfig(fieldType string, cfg *FieldConfig) error {
 	return nil
 }
 
+// ValidateFieldOp validates an atomic operation against its field definition.
+func ValidateFieldOp(def *FieldDef, op *FieldOp) error {
+	switch op.Op {
+	case OpIncrement:
+		if def.FieldType != FieldInteger && def.FieldType != FieldDecimal {
+			return fmt.Errorf("increment requires integer or decimal field, got %s", def.FieldType)
+		}
+		if op.Value == nil {
+			return fmt.Errorf("increment requires a value")
+		}
+		if _, err := toFloat64(op.Value); err != nil {
+			return fmt.Errorf("increment value must be numeric: %w", err)
+		}
+	case OpAppend, OpRemove:
+		if def.FieldType != FieldMultiSelect {
+			return fmt.Errorf("%s requires multi_select field, got %s", op.Op, def.FieldType)
+		}
+		s, ok := op.Value.(string)
+		if !ok || s == "" {
+			return fmt.Errorf("%s requires a non-empty string value", op.Op)
+		}
+		// Validate the item is a valid option.
+		cfg, _ := def.ParsedConfig()
+		if cfg != nil && len(cfg.Options) > 0 {
+			found := false
+			for _, opt := range cfg.Options {
+				if opt.Value == s {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("invalid option: %s", s)
+			}
+		}
+	case OpCAS:
+		// Validate the new value against the field definition.
+		if err := ValidateValue(def, op.Value); err != nil {
+			return fmt.Errorf("cas new value: %w", err)
+		}
+	case OpToggle:
+		if def.FieldType != FieldBoolean {
+			return fmt.Errorf("toggle requires boolean field, got %s", def.FieldType)
+		}
+	default:
+		return fmt.Errorf("unsupported field operation %q", op.Op)
+	}
+	return nil
+}
+
 // ValidateValue validates a single value against its field definition.
-// Returns nil if valid.
+// Returns nil if valid. If val is a FieldOp, it delegates to ValidateFieldOp.
 func ValidateValue(def *FieldDef, val any) error {
+	// Check for atomic operations.
+	if op, ok := AsFieldOp(val); ok {
+		return ValidateFieldOp(def, op)
+	}
+
 	if val == nil {
 		if def.Required {
 			return fmt.Errorf("field %q is required", def.Label)
@@ -123,10 +178,14 @@ func ValidateValue(def *FieldDef, val any) error {
 func ValidateValues(defs map[string]*FieldDef, values map[string]any) map[string]string {
 	errors := make(map[string]string)
 
-	// Check required fields.
+	// Check required fields — skip fields being atomically modified
+	// (they already have a value in the DB; the op mutates it, not replaces it).
 	for name, def := range defs {
 		if def.Required {
-			if _, ok := values[name]; !ok {
+			val, ok := values[name]
+			if !ok {
+				errors[name] = fmt.Sprintf("field %q is required", def.Label)
+			} else if _, isOp := AsFieldOp(val); !isOp && val == nil {
 				errors[name] = fmt.Sprintf("field %q is required", def.Label)
 			}
 		}

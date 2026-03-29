@@ -203,6 +203,60 @@ type Address struct {
 	Lng      float64 `json:"lng,omitempty"`
 }
 
+// Atomic operation names for FieldOp.
+const (
+	OpIncrement = "increment"
+	OpAppend    = "append"
+	OpRemove    = "remove"
+	OpCAS       = "cas"
+	OpToggle    = "toggle"
+)
+
+// ValidFieldOps returns all supported atomic operation names.
+func ValidFieldOps() []string {
+	return []string{OpIncrement, OpAppend, OpRemove, OpCAS, OpToggle}
+}
+
+// FieldOp represents an atomic operation on a custom field value.
+// This is the internal mirror of plugin.FieldOp.
+type FieldOp struct {
+	Op      string   `json:"op"`
+	Value   any      `json:"value,omitempty"`
+	Expect  any      `json:"expect,omitempty"`
+	Floor   *float64 `json:"floor,omitempty"`
+	Ceiling *float64 `json:"ceiling,omitempty"`
+}
+
+// AsFieldOp detects whether val is a FieldOp (either a direct struct or a
+// JSON-decoded map with an "op" key, as arrives from gRPC plugins).
+func AsFieldOp(val any) (*FieldOp, bool) {
+	switch v := val.(type) {
+	case FieldOp:
+		return &v, true
+	case *FieldOp:
+		return v, true
+	case map[string]any:
+		opStr, ok := v["op"].(string)
+		if !ok || opStr == "" {
+			return nil, false
+		}
+		op := &FieldOp{Op: opStr, Value: v["value"], Expect: v["expect"]}
+		if floor, ok := v["floor"]; ok {
+			if f, err := toFloat64(floor); err == nil {
+				op.Floor = &f
+			}
+		}
+		if ceiling, ok := v["ceiling"]; ok {
+			if f, err := toFloat64(ceiling); err == nil {
+				op.Ceiling = &f
+			}
+		}
+		return op, true
+	default:
+		return nil, false
+	}
+}
+
 // FieldFilter is a query filter for CustomFieldsQuery.
 type FieldFilter struct {
 	Field    string `json:"field"`

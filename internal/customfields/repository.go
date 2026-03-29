@@ -237,7 +237,8 @@ func (r *Repository) GetValues(entityType string, objectID int64, fieldNames []s
 }
 
 // SetValues stores custom field values for an entity.
-// values is field_name → value. The caller is responsible for validation.
+// values is field_name → value (or field_name → FieldOp for atomic operations).
+// The caller is responsible for validation.
 func (r *Repository) SetValues(entityType string, objectID int64, values map[string]any) error {
 	// Look up all field defs we need.
 	names := make([]string, 0, len(values))
@@ -254,6 +255,14 @@ func (r *Repository) SetValues(entityType string, objectID int64, values map[str
 		def, ok := defs[name]
 		if !ok {
 			return fmt.Errorf("unknown custom field %q for entity type %q", name, entityType)
+		}
+
+		// Route atomic operations to dedicated handlers.
+		if op, isOp := AsFieldOp(val); isOp {
+			if err := r.atomicUpdate(def, objectID, op); err != nil {
+				return fmt.Errorf("atomic op %q on field %q: %w", op.Op, name, err)
+			}
+			continue
 		}
 
 		if err := r.upsertValue(def, objectID, val); err != nil {
@@ -310,6 +319,309 @@ func (r *Repository) QueryByFields(entityType string, filters []FieldFilter) ([]
 		ids = append(ids, id)
 	}
 	return ids, rows.Err()
+}
+
+// --- Atomic operations ---
+
+// atomicUpdate dispatches to the appropriate atomic handler.
+func (r *Repository) atomicUpdate(def *FieldDef, objectID int64, op *FieldOp) error {
+	switch op.Op {
+	case OpIncrement:
+		return r.atomicIncrement(def, objectID, op)
+	case OpAppend:
+		return r.atomicAppend(def, objectID, op)
+	case OpRemove:
+		return r.atomicRemove(def, objectID, op)
+	case OpCAS:
+		return r.atomicCAS(def, objectID, op)
+	case OpToggle:
+		return r.atomicToggle(def, objectID)
+	default:
+		return fmt.Errorf("unsupported operation %q", op.Op)
+	}
+}
+
+// atomicIncrement adds a delta to a numeric field. If the row doesn't exist,
+// it inserts with the delta as the initial value.
+func (r *Repository) atomicIncrement(def *FieldDef, objectID int64, op *FieldOp) error {
+	col := StorageColumn(def.FieldType)
+	delta, err := toFloat64(op.Value)
+	if err != nil {
+		return fmt.Errorf("increment value: %w", err)
+	}
+
+	// Build the WHERE clause with optional floor/ceiling constraints.
+	where := "field_id = ? AND object_id = ?"
+	args := []any{delta, def.ID, objectID}
+
+	if op.Floor != nil {
+		where += fmt.Sprintf(" AND %s + ? >= ?", col)
+		args = append(args, delta, *op.Floor)
+	}
+	if op.Ceiling != nil {
+		where += fmt.Sprintf(" AND %s + ? <= ?", col)
+		args = append(args, delta, *op.Ceiling)
+	}
+
+	updateQuery := database.ConvertPlaceholders(
+		fmt.Sprintf("UPDATE gk_custom_field_value SET %s = %s + ? WHERE %s", col, col, where),
+	)
+	result, err := r.db.Exec(updateQuery, args...)
+	if err != nil {
+		return err
+	}
+	n, _ := result.RowsAffected()
+	if n == 1 {
+		return nil
+	}
+
+	// No row was updated. Either the row doesn't exist, or a floor/ceiling
+	// constraint was violated. Check which case.
+	existsQuery := database.ConvertPlaceholders(
+		"SELECT 1 FROM gk_custom_field_value WHERE field_id = ? AND object_id = ?",
+	)
+	var dummy int
+	err = r.db.QueryRow(existsQuery, def.ID, objectID).Scan(&dummy)
+	if err == nil {
+		// Row exists but constraint was violated.
+		if op.Floor != nil || op.Ceiling != nil {
+			return fmt.Errorf("increment would breach bounds")
+		}
+	}
+
+	// Row doesn't exist — insert with delta as initial value, respecting bounds.
+	if op.Floor != nil && delta < *op.Floor {
+		return fmt.Errorf("increment would breach bounds")
+	}
+	if op.Ceiling != nil && delta > *op.Ceiling {
+		return fmt.Errorf("increment would breach bounds")
+	}
+	fv := &FieldValue{FieldID: def.ID, ObjectID: objectID}
+	if err := assignValue(fv, def.FieldType, delta); err != nil {
+		return err
+	}
+	insQuery := database.ConvertPlaceholders(`
+		INSERT INTO gk_custom_field_value
+			(field_id, object_id, val_text, val_int, val_decimal, val_decimal2, val_date, val_datetime, val_json)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`)
+	_, err = r.db.Exec(insQuery,
+		fv.FieldID, fv.ObjectID,
+		fv.ValText, fv.ValInt, fv.ValDecimal, fv.ValDecimal2,
+		fv.ValDate, fv.ValDatetime, fv.ValJSON,
+	)
+	return err
+}
+
+// atomicAppend adds an item to a multi_select JSON array.
+func (r *Repository) atomicAppend(def *FieldDef, objectID int64, op *FieldOp) error {
+	item, ok := op.Value.(string)
+	if !ok {
+		return fmt.Errorf("append requires string value")
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	// Read current value.
+	selQuery := database.ConvertPlaceholders(
+		"SELECT val_json FROM gk_custom_field_value WHERE field_id = ? AND object_id = ?",
+	)
+	var current []string
+	var valJSON *json.RawMessage
+	err = tx.QueryRow(selQuery, def.ID, objectID).Scan(&valJSON)
+
+	if err == sql.ErrNoRows {
+		// No existing row — insert with single-element array.
+		current = []string{item}
+	} else if err != nil {
+		return err
+	} else if valJSON != nil {
+		if err := json.Unmarshal(*valJSON, &current); err != nil {
+			return fmt.Errorf("unmarshal multi_select: %w", err)
+		}
+		// Check for duplicates.
+		for _, v := range current {
+			if v == item {
+				return tx.Commit() // Already present, no-op.
+			}
+		}
+		current = append(current, item)
+	} else {
+		current = []string{item}
+	}
+
+	raw, err := json.Marshal(current)
+	if err != nil {
+		return err
+	}
+
+	if valJSON == nil {
+		// Insert new row.
+		jrm := json.RawMessage(raw)
+		insQuery := database.ConvertPlaceholders(`
+			INSERT INTO gk_custom_field_value
+				(field_id, object_id, val_text, val_int, val_decimal, val_decimal2, val_date, val_datetime, val_json)
+			VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, NULL, ?)
+		`)
+		if _, err := tx.Exec(insQuery, def.ID, objectID, jrm); err != nil {
+			return err
+		}
+	} else {
+		updQuery := database.ConvertPlaceholders(
+			"UPDATE gk_custom_field_value SET val_json = ? WHERE field_id = ? AND object_id = ?",
+		)
+		if _, err := tx.Exec(updQuery, json.RawMessage(raw), def.ID, objectID); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+// atomicRemove removes an item from a multi_select JSON array.
+func (r *Repository) atomicRemove(def *FieldDef, objectID int64, op *FieldOp) error {
+	item, ok := op.Value.(string)
+	if !ok {
+		return fmt.Errorf("remove requires string value")
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	selQuery := database.ConvertPlaceholders(
+		"SELECT val_json FROM gk_custom_field_value WHERE field_id = ? AND object_id = ?",
+	)
+	var valJSON *json.RawMessage
+	err = tx.QueryRow(selQuery, def.ID, objectID).Scan(&valJSON)
+	if err == sql.ErrNoRows || valJSON == nil {
+		return tx.Commit() // Nothing to remove from.
+	}
+	if err != nil {
+		return err
+	}
+
+	var current []string
+	if err := json.Unmarshal(*valJSON, &current); err != nil {
+		return fmt.Errorf("unmarshal multi_select: %w", err)
+	}
+
+	filtered := make([]string, 0, len(current))
+	for _, v := range current {
+		if v != item {
+			filtered = append(filtered, v)
+		}
+	}
+
+	raw, err := json.Marshal(filtered)
+	if err != nil {
+		return err
+	}
+	updQuery := database.ConvertPlaceholders(
+		"UPDATE gk_custom_field_value SET val_json = ? WHERE field_id = ? AND object_id = ?",
+	)
+	if _, err := tx.Exec(updQuery, json.RawMessage(raw), def.ID, objectID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// atomicCAS performs a compare-and-swap: set to new value only if current equals expected.
+func (r *Repository) atomicCAS(def *FieldDef, objectID int64, op *FieldOp) error {
+	col := StorageColumn(def.FieldType)
+
+	// Build the expected value for the WHERE clause.
+	expectFV := &FieldValue{FieldID: def.ID, ObjectID: objectID}
+	if err := assignValue(expectFV, def.FieldType, op.Expect); err != nil {
+		return fmt.Errorf("cas expect: %w", err)
+	}
+	expectCol := fieldValueColumn(expectFV, col)
+
+	// Build the new value.
+	newFV := &FieldValue{FieldID: def.ID, ObjectID: objectID}
+	if err := assignValue(newFV, def.FieldType, op.Value); err != nil {
+		return fmt.Errorf("cas new value: %w", err)
+	}
+	newCol := fieldValueColumn(newFV, col)
+
+	updateQuery := database.ConvertPlaceholders(
+		fmt.Sprintf("UPDATE gk_custom_field_value SET %s = ? WHERE field_id = ? AND object_id = ? AND %s = ?", col, col),
+	)
+	result, err := r.db.Exec(updateQuery, newCol, def.ID, objectID, expectCol)
+	if err != nil {
+		return err
+	}
+	n, _ := result.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("cas: current value does not match expected")
+	}
+	return nil
+}
+
+// atomicToggle flips a boolean field value.
+func (r *Repository) atomicToggle(def *FieldDef, objectID int64) error {
+	updateQuery := database.ConvertPlaceholders(
+		"UPDATE gk_custom_field_value SET val_int = CASE WHEN val_int = 1 THEN 0 ELSE 1 END WHERE field_id = ? AND object_id = ?",
+	)
+	result, err := r.db.Exec(updateQuery, def.ID, objectID)
+	if err != nil {
+		return err
+	}
+	n, _ := result.RowsAffected()
+	if n == 0 {
+		// No existing row — insert as true (toggling from implicit false).
+		var one int64 = 1
+		fv := &FieldValue{FieldID: def.ID, ObjectID: objectID, ValInt: &one}
+		insQuery := database.ConvertPlaceholders(`
+			INSERT INTO gk_custom_field_value
+				(field_id, object_id, val_text, val_int, val_decimal, val_decimal2, val_date, val_datetime, val_json)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`)
+		_, err = r.db.Exec(insQuery,
+			fv.FieldID, fv.ObjectID,
+			fv.ValText, fv.ValInt, fv.ValDecimal, fv.ValDecimal2,
+			fv.ValDate, fv.ValDatetime, fv.ValJSON,
+		)
+		return err
+	}
+	return nil
+}
+
+// fieldValueColumn extracts the typed value from a FieldValue for the given column name.
+func fieldValueColumn(fv *FieldValue, col string) any {
+	switch col {
+	case "val_text":
+		if fv.ValText != nil {
+			return *fv.ValText
+		}
+	case "val_int":
+		if fv.ValInt != nil {
+			return *fv.ValInt
+		}
+	case "val_decimal":
+		if fv.ValDecimal != nil {
+			return *fv.ValDecimal
+		}
+	case "val_date":
+		if fv.ValDate != nil {
+			return *fv.ValDate
+		}
+	case "val_datetime":
+		if fv.ValDatetime != nil {
+			return *fv.ValDatetime
+		}
+	case "val_json":
+		if fv.ValJSON != nil {
+			return *fv.ValJSON
+		}
+	}
+	return nil
 }
 
 // --- Internal helpers ---
