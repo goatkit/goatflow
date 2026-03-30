@@ -138,6 +138,10 @@ name: hello-grpc
 version: "1.0.0"
 runtime: grpc
 binary: hello-grpc
+description: My plugin description
+author: Acme Corp
+license: Apache-2.0
+dependencies: [goatkit-media]    # Other plugins this depends on
 resources:
   memory_mb: 512
   call_timeout: 30s
@@ -146,7 +150,66 @@ resources:
       access: readwrite
     - type: http
       scope: ["*.tenor.com"]
+sidecars:                         # Optional sidecar containers (gRPC only)
+  - name: my-sidecar
+    image: myorg/my-sidecar:latest
+    ports: ["8080"]
+    env:
+      MY_VAR: "value"
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+    privileged: false
+    memory_mb: 128
+    cpu_millis: 200
+    healthcheck:
+      command: ["curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
 ```
+
+### Sidecar Containers
+
+gRPC plugins can declare sidecar containers they require. Sidecars are companion services that run alongside the plugin — for example, an ADB server for device management or a local inference engine.
+
+**How sidecars are deployed depends on the isolation mode:**
+
+| Mode | Sidecar Deployment | Communication |
+|------|-------------------|---------------|
+| Local (default) | Sidecars not auto-managed — deploy manually or via compose overlay | Via configured host/port |
+| Docker Compose | `GenerateComposeFragment()` produces service definitions on the same network | Via container name |
+| Kubernetes | Sidecars injected into the plugin pod spec as additional containers | Via `localhost` (shared pod network) |
+
+**Example:** goatkit-devices declares an ADB server sidecar:
+
+```yaml
+sidecars:
+  - name: adb-server
+    image: goatkit/adb-server:latest
+    ports: ["5037"]
+    privileged: true              # USB device access
+    env:
+      ADB_SERVER_HOST: "0.0.0.0"
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+    healthcheck:
+      command: ["adb", "devices"]
+      interval: 10s
+```
+
+In K8s mode, this becomes a second container in the goatkit-devices pod. The plugin connects to `localhost:5037` — no cross-pod networking needed.
+
+**SidecarSpec fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Container name |
+| `image` | string | Container image (required) |
+| `ports` | []string | Exposed ports |
+| `env` | map | Environment variables |
+| `volumes` | []string | Volume mounts (`host:container` format) |
+| `privileged` | bool | Run with elevated privileges (e.g. USB access) |
+| `memory_mb` | int | Memory limit (default: 128Mi) |
+| `cpu_millis` | int | CPU limit in millicores (default: 200m) |
+| `healthcheck` | object | Health check command and interval |
 
 ## Host API
 
@@ -182,6 +245,18 @@ On Linux, gRPC plugin processes run with OS-level restrictions (`internal/plugin
 - **Network hint** — plugins without `http` permission get `GOATFLOW_NO_NETWORK=1` set in their environment
 
 On non-Linux platforms, process sandboxing is not available and a warning is logged. Use containers or limit gRPC plugins to trusted code on these platforms.
+
+### Kubernetes Pod Isolation
+
+When `GOATFLOW_PLUGIN_ISOLATION=k8s`, gRPC plugins run as Kubernetes pods instead of local processes. Each plugin gets:
+
+- **Dedicated Deployment** — auto-generated with resource limits from `ResourcePolicy`
+- **Service** — DNS-addressable within the cluster
+- **NetworkPolicy** — only GoatFlow can connect to the plugin's gRPC port
+- **Sidecar injection** — if the plugin declares sidecars in `plugin.yaml`, they are added as additional containers in the same pod (shared localhost network)
+- **Auto-restart** — Kubernetes Deployment controller handles crashes
+
+The generated manifests (`internal/plugin/grpc/k8s_isolation.go`) include Deployment + Service + NetworkPolicy. Sidecars are rendered as additional containers within the pod spec, sharing the pod network — so the plugin connects to its sidecars via `localhost`.
 
 ### Plugin Signing
 

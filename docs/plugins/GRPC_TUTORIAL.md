@@ -64,6 +64,8 @@ Fields:
 - `runtime` — Must be `grpc`
 - `binary` — Path to executable (relative to plugin directory)
 - `resources` — Requested resource limits and permissions
+- `dependencies` — Other plugins this depends on (optional)
+- `sidecars` — Sidecar containers the plugin requires (optional, see [Plugin Platform](../PLUGIN_PLATFORM.md#sidecar-containers))
 
 ## Step 3: Implement the Plugin
 

@@ -19,6 +19,18 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - Full validation: type checking, option membership for multi_select, bounds for numeric
 - Backward compatible — plain values continue to work as before
 
+**Plugin Sidecar Containers**
+- `SidecarSpec` in `plugin.yaml` — gRPC plugins can declare sidecar containers they require
+- K8s mode: sidecars injected into the plugin pod spec (shared pod network, localhost communication)
+- Docker Compose mode: `GenerateComposeFragment()` produces service definitions for sidecars
+- Supports image, ports, env vars, volumes, privileged mode, memory/CPU limits, and health checks
+- First consumer: goatkit-devices declares an ADB server sidecar for physical device fleet management
+
+**Enterprise Plugin Ecosystem**
+- 8 enterprise plugins scaffolded with schema, handlers, and private Gitea repos
+- goatkit-media, goatkit-llm, goatkit-billing, goatkit-devices, goatkit-workflows, goatkit-audit, goatkit-content-feeds, goatkit-notify
+- ROADMAP updated with enterprise plugin status
+
 ## [0.8.0] - March 2026
 
 **GoatKit PaaS Core** — Universal custom fields, plugin UI system, multi-tenancy, secure settings, entity deletion, reusable components, plugin marketplace, self-service authentication, and accessibility.
