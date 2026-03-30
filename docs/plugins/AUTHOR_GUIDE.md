@@ -48,6 +48,10 @@ name: my-plugin
 version: "1.0.0"
 runtime: grpc
 binary: my-plugin
+description: My plugin description
+author: Acme Corp
+license: Apache-2.0
+dependencies: [goatkit-media]       # Other plugins this depends on
 resources:
   memory_mb: 512
   call_timeout: 30s
@@ -62,9 +66,15 @@ resources:
     - type: email
     - type: plugin_call
       scope: ["stats"]
+sidecars:                            # Optional companion containers
+  - name: my-sidecar
+    image: myorg/my-sidecar:latest
+    ports: ["8080"]
+    healthcheck:
+      command: ["curl", "-f", "http://localhost:8080/health"]
 ```
 
-The plugin also self-describes via `GKRegister()` for routes, widgets, jobs, menu items, i18n, and error codes.
+The plugin also self-describes via `GKRegister()` for routes, widgets, jobs, menu items, i18n, and error codes. See [Sidecar Containers](../PLUGIN_PLATFORM.md#sidecar-containers) for details on declaring companion services.
 
 ### Directory Layout
 
