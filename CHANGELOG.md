@@ -31,6 +31,16 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - goatkit-media, goatkit-llm, goatkit-billing, goatkit-devices, goatkit-workflows, goatkit-audit, goatkit-content-feeds, goatkit-notify
 - ROADMAP updated with enterprise plugin status
 
+**Plugin Webhook Routes**
+- `"webhook"` middleware keyword for `RouteSpec` — plugins declare unauthenticated endpoints for external callbacks
+- HMAC-SHA256 signature verification with per-plugin signing secret (stored in secure config)
+- Stripe-specific signature parsing (`t=<timestamp>,v1=<signature>`) with 5-minute replay protection
+- Standard webhook headers supported: `X-Signature-256`, `X-Hub-Signature-256`, `X-Webhook-Signature`
+- 1MB body size limit to prevent OOM on oversized payloads
+- Secure by default — unsigned webhooks rejected unless `GOATFLOW_WEBHOOK_ALLOW_UNSIGNED=true`
+- Request logging with method, path, source IP, plugin name, and verification result
+- IP-based rate limiting per plugin (500 req/hr default, applied before signature verification)
+
 **Deployment — Custom Caddy with DNS-01 TLS**
 - `deploy/Dockerfile.caddy` — custom Caddy image with `caddy-dns/route53` module for DNS-01 ACME challenges
 - Enables Let's Encrypt TLS certificates on VPN-only deployments where ports 80/443 are not publicly accessible

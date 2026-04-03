@@ -1,7 +1,11 @@
 package api
 
 import (
+	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +14,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -585,6 +591,179 @@ func RequireGroup(groupName string) gin.HandlerFunc {
 		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: requires group " + groupName})
 		c.Abort()
 	}
+}
+
+// maxWebhookBodySize is the maximum request body size for webhook endpoints (1MB).
+const maxWebhookBodySize = 1 << 20
+
+// webhookRequestsPerHour is the default rate limit for webhook endpoints per source IP per plugin.
+const webhookRequestsPerHour = 500
+
+// WebhookRateLimit applies IP-based rate limiting scoped to the plugin name.
+// This runs BEFORE signature verification to reject floods cheaply.
+func WebhookRateLimit(pluginName string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		key := "webhook:" + pluginName + ":" + c.ClientIP()
+		if !middleware.GlobalRateLimiter().Allow(key, webhookRequestsPerHour) {
+			log.Printf("⚠️  Webhook %s: rate limited %s", pluginName, c.ClientIP())
+			c.Header("Retry-After", "60")
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "rate limit exceeded"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+// WebhookAuth provides authentication for webhook endpoints.
+// No session/JWT required — instead, verifies HMAC-SHA256 signature from the
+// request header. The signing secret is stored in the plugin's secure config
+// under the key "<plugin>_webhook_secret".
+//
+// If no webhook secret is configured, requests are REJECTED by default.
+// Set GOATFLOW_WEBHOOK_ALLOW_UNSIGNED=true to allow unsigned webhooks
+// during development (NOT recommended for production).
+//
+// Signature verification supports:
+//   - Standard HMAC: X-Signature-256, X-Hub-Signature-256, X-Webhook-Signature
+//     (format: "sha256=<hex>" or plain "<hex>")
+//   - Stripe: Stripe-Signature header (format: "t=<timestamp>,v1=<signature>")
+//     Stripe signatures are computed as HMAC-SHA256(secret, "<timestamp>.<body>")
+func WebhookAuth(pluginName string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		log.Printf("🔔 Webhook: %s %s from %s (plugin: %s)",
+			c.Request.Method, c.Request.URL.Path, c.ClientIP(), pluginName)
+
+		// Read the webhook secret from secure config.
+		secretKey := pluginName + "_webhook_secret"
+		secret := ""
+		if pluginManager != nil {
+			if host := pluginManager.Host(); host != nil {
+				secret, _ = host.SecureConfigGet(c.Request.Context(), secretKey)
+			}
+		}
+
+		if secret == "" {
+			// No secret configured — reject unless explicitly allowed.
+			if os.Getenv("GOATFLOW_WEBHOOK_ALLOW_UNSIGNED") == "true" {
+				log.Printf("⚠️  Webhook %s: no signing secret — allowing (GOATFLOW_WEBHOOK_ALLOW_UNSIGNED=true)",
+					pluginName)
+				c.Next()
+				return
+			}
+			log.Printf("❌ Webhook %s: no signing secret configured (%s) — rejecting", pluginName, secretKey)
+			c.JSON(http.StatusForbidden, gin.H{"error": "webhook not configured"})
+			c.Abort()
+			return
+		}
+
+		// Check for signature header.
+		sigHeader := ""
+		sigValue := ""
+		for _, hdr := range []string{"Stripe-Signature", "X-Signature-256", "X-Hub-Signature-256", "X-Webhook-Signature"} {
+			if v := c.GetHeader(hdr); v != "" {
+				sigHeader = hdr
+				sigValue = v
+				break
+			}
+		}
+
+		if sigValue == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "webhook signature required"})
+			c.Abort()
+			return
+		}
+
+		// Read body with size limit to prevent OOM.
+		body, err := io.ReadAll(io.LimitReader(c.Request.Body, maxWebhookBodySize+1))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
+			c.Abort()
+			return
+		}
+		if int64(len(body)) > maxWebhookBodySize {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "webhook body too large"})
+			c.Abort()
+			return
+		}
+		c.Request.Body = io.NopCloser(bytes.NewReader(body))
+
+		// Verify signature based on header type.
+		var verified bool
+		if sigHeader == "Stripe-Signature" {
+			verified = verifyStripeSignature(body, sigValue, secret)
+		} else {
+			verified = verifyHMACSignature(body, sigValue, secret)
+		}
+
+		if !verified {
+			log.Printf("❌ Webhook %s: signature mismatch from %s", pluginName, c.ClientIP())
+			c.JSON(http.StatusForbidden, gin.H{"error": "webhook signature required"})
+			c.Abort()
+			return
+		}
+
+		log.Printf("✅ Webhook %s: verified from %s", pluginName, c.ClientIP())
+		c.Next()
+	}
+}
+
+// verifyHMACSignature verifies a standard HMAC-SHA256 signature.
+// Accepts formats: "sha256=<hex>", "<hex>".
+func verifyHMACSignature(body []byte, signature, secret string) bool {
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(body)
+	expected := hex.EncodeToString(mac.Sum(nil))
+
+	// Strip "sha256=" or similar prefix.
+	cleanSig := signature
+	if idx := strings.Index(cleanSig, "="); idx > 0 && idx < 10 {
+		cleanSig = cleanSig[idx+1:]
+	}
+
+	return hmac.Equal([]byte(expected), []byte(strings.ToLower(cleanSig)))
+}
+
+// verifyStripeSignature verifies Stripe's webhook signature format.
+// Header format: "t=<timestamp>,v1=<signature>"
+// Signed payload: "<timestamp>.<body>"
+// Rejects signatures older than 5 minutes to prevent replay attacks.
+func verifyStripeSignature(body []byte, header, secret string) bool {
+	var timestamp, sig string
+	for _, part := range strings.Split(header, ",") {
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		switch kv[0] {
+		case "t":
+			timestamp = kv[1]
+		case "v1":
+			sig = kv[1]
+		}
+	}
+
+	if timestamp == "" || sig == "" {
+		return false
+	}
+
+	// Replay protection: reject signatures older than 5 minutes.
+	ts, err := strconv.ParseInt(timestamp, 10, 64)
+	if err != nil {
+		return false
+	}
+	if time.Now().Unix()-ts > 300 {
+		log.Printf("⚠️  Stripe webhook: signature too old (%ds)", time.Now().Unix()-ts)
+		return false
+	}
+
+	// Stripe signs: "<timestamp>.<body>"
+	signedPayload := timestamp + "." + string(body)
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(signedPayload))
+	expected := hex.EncodeToString(mac.Sum(nil))
+
+	return hmac.Equal([]byte(expected), []byte(strings.ToLower(sig)))
 }
 
 // EnsurePluginGroups auto-creates groups declared by plugins in their GKRegistration.

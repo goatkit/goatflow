@@ -28,6 +28,11 @@ type bucket struct {
 // Global rate limiter instance
 var globalRateLimiter = NewRateLimiter()
 
+// GlobalRateLimiter returns the shared rate limiter instance.
+func GlobalRateLimiter() *RateLimiter {
+	return globalRateLimiter
+}
+
 // NewRateLimiter creates a new rate limiter
 func NewRateLimiter() *RateLimiter {
 	rl := &RateLimiter{
