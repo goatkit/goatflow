@@ -1235,6 +1235,138 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/custom-fields`
+- **Method:** `GET`
+- **Description:** Custom fields management page
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/custom-fields/new`
+- **Method:** `GET`
+- **Description:** New custom field form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/custom-fields/:id`
+- **Method:** `GET`
+- **Description:** Edit custom field form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/custom-fields`
+- **Method:** `POST`
+- **Description:** Create new custom field
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/custom-fields/:id`
+- **Method:** `PUT`
+- **Description:** Update existing custom field
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/custom-fields/:id`
+- **Method:** `DELETE`
+- **Description:** Soft-delete custom field
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/recycle-bin`
+- **Method:** `GET`
+- **Description:** List recycle bin entries
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/recycle-bin/restore`
+- **Method:** `POST`
+- **Description:** Restore entity from recycle bin
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/recycle-bin/purge`
+- **Method:** `POST`
+- **Description:** Permanently delete entity from recycle bin
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/recycle-bin/batch-delete`
+- **Method:** `POST`
+- **Description:** Batch soft-delete multiple entities
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/recycle-bin/batch-purge`
+- **Method:** `POST`
+- **Description:** Batch permanently delete multiple entities
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/recycle-bin/log/:entity_type/:entity_id`
+- **Method:** `GET`
+- **Description:** View deletion audit log for an entity
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/templates`
 - **Method:** `GET`
 - **Description:** Display response templates management page

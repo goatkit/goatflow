@@ -190,6 +190,46 @@
         ]
       }
     },
+    "/admin/api/custom-fields": {
+      "post": {
+        "description": "Create new custom field",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/api/custom-fields/{id}": {
+      "delete": {
+        "description": "Soft-delete custom field",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update existing custom field",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/admin/api/customer-groups/permissions": {
       "get": {
         "description": "Get customer group permissions",
@@ -487,6 +527,76 @@
     "/admin/api/queues/{id}/templates": {
       "put": {
         "description": "Update queue template assignments",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/api/recycle-bin/batch-delete": {
+      "post": {
+        "description": "Batch soft-delete multiple entities",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/api/recycle-bin/batch-purge": {
+      "post": {
+        "description": "Batch permanently delete multiple entities",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/api/recycle-bin/log/:entity_type/:entity_id": {
+      "get": {
+        "description": "View deletion audit log for an entity",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/api/recycle-bin/purge": {
+      "post": {
+        "description": "Permanently delete entity from recycle bin",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/api/recycle-bin/restore": {
+      "post": {
+        "description": "Restore entity from recycle bin",
         "responses": {
           "200": {
             "description": "Success"
@@ -1603,6 +1713,48 @@
       },
       "put": {
         "description": "Toggle communication channel status",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/custom-fields": {
+      "get": {
+        "description": "Custom fields management page",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/custom-fields/new": {
+      "get": {
+        "description": "New custom field form",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/custom-fields/{id}": {
+      "get": {
+        "description": "Edit custom field form",
         "responses": {
           "200": {
             "description": "Success"
@@ -3891,6 +4043,20 @@
     "/admin/queues/{id}/templates": {
       "get": {
         "description": "Assign templates to a queue",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/recycle-bin": {
+      "get": {
+        "description": "List recycle bin entries",
         "responses": {
           "200": {
             "description": "Success"

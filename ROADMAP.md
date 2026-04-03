@@ -435,12 +435,16 @@ Shared UI components usable by any plugin. Server-rendered HTML building blocks.
 
 **GoatKit PaaS Core — Plugin Webhook Routes**
 
-Plugins need to receive callbacks from external services (payment providers, CI/CD, etc.) without authentication. Currently all plugin routes go through auth middleware.
+Plugins receive callbacks from external services (payment providers, CI/CD, etc.) without session authentication. HMAC signature verification prevents forgery.
 
-- [ ] `WebhookSpec` in `GKRegistration` — plugins declare unauthenticated route paths
-- [ ] Webhook routes bypass session/token auth but enforce HMAC signature verification (plugin-provided secret)
-- [ ] Rate limiting on webhook routes (configurable per plugin)
-- [ ] Webhook request logging for debugging (stored in plugin log table)
+- [x] `"webhook"` middleware keyword for `RouteSpec` — plugins declare webhook routes with `Middleware: ["webhook"]`
+- [x] HMAC-SHA256 signature verification with signing secret from plugin secure config (`<plugin>_webhook_secret`)
+- [x] Stripe-specific signature parsing (`t=<timestamp>,v1=<signature>` format with 5-minute replay window)
+- [x] Standard webhook headers: `X-Signature-256`, `X-Hub-Signature-256`, `X-Webhook-Signature`
+- [x] 1MB body size limit to prevent OOM on malicious payloads
+- [x] Secure by default — rejects unsigned webhooks unless `GOATFLOW_WEBHOOK_ALLOW_UNSIGNED=true` (dev only)
+- [x] Webhook request logging (method, path, source IP, plugin name, verification result)
+- [x] Rate limiting on webhook routes (500 req/hr per source IP per plugin, runs before signature verification)
 
 **GoatKit PaaS Core — Plugin File Storage API**
 

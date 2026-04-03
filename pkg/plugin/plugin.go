@@ -88,11 +88,18 @@ type GroupSpec struct {
 }
 
 // RouteSpec defines an HTTP route the plugin wants to handle.
+//
+// Middleware options:
+//   - "auth"          — session or JWT authentication required
+//   - "admin"         — auth + admin role required
+//   - "group:<name>"  — auth + group membership required
+//   - "webhook"       — no auth, HMAC signature verification, request logging
+//   - (empty)         — no middleware (use with caution)
 type RouteSpec struct {
 	Method      string   `json:"method"`                 // GET, POST, PUT, DELETE, etc.
 	Path        string   `json:"path"`                   // URL path, e.g. "/admin/stats"
 	Handler     string   `json:"handler"`                // plugin function to call
-	Middleware  []string `json:"middleware,omitempty"`   // middleware chain, e.g. ["auth", "admin"]
+	Middleware  []string `json:"middleware,omitempty"`    // middleware chain
 	Description string   `json:"description,omitempty"`  // for documentation
 }
 

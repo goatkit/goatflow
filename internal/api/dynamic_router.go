@@ -80,6 +80,8 @@ func RebuildDynamicEngine() {
 				case strings.HasPrefix(mw, "group:"):
 					groupName := strings.TrimPrefix(mw, "group:")
 					mwChain = append(mwChain, SessionOrJWTAuth(), RequireGroup(groupName))
+				case mw == "webhook":
+					mwChain = append(mwChain, WebhookRateLimit(pluginName), WebhookAuth(pluginName))
 				}
 			}
 
