@@ -433,6 +433,45 @@ Shared UI components usable by any plugin. Server-rendered HTML building blocks.
 
 ### 0.8.1 - Target: June 2026
 
+**GoatKit PaaS Core — Plugin Webhook Routes**
+
+Plugins need to receive callbacks from external services (payment providers, CI/CD, etc.) without authentication. Currently all plugin routes go through auth middleware.
+
+- [ ] `WebhookSpec` in `GKRegistration` — plugins declare unauthenticated route paths
+- [ ] Webhook routes bypass session/token auth but enforce HMAC signature verification (plugin-provided secret)
+- [ ] Rate limiting on webhook routes (configurable per plugin)
+- [ ] Webhook request logging for debugging (stored in plugin log table)
+
+**GoatKit PaaS Core — Plugin File Storage API**
+
+Platform-managed file storage for plugins. Eliminates direct filesystem access, enables S3/cloud backends.
+
+- [ ] `HostAPI.StoreFile(key, data, metadata)` / `GetFile(key)` / `DeleteFile(key)` / `ListFiles(prefix)`
+- [ ] Backend: local disk (default), S3-compatible (configurable via `GOATFLOW_STORAGE_BACKEND`)
+- [ ] Per-plugin namespace isolation (sandbox enforced)
+- [ ] Org-scoped file storage (files belong to an org context)
+- [ ] Size limits per plugin (configurable via resource policies)
+- [ ] WASM + gRPC wire format for file storage host functions
+
+**GoatKit PaaS Core — Plugin SSE Channel**
+
+Real-time server-sent events for plugin UIs. Eliminates polling, enables live progress updates and status notifications.
+
+- [ ] `HostAPI.PublishEvent(channel, event, data)` — plugins push events
+- [ ] SSE endpoint `/api/v1/plugins/{name}/events/{channel}` — clients subscribe
+- [ ] Per-plugin channel isolation (sandbox enforced)
+- [ ] Auth-scoped: agent channels require session, customer channels scoped to org
+- [ ] Automatic keepalive and reconnection handling
+
+**GoatKit PaaS Core — Automatic Org Context Injection**
+
+Plugins receive org context automatically from the authenticated session, eliminating manual org lookup.
+
+- [ ] Middleware injects `org_id` into all plugin API call params automatically
+- [ ] `HostAPI.OrgID()` returns the active org from the request context (already exists — extend to plugin dispatch)
+- [ ] Plugin dispatch wraps params with `_org_id` field before forwarding to plugin handler
+- [ ] Opt-out flag for plugins that handle multi-org queries themselves
+
 **Statistics & Reporting Plugin — UI & Shipping**
 - [ ] Dashboard widgets with Chart.js
 - [ ] Built-in report templates (tickets by queue, agent, SLA compliance)

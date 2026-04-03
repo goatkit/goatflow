@@ -31,6 +31,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - goatkit-media, goatkit-llm, goatkit-billing, goatkit-devices, goatkit-workflows, goatkit-audit, goatkit-content-feeds, goatkit-notify
 - ROADMAP updated with enterprise plugin status
 
+**Deployment — Custom Caddy with DNS-01 TLS**
+- `deploy/Dockerfile.caddy` — custom Caddy image with `caddy-dns/route53` module for DNS-01 ACME challenges
+- Enables Let's Encrypt TLS certificates on VPN-only deployments where ports 80/443 are not publicly accessible
+- DNS-01 validation via Route53 API — no inbound HTTP required for certificate issuance/renewal
+
 ## [0.8.0] - March 2026
 
 **GoatKit PaaS Core** — Universal custom fields, plugin UI system, multi-tenancy, secure settings, entity deletion, reusable components, plugin marketplace, self-service authentication, and accessibility.
