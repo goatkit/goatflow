@@ -327,3 +327,8 @@ func TestGRPCPluginConcurrent(t *testing.T) {
 		}
 	}
 }
+// File storage stubs
+func (m *mockHostAPI) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error { return nil }
+func (m *mockHostAPI) GetFile(ctx context.Context, key string) ([]byte, map[string]string, error) { return nil, nil, nil }
+func (m *mockHostAPI) DeleteFile(ctx context.Context, key string) error { return nil }
+func (m *mockHostAPI) ListFiles(ctx context.Context, prefix string) ([]plugin.FileInfo, error) { return nil, nil }

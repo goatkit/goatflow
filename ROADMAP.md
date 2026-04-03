@@ -450,12 +450,14 @@ Plugins receive callbacks from external services (payment providers, CI/CD, etc.
 
 Platform-managed file storage for plugins. Eliminates direct filesystem access, enables S3/cloud backends.
 
-- [ ] `HostAPI.StoreFile(key, data, metadata)` / `GetFile(key)` / `DeleteFile(key)` / `ListFiles(prefix)`
-- [ ] Backend: local disk (default), S3-compatible (configurable via `GOATFLOW_STORAGE_BACKEND`)
-- [ ] Per-plugin namespace isolation (sandbox enforced)
-- [ ] Org-scoped file storage (files belong to an org context)
-- [ ] Size limits per plugin (configurable via resource policies)
-- [ ] WASM + gRPC wire format for file storage host functions
+- [x] `HostAPI.StoreFile(key, data, metadata)` / `GetFile(key)` / `DeleteFile(key)` / `ListFiles(prefix)`
+- [x] Backend: local disk (default) — files stored under `$STORAGE_PATH/plugins/<plugin_name>/`
+- [x] Per-plugin namespace isolation (sandbox injects plugin name, path traversal blocked)
+- [x] Sidecar metadata files (JSON) for content-type, size, modification time
+- [x] gRPC wire format: `store_file`, `get_file`, `delete_file`, `list_files` host methods
+- [x] S3-compatible backend (`GOATFLOW_STORAGE_BACKEND=s3`) — PUT/GET/DELETE via standard HTTP, configurable endpoint/bucket/credentials
+- [x] Org-scoped file storage — files stored under `<plugin>/org-<id>/<key>` when org context is active
+- [x] Size limits per plugin — `MaxFileStorageBytes` in `ResourcePolicy` (default 500MB), enforced before write
 
 **GoatKit PaaS Core — Plugin SSE Channel**
 

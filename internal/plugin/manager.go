@@ -109,6 +109,13 @@ func (m *Manager) GetPolicy(name string) (ResourcePolicy, bool) {
 	return *p, true
 }
 
+// PolicyFor returns the policy for a plugin, or nil if not found.
+func (m *Manager) PolicyFor(name string) *ResourcePolicy {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.policies[name]
+}
+
 // AllPolicies returns all current policies.
 func (m *Manager) AllPolicies() map[string]ResourcePolicy {
 	m.mu.RLock()

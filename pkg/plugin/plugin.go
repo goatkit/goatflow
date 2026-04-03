@@ -233,6 +233,27 @@ type HostAPI interface {
 
 	// Query finds entities by custom field values. Returns matching object IDs.
 	CustomFieldsQuery(ctx context.Context, entityType string, filters []CustomFieldFilter) ([]int64, error)
+
+	// File Storage
+	// StoreFile stores a file under the plugin's namespace.
+	// Key is a logical path (e.g. "backups/job-123.backup"). Plugin prefix is auto-added.
+	// Metadata is optional key-value pairs stored alongside the file (content-type, description, etc.).
+	StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error
+	// GetFile retrieves a file by key. Returns the data and metadata, or error if not found.
+	GetFile(ctx context.Context, key string) ([]byte, map[string]string, error)
+	// DeleteFile removes a file by key.
+	DeleteFile(ctx context.Context, key string) error
+	// ListFiles lists files under a prefix (e.g. "backups/"). Returns keys and metadata.
+	ListFiles(ctx context.Context, prefix string) ([]FileInfo, error)
+}
+
+// FileInfo describes a stored file.
+type FileInfo struct {
+	Key         string            `json:"key"`
+	Size        int64             `json:"size"`
+	ContentType string            `json:"content_type,omitempty"`
+	Metadata    map[string]string `json:"metadata,omitempty"`
+	ModifiedAt  string            `json:"modified_at,omitempty"`
 }
 
 // CustomFieldSpec declares a custom field a plugin needs on a GoatKit entity.
@@ -398,6 +419,9 @@ type ResourcePolicy struct {
 	MaxCallsPerSecond int `json:"max_calls_per_second,omitempty"` // 0 = unlimited
 	MaxDBQueriesPerMin int `json:"max_db_queries_per_min,omitempty"`
 	MaxHTTPReqPerMin  int `json:"max_http_req_per_min,omitempty"`
+
+	// File storage limits
+	MaxFileStorageBytes int64 `json:"max_file_storage_bytes,omitempty"` // 0 = default (500MB)
 }
 
 // DefaultResourcePolicy returns a restrictive default policy for new plugins.

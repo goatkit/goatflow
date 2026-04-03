@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/goatkit/goatflow/internal/database"
-	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/repository"
 )
 
@@ -193,40 +192,26 @@ func TestAdminGroupManagement(t *testing.T) {
 			t.Skip("Database not available")
 		}
 
-		groupRepo := repository.NewGroupRepository(db)
-		groups, _ := groupRepo.List()
-
-		// Find a non-system group to delete
-		var testGroup *models.Group
-		for _, g := range groups {
-			if g.Name != "admin" && g.Name != "users" && g.Name != "stats" {
-				testGroup = g
-				break
-			}
+		// Create a dedicated group for this test to ensure it exists.
+		groupName := fmt.Sprintf("delete-test-%d", time.Now().UnixNano())
+		_, execErr := db.Exec(
+			"INSERT INTO `groups` (name, valid_id, create_time, change_time, create_by, change_by) VALUES (?, 1, NOW(), NOW(), 1, 1)",
+			groupName)
+		if execErr != nil {
+			t.Skipf("Could not create test group: %v", execErr)
 		}
 
-		if testGroup == nil {
-			t.Skip("No non-system group available for testing")
+		// Get the ID of the group we just created.
+		var groupID int64
+		row := db.QueryRow("SELECT id FROM `groups` WHERE name = ?", groupName)
+		if err := row.Scan(&groupID); err != nil {
+			t.Skipf("Could not find created group: %v", err)
 		}
 
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
-		var idStr2 string
-		switch v := testGroup.ID.(type) {
-		case int:
-			idStr2 = strconv.Itoa(v)
-		case int64:
-			idStr2 = strconv.Itoa(int(v))
-		case uint:
-			idStr2 = strconv.Itoa(int(v))
-		case uint64:
-			idStr2 = strconv.Itoa(int(v))
-		case string:
-			idStr2 = v
-		default:
-			t.Skip("Unknown group ID type; skipping")
-		}
+		idStr2 := strconv.FormatInt(groupID, 10)
 		req, _ := http.NewRequest("DELETE", "/admin/groups/"+idStr2, nil)
 		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()

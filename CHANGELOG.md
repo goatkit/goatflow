@@ -41,6 +41,18 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - Request logging with method, path, source IP, plugin name, and verification result
 - IP-based rate limiting per plugin (500 req/hr default, applied before signature verification)
 
+**Plugin File Storage API**
+- `HostAPI.StoreFile()` / `GetFile()` / `DeleteFile()` / `ListFiles()` — platform-managed file storage for plugins
+- Local disk backend — files stored under `$STORAGE_PATH/plugins/<plugin_name>/` with per-plugin namespace isolation
+- Sidecar JSON metadata files (content-type, size, modification time, custom key-value pairs)
+- Path traversal protection — sanitised keys, `..` and absolute paths rejected
+- gRPC wire format: `store_file`, `get_file`, `delete_file`, `list_files` host methods
+- SandboxedHostAPI enforcement — plugin name auto-injected from context
+- S3-compatible backend (`GOATFLOW_STORAGE_BACKEND=s3`) — supports MinIO, R2, AWS S3 via configurable endpoint
+- Org-scoped file storage — files namespaced under `<plugin>/org-<id>/` when org context is active
+- `MaxFileStorageBytes` in `ResourcePolicy` — per-plugin storage quota (default 500MB), enforced before write
+- Pluggable `FileStorageBackend` interface for custom storage implementations
+
 **Deployment — Custom Caddy with DNS-01 TLS**
 - `deploy/Dockerfile.caddy` — custom Caddy image with `caddy-dns/route53` module for DNS-01 ACME challenges
 - Enables Let's Encrypt TLS certificates on VPN-only deployments where ports 80/443 are not publicly accessible
