@@ -671,3 +671,8 @@ func TestRateLimiter_WindowExpiry(t *testing.T) {
 		t.Error("should be allowed after window expiry")
 	}
 }
+// File storage stubs
+func (m *mockInnerHostAPI) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error { return nil }
+func (m *mockInnerHostAPI) GetFile(ctx context.Context, key string) ([]byte, map[string]string, error) { return nil, nil, nil }
+func (m *mockInnerHostAPI) DeleteFile(ctx context.Context, key string) error { return nil }
+func (m *mockInnerHostAPI) ListFiles(ctx context.Context, prefix string) ([]FileInfo, error) { return nil, nil }

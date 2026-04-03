@@ -28,6 +28,7 @@ type ResourcePolicy = pkgplugin.ResourcePolicy
 type CascadeSpec = pkgplugin.CascadeSpec
 type CustomFieldSpec = pkgplugin.CustomFieldSpec
 type CustomFieldFilter = pkgplugin.CustomFieldFilter
+type FileInfo = pkgplugin.FileInfo
 type UISpec = pkgplugin.UISpec
 type UIRouteSpec = pkgplugin.UIRouteSpec
 type UINavSpec = pkgplugin.UINavSpec

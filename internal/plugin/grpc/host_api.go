@@ -320,6 +320,58 @@ func dispatchHostCall(ctx context.Context, host plugin.HostAPI, method string, a
 		}
 		return json.Marshal(ids)
 
+	case "store_file":
+		var req struct {
+			Key      string            `json:"key"`
+			Data     []byte            `json:"data"`     // base64-encoded by JSON
+			Metadata map[string]string `json:"metadata"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		if err := host.StoreFile(ctx, req.Key, req.Data, req.Metadata); err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]string{"status": "ok"})
+
+	case "get_file":
+		var req struct {
+			Key string `json:"key"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		data, metadata, err := host.GetFile(ctx, req.Key)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]any{"data": data, "metadata": metadata})
+
+	case "delete_file":
+		var req struct {
+			Key string `json:"key"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		if err := host.DeleteFile(ctx, req.Key); err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]string{"status": "ok"})
+
+	case "list_files":
+		var req struct {
+			Prefix string `json:"prefix"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		files, err := host.ListFiles(ctx, req.Prefix)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(files)
+
 	default:
 		return nil, &UnknownMethodError{Method: method}
 	}

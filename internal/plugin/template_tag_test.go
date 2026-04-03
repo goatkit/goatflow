@@ -411,3 +411,8 @@ func (m *mockHostAPIForTag) CustomFieldsSet(ctx context.Context, entityType stri
 func (m *mockHostAPIForTag) CustomFieldsQuery(ctx context.Context, entityType string, filters []CustomFieldFilter) ([]int64, error) {
 	return nil, nil
 }
+// File storage stubs
+func (m *mockHostAPIForTag) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error { return nil }
+func (m *mockHostAPIForTag) GetFile(ctx context.Context, key string) ([]byte, map[string]string, error) { return nil, nil, nil }
+func (m *mockHostAPIForTag) DeleteFile(ctx context.Context, key string) error { return nil }
+func (m *mockHostAPIForTag) ListFiles(ctx context.Context, prefix string) ([]FileInfo, error) { return nil, nil }

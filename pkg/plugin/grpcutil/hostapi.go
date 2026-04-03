@@ -296,5 +296,48 @@ func (c *HostAPIClient) CustomFieldsQuery(_ context.Context, entityType string, 
 	return ids, nil
 }
 
+// ---- File Storage ----
+
+func (c *HostAPIClient) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error {
+	_, err := c.call("store_file", map[string]any{
+		"key":      key,
+		"data":     data,
+		"metadata": metadata,
+	})
+	return err
+}
+
+func (c *HostAPIClient) GetFile(ctx context.Context, key string) ([]byte, map[string]string, error) {
+	result, err := c.call("get_file", map[string]any{"key": key})
+	if err != nil {
+		return nil, nil, err
+	}
+	var resp struct {
+		Data     []byte            `json:"data"`
+		Metadata map[string]string `json:"metadata"`
+	}
+	if err := json.Unmarshal(result, &resp); err != nil {
+		return nil, nil, err
+	}
+	return resp.Data, resp.Metadata, nil
+}
+
+func (c *HostAPIClient) DeleteFile(ctx context.Context, key string) error {
+	_, err := c.call("delete_file", map[string]any{"key": key})
+	return err
+}
+
+func (c *HostAPIClient) ListFiles(ctx context.Context, prefix string) ([]plugin.FileInfo, error) {
+	result, err := c.call("list_files", map[string]any{"prefix": prefix})
+	if err != nil {
+		return nil, err
+	}
+	var files []plugin.FileInfo
+	if err := json.Unmarshal(result, &files); err != nil {
+		return nil, err
+	}
+	return files, nil
+}
+
 // Verify HostAPIClient implements plugin.HostAPI at compile time.
 var _ plugin.HostAPI = (*HostAPIClient)(nil)
