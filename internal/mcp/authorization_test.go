@@ -76,13 +76,18 @@ func getMCPFixtures(t *testing.T) *MCPTestFixtures {
 		mcpFixturesErr = mcpFixtures.setup()
 	} else {
 		// Verify fixtures still exist — another package may have cleaned up shared DB state.
-		// Check user AND group membership (both can be independently wiped).
-		var userCount, membershipCount int
+		// Check user, group memberships (admin needs 3: admin+support+billing), queues, and tickets.
+		var userCount, membershipCount, queueCount, ticketCount int
 		db.QueryRow(database.ConvertPlaceholders(
 			"SELECT COUNT(*) FROM users WHERE id = ?"), mcpFixtures.AgentAdmin).Scan(&userCount)
 		db.QueryRow(database.ConvertPlaceholders(
 			"SELECT COUNT(*) FROM group_user WHERE user_id = ?"), mcpFixtures.AgentAdmin).Scan(&membershipCount)
-		if userCount == 0 || membershipCount == 0 {
+		db.QueryRow(database.ConvertPlaceholders(
+			"SELECT COUNT(*) FROM queue WHERE id = ?"), mcpFixtures.QueueSupport).Scan(&queueCount)
+		db.QueryRow(database.ConvertPlaceholders(
+			"SELECT COUNT(*) FROM ticket WHERE id = ?"), mcpFixtures.TicketAcmeSupport).Scan(&ticketCount)
+		// Admin needs exactly 3 memberships; if any were wiped, recreate everything
+		if userCount == 0 || membershipCount < 3 || queueCount == 0 || ticketCount == 0 {
 			// Fixtures were wiped or incomplete — recreate them.
 			mcpFixturesErr = mcpFixtures.setup()
 		}
@@ -203,6 +208,18 @@ func (f *MCPTestFixtures) setup() error {
 			a.id, a.login, now, now,
 		); err != nil {
 			return fmt.Errorf("failed to create agent %s: %w", a.login, err)
+		}
+	}
+
+	// Ensure admin group (ID 2) exists — other test packages may have wiped it
+	var adminGroupExists int
+	f.db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM `groups` WHERE id = ?"), f.GroupAdmin).Scan(&adminGroupExists)
+	if adminGroupExists == 0 {
+		if err := exec(
+			"INSERT INTO `groups` (id, name, comments, valid_id, create_time, create_by, change_time, change_by) VALUES (?, 'admin', 'Admin group', 1, ?, 1, ?, 1)",
+			f.GroupAdmin, now, now,
+		); err != nil {
+			return fmt.Errorf("failed to ensure admin group: %w", err)
 		}
 	}
 

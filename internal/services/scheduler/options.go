@@ -10,6 +10,7 @@ import (
 	"github.com/goatkit/goatflow/internal/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/push"
 )
 
 type options struct {
@@ -24,6 +25,7 @@ type options struct {
 	Location     *time.Location
 	ReminderHub  notifications.Hub
 	Cache        *cache.RedisCache
+	PushConfig   push.PushConfig
 }
 
 // Option applies configuration to the scheduler service.
@@ -107,5 +109,12 @@ func WithReminderHub(h notifications.Hub) Option {
 func WithCache(c *cache.RedisCache) Option {
 	return func(o *options) {
 		o.Cache = c
+	}
+}
+
+// WithPushConfig injects VAPID configuration for push notifications.
+func WithPushConfig(cfg push.PushConfig) Option {
+	return func(o *options) {
+		o.PushConfig = cfg
 	}
 }

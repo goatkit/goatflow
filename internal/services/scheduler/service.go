@@ -14,6 +14,7 @@ import (
 	"github.com/goatkit/goatflow/internal/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/push"
 	"github.com/goatkit/goatflow/internal/repository"
 )
 
@@ -54,6 +55,7 @@ type Service struct {
 	stopOnce         sync.Once
 	location         *time.Location
 	reminderHub      notifications.Hub
+	pushConfig       push.PushConfig
 	emailPollState   emailPollState
 	metrics          *emailPollMetrics
 	valkey           *cache.RedisCache
@@ -134,6 +136,7 @@ func NewService(db *sql.DB, opts ...Option) *Service {
 		logger:           options.Logger,
 		location:         location,
 		reminderHub:      hub,
+		pushConfig:       options.PushConfig,
 		metrics:          globalEmailPollMetrics(),
 		valkey:           options.Cache,
 	}

@@ -71,6 +71,11 @@ func HandleStaticFiles(c *gin.Context) {
 		filePath = "./static/favicon.ico"
 	} else if requestPath == "/favicon.svg" {
 		filePath = "./static/favicon.svg"
+	} else if requestPath == "/manifest.json" {
+		filePath = "./static/manifest.json"
+	} else if requestPath == "/sw.js" {
+		c.Header("Service-Worker-Allowed", "/")
+		filePath = "./static/sw.js"
 	} else if strings.HasPrefix(requestPath, "/static/") {
 		// Extract the static file path
 		filePath = "." + requestPath

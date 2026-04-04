@@ -6103,6 +6103,48 @@
         ]
       }
     },
+    "/api/push/subscribe": {
+      "post": {
+        "description": "Register a push subscription",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/push/unsubscribe": {
+      "delete": {
+        "description": "Remove a push subscription",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/push/vapid-key": {
+      "get": {
+        "description": "Get VAPID public key for push subscription",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/api/queues/": {
       "get": {
         "description": "List all queues",
@@ -7537,6 +7579,20 @@
         ]
       }
     },
+    "/manifest.json": {
+      "get": {
+        "description": "Serve PWA web app manifest",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/metrics": {
       "get": {
         "description": "Prometheus metrics endpoint",
@@ -7624,6 +7680,20 @@
     "/static/*filepath": {
       "get": {
         "description": "Serve all static files including css, js, images, webfonts",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/sw.js": {
+      "get": {
+        "description": "Serve service worker",
         "responses": {
           "200": {
             "description": "Success"

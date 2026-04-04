@@ -1,0 +1,27 @@
+---
+apiVersion: v1
+kind: RouteGroup
+metadata:
+  name: api-push
+  description: "Push notification API endpoints"
+  namespace: default
+  enabled: true
+spec:
+  prefix: /api
+  middleware:
+    - unified_auth
+  routes:
+    - path: /push/vapid-key
+      method: GET
+      handler: handleGetVAPIDKey
+      description: "Get VAPID public key for push subscription"
+
+    - path: /push/subscribe
+      method: POST
+      handler: handlePushSubscribe
+      description: "Register a push subscription"
+
+    - path: /push/unsubscribe
+      method: DELETE
+      handler: handlePushUnsubscribe
+      description: "Remove a push subscription"

@@ -200,7 +200,9 @@ type TicketListRequest struct {
 	ArchiveFlag         *int    `json:"archive_flag,omitempty" form:"archive_flag"`
 	StartDate           *string `json:"start_date,omitempty" form:"start_date"`
 	EndDate             *string `json:"end_date,omitempty" form:"end_date"`
-	ExcludeClosedStates bool    `json:"-"`
+	ExcludeClosedStates bool     `json:"-"`
+	StateTypeNames      []string `json:"-"` // Filter by state type names (e.g. "open","new" for open tickets)
+	OverdueOnly         bool     `json:"-"` // Only return tickets past SLA escalation time
 	AccessibleQueueIDs  []uint  `json:"-"` // Queue IDs user has permission to view (for permission filtering)
 }
 

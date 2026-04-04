@@ -464,6 +464,19 @@ func (r *TicketRepository) List(req *models.TicketListRequest) (*models.TicketLi
 		filters = append(filters, " AND (tst.name IS NULL OR LOWER(tst.name) != 'closed')")
 	}
 
+	if len(req.StateTypeNames) > 0 {
+		placeholders := make([]string, len(req.StateTypeNames))
+		for i, name := range req.StateTypeNames {
+			placeholders[i] = "?"
+			args = append(args, name)
+		}
+		filters = append(filters, " AND LOWER(tst.name) IN ("+strings.Join(placeholders, ",")+")")
+	}
+
+	if req.OverdueOnly {
+		filters = append(filters, " AND LOWER(tst.name) IN ('open', 'new', 'pending auto', 'pending reminder') AND t.escalation_time > 0 AND t.escalation_time < UNIX_TIMESTAMP()")
+	}
+
 	if req.PriorityID != nil {
 		filters = append(filters, " AND t.ticket_priority_id = ?")
 		args = append(args, *req.PriorityID)

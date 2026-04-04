@@ -4,7 +4,7 @@ Current status, past releases, and future plans for GoatFlow.
 
 ## 🚀 Current Status
 
-**Version**: 0.8.0 (March 2026) - GoatKit PaaS Core
+**Version**: 0.8.1 (April 2026) - Mobile, PWA & Security
 
 GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ticketing and service management platform. It is built as a premier standalone solution for all organizations. Written in Go with a modular monolith architecture, GoatFlow provides enterprise-grade support ticketing, ITSM capabilities, and extensive customization options.
 
@@ -25,8 +25,10 @@ GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ti
 - **MCP Server** — AI assistant integration via JSON-RPC (`/api/mcp`) with multi-user proxy RBAC
 - **Granular RBAC** — OTRS-compatible permission service with 1,300+ lines of auth tests
 - **Demo Mode** — Restricted mode for public demos (session-only prefs, blocked password/MFA changes)
-- **Coachmarks** — Declarative onboarding tooltips with view tracking and dismissal persistence
+- **Coachmarks** — Declarative onboarding tooltips (7 tips) with view tracking, dismissal persistence, and i18n
 - **Wallpaper Toggle** — Per-theme background wallpaper control with cookie persistence
+- **Mobile Optimization** — Responsive tables, GridStack breakpoints, touch targets, mobile ticket creation, compact modals
+- **PWA & Push Notifications** — Web app manifest, service worker with offline fallback, VAPID push subscriptions, browser notification delivery
 
 ### What Works
 - Agent Interface: Full ticket management with bulk actions and multi-theme UI (4 themes with wallpaper toggle)
@@ -44,10 +46,40 @@ GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ti
 - **API Documentation**: OpenAPI 3.0 spec with Swagger UI (94 endpoints, 71% coverage)
 - **RBAC**: Granular permission service with authorization tests, **entity.hard_delete permission**
 - **Accessibility**: WCAG 2.1 AA keyboard navigation, skip-to-content, focus management, screen reader announcements
+- **Mobile**: Responsive tables with column hiding, touch-friendly controls (44px targets), mobile ticket creation, compact modals
+- **PWA**: Web app manifest, service worker, offline fallback page, push notifications for ticket reminders
 
 ---
 
 ## 📜 Past Releases
+
+### [0.8.1] - April 4, 2026
+
+**Mobile, PWA & Security**
+
+- CORS origin validation, JWT production guards, dependency audits
+- SQL dialect portability — automatic function rewriting (MySQL ↔ PostgreSQL)
+- Custom field atomic operations (increment, append, remove, cas, toggle)
+- Plugin sidecar containers, webhook routes, file storage API, SSE channels
+- Automatic org context injection for plugin calls
+- Statistics & reporting plugin v2.0 (SLA compliance, time tracking, scheduled reports)
+- Mobile optimization — responsive tables, GridStack breakpoints, touch targets, compact modals, mobile ticket creation
+- PWA — web app manifest, service worker, offline fallback, push notifications with VAPID
+- Coachmarks — 7 onboarding tips with i18n in all 15 languages
+
+### [0.8.0] - March 2026
+
+**GoatKit PaaS Core**
+
+- Universal custom fields on all entities (15 field types including GIS)
+- Plugin UI system (5 UI types, 3 shell templates, PWA manifests, custom domains)
+- Organisations & multi-tenancy (hierarchy, membership, per-org config, HostAPI scoping)
+- Secure settings (AES-256-GCM encrypted plugin secrets)
+- Entity deletion (soft delete, anonymisation, hard cascade, recycle bin, auto-purge)
+- Plugin marketplace (`gk install/update/search`, dependency resolution, theme-as-plugin)
+- Self-service authentication (password recovery, registration, email verification, CAPTCHA)
+- Reusable UI components (7 components: daily-queue, week-calendar, progress-bar, stat-card, quick-action, file-dropzone, presence-indicator)
+- Accessibility (WCAG 2.1 AA keyboard navigation, focus management, screen reader announcements)
 
 ### [0.7.0] - March 26, 2026
 
@@ -295,7 +327,7 @@ GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ti
 
 ---
 
-### 0.8.0 - Target: April 2026
+### 0.8.0 - March 2026 ✅
 
 **GoatKit PaaS Core — Custom Fields**
 
@@ -431,7 +463,7 @@ Shared UI components usable by any plugin. Server-rendered HTML building blocks.
 
 ---
 
-### 0.8.1 - Target: June 2026
+### 0.8.1 - April 2026 ✅
 
 **GoatKit PaaS Core — Plugin Webhook Routes**
 
@@ -485,21 +517,32 @@ Plugins receive org context automatically from the authenticated session, elimin
 - [x] Time tracking reports and analytics
 - [x] Ships as standalone WASM plugin
 
+**Mobile Optimization**
+- [x] Responsive table column hiding — agent and customer ticket lists hide secondary columns below `md`/`lg` breakpoints
+- [x] Dashboard GridStack responsive breakpoints — 1 column (mobile), 6 columns (tablet), 12 columns (desktop)
+- [x] Mobile CSS component overrides — tighter table/modal padding below 768px via `@media` queries in `input.css`
+- [x] Touch-friendly action buttons — `.gk-action-btn` class with 44px minimum touch targets (WCAG 2.5.8)
+- [x] Ticket detail tabs — horizontal scroll with `scrollbar-hide` and gradient fade hint on mobile
+- [x] Responsive typography — ticket detail header scales `text-xl`→`text-3xl` with `break-words` for long subjects
+- [x] Admin users table — hide Groups, 2FA, Last Login columns below `lg`, action buttons upgraded to `.gk-action-btn`
+- [x] Meta grid mobile padding — reduced card padding on small screens (`p-3 sm:p-4`)
+- [x] Modal mobile layout — stacked full-width buttons, reduced padding on mobile viewports
+- [x] Mobile ticket creation flow — responsive padding, collapsible tips, stacked buttons, compact file upload zones, touch-friendly tiptap toolbar
+- [x] Push notifications (PWA) — web app manifest, service worker with offline fallback, VAPID key infrastructure, push subscription API, scheduler integration for pending reminders, notification bell toggle in navbar
+
+**Coachmarks**
+- [x] Additional tips for key features — 6 new coachmarks: dashboard widgets, ticket creation, ticket filters, bulk actions, queue overview, push notifications (i18n in all 15 languages)
+
+---
+
+### 0.8.2 - Target: June 2026
+
 **Plugin UI System — Offline & Admin**
 - [ ] Service worker / offline support with configurable caching strategy (per-plugin CacheRoutes)
 - [ ] Admin UI for managing plugin UIs (list, enable/disable, custom domain, branding override)
 
-**Mobile Optimization**
-- [ ] Responsive mobile layouts for all pages
-- [ ] Touch-optimized controls
-- [ ] Mobile ticket creation flow
-- [ ] Push notifications (PWA)
-
 **Two-Factor Authentication — Hardware Keys**
 - [ ] Hardware key support (WebAuthn/FIDO2)
-
-**Coachmarks**
-- [ ] Additional tips for key features (ticket creation, queue management)
 
 **Quality**
 - [ ] Performance benchmarks established

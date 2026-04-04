@@ -16,6 +16,7 @@ import (
 	"github.com/goatkit/goatflow/internal/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/push"
 	"github.com/goatkit/goatflow/internal/services/escalation"
 	"github.com/goatkit/goatflow/internal/services/genericagent"
 )
@@ -509,6 +510,10 @@ func (s *Service) handlePendingReminder(ctx context.Context, job *models.Schedul
 		if err := s.reminderHub.Dispatch(ctx, recipients, payload); err != nil {
 			s.logger.Printf("scheduler: failed to dispatch pending reminder for ticket %s: %v", reminder.TicketNumber, err)
 			continue
+		}
+		// Also send push notifications to subscribed browsers
+		if s.pushConfig.VAPIDPublicKey != "" {
+			push.DispatchPushReminder(ctx, s.db, recipients, payload, s.pushConfig)
 		}
 		dispatched++
 	}

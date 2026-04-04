@@ -5,9 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.8.1] - April 2026
+
+**Mobile, PWA & Security**
+
+### Security
+
+- **CORS**: replaced wildcard `Access-Control-Allow-Origin: *` with origin validation against `CORS_ALLOWED_ORIGINS` env var; defaults to same-origin when unset
+- **JWT**: production guard rejects weak or placeholder secrets (`APP_ENV=production` + secret < 32 chars or containing dev keywords → fatal on startup)
+- **Dependencies**: `make check-deps` target runs `bun pm audit` / `npm audit` as part of `make test` pipeline
 
 ### Added
+
+**Coachmarks — Additional Feature Tips**
+- 6 new onboarding coachmark tips: dashboard widgets (`⚙️`), ticket creation (`🎫`), ticket filters (`🔍`), bulk actions (`☑️`), queue overview (`📋`), push notifications (`🔔`)
+- Existing theme-switcher tip updated to use i18n keys instead of hardcoded English
+- All 7 coachmarks fully translated in all 15 languages via `coachmarks.*` i18n keys
+- Tips are page-aware (only show on relevant pages) with staggered delays and max view limits
+
+**Mobile Optimization**
+- Responsive table column hiding for agent ticket list — Customer, Queue, Assigned, Article count hidden below `md`; Age hidden below `lg`
+- Responsive table column hiding for customer ticket list — Queue, Customer, Agent hidden below `md`; Updated hidden below `lg`
+- Dashboard GridStack responsive breakpoints via `columnOpts` — 1 column (mobile), 6 columns (tablet), 12 columns (desktop); lock toggle hidden on mobile
+- Mobile CSS component overrides in `input.css` — `@media (max-width: 767px)` block reduces `.gk-table` cell padding, `.gk-modal` header/body/footer padding, and stacks modal footer buttons vertically
+- `.gk-action-btn` CSS class — 44px minimum touch target for admin action buttons (WCAG 2.5.8 compliance)
+- Ticket detail tabs horizontal scroll — `overflow-x-auto` with `.scrollbar-hide` utility and `.tab-scroll-hint` gradient fade on mobile
+- Responsive ticket detail header — scales from `text-xl` to `text-3xl` across breakpoints with `break-words` for long subjects
+- Admin users table mobile optimization — Groups, 2FA, Last Login columns hidden below `lg`; action buttons use `.gk-action-btn`
+- Meta grid card padding reduced on mobile (`p-3 sm:p-4`)
+- `.scrollbar-hide` CSS utility — cross-browser scrollbar hiding for horizontal scroll areas
+
+**Mobile Ticket Creation Flow**
+- Customer ticket form mobile optimization — responsive heading (`text-2xl sm:text-3xl`), reduced card padding (`p-4 sm:p-6`), stacked form action buttons on mobile, collapsible tips section with Alpine.js toggle
+- Agent ticket form mobile optimization — reduced container padding, compact file upload drop zone (`py-5 sm:py-10`, smaller icon), stacked action buttons on mobile
+- Attachment upload partial — reduced drop zone height (`h-24 sm:h-32`), smaller icon and padding on mobile
+- `.gk-card-body` mobile padding reduced from `p-6` to `p-4` below 768px
+- Tiptap rich text editor toolbar buttons enlarged to `2.25rem` on mobile for better touch targets
+
+**PWA Push Notifications**
+- Web app manifest (`/manifest.json`) with app name, icons, standalone display mode, and theme color
+- PWA meta tags in base layout — `<link rel="manifest">`, `<meta name="theme-color">`, Apple mobile web app tags, `<link rel="apple-touch-icon">`
+- PWA icon assets — `icon-192.png` and `icon-512.png` generated from `favicon.svg`
+- Service worker (`/sw.js`) — cache-first for static assets, network-first for navigation with offline fallback, push notification handler with notification click support
+- Offline fallback page (`/static/offline.html`) — standalone page with GoatFlow branding for network failures
+- Service worker registration in base layout `<head>`
+- VAPID key infrastructure (`internal/push/vapid.go`) — P-256 ECDSA key generation, base64url encoding, auto-generate with warning when not configured
+- Push notification sending (`internal/push/send.go`) — webpush-go integration with subscription expiry detection
+- Push subscription database table (`gk_push_subscription`) — migration 000015 for MySQL and PostgreSQL
+- Push subscription repository (`internal/push/repository.go`) — CRUD operations with multi-user lookup support
+- Push notification API endpoints — `GET /api/push/vapid-key`, `POST /api/push/subscribe`, `DELETE /api/push/unsubscribe`
+- Client-side push manager (`static/js/push-manager.js`) — subscribe/unsubscribe/isSubscribed with VAPID key fetch and PushManager integration
+- Notification bell toggle in navbar — Alpine.js powered bell icon that enables/disables push subscriptions
+- Push dispatch integration with scheduler — `DispatchPushReminder` sends push notifications alongside in-memory pending reminders, auto-removes stale subscriptions on 404/410
+- Push configuration — `PushConfig` in config with `GOATFLOW_PUSH_ENABLED`, `GOATFLOW_PUSH_VAPID_PUBLIC_KEY`, `GOATFLOW_PUSH_VAPID_PRIVATE_KEY`, `GOATFLOW_PUSH_VAPID_CONTACT` env vars
+- i18n keys for push notifications (`push.enable`, `push.disable`, `push.not_supported`, `push.permission_denied`) and offline page (`offline.title`, `offline.message`) in all 15 languages
+- Static route support for `/manifest.json` and `/sw.js` with `Service-Worker-Allowed: /` header
+- New Go dependency: `github.com/SherClockHolmes/webpush-go` v1.3.0
 
 **Custom Fields — Atomic Operations**
 - `FieldOp` type for atomic custom field updates via `CustomFieldsSet()`

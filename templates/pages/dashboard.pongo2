@@ -78,7 +78,7 @@
             <!-- Grid Lock Toggle -->
             <button type="button" id="grid-lock-toggle"
                     onclick="toggleGridLock()"
-                    class="gk-btn-secondary flex items-center"
+                    class="gk-btn-secondary hidden md:inline-flex items-center"
                     title="Unlock widgets to drag & resize">
                 <svg id="lock-icon-locked" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
@@ -207,6 +207,13 @@ function initGridStack() {
         disableResize: true,
         disableDrag: true,
         handle: '.gs-drag-handle',
+        columnOpts: {
+            breakpoints: [
+                { w: 768, c: 1 },
+                { w: 1024, c: 6 },
+                { w: 99999, c: 12 }
+            ]
+        },
     }, el);
 
     grid.on('change', function(event, items) {

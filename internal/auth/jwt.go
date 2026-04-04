@@ -2,7 +2,11 @@ package auth
 
 import (
 	"errors"
+	"flag"
 	"fmt"
+	"log"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -30,10 +34,35 @@ type JWTManager struct {
 }
 
 func NewJWTManager(secretKey string, tokenDuration time.Duration) *JWTManager {
+	rejectInsecureJWTSecret(secretKey)
 	return &JWTManager{
 		secretKey:            []byte(secretKey),
 		tokenDuration:        tokenDuration,
 		refreshTokenDuration: 7 * 24 * time.Hour, // default 7 days
+	}
+}
+
+// rejectInsecureJWTSecret logs a fatal error in production if the JWT secret
+// looks like a development placeholder or is shorter than 32 characters.
+// Skipped when TEST_DB_DRIVER or GO_TEST are set (test environment).
+func rejectInsecureJWTSecret(secret string) {
+	env := strings.ToLower(os.Getenv("APP_ENV"))
+	if env != "production" && env != "prod" {
+		return
+	}
+	// Skip in test harness — tests may set APP_ENV=production for coverage
+	// but use short throwaway secrets.
+	if flag.Lookup("test.v") != nil {
+		return
+	}
+	if len(secret) < 32 {
+		log.Fatalf("FATAL: JWT_SECRET is too short (%d chars). Production requires at least 32 characters.", len(secret))
+	}
+	lower := strings.ToLower(secret)
+	for _, bad := range []string{"dev-secret", "change-me", "placeholder", "example", "insecure", "default"} {
+		if strings.Contains(lower, bad) {
+			log.Fatalf("FATAL: JWT_SECRET contains %q — this is not safe for production. Generate a real secret.", bad)
+		}
 	}
 }
 

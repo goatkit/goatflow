@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto py-8">
+<div class="container mx-auto py-4 sm:py-8">
     <!-- Header -->
     <div class="mb-8">
         <nav class="mb-4" aria-label="Breadcrumb">
@@ -41,7 +41,7 @@
             </ol>
         </nav>
 
-        <h1 class="text-3xl font-bold gk-heading"><span class="gk-text-gradient">{{ t("customer.new_ticket.title") }}</span></h1>
+        <h1 class="text-2xl sm:text-3xl font-bold gk-heading"><span class="gk-text-gradient">{{ t("customer.new_ticket.title") }}</span></h1>
         <p class="mt-2" style="color: var(--gk-text-muted);">
             {{ t("customer.new_ticket.subtitle") }}
         </p>
@@ -50,11 +50,11 @@
     <!-- Ticket Form -->
     <form method="post" action="/customer/tickets/create" enctype="multipart/form-data" class="space-y-6">
         <div class="gk-card-glow rounded-lg">
-            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+            <div class="px-4 sm:px-6 py-3 sm:py-4" style="border-bottom: 1px solid var(--gk-border-default);">
                 <h2 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("customer.new_ticket.ticket_info") }}</h2>
             </div>
 
-            <div class="p-6 space-y-6">
+            <div class="p-4 sm:p-6 space-y-4 sm:space-y-6">
                 <!-- Subject -->
                 <div>
                     <label for="title" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
@@ -187,12 +187,12 @@
         </div>
 
         <!-- Form Actions -->
-        <div class="flex items-center justify-between">
-            <a href="/customer/tickets" class="text-sm transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
+        <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+            <a href="/customer/tickets" class="text-sm transition-colors hover:opacity-80 text-center sm:text-left" style="color: var(--gk-text-muted);">
                 {{ t("customer.new_ticket.back_to_tickets") }}
             </a>
 
-            <div class="flex space-x-3">
+            <div class="flex flex-col sm:flex-row gap-3">
                 <button type="button"
                         onclick="if(confirm('{{ t("customer.new_ticket.cancel_confirm") }}')) { window.location='/customer/tickets'; }"
                         class="gk-btn-secondary">
@@ -206,11 +206,17 @@
     </form>
 
     <!-- Help Section -->
-    <div class="mt-8 rounded-lg p-6" style="background: rgba(var(--gk-primary-rgb), 0.1); border: 1px solid var(--gk-primary);">
-        <h3 class="text-lg font-medium mb-4" style="color: var(--gk-primary);">
-            {{ t("customer.new_ticket.tips_title") }}
-        </h3>
-        <ul class="space-y-2 text-sm" style="color: var(--gk-text-secondary);">
+    <div class="mt-8 rounded-lg p-4 sm:p-6" style="background: rgba(var(--gk-primary-rgb), 0.1); border: 1px solid var(--gk-primary);"
+         x-data="{ tipsOpen: window.innerWidth >= 640 }">
+        <button type="button" @click="tipsOpen = !tipsOpen" class="flex items-center justify-between w-full text-left sm:cursor-default">
+            <h3 class="text-lg font-medium" style="color: var(--gk-primary);">
+                {{ t("customer.new_ticket.tips_title") }}
+            </h3>
+            <svg class="w-5 h-5 sm:hidden transition-transform duration-200" :class="tipsOpen ? 'rotate-180' : ''" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+        </button>
+        <ul class="space-y-2 text-sm mt-4" x-show="tipsOpen" x-transition style="color: var(--gk-text-secondary);">
             <li class="flex items-start">
                 <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style="color: var(--gk-primary);" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>

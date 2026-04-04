@@ -4971,6 +4971,48 @@ Generated from YAML route definitions
 
 
 
+### Default: api-push
+
+**Description:** Push notification API endpoints  
+**Prefix:** `/api`  
+**Middleware:** `unified_auth` 
+
+
+#### 
+
+- **Path:** `/push/vapid-key`
+- **Method:** `GET`
+- **Description:** Get VAPID public key for push subscription
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/push/subscribe`
+- **Method:** `POST`
+- **Description:** Register a push subscription
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/push/unsubscribe`
+- **Method:** `DELETE`
+- **Description:** Remove a push subscription
+
+
+
+
+---
+
+
+
 ### Default: api-queues
 
 **Description:** Queue API endpoints for frontend  
@@ -6544,6 +6586,28 @@ Generated from YAML route definitions
 **Prefix:** ``  
 **Middleware:** 
 
+
+#### 
+
+- **Path:** `/manifest.json`
+- **Method:** `GET`
+- **Description:** Serve PWA web app manifest
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/sw.js`
+- **Method:** `GET`
+- **Description:** Serve service worker
+
+
+
+
+---
 
 #### 
 
