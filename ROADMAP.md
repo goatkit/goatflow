@@ -479,11 +479,11 @@ Plugins receive org context automatically from the authenticated session, elimin
 - [x] Opt-out flag for plugins that handle multi-org queries themselves
 
 **Statistics & Reporting Plugin — UI & Shipping**
-- [ ] Dashboard widgets with Chart.js
-- [ ] Built-in report templates (tickets by queue, agent, SLA compliance)
-- [ ] Scheduled report delivery via email
-- [ ] Time tracking reports and analytics
-- [ ] Ships as standalone WASM plugin
+- [x] Dashboard widgets with Chart.js
+- [x] Built-in report templates (tickets by queue, agent, SLA compliance)
+- [x] Scheduled report delivery via email
+- [x] Time tracking reports and analytics
+- [x] Ships as standalone WASM plugin
 
 **Plugin UI System — Offline & Admin**
 - [ ] Service worker / offline support with configurable caching strategy (per-plugin CacheRoutes)
