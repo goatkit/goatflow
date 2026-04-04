@@ -41,6 +41,27 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - Request logging with method, path, source IP, plugin name, and verification result
 - IP-based rate limiting per plugin (500 req/hr default, applied before signature verification)
 
+**SQL Dialect Portability — Automatic Function Rewriting**
+- `ConvertPlaceholders()` now transparently rewrites MySQL-specific SQL functions for PostgreSQL
+- `DATE_SUB(expr, INTERVAL n UNIT)` → `(expr - INTERVAL 'n unit')` on PostgreSQL
+- `DATE_ADD(expr, INTERVAL n UNIT)` → `(expr + INTERVAL 'n unit')` on PostgreSQL
+- `UNIX_TIMESTAMP()` → `EXTRACT(EPOCH FROM NOW())::bigint` on PostgreSQL
+- `UNIX_TIMESTAMP(expr)` → `EXTRACT(EPOCH FROM expr)::bigint` on PostgreSQL
+- `CURDATE()` → `CURRENT_DATE` on PostgreSQL
+- Reverse direction: `EXTRACT(EPOCH FROM expr)::bigint` → `UNIX_TIMESTAMP(expr)` on MySQL
+- All plugin SQL queries automatically benefit (routed through `ProdHostAPI.DBQuery`)
+- Core internal queries also benefit — no manual dialect branching needed
+
+**Statistics & Reporting Plugin v2.0**
+- SLA compliance report endpoint `/api/plugins/stats/sla-compliance` — adherence rates by queue with met/breached/rate breakdown
+- Time tracking analytics endpoint `/api/plugins/stats/time-tracking` — hours logged by agent and queue, total hours
+- Scheduled weekly report delivery via email — `report_email` job runs Monday 08:00, sends HTML report to admin users
+- HTML email report template with overview, top queues, SLA compliance, and time tracking sections
+- `stats_sla` dashboard widget — per-queue SLA compliance with colour-coded rate badges (green/amber/red)
+- `stats_time_tracking` dashboard widget — total hours and top agents for the last 30 days
+- Plugin version bumped to 2.0.0; i18n extended with SLA, time tracking, and report labels (en + de)
+- Parameterized `LIMIT` in `recent_activity` query for consistent DB abstraction
+
 **Automatic Org Context Injection**
 - `_org_id` automatically injected into all plugin call params from the authenticated session
 - Works for both YAML-routed plugin calls (`buildPluginArgs`) and direct API calls (`POST /api/v1/plugins/:name/call/:fn`)

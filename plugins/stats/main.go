@@ -15,8 +15,8 @@ import (
 // Manifest defines the plugin's capabilities
 var manifestJSON = `{
   "name": "stats",
-  "version": "1.1.0",
-  "description": "Ticket statistics and analytics",
+  "version": "2.0.0",
+  "description": "Ticket statistics, reporting, and analytics",
   "author": "GoatFlow Team",
   "license": "Apache-2.0",
   "routes": [
@@ -75,6 +75,20 @@ var manifestJSON = `{
       "handler": "timeline",
       "description": "Get ticket creation timeline (daily counts)",
       "middleware": ["auth"]
+    },
+    {
+      "method": "GET",
+      "path": "/api/plugins/stats/sla-compliance",
+      "handler": "sla_compliance",
+      "description": "SLA compliance rates by queue (supports ?range=7d|30d|90d|all)",
+      "middleware": ["auth"]
+    },
+    {
+      "method": "GET",
+      "path": "/api/plugins/stats/time-tracking",
+      "handler": "time_tracking",
+      "description": "Time tracking analytics by agent and queue (supports ?range=7d|30d|90d|all)",
+      "middleware": ["auth"]
     }
   ],
   "widgets": [
@@ -101,6 +115,32 @@ var manifestJSON = `{
       "location": "dashboard",
       "size": "large",
       "refreshable": true
+    },
+    {
+      "id": "stats_sla",
+      "title": "SLA Compliance",
+      "handler": "widget_sla",
+      "location": "dashboard",
+      "size": "medium",
+      "refreshable": true
+    },
+    {
+      "id": "stats_time_tracking",
+      "title": "Time Tracking",
+      "handler": "widget_time_tracking",
+      "location": "dashboard",
+      "size": "medium",
+      "refreshable": true
+    }
+  ],
+  "jobs": [
+    {
+      "id": "weekly-report",
+      "handler": "report_email",
+      "schedule": "0 8 * * 1",
+      "description": "Send weekly statistics report via email every Monday at 08:00",
+      "enabled": true,
+      "timeout": "2m"
     }
   ],
   "i18n": {
@@ -120,7 +160,14 @@ var manifestJSON = `{
       "stats.last_7_days": "Last 7 Days",
       "stats.last_30_days": "Last 30 Days",
       "stats.last_90_days": "Last 90 Days",
-      "stats.all_time": "All Time"
+      "stats.all_time": "All Time",
+      "stats.sla_compliance": "SLA Compliance",
+      "stats.sla_met": "Met",
+      "stats.sla_breached": "Breached",
+      "stats.time_tracking": "Time Tracking",
+      "stats.total_hours": "Total Hours",
+      "stats.weekly_report": "Weekly Report",
+      "stats.weekly_report_subject": "Weekly Statistics Report"
     },
     "de": {
       "stats.title": "Statistiken",
@@ -138,7 +185,14 @@ var manifestJSON = `{
       "stats.last_7_days": "Letzte 7 Tage",
       "stats.last_30_days": "Letzte 30 Tage",
       "stats.last_90_days": "Letzte 90 Tage",
-      "stats.all_time": "Gesamt"
+      "stats.all_time": "Gesamt",
+      "stats.sla_compliance": "SLA-Einhaltung",
+      "stats.sla_met": "Eingehalten",
+      "stats.sla_breached": "Verletzt",
+      "stats.time_tracking": "Zeiterfassung",
+      "stats.total_hours": "Gesamtstunden",
+      "stats.weekly_report": "Wochenbericht",
+      "stats.weekly_report_subject": "Wöchentlicher Statistikbericht"
     }
   },
   "error_codes": [
@@ -188,12 +242,22 @@ func gk_call(fnPtr, fnLen, argsPtr, argsLen uint32) uint64 {
 		result = handleRecentActivity(args)
 	case "timeline":
 		result = handleTimeline(args)
+	case "sla_compliance":
+		result = handleSLACompliance(args)
+	case "time_tracking":
+		result = handleTimeTracking(args)
 	case "widget_overview":
 		result = handleWidgetOverview(args)
 	case "widget_by_status":
 		result = handleWidgetByStatus()
 	case "widget_chart":
 		result = handleWidgetChart()
+	case "widget_sla":
+		result = handleWidgetSLA()
+	case "widget_time_tracking":
+		result = handleWidgetTimeTracking()
+	case "report_email":
+		result = handleReportEmail(args)
 	default:
 		result = `{"error":"unknown function: ` + fn + `"}`
 	}
@@ -511,15 +575,15 @@ func handleRecentActivity(argsJSON string) string {
 		}
 	}
 
-	query := fmt.Sprintf(`
+	query := `
 		SELECT t.tn as ticket_number, t.title, ts.name as status, t.change_time as changed_at
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		ORDER BY t.change_time DESC
-		LIMIT %d
-	`, limit)
+		LIMIT ?
+	`
 
-	rows, err := dbQuery(query)
+	rows, err := dbQuery(query, limit)
 	if err != nil {
 		return `{"activity":[]}`
 	}
@@ -824,6 +888,431 @@ func toInt(v any) int {
 	default:
 		return 0
 	}
+}
+
+// --- SLA Compliance ---
+
+func handleSLACompliance(argsJSON string) string {
+	args := parseArgs(argsJSON)
+	dateFilter, hasDate := getDateFilter(args, "t.create_time")
+
+	whereClause := ""
+	if hasDate {
+		whereClause = "AND " + dateFilter
+	}
+
+	// SLA compliance: tickets with escalation_time set vs those that breached.
+	// escalation_time > 0 means SLA is configured; breached if escalation_time < close time or still open past escalation.
+	query := fmt.Sprintf(`
+		SELECT q.name as queue,
+			COUNT(*) as total,
+			SUM(CASE
+				WHEN t.escalation_time > 0 AND (
+					tst.name IN ('closed', 'merged', 'removed')
+					AND UNIX_TIMESTAMP(t.change_time) <= t.escalation_time
+				) THEN 1
+				WHEN t.escalation_time = 0 THEN 1
+				ELSE 0
+			END) as met,
+			SUM(CASE
+				WHEN t.escalation_time > 0 AND (
+					(tst.name IN ('closed', 'merged', 'removed') AND UNIX_TIMESTAMP(t.change_time) > t.escalation_time)
+					OR (tst.name NOT IN ('closed', 'merged', 'removed') AND t.escalation_time < UNIX_TIMESTAMP())
+				) THEN 1
+				ELSE 0
+			END) as breached
+		FROM ticket t
+		JOIN queue q ON t.queue_id = q.id
+		JOIN ticket_state ts ON t.ticket_state_id = ts.id
+		JOIN ticket_state_type tst ON ts.type_id = tst.id
+		WHERE 1=1 %s
+		GROUP BY q.id, q.name
+		ORDER BY queue
+	`, whereClause)
+
+	rows, err := dbQuery(query)
+	if err != nil {
+		return `{"queues":[]}`
+	}
+
+	queues := make([]map[string]any, 0, len(rows))
+	for _, row := range rows {
+		total := toInt(row["total"])
+		met := toInt(row["met"])
+		rate := 0.0
+		if total > 0 {
+			rate = float64(met) / float64(total) * 100
+		}
+		queues = append(queues, map[string]any{
+			"queue":    row["queue"],
+			"total":    total,
+			"met":      met,
+			"breached": toInt(row["breached"]),
+			"rate":     int(rate),
+		})
+	}
+	data, _ := json.Marshal(map[string]any{"queues": queues})
+	return string(data)
+}
+
+// --- Time Tracking ---
+
+func handleTimeTracking(argsJSON string) string {
+	args := parseArgs(argsJSON)
+	dateFilter, hasDate := getDateFilter(args, "ta.create_time")
+
+	whereClause := ""
+	if hasDate {
+		whereClause = "WHERE " + dateFilter
+	}
+
+	// By agent
+	agentQuery := fmt.Sprintf(`
+		SELECT CONCAT(u.first_name, ' ', u.last_name) as agent,
+			SUM(ta.time_unit) as total_minutes,
+			COUNT(DISTINCT ta.ticket_id) as ticket_count
+		FROM time_accounting ta
+		JOIN users u ON ta.create_by = u.id
+		%s
+		GROUP BY u.id, u.first_name, u.last_name
+		ORDER BY total_minutes DESC
+		LIMIT 10
+	`, whereClause)
+
+	agentRows, err := dbQuery(agentQuery)
+	agents := make([]map[string]any, 0)
+	if err == nil {
+		for _, row := range agentRows {
+			name := row["agent"]
+			if name == nil || name == " " {
+				name = "Unknown"
+			}
+			minutes := toInt(row["total_minutes"])
+			agents = append(agents, map[string]any{
+				"agent":        name,
+				"minutes":      minutes,
+				"hours":        fmt.Sprintf("%.1f", float64(minutes)/60),
+				"ticket_count": toInt(row["ticket_count"]),
+			})
+		}
+	}
+
+	// By queue
+	queueQuery := fmt.Sprintf(`
+		SELECT q.name as queue,
+			SUM(ta.time_unit) as total_minutes,
+			COUNT(DISTINCT ta.ticket_id) as ticket_count
+		FROM time_accounting ta
+		JOIN ticket t ON ta.ticket_id = t.id
+		JOIN queue q ON t.queue_id = q.id
+		%s
+		GROUP BY q.id, q.name
+		ORDER BY total_minutes DESC
+		LIMIT 10
+	`, whereClause)
+
+	queueRows, err := dbQuery(queueQuery)
+	queues := make([]map[string]any, 0)
+	if err == nil {
+		for _, row := range queueRows {
+			minutes := toInt(row["total_minutes"])
+			queues = append(queues, map[string]any{
+				"queue":        row["queue"],
+				"minutes":      minutes,
+				"hours":        fmt.Sprintf("%.1f", float64(minutes)/60),
+				"ticket_count": toInt(row["ticket_count"]),
+			})
+		}
+	}
+
+	// Total
+	totalQuery := "SELECT COALESCE(SUM(time_unit), 0) as total FROM time_accounting"
+	if whereClause != "" {
+		totalQuery = "SELECT COALESCE(SUM(ta.time_unit), 0) as total FROM time_accounting ta " + whereClause
+	}
+	totalRows, _ := dbQuery(totalQuery)
+	totalMinutes := 0
+	if len(totalRows) > 0 {
+		totalMinutes = toInt(totalRows[0]["total"])
+	}
+
+	data, _ := json.Marshal(map[string]any{
+		"by_agent":      agents,
+		"by_queue":      queues,
+		"total_minutes": totalMinutes,
+		"total_hours":   fmt.Sprintf("%.1f", float64(totalMinutes)/60),
+	})
+	return string(data)
+}
+
+// --- Scheduled Report Email ---
+
+func handleReportEmail(argsJSON string) string {
+	// Gather statistics for the report
+	overview := handleOverview(`{"query":{"range":"7d"}}`)
+	var overviewData map[string]any
+	json.Unmarshal([]byte(overview), &overviewData)
+
+	byStatus := handleByStatus(`{"query":{"range":"7d"}}`)
+	var statusData map[string]any
+	json.Unmarshal([]byte(byStatus), &statusData)
+
+	byQueue := handleByQueue(`{"query":{"range":"7d"}}`)
+	var queueData map[string]any
+	json.Unmarshal([]byte(byQueue), &queueData)
+
+	sla := handleSLACompliance(`{"query":{"range":"7d"}}`)
+	var slaData map[string]any
+	json.Unmarshal([]byte(sla), &slaData)
+
+	timeTrack := handleTimeTracking(`{"query":{"range":"7d"}}`)
+	var timeData map[string]any
+	json.Unmarshal([]byte(timeTrack), &timeData)
+
+	// Build HTML email body
+	html := buildReportHTML(overviewData, statusData, queueData, slaData, timeData)
+
+	// Get admin email addresses for report delivery
+	adminRows, err := dbQuery(`
+		SELECT u.email FROM users u
+		JOIN group_user gu ON u.id = gu.user_id
+		JOIN groups g ON gu.group_id = g.id
+		WHERE g.name = 'admin' AND u.valid_id = 1 AND gu.permission_key = 'rw'
+		ORDER BY u.id LIMIT 10
+	`)
+	if err != nil || len(adminRows) == 0 {
+		callHost("log", map[string]any{
+			"level":   "warn",
+			"message": "No admin recipients found for weekly report",
+		})
+		return `{"status":"skipped","reason":"no recipients"}`
+	}
+
+	sent := 0
+	for _, row := range adminRows {
+		email, _ := row["email"].(string)
+		if email == "" {
+			continue
+		}
+		callHost("send_email", map[string]any{
+			"to":      email,
+			"subject": "GoatFlow Weekly Statistics Report",
+			"body":    html,
+			"html":    true,
+		})
+		sent++
+	}
+
+	callHost("log", map[string]any{
+		"level":   "info",
+		"message": fmt.Sprintf("Weekly report sent to %d recipients", sent),
+	})
+
+	data, _ := json.Marshal(map[string]any{"status": "sent", "recipients": sent})
+	return string(data)
+}
+
+func buildReportHTML(overview, status, queue, sla, timeData map[string]any) string {
+	var b strings.Builder
+
+	b.WriteString(`<!DOCTYPE html><html><head><style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+.container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; }
+.header { background: #1a1a2e; color: #fff; padding: 24px; text-align: center; }
+.header h1 { margin: 0; font-size: 20px; }
+.section { padding: 20px 24px; border-bottom: 1px solid #eee; }
+.section h2 { margin: 0 0 12px; font-size: 16px; color: #333; }
+.stat-grid { display: flex; gap: 12px; flex-wrap: wrap; }
+.stat { flex: 1; min-width: 80px; text-align: center; padding: 12px; background: #f8f9fa; border-radius: 6px; }
+.stat-value { font-size: 24px; font-weight: 700; color: #1a1a2e; }
+.stat-label { font-size: 11px; color: #666; text-transform: uppercase; margin-top: 4px; }
+table { width: 100%; border-collapse: collapse; }
+td, th { padding: 8px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }
+th { color: #666; font-weight: 600; }
+.footer { padding: 16px 24px; text-align: center; color: #999; font-size: 11px; }
+</style></head><body><div class="container">`)
+
+	b.WriteString(`<div class="header"><h1>Weekly Statistics Report</h1><p style="margin:8px 0 0;opacity:0.8;font-size:13px;">Last 7 days</p></div>`)
+
+	// Overview section
+	total := toInt(overview["total"])
+	open := toInt(overview["open"])
+	pending := toInt(overview["pending"])
+	closed := toInt(overview["closed"])
+	b.WriteString(fmt.Sprintf(`<div class="section"><h2>Overview</h2><div class="stat-grid">
+<div class="stat"><div class="stat-value">%d</div><div class="stat-label">Total</div></div>
+<div class="stat"><div class="stat-value">%d</div><div class="stat-label">Open</div></div>
+<div class="stat"><div class="stat-value">%d</div><div class="stat-label">Pending</div></div>
+<div class="stat"><div class="stat-value">%d</div><div class="stat-label">Closed</div></div>
+</div></div>`, total, open, pending, closed))
+
+	// Top queues
+	if queues, ok := queue["queues"].([]any); ok && len(queues) > 0 {
+		b.WriteString(`<div class="section"><h2>Top Queues</h2><table><tr><th>Queue</th><th>Tickets</th></tr>`)
+		for i, q := range queues {
+			if i >= 5 {
+				break
+			}
+			if qm, ok := q.(map[string]any); ok {
+				b.WriteString(fmt.Sprintf(`<tr><td>%v</td><td>%d</td></tr>`, qm["name"], toInt(qm["count"])))
+			}
+		}
+		b.WriteString(`</table></div>`)
+	}
+
+	// SLA compliance
+	if slaQueues, ok := sla["queues"].([]any); ok && len(slaQueues) > 0 {
+		b.WriteString(`<div class="section"><h2>SLA Compliance</h2><table><tr><th>Queue</th><th>Met</th><th>Breached</th><th>Rate</th></tr>`)
+		for _, q := range slaQueues {
+			if qm, ok := q.(map[string]any); ok {
+				b.WriteString(fmt.Sprintf(`<tr><td>%v</td><td>%d</td><td>%d</td><td>%d%%</td></tr>`,
+					qm["queue"], toInt(qm["met"]), toInt(qm["breached"]), toInt(qm["rate"])))
+			}
+		}
+		b.WriteString(`</table></div>`)
+	}
+
+	// Time tracking
+	totalHours := "0.0"
+	if h, ok := timeData["total_hours"].(string); ok {
+		totalHours = h
+	}
+	b.WriteString(fmt.Sprintf(`<div class="section"><h2>Time Tracking</h2><p>Total hours logged: <strong>%s</strong></p>`, totalHours))
+	if agents, ok := timeData["by_agent"].([]any); ok && len(agents) > 0 {
+		b.WriteString(`<table><tr><th>Agent</th><th>Hours</th><th>Tickets</th></tr>`)
+		for i, a := range agents {
+			if i >= 5 {
+				break
+			}
+			if am, ok := a.(map[string]any); ok {
+				b.WriteString(fmt.Sprintf(`<tr><td>%v</td><td>%v</td><td>%d</td></tr>`,
+					am["agent"], am["hours"], toInt(am["ticket_count"])))
+			}
+		}
+		b.WriteString(`</table>`)
+	}
+	b.WriteString(`</div>`)
+
+	b.WriteString(`<div class="footer">Generated by GoatFlow Statistics Plugin</div></div></body></html>`)
+
+	return b.String()
+}
+
+// --- Dashboard Widgets ---
+
+func handleWidgetSLA() string {
+	rows, err := dbQuery(`
+		SELECT q.name as queue,
+			COUNT(*) as total,
+			SUM(CASE
+				WHEN t.escalation_time > 0 AND (
+					tst.name IN ('closed', 'merged', 'removed')
+					AND UNIX_TIMESTAMP(t.change_time) <= t.escalation_time
+				) THEN 1
+				WHEN t.escalation_time = 0 THEN 1
+				ELSE 0
+			END) as met,
+			SUM(CASE
+				WHEN t.escalation_time > 0 AND (
+					(tst.name IN ('closed', 'merged', 'removed') AND UNIX_TIMESTAMP(t.change_time) > t.escalation_time)
+					OR (tst.name NOT IN ('closed', 'merged', 'removed') AND t.escalation_time < UNIX_TIMESTAMP())
+				) THEN 1
+				ELSE 0
+			END) as breached
+		FROM ticket t
+		JOIN queue q ON t.queue_id = q.id
+		JOIN ticket_state ts ON t.ticket_state_id = ts.id
+		JOIN ticket_state_type tst ON ts.type_id = tst.id
+		WHERE t.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+		GROUP BY q.id, q.name
+		ORDER BY queue
+		LIMIT 5
+	`)
+
+	var items string
+	if err == nil {
+		for _, row := range rows {
+			total := toInt(row["total"])
+			met := toInt(row["met"])
+			rate := 0
+			if total > 0 {
+				rate = met * 100 / total
+			}
+			color := "var(--gk-success)"
+			if rate < 80 {
+				color = "var(--gk-danger)"
+			} else if rate < 95 {
+				color = "var(--gk-warning)"
+			}
+			items += fmt.Sprintf(`
+  <div class="flex justify-between items-center py-2" style="border-bottom: 1px solid var(--gk-border-default);">
+    <span style="color: var(--gk-text-primary);">%s</span>
+    <span class="gk-badge" style="background:%s;color:#fff;">%d%%</span>
+  </div>`, row["queue"], color, rate)
+		}
+	}
+
+	if items == "" {
+		items = `<div class="text-center py-4" style="color: var(--gk-text-muted);">No SLA data</div>`
+	}
+
+	html := fmt.Sprintf(`<div class="stats-sla">%s</div>`, items)
+	result := map[string]string{"html": html}
+	data, _ := json.Marshal(result)
+	return string(data)
+}
+
+func handleWidgetTimeTracking() string {
+	agentRows, err := dbQuery(`
+		SELECT CONCAT(u.first_name, ' ', u.last_name) as agent,
+			SUM(ta.time_unit) as total_minutes
+		FROM time_accounting ta
+		JOIN users u ON ta.create_by = u.id
+		WHERE ta.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+		GROUP BY u.id, u.first_name, u.last_name
+		ORDER BY total_minutes DESC
+		LIMIT 5
+	`)
+
+	// Total
+	totalRows, _ := dbQuery(`
+		SELECT COALESCE(SUM(time_unit), 0) as total
+		FROM time_accounting
+		WHERE create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+	`)
+	totalMin := 0
+	if len(totalRows) > 0 {
+		totalMin = toInt(totalRows[0]["total"])
+	}
+
+	html := fmt.Sprintf(`
+<div class="stats-time-tracking">
+  <div class="gk-stat-card text-center mb-4">
+    <div class="gk-stat-value">%.1f</div>
+    <div class="gk-stat-label">Hours (30d)</div>
+  </div>`, float64(totalMin)/60)
+
+	if err == nil && len(agentRows) > 0 {
+		for _, row := range agentRows {
+			name := row["agent"]
+			if name == nil || name == " " {
+				name = "Unknown"
+			}
+			minutes := toInt(row["total_minutes"])
+			html += fmt.Sprintf(`
+  <div class="flex justify-between items-center py-2" style="border-bottom: 1px solid var(--gk-border-default);">
+    <span style="color: var(--gk-text-primary);">%s</span>
+    <span class="gk-badge gk-badge-muted">%.1fh</span>
+  </div>`, name, float64(minutes)/60)
+		}
+	} else {
+		html += `<div class="text-center py-4" style="color: var(--gk-text-muted);">No time data</div>`
+	}
+
+	html += `</div>`
+	result := map[string]string{"html": html}
+	data, _ := json.Marshal(result)
+	return string(data)
 }
 
 func main() {}

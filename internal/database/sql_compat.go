@@ -90,8 +90,68 @@ func ConvertPlaceholders(query string) string {
 		query = strings.ReplaceAll(query, " ilike ", " LIKE ")
 	}
 
+	// Portable SQL function rewriting — allows queries written in MySQL dialect
+	// to run on PostgreSQL (and vice versa) without manual branching.
+	if IsPostgreSQL() {
+		query = rewriteForPostgreSQL(query)
+	} else {
+		query = rewriteForMySQL(query)
+	}
+
 	return query
 }
+
+// rewriteForPostgreSQL converts MySQL-specific SQL functions to PostgreSQL equivalents.
+func rewriteForPostgreSQL(query string) string {
+	// DATE_SUB(expr, INTERVAL n UNIT) → (expr - INTERVAL 'n UNIT')
+	query = reDateSub.ReplaceAllStringFunc(query, func(match string) string {
+		parts := reDateSub.FindStringSubmatch(match)
+		if len(parts) == 4 {
+			return fmt.Sprintf("(%s - INTERVAL '%s %s')", parts[1], parts[2], strings.ToLower(parts[3]))
+		}
+		return match
+	})
+
+	// DATE_ADD(expr, INTERVAL n UNIT) → (expr + INTERVAL 'n UNIT')
+	query = reDateAdd.ReplaceAllStringFunc(query, func(match string) string {
+		parts := reDateAdd.FindStringSubmatch(match)
+		if len(parts) == 4 {
+			return fmt.Sprintf("(%s + INTERVAL '%s %s')", parts[1], parts[2], strings.ToLower(parts[3]))
+		}
+		return match
+	})
+
+	// UNIX_TIMESTAMP(expr) → EXTRACT(EPOCH FROM expr)::bigint
+	query = reUnixTSExpr.ReplaceAllString(query, "EXTRACT(EPOCH FROM $1)::bigint")
+
+	// UNIX_TIMESTAMP() → EXTRACT(EPOCH FROM NOW())::bigint
+	query = reUnixTS.ReplaceAllString(query, "EXTRACT(EPOCH FROM NOW())::bigint")
+
+	// CURDATE() → CURRENT_DATE
+	query = reCurdate.ReplaceAllString(query, "CURRENT_DATE")
+
+	return query
+}
+
+// rewriteForMySQL converts PostgreSQL-specific SQL functions to MySQL equivalents.
+func rewriteForMySQL(query string) string {
+	// CURRENT_DATE (without parens) is valid MySQL, no rewrite needed.
+
+	// EXTRACT(EPOCH FROM expr)::bigint → UNIX_TIMESTAMP(expr)
+	query = reExtractEpoch.ReplaceAllString(query, "UNIX_TIMESTAMP($1)")
+
+	return query
+}
+
+// Compiled regexes for SQL function rewriting (case-insensitive).
+var (
+	reDateSub      = regexp.MustCompile(`(?i)DATE_SUB\(\s*([^,]+?)\s*,\s*INTERVAL\s+(\d+)\s+(\w+)\s*\)`)
+	reDateAdd      = regexp.MustCompile(`(?i)DATE_ADD\(\s*([^,]+?)\s*,\s*INTERVAL\s+(\d+)\s+(\w+)\s*\)`)
+	reUnixTSExpr   = regexp.MustCompile(`(?i)UNIX_TIMESTAMP\(\s*([^)]+?)\s*\)`)
+	reUnixTS       = regexp.MustCompile(`(?i)UNIX_TIMESTAMP\(\s*\)`)
+	reCurdate      = regexp.MustCompile(`(?i)CURDATE\(\s*\)`)
+	reExtractEpoch = regexp.MustCompile(`(?i)EXTRACT\(\s*EPOCH\s+FROM\s+(.+?)\s*\)::bigint`)
+)
 
 // MySQL: Use LastInsertId() after insert.
 func ConvertReturning(query string) (string, bool) {
