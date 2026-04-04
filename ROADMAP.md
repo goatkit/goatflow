@@ -463,11 +463,11 @@ Platform-managed file storage for plugins. Eliminates direct filesystem access, 
 
 Real-time server-sent events for plugin UIs. Eliminates polling, enables live progress updates and status notifications.
 
-- [ ] `HostAPI.PublishEvent(channel, event, data)` — plugins push events
-- [ ] SSE endpoint `/api/v1/plugins/{name}/events/{channel}` — clients subscribe
-- [ ] Per-plugin channel isolation (sandbox enforced)
-- [ ] Auth-scoped: agent channels require session, customer channels scoped to org
-- [ ] Automatic keepalive and reconnection handling
+- [x] `HostAPI.PublishEvent(channel, event, data)` — plugins push events
+- [x] SSE endpoint `/api/v1/plugins/{name}/events/{channel}` — clients subscribe
+- [x] Per-plugin channel isolation (sandbox enforced)
+- [x] Auth-scoped: agent channels require session, customer channels scoped to org
+- [x] Automatic keepalive and reconnection handling
 
 **GoatKit PaaS Core — Automatic Org Context Injection**
 

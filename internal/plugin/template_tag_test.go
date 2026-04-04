@@ -368,7 +368,7 @@ func (m *mockHostAPIForTag) CallPlugin(ctx context.Context, pluginName, function
 	return nil, nil
 }
 
-func (m *mockHostAPIForTag) PublishEvent(ctx context.Context, eventType string, data string) error {
+func (m *mockHostAPIForTag) PublishEvent(ctx context.Context, channel string, eventType string, data string) error {
 	return nil
 }
 

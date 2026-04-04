@@ -197,9 +197,10 @@ type HostAPI interface {
 	CallPlugin(ctx context.Context, pluginName, fn string, args json.RawMessage) (json.RawMessage, error)
 
 	// SSE (Server-Sent Events)
-	// Publishes an event to all connected browser clients.
+	// Publishes an event to a named channel for connected browser clients.
+	// channel scopes the event stream (e.g. "status", "progress");
 	// eventType is the SSE event name (e.g. "device-table"); data is the payload (typically HTML).
-	PublishEvent(ctx context.Context, eventType string, data string) error
+	PublishEvent(ctx context.Context, channel string, eventType string, data string) error
 
 	// Entity Deletion
 	// EntitySoftDelete soft-deletes an entity (recycle bin + PII anonymisation).

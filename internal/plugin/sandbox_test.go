@@ -64,7 +64,7 @@ func (m *mockInnerHostAPI) CallPlugin(_ context.Context, _, _ string, _ json.Raw
 	return nil, nil
 }
 
-func (m *mockInnerHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
+func (m *mockInnerHostAPI) PublishEvent(ctx context.Context, channel string, eventType string, data string) error {
 	return nil
 }
 

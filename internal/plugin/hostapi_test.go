@@ -177,7 +177,7 @@ func (h *testHostAPI) CallPlugin(ctx context.Context, pluginName, function strin
 	return json.Marshal(map[string]string{"called": pluginName + "." + function})
 }
 
-func (h *testHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
+func (h *testHostAPI) PublishEvent(ctx context.Context, channel string, eventType string, data string) error {
 	return nil
 }
 

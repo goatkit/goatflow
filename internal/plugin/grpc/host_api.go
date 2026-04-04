@@ -182,13 +182,14 @@ func dispatchHostCall(ctx context.Context, host plugin.HostAPI, method string, a
 
 	case "publish_event":
 		var req struct {
+			Channel   string `json:"channel"`
 			EventType string `json:"event_type"`
 			Data      string `json:"data"`
 		}
 		if err := json.Unmarshal(args, &req); err != nil {
 			return nil, err
 		}
-		if err := host.PublishEvent(ctx, req.EventType, req.Data); err != nil {
+		if err := host.PublishEvent(ctx, req.Channel, req.EventType, req.Data); err != nil {
 			return nil, err
 		}
 		return json.Marshal(map[string]string{"status": "ok"})

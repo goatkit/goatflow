@@ -421,12 +421,12 @@ func (s *SandboxedHostAPI) CallPlugin(ctx context.Context, pluginName, fn string
 	return s.inner.CallPlugin(ctx, pluginName, fn, args)
 }
 
-// PublishEvent sends an SSE event to connected browser clients.
+// PublishEvent sends an SSE event to a named channel for connected browser clients.
 // The plugin name is automatically set from the sandbox context.
-func (s *SandboxedHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
+func (s *SandboxedHostAPI) PublishEvent(ctx context.Context, channel string, eventType string, data string) error {
 	// Inject the plugin name into context so the host knows the source.
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
-	return s.inner.PublishEvent(ctx, eventType, data)
+	return s.inner.PublishEvent(ctx, channel, eventType, data)
 }
 
 // --- Simple sliding window rate limiter ---

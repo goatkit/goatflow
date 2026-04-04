@@ -43,6 +43,9 @@ func pluginContextWithLanguage(c *gin.Context) context.Context {
 // Set via SetPluginManager during app initialization.
 var pluginManager *plugin.Manager
 
+// pluginSSEBroker is the global SSE broker for plugin events.
+var pluginSSEBroker *plugin.SSEBroker
+
 // SetPluginManager sets the global plugin manager.
 func SetPluginManager(mgr *plugin.Manager) {
 	pluginManager = mgr
@@ -51,6 +54,11 @@ func SetPluginManager(mgr *plugin.Manager) {
 // GetPluginManager returns the global plugin manager.
 func GetPluginManager() *plugin.Manager {
 	return pluginManager
+}
+
+// SetPluginSSEBroker sets the global SSE broker for plugin channel endpoints.
+func SetPluginSSEBroker(b *plugin.SSEBroker) {
+	pluginSSEBroker = b
 }
 
 // HandlePluginList returns all registered plugins.
@@ -485,6 +493,28 @@ func SessionOrJWTAuth() gin.HandlerFunc {
 	}
 }
 
+// HandlePluginSSEChannel serves an SSE stream scoped to a specific plugin and channel.
+// GET /api/v1/plugins/:name/events/:channel
+// Auth-scoped: requires a valid session or JWT token.
+func HandlePluginSSEChannel(c *gin.Context) {
+	if pluginSSEBroker == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "SSE not available"})
+		return
+	}
+	pluginName := c.Param("name")
+	channel := c.Param("channel")
+
+	// Validate plugin exists
+	if pluginManager != nil {
+		if _, ok := pluginManager.Get(pluginName); !ok {
+			c.JSON(http.StatusNotFound, gin.H{"error": "plugin not found"})
+			return
+		}
+	}
+
+	pluginSSEBroker.ServeChannel(c.Writer, c.Request, pluginName, channel)
+}
+
 func RegisterPluginAPIRoutes(r *gin.RouterGroup) {
 	// Plugin list and call - require authentication (session or JWT)
 	plugins := r.Group("/plugins")
@@ -494,6 +524,8 @@ func RegisterPluginAPIRoutes(r *gin.RouterGroup) {
 		plugins.POST("/:name/call/:fn", HandlePluginCall)
 		plugins.GET("/widgets", HandlePluginWidgetList)
 		plugins.GET("/:name/widgets/:id", HandlePluginWidget)
+		// Per-plugin SSE channel endpoint (auth-scoped)
+		plugins.GET("/:name/events/:channel", HandlePluginSSEChannel)
 	}
 
 	// Plugin management - require admin (session or JWT)

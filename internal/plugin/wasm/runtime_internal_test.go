@@ -43,7 +43,7 @@ func (m *mockHostAPIForUnit) CallPlugin(ctx context.Context, pluginName, functio
 	return nil, nil
 }
 
-func (m *mockHostAPIForUnit) PublishEvent(ctx context.Context, eventType string, data string) error {
+func (m *mockHostAPIForUnit) PublishEvent(ctx context.Context, channel string, eventType string, data string) error {
 	return nil
 }
 
