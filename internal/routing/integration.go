@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -335,9 +337,17 @@ func registerExistingMiddleware(registry *HandlerRegistry, jwtManager interface{
 			log.Printf("Audit: Response %d for %s %s", c.Writer.Status(), c.Request.Method, c.Request.URL.Path)
 		},
 
-		// CORS middleware
+		// CORS middleware — validates Origin against CORS_ALLOWED_ORIGINS (comma-separated).
+		// Defaults to same-origin only when the env var is unset.
 		"cors": func(c *gin.Context) {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+			origin := c.GetHeader("Origin")
+			if origin != "" {
+				allowed := corsAllowedOrigins()
+				if originAllowed(origin, allowed) {
+					c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+					c.Writer.Header().Set("Vary", "Origin")
+				}
+			}
 			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
@@ -411,4 +421,33 @@ func MigrateExistingRoutes() error {
 	// This would be a more complex implementation in practice
 
 	return nil
+}
+
+// corsAllowedOrigins returns the list of allowed CORS origins from the
+// CORS_ALLOWED_ORIGINS environment variable (comma-separated).
+// Returns nil when the variable is unset, which means no cross-origin
+// requests are permitted (same-origin only).
+func corsAllowedOrigins() []string {
+	v := os.Getenv("CORS_ALLOWED_ORIGINS")
+	if v == "" {
+		return nil
+	}
+	var origins []string
+	for _, o := range strings.Split(v, ",") {
+		o = strings.TrimSpace(o)
+		if o != "" {
+			origins = append(origins, o)
+		}
+	}
+	return origins
+}
+
+// originAllowed checks whether the request origin is in the allowed list.
+func originAllowed(origin string, allowed []string) bool {
+	for _, a := range allowed {
+		if a == "*" || strings.EqualFold(a, origin) {
+			return true
+		}
+	}
+	return false
 }

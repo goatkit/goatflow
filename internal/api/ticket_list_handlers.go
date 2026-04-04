@@ -42,6 +42,7 @@ func handleTickets(c *gin.Context) {
 	statusParam := strings.TrimSpace(c.Query("status"))
 	priorityParam := strings.TrimSpace(c.Query("priority"))
 	queueParam := strings.TrimSpace(c.Query("queue"))
+	ownerParam := strings.TrimSpace(c.Query("owner"))
 	search := strings.TrimSpace(c.Query("search"))
 	sortBy := c.DefaultQuery("sort", "created_desc")
 	page := queryInt(c, "page", 1)
@@ -72,7 +73,9 @@ func handleTickets(c *gin.Context) {
 	if effectiveStatus == "" {
 		effectiveStatus = "not_closed"
 	}
-	if effectiveStatus != "all" && effectiveStatus != "not_closed" {
+	// Group filters handled directly by the switch — don't remap to state IDs.
+	groupFilters := map[string]bool{"open": true, "closed": true, "pending": true, "overdue": true}
+	if effectiveStatus != "all" && effectiveStatus != "not_closed" && !groupFilters[strings.ToLower(effectiveStatus)] {
 		key := strings.ReplaceAll(strings.ToLower(effectiveStatus), " ", "_")
 		if mapped, ok := slugToID[key]; ok {
 			effectiveStatus = mapped
@@ -87,6 +90,9 @@ func handleTickets(c *gin.Context) {
 		hasActiveFilters = true
 	}
 	if queueParam != "" && queueParam != "all" {
+		hasActiveFilters = true
+	}
+	if ownerParam != "" {
 		hasActiveFilters = true
 	}
 	if search != "" {
@@ -108,6 +114,17 @@ func handleTickets(c *gin.Context) {
 		if hasClosedType {
 			req.ExcludeClosedStates = true
 		}
+	case "open":
+		// Match stats widget "Open" tile: state types open + new
+		req.StateTypeNames = []string{"open", "new"}
+	case "closed":
+		// Match stats widget "Closed" tile: state types closed, merged, removed
+		req.StateTypeNames = []string{"closed", "merged", "removed"}
+	case "pending":
+		// Match stats widget "Pending" tile: state types pending auto, pending reminder
+		req.StateTypeNames = []string{"pending auto", "pending reminder"}
+	case "overdue":
+		req.OverdueOnly = true
 	default:
 		stateID, err := strconv.Atoi(effectiveStatus)
 		if err == nil && stateID > 0 {
@@ -169,6 +186,15 @@ func handleTickets(c *gin.Context) {
 			}
 			queueIDPtr := uint(queueID)
 			req.QueueID = &queueIDPtr
+		}
+	}
+
+	// Apply owner filter
+	if ownerParam != "" {
+		ownerID, _ := strconv.Atoi(ownerParam)
+		if ownerID > 0 {
+			ownerIDPtr := uint(ownerID)
+			req.OwnerID = &ownerIDPtr
 		}
 	}
 

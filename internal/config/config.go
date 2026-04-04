@@ -34,6 +34,14 @@ type Config struct {
 	Maintenance  MaintenanceConfig  `mapstructure:"maintenance"`
 	Integrations IntegrationsConfig `mapstructure:"integrations"`
 	Runner       RunnerConfig       `mapstructure:"runner"`
+	Push         PushConfig         `mapstructure:"push"`
+}
+
+type PushConfig struct {
+	Enabled         bool   `mapstructure:"enabled"`
+	VAPIDPublicKey  string `mapstructure:"vapid_public_key"`
+	VAPIDPrivateKey string `mapstructure:"vapid_private_key"`
+	VAPIDContact    string `mapstructure:"vapid_contact"`
 }
 
 type AppConfig struct {

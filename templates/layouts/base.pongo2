@@ -8,6 +8,13 @@
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#00E5FF">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/static/images/icon-192.png">
+
     <!-- GoatKit Theme initialization (must be inline to prevent flash) -->
     <script>
         (function() {
@@ -64,6 +71,15 @@
     <noscript>
         <link id="gk-theme-stylesheet" rel="stylesheet" href="/static/themes/builtin/synthwave/theme.css">
     </noscript>
+
+    <!-- Service Worker registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(function(e) {
+                console.warn('SW registration failed:', e);
+            });
+        }
+    </script>
 
     <!-- Vendored Fonts (Inter, Space Grotesk) - theme-specific fonts loaded dynamically -->
     <link rel="stylesheet" href="/static/css/fonts.css">
@@ -134,6 +150,7 @@
 
     <!-- Common utilities - loads after i18n data blocks -->
     <script src="/static/js/common.js"></script>
+    <script src="/static/js/push-manager.js"></script>
     <!-- GoatKit Theme Manager -->
     <script src="/static/js/theme-manager.js"></script>
     <!-- GoatKit typeahead enhancement -->
@@ -350,6 +367,21 @@
 
                         <!-- Theme selector dropdown -->
                         {% include "partials/theme_selector.pongo2" %}
+
+                        <!-- Push notification toggle -->
+                        {% if User or Customer %}
+                        <div class="relative ml-3" x-data="{ pushEnabled: false }" x-init="if (window.GoatFlowPush && GoatFlowPush.supported()) { GoatFlowPush.isSubscribed().then(function(v) { pushEnabled = v; }); }">
+                            <button @click="if (pushEnabled) { GoatFlowPush.unsubscribe().then(function() { pushEnabled = false; }); } else { GoatFlowPush.subscribe().then(function() { pushEnabled = true; }).catch(function(e) { console.warn('Push subscribe failed:', e); }); }"
+                                    x-show="window.GoatFlowPush && GoatFlowPush.supported()"
+                                    class="p-2 rounded-lg transition-all duration-200"
+                                    :style="pushEnabled ? 'color: var(--gk-primary);' : 'color: var(--gk-text-muted);'"
+                                    :title="pushEnabled ? '{{ t("push.disable")|default:"Disable push notifications" }}' : '{{ t("push.enable")|default:"Enable push notifications" }}'">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        {% endif %}
 
                         <!-- User menu -->
                         <div class="relative ml-3" x-data="{ open: false }">
@@ -580,11 +612,76 @@
         GoatCoach.register({
             id: 'theme-switcher',
             target: '#theme-selector-btn',
-            title: '🎨 Make it yours!',
-            message: 'GoatFlow comes with several themes and colour modes. Click here to find your style!',
+            title: '🎨 {{ t("coachmarks.theme.title")|default:"Make it yours!" }}',
+            message: '{{ t("coachmarks.theme.message")|default:"GoatFlow comes with several themes and colour modes. Click here to find your style!" }}',
             position: 'bottom',
             maxViews: 3,
             delay: 2000
+        });
+
+        GoatCoach.register({
+            id: 'dashboard-widgets',
+            target: '[onclick="openWidgetSettings()"]',
+            title: '⚙️ {{ t("coachmarks.widgets.title")|default:"Customise your dashboard" }}',
+            message: '{{ t("coachmarks.widgets.message")|default:"Add, remove, and rearrange dashboard widgets. Each plugin can contribute its own widgets here." }}',
+            position: 'bottom',
+            pages: ['/dashboard', '/agent/dashboard'],
+            maxViews: 2,
+            delay: 3000
+        });
+
+        GoatCoach.register({
+            id: 'create-ticket',
+            target: 'a[href="/tickets/new"]',
+            title: '🎫 {{ t("coachmarks.create_ticket.title")|default:"Create a ticket" }}',
+            message: '{{ t("coachmarks.create_ticket.message")|default:"Click here to create a new support ticket. You can set the priority, assign a queue, and attach files." }}',
+            position: 'bottom',
+            pages: ['/dashboard', '/agent/dashboard', '/tickets'],
+            maxViews: 2,
+            delay: 4000
+        });
+
+        GoatCoach.register({
+            id: 'ticket-filters',
+            target: '#filter-form',
+            title: '🔍 {{ t("coachmarks.filters.title")|default:"Filter and search" }}',
+            message: '{{ t("coachmarks.filters.message")|default:"Use the search bar and filters to find tickets by status, priority, or queue. Filters apply instantly." }}',
+            position: 'bottom',
+            pages: ['/tickets'],
+            maxViews: 2,
+            delay: 3000
+        });
+
+        GoatCoach.register({
+            id: 'bulk-actions',
+            target: '#select-all',
+            title: '☑️ {{ t("coachmarks.bulk.title")|default:"Bulk actions" }}',
+            message: '{{ t("coachmarks.bulk.message")|default:"Select multiple tickets using these checkboxes, then assign, change priority, move queues, or merge them in one go." }}',
+            position: 'right',
+            pages: ['/tickets'],
+            maxViews: 2,
+            delay: 5000
+        });
+
+        GoatCoach.register({
+            id: 'queue-management',
+            target: 'a[href="/queues"]',
+            title: '📋 {{ t("coachmarks.queues.title")|default:"Queue overview" }}',
+            message: '{{ t("coachmarks.queues.message")|default:"Queues organise tickets by team or topic. View queue statistics, SLA status, and agent workload at a glance." }}',
+            position: 'bottom',
+            pages: ['/dashboard', '/agent/dashboard'],
+            maxViews: 2,
+            delay: 6000
+        });
+
+        GoatCoach.register({
+            id: 'push-notifications',
+            target: '[title*="push notification" i], [title*="Push notification" i]',
+            title: '🔔 {{ t("coachmarks.push.title")|default:"Stay in the loop" }}',
+            message: '{{ t("coachmarks.push.message")|default:"Enable push notifications to get browser alerts for ticket reminders, even when GoatFlow is in the background." }}',
+            position: 'bottom',
+            maxViews: 2,
+            delay: 7000
         });
 
         if (document.readyState === 'loading') {

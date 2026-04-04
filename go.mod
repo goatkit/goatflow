@@ -5,6 +5,7 @@ go 1.24.0
 require (
 	github.com/99designs/gqlgen v0.17.78
 	github.com/DATA-DOG/go-sqlmock v1.5.2
+	github.com/SherClockHolmes/webpush-go v1.3.0
 	github.com/davidbyttow/govips/v2 v2.16.0
 	github.com/dop251/goja v0.0.0-20241009100908-5f46f2705ca3
 	github.com/emersion/go-imap/v2 v2.0.0-beta.7
@@ -88,6 +89,7 @@ require (
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
+	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 	github.com/gorilla/css v1.0.0 // indirect

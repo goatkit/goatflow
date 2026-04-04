@@ -1937,6 +1937,112 @@
     #activity-period {
         transition: opacity 0.2s ease-in-out;
     }
+
+    /* ============================================
+       ACTION BUTTON - Touch-friendly targets
+       ============================================ */
+    .gk-action-btn {
+        @apply inline-flex items-center justify-center rounded-lg transition-all duration-200;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.5rem;
+    }
+
+    /* ============================================
+       SCROLLBAR HIDE - For horizontal scroll areas
+       ============================================ */
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    /* ============================================
+       TAB SCROLL HINT - Fade on right edge (mobile)
+       ============================================ */
+    .tab-scroll-hint {
+        position: relative;
+    }
+
+    /* ============================================
+       MOBILE RESPONSIVE OVERRIDES
+       ============================================ */
+    @media (max-width: 767px) {
+        /* Table: tighter padding on mobile */
+        .gk-table th {
+            @apply px-2 py-2;
+        }
+
+        .gk-table td {
+            @apply px-2 py-2;
+        }
+
+        /* Prevent horizontal scroll from hover translateX */
+        .gk-table-clickable tbody tr:hover {
+            transform: none;
+        }
+
+        /* Modal: reduce padding on mobile */
+        .gk-modal-header {
+            @apply px-4 py-3;
+        }
+
+        .gk-modal-body {
+            @apply p-4;
+        }
+
+        .gk-modal-footer {
+            @apply px-4 py-3 flex-col-reverse gap-2;
+        }
+
+        .gk-modal-footer > * {
+            width: 100%;
+            text-align: center;
+        }
+
+        /* Tab scroll hint fade */
+        .tab-scroll-hint::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 40px;
+            background: linear-gradient(to right, transparent, var(--gk-bg-base));
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Card body: tighter padding on mobile */
+        .gk-card-body {
+            @apply p-4;
+        }
+
+        /* TipTap toolbar: larger touch targets on mobile */
+        .gk-tiptap-container .tiptap-toolbar .toolbar-btn {
+            min-width: 2.25rem;
+            height: 2.25rem;
+        }
+
+        /* Card header: tighter padding on mobile */
+        .gk-card-header {
+            @apply px-4 py-3;
+        }
+
+        /* Card footer: tighter padding on mobile */
+        .gk-card-footer {
+            @apply px-4 py-3;
+        }
+
+        /* Headings: scale down on mobile */
+        .gk-heading {
+            font-size: 1.5rem !important;
+            line-height: 2rem !important;
+        }
+    }
 }
 
 /* ============================================

@@ -735,33 +735,46 @@ func handleWidgetOverview(argsJSON string) string {
 	}
 
 	html := fmt.Sprintf(`
+<style>.gk-stat-link{text-decoration:none;color:inherit;display:block;border-radius:var(--gk-radius,8px);transition:transform .15s,box-shadow .15s}.gk-stat-link:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15)}</style>
 <div class="stats-overview grid grid-cols-3 gap-4 mb-4">
-  <div class="gk-stat-card text-center">
-    <div class="gk-stat-value">%d</div>
-    <div class="gk-stat-label">Total</div>
-  </div>
-  <div class="gk-stat-card success text-center">
-    <div class="gk-stat-value">%d</div>
-    <div class="gk-stat-label">Open</div>
-  </div>
-  <div class="gk-stat-card text-center">
-    <div class="gk-stat-value">%d</div>
-    <div class="gk-stat-label">Closed</div>
-  </div>
+  <a href="/tickets?status=all" class="gk-stat-link">
+    <div class="gk-stat-card text-center">
+      <div class="gk-stat-value">%d</div>
+      <div class="gk-stat-label">Total</div>
+    </div>
+  </a>
+  <a href="/tickets?status=open" class="gk-stat-link">
+    <div class="gk-stat-card success text-center">
+      <div class="gk-stat-value">%d</div>
+      <div class="gk-stat-label">Open</div>
+    </div>
+  </a>
+  <a href="/tickets?status=closed" class="gk-stat-link">
+    <div class="gk-stat-card text-center">
+      <div class="gk-stat-value">%d</div>
+      <div class="gk-stat-label">Closed</div>
+    </div>
+  </a>
 </div>
 <div class="stats-overview grid grid-cols-3 gap-4">
-  <div class="gk-stat-card success text-center">
-    <div class="gk-stat-value">%d</div>
-    <div class="gk-stat-label">New Today</div>
-  </div>
-  <div class="gk-stat-card warning text-center">
-    <div class="gk-stat-value">%d</div>
-    <div class="gk-stat-label">Pending</div>
-  </div>
-  <div class="gk-stat-card error text-center">
-    <div class="gk-stat-value">%d</div>
-    <div class="gk-stat-label">Overdue</div>
-  </div>
+  <a href="/tickets?status=open&sort=create_time&order=desc" class="gk-stat-link">
+    <div class="gk-stat-card success text-center">
+      <div class="gk-stat-value">%d</div>
+      <div class="gk-stat-label">New Today</div>
+    </div>
+  </a>
+  <a href="/tickets?status=pending" class="gk-stat-link">
+    <div class="gk-stat-card warning text-center">
+      <div class="gk-stat-value">%d</div>
+      <div class="gk-stat-label">Pending</div>
+    </div>
+  </a>
+  <a href="/tickets?status=overdue" class="gk-stat-link">
+    <div class="gk-stat-card error text-center">
+      <div class="gk-stat-value">%d</div>
+      <div class="gk-stat-label">Overdue</div>
+    </div>
+  </a>
 </div>`, total, open, closed, newToday, pending, overdue)
 
 	result := map[string]string{"html": html}
@@ -771,31 +784,35 @@ func handleWidgetOverview(argsJSON string) string {
 
 func handleWidgetByStatus() string {
 	rows, err := dbQuery(`
-		SELECT ts.name as status, COUNT(*) as count
+		SELECT ts.id as state_id, ts.name as status, COUNT(*) as count
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		GROUP BY ts.name
+		GROUP BY ts.id, ts.name
 		ORDER BY count DESC
 		LIMIT 5
 	`)
 
 	var items string
 	if err == nil {
-		for _, row := range rows {
+		for i, row := range rows {
+			border := `border-bottom: 1px solid var(--gk-border-default);`
+			if i == len(rows)-1 {
+				border = ""
+			}
+			stateID := toInt(row["state_id"])
 			items += fmt.Sprintf(`
-  <div class="flex justify-between items-center py-2" style="border-bottom: 1px solid var(--gk-border-default);">
-    <span class="capitalize" style="color: var(--gk-text-primary);">%s</span>
-    <span class="gk-badge gk-badge-muted">%d</span>
-  </div>`, row["status"], toInt(row["count"]))
+  <a href="/tickets?status=%d" style="text-decoration:none;color:inherit;display:block;">
+    <div class="flex justify-between items-center py-2" style="%s">
+      <span class="capitalize" style="color: var(--gk-text-primary);">%s</span>
+      <span class="gk-badge gk-badge-muted">%d</span>
+    </div>
+  </a>`, stateID, border, row["status"], toInt(row["count"]))
 		}
 	}
 
 	if items == "" {
 		items = `<div class="text-center py-4" style="color: var(--gk-text-muted);">No data</div>`
 	}
-
-	// Remove trailing border from last item
-	items = strings.Replace(items, "border-bottom: 1px solid var(--gk-border-default);\">\n    <span class=\"capitalize\"", "\">\n    <span class=\"capitalize\"", 1)
 
 	html := fmt.Sprintf(`<div class="stats-by-status">%s</div>`, items)
 	result := map[string]string{"html": html}
@@ -1202,7 +1219,7 @@ th { color: #666; font-weight: 600; }
 
 func handleWidgetSLA() string {
 	rows, err := dbQuery(`
-		SELECT q.name as queue,
+		SELECT q.id as queue_id, q.name as queue,
 			COUNT(*) as total,
 			SUM(CASE
 				WHEN t.escalation_time > 0 AND (
@@ -1231,7 +1248,7 @@ func handleWidgetSLA() string {
 
 	var items string
 	if err == nil {
-		for _, row := range rows {
+		for i, row := range rows {
 			total := toInt(row["total"])
 			met := toInt(row["met"])
 			rate := 0
@@ -1244,11 +1261,18 @@ func handleWidgetSLA() string {
 			} else if rate < 95 {
 				color = "var(--gk-warning)"
 			}
+			border := `border-bottom: 1px solid var(--gk-border-default);`
+			if i == len(rows)-1 {
+				border = ""
+			}
+			queueID := toInt(row["queue_id"])
 			items += fmt.Sprintf(`
-  <div class="flex justify-between items-center py-2" style="border-bottom: 1px solid var(--gk-border-default);">
-    <span style="color: var(--gk-text-primary);">%s</span>
-    <span class="gk-badge" style="background:%s;color:#fff;">%d%%</span>
-  </div>`, row["queue"], color, rate)
+  <a href="/tickets?queue=%d" style="text-decoration:none;color:inherit;display:block;">
+    <div class="flex justify-between items-center py-2" style="%s">
+      <span style="color: var(--gk-text-primary);">%s</span>
+      <span class="gk-badge" style="background:%s;color:#fff;">%d%%</span>
+    </div>
+  </a>`, queueID, border, row["queue"], color, rate)
 		}
 	}
 
@@ -1264,7 +1288,7 @@ func handleWidgetSLA() string {
 
 func handleWidgetTimeTracking() string {
 	agentRows, err := dbQuery(`
-		SELECT CONCAT(u.first_name, ' ', u.last_name) as agent,
+		SELECT u.id as user_id, CONCAT(u.first_name, ' ', u.last_name) as agent,
 			SUM(ta.time_unit) as total_minutes
 		FROM time_accounting ta
 		JOIN users u ON ta.create_by = u.id
@@ -1293,17 +1317,24 @@ func handleWidgetTimeTracking() string {
   </div>`, float64(totalMin)/60)
 
 	if err == nil && len(agentRows) > 0 {
-		for _, row := range agentRows {
+		for i, row := range agentRows {
 			name := row["agent"]
 			if name == nil || name == " " {
 				name = "Unknown"
 			}
 			minutes := toInt(row["total_minutes"])
+			userID := toInt(row["user_id"])
+			border := `border-bottom: 1px solid var(--gk-border-default);`
+			if i == len(agentRows)-1 {
+				border = ""
+			}
 			html += fmt.Sprintf(`
-  <div class="flex justify-between items-center py-2" style="border-bottom: 1px solid var(--gk-border-default);">
-    <span style="color: var(--gk-text-primary);">%s</span>
-    <span class="gk-badge gk-badge-muted">%.1fh</span>
-  </div>`, name, float64(minutes)/60)
+  <a href="/tickets?owner=%d" style="text-decoration:none;color:inherit;display:block;">
+    <div class="flex justify-between items-center py-2" style="%s">
+      <span style="color: var(--gk-text-primary);">%s</span>
+      <span class="gk-badge gk-badge-muted">%.1fh</span>
+    </div>
+  </a>`, userID, border, name, float64(minutes)/60)
 		}
 	} else {
 		html += `<div class="text-center py-4" style="color: var(--gk-text-muted);">No time data</div>`

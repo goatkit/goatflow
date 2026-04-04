@@ -63,7 +63,7 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			path := c.Request.URL.Path
 			if path == "/login" || path == "/login/2fa" || path == "/api/auth/login" || path == "/api/auth/2fa/verify" ||
 				path == "/customer/login" || path == "/customer/login/2fa" || path == "/api/auth/customer/login" || path == "/api/auth/customer/2fa/verify" ||
-				path == "/health" || path == "/metrics" || path == "/favicon.ico" || strings.HasPrefix(path, "/static/") ||
+				path == "/health" || path == "/metrics" || path == "/favicon.ico" || path == "/manifest.json" || path == "/sw.js" || strings.HasPrefix(path, "/static/") ||
 				path == "/auth/customer" || path == "/api/languages" || path == "/api/themes" || strings.HasPrefix(path, "/swagger/") {
 				c.Next()
 				return

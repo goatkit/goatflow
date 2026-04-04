@@ -621,7 +621,7 @@ func (s *FileRouteStore) registerRoute(group *gin.RouterGroup, route *RouteDefin
 		}
 
 		// Also skip common routes that might be manually registered
-		commonRoutes := []string{"/health", "/favicon.ico", "/favicon.svg"}
+		commonRoutes := []string{"/health", "/favicon.ico", "/favicon.svg", "/manifest.json", "/sw.js"}
 		for _, commonRoute := range commonRoutes {
 			if fullPath == commonRoute {
 				log.Printf("✅ Skipping common route (likely manual): %s %s", method, fullPath)

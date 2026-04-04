@@ -11,6 +11,17 @@ spec:
   prefix: ""
   middleware: []
   routes:
+    # PWA files (must be before catch-all)
+    - path: /manifest.json
+      method: GET
+      handler: handleStaticFiles
+      description: "Serve PWA web app manifest"
+
+    - path: /sw.js
+      method: GET
+      handler: handleStaticFiles
+      description: "Serve service worker"
+
     # Favicon files (must be before catch-all)
     - path: /favicon.ico
       method: GET

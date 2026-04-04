@@ -3730,5 +3730,47 @@
   "accessibility": {
     "skip_to_content": "Skip to main content",
     "main_navigation": "Main navigation"
+  },
+  "push": {
+    "enable": "Enable push notifications",
+    "disable": "Disable push notifications",
+    "enabled": "Push notifications enabled",
+    "disabled": "Push notifications disabled",
+    "not_supported": "Push notifications are not supported in this browser",
+    "permission_denied": "Push notification permission was denied"
+  },
+  "offline": {
+    "title": "You are offline",
+    "message": "Please check your internet connection and try again."
+  },
+  "coachmarks": {
+    "theme": {
+      "title": "Make it yours!",
+      "message": "GoatFlow comes with several themes and colour modes. Click here to find your style!"
+    },
+    "widgets": {
+      "title": "Customise your dashboard",
+      "message": "Add, remove, and rearrange dashboard widgets. Each plugin can contribute its own widgets here."
+    },
+    "create_ticket": {
+      "title": "Create a ticket",
+      "message": "Click here to create a new support ticket. You can set the priority, assign a queue, and attach files."
+    },
+    "filters": {
+      "title": "Filter and search",
+      "message": "Use the search bar and filters to find tickets by status, priority, or queue. Filters apply instantly."
+    },
+    "bulk": {
+      "title": "Bulk actions",
+      "message": "Select multiple tickets using these checkboxes, then assign, change priority, move queues, or merge them in one go."
+    },
+    "queues": {
+      "title": "Queue overview",
+      "message": "Queues organise tickets by team or topic. View queue statistics, SLA status, and agent workload at a glance."
+    },
+    "push": {
+      "title": "Stay in the loop",
+      "message": "Enable push notifications to get browser alerts for ticket reminders, even when GoatFlow is in the background."
+    }
   }
 }

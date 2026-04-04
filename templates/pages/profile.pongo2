@@ -3,7 +3,7 @@
 {% block title %}{{ t("navigation.profile") }} - GoatFlow{% endblock %}
 
 {% block content %}
-<div class="container mx-auto py-6">
+<div class="container mx-auto py-4 sm:py-6">
     <!-- Breadcrumbs -->
     <nav class="flex items-center text-sm mb-4" aria-label="Breadcrumb">
         <a href="/dashboard" class="gk-link-neon">{{ t("navigation.dashboard")|default:"Dashboard" }}</a>
@@ -60,7 +60,7 @@
                            class="gk-input-neon mt-1"
                            value="{{ User.LastName|default:'' }}">
                 </div>
-                <div class="sm:col-span-2 sm:w-1/2">
+                <div class="sm:col-span-2 sm:max-w-xs">
                     <label for="title" class="gk-form-label">{{ t("user.title")|default:"Title" }}</label>
                     <input type="text" id="title" name="title"
                            class="gk-input-neon mt-1"
@@ -139,7 +139,7 @@
         {% else %}
         <div class="gk-card-body" style="border-top: 1px solid var(--gk-border-default);">
             <div id="2fa-section">
-                <div class="flex items-center justify-between mb-3">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                     <div>
                         <h4 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--gk-text-muted);">
                             {{ t("settings.2fa.title")|default:"Two-Factor Authentication" }}
@@ -165,7 +165,7 @@
                         </span>
                     </div>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-3">
                     <button id="2fa-setup-btn" class="hidden gk-btn-neon text-sm" onclick="start2FASetup()">
                         {{ t("settings.2fa.enable")|default:"Enable 2FA" }}
                     </button>

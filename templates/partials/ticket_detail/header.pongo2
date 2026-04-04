@@ -19,7 +19,7 @@
                     </li>
                 </ol>
             </nav>
-            <h1 class="mt-2 text-3xl font-bold gk-text-gradient">{{ Ticket.subject }}</h1>
+            <h1 class="mt-2 text-xl sm:text-2xl md:text-3xl font-bold gk-text-gradient break-words">{{ Ticket.subject }}</h1>
             <div class="mt-2 flex flex-wrap items-center gap-3 text-sm" style="color: var(--gk-text-muted);">
                 {% include "partials/ticket_detail/status_badge.pongo2" with status=Ticket.status %}
                 {% include "partials/ticket_detail/priority_badge.pongo2" with priority=Ticket.priority %}

@@ -2921,8 +2921,24 @@ check-i18n:
 	@./scripts/check-hardcoded-text.sh --strict
 
 #########################################
+# DEPENDENCY AUDIT
+#########################################
+
+## check-deps: Audit frontend dependencies for known vulnerabilities
+.PHONY: check-deps
+check-deps:
+	@printf "🔒 Auditing frontend dependencies...\n"
+	@if command -v bun >/dev/null 2>&1 && [ -f bun.lockb ]; then \
+		bun pm audit 2>/dev/null || printf "  ⚠️  bun pm audit not available — skipping\n"; \
+	elif command -v npm >/dev/null 2>&1 && [ -f package.json ]; then \
+		npm audit --omit=dev 2>/dev/null || printf "  ⚠️  npm audit found issues (non-blocking)\n"; \
+	else \
+		printf "  ℹ️  No package manager found — skipping dependency audit\n"; \
+	fi
+
+#########################################
 # TEST OVERRIDES
 #########################################
 
 # Main test target
-test: check-i18n plugin-build-wasm test-comprehensive
+test: check-i18n check-deps plugin-build-wasm test-comprehensive

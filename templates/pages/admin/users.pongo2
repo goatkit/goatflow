@@ -109,7 +109,7 @@
                             </span>
                         </div>
                     </th>
-                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('groups')">
+                    <th scope="col" class="hidden lg:table-cell cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('groups')">
                         <div class="flex items-center gap-1">
                             {{ t("admin.groups") }}
                             <span class="sort-icon" data-column="groups">
@@ -129,10 +129,10 @@
                             </span>
                         </div>
                     </th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-muted);">
+                    <th scope="col" class="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-muted);">
                         {{ t("admin.2fa")|default:"2FA" }}
                     </th>
-                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('lastLogin')">
+                    <th scope="col" class="hidden lg:table-cell cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('lastLogin')">
                         <div class="flex items-center gap-1">
                             {{ t("admin.last_login") }}
                             <span class="sort-icon" data-column="lastLogin">
@@ -169,7 +169,7 @@
                     <td class="px-4 py-3 whitespace-nowrap">
                         <div class="text-sm" style="color: var(--gk-text-primary);">{{ user.Login }}</div>
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
+                    <td class="hidden lg:table-cell px-4 py-3 whitespace-nowrap">
                         <div class="flex flex-wrap gap-1">
                             {% for group in user.Groups %}
                             <span class="gk-badge gk-badge-primary">
@@ -195,7 +195,7 @@
                         </span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
+                    <td class="hidden lg:table-cell px-4 py-3 whitespace-nowrap">
                         {% if user.TOTP2FAEnabled %}
                         <span class="gk-badge gk-badge-success" title="{{ t("admin.2fa_enabled")|default:"2FA Enabled" }}">
                             <i class="fas fa-shield-alt mr-1"></i>
@@ -208,7 +208,7 @@
                         </span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm" style="color: var(--gk-text-muted);">
+                    <td class="hidden lg:table-cell px-4 py-3 whitespace-nowrap text-sm" style="color: var(--gk-text-muted);">
                         {% if user.LastLogin %}
                             {{ user.LastLogin|date:"Jan 2, 2006 15:04" }}
                         {% else %}
@@ -220,7 +220,7 @@
                             <button
                                 onclick="editUser({{ user.ID }})"
                                 title="{{ t("admin.edit_user_tooltip") }}"
-                                class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-primary-subtle)]"
+                                class="gk-action-btn hover:bg-[var(--gk-primary-subtle)]"
                                 style="color: var(--gk-primary);"
                             >
                                 <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -230,7 +230,7 @@
                             <button
                                 onclick="toggleUserStatus({{ user.ID }}, {{ user.ValidID }})"
                                 title="{% if user.ValidID == 1 %}{{ t("admin.deactivate_user") }}{% else %}{{ t("admin.activate_user") }}{% endif %}"
-                                class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-warning-subtle)]"
+                                class="gk-action-btn hover:bg-[var(--gk-warning-subtle)]"
                                 style="color: var(--gk-warning);"
                             >
                                 {% if user.ValidID == 1 %}
@@ -246,7 +246,7 @@
                             <button
                                 onclick="resetPassword({{ user.ID }})"
                                 title="{{ t("admin.reset_password") }}"
-                                class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-info-subtle)]"
+                                class="gk-action-btn hover:bg-[var(--gk-info-subtle)]"
                                 style="color: var(--gk-info);"
                             >
                                 <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -256,7 +256,7 @@
                             <button
                                 onclick="manageUserTokens({{ user.ID }}, '{{ user.UserLogin }}')"
                                 title="{{ t("admin.manage_api_tokens")|default:"Manage API Tokens" }}"
-                                class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-success-subtle)]"
+                                class="gk-action-btn hover:bg-[var(--gk-success-subtle)]"
                                 style="color: var(--gk-success);"
                             >
                                 <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,7 +266,7 @@
                             <button
                                 onclick="disable2FA({{ user.ID }}, '{{ user.UserLogin }}')"
                                 title="{{ t("admin.disable_2fa")|default:"Disable 2FA" }}"
-                                class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-error-subtle)]"
+                                class="gk-action-btn hover:bg-[var(--gk-error-subtle)]"
                                 style="color: var(--gk-error);"
                             >
                                 <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
