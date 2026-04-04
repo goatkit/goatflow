@@ -16,6 +16,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/organisation"
 	"github.com/goatkit/goatflow/internal/plugin"
 	"github.com/goatkit/goatflow/internal/plugin/example"
 )
@@ -811,6 +812,137 @@ func TestPluginSessionAuth_AdminRouteCount(t *testing.T) {
 	t.Logf("Discovered %d admin routes:", len(adminRoutes))
 	for _, r := range adminRoutes {
 		t.Logf("  %s %s", r.Method, r.Path)
+	}
+}
+
+func TestBuildPluginArgsInjectsOrgID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/test", nil)
+
+	// Inject org context into the request
+	ctx := organisation.WithOrgID(c.Request.Context(), 42)
+	c.Request = c.Request.WithContext(ctx)
+
+	args := buildPluginArgs(c)
+
+	var m map[string]any
+	if err := json.Unmarshal(args, &m); err != nil {
+		t.Fatalf("failed to unmarshal args: %v", err)
+	}
+
+	orgID, ok := m["_org_id"]
+	if !ok {
+		t.Fatal("expected _org_id in args")
+	}
+	if int64(orgID.(float64)) != 42 {
+		t.Errorf("expected _org_id=42, got %v", orgID)
+	}
+}
+
+func TestBuildPluginArgsNoOrgWhenZero(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/test", nil)
+
+	// No org context set (single-org mode)
+	args := buildPluginArgs(c)
+
+	var m map[string]any
+	json.Unmarshal(args, &m)
+
+	if _, ok := m["_org_id"]; ok {
+		t.Error("_org_id should not be present when org context is 0")
+	}
+}
+
+func TestBuildPluginArgsSkipOrgInjection(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Set up a plugin manager with a plugin that opts out
+	db := getTestDB(t)
+	host := plugin.NewProdHostAPI(plugin.WithDB("default", db))
+	mgr := plugin.NewManager(host)
+	SetPluginManager(mgr)
+
+	// Register a plugin with SkipOrgInjection
+	hello := example.NewHelloPlugin()
+	mgr.Register(context.Background(), hello)
+	mgr.Enable("hello")
+
+	// The hello plugin doesn't have SkipOrgInjection, so it should get _org_id
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/test", nil)
+	ctx := organisation.WithOrgID(c.Request.Context(), 99)
+	c.Request = c.Request.WithContext(ctx)
+
+	args := buildPluginArgs(c, "hello")
+	var m map[string]any
+	json.Unmarshal(args, &m)
+	if _, ok := m["_org_id"]; !ok {
+		t.Error("hello plugin should receive _org_id (SkipOrgInjection=false)")
+	}
+}
+
+func TestInjectOrgID(t *testing.T) {
+	t.Run("into existing object", func(t *testing.T) {
+		args := json.RawMessage(`{"name":"test","count":5}`)
+		result := injectOrgID(args, 42)
+
+		var m map[string]json.RawMessage
+		if err := json.Unmarshal(result, &m); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+		if string(m["_org_id"]) != "42" {
+			t.Errorf("expected _org_id=42, got %s", string(m["_org_id"]))
+		}
+		// Original fields preserved
+		if _, ok := m["name"]; !ok {
+			t.Error("original 'name' field should be preserved")
+		}
+	})
+
+	t.Run("into nil args", func(t *testing.T) {
+		result := injectOrgID(nil, 7)
+
+		var m map[string]json.RawMessage
+		json.Unmarshal(result, &m)
+		if string(m["_org_id"]) != "7" {
+			t.Errorf("expected _org_id=7, got %s", string(m["_org_id"]))
+		}
+	})
+
+	t.Run("into empty args", func(t *testing.T) {
+		result := injectOrgID(json.RawMessage(`{}`), 100)
+
+		var m map[string]json.RawMessage
+		json.Unmarshal(result, &m)
+		if string(m["_org_id"]) != "100" {
+			t.Errorf("expected _org_id=100, got %s", string(m["_org_id"]))
+		}
+	})
+}
+
+func TestHandlePluginCallWithOrgContext(t *testing.T) {
+	r, _ := setupPluginTestRouter(t)
+
+	body := bytes.NewBufferString(`{"name": "OrgTest"}`)
+	req := httptest.NewRequest("POST", "/api/v1/plugins/hello/call/hello", body)
+	req.Header.Set("Content-Type", "application/json")
+	addAuthHeader(req)
+
+	// Inject org context
+	ctx := organisation.WithOrgID(req.Context(), 55)
+	req = req.WithContext(ctx)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 }
 

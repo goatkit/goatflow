@@ -73,6 +73,11 @@ type GKRegistration struct {
 	// Called when platform entities are soft/hard deleted.
 	Cascades []CascadeSpec `json:"cascades,omitempty"`
 
+	// Org context
+	// SkipOrgInjection disables automatic _org_id injection into plugin call
+	// params. Set to true for plugins that handle multi-org queries themselves.
+	SkipOrgInjection bool `json:"skip_org_injection,omitempty"`
+
 	// Requirements
 	MinHostVersion string              `json:"min_host_version,omitempty"` // minimum GoatFlow version
 	Permissions    []string            `json:"permissions,omitempty"`      // required host permissions (legacy, use ResourceRequest)

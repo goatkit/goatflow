@@ -23,6 +23,7 @@ import (
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/organisation"
 	"github.com/goatkit/goatflow/internal/plugin"
 	"github.com/goatkit/goatflow/internal/plugin/packaging"
 	"github.com/goatkit/goatflow/internal/repository"
@@ -123,6 +124,13 @@ func HandlePluginCall(c *gin.Context) {
 	var args json.RawMessage
 	if err := c.ShouldBindJSON(&args); err != nil {
 		args = nil
+	}
+
+	// Inject org context into params unless the plugin opts out.
+	if !pluginManager.SkipsOrgInjection(pluginName) {
+		if orgID := organisation.OrgIDFromContext(c.Request.Context()); orgID != 0 {
+			args = injectOrgID(args, orgID)
+		}
 	}
 
 	result, err := pluginManager.Call(c.Request.Context(), pluginName, fnName, args)
@@ -389,7 +397,7 @@ func RegisterPluginRoutes(r *gin.Engine) int {
 }
 
 // buildPluginArgs extracts request data into JSON args for the plugin.
-func buildPluginArgs(c *gin.Context) json.RawMessage {
+func buildPluginArgs(c *gin.Context, pluginName ...string) json.RawMessage {
 	args := make(map[string]any)
 
 	// URL parameters
@@ -440,8 +448,29 @@ func buildPluginArgs(c *gin.Context) json.RawMessage {
 		args["_is_admin"] = isAdmin
 	}
 
+	// Inject org context from the authenticated session unless the plugin opts out.
+	skipOrg := len(pluginName) > 0 && pluginManager != nil && pluginManager.SkipsOrgInjection(pluginName[0])
+	if !skipOrg {
+		if orgID := organisation.OrgIDFromContext(c.Request.Context()); orgID != 0 {
+			args["_org_id"] = orgID
+		}
+	}
+
 	result, _ := json.Marshal(args)
 	return result
+}
+
+// injectOrgID merges _org_id into a JSON args object. If args is nil or not a
+// JSON object, it creates a new object with only _org_id.
+func injectOrgID(args json.RawMessage, orgID int64) json.RawMessage {
+	m := make(map[string]json.RawMessage)
+	if len(args) > 0 {
+		_ = json.Unmarshal(args, &m)
+	}
+	idBytes, _ := json.Marshal(orgID)
+	m["_org_id"] = idBytes
+	out, _ := json.Marshal(m)
+	return out
 }
 
 // RegisterPluginAPIRoutes registers the plugin management API endpoints.

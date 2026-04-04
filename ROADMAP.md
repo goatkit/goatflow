@@ -473,10 +473,10 @@ Real-time server-sent events for plugin UIs. Eliminates polling, enables live pr
 
 Plugins receive org context automatically from the authenticated session, eliminating manual org lookup.
 
-- [ ] Middleware injects `org_id` into all plugin API call params automatically
-- [ ] `HostAPI.OrgID()` returns the active org from the request context (already exists — extend to plugin dispatch)
-- [ ] Plugin dispatch wraps params with `_org_id` field before forwarding to plugin handler
-- [ ] Opt-out flag for plugins that handle multi-org queries themselves
+- [x] Middleware injects `org_id` into all plugin API call params automatically
+- [x] `HostAPI.OrgID()` returns the active org from the request context (already exists — extend to plugin dispatch)
+- [x] Plugin dispatch wraps params with `_org_id` field before forwarding to plugin handler
+- [x] Opt-out flag for plugins that handle multi-org queries themselves
 
 **Statistics & Reporting Plugin — UI & Shipping**
 - [ ] Dashboard widgets with Chart.js
