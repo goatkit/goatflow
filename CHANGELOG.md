@@ -41,6 +41,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - Request logging with method, path, source IP, plugin name, and verification result
 - IP-based rate limiting per plugin (500 req/hr default, applied before signature verification)
 
+**Automatic Org Context Injection**
+- `_org_id` automatically injected into all plugin call params from the authenticated session
+- Works for both YAML-routed plugin calls (`buildPluginArgs`) and direct API calls (`POST /api/v1/plugins/:name/call/:fn`)
+- `SkipOrgInjection` opt-out flag in `GKRegistration` for plugins that handle multi-org queries themselves
+- `Manager.SkipsOrgInjection(name)` accessor checks the flag before injection
+- Only injected when org context is active (orgID > 0); single-org deployments unaffected
+- `HostAPI.OrgID(ctx)` continues to work via Go context for plugins that prefer the programmatic API
+
 **Plugin SSE Channel**
 - `HostAPI.PublishEvent(channel, eventType, data)` — plugins push events to named channels
 - Per-plugin SSE endpoint `/api/v1/plugins/:name/events/:channel` — clients subscribe to isolated streams

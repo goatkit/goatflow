@@ -589,6 +589,19 @@ func (m *Manager) Get(name string) (Plugin, bool) {
 	return rp.plugin, true
 }
 
+// SkipsOrgInjection returns true if the named plugin has opted out of
+// automatic _org_id parameter injection.
+func (m *Manager) SkipsOrgInjection(name string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	rp, exists := m.plugins[name]
+	if !exists {
+		return false
+	}
+	return rp.manifest.SkipOrgInjection
+}
+
 // PluginNotFoundError is returned when a plugin dependency is missing.
 type PluginNotFoundError struct {
 	PluginName   string // The missing plugin

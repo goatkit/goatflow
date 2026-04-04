@@ -86,7 +86,7 @@ func RebuildDynamicEngine() {
 			}
 
 			handler := func(c *gin.Context) {
-				args := buildPluginArgs(c)
+				args := buildPluginArgs(c, pluginName)
 				ctx := pluginContextWithLanguage(c)
 				result, err := pluginManager.Call(ctx, pluginName, handlerName, args)
 				if err != nil {

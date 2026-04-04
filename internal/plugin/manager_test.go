@@ -838,3 +838,25 @@ func (m *mockHostAPI) StoreFile(ctx context.Context, key string, data []byte, me
 func (m *mockHostAPI) GetFile(ctx context.Context, key string) ([]byte, map[string]string, error) { return nil, nil, nil }
 func (m *mockHostAPI) DeleteFile(ctx context.Context, key string) error { return nil }
 func (m *mockHostAPI) ListFiles(ctx context.Context, prefix string) ([]plugin.FileInfo, error) { return nil, nil }
+
+func TestPluginManagerSkipsOrgInjection(t *testing.T) {
+	host := &mockHostAPI{}
+	mgr := plugin.NewManager(host)
+
+	// Register hello plugin (SkipOrgInjection defaults to false)
+	hello := example.NewHelloPlugin()
+	mgr.Register(context.Background(), hello)
+	mgr.Enable("hello")
+
+	t.Run("default_false", func(t *testing.T) {
+		if mgr.SkipsOrgInjection("hello") {
+			t.Error("hello plugin should not skip org injection by default")
+		}
+	})
+
+	t.Run("unknown_plugin", func(t *testing.T) {
+		if mgr.SkipsOrgInjection("nonexistent") {
+			t.Error("unknown plugin should return false")
+		}
+	})
+}
