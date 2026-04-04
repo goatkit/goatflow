@@ -343,6 +343,7 @@ func main() {
 	pluginHost := plugin.NewProdHostAPI(pluginHostOpts...)
 	sseBroker := plugin.NewSSEBroker()
 	pluginHost.SSEBroker = sseBroker
+	api.SetPluginSSEBroker(sseBroker)
 	pluginMgr := plugin.NewManager(pluginHost)
 	// Wire PluginManager back to HostAPI for plugin-to-plugin calls
 	pluginHost.PluginManager = pluginMgr

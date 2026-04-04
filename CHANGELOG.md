@@ -41,6 +41,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - Request logging with method, path, source IP, plugin name, and verification result
 - IP-based rate limiting per plugin (500 req/hr default, applied before signature verification)
 
+**Plugin SSE Channel**
+- `HostAPI.PublishEvent(channel, eventType, data)` — plugins push events to named channels
+- Per-plugin SSE endpoint `/api/v1/plugins/:name/events/:channel` — clients subscribe to isolated streams
+- Per-plugin channel isolation — `SSEBroker` filters by plugin name and channel; sandbox auto-injects plugin identity
+- Auth-scoped — channel endpoint requires valid session or JWT (via `SessionOrJWTAuth` middleware)
+- 30-second keepalive comments prevent proxy/browser idle connection timeouts
+- Legacy `/api/v1/sse` endpoint preserved for backward compatibility (presence indicator, unscoped listeners)
+- gRPC and WASM plugin runtimes updated — `publish_event` wire format now includes `channel` field
+
 **Plugin File Storage API**
 - `HostAPI.StoreFile()` / `GetFile()` / `DeleteFile()` / `ListFiles()` — platform-managed file storage for plugins
 - Local disk backend — files stored under `$STORAGE_PATH/plugins/<plugin_name>/` with per-plugin namespace isolation

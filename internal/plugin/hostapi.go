@@ -82,8 +82,8 @@ func (h *DefaultHostAPI) CallPlugin(ctx context.Context, pluginName, fn string, 
 	return nil, fmt.Errorf("plugin calls not available in default host")
 }
 
-// PublishEvent sends an SSE event to connected browser clients.
-func (h *DefaultHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
+// PublishEvent sends an SSE event to a named channel for connected browser clients.
+func (h *DefaultHostAPI) PublishEvent(ctx context.Context, channel string, eventType string, data string) error {
 	return fmt.Errorf("SSE not available in default host")
 }
 

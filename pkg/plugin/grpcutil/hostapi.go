@@ -187,9 +187,10 @@ func (c *HostAPIClient) CallPlugin(_ context.Context, pluginName, fn string, arg
 	})
 }
 
-// PublishEvent sends an SSE event to connected browser clients.
-func (c *HostAPIClient) PublishEvent(_ context.Context, eventType string, data string) error {
+// PublishEvent sends an SSE event to a named channel for connected browser clients.
+func (c *HostAPIClient) PublishEvent(_ context.Context, channel string, eventType string, data string) error {
 	_, err := c.call("publish_event", map[string]any{
+		"channel":    channel,
 		"event_type": eventType,
 		"data":       data,
 	})

@@ -576,8 +576,8 @@ func (h *ProdHostAPI) CustomFieldsQuery(ctx context.Context, entityType string, 
 	return repo.QueryByFields(entityType, internal)
 }
 
-// PublishEvent sends an SSE event to all connected browser clients.
-func (h *ProdHostAPI) PublishEvent(ctx context.Context, eventType string, data string) error {
+// PublishEvent sends an SSE event to a named channel for connected browser clients.
+func (h *ProdHostAPI) PublishEvent(ctx context.Context, channel string, eventType string, data string) error {
 	if h.SSEBroker == nil {
 		return fmt.Errorf("SSE broker not available")
 	}
@@ -586,9 +586,10 @@ func (h *ProdHostAPI) PublishEvent(ctx context.Context, eventType string, data s
 		pluginName = caller
 	}
 	h.SSEBroker.Publish(SSEEvent{
-		Plugin: pluginName,
-		Type:   eventType,
-		Data:   data,
+		Plugin:  pluginName,
+		Channel: channel,
+		Type:    eventType,
+		Data:    data,
 	})
 	return nil
 }
