@@ -56,7 +56,7 @@ type GKRegistration struct {
 
 	// Navigation control
 	HideMenuItems []string `json:"hide_menu_items,omitempty"` // IDs of default menu items to hide (dashboard, tickets, queues, phone_ticket, email_ticket, admin)
-	LandingPage   string   `json:"landing_page,omitempty"`    // URL path to redirect to after login (e.g. "/fictus")
+	LandingPage   string   `json:"landing_page,omitempty"`    // URL path to redirect to after login (e.g. "/myplugin")
 
 	// Access control — groups the plugin needs, auto-created on load
 	Groups []GroupSpec `json:"groups,omitempty"` // groups for RBAC (use "group:<name>" in route middleware)
@@ -92,9 +92,9 @@ type GKRegistration struct {
 
 // GroupSpec defines a group that a plugin requires for access control.
 // Groups are auto-created in the GoatFlow groups table when the plugin loads.
-// Routes can reference them via middleware: ["auth", "group:fictus-users"].
+// Routes can reference them via middleware: ["auth", "group:myplugin-users"].
 type GroupSpec struct {
-	Name        string `json:"name"`        // group name, e.g. "fictus-users"
+	Name        string `json:"name"`        // group name, e.g. "myplugin-users"
 	Description string `json:"description"` // human-readable description for admin UI
 }
 

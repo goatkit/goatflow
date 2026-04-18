@@ -16,7 +16,7 @@ func TestBuildPluginEnv_PrefixStripping(t *testing.T) {
 	defer os.Unsetenv("GOATFLOW_PLUGIN_ADB_SERVER_HOST")
 
 	policy := plugin.ResourcePolicy{Status: "approved"}
-	env := buildPluginEnv(policy, "goatfictus")
+	env := buildPluginEnv(policy, "testplugin")
 
 	var hasPrefixed, hasStripped bool
 	for _, kv := range env {

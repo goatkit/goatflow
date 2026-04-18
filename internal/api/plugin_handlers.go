@@ -599,7 +599,7 @@ func RequireAdmin() gin.HandlerFunc {
 
 // RequireGroup checks that the authenticated user belongs to a specific group.
 // Admin users (role=Admin or isInAdminGroup) bypass group checks.
-// Used by plugins via "group:<name>" middleware, e.g. "group:fictus-users".
+// Used by plugins via "group:<name>" middleware, e.g. "group:myplugin-users".
 func RequireGroup(groupName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Admin users bypass group checks.

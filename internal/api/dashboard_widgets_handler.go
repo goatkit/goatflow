@@ -204,7 +204,6 @@ func sizeToGrid(size string) (int, int) {
 //   Row 0:  [Ticket Overview   6x3] [Recent Tickets     6x6]
 //   Row 3:  [Tickets by Status 6x3]                      |
 //   Row 6:  [Queue Status      6x4] [Ticket Chart       6x5]
-//   Row 10: [GoatFictus        6x3]                      |
 //
 // Design rationale — agent workflow priority:
 //   1. Overview numbers (top-left, first thing scanned)
@@ -222,7 +221,6 @@ func defaultWidgetLayout(fullID string) (x, y, w, h int, ok bool) {
 		"stats:stats_by_status":           {0, 3, 6, 3},
 		"dashboard-core:queue_status":     {0, 6, 6, 4},
 		"stats:stats_chart":               {6, 6, 6, 5},
-		"goatfictus:goatfictus-status":    {0, 10, 6, 3},
 	}
 	if l, found := defaults[fullID]; found {
 		return l.x, l.y, l.w, l.h, true

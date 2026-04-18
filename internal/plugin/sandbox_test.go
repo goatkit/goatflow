@@ -352,7 +352,7 @@ func TestSandbox_PluginCallScope(t *testing.T) {
 			{Type: "plugin_call", Scope: []string{"stats"}},
 		},
 	}
-	s := NewSandboxedHostAPI(inner, "fictus", policy)
+	s := NewSandboxedHostAPI(inner, "testplugin", policy)
 	ctx := context.Background()
 
 	// Allowed
@@ -376,7 +376,7 @@ func TestSandbox_PluginCallWildcard(t *testing.T) {
 			{Type: "plugin_call", Scope: []string{"*"}},
 		},
 	}
-	s := NewSandboxedHostAPI(inner, "fictus", policy)
+	s := NewSandboxedHostAPI(inner, "testplugin", policy)
 	ctx := context.Background()
 
 	_, err := s.CallPlugin(ctx, "anything", "fn", nil)

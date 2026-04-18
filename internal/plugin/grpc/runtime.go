@@ -260,7 +260,7 @@ func (p *GRPCPlugin) Init(ctx context.Context, host plugin.HostAPI) error {
 
 // buildPluginConfig collects configuration for a plugin from environment variables.
 // Variables prefixed with GOATFLOW_PLUGIN_<NAME>_ are included with the prefix stripped
-// and the key lowercased. For example, GOATFLOW_PLUGIN_GOATFICTUS_LLM_URL becomes "llm_url".
+// and the key lowercased. For example, GOATFLOW_PLUGIN_MYPLUGIN_LLM_URL becomes "llm_url".
 func buildPluginConfig(pluginName string) map[string]string {
 	// Provide standard paths for the plugin.
 	// plugin_dir: where the plugin binary + assets live (read-only)

@@ -215,13 +215,13 @@ func TestInitDynamicTools(t *testing.T) {
 func TestGeneratePluginTools(t *testing.T) {
 	plugins := []PluginRegistration{
 		{
-			Name: "goatfictus",
+			Name: "myplugin",
 			Routes: []PluginRouteInput{
 				{
 					Method:      "POST",
 					Path:        "/admin/generate",
 					Handler:     "GenerateStory",
-					Middleware:   []string{"auth", "group:fictus-users"},
+					Middleware:   []string{"auth", "group:myplugin-users"},
 					Description: "Generate a story",
 				},
 				{
@@ -258,9 +258,9 @@ func TestGeneratePluginTools(t *testing.T) {
 	tools := GeneratePluginTools(plugins)
 
 	// Should have 3 tools:
-	// - MCPTool "goatfictus_generate_story" (declared, with rich schema)
-	// - Route "goatfictus_generatestory" (auto-generated from handler name)
-	// - Route "goatfictus_getstats" (auto-generated from handler name)
+	// - MCPTool "myplugin_generate_story" (declared, with rich schema)
+	// - Route "myplugin_generatestory" (auto-generated from handler name)
+	// - Route "myplugin_getstats" (auto-generated from handler name)
 	// The MCPTool overrides by *name*, not handler — so both exist since names differ.
 	if len(tools) != 3 {
 		t.Errorf("Expected 3 tools, got %d", len(tools))
@@ -273,7 +273,7 @@ func TestGeneratePluginTools(t *testing.T) {
 	foundMCPTool := false
 	foundRouteTool := false
 	for _, tool := range tools {
-		if tool.Name == "goatfictus_generate_story" {
+		if tool.Name == "myplugin_generate_story" {
 			foundMCPTool = true
 			if tool.Description != "Generate a fictional story with configurable length and genre" {
 				t.Errorf("MCPTool description mismatch: %q", tool.Description)
@@ -284,11 +284,11 @@ func TestGeneratePluginTools(t *testing.T) {
 			if !tool.IsPlugin {
 				t.Error("MCPTool should have IsPlugin=true")
 			}
-			if tool.PluginName != "goatfictus" {
-				t.Errorf("MCPTool plugin name = %q, want %q", tool.PluginName, "goatfictus")
+			if tool.PluginName != "myplugin" {
+				t.Errorf("MCPTool plugin name = %q, want %q", tool.PluginName, "myplugin")
 			}
 		}
-		if tool.Name == "goatfictus_getstats" {
+		if tool.Name == "myplugin_getstats" {
 			foundRouteTool = true
 			if !tool.IsPlugin {
 				t.Error("Route tool should have IsPlugin=true")
@@ -296,10 +296,10 @@ func TestGeneratePluginTools(t *testing.T) {
 		}
 	}
 	if !foundMCPTool {
-		t.Error("Missing goatfictus_generate_story tool")
+		t.Error("Missing myplugin_generate_story tool")
 	}
 	if !foundRouteTool {
-		t.Error("Missing goatfictus_getstats tool")
+		t.Error("Missing myplugin_getstats tool")
 	}
 }
 
@@ -317,11 +317,11 @@ func TestAddPluginTools(t *testing.T) {
 	pluginTools := []*GeneratedTool{
 		{
 			Tool: Tool{
-				Name:        "goatfictus_generate",
+				Name:        "myplugin_generate",
 				Description: "Generate content",
 			},
 			IsPlugin:   true,
-			PluginName: "goatfictus",
+			PluginName: "myplugin",
 		},
 	}
 
@@ -334,8 +334,8 @@ func TestAddPluginTools(t *testing.T) {
 	if _, ok := dynamicToolsMap["list_tickets"]; !ok {
 		t.Error("Core tool list_tickets should still exist")
 	}
-	if _, ok := dynamicToolsMap["goatfictus_generate"]; !ok {
-		t.Error("Plugin tool goatfictus_generate should exist")
+	if _, ok := dynamicToolsMap["myplugin_generate"]; !ok {
+		t.Error("Plugin tool myplugin_generate should exist")
 	}
 
 	// Calling AddPluginTools again should replace (not duplicate) plugin tools
