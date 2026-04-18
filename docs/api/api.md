@@ -4949,6 +4949,39 @@ Generated from YAML route definitions
 
 ---
 
+#### 
+
+- **Path:** `/mcp/sse`
+- **Method:** `POST`
+- **Description:** MCP Streamable HTTP endpoint (client-to-server)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/mcp/sse`
+- **Method:** `GET`
+- **Description:** MCP SSE notification stream (server-to-client)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/mcp/sse`
+- **Method:** `DELETE`
+- **Description:** MCP session termination
+
+
+
+
+---
+
 
 
 ### Default: api-notifications

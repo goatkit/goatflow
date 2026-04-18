@@ -47,9 +47,16 @@ var pluginManager *plugin.Manager
 // pluginSSEBroker is the global SSE broker for plugin events.
 var pluginSSEBroker *plugin.SSEBroker
 
-// SetPluginManager sets the global plugin manager.
+// SetPluginManager sets the global plugin manager and wires up the lazy-load callback
+// so MCP tools and dynamic routes are refreshed when a plugin is loaded on demand.
 func SetPluginManager(mgr *plugin.Manager) {
 	pluginManager = mgr
+	if mgr != nil {
+		mgr.OnPluginLoaded = func() {
+			RebuildDynamicEngine()
+			RefreshPluginMCPTools()
+		}
+	}
 }
 
 // GetPluginManager returns the global plugin manager.
@@ -176,6 +183,7 @@ func HandlePluginEnable(c *gin.Context) {
 	}
 
 	plugin.GetLogBuffer().Log(name, "info", fmt.Sprintf("Plugin enabled: %s", name), nil)
+	RefreshPluginMCPTools()
 	c.JSON(http.StatusOK, gin.H{"status": "enabled"})
 }
 
@@ -200,6 +208,7 @@ func HandlePluginDisable(c *gin.Context) {
 	}
 
 	plugin.GetLogBuffer().Log(name, "info", fmt.Sprintf("Plugin disabled: %s", name), nil)
+	RefreshPluginMCPTools()
 	c.JSON(http.StatusOK, gin.H{"status": "disabled"})
 }
 
@@ -873,6 +882,9 @@ var pluginDir string
 // pluginReloader is called after a plugin is uploaded to trigger a load/reload.
 var pluginReloader func(ctx context.Context, name string) error
 
+// pluginUnloader is called before overwriting a gRPC plugin binary to stop the running process.
+var pluginUnloader func(ctx context.Context, name string) error
+
 // SetPluginDir sets the plugin directory for uploads.
 func SetPluginDir(dir string) {
 	pluginDir = dir
@@ -881,6 +893,11 @@ func SetPluginDir(dir string) {
 // SetPluginReloader sets the callback used to load/reload a plugin after upload.
 func SetPluginReloader(fn func(ctx context.Context, name string) error) {
 	pluginReloader = fn
+}
+
+// SetPluginUnloader sets the callback used to stop a running plugin before binary replacement.
+func SetPluginUnloader(fn func(ctx context.Context, name string) error) {
+	pluginUnloader = fn
 }
 
 // HandlePluginUpload handles uploading a new WASM plugin.
@@ -944,15 +961,37 @@ func HandlePluginUpload(c *gin.Context) {
 	var destPath string
 
 	if isZip {
-		// Extract ZIP package
-		pkg, err := packaging.ExtractPlugin(tempPath, pluginDir)
-		os.Remove(tempPath) // Clean up temp file
+		// Validate the package first without extracting to the live directory.
+		manifest, err := packaging.ValidatePackage(tempPath)
 		if err != nil {
+			os.Remove(tempPath)
 			plugin.GetLogBuffer().Log("system", "error", fmt.Sprintf("Plugin upload failed: invalid package: %s", err.Error()), nil)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plugin package: " + err.Error()})
 			return
 		}
-		pluginName = pkg.Manifest.Name
+		pluginName = manifest.Name
+
+		// For gRPC plugins, the binary may be running. Unload it first to
+		// release the file handle so extraction can overwrite it.
+		if pluginUnloader != nil && strings.ToLower(manifest.Runtime) == "grpc" {
+			log.Printf("🔌 Unloading running plugin %s before binary replacement...", pluginName)
+			if err := pluginUnloader(context.Background(), pluginName); err != nil {
+				log.Printf("⚠️  Pre-upload unload of %s failed (may be first install): %v", pluginName, err)
+			} else {
+				log.Printf("🔌 Plugin %s unloaded, waiting for process exit...", pluginName)
+			}
+			// Wait for the OS to release the file handle after process exit.
+			time.Sleep(2 * time.Second)
+		}
+
+		// Now extract — the binary file should no longer be locked.
+		pkg, err := packaging.ExtractPlugin(tempPath, pluginDir)
+		os.Remove(tempPath)
+		if err != nil {
+			plugin.GetLogBuffer().Log("system", "error", fmt.Sprintf("Plugin upload failed: %s", err.Error()), nil)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plugin package: " + err.Error()})
+			return
+		}
 		destPath = pkg.BinaryPath
 		runtimeType := pkg.RuntimeType
 		log.Printf("🔌 Plugin package extracted: %s v%s (runtime: %s)", pluginName, pkg.Manifest.Version, runtimeType)
@@ -973,6 +1012,7 @@ func HandlePluginUpload(c *gin.Context) {
 			}()
 		}
 
+		RefreshPluginMCPTools()
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Plugin uploaded successfully",
 			"name":    pluginName,
@@ -993,6 +1033,7 @@ func HandlePluginUpload(c *gin.Context) {
 		plugin.GetLogBuffer().Log(pluginName, "info", fmt.Sprintf("Plugin uploaded: %s (runtime: wasm, size: %d bytes)", pluginName, header.Size), nil)
 	}
 
+	RefreshPluginMCPTools()
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Plugin uploaded successfully",
 		"name":    pluginName,

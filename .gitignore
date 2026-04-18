@@ -516,3 +516,4 @@ go/
 !deploy/README.md
 *.wasm
 public/
+.continue/

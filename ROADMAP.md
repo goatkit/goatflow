@@ -4,11 +4,11 @@ Current status, past releases, and future plans for GoatFlow.
 
 ## 🚀 Current Status
 
-**Version**: 0.8.1 (April 2026) - Mobile, PWA & Security
+**Version**: 0.8.2 (April 2026) - MCP Dynamic API Discovery, SSE & Plugin Manager Resilience
 
 GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ticketing and service management platform. It is built as a premier standalone solution for all organizations. Written in Go with a modular monolith architecture, GoatFlow provides enterprise-grade support ticketing, ITSM capabilities, and extensive customization options.
 
-- **GoatKit Plugin Platform** — Dual-runtime (WASM + gRPC), HostAPI, admin UI, CLI tooling, hot reload, signed plugins
+- **GoatKit Plugin Platform** — Dual-runtime (WASM + gRPC), HostAPI, admin UI, CLI tooling, hot reload, signed plugins, periodic health checks, bounded graceful shutdown
 - **Plugin Sandbox & Security** — Per-plugin isolation, resource policies, SQL whitelisting, namespace isolation, blue-green reload
 - **Custom Fields** — Universal EAV on all entities, 15 field types including GIS, plugin registration, admin UI, REST API, MCP tools
 - **Plugin UI System** — Independent plugin UIs with 3 shell types, PWA manifests, per-UI branding, auth, and navigation
@@ -22,7 +22,7 @@ GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ti
 - **Two-Factor Authentication (TOTP)** — 2FA for agents and customers with QR setup, recovery codes, admin override
 - **API Tokens** — Personal access tokens with scoped permissions and configurable expiration
 - **REST API v1 Enhanced** — OpenAPI 3.0, Swagger UI, rate limiting, webhooks
-- **MCP Server** — AI assistant integration via JSON-RPC (`/api/mcp`) with multi-user proxy RBAC
+- **MCP Server v2** — Dynamic API discovery with SSE transport, auto-generated tools from REST API + plugins, API bridge with full RBAC
 - **Granular RBAC** — OTRS-compatible permission service with 1,300+ lines of auth tests
 - **Demo Mode** — Restricted mode for public demos (session-only prefs, blocked password/MFA changes)
 - **Coachmarks** — Declarative onboarding tooltips (7 tips) with view tracking, dismissal persistence, and i18n
@@ -52,6 +52,28 @@ GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ti
 ---
 
 ## 📜 Past Releases
+
+### [0.8.2] - April 2026
+
+**MCP Dynamic API Discovery, SSE Transport, and Plugin Manager Resilience**
+
+MCP v2 — Dynamic API Discovery & SSE Transport:
+
+- MCP tools dynamically generated from YAML route definitions + OpenAPI spec — no manual tool registration
+- API bridge invokes real Gin handlers with full RBAC middleware enforcement
+- Plugin endpoints auto-discovered and exposed as MCP tools (namespaced by plugin name)
+- `MCPToolSpec` in `GKRegistration` — plugins declare MCP tools with JSON Schema input schemas
+- Streamable HTTP / SSE transport (MCP 2025-03-26) with session management and heartbeat
+- Admin SQL promoted to REST endpoint (`POST /api/v1/admin/sql`) with allowlisted statement types
+- Protocol version negotiation (supports 2024-11-05 and 2025-03-26)
+- `mcp_description` and `mcp: false` route YAML fields for per-route MCP control
+
+Plugin Manager Resilience:
+
+- **`EnsureLoaded` uses manager registry as ground truth** — previously trusted a cached `discovered[].Loaded` flag that could desync from reality, causing duplicate-spawn of already-running gRPC plugins and silent state loss (e.g. WireGuard peer maps). The cache flag is now a fast-path hint only; a warn log surfaces drift for diagnostics.
+- **Bounded graceful shutdown** — `Manager.ShutdownAll` applies per-plugin `ResourcePolicy.ShutdownTimeout` (10s default) with a 30s overall ceiling in `cmd/goats`. `GRPCPlugin.Shutdown(ctx)` now respects its context via goroutine+select, so a hung plugin can't wedge goatflow's process exit. `client.Kill()` always runs afterwards as a supervised teardown.
+- **Plugin health checker** — optional background goroutine probes every loaded plugin every 60s via the reserved `__health_ping__` function name on the existing `Call` path (no protocol changes, no plugin rebuilds). Three consecutive 5s timeouts flip `HealthStatus.Healthy` to false with a warn log; recovery flips it back. Health state exposed via `Manager.HealthStatus(name)` and `Manager.AllHealthStatuses()` for admin UI consumption. No auto-restart yet — that's 0.8.3. Opt out with `GOATFLOW_PLUGIN_HEALTH_CHECK=false`.
+- Toolbox build: `govulncheck` pinned to `v1.1.4` so `make test-unit` keeps working (`v1.2.0` transitively requires Go 1.25)
 
 ### [0.8.1] - April 4, 2026
 
@@ -298,6 +320,12 @@ GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ti
 - [x] `create_ticket` — create new tickets
 - [x] `update_ticket` — update ticket attributes
 - [x] `add_article` — add notes to tickets
+- [x] **v2: Dynamic API discovery** — tools auto-generated from YAML routes + OpenAPI spec
+- [x] **v2: API bridge** — tool execution via real Gin handlers with RBAC middleware
+- [x] **v2: Plugin tools** — auto-discovered from enabled plugins, `MCPToolSpec` for rich schemas
+- [x] **v2: SSE transport** — MCP 2025-03-26 Streamable HTTP with session management
+- [x] **v2: Admin SQL REST endpoint** — `POST /api/v1/admin/sql` with allowlisted statements
+- [x] **v2: Protocol negotiation** — supports 2024-11-05 and 2025-03-26
 
 **Demo Mode**
 - [x] `DemoMode` middleware (sets `is_demo` flag on all requests)
@@ -535,7 +563,28 @@ Plugins receive org context automatically from the authenticated session, elimin
 
 ---
 
-### 0.8.2 - Target: June 2026
+### 0.8.2 - April 2026 ✅
+
+**MCP Dynamic API Discovery & SSE Transport**
+
+- [x] Dynamic tool generation from YAML routes + OpenAPI spec (no manual registration)
+- [x] API bridge — tools invoke real Gin handlers with RBAC middleware
+- [x] Plugin tool auto-discovery — enabled plugins exposed as MCP tools
+- [x] `MCPToolSpec` in `GKRegistration` — plugins declare tools with JSON Schema
+- [x] Streamable HTTP / SSE transport (MCP 2025-03-26) with sessions and heartbeat
+- [x] Admin SQL REST endpoint (`POST /api/v1/admin/sql`) with allowlisted statements
+- [x] `mcp_description` and `mcp: false` route YAML fields
+- [x] Protocol version negotiation (2024-11-05 + 2025-03-26)
+
+---
+
+### 0.8.3 - Target: June 2026
+
+**Plugin Manager — Auto-Recovery**
+- [ ] Auto-restart on health-check failure with exponential backoff and crash-loop guard
+- [ ] Admin UI widget showing per-plugin health status (consumes `Manager.AllHealthStatuses()`)
+- [ ] Optional `Ping()` protocol method for plugins to return rich health payloads (current `__health_ping__` contract stays — any response = alive)
+- [ ] Parallel shutdown inside `ShutdownAll` to bound total release time regardless of plugin count
 
 **Plugin UI System — Offline & Admin**
 - [ ] Service worker / offline support with configurable caching strategy (per-plugin CacheRoutes)
@@ -680,8 +729,10 @@ Enterprise plugins are paid, reusable horizontal capabilities built on GoatKit c
 |---------|------|--------|-------|
 | 1.0.0 | Nov 2026 | 🔮 Future | Production Release |
 | 0.9.0 | Aug 2026 | 🔮 Future | FAQ, Calendar, Process Management Plugins |
-| 0.8.1 | Jun 2026 | 🔮 Future | Stats Plugin UI, Mobile, WebAuthn, Quality |
-| 0.8.0 | Apr 2026 | 🚀 Current | **PaaS Core** — Custom Fields, Plugin UIs, Multi-Tenancy, Deletion |
+| 0.8.3 | Jun 2026 | 🔮 Future | Plugin Auto-Restart, Plugin UI Offline, WebAuthn, Quality |
+| 0.8.2 | Apr 2026 | 🚀 Current | **MCP v2** + Plugin Manager Resilience (health checks, bounded shutdown) |
+| 0.8.1 | Apr 2026 | ✅ Released | Mobile, PWA & Security |
+| 0.8.0 | Mar 2026 | ✅ Released | **PaaS Core** — Custom Fields, Plugin UIs, Multi-Tenancy, Deletion |
 | 0.7.0 | Mar 2026 | ✅ Released | Plugin Platform Complete, Sandbox & Security, Statistics API |
 | 0.6.5 | Feb 2026 | ✅ Released | 2FA, API Tokens, RBAC, Demo Mode, Plugin Platform, MCP Server |
 | 0.6.4 | Feb 2026 | ✅ Released | Plugin Platform Roadmap |

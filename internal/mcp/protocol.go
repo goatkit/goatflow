@@ -48,6 +48,20 @@ type ServerInfo struct {
 	Version string `json:"version"`
 }
 
+// SupportedProtocolVersions lists all MCP protocol versions this server supports.
+var SupportedProtocolVersions = []string{ProtocolVersion202503, ProtocolVersion}
+
+// NegotiateProtocolVersion returns the best protocol version both client and server support.
+func NegotiateProtocolVersion(clientVersion string) string {
+	for _, v := range SupportedProtocolVersions {
+		if v == clientVersion {
+			return v
+		}
+	}
+	// Default to the base version
+	return ProtocolVersion
+}
+
 // ServerCapabilities describes what this server supports.
 type ServerCapabilities struct {
 	Tools *ToolsCapability `json:"tools,omitempty"`

@@ -433,6 +433,7 @@ func main() {
 	// Wire lazy loader to manager for on-demand loading
 	pluginMgr.SetLazyLoader(pluginLoader)
 	api.SetPluginReloader(pluginLoader.LoadOrReload) // Enable load/reload on upload
+	api.SetPluginUnloader(pluginLoader.Unload)       // Enable stop before binary replacement
 
 	if os.Getenv("GOATFLOW_PLUGIN_LAZY_LOAD") == "true" {
 		log.Printf("🔌 Discovered %d WASM plugin(s) (lazy loading enabled)", loadedCount)
@@ -449,6 +450,17 @@ func main() {
 		if err := pluginLoader.WatchDir(context.Background()); err != nil {
 			log.Printf("⚠️  Plugin hot reload disabled: %v", err)
 		}
+	}
+
+	// Plugin health checker: periodically probes every loaded plugin
+	// and marks it unhealthy after N consecutive failures. Surfaces
+	// silent zombie plugins (gRPC channel alive but process wedged)
+	// that otherwise only get noticed when user traffic hits them.
+	// Does NOT auto-restart yet — that's a 0.8.3 follow-up.
+	// Disable with GOATFLOW_PLUGIN_HEALTH_CHECK=false.
+	if os.Getenv("GOATFLOW_PLUGIN_HEALTH_CHECK") != "false" {
+		healthStop := pluginMgr.StartHealthChecker(0, 0) // defaults (60s interval, 5s probe)
+		defer healthStop()
 	}
 
 	// Register plugin-defined routes with the router
@@ -627,10 +639,15 @@ func main() {
 		}
 		// Stop plugin hot reload watcher
 		pluginLoader.StopWatch()
-		// Shutdown plugins gracefully
-		if err := pluginMgr.ShutdownAll(context.Background()); err != nil {
+		// Shutdown plugins gracefully — bounded so one hung plugin
+		// can't delay the process exit indefinitely. Per-plugin
+		// timeouts are set from each plugin's ResourcePolicy inside
+		// ShutdownAll; this outer deadline is the hard cap.
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), gracefulShutdownTimeout)
+		if err := pluginMgr.ShutdownAll(shutdownCtx); err != nil {
 			log.Printf("⚠️  Plugin shutdown error: %v", err)
 		}
+		shutdownCancel()
 		log.Fatalf("server failed: %v", err)
 	}
 	if schedulerCancel != nil {
@@ -638,11 +655,19 @@ func main() {
 	}
 	// Stop plugin hot reload watcher
 	pluginLoader.StopWatch()
-	// Shutdown plugins gracefully
-	if err := pluginMgr.ShutdownAll(context.Background()); err != nil {
+	// Shutdown plugins gracefully — see note above.
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), gracefulShutdownTimeout)
+	if err := pluginMgr.ShutdownAll(shutdownCtx); err != nil {
 		log.Printf("⚠️  Plugin shutdown error: %v", err)
 	}
+	shutdownCancel()
 }
+
+// gracefulShutdownTimeout is the overall ceiling on how long goatflow
+// will wait for plugins to shut down before exiting. Per-plugin
+// deadlines are shorter (from each plugin's ResourcePolicy) and are
+// applied inside Manager.ShutdownAll; this value just bounds the total.
+const gracefulShutdownTimeout = 30 * time.Second
 
 func initValkeyCache(cfg *config.Config) *cache.RedisCache {
 	if cfg == nil {

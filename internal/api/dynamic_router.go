@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -96,6 +97,17 @@ func RebuildDynamicEngine() {
 
 				var response map[string]any
 				if err := json.Unmarshal(result, &response); err == nil {
+					// Binary response — decode base64 data and stream with content type.
+					if isBinary, ok := response["_binary"].(bool); ok && isBinary {
+						if contentType, ok := response["content_type"].(string); ok {
+							if dataB64, ok := response["data"].(string); ok {
+								if decoded, err := base64.StdEncoding.DecodeString(dataB64); err == nil {
+									c.Data(http.StatusOK, contentType, decoded)
+									return
+								}
+							}
+						}
+					}
 					if html, ok := response["html"].(string); ok {
 						// Check if plugin wants raw HTML (no layout wrapping)
 						if raw, ok := response["raw"].(bool); ok && raw {

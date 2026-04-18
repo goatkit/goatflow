@@ -15,10 +15,26 @@ import (
 	"github.com/goatkit/goatflow/internal/shared"
 )
 
+// globalRegistry stores the handler registry instance for use by subsystems like MCP.
+var globalRegistry *HandlerRegistry
+
+// GetGlobalRegistry returns the handler registry, available after IntegrateWithExistingSystem.
+func GetGlobalRegistry() *HandlerRegistry {
+	return globalRegistry
+}
+
+// SetGlobalRegistryForTest allows tests to inject or reset the global registry.
+func SetGlobalRegistryForTest(r *HandlerRegistry) *HandlerRegistry {
+	old := globalRegistry
+	globalRegistry = r
+	return old
+}
+
 // with the existing handler functions.
 func IntegrateWithExistingSystem(router *gin.Engine, db *sql.DB, jwtManager interface{}) error {
 	// Create handler registry
 	registry := NewHandlerRegistry()
+	globalRegistry = registry
 
 	// Register all existing handlers
 	if err := registerExistingHandlers(registry, db, jwtManager); err != nil {

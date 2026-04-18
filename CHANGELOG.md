@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.2] - April 2026
+
+**MCP Dynamic API Discovery & SSE Transport**
+
+### Added
+
+**MCP Server v2 — Dynamic API Discovery**
+- All MCP tools are now dynamically generated from YAML route definitions and the OpenAPI spec — no manual tool registration needed
+- Every `/api/v1/` endpoint is automatically available as an MCP tool with input schema derived from OpenAPI
+- Plugin endpoints are auto-discovered and exposed as MCP tools, namespaced by plugin name (e.g. `myplugin_run_task`)
+- `MCPToolSpec` field added to `GKRegistration` — plugins can declare MCP tools with full JSON Schema input schemas
+- API bridge executes tools by invoking real Gin handlers with synthetic context — RBAC enforced by the same middleware stack as the REST API
+- `mcp_description` field on route YAML specs — override tool description with LLM-friendly text without changing API docs
+- `mcp: false` field on route YAML specs — opt individual routes out of MCP tool generation
+- Tool list refreshed automatically when plugins are enabled, disabled, or uploaded
+
+**MCP Streamable HTTP Transport (SSE)**
+- `POST /api/mcp/sse` — MCP 2025-03-26 Streamable HTTP endpoint with session management
+- `GET /api/mcp/sse` — server-to-client SSE notification stream with 30s heartbeat keepalive
+- `DELETE /api/mcp/sse` — session termination
+- Session manager with configurable inactivity timeout (default 30 minutes) and background cleanup
+- Protocol version negotiation — supports both `2024-11-05` and `2025-03-26`
+- `unified_auth` middleware on SSE endpoints — supports both JWT and API tokens
+- `.mcp.json` configuration now uses native SSE transport (no more stdio proxy)
+
+**Admin SQL REST Endpoint**
+- `POST /api/v1/admin/sql` — read-only SQL execution promoted from MCP-only to a proper REST endpoint
+- Allowlisted statement types: SELECT, DESCRIBE, EXPLAIN, SHOW TABLES, SHOW COLUMNS (replaces SELECT-only)
+- Admin middleware enforced — requires admin group membership
+- Dialect-portable via `database.ConvertPlaceholders()`
+- OpenAPI spec updated with request/response schemas
+
+### Changed
+- MCP server version bumped to `0.7.0`
+- MCP server rewritten from ~1050 to ~130 lines — all tool implementations removed in favour of API bridge
+- `tools.go` and `tools_custom_fields.go` deleted — 14 hardcoded tool definitions replaced by dynamic generation
+- `NewServer()` signature changed — no longer takes `*sql.DB`, takes `userRole` and `*APIBridge` instead
+- API token role resolution — MCP handlers now resolve actual admin role from database (fixes admin middleware for API tokens)
+- `ListChanged: true` capability advertised — SSE clients can be notified when the tool list changes
+- **Plugin shutdown now respects per-plugin timeouts.** `Manager.ShutdownAll` reads `ResourcePolicy.ShutdownTimeout` (or a 10s default) per plugin and applies it as a deadline on the RPC call. `GRPCPlugin.Shutdown(ctx)` no longer ignores its context — the Shutdown RPC runs in a goroutine guarded by the deadline, and `client.Kill()` runs unconditionally afterwards as a supervised teardown. The outer `cmd/goats` shutdown paths wrap the call in a 30s overall ceiling (`gracefulShutdownTimeout`) so no plugin — or combination of plugins — can wedge goatflow's process exit. Previously a hung plugin's Shutdown RPC would block every subsequent plugin's turn.
+
+### Added
+- **Plugin health checker.** Manager now runs an optional background goroutine that probes every loaded plugin every 60s via the reserved `__health_ping__` function name on the existing `Call` path. Any response within 5s (even an "unknown function" error from plugins that don't handle the name) is treated as healthy — only a context-deadline-exceeded indicates the plugin is wedged. Three consecutive failures flip `HealthStatus.Healthy` to false and log a warn-level transition; a subsequent successful probe flips it back and logs the recovery. Health state is exposed via `Manager.HealthStatus(name)` and `Manager.AllHealthStatuses()` for admin UI / dashboard rendering. No auto-restart yet — surfacing bad state is the goal for this release; restart-policy design lands in 0.8.3. Enabled by default; disable with `GOATFLOW_PLUGIN_HEALTH_CHECK=false`.
+
+### Removed
+- 14 hardcoded MCP tool implementations (replaced by dynamic generation via API bridge)
+- `ToolRegistry` global variable (replaced by `GetDynamicTools()`)
+- Direct SQL queries in MCP server (all tool execution now goes through the API bridge)
+
+### Fixed
+- **Plugin loader: `EnsureLoaded` no longer spawns duplicate instances of already-loaded plugins.** The previous implementation trusted a cached `discovered[].Loaded` boolean flag, which several reload/replace/unregister code paths fail to keep in sync with the manager's actual registry. When `AllWidgets()` (or any other caller) invoked `EnsureLoaded` on a plugin whose flag had desynced, the loader would spawn a second instance of a running gRPC plugin. The duplicate would exit within ~300ms with `acceptAndServe error: timeout waiting for accept` (usually a socket/port collision with the original), and the manager's routing would be left pointing at a broken-state instance. For stateful plugins holding long-lived network state — e.g. WireGuard peer maps — this manifested as silent peer loss requiring a full plugin redeploy to recover. `EnsureLoaded` now uses `manager.Get(name)` as the ground truth and refreshes the cache flag accordingly; the flag is a fast-path hint rather than the source of truth. A warn-level log is emitted when the flag is detected to have desynced.
+- **Toolbox build: pinned `govulncheck` to `v1.1.4`.** The previous `GOVULNCHECK_VERSION=latest` resolved to `v1.2.0`, which transitively requires Go ≥ 1.25 via `golang.org/x/vuln@v1.2.0`. The toolbox base image is Go 1.24.13, so `make test-unit` (and anything else that rebuilds the toolbox) failed with `golang.org/x/vuln@v1.2.0 requires go >= 1.25.0`. Pinned to the last `v1.1.x` release that supports Go 1.24.
+
+---
+
 ## [0.8.1] - April 2026
 
 **Mobile, PWA & Security**

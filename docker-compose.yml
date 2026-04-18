@@ -71,6 +71,16 @@ services:
     networks:
       - goatflow-network
 
+  # Init container — fix plugin file ownership so the upload API can overwrite them.
+  # Plugins may end up root-owned from manual docker cp or prior container builds.
+  plugin-init:
+    image: docker.io/alpine:3
+    container_name: goatflow-plugin-init
+    user: "0:0"
+    volumes:
+      - goatflow_plugins:/app/config/plugins
+    command: ["sh", "-c", "chown -R ${HOST_UID:-1000}:${HOST_GID:-1000} /app/config/plugins"]
+
   # GoatFlow Backend - Main application server
   backend:
     build:
@@ -121,6 +131,7 @@ services:
       JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY:-7d}
       PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-sha256}
       MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
+      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:-}
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}
       ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-pdf,doc,docx,txt,png,jpg,jpeg,gif,zip}
@@ -139,6 +150,8 @@ services:
       - goatflow_certs:/app/certs
       - goatflow_plugins:/app/config/plugins
     depends_on:
+      plugin-init:
+        condition: service_completed_successfully
       mariadb:
         condition: service_healthy
       valkey:

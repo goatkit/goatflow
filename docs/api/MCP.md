@@ -4,65 +4,91 @@ GoatFlow includes a Model Context Protocol (MCP) server that enables AI assistan
 
 ## Overview
 
-The MCP server provides a JSON-RPC 2.0 interface for AI assistants to:
-- Query tickets, queues, and users
+The MCP server dynamically generates tools from the REST API surface. Every `/api/v1/` endpoint is automatically available as an MCP tool, with the same RBAC enforcement as the REST API. Plugin endpoints are also exposed automatically.
+
+Capabilities include:
+- Full CRUD on tickets, queues, users, organisations, custom fields, and more
 - Search across tickets
-- Get dashboard statistics
+- Dashboard statistics and reporting
 - Execute read-only SQL queries (admin only)
+- All plugin APIs (auto-discovered from enabled plugins)
 
-## Architecture: Multi-User Proxy
+## Architecture: API Bridge
 
-The MCP server operates as a **multi-user proxy**. Each request is authenticated by an API token, and the token owner's permissions apply to all operations:
+The MCP server acts as a thin adapter over the existing REST API. At startup, it reads YAML route definitions and the OpenAPI spec to generate MCP tools dynamically. Tool execution invokes the real Gin handler with the user's auth context, so RBAC is enforced by the same middleware stack.
 
 ```
-┌─────────────────┐     ┌─────────────────┐      ┌──────────────────┐
-│  AI Assistant   │────>│   MCP Server    │─────>│  Underlying APIs │
-│                 │     │  (proxy layer)  │      │  (RBAC enforced) │
-└─────────────────┘     └─────────────────┘      └──────────────────┘
-        │                       │
-        │                       ▼
-        │               ┌──────────────────┐
-        │               │  Token identifies│
-        └──────────────>│  user + perms    │
-                        └──────────────────┘
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌──────────────┐
+│  AI Assistant   │────>│   MCP Server    │────>│   API Bridge    │────>│  Gin Handler │
+│                 │     │  (JSON-RPC 2.0) │     │  (synthetic ctx)│     │  + Middleware │
+└─────────────────┘     └─────────────────┘     └─────────────────┘     └──────────────┘
+        │                       │                       │
+        │                       ▼                       ▼
+        │               ┌──────────────┐        ┌──────────────┐
+        │               │ Token → user │        │ RBAC enforced│
+        └──────────────>│ + role       │        │ per endpoint │
+                        └──────────────┘        └──────────────┘
 ```
+
+### Dynamic Tool Generation
+
+Tools are generated automatically at startup from two sources:
+
+1. **REST API routes** (`routes/api-v1.yaml`) — each route becomes an MCP tool with input schema derived from the OpenAPI spec
+2. **Plugin routes** — each enabled plugin's routes become MCP tools, namespaced by plugin name
+
+No manual tool registration is needed. Adding a new API endpoint or plugin route automatically makes it available via MCP.
 
 ### Permission Model
 
-| Tool Type | Permission Source | Notes |
-|-----------|------------------|-------|
-| `list_tickets`, `get_ticket`, etc. | Underlying API RBAC | Same permissions as REST API |
-| `list_queues`, `list_users` | Underlying API RBAC | Queue access filtered by user's groups |
-| `execute_sql` | **Admin group only** | Bypasses API layer, requires admin |
+All tools inherit the RBAC of the underlying API endpoint:
 
-Most MCP tools delegate to the same handlers that power the REST API. This means:
-- Agents see only tickets in queues they have `ro` or `rw` access to
-- Customers (if using customer tokens) see only their own tickets
-- No additional permission configuration needed — existing RBAC applies
+| Endpoint Type | Permission Source | Notes |
+|---------------|------------------|-------|
+| Ticket endpoints | Queue RBAC middleware | `ticket_access_ro`, `ticket_access_rw`, etc. |
+| Admin endpoints | Admin middleware | Requires admin group membership |
+| Plugin endpoints | Plugin middleware | `auth`, `admin`, `group:<name>` |
+| Public endpoints | None | Health, info |
 
-### Admin-Only Tools
+The MCP server resolves the API token owner's actual role (Admin/Agent) from the database, ensuring admin middleware works correctly regardless of how the token was issued.
 
-The `execute_sql` tool bypasses the normal API permission layer and runs queries directly against the database. To prevent privilege escalation, it requires the token owner to be a member of the **admin group**.
+### Plugin Tools
 
-```go
-// Token must belong to a user in the "admin" group
-if !permissionService.IsInGroup(userID, "admin") {
-    return error("execute_sql requires admin group membership")
-}
-```
+Enabled plugins are automatically exposed as MCP tools:
 
-## Endpoint
+- **Route-based tools**: auto-generated from plugin `RouteSpec` declarations, named `{plugin}_{handler}`
+- **Declared tools**: plugins can optionally declare `MCPTools` in their `GKRegistration` with full JSON Schema input schemas — these override route-based tools on name collision
+- **Refresh on change**: tool list is rebuilt when plugins are enabled, disabled, or uploaded
+
+## Endpoints
+
+### HTTP POST (original)
 
 ```
 POST /api/mcp
+Authorization: Bearer <api-token>
 ```
+
+Single-request JSON-RPC 2.0 endpoint. One request per HTTP call, stateless.
+
+### Streamable HTTP / SSE (recommended)
+
+```
+POST /api/mcp/sse       # Client→server JSON-RPC (creates session on initialize)
+GET  /api/mcp/sse       # Server→client SSE notification stream
+DELETE /api/mcp/sse     # Session termination
+```
+
+MCP 2025-03-26 Streamable HTTP transport. Supports session state via `Mcp-Session-Id` header, server-initiated notifications (e.g. `tools/list_changed`), and heartbeat keepalive.
+
+Both JWT and API tokens are supported on the SSE endpoint (`unified_auth` middleware).
 
 ## Authentication
 
-Requires a valid API token with Bearer authentication:
+Requires a valid API token or JWT with Bearer authentication:
 
 ```bash
-curl -X POST https://your-goatflow-instance/api/mcp \
+curl -X POST https://your-goatflow-instance/api/mcp/sse \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
@@ -70,7 +96,14 @@ curl -X POST https://your-goatflow-instance/api/mcp \
 
 ## Protocol
 
-The MCP server implements the Model Context Protocol (version 2024-11-05) using JSON-RPC 2.0.
+The MCP server supports two protocol versions:
+
+| Version | Transport | Notes |
+|---------|-----------|-------|
+| `2024-11-05` | `POST /api/mcp` | Original, stateless |
+| `2025-03-26` | `POST/GET/DELETE /api/mcp/sse` | Streamable HTTP with sessions |
+
+Protocol version is negotiated during the `initialize` handshake — the server responds with the client's requested version if supported.
 
 ### Initialize
 
@@ -80,7 +113,7 @@ The MCP server implements the Model Context Protocol (version 2024-11-05) using 
   "id": 1,
   "method": "initialize",
   "params": {
-    "protocolVersion": "2024-11-05",
+    "protocolVersion": "2025-03-26",
     "clientInfo": {
       "name": "your-client",
       "version": "1.0"
@@ -115,34 +148,37 @@ The MCP server implements the Model Context Protocol (version 2024-11-05) using 
 }
 ```
 
-## Available Tools
+## Tool Naming Convention
+
+Tools are named based on HTTP method and path:
+
+| Method | Path | Tool Name |
+|--------|------|-----------|
+| GET | /tickets | `list_tickets` |
+| POST | /tickets | `create_ticket` |
+| GET | /tickets/:id | `get_ticket` |
+| PUT | /tickets/:id | `update_ticket` |
+| DELETE | /tickets/:id | `delete_ticket` |
+| GET | /tickets/:id/articles | `list_ticket_articles` |
+| POST | /tickets/:id/articles | `create_ticket_article` |
+| GET | /queues/:id/stats | `list_queue_stats` |
+| POST | /admin/sql | `create_admin_sql` |
+
+Plugin tools are prefixed with the plugin name: `myplugin_run_task`, `goatkit_llm_chat`, etc.
+
+## Example Tools
 
 ### list_tickets
 
-List tickets with optional filters.
+List tickets with optional filters. Results scoped to queues the authenticated user can access.
 
-**Arguments:**
-| Name | Type | Description |
-|------|------|-------------|
-| `queue_id` | integer | Filter by queue ID |
-| `state_id` | integer | Filter by state ID (1=new, 2=open, 3=pending, 4=closed) |
-| `owner_id` | integer | Filter by owner user ID |
-| `customer_id` | string | Filter by customer ID |
-| `limit` | integer | Maximum tickets to return (default 20, max 100) |
-| `offset` | integer | Offset for pagination (default 0) |
-
-**Example:**
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1,
+  "jsonrpc": "2.0", "id": 1,
   "method": "tools/call",
   "params": {
     "name": "list_tickets",
-    "arguments": {
-      "state_id": 1,
-      "limit": 5
-    }
+    "arguments": { "status": "open", "limit": 5 }
   }
 }
 ```
@@ -151,158 +187,27 @@ List tickets with optional filters.
 
 Get detailed information about a specific ticket.
 
-**Arguments:**
-| Name | Type | Description |
-|------|------|-------------|
-| `ticket_id` | integer | The ticket ID to retrieve |
-| `ticket_number` | string | The ticket number (TN) to retrieve |
-| `include_articles` | boolean | Include ticket articles/messages (default true) |
-
-Either `ticket_id` or `ticket_number` is required.
-
-**Example:**
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1,
+  "jsonrpc": "2.0", "id": 1,
   "method": "tools/call",
   "params": {
     "name": "get_ticket",
-    "arguments": {
-      "ticket_id": 12345,
-      "include_articles": true
-    }
+    "arguments": { "id": 12345 }
   }
 }
 ```
 
-### search_tickets
+### create_admin_sql
 
-Full-text search across tickets.
+Execute a read-only SQL query. Requires admin group membership. Allowlisted statements: SELECT, DESCRIBE, EXPLAIN, SHOW TABLES, SHOW COLUMNS.
 
-**Arguments:**
-| Name | Type | Description |
-|------|------|-------------|
-| `query` | string | Search query string (required) |
-| `limit` | integer | Maximum results (default 20) |
-
-**Example:**
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1,
+  "jsonrpc": "2.0", "id": 1,
   "method": "tools/call",
   "params": {
-    "name": "search_tickets",
-    "arguments": {
-      "query": "network outage",
-      "limit": 10
-    }
-  }
-}
-```
-
-### list_queues
-
-List all queues the authenticated user has access to.
-
-**Arguments:** None
-
-**Example:**
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/call",
-  "params": {
-    "name": "list_queues",
-    "arguments": {}
-  }
-}
-```
-
-### list_users
-
-List agent users in the system.
-
-**Arguments:**
-| Name | Type | Description |
-|------|------|-------------|
-| `valid` | boolean | Filter by valid/active users only (default true) |
-| `limit` | integer | Maximum users to return (default 50) |
-
-**Example:**
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/call",
-  "params": {
-    "name": "list_users",
-    "arguments": {
-      "limit": 10
-    }
-  }
-}
-```
-
-### get_statistics
-
-Get dashboard statistics including ticket counts by state and queue.
-
-**Arguments:** None
-
-**Example:**
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/call",
-  "params": {
-    "name": "get_statistics",
-    "arguments": {}
-  }
-}
-```
-
-**Returns:**
-```json
-{
-  "tickets_by_state": {
-    "new": 5,
-    "open": 120,
-    "pending reminder": 30,
-    "closed successful": 500
-  },
-  "tickets_by_queue": {
-    "Support": 400,
-    "Sales": 150
-  },
-  "total_tickets": 655,
-  "total_users": 10
-}
-```
-
-### execute_sql
-
-Execute a read-only SQL query. **SELECT queries only** — for debugging and development.
-
-⚠️ **Requires admin group membership.** This tool bypasses the normal API permission layer, so it's restricted to administrators only. Non-admin tokens will receive an error.
-
-**Arguments:**
-| Name | Type | Description |
-|------|------|-------------|
-| `query` | string | SQL SELECT query to execute (required) |
-| `args` | array | Query arguments for `?` placeholders |
-
-**Example:**
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/call",
-  "params": {
-    "name": "execute_sql",
+    "name": "create_admin_sql",
     "arguments": {
       "query": "SELECT COUNT(*) as count FROM ticket WHERE queue_id = ?",
       "args": [5]
@@ -311,10 +216,70 @@ Execute a read-only SQL query. **SELECT queries only** — for debugging and dev
 }
 ```
 
-**Security Notes:**
-- Only SELECT queries are allowed (INSERT, UPDATE, DELETE, DDL rejected)
-- Only tokens belonging to admin group members can use this tool
-- Non-admin tokens receive: `"execute_sql requires admin group membership"`
+## Route-Level MCP Control
+
+Routes can control their MCP visibility via optional YAML fields:
+
+```yaml
+- path: /tickets
+  method: GET
+  handler: HandleListTicketsAPI
+  description: "List tickets"
+  mcp_description: "List tickets with optional filters. Returns ticket ID, number, title, state, queue, priority, and owner."
+  # mcp: false  # uncomment to exclude from MCP
+```
+
+- `mcp: false` — exclude a route from MCP tool generation
+- `mcp_description` — override the tool description with an LLM-friendly version
+
+## Claude Code Configuration
+
+To use GoatFlow's MCP server with Claude Code, add to `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "goatflow": {
+      "type": "http",
+      "url": "http://localhost:8080/api/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer gf_your_api_token_here"
+      }
+    }
+  }
+}
+```
+
+> **Note:** Use `"type": "http"` (Streamable HTTP), not `"type": "sse"` (deprecated legacy format).
+
+## Plugin MCP Tools
+
+Plugins can declare rich MCP tool definitions in their `GKRegistration`:
+
+```go
+GKRegistration{
+    Name: "my-plugin",
+    MCPTools: []MCPToolSpec{
+        {
+            Name:        "do_action",
+            Description: "Perform a specific action with detailed parameters",
+            Handler:     "DoAction",
+            InputSchema: map[string]any{
+                "type": "object",
+                "properties": map[string]any{
+                    "target": map[string]any{
+                        "type": "string",
+                        "description": "Target entity",
+                    },
+                },
+                "required": []any{"target"},
+            },
+        },
+    },
+}
+```
+
+Declared tools provide richer schemas than auto-generated route tools and take priority on name collision.
 
 ## Error Handling
 
@@ -338,12 +303,7 @@ Tool execution errors are returned as successful responses with `isError: true`:
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
-    "content": [
-      {
-        "type": "text",
-        "text": "Error: ticket not found"
-      }
-    ],
+    "content": [{ "type": "text", "text": "Error (403): Admin access required" }],
     "isError": true
   }
 }
@@ -353,7 +313,7 @@ Tool execution errors are returned as successful responses with `isError: true`:
 
 API tokens can be created via:
 
-1. **Agent UI:** Settings → API Tokens
+1. **Agent UI:** Settings -> API Tokens
 2. **REST API:** `POST /api/v1/tokens`
 
 Tokens use the format `gf_<prefix>_<random>` and are stored using bcrypt hashing.
@@ -361,3 +321,9 @@ Tokens use the format `gf_<prefix>_<random>` and are stored using bcrypt hashing
 ## Rate Limiting
 
 MCP requests are subject to the same rate limiting as other API endpoints. The default rate limit is 1000 requests per token per hour.
+
+## SSE Session Management
+
+SSE sessions expire after 30 minutes of inactivity. A background cleanup goroutine removes expired sessions. Heartbeat events (`:keepalive`) are sent every 30 seconds to prevent proxy timeouts.
+
+Sessions are identified by the `Mcp-Session-Id` header, returned on the `initialize` response. The session is bound to the authenticated user — session user mismatch returns 403.

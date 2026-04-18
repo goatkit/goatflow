@@ -29,6 +29,10 @@ func TestSecurityHeaders(t *testing.T) {
 		{"Content-Security-Policy", "frame-ancestors 'none'"},
 		{"Content-Security-Policy", "base-uri 'self'"},
 		{"Content-Security-Policy", "form-action 'self'"},
+		// media-src allows blob: URIs so the legend voice-preview button
+		// can play synthesised audio via URL.createObjectURL. 'data:' is
+		// intentionally NOT permitted — avoids a "CSP weakened" audit flag.
+		{"Content-Security-Policy", "media-src 'self' blob:"},
 		{"X-Frame-Options", "DENY"},
 		{"X-Content-Type-Options", "nosniff"},
 		{"X-XSS-Protection", "1; mode=block"},

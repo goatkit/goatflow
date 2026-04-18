@@ -1,3 +1,5 @@
+//go:build mcp_legacy_tests
+
 package mcp
 
 import (

@@ -1705,6 +1705,78 @@ paths:
                 $ref: '#/components/schemas/LogEntryListResponse'
 
   # ===================
+  # Admin - SQL
+  # ===================
+  /api/v1/admin/sql:
+    post:
+      tags:
+        - Admin
+      summary: Execute read-only SQL query
+      description: |
+        Execute a read-only SQL query. Only allowlisted statement types are permitted:
+        SELECT, DESCRIBE, EXPLAIN, SHOW TABLES, SHOW COLUMNS.
+        Requires admin group membership.
+      security:
+        - jwtAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: SQL query to execute (SELECT, DESCRIBE, EXPLAIN, SHOW TABLES, or SHOW COLUMNS only)
+                  example: "SELECT id, title, queue_id FROM ticket WHERE id = ?"
+                args:
+                  type: array
+                  description: Query arguments for ? placeholders
+                  items:
+                    oneOf:
+                      - type: string
+                      - type: integer
+                      - type: number
+                  example: [42]
+      responses:
+        '200':
+          description: Query results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  columns:
+                    type: array
+                    items:
+                      type: string
+                    example: ["id", "title", "queue_id"]
+                  rows:
+                    type: array
+                    items:
+                      type: object
+                  rows_count:
+                    type: integer
+                    example: 1
+        '400':
+          description: Invalid query or disallowed statement type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ===================
   # Admin - Audit
   # ===================
   /api/v1/admin/audit/logs:

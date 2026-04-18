@@ -68,3 +68,58 @@ spec:
 		}
 	})
 }
+
+func TestLoadYAMLRoutesFromGlobalMap_SetsGlobalRegistry(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Reset global state
+	old := globalRegistry
+	globalRegistry = nil
+	defer func() { globalRegistry = old }()
+
+	// Write a minimal route file
+	dir := t.TempDir()
+	yaml := `apiVersion: v1
+kind: RouteGroup
+metadata:
+  name: test-global-registry
+  description: "Test"
+  namespace: default
+  enabled: true
+spec:
+  prefix: /test
+  routes:
+    - path: /ping
+      method: GET
+      handler: testPingHandler
+      description: "Ping"
+`
+	if err := os.WriteFile(filepath.Join(dir, "test.yaml"), []byte(yaml), 0o644); err != nil {
+		t.Fatalf("write yaml: %v", err)
+	}
+
+	// Register a handler in the global map
+	GlobalHandlerMap["testPingHandler"] = func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	}
+	defer delete(GlobalHandlerMap, "testPingHandler")
+
+	router := gin.New()
+	if err := LoadYAMLRoutesFromGlobalMap(router, dir); err != nil {
+		t.Fatalf("LoadYAMLRoutesFromGlobalMap failed: %v", err)
+	}
+
+	// The global registry MUST be set — this is what the MCP bridge relies on
+	if GetGlobalRegistry() == nil {
+		t.Fatal("GetGlobalRegistry() returned nil after LoadYAMLRoutesFromGlobalMap — MCP bridge will fail")
+	}
+
+	// Verify the registry contains handlers
+	handler, err := GetGlobalRegistry().Get("testPingHandler")
+	if err != nil {
+		t.Fatalf("Registry should contain testPingHandler: %v", err)
+	}
+	if handler == nil {
+		t.Fatal("Handler should not be nil")
+	}
+}

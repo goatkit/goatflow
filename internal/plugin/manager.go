@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/goatkit/goatflow/internal/apierrors"
 	"github.com/goatkit/goatflow/internal/customfields"
@@ -26,17 +27,30 @@ type Manager struct {
 	host       HostAPI
 	lazyLoader LazyLoader // Optional: for lazy loading support
 
+	// OnPluginLoaded is called after a plugin is lazy-loaded successfully.
+	// The API layer sets this to refresh MCP tools, rebuild dynamic engine, etc.
+	OnPluginLoaded func()
+
 	// Per-plugin resource policies (name -> policy)
 	policies map[string]*ResourcePolicy
 
 	// Per-plugin sandboxed HostAPIs (name -> sandbox)
 	sandboxes map[string]*SandboxedHostAPI
+
+	// healthCheckerStarted guards StartHealthChecker so it can't be
+	// spun up twice. See internal/plugin/health.go for the check loop.
+	healthCheckerStarted bool
 }
 
 type registeredPlugin struct {
 	plugin   Plugin
 	manifest GKRegistration
 	enabled  bool
+
+	// health tracks the most recent Ping probe outcome for this
+	// plugin. Guarded by Manager.mu. See health.go for the probe
+	// loop that updates it.
+	health healthState
 }
 
 // NewManager creates a plugin manager with the given host API.
@@ -321,6 +335,7 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 		plugin:   p,
 		manifest: manifest,
 		enabled:  isEnabled,
+		health:   healthInitForRegister(),
 	}
 
 	// Load plugin translations if provided
@@ -366,7 +381,7 @@ func (m *Manager) registerCustomFields(ctx context.Context, pluginName string, s
 	}
 
 	for _, spec := range specs {
-		prefixedName := pluginName + "_" + spec.Name
+		prefixedName := fieldPrefix(pluginName) + spec.Name
 
 		existing, err := repo.GetDefByEntityAndName(spec.EntityType, prefixedName)
 		if err != nil {
@@ -647,6 +662,11 @@ func (m *Manager) Call(ctx context.Context, pluginName, fn string, args []byte) 
 		m.mu.RLock()
 		rp, exists = m.plugins[pluginName]
 		m.mu.RUnlock()
+
+		// Notify listeners that a plugin was lazy-loaded (refreshes MCP tools, etc.)
+		if exists && m.OnPluginLoaded != nil {
+			m.OnPluginLoaded()
+		}
 	}
 
 	if !exists {
@@ -735,6 +755,7 @@ func (m *Manager) ReplacePlugin(ctx context.Context, oldName string, newPlugin P
 		plugin:   newPlugin,
 		manifest: newManifest,
 		enabled:  oldRp.enabled, // Preserve enabled state
+		health:   healthInitForRegister(),
 	}
 	m.sandboxes[oldName] = sandbox
 
@@ -1036,16 +1057,46 @@ func (m *Manager) LandingPage() string {
 	return ""
 }
 
-// ShutdownAll shuts down all plugins gracefully.
+// defaultShutdownTimeout is the per-plugin shutdown grace period used
+// when the plugin's ResourcePolicy doesn't specify one. Chosen to be
+// long enough for a well-behaved plugin to flush in-flight state (e.g.
+// close DB connections, drain a WireGuard peer map) without letting a
+// misbehaving plugin wedge ShutdownAll for too long.
+const defaultShutdownTimeout = 10 * time.Second
+
+// ShutdownAll shuts down all plugins gracefully, applying a per-plugin
+// timeout derived from the plugin's ResourcePolicy.ShutdownTimeout. A
+// plugin that doesn't honour its own deadline is force-killed by the
+// underlying supervisor (GRPCPlugin.Shutdown falls through to Kill()).
+//
+// The outer ctx still matters: if the caller imposes a shorter
+// deadline, every per-plugin timeout is additionally clamped by the
+// outer context. This lets goatflow guarantee a hard ceiling on total
+// shutdown time (e.g. 30s for the whole process) regardless of how
+// many plugins are registered.
+//
+// Currently serial — plugins aren't shut down in parallel. With a
+// handful of plugins and 5-10s per plugin budget, total worst-case
+// is bounded and acceptable. Parallelising would be nice polish but
+// would need care around the manager lock and is out of scope here.
 func (m *Manager) ShutdownAll(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	var errs []error
 	for name, rp := range m.plugins {
-		if err := rp.plugin.Shutdown(ctx); err != nil {
+		timeout := defaultShutdownTimeout
+		if pol, ok := m.policies[name]; ok && pol != nil && pol.ShutdownTimeout != "" {
+			if parsed, parseErr := time.ParseDuration(pol.ShutdownTimeout); parseErr == nil && parsed > 0 {
+				timeout = parsed
+			}
+		}
+
+		pctx, cancel := context.WithTimeout(ctx, timeout)
+		if err := rp.plugin.Shutdown(pctx); err != nil {
 			errs = append(errs, fmt.Errorf("plugin %q: %w", name, err))
 		}
+		cancel()
 	}
 
 	m.plugins = make(map[string]*registeredPlugin)

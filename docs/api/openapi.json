@@ -5927,6 +5927,44 @@
         ]
       }
     },
+    "/api/mcp/sse": {
+      "delete": {
+        "description": "MCP session termination",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "MCP SSE notification stream (server-to-client)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "MCP Streamable HTTP endpoint (client-to-server)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/api/notifications/pending": {
       "get": {
         "description": "Fetch pending reminder notifications for current agent",

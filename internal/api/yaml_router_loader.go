@@ -19,11 +19,15 @@ import (
 )
 
 // routeYAML structures reflect our route group schema.
+// Exported types are used by the MCP tool generator for dynamic API discovery.
 type routeGroupSpec struct {
 	Prefix     string      `yaml:"prefix"`
 	Middleware []string    `yaml:"middleware"`
 	Routes     []routeSpec `yaml:"routes"`
 }
+
+// RouteDoc represents a parsed YAML route group document.
+type RouteDoc = topRouteDoc
 
 type topRouteDoc struct {
 	APIVersion string `yaml:"apiVersion"`
@@ -37,16 +41,26 @@ type topRouteDoc struct {
 	Spec routeGroupSpec `yaml:"spec"`
 }
 
+// RouteSpec represents a single route definition from YAML.
+type RouteSpec = routeSpec
+
 type routeSpec struct {
-	Path        string   `yaml:"path"`
-	Method      string   `yaml:"method"`
-	HandlerName string   `yaml:"handler"`
-	Template    string   `yaml:"template"`
-	Middleware  []string `yaml:"middleware"`
-	Description string   `yaml:"description"`
-	RedirectTo  string   `yaml:"redirectTo"`
-	Status      int      `yaml:"status"`
-	Websocket   bool     `yaml:"websocket"`
+	Path           string   `yaml:"path"`
+	Method         string   `yaml:"method"`
+	HandlerName    string   `yaml:"handler"`
+	Template       string   `yaml:"template"`
+	Middleware     []string `yaml:"middleware"`
+	Description    string   `yaml:"description"`
+	RedirectTo     string   `yaml:"redirectTo"`
+	Status         int      `yaml:"status"`
+	Websocket      bool     `yaml:"websocket"`
+	MCP            *bool    `yaml:"mcp"`             // nil = include in MCP, false = exclude
+	MCPDescription string   `yaml:"mcp_description"` // override description for MCP tools
+}
+
+// CombineRoutePath joins a route group prefix with a route path.
+func CombineRoutePath(prefix, route string) string {
+	return combineRoutePath(prefix, route)
 }
 
 func combineRoutePath(prefix, route string) string {
@@ -129,6 +143,12 @@ func BuildRoutesManifest() ([]byte, error) {
 		Routes      interface{} `json:"routes"`
 	}{GeneratedAt: time.Now().UTC(), Routes: manifest}
 	return json.MarshalIndent(out, "", "  ")
+}
+
+// LoadYAMLRouteGroups scans the routes directory and returns parsed groups.
+// Exported for use by the MCP tool generator initialization in mcp_handler.go.
+func LoadYAMLRouteGroups(dir string) ([]RouteDoc, error) {
+	return loadYAMLRouteGroups(dir)
 }
 
 // loadYAMLRouteGroups scans the routes directory and returns parsed groups.

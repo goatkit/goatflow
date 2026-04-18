@@ -73,6 +73,12 @@ type GKRegistration struct {
 	// Called when platform entities are soft/hard deleted.
 	Cascades []CascadeSpec `json:"cascades,omitempty"`
 
+	// MCP (Model Context Protocol) tools.
+	// Plugins can optionally declare MCP tools with full input schemas.
+	// When declared, these override auto-generated tools from routes.
+	// Tool names are auto-prefixed with the plugin name.
+	MCPTools []MCPToolSpec `json:"mcp_tools,omitempty"`
+
 	// Org context
 	// SkipOrgInjection disables automatic _org_id injection into plugin call
 	// params. Set to true for plugins that handle multi-org queries themselves.
@@ -106,6 +112,16 @@ type RouteSpec struct {
 	Handler     string   `json:"handler"`                // plugin function to call
 	Middleware  []string `json:"middleware,omitempty"`    // middleware chain
 	Description string   `json:"description,omitempty"`  // for documentation
+}
+
+// MCPToolSpec defines an MCP tool that a plugin provides.
+// When declared, these provide richer schemas than auto-generated route tools.
+// The tool name is auto-prefixed with the plugin name to prevent collisions.
+type MCPToolSpec struct {
+	Name        string         `json:"name"`                    // tool name (auto-prefixed with plugin name)
+	Description string         `json:"description"`             // LLM-friendly description
+	Handler     string         `json:"handler"`                 // plugin function to call
+	InputSchema map[string]any `json:"input_schema,omitempty"`  // JSON Schema for parameters
 }
 
 // MenuItemSpec defines a navigation menu entry.

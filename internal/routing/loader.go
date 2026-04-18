@@ -558,6 +558,9 @@ func LoadYAMLRoutesFromGlobalMap(router *gin.Engine, routesPath string) error {
 	// Register standard middleware
 	RegisterExistingHandlers(registry)
 
+	// Store globally so subsystems (e.g. MCP bridge) can look up handlers and middleware
+	globalRegistry = registry
+
 	loader, err := NewRouteLoader(routesPath, registry, router, WithHotReload(false))
 	if err != nil {
 		return fmt.Errorf("failed to create route loader: %w", err)

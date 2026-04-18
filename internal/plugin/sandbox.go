@@ -736,10 +736,18 @@ func (s *SandboxedHostAPI) ListFiles(ctx context.Context, prefix string) ([]File
 	return s.inner.ListFiles(ctx, prefix)
 }
 
+// fieldPrefix returns the plugin name sanitised for use as a custom field
+// prefix. Hyphens are replaced with underscores so the result passes the
+// field-name regex (^[a-z][a-z0-9_]*$). Called at both registration time
+// (manager.go) and runtime (sandbox.go) so the two always agree.
+func fieldPrefix(pluginName string) string {
+	return strings.ReplaceAll(pluginName, "-", "_") + "_"
+}
+
 // prefixFieldName adds the plugin name prefix to a field name.
 // If the name already has the prefix, or is an admin/legacy field, it's returned as-is.
 func (s *SandboxedHostAPI) prefixFieldName(name string) string {
-	prefix := s.pluginName + "_"
+	prefix := fieldPrefix(s.pluginName)
 	if strings.HasPrefix(name, prefix) {
 		return name
 	}
@@ -760,7 +768,7 @@ func (s *SandboxedHostAPI) prefixFieldNames(fields []string) []string {
 
 // stripPrefixFromResults removes the plugin prefix from result map keys.
 func (s *SandboxedHostAPI) stripPrefixFromResults(m map[string]any) map[string]any {
-	prefix := s.pluginName + "_"
+	prefix := fieldPrefix(s.pluginName)
 	result := make(map[string]any, len(m))
 	for k, v := range m {
 		stripped := strings.TrimPrefix(k, prefix)

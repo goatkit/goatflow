@@ -235,6 +235,26 @@ func (l *Loader) DiscoveredPlugins() []*DiscoveredPlugin {
 }
 
 // EnsureLoaded loads a plugin by name if not already loaded (for lazy loading).
+//
+// Uses the manager's registry as the source of truth for "already loaded"
+// rather than the discovered[].Loaded cache flag. The flag is maintained
+// by several disjoint code paths (LoadAll, Reload, the fsnotify Remove
+// branch, etc.) and can drift from reality — in particular, some reload/
+// replace flows update the manager's registry without touching the flag,
+// and vice versa. If EnsureLoaded trusts the flag alone it can either:
+//
+//   - Treat a not-loaded plugin as loaded and return early (user-visible
+//     functionality silently missing from a dashboard/widget call).
+//   - Treat an already-loaded plugin as not-loaded and try to spawn a
+//     second instance, which collides with the running one (for gRPC
+//     plugins that own sockets or long-lived state, the duplicate exits
+//     within milliseconds with "acceptAndServe error: timeout waiting
+//     for accept"), and leaves the manager's routing in a confused state
+//     that loses stateful plugin data.
+//
+// Checking manager.Get() makes the wrong duplicate-spawn path impossible:
+// if the plugin is registered in the manager, it IS loaded, full stop.
+// We then refresh the flag so future callers short-circuit cheaply.
 func (l *Loader) EnsureLoaded(ctx context.Context, name string) error {
 	l.mu.RLock()
 	d, exists := l.discovered[name]
@@ -243,15 +263,39 @@ func (l *Loader) EnsureLoaded(ctx context.Context, name string) error {
 	if !exists {
 		return fmt.Errorf("plugin %q not discovered", name)
 	}
+
+	// Ground-truth check: is the plugin actually registered in the manager?
+	if _, registered := l.manager.Get(name); registered {
+		// Refresh the cache flag so subsequent fast-path checks hit.
+		if !d.Loaded {
+			l.mu.Lock()
+			d.Loaded = true
+			if d.LoadedAt.IsZero() {
+				d.LoadedAt = time.Now()
+			}
+			l.mu.Unlock()
+		}
+		return nil
+	}
+
+	// Not registered. If the cache flag claimed it was loaded, that's a
+	// desync we should log — someone unregistered without clearing the
+	// flag, or we raced with a reload. Proceed to (re)load.
 	if d.Loaded {
-		return nil // Already loaded
+		l.logger.Warn("EnsureLoaded: discovered.Loaded=true but manager reports not registered — reloading",
+			"name", name, "type", d.Type)
 	}
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	// Double-check after acquiring write lock
-	if d.Loaded {
+	// Re-check under the write lock — another goroutine may have won the
+	// race and registered the plugin by now.
+	if _, registered := l.manager.Get(name); registered {
+		d.Loaded = true
+		if d.LoadedAt.IsZero() {
+			d.LoadedAt = time.Now()
+		}
 		return nil
 	}
 

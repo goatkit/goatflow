@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -114,6 +115,25 @@ func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			c.Redirect(http.StatusSeeOther, "/login")
 			c.Abort()
 			return
+		}
+
+		// Sliding expiry: if the token is more than halfway through its lifetime,
+		// issue a fresh one so active users don't get logged out mid-session.
+		// Only applies to real JWTs (not demo tokens) and cookie-based sessions.
+		if claims.ExpiresAt != nil && claims.IssuedAt != nil {
+			lifetime := claims.ExpiresAt.Time.Sub(claims.IssuedAt.Time)
+			elapsed := time.Since(claims.IssuedAt.Time)
+			if lifetime > 0 && elapsed > lifetime/2 {
+				newToken, err := jwtManager.GenerateTokenWithLogin(
+					claims.UserID, claims.Login, claims.Email, claims.Role, claims.IsAdmin, claims.TenantID,
+				)
+				if err == nil {
+					secs := int(lifetime.Seconds())
+					c.SetCookie("access_token", newToken, secs, "/", "", false, true)
+					c.SetCookie("auth_token", newToken, secs, "/", "", false, true)
+					c.SetCookie("goatflow_logged_in", "1", secs, "/", "", false, false)
+				}
+			}
 		}
 
 		// Store user info in context

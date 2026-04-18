@@ -22,3 +22,25 @@ spec:
           method: GET
           handler: HandleMCPInfo
           description: "MCP endpoint info"
+
+        # MCP Streamable HTTP transport (SSE) — MCP 2025-03-26 spec
+        - path: /mcp/sse
+          method: POST
+          handler: HandleMCPSSE
+          middleware:
+              - unified_auth
+          description: "MCP Streamable HTTP endpoint (client-to-server)"
+
+        - path: /mcp/sse
+          method: GET
+          handler: HandleMCPSSEStream
+          middleware:
+              - unified_auth
+          description: "MCP SSE notification stream (server-to-client)"
+
+        - path: /mcp/sse
+          method: DELETE
+          handler: HandleMCPSSEDelete
+          middleware:
+              - unified_auth
+          description: "MCP session termination"

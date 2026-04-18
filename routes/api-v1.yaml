@@ -422,3 +422,11 @@ spec:
           middleware:
               - admin
           description: "Remove per-org config override"
+
+        # Admin SQL
+        - path: /admin/sql
+          method: POST
+          handler: HandleAdminExecuteSQL
+          middleware:
+              - admin
+          description: "Execute read-only SQL query (SELECT, DESCRIBE, EXPLAIN, SHOW TABLES/COLUMNS — admin only)"

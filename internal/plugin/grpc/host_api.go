@@ -373,6 +373,18 @@ func dispatchHostCall(ctx context.Context, host plugin.HostAPI, method string, a
 		}
 		return json.Marshal(files)
 
+	case "log":
+		var req struct {
+			Level   string         `json:"level"`
+			Message string         `json:"message"`
+			Fields  map[string]any `json:"fields"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		host.Log(ctx, req.Level, req.Message, req.Fields)
+		return json.Marshal(map[string]bool{"ok": true})
+
 	default:
 		return nil, &UnknownMethodError{Method: method}
 	}

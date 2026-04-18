@@ -76,7 +76,11 @@ ARG GOIMPORTS_VERSION=v0.24.0
 ARG GOSEC_VERSION=v2.21.4
 ARG STATICCHECK_VERSION=2024.1.1
 ARG GOLANGCI_LINT_VERSION=v1.64.8
-ARG GOVULNCHECK_VERSION=latest
+# Pinned: govulncheck v1.1.x is the last line that supports Go 1.24.
+# v1.2.0 (shipped with golang.org/x/vuln@v1.2.0) raised its minimum
+# to Go 1.25, which breaks the toolbox build on the current base
+# image. Revisit when/if we bump the Go base image past 1.25.
+ARG GOVULNCHECK_VERSION=v1.1.4
 ARG SWAG_VERSION=v1.16.4
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \

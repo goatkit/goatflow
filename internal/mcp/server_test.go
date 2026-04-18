@@ -7,7 +7,8 @@ import (
 )
 
 func TestServerInitialize(t *testing.T) {
-	server := NewServer(nil, 1, "admin")
+	bridge := NewAPIBridge()
+	server := NewServer(1, "admin", "Admin", bridge)
 
 	req := Request{
 		JSONRPC: "2.0",
@@ -42,7 +43,11 @@ func TestServerInitialize(t *testing.T) {
 }
 
 func TestServerToolsList(t *testing.T) {
-	server := NewServer(nil, 1, "admin")
+	// Initialize with some test routes
+	initTestTools(t)
+
+	bridge := NewAPIBridge()
+	server := NewServer(1, "admin", "Admin", bridge)
 
 	req := Request{
 		JSONRPC: "2.0",
@@ -78,24 +83,11 @@ func TestServerToolsList(t *testing.T) {
 	if len(tools) == 0 {
 		t.Error("Expected at least one tool")
 	}
-
-	// Check that list_tickets tool exists
-	found := false
-	for _, tool := range tools {
-		if toolMap, ok := tool.(map[string]any); ok {
-			if toolMap["name"] == "list_tickets" {
-				found = true
-				break
-			}
-		}
-	}
-	if !found {
-		t.Error("Expected to find list_tickets tool")
-	}
 }
 
 func TestServerMethodNotFound(t *testing.T) {
-	server := NewServer(nil, 1, "admin")
+	bridge := NewAPIBridge()
+	server := NewServer(1, "admin", "Admin", bridge)
 
 	req := Request{
 		JSONRPC: "2.0",
@@ -124,7 +116,8 @@ func TestServerMethodNotFound(t *testing.T) {
 }
 
 func TestServerPing(t *testing.T) {
-	server := NewServer(nil, 1, "admin")
+	bridge := NewAPIBridge()
+	server := NewServer(1, "admin", "Admin", bridge)
 
 	req := Request{
 		JSONRPC: "2.0",
@@ -148,29 +141,25 @@ func TestServerPing(t *testing.T) {
 	}
 }
 
-func TestToolRegistry(t *testing.T) {
-	// Verify all expected tools are registered
-	expectedTools := []string{
-		"list_tickets",
-		"get_ticket",
-		"create_ticket",
-		"update_ticket",
-		"add_article",
-		"list_queues",
-		"list_users",
-		"search_tickets",
-		"get_statistics",
-		"execute_sql",
+// initTestTools sets up a minimal dynamic tools list for testing.
+func initTestTools(t *testing.T) {
+	t.Helper()
+	// Directly populate the dynamic tools for tests
+	testTools := []Tool{
+		{
+			Name:        "list_tickets",
+			Description: "List tickets",
+			InputSchema: InputSchema{Type: "object", Properties: map[string]Property{}},
+		},
 	}
-
-	toolNames := make(map[string]bool)
-	for _, tool := range ToolRegistry {
-		toolNames[tool.Name] = true
-	}
-
-	for _, expected := range expectedTools {
-		if !toolNames[expected] {
-			t.Errorf("Missing expected tool: %s", expected)
-		}
+	dynamicTools = testTools
+	dynamicToolsMap = map[string]*GeneratedTool{
+		"list_tickets": {
+			Tool:        testTools[0],
+			HandlerName: "HandleListTicketsAPI",
+			Method:      "GET",
+			Path:        "/api/v1/tickets",
+			Middleware:  []string{"queue_ro"},
+		},
 	}
 }

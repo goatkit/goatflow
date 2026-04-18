@@ -328,8 +328,33 @@ func (p *GRPCPlugin) SetCallTimeout(d time.Duration) {
 }
 
 // Shutdown implements plugin.Plugin.
+//
+// Runs the plugin's Shutdown RPC with the caller's context deadline
+// respected. The old implementation ignored ctx and blocked on the RPC
+// indefinitely, so a plugin stuck mid-shutdown could wedge goatflow's
+// whole process (ShutdownAll holds the manager lock serially across
+// every plugin — one hang froze them all). Now we run the RPC in a
+// goroutine and let the ctx deadline bail us out into Kill().
+//
+// Kill() is always called at the end regardless of outcome: it's the
+// hashicorp go-plugin supervisor's teardown path (SIGTERM → grace
+// period → SIGKILL), and it's safe to call even if the plugin already
+// exited cleanly via the Shutdown RPC. Treating it as unconditional
+// cleanup avoids a class of leak where a half-responsive plugin
+// returned OK from Shutdown but left the subprocess alive.
 func (p *GRPCPlugin) Shutdown(ctx context.Context) error {
-	err := p.impl.Shutdown()
+	ch := make(chan error, 1)
+	go func() { ch <- p.impl.Shutdown() }()
+
+	var shutdownErr error
+	select {
+	case shutdownErr = <-ch:
+		// Plugin returned in time; shutdownErr is the RPC result.
+	case <-ctx.Done():
+		shutdownErr = fmt.Errorf("plugin %q Shutdown RPC did not complete within deadline: %w",
+			p.registration.Name, ctx.Err())
+	}
+
 	p.client.Kill()
-	return err
+	return shutdownErr
 }
