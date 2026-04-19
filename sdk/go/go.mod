@@ -2,7 +2,7 @@ module github.com/goatkit/goatflow/sdk/go
 
 go 1.23.0
 
-toolchain go1.24.11
+toolchain go1.25.0
 
 require github.com/go-resty/resty/v2 v2.16.5
 

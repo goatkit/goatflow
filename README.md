@@ -5,7 +5,7 @@
 [![Build & Release](https://github.com/goatkit/goatflow/actions/workflows/build.yml/badge.svg)](https://github.com/goatkit/goatflow/actions/workflows/build.yml)
 [![codecov](https://codecov.io/github/goatkit/goatflow/graph/badge.svg?token=P2ID45BMU4)](https://codecov.io/github/goatkit/goatflow)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://go.dev/)
 [![SLSA 2](https://slsa.dev/images/gh-badge-level2.svg)](https://slsa.dev)
 
 GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ticketing and service management platform. Although it offers a seamless upgrade path for OTRS installations, it is built as a premier standalone solution for all organizations. Written in Go with a modular monolith architecture, GoatFlow provides enterprise-grade support ticketing, ITSM capabilities, and extensive customization options.

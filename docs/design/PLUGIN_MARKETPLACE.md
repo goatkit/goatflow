@@ -172,7 +172,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
       - run: gk build
       - run: gk sign --key ${{ secrets.SIGNING_KEY }}
       - uses: softprops/action-gh-release@v2
