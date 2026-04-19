@@ -39,10 +39,11 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mariadb-admin ping -h localhost || mysqladmin ping -h localhost"]
-      interval: 5s
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MARIADB_PASSWORD\" mariadb-admin ping -h localhost -u \"$$MARIADB_USER\""]
+      interval: 30s
       timeout: 5s
       retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   valkey:
