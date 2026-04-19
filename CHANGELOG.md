@@ -7,7 +7,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [0.8.2] - April 2026
 
-**MCP Dynamic API Discovery & SSE Transport**
+**MCP v2, Plugin Manager Resilience, Go 1.25, and Security Upgrades**
 
 ### Added
 
@@ -37,25 +37,23 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - Dialect-portable via `database.ConvertPlaceholders()`
 - OpenAPI spec updated with request/response schemas
 
+**Plugin Manager Resilience**
+- **Plugin health checker.** Manager now runs an optional background goroutine that probes every loaded plugin every 60s via the reserved `__health_ping__` function name on the existing `Call` path. Any response within 5s (even an "unknown function" error from plugins that don't handle the name) is treated as healthy — only a context-deadline-exceeded indicates the plugin is wedged. Three consecutive failures flip `HealthStatus.Healthy` to false and log a warn-level transition; a subsequent successful probe flips it back and logs the recovery. Health state is exposed via `Manager.HealthStatus(name)` and `Manager.AllHealthStatuses()` for admin UI / dashboard rendering. No auto-restart yet — surfacing bad state is the goal for this release; restart-policy design lands in 0.8.3. Enabled by default; disable with `GOATFLOW_PLUGIN_HEALTH_CHECK=false`.
+
 ### Changed
+
+**MCP Server**
 - MCP server version bumped to `0.7.0`
 - MCP server rewritten from ~1050 to ~130 lines — all tool implementations removed in favour of API bridge
 - `tools.go` and `tools_custom_fields.go` deleted — 14 hardcoded tool definitions replaced by dynamic generation
 - `NewServer()` signature changed — no longer takes `*sql.DB`, takes `userRole` and `*APIBridge` instead
 - API token role resolution — MCP handlers now resolve actual admin role from database (fixes admin middleware for API tokens)
 - `ListChanged: true` capability advertised — SSE clients can be notified when the tool list changes
+
+**Plugin Manager Resilience**
 - **Plugin shutdown now respects per-plugin timeouts.** `Manager.ShutdownAll` reads `ResourcePolicy.ShutdownTimeout` (or a 10s default) per plugin and applies it as a deadline on the RPC call. `GRPCPlugin.Shutdown(ctx)` no longer ignores its context — the Shutdown RPC runs in a goroutine guarded by the deadline, and `client.Kill()` runs unconditionally afterwards as a supervised teardown. The outer `cmd/goats` shutdown paths wrap the call in a 30s overall ceiling (`gracefulShutdownTimeout`) so no plugin — or combination of plugins — can wedge goatflow's process exit. Previously a hung plugin's Shutdown RPC would block every subsequent plugin's turn.
 
-### Added
-- **Plugin health checker.** Manager now runs an optional background goroutine that probes every loaded plugin every 60s via the reserved `__health_ping__` function name on the existing `Call` path. Any response within 5s (even an "unknown function" error from plugins that don't handle the name) is treated as healthy — only a context-deadline-exceeded indicates the plugin is wedged. Three consecutive failures flip `HealthStatus.Healthy` to false and log a warn-level transition; a subsequent successful probe flips it back and logs the recovery. Health state is exposed via `Manager.HealthStatus(name)` and `Manager.AllHealthStatuses()` for admin UI / dashboard rendering. No auto-restart yet — surfacing bad state is the goal for this release; restart-policy design lands in 0.8.3. Enabled by default; disable with `GOATFLOW_PLUGIN_HEALTH_CHECK=false`.
-
-### Removed
-- 14 hardcoded MCP tool implementations (replaced by dynamic generation via API bridge)
-- `ToolRegistry` global variable (replaced by `GetDynamicTools()`)
-- Direct SQL queries in MCP server (all tool execution now goes through the API bridge)
-
-### Fixed
-- **Plugin loader: `EnsureLoaded` no longer spawns duplicate instances of already-loaded plugins.** The previous implementation trusted a cached `discovered[].Loaded` boolean flag, which several reload/replace/unregister code paths fail to keep in sync with the manager's actual registry. When `AllWidgets()` (or any other caller) invoked `EnsureLoaded` on a plugin whose flag had desynced, the loader would spawn a second instance of a running gRPC plugin. The duplicate would exit within ~300ms with `acceptAndServe error: timeout waiting for accept` (usually a socket/port collision with the original), and the manager's routing would be left pointing at a broken-state instance. For stateful plugins holding long-lived network state — e.g. WireGuard peer maps — this manifested as silent peer loss requiring a full plugin redeploy to recover. `EnsureLoaded` now uses `manager.Get(name)` as the ground truth and refreshes the cache flag accordingly; the flag is a fast-path hint rather than the source of truth. A warn-level log is emitted when the flag is detected to have desynced.
+**Build & Toolchain**
 - **Project Go toolchain bumped to 1.25.** Every reference across the build pipeline updated:
   - `go.mod` directive (`go 1.24.0` → `go 1.25.0`); SDK `sdk/go/go.mod` toolchain directive
   - All Go-using Dockerfiles: `Dockerfile`, `Dockerfile.config-manager`, `Dockerfile.goatkit`, `Dockerfile.route-tools`, `Dockerfile.tests`, `Dockerfile.toolbox`, `Dockerfile.playwright-go` (the last via its `GO_VERSION` arg controlling a manual curl install)
@@ -64,10 +62,20 @@ project adheres to [Semantic Versioning](https://semver.org/).
   - Helper script defaults: `scripts/schema-discovery.sh`, `scripts/test-api-report.sh`, `scripts/test-all-apis.sh`
   - CI: `actions/setup-go` version in `.github/workflows/test.yml` (now `'1.25'`, auto-resolves latest 1.25.x)
   - Docs: README Go badge, design-doc workflow example
-  - With the floor raised, the toolbox `govulncheck` pin (added earlier in this release as a 1.24 workaround) is reverted to `latest`.
-  - Known follow-up: `Dockerfile`'s WASM-builder stage uses `tinygo/tinygo:0.32.0`, which only supports Go source up to ~1.22. WASM plugins that declare `go 1.25` will fail there until TinyGo is bumped (0.34+ for current Go support).
-- **Indirect dep `golang.org/x/image` upgraded to v0.38.0** (Dependabot medium-severity GHSA — out-of-memory error in TIFF decoder). v0.38.0 requires Go 1.25, which the toolchain bump above enables. The package is pulled in transitively via `excelize/v2`; goatflow itself doesn't decode TIFFs, so practical exploit surface was minimal, but the upgrade clears the alert and keeps the dep graph current.
-- **Indirect dep `github.com/go-jose/go-jose/v3` upgraded to v3.0.5** (Dependabot high-severity GHSA — JWE decryption panic on certain malformed inputs). Indirect via the JWT/auth chain; the upgrade is purely safety-driven, no API changes on our side.
+- **Toolbox dev-tool pins bumped wholesale** because the previous pins (`goimports v0.24.0`, `gosec v2.21.4`, `staticcheck 2024.1.1`, `golangci-lint v1.64.8`) all transitively depended on `golang.org/x/tools@v0.25.x` or older, which contains constant-arithmetic source that won't compile under Go 1.25 (`invalid array length -delta * delta` in `tokeninternal.go`). New pins: `goimports v0.42.0` (verified), `golangci-lint v2.5.0` (note: v2 changed import path to `/v2/cmd/...`), and `gosec` / `staticcheck` set to `latest` for now (refine when known-good tags are confirmed). The toolbox `govulncheck` pin (added earlier in this release as a 1.24 workaround) is also reverted to `latest`.
+- Known follow-up: `Dockerfile`'s WASM-builder stage uses `tinygo/tinygo:0.32.0`, which only supports Go source up to ~1.22. WASM plugins that declare `go 1.25` will fail there until TinyGo is bumped (0.34+ for current Go support).
+
+### Removed
+- 14 hardcoded MCP tool implementations (replaced by dynamic generation via API bridge)
+- `ToolRegistry` global variable (replaced by `GetDynamicTools()`)
+- Direct SQL queries in MCP server (all tool execution now goes through the API bridge)
+
+### Fixed
+- **Plugin loader: `EnsureLoaded` no longer spawns duplicate instances of already-loaded plugins.** The previous implementation trusted a cached `discovered[].Loaded` boolean flag, which several reload/replace/unregister code paths fail to keep in sync with the manager's actual registry. When `AllWidgets()` (or any other caller) invoked `EnsureLoaded` on a plugin whose flag had desynced, the loader would spawn a second instance of a running gRPC plugin. The duplicate would exit within ~300ms with `acceptAndServe error: timeout waiting for accept` (usually a socket/port collision with the original), and the manager's routing would be left pointing at a broken-state instance. For stateful plugins holding long-lived network state — e.g. WireGuard peer maps — this manifested as silent peer loss requiring a full plugin redeploy to recover. `EnsureLoaded` now uses `manager.Get(name)` as the ground truth and refreshes the cache flag accordingly; the flag is a fast-path hint rather than the source of truth. A warn-level log is emitted when the flag is detected to have desynced.
+
+### Security
+- **`github.com/go-jose/go-jose/v3` upgraded to v3.0.5** (Dependabot **high**-severity GHSA — JWE decryption panic on certain malformed inputs). Indirect via the JWT/auth chain; upgrade is purely safety-driven, no API changes on our side.
+- **`golang.org/x/image` upgraded to v0.38.0** (Dependabot **medium**-severity GHSA — out-of-memory error in TIFF decoder). v0.38.0 requires Go 1.25, enabled by the toolchain bump above. Pulled in transitively via `excelize/v2`; goatflow itself doesn't decode TIFFs so practical exploit surface was minimal, but the upgrade clears the alert and keeps the dep graph current.
 
 ---
 

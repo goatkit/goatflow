@@ -71,11 +71,26 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/goatflow-db cmd/goatflow-db/main.go 2>/dev/null || true && \
     CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/schema-discovery cmd/schema-discovery/main.go 2>/dev/null || true
 
-# Install Go development tools (pinned for reproducibility)
-ARG GOIMPORTS_VERSION=v0.24.0
-ARG GOSEC_VERSION=v2.21.4
-ARG STATICCHECK_VERSION=2024.1.1
-ARG GOLANGCI_LINT_VERSION=v1.64.8
+# Install Go development tools.
+#
+# Version pins were bumped wholesale during the Go 1.25 toolchain
+# migration: the previous pins (goimports v0.24.0 / gosec v2.21.4 /
+# staticcheck 2024.1.1 / golangci-lint v1.64.8) all transitively
+# depended on golang.org/x/tools@v0.25.x or older, which contains
+# constant-arithmetic source that doesn't compile under Go 1.25
+# (`invalid array length -delta * delta` in tokeninternal.go:64).
+# Bumped to versions that build under Go 1.25.
+#
+# Notes:
+# - golangci-lint v2 changed its import path to /v2/cmd/...; the
+#   line below reflects that.
+# - gosec and staticcheck use `latest` because we don't have a
+#   confident known-good pin and they're CI-only tools — refine
+#   to specific tags when convenient.
+ARG GOIMPORTS_VERSION=v0.42.0
+ARG GOSEC_VERSION=latest
+ARG STATICCHECK_VERSION=latest
+ARG GOLANGCI_LINT_VERSION=v2.5.0
 ARG GOVULNCHECK_VERSION=latest
 ARG SWAG_VERSION=v1.16.4
 RUN --mount=type=cache,target=/go/pkg/mod \
@@ -83,7 +98,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go install golang.org/x/tools/cmd/goimports@${GOIMPORTS_VERSION} && \
     go install github.com/securego/gosec/v2/cmd/gosec@${GOSEC_VERSION} && \
     go install honnef.co/go/tools/cmd/staticcheck@${STATICCHECK_VERSION} && \
-    go install github.com/golangci/golangci-lint/cmd/golangci-lint@${GOLANGCI_LINT_VERSION} && \
+    go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION} && \
     go install golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION} && \
     go install github.com/swaggo/swag/cmd/swag@${SWAG_VERSION}
 
