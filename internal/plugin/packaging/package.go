@@ -356,6 +356,18 @@ func extractZipFileWithLimits(f *zip.File, destPath string) error {
 	}
 	defer rc.Close()
 
+	// Unlink any existing file at destPath before opening. Without this,
+	// O_TRUNC on a recently-executed binary returns ETXTBSY ("text file
+	// busy") on overlay2 even after the exec'd subprocess has exited —
+	// the filesystem appears to keep the text segment pinned to the
+	// original inode long after the process is gone. Removing unlinks
+	// the old inode so OpenFile creates a fresh one, sidestepping the
+	// quirk. Safe for first-time installs (ENOENT is ignored); safe for
+	// regular files (directories are filtered out by the caller).
+	if err := os.Remove(destPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove existing %s: %w", destPath, err)
+	}
+
 	outFile, err := os.OpenFile(destPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 	if err != nil {
 		return err
