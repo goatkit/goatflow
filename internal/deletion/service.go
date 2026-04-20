@@ -103,11 +103,14 @@ func pluginCascadesFor(entityType, mode string) []CascadeHandler {
 }
 
 // Service orchestrates entity deletion: soft delete, restore, hard delete,
-// anonymisation, cascade, and tombstone logging.
+// anonymisation, cascade, and tombstone logging. Cascade handlers live
+// in the package-level registry (see RegisterPluginCascade) — Service
+// no longer holds instance-local handlers because NewService() is
+// called per-request and any per-instance registrations would be lost
+// before dispatch.
 type Service struct {
 	repo             *Repository
-	cascadeHandlers  map[string][]CascadeHandler // entityType → handlers
-	retentionDays    map[string]int              // entityType → days
+	retentionDays    map[string]int // entityType → days
 	defaultRetention int
 }
 
@@ -119,7 +122,6 @@ func NewService() (*Service, error) {
 	}
 	return &Service{
 		repo:             repo,
-		cascadeHandlers:  make(map[string][]CascadeHandler),
 		retentionDays:    make(map[string]int),
 		defaultRetention: 60,
 	}, nil
@@ -129,15 +131,9 @@ func NewService() (*Service, error) {
 func NewServiceWithDB(db *sql.DB) *Service {
 	return &Service{
 		repo:             NewRepositoryWithDB(db),
-		cascadeHandlers:  make(map[string][]CascadeHandler),
 		retentionDays:    make(map[string]int),
 		defaultRetention: 60,
 	}
-}
-
-// RegisterCascade registers a cascade handler for an entity type.
-func (s *Service) RegisterCascade(entityType string, handler CascadeHandler) {
-	s.cascadeHandlers[entityType] = append(s.cascadeHandlers[entityType], handler)
 }
 
 // SetRetention sets the retention period for an entity type.
@@ -475,15 +471,6 @@ func (s *Service) runCascades(ctx context.Context, entityType string, entityID i
 		hook(ctx, entityType)
 	}
 
-	// Instance-local handlers fire on every mode (existing behaviour,
-	// preserved for tests and code that uses RegisterCascade directly).
-	for _, h := range s.cascadeHandlers[entityType] {
-		if err := h(ctx, entityType, entityID); err != nil {
-			slog.Warn("cascade handler failed", "entity", entityType, "id", entityID, "mode", mode, "error", err)
-		}
-	}
-	// Plugin-registered handlers are mode-aware (CascadeSpec splits into
-	// OnSoftDelete / OnHardDelete; only the one matching `mode` fires).
 	for _, h := range pluginCascadesFor(entityType, mode) {
 		if err := h(ctx, entityType, entityID); err != nil {
 			slog.Warn("plugin cascade handler failed", "entity", entityType, "id", entityID, "mode", mode, "error", err)

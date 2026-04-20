@@ -351,17 +351,10 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 	sandbox := NewSandboxedHostAPI(m.host, manifest.Name, *policy)
 	m.sandboxes[manifest.Name] = sandbox
 
-	// Register custom fields BEFORE Init — the plugin's initialisation
-	// commonly runs schema migrations and seeds data that depends on
-	// `gk_custom_field_def` rows already existing for the plugin's
-	// CustomFieldSpec entries. Registering after Init (the previous
-	// behaviour) left a race where init-time queries against the field
-	// defs silently found zero rows on first boot.
-	if len(manifest.CustomFields) > 0 {
-		if err := m.registerCustomFields(ctx, manifest.Name, manifest.CustomFields); err != nil {
-			slog.Warn("failed to register custom fields", "plugin", manifest.Name, "error", err)
-		}
-	}
+	// Side effects that must exist before Init — the plugin's
+	// InitWithHost commonly reads from / writes to custom fields during
+	// its own migrations and seeding.
+	m.applyManifestSideEffectsPreInit(ctx, manifest)
 
 	// Initialize the plugin with sandboxed host API access
 	if err := p.Init(ctx, sandbox); err != nil {
@@ -382,39 +375,57 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 		health:   healthInitForRegister(),
 	}
 
-	// Load plugin translations if provided
+	// Remaining side effects (translations, error codes, templates,
+	// cascades, UIs) — safe to run after the plugin is in the map.
+	m.applyManifestSideEffectsPostInit(ctx, manifest)
+
+	return nil
+}
+
+// applyManifestSideEffectsPreInit runs every side effect that the
+// plugin's own Init expects to already be in place. Currently just
+// custom-field definitions.
+func (m *Manager) applyManifestSideEffectsPreInit(ctx context.Context, manifest GKRegistration) {
+	if len(manifest.CustomFields) > 0 {
+		if err := m.registerCustomFields(ctx, manifest.Name, manifest.CustomFields); err != nil {
+			slog.Warn("failed to register custom fields", "plugin", manifest.Name, "error", err)
+		}
+	}
+}
+
+// applyManifestSideEffectsPostInit installs the side effects that do
+// not need to be visible to the plugin's own Init: translations, error
+// codes, template overrides, cascade handlers, and UIs. Shared by the
+// Register and ReplacePlugin paths so hot-reload reliably picks up
+// manifest changes (previously only cascades re-registered on replace,
+// leaving stale translations / error codes / CF defs / UIs behind).
+func (m *Manager) applyManifestSideEffectsPostInit(ctx context.Context, manifest GKRegistration) {
 	if manifest.I18n != nil && len(manifest.I18n.Translations) > 0 {
 		m.loadPluginTranslations(manifest.Name, manifest.I18n)
 	}
-
-	// Register plugin error codes if provided
 	if len(manifest.ErrorCodes) > 0 {
 		m.loadPluginErrorCodes(manifest.Name, manifest.ErrorCodes)
 	}
-
-	// Register template overrides if provided
 	if len(manifest.Templates) > 0 {
 		if registry := GetTemplateOverrides(); registry != nil {
 			registry.Register(manifest.Name, manifest.Templates)
 		}
 	}
-
-	// Register cascade handlers if provided. Each spec becomes a pair of
-	// closures that dispatch to the plugin's named handler via
-	// Manager.Call, carrying the deleted entity's id as the JSON arg
-	// (plugins parse it with their local extractID helper).
+	// Cascade re-registration is idempotent — RegisterPluginCascade
+	// overwrites on the same (entityType, pluginName) key — so it is
+	// safe to call on both fresh registers and hot reloads. When a
+	// reload strips cascades from a manifest, unregister so stale
+	// closures stop dispatching.
 	if len(manifest.Cascades) > 0 {
 		m.registerPluginCascades(manifest.Name, manifest.Cascades)
+	} else {
+		deletion.UnregisterPluginCascades(manifest.Name)
 	}
-
-	// Register UIs if provided
 	if len(manifest.UIs) > 0 {
 		if err := m.registerPluginUIs(ctx, manifest.Name, manifest.UIs); err != nil {
 			slog.Warn("failed to register plugin UIs", "plugin", manifest.Name, "error", err)
 		}
 	}
-
-	return nil
 }
 
 // registerCustomFields ensures all custom fields declared by a plugin exist in gk_custom_field_def.
@@ -817,6 +828,12 @@ func (m *Manager) ReplacePlugin(ctx context.Context, oldName string, newPlugin P
 	policy := m.getOrCreatePolicy(newManifest.Name, newManifest.Resources)
 	sandbox := NewSandboxedHostAPI(m.host, newManifest.Name, *policy)
 
+	// Re-register pre-Init side effects (custom fields) so the new
+	// plugin's Init sees its own declared CFs — mirrors the Register
+	// path. Without this, hot-reloading a plugin that had added a new
+	// CustomFieldSpec would leave the def missing until a full restart.
+	m.applyManifestSideEffectsPreInit(ctx, newManifest)
+
 	if err := newPlugin.Init(ctx, sandbox); err != nil {
 		return fmt.Errorf("new plugin %q init failed: %w", newManifest.Name, err)
 	}
@@ -836,16 +853,11 @@ func (m *Manager) ReplacePlugin(ctx context.Context, oldName string, newPlugin P
 	}
 	m.sandboxes[oldName] = sandbox
 
-	// Cascade closures captured a reference to this Manager and the
-	// oldName — we need to re-register them so the new manifest's
-	// handler names win. RegisterPluginCascade overwrites on the same
-	// (entityType, pluginName) key, so re-registering with the new
-	// manifest drops the old closures automatically.
-	if len(newManifest.Cascades) > 0 {
-		m.registerPluginCascades(newManifest.Name, newManifest.Cascades)
-	} else {
-		deletion.UnregisterPluginCascades(newManifest.Name)
-	}
+	// Re-apply post-Init side effects (translations, error codes,
+	// template overrides, cascade handlers, UIs) so every kind of
+	// manifest change takes effect on hot reload — previously only
+	// cascades were re-registered here.
+	m.applyManifestSideEffectsPostInit(ctx, newManifest)
 
 	return nil
 }

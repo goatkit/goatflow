@@ -219,19 +219,19 @@ func TestRepository_ListExpired(t *testing.T) {
 
 func TestService_Cascade(t *testing.T) {
 	svc := &Service{
-		cascadeHandlers:  make(map[string][]CascadeHandler),
 		retentionDays:    make(map[string]int),
 		defaultRetention: 60,
 	}
 
 	cascadeCalled := false
-	svc.RegisterCascade("test_type", func(ctx context.Context, entityType string, entityID int64) error {
+	RegisterPluginCascade("test_type", "test-cascade", func(ctx context.Context, entityType string, entityID int64) error {
 		cascadeCalled = true
 		if entityType != "test_type" || entityID != 42 {
 			t.Errorf("cascade got %s/%d", entityType, entityID)
 		}
 		return nil
-	})
+	}, nil)
+	t.Cleanup(func() { UnregisterPluginCascades("test-cascade") })
 
 	svc.runCascades(context.Background(), "test_type", 42, "soft")
 	if !cascadeCalled {

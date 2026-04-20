@@ -108,17 +108,22 @@ func TestService_CascadeRegistration(t *testing.T) {
 
 	calls := make([]string, 0)
 
-	svc.RegisterCascade("ticket", func(ctx context.Context, entityType string, entityID int64) error {
-		calls = append(calls, fmt.Sprintf("handler1:%s:%d", entityType, entityID))
-		return nil
-	})
-	svc.RegisterCascade("ticket", func(ctx context.Context, entityType string, entityID int64) error {
-		calls = append(calls, fmt.Sprintf("handler2:%s:%d", entityType, entityID))
-		return nil
-	})
-	svc.RegisterCascade("contact", func(ctx context.Context, entityType string, entityID int64) error {
-		calls = append(calls, fmt.Sprintf("contact_handler:%s:%d", entityType, entityID))
-		return nil
+	// Each synthetic plugin name scopes to this test's cleanup. Both
+	// soft and hard CascadeHandler slots get the same closure so the
+	// test exercises both soft and hard dispatch paths.
+	mkHandler := func(tag string) CascadeHandler {
+		return func(ctx context.Context, entityType string, entityID int64) error {
+			calls = append(calls, fmt.Sprintf("%s:%s:%d", tag, entityType, entityID))
+			return nil
+		}
+	}
+	RegisterPluginCascade("ticket", "test-handler1", mkHandler("handler1"), mkHandler("handler1"))
+	RegisterPluginCascade("ticket", "test-handler2", mkHandler("handler2"), mkHandler("handler2"))
+	RegisterPluginCascade("contact", "test-contact", mkHandler("contact_handler"), mkHandler("contact_handler"))
+	t.Cleanup(func() {
+		UnregisterPluginCascades("test-handler1")
+		UnregisterPluginCascades("test-handler2")
+		UnregisterPluginCascades("test-contact")
 	})
 
 	ctx := context.Background()

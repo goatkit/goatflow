@@ -211,7 +211,10 @@ services:
       - ./storage:${STORAGE_PATH:-/app/storage}:Z
       - ./docker/frontend/healthcheck.sh:/usr/local/bin/healthcheck.sh:ro,Z
       - goatflow_certs:/app/certs
+      - goatflow_plugins:/app/config/plugins
     depends_on:
+      plugin-init:
+        condition: service_completed_successfully
       mariadb:
         condition: service_healthy
       valkey:
@@ -246,7 +249,11 @@ services:
       GOATFLOW_EMAIL_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-true}
       GOATFLOW_EMAIL_FROM: ${EMAIL_FROM:-noreply@goatflow.local}
       GOATFLOW_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+    volumes:
+      - goatflow_plugins:/app/config/plugins
     depends_on:
+      plugin-init:
+        condition: service_completed_successfully
       mariadb:
         condition: service_healthy
       smtp4dev:
