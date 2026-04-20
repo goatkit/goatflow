@@ -330,7 +330,14 @@ func (l *Loader) EnsureLoaded(ctx context.Context, name string) error {
 // exist before the HTTP server starts accepting requests.
 // Returns the number of successfully loaded/discovered plugins and any errors encountered.
 func (l *Loader) LoadAll(ctx context.Context) (int, []error) {
-	// If lazy loading, discover all then eagerly load gRPC plugins
+	// If lazy loading, discover all then eagerly load everything anyway.
+	// gRPC plugins always need to load at boot for route registration.
+	// WASM plugins are also eager-loaded now so any plugin that declares
+	// a cascade handler has it registered before the first entity delete —
+	// pre-dispatch loading works too, but paying the load cost at boot is
+	// cheaper than paying it inside the delete request path. A plugin that
+	// really wants to stay deferred should not be discovered in the first
+	// place.
 	if l.lazy {
 		count, err := l.DiscoverAll()
 		if err != nil {
@@ -338,35 +345,43 @@ func (l *Loader) LoadAll(ctx context.Context) (int, []error) {
 		}
 		l.logger.Info("lazy loading enabled", "discovered", count)
 
-		// Eagerly load gRPC plugins — they define routes that Gin needs at startup
-		var grpcErrors []error
+		var loadErrors []error
 		l.mu.RLock()
-		grpcPlugins := make([]*DiscoveredPlugin, 0)
+		unloaded := make([]*DiscoveredPlugin, 0, len(l.discovered))
 		for _, d := range l.discovered {
-			if d.Type == "grpc" && !d.Loaded {
-				grpcPlugins = append(grpcPlugins, d)
+			if !d.Loaded {
+				unloaded = append(unloaded, d)
 			}
 		}
 		l.mu.RUnlock()
 
-		for _, d := range grpcPlugins {
-			manifest := l.manifests[d.Name]
-			if manifest == nil {
+		for _, d := range unloaded {
+			var loadErr error
+			switch d.Type {
+			case "grpc":
+				manifest := l.manifests[d.Name]
+				if manifest == nil {
+					continue
+				}
+				loadErr = l.loadGRPCPlugin(ctx, d.Path, manifest)
+			case "wasm":
+				loadErr = l.loadWASMPlugin(ctx, d.Path)
+			default:
 				continue
 			}
-			if err := l.loadGRPCPlugin(ctx, d.Path, manifest); err != nil {
-				l.logger.Error("failed to eager-load gRPC plugin", "name", d.Name, "error", err)
-				grpcErrors = append(grpcErrors, fmt.Errorf("load gRPC plugin %s: %w", d.Name, err))
-			} else {
-				l.mu.Lock()
-				d.Loaded = true
-				d.LoadedAt = time.Now()
-				l.mu.Unlock()
-				l.logger.Info("eager-loaded gRPC plugin (routes required at startup)", "name", d.Name)
+			if loadErr != nil {
+				l.logger.Error("failed to eager-load plugin", "name", d.Name, "type", d.Type, "error", loadErr)
+				loadErrors = append(loadErrors, fmt.Errorf("load %s plugin %s: %w", d.Type, d.Name, loadErr))
+				continue
 			}
+			l.mu.Lock()
+			d.Loaded = true
+			d.LoadedAt = time.Now()
+			l.mu.Unlock()
+			l.logger.Info("eager-loaded plugin at boot", "name", d.Name, "type", d.Type)
 		}
 
-		return count, grpcErrors
+		return count, loadErrors
 	}
 
 	var errors []error

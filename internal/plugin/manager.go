@@ -54,14 +54,45 @@ type registeredPlugin struct {
 	health healthState
 }
 
+// installDeletionPreDispatchHook tells the deletion service to call back
+// into the manager just before dispatching cascades so any
+// discovered-but-unloaded plugin gets loaded (and therefore registered
+// with the cascade registry) in time. Called once per Manager instance.
+func (m *Manager) installDeletionPreDispatchHook() {
+	deletion.SetPreDispatchHook(func(ctx context.Context, entityType string) {
+		if m.lazyLoader == nil {
+			return
+		}
+		loaded := 0
+		for _, name := range m.lazyLoader.Discovered() {
+			m.mu.RLock()
+			_, present := m.plugins[name]
+			m.mu.RUnlock()
+			if present {
+				continue
+			}
+			if err := m.lazyLoader.EnsureLoaded(ctx, name); err != nil {
+				slog.Warn("pre-cascade load failed", "plugin", name, "error", err)
+				continue
+			}
+			loaded++
+		}
+		if loaded > 0 {
+			slog.Info("pre-cascade loaded plugins", "count", loaded, "entity_type", entityType)
+		}
+	})
+}
+
 // NewManager creates a plugin manager with the given host API.
 func NewManager(host HostAPI) *Manager {
-	return &Manager{
+	m := &Manager{
 		plugins:   make(map[string]*registeredPlugin),
 		host:      host,
 		policies:  make(map[string]*ResourcePolicy),
 		sandboxes: make(map[string]*SandboxedHostAPI),
 	}
+	m.installDeletionPreDispatchHook()
+	return m
 }
 
 // Host returns the manager's HostAPI instance.
@@ -320,6 +351,18 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 	sandbox := NewSandboxedHostAPI(m.host, manifest.Name, *policy)
 	m.sandboxes[manifest.Name] = sandbox
 
+	// Register custom fields BEFORE Init — the plugin's initialisation
+	// commonly runs schema migrations and seeds data that depends on
+	// `gk_custom_field_def` rows already existing for the plugin's
+	// CustomFieldSpec entries. Registering after Init (the previous
+	// behaviour) left a race where init-time queries against the field
+	// defs silently found zero rows on first boot.
+	if len(manifest.CustomFields) > 0 {
+		if err := m.registerCustomFields(ctx, manifest.Name, manifest.CustomFields); err != nil {
+			slog.Warn("failed to register custom fields", "plugin", manifest.Name, "error", err)
+		}
+	}
+
 	// Initialize the plugin with sandboxed host API access
 	if err := p.Init(ctx, sandbox); err != nil {
 		delete(m.sandboxes, manifest.Name)
@@ -353,13 +396,6 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 	if len(manifest.Templates) > 0 {
 		if registry := GetTemplateOverrides(); registry != nil {
 			registry.Register(manifest.Name, manifest.Templates)
-		}
-	}
-
-	// Register custom fields if provided
-	if len(manifest.CustomFields) > 0 {
-		if err := m.registerCustomFields(ctx, manifest.Name, manifest.CustomFields); err != nil {
-			slog.Warn("failed to register custom fields", "plugin", manifest.Name, "error", err)
 		}
 	}
 

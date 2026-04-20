@@ -31,7 +31,25 @@ type pluginCascadeEntry struct {
 var (
 	pluginCascadeMu sync.RWMutex
 	pluginCascades  = make(map[string]map[string]pluginCascadeEntry) // entityType → pluginName → entry
+
+	// preDispatchHook is invoked immediately before runCascades iterates
+	// the registry. The plugin manager sets it at boot to eager-load any
+	// discovered-but-unloaded plugin, so a plugin that declares Cascades
+	// but has never been called still has its handlers registered by the
+	// time the dispatch loop runs. Nil when the platform runs without a
+	// plugin manager (tests).
+	preDispatchHook func(ctx context.Context, entityType string)
 )
+
+// SetPreDispatchHook registers a hook that the deletion service calls
+// before dispatching cascades for an entityType. Intended for the
+// plugin manager to lazy-load plugins whose cascade closures aren't in
+// the registry yet. Safe to call once at boot.
+func SetPreDispatchHook(fn func(ctx context.Context, entityType string)) {
+	pluginCascadeMu.Lock()
+	defer pluginCascadeMu.Unlock()
+	preDispatchHook = fn
+}
 
 // RegisterPluginCascade records a plugin's cascade handlers for an
 // entity type. Either soft or hard may be nil — only the non-nil
@@ -446,6 +464,17 @@ func (s *Service) hardDeleteEntity(entityType string, entityID int64) error {
 }
 
 func (s *Service) runCascades(ctx context.Context, entityType string, entityID int64, mode string) {
+	// Let the plugin manager ensure any discovered-but-unloaded plugin
+	// gets a chance to register its cascade closures before we dispatch.
+	// Without this, a plugin that was uploaded mid-session but never
+	// called would silently skip cascade cleanup.
+	pluginCascadeMu.RLock()
+	hook := preDispatchHook
+	pluginCascadeMu.RUnlock()
+	if hook != nil {
+		hook(ctx, entityType)
+	}
+
 	// Instance-local handlers fire on every mode (existing behaviour,
 	// preserved for tests and code that uses RegisterCascade directly).
 	for _, h := range s.cascadeHandlers[entityType] {
