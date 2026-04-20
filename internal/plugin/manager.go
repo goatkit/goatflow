@@ -10,6 +10,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/apierrors"
 	"github.com/goatkit/goatflow/internal/customfields"
+	"github.com/goatkit/goatflow/internal/deletion"
 	"github.com/goatkit/goatflow/internal/i18n"
 	"github.com/goatkit/goatflow/internal/pluginui"
 )
@@ -362,6 +363,14 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 		}
 	}
 
+	// Register cascade handlers if provided. Each spec becomes a pair of
+	// closures that dispatch to the plugin's named handler via
+	// Manager.Call, carrying the deleted entity's id as the JSON arg
+	// (plugins parse it with their local extractID helper).
+	if len(manifest.Cascades) > 0 {
+		m.registerPluginCascades(manifest.Name, manifest.Cascades)
+	}
+
 	// Register UIs if provided
 	if len(manifest.UIs) > 0 {
 		if err := m.registerPluginUIs(ctx, manifest.Name, manifest.UIs); err != nil {
@@ -586,10 +595,42 @@ func (m *Manager) Unregister(ctx context.Context, name string) error {
 		return fmt.Errorf("plugin %q shutdown failed: %w", name, err)
 	}
 
+	// Cascade closures hold a reference to *this* Manager and would
+	// keep dispatching to the gone plugin unless cleared explicitly.
+	deletion.UnregisterPluginCascades(name)
+
 	delete(m.plugins, name)
 	delete(m.sandboxes, name)
 	// Note: policy is preserved across reloads so admin settings persist
 	return nil
+}
+
+// registerPluginCascades builds per-spec closures that dispatch to the
+// plugin's named handler and installs them in the deletion package's
+// shared registry. The cascade arg is a minimal {"id": entityID} object
+// — plugins use their local extractID helper to parse it.
+func (m *Manager) registerPluginCascades(pluginName string, specs []CascadeSpec) {
+	for _, spec := range specs {
+		spec := spec // capture
+		var soft, hard deletion.CascadeHandler
+		if spec.OnSoftDelete != "" {
+			handlerName := spec.OnSoftDelete
+			soft = func(ctx context.Context, _ string, entityID int64) error {
+				args, _ := json.Marshal(map[string]int64{"id": entityID})
+				_, err := m.Call(ctx, pluginName, handlerName, args)
+				return err
+			}
+		}
+		if spec.OnHardDelete != "" {
+			handlerName := spec.OnHardDelete
+			hard = func(ctx context.Context, _ string, entityID int64) error {
+				args, _ := json.Marshal(map[string]int64{"id": entityID})
+				_, err := m.Call(ctx, pluginName, handlerName, args)
+				return err
+			}
+		}
+		deletion.RegisterPluginCascade(spec.EntityType, pluginName, soft, hard)
+	}
 }
 
 // Get returns a plugin by name.
@@ -758,6 +799,17 @@ func (m *Manager) ReplacePlugin(ctx context.Context, oldName string, newPlugin P
 		health:   healthInitForRegister(),
 	}
 	m.sandboxes[oldName] = sandbox
+
+	// Cascade closures captured a reference to this Manager and the
+	// oldName — we need to re-register them so the new manifest's
+	// handler names win. RegisterPluginCascade overwrites on the same
+	// (entityType, pluginName) key, so re-registering with the new
+	// manifest drops the old closures automatically.
+	if len(newManifest.Cascades) > 0 {
+		m.registerPluginCascades(newManifest.Name, newManifest.Cascades)
+	} else {
+		deletion.UnregisterPluginCascades(newManifest.Name)
+	}
 
 	return nil
 }

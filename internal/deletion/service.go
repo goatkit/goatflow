@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/goatkit/goatflow/internal/database"
@@ -14,6 +15,74 @@ import (
 
 // CascadeHandler is a function that a plugin registers to handle entity deletion.
 type CascadeHandler func(ctx context.Context, entityType string, entityID int64) error
+
+// pluginCascadeEntry holds a plugin's soft and/or hard cascade handlers for
+// a given (entityType, pluginName) pair. Either handler may be nil.
+type pluginCascadeEntry struct {
+	soft CascadeHandler
+	hard CascadeHandler
+}
+
+// Package-level cascade registry. Shared across all Service instances
+// because deletion.NewService() is called per-HostAPI-request rather
+// than held as a singleton, so instance-local registrations would be
+// lost between the plugin-load call that registers them and the
+// EntitySoftDelete call that needs to fire them.
+var (
+	pluginCascadeMu sync.RWMutex
+	pluginCascades  = make(map[string]map[string]pluginCascadeEntry) // entityType → pluginName → entry
+)
+
+// RegisterPluginCascade records a plugin's cascade handlers for an
+// entity type. Either soft or hard may be nil — only the non-nil
+// handler fires for its corresponding deletion mode. Re-registering
+// the same (entityType, pluginName) pair replaces the prior entry,
+// which is what plugin reloads want.
+func RegisterPluginCascade(entityType, pluginName string, soft, hard CascadeHandler) {
+	pluginCascadeMu.Lock()
+	defer pluginCascadeMu.Unlock()
+	if _, ok := pluginCascades[entityType]; !ok {
+		pluginCascades[entityType] = make(map[string]pluginCascadeEntry)
+	}
+	pluginCascades[entityType][pluginName] = pluginCascadeEntry{soft: soft, hard: hard}
+}
+
+// UnregisterPluginCascades clears every cascade handler registered by
+// pluginName. Called when a plugin is unloaded or replaced so stale
+// closures don't keep dispatching to a gone plugin.
+func UnregisterPluginCascades(pluginName string) {
+	pluginCascadeMu.Lock()
+	defer pluginCascadeMu.Unlock()
+	for entityType, m := range pluginCascades {
+		delete(m, pluginName)
+		if len(m) == 0 {
+			delete(pluginCascades, entityType)
+		}
+	}
+}
+
+// pluginCascadesFor returns all handlers to fire for (entityType, mode),
+// in the order plugins were registered (map iteration so actually
+// unordered — callers must not depend on ordering).
+func pluginCascadesFor(entityType, mode string) []CascadeHandler {
+	pluginCascadeMu.RLock()
+	defer pluginCascadeMu.RUnlock()
+	entries := pluginCascades[entityType]
+	handlers := make([]CascadeHandler, 0, len(entries))
+	for _, e := range entries {
+		switch mode {
+		case "soft":
+			if e.soft != nil {
+				handlers = append(handlers, e.soft)
+			}
+		case "hard":
+			if e.hard != nil {
+				handlers = append(handlers, e.hard)
+			}
+		}
+	}
+	return handlers
+}
 
 // Service orchestrates entity deletion: soft delete, restore, hard delete,
 // anonymisation, cascade, and tombstone logging.
@@ -377,13 +446,18 @@ func (s *Service) hardDeleteEntity(entityType string, entityID int64) error {
 }
 
 func (s *Service) runCascades(ctx context.Context, entityType string, entityID int64, mode string) {
-	handlers, ok := s.cascadeHandlers[entityType]
-	if !ok || len(handlers) == 0 {
-		return
-	}
-	for _, h := range handlers {
+	// Instance-local handlers fire on every mode (existing behaviour,
+	// preserved for tests and code that uses RegisterCascade directly).
+	for _, h := range s.cascadeHandlers[entityType] {
 		if err := h(ctx, entityType, entityID); err != nil {
 			slog.Warn("cascade handler failed", "entity", entityType, "id", entityID, "mode", mode, "error", err)
+		}
+	}
+	// Plugin-registered handlers are mode-aware (CascadeSpec splits into
+	// OnSoftDelete / OnHardDelete; only the one matching `mode` fires).
+	for _, h := range pluginCascadesFor(entityType, mode) {
+		if err := h(ctx, entityType, entityID); err != nil {
+			slog.Warn("plugin cascade handler failed", "entity", entityType, "id", entityID, "mode", mode, "error", err)
 		}
 	}
 }

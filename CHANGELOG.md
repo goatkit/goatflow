@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Plugin cascade dispatch** — `manifest.Cascades` entries are now wired into `deletion.Service` at plugin load time. When an entity is soft or hard deleted via `HostAPI.EntitySoftDelete` / `EntityHardDelete` (or via the admin recycle-bin API), every plugin that declared an `OnSoftDelete` / `OnHardDelete` handler for that entity type has its handler invoked, receiving `{"id": entityID}` as the JSON arg. Cascades are dispatched via `Manager.Call`, so they inherit the plugin's normal sandboxing and error handling. Registrations are per-plugin keyed (not per-instance), so hot-reload via `ReplacePlugin` re-registers the new manifest's handlers cleanly and `Unregister` clears its entries.
+
+### Fixed
+- **Plugin cascades previously never fired.** `manifest.Cascades` was accepted in the plugin manifest, forwarded through `GKRegistration`, and parsed by plugins — but `deletion.Service.cascadeHandlers` was never populated from it, so every plugin that declared a cleanup handler silently had no effect on entity deletion. With the dispatch now wired (see Added above), every enterprise plugin's `cascade_org_hard_delete` runs on organisation hard delete. The plugin-side handlers have been audited and fixed in lockstep to scope their DELETEs by the deleted entity's id — without that fix the freshly-wired dispatcher would have wiped every tenant's data on the first org hard delete.
+
 ## [0.8.2] - April 2026
 
 **MCP v2, Plugin Manager Resilience, Go 1.25, and Security Upgrades**
