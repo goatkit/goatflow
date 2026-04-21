@@ -210,6 +210,17 @@ func (s *Service) stopCron() {
 }
 
 func (s *Service) addJobLocked(job *models.ScheduledJob) error {
+	// Idempotent: if this slug already has a scheduled entry, leave it
+	// alone. Without this guard Run() → scheduleAllJobs() would
+	// re-register any job that was added via AddJob() between
+	// NewService and Run (e.g. plugin jobs registered by
+	// plugin.RegisterPluginJobs), creating a second cron entry whose
+	// previous entryID gets overwritten in s.entries but still fires
+	// forever — doubling every subsequent run of that job.
+	if _, exists := s.entries[job.Slug]; exists {
+		return nil
+	}
+
 	schedule, err := s.parser.Parse(job.Schedule)
 	if err != nil {
 		return err

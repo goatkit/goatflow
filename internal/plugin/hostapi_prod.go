@@ -7,8 +7,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net/http"
+	"os"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/goatkit/goatflow/internal/cache"
@@ -21,6 +25,27 @@ import (
 	"github.com/goatkit/goatflow/internal/i18n"
 	"github.com/goatkit/goatflow/internal/notifications"
 )
+
+// pluginLogEchoEnabled reports whether plugin log entries should be
+// mirrored to the host's stderr. Gated by GOATFLOW_PLUGIN_LOG_ECHO — set
+// to "1"/"true"/"yes" to turn on. The default is off because the plugin
+// log buffer already covers the admin UI use case; enable when you need
+// the logs in `docker logs` for root-cause debugging of generation /
+// cascade flows. Evaluated once per process so flipping the env mid-run
+// requires a container restart, but that's cheaper than parsing the env
+// var on every log call.
+var (
+	pluginLogEchoOnce sync.Once
+	pluginLogEcho     bool
+)
+
+func pluginLogEchoEnabled() bool {
+	pluginLogEchoOnce.Do(func() {
+		v := strings.ToLower(strings.TrimSpace(os.Getenv("GOATFLOW_PLUGIN_LOG_ECHO")))
+		pluginLogEcho = v == "1" || v == "true" || v == "yes" || v == "on"
+	})
+	return pluginLogEcho
+}
 
 // PluginLanguageKey is the context key for plugin request language.
 type pluginLangKeyType struct{}
@@ -349,6 +374,18 @@ func (h *ProdHostAPI) Log(ctx context.Context, level, message string, fields map
 		pluginName = pn
 	}
 	GetLogBuffer().Log(pluginName, level, message, fields)
+
+	// Optional mirror to stderr so plugin logs show up in `docker logs`.
+	// Bypasses the slog-level filter (LOG_LEVEL=warn above silently
+	// drops info/debug) — the gate on this side is explicit. Formatted
+	// as one line per entry so grep works cleanly.
+	if pluginLogEchoEnabled() {
+		if len(fields) > 0 {
+			log.Printf("[plugin:%s] %s: %s %v", pluginName, strings.ToUpper(level), message, fields)
+		} else {
+			log.Printf("[plugin:%s] %s: %s", pluginName, strings.ToUpper(level), message)
+		}
+	}
 }
 
 // ConfigGet retrieves a configuration value by key path.
