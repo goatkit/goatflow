@@ -8,11 +8,19 @@ import (
 	"github.com/goatkit/goatflow/internal/config"
 )
 
+// demoModeEnabled reports whether app.demo_mode is on, returning false if
+// config has not been loaded yet (e.g. in test harnesses that wire handlers
+// without initialising config).
+func demoModeEnabled() bool {
+	cfg := config.Get()
+	return cfg != nil && cfg.App.DemoMode
+}
+
 // DemoMode sets is_demo=true on every request when app.demo_mode is enabled.
 // This allows templates and handlers to check for demo mode globally.
 func DemoMode() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if config.Get().App.DemoMode {
+		if demoModeEnabled() {
 			c.Set("is_demo", true)
 		}
 		c.Next()
@@ -23,7 +31,7 @@ func DemoMode() gin.HandlerFunc {
 // (password, MFA) when demo mode is active. Returns 403 with a friendly message.
 func DemoGuard() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !config.Get().App.DemoMode {
+		if !demoModeEnabled() {
 			c.Next()
 			return
 		}

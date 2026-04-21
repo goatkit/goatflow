@@ -101,7 +101,7 @@ metadata:
 spec:
     prefix: /customer/api/v1/tokens
     middleware:
-        - customer_auth
+        - unified_auth
     routes:
         - path: /
           method: GET

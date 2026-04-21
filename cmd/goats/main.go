@@ -552,10 +552,17 @@ func main() {
 
 	log.Println("✅ Backend initialized successfully")
 
+	// Scheduler ownership: the customer-facing frontend is UI-only. Running
+	// the scheduler there duplicates cron jobs against the main app (built-in
+	// and plugin-registered alike) — same-DB races, wasted CPU, and silent
+	// row loss when a plugin uses `INSERT IGNORE` to dedupe composite keys.
 	var schedulerCancel context.CancelFunc
-	if dbErr != nil || db == nil {
+	switch {
+	case customerOnly:
+		log.Println("scheduler: disabled (CUSTOMER_FE_ONLY)")
+	case dbErr != nil || db == nil:
 		log.Printf("scheduler: disabled (database unavailable: %v)", dbErr)
-	} else {
+	default:
 		loc := time.UTC
 		cfg := config.Get()
 		if cfg != nil && cfg.App.Timezone != "" {
@@ -578,7 +585,6 @@ func main() {
 		}
 		sched := scheduler.NewService(db, options...)
 
-		// Register plugin jobs with the scheduler
 		if pluginJobCount := plugin.RegisterPluginJobs(pluginMgr, sched); pluginJobCount > 0 {
 			log.Printf("✅ Registered %d plugin job(s) with scheduler", pluginJobCount)
 		}
