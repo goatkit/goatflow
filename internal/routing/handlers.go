@@ -269,6 +269,14 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 
 		"customer-portal": middleware.CustomerPortalGate(shared.GetJWTManager()),
 
+		// Demo-mode guard — passthrough unless App.DemoMode=true, at which
+		// point it blocks non-admin password / MFA changes on a shared
+		// demo instance. Referenced by settings / agent / customer
+		// routes; without this registration the YAML loader logs
+		// `Warning: Middleware 'demo-guard' not found` and the
+		// protection is silently unwired.
+		"demo-guard": middleware.DemoGuard(),
+
 		// Queue permission middleware - for routes requiring access to ANY queue with permission
 		"queue_ro":     middleware.RequireAnyQueueAccess("ro"),
 		"queue_rw":     middleware.RequireAnyQueueAccess("rw"),

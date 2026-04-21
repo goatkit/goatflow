@@ -1,6 +1,5 @@
 # GoatFlow - Modern Open Source Ticketing System
 
-[![Security & Code Quality](https://github.com/goatkit/goatflow/actions/workflows/security.yml/badge.svg)](https://github.com/goatkit/goatflow/actions/workflows/security.yml)
 [![Tests](https://github.com/goatkit/goatflow/actions/workflows/test.yml/badge.svg)](https://github.com/goatkit/goatflow/actions/workflows/test.yml)
 [![Build & Release](https://github.com/goatkit/goatflow/actions/workflows/build.yml/badge.svg)](https://github.com/goatkit/goatflow/actions/workflows/build.yml)
 [![codecov](https://codecov.io/github/goatkit/goatflow/graph/badge.svg?token=P2ID45BMU4)](https://codecov.io/github/goatkit/goatflow)
