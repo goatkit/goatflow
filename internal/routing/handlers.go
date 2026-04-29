@@ -157,16 +157,41 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			c.Set("user_email", claims.Email)
 			c.Set("user_role", claims.Role)
 			c.Set("user_name", claims.Email)
+			c.Set("is_customer", claims.Role == "Customer")
 
 			// Try to resolve numeric user_id and set full user object for parity with non-YAML routes
 			var resolvedID int64
 			// claims.UserID is uint in our JWT implementation; convert directly
 			resolvedID = int64(claims.UserID)
 
-			// If still zero, try DB lookup by email or login
+			// SECURITY: the agent `users` and `customer_user` tables share
+			// an id space (both auto-increment from 1). If we naively look
+			// up claims.UserID in `users`, a Customer JWT whose UserID
+			// happens to match an agent row (almost certain at low ids)
+			// hijacks that agent's identity — including admin group
+			// membership. Branch on claims.Role so customer JWTs stay on
+			// the customer_user side, agent JWTs on the users side. The
+			// email-fallback path is similarly scoped.
 			var userObj *models.User
-			if resolvedID == 0 {
-				if db, dbErr := database.GetDB(); dbErr == nil && db != nil {
+			isCustomerClaims := claims.Role == "Customer"
+			db, dbErr := database.GetDB()
+			if dbErr == nil && db != nil {
+				if isCustomerClaims {
+					// Customer branch — resolve via customer_user.login
+					// (claims.Login carries the login, claims.UserID carries
+					// the customer_user.id). Never read `users` here.
+					resolveLogin := claims.Login
+					if resolveLogin == "" {
+						resolveLogin = claims.Email
+					}
+					var cuID int64
+					var login, firstName, lastName sql.NullString
+					query := `SELECT id, login, first_name, last_name FROM customer_user WHERE login = ? LIMIT 1`
+					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(query), resolveLogin).Scan(&cuID, &login, &firstName, &lastName); err == nil {
+						resolvedID = cuID
+						userObj = &models.User{ID: uint(cuID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Email: login.String, Role: "Customer", ValidID: 1}
+					}
+				} else if resolvedID == 0 {
 					var id int64
 					var login, firstName, lastName, title sql.NullString
 					// Our schema doesn't have users.email; login acts as email. Lookup by login.
@@ -174,9 +199,7 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 						resolvedID = id
 						userObj = &models.User{ID: uint(id), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Title: title.String, Email: login.String, ValidID: 1}
 					}
-				}
-			} else {
-				if db, dbErr := database.GetDB(); dbErr == nil && db != nil {
+				} else {
 					var login, firstName, lastName, title sql.NullString
 					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT login, first_name, last_name, title FROM users WHERE id = ?`), resolvedID).Scan(&login, &firstName, &lastName, &title); err == nil {
 						userObj = &models.User{ID: uint(resolvedID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Title: title.String, Email: login.String, ValidID: 1}
@@ -184,8 +207,11 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 				}
 			}
 
-			// Determine role from group membership if possible
-			if userObj != nil {
+			// Determine role from group membership if possible. Skip for
+			// customer JWTs — group_user is the agent-side join table and
+			// would trigger the same cross-class escalation this branching
+			// defends against.
+			if userObj != nil && !isCustomerClaims {
 				if db, dbErr := database.GetDB(); dbErr == nil && db != nil {
 					var cnt int
 					_ = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT COUNT(*) FROM group_user ug JOIN groups g ON ug.group_id = g.id WHERE ug.user_id = ? AND LOWER(g.name) = 'admin'`), userObj.ID).Scan(&cnt)
@@ -267,7 +293,8 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			c.Next()
 		},
 
-		"customer-portal": middleware.CustomerPortalGate(shared.GetJWTManager()),
+		"customer-portal":          middleware.CustomerPortalGate(shared.GetJWTManager()),
+		"customer-captive-redirect": middleware.CustomerCaptiveRedirect(shared.GetJWTManager()),
 
 		// Demo-mode guard — passthrough unless App.DemoMode=true, at which
 		// point it blocks non-admin password / MFA changes on a shared

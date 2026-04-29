@@ -432,8 +432,14 @@ func handleTOTPVerify(c *gin.Context) {
 		return
 	}
 
-	// Set auth cookies
+	// Set auth cookies. SECURITY: wipe customer session cookies on agent 2FA
+	// completion — same rationale as the primary agent login. One identity
+	// at a time.
 	sessionTimeout := 86400 // 24 hours
+	c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
+	c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
+	c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
+	c.SetCookie("goatflow_customer_logged_in", "", -1, "/", "", false, false)
 	c.SetCookie("access_token", jwtToken, sessionTimeout, "/", "", false, true)
 	c.SetCookie("auth_token", jwtToken, sessionTimeout, "/", "", false, true)
 	c.SetCookie("goatflow_logged_in", "1", sessionTimeout, "/", "", false, false)
@@ -866,8 +872,14 @@ func handleCustomer2FAVerify(c *gin.Context) {
 		return
 	}
 
-	// Set auth cookies
+	// Set auth cookies. SECURITY: wipe agent session cookies on customer 2FA
+	// completion — symmetric with the primary customer login. One identity
+	// at a time.
 	sessionTimeout := 86400 // 24 hours
+	c.SetCookie("access_token", "", -1, "/", "", false, true)
+	c.SetCookie("auth_token", "", -1, "/", "", false, true)
+	c.SetCookie("session_id", "", -1, "/", "", false, true)
+	c.SetCookie("goatflow_logged_in", "", -1, "/", "", false, false)
 	c.SetCookie("customer_access_token", jwtToken, sessionTimeout, "/", "", false, true)
 	c.SetCookie("customer_auth_token", jwtToken, sessionTimeout, "/", "", false, true)
 	c.SetCookie("goatflow_customer_logged_in", "1", sessionTimeout, "/", "", false, false)

@@ -627,10 +627,34 @@ func computeInitials(firstName, lastName string) string {
 }
 
 func buildUserMapFromModel(user *models.User) gin.H {
-	isAdmin := user.ID == 1 || strings.Contains(strings.ToLower(user.Login), "admin")
-	isInAdminGroup := false
-	if db, err := database.GetDB(); err == nil && db != nil {
-		isInAdminGroup = isUserInAdminGroup(db, user.ID)
+	// SECURITY: the legacy heuristic (`user.ID == 1 || login contains "admin"`)
+	// mis-classifies customer_users when their id collides with an agent
+	// users.id — most obviously id=1, which is root on the agent side and
+	// the first-created customer on the customer side. If the caller
+	// already set a Role, trust it; otherwise fall back to admin-group
+	// lookup (keyed on users.id only, so customers never hit it).
+	role := user.Role
+	isCustomer := strings.EqualFold(role, "Customer")
+	var isAdmin, isInAdminGroup bool
+	if isCustomer {
+		// Customers are never admin — skip the heuristics entirely, and
+		// also skip the admin-group lookup (group_user is an agent-side
+		// table keyed on users.id — a customer_user.id in that query
+		// would just leak into another agent's groups).
+		isAdmin = false
+		isInAdminGroup = false
+		if role == "" {
+			role = "Customer"
+		}
+	} else {
+		// Agent branch: use the existing heuristic + admin-group lookup.
+		isAdmin = user.ID == 1 || strings.Contains(strings.ToLower(user.Login), "admin")
+		if db, err := database.GetDB(); err == nil && db != nil {
+			isInAdminGroup = isUserInAdminGroup(db, user.ID)
+		}
+		if role == "" {
+			role = map[bool]string{true: "Admin", false: "Agent"}[isAdmin]
+		}
 	}
 	return gin.H{
 		"ID":             user.ID,
@@ -643,7 +667,7 @@ func buildUserMapFromModel(user *models.User) gin.H {
 		"IsActive":       user.ValidID == 1,
 		"IsAdmin":        isAdmin,
 		"IsInAdminGroup": isInAdminGroup,
-		"Role":           map[bool]string{true: "Admin", false: "Agent"}[isAdmin],
+		"Role":           role,
 	}
 }
 
@@ -654,6 +678,14 @@ func buildUserMapFromContext(c *gin.Context, userID interface{}) gin.H {
 	if normalizedRole == "" {
 		normalizedRole = "Agent"
 	}
+	// SECURITY: the customer_user and users tables share an auto-increment
+	// id space. getUserDetailsFromDB / isUserInAdminGroup both read from
+	// the agent side (users / group_user) keyed on the numeric id — if
+	// the current caller is a customer whose id happens to match an
+	// agent row, those lookups return that agent's identity and admin
+	// status. Branch on role here and route customer lookups to
+	// customer_user instead.
+	isCustomer := strings.EqualFold(normalizedRole, "Customer")
 
 	login := fmt.Sprintf("%v", userEmail)
 	firstName, lastName, title := "", "", ""
@@ -661,14 +693,45 @@ func buildUserMapFromContext(c *gin.Context, userID interface{}) gin.H {
 	userIDVal := toUintID(userID)
 
 	if db, err := database.GetDB(); err == nil && db != nil {
-		details := getUserDetailsFromDB(db, userIDVal)
-		if details.Login != "" {
-			login = details.Login
+		if isCustomer {
+			// Prefer the login carried on the session (customer_login,
+			// with username as a fallback) — claims.Login populates both.
+			loginKey := ""
+			if v, ok := c.Get("customer_login"); ok {
+				loginKey, _ = v.(string)
+			}
+			if loginKey == "" {
+				if v, ok := c.Get("username"); ok {
+					loginKey, _ = v.(string)
+				}
+			}
+			if loginKey != "" {
+				var dbLogin, dbFirst, dbLast sql.NullString
+				if err := db.QueryRow(database.ConvertPlaceholders(`
+					SELECT login, first_name, last_name FROM customer_user WHERE login = ? LIMIT 1`), loginKey).Scan(&dbLogin, &dbFirst, &dbLast); err == nil {
+					if dbLogin.Valid {
+						login = dbLogin.String
+					}
+					if dbFirst.Valid {
+						firstName = dbFirst.String
+					}
+					if dbLast.Valid {
+						lastName = dbLast.String
+					}
+				}
+			}
+			// Customers are never admin — skip group_user entirely.
+			isInAdminGroup = false
+		} else {
+			details := getUserDetailsFromDB(db, userIDVal)
+			if details.Login != "" {
+				login = details.Login
+			}
+			firstName = details.FirstName
+			lastName = details.LastName
+			title = details.Title
+			isInAdminGroup = isUserInAdminGroup(db, userIDVal)
 		}
-		firstName = details.FirstName
-		lastName = details.LastName
-		title = details.Title
-		isInAdminGroup = isUserInAdminGroup(db, userIDVal)
 	}
 
 	if firstName == "" && lastName == "" {
@@ -682,6 +745,11 @@ func buildUserMapFromContext(c *gin.Context, userID interface{}) gin.H {
 		}
 	}
 
+	isAdmin := isAdminRole(normalizedRole)
+	if isCustomer {
+		isAdmin = false
+	}
+
 	return gin.H{
 		"ID":             userID,
 		"Login":          login,
@@ -691,7 +759,7 @@ func buildUserMapFromContext(c *gin.Context, userID interface{}) gin.H {
 		"Title":          title,
 		"Email":          login,
 		"IsActive":       true,
-		"IsAdmin":        isAdminRole(normalizedRole),
+		"IsAdmin":        isAdmin,
 		"IsInAdminGroup": isInAdminGroup,
 		"Role":           normalizedRole,
 	}

@@ -1157,6 +1157,37 @@ func (m *Manager) LandingPage() string {
 	return ""
 }
 
+// LandingPageFor returns the declared LandingPage for a specific
+// enabled plugin, or empty string if the plugin isn't loaded or didn't
+// declare one. Used by the captive-portal feature to know where to
+// redirect a customer whose org is captive to that plugin.
+func (m *Manager) LandingPageFor(name string) string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	rp, ok := m.plugins[name]
+	if !ok || !rp.enabled {
+		return ""
+	}
+	return rp.manifest.LandingPage
+}
+
+// InstalledPluginNames lists the names of every enabled plugin that has
+// completed registration. Used by the admin UI to populate the
+// captive-plugin dropdown.
+func (m *Manager) InstalledPluginNames() []string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	out := make([]string, 0, len(m.plugins))
+	for name, rp := range m.plugins {
+		if rp.enabled {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
 // defaultShutdownTimeout is the per-plugin shutdown grace period used
 // when the plugin's ResourcePolicy doesn't specify one. Chosen to be
 // long enough for a well-behaved plugin to flush in-flight state (e.g.

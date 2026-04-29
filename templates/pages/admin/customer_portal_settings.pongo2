@@ -1,5 +1,5 @@
 {% extends "layouts/base.pongo2" %}
-{% block title %}{{ t("customer_portal_settings.title")|default:"Customer Portal Settings" }} - Admin{% endblock %}
+{% block title %}{{ t("customer_portal_settings.title")|default:"Default Customer Portal Settings" }} - Admin{% endblock %}
 {% block content %}
 <div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Page header -->
@@ -7,10 +7,10 @@
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-3xl font-bold gk-heading">
-                    <span class="gk-text-gradient">{{ t("customer_portal_settings.heading")|default:"Customer Portal Settings" }}</span>
+                    <span class="gk-text-gradient">{{ t("customer_portal_settings.heading")|default:"Default Customer Portal Settings" }}</span>
                 </h1>
                 <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
-                    {{ t("customer_portal_settings.description")|default:"Configure customer portal access and display options" }}
+                    {{ t("customer_portal_settings.description")|default:"System-wide defaults for every customer company. Individual companies can override any of these from their company edit page." }}
                 </p>
             </div>
             <div class="mt-4 sm:mt-0">

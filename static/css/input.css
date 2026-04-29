@@ -732,6 +732,14 @@
 
     /* Login card glow effects are theme-specific - added in synthwave.css */
 
+    /* Growing flex child for inputs that must stay readable even when the
+       toolbar is narrow. Replaces the flex-1 + inline min-width pattern
+       that every search form used to carry by hand. */
+    .gk-flex-input {
+        @apply flex-1;
+        min-width: 16rem;
+    }
+
     /* Neon input fields */
     .gk-input-neon {
         @apply block w-full rounded-md text-sm transition-all duration-200;
@@ -776,9 +784,11 @@
         padding: 0.5rem;
     }
 
-    /* Neon button - the radical version */
+    /* Neon button - the radical version. Width is intentionally
+       content-sized; add `w-full` at the call site when the button
+       should fill its container (forms, full-width CTAs). */
     .gk-btn-neon {
-        @apply inline-flex items-center justify-center w-full rounded-md px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all duration-200;
+        @apply inline-flex items-center justify-center rounded-md px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all duration-200;
         background: var(--gk-gradient-primary);
         color: var(--gk-text-inverse);
         border: none;
@@ -1612,6 +1622,23 @@
     .gk-modal-backdrop {
         background: var(--gk-bg-overlay);
         backdrop-filter: blur(4px);
+    }
+
+    /* Fallback overlay positioning for markup that uses .gk-modal-backdrop
+       as the outer wrapper (e.g. llm_providers / prompt_templates admin
+       pages). Skipped when the caller has already applied an explicit
+       positioning class so existing Tailwind-inline call sites
+       (`class="gk-modal-backdrop fixed inset-0"` or `absolute inset-0`)
+       keep their chosen stacking context. */
+    .gk-modal-backdrop:not(.absolute):not(.fixed):not(.relative):not(.sticky) {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow-y: auto;
+        padding: 1rem;
     }
 
     .gk-modal {

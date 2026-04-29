@@ -357,9 +357,35 @@ func ensureCoreHandlers() {
 			handleCustomerViewAttachment(db)(c)
 		},
 		"handleLogoutRedirect": func(c *gin.Context) {
-			// clear tokens then redirect to login
-			c.SetCookie("auth_token", "", -1, "/", "", false, true)
+			// SECURITY: full logout parity with POST /api/auth/logout. The
+			// GET form was only clearing auth_token/access_token, so after a
+			// click-to-logout the server-side session record survived, the
+			// JWT stayed valid until expiry, and customer-side cookies (on
+			// shared browsers) lingered — producing the privilege-mix that
+			// made it possible for a subsequent customer login to inherit
+			// admin context on plugin routes. Kill session, wipe every
+			// auth-related cookie in both classes.
+			if sessionID, err := c.Cookie("session_id"); err == nil && sessionID != "" {
+				if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
+					_ = sessionSvc.KillSession(sessionID)
+				}
+			}
+			if sessionID, err := c.Cookie("customer_session_id"); err == nil && sessionID != "" {
+				if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
+					_ = sessionSvc.KillSession(sessionID)
+				}
+			}
+			// Agent cookies
 			c.SetCookie("access_token", "", -1, "/", "", false, true)
+			c.SetCookie("auth_token", "", -1, "/", "", false, true)
+			c.SetCookie("token", "", -1, "/", "", false, true)
+			c.SetCookie("session_id", "", -1, "/", "", false, true)
+			c.SetCookie("goatflow_logged_in", "", -1, "/", "", false, false)
+			// Customer cookies
+			c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
+			c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
+			c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
+			c.SetCookie("goatflow_customer_logged_in", "", -1, "/", "", false, false)
 			target := loginRedirectPath(c)
 			if strings.Contains(c.Request.URL.Path, "/customer") {
 				target = "/customer/login"
@@ -487,6 +513,10 @@ func ensureCoreHandlers() {
 		"handleAPIListOrgConfigs":   handleAPIListOrgConfigs,
 		"handleAPISetOrgConfig":     handleAPISetOrgConfig,
 		"handleAPIDeleteOrgConfig":  handleAPIDeleteOrgConfig,
+		"handleAPIListOrgPluginAccess":   handleAPIListOrgPluginAccess,
+		"handleAPISetOrgPluginAccess":    handleAPISetOrgPluginAccess,
+		"handleAPIDeleteOrgPluginAccess": handleAPIDeleteOrgPluginAccess,
+		"handleAPISetCaptivePlugin":      handleAPISetCaptivePlugin,
 		// Dynamic Field Webservice AJAX handlers
 		"handleDynamicFieldAutocomplete":    handleDynamicFieldAutocomplete,
 		"handleDynamicFieldWebserviceTest":  handleDynamicFieldWebserviceTest,

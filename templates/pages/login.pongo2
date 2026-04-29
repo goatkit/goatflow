@@ -100,7 +100,7 @@
             </div>
 
             <div class="pt-2">
-                <button type="submit" class="gk-btn-neon">
+                <button type="submit" class="gk-btn-neon w-full">
                     {{ t("auth.sign_in")|default:"Sign in" }}
                 </button>
             </div>

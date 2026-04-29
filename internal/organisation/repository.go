@@ -30,10 +30,10 @@ func NewRepositoryWithDB(db *sql.DB) *Repository {
 
 // --- Organisation CRUD ---
 
-const orgColumns = `id, name, slug, parent_id, status, customer_company_id,
+const orgColumns = `id, name, slug, parent_id, status, customer_company_id, captive_plugin,
 	valid_id, create_time, create_by, change_time, change_by`
 
-const orgColumnsAliased = `o.id, o.name, o.slug, o.parent_id, o.status, o.customer_company_id,
+const orgColumnsAliased = `o.id, o.name, o.slug, o.parent_id, o.status, o.customer_company_id, o.captive_plugin,
 	o.valid_id, o.create_time, o.create_by, o.change_time, o.change_by`
 
 // ListOrgs retrieves organisations with optional filters.
@@ -98,17 +98,51 @@ func (r *Repository) UpdateOrg(o *Organisation, userID int) error {
 	now := time.Now()
 	query := database.ConvertPlaceholders(`
 		UPDATE gk_organisation SET name = ?, slug = ?, parent_id = ?, status = ?,
-			customer_company_id = ?, valid_id = ?, change_time = ?, change_by = ?
+			customer_company_id = ?, captive_plugin = ?, valid_id = ?,
+			change_time = ?, change_by = ?
 		WHERE id = ?
 	`)
 	_, err := r.db.Exec(query,
 		o.Name, o.Slug, o.ParentID, o.Status,
-		o.CustomerCompanyID, o.ValidID, now, userID, o.ID,
+		o.CustomerCompanyID, o.CaptivePlugin, o.ValidID, now, userID, o.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("update org: %w", err)
 	}
 	return nil
+}
+
+// SetCaptivePlugin updates only the captive_plugin column. `plugin` empty
+// or nil disables capture. Kept as a narrow API so the admin UI can wire
+// the Portal-tab checkbox without having to re-send the whole org row.
+func (r *Repository) SetCaptivePlugin(orgID int64, plugin *string, userID int) error {
+	query := database.ConvertPlaceholders(`
+		UPDATE gk_organisation SET captive_plugin = ?, change_time = ?, change_by = ?
+		WHERE id = ?
+	`)
+	_, err := r.db.Exec(query, plugin, time.Now(), userID, orgID)
+	if err != nil {
+		return fmt.Errorf("set captive plugin: %w", err)
+	}
+	return nil
+}
+
+// GetCaptivePlugin returns the captive_plugin for an org, or empty string
+// if none / org not found. Hot path on customer login and the portal
+// guard middleware — keep it a single-column lookup, not a full Get.
+func (r *Repository) GetCaptivePlugin(orgID int64) (string, error) {
+	query := database.ConvertPlaceholders(`SELECT captive_plugin FROM gk_organisation WHERE id = ?`)
+	var cp sql.NullString
+	if err := r.db.QueryRow(query, orgID).Scan(&cp); err != nil {
+		if err == sql.ErrNoRows {
+			return "", nil
+		}
+		return "", err
+	}
+	if !cp.Valid {
+		return "", nil
+	}
+	return cp.String, nil
 }
 
 // DeleteOrg removes an organisation. Memberships and sysconfig_org cascade.
@@ -312,7 +346,7 @@ func scanOrgs(rows *sql.Rows) ([]Organisation, error) {
 	for rows.Next() {
 		var o Organisation
 		if err := rows.Scan(&o.ID, &o.Name, &o.Slug, &o.ParentID, &o.Status,
-			&o.CustomerCompanyID, &o.ValidID, &o.CreateTime, &o.CreateBy,
+			&o.CustomerCompanyID, &o.CaptivePlugin, &o.ValidID, &o.CreateTime, &o.CreateBy,
 			&o.ChangeTime, &o.ChangeBy); err != nil {
 			return nil, fmt.Errorf("scan org: %w", err)
 		}
@@ -324,7 +358,7 @@ func scanOrgs(rows *sql.Rows) ([]Organisation, error) {
 func scanOrg(row *sql.Row) (*Organisation, error) {
 	var o Organisation
 	err := row.Scan(&o.ID, &o.Name, &o.Slug, &o.ParentID, &o.Status,
-		&o.CustomerCompanyID, &o.ValidID, &o.CreateTime, &o.CreateBy,
+		&o.CustomerCompanyID, &o.CaptivePlugin, &o.ValidID, &o.CreateTime, &o.CreateBy,
 		&o.ChangeTime, &o.ChangeBy)
 	if err == sql.ErrNoRows {
 		return nil, nil //nolint:nilnil

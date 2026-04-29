@@ -235,6 +235,13 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			userThemeMode = prefService.GetThemeMode(int(userID))
 		}
 
+		// SECURITY: wipe any pre-existing customer session cookies on agent
+		// login — see the symmetric comment in handleCustomerLogin for
+		// rationale. One browser, one identity.
+		c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
+		c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
+		c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
+		c.SetCookie("goatflow_customer_logged_in", "", -1, "/", "", false, false)
 		c.SetCookie("access_token", token, sessionTimeout, "/", "", false, true)
 		c.SetCookie("auth_token", token, sessionTimeout, "/", "", false, true)
 		// Set a non-httpOnly indicator so JavaScript can detect authentication
@@ -545,6 +552,14 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		userTheme = prefService.GetTheme(userID)
 		userThemeMode = prefService.GetThemeMode(userID)
 
+		// SECURITY: wipe customer session cookies on agent login (second code
+		// path — 2FA-completed login). Keeps parity with the primary agent
+		// login so ExtractToken can't mix an old customer session with a new
+		// agent one.
+		c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
+		c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
+		c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
+		c.SetCookie("goatflow_customer_logged_in", "", -1, "/", "", false, false)
 		c.SetCookie("access_token", token, sessionTimeout, "/", "", false, true)
 		c.SetCookie("auth_token", token, sessionTimeout, "/", "", false, true)
 		c.SetCookie("goatflow_logged_in", "1", sessionTimeout, "/", "", false, false)

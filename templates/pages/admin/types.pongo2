@@ -29,7 +29,7 @@
     <!-- Search and Filters -->
     <div class="mb-6 gk-card-glow rounded-lg p-4">
         <div class="flex gap-4">
-            <div class="flex-1">
+            <div class="gk-flex-input">
                 <label for="searchInput" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.search")|default:"Search" }}</label>
                 <input type="text" id="searchInput" placeholder="{{ t('types.search_placeholder')|default:'Search types...' }}" value="{{ Search }}"
                        class="gk-input-neon w-full" onkeyup="debounceSearch()">

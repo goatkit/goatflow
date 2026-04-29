@@ -404,6 +404,30 @@ spec:
           middleware:
               - admin
           description: "Remove member from organisation"
+        - path: /organisations/:id/plugin-access
+          method: GET
+          handler: handleAPIListOrgPluginAccess
+          middleware:
+              - admin
+          description: "List plugin-access bindings for an organisation"
+        - path: /organisations/:id/plugin-access
+          method: POST
+          handler: handleAPISetOrgPluginAccess
+          middleware:
+              - admin
+          description: "Set or replace plugin-access binding for an organisation"
+        - path: /organisations/:id/plugin-access/:plugin
+          method: DELETE
+          handler: handleAPIDeleteOrgPluginAccess
+          middleware:
+              - admin
+          description: "Disable a plugin for an organisation"
+        - path: /organisations/:id/captive-plugin
+          method: POST
+          handler: handleAPISetCaptivePlugin
+          middleware:
+              - admin
+          description: "Set or clear the captive plugin for an organisation"
         - path: /organisations/:id/config
           method: GET
           handler: handleAPIListOrgConfigs

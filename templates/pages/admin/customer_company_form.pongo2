@@ -133,92 +133,213 @@
         Save the company before configuring portal settings.
       </div>
       {% else %}
-      <form method="post" action="/admin/customer/companies/{{ Company.customer_id }}/portal-settings">
-        <div class="space-y-6">
-          <div>
-            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("customer_company_form.branding")|default:"Branding" }}</h3>
-            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">Customize the appearance of the customer portal</p>
-          </div>
-
-          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <p class="text-sm mb-6" style="color: var(--gk-text-muted);">
+        Values shown are inherited from the
+        <a href="/admin/customer/portal/settings" style="color: var(--gk-primary); text-decoration: underline;">Default Customer Portal Settings</a>
+        unless overridden below. Toggle <strong>Override default</strong> to set a value specific to this company.
+      </p>
+      <form method="post" action="/admin/customer/companies/{{ Company.customer_id }}/portal-settings" class="space-y-6">
+        {# Boolean field — Enabled #}
+        <div class="space-y-2 pb-4" style="border-bottom: 1px solid var(--gk-border-default);">
+          <div class="flex items-center justify-between">
             <div>
-              <label for="logo_url" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Logo URL</label>
-              <input type="url" name="logo_url" id="logo_url" value="{{ PortalConfig.logo_url|default:'' }}"
-                     class="gk-input-neon mt-1 block w-full">
+              <p class="text-sm font-medium" style="color: var(--gk-text-primary);">Portal enabled</p>
+              <p class="text-xs" style="color: var(--gk-text-muted);">
+                Default: <strong>{% if PortalDefaults.Enabled %}on{% else %}off{% endif %}</strong>
+              </p>
             </div>
+            <label class="inline-flex items-center gap-2 text-sm" style="color: var(--gk-text-secondary);">
+              <input type="checkbox" name="override_enabled" value="1" {% if PortalOverrides.enabled %}checked{% endif %}
+                     class="h-4 w-4" style="accent-color: var(--gk-primary);"
+                     onchange="toggleOverride(this,'enabled')">
+              Override default
+            </label>
+          </div>
+          <label class="inline-flex items-center gap-2 text-sm" style="color: var(--gk-text-secondary);">
+            <input type="hidden" name="enabled" value="0">
+            <input type="checkbox" name="enabled" id="fld-enabled" value="1" {% if PortalEffective.Enabled %}checked{% endif %}
+                   {% if not PortalOverrides.enabled %}disabled{% endif %}
+                   class="h-4 w-4" style="accent-color: var(--gk-primary);">
+            Customer portal is enabled for this company
+          </label>
+        </div>
 
+        {# Boolean field — LoginRequired #}
+        <div class="space-y-2 pb-4" style="border-bottom: 1px solid var(--gk-border-default);">
+          <div class="flex items-center justify-between">
             <div>
-              <label for="custom_domain" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Custom Domain</label>
-              <input type="text" name="custom_domain" id="custom_domain" value="{{ PortalConfig.custom_domain|default:'' }}" placeholder="portal.company.com"
-                     class="gk-input-neon mt-1 block w-full">
+              <p class="text-sm font-medium" style="color: var(--gk-text-primary);">Require login</p>
+              <p class="text-xs" style="color: var(--gk-text-muted);">
+                Default: <strong>{% if PortalDefaults.LoginRequired %}on{% else %}off{% endif %}</strong>
+              </p>
             </div>
+            <label class="inline-flex items-center gap-2 text-sm" style="color: var(--gk-text-secondary);">
+              <input type="checkbox" name="override_login_required" value="1" {% if PortalOverrides.login %}checked{% endif %}
+                     class="h-4 w-4" style="accent-color: var(--gk-primary);"
+                     onchange="toggleOverride(this,'login_required')">
+              Override default
+            </label>
+          </div>
+          <label class="inline-flex items-center gap-2 text-sm" style="color: var(--gk-text-secondary);">
+            <input type="hidden" name="login_required" value="0">
+            <input type="checkbox" name="login_required" id="fld-login_required" value="1" {% if PortalEffective.LoginRequired %}checked{% endif %}
+                   {% if not PortalOverrides.login %}disabled{% endif %}
+                   class="h-4 w-4" style="accent-color: var(--gk-primary);">
+            Require authentication before portal access
+          </label>
+        </div>
 
+        {# Text field — Title #}
+        <div class="space-y-2 pb-4" style="border-bottom: 1px solid var(--gk-border-default);">
+          <div class="flex items-center justify-between">
             <div>
-              <label for="primary_color" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Primary Color</label>
-              <input type="color" name="primary_color" id="primary_color" value="{{ PortalConfig.primary_color|default:'#1e40af' }}"
-                     class="mt-1 h-10 w-20 rounded-md shadow-sm" style="border: 1px solid var(--gk-border-default); background: var(--gk-bg-surface);">
+              <label for="fld-title" class="text-sm font-medium" style="color: var(--gk-text-primary);">Portal title</label>
+              <p class="text-xs" style="color: var(--gk-text-muted);">
+                Default: <strong>{{ PortalDefaults.Title }}</strong>
+              </p>
             </div>
+            <label class="inline-flex items-center gap-2 text-sm" style="color: var(--gk-text-secondary);">
+              <input type="checkbox" name="override_title" value="1" {% if PortalOverrides.title %}checked{% endif %}
+                     class="h-4 w-4" style="accent-color: var(--gk-primary);"
+                     onchange="toggleOverride(this,'title')">
+              Override default
+            </label>
+          </div>
+          <input type="text" name="title" id="fld-title"
+                 value="{% if PortalOverrides.title %}{{ PortalEffective.Title }}{% endif %}"
+                 placeholder="{{ PortalDefaults.Title }}"
+                 {% if not PortalOverrides.title %}disabled{% endif %}
+                 class="gk-input-neon block w-full">
+        </div>
 
+        {# Text field — FooterText #}
+        <div class="space-y-2 pb-4" style="border-bottom: 1px solid var(--gk-border-default);">
+          <div class="flex items-center justify-between">
             <div>
-              <label for="secondary_color" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Secondary Color</label>
-              <input type="color" name="secondary_color" id="secondary_color" value="{{ PortalConfig.secondary_color|default:'#64748b' }}"
-                     class="mt-1 h-10 w-20 rounded-md shadow-sm" style="border: 1px solid var(--gk-border-default); background: var(--gk-bg-surface);">
+              <label for="fld-footer_text" class="text-sm font-medium" style="color: var(--gk-text-primary);">Footer text</label>
+              <p class="text-xs" style="color: var(--gk-text-muted);">
+                Default: <strong>{{ PortalDefaults.FooterText }}</strong>
+              </p>
             </div>
+            <label class="inline-flex items-center gap-2 text-sm" style="color: var(--gk-text-secondary);">
+              <input type="checkbox" name="override_footer_text" value="1" {% if PortalOverrides.footer %}checked{% endif %}
+                     class="h-4 w-4" style="accent-color: var(--gk-primary);"
+                     onchange="toggleOverride(this,'footer_text')">
+              Override default
+            </label>
+          </div>
+          <input type="text" name="footer_text" id="fld-footer_text"
+                 value="{% if PortalOverrides.footer %}{{ PortalEffective.FooterText }}{% endif %}"
+                 placeholder="{{ PortalDefaults.FooterText }}"
+                 {% if not PortalOverrides.footer %}disabled{% endif %}
+                 class="gk-input-neon block w-full">
+        </div>
 
+        {# Text field — LandingPage #}
+        <div class="space-y-2 pb-4" style="border-bottom: 1px solid var(--gk-border-default);">
+          <div class="flex items-center justify-between">
             <div>
-              <label for="header_bg" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Header Background</label>
-              <input type="color" name="header_bg" id="header_bg" value="{{ PortalConfig.header_bg|default:'#ffffff' }}"
-                     class="mt-1 h-10 w-20 rounded-md shadow-sm" style="border: 1px solid var(--gk-border-default); background: var(--gk-bg-surface);">
+              <label for="fld-landing_page" class="text-sm font-medium" style="color: var(--gk-text-primary);">Landing page path</label>
+              <p class="text-xs" style="color: var(--gk-text-muted);">
+                Default: <strong>{{ PortalDefaults.LandingPage }}</strong>
+              </p>
             </div>
+            <label class="inline-flex items-center gap-2 text-sm" style="color: var(--gk-text-secondary);">
+              <input type="checkbox" name="override_landing_page" value="1" {% if PortalOverrides.landing %}checked{% endif %}
+                     class="h-4 w-4" style="accent-color: var(--gk-primary);"
+                     onchange="toggleOverride(this,'landing_page')">
+              Override default
+            </label>
           </div>
+          <input type="text" name="landing_page" id="fld-landing_page"
+                 value="{% if PortalOverrides.landing %}{{ PortalEffective.LandingPage }}{% endif %}"
+                 placeholder="{{ PortalDefaults.LandingPage }}"
+                 {% if not PortalOverrides.landing %}disabled{% endif %}
+                 class="gk-input-neon block w-full">
+        </div>
 
-          <div>
-            <label for="welcome_message" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Welcome Message</label>
-            <input type="text" name="welcome_message" id="welcome_message" value="{{ PortalConfig.welcome_message|default:'' }}"
-                   class="gk-input-neon mt-1 block w-full">
-          </div>
-
-          <div>
-            <label for="footer_text" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Footer Text</label>
-            <input type="text" name="footer_text" id="footer_text" value="{{ PortalConfig.footer_text|default:'' }}"
-                   class="gk-input-neon mt-1 block w-full">
-          </div>
-
-          <div>
-            <label for="custom_css" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Custom CSS</label>
-            <textarea name="custom_css" id="custom_css" rows="4"
-                      class="gk-input-neon mt-1 block w-full font-mono text-sm">{{ PortalConfig.custom_css|default:'' }}</textarea>
-          </div>
-
-          <div class="space-y-4">
-            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("customer_company_form.features")|default:"Features" }}</h3>
-
-            <div class="flex items-center">
-              <input type="checkbox" name="enable_kb" id="enable_kb" value="1" {% if PortalConfig.enable_kb %}checked{% endif %}
-                     class="h-4 w-4 rounded focus:ring-2"
-                     style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
-              <label for="enable_kb" class="ml-2 block text-sm" style="color: var(--gk-text-secondary);">
-                Enable Knowledge Base
-              </label>
-            </div>
-
-            <div class="flex items-center">
-              <input type="checkbox" name="enable_downloads" id="enable_downloads" value="1" {% if PortalConfig.enable_downloads %}checked{% endif %}
-                     class="h-4 w-4 rounded focus:ring-2"
-                     style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
-              <label for="enable_downloads" class="ml-2 block text-sm" style="color: var(--gk-text-secondary);">
-                Enable File Downloads
-              </label>
-            </div>
-          </div>
-
-          <div class="mt-6 flex justify-end">
-            <button type="submit" class="gk-btn-neon">
-              Save Portal Settings
-            </button>
-          </div>
+        <div class="mt-6 flex justify-end">
+          <button type="submit" class="gk-btn-neon">Save Portal Settings</button>
         </div>
       </form>
+      <script>
+        function toggleOverride(checkbox, fieldName) {
+          var field = document.getElementById('fld-' + fieldName);
+          if (!field) return;
+          field.disabled = !checkbox.checked;
+          if (!checkbox.checked) {
+            if (field.type === 'checkbox') {
+              // When reverting to default, reflect the default state in the UI.
+              field.checked = false;
+            } else {
+              field.value = '';
+            }
+          }
+        }
+      </script>
+
+      {# Plugin Capture — per-org setting stored on gk_organisation.captive_plugin. #}
+      <div class="mt-10" style="border-top: 1px solid var(--gk-border-default); padding-top: 2rem;">
+        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">Plugin Capture</h3>
+        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">
+          Replace the standard customer portal for this company with a single plugin.
+          When set, customers of this company are redirected to the chosen plugin on login
+          and can't navigate to the other portal pages (tickets, KB, profile). Leave as
+          <em>None</em> to use the default customer portal.
+        </p>
+
+        {% if LinkedOrgID == 0 %}
+        <div class="mt-4 rounded-md p-4 text-sm" style="border: 1px dashed var(--gk-border-default); background: var(--gk-bg-tertiary); color: var(--gk-text-secondary);">
+          This company isn't linked to an organisation yet. Plugin capture applies at the
+          organisation level — link this company to an organisation first from the GoatFictus
+          admin <strong>Organisations</strong> page.
+        </div>
+        {% else %}
+        <div class="mt-4 space-y-4">
+          <div>
+            <label for="captive_plugin" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Captive plugin</label>
+            <select id="captive_plugin" class="gk-select-neon mt-1 block w-full" style="max-width: 32rem;">
+              <option value="">— None (use standard customer portal) —</option>
+              {% for p in EnabledPlugins %}
+              <option value="{{ p }}" {% if p == CaptivePlugin %}selected{% endif %}>{{ p }}</option>
+              {% endfor %}
+            </select>
+            <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">
+              Only plugins <strong>enabled</strong> for this organisation are listed here.
+              To enable a new plugin, visit the per-plugin admin page first.
+            </p>
+          </div>
+          <div>
+            <button type="button" id="captive-save" class="gk-btn-neon">Save Capture Setting</button>
+            <span id="captive-status" class="ml-3 text-sm" style="color: var(--gk-text-muted);"></span>
+          </div>
+        </div>
+        <script>
+        (function(){
+          var saveBtn = document.getElementById('captive-save');
+          var statusEl = document.getElementById('captive-status');
+          if (!saveBtn) return;
+          saveBtn.addEventListener('click', function(){
+            var sel = document.getElementById('captive_plugin');
+            var val = sel ? sel.value : '';
+            statusEl.textContent = 'Saving…';
+            fetch('/api/v1/organisations/{{ LinkedOrgID }}/captive-plugin', {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({captive_plugin: val})
+            })
+            .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+            .then(function(r){
+              if (!r.ok) { statusEl.textContent = 'Failed: ' + ((r.data && r.data.error) || 'HTTP error'); return; }
+              statusEl.textContent = val ? ('Captive to ' + val + '. Customers of this company will be redirected on next login.') : 'Capture cleared. Customers use the standard portal.';
+            })
+            .catch(function(e){ statusEl.textContent = 'Failed: ' + e; });
+          });
+        })();
+        </script>
+        {% endif %}
+      </div>
       {% endif %}
     </div>
 

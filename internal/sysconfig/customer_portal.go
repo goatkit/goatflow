@@ -124,6 +124,49 @@ func LoadCustomerPortalConfigForCompany(db *sql.DB, customerID string) (Customer
 	return cfg, nil
 }
 
+// CustomerPortalOverrides reports which of a company's portal fields
+// are explicitly set (overriding the global default) vs inheriting.
+// True = override present, false = inheriting.
+func CustomerPortalOverrides(db *sql.DB, customerID string) map[string]bool {
+	out := map[string]bool{"enabled": false, "login": false, "title": false, "footer": false, "landing": false}
+	customerID = strings.TrimSpace(customerID)
+	if customerID == "" || db == nil {
+		return out
+	}
+	for key, fullName := range portalKeyNames(customerID) {
+		if _, ok := sysconfigValue(db, fullName); ok {
+			out[key] = true
+		}
+	}
+	return out
+}
+
+// DeleteCustomerPortalConfigKeyForCompany removes a single override row
+// for a company, causing reads to fall back to the global default.
+func DeleteCustomerPortalConfigKeyForCompany(db *sql.DB, customerID, key string) error {
+	customerID = strings.TrimSpace(customerID)
+	if customerID == "" {
+		return fmt.Errorf("customer id required")
+	}
+	names := portalKeyNames(customerID)
+	fullName, ok := names[key]
+	if !ok {
+		return fmt.Errorf("unknown portal key %q", key)
+	}
+	if db == nil {
+		return fmt.Errorf("database connection unavailable")
+	}
+	if _, err := db.Exec(database.ConvertPlaceholders(
+		`DELETE FROM sysconfig WHERE name = ?`), fullName); err != nil {
+		return err
+	}
+	if _, err := db.Exec(database.ConvertPlaceholders(
+		`DELETE FROM sysconfig_default WHERE name = ?`), fullName); err != nil {
+		return err
+	}
+	return nil
+}
+
 func ensurePortalDefault(db *sql.DB, targetName string, def portalKeyDef, userID int) error {
 	if db == nil {
 		return fmt.Errorf("database connection unavailable")

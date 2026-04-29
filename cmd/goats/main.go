@@ -353,6 +353,21 @@ func main() {
 	plugin.SetTemplateOverrides(templateOverrides)
 	shared.SetTemplateOverrideProvider(templateOverrides) // Enable template overrides
 
+	// Install the plugin-access checker so the template renderer can
+	// filter customer-facing nav items against per-user entitlement
+	// (see SetPluginAccessChecker docstring).
+	shared.SetPluginAccessChecker(api.HasPluginAccess)
+
+	// Wire the captive-plugin landing resolver so CustomerPortalGate can
+	// redirect a captive org's customers to the right plugin path. Uses
+	// the same plugin manager as every other plugin-related lookup.
+	middleware.SetCaptivePluginLandingResolver(func(name string) string {
+		if mgr := api.GetPluginManager(); mgr != nil {
+			return mgr.LandingPageFor(name)
+		}
+		return ""
+	})
+
 	// Provide plugin menu items to all templates (sidebar/nav)
 	shared.SetPluginMenuProvider(func(location string) []map[string]any {
 		items := pluginMgr.MenuItems(location)

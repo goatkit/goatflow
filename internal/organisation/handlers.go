@@ -1,6 +1,7 @@
 package organisation
 
 import (
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -83,7 +84,19 @@ func HandleListUserOrgs(repo *Repository) gin.HandlerFunc {
 			return
 		}
 
+		// Prefer the gin context (set by organisation.Middleware when
+		// installed), but fall back to the cookie directly. The middleware
+		// isn't wired into the plugin route chain, so without the cookie
+		// fallback the picker can't highlight the user's active org.
 		activeOrgID := ActiveOrgFromGin(c)
+		if activeOrgID == 0 {
+			if cookie, err := c.Cookie("active_org_id"); err == nil && cookie != "" {
+				var n int64
+				if _, scanErr := fmt.Sscanf(cookie, "%d", &n); scanErr == nil {
+					activeOrgID = n
+				}
+			}
+		}
 
 		type orgItem struct {
 			ID     int64  `json:"id"`

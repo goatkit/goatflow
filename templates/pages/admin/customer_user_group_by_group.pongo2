@@ -39,7 +39,7 @@
     <!-- Search Bar -->
     <div class="gk-card-glow rounded-lg p-4 mb-6">
         <form method="get" action="/admin/customer-user-groups/group/{{ Group.ID }}" class="flex gap-2">
-            <div class="flex-1">
+            <div class="gk-flex-input">
                 <label for="search" class="sr-only">{{ t("admin.customer_user_groups.search_users") }}</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

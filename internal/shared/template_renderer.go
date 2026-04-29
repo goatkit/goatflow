@@ -45,6 +45,22 @@ func SetPluginMenuProvider(p PluginMenuProvider) {
 	globalPluginMenuProvider = p
 }
 
+// PluginAccessChecker returns true if the current request's caller is
+// entitled to use `pluginName`. Injected from the api package to avoid
+// pulling database/repository into shared. Used by the template renderer
+// to hide nav menu items the caller can't use — a customer without
+// goatfictus entitlement shouldn't see the GoatFictus link and then
+// bounce off a 403.
+type PluginAccessChecker func(c *gin.Context, pluginName string) bool
+
+var globalPluginAccessChecker PluginAccessChecker
+
+// SetPluginAccessChecker installs the callback used by the template
+// renderer to filter plugin-menu entries against per-user access.
+func SetPluginAccessChecker(p PluginAccessChecker) {
+	globalPluginAccessChecker = p
+}
+
 // HiddenMenuProvider returns a map of menu item IDs that should be hidden.
 type HiddenMenuProvider func() map[string]bool
 
@@ -156,6 +172,29 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 	}
 	ctx["IsInAdminGroup"] = isAdmin
 
+	// isCustomer gates the "Administration" nav button in base.pongo2
+	// (and equivalents). If this key is missing, pongo2 treats it as false
+	// and the guard `{% if not isCustomer ... %}` always passes — which is
+	// how a customer session rendering a plugin page ended up seeing the
+	// Administration button. Inject it from the auth middleware's
+	// is_customer / user_role keys, with both lowercase and PascalCase
+	// aliases so templates that use either variant stay coherent.
+	isCustomer := false
+	if v, exists := c.Get("is_customer"); exists {
+		if b, ok := v.(bool); ok && b {
+			isCustomer = true
+		}
+	}
+	if !isCustomer {
+		if role, exists := c.Get("user_role"); exists {
+			if s, ok := role.(string); ok && s == "Customer" {
+				isCustomer = true
+			}
+		}
+	}
+	ctx["isCustomer"] = isCustomer
+	ctx["IsCustomer"] = isCustomer
+
 	// Inject User from context if available
 	if _, hasUser := ctx["User"]; !hasUser {
 		if user := getUserFromContext(c, isAdmin); user != nil {
@@ -163,7 +202,11 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 		}
 	}
 
-	// Inject plugin menu items for navigation
+	// Inject plugin menu items for navigation. Customer-side items are
+	// filtered against per-user plugin access so an unentitled customer
+	// doesn't see links they'd bounce off with a 403. Agent- and
+	// admin-side menus stay global — agents are cross-cutting staff
+	// whose access is gated at the route layer, not the menu.
 	if globalPluginMenuProvider != nil {
 		if _, hasIt := ctx["PluginAdminMenuItems"]; !hasIt {
 			ctx["PluginAdminMenuItems"] = globalPluginMenuProvider("admin")
@@ -172,7 +215,25 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 			ctx["PluginAgentMenuItems"] = globalPluginMenuProvider("agent")
 		}
 		if _, hasIt := ctx["PluginCustomerMenuItems"]; !hasIt {
-			ctx["PluginCustomerMenuItems"] = globalPluginMenuProvider("customer")
+			items := globalPluginMenuProvider("customer")
+			if isCustomer && globalPluginAccessChecker != nil {
+				filtered := make([]map[string]any, 0, len(items))
+				for _, it := range items {
+					name, _ := it["PluginName"].(string)
+					if name == "" {
+						// Menu items without a declared plugin name aren't
+						// access-gated — keep them visible so legacy items
+						// don't silently vanish.
+						filtered = append(filtered, it)
+						continue
+					}
+					if globalPluginAccessChecker(c, name) {
+						filtered = append(filtered, it)
+					}
+				}
+				items = filtered
+			}
+			ctx["PluginCustomerMenuItems"] = items
 		}
 	}
 

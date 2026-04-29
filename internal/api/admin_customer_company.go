@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/shared"
+	"github.com/goatkit/goatflow/internal/sysconfig"
 )
 
 // handleAdminCustomerCompanies shows the customer companies list.
@@ -274,30 +276,50 @@ func handleAdminEditCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Get portal settings from sysconfig (stored as JSON in config_item table)
-		var portalConfig map[string]interface{}
-		var configJSON sql.NullString
-		row := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT content_json FROM sysconfig 
-			WHERE name = ?
-		`), "CustomerPortal::Company::"+customerID)
-		_ = row.Scan(&configJSON) //nolint:errcheck // Defaults to empty config on error
+		// Portal settings: load the company's effective config (overrides
+		// merged onto global defaults) and the global defaults separately
+		// so the template can show what each field will resolve to when
+		// its override toggle is off.
+		portalEffective := loadCustomerPortalConfigForCustomer(db, customerID)
+		portalDefaults := loadCustomerPortalConfig(db)
+		portalOverrides := sysconfig.CustomerPortalOverrides(db, customerID)
 
-		if configJSON.Valid {
-			// Parse stored portal configuration
-			// For now, use defaults
-		}
-
-		// Default portal settings if none exist
-		if portalConfig == nil {
-			portalConfig = map[string]interface{}{
-				"logo_url":        "",
-				"primary_color":   "#1e40af", // Blue
-				"secondary_color": "#64748b", // Gray
-				"header_bg":       "#ffffff",
-				"footer_text":     "© " + company.Name,
-				"welcome_message": "Welcome to " + company.Name + " Support Portal",
-				"custom_css":      "",
+		// Resolve the linked gk_organisation + plugin-capture state so the
+		// Portal tab can render the capture section. A customer_company
+		// may not have a linked gk_organisation yet (the two tables are
+		// joined by the customer_company_id FK on gk_organisation), in
+		// which case we pass empty values and the tab shows a "link an
+		// organisation first" hint.
+		var (
+			linkedOrgID    int64
+			captivePlugin  string
+			enabledPlugins []string
+		)
+		_ = db.QueryRow(database.ConvertPlaceholders(
+			`SELECT id FROM gk_organisation WHERE customer_company_id = ? LIMIT 1`),
+			customerID).Scan(&linkedOrgID)
+		if linkedOrgID > 0 {
+			var cp sql.NullString
+			_ = db.QueryRow(database.ConvertPlaceholders(
+				`SELECT captive_plugin FROM gk_organisation WHERE id = ?`),
+				linkedOrgID).Scan(&cp)
+			if cp.Valid {
+				captivePlugin = cp.String
+			}
+			// Enabled plugins for this org — feeds the dropdown. One row
+			// per (plugin_name, group), so collapse to distinct names
+			// since the capture UI only cares about the plugin.
+			rows, err := db.Query(database.ConvertPlaceholders(
+				`SELECT DISTINCT plugin_name FROM gk_org_plugin_access WHERE org_id = ? ORDER BY plugin_name`),
+				linkedOrgID)
+			if err == nil {
+				defer rows.Close()
+				for rows.Next() {
+					var n string
+					if err := rows.Scan(&n); err == nil {
+						enabledPlugins = append(enabledPlugins, n)
+					}
+				}
 			}
 		}
 
@@ -320,7 +342,12 @@ func handleAdminEditCustomerCompany(db *sql.DB) gin.HandlerFunc {
 				"comments":    company.Comments.String,
 				"valid_id":    company.ValidID,
 			},
-			"PortalConfig": portalConfig,
+			"PortalEffective": portalEffective,
+			"PortalDefaults":  portalDefaults,
+			"PortalOverrides": portalOverrides,
+			"LinkedOrgID":     linkedOrgID,
+			"CaptivePlugin":   captivePlugin,
+			"EnabledPlugins":  enabledPlugins,
 		}
 
 		// Add success message if redirected from update
@@ -857,14 +884,35 @@ func handleAdminUpdateCustomerPortalSettings(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		cfg := customerPortalConfig{
-			Enabled:       parseCheckbox(c, "enabled"),
-			LoginRequired: parseCheckbox(c, "login_required"),
-			Title:         strings.TrimSpace(c.PostForm("title")),
-			FooterText:    strings.TrimSpace(c.PostForm("footer_text")),
-			LandingPage:   strings.TrimSpace(c.PostForm("landing_page")),
-		}
+		// Per-company submission: save only the fields the admin ticked
+		// "Override default" for; every other field gets its per-company
+		// sysconfig row deleted so reads fall back to the global
+		// defaults.
 		userID := c.GetInt("user_id")
+		baseline := loadCustomerPortalConfig(db)
+		cfg := baseline
+		overrides := map[string]bool{
+			"enabled": c.PostForm("override_enabled") == "1",
+			"login":   c.PostForm("override_login_required") == "1",
+			"title":   c.PostForm("override_title") == "1",
+			"footer":  c.PostForm("override_footer_text") == "1",
+			"landing": c.PostForm("override_landing_page") == "1",
+		}
+		if overrides["enabled"] {
+			cfg.Enabled = parseCheckbox(c, "enabled")
+		}
+		if overrides["login"] {
+			cfg.LoginRequired = parseCheckbox(c, "login_required")
+		}
+		if overrides["title"] {
+			cfg.Title = strings.TrimSpace(c.PostForm("title"))
+		}
+		if overrides["footer"] {
+			cfg.FooterText = strings.TrimSpace(c.PostForm("footer_text"))
+		}
+		if overrides["landing"] {
+			cfg.LandingPage = strings.TrimSpace(c.PostForm("landing_page"))
+		}
 		if err := saveCustomerPortalConfigForCustomer(db, customerID, cfg, userID); err != nil {
 			if isPortalConfigTableMissing(err) {
 				c.JSON(http.StatusOK, gin.H{
@@ -876,6 +924,17 @@ func handleAdminUpdateCustomerPortalSettings(db *sql.DB) gin.HandlerFunc {
 			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
+		}
+		// Save writes every field as an override; now strip the ones the
+		// admin didn't opt into so they revert to inheriting the global
+		// default.
+		for key, isOverride := range overrides {
+			if isOverride {
+				continue
+			}
+			if err := sysconfig.DeleteCustomerPortalConfigKeyForCompany(db, customerID, key); err != nil {
+				log.Printf("clear %s override for %s: %v", key, customerID, err)
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{

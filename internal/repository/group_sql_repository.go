@@ -59,7 +59,7 @@ func (r *GroupSQLRepository) List() ([]*models.Group, error) {
 // GetUserGroups retrieves group names for a user.
 func (r *GroupSQLRepository) GetUserGroups(userID uint) ([]string, error) {
 	query := database.ConvertPlaceholders(`
-		SELECT g.name 
+		SELECT g.name
 		FROM groups g
 		JOIN group_user ug ON g.id = ug.group_id
 		WHERE ug.user_id = ? AND g.valid_id = 1

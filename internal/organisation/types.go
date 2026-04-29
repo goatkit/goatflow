@@ -60,6 +60,7 @@ type Organisation struct {
 	ParentID          *int64    `json:"parent_id,omitempty" db:"parent_id"`
 	Status            string    `json:"status" db:"status"`
 	CustomerCompanyID *string   `json:"customer_company_id,omitempty" db:"customer_company_id"`
+	CaptivePlugin     *string   `json:"captive_plugin,omitempty" db:"captive_plugin"`
 	ValidID           int       `json:"valid_id" db:"valid_id"`
 	CreateTime        time.Time `json:"create_time" db:"create_time"`
 	CreateBy          int       `json:"create_by" db:"create_by"`

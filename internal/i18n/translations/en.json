@@ -3212,9 +3212,9 @@
     "under_construction_message": "This feature is currently being developed."
   },
   "customer_portal_settings": {
-    "title": "Customer Portal Settings",
-    "heading": "Customer Portal Settings",
-    "description": "Configure customer portal appearance and behavior.",
+    "title": "Default Customer Portal Settings",
+    "heading": "Default Customer Portal Settings",
+    "description": "System-wide defaults for every customer company. Individual companies can override any of these from their company edit page.",
     "enable": "Enable",
     "enable_help": "Enable Help Link",
     "require_login": "Require Login",

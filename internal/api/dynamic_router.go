@@ -81,6 +81,18 @@ func RebuildDynamicEngine() {
 				case strings.HasPrefix(mw, "group:"):
 					groupName := strings.TrimPrefix(mw, "group:")
 					mwChain = append(mwChain, SessionOrJWTAuth(), RequireGroup(groupName))
+				case strings.HasPrefix(mw, "plugin:"):
+					// "plugin:<pluginName>:<agentGroup>" — agent gate name
+					// is required so the middleware knows which group a
+					// support agent must belong to (customers go through
+					// the per-org gk_org_plugin_access table instead).
+					rest := strings.TrimPrefix(mw, "plugin:")
+					parts := strings.SplitN(rest, ":", 2)
+					if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+						log.Printf("dynamic_router: malformed plugin middleware spec %q — expected plugin:<pluginName>:<agentGroup>", mw)
+						continue
+					}
+					mwChain = append(mwChain, SessionOrJWTAuth(), RequirePluginAccess(parts[0], parts[1]))
 				case mw == "webhook":
 					mwChain = append(mwChain, WebhookRateLimit(pluginName), WebhookAuth(pluginName))
 				}
@@ -97,6 +109,17 @@ func RebuildDynamicEngine() {
 
 				var response map[string]any
 				if err := json.Unmarshal(result, &response); err == nil {
+					// Redirect response — plugin asks the platform to send the
+					// browser elsewhere. Used by customer pages that resolve no
+					// org and bail to /customer/dashboard.
+					if redirect, ok := response["redirect"].(string); ok && redirect != "" {
+						code := http.StatusSeeOther
+						if s, ok := response["status"].(float64); ok {
+							code = int(s)
+						}
+						c.Redirect(code, redirect)
+						return
+					}
 					// Binary response — decode base64 data and stream with content type.
 					if isBinary, ok := response["_binary"].(bool); ok && isBinary {
 						if contentType, ok := response["content_type"].(string); ok {

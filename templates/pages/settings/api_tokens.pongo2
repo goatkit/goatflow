@@ -82,10 +82,9 @@
 </div>
 
 <!-- Create Token Modal -->
-<div id="create-token-modal" class="gk-modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <div class="gk-modal-backdrop"></div>
-    <div class="gk-modal-container">
-        <div class="gk-modal-content max-w-md">
+<div id="create-token-modal" class="hidden fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="gk-modal-backdrop fixed inset-0"></div>
+    <div class="gk-modal relative w-full max-w-md">
             <div class="gk-modal-header">
                 <h3 id="modal-title" class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("settings.create_token")|default:"Create API Token" }}</h3>
                 <button type="button" class="gk-modal-close" aria-label="Close">
@@ -95,7 +94,7 @@
                 </button>
             </div>
             <form id="create-token-form">
-                <div class="gk-modal-body space-y-4">
+                <div class="gk-modal-body space-y-4 max-h-[70vh] overflow-y-auto">
                     <div>
                         <label for="token-name" class="gk-form-label">{{ t("common.name")|default:"Name" }} *</label>
                         <input type="text" id="token-name" name="name" required
@@ -132,15 +131,13 @@
                     </button>
                 </div>
             </form>
-        </div>
     </div>
 </div>
 
 <!-- Token Created Modal (shows the token once) -->
-<div id="token-created-modal" class="gk-modal hidden" role="dialog" aria-modal="true">
-    <div class="gk-modal-backdrop"></div>
-    <div class="gk-modal-container">
-        <div class="gk-modal-content max-w-lg">
+<div id="token-created-modal" class="hidden fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="gk-modal-backdrop fixed inset-0"></div>
+    <div class="gk-modal relative w-full max-w-lg">
             <div class="gk-modal-header">
                 <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("settings.token_created")|default:"Token Created" }}</h3>
             </div>
@@ -171,15 +168,13 @@
             <div class="gk-modal-footer">
                 <button type="button" class="gk-btn-neon gk-modal-close">{{ t("buttons.done")|default:"Done" }}</button>
             </div>
-        </div>
     </div>
 </div>
 
 <!-- Revoke Confirmation Modal -->
-<div id="revoke-modal" class="gk-modal hidden" role="dialog" aria-modal="true">
-    <div class="gk-modal-backdrop"></div>
-    <div class="gk-modal-container">
-        <div class="gk-modal-content max-w-md">
+<div id="revoke-modal" class="hidden fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="gk-modal-backdrop fixed inset-0"></div>
+    <div class="gk-modal relative w-full max-w-md">
             <div class="gk-modal-header">
                 <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("settings.revoke_token")|default:"Revoke Token" }}</h3>
                 <button type="button" class="gk-modal-close" aria-label="Close">
@@ -198,7 +193,6 @@
                 <button type="button" class="gk-btn-secondary gk-modal-close">{{ t("buttons.cancel")|default:"Cancel" }}</button>
                 <button type="button" id="confirm-revoke-btn" class="gk-btn-danger">{{ t("buttons.revoke")|default:"Revoke" }}</button>
             </div>
-        </div>
     </div>
 </div>
 
@@ -232,8 +226,11 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.style.overflow = '';
     }
 
-    // Close modals on backdrop/close button click
-    document.querySelectorAll('.gk-modal').forEach(modal => {
+    // Close modals on backdrop/close button click. Target the outer
+    // overlay wrapper via [role="dialog"] — the inner .gk-modal box is
+    // the content, not the root; hiding it alone would leave the
+    // backdrop visible.
+    document.querySelectorAll('[role="dialog"]').forEach(modal => {
         modal.querySelector('.gk-modal-backdrop')?.addEventListener('click', () => closeModal(modal));
         modal.querySelectorAll('.gk-modal-close').forEach(btn => {
             btn.addEventListener('click', () => closeModal(modal));
@@ -325,10 +322,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('scopes-container');
             container.innerHTML = availableScopes.map(scope => `
                 <label class="flex items-center cursor-pointer p-2 rounded hover:bg-opacity-50" style="background: transparent;">
-                    <input type="checkbox" name="scopes" value="${escapeHtml(scope.name)}" class="gk-checkbox mr-3">
+                    <input type="checkbox" name="scopes" value="${escapeHtml(scope.scope)}" class="gk-checkbox mr-3">
                     <div>
-                        <span class="text-sm font-medium" style="color: var(--gk-text-primary);">${escapeHtml(scope.name)}</span>
-                        <p class="text-xs" style="color: var(--gk-text-muted);">${escapeHtml(scope.description || '')}</p>
+                        <span class="text-sm font-medium" style="color: var(--gk-text-primary);">${escapeHtml(scope.description || scope.scope)}</span>
+                        <p class="text-xs font-mono" style="color: var(--gk-text-muted);">${escapeHtml(scope.scope)}</p>
                     </div>
                 </label>
             `).join('');
@@ -375,12 +372,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify(payload)
             });
 
+            // apiFetch doesn't throw on non-ok — if the server rejected the
+            // request (e.g. invalid scope), data holds the error body. Guard
+            // before treating it as success; otherwise the token input would
+            // render the literal string "undefined".
+            if (!data || !data.token) {
+                throw new Error(data && (data.error || data.message) || '{{ t("messages.error_creating")|default:"Failed to create token" }}');
+            }
+
             closeModal(createModal);
-            
+
             // Show the token
             document.getElementById('new-token-value').value = data.token;
             openModal(createdModal);
-            
+
             // Reload list
             loadTokens();
         } catch (error) {

@@ -21,7 +21,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <!-- Customer Search (server-side) -->
             <form method="get" action="/admin/customer-groups" class="flex gap-2">
-                <div class="flex-1">
+                <div class="gk-flex-input">
                     <label for="search" class="sr-only">Search customers</label>
                     <input
                         type="text"
@@ -38,7 +38,7 @@
             </form>
             <!-- Group Search (client-side) -->
             <div class="flex gap-2">
-                <div class="flex-1">
+                <div class="gk-flex-input">
                     <label for="group-search" class="sr-only">Filter groups</label>
                     <input
                         type="text"

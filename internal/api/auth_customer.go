@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -126,8 +127,15 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		}
 
 		sessionTimeout := constants.DefaultSessionTimeout
-		// Use customer-specific cookie names to avoid conflicts with agent sessions
-		// This allows agent and customer to be logged in simultaneously in the same browser
+		// SECURITY: wipe any pre-existing agent session cookies on customer
+		// login. Allowing both to coexist produced a privilege-escalation path
+		// on plugin routes: ExtractToken falls back to agent cookies outside
+		// /customer/*, so a customer who logged in after a prior agent session
+		// browsed as that agent (admin button visible, /admin accepts the
+		// request). One browser, one identity — revoke the other on sign-in.
+		c.SetCookie("access_token", "", -1, "/", "", false, true)
+		c.SetCookie("auth_token", "", -1, "/", "", false, true)
+		c.SetCookie("session_id", "", -1, "/", "", false, true)
 		c.SetCookie("customer_access_token", token, sessionTimeout, "/", "", false, true)
 		c.SetCookie("customer_auth_token", token, sessionTimeout, "/", "", false, true)
 		// Set a non-httpOnly indicator so JavaScript can detect authentication
@@ -170,12 +178,17 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			}
 		}
 
-		// Always redirect to customer dashboard after login
-		c.Header("HX-Redirect", "/customer")
+		redirectTarget := "/customer"
+		if target := resolveCustomerCaptiveRedirect(user.Login); target != "" {
+			redirectTarget = target
+		}
+
+		c.Header("HX-Redirect", redirectTarget)
 		c.JSON(http.StatusOK, gin.H{
 			"success":      true,
 			"access_token": token,
 			"token_type":   "Bearer",
+			"redirect":     redirectTarget,
 			"user": gin.H{
 				"id":         user.ID,
 				"login":      user.Login,
@@ -186,4 +199,56 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			},
 		})
 	}
+}
+
+// primaryOrgForCustomer returns the org that owns the caller's
+// customer_company, falling back to gk_user_organisation.is_default.
+func primaryOrgForCustomer(db *sql.DB, customerLogin string) int64 {
+	var orgID int64
+	_ = db.QueryRow(database.ConvertPlaceholders(`
+		SELECT o.id FROM customer_user cu
+		  JOIN gk_organisation o ON o.customer_company_id = cu.customer_id
+		 WHERE cu.login = ?
+		 ORDER BY o.id ASC
+		 LIMIT 1`), customerLogin).Scan(&orgID)
+	if orgID != 0 {
+		return orgID
+	}
+	_ = db.QueryRow(database.ConvertPlaceholders(`
+		SELECT org_id FROM gk_user_organisation
+		 WHERE customer_login = ?
+		 ORDER BY is_default DESC, create_time ASC
+		 LIMIT 1`), customerLogin).Scan(&orgID)
+	return orgID
+}
+
+func resolveCustomerCaptiveRedirect(customerLogin string) string {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		return ""
+	}
+	orgID := primaryOrgForCustomer(db, customerLogin)
+	if orgID == 0 {
+		return ""
+	}
+	var cp sql.NullString
+	err = db.QueryRow(database.ConvertPlaceholders(
+		`SELECT captive_plugin FROM gk_organisation WHERE id = ?`), orgID).Scan(&cp)
+	if err != nil || !cp.Valid || cp.String == "" {
+		return ""
+	}
+	var ok int
+	err = db.QueryRow(database.ConvertPlaceholders(`
+		SELECT 1 FROM gk_org_plugin_access opa
+		  JOIN group_customer_user gcu ON gcu.group_id = opa.group_id
+		 WHERE opa.org_id = ? AND opa.plugin_name = ? AND gcu.user_id = ?
+		 LIMIT 1`), orgID, cp.String, customerLogin).Scan(&ok)
+	if err != nil || ok != 1 {
+		return ""
+	}
+	mgr := GetPluginManager()
+	if mgr == nil {
+		return ""
+	}
+	return mgr.LandingPageFor(cp.String)
 }

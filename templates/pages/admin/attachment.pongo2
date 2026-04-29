@@ -35,7 +35,7 @@
     <!-- Search -->
     <div class="gk-card-glow rounded-lg p-4 mb-6">
         <form method="GET" action="/admin/attachments" class="flex gap-4">
-            <div class="flex-1">
+            <div class="gk-flex-input">
                 <input type="text" name="search" value="{{ SearchQuery }}" placeholder="{{ t('admin.modules.attachment.search_placeholder') }}"
                     class="gk-input-neon w-full"
                 />

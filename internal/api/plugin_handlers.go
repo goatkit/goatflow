@@ -20,10 +20,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/auth"
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/models"
-	"github.com/goatkit/goatflow/internal/organisation"
 	"github.com/goatkit/goatflow/internal/plugin"
 	"github.com/goatkit/goatflow/internal/plugin/packaging"
 	"github.com/goatkit/goatflow/internal/repository"
@@ -135,7 +135,7 @@ func HandlePluginCall(c *gin.Context) {
 
 	// Inject org context into params unless the plugin opts out.
 	if !pluginManager.SkipsOrgInjection(pluginName) {
-		if orgID := organisation.OrgIDFromContext(c.Request.Context()); orgID != 0 {
+		if orgID := orgIDFromContext(c); orgID != 0 {
 			args = injectOrgID(args, orgID)
 		}
 	}
@@ -444,11 +444,18 @@ func buildPluginArgs(c *gin.Context, pluginName ...string) json.RawMessage {
 	if email, exists := c.Get("user_email"); exists {
 		args["_user_email"] = email
 	}
-	// user_login is set by session auth; for JWT, fall back to email
+	// _user_login is the canonical login. Different middlewares store it
+	// under different keys (`user_login`, `username`); fall through to
+	// the email if neither is set so the plugin always has something.
 	if login, exists := c.Get("user_login"); exists {
 		args["_user_login"] = login
+	} else if username, exists := c.Get("username"); exists {
+		args["_user_login"] = username
 	} else if email, exists := c.Get("user_email"); exists {
 		args["_user_login"] = email
+	}
+	if customerLogin, exists := c.Get("customer_login"); exists {
+		args["_customer_login"] = customerLogin
 	}
 	if role, exists := c.Get("user_role"); exists {
 		args["_user_role"] = role
@@ -458,10 +465,15 @@ func buildPluginArgs(c *gin.Context, pluginName ...string) json.RawMessage {
 	}
 
 	// Inject org context from the authenticated session unless the plugin opts out.
+	// Use the cookie-aware helper rather than OrgIDFromContext(ctx) because
+	// no middleware currently calls WithOrgID on the request context for plugin
+	// routes. _org_id keeps the legacy key; org_id matches the JSON field name
+	// plugins already unmarshal, so plain-request-struct handlers get it for free.
 	skipOrg := len(pluginName) > 0 && pluginManager != nil && pluginManager.SkipsOrgInjection(pluginName[0])
 	if !skipOrg {
-		if orgID := organisation.OrgIDFromContext(c.Request.Context()); orgID != 0 {
+		if orgID := orgIDFromContext(c); orgID != 0 {
 			args["_org_id"] = orgID
+			args["org_id"] = orgID
 		}
 	}
 
@@ -469,8 +481,8 @@ func buildPluginArgs(c *gin.Context, pluginName ...string) json.RawMessage {
 	return result
 }
 
-// injectOrgID merges _org_id into a JSON args object. If args is nil or not a
-// JSON object, it creates a new object with only _org_id.
+// injectOrgID merges org_id / _org_id into a JSON args object. If args is nil
+// or not a JSON object, it creates a new object with those keys.
 func injectOrgID(args json.RawMessage, orgID int64) json.RawMessage {
 	m := make(map[string]json.RawMessage)
 	if len(args) > 0 {
@@ -478,6 +490,7 @@ func injectOrgID(args json.RawMessage, orgID int64) json.RawMessage {
 	}
 	idBytes, _ := json.Marshal(orgID)
 	m["_org_id"] = idBytes
+	m["org_id"] = idBytes
 	out, _ := json.Marshal(m)
 	return out
 }
@@ -492,8 +505,16 @@ func injectOrgID(args json.RawMessage, orgID int64) json.RawMessage {
 // Session auth is checked first (user_id already set by session middleware), then falls back to JWT.
 func SessionOrJWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// If a prior middleware (e.g. YAML session middleware) already authenticated, continue.
+		// A prior middleware may have already authenticated (e.g. the
+		// YAML session middleware). In that case user_id is set but the
+		// customer-branch keys RequirePluginAccess needs
+		// (customer_login, username, is_customer) may not be — those
+		// were added for this refactor and older middlewares don't know
+		// about them. Extract the JWT separately and backfill the keys
+		// before continuing, so plugin routes never 403 a real customer
+		// with "identity missing".
 		if _, exists := c.Get("user_id"); exists {
+			enrichContextFromToken(c)
 			c.Next()
 			return
 		}
@@ -520,14 +541,63 @@ func SessionOrJWTAuth() gin.HandlerFunc {
 			return
 		}
 
-		// Set user context — same as JWTAuthMiddleware.
-		c.Set("user_id", int(claims.UserID))
-		c.Set("user_email", claims.Email)
-		c.Set("user_role", claims.Role)
-		c.Set("claims", claims)
-		c.Set("isInAdminGroup", claims.IsAdmin)
-
+		setAuthContextFromClaims(c, claims)
 		c.Next()
+	}
+}
+
+// setAuthContextFromClaims sets the full set of auth-related context keys
+// used across the platform. Mirrored by enrichContextFromToken for the
+// "prior middleware already authenticated" path.
+func setAuthContextFromClaims(c *gin.Context, claims *auth.Claims) {
+	c.Set("user_id", int(claims.UserID))
+	c.Set("user_email", claims.Email)
+	c.Set("user_role", claims.Role)
+	c.Set("claims", claims)
+	c.Set("isInAdminGroup", claims.IsAdmin)
+	c.Set("username", claims.Login)
+	c.Set("is_customer", claims.Role == "Customer")
+	if claims.Role == "Customer" {
+		c.Set("customer_login", claims.Login)
+	}
+}
+
+// enrichContextFromToken backfills customer_login / username / is_customer
+// when an earlier middleware authenticated the request but didn't set
+// them. Safe to call repeatedly — every c.Set is a no-op overwrite.
+func enrichContextFromToken(c *gin.Context) {
+	// Prefer claims already on the context. Fall back to extracting the
+	// token fresh if the earlier middleware didn't stash them.
+	var claims *auth.Claims
+	if v, ok := c.Get("claims"); ok {
+		if cl, ok := v.(*auth.Claims); ok {
+			claims = cl
+		}
+	}
+	if claims == nil {
+		if token := ExtractToken(c); token != "" {
+			if mgr := getJWTManager(); mgr != nil {
+				if cl, err := mgr.ValidateToken(token); err == nil {
+					claims = cl
+				}
+			}
+		}
+	}
+	if claims == nil {
+		return
+	}
+	// Only fill in keys that are missing so we don't clobber a prior
+	// middleware's (possibly richer) setting.
+	if _, ok := c.Get("username"); !ok {
+		c.Set("username", claims.Login)
+	}
+	if _, ok := c.Get("is_customer"); !ok {
+		c.Set("is_customer", claims.Role == "Customer")
+	}
+	if claims.Role == "Customer" {
+		if _, ok := c.Get("customer_login"); !ok {
+			c.Set("customer_login", claims.Login)
+		}
 	}
 }
 
@@ -661,6 +731,183 @@ func RequireGroup(groupName string) gin.HandlerFunc {
 		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: requires group " + groupName})
 		c.Abort()
 	}
+}
+
+// RequirePluginAccess gates a plugin route. Admins bypass; customers
+// pass when the active org has a gk_org_plugin_access binding for
+// pluginName and the customer is in one of those groups; agents pass
+// when they're a member of agentGroup.
+func RequirePluginAccess(pluginName, agentGroup string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Platform admin bypass.
+		if role, exists := c.Get("user_role"); exists && role == "Admin" {
+			c.Next()
+			return
+		}
+		if isAdmin, exists := c.Get("isInAdminGroup"); exists && isAdmin == true {
+			c.Next()
+			return
+		}
+
+		db, err := database.GetDB()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "database unavailable"})
+			c.Abort()
+			return
+		}
+
+		role, _ := c.Get("user_role")
+
+		// Customer branch.
+		if role == "Customer" {
+			var login string
+			if v, ok := c.Get("customer_login"); ok {
+				login, _ = v.(string)
+			}
+			if login == "" {
+				if v, ok := c.Get("username"); ok {
+					login, _ = v.(string)
+				}
+			}
+			if login == "" {
+				c.JSON(http.StatusForbidden, gin.H{"error": "customer identity missing"})
+				c.Abort()
+				return
+			}
+			orgID := orgIDFromContext(c)
+			if orgID == 0 {
+				orgID = primaryOrgForCustomer(db, login)
+			}
+			if orgID == 0 {
+				c.JSON(http.StatusForbidden, gin.H{"error": "no organisation membership for this customer"})
+				c.Abort()
+				return
+			}
+			accessRepo := repository.NewPluginAccessRepository(db)
+			ok, err := accessRepo.HasCustomerAccess(orgID, pluginName, login)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check plugin access"})
+				c.Abort()
+				return
+			}
+			if !ok {
+				c.JSON(http.StatusForbidden, gin.H{"error": pluginName + " is not enabled for your organisation"})
+				c.Abort()
+				return
+			}
+			c.Next()
+			return
+		}
+
+		// Agent branch — require membership in the plugin's agent group.
+		userIDRaw, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "authentication required"})
+			c.Abort()
+			return
+		}
+		var userID uint
+		switch v := userIDRaw.(type) {
+		case uint:
+			userID = v
+		case int:
+			userID = uint(v)
+		case int64:
+			userID = uint(v)
+		case float64:
+			userID = uint(v)
+		default:
+			c.JSON(http.StatusForbidden, gin.H{"error": "invalid user identity"})
+			c.Abort()
+			return
+		}
+		groupRepo := repository.NewGroupRepository(db)
+		groups, err := groupRepo.GetUserGroups(userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check group membership"})
+			c.Abort()
+			return
+		}
+		for _, g := range groups {
+			if g == agentGroup {
+				c.Next()
+				return
+			}
+		}
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied: requires group " + agentGroup})
+		c.Abort()
+	}
+}
+
+// HasPluginAccess returns true iff the caller is entitled to use
+// pluginName. Read-only equivalent of RequirePluginAccess, safe to call
+// from template rendering.
+func HasPluginAccess(c *gin.Context, pluginName string) bool {
+	if role, exists := c.Get("user_role"); exists && role == "Admin" {
+		return true
+	}
+	if isAdmin, exists := c.Get("isInAdminGroup"); exists && isAdmin == true {
+		return true
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		return false
+	}
+
+	role, _ := c.Get("user_role")
+	if role == "Customer" {
+		var login string
+		if v, ok := c.Get("customer_login"); ok {
+			login, _ = v.(string)
+		}
+		if login == "" {
+			if v, ok := c.Get("username"); ok {
+				login, _ = v.(string)
+			}
+		}
+		if login == "" {
+			return false
+		}
+		orgID := orgIDFromContext(c)
+		if orgID == 0 {
+			orgID = primaryOrgForCustomer(db, login)
+		}
+		if orgID == 0 {
+			return false
+		}
+		ok, err := repository.NewPluginAccessRepository(db).HasCustomerAccess(orgID, pluginName, login)
+		return err == nil && ok
+	}
+
+	// Agents default to allow — the route itself enforces group
+	// membership on click, and menu items don't carry the agent-group
+	// metadata needed to filter them here yet. Revisit once menu items
+	// carry the gate group alongside PluginName.
+	return true
+}
+
+func orgIDFromContext(c *gin.Context) int64 {
+	for _, k := range []string{"active_org_id", "org_id", "orgID"} {
+		if v, ok := c.Get(k); ok {
+			switch n := v.(type) {
+			case int64:
+				return n
+			case int:
+				return int64(n)
+			case uint:
+				return int64(n)
+			case float64:
+				return int64(n)
+			}
+		}
+	}
+	if cookie, err := c.Cookie("active_org_id"); err == nil && cookie != "" {
+		var n int64
+		_, _ = fmt.Sscan(cookie, &n)
+		return n
+	}
+	return 0
 }
 
 // maxWebhookBodySize is the maximum request body size for webhook endpoints (1MB).

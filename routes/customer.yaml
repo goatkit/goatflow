@@ -10,7 +10,8 @@ metadata:
 spec:
   prefix: /customer
   middleware:
-    - customer-portal  # Loads portal config; handles auth per config
+    - customer-captive-redirect  # Per-org captive plugin: redirects customers whose org is captive to another plugin before customer-portal writes the response.
+    - customer-portal            # Loads portal config; handles auth per config
   routes:
     # Customer dashboard
     - path: /

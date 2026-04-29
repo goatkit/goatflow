@@ -6011,7 +6011,7 @@ Generated from YAML route definitions
 
 **Description:** Customer routes for ticket management and self-service  
 **Prefix:** `/customer`  
-**Middleware:** `customer-portal` 
+**Middleware:** `customer-captive-redirect` `customer-portal` 
 
 
 #### 

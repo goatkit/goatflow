@@ -42,7 +42,7 @@
     <div class="gk-card-glow rounded-lg overflow-hidden mb-6">
         <div class="p-4">
             <form method="get" action="/admin/customer-groups/group/{{ Group.ID }}" class="flex flex-col sm:flex-row gap-4">
-                <div class="flex-1">
+                <div class="gk-flex-input">
                     <label for="search" class="sr-only">{{ t("customer_group.search_customers")|default:"Search customers" }}</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

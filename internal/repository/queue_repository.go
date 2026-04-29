@@ -32,6 +32,7 @@ func (r *QueueRepository) GetByID(id uint) (*models.Queue, error) {
 
 	var queue models.Queue
 	var systemAddressID, salutationID, signatureID sql.NullInt32
+	var unlockTimeout, followUpID, followUpLock sql.NullInt32
 	var comments sql.NullString
 
 	err := r.db.QueryRow(query, id).Scan(
@@ -40,9 +41,9 @@ func (r *QueueRepository) GetByID(id uint) (*models.Queue, error) {
 		&systemAddressID,
 		&salutationID,
 		&signatureID,
-		&queue.FollowUpID,
-		&queue.FollowUpLock,
-		&queue.UnlockTimeout,
+		&followUpID,
+		&followUpLock,
+		&unlockTimeout,
 		&queue.GroupID,
 		&comments,
 		&queue.ValidID,
@@ -60,6 +61,15 @@ func (r *QueueRepository) GetByID(id uint) (*models.Queue, error) {
 	}
 	if signatureID.Valid {
 		queue.SignatureID = int(signatureID.Int32)
+	}
+	if unlockTimeout.Valid {
+		queue.UnlockTimeout = int(unlockTimeout.Int32)
+	}
+	if followUpID.Valid {
+		queue.FollowUpID = int(followUpID.Int32)
+	}
+	if followUpLock.Valid {
+		queue.FollowUpLock = int(followUpLock.Int32)
 	}
 	if comments.Valid {
 		queue.Comment = comments.String
@@ -86,6 +96,7 @@ func (r *QueueRepository) GetByName(name string) (*models.Queue, error) {
 
 	var queue models.Queue
 	var systemAddressID, salutationID, signatureID sql.NullInt32
+	var unlockTimeout, followUpID, followUpLock sql.NullInt32
 	var comments sql.NullString
 
 	err := r.db.QueryRow(query, name).Scan(
@@ -94,9 +105,9 @@ func (r *QueueRepository) GetByName(name string) (*models.Queue, error) {
 		&systemAddressID,
 		&salutationID,
 		&signatureID,
-		&queue.FollowUpID,
-		&queue.FollowUpLock,
-		&queue.UnlockTimeout,
+		&followUpID,
+		&followUpLock,
+		&unlockTimeout,
 		&queue.GroupID,
 		&comments,
 		&queue.ValidID,
@@ -114,6 +125,15 @@ func (r *QueueRepository) GetByName(name string) (*models.Queue, error) {
 	}
 	if signatureID.Valid {
 		queue.SignatureID = int(signatureID.Int32)
+	}
+	if unlockTimeout.Valid {
+		queue.UnlockTimeout = int(unlockTimeout.Int32)
+	}
+	if followUpID.Valid {
+		queue.FollowUpID = int(followUpID.Int32)
+	}
+	if followUpLock.Valid {
+		queue.FollowUpLock = int(followUpLock.Int32)
 	}
 	if comments.Valid {
 		queue.Comment = comments.String
@@ -149,6 +169,7 @@ func (r *QueueRepository) List() ([]*models.Queue, error) {
 		var queue models.Queue
 		var (
 			systemAddressID, salutationID, signatureID sql.NullInt32
+			unlockTimeout, followUpID, followUpLock    sql.NullInt32
 			comments, groupName                        sql.NullString
 		)
 
@@ -158,9 +179,9 @@ func (r *QueueRepository) List() ([]*models.Queue, error) {
 			&systemAddressID,
 			&salutationID,
 			&signatureID,
-			&queue.FollowUpID,
-			&queue.FollowUpLock,
-			&queue.UnlockTimeout,
+			&followUpID,
+			&followUpLock,
+			&unlockTimeout,
 			&queue.GroupID,
 			&comments,
 			&queue.ValidID,
@@ -182,6 +203,15 @@ func (r *QueueRepository) List() ([]*models.Queue, error) {
 		}
 		if signatureID.Valid {
 			queue.SignatureID = int(signatureID.Int32)
+		}
+		if unlockTimeout.Valid {
+			queue.UnlockTimeout = int(unlockTimeout.Int32)
+		}
+		if followUpID.Valid {
+			queue.FollowUpID = int(followUpID.Int32)
+		}
+		if followUpLock.Valid {
+			queue.FollowUpLock = int(followUpLock.Int32)
 		}
 		if comments.Valid {
 			queue.Comment = comments.String
