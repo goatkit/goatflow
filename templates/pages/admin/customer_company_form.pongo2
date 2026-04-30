@@ -259,7 +259,7 @@
         </div>
 
         <div class="mt-6 flex justify-end">
-          <button type="submit" class="gk-btn-neon">Save Portal Settings</button>
+          <button type="submit" class="gk-btn-neon">{{ t("customer_company_form.save_portal_settings")|default:"Save Portal Settings" }}</button>
         </div>
       </form>
       <script>
@@ -280,7 +280,7 @@
 
       {# Plugin Capture — per-org setting stored on gk_organisation.captive_plugin. #}
       <div class="mt-10" style="border-top: 1px solid var(--gk-border-default); padding-top: 2rem;">
-        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">Plugin Capture</h3>
+        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("customer_company_form.plugin_capture")|default:"Plugin Capture" }}</h3>
         <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">
           Replace the standard customer portal for this company with a single plugin.
           When set, customers of this company are redirected to the chosen plugin on login
@@ -310,7 +310,7 @@
             </p>
           </div>
           <div>
-            <button type="button" id="captive-save" class="gk-btn-neon">Save Capture Setting</button>
+            <button type="button" id="captive-save" class="gk-btn-neon">{{ t("customer_company_form.save_capture_setting")|default:"Save Capture Setting" }}</button>
             <span id="captive-status" class="ml-3 text-sm" style="color: var(--gk-text-muted);"></span>
           </div>
         </div>

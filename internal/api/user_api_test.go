@@ -452,3 +452,33 @@ func TestUserAPI(t *testing.T) {
 		})
 	})
 }
+
+func TestUserMeAPI(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("should accept uint user id from auth middleware", func(t *testing.T) {
+		router := gin.New()
+		router.Use(func(c *gin.Context) {
+			c.Set("user_id", uint(1))
+			c.Next()
+		})
+		router.GET("/api/v1/users/me", HandleUserMeAPI)
+
+		req := httptest.NewRequest("GET", "/api/v1/users/me", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		assert.NotEqual(t, http.StatusInternalServerError, w.Code)
+		if w.Code == http.StatusOK {
+			var response map[string]interface{}
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			require.NoError(t, err)
+			assert.Equal(t, true, response["success"])
+
+			data := response["data"].(map[string]interface{})
+			assert.NotNil(t, data["id"])
+			assert.NotNil(t, data["login"])
+			assert.NotNil(t, data["email"])
+		}
+	})
+}

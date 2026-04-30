@@ -1912,7 +1912,10 @@
     "branding": "Markengestaltung",
     "company_details": "Firmendetails",
     "features": "Funktionen",
-    "portal_settings": "Portal-Einstellungen"
+    "portal_settings": "Portal-Einstellungen",
+    "save_portal_settings": "Portal-Einstellungen speichern",
+    "plugin_capture": "Plugin-Erfassung",
+    "save_capture_setting": "Erfassungseinstellung speichern"
   },
   "customer_company_services": {
     "heading": "Kundenfirma Services",

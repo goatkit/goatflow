@@ -1932,7 +1932,10 @@
     "branding": "Branding",
     "company_details": "Company De' Sov",
     "features": "Features",
-    "portal_settings": "Portal Qap"
+    "portal_settings": "Portal Qap",
+    "save_portal_settings": "Portal Qap pol",
+    "plugin_capture": "Plugin jon",
+    "save_capture_setting": "jon Qap pol"
   },
   "customer_company_services": {
     "heading": "je'wI' Company Services",

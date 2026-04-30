@@ -34,7 +34,7 @@ RUN go mod download && go mod verify
 RUN go run github.com/playwright-community/playwright-go/cmd/playwright@v0.5200.0 install --with-deps chromium \
     && cp -r /root/.cache/ms-playwright-go /opt/playwright-cache/ \
     && cp -r /root/.cache/ms-playwright/* /opt/playwright-cache/browsers/ 2>/dev/null || true \
-    && chmod -R 755 /opt/playwright-cache
+    && chmod -R a+rwX /opt/playwright-cache
 
 # Set driver path for playwright-go to find at runtime
 ENV PLAYWRIGHT_DRIVER_PATH=/opt/playwright-cache/ms-playwright-go/1.52.0

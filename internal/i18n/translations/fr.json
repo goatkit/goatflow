@@ -1912,7 +1912,10 @@
     "branding": "Breting",
     "company_details": "Entreprise Détails",
     "features": "Features",
-    "portal_settings": "Poutal Paramètres"
+    "portal_settings": "Poutal Paramètres",
+    "save_portal_settings": "Enregistrer les paramètres du portail",
+    "plugin_capture": "Capture de plugin",
+    "save_capture_setting": "Enregistrer le paramètre de capture"
   },
   "customer_company_services": {
     "heading": "Client Entreprise Services",

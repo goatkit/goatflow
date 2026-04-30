@@ -24,6 +24,7 @@ import (
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/organisation"
 	"github.com/goatkit/goatflow/internal/plugin"
 	"github.com/goatkit/goatflow/internal/plugin/packaging"
 	"github.com/goatkit/goatflow/internal/repository"
@@ -901,6 +902,9 @@ func orgIDFromContext(c *gin.Context) int64 {
 				return int64(n)
 			}
 		}
+	}
+	if orgID := organisation.OrgIDFromContext(c.Request.Context()); orgID != 0 {
+		return orgID
 	}
 	if cookie, err := c.Cookie("active_org_id"); err == nil && cookie != "" {
 		var n int64

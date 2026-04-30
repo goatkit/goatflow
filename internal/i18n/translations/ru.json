@@ -1912,7 +1912,10 @@
     "branding": "Branding",
     "company_details": "Компания Детали",
     "features": "Features",
-    "portal_settings": "Portal Настройки"
+    "portal_settings": "Portal Настройки",
+    "save_portal_settings": "Сохранить настройки портала",
+    "plugin_capture": "Захват плагина",
+    "save_capture_setting": "Сохранить настройку захвата"
   },
   "customer_company_services": {
     "heading": "Клиент Компания Сервисы",

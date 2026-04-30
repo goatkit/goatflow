@@ -3511,7 +3511,10 @@
     "features": "Features",
     "assigned_services": "Assigned Services",
     "portal_settings": "Portal Settings",
-    "company_details": "Company Details"
+    "company_details": "Company Details",
+    "save_portal_settings": "Save Portal Settings",
+    "plugin_capture": "Plugin Capture",
+    "save_capture_setting": "Save Capture Setting"
   },
   "queue_detail": {
     "tickets_in_queue": "Tickets in this queue",

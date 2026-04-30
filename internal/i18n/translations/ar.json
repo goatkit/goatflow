@@ -1912,7 +1912,10 @@
     "branding": "العلامة التجارية",
     "company_details": "تفاصيل الشركة",
     "features": "الميزات",
-    "portal_settings": "إعدادات البوابة"
+    "portal_settings": "إعدادات البوابة",
+    "save_portal_settings": "حفظ إعدادات البوابة",
+    "plugin_capture": "التقاط الإضافة",
+    "save_capture_setting": "حفظ إعداد الالتقاط"
   },
   "customer_company_services": {
     "heading": "خدمات شركة العميل",

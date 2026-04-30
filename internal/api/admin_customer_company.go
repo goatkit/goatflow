@@ -898,6 +898,29 @@ func handleAdminUpdateCustomerPortalSettings(db *sql.DB) gin.HandlerFunc {
 			"footer":  c.PostForm("override_footer_text") == "1",
 			"landing": c.PostForm("override_landing_page") == "1",
 		}
+		hasOverrideControls := false
+		for _, name := range []string{"override_enabled", "override_login_required", "override_title", "override_footer_text", "override_landing_page"} {
+			if _, ok := c.Request.PostForm[name]; ok {
+				hasOverrideControls = true
+				break
+			}
+		}
+		if !hasOverrideControls {
+			// Backwards-compatible API shape: older callers posted the
+			// effective field values directly, before the UI gained explicit
+			// per-field override checkboxes.
+			for key, field := range map[string]string{
+				"enabled": "enabled",
+				"login":   "login_required",
+				"title":   "title",
+				"footer":  "footer_text",
+				"landing": "landing_page",
+			} {
+				if _, ok := c.Request.PostForm[field]; ok {
+					overrides[key] = true
+				}
+			}
+		}
 		if overrides["enabled"] {
 			cfg.Enabled = parseCheckbox(c, "enabled")
 		}

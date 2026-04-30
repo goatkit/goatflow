@@ -1912,7 +1912,10 @@
     "branding": "Branding",
     "company_details": "شرکت جزئیات",
     "features": "Features",
-    "portal_settings": "Portal تنظیمات"
+    "portal_settings": "Portal تنظیمات",
+    "save_portal_settings": "ذخیره تنظیمات پورتال",
+    "plugin_capture": "گرفتن افزونه",
+    "save_capture_setting": "ذخیره تنظیم گرفتن"
   },
   "customer_company_services": {
     "heading": "مشتری شرکت Services",

@@ -1912,7 +1912,10 @@
     "branding": "Brying",
     "company_details": "Empresa Detalles",
     "features": "Features",
-    "portal_settings": "Potal Configuración"
+    "portal_settings": "Potal Configuración",
+    "save_portal_settings": "Guardar configuración del portal",
+    "plugin_capture": "Captura de plugin",
+    "save_capture_setting": "Guardar configuración de captura"
   },
   "customer_company_services": {
     "heading": "Cliente Empresa Servicios",

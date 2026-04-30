@@ -22,7 +22,7 @@ import (
 //	@Router			/users/me [get]
 func HandleUserMeAPI(c *gin.Context) {
 	// Get user ID from context (set by auth middleware)
-	userIDValue, exists := c.Get("user_id")
+	_, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
@@ -31,9 +31,10 @@ func HandleUserMeAPI(c *gin.Context) {
 		return
 	}
 
-	// Convert user ID to int
-	userID, ok := userIDValue.(int)
-	if !ok {
+	// Convert user ID to int. JWT/session middleware commonly stores this
+	// as uint, while tests and API-token paths may use int.
+	userID := GetUserIDFromCtx(c, 0)
+	if userID == 0 {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   "Invalid user ID in context",
@@ -51,20 +52,25 @@ func HandleUserMeAPI(c *gin.Context) {
 		return
 	}
 
-	// Query user information
+	// Query user information. The `users` table holds agents/admins
+	// and has no email column — only `customer_user` carries email.
+	// We surface the login as the email field for response shape
+	// continuity (downstream UI/clients expect `email` to be present).
+	// Selecting a non-existent column here was returning a generic
+	// "Database error" 500 to every authenticated /users/me caller
+	// because the underlying error was being swallowed.
 	var user struct {
-		ID         int            `json:"id"`
-		Login      string         `json:"login"`
-		Email      sql.NullString `json:"-"`
-		FirstName  string         `json:"first_name"`
-		LastName   string         `json:"last_name"`
-		ValidID    int            `json:"valid_id"`
-		CreateTime sql.NullTime   `json:"create_time"`
-		ChangeTime sql.NullTime   `json:"change_time"`
+		ID         int          `json:"id"`
+		Login      string       `json:"login"`
+		FirstName  string       `json:"first_name"`
+		LastName   string       `json:"last_name"`
+		ValidID    int          `json:"valid_id"`
+		CreateTime sql.NullTime `json:"create_time"`
+		ChangeTime sql.NullTime `json:"change_time"`
 	}
 
 	query := database.ConvertPlaceholders(`
-		SELECT id, login, email, first_name, last_name, valid_id, create_time, change_time
+		SELECT id, login, first_name, last_name, valid_id, create_time, change_time
 		FROM users
 		WHERE id = ?
 	`)
@@ -72,7 +78,6 @@ func HandleUserMeAPI(c *gin.Context) {
 	err = db.QueryRow(query, userID).Scan(
 		&user.ID,
 		&user.Login,
-		&user.Email,
 		&user.FirstName,
 		&user.LastName,
 		&user.ValidID,
@@ -95,11 +100,9 @@ func HandleUserMeAPI(c *gin.Context) {
 		return
 	}
 
-	// Prepare email for response
-	emailStr := user.Login // Default to login if email is null
-	if user.Email.Valid {
-		emailStr = user.Email.String
-	}
+	// `users` has no email column; surface the login under the email
+	// field so callers (incl. the MCP get_user_me tool) keep working.
+	emailStr := user.Login
 
 	// Get user's groups
 	groupQuery := database.ConvertPlaceholders(`

@@ -3211,7 +3211,10 @@
     "features": "Функції",
     "assigned_services": "Призначені послуги",
     "portal_settings": "Налаштування порталу",
-    "company_details": "Деталі компанії"
+    "company_details": "Деталі компанії",
+    "save_portal_settings": "Зберегти налаштування порталу",
+    "plugin_capture": "Захоплення плагіна",
+    "save_capture_setting": "Зберегти налаштування захоплення"
   },
   "queue_detail": {
     "tickets_in_queue": "Заявки в цій черзі",

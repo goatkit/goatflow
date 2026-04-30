@@ -1941,7 +1941,10 @@
     "branding": "Branding",
     "company_details": "کمپنی تفصیلات",
     "features": "Features",
-    "portal_settings": "Portal ترتیبات"
+    "portal_settings": "Portal ترتیبات",
+    "save_portal_settings": "پورٹل ترتیبات محفوظ کریں",
+    "plugin_capture": "پلگ اِن کیپچر",
+    "save_capture_setting": "کیپچر ترتیب محفوظ کریں"
   },
   "customer_company_services": {
     "heading": "گاہک کمپنی Services",

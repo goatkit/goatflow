@@ -1912,7 +1912,10 @@
     "branding": "Branding",
     "company_details": "公司 详情",
     "features": "Features",
-    "portal_settings": "Portal 设置"
+    "portal_settings": "Portal 设置",
+    "save_portal_settings": "保存门户设置",
+    "plugin_capture": "插件捕获",
+    "save_capture_setting": "保存捕获设置"
   },
   "customer_company_services": {
     "heading": "客户 公司 服务",

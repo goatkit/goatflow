@@ -1912,7 +1912,10 @@
     "branding": "ブランディング",
     "company_details": "会社詳細",
     "features": "機能",
-    "portal_settings": "ポータル設定"
+    "portal_settings": "ポータル設定",
+    "save_portal_settings": "ポータル設定を保存",
+    "plugin_capture": "プラグインキャプチャ",
+    "save_capture_setting": "キャプチャ設定を保存"
   },
   "customer_company_services": {
     "heading": "顧客会社サービス",
