@@ -143,6 +143,18 @@ var manifestJSON = `{
       "timeout": "2m"
     }
   ],
+  "resources": {
+    "memory_mb": 32,
+    "call_timeout": "15s",
+    "permissions": [
+      {
+        "type": "db",
+        "access": "read",
+        "scope": ["ticket", "ticket_state", "ticket_state_type", "queue", "ticket_priority", "ticket_type", "users", "group_user", "groups", "time_accounting"]
+      },
+      {"type": "email"}
+    ]
+  },
   "i18n": {
     "en": {
       "stats.title": "Statistics",
@@ -258,6 +270,8 @@ func gk_call(fnPtr, fnLen, argsPtr, argsLen uint32) uint64 {
 		result = handleWidgetTimeTracking()
 	case "report_email":
 		result = handleReportEmail(args)
+	case "__health_ping__":
+		result = handleHealthPing()
 	default:
 		result = `{"error":"unknown function: ` + fn + `"}`
 	}
@@ -308,6 +322,18 @@ func dbQuery(query string, args ...any) ([]map[string]any, error) {
 	var rows []map[string]any
 	json.Unmarshal(resp, &rows)
 	return rows, nil
+}
+
+func handleHealthPing() string {
+	data, _ := json.Marshal(map[string]any{
+		"status":  "ok",
+		"runtime": "tinygo-wasm",
+		"version": "2.0.0",
+		"routes":  10,
+		"widgets": 5,
+		"jobs":    1,
+	})
+	return string(data)
 }
 
 // Request args parsing
@@ -644,8 +670,8 @@ func handleTimeline(argsJSON string) string {
 func handleWidgetOverview(argsJSON string) string {
 	// Parse RBAC queue context from args (passed by host via GetPluginWidgets)
 	var widgetArgs struct {
-		IsQueueAdmin     bool   `json:"is_queue_admin"`
-		AccessibleQueues []any  `json:"accessible_queue_ids"`
+		IsQueueAdmin     bool  `json:"is_queue_admin"`
+		AccessibleQueues []any `json:"accessible_queue_ids"`
 	}
 	json.Unmarshal([]byte(argsJSON), &widgetArgs)
 

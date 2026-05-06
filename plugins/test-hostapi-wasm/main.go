@@ -34,7 +34,19 @@ var manifestJSON = `{
   "license":"Apache-2.0",
   "routes":[
     {"method":"GET","path":"/api/plugins/test-hostapi/test","handler":"test"}
-  ]
+  ],
+  "resources":{
+    "memory_mb":16,
+    "call_timeout":"10s",
+    "permissions":[
+      {"type":"db","access":"readwrite","scope":["test"]},
+      {"type":"cache","access":"readwrite"},
+      {"type":"http","scope":["example.com"]},
+      {"type":"email","scope":["@example.com"]},
+      {"type":"config","access":"read","scope":["app.name"]},
+      {"type":"plugin_call","scope":["other"]}
+    ]
+  }
 }`
 
 //export gk_malloc
@@ -63,6 +75,8 @@ func gk_call(fnPtr, fnLen, argsPtr, argsLen uint32) uint64 {
 		result = runTests()
 	case "test_log":
 		result = testLog()
+	case "__health_ping__":
+		result = healthPing()
 	default:
 		result = `{"error":"unknown"}`
 	}
@@ -116,6 +130,16 @@ func testLog() string {
 	log(LogWarn, "Warn from WASM")
 	log(LogError, "Error from WASM")
 	data, _ := json.Marshal(map[string]any{"logged": 4})
+	return string(data)
+}
+
+func healthPing() string {
+	data, _ := json.Marshal(map[string]any{
+		"status":  "ok",
+		"runtime": "tinygo-wasm",
+		"version": "1.0.0",
+		"purpose": "hostapi-smoke-test",
+	})
 	return string(data)
 }
 

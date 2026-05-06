@@ -2,3 +2,8 @@ name: hello-grpc
 version: "1.0.0"
 runtime: grpc
 binary: hello-grpc
+resources:
+  memory_mb: 64
+  call_timeout: 5s
+  init_timeout: 5s
+  shutdown_timeout: 2s

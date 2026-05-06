@@ -18,6 +18,10 @@ var manifestJSON = `{
   "license":"Apache-2.0",
   "routes":[{"method":"GET","path":"/api/plugins/hello-wasm","handler":"hello","description":"Returns a hello message"}],
   "widgets":[{"id":"hello-wasm-widget","title":"Hello WASM","handler":"widget","location":"dashboard","size":"small","refreshable":true}],
+  "resources":{
+    "memory_mb":16,
+    "call_timeout":"5s"
+  },
   "i18n":{
     "namespace":"hello_wasm",
     "languages":["en","de","es","fr"],
@@ -48,7 +52,7 @@ func gk_register() uint64 {
 	ptr := gk_malloc(uint32(len(manifestJSON)))
 	dst := unsafe.Slice((*byte)(unsafe.Pointer(uintptr(ptr))), len(manifestJSON))
 	copy(dst, manifestJSON)
-	
+
 	// Return packed ptr|len (ptr in high 32 bits, len in low 32 bits)
 	return (uint64(ptr) << 32) | uint64(len(manifestJSON))
 }
@@ -66,6 +70,8 @@ func gk_call(fnPtr, fnLen, argsPtr, argsLen uint32) uint64 {
 		result = handleHello(args)
 	case "widget":
 		result = handleWidget()
+	case "__health_ping__":
+		result = handleHealthPing()
 	default:
 		result = `{"error":"unknown function: ` + fn + `"}`
 	}
@@ -87,7 +93,7 @@ func readString(ptr, length uint32) string {
 
 func handleHello(argsJSON string) string {
 	name := "World"
-	
+
 	if argsJSON != "" {
 		var args map[string]any
 		if err := json.Unmarshal([]byte(argsJSON), &args); err == nil {
@@ -109,6 +115,15 @@ func handleWidget() string {
 	html := `<div class="hello-wasm-widget"><p class="text-lg font-semibold">🦀 Hello from WASM!</p><p class="text-sm text-gray-500">This widget runs in a sandboxed WASM module.</p></div>`
 	result := map[string]string{"html": html}
 	data, _ := json.Marshal(result)
+	return string(data)
+}
+
+func handleHealthPing() string {
+	data, _ := json.Marshal(map[string]any{
+		"status":  "ok",
+		"runtime": "tinygo-wasm",
+		"version": "1.0.0",
+	})
 	return string(data)
 }
 

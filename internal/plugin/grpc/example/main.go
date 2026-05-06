@@ -15,6 +15,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/goatkit/goatflow/internal/plugin"
 	grpcplugin "github.com/goatkit/goatflow/internal/plugin/grpc"
@@ -22,7 +23,8 @@ import (
 
 // HelloGRPCPlugin is a simple example gRPC plugin.
 type HelloGRPCPlugin struct {
-	config map[string]string
+	config    map[string]string
+	startedAt time.Time
 }
 
 // GKRegister returns the plugin registration.
@@ -34,6 +36,12 @@ func (p *HelloGRPCPlugin) GKRegister() (*plugin.GKRegistration, error) {
 		Author:      "GoatFlow Team",
 		License:     "Apache-2.0",
 		Homepage:    "https://goatflow.io",
+		Resources: &plugin.ResourceRequest{
+			MemoryMB:        64,
+			CallTimeout:     "5s",
+			InitTimeout:     "5s",
+			ShutdownTimeout: "2s",
+		},
 
 		Widgets: []plugin.WidgetSpec{
 			{
@@ -61,6 +69,7 @@ func (p *HelloGRPCPlugin) GKRegister() (*plugin.GKRegistration, error) {
 // Init initializes the plugin.
 func (p *HelloGRPCPlugin) Init(config map[string]string) error {
 	p.config = config
+	p.startedAt = time.Now()
 	fmt.Println("[hello-grpc] Initialized with config:", config)
 	return nil
 }
@@ -81,6 +90,14 @@ func (p *HelloGRPCPlugin) Call(fn string, args json.RawMessage) (json.RawMessage
 			"status":  "running",
 			"version": "1.0.0",
 			"type":    "grpc",
+		})
+
+	case plugin.HealthPingFunc:
+		return json.Marshal(map[string]any{
+			"status":     "ok",
+			"runtime":    "grpc",
+			"version":    "1.0.0",
+			"uptime_sec": int64(time.Since(p.startedAt).Seconds()),
 		})
 
 	default:
