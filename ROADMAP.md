@@ -580,11 +580,11 @@ Plugins receive org context automatically from the authenticated session, elimin
 
 ### 0.8.3 - Target: June 2026
 
-**Plugin Manager — Auto-Recovery**
-- [ ] Auto-restart on health-check failure with exponential backoff and crash-loop guard
-- [ ] Admin UI widget showing per-plugin health status (consumes `Manager.AllHealthStatuses()`)
-- [ ] Optional `Ping()` protocol method for plugins to return rich health payloads (current `__health_ping__` contract stays — any response = alive)
-- [ ] Parallel shutdown inside `ShutdownAll` to bound total release time regardless of plugin count
+**Plugin Manager — Auto-Recovery** ✅
+- [x] Auto-restart on health-check failure with exponential backoff (5s → 5min) and crash-loop guard (>5 attempts in 10min → abandoned, requires admin reset). Loader wired as `Restarter` via `Manager.SetRestarter`; opt out with `GOATFLOW_PLUGIN_AUTO_RESTART=false`.
+- [x] Admin UI widget showing per-plugin health status — `GET /api/v1/plugins/health`, Health column + Healthy/Unhealthy summary cards on `/admin/plugins`, "Reset" action for crash-loop-abandoned plugins (`POST /api/v1/plugins/:name/reset-crashloop`).
+- [x] Rich health payloads — plugins that return JSON from their `__health_ping__` handler get it surfaced on `PluginHealth.Payload`. Existing "any response = alive" contract preserved.
+- [x] Parallel shutdown inside `ShutdownAll` — total time is now max(per-plugin timeout) instead of sum. Verified by `TestShutdownAllParallel`.
 
 **Plugin UI System — Offline & Admin**
 - [ ] Service worker / offline support with configurable caching strategy (per-plugin CacheRoutes)

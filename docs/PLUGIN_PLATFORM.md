@@ -258,6 +258,16 @@ When `GOATFLOW_PLUGIN_ISOLATION=k8s`, gRPC plugins run as Kubernetes pods instea
 
 The generated manifests (`internal/plugin/grpc/k8s_isolation.go`) include Deployment + Service + NetworkPolicy. Sidecars are rendered as additional containers within the pod spec, sharing the pod network — so the plugin connects to its sidecars via `localhost`.
 
+### Health Monitoring & Auto-Recovery
+
+Independent of the K8s controller-managed restarts, the in-process plugin manager runs its own liveness loop suitable for both single-binary and clustered deployments:
+
+- **Probe** — every 60s the manager invokes the reserved function `__health_ping__` on each loaded plugin via the standard `Call` path. Any response within 5s counts as alive (including "unknown function" errors from plugins that don't implement the handler); only a context deadline being exceeded three consecutive times flips a plugin unhealthy. Plugins can opt into rich JSON payloads — see [AUTHOR_GUIDE.md](plugins/AUTHOR_GUIDE.md#health--auto-recovery).
+- **Auto-restart** — when wired to a `Restarter` (the loader implements it via `Reload`), unhealthy plugins are restarted with exponential backoff (5s → 5min). Successful recovery resets the backoff state.
+- **Crash-loop guard** — more than five restart attempts inside a 10-minute rolling window flips `PluginHealth.CrashLoopAbandoned` true and stops further auto-restarts. Admins clear the flag from `/admin/plugins` (Reset button) or via `POST /api/v1/plugins/:name/reset-crashloop`, which is the signal that the underlying problem has been fixed.
+- **Visibility** — `Manager.AllHealthStatuses()` returns per-plugin health (healthy flag, last error, restart attempts, payload, abandonment state) and is rendered as a Health column plus summary cards on the admin Plugins page. The same data is available as JSON at `GET /api/v1/plugins/health`.
+- **Toggles** — disable health checking entirely with `GOATFLOW_PLUGIN_HEALTH_CHECK=false`; observe-only mode (probe + log, no restarts) with `GOATFLOW_PLUGIN_AUTO_RESTART=false`.
+
 ### Plugin Signing
 
 Optional ed25519 signature verification for plugin binaries (`internal/plugin/signing/signing.go`):

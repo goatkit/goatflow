@@ -163,6 +163,39 @@ func HandlePluginCall(c *gin.Context) {
 	c.Data(http.StatusOK, "application/json", result)
 }
 
+// HandlePluginHealth returns the live health snapshot for every loaded
+// plugin. Used by the admin UI's plugin-health widget to show which
+// plugins are healthy, in restart backoff, or abandoned. Includes the
+// optional rich payload that plugins return from their __health_ping__
+// handler.
+// GET /api/v1/plugins/health
+func HandlePluginHealth(c *gin.Context) {
+	if pluginManager == nil {
+		c.JSON(http.StatusOK, gin.H{"plugins": map[string]any{}})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"plugins": pluginManager.AllHealthStatuses()})
+}
+
+// HandlePluginResetCrashLoop clears the crash-loop-abandoned flag for a
+// plugin so auto-recovery can resume. Called by the admin UI after the
+// operator has fixed the underlying problem (replaced a broken binary,
+// patched a config error, etc.).
+// POST /api/v1/plugins/:name/reset-crashloop
+func HandlePluginResetCrashLoop(c *gin.Context) {
+	if pluginManager == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Plugin system not initialized"})
+		return
+	}
+	name := c.Param("name")
+	if !pluginManager.ResetCrashLoop(name) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "plugin not found"})
+		return
+	}
+	plugin.GetLogBuffer().Log(name, "info", "Crash-loop guard reset by admin", nil)
+	c.JSON(http.StatusOK, gin.H{"status": "reset"})
+}
+
 // HandlePluginEnable enables a plugin.
 // POST /api/v1/plugins/:name/enable
 func HandlePluginEnable(c *gin.Context) {
@@ -630,6 +663,7 @@ func RegisterPluginAPIRoutes(r *gin.RouterGroup) {
 	plugins.Use(SessionOrJWTAuth())
 	{
 		plugins.GET("", HandlePluginList)
+		plugins.GET("/health", HandlePluginHealth)
 		plugins.POST("/:name/call/:fn", HandlePluginCall)
 		plugins.GET("/widgets", HandlePluginWidgetList)
 		plugins.GET("/:name/widgets/:id", HandlePluginWidget)
@@ -643,6 +677,7 @@ func RegisterPluginAPIRoutes(r *gin.RouterGroup) {
 	{
 		pluginAdmin.POST("/:name/enable", HandlePluginEnable)
 		pluginAdmin.POST("/:name/disable", HandlePluginDisable)
+		pluginAdmin.POST("/:name/reset-crashloop", HandlePluginResetCrashLoop)
 		pluginAdmin.POST("/upload", HandlePluginUpload)
 		pluginAdmin.GET("/logs", HandlePluginLogs)
 		pluginAdmin.DELETE("/logs", HandleClearPluginLogs)

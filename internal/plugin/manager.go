@@ -41,6 +41,11 @@ type Manager struct {
 	// healthCheckerStarted guards StartHealthChecker so it can't be
 	// spun up twice. See internal/plugin/health.go for the check loop.
 	healthCheckerStarted bool
+
+	// restarter is the auto-recovery hook (loader.Reload). When non-nil,
+	// the health checker will dispatch restart attempts for unhealthy
+	// plugins with exponential backoff. Set via SetRestarter.
+	restarter Restarter
 }
 
 type registeredPlugin struct {
@@ -1195,7 +1200,7 @@ func (m *Manager) InstalledPluginNames() []string {
 // misbehaving plugin wedge ShutdownAll for too long.
 const defaultShutdownTimeout = 10 * time.Second
 
-// ShutdownAll shuts down all plugins gracefully, applying a per-plugin
+// ShutdownAll shuts down all plugins in parallel, applying a per-plugin
 // timeout derived from the plugin's ResourcePolicy.ShutdownTimeout. A
 // plugin that doesn't honour its own deadline is force-killed by the
 // underlying supervisor (GRPCPlugin.Shutdown falls through to Kill()).
@@ -1206,31 +1211,51 @@ const defaultShutdownTimeout = 10 * time.Second
 // shutdown time (e.g. 30s for the whole process) regardless of how
 // many plugins are registered.
 //
-// Currently serial — plugins aren't shut down in parallel. With a
-// handful of plugins and 5-10s per plugin budget, total worst-case
-// is bounded and acceptable. Parallelising would be nice polish but
-// would need care around the manager lock and is out of scope here.
+// Plugins are shut down concurrently so the worst-case total is the
+// max per-plugin timeout, not the sum. With N plugins each at 10s the
+// old serial path took 10N seconds; the parallel path takes ~10s.
 func (m *Manager) ShutdownAll(ctx context.Context) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	plugins := m.plugins
+	m.plugins = make(map[string]*registeredPlugin)
+	policies := make(map[string]*ResourcePolicy, len(m.policies))
+	for k, v := range m.policies {
+		policies[k] = v
+	}
+	m.mu.Unlock()
 
-	var errs []error
-	for name, rp := range m.plugins {
+	if len(plugins) == 0 {
+		return nil
+	}
+
+	var (
+		wg      sync.WaitGroup
+		errsMu  sync.Mutex
+		errs    []error
+	)
+
+	for name, rp := range plugins {
 		timeout := defaultShutdownTimeout
-		if pol, ok := m.policies[name]; ok && pol != nil && pol.ShutdownTimeout != "" {
+		if pol, ok := policies[name]; ok && pol != nil && pol.ShutdownTimeout != "" {
 			if parsed, parseErr := time.ParseDuration(pol.ShutdownTimeout); parseErr == nil && parsed > 0 {
 				timeout = parsed
 			}
 		}
 
-		pctx, cancel := context.WithTimeout(ctx, timeout)
-		if err := rp.plugin.Shutdown(pctx); err != nil {
-			errs = append(errs, fmt.Errorf("plugin %q: %w", name, err))
-		}
-		cancel()
+		wg.Add(1)
+		go func(name string, p Plugin, timeout time.Duration) {
+			defer wg.Done()
+			pctx, cancel := context.WithTimeout(ctx, timeout)
+			defer cancel()
+			if err := p.Shutdown(pctx); err != nil {
+				errsMu.Lock()
+				errs = append(errs, fmt.Errorf("plugin %q: %w", name, err))
+				errsMu.Unlock()
+			}
+		}(name, rp.plugin, timeout)
 	}
 
-	m.plugins = make(map[string]*registeredPlugin)
+	wg.Wait()
 
 	if len(errs) > 0 {
 		return fmt.Errorf("shutdown errors: %v", errs)

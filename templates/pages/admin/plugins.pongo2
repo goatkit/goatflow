@@ -40,7 +40,7 @@
     </header>
 
     <!-- Stats Overview -->
-    <div class="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8">
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5 mb-8">
         <div class="gk-card p-5">
             <div class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("admin.plugins_total")|default:"Total Plugins" }}</div>
             <div class="mt-2 text-2xl font-bold" style="color: var(--gk-text-primary);" id="stat-total">-</div>
@@ -52,6 +52,14 @@
         <div class="gk-card p-5">
             <div class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("admin.plugins_disabled")|default:"Disabled" }}</div>
             <div class="mt-2 text-2xl font-bold" style="color: var(--gk-warning);" id="stat-disabled">-</div>
+        </div>
+        <div class="gk-card p-5">
+            <div class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("admin.plugins_healthy")|default:"Healthy" }}</div>
+            <div class="mt-2 text-2xl font-bold" style="color: var(--gk-success);" id="stat-healthy">-</div>
+        </div>
+        <div class="gk-card p-5">
+            <div class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("admin.plugins_unhealthy")|default:"Unhealthy" }}</div>
+            <div class="mt-2 text-2xl font-bold" style="color: var(--gk-error);" id="stat-unhealthy">-</div>
         </div>
     </div>
 
@@ -147,6 +155,7 @@
                             </span>
                         </div>
                     </th>
+                    <th scope="col">{{ t("admin.plugin_health")|default:"Health" }}</th>
                     <th scope="col" class="relative px-6 py-3">
                         <span class="sr-only">{{ t("admin.actions")|default:"Actions" }}</span>
                     </th>
@@ -154,7 +163,7 @@
             </thead>
             <tbody id="plugin-tbody">
                 <tr>
-                    <td colspan="7" class="px-6 py-12 text-center">
+                    <td colspan="8" class="px-6 py-12 text-center">
                         <div style="color: var(--gk-text-muted);">
                             <svg class="animate-spin mx-auto h-8 w-8 mb-2" style="color: var(--gk-primary);" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -412,6 +421,41 @@ function getFilteredPlugins() {
     return filtered;
 }
 
+function renderHealthCell(plugin) {
+    const h = plugin.health;
+    if (!h) {
+        return `<span class="gk-badge gk-badge-muted" title="{{ t("admin.health_unknown_tooltip")|default:"No health data yet" }}">{{ t("admin.health_unknown")|default:"-" }}</span>`;
+    }
+    if (h.crash_loop_abandoned) {
+        return `
+            <div class="flex items-center gap-2">
+                <span class="gk-badge gk-badge-error" title="${escapeHtml(h.last_error || '')}">{{ t("admin.health_abandoned")|default:"Crash-loop" }}</span>
+                <button type="button"
+                        onclick="resetCrashLoop('${escapeHtml(plugin.name)}')"
+                        title="{{ t("admin.reset_crashloop_tooltip")|default:"Clear the crash-loop guard and resume auto-recovery" }}"
+                        class="text-xs underline" style="color: var(--gk-primary);">
+                    {{ t("buttons.reset")|default:"Reset" }}
+                </button>
+            </div>`;
+    }
+    if (!h.healthy && h.consecutive_failures >= 3) {
+        const attempts = h.restart_attempts || 0;
+        const sub = attempts > 0
+            ? `<div class="text-xs" style="color: var(--gk-text-muted);">{{ t("admin.health_restart_attempt")|default:"Restart attempt" }} ${attempts}</div>`
+            : '';
+        return `
+            <div>
+                <span class="gk-badge gk-badge-error" title="${escapeHtml(h.last_error || '')}">{{ t("admin.health_unhealthy")|default:"Unhealthy" }}</span>
+                ${sub}
+            </div>`;
+    }
+    if (h.healthy) {
+        return `<span class="gk-badge gk-badge-success">{{ t("admin.health_healthy")|default:"Healthy" }}</span>`;
+    }
+    // Pending first probe — neither failed nor confirmed.
+    return `<span class="gk-badge gk-badge-muted">{{ t("admin.health_pending")|default:"Pending" }}</span>`;
+}
+
 function renderPluginRow(plugin) {
     const routeCount = plugin.routes ? plugin.routes.length : 0;
     const widgetCount = plugin.widgets ? plugin.widgets.length : 0;
@@ -448,6 +492,9 @@ function renderPluginRow(plugin) {
                 ${enabled
                     ? '<span class="gk-badge gk-badge-success">Enabled</span>'
                     : '<span class="gk-badge gk-badge-muted">Disabled</span>'}
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                ${renderHealthCell(plugin)}
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                 <div class="flex items-center justify-end space-x-2">
@@ -496,7 +543,7 @@ function filterAndRender() {
     } else {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="px-6 py-12 text-center">
+                <td colspan="8" class="px-6 py-12 text-center">
                     <div style="color: var(--gk-text-muted);">
                         <svg class="mx-auto h-12 w-12" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -510,20 +557,57 @@ function filterAndRender() {
 
 async function loadPlugins() {
     try {
-        const response = await fetch('/api/v1/plugins', { credentials: 'same-origin' });
-        const data = await response.json();
+        // Fetch plugin list and per-plugin health in parallel — health is
+        // best-effort: if the endpoint fails (e.g. checker disabled) the
+        // table still renders without the Health column populated.
+        const [listResp, healthResp] = await Promise.all([
+            fetch('/api/v1/plugins', { credentials: 'same-origin' }),
+            fetch('/api/v1/plugins/health', { credentials: 'same-origin' }).catch(() => null),
+        ]);
+        const data = await listResp.json();
         plugins = data.plugins || [];
+
+        let healthMap = {};
+        if (healthResp && healthResp.ok) {
+            const hData = await healthResp.json();
+            healthMap = hData.plugins || {};
+        }
+        plugins.forEach(p => { p.health = healthMap[p.name] || null; });
 
         // Update stats
         const enabled = plugins.filter(p => p.enabled).length;
         const disabled = plugins.length - enabled;
+        const healthy = plugins.filter(p => p.health && p.health.healthy).length;
+        const unhealthy = plugins.filter(p => p.health && (!p.health.healthy && p.health.consecutive_failures >= 3)).length;
         document.getElementById('stat-total').textContent = plugins.length;
         document.getElementById('stat-enabled').textContent = enabled;
         document.getElementById('stat-disabled').textContent = disabled;
+        document.getElementById('stat-healthy').textContent = healthy;
+        document.getElementById('stat-unhealthy').textContent = unhealthy;
 
         filterAndRender();
     } catch (err) {
         console.error('Failed to load plugins:', err);
+    }
+}
+
+async function resetCrashLoop(name) {
+    if (!confirm('{{ t("admin.reset_crashloop_confirm")|default:"Clear the crash-loop guard for this plugin? Auto-recovery will resume on the next health check." }}')) {
+        return;
+    }
+    try {
+        const response = await fetch(`/api/v1/plugins/${name}/reset-crashloop`, {
+            method: 'POST',
+            credentials: 'same-origin',
+        });
+        if (response.ok) {
+            loadPlugins();
+        } else {
+            const err = await response.json().catch(() => ({}));
+            alert(err.error || 'Failed to reset crash-loop guard');
+        }
+    } catch (err) {
+        alert('Network error: ' + err.message);
     }
 }
 

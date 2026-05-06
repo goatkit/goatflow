@@ -647,6 +647,26 @@ func setupSessionAuthRouter(t *testing.T, sessionMW gin.HandlerFunc) *gin.Engine
 }
 
 // pluginAdminRoutes returns the admin-only plugin routes.
+// pluginAdminPathMarkers identifies which plugin API paths sit behind
+// RequireAdmin (admin-only). Anything not matching is treated as
+// authenticated-but-not-admin. Keep in sync with RegisterPluginAPIRoutes.
+var pluginAdminPathMarkers = []string{
+	"/enable",
+	"/disable",
+	"/upload",
+	"/logs",
+	"/reset-crashloop",
+}
+
+func isPluginAdminPath(path string) bool {
+	for _, marker := range pluginAdminPathMarkers {
+		if strings.Contains(path, marker) {
+			return true
+		}
+	}
+	return false
+}
+
 func pluginAdminRoutes() []gin.RouteInfo {
 	r := gin.New()
 	api := r.Group("/api/v1")
@@ -654,11 +674,7 @@ func pluginAdminRoutes() []gin.RouteInfo {
 
 	var adminRoutes []gin.RouteInfo
 	for _, route := range r.Routes() {
-		path := route.Path
-		if strings.Contains(path, "/enable") ||
-			strings.Contains(path, "/disable") ||
-			strings.Contains(path, "/upload") ||
-			strings.Contains(path, "/logs") {
+		if isPluginAdminPath(route.Path) {
 			adminRoutes = append(adminRoutes, route)
 		}
 	}
@@ -673,11 +689,7 @@ func pluginAuthRoutes() []gin.RouteInfo {
 
 	var authRoutes []gin.RouteInfo
 	for _, route := range r.Routes() {
-		path := route.Path
-		if !strings.Contains(path, "/enable") &&
-			!strings.Contains(path, "/disable") &&
-			!strings.Contains(path, "/upload") &&
-			!strings.Contains(path, "/logs") {
+		if !isPluginAdminPath(route.Path) {
 			authRoutes = append(authRoutes, route)
 		}
 	}
@@ -944,6 +956,52 @@ func TestHandlePluginCallWithOrgContext(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
+}
+
+func TestHandlePluginHealth(t *testing.T) {
+	r, _ := setupPluginTestRouter(t)
+
+	req := httptest.NewRequest("GET", "/api/v1/plugins/health", nil)
+	addAuthHeader(req)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp struct {
+		Plugins map[string]plugin.PluginHealth `json:"plugins"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if _, ok := resp.Plugins["hello"]; !ok {
+		t.Errorf("expected health entry for hello plugin, got %v", resp.Plugins)
+	}
+}
+
+func TestHandlePluginResetCrashLoop(t *testing.T) {
+	r, mgr := setupPluginTestRouter(t)
+
+	// Resetting a known plugin succeeds.
+	req := httptest.NewRequest("POST", "/api/v1/plugins/hello/reset-crashloop", nil)
+	addAuthHeader(req)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 for known plugin, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Unknown plugin returns 404.
+	req2 := httptest.NewRequest("POST", "/api/v1/plugins/nonexistent/reset-crashloop", nil)
+	addAuthHeader(req2)
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusNotFound {
+		t.Errorf("expected 404 for unknown plugin, got %d", w2.Code)
+	}
+	_ = mgr
 }
 
 func TestHandlePluginUploadNoDir(t *testing.T) {

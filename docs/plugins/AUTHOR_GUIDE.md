@@ -460,6 +460,37 @@ my-plugin.zip
 
 Upload via Admin → Plugins, or copy to the `plugins/` directory. Hot reload will pick up changes automatically.
 
+## Health & Auto-Recovery
+
+The plugin manager probes every loaded plugin every 60s by invoking the reserved function name `__health_ping__` on the plugin's `Call` path. There is no separate `Ping()` interface method — handle the function name in your normal `Call` dispatch.
+
+### What the manager treats as healthy
+
+Any response within 5s — including an "unknown function" error — counts as healthy: the round-trip itself proves the plugin process is alive and responsive. Only `context.DeadlineExceeded` after three consecutive probes flips a plugin to unhealthy. Plugins that don't recognise the function name therefore stay healthy out of the box; you don't have to do anything.
+
+### Optional: returning a rich payload
+
+If your plugin wants to surface custom health detail (queue depth, downstream connectivity, version, last-sync time), handle the function name and return a JSON object. The manager validates and stores it on `PluginHealth.Payload` for the admin UI to render.
+
+```go
+func (p *MyPlugin) Call(ctx context.Context, fn string, args json.RawMessage) (json.RawMessage, error) {
+    if fn == "__health_ping__" {
+        return json.Marshal(map[string]any{
+            "queue_depth":    len(p.workQueue),
+            "version":        p.version,
+            "downstream_ok":  p.checkDownstream(ctx),
+        })
+    }
+    // … your normal dispatch …
+}
+```
+
+Non-JSON bodies are silently dropped (the plugin still counts as healthy — the dashboard just shows no payload). Keep the handler fast: it shares the 5s probe budget with the round-trip.
+
+### Auto-restart
+
+When a plugin is marked unhealthy, the loader is asked to `Reload` it with exponential backoff (5s → 5min) and a crash-loop guard (>5 attempts in a 10-minute window → abandoned, requires admin reset via Admin → Plugins → Reset). Plugins that recover after a Reload reset their backoff state automatically. Operators can disable auto-restart with `GOATFLOW_PLUGIN_AUTO_RESTART=false` if they want health observation without recovery.
+
 ## Hot Reload (Development)
 
 The plugin loader watches the `plugins/` directory via fsnotify:

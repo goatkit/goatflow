@@ -18,11 +18,10 @@ import (
 // Only a context-deadline-exceeded error counts as a failure — that's
 // what distinguishes a zombie plugin from a merely unhelpful one.
 //
-// Plugins that want to do real health work (check DB connectivity,
-// external dependencies, etc.) can implement a handler for this name
-// in their Call dispatch and return a richer status. The manager
-// currently ignores the response body and only cares that something
-// came back in time.
+// Plugins that want to surface rich health info can implement a handler
+// for this name and return a JSON object — the manager stores it on
+// PluginHealth.Payload so admin UIs can render it. Plugins that don't
+// implement it remain healthy as before; the payload is just empty.
 const HealthPingFunc = "__health_ping__"
 
 // defaultHealthInterval is how often the manager probes each plugin
@@ -42,6 +41,38 @@ const defaultHealthProbeTimeout = 5 * time.Second
 // genuinely stuck plugin will accumulate failures fast.
 const healthFailureThreshold = 3
 
+// Auto-restart tuning. Backoff doubles each attempt: 5s, 10s, 20s, 40s,
+// 80s, 160s, capped at restartBackoffMax. Once a plugin restarts
+// successfully and stays healthy, the backoff resets to restartBackoffInitial.
+const (
+	restartBackoffInitial = 5 * time.Second
+	restartBackoffMax     = 5 * time.Minute
+
+	// crashLoopWindow is the rolling window over which we count
+	// restart attempts when deciding whether a plugin is in a
+	// crash-loop. Pick a window long enough to catch "broken at
+	// startup, restart succeeds briefly, then dies again" but short
+	// enough that a plugin recovering after one bad deploy isn't
+	// permanently abandoned.
+	crashLoopWindow = 10 * time.Minute
+
+	// crashLoopMaxAttempts is how many restart attempts within
+	// crashLoopWindow we tolerate before giving up. After this point,
+	// further auto-restarts are suppressed and the plugin is marked
+	// "abandoned" — admin must intervene (fix the plugin, click
+	// Restart in the UI, or simply call Manager.ResetCrashLoop).
+	crashLoopMaxAttempts = 5
+)
+
+// Restarter is the hook the manager uses to actually re-spawn a
+// plugin process after a health failure. It's an interface so the
+// manager doesn't depend on the loader package — the loader (which
+// already knows how to discover and (re)spawn WASM/gRPC plugins)
+// implements this and is wired in via SetRestarter at startup.
+type Restarter interface {
+	Reload(ctx context.Context, name string) error
+}
+
 // PluginHealth is a snapshot of a plugin's current health state.
 // Exposed via Manager.HealthStatus for admin UIs / dashboards.
 type PluginHealth struct {
@@ -50,6 +81,20 @@ type PluginHealth struct {
 	LastSuccess         time.Time `json:"last_success,omitempty"`
 	ConsecutiveFailures int       `json:"consecutive_failures"`
 	LastError           string    `json:"last_error,omitempty"`
+
+	// Payload is the most recent JSON body returned by the plugin's
+	// __health_ping__ handler, or nil if the plugin returned a
+	// non-JSON / empty body. Plugins that want to surface custom
+	// health detail (queue depth, downstream connectivity, version
+	// info) should return a JSON object from their ping handler.
+	Payload json.RawMessage `json:"payload,omitempty"`
+
+	// Restart bookkeeping (for auto-recovery). All optional — only
+	// meaningful when StartAutoRecovery has been wired in.
+	RestartAttempts    int       `json:"restart_attempts,omitempty"`
+	LastRestartAt      time.Time `json:"last_restart_at,omitempty"`
+	NextRestartAt      time.Time `json:"next_restart_at,omitempty"`
+	CrashLoopAbandoned bool      `json:"crash_loop_abandoned,omitempty"`
 }
 
 // healthState carries the in-flight health bookkeeping for one
@@ -61,6 +106,26 @@ type healthState struct {
 	lastSuccess         time.Time
 	consecutiveFailures int
 	lastError           string
+	payload             json.RawMessage
+
+	// restartAttempts counts consecutive failed restart attempts
+	// (resets to 0 when a restart succeeds and the plugin returns to
+	// healthy). Used to compute the next backoff.
+	restartAttempts int
+	lastRestartAt   time.Time
+	nextRestartAt   time.Time
+
+	// restartHistory is a rolling window of restart-attempt
+	// timestamps, capped by crashLoopMaxAttempts. Older entries are
+	// trimmed in-place; once the window is full, crashLoopAbandoned
+	// trips and auto-recovery stops.
+	restartHistory     []time.Time
+	crashLoopAbandoned bool
+
+	// inflightRestart guards against double-dispatching a restart for
+	// the same plugin — health-checker pass N+1 may run before pass N's
+	// restart goroutine has finished. Always accessed under Manager.mu.
+	inflightRestart bool
 }
 
 // StartHealthChecker launches a background goroutine that periodically
@@ -74,12 +139,12 @@ type healthState struct {
 // OnPluginLoaded and other manager-level hooks are wired up, where
 // the cmd/goats/main.go startup owns the lifecycle.
 //
-// The checker does NOT auto-restart unhealthy plugins. That will be
-// added in a future release once the restart-policy design is
-// settled (backoff shape, crash-loop guard, interaction with
-// hot-reload-on-binary-change). For now the job is to surface bad
-// state via logs + HealthStatus so operators notice, and so the
-// admin UI can render a warning.
+// If a Restarter has been wired in via SetRestarter, the checker also
+// drives auto-recovery: unhealthy plugins are scheduled for restart
+// with exponential backoff, and a crash-loop guard suppresses repeated
+// restarts for plugins that won't stabilise. Without a Restarter the
+// checker is purely observational — it logs and exposes status but
+// never restarts anything.
 func (m *Manager) StartHealthChecker(interval, probeTimeout time.Duration) func() {
 	m.mu.Lock()
 	if m.healthCheckerStarted {
@@ -108,6 +173,7 @@ func (m *Manager) StartHealthChecker(interval, probeTimeout time.Duration) func(
 				return
 			case <-ticker.C:
 				m.probeAllPluginsHealth(probeTimeout)
+				m.dispatchAutoRestarts()
 			}
 		}
 	}()
@@ -116,6 +182,15 @@ func (m *Manager) StartHealthChecker(interval, probeTimeout time.Duration) func(
 		close(stop)
 		<-done
 	}
+}
+
+// SetRestarter wires in the loader so the health checker can attempt
+// auto-recovery on health failures. Safe to call any time; without it,
+// the checker only observes and logs.
+func (m *Manager) SetRestarter(r Restarter) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.restarter = r
 }
 
 // probeAllPluginsHealth runs a single probe pass across every loaded
@@ -150,7 +225,7 @@ func (m *Manager) probeOnePluginHealth(name string, probeTimeout time.Duration) 
 
 	ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
 	defer cancel()
-	_, err := rp.plugin.Call(ctx, HealthPingFunc, json.RawMessage(nil))
+	resp, err := rp.plugin.Call(ctx, HealthPingFunc, json.RawMessage(nil))
 
 	// Only a context-deadline-exceeded indicates the plugin failed to
 	// respond in time (i.e. is zombie / wedged). Any other error —
@@ -158,6 +233,16 @@ func (m *Manager) probeOnePluginHealth(name string, probeTimeout time.Duration) 
 	// don't recognise the name — means the RPC round-trip worked and
 	// the plugin is alive.
 	failed := ctx.Err() == context.DeadlineExceeded
+
+	// Capture rich payload only on a successful response. Validate it
+	// parses as JSON before storing — plugins that don't implement the
+	// handler return an error, which we already treat as alive.
+	var payload json.RawMessage
+	if !failed && err == nil && len(resp) > 0 {
+		if json.Valid(resp) {
+			payload = append(json.RawMessage(nil), resp...)
+		}
+	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -185,6 +270,17 @@ func (m *Manager) probeOnePluginHealth(name string, probeTimeout time.Duration) 
 		rp.health.lastSuccess = now
 		rp.health.lastError = ""
 		rp.health.healthy = true
+		rp.health.payload = payload
+		// A healthy probe after a successful restart attempt: clear
+		// crash-loop bookkeeping so the next failure starts fresh.
+		if rp.health.restartAttempts > 0 {
+			slog.Info("plugin recovered after restart",
+				"plugin", name,
+				"attempts", rp.health.restartAttempts)
+			rp.health.restartAttempts = 0
+			rp.health.nextRestartAt = time.Time{}
+			rp.health.restartHistory = nil
+		}
 	}
 
 	// Log transitions only — avoid spamming a line every 60s for
@@ -206,6 +302,155 @@ func (m *Manager) probeOnePluginHealth(name string, probeTimeout time.Duration) 
 	}
 }
 
+// dispatchAutoRestarts looks for unhealthy plugins whose backoff has
+// elapsed and asks the configured Restarter to restart them. Skips
+// plugins that are already abandoned (crash-loop guard tripped) or
+// have a restart already in flight from a previous pass.
+//
+// Each restart runs in its own goroutine so a slow Reload can't block
+// the next probe interval — plugins are independent.
+func (m *Manager) dispatchAutoRestarts() {
+	m.mu.RLock()
+	r := m.restarter
+	if r == nil {
+		m.mu.RUnlock()
+		return
+	}
+	type todo struct {
+		name    string
+		attempt int
+	}
+	now := time.Now()
+	var toRestart []todo
+	for name, rp := range m.plugins {
+		if rp.health.healthy || rp.health.crashLoopAbandoned {
+			continue
+		}
+		if rp.health.consecutiveFailures < healthFailureThreshold {
+			continue
+		}
+		if !rp.health.nextRestartAt.IsZero() && now.Before(rp.health.nextRestartAt) {
+			continue
+		}
+		if rp.health.inflightRestart {
+			continue
+		}
+		toRestart = append(toRestart, todo{name: name, attempt: rp.health.restartAttempts + 1})
+	}
+	m.mu.RUnlock()
+
+	for _, t := range toRestart {
+		m.startRestart(r, t.name, t.attempt)
+	}
+}
+
+// startRestart claims the inflight flag, schedules the next backoff
+// window, and dispatches the actual Reload in a background goroutine.
+// Returns immediately so the caller (the health-checker tick) doesn't
+// block on plugin spawning.
+func (m *Manager) startRestart(r Restarter, name string, attempt int) {
+	m.mu.Lock()
+	rp, exists := m.plugins[name]
+	if !exists {
+		m.mu.Unlock()
+		return
+	}
+	if rp.health.inflightRestart {
+		// Another goroutine grabbed it between dispatchAutoRestarts
+		// reading the flag and us taking the write lock.
+		m.mu.Unlock()
+		return
+	}
+	rp.health.inflightRestart = true
+
+	// Crash-loop check: trim history to the rolling window, append
+	// this attempt, and if we've blown the budget, abandon.
+	now := time.Now()
+	cutoff := now.Add(-crashLoopWindow)
+	trimmed := rp.health.restartHistory[:0]
+	for _, t := range rp.health.restartHistory {
+		if t.After(cutoff) {
+			trimmed = append(trimmed, t)
+		}
+	}
+	trimmed = append(trimmed, now)
+	rp.health.restartHistory = trimmed
+
+	if len(trimmed) > crashLoopMaxAttempts {
+		rp.health.crashLoopAbandoned = true
+		rp.health.inflightRestart = false
+		slog.Error("plugin abandoned after crash-loop",
+			"plugin", name,
+			"attempts_in_window", len(trimmed),
+			"window", crashLoopWindow)
+		m.mu.Unlock()
+		return
+	}
+
+	rp.health.restartAttempts = attempt
+	rp.health.lastRestartAt = now
+	rp.health.nextRestartAt = now.Add(restartBackoff(attempt))
+	m.mu.Unlock()
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		slog.Warn("auto-restarting unhealthy plugin", "plugin", name, "attempt", attempt)
+		if err := r.Reload(ctx, name); err != nil {
+			slog.Warn("plugin auto-restart failed",
+				"plugin", name,
+				"attempt", attempt,
+				"error", err)
+		} else {
+			slog.Info("plugin auto-restart dispatched", "plugin", name, "attempt", attempt)
+		}
+		// Drop the inflight flag whether we succeeded or not — the
+		// next probe pass will see the result and either clear
+		// counters (success) or schedule the next attempt (failure).
+		// Reload may have replaced the registeredPlugin entirely
+		// (ReplacePlugin); look up by name fresh under the lock.
+		m.mu.Lock()
+		if rp, exists := m.plugins[name]; exists {
+			rp.health.inflightRestart = false
+		}
+		m.mu.Unlock()
+	}()
+}
+
+// restartBackoff returns the wait time for the Nth (1-indexed) restart
+// attempt: 5s, 10s, 20s, ... capped at restartBackoffMax.
+func restartBackoff(attempt int) time.Duration {
+	if attempt <= 1 {
+		return restartBackoffInitial
+	}
+	d := restartBackoffInitial
+	for i := 1; i < attempt; i++ {
+		d *= 2
+		if d >= restartBackoffMax {
+			return restartBackoffMax
+		}
+	}
+	return d
+}
+
+// ResetCrashLoop clears the crash-loop-abandoned flag and restart
+// history for a plugin. Called by the admin UI's "Retry" / "Reset"
+// button, or after the operator has fixed the underlying problem.
+// Returns false if the plugin isn't registered.
+func (m *Manager) ResetCrashLoop(name string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	rp, ok := m.plugins[name]
+	if !ok {
+		return false
+	}
+	rp.health.crashLoopAbandoned = false
+	rp.health.restartAttempts = 0
+	rp.health.restartHistory = nil
+	rp.health.nextRestartAt = time.Time{}
+	return true
+}
+
 // HealthStatus returns the current health snapshot for a named plugin.
 // Returns (zero, false) if the plugin isn't registered; otherwise
 // returns the most recent probe result.
@@ -216,13 +461,7 @@ func (m *Manager) HealthStatus(name string) (PluginHealth, bool) {
 	if !ok {
 		return PluginHealth{}, false
 	}
-	return PluginHealth{
-		Healthy:             rp.health.healthy,
-		LastCheck:           rp.health.lastCheck,
-		LastSuccess:         rp.health.lastSuccess,
-		ConsecutiveFailures: rp.health.consecutiveFailures,
-		LastError:           rp.health.lastError,
-	}, true
+	return snapshotHealth(rp), true
 }
 
 // AllHealthStatuses returns a name→health map snapshot for every
@@ -233,15 +472,26 @@ func (m *Manager) AllHealthStatuses() map[string]PluginHealth {
 	defer m.mu.RUnlock()
 	out := make(map[string]PluginHealth, len(m.plugins))
 	for name, rp := range m.plugins {
-		out[name] = PluginHealth{
-			Healthy:             rp.health.healthy,
-			LastCheck:           rp.health.lastCheck,
-			LastSuccess:         rp.health.lastSuccess,
-			ConsecutiveFailures: rp.health.consecutiveFailures,
-			LastError:           rp.health.lastError,
-		}
+		out[name] = snapshotHealth(rp)
 	}
 	return out
+}
+
+// snapshotHealth copies the in-memory health state into the public
+// PluginHealth struct. Caller must hold m.mu (read or write).
+func snapshotHealth(rp *registeredPlugin) PluginHealth {
+	return PluginHealth{
+		Healthy:             rp.health.healthy,
+		LastCheck:           rp.health.lastCheck,
+		LastSuccess:         rp.health.lastSuccess,
+		ConsecutiveFailures: rp.health.consecutiveFailures,
+		LastError:           rp.health.lastError,
+		Payload:             rp.health.payload,
+		RestartAttempts:     rp.health.restartAttempts,
+		LastRestartAt:       rp.health.lastRestartAt,
+		NextRestartAt:       rp.health.nextRestartAt,
+		CrashLoopAbandoned:  rp.health.crashLoopAbandoned,
+	}
 }
 
 // healthInitForRegister seeds a freshly-registered plugin's health
@@ -256,4 +506,3 @@ func healthInitForRegister() healthState {
 		healthy: false,
 	}
 }
-

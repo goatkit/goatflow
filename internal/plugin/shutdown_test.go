@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -59,6 +60,36 @@ func TestShutdownAllDefaultTimeout(t *testing.T) {
 	}
 	if time.Since(start) > 500*time.Millisecond {
 		t.Errorf("fast plugin shutdown took too long")
+	}
+}
+
+// TestShutdownAllParallel verifies that N hung plugins each with a
+// 200ms per-plugin budget shut down in ~200ms (parallel) rather than
+// ~N×200ms (the old serial behaviour).
+func TestShutdownAllParallel(t *testing.T) {
+	m := newTestManager()
+	const n = 5
+	for i := 0; i < n; i++ {
+		name := fmt.Sprintf("hung-%d", i)
+		addTestPlugin(m, &fakePlugin{name: name, shutdownHang: true})
+		m.policies[name] = &ResourcePolicy{PluginName: name, ShutdownTimeout: "200ms"}
+	}
+
+	start := time.Now()
+	err := m.ShutdownAll(context.Background())
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatalf("expected error from hung plugins, got nil")
+	}
+	// Serial would be ~n×200ms = 1s. Parallel should be ~200ms with a
+	// generous slop budget for goroutine scheduling on a busy CI host.
+	if elapsed > 600*time.Millisecond {
+		t.Errorf("ShutdownAll took %v for %d plugins — expected parallel (~200ms), got serial-ish", elapsed, n)
+	}
+
+	if len(m.plugins) != 0 {
+		t.Errorf("expected plugins map cleared, got %d entries", len(m.plugins))
 	}
 }
 

@@ -471,9 +471,17 @@ func main() {
 	// and marks it unhealthy after N consecutive failures. Surfaces
 	// silent zombie plugins (gRPC channel alive but process wedged)
 	// that otherwise only get noticed when user traffic hits them.
-	// Does NOT auto-restart yet — that's a 0.8.3 follow-up.
-	// Disable with GOATFLOW_PLUGIN_HEALTH_CHECK=false.
+	//
+	// Auto-recovery: with the loader wired as the Restarter, unhealthy
+	// plugins are auto-reloaded with exponential backoff (5s → 5min)
+	// and a crash-loop guard (>5 attempts in 10min → abandon, requires
+	// admin reset). Disable health checking entirely with
+	// GOATFLOW_PLUGIN_HEALTH_CHECK=false; disable just auto-restart with
+	// GOATFLOW_PLUGIN_AUTO_RESTART=false.
 	if os.Getenv("GOATFLOW_PLUGIN_HEALTH_CHECK") != "false" {
+		if os.Getenv("GOATFLOW_PLUGIN_AUTO_RESTART") != "false" {
+			pluginMgr.SetRestarter(pluginLoader)
+		}
 		healthStop := pluginMgr.StartHealthChecker(0, 0) // defaults (60s interval, 5s probe)
 		defer healthStop()
 	}

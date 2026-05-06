@@ -15,6 +15,7 @@ type fakePlugin struct {
 	name         string
 	callDelay    time.Duration // how long Call blocks before returning
 	callErr      error         // returned unconditionally when delay elapses (unless nil)
+	callResp     []byte        // response body for Call (used to test payload capture)
 	callCount    atomic.Int64  // counts how many times Call was invoked
 	shutdownHang bool          // if true, Shutdown blocks until ctx is done
 }
@@ -36,6 +37,9 @@ func (f *fakePlugin) Call(ctx context.Context, fn string, args json.RawMessage) 
 	}
 	if f.callErr != nil {
 		return nil, f.callErr
+	}
+	if f.callResp != nil {
+		return json.RawMessage(f.callResp), nil
 	}
 	return json.RawMessage(`"ok"`), nil
 }
