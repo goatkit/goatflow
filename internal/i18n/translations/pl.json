@@ -1559,6 +1559,7 @@
     "2fa_description": "Wprowadź 6-cyfrowy kod z aplikacji uwierzytelniającej",
     "2fa_verify": "Zweryfikuj",
     "2fa_recovery_hint": "Utracono dostęp? Użyj kodu odzyskiwania",
+    "use_security_key": "Użyj klucza bezpieczeństwa",
     "verification_code": "Kod weryfikacyjny",
     "back_to_login": "Powrót do logowania",
     "verify": "Zweryfikuj"
@@ -2991,7 +2992,10 @@
       "save_recovery_codes": "Zapisz kody odzyskiwania",
       "scan_instructions": "Zeskanuj ten kod QR aplikacją uwierzytelniającą",
       "setup_failed": "Nie udało się skonfigurować 2FA",
-      "verify_enable": "Zweryfikuj i włącz"
+      "verify_enable": "Zweryfikuj i włącz",
+      "add_security_key": "Dodaj klucz bezpieczeństwa",
+      "security_keys_registered": "zarejestrowanych kluczy bezpieczeństwa",
+      "security_key_name": "Nazwa klucza bezpieczeństwa"
     },
     "reset_highlights": "Resetuj podpowiedzi",
     "highlights_reset": "Podpowiedzi zostały zresetowane",

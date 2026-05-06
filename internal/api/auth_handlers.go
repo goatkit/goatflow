@@ -112,8 +112,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 
 	// Check if 2FA is enabled for this user
 	if db, err := database.GetDB(); err == nil && db != nil {
-		totpService := service.NewTOTPService(db, "GoatFlow")
-		is2FAEnabled := totpService.IsEnabled(int(user.ID))
+		is2FAEnabled := isAgentMFAEnabled(db, c.Request, int(user.ID))
 		if is2FAEnabled {
 			// 2FA is enabled - don't complete login yet
 			sessionMgr := auth.GetTOTPSessionManager()

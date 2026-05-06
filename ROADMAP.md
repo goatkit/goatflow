@@ -592,11 +592,11 @@ Plugins receive org context automatically from the authenticated session, elimin
 - [x] Admin UI for managing plugin UIs (list, enable/disable, custom domain, branding override)
 
 **Two-Factor Authentication — Hardware Keys**
-- [ ] Hardware key support (WebAuthn/FIDO2)
+- [x] Hardware key support (WebAuthn/FIDO2)
 
 **Quality**
-- [ ] Performance benchmarks established
-- [ ] Load testing harness
+- [x] Performance benchmarks established — `make bench` runs the curated Go benchmark suite and writes baseline artifacts under `generated/benchmarks/`; `make bench-compare` compares captures with benchstat.
+- [x] Load testing harness — `make load-test` runs the k6 smoke profile against the test stack, with configurable VUs, duration, base URL, endpoints, and JSON summary output.
 
 ---
 
@@ -644,7 +644,7 @@ Plugins receive org context automatically from the authenticated session, elimin
 
 **Quality**
 - [ ] 80% test coverage target
-- [ ] Load testing harness (Gatling/k6)
+- [x] Load testing harness (k6) — pulled forward into 0.8.3 with `tests/load/k6/goatflow_smoke.js` and Makefile targets.
 - [ ] Chaos engineering tests
 
 ---
@@ -715,12 +715,20 @@ Enterprise plugins are paid, reusable horizontal capabilities built on GoatKit c
 | goatkit-maps | Geocoding, route optimisation, area/territory management |
 | goatkit-notify | Templated SMS/WhatsApp/email notifications |
 
-**Status (March 2026):** 8 of 12 plugins scaffolded with schema, handlers, and Gitea repos. Driven by downstream redistribution requirements.
+**Status (May 2026):** 8 of 12 enterprise plugins have initial gRPC implementations with manifests, build packaging, HostAPI handlers, schema migrations, and plugin-health support. The remaining 4 plugins are still in planning/design.
 
 | Status | Plugins |
 |--------|---------|
-| Scaffolded | goatkit-media, goatkit-llm, goatkit-billing, goatkit-devices, goatkit-workflows, goatkit-audit, goatkit-content-feeds, goatkit-notify |
-| Planning | goatkit-subscriptions, goatkit-invoicing, goatkit-payments, goatkit-maps |
+| Initial API implementation | goatkit-media, goatkit-llm, goatkit-billing, goatkit-devices, goatkit-workflows, goatkit-audit, goatkit-content-feeds, goatkit-notify |
+| Planning/design | goatkit-subscriptions, goatkit-invoicing, goatkit-payments, goatkit-maps |
+
+**Maturity assessment (May 2026):**
+
+| Maturity | Plugins | Evidence | Gaps |
+|----------|---------|----------|------|
+| Functional API scaffold | goatkit-media, goatkit-llm, goatkit-billing, goatkit-devices, goatkit-content-feeds | Manifests, build packaging, HostAPI route/handler dispatch, schema migrations, health ping; devices also declares a sidecar capability | Needs API smoke/contract coverage and public usage docs |
+| Thin API scaffold | goatkit-workflows, goatkit-audit, goatkit-notify | Manifests, build packaging, schema migrations, route/handler dispatch, health ping | Needs deeper integration coverage and production workflow validation |
+| Planning only | goatkit-subscriptions, goatkit-invoicing, goatkit-payments, goatkit-maps | Product scope and design notes exist | Needs implementation, schema, handlers, packaging, and tests |
 
 ---
 

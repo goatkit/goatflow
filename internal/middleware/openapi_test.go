@@ -645,6 +645,12 @@ func TestValidateResponseMethod(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("Uppercase HTTP method passes validation", func(t *testing.T) {
+		body := []byte(`{"message": "test"}`)
+		err := validator.validateResponse("GET", "/test", 200, body)
+		assert.NoError(t, err)
+	})
+
 	t.Run("Missing required field fails validation", func(t *testing.T) {
 		body := []byte(`{"other": "field"}`)
 		err := validator.validateResponse("get", "/test", 200, body)

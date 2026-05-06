@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v3"
@@ -125,7 +126,7 @@ func (v *OpenAPIValidator) validateResponse(method, path string, statusCode int,
 	}
 
 	// Find the operation for this method
-	operation, exists := pathItem[method]
+	operation, exists := pathItem[strings.ToLower(method)]
 	if !exists {
 		return fmt.Errorf("method %s not found for path %s", method, path)
 	}

@@ -94,6 +94,16 @@ spec:
       handler: handle2FAVerify
       description: "Verify 2FA code and complete login"
 
+    - path: /api/auth/2fa/webauthn/begin
+      method: POST
+      handler: handleWebAuthnLoginBegin
+      description: "Begin security key login verification"
+
+    - path: /api/auth/2fa/webauthn/finish
+      method: POST
+      handler: handleWebAuthnLoginFinish
+      description: "Finish security key login verification"
+
     # Customer Two-Factor Authentication during login
     - path: /customer/login/2fa
       method: GET
@@ -105,3 +115,13 @@ spec:
       method: POST
       handler: handleCustomer2FAVerify
       description: "Verify customer 2FA code and complete login"
+
+    - path: /api/auth/customer/2fa/webauthn/begin
+      method: POST
+      handler: handleCustomerWebAuthnLoginBegin
+      description: "Begin customer security key login verification"
+
+    - path: /api/auth/customer/2fa/webauthn/finish
+      method: POST
+      handler: handleCustomerWebAuthnLoginFinish
+      description: "Finish customer security key login verification"

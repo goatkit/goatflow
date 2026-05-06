@@ -1559,6 +1559,7 @@
     "2fa_description": "کد ۶ رقمی را از برنامه احراز هویت خود وارد کنید",
     "2fa_verify": "تأیید",
     "2fa_recovery_hint": "دسترسی را از دست داده‌اید؟ از کد بازیابی استفاده کنید",
+    "use_security_key": "استفاده از کلید امنیتی",
     "verification_code": "کد تأیید",
     "back_to_login": "بازگشت به ورود",
     "verify": "تأیید"
@@ -2874,7 +2875,10 @@
       "save_recovery_codes": "ذخیره کدهای بازیابی",
       "scan_instructions": "این کد QR را با برنامه احراز هویت اسکن کنید",
       "setup_failed": "خطا در راه‌اندازی 2FA",
-      "verify_enable": "تأیید و فعال‌سازی"
+      "verify_enable": "تأیید و فعال‌سازی",
+      "add_security_key": "افزودن کلید امنیتی",
+      "security_keys_registered": "کلید امنیتی ثبت‌شده",
+      "security_key_name": "نام کلید امنیتی"
     },
     "reset_highlights": "بازنشانی راهنمای ویژگی‌ها",
     "highlights_reset": "راهنمای ویژگی‌ها بازنشانی شد",

@@ -1588,6 +1588,7 @@
     "2fa_description": "اپنی تصدیق کنندہ ایپ سے 6 ہندسوں کا کوڈ درج کریں",
     "2fa_verify": "تصدیق کریں",
     "2fa_recovery_hint": "رسائی کھو دی؟ ریکوری کوڈ استعمال کریں",
+    "use_security_key": "سیکیورٹی کلید استعمال کریں",
     "verification_code": "تصدیقی کوڈ",
     "back_to_login": "لاگ ان پر واپس جائیں",
     "verify": "تصدیق کریں"
@@ -2903,7 +2904,10 @@
       "save_recovery_codes": "ریکوری کوڈز محفوظ کریں",
       "scan_instructions": "اس QR کوڈ کو اپنی تصدیقی ایپ سے اسکین کریں",
       "setup_failed": "2FA مرتب کرنے میں ناکامی",
-      "verify_enable": "تصدیق کریں اور فعال کریں"
+      "verify_enable": "تصدیق کریں اور فعال کریں",
+      "add_security_key": "سیکیورٹی کلید شامل کریں",
+      "security_keys_registered": "رجسٹرڈ سیکیورٹی کلیدیں",
+      "security_key_name": "سیکیورٹی کلید کا نام"
     },
     "reset_highlights": "فیچر ہائی لائٹس ری سیٹ کریں",
     "highlights_reset": "فیچر ہائی لائٹس ری سیٹ ہو گئیں",

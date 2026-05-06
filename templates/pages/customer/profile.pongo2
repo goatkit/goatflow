@@ -146,8 +146,14 @@
                     <button id="2fa-disable-btn" class="hidden gk-btn-secondary text-sm" onclick="show2FADisableModal()">
                         {{ t("settings.2fa.disable")|default:"Disable 2FA" }}
                     </button>
+                    <button id="webauthn-add-btn" class="hidden gk-btn-secondary text-sm" onclick="startSecurityKeySetup()">
+                        {{ t("settings.2fa.add_security_key")|default:"Add security key" }}
+                    </button>
                     <span id="2fa-recovery-info" class="hidden ml-4 text-sm" style="color: var(--gk-text-muted);">
                         <span id="recovery-count">0</span> {{ t("settings.2fa.recovery_codes_remaining")|default:"recovery codes remaining" }}
+                    </span>
+                    <span id="webauthn-info" class="hidden text-sm" style="color: var(--gk-text-muted);">
+                        <span id="webauthn-count">0</span> {{ t("settings.2fa.security_keys_registered")|default:"security keys registered" }}
                     </span>
                 </div>
             </div>
@@ -396,11 +402,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.enabled) {
                     document.getElementById('2fa-status-enabled').classList.remove('hidden');
                     document.getElementById('2fa-disable-btn').classList.remove('hidden');
+                    document.getElementById('webauthn-add-btn').classList.remove('hidden');
                     document.getElementById('2fa-recovery-info').classList.remove('hidden');
                     document.getElementById('recovery-count').textContent = data.recovery_codes_remaining || 0;
                 } else {
                     document.getElementById('2fa-status-disabled').classList.remove('hidden');
                     document.getElementById('2fa-setup-btn').classList.remove('hidden');
+                    document.getElementById('webauthn-add-btn').classList.remove('hidden');
+                }
+                if (data.webauthn_credentials) {
+                    document.getElementById('webauthn-info').classList.remove('hidden');
+                    document.getElementById('webauthn-count').textContent = data.webauthn_credentials;
                 }
             }
         })
@@ -594,6 +606,81 @@ async function disable2FA() {
         errorEl.classList.remove('hidden');
     } finally {
         disableBtn.disabled = false;
+    }
+}
+
+function webauthnBase64URLToBuffer(value) {
+    const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+}
+
+function webauthnBufferToBase64URL(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function prepareCreationOptions(options) {
+    const publicKey = options.publicKey || options;
+    publicKey.challenge = webauthnBase64URLToBuffer(publicKey.challenge);
+    publicKey.user.id = webauthnBase64URLToBuffer(publicKey.user.id);
+    if (publicKey.excludeCredentials) {
+        publicKey.excludeCredentials = publicKey.excludeCredentials.map(credential => ({
+            ...credential,
+            id: webauthnBase64URLToBuffer(credential.id)
+        }));
+    }
+    return publicKey;
+}
+
+function serializeAttestation(credential) {
+    return {
+        id: credential.id,
+        rawId: webauthnBufferToBase64URL(credential.rawId),
+        type: credential.type,
+        response: {
+            attestationObject: webauthnBufferToBase64URL(credential.response.attestationObject),
+            clientDataJSON: webauthnBufferToBase64URL(credential.response.clientDataJSON)
+        },
+        clientExtensionResults: credential.getClientExtensionResults(),
+        authenticatorAttachment: credential.authenticatorAttachment
+    };
+}
+
+async function startSecurityKeySetup() {
+    if (!window.PublicKeyCredential) {
+        showError('This browser does not support security keys.');
+        return;
+    }
+    const password = prompt('{{ t("settings.2fa.password_to_setup")|default:"Enter your password to set up two-factor authentication." }}');
+    if (!password) return;
+    try {
+        const begin = await fetch('/customer/api/preferences/2fa/webauthn/register/begin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ password: password })
+        });
+        const beginData = await begin.json();
+        if (!beginData.success) throw new Error(beginData.error || 'Failed to start security key setup');
+        const credential = await navigator.credentials.create({ publicKey: prepareCreationOptions(beginData.options) });
+        const keyName = encodeURIComponent(prompt('{{ t("settings.2fa.security_key_name")|default:"Security key name" }}') || 'Security key');
+        const finish = await fetch(`/customer/api/preferences/2fa/webauthn/register/finish?name=${keyName}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(serializeAttestation(credential))
+        });
+        const finishData = await finish.json();
+        if (!finishData.success) throw new Error(finishData.error || 'Failed to register security key');
+        window.location.reload();
+    } catch (error) {
+        showError(error.message || '{{ t("messages.error")|default:"An error occurred. Please try again." }}');
     }
 }
 </script>

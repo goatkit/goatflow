@@ -1559,6 +1559,7 @@
     "2fa_description": "输入您身份验证器应用中的6位数代码",
     "2fa_verify": "验证",
     "2fa_recovery_hint": "无法访问？使用恢复代码",
+    "use_security_key": "使用安全密钥",
     "verification_code": "验证码",
     "back_to_login": "返回登录",
     "verify": "验证"
@@ -2877,7 +2878,10 @@
       "save_recovery_codes": "保存恢复码",
       "scan_instructions": "使用身份验证器应用扫描此二维码",
       "setup_failed": "设置双重认证失败",
-      "verify_enable": "验证并启用"
+      "verify_enable": "验证并启用",
+      "add_security_key": "添加安全密钥",
+      "security_keys_registered": "个已注册的安全密钥",
+      "security_key_name": "安全密钥名称"
     },
     "reset_highlights": "重置功能提示",
     "highlights_reset": "功能提示已重置",

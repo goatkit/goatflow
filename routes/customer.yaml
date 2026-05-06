@@ -135,6 +135,35 @@ spec:
       middleware: [demo-guard]
       description: "Disable 2FA for customer (requires valid code)"
 
+    - path: /api/preferences/2fa/webauthn/register/begin
+      method: POST
+      handler: handleCustomerWebAuthnRegisterBegin
+      middleware: [demo-guard]
+      description: "Begin customer hardware security key registration"
+
+    - path: /api/preferences/2fa/webauthn/register/finish
+      method: POST
+      handler: handleCustomerWebAuthnRegisterFinish
+      middleware: [demo-guard]
+      description: "Finish customer hardware security key registration"
+
+    - path: /api/preferences/2fa/webauthn/credentials
+      method: GET
+      handler: handleCustomerWebAuthnCredentials
+      description: "List customer hardware security keys"
+
+    - path: /api/preferences/2fa/webauthn/credentials/:id
+      method: PATCH
+      handler: handleCustomerWebAuthnCredentialRename
+      middleware: [demo-guard]
+      description: "Rename a customer hardware security key"
+
+    - path: /api/preferences/2fa/webauthn/credentials/:id
+      method: DELETE
+      handler: handleCustomerWebAuthnCredentialDelete
+      middleware: [demo-guard]
+      description: "Remove a customer hardware security key"
+
     # Password management
     - path: /password/form
       method: GET

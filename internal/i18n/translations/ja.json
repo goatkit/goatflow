@@ -1559,6 +1559,7 @@
     "2fa_description": "認証アプリの6桁のコードを入力してください",
     "2fa_verify": "確認",
     "2fa_recovery_hint": "アクセスできない場合は、リカバリーコードを使用してください",
+    "use_security_key": "セキュリティキーを使用",
     "verification_code": "確認コード",
     "back_to_login": "ログインに戻る",
     "verify": "確認"
@@ -2877,7 +2878,10 @@
       "save_recovery_codes": "リカバリーコードを保存",
       "scan_instructions": "認証アプリでこのQRコードをスキャンしてください",
       "setup_failed": "2FAの設定に失敗しました",
-      "verify_enable": "確認して有効化"
+      "verify_enable": "確認して有効化",
+      "add_security_key": "セキュリティキーを追加",
+      "security_keys_registered": "登録済みセキュリティキー",
+      "security_key_name": "セキュリティキー名"
     },
     "reset_highlights": "機能ハイライトをリセット",
     "highlights_reset": "機能ハイライトがリセットされました",

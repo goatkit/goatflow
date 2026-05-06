@@ -93,8 +93,7 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		auth.DefaultLoginRateLimiter.RecordSuccess(clientIP, login)
 
 		// Check if 2FA is enabled for this customer
-		totpService := service.NewTOTPService(db, "GoatFlow")
-		if totpService.IsEnabledForCustomer(user.Login) {
+		if isCustomerMFAEnabled(db, c.Request, user.Login) {
 			// SECURITY FIX (V3/V4/V5/V7): Use session manager - customer login stored server-side
 			sessionMgr := auth.GetTOTPSessionManager()
 			token, err := sessionMgr.CreateCustomerSession(user.Login, c.ClientIP(), c.Request.UserAgent())

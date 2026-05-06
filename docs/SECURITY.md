@@ -74,9 +74,9 @@ networks:
 ```go
 type MFAProvider interface {
     TOTP    // Time-based One-Time Password
+    WebAuthn // Hardware security keys (FIDO2)
     SMS     // SMS verification
     Email   // Email verification
-    WebAuthn // Hardware keys (FIDO2)
     Backup  // Backup codes
 }
 ```
@@ -473,5 +473,5 @@ goatflow-cli security audit
 ---
 
 *Security is everyone's responsibility*
-*Last updated: August 2025*
-*Version: 1.0*
+*Last updated: May 2026*
+*Version: 1.1*

@@ -182,8 +182,7 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		auth.DefaultLoginRateLimiter.RecordSuccess(clientIP, username)
 
 		// Check if 2FA is enabled for this user
-		totpService := service.NewTOTPService(db, "GoatFlow")
-		if totpService.IsEnabled(int(userID)) {
+		if isAgentMFAEnabled(db, c.Request, int(userID)) {
 			// 2FA is enabled - don't complete login yet
 			// SECURITY FIX (V3/V4/V5/V7): Use session manager instead of raw cookies
 			sessionMgr := auth.GetTOTPSessionManager()
@@ -192,10 +191,10 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 				sendErrorResponse(c, http.StatusInternalServerError, "Failed to create 2FA session")
 				return
 			}
-			
+
 			// Only store the token in cookie - user data is server-side
 			c.SetCookie("2fa_pending", token, 300, "/", "", false, true) // 5 min expiry
-			
+
 			if c.GetHeader("HX-Request") == "true" {
 				c.Header("HX-Redirect", "/login/2fa")
 				c.JSON(http.StatusOK, gin.H{
@@ -205,7 +204,7 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 				})
 				return
 			}
-			
+
 			c.Redirect(http.StatusFound, "/login/2fa")
 			return
 		}

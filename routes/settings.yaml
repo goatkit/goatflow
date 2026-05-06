@@ -89,3 +89,32 @@ spec:
       handler: handleTOTPDisable
       middleware: [demo-guard]
       description: "Disable 2FA (requires valid code)"
+
+    - path: /api/preferences/2fa/webauthn/register/begin
+      method: POST
+      handler: handleWebAuthnRegisterBegin
+      middleware: [demo-guard]
+      description: "Begin hardware security key registration"
+
+    - path: /api/preferences/2fa/webauthn/register/finish
+      method: POST
+      handler: handleWebAuthnRegisterFinish
+      middleware: [demo-guard]
+      description: "Finish hardware security key registration"
+
+    - path: /api/preferences/2fa/webauthn/credentials
+      method: GET
+      handler: handleWebAuthnCredentials
+      description: "List hardware security keys"
+
+    - path: /api/preferences/2fa/webauthn/credentials/:id
+      method: PATCH
+      handler: handleWebAuthnCredentialRename
+      middleware: [demo-guard]
+      description: "Rename a hardware security key"
+
+    - path: /api/preferences/2fa/webauthn/credentials/:id
+      method: DELETE
+      handler: handleWebAuthnCredentialDelete
+      middleware: [demo-guard]
+      description: "Remove a hardware security key"

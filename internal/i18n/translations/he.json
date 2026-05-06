@@ -1559,6 +1559,7 @@
     "2fa_description": "הזן את הקוד בן 6 הספרות מאפליקציית האימות שלך",
     "2fa_verify": "אמת",
     "2fa_recovery_hint": "איבדת גישה? השתמש בקוד שחזור",
+    "use_security_key": "השתמש במפתח אבטחה",
     "verification_code": "קוד אימות",
     "back_to_login": "חזרה להתחברות",
     "verify": "אמת"
@@ -2884,7 +2885,10 @@
       "save_recovery_codes": "שמור קודי שחזור",
       "scan_instructions": "סרוק קוד QR זה עם אפליקציית האימות שלך",
       "setup_failed": "הגדרת 2FA נכשלה",
-      "verify_enable": "אמת והפעל"
+      "verify_enable": "אמת והפעל",
+      "add_security_key": "הוסף מפתח אבטחה",
+      "security_keys_registered": "מפתחות אבטחה רשומים",
+      "security_key_name": "שם מפתח האבטחה"
     },
     "reset_highlights": "אפס הדגשות תכונות",
     "highlights_reset": "הדגשות התכונות אופסו",

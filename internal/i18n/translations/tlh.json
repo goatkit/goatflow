@@ -1579,6 +1579,7 @@
     "2fa_description": "jav mI' ngoq yIcha' lulIgh app vo'",
     "2fa_verify": "chut",
     "2fa_recovery_hint": "Suq lojmIt? chetvI' ngoq yIlo'",
+    "use_security_key": "Hung ngaQHa'moHwI' yIlo'",
     "verification_code": "chut ngoq",
     "back_to_login": "logIn Dung chegh",
     "verify": "chut"
@@ -2894,7 +2895,10 @@
       "save_recovery_codes": "chegh mIw yI'oj",
       "scan_instructions": "QR mIllogh yIHotlh",
       "setup_failed": "2FA qellu'be'",
-      "verify_enable": "yItob 'ej yIchu'"
+      "verify_enable": "yItob 'ej yIchu'",
+      "add_security_key": "Hung ngaQHa'moHwI' yIchel",
+      "security_keys_registered": "Hung ngaQHa'moHwI'pu' qI'lu'",
+      "security_key_name": "Hung ngaQHa'moHwI' pong"
     },
     "reset_highlights": "ngo'wI' tIchenmoH",
     "highlights_reset": "ngo'wI' chenmoHlu'pu'",

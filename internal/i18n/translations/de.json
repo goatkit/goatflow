@@ -1580,6 +1580,7 @@
     "2fa_description": "Geben Sie den 6-stelligen Code aus Ihrer Authenticator-App ein",
     "2fa_verify": "Bestätigen",
     "2fa_recovery_hint": "Zugang verloren? Verwenden Sie einen Wiederherstellungscode",
+    "use_security_key": "Sicherheitsschlüssel verwenden",
     "verification_code": "Bestätigungscode",
     "back_to_login": "Zurück zur Anmeldung",
     "verify": "Bestätigen"
@@ -2899,7 +2900,10 @@
       "save_recovery_codes": "Wiederherstellungscodes speichern",
       "scan_instructions": "Scannen Sie diesen QR-Code mit Ihrer Authenticator-App",
       "setup_failed": "2FA-Einrichtung fehlgeschlagen",
-      "verify_enable": "Verifizieren & Aktivieren"
+      "verify_enable": "Verifizieren & Aktivieren",
+      "add_security_key": "Sicherheitsschlüssel hinzufügen",
+      "security_keys_registered": "Sicherheitsschlüssel registriert",
+      "security_key_name": "Name des Sicherheitsschlüssels"
     },
     "reset_highlights": "Feature-Hinweise zurücksetzen",
     "highlights_reset": "Feature-Hinweise wurden zurückgesetzt",

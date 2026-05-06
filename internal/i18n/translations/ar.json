@@ -1559,6 +1559,7 @@
     "2fa_description": "أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة",
     "2fa_verify": "تحقق",
     "2fa_recovery_hint": "فقدت الوصول؟ استخدم رمز الاسترداد",
+    "use_security_key": "استخدم مفتاح الأمان",
     "verification_code": "رمز التحقق",
     "back_to_login": "العودة إلى تسجيل الدخول",
     "verify": "تحقق"
@@ -2877,7 +2878,10 @@
       "save_recovery_codes": "حفظ رموز الاسترداد",
       "scan_instructions": "امسح رمز QR هذا بتطبيق المصادقة",
       "setup_failed": "فشل إعداد المصادقة الثنائية",
-      "verify_enable": "تحقق وتفعيل"
+      "verify_enable": "تحقق وتفعيل",
+      "add_security_key": "إضافة مفتاح أمان",
+      "security_keys_registered": "مفاتيح أمان مسجلة",
+      "security_key_name": "اسم مفتاح الأمان"
     },
     "reset_highlights": "إعادة تعيين إبرازات الميزات",
     "highlights_reset": "تمت إعادة تعيين إبرازات الميزات",

@@ -325,6 +325,25 @@ GROUPS: List[Dict[str, object]] = [
         ],
     },
     {
+        "title": "Performance",
+        "emoji": "📈",
+        "entries": [
+            {"name": "bench", "description": "Run the curated Go benchmark baseline suite"},
+            {"name": "benchmark", "description": "Alias for bench"},
+            {
+                "name": "bench-compare",
+                "usage": "make bench-compare BASE=generated/benchmarks/base.txt CANDIDATE=generated/benchmarks/candidate.txt",
+                "description": "Compare two Go benchmark outputs with benchstat",
+            },
+            {"name": "load-test", "description": "Run the k6 smoke load-test profile against the test stack"},
+            {
+                "name": "load-test-smoke",
+                "usage": "make load-test-smoke LOAD_TEST_VUS=20 LOAD_TEST_DURATION=2m",
+                "description": "Run the configurable k6 smoke profile",
+            },
+        ],
+    },
+    {
         "title": "Helm Chart",
         "emoji": "⎈",
         "entries": [

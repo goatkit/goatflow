@@ -52,6 +52,12 @@
                 </div>
             </form>
 
+            <div class="mt-4">
+                <button type="button" id="security-key-btn" class="gk-btn-secondary w-full" onclick="verifyWithSecurityKey()">
+                    {{ t("auth.use_security_key")|default:"Use security key" }}
+                </button>
+            </div>
+
             <div class="mt-6 text-center">
                 <a href="/login" class="text-sm gk-link-neon">
                     ← {{ t("auth.back_to_login")|default:"Back to login" }}
@@ -124,5 +130,87 @@ document.getElementById('code').addEventListener('input', function(e) {
         document.getElementById('2fa-form').dispatchEvent(new Event('submit'));
     }
 });
+
+function webauthnBase64URLToBuffer(value) {
+    const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+}
+
+function webauthnBufferToBase64URL(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function prepareAssertionOptions(options) {
+    const publicKey = options.publicKey || options;
+    publicKey.challenge = webauthnBase64URLToBuffer(publicKey.challenge);
+    if (publicKey.allowCredentials) {
+        publicKey.allowCredentials = publicKey.allowCredentials.map(credential => ({
+            ...credential,
+            id: webauthnBase64URLToBuffer(credential.id)
+        }));
+    }
+    return publicKey;
+}
+
+function serializeAssertion(credential) {
+    return {
+        id: credential.id,
+        rawId: webauthnBufferToBase64URL(credential.rawId),
+        type: credential.type,
+        response: {
+            authenticatorData: webauthnBufferToBase64URL(credential.response.authenticatorData),
+            clientDataJSON: webauthnBufferToBase64URL(credential.response.clientDataJSON),
+            signature: webauthnBufferToBase64URL(credential.response.signature),
+            userHandle: credential.response.userHandle ? webauthnBufferToBase64URL(credential.response.userHandle) : null
+        },
+        clientExtensionResults: credential.getClientExtensionResults()
+    };
+}
+
+async function verifyWithSecurityKey() {
+    const errorDiv = document.getElementById('error-message');
+    const errorText = document.getElementById('error-text');
+    const btn = document.getElementById('security-key-btn');
+
+    if (!window.PublicKeyCredential) {
+        errorText.textContent = 'This browser does not support security keys.';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+
+    btn.disabled = true;
+    errorDiv.classList.add('hidden');
+
+    try {
+        const begin = await fetch('/api/auth/2fa/webauthn/begin', { method: 'POST' });
+        const beginData = await begin.json();
+        if (!beginData.success) throw new Error(beginData.error || 'No registered security keys found');
+
+        const credential = await navigator.credentials.get({ publicKey: prepareAssertionOptions(beginData.options) });
+        const finish = await fetch('/api/auth/2fa/webauthn/finish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(serializeAssertion(credential))
+        });
+        const finishData = await finish.json();
+        if (finishData.success) {
+            window.location.href = finishData.redirect || '/dashboard';
+        } else {
+            throw new Error(finishData.error || 'Security key verification failed');
+        }
+    } catch (err) {
+        errorText.textContent = err.message || 'Security key verification failed.';
+        errorDiv.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+    }
+}
 </script>
 {% endblock %}

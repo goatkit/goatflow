@@ -128,7 +128,7 @@
 - ✅ OAuth 2.0 (OAuth2 provider implemented)
 - ❌ OpenID Connect (TODO)
 - ✅ LDAP/Active Directory (LDAP provider implemented)
-- ✅ Multi-factor authentication (TOTP) — QR setup, recovery codes, admin override, audit logging
+- ✅ Multi-factor authentication — TOTP QR setup, recovery codes, WebAuthn/FIDO2 security keys, admin override, audit logging
 - ❌ Biometric authentication (TODO)
 - ✅ API key management (personal access tokens with scoped permissions, expiration, rate limiting)
 

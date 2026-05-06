@@ -277,17 +277,17 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 - [x] Password re-verification for 2FA setup/disable (V9) - requires current password
 - [x] Atomic preference updates via SetAndDelete() - all 2FA state changes in single transaction
 - [x] Admin 2FA override with audit trail
-- [ ] Hardware key support (WebAuthn) - see assessment below
+- [x] Hardware key support (WebAuthn) - implemented as an additional second-factor method alongside TOTP/recovery codes.
 
 #### Hardware Key (WebAuthn/FIDO2) Assessment
 
-**Status:** Deferred - not planned for initial release.
+**Status:** Implemented for MFA. Hardware keys are supported for agent and customer accounts as a second factor after password authentication.
 
 **Effort:** MEDIUM-HIGH (2-3 weeks)
 - New DB schema for credential storage (public keys, credential IDs, counters)
 - WebAuthn registration/authentication flows with challenge-response
 - Browser `navigator.credentials` API integration
-- Multiple keys per user, fallback to TOTP, key management UI
+- Multiple keys per user, fallback to TOTP/recovery codes, key management UI
 
 **Why hardware keys are more secure than TOTP:**
 
@@ -300,14 +300,11 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 
 **Limitation:** Basic hardware keys (YubiKey, etc.) only verify physical presence via touch - not identity. Someone with stolen key + password gets in. High-security variants add PIN or biometrics.
 
-**Why we're deferring:**
+**Operational notes:**
 
-1. **TOTP is sufficient for ticketing systems** - Users aren't high-value targets like banking
-2. **Hardware key adoption is still niche** - Most users don't own them
-3. **Let TOTP implementation bake** - Get real-world feedback first
-4. **Better use of engineering time** - Focus on features users are requesting
-
-**Recommendation:** Add to roadmap as "Phase 2 MFA" when an enterprise customer specifically requests it. Current TOTP implementation covers 99% of use cases
+1. WebAuthn is currently used as MFA, not passwordless login.
+2. Production deployments must configure HTTPS origins and a stable relying-party ID.
+3. TOTP and recovery codes remain available as fallback methods.
 
 ## Test Coverage Matrix
 

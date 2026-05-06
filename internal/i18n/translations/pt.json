@@ -1559,6 +1559,7 @@
     "2fa_description": "Digite o código de 6 dígitos do seu aplicativo autenticador",
     "2fa_verify": "Verificar",
     "2fa_recovery_hint": "Perdeu o acesso? Use um código de recuperação",
+    "use_security_key": "Usar chave de segurança",
     "verification_code": "Código de verificação",
     "back_to_login": "Voltar ao login",
     "verify": "Verificar"
@@ -2990,7 +2991,10 @@
       "save_recovery_codes": "Salvar códigos de recuperação",
       "scan_instructions": "Escaneie este código QR com seu aplicativo autenticador",
       "setup_failed": "Falha ao configurar 2FA",
-      "verify_enable": "Verificar e ativar"
+      "verify_enable": "Verificar e ativar",
+      "add_security_key": "Adicionar chave de segurança",
+      "security_keys_registered": "chaves de segurança registradas",
+      "security_key_name": "Nome da chave de segurança"
     },
     "reset_highlights": "Redefinir destaques",
     "highlights_reset": "Destaques foram redefinidos",

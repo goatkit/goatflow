@@ -182,6 +182,27 @@ override TEST_CUSTOMER_FE_PORT := 18082
 endif
 TEST_COMPOSE_FILE := $(CURDIR)/docker-compose.yml:$(CURDIR)/docker-compose.testdb.yml:$(CURDIR)/docker-compose.test.yaml
 
+# Performance and load-test defaults. Override at invocation time, e.g.
+# make bench BENCH_COUNT=5 BENCH_TIME=2s
+BENCH_COUNT ?= 3
+BENCH_TIME ?= 1s
+BENCH_REGEX ?= Benchmark(Sanitize|StripHTML|GetConfig|GetDSN|IsProduction|IsBusinessDay|IsWithinBusinessHours|SetPassword|CheckPassword|RecordRequest|GetStats|ValidateResponse|ValidateJSONSchema|Routing|TemplateLoading|DashboardPage|LinkChecker|LDAPService_ValidateConfig|LDAPService_GetUserAttributes)
+BENCH_PACKAGES ?= ./internal/utils ./internal/config ./internal/models ./internal/routing ./internal/middleware ./internal/api ./internal/service
+BENCH_OUT ?=
+K6_IMAGE ?= docker.io/grafana/k6:latest
+LOAD_TEST_BASE_URL ?= $(TEST_BACKEND_BASE_URL)
+LOAD_TEST_VUS ?= 10
+LOAD_TEST_DURATION ?= 1m
+LOAD_TEST_SCRIPT ?= tests/load/k6/goatflow_smoke.js
+LOAD_TEST_ENDPOINTS ?=
+LOAD_TEST_SUMMARY ?=
+LOAD_TEST_PREPARE_STACK ?= 1
+K6_MAX_ERROR_RATE ?= 0.01
+K6_P95_LIMIT ?= 750
+K6_P99_LIMIT ?= 1500
+K6_SLEEP_SECONDS ?= 1
+K6_REDIRECTS ?= 5
+
 #########################################
 # PLUGIN DEVELOPMENT
 #########################################
@@ -807,6 +828,51 @@ toolbox-test-all:
 		$(TOOLBOX_GO)"go test -buildvcs=false -v ./cmd/goats"; \
 		$(TOOLBOX_GO)"go test -buildvcs=false -v ./internal/api -run ^Test(AdminType|Queue|Article|Search|Priority|User|TicketZoom|AdminService|AdminStates|AdminGroupManagement|HandleGetQueues|HandleGetPriorities|DatabaseIntegrity)"; \
 		$(TOOLBOX_GO)"go test -buildvcs=false -v ./internal/service"'
+
+.PHONY: bench benchmark bench-compare
+bench benchmark: toolbox-build
+	@printf "\n📈 Running GoatFlow Go benchmark suite...\n"
+	@mkdir -p generated/benchmarks
+	@out="$(BENCH_OUT)"; \
+	if [ -z "$$out" ]; then out="generated/benchmarks/go-$$(date -u +%Y%m%dT%H%M%SZ).txt"; fi; \
+	$(MAKE) toolbox-exec ARGS="BENCH_COUNT='$(BENCH_COUNT)' BENCH_TIME='$(BENCH_TIME)' BENCH_REGEX='$(BENCH_REGEX)' BENCH_PACKAGES='$(BENCH_PACKAGES)' BENCH_OUT='$$out' bash scripts/perf/run_benchmarks.sh"
+
+bench-compare: toolbox-build
+	@[ -n "$(BASE)" ] && [ -n "$(CANDIDATE)" ] || (echo "Usage: make bench-compare BASE=generated/benchmarks/base.txt CANDIDATE=generated/benchmarks/candidate.txt" && exit 2)
+	@$(MAKE) toolbox-exec ARGS='bash scripts/perf/compare_benchmarks.sh "$(BASE)" "$(CANDIDATE)"'
+
+.PHONY: load-test load-test-smoke
+load-test: load-test-smoke
+
+load-test-smoke:
+	@printf "\n📊 Running k6 load-test smoke profile...\n"
+	@mkdir -p generated/load-tests
+	@if [ "$(LOAD_TEST_PREPARE_STACK)" != "0" ]; then \
+		$(MAKE) test-stack-up; \
+	else \
+		printf "Skipping test stack startup; using LOAD_TEST_BASE_URL=%s\n" "$(LOAD_TEST_BASE_URL)"; \
+	fi
+	@summary="$(LOAD_TEST_SUMMARY)"; \
+	if [ -z "$$summary" ]; then summary="generated/load-tests/k6-smoke-$$(date -u +%Y%m%dT%H%M%SZ).json"; fi; \
+	printf "Base URL: %s\n" "$(LOAD_TEST_BASE_URL)"; \
+	printf "Summary:  %s\n" "$$summary"; \
+	$(CONTAINER_CMD) run --rm \
+		--security-opt label=disable \
+		$(CONTAINER_USER) \
+		-v "$$PWD:/workspace"$(VZ) \
+		-w /workspace \
+		--network host \
+		-e BASE_URL="$(LOAD_TEST_BASE_URL)" \
+		-e LOAD_ENDPOINTS='$(LOAD_TEST_ENDPOINTS)' \
+		-e GF_LOAD_VUS="$(LOAD_TEST_VUS)" \
+		-e GF_LOAD_DURATION="$(LOAD_TEST_DURATION)" \
+		-e GF_LOAD_MAX_ERROR_RATE="$(K6_MAX_ERROR_RATE)" \
+		-e GF_LOAD_P95_LIMIT="$(K6_P95_LIMIT)" \
+		-e GF_LOAD_P99_LIMIT="$(K6_P99_LIMIT)" \
+		-e GF_LOAD_SLEEP_SECONDS="$(K6_SLEEP_SECONDS)" \
+		-e GF_LOAD_REDIRECTS="$(K6_REDIRECTS)" \
+		$(K6_IMAGE) \
+		run --summary-export "$$summary" --summary-trend-stats "avg,min,med,p(90),p(95),p(99),max" "$(LOAD_TEST_SCRIPT)"
 
 .PHONY: test-unit
 test-unit:

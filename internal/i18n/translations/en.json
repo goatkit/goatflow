@@ -1501,6 +1501,7 @@
     "2fa_description": "Enter the 6-digit code from your authenticator app",
     "2fa_verify": "Verify",
     "2fa_recovery_hint": "Lost access? Use a recovery code",
+    "use_security_key": "Use security key",
     "verification_code": "Verification Code",
     "back_to_login": "Back to Login",
     "verify": "Verify"
@@ -2493,7 +2494,10 @@
       "save_recovery_codes": "Save Recovery Codes",
       "scan_instructions": "Scan this QR code with your authenticator app",
       "setup_failed": "Failed to set up 2FA",
-      "verify_enable": "Verify & Enable"
+      "verify_enable": "Verify & Enable",
+      "add_security_key": "Add security key",
+      "security_keys_registered": "security keys registered",
+      "security_key_name": "Security key name"
     },
     "reset_highlights": "Reset feature highlights",
     "highlights_reset": "Feature highlights have been reset",

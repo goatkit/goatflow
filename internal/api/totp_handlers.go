@@ -61,10 +61,17 @@ func handleTOTPStatus(c *gin.Context) {
 	totpService := service.NewTOTPService(db, "GoatFlow")
 	enabled := totpService.IsEnabled(userID)
 	remaining := totpService.GetRemainingRecoveryCodes(userID)
+	webauthnCount := 0
+	if wa, err := service.NewWebAuthnService(db, c.Request); err == nil {
+		webauthnCount, _ = wa.CountCredentials(service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(userID))
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":                  true,
-		"enabled":                  enabled,
+		"enabled":                  enabled || webauthnCount > 0,
+		"totp_enabled":             enabled,
+		"webauthn_enabled":         webauthnCount > 0,
+		"webauthn_credentials":     webauthnCount,
 		"recovery_codes_remaining": remaining,
 	})
 }
@@ -514,10 +521,17 @@ func handleCustomerTOTPStatus(c *gin.Context) {
 	totpService := service.NewTOTPService(db, "GoatFlow")
 	enabled := totpService.IsEnabledForCustomer(customerLogin)
 	remaining := totpService.GetRemainingRecoveryCodesForCustomer(customerLogin)
+	webauthnCount := 0
+	if wa, err := service.NewWebAuthnService(db, c.Request); err == nil {
+		webauthnCount, _ = wa.CountCredentials(service.WebAuthnUserTypeCustomer, customerLogin)
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":                  true,
-		"enabled":                  enabled,
+		"enabled":                  enabled || webauthnCount > 0,
+		"totp_enabled":             enabled,
+		"webauthn_enabled":         webauthnCount > 0,
+		"webauthn_credentials":     webauthnCount,
 		"recovery_codes_remaining": remaining,
 	})
 }
@@ -938,7 +952,9 @@ func handleAdmin2FAOverride(c *gin.Context) {
 
 	// Check if 2FA is enabled
 	totpService := service.NewTOTPService(db, "GoatFlow")
-	if !totpService.IsEnabled(targetUserID) {
+	wa, _ := service.NewWebAuthnService(db, c.Request)
+	webauthnEnabled := wa != nil && wa.IsEnabled(service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(targetUserID))
+	if !totpService.IsEnabled(targetUserID) && !webauthnEnabled {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "2FA is not enabled for this user"})
 		return
 	}
@@ -947,6 +963,9 @@ func handleAdmin2FAOverride(c *gin.Context) {
 	if err := totpService.ForceDisable(targetUserID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to disable 2FA"})
 		return
+	}
+	if wa != nil {
+		_ = wa.DeleteAllCredentials(service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(targetUserID))
 	}
 
 	// Log the action
@@ -999,7 +1018,9 @@ func handleAdminCustomer2FAOverride(c *gin.Context) {
 
 	// Check if 2FA is enabled
 	totpService := service.NewTOTPService(db, "GoatFlow")
-	if !totpService.IsEnabledForCustomer(customerLogin) {
+	wa, _ := service.NewWebAuthnService(db, c.Request)
+	webauthnEnabled := wa != nil && wa.IsEnabled(service.WebAuthnUserTypeCustomer, customerLogin)
+	if !totpService.IsEnabledForCustomer(customerLogin) && !webauthnEnabled {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "2FA is not enabled for this customer"})
 		return
 	}
@@ -1008,6 +1029,9 @@ func handleAdminCustomer2FAOverride(c *gin.Context) {
 	if err := totpService.ForceDisableForCustomer(customerLogin); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to disable 2FA"})
 		return
+	}
+	if wa != nil {
+		_ = wa.DeleteAllCredentials(service.WebAuthnUserTypeCustomer, customerLogin)
 	}
 
 	// Log the action
