@@ -115,6 +115,25 @@ func TestServerMethodNotFound(t *testing.T) {
 	}
 }
 
+func TestServerIgnoresNotifications(t *testing.T) {
+	bridge := NewAPIBridge()
+	server := NewServer(1, "admin", "Admin", bridge)
+
+	for _, msg := range []string{
+		`{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}`,
+		`{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":1}}`,
+		`{"jsonrpc":"2.0","method":"unknown/notification"}`,
+	} {
+		respBytes, err := server.HandleMessage(context.Background(), []byte(msg))
+		if err != nil {
+			t.Fatalf("HandleMessage failed: %v", err)
+		}
+		if respBytes != nil {
+			t.Fatalf("expected no response for notification %s, got %s", msg, string(respBytes))
+		}
+	}
+}
+
 func TestServerPing(t *testing.T) {
 	bridge := NewAPIBridge()
 	server := NewServer(1, "admin", "Admin", bridge)

@@ -42,6 +42,13 @@ func NewServer(userID int, userLogin, userRole string, bridge *APIBridge) *Serve
 
 // HandleMessage processes a JSON-RPC message and returns a response.
 func (s *Server) HandleMessage(ctx context.Context, msg []byte) ([]byte, error) {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(msg, &raw); err != nil {
+		resp := ErrorResponse(nil, ErrCodeParse, "Parse error: "+err.Error())
+		return json.Marshal(resp)
+	}
+	_, hasID := raw["id"]
+
 	var req Request
 	if err := json.Unmarshal(msg, &req); err != nil {
 		resp := ErrorResponse(nil, ErrCodeParse, "Parse error: "+err.Error())
@@ -49,8 +56,22 @@ func (s *Server) HandleMessage(ctx context.Context, msg []byte) ([]byte, error) 
 	}
 
 	if req.JSONRPC != "2.0" {
+		if !hasID {
+			return nil, nil
+		}
 		resp := ErrorResponse(req.ID, ErrCodeInvalidRequest, "Invalid JSON-RPC version")
 		return json.Marshal(resp)
+	}
+
+	// JSON-RPC notifications do not include an id and must not receive a
+	// response, including error responses. MCP clients send initialized as
+	// notifications/initialized after the initialize request.
+	if !hasID {
+		switch req.Method {
+		case "initialized", "notifications/initialized":
+			s.initialized = true
+		}
+		return nil, nil
 	}
 
 	var resp Response

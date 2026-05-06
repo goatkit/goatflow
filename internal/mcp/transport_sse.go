@@ -108,7 +108,7 @@ func HandleStreamableHTTPPost(
 
 	// No response for notifications
 	if response == nil {
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusAccepted)
 		return
 	}
 
@@ -151,6 +151,7 @@ func HandleStreamableHTTPGet(
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no")
+	w.WriteHeader(http.StatusOK)
 
 	// Send initial connected event
 	WriteSSEEvent(w, flusher, "open", []byte(`{"status":"ok"}`))
