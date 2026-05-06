@@ -444,6 +444,38 @@ Access in handlers:
 title := host.Translate(ctx, "my_plugin.widget_title")
 ```
 
+## Plugin UI Offline Caching
+
+Plugin UIs can enable PWA support and ask GoatFlow's root service worker to
+pre-cache selected UI routes for offline use:
+
+```go
+UIs: []plugin.UISpec{
+    {
+        ID:    "app",
+        Name:  "Field App",
+        Type:  "agent_app",
+        Shell: "minimal",
+        Routes: []plugin.UIRouteSpec{
+            {Path: "/", Handler: "render_home"},
+            {Path: "/jobs", Handler: "render_jobs"},
+        },
+        PWA: &plugin.UIPWASpec{
+            Enabled:     true,
+            Display:     "standalone",
+            CacheRoutes: []string{"/", "/jobs"},
+        },
+    },
+}
+```
+
+`CacheRoutes` are relative to the UI base path (`/ui/{plugin}_{ui}/`) and must be
+same-origin GET routes. GoatFlow ignores external URLs, `..` path escapes,
+disabled/PWA-disabled UIs, and cache routes that target UI routes declared with a
+non-GET method. Global operators can combine plugin routes with core app rules
+through `ServiceWorker::*` sysconfig settings; supported strategies are
+`network-first`, `cache-first`, `stale-while-revalidate`, and `network-only`.
+
 ## Packaging
 
 ### ZIP Package Structure

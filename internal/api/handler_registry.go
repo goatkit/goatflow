@@ -144,6 +144,7 @@ func ensureCoreHandlers() {
 
 		// Static and basic routes
 		"handleStaticFiles": HandleStaticFiles,
+		"handleServiceWorkerConfig": HandleServiceWorkerConfig,
 		"handleLogout":      handleLogout,
 		"handleCustomerLogout": func(c *gin.Context) {
 			// Delete session record from database (check customer-specific session cookie)

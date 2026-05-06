@@ -5,6 +5,9 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/pluginui"
+	"github.com/goatkit/goatflow/internal/swconfig"
 )
 
 // HandleRedirect handles redirect routes.
@@ -86,4 +89,19 @@ func HandleStaticFiles(c *gin.Context) {
 
 	// Serve the file
 	c.File(filePath)
+}
+
+// HandleServiceWorkerConfig returns the runtime cache configuration consumed by /sw.js.
+func HandleServiceWorkerConfig(c *gin.Context) {
+	var uis []pluginui.PluginUI
+	db, err := database.GetDB()
+	if err == nil && db != nil {
+		repo := pluginui.NewRepositoryWithDB(db)
+		if active, listErr := repo.ListActive(); listErr == nil {
+			uis = active
+		}
+	}
+
+	c.Header("Cache-Control", "no-cache")
+	c.JSON(http.StatusOK, swconfig.Build(db, uis))
 }

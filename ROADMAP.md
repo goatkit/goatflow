@@ -388,6 +388,7 @@ Plugins declare unlimited independent UIs (agent apps, customer portals, public 
 - [x] Custom domain support (admin-assignable, reverse proxy config generation)
 - [x] Per-UI branding (logo, colour, fonts, favicon, app name) via `UIBrandingSpec`
 - [x] PWA manifest auto-generation (`/ui/{id}/manifest.json`) with configurable display mode
+- [x] Service worker offline support with sysconfig strategies and per-plugin `pwa.cache_routes`
 - [x] Auth per UI type: session (agent/customer), PIN (kiosk), token, none (public)
 - [x] Data scoping for customer UIs (self, org, all) — passed to plugin handlers
 - [x] Rate limiting for public UIs (configurable per UI)
@@ -587,7 +588,7 @@ Plugins receive org context automatically from the authenticated session, elimin
 - [x] Parallel shutdown inside `ShutdownAll` — total time is now max(per-plugin timeout) instead of sum. Verified by `TestShutdownAllParallel`.
 
 **Plugin UI System — Offline & Admin**
-- [ ] Service worker / offline support with configurable caching strategy (per-plugin CacheRoutes)
+- [x] Service worker / offline support with configurable caching strategy (per-plugin CacheRoutes)
 - [ ] Admin UI for managing plugin UIs (list, enable/disable, custom domain, branding override)
 
 **Two-Factor Authentication — Hardware Keys**

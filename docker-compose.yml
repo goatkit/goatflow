@@ -261,6 +261,12 @@ services:
     networks:
       - goatflow-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "tr '\\0' ' ' < /proc/1/cmdline | grep -q -- './goats -mode runner'"]
+      start_period: 10s
+      interval: 30s
+      timeout: 3s
+      retries: 3
 
   # smtp4dev - Full email sandbox (SMTP/IMAP/POP3 + Web UI)
   smtp4dev:
@@ -362,6 +368,12 @@ services:
     networks:
       - goatflow-network
     profiles: ["testdb"]
+    healthcheck:
+      test: ["CMD-SHELL", "tr '\\0' ' ' < /proc/1/cmdline | grep -q -- './goats -mode runner'"]
+      start_period: 10s
+      interval: 30s
+      timeout: 3s
+      retries: 3
 
   # GoatFlow Runner Test - Background task processor for test environment
   runner-test:

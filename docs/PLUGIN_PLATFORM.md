@@ -106,6 +106,29 @@ The Manager (`internal/plugin/manager.go`) handles the full plugin lifecycle:
 - **Stats** — per-plugin resource usage counters (DB queries, HTTP requests, cache ops, errors)
 - **Plugin-to-plugin calls** — `CallPlugin()` and `CallFrom()` with caller tracking
 
+## Plugin UIs, PWA, and Offline Caching
+
+Plugin UIs can opt into PWA support with `UISpec.PWA`. GoatFlow serves the root
+service worker at `/sw.js` for both core pages and plugin UI pages, while each UI
+keeps its own generated manifest at `/ui/{plugin}_{ui}/manifest.json`.
+
+`PWA.CacheRoutes` declares same-origin UI routes to pre-cache for offline use.
+Routes are relative to the UI base path, so `"/"` and `"/tasks"` in a UI with
+full ID `fieldkit_app` become `/ui/fieldkit_app/` and
+`/ui/fieldkit_app/tasks`. External URLs, parent-directory escapes, disabled UIs,
+PWA-disabled UIs, and routes declared as non-GET UI routes are ignored.
+
+Global service-worker behavior is configured through sysconfig:
+
+- `ServiceWorker::Enabled`
+- `ServiceWorker::DefaultNavigationStrategy`
+- `ServiceWorker::Routes`
+
+The route strategy enum is fixed for v1: `network-first`, `cache-first`,
+`stale-while-revalidate`, and `network-only`. `/sw-config.json` combines global
+rules with enabled plugin UI cache routes and gives the service worker a version
+hash so old GoatFlow caches can be retired when configuration changes.
+
 ## Loader & Discovery
 
 The Loader (`internal/plugin/loader/loader.go`) handles filesystem discovery:

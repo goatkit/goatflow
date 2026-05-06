@@ -22,6 +22,11 @@ spec:
       handler: handleStaticFiles
       description: "Serve service worker"
 
+    - path: /sw-config.json
+      method: GET
+      handler: handleServiceWorkerConfig
+      description: "Serve service worker cache configuration"
+
     # Favicon files (must be before catch-all)
     - path: /favicon.ico
       method: GET
