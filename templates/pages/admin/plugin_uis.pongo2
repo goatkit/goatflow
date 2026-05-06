@@ -1,0 +1,317 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("admin.plugin_uis")|default:"Plugin UIs" }} - {{ t("app.name") }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("admin.plugin_uis")|default:"Plugin UIs" }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.plugin_uis_description")|default:"Manage plugin UI surfaces, availability, domains, and branding" }}</p>
+            </div>
+            <div class="mt-4 sm:mt-0 flex gap-2">
+                <a href="/admin/plugins" class="gk-btn-secondary">
+                    <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+                    </svg>
+                    {{ t("admin.back_to_plugins")|default:"Back to Plugins" }}
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        <div class="gk-card p-5">
+            <div class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("admin.plugin_uis_total")|default:"Total UIs" }}</div>
+            <div class="mt-2 text-2xl font-bold" style="color: var(--gk-text-primary);" id="stat-total">-</div>
+        </div>
+        <div class="gk-card p-5">
+            <div class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("admin.plugin_uis_enabled")|default:"Enabled" }}</div>
+            <div class="mt-2 text-2xl font-bold" style="color: var(--gk-success);" id="stat-enabled">-</div>
+        </div>
+        <div class="gk-card p-5">
+            <div class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("admin.plugin_uis_pwa")|default:"PWA" }}</div>
+            <div class="mt-2 text-2xl font-bold" style="color: var(--gk-primary);" id="stat-pwa">-</div>
+        </div>
+        <div class="gk-card p-5">
+            <div class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("admin.plugin_uis_domains")|default:"Custom Domains" }}</div>
+            <div class="mt-2 text-2xl font-bold" style="color: var(--gk-accent);" id="stat-domains">-</div>
+        </div>
+    </div>
+
+    <div class="mb-6 gk-card p-4">
+        <div class="flex flex-col sm:flex-row gap-4">
+            <div class="flex-1">
+                <label for="uiSearch" class="sr-only">{{ t("admin.search_plugin_uis")|default:"Search plugin UIs" }}</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input id="uiSearch" class="gk-input-neon pl-10" type="text" placeholder="{{ t("admin.search_plugin_uis_placeholder")|default:"Search by name, plugin, or domain..." }}" oninput="renderPluginUIs()">
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <select id="typeFilter" class="gk-select-neon" onchange="renderPluginUIs()">
+                    <option value="">{{ t("common.all_types")|default:"All Types" }}</option>
+                    <option value="admin_page">admin_page</option>
+                    <option value="agent_app">agent_app</option>
+                    <option value="customer_app">customer_app</option>
+                    <option value="public_page">public_page</option>
+                    <option value="kiosk">kiosk</option>
+                </select>
+                <select id="statusFilter" class="gk-select-neon" onchange="renderPluginUIs()">
+                    <option value="">{{ t("admin.all_status")|default:"All Status" }}</option>
+                    <option value="enabled">{{ t("admin.enabled")|default:"Enabled" }}</option>
+                    <option value="disabled">{{ t("admin.disabled")|default:"Disabled" }}</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="gk-card-glow overflow-hidden rounded-lg">
+        <table class="gk-table">
+            <thead>
+                <tr>
+                    <th>{{ t("admin.plugin_ui")|default:"Plugin UI" }}</th>
+                    <th>{{ t("admin.plugin")|default:"Plugin" }}</th>
+                    <th>{{ t("common.type")|default:"Type" }}</th>
+                    <th>{{ t("admin.path")|default:"Path" }}</th>
+                    <th>{{ t("admin.domain")|default:"Domain" }}</th>
+                    <th>{{ t("admin.status")|default:"Status" }}</th>
+                    <th><span class="sr-only">{{ t("admin.actions")|default:"Actions" }}</span></th>
+                </tr>
+            </thead>
+            <tbody id="plugin-ui-tbody">
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center">
+                        <svg class="animate-spin mx-auto h-8 w-8 mb-2" style="color: var(--gk-primary);" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("common.loading")|default:"Loading..." }}</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="edit-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closeEditModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+            <div class="gk-modal-header">
+                <h3 class="gk-modal-title" id="edit-title">{{ t("admin.edit_plugin_ui")|default:"Edit Plugin UI" }}</h3>
+                <button type="button" class="gk-modal-close" onclick="closeEditModal()">
+                    <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="gk-modal-body space-y-4">
+                <input type="hidden" id="edit-id">
+                <div>
+                    <label for="edit-domain" class="form-label">{{ t("admin.custom_domain")|default:"Custom Domain" }}</label>
+                    <input id="edit-domain" class="gk-input-neon w-full" type="text" placeholder="ui.example.com">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="edit-app-name" class="form-label">{{ t("admin.app_name")|default:"App Name" }}</label>
+                        <input id="edit-app-name" class="gk-input-neon w-full" type="text">
+                    </div>
+                    <div>
+                        <label for="edit-color" class="form-label">{{ t("admin.theme_color")|default:"Theme Color" }}</label>
+                        <input id="edit-color" class="gk-input-neon w-full" type="text" placeholder="#1a1a2e">
+                    </div>
+                    <div>
+                        <label for="edit-logo" class="form-label">{{ t("admin.logo_url")|default:"Logo URL" }}</label>
+                        <input id="edit-logo" class="gk-input-neon w-full" type="text">
+                    </div>
+                    <div>
+                        <label for="edit-favicon" class="form-label">{{ t("admin.favicon_url")|default:"Favicon URL" }}</label>
+                        <input id="edit-favicon" class="gk-input-neon w-full" type="text">
+                    </div>
+                </div>
+            </div>
+            <div class="gk-modal-footer">
+                <button type="button" class="gk-btn-secondary" onclick="closeEditModal()">{{ t("buttons.cancel")|default:"Cancel" }}</button>
+                <button type="button" id="save-btn" class="gk-btn-neon" onclick="savePluginUI()">{{ t("buttons.save")|default:"Save" }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let pluginUIs = [];
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text == null ? '' : String(text);
+    return div.innerHTML;
+}
+
+function getBranding(ui) {
+    return ui.branding || {};
+}
+
+function filteredPluginUIs() {
+    const search = (document.getElementById('uiSearch').value || '').toLowerCase();
+    const type = document.getElementById('typeFilter').value;
+    const status = document.getElementById('statusFilter').value;
+    return pluginUIs.filter(ui => {
+        const haystack = [ui.name, ui.plugin_name, ui.full_id, ui.custom_domain || ''].join(' ').toLowerCase();
+        if (search && !haystack.includes(search)) return false;
+        if (type && ui.ui_type !== type) return false;
+        if (status === 'enabled' && !ui.enabled) return false;
+        if (status === 'disabled' && ui.enabled) return false;
+        return true;
+    });
+}
+
+function renderPluginUIs() {
+    const rows = filteredPluginUIs();
+    const tbody = document.getElementById('plugin-ui-tbody');
+    if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-12 text-center text-sm" style="color: var(--gk-text-muted);">{{ t("admin.no_plugin_uis")|default:"No plugin UIs found" }}</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = rows.map(ui => {
+        const domain = ui.custom_domain || '';
+        const pwa = ui.pwa_enabled ? '<span class="gk-badge gk-badge-primary ml-2">PWA</span>' : '';
+        return `
+            <tr>
+                <td class="px-4 py-3">
+                    <div class="text-sm font-medium" style="color: var(--gk-text-primary);">${escapeHtml(ui.name)}</div>
+                    <div class="text-xs font-mono" style="color: var(--gk-text-muted);">${escapeHtml(ui.full_id)}${pwa}</div>
+                </td>
+                <td class="px-4 py-3"><span class="gk-badge gk-badge-muted">${escapeHtml(ui.plugin_name)}</span></td>
+                <td class="px-4 py-3"><span class="text-sm font-mono" style="color: var(--gk-text-muted);">${escapeHtml(ui.ui_type)}</span></td>
+                <td class="px-4 py-3">
+                    <a href="${escapeHtml(ui.base_path)}" target="_blank" class="gk-link-neon font-mono text-sm">${escapeHtml(ui.base_path)}</a>
+                    ${ui.manifest_path ? `<div><a href="${escapeHtml(ui.manifest_path)}" target="_blank" class="text-xs underline" style="color: var(--gk-text-muted);">manifest</a></div>` : ''}
+                </td>
+                <td class="px-4 py-3 text-sm" style="color: var(--gk-text-muted);">${domain ? escapeHtml(domain) : '-'}</td>
+                <td class="px-4 py-3">${ui.enabled ? '<span class="gk-badge gk-badge-success">Enabled</span>' : '<span class="gk-badge gk-badge-muted">Disabled</span>'}</td>
+                <td class="px-4 py-3 text-right">
+                    <div class="flex items-center justify-end gap-2">
+                        <button type="button" class="p-2 rounded-lg hover:bg-[var(--gk-primary-subtle)]" style="color: var(--gk-primary);" title="{{ t("buttons.edit")|default:"Edit" }}" onclick="openEditModal(${ui.id})">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                        </button>
+                        <button type="button" class="p-2 rounded-lg hover:bg-[var(--gk-warning-subtle)]" style="color: ${ui.enabled ? 'var(--gk-warning)' : 'var(--gk-success)'};" title="${ui.enabled ? '{{ t("buttons.disable")|default:"Disable" }}' : '{{ t("buttons.enable")|default:"Enable" }}'}" onclick="togglePluginUI(${ui.id}, ${!ui.enabled})">
+                            ${ui.enabled
+                                ? '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" /></svg>'
+                                : '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>'}
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+function updateStats() {
+    document.getElementById('stat-total').textContent = pluginUIs.length;
+    document.getElementById('stat-enabled').textContent = pluginUIs.filter(ui => ui.enabled).length;
+    document.getElementById('stat-pwa').textContent = pluginUIs.filter(ui => ui.pwa_enabled).length;
+    document.getElementById('stat-domains').textContent = pluginUIs.filter(ui => ui.custom_domain).length;
+}
+
+async function loadPluginUIs() {
+    try {
+        const response = await fetch('/api/v1/plugin-uis', { credentials: 'same-origin' });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to load plugin UIs');
+        pluginUIs = data.uis || [];
+        updateStats();
+        renderPluginUIs();
+    } catch (err) {
+        document.getElementById('plugin-ui-tbody').innerHTML = `<tr><td colspan="7" class="px-6 py-12 text-center text-sm" style="color: var(--gk-error);">${escapeHtml(err.message)}</td></tr>`;
+    }
+}
+
+function openEditModal(id) {
+    const ui = pluginUIs.find(item => item.id === id);
+    if (!ui) return;
+    const branding = getBranding(ui);
+    document.getElementById('edit-id').value = ui.id;
+    document.getElementById('edit-title').textContent = ui.name;
+    document.getElementById('edit-domain').value = ui.custom_domain || '';
+    document.getElementById('edit-app-name').value = branding.app_name || '';
+    document.getElementById('edit-color').value = branding.color || '';
+    document.getElementById('edit-logo').value = branding.logo || '';
+    document.getElementById('edit-favicon').value = branding.favicon || '';
+    document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+    document.getElementById('edit-modal').classList.add('hidden');
+}
+
+function optionalValue(id) {
+    const value = document.getElementById(id).value.trim();
+    return value || null;
+}
+
+async function savePluginUI() {
+    const id = document.getElementById('edit-id').value;
+    const button = document.getElementById('save-btn');
+    button.disabled = true;
+    try {
+        const response = await fetch(`/api/v1/plugin-uis/${id}`, {
+            method: 'PUT',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                custom_domain: optionalValue('edit-domain'),
+                branding: {
+                    app_name: optionalValue('edit-app-name') || '',
+                    color: optionalValue('edit-color') || '',
+                    logo: optionalValue('edit-logo') || '',
+                    favicon: optionalValue('edit-favicon') || ''
+                }
+            })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to save plugin UI');
+        const idx = pluginUIs.findIndex(ui => ui.id === data.ui.id);
+        if (idx >= 0) pluginUIs[idx] = data.ui;
+        closeEditModal();
+        updateStats();
+        renderPluginUIs();
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function togglePluginUI(id, enabled) {
+    try {
+        const response = await fetch(`/api/v1/plugin-uis/${id}/toggle`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to update plugin UI');
+        const idx = pluginUIs.findIndex(ui => ui.id === data.ui.id);
+        if (idx >= 0) pluginUIs[idx] = data.ui;
+        updateStats();
+        renderPluginUIs();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+loadPluginUIs();
+</script>
+{% endblock %}

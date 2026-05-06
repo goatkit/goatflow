@@ -144,6 +144,26 @@ func (r *Repository) SetEnabled(id int64, enabled bool, userID int) error {
 	return nil
 }
 
+// UpdateAdminOverrides updates administrator-managed presentation settings.
+func (r *Repository) UpdateAdminOverrides(id int64, customDomain *string, branding *UIBrandingConfig, userID int) (*PluginUI, error) {
+	u, err := r.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if u == nil {
+		return nil, nil //nolint:nilnil
+	}
+
+	u.CustomDomain = cleanOptionalString(customDomain)
+	if err := u.SetBranding(branding); err != nil {
+		return nil, fmt.Errorf("set branding: %w", err)
+	}
+	if err := r.Update(u, userID); err != nil {
+		return nil, err
+	}
+	return r.GetByID(id)
+}
+
 // Delete removes a plugin UI permanently.
 func (r *Repository) Delete(id int64) error {
 	query := database.ConvertPlaceholders("DELETE FROM gk_plugin_ui WHERE id = ?")

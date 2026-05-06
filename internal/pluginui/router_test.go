@@ -25,7 +25,7 @@ type mockCall struct {
 	Args       json.RawMessage
 }
 
-func (m *mockCaller) Call(_ context.Context, pluginName, fn string, args json.RawMessage) (json.RawMessage, error) {
+func (m *mockCaller) Call(_ context.Context, pluginName, fn string, args []byte) ([]byte, error) {
 	m.calls = append(m.calls, mockCall{PluginName: pluginName, Fn: fn, Args: args})
 	key := pluginName + "." + fn
 	if resp, ok := m.responses[key]; ok {
@@ -40,13 +40,20 @@ type mockRenderer struct {
 	lastData     map[string]any
 }
 
-func (m *mockRenderer) HTML(c *gin.Context, code int, name string, data pongo2.Context) {
+func (m *mockRenderer) HTML(c *gin.Context, code int, name string, data interface{}) {
 	m.lastTemplate = name
 	m.lastData = make(map[string]any)
-	for k, v := range data {
-		m.lastData[k] = v
+	switch values := data.(type) {
+	case pongo2.Context:
+		for k, v := range values {
+			m.lastData[k] = v
+		}
+	case map[string]any:
+		for k, v := range values {
+			m.lastData[k] = v
+		}
 	}
-	if html, ok := data["PluginHTML"].(string); ok {
+	if html, ok := m.lastData["PluginHTML"].(string); ok {
 		c.Header("Content-Type", "text/html; charset=utf-8")
 		c.String(code, html)
 		return
@@ -59,9 +66,9 @@ func TestRegisterUIRoutes(t *testing.T) {
 
 	caller := &mockCaller{
 		responses: map[string]json.RawMessage{
-			"testplugin.ui_home":    json.RawMessage(`{"html":"<h1>Home</h1>","title":"Home"}`),
-			"testplugin.ui_items":   json.RawMessage(`{"html":"<h1>Items</h1>"}`),
-			"testplugin.ui_detail":  json.RawMessage(`{"html":"<h1>Detail</h1>"}`),
+			"testplugin.ui_home":     json.RawMessage(`{"html":"<h1>Home</h1>","title":"Home"}`),
+			"testplugin.ui_items":    json.RawMessage(`{"html":"<h1>Items</h1>"}`),
+			"testplugin.ui_detail":   json.RawMessage(`{"html":"<h1>Detail</h1>"}`),
 			"testplugin.badge_count": json.RawMessage(`{"count":5}`),
 		},
 	}
@@ -232,8 +239,8 @@ func TestRegisterUIRoutes_Shells(t *testing.T) {
 	logger := slog.Default()
 
 	tests := []struct {
-		shell    string
-		wantTpl  string
+		shell   string
+		wantTpl string
 	}{
 		{ShellStandard, "layouts/ui_standard.pongo2"},
 		{ShellMinimal, "layouts/ui_minimal.pongo2"},

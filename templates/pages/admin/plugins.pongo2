@@ -15,6 +15,16 @@
             </div>
             <div class="mt-4 sm:mt-0 flex gap-2">
                 <a
+                    href="/admin/plugin-uis"
+                    title="{{ t("admin.plugin_uis_tooltip")|default:"Manage plugin UI surfaces" }}"
+                    class="gk-btn-secondary"
+                >
+                    <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H8l-4 4V5z" />
+                    </svg>
+                    {{ t("admin.plugin_uis")|default:"Plugin UIs" }}
+                </a>
+                <a
                     href="/admin/plugins/logs"
                     title="{{ t("admin.view_logs_tooltip")|default:"View plugin logs" }}"
                     class="gk-btn-secondary"

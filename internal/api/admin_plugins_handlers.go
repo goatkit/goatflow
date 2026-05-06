@@ -12,6 +12,7 @@ import (
 func init() {
 	routing.RegisterHandler("HandleAdminPlugins", HandleAdminPlugins)
 	routing.RegisterHandler("HandleAdminPluginLogs", HandleAdminPluginLogs)
+	routing.RegisterHandler("HandleAdminPluginUIs", HandleAdminPluginUIs)
 }
 
 // HandleAdminPluginLogs renders the plugin logs page.

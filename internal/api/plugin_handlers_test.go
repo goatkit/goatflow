@@ -656,6 +656,7 @@ var pluginAdminPathMarkers = []string{
 	"/upload",
 	"/logs",
 	"/reset-crashloop",
+	"/plugin-uis",
 }
 
 func isPluginAdminPath(path string) bool {

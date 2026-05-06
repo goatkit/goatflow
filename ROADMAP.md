@@ -589,7 +589,7 @@ Plugins receive org context automatically from the authenticated session, elimin
 
 **Plugin UI System — Offline & Admin**
 - [x] Service worker / offline support with configurable caching strategy (per-plugin CacheRoutes)
-- [ ] Admin UI for managing plugin UIs (list, enable/disable, custom domain, branding override)
+- [x] Admin UI for managing plugin UIs (list, enable/disable, custom domain, branding override)
 
 **Two-Factor Authentication — Hardware Keys**
 - [ ] Hardware key support (WebAuthn/FIDO2)

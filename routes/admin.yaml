@@ -1309,6 +1309,12 @@ spec:
           template: pages/admin/plugin_logs.pongo2
           description: "Display plugin logs viewer"
 
+        - path: /plugin-uis
+          method: GET
+          handler: HandleAdminPluginUIs
+          template: pages/admin/plugin_uis.pongo2
+          description: "Display plugin UI management page"
+
         # Admin 2FA Override (with audit logging)
         - path: /api/users/:id/2fa/disable
           method: POST

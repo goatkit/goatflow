@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -11,6 +12,8 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/pluginui"
 	"github.com/goatkit/goatflow/internal/routing"
 )
 
@@ -63,7 +66,17 @@ func RebuildDynamicEngine() {
 		}
 	}
 
-	// 2. Plugin routes
+	// 2. Plugin UI routes
+	if pluginManager != nil {
+		if db, err := database.GetDB(); err == nil && db != nil {
+			repo := pluginui.NewRepositoryWithDB(db)
+			if err := pluginui.RegisterUIRoutes(eng, repo, pluginManager, getPongo2Renderer(), slog.Default()); err != nil {
+				log.Printf("⚠️  Dynamic engine: failed to load plugin UI routes: %v", err)
+			}
+		}
+	}
+
+	// 3. Plugin routes
 	if pluginManager != nil {
 		routes := pluginManager.Routes()
 		for _, route := range routes {
@@ -147,10 +160,10 @@ func RebuildDynamicEngine() {
 								activePage = ap
 							}
 							renderer.HTML(c, http.StatusOK, "pages/plugin_wrapper.pongo2", pongo2.Context{
-								"PluginHTML":   html,
-								"PluginTitle":  title,
-								"ActivePage":   activePage,
-								"User":         getUserMapForTemplate(c),
+								"PluginHTML":  html,
+								"PluginTitle": title,
+								"ActivePage":  activePage,
+								"User":        getUserMapForTemplate(c),
 							})
 							return
 						}

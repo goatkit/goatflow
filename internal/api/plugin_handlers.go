@@ -682,6 +682,14 @@ func RegisterPluginAPIRoutes(r *gin.RouterGroup) {
 		pluginAdmin.GET("/logs", HandlePluginLogs)
 		pluginAdmin.DELETE("/logs", HandleClearPluginLogs)
 	}
+
+	pluginUIAdmin := r.Group("/plugin-uis")
+	pluginUIAdmin.Use(SessionOrJWTAuth(), RequireAdmin())
+	{
+		pluginUIAdmin.GET("", HandlePluginUIAdminList)
+		pluginUIAdmin.PUT("/:id", HandlePluginUIAdminUpdate)
+		pluginUIAdmin.POST("/:id/toggle", HandlePluginUIAdminToggle)
+	}
 }
 
 // RequireAdmin middleware checks if the user is an admin.

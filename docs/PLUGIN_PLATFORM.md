@@ -129,6 +129,13 @@ The route strategy enum is fixed for v1: `network-first`, `cache-first`,
 rules with enabled plugin UI cache routes and gives the service worker a version
 hash so old GoatFlow caches can be retired when configuration changes.
 
+Administrators manage registered plugin UI surfaces from `/admin/plugin-uis`.
+The screen lists every `gk_plugin_ui` record, links to the mounted UI and PWA
+manifest, enables/disables UIs, and lets admins set `custom_domain` plus
+branding overrides (`app_name`, `logo`, `favicon`, `color`). Branding changes
+are merged into the stored UI config, preserving plugin-owned routes, auth,
+navigation, and PWA settings.
+
 ## Loader & Discovery
 
 The Loader (`internal/plugin/loader/loader.go`) handles filesystem discovery:

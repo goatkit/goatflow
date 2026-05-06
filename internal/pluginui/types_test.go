@@ -191,6 +191,69 @@ func TestPluginUI_ParsedConfig(t *testing.T) {
 	})
 }
 
+func TestPluginUI_SetBranding(t *testing.T) {
+	t.Run("merges override and preserves config", func(t *testing.T) {
+		raw, err := UISpecToConfig(UIConfig{
+			Routes: []UIRouteConfig{{Path: "/", Handler: "home"}},
+			PWA:    &UIPWAConfig{Enabled: true, CacheRoutes: []string{"/"}},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		u := &PluginUI{Config: raw}
+		err = u.SetBranding(&UIBrandingConfig{
+			AppName: "  Ops App  ",
+			Color:   " #123456 ",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := u.ParsedConfig()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(cfg.Routes) != 1 || cfg.Routes[0].Handler != "home" {
+			t.Fatalf("routes were not preserved: %+v", cfg.Routes)
+		}
+		if cfg.PWA == nil || !cfg.PWA.Enabled || len(cfg.PWA.CacheRoutes) != 1 {
+			t.Fatalf("pwa config was not preserved: %+v", cfg.PWA)
+		}
+		if cfg.Branding == nil {
+			t.Fatal("expected branding override")
+		}
+		if cfg.Branding.AppName != "Ops App" {
+			t.Errorf("AppName = %q", cfg.Branding.AppName)
+		}
+		if cfg.Branding.Color != "#123456" {
+			t.Errorf("Color = %q", cfg.Branding.Color)
+		}
+	})
+
+	t.Run("clears empty override", func(t *testing.T) {
+		raw, err := UISpecToConfig(UIConfig{
+			Branding: &UIBrandingConfig{AppName: "Existing"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		u := &PluginUI{Config: raw}
+		if err := u.SetBranding(&UIBrandingConfig{AppName: "   "}); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := u.ParsedConfig()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Branding != nil {
+			t.Fatalf("expected branding to be cleared, got %+v", cfg.Branding)
+		}
+	})
+}
+
 func TestBuildFullID(t *testing.T) {
 	if got := BuildFullID("inventory", "app"); got != "inventory_app" {
 		t.Errorf("got %q, want %q", got, "inventory_app")

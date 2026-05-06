@@ -15,12 +15,12 @@ import (
 // PluginCaller is an interface for calling plugin functions.
 // Satisfied by the plugin.Manager.
 type PluginCaller interface {
-	Call(ctx context.Context, pluginName, fn string, args json.RawMessage) (json.RawMessage, error)
+	Call(ctx context.Context, pluginName, fn string, args []byte) ([]byte, error)
 }
 
 // TemplateRenderer is the interface for rendering pongo2 templates.
 type TemplateRenderer interface {
-	HTML(c *gin.Context, code int, name string, data pongo2.Context)
+	HTML(c *gin.Context, code int, name string, data interface{})
 }
 
 // RegisterUIRoutes registers all active plugin UI routes on the given gin engine.
@@ -153,14 +153,14 @@ func buildUIHandler(ui PluginUI, cfg *UIConfig, route UIRouteConfig, caller Plug
 
 		tplData := pongo2.Context{
 			"PluginHTML":     html,
-			"ui_full_id":    ui.FullID,
-			"ui_type":       ui.UIType,
-			"ui_shell":      ui.Shell,
-			"ui_branding":   branding,
-			"ui_nav":        cfg.Nav,
-			"ui_nav_items":  navItems,
+			"ui_full_id":     ui.FullID,
+			"ui_type":        ui.UIType,
+			"ui_shell":       ui.Shell,
+			"ui_branding":    branding,
+			"ui_nav":         cfg.Nav,
+			"ui_nav_items":   navItems,
 			"ui_pwa_enabled": cfg.PWA != nil && cfg.PWA.Enabled,
-			"ActivePage":    "plugin",
+			"ActivePage":     "plugin",
 		}
 
 		// Add title from response if present.
@@ -340,7 +340,7 @@ func GenerateMenuItems(uis []PluginUI) map[string][]map[string]any {
 			result["agent"] = append(result["agent"], item)
 		case TypeCustomerApp:
 			result["customer"] = append(result["customer"], item)
-		// public_page and kiosk don't appear in nav
+			// public_page and kiosk don't appear in nav
 		}
 	}
 

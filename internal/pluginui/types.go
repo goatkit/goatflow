@@ -7,6 +7,7 @@ package pluginui
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 )
 
@@ -161,6 +162,26 @@ func (u *PluginUI) ParsedConfig() (*UIConfig, error) {
 	return &cfg, nil
 }
 
+// SetBranding merges administrator-managed branding overrides into the stored UI config.
+func (u *PluginUI) SetBranding(branding *UIBrandingConfig) error {
+	cfg, err := u.ParsedConfig()
+	if err != nil {
+		return err
+	}
+	if branding == nil || branding.IsZero() {
+		cfg.Branding = nil
+	} else {
+		cfg.Branding = branding.Clean()
+	}
+	raw, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	jrm := json.RawMessage(raw)
+	u.Config = &jrm
+	return nil
+}
+
 // BasePath returns the URL path prefix for this UI: /ui/{full_id}/
 func (u *PluginUI) BasePath() string {
 	return "/ui/" + u.FullID + "/"
@@ -168,13 +189,13 @@ func (u *PluginUI) BasePath() string {
 
 // UIConfig stores the full UISpec configuration in the config JSON column.
 type UIConfig struct {
-	Routes   []UIRouteConfig  `json:"routes,omitempty"`
-	Nav      *UINavConfig     `json:"nav,omitempty"`
-	Branding *UIBrandingConfig `json:"branding,omitempty"`
-	Auth     *UIAuthConfig    `json:"auth,omitempty"`
-	PWA      *UIPWAConfig     `json:"pwa,omitempty"`
-	DataScope string          `json:"data_scope,omitempty"`
-	RateLimit int             `json:"rate_limit,omitempty"`
+	Routes    []UIRouteConfig   `json:"routes,omitempty"`
+	Nav       *UINavConfig      `json:"nav,omitempty"`
+	Branding  *UIBrandingConfig `json:"branding,omitempty"`
+	Auth      *UIAuthConfig     `json:"auth,omitempty"`
+	PWA       *UIPWAConfig      `json:"pwa,omitempty"`
+	DataScope string            `json:"data_scope,omitempty"`
+	RateLimit int               `json:"rate_limit,omitempty"`
 }
 
 // UIRouteConfig is a route within a plugin UI.
@@ -186,7 +207,7 @@ type UIRouteConfig struct {
 
 // UINavConfig defines the navigation for a plugin UI.
 type UINavConfig struct {
-	Position string        `json:"position"` // bottom, top, side
+	Position string            `json:"position"` // bottom, top, side
 	Items    []UINavItemConfig `json:"items"`
 }
 
@@ -207,6 +228,28 @@ type UIBrandingConfig struct {
 	Color   string `json:"color,omitempty"`
 }
 
+// Clean trims string fields and returns a normalized branding config.
+func (b *UIBrandingConfig) Clean() *UIBrandingConfig {
+	if b == nil {
+		return nil
+	}
+	return &UIBrandingConfig{
+		AppName: strings.TrimSpace(b.AppName),
+		Logo:    strings.TrimSpace(b.Logo),
+		Favicon: strings.TrimSpace(b.Favicon),
+		Color:   strings.TrimSpace(b.Color),
+	}
+}
+
+// IsZero reports whether no branding override is set.
+func (b *UIBrandingConfig) IsZero() bool {
+	if b == nil {
+		return true
+	}
+	clean := b.Clean()
+	return clean.AppName == "" && clean.Logo == "" && clean.Favicon == "" && clean.Color == ""
+}
+
 // UIAuthConfig holds per-UI auth configuration.
 type UIAuthConfig struct {
 	Method string   `json:"method,omitempty"` // session, pin, token, none
@@ -220,4 +263,15 @@ type UIPWAConfig struct {
 	Display     string   `json:"display,omitempty"` // standalone, fullscreen, minimal-ui
 	ThemeColor  string   `json:"theme_color,omitempty"`
 	CacheRoutes []string `json:"cache_routes,omitempty"`
+}
+
+func cleanOptionalString(s *string) *string {
+	if s == nil {
+		return nil
+	}
+	cleaned := strings.TrimSpace(*s)
+	if cleaned == "" {
+		return nil
+	}
+	return &cleaned
 }
