@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 
@@ -103,7 +104,9 @@ func APITokenAuthMiddleware() gin.HandlerFunc {
 }
 
 // UnifiedAuthMiddleware handles both JWT tokens and API tokens (gf_*).
-func UnifiedAuthMiddleware(jwtManager interface{ ValidateToken(string) (*auth.Claims, error) }) gin.HandlerFunc {
+func UnifiedAuthMiddleware(jwtManager interface {
+	ValidateToken(string) (*auth.Claims, error)
+}) gin.HandlerFunc {
 	debugLog("DEBUG: UnifiedAuthMiddleware created")
 	return func(c *gin.Context) {
 		debugLog("DEBUG unified_auth: processing request %s %s", c.Request.Method, c.Request.URL.Path)
@@ -175,7 +178,9 @@ func authenticateAPIToken(c *gin.Context, token string) {
 }
 
 // authenticateJWT handles standard JWT token authentication
-func authenticateJWT(c *gin.Context, token string, jwtManager interface{ ValidateToken(string) (*auth.Claims, error) }) {
+func authenticateJWT(c *gin.Context, token string, jwtManager interface {
+	ValidateToken(string) (*auth.Claims, error)
+}) {
 	claims, err := jwtManager.ValidateToken(token)
 	if err != nil {
 		apierrors.Error(c, apierrors.CodeInvalidToken)
@@ -235,13 +240,13 @@ func RequireScope(scope string) gin.HandlerFunc {
 	}
 }
 
-// extractToken extracts token from Authorization header or cookies
 // ExtractToken extracts an auth token from the request. It checks the
 // Authorization header first (Bearer JWT or raw API token), then falls
 // back to cookies. On /customer paths customer-specific cookies are
 // checked before agent cookies to avoid session conflicts in the same
-// browser. The query parameter "token" is also accepted for WebSocket
-// connections.
+// browser. The query parameter "token" is only accepted for browser
+// transports that cannot reliably set headers: WebSocket upgrades and
+// known same-origin SSE endpoints.
 func ExtractToken(c *gin.Context) string {
 	// 1. Authorization header
 	if authHeader := c.GetHeader("Authorization"); authHeader != "" {
@@ -255,8 +260,8 @@ func ExtractToken(c *gin.Context) string {
 		}
 	}
 
-	// 2. Query parameter (WebSocket connections)
-	if token := c.Query("token"); token != "" {
+	// 2. Query parameter for WebSocket/SSE transports only
+	if token := c.Query("token"); token != "" && allowsQueryToken(c) {
 		return token
 	}
 
@@ -281,3 +286,53 @@ func ExtractToken(c *gin.Context) string {
 
 // extractToken is an unexported alias kept for internal callers.
 func extractToken(c *gin.Context) string { return ExtractToken(c) }
+
+func allowsQueryToken(c *gin.Context) bool {
+	if c == nil || c.Request == nil {
+		return false
+	}
+	if isWebSocketUpgrade(c.Request) {
+		return true
+	}
+	if c.Request.Method != http.MethodGet {
+		return false
+	}
+	return isAllowedSSEPath(c.Request.URL.Path)
+}
+
+func isWebSocketUpgrade(r *http.Request) bool {
+	if r.Method != http.MethodGet {
+		return false
+	}
+	return strings.EqualFold(r.Header.Get("Upgrade"), "websocket") &&
+		headerContainsToken(r.Header.Get("Connection"), "upgrade")
+}
+
+func headerContainsToken(headerValue, token string) bool {
+	for _, part := range strings.Split(headerValue, ",") {
+		if strings.EqualFold(strings.TrimSpace(part), token) {
+			return true
+		}
+	}
+	return false
+}
+
+func isAllowedSSEPath(path string) bool {
+	switch path {
+	case "/api/mcp/sse",
+		"/api/v1/sse",
+		"/api/dashboard/activity-stream",
+		"/dashboard/api/activity-stream":
+		return true
+	}
+	return isPluginSSEPath(path)
+}
+
+func isPluginSSEPath(path string) bool {
+	const prefix = "/api/v1/plugins/"
+	if !strings.HasPrefix(path, prefix) {
+		return false
+	}
+	parts := strings.Split(strings.TrimPrefix(path, prefix), "/")
+	return len(parts) == 3 && parts[0] != "" && parts[1] == "events" && parts[2] != ""
+}

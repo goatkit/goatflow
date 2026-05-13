@@ -215,17 +215,84 @@ func TestAuthMiddleware(t *testing.T) {
 		assert.Equal(t, "mytoken123", extractedToken)
 	})
 
-	t.Run("extractToken from query parameter", func(t *testing.T) {
+	t.Run("extractToken ignores query parameter on normal route", func(t *testing.T) {
 		router := gin.New()
 		var extractedToken string
 
-		router.GET("/test", func(c *gin.Context) {
+		router.GET("/*path", func(c *gin.Context) {
 			extractedToken = authMiddleware.extractToken(c)
 			c.JSON(200, gin.H{"token": extractedToken})
 		})
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/test?token=querytoken456", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Empty(t, extractedToken)
+	})
+
+	t.Run("extractToken query parameter cannot override cookie on normal route", func(t *testing.T) {
+		router := gin.New()
+		var extractedToken string
+
+		router.GET("/*path", func(c *gin.Context) {
+			extractedToken = authMiddleware.extractToken(c)
+			c.JSON(200, gin.H{"token": extractedToken})
+		})
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/test?token=querytoken456", nil)
+		req.AddCookie(&http.Cookie{Name: "auth_token", Value: "cookietoken789"})
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, "cookietoken789", extractedToken)
+	})
+
+	t.Run("extractToken accepts query parameter on SSE route", func(t *testing.T) {
+		router := gin.New()
+		var extractedToken string
+
+		router.GET("/*path", func(c *gin.Context) {
+			extractedToken = authMiddleware.extractToken(c)
+			c.JSON(200, gin.H{"token": extractedToken})
+		})
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/mcp/sse?token=querytoken456", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, "querytoken456", extractedToken)
+	})
+
+	t.Run("extractToken accepts query parameter on plugin SSE route", func(t *testing.T) {
+		router := gin.New()
+		var extractedToken string
+
+		router.GET("/*path", func(c *gin.Context) {
+			extractedToken = authMiddleware.extractToken(c)
+			c.JSON(200, gin.H{"token": extractedToken})
+		})
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/plugins/demo/events/progress?token=querytoken456", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, "querytoken456", extractedToken)
+	})
+
+	t.Run("extractToken accepts query parameter on WebSocket upgrade", func(t *testing.T) {
+		router := gin.New()
+		var extractedToken string
+
+		router.GET("/*path", func(c *gin.Context) {
+			extractedToken = authMiddleware.extractToken(c)
+			c.JSON(200, gin.H{"token": extractedToken})
+		})
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/ws?token=querytoken456", nil)
+		req.Header.Set("Connection", "keep-alive, Upgrade")
+		req.Header.Set("Upgrade", "websocket")
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, "querytoken456", extractedToken)
