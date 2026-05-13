@@ -1337,7 +1337,10 @@ reset-db:
 	@sleep 5
 
 # Test environment management
-.PHONY: test-stack-up test-stack-teardown test-stack-wait test-setup-admin
+.PHONY: test-stack-up test-stack-teardown test-stack-wait test-setup-admin test-prune-stale-test-infra
+
+TEST_APP_CONTAINERS := goatflow-backend-test goatflow-runner-test goatflow-customer-fe-test
+TEST_INFRA_CONTAINERS := goatflow-mariadb-test goatflow-postgres-test goatflow-valkey-test
 
 test-stack-up:
 	@$(MAKE) test-stack-teardown >/dev/null 2>&1 || true
@@ -1381,8 +1384,24 @@ test-stack-teardown:
 	fi
 	# Stop only test-specific containers - do NOT use 'down' with docker-compose.yml
 	# as that would bring down the dev/prod stack too
-	@docker stop goatflow-backend-test goatflow-runner-test goatflow-customer-fe-test 2>/dev/null || true
-	@docker rm goatflow-backend-test goatflow-runner-test goatflow-customer-fe-test 2>/dev/null || true
+	@docker stop $(TEST_APP_CONTAINERS) 2>/dev/null || true
+	@docker rm $(TEST_APP_CONTAINERS) 2>/dev/null || true
+	@$(MAKE) test-prune-stale-test-infra >/dev/null 2>&1 || true
+
+test-prune-stale-test-infra:
+	@if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
+		exit 0; \
+	fi
+	@# Remove only stopped/dead test infra containers. This lets Compose recreate
+	@# containers that reference pruned Docker networks without touching running
+	@# test databases/caches or shared dev services.
+	@for c in $(TEST_INFRA_CONTAINERS); do \
+		if docker inspect "$$c" >/dev/null 2>&1; then \
+			if [ "$$(docker inspect -f '{{.State.Running}}' "$$c" 2>/dev/null)" != "true" ]; then \
+				docker rm -f "$$c" >/dev/null 2>&1 || true; \
+			fi; \
+		fi; \
+	done
 
 test-up:
 	@printf "🚀 Starting test environment...\n"
@@ -1391,6 +1410,7 @@ test-up:
 		echo "Please install the required compose tool and try again."; \
 		exit 1; \
 	fi
+	@$(MAKE) test-prune-stale-test-infra >/dev/null 2>&1 || true
 	$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb up -d mariadb-test valkey-test smtp4dev
 	$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb -f docker-compose.test.yaml build backend-test runner-test customer-fe-test
 	$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb -f docker-compose.test.yaml up -d backend-test runner-test customer-fe-test

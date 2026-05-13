@@ -12,6 +12,7 @@ import (
 	"github.com/goatkit/goatflow/internal/auth"
 	"github.com/goatkit/goatflow/internal/constants"
 	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/httpcookie"
 	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/shared"
@@ -102,7 +103,7 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 				return
 			}
 			// V4 FIX: Only store token in cookie, NOT the customer's login
-			c.SetCookie("customer_2fa_pending", token, 300, "/", "", false, true) // 5 min expiry
+			httpcookie.SetAuth(c, "customer_2fa_pending", token, 300) // 5 min expiry
 
 			// Handle HTMX vs regular request
 			if c.GetHeader("HX-Request") == "true" {
@@ -132,14 +133,14 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		// /customer/*, so a customer who logged in after a prior agent session
 		// browsed as that agent (admin button visible, /admin accepts the
 		// request). One browser, one identity — revoke the other on sign-in.
-		c.SetCookie("access_token", "", -1, "/", "", false, true)
-		c.SetCookie("auth_token", "", -1, "/", "", false, true)
-		c.SetCookie("session_id", "", -1, "/", "", false, true)
-		c.SetCookie("customer_access_token", token, sessionTimeout, "/", "", false, true)
-		c.SetCookie("customer_auth_token", token, sessionTimeout, "/", "", false, true)
+		httpcookie.SetAuth(c, "access_token", "", -1)
+		httpcookie.SetAuth(c, "auth_token", "", -1)
+		httpcookie.SetAuth(c, "session_id", "", -1)
+		httpcookie.SetAuth(c, "customer_access_token", token, sessionTimeout)
+		httpcookie.SetAuth(c, "customer_auth_token", token, sessionTimeout)
 		// Set a non-httpOnly indicator so JavaScript can detect authentication
 		// (auth tokens are httpOnly for security, but JS needs to know user is logged in)
-		c.SetCookie("goatflow_customer_logged_in", "1", sessionTimeout, "/", "", false, false)
+		httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "1", sessionTimeout)
 
 		// Use CustomerPreferencesService - keyed by login, not numeric ID
 		prefService := service.NewCustomerPreferencesService(db)
@@ -173,7 +174,7 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 				log.Printf("Failed to create customer session record: %v", err)
 			} else {
 				// Store session ID in a customer-specific cookie for logout cleanup
-				c.SetCookie("customer_session_id", sessionID, sessionTimeout, "/", "", false, true)
+				httpcookie.SetAuth(c, "customer_session_id", sessionID, sessionTimeout)
 			}
 		}
 

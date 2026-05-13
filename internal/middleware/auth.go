@@ -12,6 +12,7 @@ import (
 	"github.com/goatkit/goatflow/internal/auth"
 	"github.com/goatkit/goatflow/internal/convert"
 	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/httpcookie"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/service"
 )
@@ -85,13 +86,13 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 				if err != nil || session == nil {
 					// Session was killed or doesn't exist - clear cookies and reject
 					log.Printf("DEBUG: auth middleware - session terminated, rejecting request")
-					c.SetCookie("auth_token", "", -1, "/", "", false, true)
-					c.SetCookie("access_token", "", -1, "/", "", false, true)
-					c.SetCookie("session_id", "", -1, "/", "", false, true)
+					httpcookie.SetAuth(c, "auth_token", "", -1)
+					httpcookie.SetAuth(c, "access_token", "", -1)
+					httpcookie.SetAuth(c, "session_id", "", -1)
 					// Also clear customer-specific cookies
-					c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
-					c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
-					c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
+					httpcookie.SetAuth(c, "customer_auth_token", "", -1)
+					httpcookie.SetAuth(c, "customer_access_token", "", -1)
+					httpcookie.SetAuth(c, "customer_session_id", "", -1)
 					m.unauthorizedResponse(c, "Session has been terminated")
 					return
 				}

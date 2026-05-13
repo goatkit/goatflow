@@ -14,6 +14,7 @@ import (
 	"github.com/goatkit/goatflow/internal/auth"
 	"github.com/goatkit/goatflow/internal/constants"
 	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/httpcookie"
 	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/shared"
 )
@@ -127,7 +128,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 			}
 
 			// Store token in cookie - user data is server-side
-			c.SetCookie("2fa_pending", token, 300, "/", "", false, true) // 5 min expiry
+			httpcookie.SetAuth(c, "2fa_pending", token, 300) // 5 min expiry
 
 			if c.GetHeader("HX-Request") == "true" {
 				// HTMX boosted form - use 302 redirect (hx-boost follows standard redirects)
@@ -177,37 +178,10 @@ var HandleAuthLogin = func(c *gin.Context) {
 		}
 	}
 
-	// Set cookies for tokens - set both names for compatibility across middlewares
-	c.SetCookie(
-		"auth_token", // AuthMiddleware looks for this name
-		accessToken,
-		sessionTimeout,
-		"/",
-		"",
-		false, // Not HTTPS in dev
-		true,  // HttpOnly
-	)
-
-	// Also set access_token for components expecting this name
-	c.SetCookie(
-		"access_token",
-		accessToken,
-		sessionTimeout,
-		"/",
-		"",
-		false,
-		true,
-	)
-
-	c.SetCookie(
-		"refresh_token",
-		refreshToken,
-		constants.RefreshTokenTimeout, // 7 days
-		"/",
-		"",
-		false,
-		true,
-	)
+	// Set cookies for tokens - set both names for compatibility across middlewares.
+	httpcookie.SetAuth(c, "auth_token", accessToken, sessionTimeout)
+	httpcookie.SetAuth(c, "access_token", accessToken, sessionTimeout)
+	httpcookie.SetAuth(c, "refresh_token", refreshToken, constants.RefreshTokenTimeout)
 
 	// Store user in session (use "user_id" to match middleware)
 	c.Set("user", user)
@@ -230,13 +204,13 @@ var HandleAuthLogin = func(c *gin.Context) {
 			log.Printf("Failed to create session record: %v", err)
 		} else {
 			// Store session ID in a cookie for logout cleanup
-			c.SetCookie("session_id", sessionID, sessionTimeout, "/", "", false, true)
+			httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
 		}
 	}
 
 	// Set a non-httpOnly indicator so JavaScript can detect authentication
 	// (auth tokens are httpOnly for security, but JS needs to know user is logged in)
-	c.SetCookie("goatflow_logged_in", "1", sessionTimeout, "/", "", false, false)
+	httpcookie.SetAuthState(c, "goatflow_logged_in", "1", sessionTimeout)
 
 	redirectTarget := "/dashboard"
 	if strings.EqualFold(user.Role, "customer") {
@@ -275,11 +249,11 @@ var HandleAuthLogout = func(c *gin.Context) {
 	}
 
 	// Clear cookies
-	c.SetCookie("auth_token", "", -1, "/", "", false, true)
-	c.SetCookie("access_token", "", -1, "/", "", false, true)
-	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
-	c.SetCookie("session_id", "", -1, "/", "", false, true)
-	c.SetCookie("goatflow_logged_in", "", -1, "/", "", false, false)
+	httpcookie.SetAuth(c, "auth_token", "", -1)
+	httpcookie.SetAuth(c, "access_token", "", -1)
+	httpcookie.SetAuth(c, "refresh_token", "", -1)
+	httpcookie.SetAuth(c, "session_id", "", -1)
+	httpcookie.SetAuthState(c, "goatflow_logged_in", "", -1)
 
 	// Redirect to login
 	c.Redirect(http.StatusSeeOther, "/login")

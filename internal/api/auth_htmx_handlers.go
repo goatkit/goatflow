@@ -17,6 +17,7 @@ import (
 	"github.com/goatkit/goatflow/internal/config"
 	"github.com/goatkit/goatflow/internal/constants"
 	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/httpcookie"
 	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/shared"
 )
@@ -72,8 +73,8 @@ func handleCustomerLoginPage(c *gin.Context) {
 			c.Redirect(http.StatusFound, "/customer")
 			return
 		}
-		c.SetCookie("access_token", "", -1, "/", "", false, true)
-		c.SetCookie("auth_token", "", -1, "/", "", false, true)
+		httpcookie.SetAuth(c, "access_token", "", -1)
+		httpcookie.SetAuth(c, "auth_token", "", -1)
 	}
 
 	errorMsg := c.Query("error")
@@ -193,7 +194,7 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			}
 
 			// Only store the token in cookie - user data is server-side
-			c.SetCookie("2fa_pending", token, 300, "/", "", false, true) // 5 min expiry
+			httpcookie.SetAuth(c, "2fa_pending", token, 300) // 5 min expiry
 
 			if c.GetHeader("HX-Request") == "true" {
 				c.Header("HX-Redirect", "/login/2fa")
@@ -237,15 +238,15 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		// SECURITY: wipe any pre-existing customer session cookies on agent
 		// login — see the symmetric comment in handleCustomerLogin for
 		// rationale. One browser, one identity.
-		c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
-		c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
-		c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
-		c.SetCookie("goatflow_customer_logged_in", "", -1, "/", "", false, false)
-		c.SetCookie("access_token", token, sessionTimeout, "/", "", false, true)
-		c.SetCookie("auth_token", token, sessionTimeout, "/", "", false, true)
+		httpcookie.SetAuth(c, "customer_access_token", "", -1)
+		httpcookie.SetAuth(c, "customer_auth_token", "", -1)
+		httpcookie.SetAuth(c, "customer_session_id", "", -1)
+		httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "", -1)
+		httpcookie.SetAuth(c, "access_token", token, sessionTimeout)
+		httpcookie.SetAuth(c, "auth_token", token, sessionTimeout)
 		// Set a non-httpOnly indicator so JavaScript can detect authentication
 		// (auth tokens are httpOnly for security, but JS needs to know user is logged in)
-		c.SetCookie("goatflow_logged_in", "1", sessionTimeout, "/", "", false, false)
+		httpcookie.SetAuthState(c, "goatflow_logged_in", "1", sessionTimeout)
 
 		// Set theme cookies from database preferences (if user has saved preferences)
 		// These will override any login-page localStorage values in the browser
@@ -270,7 +271,7 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 				log.Printf("Failed to create session record: %v", err)
 			} else {
 				// Store session ID in a cookie for logout cleanup
-				c.SetCookie("session_id", sessionID, sessionTimeout, "/", "", false, true)
+				httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
 			}
 		}
 
@@ -357,7 +358,7 @@ func handleHTMXLogin(c *gin.Context) {
 // handleDemoCustomerLogin creates a demo customer token for testing.
 func handleDemoCustomerLogin(c *gin.Context) {
 	token := fmt.Sprintf("demo_customer_%s_%d", "john.customer", time.Now().Unix())
-	c.SetCookie("access_token", token, 86400, "/", "", false, true)
+	httpcookie.SetAuth(c, "access_token", token, 86400)
 	c.Redirect(http.StatusFound, "/customer/")
 }
 
@@ -380,17 +381,17 @@ func handleLogout(c *gin.Context) {
 	}
 
 	// Clear all agent auth cookies
-	c.SetCookie("access_token", "", -1, "/", "", false, true)
-	c.SetCookie("auth_token", "", -1, "/", "", false, true)
-	c.SetCookie("token", "", -1, "/", "", false, true)
-	c.SetCookie("session_id", "", -1, "/", "", false, true)
-	c.SetCookie("goatflow_logged_in", "", -1, "/", "", false, false)
+	httpcookie.SetAuth(c, "access_token", "", -1)
+	httpcookie.SetAuth(c, "auth_token", "", -1)
+	httpcookie.SetAuth(c, "token", "", -1)
+	httpcookie.SetAuth(c, "session_id", "", -1)
+	httpcookie.SetAuthState(c, "goatflow_logged_in", "", -1)
 
 	// Clear all customer-specific auth cookies
-	c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
-	c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
-	c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
-	c.SetCookie("goatflow_customer_logged_in", "", -1, "/", "", false, false)
+	httpcookie.SetAuth(c, "customer_access_token", "", -1)
+	httpcookie.SetAuth(c, "customer_auth_token", "", -1)
+	httpcookie.SetAuth(c, "customer_session_id", "", -1)
+	httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "", -1)
 
 	c.Redirect(http.StatusFound, loginRedirectPath(c))
 }
@@ -459,7 +460,7 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		sessionMgr := auth.GetTOTPSessionManager()
 		session := sessionMgr.ValidateAndGetSession(pendingToken, c.ClientIP(), c.Request.UserAgent())
 		if session == nil {
-			c.SetCookie("2fa_pending", "", -1, "/", "", false, true)
+			httpcookie.SetAuth(c, "2fa_pending", "", -1)
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"error":   "Invalid or expired session - please login again",
@@ -506,7 +507,7 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			remaining := sessionMgr.RecordFailedAttempt(pendingToken)
 			if remaining <= 0 {
 				sessionMgr.InvalidateSession(pendingToken)
-				c.SetCookie("2fa_pending", "", -1, "/", "", false, true)
+				httpcookie.SetAuth(c, "2fa_pending", "", -1)
 				c.JSON(http.StatusUnauthorized, gin.H{
 					"success": false,
 					"error":   "Too many failed attempts - please login again",
@@ -523,7 +524,7 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 
 		// 2FA verified - clear session and cookie
 		sessionMgr.InvalidateSession(pendingToken)
-		c.SetCookie("2fa_pending", "", -1, "/", "", false, true)
+		httpcookie.SetAuth(c, "2fa_pending", "", -1)
 
 		// Complete the login - generate token and set cookies
 		var token string
@@ -555,13 +556,13 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		// path — 2FA-completed login). Keeps parity with the primary agent
 		// login so ExtractToken can't mix an old customer session with a new
 		// agent one.
-		c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
-		c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
-		c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
-		c.SetCookie("goatflow_customer_logged_in", "", -1, "/", "", false, false)
-		c.SetCookie("access_token", token, sessionTimeout, "/", "", false, true)
-		c.SetCookie("auth_token", token, sessionTimeout, "/", "", false, true)
-		c.SetCookie("goatflow_logged_in", "1", sessionTimeout, "/", "", false, false)
+		httpcookie.SetAuth(c, "customer_access_token", "", -1)
+		httpcookie.SetAuth(c, "customer_auth_token", "", -1)
+		httpcookie.SetAuth(c, "customer_session_id", "", -1)
+		httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "", -1)
+		httpcookie.SetAuth(c, "access_token", token, sessionTimeout)
+		httpcookie.SetAuth(c, "auth_token", token, sessionTimeout)
+		httpcookie.SetAuthState(c, "goatflow_logged_in", "1", sessionTimeout)
 
 		if userTheme != "" {
 			c.SetCookie("goatflow_theme", userTheme, sessionTimeout, "/", "", false, false)
@@ -582,7 +583,7 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			if err != nil {
 				log.Printf("Failed to create session record: %v", err)
 			} else {
-				c.SetCookie("session_id", sessionID, sessionTimeout, "/", "", false, true)
+				httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
 			}
 		}
 

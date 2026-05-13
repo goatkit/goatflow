@@ -11,6 +11,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/auth"
 	"github.com/goatkit/goatflow/internal/convert"
+	"github.com/goatkit/goatflow/internal/httpcookie"
 	"github.com/goatkit/goatflow/internal/models"
 )
 
@@ -89,8 +90,8 @@ func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		// Validate real JWT token (if JWT manager is available)
 		if jwtManager == nil {
 			// No JWT manager configured and not a demo token
-			c.SetCookie("access_token", "", -1, "/", "", false, true)
-			c.SetCookie("auth_token", "", -1, "/", "", false, true)
+			httpcookie.SetAuth(c, "access_token", "", -1)
+			httpcookie.SetAuth(c, "auth_token", "", -1)
 			if isAPIRequest(c) {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication not configured"})
 				c.Abort()
@@ -104,8 +105,8 @@ func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		claims, err := jwtManager.ValidateToken(token)
 		if err != nil {
 			// Clear invalid cookie
-			c.SetCookie("access_token", "", -1, "/", "", false, true)
-			c.SetCookie("auth_token", "", -1, "/", "", false, true)
+			httpcookie.SetAuth(c, "access_token", "", -1)
+			httpcookie.SetAuth(c, "auth_token", "", -1)
 
 			if isAPIRequest(c) {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
@@ -129,9 +130,9 @@ func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 				)
 				if err == nil {
 					secs := int(lifetime.Seconds())
-					c.SetCookie("access_token", newToken, secs, "/", "", false, true)
-					c.SetCookie("auth_token", newToken, secs, "/", "", false, true)
-					c.SetCookie("goatflow_logged_in", "1", secs, "/", "", false, false)
+					httpcookie.SetAuth(c, "access_token", newToken, secs)
+					httpcookie.SetAuth(c, "auth_token", newToken, secs)
+					httpcookie.SetAuthState(c, "goatflow_logged_in", "1", secs)
 				}
 			}
 		}

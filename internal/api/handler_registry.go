@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/httpcookie"
 	"github.com/goatkit/goatflow/internal/routing"
 	"github.com/goatkit/goatflow/internal/shared"
 )
@@ -143,9 +144,9 @@ func ensureCoreHandlers() {
 		"HandleMailAccountPollStatus": HandleMailAccountPollStatus,
 
 		// Static and basic routes
-		"handleStaticFiles": HandleStaticFiles,
+		"handleStaticFiles":         HandleStaticFiles,
 		"handleServiceWorkerConfig": HandleServiceWorkerConfig,
-		"handleLogout":      handleLogout,
+		"handleLogout":              handleLogout,
 		"handleCustomerLogout": func(c *gin.Context) {
 			// Delete session record from database (check customer-specific session cookie)
 			if sessionID, err := c.Cookie("customer_session_id"); err == nil && sessionID != "" {
@@ -160,16 +161,16 @@ func ensureCoreHandlers() {
 				}
 			}
 			// Clear customer-specific auth cookies
-			c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
-			c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
-			c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
-			c.SetCookie("goatflow_customer_logged_in", "", -1, "/", "", false, false)
+			httpcookie.SetAuth(c, "customer_auth_token", "", -1)
+			httpcookie.SetAuth(c, "customer_access_token", "", -1)
+			httpcookie.SetAuth(c, "customer_session_id", "", -1)
+			httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "", -1)
 			// Also clear legacy cookies for backwards compatibility
-			c.SetCookie("auth_token", "", -1, "/", "", false, true)
-			c.SetCookie("access_token", "", -1, "/", "", false, true)
-			c.SetCookie("token", "", -1, "/", "", false, true)
-			c.SetCookie("session_id", "", -1, "/", "", false, true)
-			c.SetCookie("goatflow_logged_in", "", -1, "/", "", false, false)
+			httpcookie.SetAuth(c, "auth_token", "", -1)
+			httpcookie.SetAuth(c, "access_token", "", -1)
+			httpcookie.SetAuth(c, "token", "", -1)
+			httpcookie.SetAuth(c, "session_id", "", -1)
+			httpcookie.SetAuthState(c, "goatflow_logged_in", "", -1)
 			c.Header("HX-Redirect", "/customer/login")
 			c.Redirect(http.StatusSeeOther, "/customer/login")
 		},
@@ -377,16 +378,16 @@ func ensureCoreHandlers() {
 				}
 			}
 			// Agent cookies
-			c.SetCookie("access_token", "", -1, "/", "", false, true)
-			c.SetCookie("auth_token", "", -1, "/", "", false, true)
-			c.SetCookie("token", "", -1, "/", "", false, true)
-			c.SetCookie("session_id", "", -1, "/", "", false, true)
-			c.SetCookie("goatflow_logged_in", "", -1, "/", "", false, false)
+			httpcookie.SetAuth(c, "access_token", "", -1)
+			httpcookie.SetAuth(c, "auth_token", "", -1)
+			httpcookie.SetAuth(c, "token", "", -1)
+			httpcookie.SetAuth(c, "session_id", "", -1)
+			httpcookie.SetAuthState(c, "goatflow_logged_in", "", -1)
 			// Customer cookies
-			c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
-			c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
-			c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
-			c.SetCookie("goatflow_customer_logged_in", "", -1, "/", "", false, false)
+			httpcookie.SetAuth(c, "customer_access_token", "", -1)
+			httpcookie.SetAuth(c, "customer_auth_token", "", -1)
+			httpcookie.SetAuth(c, "customer_session_id", "", -1)
+			httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "", -1)
 			target := loginRedirectPath(c)
 			if strings.Contains(c.Request.URL.Path, "/customer") {
 				target = "/customer/login"
@@ -416,16 +417,16 @@ func ensureCoreHandlers() {
 		"handleQueueMetaPartial": handleQueueMetaPartial,
 
 		// Admin handlers
-		"handleAdminDashboard":   handleAdminDashboard,
-		"handleAdminUsers":       HandleAdminUsers,
-		"HandleAdminUsersList":   HandleAdminUsersList,
-		"handleAdminUserCreate":  HandleAdminUserCreate,
-		"handleAdminUserGet":     HandleAdminUserGet,
-		"handleAdminUserEdit":    HandleAdminUserEdit,
-		"handleAdminUserUpdate":  HandleAdminUserUpdate,
-		"handleAdminUserDelete":  HandleAdminUserDelete,
-		"handleAdminUserGroups":  HandleAdminUserGroups,
-		"handleAdminUsersStatus": HandleAdminUsersStatus,
+		"handleAdminDashboard":         handleAdminDashboard,
+		"handleAdminUsers":             HandleAdminUsers,
+		"HandleAdminUsersList":         HandleAdminUsersList,
+		"handleAdminUserCreate":        HandleAdminUserCreate,
+		"handleAdminUserGet":           HandleAdminUserGet,
+		"handleAdminUserEdit":          HandleAdminUserEdit,
+		"handleAdminUserUpdate":        HandleAdminUserUpdate,
+		"handleAdminUserDelete":        HandleAdminUserDelete,
+		"handleAdminUserGroups":        HandleAdminUserGroups,
+		"handleAdminUsersStatus":       HandleAdminUsersStatus,
 		"HandleAdminUserResetPassword": HandleAdminUserResetPassword,
 		"handleAdminPasswordPolicy": func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"min_length": 8, "require_special": true}})
@@ -502,25 +503,25 @@ func ensureCoreHandlers() {
 		"handleAdminBatchHardDelete": handleAdminBatchHardDelete,
 		"handleAdminDeletionLog":     handleAdminDeletionLog,
 		// Organisation handlers
-		"handleSwitchOrg":           handleSwitchOrg,
-		"handleListUserOrgs":        handleListUserOrgs,
-		"handleAPIListOrgs":         handleAPIListOrgs,
-		"handleAPICreateOrg":        handleAPICreateOrg,
-		"handleAPIUpdateOrg":        handleAPIUpdateOrg,
-		"handleAPIDeleteOrg":        handleAPIDeleteOrg,
-		"handleAPIListMembers":      handleAPIListMembers,
-		"handleAPIAddMember":        handleAPIAddMember,
-		"handleAPIRemoveMember":     handleAPIRemoveMember,
-		"handleAPIListOrgConfigs":   handleAPIListOrgConfigs,
-		"handleAPISetOrgConfig":     handleAPISetOrgConfig,
-		"handleAPIDeleteOrgConfig":  handleAPIDeleteOrgConfig,
+		"handleSwitchOrg":                handleSwitchOrg,
+		"handleListUserOrgs":             handleListUserOrgs,
+		"handleAPIListOrgs":              handleAPIListOrgs,
+		"handleAPICreateOrg":             handleAPICreateOrg,
+		"handleAPIUpdateOrg":             handleAPIUpdateOrg,
+		"handleAPIDeleteOrg":             handleAPIDeleteOrg,
+		"handleAPIListMembers":           handleAPIListMembers,
+		"handleAPIAddMember":             handleAPIAddMember,
+		"handleAPIRemoveMember":          handleAPIRemoveMember,
+		"handleAPIListOrgConfigs":        handleAPIListOrgConfigs,
+		"handleAPISetOrgConfig":          handleAPISetOrgConfig,
+		"handleAPIDeleteOrgConfig":       handleAPIDeleteOrgConfig,
 		"handleAPIListOrgPluginAccess":   handleAPIListOrgPluginAccess,
 		"handleAPISetOrgPluginAccess":    handleAPISetOrgPluginAccess,
 		"handleAPIDeleteOrgPluginAccess": handleAPIDeleteOrgPluginAccess,
 		"handleAPISetCaptivePlugin":      handleAPISetCaptivePlugin,
 		// Dynamic Field Webservice AJAX handlers
-		"handleDynamicFieldAutocomplete":    handleDynamicFieldAutocomplete,
-		"handleDynamicFieldWebserviceTest":  handleDynamicFieldWebserviceTest,
+		"handleDynamicFieldAutocomplete":   handleDynamicFieldAutocomplete,
+		"handleDynamicFieldWebserviceTest": handleDynamicFieldWebserviceTest,
 		// GenericInterface Webservice management handlers
 		"handleAdminWebservices":         handleAdminWebservices,
 		"handleAdminWebserviceNew":       handleAdminWebserviceNew,
@@ -532,21 +533,21 @@ func ensureCoreHandlers() {
 		"handleTestWebservice":           handleTestWebservice,
 		"handleAdminWebserviceHistory":   handleAdminWebserviceHistory,
 		"handleRestoreWebserviceHistory": handleRestoreWebserviceHistory,
-		"handleAdminStates":                         handleAdminStates,
-		"handleAdminTypes":                          handleAdminTypes,
-		"handleAdminServices":                       handleAdminServices,
-		"handleAdminServiceCreate":                  handleAdminServiceCreate,
-		"handleAdminServiceUpdate":                  handleAdminServiceUpdate,
-		"handleAdminServiceDelete":                  handleAdminServiceDelete,
-		"handleAdminSLA":                            handleAdminSLA,
-		"handleAdminSLACreate":                      handleAdminSLACreate,
-		"handleAdminSLAUpdate":                      handleAdminSLAUpdate,
-		"handleAdminSLADelete":                      handleAdminSLADelete,
-		"handleAdminLookups":                        handleAdminLookups,
-		"dashboard_stats":                           handleDashboardStats,
-		"dashboard_recent_tickets":                  handleRecentTickets,
-		"dashboard_activity":                        handleActivity,
-		"dashboard_activity_stream":                 handleActivityStream,
+		"handleAdminStates":              handleAdminStates,
+		"handleAdminTypes":               handleAdminTypes,
+		"handleAdminServices":            handleAdminServices,
+		"handleAdminServiceCreate":       handleAdminServiceCreate,
+		"handleAdminServiceUpdate":       handleAdminServiceUpdate,
+		"handleAdminServiceDelete":       handleAdminServiceDelete,
+		"handleAdminSLA":                 handleAdminSLA,
+		"handleAdminSLACreate":           handleAdminSLACreate,
+		"handleAdminSLAUpdate":           handleAdminSLAUpdate,
+		"handleAdminSLADelete":           handleAdminSLADelete,
+		"handleAdminLookups":             handleAdminLookups,
+		"dashboard_stats":                handleDashboardStats,
+		"dashboard_recent_tickets":       handleRecentTickets,
+		"dashboard_activity":             handleActivity,
+		"dashboard_activity_stream":      handleActivityStream,
 
 		// Customer company handlers - full implementations
 		"handleAdminCustomerCompanies": HandleAdminCustomerCompanies,
@@ -652,12 +653,12 @@ func ensureCoreHandlers() {
 		"handleAdminServiceCustomerUsersUpdate":   HandleAdminServiceCustomerUsersUpdate,
 
 		// Customer groups management (customer company ↔ group permissions)
-		"handleAdminCustomerGroups":              handleAdminCustomerGroups,
-		"handleAdminCustomerGroupEdit":           handleAdminCustomerGroupEdit,
-		"handleAdminCustomerGroupUpdate":         handleAdminCustomerGroupUpdate,
-		"handleAdminCustomerGroupByGroup":        handleAdminCustomerGroupByGroup,
-		"handleAdminCustomerGroupByGroupUpdate":  handleAdminCustomerGroupByGroupUpdate,
-		"handleGetCustomerGroupPermissions":      handleGetCustomerGroupPermissions,
+		"handleAdminCustomerGroups":             handleAdminCustomerGroups,
+		"handleAdminCustomerGroupEdit":          handleAdminCustomerGroupEdit,
+		"handleAdminCustomerGroupUpdate":        handleAdminCustomerGroupUpdate,
+		"handleAdminCustomerGroupByGroup":       handleAdminCustomerGroupByGroup,
+		"handleAdminCustomerGroupByGroupUpdate": handleAdminCustomerGroupByGroupUpdate,
+		"handleGetCustomerGroupPermissions":     handleGetCustomerGroupPermissions,
 
 		// Email identity API handlers
 		"HandleListSystemAddressesAPI": HandleListSystemAddressesAPI,

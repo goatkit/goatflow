@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/httpcookie"
 	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/shared"
@@ -98,10 +99,10 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			claims, err := jwtManager.ValidateToken(token)
 			if err != nil {
 				// Clear invalid cookies (both standard and customer-specific)
-				c.SetCookie("auth_token", "", -1, "/", "", false, true)
-				c.SetCookie("access_token", "", -1, "/", "", false, true)
-				c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
-				c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
+				httpcookie.SetAuth(c, "auth_token", "", -1)
+				httpcookie.SetAuth(c, "access_token", "", -1)
+				httpcookie.SetAuth(c, "customer_auth_token", "", -1)
+				httpcookie.SetAuth(c, "customer_access_token", "", -1)
 				if wantsHTMLResponse(c) {
 					loginPath := "/login"
 					if strings.HasPrefix(path, "/customer") {
@@ -130,12 +131,12 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 					session, sessionErr := sessionSvc.GetSession(sessionID)
 					if sessionErr != nil || session == nil {
 						// Session was killed - clear all cookies and reject
-						c.SetCookie("auth_token", "", -1, "/", "", false, true)
-						c.SetCookie("access_token", "", -1, "/", "", false, true)
-						c.SetCookie("session_id", "", -1, "/", "", false, true)
-						c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
-						c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
-						c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
+						httpcookie.SetAuth(c, "auth_token", "", -1)
+						httpcookie.SetAuth(c, "access_token", "", -1)
+						httpcookie.SetAuth(c, "session_id", "", -1)
+						httpcookie.SetAuth(c, "customer_auth_token", "", -1)
+						httpcookie.SetAuth(c, "customer_access_token", "", -1)
+						httpcookie.SetAuth(c, "customer_session_id", "", -1)
 						if wantsHTMLResponse(c) {
 							loginPath := "/login"
 							if strings.HasPrefix(path, "/customer") {

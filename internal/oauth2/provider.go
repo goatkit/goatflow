@@ -3,7 +3,10 @@ package oauth2
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,6 +15,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"github.com/goatkit/goatflow/internal/convert"
 )
 
 // GrantType represents OAuth2 grant types.
@@ -129,6 +134,15 @@ const (
 	ScopeOfflineAccess Scope = "offline_access" // for refresh tokens
 )
 
+var ErrOAuth2RouteSecurityRequired = errors.New("oauth2 route setup requires auth and admin middleware")
+
+// RouteSecurity contains the host-provided security middleware required before
+// OAuth2 routes can be exposed.
+type RouteSecurity struct {
+	AuthMiddleware  gin.HandlerFunc
+	AdminMiddleware gin.HandlerFunc
+}
+
 // Provider implements OAuth2 authorization server.
 type Provider struct {
 	clientRepo       ClientRepository
@@ -205,13 +219,24 @@ func NewProvider(
 	}
 }
 
-// SetupOAuth2Routes sets up OAuth2 endpoints.
-func (p *Provider) SetupOAuth2Routes(r *gin.Engine) {
+// SetupOAuth2Routes refuses to register routes without explicit security
+// middleware. Use SetupOAuth2RoutesWithSecurity when wiring this provider.
+func (p *Provider) SetupOAuth2Routes(r *gin.Engine) error {
+	return p.SetupOAuth2RoutesWithSecurity(r, RouteSecurity{})
+}
+
+// SetupOAuth2RoutesWithSecurity sets up OAuth2 endpoints with host-provided
+// authentication and admin authorization middleware.
+func (p *Provider) SetupOAuth2RoutesWithSecurity(r *gin.Engine, security RouteSecurity) error {
+	if r == nil || security.AuthMiddleware == nil || security.AdminMiddleware == nil {
+		return ErrOAuth2RouteSecurityRequired
+	}
+
 	oauth2 := r.Group("/oauth2")
 	{
 		// Authorization endpoint
-		oauth2.GET("/authorize", p.handleAuthorize)
-		oauth2.POST("/authorize", p.handleAuthorizePost)
+		oauth2.GET("/authorize", security.AuthMiddleware, p.handleAuthorize)
+		oauth2.POST("/authorize", security.AuthMiddleware, p.handleAuthorizePost)
 
 		// Token endpoint
 		oauth2.POST("/token", p.handleToken)
@@ -230,8 +255,7 @@ func (p *Provider) SetupOAuth2Routes(r *gin.Engine) {
 	}
 
 	// Client management endpoints (admin only)
-	admin := r.Group("/admin/oauth2/clients")
-	// TODO: Add admin middleware
+	admin := r.Group("/admin/oauth2/clients", security.AuthMiddleware, security.AdminMiddleware)
 	{
 		admin.GET("", p.handleListClients)
 		admin.POST("", p.handleCreateClient)
@@ -240,6 +264,8 @@ func (p *Provider) SetupOAuth2Routes(r *gin.Engine) {
 		admin.DELETE("/:id", p.handleDeleteClient)
 		admin.POST("/:id/regenerate-secret", p.handleRegenerateSecret)
 	}
+
+	return nil
 }
 
 // handleAuthorize handles the authorization endpoint.
@@ -693,15 +719,57 @@ func (p *Provider) generateToken() string {
 }
 
 func (p *Provider) validatePKCE(challenge, method, verifier string) bool {
-	// TODO: Implement PKCE validation
-	// For now, just check if verifier is provided when challenge exists
-	return verifier != ""
+	if challenge == "" || verifier == "" {
+		return false
+	}
+
+	switch method {
+	case "", "plain":
+		return subtle.ConstantTimeCompare([]byte(challenge), []byte(verifier)) == 1
+	case "S256":
+		sum := sha256.Sum256([]byte(verifier))
+		expected := base64.RawURLEncoding.EncodeToString(sum[:])
+		return subtle.ConstantTimeCompare([]byte(challenge), []byte(expected)) == 1
+	default:
+		return false
+	}
 }
 
 func (p *Provider) getCurrentUser(c *gin.Context) (uint, string, string, bool) {
-	// TODO: Integrate with existing middleware
-	// For now, return mock data
-	return 1, "demo@example.com", "Admin", true
+	if c == nil {
+		return 0, "", "", false
+	}
+
+	userID := uint(0)
+	if v, exists := c.Get("user_id"); exists {
+		userID = convert.ToUint(v, 0)
+	}
+	if userID == 0 {
+		return 0, "", "", false
+	}
+
+	email := getContextString(c, "user_email")
+	if email == "" {
+		email = getContextString(c, "username")
+	}
+	role := getContextString(c, "user_role")
+	if email == "" || role == "" {
+		return 0, "", "", false
+	}
+
+	return userID, email, role, true
+}
+
+func getContextString(c *gin.Context, key string) string {
+	v, exists := c.Get(key)
+	if !exists {
+		return ""
+	}
+	s, ok := v.(string)
+	if !ok {
+		return ""
+	}
+	return s
 }
 
 func (p *Provider) sendError(c *gin.Context, error, description, redirectURI, state string) {

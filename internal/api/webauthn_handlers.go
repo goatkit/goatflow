@@ -14,6 +14,7 @@ import (
 	"github.com/goatkit/goatflow/internal/auth"
 	"github.com/goatkit/goatflow/internal/constants"
 	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/httpcookie"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/routing"
 	"github.com/goatkit/goatflow/internal/service"
@@ -188,7 +189,7 @@ func handleWebAuthnLoginFinish(c *gin.Context) {
 		return
 	}
 	auth.GetTOTPSessionManager().InvalidateSession(token)
-	c.SetCookie("2fa_pending", "", -1, "/", "", false, true)
+	httpcookie.SetAuth(c, "2fa_pending", "", -1)
 	completeAgentSecondFactorLogin(c, db, session)
 }
 
@@ -339,7 +340,7 @@ func handleCustomerWebAuthnLoginFinish(c *gin.Context) {
 		return
 	}
 	auth.GetTOTPSessionManager().InvalidateSession(token)
-	c.SetCookie("customer_2fa_pending", "", -1, "/", "", false, true)
+	httpcookie.SetAuth(c, "customer_2fa_pending", "", -1)
 	completeCustomerSecondFactorLogin(c, db, session)
 }
 
@@ -457,7 +458,7 @@ func pendingAgent2FASession(c *gin.Context) (*auth.PendingTOTPSession, bool) {
 	}
 	session := auth.GetTOTPSessionManager().ValidateAndGetSession(token, c.ClientIP(), c.Request.UserAgent())
 	if session == nil || session.IsCustomer {
-		c.SetCookie("2fa_pending", "", -1, "/", "", false, true)
+		httpcookie.SetAuth(c, "2fa_pending", "", -1)
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "invalid or expired 2FA session"})
 		return nil, false
 	}
@@ -472,7 +473,7 @@ func pendingCustomer2FASession(c *gin.Context) (*auth.PendingTOTPSession, bool) 
 	}
 	session := auth.GetTOTPSessionManager().ValidateAndGetSession(token, c.ClientIP(), c.Request.UserAgent())
 	if session == nil || !session.IsCustomer {
-		c.SetCookie("customer_2fa_pending", "", -1, "/", "", false, true)
+		httpcookie.SetAuth(c, "customer_2fa_pending", "", -1)
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "invalid or expired 2FA session"})
 		return nil, false
 	}
@@ -499,13 +500,13 @@ func completeAgentSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth.Pe
 	if userTimeout := prefService.GetSessionTimeout(session.UserID); userTimeout > 0 {
 		sessionTimeout = userTimeout
 	}
-	c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
-	c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
-	c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
-	c.SetCookie("goatflow_customer_logged_in", "", -1, "/", "", false, false)
-	c.SetCookie("access_token", token, sessionTimeout, "/", "", false, true)
-	c.SetCookie("auth_token", token, sessionTimeout, "/", "", false, true)
-	c.SetCookie("goatflow_logged_in", "1", sessionTimeout, "/", "", false, false)
+	httpcookie.SetAuth(c, "customer_access_token", "", -1)
+	httpcookie.SetAuth(c, "customer_auth_token", "", -1)
+	httpcookie.SetAuth(c, "customer_session_id", "", -1)
+	httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "", -1)
+	httpcookie.SetAuth(c, "access_token", token, sessionTimeout)
+	httpcookie.SetAuth(c, "auth_token", token, sessionTimeout)
+	httpcookie.SetAuthState(c, "goatflow_logged_in", "1", sessionTimeout)
 	if userTheme := prefService.GetTheme(session.UserID); userTheme != "" {
 		c.SetCookie("goatflow_theme", userTheme, sessionTimeout, "/", "", false, false)
 	}
@@ -517,7 +518,7 @@ func completeAgentSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth.Pe
 		if err != nil {
 			log.Printf("Failed to create session record: %v", err)
 		} else {
-			c.SetCookie("session_id", sessionID, sessionTimeout, "/", "", false, true)
+			httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "redirect": "/dashboard"})
@@ -544,13 +545,13 @@ func completeCustomerSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth
 		return
 	}
 	sessionTimeout := 86400
-	c.SetCookie("access_token", "", -1, "/", "", false, true)
-	c.SetCookie("auth_token", "", -1, "/", "", false, true)
-	c.SetCookie("session_id", "", -1, "/", "", false, true)
-	c.SetCookie("goatflow_logged_in", "", -1, "/", "", false, false)
-	c.SetCookie("customer_access_token", jwtToken, sessionTimeout, "/", "", false, true)
-	c.SetCookie("customer_auth_token", jwtToken, sessionTimeout, "/", "", false, true)
-	c.SetCookie("goatflow_customer_logged_in", "1", sessionTimeout, "/", "", false, false)
+	httpcookie.SetAuth(c, "access_token", "", -1)
+	httpcookie.SetAuth(c, "auth_token", "", -1)
+	httpcookie.SetAuth(c, "session_id", "", -1)
+	httpcookie.SetAuthState(c, "goatflow_logged_in", "", -1)
+	httpcookie.SetAuth(c, "customer_access_token", jwtToken, sessionTimeout)
+	httpcookie.SetAuth(c, "customer_auth_token", jwtToken, sessionTimeout)
+	httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "1", sessionTimeout)
 	c.JSON(http.StatusOK, gin.H{"success": true, "access_token": jwtToken, "redirect": "/customer"})
 }
 
