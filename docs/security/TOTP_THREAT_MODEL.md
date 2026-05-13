@@ -277,17 +277,19 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 - [x] Password re-verification for 2FA setup/disable (V9) - requires current password
 - [x] Atomic preference updates via SetAndDelete() - all 2FA state changes in single transaction
 - [x] Admin 2FA override with audit trail
-- [x] Hardware key support (WebAuthn) - implemented as an additional second-factor method alongside TOTP/recovery codes.
+- [x] Hardware key support (WebAuthn) - implemented as an additional second-factor method alongside TOTP/recovery codes, with passkey-capable resident credentials for new registrations.
+- [x] Passkey login (WebAuthn discoverable credentials) - implemented for agent and customer login surfaces with active-account revalidation before session issuance.
 
 #### Hardware Key (WebAuthn/FIDO2) Assessment
 
-**Status:** Implemented for MFA. Hardware keys are supported for agent and customer accounts as a second factor after password authentication.
+**Status:** Implemented for MFA and passkey login. Hardware keys are supported for agent and customer accounts as a second factor after password authentication, and newly registered WebAuthn credentials request resident-key storage plus user verification so they can also be used as passkeys from the login page.
 
-**Effort:** MEDIUM-HIGH (2-3 weeks)
+**Implemented controls:**
 - New DB schema for credential storage (public keys, credential IDs, counters)
 - WebAuthn registration/authentication flows with challenge-response
 - Browser `navigator.credentials` API integration
 - Multiple keys per user, fallback to TOTP/recovery codes, key management UI
+- Passwordless passkey login uses discoverable WebAuthn assertions, short-lived server-side ceremony state, HttpOnly pending cookies, credential-ID plus user-handle ownership checks, account-active checks, and audit events before normal auth cookies are issued.
 
 **Why hardware keys are more secure than TOTP:**
 
@@ -302,9 +304,9 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 
 **Operational notes:**
 
-1. WebAuthn is currently used as MFA, not passwordless login.
-2. Production deployments must configure HTTPS origins and a stable relying-party ID.
-3. TOTP and recovery codes remain available as fallback methods.
+1. Production deployments must configure HTTPS origins and a stable relying-party ID.
+2. TOTP and recovery codes remain available as fallback methods.
+3. Credentials registered before resident-key/passkey options were enabled may need to be removed and re-registered before browsers/password managers offer them for passwordless login.
 
 ## Test Coverage Matrix
 

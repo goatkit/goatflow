@@ -1,6 +1,8 @@
 package service
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
@@ -15,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 
 	"github.com/goatkit/goatflow/internal/database"
@@ -23,6 +26,12 @@ import (
 const (
 	WebAuthnUserTypeAgent    = "agent"
 	WebAuthnUserTypeCustomer = "customer"
+
+	webAuthnPurposeRegistration = "registration"
+	webAuthnPurposeLogin        = "login"
+	webAuthnPurposePasskeyLogin = "passkey-login"
+
+	webAuthnCeremonyTTL = 5 * time.Minute
 )
 
 type WebAuthnCredentialRecord struct {
@@ -41,6 +50,11 @@ type WebAuthnCredentialRecord struct {
 type WebAuthnService struct {
 	db       *sql.DB
 	webauthn *webauthn.WebAuthn
+}
+
+type PasskeyLoginResult struct {
+	UserType string
+	UserKey  string
 }
 
 type webAuthnUser struct {
@@ -183,14 +197,8 @@ func (s *WebAuthnService) ListCredentials(userType, userKey string) ([]WebAuthnC
 	var out []WebAuthnCredentialRecord
 	for rows.Next() {
 		var rec WebAuthnCredentialRecord
-		var signCount int64
-		var lastUsed sql.NullTime
-		if err := rows.Scan(&rec.ID, &rec.UserType, &rec.UserKey, &rec.CredentialID, &rec.credentialJSON, &rec.Name, &signCount, &lastUsed, &rec.CreatedAt, &rec.UpdatedAt); err != nil {
+		if err := scanWebAuthnCredential(rows, &rec); err != nil {
 			return nil, err
-		}
-		rec.SignCount = uint32(signCount)
-		if lastUsed.Valid {
-			rec.LastUsedAt = &lastUsed.Time
 		}
 		out = append(out, rec)
 	}
@@ -202,16 +210,24 @@ func (s *WebAuthnService) BeginRegistration(userType, userKey, displayName strin
 	if err != nil {
 		return nil, err
 	}
-	creation, session, err := s.webauthn.BeginRegistration(user)
+	creation, session, err := s.webauthn.BeginRegistration(user,
+		webauthn.WithAuthenticatorSelection(protocol.AuthenticatorSelection{
+			RequireResidentKey: protocol.ResidentKeyRequired(),
+			ResidentKey:        protocol.ResidentKeyRequirementRequired,
+			UserVerification:   protocol.VerificationRequired,
+		}),
+		webauthn.WithExclusions(webauthn.Credentials(user.WebAuthnCredentials()).CredentialDescriptors()),
+		webauthn.WithExtensions(protocol.AuthenticationExtensions{"credProps": true}),
+	)
 	if err != nil {
 		return nil, err
 	}
-	defaultWebAuthnCeremonies.Put(userType, userKey, "registration", *session)
+	s.storeCeremony(userType, userKey, webAuthnPurposeRegistration, *session)
 	return creation, nil
 }
 
 func (s *WebAuthnService) FinishRegistration(userType, userKey, displayName, keyName string, r *http.Request) (*WebAuthnCredentialRecord, error) {
-	ceremony, ok := defaultWebAuthnCeremonies.Take(userType, userKey, "registration")
+	ceremony, ok := s.takeCeremony(userType, userKey, webAuthnPurposeRegistration)
 	if !ok {
 		return nil, errors.New("registration challenge expired")
 	}
@@ -241,12 +257,12 @@ func (s *WebAuthnService) BeginLogin(userType, userKey, displayName string) (int
 	if err != nil {
 		return nil, err
 	}
-	defaultWebAuthnCeremonies.Put(userType, userKey, "login", *session)
+	s.storeCeremony(userType, userKey, webAuthnPurposeLogin, *session)
 	return assertion, nil
 }
 
 func (s *WebAuthnService) FinishLogin(userType, userKey, displayName string, r *http.Request) error {
-	ceremony, ok := defaultWebAuthnCeremonies.Take(userType, userKey, "login")
+	ceremony, ok := s.takeCeremony(userType, userKey, webAuthnPurposeLogin)
 	if !ok {
 		return errors.New("login challenge expired")
 	}
@@ -259,6 +275,72 @@ func (s *WebAuthnService) FinishLogin(userType, userKey, displayName string, r *
 		return err
 	}
 	return s.updateCredentialAfterLogin(credential)
+}
+
+func (s *WebAuthnService) BeginPasskeyLogin(userType string) (interface{}, string, error) {
+	if !validWebAuthnUserType(userType) {
+		return nil, "", errors.New("invalid user type")
+	}
+	assertion, session, err := s.webauthn.BeginDiscoverableLogin(
+		webauthn.WithUserVerification(protocol.VerificationRequired),
+	)
+	if err != nil {
+		return nil, "", err
+	}
+	token, err := randomWebAuthnToken()
+	if err != nil {
+		return nil, "", err
+	}
+	s.storeCeremony(userType, token, webAuthnPurposePasskeyLogin, *session)
+	return assertion, token, nil
+}
+
+func (s *WebAuthnService) FinishPasskeyLogin(userType, token string, r *http.Request) (*PasskeyLoginResult, error) {
+	if !validWebAuthnUserType(userType) {
+		return nil, errors.New("invalid user type")
+	}
+	ceremony, ok := s.takeCeremony(userType, token, webAuthnPurposePasskeyLogin)
+	if !ok {
+		return nil, errors.New("passkey login challenge expired")
+	}
+
+	var result *PasskeyLoginResult
+	handler := func(rawID, userHandle []byte) (webauthn.User, error) {
+		user, loginResult, err := s.passkeyLoginUser(rawID, userHandle)
+		if err != nil {
+			return nil, err
+		}
+		result = loginResult
+		return user, nil
+	}
+
+	_, credential, err := s.webauthn.FinishPasskeyLogin(handler, ceremony.Session, r)
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		return nil, errors.New("passkey login user was not resolved")
+	}
+	if err := s.updateCredentialAfterLogin(credential); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (s *WebAuthnService) passkeyLoginUser(rawID, userHandle []byte) (webauthn.User, *PasskeyLoginResult, error) {
+	rec, err := s.credentialByRawID(rawID)
+	if err != nil {
+		return nil, nil, err
+	}
+	handleUserType, handleUserKey, ok := parseWebAuthnUserID(userHandle)
+	if !ok || handleUserType != rec.UserType || handleUserKey != rec.UserKey {
+		return nil, nil, errors.New("credential user handle mismatch")
+	}
+	user, err := s.loadUser(rec.UserType, rec.UserKey, rec.UserKey)
+	if err != nil {
+		return nil, nil, err
+	}
+	return user, &PasskeyLoginResult{UserType: rec.UserType, UserKey: rec.UserKey}, nil
 }
 
 func (s *WebAuthnService) RenameCredential(userType, userKey string, id int64, name string) error {
@@ -314,7 +396,7 @@ func (s *WebAuthnService) loadUser(userType, userKey, displayName string) (*webA
 		displayName = userKey
 	}
 	return &webAuthnUser{
-		id:          []byte(userType + ":" + userKey),
+		id:          webAuthnUserID(userType, userKey),
 		name:        userKey,
 		displayName: displayName,
 		credentials: credentials,
@@ -367,6 +449,61 @@ func (s *WebAuthnService) updateCredentialAfterLogin(credential *webauthn.Creden
 	return err
 }
 
+func (s *WebAuthnService) credentialByRawID(rawID []byte) (*WebAuthnCredentialRecord, error) {
+	query := database.ConvertPlaceholders(`
+		SELECT id, user_type, user_key, credential_id, credential_json, name, sign_count, last_used_at, created_at, updated_at
+		FROM gk_webauthn_credential
+		WHERE credential_id = ?
+		LIMIT 1`)
+	var rec WebAuthnCredentialRecord
+	if err := scanWebAuthnCredential(s.db.QueryRow(query, encodeCredentialID(rawID)), &rec); err != nil {
+		return nil, err
+	}
+	return &rec, nil
+}
+
+type webAuthnCredentialScanner interface {
+	Scan(dest ...interface{}) error
+}
+
+func scanWebAuthnCredential(scanner webAuthnCredentialScanner, rec *WebAuthnCredentialRecord) error {
+	var signCount int64
+	var lastUsed sql.NullTime
+	if err := scanner.Scan(&rec.ID, &rec.UserType, &rec.UserKey, &rec.CredentialID, &rec.credentialJSON, &rec.Name, &signCount, &lastUsed, &rec.CreatedAt, &rec.UpdatedAt); err != nil {
+		return err
+	}
+	const maxUint32 = int64(1<<32 - 1)
+	if signCount < 0 || signCount > maxUint32 {
+		return fmt.Errorf("credential %d sign count out of range", rec.ID)
+	}
+	rec.SignCount = uint32(signCount)
+	if lastUsed.Valid {
+		rec.LastUsedAt = &lastUsed.Time
+	}
+	return nil
+}
+
+func webAuthnUserID(userType, userKey string) []byte {
+	return []byte(userType + ":" + userKey)
+}
+
+func parseWebAuthnUserID(handle []byte) (string, string, bool) {
+	userType, userKey, ok := strings.Cut(string(handle), ":")
+	return userType, userKey, ok && validWebAuthnUserType(userType) && userKey != ""
+}
+
+func validWebAuthnUserType(userType string) bool {
+	return userType == WebAuthnUserTypeAgent || userType == WebAuthnUserTypeCustomer
+}
+
+func randomWebAuthnToken() (string, error) {
+	var raw [32]byte
+	if _, err := rand.Read(raw[:]); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(raw[:]), nil
+}
+
 func encodeCredentialID(id []byte) string {
 	return base64.RawURLEncoding.EncodeToString(id)
 }
@@ -375,17 +512,142 @@ func AgentWebAuthnUserKey(userID int) string {
 	return strconv.Itoa(userID)
 }
 
-func (s *webAuthnCeremonyStore) Put(userType, userKey, purpose string, session webauthn.SessionData) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.cleanupLocked()
-	s.sessions[s.key(userType, userKey, purpose)] = webAuthnCeremony{
+func (s *WebAuthnService) storeCeremony(userType, userKey, purpose string, session webauthn.SessionData) {
+	ceremony := newWebAuthnCeremony(userType, userKey, purpose, session)
+	if err := s.storeCeremonyDB(ceremony); err != nil {
+		defaultWebAuthnCeremonies.PutCeremony(ceremony)
+	}
+}
+
+func (s *WebAuthnService) takeCeremony(userType, userKey, purpose string) (webAuthnCeremony, bool) {
+	if ceremony, ok, err := s.takeCeremonyDB(userType, userKey, purpose); err == nil {
+		return ceremony, ok
+	}
+	return defaultWebAuthnCeremonies.Take(userType, userKey, purpose)
+}
+
+func (s *WebAuthnService) storeCeremonyDB(ceremony webAuthnCeremony) error {
+	if s.db == nil {
+		return errors.New("database unavailable")
+	}
+	sessionJSON, err := json.Marshal(ceremony.Session)
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	cleanupQuery := database.ConvertPlaceholders("DELETE FROM gk_webauthn_ceremony WHERE expires_at < ?")
+	if _, err := s.db.Exec(cleanupQuery, now); err != nil {
+		return err
+	}
+
+	var query string
+	if database.IsMySQL() {
+		query = `
+			INSERT INTO gk_webauthn_ceremony
+				(ceremony_key, user_type, user_key, purpose, session_json, expires_at, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
+			ON DUPLICATE KEY UPDATE
+				user_type = VALUES(user_type),
+				user_key = VALUES(user_key),
+				purpose = VALUES(purpose),
+				session_json = VALUES(session_json),
+				expires_at = VALUES(expires_at),
+				created_at = VALUES(created_at)`
+	} else {
+		query = `
+			INSERT INTO gk_webauthn_ceremony
+				(ceremony_key, user_type, user_key, purpose, session_json, expires_at, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
+			ON CONFLICT (ceremony_key) DO UPDATE SET
+				user_type = EXCLUDED.user_type,
+				user_key = EXCLUDED.user_key,
+				purpose = EXCLUDED.purpose,
+				session_json = EXCLUDED.session_json,
+				expires_at = EXCLUDED.expires_at,
+				created_at = EXCLUDED.created_at`
+	}
+	_, err = s.db.Exec(database.ConvertPlaceholders(query),
+		webAuthnCeremonyKey(ceremony.UserType, ceremony.UserKey, ceremony.Purpose),
+		ceremony.UserType,
+		ceremony.UserKey,
+		ceremony.Purpose,
+		string(sessionJSON),
+		ceremony.Expires,
+		now,
+	)
+	return err
+}
+
+func (s *WebAuthnService) takeCeremonyDB(userType, userKey, purpose string) (webAuthnCeremony, bool, error) {
+	if s.db == nil {
+		return webAuthnCeremony{}, false, errors.New("database unavailable")
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return webAuthnCeremony{}, false, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	var ceremony webAuthnCeremony
+	var sessionJSON []byte
+	key := webAuthnCeremonyKey(userType, userKey, purpose)
+	query := database.ConvertPlaceholders(`
+		SELECT user_type, user_key, purpose, session_json, expires_at
+		FROM gk_webauthn_ceremony
+		WHERE ceremony_key = ?
+		FOR UPDATE`)
+	err = tx.QueryRow(query, key).Scan(&ceremony.UserType, &ceremony.UserKey, &ceremony.Purpose, &sessionJSON, &ceremony.Expires)
+	if err == sql.ErrNoRows {
+		return webAuthnCeremony{}, false, nil
+	}
+	if err != nil {
+		return webAuthnCeremony{}, false, err
+	}
+
+	deleteQuery := database.ConvertPlaceholders("DELETE FROM gk_webauthn_ceremony WHERE ceremony_key = ?")
+	if _, err := tx.Exec(deleteQuery, key); err != nil {
+		return webAuthnCeremony{}, false, err
+	}
+	if err := tx.Commit(); err != nil {
+		return webAuthnCeremony{}, false, err
+	}
+
+	if ceremony.UserType != userType || ceremony.UserKey != userKey || ceremony.Purpose != purpose {
+		return webAuthnCeremony{}, false, nil
+	}
+	if time.Now().After(ceremony.Expires) {
+		return webAuthnCeremony{}, false, nil
+	}
+	if err := json.Unmarshal(sessionJSON, &ceremony.Session); err != nil {
+		return webAuthnCeremony{}, false, err
+	}
+	return ceremony, true, nil
+}
+
+func newWebAuthnCeremony(userType, userKey, purpose string, session webauthn.SessionData) webAuthnCeremony {
+	return webAuthnCeremony{
 		UserType: userType,
 		UserKey:  userKey,
 		Purpose:  purpose,
 		Session:  session,
-		Expires:  time.Now().Add(5 * time.Minute),
+		Expires:  time.Now().Add(webAuthnCeremonyTTL),
 	}
+}
+
+func webAuthnCeremonyKey(userType, userKey, purpose string) string {
+	sum := sha256.Sum256([]byte(userType + "\x00" + userKey + "\x00" + purpose))
+	return base64.RawURLEncoding.EncodeToString(sum[:])
+}
+
+func (s *webAuthnCeremonyStore) Put(userType, userKey, purpose string, session webauthn.SessionData) {
+	s.PutCeremony(newWebAuthnCeremony(userType, userKey, purpose, session))
+}
+
+func (s *webAuthnCeremonyStore) PutCeremony(ceremony webAuthnCeremony) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.cleanupLocked()
+	s.sessions[s.key(ceremony.UserType, ceremony.UserKey, ceremony.Purpose)] = ceremony
 }
 
 func (s *webAuthnCeremonyStore) Take(userType, userKey, purpose string) (webAuthnCeremony, bool) {

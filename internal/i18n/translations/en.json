@@ -1454,7 +1454,8 @@
   "app": {
     "description": "Modern IT Service Management Platform",
     "name": "GoatFlow",
-    "title": "GoatFlow - Ticketing System"
+    "title": "GoatFlow - Ticketing System",
+    "logo_alt": "GoatFlow logo"
   },
   "assets": {
     "asset_tag": "Asset Tag",
@@ -1504,7 +1505,13 @@
     "use_security_key": "Use security key",
     "verification_code": "Verification Code",
     "back_to_login": "Back to Login",
-    "verify": "Verify"
+    "verify": "Verify",
+    "2fa_security_key_only_description": "Use your security key to finish signing in.",
+    "2fa_totp_or_security_key_description": "Enter the code from your authenticator app or use your security key.",
+    "invalid_code": "Invalid code",
+    "security_keys_not_supported": "This browser does not support security keys.",
+    "no_security_keys_registered": "No registered security keys found",
+    "security_key_verification_failed": "Security key verification failed."
   },
   "buttons": {
     "add": "Add",
@@ -2310,7 +2317,8 @@
     "passwords_match": "Passwords match",
     "passwords_no_match": "Passwords do not match",
     "changed_success": "Password changed successfully!",
-    "same_as_current": "New password must be different from current password"
+    "same_as_current": "New password must be different from current password",
+    "toggle_visibility": "Toggle password visibility"
   },
   "priority": {
     "critical": "Critical",
@@ -2497,7 +2505,21 @@
       "verify_enable": "Verify & Enable",
       "add_security_key": "Add security key",
       "security_keys_registered": "security keys registered",
-      "security_key_name": "Security key name"
+      "security_key_name": "Security key name",
+      "mfa_enabled_label": "MFA enabled",
+      "authenticator_app_enabled_label": "Authenticator app enabled",
+      "security_key_enabled_label": "Security key enabled",
+      "mfa_enabled_description": "Authenticator app codes and security keys are enabled for this account.",
+      "authenticator_app_enabled_description": "Authenticator app codes are required after password login.",
+      "security_key_enabled_description": "A security key is registered and will be required after password login.",
+      "no_factor_description": "Add an authenticator app or security key to protect this account.",
+      "enable_authenticator_app": "Enable authenticator app",
+      "disable_authenticator_app": "Disable authenticator app",
+      "security_key_registered_singular": "1 security key registered",
+      "security_key_registered_count": "{count} security keys registered",
+      "security_key_setup_failed": "Failed to start security key setup",
+      "security_key_register_failed": "Failed to register security key",
+      "security_key_default_name": "Security key"
     },
     "reset_highlights": "Reset feature highlights",
     "highlights_reset": "Feature highlights have been reset",

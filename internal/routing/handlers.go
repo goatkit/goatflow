@@ -55,6 +55,31 @@ func nullable(val sql.NullString) string {
 	return ""
 }
 
+func isPublicAuthPath(path string) bool {
+	switch path {
+	case "/login",
+		"/login/2fa",
+		"/api/auth/login",
+		"/api/auth/passkey/begin",
+		"/api/auth/passkey/finish",
+		"/api/auth/2fa/verify",
+		"/api/auth/2fa/webauthn/begin",
+		"/api/auth/2fa/webauthn/finish",
+		"/customer/login",
+		"/customer/login/2fa",
+		"/api/auth/customer/login",
+		"/api/auth/customer/passkey/begin",
+		"/api/auth/customer/passkey/finish",
+		"/api/auth/customer/2fa/verify",
+		"/api/auth/customer/2fa/webauthn/begin",
+		"/api/auth/customer/2fa/webauthn/finish",
+		"/auth/customer":
+		return true
+	default:
+		return false
+	}
+}
+
 // RegisterExistingHandlers registers existing handlers with the registry.
 func RegisterExistingHandlers(registry *HandlerRegistry) {
 	// Register middleware only - all route handlers are now in YAML
@@ -62,10 +87,9 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 		"auth": func(c *gin.Context) {
 			// Public (unauthenticated) paths bypass auth
 			path := c.Request.URL.Path
-			if path == "/login" || path == "/login/2fa" || path == "/api/auth/login" || path == "/api/auth/2fa/verify" ||
-				path == "/customer/login" || path == "/customer/login/2fa" || path == "/api/auth/customer/login" || path == "/api/auth/customer/2fa/verify" ||
+			if isPublicAuthPath(path) ||
 				path == "/health" || path == "/metrics" || path == "/favicon.ico" || path == "/manifest.json" || path == "/sw.js" || path == "/sw-config.json" || strings.HasPrefix(path, "/static/") ||
-				path == "/auth/customer" || path == "/api/languages" || path == "/api/themes" || strings.HasPrefix(path, "/swagger/") {
+				path == "/api/languages" || path == "/api/themes" || strings.HasPrefix(path, "/swagger/") {
 				c.Next()
 				return
 			}

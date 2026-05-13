@@ -6,13 +6,19 @@
 <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-sm relative z-10">
         <div class="gk-logo-glow gk-float mx-auto w-24 h-24" style="color: var(--gk-primary);">
-            <img class="w-full h-full" src="/static/favicon.svg" alt="GoatFlow Logo">
+            <img class="w-full h-full" src="/static/favicon.svg" alt="{{ t('app.logo_alt')|default:'GoatFlow logo' }}">
         </div>
         <h2 class="mt-6 text-center text-3xl gk-heading gk-text-gradient">
             {{ t("auth.2fa_title")|default:"Two-Factor Authentication" }}
         </h2>
         <p class="mt-2 text-center text-sm" style="color: var(--gk-text-secondary);">
-            {{ t("auth.2fa_description")|default:"Enter the code from your authenticator app" }}
+            {% if security_key_only %}
+                {{ t("auth.2fa_security_key_only_description")|default:"Use your security key to finish signing in." }}
+            {% elif webauthn_enabled %}
+                {{ t("auth.2fa_totp_or_security_key_description")|default:"Enter the code from your authenticator app or use your security key." }}
+            {% else %}
+                {{ t("auth.2fa_description")|default:"Enter the code from your authenticator app" }}
+            {% endif %}
         </p>
     </div>
 
@@ -22,41 +28,45 @@
                 <div class="text-sm text-red-800 dark:text-red-200" id="error-text"></div>
             </div>
 
-            <form id="2fa-form" class="space-y-5">
-                <div>
-                    <label for="code" class="form-label">{{ t("auth.verification_code")|default:"Verification Code" }}</label>
-                    <div class="mt-2">
-                        <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]*" 
-                               autocomplete="one-time-code" required autofocus
-                               maxlength="8"
-                               class="gk-input-neon text-center text-2xl tracking-widest"
-                               placeholder="000000"
-                               style="letter-spacing: 0.5em;">
+            {% if show_totp_form %}
+                <form id="2fa-form" class="space-y-5">
+                    <div>
+                        <label for="code" class="form-label">{{ t("auth.verification_code")|default:"Verification Code" }}</label>
+                        <div class="mt-2">
+                            <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]*"
+                                   autocomplete="one-time-code" required autofocus
+                                   maxlength="16"
+                                   class="gk-input-neon text-center text-2xl tracking-widest"
+                                   placeholder="000000"
+                                   style="letter-spacing: 0.5em;">
+                        </div>
+                        <p class="mt-2 text-xs" style="color: var(--gk-text-muted);">
+                            {{ t("auth.2fa_recovery_hint")|default:"You can also use a recovery code" }}
+                        </p>
                     </div>
-                    <p class="mt-2 text-xs" style="color: var(--gk-text-muted);">
-                        {{ t("auth.2fa_recovery_hint")|default:"You can also use a recovery code" }}
-                    </p>
-                </div>
 
-                <div>
-                    <button type="submit" id="verify-btn" class="gk-btn-neon w-full">
-                        <span id="btn-text">{{ t("auth.verify")|default:"Verify" }}</span>
-                        <span id="btn-loading" class="hidden">
-                            <svg class="animate-spin h-5 w-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            {{ t("common.verifying")|default:"Verifying..." }}
-                        </span>
+                    <div>
+                        <button type="submit" id="verify-btn" class="gk-btn-neon w-full">
+                            <span id="btn-text">{{ t("auth.verify")|default:"Verify" }}</span>
+                            <span id="btn-loading" class="hidden">
+                                <svg class="animate-spin h-5 w-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                {{ t("common.verifying")|default:"Verifying..." }}
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if webauthn_enabled %}
+                <div class="{% if show_totp_form %}mt-4{% endif %}">
+                    <button type="button" id="security-key-btn" class="{% if security_key_only %}gk-btn-neon{% else %}gk-btn-secondary{% endif %} w-full" onclick="verifyWithSecurityKey()">
+                        {{ t("auth.use_security_key")|default:"Use security key" }}
                     </button>
                 </div>
-            </form>
-
-            <div class="mt-4">
-                <button type="button" id="security-key-btn" class="gk-btn-secondary w-full" onclick="verifyWithSecurityKey()">
-                    {{ t("auth.use_security_key")|default:"Use security key" }}
-                </button>
-            </div>
+            {% endif %}
 
             <div class="mt-6 text-center">
                 <a href="/login" class="text-sm gk-link-neon">
@@ -68,7 +78,17 @@
 </div>
 
 <script>
-document.getElementById('2fa-form').addEventListener('submit', async function(e) {
+const twoFAI18n = {
+    invalidCode: '{{ t("auth.invalid_code")|default:"Invalid code"|escapejs }}',
+    genericError: '{{ t("errors.generic")|default:"An error occurred. Please try again."|escapejs }}',
+    securityKeysNotSupported: '{{ t("auth.security_keys_not_supported")|default:"This browser does not support security keys."|escapejs }}',
+    noSecurityKeysRegistered: '{{ t("auth.no_security_keys_registered")|default:"No registered security keys found"|escapejs }}',
+    securityKeyVerificationFailed: '{{ t("auth.security_key_verification_failed")|default:"Security key verification failed."|escapejs }}'
+};
+
+const twoFAForm = document.getElementById('2fa-form');
+if (twoFAForm) {
+    twoFAForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const code = document.getElementById('code').value.trim();
@@ -102,7 +122,7 @@ document.getElementById('2fa-form').addEventListener('submit', async function(e)
             window.location.href = data.redirect || '/dashboard';
         } else {
             // Show error
-            errorText.textContent = data.error || 'Invalid code';
+            errorText.textContent = data.error || twoFAI18n.invalidCode;
             errorDiv.classList.remove('hidden');
             
             // Clear the input for retry
@@ -110,7 +130,7 @@ document.getElementById('2fa-form').addEventListener('submit', async function(e)
             document.getElementById('code').focus();
         }
     } catch (err) {
-        errorText.textContent = 'An error occurred. Please try again.';
+        errorText.textContent = twoFAI18n.genericError;
         errorDiv.classList.remove('hidden');
     } finally {
         // Reset button state
@@ -118,10 +138,13 @@ document.getElementById('2fa-form').addEventListener('submit', async function(e)
         btnLoading.classList.add('hidden');
         verifyBtn.disabled = false;
     }
-});
+    });
+}
 
 // Auto-submit when 6 digits entered
-document.getElementById('code').addEventListener('input', function(e) {
+const codeInput = document.getElementById('code');
+if (codeInput) {
+    codeInput.addEventListener('input', function(e) {
     // Remove non-numeric characters (except for recovery codes which have letters)
     const value = e.target.value;
     
@@ -129,7 +152,8 @@ document.getElementById('code').addEventListener('input', function(e) {
     if (/^\d{6}$/.test(value)) {
         document.getElementById('2fa-form').dispatchEvent(new Event('submit'));
     }
-});
+    });
+}
 
 function webauthnBase64URLToBuffer(value) {
     const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
@@ -180,7 +204,7 @@ async function verifyWithSecurityKey() {
     const btn = document.getElementById('security-key-btn');
 
     if (!window.PublicKeyCredential) {
-        errorText.textContent = 'This browser does not support security keys.';
+        errorText.textContent = twoFAI18n.securityKeysNotSupported;
         errorDiv.classList.remove('hidden');
         return;
     }
@@ -191,7 +215,7 @@ async function verifyWithSecurityKey() {
     try {
         const begin = await fetch('/api/auth/2fa/webauthn/begin', { method: 'POST' });
         const beginData = await begin.json();
-        if (!beginData.success) throw new Error(beginData.error || 'No registered security keys found');
+        if (!beginData.success) throw new Error(beginData.error || twoFAI18n.noSecurityKeysRegistered);
 
         const credential = await navigator.credentials.get({ publicKey: prepareAssertionOptions(beginData.options) });
         const finish = await fetch('/api/auth/2fa/webauthn/finish', {
@@ -203,10 +227,10 @@ async function verifyWithSecurityKey() {
         if (finishData.success) {
             window.location.href = finishData.redirect || '/dashboard';
         } else {
-            throw new Error(finishData.error || 'Security key verification failed');
+            throw new Error(finishData.error || twoFAI18n.securityKeyVerificationFailed);
         }
     } catch (err) {
-        errorText.textContent = err.message || 'Security key verification failed.';
+        errorText.textContent = err.message || twoFAI18n.securityKeyVerificationFailed;
         errorDiv.classList.remove('hidden');
     } finally {
         btn.disabled = false;

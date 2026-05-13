@@ -1532,7 +1532,8 @@
   "app": {
     "description": "chu' IT toy'taH SeH pat",
     "name": "GoatFlow",
-    "title": "GoatFlow - chaw' pat"
+    "title": "GoatFlow - chaw' pat",
+    "logo_alt": "GoatFlow Degh"
   },
   "assets": {
     "asset_tag": "Doch per",
@@ -1582,7 +1583,13 @@
     "use_security_key": "Hung ngaQHa'moHwI' yIlo'",
     "verification_code": "chut ngoq",
     "back_to_login": "logIn Dung chegh",
-    "verify": "chut"
+    "verify": "chut",
+    "2fa_security_key_only_description": "QapmeH 'elmeH, Hung ngaQHa'moHwI'lIj yIlo'.",
+    "2fa_totp_or_security_key_description": "lulIgh app ngoq yI'ogh pagh Hung ngaQHa'moHwI'lIj yIlo'.",
+    "invalid_code": "ngoq muj",
+    "security_keys_not_supported": "web laDwI'vam Hung ngaQHa'moHwI' ngaSbe'.",
+    "no_security_keys_registered": "Hung ngaQHa'moHwI' qonlu'bogh pagh tu'lu'",
+    "security_key_verification_failed": "Hung ngaQHa'moHwI' tobHa'."
   },
   "bulk_actions": {
     "all_selected": "Hoch wIvlu'",
@@ -2571,7 +2578,8 @@
     "passwords_match": "ngaDmoHwI'mey rap",
     "passwords_no_match": "ngaDmoHwI'mey rapbe'",
     "changed_success": "ngaDmoHwI' choHlu'ta'!",
-    "same_as_current": "chu' ngaDmoHwI' pIm 'oH poQ"
+    "same_as_current": "chu' ngaDmoHwI' pIm 'oH poQ",
+    "toggle_visibility": "pegh mu' leghlu'ghach choH"
   },
   "priority": {
     "critical": "Qob'a'",
@@ -2898,7 +2906,21 @@
       "verify_enable": "yItob 'ej yIchu'",
       "add_security_key": "Hung ngaQHa'moHwI' yIchel",
       "security_keys_registered": "Hung ngaQHa'moHwI'pu' qI'lu'",
-      "security_key_name": "Hung ngaQHa'moHwI' pong"
+      "security_key_name": "Hung ngaQHa'moHwI' pong",
+      "mfa_enabled_label": "MFA chu'",
+      "authenticator_app_enabled_label": "lulIgh app chu'",
+      "security_key_enabled_label": "Hung ngaQHa'moHwI' chu'",
+      "mfa_enabled_description": "accountvamvaD lulIgh app ngoqmey Hung ngaQHa'moHwI' je chu'.",
+      "authenticator_app_enabled_description": "pegh mu' logIn qa'DI', lulIgh app ngoqmey poQlu'.",
+      "security_key_enabled_description": "Hung ngaQHa'moHwI' qonlu' 'ej pegh mu' logIn qa'DI' poQlu'.",
+      "no_factor_description": "accountvam QanmeH, lulIgh app pagh Hung ngaQHa'moHwI' yIchel.",
+      "enable_authenticator_app": "lulIgh app yIchu'",
+      "disable_authenticator_app": "lulIgh app yIchu'Ha'",
+      "security_key_registered_singular": "1 Hung ngaQHa'moHwI' qonlu'",
+      "security_key_registered_count": "{count} Hung ngaQHa'moHwI' qonlu'",
+      "security_key_setup_failed": "Hung ngaQHa'moHwI' setup taghlu'pu'be'",
+      "security_key_register_failed": "Hung ngaQHa'moHwI' qonlu'pu'be'",
+      "security_key_default_name": "Hung ngaQHa'moHwI'"
     },
     "reset_highlights": "ngo'wI' tIchenmoH",
     "highlights_reset": "ngo'wI' chenmoHlu'pu'",

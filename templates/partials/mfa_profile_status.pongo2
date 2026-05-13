@@ -1,0 +1,77 @@
+const gkMFAI18n = {
+    mfaEnabledLabel: '{{ t("settings.2fa.mfa_enabled_label")|default:"MFA enabled"|escapejs }}',
+    authenticatorAppEnabledLabel: '{{ t("settings.2fa.authenticator_app_enabled_label")|default:"Authenticator app enabled"|escapejs }}',
+    securityKeyEnabledLabel: '{{ t("settings.2fa.security_key_enabled_label")|default:"Security key enabled"|escapejs }}',
+    mfaEnabledDescription: '{{ t("settings.2fa.mfa_enabled_description")|default:"Authenticator app codes and security keys are enabled for this account."|escapejs }}',
+    authenticatorAppEnabledDescription: '{{ t("settings.2fa.authenticator_app_enabled_description")|default:"Authenticator app codes are required after password login."|escapejs }}',
+    securityKeyEnabledDescription: '{{ t("settings.2fa.security_key_enabled_description")|default:"A security key is registered and will be required after password login."|escapejs }}',
+    noFactorDescription: '{{ t("settings.2fa.no_factor_description")|default:"Add an authenticator app or security key to protect this account."|escapejs }}',
+    enableAuthenticatorApp: '{{ t("settings.2fa.enable_authenticator_app")|default:"Enable authenticator app"|escapejs }}',
+    enable2FA: '{{ t("settings.2fa.enable")|default:"Enable 2FA"|escapejs }}',
+    disableAuthenticatorApp: '{{ t("settings.2fa.disable_authenticator_app")|default:"Disable authenticator app"|escapejs }}',
+    securityKeyRegisteredSingular: '{{ t("settings.2fa.security_key_registered_singular")|default:"1 security key registered"|escapejs }}',
+    securityKeyRegisteredCount: '{{ t("settings.2fa.security_key_registered_count")|default:"{count} security keys registered"|escapejs }}'
+};
+
+function gkMFAElement(id) {
+    return document.getElementById(id);
+}
+
+function gkMFAShow(id, visible) {
+    const el = gkMFAElement(id);
+    if (!el) return;
+    el.classList.toggle('hidden', !visible);
+}
+
+function gkMFASetText(id, value) {
+    const el = gkMFAElement(id);
+    if (!el) return;
+    el.textContent = value;
+}
+
+function renderMFAProfileStatus(data) {
+    const hasTOTP = data.totp_enabled === true;
+    const keyCount = Number(data.webauthn_credentials || 0);
+    const hasSecurityKey = data.webauthn_enabled === true || keyCount > 0;
+    const hasAnyFactor = hasTOTP || hasSecurityKey || data.enabled === true;
+
+    gkMFAShow('2fa-status-loading', false);
+    gkMFAShow('2fa-status-enabled', hasAnyFactor);
+    gkMFAShow('2fa-status-disabled', !hasAnyFactor);
+    gkMFAShow('2fa-setup-btn', !hasTOTP);
+    gkMFAShow('2fa-disable-btn', hasTOTP);
+    gkMFAShow('webauthn-add-btn', true);
+    gkMFAShow('2fa-recovery-info', hasTOTP);
+    gkMFAShow('webauthn-info', keyCount > 0);
+
+    if (hasTOTP && hasSecurityKey) {
+        gkMFASetText('2fa-status-enabled-label', gkMFAI18n.mfaEnabledLabel);
+        gkMFASetText('2fa-description', gkMFAI18n.mfaEnabledDescription);
+    } else if (hasTOTP) {
+        gkMFASetText('2fa-status-enabled-label', gkMFAI18n.authenticatorAppEnabledLabel);
+        gkMFASetText('2fa-description', gkMFAI18n.authenticatorAppEnabledDescription);
+    } else if (hasSecurityKey) {
+        gkMFASetText('2fa-status-enabled-label', gkMFAI18n.securityKeyEnabledLabel);
+        gkMFASetText('2fa-description', gkMFAI18n.securityKeyEnabledDescription);
+    } else {
+        gkMFASetText('2fa-description', gkMFAI18n.noFactorDescription);
+    }
+
+    gkMFASetText('2fa-setup-btn', hasSecurityKey && !hasTOTP ? gkMFAI18n.enableAuthenticatorApp : gkMFAI18n.enable2FA);
+    gkMFASetText('2fa-disable-btn', gkMFAI18n.disableAuthenticatorApp);
+    gkMFASetText('recovery-count', data.recovery_codes_remaining || 0);
+    if (keyCount > 0) {
+        const keyText = keyCount === 1
+            ? gkMFAI18n.securityKeyRegisteredSingular
+            : gkMFAI18n.securityKeyRegisteredCount.replace('{count}', keyCount);
+        gkMFASetText('webauthn-info', keyText);
+    }
+}
+
+function renderMFAProfileStatusFallback() {
+    gkMFAShow('2fa-status-loading', false);
+    gkMFAShow('2fa-status-disabled', true);
+    gkMFAShow('2fa-setup-btn', true);
+    gkMFAShow('webauthn-add-btn', true);
+    gkMFASetText('2fa-description', gkMFAI18n.noFactorDescription);
+}

@@ -4,7 +4,7 @@ FROM mcr.microsoft.com/playwright:v1.52.0-jammy
 
 # Install Go toolchain (match project toolchain if needed)
 # Detects architecture automatically (amd64 or arm64)
-ARG GO_VERSION=1.25.0
+ARG GO_VERSION=1.25.10
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates git build-essential && rm -rf /var/lib/apt/lists/* \
     && GOARCH=$(dpkg --print-architecture) \
     && echo "Detected architecture: ${GOARCH}" \

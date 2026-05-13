@@ -1512,7 +1512,8 @@
   "app": {
     "description": "Современная платформа управления IT-услугами",
     "name": "GoatFlow",
-    "title": "GoatFlow - Система заявок"
+    "title": "GoatFlow - Система заявок",
+    "logo_alt": "Логотип GoatFlow"
   },
   "assets": {
     "asset_tag": "Инвентарный номер",
@@ -1562,7 +1563,13 @@
     "use_security_key": "Использовать ключ безопасности",
     "verification_code": "Код подтверждения",
     "back_to_login": "Вернуться к входу",
-    "verify": "Подтвердить"
+    "verify": "Подтвердить",
+    "2fa_security_key_only_description": "Используйте ключ безопасности, чтобы завершить вход.",
+    "2fa_totp_or_security_key_description": "Введите код из приложения-аутентификатора или используйте ключ безопасности.",
+    "invalid_code": "Неверный код",
+    "security_keys_not_supported": "Этот браузер не поддерживает ключи безопасности.",
+    "no_security_keys_registered": "Зарегистрированные ключи безопасности не найдены",
+    "security_key_verification_failed": "Не удалось проверить ключ безопасности."
   },
   "bulk_actions": {
     "all_selected": "Все выбраны",
@@ -2554,7 +2561,8 @@
     "passwords_match": "Пароли совпадают",
     "passwords_no_match": "Пароли не совпадают",
     "changed_success": "Пароль успешно изменён!",
-    "same_as_current": "Новый пароль должен отличаться от текущего"
+    "same_as_current": "Новый пароль должен отличаться от текущего",
+    "toggle_visibility": "Переключить видимость пароля"
   },
   "priority": {
     "critical": "Критический",
@@ -2881,7 +2889,21 @@
       "verify_enable": "Подтвердить и включить",
       "add_security_key": "Добавить ключ безопасности",
       "security_keys_registered": "зарегистрированных ключей безопасности",
-      "security_key_name": "Имя ключа безопасности"
+      "security_key_name": "Имя ключа безопасности",
+      "mfa_enabled_label": "MFA включена",
+      "authenticator_app_enabled_label": "Приложение-аутентификатор включено",
+      "security_key_enabled_label": "Ключ безопасности включен",
+      "mfa_enabled_description": "Для этой учетной записи включены коды приложения-аутентификатора и ключи безопасности.",
+      "authenticator_app_enabled_description": "Коды приложения-аутентификатора требуются после входа с паролем.",
+      "security_key_enabled_description": "Ключ безопасности зарегистрирован и потребуется после входа с паролем.",
+      "no_factor_description": "Добавьте приложение-аутентификатор или ключ безопасности, чтобы защитить эту учетную запись.",
+      "enable_authenticator_app": "Включить приложение-аутентификатор",
+      "disable_authenticator_app": "Отключить приложение-аутентификатор",
+      "security_key_registered_singular": "Зарегистрирован 1 ключ безопасности",
+      "security_key_registered_count": "Зарегистрировано ключей безопасности: {count}",
+      "security_key_setup_failed": "Не удалось начать настройку ключа безопасности",
+      "security_key_register_failed": "Не удалось зарегистрировать ключ безопасности",
+      "security_key_default_name": "Ключ безопасности"
     },
     "reset_highlights": "Сбросить подсказки",
     "highlights_reset": "Подсказки сброшены",

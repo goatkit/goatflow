@@ -78,9 +78,7 @@ func CustomerCaptiveRedirect(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			return
 		}
 		path := c.Request.URL.Path
-		if strings.HasPrefix(path, "/customer/login") ||
-			strings.HasPrefix(path, "/customer/logout") ||
-			strings.HasPrefix(path, "/customer/api") {
+		if bypassCustomerCaptiveRedirect(path) {
 			c.Next()
 			return
 		}
@@ -128,6 +126,25 @@ func CustomerCaptiveRedirect(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		c.JSON(http.StatusForbidden, gin.H{"error": "this organisation is captive to plugin " + cp.String})
 		c.Abort()
 	}
+}
+
+func bypassCustomerCaptiveRedirect(path string) bool {
+	for _, prefix := range []string{
+		"/customer/login",
+		"/customer/logout",
+		"/customer/api",
+		"/customer/profile",
+		"/customer/password",
+	} {
+		if pathMatchesCustomerPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func pathMatchesCustomerPrefix(path, prefix string) bool {
+	return path == prefix || strings.HasPrefix(path, strings.TrimRight(prefix, "/")+"/")
 }
 
 // CustomerPortalGate loads portal config, enforces enable/disable, and applies optional login rules.
@@ -207,7 +224,6 @@ func CustomerPortalGate(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		c.Next()
 	}
 }
-
 
 func respondPortalDisabled(c *gin.Context, cfg sysconfig.CustomerPortalConfig) {
 	accept := c.GetHeader("Accept")

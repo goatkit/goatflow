@@ -1,6 +1,6 @@
 module github.com/goatkit/goatflow
 
-go 1.25.0
+go 1.25.10
 
 require (
 	github.com/99designs/gqlgen v0.17.78
@@ -44,7 +44,7 @@ require (
 	github.com/xuri/excelize/v2 v2.10.0
 	github.com/yuin/goldmark v1.7.4
 	golang.org/x/crypto v0.50.0
-	golang.org/x/net v0.52.0
+	golang.org/x/net v0.53.0
 	golang.org/x/text v0.36.0
 	google.golang.org/grpc v1.79.3
 	gopkg.in/yaml.v2 v2.4.0
@@ -144,7 +144,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/arch v0.23.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/image v0.38.0 // indirect
+	golang.org/x/image v0.39.0 // indirect
 	golang.org/x/mod v0.34.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect

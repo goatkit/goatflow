@@ -1512,7 +1512,8 @@
   "app": {
     "description": "モダンなITサービス管理プラットフォーム",
     "name": "GoatFlow",
-    "title": "GoatFlow - チケットシステム"
+    "title": "GoatFlow - チケットシステム",
+    "logo_alt": "GoatFlow ロゴ"
   },
   "assets": {
     "asset_tag": "資産タグ",
@@ -1562,7 +1563,13 @@
     "use_security_key": "セキュリティキーを使用",
     "verification_code": "確認コード",
     "back_to_login": "ログインに戻る",
-    "verify": "確認"
+    "verify": "確認",
+    "2fa_security_key_only_description": "サインインを完了するにはセキュリティキーを使用してください。",
+    "2fa_totp_or_security_key_description": "認証アプリのコードを入力するか、セキュリティキーを使用してください。",
+    "invalid_code": "無効なコードです",
+    "security_keys_not_supported": "このブラウザーはセキュリティキーに対応していません。",
+    "no_security_keys_registered": "登録済みのセキュリティキーが見つかりません",
+    "security_key_verification_failed": "セキュリティキーの確認に失敗しました。"
   },
   "bulk_actions": {
     "all_selected": "すべて選択済み",
@@ -2554,7 +2561,8 @@
     "passwords_match": "パスワードが一致しています",
     "passwords_no_match": "パスワードが一致しません",
     "changed_success": "パスワードが正常に変更されました！",
-    "same_as_current": "新しいパスワードは現在のパスワードと異なる必要があります"
+    "same_as_current": "新しいパスワードは現在のパスワードと異なる必要があります",
+    "toggle_visibility": "パスワードの表示を切り替え"
   },
   "priority": {
     "critical": "緊急",
@@ -2881,7 +2889,21 @@
       "verify_enable": "確認して有効化",
       "add_security_key": "セキュリティキーを追加",
       "security_keys_registered": "登録済みセキュリティキー",
-      "security_key_name": "セキュリティキー名"
+      "security_key_name": "セキュリティキー名",
+      "mfa_enabled_label": "MFA が有効です",
+      "authenticator_app_enabled_label": "認証アプリが有効です",
+      "security_key_enabled_label": "セキュリティキーが有効です",
+      "mfa_enabled_description": "このアカウントでは認証アプリのコードとセキュリティキーが有効です。",
+      "authenticator_app_enabled_description": "パスワードでログインした後に認証アプリのコードが必要です。",
+      "security_key_enabled_description": "セキュリティキーが登録されており、パスワードでログインした後に必要になります。",
+      "no_factor_description": "このアカウントを保護するために、認証アプリまたはセキュリティキーを追加してください。",
+      "enable_authenticator_app": "認証アプリを有効にする",
+      "disable_authenticator_app": "認証アプリを無効にする",
+      "security_key_registered_singular": "セキュリティキーが1件登録されています",
+      "security_key_registered_count": "セキュリティキーが{count}件登録されています",
+      "security_key_setup_failed": "セキュリティキー設定の開始に失敗しました",
+      "security_key_register_failed": "セキュリティキーの登録に失敗しました",
+      "security_key_default_name": "セキュリティキー"
     },
     "reset_highlights": "機能ハイライトをリセット",
     "highlights_reset": "機能ハイライトがリセットされました",

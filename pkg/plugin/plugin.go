@@ -85,9 +85,9 @@ type GKRegistration struct {
 	SkipOrgInjection bool `json:"skip_org_injection,omitempty"`
 
 	// Requirements
-	MinHostVersion string              `json:"min_host_version,omitempty"` // minimum GoatFlow version
-	Permissions    []string            `json:"permissions,omitempty"`      // required host permissions (legacy, use ResourceRequest)
-	Resources      *ResourceRequest    `json:"resources,omitempty"`        // requested resource limits
+	MinHostVersion string           `json:"min_host_version,omitempty"` // minimum GoatFlow version
+	Permissions    []string         `json:"permissions,omitempty"`      // required host permissions (legacy, use ResourceRequest)
+	Resources      *ResourceRequest `json:"resources,omitempty"`        // requested resource limits
 }
 
 // GroupSpec defines a group that a plugin requires for access control.
@@ -107,21 +107,21 @@ type GroupSpec struct {
 //   - "webhook"       — no auth, HMAC signature verification, request logging
 //   - (empty)         — no middleware (use with caution)
 type RouteSpec struct {
-	Method      string   `json:"method"`                 // GET, POST, PUT, DELETE, etc.
-	Path        string   `json:"path"`                   // URL path, e.g. "/admin/stats"
-	Handler     string   `json:"handler"`                // plugin function to call
-	Middleware  []string `json:"middleware,omitempty"`    // middleware chain
-	Description string   `json:"description,omitempty"`  // for documentation
+	Method      string   `json:"method"`                // GET, POST, PUT, DELETE, etc.
+	Path        string   `json:"path"`                  // URL path, e.g. "/admin/stats"
+	Handler     string   `json:"handler"`               // plugin function to call
+	Middleware  []string `json:"middleware,omitempty"`  // middleware chain
+	Description string   `json:"description,omitempty"` // for documentation
 }
 
 // MCPToolSpec defines an MCP tool that a plugin provides.
 // When declared, these provide richer schemas than auto-generated route tools.
 // The tool name is auto-prefixed with the plugin name to prevent collisions.
 type MCPToolSpec struct {
-	Name        string         `json:"name"`                    // tool name (auto-prefixed with plugin name)
-	Description string         `json:"description"`             // LLM-friendly description
-	Handler     string         `json:"handler"`                 // plugin function to call
-	InputSchema map[string]any `json:"input_schema,omitempty"`  // JSON Schema for parameters
+	Name        string         `json:"name"`                   // tool name (auto-prefixed with plugin name)
+	Description string         `json:"description"`            // LLM-friendly description
+	Handler     string         `json:"handler"`                // plugin function to call
+	InputSchema map[string]any `json:"input_schema,omitempty"` // JSON Schema for parameters
 }
 
 // MenuItemSpec defines a navigation menu entry.
@@ -281,16 +281,16 @@ type FileInfo struct {
 // CustomFieldSpec declares a custom field a plugin needs on a GoatKit entity.
 // The platform creates, stores, validates, indexes, and renders these fields.
 type CustomFieldSpec struct {
-	Name        string          `json:"name"`                    // machine name (auto-prefixed with plugin name)
-	Label       string          `json:"label"`                   // display label (can be i18n key)
-	EntityType  string          `json:"entity_type"`             // "contact", "agent", "organisation", etc.
-	FieldType   string          `json:"field_type"`              // "text", "select", "point", etc.
-	Section     string          `json:"section,omitempty"`       // UI section grouping (default: "custom")
-	Order       int             `json:"order,omitempty"`         // sort within section
+	Name        string          `json:"name"`              // machine name (auto-prefixed with plugin name)
+	Label       string          `json:"label"`             // display label (can be i18n key)
+	EntityType  string          `json:"entity_type"`       // "contact", "agent", "organisation", etc.
+	FieldType   string          `json:"field_type"`        // "text", "select", "point", etc.
+	Section     string          `json:"section,omitempty"` // UI section grouping (default: "custom")
+	Order       int             `json:"order,omitempty"`   // sort within section
 	Required    bool            `json:"required,omitempty"`
-	Description string          `json:"description,omitempty"`   // help text below input
+	Description string          `json:"description,omitempty"` // help text below input
 	Placeholder string          `json:"placeholder,omitempty"`
-	Config      json.RawMessage `json:"config,omitempty"`        // type-specific config (options, regex, etc.)
+	Config      json.RawMessage `json:"config,omitempty"` // type-specific config (options, regex, etc.)
 }
 
 // FieldOp represents an atomic operation on a custom field value.
@@ -314,35 +314,35 @@ type FieldOp struct {
 
 // CustomFieldFilter is a query filter used by CustomFieldsQuery.
 type CustomFieldFilter struct {
-	Field    string `json:"field"`              // field name (plugin prefix stripped)
-	Operator string `json:"operator"`           // eq, neq, gt, lt, gte, lte, like, in, between, near
-	Value    any    `json:"value"`              // comparison value
-	Value2   any    `json:"value2,omitempty"`   // second value for between (upper bound) and near (radius km)
+	Field    string `json:"field"`            // field name (plugin prefix stripped)
+	Operator string `json:"operator"`         // eq, neq, gt, lt, gte, lte, like, in, between, near
+	Value    any    `json:"value"`            // comparison value
+	Value2   any    `json:"value2,omitempty"` // second value for between (upper bound) and near (radius km)
 }
 
 // UISpec declares an independent UI that a plugin provides.
 // Each UI gets its own routes, shell, branding, auth, and optional PWA support.
 type UISpec struct {
-	ID          string          `json:"id"`                      // unique within plugin (auto-prefixed)
-	Name        string          `json:"name"`                    // display name
+	ID          string          `json:"id"`   // unique within plugin (auto-prefixed)
+	Name        string          `json:"name"` // display name
 	Description string          `json:"description,omitempty"`
-	Type        string          `json:"type"`                    // admin_page, agent_app, customer_app, public_page, kiosk
-	Icon        string          `json:"icon,omitempty"`          // FontAwesome class or SVG
-	Shell       string          `json:"shell,omitempty"`         // none, minimal, standard (defaults per type)
-	Routes      []UIRouteSpec   `json:"routes"`                  // routes relative to /ui/{plugin}_{id}/
-	Nav         *UINavSpec      `json:"nav,omitempty"`           // navigation for minimal/standard shells
-	Branding    *UIBrandingSpec `json:"branding,omitempty"`      // per-UI branding overrides
-	Auth        *UIAuthSpec     `json:"auth,omitempty"`          // auth configuration
-	PWA         *UIPWASpec      `json:"pwa,omitempty"`           // PWA manifest configuration
-	DataScope   string          `json:"data_scope,omitempty"`    // self, org, all (for customer UIs)
-	RateLimit   int             `json:"rate_limit,omitempty"`    // requests/min for public UIs (0 = default)
+	Type        string          `json:"type"`                 // admin_page, agent_app, customer_app, public_page, kiosk
+	Icon        string          `json:"icon,omitempty"`       // FontAwesome class or SVG
+	Shell       string          `json:"shell,omitempty"`      // none, minimal, standard (defaults per type)
+	Routes      []UIRouteSpec   `json:"routes"`               // routes relative to /ui/{plugin}_{id}/
+	Nav         *UINavSpec      `json:"nav,omitempty"`        // navigation for minimal/standard shells
+	Branding    *UIBrandingSpec `json:"branding,omitempty"`   // per-UI branding overrides
+	Auth        *UIAuthSpec     `json:"auth,omitempty"`       // auth configuration
+	PWA         *UIPWASpec      `json:"pwa,omitempty"`        // PWA manifest configuration
+	DataScope   string          `json:"data_scope,omitempty"` // self, org, all (for customer UIs)
+	RateLimit   int             `json:"rate_limit,omitempty"` // requests/min for public UIs (0 = default)
 }
 
 // UIRouteSpec defines a route within a plugin UI.
 type UIRouteSpec struct {
-	Path    string `json:"path"`              // relative path, e.g. "/", "/items/:id"
-	Method  string `json:"method,omitempty"`  // GET, POST, etc. (default: GET)
-	Handler string `json:"handler"`           // plugin function name
+	Path    string `json:"path"`             // relative path, e.g. "/", "/items/:id"
+	Method  string `json:"method,omitempty"` // GET, POST, etc. (default: GET)
+	Handler string `json:"handler"`          // plugin function name
 }
 
 // UINavSpec defines navigation for a plugin UI shell.
@@ -377,10 +377,10 @@ type UIAuthSpec struct {
 // UIPWASpec holds PWA manifest configuration for a plugin UI.
 type UIPWASpec struct {
 	Enabled     bool     `json:"enabled"`
-	StartURL    string   `json:"start_url,omitempty"`     // defaults to UI root
-	Display     string   `json:"display,omitempty"`       // standalone, fullscreen, minimal-ui
+	StartURL    string   `json:"start_url,omitempty"` // defaults to UI root
+	Display     string   `json:"display,omitempty"`   // standalone, fullscreen, minimal-ui
 	ThemeColor  string   `json:"theme_color,omitempty"`
-	CacheRoutes []string `json:"cache_routes,omitempty"`  // routes to pre-cache for offline
+	CacheRoutes []string `json:"cache_routes,omitempty"` // routes to pre-cache for offline
 }
 
 // CascadeSpec declares a plugin's cascade handler for entity deletion.
@@ -394,13 +394,16 @@ type CascadeSpec struct {
 // These are requests/defaults — the platform may grant less via ResourcePolicy.
 type ResourceRequest struct {
 	// Process limits (gRPC plugins only, ignored for WASM)
-	MemoryMB       int    `json:"memory_mb,omitempty" yaml:"memory_mb,omitempty"`             // Requested RSS limit in MB
-	CallTimeout    string `json:"call_timeout,omitempty" yaml:"call_timeout,omitempty"`        // Per-call deadline, e.g. "30s"
-	InitTimeout    string `json:"init_timeout,omitempty" yaml:"init_timeout,omitempty"`        // Init must complete within, e.g. "10s"
+	MemoryMB        int    `json:"memory_mb,omitempty" yaml:"memory_mb,omitempty"`               // Requested RSS limit in MB
+	CallTimeout     string `json:"call_timeout,omitempty" yaml:"call_timeout,omitempty"`         // Per-call deadline, e.g. "30s"
+	InitTimeout     string `json:"init_timeout,omitempty" yaml:"init_timeout,omitempty"`         // Init must complete within, e.g. "10s"
 	ShutdownTimeout string `json:"shutdown_timeout,omitempty" yaml:"shutdown_timeout,omitempty"` // Shutdown grace period, e.g. "5s"
 
 	// HostAPI permissions requested
 	Permissions []Permission `json:"permissions,omitempty" yaml:"permissions,omitempty"`
+
+	// Requested file storage quota. The platform may grant less via ResourcePolicy.
+	MaxFileStorageBytes int64 `json:"max_file_storage_bytes,omitempty" yaml:"max_file_storage_bytes,omitempty"`
 }
 
 // Permission declares a specific capability a plugin requests.
@@ -438,9 +441,9 @@ type ResourcePolicy struct {
 	Permissions []Permission `json:"permissions,omitempty"`
 
 	// Rate limits
-	MaxCallsPerSecond int `json:"max_calls_per_second,omitempty"` // 0 = unlimited
+	MaxCallsPerSecond  int `json:"max_calls_per_second,omitempty"` // 0 = unlimited
 	MaxDBQueriesPerMin int `json:"max_db_queries_per_min,omitempty"`
-	MaxHTTPReqPerMin  int `json:"max_http_req_per_min,omitempty"`
+	MaxHTTPReqPerMin   int `json:"max_http_req_per_min,omitempty"`
 
 	// File storage limits
 	MaxFileStorageBytes int64 `json:"max_file_storage_bytes,omitempty"` // 0 = default (500MB)

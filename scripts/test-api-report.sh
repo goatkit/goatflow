@@ -28,7 +28,7 @@ test_api() {
         -v "/home/nigel/git/goatkit/goatflow:/workspace" \
         -w /workspace \
         --network goatflow_goatflow-network \
-        "${GO_IMAGE:-golang:1.25-alpine}" \
+        "${GO_IMAGE:-golang:1.25.10-alpine}" \
         sh -c "go test -v ./internal/api -run '$pattern' -count=1 2>&1" > /tmp/test_output.txt 2>&1; then
         
         # Check if tests actually passed

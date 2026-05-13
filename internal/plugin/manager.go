@@ -96,6 +96,7 @@ func NewManager(host HostAPI) *Manager {
 		policies:  make(map[string]*ResourcePolicy),
 		sandboxes: make(map[string]*SandboxedHostAPI),
 	}
+	SetGlobalManager(m)
 	m.installDeletionPreDispatchHook()
 	return m
 }
@@ -114,16 +115,19 @@ func (m *Manager) getOrCreatePolicy(name string, requested *ResourceRequest) *Re
 	if p, ok := m.policies[name]; ok {
 		return p
 	}
-	
+
 	// Try to load from database first
 	ctx := context.Background()
 	if policy, err := m.loadPolicy(ctx, name); err == nil {
 		m.policies[name] = policy
 		return policy
 	}
-	
+
 	// Create default policy if not found in database
 	policy := DefaultResourcePolicy(name)
+	if requested != nil && requested.MaxFileStorageBytes > 0 {
+		policy.MaxFileStorageBytes = requested.MaxFileStorageBytes
+	}
 	m.policies[name] = &policy
 	return &policy
 }
@@ -229,7 +233,7 @@ func (m *Manager) loadPluginEnabled(ctx context.Context, name string) bool {
 	}
 
 	key := pluginConfigKey(name)
-	
+
 	// Query sysconfig_modified first (user overrides)
 	query := `
 		SELECT effective_value FROM sysconfig_modified 
@@ -242,7 +246,7 @@ func (m *Manager) loadPluginEnabled(ctx context.Context, name string) bool {
 			return val != "0" && val != "false"
 		}
 	}
-	
+
 	// Fall back to sysconfig_default
 	query = `
 		SELECT effective_value FROM sysconfig_default 
@@ -255,7 +259,7 @@ func (m *Manager) loadPluginEnabled(ctx context.Context, name string) bool {
 			return val != "0" && val != "false"
 		}
 	}
-	
+
 	// No sysconfig entry found — default to enabled.
 	// Example plugins are disabled via sysconfig seed data in DB migrations,
 	// not via hardcoded logic here.
@@ -719,7 +723,7 @@ type PluginNotFoundError struct {
 
 func (e *PluginNotFoundError) Error() string {
 	if e.CallerPlugin != "" {
-		return fmt.Sprintf("plugin %q not found (required by %q to call %q)", 
+		return fmt.Sprintf("plugin %q not found (required by %q to call %q)",
 			e.PluginName, e.CallerPlugin, e.Function)
 	}
 	return fmt.Sprintf("plugin %q not found", e.PluginName)
@@ -1083,7 +1087,7 @@ func (m *Manager) loadPolicy(ctx context.Context, name string) (*ResourcePolicy,
 	}
 
 	key := policyConfigKey(name)
-	
+
 	// Query sysconfig_modified first (admin overrides)
 	query := `
 		SELECT effective_value FROM sysconfig_modified 
@@ -1100,7 +1104,7 @@ func (m *Manager) loadPolicy(ctx context.Context, name string) (*ResourcePolicy,
 			return &policy, nil
 		}
 	}
-	
+
 	return nil, fmt.Errorf("policy not found in database")
 }
 
@@ -1111,13 +1115,13 @@ func (m *Manager) savePolicy(ctx context.Context, name string, policy *ResourceP
 	}
 
 	key := policyConfigKey(name)
-	
+
 	// Serialize policy as JSON
 	jsonData, err := json.Marshal(policy)
 	if err != nil {
 		return fmt.Errorf("failed to serialize policy: %w", err)
 	}
-	
+
 	jsonStr := string(jsonData)
 
 	// Upsert into sysconfig_modified
@@ -1229,9 +1233,9 @@ func (m *Manager) ShutdownAll(ctx context.Context) error {
 	}
 
 	var (
-		wg      sync.WaitGroup
-		errsMu  sync.Mutex
-		errs    []error
+		wg     sync.WaitGroup
+		errsMu sync.Mutex
+		errs   []error
 	)
 
 	for name, rp := range plugins {

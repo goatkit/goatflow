@@ -5,12 +5,15 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/goatkit/goatflow/internal/database"
 )
 
 // TOTPSessionManager handles pending 2FA sessions with security controls.
@@ -23,17 +26,17 @@ type TOTPSessionManager struct {
 
 // PendingTOTPSession tracks a pending 2FA verification.
 type PendingTOTPSession struct {
-	Token      string    // Random token (cookie value)
-	UserID     int       // For agents (numeric)
-	UserLogin  string    // For customers (email) - stored here, not in cookie
-	Username   string    // Display name
-	IsCustomer bool      // true for customer, false for agent
-	CreatedAt  time.Time // Session creation time
-	ExpiresAt  time.Time // Expiration (5 minutes)
-	Attempts   int       // Failed attempt count
-	MaxAttempts int      // Max allowed (default 5)
-	ClientIP   string    // Bind to IP for security
-	UserAgent  string    // Bind to User-Agent
+	Token       string    // Random token (cookie value)
+	UserID      int       // For agents (numeric)
+	UserLogin   string    // For customers (email) - stored here, not in cookie
+	Username    string    // Display name
+	IsCustomer  bool      // true for customer, false for agent
+	CreatedAt   time.Time // Session creation time
+	ExpiresAt   time.Time // Expiration (5 minutes)
+	Attempts    int       // Failed attempt count
+	MaxAttempts int       // Max allowed (default 5)
+	ClientIP    string    // Bind to IP for security
+	UserAgent   string    // Bind to User-Agent
 }
 
 const (
@@ -95,6 +98,10 @@ func (m *TOTPSessionManager) CreateAgentSession(userID int, username, clientIP, 
 	m.sessions[token] = session
 	m.mu.Unlock()
 
+	if err := m.storeSessionDB(session); err != nil {
+		log.Printf("[SECURITY] 2FA session database store unavailable: %v", err)
+	}
+
 	return token, nil
 }
 
@@ -122,6 +129,10 @@ func (m *TOTPSessionManager) CreateCustomerSession(userLogin, clientIP, userAgen
 	m.sessions[token] = session
 	m.mu.Unlock()
 
+	if err := m.storeSessionDB(session); err != nil {
+		log.Printf("[SECURITY] 2FA session database store unavailable: %v", err)
+	}
+
 	return token, nil
 }
 
@@ -134,8 +145,15 @@ func (m *TOTPSessionManager) ValidateAndGetSession(token, clientIP, userAgent st
 	m.mu.RUnlock()
 
 	if !exists {
-		log.Printf("[SECURITY] 2FA session validation failed: token not found")
-		return nil
+		var ok bool
+		session, ok = m.loadSessionDB(token)
+		if !ok {
+			log.Printf("[SECURITY] 2FA session validation failed: token not found")
+			return nil
+		}
+		m.mu.Lock()
+		m.sessions[token] = session
+		m.mu.Unlock()
 	}
 
 	// Check expiration
@@ -189,11 +207,10 @@ func isSimilarUserAgent(expected, got string) bool {
 // Returns remaining attempts, or 0 if session is now invalid.
 func (m *TOTPSessionManager) RecordFailedAttempt(token string) int {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	session, exists := m.sessions[token]
 	if !exists {
-		return 0
+		m.mu.Unlock()
+		return m.recordFailedAttemptDB(token)
 	}
 
 	session.Attempts++
@@ -201,9 +218,15 @@ func (m *TOTPSessionManager) RecordFailedAttempt(token string) int {
 
 	if remaining <= 0 {
 		delete(m.sessions, token)
+		m.mu.Unlock()
+		_ = m.deleteSessionDB(token)
 		return 0
 	}
 
+	m.mu.Unlock()
+	if err := m.updateSessionAttemptsDB(token, session.Attempts); err != nil {
+		log.Printf("[SECURITY] 2FA session attempt update unavailable: %v", err)
+	}
 	return remaining
 }
 
@@ -212,6 +235,7 @@ func (m *TOTPSessionManager) InvalidateSession(token string) {
 	m.mu.Lock()
 	delete(m.sessions, token)
 	m.mu.Unlock()
+	_ = m.deleteSessionDB(token)
 }
 
 // GetRemainingAttempts returns how many attempts are left for a session.
@@ -260,7 +284,6 @@ func (m *TOTPSessionManager) cleanupLoop() {
 
 func (m *TOTPSessionManager) cleanup() {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	now := time.Now()
 	for token, session := range m.sessions {
@@ -268,6 +291,8 @@ func (m *TOTPSessionManager) cleanup() {
 			delete(m.sessions, token)
 		}
 	}
+	m.mu.Unlock()
+	_ = m.deleteExpiredSessionsDB(now)
 }
 
 // Stats returns current session manager statistics.
@@ -278,4 +303,189 @@ func (m *TOTPSessionManager) Stats() map[string]int {
 	return map[string]int{
 		"active_sessions": len(m.sessions),
 	}
+}
+
+func (m *TOTPSessionManager) storeSessionDB(session *PendingTOTPSession) error {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		return err
+	}
+
+	var query string
+	if database.IsMySQL() {
+		query = `
+			INSERT INTO gk_totp_pending_session
+				(session_key, user_id, user_login, username, is_customer, created_at, expires_at, attempts, max_attempts, client_ip, user_agent)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			ON DUPLICATE KEY UPDATE
+				user_id = VALUES(user_id),
+				user_login = VALUES(user_login),
+				username = VALUES(username),
+				is_customer = VALUES(is_customer),
+				created_at = VALUES(created_at),
+				expires_at = VALUES(expires_at),
+				attempts = VALUES(attempts),
+				max_attempts = VALUES(max_attempts),
+				client_ip = VALUES(client_ip),
+				user_agent = VALUES(user_agent)`
+	} else {
+		query = `
+			INSERT INTO gk_totp_pending_session
+				(session_key, user_id, user_login, username, is_customer, created_at, expires_at, attempts, max_attempts, client_ip, user_agent)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			ON CONFLICT (session_key) DO UPDATE SET
+				user_id = EXCLUDED.user_id,
+				user_login = EXCLUDED.user_login,
+				username = EXCLUDED.username,
+				is_customer = EXCLUDED.is_customer,
+				created_at = EXCLUDED.created_at,
+				expires_at = EXCLUDED.expires_at,
+				attempts = EXCLUDED.attempts,
+				max_attempts = EXCLUDED.max_attempts,
+				client_ip = EXCLUDED.client_ip,
+				user_agent = EXCLUDED.user_agent`
+	}
+
+	_, err = db.Exec(database.ConvertPlaceholders(query),
+		totpSessionKey(session.Token),
+		session.UserID,
+		session.UserLogin,
+		session.Username,
+		session.IsCustomer,
+		session.CreatedAt,
+		session.ExpiresAt,
+		session.Attempts,
+		session.MaxAttempts,
+		session.ClientIP,
+		session.UserAgent,
+	)
+	return err
+}
+
+func (m *TOTPSessionManager) loadSessionDB(token string) (*PendingTOTPSession, bool) {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		return nil, false
+	}
+
+	query := database.ConvertPlaceholders(`
+		SELECT user_id, user_login, username, is_customer, created_at, expires_at, attempts, max_attempts, client_ip, user_agent
+		FROM gk_totp_pending_session
+		WHERE session_key = ?
+		LIMIT 1`)
+	var session PendingTOTPSession
+	var userID sql.NullInt64
+	var userLogin, username, clientIP, userAgent sql.NullString
+	err = db.QueryRow(query, totpSessionKey(token)).Scan(
+		&userID,
+		&userLogin,
+		&username,
+		&session.IsCustomer,
+		&session.CreatedAt,
+		&session.ExpiresAt,
+		&session.Attempts,
+		&session.MaxAttempts,
+		&clientIP,
+		&userAgent,
+	)
+	if err != nil {
+		return nil, false
+	}
+	session.Token = token
+	if userID.Valid {
+		session.UserID = int(userID.Int64)
+	}
+	if userLogin.Valid {
+		session.UserLogin = userLogin.String
+	}
+	if username.Valid {
+		session.Username = username.String
+	}
+	if clientIP.Valid {
+		session.ClientIP = clientIP.String
+	}
+	if userAgent.Valid {
+		session.UserAgent = userAgent.String
+	}
+	return &session, true
+}
+
+func (m *TOTPSessionManager) updateSessionAttemptsDB(token string, attempts int) error {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		return err
+	}
+	query := database.ConvertPlaceholders("UPDATE gk_totp_pending_session SET attempts = ? WHERE session_key = ?")
+	_, err = db.Exec(query, attempts, totpSessionKey(token))
+	return err
+}
+
+func (m *TOTPSessionManager) recordFailedAttemptDB(token string) int {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		return 0
+	}
+
+	key := totpSessionKey(token)
+	tx, err := db.Begin()
+	if err != nil {
+		return 0
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	query := database.ConvertPlaceholders(`
+		SELECT attempts, max_attempts
+		FROM gk_totp_pending_session
+		WHERE session_key = ?
+		FOR UPDATE`)
+	var attempts, maxAttempts int
+	if err := tx.QueryRow(query, key).Scan(&attempts, &maxAttempts); err != nil {
+		return 0
+	}
+	attempts++
+	remaining := maxAttempts - attempts
+	if remaining <= 0 {
+		deleteQuery := database.ConvertPlaceholders("DELETE FROM gk_totp_pending_session WHERE session_key = ?")
+		if _, err := tx.Exec(deleteQuery, key); err != nil {
+			return 0
+		}
+		if err := tx.Commit(); err != nil {
+			return 0
+		}
+		return 0
+	}
+
+	updateQuery := database.ConvertPlaceholders("UPDATE gk_totp_pending_session SET attempts = ? WHERE session_key = ?")
+	if _, err := tx.Exec(updateQuery, attempts, key); err != nil {
+		return 0
+	}
+	if err := tx.Commit(); err != nil {
+		return 0
+	}
+	return remaining
+}
+
+func (m *TOTPSessionManager) deleteSessionDB(token string) error {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		return err
+	}
+	query := database.ConvertPlaceholders("DELETE FROM gk_totp_pending_session WHERE session_key = ?")
+	_, err = db.Exec(query, totpSessionKey(token))
+	return err
+}
+
+func (m *TOTPSessionManager) deleteExpiredSessionsDB(now time.Time) error {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		return err
+	}
+	query := database.ConvertPlaceholders("DELETE FROM gk_totp_pending_session WHERE expires_at < ?")
+	_, err = db.Exec(query, now)
+	return err
+}
+
+func totpSessionKey(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }

@@ -1512,7 +1512,8 @@
   "app": {
     "description": "Plateforme moderne de gestion des services informatiques",
     "name": "GoatFlow",
-    "title": "GoatFlow - Système de tickets"
+    "title": "GoatFlow - Système de tickets",
+    "logo_alt": "Logo GoatFlow"
   },
   "assets": {
     "asset_tag": "Étiquette d'actif",
@@ -1562,7 +1563,13 @@
     "use_security_key": "Utiliser une clé de sécurité",
     "verification_code": "Code de vérification",
     "back_to_login": "Retour à la connexion",
-    "verify": "Vérifier"
+    "verify": "Vérifier",
+    "2fa_security_key_only_description": "Utilisez votre clé de sécurité pour terminer la connexion.",
+    "2fa_totp_or_security_key_description": "Saisissez le code de votre application d'authentification ou utilisez votre clé de sécurité.",
+    "invalid_code": "Code invalide",
+    "security_keys_not_supported": "Ce navigateur ne prend pas en charge les clés de sécurité.",
+    "no_security_keys_registered": "Aucune clé de sécurité enregistrée trouvée",
+    "security_key_verification_failed": "La vérification de la clé de sécurité a échoué."
   },
   "bulk_actions": {
     "all_selected": "Tous sélectionnés",
@@ -2554,7 +2561,8 @@
     "passwords_match": "Les mots de passe correspondent",
     "passwords_no_match": "Les mots de passe ne correspondent pas",
     "changed_success": "Mot de passe modifié avec succès !",
-    "same_as_current": "Le nouveau mot de passe doit être différent du mot de passe actuel"
+    "same_as_current": "Le nouveau mot de passe doit être différent du mot de passe actuel",
+    "toggle_visibility": "Afficher ou masquer le mot de passe"
   },
   "priority": {
     "critical": "Critique",
@@ -2881,7 +2889,21 @@
       "verify_enable": "Vérifier et activer",
       "add_security_key": "Ajouter une clé de sécurité",
       "security_keys_registered": "clés de sécurité enregistrées",
-      "security_key_name": "Nom de la clé de sécurité"
+      "security_key_name": "Nom de la clé de sécurité",
+      "mfa_enabled_label": "MFA activée",
+      "authenticator_app_enabled_label": "Application d'authentification activée",
+      "security_key_enabled_label": "Clé de sécurité activée",
+      "mfa_enabled_description": "Les codes de l'application d'authentification et les clés de sécurité sont activés pour ce compte.",
+      "authenticator_app_enabled_description": "Les codes de l'application d'authentification sont requis après la connexion par mot de passe.",
+      "security_key_enabled_description": "Une clé de sécurité est enregistrée et sera requise après la connexion par mot de passe.",
+      "no_factor_description": "Ajoutez une application d'authentification ou une clé de sécurité pour protéger ce compte.",
+      "enable_authenticator_app": "Activer l'application d'authentification",
+      "disable_authenticator_app": "Désactiver l'application d'authentification",
+      "security_key_registered_singular": "1 clé de sécurité enregistrée",
+      "security_key_registered_count": "{count} clés de sécurité enregistrées",
+      "security_key_setup_failed": "Échec du démarrage de la configuration de la clé de sécurité",
+      "security_key_register_failed": "Échec de l'enregistrement de la clé de sécurité",
+      "security_key_default_name": "Clé de sécurité"
     },
     "reset_highlights": "Réinitialiser les guides",
     "highlights_reset": "Les guides ont été réinitialisés",

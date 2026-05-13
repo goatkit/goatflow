@@ -1512,7 +1512,8 @@
   "app": {
     "description": "Plataforma Moderna de Gestión de Servicios de TI",
     "name": "GoatFlow",
-    "title": "GoatFlow - Sistema de Tickets"
+    "title": "GoatFlow - Sistema de Tickets",
+    "logo_alt": "Logotipo de GoatFlow"
   },
   "assets": {
     "asset_tag": "Etiqueta de Activo",
@@ -1562,7 +1563,13 @@
     "use_security_key": "Usar llave de seguridad",
     "verification_code": "Código de verificación",
     "back_to_login": "Volver al inicio de sesión",
-    "verify": "Verificar"
+    "verify": "Verificar",
+    "2fa_security_key_only_description": "Use su llave de seguridad para terminar de iniciar sesión.",
+    "2fa_totp_or_security_key_description": "Introduzca el código de su aplicación de autenticación o use su llave de seguridad.",
+    "invalid_code": "Código inválido",
+    "security_keys_not_supported": "Este navegador no admite llaves de seguridad.",
+    "no_security_keys_registered": "No se encontraron llaves de seguridad registradas",
+    "security_key_verification_failed": "Falló la verificación de la llave de seguridad."
   },
   "bulk_actions": {
     "all_selected": "Todos seleccionados",
@@ -2553,7 +2560,8 @@
     "passwords_match": "Las contraseñas coinciden",
     "passwords_no_match": "Las contraseñas no coinciden",
     "changed_success": "¡Contraseña cambiada exitosamente!",
-    "same_as_current": "La nueva contraseña debe ser diferente de la actual"
+    "same_as_current": "La nueva contraseña debe ser diferente de la actual",
+    "toggle_visibility": "Alternar visibilidad de la contraseña"
   },
   "priority": {
     "critical": "Crítica",
@@ -2880,7 +2888,21 @@
       "verify_enable": "Verificar y activar",
       "add_security_key": "Añadir llave de seguridad",
       "security_keys_registered": "llaves de seguridad registradas",
-      "security_key_name": "Nombre de la llave de seguridad"
+      "security_key_name": "Nombre de la llave de seguridad",
+      "mfa_enabled_label": "MFA activada",
+      "authenticator_app_enabled_label": "Aplicación de autenticación activada",
+      "security_key_enabled_label": "Llave de seguridad activada",
+      "mfa_enabled_description": "Los códigos de la aplicación de autenticación y las llaves de seguridad están activados para esta cuenta.",
+      "authenticator_app_enabled_description": "Se requieren códigos de la aplicación de autenticación después de iniciar sesión con contraseña.",
+      "security_key_enabled_description": "Hay una llave de seguridad registrada y será necesaria después de iniciar sesión con contraseña.",
+      "no_factor_description": "Añada una aplicación de autenticación o una llave de seguridad para proteger esta cuenta.",
+      "enable_authenticator_app": "Activar aplicación de autenticación",
+      "disable_authenticator_app": "Desactivar aplicación de autenticación",
+      "security_key_registered_singular": "1 llave de seguridad registrada",
+      "security_key_registered_count": "{count} llaves de seguridad registradas",
+      "security_key_setup_failed": "No se pudo iniciar la configuración de la llave de seguridad",
+      "security_key_register_failed": "No se pudo registrar la llave de seguridad",
+      "security_key_default_name": "Llave de seguridad"
     },
     "reset_highlights": "Restablecer destacados",
     "highlights_reset": "Los destacados se han restablecido",

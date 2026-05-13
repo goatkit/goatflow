@@ -1512,7 +1512,8 @@
   "app": {
     "description": "پلتفرم مدرن مدیریت خدمات IT",
     "name": "GoatFlow",
-    "title": "GoatFlow - سیستم تیکتینگ"
+    "title": "GoatFlow - سیستم تیکتینگ",
+    "logo_alt": "نشان‌واره GoatFlow"
   },
   "assets": {
     "asset_tag": "برچسب دارایی",
@@ -1562,7 +1563,13 @@
     "use_security_key": "استفاده از کلید امنیتی",
     "verification_code": "کد تأیید",
     "back_to_login": "بازگشت به ورود",
-    "verify": "تأیید"
+    "verify": "تأیید",
+    "2fa_security_key_only_description": "برای تکمیل ورود از کلید امنیتی خود استفاده کنید.",
+    "2fa_totp_or_security_key_description": "کد برنامه احراز هویت را وارد کنید یا از کلید امنیتی خود استفاده کنید.",
+    "invalid_code": "کد نامعتبر است",
+    "security_keys_not_supported": "این مرورگر از کلیدهای امنیتی پشتیبانی نمی‌کند.",
+    "no_security_keys_registered": "هیچ کلید امنیتی ثبت‌شده‌ای یافت نشد",
+    "security_key_verification_failed": "تأیید کلید امنیتی ناموفق بود."
   },
   "bulk_actions": {
     "all_selected": "همه انتخاب شدند",
@@ -2551,7 +2558,8 @@
     "passwords_match": "رمزهای عبور مطابقت دارند",
     "passwords_no_match": "رمزهای عبور مطابقت ندارند",
     "changed_success": "رمز عبور با موفقیت تغییر کرد!",
-    "same_as_current": "رمز عبور جدید باید با رمز عبور فعلی متفاوت باشد"
+    "same_as_current": "رمز عبور جدید باید با رمز عبور فعلی متفاوت باشد",
+    "toggle_visibility": "تغییر نمایش رمز عبور"
   },
   "priority": {
     "critical": "بحرانی",
@@ -2878,7 +2886,21 @@
       "verify_enable": "تأیید و فعال‌سازی",
       "add_security_key": "افزودن کلید امنیتی",
       "security_keys_registered": "کلید امنیتی ثبت‌شده",
-      "security_key_name": "نام کلید امنیتی"
+      "security_key_name": "نام کلید امنیتی",
+      "mfa_enabled_label": "MFA فعال است",
+      "authenticator_app_enabled_label": "برنامه احراز هویت فعال است",
+      "security_key_enabled_label": "کلید امنیتی فعال است",
+      "mfa_enabled_description": "کدهای برنامه احراز هویت و کلیدهای امنیتی برای این حساب فعال هستند.",
+      "authenticator_app_enabled_description": "کدهای برنامه احراز هویت پس از ورود با رمز عبور لازم هستند.",
+      "security_key_enabled_description": "یک کلید امنیتی ثبت شده است و پس از ورود با رمز عبور لازم خواهد بود.",
+      "no_factor_description": "برای محافظت از این حساب، یک برنامه احراز هویت یا کلید امنیتی اضافه کنید.",
+      "enable_authenticator_app": "فعال کردن برنامه احراز هویت",
+      "disable_authenticator_app": "غیرفعال کردن برنامه احراز هویت",
+      "security_key_registered_singular": "۱ کلید امنیتی ثبت شده است",
+      "security_key_registered_count": "{count} کلید امنیتی ثبت شده است",
+      "security_key_setup_failed": "شروع راه‌اندازی کلید امنیتی ناموفق بود",
+      "security_key_register_failed": "ثبت کلید امنیتی ناموفق بود",
+      "security_key_default_name": "کلید امنیتی"
     },
     "reset_highlights": "بازنشانی راهنمای ویژگی‌ها",
     "highlights_reset": "راهنمای ویژگی‌ها بازنشانی شد",

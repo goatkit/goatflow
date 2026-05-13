@@ -1541,7 +1541,8 @@
   "app": {
     "description": "جدید IT سروس مینجمنٹ پلیٹ فارم",
     "name": "GoatFlow",
-    "title": "GoatFlow - ٹکٹنگ سسٹم"
+    "title": "GoatFlow - ٹکٹنگ سسٹم",
+    "logo_alt": "GoatFlow لوگو"
   },
   "assets": {
     "asset_tag": "اثاثہ ٹیگ",
@@ -1591,7 +1592,13 @@
     "use_security_key": "سیکیورٹی کلید استعمال کریں",
     "verification_code": "تصدیقی کوڈ",
     "back_to_login": "لاگ ان پر واپس جائیں",
-    "verify": "تصدیق کریں"
+    "verify": "تصدیق کریں",
+    "2fa_security_key_only_description": "سائن اِن مکمل کرنے کے لیے اپنی سیکیورٹی کلید استعمال کریں۔",
+    "2fa_totp_or_security_key_description": "اپنی تصدیق کنندہ ایپ کا کوڈ درج کریں یا اپنی سیکیورٹی کلید استعمال کریں۔",
+    "invalid_code": "غلط کوڈ",
+    "security_keys_not_supported": "یہ براؤزر سیکیورٹی کلیدوں کی معاونت نہیں کرتا۔",
+    "no_security_keys_registered": "کوئی رجسٹرڈ سیکیورٹی کلید نہیں ملی",
+    "security_key_verification_failed": "سیکیورٹی کلید کی تصدیق ناکام ہوگئی۔"
   },
   "bulk_actions": {
     "all_selected": "سب منتخب",
@@ -2580,7 +2587,8 @@
     "passwords_match": "پاس ورڈز مماثل ہیں",
     "passwords_no_match": "پاس ورڈز مماثل نہیں ہیں",
     "changed_success": "پاس ورڈ کامیابی سے تبدیل ہو گیا!",
-    "same_as_current": "نیا پاس ورڈ موجودہ پاس ورڈ سے مختلف ہونا چاہیے"
+    "same_as_current": "نیا پاس ورڈ موجودہ پاس ورڈ سے مختلف ہونا چاہیے",
+    "toggle_visibility": "پاس ورڈ کی نمائش بدلیں"
   },
   "priority": {
     "critical": "اہم",
@@ -2907,7 +2915,21 @@
       "verify_enable": "تصدیق کریں اور فعال کریں",
       "add_security_key": "سیکیورٹی کلید شامل کریں",
       "security_keys_registered": "رجسٹرڈ سیکیورٹی کلیدیں",
-      "security_key_name": "سیکیورٹی کلید کا نام"
+      "security_key_name": "سیکیورٹی کلید کا نام",
+      "mfa_enabled_label": "MFA فعال ہے",
+      "authenticator_app_enabled_label": "تصدیق کنندہ ایپ فعال ہے",
+      "security_key_enabled_label": "سیکیورٹی کلید فعال ہے",
+      "mfa_enabled_description": "اس اکاؤنٹ کے لیے تصدیق کنندہ ایپ کے کوڈز اور سیکیورٹی کلیدیں فعال ہیں۔",
+      "authenticator_app_enabled_description": "پاس ورڈ لاگ ان کے بعد تصدیق کنندہ ایپ کے کوڈز درکار ہیں۔",
+      "security_key_enabled_description": "ایک سیکیورٹی کلید رجسٹرڈ ہے اور پاس ورڈ لاگ ان کے بعد درکار ہوگی۔",
+      "no_factor_description": "اس اکاؤنٹ کی حفاظت کے لیے تصدیق کنندہ ایپ یا سیکیورٹی کلید شامل کریں۔",
+      "enable_authenticator_app": "تصدیق کنندہ ایپ فعال کریں",
+      "disable_authenticator_app": "تصدیق کنندہ ایپ غیر فعال کریں",
+      "security_key_registered_singular": "1 سیکیورٹی کلید رجسٹرڈ ہے",
+      "security_key_registered_count": "{count} سیکیورٹی کلیدیں رجسٹرڈ ہیں",
+      "security_key_setup_failed": "سیکیورٹی کلید سیٹ اپ شروع کرنے میں ناکامی",
+      "security_key_register_failed": "سیکیورٹی کلید رجسٹر کرنے میں ناکامی",
+      "security_key_default_name": "سیکیورٹی کلید"
     },
     "reset_highlights": "فیچر ہائی لائٹس ری سیٹ کریں",
     "highlights_reset": "فیچر ہائی لائٹس ری سیٹ ہو گئیں",

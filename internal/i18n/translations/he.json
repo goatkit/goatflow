@@ -1512,7 +1512,8 @@
   "app": {
     "description": "פלטפורמת ניהול שירותי IT מודרנית",
     "name": "GoatFlow",
-    "title": "GoatFlow - מערכת כרטיסים"
+    "title": "GoatFlow - מערכת כרטיסים",
+    "logo_alt": "לוגו GoatFlow"
   },
   "assets": {
     "asset_tag": "תג נכס",
@@ -1562,7 +1563,13 @@
     "use_security_key": "השתמש במפתח אבטחה",
     "verification_code": "קוד אימות",
     "back_to_login": "חזרה להתחברות",
-    "verify": "אמת"
+    "verify": "אמת",
+    "2fa_security_key_only_description": "השתמש במפתח האבטחה שלך כדי להשלים את ההתחברות.",
+    "2fa_totp_or_security_key_description": "הזן את הקוד מאפליקציית האימות או השתמש במפתח האבטחה שלך.",
+    "invalid_code": "קוד לא חוקי",
+    "security_keys_not_supported": "דפדפן זה אינו תומך במפתחות אבטחה.",
+    "no_security_keys_registered": "לא נמצאו מפתחות אבטחה רשומים",
+    "security_key_verification_failed": "אימות מפתח האבטחה נכשל."
   },
   "bulk_actions": {
     "all_selected": "הכל נבחר",
@@ -2551,7 +2558,8 @@
     "passwords_match": "הסיסמאות תואמות",
     "passwords_no_match": "הסיסמאות אינן תואמות",
     "changed_success": "הסיסמה שונתה בהצלחה!",
-    "same_as_current": "הסיסמה החדשה חייבת להיות שונה מהסיסמה הנוכחית"
+    "same_as_current": "הסיסמה החדשה חייבת להיות שונה מהסיסמה הנוכחית",
+    "toggle_visibility": "החלף את נראות הסיסמה"
   },
   "priority": {
     "critical": "קריטי",
@@ -2888,7 +2896,21 @@
       "verify_enable": "אמת והפעל",
       "add_security_key": "הוסף מפתח אבטחה",
       "security_keys_registered": "מפתחות אבטחה רשומים",
-      "security_key_name": "שם מפתח האבטחה"
+      "security_key_name": "שם מפתח האבטחה",
+      "mfa_enabled_label": "MFA מופעל",
+      "authenticator_app_enabled_label": "אפליקציית אימות מופעלת",
+      "security_key_enabled_label": "מפתח אבטחה מופעל",
+      "mfa_enabled_description": "קודי אפליקציית אימות ומפתחות אבטחה מופעלים עבור חשבון זה.",
+      "authenticator_app_enabled_description": "קודי אפליקציית האימות נדרשים לאחר התחברות עם סיסמה.",
+      "security_key_enabled_description": "מפתח אבטחה רשום ויידרש לאחר התחברות עם סיסמה.",
+      "no_factor_description": "הוסף אפליקציית אימות או מפתח אבטחה כדי להגן על חשבון זה.",
+      "enable_authenticator_app": "הפעל אפליקציית אימות",
+      "disable_authenticator_app": "השבת אפליקציית אימות",
+      "security_key_registered_singular": "מפתח אבטחה אחד רשום",
+      "security_key_registered_count": "{count} מפתחות אבטחה רשומים",
+      "security_key_setup_failed": "התחלת הגדרת מפתח האבטחה נכשלה",
+      "security_key_register_failed": "רישום מפתח האבטחה נכשל",
+      "security_key_default_name": "מפתח אבטחה"
     },
     "reset_highlights": "אפס הדגשות תכונות",
     "highlights_reset": "הדגשות התכונות אופסו",

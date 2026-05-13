@@ -29,6 +29,8 @@ func init() {
 	routing.RegisterHandler("handleWebAuthnCredentialDelete", handleWebAuthnCredentialDelete)
 	routing.RegisterHandler("handleWebAuthnLoginBegin", handleWebAuthnLoginBegin)
 	routing.RegisterHandler("handleWebAuthnLoginFinish", handleWebAuthnLoginFinish)
+	routing.RegisterHandler("handlePasskeyLoginBegin", handlePasskeyLoginBegin)
+	routing.RegisterHandler("handlePasskeyLoginFinish", handlePasskeyLoginFinish)
 
 	routing.RegisterHandler("handleCustomerWebAuthnRegisterBegin", handleCustomerWebAuthnRegisterBegin)
 	routing.RegisterHandler("handleCustomerWebAuthnRegisterFinish", handleCustomerWebAuthnRegisterFinish)
@@ -37,6 +39,8 @@ func init() {
 	routing.RegisterHandler("handleCustomerWebAuthnCredentialDelete", handleCustomerWebAuthnCredentialDelete)
 	routing.RegisterHandler("handleCustomerWebAuthnLoginBegin", handleCustomerWebAuthnLoginBegin)
 	routing.RegisterHandler("handleCustomerWebAuthnLoginFinish", handleCustomerWebAuthnLoginFinish)
+	routing.RegisterHandler("handleCustomerPasskeyLoginBegin", handleCustomerPasskeyLoginBegin)
+	routing.RegisterHandler("handleCustomerPasskeyLoginFinish", handleCustomerPasskeyLoginFinish)
 }
 
 func handleWebAuthnRegisterBegin(c *gin.Context) {
@@ -93,6 +97,7 @@ func handleWebAuthnRegisterFinish(c *gin.Context) {
 	}
 	rec, err := wa.FinishRegistration(service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(userID), displayName, keyName, c.Request)
 	if err != nil {
+		log.Printf("[SECURITY] WebAuthn registration failed user_type=agent user_id=%d ip=%s err=%v", userID, c.ClientIP(), err)
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
 		return
 	}
@@ -193,6 +198,14 @@ func handleWebAuthnLoginFinish(c *gin.Context) {
 	completeAgentSecondFactorLogin(c, db, session)
 }
 
+func handlePasskeyLoginBegin(c *gin.Context) {
+	beginPasskeyLogin(c, service.WebAuthnUserTypeAgent, "passkey_login_pending")
+}
+
+func handlePasskeyLoginFinish(c *gin.Context) {
+	finishPasskeyLogin(c, service.WebAuthnUserTypeAgent, "passkey_login_pending")
+}
+
 func handleCustomerWebAuthnRegisterBegin(c *gin.Context) {
 	customerLogin := getCustomerLogin(c)
 	if customerLogin == "" {
@@ -244,6 +257,7 @@ func handleCustomerWebAuthnRegisterFinish(c *gin.Context) {
 	}
 	rec, err := wa.FinishRegistration(service.WebAuthnUserTypeCustomer, customerLogin, customerLogin, c.Query("name"), c.Request)
 	if err != nil {
+		log.Printf("[SECURITY] WebAuthn registration failed user_type=customer user=%s ip=%s err=%v", customerLogin, c.ClientIP(), err)
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
 		return
 	}
@@ -344,6 +358,14 @@ func handleCustomerWebAuthnLoginFinish(c *gin.Context) {
 	completeCustomerSecondFactorLogin(c, db, session)
 }
 
+func handleCustomerPasskeyLoginBegin(c *gin.Context) {
+	beginPasskeyLogin(c, service.WebAuthnUserTypeCustomer, "customer_passkey_login_pending")
+}
+
+func handleCustomerPasskeyLoginFinish(c *gin.Context) {
+	finishPasskeyLogin(c, service.WebAuthnUserTypeCustomer, "customer_passkey_login_pending")
+}
+
 func webAuthnDB(c *gin.Context) (*sql.DB, bool) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -351,6 +373,139 @@ func webAuthnDB(c *gin.Context) (*sql.DB, bool) {
 		return nil, false
 	}
 	return db, true
+}
+
+func beginPasskeyLogin(c *gin.Context, userType, cookieName string) {
+	limiterKey := passkeyLimiterKey(userType)
+	if blocked, remaining := auth.DefaultLoginRateLimiter.IsBlocked(c.ClientIP(), limiterKey); blocked {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"success":         false,
+			"error":           fmt.Sprintf("too many failed attempts, try again in %d seconds", int(remaining.Seconds())),
+			"retry_after_sec": int(remaining.Seconds()),
+		})
+		return
+	}
+	db, ok := webAuthnDB(c)
+	if !ok {
+		return
+	}
+	wa, err := service.NewWebAuthnService(db, c.Request)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "passkey login unavailable"})
+		return
+	}
+	options, token, err := wa.BeginPasskeyLogin(userType)
+	if err != nil {
+		auth.DefaultLoginRateLimiter.RecordFailure(c.ClientIP(), limiterKey)
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "passkey login unavailable"})
+		return
+	}
+	httpcookie.SetAuth(c, cookieName, token, 300)
+	c.JSON(http.StatusOK, gin.H{"success": true, "options": options})
+}
+
+func finishPasskeyLogin(c *gin.Context, userType, cookieName string) {
+	limiterKey := passkeyLimiterKey(userType)
+	if blocked, remaining := auth.DefaultLoginRateLimiter.IsBlocked(c.ClientIP(), limiterKey); blocked {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"success":         false,
+			"error":           fmt.Sprintf("too many failed attempts, try again in %d seconds", int(remaining.Seconds())),
+			"retry_after_sec": int(remaining.Seconds()),
+		})
+		return
+	}
+	token, err := c.Cookie(cookieName)
+	if err != nil || token == "" {
+		auth.DefaultLoginRateLimiter.RecordFailure(c.ClientIP(), limiterKey)
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "passkey login challenge expired"})
+		return
+	}
+	db, ok := webAuthnDB(c)
+	if !ok {
+		return
+	}
+	wa, err := service.NewWebAuthnService(db, c.Request)
+	if err != nil {
+		httpcookie.SetAuth(c, cookieName, "", -1)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "passkey login unavailable"})
+		return
+	}
+	result, err := wa.FinishPasskeyLogin(userType, token, c.Request)
+	httpcookie.SetAuth(c, cookieName, "", -1)
+	if err != nil {
+		auth.DefaultLoginRateLimiter.RecordFailure(c.ClientIP(), limiterKey)
+		log.Printf("[SECURITY] passkey login failed user_type=%s ip=%s err=%v", userType, c.ClientIP(), err)
+		auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "PASSKEY_LOGIN_FAILED", IsCustomer: userType == service.WebAuthnUserTypeCustomer, ClientIP: c.ClientIP(), Success: false, Details: "passkey assertion failed"})
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "passkey login failed"})
+		return
+	}
+
+	switch result.UserType {
+	case service.WebAuthnUserTypeAgent:
+		session, err := activeAgentPasskeySession(db, result.UserKey, c)
+		if err != nil {
+			auth.DefaultLoginRateLimiter.RecordFailure(c.ClientIP(), limiterKey)
+			auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "PASSKEY_LOGIN_FAILED", UserLogin: result.UserKey, ClientIP: c.ClientIP(), Success: false, Details: "agent account inactive or unavailable"})
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "passkey login failed"})
+			return
+		}
+		auth.DefaultLoginRateLimiter.RecordSuccess(c.ClientIP(), limiterKey)
+		auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "PASSKEY_LOGIN_SUCCESS", UserID: session.UserID, UserLogin: session.Username, ClientIP: c.ClientIP(), Success: true, Details: "agent passkey login"})
+		completeAgentSecondFactorLogin(c, db, session)
+	case service.WebAuthnUserTypeCustomer:
+		session, err := activeCustomerPasskeySession(db, result.UserKey, c)
+		if err != nil {
+			auth.DefaultLoginRateLimiter.RecordFailure(c.ClientIP(), limiterKey)
+			auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "PASSKEY_LOGIN_FAILED", UserLogin: result.UserKey, IsCustomer: true, ClientIP: c.ClientIP(), Success: false, Details: "customer account inactive or unavailable"})
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "passkey login failed"})
+			return
+		}
+		auth.DefaultLoginRateLimiter.RecordSuccess(c.ClientIP(), limiterKey)
+		auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "PASSKEY_LOGIN_SUCCESS", UserLogin: session.UserLogin, IsCustomer: true, ClientIP: c.ClientIP(), Success: true, Details: "customer passkey login"})
+		completeCustomerSecondFactorLogin(c, db, session)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "passkey login failed"})
+	}
+}
+
+func passkeyLimiterKey(userType string) string {
+	return "__passkey_login__:" + userType
+}
+
+func activeAgentPasskeySession(db *sql.DB, userKey string, c *gin.Context) (*auth.PendingTOTPSession, error) {
+	userID, err := strconv.Atoi(userKey)
+	if err != nil || userID <= 0 {
+		return nil, errorsText("invalid passkey account")
+	}
+	userRepo := repository.NewUserRepository(db)
+	user, err := userRepo.GetByID(uint(userID))
+	if err != nil || user == nil || !user.IsActive() {
+		return nil, errorsText("account inactive")
+	}
+	return &auth.PendingTOTPSession{
+		UserID:     userID,
+		Username:   user.Login,
+		IsCustomer: false,
+		ClientIP:   c.ClientIP(),
+		UserAgent:  c.Request.UserAgent(),
+	}, nil
+}
+
+func activeCustomerPasskeySession(db *sql.DB, login string, c *gin.Context) (*auth.PendingTOTPSession, error) {
+	var validID int
+	query := database.ConvertPlaceholders("SELECT valid_id FROM customer_user WHERE login = ?")
+	if err := db.QueryRow(query, login).Scan(&validID); err != nil {
+		return nil, err
+	}
+	if validID != 1 {
+		return nil, errorsText("account inactive")
+	}
+	return &auth.PendingTOTPSession{
+		UserLogin:  login,
+		IsCustomer: true,
+		ClientIP:   c.ClientIP(),
+		UserAgent:  c.Request.UserAgent(),
+	}, nil
 }
 
 func verifyAgentPasswordAndDisplayName(db *sql.DB, userID int, password string) (string, error) {
@@ -553,22 +708,4 @@ func completeCustomerSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth
 	httpcookie.SetAuth(c, "customer_auth_token", jwtToken, sessionTimeout)
 	httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "1", sessionTimeout)
 	c.JSON(http.StatusOK, gin.H{"success": true, "access_token": jwtToken, "redirect": "/customer"})
-}
-
-func isAgentMFAEnabled(db *sql.DB, r *http.Request, userID int) bool {
-	totpService := service.NewTOTPService(db, "GoatFlow")
-	if totpService.IsEnabled(userID) {
-		return true
-	}
-	wa, err := service.NewWebAuthnService(db, r)
-	return err == nil && wa.IsEnabled(service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(userID))
-}
-
-func isCustomerMFAEnabled(db *sql.DB, r *http.Request, login string) bool {
-	totpService := service.NewTOTPService(db, "GoatFlow")
-	if totpService.IsEnabledForCustomer(login) {
-		return true
-	}
-	wa, err := service.NewWebAuthnService(db, r)
-	return err == nil && wa.IsEnabled(service.WebAuthnUserTypeCustomer, login)
 }

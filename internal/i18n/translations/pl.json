@@ -1512,7 +1512,8 @@
   "app": {
     "description": "Nowoczesna platforma zarządzania usługami IT",
     "name": "GoatFlow",
-    "title": "GoatFlow - System zgłoszeń"
+    "title": "GoatFlow - System zgłoszeń",
+    "logo_alt": "Logo GoatFlow"
   },
   "assets": {
     "asset_tag": "Tag zasobu",
@@ -1562,7 +1563,13 @@
     "use_security_key": "Użyj klucza bezpieczeństwa",
     "verification_code": "Kod weryfikacyjny",
     "back_to_login": "Powrót do logowania",
-    "verify": "Zweryfikuj"
+    "verify": "Zweryfikuj",
+    "2fa_security_key_only_description": "Użyj klucza bezpieczeństwa, aby dokończyć logowanie.",
+    "2fa_totp_or_security_key_description": "Wprowadź kod z aplikacji uwierzytelniającej lub użyj klucza bezpieczeństwa.",
+    "invalid_code": "Nieprawidłowy kod",
+    "security_keys_not_supported": "Ta przeglądarka nie obsługuje kluczy bezpieczeństwa.",
+    "no_security_keys_registered": "Nie znaleziono zarejestrowanych kluczy bezpieczeństwa",
+    "security_key_verification_failed": "Weryfikacja klucza bezpieczeństwa nie powiodła się."
   },
   "bulk_actions": {
     "all_selected": "Wszystko wybrane",
@@ -2554,7 +2561,8 @@
     "passwords_match": "Hasła są zgodne",
     "passwords_no_match": "Hasła nie są zgodne",
     "changed_success": "Hasło zostało pomyślnie zmienione!",
-    "same_as_current": "Nowe hasło musi być inne niż obecne"
+    "same_as_current": "Nowe hasło musi być inne niż obecne",
+    "toggle_visibility": "Przełącz widoczność hasła"
   },
   "priority": {
     "critical": "Krytyczny",
@@ -2995,7 +3003,21 @@
       "verify_enable": "Zweryfikuj i włącz",
       "add_security_key": "Dodaj klucz bezpieczeństwa",
       "security_keys_registered": "zarejestrowanych kluczy bezpieczeństwa",
-      "security_key_name": "Nazwa klucza bezpieczeństwa"
+      "security_key_name": "Nazwa klucza bezpieczeństwa",
+      "mfa_enabled_label": "MFA włączone",
+      "authenticator_app_enabled_label": "Aplikacja uwierzytelniająca włączona",
+      "security_key_enabled_label": "Klucz bezpieczeństwa włączony",
+      "mfa_enabled_description": "Kody z aplikacji uwierzytelniającej i klucze bezpieczeństwa są włączone dla tego konta.",
+      "authenticator_app_enabled_description": "Kody z aplikacji uwierzytelniającej są wymagane po zalogowaniu hasłem.",
+      "security_key_enabled_description": "Klucz bezpieczeństwa jest zarejestrowany i będzie wymagany po zalogowaniu hasłem.",
+      "no_factor_description": "Dodaj aplikację uwierzytelniającą lub klucz bezpieczeństwa, aby chronić to konto.",
+      "enable_authenticator_app": "Włącz aplikację uwierzytelniającą",
+      "disable_authenticator_app": "Wyłącz aplikację uwierzytelniającą",
+      "security_key_registered_singular": "Zarejestrowano 1 klucz bezpieczeństwa",
+      "security_key_registered_count": "Zarejestrowano {count} kluczy bezpieczeństwa",
+      "security_key_setup_failed": "Nie udało się rozpocząć konfiguracji klucza bezpieczeństwa",
+      "security_key_register_failed": "Nie udało się zarejestrować klucza bezpieczeństwa",
+      "security_key_default_name": "Klucz bezpieczeństwa"
     },
     "reset_highlights": "Resetuj podpowiedzi",
     "highlights_reset": "Podpowiedzi zostały zresetowane",

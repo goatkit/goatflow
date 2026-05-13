@@ -1512,7 +1512,8 @@
   "app": {
     "description": "منصة حديثة لإدارة خدمات تكنولوجيا المعلومات",
     "name": "GoatFlow",
-    "title": "GoatFlow - نظام التذاكر"
+    "title": "GoatFlow - نظام التذاكر",
+    "logo_alt": "شعار GoatFlow"
   },
   "assets": {
     "asset_tag": "علامة الأصل",
@@ -1562,7 +1563,13 @@
     "use_security_key": "استخدم مفتاح الأمان",
     "verification_code": "رمز التحقق",
     "back_to_login": "العودة إلى تسجيل الدخول",
-    "verify": "تحقق"
+    "verify": "تحقق",
+    "2fa_security_key_only_description": "استخدم مفتاح الأمان لإكمال تسجيل الدخول.",
+    "2fa_totp_or_security_key_description": "أدخل الرمز من تطبيق المصادقة أو استخدم مفتاح الأمان.",
+    "invalid_code": "الرمز غير صالح",
+    "security_keys_not_supported": "هذا المتصفح لا يدعم مفاتيح الأمان.",
+    "no_security_keys_registered": "لم يتم العثور على مفاتيح أمان مسجلة",
+    "security_key_verification_failed": "فشل التحقق من مفتاح الأمان."
   },
   "bulk_actions": {
     "all_selected": "تم تحديد الكل",
@@ -2554,7 +2561,8 @@
     "passwords_match": "كلمات المرور متطابقة",
     "passwords_no_match": "كلمات المرور غير متطابقة",
     "changed_success": "تم تغيير كلمة المرور بنجاح!",
-    "same_as_current": "يجب أن تكون كلمة المرور الجديدة مختلفة عن الحالية"
+    "same_as_current": "يجب أن تكون كلمة المرور الجديدة مختلفة عن الحالية",
+    "toggle_visibility": "تبديل ظهور كلمة المرور"
   },
   "priority": {
     "critical": "حرجة",
@@ -2881,7 +2889,21 @@
       "verify_enable": "تحقق وتفعيل",
       "add_security_key": "إضافة مفتاح أمان",
       "security_keys_registered": "مفاتيح أمان مسجلة",
-      "security_key_name": "اسم مفتاح الأمان"
+      "security_key_name": "اسم مفتاح الأمان",
+      "mfa_enabled_label": "تم تفعيل المصادقة متعددة العوامل",
+      "authenticator_app_enabled_label": "تم تفعيل تطبيق المصادقة",
+      "security_key_enabled_label": "تم تفعيل مفتاح الأمان",
+      "mfa_enabled_description": "تم تفعيل رموز تطبيق المصادقة ومفاتيح الأمان لهذا الحساب.",
+      "authenticator_app_enabled_description": "رموز تطبيق المصادقة مطلوبة بعد تسجيل الدخول بكلمة المرور.",
+      "security_key_enabled_description": "تم تسجيل مفتاح أمان وسيكون مطلوبًا بعد تسجيل الدخول بكلمة المرور.",
+      "no_factor_description": "أضف تطبيق مصادقة أو مفتاح أمان لحماية هذا الحساب.",
+      "enable_authenticator_app": "تفعيل تطبيق المصادقة",
+      "disable_authenticator_app": "تعطيل تطبيق المصادقة",
+      "security_key_registered_singular": "تم تسجيل مفتاح أمان واحد",
+      "security_key_registered_count": "تم تسجيل {count} مفاتيح أمان",
+      "security_key_setup_failed": "فشل بدء إعداد مفتاح الأمان",
+      "security_key_register_failed": "فشل تسجيل مفتاح الأمان",
+      "security_key_default_name": "مفتاح الأمان"
     },
     "reset_highlights": "إعادة تعيين إبرازات الميزات",
     "highlights_reset": "تمت إعادة تعيين إبرازات الميزات",

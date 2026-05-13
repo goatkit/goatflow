@@ -1512,7 +1512,8 @@
   "app": {
     "description": "Plataforma Moderna de Gerenciamento de Serviços de TI",
     "name": "GoatFlow",
-    "title": "GoatFlow - Sistema de Chamados"
+    "title": "GoatFlow - Sistema de Chamados",
+    "logo_alt": "Logotipo do GoatFlow"
   },
   "assets": {
     "asset_tag": "Tag de Ativo",
@@ -1562,7 +1563,13 @@
     "use_security_key": "Usar chave de segurança",
     "verification_code": "Código de verificação",
     "back_to_login": "Voltar ao login",
-    "verify": "Verificar"
+    "verify": "Verificar",
+    "2fa_security_key_only_description": "Use sua chave de segurança para concluir o login.",
+    "2fa_totp_or_security_key_description": "Digite o código do seu aplicativo autenticador ou use sua chave de segurança.",
+    "invalid_code": "Código inválido",
+    "security_keys_not_supported": "Este navegador não oferece suporte a chaves de segurança.",
+    "no_security_keys_registered": "Nenhuma chave de segurança registrada encontrada",
+    "security_key_verification_failed": "Falha na verificação da chave de segurança."
   },
   "bulk_actions": {
     "all_selected": "Todos selecionados",
@@ -2553,7 +2560,8 @@
     "passwords_match": "As senhas correspondem",
     "passwords_no_match": "As senhas não correspondem",
     "changed_success": "Senha alterada com sucesso!",
-    "same_as_current": "A nova senha deve ser diferente da senha atual"
+    "same_as_current": "A nova senha deve ser diferente da senha atual",
+    "toggle_visibility": "Alternar visibilidade da senha"
   },
   "priority": {
     "critical": "Crítico",
@@ -2994,7 +3002,21 @@
       "verify_enable": "Verificar e ativar",
       "add_security_key": "Adicionar chave de segurança",
       "security_keys_registered": "chaves de segurança registradas",
-      "security_key_name": "Nome da chave de segurança"
+      "security_key_name": "Nome da chave de segurança",
+      "mfa_enabled_label": "MFA ativada",
+      "authenticator_app_enabled_label": "Aplicativo autenticador ativado",
+      "security_key_enabled_label": "Chave de segurança ativada",
+      "mfa_enabled_description": "Códigos do aplicativo autenticador e chaves de segurança estão ativados para esta conta.",
+      "authenticator_app_enabled_description": "Códigos do aplicativo autenticador são exigidos após o login com senha.",
+      "security_key_enabled_description": "Uma chave de segurança está registrada e será exigida após o login com senha.",
+      "no_factor_description": "Adicione um aplicativo autenticador ou uma chave de segurança para proteger esta conta.",
+      "enable_authenticator_app": "Ativar aplicativo autenticador",
+      "disable_authenticator_app": "Desativar aplicativo autenticador",
+      "security_key_registered_singular": "1 chave de segurança registrada",
+      "security_key_registered_count": "{count} chaves de segurança registradas",
+      "security_key_setup_failed": "Falha ao iniciar a configuração da chave de segurança",
+      "security_key_register_failed": "Falha ao registrar a chave de segurança",
+      "security_key_default_name": "Chave de segurança"
     },
     "reset_highlights": "Redefinir destaques",
     "highlights_reset": "Destaques foram redefinidos",

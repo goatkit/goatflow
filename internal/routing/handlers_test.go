@@ -215,3 +215,46 @@ func TestAuthMiddlewareHonorsBypassDisable(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnauthorized, resp.Code)
 }
+
+func TestAuthMiddlewareAllowsPublicAuthCeremonyRoutes(t *testing.T) {
+	gin.SetMode(gin.ReleaseMode)
+	t.Setenv("APP_ENV", "test")
+	t.Setenv("GOATFLOW_DISABLE_TEST_AUTH_BYPASS", "1")
+
+	registry := NewHandlerRegistry()
+	RegisterExistingHandlers(registry)
+
+	authMw, err := registry.GetMiddleware("auth")
+	if err != nil {
+		t.Fatalf("expected auth middleware: %v", err)
+	}
+
+	publicPaths := []string{
+		"/api/auth/passkey/begin",
+		"/api/auth/passkey/finish",
+		"/api/auth/customer/passkey/begin",
+		"/api/auth/customer/passkey/finish",
+		"/api/auth/2fa/webauthn/begin",
+		"/api/auth/2fa/webauthn/finish",
+		"/api/auth/customer/2fa/webauthn/begin",
+		"/api/auth/customer/2fa/webauthn/finish",
+	}
+
+	for _, path := range publicPaths {
+		t.Run(path, func(t *testing.T) {
+			router := gin.New()
+			router.Use(authMw)
+			router.POST(path, func(c *gin.Context) {
+				c.Status(http.StatusNoContent)
+			})
+
+			req := httptest.NewRequest(http.MethodPost, path, nil)
+			req.Header.Set("Accept", "application/json")
+			resp := httptest.NewRecorder()
+
+			router.ServeHTTP(resp, req)
+
+			assert.Equal(t, http.StatusNoContent, resp.Code)
+		})
+	}
+}

@@ -34,6 +34,26 @@ function sameOriginURL(input) {
     }
 }
 
+function requestAcceptsEventStream(request) {
+    var accept = request.headers.get('Accept') || '';
+    return accept.toLowerCase().indexOf('text/event-stream') !== -1;
+}
+
+function isPluginEventStreamPath(pathname) {
+    var parts = pathname.split('/');
+    return parts.length === 7 &&
+        parts[1] === 'api' &&
+        parts[2] === 'v1' &&
+        parts[3] === 'plugins' &&
+        !!parts[4] &&
+        parts[5] === 'events' &&
+        !!parts[6];
+}
+
+function shouldBypassServiceWorker(request, url) {
+    return requestAcceptsEventStream(request) || isPluginEventStreamPath(url.pathname);
+}
+
 function cacheName() {
     return currentConfig.cache_name || FALLBACK_CACHE;
 }
@@ -211,6 +231,7 @@ self.addEventListener('fetch', function(event) {
 
     var url = sameOriginURL(request.url);
     if (!url) return;
+    if (shouldBypassServiceWorker(request, url)) return;
 
     event.respondWith(
         loadConfig(false).then(function(config) {

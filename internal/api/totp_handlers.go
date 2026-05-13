@@ -785,13 +785,25 @@ This is an automated security notification.
 
 // handleCustomer2FAPage renders the 2FA verification page during customer login.
 func handleCustomer2FAPage(c *gin.Context) {
-	// Check for pending 2FA cookie
-	if _, err := c.Cookie("customer_2fa_pending"); err != nil {
+	token, err := c.Cookie("customer_2fa_pending")
+	if err != nil || token == "" {
 		c.Redirect(http.StatusFound, "/customer/login")
 		return
 	}
 
-	getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/login_2fa.pongo2", nil)
+	session := auth.GetTOTPSessionManager().ValidateAndGetSession(token, c.ClientIP(), c.Request.UserAgent())
+	if session == nil || !session.IsCustomer {
+		httpcookie.SetAuth(c, "customer_2fa_pending", "", -1)
+		c.Redirect(http.StatusFound, "/customer/login")
+		return
+	}
+
+	status := mfaStatus{TOTPEnabled: true, WebAuthnEnabled: true}
+	if db, err := database.GetDB(); err == nil && db != nil {
+		status = customerMFAStatus(db, c.Request, session.UserLogin)
+	}
+
+	getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/login_2fa.pongo2", mfaLoginPageContext(status))
 }
 
 // handleCustomer2FAVerify verifies the 2FA code and completes customer login.

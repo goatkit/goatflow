@@ -453,7 +453,8 @@ goatflow-cli security audit
 ## Security Roadmap
 
 ### Near Term (3 months)
-- [ ] Hardware key support (WebAuthn)
+- [x] Hardware key support (WebAuthn/FIDO2 MFA)
+- [x] Passkey login for agent and customer accounts
 - [ ] Enhanced DDoS protection
 - [ ] Security dashboard
 - [ ] Automated compliance reports

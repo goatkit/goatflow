@@ -80,6 +80,8 @@ func ensureCoreHandlers() {
 		"handle2FAPage":             handle2FAPage,
 		"handleDashboard":           handleDashboard,
 		"handleAuthLogin":           HandleAuthLogin,
+		"handlePasskeyLoginBegin":   handlePasskeyLoginBegin,
+		"handlePasskeyLoginFinish":  handlePasskeyLoginFinish,
 		"handleTickets":             handleTickets,
 		"handleTicketDetail":        handleTicketDetail,
 		"HandleQueueDetail":         handleQueueDetail,
@@ -179,6 +181,8 @@ func ensureCoreHandlers() {
 		"handleCustomerLogin": func(c *gin.Context) {
 			handleCustomerLogin(shared.GetJWTManager())(c)
 		},
+		"handleCustomerPasskeyLoginBegin":  handleCustomerPasskeyLoginBegin,
+		"handleCustomerPasskeyLoginFinish": handleCustomerPasskeyLoginFinish,
 		"handle2FAVerify": func(c *gin.Context) {
 			handle2FAVerify(shared.GetJWTManager())(c)
 		},

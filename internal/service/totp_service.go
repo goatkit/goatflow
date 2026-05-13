@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
@@ -338,7 +339,7 @@ func (s *TOTPService) confirmSetupWithBackend(backend PreferencesBackend, code s
 	}
 
 	// Validate the code
-	if !totp.Validate(code, secret) {
+	if !validateAuthenticatorCode(code, secret) {
 		return fmt.Errorf("invalid verification code")
 	}
 
@@ -381,8 +382,7 @@ func (s *TOTPService) validateCodeWithBackend(backend PreferencesBackend, code s
 	}
 
 	// Try TOTP code first
-	totpValid := totp.Validate(code, secret)
-	if totpValid {
+	if validateAuthenticatorCode(code, secret) {
 		return true, nil
 	}
 
@@ -393,6 +393,30 @@ func (s *TOTPService) validateCodeWithBackend(backend PreferencesBackend, code s
 	}
 
 	return false, nil
+}
+
+func validateAuthenticatorCode(code, secret string) bool {
+	code = normalizeVerificationCode(code)
+	if code == "" || secret == "" {
+		return false
+	}
+	valid, err := totp.ValidateCustom(code, secret, time.Now(), totp.ValidateOpts{
+		Period:    30,
+		Skew:      1,
+		Digits:    otp.DigitsSix,
+		Algorithm: otp.AlgorithmSHA1,
+	})
+	return err == nil && valid
+}
+
+func normalizeVerificationCode(code string) string {
+	code = strings.TrimSpace(code)
+	code = strings.ReplaceAll(code, " ", "")
+	code = strings.ReplaceAll(code, "-", "")
+	code = strings.ReplaceAll(code, "\t", "")
+	code = strings.ReplaceAll(code, "\n", "")
+	code = strings.ReplaceAll(code, "\r", "")
+	return code
 }
 
 // IsEnabled checks if 2FA is enabled for a user.

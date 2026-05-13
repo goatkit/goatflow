@@ -1404,7 +1404,8 @@
   "app": {
     "description": "Сучасна платформа керування ІТ-послугами",
     "name": "GoatFlow",
-    "title": "GoatFlow - Система заявок"
+    "title": "GoatFlow - Система заявок",
+    "logo_alt": "Логотип GoatFlow"
   },
   "assets": {
     "asset_tag": "Інвентарний номер",
@@ -1454,7 +1455,13 @@
     "use_security_key": "Використати ключ безпеки",
     "verification_code": "Код підтвердження",
     "back_to_login": "Повернутися до входу",
-    "verify": "Підтвердити"
+    "verify": "Підтвердити",
+    "2fa_security_key_only_description": "Використайте ключ безпеки, щоб завершити вхід.",
+    "2fa_totp_or_security_key_description": "Введіть код із додатка автентифікації або використайте ключ безпеки.",
+    "invalid_code": "Недійсний код",
+    "security_keys_not_supported": "Цей браузер не підтримує ключі безпеки.",
+    "no_security_keys_registered": "Зареєстровані ключі безпеки не знайдено",
+    "security_key_verification_failed": "Не вдалося перевірити ключ безпеки."
   },
   "buttons": {
     "add": "Додати",
@@ -2190,7 +2197,8 @@
     "passwords_match": "Паролі збігаються",
     "passwords_no_match": "Паролі не збігаються",
     "changed_success": "Пароль успішно змінено!",
-    "same_as_current": "Новий пароль має відрізнятися від поточного"
+    "same_as_current": "Новий пароль має відрізнятися від поточного",
+    "toggle_visibility": "Перемкнути видимість пароля"
   },
   "priority": {
     "critical": "Критичний",
@@ -2375,7 +2383,21 @@
       "verify_enable": "Підтвердити та увімкнути",
       "add_security_key": "Додати ключ безпеки",
       "security_keys_registered": "зареєстрованих ключів безпеки",
-      "security_key_name": "Назва ключа безпеки"
+      "security_key_name": "Назва ключа безпеки",
+      "mfa_enabled_label": "MFA увімкнено",
+      "authenticator_app_enabled_label": "Додаток автентифікації увімкнено",
+      "security_key_enabled_label": "Ключ безпеки увімкнено",
+      "mfa_enabled_description": "Для цього облікового запису увімкнено коди додатка автентифікації та ключі безпеки.",
+      "authenticator_app_enabled_description": "Коди додатка автентифікації потрібні після входу з паролем.",
+      "security_key_enabled_description": "Ключ безпеки зареєстровано, і він буде потрібен після входу з паролем.",
+      "no_factor_description": "Додайте додаток автентифікації або ключ безпеки, щоб захистити цей обліковий запис.",
+      "enable_authenticator_app": "Увімкнути додаток автентифікації",
+      "disable_authenticator_app": "Вимкнути додаток автентифікації",
+      "security_key_registered_singular": "Зареєстровано 1 ключ безпеки",
+      "security_key_registered_count": "Зареєстровано ключів безпеки: {count}",
+      "security_key_setup_failed": "Не вдалося розпочати налаштування ключа безпеки",
+      "security_key_register_failed": "Не вдалося зареєструвати ключ безпеки",
+      "security_key_default_name": "Ключ безпеки"
     },
     "reset_highlights": "Скинути підказки",
     "highlights_reset": "Підказки скинуто",

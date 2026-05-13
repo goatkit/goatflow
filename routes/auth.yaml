@@ -24,6 +24,17 @@ spec:
       handler: handleAuthLogin
       description: "Process login form submission via HTMX"
 
+    # Passkey login endpoints - passwordless WebAuthn ceremony
+    - path: /api/auth/passkey/begin
+      method: POST
+      handler: handlePasskeyLoginBegin
+      description: "Begin agent passkey login"
+
+    - path: /api/auth/passkey/finish
+      method: POST
+      handler: handlePasskeyLoginFinish
+      description: "Finish agent passkey login"
+
     # Logout endpoint
     - path: /api/auth/logout
       method: POST
@@ -74,6 +85,16 @@ spec:
       method: POST
       handler: handleCustomerLogin
       description: "Process customer login form"
+
+    - path: /api/auth/customer/passkey/begin
+      method: POST
+      handler: handleCustomerPasskeyLoginBegin
+      description: "Begin customer passkey login"
+
+    - path: /api/auth/customer/passkey/finish
+      method: POST
+      handler: handleCustomerPasskeyLoginFinish
+      description: "Finish customer passkey login"
 
     # Customer logout (no auth middleware)
     # Must clear cookies before middleware runs

@@ -118,7 +118,7 @@
                         <h4 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--gk-text-muted);">
                             {{ t("settings.2fa.title")|default:"Two-Factor Authentication" }}
                         </h4>
-                        <p class="text-xs mt-1" style="color: var(--gk-text-muted);">
+                        <p id="2fa-description" class="text-xs mt-1" style="color: var(--gk-text-muted);">
                             {{ t("settings.2fa.description")|default:"Add an extra layer of security to your account using an authenticator app" }}
                         </p>
                     </div>
@@ -130,7 +130,7 @@
                             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
-                            {{ t("settings.2fa.enabled")|default:"Enabled" }}
+                            <span id="2fa-status-enabled-label">{{ t("settings.2fa.enabled")|default:"Enabled" }}</span>
                         </span>
                     </div>
                     <div id="2fa-status-disabled" class="hidden">
@@ -140,13 +140,13 @@
                     </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
-                    <button id="2fa-setup-btn" class="hidden gk-btn-neon text-sm" onclick="start2FASetup()">
+                    <button type="button" id="2fa-setup-btn" class="hidden gk-btn-neon text-sm" onclick="start2FASetup()">
                         {{ t("settings.2fa.enable")|default:"Enable 2FA" }}
                     </button>
-                    <button id="2fa-disable-btn" class="hidden gk-btn-secondary text-sm" onclick="show2FADisableModal()">
+                    <button type="button" id="2fa-disable-btn" class="hidden gk-btn-secondary text-sm" onclick="show2FADisableModal()">
                         {{ t("settings.2fa.disable")|default:"Disable 2FA" }}
                     </button>
-                    <button id="webauthn-add-btn" class="hidden gk-btn-secondary text-sm" onclick="startSecurityKeySetup()">
+                    <button type="button" id="webauthn-add-btn" class="hidden gk-btn-secondary text-sm" onclick="startSecurityKeySetup()">
                         {{ t("settings.2fa.add_security_key")|default:"Add security key" }}
                     </button>
                     <span id="2fa-recovery-info" class="hidden ml-4 text-sm" style="color: var(--gk-text-muted);">
@@ -200,6 +200,17 @@
 </div>
 
 <script>
+{% include "partials/mfa_profile_status.pongo2" %}
+
+function showProfileError(msg) {
+    const errorToast = document.getElementById('error-toast');
+    const errorMessage = document.getElementById('error-message');
+    if (!errorToast || !errorMessage) return;
+    errorMessage.textContent = msg;
+    errorToast.classList.remove('hidden');
+    setTimeout(() => errorToast.classList.add('hidden'), 5000);
+}
+
 function handleCoachmarkReset(checkbox) {
     if (!checkbox.checked) return;
     if (typeof GoatCoach !== 'undefined') GoatCoach.reset();
@@ -243,9 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showError(msg) {
-        errorMessage.textContent = msg;
-        errorToast.classList.remove('hidden');
-        setTimeout(() => errorToast.classList.add('hidden'), 5000);
+        showProfileError(msg);
     }
 
     function showSuccess() {
@@ -397,30 +406,15 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/customer/api/preferences/2fa/status', { credentials: 'include' })
         .then(response => response.json())
         .then(data => {
-            document.getElementById('2fa-status-loading').classList.add('hidden');
             if (data.success) {
-                if (data.enabled) {
-                    document.getElementById('2fa-status-enabled').classList.remove('hidden');
-                    document.getElementById('2fa-disable-btn').classList.remove('hidden');
-                    document.getElementById('webauthn-add-btn').classList.remove('hidden');
-                    document.getElementById('2fa-recovery-info').classList.remove('hidden');
-                    document.getElementById('recovery-count').textContent = data.recovery_codes_remaining || 0;
-                } else {
-                    document.getElementById('2fa-status-disabled').classList.remove('hidden');
-                    document.getElementById('2fa-setup-btn').classList.remove('hidden');
-                    document.getElementById('webauthn-add-btn').classList.remove('hidden');
-                }
-                if (data.webauthn_credentials) {
-                    document.getElementById('webauthn-info').classList.remove('hidden');
-                    document.getElementById('webauthn-count').textContent = data.webauthn_credentials;
-                }
+                renderMFAProfileStatus(data);
+            } else {
+                renderMFAProfileStatusFallback();
             }
         })
         .catch(e => {
             console.error('Error loading 2FA status:', e);
-            document.getElementById('2fa-status-loading').classList.add('hidden');
-            document.getElementById('2fa-status-disabled').classList.remove('hidden');
-            document.getElementById('2fa-setup-btn').classList.remove('hidden');
+            renderMFAProfileStatusFallback();
         });
 });
 
@@ -432,6 +426,19 @@ function start2FASetup() {
     document.getElementById('2fa-setup-password').value = '';
     document.getElementById('2fa-setup-password-error').classList.add('hidden');
     document.getElementById('2fa-setup-modal').classList.remove('hidden');
+}
+
+function togglePasswordVisibility(fieldId) {
+    const field = document.getElementById(fieldId);
+    const showIcon = document.getElementById(fieldId + '-show');
+    const hideIcon = document.getElementById(fieldId + '-hide');
+    if (!field) return;
+    const visible = field.type === 'password';
+    field.type = visible ? 'text' : 'password';
+    if (showIcon) showIcon.classList.toggle('hidden', visible);
+    if (hideIcon) hideIcon.classList.toggle('hidden', !visible);
+    const toggle = document.querySelector('[data-password-toggle="' + fieldId + '"]');
+    if (toggle) toggle.setAttribute('aria-pressed', visible ? 'true' : 'false');
 }
 
 let stored2FAPassword = '';
@@ -483,7 +490,7 @@ async function verifyPasswordAndShowQR() {
         }
     } catch (error) {
         console.error('2FA setup error:', error);
-        errorEl.textContent = '{{ t("messages.error")|default:"An error occurred. Please try again." }}';
+        errorEl.textContent = '{{ t("errors.generic")|default:"An error occurred. Please try again."|escapejs }}';
         errorEl.classList.remove('hidden');
     } finally {
         btn.disabled = false;
@@ -538,7 +545,7 @@ async function confirm2FASetup() {
         }
     } catch (error) {
         console.error('2FA confirm error:', error);
-        errorEl.textContent = '{{ t("messages.error")|default:"An error occurred. Please try again." }}';
+        errorEl.textContent = '{{ t("errors.generic")|default:"An error occurred. Please try again."|escapejs }}';
         errorEl.classList.remove('hidden');
     } finally {
         confirmBtn.disabled = false;
@@ -602,7 +609,7 @@ async function disable2FA() {
         }
     } catch (error) {
         console.error('2FA disable error:', error);
-        errorEl.textContent = '{{ t("messages.error")|default:"An error occurred. Please try again." }}';
+        errorEl.textContent = '{{ t("errors.generic")|default:"An error occurred. Please try again."|escapejs }}';
         errorEl.classList.remove('hidden');
     } finally {
         disableBtn.disabled = false;
@@ -654,11 +661,32 @@ function serializeAttestation(credential) {
 
 async function startSecurityKeySetup() {
     if (!window.PublicKeyCredential) {
-        showError('This browser does not support security keys.');
+        showProfileError('{{ t("auth.security_keys_not_supported")|default:"This browser does not support security keys."|escapejs }}');
         return;
     }
-    const password = prompt('{{ t("settings.2fa.password_to_setup")|default:"Enter your password to set up two-factor authentication." }}');
-    if (!password) return;
+    document.getElementById('security-key-password').value = '';
+    document.getElementById('security-key-password-error').classList.add('hidden');
+    document.getElementById('security-key-password-modal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('security-key-password').focus(), 0);
+}
+
+function closeSecurityKeyPasswordModal() {
+    document.getElementById('security-key-password-modal').classList.add('hidden');
+    document.getElementById('security-key-password').value = '';
+    document.getElementById('security-key-password-error').classList.add('hidden');
+}
+
+async function submitSecurityKeyPassword() {
+    const password = document.getElementById('security-key-password').value;
+    const errorEl = document.getElementById('security-key-password-error');
+    const btn = document.getElementById('security-key-password-confirm-btn');
+    if (!password) {
+        errorEl.textContent = '{{ t("settings.2fa.password_required")|default:"Please enter your password" }}';
+        errorEl.classList.remove('hidden');
+        return;
+    }
+    btn.disabled = true;
+    errorEl.classList.add('hidden');
     try {
         const begin = await fetch('/customer/api/preferences/2fa/webauthn/register/begin', {
             method: 'POST',
@@ -667,9 +695,9 @@ async function startSecurityKeySetup() {
             body: JSON.stringify({ password: password })
         });
         const beginData = await begin.json();
-        if (!beginData.success) throw new Error(beginData.error || 'Failed to start security key setup');
+        if (!beginData.success) throw new Error(beginData.error || '{{ t("settings.2fa.security_key_setup_failed")|default:"Failed to start security key setup"|escapejs }}');
         const credential = await navigator.credentials.create({ publicKey: prepareCreationOptions(beginData.options) });
-        const keyName = encodeURIComponent(prompt('{{ t("settings.2fa.security_key_name")|default:"Security key name" }}') || 'Security key');
+        const keyName = encodeURIComponent(prompt('{{ t("settings.2fa.security_key_name")|default:"Security key name"|escapejs }}') || '{{ t("settings.2fa.security_key_default_name")|default:"Security key"|escapejs }}');
         const finish = await fetch(`/customer/api/preferences/2fa/webauthn/register/finish?name=${keyName}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -677,10 +705,14 @@ async function startSecurityKeySetup() {
             body: JSON.stringify(serializeAttestation(credential))
         });
         const finishData = await finish.json();
-        if (!finishData.success) throw new Error(finishData.error || 'Failed to register security key');
+        if (!finishData.success) throw new Error(finishData.error || '{{ t("settings.2fa.security_key_register_failed")|default:"Failed to register security key"|escapejs }}');
+        closeSecurityKeyPasswordModal();
         window.location.reload();
     } catch (error) {
-        showError(error.message || '{{ t("messages.error")|default:"An error occurred. Please try again." }}');
+        errorEl.textContent = error.message || '{{ t("errors.generic")|default:"An error occurred. Please try again."|escapejs }}';
+        errorEl.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
     }
 }
 </script>
@@ -692,7 +724,7 @@ async function startSecurityKeySetup() {
         <div class="gk-card-glow max-w-lg w-full max-h-[90vh] overflow-y-auto relative" style="background: var(--gk-bg-surface);">
             <div class="p-6">
                 <h3 class="gk-card-title">{{ t("settings.2fa.setup_title")|default:"Set Up Two-Factor Authentication" }}</h3>
-                <button onclick="close2FASetupModal()" class="absolute top-4 right-4" style="color: var(--gk-text-muted);">
+                <button type="button" onclick="close2FASetupModal()" class="absolute top-4 right-4" style="color: var(--gk-text-muted);">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -706,9 +738,21 @@ async function startSecurityKeySetup() {
                     
                     <div>
                         <label class="gk-form-label">{{ t("auth.password")|default:"Password" }}</label>
-                        <input type="password" id="2fa-setup-password" class="gk-input-neon mt-1"
-                               placeholder="{{ t('settings.2fa.password_placeholder')|default:'Enter your password' }}"
-                               onkeypress="if(event.key==='Enter') verifyPasswordAndShowQR()">
+                        <div class="relative mt-1">
+                            <input type="password" id="2fa-setup-password" class="gk-input-neon pr-12"
+                                   placeholder="{{ t('settings.2fa.password_placeholder')|default:'Enter your password' }}"
+                                   autocomplete="current-password"
+                                   onkeypress="if(event.key==='Enter') verifyPasswordAndShowQR()">
+                            <button type="button" onclick="togglePasswordVisibility('2fa-setup-password')" data-password-toggle="2fa-setup-password" aria-label="{{ t('password.toggle_visibility')|default:'Toggle password visibility' }}" aria-pressed="false" class="absolute inset-y-0 right-0 flex items-center px-3" style="color: var(--gk-text-muted);">
+                                <svg id="2fa-setup-password-show" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                                <svg id="2fa-setup-password-hide" class="h-5 w-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                                </svg>
+                            </button>
+                        </div>
                         <p id="2fa-setup-password-error" class="hidden mt-2 text-sm" style="color: var(--gk-error);"></p>
                     </div>
                     
@@ -770,6 +814,54 @@ async function startSecurityKeySetup() {
     </div>
 </div>
 
+<!-- Security Key Password Modal -->
+<div id="security-key-password-modal" class="fixed inset-0 z-50 hidden" aria-modal="true">
+    <div class="fixed inset-0 bg-black/50" onclick="closeSecurityKeyPasswordModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="gk-card-glow max-w-md w-full relative" style="background: var(--gk-bg-surface);">
+            <div class="p-6">
+                <h3 class="gk-card-title">{{ t("settings.2fa.add_security_key")|default:"Add security key" }}</h3>
+                <button type="button" onclick="closeSecurityKeyPasswordModal()" class="absolute top-4 right-4" style="color: var(--gk-text-muted);">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+
+                <div class="mt-4 space-y-4">
+                    <p class="text-sm" style="color: var(--gk-text-secondary);">
+                        {{ t("settings.2fa.password_to_setup")|default:"Enter your password to set up two-factor authentication." }}
+                    </p>
+
+                    <div>
+                        <label class="gk-form-label">{{ t("auth.password")|default:"Password" }}</label>
+                        <div class="relative mt-1">
+                            <input type="password" id="security-key-password" class="gk-input-neon pr-12"
+                                   placeholder="{{ t('settings.2fa.password_placeholder')|default:'Enter your password' }}"
+                                   autocomplete="current-password"
+                                   onkeypress="if(event.key==='Enter') submitSecurityKeyPassword()">
+                            <button type="button" onclick="togglePasswordVisibility('security-key-password')" data-password-toggle="security-key-password" aria-label="{{ t('password.toggle_visibility')|default:'Toggle password visibility' }}" aria-pressed="false" class="absolute inset-y-0 right-0 flex items-center px-3" style="color: var(--gk-text-muted);">
+                                <svg id="security-key-password-show" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                                <svg id="security-key-password-hide" class="h-5 w-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <p id="security-key-password-error" class="hidden mt-2 text-sm" style="color: var(--gk-error);"></p>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 mt-6 pt-4" style="border-top: 1px solid var(--gk-border-default);">
+                    <button type="button" onclick="closeSecurityKeyPasswordModal()" class="gk-btn-secondary">{{ t("buttons.cancel")|default:"Cancel" }}</button>
+                    <button type="button" onclick="submitSecurityKeyPassword()" id="security-key-password-confirm-btn" class="gk-btn-neon">{{ t("buttons.continue")|default:"Continue" }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 2FA Disable Modal -->
 <div id="2fa-disable-modal" class="fixed inset-0 z-50 hidden" aria-modal="true">
     <div class="fixed inset-0 bg-black/50" onclick="close2FADisableModal()"></div>
@@ -777,7 +869,7 @@ async function startSecurityKeySetup() {
         <div class="gk-card-glow max-w-md w-full" style="background: var(--gk-bg-surface);">
             <div class="p-6">
                 <h3 class="gk-card-title">{{ t("settings.2fa.disable_title")|default:"Disable Two-Factor Authentication" }}</h3>
-                <button onclick="close2FADisableModal()" class="absolute top-4 right-4" style="color: var(--gk-text-muted);">
+                <button type="button" onclick="close2FADisableModal()" class="absolute top-4 right-4" style="color: var(--gk-text-muted);">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -797,8 +889,20 @@ async function startSecurityKeySetup() {
                     
                     <div>
                         <label class="gk-form-label">{{ t("settings.2fa.confirm_password")|default:"Confirm your password:" }}</label>
-                        <input type="password" id="2fa-disable-password" class="gk-input-neon mt-1"
-                               placeholder="{{ t('settings.2fa.password_placeholder')|default:'Enter your password' }}">
+                        <div class="relative mt-1">
+                            <input type="password" id="2fa-disable-password" class="gk-input-neon pr-12"
+                                   placeholder="{{ t('settings.2fa.password_placeholder')|default:'Enter your password' }}"
+                                   autocomplete="current-password">
+                            <button type="button" onclick="togglePasswordVisibility('2fa-disable-password')" data-password-toggle="2fa-disable-password" aria-label="{{ t('password.toggle_visibility')|default:'Toggle password visibility' }}" aria-pressed="false" class="absolute inset-y-0 right-0 flex items-center px-3" style="color: var(--gk-text-muted);">
+                                <svg id="2fa-disable-password-show" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                                <svg id="2fa-disable-password-hide" class="h-5 w-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                                </svg>
+                            </button>
+                        </div>
                         <p id="2fa-disable-error" class="hidden mt-2 text-sm" style="color: var(--gk-error);"></p>
                     </div>
                 </div>

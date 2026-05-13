@@ -1424,6 +1424,10 @@ func TestAllCustomerTemplatesRender(t *testing.T) {
 			ctx: func() pongo2.Context {
 				ctx := baseContext()
 				ctx["Error"] = ""
+				ctx["show_totp_form"] = true
+				ctx["totp_enabled"] = true
+				ctx["webauthn_enabled"] = false
+				ctx["security_key_only"] = false
 				return ctx
 			}(),
 		},
@@ -1433,6 +1437,10 @@ func TestAllCustomerTemplatesRender(t *testing.T) {
 			ctx: func() pongo2.Context {
 				ctx := baseContext()
 				ctx["Error"] = ""
+				ctx["show_totp_form"] = true
+				ctx["totp_enabled"] = true
+				ctx["webauthn_enabled"] = false
+				ctx["security_key_only"] = false
 				return ctx
 			}(),
 		},

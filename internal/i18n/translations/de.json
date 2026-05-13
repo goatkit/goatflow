@@ -1533,7 +1533,8 @@
   "app": {
     "description": "Moderne IT-Service-Management-Plattform",
     "name": "GoatFlow",
-    "title": "GoatFlow - Ticketsystem"
+    "title": "GoatFlow - Ticketsystem",
+    "logo_alt": "GoatFlow-Logo"
   },
   "assets": {
     "asset_tag": "Asset-Tag",
@@ -1583,7 +1584,13 @@
     "use_security_key": "Sicherheitsschlüssel verwenden",
     "verification_code": "Bestätigungscode",
     "back_to_login": "Zurück zur Anmeldung",
-    "verify": "Bestätigen"
+    "verify": "Bestätigen",
+    "2fa_security_key_only_description": "Verwenden Sie Ihren Sicherheitsschlüssel, um die Anmeldung abzuschließen.",
+    "2fa_totp_or_security_key_description": "Geben Sie den Code aus Ihrer Authenticator-App ein oder verwenden Sie Ihren Sicherheitsschlüssel.",
+    "invalid_code": "Ungültiger Code",
+    "security_keys_not_supported": "Dieser Browser unterstützt keine Sicherheitsschlüssel.",
+    "no_security_keys_registered": "Keine registrierten Sicherheitsschlüssel gefunden",
+    "security_key_verification_failed": "Überprüfung des Sicherheitsschlüssels fehlgeschlagen."
   },
   "bulk_actions": {
     "all_selected": "Alle ausgewählt",
@@ -2576,7 +2583,8 @@
     "passwords_match": "Passwörter stimmen überein",
     "passwords_no_match": "Passwörter stimmen nicht überein",
     "changed_success": "Passwort erfolgreich geändert!",
-    "same_as_current": "Das neue Passwort muss sich vom aktuellen Passwort unterscheiden"
+    "same_as_current": "Das neue Passwort muss sich vom aktuellen Passwort unterscheiden",
+    "toggle_visibility": "Passwortsichtbarkeit umschalten"
   },
   "priority": {
     "critical": "Kritisch",
@@ -2903,7 +2911,21 @@
       "verify_enable": "Verifizieren & Aktivieren",
       "add_security_key": "Sicherheitsschlüssel hinzufügen",
       "security_keys_registered": "Sicherheitsschlüssel registriert",
-      "security_key_name": "Name des Sicherheitsschlüssels"
+      "security_key_name": "Name des Sicherheitsschlüssels",
+      "mfa_enabled_label": "MFA aktiviert",
+      "authenticator_app_enabled_label": "Authenticator-App aktiviert",
+      "security_key_enabled_label": "Sicherheitsschlüssel aktiviert",
+      "mfa_enabled_description": "Authenticator-App-Codes und Sicherheitsschlüssel sind für dieses Konto aktiviert.",
+      "authenticator_app_enabled_description": "Authenticator-App-Codes sind nach der Passwortanmeldung erforderlich.",
+      "security_key_enabled_description": "Ein Sicherheitsschlüssel ist registriert und wird nach der Passwortanmeldung benötigt.",
+      "no_factor_description": "Fügen Sie eine Authenticator-App oder einen Sicherheitsschlüssel hinzu, um dieses Konto zu schützen.",
+      "enable_authenticator_app": "Authenticator-App aktivieren",
+      "disable_authenticator_app": "Authenticator-App deaktivieren",
+      "security_key_registered_singular": "1 Sicherheitsschlüssel registriert",
+      "security_key_registered_count": "{count} Sicherheitsschlüssel registriert",
+      "security_key_setup_failed": "Einrichtung des Sicherheitsschlüssels konnte nicht gestartet werden",
+      "security_key_register_failed": "Sicherheitsschlüssel konnte nicht registriert werden",
+      "security_key_default_name": "Sicherheitsschlüssel"
     },
     "reset_highlights": "Feature-Hinweise zurücksetzen",
     "highlights_reset": "Feature-Hinweise wurden zurückgesetzt",

@@ -102,10 +102,19 @@
                 </button>
             </div>
         </form>
+        <div class="my-5 flex items-center gap-3">
+            <div class="h-px flex-1" style="background: var(--gk-border-subtle);"></div>
+            <span class="text-xs uppercase" style="color: var(--gk-text-muted);">{{ t("auth.or_continue_with")|default:"Or continue with" }}</span>
+            <div class="h-px flex-1" style="background: var(--gk-border-subtle);"></div>
+        </div>
+        <button id="passkey-login-btn" type="button" class="gk-btn-secondary w-full" onclick="loginWithPasskey()">
+            {{ t("auth.use_security_key")|default:"Use security key" }}
+        </button>
         </div><!-- end gk-login-card -->
     </div>
 </div>
 
+<script src="/static/js/webauthn-utils.js"></script>
 <script>
     const capsLockIcon = document.getElementById('capsLockIcon');
     const loginInput = document.getElementById('login');
@@ -133,6 +142,7 @@
 
     const errorBox = document.getElementById('error-message');
     const submitBtn = document.querySelector('form button[type="submit"]');
+    const passkeyBtn = document.getElementById('passkey-login-btn');
     const FAIL_KEY = 'customerLoginFailCount';
     const UNTIL_KEY = 'customerLoginBackoffUntil';
     const invalidCredentialsMsg = '{{ t("customer.auth.invalid_credentials") }}';
@@ -177,6 +187,24 @@
         }
     }
     applyBackoff();
+
+    async function loginWithPasskey() {
+        if (passkeyBtn) passkeyBtn.disabled = true;
+        clearError();
+        try {
+            const data = await window.GoatFlowWebAuthn.passkeyLogin({
+                beginUrl: '/api/auth/customer/passkey/begin',
+                finishUrl: '/api/auth/customer/passkey/finish'
+            });
+            setFailCount(0);
+            localStorage.removeItem(UNTIL_KEY);
+            window.location.replace(data.redirect || '/customer');
+        } catch (err) {
+            setError((err && err.message) || 'Passkey login failed.');
+        } finally {
+            if (passkeyBtn) passkeyBtn.disabled = false;
+        }
+    }
 
     document.body.addEventListener('htmx:beforeSwap', function(evt) {
         if (!(evt.detail && evt.detail.xhr)) return;

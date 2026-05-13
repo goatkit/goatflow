@@ -81,6 +81,44 @@ func TestTOTP_ValidCodeAccepted(t *testing.T) {
 	assert.True(t, valid, "Valid TOTP code should be accepted")
 }
 
+func TestTOTP_PreviousStepCodeAcceptedForClockSkew(t *testing.T) {
+	db, mock := setupMockDB(t)
+	defer db.Close()
+
+	svc := NewTOTPService(db, "GoatFlow")
+	userID := 123
+	secret := "JBSWY3DPEHPK3PXP"
+	code, err := totp.GenerateCode(secret, time.Now().Add(-30*time.Second))
+	require.NoError(t, err)
+
+	mock.ExpectQuery("SELECT preferences_value FROM user_preferences").
+		WithArgs(userID, "UserTOTPSecret").
+		WillReturnRows(sqlmock.NewRows([]string{"preferences_value"}).AddRow(secret))
+
+	valid, err := svc.ValidateCode(userID, code)
+	assert.NoError(t, err)
+	assert.True(t, valid, "Previous-step TOTP code should be accepted for normal clock skew")
+}
+
+func TestTOTP_CodeInputNormalization(t *testing.T) {
+	db, mock := setupMockDB(t)
+	defer db.Close()
+
+	svc := NewTOTPService(db, "GoatFlow")
+	userID := 123
+	secret := "JBSWY3DPEHPK3PXP"
+	code := generateValidCode(secret)
+	formatted := code[:3] + " " + code[3:]
+
+	mock.ExpectQuery("SELECT preferences_value FROM user_preferences").
+		WithArgs(userID, "UserTOTPSecret").
+		WillReturnRows(sqlmock.NewRows([]string{"preferences_value"}).AddRow(secret))
+
+	valid, err := svc.ValidateCode(userID, formatted)
+	assert.NoError(t, err)
+	assert.True(t, valid, "TOTP code with common separators should be accepted")
+}
+
 // =============================================================================
 // T2: Recovery Code Single Use
 // =============================================================================

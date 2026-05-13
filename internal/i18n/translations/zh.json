@@ -1512,7 +1512,8 @@
   "app": {
     "description": "现代IT服务管理平台",
     "name": "GoatFlow",
-    "title": "GoatFlow - 工单系统"
+    "title": "GoatFlow - 工单系统",
+    "logo_alt": "GoatFlow 标志"
   },
   "assets": {
     "asset_tag": "资产标签",
@@ -1562,7 +1563,13 @@
     "use_security_key": "使用安全密钥",
     "verification_code": "验证码",
     "back_to_login": "返回登录",
-    "verify": "验证"
+    "verify": "验证",
+    "2fa_security_key_only_description": "使用安全密钥完成登录。",
+    "2fa_totp_or_security_key_description": "输入身份验证器应用中的代码，或使用安全密钥。",
+    "invalid_code": "代码无效",
+    "security_keys_not_supported": "此浏览器不支持安全密钥。",
+    "no_security_keys_registered": "未找到已注册的安全密钥",
+    "security_key_verification_failed": "安全密钥验证失败。"
   },
   "bulk_actions": {
     "all_selected": "全部已选",
@@ -2554,7 +2561,8 @@
     "passwords_match": "密码匹配",
     "passwords_no_match": "密码不匹配",
     "changed_success": "密码修改成功！",
-    "same_as_current": "新密码必须与当前密码不同"
+    "same_as_current": "新密码必须与当前密码不同",
+    "toggle_visibility": "切换密码可见性"
   },
   "priority": {
     "critical": "紧急",
@@ -2881,7 +2889,21 @@
       "verify_enable": "验证并启用",
       "add_security_key": "添加安全密钥",
       "security_keys_registered": "个已注册的安全密钥",
-      "security_key_name": "安全密钥名称"
+      "security_key_name": "安全密钥名称",
+      "mfa_enabled_label": "MFA 已启用",
+      "authenticator_app_enabled_label": "身份验证器应用已启用",
+      "security_key_enabled_label": "安全密钥已启用",
+      "mfa_enabled_description": "此账户已启用身份验证器应用代码和安全密钥。",
+      "authenticator_app_enabled_description": "密码登录后需要身份验证器应用代码。",
+      "security_key_enabled_description": "已注册安全密钥，密码登录后将需要使用。",
+      "no_factor_description": "添加身份验证器应用或安全密钥以保护此账户。",
+      "enable_authenticator_app": "启用身份验证器应用",
+      "disable_authenticator_app": "停用身份验证器应用",
+      "security_key_registered_singular": "已注册 1 个安全密钥",
+      "security_key_registered_count": "已注册 {count} 个安全密钥",
+      "security_key_setup_failed": "无法开始安全密钥设置",
+      "security_key_register_failed": "无法注册安全密钥",
+      "security_key_default_name": "安全密钥"
     },
     "reset_highlights": "重置功能提示",
     "highlights_reset": "功能提示已重置",

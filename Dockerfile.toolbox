@@ -3,7 +3,7 @@
 
 # Global build arg - must be before any FROM that uses it
 # Default provided for docker build without --build-arg; compose/make override from .env
-ARG GO_IMAGE=golang:1.25-alpine
+ARG GO_IMAGE=golang:1.25.10-alpine
 
 # Reuse compiled binaries from dedicated artifacts image
 FROM goatflow-artifacts:latest AS artifacts
@@ -185,8 +185,8 @@ COPY --from=toolbox-builder /usr/local/go /usr/local/go
 RUN if [ ! -x /usr/local/go/bin/go ]; then \
             echo 'Go toolchain copy missing, installing fallback'; \
             apk add --no-cache curl tar bash ca-certificates jq; \
-            curl -fsSL https://go.dev/dl/go1.25.0.linux-amd64.tar.gz -o /tmp/go.tgz; \
-            GO_SHA=$(curl -fsSL https://go.dev/dl/?mode=json | jq -r '.[] | select(.version=="go1.25.0") | .files[] | select(.filename=="go1.25.0.linux-amd64.tar.gz") | .sha256') && \
+            curl -fsSL https://go.dev/dl/go1.25.10.linux-amd64.tar.gz -o /tmp/go.tgz; \
+            GO_SHA=$(curl -fsSL https://go.dev/dl/?mode=json | jq -r '.[] | select(.version=="go1.25.10") | .files[] | select(.filename=="go1.25.10.linux-amd64.tar.gz") | .sha256') && \
             echo "$GO_SHA  /tmp/go.tgz" | sha256sum -c - && \
             tar -C /usr/local -xzf /tmp/go.tgz; \
             rm /tmp/go.tgz; \
@@ -223,4 +223,3 @@ ENTRYPOINT ["/usr/local/bin/toolbox-entrypoint.sh"]
 
 # Default to bash shell for interactive use
 CMD ["/bin/bash"]
- 

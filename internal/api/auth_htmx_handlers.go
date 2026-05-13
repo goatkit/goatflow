@@ -436,11 +436,24 @@ func loginRedirectPath(c *gin.Context) string {
 
 // handle2FAPage shows the 2FA verification page.
 func handle2FAPage(c *gin.Context) {
-	if _, err := c.Cookie("2fa_pending"); err != nil {
+	token, err := c.Cookie("2fa_pending")
+	if err != nil || token == "" {
 		c.Redirect(http.StatusFound, "/login")
 		return
 	}
-	getPongo2Renderer().HTML(c, http.StatusOK, "pages/login_2fa.pongo2", pongo2.Context{})
+
+	session := auth.GetTOTPSessionManager().ValidateAndGetSession(token, c.ClientIP(), c.Request.UserAgent())
+	if session == nil || session.IsCustomer {
+		httpcookie.SetAuth(c, "2fa_pending", "", -1)
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	status := mfaStatus{TOTPEnabled: true, WebAuthnEnabled: true}
+	if db, err := database.GetDB(); err == nil && db != nil {
+		status = agentMFAStatus(db, c.Request, session.UserID)
+	}
+	getPongo2Renderer().HTML(c, http.StatusOK, "pages/login_2fa.pongo2", mfaLoginPageContext(status))
 }
 
 // handle2FAVerify processes the 2FA verification during login.

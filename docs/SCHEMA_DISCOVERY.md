@@ -220,7 +220,7 @@ If Go version errors occur, update the single source of truth:
 ```bash
 # Edit .env and change GO_IMAGE
 vim .env
-# Example: GO_IMAGE=golang:1.25.0-alpine
+# Example: GO_IMAGE=golang:1.25.10-alpine
 ```
 
 All Dockerfiles and scripts inherit from this setting.
