@@ -309,7 +309,7 @@ debug-env:
 	@printf "Selected commands will be used for all make targets.\n"
 
 # Initial setup with secure secret generation
-setup:
+setup: setup-hooks
 	@printf "🔬 Synthesizing secure configuration...\n"
 	@if [ ! -f .env ]; then \
 		$(MAKE) synthesize || echo "⚠️  Failed to synthesize. Using example file as fallback."; \
@@ -319,6 +319,14 @@ setup:
 	fi
 	@cp -n docker-compose.override.yml.example docker-compose.override.yml || true
 	@printf "Setup complete. Run 'make up' to start development environment.\n"
+
+# Activate tracked git hooks (secret scanning, binary blocking, attribution check)
+setup-hooks:
+	@if [ -d .git ]; then \
+		bash scripts/install-git-hooks.sh; \
+	else \
+		echo "⚠️  Not in a git repository — skipping hooks setup."; \
+	fi
 # Generate secure credentials and output CSV to stdout
 synthesize-credentials:
 	@$(MAKE) toolbox-build >&2
@@ -387,7 +395,7 @@ synthesize:
 	@if [ -d .git ]; then \
 		echo ""; \
 		echo "💡 To enable secret scanning in git commits, run:"; \
-		echo "   make scan-secrets-precommit"; \
+		echo "   make setup-hooks"; \
 	fi
 
 # Rotate secrets in existing .env file (runs in container)
@@ -2485,7 +2493,7 @@ clean-test-results:
 	@rm -rf test-results/
 
 # Security scanning commands
-.PHONY: scan-secrets scan-secrets-history scan-secrets-precommit scan-vulnerabilities security-scan
+.PHONY: scan-secrets scan-secrets-history setup-hooks scan-vulnerabilities security-scan
 
 # Scan for secrets in current code
 scan-secrets:
@@ -2505,9 +2513,8 @@ scan-secrets-history:
 		zricethezav/gitleaks:latest \
 		detect --source . --log-opts="--all" --verbose
 
-# Install pre-commit hooks for secret scanning (using bash script)
-scan-secrets-precommit:
-	@bash scripts/install-git-hooks.sh
+# Activate tracked git hooks for secret scanning (alias for setup-hooks)
+scan-secrets-precommit: setup-hooks
 
 # Scan for vulnerabilities (Go dependencies + container/config)
 scan-vulnerabilities: toolbox-build

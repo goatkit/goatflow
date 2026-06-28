@@ -517,3 +517,6 @@ go/
 *.wasm
 public/
 .continue/
+
+# MCP client config (contains API tokens — use .mcp.json.example as template)
+.mcp.json

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "goatflow": {
+      "type": "http",
+      "url": "http://localhost:8080/api/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer gf_YOUR_API_TOKEN_HERE"
+      }
+    }
+  }
+}

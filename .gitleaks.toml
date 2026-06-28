@@ -7,6 +7,21 @@ title = "GoatFlow Gitleaks Configuration"
 [extend]
 useDefault = true
 
+# Custom rules for GoatFlow-specific token formats
+[[rules]]
+id = "goatflow-api-token"
+description = "GoatFlow API token (gf_<hex>_<hex>)"
+regex = '''gf_[a-f0-9]{8}_[a-f0-9]{48}'''
+tags = ["key", "goatflow", "apitoken"]
+keywords = ["gf_"]
+
+[[rules]]
+id = "goatflow-jwt-secret"
+description = "GoatFlow JWT secret in config"
+regex = '''(?i)(jwt[_-]?secret|session[_-]?secret)\s*[:=]\s*["']?[a-f0-9]{32,}["']?'''
+tags = ["key", "jwt", "goatflow"]
+keywords = ["jwt_secret", "jwt-secret", "session_secret", "session-secret"]
+
 # Paths to exclude from scanning (test files with example tokens)
 [allowlist]
 paths = [
@@ -28,6 +43,10 @@ paths = [
     '''bun\.lockb''',
     # Design docs contain example/placeholder tokens (gf_EXAMPLE_, sk_live_xxx, etc.)
     '''docs/design/.*\.md''',
+    # MCP client config template (placeholder token, not real)
+    '''\.mcp\.json\.example''',
+    # Crypto test uses a fake Stripe key (sk_live_abc123def456) for encryption/decryption tests
+    '''internal/secureconfig/crypto_test\.go''',
 ]
 
 # Stop words to prevent false positives
