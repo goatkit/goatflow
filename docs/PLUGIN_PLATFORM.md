@@ -4,6 +4,9 @@
 
 GoatKit provides a full plugin platform that enables third-party developers to extend GoatFlow without modifying core code. The platform supports two runtimes — WASM for portable, sandboxed plugins and gRPC for native, I/O-heavy workloads — managed uniformly through a single `Plugin` interface.
 
+## Clean Plugin Runtime Boundary
+
+The plugin runtime is built exclusively on platform packages under `internal/platform/`. It has zero dependencies on product-specific code (anything under `internal/` not under `internal/platform/`). This ensures that plugins can be developed and executed without pulling in the full GoatFlow product, making the runtime suitable for other products built on the GoatKit platform.
 ## Architecture
 
 ```

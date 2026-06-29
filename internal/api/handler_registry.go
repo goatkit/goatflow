@@ -350,27 +350,6 @@ func ensureCoreHandlers() {
 			}
 			handleCustomerChangePassword(db)(c)
 		},
-		"handleCustomerKnowledgeBase": func(c *gin.Context) {
-			db, ok := mustGetDB(c)
-			if !ok {
-				return
-			}
-			handleCustomerKnowledgeBase(db)(c)
-		},
-		"handleCustomerKBSearch": func(c *gin.Context) {
-			db, ok := mustGetDB(c)
-			if !ok {
-				return
-			}
-			handleCustomerKBSearch(db)(c)
-		},
-		"handleCustomerKBArticle": func(c *gin.Context) {
-			db, ok := mustGetDB(c)
-			if !ok {
-				return
-			}
-			handleCustomerKBArticle(db)(c)
-		},
 		"handleCustomerCompanyInfo": func(c *gin.Context) {
 			db, ok := mustGetDB(c)
 			if !ok {

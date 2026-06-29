@@ -1558,23 +1558,6 @@ func getPasswordPolicyErrorMessage(code string) string {
 	}
 }
 
-func handleCustomerKnowledgeBase(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Knowledge base"})
-	}
-}
-
-func handleCustomerKBSearch(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: KB search"})
-	}
-}
-
-func handleCustomerKBArticle(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: KB article"})
-	}
-}
 
 func handleCustomerCompanyInfo(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {

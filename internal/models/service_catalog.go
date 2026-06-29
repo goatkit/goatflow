@@ -97,7 +97,6 @@ type ServiceCatalogItem struct {
 	IncludedItems []ServiceCatalogItem `json:"included_items,omitempty" gorm:"many2many:catalog_item_inclusions;"`
 
 	// Knowledge base
-	KnowledgeArticles  []KnowledgeArticle `json:"knowledge_articles,omitempty" gorm:"many2many:catalog_item_articles;"`
 	Instructions       string             `json:"instructions"`
 	TermsAndConditions string             `json:"terms_and_conditions"`
 

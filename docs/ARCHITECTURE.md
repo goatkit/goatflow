@@ -186,17 +186,25 @@ rows, err := db.Query("SELECT * FROM ticket WHERE id = $1", id)
 ## Go Best Practices
 
 ### Code Organization
-```
 internal/
-├── api/           # API handlers (HTMX + REST)
-├── auth/          # Authentication providers
-├── cache/         # Valkey client wrapper
-├── database/      # Connection pool & ConvertPlaceholders
-├── models/        # Domain entities with sqlx scan
-├── repository/    # Data access layer
-├── service/       # Business logic
-└── template/      # Pongo2 helpers & functions
-```
+├── platform/           # Platform packages (auth, cache, database, models, service, etc.)
+│   ├── api/
+│   ├── auth/
+│   ├── cache/
+│   ├── database/
+│   ├── models/
+│   ├── service/
+│   └── ...             # other platform packages (customfields, config, etc.)
+├── api/                # Product API handlers (HTMX + REST)
+├── auth/               # Product authentication providers
+├── components/         # UI components
+├── core/               # Core application logic
+├── email/              # Email system
+├── history/            # History tracking
+├── models/             # Product domain entities
+├── repository/         # Data access layer
+├── service/            # Product business logic
+└── ...                 # other product packages (runner, selfservice, webhooks, etc.)
 
 ### Error Handling
 ```go

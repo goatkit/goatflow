@@ -96,7 +96,7 @@ Some GoatFlow features are built entirely on existing OTRS infrastructure:
 
 - **Two-Factor Auth (TOTP):** Secrets and recovery codes stored in `user_preferences` / `customer_preferences`
 - **SLA Management:** Uses existing `sla`, `sla_preferences`, `service_sla` tables
-- **Knowledge Base:** Uses existing `faq_*` tables
+- **Knowledge Base:** Planned `gk_kb_*` tables (future); Znuny `faq_*` import via `goatflow-migrate`.
 - **GenericAgent:** Uses existing `generic_agent_jobs` table
 - **Plugin state:** Uses existing `sysconfig_default` / `sysconfig_modified` tables
 
