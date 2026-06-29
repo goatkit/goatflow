@@ -2,7 +2,7 @@
 
 > Version: 1.1
 > Date: 2026-06-29
-> Status: Phase 1 complete, Phase 2 next
+> Status: Phase 1-2 complete, Phase 3 next
 > Related: `docs/ARCHITECTURE.md`, `docs/PLUGIN_PLATFORM.md`, `docs/design/LLM_INTEGRATION.md`
 
 ## 1. Goal
@@ -181,15 +181,15 @@ move `services/{adapter,database,registry}` to `internal/platform/services/`.
 
 #### Steps
 
-1. Audit what `database/` actually calls on `services/adapter` — likely
+1. ✅ Audit what `database/` actually calls on `services/adapter` — likely
    `adapter.GetDB()` at `connection.go:41`. Move that logic into `database/` directly.
-2. Audit what the 4 `internal/api` files and `main.go` call on `services/adapter` —
+2. ✅ Audit what the 4 `internal/api` files and `main.go` call on `services/adapter` —
    likely `adapter.InitializeServiceRegistry()` and service lookups. These callers
    stay on the `services/adapter` API; only the internal dependency direction flips.
-3. Move `services/adapter`, `services/database`, `services/registry` to
+3. ✅ Move `services/adapter`, `services/database`, `services/registry` to
    `internal/platform/services/`.
-4. Update all 6 import sites.
-5. `database/` now imports only `internal/platform/services/registry`
+4. ✅ Update all 6 import sites.
+5. ✅ `database/` now imports only `internal/platform/services/registry`
    (platform to platform, allowed).
 
 #### Risks and mitigations
@@ -198,7 +198,7 @@ move `services/{adapter,database,registry}` to `internal/platform/services/`.
 |---|---|---|---|---|
 | 2.1 | `adapter.GetDB()` may use the service registry to resolve which DB connection to return (multi-DB routing) — moving this to `database/` could duplicate registry logic | Medium | High | **Audit before refactoring.** Read `services/adapter/*.go` fully. If `GetDB()` delegates to the registry, the registry must move with (or before) the inversion. Do not split `GetDB()` from the registry — move them together to `internal/platform/`. |
 | 2.2 | The 4 `internal/api` files importing `services/adapter` may use it for more than just DB access (e.g., other service lookups) | Medium | Medium | Grep each of the 4 files for `adapter.` calls. Classify each call as DB-related (stays) or service-lookup (may need the registry directly). Update imports accordingly. |
-| 2.3 | Circular import: `database/` to `platform/services/registry` to `database/` | Low | High | `services/registry` (`internal/services/registry`) currently has **zero internal imports** (confirmed clean). It will not import `database/`. No cycle. |
+| 2.3 | Circular import: `database/` to `platform/services/registry` to `database/` | Low | High | `services/registry` (`internal/platform/services/registry`) currently has **zero internal imports** (confirmed clean). It will not import `database/`. No cycle. |
 | 2.4 | `cmd/goats/main.go:59` calls `adapter.InitializeServiceRegistry()` — if the init order changes, boot could fail | Medium | High | The init call stays in `main.go`; only the import path changes (`services/adapter` to `platform/services/adapter`). No logic change. Verify boot sequence with a smoke test. |
 | 2.5 | `internal/database/testing.go` is used by tests across the codebase — changing its imports could break many test suites | Medium | Medium | Update `testing.go` in the same commit as the connection.go change. Run `go test ./...` to catch breakages. |
 | 2.6 | MySQL and Postgres drivers in `database/drivers/` may have implicit dependencies on the adapter for driver selection | Low | Medium | Verify `database/drivers/{postgres,mysql,sqlite}/*.go` import only `internal/database` (confirmed clean in investigation). No adapter dependency. |
@@ -207,14 +207,14 @@ move `services/{adapter,database,registry}` to `internal/platform/services/`.
 
 | # | Check | Command | Pass criteria |
 |---|---|---|---|
-| V2.1 | `database/` does not import `internal/services/adapter` | `grep -rn 'goatflow/internal/services/adapter' internal/database/` | Zero matches |
+| V2.1 | `database/` does not import old product `services/adapter` | `grep -rn 'goatflow/internal/services/adapter' internal/database/` | Zero matches (uses `internal/platform/services/...`) |
 | V2.2 | `database/` imports only platform packages | `grep -rn 'goatflow/internal/' internal/database/*.go \| grep -v 'platform/\|database/'` | Zero matches (only self-imports and platform imports) |
 | V2.3 | Full build compiles | `go build ./...` | Clean |
 | V2.4 | Boot sequence works | `go test -run TestBootSequence ./cmd/goats/...` (or manual smoke test) | Services initialize, DB connects, migrations run |
 | V2.5 | All tests pass | `go test ./...` | All pass |
 | V2.6 | `go vet` clean | `go vet ./internal/database/... ./internal/platform/services/...` | No warnings |
 | V2.7 | No circular imports | `go list -deps ./internal/database/ \| grep goatflow/internal \| sort -u` | No product packages in the dependency list |
-| V2.8 | All 6 former `services/adapter` import sites updated | `grep -rn 'goatflow/internal/services/adapter' internal/ cmd/` | Zero matches (all updated to `platform/services/adapter`) |
+| V2.8 | All 6 import sites use `internal/platform/services/adapter` | `grep -rn 'goatflow/internal/platform/services/adapter' internal/ cmd/` | 6 matches (all import sites updated to platform path) |
 
 #### Estimated effort: 2-3 days
 

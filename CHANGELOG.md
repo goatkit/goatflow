@@ -16,6 +16,12 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `internal/services/scheduler/` that translates platform → product; wired in
   `cmd/goats/main.go`. The plugin runtime no longer transitively depends on ~16,000 lines
   of product code. Full plan: `docs/PLATFORM_PRODUCT_DECOUPLING.md`.
+- **Phase 2 of platform/product decoupling complete.** Inverted the `database` →
+  `services/adapter` dependency — moved connection lifecycle into `database/` directly,
+  then moved `services/{adapter,database,registry}` to
+  `internal/platform/services/`. All 6 import sites updated. `database/` now imports
+  only `internal/platform/services/registry` (platform to platform). Full plan:
+  `docs/PLATFORM_PRODUCT_DECOUPLING.md`.
 - **`bun pm audit` → `bun pm scan`** in `check-deps` target. The `audit` subcommand was
   removed in bun 1.1.x; renamed to `scan`.
 

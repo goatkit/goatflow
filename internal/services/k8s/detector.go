@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/goatkit/goatflow/internal/services/registry"
+	"github.com/goatkit/goatflow/internal/platform/services/registry"
 )
 
 // EnvironmentType represents the deployment environment.

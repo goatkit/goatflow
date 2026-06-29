@@ -381,7 +381,7 @@ Universal custom fields on every core entity. Plugins declare fields at registra
 - [x] Break `scheduler.go` coupling — define `PlatformScheduler` interface in plugin
       package, replace `*services/scheduler` dependency with adapter pattern. Unblocks
       the plugin runtime from ~16,000 lines of product code.
-- [ ] Invert `database` → `services/adapter` dependency — move connection lifecycle into
+- [x] Invert `database` → `services/adapter` dependency — move connection lifecycle into
       `database/`, move `services/{adapter,database,registry}` to `internal/platform/services/`.
       Fixes inverted layering (DB layer currently depends on services layer).
 - [ ] Split `internal/models/` — move 11 platform type files (User, Group, Role, Session,

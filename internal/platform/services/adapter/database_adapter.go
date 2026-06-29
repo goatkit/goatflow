@@ -13,8 +13,8 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
-	"github.com/goatkit/goatflow/internal/services/database"
-	"github.com/goatkit/goatflow/internal/services/registry"
+	"github.com/goatkit/goatflow/internal/platform/services/database"
+	"github.com/goatkit/goatflow/internal/platform/services/registry"
 )
 
 var (

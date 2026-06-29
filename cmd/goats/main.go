@@ -56,7 +56,7 @@ import (
 	"github.com/goatkit/goatflow/internal/runner"
 	"github.com/goatkit/goatflow/internal/runner/tasks"
 	"github.com/goatkit/goatflow/internal/service"
-	"github.com/goatkit/goatflow/internal/services/adapter"
+	"github.com/goatkit/goatflow/internal/platform/services/adapter"
 	"github.com/goatkit/goatflow/internal/services/k8s"
 	"github.com/goatkit/goatflow/internal/services/scheduler"
 	"github.com/goatkit/goatflow/internal/shared"

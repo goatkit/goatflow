@@ -13,7 +13,7 @@ import (
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/repository"
-	"github.com/goatkit/goatflow/internal/services/adapter"
+	"github.com/goatkit/goatflow/internal/platform/services/adapter"
 )
 
 // Admin Users CRUD Handlers

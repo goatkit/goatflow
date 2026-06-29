@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/services/adapter"
+	"github.com/goatkit/goatflow/internal/platform/services/adapter"
 )
 
 // wrapAdapterDBHandler wraps a handler factory that requires a database connection via adapter.
