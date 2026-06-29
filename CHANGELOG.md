@@ -55,6 +55,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `docs/PLATFORM_PRODUCT_DECOUPLING.md`.
 - **`bun pm audit` → `bun pm scan`** in `check-deps` target. The `audit` subcommand was
   removed in bun 1.1.x; renamed to `scan`.
+- **Plugin request body passthrough.** `buildPluginArgs` now forwards non-JSON request bodies (XML, CSV, plain text) to plugins as `_body` / `_content_type`, capped at 4 MiB (`maxPluginBodySize`). Previously only JSON bodies were merged into the args map, so payloads like an OTRS FAQ XML import were silently dropped. Restores the ability to handle non-JSON POST routes on plugin handlers.
+- **Plugin error responses now set HTTP status.** The dynamic router honours plugin JSON responses of the form `{"error": "<msg>", "status": <N>}` (N in 400–599) and maps them to the matching HTTP status code, instead of serving every response as 200-OK-with-body. Lets plugins signal not-found / bad-request / server errors to clients. A Go `error` return still falls back to 500 as before.
+- **Plugin platform docs.** Added a "Request & Response Conventions" section to `docs/PLUGIN_PLATFORM.md` documenting the args payload fields (`_body`, `_content_type`, `_org_id`, `_user_*`, etc.) and the response shapes the dynamic router recognises (error/redirect/HTML/binary/JSON).
 
 ### Fixed
 - **`RegisterHandler` nil-ambiguity in `PluginAdapter`.** Two `RegisterHandler` methods on

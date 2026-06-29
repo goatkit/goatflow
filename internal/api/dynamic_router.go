@@ -124,6 +124,21 @@ func RebuildDynamicEngine() {
 
 				var response map[string]any
 				if err := json.Unmarshal(result, &response); err == nil {
+					// Error response — a plugin can return {"error": msg, "status": 404}
+					// to set the HTTP status code. The int status convention is shared
+					// with the redirect path below. Without this, every plugin error
+					// surfaces as a 200 with the body — clients can't distinguish
+					// not-found / bad-request from success.
+					if errMsg, ok := response["error"].(string); ok && errMsg != "" {
+						code := http.StatusInternalServerError
+						if s, ok := response["status"].(float64); ok {
+							if c := int(s); c >= 400 && c <= 599 {
+								code = c
+							}
+						}
+						c.JSON(code, gin.H{"error": errMsg})
+						return
+					}
 					// Redirect response — plugin asks the platform to send the
 					// browser elsewhere. Used by customer pages that resolve no
 					// org and bail to /customer/dashboard.

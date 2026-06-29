@@ -264,6 +264,29 @@ The HostAPI interface (`pkg/plugin/plugin.go`) provides access to host services:
 
 The production implementation (`ProdHostAPI` in `internal/platform/plugin/hostapi_prod.go`) wires these to real database, cache (Redis/Valkey), email, and other services. It supports multiple named databases with `@dbname:` query prefix syntax.
 
+## Request & Response Conventions
+
+When the platform routes an HTTP request to a plugin handler, it builds the
+`args` payload (`buildPluginArgs` in `internal/api/plugin_handlers.go`) from:
+
+- **URL path params** — e.g. `:id` → `args["id"]`
+- **Query params** — single values become strings; repeated values become arrays
+- **Request body** —
+  - JSON bodies (`Content-Type: application/json`) are merged into `args` field by field, so handlers that unmarshal into a struct pick fields up for free.
+  - Non-JSON bodies (XML, CSV, plain text) are passed through verbatim as `args["_body"]` with `args["_content_type"]`, capped at 4 MiB (`maxPluginBodySize`). Use this for imports and webhook-style payloads that aren't JSON.
+- **Request metadata** — `_method`, `_path`
+- **Authenticated user** — `_user_id`, `_user_email`, `_user_login`, `_customer_login`, `_user_role`, `_is_admin`
+- **Org context** — `_org_id` and `org_id` (int64) from the active session, unless the plugin sets `SkipOrgInjection: true`
+
+The handler returns `(json.RawMessage, error)`. The dynamic router
+(`internal/api/dynamic_router.go`) interprets the JSON response as follows:
+
+- **Error response** — `{"error": "<msg>", "status": <N>}` with `N` in 400–599 maps to the matching HTTP status. Without a `status` field, a Go `error` return becomes HTTP 500. Use this to signal 400/404/502 etc. without every error surfacing as 200-OK-with-body.
+- **Redirect** — `{"redirect": "<url>", "status": <303>}` issues an HTTP redirect (default 303 See Other).
+- **HTML page** — `{"html": "<markup>", "title": "...", "active_page": "..."}` wraps the HTML in the platform's `plugin_wrapper.pongo2` layout. Set `"raw": true` to emit the HTML without the layout.
+- **Binary** — `{"_binary": true, "content_type": "...", "data": "<base64>"}` streams the decoded bytes with the given content type.
+- **JSON** (default) — any other JSON object is served as `application/json` with HTTP 200.
+
 ## Sandbox & Security Model
 
 Every plugin receives a **SandboxedHostAPI** (`internal/platform/plugin/sandbox.go`) that wraps the real HostAPI with per-plugin enforcement:

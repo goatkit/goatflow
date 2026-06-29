@@ -458,12 +458,34 @@ func buildPluginArgs(c *gin.Context, pluginName ...string) json.RawMessage {
 		}
 	}
 
-	// Request body (if present)
+	// Request body (if present). Parse JSON bodies into the args map so
+	// handlers that unmarshal into a struct pick fields up for free. For
+	// non-JSON bodies (XML, CSV, plain text — e.g. an OTRS FAQ import),
+	// capture the raw bytes and pass them through as _body / _content_type
+	// so plugins can process payloads the JSON merger would otherwise drop.
 	if c.Request.Body != nil && c.Request.ContentLength > 0 {
-		var body map[string]any
-		if err := c.ShouldBindJSON(&body); err == nil {
-			for k, v := range body {
-				args[k] = v
+		raw, err := io.ReadAll(io.LimitReader(c.Request.Body, maxPluginBodySize+1))
+		if err == nil {
+			if int64(len(raw)) > maxPluginBodySize {
+				c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "plugin request body too large"})
+				c.Abort()
+				return nil
+			}
+			// Restore the body in case a downstream reader needs it.
+			c.Request.Body = io.NopCloser(bytes.NewReader(raw))
+
+			contentType := c.GetHeader("Content-Type")
+			if strings.Contains(strings.ToLower(contentType), "application/json") {
+				var body map[string]any
+				if err := json.Unmarshal(raw, &body); err == nil {
+					for k, v := range body {
+						args[k] = v
+					}
+				}
+			} else {
+				// Non-JSON payload: pass the raw body through verbatim.
+				args["_body"] = string(raw)
+				args["_content_type"] = contentType
 			}
 		}
 	}
@@ -958,6 +980,10 @@ func orgIDFromContext(c *gin.Context) int64 {
 	return 0
 }
 
+// maxPluginBodySize is the maximum request body size passed through to a
+// plugin via buildPluginArgs (4MB). Covers large imports such as an OTRS
+// FAQ XML export while bounding memory per request.
+const maxPluginBodySize = 4 << 20
 // maxWebhookBodySize is the maximum request body size for webhook endpoints (1MB).
 const maxWebhookBodySize = 1 << 20
 
