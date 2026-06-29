@@ -3021,12 +3021,12 @@ check-i18n:
 .PHONY: check-deps
 check-deps:
 	@printf "🔒 Auditing frontend dependencies...\n"
-	@if command -v bun >/dev/null 2>&1 && [ -f bun.lockb ]; then \
-		bun pm scan 2>/dev/null || printf "  ⚠️  bun pm scan not available — skipping\n"; \
-	elif command -v npm >/dev/null 2>&1 && [ -f package.json ]; then \
+	@if command -v bun >/dev/null 2>&1 && [ -f bun.lockb ] && bun audit --help >/dev/null 2>&1; then \
+		bun audit >/dev/null 2>&1 || printf "  ⚠️  bun audit found issues (non-blocking)\n"; \
+	elif command -v npm >/dev/null 2>&1 && [ -f package-lock.json ]; then \
 		npm audit --omit=dev 2>/dev/null || printf "  ⚠️  npm audit found issues (non-blocking)\n"; \
 	else \
-		printf "  ℹ️  No package manager found — skipping dependency audit\n"; \
+		printf "  ℹ️  No supported package-manager audit found — skipping dependency audit\n"; \
 	fi
 
 #########################################
