@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/goatkit/goatflow/internal/api"
-	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/models"

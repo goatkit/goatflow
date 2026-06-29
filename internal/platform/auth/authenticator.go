@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/goatkit/goatflow/internal/models"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
 
 // Common errors.
@@ -20,13 +20,13 @@ var (
 type AuthProvider interface {
 	// Authenticate attempts to authenticate a user with the given credentials
 	// Returns the authenticated user and nil error on success
-	Authenticate(ctx context.Context, username, password string) (*models.User, error)
+	Authenticate(ctx context.Context, username, password string) (*platformmodels.User, error)
 
 	// GetUser retrieves user details by username/email
-	GetUser(ctx context.Context, identifier string) (*models.User, error)
+	GetUser(ctx context.Context, identifier string) (*platformmodels.User, error)
 
 	// ValidateToken validates an existing session/token
-	ValidateToken(ctx context.Context, token string) (*models.User, error)
+	ValidateToken(ctx context.Context, token string) (*platformmodels.User, error)
 
 	// Name returns the name of this auth provider
 	Name() string
@@ -61,7 +61,7 @@ func NewAuthenticator(providers ...AuthProvider) *Authenticator {
 }
 
 // Authenticate attempts to authenticate using all configured providers.
-func (a *Authenticator) Authenticate(ctx context.Context, username, password string) (*models.User, error) {
+func (a *Authenticator) Authenticate(ctx context.Context, username, password string) (*platformmodels.User, error) {
 	if len(a.providers) == 0 {
 		return nil, ErrAuthBackendFailed
 	}
@@ -91,7 +91,7 @@ func (a *Authenticator) Authenticate(ctx context.Context, username, password str
 }
 
 // GetUser retrieves user information from the primary provider.
-func (a *Authenticator) GetUser(ctx context.Context, identifier string) (*models.User, error) {
+func (a *Authenticator) GetUser(ctx context.Context, identifier string) (*platformmodels.User, error) {
 	if a.primary == nil {
 		return nil, ErrAuthBackendFailed
 	}
@@ -100,7 +100,7 @@ func (a *Authenticator) GetUser(ctx context.Context, identifier string) (*models
 }
 
 // ValidateToken validates a token using the primary provider.
-func (a *Authenticator) ValidateToken(ctx context.Context, token string) (*models.User, error) {
+func (a *Authenticator) ValidateToken(ctx context.Context, token string) (*platformmodels.User, error) {
 	if a.primary == nil {
 		return nil, ErrAuthBackendFailed
 	}

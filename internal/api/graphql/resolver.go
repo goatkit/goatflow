@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
-	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/cache"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/repository"

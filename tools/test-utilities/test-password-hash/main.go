@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/platform/auth"
 )
 
 func main() {

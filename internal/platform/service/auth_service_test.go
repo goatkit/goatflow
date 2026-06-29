@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/yamlmgmt"
 )
 

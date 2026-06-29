@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 

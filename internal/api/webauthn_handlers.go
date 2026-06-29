@@ -11,7 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"

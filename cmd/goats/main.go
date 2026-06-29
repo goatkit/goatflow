@@ -59,6 +59,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/services/k8s"
 	"github.com/goatkit/goatflow/internal/platform/yamlmgmt"
 	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/runner/tasks"
 	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/services/scheduler"
@@ -195,6 +196,9 @@ func main() {
 		adapter := yamlmgmt.NewConfigAdapter(vm)
 		platformservice.SetConfigAdapter(adapter)
 	}
+	auth.SetUserRepoFactory(func(db *sql.DB) auth.UserLookup {
+		return repository.NewUserRepository(db)
+	})
 	ticketNumGen := setup.Generator
 	systemID := setup.SystemID
 

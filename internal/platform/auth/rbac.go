@@ -1,6 +1,6 @@
 package auth
 
-import "github.com/goatkit/goatflow/internal/models"
+import platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 
 type Permission string
 
@@ -36,12 +36,12 @@ const (
 )
 
 type RBAC struct {
-	rolePermissions map[models.UserRole][]Permission
+	rolePermissions map[platformmodels.UserRole][]Permission
 }
 
 func NewRBAC() *RBAC {
 	rbac := &RBAC{
-		rolePermissions: make(map[models.UserRole][]Permission),
+		rolePermissions: make(map[platformmodels.UserRole][]Permission),
 	}
 	rbac.initializePermissions()
 	return rbac
@@ -49,7 +49,7 @@ func NewRBAC() *RBAC {
 
 func (r *RBAC) initializePermissions() {
 	// Admin has all permissions
-	r.rolePermissions[models.RoleAdmin] = []Permission{
+	r.rolePermissions[platformmodels.RoleAdmin] = []Permission{
 		PermissionTicketCreate, PermissionTicketRead, PermissionTicketUpdate, PermissionTicketDelete,
 		PermissionTicketAssign, PermissionTicketClose,
 		PermissionUserCreate, PermissionUserRead, PermissionUserUpdate, PermissionUserDelete,
@@ -60,7 +60,7 @@ func (r *RBAC) initializePermissions() {
 	}
 
 	// Agent has ticket and limited user permissions
-	r.rolePermissions[models.RoleAgent] = []Permission{
+	r.rolePermissions[platformmodels.RoleAgent] = []Permission{
 		PermissionTicketCreate, PermissionTicketRead, PermissionTicketUpdate,
 		PermissionTicketAssign, PermissionTicketClose,
 		PermissionUserRead,
@@ -69,13 +69,13 @@ func (r *RBAC) initializePermissions() {
 	}
 
 	// Customer can only manage their own tickets
-	r.rolePermissions[models.RoleCustomer] = []Permission{
+	r.rolePermissions[platformmodels.RoleCustomer] = []Permission{
 		PermissionOwnTicketRead, PermissionOwnTicketCreate,
 	}
 }
 
 func (r *RBAC) HasPermission(role string, permission Permission) bool {
-	userRole := models.UserRole(role)
+	userRole := platformmodels.UserRole(role)
 	permissions, exists := r.rolePermissions[userRole]
 	if !exists {
 		return false
@@ -91,18 +91,18 @@ func (r *RBAC) HasPermission(role string, permission Permission) bool {
 }
 
 func (r *RBAC) GetRolePermissions(role string) []Permission {
-	userRole := models.UserRole(role)
+	userRole := platformmodels.UserRole(role)
 	return r.rolePermissions[userRole]
 }
 
 func (r *RBAC) CanAccessTicket(role string, ticketOwnerID, userID uint) bool {
 	// Admins and Agents can access any ticket
-	if role == string(models.RoleAdmin) || role == string(models.RoleAgent) {
+	if role == string(platformmodels.RoleAdmin) || role == string(platformmodels.RoleAgent) {
 		return true
 	}
 
 	// Customers can only access their own tickets
-	if role == string(models.RoleCustomer) {
+	if role == string(platformmodels.RoleCustomer) {
 		return ticketOwnerID == userID
 	}
 
@@ -111,7 +111,7 @@ func (r *RBAC) CanAccessTicket(role string, ticketOwnerID, userID uint) bool {
 
 func (r *RBAC) CanModifyUser(actorRole string, targetUserRole string) bool {
 	// Only admins can modify other users
-	if actorRole != string(models.RoleAdmin) {
+	if actorRole != string(platformmodels.RoleAdmin) {
 		return false
 	}
 

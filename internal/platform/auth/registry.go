@@ -4,13 +4,36 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
+
+// UserLookup is the subset of user repository methods auth providers need.
+// Product code injects a concrete *repository.UserRepository, which satisfies this interface.
+type UserLookup interface {
+	GetByLogin(login string) (*platformmodels.User, error)
+	GetByEmail(email string) (*platformmodels.User, error)
+}
 
 // ProviderDependencies bundles common resources providers may need.
 type ProviderDependencies struct {
-	DB *sql.DB
+	DB       *sql.DB
+	UserRepo UserLookup
 	// Config adapter kept generic to avoid import cycle; accessed via injected function.
 	// We expose a getter so providers wanting config can perform a type assertion.
+}
+
+var userRepoFactory func(*sql.DB) UserLookup
+
+// SetUserRepoFactory injects a factory that creates a UserLookup from a *sql.DB.
+// Product code calls this at boot to wire repository.UserRepository without a platform import.
+func SetUserRepoFactory(f func(*sql.DB) UserLookup) { userRepoFactory = f }
+
+func getUserRepo(db *sql.DB) UserLookup {
+	if userRepoFactory != nil {
+		return userRepoFactory(db)
+	}
+	return nil
 }
 
 // ProviderFactory builds an AuthProvider given dependencies.

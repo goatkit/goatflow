@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/goatkit/goatflow/internal/models"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
 
 // test helper: capture registry then restore.
@@ -33,16 +33,16 @@ type fakeProvider struct {
 	authenticated bool
 }
 
-func (f *fakeProvider) Authenticate(ctx context.Context, u, pw string) (*models.User, error) {
+func (f *fakeProvider) Authenticate(ctx context.Context, u, pw string) (*platformmodels.User, error) {
 	if f.authenticated {
-		return &models.User{Login: u, Email: u, Role: "Agent", ValidID: 1}, nil
+		return &platformmodels.User{Login: u, Email: u, Role: "Agent", ValidID: 1}, nil
 	}
 	return nil, ErrInvalidCredentials
 }
-func (f *fakeProvider) GetUser(ctx context.Context, id string) (*models.User, error) {
-	return &models.User{Login: id, Email: id, Role: "Agent", ValidID: 1}, nil
+func (f *fakeProvider) GetUser(ctx context.Context, id string) (*platformmodels.User, error) {
+	return &platformmodels.User{Login: id, Email: id, Role: "Agent", ValidID: 1}, nil
 }
-func (f *fakeProvider) ValidateToken(ctx context.Context, t string) (*models.User, error) {
+func (f *fakeProvider) ValidateToken(ctx context.Context, t string) (*platformmodels.User, error) {
 	return nil, ErrAuthBackendFailed
 }
 func (f *fakeProvider) Name() string  { return f.n }

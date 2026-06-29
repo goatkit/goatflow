@@ -7,30 +7,27 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/goatkit/goatflow/internal/models"
-	"github.com/goatkit/goatflow/internal/repository"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
 
 // DatabaseAuthProvider provides authentication against the database.
 type DatabaseAuthProvider struct {
-	userRepo *repository.UserRepository
+	userRepo UserLookup
 	db       *sql.DB
 	hasher   *PasswordHasher
 }
 
-// NewDatabaseAuthProvider creates a new database authentication provider.
-func NewDatabaseAuthProvider(db *sql.DB) *DatabaseAuthProvider {
+func NewDatabaseAuthProvider(db *sql.DB, userRepo UserLookup) *DatabaseAuthProvider {
 	return &DatabaseAuthProvider{
-		userRepo: repository.NewUserRepository(db),
+		userRepo: userRepo,
 		db:       db,
 		hasher:   NewPasswordHasher(),
 	}
 }
-
 // Authenticate authenticates a user against the database.
-func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, password string) (*models.User, error) {
+func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, password string) (*platformmodels.User, error) {
 	// Try to find user by login or email
-	var user *models.User
+	var user *platformmodels.User
 	var err error
 	isCustomer := false
 
@@ -67,8 +64,8 @@ func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, passw
 }
 
 // GetUser retrieves user details by username or email.
-func (p *DatabaseAuthProvider) GetUser(ctx context.Context, identifier string) (*models.User, error) {
-	var user *models.User
+func (p *DatabaseAuthProvider) GetUser(ctx context.Context, identifier string) (*platformmodels.User, error) {
+	var user *platformmodels.User
 	var err error
 
 	// Check if identifier looks like an email
@@ -96,7 +93,7 @@ func (p *DatabaseAuthProvider) GetUser(ctx context.Context, identifier string) (
 }
 
 // ValidateToken validates a session token (for future implementation).
-func (p *DatabaseAuthProvider) ValidateToken(ctx context.Context, token string) (*models.User, error) {
+func (p *DatabaseAuthProvider) ValidateToken(ctx context.Context, token string) (*platformmodels.User, error) {
 	// TODO: Implement token validation when we add session management
 	// For now, return not implemented
 	return nil, ErrAuthBackendFailed
@@ -113,7 +110,7 @@ func (p *DatabaseAuthProvider) Priority() int {
 }
 
 // authenticateCustomerUser authenticates a customer user from the customer_user table.
-func (p *DatabaseAuthProvider) authenticateCustomerUser(ctx context.Context, username, password string) (*models.User, error) {
+func (p *DatabaseAuthProvider) authenticateCustomerUser(ctx context.Context, username, password string) (*platformmodels.User, error) {
 	// Query customer_user table - allow login by username OR email
 	var login, email, customerID, firstName, lastName, pw string
 	var validID int
@@ -146,7 +143,7 @@ func (p *DatabaseAuthProvider) authenticateCustomerUser(ctx context.Context, use
 	}
 
 	// Convert to models.User format
-	user := &models.User{
+	user := &platformmodels.User{
 		ID:        uint(id),
 		Login:     login,
 		Email:     email,
@@ -166,6 +163,10 @@ func init() {
 		if deps.DB == nil {
 			return nil, errors.New("db required for database auth provider")
 		}
-		return NewDatabaseAuthProvider(deps.DB), nil
+		userRepo := deps.UserRepo
+		if userRepo == nil {
+			userRepo = getUserRepo(deps.DB)
+		}
+		return NewDatabaseAuthProvider(deps.DB, userRepo), nil
 	})
 }

@@ -8,7 +8,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/goatkit/goatflow/internal/auth"
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/yamlmgmt"
 )

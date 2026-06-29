@@ -7,12 +7,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/goatkit/goatflow/internal/models"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
 
 // StaticAuthProvider offers simple in-memory users for demos/tests.
 type StaticAuthProvider struct {
-	users    map[string]*models.User // key: login (lowercase)
+	users    map[string]*platformmodels.User // key: login (lowercase)
 	pwMap    map[string]string       // login -> plain or hashed (bcrypt/sha*)
 	hasher   *PasswordHasher
 	priority int
@@ -22,7 +22,7 @@ type StaticAuthProvider struct {
 // static user spec env format: user:password:Role(Agent|Customer|Admin)
 // Multiple separated by commas.
 func NewStaticAuthProvider(specs []string) *StaticAuthProvider {
-	users := map[string]*models.User{}
+	users := map[string]*platformmodels.User{}
 	pw := map[string]string{}
 	hasher := NewPasswordHasher()
 	for _, s := range specs {
@@ -37,14 +37,14 @@ func NewStaticAuthProvider(specs []string) *StaticAuthProvider {
 		login := parts[0]
 		pass := parts[1]
 		role := parts[2]
-		u := &models.User{Login: login, Email: login + "@static.local", Role: role, ValidID: 1}
+		u := &platformmodels.User{Login: login, Email: login + "@static.local", Role: role, ValidID: 1}
 		users[strings.ToLower(login)] = u
 		pw[strings.ToLower(login)] = pass
 	}
 	return &StaticAuthProvider{users: users, pwMap: pw, hasher: hasher, priority: 1, name: "Static"}
 }
 
-func (p *StaticAuthProvider) Authenticate(ctx context.Context, username, password string) (*models.User, error) {
+func (p *StaticAuthProvider) Authenticate(ctx context.Context, username, password string) (*platformmodels.User, error) {
 	if p == nil {
 		return nil, ErrAuthBackendFailed
 	}
@@ -61,7 +61,7 @@ func (p *StaticAuthProvider) Authenticate(ctx context.Context, username, passwor
 	return nil, ErrInvalidCredentials
 }
 
-func (p *StaticAuthProvider) GetUser(ctx context.Context, identifier string) (*models.User, error) {
+func (p *StaticAuthProvider) GetUser(ctx context.Context, identifier string) (*platformmodels.User, error) {
 	if u, ok := p.users[strings.ToLower(identifier)]; ok {
 		clone := *u
 		return &clone, nil
@@ -69,7 +69,7 @@ func (p *StaticAuthProvider) GetUser(ctx context.Context, identifier string) (*m
 	return nil, ErrUserNotFound
 }
 
-func (p *StaticAuthProvider) ValidateToken(ctx context.Context, token string) (*models.User, error) {
+func (p *StaticAuthProvider) ValidateToken(ctx context.Context, token string) (*platformmodels.User, error) {
 	return nil, ErrAuthBackendFailed
 }
 

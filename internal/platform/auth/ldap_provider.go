@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/goatkit/goatflow/internal/models"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
 
 // LDAPConfig holds LDAP server configuration.
@@ -34,7 +34,7 @@ func NewLDAPAuthProvider(config *LDAPConfig) *LDAPAuthProvider {
 }
 
 // Authenticate authenticates a user against LDAP.
-func (p *LDAPAuthProvider) Authenticate(ctx context.Context, username, password string) (*models.User, error) {
+func (p *LDAPAuthProvider) Authenticate(ctx context.Context, username, password string) (*platformmodels.User, error) {
 	// TODO: Implement LDAP authentication
 	// 1. Connect to LDAP server
 	// 2. Bind with service account
@@ -47,13 +47,13 @@ func (p *LDAPAuthProvider) Authenticate(ctx context.Context, username, password 
 }
 
 // GetUser retrieves user details from LDAP.
-func (p *LDAPAuthProvider) GetUser(ctx context.Context, identifier string) (*models.User, error) {
+func (p *LDAPAuthProvider) GetUser(ctx context.Context, identifier string) (*platformmodels.User, error) {
 	// TODO: Implement LDAP user lookup
 	return nil, fmt.Errorf("LDAP user lookup not yet implemented")
 }
 
 // ValidateToken validates a session token.
-func (p *LDAPAuthProvider) ValidateToken(ctx context.Context, token string) (*models.User, error) {
+func (p *LDAPAuthProvider) ValidateToken(ctx context.Context, token string) (*platformmodels.User, error) {
 	// LDAP doesn't handle tokens directly
 	return nil, ErrAuthBackendFailed
 }
