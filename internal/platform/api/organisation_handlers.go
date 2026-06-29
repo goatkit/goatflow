@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/organisation"
+	"github.com/goatkit/goatflow/internal/platform/organisation"
 	"github.com/goatkit/goatflow/internal/routing"
 )
 

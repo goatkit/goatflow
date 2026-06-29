@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/database"
 	platformservice "github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/repository"

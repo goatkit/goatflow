@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/database"
-	"github.com/goatkit/goatflow/internal/pluginui"
+	"github.com/goatkit/goatflow/internal/platform/pluginui"
 	"github.com/goatkit/goatflow/internal/routing"
 )
 

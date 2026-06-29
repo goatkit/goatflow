@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/organisation"
+	"github.com/goatkit/goatflow/internal/platform/organisation"
 )
 
 // SandboxedHostAPI wraps a HostAPI with per-plugin permission enforcement

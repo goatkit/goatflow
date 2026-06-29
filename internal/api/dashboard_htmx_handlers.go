@@ -17,7 +17,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/i18n"
 	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/models"
-	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/platform/notifications"
 	"github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/routing"

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/platform/config"
 )
 
 // demoModeEnabled reports whether app.demo_mode is on, returning false if

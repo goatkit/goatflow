@@ -16,14 +16,14 @@ import (
 	"time"
 
 	"github.com/goatkit/goatflow/internal/cache"
-	"github.com/goatkit/goatflow/internal/customfields"
+	"github.com/goatkit/goatflow/internal/platform/customfields"
 	"github.com/goatkit/goatflow/internal/deletion"
-	"github.com/goatkit/goatflow/internal/organisation"
-	"github.com/goatkit/goatflow/internal/secureconfig"
-	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/platform/organisation"
+	"github.com/goatkit/goatflow/internal/platform/secureconfig"
+	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
-	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/platform/notifications"
 )
 
 // pluginLogEchoEnabled reports whether plugin log entries should be

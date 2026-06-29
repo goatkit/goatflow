@@ -15,11 +15,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 
-	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/mailqueue"
-	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/platform/notifications"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/services"

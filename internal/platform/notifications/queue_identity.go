@@ -7,7 +7,7 @@ import (
 	"net/mail"
 	"strings"
 
-	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/database"
 )
 

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/goatkit/goatflow/internal/pluginui"
+	"github.com/goatkit/goatflow/internal/platform/pluginui"
 )
 
 func TestBuildDefaultsWithoutDB(t *testing.T) {

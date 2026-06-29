@@ -13,11 +13,11 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/auth"
-	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
 	"github.com/goatkit/goatflow/internal/service"
-	"github.com/goatkit/goatflow/internal/sysconfig"
+	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 	"github.com/goatkit/goatflow/internal/platform/utils"
 )
 

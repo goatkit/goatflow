@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/goatkit/goatflow/internal/database"
-	"github.com/goatkit/goatflow/internal/sysconfig"
+	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 )
 
 // Note: Uses centralized GetTestAuthToken() and AddTestAuthCookie() from test_helpers.go

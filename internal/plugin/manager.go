@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/customfields"
+	"github.com/goatkit/goatflow/internal/platform/customfields"
 	"github.com/goatkit/goatflow/internal/deletion"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
 	"github.com/goatkit/goatflow/internal/platform/apierrors"
-	"github.com/goatkit/goatflow/internal/pluginui"
+	"github.com/goatkit/goatflow/internal/platform/pluginui"
 )
 
 // LazyLoader is the interface for lazy-loading plugins on demand.

@@ -15,7 +15,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/shared"
-	"github.com/goatkit/goatflow/internal/sysconfig"
+	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 )
 
 // handleAdminCustomerCompanies shows the customer companies list.

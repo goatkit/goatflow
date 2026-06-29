@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/services/scheduler"
 )

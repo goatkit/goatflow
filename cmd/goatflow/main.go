@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/database"
 )
 

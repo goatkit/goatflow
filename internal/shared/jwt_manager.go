@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/goatkit/goatflow/internal/auth"
-	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/platform/config"
 )
 
 // parseDuration extends time.ParseDuration with support for "d" (days) suffix.

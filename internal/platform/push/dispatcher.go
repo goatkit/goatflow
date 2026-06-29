@@ -7,7 +7,7 @@ import (
 	"errors"
 	"log"
 
-	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/platform/notifications"
 )
 
 // PushConfig holds VAPID configuration for push dispatching.

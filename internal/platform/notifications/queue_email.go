@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"strings"
 
-	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/platform/config"
 )
 
 // EmailBranding bundles outbound email metadata for queue-based messages.

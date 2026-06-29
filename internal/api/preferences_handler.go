@@ -16,7 +16,7 @@ import (
 	platformservice "github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/service"
-	"github.com/goatkit/goatflow/internal/sysconfig"
+	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 )
 
 // HandleGetAvailableLanguages returns the list of supported languages (public, no auth required).

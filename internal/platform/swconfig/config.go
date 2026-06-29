@@ -9,8 +9,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/goatkit/goatflow/internal/pluginui"
-	"github.com/goatkit/goatflow/internal/sysconfig"
+	"github.com/goatkit/goatflow/internal/platform/pluginui"
+	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 )
 
 const (

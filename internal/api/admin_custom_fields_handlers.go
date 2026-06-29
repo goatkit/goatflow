@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/customfields"
+	"github.com/goatkit/goatflow/internal/platform/customfields"
 	"github.com/goatkit/goatflow/internal/shared"
 )
 

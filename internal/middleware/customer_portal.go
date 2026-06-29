@@ -11,7 +11,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/auth"
 	"github.com/goatkit/goatflow/internal/database"
-	"github.com/goatkit/goatflow/internal/sysconfig"
+	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 )
 
 // CaptivePluginLandingResolver maps a plugin name to its declared

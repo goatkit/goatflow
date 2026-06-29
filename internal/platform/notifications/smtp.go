@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/goatkit/goatflow/internal/config"
+	"github.com/goatkit/goatflow/internal/platform/config"
 )
 
 type EmailMessage struct {

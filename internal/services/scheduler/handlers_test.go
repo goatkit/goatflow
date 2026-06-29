@@ -12,7 +12,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/models"
-	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/platform/notifications"
 	"github.com/goatkit/goatflow/internal/repository"
 )
 
