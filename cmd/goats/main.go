@@ -59,7 +59,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/runner"
 	"github.com/goatkit/goatflow/internal/runner/tasks"
 	"github.com/goatkit/goatflow/internal/service"
-	"github.com/goatkit/goatflow/internal/services/k8s"
+	"github.com/goatkit/goatflow/internal/platform/services/k8s"
 	"github.com/goatkit/goatflow/internal/services/scheduler"
 	"github.com/goatkit/goatflow/internal/shared"
 	"github.com/goatkit/goatflow/internal/ticketnumber"
