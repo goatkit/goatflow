@@ -15,7 +15,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
 	"github.com/goatkit/goatflow/internal/service"
-	"github.com/goatkit/goatflow/internal/shared"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // HandleCustomerLogin is the exported handler for customer login POST requests.

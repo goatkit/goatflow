@@ -14,7 +14,7 @@ import (
 	"github.com/lib/pq"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/shared"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 ) // Service represents a service in OTRS
 type Service struct {
 	ID         int       `json:"id"`

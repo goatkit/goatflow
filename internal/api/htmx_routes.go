@@ -15,7 +15,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/ldap"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/routing"
-	"github.com/goatkit/goatflow/internal/shared"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // SetupHTMXRoutes sets up all HTMX routes on the given router.

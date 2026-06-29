@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/shared"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // SLA represents Service Level Agreement status.

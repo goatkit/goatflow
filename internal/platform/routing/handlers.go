@@ -15,7 +15,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
 	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
-	"github.com/goatkit/goatflow/internal/shared"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // DynamicFieldLoader is a function type for loading dynamic fields to avoid import cycles.

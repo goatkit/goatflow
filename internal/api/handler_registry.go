@@ -16,7 +16,7 @@ import (
 	_ "github.com/goatkit/goatflow/internal/platform/api"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
 	"github.com/goatkit/goatflow/internal/platform/routing"
-	"github.com/goatkit/goatflow/internal/shared"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // Simple global handler registry to decouple YAML route loader from hardcoded map.

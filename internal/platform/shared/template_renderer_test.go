@@ -8,7 +8,7 @@ import (
 )
 
 func TestCountrySelectTemplateExecutesWithFallbackCountries(t *testing.T) {
-	templateDir := filepath.Join("..", "..", "templates")
+	templateDir := filepath.Join("..", "..", "..", "templates")
 	renderer, err := NewTemplateRenderer(templateDir)
 	if err != nil {
 		t.Fatalf("failed to create renderer: %v", err)

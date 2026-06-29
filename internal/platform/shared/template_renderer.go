@@ -17,9 +17,8 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/i18n"
 	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
-	"github.com/goatkit/goatflow/internal/models"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/version"
-	"github.com/goatkit/goatflow/internal/repository"
 )
 
 // TemplateOverrideProvider allows plugins to override templates without import cycles.
@@ -286,15 +285,15 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 }
 
 // getUserFromContext extracts the user from gin context (set by JWT middleware).
-func getUserFromContext(c *gin.Context, isAdmin bool) *models.User {
+func getUserFromContext(c *gin.Context, isAdmin bool) *platformmodels.User {
 	// Try direct user object first
 	userInterface, exists := c.Get("user")
 	if exists {
-		if user, ok := userInterface.(*models.User); ok {
+		if user, ok := userInterface.(*platformmodels.User); ok {
 			user.IsInAdminGroup = isAdmin
 			return user
 		}
-		if user, ok := userInterface.(models.User); ok {
+		if user, ok := userInterface.(platformmodels.User); ok {
 			user.IsInAdminGroup = isAdmin
 			return &user
 		}
@@ -310,7 +309,7 @@ func getUserFromContext(c *gin.Context, isAdmin bool) *models.User {
 		return nil
 	}
 
-	user := &models.User{IsInAdminGroup: isAdmin, ID: userID}
+	user := &platformmodels.User{IsInAdminGroup: isAdmin, ID: userID}
 
 	// Set role
 	if role, ok := c.Get("user_role"); ok {
@@ -370,7 +369,7 @@ func addMaintenanceContext(ctx pongo2.Context) {
 		return
 	}
 
-	repo := repository.NewSystemMaintenanceRepository(db)
+	repo := middleware.NewMaintenanceChecker(db)
 
 	// Check active maintenance
 	if active, err := repo.IsActive(); err == nil && active != nil {

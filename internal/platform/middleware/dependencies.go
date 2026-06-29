@@ -44,6 +44,15 @@ func SetSessionServiceFactory(f func(*sql.DB) SessionChecker) { sessionServiceFa
 // SetMaintenanceCheckerFactory injects a maintenance checker factory from product code.
 func SetMaintenanceCheckerFactory(f func(*sql.DB) MaintenanceChecker) { maintenanceCheckerFactory = f }
 
+// NewMaintenanceChecker creates a MaintenanceChecker from the injected factory.
+// Returns nil if no factory is set.
+func NewMaintenanceChecker(db *sql.DB) MaintenanceChecker {
+	if maintenanceCheckerFactory != nil {
+		return maintenanceCheckerFactory(db)
+	}
+	return nil
+}
+
 // SetQueueAccessCheckerFactory injects a queue access checker factory from product code.
 func SetQueueAccessCheckerFactory(f func(*sql.DB) QueueAccessChecker) { queueAccessCheckerFactory = f }
 

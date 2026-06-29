@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/shared"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 
 	"github.com/gin-gonic/gin"
 )

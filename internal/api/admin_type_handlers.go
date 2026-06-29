@@ -13,7 +13,7 @@ import (
 	"github.com/lib/pq"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/shared"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // TicketType represents a ticket type.

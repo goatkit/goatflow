@@ -64,7 +64,7 @@ import (
 	"github.com/goatkit/goatflow/internal/runner/tasks"
 	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/services/scheduler"
-	"github.com/goatkit/goatflow/internal/shared"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/ticketnumber"
 )
 
@@ -215,6 +215,9 @@ func main() {
 	})
 	middleware.SetTicketQueueResolverFactory(func() middleware.TicketQueueResolver {
 		return &repository.TicketQueueResolverImpl{}
+	})
+	shared.SetSessionManagerFactory(func(db *sql.DB) shared.SessionManager {
+		return service.NewSessionService(repository.NewSessionRepository(db))
 	})
 	ticketNumGen := setup.Generator
 	systemID := setup.SystemID

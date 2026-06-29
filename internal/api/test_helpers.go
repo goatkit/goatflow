@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/goatkit/goatflow/internal/shared"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 var (
