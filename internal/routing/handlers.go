@@ -14,7 +14,7 @@ import (
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/httpcookie"
 	"github.com/goatkit/goatflow/internal/middleware"
-	"github.com/goatkit/goatflow/internal/models"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/shared"
 )
 
@@ -197,7 +197,7 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			// membership. Branch on claims.Role so customer JWTs stay on
 			// the customer_user side, agent JWTs on the users side. The
 			// email-fallback path is similarly scoped.
-			var userObj *models.User
+			var userObj *platformmodels.User
 			isCustomerClaims := claims.Role == "Customer"
 			db, dbErr := database.GetDB()
 			if dbErr == nil && db != nil {
@@ -214,7 +214,7 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 					query := `SELECT id, login, first_name, last_name FROM customer_user WHERE login = ? LIMIT 1`
 					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(query), resolveLogin).Scan(&cuID, &login, &firstName, &lastName); err == nil {
 						resolvedID = cuID
-						userObj = &models.User{ID: uint(cuID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Email: login.String, Role: "Customer", ValidID: 1}
+						userObj = &platformmodels.User{ID: uint(cuID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Email: login.String, Role: "Customer", ValidID: 1}
 					}
 				} else if resolvedID == 0 {
 					var id int64
@@ -222,12 +222,12 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 					// Our schema doesn't have users.email; login acts as email. Lookup by login.
 					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT id, login, first_name, last_name, title FROM users WHERE login = ? LIMIT 1`), claims.Email).Scan(&id, &login, &firstName, &lastName, &title); err == nil {
 						resolvedID = id
-						userObj = &models.User{ID: uint(id), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Title: title.String, Email: login.String, ValidID: 1}
+						userObj = &platformmodels.User{ID: uint(id), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Title: title.String, Email: login.String, ValidID: 1}
 					}
 				} else {
 					var login, firstName, lastName, title sql.NullString
 					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT login, first_name, last_name, title FROM users WHERE id = ?`), resolvedID).Scan(&login, &firstName, &lastName, &title); err == nil {
-						userObj = &models.User{ID: uint(resolvedID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Title: title.String, Email: login.String, ValidID: 1}
+						userObj = &platformmodels.User{ID: uint(resolvedID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Title: title.String, Email: login.String, ValidID: 1}
 					}
 				}
 			}

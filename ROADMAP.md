@@ -391,9 +391,10 @@ Universal custom fields on every core entity. Plugins declare fields at registra
       zinc mock refactored to remove production-code product import.
 
 **Phase 2 — Complete structural boundary**
-- [ ] Decouple `internal/routing/` from `internal/api` and `internal/models` — define
-      `HandlerResolver` interface, replace direct handler imports with lookup-by-name
-      at registration time.
+- [x] Decouple `internal/routing/` from `internal/api` and `internal/models` — added
+      `HandlerResolver`, switched routing loaders to resolver interface, moved routing
+      user context to `platform/models.User`, and moved real YAML handler coverage to
+      API-side tests.
 - [ ] Reorganize `internal/api/` — move ~30-40 platform handler files (auth, api_token,
       user, organisation, push, webauthn, totp, mcp, plugin, custom_fields, deletion,
       i18n, ldap) to `internal/platform/api/`; keep product handlers (ticket, queue,

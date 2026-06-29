@@ -20,7 +20,7 @@ type RouteLoader struct {
 	mu         sync.RWMutex
 	routesPath string
 	configs    map[string]*RouteConfig
-	registry   *HandlerRegistry
+	registry   HandlerResolver
 	router     *gin.Engine
 	watcher    *fsnotify.Watcher
 
@@ -55,7 +55,7 @@ func WithEnvironment(env string) LoaderOption {
 }
 
 // NewRouteLoader creates a new route loader.
-func NewRouteLoader(routesPath string, registry *HandlerRegistry, router *gin.Engine, opts ...LoaderOption) (*RouteLoader, error) {
+func NewRouteLoader(routesPath string, registry HandlerResolver, router *gin.Engine, opts ...LoaderOption) (*RouteLoader, error) {
 	loader := &RouteLoader{
 		routesPath:  routesPath,
 		configs:     make(map[string]*RouteConfig),
@@ -536,7 +536,7 @@ func (l *RouteLoader) GetLoadedRoutes() map[string]*RouteConfig {
 }
 
 // LoadYAMLRoutes is a package-level function that creates a RouteLoader and loads all routes.
-func LoadYAMLRoutes(router *gin.Engine, routesPath string, registry *HandlerRegistry) error {
+func LoadYAMLRoutes(router *gin.Engine, routesPath string, registry HandlerResolver) error {
 	loader, err := NewRouteLoader(routesPath, registry, router, WithHotReload(false))
 	if err != nil {
 		return fmt.Errorf("failed to create route loader: %w", err)
@@ -572,8 +572,7 @@ func LoadYAMLRoutesFromGlobalMap(router *gin.Engine, routesPath string) error {
 // LoadYAMLRoutesForTesting loads YAML routes for test/development scenarios.
 // This function auto-discovers the routes directory and uses the standard middleware.
 // Tests MUST authenticate properly - there is NO auth bypass.
-// This is the ONLY function that should be used for loading YAML routes in tests -
-// do not use internal/api/yaml_router_loader.go directly (it's only for manifest generation).
+// Use this helper instead of product-package route loaders in routing tests.
 func LoadYAMLRoutesForTesting(router *gin.Engine) error {
 	// Try to find routes directory
 	routesPath, err := resolveRoutesDir("./routes")

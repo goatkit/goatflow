@@ -59,7 +59,9 @@ func RebuildDynamicEngine() {
 
 	// 1. YAML routes
 	if dynRouteDir != "" {
-		if err := routing.LoadYAMLRoutesFromGlobalMap(eng, dynRouteDir); err != nil {
+		resolver := NewRoutingHandlerResolver()
+		routing.SetGlobalRegistry(resolver.Registry())
+		if err := routing.LoadYAMLRoutes(eng, dynRouteDir, resolver); err != nil {
 			log.Printf("⚠️  Dynamic engine: failed to load YAML routes: %v", err)
 		} else {
 			log.Println("✅ YAML routes loaded")

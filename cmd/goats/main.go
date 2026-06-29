@@ -48,6 +48,7 @@ import (
 	"github.com/goatkit/goatflow/internal/lookups"
 	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/platform/services/adapter"
 	"github.com/goatkit/goatflow/internal/plugin"
 	"github.com/goatkit/goatflow/internal/plugin/core"
 	"github.com/goatkit/goatflow/internal/plugin/example"
@@ -56,7 +57,6 @@ import (
 	"github.com/goatkit/goatflow/internal/runner"
 	"github.com/goatkit/goatflow/internal/runner/tasks"
 	"github.com/goatkit/goatflow/internal/service"
-	"github.com/goatkit/goatflow/internal/platform/services/adapter"
 	"github.com/goatkit/goatflow/internal/services/k8s"
 	"github.com/goatkit/goatflow/internal/services/scheduler"
 	"github.com/goatkit/goatflow/internal/shared"
@@ -434,7 +434,7 @@ func main() {
 	if pluginDir == "" {
 		pluginDir = filepath.Join(configDir, "plugins")
 	}
-	api.SetPluginDir(pluginDir)      // Enable plugin uploads
+	api.SetPluginDir(pluginDir) // Enable plugin uploads
 
 	// Configure loader options
 	var loaderOpts []pluginloader.LoaderOption
@@ -489,7 +489,7 @@ func main() {
 	// Register plugin-defined routes with the router
 	// (done later after router is created)
 
-	// Load YAML routes using GlobalHandlerMap (handlers self-register via init())
+	// Load YAML routes through the API-backed routing resolver.
 	routesDir := os.Getenv("ROUTES_DIR")
 	if routesDir == "" {
 		routesDir = "/app/routes"

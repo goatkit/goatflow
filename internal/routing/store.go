@@ -56,7 +56,7 @@ type FileRouteStore struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
 	router           *gin.Engine
-	registry         *HandlerRegistry
+	registry         HandlerResolver
 	registeredRoutes map[string]bool // key: method:path, value: registered
 }
 
@@ -79,7 +79,7 @@ var (
 )
 
 // NewFileRouteStore creates a new file-based route store.
-func NewFileRouteStore(routesDir string, router *gin.Engine, registry *HandlerRegistry) *FileRouteStore {
+func NewFileRouteStore(routesDir string, router *gin.Engine, registry HandlerResolver) *FileRouteStore {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &FileRouteStore{
@@ -706,7 +706,7 @@ type SimpleRouteManager struct {
 }
 
 // NewSimpleRouteManager creates a route manager that uses file-based storage.
-func NewSimpleRouteManager(routesDir string, router *gin.Engine, registry *HandlerRegistry) *SimpleRouteManager {
+func NewSimpleRouteManager(routesDir string, router *gin.Engine, registry HandlerResolver) *SimpleRouteManager {
 	store := NewFileRouteStore(routesDir, router, registry)
 
 	return &SimpleRouteManager{

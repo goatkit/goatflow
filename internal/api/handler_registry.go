@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -58,6 +59,91 @@ func ListHandlers() []string {
 		out = append(out, k)
 	}
 	sort.Strings(out)
+	return out
+}
+
+// RoutingHandlerResolver exposes API-registered handlers through routing's resolver interface.
+type RoutingHandlerResolver struct {
+	registry *routing.HandlerRegistry
+}
+
+var _ routing.HandlerResolver = RoutingHandlerResolver{}
+
+// NewRoutingHandlerResolver initializes core API handlers and returns a routing resolver.
+func NewRoutingHandlerResolver() RoutingHandlerResolver {
+	ensureCoreHandlers()
+
+	registry := routing.NewHandlerRegistry()
+	for name, handler := range registeredHandlers() {
+		registry.Override(name, handler)
+	}
+	routing.RegisterExistingHandlers(registry)
+
+	return RoutingHandlerResolver{registry: registry}
+}
+
+// Registry returns the populated routing registry for callers that need registry-specific APIs.
+func (r RoutingHandlerResolver) Registry() *routing.HandlerRegistry {
+	return r.registry
+}
+
+// Get resolves a registered API handler by route handler name.
+func (r RoutingHandlerResolver) Get(name string) (gin.HandlerFunc, error) {
+	if r.registry != nil {
+		return r.registry.Get(name)
+	}
+	if h, ok := GetHandler(name); ok {
+		return h, nil
+	}
+	if h, ok := routing.GlobalHandlerMap[name]; ok {
+		return h, nil
+	}
+	return nil, fmt.Errorf("handler %s not found", name)
+}
+
+// GetMiddleware resolves registered routing middleware by name.
+func (r RoutingHandlerResolver) GetMiddleware(name string) (gin.HandlerFunc, error) {
+	if r.registry == nil {
+		return nil, fmt.Errorf("middleware %s not found", name)
+	}
+	return r.registry.GetMiddleware(name)
+}
+
+// HandlerExists reports whether a route handler name is registered.
+func (r RoutingHandlerResolver) HandlerExists(name string) bool {
+	if r.registry != nil {
+		return r.registry.HandlerExists(name)
+	}
+	if _, err := r.Get(name); err == nil {
+		return true
+	}
+	return false
+}
+
+// IsFeatureEnabled reports whether a route feature flag is enabled.
+func (r RoutingHandlerResolver) IsFeatureEnabled(name string) bool {
+	if r.registry == nil {
+		return false
+	}
+	return r.registry.IsFeatureEnabled(name)
+}
+
+// RegisteredHandlers returns a copy of all API handlers known to the resolver.
+func (RoutingHandlerResolver) RegisteredHandlers() map[string]gin.HandlerFunc {
+	return registeredHandlers()
+}
+
+func registeredHandlers() map[string]gin.HandlerFunc {
+	handlerRegistryMu.RLock()
+	out := make(map[string]gin.HandlerFunc, len(handlerRegistry)+len(routing.GlobalHandlerMap))
+	for name, h := range handlerRegistry {
+		out[name] = h
+	}
+	handlerRegistryMu.RUnlock()
+
+	for name, h := range routing.GlobalHandlerMap {
+		out[name] = h
+	}
 	return out
 }
 

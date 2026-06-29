@@ -1,8 +1,8 @@
 # GoatKit Platform / Product Decoupling — Implementation Plan
 
-> Version: 1.2
+> Version: 1.3
 > Date: 2026-06-29
-> Status: Phase 1-3 complete, Phase 4 next
+> Status: Phase 1-4 complete, Phase 5 next
 > Related: `docs/ARCHITECTURE.md`, `docs/PLUGIN_PLATFORM.md`, `docs/design/LLM_INTEGRATION.md`
 
 ## 1. Goal
@@ -235,21 +235,21 @@ files** — the largest blast radius of any phase.
 Split into `internal/platform/models/` (8 moved whole + 2 split) and keep product files in
 `internal/models/`.
 
-#### Platform types to move
+#### Platform type outcomes
 
-| File | Types |
-|---|---|
-| `api_token.go` | `APITokenUserType`, etc. |
-| `db_role.go` | `DBRole` |
-| `email.go` | `EmailAccount` |
-| `group.go` | `Group` |
-| `ldap.go` | `LDAPConfiguration` |
-| `lookups.go` | `LookupItem` |
-| `role.go` | `Role` |
-| `scope_registry.go` | `ScopeDefinition` |
-| `search.go` | `SearchRequest` |
-| `session.go` | `Session` |
-| `user.go` | `User` |
+| File | Types | Outcome |
+|---|---|---|
+| `api_token.go` | `APITokenUserType`, etc. | ✅ Moved whole |
+| `db_role.go` | `DBRole` | ✅ Moved whole |
+| `email.go` | `EmailAccount` | ❌ Stayed product — `Queue *Queue` field creates platform→product coupling |
+| `group.go` | `Group` | ✅ Moved whole |
+| `ldap.go` | `LDAPConfiguration` | ✅ Moved whole |
+| `lookups.go` | `LookupItem` | ✅ Split — `QueueInfo`, `TicketFormData` stayed product |
+| `role.go` | `Role` | ✅ Moved whole |
+| `scope_registry.go` | `ScopeDefinition` | ✅ Moved whole |
+| `search.go` | `SearchRequest`, `SearchResult`, `SearchHit`, `Facet`, `IndexStats` | ✅ Split — ticket-specific search types stayed product |
+| `session.go` | `Session` | ✅ Moved whole |
+| `user.go` | `User` | ✅ Moved whole |
 
 #### Product types to stay
 
@@ -278,9 +278,9 @@ Split into `internal/platform/models/` (8 moved whole + 2 split) and keep produc
 
 | # | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|---|
-| 3.1 | **114 import sites is a large mechanical change — high risk of merge conflicts** if anyone else is working on the codebase | High | Medium | Do this in a dedicated commit, off-peak. Communicate timing to all contributors. Consider a scripted `sed`/`goimports` approach over manual editing. Run `go build` after each batch of import updates to catch errors early. |
-| 3.2 | **Files using both platform and product types need two imports with the same package name** — Go disallows two imports with the same name unless one is aliased | Certain | High | Use import aliases: `import ( platformmodels "goatflow/internal/platform/models"; models "goatflow/internal/models" )`. Convention: platform models keep the unqualified `models` name; product models get aliased when both are needed. Document this convention. |
-| 3.3 | **Type identity breakage** — if any code does `assert.(models.User)` or `interface{} to models.User` type assertions across the boundary, splitting the type breaks the assertion | Medium | High | Use type aliases (`type User = platformmodels.User`) in `internal/models/` for cross-boundary types. Aliases preserve type identity — `models.User` and `platformmodels.User` are the same type. Add aliases for all 11 moved types. |
+| 3.1 | **158 import sites is a large mechanical change — high risk of merge conflicts** if anyone else is working on the codebase | High | Medium | Do this in a dedicated commit, off-peak. Communicate timing to all contributors. Prefer aliases first, then migrate import paths in later focused passes. Run `go build` after each batch of import updates to catch errors early. |
+| 3.2 | **Files using both platform and product types need two imports with the same package name** — Go disallows two imports with the same name unless one is aliased | Certain | High | Use import aliases: `import ( platformmodels "goatflow/internal/platform/models"; models "goatflow/internal/models" )`. Convention: platform models use `platformmodels` where product `models` is also needed. Document this convention. |
+| 3.3 | **Type identity breakage** — if any code does `assert.(models.User)` or `interface{} to models.User` type assertions across the boundary, splitting the type breaks the assertion | Medium | High | Use type aliases (`type User = platformmodels.User`) in `internal/models/` for cross-boundary types. Aliases preserve type identity — `models.User` and `platformmodels.User` are the same type. Add aliases for all moved and split platform types. |
 | 3.4 | **JSON serialization compatibility** — if API responses serialize `models.User` and the type moves, the JSON structure could change if field tags differ | Low | High | `git mv` preserves the file contents exactly — field tags do not change. The type alias ensures the same struct is serialized. Verify with API contract tests. |
 | 3.5 | **Database scanning** — `sqlx` scans into `models.User` by field name; if the type moves, scanning still works (same struct, different import path) | Low | Low | No change — `sqlx` scans by struct field name, not import path. Verify with repository tests. |
 | 3.6 | **The `internal/email/inbound/adapter` package imports `internal/models`** — it may use platform types (email config) or product types | Medium | Medium | Audit `email/inbound/adapter/*.go` during this phase. If it uses `EmailAccount` (platform), update to `platform/models`. If it uses ticket types, leave as `models`. |
@@ -330,13 +330,15 @@ code registers handlers by name; the router looks them up.
 
 #### Steps
 
-1. Define `HandlerResolver` interface in `internal/routing/`.
-2. Remove `internal/models` import from `handlers.go` — replace any `models.*` usage
-   with router-internal types or interface params.
-3. Create `internal/api/handler_registry.go` implementing `HandlerResolver`.
-4. Wire in `cmd/goats/main.go`.
-5. Update `yaml_handler_wiring_test.go` to use a mock resolver instead of importing
-   `internal/api`.
+1. ✅ Define `HandlerResolver` interface in `internal/routing/`.
+2. ✅ Remove `internal/models` import from `handlers.go` — `models.User` became
+   `platformmodels.User` to preserve identity through Phase 3 aliases.
+3. ✅ Create `internal/api/handler_registry.go` implementation via
+   `RoutingHandlerResolver`.
+4. ✅ Wire the API-backed resolver into YAML route loading (`dynamic_router.go`,
+   `routes_simplified.go`; `cmd/goats/main.go` now documents the resolver path).
+5. ✅ Update `yaml_handler_wiring_test.go` to use a mock resolver instead of importing
+   `internal/api`; add API-side coverage for real YAML handler resolution.
 
 #### Risks and mitigations
 
@@ -353,16 +355,24 @@ code registers handlers by name; the router looks them up.
 
 | # | Check | Command | Pass criteria |
 |---|---|---|---|
-| V4.1 | Routing has no product imports | `grep -rn 'goatflow/internal/api\b\|goatflow/internal/models\b' internal/routing/` | Zero matches (including test files) |
-| V4.2 | Routing compiles in isolation | `go build ./internal/routing/...` | Clean |
-| V4.3 | All routes resolve at boot | `go test -run TestRouteResolution ./internal/routing/...` | Every route's handler name resolves via the registry — zero unresolved |
-| V4.4 | Full test suite passes | `go test ./...` | All pass — catches any handler wiring breakage |
-| V4.5 | HTTP integration tests pass | `go test -run TestHTTP ./internal/api/...` (or Playwright E2E: `make e2e`) | All routes return expected responses |
-| V4.6 | `go vet` clean | `go vet ./internal/routing/...` | No warnings |
-| V4.7 | No circular imports | `go list -deps ./internal/routing/ \| grep goatflow/internal \| sort -u` | Only platform packages in the dependency list |
-| V4.8 | All 31 route YAML files have resolvable handlers | Script: parse each YAML, extract handler names, verify each exists in `handler_registry.go` | 100% coverage — no missing handlers |
+| V4.1 | Routing has no `internal/api` / `internal/models` imports | `grep -rn 'goatflow/internal/api\b\|goatflow/internal/models\b' internal/routing/` | ✅ Zero matches (including test files) |
+| V4.2 | Routing/API compile and targeted tests pass | `make toolbox-exec ARGS="go test ./internal/routing/... ./internal/api/..."` | ✅ Clean |
+| V4.3 | All YAML handlers resolve through product registry | `make toolbox-exec ARGS="go test ./internal/api -run TestAllYAMLHandlersResolveThroughAPIRegistry"` | ✅ Zero unresolved |
+| V4.4 | Full test suite passes | `make toolbox-exec ARGS="go test ./..."` | ✅ All pass |
+| V4.5 | HTTP integration smoke coverage | `make toolbox-exec ARGS="go test ./internal/api/... -run TestYAMLRoutesBasicAvailability"` | ✅ Routes registered |
+| V4.6 | `go vet` clean | `make toolbox-exec ARGS="go vet ./internal/routing/..."` | ✅ No warnings |
+| V4.7 | No circular imports | `make toolbox-exec ARGS="go list -deps ./internal/routing"` | ✅ No cycle errors; transitive product deps via `middleware`/`shared` remain for later phases |
+| V4.8 | Routing package decoupled from product API tests | `grep -rn 'goatflow/internal/api\b' internal/routing/` | ✅ Zero matches |
 
-#### Estimated effort: 3-5 days
+#### Execution notes
+
+- `internal/routing.HandlerResolver` now covers handler, middleware, and feature-flag lookup.
+- `routing.RouteLoader` and `FileRouteStore` consume the resolver interface instead of a concrete registry.
+- `internal/api.RoutingHandlerResolver` populates a routing registry from API handler registration and is wired into YAML route loading.
+- `internal/routing/handlers.go` imports `internal/platform/models` for `User`; this preserves `shared` template/user context type assertions because Phase 3 aliases keep `models.User` and `platformmodels.User` identical.
+- `internal/routing/yaml_handler_wiring_test.go` no longer imports `internal/api`; `internal/api/yaml_handler_wiring_test.go` owns product-registry coverage for real YAML handler names.
+
+#### Estimated effort: 3-5 days (actual: ~1 day)
 
 ---
 

@@ -10,6 +10,14 @@ import (
 // HandlerFunc is the standard handler function type.
 type HandlerFunc gin.HandlerFunc
 
+// HandlerResolver resolves route handlers, middleware, and feature flags needed by loaders.
+type HandlerResolver interface {
+	Get(name string) (gin.HandlerFunc, error)
+	GetMiddleware(name string) (gin.HandlerFunc, error)
+	HandlerExists(name string) bool
+	IsFeatureEnabled(name string) bool
+}
+
 // HandlerRegistry manages the mapping between handler names and functions.
 type HandlerRegistry struct {
 	mu       sync.RWMutex
@@ -196,9 +204,12 @@ func (r *HandlerRegistry) Clear() {
 // HandlerExists checks if a handler is registered.
 func (r *HandlerRegistry) HandlerExists(name string) bool {
 	r.mu.RLock()
-	defer r.mu.RUnlock()
-
 	_, exists := r.handlers[name]
+	r.mu.RUnlock()
+	if exists {
+		return true
+	}
+	_, exists = GlobalHandlerMap[name]
 	return exists
 }
 

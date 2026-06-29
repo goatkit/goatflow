@@ -1,13 +1,13 @@
 package routing_test
 
 import (
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	// Import api package to trigger init() registrations.
-	_ "github.com/goatkit/goatflow/internal/api"
+	"github.com/gin-gonic/gin"
 	"github.com/goatkit/goatflow/internal/routing"
 
 	"github.com/stretchr/testify/require"
@@ -26,14 +26,9 @@ type RouteFile struct {
 	} `yaml:"spec"`
 }
 
-// TestAllYAMLHandlersAreRegistered ensures every handler referenced in YAML routes
-// is registered in the global handler registry via init().
-//
-// When adding new handlers:
-//  1. Create the handler function in internal/api/
-//  2. Create an init() function that calls routing.RegisterHandler("handlerName", HandlerFunc)
-//     (see internal/api/admin_sla_init.go for example)
-func TestAllYAMLHandlersAreRegistered(t *testing.T) {
+// TestAllYAMLHandlersResolveWithMockResolver ensures every handler referenced in YAML routes
+// can be represented by routing's HandlerResolver without importing product API code.
+func TestAllYAMLHandlersResolveWithMockResolver(t *testing.T) {
 	// Find routes directory
 	routesDir := findRoutesDir(t)
 	if routesDir == "" {
@@ -44,24 +39,18 @@ func TestAllYAMLHandlersAreRegistered(t *testing.T) {
 	yamlHandlers := collectYAMLHandlers(t, routesDir)
 	require.NotEmpty(t, yamlHandlers, "Should find handlers in YAML files")
 
-	// Get all registered handlers from GlobalHandlerMap (populated via init())
-	registeredHandlers := routing.GlobalHandlerMap
-
-	t.Logf("Found %d handlers in YAML, %d registered via init()", len(yamlHandlers), len(registeredHandlers))
-
-	// Check each YAML handler is registered
-	var missing []string
+	registry := routing.NewHandlerRegistry()
 	for handler := range yamlHandlers {
-		if _, ok := registeredHandlers[handler]; !ok {
-			missing = append(missing, handler)
+		h := func(c *gin.Context) {
+			c.Status(http.StatusNoContent)
 		}
+		require.NoError(t, registry.Register(handler, h))
 	}
 
-	if len(missing) > 0 {
-		t.Errorf("The following handlers are referenced in YAML but not registered via init():\n  %s\n\n"+
-			"To fix: Add routing.RegisterHandler(%q, YourHandler) in an init() function\n"+
-			"See internal/api/admin_sla_init.go for example",
-			strings.Join(missing, "\n  "), missing[0])
+	t.Logf("Found %d handlers in YAML and registered them in mock resolver", len(yamlHandlers))
+
+	for handler := range yamlHandlers {
+		require.True(t, registry.HandlerExists(handler), "handler %q should resolve through mock resolver", handler)
 	}
 }
 

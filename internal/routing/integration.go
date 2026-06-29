@@ -5,20 +5,24 @@ import (
 )
 
 // globalRegistry stores the handler registry instance for use by subsystems
-// like the MCP bridge. Populated by LoadYAMLRoutesFromGlobalMap in loader.go.
+// like the MCP bridge. Populated when YAML routes are loaded.
 var globalRegistry *HandlerRegistry
 
-// GetGlobalRegistry returns the handler registry, available after
-// LoadYAMLRoutesFromGlobalMap has run.
+// GetGlobalRegistry returns the handler registry, available after YAML routes load.
 func GetGlobalRegistry() *HandlerRegistry {
 	return globalRegistry
 }
 
-// SetGlobalRegistryForTest allows tests to inject or reset the global registry.
-func SetGlobalRegistryForTest(r *HandlerRegistry) *HandlerRegistry {
+// SetGlobalRegistry sets the process-wide handler registry.
+func SetGlobalRegistry(r *HandlerRegistry) *HandlerRegistry {
 	old := globalRegistry
 	globalRegistry = r
 	return old
+}
+
+// SetGlobalRegistryForTest allows tests to inject or reset the global registry.
+func SetGlobalRegistryForTest(r *HandlerRegistry) *HandlerRegistry {
+	return SetGlobalRegistry(r)
 }
 
 // GlobalHandlerMap is populated by the API package's init() functions so the

@@ -94,21 +94,9 @@ func NewSimpleRouterWithDB(db *sql.DB) *gin.Engine {
 func setupYAMLRouting(r *gin.Engine, db *sql.DB) error {
 	log.Println("🔧 Setting up YAML routing system")
 
-	// Ensure core handlers are registered
-	ensureCoreHandlers()
-
-	// Create handler registry from routing package
-	registry := routing.NewHandlerRegistry()
-
-	// Copy handlers from global registry to routing registry
-	for name, handler := range handlerRegistry {
-		_ = registry.Register(name, handler) //nolint:errcheck // Best effort handler registration
-	}
-
-	// Also copy handlers from routing.GlobalHandlerMap (populated via init() in handler files)
-	for name, handler := range routing.GlobalHandlerMap {
-		_ = registry.Register(name, handler) //nolint:errcheck // Best effort handler registration
-	}
+	// Build the API-backed resolver used by YAML route loading.
+	resolver := NewRoutingHandlerResolver()
+	routing.SetGlobalRegistry(resolver.Registry())
 
 	// Load all routes from YAML files
 	routesPath := "routes"
@@ -149,11 +137,8 @@ func setupYAMLRouting(r *gin.Engine, db *sql.DB) error {
 		log.Printf("✅ Found routes at: %s", routesPath)
 	}
 
-	// Ensure routing registry has expected middleware/handlers
-	routing.RegisterExistingHandlers(registry)
-
 	log.Printf("📂 Loading routes from: %s", routesPath)
-	if err := routing.LoadYAMLRoutes(r, routesPath, registry); err != nil {
+	if err := routing.LoadYAMLRoutes(r, routesPath, resolver); err != nil {
 		return fmt.Errorf("failed to load routes: %w", err)
 	}
 
