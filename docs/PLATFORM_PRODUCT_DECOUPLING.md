@@ -1,8 +1,8 @@
 # GoatKit Platform / Product Decoupling — Implementation Plan
 
-> Version: 1.4
+> Version: 1.5
 > Date: 2026-06-29
-> Status: Phase 1-5 complete, Phase 6 next
+> Status: Phase 1-6 complete, Phase 7 next
 > Related: `docs/ARCHITECTURE.md`, `docs/PLUGIN_PLATFORM.md`, `docs/design/LLM_INTEGRATION.md`
 
 ## 1. Goal
@@ -457,12 +457,14 @@ Files for: `ticket`, `sla`, `escalation`, `generic_agent`, etc.
 
 ### Phase 6 — Move all remaining platform packages to `internal/platform/`
 
+#### Status: ✅ Complete (auth, middleware, template, shared decoupled + moved; cache, deletion, plugin moved)
+
 #### Problem
 
 After Phases 1-5, approximately 25-30 already-clean platform packages still live at
 `internal/` root. They need to move to `internal/platform/` for structural
-consistency.
-
+consistency. Four packages (auth, middleware, template, shared) had hidden product
+dependencies (repository, service, models) requiring interface indirection before moving.
 #### Steps
 
 1. `git mv` each clean platform package to `internal/platform/<name>/`.
@@ -505,14 +507,28 @@ internal/platform/
 ├── secureconfig/
 ├── service/          (from Phase 5)
 ├── services/         (from Phase 2: adapter, database, registry, k8s, user)
+├── shared/           (from Phase 6 — decoupled from repository/service via SessionManager interface)
 ├── storage/          (if audited as platform — see risk 6.3)
 ├── sysconfig/
-├── template/
+├── template/         (from Phase 6 — decoupled from repository/models via MaintenanceChecker interface)
 ├── utils/
 ├── webhook/
 ├── yamlmgmt/
 └── zinc/
 ```
+
+#### Decoupling work (Phase 6)
+
+Four packages had hidden product dependencies requiring interface indirection before moving:
+
+| Package | Product deps removed | Interface injected | Factory setter |
+|---|---|---|---|
+| `auth` | `internal/models`, `internal/repository` | `UserLookup` (GetByLogin, GetByEmail) | `auth.SetUserRepoFactory` |
+| `template` | `internal/models`, `internal/repository`, `internal/middleware`, `internal/shared` | `MaintenanceChecker` (IsActive, IsComing) | `template.SetMaintenanceCheckerFactory`, `template.SetContextHelpers` |
+| `middleware` | `internal/models`, `internal/repository`, `internal/service` | `SessionChecker`, `MaintenanceChecker`, `QueueAccessChecker`, `TicketQueueResolver` | `middleware.Set*Factory` (4 setters) |
+| `shared` | `internal/models`, `internal/repository`, `internal/service` | `SessionManager` (CreateSession, GetSession, TouchSession, KillSession) | `shared.SetSessionManagerFactory` |
+
+All factories are wired in `cmd/goats/main.go` (production) and `internal/api/test_factory_init_test.go` (tests).
 
 #### Risks and mitigations
 
@@ -539,7 +555,7 @@ internal/platform/
 | V6.7 | No product package under `internal/` (non-platform) imports another product package circularly due to the reorganization | `go list -deps ./internal/... \| sort -u \| head` | No circular dependency errors from `go list` |
 | V6.8 | Plugin system still loads plugins | `go test -run TestPlugin ./internal/platform/plugin/...` | Plugins load, init, call, shutdown |
 
-#### Estimated effort: 3-5 days
+#### Estimated effort: 3-5 days (actual: ~1 day)
 
 ---
 
