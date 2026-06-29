@@ -15,10 +15,10 @@ import (
 	"github.com/goatkit/goatflow/internal/auth"
 	"github.com/goatkit/goatflow/internal/config"
 	"github.com/goatkit/goatflow/internal/database"
-	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/platform/i18n"
 	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/sysconfig"
-	"github.com/goatkit/goatflow/internal/utils"
+	"github.com/goatkit/goatflow/internal/platform/utils"
 )
 
 // RegisterCustomerRoutes registers all customer portal routes.

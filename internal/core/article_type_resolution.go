@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/goatkit/goatflow/internal/constants"
+	"github.com/goatkit/goatflow/internal/platform/constants"
 )
 
 // ArticleIntent captures high-level request/user intent for creating an article.

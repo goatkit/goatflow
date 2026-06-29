@@ -16,7 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/config"
-	"github.com/goatkit/goatflow/internal/constants"
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/history"
 	"github.com/goatkit/goatflow/internal/mailqueue"
@@ -24,7 +24,7 @@ import (
 	"github.com/goatkit/goatflow/internal/notifications"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/service"
-	"github.com/goatkit/goatflow/internal/utils"
+	"github.com/goatkit/goatflow/internal/platform/utils"
 )
 
 // This fixes the 500 error when users try to create tickets with attachments.

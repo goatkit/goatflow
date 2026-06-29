@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/goatkit/goatflow/internal/data"
-	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/platform/i18n"
 )
 
 // LookupOption represents a single option in a dropdown/select field.

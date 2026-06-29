@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/goatkit/goatflow/internal/database"
-	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/platform/i18n"
 )
 
 func setupPreferencesTestRouter() *gin.Engine {

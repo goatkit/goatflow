@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/goatkit/goatflow/internal/auth"
-	"github.com/goatkit/goatflow/internal/yamlmgmt"
+	"github.com/goatkit/goatflow/internal/platform/yamlmgmt"
 )
 
 // helper to build a minimal config adapter with Auth::Providers list.

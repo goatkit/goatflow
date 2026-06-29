@@ -12,7 +12,7 @@ import (
 	"golang.org/x/text/language"
 	"gopkg.in/yaml.v3"
 
-	"github.com/goatkit/goatflow/internal/yamlmgmt"
+	"github.com/goatkit/goatflow/internal/platform/yamlmgmt"
 )
 
 func main() {

@@ -10,7 +10,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/auth"
 	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
-	"github.com/goatkit/goatflow/internal/yamlmgmt"
+	"github.com/goatkit/goatflow/internal/platform/yamlmgmt"
 )
 
 // AuthService handles authentication and authorization.

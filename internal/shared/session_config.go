@@ -2,7 +2,7 @@ package shared
 
 import (
 	"github.com/goatkit/goatflow/internal/config"
-	"github.com/goatkit/goatflow/internal/constants"
+	"github.com/goatkit/goatflow/internal/platform/constants"
 )
 
 // GetSystemSessionMaxTime returns the configured session lifetime in seconds.

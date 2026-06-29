@@ -22,7 +22,7 @@ import (
 	"github.com/goatkit/goatflow/internal/notifications"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/routing"
-	"github.com/goatkit/goatflow/internal/utils"
+	"github.com/goatkit/goatflow/internal/platform/utils"
 )
 
 func init() {

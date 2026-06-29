@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/goatkit/goatflow/internal/marketplace"
+	"github.com/goatkit/goatflow/internal/platform/marketplace"
 )
 
 func getPluginsDir() string {

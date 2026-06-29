@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/database"
-	"github.com/goatkit/goatflow/internal/webhook"
+	"github.com/goatkit/goatflow/internal/platform/webhook"
 )
 
 // WebhookHandlers handles webhook-related API endpoints.

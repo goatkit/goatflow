@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/constants"
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/history"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/repository"

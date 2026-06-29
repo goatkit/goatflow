@@ -45,7 +45,7 @@ import (
 	"github.com/goatkit/goatflow/internal/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/email/inbound/filters"
 	"github.com/goatkit/goatflow/internal/email/inbound/postmaster"
-	"github.com/goatkit/goatflow/internal/lookups"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/notifications"
 	platformapi "github.com/goatkit/goatflow/internal/platform/api"
@@ -63,7 +63,7 @@ import (
 	"github.com/goatkit/goatflow/internal/services/scheduler"
 	"github.com/goatkit/goatflow/internal/shared"
 	"github.com/goatkit/goatflow/internal/ticketnumber"
-	"github.com/goatkit/goatflow/internal/yamlmgmt"
+	"github.com/goatkit/goatflow/internal/platform/yamlmgmt"
 )
 
 var valkeyCache *cache.RedisCache
