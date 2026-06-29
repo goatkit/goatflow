@@ -11,7 +11,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/repository"
-	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/service"
 )
 

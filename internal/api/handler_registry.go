@@ -15,7 +15,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 	_ "github.com/goatkit/goatflow/internal/platform/api"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
-	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/shared"
 )
 

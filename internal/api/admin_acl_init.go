@@ -1,6 +1,6 @@
 package api
 
-import "github.com/goatkit/goatflow/internal/routing"
+import "github.com/goatkit/goatflow/internal/platform/routing"
 
 func init() {
 	// Register ACL handlers into the global routing registry

@@ -21,7 +21,7 @@ import (
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/notifications"
 	"github.com/goatkit/goatflow/internal/repository"
-	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/platform/utils"
 )
 

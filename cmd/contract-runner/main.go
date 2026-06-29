@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/api"
-	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/platform/routing"
 )
 
 // ContractResult represents the result of a contract test.

@@ -6,7 +6,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/platform/routing"
 )
 
 func init() {

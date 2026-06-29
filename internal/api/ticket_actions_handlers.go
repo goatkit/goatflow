@@ -18,7 +18,7 @@ import (
 	"github.com/goatkit/goatflow/internal/history"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/repository"
-	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/platform/routing"
 )
 
 func init() {

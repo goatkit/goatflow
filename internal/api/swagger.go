@@ -9,7 +9,7 @@ import (
 
 	// Import generated docs - this registers SwaggerInfo via init()
 	"github.com/goatkit/goatflow/docs/api"
-	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/platform/routing"
 )
 
 // Dark mode CSS for Swagger UI - injected into index.html

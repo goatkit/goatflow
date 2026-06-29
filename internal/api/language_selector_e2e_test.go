@@ -13,7 +13,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/i18n"
 	"github.com/goatkit/goatflow/internal/middleware"
-	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/shared"
 )
 

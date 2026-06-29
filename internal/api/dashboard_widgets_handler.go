@@ -9,7 +9,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/plugin"
-	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/platform/routing"
 )
 
 func init() {

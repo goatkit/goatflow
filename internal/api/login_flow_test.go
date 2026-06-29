@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	apipkg "github.com/goatkit/goatflow/internal/api"
-	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/platform/routing"
 )
 
 // Minimal integration style test for the auth login handler + auth middleware.

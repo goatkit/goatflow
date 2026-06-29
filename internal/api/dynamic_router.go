@@ -14,7 +14,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/pluginui"
-	"github.com/goatkit/goatflow/internal/routing"
+	"github.com/goatkit/goatflow/internal/platform/routing"
 )
 
 // Backwards compatibility stubs for htmx_routes.go and routes_watcher.go
