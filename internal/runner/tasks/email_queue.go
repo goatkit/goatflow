@@ -17,7 +17,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/mailqueue"
-	"github.com/goatkit/goatflow/internal/runner"
+	"github.com/goatkit/goatflow/internal/platform/runner"
 )
 
 const (

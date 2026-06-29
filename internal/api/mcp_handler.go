@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/mcp"
+	"github.com/goatkit/goatflow/internal/platform/mcp"
 	"github.com/goatkit/goatflow/internal/plugin"
 )
 

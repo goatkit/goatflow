@@ -11,7 +11,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/repository"
-	"github.com/goatkit/goatflow/internal/runner"
+	"github.com/goatkit/goatflow/internal/platform/runner"
 	"github.com/goatkit/goatflow/internal/service"
 )
 

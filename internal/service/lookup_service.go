@@ -9,7 +9,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/goatkit/goatflow/internal/data"
+	"github.com/goatkit/goatflow/internal/platform/data"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
 	"github.com/goatkit/goatflow/internal/models"

@@ -11,7 +11,7 @@ import (
 	"github.com/robfig/cron/v3"
 
 	"github.com/goatkit/goatflow/internal/cache"
-	"github.com/goatkit/goatflow/internal/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/notifications"
 	"github.com/goatkit/goatflow/internal/platform/push"

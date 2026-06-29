@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/mcp"
+	"github.com/goatkit/goatflow/internal/platform/mcp"
 )
 
 // mcpSessions is the global MCP session manager for SSE transport.

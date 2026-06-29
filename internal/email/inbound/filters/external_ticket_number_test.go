@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goatkit/goatflow/internal/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
 )
 
 func TestExternalTicketNumberFilterMatchesSubject(t *testing.T) {

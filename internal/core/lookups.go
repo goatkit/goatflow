@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/data"
+	"github.com/goatkit/goatflow/internal/platform/data"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
 )
 

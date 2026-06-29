@@ -24,7 +24,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v3"
 
-	"github.com/goatkit/goatflow/internal/components/lambda"
+	"github.com/goatkit/goatflow/internal/platform/components/lambda"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
 	"github.com/goatkit/goatflow/internal/mailaccountmeta"
