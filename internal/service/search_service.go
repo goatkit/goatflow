@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/goatkit/goatflow/internal/models"
-	"github.com/goatkit/goatflow/internal/zinc"
+	"github.com/goatkit/goatflow/internal/platform/zinc"
 )
 
 // SearchService handles search operations for tickets.

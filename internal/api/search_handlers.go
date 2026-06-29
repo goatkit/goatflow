@@ -9,7 +9,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/service"
-	"github.com/goatkit/goatflow/internal/zinc"
+	"github.com/goatkit/goatflow/internal/platform/zinc"
 )
 
 // SearchHandlers handles search-related API endpoints.

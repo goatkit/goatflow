@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/goatkit/goatflow/internal/models"
-	"github.com/goatkit/goatflow/internal/zinc"
+	"github.com/goatkit/goatflow/internal/platform/zinc"
 )
 
 func TestSearchService(t *testing.T) {

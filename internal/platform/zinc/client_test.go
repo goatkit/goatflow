@@ -7,8 +7,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/goatkit/goatflow/internal/models"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
+
+type testSearchDocument struct {
+	ID           string   `json:"id"`
+	TicketNumber string   `json:"ticket_number,omitempty"`
+	Title        string   `json:"title"`
+	Content      string   `json:"content,omitempty"`
+	Status       string   `json:"status,omitempty"`
+	Priority     string   `json:"priority,omitempty"`
+	Queue        string   `json:"queue,omitempty"`
+	CustomerName string   `json:"customer_name,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
+}
 
 func TestZincClient(t *testing.T) {
 	// Use mock client for testing
@@ -16,7 +28,7 @@ func TestZincClient(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("IndexDocument", func(t *testing.T) {
-		doc := &models.TicketSearchDocument{
+		doc := &testSearchDocument{
 			ID:           "TICKET-123",
 			TicketNumber: "123",
 			Title:        "Network connectivity issue",
@@ -39,7 +51,7 @@ func TestZincClient(t *testing.T) {
 
 	t.Run("SearchDocuments", func(t *testing.T) {
 		// Index some test documents
-		docs := []models.TicketSearchDocument{
+		docs := []testSearchDocument{
 			{
 				ID:       "TICKET-101",
 				Title:    "Email not working",
@@ -74,7 +86,7 @@ func TestZincClient(t *testing.T) {
 		}
 
 		// Search for email-related tickets
-		query := &models.SearchRequest{
+		query := &platformmodels.SearchRequest{
 			Query:    "email",
 			PageSize: 10,
 		}
@@ -86,7 +98,7 @@ func TestZincClient(t *testing.T) {
 	})
 
 	t.Run("SearchWithFilters", func(t *testing.T) {
-		query := &models.SearchRequest{
+		query := &platformmodels.SearchRequest{
 			Query: "*",
 			Filters: map[string]string{
 				"status":   "open",
@@ -111,7 +123,7 @@ func TestZincClient(t *testing.T) {
 		docID := "TICKET-200"
 
 		// Index initial document
-		doc := &models.TicketSearchDocument{
+		doc := &testSearchDocument{
 			ID:       docID,
 			Title:    "Initial title",
 			Status:   "open",
@@ -141,7 +153,7 @@ func TestZincClient(t *testing.T) {
 		docID := "TICKET-300"
 
 		// Index document
-		doc := &models.TicketSearchDocument{
+		doc := &testSearchDocument{
 			ID:    docID,
 			Title: "To be deleted",
 		}
@@ -159,15 +171,15 @@ func TestZincClient(t *testing.T) {
 
 	t.Run("BulkIndex", func(t *testing.T) {
 		docs := []interface{}{
-			models.TicketSearchDocument{
+			testSearchDocument{
 				ID:    "BULK-1",
 				Title: "Bulk document 1",
 			},
-			models.TicketSearchDocument{
+			testSearchDocument{
 				ID:    "BULK-2",
 				Title: "Bulk document 2",
 			},
-			models.TicketSearchDocument{
+			testSearchDocument{
 				ID:    "BULK-3",
 				Title: "Bulk document 3",
 			},
@@ -236,7 +248,7 @@ func TestZincClient(t *testing.T) {
 	})
 
 	t.Run("SearchWithHighlight", func(t *testing.T) {
-		query := &models.SearchRequest{
+		query := &platformmodels.SearchRequest{
 			Query:     "email",
 			Highlight: true,
 			PageSize:  10,
@@ -257,7 +269,7 @@ func TestZincClient(t *testing.T) {
 	t.Run("SearchWithPagination", func(t *testing.T) {
 		// Index many documents
 		for i := 0; i < 25; i++ {
-			doc := models.TicketSearchDocument{
+			doc := testSearchDocument{
 				ID:    "PAGE-" + string(rune('A'+i)),
 				Title: "Pagination test " + string(rune('A'+i)),
 			}
@@ -265,7 +277,7 @@ func TestZincClient(t *testing.T) {
 		}
 
 		// First page
-		query := &models.SearchRequest{
+		query := &platformmodels.SearchRequest{
 			Query:    "pagination",
 			Page:     1,
 			PageSize: 10,
@@ -292,7 +304,7 @@ func TestZincClient(t *testing.T) {
 	})
 
 	t.Run("SearchWithSort", func(t *testing.T) {
-		query := &models.SearchRequest{
+		query := &platformmodels.SearchRequest{
 			Query:     "*",
 			SortBy:    "created_at",
 			SortOrder: "desc",
