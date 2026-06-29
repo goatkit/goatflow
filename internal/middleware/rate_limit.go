@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/apierrors"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/apierrors"
 )
 
 // RateLimiter implements a token bucket rate limiter
@@ -19,9 +19,9 @@ type RateLimiter struct {
 }
 
 type bucket struct {
-	tokens    float64
-	limit     float64   // max tokens (requests per window)
-	refillRate float64  // tokens per second
+	tokens     float64
+	limit      float64 // max tokens (requests per window)
+	refillRate float64 // tokens per second
 	lastRefill time.Time
 }
 

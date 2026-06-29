@@ -14,7 +14,7 @@ import (
 	"github.com/goatkit/goatflow/internal/auth"
 	"github.com/goatkit/goatflow/internal/constants"
 	"github.com/goatkit/goatflow/internal/database"
-	"github.com/goatkit/goatflow/internal/httpcookie"
+	"github.com/goatkit/goatflow/internal/platform/httpcookie"
 	"github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/shared"
 )

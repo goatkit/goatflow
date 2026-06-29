@@ -10,9 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/auth"
-	"github.com/goatkit/goatflow/internal/convert"
 	"github.com/goatkit/goatflow/internal/database"
-	"github.com/goatkit/goatflow/internal/httpcookie"
+	"github.com/goatkit/goatflow/internal/platform/convert"
+	"github.com/goatkit/goatflow/internal/platform/httpcookie"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/service"
 )

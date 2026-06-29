@@ -20,9 +20,9 @@ type ErrorEnumerator interface {
 
 // registry holds all registered error codes
 type registry struct {
-	mu     sync.RWMutex
-	codes  map[string]ErrorCode // code -> ErrorCode
-	byNS   map[string][]string  // namespace -> []code
+	mu    sync.RWMutex
+	codes map[string]ErrorCode // code -> ErrorCode
+	byNS  map[string][]string  // namespace -> []code
 }
 
 // Registry is the global error code registry

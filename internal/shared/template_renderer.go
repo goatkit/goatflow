@@ -18,8 +18,8 @@ import (
 	"github.com/goatkit/goatflow/internal/lookups"
 	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/version"
 	"github.com/goatkit/goatflow/internal/repository"
-	"github.com/goatkit/goatflow/internal/version"
 )
 
 // TemplateOverrideProvider allows plugins to override templates without import cycles.

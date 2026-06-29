@@ -9,9 +9,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/apierrors"
 	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/apierrors"
 	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/shared"
 )
@@ -264,9 +264,9 @@ func HandleGetScopes(c *gin.Context) {
 // Customer handlers are aliases to the unified handlers above
 // The handlers detect agent vs customer from context automatically
 var (
-	HandleCustomerListTokens   = HandleListTokens
-	HandleCustomerCreateToken  = HandleCreateToken
-	HandleCustomerRevokeToken  = HandleRevokeToken
+	HandleCustomerListTokens  = HandleListTokens
+	HandleCustomerCreateToken = HandleCreateToken
+	HandleCustomerRevokeToken = HandleRevokeToken
 )
 
 // === Admin Token Handlers ===
@@ -492,10 +492,10 @@ func isValidWildcardScope(scope string) bool {
 
 // Admin handler aliases - unified handlers work for both agents and customers
 var (
-	HandleAdminListUserTokens     = HandleAdminListTargetTokens
-	HandleAdminCreateUserToken    = HandleAdminCreateTargetToken
-	HandleAdminRevokeUserToken    = HandleAdminRevokeTargetToken
-	HandleAdminListCustomerTokens = HandleAdminListTargetTokens
+	HandleAdminListUserTokens      = HandleAdminListTargetTokens
+	HandleAdminCreateUserToken     = HandleAdminCreateTargetToken
+	HandleAdminRevokeUserToken     = HandleAdminRevokeTargetToken
+	HandleAdminListCustomerTokens  = HandleAdminListTargetTokens
 	HandleAdminCreateCustomerToken = HandleAdminCreateTargetToken
 	HandleAdminRevokeCustomerToken = HandleAdminRevokeTargetToken
 )

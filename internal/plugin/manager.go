@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/apierrors"
 	"github.com/goatkit/goatflow/internal/customfields"
 	"github.com/goatkit/goatflow/internal/deletion"
 	"github.com/goatkit/goatflow/internal/i18n"
+	"github.com/goatkit/goatflow/internal/platform/apierrors"
 	"github.com/goatkit/goatflow/internal/pluginui"
 )
 

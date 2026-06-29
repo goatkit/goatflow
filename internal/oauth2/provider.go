@@ -16,7 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/goatkit/goatflow/internal/convert"
+	"github.com/goatkit/goatflow/internal/platform/convert"
 )
 
 // GrantType represents OAuth2 grant types.

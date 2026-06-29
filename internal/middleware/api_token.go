@@ -9,9 +9,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/apierrors"
 	"github.com/goatkit/goatflow/internal/auth"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/apierrors"
 )
 
 // debugLog logs only when LOG_LEVEL=debug
