@@ -26,6 +26,9 @@ func NewDatabaseAuthProvider(db *sql.DB, userRepo UserLookup) *DatabaseAuthProvi
 }
 // Authenticate authenticates a user against the database.
 func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, password string) (*platformmodels.User, error) {
+	if p.userRepo == nil {
+		return nil, ErrAuthBackendFailed
+	}
 	// Try to find user by login or email
 	var user *platformmodels.User
 	var err error
@@ -65,6 +68,9 @@ func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, passw
 
 // GetUser retrieves user details by username or email.
 func (p *DatabaseAuthProvider) GetUser(ctx context.Context, identifier string) (*platformmodels.User, error) {
+	if p.userRepo == nil {
+		return nil, ErrAuthBackendFailed
+	}
 	var user *platformmodels.User
 	var err error
 

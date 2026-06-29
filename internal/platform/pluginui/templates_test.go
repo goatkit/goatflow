@@ -8,8 +8,8 @@ import (
 
 func TestPluginUILayoutsRegisterRootServiceWorkerForPWA(t *testing.T) {
 	for _, file := range []string{
-		"../../templates/layouts/ui_minimal.pongo2",
-		"../../templates/layouts/ui_none.pongo2",
+		"../../../templates/layouts/ui_minimal.pongo2",
+		"../../../templates/layouts/ui_none.pongo2",
 	} {
 		data, err := os.ReadFile(file)
 		if err != nil {

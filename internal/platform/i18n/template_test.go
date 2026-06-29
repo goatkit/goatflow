@@ -26,7 +26,7 @@ func TestTemplateTranslationKeys(t *testing.T) {
 	tFuncPattern := regexp.MustCompile(`\{\{[^}]*t\(["']([^"']+)["']\)[^}]*\}\}|[^a-zA-Z]t\(["']([^"']+)["']\)`)
 
 	// Find all template files
-	templatesDir := "../../templates"
+	templatesDir := "../../../templates"
 	missingKeys := make(map[string][]string)
 
 	err := filepath.Walk(templatesDir, func(path string, info os.FileInfo, err error) error {

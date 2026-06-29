@@ -370,7 +370,9 @@ func addMaintenanceContext(ctx pongo2.Context) {
 	}
 
 	repo := middleware.NewMaintenanceChecker(db)
-
+	if repo == nil {
+		return
+	}
 	// Check active maintenance
 	if active, err := repo.IsActive(); err == nil && active != nil {
 		// Use default message from config if not set in record
