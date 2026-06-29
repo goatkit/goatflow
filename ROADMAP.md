@@ -384,10 +384,11 @@ Universal custom fields on every core entity. Plugins declare fields at registra
 - [x] Invert `database` → `services/adapter` dependency — move connection lifecycle into
       `database/`, move `services/{adapter,database,registry}` to `internal/platform/services/`.
       Fixes inverted layering (DB layer currently depends on services layer).
-- [ ] Split `internal/models/` — move 11 platform type files (User, Group, Role, Session,
-      APIToken, etc.) to `internal/platform/models/`; keep product types (Ticket, SLA,
-      Queue, etc.) in `internal/models/`. Type aliases preserve identity for 114 importing
-      files.
+- [x] Split `internal/models/` -- moved 8 clean files whole to `internal/platform/models/`
+      (User, Group, Role, Session, APIToken, DBRole, LDAPConfiguration, ScopeDefinition);
+      split lookups (LookupItem) and search (SearchRequest etc.); EmailAccount stayed
+      product-side due to Queue field. Type aliases preserve identity for all callers.
+      zinc mock refactored to remove production-code product import.
 
 **Phase 2 — Complete structural boundary**
 - [ ] Decouple `internal/routing/` from `internal/api` and `internal/models` — define

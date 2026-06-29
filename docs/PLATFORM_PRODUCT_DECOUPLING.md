@@ -1,8 +1,8 @@
 # GoatKit Platform / Product Decoupling — Implementation Plan
 
-> Version: 1.1
+> Version: 1.2
 > Date: 2026-06-29
-> Status: Phase 1-2 complete, Phase 3 next
+> Status: Phase 1-3 complete, Phase 4 next
 > Related: `docs/ARCHITECTURE.md`, `docs/PLUGIN_PLATFORM.md`, `docs/design/LLM_INTEGRATION.md`
 
 ## 1. Goal
@@ -227,12 +227,12 @@ move `services/{adapter,database,registry}` to `internal/platform/services/`.
 `internal/models/` is one 36-file, 5937-line package mixing platform types (`User`,
 `Group`, `Role`, `Session`, `APIToken`, `LDAPConfiguration`, `SearchRequest`,
 `EmailAccount`) with product types (`Ticket`, `SLA`, `Queue`, `Incident`, `Change`,
-`ACL`, `CannedResponse`, `KnowledgeArticle`). It is imported by **114 non-test
+`ACL`, `CannedResponse`, `KnowledgeArticle`). It is imported by **158 non-test
 files** — the largest blast radius of any phase.
 
 #### Fix
 
-Split into `internal/platform/models/` (11 platform files) and keep product files in
+Split into `internal/platform/models/` (8 moved whole + 2 split) and keep product files in
 `internal/models/`.
 
 #### Platform types to move
@@ -261,15 +261,18 @@ Split into `internal/platform/models/` (11 platform files) and keep product file
 
 #### Steps
 
-1. Create `internal/platform/models/` directory.
-2. `git mv` the 11 platform files.
-3. Change package name in moved files (keep as `models` — Go allows same package name
+1. ✅ Create `internal/platform/models/` directory.
+2. ✅ `git mv` 8 clean platform files (`api_token`, `db_role`, `group`, `ldap`, `role`,
+   `scope_registry`, `session`, `user`).
+3. ✅ Change package name in moved files (keep as `models` — Go allows same package name
    at different import paths).
-4. Update all 114 importing files: files using only platform types change import path;
-   files using both platform and product types get both imports.
-5. Where product code uses `models.User` in exported signatures, add a type alias in
-   `internal/models/`: `type User = platformmodels.User` (transitive alias,
-   zero-cost).
+4. ✅ Split mixed files — extract `LookupItem` from `lookups.go`; extract `SearchRequest`,
+   `SearchResult`, `SearchHit`, `Facet`, `IndexStats` from `search.go`; keep product
+   types in their original files.
+5. ✅ Add `type_aliases.go` in `internal/models/` with type aliases, const aliases,
+   var aliases, and func forwarding for all moved types.
+6. ✅ Refactor `internal/zinc/` to remove product import from production code (use JSON
+   roundtrip for generic document handling).
 
 #### Risks and mitigations
 
@@ -298,7 +301,16 @@ Split into `internal/platform/models/` (11 platform files) and keep product file
 | V3.8 | Import count verified | `grep -rln 'goatflow/internal/models"' --include="*.go" internal/ cmd/ \| wc -l` | Significantly reduced (only files using product types remain) |
 | V3.9 | golangci-lint clean | `golangci-lint run ./internal/platform/models/... ./internal/models/...` | No new warnings |
 
-#### Estimated effort: 3-4 days
+#### Execution notes
+
+- **8 files moved whole** (git mv, no changes): api_token, db_role, group, ldap, role, scope_registry, session, user
+- **`email.go` stayed product** — `EmailAccount.Queue *Queue` field would create platform→product dependency
+- **`lookups.go` split** — `LookupItem` to platform; `QueueInfo`, `TicketFormData` stay product
+- **`search.go` split** — `SearchRequest`, `SearchResult`, `SearchHit`, `Facet`, `IndexStats` to platform; everything else stays product
+- **`zinc` mock refactored** — production code now imports only platform models; uses JSON roundtrip for generic doc handling. Test files still import product models (test-only)
+- **158 importing files** — no import path changes needed due to type aliases
+
+#### Estimated effort: 3-4 days (actual: ~1 day)
 
 ---
 

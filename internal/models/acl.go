@@ -69,17 +69,17 @@ type ACLContext struct {
 	CustomerUserID string
 
 	// Ticket context (from database for PropertiesDatabase matching)
-	TicketID     int
-	Ticket       *Ticket
-	QueueID      int
-	StateID      int
-	PriorityID   int
-	TypeID       int
-	ServiceID    int
-	SLAID        int
-	OwnerID      int
-	LockID       int
-	CustomerID   string
+	TicketID   int
+	Ticket     *Ticket
+	QueueID    int
+	StateID    int
+	PriorityID int
+	TypeID     int
+	ServiceID  int
+	SLAID      int
+	OwnerID    int
+	LockID     int
+	CustomerID string
 
 	// Frontend/Form context (for Properties matching)
 	// These represent current form values that may differ from DB

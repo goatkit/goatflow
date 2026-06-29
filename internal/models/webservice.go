@@ -21,13 +21,13 @@ type WebserviceConfig struct {
 // WebserviceConfigData represents the parsed YAML configuration.
 // Structure matches OTRS's GenericInterface config format.
 type WebserviceConfigData struct {
-	Name             string           `yaml:"Name,omitempty" json:"name,omitempty"`
-	Description      string           `yaml:"Description,omitempty" json:"description,omitempty"`
-	RemoteSystem     string           `yaml:"RemoteSystem,omitempty" json:"remote_system,omitempty"`
-	FrameworkVersion string           `yaml:"FrameworkVersion,omitempty" json:"framework_version,omitempty"`
-	Debugger         DebuggerConfig   `yaml:"Debugger,omitempty" json:"debugger,omitempty"`
-	Provider         ProviderConfig   `yaml:"Provider,omitempty" json:"provider,omitempty"`
-	Requester        RequesterConfig  `yaml:"Requester,omitempty" json:"requester,omitempty"`
+	Name             string          `yaml:"Name,omitempty" json:"name,omitempty"`
+	Description      string          `yaml:"Description,omitempty" json:"description,omitempty"`
+	RemoteSystem     string          `yaml:"RemoteSystem,omitempty" json:"remote_system,omitempty"`
+	FrameworkVersion string          `yaml:"FrameworkVersion,omitempty" json:"framework_version,omitempty"`
+	Debugger         DebuggerConfig  `yaml:"Debugger,omitempty" json:"debugger,omitempty"`
+	Provider         ProviderConfig  `yaml:"Provider,omitempty" json:"provider,omitempty"`
+	Requester        RequesterConfig `yaml:"Requester,omitempty" json:"requester,omitempty"`
 }
 
 // DebuggerConfig controls debug logging for the webservice.
@@ -67,7 +67,7 @@ type InvokerConfig struct {
 
 // EventConfig defines event triggers for invokers.
 type EventConfig struct {
-	Event       string `yaml:"Event,omitempty" json:"event,omitempty"`
+	Event        string `yaml:"Event,omitempty" json:"event,omitempty"`
 	Asynchronous string `yaml:"Asynchronous,omitempty" json:"asynchronous,omitempty"` // 0 or 1
 }
 
@@ -79,8 +79,8 @@ type MappingConfig struct {
 
 // TransportConfig defines the transport layer configuration.
 type TransportConfig struct {
-	Type   string                `yaml:"Type,omitempty" json:"type,omitempty"` // HTTP::REST, HTTP::SOAP
-	Config TransportHTTPConfig   `yaml:"Config,omitempty" json:"config,omitempty"`
+	Type   string              `yaml:"Type,omitempty" json:"type,omitempty"` // HTTP::REST, HTTP::SOAP
+	Config TransportHTTPConfig `yaml:"Config,omitempty" json:"config,omitempty"`
 }
 
 // TransportHTTPConfig defines HTTP transport settings.
@@ -100,9 +100,9 @@ type TransportHTTPConfig struct {
 	AdditionalHeaders     map[string]string       `yaml:"AdditionalHeaders,omitempty" json:"additional_headers,omitempty"`
 
 	// SOAP-specific settings
-	Encoding  string `yaml:"Encoding,omitempty" json:"encoding,omitempty"`
-	Endpoint  string `yaml:"Endpoint,omitempty" json:"endpoint,omitempty"`
-	NameSpace string `yaml:"NameSpace,omitempty" json:"namespace,omitempty"`
+	Encoding   string `yaml:"Encoding,omitempty" json:"encoding,omitempty"`
+	Endpoint   string `yaml:"Endpoint,omitempty" json:"endpoint,omitempty"`
+	NameSpace  string `yaml:"NameSpace,omitempty" json:"namespace,omitempty"`
 	SOAPAction string `yaml:"SOAPAction,omitempty" json:"soap_action,omitempty"`
 
 	// Authentication
@@ -146,12 +146,12 @@ type AuthConfig struct {
 	OAuth2Scope        string `yaml:"OAuth2Scope,omitempty" json:"oauth2_scope,omitempty"`
 
 	// JWT
-	JWTAuthKeyFilePath         string `yaml:"JWTAuthKeyFilePath,omitempty" json:"jwt_auth_key_file_path,omitempty"`
-	JWTAuthKeyFilePassword     string `yaml:"JWTAuthKeyFilePassword,omitempty" json:"jwt_auth_key_file_password,omitempty"`
-	JWTAuthAlgorithm           string `yaml:"JWTAuthAlgorithm,omitempty" json:"jwt_auth_algorithm,omitempty"`
-	JWTAuthCertificateFilePath string `yaml:"JWTAuthCertificateFilePath,omitempty" json:"jwt_auth_certificate_file_path,omitempty"`
-	JWTAuthTTL                 string `yaml:"JWTAuthTTL,omitempty" json:"jwt_auth_ttl,omitempty"`
-	JWTAuthPayload             string `yaml:"JWTAuthPayload,omitempty" json:"jwt_auth_payload,omitempty"`
+	JWTAuthKeyFilePath          string `yaml:"JWTAuthKeyFilePath,omitempty" json:"jwt_auth_key_file_path,omitempty"`
+	JWTAuthKeyFilePassword      string `yaml:"JWTAuthKeyFilePassword,omitempty" json:"jwt_auth_key_file_password,omitempty"`
+	JWTAuthAlgorithm            string `yaml:"JWTAuthAlgorithm,omitempty" json:"jwt_auth_algorithm,omitempty"`
+	JWTAuthCertificateFilePath  string `yaml:"JWTAuthCertificateFilePath,omitempty" json:"jwt_auth_certificate_file_path,omitempty"`
+	JWTAuthTTL                  string `yaml:"JWTAuthTTL,omitempty" json:"jwt_auth_ttl,omitempty"`
+	JWTAuthPayload              string `yaml:"JWTAuthPayload,omitempty" json:"jwt_auth_payload,omitempty"`
 	JWTAuthAdditionalHeaderData string `yaml:"JWTAuthAdditionalHeaderData,omitempty" json:"jwt_auth_additional_header_data,omitempty"`
 }
 
@@ -167,10 +167,10 @@ type SSLConfig struct {
 
 // ProxyConfig defines HTTP proxy settings.
 type ProxyConfig struct {
-	UseProxy     string `yaml:"UseProxy,omitempty" json:"use_proxy,omitempty"` // 0 or 1
-	ProxyHost    string `yaml:"ProxyHost,omitempty" json:"proxy_host,omitempty"`
-	ProxyPort    string `yaml:"ProxyPort,omitempty" json:"proxy_port,omitempty"`
-	ProxyUser    string `yaml:"ProxyUser,omitempty" json:"proxy_user,omitempty"`
+	UseProxy      string `yaml:"UseProxy,omitempty" json:"use_proxy,omitempty"` // 0 or 1
+	ProxyHost     string `yaml:"ProxyHost,omitempty" json:"proxy_host,omitempty"`
+	ProxyPort     string `yaml:"ProxyPort,omitempty" json:"proxy_port,omitempty"`
+	ProxyUser     string `yaml:"ProxyUser,omitempty" json:"proxy_user,omitempty"`
 	ProxyPassword string `yaml:"ProxyPassword,omitempty" json:"proxy_password,omitempty"`
 }
 

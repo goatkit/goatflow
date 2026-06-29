@@ -1,4 +1,3 @@
-// Package zinc provides the ZincSearch client for full-text search.
 package zinc
 
 import (
@@ -10,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/models"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
 
 // Client interface for Zinc search operations.
@@ -19,7 +18,7 @@ type Client interface {
 	CreateIndex(ctx context.Context, name string, mapping map[string]interface{}) error
 	DeleteIndex(ctx context.Context, name string) error
 	IndexExists(ctx context.Context, name string) (bool, error)
-	GetIndexStats(ctx context.Context, name string) (*models.IndexStats, error)
+	GetIndexStats(ctx context.Context, name string) (*platformmodels.IndexStats, error)
 
 	// Document operations
 	IndexDocument(ctx context.Context, index string, id string, doc interface{}) error
@@ -29,7 +28,7 @@ type Client interface {
 	BulkIndex(ctx context.Context, index string, docs []interface{}) error
 
 	// Search operations
-	Search(ctx context.Context, index string, query *models.SearchRequest) (*models.SearchResult, error)
+	Search(ctx context.Context, index string, query *platformmodels.SearchRequest) (*platformmodels.SearchResult, error)
 	Suggest(ctx context.Context, index string, text string, field string) ([]string, error)
 }
 
@@ -97,7 +96,7 @@ func (c *ZincClient) IndexExists(ctx context.Context, name string) (bool, error)
 }
 
 // GetIndexStats retrieves statistics for an index.
-func (c *ZincClient) GetIndexStats(ctx context.Context, name string) (*models.IndexStats, error) {
+func (c *ZincClient) GetIndexStats(ctx context.Context, name string) (*platformmodels.IndexStats, error) {
 	url := fmt.Sprintf("%s/api/index/%s/stats", c.baseURL, name)
 
 	var response struct {
@@ -110,7 +109,7 @@ func (c *ZincClient) GetIndexStats(ctx context.Context, name string) (*models.In
 		return nil, err
 	}
 
-	return &models.IndexStats{
+	return &platformmodels.IndexStats{
 		Name:          name,
 		DocumentCount: response.DocNum,
 		StorageSize:   response.StorageSize,
@@ -164,15 +163,8 @@ func (c *ZincClient) BulkIndex(ctx context.Context, index string, docs []interfa
 	// Build bulk request body
 	var buffer bytes.Buffer
 	for _, doc := range docs {
-		// Get document ID if available
-		docID := ""
-		if docMap, ok := doc.(map[string]interface{}); ok {
-			if id, exists := docMap["id"]; exists {
-				docID = fmt.Sprintf("%v", id)
-			}
-		} else if searchDoc, ok := doc.(models.TicketSearchDocument); ok {
-			docID = searchDoc.ID
-		}
+		// Try to extract document ID from map or struct with ID field
+		docID := extractDocID(doc)
 
 		// Index action
 		action := map[string]interface{}{
@@ -197,8 +189,29 @@ func (c *ZincClient) BulkIndex(ctx context.Context, index string, docs []interfa
 	return c.doRequest(ctx, "POST", url, buffer.Bytes(), nil)
 }
 
+// extractDocID attempts to extract a document ID from various types.
+func extractDocID(doc interface{}) string {
+	// Try map first
+	if docMap, ok := doc.(map[string]interface{}); ok {
+		if id, exists := docMap["id"]; exists {
+			return fmt.Sprintf("%v", id)
+		}
+	}
+	// Try JSON roundtrip for structs
+	data, err := json.Marshal(doc)
+	if err == nil {
+		var docMap map[string]interface{}
+		if err := json.Unmarshal(data, &docMap); err == nil {
+			if id, exists := docMap["id"]; exists {
+				return fmt.Sprintf("%v", id)
+			}
+		}
+	}
+	return ""
+}
+
 // Search performs a search query.
-func (c *ZincClient) Search(ctx context.Context, index string, query *models.SearchRequest) (*models.SearchResult, error) {
+func (c *ZincClient) Search(ctx context.Context, index string, query *platformmodels.SearchRequest) (*platformmodels.SearchResult, error) {
 	url := fmt.Sprintf("%s/api/%s/_search", c.baseURL, index)
 
 	// Build Zinc query
@@ -224,14 +237,14 @@ func (c *ZincClient) Search(ctx context.Context, index string, query *models.Sea
 		return nil, err
 	}
 
-	// Convert to SearchResult
-	result := &models.SearchResult{
+	// Convert to platformmodels.SearchResult
+	result := &platformmodels.SearchResult{
 		Query:     query.Query,
 		TotalHits: response.Hits.Total.Value,
 		Page:      query.Page,
 		PageSize:  query.PageSize,
 		Took:      response.Took,
-		Hits:      make([]models.SearchHit, 0, len(response.Hits.Hits)),
+		Hits:      make([]platformmodels.SearchHit, 0, len(response.Hits.Hits)),
 	}
 
 	if result.Page == 0 {
@@ -248,7 +261,7 @@ func (c *ZincClient) Search(ctx context.Context, index string, query *models.Sea
 
 	// Convert hits
 	for _, hit := range response.Hits.Hits {
-		searchHit := models.SearchHit{
+		searchHit := platformmodels.SearchHit{
 			ID:         hit.ID,
 			Type:       "ticket",
 			Score:      hit.Score,
@@ -299,8 +312,8 @@ func (c *ZincClient) Suggest(ctx context.Context, index string, text string, fie
 	return suggestions, nil
 }
 
-// buildZincQuery builds a Zinc query from SearchRequest.
-func (c *ZincClient) buildZincQuery(req *models.SearchRequest) map[string]interface{} {
+// buildZincQuery builds a Zinc query from platformmodels.SearchRequest.
+func (c *ZincClient) buildZincQuery(req *platformmodels.SearchRequest) map[string]interface{} {
 	query := map[string]interface{}{
 		"from": (req.Page - 1) * req.PageSize,
 		"size": req.PageSize,

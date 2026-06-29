@@ -2,26 +2,27 @@ package zinc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/goatkit/goatflow/internal/models"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
+	"time"
 )
 
 // MockZincClient is a mock implementation of the Client interface for testing.
 type MockZincClient struct {
 	mu        sync.RWMutex
 	indices   map[string]map[string]interface{} // index -> document ID -> document
-	indexInfo map[string]*models.IndexStats
+	indexInfo map[string]*platformmodels.IndexStats
 }
 
 // NewMockZincClient creates a new mock Zinc client.
 func NewMockZincClient() *MockZincClient {
 	return &MockZincClient{
 		indices:   make(map[string]map[string]interface{}),
-		indexInfo: make(map[string]*models.IndexStats),
+		indexInfo: make(map[string]*platformmodels.IndexStats),
 	}
 }
 
@@ -35,7 +36,7 @@ func (c *MockZincClient) CreateIndex(ctx context.Context, name string, mapping m
 	}
 
 	c.indices[name] = make(map[string]interface{})
-	c.indexInfo[name] = &models.IndexStats{
+	c.indexInfo[name] = &platformmodels.IndexStats{
 		Name:          name,
 		DocumentCount: 0,
 		StorageSize:   0,
@@ -70,7 +71,7 @@ func (c *MockZincClient) IndexExists(ctx context.Context, name string) (bool, er
 }
 
 // GetIndexStats retrieves statistics for an index.
-func (c *MockZincClient) GetIndexStats(ctx context.Context, name string) (*models.IndexStats, error) {
+func (c *MockZincClient) GetIndexStats(ctx context.Context, name string) (*platformmodels.IndexStats, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -95,7 +96,7 @@ func (c *MockZincClient) IndexDocument(ctx context.Context, index string, id str
 
 	if _, exists := c.indices[index]; !exists {
 		c.indices[index] = make(map[string]interface{})
-		c.indexInfo[index] = &models.IndexStats{
+		c.indexInfo[index] = &platformmodels.IndexStats{
 			Name:   index,
 			Status: "green",
 		}
@@ -123,29 +124,13 @@ func (c *MockZincClient) UpdateDocument(ctx context.Context, index string, id st
 		return fmt.Errorf("document %s not found", id)
 	}
 
-	// Apply updates
-	if docMap, ok := doc.(map[string]interface{}); ok {
+	// Apply updates via JSON roundtrip — supports any serializable type
+	docMap, err := docToMap(doc)
+	if err == nil && docMap != nil {
 		for k, v := range updates {
 			docMap[k] = v
 		}
-	} else if searchDoc, ok := doc.(*models.TicketSearchDocument); ok {
-		// Handle TicketSearchDocument updates
-		for k, v := range updates {
-			switch k {
-			case "status":
-				if s, ok := v.(string); ok {
-					searchDoc.Status = s
-				}
-			case "priority":
-				if p, ok := v.(string); ok {
-					searchDoc.Priority = p
-				}
-			case "title":
-				if t, ok := v.(string); ok {
-					searchDoc.Title = t
-				}
-			}
-		}
+		c.indices[index][id] = docMap
 	}
 
 	c.indexInfo[index].LastUpdated = time.Now()
@@ -180,7 +165,7 @@ func (c *MockZincClient) GetDocument(ctx context.Context, index string, id strin
 
 	indexDocs, exists := c.indices[index]
 	if !exists {
-		return nil, fmt.Errorf("index %s not found", index)
+		return nil, nil
 	}
 
 	doc, exists := indexDocs[id]
@@ -188,40 +173,10 @@ func (c *MockZincClient) GetDocument(ctx context.Context, index string, id strin
 		return nil, fmt.Errorf("document %s not found", id)
 	}
 
-	// Convert to map
-	result := make(map[string]interface{})
-
-	switch v := doc.(type) {
-	case map[string]interface{}:
-		result = v
-	case models.TicketSearchDocument:
-		result["id"] = v.ID
-		result["ticket_number"] = v.TicketNumber
-		result["title"] = v.Title
-		result["content"] = v.Content
-		result["status"] = v.Status
-		result["priority"] = v.Priority
-		result["queue"] = v.Queue
-		result["tags"] = v.Tags
-		result["customer_name"] = v.CustomerName
-		result["customer_email"] = v.CustomerEmail
-		result["agent_name"] = v.AgentName
-		result["created_at"] = v.CreatedAt
-		result["updated_at"] = v.UpdatedAt
-	case *models.TicketSearchDocument:
-		result["id"] = v.ID
-		result["ticket_number"] = v.TicketNumber
-		result["title"] = v.Title
-		result["content"] = v.Content
-		result["status"] = v.Status
-		result["priority"] = v.Priority
-		result["queue"] = v.Queue
-		result["tags"] = v.Tags
-		result["customer_name"] = v.CustomerName
-		result["customer_email"] = v.CustomerEmail
-		result["agent_name"] = v.AgentName
-		result["created_at"] = v.CreatedAt
-		result["updated_at"] = v.UpdatedAt
+	// Convert to map via JSON roundtrip
+	result, _ := docToMap(doc)
+	if result == nil {
+		result = make(map[string]interface{})
 	}
 
 	return result, nil
@@ -231,18 +186,7 @@ func (c *MockZincClient) GetDocument(ctx context.Context, index string, id strin
 func (c *MockZincClient) BulkIndex(ctx context.Context, index string, docs []interface{}) error {
 	for _, doc := range docs {
 		// Extract ID from document
-		var id string
-		switch v := doc.(type) {
-		case models.TicketSearchDocument:
-			id = v.ID
-		case *models.TicketSearchDocument:
-			id = v.ID
-		case map[string]interface{}:
-			if idVal, ok := v["id"]; ok {
-				id = fmt.Sprintf("%v", idVal)
-			}
-		}
-
+		id := extractDocID(doc)
 		if id == "" {
 			id = fmt.Sprintf("doc_%d", time.Now().UnixNano())
 		}
@@ -256,16 +200,16 @@ func (c *MockZincClient) BulkIndex(ctx context.Context, index string, docs []int
 }
 
 // Search performs a search query.
-func (c *MockZincClient) Search(ctx context.Context, index string, query *models.SearchRequest) (*models.SearchResult, error) {
+func (c *MockZincClient) Search(ctx context.Context, index string, query *platformmodels.SearchRequest) (*platformmodels.SearchResult, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	indexDocs, exists := c.indices[index]
 	if !exists {
-		return nil, fmt.Errorf("index %s not found", index)
+		return nil, nil
 	}
 
-	var hits []models.SearchHit
+	var hits []platformmodels.SearchHit
 	queryLower := strings.ToLower(query.Query)
 
 	// Simple text search
@@ -273,140 +217,144 @@ func (c *MockZincClient) Search(ctx context.Context, index string, query *models
 		match := false
 		score := 0.0
 
-		// Convert document to searchable format
+		// Convert document to map via JSON roundtrip for uniform field access
+		docMap, _ := docToMap(doc)
+
 		var title, content, status, priority string
 		var tags []string
 
-		switch v := doc.(type) {
-		case models.TicketSearchDocument:
-			title = v.Title
-			content = v.Content
-			status = v.Status
-			priority = v.Priority
-			tags = v.Tags
-		case *models.TicketSearchDocument:
-			title = v.Title
-			content = v.Content
-			status = v.Status
-			priority = v.Priority
-			tags = v.Tags
-		case map[string]interface{}:
-			if t, ok := v["title"].(string); ok {
+		if docMap != nil {
+			if t, ok := docMap["title"].(string); ok {
 				title = t
 			}
-			if c, ok := v["content"].(string); ok {
+			if c, ok := docMap["content"].(string); ok {
 				content = c
 			}
-			if s, ok := v["status"].(string); ok {
+			if s, ok := docMap["status"].(string); ok {
 				status = s
 			}
-			if p, ok := v["priority"].(string); ok {
+			if p, ok := docMap["priority"].(string); ok {
 				priority = p
+			}
+			if t, ok := docMap["tags"]; ok {
+				switch tv := t.(type) {
+				case []string:
+					tags = tv
+				case []interface{}:
+					for _, tag := range tv {
+						if s, ok := tag.(string); ok {
+							tags = append(tags, s)
+						}
+					}
+				}
 			}
 		}
 
 		// Check query match
-		if query.Query == "*" || query.Query == "" {
-			match = true
-			score = 1.0
-		} else if strings.Contains(strings.ToLower(title), queryLower) {
-			match = true
-			score = 2.0
-		} else if strings.Contains(strings.ToLower(content), queryLower) {
+		if query.Query == "" || query.Query == "*" {
 			match = true
 			score = 1.0
 		} else {
+			// Search in title
+			if strings.Contains(strings.ToLower(title), queryLower) {
+				match = true
+				score += 1.0
+			}
+			// Search in content
+			if strings.Contains(strings.ToLower(content), queryLower) {
+				match = true
+				score += 0.5
+			}
+			// Search in tags
 			for _, tag := range tags {
 				if strings.Contains(strings.ToLower(tag), queryLower) {
 					match = true
-					score = 0.5
+					score += 0.3
+				}
+			}
+		}
+
+		// Check filters
+		if match && len(query.Filters) > 0 {
+			for key, value := range query.Filters {
+				fieldValue := ""
+				if docMap != nil {
+					if v, ok := docMap[key]; ok {
+						fieldValue = fmt.Sprintf("%v", v)
+					}
+				}
+				if fieldValue != value {
+					match = false
 					break
 				}
 			}
 		}
 
-		// Apply filters
-		if match && len(query.Filters) > 0 {
-			for field, value := range query.Filters {
-				switch field {
-				case "status":
-					if status != value {
-						match = false
-					}
-				case "priority":
-					if priority != value {
-						match = false
-					}
-				}
-			}
-		}
-
 		if match {
-			source := make(map[string]interface{})
-			source["id"] = id
-			source["title"] = title
-			source["content"] = content
-			source["status"] = status
-			source["priority"] = priority
-			source["tags"] = tags
-
-			hit := models.SearchHit{
-				ID:        id,
-				Type:      "ticket",
-				Score:     score,
-				Source:    source,
-				Timestamp: time.Now(),
-			}
-
-			// Add highlights if requested
-			if query.Highlight && queryLower != "" && queryLower != "*" {
-				hit.Highlights = make(map[string][]string)
-				if strings.Contains(strings.ToLower(title), queryLower) {
-					// Case-insensitive replacement
-					highlighted := strings.ReplaceAll(strings.ToLower(title), queryLower, "<em>"+queryLower+"</em>")
-					hit.Highlights["title"] = []string{highlighted}
+			highlights := make(map[string][]string)
+			if query.Highlight {
+				excerpts := []string{"<em>" + title + "</em>"}
+				if title != "" {
+					highlights["title"] = excerpts
 				}
-				if strings.Contains(strings.ToLower(content), queryLower) {
-					highlighted := strings.ReplaceAll(strings.ToLower(content), queryLower, "<em>"+queryLower+"</em>")
-					hit.Highlights["content"] = []string{highlighted}
+				if content != "" {
+					highlights["content"] = []string{"<em>" + content + "</em>"}
 				}
 			}
-
+			hit := platformmodels.SearchHit{
+				ID:    id,
+				Type:  "ticket",
+				Score: score,
+				Source: map[string]interface{}{
+					"title":    title,
+					"content":  content,
+					"status":   status,
+					"priority": priority,
+					"tags":     tags,
+				},
+				Timestamp:  time.Now(),
+				Highlights: highlights,
+			}
 			hits = append(hits, hit)
 		}
 	}
 
+	result := &platformmodels.SearchResult{
+		Query:    query.Query,
+		Page:     query.Page,
+		PageSize: query.PageSize,
+		Hits:     hits,
+		Took:     0,
+	}
+
+	if result.Page == 0 {
+		result.Page = 1
+	}
+	if result.PageSize == 0 {
+		result.PageSize = 20
+	}
+
+	result.TotalHits = int64(len(hits))
+	result.TotalPages = int(result.TotalHits / int64(result.PageSize))
+	if result.TotalHits%int64(result.PageSize) > 0 {
+		result.TotalPages++
+	}
+
 	// Apply pagination
-	page := query.Page
-	if page == 0 {
-		page = 1
-	}
-	pageSize := query.PageSize
-	if pageSize == 0 {
-		pageSize = 20
-	}
-
-	start := (page - 1) * pageSize
-	end := start + pageSize
-
-	totalHits := len(hits)
-	if start < len(hits) {
-		if end > len(hits) {
-			end = len(hits)
+	if result.PageSize > 0 && len(result.Hits) > result.PageSize {
+		start := (result.Page - 1) * result.PageSize
+		if start < 0 {
+			start = 0
 		}
-		hits = hits[start:end]
-	} else {
-		hits = []models.SearchHit{}
-	}
-
-	result := &models.SearchResult{
-		Query:      query.Query,
-		TotalHits:  int64(totalHits),
-		Page:       page,
-		PageSize:   pageSize,
-		TotalPages: (totalHits + pageSize - 1) / pageSize,
-		Took:       10, // Mock timing
-		Hits:       hits,
+		if start >= len(result.Hits) {
+			result.Hits = nil
+		} else {
+			end := start + result.PageSize
+			if end > len(result.Hits) {
+				end = len(result.Hits)
+			}
+			result.Hits = result.Hits[start:end]
+		}
 	}
 
 	return result, nil
@@ -433,4 +381,20 @@ func (c *MockZincClient) Suggest(ctx context.Context, index string, text string,
 	}
 
 	return suggestions, nil
+}
+
+// docToMap converts any JSON-serializable value to a map.
+func docToMap(doc interface{}) (map[string]interface{}, error) {
+	if docMap, ok := doc.(map[string]interface{}); ok {
+		return docMap, nil
+	}
+	data, err := json.Marshal(doc)
+	if err != nil {
+		return nil, err
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }

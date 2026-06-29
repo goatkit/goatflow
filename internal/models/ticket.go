@@ -187,23 +187,23 @@ type ArticleCreateRequest struct {
 
 // TicketListRequest represents query parameters for listing tickets.
 type TicketListRequest struct {
-	Page                int     `json:"page,omitempty" form:"page"`
-	PerPage             int     `json:"per_page,omitempty" form:"per_page"`
-	QueueID             *uint   `json:"queue_id,omitempty" form:"queue_id"`
-	StateID             *uint   `json:"state_id,omitempty" form:"state_id"`
-	PriorityID          *uint   `json:"priority_id,omitempty" form:"priority_id"`
-	CustomerID          *uint   `json:"customer_id,omitempty" form:"customer_id"`
-	OwnerID             *uint   `json:"owner_id,omitempty" form:"owner_id"`
-	Search              string  `json:"search,omitempty" form:"search"`
-	SortBy              string  `json:"sort_by,omitempty" form:"sort_by"`
-	SortOrder           string  `json:"sort_order,omitempty" form:"sort_order"`
-	ArchiveFlag         *int    `json:"archive_flag,omitempty" form:"archive_flag"`
-	StartDate           *string `json:"start_date,omitempty" form:"start_date"`
-	EndDate             *string `json:"end_date,omitempty" form:"end_date"`
+	Page                int      `json:"page,omitempty" form:"page"`
+	PerPage             int      `json:"per_page,omitempty" form:"per_page"`
+	QueueID             *uint    `json:"queue_id,omitempty" form:"queue_id"`
+	StateID             *uint    `json:"state_id,omitempty" form:"state_id"`
+	PriorityID          *uint    `json:"priority_id,omitempty" form:"priority_id"`
+	CustomerID          *uint    `json:"customer_id,omitempty" form:"customer_id"`
+	OwnerID             *uint    `json:"owner_id,omitempty" form:"owner_id"`
+	Search              string   `json:"search,omitempty" form:"search"`
+	SortBy              string   `json:"sort_by,omitempty" form:"sort_by"`
+	SortOrder           string   `json:"sort_order,omitempty" form:"sort_order"`
+	ArchiveFlag         *int     `json:"archive_flag,omitempty" form:"archive_flag"`
+	StartDate           *string  `json:"start_date,omitempty" form:"start_date"`
+	EndDate             *string  `json:"end_date,omitempty" form:"end_date"`
 	ExcludeClosedStates bool     `json:"-"`
 	StateTypeNames      []string `json:"-"` // Filter by state type names (e.g. "open","new" for open tickets)
 	OverdueOnly         bool     `json:"-"` // Only return tickets past SLA escalation time
-	AccessibleQueueIDs  []uint  `json:"-"` // Queue IDs user has permission to view (for permission filtering)
+	AccessibleQueueIDs  []uint   `json:"-"` // Queue IDs user has permission to view (for permission filtering)
 }
 
 // TicketListResponse represents a paginated list of tickets.
