@@ -6,15 +6,17 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/config"
-	"github.com/goatkit/goatflow/internal/repository"
 )
 
 // MaintenanceNotification middleware checks for active/upcoming maintenance
 // and adds notification data to the context for templates.
 func MaintenanceNotification(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		repo := repository.NewSystemMaintenanceRepository(db)
-
+		if maintenanceCheckerFactory == nil {
+			c.Next()
+			return
+		}
+		repo := maintenanceCheckerFactory(db)
 		// Check active maintenance
 		if active, err := repo.IsActive(); err == nil && active != nil {
 			// Use default message from config if not set in record

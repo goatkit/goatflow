@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/platform/middleware"
 )
 
 // handleListUsers returns all users (agents).

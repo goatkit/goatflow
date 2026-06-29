@@ -7,7 +7,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/ldap"
-	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/platform/middleware"
 )
 
 // getContextUserID extracts user_id from context safely.

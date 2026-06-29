@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/models"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/apierrors"
 )
 
@@ -112,16 +112,16 @@ func RateLimitMiddleware() gin.HandlerFunc {
 
 		// Check if using API token (has custom rate limit)
 		if apiToken, exists := c.Get("api_token"); exists {
-			token := apiToken.(*models.APIToken)
+			token := apiToken.(*platformmodels.APIToken)
 			key = "token:" + token.Prefix
 			limit = token.RateLimit
 			if limit <= 0 {
-				limit = models.DefaultRateLimit
+				limit = platformmodels.DefaultRateLimit
 			}
 		} else {
 			// Fall back to IP-based limiting
 			key = "ip:" + c.ClientIP()
-			limit = models.DefaultRateLimit
+			limit = platformmodels.DefaultRateLimit
 		}
 
 		if !globalRateLimiter.Allow(key, limit) {

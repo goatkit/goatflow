@@ -28,7 +28,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
 	"github.com/goatkit/goatflow/internal/mailaccountmeta"
-	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/platform/middleware"
 )
 
 // Format: sha256$salt$hash (similar to OTRS format).

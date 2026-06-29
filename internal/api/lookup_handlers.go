@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/platform/middleware"
 )
 
 // handleAdminLookups is already defined in htmx_routes.go for templates

@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/goatkit/goatflow/internal/models"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
 
 func init() {
@@ -182,7 +182,7 @@ func TestRateLimitMiddleware_UsesAPITokenLimit(t *testing.T) {
 	router := gin.New()
 	// Inject a mock API token before rate limit middleware
 	router.Use(func(c *gin.Context) {
-		c.Set("api_token", &models.APIToken{
+		c.Set("api_token", &platformmodels.APIToken{
 			Prefix:    "test_token_123",
 			RateLimit: 3, // Custom low limit
 		})
@@ -215,7 +215,7 @@ func TestRateLimitMiddleware_DefaultsToDefaultRateLimitWhenTokenHasZero(t *testi
 
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
-		c.Set("api_token", &models.APIToken{
+		c.Set("api_token", &platformmodels.APIToken{
 			Prefix:    "test_zero_limit",
 			RateLimit: 0, // Zero should default to DefaultRateLimit
 		})

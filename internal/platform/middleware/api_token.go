@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
-	"github.com/goatkit/goatflow/internal/models"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/apierrors"
 )
 
@@ -24,7 +24,7 @@ func debugLog(format string, v ...interface{}) {
 // APITokenVerifier is the interface for verifying API tokens.
 // This breaks the import cycle between api and middleware packages.
 type APITokenVerifier interface {
-	VerifyToken(ctx context.Context, rawToken string) (*models.APIToken, error)
+	VerifyToken(ctx context.Context, rawToken string) (*platformmodels.APIToken, error)
 	UpdateLastUsed(ctx context.Context, tokenID int64, ip string) error
 }
 
@@ -38,7 +38,7 @@ func SetAPITokenVerifier(v APITokenVerifier) {
 
 // IsAPIToken checks if a token string is a GoatKit API token (gf_ prefix)
 func IsAPIToken(token string) bool {
-	return strings.HasPrefix(token, models.TokenPrefix)
+	return strings.HasPrefix(token, platformmodels.TokenPrefix)
 }
 
 // APITokenAuthMiddleware authenticates requests using GoatKit API tokens (gf_*).
@@ -92,7 +92,7 @@ func APITokenAuthMiddleware() gin.HandlerFunc {
 		c.Set("api_token_id", apiToken.ID)
 		c.Set("api_token_scopes", apiToken.Scopes)
 
-		if apiToken.UserType == models.APITokenUserAgent {
+		if apiToken.UserType == platformmodels.APITokenUserAgent {
 			c.Set("user_role", "User")
 		} else {
 			c.Set("user_role", "Customer")
@@ -164,7 +164,7 @@ func authenticateAPIToken(c *gin.Context, token string) {
 	c.Set("api_token_id", apiToken.ID)
 	c.Set("api_token_scopes", apiToken.Scopes)
 
-	if apiToken.UserType == models.APITokenUserAgent {
+	if apiToken.UserType == platformmodels.APITokenUserAgent {
 		c.Set("user_role", "User")
 	} else {
 		c.Set("user_role", "Customer")
@@ -207,7 +207,7 @@ func RequireScope(scope string) gin.HandlerFunc {
 		}
 
 		apiToken, _ := c.Get("api_token")
-		token, ok := apiToken.(*models.APIToken)
+		token, ok := apiToken.(*platformmodels.APIToken)
 		if !ok {
 			apierrors.Error(c, apierrors.CodeInternalError)
 			c.Abort()
@@ -224,9 +224,9 @@ func RequireScope(scope string) gin.HandlerFunc {
 		// Check scope restrictions (AgentOnly, RequireRole)
 		userRole, _ := c.Get("user_role")
 		roleStr, _ := userRole.(string)
-		isCustomer := token.UserType == models.APITokenUserCustomer
+		isCustomer := token.UserType == platformmodels.APITokenUserCustomer
 
-		if !models.IsScopeAllowed(scope, roleStr, isCustomer) {
+		if !platformmodels.IsScopeAllowed(scope, roleStr, isCustomer) {
 			if isCustomer {
 				apierrors.ErrorWithMessage(c, apierrors.CodeForbidden, "This endpoint is not available to customers")
 			} else {

@@ -12,7 +12,6 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/convert"
-	"github.com/goatkit/goatflow/internal/service"
 )
 
 // RequireQueueAccess checks if the user has the specified permission for the queue.
@@ -97,7 +96,12 @@ func RequireQueueAccess(permType string) gin.HandlerFunc {
 		}
 
 		// Create queue access service
-		queueAccessSvc := service.NewQueueAccessService(db)
+		if queueAccessCheckerFactory == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Queue access service unavailable"})
+			c.Abort()
+			return
+		}
+		queueAccessSvc := queueAccessCheckerFactory(db)
 
 		// Check if user is admin (bypass permission check)
 		isAdmin, err := queueAccessSvc.IsAdmin(c.Request.Context(), userIDUint)
@@ -177,26 +181,14 @@ func RequireQueueAccessFromTicket(permType string) gin.HandlerFunc {
 			return
 		}
 
-		// Look up the ticket - try ticket number (tn) first, then numeric ID
-		// This is important because ticket numbers like "2025082610000069" are numeric
-		// but should be matched against the tn field, not the id field
-		var queueID uint
-		var ticketID uint64
-
-		// First, try to find by ticket number (tn field)
-		query := database.ConvertPlaceholders("SELECT id, queue_id FROM ticket WHERE tn = ?")
-		err = db.QueryRow(query, ticketIDStr).Scan(&ticketID, &queueID)
-
-		if err != nil {
-			// If not found by tn, try as numeric primary key ID (for backwards compatibility)
-			numericID, parseErr := strconv.ParseUint(ticketIDStr, 10, 64)
-			if parseErr == nil {
-				ticketID = numericID
-				query = database.ConvertPlaceholders("SELECT queue_id FROM ticket WHERE id = ?")
-				err = db.QueryRow(query, ticketID).Scan(&queueID)
-			}
+		// Resolve ticket to queue ID via injected resolver
+		if ticketQueueResolverFactory == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ticket resolver unavailable"})
+			c.Abort()
+			return
 		}
-
+		resolver := ticketQueueResolverFactory()
+		queueID, ticketID, err := resolver.ResolveQueueID(db, ticketIDStr)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
 			c.Abort()
@@ -204,7 +196,12 @@ func RequireQueueAccessFromTicket(permType string) gin.HandlerFunc {
 		}
 
 		// Create queue access service
-		queueAccessSvc := service.NewQueueAccessService(db)
+		if queueAccessCheckerFactory == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Queue access service unavailable"})
+			c.Abort()
+			return
+		}
+		queueAccessSvc := queueAccessCheckerFactory(db)
 
 		// Check if user is admin (bypass permission check)
 		isAdmin, err := queueAccessSvc.IsAdmin(c.Request.Context(), userIDUint)
@@ -283,7 +280,12 @@ func RequireAnyQueueAccess(permType string) gin.HandlerFunc {
 		}
 
 		// Create queue access service
-		queueAccessSvc := service.NewQueueAccessService(db)
+		if queueAccessCheckerFactory == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Queue access service unavailable"})
+			c.Abort()
+			return
+		}
+		queueAccessSvc := queueAccessCheckerFactory(db)
 
 		// Check if user is admin (bypass permission check)
 		isAdmin, err := queueAccessSvc.IsAdmin(c.Request.Context(), userIDUint)

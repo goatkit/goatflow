@@ -13,24 +13,22 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/convert"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
-	"github.com/goatkit/goatflow/internal/repository"
-	"github.com/goatkit/goatflow/internal/service"
 )
 
-// Session service singleton for middleware (avoids import cycle with shared package)
 var (
-	middlewareSessionService *service.SessionService
+	middlewareSessionService SessionChecker
 	middlewareSessionOnce    sync.Once
 )
 
-func getMiddlewareSessionService() *service.SessionService {
+func getMiddlewareSessionService() SessionChecker {
 	middlewareSessionOnce.Do(func() {
 		db, err := database.GetDB()
 		if err != nil {
 			return
 		}
-		repo := repository.NewSessionRepository(db)
-		middlewareSessionService = service.NewSessionService(repo)
+		if sessionServiceFactory != nil {
+			middlewareSessionService = sessionServiceFactory(db)
+		}
 	})
 	return middlewareSessionService
 }

@@ -41,7 +41,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/email/inbound/filters"
 	"github.com/goatkit/goatflow/internal/email/inbound/postmaster"
-	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/template"
 	platformapi "github.com/goatkit/goatflow/internal/platform/api"
 	"github.com/goatkit/goatflow/internal/platform/cache"
@@ -204,6 +204,18 @@ func main() {
 		return repository.NewSystemMaintenanceRepository(db)
 	})
 	template.SetContextHelpers(middleware.GetLanguage, shared.GetUserIDFromCtxUint)
+	middleware.SetSessionServiceFactory(func(db *sql.DB) middleware.SessionChecker {
+		return service.NewSessionService(repository.NewSessionRepository(db))
+	})
+	middleware.SetMaintenanceCheckerFactory(func(db *sql.DB) middleware.MaintenanceChecker {
+		return repository.NewSystemMaintenanceRepository(db)
+	})
+	middleware.SetQueueAccessCheckerFactory(func(db *sql.DB) middleware.QueueAccessChecker {
+		return service.NewQueueAccessService(db)
+	})
+	middleware.SetTicketQueueResolverFactory(func() middleware.TicketQueueResolver {
+		return &repository.TicketQueueResolverImpl{}
+	})
 	ticketNumGen := setup.Generator
 	systemID := setup.SystemID
 

@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
-	"github.com/goatkit/goatflow/internal/models"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/convert"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
 )
@@ -376,7 +376,7 @@ func RequireTicketAccess(rbac *auth.RBAC) gin.HandlerFunc {
 
 		// For admins and agents, allow access to any ticket
 		// For customers, we'd need to check database ownership
-		if userRole == string(models.RoleAdmin) || userRole == string(models.RoleAgent) {
+		if userRole == string(platformmodels.RoleAdmin) || userRole == string(platformmodels.RoleAgent) {
 			c.Next()
 			return
 		}

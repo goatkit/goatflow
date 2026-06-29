@@ -13,7 +13,7 @@ import (
 
 	api "github.com/goatkit/goatflow/internal/api"
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/service/ticket_number"
 )
