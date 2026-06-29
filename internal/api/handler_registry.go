@@ -14,6 +14,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/httpcookie"
+	_ "github.com/goatkit/goatflow/internal/platform/api"
 	"github.com/goatkit/goatflow/internal/routing"
 	"github.com/goatkit/goatflow/internal/shared"
 )
@@ -574,37 +575,12 @@ func ensureCoreHandlers() {
 		"handleAdminDynamicFieldScreenConfigSave":   handleAdminDynamicFieldScreenConfigSave,
 		"handleAdminDynamicFieldScreenConfigSingle": handleAdminDynamicFieldScreenConfigSingle,
 		// Custom Fields (GoatKit PaaS Core) handlers
-		"handleAdminCustomFields":       handleAdminCustomFields,
-		"handleAdminCustomFieldNew":     handleAdminCustomFieldNew,
-		"handleAdminCustomFieldEdit":    handleAdminCustomFieldEdit,
-		"handleCreateCustomField":       handleCreateCustomField,
-		"handleUpdateCustomField":       handleUpdateCustomField,
-		"handleDeleteCustomField":       handleDeleteCustomField,
-		"handleAPIListCustomFieldDefs":  handleAPIListCustomFieldDefs,
-		"handleAPIGetCustomFieldDef":    handleAPIGetCustomFieldDef,
-		"handleAPIGetCustomFieldValues": handleAPIGetCustomFieldValues,
-		"handleAPISetCustomFieldValues": handleAPISetCustomFieldValues,
-		"handleAPIQueryCustomFields":    handleAPIQueryCustomFields,
-		// Deletion / Recycle bin handlers
-		"handleAdminRecycleBinList":  handleAdminRecycleBinList,
-		"handleAdminRestore":         handleAdminRestore,
-		"handleAdminHardDelete":      handleAdminHardDelete,
-		"handleAdminBatchSoftDelete": handleAdminBatchSoftDelete,
-		"handleAdminBatchHardDelete": handleAdminBatchHardDelete,
-		"handleAdminDeletionLog":     handleAdminDeletionLog,
-		// Organisation handlers
-		"handleSwitchOrg":                handleSwitchOrg,
-		"handleListUserOrgs":             handleListUserOrgs,
-		"handleAPIListOrgs":              handleAPIListOrgs,
-		"handleAPICreateOrg":             handleAPICreateOrg,
-		"handleAPIUpdateOrg":             handleAPIUpdateOrg,
-		"handleAPIDeleteOrg":             handleAPIDeleteOrg,
-		"handleAPIListMembers":           handleAPIListMembers,
-		"handleAPIAddMember":             handleAPIAddMember,
-		"handleAPIRemoveMember":          handleAPIRemoveMember,
-		"handleAPIListOrgConfigs":        handleAPIListOrgConfigs,
-		"handleAPISetOrgConfig":          handleAPISetOrgConfig,
-		"handleAPIDeleteOrgConfig":       handleAPIDeleteOrgConfig,
+		"handleAdminCustomFields":        handleAdminCustomFields,
+		"handleAdminCustomFieldNew":      handleAdminCustomFieldNew,
+		"handleAdminCustomFieldEdit":     handleAdminCustomFieldEdit,
+		"handleCreateCustomField":        handleCreateCustomField,
+		"handleUpdateCustomField":        handleUpdateCustomField,
+		"handleDeleteCustomField":        handleDeleteCustomField,
 		"handleAPIListOrgPluginAccess":   handleAPIListOrgPluginAccess,
 		"handleAPISetOrgPluginAccess":    handleAPISetOrgPluginAccess,
 		"handleAPIDeleteOrgPluginAccess": handleAPIDeleteOrgPluginAccess,
@@ -795,7 +771,6 @@ func ensureCoreHandlers() {
 		"HandleAPIQueueGet":          HandleAPIQueueGet,
 		"HandleAPIQueueDetails":      HandleAPIQueueDetails,
 		"HandleAPIQueueStatus":       HandleAPIQueueStatus,
-		"HandleLoginAPI":             HandleLoginAPI,
 		"HandleListTicketsAPI":       HandleListTicketsAPI,
 		"HandleCreateTicketAPI":      HandleCreateTicketAPI,
 		"HandleGetTicketAPI":         HandleGetTicketAPI,
@@ -811,13 +786,7 @@ func ensureCoreHandlers() {
 		"HandleCreateInternalNote":   HandleCreateInternalNote,
 		"HandleUpdateInternalNote":   HandleUpdateInternalNote,
 		"HandleDeleteInternalNote":   HandleDeleteInternalNote,
-		"HandleUserMeAPI":            HandleUserMeAPI,
-		"HandleListUsersAPI":         HandleListUsersAPI,
-		"HandleGetUserAPI":           HandleGetUserAPI,
 		"HandleListGroupsAPI":        HandleListGroupsAPI,
-		"HandleCreateUserAPI":        HandleCreateUserAPI,
-		"HandleUpdateUserAPI":        HandleUpdateUserAPI,
-		"HandleDeleteUserAPI":        HandleDeleteUserAPI,
 		"HandleListQueuesAPI":        HandleListQueuesAPI,
 		"HandleGetQueueAPI":          HandleGetQueueAPI,
 		"HandleGetQueueAgentsAPI":    HandleGetQueueAgentsAPI,

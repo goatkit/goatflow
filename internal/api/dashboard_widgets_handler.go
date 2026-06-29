@@ -7,9 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/plugin"
 	"github.com/goatkit/goatflow/internal/routing"
-	"github.com/goatkit/goatflow/internal/service"
 )
 
 func init() {
@@ -20,7 +20,7 @@ func init() {
 
 // WidgetInfo describes a widget for the configuration UI.
 type WidgetInfo struct {
-	ID         string `json:"id"`          // "plugin_name:widget_id"
+	ID         string `json:"id"` // "plugin_name:widget_id"
 	PluginName string `json:"plugin_name"`
 	WidgetID   string `json:"widget_id"`
 	Title      string `json:"title"`
@@ -108,7 +108,7 @@ func handleDashboardWidgetsList(c *gin.Context) {
 			H:          gh,
 		})
 	}
-	
+
 	// If no widgets found (plugin manager not initialized), return empty
 	if widgets == nil {
 		widgets = []WidgetInfo{}
@@ -201,26 +201,25 @@ func sizeToGrid(size string) (int, int) {
 //
 // Default layout (12-column grid, cellHeight=120):
 //
-//   Row 0:  [Ticket Overview   6x3] [Recent Tickets     6x6]
-//   Row 3:  [Tickets by Status 6x3]                      |
-//   Row 6:  [Queue Status      6x4] [Ticket Chart       6x5]
+//	Row 0:  [Ticket Overview   6x3] [Recent Tickets     6x6]
+//	Row 3:  [Tickets by Status 6x3]                      |
+//	Row 6:  [Queue Status      6x4] [Ticket Chart       6x5]
 //
 // Design rationale — agent workflow priority:
-//   1. Overview numbers (top-left, first thing scanned)
-//   2. Recent tickets (top-right, tall — most actionable, shows more items)
-//   3. Status breakdown (below overview, completes the workload picture)
-//   4. Queue pressure (mid-left, which queues need attention)
-//   5. Trend chart (mid-right, contextual not urgent)
-//   6. Plugin widgets (bottom, supplementary information)
-//
+//  1. Overview numbers (top-left, first thing scanned)
+//  2. Recent tickets (top-right, tall — most actionable, shows more items)
+//  3. Status breakdown (below overview, completes the workload picture)
+//  4. Queue pressure (mid-left, which queues need attention)
+//  5. Trend chart (mid-right, contextual not urgent)
+//  6. Plugin widgets (bottom, supplementary information)
 func defaultWidgetLayout(fullID string) (x, y, w, h int, ok bool) {
 	type layout struct{ x, y, w, h int }
 	defaults := map[string]layout{
-		"stats:stats_overview":            {0, 0, 6, 3},
-		"dashboard-core:recent_tickets":   {6, 0, 6, 6},
-		"stats:stats_by_status":           {0, 3, 6, 3},
-		"dashboard-core:queue_status":     {0, 6, 6, 4},
-		"stats:stats_chart":               {6, 6, 6, 5},
+		"stats:stats_overview":          {0, 0, 6, 3},
+		"dashboard-core:recent_tickets": {6, 0, 6, 6},
+		"stats:stats_by_status":         {0, 3, 6, 3},
+		"dashboard-core:queue_status":   {0, 6, 6, 4},
+		"stats:stats_chart":             {6, 6, 6, 5},
 	}
 	if l, found := defaults[fullID]; found {
 		return l.x, l.y, l.w, l.h, true

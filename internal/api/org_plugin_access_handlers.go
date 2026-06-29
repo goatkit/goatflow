@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/organisation"
 	"github.com/goatkit/goatflow/internal/repository"
 )
 
@@ -157,8 +158,9 @@ func handleAPISetCaptivePlugin(c *gin.Context) {
 		}
 	}
 
-	orgR := orgRepo(c)
-	if orgR == nil {
+	orgR, err := organisation.NewRepository()
+	if err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database unavailable"})
 		return
 	}
 	userID := 1
@@ -233,4 +235,3 @@ func parseOrgIDParam(c *gin.Context) (int64, bool) {
 	}
 	return id, true
 }
-

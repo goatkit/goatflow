@@ -12,6 +12,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/config"
 	"github.com/goatkit/goatflow/internal/database"
+	platformservice "github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/shared"
@@ -25,7 +26,7 @@ var (
 	simpleTicketService *service.SimpleTicketService
 	storageService      service.StorageService
 	lookupService       *service.LookupService
-	authService         *service.AuthService
+	authService         *platformservice.AuthService
 
 	servicesMu          sync.Mutex
 	servicesInitialized bool
@@ -123,7 +124,7 @@ func GetUserRepository() *repository.UserRepository {
 }
 
 // GetAuthService returns the singleton auth service instance.
-func GetAuthService() *service.AuthService {
+func GetAuthService() *platformservice.AuthService {
 	InitializeServices()
 	return authService
 }
@@ -207,7 +208,7 @@ func initDatabaseServicesLocked(db *sql.DB) {
 	}
 
 	jwtManager := shared.GetJWTManager()
-	authService = service.NewAuthService(db, jwtManager)
+	authService = platformservice.NewAuthService(db, jwtManager)
 	log.Printf("Successfully connected to database")
 }
 

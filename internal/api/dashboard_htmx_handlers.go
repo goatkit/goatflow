@@ -18,9 +18,9 @@ import (
 	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/notifications"
+	"github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/routing"
-	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/shared"
 
 	"github.com/xeonx/timeago"
@@ -193,30 +193,30 @@ func handleDashboard(c *gin.Context) {
 
 	// Get plugin widgets for dashboard - filtered by user preferences
 	allPluginWidgets := GetPluginWidgets(c.Request.Context(), "dashboard", c)
-	
+
 	// Get user's widget config to filter
 	var dashboardUserID int
 	if val, exists := c.Get("user_id"); exists {
 		dashboardUserID = shared.ToInt(val, 0)
 	}
-	
+
 	pluginWidgets := allPluginWidgets
 	if dashboardUserID > 0 && db != nil {
 		prefService := service.NewUserPreferencesService(db)
 		widgetConfig, _ := prefService.GetDashboardWidgets(dashboardUserID)
-		
+
 		if widgetConfig != nil && len(widgetConfig) > 0 {
 			// Build map of widget configs (enabled + position + grid)
 			configMap := make(map[string]service.DashboardWidgetConfig)
 			for _, cfg := range widgetConfig {
 				configMap[cfg.WidgetID] = cfg
 			}
-			
+
 			// Filter widgets based on config and apply grid coords
 			filtered := make([]PluginWidgetData, 0, len(allPluginWidgets))
 			for _, w := range allPluginWidgets {
 				fullID := w.PluginName + ":" + w.ID
-				
+
 				// Check if widget is in config
 				if cfg, inConfig := configMap[fullID]; inConfig {
 					if cfg.Enabled {
@@ -232,7 +232,7 @@ func handleDashboard(c *gin.Context) {
 					filtered = append(filtered, w)
 				}
 			}
-			
+
 			// Apply default grid dimensions for widgets without saved config
 			for i := range filtered {
 				if filtered[i].GridW == 0 {
@@ -247,7 +247,7 @@ func handleDashboard(c *gin.Context) {
 					}
 				}
 			}
-			
+
 			// Sort by saved position
 			sort.SliceStable(filtered, func(i, j int) bool {
 				idI := filtered[i].PluginName + ":" + filtered[i].ID
@@ -261,11 +261,11 @@ func handleDashboard(c *gin.Context) {
 				}
 				return posI < posJ
 			})
-			
+
 			pluginWidgets = filtered
 		}
 	}
-	
+
 	// Ensure all widgets have default grid dimensions and positions
 	for i := range pluginWidgets {
 		fullID := pluginWidgets[i].PluginName + ":" + pluginWidgets[i].ID

@@ -48,6 +48,8 @@ import (
 	"github.com/goatkit/goatflow/internal/lookups"
 	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/notifications"
+	platformapi "github.com/goatkit/goatflow/internal/platform/api"
+	platformservice "github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/platform/services/adapter"
 	"github.com/goatkit/goatflow/internal/plugin"
 	"github.com/goatkit/goatflow/internal/plugin/core"
@@ -191,7 +193,7 @@ func main() {
 	{
 		vm := yamlmgmt.NewVersionManager(configDir)
 		adapter := yamlmgmt.NewConfigAdapter(vm)
-		service.SetConfigAdapter(adapter)
+		platformservice.SetConfigAdapter(adapter)
 	}
 	ticketNumGen := setup.Generator
 	systemID := setup.SystemID
@@ -624,7 +626,7 @@ func main() {
 	}
 	// Ensure /api/v1 i18n endpoints are registered (after YAML so we can augment)
 	v1Group := r.Group("/api/v1")
-	i18nHandlers := api.NewI18nHandlers()
+	i18nHandlers := platformapi.NewI18nHandlers()
 	i18nHandlers.RegisterRoutes(v1Group)
 
 	// Register plugin management API routes

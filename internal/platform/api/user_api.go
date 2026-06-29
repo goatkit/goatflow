@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 // HandleUserMeAPI returns the current authenticated user's information.
@@ -33,7 +34,7 @@ func HandleUserMeAPI(c *gin.Context) {
 
 	// Convert user ID to int. JWT/session middleware commonly stores this
 	// as uint, while tests and API-token paths may use int.
-	userID := GetUserIDFromCtx(c, 0)
+	userID := shared.GetUserIDFromCtx(c, 0)
 	if userID == 0 {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,

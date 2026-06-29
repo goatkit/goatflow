@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/goatkit/goatflow/internal/auth"
-	"github.com/goatkit/goatflow/internal/models"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/yamlmgmt"
 )
 
@@ -83,7 +83,7 @@ func getConfiguredProviderOrder() []string {
 }
 
 // Login authenticates a user and returns JWT tokens.
-func (s *AuthService) Login(ctx context.Context, username, password string) (*models.User, string, string, error) {
+func (s *AuthService) Login(ctx context.Context, username, password string) (*platformmodels.User, string, string, error) {
 	// Authenticate user
 	user, err := s.authenticator.Authenticate(ctx, username, password)
 	if err != nil {
@@ -127,7 +127,7 @@ func (s *AuthService) checkAdminGroup(userID uint) bool {
 }
 
 // ValidateToken validates a JWT token and returns the user.
-func (s *AuthService) ValidateToken(tokenString string) (*models.User, error) {
+func (s *AuthService) ValidateToken(tokenString string) (*platformmodels.User, error) {
 	// Validate token using JWT manager
 	claims, err := s.jwtManager.ValidateToken(tokenString)
 	if err != nil {
@@ -135,7 +135,7 @@ func (s *AuthService) ValidateToken(tokenString string) (*models.User, error) {
 	}
 
 	// Create user object from token claims
-	user := &models.User{
+	user := &platformmodels.User{
 		ID:    claims.UserID,
 		Login: claims.Email, // Use email as login for now
 		Email: claims.Email,
@@ -161,6 +161,6 @@ func (s *AuthService) RefreshToken(refreshToken string) (string, error) {
 // Token generation methods removed - now using JWTManager
 
 // GetUser retrieves user information by identifier.
-func (s *AuthService) GetUser(ctx context.Context, identifier string) (*models.User, error) {
+func (s *AuthService) GetUser(ctx context.Context, identifier string) (*platformmodels.User, error) {
 	return s.authenticator.GetUser(ctx, identifier)
 }

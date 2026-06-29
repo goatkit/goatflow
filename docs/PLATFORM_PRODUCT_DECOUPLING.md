@@ -1,8 +1,8 @@
 # GoatKit Platform / Product Decoupling — Implementation Plan
 
-> Version: 1.3
+> Version: 1.4
 > Date: 2026-06-29
-> Status: Phase 1-4 complete, Phase 5 next
+> Status: Phase 1-5 complete, Phase 6 next
 > Related: `docs/ARCHITECTURE.md`, `docs/PLUGIN_PLATFORM.md`, `docs/design/LLM_INTEGRATION.md`
 
 ## 1. Goal
@@ -390,25 +390,27 @@ boundary. `internal/service/` (23 files, 7515 lines) mixes platform services
 Move platform-flavored files to `internal/platform/api/` and
 `internal/platform/service/`. Product files stay.
 
-#### Platform API files to move
+#### Platform API files moved
 
-`auth_*.go`, `api_token_*.go`, `user_*.go`, `organisation_handlers.go`,
-`push_*.go`, `webauthn_*.go`, `totp_*.go`, `mcp_*.go`, `plugin_handlers.go`,
-`plugin_ui_admin_*.go`, `deletion_handlers.go`, `custom_fields_api_handlers.go`,
-`lookup_*.go`, `i18n_handlers.go`, `ldap_handlers.go`,
-`org_plugin_access_handlers.go`
+`auth_api.go`, `auth_handler.go`, `user_*.go`, `organisation_handlers.go`,
+`deletion_handlers.go`, `custom_fields_api_handlers.go`, and `i18n_handlers.go`
+(plus matching platform tests where the tests only covered moved handlers).
 
-#### Product API files to stay
+#### Product API files kept after triage
 
-`ticket_*.go`, `queue_*.go`, `article_*.go`, `sla_*.go`, `priority_*.go`,
-`state_*.go`, `type_*.go`, `service_*.go`, `canned_response_*.go`, `admin_sla_*`,
-`admin_queue_*`, `admin_generic_agent_*`, `admin_postmaster_*`,
-`admin_webservice_*`, `customer_*`, `agent_*`, `graphql/`, `shared/`, `v1/`
+`api_token_*`, `auth_handlers.go`, `auth_htmx_handlers.go`, `auth_customer.go`,
+`push_*`, `webauthn_*`, `totp_*`, `mcp_*`, `plugin_*`, `plugin_ui_admin_*`,
+`org_plugin_access_handlers.go`, `lookup_*`, and product handlers (`ticket_*`,
+`queue_*`, `article_*`, `sla_*`, `priority_*`, `state_*`, `type_*`,
+`service_*`, `canned_response_*`, `admin_*`, `customer_*`, `agent_*`,
+`graphql/`, `shared/`, `v1/`) stay in `internal/api/`.
 
-#### Platform service files to move
+#### Platform service files moved
 
-Files for: `api_token`, `auth`, `user` (the platform concerns in
-`internal/service/`)
+`auth_service.go`, `totp_service.go`, `webauthn_service.go`, and
+`user_preferences.go` (plus matching tests). `api_token_service.go` stayed in
+product service because it still imports the mixed repository layer and uses
+product token scopes.
 
 #### Product service files to stay
 
@@ -416,13 +418,14 @@ Files for: `ticket`, `sla`, `escalation`, `generic_agent`, etc.
 
 #### Steps
 
-1. File-by-file triage of `internal/api/` (~30-40 platform files identified in
-   investigation).
-2. `git mv` platform files to `internal/platform/api/`.
-3. File-by-file triage of `internal/service/` (~5-8 platform files).
-4. `git mv` platform service files to `internal/platform/service/`.
-5. Update all importers (4 for `api`, 40 for `service`).
-6. Triage `internal/api/shared/` — split platform helpers from product helpers.
+1. [x] File-by-file triage of `internal/api/`.
+2. [x] `git mv` safe platform files to `internal/platform/api/`.
+3. [x] File-by-file triage of `internal/service/`.
+4. [x] `git mv` safe platform service files to `internal/platform/service/`.
+5. [x] Update importers to use `platformapi` / `platformservice` aliases where
+   product and platform packages are both needed.
+6. [x] Keep product-coupled handlers and services in place instead of forcing a
+   move that would reintroduce platform -> product imports.
 
 #### Risks and mitigations
 
@@ -438,19 +441,17 @@ Files for: `ticket`, `sla`, `escalation`, `generic_agent`, etc.
 
 #### Verification checks
 
-| # | Check | Command | Pass criteria |
+| # | Check | Command | Result |
 |---|---|---|---|
-| V5.1 | `internal/platform/api/` imports no product packages | `grep -rn 'goatflow/internal/\(repository\|ticketnumber\|ticketutil\|history\|models"\|service"' internal/platform/api/` | Zero matches |
-| V5.2 | `internal/platform/service/` imports no product packages | `grep -rn 'goatflow/internal/\(repository\|ticketnumber\|ticketutil\|history\|models"\|api"' internal/platform/service/` | Zero matches |
-| V5.3 | Full build compiles | `go build ./...` | Clean |
-| V5.4 | All tests pass | `go test ./...` | All pass |
-| V5.5 | HTTP integration tests pass | `make e2e` or `go test -run Integration ./...` | All routes work, all handlers respond |
-| V5.6 | `go vet` clean | `go vet ./...` | No warnings |
-| V5.7 | golangci-lint clean | `golangci-lint run ./...` | No new warnings |
-| V5.8 | No misclassified files | Manual review of `PLATFORM_PACKAGES.md` against actual imports | Every file in `internal/platform/api/` and `internal/platform/service/` has zero product imports |
-| V5.9 | API contract tests pass | `go test -run TestAPI ./internal/api/... ./internal/platform/api/...` | JSON contracts unchanged |
+| V5.1 | `internal/platform/api/` and `internal/platform/service/` import no product packages directly | `grep 'github.com/goatkit/goatflow/internal/(api|models|service|repository|ticketnumber|ticketutil|history|zinc)' internal/platform/{api,service}` | Zero matches |
+| V5.2 | Targeted split packages compile and test | `make toolbox-exec ARGS="go test ./internal/platform/api ./internal/platform/service ./internal/api ./internal/middleware ./cmd/goats"` | Pass |
+| V5.3 | API contract tests pass | `make toolbox-exec ARGS="go test -run TestAPI ./internal/api/... ./internal/platform/api/..."` | Pass |
+| V5.4 | Full build compiles | `make toolbox-exec ARGS="go build ./..."` | Pass |
+| V5.5 | Full test suite passes | `make toolbox-exec ARGS="go test ./..."` | Pass |
+| V5.6 | `go vet` clean | `make toolbox-exec ARGS="go vet ./..."` | Pass |
+| V5.7 | Transitive platform dependency cleanup remains for Phase 6/7 | `make toolbox-exec ARGS="go list -deps ./internal/platform/api ./internal/platform/service"` | Shows transitive root packages via `auth`, `middleware`, `customfields`, etc.; direct imports are clean |
 
-#### Estimated effort: 5-7 days
+#### Estimated effort: 5-7 days (actual: ~1 day)
 
 ---
 

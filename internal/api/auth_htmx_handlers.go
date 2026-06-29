@@ -18,7 +18,7 @@ import (
 	"github.com/goatkit/goatflow/internal/constants"
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/httpcookie"
-	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/shared"
 )
 
@@ -310,7 +310,7 @@ func handleHTMXLogin(c *gin.Context) {
 			return
 		}
 
-		token, err := getJWTManager().GenerateToken(1, demoEmail, "Agent", 0)
+		token, err := shared.GetJWTManager().GenerateToken(1, demoEmail, "Agent", 0)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to generate token"})
 			return

@@ -6,8 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/auth"
-	"github.com/goatkit/goatflow/internal/models"
-	"github.com/goatkit/goatflow/internal/service"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
+	"github.com/goatkit/goatflow/internal/platform/service"
 )
 
 type AuthHandler struct {
@@ -21,7 +21,7 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
-	var req models.LoginRequest
+	var req platformmodels.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid request format",
@@ -60,7 +60,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	var req models.RefreshTokenRequest
+	var req platformmodels.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid request format",

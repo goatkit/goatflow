@@ -13,6 +13,7 @@ import (
 	"github.com/goatkit/goatflow/internal/auth"
 	"github.com/goatkit/goatflow/internal/database"
 	"github.com/goatkit/goatflow/internal/i18n"
+	platformservice "github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/sysconfig"
@@ -126,7 +127,7 @@ func HandleGetSessionTimeout(c *gin.Context) {
 	}
 
 	// Get preference service
-	prefService := service.NewUserPreferencesService(db)
+	prefService := platformservice.NewUserPreferencesService(db)
 
 	// Get session timeout preference
 	timeout := prefService.GetSessionTimeout(userID)
@@ -181,7 +182,7 @@ func HandleSetSessionTimeout(c *gin.Context) {
 	}
 
 	// Get preference service
-	prefService := service.NewUserPreferencesService(db)
+	prefService := platformservice.NewUserPreferencesService(db)
 
 	// Set session timeout preference
 	if err := prefService.SetSessionTimeout(userID, request.Value); err != nil {
@@ -226,7 +227,7 @@ func HandleGetLanguage(c *gin.Context) {
 		return
 	}
 
-	prefService := service.NewUserPreferencesService(db)
+	prefService := platformservice.NewUserPreferencesService(db)
 	lang := prefService.GetLanguage(userID)
 
 	// Build list of available languages with display names for the UI
@@ -330,7 +331,7 @@ func HandleSetLanguage(c *gin.Context) {
 		return
 	}
 
-	prefService := service.NewUserPreferencesService(db)
+	prefService := platformservice.NewUserPreferencesService(db)
 
 	if err := prefService.SetLanguage(userID, request.Value); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -381,7 +382,7 @@ func HandleGetRemindersEnabled(c *gin.Context) {
 		return
 	}
 
-	prefService := service.NewUserPreferencesService(db)
+	prefService := platformservice.NewUserPreferencesService(db)
 	enabled := prefService.GetRemindersEnabled(userID)
 
 	c.JSON(http.StatusOK, gin.H{
@@ -430,7 +431,7 @@ func HandleSetRemindersEnabled(c *gin.Context) {
 		return
 	}
 
-	prefService := service.NewUserPreferencesService(db)
+	prefService := platformservice.NewUserPreferencesService(db)
 
 	if err := prefService.SetRemindersEnabled(userID, request.Enabled); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -747,7 +748,7 @@ func HandleGetTheme(c *gin.Context) {
 			})
 			return
 		}
-		userPrefService := service.NewUserPreferencesService(db)
+		userPrefService := platformservice.NewUserPreferencesService(db)
 		theme = userPrefService.GetTheme(userID)
 		mode = userPrefService.GetThemeMode(userID)
 	}
@@ -894,7 +895,7 @@ func HandleSetTheme(c *gin.Context) {
 			return
 		}
 
-		userPrefService := service.NewUserPreferencesService(db)
+		userPrefService := platformservice.NewUserPreferencesService(db)
 
 		// Save theme preference to user_preferences table
 		if request.Theme != "" {

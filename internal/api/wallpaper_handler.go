@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/goatkit/goatflow/internal/database"
-	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/platform/service"
 )
 
 // HandleSetWallpaper saves the user's wallpaper preference (on/off).

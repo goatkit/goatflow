@@ -6,7 +6,17 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/deletion"
+	"github.com/goatkit/goatflow/internal/routing"
 )
+
+func init() {
+	routing.RegisterHandler("handleAdminRecycleBinList", handleAdminRecycleBinList)
+	routing.RegisterHandler("handleAdminRestore", handleAdminRestore)
+	routing.RegisterHandler("handleAdminHardDelete", handleAdminHardDelete)
+	routing.RegisterHandler("handleAdminBatchSoftDelete", handleAdminBatchSoftDelete)
+	routing.RegisterHandler("handleAdminBatchHardDelete", handleAdminBatchHardDelete)
+	routing.RegisterHandler("handleAdminDeletionLog", handleAdminDeletionLog)
+}
 
 func deletionService(c *gin.Context) *deletion.Service {
 	svc, err := deletion.NewService()

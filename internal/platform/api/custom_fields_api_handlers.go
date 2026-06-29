@@ -7,7 +7,16 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/customfields"
+	"github.com/goatkit/goatflow/internal/routing"
 )
+
+func init() {
+	routing.RegisterHandler("handleAPIListCustomFieldDefs", handleAPIListCustomFieldDefs)
+	routing.RegisterHandler("handleAPIGetCustomFieldDef", handleAPIGetCustomFieldDef)
+	routing.RegisterHandler("handleAPIGetCustomFieldValues", handleAPIGetCustomFieldValues)
+	routing.RegisterHandler("handleAPISetCustomFieldValues", handleAPISetCustomFieldValues)
+	routing.RegisterHandler("handleAPIQueryCustomFields", handleAPIQueryCustomFields)
+}
 
 // --- REST API v1: /api/v1/custom-fields/* ---
 
@@ -145,7 +154,7 @@ func handleAPISetCustomFieldValues(c *gin.Context) {
 // POST /api/v1/custom-fields/query
 func handleAPIQueryCustomFields(c *gin.Context) {
 	var req struct {
-		EntityType string                   `json:"entity_type"`
+		EntityType string                     `json:"entity_type"`
 		Filters    []customfields.FieldFilter `json:"filters"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {

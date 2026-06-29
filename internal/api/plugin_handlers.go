@@ -28,6 +28,7 @@ import (
 	"github.com/goatkit/goatflow/internal/plugin"
 	"github.com/goatkit/goatflow/internal/plugin/packaging"
 	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/shared"
 )
 
 // pluginContextWithLanguage adds the request language to the context for i18n support.
@@ -554,14 +555,14 @@ func SessionOrJWTAuth() gin.HandlerFunc {
 		}
 
 		// Extract token from cookies or Authorization header and validate.
-		token := ExtractToken(c)
+		token := middleware.ExtractToken(c)
 		if token == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Authentication required"})
 			c.Abort()
 			return
 		}
 
-		jwtMgr := getJWTManager()
+		jwtMgr := shared.GetJWTManager()
 		if jwtMgr == nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Auth service unavailable"})
 			c.Abort()
@@ -609,8 +610,8 @@ func enrichContextFromToken(c *gin.Context) {
 		}
 	}
 	if claims == nil {
-		if token := ExtractToken(c); token != "" {
-			if mgr := getJWTManager(); mgr != nil {
+		if token := middleware.ExtractToken(c); token != "" {
+			if mgr := shared.GetJWTManager(); mgr != nil {
 				if cl, err := mgr.ValidateToken(token); err == nil {
 					claims = cl
 				}

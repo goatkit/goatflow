@@ -6,6 +6,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
+	platformapi "github.com/goatkit/goatflow/internal/platform/api"
 )
 
 // API v1 handler exports
@@ -56,7 +58,7 @@ var HandleAPIv1TicketUpdate = HandleUpdateTicketAPI
 var HandleAPIv1TicketDelete = HandleDeleteTicketAPI
 
 // Users API handlers.
-var HandleAPIv1UserMe = HandleUserMeAPI
+var HandleAPIv1UserMe = platformapi.HandleUserMeAPI
 
 var HandleAPIv1UsersList = func(c *gin.Context) {
 	userRepo := GetUserRepository()
@@ -329,9 +331,9 @@ var HandleAPIv1TicketReopen = HandleReopenTicketAPI
 var HandleAPIv1TicketAssign = HandleAssignTicketAPI
 
 // Auth handlers.
-var HandleAPIv1AuthLogin = HandleLoginAPI
-var HandleAPIv1AuthRefresh = HandleRefreshTokenAPI
-var HandleAPIv1AuthLogout = HandleLogoutAPI
-var HandleAPIv1AuthRegister = HandleRegisterAPI
+var HandleAPIv1AuthLogin = platformapi.HandleLoginAPI
+var HandleAPIv1AuthRefresh = platformapi.HandleRefreshTokenAPI
+var HandleAPIv1AuthLogout = platformapi.HandleLogoutAPI
+var HandleAPIv1AuthRegister = platformapi.HandleRegisterAPI
 
 // Search API handler (using existing HandleSearchAPI from search_handler.go)

@@ -395,13 +395,17 @@ Universal custom fields on every core entity. Plugins declare fields at registra
       `HandlerResolver`, switched routing loaders to resolver interface, moved routing
       user context to `platform/models.User`, and moved real YAML handler coverage to
       API-side tests.
-- [ ] Reorganize `internal/api/` — move ~30-40 platform handler files (auth, api_token,
-      user, organisation, push, webauthn, totp, mcp, plugin, custom_fields, deletion,
-      i18n, ldap) to `internal/platform/api/`; keep product handlers (ticket, queue,
-      sla, article, etc.) in `internal/api/`.
-- [ ] Reorganize `internal/service/` — move platform service files (api_token, auth,
-      user) to `internal/platform/service/`; keep product services (ticket, sla,
-      escalation) in `internal/service/`.
+- [x] Reorganize `internal/api/` — moved safe platform handlers to
+      `internal/platform/api/` (`auth_api`, `auth_handler`, `user_*`,
+      `organisation_handlers`, `deletion_handlers`, `custom_fields_api_handlers`,
+      `i18n_handlers`). Product-coupled handlers stayed in `internal/api/`
+      after triage (`api_token`, mixed auth/customer, push, webauthn, totp,
+      mcp, plugin, lookups, ticket/queue/article/etc.).
+- [x] Reorganize `internal/service/` — moved platform services to
+      `internal/platform/service/` (`auth_service`, `totp_service`,
+      `webauthn_service`, `user_preferences`); kept `api_token_service` and
+      product services in `internal/service/` because they still depend on the
+      mixed repository/product scope layer.
 
 **Phase 3 — Enforce and document**
 - [ ] Move all remaining clean platform packages to `internal/platform/` (~25-30

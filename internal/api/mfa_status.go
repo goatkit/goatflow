@@ -6,7 +6,7 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 
-	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/platform/service"
 )
 
 type mfaStatus struct {

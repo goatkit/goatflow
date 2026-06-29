@@ -6,7 +6,23 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/organisation"
+	"github.com/goatkit/goatflow/internal/routing"
 )
+
+func init() {
+	routing.RegisterHandler("handleSwitchOrg", handleSwitchOrg)
+	routing.RegisterHandler("handleListUserOrgs", handleListUserOrgs)
+	routing.RegisterHandler("handleAPIListOrgs", handleAPIListOrgs)
+	routing.RegisterHandler("handleAPICreateOrg", handleAPICreateOrg)
+	routing.RegisterHandler("handleAPIUpdateOrg", handleAPIUpdateOrg)
+	routing.RegisterHandler("handleAPIDeleteOrg", handleAPIDeleteOrg)
+	routing.RegisterHandler("handleAPIListMembers", handleAPIListMembers)
+	routing.RegisterHandler("handleAPIAddMember", handleAPIAddMember)
+	routing.RegisterHandler("handleAPIRemoveMember", handleAPIRemoveMember)
+	routing.RegisterHandler("handleAPIListOrgConfigs", handleAPIListOrgConfigs)
+	routing.RegisterHandler("handleAPISetOrgConfig", handleAPISetOrgConfig)
+	routing.RegisterHandler("handleAPIDeleteOrgConfig", handleAPIDeleteOrgConfig)
+}
 
 // orgRepo returns a lazily-initialised organisation repository.
 // Returns nil + 503 response if DB is unavailable.
