@@ -41,7 +41,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/cache"
 	"github.com/goatkit/goatflow/internal/platform/config"
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/email/inbound/filters"
 	"github.com/goatkit/goatflow/internal/email/inbound/postmaster"

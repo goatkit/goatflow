@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 func insertWebhookRow(t *testing.T, query string, args ...interface{}) int {

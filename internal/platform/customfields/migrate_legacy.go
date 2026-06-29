@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"gopkg.in/yaml.v3"
 )
 

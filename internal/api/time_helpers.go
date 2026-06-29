@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/goatkit/goatflow/internal/platform/config"
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/history"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/repository"

@@ -8,11 +8,11 @@ import (
 	"log"
 	"os"
 
-	"github.com/goatkit/goatflow/internal/database"
-	_ "github.com/goatkit/goatflow/internal/database/drivers/mysql"
-	_ "github.com/goatkit/goatflow/internal/database/drivers/postgres"
-	_ "github.com/goatkit/goatflow/internal/database/drivers/sqlite"
-	"github.com/goatkit/goatflow/internal/database/schema"
+	"github.com/goatkit/goatflow/internal/platform/database"
+	_ "github.com/goatkit/goatflow/internal/platform/database/drivers/mysql"
+	_ "github.com/goatkit/goatflow/internal/platform/database/drivers/postgres"
+	_ "github.com/goatkit/goatflow/internal/platform/database/drivers/sqlite"
+	"github.com/goatkit/goatflow/internal/platform/database/schema"
 )
 
 func main() {

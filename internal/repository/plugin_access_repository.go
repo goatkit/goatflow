@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // OrgPluginAccess is one row from gk_org_plugin_access — a binding that

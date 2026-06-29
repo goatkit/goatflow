@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // Use keys defined in storage_service.go (same package)

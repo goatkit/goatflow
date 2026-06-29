@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // Repository provides CRUD operations for organisations, memberships, and per-org sysconfig.

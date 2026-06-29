@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // Repository provides CRUD operations for custom field definitions and values.

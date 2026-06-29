@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // HandleUpdateArticleAPI handles PUT /api/v1/tickets/:ticket_id/articles/:id.

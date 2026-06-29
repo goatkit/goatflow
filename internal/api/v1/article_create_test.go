@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	. "github.com/goatkit/goatflow/internal/api"
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // ensureArticleTestPermissions grants user 1 rw+note permission on the given ticket's queue group.

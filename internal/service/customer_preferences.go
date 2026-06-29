@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/goatkit/goatflow/internal/platform/constants"
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // CustomerPreferencesService handles customer preference operations.

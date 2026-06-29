@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 func getTestDB(t *testing.T) *sql.DB {

@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 func TestMain(m *testing.M) {

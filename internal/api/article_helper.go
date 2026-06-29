@@ -4,7 +4,7 @@ package api
 import (
 	"database/sql"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // ArticleInsertParams holds parameters for creating an article.

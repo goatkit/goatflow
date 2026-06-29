@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // IDMapping tracks the mapping between old IDs and new IDs during import.

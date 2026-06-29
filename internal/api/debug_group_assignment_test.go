@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/stretchr/testify/require"
 )
 

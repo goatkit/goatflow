@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // CannedResponseDB represents a canned response in the database.

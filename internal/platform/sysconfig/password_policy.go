@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // PasswordPolicy holds OTRS-compatible password policy settings.

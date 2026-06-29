@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // FilesystemBackend implements article storage on the filesystem (OTRS ArticleStorageFS).

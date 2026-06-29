@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // We maintain exactly one row per counter_uid and atomically increment using dialect specific UPSERT:

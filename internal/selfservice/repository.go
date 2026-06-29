@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // Repository provides CRUD for auth tokens and registration requests.

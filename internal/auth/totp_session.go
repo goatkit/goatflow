@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // TOTPSessionManager handles pending 2FA sessions with security controls.

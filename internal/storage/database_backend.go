@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // DatabaseBackend implements article storage in the database (OTRS ArticleStorageDB).

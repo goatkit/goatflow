@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // DynamicFieldFilter represents a filter condition for dynamic field values.

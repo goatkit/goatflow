@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // GetArticleAttachments retrieves attachments for a specific article from the database.

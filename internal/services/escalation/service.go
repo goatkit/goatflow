@@ -8,7 +8,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // Service handles ticket escalation index calculation matching OTRS behavior.

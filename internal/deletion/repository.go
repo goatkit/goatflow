@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // Repository provides CRUD for the recycle bin and deletion log.

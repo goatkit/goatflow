@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // PostgresBackend implements SearchBackend using PostgreSQL full-text search.

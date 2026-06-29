@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // getDynamicFieldsWithDB retrieves dynamic fields with optional filters.

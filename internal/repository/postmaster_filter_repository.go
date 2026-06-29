@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/goatkit/goatflow/internal/database"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // FilterMatch represents a match condition in a postmaster filter.
