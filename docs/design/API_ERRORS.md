@@ -157,7 +157,7 @@ The enumeration pattern can be extended to other plugin capabilities:
   - `codes.go` - Core error code constants and definitions
   - `registry.go` - Error code registry with namespacing
   - `response.go` - Gin response helpers
-- Plugin interface: `internal/plugin/types.go`
+- Plugin interface: `internal/platform/plugin/types.go`
 - HTTP helpers:
   - `apierrors.Error(c, code)` - looks up code, sets HTTP status, returns JSON
   - `apierrors.ErrorWithMessage(c, code, msg)` - custom message

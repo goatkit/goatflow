@@ -9,7 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/cache"
+	"github.com/goatkit/goatflow/internal/platform/cache"
 )
 
 // valkeyCache holds the cache client injected from main for status lookups.

@@ -201,4 +201,4 @@ func TestIsThemePlugin(t *testing.T) {
 	}
 }
 
-// K8s isolation constants are in internal/plugin/grpc package — tested there.
+// K8s isolation constants are in internal/platform/plugin/grpc package — tested there.

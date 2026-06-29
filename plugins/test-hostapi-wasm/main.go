@@ -1,7 +1,7 @@
 //go:build tinygo.wasm
 
 // Package main implements a test WASM plugin that exercises host API calls.
-// This plugin is used by internal/plugin/wasm tests to verify host callbacks work.
+// This plugin is used by internal/platform/plugin/wasm tests to verify host callbacks work.
 package main
 
 import (

@@ -21,12 +21,12 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/auth"
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/middleware"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/organisation"
-	"github.com/goatkit/goatflow/internal/plugin"
-	"github.com/goatkit/goatflow/internal/plugin/packaging"
+	"github.com/goatkit/goatflow/internal/platform/plugin"
+	"github.com/goatkit/goatflow/internal/platform/plugin/packaging"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/shared"
 )

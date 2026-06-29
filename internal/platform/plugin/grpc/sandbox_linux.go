@@ -1,0 +1,146 @@
+//go:build linux
+
+package grpc
+
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"syscall"
+
+	"github.com/goatkit/goatflow/internal/platform/plugin"
+)
+
+// buildSysProcAttr creates OS-level process restrictions for gRPC plugin processes on Linux.
+func buildSysProcAttr(policy plugin.ResourcePolicy) *syscall.SysProcAttr {
+	attr := &syscall.SysProcAttr{
+		// Plugin dies when host dies - prevent orphaned processes
+		Pdeathsig: syscall.SIGKILL,
+	}
+
+	// Apply namespace isolation where available (requires Linux kernel support)
+	// This provides basic process isolation but isn't as strong as containers
+	// Skip namespace isolation in testing environments
+	if supportsNamespaces() && !isTestEnvironment() {
+		attr.Cloneflags = syscall.CLONE_NEWNS | syscall.CLONE_NEWPID
+	}
+
+	// Note: Setting rlimits through SysProcAttr.Setrlimit is not available in Go's standard library.
+	// For production use, consider using a wrapper script or external tools like systemd-run
+	// with resource constraints, or container technologies for stronger isolation.
+	//
+	// For now, we document the intended limits and rely on namespace isolation where available.
+
+	return attr
+}
+
+// buildPluginEnv creates a minimal, restricted environment for the plugin process.
+// This prevents leaking sensitive host environment variables like DB credentials.
+func buildPluginEnv(policy plugin.ResourcePolicy, pluginName string) []string {
+	// Start with minimal safe environment
+	env := []string{
+		"PATH=/usr/local/bin:/usr/bin:/bin", // Basic PATH
+	}
+
+	// Create plugin-specific temp directory
+	tmpDir := filepath.Join("/tmp", "goatflow-plugin-"+pluginName)
+	if err := os.MkdirAll(tmpDir, 0700); err == nil {
+		env = append(env, "HOME="+tmpDir)
+		env = append(env, "TMPDIR="+tmpDir)
+	} else {
+		// Fall back to /tmp if we can't create plugin-specific dir
+		env = append(env, "HOME=/tmp")
+		env = append(env, "TMPDIR=/tmp")
+	}
+
+	// Add timezone for time-aware plugins
+	if tz := os.Getenv("TZ"); tz != "" {
+		env = append(env, "TZ="+tz)
+	}
+
+	// Forward plugin-specific env vars (GOATFLOW_PLUGIN_* prefix).
+	// Variables are forwarded as-is AND with the prefix stripped, so e.g.
+	// GOATFLOW_PLUGIN_ADB_SERVER_HOST=localhost appears in the plugin
+	// environment as both GOATFLOW_PLUGIN_ADB_SERVER_HOST and ADB_SERVER_HOST.
+	// This lets plugins use standard env var names while keeping the
+	// namespaced originals available for disambiguation.
+	for _, kv := range os.Environ() {
+		if strings.HasPrefix(kv, "GOATFLOW_PLUGIN_") {
+			env = append(env, kv)
+			// Strip prefix: GOATFLOW_PLUGIN_FOO=bar -> FOO=bar
+			stripped := strings.TrimPrefix(kv, "GOATFLOW_PLUGIN_")
+			env = append(env, stripped)
+		}
+	}
+
+	// Check if plugin has network permissions - if not, limit network access
+	hasHTTP := false
+	for _, perm := range policy.Permissions {
+		if perm.Type == "http" {
+			hasHTTP = true
+			break
+		}
+	}
+
+	// If no HTTP permission, set environment variable that compliant plugins should check
+	if !hasHTTP {
+		env = append(env, "GOATFLOW_NO_NETWORK=1")
+	}
+
+	return env
+}
+
+// supportsNamespaces checks if namespace isolation is available and permitted.
+// Inside Docker containers, namespace creation is usually denied (EPERM)
+// even though the kernel supports it.
+func supportsNamespaces() bool {
+	// Check kernel support
+	if _, err := os.Stat("/proc/sys/user/max_user_namespaces"); err != nil {
+		return false
+	}
+
+	// Detect container environment where namespace creation is typically denied.
+	// Check /.dockerenv (Docker) or /run/.containerenv (Podman).
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return false
+	}
+	if _, err := os.Stat("/run/.containerenv"); err == nil {
+		return false
+	}
+
+	// Check cgroup for container signatures
+	if data, err := os.ReadFile("/proc/1/cgroup"); err == nil {
+		s := string(data)
+		if strings.Contains(s, "docker") || strings.Contains(s, "containerd") ||
+			strings.Contains(s, "kubepods") || strings.Contains(s, "lxc") {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isTestEnvironment detects if we're running in a test environment.
+func isTestEnvironment() bool {
+	// Check if we're running under 'go test'
+	if os.Getenv("GO_TEST") == "1" {
+		return true
+	}
+	// Alternative detection: check if the current executable contains "test"
+	if exe, err := os.Executable(); err == nil {
+		return filepath.Base(exe) == "test" || strings.Contains(exe, ".test") || strings.Contains(exe, "_test")
+	}
+	return false
+}
+
+// applyProcessSandbox applies OS-level restrictions to the plugin command.
+func applyProcessSandbox(cmd *exec.Cmd, policy plugin.ResourcePolicy, pluginName string) error {
+	// Set process attributes (resource limits, namespaces)
+	cmd.SysProcAttr = buildSysProcAttr(policy)
+
+	// Set restricted environment
+	cmd.Env = buildPluginEnv(policy, pluginName)
+
+	return nil
+}

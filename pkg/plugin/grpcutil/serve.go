@@ -1,7 +1,7 @@
 // Package grpcutil provides the gRPC plugin serving utilities for GoatKit.
 //
 // External gRPC plugins import this package to serve their implementation.
-// The host-side loading and management stays in internal/plugin/grpc.
+// The host-side loading and management stays in internal/platform/plugin/grpc.
 //
 // Usage:
 //

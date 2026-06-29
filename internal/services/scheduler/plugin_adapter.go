@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/goatkit/goatflow/internal/models"
-	"github.com/goatkit/goatflow/internal/plugin"
+	"github.com/goatkit/goatflow/internal/platform/plugin"
 )
 
 // PluginAdapter adapts the product scheduler.Service to the plugin runtime's

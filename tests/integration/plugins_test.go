@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/plugin"
-	"github.com/goatkit/goatflow/internal/plugin/example"
+	"github.com/goatkit/goatflow/internal/platform/plugin"
+	"github.com/goatkit/goatflow/internal/platform/plugin/example"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -131,7 +131,7 @@ func TestProdHostAPIWithRealDatabase(t *testing.T) {
 
 	t.Run("Log writes to buffer", func(t *testing.T) {
 		hostAPI.Log(ctx, "info", "Integration test log", map[string]any{
-			"test": true,
+			"test":      true,
 			"component": "plugins_test",
 		})
 

@@ -7,9 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/platform/service"
-	"github.com/goatkit/goatflow/internal/plugin"
+	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/routing"
+	"github.com/goatkit/goatflow/internal/platform/service"
 )
 
 func init() {

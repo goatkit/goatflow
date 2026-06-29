@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/mcp"
-	"github.com/goatkit/goatflow/internal/plugin"
+	"github.com/goatkit/goatflow/internal/platform/plugin"
 )
 
 var (
@@ -83,7 +83,7 @@ func refreshPluginMCPTools(mgr *plugin.Manager) {
 				Method:      rt.Method,
 				Path:        rt.Path,
 				Handler:     rt.Handler,
-				Middleware:   rt.Middleware,
+				Middleware:  rt.Middleware,
 				Description: rt.Description,
 			})
 		}

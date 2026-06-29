@@ -17,8 +17,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/organisation"
-	"github.com/goatkit/goatflow/internal/plugin"
-	"github.com/goatkit/goatflow/internal/plugin/example"
+	"github.com/goatkit/goatflow/internal/platform/plugin"
+	"github.com/goatkit/goatflow/internal/platform/plugin/example"
 	"github.com/goatkit/goatflow/internal/shared"
 )
 

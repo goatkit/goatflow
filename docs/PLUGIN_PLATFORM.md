@@ -51,7 +51,7 @@ Portable, sandboxed plugins using [wazero](https://wazero.io/) (pure Go, no CGO)
 - **Cross-platform** — no OS/arch-specific builds
 - **Best for**: Most plugins, especially UI extensions and business logic
 
-Implementation: `internal/plugin/wasm/`
+Implementation: `internal/platform/plugin/wasm/`
 
 ### gRPC Plugins (Power Users)
 
@@ -63,7 +63,7 @@ Native Go plugins running as separate processes via [HashiCorp go-plugin](https:
 - **Hot reload** — fsnotify watches binaries and auto-reloads on change
 - **Best for**: Heavy integrations, native dependencies, I/O-heavy workloads
 
-Implementation: `internal/plugin/grpc/`, `pkg/plugin/grpcutil/`
+Implementation: `internal/platform/plugin/grpc/`, `pkg/plugin/grpcutil/`
 
 **Note:** Despite the package name "grpc", the actual wire protocol is HashiCorp's net/rpc — no protoc or proto files are needed.
 
@@ -97,7 +97,7 @@ Plugins return a `GKRegistration` from `GKRegister()` declaring their identity a
 
 ## Plugin Manager
 
-The Manager (`internal/plugin/manager.go`) handles the full plugin lifecycle:
+The Manager (`internal/platform/plugin/manager.go`) handles the full plugin lifecycle:
 
 - **Register/Unregister** — loads plugins, creates sandboxed HostAPI, initializes
 - **Enable/Disable** — state persisted to sysconfig tables (not separate files)
@@ -138,7 +138,7 @@ navigation, and PWA settings.
 
 ## Loader & Discovery
 
-The Loader (`internal/plugin/loader/loader.go`) handles filesystem discovery:
+The Loader (`internal/platform/plugin/loader/loader.go`) handles filesystem discovery:
 
 - Scans `plugins/` directory for `.wasm` files and subdirectories with `plugin.yaml`
 - Supports lazy loading (discover without loading) or eager loading
@@ -259,15 +259,15 @@ The HostAPI interface (`pkg/plugin/plugin.go`) provides access to host services:
 | `Translate` | `(ctx, key, args...) → string` | i18n translation |
 | `CallPlugin` | `(ctx, pluginName, fn, args) → (json.RawMessage, error)` | Plugin-to-plugin calls |
 
-The production implementation (`ProdHostAPI` in `internal/plugin/hostapi_prod.go`) wires these to real database, cache (Redis/Valkey), email, and other services. It supports multiple named databases with `@dbname:` query prefix syntax.
+The production implementation (`ProdHostAPI` in `internal/platform/plugin/hostapi_prod.go`) wires these to real database, cache (Redis/Valkey), email, and other services. It supports multiple named databases with `@dbname:` query prefix syntax.
 
 ## Sandbox & Security Model
 
-Every plugin receives a **SandboxedHostAPI** (`internal/plugin/sandbox.go`) that wraps the real HostAPI with per-plugin enforcement:
+Every plugin receives a **SandboxedHostAPI** (`internal/platform/plugin/sandbox.go`) that wraps the real HostAPI with per-plugin enforcement:
 
 ### OS-Level Process Isolation (gRPC)
 
-On Linux, gRPC plugin processes run with OS-level restrictions (`internal/plugin/grpc/sandbox_linux.go`):
+On Linux, gRPC plugin processes run with OS-level restrictions (`internal/platform/plugin/grpc/sandbox_linux.go`):
 
 - **Namespace isolation** — `CLONE_NEWNS` and `CLONE_NEWPID` separate the plugin's mount and PID namespaces from the host
 - **Pdeathsig** — `SIGKILL` ensures plugin processes die when the host dies (no orphans)
@@ -286,7 +286,7 @@ When `GOATFLOW_PLUGIN_ISOLATION=k8s`, gRPC plugins run as Kubernetes pods instea
 - **Sidecar injection** — if the plugin declares sidecars in `plugin.yaml`, they are added as additional containers in the same pod (shared localhost network)
 - **Auto-restart** — Kubernetes Deployment controller handles crashes
 
-The generated manifests (`internal/plugin/grpc/k8s_isolation.go`) include Deployment + Service + NetworkPolicy. Sidecars are rendered as additional containers within the pod spec, sharing the pod network — so the plugin connects to its sidecars via `localhost`.
+The generated manifests (`internal/platform/plugin/grpc/k8s_isolation.go`) include Deployment + Service + NetworkPolicy. Sidecars are rendered as additional containers within the pod spec, sharing the pod network — so the plugin connects to its sidecars via `localhost`.
 
 ### Health Monitoring & Auto-Recovery
 
@@ -300,7 +300,7 @@ Independent of the K8s controller-managed restarts, the in-process plugin manage
 
 ### Plugin Signing
 
-Optional ed25519 signature verification for plugin binaries (`internal/plugin/signing/signing.go`):
+Optional ed25519 signature verification for plugin binaries (`internal/platform/plugin/signing/signing.go`):
 
 - **Key generation** — `GenerateKeyPair()` creates ed25519 key pairs for signing
 - **Signing** — `SignBinary()` computes SHA-256 hash of the binary and signs with ed25519, writing hex-encoded signature to `<binary>.sig`
@@ -382,7 +382,7 @@ Policies are serialized as JSON and stored in the `sysconfig_modified` table (ke
 
 ### ZIP Package Security
 
-Plugin ZIP extraction (`internal/plugin/packaging/`) enforces strict limits:
+Plugin ZIP extraction (`internal/platform/plugin/packaging/`) enforces strict limits:
 
 - **Symlink rejection** — symlinks in archives are rejected (prevents path traversal)
 - **File size limit** — 100 MB per file maximum
@@ -391,11 +391,11 @@ Plugin ZIP extraction (`internal/plugin/packaging/`) enforces strict limits:
 
 ## Scheduler Integration
 
-Plugin-defined cron jobs are registered with the scheduler (`internal/plugin/scheduler.go`). Jobs declared in `GKRegistration.Jobs` are automatically wired to the scheduler service with configurable timeouts.
+Plugin-defined cron jobs are registered with the scheduler (`internal/platform/plugin/scheduler.go`). Jobs declared in `GKRegistration.Jobs` are automatically wired to the scheduler service with configurable timeouts.
 
 ## Packaging
 
-Plugin packages (`internal/plugin/packaging/`) support ZIP distribution:
+Plugin packages (`internal/platform/plugin/packaging/`) support ZIP distribution:
 
 ```
 my-plugin.zip
@@ -428,7 +428,7 @@ Plugin management is available at `/admin/plugins`:
 ## Example Plugins
 
 - **Stats** (`plugins/stats/`) — WASM plugin providing dashboard widgets
-- **Hello gRPC** (`internal/plugin/grpc/example/`) — gRPC plugin demonstrating routes and widgets
+- **Hello gRPC** (`internal/platform/plugin/grpc/example/`) — gRPC plugin demonstrating routes and widgets
 
 ## Developer Experience
 

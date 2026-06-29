@@ -149,14 +149,14 @@ its ticket-aware scheduler as the implementation.
 
 | # | Check | Command | Pass criteria |
 |---|---|---|---|
-| V1.1 | Plugin package has no product imports | `grep -rn 'goatflow/internal/models\|goatflow/internal/services/scheduler\|goatflow/internal/repository\|goatflow/internal/ticketutil\|goatflow/internal/ticketnumber' internal/plugin/*.go` | Zero matches (excluding `_test.go` if tests legitimately test the adapter) |
-| V1.2 | Plugin package compiles in isolation | `go build ./internal/plugin/...` | Clean compile, no errors |
-| V1.3 | Scheduler tests pass | `go test ./internal/plugin/... ./internal/services/scheduler/...` | All pass |
+| V1.1 | Plugin package has no product imports | `grep -rn 'goatflow/internal/models\|goatflow/internal/services/scheduler\|goatflow/internal/repository\|goatflow/internal/ticketutil\|goatflow/internal/ticketnumber' internal/platform/plugin/*.go` | Zero matches (excluding `_test.go` if tests legitimately test the adapter) |
+| V1.2 | Plugin package compiles in isolation | `go build ./internal/platform/plugin/...` | Clean compile, no errors |
+| V1.3 | Scheduler tests pass | `go test ./internal/platform/plugin/... ./internal/services/scheduler/...` | All pass |
 | V1.4 | Full build compiles | `go build ./...` | Clean |
-| V1.5 | Plugin jobs still register at boot | `go test -run TestRegisterPluginJobs ./internal/plugin/...` | Jobs register and execute via the adapter |
+| V1.5 | Plugin jobs still register at boot | `go test -run TestRegisterPluginJobs ./internal/platform/plugin/...` | Jobs register and execute via the adapter |
 | V1.6 | No regression in scheduler behavior | `go test ./internal/services/scheduler/...` | All existing scheduler tests pass (auto-close, email poll, escalation check, etc.) |
-| V1.7 | `go vet` clean | `go vet ./internal/plugin/... ./internal/services/scheduler/...` | No warnings |
-| V1.8 | Transitive import closure of `internal/plugin` contains no product packages | `go list -deps ./internal/plugin/ \| grep -E 'goatflow/internal/(repository\|ticketnumber\|ticketutil\|history\|services/escalation\|services/genericagent\|email/inbound)'` | Zero matches |
+| V1.7 | `go vet` clean | `go vet ./internal/platform/plugin/... ./internal/services/scheduler/...` | No warnings |
+| V1.8 | Transitive import closure of `internal/platform/plugin` contains no product packages | `go list -deps ./internal/platform/plugin/ \| grep -E 'goatflow/internal/(repository\|ticketnumber\|ticketutil\|history\|services/escalation\|services/genericagent\|email/inbound)'` | Zero matches |
 
 #### Estimated effort: 1-2 days
 
@@ -537,7 +537,7 @@ internal/platform/
 | V6.5 | golangci-lint clean | `golangci-lint run ./...` | No new warnings |
 | V6.6 | Binary still starts and serves requests | `go build -o /tmp/goats ./cmd/goats && /tmp/goats -mode server &` then `curl localhost:8080/health` | Server starts, health check returns 200 |
 | V6.7 | No product package under `internal/` (non-platform) imports another product package circularly due to the reorganization | `go list -deps ./internal/... \| sort -u \| head` | No circular dependency errors from `go list` |
-| V6.8 | Plugin system still loads plugins | `go test -run TestPlugin ./internal/plugin/...` | Plugins load, init, call, shutdown |
+| V6.8 | Plugin system still loads plugins | `go test -run TestPlugin ./internal/platform/plugin/...` | Plugins load, init, call, shutdown |
 
 #### Estimated effort: 3-5 days
 

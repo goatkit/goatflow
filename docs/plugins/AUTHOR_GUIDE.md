@@ -588,7 +588,7 @@ Modify your plugin file/binary and the platform reloads it automatically with 50
 See the source tree for examples:
 
 - `plugins/stats/` — WASM plugin with dashboard widgets and i18n
-- `internal/plugin/grpc/example/` — gRPC plugin with routes and widgets
+- `internal/platform/plugin/grpc/example/` — gRPC plugin with routes and widgets
 
 ## Getting Help
 

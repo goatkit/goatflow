@@ -350,7 +350,7 @@ func (p *MyPlugin) Call(fn string, args json.RawMessage) (json.RawMessage, error
 
 ## Real-World Example
 
-See `internal/plugin/grpc/example/main.go` for the built-in hello-grpc plugin that demonstrates:
+See `internal/platform/plugin/grpc/example/main.go` for the built-in hello-grpc plugin that demonstrates:
 - Widget rendering with GoatKit CSS variables
 - API route handling
 - Plugin metadata declaration
