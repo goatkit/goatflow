@@ -128,6 +128,8 @@ const (
 	UserTypeCustomer          = platformmodels.UserTypeCustomer
 )
 
+type SystemMaintenance = platformmodels.SystemMaintenance
+
 // ---- Var aliases ----
 
 var ValidScopes = platformmodels.ValidScopes

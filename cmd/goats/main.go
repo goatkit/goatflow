@@ -42,6 +42,7 @@ import (
 	"github.com/goatkit/goatflow/internal/email/inbound/filters"
 	"github.com/goatkit/goatflow/internal/email/inbound/postmaster"
 	"github.com/goatkit/goatflow/internal/middleware"
+	"github.com/goatkit/goatflow/internal/platform/template"
 	platformapi "github.com/goatkit/goatflow/internal/platform/api"
 	"github.com/goatkit/goatflow/internal/platform/cache"
 	"github.com/goatkit/goatflow/internal/platform/config"
@@ -199,6 +200,10 @@ func main() {
 	auth.SetUserRepoFactory(func(db *sql.DB) auth.UserLookup {
 		return repository.NewUserRepository(db)
 	})
+	template.SetMaintenanceCheckerFactory(func(db *sql.DB) template.MaintenanceChecker {
+		return repository.NewSystemMaintenanceRepository(db)
+	})
+	template.SetContextHelpers(middleware.GetLanguage, shared.GetUserIDFromCtxUint)
 	ticketNumGen := setup.Generator
 	systemID := setup.SystemID
 

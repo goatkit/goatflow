@@ -1,6 +1,7 @@
 package template
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"strings"
@@ -12,11 +13,31 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
-	"github.com/goatkit/goatflow/internal/middleware"
-	"github.com/goatkit/goatflow/internal/models"
-	"github.com/goatkit/goatflow/internal/repository"
-	"github.com/goatkit/goatflow/internal/shared"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
+
+var (
+	getLanguageFn      func(*gin.Context) string
+	getUserIDFromCtxFn func(*gin.Context, uint) uint
+)
+
+// SetContextHelpers injects product-side context helper functions.
+func SetContextHelpers(getLanguage func(*gin.Context) string, getUserID func(*gin.Context, uint) uint) {
+	getLanguageFn = getLanguage
+	getUserIDFromCtxFn = getUserID
+}
+
+// MaintenanceChecker checks for active system maintenance.
+// Product code injects a concrete *repository.SystemMaintenanceRepository via SetMaintenanceCheckerFactory.
+type MaintenanceChecker interface {
+	IsActive() (*platformmodels.SystemMaintenance, error)
+	IsComing(withinMinutes int) (*platformmodels.SystemMaintenance, error)
+}
+
+var maintenanceCheckerFactory func(*sql.DB) MaintenanceChecker
+
+// SetMaintenanceCheckerFactory injects a factory from product code.
+func SetMaintenanceCheckerFactory(f func(*sql.DB) MaintenanceChecker) { maintenanceCheckerFactory = f }
 
 // Pongo2Renderer is a custom Gin renderer using Pongo2.
 type Pongo2Renderer struct {
@@ -81,7 +102,10 @@ func (r *Pongo2Renderer) Instance(name string, data interface{}) *pongo2.Templat
 // Render renders a Pongo2 template.
 func (r *Pongo2Renderer) Render(c *gin.Context, code int, name string, data interface{}) error {
 	// Get language from context
-	lang := middleware.GetLanguage(c)
+	lang := ""
+	if getLanguageFn != nil {
+		lang = getLanguageFn(c)
+	}
 	i18nInstance := i18n.GetInstance()
 
 	// Debug: Log the detected language
@@ -195,15 +219,14 @@ func (r *Pongo2Renderer) HTML(c *gin.Context, code int, name string, data interf
 	}
 }
 
-// getUserFromContext extracts the user from gin context (set by JWT middleware).
-func (r *Pongo2Renderer) getUserFromContext(c *gin.Context) *models.User {
+func (r *Pongo2Renderer) getUserFromContext(c *gin.Context) *platformmodels.User {
 	// Try direct user object first
 	userInterface, exists := c.Get("user")
 	if exists {
-		if user, ok := userInterface.(*models.User); ok {
+		if user, ok := userInterface.(*platformmodels.User); ok {
 			return user
 		}
-		if user, ok := userInterface.(models.User); ok {
+		if user, ok := userInterface.(platformmodels.User); ok {
 			return &user
 		}
 	}
@@ -213,12 +236,15 @@ func (r *Pongo2Renderer) getUserFromContext(c *gin.Context) *models.User {
 		return nil
 	}
 
-	userID := shared.GetUserIDFromCtxUint(c, 0)
+	userID := uint(0)
+	if getUserIDFromCtxFn != nil {
+		userID = getUserIDFromCtxFn(c, 0)
+	}
 	if userID == 0 {
 		return nil
 	}
 
-	user := &models.User{ID: userID}
+	user := &platformmodels.User{ID: userID}
 
 	// Set role
 	if role, ok := c.Get("user_role"); ok {
@@ -259,7 +285,10 @@ func (r *Pongo2Renderer) addMaintenanceContext(ctx pongo2.Context) {
 		return
 	}
 
-	repo := repository.NewSystemMaintenanceRepository(db)
+	if maintenanceCheckerFactory == nil {
+		return
+	}
+	repo := maintenanceCheckerFactory(db)
 
 	// Check active maintenance
 	active, err := repo.IsActive()
