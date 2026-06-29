@@ -46,6 +46,10 @@ type Manager struct {
 	// the health checker will dispatch restart attempts for unhealthy
 	// plugins with exponential backoff. Set via SetRestarter.
 	restarter Restarter
+
+	// scheduler is the platform scheduler used for registering plugin jobs.
+	// Set via SetScheduler before calling RegisterPluginJobs.
+	scheduler PlatformScheduler
 }
 
 type registeredPlugin struct {
@@ -334,6 +338,20 @@ func (m *Manager) SetLazyLoader(loader LazyLoader) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.lazyLoader = loader
+}
+
+// SetScheduler sets the platform scheduler for plugin job registration.
+func (m *Manager) SetScheduler(sched PlatformScheduler) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.scheduler = sched
+}
+
+// Scheduler returns the platform scheduler, or nil if not set.
+func (m *Manager) Scheduler() PlatformScheduler {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.scheduler
 }
 
 // Discovered returns the names of discovered but not necessarily loaded plugins.

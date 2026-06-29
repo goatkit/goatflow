@@ -3022,7 +3022,7 @@ check-i18n:
 check-deps:
 	@printf "🔒 Auditing frontend dependencies...\n"
 	@if command -v bun >/dev/null 2>&1 && [ -f bun.lockb ]; then \
-		bun pm audit 2>/dev/null || printf "  ⚠️  bun pm audit not available — skipping\n"; \
+		bun pm scan 2>/dev/null || printf "  ⚠️  bun pm scan not available — skipping\n"; \
 	elif command -v npm >/dev/null 2>&1 && [ -f package.json ]; then \
 		npm audit --omit=dev 2>/dev/null || printf "  ⚠️  npm audit found issues (non-blocking)\n"; \
 	else \

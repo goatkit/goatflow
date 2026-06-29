@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- **Phase 1 of platform/product decoupling complete.** Broke the `scheduler.go` coupling
+  between the plugin runtime (`internal/plugin/`) and product packages (`internal/models`,
+  `internal/services/scheduler`). Defined `PlatformScheduler` interface and
+  `PlatformScheduledJob` type in `internal/plugin/scheduler_iface.go`; rewrote
+  `scheduler.go` to use platform types; created `PluginAdapter` in
+  `internal/services/scheduler/` that translates platform → product; wired in
+  `cmd/goats/main.go`. The plugin runtime no longer transitively depends on ~16,000 lines
+  of product code. Full plan: `docs/PLATFORM_PRODUCT_DECOUPLING.md`.
+- **`bun pm audit` → `bun pm scan`** in `check-deps` target. The `audit` subcommand was
+  removed in bun 1.1.x; renamed to `scan`.
+
+### Fixed
+- **`RegisterHandler` nil-ambiguity in `PluginAdapter`.** Two `RegisterHandler` methods on
+  `*scheduler.Service` caused an ambiguous-call error when passing `nil`. Fixed with a
+  separate `PluginAdapter` struct that avoids method-name collisions.
+
 ## [0.8.3] - 2026-05-13
 
 ### Added

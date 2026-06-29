@@ -608,7 +608,8 @@ func main() {
 		}
 		sched := scheduler.NewService(db, options...)
 
-		if pluginJobCount := plugin.RegisterPluginJobs(pluginMgr, sched); pluginJobCount > 0 {
+		pluginAdapter := scheduler.NewPluginAdapter(sched)
+		if pluginJobCount := plugin.RegisterPluginJobs(pluginMgr, pluginAdapter); pluginJobCount > 0 {
 			log.Printf("✅ Registered %d plugin job(s) with scheduler", pluginJobCount)
 		}
 

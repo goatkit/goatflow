@@ -377,9 +377,48 @@ Universal custom fields on every core entity. Plugins declare fields at registra
 - [x] MCP tools: `custom_fields_get`, `custom_fields_set`, `custom_fields_query`, `custom_fields_list`
 - [x] Design spec: `docs/design/CUSTOM_FIELDS.md`
 
-**GoatKit PaaS Core — Plugin UI System**
+**Phase 1 — Break highest-leverage coupling** *(prerequisite for v0.10.0 plugins)*
+- [x] Break `scheduler.go` coupling — define `PlatformScheduler` interface in plugin
+      package, replace `*services/scheduler` dependency with adapter pattern. Unblocks
+      the plugin runtime from ~16,000 lines of product code.
+- [ ] Invert `database` → `services/adapter` dependency — move connection lifecycle into
+      `database/`, move `services/{adapter,database,registry}` to `internal/platform/services/`.
+      Fixes inverted layering (DB layer currently depends on services layer).
+- [ ] Split `internal/models/` — move 11 platform type files (User, Group, Role, Session,
+      APIToken, etc.) to `internal/platform/models/`; keep product types (Ticket, SLA,
+      Queue, etc.) in `internal/models/`. Type aliases preserve identity for 114 importing
+      files.
 
-Plugins declare unlimited independent UIs (agent apps, customer portals, public pages, kiosks) that run in dedicated UI containers with their own domains, branding, auth, navigation, and PWA support.
+**Phase 2 — Complete structural boundary**
+- [ ] Decouple `internal/routing/` from `internal/api` and `internal/models` — define
+      `HandlerResolver` interface, replace direct handler imports with lookup-by-name
+      at registration time.
+- [ ] Reorganize `internal/api/` — move ~30-40 platform handler files (auth, api_token,
+      user, organisation, push, webauthn, totp, mcp, plugin, custom_fields, deletion,
+      i18n, ldap) to `internal/platform/api/`; keep product handlers (ticket, queue,
+      sla, article, etc.) in `internal/api/`.
+- [ ] Reorganize `internal/service/` — move platform service files (api_token, auth,
+      user) to `internal/platform/service/`; keep product services (ticket, sla,
+      escalation) in `internal/service/`.
+
+**Phase 3 — Enforce and document**
+- [ ] Move all remaining clean platform packages to `internal/platform/` (~25-30
+      packages: cache, config, i18n, auth, middleware, search, zinc, customfields,
+      organisation, secureconfig, pluginui, notifications, oauth2, ldap, push, webhook,
+      mcp, marketplace, yamlmgmt, template, sysconfig, utils, version, etc.)
+- [ ] Custom linter (`cmd/gk-lint/`) — scans all `internal/platform/` files, fails if
+      any import a product package. Product packages discovered dynamically (any
+      `internal/` package not under `internal/platform/`). Catches both direct and
+      transitive violations via `go list -deps`. Added to CI as required check.
+- [ ] Documentation — update `ARCHITECTURE.md`, `PLUGIN_PLATFORM.md`; write
+      `PLATFORM_PACKAGES.md` (canonical platform/product package list); write
+      `PLATFORM_BOUNDARY.md` (linter docs).
+- [ ] Dead code cleanup — delete `internal/models/knowledge.go` (GORM-tagged stub, no
+      backing tables), remove `KnowledgeArticles` field from `service_catalog.go`,
+      remove TODO stub handlers from `customer_routes.go:1561-1577`, fix false
+      `DATABASE.md:99` claim about `faq_*` tables.
+
+**GoatKit PaaS Core — Plugin UI System**
 
 - [x] `UISpec` in `GKRegistration` (name, type, routes, branding, auth, PWA, data scope, rate limit)
 - [x] UI types: admin_page, agent_app, customer_app, public_page, kiosk
