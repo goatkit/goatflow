@@ -1,8 +1,8 @@
 # GoatKit Platform / Product Decoupling — Implementation Plan
 
-> Version: 1.5
+> Version: 1.6
 > Date: 2026-06-29
-> Status: Phase 1-6 complete, Phase 7 next
+> Status: Phase 1-7 complete, Phase 8 next
 > Related: `docs/ARCHITECTURE.md`, `docs/PLUGIN_PLATFORM.md`, `docs/design/LLM_INTEGRATION.md`
 
 ## 1. Goal
@@ -568,15 +568,15 @@ without enforcement.
 
 #### Steps
 
-1. Write `cmd/gk-lint/main.go` — scans all Go files under `internal/platform/` and
+1. ✅ Write `cmd/gk-lint/main.go` — scans all Go files under `internal/platform/` and
    asserts none import a product package.
-2. Product package list: any `internal/` package NOT under `internal/platform/` is
+2. ✅ Product package list: any `internal/` package NOT under `internal/platform/` is
    product. The linter discovers product packages dynamically by scanning the
    directory tree (no hardcoded list).
-3. Add `Makefile` target `lint-platform`.
-4. Add to CI (`golangci-lint` already runs at `Makefile:1178`; add `gk-lint` as a
+3. ✅ Add `Makefile` target `lint-platform`.
+4. ✅ Add to CI (`golangci-lint` already runs at `Makefile:1178`; add `gk-lint` as a
    separate required step).
-5. Write `docs/development/PLATFORM_BOUNDARY.md` — explain the boundary, the linter,
+5. ✅ Write `docs/development/PLATFORM_BOUNDARY.md` — explain the boundary, the linter,
    and how to add new packages to the correct side.
 
 #### Risks and mitigations
@@ -599,6 +599,15 @@ without enforcement.
 | V7.4 | CI integration works | Run the CI pipeline (or simulate: `make lint`) | `lint-platform` passes as part of `make lint` |
 | V7.5 | Linter is fast | `time go run ./cmd/gk-lint/` | < 2 seconds |
 | V7.6 | Allowlist mechanism works | Add a legitimate exception to the allowlist, run linter | Exception is honored, no false positive |
+
+#### Execution notes
+
+- `cmd/gk-lint` uses Go's compiler dependency graph (`go list -deps ./internal/platform/...`) as the authoritative transitive check.
+- Direct import scanning uses `go/parser` and reports `file:line` diagnostics for all Go files under `internal/platform/`, including tests.
+- Product packages are discovered dynamically from `internal/`; the violation predicate treats any module-local `internal/` import outside `internal/platform/` as product.
+- `make lint-platform` runs the linter through the toolbox container and `make lint` depends on it.
+- `.github/workflows/test.yml` runs `make lint-platform` before the containerized test suite.
+- `docs/development/PLATFORM_BOUNDARY.md` documents package placement, direct/transitive checks, and the exception process; `CONTRIBUTING.md` references the required check.
 
 #### Estimated effort: 1-2 days
 

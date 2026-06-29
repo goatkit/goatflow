@@ -127,6 +127,9 @@ jobs:
           docker run --rm -v goatflow_goatflow_runtime:/vol alpine:3.19 sh -c "chown -R 1000:1000 /vol && chmod 775 /vol"
           docker run --rm -v goatflow_cache:/vol alpine:3.19 sh -c "mkdir -p /vol/go-build /vol/go-mod /vol/xdg /vol/bun /vol/golangci-lint /vol/ms-playwright && chown -R 1000:1000 /vol && chmod -R 775 /vol"
 
+      - name: Run platform boundary lint
+        run: make lint-platform
+
       - name: Run containerized tests
         run: make test
 

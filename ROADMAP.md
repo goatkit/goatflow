@@ -377,52 +377,18 @@ Universal custom fields on every core entity. Plugins declare fields at registra
 - [x] MCP tools: `custom_fields_get`, `custom_fields_set`, `custom_fields_query`, `custom_fields_list`
 - [x] Design spec: `docs/design/CUSTOM_FIELDS.md`
 
-**Phase 1 — Break highest-leverage coupling** *(prerequisite for v0.10.0 plugins)*
-- [x] Break `scheduler.go` coupling — define `PlatformScheduler` interface in plugin
-      package, replace `*services/scheduler` dependency with adapter pattern. Unblocks
-      the plugin runtime from ~16,000 lines of product code.
-- [x] Invert `database` → `services/adapter` dependency — move connection lifecycle into
-      `database/`, move `services/{adapter,database,registry}` to `internal/platform/services/`.
-      Fixes inverted layering (DB layer currently depends on services layer).
-- [x] Split `internal/models/` -- moved 8 clean files whole to `internal/platform/models/`
-      (User, Group, Role, Session, APIToken, DBRole, LDAPConfiguration, ScopeDefinition);
-      split lookups (LookupItem) and search (SearchRequest etc.); EmailAccount stayed
-      product-side due to Queue field. Type aliases preserve identity for all callers.
-      zinc mock refactored to remove production-code product import.
+**Platform/Product Decoupling** *(prerequisite for v0.10.0 plugins)*
 
-**Phase 2 — Complete structural boundary**
-- [x] Decouple `internal/routing/` from `internal/api` and `internal/models` — added
-      `HandlerResolver`, switched routing loaders to resolver interface, moved routing
-      user context to `platform/models.User`, and moved real YAML handler coverage to
-      API-side tests.
-- [x] Reorganize `internal/api/` — moved safe platform handlers to
-      `internal/platform/api/` (`auth_api`, `auth_handler`, `user_*`,
-      `organisation_handlers`, `deletion_handlers`, `custom_fields_api_handlers`,
-      `i18n_handlers`). Product-coupled handlers stayed in `internal/api/`
-      after triage (`api_token`, mixed auth/customer, push, webauthn, totp,
-      mcp, plugin, lookups, ticket/queue/article/etc.).
-- [x] Reorganize `internal/service/` — moved platform services to
-      `internal/platform/service/` (`auth_service`, `totp_service`,
-      `webauthn_service`, `user_preferences`); kept `api_token_service` and
-      product services in `internal/service/` because they still depend on the
-      mixed repository/product scope layer.
+- [x] **Phase 1 — Break `scheduler.go` coupling**: Defined platform scheduler interface in plugin package, replaced `*services/scheduler` dependency with adapter pattern, moved connection lifecycle into `database/`, moved `services/{adapter,database,registry}` to `internal/platform/services/`.
+- [x] **Phase 2 — Invert `database` to `services/adapter` dependency**: Moved services/{adapter,database,registry} to `internal/platform/services/`, updated import sites, `database/` now imports only platform packages.
+- [x] **Phase 3 — Split `internal/models/`**: Moved platform types (`User`, `Group`, `Role`, `Session`, `APIToken`, `LDAPConfiguration`, `SearchRequest`, `EmailAccount` split) to `internal/platform/models/`, kept product types in `internal/models/`, added type aliases to preserve identity.
+- [x] **Phase 4 — Decouple `internal/routing/` from `internal/api/` and `internal/models/`**: Introduced `HandlerResolver` interface, removed `internal/models` import, wired API-backed resolver from `internal/api/handler_registry.go`.
+- [x] **Phase 5 — Reorganize `internal/api/` and `internal/service/`**: Moved platform handlers (`auth_api`, `auth_handler`, `user_*`, `organisation_handlers`, `deletion_handlers`, `custom_fields_api_handlers`, `i18n_handlers`) to `internal/platform/api/`; moved platform services (`auth_service`, `totp_service`, `webauthn_service`, `user_preferences`) to `internal/platform/service/`.
+- [x] **Phase 6 — Move all remaining platform packages to `internal/platform/`**: Moved `auth`, `middleware`, `template`, `shared`, `cache`, `config`, `customfields`, `data`, `deletion`, `httpcookie`, `i18n`, `ldap`, `lookups`, `marketplace`, `mcp`, `notifications`, `oauth2`, `organisation`, `pluginui`, `push`, `runner`, `search`, `secureconfig`, `service`, `services`, `storage`, `sysconfig`, `template`, `utils`, `webhook`, `yamlmgmt`, `zinc` to `internal/platform/` after decoupling hidden dependencies via interfaces.
+- [x] **Phase 7 — Enforce boundary with linter**: Created `cmd/gk-lint/` that scans `internal/platform/` for direct and transitive product package imports using `go list -deps`, added `lint-platform` target to Makefile and CI, wrote `docs/development/PLATFORM_BOUNDARY.md`.
+- [ ] **Phase 8 — Documentation and cleanup**: Update `docs/ARCHITECTURE.md` to reflect `internal/platform/` structure, fix `DATABASE.md:99` claim about `faq_*` tables, update `docs/PLUGIN_PLATFORM.md`, delete dead code (`internal/models/knowledge.go`, `KnowledgeArticles` field from `service_catalog.go`, TODO stub handlers from `customer_routes.go:1561-1577`), write `docs/development/PLATFORM_PACKAGES.md` canonical list.
 
-**Phase 3 — Enforce and document**
-- [ ] Move all remaining clean platform packages to `internal/platform/` (~25-30
-      packages: cache, config, i18n, auth, middleware, search, zinc, customfields,
-      organisation, secureconfig, pluginui, notifications, oauth2, ldap, push, webhook,
-      mcp, marketplace, yamlmgmt, template, sysconfig, utils, version, etc.)
-- [ ] Custom linter (`cmd/gk-lint/`) — scans all `internal/platform/` files, fails if
-      any import a product package. Product packages discovered dynamically (any
-      `internal/` package not under `internal/platform/`). Catches both direct and
-      transitive violations via `go list -deps`. Added to CI as required check.
-- [ ] Documentation — update `ARCHITECTURE.md`, `PLUGIN_PLATFORM.md`; write
-      `PLATFORM_PACKAGES.md` (canonical platform/product package list); write
-      `PLATFORM_BOUNDARY.md` (linter docs).
-- [ ] Dead code cleanup — delete `internal/models/knowledge.go` (GORM-tagged stub, no
-      backing tables), remove `KnowledgeArticles` field from `service_catalog.go`,
-      remove TODO stub handlers from `customer_routes.go:1561-1577`, fix false
-      `DATABASE.md:99` claim about `faq_*` tables.
+Full plan: `docs/PLATFORM_PRODUCT_DECOUPLING.md` (version 1.6).
 
 **GoatKit PaaS Core — Plugin UI System**
 

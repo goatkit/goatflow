@@ -1165,9 +1165,13 @@ toolbox-run-file:
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run $(FILE)'
 
 # Run all linters (Go, YAML, OpenAPI, Helm)
-.PHONY: lint
-lint: toolbox-lint yaml-lint openapi-lint helm-lint
+.PHONY: lint lint-platform
+lint: lint-platform toolbox-lint yaml-lint openapi-lint helm-lint
 	@printf "✅ All linting complete\n"
+
+# Enforce platform/product import boundary
+lint-platform: toolbox-build
+	@$(MAKE) toolbox-exec ARGS="go run ./cmd/gk-lint/"
 
 # Run linting with toolbox
 toolbox-lint:

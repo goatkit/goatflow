@@ -22,6 +22,37 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `internal/platform/services/`. All 6 import sites updated. `database/` now imports
   only `internal/platform/services/registry` (platform to platform). Full plan:
   `docs/PLATFORM_PRODUCT_DECOUPLING.md`.
+- **Phase 3 of platform/product decoupling complete.** Split `internal/models/` into
+  platform and product packages. Moved 8 clean files to `internal/platform/models/`
+  (User, Group, Role, Session, APIToken, DBRole, LDAPConfiguration, ScopeDefinition);
+  split lookups and search types; EmailAccount stayed product-side due to Queue field.
+  Type aliases preserve identity for all callers. Zinc mock refactored to remove
+  production-code product import. Full plan: `docs/PLATFORM_PRODUCT_DECOUPLING.md`.
+- **Phase 4 of platform/product decoupling complete.** Decoupled `internal/routing/` from
+  `internal/api` and `internal/models`. Added `HandlerResolver` interface, switched
+  routing loaders to resolver-based approach, moved routing user context to
+  `platform/models.User`, and moved real YAML handler coverage to API-side tests.
+  Full plan: `docs/PLATFORM_PRODUCT_DECOUPLING.md`.
+- **Phase 5 of platform/product decoupling complete.** Reorganized `internal/api/` and
+  `internal/service/` layers. Moved safe platform handlers to `internal/platform/api/`
+  (auth_api, auth_handler, user_*, organisation_handlers, deletion_handlers,
+  custom_fields_api_handlers, i18n_handlers). Moved platform services to
+  `internal/platform/service/` (auth_service, totp_service, webauthn_service,
+  user_preferences). Product-coupled handlers and services stayed in place after triage.
+  Full plan: `docs/PLATFORM_PRODUCT_DECOUPLING.md`.
+- **Phase 6 of platform/product decoupling complete.** Moved remaining clean platform
+  packages to `internal/platform/` (constants, logging, middleware). Updated all import
+  sites across the codebase. Platform package boundary now clearly separates reusable
+  infrastructure from product-specific logic. Full plan:
+  `docs/PLATFORM_PRODUCT_DECOUPLING.md`.
+- **Phase 7 of platform/product decoupling complete.** Enforced platform boundary with
+  custom linter (`cmd/gk-lint/`). Linter scans all `internal/platform/` files for direct
+  imports of product packages and transitive violations via `go list -deps`. Product
+  packages discovered dynamically (any `internal/` package not under `internal/platform/`).
+  Added to CI as required check before tests. Created `docs/development/PLATFORM_BOUNDARY.md`
+  documenting boundary rules, linter behavior, and exception process. Updated
+  CONTRIBUTING.md with platform-boundary requirement. Full plan:
+  `docs/PLATFORM_PRODUCT_DECOUPLING.md`.
 - **`bun pm audit` → `bun pm scan`** in `check-deps` target. The `audit` subcommand was
   removed in bun 1.1.x; renamed to `scan`.
 

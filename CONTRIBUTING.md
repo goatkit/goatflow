@@ -50,6 +50,7 @@ While we prepare comprehensive contribution guidelines, here are the basics:
 - Templating: Pongo2 only. Do not use Go's `html/template`. Render user-facing views via Pongo2 with `layouts/base.pongo2` and proper context (`User`, `ActivePage`).
 - Routing: All routes defined in YAML under `routes/*.yaml` using the YAML router. Do not register routes directly in Go code.
 - Tests: add/update tests for any DB-affecting change; run `make test`.
+- Platform boundary: run `make lint-platform` before merging changes under `internal/platform/`; platform packages must not import product packages.
 
 ## Go Performance Standards
 
