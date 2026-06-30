@@ -1,10 +1,109 @@
 {% extends "layouts/base.pongo2" %}
-{% block title %}{{ t("customer.placeholder_pages.knowledge_base_article") }} - GoatFlow{% endblock %}
+
+{% block title %}{{ t("customer.kb_article.title") }} - GoatFlow{% endblock %}
+
 {% block content %}
-<div class="container mx-auto py-8">
-    <h1 class="text-2xl font-bold gk-heading mb-4"><span class="gk-text-gradient">{{ t("customer.placeholder_pages.knowledge_base_article") }}</span></h1>
-    <div class="gk-card-glow rounded-lg p-6">
-        <p style="color: var(--gk-text-muted);">{{ t("customer.placeholder_pages.under_construction") }}</p>
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Article Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold gk-heading" id="article-title">
+            <span class="gk-text-gradient">Loading...</span>
+        </h1>
+        <div class="mt-4" style="color: var(--gk-text-secondary);" id="article-meta">
+            <span id="article-category"></span>
+            <span id="article-updated" class="ml-4"></span>
+        </div>
+    </div>
+
+    <!-- Article Content -->
+    <div id="article-content" class="prose prose-lg max-w-none">
+        <!-- Article content will be loaded here by JavaScript -->
+        <div class="text-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p class="mt-4" style="color: var(--gk-text-muted);">{{ t("customer.loading") }}</p>
+        </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Extract article ID from URL path
+    const pathParts = window.location.pathname.split('/');
+    const articleId = pathParts[pathParts.length - 1];
+    
+    if (!articleId || isNaN(articleId)) {
+        document.getElementById('article-title').textContent = '{{ t("customer.error_invalid_article") }}';
+        document.getElementById('article-content').innerHTML = `
+            <div class="text-center py-8">
+                <p style="color: var(--gk-text-red);">{{ t("customer.error_invalid_article") }}</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Load article via AJAX
+    fetch(`/kb/article/${articleId}`, {
+        credentials: 'include'
+    })
+    .then(response => {
+        if (response.status === 404) {
+            throw new Error('Article not found or not accessible');
+        }
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Update title
+        document.getElementById('article-title').textContent = data.Title;
+        
+        // Update meta
+        const metaEl = document.getElementById('article-meta');
+        if (data.Category || data.UpdatedAt) {
+            metaEl.innerHTML = '';
+            if (data.Category) {
+                const categorySpan = document.createElement('span');
+                categorySpan.className = 'px-2 py-1 text-xs font-medium bg-gray-100 rounded';
+                categorySpan.textContent = data.Category;
+                metaEl.appendChild(categorySpan);
+            }
+            if (data.UpdatedAt) {
+                const updatedSpan = document.createElement('span');
+                updatedSpan.className = 'ml-4 text-sm text-gray-500';
+                updatedSpan.textContent = data.UpdatedAt;
+                metaEl.appendChild(updatedSpan);
+            }
+        }
+        
+        // Update content
+        const contentEl = document.getElementById('article-content');
+        if (data.Content) {
+            // Simple markdown-like rendering for basic formatting
+            let content = data.Content
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>')
+                .replace(/\[b\](.*?)\[\/b\]/g, '<strong>$1</strong>')
+                .replace(/\[i\](.*?)\[\/i\]/g, '<em>$1</em>')
+                .replace(/\[u\](.*?)\[\/u\]/g, '<u>$1</u>');
+            contentEl.innerHTML = `<p>${content}</p>`;
+        } else {
+            contentEl.innerHTML = `
+                <div class="text-center py-8">
+                    <p style="color: var(--gk-text-muted);">{{ t("customer.article_no_content") }}</p>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading article:', error);
+        document.getElementById('article-title').textContent = '{{ t("customer.error_loading") }}';
+        document.getElementById('article-content').innerHTML = `
+            <div class="text-center py-8">
+                <p style="color: var(--gk-text-red);">{{ t("customer.error_loading") }}</p>
+            </div>
+        `;
+    });
+});
+</script>
 {% endblock %}

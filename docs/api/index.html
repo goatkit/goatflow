@@ -2593,6 +2593,17 @@
                 
                 <div class="route">
                     <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/plugin-uis</code>
+                    <p>Display plugin UI management page</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
                     <div class="method POST">POST</div>
                     <code class="path">/api/users/:id/2fa/disable</code>
                     <p>Admin override: disable 2FA for a user (requires reason)</p>
@@ -5697,6 +5708,28 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method POST">POST</div>
+                    <code class="path">/api/auth/passkey/begin</code>
+                    <p>Begin agent passkey login</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/api/auth/passkey/finish</code>
+                    <p>Finish agent passkey login</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
                     <code class="path">/api/auth/logout</code>
                     <p>Process logout request</p>
                     
@@ -5784,6 +5817,28 @@
                 
                 <div class="route">
                     <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/api/auth/customer/passkey/begin</code>
+                    <p>Begin customer passkey login</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/api/auth/customer/passkey/finish</code>
+                    <p>Finish customer passkey login</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
                     <div class="method GET">GET</div>
                     <code class="path">/customer/logout</code>
                     <p>Customer logout - clears cookies and redirects</p>
@@ -5817,6 +5872,28 @@
                 
                 <div class="route">
                     <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/api/auth/2fa/webauthn/begin</code>
+                    <p>Begin security key login verification</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/api/auth/2fa/webauthn/finish</code>
+                    <p>Finish security key login verification</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
                     <div class="method GET">GET</div>
                     <code class="path">/customer/login/2fa</code>
                     <p>Display customer 2FA verification page during login</p>
@@ -5831,6 +5908,28 @@
                     <div class="method POST">POST</div>
                     <code class="path">/api/auth/customer/2fa/verify</code>
                     <p>Verify customer 2FA code and complete login</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/api/auth/customer/2fa/webauthn/begin</code>
+                    <p>Begin customer security key login verification</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/api/auth/customer/2fa/webauthn/finish</code>
+                    <p>Finish customer security key login verification</p>
                     
                     
                     
@@ -6298,6 +6397,61 @@
                 
                 <div class="route">
                     <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/api/preferences/2fa/webauthn/register/begin</code>
+                    <p>Begin customer hardware security key registration</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/api/preferences/2fa/webauthn/register/finish</code>
+                    <p>Finish customer hardware security key registration</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/api/preferences/2fa/webauthn/credentials</code>
+                    <p>List customer hardware security keys</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method PATCH">PATCH</div>
+                    <code class="path">/api/preferences/2fa/webauthn/credentials/:id</code>
+                    <p>Rename a customer hardware security key</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method DELETE">DELETE</div>
+                    <code class="path">/api/preferences/2fa/webauthn/credentials/:id</code>
+                    <p>Remove a customer hardware security key</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
                     <div class="method GET">GET</div>
                     <code class="path">/password/form</code>
                     <p>Display password change form</p>
@@ -6312,39 +6466,6 @@
                     <div class="method POST">POST</div>
                     <code class="path">/password/change</code>
                     <p>Process password change</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/knowledge-base</code>
-                    <p>Display knowledge base articles</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/kb/search</code>
-                    <p>Search knowledge base articles</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/kb/article/:id</code>
-                    <p>Display knowledge base article</p>
                     
                     
                     
@@ -6666,6 +6787,61 @@
                     
                 </div>
                 
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/api/preferences/2fa/webauthn/register/begin</code>
+                    <p>Begin hardware security key registration</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/api/preferences/2fa/webauthn/register/finish</code>
+                    <p>Finish hardware security key registration</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/api/preferences/2fa/webauthn/credentials</code>
+                    <p>List hardware security keys</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method PATCH">PATCH</div>
+                    <code class="path">/api/preferences/2fa/webauthn/credentials/:id</code>
+                    <p>Rename a hardware security key</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method DELETE">DELETE</div>
+                    <code class="path">/api/preferences/2fa/webauthn/credentials/:id</code>
+                    <p>Remove a hardware security key</p>
+                    
+                    
+                    
+                    
+                </div>
+                
             </div>
         </div>
         
@@ -6692,6 +6868,17 @@
                     <div class="method GET">GET</div>
                     <code class="path">/sw.js</code>
                     <p>Serve service worker</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/sw-config.json</code>
+                    <p>Serve service worker cache configuration</p>
                     
                     
                     

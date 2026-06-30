@@ -3758,6 +3758,20 @@
         ]
       }
     },
+    "/admin/plugin-uis": {
+      "get": {
+        "description": "Display plugin UI management page",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/admin/plugins": {
       "get": {
         "description": "Display plugin management page",
@@ -5387,6 +5401,34 @@
         ]
       }
     },
+    "/api/auth/2fa/webauthn/begin": {
+      "post": {
+        "description": "Begin security key login verification",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/auth/2fa/webauthn/finish": {
+      "post": {
+        "description": "Finish security key login verification",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/api/auth/customer/2fa/verify": {
       "post": {
         "description": "Verify customer 2FA code and complete login",
@@ -5401,9 +5443,65 @@
         ]
       }
     },
+    "/api/auth/customer/2fa/webauthn/begin": {
+      "post": {
+        "description": "Begin customer security key login verification",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/auth/customer/2fa/webauthn/finish": {
+      "post": {
+        "description": "Finish customer security key login verification",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/api/auth/customer/login": {
       "post": {
         "description": "Process customer login form",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/auth/customer/passkey/begin": {
+      "post": {
+        "description": "Begin customer passkey login",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/auth/customer/passkey/finish": {
+      "post": {
+        "description": "Finish customer passkey login",
         "responses": {
           "200": {
             "description": "Success"
@@ -5432,6 +5530,34 @@
     "/api/auth/logout": {
       "post": {
         "description": "Process logout request",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/auth/passkey/begin": {
+      "post": {
+        "description": "Begin agent passkey login",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/auth/passkey/finish": {
+      "post": {
+        "description": "Finish agent passkey login",
         "responses": {
           "200": {
             "description": "Success"
@@ -6024,6 +6150,74 @@
     "/api/preferences/2fa/status": {
       "get": {
         "description": "Get 2FA status for current user",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/preferences/2fa/webauthn/credentials": {
+      "get": {
+        "description": "List hardware security keys",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/preferences/2fa/webauthn/credentials/{id}": {
+      "delete": {
+        "description": "Remove a hardware security key",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "patch": {
+        "description": "Rename a hardware security key",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/preferences/2fa/webauthn/register/begin": {
+      "post": {
+        "description": "Begin hardware security key registration",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/preferences/2fa/webauthn/register/finish": {
+      "post": {
+        "description": "Finish hardware security key registration",
         "responses": {
           "200": {
             "description": "Success"
@@ -7011,6 +7205,74 @@
         ]
       }
     },
+    "/customer/api/preferences/2fa/webauthn/credentials": {
+      "get": {
+        "description": "List customer hardware security keys",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/api/preferences/2fa/webauthn/credentials/{id}": {
+      "delete": {
+        "description": "Remove a customer hardware security key",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "patch": {
+        "description": "Rename a customer hardware security key",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/api/preferences/2fa/webauthn/register/begin": {
+      "post": {
+        "description": "Begin customer hardware security key registration",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/api/preferences/2fa/webauthn/register/finish": {
+      "post": {
+        "description": "Finish customer hardware security key registration",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/customer/api/preferences/coachmarks/dismiss": {
       "post": {
         "description": "Dismiss a coachmark tip for current customer",
@@ -7134,48 +7396,6 @@
     "/customer/company/users": {
       "get": {
         "description": "Display customer company users",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/customer/kb/article/{id}": {
-      "get": {
-        "description": "Display knowledge base article",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/customer/kb/search": {
-      "get": {
-        "description": "Search knowledge base articles",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/customer/knowledge-base": {
-      "get": {
-        "description": "Display knowledge base articles",
         "responses": {
           "200": {
             "description": "Success"
@@ -7718,6 +7938,20 @@
     "/static/*filepath": {
       "get": {
         "description": "Serve all static files including css, js, images, webfonts",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/sw-config.json": {
+      "get": {
+        "description": "Serve service worker cache configuration",
         "responses": {
           "200": {
             "description": "Success"

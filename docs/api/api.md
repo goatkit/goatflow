@@ -2566,6 +2566,17 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/plugin-uis`
+- **Method:** `GET`
+- **Description:** Display plugin UI management page
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/api/users/:id/2fa/disable`
 - **Method:** `POST`
 - **Description:** Admin override: disable 2FA for a user (requires reason)
@@ -5648,6 +5659,28 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/api/auth/passkey/begin`
+- **Method:** `POST`
+- **Description:** Begin agent passkey login
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/auth/passkey/finish`
+- **Method:** `POST`
+- **Description:** Finish agent passkey login
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/api/auth/logout`
 - **Method:** `POST`
 - **Description:** Process logout request
@@ -5736,6 +5769,28 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/api/auth/customer/passkey/begin`
+- **Method:** `POST`
+- **Description:** Begin customer passkey login
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/auth/customer/passkey/finish`
+- **Method:** `POST`
+- **Description:** Finish customer passkey login
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/customer/logout`
 - **Method:** `GET`
 - **Description:** Customer logout - clears cookies and redirects
@@ -5769,6 +5824,28 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/api/auth/2fa/webauthn/begin`
+- **Method:** `POST`
+- **Description:** Begin security key login verification
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/auth/2fa/webauthn/finish`
+- **Method:** `POST`
+- **Description:** Finish security key login verification
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/customer/login/2fa`
 - **Method:** `GET`
 - **Description:** Display customer 2FA verification page during login
@@ -5783,6 +5860,28 @@ Generated from YAML route definitions
 - **Path:** `/api/auth/customer/2fa/verify`
 - **Method:** `POST`
 - **Description:** Verify customer 2FA code and complete login
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/auth/customer/2fa/webauthn/begin`
+- **Method:** `POST`
+- **Description:** Begin customer security key login verification
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/auth/customer/2fa/webauthn/finish`
+- **Method:** `POST`
+- **Description:** Finish customer security key login verification
 
 
 
@@ -6247,6 +6346,61 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/api/preferences/2fa/webauthn/register/begin`
+- **Method:** `POST`
+- **Description:** Begin customer hardware security key registration
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/preferences/2fa/webauthn/register/finish`
+- **Method:** `POST`
+- **Description:** Finish customer hardware security key registration
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/preferences/2fa/webauthn/credentials`
+- **Method:** `GET`
+- **Description:** List customer hardware security keys
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/preferences/2fa/webauthn/credentials/:id`
+- **Method:** `PATCH`
+- **Description:** Rename a customer hardware security key
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/preferences/2fa/webauthn/credentials/:id`
+- **Method:** `DELETE`
+- **Description:** Remove a customer hardware security key
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/password/form`
 - **Method:** `GET`
 - **Description:** Display password change form
@@ -6261,39 +6415,6 @@ Generated from YAML route definitions
 - **Path:** `/password/change`
 - **Method:** `POST`
 - **Description:** Process password change
-
-
-
-
----
-
-#### 
-
-- **Path:** `/knowledge-base`
-- **Method:** `GET`
-- **Description:** Display knowledge base articles
-
-
-
-
----
-
-#### 
-
-- **Path:** `/kb/search`
-- **Method:** `GET`
-- **Description:** Search knowledge base articles
-
-
-
-
----
-
-#### 
-
-- **Path:** `/kb/article/:id`
-- **Method:** `GET`
-- **Description:** Display knowledge base article
 
 
 
@@ -6611,6 +6732,61 @@ Generated from YAML route definitions
 
 ---
 
+#### 
+
+- **Path:** `/api/preferences/2fa/webauthn/register/begin`
+- **Method:** `POST`
+- **Description:** Begin hardware security key registration
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/preferences/2fa/webauthn/register/finish`
+- **Method:** `POST`
+- **Description:** Finish hardware security key registration
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/preferences/2fa/webauthn/credentials`
+- **Method:** `GET`
+- **Description:** List hardware security keys
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/preferences/2fa/webauthn/credentials/:id`
+- **Method:** `PATCH`
+- **Description:** Rename a hardware security key
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/preferences/2fa/webauthn/credentials/:id`
+- **Method:** `DELETE`
+- **Description:** Remove a hardware security key
+
+
+
+
+---
+
 
 
 ### Default: static
@@ -6636,6 +6812,17 @@ Generated from YAML route definitions
 - **Path:** `/sw.js`
 - **Method:** `GET`
 - **Description:** Serve service worker
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/sw-config.json`
+- **Method:** `GET`
+- **Description:** Serve service worker cache configuration
 
 
 

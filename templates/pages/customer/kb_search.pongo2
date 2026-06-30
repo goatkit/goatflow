@@ -1,10 +1,148 @@
 {% extends "layouts/base.pongo2" %}
-{% block title %}{{ t("customer.placeholder_pages.knowledge_base_search") }} - GoatFlow{% endblock %}
+
+{% block title %}{{ t("customer.kb_search.title") }} - GoatFlow{% endblock %}
+
 {% block content %}
-<div class="container mx-auto py-8">
-    <h1 class="text-2xl font-bold gk-heading mb-4"><span class="gk-text-gradient">{{ t("customer.placeholder_pages.knowledge_base_search") }}</span></h1>
-    <div class="gk-card-glow rounded-lg p-6">
-        <p style="color: var(--gk-text-muted);">{{ t("customer.placeholder_pages.under_construction") }}</p>
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Search Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold gk-heading">
+            <span class="gk-text-gradient">{{ t("customer.kb_search.title") }}</span>
+        </h1>
+        <p class="mt-4" style="color: var(--gk-text-secondary);">
+            {{ t("customer.kb_search.description") }}
+        </p>
+    </div>
+
+    <!-- Search Form -->
+    <div class="mb-6">
+        <form id="kb-search-form" class="flex flex-col sm:flex-row items-end gap-4">
+            <div class="flex-1 min-w-0">
+                <label for="search-query" class="sr-only">{{ t("customer.kb_search.query") }}</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M10.5 10.5a6 6 0 100 12 6 6 0 000-12z" />
+                        </svg>
+                    </div>
+                    <input
+                        type="text"
+                        id="search-query"
+                        name="query"
+                        placeholder="{{ t("customer.kb_search.placeholder") }}"
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                </div>
+            </div>
+            <button
+                type="submit"
+                id="search-button"
+                class="px-6 py-3 rounded-lg bg-primary text-white font-medium hover:bg-primary-dark transition-colors duration-200"
+            >
+                {{ t("customer.kb_search.button") }}
+            </button>
+        </form>
+    </div>
+
+    <!-- Search Results -->
+    <div id="kb-search-results" class="space-y-4">
+        <!-- Search results will be loaded here by JavaScript -->
+        <div class="text-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p class="mt-4" style="color: var(--gk-text-muted);">{{ t("customer.loading") }}</p>
+        </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentARY', function() {
+    const form = document.getElementById('kb-search-form');
+    const queryInput = document.getElementById('search-query');
+    const resultsContainer = document.getElementById('kb-search-results');
+    const searchButton = document.getElementById('search-button');
+
+    function performSearch() {
+        const query = queryInput.value.trim();
+        if (!query) {
+            resultsContainer.innerHTML = `
+                <div class="text-center py-8">
+                    <p style="color: var(--gk-text-muted);">{{ t("customer.kb_search.empty_query") }}</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Show loading state
+        resultsContainer.innerHTML = `
+            <div class="text-center py-12">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <p class="mt-4" style="color: var(--gk-text-muted);">{{ t("customer.loading") }}</p>
+            </div>
+        `;
+
+        // Perform search
+        fetch(`/kb/search?query=${encodeURIComponent(query)}`, {
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.Results && data.Results.length > 0) {
+                resultsContainer.innerHTML = data.Results.map(hit => `
+                    <div class="border rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="text-lg font-medium text-gray-900">${hit.Title}</h3>
+                                <p class="mt-2 text-gray-600">${hit.Summary}</p>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    <span class="px-2 py-1 text-xs font-medium bg-gray-100 rounded">${hit.Category}</span>
+                                </div>
+                                <p class="text-sm text-gray-500">${hit.Score.toFixed(2)}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                resultsContainer.innerHTML = `
+                    <div class="text-center py-8">
+                        <p style="color: var(--gk-text-muted);">{{ t("customer.kb_search.no_results") }}</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error performing search:', error);
+            resultsContainer.innerHTML = `
+                <div class="text-center py-8">
+                    <p style="color: var(--gk-text-red);">{{ t("customer.error_loading") }}</p>
+                </div>
+            `;
+        });
+    }
+
+    // Handle form submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        performSearch();
+    });
+
+    // Handle Enter key in search box
+    queryInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            performSearch();
+        }
+    });
+
+    // Optional: perform search on button click (form submission already handles this)
+    searchButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        performSearch();
+    });
+});
+</script>
 {% endblock %}
