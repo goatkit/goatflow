@@ -590,6 +590,12 @@ func SessionOrJWTAuth() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		// If this is a gf_ API token, authenticate via the token verifier
+		// instead of trying to validate it as a JWT.
+		if middleware.IsAPIToken(token) {
+			middleware.AuthenticateAPIToken(c, token)
+			return
+		}
 
 		claims, err := jwtMgr.ValidateToken(token)
 		if err != nil {

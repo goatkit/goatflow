@@ -127,6 +127,13 @@ func UnifiedAuthMiddleware(jwtManager interface {
 	}
 }
 
+// AuthenticateAPIToken handles gf_* token authentication. Exported so that
+// other auth middlewares (e.g. SessionOrJWTAuth) can delegate to it when
+// they detect an API token.
+func AuthenticateAPIToken(c *gin.Context, token string) {
+	authenticateAPIToken(c, token)
+}
+
 // authenticateAPIToken handles gf_* token authentication
 func authenticateAPIToken(c *gin.Context, token string) {
 	debugLog("DEBUG api_token: authenticating gf_* token (prefix: %s...)", token[:min(15, len(token))])
@@ -166,6 +173,10 @@ func authenticateAPIToken(c *gin.Context, token string) {
 
 	if apiToken.UserType == platformmodels.APITokenUserAgent {
 		c.Set("user_role", "User")
+		// Admin tokens (wildcard or admin:* scopes) pass RequireAdmin checks.
+		if apiToken.HasScope("*") || apiToken.HasScope("admin:*") {
+			c.Set("isInAdminGroup", true)
+		}
 	} else {
 		c.Set("user_role", "Customer")
 		c.Set("customer_user_id", apiToken.UserID)
