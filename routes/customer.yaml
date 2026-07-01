@@ -217,3 +217,22 @@ spec:
       handler: handleCustomerCompanyUsers
       template: pages/customer/company_users.pongo2
       description: "Display customer company users"
+
+    # Knowledge Base
+    - path: /kb
+      method: GET
+      handler: handleCustomerKnowledgeBase
+      template: pages/customer/knowledge_base.pongo2
+      description: "Display knowledge base articles"
+
+    - path: /kb/search
+      method: GET
+      handler: handleCustomerKBSearch
+      template: pages/customer/kb_search.pongo2
+      description: "Search knowledge base articles"
+
+    - path: /kb/article/:id
+      method: GET
+      handler: handleCustomerKBArticle
+      template: pages/customer/kb_article.pongo2
+      description: "View a single knowledge base article"

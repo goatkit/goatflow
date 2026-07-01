@@ -1570,3 +1570,51 @@ func handleCustomerCompanyUsers(db *sql.DB) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"status": "TODO: Company users"})
 	}
 }
+
+// handleCustomerKnowledgeBase renders the KB listing page.
+// Data is loaded client-side via JS fetch('/knowledge-base') from the kb plugin.
+func handleCustomerKnowledgeBase(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !requireCustomerAuth(c) {
+			return
+		}
+		username := c.GetString("username")
+		cfg := customerPortalConfigFromContext(c, db)
+		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/knowledge_base.pongo2", withPortalContextAndCustomer(pongo2.Context{
+			"Title":      cfg.Title,
+			"ActivePage": "kb",
+		}, cfg, db, username))
+	}
+}
+
+// handleCustomerKBSearch renders the KB search page.
+// Search is performed client-side via JS fetch('/kb/search?query=...') from the kb plugin.
+func handleCustomerKBSearch(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !requireCustomerAuth(c) {
+			return
+		}
+		username := c.GetString("username")
+		cfg := customerPortalConfigFromContext(c, db)
+		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/kb_search.pongo2", withPortalContextAndCustomer(pongo2.Context{
+			"Title":      cfg.Title,
+			"ActivePage": "kb-search",
+		}, cfg, db, username))
+	}
+}
+
+// handleCustomerKBArticle renders a single KB article page.
+// The article is loaded client-side via JS fetch('/kb/article/:id') from the kb plugin.
+func handleCustomerKBArticle(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !requireCustomerAuth(c) {
+			return
+		}
+		username := c.GetString("username")
+		cfg := customerPortalConfigFromContext(c, db)
+		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/kb_article.pongo2", withPortalContextAndCustomer(pongo2.Context{
+			"Title":      cfg.Title,
+			"ActivePage": "kb-article",
+		}, cfg, db, username))
+	}
+}

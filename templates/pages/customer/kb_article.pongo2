@@ -64,13 +64,16 @@ document.addEventListener('DOMContentLoaded', function() {
             metaEl.innerHTML = '';
             if (data.Category) {
                 const categorySpan = document.createElement('span');
-                categorySpan.className = 'px-2 py-1 text-xs font-medium bg-gray-100 rounded';
+                categorySpan.className = 'px-2 py-1 text-xs font-medium rounded';
+                categorySpan.style.background = 'var(--gk-bg-elevated)';
+                categorySpan.style.color = 'var(--gk-text-muted)';
                 categorySpan.textContent = data.Category;
                 metaEl.appendChild(categorySpan);
             }
             if (data.UpdatedAt) {
                 const updatedSpan = document.createElement('span');
-                updatedSpan.className = 'ml-4 text-sm text-gray-500';
+                updatedSpan.className = 'ml-4 text-sm';
+                updatedSpan.style.color = 'var(--gk-text-muted)';
                 updatedSpan.textContent = data.UpdatedAt;
                 metaEl.appendChild(updatedSpan);
             }

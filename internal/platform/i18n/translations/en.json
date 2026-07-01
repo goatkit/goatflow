@@ -1885,6 +1885,27 @@
       "company_info_title": "Company Info",
       "company_users_title": "Company Users"
     },
+    "knowledge_base": {
+      "title": "Knowledge Base",
+      "description": "Browse our knowledge base for helpful articles and guides",
+      "no_articles": "No articles available yet"
+    },
+    "kb_search": {
+      "title": "Search Knowledge Base",
+      "description": "Search for articles across the knowledge base",
+      "query": "Search query",
+      "placeholder": "Enter your search terms...",
+      "button": "Search",
+      "empty_query": "Please enter a search term",
+      "no_results": "No results found"
+    },
+    "kb_article": {
+      "title": "Knowledge Base Article"
+    },
+    "loading": "Loading...",
+    "error_loading": "Error loading content",
+    "error_invalid_article": "Invalid article ID",
+    "article_no_content": "This article has no content",
     "common": {
       "required": "*"
     }
