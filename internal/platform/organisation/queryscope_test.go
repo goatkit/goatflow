@@ -235,7 +235,7 @@ func TestExtractMainTable(t *testing.T) {
 		{"SELECT * FROM `ticket` WHERE id = 1", "ticket"},
 		{"UPDATE ticket SET title = 'x'", "ticket"},
 		{"DELETE FROM ticket WHERE id = 1", "ticket"},
-		{"INSERT INTO ticket (title) VALUES ('x')", ""},  // extractMainTable doesn't extract INSERT targets
+		{"INSERT INTO ticket (title) VALUES ('x')", ""}, // extractMainTable doesn't extract INSERT targets
 		{"SELECT 1", ""},
 	}
 	for _, tt := range tests {

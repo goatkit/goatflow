@@ -29,8 +29,8 @@ const (
 // CAPTCHA providers.
 const (
 	CAPTCHANone      = ""
-	CAPTCHARecaptcha  = "recaptcha_v3"
-	CAPTCHAHCaptcha   = "hcaptcha"
+	CAPTCHARecaptcha = "recaptcha_v3"
+	CAPTCHAHCaptcha  = "hcaptcha"
 )
 
 // AuthToken represents a row in gk_auth_token.

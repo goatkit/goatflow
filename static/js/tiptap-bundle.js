@@ -1,7 +1,7 @@
 // Tiptap Bundle - Exports all required Tiptap modules for bundling
 // This gets compiled to tiptap.min.js for airgapped environments
 
-import { Editor } from '@tiptap/core';
+import { Editor, Extension } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Table } from '@tiptap/extension-table';
@@ -18,10 +18,14 @@ import { TaskItem } from '@tiptap/extension-task-item';
 import Image from '@tiptap/extension-image';
 import { generateHTML, generateJSON } from '@tiptap/core';
 import { markdownToHTML, htmlToMarkdown } from './markdown-utils.js';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 
 // Export everything as a global object
 window.Tiptap = {
     Editor,
+    Extension,
+    Plugin,
+    PluginKey,
     StarterKit,
     Placeholder,
     Table,

@@ -183,9 +183,9 @@ func TestCustomerInitialsInBaseTemplate(t *testing.T) {
 				"email":      "emma.scott@example.com",
 				"initials":   "ES",
 			},
-			"Lang":       "en",
-			"Direction":  "ltr",
-			"IsRTL":      false,
+			"Lang":        "en",
+			"Direction":   "ltr",
+			"IsRTL":       false,
 			"profileHref": "/customer/profile",
 			"logoutHref":  "/customer/logout",
 		}
@@ -208,7 +208,7 @@ func TestCustomerInitialsInBaseTemplate(t *testing.T) {
 			// (FirstName from email, no LastName)
 			"User": map[string]interface{}{
 				"FirstName": "emma.scott@example.com", // Wrong: email used as name
-				"LastName":  "",                        // Empty because email has no space
+				"LastName":  "",                       // Empty because email has no space
 			},
 			"Customer": map[string]string{
 				"first_name": "Emma",
@@ -216,9 +216,9 @@ func TestCustomerInitialsInBaseTemplate(t *testing.T) {
 				"email":      "emma.scott@example.com",
 				"initials":   "ES",
 			},
-			"Lang":       "en",
-			"Direction":  "ltr",
-			"IsRTL":      false,
+			"Lang":        "en",
+			"Direction":   "ltr",
+			"IsRTL":       false,
 			"profileHref": "/customer/profile",
 			"logoutHref":  "/customer/logout",
 		}

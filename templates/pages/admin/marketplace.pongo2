@@ -1,0 +1,250 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("admin.marketplace")|default:"Marketplace" }} - {{ t("app.name") }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <header class="mb-8">
+        <div class="flex items-center justify-between flex-wrap">
+            <div>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("admin.marketplace")|default:"Marketplace" }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.marketplace_description")|default:"Browse and install community plugins" }}</p>
+            </div>
+            <div class="mt-4 sm:mt-0 flex gap-2">
+                <a href="/admin/plugins" class="gk-btn-secondary">
+                    <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+                    </svg>
+                    {{ t("admin.back_to_plugins")|default:"Back to Plugins" }}
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="gk-card p-5">
+            <div class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("admin.marketplace_total")|default:"Available" }}</div>
+            <div class="mt-2 text-2xl font-bold" style="color: var(--gk-text-primary);" id="stat-total">-</div>
+        </div>
+        <div class="gk-card p-5">
+            <div class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("admin.marketplace_installed")|default:"Installed" }}</div>
+            <div class="mt-2 text-2xl font-bold" style="color: var(--gk-success);" id="stat-installed">-</div>
+        </div>
+        <div class="gk-card p-5">
+            <div class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("admin.marketplace_updates")|default:"Updates Available" }}</div>
+            <div class="mt-2 text-2xl font-bold" style="color: var(--gk-warning);" id="stat-updates">-</div>
+        </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="mb-6 gk-card p-4">
+        <div class="flex flex-wrap items-center gap-4">
+            <div class="flex-1 min-w-[200px]">
+                <label for="marketplaceSearch" class="sr-only">{{ t("admin.search_marketplace")|default:"Search marketplace" }}</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-lineup="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input
+                        type="text"
+                        id="marketplaceSearch"
+                        class="gk-input-neon pl-10"
+                        placeholder="{{ t("admin.search_marketplace_placeholder")|default:"Search by name, tag, or description..." }}"
+                        oninput="filterPlugins()"
+                    >
+                </div>
+            </div>
+            <div class="flex-shrink-0">
+                <label for="categoryFilter" class="sr-only">{{ t("admin.filter_category")|default:"Filter by category" }}</label>
+                <select id="categoryFilter" class="gk-select-neon" onchange="filterPlugins()">
+                    <option value="">{{ t("admin.all_categories")|default:"All Categories" }}</option>
+                    <option value="business">Business</option>
+                    <option value="integration">Integration</option>
+                    <option value="theme">Theme</option>
+                    <option value="utility">Utility</option>
+                </select>
+            </div>
+            <div class="flex-shrink-0">
+                <label for="sortSelect" class="sr-only">{{ t("admin.sort_by")|default:"Sort by" }}</label>
+                <select id="sortSelect" class="gk-select-neon" onchange="filterPlugins()">
+                    <option value="name">{{ t("admin.sort_name")|default:"Name" }}</option>
+                    <option value="latest_version">{{ t("admin.sort_version")|default:"Version" }}</option>
+                    <option value="category">{{ t("admin.sort_category")|default:"Category" }}</option>
+                    <option value="author">{{ t("admin.sort_author")|default:"Author" }}</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plugin grid -->
+    <div id="plugin-grid" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div class="col-span-full text-center py-12" style="color: var(--gk-text-muted);">
+            <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" />
+            </svg>
+            <p>{{ t("admin.loading_marketplace")|default:"Loading marketplace..." }}</p>
+        </div>
+    </div>
+</div>
+
+<script>
+const i18n = {
+    install: '{{ t("buttons.install")|default:"Install" }}',
+    update: '{{ t("buttons.update")|default:"Update" }}',
+    installed: '{{ t("admin.installed")|default:"Installed" }}',
+    installing: '{{ t("admin.installing")|default:"Installing..." }}',
+    upToDate: '{{ t("admin.up_to_date")|default:"Up to date" }}',
+    installFailed: '{{ t("admin.install_failed")|default:"Install failed" }}',
+    verified: '{{ t("admin.verified_signed")|default:"Verified" }}',
+    noResults: '{{ t("admin.no_marketplace_results")|default:"No plugins found" }}',
+    loadFailed: '{{ t("admin.marketplace_load_failed")|default:"Failed to load marketplace" }}',
+};
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+let allPlugins = [];
+let installedCount = 0;
+let updateCount = 0;
+
+async function loadMarketplace() {
+    try {
+        const resp = await fetch('/api/v1/plugins/marketplace');
+        if (!resp.ok) throw new Error(i18n.loadFailed);
+        const data = await resp.json();
+
+        allPlugins = data.plugins || [];
+        installedCount = allPlugins.filter(p => p.installed_version).length;
+        updateCount = allPlugins.filter(p => p.update_available).length;
+
+        document.getElementById('stat-total').textContent = allPlugins.length;
+        document.getElementById('stat-installed').textContent = installedCount;
+        document.getElementById('stat-updates').textContent = updateCount;
+
+        filterPlugins();
+    } catch (err) {
+        document.getElementById('plugin-grid').innerHTML = `
+            <div class="col-span-full text-center py-12" style="color: var(--gk-error);">
+                <p>${err.message}</p>
+            </div>`;
+    }
+}
+
+function filterPlugins() {
+    const search = (document.getElementById('marketplaceSearch').value || '').toLowerCase();
+    const category = document.getElementById('categoryFilter').value;
+    const sortBy = document.getElementById('sortSelect').value;
+
+    let filtered = allPlugins.filter(p => {
+        if (category && p.category !== category) return false;
+        if (search) {
+            const haystack = (p.name + ' ' + (p.description || '') + ' ' + (p.author || '') + ' ' + (p.tags || []).join(' ')).toLowerCase();
+            if (!haystack.includes(search)) return false;
+        }
+        return true;
+    });
+
+    filtered.sort((a, b) => {
+        let av = (a[sortBy] || '').toString().toLowerCase();
+        let bv = (b[sortBy] || '').toString().toLowerCase();
+        return av < bv ? -1 : av > bv ? 1 : 0;
+    });
+
+    renderPlugins(filtered);
+}
+
+function renderPlugins(plugins) {
+    const grid = document.getElementById('plugin-grid');
+
+    if (plugins.length === 0) {
+        grid.innerHTML = `
+            <div class="col-span-full text-center py-12" style="color: var(--gk-text-muted);">
+                <p>${i18n.noResults}</p>
+            </div>`;
+        return;
+    }
+
+    grid.innerHTML = plugins.map(p => {
+        let badge, button;
+        if (p.update_available) {
+            badge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background: rgba(245,158,11,0.15); color: var(--gk-warning);">${i18n.update} v${p.latest_version}</span>`;
+            button = `<button onclick="installPlugin('${p.name}')" class="gk-btn-neon text-sm px-3 py-1.5" style="background: var(--gk-warning); border-color: var(--gk-warning);">${i18n.update}</button>`;
+        } else if (p.installed_version) {
+            badge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background: rgba(34,197,94,0.15); color: var(--gk-success);">${i18n.installed} v${p.installed_version}</span>`;
+            button = `<span class="text-sm" style="color: var(--gk-text-muted);">${i18n.upToDate}</span>`;
+        } else {
+            badge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background: rgba(99,102,241,0.15); color: var(--gk-primary);">v${p.latest_version}</span>`;
+            button = `<button onclick="installPlugin('${p.name}')" class="gk-btn-neon text-sm px-3 py-1.5">${i18n.install}</button>`;
+        }
+
+        const verifiedIcon = p.verified
+            ? `<span title="${i18n.verified}" style="color: var(--gk-success);"><svg class="inline h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.914 11.914 0 008 8C8 5.042 6.957 2.307 5.235.065L2.166 4.999z" clip-rule="evenodd" /></svg></span>`
+            : '';
+
+        const tags = (p.tags || []).slice(0, 3).map(t =>
+            `<span class="inline-block px-1.5 py-0.5 rounded text-xs" style="background: var(--gk-bg-elevated); color: var(--gk-text-muted);">${t}</span>`
+        ).join(' ');
+        const iconUrl = p.icon || '';
+        const iconHtml = iconUrl
+            ? `<img src="${escapeHtml(iconUrl)}" alt="" class="h-8 w-8 rounded flex-shrink-0" loading="lazy" onerror="this.style.display='none'">`
+            : `<div class="h-8 w-8 rounded flex-shrink-0 flex items-center justify-center text-xs font-bold" style="background: var(--gk-bg-elevated); color: var(--gk-text-muted);">${(p.name || '?')[0].toUpperCase()}</div>`;
+
+        return `
+        <div class="gk-card p-5 flex flex-col">
+            <div class="flex items-start gap-3 mb-2">
+                ${iconHtml}
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between">
+                        <div class="min-w-0">
+                            <h3 class="text-lg font-semibold truncate" style="color: var(--gk-text-primary);">${p.name} ${verifiedIcon}</h3>
+                            <p class="text-xs mt-0.5 truncate" style="color: var(--gk-text-muted);">${p.author || ''} · ${p.licence || ''}</p>
+                        </div>
+                        ${badge}
+                    </div>
+                </div>
+            </div>
+            <p class="text-sm flex-1 mb-3" style="color: var(--gk-text-secondary);">${p.description || ''}</p>
+            <div class="flex items-center justify-between">
+                <div class="flex flex-wrap gap-1">${tags}</div>
+                ${button}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function installPlugin(name) {
+    const buttons = document.querySelectorAll(`button[onclick="installPlugin('${name}')"]`);
+    buttons.forEach(b => { b.disabled = true; b.textContent = i18n.installing; });
+
+    try {
+        const resp = await fetch('/api/v1/plugins/marketplace/install', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name }),
+        });
+        const data = await resp.json();
+
+        if (!resp.ok) {
+            alert(`${i18n.installFailed}: ${data.error || resp.statusText}`);
+            buttons.forEach(b => { b.disabled = false; b.textContent = i18n.install; });
+            return;
+        }
+
+        await loadMarketplace();
+    } catch (err) {
+        alert(`${i18n.installFailed}: ${err.message}`);
+        buttons.forEach(b => { b.disabled = false; b.textContent = i18n.install; });
+    }
+}
+
+loadMarketplace();
+</script>
+{% endblock %}

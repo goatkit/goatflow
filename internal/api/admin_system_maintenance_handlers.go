@@ -10,8 +10,8 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/service"
 )
@@ -35,22 +35,22 @@ func handleAdminSystemMaintenance(c *gin.Context) {
 	maintenanceList := make([]gin.H, 0, len(records))
 	for _, m := range records {
 		maintenanceList = append(maintenanceList, gin.H{
-			"ID":               m.ID,
-			"StartDate":        m.StartDate,
-			"StopDate":         m.StopDate,
+			"ID":                 m.ID,
+			"StartDate":          m.StartDate,
+			"StopDate":           m.StopDate,
 			"StartDateFormatted": m.StartDateFormatted(),
 			"StopDateFormatted":  m.StopDateFormatted(),
-			"Comments":         m.Comments,
-			"LoginMessage":     m.GetLoginMessage(),
-			"ShowLoginMessage": m.ShowLoginMessage,
-			"NotifyMessage":    m.GetNotifyMessage(),
-			"ValidID":          m.ValidID,
-			"IsValid":          m.IsValid(),
-			"IsActive":         m.IsCurrentlyActive(),
-			"IsPast":           m.IsPast(),
-			"Duration":         m.Duration(),
-			"CreateTime":       m.CreateTime,
-			"ChangeTime":       m.ChangeTime,
+			"Comments":           m.Comments,
+			"LoginMessage":       m.GetLoginMessage(),
+			"ShowLoginMessage":   m.ShowLoginMessage,
+			"NotifyMessage":      m.GetNotifyMessage(),
+			"ValidID":            m.ValidID,
+			"IsValid":            m.IsValid(),
+			"IsActive":           m.IsCurrentlyActive(),
+			"IsPast":             m.IsPast(),
+			"Duration":           m.Duration(),
+			"CreateTime":         m.CreateTime,
+			"ChangeTime":         m.ChangeTime,
 		})
 	}
 
@@ -484,19 +484,19 @@ func handleGetSystemMaintenance(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data": gin.H{
-			"id":                 m.ID,
-			"start_date":         m.StartDate,
-			"stop_date":          m.StopDate,
+			"id":                   m.ID,
+			"start_date":           m.StartDate,
+			"stop_date":            m.StopDate,
 			"start_date_formatted": m.StartDateFormatted(),
 			"stop_date_formatted":  m.StopDateFormatted(),
-			"comments":           m.Comments,
-			"login_message":      m.GetLoginMessage(),
-			"show_login_message": m.ShowLoginMessage,
-			"notify_message":     m.GetNotifyMessage(),
-			"valid_id":           m.ValidID,
-			"is_active":          m.IsCurrentlyActive(),
-			"create_time":        m.CreateTime,
-			"change_time":        m.ChangeTime,
+			"comments":             m.Comments,
+			"login_message":        m.GetLoginMessage(),
+			"show_login_message":   m.ShowLoginMessage,
+			"notify_message":       m.GetNotifyMessage(),
+			"valid_id":             m.ValidID,
+			"is_active":            m.IsCurrentlyActive(),
+			"create_time":          m.CreateTime,
+			"change_time":          m.ChangeTime,
 		},
 	})
 }

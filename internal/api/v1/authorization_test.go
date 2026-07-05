@@ -16,10 +16,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/goatkit/goatflow/internal/api"
+	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
-	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/services"
 )
 
@@ -50,11 +50,11 @@ type AuthTestFixtures struct {
 	AgentMulti     int // rw on Support, ro on Billing, rw on Stats
 
 	// Agents with granular permissions
-	AgentNoteOnly     int // note permission only on Support
-	AgentCreateOnly   int // create permission only on Support
-	AgentMoveInto     int // move_into permission only on Support
-	AgentOwner        int // owner permission only on Support
-	AgentPriority     int // priority permission only on Support
+	AgentNoteOnly   int // note permission only on Support
+	AgentCreateOnly int // create permission only on Support
+	AgentMoveInto   int // move_into permission only on Support
+	AgentOwner      int // owner permission only on Support
+	AgentPriority   int // priority permission only on Support
 
 	// Customers
 	CustomerAcme     string // Acme Corp customer
@@ -66,10 +66,10 @@ type AuthTestFixtures struct {
 	CompanyNovaBank string
 
 	// Tickets (for access tests)
-	TicketAcmeSupport      int // Acme ticket in Support queue
-	TicketNovaBankSupport  int // NovaBank ticket in Support queue
-	TicketAcmeBilling      int // Acme ticket in Billing queue
-	TicketForDelete        int // Dedicated ticket for DELETE tests (will be archived)
+	TicketAcmeSupport       int // Acme ticket in Support queue
+	TicketNovaBankSupport   int // NovaBank ticket in Support queue
+	TicketAcmeBilling       int // Acme ticket in Billing queue
+	TicketForDelete         int // Dedicated ticket for DELETE tests (will be archived)
 	TicketNovaBankExclusive int // NovaBank ticket in NovaBank queue (only NovaBank company can access)
 
 	// API Tokens
@@ -381,7 +381,7 @@ func (f *AuthTestFixtures) setup() error {
 			create_time, create_by, change_time, change_by)
 		VALUES (?, ?, 'ro', 1, 'Ticket', ?, 1, ?, 1)
 	`, f.CompanyNovaBank, f.GroupNovaBank, now, now)
-	
+
 	// -------------------------------------------------------------------------
 	// 7b. Assign Individual Customer User Group Permissions (group_customer_user table)
 	// -------------------------------------------------------------------------
@@ -393,7 +393,7 @@ func (f *AuthTestFixtures) setup() error {
 			create_time, create_by, change_time, change_by)
 		VALUES (?, ?, 'ro', 1, ?, 1, ?, 1)
 	`, f.CustomerAcme, f.GroupBilling, now, now)
-	
+
 	// CustomerNoGroup has NO group permissions (only company-based access via CompanyAcme)
 
 	// -------------------------------------------------------------------------
@@ -498,13 +498,13 @@ func (f *AuthTestFixtures) setup() error {
 		}
 
 		_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM user_api_tokens WHERE name = ?"), td.name)
-		
+
 		// Set revoked_at if token should be revoked
 		var revokedAt interface{} = nil
 		if isRevoked {
 			revokedAt = now
 		}
-		
+
 		if err := exec(`
 			INSERT INTO user_api_tokens (user_id, user_type, name, prefix, token_hash, scopes, 
 				expires_at, revoked_at, created_at)
@@ -571,7 +571,7 @@ func (m *MockTokenVerifier) UpdateLastUsed(ctx context.Context, tokenID int64, i
 func (m *MockTokenVerifier) buildToken(name string) (*models.APIToken, error) {
 	// Parse token name to determine properties
 	// This is a simplified mock - real implementation would query DB
-	
+
 	token := &models.APIToken{
 		ID:   1,
 		Name: name,
@@ -756,7 +756,7 @@ func TestTokenScope_TicketsRead(t *testing.T) {
 
 	// Use real ticket ID from fixtures
 	ticketPath := fmt.Sprintf("/api/v1/tickets/%d", fixtures.TicketAcmeSupport)
-	
+
 	// Valid request bodies for POST/PATCH
 	createBody := fmt.Sprintf(`{"title":"Test Ticket","queue_id":%d}`, fixtures.QueueSupport)
 	updateBody := `{"title":"Updated Title"}`
@@ -795,7 +795,7 @@ func TestTokenScope_TicketsRead(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			token := fixtures.Tokens[tt.tokenName]
 			w := makeRequestWithBody(t, router, tt.method, tt.path, token, tt.body)
-			
+
 			if tt.wantBlocked {
 				assert.Equal(t, 403, w.Code, "expected 403 (scope should block), got %d for %s %s", w.Code, tt.method, tt.path)
 			} else {
@@ -846,10 +846,10 @@ func TestTokenScope_AgentOnlyScopes(t *testing.T) {
 		path       string
 		wantStatus int
 	}{
-		// Agent with users:read - should work (scope exists in agent token definitions... 
+		// Agent with users:read - should work (scope exists in agent token definitions...
 		// but we need to add it to fixtures first. For now test admin:* scope)
 		{"agent admin scope can access admin", "agent-admin-admin-scope", "GET", "/api/v1/admin/settings", 200},
-		
+
 		// Customer tokens should not be able to access agent-only endpoints
 		// (This would require the endpoint to check user_role, not just scope)
 		{"customer full scope cannot access admin", "customer-acme-full", "GET", "/api/v1/admin/settings", 403},
@@ -896,13 +896,13 @@ func TestAgentGroupPermissions_QueueAccess(t *testing.T) {
 
 	// These tests verify that agents can only access tickets in queues
 	// where they have appropriate group permissions.
-	// 
+	//
 	// NOTE: This requires the actual ticket handlers to enforce group checks,
 	// not just scope checks. The placeholder handlers don't do this yet.
-	// 
+	//
 	// Test scenarios:
 	// - agent-rw-support: rw on Support only
-	// - agent-ro-support: ro on Support only  
+	// - agent-ro-support: ro on Support only
 	// - agent-multi: rw on Support, ro on Billing, rw on Stats
 
 	t.Run("agent with rw can update ticket in their queue", func(t *testing.T) {
@@ -1096,7 +1096,7 @@ func TestAgentGroupPermissions_GranularPerms(t *testing.T) {
 }
 
 // =============================================================================
-// CUSTOMER ACCESS TESTS  
+// CUSTOMER ACCESS TESTS
 // =============================================================================
 
 func TestCustomerAccess_CompanyIsolation(t *testing.T) {
@@ -1218,7 +1218,7 @@ func TestCustomerAccess_GroupPermissions(t *testing.T) {
 			t.Error("Carol should NOT access NovaBank Exclusive ticket (no company ownership or group access)")
 		}
 	})
-	
+
 	t.Run("customer can access other company ticket via company group permission", func(t *testing.T) {
 		// Carol (Acme company) CAN access NovaBank Support ticket because
 		// Acme company has 'ro' on Support group

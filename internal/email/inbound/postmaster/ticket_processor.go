@@ -21,12 +21,12 @@ import (
 	gomail "github.com/emersion/go-message/mail"
 	htmlcharset "golang.org/x/net/html/charset"
 
-	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/core"
-	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/email/inbound/filters"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/constants"
+	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/service"
 )
 

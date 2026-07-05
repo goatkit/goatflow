@@ -140,10 +140,10 @@ func TestIsValidAttribute(t *testing.T) {
 		{"Responsible", true},
 		{"DynamicField_Category", true},
 		{"DynamicField_MyField", true},
-		{"DynamicField_", false},        // Empty field name
-		{"DynamicField", false},         // Missing underscore
+		{"DynamicField_", false}, // Empty field name
+		{"DynamicField", false},  // Missing underscore
 		{"Invalid", false},
-		{"queue", false},                // Case sensitive
+		{"queue", false}, // Case sensitive
 		{"STATE", false},
 		{"", false},
 	}
@@ -273,7 +273,7 @@ func TestPrepareDataForStorage(t *testing.T) {
 	// Test Excel file - should be base64 encoded
 	xlsxData := []byte("fake excel data")
 	result = svc.PrepareDataForStorage("test.xlsx", xlsxData)
-	assert.NotEqual(t, string(xlsxData), result) // Should be base64
+	assert.NotEqual(t, string(xlsxData), result)       // Should be base64
 	assert.Contains(t, result, "ZmFrZSBleGNlbCBkYXRh") // base64 of "fake excel data"
 }
 

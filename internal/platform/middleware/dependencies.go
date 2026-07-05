@@ -19,7 +19,6 @@ type MaintenanceChecker interface {
 	IsComing(withinMinutes int) (*platformmodels.SystemMaintenance, error)
 }
 
-
 // QueueAccessChecker checks queue permissions (subset of service.QueueAccessService).
 type QueueAccessChecker interface {
 	IsAdmin(ctx context.Context, userID uint) (bool, error)
@@ -34,11 +33,12 @@ type TicketQueueResolver interface {
 }
 
 var (
-	sessionServiceFactory        func(*sql.DB) SessionChecker
-	maintenanceCheckerFactory    func(*sql.DB) MaintenanceChecker
-	queueAccessCheckerFactory    func(*sql.DB) QueueAccessChecker
-	ticketQueueResolverFactory   func() TicketQueueResolver
+	sessionServiceFactory      func(*sql.DB) SessionChecker
+	maintenanceCheckerFactory  func(*sql.DB) MaintenanceChecker
+	queueAccessCheckerFactory  func(*sql.DB) QueueAccessChecker
+	ticketQueueResolverFactory func() TicketQueueResolver
 )
+
 func SetSessionServiceFactory(f func(*sql.DB) SessionChecker) { sessionServiceFactory = f }
 
 // SetMaintenanceCheckerFactory injects a maintenance checker factory from product code.

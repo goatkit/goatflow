@@ -24,12 +24,16 @@ import (
 //	@Router			/queues [post]
 func HandleCreateQueueAPI(c *gin.Context) {
 	// Check authentication and admin permissions
-	userID, exists := c.Get("user_id")
+	_, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
 		return
 	}
-	_ = userID // TODO: Check admin permissions
+	userRole, _ := c.Get("user_role")
+	if userRole != "Admin" {
+		c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "Admin role required"})
+		return
+	}
 
 	var req struct {
 		Name            string  `json:"name" binding:"required"`

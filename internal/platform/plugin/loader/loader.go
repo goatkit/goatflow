@@ -234,6 +234,17 @@ func (l *Loader) DiscoveredPlugins() []*DiscoveredPlugin {
 	return result
 }
 
+// Forget removes a plugin from the discovered set so it no longer
+// appears in Discovered(). Implements plugin.LazyLoader interface.
+// Safe to call after a plugin has been uninstalled — prevents stale
+// entries from lingering in the admin UI list.
+func (l *Loader) Forget(name string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	delete(l.discovered, name)
+	delete(l.manifests, name)
+}
+
 // EnsureLoaded loads a plugin by name if not already loaded (for lazy loading).
 //
 // Uses the manager's registry as the source of truth for "already loaded"

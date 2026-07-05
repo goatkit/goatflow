@@ -683,3 +683,7 @@ func (m *mockInnerHostAPI) DeleteFile(ctx context.Context, key string) error { r
 func (m *mockInnerHostAPI) ListFiles(ctx context.Context, prefix string) ([]FileInfo, error) {
 	return nil, nil
 }
+
+func (m *mockInnerHostAPI) GenerateThumbnail(_ context.Context, _ []byte, _ string, _, _ int) ([]byte, string, error) {
+	return nil, "", fmt.Errorf("not implemented")
+}

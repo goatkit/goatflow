@@ -218,12 +218,12 @@ func (r *Repository) GetValues(entityType string, objectID int64, fieldNames []s
 	result := make(map[string]any)
 	for rows.Next() {
 		var (
-			name, fieldType                string
-			valText                        *string
-			valInt                         *int64
-			valDecimal, valDecimal2        *float64
-			valDate, valDatetime           *time.Time
-			valJSON                        *json.RawMessage
+			name, fieldType         string
+			valText                 *string
+			valInt                  *int64
+			valDecimal, valDecimal2 *float64
+			valDate, valDatetime    *time.Time
+			valJSON                 *json.RawMessage
 		)
 		if err := rows.Scan(&name, &fieldType, &valText, &valInt, &valDecimal, &valDecimal2, &valDate, &valDatetime, &valJSON); err != nil {
 			return nil, fmt.Errorf("scan custom field value: %w", err)

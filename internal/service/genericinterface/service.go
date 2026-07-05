@@ -61,11 +61,11 @@ type Service struct {
 
 // webserviceCache caches webservice configurations.
 type webserviceCache struct {
-	mu       sync.RWMutex
-	configs  map[string]*models.WebserviceConfig // by name
+	mu          sync.RWMutex
+	configs     map[string]*models.WebserviceConfig // by name
 	configsByID map[int]*models.WebserviceConfig
-	expiry   time.Time
-	ttl      time.Duration
+	expiry      time.Time
+	ttl         time.Duration
 }
 
 // NewService creates a new GenericInterface service.

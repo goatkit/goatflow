@@ -345,12 +345,12 @@
                             {% endif %}
                             {% if not isCustomer and PluginAgentMenuItems %}{% for pmi in PluginAgentMenuItems %}
                             <a href="{{ pmi.Path }}" class="gk-nav-link">
-                                {% if pmi.Icon %}<i class="fa-solid fa-{{ pmi.Icon }} mr-2"></i>{% endif %}{{ pmi.Label }}
+                                {% if pmi.Icon %}<i class="fa-solid {{ pmi.Icon }} mr-2"></i>{% endif %}{{ pmi.Label }}
                             </a>
                             {% endfor %}{% endif %}
                             {% if isCustomer and PluginCustomerMenuItems %}{% for pmi in PluginCustomerMenuItems %}
                             <a href="{{ pmi.Path }}" class="gk-nav-link">
-                                {% if pmi.Icon %}<i class="fa-solid fa-{{ pmi.Icon }} mr-2"></i>{% endif %}{{ pmi.Label }}
+                                {% if pmi.Icon %}<i class="fa-solid {{ pmi.Icon }} mr-2"></i>{% endif %}{{ pmi.Label }}
                             </a>
                             {% endfor %}{% endif %}
                         </div>
@@ -438,12 +438,12 @@
                         {% endif %}
                         {% if not isCustomer and PluginAgentMenuItems %}{% for pmi in PluginAgentMenuItems %}
                         <a href="{{ pmi.Path }}" class="gk-sidebar-link">
-                            {% if pmi.Icon %}<i class="fa-solid fa-{{ pmi.Icon }} mr-2"></i>{% endif %}{{ pmi.Label }}
+                            {% if pmi.Icon %}<i class="fa-solid {{ pmi.Icon }} mr-2"></i>{% endif %}{{ pmi.Label }}
                         </a>
                         {% endfor %}{% endif %}
                         {% if isCustomer and PluginCustomerMenuItems %}{% for pmi in PluginCustomerMenuItems %}
                         <a href="{{ pmi.Path }}" class="gk-sidebar-link">
-                            {% if pmi.Icon %}<i class="fa-solid fa-{{ pmi.Icon }} mr-2"></i>{% endif %}{{ pmi.Label }}
+                            {% if pmi.Icon %}<i class="fa-solid {{ pmi.Icon }} mr-2"></i>{% endif %}{{ pmi.Label }}
                         </a>
                         {% endfor %}{% endif %}
                     </div>

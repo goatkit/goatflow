@@ -16,9 +16,9 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
-	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 	"github.com/goatkit/goatflow/internal/platform/utils"
+	"github.com/goatkit/goatflow/internal/service"
 )
 
 // RegisterCustomerRoutes registers all customer portal routes.
@@ -48,10 +48,7 @@ func RegisterCustomerRoutes(r *gin.RouterGroup, db *sql.DB) {
 	// r.GET("/kb", handleCustomerKnowledgeBase(db))
 	// r.GET("/kb/search", handleCustomerKBSearch(db))
 	// r.GET("/kb/article/:id", handleCustomerKBArticle(db))
-	//
-	// // Company info (if customer belongs to company)
-	// r.GET("/company", handleCustomerCompanyInfo(db))
-	// r.GET("/company/users", handleCustomerCompanyUsers(db))
+	// }
 }
 
 func customerPortalConfigFromContext(c *gin.Context, db *sql.DB) sysconfig.CustomerPortalConfig {
@@ -837,13 +834,13 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 				}
 
 				// Sanitise article body to prevent stored XSS (defence in depth).
-			articleBody := article.Body.String
-			if utils.IsHTML(articleBody) {
-				articleSanitizer := utils.NewHTMLSanitizer()
-				articleBody = articleSanitizer.Sanitize(articleBody)
-			}
+				articleBody := article.Body.String
+				if utils.IsHTML(articleBody) {
+					articleSanitizer := utils.NewHTMLSanitizer()
+					articleBody = articleSanitizer.Sanitize(articleBody)
+				}
 
-			articles = append(articles, map[string]interface{}{
+				articles = append(articles, map[string]interface{}{
 					"id":          article.ID,
 					"subject":     article.Subject.String,
 					"body":        articleBody,
@@ -1555,19 +1552,6 @@ func getPasswordPolicyErrorMessage(code string) string {
 		return "Password must contain at least 2 letters"
 	default:
 		return "Password does not meet the security requirements"
-	}
-}
-
-
-func handleCustomerCompanyInfo(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Company info"})
-	}
-}
-
-func handleCustomerCompanyUsers(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Company users"})
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -404,7 +405,13 @@ func (m *Manager) validateValue(setting *Setting, value string) error {
 
 	// Additional validation using regex
 	if setting.Validation != "" {
-		// TODO: Add regex validation
+		re, err := regexp.Compile(setting.Validation)
+		if err != nil {
+			return fmt.Errorf("invalid validation pattern: %w", err)
+		}
+		if !re.MatchString(value) {
+			return fmt.Errorf("must match pattern: %s", setting.Validation)
+		}
 	}
 
 	return nil

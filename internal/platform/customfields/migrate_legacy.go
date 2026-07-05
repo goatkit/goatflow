@@ -22,28 +22,28 @@ var legacyEntityMap = map[string]string{
 
 // Legacy OTRS field_type → GoatKit field_type mapping.
 var legacyFieldTypeMap = map[string]string{
-	"Text":                   FieldText,
-	"TextArea":               FieldTextArea,
-	"Checkbox":               FieldBoolean,
-	"Dropdown":               FieldSelect,
-	"Multiselect":            FieldMultiSelect,
-	"Date":                   FieldDate,
-	"DateTime":               FieldDateTime,
-	"WebserviceDropdown":     FieldSelect,
-	"WebserviceMultiselect":  FieldMultiSelect,
+	"Text":                  FieldText,
+	"TextArea":              FieldTextArea,
+	"Checkbox":              FieldBoolean,
+	"Dropdown":              FieldSelect,
+	"Multiselect":           FieldMultiSelect,
+	"Date":                  FieldDate,
+	"DateTime":              FieldDateTime,
+	"WebserviceDropdown":    FieldSelect,
+	"WebserviceMultiselect": FieldMultiSelect,
 }
 
 // Legacy value column → GoatKit value column mapping for each legacy field type.
 var legacyValueColumn = map[string]string{
-	"Text":                   "value_text",
-	"TextArea":               "value_text",
-	"Checkbox":               "value_int",
-	"Dropdown":               "value_text",
-	"Multiselect":            "value_text",
-	"Date":                   "value_date",
-	"DateTime":               "value_date",
-	"WebserviceDropdown":     "value_text",
-	"WebserviceMultiselect":  "value_text",
+	"Text":                  "value_text",
+	"TextArea":              "value_text",
+	"Checkbox":              "value_int",
+	"Dropdown":              "value_text",
+	"Multiselect":           "value_text",
+	"Date":                  "value_date",
+	"DateTime":              "value_date",
+	"WebserviceDropdown":    "value_text",
+	"WebserviceMultiselect": "value_text",
 }
 
 // MigrateLegacyFields copies legacy dynamic_field definitions and values into the

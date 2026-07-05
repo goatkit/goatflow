@@ -16,8 +16,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/services/ticketattributerelations"
 )
 
@@ -188,7 +188,7 @@ func TestFilterByTicketAttributeRelations(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		var response struct {
-			Success bool     `json:"success"`
+			Success bool    `json:"success"`
 			Data    []gin.H `json:"data"`
 		}
 		err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -218,7 +218,7 @@ func TestFilterByTicketAttributeRelations(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		var response struct {
-			Success bool     `json:"success"`
+			Success bool    `json:"success"`
 			Data    []gin.H `json:"data"`
 		}
 		err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -247,7 +247,7 @@ func TestFilterByTicketAttributeRelations(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		var response struct {
-			Success bool     `json:"success"`
+			Success bool    `json:"success"`
 			Data    []gin.H `json:"data"`
 		}
 		err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -277,7 +277,7 @@ func TestFilterByTicketAttributeRelations(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		var response struct {
-			Success bool     `json:"success"`
+			Success bool    `json:"success"`
 			Data    []gin.H `json:"data"`
 		}
 		err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -452,7 +452,7 @@ func TestFilterTypes(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		var response struct {
-			Success bool     `json:"success"`
+			Success bool    `json:"success"`
 			Data    []gin.H `json:"data"`
 		}
 		err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -482,7 +482,7 @@ func TestFilterTypes(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		var response struct {
-			Success bool     `json:"success"`
+			Success bool    `json:"success"`
 			Data    []gin.H `json:"data"`
 		}
 		err := json.Unmarshal(w.Body.Bytes(), &response)

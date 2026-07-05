@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
 )
 
 // AccountFromModel converts a persistence EmailAccount to the connector payload.

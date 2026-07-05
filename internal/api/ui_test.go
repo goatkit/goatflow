@@ -46,9 +46,9 @@ func TestDarkThemeContrast(t *testing.T) {
 			route:      "/dashboard",
 			activePage: "dashboard",
 			shouldContain: []string{
-				"--gk-text-",           // GoatKit text color variables
-				"--gk-bg-",             // GoatKit background variables
-				"gk-nav-link",          // GoatKit navigation links
+				"--gk-text-",  // GoatKit text color variables
+				"--gk-bg-",    // GoatKit background variables
+				"gk-nav-link", // GoatKit navigation links
 			},
 		},
 		{
@@ -56,7 +56,7 @@ func TestDarkThemeContrast(t *testing.T) {
 			route:      "/tickets",
 			activePage: "tickets",
 			shouldContain: []string{
-				"--gk-primary",         // Primary theme color reference
+				"--gk-primary", // Primary theme color reference
 			},
 		},
 		{
@@ -64,8 +64,8 @@ func TestDarkThemeContrast(t *testing.T) {
 			route:      "/dashboard",
 			activePage: "dashboard",
 			shouldContain: []string{
-				"gk-btn-",              // GoatKit button classes
-				"--gk-primary",         // Primary color variable
+				"gk-btn-",      // GoatKit button classes
+				"--gk-primary", // Primary color variable
 			},
 		},
 		{
@@ -73,8 +73,8 @@ func TestDarkThemeContrast(t *testing.T) {
 			route:      "/dashboard",
 			activePage: "dashboard",
 			shouldContain: []string{
-				"--gk-bg-base",         // Base background variable
-				"--gk-text-primary",    // Primary text color
+				"--gk-bg-base",      // Base background variable
+				"--gk-text-primary", // Primary text color
 			},
 		},
 	}
@@ -160,9 +160,9 @@ func TestQueueView(t *testing.T) {
 			userRole:       "admin",
 			expectedStatus: http.StatusOK,
 			checkContent: []string{
-				"--gk-bg-",     // GoatKit background variables
-				"--gk-text-",   // GoatKit text variables
-				"gk-card-",     // GoatKit card classes
+				"--gk-bg-",   // GoatKit background variables
+				"--gk-text-", // GoatKit text variables
+				"gk-card-",   // GoatKit card classes
 			},
 		},
 	}
@@ -269,9 +269,9 @@ func TestAdminView(t *testing.T) {
 			userRole:       "admin",
 			expectedStatus: http.StatusOK,
 			checkContent: []string{
-				"--gk-bg-",      // GoatKit background variables
-				"--gk-text-",    // GoatKit text variables
-				"gk-card-",      // GoatKit card classes
+				"--gk-bg-",   // GoatKit background variables
+				"--gk-text-", // GoatKit text variables
+				"gk-card-",   // GoatKit card classes
 			},
 		},
 	}

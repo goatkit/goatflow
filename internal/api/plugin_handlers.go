@@ -20,15 +20,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/platform/auth"
-	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/organisation"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/plugin/packaging"
-	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/platform/shared"
+	"github.com/goatkit/goatflow/internal/repository"
 )
 
 // pluginContextWithLanguage adds the request language to the context for i18n support.
@@ -89,6 +89,7 @@ func HandlePluginList(c *gin.Context) {
 		plugins = append(plugins, map[string]any{
 			"name":        m.Name,
 			"version":     m.Version,
+			"icon":        m.Icon,
 			"description": m.Description,
 			"author":      m.Author,
 			"license":     m.License,
@@ -319,9 +320,10 @@ func HandlePluginWidget(c *gin.Context) {
 		return
 	}
 
-	// Call the widget handler (pass empty JSON object, not nil)
+	// Call the widget handler with request context (org, user, etc.)
 	ctx := pluginContextWithLanguage(c)
-	result, err := pluginManager.Call(ctx, pluginName, widgetHandler, []byte("{}"))
+	widgetArgs := buildPluginArgs(c, pluginName)
+	result, err := pluginManager.Call(ctx, pluginName, widgetHandler, widgetArgs)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Widget error: %v", err)
 		return
@@ -355,24 +357,9 @@ func GetPluginWidgets(ctx context.Context, location string, ginCtx ...*gin.Conte
 		return nil
 	}
 
-	// Build widget args with RBAC context if gin context is available
 	widgetArgs := []byte("{}")
 	if len(ginCtx) > 0 && ginCtx[0] != nil {
-		c := ginCtx[0]
-		argsMap := map[string]any{}
-
-		if val, exists := c.Get("is_queue_admin"); exists {
-			argsMap["is_queue_admin"] = val
-		}
-		if val, exists := c.Get("accessible_queue_ids"); exists {
-			argsMap["accessible_queue_ids"] = val
-		}
-
-		if len(argsMap) > 0 {
-			if data, err := json.Marshal(argsMap); err == nil {
-				widgetArgs = data
-			}
-		}
+		widgetArgs = buildPluginArgs(ginCtx[0])
 	}
 
 	// Use AllWidgets to trigger lazy loading of discovered plugins
@@ -480,6 +467,17 @@ func buildPluginArgs(c *gin.Context, pluginName ...string) json.RawMessage {
 				if err := json.Unmarshal(raw, &body); err == nil {
 					for k, v := range body {
 						args[k] = v
+					}
+				}
+			} else if strings.Contains(strings.ToLower(contentType), "application/x-www-form-urlencoded") {
+				// Parse form-encoded data into top-level args so plugins
+				// receive {"title": "Hello"} not {"_body": "title=Hello"}.
+				c.Request.ParseForm()
+				for key, values := range c.Request.PostForm {
+					if len(values) == 1 {
+						args[key] = values[0]
+					} else {
+						args[key] = values
 					}
 				}
 			} else {
@@ -686,6 +684,55 @@ func HandlePluginSSEChannel(c *gin.Context) {
 	pluginSSEBroker.ServeChannel(c.Writer, c.Request, pluginName, channel)
 }
 
+// HandlePluginUninstall removes a plugin: shuts it down, cleans up DB side-effects,
+// removes the directory from disk, and clears in-memory state.
+// DELETE /api/v1/plugins/:name
+func HandlePluginUninstall(c *gin.Context) {
+	name := c.Param("name")
+	if name == "" || strings.Contains(name, "..") || strings.Contains(name, "/") || strings.Contains(name, "\\") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plugin name"})
+		return
+	}
+
+	log.Printf("🗑️  Plugin uninstall requested: %s", name)
+
+	if pluginManager == nil {
+		log.Printf("ERROR plugin system not initialized for uninstall of %s", name)
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Plugin system not initialized"})
+		return
+	}
+
+	// 1. Unregister — proper shutdown, cascade teardown, in-memory cleanup.
+	if err := pluginManager.Unregister(c.Request.Context(), name); err != nil {
+		log.Printf("WARN Unregister for %s: %v — trying Unload fallback", name, err)
+		pluginManager.Unload(name)
+	}
+
+	// 1b. Forget — remove from the loader's discovered set so the plugin
+	// doesn't reappear in the plugin list before the next restart.
+	pluginManager.Forget(name)
+
+	// 2. Remove directory from disk.
+	pmDir := pluginDir
+	if pmDir != "" {
+		pluginPath := filepath.Join(pmDir, name)
+		if _, statErr := os.Stat(pluginPath); os.IsNotExist(statErr) {
+			log.Printf("INFO plugin dir already gone for %s (path=%s)", name, pluginPath)
+		} else if statErr == nil {
+			if rmErr := os.RemoveAll(pluginPath); rmErr != nil {
+				log.Printf("WARN removing plugin dir for %s: %v", name, rmErr)
+			} else {
+				log.Printf("INFO removed plugin dir %s for %s", pluginPath, name)
+			}
+		} else {
+			log.Printf("WARN stat plugin dir for %s: %v", name, statErr)
+		}
+	} else {
+		log.Printf("INFO plugin dir not configured — skipping disk cleanup for %s", name)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "plugin uninstalled", "name": name})
+}
 func RegisterPluginAPIRoutes(r *gin.RouterGroup) {
 	// Plugin list and call - require authentication (session or JWT)
 	plugins := r.Group("/plugins")
@@ -707,9 +754,13 @@ func RegisterPluginAPIRoutes(r *gin.RouterGroup) {
 		pluginAdmin.POST("/:name/enable", HandlePluginEnable)
 		pluginAdmin.POST("/:name/disable", HandlePluginDisable)
 		pluginAdmin.POST("/:name/reset-crashloop", HandlePluginResetCrashLoop)
+		pluginAdmin.DELETE("/:name", HandlePluginUninstall)
 		pluginAdmin.POST("/upload", HandlePluginUpload)
 		pluginAdmin.GET("/logs", HandlePluginLogs)
 		pluginAdmin.DELETE("/logs", HandleClearPluginLogs)
+		pluginAdmin.GET("/marketplace", HandleMarketplaceIndex)
+		pluginAdmin.GET("/marketplace/search", HandleMarketplaceSearch)
+		pluginAdmin.POST("/marketplace/install", HandleMarketplaceInstall)
 	}
 
 	pluginUIAdmin := r.Group("/plugin-uis")
@@ -990,6 +1041,7 @@ func orgIDFromContext(c *gin.Context) int64 {
 // plugin via buildPluginArgs (4MB). Covers large imports such as an OTRS
 // FAQ XML export while bounding memory per request.
 const maxPluginBodySize = 4 << 20
+
 // maxWebhookBodySize is the maximum request body size for webhook endpoints (1MB).
 const maxWebhookBodySize = 1 << 20
 

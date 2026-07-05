@@ -13,9 +13,9 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	platformservice "github.com/goatkit/goatflow/internal/platform/service"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/service"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 var (

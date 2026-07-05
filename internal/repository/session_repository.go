@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // SessionRepository defines the interface for session operations.

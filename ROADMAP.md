@@ -386,7 +386,8 @@ Universal custom fields on every core entity. Plugins declare fields at registra
 - [x] **Phase 5 — Reorganize `internal/api/` and `internal/service/`**: Moved platform handlers (`auth_api`, `auth_handler`, `user_*`, `organisation_handlers`, `deletion_handlers`, `custom_fields_api_handlers`, `i18n_handlers`) to `internal/platform/api/`; moved platform services (`auth_service`, `totp_service`, `webauthn_service`, `user_preferences`) to `internal/platform/service/`.
 - [x] **Phase 6 — Move all remaining platform packages to `internal/platform/`**: Moved `auth`, `middleware`, `template`, `shared`, `cache`, `config`, `customfields`, `data`, `deletion`, `httpcookie`, `i18n`, `ldap`, `lookups`, `marketplace`, `mcp`, `notifications`, `oauth2`, `organisation`, `pluginui`, `push`, `runner`, `search`, `secureconfig`, `service`, `services`, `storage`, `sysconfig`, `template`, `utils`, `webhook`, `yamlmgmt`, `zinc` to `internal/platform/` after decoupling hidden dependencies via interfaces.
 - [x] **Phase 7 — Enforce boundary with linter**: Created `cmd/gk-lint/` that scans `internal/platform/` for direct and transitive product package imports using `go list -deps`, added `lint-platform` target to Makefile and CI, wrote `docs/development/PLATFORM_BOUNDARY.md`.
-- [ ] **Phase 8 — Documentation and cleanup**: Update `docs/ARCHITECTURE.md` to reflect `internal/platform/` structure, fix `DATABASE.md:99` claim about `faq_*` tables, update `docs/PLUGIN_PLATFORM.md`, delete dead code (`internal/models/knowledge.go`, `KnowledgeArticles` field from `service_catalog.go`, TODO stub handlers from `customer_routes.go:1561-1577`), write `docs/development/PLATFORM_PACKAGES.md` canonical list.
+- [x] **Phase 8 — Documentation and cleanup**: Update `docs/ARCHITECTURE.md` to reflect `internal/platform/` structure, fix `DATABASE.md:99` claim about `faq_*` tables, update `docs/PLUGIN_PLATFORM.md`, write `docs/development/PLATFORM_PACKAGES.md` canonical list.
+- [x] Dead code deleted — `internal/models/knowledge.go` (already removed), `KnowledgeArticles` field from `service_catalog.go` (already removed), TODO stub handlers from `customer_routes.go:1561-1577` (removed — `handleCustomerCompanyInfo`, `handleCustomerCompanyUsers`).
 
 Full plan: `docs/PLATFORM_PRODUCT_DECOUPLING.md` (version 1.6).
 
@@ -482,6 +483,7 @@ Shared UI components usable by any plugin. Server-rendered HTML building blocks.
 - [x] Plugin update notifications — `CheckUpdates()` compares installed versions against marketplace index
 - [x] Kubernetes pod isolation — `GOATFLOW_PLUGIN_ISOLATION=k8s` mode, `GeneratePodManifest()` generates Deployment + Service + NetworkPolicy YAML
 - [x] Design spec: `docs/design/PLUGIN_MARKETPLACE.md`
+- [x] Admin marketplace UI — `/admin/marketplace` page with stats cards, category/sort/search filters, and install/update buttons; backed by `GET /api/v1/plugins/marketplace`, `GET /api/v1/plugins/marketplace/search`, `POST /api/v1/plugins/marketplace/install`. Dashboard card links to the page.
 
 **Self-Service Authentication**
 - [x] Password recovery for customers — email-based reset with secure tokens (1hr expiry), anti-enumeration response

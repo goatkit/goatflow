@@ -37,15 +37,15 @@ type ImportResult struct {
 
 // ImportPreviewItem represents a field in the import preview.
 type ImportPreviewItem struct {
-	Name         string `json:"name"`
-	Label        string `json:"label"`
-	FieldType    string `json:"field_type"`
-	ObjectType   string `json:"object_type"`
-	Exists       bool   `json:"exists"`
-	HasScreens   bool   `json:"has_screens"`
-	ScreenCount  int    `json:"screen_count"`
-	WillCreate   bool   `json:"will_create"`
-	WillOverwrite bool  `json:"will_overwrite"`
+	Name          string `json:"name"`
+	Label         string `json:"label"`
+	FieldType     string `json:"field_type"`
+	ObjectType    string `json:"object_type"`
+	Exists        bool   `json:"exists"`
+	HasScreens    bool   `json:"has_screens"`
+	ScreenCount   int    `json:"screen_count"`
+	WillCreate    bool   `json:"will_create"`
+	WillOverwrite bool   `json:"will_overwrite"`
 }
 
 // ExportDynamicFields exports the specified dynamic fields to an OTRS-compatible format.

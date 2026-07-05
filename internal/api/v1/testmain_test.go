@@ -82,7 +82,7 @@ func resetTestDatabase() error {
 
 	// Restore canonical test tickets (IDs 1, 2, 3, 123)
 	now := "NOW()"
-	
+
 	// Ensure tickets exist in expected state (not archived)
 	db.Exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id, 
 		responsible_user_id, ticket_priority_id, ticket_state_id, customer_id, customer_user_id,

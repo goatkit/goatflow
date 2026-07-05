@@ -60,7 +60,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: false,
 		},
-			},
+	},
 	"es": {
 		Code:       "es",
 		Name:       "Spanish",
@@ -80,7 +80,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-			},
+	},
 	"fr": {
 		Code:       "fr",
 		Name:       "French",
@@ -100,7 +100,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-			},
+	},
 	"de": {
 		Code:       "de",
 		Name:       "German",
@@ -120,7 +120,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-			},
+	},
 	"ar": {
 		Code:       "ar",
 		Name:       "Arabic",
@@ -140,7 +140,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-			},
+	},
 	"he": {
 		Code:       "he",
 		Name:       "Hebrew",
@@ -160,7 +160,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-			},
+	},
 	"fa": {
 		Code:       "fa",
 		Name:       "Persian",
@@ -180,7 +180,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    0,
 			SpaceAfterSymbol: true,
 		},
-			},
+	},
 	"ur": {
 		Code:       "ur",
 		Name:       "Urdu",
@@ -200,7 +200,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-			},
+	},
 	"ja": {
 		Code:       "ja",
 		Name:       "Japanese",
@@ -220,7 +220,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    0,
 			SpaceAfterSymbol: false,
 		},
-			},
+	},
 	"zh": {
 		Code:       "zh",
 		Name:       "Chinese",
@@ -240,7 +240,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: false,
 		},
-			},
+	},
 	"pl": {
 		Code:       "pl",
 		Name:       "Polish",
@@ -260,7 +260,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-			},
+	},
 	"pt": {
 		Code:       "pt",
 		Name:       "Portuguese",
@@ -280,7 +280,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-			},
+	},
 	"tlh": {
 		Code:       "tlh",
 		Name:       "Klingon",
@@ -300,7 +300,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-			},
+	},
 	"ru": {
 		Code:       "ru",
 		Name:       "Russian",
@@ -320,7 +320,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-			},
+	},
 	"uk": {
 		Code:       "uk",
 		Name:       "Ukrainian",
@@ -340,7 +340,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-			},
+	},
 }
 
 // GetLanguageConfig returns configuration for a language.

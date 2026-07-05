@@ -515,9 +515,9 @@ func TestValidateValues(t *testing.T) {
 	optsCfg := json.RawMessage(`{"options":[{"value":"a","label":"A"},{"value":"b","label":"B"}]}`)
 
 	defs := map[string]*FieldDef{
-		"name":   {Name: "name", Label: "Name", FieldType: FieldText, Required: true},
-		"age":    {Name: "age", Label: "Age", FieldType: FieldInteger},
-		"tier":   {Name: "tier", Label: "Tier", FieldType: FieldSelect, Config: &optsCfg},
+		"name": {Name: "name", Label: "Name", FieldType: FieldText, Required: true},
+		"age":  {Name: "age", Label: "Age", FieldType: FieldInteger},
+		"tier": {Name: "tier", Label: "Tier", FieldType: FieldSelect, Config: &optsCfg},
 	}
 
 	t.Run("all valid", func(t *testing.T) {

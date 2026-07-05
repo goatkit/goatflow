@@ -10,15 +10,15 @@ import (
 
 // HistoryType constants for common ticket history events.
 const (
-	TypeNewTicket       = "NewTicket"
-	TypeOwnerUpdate     = "OwnerUpdate"
-	TypeStateUpdate     = "StateUpdate"
-	TypeAddNote         = "AddNote"
-	TypePriorityUpdate  = "PriorityUpdate"
-	TypeQueueMove       = "Move"
-	TypeSetPendingTime  = "SetPendingTime"
-	TypeMerged          = "Merged"
-	TypeTimeAccounting  = "TimeAccounting"
+	TypeNewTicket      = "NewTicket"
+	TypeOwnerUpdate    = "OwnerUpdate"
+	TypeStateUpdate    = "StateUpdate"
+	TypeAddNote        = "AddNote"
+	TypePriorityUpdate = "PriorityUpdate"
+	TypeQueueMove      = "Move"
+	TypeSetPendingTime = "SetPendingTime"
+	TypeMerged         = "Merged"
+	TypeTimeAccounting = "TimeAccounting"
 )
 
 // HistoryInserter is an interface for inserting ticket history entries.

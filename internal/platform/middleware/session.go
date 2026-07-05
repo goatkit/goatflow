@@ -10,9 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
-	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/convert"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
 
 // contextKey is a private type to avoid key collisions in context.

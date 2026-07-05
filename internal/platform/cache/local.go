@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"encoding/json"
 	"sync"
 	"time"
 )
@@ -72,6 +73,18 @@ func (lc *LocalCache) Get(key string) (interface{}, bool) {
 	return item.Value, true
 }
 
+// estimateSize approximates the memory size of a value via JSON encoding.
+func estimateSize(v interface{}) int64 {
+	if v == nil {
+		return 0
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return 0
+	}
+	return int64(len(b))
+}
+
 // Set stores an item in local cache.
 func (lc *LocalCache) Set(key string, value interface{}, ttl time.Duration) {
 	lc.mu.Lock()
@@ -92,7 +105,7 @@ func (lc *LocalCache) Set(key string, value interface{}, ttl time.Duration) {
 		ExpiresAt:  expiresAt,
 		AccessedAt: time.Now(),
 		CreatedAt:  time.Now(),
-		Size:       1, // TODO: Calculate actual size
+		Size:       estimateSize(value),
 	}
 
 	lc.stats.Sets++

@@ -15,6 +15,16 @@
             </div>
             <div class="mt-4 sm:mt-0 flex gap-2">
                 <a
+                    href="/admin/marketplace"
+                    title="{{ t("admin.marketplace_tooltip")|default:"Browse and install plugins from the marketplace" }}"
+                    class="gk-btn-neon"
+                >
+                    <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    {{ t("admin.marketplace")|default:"Marketplace" }}
+                </a>
+                <a
                     href="/admin/plugin-uis"
                     title="{{ t("admin.plugin_uis_tooltip")|default:"Manage plugin UI surfaces" }}"
                     class="gk-btn-secondary"
@@ -475,14 +485,19 @@ function renderPluginRow(plugin) {
     return `
         <tr id="plugin-row-${escapeHtml(plugin.name)}">
             <td class="px-4 py-3">
-                <div>
-                    <div class="text-sm font-medium" style="color: var(--gk-text-primary);">
-                        <a href="#" onclick="showPluginDetails('${escapeHtml(plugin.name)}'); return false;" class="hover:underline" style="color: var(--gk-primary);">
-                            ${escapeHtml(plugin.name)}
-                        </a>
-                    </div>
-                    <div class="text-sm max-w-xs truncate" style="color: var(--gk-text-muted);" title="${escapeHtml(plugin.description || '')}">
-                        ${escapeHtml((plugin.description || '').substring(0, 80)) || '-'}
+                <div class="flex items-center gap-3">
+                    ${plugin.icon
+                        ? `<img src="${escapeHtml(plugin.icon)}" alt="" class="h-6 w-6 rounded flex-shrink-0" loading="lazy" onerror="this.style.display='none'">`
+                        : `<div class="h-6 w-6 rounded flex-shrink-0 flex items-center justify-center text-xs font-bold" style="background: var(--gk-bg-elevated); color: var(--gk-text-muted);">${(plugin.name || '?')[0].toUpperCase()}</div>`}
+                    <div>
+                        <div class="text-sm font-medium" style="color: var(--gk-text-primary);">
+                            <a href="#" onclick="showPluginDetails('${escapeHtml(plugin.name)}'); return false;" class="hover:underline" style="color: var(--gk-primary);">
+                                ${escapeHtml(plugin.name)}
+                            </a>
+                        </div>
+                        <div class="text-sm max-w-xs truncate" style="color: var(--gk-text-muted);" title="${escapeHtml(plugin.description || '')}">
+                            ${escapeHtml((plugin.description || '').substring(0, 80)) || '-'}
+                        </div>
                     </div>
                 </div>
             </td>
@@ -620,7 +635,6 @@ async function resetCrashLoop(name) {
         alert('Network error: ' + err.message);
     }
 }
-
 function showPluginDetails(name) {
     const plugin = plugins.find(p => p.name === name);
     if (!plugin) return;
@@ -628,9 +642,21 @@ function showPluginDetails(name) {
     const modal = document.getElementById('plugin-details-modal');
     document.getElementById('modal-plugin-name').textContent = plugin.name;
 
+    // Plugin icon
+    const iconHtml = plugin.icon
+        ? `<img src="${escapeHtml(plugin.icon)}" alt="" class="h-10 w-10 rounded flex-shrink-0" loading="lazy" onerror="this.style.display='none'">`
+        : `<div class="h-10 w-10 rounded flex-shrink-0 flex items-center justify-center text-xs font-bold" style="background: var(--gk-bg-elevated); color: var(--gk-text-muted);">${(plugin.name || '?')[0].toUpperCase()}</div>`;
+
     const muted = 'color: var(--gk-text-muted)';
     let html = `
         <div class="space-y-4">
+            <div class="flex items-center gap-4 mb-4">
+                ${iconHtml}
+                <div>
+                    <div class="text-lg font-semibold" style="color: var(--gk-text-primary);">${escapeHtml(plugin.name)}</div>
+                    <div class="text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.plugin_overview")|default:"Plugin Overview" }}</div>
+                </div>
+            </div>
             <div class="grid grid-cols-2 gap-2 text-sm">
                 <div style="${muted}">{{ t("admin.plugin_version")|default:"Version" }}</div>
                 <div><span class="gk-badge gk-badge-muted">${escapeHtml(plugin.version || '1.0.0')}</span></div>

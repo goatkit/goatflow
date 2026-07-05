@@ -54,13 +54,13 @@ func TestIsSupportedImageType(t *testing.T) {
 // TestCalculateThumbnailScale tests the calculateThumbnailScale function
 func TestCalculateThumbnailScale(t *testing.T) {
 	tests := []struct {
-		name             string
-		srcWidth         int
-		srcHeight        int
-		maxWidth         int
-		maxHeight        int
-		expectedScale    float64
-		description      string
+		name          string
+		srcWidth      int
+		srcHeight     int
+		maxWidth      int
+		maxHeight     int
+		expectedScale float64
+		description   string
 	}{
 		{
 			name:          "Image fits within bounds",

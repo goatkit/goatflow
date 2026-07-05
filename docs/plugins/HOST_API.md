@@ -202,6 +202,46 @@ err := host.SendEmail(ctx, "user@example.com", "Report Ready",
 
 ---
 
+## File Storage
+
+### GenerateThumbnail
+
+Generate an image thumbnail server-side. The plugin does not need libvips — the host handles all image processing.
+
+```go
+GenerateThumbnail(ctx context.Context, data []byte, contentType string, maxWidth, maxHeight int) (thumbData []byte, thumbContentType string, err error)
+```
+
+**Parameters:**
+- `data` — Raw image bytes
+- `contentType` — MIME type (jpeg, png, gif, webp, avif, heic, tiff)
+- `maxWidth` — Max bounding-box width (aspect ratio preserved)
+- `maxHeight` — Max bounding-box height (aspect ratio preserved)
+
+**Returns:**
+- `thumbData` — Thumbnail bytes
+- `thumbContentType` — Output format (`"image/jpeg"` or `"image/png"`)
+- `error` — Error if generation fails or service not configured
+
+**Example:**
+```go
+thumb, ct, err := host.GenerateThumbnail(ctx, imgBytes, "image/png", 300, 300)
+if err != nil {
+    // Service not configured — fall back to the original / CSS-scaled thumbnail.
+    return imgBytes, "image/png", nil
+}
+```
+
+**Notes:**
+- Uses libvips Lanczos3 downscale for high-quality resampling (intended behaviour; govips v2.x migration pending in `internal/service/thumbnail_service.go`).
+- Non-image content types return a placeholder icon based on the content type.
+- Returns the error `"thumbnail service not configured"` when the host has no `ThumbnailGenerator` wired (e.g. a build without the `vips-dev` C headers); the plugin should fall back to serving the original or a CSS-scaled thumbnail. The KB plugin decodes originals via blob URLs in this mode.
+- Pair with `StoreFile` / `GetFile` to persist the generated thumbnail and reference it by key.
+
+**Permission required:** none — always allowed (the sandbox stamps the caller identity but applies no permission gate, like `Log`/`Translate`).
+
+---
+
 ## Logging
 
 ### Log
@@ -293,7 +333,6 @@ result, err := host.CallPlugin(ctx, "stats", "get_ticket_stats", args)
 - Lazy loading is attempted if the target isn't loaded yet
 - Caller plugin name is tracked for better error messages and stamped by the host (plugins can't impersonate each other)
 
----
 
 ## Sandboxing & Permissions
 

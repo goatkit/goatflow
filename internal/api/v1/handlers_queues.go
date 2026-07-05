@@ -52,18 +52,18 @@ func (router *APIRouter) handleListQueues(c *gin.Context) {
 	defer rows.Close()
 
 	type Queue struct {
-		ID                int        `json:"id"`
-		Name              string     `json:"name"`
-		GroupID           int        `json:"group_id"`
-		GroupName         *string    `json:"group_name"`
-		CalendarName      *string    `json:"calendar_name"`
-		FirstResponseTime *int       `json:"first_response_time"`
-		UpdateTime        *int       `json:"update_time"`
-		SolutionTime      *int       `json:"solution_time"`
-		Comment           string     `json:"comment"`
-		ValidID           int        `json:"valid_id"`
-		CreatedAt         time.Time  `json:"created_at"`
-		UpdatedAt         time.Time  `json:"updated_at"`
+		ID                int       `json:"id"`
+		Name              string    `json:"name"`
+		GroupID           int       `json:"group_id"`
+		GroupName         *string   `json:"group_name"`
+		CalendarName      *string   `json:"calendar_name"`
+		FirstResponseTime *int      `json:"first_response_time"`
+		UpdateTime        *int      `json:"update_time"`
+		SolutionTime      *int      `json:"solution_time"`
+		Comment           string    `json:"comment"`
+		ValidID           int       `json:"valid_id"`
+		CreatedAt         time.Time `json:"created_at"`
+		UpdatedAt         time.Time `json:"updated_at"`
 	}
 
 	queues := []Queue{}

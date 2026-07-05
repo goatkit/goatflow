@@ -3,8 +3,8 @@ package api
 import (
 	"database/sql"
 
-	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/auth"
+	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/platform/template"
 	"github.com/goatkit/goatflow/internal/repository"

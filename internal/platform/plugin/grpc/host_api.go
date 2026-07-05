@@ -373,6 +373,32 @@ func dispatchHostCall(ctx context.Context, host plugin.HostAPI, method string, a
 		}
 		return json.Marshal(files)
 
+	case "generate_thumbnail":
+		var req struct {
+			Data        []byte `json:"data"`
+			ContentType string `json:"content_type"`
+			MaxWidth    int    `json:"max_width"`
+			MaxHeight   int    `json:"max_height"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		// Default to 200×200 if not specified
+		if req.MaxWidth <= 0 {
+			req.MaxWidth = 200
+		}
+		if req.MaxHeight <= 0 {
+			req.MaxHeight = 200
+		}
+		thumbData, thumbCT, err := host.GenerateThumbnail(ctx, req.Data, req.ContentType, req.MaxWidth, req.MaxHeight)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]any{
+			"thumb_data":         thumbData,
+			"thumb_content_type": thumbCT,
+		})
+
 	case "log":
 		var req struct {
 			Level   string         `json:"level"`

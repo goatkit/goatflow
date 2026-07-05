@@ -88,25 +88,25 @@ func IsValidFieldType(ft string) bool {
 
 // FieldDef represents a custom field definition from gk_custom_field_def.
 type FieldDef struct {
-	ID          int64            `json:"id" db:"id"`
-	Name        string           `json:"name" db:"name"`
-	Label       string           `json:"label" db:"label"`
-	EntityType  string           `json:"entity_type" db:"entity_type"`
-	FieldType   string           `json:"field_type" db:"field_type"`
-	OwnerType   string           `json:"owner_type" db:"owner_type"`
-	OwnerName   *string          `json:"owner_name,omitempty" db:"owner_name"`
-	MigratedFrom *int64          `json:"migrated_from,omitempty" db:"migrated_from"`
-	Section     string           `json:"section" db:"section"`
-	FieldOrder  int              `json:"field_order" db:"field_order"`
-	Description *string          `json:"description,omitempty" db:"description"`
-	Placeholder *string          `json:"placeholder,omitempty" db:"placeholder"`
-	Required    bool             `json:"required" db:"required"`
-	Config      *json.RawMessage `json:"config,omitempty" db:"config"`
-	ValidID     int              `json:"valid_id" db:"valid_id"`
-	CreateTime  time.Time        `json:"create_time" db:"create_time"`
-	CreateBy    int              `json:"create_by" db:"create_by"`
-	ChangeTime  time.Time        `json:"change_time" db:"change_time"`
-	ChangeBy    int              `json:"change_by" db:"change_by"`
+	ID           int64            `json:"id" db:"id"`
+	Name         string           `json:"name" db:"name"`
+	Label        string           `json:"label" db:"label"`
+	EntityType   string           `json:"entity_type" db:"entity_type"`
+	FieldType    string           `json:"field_type" db:"field_type"`
+	OwnerType    string           `json:"owner_type" db:"owner_type"`
+	OwnerName    *string          `json:"owner_name,omitempty" db:"owner_name"`
+	MigratedFrom *int64           `json:"migrated_from,omitempty" db:"migrated_from"`
+	Section      string           `json:"section" db:"section"`
+	FieldOrder   int              `json:"field_order" db:"field_order"`
+	Description  *string          `json:"description,omitempty" db:"description"`
+	Placeholder  *string          `json:"placeholder,omitempty" db:"placeholder"`
+	Required     bool             `json:"required" db:"required"`
+	Config       *json.RawMessage `json:"config,omitempty" db:"config"`
+	ValidID      int              `json:"valid_id" db:"valid_id"`
+	CreateTime   time.Time        `json:"create_time" db:"create_time"`
+	CreateBy     int              `json:"create_by" db:"create_by"`
+	ChangeTime   time.Time        `json:"change_time" db:"change_time"`
+	ChangeBy     int              `json:"change_by" db:"change_by"`
 }
 
 // IsActive returns true if this field definition is valid/enabled.
@@ -144,9 +144,9 @@ type FieldValue struct {
 // Not all fields apply to all types — each field type uses a subset.
 type FieldConfig struct {
 	// text / textarea
-	MaxLength  *int    `json:"max_length,omitempty"`
-	Regex      string  `json:"regex,omitempty"`
-	RegexError string  `json:"regex_error,omitempty"`
+	MaxLength  *int   `json:"max_length,omitempty"`
+	Regex      string `json:"regex,omitempty"`
+	RegexError string `json:"regex_error,omitempty"`
 
 	// select / multi_select
 	Options     []SelectOption `json:"options,omitempty"`

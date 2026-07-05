@@ -75,7 +75,7 @@ func handleSwaggerDark(c *gin.Context) {
 		c.String(http.StatusOK, swaggerDarkIndexHTML)
 		return
 	}
-	
+
 	// For other files (CSS, JS, doc.json, etc.), use default handler
 	handler := ginSwagger.WrapHandler(swaggerFiles.Handler,
 		ginSwagger.DefaultModelsExpandDepth(-1),

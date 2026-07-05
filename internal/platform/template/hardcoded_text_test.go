@@ -184,7 +184,7 @@ func TestCommonHardcodedPatterns(t *testing.T) {
 							continue
 						}
 						issues = append(issues,
-							strings.Join([]string{relPath, ":", string(rune(lineNum+1)), ": ", p.description, " - '", p.pattern, "'"}, ""))
+							strings.Join([]string{relPath, ":", string(rune(lineNum + 1)), ": ", p.description, " - '", p.pattern, "'"}, ""))
 					}
 				}
 			}

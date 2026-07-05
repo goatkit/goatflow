@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "updated_at": "2025-01-15T00:00:00Z",
+  "plugins": [
+    {
+      "name": "goat-kb",
+      "description": "Knowledge base plugin with article management and customer portal",
+      "author": "GoatKit",
+      "licence": "Apache-2.0",
+      "homepage": "https://github.com/goatkit/goat-kb",
+      "repo": "goatkit/goat-kb",
+      "category": "business",
+      "icon": "https://raw.githubusercontent.com/goatkit/goat-kb/main/icon.svg",
+      "tags": ["knowledge-base", "faq", "articles", "customer-portal"],
+      "latest_version": "1.0.0",
+      "min_host_version": "0.8.0",
+      "runtime": "grpc",
+      "verified": true,
+      "dependencies": [],
+      "public_key": "fa81e60073ee6f3e5825c575c18a7c2556f2abf2640dcf0e296a98fe4eb60fa6"
+    },
+    {
+      "name": "goat-analytics",
+      "description": "Real-time analytics dashboard with custom metrics",
+      "author": "GoatKit",
+      "licence": "Apache-2.0",
+      "homepage": "https://github.com/goatkit/goat-analytics",
+      "repo": "goatkit/goat-analytics",
+      "category": "integration",
+      "tags": ["analytics", "dashboard", "metrics", "reporting"],
+      "latest_version": "0.3.1",
+      "icon": "https://raw.githubusercontent.com/goatkit/goat-analytics/main/icon.svg",
+      "min_host_version": "0.8.0",
+      "runtime": "wasm",
+      "verified": false,
+      "dependencies": ["goat-kb"]
+    },
+    {
+      "name": "warm-scholar",
+      "description": "Warm scholarly theme with deep charcoal and amber accents",
+      "author": "GoatKit",
+      "licence": "Apache-2.0",
+      "homepage": "https://github.com/goatkit/warm-scholar",
+      "repo": "goatkit/warm-scholar",
+      "icon": "",
+      "category": "theme",
+      "tags": ["theme", "dark-mode", "scholarly"],
+      "latest_version": "0.1.0",
+      "min_host_version": "",
+      "runtime": "template",
+      "verified": false,
+      "dependencies": []
+    }
+  ]
+}

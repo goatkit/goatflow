@@ -459,13 +459,13 @@ func saveRolePermissions(db *sql.DB, roleID int, permissions []string) error {
 
 	// Define mapping from simple permissions to group_role permission keys
 	permMapping := map[string]string{
-		"view_tickets":     "ro",
-		"create_tickets":   "create",
-		"edit_tickets":     "note",
-		"delete_tickets":   "owner",
-		"assign_tickets":   "move_into",
-		"manage_users":     "rw",
-		"manage_settings":  "rw",
+		"view_tickets":      "ro",
+		"create_tickets":    "create",
+		"edit_tickets":      "note",
+		"delete_tickets":    "owner",
+		"assign_tickets":    "move_into",
+		"manage_users":      "rw",
+		"manage_settings":   "rw",
 		"manage_priorities": "priority",
 	}
 
@@ -513,10 +513,10 @@ func saveRolePermissions(db *sql.DB, roleID int, permissions []string) error {
 // frontendPermMapping maps raw database permission keys to frontend-friendly names.
 // Some database permissions map to multiple frontend permissions.
 var frontendPermMapping = map[string]string{
-	"ro":         "view_tickets",
-	"move_into":  "assign_tickets",
-	"create":     "create_tickets",
-	"note":       "edit_tickets",
+	"ro":        "view_tickets",
+	"move_into": "assign_tickets",
+	"create":    "create_tickets",
+	"note":      "edit_tickets",
 }
 
 func mapDatabaseToFrontendPermissions(rawPermissions []string) []string {

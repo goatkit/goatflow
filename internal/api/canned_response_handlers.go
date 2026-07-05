@@ -291,9 +291,18 @@ func (h *CannedResponseHandlers) DeleteResponse(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid response ID"})
 		return
 	}
-
-	// TODO: Check permissions
-
+	// Check permissions - admin or owner can delete
+	currentUserID := GetUserIDFromCtx(c, 0)
+	userRole, _ := c.Get("user_role")
+	response, err := h.service.GetResponse(c.Request.Context(), uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Response not found"})
+		return
+	}
+	if userRole != "Admin" && int(response.OwnerID) != currentUserID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can only delete your own responses"})
+		return
+	}
 	if err := h.service.DeleteResponse(c.Request.Context(), uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

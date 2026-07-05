@@ -31,12 +31,12 @@ type EscalationPreferences struct {
 
 // TicketInfo holds ticket data needed for escalation calculation.
 type TicketInfo struct {
-	ID         int
-	QueueID    int
-	SLAID      *int
-	StateType  string // new, open, closed, removed, pending, merged
-	Created    time.Time
-	UserID     int
+	ID        int
+	QueueID   int
+	SLAID     *int
+	StateType string // new, open, closed, removed, pending, merged
+	Created   time.Time
+	UserID    int
 }
 
 // NewService creates a new escalation service.

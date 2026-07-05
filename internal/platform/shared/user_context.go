@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/convert"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // UserContext represents user information for templates.

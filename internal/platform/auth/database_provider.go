@@ -24,6 +24,7 @@ func NewDatabaseAuthProvider(db *sql.DB, userRepo UserLookup) *DatabaseAuthProvi
 		hasher:   NewPasswordHasher(),
 	}
 }
+
 // Authenticate authenticates a user against the database.
 func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, password string) (*platformmodels.User, error) {
 	if p.userRepo == nil {

@@ -32,15 +32,15 @@ func TestCalendarAddWorkingTime(t *testing.T) {
 			name:     "add time that crosses end of day",
 			start:    time.Date(2025, 1, 6, 16, 0, 0, 0, time.UTC), // Monday 16:00
 			minutes:  120,                                          // 2 hours
-			wantDay:  7,                                             // Tuesday
-			wantHour: 9,                                             // 09:00 (1 hour left on Monday, 1 hour on Tuesday)
+			wantDay:  7,                                            // Tuesday
+			wantHour: 9,                                            // 09:00 (1 hour left on Monday, 1 hour on Tuesday)
 		},
 		{
 			name:     "add time over weekend",
 			start:    time.Date(2025, 1, 10, 16, 0, 0, 0, time.UTC), // Friday 16:00
-			minutes:  120,                                            // 2 hours
-			wantDay:  13,                                              // Monday
-			wantHour: 9,                                               // 09:00
+			minutes:  120,                                           // 2 hours
+			wantDay:  13,                                            // Monday
+			wantHour: 9,                                             // 09:00
 		},
 	}
 
@@ -85,7 +85,7 @@ func TestCalendarWorkHoursInRange(t *testing.T) {
 			name:      "across weekend",
 			start:     time.Date(2025, 1, 10, 9, 0, 0, 0, time.UTC),  // Friday 09:00
 			end:       time.Date(2025, 1, 13, 17, 0, 0, 0, time.UTC), // Monday 17:00
-			wantHours: 16, // 8 hours Friday + 8 hours Monday
+			wantHours: 16,                                            // 8 hours Friday + 8 hours Monday
 		},
 	}
 

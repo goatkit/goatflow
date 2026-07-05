@@ -3,6 +3,7 @@ package wasm_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -687,4 +688,12 @@ func (m *trackingHostAPI) GetFile(ctx context.Context, key string) ([]byte, map[
 func (m *trackingHostAPI) DeleteFile(ctx context.Context, key string) error { return nil }
 func (m *trackingHostAPI) ListFiles(ctx context.Context, prefix string) ([]plugin.FileInfo, error) {
 	return nil, nil
+}
+
+func (m *mockHostAPI) GenerateThumbnail(_ context.Context, _ []byte, _ string, _, _ int) ([]byte, string, error) {
+	return nil, "", fmt.Errorf("not implemented")
+}
+
+func (m *trackingHostAPI) GenerateThumbnail(_ context.Context, _ []byte, _ string, _, _ int) ([]byte, string, error) {
+	return nil, "", fmt.Errorf("not implemented")
 }

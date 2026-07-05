@@ -69,12 +69,10 @@ func init() {
 //	@Router			/search [post]
 func HandleSearchAPI(c *gin.Context) {
 	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	_ = userID // Will use for permission-based filtering later
 
 	var req search.SearchQuery
 	if err := c.ShouldBindJSON(&req); err != nil {

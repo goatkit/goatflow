@@ -3,6 +3,7 @@ package wasm
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/goatkit/goatflow/internal/platform/plugin"
@@ -259,4 +260,7 @@ func (m *mockHostAPIForUnit) GetFile(ctx context.Context, key string) ([]byte, m
 func (m *mockHostAPIForUnit) DeleteFile(ctx context.Context, key string) error { return nil }
 func (m *mockHostAPIForUnit) ListFiles(ctx context.Context, prefix string) ([]plugin.FileInfo, error) {
 	return nil, nil
+}
+func (m *mockHostAPIForUnit) GenerateThumbnail(_ context.Context, _ []byte, _ string, _, _ int) ([]byte, string, error) {
+	return nil, "", fmt.Errorf("not implemented")
 }

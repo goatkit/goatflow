@@ -340,5 +340,25 @@ func (c *HostAPIClient) ListFiles(ctx context.Context, prefix string) ([]plugin.
 	return files, nil
 }
 
+func (c *HostAPIClient) GenerateThumbnail(ctx context.Context, data []byte, contentType string, maxWidth, maxHeight int) ([]byte, string, error) {
+	result, err := c.call("generate_thumbnail", map[string]any{
+		"data":         data,
+		"content_type": contentType,
+		"max_width":    maxWidth,
+		"max_height":   maxHeight,
+	})
+	if err != nil {
+		return nil, "", err
+	}
+	var resp struct {
+		ThumbData        []byte `json:"thumb_data"`
+		ThumbContentType string `json:"thumb_content_type"`
+	}
+	if err := json.Unmarshal(result, &resp); err != nil {
+		return nil, "", err
+	}
+	return resp.ThumbData, resp.ThumbContentType, nil
+}
+
 // Verify HostAPIClient implements plugin.HostAPI at compile time.
 var _ plugin.HostAPI = (*HostAPIClient)(nil)

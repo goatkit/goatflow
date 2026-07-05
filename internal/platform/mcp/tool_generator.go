@@ -38,12 +38,12 @@ type RouteInput struct {
 
 // Dynamic tool registry — initialized at startup, refreshed when plugins load.
 var (
-	dynamicTools    []Tool                     // flat list for tools/list
-	dynamicToolsMap map[string]*GeneratedTool  // name -> tool for dispatch
+	dynamicTools    []Tool                    // flat list for tools/list
+	dynamicToolsMap map[string]*GeneratedTool // name -> tool for dispatch
 	dynamicMu       sync.RWMutex              // protects reads/writes of tools
 	dynamicInitOnce sync.Once
 	dynamicInitErr  error
-	lastOpenAPIPath string                     // remembered for refresh calls
+	lastOpenAPIPath string // remembered for refresh calls
 )
 
 // GetDynamicTools returns the generated tool list. Thread-safe.
@@ -186,8 +186,8 @@ func initDynamicToolsOnce(routes []RouteInput, openapiPath string) error {
 // PluginRegistration holds the data needed to generate MCP tools from a plugin.
 // Mirrors the relevant fields from pkg/plugin.GKRegistration to avoid import cycles.
 type PluginRegistration struct {
-	Name    string
-	Routes  []PluginRouteInput
+	Name     string
+	Routes   []PluginRouteInput
 	MCPTools []PluginMCPToolInput
 }
 
@@ -291,7 +291,7 @@ func GeneratePluginTools(plugins []PluginRegistration) []*GeneratedTool {
 				HandlerName: rt.Handler,
 				Method:      strings.ToUpper(rt.Method),
 				Path:        rt.Path,
-				Middleware:   rt.Middleware,
+				Middleware:  rt.Middleware,
 				PathParams:  extractPathParams(rt.Path),
 				IsPlugin:    true,
 				PluginName:  p.Name,

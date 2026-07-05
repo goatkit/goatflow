@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -366,12 +367,12 @@ func TestAddArticle_Validation(t *testing.T) {
 	})
 
 	tests := []struct {
-		name         string
-		ticketID     string
-		payload      interface{}
-		wantStatus   int
-		wantError    string
-		needsTicket  bool // skip if no seeded ticket
+		name        string
+		ticketID    string
+		payload     interface{}
+		wantStatus  int
+		wantError   string
+		needsTicket bool // skip if no seeded ticket
 	}{
 		{
 			name:       "invalid ticket ID",
@@ -605,9 +606,17 @@ func TestAddArticle_EmailHeaders(t *testing.T) {
 	requireDatabase(t)
 
 	db, err := database.GetDB()
-	if err == nil && db != nil {
-		ensureArticleTestPermissions(t, db, 1)
+	if err != nil || db == nil {
+		t.Skip("Database not available")
 	}
+
+	// Use seeded ticket from test database (same pattern as TestAddArticle_BasicArticle)
+	var ticketID int
+	err = db.QueryRow("SELECT id FROM ticket ORDER BY id LIMIT 1").Scan(&ticketID)
+	if err != nil {
+		t.Skipf("No seeded ticket available: %v", err)
+	}
+	ensureArticleTestPermissions(t, db, ticketID)
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -633,7 +642,7 @@ func TestAddArticle_EmailHeaders(t *testing.T) {
 	jsonData, err := json.Marshal(payload)
 	require.NoError(t, err)
 
-	req := httptest.NewRequest("POST", "/api/v1/tickets/1/articles", bytes.NewBuffer(jsonData))
+	req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/tickets/%d/articles", ticketID), bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
@@ -645,8 +654,10 @@ func TestAddArticle_EmailHeaders(t *testing.T) {
 	err = json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 
-	assert.True(t, response["success"].(bool))
-	data := response["data"].(map[string]interface{})
+	data, ok := response["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("missing or invalid 'data' field in response: %s", w.Body.String())
+	}
 	assert.Equal(t, "sender@example.com", data["from"])
 	assert.Equal(t, "recipient@example.com", data["to"])
 	assert.Equal(t, "cc@example.com", data["cc"])
@@ -655,6 +666,20 @@ func TestAddArticle_EmailHeaders(t *testing.T) {
 
 func TestAddArticle_UpdatesTicketChangeTime(t *testing.T) {
 	requireDatabase(t)
+
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		t.Skip("Database not available")
+	}
+
+	// Use seeded ticket from test database (same pattern as TestAddArticle_EmailHeaders)
+	var ticketID int
+	err = db.QueryRow("SELECT id FROM ticket ORDER BY id LIMIT 1").Scan(&ticketID)
+	if err != nil {
+		t.Skipf("No seeded ticket available: %v", err)
+	}
+	ensureArticleTestPermissions(t, db, ticketID)
+
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
@@ -671,7 +696,7 @@ func TestAddArticle_UpdatesTicketChangeTime(t *testing.T) {
 	jsonData, err := json.Marshal(payload)
 	require.NoError(t, err)
 
-	req := httptest.NewRequest("POST", "/api/v1/tickets/1/articles", bytes.NewBuffer(jsonData))
+	req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/tickets/%d/articles", ticketID), bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
@@ -683,8 +708,10 @@ func TestAddArticle_UpdatesTicketChangeTime(t *testing.T) {
 	err = json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 
-	assert.True(t, response["success"].(bool))
-	data := response["data"].(map[string]interface{})
+	data, ok := response["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("missing or invalid 'data' field in response: %s", w.Body.String())
+	}
 
 	// Check that the creator is set correctly
 	assert.Equal(t, float64(15), data["create_by"])

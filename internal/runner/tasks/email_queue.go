@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/mailqueue"
+	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/runner"
 )
 

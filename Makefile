@@ -215,6 +215,32 @@ gk: toolbox-build
 plugin-init: toolbox-build
 	@$(MAKE) toolbox-exec ARGS='go run ./cmd/gk plugin init $(NAME) $(RUNTIME)'
 
+## gk-install: Install from marketplace and deploy to running instance (NAME=<plugin-name>)
+gk-install: toolbox-build
+	@if [ -z "$(NAME)" ]; then echo "Usage: make gk-install NAME=<plugin-name>"; exit 1; fi
+	@$(MAKE) toolbox-exec ARGS='go run ./cmd/gk install $(NAME)'
+	@bash scripts/gk-deploy.sh $(NAME)
+
+## gk-update: Check and apply plugin updates (NAME=<optional-plugin-name>)
+gk-update: toolbox-build
+	@$(MAKE) toolbox-exec ARGS='go run ./cmd/gk update $(NAME)'
+
+## gk-search: Search the marketplace (QUERY=<search-term>)
+gk-search: toolbox-build
+	@$(MAKE) toolbox-exec ARGS='go run ./cmd/gk search $(QUERY)'
+
+## gk-build: Package a plugin into a ZIP (DIR=<plugin-dir>, default: .)
+gk-build: toolbox-build
+	@$(MAKE) toolbox-exec ARGS='go run ./cmd/gk build $(DIR)'
+
+## gk-sign: Sign a plugin file (FILE=<path>, KEY=<hex-private-key>)
+gk-sign: toolbox-build
+	@$(MAKE) toolbox-exec ARGS='go run ./cmd/gk sign $(FILE) --key $(KEY)'
+## gk-deploy: Deploy an installed plugin to the running instance via API (NAME=<plugin-name>)
+gk-deploy:
+	@if [ -z "$(NAME)" ]; then echo "Usage: make gk-deploy NAME=<plugin-name>"; exit 1; fi
+	@bash scripts/gk-deploy.sh $(NAME)
+
 ## plugin-build-wasm: Build all WASM plugins using TinyGo Docker image
 .PHONY: plugin-build-wasm
 plugin-build-wasm:
@@ -2926,8 +2952,18 @@ js-build: css-deps-stable
 	@if [ ! -s static/js/tiptap.min.js ]; then \
 		echo "❌ Build failed: tiptap.min.js missing or empty"; exit 1; \
 	fi
+	@# Validate paste/drop extension is wired in the editor source
+	@if ! grep -q "createImagePasteExtension(config.imageUploadUrl)" static/js/tiptap-editor.js; then \
+		echo "❌ Paste extension not wired in extensions array"; exit 1; \
+	fi
+	@if ! grep -q "function createImagePasteExtension" static/js/tiptap-editor.js; then \
+		echo "❌ createImagePasteExtension() definition missing"; exit 1; \
+	fi
+	@if ! grep -q "imageUploadUrl" static/js/tiptap-editor.js; then \
+		echo "❌ imageUploadUrl config option missing"; exit 1; \
+	fi
+	@SIZE=$$(stat -c%s static/js/tiptap.min.js); if [ "$$SIZE" -lt 300000 ]; then echo "❌ Bundle suspiciously small: $$SIZE bytes"; exit 1; fi
 	@ls -lh static/js/tiptap.min.js | awk '{print "✅ JavaScript built:" $$9 " (" $$5 ")"}'
-
 .PHONY: frontend-fix-js-dir
 frontend-fix-js-dir:
 	@printf "🩹 Fixing static/js ownership inside container (one-time)...\n"

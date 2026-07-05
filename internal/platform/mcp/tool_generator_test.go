@@ -35,7 +35,7 @@ func TestToolNameFromRoute(t *testing.T) {
 		{"POST", "/tickets/:id/reopen", "create_ticket_reopen"},
 		{"POST", "/tickets/:id/time", "create_ticket_time"},
 		{"GET", "/organisations", "list_organisations"},
-		{"POST", "/organisations", "create_organisation"},  // POST singularizes
+		{"POST", "/organisations", "create_organisation"}, // POST singularizes
 		{"GET", "/custom-fields/definitions", "list_custom_field_definitions"},
 	}
 
@@ -221,7 +221,7 @@ func TestGeneratePluginTools(t *testing.T) {
 					Method:      "POST",
 					Path:        "/admin/generate",
 					Handler:     "GenerateStory",
-					Middleware:   []string{"auth", "group:myplugin-users"},
+					Middleware:  []string{"auth", "group:myplugin-users"},
 					Description: "Generate a story",
 				},
 				{

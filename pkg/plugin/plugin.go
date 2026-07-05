@@ -44,6 +44,7 @@ type GKRegistration struct {
 	Author      string `json:"author"`      // author or organization
 	License     string `json:"license"`     // SPDX identifier, e.g. "Apache-2.0"
 	Homepage    string `json:"homepage"`    // URL to plugin docs/repo
+	Icon        string          `json:"icon,omitempty"`     // SVG icon content, FontAwesome class (e.g. "fa-book"), or bundled icon path
 
 	// Capabilities - what the plugin exposes to the host
 	Routes     []RouteSpec     `json:"routes,omitempty"`      // HTTP routes to register
@@ -267,6 +268,11 @@ type HostAPI interface {
 	DeleteFile(ctx context.Context, key string) error
 	// ListFiles lists files under a prefix (e.g. "backups/"). Returns keys and metadata.
 	ListFiles(ctx context.Context, prefix string) ([]FileInfo, error)
+	// GenerateThumbnail generates a thumbnail from image data using libvips.
+	// Takes raw image bytes + content type + max dimensions (bounding box, aspect ratio preserved).
+	// Returns thumbnail bytes and output content type (always image/jpeg or image/png).
+	// For non-image types, returns a placeholder icon based on content type.
+	GenerateThumbnail(ctx context.Context, data []byte, contentType string, maxWidth, maxHeight int) (thumbData []byte, thumbContentType string, err error)
 }
 
 // FileInfo describes a stored file.

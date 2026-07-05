@@ -43,6 +43,7 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/group_view.pongo2":                    true,
 	"pages/admin/groups.pongo2":                        true,
 	"pages/admin/lookups.pongo2":                       true,
+	"pages/admin/marketplace.pongo2":                   true,
 	"pages/admin/permissions.pongo2":                   true,
 	"pages/admin/permissions_debug.pongo2":             true,
 	"pages/admin/permissions_simple.pongo2":            true,
@@ -108,19 +109,16 @@ var AllPageTemplates = map[string]bool{
 	"pages/agent/tickets.pongo2":     true,
 
 	// Customer templates
-	"pages/customer/company_info.pongo2":   true,
-	"pages/customer/company_users.pongo2":  true,
-	"pages/customer/dashboard.pongo2":      true,
-	"pages/customer/kb_article.pongo2":     true,
-	"pages/customer/kb_search.pongo2":      true,
-	"pages/customer/knowledge_base.pongo2": true,
-	"pages/customer/login.pongo2":          true,
-	"pages/customer/login_2fa.pongo2":      true,
-	"pages/customer/new_ticket.pongo2":     true,
-	"pages/customer/password_form.pongo2":  true,
-	"pages/customer/profile.pongo2":        true,
-	"pages/customer/ticket_view.pongo2":    true,
-	"pages/customer/tickets.pongo2":        true,
+	"pages/customer/company_info.pongo2":  true,
+	"pages/customer/company_users.pongo2": true,
+	"pages/customer/dashboard.pongo2":     true,
+	"pages/customer/login.pongo2":         true,
+	"pages/customer/login_2fa.pongo2":     true,
+	"pages/customer/new_ticket.pongo2":    true,
+	"pages/customer/password_form.pongo2": true,
+	"pages/customer/profile.pongo2":       true,
+	"pages/customer/ticket_view.pongo2":   true,
+	"pages/customer/tickets.pongo2":       true,
 
 	// Dashboard templates
 	"pages/dashboard.pongo2":          true,
@@ -1385,36 +1383,6 @@ func TestAllCustomerTemplatesRender(t *testing.T) {
 					"ClosedTickets": 5,
 				}
 				ctx["RecentTickets"] = []map[string]interface{}{sampleTicket()}
-				return ctx
-			}(),
-		},
-		{
-			name:     "customer/kb_article",
-			template: "pages/customer/kb_article.pongo2",
-			ctx: func() pongo2.Context {
-				ctx := customerContext()
-				ctx["Article"] = sampleKBArticle()
-				ctx["RelatedArticles"] = emptySlice()
-				return ctx
-			}(),
-		},
-		{
-			name:     "customer/kb_search",
-			template: "pages/customer/kb_search.pongo2",
-			ctx: func() pongo2.Context {
-				ctx := customerContext()
-				ctx["Query"] = ""
-				ctx["Results"] = emptySlice()
-				return ctx
-			}(),
-		},
-		{
-			name:     "customer/knowledge_base",
-			template: "pages/customer/knowledge_base.pongo2",
-			ctx: func() pongo2.Context {
-				ctx := customerContext()
-				ctx["Categories"] = []map[string]interface{}{sampleKBCategory()}
-				ctx["FeaturedArticles"] = []map[string]interface{}{sampleKBArticle()}
 				return ctx
 			}(),
 		},

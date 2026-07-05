@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"gopkg.in/yaml.v3"
 )
 

@@ -40,6 +40,8 @@
             placeholder: placeholder,
             editorMode: editorMode,
             content: initialContent,
+            imageUrlPrompt: '{{ t("editor.insert_image_prompt")|default:"Enter image URL (or leave empty to pick a file):" }}',
+            linkUrlPrompt: '{{ t("editor.insert_link_prompt")|default:"Enter URL:" }}',
             onUpdate: function(content) {
                 if (hiddenField) {
                     hiddenField.value = content;

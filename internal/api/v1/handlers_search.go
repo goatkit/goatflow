@@ -221,15 +221,15 @@ func (router *APIRouter) handleSearchTickets(c *gin.Context) {
 		}
 
 		tickets = append(tickets, gin.H{
-			"id":          id,
-			"number":      tn,
-			"title":       title,
-			"state":       state,
-			"priority":    priority,
-			"queue":       queue,
-			"owner":       owner,
-			"created_at":  createTime,
-			"updated_at":  changeTime,
+			"id":         id,
+			"number":     tn,
+			"title":      title,
+			"state":      state,
+			"priority":   priority,
+			"queue":      queue,
+			"owner":      owner,
+			"created_at": createTime,
+			"updated_at": changeTime,
 		})
 	}
 

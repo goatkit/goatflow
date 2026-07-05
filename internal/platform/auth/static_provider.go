@@ -13,7 +13,7 @@ import (
 // StaticAuthProvider offers simple in-memory users for demos/tests.
 type StaticAuthProvider struct {
 	users    map[string]*platformmodels.User // key: login (lowercase)
-	pwMap    map[string]string       // login -> plain or hashed (bcrypt/sha*)
+	pwMap    map[string]string               // login -> plain or hashed (bcrypt/sha*)
 	hasher   *PasswordHasher
 	priority int
 	name     string

@@ -127,8 +127,131 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     };
 });
+// ImagePasteExtension creates a TipTap extension that handles paste and drop
+// of image files, reading them as base64 data URLs. This works in BOTH modes
+// (paste catches clipboard images in richtext mode; drop catches files in both)
+// and is shared across all Tiptap editors in the platform — tickets, KB articles, etc.
+function createImagePasteExtension(uploadUrl) {
+    var Extension = window.Tiptap.Extension;
+    var Plugin = window.Tiptap.Plugin;
+    var PluginKey = window.Tiptap.PluginKey;
+    if (!Extension || !Plugin) return null;
+    return Extension.create({
+        name: 'imagePaste',
+        addProseMirrorPlugins: function () {
+            var _this = this;
+            return [
+                new Plugin({
+                    key: new PluginKey('imagePaste'),
+                    props: {
+                        handlePaste: function (view, event) {
+                            var items = event.clipboardData && event.clipboardData.items;
+                            if (!items) return false;
+                            for (var i = 0; i < items.length; i++) {
+                                var item = items[i];
+                                if (item.type && item.type.indexOf('image/') === 0) {
+                                    event.preventDefault();
+                                    var file = item.getAsFile();
+                                    if (file) {
+                                        var reader = new FileReader();
+                                        reader.onload = function (e) {
+                                            var dataUrl = e.target.result;
+                                            if (uploadUrl) {
+                                                // Upload via configured endpoint, insert server URL
+                                                var comma = dataUrl.indexOf(',');
+                                                var b64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
+                                                fetch(uploadUrl, {
+                                                    method: 'POST',
+                                                    headers: {'Content-Type': 'application/json'},
+                                                    body: JSON.stringify({
+                                                        filename: file.name || 'pasted-image.png',
+                                                        content_type: file.type || 'image/png',
+                                                        data: b64
+                                                    })
+                                                }).then(function(r) {
+                                                    if (!r.ok) throw new Error('Upload returned ' + r.status);
+                                                    return r.json();
+                                                }).then(function(resp) {
+                                                    if (resp.id) {
+                                                        _this.editor.chain().focus().setImage({ src: '/kb/attachment/' + resp.id }).run();
+                                                    }
+                                                }).catch(function(err) {
+                                                    console.error('Image upload failed, fall back:', err);
+                                                    _this.editor.chain().focus().setImage({ src: dataUrl }).run();
+                                                });
+                                            } else {
+                                                // No upload URL — insert inline base64 data URL
+                                                _this.editor.chain().focus().setImage({ src: dataUrl }).run();
+                                            }
+                                        };
+                                        reader.readAsDataURL(file);
+                                    }
+                                    return true;
+                                }
+                            }
+                            return false;
+                        },
+                        handleDrop: function (view, event) {
+                            var files = event.dataTransfer && event.dataTransfer.files;
+                            if (!files || !files.length) return false;
+                            for (var i = 0; i < files.length; i++) {
+                                var file = files[i];
+                                if (file.type && file.type.indexOf('image/') === 0) {
+                                    event.preventDefault();
+                                    var reader = new FileReader();
+                                    reader.onload = function (e) {
+                                        var dataUrl = e.target.result;
+                                        if (uploadUrl) {
+                                            var comma = dataUrl.indexOf(',');
+                                            var b64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
+                                            fetch(uploadUrl, {
+                                                method: 'POST',
+                                                headers: {'Content-Type': 'application/json'},
+                                                body: JSON.stringify({
+                                                    filename: file.name || 'pasted-image.png',
+                                                    content_type: file.type || 'image/png',
+                                                    data: b64
+                                                })
+                                            }).then(function(r) {
+                                                if (!r.ok) throw new Error('Upload returned ' + r.status);
+                                                return r.json();
+                                            }).then(function(resp) {
+                                                if (resp.id) {
+                                                    var pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+                                                    if (pos) {
+                                                        view.dispatch(view.state.tr.insert(pos.pos, view.state.schema.nodes.image.create({ src: '/kb/attachment/' + resp.id })));
+                                                    }
+                                                }
+                                            }).catch(function(err) {
+                                                console.error('Image upload failed, fall back:', err);
+                                                var pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+                                                if (pos) {
+                                                    view.dispatch(view.state.tr.insert(pos.pos, view.state.schema.nodes.image.create({ src: dataUrl })));
+                                                }
+                                            });
+                                        } else {
+                                            var pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+                                            if (pos) {
+                                                view.dispatch(view.state.tr.insert(pos.pos, view.state.schema.nodes.image.create({ src: dataUrl })));
+                                            }
+                                        }
+                                    };
+                                    reader.readAsDataURL(file);
+                                    return true;
+                                }
+                            }
+                            return false;
+                        },
+                    },
+                }),
+            ];
+        },
+    });
+}
 
 function initTiptapEditor(elementId, options = {}) {
+    console.log("initTiptapEditor called with elementId:", elementId);
+
     console.log("initTiptapEditor called with elementId:", elementId);
 
     // Check if editor already exists for this element
@@ -152,6 +275,9 @@ function initTiptapEditor(elementId, options = {}) {
         placeholder: options.placeholder || "Write your message here...",
         content: options.content || "",
         onUpdate: options.onUpdate || null,
+        imageUploadUrl: options.imageUploadUrl || "",
+        imageUrlPrompt: options.imageUrlPrompt || "Enter image URL (or leave empty to pick a file):",
+        linkUrlPrompt: options.linkUrlPrompt || "Enter URL:",
     };
 
     // Build editor div structure
@@ -472,6 +598,7 @@ function initTiptapEditor(elementId, options = {}) {
                 TableCell,
                 TableHeader,
                 Image,
+                createImagePasteExtension(config.imageUploadUrl),
             ],
             content: content,
             editable: config.mode === "edit",
@@ -807,9 +934,9 @@ function initTiptapEditor(elementId, options = {}) {
                         editor.chain().focus().toggleCodeBlock().run();
                     }
                     break;
-                case "setLink":
+                case "insertLink":
                     if (currentMode === "richtext" && editor) {
-                        const url = prompt("Enter URL:");
+                        const url = prompt(config.linkUrlPrompt);
                         if (url) {
                             editor.chain().focus().setLink({ href: url }).run();
                         }
@@ -822,13 +949,23 @@ function initTiptapEditor(elementId, options = {}) {
                     break;
                 case "insertImage":
                     if (currentMode === "richtext" && editor) {
-                        const imageUrl = prompt("Enter image URL:");
-                        if (imageUrl) {
-                            editor
-                                .chain()
-                                .focus()
-                                .setImage({ src: imageUrl })
-                                .run();
+                        var url = prompt(config.imageUrlPrompt);
+                        if (url) {
+                            editor.chain().focus().setImage({ src: url }).run();
+                        } else {
+                            var input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.onchange = function() {
+                                var file = input.files && input.files[0];
+                                if (!file) return;
+                                var reader = new FileReader();
+                                reader.onload = function(e) {
+                                    editor.chain().focus().setImage({ src: e.target.result }).run();
+                                };
+                                reader.readAsDataURL(file);
+                            };
+                            input.click();
                         }
                     }
                     break;

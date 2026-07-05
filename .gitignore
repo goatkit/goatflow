@@ -48,8 +48,9 @@ charts/*/*.tgz
 
 # Individual binaries (in case they're built in root by mistake)
 goats          # Main server binary - should be in container only
-goatflow          # CLI tool - should be in container only
-goatflow-*        # Any goatflow-prefixed binaries
+!cmd/goats/
+goatflow       # CLI tool - should be in container only
+goatflow-*     # Any goatflow-prefixed binaries
 generator      # Code generator
 migrate        # Database migration tool
 server         # Legacy server name

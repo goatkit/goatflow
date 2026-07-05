@@ -12,8 +12,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/platform/database"
 	_ "github.com/goatkit/goatflow/internal/platform/api"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/platform/shared"
@@ -349,20 +349,6 @@ func ensureCoreHandlers() {
 				return
 			}
 			handleCustomerChangePassword(db)(c)
-		},
-		"handleCustomerCompanyInfo": func(c *gin.Context) {
-			db, ok := mustGetDB(c)
-			if !ok {
-				return
-			}
-			handleCustomerCompanyInfo(db)(c)
-		},
-		"handleCustomerCompanyUsers": func(c *gin.Context) {
-			db, ok := mustGetDB(c)
-			if !ok {
-				return
-			}
-			handleCustomerCompanyUsers(db)(c)
 		},
 		"handleCustomerKnowledgeBase": func(c *gin.Context) {
 			db, ok := mustGetDB(c)

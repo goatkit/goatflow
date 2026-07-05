@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/rpc"
 	"testing"
@@ -615,4 +616,7 @@ func (m *mockHostAPI) GetFile(ctx context.Context, key string) ([]byte, map[stri
 func (m *mockHostAPI) DeleteFile(ctx context.Context, key string) error { return nil }
 func (m *mockHostAPI) ListFiles(ctx context.Context, prefix string) ([]plugin.FileInfo, error) {
 	return nil, nil
+}
+func (m *mockHostAPI) GenerateThumbnail(_ context.Context, _ []byte, _ string, _, _ int) ([]byte, string, error) {
+	return nil, "", fmt.Errorf("not implemented")
 }

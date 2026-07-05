@@ -41,14 +41,14 @@ import (
 
 	"github.com/goatkit/goatflow/internal/email/inbound/filters"
 	"github.com/goatkit/goatflow/internal/email/inbound/postmaster"
-	"github.com/goatkit/goatflow/internal/platform/middleware"
-	"github.com/goatkit/goatflow/internal/platform/template"
 	platformapi "github.com/goatkit/goatflow/internal/platform/api"
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/cache"
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/platform/lookups"
+	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/notifications"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/plugin/core"
@@ -58,13 +58,13 @@ import (
 	platformservice "github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/platform/services/adapter"
 	"github.com/goatkit/goatflow/internal/platform/services/k8s"
+	"github.com/goatkit/goatflow/internal/platform/shared"
+	"github.com/goatkit/goatflow/internal/platform/template"
 	"github.com/goatkit/goatflow/internal/platform/yamlmgmt"
 	"github.com/goatkit/goatflow/internal/repository"
-	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/runner/tasks"
 	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/services/scheduler"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/ticketnumber"
 )
 
@@ -366,6 +366,18 @@ func main() {
 	if valkeyCache != nil {
 		pluginHostOpts = append(pluginHostOpts, plugin.WithCache(valkeyCache))
 	}
+	// Thumbnail service — server-side image thumbnails via libvips (govips v2.16.0).
+	// govips is initialised above (vips.Startup) and the Dockerfile ships vips-dev vips-heif.
+	// No Redis cache here: the wired closure calls GenerateThumbnail directly; the
+	// GetOrCreateThumbnail cache path is unused until a caller adopts it.
+	thumbSvc := service.NewThumbnailService(nil)
+	pluginHostOpts = append(pluginHostOpts, plugin.WithThumbnailService(
+		plugin.NewThumbnailGenerator(func(data []byte, contentType string, maxWidth, maxHeight int) ([]byte, string, error) {
+			return thumbSvc.GenerateThumbnail(data, contentType, service.ThumbnailOptions{
+				Width: maxWidth, Height: maxHeight, Quality: 85, Format: "jpeg",
+			})
+		}),
+	))
 	pluginHost := plugin.NewProdHostAPI(pluginHostOpts...)
 	sseBroker := plugin.NewSSEBroker()
 	pluginHost.SSEBroker = sseBroker

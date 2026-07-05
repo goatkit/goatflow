@@ -314,7 +314,7 @@ func TestSecurityQueueFilterBypass(t *testing.T) {
 
 		router.Use(func(c *gin.Context) {
 			c.Set("user_id", 1)
-			c.Set("is_queue_admin", true) // Admin user
+			c.Set("is_queue_admin", true)           // Admin user
 			c.Set("accessible_queue_ids", []uint{}) // Empty - admin doesn't need this
 			c.Next()
 		})

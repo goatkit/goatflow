@@ -11,8 +11,8 @@ const GinContextKey = "active_org_id"
 
 // Middleware resolves the active organisation for each request and sets it
 // in both the gin context and the request context. The org is resolved from:
-//   1. Session cookie (active_org_id) — set by the org switcher
-//   2. User's default org — if no cookie set
+//  1. Session cookie (active_org_id) — set by the org switcher
+//  2. User's default org — if no cookie set
 //
 // In single-org mode (no organisations in DB), this is a no-op.
 func Middleware(repo *Repository) gin.HandlerFunc {

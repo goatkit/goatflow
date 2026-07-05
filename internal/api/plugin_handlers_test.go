@@ -612,6 +612,32 @@ func TestHandlePluginUploadNoFile(t *testing.T) {
 		t.Errorf("expected 400 for missing file, got %d", w.Code)
 	}
 }
+func TestHandlePluginUninstall(t *testing.T) {
+	tmpDir := t.TempDir()
+	// Create a test plugin subdirectory
+	pluginPath := filepath.Join(tmpDir, "test-uninstall")
+	os.MkdirAll(pluginPath, 0755)
+	SetPluginDir(tmpDir)
+	r, _ := setupPluginTestRouter(t)
+	req := httptest.NewRequest("DELETE", "/api/v1/plugins/test-uninstall", nil)
+	addAuthHeader(req)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var result map[string]any
+	json.Unmarshal(w.Body.Bytes(), &result)
+	if result["message"] != "plugin uninstalled" {
+		t.Errorf("expected message 'plugin uninstalled', got %v", result["message"])
+	}
+	// Verify directory was removed
+	if _, err := os.Stat(pluginPath); !os.IsNotExist(err) {
+		t.Error("expected plugin directory to be removed after uninstall")
+	}
+}
 
 // --- Session-based auth tests ---
 
@@ -657,10 +683,15 @@ var pluginAdminPathMarkers = []string{
 	"/upload",
 	"/logs",
 	"/reset-crashloop",
+	"/marketplace",
 	"/plugin-uis",
 }
 
-func isPluginAdminPath(path string) bool {
+func isPluginAdminPath(method, path string) bool {
+	// DELETE /api/v1/plugins/:name is admin-only (uninstall)
+	if method == "DELETE" && strings.HasPrefix(path, "/api/v1/plugins/") {
+		return true
+	}
 	for _, marker := range pluginAdminPathMarkers {
 		if strings.Contains(path, marker) {
 			return true
@@ -676,7 +707,7 @@ func pluginAdminRoutes() []gin.RouteInfo {
 
 	var adminRoutes []gin.RouteInfo
 	for _, route := range r.Routes() {
-		if isPluginAdminPath(route.Path) {
+		if isPluginAdminPath(route.Method, route.Path) {
 			adminRoutes = append(adminRoutes, route)
 		}
 	}
@@ -691,7 +722,7 @@ func pluginAuthRoutes() []gin.RouteInfo {
 
 	var authRoutes []gin.RouteInfo
 	for _, route := range r.Routes() {
-		if !isPluginAdminPath(route.Path) {
+		if !isPluginAdminPath(route.Method, route.Path) {
 			authRoutes = append(authRoutes, route)
 		}
 	}

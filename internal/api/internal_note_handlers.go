@@ -20,7 +20,7 @@ type InternalNoteHandlers struct {
 // getAuthUserInfo extracts user info from the gin context (set by auth middleware).
 // Returns userID, userName, userEmail with sensible defaults if not authenticated.
 func getAuthUserInfo(c *gin.Context) (uint, string, string) {
-	userID := uint(1)   // Default system user
+	userID := uint(1) // Default system user
 	userName := "System"
 	userEmail := "system@localhost"
 

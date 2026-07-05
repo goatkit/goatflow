@@ -17,10 +17,10 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/models"
-	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/routing"
+	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/service"
 )
 
@@ -68,13 +68,18 @@ func handleAdminGroups(c *gin.Context) {
 		}
 	}
 
-	// TODO: Implement group filtering using searchTerm and statusTerm from cookies
-	// Currently, filters are saved but not applied when loading from cookies
-	// if searchTerm == "" && statusTerm == "" {
-	//     if cookie, err := c.Request.Cookie("group_filters"); err == nil {
-	//         // restore searchTerm and statusTerm from cookie
-	//     }
-	// }
+	// Restore filters from cookie if no query params provided
+	if searchTerm == "" && statusTerm == "" {
+		if cookie, err := c.Cookie("group_filters"); err == nil {
+			if decoded, err := url.QueryUnescape(cookie); err == nil {
+				var state map[string]string
+				if err := json.Unmarshal([]byte(decoded), &state); err == nil {
+					searchTerm = state["search"]
+					statusTerm = state["status"]
+				}
+			}
+		}
+	}
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {

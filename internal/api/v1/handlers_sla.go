@@ -48,10 +48,10 @@ func (router *APIRouter) handleGetTicketSLA(c *gin.Context) {
 		c.JSON(http.StatusOK, APIResponse{
 			Success: true,
 			Data: gin.H{
-				"ticket_id":      ticketID,
-				"sla_status":     "not_applicable",
-				"reason":         "Ticket is closed",
-				"sla_active":     false,
+				"ticket_id":  ticketID,
+				"sla_status": "not_applicable",
+				"reason":     "Ticket is closed",
+				"sla_active": false,
 			},
 		})
 		return
@@ -60,11 +60,11 @@ func (router *APIRouter) handleGetTicketSLA(c *gin.Context) {
 	// Calculate SLA based on priority and creation time
 	// Default SLA times by priority (in hours)
 	slaHours := map[int]int{
-		1: 1,   // Critical: 1 hour
-		2: 4,   // High: 4 hours
-		3: 8,   // Normal: 8 hours
-		4: 24,  // Low: 24 hours
-		5: 72,  // Very low: 72 hours
+		1: 1,  // Critical: 1 hour
+		2: 4,  // High: 4 hours
+		3: 8,  // Normal: 8 hours
+		4: 24, // Low: 24 hours
+		5: 72, // Very low: 72 hours
 	}
 
 	targetHours, ok := slaHours[ticket.TicketPriorityID]
@@ -75,7 +75,7 @@ func (router *APIRouter) handleGetTicketSLA(c *gin.Context) {
 	deadline := ticket.CreateTime.Add(time.Duration(targetHours) * time.Hour)
 	now := time.Now()
 	timeRemaining := deadline.Sub(now)
-	
+
 	// Calculate percentage used
 	totalDuration := time.Duration(targetHours) * time.Hour
 	elapsed := now.Sub(ticket.CreateTime)

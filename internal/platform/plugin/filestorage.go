@@ -137,6 +137,17 @@ func (h *ProdHostAPI) ListFiles(ctx context.Context, prefix string) ([]pkgplugin
 	return initBackend().List(path)
 }
 
+// GenerateThumbnail generates a thumbnail from image data using the
+// platform's ThumbnailService (libvips via govips). For non-image types,
+// returns a placeholder icon. The plugin does not need libvips — the
+// host handles all image processing.
+func (h *ProdHostAPI) GenerateThumbnail(ctx context.Context, data []byte, contentType string, maxWidth, maxHeight int) ([]byte, string, error) {
+	if h.thumbnailService == nil {
+		return nil, "", fmt.Errorf("thumbnail service not configured")
+	}
+	return h.thumbnailService.GenerateThumbnail(data, contentType, maxWidth, maxHeight)
+}
+
 // ---- Size limit enforcement ----
 
 // maxPluginStorageBytes is the default per-plugin storage limit (500MB).

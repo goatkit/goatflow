@@ -37,9 +37,9 @@ func TestValidRoles(t *testing.T) {
 
 func TestOrganisation_IsActive(t *testing.T) {
 	tests := []struct {
-		name    string
-		org     Organisation
-		want    bool
+		name string
+		org  Organisation
+		want bool
 	}{
 		{"active and valid", Organisation{ValidID: 1, Status: StatusActive}, true},
 		{"suspended", Organisation{ValidID: 1, Status: StatusSuspended}, false},

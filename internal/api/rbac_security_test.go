@@ -456,7 +456,7 @@ func TestDashboardStats_OnlyCountsAccessibleTickets(t *testing.T) {
 
 		// Should only count tickets in Alpha + Both queues
 		expectedMax := len(fixtures.TicketsAlpha) + len(fixtures.TicketsBoth)
-		
+
 		if totalTickets > expectedMax {
 			// Check if Beta queue tickets are being counted
 			byQueue := resp["by_queue"].([]interface{})

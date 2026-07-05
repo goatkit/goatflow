@@ -75,14 +75,14 @@ func (o *Organisation) IsActive() bool {
 
 // UserOrganisation represents a row in gk_user_organisation.
 type UserOrganisation struct {
-	ID             int64     `json:"id" db:"id"`
-	OrgID          int64     `json:"org_id" db:"org_id"`
-	UserID         *int      `json:"user_id,omitempty" db:"user_id"`
-	CustomerLogin  *string   `json:"customer_login,omitempty" db:"customer_login"`
-	Role           string    `json:"role" db:"role"`
-	IsDefault      bool      `json:"is_default" db:"is_default"`
-	CreateTime     time.Time `json:"create_time" db:"create_time"`
-	CreateBy       int       `json:"create_by" db:"create_by"`
+	ID            int64     `json:"id" db:"id"`
+	OrgID         int64     `json:"org_id" db:"org_id"`
+	UserID        *int      `json:"user_id,omitempty" db:"user_id"`
+	CustomerLogin *string   `json:"customer_login,omitempty" db:"customer_login"`
+	Role          string    `json:"role" db:"role"`
+	IsDefault     bool      `json:"is_default" db:"is_default"`
+	CreateTime    time.Time `json:"create_time" db:"create_time"`
+	CreateBy      int       `json:"create_by" db:"create_by"`
 }
 
 // SysconfigOrg represents a per-org sysconfig override in sysconfig_org.

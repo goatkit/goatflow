@@ -220,12 +220,12 @@ Already implemented in GoatFlow 0.7.0/0.8.0:
 - `gk` CLI with `init`, `build`, `sign` commands
 
 Needed for marketplace:
-- [ ] `gk install` command — download from GitHub Release
-- [ ] `gk update` command — version comparison and update
-- [ ] `gk search` command — index search
-- [ ] `marketplace.json` schema and initial index
-- [ ] Admin UI marketplace tab
-- [ ] GitHub Actions template for plugin publishing
+- [x] `gk install` command — download from GitHub Release
+- [x] `gk update` command — version comparison and update
+- [x] `gk search` command — index search
+- [x] `marketplace.json` schema and initial index
+- [ ] Admin UI marketplace tab (deferred — CLI-first)
+- [x] GitHub Actions template for plugin publishing
 
 ## Hosting Costs
 

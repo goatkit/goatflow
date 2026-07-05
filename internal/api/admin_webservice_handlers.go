@@ -9,8 +9,8 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/service/genericinterface"
 )
 
@@ -90,12 +90,12 @@ func handleAdminWebservices(c *gin.Context) {
 
 	// Render the template
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/webservices.pongo2", pongo2.Context{
-		"Title":        "Web Services",
-		"Webservices":  filtered,
-		"SearchQuery":  searchQuery,
-		"ValidFilter":  validFilter,
-		"User":         getUserMapForTemplate(c),
-		"ActivePage":   "admin",
+		"Title":       "Web Services",
+		"Webservices": filtered,
+		"SearchQuery": searchQuery,
+		"ValidFilter": validFilter,
+		"User":        getUserMapForTemplate(c),
+		"ActivePage":  "admin",
 	})
 }
 
@@ -103,11 +103,11 @@ func handleAdminWebservices(c *gin.Context) {
 func handleAdminWebserviceNew(c *gin.Context) {
 	// Render the form template
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/webservice_form.pongo2", pongo2.Context{
-		"Title":       "New Web Service",
-		"IsNew":       true,
-		"Webservice":  nil,
-		"User":        getUserMapForTemplate(c),
-		"ActivePage":  "admin",
+		"Title":      "New Web Service",
+		"IsNew":      true,
+		"Webservice": nil,
+		"User":       getUserMapForTemplate(c),
+		"ActivePage": "admin",
 	})
 }
 
@@ -138,11 +138,11 @@ func handleAdminWebserviceEdit(c *gin.Context) {
 
 	// Render the form template
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/webservice_form.pongo2", pongo2.Context{
-		"Title":       "Edit Web Service",
-		"IsNew":       false,
-		"Webservice":  ws,
-		"User":        getUserMapForTemplate(c),
-		"ActivePage":  "admin",
+		"Title":      "Edit Web Service",
+		"IsNew":      false,
+		"Webservice": ws,
+		"User":       getUserMapForTemplate(c),
+		"ActivePage": "admin",
 	})
 }
 
@@ -558,11 +558,11 @@ func handleAdminWebserviceHistory(c *gin.Context) {
 
 	// Render the template
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/webservice_history.pongo2", pongo2.Context{
-		"Title":       "Web Service History",
-		"Webservice":  ws,
-		"History":     history,
-		"User":        getUserMapForTemplate(c),
-		"ActivePage":  "admin",
+		"Title":      "Web Service History",
+		"Webservice": ws,
+		"History":    history,
+		"User":       getUserMapForTemplate(c),
+		"ActivePage": "admin",
 	})
 }
 

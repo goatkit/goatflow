@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // APITokenRepository handles database operations for API tokens

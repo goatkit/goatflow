@@ -778,6 +778,8 @@ func (m *mockLazyLoader) Discovered() []string {
 	return m.discovered
 }
 
+func (m *mockLazyLoader) Forget(name string) {}
+
 func TestPluginManagerWithLazyLoader(t *testing.T) {
 	ctx := context.Background()
 	host := &mockHostAPI{}
@@ -866,4 +868,8 @@ func TestPluginManagerSkipsOrgInjection(t *testing.T) {
 			t.Error("unknown plugin should return false")
 		}
 	})
+}
+
+func (m *mockHostAPI) GenerateThumbnail(_ context.Context, _ []byte, _ string, _, _ int) ([]byte, string, error) {
+	return nil, "", fmt.Errorf("not implemented")
 }

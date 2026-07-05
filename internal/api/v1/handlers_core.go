@@ -344,13 +344,13 @@ func (router *APIRouter) handleGetUserSessions(c *gin.Context) {
 			var ip, agent, created, lastRequest *string
 			if rows.Scan(&sessionID, &ip, &agent, &created, &lastRequest) == nil {
 				sessions = append(sessions, gin.H{
-					"id":          sessionID,
-					"user_id":     userID,
-					"ip_address":  ip,
-					"user_agent":  agent,
-					"created_at":  created,
-					"last_seen":   lastRequest,
-					"current":     sessionID == currentSessionID,
+					"id":         sessionID,
+					"user_id":    userID,
+					"ip_address": ip,
+					"user_agent": agent,
+					"created_at": created,
+					"last_seen":  lastRequest,
+					"current":    sessionID == currentSessionID,
 				})
 			}
 		}

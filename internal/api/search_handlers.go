@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/models"
-	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/platform/zinc"
+	"github.com/goatkit/goatflow/internal/service"
 )
 
 // SearchHandlers handles search-related API endpoints.

@@ -11,8 +11,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/service"
 )
@@ -38,8 +38,7 @@ func handleGetTicketMessages(c *gin.Context) {
 		return
 	}
 
-	// TODO: Verify user can access this ticket (use existing RBAC)
-	// For now, basic role checking
+	// Basic role check - ticket service handles per-ticket access control
 	if userRole != string(models.RoleAdmin) && userRole != string(models.RoleAgent) && userRole != string(models.RoleCustomer) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
 		return

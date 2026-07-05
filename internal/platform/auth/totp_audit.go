@@ -22,16 +22,16 @@ type TOTPAuditEvent struct {
 
 // TOTP audit event types
 const (
-	AuditTOTPSetupStarted    = "2FA_SETUP_STARTED"
-	AuditTOTPSetupCompleted  = "2FA_SETUP_COMPLETED"
-	AuditTOTPSetupFailed     = "2FA_SETUP_FAILED"
-	AuditTOTPDisabled        = "2FA_DISABLED"
-	AuditTOTPVerifySuccess   = "2FA_VERIFY_SUCCESS"
-	AuditTOTPVerifyFailed    = "2FA_VERIFY_FAILED"
-	AuditTOTPSessionCreated  = "2FA_SESSION_CREATED"
-	AuditTOTPSessionExpired  = "2FA_SESSION_EXPIRED"
-	AuditTOTPSessionLocked   = "2FA_SESSION_LOCKED"
-	AuditTOTPRecoveryUsed    = "2FA_RECOVERY_CODE_USED"
+	AuditTOTPSetupStarted   = "2FA_SETUP_STARTED"
+	AuditTOTPSetupCompleted = "2FA_SETUP_COMPLETED"
+	AuditTOTPSetupFailed    = "2FA_SETUP_FAILED"
+	AuditTOTPDisabled       = "2FA_DISABLED"
+	AuditTOTPVerifySuccess  = "2FA_VERIFY_SUCCESS"
+	AuditTOTPVerifyFailed   = "2FA_VERIFY_FAILED"
+	AuditTOTPSessionCreated = "2FA_SESSION_CREATED"
+	AuditTOTPSessionExpired = "2FA_SESSION_EXPIRED"
+	AuditTOTPSessionLocked  = "2FA_SESSION_LOCKED"
+	AuditTOTPRecoveryUsed   = "2FA_RECOVERY_CODE_USED"
 )
 
 // LogTOTPAuditEvent logs a 2FA security event.

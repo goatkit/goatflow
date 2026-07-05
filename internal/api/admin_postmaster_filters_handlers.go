@@ -230,10 +230,10 @@ func HandleAdminPostmasterFilterGet(c *gin.Context) {
 
 // PostmasterFilterInput represents the JSON input for creating/updating filters.
 type PostmasterFilterInput struct {
-	Name    string                    `json:"name" binding:"required"`
-	Stop    bool                      `json:"stop"`
-	Matches []repository.FilterMatch  `json:"matches"`
-	Sets    []repository.FilterSet    `json:"sets"`
+	Name    string                   `json:"name" binding:"required"`
+	Stop    bool                     `json:"stop"`
+	Matches []repository.FilterMatch `json:"matches"`
+	Sets    []repository.FilterSet   `json:"sets"`
 }
 
 // handleCreatePostmasterFilter creates a new postmaster filter.

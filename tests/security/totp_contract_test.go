@@ -303,8 +303,8 @@ func TestTOTP_CustomerVerifyUsesCustomerCookies(t *testing.T) {
 	// Using AGENT cookies should fail
 	req := httptest.NewRequest("POST", "/api/auth/customer/2fa/verify", jsonBody(map[string]string{"code": "123456"}))
 	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "2fa_pending", Value: "agent_token"})       // Wrong cookie!
-	req.AddCookie(&http.Cookie{Name: "2fa_user_id", Value: "123"})               // Wrong cookie!
+	req.AddCookie(&http.Cookie{Name: "2fa_pending", Value: "agent_token"}) // Wrong cookie!
+	req.AddCookie(&http.Cookie{Name: "2fa_user_id", Value: "123"})         // Wrong cookie!
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
@@ -364,8 +364,8 @@ func TestTOTP_CodeValidationConstantTime(t *testing.T) {
 
 func TestTOTP_CodeInputSanitization(t *testing.T) {
 	testCases := []struct {
-		name        string
-		input       string
+		name         string
+		input        string
 		shouldReject bool
 	}{
 		{"normal 6 digit", "123456", false},
@@ -638,12 +638,12 @@ func TestCritical_2FAEnabled_NoTokenWithoutVerification(t *testing.T) {
 
 	// Simulate user database
 	users := map[string]struct {
-		id         int
-		password   string
+		id          int
+		password    string
 		totpEnabled bool
 	}{
-		"admin":    {id: 1, password: "secret", totpEnabled: true},
-		"noTOTP":   {id: 2, password: "secret", totpEnabled: false},
+		"admin":  {id: 1, password: "secret", totpEnabled: true},
+		"noTOTP": {id: 2, password: "secret", totpEnabled: false},
 	}
 
 	r.POST("/api/auth/login", func(c *gin.Context) {
@@ -1194,12 +1194,12 @@ func TestVuln_V8_AuditEventsExist(t *testing.T) {
 func TestVuln_V8_AuditLogFormat(t *testing.T) {
 	// Verify audit log contains required fields
 	requiredFields := []string{
-		"event",      // Event type
-		"status",     // SUCCESS/FAILURE
-		"user_type",  // agent/customer
-		"user",       // User identifier
-		"ip",         // Client IP
-		"details",    // Additional details
+		"event",     // Event type
+		"status",    // SUCCESS/FAILURE
+		"user_type", // agent/customer
+		"user",      // User identifier
+		"ip",        // Client IP
+		"details",   // Additional details
 	}
 
 	// Example log format: [SECURITY] [2FA] event=2FA_VERIFY_SUCCESS status=SUCCESS user_type=agent user=admin ip=192.168.1.1 details="2FA verification successful"

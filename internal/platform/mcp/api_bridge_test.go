@@ -347,9 +347,9 @@ type mockPluginCaller struct {
 	response string
 	err      error
 	// Captured call args
-	lastPlugin  string
-	lastFn      string
-	lastArgs    []byte
+	lastPlugin string
+	lastFn     string
+	lastArgs   []byte
 }
 
 func (m *mockPluginCaller) Call(ctx context.Context, pluginName, fn string, args []byte) ([]byte, error) {

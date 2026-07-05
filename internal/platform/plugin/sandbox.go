@@ -736,6 +736,12 @@ func (s *SandboxedHostAPI) ListFiles(ctx context.Context, prefix string) ([]File
 	return s.inner.ListFiles(ctx, prefix)
 }
 
+func (s *SandboxedHostAPI) GenerateThumbnail(ctx context.Context, data []byte, contentType string, maxWidth, maxHeight int) ([]byte, string, error) {
+	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
+	return s.inner.GenerateThumbnail(ctx, data, contentType, maxWidth, maxHeight)
+}
+
 // fieldPrefix returns the plugin name sanitised for use as a custom field
 // prefix. Hyphens are replaced with underscores so the result passes the
 // field-name regex (^[a-z][a-z0-9_]*$). Called at both registration time

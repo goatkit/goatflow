@@ -175,6 +175,7 @@ func TestQueueAPI(t *testing.T) {
 			router := gin.New()
 			router.Use(func(c *gin.Context) {
 				c.Set("user_id", uint(1))
+				c.Set("user_role", "Admin")
 				c.Next()
 			})
 			router.POST("/api/v1/queues", HandleCreateQueueAPI)
@@ -197,6 +198,7 @@ func TestQueueAPI(t *testing.T) {
 			router := gin.New()
 			router.Use(func(c *gin.Context) {
 				c.Set("user_id", uint(1))
+				c.Set("user_role", "Admin")
 				c.Next()
 			})
 			router.POST("/api/v1/queues", HandleCreateQueueAPI)
@@ -231,6 +233,7 @@ func TestQueueAPI(t *testing.T) {
 			router := gin.New()
 			router.Use(func(c *gin.Context) {
 				c.Set("user_id", uint(1))
+				c.Set("user_role", "Admin")
 				c.Next()
 			})
 			router.POST("/api/v1/queues", HandleCreateQueueAPI)

@@ -62,13 +62,39 @@ var PluginLanguageKey = pluginLangKeyType{}
 // ProdHostAPI is the production implementation of HostAPI.
 // It wires plugins to real database, cache, email, and other services.
 type ProdHostAPI struct {
-	databases     map[string]*sql.DB // Named database connections
-	defaultDB     string             // Name of the default database
-	cache         *cache.RedisCache
-	httpClient    *http.Client
-	logger        *slog.Logger
-	PluginManager *Manager   // For plugin-to-plugin calls
-	SSEBroker     *SSEBroker // For publishing SSE events to browsers
+	databases        map[string]*sql.DB // Named database connections
+	defaultDB        string             // Name of the default database
+	cache            *cache.RedisCache
+	httpClient       *http.Client
+	logger           *slog.Logger
+	PluginManager    *Manager           // For plugin-to-plugin calls
+	SSEBroker        *SSEBroker         // For publishing SSE events to browsers
+	thumbnailService ThumbnailGenerator // For image thumbnail generation
+}
+
+// ThumbnailGenerator generates thumbnails from image data.
+// Implemented by service.ThumbnailService (via an adapter) so the platform
+// layer doesn't import internal/service directly.
+type ThumbnailGenerator interface {
+	GenerateThumbnail(data []byte, contentType string, maxWidth, maxHeight int) ([]byte, string, error)
+}
+
+// thumbnailServiceAdapter wraps service.ThumbnailService to satisfy
+// ThumbnailGenerator. Defined here so the platform layer stays decoupled;
+// the adapter is constructed in main.go where service is imported.
+type ThumbnailServiceAdapter struct {
+	genFunc func(data []byte, contentType string, maxWidth, maxHeight int) ([]byte, string, error)
+}
+
+// NewThumbnailGenerator creates a ThumbnailGenerator from a function.
+// This lets main.go pass a closure that calls service.ThumbnailService
+// without this package importing internal/service.
+func NewThumbnailGenerator(fn func(data []byte, contentType string, maxWidth, maxHeight int) ([]byte, string, error)) ThumbnailGenerator {
+	return &ThumbnailServiceAdapter{genFunc: fn}
+}
+
+func (a *ThumbnailServiceAdapter) GenerateThumbnail(data []byte, contentType string, maxWidth, maxHeight int) ([]byte, string, error) {
+	return a.genFunc(data, contentType, maxWidth, maxHeight)
 }
 
 // ProdHostAPIOption is a functional option for ProdHostAPI.
@@ -113,6 +139,13 @@ func WithLogger(logger *slog.Logger) ProdHostAPIOption {
 func WithPluginManager(mgr *Manager) ProdHostAPIOption {
 	return func(h *ProdHostAPI) {
 		h.PluginManager = mgr
+	}
+}
+
+// WithThumbnailService sets the thumbnail generation service.
+func WithThumbnailService(ts ThumbnailGenerator) ProdHostAPIOption {
+	return func(h *ProdHostAPI) {
+		h.thumbnailService = ts
 	}
 }
 

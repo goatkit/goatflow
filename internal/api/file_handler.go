@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/goatkit/goatflow/internal/platform/database"
 
 	"github.com/goatkit/goatflow/internal/service"
 )
@@ -64,10 +65,41 @@ func handleServeFile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file path"})
 		return
 	}
+	// Check authentication
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 
-	// TODO: Add authorization check here
-	// ticketID := pathParts[1]
-	// Check if user has access to this ticket
+	// Extract ticket ID from path and verify access
+	ticketID := pathParts[1]
+	if db, err := database.GetDB(); err == nil && db != nil {
+		// Verify ticket exists and user has access
+		var count int
+		accessQuery := database.ConvertPlaceholders(`
+			SELECT COUNT(*) FROM ticket
+			WHERE id = ? AND valid_id = 1
+		`)
+		if err := db.QueryRow(accessQuery, ticketID).Scan(&count); err != nil || count == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "ticket not found"})
+			return
+		}
+
+		// Check user has access (admin/agent always, customer only if assigned)
+		userRole, _ := c.Get("user_role")
+		if userRole == "Customer" {
+			var customerCount int
+			customerQuery := database.ConvertPlaceholders(`
+				SELECT COUNT(*) FROM ticket
+				WHERE id = ? AND customer_user_id = ?
+			`)
+			if err := db.QueryRow(customerQuery, ticketID, userID).Scan(&customerCount); err != nil || customerCount == 0 {
+				c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+				return
+			}
+		}
+	}
 
 	// Initialize storage service
 	storagePath := os.Getenv("STORAGE_LOCAL_PATH")
@@ -81,12 +113,12 @@ func handleServeFile(c *gin.Context) {
 	}
 
 	// Check if file exists
-	exists, err := storageService.Exists(c.Request.Context(), filePath)
+	fileExists, err := storageService.Exists(c.Request.Context(), filePath)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check file"})
 		return
 	}
-	if !exists {
+	if !fileExists {
 		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
 		return
 	}

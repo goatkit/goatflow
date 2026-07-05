@@ -24,16 +24,16 @@ type fieldCache struct {
 }
 
 type cacheEntry struct {
-	data    []AutocompleteResult
-	expiry  time.Time
+	data   []AutocompleteResult
+	expiry time.Time
 }
 
 // AutocompleteResult represents a single autocomplete suggestion.
 // JSON field names match OTRS's expected format for compatibility.
 type AutocompleteResult struct {
-	StoredValue  string                 `json:"StoredValue"`            // The stored value (e.g., ID) - OTRS compatible
-	DisplayValue string                 `json:"DisplayValue"`           // The displayed text - OTRS compatible
-	Data         map[string]interface{} `json:"Data,omitempty"`         // Additional data for autofill
+	StoredValue  string                 `json:"StoredValue"`    // The stored value (e.g., ID) - OTRS compatible
+	DisplayValue string                 `json:"DisplayValue"`   // The displayed text - OTRS compatible
+	Data         map[string]interface{} `json:"Data,omitempty"` // Additional data for autofill
 	// Legacy aliases for frontend compatibility (same values, different keys)
 	Value string `json:"value,omitempty"` // Alias for StoredValue
 	Label string `json:"label,omitempty"` // Alias for DisplayValue

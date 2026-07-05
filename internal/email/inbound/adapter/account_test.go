@@ -3,8 +3,8 @@ package adapter
 import (
 	"testing"
 
-	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
 )
 
 func TestAccountFromModelDefaults(t *testing.T) {

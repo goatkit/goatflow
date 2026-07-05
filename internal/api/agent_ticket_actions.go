@@ -14,14 +14,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/platform/config"
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/history"
 	"github.com/goatkit/goatflow/internal/mailqueue"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/config"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/notifications"
-	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/platform/utils"
+	"github.com/goatkit/goatflow/internal/repository"
 )
 
 // noteNotificationParams holds parameters for customer note email notifications.

@@ -156,3 +156,7 @@ func (h *DefaultHostAPI) DeleteFile(ctx context.Context, key string) error {
 func (h *DefaultHostAPI) ListFiles(ctx context.Context, prefix string) ([]FileInfo, error) {
 	return nil, fmt.Errorf("file storage not available in default host")
 }
+
+func (m *DefaultHostAPI) GenerateThumbnail(_ context.Context, _ []byte, _ string, _, _ int) ([]byte, string, error) {
+	return nil, "", fmt.Errorf("thumbnail generation not available in default host")
+}

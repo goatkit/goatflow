@@ -15,8 +15,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/platform/routing"
+	"github.com/goatkit/goatflow/internal/repository"
 )
 
 func init() {
@@ -435,14 +435,14 @@ func handleAdminDashboard(c *gin.Context) {
 	recentActivity := getRecentAdminActivity(db)
 
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/dashboard.pongo2", pongo2.Context{
-		"UserCount":       userCount,
-		"GroupCount":      groupCount,
-		"ActiveTickets":   activeTickets,
-		"QueueCount":      queueCount,
-		"TicketActivity":  ticketActivity,
-		"RecentActivity":  recentActivity,
-		"User":            getUserMapForTemplate(c),
-		"ActivePage":      "admin",
+		"UserCount":      userCount,
+		"GroupCount":     groupCount,
+		"ActiveTickets":  activeTickets,
+		"QueueCount":     queueCount,
+		"TicketActivity": ticketActivity,
+		"RecentActivity": recentActivity,
+		"User":           getUserMapForTemplate(c),
+		"ActivePage":     "admin",
 	})
 }
 
@@ -524,13 +524,13 @@ func timeAgo(t time.Time) string {
 func getTicketActivityFromCache(c *gin.Context, db *sql.DB) map[string]int {
 	// Default values
 	metrics := map[string]int{
-		"closed_day":   0,
-		"closed_week":  0,
-		"closed_month": 0,
-		"created_day":  0,
-		"created_week": 0,
+		"closed_day":    0,
+		"closed_week":   0,
+		"closed_month":  0,
+		"created_day":   0,
+		"created_week":  0,
 		"created_month": 0,
-		"open":         0,
+		"open":          0,
 	}
 
 	// Try cache first

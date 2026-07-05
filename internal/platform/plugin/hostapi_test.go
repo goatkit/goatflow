@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 )
 
@@ -429,4 +430,7 @@ func (m *testHostAPI) GetFile(ctx context.Context, key string) ([]byte, map[stri
 func (m *testHostAPI) DeleteFile(ctx context.Context, key string) error { return nil }
 func (m *testHostAPI) ListFiles(ctx context.Context, prefix string) ([]FileInfo, error) {
 	return nil, nil
+}
+func (m *testHostAPI) GenerateThumbnail(_ context.Context, _ []byte, _ string, _, _ int) ([]byte, string, error) {
+	return nil, "", fmt.Errorf("not implemented")
 }

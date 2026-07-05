@@ -334,12 +334,12 @@ func TestHandleKillAllSessionsWithoutDB(t *testing.T) {
 func TestSessionDataKeys(t *testing.T) {
 	// Verify the session data key constants are correct
 	expectedKeys := map[string]string{
-		"UserID":             models.SessionKeyUserID,
-		"UserLogin":          models.SessionKeyUserLogin,
-		"UserType":           models.SessionKeyUserType,
-		"CreateTime":         models.SessionKeyCreateTime,
-		"LastRequest":        models.SessionKeyLastRequest,
-		"UserRemoteAddr":     models.SessionKeyUserRemoteAddr,
+		"UserID":              models.SessionKeyUserID,
+		"UserLogin":           models.SessionKeyUserLogin,
+		"UserType":            models.SessionKeyUserType,
+		"CreateTime":          models.SessionKeyCreateTime,
+		"LastRequest":         models.SessionKeyLastRequest,
+		"UserRemoteAddr":      models.SessionKeyUserRemoteAddr,
 		"UserRemoteUserAgent": models.SessionKeyUserRemoteAgent,
 	}
 

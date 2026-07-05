@@ -51,10 +51,10 @@ type MCPTestFixtures struct {
 	CustomerNovaBank string
 
 	// Tickets
-	TicketAcmeSupport      int64
-	TicketNovaBankSupport  int64
-	TicketAcmeBilling      int64
-	TicketNovaBankBilling  int64
+	TicketAcmeSupport     int64
+	TicketNovaBankSupport int64
+	TicketAcmeBilling     int64
+	TicketNovaBankBilling int64
 }
 
 var (
@@ -234,7 +234,7 @@ func (f *MCPTestFixtures) setup() error {
 		perm    string
 	}{
 		// Admin gets admin group membership + rw on all test queues
-		{f.AgentAdmin, f.GroupAdmin, "rw"},     // Admin group membership!
+		{f.AgentAdmin, f.GroupAdmin, "rw"}, // Admin group membership!
 		{f.AgentAdmin, f.GroupSupport, "rw"},
 		{f.AgentAdmin, f.GroupBilling, "rw"},
 
@@ -616,7 +616,7 @@ func TestSearchTickets_AgentQueueAccess(t *testing.T) {
 }
 
 // =============================================================================
-// CUSTOMER COMPANY ISOLATION TESTS  
+// CUSTOMER COMPANY ISOLATION TESTS
 // =============================================================================
 
 // Note: These tests require MCP to support customer tokens.
@@ -760,19 +760,19 @@ func TestCreateTicket_QueuePermissions(t *testing.T) {
 
 		require.NoError(t, err)
 		require.False(t, result.IsError, "Admin should create ticket in Support queue, got: %s", getResultText(result))
-		
+
 		// Verify ticket was actually created with correct values
 		text := getResultText(result)
 		assert.Contains(t, text, "ticket_id")
 		assert.Contains(t, text, "ticket_number")
 		assert.Contains(t, text, "article_id")
-		
+
 		// Parse result to get ticket ID and verify in DB
 		var resultMap map[string]any
 		require.NoError(t, json.Unmarshal([]byte(text), &resultMap), "failed to parse result JSON")
 		require.Contains(t, resultMap, "ticket_id", "result should contain ticket_id")
 		ticketID := int64(resultMap["ticket_id"].(float64))
-		
+
 		// Verify ticket exists with correct title and queue
 		var title string
 		var queueID int
@@ -782,7 +782,7 @@ func TestCreateTicket_QueuePermissions(t *testing.T) {
 		require.NoError(t, err, "Ticket should exist in database")
 		assert.Equal(t, "Test ticket from MCP", title)
 		assert.Equal(t, fixtures.QueueSupport, queueID)
-		
+
 		// Verify article was created with correct body
 		articleID := int64(resultMap["article_id"].(float64))
 		var body string
@@ -809,7 +809,7 @@ func TestCreateTicket_QueuePermissions(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.IsError, "Support agent should NOT create in Billing queue")
 		assert.Contains(t, getResultText(result), "no permission")
-		
+
 		// Verify ticket was NOT created
 		var countAfter int
 		fixtures.db.QueryRow("SELECT COUNT(*) FROM ticket WHERE title = 'Should fail - no permission'").Scan(&countAfter)
@@ -850,7 +850,7 @@ func TestUpdateTicket_Permissions(t *testing.T) {
 
 	t.Run("agent can update ticket title and verify change", func(t *testing.T) {
 		server := NewServer(fixtures.db, fixtures.AgentSupport, "mcptest-agent-support")
-		
+
 		// Get original title
 		var originalTitle string
 		fixtures.db.QueryRow(
@@ -866,7 +866,7 @@ func TestUpdateTicket_Permissions(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, result.IsError, "Support agent should update ticket in Support queue")
 		assert.Contains(t, getResultText(result), "updated")
-		
+
 		// Verify title was actually changed in database
 		var updatedTitle string
 		err = fixtures.db.QueryRow(
@@ -879,7 +879,7 @@ func TestUpdateTicket_Permissions(t *testing.T) {
 
 	t.Run("agent cannot update ticket in inaccessible queue", func(t *testing.T) {
 		server := NewServer(fixtures.db, fixtures.AgentSupport, "mcptest-agent-support")
-		
+
 		// Get original title to verify it doesn't change
 		var originalTitle string
 		fixtures.db.QueryRow(
@@ -894,7 +894,7 @@ func TestUpdateTicket_Permissions(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.IsError, "Support agent should NOT update Billing ticket")
 		assert.Contains(t, getResultText(result), "not found") // Security: 404 not 403
-		
+
 		// Verify title was NOT changed
 		var unchangedTitle string
 		fixtures.db.QueryRow(
@@ -905,7 +905,7 @@ func TestUpdateTicket_Permissions(t *testing.T) {
 
 	t.Run("agent cannot move ticket to queue without move_into permission", func(t *testing.T) {
 		server := NewServer(fixtures.db, fixtures.AgentSupport, "mcptest-agent-support")
-		
+
 		// Verify ticket is in Support queue before
 		var queueBefore int
 		fixtures.db.QueryRow(
@@ -921,7 +921,7 @@ func TestUpdateTicket_Permissions(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.IsError, "Support agent should NOT move ticket to Billing")
 		assert.Contains(t, getResultText(result), "no permission")
-		
+
 		// Verify ticket is still in Support queue
 		var queueAfter int
 		fixtures.db.QueryRow(
@@ -932,7 +932,7 @@ func TestUpdateTicket_Permissions(t *testing.T) {
 
 	t.Run("admin can move ticket between queues", func(t *testing.T) {
 		server := NewServer(fixtures.db, fixtures.AgentAdmin, "mcptest-admin")
-		
+
 		// Create a ticket we can move (don't mess with fixture tickets)
 		createResult, _ := callMCPTool(t, server, "create_ticket", map[string]any{
 			"title":    "Ticket to move",
@@ -951,7 +951,7 @@ func TestUpdateTicket_Permissions(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.False(t, result.IsError, "Admin should move ticket")
-		
+
 		// Verify ticket moved
 		var newQueueID int
 		fixtures.db.QueryRow(
@@ -997,7 +997,7 @@ func TestAddArticle_Permissions(t *testing.T) {
 
 	t.Run("agent can add article and verify content", func(t *testing.T) {
 		server := NewServer(fixtures.db, fixtures.AgentAdmin, "mcptest-admin")
-		
+
 		uniqueBody := fmt.Sprintf("Test note added via MCP at %d", time.Now().UnixNano())
 		result, err := callMCPTool(t, server, "add_article", map[string]any{
 			"ticket_id": fixtures.TicketAcmeSupport,
@@ -1007,15 +1007,15 @@ func TestAddArticle_Permissions(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.False(t, result.IsError, "Admin should add article to Support ticket")
-		
+
 		// Parse result
 		text := getResultText(result)
 		assert.Contains(t, text, "article_id")
-		
+
 		var resultMap map[string]any
 		json.Unmarshal([]byte(text), &resultMap)
 		articleID := int64(resultMap["article_id"].(float64))
-		
+
 		// Verify article exists with correct content
 		var subject, body string
 		err = fixtures.db.QueryRow(
@@ -1024,7 +1024,7 @@ func TestAddArticle_Permissions(t *testing.T) {
 		require.NoError(t, err, "Article should exist in database")
 		assert.Equal(t, "MCP Test Subject", subject)
 		assert.Equal(t, uniqueBody, body)
-		
+
 		// Verify article is linked to correct ticket
 		var ticketID int64
 		fixtures.db.QueryRow(
@@ -1035,13 +1035,13 @@ func TestAddArticle_Permissions(t *testing.T) {
 
 	t.Run("article defaults subject to ticket title if not provided", func(t *testing.T) {
 		server := NewServer(fixtures.db, fixtures.AgentAdmin, "mcptest-admin")
-		
+
 		// Get ticket title
 		var ticketTitle string
 		fixtures.db.QueryRow(
 			database.ConvertPlaceholders("SELECT title FROM ticket WHERE id = ?"),
 			fixtures.TicketAcmeSupport).Scan(&ticketTitle)
-		
+
 		result, err := callMCPTool(t, server, "add_article", map[string]any{
 			"ticket_id": fixtures.TicketAcmeSupport,
 			"body":      "Article without explicit subject",
@@ -1050,11 +1050,11 @@ func TestAddArticle_Permissions(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.False(t, result.IsError)
-		
+
 		var resultMap map[string]any
 		json.Unmarshal([]byte(getResultText(result)), &resultMap)
 		articleID := int64(resultMap["article_id"].(float64))
-		
+
 		// Verify subject defaulted to ticket title
 		var subject string
 		fixtures.db.QueryRow(
@@ -1065,7 +1065,7 @@ func TestAddArticle_Permissions(t *testing.T) {
 
 	t.Run("internal article is not visible to customer", func(t *testing.T) {
 		server := NewServer(fixtures.db, fixtures.AgentAdmin, "mcptest-admin")
-		
+
 		result, err := callMCPTool(t, server, "add_article", map[string]any{
 			"ticket_id":    fixtures.TicketAcmeSupport,
 			"body":         "Internal note - not for customers",
@@ -1074,11 +1074,11 @@ func TestAddArticle_Permissions(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.False(t, result.IsError)
-		
+
 		var resultMap map[string]any
 		json.Unmarshal([]byte(getResultText(result)), &resultMap)
 		articleID := int64(resultMap["article_id"].(float64))
-		
+
 		// Verify visibility
 		var isVisible int
 		fixtures.db.QueryRow(
@@ -1089,7 +1089,7 @@ func TestAddArticle_Permissions(t *testing.T) {
 
 	t.Run("external article is visible to customer", func(t *testing.T) {
 		server := NewServer(fixtures.db, fixtures.AgentAdmin, "mcptest-admin")
-		
+
 		result, err := callMCPTool(t, server, "add_article", map[string]any{
 			"ticket_id":    fixtures.TicketAcmeSupport,
 			"body":         "External note - visible to customers",
@@ -1098,11 +1098,11 @@ func TestAddArticle_Permissions(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.False(t, result.IsError)
-		
+
 		var resultMap map[string]any
 		json.Unmarshal([]byte(getResultText(result)), &resultMap)
 		articleID := int64(resultMap["article_id"].(float64))
-		
+
 		// Verify visibility
 		var isVisible int
 		fixtures.db.QueryRow(
@@ -1113,7 +1113,7 @@ func TestAddArticle_Permissions(t *testing.T) {
 
 	t.Run("agent cannot add article to inaccessible ticket", func(t *testing.T) {
 		server := NewServer(fixtures.db, fixtures.AgentSupport, "mcptest-agent-support")
-		
+
 		// Count articles before
 		var countBefore int
 		fixtures.db.QueryRow(
@@ -1128,7 +1128,7 @@ func TestAddArticle_Permissions(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.IsError, "Support agent should NOT add article to Billing ticket")
 		assert.Contains(t, getResultText(result), "not found") // Security: 404 not 403
-		
+
 		// Verify no article was created
 		var countAfter int
 		fixtures.db.QueryRow(
@@ -1256,8 +1256,8 @@ func TestGetStatistics_OnlyShowsAccessibleData(t *testing.T) {
 		// Admin sees all tickets
 		adminServer := NewServer(fixtures.db, fixtures.AgentAdmin, "mcptest-admin")
 		adminResult, _ := callMCPTool(t, adminServer, "get_statistics", map[string]any{})
-		
-		// Support agent sees only Support queue tickets  
+
+		// Support agent sees only Support queue tickets
 		supportServer := NewServer(fixtures.db, fixtures.AgentSupport, "mcptest-agent-support")
 		supportResult, _ := callMCPTool(t, supportServer, "get_statistics", map[string]any{})
 
@@ -1271,8 +1271,8 @@ func TestGetStatistics_OnlyShowsAccessibleData(t *testing.T) {
 
 		// Support agent should see fewer tickets than admin
 		// (Admin sees Support + Billing, Support agent sees only Support)
-		assert.Less(t, supportTotal, adminTotal, 
-			"Support agent should see fewer tickets than admin (got admin=%d, support=%d)", 
+		assert.Less(t, supportTotal, adminTotal,
+			"Support agent should see fewer tickets than admin (got admin=%d, support=%d)",
 			adminTotal, supportTotal)
 	})
 }

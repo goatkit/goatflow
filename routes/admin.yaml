@@ -1307,7 +1307,13 @@ spec:
           method: GET
           handler: HandleAdminPluginLogs
           template: pages/admin/plugin_logs.pongo2
-          description: "Display plugin logs viewer"
+
+        # Marketplace
+        - path: /marketplace
+          method: GET
+          handler: HandleAdminMarketplace
+          template: pages/admin/marketplace.pongo2
+          description: "Browse and install plugins from the marketplace"
 
         - path: /plugin-uis
           method: GET

@@ -51,6 +51,25 @@ func main() {
 			os.Exit(1)
 		}
 		marketplaceSearch(strings.Join(os.Args[2:], " "))
+	case "build":
+		pluginDir := "."
+		if len(os.Args) >= 3 {
+			pluginDir = os.Args[2]
+		}
+		marketplaceBuild(pluginDir)
+	case "sign":
+		if len(os.Args) < 3 {
+			fmt.Println("Usage: gk sign <file> [--key <hex-private-key>]")
+			os.Exit(1)
+		}
+		marketplaceSign(os.Args[2], os.Args[3:])
+	case "keys":
+		if len(os.Args) >= 3 && os.Args[2] == "generate" {
+			marketplaceGenerateKeys()
+		} else {
+			fmt.Println("Usage: gk keys generate")
+			os.Exit(1)
+		}
 	case "help", "-h", "--help":
 		printUsage()
 	case "version", "-v", "--version":
@@ -61,7 +80,6 @@ func main() {
 		os.Exit(1)
 	}
 }
-
 func printUsage() {
 	fmt.Println("GoatKit CLI - Plugin Development & Marketplace Tool")
 	fmt.Println()
@@ -69,6 +87,9 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("Development:")
 	fmt.Println("  plugin init    Create a new plugin from template")
+	fmt.Println("  build [dir]    Package a plugin into a distributable ZIP")
+	fmt.Println("  sign <file>    Sign a plugin file with ed25519 (--key <hex> or GOATFLOW_SIGNING_KEY)")
+	fmt.Println("  keys generate  Generate a new ed25519 key pair")
 	fmt.Println()
 	fmt.Println("Marketplace:")
 	fmt.Println("  install <name> Install a plugin from the marketplace")

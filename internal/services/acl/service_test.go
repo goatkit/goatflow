@@ -132,8 +132,8 @@ func TestMatchesContext_Properties(t *testing.T) {
 				},
 			},
 			ctx: &models.ACLContext{
-				StateID:     1,          // DB value
-				FormStateID: intPtr(2),  // Form value
+				StateID:     1,         // DB value
+				FormStateID: intPtr(2), // Form value
 			},
 			matches: true, // Properties uses form values
 		},

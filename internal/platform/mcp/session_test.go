@@ -117,7 +117,7 @@ func TestNegotiateProtocolVersion(t *testing.T) {
 		{ProtocolVersion, ProtocolVersion},
 		{ProtocolVersion202503, ProtocolVersion202503},
 		{"2023-01-01", ProtocolVersion}, // unknown → fallback
-		{"", ProtocolVersion},            // empty → fallback
+		{"", ProtocolVersion},           // empty → fallback
 	}
 
 	for _, tt := range tests {

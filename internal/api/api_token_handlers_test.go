@@ -85,7 +85,7 @@ func TestHandleListTokens_RequiresAuth(t *testing.T) {
 
 func TestHandleCreateToken_ValidatesRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	// Test without service - should get service unavailable
 	router := gin.New()
 	router.POST("/tokens", HandleCreateToken)
@@ -105,7 +105,7 @@ func TestHandleCreateToken_ValidatesRequest(t *testing.T) {
 func TestHandleCreateToken_RequiresName(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	
+
 	// Simulate authenticated user
 	router.POST("/tokens", func(c *gin.Context) {
 		c.Set("user_id", 1)
@@ -123,7 +123,7 @@ func TestHandleCreateToken_RequiresName(t *testing.T) {
 	if w.Code == http.StatusCreated {
 		t.Error("Expected validation error for missing name, got 201")
 	}
-	
+
 	var resp struct {
 		Error struct {
 			Code    string `json:"code"`
@@ -151,7 +151,7 @@ func TestHandleCreateToken_RequiresName(t *testing.T) {
 func TestHandleRevokeToken_InvalidID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	
+
 	router.DELETE("/tokens/:id", func(c *gin.Context) {
 		c.Set("user_id", 1)
 		HandleRevokeToken(c)
@@ -168,14 +168,14 @@ func TestHandleRevokeToken_InvalidID(t *testing.T) {
 			Message string `json:"message"`
 		} `json:"error"`
 	}
-	
+
 	// Should either be service unavailable or invalid ID error
 	if w.Code != http.StatusBadRequest && w.Code != http.StatusServiceUnavailable {
 		// Parse to see what we got
 		json.Unmarshal(w.Body.Bytes(), &resp)
 		t.Logf("Response: %d - %+v", w.Code, resp)
 	}
-	
+
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err == nil {
 		if resp.Error.Code == "core:invalid_id" {
 			// This is the expected behaviour

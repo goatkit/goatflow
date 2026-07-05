@@ -10,14 +10,14 @@ import (
 
 // Field type constants matching OTRS.
 const (
-	DFTypeText                 = "Text"
-	DFTypeTextArea             = "TextArea"
-	DFTypeCheckbox             = "Checkbox"
-	DFTypeDropdown             = "Dropdown"
-	DFTypeMultiselect          = "Multiselect"
-	DFTypeDate                 = "Date"
-	DFTypeDateTime             = "DateTime"
-	DFTypeWebserviceDropdown   = "WebserviceDropdown"
+	DFTypeText                  = "Text"
+	DFTypeTextArea              = "TextArea"
+	DFTypeCheckbox              = "Checkbox"
+	DFTypeDropdown              = "Dropdown"
+	DFTypeMultiselect           = "Multiselect"
+	DFTypeDate                  = "Date"
+	DFTypeDateTime              = "DateTime"
+	DFTypeWebserviceDropdown    = "WebserviceDropdown"
 	DFTypeWebserviceMultiselect = "WebserviceMultiselect"
 )
 

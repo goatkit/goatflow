@@ -14,9 +14,9 @@ const DefaultIndexURL = "https://raw.githubusercontent.com/goatkit/marketplace/m
 
 // Index represents the marketplace.json index file.
 type Index struct {
-	Version   int            `json:"version"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	Plugins   []PluginEntry  `json:"plugins"`
+	Version   int           `json:"version"`
+	UpdatedAt time.Time     `json:"updated_at"`
+	Plugins   []PluginEntry `json:"plugins"`
 }
 
 // PluginEntry represents a plugin listing in the marketplace.
@@ -26,14 +26,16 @@ type PluginEntry struct {
 	Author         string   `json:"author"`
 	Licence        string   `json:"licence"`
 	Homepage       string   `json:"homepage"`
-	Repo           string   `json:"repo"`             // GitHub owner/repo
-	Category       string   `json:"category"`         // business, integration, theme, utility
+	Repo           string   `json:"repo"`     // GitHub owner/repo
+	IconURL        string   `json:"icon,omitempty"` // URL to plugin icon image (SVG or PNG, recommended 64×64)
+	Category       string   `json:"category"` // business, integration, theme, utility
 	Tags           []string `json:"tags"`
 	LatestVersion  string   `json:"latest_version"`
 	MinHostVersion string   `json:"min_host_version"`
-	Runtime        string   `json:"runtime"`          // wasm, grpc
-	Verified       bool     `json:"verified"`         // has ed25519 signature
+	Runtime        string   `json:"runtime"`                // wasm, grpc
+	Verified       bool     `json:"verified"`               // has ed25519 signature
 	Dependencies   []string `json:"dependencies,omitempty"` // plugin names this depends on
+	PublicKey      string   `json:"public_key,omitempty"`   // ed25519 public key (hex) for signature verification
 }
 
 // InstalledPlugin represents a locally installed plugin read from its manifest.

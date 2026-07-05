@@ -12,8 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/services/adapter"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 )
@@ -87,13 +87,13 @@ func HandleAdminUsers(c *gin.Context) {
 
 			for _, r := range list {
 				users = append(users, gin.H{
-					"ID":          r.id,
-					"Login":       r.login,
-					"Title":       r.title,
-					"FirstName":   r.fn,
-					"LastName":    r.ln,
-					"ValidID":     r.valid,
-					"Groups":      gm[r.id],
+					"ID":             r.id,
+					"Login":          r.login,
+					"Title":          r.title,
+					"FirstName":      r.fn,
+					"LastName":       r.ln,
+					"ValidID":        r.valid,
+					"Groups":         gm[r.id],
 					"TOTP2FAEnabled": totp2fa[r.id],
 				})
 			}

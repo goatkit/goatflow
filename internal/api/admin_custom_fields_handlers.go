@@ -45,11 +45,11 @@ func handleAdminCustomFields(c *gin.Context) {
 
 	renderer.HTML(c, http.StatusOK, "pages/admin/custom_fields.pongo2", gin.H{
 		"FieldsGrouped": grouped,
-		"EntityTypes":  customfields.ValidEntityTypes(),
-		"FieldTypes":   customfields.ValidFieldTypes(),
-		"EntityFilter": entityFilter,
-		"OwnerFilter":  ownerFilter,
-		"ActivePage":   "admin",
+		"EntityTypes":   customfields.ValidEntityTypes(),
+		"FieldTypes":    customfields.ValidFieldTypes(),
+		"EntityFilter":  entityFilter,
+		"OwnerFilter":   ownerFilter,
+		"ActivePage":    "admin",
 	})
 }
 
@@ -281,7 +281,9 @@ func handleDeleteCustomField(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
 }
 
-func renderAdminCFError(c *gin.Context, renderer interface{ HTML(*gin.Context, int, string, any) }, msg string) {
+func renderAdminCFError(c *gin.Context, renderer interface {
+	HTML(*gin.Context, int, string, any)
+}, msg string) {
 	if renderer != nil {
 		renderer.HTML(c, http.StatusInternalServerError, "error.html", gin.H{"Error": msg})
 	} else {

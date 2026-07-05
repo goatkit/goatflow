@@ -248,11 +248,11 @@ func (router *APIRouter) handleGetAuditLogs(c *gin.Context) {
 			var userLogin *string
 			if rows.Scan(&id, &ticketID, &name, &createTime, &userLogin, &historyTypeID) == nil {
 				log := gin.H{
-					"id":         id,
-					"ticket_id":  ticketID,
-					"action":     name,
-					"type_id":    historyTypeID,
-					"timestamp":  createTime,
+					"id":        id,
+					"ticket_id": ticketID,
+					"action":    name,
+					"type_id":   historyTypeID,
+					"timestamp": createTime,
 				}
 				if userLogin != nil {
 					log["user"] = *userLogin

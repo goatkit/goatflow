@@ -12,9 +12,9 @@ import (
 	"github.com/gin-gonic/gin"
 
 	api "github.com/goatkit/goatflow/internal/api"
+	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
-	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/service/ticket_number"
 )
 
@@ -1633,8 +1633,8 @@ func (router *APIRouter) handleBulkCloseTickets(c *gin.Context) {
 // handleBulkUpdatePriority updates priority for multiple tickets.
 func (router *APIRouter) handleBulkUpdatePriority(c *gin.Context) {
 	var bulkRequest struct {
-		TicketIDs  []int `json:"ticket_ids" binding:"required"`
-		PriorityID int   `json:"priority_id" binding:"required"`
+		TicketIDs  []int  `json:"ticket_ids" binding:"required"`
+		PriorityID int    `json:"priority_id" binding:"required"`
 		Comment    string `json:"comment"`
 	}
 

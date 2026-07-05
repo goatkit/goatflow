@@ -2,6 +2,7 @@ package marketplace
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,8 +11,12 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 
+	"github.com/goatkit/goatflow/internal/platform/plugin/packaging"
+	"github.com/goatkit/goatflow/internal/platform/plugin/signing"
+	"github.com/goatkit/goatflow/internal/platform/version"
 	"github.com/goatkit/goatflow/pkg/plugin"
 )
 
@@ -76,7 +81,7 @@ func (c *Client) Search(query string) ([]PluginEntry, error) {
 	query = strings.ToLower(query)
 	var results []PluginEntry
 	for _, p := range index.Plugins {
-		if matchesQuery(p, query) {
+		if MatchesQuery(p, query) {
 			results = append(results, p)
 		}
 	}
@@ -159,7 +164,7 @@ func (c *Client) CheckUpdates() ([]UpdateAvailable, error) {
 		if !ok {
 			continue
 		}
-		if entry.LatestVersion != inst.Version {
+		if versionCompare(entry.LatestVersion, inst.Version) > 0 {
 			updates = append(updates, UpdateAvailable{
 				Name:           inst.Name,
 				CurrentVersion: inst.Version,
@@ -169,6 +174,154 @@ func (c *Client) CheckUpdates() ([]UpdateAvailable, error) {
 		}
 	}
 	return updates, nil
+}
+
+// ErrAlreadyInstalled indicates a plugin is already installed at the requested version.
+var ErrAlreadyInstalled = errors.New("plugin already installed at the requested version")
+
+// ensureVersionPrefix adds a "v" prefix to a version string if missing.
+// golang.org/x/mod/semver requires the "v" prefix.
+func ensureVersionPrefix(v string) string {
+	if !strings.HasPrefix(v, "v") {
+		return "v" + v
+	}
+	return v
+}
+
+// versionCompare returns -1, 0, or 1 comparing a vs b using semver.
+func versionCompare(a, b string) int {
+	return semver.Compare(ensureVersionPrefix(a), ensureVersionPrefix(b))
+}
+
+// CompareVersions returns -1, 0, or 1 comparing a vs b using semver.
+// Exported for use by API handlers that need to check for updates.
+func CompareVersions(a, b string) int {
+	return versionCompare(a, b)
+}
+
+// Install downloads, verifies, and extracts a plugin from the marketplace.
+// Returns ErrAlreadyInstalled if the plugin is already at the requested version.
+func (c *Client) Install(entry *PluginEntry) error {
+	if entry.MinHostVersion != "" {
+		hostVer := version.Short()
+		if hostVer != "dev" && hostVer != "" {
+			if versionCompare(hostVer, entry.MinHostVersion) < 0 {
+				return fmt.Errorf("plugin requires GoatFlow >= %s, you have %s", entry.MinHostVersion, hostVer)
+			}
+		}
+	}
+
+	installed, _ := c.ListInstalled()
+	for _, inst := range installed {
+		if inst.Name == entry.Name && versionCompare(inst.Version, entry.LatestVersion) == 0 {
+			return ErrAlreadyInstalled
+		}
+	}
+
+	return c.fetchAndExtract(entry)
+}
+
+// Update replaces an installed plugin with the marketplace version.
+// The existing plugin directory is removed before extraction for a clean replacement.
+func (c *Client) Update(entry *PluginEntry) error {
+	pluginDir := filepath.Join(c.pluginsDir, entry.Name)
+	_ = os.RemoveAll(pluginDir)
+
+	return c.fetchAndExtract(entry)
+}
+
+// fetchAndExtract downloads a plugin ZIP, verifies its signature if available,
+// and extracts it to the plugins directory.
+func (c *Client) fetchAndExtract(entry *PluginEntry) error {
+	zipURL := DownloadURL(entry.Repo, entry.LatestVersion, entry.Name)
+	zipFile, err := os.CreateTemp("", "gk-plugin-*.zip")
+	if err != nil {
+		return fmt.Errorf("create temp file: %w", err)
+	}
+	zipPath := zipFile.Name()
+	defer os.Remove(zipPath)
+
+	resp, err := c.httpClient.Get(zipURL)
+	if err != nil {
+		zipFile.Close()
+		return fmt.Errorf("download plugin: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		zipFile.Close()
+		return fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
+	}
+
+	if _, err := io.Copy(zipFile, resp.Body); err != nil {
+		zipFile.Close()
+		return fmt.Errorf("write plugin zip: %w", err)
+	}
+	zipFile.Close()
+
+	// Verify signature if a .sig file is available.
+	sigURL := SignatureURL(entry.Repo, entry.LatestVersion, entry.Name)
+	sigResp, sigErr := c.httpClient.Get(sigURL)
+	hasSig := sigErr == nil && sigResp != nil && sigResp.StatusCode == http.StatusOK
+	if !hasSig {
+		if sigResp != nil {
+			sigResp.Body.Close()
+		}
+		if signing.IsSignatureRequired() {
+			return fmt.Errorf("plugin %q is not signed but signatures are required (GOATFLOW_REQUIRE_SIGNATURES=1)", entry.Name)
+		}
+	} else {
+		sigFile, err := os.CreateTemp("", "gk-plugin-*.sig")
+		if err != nil {
+			sigResp.Body.Close()
+			return fmt.Errorf("create temp sig file: %w", err)
+		}
+		sigPath := sigFile.Name()
+		defer os.Remove(sigPath)
+
+		if _, err := io.Copy(sigFile, sigResp.Body); err != nil {
+			sigFile.Close()
+			sigResp.Body.Close()
+			return fmt.Errorf("write signature: %w", err)
+		}
+		sigFile.Close()
+		sigResp.Body.Close()
+
+		keys, err := LoadTrustedKeys()
+		if err != nil {
+			return fmt.Errorf("load trusted keys: %w", err)
+		}
+		if entry.PublicKey != "" {
+			indexKey, err := parsePublicKey(entry.PublicKey)
+			if err != nil {
+				return fmt.Errorf("invalid public key in marketplace index: %w", err)
+			}
+			keys = append(keys, indexKey)
+		}
+		if len(keys) > 0 {
+			if err := signing.VerifyBinary(zipPath, sigPath, keys); err != nil {
+				return fmt.Errorf("signature verification failed: %w", err)
+			}
+		} else {
+			fmt.Fprintln(os.Stderr, "Warning: signature file exists but no trusted keys configured — skipping verification")
+		}
+	}
+
+	// Extract plugin package.
+	pkg, err := packaging.ExtractPlugin(zipPath, c.pluginsDir)
+	if err != nil {
+		return fmt.Errorf("extract plugin: %w", err)
+	}
+
+	// Install theme assets if applicable.
+	pluginDir := filepath.Join(c.pluginsDir, pkg.Manifest.Name)
+	if IsThemePlugin(&pkg.Manifest) {
+		if err := InstallTheme(pluginDir, &pkg.Manifest); err != nil {
+			return fmt.Errorf("install theme: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // DownloadURL returns the GitHub Release download URL for a plugin version.
@@ -181,7 +334,7 @@ func SignatureURL(repo, version, pluginName string) string {
 	return DownloadURL(repo, version, pluginName) + ".sig"
 }
 
-func matchesQuery(p PluginEntry, query string) bool {
+func MatchesQuery(p PluginEntry, query string) bool {
 	if strings.Contains(strings.ToLower(p.Name), query) {
 		return true
 	}

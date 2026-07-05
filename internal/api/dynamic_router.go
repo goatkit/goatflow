@@ -113,22 +113,14 @@ func RebuildDynamicEngine() {
 				}
 			}
 
-			handler := func(c *gin.Context) {
+			_handler := func(c *gin.Context) {
 				args := buildPluginArgs(c, pluginName)
 				ctx := pluginContextWithLanguage(c)
 				result, err := pluginManager.Call(ctx, pluginName, handlerName, args)
 				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					return
 				}
-
 				var response map[string]any
 				if err := json.Unmarshal(result, &response); err == nil {
-					// Error response — a plugin can return {"error": msg, "status": 404}
-					// to set the HTTP status code. The int status convention is shared
-					// with the redirect path below. Without this, every plugin error
-					// surfaces as a 200 with the body — clients can't distinguish
-					// not-found / bad-request from success.
 					if errMsg, ok := response["error"].(string); ok && errMsg != "" {
 						code := http.StatusInternalServerError
 						if s, ok := response["status"].(float64); ok {
@@ -139,9 +131,6 @@ func RebuildDynamicEngine() {
 						c.JSON(code, gin.H{"error": errMsg})
 						return
 					}
-					// Redirect response — plugin asks the platform to send the
-					// browser elsewhere. Used by customer pages that resolve no
-					// org and bail to /customer/dashboard.
 					if redirect, ok := response["redirect"].(string); ok && redirect != "" {
 						code := http.StatusSeeOther
 						if s, ok := response["status"].(float64); ok {
@@ -150,7 +139,6 @@ func RebuildDynamicEngine() {
 						c.Redirect(code, redirect)
 						return
 					}
-					// Binary response — decode base64 data and stream with content type.
 					if isBinary, ok := response["_binary"].(bool); ok && isBinary {
 						if contentType, ok := response["content_type"].(string); ok {
 							if dataB64, ok := response["data"].(string); ok {
@@ -162,13 +150,11 @@ func RebuildDynamicEngine() {
 						}
 					}
 					if html, ok := response["html"].(string); ok {
-						// Check if plugin wants raw HTML (no layout wrapping)
 						if raw, ok := response["raw"].(bool); ok && raw {
 							c.Header("Content-Type", "text/html; charset=utf-8")
 							c.String(http.StatusOK, html)
 							return
 						}
-						// Wrap plugin HTML in base layout template
 						renderer := getPongo2Renderer()
 						if renderer != nil {
 							title, _ := response["title"].(string)
@@ -184,7 +170,6 @@ func RebuildDynamicEngine() {
 							})
 							return
 						}
-						// Fallback if no renderer
 						c.Header("Content-Type", "text/html; charset=utf-8")
 						c.String(http.StatusOK, html)
 						return
@@ -194,22 +179,31 @@ func RebuildDynamicEngine() {
 				c.Data(http.StatusOK, "application/json", result)
 			}
 
+			handlers := append(mwChain, _handler)
+
 			path := route.RouteSpec.Path
-			handlers := append(mwChain, handler)
-			switch route.RouteSpec.Method {
-			case "GET":
-				eng.GET(path, handlers...)
-			case "POST":
-				eng.POST(path, handlers...)
-			case "PUT":
-				eng.PUT(path, handlers...)
-			case "DELETE":
-				eng.DELETE(path, handlers...)
-			case "PATCH":
-				eng.PATCH(path, handlers...)
-			default:
-				eng.GET(path, handlers...)
-			}
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("⚠️  Route collision for %s %s — skipping (plugin may be duplicated): %v", route.RouteSpec.Method, path, r)
+						return
+					}
+				}()
+				switch route.RouteSpec.Method {
+				case "GET":
+					eng.GET(path, handlers...)
+				case "POST":
+					eng.POST(path, handlers...)
+				case "PUT":
+					eng.PUT(path, handlers...)
+				case "DELETE":
+					eng.DELETE(path, handlers...)
+				case "PATCH":
+					eng.PATCH(path, handlers...)
+				default:
+					eng.GET(path, handlers...)
+				}
+			}()
 
 			log.Printf("🔌 Registered plugin route: %s %s -> %s.%s",
 				route.RouteSpec.Method, path, pluginName, handlerName)

@@ -14,8 +14,8 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
 	"github.com/goatkit/goatflow/internal/models"
+	_ "github.com/lib/pq"
 )
 
 // testDB wraps a database connection for tests.

@@ -46,7 +46,7 @@ func DefaultThumbnailOptions() ThumbnailOptions {
 // GenerateThumbnail generates a thumbnail from image data using libvips.
 // Supports JPEG, PNG, GIF, WebP, AVIF, HEIC, TIFF, and more.
 func (s *ThumbnailService) GenerateThumbnail(data []byte, contentType string, opts ThumbnailOptions) (thumbnailData []byte, outputFormat string, err error) {
-	// Load image from buffer - govips auto-detects format
+	// Load image from buffer using Thumbnail API (uses Lanczos3 internally)
 	image, err := vips.NewImageFromBuffer(data)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to decode image: %w", err)
@@ -61,16 +61,16 @@ func (s *ThumbnailService) GenerateThumbnail(data []byte, contentType string, op
 		return nil, "", fmt.Errorf("failed to resize image: %w", err)
 	}
 
-	// Export to desired format
+	// Export to desired format using v2.16.0 constructor pattern
 	if opts.Format == "png" {
-		thumbnailData, _, err = image.ExportPng(&vips.PngExportParams{
-			Compression: 6,
-		})
+		exportParams := vips.NewPngExportParams()
+		exportParams.Compression = 6
+		thumbnailData, _, err = image.ExportPng(exportParams)
 		outputFormat = "image/png"
 	} else {
-		thumbnailData, _, err = image.ExportJpeg(&vips.JpegExportParams{
-			Quality: opts.Quality,
-		})
+		exportParams := vips.NewJpegExportParams()
+		exportParams.Quality = opts.Quality
+		thumbnailData, _, err = image.ExportJpeg(exportParams)
 		outputFormat = "image/jpeg"
 	}
 

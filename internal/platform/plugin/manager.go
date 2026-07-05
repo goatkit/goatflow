@@ -19,6 +19,7 @@ import (
 type LazyLoader interface {
 	EnsureLoaded(ctx context.Context, name string) error
 	Discovered() []string
+	Forget(name string)
 }
 
 // Manager handles plugin lifecycle: loading, registration, and invocation.
@@ -362,6 +363,13 @@ func (m *Manager) Discovered() []string {
 	return m.lazyLoader.Discovered()
 }
 
+// Forget tells the lazy loader to forget a plugin so it no longer appears in Discovered().
+func (m *Manager) Forget(name string) {
+	if m.lazyLoader != nil {
+		m.lazyLoader.Forget(name)
+	}
+}
+
 // Register loads and initializes a plugin.
 func (m *Manager) Register(ctx context.Context, p Plugin) error {
 	manifest := p.GKRegister()
@@ -407,6 +415,19 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 	m.applyManifestSideEffectsPostInit(ctx, manifest)
 
 	return nil
+}
+
+// Unload removes a plugin from the manager's in-memory state.
+// The plugin directory is removed by HandlePluginUnfull; this clears
+// the registry, sandbox, and policy entries so the plugin is fully
+// uninstalled without requiring a restart.
+func (m *Manager) Unload(name string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	delete(m.plugins, name)
+	delete(m.sandboxes, name)
+	delete(m.policies, name)
 }
 
 // applyManifestSideEffectsPreInit runs every side effect that the

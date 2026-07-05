@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/ticketutil"
 )
@@ -508,16 +508,16 @@ func (s *Service) applyActions(ctx context.Context, ticketID int, actions *model
 		}
 
 		article := &models.Article{
-			TicketID:              ticketID,
-			ArticleTypeID:         10, // note-internal
-			SenderTypeID:          1,  // agent
+			TicketID:               ticketID,
+			ArticleTypeID:          10, // note-internal
+			SenderTypeID:           1,  // agent
 			CommunicationChannelID: 1,
-			IsVisibleForCustomer:  0, // Internal note
-			Subject:               subject,
-			Body:                  body,
-			MimeType:              "text/plain",
-			CreateBy:              userID,
-			ChangeBy:              userID,
+			IsVisibleForCustomer:   0, // Internal note
+			Subject:                subject,
+			Body:                   body,
+			MimeType:               "text/plain",
+			CreateBy:               userID,
+			ChangeBy:               userID,
 		}
 
 		if err := s.articleRepo.Create(article); err != nil {

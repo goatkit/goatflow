@@ -3,6 +3,7 @@ package i18n
 import (
 	"fmt"
 	"html/template"
+	"strings"
 	"time"
 )
 
@@ -147,21 +148,21 @@ func createCurrencyFunc(lang string) func(amount float64) string {
 		// Simple currency formatting based on language
 		switch lang {
 		case "en":
-			return "$" + formatNumber(amount, 2)
+			return "$" + formatNumber(amount, 2, lang)
 		case "es":
-			return formatNumber(amount, 2) + " €"
+			return formatNumber(amount, 2, lang) + " €"
 		case "fr":
-			return formatNumber(amount, 2) + " €"
+			return formatNumber(amount, 2, lang) + " €"
 		case "de":
-			return formatNumber(amount, 2) + " €"
+			return formatNumber(amount, 2, lang) + " €"
 		case "pt":
-			return "R$ " + formatNumber(amount, 2)
+			return "R$ " + formatNumber(amount, 2, lang)
 		case "ja":
-			return "¥" + formatNumber(amount, 0)
+			return "¥" + formatNumber(amount, 0, lang)
 		case "zh":
-			return "¥" + formatNumber(amount, 2)
+			return "¥" + formatNumber(amount, 2, lang)
 		default:
-			return "$" + formatNumber(amount, 2)
+			return "$" + formatNumber(amount, 2, lang)
 		}
 	}
 }
@@ -184,34 +185,67 @@ func createNumberFunc(lang string) func(n interface{}) string {
 			return "0"
 		}
 
-		return formatNumber(num, 0)
+		return formatNumber(num, 0, lang)
 	}
 }
 
 // createPercentFunc creates a percentage formatting function for templates.
 func createPercentFunc(lang string) func(n float64) string {
 	return func(n float64) string {
-		return formatNumber(n*100, 1) + "%"
+		return formatNumber(n*100, 1, lang) + "%"
 	}
 }
 
-// formatNumber formats a number with the specified decimal places.
-func formatNumber(n float64, decimals int) string {
-	// Simple number formatting
-	format := "%."
-	if decimals >= 0 {
-		format += fmt.Sprintf("%d", decimals) + "f"
-	} else {
-		format += "f"
+// formatNumber formats a number with the specified decimal places and locale-aware separators.
+func formatNumber(n float64, decimals int, lang string) string {
+	// Determine locale-specific separator characters
+	thousandsSep := ","
+	decimalSep := "."
+	switch lang {
+	case "de", "es", "fr", "pt":
+		thousandsSep = "."
+		decimalSep = ","
+	case "ja", "zh":
+		thousandsSep = ","
+		decimalSep = "."
 	}
 
-	// TODO: Add thousands separator based on locale
-	return sprintf(format, n)
-}
+	// Format the number without thousands separator first
+	format := fmt.Sprintf("%%.%df", decimals)
+	formatted := fmt.Sprintf(format, n)
 
-// sprintf is a simple sprintf implementation.
-func sprintf(format string, args ...interface{}) string {
-	// This would use fmt.Sprintf in a real implementation
-	// Simplified for demonstration
-	return "formatted"
+	// Split into integer and decimal parts
+	parts := strings.Split(formatted, ".")
+	intPart := parts[0]
+	decPart := ""
+	if len(parts) > 1 {
+		decPart = decimalSep + parts[1]
+	}
+
+	// Handle negative sign
+	prefix := ""
+	if strings.HasPrefix(intPart, "-") {
+		prefix = "-"
+		intPart = intPart[1:]
+	}
+
+	// Add thousands separator
+	if len(intPart) > 3 {
+		var buf strings.Builder
+		buf.Grow(len(intPart) + len(intPart)/3)
+		remainder := len(intPart) % 3
+		if remainder > 0 {
+			buf.WriteString(intPart[:remainder])
+			buf.WriteString(thousandsSep)
+		}
+		for i := remainder; i < len(intPart); i += 3 {
+			buf.WriteString(intPart[i : i+3])
+			if i+3 < len(intPart) {
+				buf.WriteString(thousandsSep)
+			}
+		}
+		intPart = buf.String()
+	}
+
+	return prefix + intPart + decPart
 }

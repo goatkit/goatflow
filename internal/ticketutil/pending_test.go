@@ -66,8 +66,8 @@ func TestEnsurePendingTime(t *testing.T) {
 	tests := []struct {
 		name       string
 		untilTime  int
-		wantSame   bool   // If true, result should equal input
-		wantApprox int64  // If wantSame is false, result should be close to this
+		wantSame   bool  // If true, result should equal input
+		wantApprox int64 // If wantSame is false, result should be close to this
 	}{
 		{
 			name:      "positive untilTime returns same value",
