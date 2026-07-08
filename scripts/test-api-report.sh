@@ -25,7 +25,7 @@ test_api() {
     
     # Run test and capture output
     if docker run --rm \
-        -v "/home/nigel/git/goatkit/goatflow:/workspace" \
+        -v "$PWD:/workspace" \
         -w /workspace \
         --network goatflow_goatflow-network \
         "${GO_IMAGE:-golang:1.25.10-alpine}" \

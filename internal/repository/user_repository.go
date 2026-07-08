@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/goatkit/goatflow/internal/models"
@@ -366,6 +367,29 @@ func (r *UserRepository) GetUserGroups(userID uint) ([]string, error) {
 	return groups, nil
 }
 
+// AddUserToGroup adds a user to an existing group by name. Uses INSERT ... SELECT so it only inserts when the group exists and is active (valid_id=1). Groups not found locally are silently skipped.
+func (r *UserRepository) AddUserToGroup(userID uint, groupName string) error {
+	query := database.ConvertPlaceholders(
+		`INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+		 SELECT ?, g.id, 'rw', NOW(), 1, NOW(), 1
+		 FROM groups g WHERE g.name = ? AND g.valid_id = 1`,
+	)
+	_, err := r.db.Exec(query, int(userID), groupName)
+	return err
+}
+
+// SyncGroups assigns a user to all matching local groups. Failures on individual groups are logged but don't abort the flow.
+func (r *UserRepository) SyncGroups(userID uint, groupNames []string) error {
+	if len(groupNames) == 0 {
+		return nil
+	}
+	for _, name := range groupNames {
+		if err := r.AddUserToGroup(userID, name); err != nil {
+			log.Printf("WARN: failed to add user %d to group %s: %v", userID, name, err)
+		}
+	}
+	return nil
+}
 // List retrieves all users (both active and inactive).
 func (r *UserRepository) List() ([]*models.User, error) {
 	query := database.ConvertPlaceholders(`

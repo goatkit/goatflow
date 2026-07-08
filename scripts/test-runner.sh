@@ -175,7 +175,7 @@ if make test-unit > "$UNIT_LOG" 2>&1; then
 
     if [ "$UNIT_PACKAGES_FAILED" = "0" ] || [ -z "$UNIT_PACKAGES_FAILED" ]; then
         UNIT_PACKAGES_FAILED=0
-        if [ "$UNIT_TESTS_FAILED" = "0" ]; then
+        if [ "$UNIT_TESTS_FAILED" = "0" ] && [ "$UNIT_PACKAGES_PASSED" -gt 0 ] 2>/dev/null; then
             success "Unit tests: $UNIT_TESTS_PASSED tests passed ($UNIT_PACKAGES_PASSED packages)"
         else
             fail "Unit tests: $UNIT_TESTS_PASSED passed, $UNIT_TESTS_FAILED failed ($UNIT_PACKAGES_PASSED packages)"
@@ -317,7 +317,9 @@ TOTAL_PACKAGES_FAILED=$((UNIT_PACKAGES_FAILED))
 
 # Checklist style summary
 echo "  Test Results:"
-if [ "$UNIT_TESTS_FAILED" = "0" ] && [ "$UNIT_PACKAGES_FAILED" = "0" ]; then
+if [ "$UNIT_PACKAGES_PASSED" = "0" ] && [ "$UNIT_PACKAGES_FAILED" = "0" ]; then
+    echo -e "    ${RED}[✗]${NC} Unit Tests          NO TESTS RAN - see $UNIT_LOG"
+elif [ "$UNIT_TESTS_FAILED" = "0" ] && [ "$UNIT_PACKAGES_FAILED" = "0" ]; then
     echo -e "    ${GREEN}[✓]${NC} Unit Tests          ${UNIT_TESTS_PASSED} passed (${UNIT_PACKAGES_PASSED} packages)"
 elif [ "$UNIT_PACKAGES_FAILED" = "0" ]; then
     echo -e "    ${RED}[✗]${NC} Unit Tests          ${UNIT_TESTS_PASSED} passed, ${UNIT_TESTS_FAILED} failed (${UNIT_PACKAGES_PASSED} packages)"
@@ -373,7 +375,7 @@ if [ "$TOTAL_TESTS_RUN" = "0" ]; then
     echo "  Check the log files above for build errors."
     echo ""
     exit 1
-elif [ "$TOTAL_TESTS_FAILED" = "0" ] && [ "$TOTAL_PACKAGES_FAILED" = "0" ]; then
+elif [ "$TOTAL_TESTS_FAILED" = "0" ] && [ "$TOTAL_PACKAGES_FAILED" = "0" ] && [ "$UNIT_PACKAGES_PASSED" -gt 0 ] 2>/dev/null; then
     echo -e "  ${GREEN}══════════════════════════════════════════════════════════${NC}"
     echo -e "  ${GREEN}       ALL ${TOTAL_TESTS_PASSED} TESTS PASSED                           ${NC}"
     echo -e "  ${GREEN}══════════════════════════════════════════════════════════${NC}"
@@ -381,7 +383,9 @@ elif [ "$TOTAL_TESTS_FAILED" = "0" ] && [ "$TOTAL_PACKAGES_FAILED" = "0" ]; then
     exit 0
 else
     echo -e "  ${RED}══════════════════════════════════════════════════════════${NC}"
-    if [ "$TOTAL_PACKAGES_FAILED" != "0" ] && [ "$TOTAL_TESTS_FAILED" = "0" ]; then
+    if [ "$UNIT_PACKAGES_PASSED" = "0" ] && [ "$UNIT_PACKAGES_FAILED" = "0" ]; then
+        echo -e "  ${RED}       UNIT TESTS DID NOT RUN — see $UNIT_LOG                ${NC}"
+    elif [ "$TOTAL_PACKAGES_FAILED" != "0" ] && [ "$TOTAL_TESTS_FAILED" = "0" ]; then
         echo -e "  ${RED}       ${TOTAL_PACKAGES_FAILED} PACKAGES FAILED TO BUILD                  ${NC}"
     elif [ "$TOTAL_PACKAGES_FAILED" != "0" ]; then
         echo -e "  ${RED}       ${TOTAL_TESTS_FAILED} TESTS FAILED, ${TOTAL_PACKAGES_FAILED} PACKAGES FAILED       ${NC}"

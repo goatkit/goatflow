@@ -1247,6 +1247,7 @@
         "plugin_logs": "Plugin Logs",
         "plugin_logs_description": "View plugin activity and errors",
         "plugin_name": "Name",
+        "plugin_overview": "Plugin Overview",
         "plugin_routes": "Routes",
         "plugin_runtime": "Runtime",
         "plugin_status": "Status",
@@ -1488,6 +1489,60 @@
             "transport": "Transport Type",
             "transport_settings": "Transport Settings",
             "update_success": "Web service updated successfully"
+        },
+        "identity_providers": {
+            "title": "Identity Providers",
+            "description": "Manage external identity providers for user authentication.",
+            "add": "Add Provider",
+            "name": "Name",
+            "type": "Type",
+            "client_id": "Client ID",
+            "provision": "Auto-provision",
+            "yes": "Yes",
+            "no": "No",
+            "no_providers": "No identity providers configured yet.",
+            "disable": "Disable",
+            "enable": "Enable",
+            "edit": "Edit Identity Provider",
+            "create": "Create Identity Provider",
+            "form_help": "Configure external identity provider settings.",
+            "basic_info": "Basic Information",
+            "credentials": "Credentials",
+            "user_mapping": "User Mapping",
+            "fields": {
+                "name": "Name",
+                "type": "Provider Type",
+                "type_help": "Google and GitHub use pre-configured discovery endpoints. OIDC and SAML require manual configuration.",
+                "org_scope": "Organization Scope",
+                "org_scope_help": "Empty = available to all organizations. Set to a specific org for org-scoped access.",
+                "client_id": "Client ID",
+                "client_secret": "Client Secret",
+                "discovery_url": "Discovery URL",
+                "discovery_url_help": "OIDC provider discovery URL (auto-configures endpoints). Required for OIDC/SAML. Google and GitHub use built-in discovery.",
+                "scopes": "Scopes",
+                "scopes_help": "Space-separated OAuth2/OIDC scopes. Default: openid profile email",
+                "email_claim": "Email Claim",
+                "name_claim": "Name Claim",
+                "groups_claim": "Groups Claim"
+            },
+            "settings": {
+                "enabled": "Enabled",
+                "auto_provision": "Auto-provision users",
+                "auto_provision_help": "Automatically create GoatFlow user accounts for first-time logins from this provider."
+            },
+            "actions": {
+                "cancel": "Cancel",
+                "create": "Create",
+                "update": "Update"
+            },
+            "toast": {
+                "updated": "Provider updated",
+                "created": "Provider created"
+            },
+            "confirm": {
+                "toggle": "Are you sure you want to {action} this provider?",
+                "delete": "Are you sure you want to delete {name}?"
+            }
         }
     },
     "admin_dashboard": {
@@ -1715,7 +1770,8 @@
         "username": "Username",
         "username_placeholder": "Enter your username",
         "verification_code": "Verification Code",
-        "verify": "Verify"
+        "verify": "Verify",
+        "sign_in_with": "Sign in with"
     },
     "bulk_actions": {
         "all_selected": "All Selected",
@@ -3980,5 +4036,8 @@
     },
     "welcome": {
         "greeting": "Welcome"
+    },
+    "identity_providers": {
+        "dashboard_desc": "Configure external authentication providers"
     }
 }

@@ -11,6 +11,7 @@ import (
 
 // TestTemplateTranslationKeys verifies that all translation keys used in templates exist.
 func TestTemplateTranslationKeys(t *testing.T) {
+	t.Parallel()
 	// Initialize i18n
 	if err := Initialize(&Config{
 		DefaultLanguage:    "en",
@@ -90,7 +91,7 @@ func TestTemplateTranslationKeys(t *testing.T) {
 			}
 		}
 	}
-}
+ }
 
 // suggestCorrectKey tries to find a similar key that exists.
 func suggestCorrectKey(i18n *I18n, wrongKey string) string {
@@ -129,6 +130,7 @@ func suggestCorrectKey(i18n *I18n, wrongKey string) string {
 
 // TestTranslationKeyConsistency ensures consistent key usage across the codebase.
 func TestTranslationKeyConsistency(t *testing.T) {
+	t.Parallel()
 	// Initialize i18n
 	if err := Initialize(&Config{
 		DefaultLanguage:    "en",
@@ -180,4 +182,4 @@ func TestTranslationKeyConsistency(t *testing.T) {
 		}
 		t.Logf("Consider consolidating these to avoid confusion")
 	}
-}
+ }

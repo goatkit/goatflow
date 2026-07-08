@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
@@ -21,22 +22,24 @@ type AuthService struct {
 }
 
 // NewAuthService creates a new authentication service with a JWT manager.
-func NewAuthService(db *sql.DB, jwtManager *auth.JWTManager) *AuthService {
-	providers := []auth.AuthProvider{}
+func NewAuthService(db *sql.DB, jwtManager *auth.JWTManager, oidcClient *http.Client, stateStore auth.StateStore) *AuthService {
 	order := getConfiguredProviderOrder()
-	deps := auth.ProviderDependencies{DB: db}
+	providerDeps := auth.ProviderDependencies{
+		DB:         db,
+		OIDCClient: oidcClient,
+		StateStore: stateStore,
+	}
+	providers := []auth.AuthProvider{}
 	for _, name := range order {
-		p, err := auth.CreateProvider(name, deps)
+		p, err := auth.CreateProvider(name, providerDeps)
 		if err != nil {
-			// Skip missing/disabled providers quietly
 			log.Printf("auth: provider '%s' skipped: %v", name, err)
 			continue
 		}
 		providers = append(providers, p)
 	}
 	if len(providers) == 0 {
-		// Always fall back to direct database provider
-		p, err := auth.CreateProvider("database", deps)
+		p, err := auth.CreateProvider("database", providerDeps)
 		if err == nil {
 			providers = append(providers, p)
 		}
@@ -58,7 +61,6 @@ func getConfiguredProviderOrder() []string {
 	if err != nil {
 		return []string{"database"}
 	}
-	// Expect slice
 	switch raw := v.(type) {
 	case []interface{}:
 		out := []string{}
@@ -84,30 +86,22 @@ func getConfiguredProviderOrder() []string {
 
 // Login authenticates a user and returns JWT tokens.
 func (s *AuthService) Login(ctx context.Context, username, password string) (*platformmodels.User, string, string, error) {
-	// Authenticate user
 	user, err := s.authenticator.Authenticate(ctx, username, password)
 	if err != nil {
 		return nil, "", "", err
 	}
-
-	// Check if user is in admin group (for JWT claim)
 	isAdmin := s.checkAdminGroup(user.ID)
-
-	// Generate tokens using the JWT manager
 	accessToken, err := s.jwtManager.GenerateTokenWithAdmin(user.ID, user.Email, user.Role, isAdmin, 0)
 	if err != nil {
 		return nil, "", "", fmt.Errorf("failed to generate access token: %w", err)
 	}
-
 	refreshToken, err := s.jwtManager.GenerateRefreshToken(user.ID, user.Email)
 	if err != nil {
 		return nil, "", "", fmt.Errorf("failed to generate refresh token: %w", err)
 	}
-
 	return user, accessToken, refreshToken, nil
 }
 
-// checkAdminGroup checks if user is in admin group.
 func (s *AuthService) checkAdminGroup(userID uint) bool {
 	if s.db == nil {
 		return false
@@ -128,37 +122,27 @@ func (s *AuthService) checkAdminGroup(userID uint) bool {
 
 // ValidateToken validates a JWT token and returns the user.
 func (s *AuthService) ValidateToken(tokenString string) (*platformmodels.User, error) {
-	// Validate token using JWT manager
 	claims, err := s.jwtManager.ValidateToken(tokenString)
 	if err != nil {
 		return nil, fmt.Errorf("invalid token: %w", err)
 	}
-
-	// Create user object from token claims
 	user := &platformmodels.User{
 		ID:    claims.UserID,
-		Login: claims.Email, // Use email as login for now
+		Login: claims.Email,
 		Email: claims.Email,
 		Role:  claims.Role,
 	}
-
 	return user, nil
 }
 
 // RefreshToken generates a new access token from a refresh token.
 func (s *AuthService) RefreshToken(refreshToken string) (string, error) {
-	// Validate refresh token using JWT manager
 	claims, err := s.jwtManager.ValidateRefreshToken(refreshToken)
 	if err != nil {
 		return "", err
 	}
-
-	// Generate new access token
-	// Note: We need to get the full user details, for now using basic info from claims
-	return s.jwtManager.GenerateToken(0, claims.Subject, "User", 0) // TODO: Get actual user ID and role
+	return s.jwtManager.GenerateToken(0, claims.Subject, "User", 0)
 }
-
-// Token generation methods removed - now using JWTManager
 
 // GetUser retrieves user information by identifier.
 func (s *AuthService) GetUser(ctx context.Context, identifier string) (*platformmodels.User, error) {

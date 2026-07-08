@@ -1187,6 +1187,7 @@
         "plugin_logs": "Logs des Plugins",
         "plugin_logs_description": "Voir l'activité et les erreurs des plugins",
         "plugin_name": "Nom",
+        "plugin_overview": "Aperçu du plugin",
         "plugin_routes": "Routes",
         "plugin_runtime": "Environnement d'exécution",
         "plugin_status": "Statut",
@@ -1418,6 +1419,60 @@
             "transport": "Type de Transport",
             "transport_settings": "Paramètres de Transport",
             "update_success": "Service web mis à jour avec succès"
+        },
+        "identity_providers": {
+            "title": "Fournisseurs d'identité",
+            "description": "Gérer les fournisseurs d'identité externes pour l'authentification des utilisateurs.",
+            "add": "Ajouter un fournisseur",
+            "name": "Nom",
+            "type": "Type",
+            "client_id": "ID client",
+            "provision": "Approvisionnement automatique",
+            "yes": "Oui",
+            "no": "Non",
+            "no_providers": "Aucun fournisseur d'identité configuré pour le moment.",
+            "disable": "Désactiver",
+            "enable": "Activer",
+            "edit": "Modifier le fournisseur d'identité",
+            "create": "Créer un fournisseur d'identité",
+            "form_help": "Configurer les paramètres du fournisseur d'identité externe.",
+            "basic_info": "Informations de base",
+            "credentials": "Identifiants",
+            "user_mapping": "Mappage des utilisateurs",
+            "fields": {
+                "name": "Nom",
+                "type": "Type de fournisseur",
+                "type_help": "Google et GitHub utilisent des points de découverte préconfigurés. OIDC et SAML nécessitent une configuration manuelle.",
+                "org_scope": "Portée organisation",
+                "org_scope_help": "Vide = disponible pour toutes les organisations. Définir sur une organisation spécifique pour un accès organisationnel.",
+                "client_id": "ID client",
+                "client_secret": "Secret client",
+                "discovery_url": "URL de découverte",
+                "discovery_url_help": "URL de découverte du fournisseur OIDC (configure automatiquement les endpoints). Requis pour OIDC/SAML. Google et GitHub utilisent la découverte intégrée.",
+                "scopes": "Portées",
+                "scopes_help": "Portées OAuth2/OIDC séparées par des espaces. Défaut : openid profile email",
+                "email_claim": "Attribut e-mail",
+                "name_claim": "Attribut nom",
+                "groups_claim": "Attribut groupes"
+            },
+            "settings": {
+                "enabled": "Activé",
+                "auto_provision": "Approvisionner les utilisateurs automatiquement",
+                "auto_provision_help": "Créer automatiquement des comptes utilisateur GoatFlow pour les premières connexions depuis ce fournisseur."
+            },
+            "actions": {
+                "cancel": "Annuler",
+                "create": "Créer",
+                "update": "Mettre à jour"
+            },
+            "toast": {
+                "updated": "Fournisseur mis à jour",
+                "created": "Fournisseur créé"
+            },
+            "confirm": {
+                "toggle": "Êtes-vous sûr de vouloir {action} ce fournisseur ?",
+                "delete": "Êtes-vous sûr de vouloir supprimer {name} ?"
+            }
         }
     },
     "admin_dashboard": {
@@ -1613,7 +1668,8 @@
         "username": "Nom d'utilisateur",
         "username_placeholder": "Entrez votre nom d'utilisateur",
         "verification_code": "Code de vérification",
-        "verify": "Vérifier"
+        "verify": "Vérifier",
+        "sign_in_with": "Sign in with"
     },
     "bulk_actions": {
         "all_selected": "Tous sélectionnés",
@@ -3597,5 +3653,8 @@
     },
     "welcome": {
         "greeting": "Bienvenue"
+    },
+    "identity_providers": {
+        "dashboard_desc": "Configurer les fournisseurs d'authentification externes"
     }
 }

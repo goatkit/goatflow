@@ -1187,6 +1187,7 @@
         "plugin_logs": "לוגים של תוספים",
         "plugin_logs_description": "הצג פעילות ושגיאות של תוספים",
         "plugin_name": "שם",
+        "plugin_overview": "סקירת פלאגין",
         "plugin_routes": "נתיבים",
         "plugin_runtime": "סביבת הרצה",
         "plugin_status": "סטטוס",
@@ -1418,6 +1419,60 @@
             "transport": "סוג תעבורה",
             "transport_settings": "הגדרות תעבורה",
             "update_success": "שירות האינטרנט עודכן בהצלחה"
+        },
+        "identity_providers": {
+            "title": "ספקי זהות",
+            "description": "ניהול ספקי זהות חיצוניים לאימות משתמשים.",
+            "add": "הוסף ספק",
+            "name": "שם",
+            "type": "סוג",
+            "client_id": "מזהה לקוח",
+            "provision": "ספק אוטומטי",
+            "yes": "כן",
+            "no": "לא",
+            "no_providers": "עדיין לא הוגדרו ספקי זהות.",
+            "disable": "השבת",
+            "enable": "הפעל",
+            "edit": "ערוך ספק זהות",
+            "create": "צור ספק זהות",
+            "form_help": "תצורת הגדרות ספק זהות חיצוני.",
+            "basic_info": "מידע בסיסי",
+            "credentials": "אישורים",
+            "user_mapping": "מיפוי משתמשים",
+            "fields": {
+                "name": "שם",
+                "type": "סוג ספק",
+                "type_help": "Google ו־GitHub משתמשים בנקודות גילוי מוגדרות מראש. OIDC ו־SAML דורשות תצורה ידנית.",
+                "org_scope": "היקף ארגון",
+                "org_scope_help": "ריק = זמין לכל הארגונים. הגדר לארגון ספציפי לגישה לפי ארגון.",
+                "client_id": "מזהה לקוח",
+                "client_secret": "סוד לקוח",
+                "discovery_url": "כתובת URL של גילוי",
+                "discovery_url_help": "כתובת URL לגילוי ספק OIDC (מגדירה נקודות קצה אוטומטית). נדרש ל־OIDC/SAML. Google ו־GitHub משתמשים בגילוי מובנה.",
+                "scopes": "היקפים",
+                "scopes_help": "היקפי OAuth2/OIDC מופרדים במרווחים. ברירת מחדל: openid profile email",
+                "email_claim": "תביעת אימייל",
+                "name_claim": "תביעת שם",
+                "groups_claim": "תביעת קבוצות"
+            },
+            "settings": {
+                "enabled": "מופעל",
+                "auto_provision": "ספק משתמשים אוטומטית",
+                "auto_provision_help": "צור חשבונות משתמשים של GoatFlow אוטומטית עבור כניסות ראשונות מהספק הזה."
+            },
+            "actions": {
+                "cancel": "ביטול",
+                "create": "צור",
+                "update": "עדכון"
+            },
+            "toast": {
+                "updated": "הספק עודכן",
+                "created": "הספק נוצר"
+            },
+            "confirm": {
+                "toggle": "האם אתה בטוח שברצונך {action} ספק זה?",
+                "delete": "האם אתה בטוח שברצונך למחוק את {name}?"
+            }
         }
     },
     "admin_dashboard": {
@@ -1613,7 +1668,8 @@
         "username": "שם משתמש",
         "username_placeholder": "הזן שם משתמש",
         "verification_code": "קוד אימות",
-        "verify": "אמת"
+        "verify": "אמת",
+        "sign_in_with": "Sign in with"
     },
     "bulk_actions": {
         "all_selected": "הכל נבחר",
@@ -3649,5 +3705,8 @@
     },
     "welcome": {
         "greeting": "ברוך הבא"
+    },
+    "identity_providers": {
+        "dashboard_desc": "הגדר ספקי אימות חיצוניים"
     }
 }

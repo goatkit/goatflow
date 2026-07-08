@@ -165,7 +165,10 @@ func ensureCoreHandlers() {
 	pairs := map[string]gin.HandlerFunc{
 		"handleLoginPage":           handleLoginPage,
 		"handle2FAPage":             handle2FAPage,
-		"handleDashboard":           handleDashboard,
+		"handleOIDCRedirect":        handleOIDCRedirect,
+		"handleOIDCCallback":        handleOIDCCallback,
+		"handleSAMLRedirect":        handleSAMLRedirect,
+		"handleSAMLCallback":        handleSAMLCallback,
 		"handleAuthLogin":           HandleAuthLogin,
 		"handlePasskeyLoginBegin":   handlePasskeyLoginBegin,
 		"handlePasskeyLoginFinish":  handlePasskeyLoginFinish,

@@ -1187,6 +1187,7 @@
         "plugin_logs": "Logi wtyczek",
         "plugin_logs_description": "Zobacz aktywność i błędy wtyczek",
         "plugin_name": "Nazwa",
+        "plugin_overview": "Przegląd wtyczki",
         "plugin_routes": "Trasy",
         "plugin_runtime": "Środowisko uruchomieniowe",
         "plugin_status": "Status",
@@ -1418,6 +1419,60 @@
             "transport": "Typ Transportu",
             "transport_settings": "Ustawienia Transportu",
             "update_success": "Usługa sieciowa zaktualizowana pomyślnie"
+        },
+        "identity_providers": {
+            "title": "Dostawcy tożsamości",
+            "description": "Zarządzaj zewnętrznymi dostawcami tożsamości do uwierzytelniania użytkowników.",
+            "add": "Dodaj dostawcę",
+            "name": "Nazwa",
+            "type": "Typ",
+            "client_id": "ID klienta",
+            "provision": "Automatyczne zaopatrywanie",
+            "yes": "Tak",
+            "no": "Nie",
+            "no_providers": "Nie skonfigurowano jeszcze dostawców tożsamości.",
+            "disable": "Wyłącz",
+            "enable": "Włącz",
+            "edit": "Edytuj dostawcę tożsamości",
+            "create": "Utwórz dostawcę tożsamości",
+            "form_help": "Skonfiguruj ustawienia zewnętrznego dostawcy tożsamości.",
+            "basic_info": "Podstawowe informacje",
+            "credentials": "Dane logowania",
+            "user_mapping": "Mapowanie użytkowników",
+            "fields": {
+                "name": "Nazwa",
+                "type": "Typ dostawcy",
+                "type_help": "Google i GitHub używają wstępnie skonfigurowanych punktów końcowych wykrywania. OIDC i SAML wymagają konfiguracji ręcznej.",
+                "org_scope": "Zakres organizacji",
+                "org_scope_help": "Puste = dostępne dla wszystkich organizacji. Ustaw dla konkretnej organizacji w celu dostępu organizacyjnego.",
+                "client_id": "ID klienta",
+                "client_secret": "Tajny klucz klienta",
+                "discovery_url": "URL wykrywania",
+                "discovery_url_help": "URL wykrywania dostawcy OIDC (automatycznie konfiguruje punkty końcowe). Wymagane dla OIDC/SAML. Google i GitHub używają wbudowanego wykrywania.",
+                "scopes": "Zakresy",
+                "scopes_help": "Zakresy OAuth2/OIDC rozdzielone spacjami. Domyślnie: openid profile email",
+                "email_claim": "Atrybut e-mail",
+                "name_claim": "Atrybut imienia",
+                "groups_claim": "Atrybut grup"
+            },
+            "settings": {
+                "enabled": "Włączone",
+                "auto_provision": "Automatycznie zaopatruj użytkowników",
+                "auto_provision_help": "Automatycznie twórz konta użytkowników GoatFlow przy pierwszym logowaniu z tego dostawcy."
+            },
+            "actions": {
+                "cancel": "Anuluj",
+                "create": "Utwórz",
+                "update": "Aktualizuj"
+            },
+            "toast": {
+                "updated": "Dostawca zaktualizowany",
+                "created": "Dostawca utworzony"
+            },
+            "confirm": {
+                "toggle": "Czy na pewno chcesz {action} tego dostawcy?",
+                "delete": "Czy na pewno chcesz usunąć {name}?"
+            }
         }
     },
     "admin_dashboard": {
@@ -1613,7 +1668,8 @@
         "username": "Nazwa użytkownika",
         "username_placeholder": "Wprowadź nazwę użytkownika",
         "verification_code": "Kod weryfikacyjny",
-        "verify": "Zweryfikuj"
+        "verify": "Zweryfikuj",
+        "sign_in_with": "Sign in with"
     },
     "bulk_actions": {
         "all_selected": "Wszystko wybrane",
@@ -4168,5 +4224,8 @@
     },
     "welcome": {
         "greeting": "Witamy"
+    },
+    "identity_providers": {
+        "dashboard_desc": "Skonfiguruj zewnętrznych dostawców uwierzytelniania"
     }
 }

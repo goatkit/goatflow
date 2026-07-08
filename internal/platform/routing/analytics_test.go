@@ -6,6 +6,7 @@ import (
 )
 
 func TestNewRouteMetrics(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 
 	if rm == nil {
@@ -23,9 +24,10 @@ func TestNewRouteMetrics(t *testing.T) {
 	if rm.uptimeStart.IsZero() {
 		t.Error("expected uptimeStart to be set")
 	}
-}
+ }
 
 func TestRecordRequest(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 
 	req := RouteRequest{
@@ -61,9 +63,10 @@ func TestRecordRequest(t *testing.T) {
 	if stats.Handler != "TicketListHandler" {
 		t.Errorf("expected Handler TicketListHandler, got %s", stats.Handler)
 	}
-}
+ }
 
 func TestRecordRequest_ErrorTracking(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 
 	errorCodes := []int{400, 401, 403, 404, 500, 502, 503}
@@ -86,9 +89,10 @@ func TestRecordRequest_ErrorTracking(t *testing.T) {
 	if stats.ErrorCount != int64(len(errorCodes)) {
 		t.Errorf("expected ErrorCount %d, got %d", len(errorCodes), stats.ErrorCount)
 	}
-}
+ }
 
 func TestRecordRequest_DurationTracking(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 
 	durations := []time.Duration{
@@ -121,9 +125,10 @@ func TestRecordRequest_DurationTracking(t *testing.T) {
 	if stats.AverageDuration != expectedAvg {
 		t.Errorf("expected AverageDuration %v, got %v", expectedAvg, stats.AverageDuration)
 	}
-}
+ }
 
 func TestRecordRequest_StatusCodeTracking(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 
 	rm.RecordRequest(RouteRequest{Method: "GET", Path: "/api/test", StatusCode: 200, Duration: time.Millisecond})
@@ -143,9 +148,10 @@ func TestRecordRequest_StatusCodeTracking(t *testing.T) {
 	if stats.StatusCodes[404] != 1 {
 		t.Errorf("expected 1 x 404 status, got %d", stats.StatusCodes[404])
 	}
-}
+ }
 
 func TestRecordRequest_RecentRequestsLimit(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 	rm.maxRecentLogs = 10
 
@@ -162,9 +168,10 @@ func TestRecordRequest_RecentRequestsLimit(t *testing.T) {
 	if len(rm.recentRequests) != 10 {
 		t.Errorf("expected max 10 recent requests, got %d", len(rm.recentRequests))
 	}
-}
+ }
 
 func TestGetStats(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 
 	rm.RecordRequest(RouteRequest{Method: "GET", Path: "/api/users", StatusCode: 200, Duration: 100 * time.Millisecond})
@@ -188,9 +195,10 @@ func TestGetStats(t *testing.T) {
 	if stats.Routes[0].Path != "/api/tickets" {
 		t.Errorf("expected first route /api/tickets, got %s", stats.Routes[0].Path)
 	}
-}
+ }
 
 func TestGetStats_ErrorRate(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 
 	// 10 requests, 2 errors = 20% error rate
@@ -206,9 +214,10 @@ func TestGetStats_ErrorRate(t *testing.T) {
 	if stats.ErrorRate != 20.0 {
 		t.Errorf("expected ErrorRate 20.0, got %f", stats.ErrorRate)
 	}
-}
+ }
 
 func TestGetRecentRequests(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 
 	for i := 0; i < 100; i++ {
@@ -224,9 +233,10 @@ func TestGetRecentRequests(t *testing.T) {
 	if len(recent) != 100 {
 		t.Errorf("expected 100 recent requests (all available), got %d", len(recent))
 	}
-}
+ }
 
 func TestInitRouteMetrics(t *testing.T) {
+	t.Parallel()
 	// Reset global
 	globalMetrics = nil
 
@@ -241,9 +251,10 @@ func TestInitRouteMetrics(t *testing.T) {
 	if rm != globalMetrics {
 		t.Error("expected returned metrics to be globalMetrics")
 	}
-}
+ }
 
 func TestGetGlobalMetrics(t *testing.T) {
+	t.Parallel()
 	// Reset global
 	globalMetrics = nil
 
@@ -257,9 +268,10 @@ func TestGetGlobalMetrics(t *testing.T) {
 	if rm != rm2 {
 		t.Error("expected same metrics instance")
 	}
-}
+ }
 
 func TestRouteStats_Fields(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 
 	now := time.Now()
@@ -287,9 +299,10 @@ func TestRouteStats_Fields(t *testing.T) {
 	if stats.LastAccessed.Before(now) {
 		t.Error("expected LastAccessed to be after test start")
 	}
-}
+ }
 
 func TestRequestLog_Fields(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 
 	rm.RecordRequest(RouteRequest{
@@ -325,9 +338,10 @@ func TestRequestLog_Fields(t *testing.T) {
 	if log.IP != "10.0.0.1" {
 		t.Errorf("expected IP 10.0.0.1, got %s", log.IP)
 	}
-}
+ }
 
 func TestGenerateRouteRows_Empty(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 
 	rows := rm.generateRouteRows([]*RouteStats{})
@@ -338,9 +352,10 @@ func TestGenerateRouteRows_Empty(t *testing.T) {
 	if !contains(rows, "No routes tracked yet") {
 		t.Error("expected 'No routes tracked yet' message")
 	}
-}
+ }
 
 func TestGenerateRouteRows_WithRoutes(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 
 	routes := []*RouteStats{
@@ -382,9 +397,10 @@ func TestGenerateRouteRows_WithRoutes(t *testing.T) {
 	if !contains(rows, "error-rate") {
 		t.Error("expected error-rate class for high error route")
 	}
-}
+ }
 
 func TestGenerateDashboardHTML(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 
 	rm.RecordRequest(RouteRequest{Method: "GET", Path: "/api/test", StatusCode: 200, Duration: time.Millisecond})
@@ -403,9 +419,10 @@ func TestGenerateDashboardHTML(t *testing.T) {
 	if !contains(html, "Route Performance") {
 		t.Error("expected 'Route Performance' in dashboard HTML")
 	}
-}
+ }
 
 func TestConcurrentRequests(t *testing.T) {
+	t.Parallel()
 	rm := NewRouteMetrics()
 
 	done := make(chan bool)
@@ -431,7 +448,7 @@ func TestConcurrentRequests(t *testing.T) {
 	if rm.totalRequests != 1000 {
 		t.Errorf("expected 1000 total requests, got %d", rm.totalRequests)
 	}
-}
+ }
 
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))

@@ -5,6 +5,7 @@
 
 set -e
 
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 echo "🧪 GoatFlow YAML Platform Integration Test"
 echo "========================================"
 echo ""
@@ -133,7 +134,7 @@ func main() {
 EOF
 
 run_test "Platform package compilation" \
-    "cd /home/nigel/git/goatkit/goatflow && go build -o /tmp/test_platform /tmp/test_platform_compile.go"
+    "cd \"$REPO_ROOT\" && go build -o /tmp/test_platform /tmp/test_platform_compile.go"
 
 # Test 9: Container health
 run_test "Container runs without errors" \
@@ -155,22 +156,22 @@ echo "-----------------"
 
 # Test core components exist and are functional
 run_test "Version manager exists" \
-    "test -f /home/nigel/git/goatkit/goatflow/internal/yamlmgmt/version_manager.go"
+    "test -f \"$REPO_ROOT/internal/yamlmgmt/version_manager.go\""
 
 run_test "Hot reload manager exists" \
-    "test -f /home/nigel/git/goatkit/goatflow/internal/yamlmgmt/hot_reload.go"
+    "test -f \"$REPO_ROOT/internal/yamlmgmt/hot_reload.go\""
 
 run_test "Schema registry exists" \
-    "test -f /home/nigel/git/goatkit/goatflow/internal/yamlmgmt/schema_registry.go"
+    "test -f \"$REPO_ROOT/internal/yamlmgmt/schema_registry.go\""
 
 run_test "Universal linter exists" \
-    "test -f /home/nigel/git/goatkit/goatflow/internal/yamlmgmt/linter.go"
+    "test -f \"$REPO_ROOT/internal/yamlmgmt/linter.go\""
 
 run_test "Config adapter exists" \
-    "test -f /home/nigel/git/goatkit/goatflow/internal/yamlmgmt/config_adapter.go"
+    "test -f \"$REPO_ROOT/internal/yamlmgmt/config_adapter.go\""
 
 run_test "CLI tool exists" \
-    "test -f /home/nigel/git/goatkit/goatflow/cmd/goatflow-config/main.go"
+    "test -f \"$REPO_ROOT/cmd/goatflow-config/main.go\""
 
 echo ""
 echo "🎯 Advanced Feature Tests"

@@ -72,7 +72,7 @@ func HandleLoginAPI(c *gin.Context) {
 	}
 
 	// Create auth service
-	authService := service.NewAuthService(db, getJWTManager())
+	authService := service.NewAuthService(db, getJWTManager(), auth.GetOIDCClient(), auth.GetStateStore())
 
 	// Authenticate user
 	user, accessToken, refreshToken, err := authService.Login(context.Background(), loginRequest.Login, loginRequest.Password)
@@ -154,7 +154,7 @@ func HandleRefreshTokenAPI(c *gin.Context) {
 	}
 
 	// Create auth service
-	authService := service.NewAuthService(db, getJWTManager())
+	authService := service.NewAuthService(db, getJWTManager(), auth.GetOIDCClient(), auth.GetStateStore())
 
 	// Refresh the token
 	newAccessToken, err := authService.RefreshToken(refreshRequest.RefreshToken)

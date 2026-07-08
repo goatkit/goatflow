@@ -110,6 +110,22 @@
             <span class="text-xs uppercase" style="color: var(--gk-text-muted);">{{ t("auth.or_continue_with")|default:"Or continue with" }}</span>
             <div class="h-px flex-1" style="background: var(--gk-border-subtle);"></div>
         </div>
+        {% if IdPButtons and IdPButtons|length > 0 %}
+        <div class="space-y-3 mt-4">
+            {% for button in IdPButtons %}
+            <a href="/auth/{{ button.slug }}" class="gk-btn-secondary gk-btn-idp w-full flex items-center justify-center gap-3" title="{{ button.name }}">
+                {% if button.type == 'google' %}
+                <i class="fa-brands fa-google text-[#DB4437] text-lg"></i>
+                {% elif button.type == 'oidc' %}
+                <i class="fa-solid fa-key text-lg" style="color: var(--gk-primary);"></i>
+                {% else %}
+                <i class="fa-solid fa-right-to-bracket text-lg"></i>
+                {% endif %}
+                {{ t("auth.sign_in_with")|default:"Sign in with" }} {{ button.name }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
         <button id="passkey-login-btn" type="button" class="gk-btn-secondary w-full" onclick="loginWithPasskey()">
             {{ t("auth.use_security_key")|default:"Use security key" }}
         </button>

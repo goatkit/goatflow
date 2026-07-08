@@ -1216,6 +1216,7 @@
         "plugin_logs": "پلگ ان لاگز",
         "plugin_logs_description": "پلگ ان کی سرگرمی اور غلطیاں دیکھیں",
         "plugin_name": "نام",
+        "plugin_overview": "پلگ ان جائزہ",
         "plugin_routes": "راستے",
         "plugin_runtime": "رن ٹائم",
         "plugin_status": "حیثیت",
@@ -1447,6 +1448,60 @@
             "transport": "ٹرانسپورٹ کی قسم",
             "transport_settings": "ٹرانسپورٹ سیٹنگز",
             "update_success": "ویب سروس کامیابی سے اپڈیٹ ہوئی"
+        },
+        "identity_providers": {
+            "title": "شناختی فراہم کنندگان",
+            "description": "صارفین کی تصدیق کے لیے بیرونی شناختی فراہم کنندگان کا نظم کریں۔",
+            "add": "فراہم کنندہ شامل کریں",
+            "name": "نام",
+            "type": "قسم",
+            "client_id": "کلائنٹ ID",
+            "provision": "خودکار فراہمی",
+            "yes": "ہاں",
+            "no": "نہیں",
+            "no_providers": "ابھی تک کوئی شناختی فراہم کنندہ ترتیب دیا نہیں گیا ہے۔",
+            "disable": "غیر فعال کریں",
+            "enable": "فعال کریں",
+            "edit": "شناختی فراہم کنندہ میں ترمیم",
+            "create": "شناختی فراہم کنندہ بنائیں",
+            "form_help": "بیرونی شناختی فراہم کنندہ کی سیٹنگز کو تشکیل دیں۔",
+            "basic_info": "بنیادی معلومات",
+            "credentials": "سرٹیفکیٹس",
+            "user_mapping": "صارف مینگ",
+            "fields": {
+                "name": "نام",
+                "type": "فراہم کنندہ کی قسم",
+                "type_help": "Google اور GitHub پہلے سے ترتیب شدہ ڈسکوری اینڈپوائنٹس استعمال کرتے ہیں۔ OIDC اور SAML کو مینوئل ترتیب کی ضرورت ہے۔",
+                "org_scope": "تنظیم دائرہ کار",
+                "org_scope_help": "خالی = تمام تنظیموں کے لیے دستیاب۔ تنظیمی رسائی کے لیے مخصوص تنظیم پر سیٹ کریں۔",
+                "client_id": "کلائنٹ ID",
+                "client_secret": "کلائنٹ خفیہ",
+                "discovery_url": "ڈسکوری URL",
+                "discovery_url_help": "OIDC فراہم کنندہ ڈسکوری URL (اینڈپوائنٹس کو خودکار طور پر ترتیب دیتا ہے)۔ OIDC/SAML کے لیے ضروری۔ Google اور GitHub بلٹ ان ڈسکوری استعمال کرتے ہیں۔",
+                "scopes": "دائرہ کار",
+                "scopes_help": "خالی جگہ سے الگ کردہ OAuth2/OIDC دائرہ کار۔ ڈیفالٹ: openid profile email",
+                "email_claim": "ای میل دعویٰ",
+                "name_claim": "نام دعویٰ",
+                "groups_claim": "گروپس دعویٰ"
+            },
+            "settings": {
+                "enabled": "فعال",
+                "auto_provision": "صارفین کی خودکار فراہمی",
+                "auto_provision_help": "اس فراہم کنندہ سے پہلی بار لاگ ان پر GoatFlow صارف اکاؤنٹس خودکار طور پر بنائیں۔"
+            },
+            "actions": {
+                "cancel": "منسوخ",
+                "create": "بنائیں",
+                "update": "اپڈیٹ"
+            },
+            "toast": {
+                "updated": "فراہم کنندہ اپڈیٹ ہو گیا",
+                "created": "فراہم کنندہ بن گیا"
+            },
+            "confirm": {
+                "toggle": "کیا آپ واقعی اس فراہم کنندہ کو {action} کرنا چاہتے ہیں؟",
+                "delete": "کیا آپ واقعی {name} کو حذف کرنا چاہتے ہیں؟"
+            }
         }
     },
     "admin_dashboard": {
@@ -1642,7 +1697,8 @@
         "username": "صارف نام",
         "username_placeholder": "اپنا صارف نام درج کریں",
         "verification_code": "تصدیقی کوڈ",
-        "verify": "تصدیق کریں"
+        "verify": "تصدیق کریں",
+        "sign_in_with": "Sign in with"
     },
     "bulk_actions": {
         "all_selected": "سب منتخب",
@@ -3622,5 +3678,8 @@
     },
     "welcome": {
         "greeting": "خوش آمدید"
+    },
+    "identity_providers": {
+        "dashboard_desc": "بیرونی تصدیق فراہم کنندگان ترتیب دیں"
     }
 }

@@ -27,9 +27,9 @@ echo ""
 run_config() {
     docker run --rm \
         -v goatflow-config-demo:/app/.versions \
-        -v /home/nigel/git/goatkit/goatflow:/workspace:ro \
-        -v /home/nigel/git/goatkit/goatflow/routes:/app/routes:ro \
-        -v /home/nigel/git/goatkit/goatflow/config:/app/config:ro \
+        -v "$PWD:/workspace:ro" \
+        -v "$PWD/routes:/app/routes:ro" \
+        -v "$PWD/config:/app/config:ro" \
         goatflow-config-manager "$@"
 }
 

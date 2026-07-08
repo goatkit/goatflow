@@ -1187,6 +1187,7 @@
         "plugin_logs": "插件日志",
         "plugin_logs_description": "查看插件活动和错误",
         "plugin_name": "名称",
+        "plugin_overview": "插件概览",
         "plugin_routes": "路由",
         "plugin_runtime": "运行环境",
         "plugin_status": "状态",
@@ -1418,6 +1419,60 @@
             "transport": "传输类型",
             "transport_settings": "传输设置",
             "update_success": "Web服务更新成功"
+        },
+        "identity_providers": {
+            "title": "身份提供商",
+            "description": "管理用于用户认证的外部身份提供商。",
+            "add": "添加提供商",
+            "name": "名称",
+            "type": "类型",
+            "client_id": "客户端 ID",
+            "provision": "自动配置",
+            "yes": "是",
+            "no": "否",
+            "no_providers": "尚未配置任何身份提供商。",
+            "disable": "禁用",
+            "enable": "启用",
+            "edit": "编辑身份提供商",
+            "create": "创建身份提供商",
+            "form_help": "配置外部身份提供商设置。",
+            "basic_info": "基本信息",
+            "credentials": "凭据",
+            "user_mapping": "用户映射",
+            "fields": {
+                "name": "名称",
+                "type": "提供商类型",
+                "type_help": "Google 和 GitHub 使用预配置的发现端点。OIDC 和 SAML 需要手动配置。",
+                "org_scope": "组织范围",
+                "org_scope_help": "留空 = 对所有组织可用。设置为特定组织以实现组织范围访问。",
+                "client_id": "客户端 ID",
+                "client_secret": "客户端密钥",
+                "discovery_url": "发现 URL",
+                "discovery_url_help": "OIDC 提供商发现 URL（自动配置端点）。OIDC/SAML 需要。Google 和 GitHub 使用内置发现。",
+                "scopes": "作用域",
+                "scopes_help": "空格分隔的 OAuth2/OIDC 作用域。默认：openid profile email",
+                "email_claim": "电子邮件声明",
+                "name_claim": "名称声明",
+                "groups_claim": "组声明"
+            },
+            "settings": {
+                "enabled": "已启用",
+                "auto_provision": "自动配置用户",
+                "auto_provision_help": "自动为此提供商首次登录的用户创建 GoatFlow 用户账户。"
+            },
+            "actions": {
+                "cancel": "取消",
+                "create": "创建",
+                "update": "更新"
+            },
+            "toast": {
+                "updated": "提供商已更新",
+                "created": "提供商已创建"
+            },
+            "confirm": {
+                "toggle": "您确定要{action}此提供商吗？",
+                "delete": "您确定要删除{name}吗？"
+            }
         }
     },
     "admin_dashboard": {
@@ -1613,7 +1668,8 @@
         "username": "用户名",
         "username_placeholder": "请输入用户名",
         "verification_code": "验证码",
-        "verify": "验证"
+        "verify": "验证",
+        "sign_in_with": "Sign in with"
     },
     "bulk_actions": {
         "all_selected": "全部已选",
@@ -3597,5 +3653,8 @@
     },
     "welcome": {
         "greeting": "欢迎"
+    },
+    "identity_providers": {
+        "dashboard_desc": "配置外部身份验证提供程序"
     }
 }

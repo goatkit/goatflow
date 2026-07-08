@@ -615,14 +615,14 @@ Plugins receive org context automatically from the authenticated session, elimin
 
 ### 0.8.4 - Target: July 2026
 
-**OAuth2/OIDC Provider & Client Management**
-- [ ] Harden or replace the dormant OAuth2 provider skeleton before wiring any routes (remove mock current-user fallback, require real auth/admin middleware, enforce PKCE, and fail closed on incomplete handlers)
-- [ ] OAuth2/OIDC data model and migrations for clients, authorization codes, access tokens, refresh tokens, signing keys, consent grants, revocations, and audit events
-- [ ] Admin UI for OAuth2/OIDC clients (`/admin/oauth2/clients`): list, create/edit, enable/disable, redirect URI management, scopes, grant types, confidential/public client mode, and secret rotation
-- [ ] Authorization code + PKCE flow with strict redirect URI matching, scope validation, refresh-token rotation, revocation, and introspection
-- [ ] OIDC discovery and JWKS support with configurable issuer, key rotation plan, and signed access/ID tokens where appropriate
-- [ ] Operator documentation, OpenAPI coverage, route tests, protocol tests, and security tests for invalid redirects, PKCE failure, client-secret handling, token expiry, and revoked credentials
-
+**External Identity Provider Integration (OIDC Client)**
+- [x] Identity provider registry — `OIDCProvider` interface (type-asserted in handlers), `StateStore` with PKCE verifier + 5min TTL, `MemoryStateStore` implementation (`internal/platform/auth/`)
+- [x] Admin UI for identity providers — per-org management (`/admin/identity-providers`): list, create/edit, enable/disable, client credentials (client ID, client secret), issuer URL, discovery endpoint configuration (`internal/api/admin_identity_providers_handlers.go`)
+- [x] OIDC discovery-based authentication — support for Google and generic OIDC providers via `golang.org/x/oauth2` + `coreos/go-oidc/v3`; automatic discovery of `/.well-known/openid-configuration`; PKCE (S256) mandatory
+- [x] User provisioning — auto-provision on first login (create local user record from IdP claims), local user lookup fallback, email-based user resolution
+- [x] Post-auth TOTP — 2FA challenge still applies after IdP login; recovery codes and hardware keys apply uniformly
+- [x] Login page IdP buttons — dynamically rendered based on org config; falls back to local login when no IdPs configured for the org (`templates/pages/login.pongo2`)
+- [x] Integration tests — 5 OIDC integration tests with Keycloak 26.x testcontainer (`make test-oidc-integration`); unit tests for PKCE generation, provider name/priority, state store
 ---
 
 ### 0.9.0 - Target: August 2026
@@ -763,8 +763,8 @@ Enterprise plugins are paid, reusable horizontal capabilities built on GoatKit c
 |---------|------|--------|-------|
 | 1.0.0 | Nov 2026 | 🔮 Future | Production Release |
 | 0.9.0 | Aug 2026 | 🔮 Future | FAQ, Calendar, Process Management Plugins |
-| 0.8.4 | Jul 2026 | 🔮 Future | OAuth2/OIDC Provider & Client Management |
-| 0.8.3 | Jun 2026 | 🔮 Future | Plugin Auto-Restart, Plugin UI Offline, WebAuthn, Quality |
+| 0.8.4 | Jul 2026 | 🔧 In Progress | External Identity Provider Integration (OIDC Client) |
+| 0.8.3 | Jun 2026 | ✅ Complete | Plugin Auto-Restart, Plugin UI Offline, WebAuthn, Quality |
 | 0.8.2 | Apr 2026 | 🚀 Current | **MCP v2** + Plugin Manager Resilience (health checks, bounded shutdown) |
 | 0.8.1 | Apr 2026 | ✅ Released | Mobile, PWA & Security |
 | 0.8.0 | Mar 2026 | ✅ Released | **PaaS Core** — Custom Fields, Plugin UIs, Multi-Tenancy, Deletion |

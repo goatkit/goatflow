@@ -140,7 +140,7 @@ GoatKit is a **platform**, not just an application framework. GoatFlow is the fi
 │                  GoatKit Platform                   │
 ├─────────────────────────────────────────────────────┤
 │  Core Infrastructure                                │
-│  • Auth system (users, agents, API keys)            │
+│  • Auth system (users, agents, API keys, external identity providers)  │
 │  • Database abstraction (PostgreSQL, MySQL)         │
 │  • Email integration (SMTP, IMAP, POP3)             │
 │  • Scheduler & background jobs                      │

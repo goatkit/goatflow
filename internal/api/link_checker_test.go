@@ -54,11 +54,14 @@ func TestAllLinksReturn200(t *testing.T) {
 			"/customer/profile":               {http.StatusServiceUnavailable: {}},
 			"/customer":                       {http.StatusServiceUnavailable: {}},
 			"/customer/tickets":               {http.StatusServiceUnavailable: {}},
-			"/admin/auto-responses":           {http.StatusServiceUnavailable: {}}, // Requires DB
-			"/admin/queue-auto-responses":     {http.StatusServiceUnavailable: {}}, // Requires DB
-			"/admin/article-colors":           {http.StatusServiceUnavailable: {}}, // Requires DB
+			"/admin/auto-responses":           {http.StatusServiceUnavailable: {}},  // Requires DB
+			"/admin/queue-auto-responses":     {http.StatusServiceUnavailable: {}},  // Requires DB
+			"/admin/article-colors":           {http.StatusServiceUnavailable: {}},  // Requires DB
+			"/auth/oidc":                      {http.StatusInternalServerError: {}}, // Requires OIDC server discovery
+			"/auth/google":                    {http.StatusInternalServerError: {}}, // Requires OIDC server discovery
+			"/auth/github":                    {http.StatusInternalServerError: {}}, // Requires OIDC server discovery
+			"/auth/saml2":                     {http.StatusInternalServerError: {}}, // Requires OIDC server discovery
 		}
-
 		if strings.HasPrefix(trimmed, "/tickets/") && status == http.StatusNotFound {
 			return true
 		}

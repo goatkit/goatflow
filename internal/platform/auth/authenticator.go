@@ -35,6 +35,18 @@ type AuthProvider interface {
 	Priority() int
 }
 
+// OIDCProvider defines the interface for redirect-based authentication providers (OIDC, Google, etc).
+// Used via type assertion in login handlers, NOT part of AuthProvider since
+// password-based providers (database, LDAP) don't have auth redirects.
+type OIDCProvider interface {
+	// StartAuthFlow generates a state token and returns the IdP authorize URL.
+	StartAuthFlow(ctx context.Context, state, codeVerifier string) (authURL string, err error)
+
+	// CompleteAuthFlow exchanges an authorization code for a user.
+	// Validates state, exchanges code, validates ID token (JWKS), and resolves user.
+	CompleteAuthFlow(ctx context.Context, code, state string) (*platformmodels.User, error)
+}
+
 // Authenticator manages multiple authentication providers.
 type Authenticator struct {
 	providers []AuthProvider

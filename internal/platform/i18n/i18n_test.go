@@ -9,8 +9,7 @@ func TestI18nInitialization(t *testing.T) {
 	i18n := GetInstance()
 	if i18n == nil {
 		t.Fatal("Failed to get i18n instance")
-	}
-}
+	} }
 
 func TestSupportedLanguages(t *testing.T) {
 	i18n := GetInstance()
@@ -38,8 +37,7 @@ func TestSupportedLanguages(t *testing.T) {
 	}
 	if !hasDe {
 		t.Error("German (de) should be supported")
-	}
-}
+	} }
 
 func TestTranslationKeys(t *testing.T) {
 	i18n := GetInstance()
@@ -94,8 +92,7 @@ func TestTranslationKeys(t *testing.T) {
 				}
 			}
 		})
-	}
-}
+	} }
 
 func TestNestedTranslations(t *testing.T) {
 	i18n := GetInstance()
@@ -119,8 +116,7 @@ func TestNestedTranslations(t *testing.T) {
 		if result == tt.key {
 			t.Errorf("Translation missing for %s in language %s", tt.key, tt.lang)
 		}
-	}
-}
+	} }
 
 func TestFallbackToEnglish(t *testing.T) {
 	i18n := GetInstance()
@@ -129,8 +125,7 @@ func TestFallbackToEnglish(t *testing.T) {
 	result := i18n.T("fr", "app.name")
 	if result != "GoatFlow" {
 		t.Errorf("Should fallback to English for unsupported language, got %q", result)
-	}
-}
+	} }
 
 func TestTranslationWithArgs(t *testing.T) {
 	i18n := GetInstance()
@@ -154,5 +149,4 @@ func TestTranslationWithArgs(t *testing.T) {
 				t.Errorf("T(%q, %q, %v) = %q; want %q", tt.lang, tt.key, tt.args, result, tt.expected)
 			}
 		})
-	}
-}
+	} }

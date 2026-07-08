@@ -1187,6 +1187,7 @@
         "plugin_logs": "プラグインログ",
         "plugin_logs_description": "プラグインの活動とエラーを表示",
         "plugin_name": "名前",
+        "plugin_overview": "プラグインの概要",
         "plugin_routes": "ルート",
         "plugin_runtime": "ランタイム",
         "plugin_status": "ステータス",
@@ -1418,6 +1419,60 @@
             "transport": "トランスポートタイプ",
             "transport_settings": "トランスポート設定",
             "update_success": "Webサービスが正常に更新されました"
+        },
+        "identity_providers": {
+            "title": "アイデンティティプロバイダー",
+            "description": "ユーザー認証のための外部アイデンティティプロバイダーを管理します。",
+            "add": "プロバイダーを追加",
+            "name": "名前",
+            "type": "タイプ",
+            "client_id": "クライアントID",
+            "provision": "自動プロビジョニング",
+            "yes": "はい",
+            "no": "いいえ",
+            "no_providers": "まだアイデンティティプロバイダーが構成されていません。",
+            "disable": "無効化",
+            "enable": "有効化",
+            "edit": "アイデンティティプロバイダーを編集",
+            "create": "アイデンティティプロバイダーの作成",
+            "form_help": "外部アイデンティティプロバイダーの設定を構成します。",
+            "basic_info": "基本情報",
+            "credentials": "認証情報",
+            "user_mapping": "ユーザーマッピング",
+            "fields": {
+                "name": "名前",
+                "type": "プロバイダータイプ",
+                "type_help": "GoogleとGitHubは事前に構成された discovery エンドポイントを使用します。OIDCとSAMLは手動構成が必要です。",
+                "org_scope": "組織スコープ",
+                "org_scope_help": "空白 = 全組織で利用可能。組織スコープアクセスには特定の組織を設定。",
+                "client_id": "クライアントID",
+                "client_secret": "クライアントシークレット",
+                "discovery_url": "Discovery URL",
+                "discovery_url_help": "OIDC プロバイダー discovery URL（エンドポイントを自動構成）。OIDC/SAML で必要。Google と GitHub は組み込み discovery を使用。",
+                "scopes": "スコープ",
+                "scopes_help": "スペース区切りの OAuth2/OIDC スコープ。デフォルト: openid profile email",
+                "email_claim": "Email クレーム",
+                "name_claim": "Name クレーム",
+                "groups_claim": "Groups クレーム"
+            },
+            "settings": {
+                "enabled": "有効",
+                "auto_provision": "ユーザーを自動プロビジョニング",
+                "auto_provision_help": "このプロバイダーからの初回ログイン時にGoatFlowユーザーアカウントを自動作成。"
+            },
+            "actions": {
+                "cancel": "キャンセル",
+                "create": "作成",
+                "update": "更新"
+            },
+            "toast": {
+                "updated": "プロバイダーを更新しました",
+                "created": "プロバイダーを作成しました"
+            },
+            "confirm": {
+                "toggle": "このプロバイダーを{action}してもよろしいですか？",
+                "delete": "{name}を削除してもよろしいですか？"
+            }
         }
     },
     "admin_dashboard": {
@@ -1613,7 +1668,8 @@
         "username": "ユーザー名",
         "username_placeholder": "ユーザー名を入力",
         "verification_code": "確認コード",
-        "verify": "確認"
+        "verify": "確認",
+        "sign_in_with": "Sign in with"
     },
     "bulk_actions": {
         "all_selected": "すべて選択済み",
@@ -3597,5 +3653,8 @@
     },
     "welcome": {
         "greeting": "ようこそ"
+    },
+    "identity_providers": {
+        "dashboard_desc": "外部認証プロバイダーを構成する"
     }
 }

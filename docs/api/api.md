@@ -2557,7 +2557,18 @@ Generated from YAML route definitions
 
 - **Path:** `/plugins/logs`
 - **Method:** `GET`
-- **Description:** Display plugin logs viewer
+- **Description:** 
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/marketplace`
+- **Method:** `GET`
+- **Description:** Browse and install plugins from the marketplace
 
 
 
@@ -2591,6 +2602,83 @@ Generated from YAML route definitions
 - **Path:** `/api/customers/:login/2fa/disable`
 - **Method:** `POST`
 - **Description:** Admin override: disable 2FA for a customer (requires reason)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/admin/identity-providers`
+- **Method:** `GET`
+- **Description:** 
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/admin/identity-providers/new`
+- **Method:** `GET`
+- **Description:** 
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/admin/identity-providers`
+- **Method:** `POST`
+- **Description:** Create a new identity provider
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/admin/identity-providers/:id/edit`
+- **Method:** `GET`
+- **Description:** 
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/admin/identity-providers/:id`
+- **Method:** `PUT`
+- **Description:** Update an existing identity provider
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/admin/identity-providers/:id`
+- **Method:** `DELETE`
+- **Description:** Delete an identity provider
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/admin/identity-providers/:id/:action`
+- **Method:** `POST`
+- **Description:** Enable or disable an identity provider (action: enable|disable)
 
 
 
@@ -5888,6 +5976,28 @@ Generated from YAML route definitions
 
 ---
 
+#### 
+
+- **Path:** `/auth/:provider`
+- **Method:** `GET`
+- **Description:** Redirect to IdP for OIDC/OAuth2 authentication
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auth/:provider/callback`
+- **Method:** `GET`
+- **Description:** Handle OIDC/OAuth2 callback from IdP
+
+
+
+
+---
+
 
 
 ### Default: basic
@@ -6470,28 +6580,6 @@ Generated from YAML route definitions
 - **Path:** `/tickets/:id/attachments/:attachment_id/view`
 - **Method:** `GET`
 - **Description:** View attachment in modal viewer
-
-
-
-
----
-
-#### 
-
-- **Path:** `/company/info`
-- **Method:** `GET`
-- **Description:** Display customer company information
-
-
-
-
----
-
-#### 
-
-- **Path:** `/company/users`
-- **Method:** `GET`
-- **Description:** Display customer company users
 
 
 

@@ -24,7 +24,7 @@ echo ""
 
 # Helper to run GoatKit
 gk() {
-    docker run --rm -v /home/nigel/git/goatkit/goatflow:/workspace:ro goatkit "$@"
+    docker run --rm -v "$PWD:/workspace:ro" goatkit "$@"
 }
 
 # 1. Show help

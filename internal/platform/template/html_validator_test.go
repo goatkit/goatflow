@@ -8,6 +8,7 @@ import (
 )
 
 func TestValidateTagBalance(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		html    string
@@ -138,9 +139,10 @@ func TestValidateTagBalance(t *testing.T) {
 			}
 		})
 	}
-}
+ }
 
 func TestValidateHTML(t *testing.T) {
+	t.Parallel()
 	// ValidateHTML is a wrapper, just verify it calls through correctly
 	err := ValidateHTML("<div></div>")
 	assert.NoError(t, err)
@@ -148,9 +150,10 @@ func TestValidateHTML(t *testing.T) {
 	err = ValidateHTML("<div>")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unclosed tags")
-}
+ }
 
 func TestValidateTagBalance_RealWorldTemplates(t *testing.T) {
+	t.Parallel()
 	// Test patterns commonly found in our templates
 	tests := []struct {
 		name    string
@@ -251,9 +254,10 @@ func TestValidateTagBalance_RealWorldTemplates(t *testing.T) {
 			}
 		})
 	}
-}
+ }
 
 func TestVoidElements(t *testing.T) {
+	t.Parallel()
 	// Verify all void elements are handled correctly
 	voidTags := []string{
 		"area", "base", "br", "col", "embed", "hr", "img",
@@ -273,9 +277,10 @@ func TestVoidElements(t *testing.T) {
 			assert.NoError(t, err, "self-closing %s should be valid", tag)
 		})
 	}
-}
+ }
 
 func TestValidateTagBalance_ErrorMessages(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		html        string
@@ -309,4 +314,4 @@ func TestValidateTagBalance_ErrorMessages(t *testing.T) {
 			}
 		})
 	}
-}
+ }

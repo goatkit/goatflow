@@ -12,6 +12,7 @@ GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ti
 ## Key Features
 
 - 🔒 **Security-First Design** - Built with zero-trust principles, comprehensive audit logging, enterprise security standards, and hardened plugin sandbox (OS-level isolation, ed25519 signing, SQL table whitelisting)
+- 🔑 **External Identity Providers** - OIDC client support for Google, Keycloak, Azure AD (Entra ID), and generic OIDC providers; PKCE (S256) mandatory, JWKS verification, auto-provisioning, post-auth TOTP
 - 🚀 **High Performance** - Go-based backend with optimized database queries and caching
 - 🌐 **Cloud Native** - Containerized deployment supporting Docker, Podman, and Kubernetes
 - 📱 **Responsive UI** - Modern HTMX-powered interface with progressive enhancement

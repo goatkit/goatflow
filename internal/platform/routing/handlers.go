@@ -56,6 +56,10 @@ func nullable(val sql.NullString) string {
 }
 
 func isPublicAuthPath(path string) bool {
+	// OIDC/SAML IdP redirect and callback endpoints must be public
+	if strings.HasPrefix(path, "/auth/") {
+		return true
+	}
 	switch path {
 	case "/login",
 		"/login/2fa",
@@ -72,8 +76,7 @@ func isPublicAuthPath(path string) bool {
 		"/api/auth/customer/passkey/finish",
 		"/api/auth/customer/2fa/verify",
 		"/api/auth/customer/2fa/webauthn/begin",
-		"/api/auth/customer/2fa/webauthn/finish",
-		"/auth/customer":
+		"/api/auth/customer/2fa/webauthn/finish":
 		return true
 	default:
 		return false

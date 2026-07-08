@@ -5,15 +5,17 @@ import (
 )
 
 func TestLanguageDirectionConstants(t *testing.T) {
+	t.Parallel()
 	if LTR != "ltr" {
 		t.Errorf("LTR = %q, want %q", LTR, "ltr")
 	}
 	if RTL != "rtl" {
 		t.Errorf("RTL = %q, want %q", RTL, "rtl")
 	}
-}
+ }
 
 func TestSupportedLanguages_RTL(t *testing.T) {
+	t.Parallel()
 	// Test that required languages exist in metadata
 	required := []string{"en", "de", "ar", "he", "fa", "es", "fr"}
 	for _, code := range required {
@@ -46,9 +48,10 @@ func TestSupportedLanguages_RTL(t *testing.T) {
 	if !foundEnglish {
 		t.Error("English should be enabled (en.json must exist)")
 	}
-}
+ }
 
 func TestGetLanguageConfig(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		code     string
@@ -72,9 +75,10 @@ func TestGetLanguageConfig(t *testing.T) {
 			}
 		})
 	}
-}
+ }
 
 func TestIsRTL(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		code string
@@ -99,9 +103,10 @@ func TestIsRTL(t *testing.T) {
 			}
 		})
 	}
-}
+ }
 
 func TestGetDirection(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		code string
@@ -122,9 +127,10 @@ func TestGetDirection(t *testing.T) {
 			}
 		})
 	}
-}
+ }
 
 func TestGetEnabledLanguages(t *testing.T) {
+	t.Parallel()
 	enabled := GetEnabledLanguages()
 
 	if len(enabled) == 0 {
@@ -149,9 +155,10 @@ func TestGetEnabledLanguages(t *testing.T) {
 	if !hasEnglish {
 		t.Error("English should be in enabled languages")
 	}
-}
+ }
 
 func TestConvertDigits(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		number string
@@ -175,9 +182,10 @@ func TestConvertDigits(t *testing.T) {
 			}
 		})
 	}
-}
+ }
 
 func TestGetCSSClass(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		lang     string
@@ -215,9 +223,10 @@ func TestGetCSSClass(t *testing.T) {
 			}
 		})
 	}
-}
+ }
 
 func TestGetHTMLAttributes(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		lang    string
@@ -243,9 +252,10 @@ func TestGetHTMLAttributes(t *testing.T) {
 			}
 		})
 	}
-}
+ }
 
 func TestLanguageConfig_NumberFormat(t *testing.T) {
+	t.Parallel()
 	// Test German number format
 	de := SupportedLanguages["de"]
 	if de.NumberFormat.DecimalSeparator != "," {
@@ -263,9 +273,10 @@ func TestLanguageConfig_NumberFormat(t *testing.T) {
 	if en.NumberFormat.ThousandSeparator != "," {
 		t.Errorf("English thousand separator = %q, want %q", en.NumberFormat.ThousandSeparator, ",")
 	}
-}
+ }
 
 func TestLanguageConfig_CurrencyFormat(t *testing.T) {
+	t.Parallel()
 	// Test English (USD)
 	en := SupportedLanguages["en"]
 	if en.Currency.Symbol != "$" {
@@ -283,9 +294,10 @@ func TestLanguageConfig_CurrencyFormat(t *testing.T) {
 	if de.Currency.Position != "after" {
 		t.Errorf("German currency position = %q, want %q", de.Currency.Position, "after")
 	}
-}
+ }
 
 func TestFormatCurrency(t *testing.T) {
+	t.Parallel()
 	// Basic test that it doesn't panic
 	result := FormatCurrency(100.00, "en")
 	if result == "" {
@@ -302,9 +314,10 @@ func TestFormatCurrency(t *testing.T) {
 	if resultUnknown == "" {
 		t.Error("FormatCurrency for unknown language returned empty string")
 	}
-}
+ }
 
 func TestFormatNumber(t *testing.T) {
+	t.Parallel()
 	// Basic test that it doesn't panic
 	result := FormatNumber(1234.56, "en", 2)
 	if result == "" {
@@ -316,7 +329,7 @@ func TestFormatNumber(t *testing.T) {
 	if resultUnknown == "" {
 		t.Error("FormatNumber for unknown language returned empty string")
 	}
-}
+ }
 
 // Helper function.
 func containsStr(s, substr string) bool {

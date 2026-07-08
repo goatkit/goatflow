@@ -1187,6 +1187,7 @@
         "plugin_logs": "Logs de Plugins",
         "plugin_logs_description": "Ver atividade e erros de plugins",
         "plugin_name": "Nome",
+        "plugin_overview": "Visão geral do plugin",
         "plugin_routes": "Rotas",
         "plugin_runtime": "Ambiente de execução",
         "plugin_status": "Status",
@@ -1418,6 +1419,60 @@
             "transport": "Tipo de Transporte",
             "transport_settings": "Configurações de Transporte",
             "update_success": "Serviço web atualizado com sucesso"
+        },
+        "identity_providers": {
+            "title": "Provedores de identidade",
+            "description": "Gerir provedores de identidade externos para autenticação de utilizadores.",
+            "add": "Adicionar provedor",
+            "name": "Nome",
+            "type": "Tipo",
+            "client_id": "ID do cliente",
+            "provision": "Provisionamento automático",
+            "yes": "Sim",
+            "no": "Não",
+            "no_providers": "Ainda não há provedores de identidade configurados.",
+            "disable": "Desativar",
+            "enable": "Ativar",
+            "edit": "Editar provedor de identidade",
+            "create": "Criar provedor de identidade",
+            "form_help": "Configurar as definições do provedor de identidade externo.",
+            "basic_info": "Informações básicas",
+            "credentials": "Credenciais",
+            "user_mapping": "Mapeamento de utilizador",
+            "fields": {
+                "name": "Nome",
+                "type": "Tipo de provedor",
+                "type_help": "Google e GitHub usam endpoints de discovery pré-configurados. OIDC e SAML requerem configuração manual.",
+                "org_scope": "Âmbito de organização",
+                "org_scope_help": "Vazio = disponível para todas as organizações. Definir uma organização específica para acesso por organização.",
+                "client_id": "ID do cliente",
+                "client_secret": "Segredo do cliente",
+                "discovery_url": "URL de discovery",
+                "discovery_url_help": "URL de discovery do provedor OIDC (configura automaticamente os endpoints). Necessário para OIDC/SAML. Google e GitHub usam discovery integrado.",
+                "scopes": "Âmbitos",
+                "scopes_help": "Âmbitos OAuth2/OIDC separados por espaço. Padrão: openid profile email",
+                "email_claim": "Atributo de e-mail",
+                "name_claim": "Atributo de nome",
+                "groups_claim": "Atributo de grupos"
+            },
+            "settings": {
+                "enabled": "Ativado",
+                "auto_provision": "Provisionar utilizadores automaticamente",
+                "auto_provision_help": "Criar automaticamente contas de utilizador GoatFlow para os primeiros logins deste provedor."
+            },
+            "actions": {
+                "cancel": "Cancelar",
+                "create": "Criar",
+                "update": "Atualizar"
+            },
+            "toast": {
+                "updated": "Provedor atualizado",
+                "created": "Provedor criado"
+            },
+            "confirm": {
+                "toggle": "Tem a certeza que deseja {action} este provedor?",
+                "delete": "Tem a certeza que deseja eliminar {name}?"
+            }
         }
     },
     "admin_dashboard": {
@@ -1613,7 +1668,8 @@
         "username": "Nome de Usuário",
         "username_placeholder": "Digite seu nome de usuário",
         "verification_code": "Código de verificação",
-        "verify": "Verificar"
+        "verify": "Verificar",
+        "sign_in_with": "Sign in with"
     },
     "bulk_actions": {
         "all_selected": "Todos selecionados",
@@ -4167,5 +4223,8 @@
     },
     "welcome": {
         "greeting": "Bem-vindo"
+    },
+    "identity_providers": {
+        "dashboard_desc": "Configurar provedores de autenticação externos"
     }
 }

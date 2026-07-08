@@ -2584,7 +2584,18 @@
                     <h3></h3>
                     <div class="method GET">GET</div>
                     <code class="path">/plugins/logs</code>
-                    <p>Display plugin logs viewer</p>
+                    <p></p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/marketplace</code>
+                    <p>Browse and install plugins from the marketplace</p>
                     
                     
                     
@@ -2618,6 +2629,83 @@
                     <div class="method POST">POST</div>
                     <code class="path">/api/customers/:login/2fa/disable</code>
                     <p>Admin override: disable 2FA for a customer (requires reason)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/admin/identity-providers</code>
+                    <p></p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/admin/identity-providers/new</code>
+                    <p></p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/admin/identity-providers</code>
+                    <p>Create a new identity provider</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/admin/identity-providers/:id/edit</code>
+                    <p></p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method PUT">PUT</div>
+                    <code class="path">/admin/identity-providers/:id</code>
+                    <p>Update an existing identity provider</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method DELETE">DELETE</div>
+                    <code class="path">/admin/identity-providers/:id</code>
+                    <p>Delete an identity provider</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/admin/identity-providers/:id/:action</code>
+                    <p>Enable or disable an identity provider (action: enable|disable)</p>
                     
                     
                     
@@ -5936,6 +6024,28 @@
                     
                 </div>
                 
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/auth/:provider</code>
+                    <p>Redirect to IdP for OIDC/OAuth2 authentication</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/auth/:provider/callback</code>
+                    <p>Handle OIDC/OAuth2 callback from IdP</p>
+                    
+                    
+                    
+                    
+                </div>
+                
             </div>
         </div>
         
@@ -6521,28 +6631,6 @@
                     <div class="method GET">GET</div>
                     <code class="path">/tickets/:id/attachments/:attachment_id/view</code>
                     <p>View attachment in modal viewer</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/company/info</code>
-                    <p>Display customer company information</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/company/users</code>
-                    <p>Display customer company users</p>
                     
                     
                     

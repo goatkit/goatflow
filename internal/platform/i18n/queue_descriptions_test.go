@@ -5,6 +5,7 @@ import (
 )
 
 func TestQueueDescriptionTranslations(t *testing.T) {
+	t.Parallel()
 	i18n := GetInstance()
 
 	// Test queue description translations
@@ -72,4 +73,4 @@ func TestQueueDescriptionTranslations(t *testing.T) {
 			}
 		})
 	}
-}
+ }

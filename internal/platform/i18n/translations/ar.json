@@ -1187,6 +1187,7 @@
         "plugin_logs": "سجلات الإضافات",
         "plugin_logs_description": "عرض نشاط وأخطاء الإضافات",
         "plugin_name": "الاسم",
+        "plugin_overview": "نظرة عامة على البرنامج المساعد",
         "plugin_routes": "المسارات",
         "plugin_runtime": "بيئة التشغيل",
         "plugin_status": "الحالة",
@@ -1418,6 +1419,60 @@
             "transport": "نوع النقل",
             "transport_settings": "إعدادات النقل",
             "update_success": "تم تحديث خدمة الويب بنجاح"
+        },
+        "identity_providers": {
+            "title": "موفرو الهوية",
+            "description": "إدارة مزودي الهوية الخارجية لمصادقة المستخدمين.",
+            "add": "إضافة مزود",
+            "name": "الاسم",
+            "type": "النوع",
+            "client_id": "معرف العميل",
+            "provision": "التوفير التلقائي",
+            "yes": "نعم",
+            "no": "لا",
+            "no_providers": "لم يتم تكوين أي مزودي هوية بعد.",
+            "disable": "تعطيل",
+            "enable": "تمكين",
+            "edit": "تحرير مزود الهوية",
+            "create": "إنشاء مزود هوية",
+            "form_help": "تكوين إعدادات مزود الهوية الخارجي.",
+            "basic_info": "معلومات أساسية",
+            "credentials": "بيانات الاعتماد",
+            "user_mapping": "تعيين المستخدم",
+            "fields": {
+                "name": "الاسم",
+                "type": "نوع المزود",
+                "type_help": "تستخدم Google و GitHub نقاط اكتشاف معدة مسبقًا. يتطلب OIDC و SAML تكوينًا يدويًا.",
+                "org_scope": "نطاق المؤسسة",
+                "org_scope_help": "فارغ = متاح لجميع المؤسسات. تعيين لمؤسسة محددة للوصول حسب المؤسسة.",
+                "client_id": "معرف العميل",
+                "client_secret": "سر العميل",
+                "discovery_url": "عنوان URL للاكتشاف",
+                "discovery_url_help": "عنوان URL لاكتشاف مزود OIDC (يكوين نقاط النهاية تلقائيًا). مطلوب لـ OIDC/SAML. تستخدم Google و GitHub الاكتشاف المدمج.",
+                "scopes": "النطاقات",
+                "scopes_help": "نطاقات OAuth2/OIDC مفصولة بمسافات. الافتراضي: openid profile email",
+                "email_claim": "مطالبة البريد الإلكتروني",
+                "name_claim": "مطالبة الاسم",
+                "groups_claim": "مطالبة المجموعات"
+            },
+            "settings": {
+                "enabled": "مُفعّل",
+                "auto_provision": "توفير المستخدمين تلقائيًا",
+                "auto_provision_help": "إنشاء حسابات مستخدمين GoatFlow تلقائيًا عند تسجيل الدخول الأول من هذا المزود."
+            },
+            "actions": {
+                "cancel": "إلغاء",
+                "create": "إنشاء",
+                "update": "تحديث"
+            },
+            "toast": {
+                "updated": "تم تحديث المزود",
+                "created": "تم إنشاء المزود"
+            },
+            "confirm": {
+                "toggle": "هل أنت متأكد أنك تريد {action} هذا المزود؟",
+                "delete": "هل أنت متأكد أنك تريد حذف {name}؟"
+            }
         }
     },
     "admin_dashboard": {
@@ -1613,7 +1668,8 @@
         "username": "اسم المستخدم",
         "username_placeholder": "أدخل اسم المستخدم",
         "verification_code": "رمز التحقق",
-        "verify": "تحقق"
+        "verify": "تحقق",
+        "sign_in_with": "Sign in with"
     },
     "bulk_actions": {
         "all_selected": "تم تحديد الكل",
@@ -3615,5 +3671,8 @@
     },
     "welcome": {
         "greeting": "مرحبًا"
+    },
+    "identity_providers": {
+        "dashboard_desc": "تكوين مزودي المصادقة الخارجيين"
     }
 }

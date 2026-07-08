@@ -146,3 +146,24 @@ spec:
       method: POST
       handler: handleCustomerWebAuthnLoginFinish
       description: "Finish customer security key login verification"
+
+    # OIDC/OAuth2 identity provider login flows
+    - path: /auth/:id
+      method: GET
+      handler: handleOIDCRedirect
+      description: "Redirect to IdP for OIDC/OAuth2 authentication"
+    - path: /auth/:id/callback
+      method: GET
+      handler: handleOIDCCallback
+      description: "Handle OIDC/OAuth2 callback from IdP"
+
+    # SAML2 identity provider login flows
+    - path: /auth/:id/saml
+      method: GET
+      handler: handleSAMLRedirect
+      description: "Initiate SAML2 SP-initiated login flow"
+    - path: /auth/:id/acs
+      method: POST
+      handler: handleSAMLCallback
+      description: "Handle SAML2 ACS POST response from IdP"
+

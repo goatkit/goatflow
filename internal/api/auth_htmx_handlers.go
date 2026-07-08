@@ -49,9 +49,28 @@ func handleLoginPage(c *gin.Context) {
 	}
 
 	cfg := config.Get()
-	errorMsg := c.Query("error")
+	errorMsg := ""
+	if rawErr := c.Query("error"); rawErr != "" {
+		messages := map[string]string{
+			"invalid_provider":    "Invalid login provider.",
+			"server_error":        "A server error occurred. Please try again.",
+			"provider_not_found":  "The selected login provider could not be found.",
+			"provider_disabled":   "This login provider has been disabled.",
+			"provider_mismatch":   "Authentication provider mismatch. Please try again.",
+			"auth_failed":         "Authentication failed. Please check your provider configuration or try again.",
+			"saml_config_error":   "SAML provider configuration error. Contact your administrator.",
+			"missing_params":      "Missing authentication parameters. Please try again.",
+			"missing_state":       "Authentication state missing. Please try again.",
+			"invalid_state":       "Authentication session expired. Please try again.",
+			"session_error":       "Failed to create a session. Please try again.",
+		}
+		if msg, ok := messages[rawErr]; ok {
+			errorMsg = msg
+		} else {
+			errorMsg = rawErr
+		}
+	}
 
-	// Default to false if config is not initialized (e.g., in tests)
 	allowRegistration := false
 	allowLostPassword := false
 	if cfg != nil {
@@ -59,10 +78,37 @@ func handleLoginPage(c *gin.Context) {
 		allowLostPassword = cfg.Features.LostPassword
 	}
 
+	// Get available OIDC providers for IdP buttons
+	var idpButtons []map[string]string
+	if db, err := database.GetDB(); err == nil && db != nil {
+		query := database.ConvertPlaceholders(
+			`SELECT id, name, provider_type FROM gk_identity_provider
+			WHERE (org_id IS NULL OR org_id = ?) AND enabled = 1
+			ORDER BY provider_type, name`,
+		)
+		rows, err := db.Query(query, orgIDFromContext(c))
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var id uint
+				var name, ptype string
+				if err := rows.Scan(&id, &name, &ptype); err == nil {
+					idpButtons = append(idpButtons, map[string]string{
+						"id":   fmt.Sprintf("%d", id),
+						"name": name,
+						"type": ptype,
+						"slug": fmt.Sprintf("%d", id),
+					})
+				}
+			}
+		}
+	}
+
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/login.pongo2", pongo2.Context{
 		"error":             errorMsg,
 		"AllowRegistration": allowRegistration,
 		"AllowLostPassword": allowLostPassword,
+		"IdPButtons":        idpButtons,
 	})
 }
 

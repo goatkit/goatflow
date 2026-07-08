@@ -56,6 +56,100 @@
         ]
       }
     },
+    "/admin/admin/identity-providers": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create a new identity provider",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/admin/identity-providers/new": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/admin/identity-providers/{id}": {
+      "delete": {
+        "description": "Delete an identity provider",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update an existing identity provider",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/admin/identity-providers/{id}/:action": {
+      "post": {
+        "description": "Enable or disable an identity provider (action: enable|disable)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/admin/identity-providers/{id}/edit": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/admin/api/acl": {
       "post": {
         "description": "Create a new ACL",
@@ -3475,6 +3569,20 @@
         ]
       }
     },
+    "/admin/marketplace": {
+      "get": {
+        "description": "Browse and install plugins from the marketplace",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/admin/modules": {
       "get": {
         "description": "List available dynamic modules",
@@ -3788,7 +3896,7 @@
     },
     "/admin/plugins/logs": {
       "get": {
-        "description": "Display plugin logs viewer",
+        "description": "",
         "responses": {
           "200": {
             "description": "Success"
@@ -7121,6 +7229,34 @@
         ]
       }
     },
+    "/auth/:provider": {
+      "get": {
+        "description": "Redirect to IdP for OIDC/OAuth2 authentication",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/auth/:provider/callback": {
+      "get": {
+        "description": "Handle OIDC/OAuth2 callback from IdP",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/auth/customer": {
       "get": {
         "description": "Customer login portal",
@@ -7368,34 +7504,6 @@
     "/customer/api/preferences/wallpaper": {
       "post": {
         "description": "Set wallpaper on/off preference for customer",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/customer/company/info": {
-      "get": {
-        "description": "Display customer company information",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/customer/company/users": {
-      "get": {
-        "description": "Display customer company users",
         "responses": {
           "200": {
             "description": "Success"

@@ -171,6 +171,7 @@ func (a *HTMLAsserter) NotContains(unexpected string) {
 // is provided with proper initials, those initials are used rather than deriving
 // them from an incomplete User object.
 func TestCustomerInitialsInBaseTemplate(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	t.Run("customer initials display ES for Emma Scott", func(t *testing.T) {
@@ -234,4 +235,4 @@ func TestCustomerInitialsInBaseTemplate(t *testing.T) {
 		// After fixing, this assertion should pass:
 		assert.Contains(t, html, ">ES</span>", "Should show Customer initials 'ES', not User-derived single letter")
 	})
-}
+ }

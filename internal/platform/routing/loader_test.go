@@ -11,6 +11,7 @@ import (
 )
 
 func TestLoadYAMLRoutesPreservesPrefix(t *testing.T) {
+	t.Parallel()
 	gin.SetMode(gin.TestMode)
 
 	dir := t.TempDir()
@@ -67,9 +68,10 @@ spec:
 			t.Fatalf("unexpected handler without prefix: status %d", w.Code)
 		}
 	})
-}
+ }
 
 func TestLoadYAMLRoutesFromGlobalMap_SetsGlobalRegistry(t *testing.T) {
+	t.Parallel()
 	gin.SetMode(gin.TestMode)
 
 	// Reset global state
@@ -122,4 +124,4 @@ spec:
 	if handler == nil {
 		t.Fatal("Handler should not be nil")
 	}
-}
+ }

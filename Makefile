@@ -11,6 +11,7 @@ endif
 GO_IMAGE ?= golang:1.25.10-alpine
 export GO_IMAGE
 TOOLBOX_IMAGE ?= ghcr.io/goatkit/goatflow/toolbox:latest
+NPROC := $(shell nproc 2>/dev/null || echo 4)
 
 # Version information from git (used in docker build)
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -303,18 +304,90 @@ test-legacy: toolbox-build
 		-e TEST_BACKEND_SERVICE_HOST=localhost \
 		-e TEST_BACKEND_PORT=$(TEST_BACKEND_PORT) \
 		-e TEST_BACKEND_CONTAINER_PORT=$(TEST_BACKEND_PORT) \
-		$(TOOLBOX_IMAGE) \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
-		echo "Running template tests (fail-fast)"; go test -count=1 -timeout=1m -buildvcs=false ./internal/template/...; \
-		CORE_PKGS=$$(go list ./... | rg -v "tests/e2e|tests/integration|internal/email/integration|internal/template"); \
-		echo "Running core packages"; go test -count=1 -timeout=15m -buildvcs=false $$CORE_PKGS; \
-		echo "Running integration packages"; go test -tags=integration -count=1 -timeout=20m -buildvcs=false ./tests/integration ./internal/email/integration'
+		echo "Running template tests (fail-fast)"; go test -count=1 -timeout=1m -buildvcs=false -v -p $(NPROC) ./internal/platform/template/...; \
+		CORE_PKGS=$$(go list ./... | rg -v "tests/e2e|tests/integration|internal/email/integration|internal/platform/template"); \
+		echo "Running core packages"; go test -count=1 -timeout=15m -buildvcs=false -v -p $(NPROC) $$CORE_PKGS; \
+		echo "Running integration packages"; go test -tags=integration -count=1 -timeout=20m -buildvcs=false -v -p $(NPROC) ./tests/integration ./internal/email/integration'
 	@$(MAKE) test-e2e-playwright-go
 
 # Run template tests only (fast fail-fast validation of HTMX attributes and paths)
 test-templates:
 	@printf "🎨 Running template tests (fail-fast)...\n"
-	@$(MAKE) toolbox-exec ARGS="go test -v -count=1 ./internal/template/..."
+	@$(MAKE) toolbox-exec ARGS="go test -v -count=1 ./internal/platform/template/..."
+
+# Run all unit tests (templates + core packages, no integration/e2e)
+test-unit: toolbox-build test-stack-up
+	@printf "\n🧪 Running unit tests...\n"
+	@$(CONTAINER_CMD) run --rm \
+		--security-opt label=disable \
+		$(CONTAINER_USER) \
+		-v "$$(pwd):/workspace" \
+		--network host \
+		$(MOD_CACHE_MOUNT) \
+		-w /workspace \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
+		-e APP_ENV=test \
+		-e ENABLE_TEST_ADMIN_ROUTES=1 \
+		-e STORAGE_PATH=/tmp \
+		-e TEMPLATES_DIR=/workspace/templates \
+		-e DB_DRIVER=$(TEST_DB_DRIVER) \
+		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
+		-e DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e DB_NAME=$(TEST_DB_NAME) \
+		-e DB_USER=$(TEST_DB_USER) \
+		-e DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
+		-e TEST_DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
+		-e TEST_DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e TEST_DB_NAME=$(TEST_DB_NAME) \
+		-e TEST_DB_USER=$(TEST_DB_USER) \
+		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
+		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
+		$(TOOLBOX_IMAGE) \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; \
+		echo "Running template tests..."; go test -count=1 -timeout=1m -buildvcs=false -v -p $(NPROC) ./internal/platform/template/... || true; \
+		CORE_PKGS=$$(go list ./... | rg -v "tests/e2e|tests/integration|internal/email/integration|internal/platform/template"); \
+		echo "Running core packages"; go test -count=1 -timeout=15m -buildvcs=false -v -p $(NPROC) $$CORE_PKGS'
+
+
+# Run unit tests with Go's result caching enabled (skips unchanged packages).
+# Drops -count=1 for fast local iteration. Keeps -timeout for safety.
+test-fast: toolbox-build test-stack-up
+	@printf "\n🧪 Running unit tests (cache-enabled)...\n"
+	@$(CONTAINER_CMD) run --rm \
+		--security-opt label=disable \
+		$(CONTAINER_USER) \
+		-v "$$(pwd):/workspace" \
+		--network host \
+		$(MOD_CACHE_MOUNT) \
+		-w /workspace \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
+		-e APP_ENV=test \
+		-e ENABLE_TEST_ADMIN_ROUTES=1 \
+		-e STORAGE_PATH=/tmp \
+		-e TEMPLATES_DIR=/workspace/templates \
+		-e DB_DRIVER=$(TEST_DB_DRIVER) \
+		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
+		-e DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e DB_NAME=$(TEST_DB_NAME) \
+		-e DB_USER=$(TEST_DB_USER) \
+		-e DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
+		-e TEST_DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
+		-e TEST_DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e TEST_DB_NAME=$(TEST_DB_NAME) \
+		-e TEST_DB_USER=$(TEST_DB_USER) \
+		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
+		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
+		$(TOOLBOX_IMAGE) \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; \
+		echo "Running template tests..."; go test -timeout=1m -buildvcs=false -v -p $(NPROC) ./internal/platform/template/... || true; \
+		CORE_PKGS=$$(go list ./... | rg -v "tests/e2e|tests/integration|internal/email/integration|internal/platform/template"); \
+		echo "Running core packages"; go test -timeout=15m -buildvcs=false -v -p $(NPROC) $$CORE_PKGS'
 
 # Debug environment detection
 debug-env:
@@ -908,18 +981,6 @@ load-test-smoke:
 		$(K6_IMAGE) \
 		run --summary-export "$$summary" --summary-trend-stats "avg,min,med,p(90),p(95),p(99),max" "$(LOAD_TEST_SCRIPT)"
 
-.PHONY: test-unit
-test-unit:
-	@echo "🧪 Running unit tests (with test database)..."
-	@$(MAKE) toolbox-build
-	@# Ensure test DB is running
-	@$(MAKE) test-db-up >/dev/null 2>&1 || true
-	@$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile toolbox --profile testdb run --rm -T \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
-		-e GOFLAGS=-buildvcs=false \
-		toolbox \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; mkdir -p generated/test-results; PKGS="./cmd/goats ./internal/..."; if [ -d generated ] && ls generated/*.go >/dev/null 2>&1; then PKGS="$$PKGS ./generated/..."; fi; go test -count=1 -buildvcs=false -v $$PKGS | tee generated/test-results/unit_stable.log'
 
 .PHONY: test-e2e
 test-e2e:
@@ -987,6 +1048,25 @@ toolbox-test-integration:
 		PKGS="$${INT_PKGS:-./internal/middleware}"; \
 		echo "Running integration-tagged tests for packages: $$PKGS"; \
 		go test -tags=integration -buildvcs=false -count=1 -v $$PKGS'
+
+# Run OIDC integration tests (requires Docker for testcontainers Keycloak)
+.PHONY: test-oidc-integration
+test-oidc-integration: toolbox-build
+	@printf "\n🧪 Running OIDC integration tests (requires Docker + Keycloak)...\n"
+	@$(CONTAINER_CMD) run --rm \
+		--security-opt label=disable \
+		$(CONTAINER_USER) \
+		-v "$$PWD:/workspace" \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		--network host \
+		-w /workspace \
+		-u "$$UID:$$GID" \
+		--group-add "$$(stat -c '%g' /var/run/docker.sock)" \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
+		-e GOFLAGS=-buildvcs=false \
+		$(TOOLBOX_IMAGE) \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; echo "Running OIDC integration tests..."; go test -tags=integration -buildvcs=false -count=1 -timeout=10m -v ./internal/platform/auth/...'
 
 # Run smtp4dev + POP/DB email integrations end-to-end
 toolbox-test-email-integration:
@@ -1510,15 +1590,16 @@ endif
 #    e.g.   echo "select * from users;"| make db-shell
 #           echo "select * from users;"| make DB_DRIVER=mysql   db-shell
 db-shell:
+	@$(COMPOSE_CMD) up -d mariadb >/dev/null 2>&1 || true
 	@if [ -t 0 ]; then \
 		TTY_FLAGS="-it"; \
 	else \
 		TTY_FLAGS="-T"; \
 	fi; \
 	if [ "$(DB_DRIVER)" = "postgres" ]; then \
-		$(COMPOSE_CMD) --profile toolbox run --rm $$TTY_FLAGS toolbox psql -h $(DB_HOST) -U $(DB_USER) -d $(DB_NAME); \
+		$(COMPOSE_CMD) exec $$TTY_FLAGS postgres psql -U $(DB_USER) -d $(DB_NAME); \
 	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm $$TTY_FLAGS toolbox mysql -h $(DB_HOST) -u $(DB_USER) -p$(DB_PASSWORD) -D $(DB_NAME); \
+		$(COMPOSE_CMD) exec $$TTY_FLAGS mariadb mariadb -u $(DB_USER) -p$(DB_PASSWORD) -D $(DB_NAME); \
 	fi
 
 db-shell-test: test-db-up
@@ -1528,16 +1609,16 @@ db-shell-test: test-db-up
 		TTY_FLAGS="-T"; \
 	fi; \
 	if [ "$(TEST_DB_DRIVER)" = "postgres" ]; then \
-		$(COMPOSE_CMD) --profile toolbox run --rm $$TTY_FLAGS toolbox psql -h $(TEST_DB_POSTGRES_HOST) -U $(TEST_DB_POSTGRES_USER) -d $(TEST_DB_POSTGRES_NAME); \
+		$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml exec $$TTY_FLAGS postgres-test psql -U $(TEST_DB_POSTGRES_USER) -d $(TEST_DB_POSTGRES_NAME); \
 	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm $$TTY_FLAGS toolbox mysql -h $(TEST_DB_MYSQL_HOST) -u $(TEST_DB_MYSQL_USER) -p$(TEST_DB_MYSQL_PASSWORD) -D $(TEST_DB_MYSQL_NAME); \
+		$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml exec $$TTY_FLAGS mariadb-test mariadb -u $(TEST_DB_MYSQL_USER) -p$(TEST_DB_MYSQL_PASSWORD) -D $(TEST_DB_MYSQL_NAME); \
 	fi
 
 # Fix PostgreSQL sequences after data import (PostgreSQL only)
 db-fix-sequences:
 	@if [ "$(DB_DRIVER)" = "postgres" ]; then \
 		printf "🔧 Fixing database sequences...\n"; \
-		$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox psql -h $(DB_HOST) -U $(DB_USER) -d $(DB_NAME) -v ON_ERROR_STOP=1 -f /workspace/scripts/db/postgres/fix_sequences.sql; \
+		cat scripts/db/postgres/fix_sequences.sql | $(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -v ON_ERROR_STOP=1; \
 		printf "✅ Sequences fixed - duplicate key errors should be resolved\n"; \
 	else \
 		printf "ℹ️  Sequence fixing is only needed for PostgreSQL databases\n"; \
@@ -1547,71 +1628,52 @@ db-fix-sequences-test:
 	@$(MAKE) test-db-up >/dev/null 2>&1 || true
 	@if [ "$(TEST_DB_DRIVER)" = "postgres" ]; then \
 		printf "🔧 Fixing test database sequences...\n"; \
-		$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox psql -h $(TEST_DB_POSTGRES_HOST) -p $(TEST_DB_POSTGRES_CONTAINER_PORT) -U $(TEST_DB_POSTGRES_USER) -d $(TEST_DB_POSTGRES_NAME) -v ON_ERROR_STOP=1 -f /workspace/scripts/db/postgres/fix_sequences.sql; \
+		cat scripts/db/postgres/fix_sequences.sql | $(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml exec -T postgres-test psql -U $(TEST_DB_POSTGRES_USER) -d $(TEST_DB_POSTGRES_NAME) -v ON_ERROR_STOP=1; \
 		printf "✅ Test database sequences synchronized\n"; \
 	else \
 		printf "ℹ️  Sequence fixing is only needed for PostgreSQL test databases\n"; \
 	fi
 # Run a database query (use QUERY="SELECT ..." make db-query)
 db-query:
-	# Robust query execution: supports STDIN, QUERY_FILE, or QUERY var
-	# Priority: (1) read SQL from STDIN if not a TTY, (2) read from QUERY_FILE, (3) use QUERY variable
-	@if [ -t 0 ] && [ -z "$(QUERY)" ] && [ -z "$(QUERY_FILE)" ]; then \
-		echo "Usage:"; \
-		echo "  echo 'SELECT 1;' | make db-query"; \
-		echo "  make db-query QUERY=\"SELECT * FROM table WHERE name = 'foo';\""; \
-		echo "  make db-query QUERY_FILE=path/to/query.sql"; \
-		exit 1; \
-	fi; \
+	# Priority: (1) QUERY variable, (2) QUERY_FILE, (3) STDIN
+	@if [ "$(DB_DRIVER)" = "postgres" ]; then $(COMPOSE_CMD) up -d postgres >/dev/null 2>&1 || true; else $(COMPOSE_CMD) up -d mariadb >/dev/null 2>&1 || true; fi; \
 	if [ "$(DB_DRIVER)" = "postgres" ]; then \
-		if [ ! -t 0 ]; then \
-			$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox psql -h $(DB_HOST) -U $(DB_USER) -d $(DB_NAME) -t; \
+		if [ -n "$(QUERY)" ]; then \
+			$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -t -c "$(QUERY)"; \
 		elif [ -n "$(QUERY_FILE)" ]; then \
-			$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox bash -lc "psql -h $(DB_HOST) -U $(DB_USER) -d $(DB_NAME) -t < '$(QUERY_FILE)'"; \
+			cat '$(QUERY_FILE)' | $(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -t; \
 		else \
-			$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox psql -h $(DB_HOST) -U $(DB_USER) -d $(DB_NAME) -t -c "$(QUERY)"; \
+			$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -t; \
 		fi; \
 	else \
-		if [ ! -t 0 ]; then \
-			$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox mysql -h $(DB_HOST) -u $(DB_USER) -p$(DB_PASSWORD) -D $(DB_NAME); \
+		if [ -n "$(QUERY)" ]; then \
+			$(COMPOSE_CMD) exec -T mariadb mariadb -u $(DB_USER) -p$(DB_PASSWORD) -D $(DB_NAME) -e "$(QUERY)"; \
 		elif [ -n "$(QUERY_FILE)" ]; then \
-			$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox bash -lc "mysql -h $(DB_HOST) -u $(DB_USER) -p$(DB_PASSWORD) -D $(DB_NAME) < '$(QUERY_FILE)'"; \
+			cat '$(QUERY_FILE)' | $(COMPOSE_CMD) exec -T mariadb mariadb -u $(DB_USER) -p$(DB_PASSWORD) -D $(DB_NAME); \
 		else \
-			$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox mysql -h $(DB_HOST) -u $(DB_USER) -p$(DB_PASSWORD) -D $(DB_NAME) -e "$(QUERY)"; \
+			$(COMPOSE_CMD) exec -T mariadb mariadb -u $(DB_USER) -p$(DB_PASSWORD) -D $(DB_NAME); \
 		fi; \
 	fi
 
 # Test database operations (automatically use TEST_DB_* variables)
 db-query-test:
-	# Test database query execution: supports STDIN, QUERY_FILE, or QUERY var
+	# Priority: (1) QUERY variable, (2) QUERY_FILE, (3) STDIN
 	@$(MAKE) test-db-up >/dev/null 2>&1 || true
-	@if [ -t 0 ] && [ -z "$(QUERY)" ] && [ -z "$(QUERY_FILE)" ]; then \
-		echo "Usage:"; \
-		echo "  echo 'SELECT 1;' | make db-query-test"; \
-		echo "  make db-query-test QUERY=\"SELECT * FROM table WHERE name = 'foo';\""; \
-		echo "  make db-query-test QUERY_FILE=path/to/query.sql"; \
-		exit 1; \
-	fi
-	@if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
-		echo "ERROR: $(COMPOSE_CMD)"; \
-		echo "Please install the required compose tool and try again."; \
-		exit 1; \
-	fi
 	@if [ "$(TEST_DB_DRIVER)" = "postgres" ]; then \
-		if [ ! -t 0 ]; then \
-			$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox psql -h $(TEST_DB_POSTGRES_HOST) -U $(TEST_DB_POSTGRES_USER) -d $(TEST_DB_POSTGRES_NAME) -t; \
+		if [ -n "$(QUERY)" ]; then \
+			$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml exec -T postgres-test psql -U $(TEST_DB_POSTGRES_USER) -d $(TEST_DB_POSTGRES_NAME) -t -c "$(QUERY)"; \
 		elif [ -n "$(QUERY_FILE)" ]; then \
-			$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox bash -lc "psql -h $(TEST_DB_POSTGRES_HOST) -U $(TEST_DB_POSTGRES_USER) -d $(TEST_DB_POSTGRES_NAME) -t < '$(QUERY_FILE)'"; \
+			cat '$(QUERY_FILE)' | $(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml exec -T postgres-test psql -U $(TEST_DB_POSTGRES_USER) -d $(TEST_DB_POSTGRES_NAME) -t; \
 		else \
-			$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox psql -h $(TEST_DB_POSTGRES_HOST) -U $(TEST_DB_POSTGRES_USER) -d $(TEST_DB_POSTGRES_NAME) -t -c "$(QUERY)"; \
+			$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml exec -T postgres-test psql -U $(TEST_DB_POSTGRES_USER) -d $(TEST_DB_POSTGRES_NAME) -t; \
 		fi; \
 	else \
-		if [ ! -t 0 ]; then \
-			$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox mysql -h $(TEST_DB_MYSQL_HOST) -u $(TEST_DB_MYSQL_USER) -p$(TEST_DB_MYSQL_PASSWORD) -D $(TEST_DB_MYSQL_NAME); \
+		if [ -n "$(QUERY)" ]; then \
+			$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml exec -T mariadb-test mariadb -u $(TEST_DB_MYSQL_USER) -p$(TEST_DB_MYSQL_PASSWORD) -D $(TEST_DB_MYSQL_NAME) -e "$(QUERY)"; \
 		elif [ -n "$(QUERY_FILE)" ]; then \
-			$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox bash -lc "mysql -h $(TEST_DB_MYSQL_HOST) -u $(TEST_DB_MYSQL_USER) -p$(TEST_DB_MYSQL_PASSWORD) -D $(TEST_DB_MYSQL_NAME) < '$(QUERY_FILE)'"; \
+			cat '$(QUERY_FILE)' | $(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml exec -T mariadb-test mariadb -u $(TEST_DB_MYSQL_USER) -p$(TEST_DB_MYSQL_PASSWORD) -D $(TEST_DB_MYSQL_NAME); \
 		else \
-			$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox mysql -h $(TEST_DB_MYSQL_HOST) -u $(TEST_DB_MYSQL_USER) -p$(TEST_DB_MYSQL_PASSWORD) -D $(TEST_DB_MYSQL_NAME) -e "$(QUERY)"; \
+			$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml exec -T mariadb-test mariadb -u $(TEST_DB_MYSQL_USER) -p$(TEST_DB_MYSQL_PASSWORD) -D $(TEST_DB_MYSQL_NAME); \
 		fi; \
 	fi
 

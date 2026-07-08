@@ -79,42 +79,68 @@ func resetTestDatabase() error {
 	db.Exec("DELETE FROM article_data_mime WHERE article_id IN (SELECT id FROM article WHERE ticket_id > 1000)")
 	db.Exec("DELETE FROM article WHERE ticket_id > 1000")
 	db.Exec("DELETE FROM ticket WHERE id > 1000")
+	// Ensure queues referenced by test tickets exist (queue 1 already seeded)
+	if _, err := db.Exec(`INSERT INTO queue (id, name, group_id, unlock_timeout, first_response_time,
+		first_response_notify, update_time, update_notify, solution_time, solution_notify,
+		system_address_id, calendar_name, default_sign_key, salutation_id, signature_id,
+		follow_up_id, follow_up_lock, comments, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (2, 'Raw', 1, 0, 0, 0, 0, 0, 0, 0, 1, NULL, NULL, 1, 1, 1, 1, 'Raw queue for testing', 1,
+		NOW(), 1, NOW(), 1)
+		ON DUPLICATE KEY UPDATE name = VALUES(name)`); err != nil {
+		fmt.Fprintf(os.Stderr, "WARNING: failed to seed queue Raw: %v\n", err)
+	}
 
-	// Restore canonical test tickets (IDs 1, 2, 3, 123)
+	if _, err := db.Exec(`INSERT INTO queue (id, name, group_id, unlock_timeout, first_response_time,
+		first_response_notify, update_time, update_notify, solution_time, solution_notify,
+		system_address_id, calendar_name, default_sign_key, salutation_id, signature_id,
+		follow_up_id, follow_up_lock, comments, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (3, 'Junk', 1, 0, 0, 0, 0, 0, 0, 0, 1, NULL, NULL, 1, 1, 1, 1, 'Junk queue for testing', 1,
+		NOW(), 1, NOW(), 1)
+		ON DUPLICATE KEY UPDATE name = VALUES(name)`); err != nil {
+		fmt.Fprintf(os.Stderr, "WARNING: failed to seed queue Junk: %v\n", err)
+	}
+
 	now := "NOW()"
-
 	// Ensure tickets exist in expected state (not archived)
-	db.Exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id, 
+	if _, err := db.Exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id,
 		responsible_user_id, ticket_priority_id, ticket_state_id, customer_id, customer_user_id,
 		timeout, until_time, escalation_time, escalation_update_time, escalation_response_time,
 		escalation_solution_time, archive_flag, create_time, create_by, change_time, change_by)
 		VALUES (1, 'RAW-0001', 'First Raw queue ticket', 2, 1, 1, 1, 1, 3, 2,
 		'test-customer', 'test@example.com', 0, 0, 0, 0, 0, 0, 0, ` + now + `, 1, ` + now + `, 1)
-		ON DUPLICATE KEY UPDATE ticket_state_id = 2, archive_flag = 0`)
+		ON DUPLICATE KEY UPDATE ticket_state_id = 2, archive_flag = 0`); err != nil {
+		fmt.Fprintf(os.Stderr, "WARNING: failed to seed ticket 1: %v\n", err)
+	}
 
-	db.Exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id, 
+	if _, err := db.Exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id,
 		responsible_user_id, ticket_priority_id, ticket_state_id, customer_id, customer_user_id,
 		timeout, until_time, escalation_time, escalation_update_time, escalation_response_time,
 		escalation_solution_time, archive_flag, create_time, create_by, change_time, change_by)
 		VALUES (2, 'RAW-0002', 'Second Raw queue ticket', 2, 1, 1, 1, 1, 3, 2,
 		'test-customer', 'test@example.com', 0, 0, 0, 0, 0, 0, 0, ` + now + `, 1, ` + now + `, 1)
-		ON DUPLICATE KEY UPDATE ticket_state_id = 2, archive_flag = 0`)
+		ON DUPLICATE KEY UPDATE ticket_state_id = 2, archive_flag = 0`); err != nil {
+		fmt.Fprintf(os.Stderr, "WARNING: failed to seed ticket 2: %v\n", err)
+	}
 
-	db.Exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id, 
+	if _, err := db.Exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id,
 		responsible_user_id, ticket_priority_id, ticket_state_id, customer_id, customer_user_id,
 		timeout, until_time, escalation_time, escalation_update_time, escalation_response_time,
 		escalation_solution_time, archive_flag, create_time, create_by, change_time, change_by)
 		VALUES (3, 'JUNK-0001', 'Junk queue ticket', 3, 1, 1, 1, 1, 3, 2,
 		'test-customer', 'test@example.com', 0, 0, 0, 0, 0, 0, 0, ` + now + `, 1, ` + now + `, 1)
-		ON DUPLICATE KEY UPDATE ticket_state_id = 2, archive_flag = 0`)
+		ON DUPLICATE KEY UPDATE ticket_state_id = 2, archive_flag = 0`); err != nil {
+		fmt.Fprintf(os.Stderr, "WARNING: failed to seed ticket 3: %v\n", err)
+	}
 
-	db.Exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id, 
+	if _, err := db.Exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id,
 		responsible_user_id, ticket_priority_id, ticket_state_id, customer_id, customer_user_id,
 		timeout, until_time, escalation_time, escalation_update_time, escalation_response_time,
 		escalation_solution_time, archive_flag, create_time, create_by, change_time, change_by)
 		VALUES (123, 'TEST-0123', 'Test Ticket for Attachments', 1, 1, 1, 1, 1, 3, 2,
 		'test-customer', 'test@example.com', 0, 0, 0, 0, 0, 0, 0, ` + now + `, 1, ` + now + `, 1)
-		ON DUPLICATE KEY UPDATE ticket_state_id = 2, archive_flag = 0`)
+		ON DUPLICATE KEY UPDATE ticket_state_id = 2, archive_flag = 0`); err != nil {
+		fmt.Fprintf(os.Stderr, "WARNING: failed to seed ticket 123: %v\n", err)
+	}
 
 	// Ensure user 1 has permissions on all queues
 	db.Exec(`INSERT IGNORE INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)

@@ -9,6 +9,7 @@ import (
 
 // TestDynamicFieldFormCreate tests the create form uses hx-post.
 func TestDynamicFieldFormCreate(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	ctx := pongo2.Context{
@@ -47,10 +48,11 @@ func TestDynamicFieldFormCreate(t *testing.T) {
 
 	// Title should indicate create (check for either i18n key or default text)
 	asserter.ContainsAny("Create Dynamic Field", "admin.dynamic_fields.create_heading")
-}
+ }
 
 // TestDynamicFieldFormEdit tests the edit form uses hx-put.
 func TestDynamicFieldFormEdit(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	ctx := pongo2.Context{
@@ -89,10 +91,11 @@ func TestDynamicFieldFormEdit(t *testing.T) {
 
 	// Title should indicate edit (check for either i18n key or default text)
 	asserter.ContainsAny("Edit Dynamic Field", "admin.dynamic_fields.edit_heading")
-}
+ }
 
 // TestDynamicFieldsListDeletePath tests delete buttons use correct API path.
 func TestDynamicFieldsListDeletePath(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	ctx := pongo2.Context{
@@ -117,10 +120,11 @@ func TestDynamicFieldsListDeletePath(t *testing.T) {
 
 	// Delete should use /admin/api path
 	asserter.Contains("/admin/api/dynamic-fields/")
-}
+ }
 
 // TestDynamicFieldScreensAPIPath tests screen config uses correct API path.
 func TestDynamicFieldScreensAPIPath(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	ctx := pongo2.Context{
@@ -147,4 +151,4 @@ func TestDynamicFieldScreensAPIPath(t *testing.T) {
 	// Screen config API should use /admin/api path (singular "screen")
 	asserter.Contains("/admin/api/dynamic-fields/")
 	asserter.Contains("/screen")
-}
+ }

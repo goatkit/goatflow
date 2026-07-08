@@ -9,6 +9,7 @@ import (
 )
 
 func TestRBAC(t *testing.T) {
+	t.Parallel()
 	rbac := NewRBAC()
 
 	t.Run("Admin has all permissions", func(t *testing.T) {
@@ -136,4 +137,4 @@ func TestRBAC(t *testing.T) {
 		assert.True(t, rbac.CanViewReports(string(platformmodels.RoleAgent)))
 		assert.False(t, rbac.CanViewReports(string(platformmodels.RoleCustomer)))
 	})
-}
+ }

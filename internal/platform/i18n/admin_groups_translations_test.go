@@ -6,6 +6,7 @@ import (
 )
 
 func TestAdminGroupsTranslations(t *testing.T) {
+	t.Parallel()
 	i18n := GetInstance()
 
 	// All translation keys used in the Groups UI
@@ -86,9 +87,10 @@ func TestAdminGroupsTranslations(t *testing.T) {
 	if totalMissing > 0 {
 		t.Errorf("\n📊 Total missing translations: %d", totalMissing)
 	}
-}
+ }
 
 func TestGroupsPageNoHardcodedText(t *testing.T) {
+	t.Parallel()
 	// This test would check that the groups.pongo2 template doesn't have
 	// hardcoded English text outside of translation functions
 	// For now, we list text that should be translated
@@ -121,4 +123,4 @@ func TestGroupsPageNoHardcodedText(t *testing.T) {
 	for _, text := range hardcodedTextToCheck {
 		t.Logf("  - %q", text)
 	}
-}
+ }

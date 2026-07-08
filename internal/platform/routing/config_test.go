@@ -5,6 +5,7 @@ import (
 )
 
 func TestRouteConfig_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		config  RouteConfig
@@ -73,9 +74,10 @@ func TestRouteConfig_Validate(t *testing.T) {
 			}
 		})
 	}
-}
+ }
 
 func TestRouteDefinition_GetMethods(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		method   interface{}
@@ -125,9 +127,10 @@ func TestRouteDefinition_GetMethods(t *testing.T) {
 			}
 		})
 	}
-}
+ }
 
 func TestRouteMetadata_Fields(t *testing.T) {
+	t.Parallel()
 	metadata := RouteMetadata{
 		Name:        "api-routes",
 		Description: "API endpoints for the application",
@@ -162,9 +165,10 @@ func TestRouteMetadata_Fields(t *testing.T) {
 	if len(metadata.Tenants) != 2 {
 		t.Errorf("expected 2 Tenants, got %d", len(metadata.Tenants))
 	}
-}
+ }
 
 func TestRouteSpec_Fields(t *testing.T) {
+	t.Parallel()
 	spec := RouteSpec{
 		Prefix:     "/api/v1",
 		Middleware: []string{"auth", "cors", "ratelimit"},
@@ -191,9 +195,10 @@ func TestRouteSpec_Fields(t *testing.T) {
 	if spec.RateLimit == nil {
 		t.Error("expected RateLimit to be set")
 	}
-}
+ }
 
 func TestRouteDefinition_Fields(t *testing.T) {
+	t.Parallel()
 	rd := RouteDefinition{
 		Path:        "/tickets/:id",
 		Method:      "GET",
@@ -230,9 +235,10 @@ func TestRouteDefinition_Fields(t *testing.T) {
 	if rd.Condition != "feature.enabled" {
 		t.Errorf("expected Condition feature.enabled, got %s", rd.Condition)
 	}
-}
+ }
 
 func TestRateLimitConfig_Fields(t *testing.T) {
+	t.Parallel()
 	rl := RateLimitConfig{
 		Requests: 1000,
 		Period:   3600,
@@ -248,9 +254,10 @@ func TestRateLimitConfig_Fields(t *testing.T) {
 	if rl.Key != "api_key" {
 		t.Errorf("expected Key api_key, got %s", rl.Key)
 	}
-}
+ }
 
 func TestOpenAPISpec_Fields(t *testing.T) {
+	t.Parallel()
 	spec := OpenAPISpec{
 		Summary:     "List all tickets",
 		Description: "Returns a paginated list of tickets",
@@ -284,9 +291,10 @@ func TestOpenAPISpec_Fields(t *testing.T) {
 	if len(spec.Responses) != 2 {
 		t.Errorf("expected 2 Responses, got %d", len(spec.Responses))
 	}
-}
+ }
 
 func TestOpenAPIParameter_Fields(t *testing.T) {
+	t.Parallel()
 	param := OpenAPIParameter{
 		Name:        "ticket_id",
 		In:          "path",
@@ -310,9 +318,10 @@ func TestOpenAPIParameter_Fields(t *testing.T) {
 	if len(param.Schema) != 2 {
 		t.Errorf("expected 2 Schema fields, got %d", len(param.Schema))
 	}
-}
+ }
 
 func TestRouteTestCase_Fields(t *testing.T) {
+	t.Parallel()
 	tc := RouteTestCase{
 		Name:        "valid ticket creation",
 		Description: "Test creating a valid ticket",
@@ -342,9 +351,10 @@ func TestRouteTestCase_Fields(t *testing.T) {
 	if len(tc.Input) != 2 {
 		t.Errorf("expected 2 Input fields, got %d", len(tc.Input))
 	}
-}
+ }
 
 func TestParamConfig_Fields(t *testing.T) {
+	t.Parallel()
 	pc := ParamConfig{
 		Type:        "string",
 		Required:    true,
@@ -378,9 +388,10 @@ func TestParamConfig_Fields(t *testing.T) {
 	if pc.Transform != "lowercase" {
 		t.Errorf("expected Transform lowercase, got %s", pc.Transform)
 	}
-}
+ }
 
 func TestMiddlewareConfig_Fields(t *testing.T) {
+	t.Parallel()
 	mc := MiddlewareConfig{
 		Name:    "cors",
 		Enabled: true,
@@ -399,9 +410,10 @@ func TestMiddlewareConfig_Fields(t *testing.T) {
 	if len(mc.Config) != 2 {
 		t.Errorf("expected 2 Config fields, got %d", len(mc.Config))
 	}
-}
+ }
 
 func TestFeatureFlag_Fields(t *testing.T) {
+	t.Parallel()
 	ff := FeatureFlag{
 		Name:        "new-ticket-form",
 		Enabled:     true,
@@ -422,9 +434,10 @@ func TestFeatureFlag_Fields(t *testing.T) {
 	if ff.Percentage != 50 {
 		t.Errorf("expected Percentage 50, got %d", ff.Percentage)
 	}
-}
+ }
 
 func TestRouteGroup_Fields(t *testing.T) {
+	t.Parallel()
 	rg := RouteGroup{
 		Name:       "api-v2",
 		Prefix:     "/api/v2",
@@ -448,4 +461,4 @@ func TestRouteGroup_Fields(t *testing.T) {
 	if !rg.Enabled {
 		t.Error("expected Enabled to be true")
 	}
-}
+ }

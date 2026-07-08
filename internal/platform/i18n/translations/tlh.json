@@ -1207,6 +1207,7 @@
         "plugin_logs": "ngogh ta",
         "plugin_logs_description": "ngogh vanglu' Qagh je yIlegh",
         "plugin_name": "pong",
+        "plugin_overview": "Plugin veQ",
         "plugin_routes": "He",
         "plugin_runtime": "qul runtime",
         "plugin_status": "Dotlh",
@@ -1438,6 +1439,60 @@
             "transport": "jIHwI' Segh",
             "transport_settings": "jIHwI' chenmoHwI'",
             "update_success": "jabbI'ID SeH choHlu' Qap"
+        },
+        "identity_providers": {
+            "title": "qIlpuSlu' Qaw'egh",
+            "description": "puSov Qarluq DaqloS qIlpuSlu' Qaw'egh.",
+            "add": "Qaw'egh Qaw'",
+            "name": "Qaw'",
+            "type": "Sov",
+            "client_id": "mIQ ID",
+            "provision": "mIQov QoQ",
+            "yes": "nuQ",
+            "no": "Qapla'",
+            "no_providers": "Qaw'egh mIQov SuQmoH Qapla' lI'llaH.",
+            "disable": "mIQov QoQ",
+            "enable": "mIQov QoQ",
+            "edit": "Qaw'egh Qaw'",
+            "create": "Qaw'egh QoQ",
+            "form_help": "Qaw'egh SoH Qapla' lI'llaH.",
+            "basic_info": "Qaw'egh",
+            "credentials": "Qapla'",
+            "user_mapping": "puSov mIQ",
+            "fields": {
+                "name": "Qaw'",
+                "type": "Sov",
+                "type_help": "Google and GitHub use preconfigured discovery endpoints. OIDC and SAML require manual configuration.",
+                "org_scope": "qInID",
+                "org_scope_help": "Empty = available to all organizations. Set to a specific org for org-scoped access.",
+                "client_id": "mIQ ID",
+                "client_secret": "mIQ bIw",
+                "discovery_url": "SujmoH URL",
+                "discovery_url_help": "OIDC provider discovery URL (auto-configures endpoints). Required for OIDC/SAML. Google and GitHub use built-in discovery.",
+                "scopes": "Suj",
+                "scopes_help": "Space-separated OAuth2/OIDC scopes. Default: openid profile email",
+                "email_claim": "puSov claim",
+                "name_claim": "Qaw' claim",
+                "groups_claim": "Qaw'egh claim"
+            },
+            "settings": {
+                "enabled": "Qap",
+                "auto_provision": "puSov mIQ",
+                "auto_provision_help": "Automatically create GoatFlow user accounts for first-time logins from this provider."
+            },
+            "actions": {
+                "cancel": "Qap Qap",
+                "create": "QoQ",
+                "update": "Qap Qap"
+            },
+            "toast": {
+                "updated": "Qap Qap",
+                "created": "Qap Qap"
+            },
+            "confirm": {
+                "toggle": "Qap Qap?",
+                "delete": "Qap Qap?"
+            }
         }
     },
     "admin_dashboard": {
@@ -1633,7 +1688,8 @@
         "username": "lo'wI' pong",
         "username_placeholder": "lo'wI' pong yIngu'",
         "verification_code": "chut ngoq",
-        "verify": "chut"
+        "verify": "chut",
+        "sign_in_with": "Sign in with"
     },
     "bulk_actions": {
         "all_selected": "Hoch wIvlu'",
@@ -3613,5 +3669,8 @@
     },
     "welcome": {
         "greeting": "nuqneH"
+    },
+    "identity_providers": {
+        "dashboard_desc": "HalchIDQoS HochID QutlhIch"
     }
 }

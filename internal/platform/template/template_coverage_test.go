@@ -41,6 +41,8 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/group_members.pongo2":                 true,
 	"pages/admin/group_permissions.pongo2":             true,
 	"pages/admin/group_view.pongo2":                    true,
+	"pages/admin/identity_provider_form.pongo2":        true,
+	"pages/admin/identity_providers.pongo2":            true,
 	"pages/admin/groups.pongo2":                        true,
 	"pages/admin/lookups.pongo2":                       true,
 	"pages/admin/marketplace.pongo2":                   true,
@@ -391,11 +393,34 @@ func sampleAttachment() map[string]interface{} {
 	}
 }
 
+func sampleIdentityProvider() map[string]interface{} {
+	return map[string]interface{}{
+		"ID":              1,
+		"Name":            "Google",
+		"ProviderType":    "google",
+		"ClientID":        "test-client-id",
+		"ClientSecret":    "test-client-secret",
+		"DiscoveryURL":    "",
+		"Scopes":          "openid email profile",
+		"UserClaimEmail":  "email",
+		"UserClaimName":   "name",
+		"UserClaimGroups": "groups",
+		"Enabled":         true,
+		"AutoProvision":   true,
+		"AutoAddToGroup":  "",
+		"CreateTime":      time.Now(),
+		"CreateBy":        1,
+		"ChangeTime":      time.Now(),
+		"ChangeBy":        1,
+	}
+}
+
 // =============================================================================
 // ADMIN TEMPLATE TESTS
 // =============================================================================
 
 func TestAllAdminTemplatesRender(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	tests := []struct {
@@ -621,6 +646,26 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 				ctx := adminContext()
 				ctx["Group"] = sampleGroup()
 				ctx["Members"] = []map[string]interface{}{sampleUser()}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/identity_provider_form",
+			template: "pages/admin/identity_provider_form.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Provider"] = sampleIdentityProvider()
+				ctx["FormAction"] = "/admin/identity-providers"
+				ctx["Method"] = "POST"
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/identity_providers",
+			template: "pages/admin/identity_providers.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Providers"] = []map[string]interface{}{sampleIdentityProvider()}
 				return ctx
 			}(),
 		},
@@ -1279,13 +1324,14 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
-}
+ }
 
 // =============================================================================
 // AGENT TEMPLATE TESTS
 // =============================================================================
 
 func TestAllAgentTemplatesRender(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	tests := []struct {
@@ -1340,13 +1386,14 @@ func TestAllAgentTemplatesRender(t *testing.T) {
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
-}
+ }
 
 // =============================================================================
 // CUSTOMER TEMPLATE TESTS
 // =============================================================================
 
 func TestAllCustomerTemplatesRender(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	tests := []struct {
@@ -1466,13 +1513,14 @@ func TestAllCustomerTemplatesRender(t *testing.T) {
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
-}
+ }
 
 // =============================================================================
 // DASHBOARD TEMPLATE TESTS
 // =============================================================================
 
 func TestAllDashboardTemplatesRender(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	tests := []struct {
@@ -1521,7 +1569,7 @@ func TestAllDashboardTemplatesRender(t *testing.T) {
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
-}
+ }
 
 // =============================================================================
 // DEV TEMPLATE TESTS
@@ -1534,6 +1582,7 @@ func TestAllDashboardTemplatesRender(t *testing.T) {
 // =============================================================================
 
 func TestAllQueueTemplatesRender(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	tests := []struct {
@@ -1588,13 +1637,14 @@ func TestAllQueueTemplatesRender(t *testing.T) {
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
-}
+ }
 
 // =============================================================================
 // TICKET TEMPLATE TESTS
 // =============================================================================
 
 func TestAllTicketTemplatesRender(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	tests := []struct {
@@ -1668,13 +1718,14 @@ func TestAllTicketTemplatesRender(t *testing.T) {
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
-}
+ }
 
 // =============================================================================
 // MISC TEMPLATE TESTS
 // =============================================================================
 
 func TestAllMiscTemplatesRender(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	tests := []struct {
@@ -1778,7 +1829,7 @@ func TestAllMiscTemplatesRender(t *testing.T) {
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
-}
+ }
 
 // =============================================================================
 // 100% COVERAGE ENFORCEMENT TEST
@@ -1786,6 +1837,7 @@ func TestAllMiscTemplatesRender(t *testing.T) {
 
 // TestAllPageTemplatesHaveCoverage ensures every page template is tested.
 func TestAllPageTemplatesHaveCoverage(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	// Walk templates directory and collect all page templates
@@ -1836,7 +1888,7 @@ func TestAllPageTemplatesHaveCoverage(t *testing.T) {
 		t.Errorf("The following entries in AllPageTemplates map reference non-existent templates:\n%s",
 			strings.Join(stale, "\n"))
 	}
-}
+ }
 
 // =============================================================================
 // DYNAMIC TEMPLATE RENDER TEST
@@ -1952,6 +2004,7 @@ func universalContext() pongo2.Context {
 // TestAllTemplatesRenderDynamically discovers all page templates and attempts to render them
 // with a universal context. This catches basic rendering errors without needing per-template test entries.
 func TestAllTemplatesRenderDynamically(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	// Walk templates directory and collect all page templates
@@ -1992,4 +2045,4 @@ func TestAllTemplatesRenderDynamically(t *testing.T) {
 			}
 		})
 	}
-}
+ }

@@ -1,6 +1,6 @@
 # Go + Playwright runner for Go e2e tests
 # Multi-arch: supports both amd64 and arm64
-FROM mcr.microsoft.com/playwright:v1.52.0-jammy
+FROM mcr.microsoft.com/playwright:v1.60.0-jammy
 
 # Install Go toolchain (match project toolchain if needed)
 # Detects architecture automatically (amd64 or arm64)
@@ -29,15 +29,16 @@ WORKDIR /workspace
 COPY --chown=pwuser:pwuser go.mod go.sum ./
 RUN go mod download && go mod verify
 
-# Install playwright-go driver to shared location (as root, then make accessible)
-# The driver goes to ~/.cache/ms-playwright-go by default
-RUN go run github.com/playwright-community/playwright-go/cmd/playwright@v0.5200.0 install --with-deps chromium \
+# Install playwright-go driver using npmmirror as download mirror (CDN blocked in this environment)
+# Browsers are already bundled in the base mcr.microsoft.com/playwright image
+ENV PLAYWRIGHT_DOWNLOAD_HOST=https://registry.npmmirror.com/-/binary/playwright
+RUN go run github.com/playwright-community/playwright-go/cmd/playwright@v0.6000.0 install \
     && cp -r /root/.cache/ms-playwright-go /opt/playwright-cache/ \
-    && cp -r /root/.cache/ms-playwright/* /opt/playwright-cache/browsers/ 2>/dev/null || true \
-    && chmod -R a+rwX /opt/playwright-cache
+    && chmod -R a+rwX /opt/playwright-cache \
+    && ls /opt/playwright-cache/ms-playwright-go/
 
 # Set driver path for playwright-go to find at runtime
-ENV PLAYWRIGHT_DRIVER_PATH=/opt/playwright-cache/ms-playwright-go/1.52.0
+ENV PLAYWRIGHT_DRIVER_PATH=/opt/playwright-cache/ms-playwright-go/1.60.0
 
 COPY --chown=pwuser:pwuser . .
 

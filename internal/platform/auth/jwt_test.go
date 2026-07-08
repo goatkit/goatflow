@@ -9,6 +9,7 @@ import (
 )
 
 func TestJWTManager(t *testing.T) {
+	t.Parallel()
 	secretKey := "test-secret-key-for-testing"
 	tokenDuration := 1 * time.Hour
 	jwtManager := NewJWTManager(secretKey, tokenDuration)
@@ -80,7 +81,7 @@ func TestJWTManager(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, token)
 	})
-}
+ }
 
 func TestJWTManagerConcurrency(t *testing.T) {
 	jwtManager := NewJWTManager("test-secret", 1*time.Hour)

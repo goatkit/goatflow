@@ -285,8 +285,28 @@ services:
       - smtp4dev_data:/smtp4dev
     networks:
       - goatflow-network
+  # Keycloak Test Identity Provider — pre-configured realm, clients, scripted auth
+  keycloak-test:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: goatflow-keycloak-test
+    command: start-dev --db=dev-file --hostname-strict=false --import-realm
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    ports:
+      - "${KEYCLOAK_PORT:-18090}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/realms/goatflow/.well-known/openid-configuration || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 60s
+    networks:
+      - goatflow-network
+    volumes:
+      - ./docker/oauth2/keycloak-realm.json:/opt/keycloak/data/import/realm.json:ro
+    profiles: ["testdb"]
 
-  # Valkey Test Cache - Separate cache for test environment
   valkey-test:
     image: docker.io/valkey/valkey:7-alpine
     container_name: goatflow-valkey-test

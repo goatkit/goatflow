@@ -29,6 +29,7 @@ type RouteFile struct {
 // TestAllYAMLHandlersResolveWithMockResolver ensures every handler referenced in YAML routes
 // can be represented by routing's HandlerResolver without importing product API code.
 func TestAllYAMLHandlersResolveWithMockResolver(t *testing.T) {
+	t.Parallel()
 	// Find routes directory
 	routesDir := findRoutesDir(t)
 	if routesDir == "" {
@@ -52,7 +53,7 @@ func TestAllYAMLHandlersResolveWithMockResolver(t *testing.T) {
 	for handler := range yamlHandlers {
 		require.True(t, registry.HandlerExists(handler), "handler %q should resolve through mock resolver", handler)
 	}
-}
+ }
 
 func findRoutesDir(t *testing.T) string {
 	// Try relative paths from test location

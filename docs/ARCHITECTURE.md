@@ -53,8 +53,8 @@ This separation enables:
 │  ┌────────────────────────▼───────────────────────────────┐  │
 │  │  GoatKit Platform Core                                 │  │
 │  │  ┌──────────────┐ ┌──────────────┐ ┌────────────────┐  │  │
-│  │  │ Web Server   │ │ Auth System  │ │ Plugin Runtime │  │  │
-│  │  │ (Gin + HTMX) │ │ (JWT, LDAP)  │ │ (WASM, gRPC)   │  │  │
+│  │  │ Web Server   │ │ Auth System      │ │ Plugin Runtime │  │  │
+│  │  │ (Gin + HTMX) │ │ (JWT, LDAP, OIDC)│ │ (WASM, gRPC)   │  │  │
 │  │  └──────────────┘ └──────────────┘ └────────────────┘  │  │
 │  │  ┌──────────────┐ ┌──────────────┐ ┌────────────────┐  │  │
 │  │  │ YAML Router  │ │ Templates    │ │ Email System   │  │  │
@@ -148,6 +148,7 @@ rows, err := db.Query("SELECT * FROM ticket WHERE id = $1", id)
 - JWT with refresh tokens
 - LDAP integration (scaffolded)
 - Database auth provider
+- External identity providers (OIDC client — Google, GitHub, Keycloak, Azure AD, generic OIDC)
 
 ### CI/CD
 - Security scanning (gosec, govulncheck, Semgrep, GitLeaks)

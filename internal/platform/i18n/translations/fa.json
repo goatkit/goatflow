@@ -1187,6 +1187,7 @@
         "plugin_logs": "لاگ‌های افزونه",
         "plugin_logs_description": "مشاهده فعالیت و خطاهای افزونه‌ها",
         "plugin_name": "نام",
+        "plugin_overview": "نمای کلی افزونه",
         "plugin_routes": "مسیرها",
         "plugin_runtime": "محیط اجرا",
         "plugin_status": "وضعیت",
@@ -1418,6 +1419,60 @@
             "transport": "نوع حمل و نقل",
             "transport_settings": "تنظیمات حمل و نقل",
             "update_success": "سرویس وب با موفقیت به‌روزرسانی شد"
+        },
+        "identity_providers": {
+            "title": "ارائه‌دهندگان هویت",
+            "description": "مدیریت ارائه‌دهندگان هویت خارجی برای احراز هویت کاربران.",
+            "add": "افزودن ارائه‌دهنده",
+            "name": "نام",
+            "type": "نوع",
+            "client_id": "شناسه مشتری",
+            "provision": "تخصیص خودکار",
+            "yes": "بله",
+            "no": "خیر",
+            "no_providers": "هنوز هیچ ارائه‌دهنده هویتی پیکربندی نشده است.",
+            "disable": "غیرفعال‌سازی",
+            "enable": "فعال‌سازی",
+            "edit": "ویرایش ارائه‌دهنده هویت",
+            "create": "ایجاد ارائه‌دهنده هویت",
+            "form_help": "پیکربندی تنظیمات ارائه‌دهنده هویت خارجی.",
+            "basic_info": "اطلاعات پایه",
+            "credentials": "اعتبارنامه‌ها",
+            "user_mapping": "نگاشت کاربر",
+            "fields": {
+                "name": "نام",
+                "type": "نوع ارائه‌دهنده",
+                "type_help": "گوگل و گیت‌هاب از نقاط کشف از پیش پیکربندی‌شده استفاده می‌کنند. OIDC و SAML به پیکربندی دستی نیاز دارند.",
+                "org_scope": "محدوده سازمان",
+                "org_scope_help": "خالی = در دسترس برای همه سازمان‌ها. برای دسترسی سازمانی یک سازمان خاص تنظیم کنید.",
+                "client_id": "شناسه مشتری",
+                "client_secret": "راز مشتری",
+                "discovery_url": "URL کشف",
+                "discovery_url_help": "URL کشف ارائه‌دهنده OIDC (نقاط پایانی را به‌طور خودکار پیکربندی می‌کند). برای OIDC/SAML لازم. گوگل و گیت‌هاب از کشف داخلی استفاده می‌کنند.",
+                "scopes": "محدوده‌ها",
+                "scopes_help": "محدوده‌های OAuth2/OIDC جدا شده با فاصله. پیش‌فرض: openid profile email",
+                "email_claim": "ادعای ایمیل",
+                "name_claim": "ادعای نام",
+                "groups_claim": "ادعای گروه‌ها"
+            },
+            "settings": {
+                "enabled": "فعال",
+                "auto_provision": "تخصیص خودکار کاربران",
+                "auto_provision_help": "ایجاد خودکار حساب‌های کاربری GoatFlow برای اولین ورود از این ارائه‌دهنده."
+            },
+            "actions": {
+                "cancel": "لغو",
+                "create": "ایجاد",
+                "update": "به‌روزرسانی"
+            },
+            "toast": {
+                "updated": "ارائه‌دهنده به‌روزرسانی شد",
+                "created": "ارائه‌دهنده ایجاد شد"
+            },
+            "confirm": {
+                "toggle": "آیا مطمئن هستید که می‌خواهید این ارائه‌دهنده را {action} کنید؟",
+                "delete": "آیا مطمئن هستید که می‌خواهید {name} را حذف کنید؟"
+            }
         }
     },
     "admin_dashboard": {
@@ -1613,7 +1668,8 @@
         "username": "نام کاربری",
         "username_placeholder": "نام کاربری را وارد کنید",
         "verification_code": "کد تأیید",
-        "verify": "تأیید"
+        "verify": "تأیید",
+        "sign_in_with": "Sign in with"
     },
     "bulk_actions": {
         "all_selected": "همه انتخاب شدند",
@@ -3696,5 +3752,8 @@
         "support": "پشتیبانی",
         "tagline": "پلتفرم مدرن مدیریت خدمات IT",
         "title": "به GoatFlow خوش آمدید"
+    },
+    "identity_providers": {
+        "dashboard_desc": "پیکربندی ارائه‌دهندگان احراز هویت خارجی"
     }
 }

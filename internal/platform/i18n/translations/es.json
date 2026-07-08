@@ -1187,6 +1187,7 @@
         "plugin_logs": "Logs de Plugins",
         "plugin_logs_description": "Ver actividad y errores de plugins",
         "plugin_name": "Nombre",
+        "plugin_overview": "Vista general del plugin",
         "plugin_routes": "Rutas",
         "plugin_runtime": "Tiempo de ejecución",
         "plugin_status": "Estado",
@@ -1418,6 +1419,60 @@
             "transport": "Tipo de Transporte",
             "transport_settings": "Configuración de Transporte",
             "update_success": "Servicio web actualizado exitosamente"
+        },
+        "identity_providers": {
+            "title": "Proveedores de identidad",
+            "description": "Gestionar proveedores de identidad externos para la autenticación de usuarios.",
+            "add": "Añadir proveedor",
+            "name": "Nombre",
+            "type": "Tipo",
+            "client_id": "ID de cliente",
+            "provision": "Provisión automática",
+            "yes": "Sí",
+            "no": "No",
+            "no_providers": "Aún no hay proveedores de identidad configurados.",
+            "disable": "Desactivar",
+            "enable": "Activar",
+            "edit": "Editar proveedor de identidad",
+            "create": "Crear proveedor de identidad",
+            "form_help": "Configurar los ajustes del proveedor de identidad externo.",
+            "basic_info": "Información básica",
+            "credentials": "Credenciales",
+            "user_mapping": "Asignación de usuario",
+            "fields": {
+                "name": "Nombre",
+                "type": "Tipo de proveedor",
+                "type_help": "Google y GitHub utilizan puntos de discovery preconfigurados. OIDC y SAML requieren configuración manual.",
+                "org_scope": "Ámbito de organización",
+                "org_scope_help": "Vacío = disponible para todas las organizaciones. Establecer una organización específica para acceso por organización.",
+                "client_id": "ID de cliente",
+                "client_secret": "Secreto de cliente",
+                "discovery_url": "URL de discovery",
+                "discovery_url_help": "URL de discovery del proveedor OIDC (configura automáticamente los endpoints). Requiere para OIDC/SAML. Google y GitHub utilizan discovery integrado.",
+                "scopes": "Ámbitos",
+                "scopes_help": "Ámbitos OAuth2/OIDC separados por espacios. Predeterminado: openid profile email",
+                "email_claim": "Afirmación de correo",
+                "name_claim": "Afirmación de nombre",
+                "groups_claim": "Afirmación de grupos"
+            },
+            "settings": {
+                "enabled": "Activado",
+                "auto_provision": "Provisionar usuarios automáticamente",
+                "auto_provision_help": "Crear automáticamente cuentas de usuario de GoatFlow para los primeros inicios de sesión desde este proveedor."
+            },
+            "actions": {
+                "cancel": "Cancelar",
+                "create": "Crear",
+                "update": "Actualizar"
+            },
+            "toast": {
+                "updated": "Proveedor actualizado",
+                "created": "Proveedor creado"
+            },
+            "confirm": {
+                "toggle": "¿Está seguro de que desea {action} este proveedor?",
+                "delete": "¿Está seguro de que desea eliminar {name}?"
+            }
         }
     },
     "admin_dashboard": {
@@ -1613,7 +1668,8 @@
         "username": "Nombre de Usuario",
         "username_placeholder": "Ingrese su nombre de usuario",
         "verification_code": "Código de verificación",
-        "verify": "Verificar"
+        "verify": "Verificar",
+        "sign_in_with": "Sign in with"
     },
     "bulk_actions": {
         "all_selected": "Todos seleccionados",
@@ -3596,5 +3652,8 @@
     },
     "welcome": {
         "greeting": "Bienvenido"
+    },
+    "identity_providers": {
+        "dashboard_desc": "Configurar proveedores de autenticación externos"
     }
 }

@@ -21,6 +21,9 @@ type BrowserHelper struct {
 	t          *testing.T
 }
 
+// stringPtr returns a pointer to the given string value.
+func stringPtr(s string) *string { return &s }
+
 // NewBrowserHelper creates a new browser helper instance
 func NewBrowserHelper(t *testing.T) *BrowserHelper {
 	return &BrowserHelper{
@@ -68,7 +71,7 @@ func (b *BrowserHelper) Setup() error {
 			Height: 720,
 		},
 		RecordVideo: &playwright.RecordVideo{
-			Dir: "./test-results/videos",
+			Dir: stringPtr("./test-results/videos"),
 		},
 	})
 	if err != nil {

@@ -1,0 +1,269 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{% if Provider.ID %}{{ t("admin.identity_providers.edit")|default:"Edit Identity Provider" }}{% else %}{{ t("admin.identity_providers.create")|default:"Create Identity Provider" }}{% endif %} - GoatFlow Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Page header -->
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div class="flex items-center">
+                <a href="/admin/identity-providers" class="gk-btn-secondary mr-4">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    {{ t("common.back")|default:"Back" }}
+                </a>
+                <div>
+                    <h1 class="text-3xl font-bold gk-heading">
+                        <span class="gk-text-gradient">
+                            {% if Provider.ID %}{{ t("admin.identity_providers.edit")|default:"Edit Identity Provider" }}{% else %}{{ t("admin.identity_providers.create")|default:"Create Identity Provider" }}{% endif %}
+                        </span>
+                    </h1>
+                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
+                        {{ t("admin.identity_providers.form_help")|default:"Configure external identity provider settings." }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Form -->
+    <div class="gk-card-glow rounded-lg overflow-hidden">
+        <form
+            id="providerForm"
+            method="POST"
+            action="{{ FormAction }}"
+            {% if Method == "PUT" %}
+            hx-put="{{ FormAction }}"
+            hx-encoding="application/x-www-form-urlencoded"
+            {% else %}
+            hx-post="{{ FormAction }}"
+            {% endif %}
+            hx-swap="none"
+        >
+            <!-- Basic Information -->
+            <div class="border-b pb-6" style="border-color: var(--gk-border-default);">
+                <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.identity_providers.basic_info")|default:"Basic Information" }}</h3>
+
+                <div class="grid grid-cols-1 gap-6 max-w-2xl">
+                    <!-- Name -->
+                    <div>
+                        <label for="name" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.identity_providers.fields.name")|default:"Name" }} <span style="color: var(--gk-error);">*</span>
+                        </label>
+                        <input type="text" name="name" id="name" value="{{ Provider.Name }}" required
+                            class="gk-input-neon w-full"
+                            placeholder="e.g., Corporate OIDC, Google Workspace">
+                    </div>
+
+                    <!-- Provider Type -->
+                    <div>
+                        <label for="provider_type" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.identity_providers.fields.type")|default:"Provider Type" }} <span style="color: var(--gk-error);">*</span>
+                        </label>
+                        <select name="provider_type" id="provider_type" required class="gk-select-neon w-full">
+                            <option value="oidc" {% if Provider.ProviderType == "oidc" %}selected{% endif %}>OpenID Connect (OIDC)</option>
+                            <option value="google" {% if Provider.ProviderType == "google" %}selected{% endif %}>Google</option>
+                            <option value="github" {% if Provider.ProviderType == "github" %}selected{% endif %}>GitHub</option>
+                        </select>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.identity_providers.fields.type_help")|default:"Google uses a built-in discovery endpoint. OIDC requires manual configuration. GitHub uses OAuth2." }}</p>
+                    </div>
+
+                    <!-- Org Scope -->
+                    <div>
+                        <label for="org_id" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.identity_providers.fields.org_scope")|default:"Organization Scope" }}
+                        </label>
+                        <input type="number" name="org_id" id="org_id" value="{% if Provider.OrgID %}{{ Provider.OrgID }}{% endif %}" min="1"
+                            class="gk-input-neon w-full"
+                            placeholder="Leave empty for global (all orgs)">
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.identity_providers.fields.org_scope_help")|default:"Empty = available to all organizations. Set to a specific org for org-scoped access." }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Credentials -->
+            <div class="border-b pb-6" style="border-color: var(--gk-border-default);">
+                <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.identity_providers.credentials")|default:"Credentials" }}</h3>
+
+                <div class="grid grid-cols-1 gap-6 max-w-2xl">
+                    <!-- Client ID -->
+                    <div>
+                        <label for="client_id" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.identity_providers.fields.client_id")|default:"Client ID" }} <span style="color: var(--gk-error);">*</span>
+                        </label>
+                        <input type="text" name="client_id" id="client_id" value="{{ Provider.ClientID }}" required
+                            class="gk-input-neon w-full font-mono text-sm"
+                            placeholder="e.g., 123456-abcdef.apps.googleusercontent.com">
+                    </div>
+
+                    <!-- Client Secret -->
+                    <div>
+                        <label for="client_secret" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.identity_providers.fields.client_secret")|default:"Client Secret" }}
+                        </label>
+                        <input type="password" name="client_secret" id="client_secret"
+                            class="gk-input-neon w-full font-mono text-sm"
+                            placeholder="{% if Provider.ClientSecret %}•••••••• (leave blank to keep current){% else %}Client secret or API key{% endif %}"
+                            value="{% if Provider.ClientSecret %}{{ Provider.ClientSecret }}{% endif %}">
+                        <button type="button" onclick="var el=document.getElementById('client_secret');el.type=el.type==='password'?'text':'password';this.textContent=this.textContent.startsWith('[')?'[HIDE]':'[REVEAL]' "
+                            class="ml-2 text-xs underline cursor-pointer" style="color: var(--gk-text-secondary);">[REVEAL]</button>
+                    </div>
+                    <!-- Discovery URL -->
+                    <div>
+                        <label for="discovery_url" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.identity_providers.fields.discovery_url")|default:"Discovery URL" }}
+                        </label>
+                        <input type="url" name="discovery_url" id="discovery_url" value="{{ Provider.DiscoveryURL }}"
+                            class="gk-input-neon w-full font-mono text-sm"
+                            placeholder="https://accounts.google.com/.well-known/openid-configuration">
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.identity_providers.fields.discovery_url_help")|default:"OIDC provider discovery URL (auto-configures endpoints). Required for OIDC/SAML. Google and GitHub use built-in discovery." }}</p>
+                    </div>
+
+                    <!-- Scopes -->
+                    <div>
+                        <label for="scopes" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.identity_providers.fields.scopes")|default:"Scopes" }}
+                        </label>
+                        <input type="text" name="scopes" id="scopes" value="{{ Provider.Scopes }}"
+                            class="gk-input-neon w-full font-mono text-sm"
+                            placeholder="openid profile email">
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.identity_providers.fields.scopes_help")|default:"Space-separated OAuth2/OIDC scopes. Default: openid profile email" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Mapping -->
+            <div class="border-b pb-6" style="border-color: var(--gk-border-default);">
+                <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.identity_providers.user_mapping")|default:"User Mapping" }}</h3>
+
+                <div class="grid grid-cols-1 gap-6 max-w-2xl">
+                    <!-- Email Claim -->
+                    <div>
+                        <label for="user_claim_email" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.identity_providers.fields.email_claim")|default:"Email Claim" }}
+                        </label>
+                        <input type="text" name="user_claim_email" id="user_claim_email" value="{{ Provider.UserClaimEmail }}"
+                            class="gk-input-neon w-full font-mono text-sm"
+                            placeholder="email">
+                    </div>
+
+                    <!-- Name Claim -->
+                    <div>
+                        <label for="user_claim_name" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.identity_providers.fields.name_claim")|default:"Name Claim" }}
+                        </label>
+                        <input type="text" name="user_claim_name" id="user_claim_name" value="{{ Provider.UserClaimName }}"
+                            class="gk-input-neon w-full font-mono text-sm"
+                            placeholder="name">
+                    </div>
+
+                    <!-- Groups Claim -->
+                    <div>
+                        <label for="user_claim_groups" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.identity_providers.fields.groups_claim")|default:"Groups Claim" }}
+                        </label>
+                        <input type="text" name="user_claim_groups" id="user_claim_groups" value="{{ Provider.UserClaimGroups }}"
+                            class="gk-input-neon w-full font-mono text-sm"
+                            placeholder="groups">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="pb-6">
+                <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("common.settings")|default:"Settings" }}</h3>
+
+                <div class="grid grid-cols-1 gap-4 max-w-2xl">
+                    <!-- Enabled -->
+                    <div class="flex items-center">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" name="enabled" value="1" {% if Provider.Enabled or not Provider.ID %}checked{% endif %}
+                                class="rounded text-goatflow-600 focus:ring-goatflow-500 h-4 w-4">
+                            <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.identity_providers.settings.enabled")|default:"Enabled" }}</span>
+                        </label>
+                    </div>
+
+                    <!-- Auto Provision -->
+                    <div class="flex items-center">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" name="auto_provision" value="1" {% if Provider.AutoProvision %}checked{% endif %}
+                                class="rounded text-goatflow-600 focus:ring-goatflow-500 h-4 w-4">
+                            <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">
+                                {{ t("admin.identity_providers.settings.auto_provision")|default:"Auto-provision users" }}
+                                <span style="color: var(--gk-text-muted); font-weight: normal;">— {{ t("admin.identity_providers.settings.auto_provision_help")|default:"Automatically create GoatFlow user accounts for first-time logins from this provider." }}</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- User Table (OIDC only) -->
+                    <div id="userTableField" class="{% if Provider.ProviderType != "oidc" %}hidden{% endif %}">
+                        <label for="user_table" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.identity_providers.fields.user_table")|default:"User Table" }}
+                        </label>
+                        <select name="user_table" id="user_table" class="gk-select-neon w-full max-w-xs">
+                            <option value="users" {% if not Provider.UserTable or Provider.UserTable == "users" %}selected{% endif %}>Agent (users)</option>
+                            <option value="customer" {% if Provider.UserTable == "customer" %}selected{% endif %}>Customer (service_customer_user)</option>
+                        </select>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">
+                            {{ t("admin.identity_providers.fields.user_table_help")|default:"Which user table auto-provisioned accounts are created in." }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-4 border-t" style="border-color: var(--gk-border-default);">
+                <a href="/admin/identity-providers" class="gk-btn-secondary">
+                    {{ t("admin.identity_providers.actions.cancel")|default:"Cancel" }}
+                </a>
+                <button type="submit" id="submitBtn" class="gk-btn-neon">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    {% if Provider.ID %}{{ t("admin.identity_providers.actions.update")|default:"Update" }}{% else %}{{ t("admin.identity_providers.actions.create")|default:"Create" }}{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('providerForm').addEventListener('submit', function() {
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    btn.style.cursor = 'not-allowed';
+});
+
+document.getElementById('provider_type').addEventListener('change', function() {
+    document.getElementById('userTableField').classList.toggle('hidden', this.value !== 'oidc');
+});
+
+document.body.addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.xhr.status >= 400) {
+        try {
+            const response = JSON.parse(event.detail.xhr.responseText);
+            showToast('Error: ' + (response.error || 'Unknown error'), 'error');
+        } catch (e) {
+            showToast('Error: ' + event.detail.xhr.statusText, 'error');
+        }
+        const btn = document.getElementById('submitBtn');
+        if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
+    } else {
+        showToast('{% if Provider.ID %}{{ t("admin.identity_providers.toast.updated")|default:"Provider updated" }}{% else %}{{ t("admin.identity_providers.toast.created")|default:"Provider created" }}{% endif %}', 'success');
+        setTimeout(() => window.location.href = '/admin/identity-providers', 500);
+    }
+});
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50';
+    toast.style.background = type === 'error' ? 'var(--gk-error)' : type === 'success' ? 'var(--gk-success)' : 'var(--gk-primary)';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}

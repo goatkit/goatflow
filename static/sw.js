@@ -51,7 +51,10 @@ function isPluginEventStreamPath(pathname) {
 }
 
 function shouldBypassServiceWorker(request, url) {
-    return requestAcceptsEventStream(request) || isPluginEventStreamPath(url.pathname);
+    if (requestAcceptsEventStream(request) || isPluginEventStreamPath(url.pathname)) return true;
+    // Auth redirects/callbacks must never be cached — they redirect to external IdPs
+    if (url.pathname.indexOf('/auth/') === 0) return true;
+    return false;
 }
 
 function cacheName() {

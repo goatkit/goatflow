@@ -17,6 +17,7 @@ import (
 // - Common hardcoded phrases that should use translations
 // - Hardcoded title and placeholder attributes
 func TestHardcodedTextScanner(t *testing.T) {
+	t.Parallel()
 	// Find the script relative to the project root
 	scriptPath := findScript(t)
 	if scriptPath == "" {
@@ -57,12 +58,13 @@ func TestHardcodedTextScanner(t *testing.T) {
 			}
 		}
 	}
-}
+ }
 
 // TestHardcodedTextScannerStrict runs the scanner in strict mode.
 // This test is skipped by default and can be enabled in CI.
 // To run: go test -run TestHardcodedTextScannerStrict -tags=strict
 func TestHardcodedTextScannerStrict(t *testing.T) {
+	t.Parallel()
 	if os.Getenv("CI_STRICT_I18N") != "true" {
 		t.Skip("Skipping strict i18n check (set CI_STRICT_I18N=true to enable)")
 	}
@@ -83,7 +85,7 @@ func TestHardcodedTextScannerStrict(t *testing.T) {
 	}
 
 	t.Log("No hardcoded text found - i18n compliance check passed")
-}
+ }
 
 // findScript locates the check-hardcoded-text.sh script
 func findScript(t *testing.T) string {
@@ -136,6 +138,7 @@ func findModuleRoot() string {
 // TestCommonHardcodedPatterns checks for specific hardcoded patterns
 // that are known to cause i18n issues.
 func TestCommonHardcodedPatterns(t *testing.T) {
+	t.Parallel()
 	templatesDir := findTemplatesDir(t)
 	if templatesDir == "" {
 		t.Skip("templates directory not found")
@@ -205,7 +208,7 @@ func TestCommonHardcodedPatterns(t *testing.T) {
 		// Note: Not failing the test, just reporting
 		// Enable strict mode in CI if you want failures
 	}
-}
+ }
 
 // findTemplatesDir locates the templates directory
 func findTemplatesDir(t *testing.T) string {

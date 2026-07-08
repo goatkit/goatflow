@@ -5,6 +5,7 @@ import (
 )
 
 func TestUITranslations(t *testing.T) {
+	t.Parallel()
 	i18n := GetInstance()
 
 	// Test cases for common UI text that should be translated
@@ -72,9 +73,10 @@ func TestUITranslations(t *testing.T) {
 	if len(failedTests) > 0 {
 		t.Errorf("\nMissing translations for keys: %v", failedTests)
 	}
-}
+ }
 
 func TestDashboardPageTranslations(t *testing.T) {
+	t.Parallel()
 	i18n := GetInstance()
 
 	// Specific dashboard page text
@@ -109,9 +111,10 @@ func TestDashboardPageTranslations(t *testing.T) {
 	for lang, keys := range missingTranslations {
 		t.Errorf("Language %q missing translations for: %v", lang, keys)
 	}
-}
+ }
 
 func TestTemplateTextTranslations(t *testing.T) {
+	t.Parallel()
 	i18n := GetInstance()
 
 	// Test that common template text is translated
@@ -141,4 +144,4 @@ func TestTemplateTextTranslations(t *testing.T) {
 			t.Errorf("German translation missing for %s (%s)", tt.key, tt.desc)
 		}
 	}
-}
+ }

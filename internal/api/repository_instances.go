@@ -4,12 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	platformservice "github.com/goatkit/goatflow/internal/platform/service"
@@ -207,8 +209,13 @@ func initDatabaseServicesLocked(db *sql.DB) {
 		log.Printf("StorageService: using local backend at %s", storagePath)
 	}
 
+	// Initialize OIDC support
+	auth.SetStateStore(auth.NewMemoryStateStore())
+	oidcClient := &http.Client{Timeout: 30 * time.Second}
+	auth.SetOIDCClient(oidcClient)
+
 	jwtManager := shared.GetJWTManager()
-	authService = platformservice.NewAuthService(db, jwtManager)
+	authService = platformservice.NewAuthService(db, jwtManager, oidcClient, auth.GetStateStore())
 	log.Printf("Successfully connected to database")
 }
 

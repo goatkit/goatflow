@@ -6,6 +6,7 @@ import (
 )
 
 func TestLoginRateLimiter_Basic(t *testing.T) {
+	t.Parallel()
 	rl := NewLoginRateLimiter(3, 60, 1*time.Second, 10*time.Second)
 
 	ip := "192.168.1.1"
@@ -34,9 +35,10 @@ func TestLoginRateLimiter_Basic(t *testing.T) {
 	if remaining <= 0 {
 		t.Error("remaining time should be positive")
 	}
-}
+ }
 
 func TestLoginRateLimiter_DifferentUsers(t *testing.T) {
+	t.Parallel()
 	rl := NewLoginRateLimiter(2, 60, 1*time.Second, 10*time.Second)
 
 	ip := "192.168.1.1"
@@ -55,9 +57,10 @@ func TestLoginRateLimiter_DifferentUsers(t *testing.T) {
 	if blocked2 {
 		t.Error("user2 should not be blocked")
 	}
-}
+ }
 
 func TestLoginRateLimiter_DifferentIPs(t *testing.T) {
+	t.Parallel()
 	rl := NewLoginRateLimiter(2, 60, 1*time.Second, 10*time.Second)
 
 	user := "testuser"
@@ -76,9 +79,10 @@ func TestLoginRateLimiter_DifferentIPs(t *testing.T) {
 	if blocked2 {
 		t.Error("should not be blocked from IP2")
 	}
-}
+ }
 
 func TestLoginRateLimiter_SuccessClearsRecord(t *testing.T) {
+	t.Parallel()
 	rl := NewLoginRateLimiter(3, 60, 1*time.Second, 10*time.Second)
 
 	ip := "192.168.1.1"
@@ -98,9 +102,10 @@ func TestLoginRateLimiter_SuccessClearsRecord(t *testing.T) {
 	if blocked {
 		t.Error("should not be blocked after success cleared record")
 	}
-}
+ }
 
 func TestLoginRateLimiter_ExponentialBackoff(t *testing.T) {
+	t.Parallel()
 	rl := NewLoginRateLimiter(2, 60, 1*time.Second, 30*time.Second)
 
 	// Test backoff calculation
@@ -117,9 +122,10 @@ func TestLoginRateLimiter_ExponentialBackoff(t *testing.T) {
 	if backoff3 != 4*time.Second {
 		t.Errorf("expected 4s backoff 2 over, got %v", backoff3)
 	}
-}
+ }
 
 func TestLoginRateLimiter_MaxBackoff(t *testing.T) {
+	t.Parallel()
 	rl := NewLoginRateLimiter(2, 60, 1*time.Second, 5*time.Second)
 
 	// Even with many failures, backoff should not exceed max
@@ -127,9 +133,10 @@ func TestLoginRateLimiter_MaxBackoff(t *testing.T) {
 	if backoff > 5*time.Second {
 		t.Errorf("backoff should not exceed max, got %v", backoff)
 	}
-}
+ }
 
 func TestLoginRateLimiter_Stats(t *testing.T) {
+	t.Parallel()
 	rl := NewLoginRateLimiter(2, 60, 1*time.Second, 10*time.Second)
 
 	// Record some activity
@@ -145,4 +152,4 @@ func TestLoginRateLimiter_Stats(t *testing.T) {
 	if stats["blocked_count"].(int) != 1 {
 		t.Errorf("expected 1 blocked, got %v", stats["blocked_count"])
 	}
-}
+ }

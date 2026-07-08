@@ -54,6 +54,9 @@ services:
   adminer:
     profiles:
       - never  # Disabled in production
+  keycloak-test:
+    profiles:
+      - never  # Disabled in production
 
 # Production volume configuration
 volumes:

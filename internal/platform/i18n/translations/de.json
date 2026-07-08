@@ -1195,6 +1195,7 @@
         "plugin_logs": "Plugin-Logs",
         "plugin_logs_description": "Plugin-Aktivität und Fehler anzeigen",
         "plugin_name": "Name",
+        "plugin_overview": "Plugin-Übersicht",
         "plugin_routes": "Routen",
         "plugin_runtime": "Laufzeit",
         "plugin_status": "Status",
@@ -1437,6 +1438,60 @@
             "transport": "Transport-Typ",
             "transport_settings": "Transport-Einstellungen",
             "update_success": "Web-Service erfolgreich aktualisiert"
+        },
+        "identity_providers": {
+            "title": "Identitätsanbieter",
+            "description": "Externe Identitätsanbieter für die Benutzerauthentifizierung verwalten.",
+            "add": "Anbieter hinzufügen",
+            "name": "Name",
+            "type": "Typ",
+            "client_id": "Client-ID",
+            "provision": "Automatische Bereitstellung",
+            "yes": "Ja",
+            "no": "Nein",
+            "no_providers": "Noch keine Identitätsanbieter konfiguriert.",
+            "disable": "Deaktivieren",
+            "enable": "Aktivieren",
+            "edit": "Identitätsanbieter bearbeiten",
+            "create": "Identitätsanbieter erstellen",
+            "form_help": "Einstellungen für externe Identitätsanbieter konfigurieren.",
+            "basic_info": "Grundlegende Informationen",
+            "credentials": "Anmeldeinformationen",
+            "user_mapping": "Benutzerzuordnung",
+            "fields": {
+                "name": "Name",
+                "type": "Anbietertyp",
+                "type_help": "Google und GitHub verwenden vorkonfigurierte Discovery-Endpunkte. OIDC und SAML erfordern manuelle Konfiguration.",
+                "org_scope": "Organisationsscope",
+                "org_scope_help": "Leer = für alle Organisationen verfügbar. Auf eine bestimmte Organisation setzen für Organisationszugriff.",
+                "client_id": "Client-ID",
+                "client_secret": "Client-Geheimnis",
+                "discovery_url": "Discovery-URL",
+                "discovery_url_help": "OIDC-Anbieter-Discovery-URL (automatisches Konfigurieren der Endpunkte). Erforderlich für OIDC/SAML. Google und GitHub verwenden eingebaute Discovery.",
+                "scopes": "Scopes",
+                "scopes_help": "Leerzeichen-getrennte OAuth2/OIDC-Scopes. Standard: openid profile email",
+                "email_claim": "E-Mail-Anspruch",
+                "name_claim": "Name-Anspruch",
+                "groups_claim": "Gruppen-Anspruch"
+            },
+            "settings": {
+                "enabled": "Aktiviert",
+                "auto_provision": "Benutzer automatisch bereitstellen",
+                "auto_provision_help": "Automatisch GoatFlow-Butzerkonten für Erstregistrierungen von diesem Anbieter erstellen."
+            },
+            "actions": {
+                "cancel": "Abbrechen",
+                "create": "Erstellen",
+                "update": "Aktualisieren"
+            },
+            "toast": {
+                "updated": "Anbieter aktualisiert",
+                "created": "Anbieter erstellt"
+            },
+            "confirm": {
+                "toggle": "Sind Sie sicher, dass Sie diesen Anbieter {action} möchten?",
+                "delete": "Sind Sie sicher, dass Sie {name} löschen möchten?"
+            }
         }
     },
     "admin_dashboard": {
@@ -1634,7 +1689,8 @@
         "username": "Benutzername",
         "username_placeholder": "Benutzernamen eingeben",
         "verification_code": "Bestätigungscode",
-        "verify": "Bestätigen"
+        "verify": "Bestätigen",
+        "sign_in_with": "Sign in with"
     },
     "bulk_actions": {
         "all_selected": "Alle ausgewählt",
@@ -3621,5 +3677,8 @@
     },
     "welcome": {
         "greeting": "Willkommen"
+    },
+    "identity_providers": {
+        "dashboard_desc": "Externe Authentifizierungsanbieter konfigurieren"
     }
 }

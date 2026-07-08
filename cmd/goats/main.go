@@ -304,6 +304,10 @@ func main() {
 		}
 	}
 
+	// Initialize OIDC state store (in-memory) and HTTP client for IdP token exchanges
+auth.SetStateStore(auth.NewMemoryStateStore())
+auth.SetOIDCClient(&http.Client{Timeout: 30 * time.Second})
+
 	// Create router for YAML routes
 	r := gin.New()
 

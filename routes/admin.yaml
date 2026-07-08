@@ -1331,3 +1331,39 @@ spec:
           method: POST
           handler: handleAdminCustomer2FAOverride
           description: "Admin override: disable 2FA for a customer (requires reason)"
+
+        # Identity Providers (OIDC Client)
+        - path: /admin/identity-providers
+          method: GET
+          handler: handleAdminIdentityProviders
+          template: pages/admin/identity_providers.pongo2
+
+        - path: /admin/identity-providers/new
+          method: GET
+          handler: handleAdminIdentityProviderNew
+          template: pages/admin/identity_provider_form.pongo2
+
+        - path: /admin/identity-providers
+          method: POST
+          handler: handleAdminIdentityProviderCreate
+          description: "Create a new identity provider"
+
+        - path: /admin/identity-providers/:id/edit
+          method: GET
+          handler: handleAdminIdentityProviderEdit
+          template: pages/admin/identity_provider_form.pongo2
+
+        - path: /admin/identity-providers/:id
+          method: PUT
+          handler: handleAdminIdentityProviderUpdate
+          description: "Update an existing identity provider"
+
+        - path: /admin/identity-providers/:id
+          method: DELETE
+          handler: handleAdminIdentityProviderDelete
+          description: "Delete an identity provider"
+
+        - path: /admin/identity-providers/:id/:action
+          method: POST
+          handler: handleAdminIdentityProviderToggle
+          description: "Enable or disable an identity provider (action: enable|disable)"

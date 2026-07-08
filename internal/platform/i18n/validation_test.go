@@ -20,6 +20,7 @@ type languageCoverage struct {
 // TestTranslationCompleteness validates that all languages have complete translations.
 // Languages are auto-detected based on JSON file existence in internal/i18n/translations/.
 func TestTranslationCompleteness(t *testing.T) {
+	t.Parallel()
 	i18n := GetInstance()
 
 	// Get base keys from English
@@ -158,7 +159,7 @@ func TestTranslationCompleteness(t *testing.T) {
 
 	t.Log("└──────┴──────────────┴──────────────────┴───────┴─────────────┘")
 	t.Logf("Total: %d/%d languages with JSON files, %d base keys", withJSON, len(coverageData), len(baseKeys))
-}
+ }
 
 // truncate shortens a string to maxLen, adding ellipsis if needed.
 func truncate(s string, maxLen int) string {
@@ -178,6 +179,7 @@ func formatCoverage(coverage float64) string {
 
 // TestCriticalTranslations ensures critical UI keys are translated in all enabled languages.
 func TestCriticalTranslations(t *testing.T) {
+	t.Parallel()
 	i18n := GetInstance()
 
 	// Define critical keys that must be translated
@@ -221,11 +223,12 @@ func TestCriticalTranslations(t *testing.T) {
 			}
 		})
 	}
-}
+ }
 
 // TestTranslationConsistency checks for consistent formatting across languages.
 // This test only logs warnings for missing patterns - it doesn't fail for incomplete translations.
 func TestTranslationConsistency(t *testing.T) {
+	t.Parallel()
 	i18n := GetInstance()
 
 	// Keys that should have consistent format patterns
@@ -267,7 +270,7 @@ func TestTranslationConsistency(t *testing.T) {
 			}
 		})
 	}
-}
+ }
 
 // Helper function.
 func contains(s, substr string) bool {

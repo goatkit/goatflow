@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/http"
 
 	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
@@ -13,14 +14,16 @@ import (
 type UserLookup interface {
 	GetByLogin(login string) (*platformmodels.User, error)
 	GetByEmail(email string) (*platformmodels.User, error)
+	Create(user *platformmodels.User) error
+	SyncGroups(userID uint, groupNames []string) error
 }
 
 // ProviderDependencies bundles common resources providers may need.
 type ProviderDependencies struct {
-	DB       *sql.DB
-	UserRepo UserLookup
-	// Config adapter kept generic to avoid import cycle; accessed via injected function.
-	// We expose a getter so providers wanting config can perform a type assertion.
+	DB         *sql.DB
+	UserRepo   UserLookup
+	OIDCClient *http.Client // shared HTTP client for OIDC token exchanges and JWKS fetches
+	StateStore StateStore   // state token store for OIDC OAuth2 state protection
 }
 
 var userRepoFactory func(*sql.DB) UserLookup
@@ -72,3 +75,27 @@ func ListProviders() []string {
 	}
 	return names
 }
+
+// Global accessors for handlers that need the OIDC client and state store.
+// Set via SetOIDCClient/SetStateStore from main.go during boot.
+
+var (
+	globalOIDCClient *http.Client
+	globalStateStore StateStore
+)
+
+// GetOIDCClient returns the globally-configured OIDC HTTP client.
+func GetOIDCClient() *http.Client {
+	return globalOIDCClient
+}
+
+// SetOIDCClient sets the global OIDC HTTP client.
+func SetOIDCClient(client *http.Client) { globalOIDCClient = client }
+
+// GetStateStore returns the globally-configured state store.
+func GetStateStore() StateStore {
+	return globalStateStore
+}
+
+// SetStateStore sets the global state store.
+func SetStateStore(store StateStore) { globalStateStore = store }

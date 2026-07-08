@@ -7,6 +7,7 @@ import (
 )
 
 func TestLogin2FATemplateSecurityKeyOnlyMode(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	tests := []struct {
 		name     string
@@ -39,4 +40,4 @@ func TestLogin2FATemplateSecurityKeyOnlyMode(t *testing.T) {
 			assert.NotContains(t, html, `id="code" name="code"`)
 		})
 	}
-}
+ }

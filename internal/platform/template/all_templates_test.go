@@ -51,6 +51,7 @@ func customerContext() pongo2.Context {
 // =============================================================================
 
 func TestLoginFormAction(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := baseContext()
 	ctx["Error"] = ""
@@ -62,9 +63,10 @@ func TestLoginFormAction(t *testing.T) {
 	asserter.HasFormAction("/api/auth/login")
 	// Login uses hx-boost for progressive enhancement, not hx-post
 	asserter.Contains("hx-boost=\"true\"")
-}
+ }
 
 func TestCustomerLoginFormAction(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := baseContext()
 	ctx["Error"] = ""
@@ -74,9 +76,10 @@ func TestCustomerLoginFormAction(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/api/auth/customer/login")
-}
+ }
 
 func TestRegisterFormAction(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := baseContext()
 	ctx["Error"] = ""
@@ -86,13 +89,14 @@ func TestRegisterFormAction(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasHTMXPost("/api/auth/register")
-}
+ }
 
 // =============================================================================
 // TICKET TEMPLATES
 // =============================================================================
 
 func TestNewTicketFormAction(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := ticketContext()
 	ctx["Types"] = []map[string]interface{}{{"ID": 1, "Name": "Unclassified"}}
@@ -105,9 +109,10 @@ func TestNewTicketFormAction(t *testing.T) {
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/api/tickets")
 	asserter.HasHTMXPost("/api/tickets")
-}
+ }
 
 func TestTicketDetailNoteForm(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := ticketContext()
 	ctx["ArticleTypes"] = []map[string]interface{}{{"ID": 1, "Name": "note-internal"}}
@@ -120,9 +125,10 @@ func TestTicketDetailNoteForm(t *testing.T) {
 	asserter := NewHTMLAsserter(t, html)
 	// Note form should POST to agent ticket note endpoint
 	asserter.HasHTMXPost("/agent/tickets/123/note")
-}
+ }
 
 func TestTicketDetailAttachmentForm(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := ticketContext()
 	ctx["Attachments"] = []map[string]interface{}{}
@@ -133,9 +139,10 @@ func TestTicketDetailAttachmentForm(t *testing.T) {
 	asserter := NewHTMLAsserter(t, html)
 	// Attachment upload form
 	asserter.HasHTMXPost("/api/tickets/2025010112345678/attachments")
-}
+ }
 
 func TestCustomerNewTicketFormAction(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := customerContext()
 	ctx["Queues"] = []map[string]interface{}{{"ID": 1, "Name": "Support"}}
@@ -148,9 +155,10 @@ func TestCustomerNewTicketFormAction(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/customer/tickets/create")
-}
+ }
 
 func TestCustomerTicketReplyFormAction(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := customerContext()
 	ctx["Ticket"] = map[string]interface{}{
@@ -165,13 +173,14 @@ func TestCustomerTicketReplyFormAction(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/customer/tickets/456/reply")
-}
+ }
 
 // =============================================================================
 // ADMIN TEMPLATES
 // =============================================================================
 
 func TestAdminCustomerPortalSettingsForm(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := baseContext()
 	ctx["Settings"] = map[string]interface{}{
@@ -185,9 +194,10 @@ func TestAdminCustomerPortalSettingsForm(t *testing.T) {
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/admin/customer/portal/settings")
 	asserter.HasHTMXPost("/admin/customer/portal/settings")
-}
+ }
 
 func TestAdminCustomerCompanyFormCreate(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := baseContext()
 	ctx["IsNew"] = true
@@ -201,9 +211,10 @@ func TestAdminCustomerCompanyFormCreate(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/admin/customer/companies")
-}
+ }
 
 func TestAdminCustomerCompanyFormEdit(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := baseContext()
 	ctx["IsNew"] = false
@@ -217,9 +228,39 @@ func TestAdminCustomerCompanyFormEdit(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/admin/customer/companies/CUST001/edit")
-}
+ }
+
+func TestAdminIdentityProviderFormCreate(t *testing.T) {
+	t.Parallel()
+	helper := NewTemplateTestHelper(t)
+	ctx := baseContext()
+	ctx["Provider"] = sampleIdentityProvider()
+	ctx["FormAction"] = "/admin/identity-providers"
+	ctx["Method"] = "POST"
+
+	html, err := helper.RenderTemplate("pages/admin/identity_provider_form.pongo2", ctx)
+	require.NoError(t, err)
+
+	asserter := NewHTMLAsserter(t, html)
+	asserter.Contains("hx-post=\"/admin/identity-providers\"")
+ }
+
+func TestAdminIdentityProviderFormEdit(t *testing.T) {
+	t.Parallel()
+	helper := NewTemplateTestHelper(t)
+	ctx := baseContext()
+	ctx["Provider"] = sampleIdentityProvider()
+	ctx["FormAction"] = "/admin/identity-providers/1"
+	ctx["Method"] = "PUT"
+
+	html, err := helper.RenderTemplate("pages/admin/identity_provider_form.pongo2", ctx)
+	require.NoError(t, err)
+	asserter := NewHTMLAsserter(t, html)
+	asserter.Contains("hx-put=\"/admin/identity-providers/1\"")
+ }
 
 func TestAdminEmailQueueRetryForms(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := baseContext()
 	ctx["Emails"] = []map[string]interface{}{
@@ -246,13 +287,14 @@ func TestAdminEmailQueueRetryForms(t *testing.T) {
 	// Individual retry/delete buttons
 	asserter.Contains("hx-post=\"/admin/email-queue/retry/")
 	asserter.Contains("hx-post=\"/admin/email-queue/delete/")
-}
+ }
 
 // =============================================================================
 // SEARCH/FILTER FORMS (GET actions - verify they don't accidentally use POST)
 // =============================================================================
 
 func TestQueuesSearchFormIsGET(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := baseContext()
 	ctx["Queues"] = []map[string]interface{}{}
@@ -264,9 +306,10 @@ func TestQueuesSearchFormIsGET(t *testing.T) {
 	asserter.HasFormAction("/queues")
 	// Search forms should be GET, not POST
 	asserter.NotContains("hx-post=\"/queues\"")
-}
+ }
 
 func TestAdminSLASearchFormIsGET(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := baseContext()
 	ctx["SLAs"] = []map[string]interface{}{}
@@ -278,9 +321,10 @@ func TestAdminSLASearchFormIsGET(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/admin/sla")
-}
+ }
 
 func TestAdminCustomerCompaniesSearchFormIsGET(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := baseContext()
 	ctx["Companies"] = []map[string]interface{}{}
@@ -291,9 +335,10 @@ func TestAdminCustomerCompaniesSearchFormIsGET(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/admin/customer/companies")
-}
+ }
 
 func TestAgentTicketsSearchFormIsGET(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := baseContext()
 	ctx["Tickets"] = []map[string]interface{}{}
@@ -306,9 +351,10 @@ func TestAgentTicketsSearchFormIsGET(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/agent/tickets")
-}
+ }
 
 func TestCustomerTicketsSearchFormIsGET(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 	ctx := customerContext()
 	ctx["Tickets"] = []map[string]interface{}{}
@@ -318,7 +364,7 @@ func TestCustomerTicketsSearchFormIsGET(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/customer/tickets")
-}
+ }
 
 // =============================================================================
 // TEMPLATE CONSISTENCY TESTS
@@ -326,6 +372,7 @@ func TestCustomerTicketsSearchFormIsGET(t *testing.T) {
 // =============================================================================
 
 func TestNoMixedHTMXAndTraditionalSubmit(t *testing.T) {
+	t.Parallel()
 	// Templates should not have both hx-post AND form method="POST" action pointing to different URLs
 	// This is a meta-test that could be expanded to scan all templates
 
@@ -344,7 +391,7 @@ func TestNoMixedHTMXAndTraditionalSubmit(t *testing.T) {
 	// Both action and hx-post should be /api/tickets
 	asserter.HasFormAction("/api/tickets")
 	asserter.HasHTMXPost("/api/tickets")
-}
+ }
 
 // =============================================================================
 // ADMIN API PATH PREFIX TESTS
@@ -352,6 +399,7 @@ func TestNoMixedHTMXAndTraditionalSubmit(t *testing.T) {
 // =============================================================================
 
 func TestAdminAPIPathsUseCorrectPrefix(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name           string
 		template       string
@@ -408,7 +456,7 @@ func TestAdminAPIPathsUseCorrectPrefix(t *testing.T) {
 			}
 		})
 	}
-}
+ }
 
 // =============================================================================
 // FORM TEMPLATE TESTS
@@ -432,6 +480,7 @@ var testedFormTemplates = map[string]bool{
 	"pages/customer/ticket_view.pongo2": true,
 
 	// Admin
+	"pages/admin/identity_provider_form.pongo2":     true,
 	"pages/admin/attachment.pongo2":                 true,
 	"pages/admin/dynamic_field_form.pongo2":         true,
 	"pages/admin/dynamic_fields.pongo2":             true,
@@ -491,6 +540,7 @@ var testedFormTemplates = map[string]bool{
 // TestFormTemplateCoverage scans for templates with forms and verifies they have form action tests.
 // Note: 100% render coverage is enforced by TestAllPageTemplatesHaveCoverage in template_coverage_test.go.
 func TestFormTemplateCoverage(t *testing.T) {
+	t.Parallel()
 	helper := NewTemplateTestHelper(t)
 
 	// Patterns that indicate a template needs form testing
@@ -543,4 +593,4 @@ func TestFormTemplateCoverage(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-}
+ }
