@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -53,17 +54,21 @@ func handleSAMLRedirect(c *gin.Context) {
 	acsURL := shared.BuildRedirectURL(c, "/auth/"+idStr+"/acs")
 
 	cfg := &auth.SAMLConfig{
-		EntityID:       provider.EntityID,
-		AcsURL:         acsURL,
-		IdPMetadataURL: provider.DiscoveryURL,
-		SigningCert:    provider.SigningCert,
-		PrivateKey:     provider.PrivateKey,
-		UserClaimEmail: provider.UserClaimEmail,
-		UserClaimName:  provider.UserClaimName,
-		AutoProvision:  provider.AutoProvision,
+		EntityID:        provider.EntityID,
+		AcsURL:          acsURL,
+		IdPMetadataURL:  provider.DiscoveryURL,
+		IdPMetadataXML:  provider.IdPMetadataXML,
+		SigningCert:     provider.SigningCert,
+		PrivateKey:      provider.PrivateKey,
+		UserClaimEmail:  provider.UserClaimEmail,
+		UserClaimName:   provider.UserClaimName,
+		UserClaimGroups: provider.UserClaimGroups,
+		AutoProvision:   provider.AutoProvision,
+		UserTable:       provider.UserTable,
 	}
 
 	prov, err := auth.NewSAML2Provider(cfg, auth.ProviderDependencies{
+		DB:         db,
 		UserRepo:   repository.NewUserRepository(db),
 		StateStore: stateStore,
 	})
@@ -130,17 +135,21 @@ func handleSAMLCallback(c *gin.Context) {
 
 	acsURL := shared.BuildRedirectURL(c, "/auth/"+idStr+"/acs")
 	cfg := &auth.SAMLConfig{
-		EntityID:       provider.EntityID,
-		AcsURL:         acsURL,
-		IdPMetadataURL: provider.DiscoveryURL,
-		SigningCert:    provider.SigningCert,
-		PrivateKey:     provider.PrivateKey,
-		UserClaimEmail: provider.UserClaimEmail,
-		UserClaimName:  provider.UserClaimName,
-		AutoProvision:  provider.AutoProvision,
+		EntityID:        provider.EntityID,
+		AcsURL:          acsURL,
+		IdPMetadataURL:  provider.DiscoveryURL,
+		IdPMetadataXML:  provider.IdPMetadataXML,
+		SigningCert:     provider.SigningCert,
+		PrivateKey:      provider.PrivateKey,
+		UserClaimEmail:  provider.UserClaimEmail,
+		UserClaimName:   provider.UserClaimName,
+		UserClaimGroups: provider.UserClaimGroups,
+		AutoProvision:   provider.AutoProvision,
+		UserTable:       provider.UserTable,
 	}
 
 	prov, err := auth.NewSAML2Provider(cfg, auth.ProviderDependencies{
+		DB:         db,
 		UserRepo:   repository.NewUserRepository(db),
 		StateStore: stateStore,
 	})
@@ -172,4 +181,50 @@ func handleSAMLCallback(c *gin.Context) {
 	}
 
 	createSession(c, user)
+}
+
+// handleSAMLMetadata serves the SP metadata XML for auto-configuration in IdPs.
+func handleSAMLMetadata(c *gin.Context) {
+	idStr := c.Param("id")
+	providerID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil || providerID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider ID"})
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database unavailable"})
+		return
+	}
+
+	repo := repository.NewIdentityProviderRepository(db)
+	provider, err := repo.GetProvider(uint(providerID))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Provider not found"})
+		return
+	}
+
+	entityID := provider.EntityID
+	if entityID == "" {
+		entityID = shared.BuildRedirectURL(c, "/auth/"+idStr+"/metadata")
+	}
+	acsURL := shared.BuildRedirectURL(c, "/auth/"+idStr+"/acs")
+
+	cfg := &auth.SAMLConfig{
+		EntityID:      entityID,
+		AcsURL:        acsURL,
+		SigningCert:   provider.SigningCert,
+		PrivateKey:    provider.PrivateKey,
+		IdPMetadataURL: provider.DiscoveryURL,
+	}
+
+	// Generate SP metadata XML from config
+	xmlBytes, err := auth.GenerateSPMetadata(cfg)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to generate metadata: %v", err)})
+		return
+	}
+
+	c.Data(http.StatusOK, "application/xml", xmlBytes)
 }

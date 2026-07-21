@@ -2332,3 +2332,38 @@ html.gk-no-wallpaper .gk-grid-bg::before,
 .dark .hover\:bg-red-50:hover {
     background-color: var(--gk-error-subtle) !important;
 }
+
+/* Secret/password field wrapper with inline eye toggle */
+.gk-secret-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.gk-secret-field .gk-input-neon {
+    padding-right: 2.75rem;
+}
+
+.gk-secret-toggle {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--gk-text-muted);
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s ease;
+}
+
+.gk-secret-toggle:hover {
+    color: var(--gk-text-secondary);
+}
+
+.gk-secret-toggle svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}

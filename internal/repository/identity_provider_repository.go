@@ -30,8 +30,9 @@ func (r *IdentityProviderRepository) CreateProvider(p *models.IdentityProvider) 
 		(name, provider_type, client_id, discovery_url, scopes,
 		 user_claim_email, user_claim_name, user_claim_groups,
 		 org_id, enabled, auto_provision, user_table, auto_add_to_group,
+		 signing_cert, private_key, entity_id, acs_url, idp_metadata_xml,
 		 create_time, create_by, change_time, change_by)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 	)
 	var orgIDVal *int64
 	if p.OrgID != nil {
@@ -53,6 +54,11 @@ func (r *IdentityProviderRepository) CreateProvider(p *models.IdentityProvider) 
 		p.AutoProvision,
 		p.UserTable,
 		p.AutoAddToGroup,
+		p.SigningCert,
+		p.PrivateKey,
+		p.EntityID,
+		p.ACSURL,
+		p.IdPMetadataXML,
 		p.CreateTime,
 		p.CreateBy,
 		p.ChangeTime,
@@ -72,7 +78,7 @@ func (r *IdentityProviderRepository) CreateProvider(p *models.IdentityProvider) 
 // GetProvider returns an identity provider by ID.
 func (r *IdentityProviderRepository) GetProvider(id uint) (*models.IdentityProvider, error) {
 	query := database.ConvertPlaceholders(
-		`SELECT id, org_id, name, provider_type, client_id, client_secret, discovery_url, scopes,
+		`SELECT id, org_id, name, provider_type, client_id, client_secret, signing_cert, private_key, entity_id, acs_url, idp_metadata_xml, discovery_url, scopes,
 		 user_claim_email, user_claim_name, user_claim_groups,
 		 enabled, auto_provision, user_table, auto_add_to_group,
 		 create_time, create_by, change_time, change_by
@@ -80,12 +86,13 @@ func (r *IdentityProviderRepository) GetProvider(id uint) (*models.IdentityProvi
 	)
 	var p models.IdentityProvider
 	var orgID sql.NullInt64
-	var claimGroups sql.NullString
+	var claimGroups, clientSecret, signingCert, privateKey, entityID, acsURL, idpMetadataXML, autoAddToGroup sql.NullString
 	err := r.db.QueryRow(query, id).Scan(
-		&p.ID, &orgID, &p.Name, &p.ProviderType, &p.ClientID, &p.ClientSecret,
+		&p.ID, &orgID, &p.Name, &p.ProviderType, &p.ClientID, &clientSecret,
+		&signingCert, &privateKey, &entityID, &acsURL, &idpMetadataXML,
 		&p.DiscoveryURL, &p.Scopes,
 		&p.UserClaimEmail, &p.UserClaimName,
-		&claimGroups, &p.Enabled, &p.AutoProvision, &p.UserTable, &p.AutoAddToGroup,
+		&claimGroups, &p.Enabled, &p.AutoProvision, &p.UserTable, &autoAddToGroup,
 		&p.CreateTime, &p.CreateBy, &p.ChangeTime, &p.ChangeBy,
 	)
 	if err == sql.ErrNoRows {
@@ -98,6 +105,13 @@ func (r *IdentityProviderRepository) GetProvider(id uint) (*models.IdentityProvi
 		v := uint(orgID.Int64)
 		p.OrgID = &v
 	}
+	p.ClientSecret = clientSecret.String
+	p.SigningCert = signingCert.String
+	p.PrivateKey = privateKey.String
+	p.EntityID = entityID.String
+	p.ACSURL = acsURL.String
+	p.IdPMetadataXML = idpMetadataXML.String
+	p.AutoAddToGroup = autoAddToGroup.String
 	if claimGroups.Valid {
 		p.UserClaimGroups = claimGroups.String
 	}
@@ -107,7 +121,7 @@ func (r *IdentityProviderRepository) GetProvider(id uint) (*models.IdentityProvi
 // GetProvidersByOrg returns all providers for a specific org (including global).
 func (r *IdentityProviderRepository) GetProvidersByOrg(orgID uint) ([]*models.IdentityProvider, error) {
 	query := database.ConvertPlaceholders(
-		`SELECT id, org_id, name, provider_type, client_id, discovery_url, scopes,
+		`SELECT id, org_id, name, provider_type, client_id, signing_cert, private_key, entity_id, acs_url, idp_metadata_xml, discovery_url, scopes,
 		 user_claim_email, user_claim_name, user_claim_groups,
 		 enabled, auto_provision, user_table, auto_add_to_group,
 		 create_time, create_by, change_time, change_by
@@ -126,7 +140,7 @@ func (r *IdentityProviderRepository) GetProvidersByOrg(orgID uint) ([]*models.Id
 // GetGlobalProviders returns all global (org_id NULL) providers.
 func (r *IdentityProviderRepository) GetGlobalProviders() ([]*models.IdentityProvider, error) {
 	query := database.ConvertPlaceholders(
-		`SELECT id, org_id, name, provider_type, client_id, discovery_url, scopes,
+		`SELECT id, org_id, name, provider_type, client_id, signing_cert, private_key, entity_id, acs_url, idp_metadata_xml, discovery_url, scopes,
 		 user_claim_email, user_claim_name, user_claim_groups,
 		 enabled, auto_provision, user_table, auto_add_to_group,
 		 create_time, create_by, change_time, change_by
@@ -146,7 +160,7 @@ func (r *IdentityProviderRepository) GetGlobalProviders() ([]*models.IdentityPro
 func (r *IdentityProviderRepository) UpdateProvider(p *models.IdentityProvider) error {
 	query := database.ConvertPlaceholders(
 		`UPDATE gk_identity_provider SET
-		 name = ?, provider_type = ?, client_id = ?, client_secret = ?, discovery_url = ?, scopes = ?,
+		 name = ?, provider_type = ?, client_id = ?, client_secret = ?, signing_cert = ?, private_key = ?, entity_id = ?, acs_url = ?, idp_metadata_xml = ?, discovery_url = ?, scopes = ?,
 		 user_claim_email = ?, user_claim_name = ?, user_claim_groups = ?,
 		 enabled = ?, auto_provision = ?, user_table = ?, auto_add_to_group = ?,
 		 change_time = ?, change_by = ?
@@ -154,7 +168,7 @@ func (r *IdentityProviderRepository) UpdateProvider(p *models.IdentityProvider) 
 	)
 	_, err := r.db.Exec(
 		query,
-		p.Name, p.ProviderType, p.ClientID, p.ClientSecret, p.DiscoveryURL, p.Scopes,
+		p.Name, p.ProviderType, p.ClientID, p.ClientSecret, p.SigningCert, p.PrivateKey, p.EntityID, p.ACSURL, p.IdPMetadataXML, p.DiscoveryURL, p.Scopes,
 		p.UserClaimEmail, p.UserClaimName, p.UserClaimGroups,
 		p.Enabled, p.AutoProvision, p.UserTable, p.AutoAddToGroup,
 		p.ChangeTime, p.ChangeBy, p.ID,
@@ -179,7 +193,7 @@ func (r *IdentityProviderRepository) DeleteProvider(id uint) error {
 // Prefers org-scoped, falls back to global.
 func (r *IdentityProviderRepository) GetProviderByOrgAndType(orgID uint, providerType string) (*models.IdentityProvider, error) {
 	query := database.ConvertPlaceholders(
-		`SELECT id, org_id, name, provider_type, client_id, client_secret, discovery_url, scopes,
+		`SELECT id, org_id, name, provider_type, client_id, client_secret, signing_cert, private_key, entity_id, acs_url, idp_metadata_xml, discovery_url, scopes,
 		 user_claim_email, user_claim_name, user_claim_groups,
 		 enabled, auto_provision, user_table, auto_add_to_group,
 		 create_time, create_by, change_time, change_by
@@ -190,12 +204,13 @@ func (r *IdentityProviderRepository) GetProviderByOrgAndType(orgID uint, provide
 	)
 	var p models.IdentityProvider
 	var orgIDNull sql.NullInt64
-	var claimGroups sql.NullString
+	var claimGroups, clientSecret, signingCert, privateKey, entityID, acsURL, idpMetadataXML, autoAddToGroup sql.NullString
 	err := r.db.QueryRow(query, orgID, providerType).Scan(
-		&p.ID, &orgIDNull, &p.Name, &p.ProviderType, &p.ClientID, &p.ClientSecret,
+		&p.ID, &orgIDNull, &p.Name, &p.ProviderType, &p.ClientID, &clientSecret,
+		&signingCert, &privateKey, &entityID, &acsURL, &idpMetadataXML,
 		&p.DiscoveryURL, &p.Scopes,
 		&p.UserClaimEmail, &p.UserClaimName,
-		&claimGroups, &p.Enabled, &p.AutoProvision, &p.UserTable, &p.AutoAddToGroup,
+		&claimGroups, &p.Enabled, &p.AutoProvision, &p.UserTable, &autoAddToGroup,
 		&p.CreateTime, &p.CreateBy, &p.ChangeTime, &p.ChangeBy,
 	)
 	if err == sql.ErrNoRows {
@@ -208,6 +223,13 @@ func (r *IdentityProviderRepository) GetProviderByOrgAndType(orgID uint, provide
 		v := uint(orgIDNull.Int64)
 		p.OrgID = &v
 	}
+	p.ClientSecret = clientSecret.String
+	p.SigningCert = signingCert.String
+	p.PrivateKey = privateKey.String
+	p.EntityID = entityID.String
+	p.ACSURL = acsURL.String
+	p.IdPMetadataXML = idpMetadataXML.String
+	p.AutoAddToGroup = autoAddToGroup.String
 	if claimGroups.Valid {
 		p.UserClaimGroups = claimGroups.String
 	}
@@ -217,7 +239,7 @@ func (r *IdentityProviderRepository) GetProviderByOrgAndType(orgID uint, provide
 // ListProviders returns all providers (for admin list).
 func (r *IdentityProviderRepository) ListProviders() ([]*models.IdentityProvider, error) {
 	query := database.ConvertPlaceholders(
-		`SELECT id, org_id, name, provider_type, client_id, discovery_url, scopes,
+		`SELECT id, org_id, name, provider_type, client_id, signing_cert, private_key, entity_id, acs_url, idp_metadata_xml, discovery_url, scopes,
 		 user_claim_email, user_claim_name, user_claim_groups,
 		 enabled, auto_provision, user_table, auto_add_to_group,
 		 create_time, create_by, change_time, change_by
@@ -238,10 +260,12 @@ func scanProviders(rows *sql.Rows) ([]*models.IdentityProvider, error) {
 		var p models.IdentityProvider
 		var orgID sql.NullInt64
 		var claimGroups sql.NullString
+		var signingCert, privateKey, entityID, acsURL, idpMetadataXML, autoAddToGroup sql.NullString
 		err := rows.Scan(
 			&p.ID, &orgID, &p.Name, &p.ProviderType, &p.ClientID,
+			&signingCert, &privateKey, &entityID, &acsURL, &idpMetadataXML,
 			&p.DiscoveryURL, &p.Scopes, &p.UserClaimEmail, &p.UserClaimName,
-			&claimGroups, &p.Enabled, &p.AutoProvision, &p.UserTable, &p.AutoAddToGroup,
+			&claimGroups, &p.Enabled, &p.AutoProvision, &p.UserTable, &autoAddToGroup,
 			&p.CreateTime, &p.CreateBy, &p.ChangeTime, &p.ChangeBy,
 		)
 		if err != nil {
@@ -254,6 +278,12 @@ func scanProviders(rows *sql.Rows) ([]*models.IdentityProvider, error) {
 		if claimGroups.Valid {
 			p.UserClaimGroups = claimGroups.String
 		}
+		p.SigningCert = signingCert.String
+		p.PrivateKey = privateKey.String
+		p.EntityID = entityID.String
+		p.ACSURL = acsURL.String
+		p.IdPMetadataXML = idpMetadataXML.String
+		p.AutoAddToGroup = autoAddToGroup.String
 		providers = append(providers, &p)
 	}
 	if err := rows.Err(); err != nil {

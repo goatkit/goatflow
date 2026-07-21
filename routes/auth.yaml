@@ -166,4 +166,8 @@ spec:
       method: POST
       handler: handleSAMLCallback
       description: "Handle SAML2 ACS POST response from IdP"
+    - path: /auth/:id/metadata
+      method: GET
+      handler: handleSAMLMetadata
+      description: "Serve SAML2 SP metadata XML for IdP auto-configuration"
 

@@ -14,6 +14,7 @@ type IdentityProvider struct {
 	PrivateKey        string    `json:"-"`
 	EntityID          string    `json:"entity_id"`
 	ACSURL            string    `json:"acs_url"`
+	IdPMetadataXML     string    `json:"idp_metadata_xml"`
 	Scopes            string    `json:"scopes"`
 	UserClaimEmail    string    `json:"user_claim_email"`
 	UserClaimName     string    `json:"user_claim_name"`

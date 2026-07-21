@@ -10,7 +10,7 @@
             <div class="flex items-center">
                 <a href="/admin/identity-providers" class="gk-btn-secondary mr-4">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
                     {{ t("common.back")|default:"Back" }}
                 </a>
@@ -43,7 +43,7 @@
             hx-swap="none"
         >
             <!-- Basic Information -->
-            <div class="border-b pb-6" style="border-color: var(--gk-border-default);">
+            <div class="border-b px-6 py-6" style="border-color: var(--gk-border-default);">
                 <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.identity_providers.basic_info")|default:"Basic Information" }}</h3>
 
                 <div class="grid grid-cols-1 gap-6 max-w-2xl">
@@ -53,7 +53,7 @@
                             {{ t("admin.identity_providers.fields.name")|default:"Name" }} <span style="color: var(--gk-error);">*</span>
                         </label>
                         <input type="text" name="name" id="name" value="{{ Provider.Name }}" required
-                            class="gk-input-neon w-full"
+                            class="gk-input-neon"
                             placeholder="e.g., Corporate OIDC, Google Workspace">
                     </div>
 
@@ -62,12 +62,13 @@
                         <label for="provider_type" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
                             {{ t("admin.identity_providers.fields.type")|default:"Provider Type" }} <span style="color: var(--gk-error);">*</span>
                         </label>
-                        <select name="provider_type" id="provider_type" required class="gk-select-neon w-full">
+                        <select name="provider_type" id="provider_type" required class="gk-select-neon">
                             <option value="oidc" {% if Provider.ProviderType == "oidc" %}selected{% endif %}>OpenID Connect (OIDC)</option>
                             <option value="google" {% if Provider.ProviderType == "google" %}selected{% endif %}>Google</option>
                             <option value="github" {% if Provider.ProviderType == "github" %}selected{% endif %}>GitHub</option>
+                            <option value="saml2" {% if Provider.ProviderType == "saml2" %}selected{% endif %}>SAML 2.0</option>
                         </select>
-                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.identity_providers.fields.type_help")|default:"Google uses a built-in discovery endpoint. OIDC requires manual configuration. GitHub uses OAuth2." }}</p>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">OIDC for standards-based IdPs. Google/GitHub for quick setup. SAML 2.0 for enterprise SSO.</p>
                     </div>
 
                     <!-- Org Scope -->
@@ -76,66 +77,119 @@
                             {{ t("admin.identity_providers.fields.org_scope")|default:"Organization Scope" }}
                         </label>
                         <input type="number" name="org_id" id="org_id" value="{% if Provider.OrgID %}{{ Provider.OrgID }}{% endif %}" min="1"
-                            class="gk-input-neon w-full"
+                            class="gk-input-neon"
                             placeholder="Leave empty for global (all orgs)">
-                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.identity_providers.fields.org_scope_help")|default:"Empty = available to all organizations. Set to a specific org for org-scoped access." }}</p>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">Empty = available to all organizations. Set to a specific org for org-scoped access.</p>
                     </div>
                 </div>
             </div>
 
             <!-- Credentials -->
-            <div class="border-b pb-6" style="border-color: var(--gk-border-default);">
+            <div class="border-b px-6 py-6" style="border-color: var(--gk-border-default);">
                 <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.identity_providers.credentials")|default:"Credentials" }}</h3>
 
                 <div class="grid grid-cols-1 gap-6 max-w-2xl">
                     <!-- Client ID -->
-                    <div>
+                    <div id="clientIdField">
                         <label for="client_id" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
-                            {{ t("admin.identity_providers.fields.client_id")|default:"Client ID" }} <span style="color: var(--gk-error);">*</span>
+                            {{ t("admin.identity_providers.fields.client_id")|default:"Client ID" }} <span class="oidc-required" style="color: var(--gk-error);">*</span>
                         </label>
-                        <input type="text" name="client_id" id="client_id" value="{{ Provider.ClientID }}" required
-                            class="gk-input-neon w-full font-mono text-sm"
+                        <input type="text" name="client_id" id="client_id" value="{{ Provider.ClientID }}"
+                            class="gk-input-neon font-mono text-sm"
                             placeholder="e.g., 123456-abcdef.apps.googleusercontent.com">
                     </div>
 
                     <!-- Client Secret -->
-                    <div>
+                    <div id="clientSecretField">
                         <label for="client_secret" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
                             {{ t("admin.identity_providers.fields.client_secret")|default:"Client Secret" }}
                         </label>
-                        <input type="password" name="client_secret" id="client_secret"
-                            class="gk-input-neon w-full font-mono text-sm"
-                            placeholder="{% if Provider.ClientSecret %}•••••••• (leave blank to keep current){% else %}Client secret or API key{% endif %}"
-                            value="{% if Provider.ClientSecret %}{{ Provider.ClientSecret }}{% endif %}">
-                        <button type="button" onclick="var el=document.getElementById('client_secret');el.type=el.type==='password'?'text':'password';this.textContent=this.textContent.startsWith('[')?'[HIDE]':'[REVEAL]' "
-                            class="ml-2 text-xs underline cursor-pointer" style="color: var(--gk-text-secondary);">[REVEAL]</button>
-                    </div>
-                    <!-- Discovery URL -->
-                    <div>
-                        <label for="discovery_url" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
-                            {{ t("admin.identity_providers.fields.discovery_url")|default:"Discovery URL" }}
-                        </label>
-                        <input type="url" name="discovery_url" id="discovery_url" value="{{ Provider.DiscoveryURL }}"
-                            class="gk-input-neon w-full font-mono text-sm"
-                            placeholder="https://accounts.google.com/.well-known/openid-configuration">
-                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.identity_providers.fields.discovery_url_help")|default:"OIDC provider discovery URL (auto-configures endpoints). Required for OIDC/SAML. Google and GitHub use built-in discovery." }}</p>
+                        <div class="gk-secret-field">
+                            <input type="password" name="client_secret" id="client_secret"
+                                class="gk-input-neon font-mono text-sm"
+                                placeholder="{% if Provider.ClientSecret %}•••••••• (leave blank to keep current){% else %}Client secret or API key{% endif %}"
+                                value="{% if Provider.ClientSecret %}{{ Provider.ClientSecret }}{% endif %}">
+                            <button type="button" class="gk-secret-toggle" onclick="gkToggleSecret('client_secret')" aria-label="Toggle visibility">
+                                <svg class="eye-open" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                <svg class="eye-closed hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Scopes -->
+                    <!-- Discovery URL / Metadata URL -->
                     <div>
+                        <label for="discovery_url" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            <span id="discoveryLabel">{{ t("admin.identity_providers.fields.discovery_url")|default:"Discovery URL" }}</span>
+                        </label>
+                        <input type="url" name="discovery_url" id="discovery_url" value="{{ Provider.DiscoveryURL }}"
+                            class="gk-input-neon font-mono text-sm"
+                            placeholder="https://accounts.google.com/.well-known/openid-configuration">
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);" id="discoveryHelp">{{ t("admin.identity_providers.fields.discovery_url_help")|default:"OIDC discovery URL or SAML metadata URL." }}</p>
+                    </div>
+
+                    <!-- Scopes (OIDC only) -->
+                    <div id="scopesField">
                         <label for="scopes" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
                             {{ t("admin.identity_providers.fields.scopes")|default:"Scopes" }}
                         </label>
                         <input type="text" name="scopes" id="scopes" value="{{ Provider.Scopes }}"
-                            class="gk-input-neon w-full font-mono text-sm"
+                            class="gk-input-neon font-mono text-sm"
                             placeholder="openid profile email">
-                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.identity_providers.fields.scopes_help")|default:"Space-separated OAuth2/OIDC scopes. Default: openid profile email" }}</p>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">Space-separated OAuth2/OIDC scopes. Default: openid profile email</p>
+                    </div>
+
+                    <!-- SAML2-Specific Fields -->
+                    <div id="saml2Fields" class="{% if Provider.ProviderType != "saml2" %}hidden{% endif %} grid grid-cols-1 gap-6">
+                        <!-- Entity ID -->
+                        <div>
+                            <label for="entity_id" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                SP Entity ID
+                            </label>
+                            <input type="text" name="entity_id" id="entity_id" value="{{ Provider.EntityID }}"
+                                class="gk-input-neon font-mono text-sm"
+                                placeholder="Auto-derived from ACS URL if left blank">
+                        </div>
+
+                        <!-- IdP Metadata XML -->
+                        <div>
+                            <label for="idp_metadata_xml" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                IdP Metadata XML
+                            </label>
+                            <textarea name="idp_metadata_xml" id="idp_metadata_xml" rows="5"
+                                class="gk-input-neon font-mono text-xs"
+                                placeholder="Paste raw IdP metadata XML here (alternative to Metadata URL above)">{{ Provider.IdPMetadataXML }}</textarea>
+                            <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">Provide either a Metadata URL above OR paste raw XML here.</p>
+                        </div>
+
+                        <!-- Signing Certificate -->
+                        <div>
+                            <label for="signing_cert" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                SP Signing Certificate
+                            </label>
+                            <div class="gk-secret-field">
+                                <textarea name="signing_cert" id="signing_cert" rows="3"
+                                    class="gk-input-neon font-mono text-xs"
+                                    placeholder="Auto-generated if left blank">{{ Provider.SigningCert }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Private Key -->
+                        <div>
+                            <label for="private_key" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                SP Private Key
+                            </label>
+                            <div class="gk-secret-field">
+                                <textarea name="private_key" id="private_key" rows="3"
+                                    class="gk-input-neon font-mono text-xs"
+                                    placeholder="Auto-generated if left blank">{{ Provider.PrivateKey }}</textarea>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- User Mapping -->
-            <div class="border-b pb-6" style="border-color: var(--gk-border-default);">
+            <div class="border-b px-6 py-6" style="border-color: var(--gk-border-default);">
                 <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.identity_providers.user_mapping")|default:"User Mapping" }}</h3>
 
                 <div class="grid grid-cols-1 gap-6 max-w-2xl">
@@ -145,7 +199,7 @@
                             {{ t("admin.identity_providers.fields.email_claim")|default:"Email Claim" }}
                         </label>
                         <input type="text" name="user_claim_email" id="user_claim_email" value="{{ Provider.UserClaimEmail }}"
-                            class="gk-input-neon w-full font-mono text-sm"
+                            class="gk-input-neon font-mono text-sm"
                             placeholder="email">
                     </div>
 
@@ -155,7 +209,7 @@
                             {{ t("admin.identity_providers.fields.name_claim")|default:"Name Claim" }}
                         </label>
                         <input type="text" name="user_claim_name" id="user_claim_name" value="{{ Provider.UserClaimName }}"
-                            class="gk-input-neon w-full font-mono text-sm"
+                            class="gk-input-neon font-mono text-sm"
                             placeholder="name">
                     </div>
 
@@ -165,14 +219,14 @@
                             {{ t("admin.identity_providers.fields.groups_claim")|default:"Groups Claim" }}
                         </label>
                         <input type="text" name="user_claim_groups" id="user_claim_groups" value="{{ Provider.UserClaimGroups }}"
-                            class="gk-input-neon w-full font-mono text-sm"
+                            class="gk-input-neon font-mono text-sm"
                             placeholder="groups">
                     </div>
                 </div>
             </div>
 
             <!-- Settings -->
-            <div class="pb-6">
+            <div class="px-6 py-6">
                 <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("common.settings")|default:"Settings" }}</h3>
 
                 <div class="grid grid-cols-1 gap-4 max-w-2xl">
@@ -192,35 +246,33 @@
                                 class="rounded text-goatflow-600 focus:ring-goatflow-500 h-4 w-4">
                             <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">
                                 {{ t("admin.identity_providers.settings.auto_provision")|default:"Auto-provision users" }}
-                                <span style="color: var(--gk-text-muted); font-weight: normal;">— {{ t("admin.identity_providers.settings.auto_provision_help")|default:"Automatically create GoatFlow user accounts for first-time logins from this provider." }}</span>
+                                <span style="color: var(--gk-text-muted); font-weight: normal;">— Automatically create GoatFlow user accounts for first-time logins from this provider.</span>
                             </span>
                         </label>
                     </div>
 
-                    <!-- User Table (OIDC only) -->
-                    <div id="userTableField" class="{% if Provider.ProviderType != "oidc" %}hidden{% endif %}">
+                    <!-- User Table (OIDC/SAML2) -->
+                    <div id="userTableField" class="pt-2 {% if Provider.ProviderType != "oidc" and Provider.ProviderType != "saml2" %}hidden{% endif %}">
                         <label for="user_table" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
                             {{ t("admin.identity_providers.fields.user_table")|default:"User Table" }}
                         </label>
-                        <select name="user_table" id="user_table" class="gk-select-neon w-full max-w-xs">
+                        <select name="user_table" id="user_table" class="gk-select-neon max-w-xs">
                             <option value="users" {% if not Provider.UserTable or Provider.UserTable == "users" %}selected{% endif %}>Agent (users)</option>
                             <option value="customer" {% if Provider.UserTable == "customer" %}selected{% endif %}>Customer (service_customer_user)</option>
                         </select>
-                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">
-                            {{ t("admin.identity_providers.fields.user_table_help")|default:"Which user table auto-provisioned accounts are created in." }}
-                        </p>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">Which user table auto-provisioned accounts are created in.</p>
                     </div>
                 </div>
             </div>
 
             <!-- Form Actions -->
-            <div class="flex justify-end space-x-3 pt-4 border-t" style="border-color: var(--gk-border-default);">
+            <div class="flex justify-end space-x-3 px-6 py-4 border-t" style="border-color: var(--gk-border-default);">
                 <a href="/admin/identity-providers" class="gk-btn-secondary">
                     {{ t("admin.identity_providers.actions.cancel")|default:"Cancel" }}
                 </a>
                 <button type="submit" id="submitBtn" class="gk-btn-neon">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" width="2" d="M5 13l4 4L19 7"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                     </svg>
                     {% if Provider.ID %}{{ t("admin.identity_providers.actions.update")|default:"Update" }}{% else %}{{ t("admin.identity_providers.actions.create")|default:"Create" }}{% endif %}
                 </button>
@@ -230,6 +282,24 @@
 </div>
 
 <script>
+// Reusable secret field toggle — swaps password/text and eye icon
+function gkToggleSecret(id) {
+    const el = document.getElementById(id);
+    const btn = el.parentElement.querySelector('.gk-secret-toggle');
+    if (!btn) return;
+    const eyeOpen = btn.querySelector('.eye-open');
+    const eyeClosed = btn.querySelector('.eye-closed');
+    if (el.type === 'password') {
+        el.type = 'text';
+        eyeOpen.classList.add('hidden');
+        eyeClosed.classList.remove('hidden');
+    } else {
+        el.type = 'password';
+        eyeOpen.classList.remove('hidden');
+        eyeClosed.classList.add('hidden');
+    }
+}
+
 document.getElementById('providerForm').addEventListener('submit', function() {
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
@@ -237,8 +307,26 @@ document.getElementById('providerForm').addEventListener('submit', function() {
     btn.style.cursor = 'not-allowed';
 });
 
+// Toggle field visibility based on provider type
 document.getElementById('provider_type').addEventListener('change', function() {
-    document.getElementById('userTableField').classList.toggle('hidden', this.value !== 'oidc');
+    const isOIDC = this.value === 'oidc' || this.value === 'google' || this.value === 'github';
+    const isSAML2 = this.value === 'saml2';
+    document.getElementById('userTableField').classList.toggle('hidden', !isOIDC && !isSAML2);
+    document.getElementById('saml2Fields').classList.toggle('hidden', !isSAML2);
+    document.getElementById('scopesField').classList.toggle('hidden', !isOIDC);
+    // Client ID/secret not required for SAML2
+    document.getElementById('clientIdField').classList.toggle('hidden', isSAML2);
+    document.getElementById('clientSecretField').classList.toggle('hidden', isSAML2);
+    // Label changes for SAML2
+    const dLabel = document.getElementById('discoveryLabel');
+    const dHelp = document.getElementById('discoveryHelp');
+    if (isSAML2) {
+        dLabel.textContent = 'Metadata URL';
+        dHelp.textContent = 'SAML IdP metadata URL (alternative: paste XML below).';
+    } else {
+        dLabel.textContent = 'Discovery URL';
+        dHelp.textContent = 'OIDC discovery URL or SAML metadata URL.';
+    }
 });
 
 document.body.addEventListener('htmx:afterRequest', function(event) {

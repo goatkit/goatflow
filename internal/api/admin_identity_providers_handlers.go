@@ -1,7 +1,13 @@
 package api
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
+	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -93,6 +99,7 @@ func handleAdminIdentityProviderCreate(c *gin.Context) {
 	claimEmail := strings.TrimSpace(c.PostForm("user_claim_email"))
 	claimName := strings.TrimSpace(c.PostForm("user_claim_name"))
 	claimGroups := strings.TrimSpace(c.PostForm("user_claim_groups"))
+	idpMetadataXML := strings.TrimSpace(c.PostForm("idp_metadata_xml"))
 	enabled := c.PostForm("enabled") == "1"
 	autoProvision := c.PostForm("auto_provision") == "1"
 	userTable := c.PostForm("user_table")
@@ -100,7 +107,7 @@ func handleAdminIdentityProviderCreate(c *gin.Context) {
 		userTable = "users"
 	}
 
-	if name == "" || providerType == "" || clientID == "" {
+	if name == "" || providerType == "" || (clientID == "" && providerType != "saml2") {
 		sendErrorResponse(c, http.StatusBadRequest, "Name, provider type, and client ID are required")
 		return
 	}
@@ -128,24 +135,24 @@ func handleAdminIdentityProviderCreate(c *gin.Context) {
 			return
 		}
 	}
-
-	// Validate SAML2 specific fields (required)
+	// SAML2: auto-generate cert/key if not provided, accept metadata URL or XML
 	if providerType == "saml2" {
-		if discoveryURL == "" {
-			sendErrorResponse(c, http.StatusBadRequest, "Metadata URL is required for SAML2 providers")
+		if discoveryURL == "" && idpMetadataXML == "" {
+			sendErrorResponse(c, http.StatusBadRequest, "Metadata URL or XML is required for SAML2 providers")
 			return
 		}
-		if !isValidURL(discoveryURL) {
+		if discoveryURL != "" && !isValidURL(discoveryURL) {
 			sendErrorResponse(c, http.StatusBadRequest, "Invalid metadata URL format")
 			return
 		}
-		if signingCert == "" {
-			sendErrorResponse(c, http.StatusBadRequest, "Signing certificate is required for SAML2 providers")
-			return
-		}
-		if privateKey == "" {
-			sendErrorResponse(c, http.StatusBadRequest, "Private key is required for SAML2 providers")
-			return
+		if signingCert == "" || privateKey == "" {
+			genCert, genKey, err := generateSAMLKeyPair()
+			if err != nil {
+				sendErrorResponse(c, http.StatusInternalServerError, "Failed to generate SAML key pair")
+				return
+			}
+			signingCert = genCert
+			privateKey = genKey
 		}
 	}
 
@@ -165,6 +172,7 @@ func handleAdminIdentityProviderCreate(c *gin.Context) {
 		SigningCert:     signingCert,
 		PrivateKey:      privateKey,
 		EntityID:        entityID,
+		IdPMetadataXML:  idpMetadataXML,
 		ACSURL:          acsURL,
 		Scopes:          scopes,
 		UserClaimEmail:  claimEmail,
@@ -219,13 +227,16 @@ func handleAdminIdentityProviderEdit(c *gin.Context) {
 			"ID":              p.ID,
 			"OrgID":           p.OrgID,
 			"Name":            p.Name,
+			"IdPMetadataXML": p.IdPMetadataXML,
+			"SigningCert":     p.SigningCert,
+			"PrivateKey":      p.PrivateKey,
+			"EntityID":        p.EntityID,
+			"ACSURL":          p.ACSURL,
+			"UserTable":       p.UserTable,
 			"ProviderType":    p.ProviderType,
 			"ClientID":        p.ClientID,
 			"ClientSecret":    p.ClientSecret,
 			"DiscoveryURL":    p.DiscoveryURL,
-			"SigningCert":     p.SigningCert,
-			"EntityID":        p.EntityID,
-			"ACSURL":          p.ACSURL,
 			"Scopes":          p.Scopes,
 			"UserClaimEmail":  p.UserClaimEmail,
 			"UserClaimName":   p.UserClaimName,
@@ -256,6 +267,7 @@ func handleAdminIdentityProviderUpdate(c *gin.Context) {
 	scopes := strings.TrimSpace(c.PostForm("scopes"))
 	clientSecret := c.PostForm("client_secret")
 	claimEmail := strings.TrimSpace(c.PostForm("user_claim_email"))
+	idpMetadataXML := strings.TrimSpace(c.PostForm("idp_metadata_xml"))
 	claimName := strings.TrimSpace(c.PostForm("user_claim_name"))
 	claimGroups := strings.TrimSpace(c.PostForm("user_claim_groups"))
 	enabled := c.PostForm("enabled") == "1"
@@ -265,7 +277,7 @@ func handleAdminIdentityProviderUpdate(c *gin.Context) {
 		userTable = "users"
 	}
 
-	if name == "" || providerType == "" || clientID == "" {
+	if name == "" || providerType == "" || (clientID == "" && providerType != "saml2") {
 		sendErrorResponse(c, http.StatusBadRequest, "Name, provider type, and client ID are required")
 		return
 	}
@@ -293,24 +305,24 @@ func handleAdminIdentityProviderUpdate(c *gin.Context) {
 			return
 		}
 	}
-
-	// Validate SAML2 specific fields (required)
+	// SAML2: auto-generate cert/key if not provided, accept metadata URL or XML
 	if providerType == "saml2" {
-		if discoveryURL == "" {
-			sendErrorResponse(c, http.StatusBadRequest, "Metadata URL is required for SAML2 providers")
+		if discoveryURL == "" && idpMetadataXML == "" {
+			sendErrorResponse(c, http.StatusBadRequest, "Metadata URL or XML is required for SAML2 providers")
 			return
 		}
-		if !isValidURL(discoveryURL) {
+		if discoveryURL != "" && !isValidURL(discoveryURL) {
 			sendErrorResponse(c, http.StatusBadRequest, "Invalid metadata URL format")
 			return
 		}
-		if signingCert == "" {
-			sendErrorResponse(c, http.StatusBadRequest, "Signing certificate is required for SAML2 providers")
-			return
-		}
-		if privateKey == "" {
-			sendErrorResponse(c, http.StatusBadRequest, "Private key is required for SAML2 providers")
-			return
+		if signingCert == "" || privateKey == "" {
+			genCert, genKey, err := generateSAMLKeyPair()
+			if err != nil {
+				sendErrorResponse(c, http.StatusInternalServerError, "Failed to generate SAML key pair")
+				return
+			}
+			signingCert = genCert
+			privateKey = genKey
 		}
 	}
 
@@ -327,6 +339,7 @@ func handleAdminIdentityProviderUpdate(c *gin.Context) {
 		return
 	}
 
+	p.IdPMetadataXML = idpMetadataXML
 	p.Name = name
 	p.ProviderType = providerType
 	p.ClientID = clientID
@@ -334,8 +347,13 @@ func handleAdminIdentityProviderUpdate(c *gin.Context) {
 		p.ClientSecret = clientSecret
 	}
 	p.DiscoveryURL = discoveryURL
-	p.SigningCert = signingCert
-	p.PrivateKey = privateKey
+	// Preserve existing cert/key if form sends empty (password fields aren't pre-filled)
+	if signingCert != "" {
+		p.SigningCert = signingCert
+	}
+	if privateKey != "" {
+		p.PrivateKey = privateKey
+	}
 	p.EntityID = entityID
 	p.ACSURL = acsURL
 	p.Scopes = scopes
@@ -429,4 +447,38 @@ func handleAdminIdentityProviderToggle(c *gin.Context) {
 func isValidURL(u string) bool {
 	_, err := url.ParseRequestURI(u)
 	return err == nil
+}
+
+// generateSAMLKeyPair generates a self-signed X.509 certificate and RSA private key for SAML SP signing.
+func generateSAMLKeyPair() (certPEM, keyPEM string, err error) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", "", fmt.Errorf("generate RSA key: %w", err)
+	}
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName:   "GoatFlow SAML SP",
+			Organization: []string{"GoatFlow"},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().AddDate(10, 0, 0),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
+	if err != nil {
+		return "", "", fmt.Errorf("create certificate: %w", err)
+	}
+
+	certPEM = string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes}))
+	keyBytes, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		return "", "", fmt.Errorf("marshal private key: %w", err)
+	}
+	keyPEM = string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyBytes}))
+	return certPEM, keyPEM, nil
 }

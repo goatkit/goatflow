@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"database/sql"
 	"encoding/pem"
 	"encoding/xml"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 
 	"github.com/crewjam/saml"
 
-	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
+	"github.com/goatkit/goatflow/internal/platform/models"
 )
 
 const (
@@ -25,14 +26,17 @@ const (
 
 // SAMLConfig holds SAML2 service provider configuration derived from an IdentityProvider row.
 type SAMLConfig struct {
-	EntityID      string // SP entity ID
-	AcsURL        string // Assertion Consumer Service URL on this host
+	EntityID       string // SP entity ID
+	AcsURL         string // Assertion Consumer Service URL on this host
 	IdPMetadataURL string // IdP metadata endpoint URL
-	SigningCert   string // PEM-encoded X.509 certificate for signing
-	PrivateKey    string // PEM-encoded private key
+	IdPMetadataXML string // raw IdP metadata XML (alternative to URL)
+	SigningCert    string // PEM-encoded X.509 certificate for signing
+	PrivateKey     string // PEM-encoded private key
 	UserClaimEmail string // attribute name/oid mapped to email (default "email")
 	UserClaimName  string // attribute name/oid mapped to display name (default "name")
-	AutoProvision bool   // create users not found in the database
+	UserClaimGroups string // attribute name mapped to groups (default "groups")
+	AutoProvision  bool   // create users not found in the database
+	UserTable      string // "users" (agent) or "customer" (service_customer_user)
 }
 
 // samlProvider implements AuthProvider for SAML2 SP-initiated login flow.
@@ -43,6 +47,9 @@ type samlProvider struct {
 	autoProvision bool
 	claimEmail    string
 	claimName     string
+	claimGroups   string
+	userTable     string
+	db            *sql.DB
 }
 
 // NewSAML2Provider creates a new SAML2 provider from the given configuration.
@@ -50,26 +57,10 @@ func NewSAML2Provider(cfg *SAMLConfig, deps ProviderDependencies) (*samlProvider
 	if cfg == nil {
 		return nil, fmt.Errorf("saml config required")
 	}
-	if cfg.PrivateKey == "" || cfg.SigningCert == "" {
-		return nil, fmt.Errorf("signing certificate and private key required")
-	}
-	if cfg.IdPMetadataURL == "" {
-		return nil, fmt.Errorf("IdP metadata URL required")
-	}
 
-	keySigner, err := parsePrivateKey([]byte(cfg.PrivateKey))
+	metadata, err := loadIdPMetadata(cfg.IdPMetadataXML, cfg.IdPMetadataURL)
 	if err != nil {
-		return nil, fmt.Errorf("parse private key: %w", err)
-	}
-
-	cert, err := parseCertificate([]byte(cfg.SigningCert))
-	if err != nil {
-		return nil, fmt.Errorf("parse certificate: %w", err)
-	}
-
-	metadata, err := fetchIdPMetadata(cfg.IdPMetadataURL)
-	if err != nil {
-		return nil, fmt.Errorf("fetch IdP metadata: %w", err)
+		return nil, err
 	}
 
 	entityID := cfg.EntityID
@@ -87,11 +78,22 @@ func NewSAML2Provider(cfg *SAMLConfig, deps ProviderDependencies) (*samlProvider
 
 	sp := &saml.ServiceProvider{
 		EntityID:    entityID,
-		Key:         keySigner,
-		Certificate: cert,
 		MetadataURL: *metadataURL,
 		AcsURL:      *acsURL,
 		IDPMetadata: metadata,
+	}
+
+	if cfg.PrivateKey != "" && cfg.SigningCert != "" {
+		keySigner, err := parsePrivateKey([]byte(cfg.PrivateKey))
+		if err != nil {
+			return nil, fmt.Errorf("parse private key: %w", err)
+		}
+		cert, err := parseCertificate([]byte(cfg.SigningCert))
+		if err != nil {
+			return nil, fmt.Errorf("parse certificate: %w", err)
+		}
+		sp.Key = keySigner
+		sp.Certificate = cert
 	}
 
 	emailClaim := cfg.UserClaimEmail
@@ -102,6 +104,14 @@ func NewSAML2Provider(cfg *SAMLConfig, deps ProviderDependencies) (*samlProvider
 	if nameClaim == "" {
 		nameClaim = "name"
 	}
+	groupsClaim := cfg.UserClaimGroups
+	if groupsClaim == "" {
+		groupsClaim = "groups"
+	}
+	userTable := cfg.UserTable
+	if userTable == "" {
+		userTable = "users"
+	}
 
 	return &samlProvider{
 		sp:            sp,
@@ -110,7 +120,72 @@ func NewSAML2Provider(cfg *SAMLConfig, deps ProviderDependencies) (*samlProvider
 		autoProvision: cfg.AutoProvision,
 		claimEmail:    emailClaim,
 		claimName:     nameClaim,
+		claimGroups:   groupsClaim,
+		userTable:     userTable,
+		db:            deps.DB,
 	}, nil
+}
+
+// loadIdPMetadata loads IdP metadata from inline XML first, then falls back to URL fetch.
+func loadIdPMetadata(metadataXML, metadataURL string) (*saml.EntityDescriptor, error) {
+	if metadataXML != "" {
+		var ed saml.EntityDescriptor
+		if err := xml.Unmarshal([]byte(metadataXML), &ed); err != nil {
+			return nil, fmt.Errorf("parse IdP metadata XML: %w", err)
+		}
+		return &ed, nil
+	}
+	if metadataURL != "" {
+		return fetchIdPMetadata(metadataURL)
+	}
+	return nil, fmt.Errorf("IdP metadata XML or URL required")
+}
+
+// GenerateSPMetadata builds the SP metadata XML from the given configuration.
+// The metadata advertises this service provider's entity ID, ACS URL, and
+// optional signing certificate so an IdP can be configured to trust it.
+func GenerateSPMetadata(cfg *SAMLConfig) ([]byte, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("saml config required")
+	}
+	entityID := cfg.EntityID
+	if entityID == "" {
+		entityID = cfg.AcsURL + "/saml/metadata"
+	}
+	acsURL, err := parseURL(cfg.AcsURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse ACS URL: %w", err)
+	}
+	metadataURL, err := parseURL(entityID + "/metadata")
+	if err != nil {
+		return nil, fmt.Errorf("parse metadata URL: %w", err)
+	}
+
+	sp := &saml.ServiceProvider{
+		EntityID:    entityID,
+		MetadataURL: *metadataURL,
+		AcsURL:      *acsURL,
+	}
+
+	if cfg.PrivateKey != "" && cfg.SigningCert != "" {
+		keySigner, err := parsePrivateKey([]byte(cfg.PrivateKey))
+		if err != nil {
+			return nil, fmt.Errorf("parse private key: %w", err)
+		}
+		cert, err := parseCertificate([]byte(cfg.SigningCert))
+		if err != nil {
+			return nil, fmt.Errorf("parse certificate: %w", err)
+		}
+		sp.Key = keySigner
+		sp.Certificate = cert
+	}
+
+	metadata := sp.Metadata()
+	data, err := xml.MarshalIndent(metadata, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshal SP metadata: %w", err)
+	}
+	return append(data, '\n'), nil
 }
 
 // Name returns the provider name.
@@ -124,23 +199,20 @@ func (p *samlProvider) Priority() int {
 }
 
 // Authenticate returns an error — SAML uses redirects, not passwords.
-func (p *samlProvider) Authenticate(_ context.Context, _, _ string) (*platformmodels.User, error) {
+func (p *samlProvider) Authenticate(_ context.Context, _, _ string) (*models.User, error) {
 	return nil, ErrAuthBackendFailed
 }
 
 // GetUser retrieves a user by identifier (email or login).
-func (p *samlProvider) GetUser(_ context.Context, identifier string) (*platformmodels.User, error) {
+func (p *samlProvider) GetUser(_ context.Context, identifier string) (*models.User, error) {
 	if p.userRepo == nil {
 		return nil, fmt.Errorf("user repository not available")
-	}
-	if strings.Contains(identifier, "@") {
-		return p.userRepo.GetByEmail(identifier)
 	}
 	return p.userRepo.GetByLogin(identifier)
 }
 
 // ValidateToken is not implemented for SAML2.
-func (p *samlProvider) ValidateToken(_ context.Context, _ string) (*platformmodels.User, error) {
+func (p *samlProvider) ValidateToken(_ context.Context, _ string) (*models.User, error) {
 	return nil, fmt.Errorf("ValidateToken not supported for SAML")
 }
 
@@ -157,9 +229,7 @@ func (p *samlProvider) StartAuthFlow(_ context.Context, state string, _ string) 
 // CompleteAuthFlow completes the SAML2 authentication by parsing and validating the
 // IdP POST response from the ACS endpoint. The data map must contain a *http.Request
 // under the key "request".
-func (p *samlProvider) CompleteAuthFlow(ctx context.Context, _ string, data map[string]interface{}) (*platformmodels.User, error) {
-	_ = ctx
-
+func (p *samlProvider) CompleteAuthFlow(ctx context.Context, _ string, data map[string]interface{}) (*models.User, error) {
 	req, ok := data["request"].(*http.Request)
 	if !ok || req == nil {
 		return nil, fmt.Errorf("missing *http.Request in auth data")
@@ -170,46 +240,87 @@ func (p *samlProvider) CompleteAuthFlow(ctx context.Context, _ string, data map[
 		return nil, fmt.Errorf("parse SAML response: %w", err)
 	}
 
-	email, name := extractUserAttributes(assertion, p.claimEmail, p.claimName)
+	email, givenName, familyName, groups := extractUserAttributes(assertion, p.claimEmail, p.claimName, p.claimGroups)
 	if email == "" {
 		return nil, fmt.Errorf("no email attribute in SAML assertion")
 	}
 
-	return p.lookupOrProvisionUser(email, name)
+	return p.lookupOrProvisionUser(ctx, email, givenName, familyName, groups)
 }
 
-// lookupOrProvisionUser finds an existing user by email or creates one if auto-provision is enabled.
-func (p *samlProvider) lookupOrProvisionUser(email, name string) (*platformmodels.User, error) {
+// lookupOrProvisionUser finds an existing user by login or creates one if auto-provision is enabled.
+func (p *samlProvider) lookupOrProvisionUser(_ context.Context, email, givenName, familyName string, groups []string) (*models.User, error) {
 	if p.userRepo == nil {
 		return nil, fmt.Errorf("user repository not available")
 	}
-	if user, err := p.userRepo.GetByEmail(email); err == nil && user != nil {
-		return user, nil
+
+	var user *models.User
+	var err error
+
+	if p.userTable == "customer" {
+		if !p.autoProvision {
+			return nil, fmt.Errorf("user not found and auto-provision is disabled")
+		}
+		user, err = p.createOAuthUser(email, givenName, familyName)
+		if err != nil {
+			return nil, fmt.Errorf("provision customer: %w", err)
+		}
+	} else {
+		existing, repoErr := p.userRepo.GetByLogin(email)
+		if repoErr == nil && existing != nil {
+			user = existing
+		} else if !p.autoProvision {
+			return nil, fmt.Errorf("user not found and auto-provision is disabled")
+		} else {
+			user, err = p.createOAuthUser(email, givenName, familyName)
+			if err != nil {
+				return nil, fmt.Errorf("provision agent: %w", err)
+			}
+		}
 	}
-	if !p.autoProvision {
-		return nil, fmt.Errorf("user %s not found and auto-provision is disabled", email)
+
+	if user == nil {
+		return nil, fmt.Errorf("failed to lookup or provision user")
 	}
-	return p.createOAuthUser(email, name)
+
+	if len(groups) > 0 && p.userRepo != nil {
+		p.userRepo.SyncGroups(user.ID, groups)
+	}
+
+	return user, nil
 }
 
-// createOAuthUser creates a new user struct for SAML login.
-func (p *samlProvider) createOAuthUser(email, name string) (*platformmodels.User, error) {
-	login := email
-	if idx := strings.Index(email, "@"); idx > 0 {
-		login = email[:idx]
-	}
-
+// createOAuthUser persists a new SAML2 user.
+func (p *samlProvider) createOAuthUser(email, givenName, familyName string) (*models.User, error) {
 	now := time.Now()
-	return &platformmodels.User{
-		Login:      login,
-		Email:      email,
-		Title:      name,
+	user := &models.User{
+		Login:      email,
+		FirstName:  givenName,
+		LastName:   familyName,
 		Role:       "Agent",
 		ValidID:    1,
 		CreateTime: now,
+		CreateBy:   1,
 		ChangeTime: now,
-	}, nil
+		ChangeBy:   1,
+	}
+	if err := p.userRepo.Create(user); err != nil {
+		return nil, fmt.Errorf("create SAML user: %w", err)
+	}
+	user.Email = email
+
+	groupName := "users"
+	if p.db != nil {
+		var gid int64
+		err := p.db.QueryRow("SELECT id FROM groups WHERE name = ?", groupName).Scan(&gid)
+		if err == nil && gid > 0 {
+			p.db.Exec("INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by) VALUES (?, ?, 'rw', NOW(), 1, NOW(), 1)", int(user.ID), gid)
+		}
+	}
+
+	return user, nil
 }
+
 // parsePrivateKey parses a PEM-encoded private key and returns it as a crypto.Signer.
 func parsePrivateKey(pemBytes []byte) (crypto.Signer, error) {
 	block, _ := pem.Decode(pemBytes)
@@ -231,7 +342,6 @@ func parsePrivateKey(pemBytes []byte) (crypto.Signer, error) {
 		}
 		return key, nil
 	default:
-		// Try generic PKCS#8 parsing as fallback
 		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
 			return nil, fmt.Errorf("parse private key (unknown type %q): %w", block.Type, err)
@@ -284,26 +394,25 @@ func parseURL(rawURL string) (*url.URL, error) {
 	return parsed, nil
 }
 
-// extractUserAttributes extracts email and display name from SAML assertion attributes.
-func extractUserAttributes(assertion *saml.Assertion, emailAttrName, nameAttrName string) (email, displayName string) {
+// extractUserAttributes extracts email, display name components, and groups from SAML assertion attributes.
+func extractUserAttributes(assertion *saml.Assertion, emailAttrName, nameAttrName, groupsAttrName string) (email, givenName, familyName string, groups []string) {
 	email = extractAttributeValue(assertion, emailAttrName)
-	firstName := extractAttributeValue(assertion, "givenName")
-	surname := extractAttributeValue(assertion, "sn")
+
+	givenName = extractAttributeValue(assertion, "givenName")
+	familyName = extractAttributeValue(assertion, "sn")
 	fullName := extractAttributeValue(assertion, nameAttrName)
 
-	if fullName != "" {
-		displayName = fullName
-	} else if firstName != "" || surname != "" {
-		parts := []string{firstName, surname}
-		validParts := make([]string, 0, len(parts))
-		for _, p := range parts {
-			if strings.TrimSpace(p) != "" {
-				validParts = append(validParts, strings.TrimSpace(p))
-			}
+	if givenName == "" && familyName == "" && fullName != "" {
+		if idx := strings.Index(fullName, " "); idx > 0 {
+			givenName = fullName[:idx]
+			familyName = fullName[idx+1:]
+		} else {
+			givenName = fullName
 		}
-		displayName = strings.Join(validParts, " ")
 	}
-	return email, displayName
+
+	groups = extractAttributeValues(assertion, groupsAttrName)
+	return email, givenName, familyName, groups
 }
 
 // extractAttributeValue retrieves a single attribute value from all AttributeStatements in the assertion.
@@ -318,4 +427,40 @@ func extractAttributeValue(assertion *saml.Assertion, attrName string) string {
 		}
 	}
 	return ""
+}
+
+// extractAttributeValues collects all values for a multi-valued attribute across all AttributeStatements.
+// If a single value contains commas, it is split into individual entries.
+func extractAttributeValues(assertion *saml.Assertion, attrName string) []string {
+	var values []string
+	for _, stmt := range assertion.AttributeStatements {
+		for _, attr := range stmt.Attributes {
+			if !strings.EqualFold(attr.Name, attrName) && !strings.EqualFold(attr.FriendlyName, attrName) {
+				continue
+			}
+			for _, v := range attr.Values {
+				if v.Value == "" {
+					continue
+				}
+				if strings.Contains(v.Value, ",") {
+					for _, part := range strings.Split(v.Value, ",") {
+						part = strings.TrimSpace(part)
+						if part != "" {
+							values = append(values, part)
+						}
+					}
+				} else {
+					values = append(values, strings.TrimSpace(v.Value))
+				}
+			}
+		}
+	}
+	return values
+}
+
+// Register SAML2 provider factory.
+func init() {
+	RegisterProvider("saml2", func(deps ProviderDependencies) (AuthProvider, error) {
+		return NewSAML2Provider(&SAMLConfig{}, deps)
+	})
 }
