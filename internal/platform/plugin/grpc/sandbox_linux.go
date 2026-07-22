@@ -43,15 +43,20 @@ func buildPluginEnv(policy plugin.ResourcePolicy, pluginName string) []string {
 		"PATH=/usr/local/bin:/usr/bin:/bin", // Basic PATH
 	}
 
-	// Create plugin-specific temp directory
-	tmpDir := filepath.Join("/tmp", "goatflow-plugin-"+pluginName)
+	// Create plugin-specific temp directory under the writable app temp dir.
+	// /tmp is NOT world-writable in the alpine runtime image (mode 0755,
+	// root-owned), so go-plugin cannot create its unix socket there and the
+	// plugin exits before the handshake. /app/tmp is created and chowned to
+	// appuser in the Dockerfile runtime-base stage.
+	const pluginTmpBase = "/app/tmp"
+	tmpDir := filepath.Join(pluginTmpBase, "goatflow-plugin-"+pluginName)
 	if err := os.MkdirAll(tmpDir, 0700); err == nil {
 		env = append(env, "HOME="+tmpDir)
 		env = append(env, "TMPDIR="+tmpDir)
 	} else {
-		// Fall back to /tmp if we can't create plugin-specific dir
-		env = append(env, "HOME=/tmp")
-		env = append(env, "TMPDIR=/tmp")
+		// Fall back to the writable app temp base (never /tmp — it is not writable).
+		env = append(env, "HOME="+pluginTmpBase)
+		env = append(env, "TMPDIR="+pluginTmpBase)
 	}
 
 	// Add timezone for time-aware plugins

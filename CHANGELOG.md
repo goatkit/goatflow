@@ -7,6 +7,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **gRPC plugins failed to load in the alpine runtime image** ("Failed to read any lines from
+  plugin's stdout"). `/tmp` is `0755 root:root` in alpine (not world-writable), so go-plugin could
+  not create its unix socket there and the plugin exited before the handshake.
+  `buildPluginEnv` (`internal/platform/plugin/grpc/sandbox_linux.go`) now points plugin
+  `TMPDIR`/`HOME` at `/app/tmp` (writable, appuser-owned) instead of `/tmp`, and the Dockerfile
+  runtime-base exports `ENV TMPDIR=/app/tmp`. Affects every gRPC plugin (e.g. goatkit-llm).
+
 ### Security
 - **Dependency vulnerability remediation** — Updated dependencies to fix 22 GitHub Dependabot alerts
   (7 critical, 5 high, 10 moderate). npm: `js-yaml` v4.2.0 → latest (high DoS),

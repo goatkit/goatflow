@@ -195,6 +195,7 @@ RUN addgroup -g ${GID} -S appgroup && \
 
 # Set cache-related envs (Go build cache mostly relevant in toolbox, but harmless here)
 ENV XDG_CACHE_HOME=/home/appuser/.cache
+ENV TMPDIR=/app/tmp
 
 # Switch to non-root user
 USER appuser
