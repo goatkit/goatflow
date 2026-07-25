@@ -37,7 +37,7 @@ RUN curl -sL "https://use.fontawesome.com/releases/v6.7.2/fontawesome-free-6.7.2
 # ============================================
 # Stage 0b: Build frontend assets (CSS + JS)
 # ============================================
-FROM oven/bun:1.1-alpine AS frontend
+FROM oven/bun:1.3-alpine AS frontend
 
 # Add Node.js for tailwindcss compatibility (bunx has mkdir bugs with tailwind)
 RUN apk add --no-cache nodejs
