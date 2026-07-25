@@ -192,8 +192,7 @@ func TestAttachmentDownloadHandler(t *testing.T) {
 		require.NoError(t, err)
 
 		// Create a test file
-		testDir := "/tmp/test-attachments"
-		os.MkdirAll(testDir, 0755)
+		testDir := filepath.Join(os.TempDir(), "test-attachments")
 		testFile := filepath.Join(testDir, "test-download.txt")
 		testContent := []byte("Test download content")
 		err = os.WriteFile(testFile, testContent, 0644)

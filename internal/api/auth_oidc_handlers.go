@@ -18,9 +18,12 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
-// handleOIDCRedirect initiates the OIDC/OAuth2 login flow for a given provider by ID.
 func handleOIDCRedirect(c *gin.Context) {
 	idStr := c.Param("id")
+	if idStr == "" {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
 	providerID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil || providerID == 0 {
 		c.Redirect(http.StatusFound, "/login?error=invalid_provider")

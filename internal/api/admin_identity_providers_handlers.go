@@ -135,7 +135,7 @@ func handleAdminIdentityProviderCreate(c *gin.Context) {
 			return
 		}
 	}
-	// SAML2: auto-generate cert/key if not provided, accept metadata URL or XML
+	// SAML2: require metadata URL or XML, plus signing cert and private key
 	if providerType == "saml2" {
 		if discoveryURL == "" && idpMetadataXML == "" {
 			sendErrorResponse(c, http.StatusBadRequest, "Metadata URL or XML is required for SAML2 providers")
@@ -145,14 +145,13 @@ func handleAdminIdentityProviderCreate(c *gin.Context) {
 			sendErrorResponse(c, http.StatusBadRequest, "Invalid metadata URL format")
 			return
 		}
-		if signingCert == "" || privateKey == "" {
-			genCert, genKey, err := generateSAMLKeyPair()
-			if err != nil {
-				sendErrorResponse(c, http.StatusInternalServerError, "Failed to generate SAML key pair")
-				return
-			}
-			signingCert = genCert
-			privateKey = genKey
+		if signingCert == "" {
+			sendErrorResponse(c, http.StatusBadRequest, "Signing certificate is required for SAML2 providers")
+			return
+		}
+		if privateKey == "" {
+			sendErrorResponse(c, http.StatusBadRequest, "Private key is required for SAML2 providers")
+			return
 		}
 	}
 
