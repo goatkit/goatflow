@@ -278,8 +278,7 @@ test-legacy: toolbox-build
 		--network host \
 		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
@@ -325,8 +324,7 @@ test-unit: toolbox-build test-stack-up
 		--network host \
 		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
@@ -363,8 +361,7 @@ test-fast: toolbox-build test-stack-up
 		--network host \
 		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
@@ -706,8 +703,7 @@ toolbox-compile:
         -v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go version && go build -buildvcs=false ./...'
 
@@ -721,8 +717,7 @@ toolbox-compile-api:
         -v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go version && go build -buildvcs=false ./internal/api ./cmd/goats'
 
@@ -770,8 +765,7 @@ toolbox-test-api: toolbox-build
 		--network host \
 		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
@@ -806,8 +800,7 @@ toolbox-test-api-host: toolbox-build
 		--network host \
 		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
@@ -844,8 +837,7 @@ toolbox-test:
 		--network host \
 		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
@@ -920,8 +912,7 @@ toolbox-test-all:
 		--network host \
 		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e STORAGE_PATH=/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
@@ -997,8 +988,7 @@ test-e2e:
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e GOFLAGS=-buildvcs=false \
 		-e HEADLESS \
 		-e BASE_URL \
@@ -1021,8 +1011,7 @@ toolbox-test-integration:
 		--network host \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e GOFLAGS=-buildvcs=false \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
@@ -1062,8 +1051,7 @@ test-oidc-integration: toolbox-build
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		--group-add "$$(stat -c '%g' /var/run/docker.sock)" \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e GOFLAGS=-buildvcs=false \
 		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; echo "Running OIDC integration tests..."; go test -tags=integration -buildvcs=false -count=1 -timeout=10m -v ./internal/platform/auth/...'
@@ -1081,8 +1069,7 @@ toolbox-test-email-integration:
 		--network host \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e GOFLAGS=-buildvcs=false \
 		-e APP_ENV=test \
 		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
@@ -1109,8 +1096,7 @@ toolbox-test-run:
 		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
 		--network host \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 		-e DB_NAME=goatflow_test -e DB_USER=goatflow_test -e DB_PASSWORD=goatflow_test_password \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
@@ -1130,8 +1116,7 @@ toolbox-mod-tidy:
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go mod tidy && go mod download'
 
@@ -1162,8 +1147,7 @@ toolbox-test-pkg:
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		--network host \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
@@ -1198,8 +1182,7 @@ toolbox-test-files:
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		--network host \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
@@ -1230,8 +1213,7 @@ toolbox-staticcheck:
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e GOFLAGS=-buildvcs=false \
 		$(TOOLBOX_IMAGE) \
 		bash -lc 'set -e; export PATH=/usr/local/go/bin:/usr/local/bin:$$PATH; export GOFLAGS="-buildvcs=false"; go version; \
@@ -1260,8 +1242,7 @@ toolbox-run-file:
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		--network host \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e DB_HOST=postgres -e DB_PORT=$(DB_PORT) \
 		-e DB_NAME=$(DB_NAME) -e DB_USER=$(DB_USER) \
 		-e PGPASSWORD=$(DB_PASSWORD) \
@@ -1288,8 +1269,7 @@ toolbox-lint:
 		-v goatflow_cache:/cache \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e GOPATH=/cache/gopath \
 		-e GOLANGCI_LINT_CACHE=/cache/golangci-lint \
 		$(TOOLBOX_IMAGE) \
@@ -2108,8 +2088,7 @@ import-test-data:
 		$(CONTAINER_USER) \
 		-v "$(pwd):/workspace" \
 		-w /workspace \
-		-e GOCACHE=/tmp/.cache/go-build \
-		-e GOMODCACHE=/tmp/.cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-u "$(id -u):$(id -g)" \
 		$(GO_IMAGE) \
 		go build -o /workspace/bin/import-otrs ./cmd/import-otrs/main.go
@@ -2237,8 +2216,7 @@ babelfish: toolbox-build
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && mkdir -p /workspace/tmp/bin && go build -buildvcs=false -o /workspace/tmp/bin/goatflow-babelfish cmd/goatflow-babelfish/main.go'
 	@printf "✨ goatflow-babelfish built at tmp/bin/goatflow-babelfish\n"
@@ -2250,8 +2228,7 @@ babelfish-run: toolbox-build
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/goatflow-babelfish/main.go $(ARGS)'
 
@@ -2262,8 +2239,7 @@ babelfish-coverage: toolbox-build
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/goatflow-babelfish/main.go -action=coverage'
 
@@ -2274,8 +2250,7 @@ babelfish-validate: toolbox-build
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/goatflow-babelfish/main.go -action=validate -lang=$(LANG) $(BF_FLAGS)'
 
@@ -2286,8 +2261,7 @@ babelfish-missing: toolbox-build
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/goatflow-babelfish/main.go -action=missing -lang=$(LANG) $(BF_FLAGS)'
 
@@ -2480,8 +2454,7 @@ test-e2e-playwright-go:
 		-e DEMO_ADMIN_PASSWORD=$(DEMO_ADMIN_PASSWORD) \
 		-e PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-cache/browsers \
 		-e XDG_CACHE_HOME=/cache/xdg \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		 goatflow-playwright-go:latest bash -lc "go test -tags e2e -v ./tests/e2e/playwright $${ARGS}"
 
 .PHONY: test-e2e-go
@@ -2509,8 +2482,7 @@ test-e2e-go:
 		-e DEMO_ADMIN_PASSWORD=$(DEMO_ADMIN_PASSWORD) \
 		-e PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-cache/browsers \
 		-e XDG_CACHE_HOME=/cache/xdg \
-		-e GOCACHE=/cache/go-build \
-		-e GOMODCACHE=/cache/go-mod \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		 goatflow-playwright-go:latest bash -lc "go test -tags e2e -v ./tests/e2e -run \"$${TEST:-CustomerTicket}\""
 
 PLAYWRIGHT_RESULTS_DIR ?= /tmp/playwright-results
