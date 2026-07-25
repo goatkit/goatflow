@@ -280,7 +280,15 @@ func resetTestDatabase() error {
 	// Disable foreign key checks for cleanup
 	db.Exec("SET FOREIGN_KEY_CHECKS = 0")
 	defer db.Exec("SET FOREIGN_KEY_CHECKS = 1")
-
+	// Run schema migrations that don't use IF NOT EXISTS (new columns)
+	// Migration 0024: Add user_table column to identity_providers
+	db.Exec("ALTER TABLE gk_identity_provider ADD COLUMN IF NOT EXISTS user_table VARCHAR(20) NOT NULL DEFAULT 'users'")
+	// Migration 0025: Add SAML2-specific fields (signing_cert, private_key, etc.)
+	db.Exec("ALTER TABLE gk_identity_provider ADD COLUMN IF NOT EXISTS signing_cert TEXT DEFAULT ''")
+	db.Exec("ALTER TABLE gk_identity_provider ADD COLUMN IF NOT EXISTS private_key TEXT DEFAULT ''")
+	db.Exec("ALTER TABLE gk_identity_provider ADD COLUMN IF NOT EXISTS entity_id VARCHAR(500) DEFAULT ''")
+	db.Exec("ALTER TABLE gk_identity_provider ADD COLUMN IF NOT EXISTS acs_url VARCHAR(500) DEFAULT ''")
+	db.Exec("ALTER TABLE gk_identity_provider ADD COLUMN IF NOT EXISTS idp_metadata_xml TEXT DEFAULT ''")
 	// Clean ALL tickets - we'll recreate canonical test data
 	db.Exec("DELETE FROM ticket_history")
 	db.Exec("DELETE FROM article_data_mime")

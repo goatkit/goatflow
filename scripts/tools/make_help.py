@@ -305,6 +305,10 @@ GROUPS: List[Dict[str, object]] = [
         "entries": [
             {"name": "reset-password", "description": "Reset a user password"},
             {
+                "name": "test-reset-password",
+                "description": "Reset test database admin password (auto-detects postgres/mysql)",
+            },
+            {
                 "name": "test-pg-reset-password",
                 "description": "Reset password in Postgres test DB",
             },

@@ -14,10 +14,16 @@ CREATE TABLE gk_identity_provider (
     enabled         BOOLEAN DEFAULT TRUE,
     auto_provision  BOOLEAN DEFAULT TRUE,
     auto_add_to_group VARCHAR(100),
+    user_table      VARCHAR(20) NOT NULL DEFAULT 'users',
     create_time     TIMESTAMP NOT NULL,
     create_by       INT NOT NULL,
     change_time     TIMESTAMP NOT NULL,
-    change_by       INT NOT NULL
+    change_by       INT NOT NULL,
+    signing_cert    TEXT DEFAULT '',
+    private_key     TEXT DEFAULT '',
+    entity_id       VARCHAR(500) DEFAULT '',
+    acs_url         VARCHAR(500) DEFAULT '',
+    idp_metadata_xml TEXT DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_gk_ip_org ON gk_identity_provider(org_id);

@@ -116,7 +116,6 @@ export COMPOSE_CMD
 TOOLBOX_GO := $(MAKE) toolbox-exec ARGS=
 
 # Cache mount: always use named Docker volume at /cache (not overlaid on workspace)
-MOD_CACHE_MOUNT := -v goatflow_cache:/cache
 
 # Helper targets for cache volumes
 .PHONY: cache-prune
@@ -246,12 +245,13 @@ gk-deploy:
 .PHONY: plugin-build-wasm
 plugin-build-wasm:
 	@printf "\n🔌 Building WASM plugins...\n"
+	@mkdir -p $$PWD/tmp && chmod 777 $$PWD/tmp
 	@for dir in plugins/*/; do \
 		if [ -f "$$dir/main.go" ] && grep -q "tinygo.wasm" "$$dir/main.go" 2>/dev/null; then \
 			name=$$(basename $$dir); \
 			wasm_name=$$(echo $$name | sed 's/-wasm$$//'); \
 			echo "  Building $$name -> $${wasm_name}.wasm..."; \
-			$(CONTAINER_CMD) run --rm --user "$$(id -u):$$(id -g)" -e HOME=/tmp -v "$$PWD/$$dir:/src" -w /src tinygo/tinygo:0.32.0 \
+			$(CONTAINER_CMD) run --rm --user "$$(id -u):$$(id -g)" -e HOME=/tmp -e TMPDIR=/tmp -v "$$PWD/tmp:/tmp" -v "$$PWD/$$dir:/src" -w /src tinygo/tinygo:0.32.0 \
 				tinygo build -o $${wasm_name}.wasm -target wasi -scheduler=none main.go; \
 		fi; \
 	done
@@ -276,7 +276,6 @@ test-legacy: toolbox-build
 		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		--network host \
-		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
@@ -322,7 +321,6 @@ test-unit: toolbox-build test-stack-up
 		$(CONTAINER_USER) \
 		-v "$$(pwd):/workspace" \
 		--network host \
-		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
@@ -359,7 +357,6 @@ test-fast: toolbox-build test-stack-up
 		$(CONTAINER_USER) \
 		-v "$$(pwd):/workspace" \
 		--network host \
-		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
@@ -542,10 +539,10 @@ k8s-secrets:
 # This is a recovery target for volumes that have incorrect permissions from previous runs
 .PHONY: cache-fix
 cache-fix:
-	@printf "\n🔧 Fixing cache permissions in Docker volume...\n"
-	@$(CONTAINER_CMD) run --rm -v goatflow_goatflow_cache:/cache alpine:3.19 \
-		sh -c 'chown -R 1000:1000 /cache && mkdir -p /cache/go-build /cache/go-mod /cache/xdg/helm/repository /cache/xdg/helm/cache /cache/xdg/helm/config /cache/bun /cache/golangci-lint && chown -R 1000:1000 /cache'
-	@printf "✅ Cache permissions fixed\n"
+	@printf "\n🔧 Cache directories are now workspace-local, no volume needed.\n"
+	@printf "If you still have /cache volumes with bad permissions, run:\n"
+	@printf "  make down\n"
+	@printf "  docker volume rm goatflow_goatflow_cache\n"
 
 # Setup helm repos (run once, idempotent)
 .PHONY: helm-setup
@@ -763,7 +760,6 @@ toolbox-test-api: toolbox-build
 		$(CONTAINER_USER) \
         -v "$$PWD:/workspace" \
 		--network host \
-		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
@@ -798,7 +794,6 @@ toolbox-test-api-host: toolbox-build
 		$(CONTAINER_USER) \
         -v "$$PWD:/workspace" \
 		--network host \
-		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
@@ -835,7 +830,6 @@ toolbox-test:
 		$(CONTAINER_USER) \
         -v "$$PWD:/workspace" \
 		--network host \
-		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
@@ -872,9 +866,9 @@ openapi-lint:
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		$(CONTAINER_USER) \
-		-v "$$PWD/api:/spec"$(VZ) \
-		-v goatflow_cache:/cache \
-		-e BUN_INSTALL_CACHE_DIR=/cache/bun \
+		-v "$$PWD:/workspace"$(VZ) \
+		-w /workspace \
+		-e TMPDIR=/workspace/tmp -e BUN_INSTALL_CACHE_DIR=/workspace/.bun \
 		oven/bun:1.1-alpine \
 		sh -lc 'bun add -g @redocly/cli >/dev/null 2>&1 && redocly lint /spec/openapi.yaml'
 
@@ -884,9 +878,9 @@ openapi-bundle:
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		$(CONTAINER_USER) \
-		-v "$$PWD/api:/spec"$(VZ) \
-		-v goatflow_cache:/cache \
-		-e BUN_INSTALL_CACHE_DIR=/cache/bun \
+		-v "$$PWD:/workspace"$(VZ) \
+		-w /workspace \
+		-e TMPDIR=/workspace/tmp -e BUN_INSTALL_CACHE_DIR=/workspace/.bun \
 		oven/bun:1.1-alpine \
 		sh -lc 'bun add -g @redocly/cli >/dev/null 2>&1 && redocly bundle /spec/openapi.yaml -o /spec/openapi.bundle.yaml'
 
@@ -910,7 +904,6 @@ toolbox-test-all:
 		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
 		--network host \
-		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
@@ -1093,7 +1086,6 @@ toolbox-test-run:
         --security-opt label=disable \
 		$(CONTAINER_USER) \
         -v "$$PWD:/workspace" \
-		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
 		--network host \
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
@@ -1143,7 +1135,6 @@ toolbox-test-pkg:
 		--security-opt label=disable \
 		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
-		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		--network host \
@@ -1178,7 +1169,6 @@ toolbox-test-files:
 		--security-opt label=disable \
 		$(CONTAINER_USER) \
 		-v "$$PWD:/workspace" \
-		$(MOD_CACHE_MOUNT) \
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		--network host \
@@ -1266,12 +1256,10 @@ toolbox-lint:
 	@printf "🔍 Running linters...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
-		-v goatflow_cache:/cache \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
-		-e GOPATH=/cache/gopath \
-		-e GOLANGCI_LINT_CACHE=/cache/golangci-lint \
+		-e GOPATH=/workspace/.gopath -e GOLANGCI_LINT_CACHE=/workspace/.golangci-lint \
 		$(TOOLBOX_IMAGE) \
 		golangci-lint run ./...
 
@@ -1302,8 +1290,7 @@ trivy-scan:
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v goatflow_cache:/cache \
-		-e TRIVY_CACHE_DIR=/cache/trivy \
+		-e TRIVY_CACHE_DIR=/workspace/.trivy-cache \
 		aquasec/trivy:latest \
 		fs --severity CRITICAL,HIGH,MEDIUM /workspace
 
@@ -1312,15 +1299,13 @@ trivy-images:
 	@printf "🔍 Scanning backend image...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v goatflow_cache:/cache \
-		-e TRIVY_CACHE_DIR=/cache/trivy \
+		-e TRIVY_CACHE_DIR=/workspace/.trivy-cache \
 		aquasec/trivy:latest \
 		image goatflow-backend:latest
 	@printf "🔍 Scanning frontend image...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v goatflow_cache:/cache \
-		-e TRIVY_CACHE_DIR=/cache/trivy \
+		-e TRIVY_CACHE_DIR=/workspace/.trivy-cache \
 		aquasec/trivy:latest \
 		image goatflow-frontend:latest
 
@@ -2430,8 +2415,6 @@ test-e2e-playwright-go:
 	@printf "   Platform: $(NATIVE_PLATFORM)\n"
 	$(CONTAINER_CMD) build --platform $(NATIVE_PLATFORM) -f Dockerfile.playwright-go -t goatflow-playwright-go:latest . >/dev/null
 	@# Ensure cache volume directories exist with correct ownership
-	@HOST_UID=$$(id -u); HOST_GID=$$(id -g); \
-	$(CONTAINER_CMD) run --rm --platform $(NATIVE_PLATFORM) -u 0:0 -e HOST_UID=$$HOST_UID -e HOST_GID=$$HOST_GID -v goatflow_cache:/cache alpine sh -c "mkdir -p /cache/xdg /cache/go-build /cache/go-mod /cache/ms-playwright && chown -R $$HOST_UID:$$HOST_GID /cache"
 	# Prefer explicit BASE_URL provided on invocation; ignore .env for this target
 	@if [ -n "$(BASE_URL)" ]; then echo "[playwright-go] (explicit) BASE_URL=$(BASE_URL)"; else echo "[playwright-go] (default) BASE_URL=$${BASE_URL:-http://localhost:8080}"; fi
 	# Allow overriding network (e.g. PLAYWRIGHT_NETWORK=goatflow_default) to access compose service DNS
@@ -2442,7 +2425,6 @@ test-e2e-playwright-go:
 		$(CONTAINER_USER) \
 		-u "$$(id -u):$$(id -g)" \
 		-v "$$PWD:/workspace" \
-		-v goatflow_cache:/cache \
 		-w /workspace \
 		$$( [ -n "$(PLAYWRIGHT_NETWORK)" ] && printf -- "--network $(PLAYWRIGHT_NETWORK)" || printf -- "--network host" ) \
 		-e HOME=/workspace \
@@ -2453,7 +2435,7 @@ test-e2e-playwright-go:
 		-e DEMO_ADMIN_EMAIL=$(DEMO_ADMIN_EMAIL) \
 		-e DEMO_ADMIN_PASSWORD=$(DEMO_ADMIN_PASSWORD) \
 		-e PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-cache/browsers \
-		-e XDG_CACHE_HOME=/cache/xdg \
+		-e XDG_CACHE_HOME=/workspace/.xdg-cache \
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		 goatflow-playwright-go:latest bash -lc "go test -tags e2e -v ./tests/e2e/playwright $${ARGS}"
 
@@ -2470,7 +2452,6 @@ test-e2e-go:
 		$(CONTAINER_USER) \
 		-u "$$UID:$$GID" \
 		-v "$$PWD:/workspace" \
-		-v goatflow_cache:/cache \
 		-w /workspace \
 		--network host \
 		-e HOME=/workspace \
@@ -2479,9 +2460,8 @@ test-e2e-go:
 		-e TEST_USERNAME=$(TEST_USERNAME) \
 		-e TEST_PASSWORD=$(TEST_PASSWORD) \
 		-e DEMO_ADMIN_EMAIL=$(DEMO_ADMIN_EMAIL) \
-		-e DEMO_ADMIN_PASSWORD=$(DEMO_ADMIN_PASSWORD) \
+		-e XDG_CACHE_HOME=/workspace/.xdg-cache \
 		-e PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-cache/browsers \
-		-e XDG_CACHE_HOME=/cache/xdg \
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		 goatflow-playwright-go:latest bash -lc "go test -tags e2e -v ./tests/e2e -run \"$${TEST:-CustomerTicket}\""
 
@@ -2587,8 +2567,7 @@ scan-vulnerabilities: toolbox-build
 	@printf "🔍 Scanning container/config for vulnerabilities...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
-		-v goatflow_cache:/cache \
-		-e TRIVY_CACHE_DIR=/cache/trivy \
+		-e TRIVY_CACHE_DIR=/workspace/.trivy-cache \
 		-w /workspace \
 		aquasec/trivy:latest \
 		fs --scanners vuln,secret,misconfig . \
@@ -2936,9 +2915,9 @@ bun-updates:
 css-deps:
 	@printf "📦 Installing CSS build dependencies...\n"
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && bun install && touch /cache/.frontend_deps_installed || true'; \
+		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && bun install && touch /workspace/.frontend_deps_installed || true'; \
 	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && bun install && touch /cache/.frontend_deps_installed || true'; \
+		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && bun install && touch /workspace/.frontend_deps_installed || true'; \
 	fi
 	@printf "✅ CSS dependencies installed\n"
 # Install CSS dependencies without upgrading (preserves pinned versions)
@@ -2947,9 +2926,9 @@ css-deps-stable:
 	@# Pre-create node_modules with correct ownership before Docker mounts volume
 	@[ -d node_modules ] || mkdir -p node_modules
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && if [ ! -d node_modules/tailwindcss ]; then echo "🧹 Cleaning existing node_modules (fresh install)"; rm -rf node_modules 2>/dev/null || true; fi; bun install && touch /cache/.frontend_deps_installed || true'; \
+		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && if [ ! -d node_modules/tailwindcss ]; then echo "🧹 Cleaning existing node_modules (fresh install)"; rm -rf node_modules 2>/dev/null || true; fi; bun install && touch /workspace/.frontend_deps_installed || true'; \
 	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && if [ ! -d node_modules/tailwindcss ]; then echo "🧹 Cleaning existing node_modules (fresh install)"; rm -rf node_modules 2>/dev/null || true; fi; bun install && touch /cache/.frontend_deps_installed || true'; \
+		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && if [ ! -d node_modules/tailwindcss ]; then echo "🧹 Cleaning existing node_modules (fresh install)"; rm -rf node_modules 2>/dev/null || true; fi; bun install && touch /workspace/.frontend_deps_installed || true'; \
 	fi
 	@printf "✅ CSS dependencies installed\n"
 # Build production CSS (in container with user permissions) - ensure deps first
@@ -3012,9 +2991,9 @@ frontend-clean-cache:
 	@printf "🧹 Removing node_modules and frontend marker...\n"
 	@rm -rf node_modules 2>/dev/null || true
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'rm -f /cache/.frontend_deps_installed 2>/dev/null || true'; \
+		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'rm -f /workspace/.frontend_deps_installed 2>/dev/null || true'; \
 	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'rm -f /cache/.frontend_deps_installed 2>/dev/null || true'; \
+		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'rm -f /workspace/.frontend_deps_installed 2>/dev/null || true'; \
 	fi
 	@printf "✅ node_modules removed. Next build will reinstall dependencies.\n"
 
@@ -3033,8 +3012,9 @@ css-watch: css-deps
 	@printf "👁️  Watching for CSS changes...\n"
 	@$(CONTAINER_CMD) run --rm -it --security-opt label=disable -u $(shell id -u):$(shell id -g) \
 		$(CONTAINER_USER) \
-		-v $(PWD):/app -v goatflow_cache:/cache -e BUN_INSTALL_CACHE_DIR=/cache/bun \
-		-w /app oven/bun:1.1-alpine bun run watch-css
+		-v $(PWD):/app -w /app -e BUN_INSTALL_CACHE_DIR=/workspace/.bun \
+		-e TMPDIR=/workspace/tmp \
+		oven/bun:1.1-alpine bun run watch-css
 
 #########################################
 # TEST TARGETS

@@ -6,7 +6,8 @@ services:
   mariadb:
     image: docker.io/mariadb:11
     container_name: goatflow-mariadb
-    user: "999:999" # Run as mysql user (standard for MariaDB)
+    # Runs entrypoint as root so it can chown /var/lib/mysql on first init,
+    # then drops privileges to the mysql user (999) internally.
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
@@ -58,7 +59,8 @@ services:
   valkey:
     image: docker.io/valkey/valkey:7-alpine
     container_name: goatflow-valkey
-    user: "999:1000" # Run as valkey user (standard for Valkey)
+    # Runs entrypoint as root so it can chown /data on first init,
+    # then drops privileges to the valkey user internally.
     ports:
       - "${VALKEY_PORT:-6388}:6379"
     volumes:
@@ -645,12 +647,13 @@ services:
     container_name: goatflow-toolbox
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}" # Match host user to avoid root-owned artifacts
     environment:
-      # Go development environment - cache in separate volume (not overlaid on workspace)
-      GOCACHE: /cache/go-build
-      GOMODCACHE: /cache/go-mod
-      GOLANGCI_LINT_CACHE: /cache/golangci-lint
-      BUN_INSTALL_CACHE_DIR: /cache/bun
-      XDG_CACHE_HOME: /cache/xdg
+      # Go development environment - workspace-local cache dirs (writable by UID 1000)
+      TMPDIR: /workspace/tmp
+      GOCACHE: /workspace/.go-build
+      GOMODCACHE: /workspace/.gomodcache
+      GOLANGCI_LINT_CACHE: /workspace/.golangci-lint
+      BUN_INSTALL_CACHE_DIR: /workspace/.bun
+      XDG_CACHE_HOME: /workspace/.xdg-cache
       GOTOOLCHAIN: local
       GOTELEMETRY: off
       PATH: /usr/local/go/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -671,7 +674,6 @@ services:
       GOATFLOW_TEST_DB_READY: "1"
     volumes:
       - .:/workspace:Z
-      - goatflow_cache:/cache
     working_dir: /workspace
     networks:
       - goatflow-network
@@ -690,7 +692,7 @@ volumes:
   # postgres_data:     # Commented out - using MariaDB instead
   valkey_data:
   valkey_test_data:
-  goatflow_cache:
+  # goatflow_cache:      # REMOVED - now using workspace-local cache paths (/workspace/.go-build, etc.)
   goatflow_certs:
   goatflow_plugins:
   smtp4dev_data:

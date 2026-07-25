@@ -19,7 +19,7 @@ COMPOSE_CMD="${COMPOSE_CMD:-docker compose}"
 
 # Try goatflow CLI first (if available in backend container)
 if $COMPOSE_CMD -f docker-compose.yml -f docker-compose.testdb.yml -f docker-compose.test.yaml \
-    exec -T backend-test goats reset-user \
+    exec -T backend-test goatflow reset-user \
     --username="${TEST_USERNAME:-root@localhost}" \
     --password="***" \
     --enable >/dev/null 2>&1; then

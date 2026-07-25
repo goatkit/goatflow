@@ -101,8 +101,13 @@ FROM docker.io/tinygo/tinygo:0.32.0 AS wasm-builder
 WORKDIR /plugins
 COPY --chown=tinygo:tinygo plugins/ ./
 
+# Create tmp directory with proper permissions (in workspace, not system /tmp)
+RUN mkdir -p /plugins/tmp && chmod 777 /plugins/tmp
+
 # Build all TinyGo WASM plugins (subshell per plugin to avoid cd issues)
 RUN set -e; failed=0; \
+    export TMPDIR=/plugins/tmp; \
+    export HOME=/plugins/tmp; \
     for dir in */; do \
         if [ -f "${dir}main.go" ] && grep -q "tinygo.wasm" "${dir}main.go" 2>/dev/null; then \
             name=$(basename "$dir"); \

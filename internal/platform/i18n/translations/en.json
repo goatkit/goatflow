@@ -1523,7 +1523,8 @@
                 "scopes_help": "Space-separated OAuth2/OIDC scopes. Default: openid profile email",
                 "email_claim": "Email Claim",
                 "name_claim": "Name Claim",
-                "groups_claim": "Groups Claim"
+                "groups_claim": "Groups Claim",
+                "user_table": "User Table"
             },
             "settings": {
                 "enabled": "Enabled",

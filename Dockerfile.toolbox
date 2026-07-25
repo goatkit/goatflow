@@ -162,13 +162,13 @@ RUN addgroup -g ${GID} -S appgroup && \
 
 # Set up workspace
 WORKDIR /workspace
-# Pre-create cache directories for Go, Playwright, Bun, and Helm
-# Cache is at /cache (separate from workspace) to avoid host mount point creation issues
-RUN mkdir -p /cache /cache/go-build /cache/go-mod \
-    /cache/xdg/helm/repository /cache/xdg/helm/cache /cache/xdg/helm/config \
-    /cache/bun /cache/golangci-lint /cache/tmp \
-    /home/appuser/.cache/ms-playwright-go /home/appuser/.cache && \
-    chown -R appuser:appgroup /cache /home/appuser/.cache
+# Pre-create workspace-local cache directories and plugin temp dir
+# Workspace-local caches are writable by non-root appuser; /app/tmp is required by gRPC plugins
+RUN mkdir -p /workspace/.go-build /workspace/.gomodcache /workspace/.golangci-lint \
+    /workspace/.xdg-cache/helm/repository /workspace/.xdg-cache/helm/cache /workspace/.xdg-cache/helm/config \
+    /workspace/.bun /app/tmp /home/appuser/.cache/ms-playwright-go /home/appuser/.cache && \
+    chown -R appuser:appgroup /workspace/.go-build /workspace/.gomodcache /workspace/.golangci-lint \
+    /workspace/.xdg-cache /workspace/.bun /app/tmp /home/appuser/.cache
 
 # Copy binaries from artifacts image
 COPY --from=artifacts --chown=appuser:appgroup /artifacts/goats /usr/local/bin/goats
@@ -206,13 +206,14 @@ RUN chmod +x /usr/local/bin/toolbox-entrypoint.sh
 COPY --from=toolbox-builder --chown=appuser:appgroup /workspace/node_modules /workspace/node_modules
 
 # Set environment for Go caching and prevent auto toolchain downloads
-# Cache is at /cache (separate from workspace bind mount)
-ENV GOCACHE=/cache/go-build \
-    GOMODCACHE=/cache/go-mod \
+# Use workspace-local cache paths; /app/tmp required by gRPC plugins
+ENV TMPDIR=/app/tmp \
+    GOCACHE=/workspace/.go-build \
+    GOMODCACHE=/workspace/.gomodcache \
     GOTOOLCHAIN=local \
-    BUN_INSTALL_CACHE_DIR=/cache/bun \
-    XDG_CACHE_HOME=/cache/xdg \
-    GOLANGCI_LINT_CACHE=/cache/golangci-lint \
+    BUN_INSTALL_CACHE_DIR=/workspace/.bun \
+    XDG_CACHE_HOME=/workspace/.xdg-cache \
+    GOLANGCI_LINT_CACHE=/workspace/.golangci-lint \
     PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Run as non-root user
