@@ -316,6 +316,8 @@ test-templates:
 # Run all unit tests (templates + core packages, no integration/e2e)
 test-unit: toolbox-build test-stack-up
 	@printf "\n🧪 Running unit tests...\n"
+	@mkdir -p .go-build .gomodcache .golangci-lint .bun .xdg-cache tmp
+	@chmod -R 777 .go-build .gomodcache .golangci-lint .bun .xdg-cache tmp 2>/dev/null || true
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		$(CONTAINER_USER) \
@@ -591,6 +593,8 @@ helm-package: helm-deps
 
 # Build toolbox image
 toolbox-build: build-artifacts
+	@mkdir -p .go-build .gomodcache .golangci-lint .bun .xdg-cache/helm/repository .xdg-cache/helm/cache .xdg-cache/helm/config tmp
+	@chmod -R 777 .go-build .gomodcache .golangci-lint .bun .xdg-cache tmp 2>/dev/null || true
 	@printf "\n🔧 Building GoatFlow toolbox container...\n"
 	@if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
 		echo "⚠️  compose not available; falling back to direct docker build"; \
