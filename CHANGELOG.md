@@ -149,14 +149,6 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `createImagePasteExtension` definition, its call site with `config.imageUploadUrl`, and the
   `imageUploadUrl` option default — failing the build if any is missing. Guards against the "defined but never wired" regression that originally left paste/drop inert.
 
-### Fixed
-- **gRPC plugins failed to load in CI containers** ("Failed to read any lines from plugin's stdout"). `/tmp` is `0755 root:root` in alpine (not world-writable), so go-plugin could not create its unix socket there and the plugin exited before the handshake. The fix points plugin `TMPDIR`/`HOME` at `/app/tmp` via `buildPluginEnv` (`internal/platform/plugin/grpc/sandbox_linux.go`) instead of `/tmp`, exports `ENV TMPDIR=/app/tmp` in the Dockerfile runtime, and makes `/app/tmp` world-writable with a sticky bit (`chmod 1777`) so any container UID can create temp files — not just the image's appuser.
-- **`RegisterHandler` nil-ambiguity in `PluginAdapter`.** Two `RegisterHandler` methods on `*scheduler.Service` caused an ambiguous-call error when passing `nil`. Fixed with a separate `PluginAdapter` struct that avoids method-name collisions.
-- **`TestPluginSessionAuth_NonAdminCanAccessAuthRoutes`.** `isPluginAdminPath` only checked for the `/plugins` path marker, so `DELETE /api/v1/plugins/:name` (uninstall — admin-only) was classified as a non-admin path and the test asserted a non-admin could reach it. Made the check method-aware so DELETE on a specific plugin is correctly treated as admin territory.
-- **`TestAddArticle_UpdatesTicketChangeTime`.** Hardcoded ticket ID 1, which may not exist in the test database (404 → no change-time update → assertion failure). Switched to `SELECT id FROM ticket ORDER BY id LIMIT 1` with a skip fallback, and added a safe `.(map[string]interface{})` type assertion to prevent a nil-panic on the response data. Same fix already applied to `TestAddArticle_EmailHeaders`.
-- **`mockLazyLoader` missing `Forget()`.** The mock in `internal/platform/plugin/manager_test.go` didn't implement the `Forget()` method added to the `LazyLoader` interface, so the suite failed to compile after the loader gained that method. Added the stub.
-- **`TestAllCustomerTemplatesRender` / `TestAllPageTemplatesHaveCoverage`.** Referenced KB templates (`customer/kb_article.pongo2`, `kb_search.pongo2`, `knowledge_base.pongo2`) that no longer exist in the host — the KB plugin owns those routes via its own embedded templates. Removed the stale references from the coverage map and test cases.
-
 ### Added
 - **Passkey login for agents and customers.** Registered WebAuthn credentials are now created as
   resident, user-verified credentials suitable for passwordless passkey login. The agent and customer
