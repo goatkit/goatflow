@@ -4,8 +4,10 @@
 
 set -e
 
-CACHE_DIR="/cache"
-CACHE_DIRS="$CACHE_DIR $CACHE_DIR/go-build $CACHE_DIR/go-mod $CACHE_DIR/xdg/helm/repository $CACHE_DIR/xdg/helm/cache $CACHE_DIR/bun $CACHE_DIR/golangci-lint $CACHE_DIR/tmp"
+CACHE_DIR="/workspace"
+
+# Cache directories matching Dockerfile.toolbox ENV vars (GOCACHE, GOMODCACHE, etc.)
+CACHE_DIRS="$CACHE_DIR/.go-build $CACHE_DIR/.gomodcache $CACHE_DIR/.golangci-lint $CACHE_DIR/.bun $CACHE_DIR/.xdg-cache/helm/repository $CACHE_DIR/.xdg-cache/helm/cache $CACHE_DIR/.xdg-cache/helm/config"
 
 # Ensure cache directories exist and are writable (ownership doesn't matter)
 ensure_cache_writable() {
