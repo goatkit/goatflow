@@ -195,9 +195,10 @@ func TestAttachmentDownloadHandler(t *testing.T) {
 		testDir := filepath.Join(os.TempDir(), "test-attachments")
 		testFile := filepath.Join(testDir, "test-download.txt")
 		testContent := []byte("Test download content")
+		require.NoError(t, os.MkdirAll(testDir, 0755))
 		err = os.WriteFile(testFile, testContent, 0644)
 		require.NoError(t, err)
-		defer os.Remove(testFile)
+		defer os.RemoveAll(testDir)
 
 		// Insert test attachment record
 		var attachmentID int

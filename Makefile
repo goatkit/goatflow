@@ -280,7 +280,7 @@ test-legacy: toolbox-build
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
-		-e STORAGE_PATH=/tmp \
+		-e STORAGE_PATH=/workspace/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
 		-e DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
@@ -304,8 +304,8 @@ test-legacy: toolbox-build
 		-e TEST_BACKEND_CONTAINER_PORT=$(TEST_BACKEND_PORT) \
 		echo "Running template tests (fail-fast)"; go test -count=1 -timeout=1m -buildvcs=false -v -p $(NPROC) ./internal/platform/template/...; \
 		CORE_PKGS=$$(go list ./... | rg -v "tests/e2e|tests/integration|internal/email/integration|internal/platform/template"); \
-		echo "Running core packages"; go test -count=1 -timeout=15m -buildvcs=false -v -p $(NPROC) $$CORE_PKGS; \
-		echo "Running integration packages"; go test -tags=integration -count=1 -timeout=20m -buildvcs=false -v -p $(NPROC) ./tests/integration ./internal/email/integration'
+		echo "Running core packages"; go test -count=1 -timeout=15m -buildvcs=false -v -p 1 $$CORE_PKGS; \
+		echo "Running integration packages"; go test -tags=integration -count=1 -timeout=20m -buildvcs=false -v -p 1 ./tests/integration ./internal/email/integration'
 	@$(MAKE) test-e2e-playwright-go
 
 # Run template tests only (fast fail-fast validation of HTMX attributes and paths)
@@ -325,7 +325,7 @@ test-unit: toolbox-build test-stack-up
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
-		-e STORAGE_PATH=/tmp \
+		-e STORAGE_PATH=/workspace/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
 		-e DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
@@ -361,7 +361,7 @@ test-fast: toolbox-build test-stack-up
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
-		-e STORAGE_PATH=/tmp \
+		-e STORAGE_PATH=/workspace/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
 		-e DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
@@ -764,7 +764,7 @@ toolbox-test-api: toolbox-build
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
-		-e STORAGE_PATH=/tmp \
+		-e STORAGE_PATH=/workspace/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
 		-e DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
@@ -798,7 +798,7 @@ toolbox-test-api-host: toolbox-build
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
-		-e STORAGE_PATH=/tmp \
+		-e STORAGE_PATH=/workspace/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
 		-e DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
@@ -834,7 +834,7 @@ toolbox-test:
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
-		-e STORAGE_PATH=/tmp \
+		-e STORAGE_PATH=/workspace/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
 		-e DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
@@ -907,7 +907,7 @@ toolbox-test-all:
 		-w /workspace \
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
-		-e STORAGE_PATH=/tmp \
+		-e STORAGE_PATH=/workspace/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
 		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 		-e DB_DRIVER=$(DB_DRIVER) \
@@ -1008,7 +1008,7 @@ toolbox-test-integration:
 		-e GOFLAGS=-buildvcs=false \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
-		-e STORAGE_PATH=/tmp \
+		-e STORAGE_PATH=/workspace/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
 		-e DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
@@ -1141,7 +1141,7 @@ toolbox-test-pkg:
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
-		-e STORAGE_PATH=/tmp \
+		-e STORAGE_PATH=/workspace/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
 		-e DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
@@ -1175,7 +1175,7 @@ toolbox-test-files:
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
-		-e STORAGE_PATH=/tmp \
+		-e STORAGE_PATH=/workspace/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
 		-e DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
@@ -2261,7 +2261,7 @@ test-coverage: toolbox-build
 	@mkdir -p generated
 	@DB_NAME=$${DB_NAME:-goatflow}_test \
 	APP_ENV=test \
-	STORAGE_PATH=/tmp \
+	STORAGE_PATH=/workspace/tmp \
 	TEMPLATES_DIR=/workspace/templates \
 	DB_DRIVER=$(DB_DRIVER) \
 	DB_HOST=$(DB_HOST) \
@@ -2361,7 +2361,7 @@ test-coverage-html: toolbox-build
 	@mkdir -p generated
 	@DB_NAME=$${DB_NAME:-goatflow}_test \
 	APP_ENV=test \
-	STORAGE_PATH=/tmp \
+	STORAGE_PATH=/workspace/tmp \
 	TEMPLATES_DIR=/workspace/templates \
 	DB_DRIVER=$(DB_DRIVER) \
 	DB_HOST=$(DB_HOST) \
