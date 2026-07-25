@@ -8,12 +8,12 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
-- **gRPC plugins failed to load in the alpine runtime image** ("Failed to read any lines from
-  plugin's stdout"). `/tmp` is `0755 root:root` in alpine (not world-writable), so go-plugin could
-  not create its unix socket there and the plugin exited before the handshake.
-  `buildPluginEnv` (`internal/platform/plugin/grpc/sandbox_linux.go`) now points plugin
-  `TMPDIR`/`HOME` at `/app/tmp` (writable, appuser-owned) instead of `/tmp`, and the Dockerfile
-  runtime-base exports `ENV TMPDIR=/app/tmp`. Affects every gRPC plugin (e.g. goatkit-llm).
+- **gRPC plugins failed to load in CI containers** ("Failed to read any lines from plugin's stdout"). `/tmp` is `0755 root:root` in alpine (not world-writable), so go-plugin could not create its unix socket there and the plugin exited before the handshake. The fix points plugin `TMPDIR`/`HOME` at `/app/tmp` via `buildPluginEnv` (`internal/platform/plugin/grpc/sandbox_linux.go`) instead of `/tmp`, exports `ENV TMPDIR=/app/tmp` in the Dockerfile runtime, and makes `/app/tmp` world-writable with a sticky bit (`chmod 1777`) so any container UID can create temp files — not just the image's appuser.
+- **`RegisterHandler` nil-ambiguity in `PluginAdapter`.** Two `RegisterHandler` methods on `*scheduler.Service` caused an ambiguous-call error when passing `nil`. Fixed with a separate `PluginAdapter` struct that avoids method-name collisions.
+- **`TestPluginSessionAuth_NonAdminCanAccessAuthRoutes`.** `isPluginAdminPath` only checked for the `/plugins` path marker, so `DELETE /api/v1/plugins/:name` (uninstall — admin-only) was classified as a non-admin path and the test asserted a non-admin could reach it. Made the check method-aware so DELETE on a specific plugin is correctly treated as admin territory.
+- **`TestAddArticle_UpdatesTicketChangeTime`.** Hardcoded ticket ID 1, which may not exist in the test database (404 → no change-time update → assertion failure). Switched to `SELECT id FROM ticket ORDER BY id LIMIT 1` with a skip fallback, and added a safe `.(map[string]interface{})` type assertion to prevent a nil-panic on the response data. Same fix already applied to `TestAddArticle_EmailHeaders`.
+- **`mockLazyLoader` missing `Forget()`.** The mock in `internal/platform/plugin/manager_test.go` didn't implement the `Forget()` method added to the `LazyLoader` interface, so the suite failed to compile after the loader gained that method. Added the stub.
+- **`TestAllCustomerTemplatesRender` / `TestAllPageTemplatesHaveCoverage`.** Referenced KB templates (`customer/kb_article.pongo2`, `kb_search.pongo2`, `knowledge_base.pongo2`) that no longer exist in the host — the KB plugin owns those routes via its own embedded templates. Removed the stale references from the coverage map and test cases.
 
 ### Security
 - **Dependency vulnerability remediation** — Updated dependencies to fix 22 GitHub Dependabot alerts
@@ -27,13 +27,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
   commit → v0.1.1 (medium auth bypass)
 
 ### Added
-  testcontainers/Keycloak access.
 - **`HostAPI.GenerateThumbnail`** — new platform interface method (`pkg/plugin/plugin.go`) lets
   plugins request server-side thumbnail generation from image bytes. Signature:
   `GenerateThumbnail(ctx, data []byte, contentType string, maxWidth, maxHeight int) (thumbData []byte,
-  thumbContentType string, err error)`. Wired across the full HostAPI stack: gRPC client
-  (`pkg/plugin/grpcutil/hostapi.go`), gRPC server dispatch
-  (`internal/platform/plugin/grpc/host_api.go`), `ProdHostAPI` (`filestorage.go`) with a
   `ThumbnailGenerator` adapter + `NewThumbnailGenerator(fn)` constructor (`hostapi_prod.go`), and
   `SandboxedHostAPI` delegation (`sandbox.go`). All 14 HostAPI implementations across 11 files updated
   (10 test mocks + 3 production + 1 adapter). Enabled in `cmd/goats/main.go` via
@@ -151,30 +147,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
   to drop the stale references.
 - **JS build validates paste-extension wiring.** `make js-build` now greps the rebuilt bundle for the
   `createImagePasteExtension` definition, its call site with `config.imageUploadUrl`, and the
-  `imageUploadUrl` option default — failing the build if any is missing. Guards against the "defined
-  but never wired" regression that originally left paste/drop inert.
+  `imageUploadUrl` option default — failing the build if any is missing. Guards against the "defined but never wired" regression that originally left paste/drop inert.
 
 ### Fixed
-- **`RegisterHandler` nil-ambiguity in `PluginAdapter`.** Two `RegisterHandler` methods on
-  `*scheduler.Service` caused an ambiguous-call error when passing `nil`. Fixed with a
-  separate `PluginAdapter` struct that avoids method-name collisions.
-- **`TestPluginSessionAuth_NonAdminCanAccessAuthRoutes`.** `isPluginAdminPath` only checked for the
-  `/plugins` path marker, so `DELETE /api/v1/plugins/:name` (uninstall — admin-only) was classified as
-  a non-admin path and the test asserted a non-admin could reach it. Made the check method-aware so
-  DELETE on a specific plugin is correctly treated as admin territory.
-- **`TestAddArticle_UpdatesTicketChangeTime`.** Hardcoded ticket ID 1, which may not exist in the test
-  database (404 → no change-time update → assertion failure). Switched to `SELECT id FROM ticket ORDER
-  BY id LIMIT 1` with a skip fallback, and added a safe `.(map[string]interface{})` type assertion to
-  prevent a nil-panic on the response data. Same fix already applied to `TestAddArticle_EmailHeaders`.
-- **`mockLazyLoader` missing `Forget()`.** The mock in `internal/platform/plugin/manager_test.go`
-  didn't implement the `Forget()` method added to the `LazyLoader` interface, so the suite failed to
-  compile after the loader gained that method. Added the stub.
-- **`TestAllCustomerTemplatesRender` / `TestAllPageTemplatesHaveCoverage`.** Referenced KB templates
-  (`customer/kb_article.pongo2`, `kb_search.pongo2`, `knowledge_base.pongo2`) that no longer exist in
-  the host — the KB plugin owns those routes via its own embedded templates. Removed the stale
-  references from the coverage map and test cases.
-
-## [0.8.3] - 2026-05-13
+- **gRPC plugins failed to load in CI containers** ("Failed to read any lines from plugin's stdout"). `/tmp` is `0755 root:root` in alpine (not world-writable), so go-plugin could not create its unix socket there and the plugin exited before the handshake. The fix points plugin `TMPDIR`/`HOME` at `/app/tmp` via `buildPluginEnv` (`internal/platform/plugin/grpc/sandbox_linux.go`) instead of `/tmp`, exports `ENV TMPDIR=/app/tmp` in the Dockerfile runtime, and makes `/app/tmp` world-writable with a sticky bit (`chmod 1777`) so any container UID can create temp files — not just the image's appuser.
+- **`RegisterHandler` nil-ambiguity in `PluginAdapter`.** Two `RegisterHandler` methods on `*scheduler.Service` caused an ambiguous-call error when passing `nil`. Fixed with a separate `PluginAdapter` struct that avoids method-name collisions.
+- **`TestPluginSessionAuth_NonAdminCanAccessAuthRoutes`.** `isPluginAdminPath` only checked for the `/plugins` path marker, so `DELETE /api/v1/plugins/:name` (uninstall — admin-only) was classified as a non-admin path and the test asserted a non-admin could reach it. Made the check method-aware so DELETE on a specific plugin is correctly treated as admin territory.
+- **`TestAddArticle_UpdatesTicketChangeTime`.** Hardcoded ticket ID 1, which may not exist in the test database (404 → no change-time update → assertion failure). Switched to `SELECT id FROM ticket ORDER BY id LIMIT 1` with a skip fallback, and added a safe `.(map[string]interface{})` type assertion to prevent a nil-panic on the response data. Same fix already applied to `TestAddArticle_EmailHeaders`.
+- **`mockLazyLoader` missing `Forget()`.** The mock in `internal/platform/plugin/manager_test.go` didn't implement the `Forget()` method added to the `LazyLoader` interface, so the suite failed to compile after the loader gained that method. Added the stub.
+- **`TestAllCustomerTemplatesRender` / `TestAllPageTemplatesHaveCoverage`.** Referenced KB templates (`customer/kb_article.pongo2`, `kb_search.pongo2`, `knowledge_base.pongo2`) that no longer exist in the host — the KB plugin owns those routes via its own embedded templates. Removed the stale references from the coverage map and test cases.
 
 ### Added
 - **Passkey login for agents and customers.** Registered WebAuthn credentials are now created as
@@ -292,21 +273,13 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `true`/`1`/`yes`/`on` to enable. Complements the in-memory ring buffer (served at
   `/api/v1/plugins/logs`) — the buffer is great for the admin UI but fills fast during heavy
   generation, and low-level media-decision / cascade-dispatch traces rotate out before you can query
+
   them. Mirror path bypasses the slog level filter so info/debug lines get through regardless of
-  `LOG_LEVEL`. Evaluated once per process via `sync.Once` — flipping the env mid-run needs a container
-  restart.
 
 ### Fixed
 - **TOTP login sessions now survive split frontend/backend handling.** Password login now stores
   pending agent/customer 2FA sessions in the new `gk_totp_pending_session` table using a hash of the
-  pending cookie token, while retaining the in-memory map as a fast local cache. This fixes valid
-  authenticator-app codes being rejected after restarts or when password login and TOTP verification
-  land on different app containers.
-- **Captive customer organisations can still reach account self-service.** `/customer/profile`,
-  `/customer/profile/update`, and `/customer/password/*` now bypass the captive-plugin landing
-  redirect so customers can manage profile details, passwords, 2FA, and passkeys even when their
-  organisation is pinned to a plugin landing page.
-- **Test stack startup now recovers from stale Docker network references without disrupting the dev
+
   stack.** `test-stack-teardown` removes only stopped/dead test infrastructure containers before
   `test-up` recreates them, while leaving running test DB/cache containers and shared dev services
   alone.
@@ -427,6 +400,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
   installed in `Register` but silently skipped when a plugin was replaced via upload, so reloaded
   plugins that had added or modified any of those would need a full backend restart to take effect.
   `Register` and `ReplacePlugin` now share `applyManifestSideEffectsPreInit` /
+
   `applyManifestSideEffectsPostInit` helpers so every manifest field is re-applied on each register or
   replace.
 
