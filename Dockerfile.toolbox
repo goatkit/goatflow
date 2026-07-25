@@ -168,7 +168,8 @@ RUN mkdir -p /workspace/.go-build /workspace/.gomodcache /workspace/.golangci-li
     /workspace/.xdg-cache/helm/repository /workspace/.xdg-cache/helm/cache /workspace/.xdg-cache/helm/config \
     /workspace/.bun /app/tmp /home/appuser/.cache/ms-playwright-go /home/appuser/.cache && \
     chown -R appuser:appgroup /workspace/.go-build /workspace/.gomodcache /workspace/.golangci-lint \
-    /workspace/.xdg-cache /workspace/.bun /app/tmp /home/appuser/.cache
+    /workspace/.xdg-cache /workspace/.bun /home/appuser/.cache && \
+    chmod 1777 /app/tmp
 
 # Copy binaries from artifacts image
 COPY --from=artifacts --chown=appuser:appgroup /artifacts/goats /usr/local/bin/goats
