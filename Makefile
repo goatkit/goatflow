@@ -1691,6 +1691,8 @@ toolbox-exec:
 		echo "Please install the required compose tool and try again."; \
 		exit 1; \
 	fi
+	@mkdir -p .go-build .gomodcache .golangci-lint .bun .xdg-cache/helm/repository .xdg-cache/helm/cache .xdg-cache/helm/config tmp
+	@chmod 777 .go-build .gomodcache .golangci-lint .bun .xdg-cache tmp 2>/dev/null || true
 	@printf "\n🔧 toolbox -> %s\n" "$(ARGS)"
 	@# Always include testdb profile so tests can reach the test database
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \

@@ -118,8 +118,8 @@ jobs:
 
       - name: Prepare directories and volumes
         run: |
-          mkdir -p .cache tmp generated/api-map
-          chmod 777 .cache tmp generated generated/api-map
+          mkdir -p .cache tmp generated/api-map .go-build .gomodcache .golangci-lint .bun .xdg-cache
+          chmod 777 .cache tmp generated generated/api-map .go-build .gomodcache .golangci-lint .bun .xdg-cache
           docker volume create goatflow_goatflow_cache
           docker volume create goatflow_goatflow_runtime
           docker volume create goatflow_cache
