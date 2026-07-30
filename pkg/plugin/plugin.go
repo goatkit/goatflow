@@ -38,13 +38,13 @@ type Plugin interface {
 // This is returned by GKRegister() - the self-describing plugin protocol.
 type GKRegistration struct {
 	// Identity
-	Name        string `json:"name"`        // unique identifier, e.g. "stats"
-	Version     string `json:"version"`     // semver, e.g. "1.0.0"
-	Description string `json:"description"` // human-readable description
-	Author      string `json:"author"`      // author or organization
-	License     string `json:"license"`     // SPDX identifier, e.g. "Apache-2.0"
-	Homepage    string `json:"homepage"`    // URL to plugin docs/repo
-	Icon        string          `json:"icon,omitempty"`     // SVG icon content, FontAwesome class (e.g. "fa-book"), or bundled icon path
+	Name        string `json:"name"`           // unique identifier, e.g. "stats"
+	Version     string `json:"version"`        // semver, e.g. "1.0.0"
+	Description string `json:"description"`    // human-readable description
+	Author      string `json:"author"`         // author or organization
+	License     string `json:"license"`        // SPDX identifier, e.g. "Apache-2.0"
+	Homepage    string `json:"homepage"`       // URL to plugin docs/repo
+	Icon        string `json:"icon,omitempty"` // SVG icon content, FontAwesome class (e.g. "fa-book"), or bundled icon path
 
 	// Capabilities - what the plugin exposes to the host
 	Routes     []RouteSpec     `json:"routes,omitempty"`      // HTTP routes to register
@@ -79,6 +79,11 @@ type GKRegistration struct {
 	// When declared, these override auto-generated tools from routes.
 	// Tool names are auto-prefixed with the plugin name.
 	MCPTools []MCPToolSpec `json:"mcp_tools,omitempty"`
+
+	// Setup tasks the plugin contributes to the host's Setup Assistant.
+	// Each task becomes a mini-wizard entry in the admin setup catalog; running
+	// one dispatches to the plugin handler named in SetupTaskSpec.Handler.
+	SetupTasks []SetupTaskSpec `json:"setup_tasks,omitempty"`
 
 	// Org context
 	// SkipOrgInjection disables automatic _org_id injection into plugin call
@@ -123,6 +128,22 @@ type MCPToolSpec struct {
 	Description string         `json:"description"`            // LLM-friendly description
 	Handler     string         `json:"handler"`                // plugin function to call
 	InputSchema map[string]any `json:"input_schema,omitempty"` // JSON Schema for parameters
+}
+
+// SetupTaskSpec declares a task the plugin contributes to the host's Setup
+// Assistant task catalog. Tasks are mini-wizards for common admin operations
+// (onboard a customer, create a queue + assign groups, configure an SLA, …).
+// When the admin runs a plugin task, the host invokes the named Handler via
+// Manager.Call(pluginName, handler, args); the handler returns a JSON object
+// whose shape the Setup Assistant renders (e.g. {"html": "..."} or
+// {"form": [...], "submit_handler": "..."}).
+type SetupTaskSpec struct {
+	ID          string `json:"id"`                    // unique within the plugin; the catalog key is "<plugin>:<id>"
+	Title       string `json:"title"`                 // human-readable task name
+	Description string `json:"description,omitempty"` // one-line explanation shown in the catalog
+	Icon        string `json:"icon,omitempty"`        // SVG content, FontAwesome class, or bundled icon path
+	Handler     string `json:"handler"`               // plugin function invoked by Manager.Call
+	Category    string `json:"category"`              // grouping in the catalog, e.g. "customers", "tickets", "sla"
 }
 
 // MenuItemSpec defines a navigation menu entry.

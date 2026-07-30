@@ -815,7 +815,7 @@ func fixSequences(db *sql.DB) {
 	}
 
 	for _, s := range sequences {
-		query := fmt.Sprintf("SELECT setval('%s', COALESCE((SELECT MAX(id) FROM %s), 0) + 1, false)", s.seq, s.table) //nolint:gosec // table/seq names from hardcoded list
+		query := fmt.Sprintf("SELECT setval('%s', COALESCE((SELECT MAX(id) FROM %s), 0) + 1, false)", s.seq, s.table) //nolint:gosec // table/seq names from hardcoded list //nolint:gk-sql-sprintf // internal migration schema name
 		if _, err := db.Exec(query); err != nil {
 			// Some sequences might not exist, that's okay
 			log.Printf("Note: Could not fix sequence %s: %v", s.seq, err)
@@ -897,7 +897,7 @@ func validateDatabaseState(db *sql.DB, force bool) error {
 	nonEmptyTables := []string{}
 	for _, table := range tables {
 		var count int
-		err := db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s", table)).Scan(&count)
+		err := db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s", table)).Scan(&count) //nolint:gk-sql-sprintf // internal migration schema name
 		if err != nil {
 			// Table might not exist, that's okay
 			continue
@@ -948,7 +948,7 @@ func validateDatabaseState(db *sql.DB, force bool) error {
 			fmt.Printf("   🗑️  Clearing %s...\n", table)
 			if _, err := db.Exec(fmt.Sprintf("TRUNCATE %s CASCADE", table)); err != nil {
 				// Some tables might not exist or have dependencies
-				if _, err := db.Exec(fmt.Sprintf("DELETE FROM %s", table)); err != nil {
+				if _, err := db.Exec(fmt.Sprintf("DELETE FROM %s", table)); err != nil { //nolint:gk-sql-sprintf // internal migration schema name
 					log.Printf("   Warning: Could not clear %s: %v", table, err)
 				}
 			}

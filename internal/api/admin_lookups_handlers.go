@@ -428,6 +428,13 @@ func handleAdminDashboard(c *gin.Context) {
 		_ = db.QueryRow("SELECT COUNT(*) FROM ticket WHERE ticket_state_id IN (1,2,3,4)").Scan(&activeTickets) //nolint:errcheck
 	}
 
+	// First-run nudge: on a system with no groups/queues and setup not yet marked
+	// complete, send the admin to the setup wizard instead of an empty dashboard.
+	if !setupCompleted(db) && groupCount == 0 && queueCount == 0 {
+		c.Redirect(http.StatusSeeOther, "/admin/setup")
+		return
+	}
+
 	// Get ticket activity metrics from cache with fallback to calculation
 	ticketActivity := getTicketActivityFromCache(c, db)
 
@@ -444,6 +451,16 @@ func handleAdminDashboard(c *gin.Context) {
 		"User":           getUserMapForTemplate(c),
 		"ActivePage":     "admin",
 	})
+}
+
+// setupCompleted reports whether first-run setup has been marked done via the
+// setup.assistant.completed sysconfig flag.
+func setupCompleted(db *sql.DB) bool {
+	if db == nil {
+		return false
+	}
+	done, _ := sysconfigBool(db, "setup.assistant.completed")
+	return done
 }
 
 // getTicketActivityFromCache retrieves ticket activity metrics from Valkey cache,

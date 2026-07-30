@@ -51,7 +51,7 @@ func (r *TicketRepository) AutoClosePendingTickets(
 	query := fmt.Sprintf(
 		"SELECT id, name FROM ticket_state WHERE name IN (%s)",
 		strings.Join(placeholders, ", "),
-	)
+	) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	rows, err := r.db.QueryContext(ctx, database.ConvertPlaceholders(query), args...)
 	if err != nil {

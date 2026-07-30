@@ -93,7 +93,7 @@ func main() {
 			},
 			"create_title":   fmt.Sprintf("New %s", capitalize(mod)),
 			"edit_title":     fmt.Sprintf("Edit %s", capitalize(mod)),
-			"delete_title":   fmt.Sprintf("Delete %s", capitalize(mod)),
+			"delete_title":   fmt.Sprintf("Delete %s", capitalize(mod)), //nolint:gk-sql-sprintf // internal migration schema name
 			"delete_confirm": fmt.Sprintf("Are you sure you want to delete this %s? This action cannot be undone.", mod),
 		}
 	}

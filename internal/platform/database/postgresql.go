@@ -196,7 +196,7 @@ func (p *PostgreSQLDatabase) CreateTable(ctx context.Context, definition *TableD
 
 // DropTable drops a table.
 func (p *PostgreSQLDatabase) DropTable(ctx context.Context, tableName string) error {
-	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", p.Quote(tableName))
+	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", p.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 	_, err := p.db.ExecContext(ctx, query)
 	return err
 }
@@ -217,7 +217,7 @@ func (p *PostgreSQLDatabase) CreateIndex(ctx context.Context, tableName, indexNa
 		uniqueClause,
 		p.Quote(indexName),
 		p.Quote(tableName),
-		strings.Join(quotedColumns, ", "))
+		strings.Join(quotedColumns, ", ")) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 	_, err := p.db.ExecContext(ctx, query)
 	return err
@@ -225,7 +225,7 @@ func (p *PostgreSQLDatabase) CreateIndex(ctx context.Context, tableName, indexNa
 
 // DropIndex drops an index.
 func (p *PostgreSQLDatabase) DropIndex(ctx context.Context, tableName, indexName string) error {
-	query := fmt.Sprintf("DROP INDEX IF EXISTS %s", p.Quote(indexName))
+	query := fmt.Sprintf("DROP INDEX IF EXISTS %s", p.Quote(indexName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 	_, err := p.db.ExecContext(ctx, query)
 	return err
 }
@@ -264,7 +264,7 @@ func (p *PostgreSQLDatabase) BuildInsert(tableName string, data map[string]inter
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
 		p.Quote(tableName),
 		strings.Join(columns, ", "),
-		strings.Join(placeholders, ", "))
+		strings.Join(placeholders, ", ")) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 	return query, values
 }
@@ -284,7 +284,7 @@ func (p *PostgreSQLDatabase) BuildUpdate(tableName string, data map[string]inter
 	query := fmt.Sprintf("UPDATE %s SET %s WHERE %s",
 		p.Quote(tableName),
 		strings.Join(setParts, ", "),
-		where)
+		where) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 	// Append WHERE clause arguments
 	values = append(values, whereArgs...)
@@ -301,7 +301,7 @@ func (p *PostgreSQLDatabase) BuildSelect(tableName string, columns []string, whe
 
 	query := fmt.Sprintf("SELECT %s FROM %s",
 		strings.Join(quotedColumns, ", "),
-		p.Quote(tableName))
+		p.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 	if where != "" {
 		query += " WHERE " + where
@@ -396,7 +396,7 @@ func (p *PostgreSQLDatabase) buildCreateTableSQL(def *TableDefinition) string {
 		parts = append(parts, p.buildConstraintSQL(constraint))
 	}
 
-	return fmt.Sprintf("CREATE TABLE %s (\n  %s\n)", p.Quote(def.Name), strings.Join(parts, ",\n  "))
+	return fmt.Sprintf("CREATE TABLE %s (\n  %s\n)", p.Quote(def.Name), strings.Join(parts, ",\n  ")) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 }
 
 // buildColumnSQL builds column definition SQL.

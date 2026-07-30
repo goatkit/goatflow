@@ -171,7 +171,7 @@ func HandleGetTicketAPI(c *gin.Context) {
 		LEFT JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
 		LEFT JOIN queue q ON t.queue_id = q.id
 		WHERE t.id = ?
-	`, typeSelect))
+	`, typeSelect)) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 
 	var ticket struct {
 		ID                int64          `json:"id"`

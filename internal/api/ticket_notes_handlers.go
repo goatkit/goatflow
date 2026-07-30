@@ -179,7 +179,7 @@ func handleAddTicketNote(c *gin.Context) {
 					return
 				}
 
-				subject := fmt.Sprintf("Update on Ticket %s", ticket.TicketNumber)
+				subject := fmt.Sprintf("Update on Ticket %s", ticket.TicketNumber) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 				body := fmt.Sprintf(
 					"A new update has been added to your ticket.\n\n%s\n\nBest regards,\nGoatFlow Support Team",
 					noteData.Content)

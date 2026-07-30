@@ -524,7 +524,7 @@ func (d *Discovery) generateFilters(info *TableInfo) []Filter {
 			Type:   "select",
 			Label:  formatLabel(fk.Column),
 			Source: "database",
-			Query:  fmt.Sprintf("SELECT %s, name FROM %s ORDER BY name", fk.ReferencedColumn, fk.ReferencedTable),
+			Query:  fmt.Sprintf("SELECT %s, name FROM %s ORDER BY name", fk.ReferencedColumn, fk.ReferencedTable), //nolint:gk-sql-sprintf // internal schema object name; not a bind position
 		})
 	}
 

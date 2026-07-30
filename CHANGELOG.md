@@ -19,6 +19,18 @@ project adheres to [Semantic Versioning](https://semver.org/).
   request bodies (XML, CSV, plain text) to plugins as `_body` / `_content_type`. Plugin JSON
   responses of the form `{"error": "<msg>", "status": <N>}` are now mapped to the matching HTTP
   status code instead of always serving 200-OK.
+- **Customer onboarding wizard.** "Onboard a customer" task now provisions an entire customer setup in one
+  shot, all OTRS-compatible: company record (auto-suggested, editable Customer ID + ISO country dropdown),
+  managing agent teams (`group_customer`), portal users with generated temporary passwords, Service/SLA
+  mapping (`service` → `service_sla` → `service_customer_user`), and an inbound mailbox (`mail_account`)
+  wired to a queue that can be picked or created on the fly (owned by a chosen team). 5-step UI
+  (company → users → teams & SLA → email → review) and a programmatic API at
+  `POST /api/v1/admin/setup/onboard-customer` (`internal/service/setup_assistant_service.go::OnboardCustomer`).
+- **Setup Assistant (first-run wizard + re-runnable task catalog).** Auto-redirect on fresh installs
+  guides admins through org type → teams → queues → agents → customers → SLAs → create; re-runnable
+  assistant page shows entity snapshot and mini-wizards for common operations. Plugin-extensible via
+  `GKRegistration.SetupTasks`. JSON API at `/api/v1/admin/setup/*` enables programmatic/LLM-driven
+  configuration (`internal/service/setup_assistant_service.go`, HTML/API handlers in `internal/api`).
 
 ### Changed
 - **Platform/product decoupling (Phases 1–8).** Moved platform code out of product packages into

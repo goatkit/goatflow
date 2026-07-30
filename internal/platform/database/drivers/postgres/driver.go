@@ -119,7 +119,7 @@ func (d *PostgreSQLDriver) CreateTable(schema database.TableSchema) (database.Qu
 	}
 
 	sql := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (\n    %s\n)",
-		schema.Name, strings.Join(parts, ",\n    "))
+		schema.Name, strings.Join(parts, ",\n    ")) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 	return database.Query{SQL: sql, Args: nil}, nil
 }
@@ -127,7 +127,7 @@ func (d *PostgreSQLDriver) CreateTable(schema database.TableSchema) (database.Qu
 // DropTable generates a DROP TABLE query.
 func (d *PostgreSQLDriver) DropTable(tableName string) (database.Query, error) {
 	return database.Query{
-		SQL:  fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE", tableName),
+		SQL:  fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE", tableName), //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 		Args: nil,
 	}, nil
 }
@@ -163,7 +163,7 @@ func (d *PostgreSQLDriver) Insert(table string, data map[string]interface{}) (da
 	sql := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) RETURNING *",
 		table,
 		strings.Join(columns, ", "),
-		strings.Join(placeholders, ", "))
+		strings.Join(placeholders, ", ")) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 	return database.Query{SQL: sql, Args: values}, nil
 }
@@ -193,14 +193,14 @@ func (d *PostgreSQLDriver) Update(table string, data map[string]interface{}, whe
 	sql := fmt.Sprintf("UPDATE %s SET %s WHERE %s RETURNING *",
 		table,
 		strings.Join(setClauses, ", "),
-		adjustedWhere)
+		adjustedWhere) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 	return database.Query{SQL: sql, Args: values}, nil
 }
 
 // Delete generates a DELETE query.
 func (d *PostgreSQLDriver) Delete(table string, where string, whereArgs ...interface{}) (database.Query, error) {
-	sql := fmt.Sprintf("DELETE FROM %s WHERE %s", table, where)
+	sql := fmt.Sprintf("DELETE FROM %s WHERE %s", table, where) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 	return database.Query{SQL: sql, Args: whereArgs}, nil
 }
 
@@ -211,7 +211,7 @@ func (d *PostgreSQLDriver) Select(table string, columns []string, where string, 
 		cols = strings.Join(columns, ", ")
 	}
 
-	sql := fmt.Sprintf("SELECT %s FROM %s", cols, table)
+	sql := fmt.Sprintf("SELECT %s FROM %s", cols, table) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 	if where != "" {
 		sql += " WHERE " + where
 	}

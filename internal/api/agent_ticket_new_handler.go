@@ -262,7 +262,7 @@ func getQueuesByIDs(db *sql.DB, queueIDs []uint) ([]gin.H, error) {
 		FROM queue
 		WHERE id IN (%s) AND valid_id = 1
 		ORDER BY name
-	`, strings.Join(placeholders, ","))
+	`, strings.Join(placeholders, ",")) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 
 	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
@@ -492,7 +492,7 @@ func loadPreferredQueuesInternal(db *sql.DB, identifiers []string, tableName, id
 		WHERE t.permission_value = 1
 		  AND q.valid_id = 1
 		  AND t.%s IN (%s)
-	`, idColumn, tableName, idColumn, strings.Join(placeholders, ","))
+	`, idColumn, tableName, idColumn, strings.Join(placeholders, ",")) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 
 	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {

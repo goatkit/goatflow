@@ -1,0 +1,263 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("setup.wizard.title")|default:"Setup Wizard - GoatFlow" }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <header class="mb-8 text-center">
+        <h1 class="text-3xl font-bold gk-heading"><span class="gk-text-gradient">{{ t("setup.wizard.welcome")|default:"Welcome to GoatFlow" }}</span></h1>
+        <p class="mt-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("setup.wizard.subtitle")|default:"Let's get your helpdesk configured in a few steps." }}</p>
+    </header>
+
+    <!-- Progress indicator -->
+    <ol id="wizardProgress" class="flex items-center justify-between mb-8 text-xs">
+        <li class="step-dot active" data-step="1">{{ t("setup.wizard.step_type")|default:"1. Type" }}</li>
+        <li class="step-dot" data-step="2">{{ t("setup.wizard.step_teams")|default:"2. Teams" }}</li>
+        <li class="step-dot" data-step="3">{{ t("setup.wizard.step_queues")|default:"3. Queues" }}</li>
+        <li class="step-dot" data-step="4">{{ t("setup.wizard.step_agents")|default:"4. Agents" }}</li>
+        <li class="step-dot" data-step="5">{{ t("setup.wizard.step_customers")|default:"5. Customers" }}</li>
+        <li class="step-dot" data-step="6">{{ t("setup.wizard.step_slas")|default:"6. SLAs" }}</li>
+        <li class="step-dot" data-step="7">{{ t("setup.wizard.step_review")|default:"7. Review" }}</li>
+    </ol>
+
+    <form id="wizardForm" class="gk-card-glow rounded-lg p-6">
+        <!-- Step 1: Org type -->
+        <section class="wizard-step" data-step="1">
+            <h2 class="text-xl font-semibold mb-4" style="color: var(--gk-text-primary);">{{ t("setup.wizard.org_type_heading")|default:"What kind of organisation is this?" }}</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="orgTypeOptions">
+                <label class="org-type"><input type="radio" name="org_type" value="support" checked> {{ t("setup.wizard.org_support")|default:"IT Support Team" }}</label>
+                <label class="org-type"><input type="radio" name="org_type" value="ops"> {{ t("setup.wizard.org_ops")|default:"IT Operations" }}</label>
+                <label class="org-type"><input type="radio" name="org_type" value="customer_service"> {{ t("setup.wizard.org_cs")|default:"Customer Service" }}</label>
+                <label class="org-type"><input type="radio" name="org_type" value="other"> {{ t("setup.wizard.org_other")|default:"Other" }}</label>
+            </div>
+        </section>
+
+        <!-- Step 2: Teams -->
+        <section class="wizard-step hidden" data-step="2">
+            <h2 class="text-xl font-semibold mb-1" style="color: var(--gk-text-primary);">{{ t("setup.wizard.teams_heading")|default:"Create your teams" }}</h2>
+            <p class="text-xs mb-4" style="color: var(--gk-text-muted);">{{ t("setup.wizard.teams_desc")|default:"Teams own queues and tickets." }}</p>
+            <div id="groupRows" class="space-y-2"></div>
+            <button type="button" class="gk-btn-secondary mt-3" onclick="addGroupRow()">{{ t("setup.wizard.add_team")|default:"+ Add team" }}</button>
+        </section>
+
+        <!-- Step 3: Queues -->
+        <section class="wizard-step hidden" data-step="3">
+            <h2 class="text-xl font-semibold mb-1" style="color: var(--gk-text-primary);">{{ t("setup.wizard.queues_heading")|default:"Create ticket queues" }}</h2>
+            <p class="text-xs mb-4" style="color: var(--gk-text-muted);">{{ t("setup.wizard.queues_desc")|default:"A queue is an inbox tickets land in. Assign each queue to one or more teams." }}</p>
+            <div id="queueRows" class="space-y-3"></div>
+            <button type="button" class="gk-btn-secondary mt-3" onclick="addQueueRow()">{{ t("setup.wizard.add_queue")|default:"+ Add queue" }}</button>
+        </section>
+
+        <!-- Step 4: Agents -->
+        <section class="wizard-step hidden" data-step="4">
+            <h2 class="text-xl font-semibold mb-1" style="color: var(--gk-text-primary);">{{ t("setup.wizard.agents_heading")|default:"Add agents" }}</h2>
+            <p class="text-xs mb-4" style="color: var(--gk-text-muted);">{{ t("setup.wizard.agents_desc")|default:"Agents work tickets. A password reset link will be needed before they can log in." }}</p>
+            <div id="agentRows" class="space-y-3"></div>
+            <button type="button" class="gk-btn-secondary mt-3" onclick="addAgentRow()">{{ t("setup.wizard.add_agent")|default:"+ Add agent" }}</button>
+        </section>
+
+        <!-- Step 5: Customers -->
+        <section class="wizard-step hidden" data-step="5">
+            <h2 class="text-xl font-semibold mb-1" style="color: var(--gk-text-primary);">{{ t("setup.wizard.customers_heading")|default:"Onboard customer companies" }}</h2>
+            <p class="text-xs mb-4" style="color: var(--gk-text-muted);">{{ t("setup.wizard.customers_desc")|default:"Optional. Customers use the customer portal to raise tickets." }}</p>
+            <div id="customerRows" class="space-y-3"></div>
+            <button type="button" class="gk-btn-secondary mt-3" onclick="addCustomerRow()">{{ t("setup.wizard.add_customer")|default:"+ Add customer" }}</button>
+        </section>
+
+        <!-- Step 6: SLAs -->
+        <section class="wizard-step hidden" data-step="6">
+            <h2 class="text-xl font-semibold mb-1" style="color: var(--gk-text-primary);">{{ t("setup.wizard.slas_heading")|default:"Configure SLAs" }}</h2>
+            <p class="text-xs mb-4" style="color: var(--gk-text-muted);">{{ t("setup.wizard.slas_desc")|default:"Optional. Times are in minutes (e.g. 60 = 1 hour, 1440 = 1 day)." }}</p>
+            <div id="slaRows" class="space-y-3"></div>
+            <button type="button" class="gk-btn-secondary mt-3" onclick="addSlARow()">{{ t("setup.wizard.add_sla")|default:"+ Add SLA" }}</button>
+        </section>
+
+        <!-- Step 7: Review -->
+        <section class="wizard-step hidden" data-step="7">
+            <h2 class="text-xl font-semibold mb-3" style="color: var(--gk-text-primary);">{{ t("setup.wizard.review_heading")|default:"Review and create" }}</h2>
+            <div id="reviewSummary" class="text-sm space-y-2" style="color: var(--gk-text-secondary);"></div>
+            <p class="mt-4 text-xs" style="color: var(--gk-text-muted);">{{ t("setup.wizard.review_desc")|default:"Creating now will add the entities above. You can adjust everything later from the admin pages." }}</p>
+        </section>
+
+        <!-- Nav -->
+        <div class="flex items-center justify-between mt-8">
+            <button type="button" id="btnBack" class="gk-btn-secondary" onclick="goStep(-1)">{{ t("setup.wizard.back")|default:"Back" }}</button>
+            <span id="wizardError" class="text-sm" style="color: var(--gk-danger, #ef4444);"></span>
+            <button type="button" id="btnNext" class="gk-btn-neon" onclick="goStep(1)">{{ t("setup.wizard.next")|default:"Next" }}</button>
+        </div>
+    </form>
+
+    <!-- Hidden i18n strings consumed by the JS below (no JSON filter needed). -->
+    <div id="setupI18n" class="hidden"
+         data-remove="{{ t("setup.wizard.remove")|default:"Remove" }}"
+         data-team-name="{{ t("setup.wizard.team_name_ph")|default:"Team name (e.g. Support)" }}"
+         data-queue-name="{{ t("setup.wizard.queue_name_ph")|default:"Queue name (e.g. Support Inbox)" }}"
+         data-add-teams-first="{{ t("setup.wizard.add_teams_first")|default:"Add teams first." }}"
+         data-login="{{ t("setup.wizard.login_ph")|default:"Login" }}"
+         data-first-name="{{ t("setup.wizard.first_name_ph")|default:"First name" }}"
+         data-last-name="{{ t("setup.wizard.last_name_ph")|default:"Last name" }}"
+         data-email="{{ t("setup.wizard.email_ph")|default:"Email" }}"
+         data-customer-id="{{ t("setup.wizard.customer_id_ph")|default:"Customer ID (e.g. ACME)" }}"
+         data-company-name="{{ t("setup.wizard.company_name_ph")|default:"Company name" }}"
+         data-sla-name="{{ t("setup.wizard.sla_name_ph")|default:"SLA name (e.g. Standard)" }}"
+         data-first-response="{{ t("setup.wizard.first_response_ph")|default:"First response (min)" }}"
+         data-solution="{{ t("setup.wizard.solution_ph")|default:"Solution (min)" }}"
+         data-creating="{{ t("setup.wizard.creating")|default:"Creating..." }}"
+         data-create="{{ t("setup.wizard.create")|default:"Create" }}"
+         data-next="{{ t("setup.wizard.next")|default:"Next" }}"
+         data-network-error="{{ t("setup.wizard.network_error")|default:"Network error." }}"
+         data-creation-failed="{{ t("setup.wizard.creation_failed")|default:"Creation failed. Check the values and try again." }}"
+         data-add-team-first="{{ t("setup.wizard.add_team_first")|default:"Add at least one team." }}"
+         data-review-teams="{{ t("setup.wizard.review_teams")|default:"Teams" }}"
+         data-review-queues="{{ t("setup.wizard.review_queues")|default:"Queues" }}"
+         data-review-agents="{{ t("setup.wizard.review_agents")|default:"Agents" }}"
+         data-review-customers="{{ t("setup.wizard.review_customers")|default:"Customers" }}"
+         data-review-slas="{{ t("setup.wizard.review_slas")|default:"SLAs" }}"></div>
+</div>
+
+<style>
+    .step-dot { display:flex; align-items:center; gap:.35rem; color: var(--gk-text-muted); }
+    .step-dot.active { color: var(--gk-primary); font-weight:600; }
+    .step-dot::before { content:""; width:1.5rem; height:.25rem; background: var(--gk-border-default); border-radius:9999px; }
+    .step-dot.active::before { background: var(--gk-primary); }
+    .org-type { display:flex; align-items:center; gap:.5rem; padding:.6rem .8rem; border:1px solid var(--gk-border-default); border-radius:.5rem; cursor:pointer; color: var(--gk-text-primary); }
+    .row-card { border:1px solid var(--gk-border-default); border-radius:.5rem; padding:.75rem; background: var(--gk-bg-elevated); }
+    .chk { color: var(--gk-text-primary); }
+</style>
+
+<script>
+const I18N = (document.getElementById('setupI18n') || {}).dataset || {};
+let step = 1;
+const TOTAL = 7;
+
+function showStep(n) {
+    document.querySelectorAll('.wizard-step').forEach(s => s.classList.toggle('hidden', s.dataset.step != n));
+    document.querySelectorAll('.step-dot').forEach(d => d.classList.toggle('active', d.dataset.step <= n));
+    document.getElementById('btnBack').style.visibility = n === 1 ? 'hidden' : 'visible';
+    document.getElementById('btnNext').textContent = n === TOTAL ? I18N.create : I18N.next;
+    if (n === 3) renderQueueGroupOptions();
+    if (n === 4) renderAgentGroupOptions();
+    if (n === 7) renderReview();
+    document.getElementById('wizardError').textContent = '';
+}
+function goStep(dir) {
+    const next = step + dir;
+    if (next < 1) return;
+    if (next > TOTAL) { submitWizard(); return; }
+    step = next; showStep(step);
+}
+
+function groupNames() {
+    return [...document.querySelectorAll('#groupRows .group-name')].map(i => i.value.trim()).filter(Boolean);
+}
+function groupCheckboxesHTML(prefix, idx) {
+    const names = groupNames();
+    if (!names.length) return '<span class="text-xs" style="color: var(--gk-text-muted);">' + I18N.addTeamsFirst + '</span>';
+    return names.map((n, i) => '<label class="chk"><input type="checkbox" data-prefix="' + prefix + '" data-row="' + idx + '" value="' + (i+1) + '" onchange="syncGroupIds()"> ' + n + '</label>').join(' ');
+}
+
+function addGroupRow() {
+    const c = document.getElementById('groupRows');
+    const d = document.createElement('div'); d.className = 'row-card flex gap-2';
+    d.innerHTML = '<input type="text" class="group-name gk-input-neon w-full" placeholder="' + I18N.teamName + '"><button type="button" class="gk-btn-secondary" onclick="this.parentElement.remove()">' + I18N.remove + '</button>';
+    c.appendChild(d);
+}
+function addQueueRow() {
+    const c = document.getElementById('queueRows');
+    const idx = c.children.length;
+    const d = document.createElement('div'); d.className = 'row-card';
+    d.innerHTML = '<div class="flex gap-2"><input type="text" class="queue-name gk-input-neon w-full" placeholder="' + I18N.queueName + '"><button type="button" class="gk-btn-secondary" onclick="this.closest(\'.row-card\').remove()">' + I18N.remove + '</button></div>' +
+        '<div class="queue-groups mt-2 text-sm">' + groupCheckboxesHTML('queue', idx) + '</div>' +
+        '<input type="hidden" class="queue-group-ids" data-row="' + idx + '">';
+    c.appendChild(d);
+}
+function addAgentRow() {
+    const c = document.getElementById('agentRows');
+    const idx = c.children.length;
+    const d = document.createElement('div'); d.className = 'row-card';
+    d.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-4 gap-2">' +
+        '<input type="text" class="agent-login gk-input-neon w-full" placeholder="' + I18N.login + '"><input type="text" class="agent-first gk-input-neon w-full" placeholder="' + I18N.firstName + '">' +
+        '<input type="text" class="agent-last gk-input-neon w-full" placeholder="' + I18N.lastName + '"><input type="email" class="agent-email gk-input-neon w-full" placeholder="' + I18N.email + '">' +
+        '</div><div class="agent-groups mt-2 text-sm">' + groupCheckboxesHTML('agent', idx) + '</div>' +
+        '<div class="flex justify-end mt-1"><button type="button" class="gk-btn-secondary" onclick="this.closest(\'.row-card\').remove()">' + I18N.remove + '</button></div>' +
+        '<input type="hidden" class="agent-group-ids" data-row="' + idx + '">';
+    c.appendChild(d);
+}
+function addCustomerRow() {
+    const c = document.getElementById('customerRows');
+    const d = document.createElement('div'); d.className = 'row-card grid grid-cols-1 sm:grid-cols-2 gap-2';
+    d.innerHTML = '<input type="text" class="cust-id gk-input-neon w-full" placeholder="' + I18N.customerId + '"><input type="text" class="cust-name gk-input-neon w-full" placeholder="' + I18N.companyName + '"><button type="button" class="gk-btn-secondary sm:col-span-2" onclick="this.closest(\'.row-card\').remove()">' + I18N.remove + '</button>';
+    c.appendChild(d);
+}
+function addSlARow() {
+    const c = document.getElementById('slaRows');
+    const d = document.createElement('div'); d.className = 'row-card grid grid-cols-1 sm:grid-cols-3 gap-2';
+    d.innerHTML = '<input type="text" class="sla-name gk-input-neon w-full" placeholder="' + I18N.slaName + '"><input type="number" class="sla-frt gk-input-neon w-full" placeholder="' + I18N.firstResponse + '"><input type="number" class="sla-sol gk-input-neon w-full" placeholder="' + I18N.solution + '"><button type="button" class="gk-btn-secondary sm:col-span-3" onclick="this.closest(\'.row-card\').remove()">' + I18N.remove + '</button>';
+    c.appendChild(d);
+}
+
+function renderQueueGroupOptions() {
+    document.querySelectorAll('#queueRows .row-card').forEach((card, idx) => {
+        card.querySelector('.queue-groups').innerHTML = groupCheckboxesHTML('queue', idx);
+    });
+}
+function renderAgentGroupOptions() {
+    document.querySelectorAll('#agentRows .row-card').forEach((card, idx) => {
+        card.querySelector('.agent-groups').innerHTML = groupCheckboxesHTML('agent', idx);
+    });
+}
+function syncGroupIds() {
+    document.querySelectorAll('#queueRows .row-card').forEach(card => {
+        const ids = [...card.querySelectorAll('.queue-groups input:checked')].map(c => parseInt(c.value));
+        card.querySelector('.queue-group-ids').value = ids.join(',');
+    });
+    document.querySelectorAll('#agentRows .row-card').forEach(card => {
+        const ids = [...card.querySelectorAll('.agent-groups input:checked')].map(c => parseInt(c.value));
+        card.querySelector('.agent-group-ids').value = ids.join(',');
+    });
+}
+function parseIds(v) { return (v||'').split(',').map(x=>parseInt(x)).filter(x=>!isNaN(x)&&x>0); }
+
+function collect() {
+    return {
+        org_type: (document.querySelector('input[name=org_type]:checked')||{}).value || 'support',
+        groups: [...document.querySelectorAll('#groupRows .row-card')].map(c => ({ name: c.querySelector('.group-name').value.trim(), comments: '' })).filter(g=>g.name),
+        queues: [...document.querySelectorAll('#queueRows .row-card')].map(c => ({ name: c.querySelector('.queue-name').value.trim(), group_ids: parseIds(c.querySelector('.queue-group-ids').value), comments: '' })).filter(q=>q.name),
+        agents: [...document.querySelectorAll('#agentRows .row-card')].map(c => ({ login: c.querySelector('.agent-login').value.trim(), first_name: c.querySelector('.agent-first').value.trim(), last_name: c.querySelector('.agent-last').value.trim(), email: c.querySelector('.agent-email').value.trim(), group_ids: parseIds(c.querySelector('.agent-group-ids').value) })).filter(a=>a.login),
+        customer_companies: [...document.querySelectorAll('#customerRows .row-card')].map(c => ({ customer_id: c.querySelector('.cust-id').value.trim(), name: c.querySelector('.cust-name').value.trim(), fields: {} })).filter(x=>x.customer_id && x.name),
+        slas: [...document.querySelectorAll('#slaRows .row-card')].map(c => ({ name: c.querySelector('.sla-name').value.trim(), first_response_time: parseInt(c.querySelector('.sla-frt').value)||0, solution_time: parseInt(c.querySelector('.sla-sol').value)||0 })).filter(s=>s.name)
+    };
+}
+function renderReview() {
+    const d = collect();
+    const row = (label, n) => n ? '<div><strong>' + label + ':</strong> ' + n + '</div>' : '';
+    document.getElementById('reviewSummary').innerHTML =
+        row(I18N.reviewTeams, d.groups.map(g=>g.name).join(', ')||'—') +
+        row(I18N.reviewQueues, d.queues.map(q=>q.name).join(', ')||'—') +
+        row(I18N.reviewAgents, d.agents.map(a=>a.login).join(', ')||'—') +
+        row(I18N.reviewCustomers, d.customer_companies.map(c=>c.name).join(', ')||'—') +
+        row(I18N.reviewSlas, d.slas.map(s=>s.name).join(', ')||'—');
+}
+
+function submitWizard() {
+    const err = document.getElementById('wizardError');
+    err.textContent = '';
+    const data = collect();
+    if (!data.groups.length) { step = 2; showStep(2); err.textContent = I18N.addTeamFirst; return; }
+    const btn = document.getElementById('btnNext'); btn.disabled = true; btn.textContent = I18N.creating;
+    fetch('/admin/setup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) })
+        .then(r => r.json())
+        .then(res => {
+            btn.disabled = false;
+            if (res.success && res.redirect) { window.location.href = res.redirect; return; }
+            btn.textContent = I18N.create;
+            err.textContent = res.error || I18N.creationFailed;
+        })
+        .catch(() => { btn.disabled = false; btn.textContent = I18N.create; err.textContent = I18N.networkError; });
+}
+
+// Seed one team row so the wizard is never empty.
+addGroupRow();
+showStep(1);
+</script>
+{% endblock %}

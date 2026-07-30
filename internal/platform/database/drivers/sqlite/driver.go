@@ -132,7 +132,7 @@ func (d *SQLiteDriver) CreateTable(schema database.TableSchema) (database.Query,
 	}
 
 	sql := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (\n    %s\n)",
-		schema.Name, strings.Join(parts, ",\n    "))
+		schema.Name, strings.Join(parts, ",\n    ")) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 	return database.Query{SQL: sql, Args: nil}, nil
 }
@@ -140,7 +140,7 @@ func (d *SQLiteDriver) CreateTable(schema database.TableSchema) (database.Query,
 // DropTable generates a DROP TABLE query.
 func (d *SQLiteDriver) DropTable(tableName string) (database.Query, error) {
 	return database.Query{
-		SQL:  fmt.Sprintf("DROP TABLE IF EXISTS %s", tableName),
+		SQL:  fmt.Sprintf("DROP TABLE IF EXISTS %s", tableName), //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 		Args: nil,
 	}, nil
 }
@@ -174,7 +174,7 @@ func (d *SQLiteDriver) Insert(table string, data map[string]interface{}) (databa
 	sql := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) RETURNING *",
 		table,
 		strings.Join(columns, ", "),
-		strings.Join(placeholders, ", "))
+		strings.Join(placeholders, ", ")) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 	return database.Query{SQL: sql, Args: values}, nil
 }
@@ -196,14 +196,14 @@ func (d *SQLiteDriver) Update(table string, data map[string]interface{}, where s
 	sql := fmt.Sprintf("UPDATE %s SET %s WHERE %s RETURNING *",
 		table,
 		strings.Join(setClauses, ", "),
-		where)
+		where) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 	return database.Query{SQL: sql, Args: values}, nil
 }
 
 // Delete generates a DELETE query.
 func (d *SQLiteDriver) Delete(table string, where string, whereArgs ...interface{}) (database.Query, error) {
-	sql := fmt.Sprintf("DELETE FROM %s WHERE %s", table, where)
+	sql := fmt.Sprintf("DELETE FROM %s WHERE %s", table, where) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 	return database.Query{SQL: sql, Args: whereArgs}, nil
 }
 
@@ -214,7 +214,7 @@ func (d *SQLiteDriver) Select(table string, columns []string, where string, wher
 		cols = strings.Join(columns, ", ")
 	}
 
-	sql := fmt.Sprintf("SELECT %s FROM %s", cols, table)
+	sql := fmt.Sprintf("SELECT %s FROM %s", cols, table) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 	if where != "" {
 		sql += " WHERE " + where
 	}

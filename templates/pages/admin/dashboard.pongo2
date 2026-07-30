@@ -99,6 +99,17 @@
                 </article>
             </div>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <a href="/admin/setup/assistant" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-wand-magic-sparkles text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.setup_assistant")|default:"Setup Assistant" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.setup_assistant_desc")|default:"Guided tasks to configure teams, queues, agents, SLAs and more." }}</p>
+                        </div>
+                    </div>
+                </a>
                 <a href="/admin/users" class="gk-admin-card group">
                     <div class="flex items-start">
                         <div class="gk-admin-card-icon">

@@ -254,7 +254,7 @@ func getScreenConfigMatrixWithDB(db *sql.DB, objectType string) (*ScreenConfigMa
 		SELECT id, field_id, screen_key, config_value, create_time, create_by, change_time, change_by
 		FROM dynamic_field_screen_config
 		WHERE field_id IN (%s)
-	`, strings.Join(placeholders, ",")))
+	`, strings.Join(placeholders, ","))) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 
 	configRows, err := db.Query(configQuery, fieldIDs...)
 	if err != nil {

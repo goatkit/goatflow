@@ -46,7 +46,7 @@ func queueCustomerNoteNotification(params noteNotificationParams) {
 		return
 	}
 
-	emailSubject := fmt.Sprintf("Update on Ticket %s", params.Ticket.TicketNumber)
+	emailSubject := fmt.Sprintf("Update on Ticket %s", params.Ticket.TicketNumber) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 	emailBody := buildNoteEmailBody(params.Subject, params.Body)
 	inReplyTo, references := getThreadingHeaders(params.DB, uint(params.Ticket.ID))
 
@@ -169,7 +169,7 @@ func queueArticleNotificationEmail(db *sql.DB, ticketID int, articleID int64, cu
 
 	subject := "Update on Ticket"
 	if ticketNumber.Valid && ticketNumber.String != "" {
-		subject = fmt.Sprintf("Update on Ticket %s", ticketNumber.String)
+		subject = fmt.Sprintf("Update on Ticket %s", ticketNumber.String) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 	}
 	body := fmt.Sprintf("A new update has been added to your ticket.\n\n%s\n\nBest regards,\nGoatFlow Support Team", articleBody)
 

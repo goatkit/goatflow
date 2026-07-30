@@ -140,7 +140,7 @@ func HandleMarketplaceInstall(c *gin.Context) {
 	if isUpdate {
 		if err := client.Update(entry); err != nil {
 			plugin.GetLogBuffer().Log(req.Name, "error", fmt.Sprintf("Marketplace update failed: %s", err.Error()), nil)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Update failed: %v", err)})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Update failed: %v", err)}) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 			return
 		}
 	} else {

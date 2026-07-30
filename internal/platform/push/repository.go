@@ -67,7 +67,7 @@ func GetSubscriptionsForUsers(ctx context.Context, db *sql.DB, userIDs []int, us
 
 	query := fmt.Sprintf(
 		`SELECT endpoint, p256dh, auth FROM gk_push_subscription WHERE user_id IN (%s) AND user_type = ?`,
-		strings.Join(placeholders, ","))
+		strings.Join(placeholders, ",")) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {

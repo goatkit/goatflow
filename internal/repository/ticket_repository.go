@@ -151,7 +151,7 @@ func (r *TicketRepository) insertTicket(ticket *models.Ticket) error {
 		) VALUES (
 			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
 			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-		) RETURNING id`, database.TicketTypeColumn())
+		) RETURNING id`, database.TicketTypeColumn()) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	// Convert placeholders for MySQL compatibility
 	query = database.ConvertPlaceholders(query)
@@ -1192,7 +1192,7 @@ func (r *TicketRepository) AddTicketHistoryEntry(ctx context.Context, exec inter
 			name, history_type_id, ticket_id, article_id, %s, queue_id, owner_id,
 			priority_id, state_id, create_time, create_by, change_time, change_by
 		) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-	`, database.TicketTypeColumn())
+	`, database.TicketTypeColumn()) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	_, err = executor.ExecContext(ctx, database.ConvertPlaceholders(query),
 		entry.Name,

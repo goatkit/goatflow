@@ -20,6 +20,34 @@ spec:
           template: pages/admin/dashboard.pongo2
           description: "Display admin dashboard with system overview"
 
+        # Setup assistant (first-run wizard + re-runnable task catalog)
+        - path: /setup
+          method: GET
+          handler: handleAdminSetupWizard
+          template: pages/admin/setup_wizard.pongo2
+          description: "First-run setup wizard"
+
+        - path: /setup
+          method: POST
+          handler: handleAdminSetupWizardSubmit
+          description: "Process setup wizard submission"
+
+        - path: /setup/assistant
+          method: GET
+          handler: handleAdminSetupAssistant
+          template: pages/admin/setup_assistant.pongo2
+          description: "Setup assistant task catalog"
+
+        - path: /setup/task/:plugin/:task_id
+          method: GET
+          handler: handleAdminSetupTask
+          description: "Run a setup task (core or plugin)"
+
+        - path: /setup/task/:plugin/:task_id
+          method: POST
+          handler: handleAdminSetupTask
+          description: "Process a setup task submission"
+
         # User management
         - path: /users
           method: GET

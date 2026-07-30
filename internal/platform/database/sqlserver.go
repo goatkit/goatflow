@@ -110,7 +110,7 @@ func (s *SQLServerDatabase) CreateTable(ctx context.Context, definition *TableDe
 
 // DropTable drops a table.
 func (s *SQLServerDatabase) DropTable(ctx context.Context, tableName string) error {
-	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", s.Quote(tableName))
+	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", s.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 	_, err := s.db.ExecContext(ctx, query)
 	return err
 }
@@ -123,7 +123,7 @@ func (s *SQLServerDatabase) CreateIndex(ctx context.Context, tableName, indexNam
 
 // DropIndex drops an index.
 func (s *SQLServerDatabase) DropIndex(ctx context.Context, tableName, indexName string) error {
-	query := fmt.Sprintf("DROP INDEX %s ON %s", s.Quote(indexName), s.Quote(tableName))
+	query := fmt.Sprintf("DROP INDEX %s ON %s", s.Quote(indexName), s.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 	_, err := s.db.ExecContext(ctx, query)
 	return err
 }
@@ -166,7 +166,7 @@ func (s *SQLServerDatabase) BuildSelect(tableName string, columns []string, wher
 
 	query := fmt.Sprintf("SELECT %s FROM %s",
 		strings.Join(quotedColumns, ", "),
-		s.Quote(tableName))
+		s.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 	if where != "" {
 		query += " WHERE " + where
@@ -182,7 +182,7 @@ func (s *SQLServerDatabase) BuildSelect(tableName string, columns []string, wher
 		query = fmt.Sprintf("SELECT TOP %d %s FROM %s",
 			limit,
 			strings.Join(quotedColumns, ", "),
-			s.Quote(tableName))
+			s.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 		if where != "" {
 			query += " WHERE " + where

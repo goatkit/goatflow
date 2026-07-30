@@ -195,7 +195,7 @@ func (r *Repository) AnonymiseEntity(entityType string, entityID int64) error {
 			value = DefaultAnonymiseValue
 		}
 		query := database.ConvertPlaceholders(
-			fmt.Sprintf("UPDATE %s SET %s = ? WHERE id = ?", f.Table, f.Column))
+			fmt.Sprintf("UPDATE %s SET %s = ? WHERE id = ?", f.Table, f.Column)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 		if _, err := r.db.Exec(query, value, entityID); err != nil {
 			return fmt.Errorf("anonymise %s.%s: %w", f.Table, f.Column, err)
 		}

@@ -135,7 +135,7 @@ func (m *MySQLDatabase) CreateTable(ctx context.Context, definition *TableDefini
 
 // DropTable drops a table.
 func (m *MySQLDatabase) DropTable(ctx context.Context, tableName string) error {
-	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", m.Quote(tableName))
+	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", m.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 	_, err := m.db.ExecContext(ctx, query)
 	return err
 }
@@ -156,7 +156,7 @@ func (m *MySQLDatabase) CreateIndex(ctx context.Context, tableName, indexName st
 		uniqueClause,
 		m.Quote(indexName),
 		m.Quote(tableName),
-		strings.Join(quotedColumns, ", "))
+		strings.Join(quotedColumns, ", ")) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 	_, err := m.db.ExecContext(ctx, query)
 	return err
@@ -164,7 +164,7 @@ func (m *MySQLDatabase) CreateIndex(ctx context.Context, tableName, indexName st
 
 // DropIndex drops an index.
 func (m *MySQLDatabase) DropIndex(ctx context.Context, tableName, indexName string) error {
-	query := fmt.Sprintf("DROP INDEX %s ON %s", m.Quote(indexName), m.Quote(tableName))
+	query := fmt.Sprintf("DROP INDEX %s ON %s", m.Quote(indexName), m.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 	_, err := m.db.ExecContext(ctx, query)
 	return err
 }
@@ -207,7 +207,7 @@ func (m *MySQLDatabase) BuildSelect(tableName string, columns []string, where st
 
 	query := fmt.Sprintf("SELECT %s FROM %s",
 		strings.Join(quotedColumns, ", "),
-		m.Quote(tableName))
+		m.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 	if where != "" {
 		query += " WHERE " + where

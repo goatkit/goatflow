@@ -63,6 +63,14 @@ func ConvertPlaceholders(query string) string {
 		panic(fmt.Sprintf("ConvertPlaceholders: $N placeholders are not allowed. Use ? placeholders instead.\nQuery: %s", query))
 	}
 
+	// Reject stacked queries (e.g. "SELECT ...; DROP TABLE users"). This is the
+	// single runtime injection guard for the whole system — every query through
+	// the DB layer passes through here, whether from core code, repositories, or
+	// plugin HostAPI. No call site needs changing.
+	if err := CheckStackedQuery(query); err != nil {
+		panic(fmt.Sprintf("ConvertPlaceholders: %v\nQuery: %s", err, query))
+	}
+
 	if IsMySQL() {
 		// ? placeholders work directly for MySQL
 		// No conversion needed
@@ -195,7 +203,7 @@ func BuildInsertQuery(table string, columns []string, returning bool) string {
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
 		quotedTable,
 		strings.Join(quotedColumns, ", "),
-		strings.Join(placeholders, ", "))
+		strings.Join(placeholders, ", ")) //nolint:gk-sql-sprintf // quoted identifier built from validated table/column args
 
 	if returning && IsPostgreSQL() {
 		query += " RETURNING *"
@@ -216,7 +224,7 @@ func BuildUpdateQuery(table string, setColumns []string, whereClause string) str
 		setClauses[i] = fmt.Sprintf("%s = ?", quotedCol)
 	}
 
-	query := fmt.Sprintf("UPDATE %s SET %s", quotedTable, strings.Join(setClauses, ", "))
+	query := fmt.Sprintf("UPDATE %s SET %s", quotedTable, strings.Join(setClauses, ", ")) //nolint:gk-sql-sprintf // quoted identifier built from validated table/column args
 	if whereClause != "" {
 		query += " WHERE " + whereClause
 	}

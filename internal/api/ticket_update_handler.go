@@ -434,7 +434,7 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 	updateQuery := fmt.Sprintf(
 		"UPDATE ticket SET %s WHERE id = ?",
 		strings.Join(updateFields, ", "),
-	)
+	) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 
 	_, err = db.Exec(database.ConvertPlaceholders(updateQuery), args...)
 	if err != nil {
@@ -466,7 +466,7 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 			t.change_by
 		FROM ticket t
 		WHERE t.id = ?
-	`, typeSelect))
+	`, typeSelect)) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 
 	var ticket struct {
 		ID                int64     `json:"id"`

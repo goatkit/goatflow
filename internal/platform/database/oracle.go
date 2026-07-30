@@ -110,7 +110,7 @@ func (o *OracleDatabase) CreateTable(ctx context.Context, definition *TableDefin
 
 // DropTable drops a table.
 func (o *OracleDatabase) DropTable(ctx context.Context, tableName string) error {
-	query := fmt.Sprintf("DROP TABLE %s", o.Quote(tableName))
+	query := fmt.Sprintf("DROP TABLE %s", o.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 	_, err := o.db.ExecContext(ctx, query)
 	return err
 }
@@ -123,7 +123,7 @@ func (o *OracleDatabase) CreateIndex(ctx context.Context, tableName, indexName s
 
 // DropIndex drops an index.
 func (o *OracleDatabase) DropIndex(ctx context.Context, tableName, indexName string) error {
-	query := fmt.Sprintf("DROP INDEX %s", o.Quote(indexName))
+	query := fmt.Sprintf("DROP INDEX %s", o.Quote(indexName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 	_, err := o.db.ExecContext(ctx, query)
 	return err
 }
@@ -166,7 +166,7 @@ func (o *OracleDatabase) BuildSelect(tableName string, columns []string, where s
 
 	query := fmt.Sprintf("SELECT %s FROM %s",
 		strings.Join(quotedColumns, ", "),
-		o.Quote(tableName))
+		o.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
 	if where != "" {
 		query += " WHERE " + where
@@ -178,7 +178,7 @@ func (o *OracleDatabase) BuildSelect(tableName string, columns []string, where s
 
 	// Oracle uses ROWNUM for limiting
 	if limit > 0 {
-		query = fmt.Sprintf("SELECT * FROM (%s) WHERE ROWNUM <= %d", query, limit)
+		query = fmt.Sprintf("SELECT * FROM (%s) WHERE ROWNUM <= %d", query, limit) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 	}
 
 	return query

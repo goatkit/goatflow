@@ -264,7 +264,7 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 			1, ?, ?,
 			NOW(), ?, NOW(), ?
 		) RETURNING id
-	`, ticketTypeColumn))
+	`, ticketTypeColumn)) //nolint:gk-sql-sprintf // hardcoded column fragment; user values bound via ?
 
 	ticketID, err := adapter.InsertWithReturningTx(
 		tx,
@@ -374,7 +374,7 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 		       ticket_priority_id, customer_user_id, customer_id, create_time
 		FROM ticket
 		WHERE id = ?
-	`, typeSelect))
+	`, typeSelect)) //nolint:gk-sql-sprintf // hardcoded column fragment; user values bound via ?
 
 	row := db.QueryRow(query, ticketID)
 	err = row.Scan(
@@ -647,7 +647,7 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 	updateQuery := database.ConvertPlaceholders(fmt.Sprintf(
 		"UPDATE ticket SET %s WHERE id = ?",
 		strings.Join(setClauses, ", "),
-	))
+	)) //nolint:gk-sql-sprintf // hardcoded column fragment; user values bound via ?
 
 	// Execute update
 	result, err := db.Exec(updateQuery, args...)
@@ -671,7 +671,7 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 		       ticket_lock_id, user_id, responsible_user_id,
 		       create_time, change_time
 		FROM ticket WHERE id = ?
-	`, typeSelectUpdated)), ticketID).Scan(
+	`, typeSelectUpdated)), ticketID).Scan( //nolint:gk-sql-sprintf // hardcoded column fragment; user values bound via ?
 		&ticket.ID, &ticket.TicketNumber, &ticket.Title, &ticket.QueueID,
 		&ticket.TypeID, &ticket.TicketStateID, &ticket.TicketPriorityID,
 		&ticket.CustomerUserID, &ticket.CustomerID, &ticket.TicketLockID,

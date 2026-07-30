@@ -217,9 +217,9 @@ func (h *BaseCRUDHandler) Delete(c *gin.Context) {
 
 	var query string
 	if h.Config.SoftDelete {
-		query = fmt.Sprintf("UPDATE %s SET valid_id = 2 WHERE id = ?", h.Config.TableName)
+		query = fmt.Sprintf("UPDATE %s SET valid_id = 2 WHERE id = ?", h.Config.TableName) //nolint:gk-sql-sprintf // trusted table name from validated CRUD config; values bound via ?
 	} else {
-		query = fmt.Sprintf("DELETE FROM %s WHERE id = ?", h.Config.TableName)
+		query = fmt.Sprintf("DELETE FROM %s WHERE id = ?", h.Config.TableName) //nolint:gk-sql-sprintf // trusted table name from validated CRUD config; values bound via ?
 	}
 
 	_, err := h.DB.Exec(query, id)
@@ -286,7 +286,7 @@ func (h *BaseCRUDHandler) Search(c *gin.Context) {
 
 func (h *BaseCRUDHandler) buildListQuery() string {
 	columns := h.getSelectColumns()
-	query := fmt.Sprintf("SELECT %s FROM %s", columns, h.Config.TableName)
+	query := fmt.Sprintf("SELECT %s FROM %s", columns, h.Config.TableName) //nolint:gk-sql-sprintf // trusted table name from validated CRUD config; values bound via ?
 
 	if h.Config.SoftDelete {
 		query += " WHERE valid_id = 1"
@@ -298,7 +298,7 @@ func (h *BaseCRUDHandler) buildListQuery() string {
 
 func (h *BaseCRUDHandler) buildGetQuery() string {
 	columns := h.getSelectColumns()
-	return fmt.Sprintf("SELECT %s FROM %s WHERE id = ?", columns, h.Config.TableName)
+	return fmt.Sprintf("SELECT %s FROM %s WHERE id = ?", columns, h.Config.TableName) //nolint:gk-sql-sprintf // trusted table name from validated CRUD config; values bound via ?
 }
 
 func (h *BaseCRUDHandler) buildInsertQuery() string {
@@ -321,7 +321,7 @@ func (h *BaseCRUDHandler) buildInsertQuery() string {
 	return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
 		h.Config.TableName,
 		joinStrings(columns, ", "),
-		joinStrings(placeholders, ", "))
+		joinStrings(placeholders, ", ")) //nolint:gk-sql-sprintf // trusted table name from validated CRUD config; values bound via ?
 }
 
 func (h *BaseCRUDHandler) buildUpdateQuery() string {
@@ -334,7 +334,7 @@ func (h *BaseCRUDHandler) buildUpdateQuery() string {
 
 	return fmt.Sprintf("UPDATE %s SET %s WHERE id = ?",
 		h.Config.TableName,
-		joinStrings(sets, ", "))
+		joinStrings(sets, ", ")) //nolint:gk-sql-sprintf // trusted table name from validated CRUD config; values bound via ?
 }
 
 func (h *BaseCRUDHandler) buildSearchQuery(searchTerm string) string {
@@ -350,7 +350,7 @@ func (h *BaseCRUDHandler) buildSearchQuery(searchTerm string) string {
 	query := fmt.Sprintf("SELECT %s FROM %s WHERE %s",
 		columns,
 		h.Config.TableName,
-		joinStrings(searchableFields, " OR "))
+		joinStrings(searchableFields, " OR ")) //nolint:gk-sql-sprintf // trusted table name from validated CRUD config; values bound via ?
 
 	if h.Config.SoftDelete {
 		query += " AND valid_id = 1"

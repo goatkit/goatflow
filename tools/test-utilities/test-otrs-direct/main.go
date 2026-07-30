@@ -88,7 +88,7 @@ func main() {
 
 	for _, table := range keyTables {
 		var count int
-		err := db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM `%s`", table)).Scan(&count)
+		err := db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM `%s`", table)).Scan(&count) //nolint:gk-sql-sprintf // internal schema name in offline test utility
 		if err != nil {
 			fmt.Printf("  %-20s: Error - %v\n", table, err)
 		} else {

@@ -62,6 +62,11 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/schema_discovery.pongo2":              true,
 	"pages/admin/schema_monitoring.pongo2":             true,
 	"pages/admin/services.pongo2":                      true,
+	"pages/admin/_setup_group_checkboxes.pongo2":       true,
+	"pages/admin/setup_assistant.pongo2":               true,
+	"pages/admin/setup_task_form.pongo2":               true,
+	"pages/admin/setup_wizard.pongo2":                  true,
+	"pages/admin/onboard_customer.pongo2":              true,
 	"pages/admin/signature_form.pongo2":                true,
 	"pages/admin/signatures.pongo2":                    true,
 	"pages/admin/sla.pongo2":                           true,
@@ -1324,7 +1329,7 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
- }
+}
 
 // =============================================================================
 // AGENT TEMPLATE TESTS
@@ -1386,7 +1391,7 @@ func TestAllAgentTemplatesRender(t *testing.T) {
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
- }
+}
 
 // =============================================================================
 // CUSTOMER TEMPLATE TESTS
@@ -1513,7 +1518,7 @@ func TestAllCustomerTemplatesRender(t *testing.T) {
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
- }
+}
 
 // =============================================================================
 // DASHBOARD TEMPLATE TESTS
@@ -1569,7 +1574,7 @@ func TestAllDashboardTemplatesRender(t *testing.T) {
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
- }
+}
 
 // =============================================================================
 // DEV TEMPLATE TESTS
@@ -1637,7 +1642,7 @@ func TestAllQueueTemplatesRender(t *testing.T) {
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
- }
+}
 
 // =============================================================================
 // TICKET TEMPLATE TESTS
@@ -1718,7 +1723,7 @@ func TestAllTicketTemplatesRender(t *testing.T) {
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
- }
+}
 
 // =============================================================================
 // MISC TEMPLATE TESTS
@@ -1829,7 +1834,7 @@ func TestAllMiscTemplatesRender(t *testing.T) {
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
- }
+}
 
 // =============================================================================
 // 100% COVERAGE ENFORCEMENT TEST
@@ -1888,7 +1893,7 @@ func TestAllPageTemplatesHaveCoverage(t *testing.T) {
 		t.Errorf("The following entries in AllPageTemplates map reference non-existent templates:\n%s",
 			strings.Join(stale, "\n"))
 	}
- }
+}
 
 // =============================================================================
 // DYNAMIC TEMPLATE RENDER TEST
@@ -2045,4 +2050,4 @@ func TestAllTemplatesRenderDynamically(t *testing.T) {
 			}
 		})
 	}
- }
+}

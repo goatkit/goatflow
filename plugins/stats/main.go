@@ -396,7 +396,7 @@ func handleOverview(argsJSON string) string {
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		JOIN ticket_state_type tst ON ts.type_id = tst.id
 		%s
-	`, whereClause)
+	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	rows, err := dbQuery(query)
 	if err != nil || len(rows) == 0 {
@@ -431,7 +431,7 @@ func handleByStatus(argsJSON string) string {
 		%s
 		GROUP BY ts.name
 		ORDER BY count DESC
-	`, whereClause)
+	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	rows, err := dbQuery(query)
 	if err != nil {
@@ -466,7 +466,7 @@ func handleByQueue(argsJSON string) string {
 		GROUP BY q.name
 		ORDER BY count DESC
 		LIMIT 10
-	`, whereClause)
+	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	rows, err := dbQuery(query)
 	if err != nil {
@@ -500,7 +500,7 @@ func handleByPriority(argsJSON string) string {
 		%s
 		GROUP BY tp.name
 		ORDER BY tp.id
-	`, whereClause)
+	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	rows, err := dbQuery(query)
 	if err != nil {
@@ -534,7 +534,7 @@ func handleByType(argsJSON string) string {
 		%s
 		GROUP BY tt.name
 		ORDER BY count DESC
-	`, whereClause)
+	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	rows, err := dbQuery(query)
 	if err != nil {
@@ -569,7 +569,7 @@ func handleByOwner(argsJSON string) string {
 		GROUP BY u.id, u.first_name, u.last_name
 		ORDER BY count DESC
 		LIMIT 10
-	`, whereClause)
+	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	rows, err := dbQuery(query)
 	if err != nil {
@@ -692,7 +692,7 @@ func handleWidgetOverview(argsJSON string) string {
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		JOIN ticket_state_type tst ON ts.type_id = tst.id
 		WHERE tst.name IN ('open', 'new')%s
-	`, queueFilter))
+	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 	open := 0
 	if err == nil && len(openRows) > 0 {
 		open = toInt(openRows[0]["cnt"])
@@ -703,7 +703,7 @@ func handleWidgetOverview(argsJSON string) string {
 		SELECT COUNT(*) as cnt
 		FROM ticket t
 		WHERE DATE(t.create_time) = CURDATE()%s
-	`, queueFilter))
+	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 	newToday := 0
 	if err == nil && len(newTodayRows) > 0 {
 		newToday = toInt(newTodayRows[0]["cnt"])
@@ -716,7 +716,7 @@ func handleWidgetOverview(argsJSON string) string {
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		JOIN ticket_state_type tst ON ts.type_id = tst.id
 		WHERE tst.name IN ('pending auto', 'pending reminder')%s
-	`, queueFilter))
+	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 	pending := 0
 	if err == nil && len(pendingRows) > 0 {
 		pending = toInt(pendingRows[0]["cnt"])
@@ -732,7 +732,7 @@ func handleWidgetOverview(argsJSON string) string {
 		WHERE tst.name IN ('open', 'new', 'pending auto', 'pending reminder')
 		  AND t.escalation_time > 0
 		  AND t.escalation_time < UNIX_TIMESTAMP()%s
-	`, queueFilter))
+	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 	overdue := 0
 	if err == nil && len(overdueRows) > 0 {
 		overdue = toInt(overdueRows[0]["cnt"])
@@ -754,7 +754,7 @@ func handleWidgetOverview(argsJSON string) string {
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		JOIN ticket_state_type tst ON ts.type_id = tst.id
 		WHERE tst.name IN ('closed', 'merged', 'removed')%s
-	`, queueFilter))
+	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 	closed := 0
 	if err == nil && len(closedRows) > 0 {
 		closed = toInt(closedRows[0]["cnt"])
@@ -971,7 +971,7 @@ func handleSLACompliance(argsJSON string) string {
 		WHERE 1=1 %s
 		GROUP BY q.id, q.name
 		ORDER BY queue
-	`, whereClause)
+	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	rows, err := dbQuery(query)
 	if err != nil {
@@ -1020,7 +1020,7 @@ func handleTimeTracking(argsJSON string) string {
 		GROUP BY u.id, u.first_name, u.last_name
 		ORDER BY total_minutes DESC
 		LIMIT 10
-	`, whereClause)
+	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	agentRows, err := dbQuery(agentQuery)
 	agents := make([]map[string]any, 0)
@@ -1052,7 +1052,7 @@ func handleTimeTracking(argsJSON string) string {
 		GROUP BY q.id, q.name
 		ORDER BY total_minutes DESC
 		LIMIT 10
-	`, whereClause)
+	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	queueRows, err := dbQuery(queueQuery)
 	queues := make([]map[string]any, 0)

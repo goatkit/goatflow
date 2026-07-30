@@ -1,16 +1,9 @@
 -- MariaDB initialization script for GoatFlow
--- Creates database and user if they don't exist
--- NOTE: User password is set via MYSQL_PASSWORD env var in docker-compose.yml
--- This script only grants privileges; MariaDB image creates user automatically
+-- The goatflow database and user are created automatically by the MariaDB image
+-- via MYSQL_DATABASE / MYSQL_USER / MYSQL_PASSWORD env vars in docker-compose.yml.
+-- Nothing extra needed here.
 
--- Create database if it doesn't exist
+-- Create database if it doesn't exist (for local development)
 CREATE DATABASE IF NOT EXISTS otrs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- The MariaDB image auto-creates the user and grants privileges on MYSQL_DATABASE
--- Flush privileges to ensure they take effect
 FLUSH PRIVILEGES;
-
--- Optional: Set some recommended settings for OTRS compatibility
-SET GLOBAL max_allowed_packet = 67108864; -- 64MB
-SET GLOBAL innodb_log_file_size = 268435456; -- 256MB
-SET GLOBAL query_cache_size = 33554432; -- 32MB

@@ -422,7 +422,7 @@ func HandleUpdateWebhookAPI(c *gin.Context) {
 
 	updateQuery := database.ConvertPlaceholders(
 		fmt.Sprintf("UPDATE webhooks SET %s WHERE id = ?",
-			strings.Join(updateParts, ", ")),
+			strings.Join(updateParts, ", ")), //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 	)
 
 	_, err = db.Exec(updateQuery, args...)
@@ -834,7 +834,7 @@ func HandleRetryWebhookDeliveryAPI(c *gin.Context) {
 		SET next_retry = %s,
 			attempts = attempts + 1
 		WHERE id = ?
-	`, nextRetryExpr)
+	`, nextRetryExpr) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 
 	_, err = database.GetAdapter().Exec(db, updateQuery, deliveryID)
 	if err != nil {

@@ -1,0 +1,17 @@
+{# Reusable group-checkbox block for setup task forms. #}
+{% if NeedsGroups %}
+<div>
+    <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">Teams</label>
+    {% if Groups %}
+    <div class="flex flex-wrap gap-3">
+        {% for g in Groups %}
+        <label class="text-sm" style="color: var(--gk-text-primary);">
+            <input type="checkbox" name="group_ids" value="{{ g.ID }}"> {{ g.Name }}
+        </label>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-xs" style="color: var(--gk-text-muted);">No teams exist yet — create one first.</p>
+    {% endif %}
+</div>
+{% endif %}

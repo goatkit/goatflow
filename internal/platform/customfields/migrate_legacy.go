@@ -195,7 +195,7 @@ func copyLegacyValues(db *sql.DB, lf legacyField, newFieldID int64, newFieldType
 	// Read legacy values.
 	query := database.ConvertPlaceholders(fmt.Sprintf(`
 		SELECT object_id, %s FROM dynamic_field_value WHERE field_id = ?
-	`, srcCol))
+	`, srcCol)) //nolint:gk-sql-sprintf // internal migration schema name
 
 	rows, err := db.Query(query, lf.ID)
 	if err != nil {

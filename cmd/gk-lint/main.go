@@ -5,13 +5,17 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
+
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 const platformPrefix = "internal/platform"
@@ -28,6 +32,7 @@ type violation struct {
 	File   string
 	Line   int
 	Import string
+	Detail string
 }
 
 func main() {
@@ -51,6 +56,12 @@ func main() {
 		fatal(err)
 	}
 	violations = append(violations, transitive...)
+
+	sqlViolations, err := scanSQLSprintf(root)
+	if err != nil {
+		fatal(err)
+	}
+	violations = append(violations, sqlViolations...)
 
 	if len(violations) > 0 {
 		printViolations(violations)
@@ -271,6 +282,160 @@ func allowedImport(importPath string) (string, bool) {
 	return "", false
 }
 
+// scanSQLSprintf walks every non-vendor, non-test .go file and flags
+// fmt.Sprintf calls whose format string is a SQL query containing %s or %v
+// verbs — the pattern that lets a value leak into SQL text. Integer verbs
+// like %d are safe; only string/generic verbs can inject.
+//
+// The heuristic reuses database.IsSQLQuery so the runtime guard and the
+// compile-time lint share one definition of "is this SQL?". Suppress a
+// justified instance (e.g. an allowlisted identifier) with a trailing
+// //nolint:gk-sql-sprintf comment on the Sprintf call's line.
+func scanSQLSprintf(root string) ([]violation, error) {
+	violations := make([]violation, 0)
+	fset := token.NewFileSet()
+
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			name := d.Name()
+			if path != root && (name == "vendor" || name == ".git" || name == "node_modules" || strings.HasPrefix(name, ".")) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(d.Name(), ".go") {
+			return nil
+		}
+		// Test files build throwaway SQL constantly; keep the signal on prod code.
+		if strings.HasSuffix(d.Name(), "_test.go") {
+			return nil
+		}
+
+		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		if err != nil {
+			// Unparseable file is not our concern — let the compiler report it.
+			return nil
+		}
+
+		nolintLines := nolintLineSet(fset, file)
+
+		ast.Inspect(file, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok || sel.Sel.Name != "Sprintf" {
+				return true
+			}
+			id, ok := sel.X.(*ast.Ident)
+			if !ok || id.Name != "fmt" {
+				return true
+			}
+			if len(call.Args) == 0 {
+				return true
+			}
+			lit, ok := call.Args[0].(*ast.BasicLit)
+			if !ok || lit.Kind != token.STRING {
+				return true
+			}
+			raw, err := strconv.Unquote(lit.Value)
+			if err != nil {
+				return true
+			}
+			if !database.IsSQLQuery(raw) {
+				return true
+			}
+			if !hasInjectionVerb(raw) {
+				return true
+			}
+
+			startLine := fset.Position(call.Pos()).Line
+			endLine := fset.Position(call.End()).Line
+			if nolintLines[startLine] || nolintLines[endLine] || nolintLines[startLine-1] {
+				return true
+			}
+
+			rel, relErr := filepath.Rel(root, path)
+			if relErr != nil {
+				rel = path
+			}
+			violations = append(violations, violation{
+				Kind:   "sql-sprintf",
+				File:   filepath.ToSlash(rel),
+				Line:   startLine,
+				Detail: strings.TrimSpace(raw),
+			})
+			return true
+		})
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return violations, nil
+}
+
+// nolintLineSet returns the set of line numbers that carry a
+// //nolint:gk-sql-sprintf directive, so the SQL rule can honour suppressions.
+func nolintLineSet(fset *token.FileSet, file *ast.File) map[int]bool {
+	out := make(map[int]bool)
+	for _, group := range file.Comments {
+		for _, c := range group.List {
+			if strings.Contains(c.Text, "nolint:gk-sql-sprintf") {
+				out[fset.Position(c.Pos()).Line] = true
+			}
+		}
+	}
+	return out
+}
+
+// hasInjectionVerb reports whether the format string contains a %s or %v verb
+// (the verbs that substitute arbitrary values). %d, %t, %f and %% are safe.
+// Handles positional (%[1]s), flagged (%-20s), and precision (%.2f) forms.
+func hasInjectionVerb(format string) bool {
+	for i := 0; i < len(format); i++ {
+		if format[i] != '%' {
+			continue
+		}
+		if i+1 < len(format) && format[i+1] == '%' {
+			i++
+			continue
+		}
+		j := i + 1
+		if j < len(format) && format[j] == '[' {
+			for j < len(format) && format[j] != ']' {
+				j++
+			}
+			if j < len(format) {
+				j++
+			}
+		}
+		for j < len(format) && strings.IndexByte("+-# 0", format[j]) >= 0 {
+			j++
+		}
+		for j < len(format) && format[j] >= '0' && format[j] <= '9' {
+			j++
+		}
+		if j < len(format) && format[j] == '.' {
+			j++
+			for j < len(format) && format[j] >= '0' && format[j] <= '9' {
+				j++
+			}
+		}
+		if j < len(format) {
+			switch format[j] {
+			case 's', 'v':
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func printViolations(violations []violation) {
 	sort.Slice(violations, func(i, j int) bool {
 		if violations[i].Kind != violations[j].Kind {
@@ -278,6 +443,9 @@ func printViolations(violations []violation) {
 		}
 		if violations[i].File != violations[j].File {
 			return violations[i].File < violations[j].File
+		}
+		if violations[i].Line != violations[j].Line {
+			return violations[i].Line < violations[j].Line
 		}
 		return violations[i].Import < violations[j].Import
 	})
@@ -289,6 +457,11 @@ func printViolations(violations []violation) {
 			fmt.Fprintf(os.Stderr, "  direct: %s:%d imports product package %s\n", v.File, v.Line, v.Import)
 		case "transitive":
 			fmt.Fprintf(os.Stderr, "  transitive: internal/platform dependency closure includes product package %s\n", v.Import)
+		case "sql-sprintf":
+			fmt.Fprintf(os.Stderr, "  sql-sprintf: %s:%d builds SQL with %%s/%%v — use parameterised queries instead\n", v.File, v.Line)
+			if v.Detail != "" {
+				fmt.Fprintf(os.Stderr, "    %s\n", v.Detail)
+			}
 		default:
 			fmt.Fprintf(os.Stderr, "  %s: %s %s\n", v.Kind, v.File, v.Import)
 		}

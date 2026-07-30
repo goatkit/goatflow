@@ -492,7 +492,7 @@ func (s *Service) applyActions(ctx context.Context, ticketID int, actions *model
 		setClauses = append(setClauses, "change_time = ?", "change_by = ?")
 		args = append(args, now, userID, ticketID)
 
-		query := fmt.Sprintf("UPDATE ticket SET %s WHERE id = ?", strings.Join(setClauses, ", "))
+		query := fmt.Sprintf("UPDATE ticket SET %s WHERE id = ?", strings.Join(setClauses, ", ")) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 		query = database.ConvertPlaceholders(query)
 
 		if _, err := s.db.ExecContext(ctx, query, args...); err != nil {

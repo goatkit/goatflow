@@ -276,7 +276,7 @@ func handleAdminAttachmentUpdate(c *gin.Context) {
 	args = append(args, id)
 	query := fmt.Sprintf(
 		"UPDATE standard_attachment SET %s WHERE id = ?",
-		strings.Join(updates, ", "))
+		strings.Join(updates, ", ")) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 
 	result, err := db.Exec(database.ConvertPlaceholders(query), args...)
 	if err != nil {

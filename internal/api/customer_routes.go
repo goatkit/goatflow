@@ -604,7 +604,7 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 				0, 0, 0, 0,
 				NOW(), ?, NOW(), ?
 			)
-		`, typeColumn)), tn, title, queueID, serviceIDVal, priorityID, systemUserID, systemUserID, customerID, username, systemUserID, systemUserID)
+		`, typeColumn)), tn, title, queueID, serviceIDVal, priorityID, systemUserID, systemUserID, customerID, username, systemUserID, systemUserID) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 
 		if err != nil {
 			log.Printf("Customer create ticket error: %v", err)

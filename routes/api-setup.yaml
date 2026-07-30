@@ -1,0 +1,41 @@
+---
+# Setup Assistant - Admin API Routes
+# JSON API mirroring the HTML setup assistant; designed for programmatic / LLM
+# driving of first-run and ongoing configuration.
+apiVersion: v1
+kind: RouteGroup
+metadata:
+    name: api-setup-admin
+    description: "Setup assistant admin API (recce, wizard, task catalog)"
+    namespace: default
+    enabled: true
+spec:
+    prefix: /api/v1/admin/setup
+    middleware:
+        - unified_auth
+        - admin
+    routes:
+        - path: /recce
+          method: GET
+          handler: HandleAPISetupRecce
+          description: "Return system snapshot (entity counts + setup status)"
+
+        - path: /wizard
+          method: POST
+          handler: HandleAPISetupWizard
+          description: "Execute the first-run wizard from a single JSON payload"
+
+        - path: /onboard-customer
+          method: POST
+          handler: HandleAPISetupOnboardCustomer
+          description: "Provision a customer company + portal users in one shot"
+
+        - path: /tasks
+          method: GET
+          handler: HandleAPISetupTasks
+          description: "Return the combined core + plugin setup task catalog"
+
+        - path: /tasks/:plugin/:task_id
+          method: POST
+          handler: HandleAPISetupTask
+          description: "Dispatch a plugin setup task"

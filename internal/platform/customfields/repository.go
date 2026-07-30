@@ -364,7 +364,7 @@ func (r *Repository) atomicIncrement(def *FieldDef, objectID int64, op *FieldOp)
 	}
 
 	updateQuery := database.ConvertPlaceholders(
-		fmt.Sprintf("UPDATE gk_custom_field_value SET %s = %s + ? WHERE %s", col, col, where),
+		fmt.Sprintf("UPDATE gk_custom_field_value SET %s = %s + ? WHERE %s", col, col, where), //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 	)
 	result, err := r.db.Exec(updateQuery, args...)
 	if err != nil {
@@ -551,7 +551,7 @@ func (r *Repository) atomicCAS(def *FieldDef, objectID int64, op *FieldOp) error
 	newCol := fieldValueColumn(newFV, col)
 
 	updateQuery := database.ConvertPlaceholders(
-		fmt.Sprintf("UPDATE gk_custom_field_value SET %s = ? WHERE field_id = ? AND object_id = ? AND %s = ?", col, col),
+		fmt.Sprintf("UPDATE gk_custom_field_value SET %s = ? WHERE field_id = ? AND object_id = ? AND %s = ?", col, col), //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 	)
 	result, err := r.db.Exec(updateQuery, newCol, def.ID, objectID, expectCol)
 	if err != nil {
@@ -642,7 +642,7 @@ func (r *Repository) getDefsByNames(entityType string, names []string) (map[stri
 		       create_time, create_by, change_time, change_by
 		FROM gk_custom_field_def
 		WHERE entity_type = ? AND name IN (%s) AND valid_id = 1
-	`, strings.Join(placeholders, ",")))
+	`, strings.Join(placeholders, ","))) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {

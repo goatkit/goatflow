@@ -142,7 +142,7 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	for i := range cols {
 		placeholders[i] = "?"
 	}
-	articleQuery := fmt.Sprintf("INSERT INTO article (%s) VALUES (%s) RETURNING id", strings.Join(cols, ", "), strings.Join(placeholders, ", "))
+	articleQuery := fmt.Sprintf("INSERT INTO article (%s) VALUES (%s) RETURNING id", strings.Join(cols, ", "), strings.Join(placeholders, ", ")) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 	articleQuery = database.ConvertPlaceholders(articleQuery)
 
 	// Use adapter for database-specific handling
@@ -634,7 +634,7 @@ func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Ar
 		LEFT JOIN article_data_mime adm ON a.id = adm.article_id
 		WHERE %s
 		ORDER BY a.create_time DESC, a.id DESC
-		LIMIT 1`, articleTypeExpr, commChannelExpr, selectValid, strings.Join(whereParts, " AND "))
+		LIMIT 1`, articleTypeExpr, commChannelExpr, selectValid, strings.Join(whereParts, " AND ")) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 	query = database.ConvertPlaceholders(query)
 
 	var article models.Article
@@ -717,7 +717,7 @@ func (r *ArticleRepository) GetLatestCustomerArticleForTicket(ticketID uint) (*m
 		LEFT JOIN article_data_mime adm ON a.id = adm.article_id
 		WHERE %s
 		ORDER BY a.create_time DESC, a.id DESC
-		LIMIT 1`, articleTypeExpr, commChannelExpr, selectValid, strings.Join(whereParts, " AND "))
+		LIMIT 1`, articleTypeExpr, commChannelExpr, selectValid, strings.Join(whereParts, " AND ")) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 	query = database.ConvertPlaceholders(query)
 
 	var article models.Article

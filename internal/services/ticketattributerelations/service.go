@@ -253,7 +253,7 @@ func (s *Service) Update(ctx context.Context, id int64, updates map[string]inter
 	query := database.ConvertPlaceholders(fmt.Sprintf(
 		"UPDATE acl_ticket_attribute_relations SET %s WHERE id = ?",
 		strings.Join(setClauses, ", "),
-	))
+	)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	_, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {

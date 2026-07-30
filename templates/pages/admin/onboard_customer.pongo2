@@ -1,0 +1,476 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("onboard.title")|default:"Onboard a Customer - GoatFlow Admin" }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-3xl">
+    <header class="mb-6">
+        <a href="/admin/setup/assistant" class="gk-btn-secondary mb-3 inline-flex items-center">
+            <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            {{ t("onboard.back")|default:"Back to Setup Assistant" }}
+        </a>
+        <h1 class="text-2xl font-bold gk-heading"><span class="gk-text-gradient">{{ t("onboard.heading")|default:"Onboard a Customer" }}</span></h1>
+        <p class="mt-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("onboard.subtitle")|default:"Create the company, provision portal users, and hand out temporary passwords — all in one go." }}</p>
+    </header>
+
+    <!-- Progress -->
+    <ol class="flex items-center justify-between mb-8 text-xs">
+        <li class="ob-step-dot active" data-step="1">{{ t("onboard.step_company")|default:"1. Company" }}</li>
+        <li class="ob-step-dot" data-step="2">{{ t("onboard.step_users")|default:"2. Users" }}</li>
+        <li class="ob-step-dot" data-step="3">{{ t("onboard.step_sla")|default:"3. SLA" }}</li>
+        <li class="ob-step-dot" data-step="4">{{ t("onboard.step_email")|default:"4. Email" }}</li>
+        <li class="ob-step-dot" data-step="5">{{ t("onboard.step_review")|default:"5. Review" }}</li>
+    </ol>
+
+    <div id="obError" class="text-sm mb-3" style="color: var(--gk-danger, #ef4444);"></div>
+
+    <!-- Step 1: Company -->
+    <section class="ob-step gk-card-glow rounded-lg p-6" data-step="1">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+                <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.company_name")|default:"Company name" }} *</label>
+                <input type="text" id="obName" class="gk-input-neon w-full" placeholder="{{ t("onboard.company_name_ph")|default:"Acme Corporation" }}" oninput="syncSuggestedID(); syncServiceName()">
+            </div>
+            <div>
+                <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.customer_id")|default:"Customer ID" }} *</label>
+                <input type="text" id="obCID" class="gk-input-neon w-full" placeholder="{{ t("onboard.customer_id_ph")|default:"ACME" }}">
+            </div>
+        </div>
+        <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.street")|default:"Street" }}</label><input type="text" id="obStreet" class="gk-input-neon w-full"></div>
+            <div><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.city")|default:"City" }}</label><input type="text" id="obCity" class="gk-input-neon w-full"></div>
+            <div><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.zip")|default:"ZIP" }}</label><input type="text" id="obZip" class="gk-input-neon w-full"></div>
+            <div>
+                <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.country")|default:"Country" }}</label>
+                {% include "partials/forms/country_select.pongo2" with field_id="obCountry" field_name="country" select_classes="gk-select-neon w-full mt-1 block" %}
+            </div>
+        </div>
+        <div class="mt-3 grid grid-cols-2 gap-3">
+            <div><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.url")|default:"URL" }}</label><input type="text" id="obUrl" class="gk-input-neon w-full"></div>
+            <div><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.comments")|default:"Comments" }}</label><input type="text" id="obComments" class="gk-input-neon w-full"></div>
+        </div>
+    </section>
+
+    <!-- Step 2: Users -->
+    <section class="ob-step hidden gk-card-glow rounded-lg p-6" data-step="2">
+        <p class="text-xs mb-4" style="color: var(--gk-text-muted);">{{ t("onboard.users_desc")|default:"Add the people who will log in to the customer portal. A temporary password is generated for each." }}</p>
+        <div id="obUserRows" class="space-y-3"></div>
+        <button type="button" class="gk-btn-secondary mt-3" onclick="obAddUser()">{{ t("onboard.add_user")|default:"+ Add user" }}</button>
+    </section>
+
+    <!-- Step 3: Service & SLA (optional) -->
+    <section class="ob-step hidden gk-card-glow rounded-lg p-6" data-step="3">
+        <h2 class="text-sm font-semibold mb-1" style="color: var(--gk-text-primary);">{{ t("onboard.teams_heading")|default:"Managing teams" }}</h2>
+        <p class="text-xs mb-3" style="color: var(--gk-text-muted);">{{ t("onboard.teams_desc")|default:"Which agent teams can see and manage this customer's tickets (OTRS group_customer)." }}</p>
+        <input type="text" id="obGroupSearch" class="gk-input-neon w-full mb-2" placeholder="{{ t("onboard.search_teams")|default:"Search teams..." }}" oninput="filterGroups()">
+        <div id="obGroupList" class="max-h-44 overflow-y-auto flex flex-col gap-1 mb-4 rounded-md p-2" style="background: var(--gk-bg-elevated);">
+            {% if Groups %}
+            {% for g in Groups %}
+            <label class="ob-group-opt text-sm flex items-center gap-2 rounded p-1" style="color: var(--gk-text-primary);" data-name="{{ g.Name }}">
+                <input type="checkbox" class="ob-group" value="{{ g.ID }}"> {{ g.Name }}
+            </label>
+            {% endfor %}
+            {% else %}
+            <span class="text-xs" style="color: var(--gk-text-muted);">{{ t("onboard.no_teams")|default:"No teams exist yet — create one below." }}</span>
+            {% endif %}
+        </div>
+        <div class="border-t pt-3" style="border-color: var(--gk-border-default);">
+            <label class="flex items-center gap-2 text-sm" style="color: var(--gk-text-primary);">
+                <input type="checkbox" id="obCreateGroup" onchange="toggleCreateGroup()">
+                {{ t("onboard.create_team")|default:"Create a new team for this customer" }}
+            </label>
+            <div id="obCreateGroupBlock" class="hidden mt-2">
+                <input type="text" id="obCreateGroupName" class="gk-input-neon w-full" placeholder="{{ t("onboard.team_name")|default:"Team name" }}">
+                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("onboard.create_team_hint")|default:"Recommended from the company ID — edit if you like." }}</p>
+            </div>
+        </div>
+
+        <h2 class="text-sm font-semibold mb-1" style="color: var(--gk-text-primary);">{{ t("onboard.sla_heading")|default:"Service & SLA" }}</h2>
+        <p class="text-xs mb-3" style="color: var(--gk-text-muted);">{{ t("onboard.sla_desc")|default:"Optional. Assign a Service with an SLA so this customer's tickets get response-time targets (OTRS Service/SLA model)." }}</p>
+        <label class="flex items-center gap-2 text-sm" style="color: var(--gk-text-primary);">
+            <input type="checkbox" id="obUseSLA" onchange="toggleSLA()">
+            {{ t("onboard.assign_sla")|default:"Assign an SLA to this customer" }}
+        </label>
+        <div id="obSLABlock" class="hidden mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.sla")|default:"SLA" }}</label>
+                <select id="obSLA" class="gk-select-neon w-full mt-1 block">
+                    {% if SLAs %}
+                    {% for s in SLAs %}<option value="{{ s.ID }}">{{ s.Name }}</option>{% endfor %}
+                    {% else %}
+                    <option value="">{{ t("onboard.no_slas")|default:"No SLAs configured — create one first" }}</option>
+                    {% endif %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.service_name")|default:"Service name" }}</label>
+                <input type="text" id="obServiceName" class="gk-input-neon w-full" placeholder="{{ t("onboard.service_name_ph")|default:"Defaults to company name + Service" }}">
+            </div>
+        </div>
+    </section>
+
+    <!-- Step 4: Email fetching (optional) -->
+    <section class="ob-step hidden gk-card-glow rounded-lg p-6" data-step="4">
+        <p class="text-xs mb-4" style="color: var(--gk-text-muted);">{{ t("onboard.email_desc")|default:"Optional. Fetch this customer's support mailbox into a queue so inbound emails become tickets automatically (OTRS mail_account)." }}</p>
+        <label class="flex items-center gap-2 text-sm" style="color: var(--gk-text-primary);">
+            <input type="checkbox" id="obUseMail" onchange="toggleMail()">
+            {{ t("onboard.setup_mailbox")|default:"Set up an inbound mailbox" }}
+        </label>
+        <div id="obMailBlock" class="hidden mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.mail_login")|default:"Mailbox login / email" }} *</label>
+                <input type="text" id="obMailLogin" class="gk-input-neon w-full" placeholder="{{ t("onboard.mail_login_ph")|default:"support@acme.com" }}">
+            </div>
+            <div>
+                <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.mail_password")|default:"Mailbox password" }} *</label>
+                <input type="password" id="obMailPassword" class="gk-input-neon w-full" autocomplete="new-password">
+            </div>
+            <div>
+                <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.mail_host")|default:"Host" }} *</label>
+                <input type="text" id="obMailHost" class="gk-input-neon w-full" placeholder="{{ t("onboard.mail_host_ph")|default:"imap.acme.com" }}">
+            </div>
+            <div>
+                <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.mail_type")|default:"Protocol" }}</label>
+                <select id="obMailType" class="gk-select-neon w-full mt-1 block">
+                    <option value="IMAP">IMAP</option>
+                    <option value="IMAPTLS">IMAP+TLS</option>
+                    <option value="IMAPS">IMAPS</option>
+                    <option value="POP3">POP3</option>
+                    <option value="POP3S">POP3S</option>
+                </select>
+            </div>
+            <div class="sm:col-span-2">
+                <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.mail_queue")|default:"Destination queue" }} *</label>
+                <div class="flex flex-wrap items-center gap-4 text-sm" style="color: var(--gk-text-primary);">
+                    <label><input type="radio" name="obQueueMode" value="existing" checked onchange="toggleQueueMode()"> {{ t("onboard.queue_existing")|default:"Use existing" }}</label>
+                    <label><input type="radio" name="obQueueMode" value="create" onchange="toggleQueueMode()"> {{ t("onboard.queue_create")|default:"Create new" }}</label>
+                </div>
+                <div id="obQueueExisting" class="mt-2">
+                    <select id="obMailQueue" class="gk-select-neon w-full mt-1 block">
+                        {% if Queues %}
+                        {% for q in Queues %}<option value="{{ q.ID }}">{{ q.Name }}</option>{% endfor %}
+                        {% else %}
+                        <option value="">{{ t("onboard.no_queues")|default:"No queues configured — create one first" }}</option>
+                        {% endif %}
+                    </select>
+                </div>
+                <div id="obQueueCreate" class="hidden mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input type="text" id="obMailCreateQueueName" class="gk-input-neon w-full" placeholder="{{ t("onboard.queue_name_ph")|default:"Queue name (e.g. Acme Support)" }}">
+                    <select id="obMailCreateQueueGroup" class="gk-select-neon w-full mt-1 block">
+                        <option value="">{{ t("onboard.queue_owner")|default:"Owning team" }}</option>
+                        <option id="obNewTeamOption" value="__new__" class="hidden">{{ t("onboard.queue_owner_new")|default:"Use the team being created" }}</option>
+                        {% if Groups %}
+                        {% for g in Groups %}<option value="{{ g.ID }}">{{ g.Name }}</option>{% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.mail_folder")|default:"IMAP folder" }}</label>
+                <input type="text" id="obMailFolder" class="gk-input-neon w-full" placeholder="INBOX">
+            </div>
+        </div>
+    </section>
+
+    <!-- Step 5: Review -->
+    <section class="ob-step hidden gk-card-glow rounded-lg p-6" data-step="5">
+        <div id="obReview" class="text-sm space-y-2" style="color: var(--gk-text-secondary);"></div>
+    </section>
+
+    <!-- Result panel (shown after success) -->
+    <section id="obResult" class="hidden gk-card-glow rounded-lg p-6 mt-4">
+        <h2 class="text-lg font-semibold mb-3" style="color: var(--gk-text-primary);">{{ t("onboard.done")|default:"Onboarding complete" }}</h2>
+        <div id="obResultBody" class="text-sm space-y-3"></div>
+        <div class="mt-4 flex gap-2">
+            <button type="button" class="gk-btn-secondary" onclick="obCopyCredentials()">{{ t("onboard.copy_credentials")|default:"Copy credentials" }}</button>
+            <a href="/admin/setup/assistant" class="gk-btn-neon">{{ t("onboard.done_btn")|default:"Done" }}</a>
+        </div>
+    </section>
+
+    <!-- Nav -->
+    <div class="flex items-center justify-between mt-6">
+        <button type="button" id="obBack" class="gk-btn-secondary" onclick="obGo(-1)">{{ t("onboard.back_btn")|default:"Back" }}</button>
+        <button type="button" id="obNext" class="gk-btn-neon" onclick="obGo(1)">{{ t("onboard.next_btn")|default:"Next" }}</button>
+    </div>
+
+    <!-- i18n strings for JS -->
+    <div id="obI18n" class="hidden"
+         data-mail="{{ t("onboard.review_mail")|default:"Mailbox" }}"
+         data-queue-create="{{ t("onboard.queue_create")|default:"Create new" }}"
+         data-email="{{ t("onboard.email_ph")|default:"Email" }}"
+         data-login="{{ t("onboard.login_ph")|default:"Login" }}"
+         data-first="{{ t("onboard.first_ph")|default:"First name" }}"
+         data-last="{{ t("onboard.last_ph")|default:"Last name" }}"
+         data-title="{{ t("onboard.title_ph")|default:"Title" }}"
+         data-phone="{{ t("onboard.phone_ph")|default:"Phone" }}"
+         data-remove="{{ t("onboard.remove")|default:"Remove" }}"
+         data-creating="{{ t("onboard.creating")|default:"Creating..." }}"
+         data-next="{{ t("onboard.next_btn")|default:"Next" }}"
+         data-create="{{ t("onboard.create_btn")|default:"Create" }}"
+         data-network-error="{{ t("onboard.network_error")|default:"Network error." }}"
+         data-company="{{ t("onboard.review_company")|default:"Company" }}"
+         data-users="{{ t("onboard.review_users")|default:"Portal users" }}"
+         data-service="{{ t("onboard.review_service")|default:"Service / SLA" }}"
+         data-teams="{{ t("onboard.review_teams")|default:"Managing teams" }}"
+         data-mail="{{ t("onboard.review_mail")|default:"Mailbox" }}"
+         data-password="{{ t("onboard.password")|default:"Temporary password" }}"
+         data-none="{{ t("onboard.none")|default:"None" }}"
+         data-err-name="{{ t("onboard.err_name")|default:"Company name is required." }}"
+         data-err-failed="{{ t("onboard.err_failed")|default:"Onboarding failed." }}"></div>
+</div>
+
+<style>
+    .ob-step-dot { color: var(--gk-text-muted); }
+    .ob-step-dot.active { color: var(--gk-primary); font-weight:600; }
+</style>
+
+<script>
+const I18N = (document.getElementById('obI18n') || {}).dataset || {};
+let obStep = 1;
+const TOTAL = 5;
+let obLastResult = null;
+
+function obShow(n) {
+    document.querySelectorAll('.ob-step').forEach(s => s.classList.toggle('hidden', s.dataset.step != n));
+    document.querySelectorAll('.ob-step-dot').forEach(d => d.classList.toggle('active', d.dataset.step <= n));
+    document.getElementById('obBack').style.visibility = n === 1 ? 'hidden' : 'visible';
+    document.getElementById('obNext').textContent = n === TOTAL ? I18N.create : I18N.next;
+    if (n === TOTAL) obRenderReview();
+    document.getElementById('obError').textContent = '';
+}
+function obGo(dir) {
+    const n = obStep + dir;
+    if (n < 1) return;
+    if (n > TOTAL) { obSubmit(); return; }
+    obStep = n; obShow(obStep);
+}
+
+function slugify(name) {
+    let s = (name || '').trim().toUpperCase();
+    let out = '';
+    for (const ch of s) {
+        if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')) out += ch;
+        else if (ch === ' ' || ch === '_' || ch === '-' || ch === '/') out += '-';
+    }
+    return out.replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '').slice(0, 50);
+}
+let obIDTouched = false;
+function syncSuggestedID() {
+    const cid = document.getElementById('obCID');
+    if (!obIDTouched) cid.value = slugify(document.getElementById('obName').value);
+}
+function syncServiceName() {
+    const sn = document.getElementById('obServiceName');
+    if (!sn.dataset.touched) sn.placeholder = (document.getElementById('obName').value || '') + ' Service';
+}
+function toggleSLA() {
+    document.getElementById('obSLABlock').classList.toggle('hidden', !document.getElementById('obUseSLA').checked);
+}
+function toggleQueueMode() {
+    const mode = [...document.getElementsByName('obQueueMode')].find(r => r.checked).value;
+    document.getElementById('obQueueExisting').classList.toggle('hidden', mode !== 'existing');
+    document.getElementById('obQueueCreate').classList.toggle('hidden', mode !== 'create');
+}
+function toggleMail() {
+    document.getElementById('obMailBlock').classList.toggle('hidden', !document.getElementById('obUseMail').checked);
+}
+function filterGroups() {
+    const q = (document.getElementById('obGroupSearch').value || '').toLowerCase();
+    document.querySelectorAll('.ob-group-opt').forEach(lbl => {
+        lbl.style.display = lbl.dataset.name.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+function toggleCreateGroup() {
+    const on = document.getElementById('obCreateGroup').checked;
+    document.getElementById('obCreateGroupBlock').classList.toggle('hidden', !on);
+    const opt = document.getElementById('obNewTeamOption');
+    if (opt) opt.classList.toggle('hidden', !on);
+    if (on) syncCreateGroupName();
+}
+function syncCreateGroupName() {
+    const inp = document.getElementById('obCreateGroupName');
+    if (inp && !inp.dataset.touched) {
+        const cid = (document.getElementById('obCID').value || '').trim();
+        inp.value = cid ? cid + ' Support' : '';
+    }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('obCID').addEventListener('input', () => { obIDTouched = true; syncCreateGroupName(); });
+    document.getElementById('obServiceName').addEventListener('input', function() { this.dataset.touched = '1'; });
+    document.getElementById('obCreateGroupName').addEventListener('input', function() { this.dataset.touched = '1'; });
+    obAddUser();
+    obShow(1);
+});
+
+function obAddUser() {
+    const c = document.getElementById('obUserRows');
+    const d = document.createElement('div');
+    d.className = 'border rounded-md p-3';
+    d.style.borderColor = 'var(--gk-border-default)';
+    d.innerHTML =
+        '<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">' +
+        '<input type="text" class="u-login gk-input-neon w-full" placeholder="' + I18N.login + '">' +
+        '<input type="email" class="u-email gk-input-neon w-full" placeholder="' + I18N.email + '">' +
+        '<input type="text" class="u-first gk-input-neon w-full" placeholder="' + I18N.first + '">' +
+        '<input type="text" class="u-last gk-input-neon w-full" placeholder="' + I18N.last + '">' +
+        '<input type="text" class="u-title gk-input-neon w-full" placeholder="' + I18N.title + '">' +
+        '<input type="text" class="u-phone gk-input-neon w-full" placeholder="' + I18N.phone + '">' +
+        '</div>' +
+        '<div class="flex justify-end mt-1"><button type="button" class="gk-btn-secondary" onclick="this.closest(\'.border.rounded-md\').remove()">' + I18N.remove + '</button></div>';
+    c.appendChild(d);
+}
+
+function obCollect() {
+    const country = (document.getElementById('obCountry') || {}).value || '';
+    const useSLA = document.getElementById('obUseSLA').checked;
+    const slaVal = parseInt((document.getElementById('obSLA') || {}).value || '0', 10);
+    const out = {
+        name: document.getElementById('obName').value.trim(),
+        customer_id: document.getElementById('obCID').value.trim(),
+        street: document.getElementById('obStreet').value.trim(),
+        city: document.getElementById('obCity').value.trim(),
+        zip: document.getElementById('obZip').value.trim(),
+        country: country,
+        url: document.getElementById('obUrl').value.trim(),
+        comments: document.getElementById('obComments').value.trim(),
+        users: [...document.querySelectorAll('#obUserRows > div')].map(card => ({
+            login: card.querySelector('.u-login').value.trim(),
+            email: card.querySelector('.u-email').value.trim(),
+            first_name: card.querySelector('.u-first').value.trim(),
+            last_name: card.querySelector('.u-last').value.trim(),
+            title: card.querySelector('.u-title').value.trim(),
+            phone: card.querySelector('.u-phone').value.trim()
+        })).filter(u => u.login),
+        managing_group_ids: [...document.querySelectorAll('.ob-group:checked')].map(c => parseInt(c.value, 10)).filter(x => x > 0)
+    };
+    if (document.getElementById('obCreateGroup') && document.getElementById('obCreateGroup').checked) {
+        const gn = document.getElementById('obCreateGroupName').value.trim();
+        if (gn) out.create_managing_group_name = gn;
+    }
+    if (useSLA && slaVal > 0) {
+        out.sla_id = slaVal;
+        const sn = document.getElementById('obServiceName').value.trim();
+        if (sn) out.service_name = sn;
+    }
+    if (document.getElementById('obUseMail') && document.getElementById('obUseMail').checked) {
+        const qMode = [...document.getElementsByName('obQueueMode')].find(r => r.checked).value;
+        out.mail_account = {
+            login: document.getElementById('obMailLogin').value.trim(),
+            password: document.getElementById('obMailPassword').value,
+            host: document.getElementById('obMailHost').value.trim(),
+            account_type: (document.getElementById('obMailType') || {}).value || 'IMAP',
+            imap_folder: document.getElementById('obMailFolder').value.trim(),
+            trusted: false
+        };
+        if (qMode === 'create') {
+            out.mail_account.create_queue_name = document.getElementById('obMailCreateQueueName').value.trim();
+            const ownerVal = (document.getElementById('obMailCreateQueueGroup') || {}).value || '';
+            if (ownerVal === '__new__') {
+                out.mail_account.create_queue_use_new_team = true;
+            } else {
+                out.mail_account.create_queue_group_id = parseInt(ownerVal, 10);
+            }
+        } else {
+            out.mail_account.queue_id = parseInt((document.getElementById('obMailQueue') || {}).value || '0', 10);
+        }
+    }
+    return out;
+}
+
+function obRenderReview() {
+    const d = obCollect();
+    const esc = s => (s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+    let html = '<div><strong>' + I18N.company + ':</strong> ' + esc(d.name) + ' <code style="color:var(--gk-text-muted)">' + esc(d.customer_id) + '</code></div>';
+    if (d.users.length) {
+        html += '<div class="mt-2"><strong>' + I18N.users + ':</strong><ul class="list-disc ml-5 mt-1">';
+        for (const u of d.users) html += '<li>' + esc(u.login) + (u.email ? ' &lt;' + esc(u.email) + '&gt;' : '') + '</li>';
+        html += '</ul></div>';
+    } else {
+        html += '<div class="mt-2"><strong>' + I18N.users + ':</strong> ' + I18N.none + '</div>';
+    }
+    {
+        const teamNames = [...document.querySelectorAll('.ob-group:checked')].map(c => c.parentElement.textContent.trim());
+        const parts = [];
+        if (teamNames.length) parts.push(teamNames.join(', '));
+        if (d.create_managing_group_name) parts.push('+ ' + d.create_managing_group_name + ' (new)');
+        if (parts.length) html += '<div class="mt-2"><strong>' + I18N.teams + ':</strong> ' + parts.join('; ') + '</div>';
+    }
+    if (d.sla_id) {
+        const slaSel = document.getElementById('obSLA');
+        const slaName = slaSel.options[slaSel.selectedIndex] ? slaSel.options[slaSel.selectedIndex].text : '';
+        html += '<div class="mt-2"><strong>' + I18N.service + ':</strong> ' + esc(d.service_name || (d.name + ' Service')) + ' &rarr; ' + esc(slaName) + '</div>';
+    }
+    if (d.mail_account) {
+        let qName;
+        if (d.mail_account.create_queue_name) {
+            qName = I18N.queueCreate + ': ' + d.mail_account.create_queue_name;
+        } else {
+            const qSel = document.getElementById('obMailQueue');
+            qName = qSel && qSel.options[qSel.selectedIndex] ? qSel.options[qSel.selectedIndex].text : '';
+        }
+        html += '<div class="mt-2"><strong>' + I18N.mail + ':</strong> ' + esc(d.mail_account.login) + ' @ ' + esc(d.mail_account.host) + ' &rarr; ' + esc(qName) + '</div>';
+    }
+    document.getElementById('obReview').innerHTML = html;
+}
+
+function obSubmit() {
+    const err = document.getElementById('obError'); err.textContent = '';
+    const data = obCollect();
+    if (!data.name) { obStep = 1; obShow(1); err.textContent = I18N.errName; return; }
+    const btn = document.getElementById('obNext'); btn.disabled = true; btn.textContent = I18N.creating;
+    fetch('/admin/setup/task/setup-assistant/create_customer', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(res => {
+        btn.disabled = false; btn.textContent = I18N.create;
+        const out = res.data || res;
+        if (res.success && out && out.success !== false) {
+            obLastResult = out;
+            obRenderResult(out);
+        } else {
+            err.textContent = (out && out.error) || res.error || I18N.errFailed;
+        }
+    })
+    .catch(() => { btn.disabled = false; btn.textContent = I18N.create; err.textContent = I18N.networkError; });
+}
+
+function obRenderResult(out) {
+    document.getElementById('obNext').classList.add('hidden');
+    document.getElementById('obBack').classList.add('hidden');
+    document.querySelectorAll('.ob-step').forEach(s => s.classList.add('hidden'));
+    const esc = s => (s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+    let html = '<div><strong>' + I18N.company + ':</strong> ' + esc(out.company_name) + ' <code style="color:var(--gk-text-muted)">' + esc(out.customer_id) + '</code></div>';
+    {
+        const teamNames = [...document.querySelectorAll('.ob-group:checked')].map(c => c.parentElement.textContent.trim());
+        const parts = [];
+        if (teamNames.length) parts.push(teamNames.join(', '));
+        if (out.created_group_name) parts.push('+ ' + esc(out.created_group_name) + ' (new)');
+        if (parts.length) html += '<div class="mt-2"><strong>' + I18N.teams + ':</strong> ' + parts.join('; ') + '</div>';
+    }
+    if (out.service_id) {
+        html += '<div class="mt-2"><strong>' + I18N.service + ':</strong> ' + esc(out.service_name) + (out.sla_linked ? ' <span style="color:var(--gk-primary)">&checkmark; SLA</span>' : '') + '</div>';
+    }
+    if (out.mail_account_id) {
+        const qSel = document.getElementById('obMailQueue');
+        const qName = qSel && qSel.options[qSel.selectedIndex] ? qSel.options[qSel.selectedIndex].text : '';
+        html += '<div class="mt-2"><strong>' + I18N.mail + ':</strong> ' + esc((document.getElementById('obMailLogin')||{}).value||'') + ' &rarr; ' + esc(qName) + ' <span style="color:var(--gk-primary)">&checkmark;</span></div>';
+    }
+    if (out.users_created && out.users_created.length) {
+        html += '<div class="mt-3"><strong>' + I18N.users + '</strong><table class="w-full text-xs mt-1"><thead><tr style="color:var(--gk-text-muted)"><th class="text-left py-1">Login</th><th class="text-left py-1">Email</th><th class="text-left py-1">' + I18N.password + '</th></tr></thead><tbody>';
+        for (const u of out.users_created) html += '<tr style="border-top:1px solid var(--gk-border-default)"><td class="py-1">' + esc(u.login) + '</td><td class="py-1">' + esc(u.email) + '</td><td class="py-1"><code>' + esc(u.password) + '</code></td></tr>';
+        html += '</tbody></table></div>';
+    }
+    document.getElementById('obResultBody').innerHTML = html;
+    document.getElementById('obResult').classList.remove('hidden');
+}
+
+function obCopyCredentials() {
+    if (!obLastResult) return;
+    let lines = [obLastResult.company_name + ' (' + obLastResult.customer_id + ')'];
+    if (obLastResult.service_name) lines.push('Service: ' + obLastResult.service_name);
+    if (obLastResult.users_created) for (const u of obLastResult.users_created) lines.push(u.login + ' | ' + u.email + ' | ' + u.password);
+    navigator.clipboard.writeText(lines.join('\n'));
+}
+</script>
+{% endblock %}

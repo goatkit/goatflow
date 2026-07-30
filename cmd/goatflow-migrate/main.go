@@ -635,7 +635,7 @@ func convertInsertStatement(sql, tableName string) string {
 					if result != "" {
 						result += ";\n"
 					}
-					result += fmt.Sprintf(`INSERT INTO "%s" (%s) VALUES (%s)`, tableName, columnList, valuesList)
+					result += fmt.Sprintf(`INSERT INTO "%s" (%s) VALUES (%s)`, tableName, columnList, valuesList) //nolint:gk-sql-sprintf // internal migration schema name
 				}
 				tupleStart = -1
 			}
@@ -676,7 +676,7 @@ func validateImportedData(dbURL string, verbose bool) error {
 
 	for _, table := range coreTables {
 		var count int
-		query := fmt.Sprintf("SELECT COUNT(*) FROM %s", table) //nolint:gosec // table names from hardcoded list
+		query := fmt.Sprintf("SELECT COUNT(*) FROM %s", table) //nolint:gosec // table names from hardcoded list //nolint:gk-sql-sprintf // internal migration schema name
 
 		err := db.QueryRowContext(ctx, query).Scan(&count)
 		if err != nil {

@@ -1,0 +1,63 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("setup.assistant.title")|default:"Setup Assistant - GoatFlow Admin" }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <header class="mb-8">
+        <h1 class="text-3xl font-bold gk-heading"><span class="gk-text-gradient">{{ t("setup.assistant.heading")|default:"Setup Assistant" }}</span></h1>
+        <p class="mt-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("setup.assistant.subtitle")|default:"A snapshot of your configuration and guided tasks for common operations." }}</p>
+    </header>
+
+    <!-- Snapshot stat cards -->
+    {% if Snapshot %}
+    <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-10">
+        <div class="gk-card-glow rounded-lg p-4 text-center">
+            <div class="text-3xl font-bold" style="color: var(--gk-primary);">{{ Snapshot.Groups }}</div>
+            <div class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ t("setup.assistant.stat_teams")|default:"Teams" }}</div>
+        </div>
+        <div class="gk-card-glow rounded-lg p-4 text-center">
+            <div class="text-3xl font-bold" style="color: var(--gk-primary);">{{ Snapshot.Queues }}</div>
+            <div class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ t("setup.assistant.stat_queues")|default:"Queues" }}</div>
+        </div>
+        <div class="gk-card-glow rounded-lg p-4 text-center">
+            <div class="text-3xl font-bold" style="color: var(--gk-primary);">{{ Snapshot.Agents }}</div>
+            <div class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ t("setup.assistant.stat_agents")|default:"Agents" }}</div>
+        </div>
+        <div class="gk-card-glow rounded-lg p-4 text-center">
+            <div class="text-3xl font-bold" style="color: var(--gk-primary);">{{ Snapshot.Customers }}</div>
+            <div class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ t("setup.assistant.stat_customers")|default:"Customers" }}</div>
+        </div>
+        <div class="gk-card-glow rounded-lg p-4 text-center">
+            <div class="text-3xl font-bold" style="color: var(--gk-primary);">{{ Snapshot.SLAs }}</div>
+            <div class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ t("setup.assistant.stat_slas")|default:"SLAs" }}</div>
+        </div>
+        <div class="gk-card-glow rounded-lg p-4 text-center">
+            <div class="text-3xl font-bold" style="color: var(--gk-primary);">{{ Snapshot.Roles }}</div>
+            <div class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ t("setup.assistant.stat_roles")|default:"Roles" }}</div>
+        </div>
+    </section>
+    {% if Snapshot.SetupCompleted %}
+    <p class="text-xs mb-8" style="color: var(--gk-text-muted);">{{ t("setup.assistant.complete")|default:"First-run setup is complete. The dashboard will not redirect here again." }}</p>
+    {% else %}
+    <p class="text-xs mb-8" style="color: var(--gk-text-muted);">{{ t("setup.assistant.incomplete")|default:"First-run setup is not yet marked complete." }}</p>
+    {% endif %}
+    {% endif %}
+
+    <!-- Task catalog -->
+    <h2 class="text-lg font-semibold mb-4" style="color: var(--gk-text-primary);">{{ t("setup.assistant.tasks")|default:"Tasks" }}</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for task in Tasks %}
+        <a href="/admin/setup/task/{{ task.Plugin }}/{{ task.ID }}"
+           class="gk-card-glow rounded-lg p-5 block hover:shadow-lg transition-shadow">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium" style="color: var(--gk-text-primary);">{{ task.Title }}</span>
+                <span class="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded" style="background: var(--gk-bg-elevated); color: var(--gk-text-muted);">{{ task.Category }}</span>
+            </div>
+            {% if task.Description %}<p class="text-xs" style="color: var(--gk-text-secondary);">{{ task.Description }}</p>{% endif %}
+            {% if task.Plugin != "setup-assistant" %}<p class="text-[10px] mt-2" style="color: var(--gk-text-muted);">{{ t("setup.assistant.plugin_label")|default:"Plugin" }}: {{ task.Plugin }}</p>{% endif %}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
