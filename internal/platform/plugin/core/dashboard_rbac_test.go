@@ -177,11 +177,15 @@ func seedQueues(t *testing.T) (qa, qb string, g1id, g2id int) {
 func createUserInGroup(t *testing.T, login string, groupID int) int {
 	db, err := database.GetDB()
 	require.NoError(t, err)
-	r, err := db.Exec(`
+	_, err = db.Exec(`
 		INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, 'x', 'RBAC', 'User', 1, NOW(), 1, NOW(), 1)`, login)
 	require.NoError(t, err)
-	uid, _ := r.LastInsertId()
+	// Resolve the id by login rather than trusting LastInsertID: the shared
+	// test DB can race other tests, so we re-query to bind group_user to the
+	// actual committed row.
+	var uid int
+	require.NoError(t, db.QueryRow(`SELECT id FROM users WHERE login = ?`, login).Scan(&uid))
 	_, err = db.Exec(`
 		INSERT INTO group_user (user_id, group_id, permission_key, create_time, change_time, create_by, change_by)
 		VALUES (?, ?, 'rw', NOW(), NOW(), 1, 1)`, uid, groupID)
@@ -226,11 +230,12 @@ func TestQueueStatus_RBAC(t *testing.T) {
 
 		// Admin user: member of the real 'admin' group (bypasses RBAC).
 		login := fmt.Sprintf("rbac_admin_%d", time.Now().UnixNano())
-		r, err := db.Exec(`
+		_, err = db.Exec(`
 			INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
 			VALUES (?, 'x', 'RBAC', 'Admin', 1, NOW(), 1, NOW(), 1)`, login)
 		require.NoError(t, err)
-		uid, _ := r.LastInsertId()
+		var uid int
+		require.NoError(t, db.QueryRow(`SELECT id FROM users WHERE login = ?`, login).Scan(&uid))
 		var adminGrp int
 		err = db.QueryRow("SELECT id FROM `groups` WHERE name = 'admin' AND valid_id = 1 LIMIT 1").Scan(&adminGrp)
 		require.NoError(t, err)
