@@ -40,8 +40,15 @@
                 {% include "pages/admin/_setup_group_checkboxes.pongo2" %}
             {% elif Task.ID == "create_customer" %}
                 <div class="grid grid-cols-3 gap-3">
-                    <div><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">Customer ID *</label><input type="text" name="customer_id" required class="gk-input-neon w-full"></div>
-                    <div class="col-span-2"><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">Company name *</label><input type="text" name="name" required class="gk-input-neon w-full"></div>
+                    <div>
+                        <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">Customer ID *</label>
+                        <input type="text" name="customer_id" id="customerId" required class="gk-input-neon w-full">
+                    </div>
+                    <div class="col-span-2 relative">
+                        <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">Company name *</label>
+                        <input type="text" name="name" id="companyName" required class="gk-input-neon w-full" autocomplete="off" placeholder="Type to search or enter new name..." oninput="searchCustomers(this)">
+                        <div id="customerDropdown" class="absolute z-50 w-full mt-1 rounded-md shadow-lg border max-h-48 overflow-y-auto" style="background-color: var(--gk-bg-elevated, #fff); border-color: var(--gk-border-default, #e5e7eb); display: none;"></div>
+                    </div>
                 </div>
                 <div class="mt-3 grid grid-cols-3 gap-3">
                     <div><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">Street</label><input type="text" name="street" class="gk-input-neon w-full"></div>
@@ -59,6 +66,37 @@
                     <div><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">First response (min)</label><input type="number" name="first_response_time" value="60" class="gk-input-neon w-full"></div>
                     <div><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">Solution (min)</label><input type="number" name="solution_time" value="1440" class="gk-input-neon w-full"></div>
                 </div>
+            {% elif Task.ID == "assign_agent_group" %}
+                <div style="position: relative;">
+                    <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">Agent *</label>
+                    <input type="text" id="agent_picker"
+                        data-gk-autocomplete="agents"
+                        data-value-field="id"
+                        data-display-template="{login}"
+                        data-hidden-target="agentId"
+                        data-min-chars="0"
+                        aria-controls="agent_suggestions"
+                        autocomplete="off"
+                        required
+                        class="gk-input-neon w-full"
+                        placeholder="Type to search agents...">
+                    <input type="hidden" id="agentId" name="agent_id">
+                    <div id="agent_suggestions"></div>
+                </div>
+                {% include "pages/admin/_setup_group_checkboxes.pongo2" %}
+            {% elif Task.ID == "assign_queue_group" %}
+                <div><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">Queue *</label>
+                    <select name="queue_id" required class="gk-select-neon w-full">
+                        <option value="">Select a queue...</option>
+                        {% for q in Queues %}<option value="{{ q.ID }}">{{ q.Name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">Team *</label>
+                    <select name="group_id" required class="gk-select-neon w-full">
+                        <option value="">Select a team...</option>
+                        {% for g in Groups %}<option value="{{ g.ID }}">{{ g.Name }}</option>{% endfor %}
+                    </select>
+                </div>
             {% else %}
                 <p class="text-sm" style="color: var(--gk-text-muted);">This task has no inline form. Use the relevant admin page directly.</p>
             {% endif %}
@@ -68,12 +106,84 @@
             <button type="submit" id="taskSubmit" class="gk-btn-neon">{% if IsMarkComplete %}{{ t("setup.task.mark_complete_btn")|default:"Mark complete" }}{% else %}{{ t("setup.task.create_btn")|default:"Create" }}{% endif %}</button>
         </div>
     </form>
+
+    {% if Task.ID == "assign_agent_group" %}
+    <script type="application/json" data-gk-seed="agents">[
+    {% for a in Agents %}{"id": {{ a.ID }}, "login": "{{ a.Login|escapejs }}"}{% if not loop.last %},{% endif %}{% endfor %}
+    ]</script>
+    {% endif %}
 </div>
 
 <style>
 </style>
 
 <script>
+let customerSearchTimer = null;
+
+function searchCustomers(input) {
+    clearTimeout(customerSearchTimer);
+    const query = input.value.trim();
+    const dropdown = document.getElementById("customerDropdown");
+    
+    if (query.length < 1) {
+        dropdown.style.display = "none";
+        return;
+    }
+    
+    // Debounce the search
+    customerSearchTimer = setTimeout(() => {
+        fetch("/api/v1/admin/setup/customers/search/" + encodeURIComponent(query))
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.data && data.data.length > 0) {
+                    renderCustomerDropdown(data.data, dropdown);
+                } else {
+                    dropdown.style.display = "none";
+                }
+            })
+            .catch(() => { dropdown.style.display = "none"; });
+    }, 200);
+}
+
+function renderCustomerDropdown(customers, dropdown) {
+    dropdown.innerHTML = "";
+    customers.forEach(c => {
+        const item = document.createElement("div");
+        item.className = "px-3 py-2 cursor-pointer text-sm";
+        item.style.color = "var(--gk-text-primary)";
+        item.textContent = c.label;
+        item.onmouseenter = function() {
+            this.style.backgroundColor = "var(--gk-primary-light, rgba(0,0,0,0.05))";
+        };
+        item.onmouseleave = function() {
+            this.style.backgroundColor = "";
+        };
+        item.onclick = function(e) {
+            e.stopPropagation();
+            selectCustomerFromDropdown(c);
+        };
+        dropdown.appendChild(item);
+    });
+    dropdown.style.display = "block";
+}
+
+function selectCustomerFromDropdown(c) {
+    const name = c.label.includes(" (") ? c.label.split(" (")[0] : c.label;
+    document.getElementById("companyName").value = name;
+    document.getElementById("customerId").value = c.value;
+    document.getElementById("customerDropdown").style.display = "none";
+
+    // Existing customer selected - redirect to wizard review mode
+    window.location.href = "/admin/setup/wizard?existing_customer_id=" + encodeURIComponent(c.value);
+}
+
+// Close dropdown when clicking outside
+document.addEventListener("click", function(e) {
+    const dropdown = document.getElementById("customerDropdown");
+    if (dropdown && !e.target.closest(".col-span-2")) {
+        dropdown.style.display = "none";
+    }
+});
 function submitTask(e) {
     e.preventDefault();
     const msg = document.getElementById('taskMsg'); msg.textContent = '';

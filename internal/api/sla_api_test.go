@@ -474,7 +474,7 @@ func ensureSLATestSchema(t *testing.T, db *sql.DB) {
 func resetSLATestData(t *testing.T, db *sql.DB) {
 	t.Helper()
 
-	_, err := db.Exec("DELETE FROM tickets")
+	_, err := db.Exec("DELETE FROM service_sla")
 	require.NoError(t, err)
 	_, err = db.Exec("DELETE FROM sla")
 	require.NoError(t, err)

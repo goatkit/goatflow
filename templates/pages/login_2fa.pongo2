@@ -6,7 +6,7 @@
 <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-sm relative z-10">
         <div class="gk-logo-glow gk-float mx-auto w-24 h-24" style="color: var(--gk-primary);">
-            <img class="w-full h-full" src="/static/favicon.svg" alt="{{ t('app.logo_alt')|default:'GoatFlow logo' }}">
+            <img class="w-full h-full" src="/static/favicon.svg?v={{ assetVersion }}" alt="{{ t('app.logo_alt')|default:'GoatFlow logo' }}">
         </div>
         <h2 class="mt-6 text-center text-3xl gk-heading gk-text-gradient">
             {{ t("auth.2fa_title")|default:"Two-Factor Authentication" }}

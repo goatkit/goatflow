@@ -40,7 +40,7 @@
                 {% if QueueMeta.SystemAddressDisplay %}
                 <p class="text-sm" style="color: var(--gk-text-primary);">{{ QueueMeta.SystemAddressDisplay }}</p>
                 {% endif %}
-                {% if QueueMeta.SystemAddressID %}
+                {% if QueueMeta.SystemAddressID and User.IsAdmin %}
                 <a href="/admin/email-identities?tab=system-addresses" class="font-mono text-sm hover:opacity-80 transition-opacity" style="color: var(--gk-primary);">
                     {{ QueueMeta.SystemAddressEmail }}
                 </a>

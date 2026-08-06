@@ -73,9 +73,9 @@ func (p *DashboardPlugin) Init(ctx context.Context, host plugin.HostAPI) error {
 func (p *DashboardPlugin) Call(ctx context.Context, fn string, args json.RawMessage) (json.RawMessage, error) {
 	switch fn {
 	case "widget_recent_tickets":
-		return p.handleRecentTickets(ctx)
+		return p.handleRecentTickets(ctx, args)
 	case "widget_queue_status":
-		return p.handleQueueStatus(ctx)
+		return p.handleQueueStatus(ctx, args)
 	default:
 		return nil, fmt.Errorf("unknown function: %s", fn)
 	}
@@ -90,22 +90,63 @@ func (p *DashboardPlugin) Shutdown(ctx context.Context) error {
 }
 
 // handleRecentTickets returns recent tickets widget HTML.
-func (p *DashboardPlugin) handleRecentTickets(ctx context.Context) (json.RawMessage, error) {
-	// Query recent tickets
-	rows, err := p.host.DBQuery(ctx, `
-		SELECT 
-			t.tn as ticket_number,
-			t.title,
-			ts.name as status,
-			tp.name as priority,
-			t.customer_user_id,
-			t.change_time
-		FROM ticket t
-		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
-		ORDER BY t.change_time DESC
-		LIMIT 5
-	`)
+func (p *DashboardPlugin) handleRecentTickets(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
+	userID := widgetArgsUserID(args)
+
+	var rows []map[string]any
+	var err error
+
+	if userID <= 0 {
+		// Unauthenticated: no tickets.
+		rows = nil
+	} else if groupIDs, isAdmin, gErr := p.userEffectiveGroupIDs(ctx, userID); gErr != nil {
+		err = gErr
+	} else if isAdmin {
+		// Admin sees all recent tickets.
+		rows, err = p.host.DBQuery(ctx, `
+			SELECT 
+				t.tn as ticket_number,
+				t.title,
+				ts.name as status,
+				tp.name as priority,
+				t.customer_user_id,
+				t.change_time
+			FROM ticket t
+			JOIN ticket_state ts ON t.ticket_state_id = ts.id
+			JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
+			ORDER BY t.change_time DESC
+			LIMIT 5
+		`)
+	} else if len(groupIDs) == 0 {
+		// No accessible groups: no tickets.
+		rows = nil
+	} else {
+		// Restrict to tickets in queues owned by the user's groups.
+		placeholders := make([]string, len(groupIDs))
+		argsList := make([]any, len(groupIDs))
+		for i, gid := range groupIDs {
+			placeholders[i] = "?"
+			argsList[i] = gid
+		}
+		query := `
+			SELECT 
+				t.tn as ticket_number,
+				t.title,
+				ts.name as status,
+				tp.name as priority,
+				t.customer_user_id,
+				t.change_time
+			FROM ticket t
+			JOIN ticket_state ts ON t.ticket_state_id = ts.id
+			JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
+			WHERE t.queue_id IN (
+				SELECT q.id FROM queue q WHERE q.valid_id = 1 AND q.group_id IN (` +
+			strings.Join(placeholders, ",") + `)
+			)
+			ORDER BY t.change_time DESC
+			LIMIT 5`
+		rows, err = p.host.DBQuery(ctx, query, argsList...)
+	}
 
 	var html strings.Builder
 	html.WriteString(`<ul role="list" class="-my-5 divide-y" style="border-color: var(--gk-border-default);">`)
@@ -215,11 +256,15 @@ func (p *DashboardPlugin) handleRecentTickets(ctx context.Context) (json.RawMess
 }
 
 // handleQueueStatus returns queue status widget HTML.
-func (p *DashboardPlugin) handleQueueStatus(ctx context.Context) (json.RawMessage, error) {
-	// Query queue statistics with full status breakdown
-	// Uses ticket_state_type to properly categorize states regardless of state IDs
-	rows, err := p.host.DBQuery(ctx, `
+func (p *DashboardPlugin) handleQueueStatus(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
+	// Query queue statistics with full status breakdown, restricted to queues
+	// the user's groups own. Uses ticket_state_type to properly categorize
+	// states regardless of state IDs.
+	userID := widgetArgsUserID(args)
+
+	query := `
 		SELECT 
+			q.id as queue_id,
 			q.name as queue_name,
 			COUNT(t.id) as total,
 			SUM(CASE WHEN tst.name = 'new' THEN 1 ELSE 0 END) as new_count,
@@ -230,11 +275,38 @@ func (p *DashboardPlugin) handleQueueStatus(ctx context.Context) (json.RawMessag
 		LEFT JOIN ticket t ON t.queue_id = q.id
 		LEFT JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		LEFT JOIN ticket_state_type tst ON ts.type_id = tst.id
-		WHERE q.valid_id = 1
-		GROUP BY q.id, q.name
-		ORDER BY q.name
-		LIMIT 10
-	`)
+		WHERE q.valid_id = 1 `
+
+	var rows []map[string]any
+	var err error
+
+	if userID <= 0 {
+		rows = nil
+	} else if groupIDs, isAdmin, gErr := p.userEffectiveGroupIDs(ctx, userID); gErr != nil {
+		err = gErr
+	} else if isAdmin {
+		// Admin sees all queues.
+		rows, err = p.host.DBQuery(ctx, query+`
+			GROUP BY q.id, q.name
+			ORDER BY q.name
+			LIMIT 10
+		`)
+	} else if len(groupIDs) == 0 {
+		rows = nil
+	} else {
+		placeholders := make([]string, len(groupIDs))
+		argsList := make([]any, len(groupIDs))
+		for i, gid := range groupIDs {
+			placeholders[i] = "?"
+			argsList[i] = gid
+		}
+		rows, err = p.host.DBQuery(ctx, query+`
+			AND q.group_id IN (`+strings.Join(placeholders, ",")+`)
+			GROUP BY q.id, q.name
+			ORDER BY q.name
+			LIMIT 10
+		`, argsList...)
+	}
 
 	var html strings.Builder
 
@@ -261,6 +333,7 @@ func (p *DashboardPlugin) handleQueueStatus(ctx context.Context) (json.RawMessag
 				<tbody>`)
 
 		for _, row := range rows {
+			queueID := toInt(row["queue_id"])
 			queueName := toString(row["queue_name"])
 			total := toInt(row["total"])
 			newCount := toInt(row["new_count"])
@@ -274,16 +347,20 @@ func (p *DashboardPlugin) handleQueueStatus(ctx context.Context) (json.RawMessag
 				displayName = displayName[:32] + "..."
 			}
 
+			queueURL := fmt.Sprintf("/queues/%d", queueID)
+
 			html.WriteString(fmt.Sprintf(`
 				<tr>
-					<td class="py-2 px-3 truncate" style="color: var(--gk-text-primary); max-width: 200px;" title="%s">%s</td>
+					<td class="py-2 px-3 truncate" style="color: var(--gk-text-primary); max-width: 200px;" title="%s">
+						<a href="%s" class="hover:underline" style="color: inherit; text-decoration: none;">%s</a>
+					</td>
 					<td class="py-2 px-2 text-center">%s</td>
 					<td class="py-2 px-2 text-center">%s</td>
 					<td class="py-2 px-2 text-center">%s</td>
 					<td class="py-2 px-2 text-center">%s</td>
 					<td class="py-2 px-2 text-center font-semibold" style="color: var(--gk-text-primary);">%d</td>
 				</tr>`,
-				escapeHTML(queueName), escapeHTML(displayName),
+				escapeHTML(queueName), queueURL, escapeHTML(displayName),
 				statusBadge(newCount, "new"),
 				statusBadge(openCount, "open"),
 				statusBadge(pendingCount, "pending"),
@@ -327,6 +404,85 @@ func statusBadge(count int, statusType string) string {
 }
 
 // Helper functions
+
+// widgetArgsUserID extracts the authenticated user id from the widget args
+// supplied by the host (keys are injected by buildPluginArgs, e.g. _user_id).
+// Returns 0 when absent or non-numeric, which callers treat as "no access".
+func widgetArgsUserID(args json.RawMessage) int {
+	if len(args) == 0 {
+		return 0
+	}
+	var m map[string]any
+	if err := json.Unmarshal(args, &m); err != nil {
+		return 0
+	}
+	switch v := m["_user_id"].(type) {
+	case float64:
+		return int(v)
+	case string:
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return 0
+}
+
+// userEffectiveGroupIDs returns the set of group IDs the user has 'rw' access
+// to, mirroring QueueAccessService.GetUserEffectiveGroupIDs (direct group_user
+// plus role_user -> group_role). Returns ok=false if the user is admin (admin
+// bypasses queue RBAC and sees everything) or on a query error.
+func (p *DashboardPlugin) userEffectiveGroupIDs(ctx context.Context, userID int) ([]int, bool, error) {
+	if userID <= 0 {
+		return nil, false, nil
+	}
+	// Admin bypass.
+	admRows, err := p.host.DBQuery(ctx, `
+		SELECT COUNT(*) as c
+		FROM group_user gu
+		JOIN `+"`groups`"+` g ON gu.group_id = g.id
+		WHERE gu.user_id = ? AND g.name = 'admin' AND g.valid_id = 1
+	`, userID)
+	if err == nil && len(admRows) > 0 {
+		if toInt(admRows[0]["c"]) > 0 {
+			return nil, true, nil
+		}
+	}
+
+	rows, err := p.host.DBQuery(ctx, `
+		SELECT DISTINCT gu.group_id
+		FROM group_user gu
+		JOIN `+"`groups`"+` g ON gu.group_id = g.id
+		WHERE gu.user_id = ?
+		  AND g.valid_id = 1
+		  AND (gu.permission_key = 'rw' OR gu.permission_key = 'ro')
+		UNION
+		SELECT DISTINCT gr.group_id
+		FROM role_user ru
+		JOIN roles r ON ru.role_id = r.id
+		JOIN group_role gr ON ru.role_id = gr.role_id
+		JOIN `+"`groups`"+` g ON gr.group_id = g.id
+		WHERE ru.user_id = ?
+		  AND r.valid_id = 1
+		  AND g.valid_id = 1
+		  AND (gr.permission_key = 'rw' OR gr.permission_key = 'ro')
+		  AND gr.permission_value = 1
+	`, userID, userID)
+	if err != nil {
+		return nil, false, err
+	}
+
+	seen := make(map[int]struct{})
+	groupIDs := make([]int, 0, len(rows))
+	for _, row := range rows {
+		if n := toInt(row["group_id"]); n > 0 {
+			if _, dup := seen[n]; !dup {
+				seen[n] = struct{}{}
+				groupIDs = append(groupIDs, n)
+			}
+		}
+	}
+	return groupIDs, false, nil
+}
 
 func toString(v any) string {
 	if v == nil {

@@ -6,14 +6,14 @@
     <title>{% block title %}{{ t("app.title") }}{% endblock %}</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v={{ assetVersion }}">
 
     <!-- PWA -->
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="/manifest.json?v={{ assetVersion }}">
     <meta name="theme-color" content="#00E5FF">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="/static/images/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/images/icon-192.png?v={{ assetVersion }}">
 
     <!-- GoatKit Theme initialization (must be inline to prevent flash) -->
     <script>
@@ -65,31 +65,31 @@
             }
 
             // Write the correct theme stylesheet link dynamically
-            document.write('<link id="gk-theme-stylesheet" rel="stylesheet" href="' + getThemePath(theme) + '/theme.css">');
+            document.write('<link id="gk-theme-stylesheet" rel="stylesheet" href="' + getThemePath(theme) + '/theme.css?v={{ assetVersion }}">');
         })();
     </script>
     <noscript>
-        <link id="gk-theme-stylesheet" rel="stylesheet" href="/static/themes/builtin/synthwave/theme.css">
+        <link id="gk-theme-stylesheet" rel="stylesheet" href="/static/themes/builtin/synthwave/theme.css?v={{ assetVersion }}">
     </noscript>
 
     <!-- Service Worker registration -->
     {% include "partials/service_worker_registration.pongo2" %}
 
     <!-- Vendored Fonts (Inter, Space Grotesk) - theme-specific fonts loaded dynamically -->
-    <link rel="stylesheet" href="/static/css/fonts.css">
+    <link rel="stylesheet" href="/static/css/fonts.css?v={{ assetVersion }}">
 
     <!-- Tailwind CSS (production build) -->
-    <link rel="stylesheet" href="/static/css/output.css">
+    <link rel="stylesheet" href="/static/css/output.css?v={{ assetVersion }}">
 
     <!-- Font Awesome Icons (vendored for air-gapped environments) -->
-    <link rel="stylesheet" href="/static/css/fontawesome/all.min.css">
+    <link rel="stylesheet" href="/static/css/fontawesome/all.min.css?v={{ assetVersion }}">
 
     <!-- Alpine.js for interactivity (vendored) -->
-    <script defer src="/static/js/alpine.min.js"></script>
+    <script defer src="/static/js/alpine.min.js?v={{ assetVersion }}"></script>
 
     <!-- HTMX for dynamic updates (vendored) -->
-    <script src="/static/js/htmx.min.js"></script>
-    <script defer src="/static/js/accessibility.js"></script>
+    <script src="/static/js/htmx.min.js?v={{ assetVersion }}"></script>
+    <script defer src="/static/js/accessibility.js?v={{ assetVersion }}"></script>
 
     <!-- HTMX configuration for authentication -->
     <script>
@@ -101,8 +101,8 @@
     </script>
 
     <!-- HTMX extensions (vendored) -->
-    <script src="/static/js/htmx-json-enc.js"></script>
-    <script src="/static/js/htmx-sse.js"></script>
+    <script src="/static/js/htmx-json-enc.js?v={{ assetVersion }}"></script>
+    <script src="/static/js/htmx-sse.js?v={{ assetVersion }}"></script>
 
     <!-- i18n data blocks - MUST be before common.js which reads them -->
     <!-- Validation i18n (only current language) -->
@@ -143,17 +143,17 @@
     }</script>
 
     <!-- Common utilities - loads after i18n data blocks -->
-    <script src="/static/js/common.js"></script>
-    <script src="/static/js/push-manager.js"></script>
+    <script src="/static/js/common.js?v={{ assetVersion }}"></script>
+    <script src="/static/js/push-manager.js?v={{ assetVersion }}"></script>
     <!-- GoatKit Theme Manager -->
-    <script src="/static/js/theme-manager.js"></script>
+    <script src="/static/js/theme-manager.js?v={{ assetVersion }}"></script>
     <!-- GoatKit typeahead enhancement -->
-    <script src="/static/js/goatkit-typeahead.js"></script>
-    <script src="/static/js/goatkit-autocomplete.js"></script>
-    <script src="/static/js/goatkit-validate.js"></script>
-    <script src="/static/js/entity-selector.js"></script>
+    <script src="/static/js/goatkit-typeahead.js?v={{ assetVersion }}"></script>
+    <script src="/static/js/goatkit-autocomplete.js?v={{ assetVersion }}"></script>
+    <script src="/static/js/goatkit-validate.js?v={{ assetVersion }}"></script>
+    <script src="/static/js/entity-selector.js?v={{ assetVersion }}"></script>
     <!-- GoatKit Coachmarks - feature spotlights -->
-    <script src="/static/js/coachmarks.js"></script>
+    <script src="/static/js/coachmarks.js?v={{ assetVersion }}"></script>
 
     <!-- Custom styles -->
     <style>

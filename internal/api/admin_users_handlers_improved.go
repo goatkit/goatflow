@@ -238,7 +238,7 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 	// First, get current group memberships for logging
 	var currentGroups []string
 	rows, err := tx.Query(database.ConvertPlaceholders(`
-		SELECT g.name FROM groups g 
+		SELECT DISTINCT g.name FROM groups g 
 		JOIN group_user gu ON g.id = gu.group_id 
 		WHERE gu.user_id = ? AND g.valid_id = 1`), id)
 	if err == nil {
@@ -311,7 +311,7 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 	// Final verification - query the actual groups from database
 	var finalGroups []string
 	rows, err = db.Query(database.ConvertPlaceholders(`
-		SELECT g.name FROM groups g 
+		SELECT DISTINCT g.name FROM groups g 
 		JOIN group_user gu ON g.id = gu.group_id 
 		WHERE gu.user_id = ? AND g.valid_id = 1
 		ORDER BY g.name`), id)

@@ -342,7 +342,7 @@ func HandleAdminGroupsUsers(c *gin.Context) {
 	}
 
 	rows, err := db.Query(database.ConvertPlaceholders(`
-		SELECT u.id, u.login, u.first_name, u.last_name, u.login as email
+		SELECT DISTINCT u.id, u.login, u.first_name, u.last_name, u.login as email
 		FROM users u
 		JOIN group_user gu ON u.id = gu.user_id
 		WHERE gu.group_id = ? AND u.valid_id = 1

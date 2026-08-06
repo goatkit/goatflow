@@ -55,7 +55,7 @@ func HandleAdminUsers(c *gin.Context) {
 			// Prefetch group memberships for all users
 			gm := map[int][]string{}
 			if gr, gerr := db.Query(database.ConvertPlaceholders(`
-				SELECT gu.user_id, g.name
+				SELECT DISTINCT gu.user_id, g.name
 				FROM group_user gu
 				JOIN groups g ON g.id = gu.group_id
 				WHERE g.valid_id = 1`)); gerr == nil {
@@ -218,7 +218,7 @@ func HandleAdminUserGet(c *gin.Context) {
 
 	// Get user's groups
 	groupQuery := database.ConvertPlaceholders(`
-		SELECT g.id, g.name
+		SELECT DISTINCT g.id, g.name
 		FROM groups g
 		JOIN group_user gu ON g.id = gu.group_id
 		WHERE gu.user_id = ? AND g.valid_id = 1`)
@@ -397,7 +397,7 @@ func HandleAdminUserCreate(c *gin.Context) {
 			WHERE NOT EXISTS (
 				SELECT 1 FROM group_user WHERE user_id = ? AND group_id = ? AND permission_key = 'rw'
 			)`),
-			userID, groupID,
+			userID, groupID, userID, groupID,
 		)
 	}
 

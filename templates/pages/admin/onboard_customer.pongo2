@@ -27,9 +27,18 @@
     <!-- Step 1: Company -->
     <section class="ob-step gk-card-glow rounded-lg p-6" data-step="1">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="sm:col-span-2">
+            <div class="sm:col-span-2 relative">
                 <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.company_name")|default:"Company name" }} *</label>
-                <input type="text" id="obName" class="gk-input-neon w-full" placeholder="{{ t("onboard.company_name_ph")|default:"Acme Corporation" }}" oninput="syncSuggestedID(); syncServiceName()">
+                <input type="text" id="obName" class="gk-input-neon w-full" autocomplete="off"
+                    placeholder="{{ t("onboard.company_name_ph")|default:"Acme Corporation" }}"
+                    data-gk-autocomplete="companies"
+                    data-value-field="customer_id"
+                    data-display-template="{name}"
+                    data-hidden-target="obCID"
+                    data-min-chars="0"
+                    aria-controls="obCustomerSuggestions"
+                    oninput="syncSuggestedID(); syncServiceName()">
+                <div id="obCustomerSuggestions" class="hidden"></div>
             </div>
             <div>
                 <label class="block text-xs mb-1" style="color: var(--gk-text-muted);">{{ t("onboard.customer_id")|default:"Customer ID" }} *</label>
@@ -53,7 +62,14 @@
 
     <!-- Step 2: Users -->
     <section class="ob-step hidden gk-card-glow rounded-lg p-6" data-step="2">
-        <p class="text-xs mb-4" style="color: var(--gk-text-muted);">{{ t("onboard.users_desc")|default:"Add the people who will log in to the customer portal. A temporary password is generated for each." }}</p>
+        <div class="flex items-center justify-between mb-4">
+            <p class="text-xs" style="color: var(--gk-text-muted);">{{ t("onboard.users_desc")|default:"Add the people who will log in to the customer portal. A temporary password is generated for each." }}</p>
+            <span id="obUserCount" class="text-xs px-2 py-1 rounded-full whitespace-nowrap" style="color: var(--gk-text-muted); background: var(--gk-bg-elevated);">0 users</span>
+        </div>
+        <div id="obExistingUsersBanner" class="hidden mb-4 p-3 rounded-md text-xs flex items-center gap-2" style="background: var(--gk-bg-elevated); color: var(--gk-text-secondary);">
+            <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span id="obExistingUsersText"></span>
+        </div>
         <div id="obUserRows" class="space-y-3"></div>
         <button type="button" class="gk-btn-secondary mt-3" onclick="obAddUser()">{{ t("onboard.add_user")|default:"+ Add user" }}</button>
     </section>
@@ -217,6 +233,11 @@
          data-none="{{ t("onboard.none")|default:"None" }}"
          data-err-name="{{ t("onboard.err_name")|default:"Company name is required." }}"
          data-err-failed="{{ t("onboard.err_failed")|default:"Onboarding failed." }}"></div>
+
+    <!-- Seed data for company autocomplete (data-gk-autocomplete) -->
+    <script type="application/json" data-gk-seed="companies">[
+    {% for c in Companies %}{"customer_id": "{{ c.CustomerID|escapejs }}", "name": "{{ c.Name|escapejs }}"}{% if not loop.last %},{% endif %}{% endfor %}
+    ]</script>
 </div>
 
 <style>
@@ -228,7 +249,7 @@
 const I18N = (document.getElementById('obI18n') || {}).dataset || {};
 let obStep = 1;
 const TOTAL = 5;
-let obLastResult = null;
+let obExistingUserCount = 0;
 
 function obShow(n) {
     document.querySelectorAll('.ob-step').forEach(s => s.classList.toggle('hidden', s.dataset.step != n));
@@ -316,8 +337,31 @@ function obAddUser() {
         '<input type="text" class="u-title gk-input-neon w-full" placeholder="' + I18N.title + '">' +
         '<input type="text" class="u-phone gk-input-neon w-full" placeholder="' + I18N.phone + '">' +
         '</div>' +
-        '<div class="flex justify-end mt-1"><button type="button" class="gk-btn-secondary" onclick="this.closest(\'.border.rounded-md\').remove()">' + I18N.remove + '</button></div>';
+        '<div class="flex justify-end mt-1"><button type="button" class="gk-btn-secondary" onclick="this.closest(\'.border.rounded-md\').remove(); updateUserCount()">' + I18N.remove + '</button></div>';
     c.appendChild(d);
+    updateUserCount();
+}
+
+function updateUserCount() {
+    const newRows = document.querySelectorAll('#obUserRows > div').length;
+    const el = document.getElementById('obUserCount');
+    if (el) {
+        const parts = [];
+        if (obExistingUserCount > 0) parts.push(obExistingUserCount + ' existing');
+        if (newRows > 0) parts.push(newRows + ' new');
+        el.textContent = parts.length ? parts.join(' · ') : '0 users';
+    }
+    const banner = document.getElementById('obExistingUsersBanner');
+    const bannerText = document.getElementById('obExistingUsersText');
+    if (banner && bannerText) {
+        if (obExistingUserCount > 0) {
+            banner.classList.remove('hidden');
+            bannerText.textContent = obExistingUserCount + ' portal user' + (obExistingUserCount === 1 ? '' : 's') +
+                ' already exist. Add new users below — their passwords will be generated automatically.';
+        } else {
+            banner.classList.add('hidden');
+        }
+    }
 }
 
 function obCollect() {
@@ -472,5 +516,43 @@ function obCopyCredentials() {
     if (obLastResult.users_created) for (const u of obLastResult.users_created) lines.push(u.login + ' | ' + u.email + ' | ' + u.password);
     navigator.clipboard.writeText(lines.join('\n'));
 }
+
+// When the GoatKit autocomplete component selects an existing company,
+// fetch its full config and populate all address fields.
+document.getElementById('obName').addEventListener('gk:autocomplete:select', function(e) {
+    const {value} = e.detail;
+    obIDTouched = true;
+    fetch('/api/v1/admin/setup/customers/' + encodeURIComponent(value))
+        .then(r => r.json())
+        .then(cfg => {
+            if (!cfg.success || !cfg.data) return;
+            const cust = cfg.data.customer || {};
+            document.getElementById('obStreet').value = cust.street || '';
+            document.getElementById('obCity').value = cust.city || '';
+            document.getElementById('obZip').value = cust.zip || '';
+            document.getElementById('obUrl').value = cust.url || '';
+            document.getElementById('obComments').value = cust.comments || '';
+            const countrySel = document.getElementById('obCountry');
+            if (countrySel && cust.country) {
+                for (const opt of countrySel.options) {
+                    if (opt.value === cust.country) { opt.selected = true; break; }
+                }
+            }
+            syncServiceName();
+
+            // Show existing user count without rendering all rows (scales to any org size).
+            const portalUsers = cfg.data.portal_users || [];
+            obExistingUserCount = portalUsers.length;
+            updateUserCount();
+
+            // Pre-check managing teams already assigned to this customer.
+            document.querySelectorAll('.ob-group').forEach(cb => cb.checked = false);
+            (cfg.data.groups || []).forEach(g => {
+                const cb = document.querySelector('.ob-group[value="' + g.id + '"]');
+                if (cb) cb.checked = true;
+            });
+        })
+        .catch(() => {});
+});
 </script>
 {% endblock %}

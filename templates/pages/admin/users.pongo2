@@ -342,25 +342,66 @@
                         <label for="password" class="form-label">
                             {{ t("admin.password") }} <span id="passwordHint" class="text-xs" style="color: var(--gk-text-muted);">({{ t("admin.leave_blank_to_keep") }})</span>
                         </label>
-                        <input type="password" id="password" name="password" autocomplete="new-password" class="gk-input-neon w-full">
+                        <input type="password" id="password" name="password" autocomplete="new-password"
+                            class="gk-input-neon w-full"
+                            oninput="validatePassword()">
+                    </div>
+
+                    <div>
+                        <label for="userConfirmPassword" class="form-label">
+                            {{ t("admin.confirm_password") }}
+                        </label>
+                        <input type="password" id="userConfirmPassword" name="confirm_password" autocomplete="new-password"
+                            class="gk-input-neon w-full"
+                            oninput="validatePassword()">
+                    </div>
+
+                    <!-- Password validation feedback (shared logic with the reset-password modal) -->
+                    <div class="space-y-2">
+                        <div id="ulengthCheck" class="flex items-center text-sm">
+                            <svg id="ulengthIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            <span class="pw-policy-length" style="color: var(--gk-text-muted);">{{ t("admin.password_requirement_length_initial") }}</span>
+                        </div>
+                        <div id="umatchCheck" class="flex items-center text-sm">
+                            <svg id="umatchIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            <span style="color: var(--gk-text-muted);">{{ t("admin.password_requirement_match") }}</span>
+                        </div>
+                        <div id="ustrengthCheck" class="flex items-center text-sm">
+                            <svg id="ustrengthIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            <span class="pw-policy-strength" style="color: var(--gk-text-muted);">{{ t("admin.password_requirement_contains_default") }}</span>
+                        </div>
                     </div>
 
                     <div>
                         <label class="form-label">
                             {{ t("admin.groups") }}
                         </label>
-                        <div class="mt-1 flex items-center gap-2">
-                            <button type="button" onclick="selectAllGroups(true)" class="gk-btn-secondary text-xs px-2 py-1">{{ t("labels.select_all") }}</button>
-                            <button type="button" onclick="selectAllGroups(false)" class="gk-btn-secondary text-xs px-2 py-1">{{ t("buttons.clear") }}</button>
+                        <div class="mt-1 relative">
+                            <input type="text" id="groupSearch"
+                                data-gk-autocomplete="admin-groups"
+                                data-multiple="true"
+                                data-value-field="name"
+                                data-display-template="{name}"
+                                data-multiple-target="groupIds"
+                                data-chips-target="groupChips"
+                                data-min-chars="0"
+                                placeholder="{{ t('admin.search_groups') }}"
+                                aria-controls="groupSuggestions"
+                                autocomplete="off"
+                                class="gk-input-neon w-full">
+                            <div id="groupSuggestions" class="hidden"></div>
                         </div>
-                        <div id="groupsList" class="mt-2 max-h-64 overflow-y-auto rounded-md divide-y" style="background: var(--gk-bg-elevated); border: 1px solid var(--gk-border-default); border-color: var(--gk-border-default);">
-                            {% for group in Groups %}
-                            <label class="flex items-center gap-2 px-3 py-2 cursor-pointer select-none hover:bg-[var(--gk-primary-subtle)] transition-colors">
-                                <input type="checkbox" name="groups" value="{{ group.Name }}" data-group-id="{{ group.ID }}" class="rounded" style="accent-color: var(--gk-primary);">
-                                <span class="text-sm" style="color: var(--gk-text-primary);">{{ group.Name }}</span>
-                            </label>
-                            {% endfor %}
-                        </div>
+                        <div id="groupChips" class="mt-2 flex flex-wrap gap-1"></div>
+                        <input type="hidden" id="groupIds">
+                        <script type="application/json" data-gk-seed="admin-groups">
+                        [{% for group in Groups %}{"name": "{{ group.Name|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]
+                        </script>
                     </div>
 
                     <div>
@@ -593,8 +634,22 @@ function submitUserForm(event) {
     const formData = new FormData(form);
     const userId = document.getElementById('userId').value;
 
-    // Get selected groups - from checkbox list; send group names
-    const selectedGroups = Array.from(document.querySelectorAll('#groupsList input[name="groups"]:checked')).map(cb => cb.value);
+    // When a new password is entered, bind to the add/edit modal fields and
+    // enforce the shared password policy + confirmation (reused via pwBind).
+    // Note: bind WITHOUT resetting the fields, so the typed value is kept.
+    const newPassword = document.getElementById('password').value;
+    if (newPassword !== '') {
+        pwBind = { ...passwordEditFields };
+        if (!validatePassword()) {
+            showError(i18nMessages.passwordRequirementsIncomplete);
+            return;
+        }
+    }
+
+    // Get selected groups - from the multi-select autocomplete hidden field;
+    // send group names (comma-separated on the hidden input).
+    const groupValue = document.getElementById('groupIds').value;
+    const selectedGroups = groupValue ? groupValue.split(',').filter(Boolean) : [];
 
     // Clear existing groups in formData and add selected ones
     formData.delete('groups');
@@ -663,16 +718,35 @@ function submitUserForm(event) {
     });
 }
 
+// Shared binding for the add/edit-user modal's password fields.
+const passwordEditFields = { field: 'password', confirm: 'userConfirmPassword', lenIcon: 'ulengthIcon', matchIcon: 'umatchIcon', strIcon: 'ustrengthIcon' };
+
+// Bind the shared password validator to the add/edit-user modal fields and
+// reset its confirm field + policy icons. `required` means a password is
+// mandatory (add-user); for edit, blank keeps the existing password.
+function bindUserPasswordUI(required) {
+    pwBind = { ...passwordEditFields };
+    document.getElementById('password').value = '';
+    document.getElementById('userConfirmPassword').value = '';
+    validatePassword(); // reset the three policy icons to neutral
+    document.getElementById('passwordHint').style.display = required ? 'none' : 'inline';
+    const pwd = document.getElementById('password');
+    if (required) pwd.setAttribute('required', 'required'); else pwd.removeAttribute('required');
+}
+
 function showAddUserModal() {
     document.getElementById('modalTitle').textContent = '{{ t("admin.add_user") }}';
     const form = document.getElementById('userForm');
     form.reset();
     document.getElementById('userId').value = '';
-    document.getElementById('passwordHint').style.display = 'none';
-    document.getElementById('password').setAttribute('required', 'required');
+    bindUserPasswordUI(true);
 
     // Clear all group selections
-    document.querySelectorAll('#groupsList input[name="groups"]').forEach(cb => cb.checked = false);
+    if (window.GoatKitAutocomplete && window.GoatKitAutocomplete.clearMultiple) {
+        window.GoatKitAutocomplete.clearMultiple('groupSearch');
+    } else {
+        document.getElementById('groupIds').value = '';
+    }
 
     document.getElementById('userModal').classList.remove('hidden');
 }
@@ -695,14 +769,14 @@ function editUser(userId) {
                 document.getElementById('firstName').value = user.first_name;
                 document.getElementById('lastName').value = user.last_name;
                 document.getElementById('validId').value = user.valid_id;
-                document.getElementById('passwordHint').style.display = 'inline';
-                document.getElementById('password').removeAttribute('required');
-                document.getElementById('password').value = ''; // Clear password field
+                bindUserPasswordUI(false); // reset password + confirm + policy icons
 
-                // Set selected groups - match by name in checkbox list
-                document.querySelectorAll('#groupsList input[name="groups"]').forEach(cb => {
-                    cb.checked = (user.groups || []).includes(cb.value);
-                });
+                // Set selected groups - populate the multi-select autocomplete
+                if (window.GoatKitAutocomplete && window.GoatKitAutocomplete.setMultiple) {
+                    window.GoatKitAutocomplete.setMultiple('groupSearch', user.groups || []);
+                } else {
+                    document.getElementById('groupIds').value = (user.groups || []).join(',');
+                }
 
                 document.getElementById('userModal').classList.remove('hidden');
             }
@@ -715,13 +789,6 @@ function editUser(userId) {
 function closeUserModal() {
     document.getElementById('userModal').classList.add('hidden');
 }
-
-function selectAllGroups(checked) {
-    document.querySelectorAll('#groupsList input[name="groups"]').forEach(cb => {
-        cb.checked = !!checked;
-    });
-}
-
 
 function showError(message) {
     // Check if it's a duplicate key error
@@ -880,7 +947,7 @@ function showGuruMeditation(title, message) {
                             <svg id="lengthIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
-                            <span style="color: var(--gk-text-muted);">{{ t("admin.password_requirement_length_initial") }}</span>
+                            <span class="pw-policy-length" style="color: var(--gk-text-muted);">{{ t("admin.password_requirement_length_initial") }}</span>
                         </div>
                         <div id="matchCheck" class="flex items-center text-sm">
                             <svg id="matchIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -892,7 +959,7 @@ function showGuruMeditation(title, message) {
                             <svg id="strengthIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
-                            <span style="color: var(--gk-text-muted);">{{ t("admin.password_requirement_contains_default") }}</span>
+                            <span class="pw-policy-strength" style="color: var(--gk-text-muted);">{{ t("admin.password_requirement_contains_default") }}</span>
                         </div>
                     </div>
                 </div>
@@ -1066,6 +1133,13 @@ let passwordPolicy = {
     requireSpecial: false
 };
 
+// Shared binding for whichever password mutation is active. validatePassword(),
+// updateValidationIcon() and updatePasswordPolicyDisplay() operate on this, so
+// the policy + confirmation rules live in ONE place and are reused by both the
+// add/edit-user modal and the reset-password modal.
+const passwordResetFields = { field: 'newPassword', confirm: 'confirmPassword', lenIcon: 'lengthIcon', matchIcon: 'matchIcon', strIcon: 'strengthIcon' };
+let pwBind = { ...passwordResetFields };
+
 // Fetch password policy on page load
 fetch('/admin/password-policy', {
     credentials: 'include'
@@ -1165,6 +1239,7 @@ function toggleUserStatus(userId, currentStatus) {
 
 function resetPassword(userId) {
     currentUserId = userId;
+    pwBind = { ...passwordResetFields };
     document.getElementById('newPassword').value = '';
     document.getElementById('confirmPassword').value = '';
     // Reset validation icons
@@ -1212,40 +1287,34 @@ function clearPasswordField(fieldId) {
 }
 
 function updatePasswordPolicyDisplay() {
-    // Update the length requirement text
-    const lengthText = document.querySelector('#lengthCheck span');
-    if (lengthText) {
-        lengthText.textContent = i18nMessages.lengthTemplate.replace('{min}', passwordPolicy.minLength);
-    }
+    // Update length requirement text on every policy checklist on the page
+    // (a shared class keeps this DRY across the add/edit and reset modals).
+    const len = i18nMessages.lengthTemplate.replace('{min}', passwordPolicy.minLength);
+    document.querySelectorAll('.pw-policy-length').forEach(span => { span.textContent = len; });
 
-    // Update the strength requirement text
-    const strengthText = document.querySelector('#strengthCheck span');
-    if (strengthText) {
-        const requirements = [];
-        if (passwordPolicy.requireUppercase) requirements.push(i18nMessages.requirementUppercase);
-        if (passwordPolicy.requireLowercase) requirements.push(i18nMessages.requirementLowercase);
-        if (passwordPolicy.requireDigit) requirements.push(i18nMessages.requirementDigit);
-        if (passwordPolicy.requireSpecial) requirements.push(i18nMessages.requirementSpecial);
-
-        if (requirements.length > 0) {
-            strengthText.textContent = i18nMessages.containsTemplate.replace('{requirements}', requirements.join(', '));
-        } else {
-            strengthText.textContent = i18nMessages.containsNone;
-        }
-    }
+    // Build the strength requirement text once and apply to every checklist
+    const requirements = [];
+    if (passwordPolicy.requireUppercase) requirements.push(i18nMessages.requirementUppercase);
+    if (passwordPolicy.requireLowercase) requirements.push(i18nMessages.requirementLowercase);
+    if (passwordPolicy.requireDigit) requirements.push(i18nMessages.requirementDigit);
+    if (passwordPolicy.requireSpecial) requirements.push(i18nMessages.requirementSpecial);
+    const strength = requirements.length
+        ? i18nMessages.containsTemplate.replace('{requirements}', requirements.join(', '))
+        : i18nMessages.containsNone;
+    document.querySelectorAll('.pw-policy-strength').forEach(span => { span.textContent = strength; });
 }
 
 function validatePassword() {
-    const password = document.getElementById('newPassword').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
+    const password = document.getElementById(pwBind.field).value;
+    const confirmPassword = document.getElementById(pwBind.confirm).value;
 
     // Check length
     const lengthValid = password.length >= passwordPolicy.minLength;
-    updateValidationIcon('lengthIcon', lengthValid);
+    updateValidationIcon(pwBind.lenIcon, lengthValid);
 
     // Check if passwords match
     const matchValid = password !== '' && password === confirmPassword;
-    updateValidationIcon('matchIcon', matchValid);
+    updateValidationIcon(pwBind.matchIcon, matchValid);
 
     // Check strength requirements based on policy
     let strengthValid = true;
@@ -1263,7 +1332,7 @@ function validatePassword() {
         strengthValid = strengthValid && /[!@#$%^&*(),.?":{}|<>]/.test(password);
     }
 
-    updateValidationIcon('strengthIcon', strengthValid);
+    updateValidationIcon(pwBind.strIcon, strengthValid);
 
     return lengthValid && matchValid && strengthValid;
 }
@@ -1277,7 +1346,7 @@ function updateValidationIcon(iconId, isValid) {
         icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
         icon.style.color = 'var(--gk-success)';
         text.style.color = 'var(--gk-success)';
-    } else if (document.getElementById('newPassword').value !== '') {
+    } else if (document.getElementById(pwBind.field).value !== '') {
         icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>';
         icon.style.color = 'var(--gk-error)';
         text.style.color = 'var(--gk-error)';

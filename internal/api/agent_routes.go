@@ -328,7 +328,7 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 
 		// Get available queues for filter
 		queueRows, err := db.Query(database.ConvertPlaceholders(`
-			SELECT q.id, q.name
+			SELECT DISTINCT q.id, q.name
 			FROM queue q
 			JOIN group_user gu ON q.group_id = gu.group_id
 			WHERE gu.user_id = ?

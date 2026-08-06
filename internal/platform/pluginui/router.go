@@ -114,6 +114,33 @@ func buildUIHandler(ui PluginUI, cfg *UIConfig, route UIRouteConfig, caller Plug
 			}
 		}
 
+		// Forward the authenticated user's identity so plugins can resolve the
+		// acting user on UI page calls (same keys as the API buildPluginArgs).
+		// Without this, UI page handlers can only guess who is calling.
+		if userID, exists := c.Get("user_id"); exists {
+			args["_user_id"] = userID
+		}
+		if email, exists := c.Get("user_email"); exists {
+			args["_user_email"] = email
+		}
+		if login, exists := c.Get("user_login"); exists {
+			args["_user_login"] = login
+		} else if username, exists := c.Get("username"); exists {
+			args["_user_login"] = username
+		} else if email, exists := c.Get("user_email"); exists {
+			args["_user_login"] = email
+		}
+		if isAdmin, exists := c.Get("isInAdminGroup"); exists {
+			args["_is_admin"] = isAdmin
+		}
+		if role, exists := c.Get("user_role"); exists {
+			args["_user_role"] = role
+		}
+		if orgID, exists := c.Get("org_id"); exists {
+			args["_org_id"] = orgID
+			args["org_id"] = orgID
+		}
+
 		argsJSON, _ := json.Marshal(args)
 		ctx := c.Request.Context()
 

@@ -90,6 +90,7 @@
     <!-- Hidden i18n strings consumed by the JS below (no JSON filter needed). -->
     <div id="setupI18n" class="hidden"
          data-remove="{{ t("setup.wizard.remove")|default:"Remove" }}"
+         data-search-customer="{{ t("setup.wizard.search_customer")|default:"Type to search existing customer..." }}"
          data-team-name="{{ t("setup.wizard.team_name_ph")|default:"Team name (e.g. Support)" }}"
          data-queue-name="{{ t("setup.wizard.queue_name_ph")|default:"Queue name (e.g. Support Inbox)" }}"
          data-add-teams-first="{{ t("setup.wizard.add_teams_first")|default:"Add teams first." }}"
@@ -185,9 +186,84 @@ function addAgentRow() {
 }
 function addCustomerRow() {
     const c = document.getElementById('customerRows');
-    const d = document.createElement('div'); d.className = 'row-card grid grid-cols-1 sm:grid-cols-2 gap-2';
-    d.innerHTML = '<input type="text" class="cust-id gk-input-neon w-full" placeholder="' + I18N.customerId + '"><input type="text" class="cust-name gk-input-neon w-full" placeholder="' + I18N.companyName + '"><button type="button" class="gk-btn-secondary sm:col-span-2" onclick="this.closest(\'.row-card\').remove()">' + I18N.remove + '</button>';
+    const d = document.createElement('div'); d.className = 'row-card grid grid-cols-1 sm:grid-cols-3 gap-2';
+    d.innerHTML = <div class="relative">
+            <input type="text" class="cust-search gk-input-neon w-full" placeholder="Type to search existing customer..." oninput="searchCustomer(this)">
+            <div class="customer-dropdown absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-32 overflow-y-auto hidden"></div>
+        </div>
+        <input type="text" class="cust-id gk-input-neon w-full" placeholder="' + I18N.customerId + '" onchange="syncCustomerId(this)">
+        <input type="text" class="cust-name gk-input-neon w-full" placeholder="' + I18N.companyName + '"><button type="button" class="gk-btn-secondary sm:col-span-3" onclick="this.closest(\'.row-card\').remove()">' + I18N.remove + '</button>';
     c.appendChild(d);
+}
+
+let customerCache = {};
+
+function searchCustomer(input) {
+    const query = input.value.trim();
+    const dropdown = input.nextElementSibling;
+    
+    if (query.length < 1) {
+        dropdown.classList.add('hidden');
+        return;
+    }
+    
+    // Check cache first
+    if (customerCache[query]) {
+        renderDropdown(customerCache[query], dropdown);
+        return;
+    }
+    
+    // Fetch from API
+    fetch('/api/v1/admin/setup/customers/search/' + encodeURIComponent(query))
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.data) {
+                customerCache[query] = data.data;
+                renderDropdown(data.data, dropdown);
+            } else {
+                dropdown.classList.add('hidden');
+            }
+        })
+        .catch(() => dropdown.classList.add('hidden'));
+}
+
+function renderDropdown(customers, dropdown) {
+    if (!customers.length) {
+        dropdown.classList.add('hidden');
+        return;
+    }
+    
+    dropdown.innerHTML = customers.map(c => 
+        '<div class="px-3 py-2 cursor-pointer hover:bg-gray-100" onclick="selectCustomer(this, \'' + c.value + '\', \'' + c.label + '\')">' + c.label + '</div>'
+    ).join('');
+    dropdown.classList.remove('hidden');
+}
+
+function selectCustomer(div, value, label) {
+    const row = div.closest('.row-card');
+    const searchInput = row.querySelector('.cust-search');
+    const idInput = row.querySelector('.cust-id');
+    const nameInput = row.querySelector('.cust-name');
+    const dropdown = searchInput.nextElementSibling;
+    
+    // Set values
+    searchInput.value = label;
+    idInput.value = value;
+    
+    // Auto-populate name from existing customer (simplified - could be enhanced)
+    nameInput.value = label.split(' (')[0]; // Remove customer_id from label
+    
+    // Hide dropdown
+    dropdown.classList.add('hidden');
+}
+
+function syncCustomerId(input) {
+    // Sync customer ID to name if empty
+    const row = input.closest('.row-card');
+    const nameInput = row.querySelector('.cust-name');
+    if (!nameInput.value) {
+        nameInput.value = 'Customer ' + input.value;
+    }
 }
 function addSlARow() {
     const c = document.getElementById('slaRows');

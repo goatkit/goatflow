@@ -39,3 +39,13 @@ spec:
           method: POST
           handler: HandleAPISetupTask
           description: "Dispatch a plugin setup task"
+
+        - path: /customers/search/:query
+          method: GET
+          handler: handleAdminSetupCustomerSearch
+          description: "Search customers for dropdown type-ahead (supports name and ID)"
+
+        - path: /customers/:customer_id
+          method: GET
+          handler: handleAdminSetupCustomerConfig
+          description: "Return full customer configuration for form auto-population"

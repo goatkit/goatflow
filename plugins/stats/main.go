@@ -261,13 +261,13 @@ func gk_call(fnPtr, fnLen, argsPtr, argsLen uint32) uint64 {
 	case "widget_overview":
 		result = handleWidgetOverview(args)
 	case "widget_by_status":
-		result = handleWidgetByStatus()
+		result = handleWidgetByStatus(args)
 	case "widget_chart":
-		result = handleWidgetChart()
+		result = handleWidgetChart(args)
 	case "widget_sla":
-		result = handleWidgetSLA()
+		result = handleWidgetSLA(args)
 	case "widget_time_tracking":
-		result = handleWidgetTimeTracking()
+		result = handleWidgetTimeTracking(args)
 	case "report_email":
 		result = handleReportEmail(args)
 	case "__health_ping__":
@@ -370,11 +370,54 @@ func getDateFilter(args RequestArgs, dateColumn string) (string, bool) {
 	default:
 		return "", false
 	}
-
 	// Use DATE_SUB for MySQL/MariaDB compatibility
 	return fmt.Sprintf("%s >= DATE_SUB(NOW(), INTERVAL %d DAY)", dateColumn, days), true
 }
 
+// getQueueFilter returns a SQL WHERE fragment restricting to queues the user can access.
+// Expects standard host args: _user_id (float64/int) and _is_admin (bool).
+func getQueueFilter(argsJSON string) string {
+	// Debug: include args length in filter comment
+	// Note: filter comment will appear in generated SQL as comment
+	// _ = argsJSON // use argsJSON to avoid unused variable warning if debug removed
+
+	var widgetArgs struct {
+		UserID  interface{} `json:"_user_id"`
+		IsAdmin bool        `json:"_is_admin"`
+	}
+	_ = json.Unmarshal([]byte(argsJSON), &widgetArgs)
+
+	userID := toInt(widgetArgs.UserID)
+	if widgetArgs.IsAdmin || userID <= 0 {
+		return ""
+	}
+
+	// Resolve user's groups via group_user, then queues owned by those groups.
+	rows, err := dbQuery(`
+		SELECT DISTINCT q.id
+		FROM queue q
+		JOIN ` + "`groups`" + ` g ON q.group_id = g.id
+		JOIN group_user gu ON gu.group_id = g.id
+		WHERE gu.user_id = ?
+		  AND g.valid_id = 1
+		  AND q.valid_id = 1
+		  AND (gu.permission_key = 'rw' OR gu.permission_key = 'ro')
+	`, userID)
+	if err != nil || len(rows) == 0 {
+		return " AND 1=0" // no accessible queues
+	}
+
+	ids := make([]string, 0, len(rows))
+	for _, r := range rows {
+		if id := toInt(r["id"]); id > 0 {
+			ids = append(ids, fmt.Sprintf("%d", id))
+		}
+	}
+	if len(ids) == 0 {
+		return " AND 1=0"
+	}
+	return " AND t.queue_id IN (" + strings.Join(ids, ",") + ")"
+}
 // API Handlers
 
 func handleOverview(argsJSON string) string {
@@ -668,22 +711,7 @@ func handleTimeline(argsJSON string) string {
 // Widget Handlers
 
 func handleWidgetOverview(argsJSON string) string {
-	// Parse RBAC queue context from args (passed by host via GetPluginWidgets)
-	var widgetArgs struct {
-		IsQueueAdmin     bool  `json:"is_queue_admin"`
-		AccessibleQueues []any `json:"accessible_queue_ids"`
-	}
-	json.Unmarshal([]byte(argsJSON), &widgetArgs)
-
-	// Build queue filter SQL fragment
-	queueFilter := ""
-	if !widgetArgs.IsQueueAdmin && len(widgetArgs.AccessibleQueues) > 0 {
-		ids := make([]string, 0, len(widgetArgs.AccessibleQueues))
-		for _, id := range widgetArgs.AccessibleQueues {
-			ids = append(ids, fmt.Sprintf("%d", toInt(id)))
-		}
-		queueFilter = " AND t.queue_id IN (" + strings.Join(ids, ",") + ")"
-	}
+	queueFilter := getQueueFilter(argsJSON)
 
 	// Open tickets (state type 'open' or 'new')
 	openRows, err := dbQuery(fmt.Sprintf(`
@@ -808,15 +836,18 @@ func handleWidgetOverview(argsJSON string) string {
 	return string(data)
 }
 
-func handleWidgetByStatus() string {
-	rows, err := dbQuery(`
+func handleWidgetByStatus(argsJSON string) string {
+	queueFilter := getQueueFilter(argsJSON)
+
+	rows, err := dbQuery(fmt.Sprintf(`
 		SELECT ts.id as state_id, ts.name as status, COUNT(*) as count
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
+		WHERE 1=1%s
 		GROUP BY ts.id, ts.name
 		ORDER BY count DESC
 		LIMIT 5
-	`)
+	`, queueFilter))
 
 	var items string
 	if err == nil {
@@ -846,15 +877,17 @@ func handleWidgetByStatus() string {
 	return string(data)
 }
 
-func handleWidgetChart() string {
+func handleWidgetChart(argsJSON string) string {
+	queueFilter := getQueueFilter(argsJSON)
+
 	// Get timeline data for chart
-	rows, err := dbQuery(`
+	rows, err := dbQuery(fmt.Sprintf(`
 		SELECT DATE(t.create_time) as date, COUNT(*) as count
 		FROM ticket t
-		WHERE t.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+		WHERE t.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)%s
 		GROUP BY DATE(t.create_time)
 		ORDER BY date
-	`)
+	`, queueFilter))
 
 	var labels, dataPoints []string
 	if err == nil {
@@ -1240,11 +1273,10 @@ th { color: #666; font-weight: 600; }
 
 	return b.String()
 }
+func handleWidgetSLA(argsJSON string) string {
+	queueFilter := getQueueFilter(argsJSON)
 
-// --- Dashboard Widgets ---
-
-func handleWidgetSLA() string {
-	rows, err := dbQuery(`
+	rows, err := dbQuery(fmt.Sprintf(`
 		SELECT q.id as queue_id, q.name as queue,
 			COUNT(*) as total,
 			SUM(CASE
@@ -1266,11 +1298,11 @@ func handleWidgetSLA() string {
 		JOIN queue q ON t.queue_id = q.id
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		JOIN ticket_state_type tst ON ts.type_id = tst.id
-		WHERE t.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+		WHERE t.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)%s
 		GROUP BY q.id, q.name
 		ORDER BY queue
 		LIMIT 5
-	`)
+	`, queueFilter))
 
 	var items string
 	if err == nil {
@@ -1312,24 +1344,28 @@ func handleWidgetSLA() string {
 	return string(data)
 }
 
-func handleWidgetTimeTracking() string {
-	agentRows, err := dbQuery(`
+func handleWidgetTimeTracking(argsJSON string) string {
+	queueFilter := getQueueFilter(argsJSON)
+
+	agentRows, err := dbQuery(fmt.Sprintf(`
 		SELECT u.id as user_id, CONCAT(u.first_name, ' ', u.last_name) as agent,
 			SUM(ta.time_unit) as total_minutes
 		FROM time_accounting ta
 		JOIN users u ON ta.create_by = u.id
-		WHERE ta.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+		JOIN ticket t ON ta.ticket_id = t.id
+		WHERE ta.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)%s
 		GROUP BY u.id, u.first_name, u.last_name
 		ORDER BY total_minutes DESC
 		LIMIT 5
-	`)
+	`, queueFilter))
 
 	// Total
-	totalRows, _ := dbQuery(`
-		SELECT COALESCE(SUM(time_unit), 0) as total
-		FROM time_accounting
-		WHERE create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-	`)
+	totalRows, _ := dbQuery(fmt.Sprintf(`
+		SELECT COALESCE(SUM(ta.time_unit), 0) as total
+		FROM time_accounting ta
+		JOIN ticket t ON ta.ticket_id = t.id
+		WHERE ta.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)%s
+	`, queueFilter))
 	totalMin := 0
 	if len(totalRows) > 0 {
 		totalMin = toInt(totalRows[0]["total"])

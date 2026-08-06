@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
@@ -161,6 +163,11 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 	ctx["AppVersionShort"] = version.Short()
 	ctx["AppVersionFull"] = version.Full()
 	ctx["AppVersionInfo"] = version.GetInfo()
+	// Cache-busting token for static assets. Prefer the build date (stable
+	// within a release, changes per build); fall back to a per-process nonce
+	// so dev stacks that run prebuilt images (BuildDate unset) still bust the
+	// cache on every restart.
+	ctx["assetVersion"] = assetVersionToken()
 
 	// Auto-inject User and IsInAdminGroup from context for consistent nav bar
 	isAdmin := false
@@ -395,4 +402,16 @@ func addMaintenanceContext(ctx pongo2.Context) {
 	if coming, err := repo.IsComing(upcomingMinutes); err == nil && coming != nil {
 		ctx["MaintenanceComing"] = coming
 	}
+}
+
+// processAssetNonce is generated once per process so dev builds running a
+// prebuilt image (where version.BuildDate is left as "unknown") still get a
+// fresh cache-bust token on every restart.
+var processAssetNonce = strconv.FormatInt(time.Now().UnixNano(), 36)
+
+func assetVersionToken() string {
+	if version.BuildDate != "" && version.BuildDate != "unknown" {
+		return version.BuildDate
+	}
+	return processAssetNonce
 }

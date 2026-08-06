@@ -4,6 +4,9 @@
     window.GoatKitAutocompleteLoaded = true;
     const REGISTRY = {};
     const DEFAULTS = { minChars: 1, maxResults: 10, debounce: 120 };
+    // Inputs whose next focus should NOT open the dropdown (e.g. after removing
+    // a chip we refocus the field but don't want the suggestion list to pop open).
+    const suppressOpen = new Set();
     const DBG = () => !!window.GK_DEBUG;
     function sanitizeJSON(text) {
         // Remove trailing commas before ] or }
@@ -164,6 +167,98 @@
     function maxResults(input) {
         return parseNumber(input.dataset.maxResults, DEFAULTS.maxResults);
     }
+    function isMultiple(input) {
+        return (
+            input.dataset.multiple === "true" ||
+            input.hasAttribute("data-multiple")
+        );
+    }
+    function selectedValues(input, state) {
+        return state.selected || [];
+    }
+    function itemValue(input, item) {
+        return item[valueField(input)] ?? item.login ?? item.id;
+    }
+    function chipsContainer(input) {
+        const id = input.dataset.chipsTarget;
+        if (id) {
+            const el = document.getElementById(id);
+            if (el) return el;
+        }
+        let wrap = input.parentNode.querySelector(
+            ":scope > .gk-multiselect-chips",
+        );
+        if (!wrap) {
+            wrap = document.createElement("div");
+            wrap.className = "gk-multiselect-chips mt-2 flex flex-wrap gap-1";
+            input.parentNode.appendChild(wrap);
+        }
+        return wrap;
+    }
+    function syncMultipleValue(input, selected) {
+        const hid = input.dataset.multipleTarget || input.dataset.hiddenTarget;
+        if (hid) {
+            const h = document.getElementById(hid);
+            if (h) {
+                h.value = selected.join(",");
+                h.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+        }
+    }
+    function renderChips(input, state) {
+        const selected = selectedValues(input, state);
+        const wrap = chipsContainer(input);
+        wrap.innerHTML = "";
+        selected.forEach((val) => {
+            const chip = document.createElement("span");
+            chip.className =
+                "gk-chip inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded text-sm";
+            chip.style.cssText =
+                "background: var(--gk-primary-subtle); color: var(--gk-primary); border: 1px solid var(--gk-border-default);";
+            chip.textContent = val;
+            const rm = document.createElement("button");
+            rm.type = "button";
+            rm.setAttribute("aria-label", "Remove " + val);
+            rm.innerHTML = "&times;";
+            rm.style.cssText =
+                "border:none;background:none;cursor:pointer;color:var(--gk-text-muted);padding:0 2px;font-size:1rem;line-height:1;";
+            rm.addEventListener("click", (e) => {
+                e.preventDefault();
+                removeSelected(input, state, val);
+            });
+            chip.appendChild(rm);
+            wrap.appendChild(chip);
+        });
+    }
+    function removeSelected(input, state, val) {
+        state.selected = (state.selected || []).filter(
+            (v) => v !== val,
+        );
+        renderChips(input, state);
+        syncMultipleValue(input, state.selected);
+        // Refocus without popping the dropdown open (see focus handler).
+        suppressOpen.add(input.id);
+        input.focus();
+    }
+    function setMultipleState(input, values) {
+        const state =
+            REGISTRY[input.id] ||
+            (REGISTRY[input.id] = {
+                items: [],
+                filtered: [],
+                active: -1,
+                loading: false,
+                selected: [],
+            });
+        const list = Array.isArray(values)
+            ? values
+            : values
+              ? String(values).split(",")
+              : [];
+        state.selected = [...new Set(list.filter(Boolean))];
+        renderChips(input, state);
+        syncMultipleValue(input, state.selected);
+    }
     function setupInput(input) {
         if (REGISTRY[input.id]) return;
         if (!input.id) {
@@ -182,7 +277,7 @@
         const list = ensureList(input);
         if (!list) return;
         list.setAttribute("role", "listbox");
-        let state = { items: [], filtered: [], active: -1, loading: false };
+        let state = { items: [], filtered: [], active: -1, loading: false, selected: [] };
         REGISTRY[input.id] = state;
         const src = getDataSource(input);
         // Try to get seed data - if not found, try loading all seeds first (handles race conditions)
@@ -209,6 +304,8 @@
             debounced();
         });
         input.addEventListener("focus", () => {
+            // Some programmatic refocuses (chip removal) shouldn't pop the list open.
+            if (suppressOpen.delete(input.id)) return;
             // trigger initial fetch on first char or empty if remote wants suggestions
             if (input.value.trim().length >= minChars(input)) debounced();
         });
@@ -256,17 +353,36 @@
     }
     function commitSelection(input, list, item) {
         if (!item) return;
-        const hiddenId = input.dataset.hiddenTarget;
-        const val = item[valueField(input)] || item.login || item.id;
+        const val = itemValue(input, item);
         const display = compileTemplate(displayTemplate(input), item);
-        input.value = display;
-        if (hiddenId) {
-            const hidden = document.getElementById(hiddenId);
-            if (hidden) {
-                hidden.value = val;
-                hidden.dispatchEvent(new Event("change", { bubbles: true }));
+
+        if (!isMultiple(input)) {
+            // Single-select: put the chosen display in the field and set one hidden value.
+            const hiddenId = input.dataset.hiddenTarget;
+            input.value = display;
+            if (hiddenId) {
+                const hidden = document.getElementById(hiddenId);
+                if (hidden) {
+                    hidden.value = val;
+                    hidden.dispatchEvent(
+                        new Event("change", { bubbles: true }),
+                    );
+                }
             }
+            dispatch(list, "select", { value: val, display, data: item });
+            return;
         }
+
+        // Multi-select: append a chip, keep the field clear for more searches.
+        const state = REGISTRY[input.id] || (REGISTRY[input.id] = { selected: [] });
+        if (!state.selected) state.selected = [];
+        if (state.selected.includes(val)) return; // already added
+        state.selected.push(val);
+        state.active = -1;
+        renderChips(input, state);
+        syncMultipleValue(input, state.selected);
+        input.value = "";
+        input.focus();
         dispatch(list, "select", { value: val, display, data: item });
     }
     async function refresh(input, state, src, localSeed) {
@@ -302,14 +418,16 @@
             }
         }
         const lower = q.toLowerCase();
+        const sel = new Set(selectedValues(input, state));
         const filtered = base
-            .filter((obj) =>
-                Object.values(obj).some(
+            .filter((obj) => {
+                if (sel.size && sel.has(itemValue(input, obj))) return false;
+                return Object.values(obj).some(
                     (v) =>
                         typeof v === "string" &&
                         v.toLowerCase().includes(lower),
-                ),
-            )
+                );
+            })
             .slice(0, maxResults(input));
         if (DBG())
             console.log("[GK-AUTO] refresh", {
@@ -377,6 +495,15 @@
                 const input = document.getElementById(id);
                 if (input) input.dispatchEvent(new Event("input"));
             });
+        },
+        // Programmatically set/clear a multi-select autocomplete (tag chips).
+        setMultiple: (id, values) => {
+            const input = document.getElementById(id);
+            if (input) setMultipleState(input, values);
+        },
+        clearMultiple: (id) => {
+            const input = document.getElementById(id);
+            if (input) setMultipleState(input, []);
         },
     };
 })();

@@ -8,6 +8,18 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Setup Assistant: Response templates, business hours, and email transport onboarding.** Three new
+  skippable wizard steps (6: canned responses, 7: business hours calendar, 8: outbound SMTP config)
+  with i18n support across all 15 languages. New tasks registered in `GetCoreTasks()`:
+  `create_response_template`, `configure_business_hours`, `configure_email_transport`
+  (`internal/service/setup_assistant_service.go`). Admin handlers accept JSON payloads via
+  `ShouldBindJSON` (`internal/api/admin_setup_handlers.go`). Translation keys added to all
+  `internal/platform/i18n/translations/*.json` files under `setup_assistant_tasks` section.
+- **Existing customer review mode.** Company name field on `create_customer` task is now a type-ahead
+  combo box. Selecting an existing customer redirects to the wizard in review mode
+  (`/admin/setup/wizard?existing_customer_id=ID`), loading the full customer configuration for
+  review/editing via `LoadExistingCustomer()`. New API endpoint
+  `GET /api/v1/admin/setup/customers/search/:query` for dropdown auto-completion.
 - **SAML2 identity provider support.** Enterprise SSO via SAML2 using the `crewjam/saml` library,
   with separate flow from existing OIDC/OAuth2. Admin UI for managing identity provider
   configurations including signing certificates and private keys.
@@ -31,6 +43,32 @@ project adheres to [Semantic Versioning](https://semver.org/).
   assistant page shows entity snapshot and mini-wizards for common operations. Plugin-extensible via
   `GKRegistration.SetupTasks`. JSON API at `/api/v1/admin/setup/*` enables programmatic/LLM-driven
   configuration (`internal/service/setup_assistant_service.go`, HTML/API handlers in `internal/api`).
+
+- **Admin Users: reusable multi-select group control with search + chips.** The overwhelming group
+  checkbox list in the add/edit-user modal is replaced by the platform `data-gk-autocomplete` control
+  in a new opt-in `data-multiple` mode: type-ahead search, selected groups rendered as removable tag
+  chips, and a comma-separated hidden value. The enhancement lives in the shared
+  `static/js/goatkit-autocomplete.js` (new `setMultiple`/`clearMultiple` API), so any admin form can
+  reuse it with plain template attributes (`templates/pages/admin/users.pongo2`).
+- **Password policy + confirmation in the admin add/edit-user modal.** Setting a new password in the
+  add/edit-user modal now shows the live password-policy checklist (length / match / character-class)
+  and requires a confirmation field before submit — previously only the separate reset-password modal
+  had this. The validation engine is shared: `validatePassword()`, `updateValidationIcon()` and the
+  policy rendering now act on a small `pwBind` binding, so both modals reuse one implementation
+  (`templates/pages/admin/users.pongo2`).
+- **Static-asset cache-busting.** Every `script`/`link` include now carries `?v={{ assetVersion }}`,
+  where `assetVersion` is the build date, falling back to a per-process nonce so dev stacks running
+  prebuilt images still bust the browser cache on every restart
+  (`internal/platform/shared/template_renderer.go`, `templates/layouts/base.pongo2`).
+- **RBAC-scoped core dashboard widgets.** The recent-tickets and queue-status dashboard widgets
+  (and the stats plugin's by-status / chart / SLA / time-tracking widgets) now scope results to the
+  acting user's groups via `args` instead of returning all rows, and the queue system-address deep
+  link is admin-only (`internal/platform/plugin/core/dashboard.go`, `plugins/stats/main.go`,
+  `templates/components/queue_meta.pongo2`).
+- **Plugin UI page handlers now receive caller identity.** `pluginui.buildUIHandler` forwards
+  `_user_id` / `_user_login` / `_user_email` / `_is_admin` / `_user_role` / `_org_id` from the request
+  context so plugins can resolve which user is acting on a UI page render
+  (`internal/platform/pluginui/router.go`).
 
 ### Changed
 - **Platform/product decoupling (Phases 1–8).** Moved platform code out of product packages into
@@ -56,6 +94,28 @@ project adheres to [Semantic Versioning](https://semver.org/).
   attachment temp path creation.
 - **Test factory wiring and nil checks** for decoupled platform packages.
 - **Bun lockfiles restored** and storage path / test isolation fixed for non-root containers.
+- **Admin Users group search in the edit modal returned no suggestions.** `data-display-template`
+  used pongo2's `{{name}}` (double braces), which the template engine consumed — the display template
+  rendered empty. Switched to the single-brace `{name}` convention used by the other
+  `data-gk-autocomplete` controls.
+- **Duplicate groups in user/group/queue listings.** Group-membership queries in
+  `admin_users_handlers.go`, `admin_users_handlers_improved.go`, `admin_crud_handlers.go`, and
+  `agent_routes.go` joined `group_user` without `DISTINCT`, so a user holding several permission rows
+  for one group (e.g. `grp_atlasconstruction` ×7) surfaced the same group/queue repeatedly. All four
+  queries now `SELECT DISTINCT`. No data was remediated — `group_user` `(user, group, permission)`
+  rows were already unique.
+- **Admin user-create group INSERT passed 2 args for 4 placeholders.** `HandleAdminUserCreate`'s
+  group loop INSERT used `userID, groupID` twice but only passed each once, so the `NOT EXISTS`
+  subquery had unbound args and new groups were not granted. Now passes all four
+  (`userID, groupID, userID, groupID`).
+- **Removing a group chip popped the dropdown open.** The chip remove handler refocused the input,
+  which — for the `data-min-chars="0"` group control — reopened the suggestion list. The refocus is
+  now marked so the list stays closed after removing a chip (`static/js/goatkit-autocomplete.js`).
+- **Logged-out pages served a stale cached favicon/logo.** The auth/login layouts referenced the
+  favicon and logo without the cache-bust token, so logged-out surfaces kept showing the previous
+  artwork while the logged-in UI (versioned) showed the current one. All favicon/logo references now
+  carry `?v={{ assetVersion }}` (`templates/layouts/auth.pongo2`, `login.pongo2`,
+  `login_2fa.pongo2`, `customer/login.pongo2`, `customer/login_2fa.pongo2`).
 
 ### Security
 - **22 Dependabot vulnerabilities remediated** (7 critical, 5 high, 10 moderate). Go:

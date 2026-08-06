@@ -13,6 +13,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 func TestHandleAdminUserGet(t *testing.T) {
@@ -188,6 +190,63 @@ func TestHandleAdminUserCreate(t *testing.T) {
 		// Should return 200 OK (either with JSON success or toast response depending on DB state)
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
+}
+
+// TestHandleAdminUserCreate_PersistsSelectedGroups is a regression test: the
+// create path's group insert used 4 placeholders but passed only 2 args, so the
+// INSERT silently failed (driver returned "Incorrect arguments to EXECUTE") and
+// selected groups were never persisted (the error was swallowed by errcheck).
+func TestHandleAdminUserCreate_PersistsSelectedGroups(t *testing.T) {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		t.Skip("test database not available")
+	}
+
+	// Find a real active group to reference by name.
+	groupName := "admin"
+	var groupID int
+	err = db.QueryRow(database.ConvertPlaceholders(
+		"SELECT id FROM `groups` WHERE name = ? AND valid_id = 1 LIMIT 1"), groupName).Scan(&groupID)
+	if err != nil {
+		t.Skipf("group %q not found; skipping", groupName)
+	}
+
+	login := "grp_created_" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	router := gin.New()
+	router.POST("/admin/users", HandleAdminUserCreate)
+
+	formData := url.Values{
+		"login":      {login},
+		"first_name": {"Group"},
+		"last_name":  {"Persist"},
+		"valid_id":   {"1"},
+		"password":   {"Passw0rd!string"},
+		"groups":     {groupName},
+	}
+	req, _ := http.NewRequest("POST", "/admin/users",
+		strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	t.Cleanup(func() {
+		_, _ = db.Exec(database.ConvertPlaceholders(
+			"DELETE FROM group_user WHERE user_id = (SELECT id FROM users WHERE login = ?)"), login)
+		_, _ = db.Exec(database.ConvertPlaceholders(
+			"DELETE FROM users WHERE login = ?"), login)
+	})
+
+	var uid int
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		"SELECT id FROM users WHERE login = ?"), login).Scan(&uid))
+
+	var n int
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		"SELECT COUNT(*) FROM group_user WHERE user_id = ? AND group_id = ? AND permission_key = 'rw'"),
+		uid, groupID).Scan(&n))
+	assert.Equal(t, 1, n, "selected group should be persisted in group_user")
 }
 
 func TestHandleAdminUserUpdate(t *testing.T) {

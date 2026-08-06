@@ -117,7 +117,7 @@ func TestSetupAssistant_TasksCatalog(t *testing.T) {
 	// manager returns an empty plugin list.
 	svc := service.NewSetupAssistantService(nil, nil)
 	core := svc.GetCoreTasks()
-	assert.Len(t, core, 8, "core task catalog must have 8 built-in tasks")
+	assert.Len(t, core, 11, "core task catalog must have 11 built-in tasks")
 	plugins := svc.GetPluginTasks()
 	assert.Empty(t, plugins, "nil plugin manager → no plugin tasks")
 	all := svc.GetAllTasks()

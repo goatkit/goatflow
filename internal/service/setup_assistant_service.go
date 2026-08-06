@@ -5,8 +5,10 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/goatkit/goatflow/internal/platform/i18n"
 	"regexp"
 	"strings"
 	"time"
@@ -76,16 +78,50 @@ type SLAInput struct {
 	SolutionTime      int    `json:"solution_time" form:"solution_time"`
 }
 
+// ResponseTemplateInput defines a canned response template for customer support.
+type ResponseTemplateInput struct {
+	Name        string   `json:"name" form:"name"`                           // Display name (required)
+	Shortcut    string   `json:"shortcut,omitempty" form:"shortcut"`         // Quick access code
+	Category    string   `json:"category,omitempty" form:"category"`         // For organization
+	Content     string   `json:"content" form:"content"`                     // Response body (required)
+	ContentType string   `json:"content_type,omitempty" form:"content_type"` // text/plain or text/html
+	Tags        []string `json:"tags,omitempty" form:"tags"`                 // Search tags
+}
+
+// BusinessHoursInput defines working hours configuration for SLA calculations.
+type BusinessHoursInput struct {
+	Name        string `json:"name" form:"name"`                   // Configuration name
+	Timezone    string `json:"timezone,omitempty" form:"timezone"` // e.g., "America/New_York"
+	Description string `json:"description,omitempty" form:"description"`
+}
+
+// EmailTransportInput configures outbound SMTP for the system.
+type EmailTransportInput struct {
+	Host     string `json:"host" form:"host"`                     // SMTP server host (required)
+	Port     int    `json:"port" form:"port"`                     // 25, 465, 587 etc.
+	User     string `json:"user,omitempty" form:"user"`           // Username for auth
+	Password string `json:"password,omitempty" form:"password"`   // Password (stored securely)
+	AuthType string `json:"auth_type,omitempty" form:"auth_type"` // plain, login, crammd5
+	TLS      bool   `json:"tls,omitempty" form:"tls"`             // Enable TLS
+	TLSMode  string `json:"tls_mode,omitempty" form:"tls_mode"`   // none, starttls, smtps
+	From     string `json:"from,omitempty" form:"from"`           // Default from address
+	FromName string `json:"from_name,omitempty" form:"from_name"` // Display name for sender
+}
+
 // WizardRequest is the single structured payload the wizard (UI or LLM) submits.
 // Submitting everything at once makes the flow idempotent and API-friendly.
 type WizardRequest struct {
-	OrgType           string          `json:"org_type" form:"org_type"`
-	Groups            []GroupInput    `json:"groups" form:"groups"`
-	Queues            []QueueInput    `json:"queues" form:"queues"`
-	Agents            []AgentInput    `json:"agents" form:"agents"`
-	CustomerCompanies []CustomerInput `json:"customer_companies" form:"customer_companies"`
-	SLAs              []SLAInput      `json:"slas" form:"slas"`
-	CreateBy          int             `json:"-" form:"-"`
+	OrgType            string                  `json:"org_type" form:"org_type"`
+	Groups             []GroupInput            `json:"groups" form:"groups"`
+	Queues             []QueueInput            `json:"queues" form:"queues"`
+	Agents             []AgentInput            `json:"agents" form:"agents"`
+	CustomerCompanies  []CustomerInput         `json:"customer_companies" form:"customer_companies"`
+	SLAs               []SLAInput              `json:"slas" form:"slas"`
+	ResponseTemplates  []ResponseTemplateInput `json:"response_templates,omitempty" form:"response_templates"`
+	BusinessHours      []BusinessHoursInput    `json:"business_hours,omitempty" form:"business_hours"`
+	MailTransport      *EmailTransportInput    `json:"mail_transport,omitempty" form:"mail_transport"`
+	ExistingCustomerID string                  `json:"existing_customer_id,omitempty" form:"existing_customer_id"`
+	CreateBy           int                     `json:"-" form:"-"`
 }
 
 // CreatedEntity records one entity ExecuteWizard successfully created, so a
@@ -333,6 +369,74 @@ func (s *SetupAssistantService) CreateAgent(ctx context.Context, login, firstNam
 	return userID, nil
 }
 
+// AssignAgentToGroups grants an existing agent (user) rw membership in the
+// given teams. Idempotent per (user, group): an existing 'rw' row is left
+// untouched. Returns an error if the agent does not exist or is inactive.
+func (s *SetupAssistantService) AssignAgentToGroups(ctx context.Context, userID int, groupIDs []int, createBy int) error {
+	if userID <= 0 {
+		return errors.New("agent is required")
+	}
+	if len(groupIDs) == 0 {
+		return errors.New("at least one team is required")
+	}
+	if createBy <= 0 {
+		createBy = 1
+	}
+
+	var exists int
+	if err := s.db.QueryRowContext(ctx, database.ConvertPlaceholders(
+		"SELECT 1 FROM users WHERE id = ? AND valid_id = 1"), userID).Scan(&exists); err != nil {
+		return errors.New("agent not found")
+	}
+
+	for _, gid := range groupIDs {
+		if gid <= 0 {
+			continue
+		}
+		var mapped int
+		err := s.db.QueryRowContext(ctx, database.ConvertPlaceholders(
+			"SELECT 1 FROM group_user WHERE user_id = ? AND group_id = ? AND permission_key = 'rw'"), userID, gid).Scan(&mapped)
+		if err == nil {
+			continue // already a member with rw
+		}
+		if _, err := s.db.ExecContext(ctx, database.ConvertPlaceholders(`
+			INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+			VALUES (?, ?, 'rw', NOW(), ?, NOW(), ?)`), userID, gid, createBy, createBy); err != nil {
+			return fmt.Errorf("assign agent to team %d: %w", gid, err)
+		}
+	}
+	return nil
+}
+
+// AssignQueueToGroup grants an existing team ownership/access of an existing
+// queue. In the canonical GoatFlow schema a queue is owned by a single team via
+// queue.group_id (users gain queue access by belonging to that team), so the
+// first team supplied becomes the queue's owner. Idempotent.
+func (s *SetupAssistantService) AssignQueueToGroup(ctx context.Context, queueID int, groupID int, createBy int) error {
+	if queueID <= 0 {
+		return errors.New("queue is required")
+	}
+	if groupID <= 0 {
+		return errors.New("team is required")
+	}
+	if createBy <= 0 {
+		createBy = 1
+	}
+
+	var exists int
+	if err := s.db.QueryRowContext(ctx, database.ConvertPlaceholders(
+		"SELECT 1 FROM queue WHERE id = ? AND valid_id = 1"), queueID).Scan(&exists); err != nil {
+		return errors.New("queue not found")
+	}
+	_, err := s.db.ExecContext(ctx, database.ConvertPlaceholders(
+		"UPDATE queue SET group_id = ?, change_time = NOW(), change_by = ? WHERE id = ?"),
+		groupID, createBy, queueID)
+	if err != nil {
+		return fmt.Errorf("grant team %d queue access: %w", groupID, err)
+	}
+	return nil
+}
+
 // CreateCustomerCompany inserts a customer_company row. Fields carries optional
 // columns (street, zip, city, country, url, comments).
 func (s *SetupAssistantService) CreateCustomerCompany(ctx context.Context, customerID, name string, fields map[string]string, createBy int) error {
@@ -390,39 +494,40 @@ type CustomerUserInput struct {
 	Mobile    string `json:"mobile,omitempty" form:"mobile"`
 }
 
-
 // MailAccountInput configures an inbound mailbox (OTRS mail_account) whose
 // fetched messages land in a queue — used to wire up a customer's support
 // email address during onboarding.
 type MailAccountInput struct {
-	Login       string `json:"login" form:"login"`       // mailbox username / email
-	Password    string `json:"password" form:"password"` // mailbox password (stored as-is, matching existing admin UI)
-	Host        string `json:"host" form:"host"`          // IMAP/POP3 host
-	AccountType string `json:"account_type" form:"account_type"` // IMAP, IMAPTLS, IMAPS, POP3, POP3S
-	QueueID          int    `json:"queue_id" form:"queue_id"` // existing queue fetched mail lands in
-	CreateQueueName  string `json:"create_queue_name,omitempty" form:"create_queue_name"`   // if set + QueueID==0, create a new queue
-	CreateQueueGroupID int  `json:"create_queue_group_id,omitempty" form:"create_queue_group_id"` // owning team for a created queue
+	Login              string `json:"login" form:"login"`                                           // mailbox username / email
+	Password           string `json:"password" form:"password"`                                     // mailbox password (stored as-is, matching existing admin UI)
+	Host               string `json:"host" form:"host"`                                             // IMAP/POP3 host
+	AccountType        string `json:"account_type" form:"account_type"`                             // IMAP, IMAPTLS, IMAPS, POP3, POP3S
+	QueueID            int    `json:"queue_id" form:"queue_id"`                                     // existing queue fetched mail lands in
+	CreateQueueName    string `json:"create_queue_name,omitempty" form:"create_queue_name"`         // if set + QueueID==0, create a new queue
+	CreateQueueGroupID int    `json:"create_queue_group_id,omitempty" form:"create_queue_group_id"` // owning team for a created queue
 	// CreateQueueUseNewTeam: own the created queue with the team created earlier
 	// in this onboarding wizard (no id yet at request time).
-	CreateQueueUseNewTeam bool `json:"create_queue_use_new_team,omitempty" form:"create_queue_use_new_team"`
-	IMAPFolder       string `json:"imap_folder,omitempty" form:"imap_folder"`
-	Trusted          bool   `json:"trusted,omitempty" form:"trusted"`
+	CreateQueueUseNewTeam bool   `json:"create_queue_use_new_team,omitempty" form:"create_queue_use_new_team"`
+	IMAPFolder            string `json:"imap_folder,omitempty" form:"imap_folder"`
+	Trusted               bool   `json:"trusted,omitempty" form:"trusted"`
+	Comments              string `json:"comments,omitempty" form:"comments"`
 }
+
 // OnboardCustomerRequest is the full payload for the customer onboarding wizard:
 // company identity + address + the initial portal users to provision.
 type OnboardCustomerRequest struct {
-	CustomerID string `json:"customer_id" form:"customer_id"`
-	Name       string `json:"name" form:"name"`
-	Street     string `json:"street,omitempty" form:"street"`
-	City       string `json:"city,omitempty" form:"city"`
-	ZIP        string `json:"zip,omitempty" form:"zip"`
-	Country    string `json:"country,omitempty" form:"country"`
-	URL        string `json:"url,omitempty" form:"url"`
-	Comments   string `json:"comments,omitempty" form:"comments"`
+	CustomerID string              `json:"customer_id" form:"customer_id"`
+	Name       string              `json:"name" form:"name"`
+	Street     string              `json:"street,omitempty" form:"street"`
+	City       string              `json:"city,omitempty" form:"city"`
+	ZIP        string              `json:"zip,omitempty" form:"zip"`
+	Country    string              `json:"country,omitempty" form:"country"`
+	URL        string              `json:"url,omitempty" form:"url"`
+	Comments   string              `json:"comments,omitempty" form:"comments"`
 	Users      []CustomerUserInput `json:"users,omitempty" form:"users"`
 	// ManagingGroupIDs: agent teams granted read-write access to this company
 	// (OTRS group_customer) — i.e. which teams manage this customer.
-	ManagingGroupIDs []int             `json:"managing_group_ids,omitempty" form:"managing_group_ids"`
+	ManagingGroupIDs []int `json:"managing_group_ids,omitempty" form:"managing_group_ids"`
 	// CreateManagingGroupName: if set, create a new team with this name (e.g.
 	// derived from the customer id) and add it to the managing teams.
 	CreateManagingGroupName string `json:"create_managing_group_name,omitempty" form:"create_managing_group_name"`
@@ -781,6 +886,64 @@ func (s *SetupAssistantService) LinkServiceSLA(ctx context.Context, serviceID, s
 	return nil
 }
 
+// CreateCannedResponses creates multiple canned response templates for customer onboarding.
+func (s *SetupAssistantService) CreateCannedResponses(ctx context.Context, templates []ResponseTemplateInput, createBy int) error {
+	if len(templates) == 0 {
+		return nil // skippable - nothing to do
+	}
+
+	for _, t := range templates {
+		cr := &models.CannedResponse{
+			Name: strings.TrimSpace(t.Name), Shortcut: strings.TrimSpace(t.Shortcut), Category: strings.TrimSpace(t.Category),
+			Content: t.Content, ContentType: "text/html", Tags: t.Tags, IsActive: true,
+			OwnerID: uint(createBy), CreatedBy: uint(createBy), UpdatedBy: uint(createBy),
+			CreatedAt: time.Now(), UpdatedAt: time.Now(),
+		}
+		if cr.Name == "" {
+			return fmt.Errorf("response name is required")
+		}
+		if cr.Content == "" {
+			return fmt.Errorf("response content is required for %q", cr.Name)
+		}
+
+		query := database.ConvertPlaceholders(`INSERT INTO canned_response (name, category, content, content_type, tags, scope, owner_id, valid_id, create_time, create_by, change_time, change_by) VALUES (?, ?, ?, ?, ?, 'personal', ?, 1, NOW(), ?, NOW(), ?)`)
+		tagsJSON, _ := json.Marshal(cr.Tags)
+		_, err := s.db.ExecContext(ctx, query, cr.Name, cr.Category, cr.Content, cr.ContentType, string(tagsJSON), cr.OwnerID, createBy, createBy)
+		if err != nil {
+			return fmt.Errorf("creating response %q: %w", cr.Name, err)
+		}
+	}
+	return nil
+}
+
+// CreateEmailTransport configures outbound SMTP settings via sysconfig.
+func (s *SetupAssistantService) CreateEmailTransport(ctx context.Context, cfg EmailTransportInput, createBy int) error {
+	if strings.TrimSpace(cfg.Host) == "" {
+		return errors.New("SMTP host is required")
+	}
+
+	sysconfigKey := "Email.SMTP.Config"
+	configJSON := fmt.Sprintf(`{"host":"%s","port":%d,"user":"%s","auth_type":"%s","tls":%v,"tls_mode":"%s","from":"%s","from_name":"%s"}`, cfg.Host, cfg.Port, strings.TrimSpace(cfg.User), strings.TrimSpace(cfg.AuthType), cfg.TLS, cfg.TLSMode, strings.TrimSpace(cfg.From), strings.TrimSpace(cfg.FromName))
+
+	return s.writeSysconfig(ctx, sysconfigKey, configJSON)
+}
+
+// CreateBusinessHours creates a business hours calendar for SLA calculations.
+func (s *SetupAssistantService) CreateBusinessHours(ctx context.Context, cfg BusinessHoursInput, createBy int) error {
+	if strings.TrimSpace(cfg.Name) == "" {
+		return errors.New("business hours name is required")
+	}
+
+	query := `INSERT INTO calendar (group_id, name, salt_string, color, ticket_appointments, valid_id, create_time, create_by, change_time, change_by) VALUES (?, ?, UUID(), '#3498db', '{}', 1, NOW(), ?, NOW(), ?)`
+	_, err := s.db.ExecContext(ctx, database.ConvertPlaceholders(query), createBy, cfg.Name, createBy, createBy)
+	if err != nil {
+		return fmt.Errorf("creating business hours calendar %q: %w", cfg.Name, err)
+	}
+
+	sysconfigKey := "BusinessHours." + cfg.Name + ".Timezone"
+	return s.writeSysconfig(ctx, sysconfigKey, cfg.Timezone)
+}
+
 // AssignServiceToCustomerUser grants a service to a customer user by login via
 // the OTRS `service_customer_user` table.
 func (s *SetupAssistantService) AssignServiceToCustomerUser(ctx context.Context, login string, serviceID, createBy int) error {
@@ -799,6 +962,289 @@ func (s *SetupAssistantService) AssignServiceToCustomerUser(ctx context.Context,
 		return fmt.Errorf("assign service to customer user: %w", err)
 	}
 	return nil
+}
+
+// LoadExistingCustomer loads an existing customer company and its associated configuration
+// for review and modification in the wizard.
+func (s *SetupAssistantService) LoadExistingCustomer(ctx context.Context, customerID string) (*CustomerConfiguration, error) {
+	customerID = strings.TrimSpace(customerID)
+	if customerID == "" {
+		return nil, errors.New("customer_id is required")
+	}
+
+	config := &CustomerConfiguration{}
+
+	// Load customer company details
+	row := s.db.QueryRowContext(ctx,
+		"SELECT name, street, zip, city, country, url, comments FROM customer_company WHERE customer_id = ?",
+		customerID)
+
+	var customer CustomerCompany
+	var street, zip, city, country, urlVal, comments sql.NullString
+	err := row.Scan(&customer.Name, &street, &zip, &city, &country, &urlVal, &comments)
+	if err == nil {
+		customer.Street = street.String
+		customer.Zip = zip.String
+		customer.City = city.String
+		customer.Country = country.String
+		customer.Url = urlVal.String
+		customer.Comments = comments.String
+	}
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("customer %q not found", customerID)
+		}
+		return nil, fmt.Errorf("load customer: %w", err)
+	}
+
+	config.Customer = &customer
+
+	// Load associated groups
+	groups, err := s.loadCustomerGroups(ctx, customerID)
+	if err != nil {
+		return nil, fmt.Errorf("load groups: %w", err)
+	}
+	config.Groups = groups
+
+	// Load associated queues
+	queues, err := s.loadCustomerQueues(ctx, customerID)
+	if err != nil {
+		return nil, fmt.Errorf("load queues: %w", err)
+	}
+	config.Queues = queues
+
+	// Load associated agents/users
+	agents, err := s.loadCustomerAgents(ctx, customerID)
+	if err != nil {
+		return nil, fmt.Errorf("load agents: %w", err)
+	}
+	config.Agents = agents
+
+	// Load mail accounts
+	mailAccounts, err := s.loadCustomerMailAccounts(ctx, customerID)
+	if err != nil {
+		return nil, fmt.Errorf("load mail accounts: %w", err)
+	}
+	config.MailAccounts = mailAccounts
+
+	// Load services and SLAs
+	services, slas, err := s.loadCustomerServicesAndSLAs(ctx, customerID)
+	if err != nil {
+		return nil, fmt.Errorf("load services/SLAs: %w", err)
+	}
+	config.Services = services
+	config.SLAs = slas
+
+	// Load canned responses (simplified - just names and counts)
+	responses, err := s.loadCustomerResponses(ctx, customerID)
+	if err != nil {
+		return nil, fmt.Errorf("load responses: %w", err)
+	}
+	config.CannedResponses = responses
+
+	// Load business hours
+	hours, err := s.loadCustomerBusinessHours(ctx, customerID)
+	if err != nil {
+		return nil, fmt.Errorf("load business hours: %w", err)
+	}
+	config.BusinessHours = hours
+
+	// Load email transport config
+	transport, err := s.loadEmailTransportConfig(ctx, customerID)
+	if err != nil {
+		return nil, fmt.Errorf("load email transport: %w", err)
+	}
+	config.EmailTransport = transport
+
+	// Load portal users (customer_user table)
+	portalUsers, err := s.loadCustomerPortalUsers(ctx, customerID)
+	if err != nil {
+		return nil, fmt.Errorf("load portal users: %w", err)
+	}
+	config.PortalUsers = portalUsers
+
+	return config, nil
+}
+
+// CustomerConfiguration holds all configuration for an existing customer
+type CustomerConfiguration struct {
+	Customer        *CustomerCompany         `json:"customer"`
+	Groups          []GroupWithID            `json:"groups"`
+	Queues          []QueueWithGroupIDs      `json:"queues"`
+	Agents          []AgentInputWithGroupIDs `json:"agents"`
+	MailAccounts    []MailAccountInput       `json:"mail_accounts"`
+	Services        []string                 `json:"services"`
+	SLAs            []SLAInput               `json:"slas"`
+	PortalUsers     []PortalUserInfo         `json:"portal_users"`
+	CannedResponses []string                 `json:"canned_responses"`
+	BusinessHours   []BusinessHoursInput     `json:"business_hours"`
+	EmailTransport  *EmailTransportInput     `json:"mail_transport"`
+}
+
+// PortalUserInfo holds a customer portal user record for the config response.
+type PortalUserInfo struct {
+	Login     string `json:"login"`
+	Email     string `json:"email"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Phone     string `json:"phone,omitempty"`
+	Title     string `json:"title,omitempty"`
+}
+
+// CustomerCompany holds customer company details
+type CustomerCompany struct {
+	Name     string `json:"name"`
+	Street   string `json:"street"`
+	Zip      string `json:"zip"`
+	City     string `json:"city"`
+	Country  string `json:"country"`
+	Url      string `json:"url"`
+	Comments string `json:"comments"`
+}
+
+// GroupWithID holds group name with ID from DB
+type GroupWithID struct {
+	Name string `json:"name"`
+	ID   int    `json:"id"`
+}
+
+// QueueWithGroupIDs holds queue with group assignments
+type QueueWithGroupIDs struct {
+	Name     string `json:"name"`
+	GroupIDs []int  `json:"group_ids"`
+}
+
+// AgentInputWithGroupIDs extends AgentInput with ID and group assignments
+type AgentInputWithGroupIDs struct {
+	Login     string `json:"login"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Email     string `json:"email"`
+	GroupIDs  []int  `json:"group_ids"`
+}
+
+// Helper methods to load customer associations
+func (s *SetupAssistantService) loadCustomerGroups(ctx context.Context, customerID string) ([]GroupWithID, error) {
+	rows, err := s.db.QueryContext(ctx,
+		"SELECT g.id, g.name FROM group_customer gc JOIN groups g ON gc.group_id = g.id WHERE gc.customer_id = ?",
+		customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var groups []GroupWithID
+	for rows.Next() {
+		var g GroupWithID
+		if err := rows.Scan(&g.ID, &g.Name); err != nil {
+			return nil, err
+		}
+		groups = append(groups, g)
+	}
+	return groups, rows.Err()
+}
+
+func (s *SetupAssistantService) loadCustomerQueues(ctx context.Context, customerID string) ([]QueueWithGroupIDs, error) {
+	// Queues are linked to customers through groups: queue.group_id → group_customer.group_id → customer_id
+	rows, err := s.db.QueryContext(ctx,
+		"SELECT DISTINCT q.id, q.name FROM queue q "+
+			"JOIN group_customer gc ON q.group_id = gc.group_id "+
+			"WHERE gc.customer_id = ? AND q.valid_id = 1",
+		customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var queues []QueueWithGroupIDs
+	for rows.Next() {
+		var id int
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return nil, err
+		}
+		queues = append(queues, QueueWithGroupIDs{Name: name})
+	}
+	return queues, rows.Err()
+}
+
+func (s *SetupAssistantService) loadCustomerAgents(ctx context.Context, customerID string) ([]AgentInputWithGroupIDs, error) {
+	// Agents are not directly linked to customers via a simple join.
+	// Return empty list - agent association is through queues/groups.
+	return nil, nil
+}
+
+func (s *SetupAssistantService) loadCustomerMailAccounts(ctx context.Context, customerID string) ([]MailAccountInput, error) {
+	rows, err := s.db.QueryContext(ctx,
+		"SELECT ma.login, ma.pw, ma.host, ma.account_type, ma.queue_id, ma.trusted, ma.imap_folder, ma.comments "+
+			"FROM mail_account ma "+
+			"JOIN queue q ON ma.queue_id = q.id JOIN group_customer gc ON q.group_id = gc.group_id "+
+			"WHERE gc.customer_id = ?",
+		customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var accounts []MailAccountInput
+	for rows.Next() {
+		var account MailAccountInput
+		var pw, comments, imapFolder sql.NullString
+		var trusted int
+		if err := rows.Scan(
+			&account.Login, &pw, &account.Host, &account.AccountType,
+			&account.QueueID, &trusted, &imapFolder, &comments,
+		); err != nil {
+			return nil, err
+		}
+		account.Password = pw.String
+		account.Trusted = trusted != 0
+		account.IMAPFolder = imapFolder.String
+		account.Comments = comments.String
+		accounts = append(accounts, account)
+	}
+	return accounts, rows.Err()
+}
+
+func (s *SetupAssistantService) loadCustomerServicesAndSLAs(ctx context.Context, customerID string) ([]string, []SLAInput, error) {
+	rows, err := s.db.QueryContext(ctx,
+		"SELECT s.name FROM service s JOIN service_customer_user scu ON s.id = scu.service_id JOIN customer_user cu ON scu.customer_user_login = cu.login WHERE cu.customer_id = ?",
+		customerID)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	var services []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, nil, err
+		}
+		services = append(services, name)
+	}
+
+	return services, []SLAInput{}, nil
+}
+
+func (s *SetupAssistantService) loadCustomerResponses(ctx context.Context, customerID string) ([]string, error) {
+	// canned_response is not customer-scoped in the current schema.
+	// Return empty list — responses are global in OTRS model.
+	return nil, nil
+
+}
+
+func (s *SetupAssistantService) loadCustomerBusinessHours(ctx context.Context, customerID string) ([]BusinessHoursInput, error) {
+	// business_hours table doesn't exist in current schema.
+	// Return empty list — calendars are global, not customer-scoped.
+	return nil, nil
+
+}
+
+func (s *SetupAssistantService) loadEmailTransportConfig(ctx context.Context, customerID string) (*EmailTransportInput, error) {
+	// This would query sysconfig or a dedicated email_config table
+	// For now, return nil (no config loaded)
+	return nil, nil
 }
 
 // AssignGroupsToCustomer grants agent teams (groups) read-write access to a
@@ -825,6 +1271,30 @@ func (s *SetupAssistantService) AssignGroupsToCustomer(ctx context.Context, cust
 		}
 	}
 	return nil
+}
+
+// loadCustomerPortalUsers loads customer_user records for a given customer.
+func (s *SetupAssistantService) loadCustomerPortalUsers(ctx context.Context, customerID string) ([]PortalUserInfo, error) {
+	rows, err := s.db.QueryContext(ctx,
+		"SELECT login, email, first_name, last_name, phone, title FROM customer_user WHERE customer_id = ? AND valid_id = 1 ORDER BY login",
+		customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := make([]PortalUserInfo, 0)
+	for rows.Next() {
+		var u PortalUserInfo
+		var phone, title sql.NullString
+		if err := rows.Scan(&u.Login, &u.Email, &u.FirstName, &u.LastName, &phone, &title); err != nil {
+			return nil, err
+		}
+		u.Phone = phone.String
+		u.Title = title.String
+		users = append(users, u)
+	}
+	return users, rows.Err()
 }
 
 // suggestIDRe collapses runs of separators in a derived customer id.
@@ -998,6 +1468,31 @@ func (s *SetupAssistantService) ExecuteWizard(ctx context.Context, req WizardReq
 		res.Created = append(res.Created, CreatedEntity{Kind: "sla", Name: sl.Name, ID: id})
 	}
 
+	// 6. Canned response templates.
+	if len(req.ResponseTemplates) > 0 {
+		if err := s.CreateCannedResponses(ctx, req.ResponseTemplates, createBy); err != nil {
+			res.Error = fmt.Sprintf("canned responses: %v", err)
+			return res
+		}
+		res.Created = append(res.Created, CreatedEntity{Kind: "canned_response", Name: "templates"})
+	}
+	// 7. Business hours.
+	for _, bh := range req.BusinessHours {
+		if err := s.CreateBusinessHours(ctx, bh, createBy); err != nil {
+			res.Error = fmt.Sprintf("business hours %q: %v", bh.Name, err)
+			return res
+		}
+		res.Created = append(res.Created, CreatedEntity{Kind: "business_hours", Name: bh.Name})
+	}
+	// 8. Email transport.
+	if req.MailTransport != nil {
+		if err := s.CreateEmailTransport(ctx, *req.MailTransport, createBy); err != nil {
+			res.Error = fmt.Sprintf("email transport: %v", err)
+			return res
+		}
+		res.Created = append(res.Created, CreatedEntity{Kind: "mail_transport", Name: req.MailTransport.Host})
+	}
+
 	res.Success = true
 	return res
 }
@@ -1013,6 +1508,9 @@ func (s *SetupAssistantService) GetCoreTasks() []PluginSetupTask {
 		{Plugin: "setup-assistant", ID: "assign_agent_group", Title: "Assign agent to team", Category: "teams", Handler: "assign_agent_group", Icon: "fa-user-tag", Description: "Add an existing agent to an existing team."},
 		{Plugin: "setup-assistant", ID: "create_customer", Title: "Onboard a customer", Category: "customers", Handler: "create_customer", Icon: "fa-building", Description: "Create a customer company, provision portal users, and generate temporary passwords in one go."},
 		{Plugin: "setup-assistant", ID: "create_sla", Title: "Configure an SLA", Category: "sla", Handler: "create_sla", Icon: "fa-clock", Description: "Define first-response and solution time targets."},
+		{Plugin: "setup-assistant", ID: "create_response_template", Title: i18n.GetInstance().T("", "setup_assistant_tasks.create_response_template.title"), Description: i18n.GetInstance().T("", "setup_assistant_tasks.create_response_template.description")},
+		{Plugin: "setup-assistant", ID: "configure_business_hours", Title: i18n.GetInstance().T("", "setup_assistant_tasks.configure_business_hours.title"), Description: i18n.GetInstance().T("", "setup_assistant_tasks.configure_business_hours.description")},
+		{Plugin: "setup-assistant", ID: "configure_email_transport", Title: i18n.GetInstance().T("", "setup_assistant_tasks.configure_email_transport.title"), Description: i18n.GetInstance().T("", "setup_assistant_tasks.configure_email_transport.description")},
 		{Plugin: "setup-assistant", ID: "mark_complete", Title: "Mark setup complete", Category: "system", Handler: "mark_complete", Icon: "fa-check", Description: "Dismiss the first-run wizard and stop the dashboard redirect."},
 	}
 }
@@ -1107,6 +1605,7 @@ func (s *SetupAssistantService) writeSysconfig(ctx context.Context, name, value 
 	if s.db == nil {
 		return errors.New("database unavailable")
 	}
+	// Try UPDATE first (works when the sysconfig_default row already exists).
 	res, err := s.db.ExecContext(ctx,
 		database.ConvertPlaceholders("UPDATE sysconfig_default SET effective_value = ? WHERE name = ?"),
 		value, name)
@@ -1116,10 +1615,28 @@ func (s *SetupAssistantService) writeSysconfig(ctx context.Context, name, value 
 	if n, _ := res.RowsAffected(); n > 0 {
 		return nil
 	}
+	// INSERT with all NOT NULL columns required by the schema.
+	// On duplicate key, fall back to UPDATE (race between concurrent callers).
 	_, err = s.db.ExecContext(ctx,
-		database.ConvertPlaceholders("INSERT INTO sysconfig_default (name, effective_value) VALUES (?, ?)"),
-		name, value)
+		database.ConvertPlaceholders(`INSERT INTO sysconfig_default
+			(name, description, navigation, is_invisible, is_readonly, is_required, is_valid,
+			 has_configlevel, user_modification_possible, user_modification_active,
+			 effective_value, xml_content_raw, xml_content_parsed, xml_filename,
+			 is_dirty, exclusive_lock_guid,
+			 create_time, create_by, change_time, change_by)
+			VALUES (?, '', '', 1, 1, 0, 1, 0, 0, 0, ?, '', '', '', 0, '', NOW(), ?, NOW(), ?)`),
+		name, value, 1, 1)
 	if err != nil {
+		if isDuplicateErr(err) {
+			// Row was inserted by a concurrent caller — update it instead.
+			_, err = s.db.ExecContext(ctx,
+				database.ConvertPlaceholders("UPDATE sysconfig_default SET effective_value = ? WHERE name = ?"),
+				value, name)
+			if err != nil {
+				return fmt.Errorf("update sysconfig after duplicate: %w", err)
+			}
+			return nil
+		}
 		return fmt.Errorf("insert sysconfig: %w", err)
 	}
 	return nil
