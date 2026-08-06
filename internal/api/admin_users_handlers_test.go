@@ -249,6 +249,94 @@ func TestHandleAdminUserCreate_PersistsSelectedGroups(t *testing.T) {
 	assert.Equal(t, 1, n, "selected group should be persisted in group_user")
 }
 
+// TestHandleAdminUserGet_DedupesMultiPermissionGroups is a regression test for
+// the SELECT DISTINCT fix: a user granted one group under several permission
+// keys (e.g. rw + ro + owner rows) used to surface that group once per
+// permission row in user.Groups. The group must now appear exactly once.
+func TestHandleAdminUserGet_DedupesMultiPermissionGroups(t *testing.T) {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		t.Skip("test database not available")
+	}
+
+	// Find a real active group to reference by name.
+	groupName := "admin"
+	var groupID int
+	err = db.QueryRow(database.ConvertPlaceholders(
+		"SELECT id FROM `groups` WHERE name = ? AND valid_id = 1 LIMIT 1"), groupName).Scan(&groupID)
+	if err != nil {
+		t.Skipf("group %q not found; skipping", groupName)
+	}
+
+	// Create the user {and} one rw membership through the real handler, then add
+	// further permission rows for the same group directly (as a user who holds
+	// several permission keys would have).
+	login := "grp_distinct_" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	router := gin.New()
+	router.POST("/admin/users", HandleAdminUserCreate)
+
+	formData := url.Values{
+		"login":      {login},
+		"first_name": {"Distinct"},
+		"last_name":  {"Groups"},
+		"valid_id":   {"1"},
+		"password":   {"Passw0rd!string"},
+		"groups":     {groupName},
+	}
+	req, _ := http.NewRequest("POST", "/admin/users",
+		strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var uid int
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		"SELECT id FROM users WHERE login = ?"), login).Scan(&uid))
+
+	// Additional permission keys for the SAME (user, group) membership.
+	for _, perm := range []string{"ro", "owner", "move_into"} {
+		_, err = db.Exec(database.ConvertPlaceholders(
+			"INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by) VALUES (?, ?, ?, NOW(), ?, NOW(), ?)"),
+			uid, groupID, perm, uid, uid)
+		require.NoError(t, err)
+	}
+
+	t.Cleanup(func() {
+		_, _ = db.Exec(database.ConvertPlaceholders(
+			"DELETE FROM group_user WHERE user_id = ?"), uid)
+		_, _ = db.Exec(database.ConvertPlaceholders(
+			"DELETE FROM users WHERE id = ?"), uid)
+	})
+
+	// GET the user and confirm the group is reported exactly once.
+	gin.SetMode(gin.TestMode)
+	router = gin.New()
+	router.GET("/admin/users/:id", HandleAdminUserGet)
+	req, _ = http.NewRequest("GET", "/admin/users/"+strconv.Itoa(uid), nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	require.True(t, response["success"].(bool))
+
+	data, ok := response["data"].(map[string]interface{})
+	require.True(t, ok)
+	groups, ok := data["groups"].([]interface{})
+	require.True(t, ok, "groups should be a list")
+
+	count := 0
+	for _, g := range groups {
+		if g == groupName {
+			count++
+		}
+	}
+	assert.Equal(t, 1, count,
+		"group should appear exactly once despite multiple permission rows")
+}
+
 func TestHandleAdminUserUpdate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

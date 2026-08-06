@@ -116,6 +116,13 @@ project adheres to [Semantic Versioning](https://semver.org/).
   artwork while the logged-in UI (versioned) showed the current one. All favicon/logo references now
   carry `?v={{ assetVersion }}` (`templates/layouts/auth.pongo2`, `login.pongo2`,
   `login_2fa.pongo2`, `customer/login.pongo2`, `customer/login_2fa.pongo2`).
+- **2FA login loop on Firefox (agent + customer).** The OTP code's 6-digit auto-submit dispatched a
+  synthetic `new Event('submit')` on the form. That event is not `cancelable`, so in Firefox the
+  browser performs a native form submission (reloading the 2FA page) in addition to the fetch-based
+  verify, leaving the user stuck entering their code; Chrome ignores the synthetic event. The form's
+  fetch+redirect logic was extracted into a shared `verifyCode()` called directly by both the submit
+  handler and the auto-submit, removing the synthetic `submit` event entirely
+  (`templates/pages/login_2fa.pongo2`, `templates/pages/customer/login_2fa.pongo2`).
 
 ### Security
 - **22 Dependabot vulnerabilities remediated** (7 critical, 5 high, 10 moderate). Go:
