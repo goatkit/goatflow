@@ -152,8 +152,12 @@ func seedQueues(t *testing.T) (qa, qb string, g1id, g2id int) {
 
 	qa = "rbac_qa_" + sfx
 	qb = "rbac_qb_" + sfx
+	// Reuse an existing queue's follow_up_id (a valid FK) so this test does not
+	// depend on a specific seed row in follow_up_possible being present.
 	var followUpID int
-	require.NoError(t, db.QueryRow("SELECT id FROM follow_up_possible ORDER BY id LIMIT 1").Scan(&followUpID))
+	if err := db.QueryRow("SELECT follow_up_id FROM queue ORDER BY id LIMIT 1").Scan(&followUpID); err != nil {
+		followUpID = 1
+	}
 	_, err = db.Exec(`
 		INSERT INTO queue (name, group_id, system_address_id, salutation_id, signature_id,
 			follow_up_id, follow_up_lock, valid_id, create_time, change_time, create_by, change_by)

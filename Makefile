@@ -8,7 +8,7 @@ export $(shell sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' .env)
 endif
 
 # Fallback if .env doesn't exist or doesn't define GO_IMAGE
-GO_IMAGE ?= golang:1.25.10-alpine
+GO_IMAGE ?= golang:1.25.12-alpine
 export GO_IMAGE
 TOOLBOX_IMAGE ?= ghcr.io/goatkit/goatflow/toolbox:latest
 NPROC := $(shell nproc 2>/dev/null || echo 4)

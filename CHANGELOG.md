@@ -132,6 +132,13 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `golang.org/x/image` v0.39.0 → v0.44.0, `github.com/quic-go/quic-go` v0.59.0 → v0.60.0,
   `github.com/Azure/go-ntlmssp` → v0.1.1. npm: `js-yaml`, `linkify-it`, `markdown-it` updated via
   overrides. Frontend: `postcss` override bumped to ^8.5.18.
+- **Go toolchain bumped to 1.25.12 and reachable advisories cleared.** `govulncheck` reported 9
+  reachable vulnerabilities; all fixed: `google.golang.org/grpc` v1.79.3 → v1.82.1,
+  `github.com/yuin/goldmark` v1.7.4 → v1.7.17, `github.com/cloudflare/circl` v1.3.3 → v1.6.3,
+  `github.com/russellhaering/goxmldsig` v1.4.0 → v1.6.0 (SAML chain), and the Go image / build refs
+  bumped from `1.25.10` → `1.25.12` to ship the stdlib fixes (`crypto/tls`, `crypto/x509`, `mime`,
+  `net/textproto`) across all Dockerfiles, the Makefile, CI, `.env` files, and helper scripts.
+  `govulncheck` is now clean (0 reachable).
 
 ## [0.8.3] - 2026-05-13
 
