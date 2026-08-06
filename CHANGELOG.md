@@ -7,6 +7,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-08-06
+
 ### Added
 - **Setup Assistant: Response templates, business hours, and email transport onboarding.** Three new
   skippable wizard steps (6: canned responses, 7: business hours calendar, 8: outbound SMTP config)
