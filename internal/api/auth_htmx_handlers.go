@@ -43,6 +43,16 @@ func resolveUserRole(userID uint) (role string, isAdmin bool) {
 
 // handleLoginPage shows the login page.
 func handleLoginPage(c *gin.Context) {
+	if strings.HasPrefix(c.Request.URL.Path, "/customer") {
+		c.Redirect(http.StatusFound, "/customer/login")
+		return
+	}
+
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("CUSTOMER_FE_ONLY")), "true") {
+		c.Redirect(http.StatusFound, "/customer/login")
+		return
+	}
+
 	if cookie, err := c.Cookie("access_token"); err == nil && cookie != "" {
 		c.Redirect(http.StatusFound, "/dashboard")
 		return

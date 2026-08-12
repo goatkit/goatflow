@@ -847,7 +847,7 @@ func handleWidgetByStatus(argsJSON string) string {
 		GROUP BY ts.id, ts.name
 		ORDER BY count DESC
 		LIMIT 5
-	`, queueFilter))
+	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	var items string
 	if err == nil {
@@ -887,7 +887,7 @@ func handleWidgetChart(argsJSON string) string {
 		WHERE t.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)%s
 		GROUP BY DATE(t.create_time)
 		ORDER BY date
-	`, queueFilter))
+	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	var labels, dataPoints []string
 	if err == nil {
@@ -1302,7 +1302,7 @@ func handleWidgetSLA(argsJSON string) string {
 		GROUP BY q.id, q.name
 		ORDER BY queue
 		LIMIT 5
-	`, queueFilter))
+	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	var items string
 	if err == nil {
@@ -1357,7 +1357,7 @@ func handleWidgetTimeTracking(argsJSON string) string {
 		GROUP BY u.id, u.first_name, u.last_name
 		ORDER BY total_minutes DESC
 		LIMIT 5
-	`, queueFilter))
+	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	// Total
 	totalRows, _ := dbQuery(fmt.Sprintf(`
@@ -1365,7 +1365,7 @@ func handleWidgetTimeTracking(argsJSON string) string {
 		FROM time_accounting ta
 		JOIN ticket t ON ta.ticket_id = t.id
 		WHERE ta.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)%s
-	`, queueFilter))
+	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 	totalMin := 0
 	if len(totalRows) > 0 {
 		totalMin = toInt(totalRows[0]["total"])
