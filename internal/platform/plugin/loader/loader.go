@@ -819,7 +819,7 @@ func (l *Loader) watchLoop(watcher *fsnotify.Watcher, watchCtx context.Context) 
 			if !ok {
 				return
 			}
-			l.handleFSEvent(event)
+			l.handleFSEvent(watcher, event)
 
 		case err, ok := <-errors:
 			if !ok {
@@ -831,20 +831,22 @@ func (l *Loader) watchLoop(watcher *fsnotify.Watcher, watchCtx context.Context) 
 }
 
 // handleFSEvent processes a single file system event with debouncing.
-func (l *Loader) handleFSEvent(event fsnotify.Event) {
+// watcher is the captured watcher passed down from watchLoop, so reads here
+// never race with StopWatch (which nils l.watcher under watchMu).
+func (l *Loader) handleFSEvent(watcher *fsnotify.Watcher, event fsnotify.Event) {
 	path := event.Name
 	baseName := filepath.Base(path)
 
 	// New subdirectory created — watch it and check for plugin.yaml
 	if event.Op&fsnotify.Create != 0 {
 		if info, err := os.Stat(path); err == nil && info.IsDir() {
-			if l.watcher != nil {
-				l.watcher.Add(path)
+			if watcher != nil {
+				watcher.Add(path)
 			}
 			// Check if the new directory already contains a plugin.yaml
 			manifestPath := filepath.Join(path, "plugin.yaml")
 			if _, err := os.Stat(manifestPath); err == nil {
-				l.handleFSEvent(fsnotify.Event{
+				l.handleFSEvent(watcher, fsnotify.Event{
 					Name: manifestPath,
 					Op:   fsnotify.Create,
 				})
@@ -873,7 +875,7 @@ func (l *Loader) handleFSEvent(event fsnotify.Event) {
 	}
 	l.debounce[path] = time.AfterFunc(500*time.Millisecond, func() {
 		if isManifest {
-			l.processManifestChange(event)
+			l.processManifestChange(watcher, event)
 		} else if isGRPC {
 			l.processGRPCBinaryChange(event)
 		} else {
@@ -947,7 +949,7 @@ func (l *Loader) pluginNameForBinaryPath(path string) string {
 }
 
 // processManifestChange handles plugin.yaml create/modify events.
-func (l *Loader) processManifestChange(event fsnotify.Event) {
+func (l *Loader) processManifestChange(watcher *fsnotify.Watcher, event fsnotify.Event) {
 	path := event.Name
 	pluginDir := filepath.Dir(path)
 
@@ -991,8 +993,8 @@ func (l *Loader) processManifestChange(event fsnotify.Event) {
 		}
 
 		// Watch the plugin subdirectory for binary changes
-		if l.watcher != nil {
-			l.watcher.Add(pluginDir)
+		if watcher != nil {
+			watcher.Add(pluginDir)
 		}
 
 	case event.Op&fsnotify.Remove != 0:
