@@ -12,6 +12,7 @@ import (
 
 // mockInnerHostAPI records calls for assertion.
 type mockInnerHostAPI struct {
+	mu           sync.Mutex
 	queryCalls   int
 	execCalls    int
 	cacheCalls   int
@@ -23,44 +24,62 @@ type mockInnerHostAPI struct {
 }
 
 func (m *mockInnerHostAPI) DBQuery(_ context.Context, _ string, _ ...any) ([]map[string]any, error) {
+	m.mu.Lock()
 	m.queryCalls++
+	m.mu.Unlock()
 	return nil, nil
 }
 func (m *mockInnerHostAPI) DBExec(_ context.Context, _ string, _ ...any) (int64, error) {
+	m.mu.Lock()
 	m.execCalls++
+	m.mu.Unlock()
 	return 0, nil
 }
 func (m *mockInnerHostAPI) CacheGet(_ context.Context, key string) ([]byte, bool, error) {
+	m.mu.Lock()
 	m.cacheCalls++
 	m.lastCacheKey = key
+	m.mu.Unlock()
 	return nil, false, nil
 }
 func (m *mockInnerHostAPI) CacheSet(_ context.Context, key string, _ []byte, _ int) error {
+	m.mu.Lock()
 	m.cacheCalls++
 	m.lastCacheKey = key
+	m.mu.Unlock()
 	return nil
 }
 func (m *mockInnerHostAPI) CacheDelete(_ context.Context, key string) error {
+	m.mu.Lock()
 	m.cacheCalls++
 	m.lastCacheKey = key
+	m.mu.Unlock()
 	return nil
 }
 func (m *mockInnerHostAPI) HTTPRequest(_ context.Context, _, _ string, _ map[string]string, _ []byte) (int, []byte, error) {
+	m.mu.Lock()
 	m.httpCalls++
+	m.mu.Unlock()
 	return 200, nil, nil
 }
 func (m *mockInnerHostAPI) SendEmail(_ context.Context, _, _, _ string, _ bool) error {
+	m.mu.Lock()
 	m.emailCalls++
+	m.mu.Unlock()
 	return nil
 }
 func (m *mockInnerHostAPI) Log(_ context.Context, _, _ string, _ map[string]any) {}
 func (m *mockInnerHostAPI) ConfigGet(_ context.Context, _ string) (string, error) {
+	m.mu.Lock()
 	m.configCalls++
+	m.mu.Unlock()
 	return "val", nil
 }
 func (m *mockInnerHostAPI) Translate(_ context.Context, key string, _ ...any) string { return key }
 func (m *mockInnerHostAPI) CallPlugin(_ context.Context, _, _ string, _ json.RawMessage) (json.RawMessage, error) {
+	m.mu.Lock()
 	m.callCalls++
+	m.mu.Unlock()
 	return nil, nil
 }
 
