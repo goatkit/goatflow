@@ -761,6 +761,8 @@ func (l *Loader) WatchDir(ctx context.Context) error {
 	l.watchMu.Lock()
 	l.watcher = watcher
 	l.watchCtx, l.watchCancel = context.WithCancel(ctx)
+	w := l.watcher
+	wc := l.watchCtx
 	l.watchMu.Unlock()
 
 	// Watch the main plugin directory
@@ -780,7 +782,7 @@ func (l *Loader) WatchDir(ctx context.Context) error {
 
 	l.logger.Info("🔄 hot reload enabled", "path", l.pluginDir)
 
-	go l.watchLoop()
+	go l.watchLoop(w, wc)
 	return nil
 }
 
@@ -799,15 +801,18 @@ func (l *Loader) StopWatch() {
 }
 
 // watchLoop processes file system events.
-func (l *Loader) watchLoop() {
-	if l.watcher == nil {
+// watcher and watchCtx are captured at goroutine spawn time under watchMu so
+// that StopWatch (which mutates l.watcher/l.watchCtx) cannot race with reads
+// here.
+func (l *Loader) watchLoop(watcher *fsnotify.Watcher, watchCtx context.Context) {
+	if watcher == nil {
 		return
 	}
-	events := l.watcher.Events
-	errors := l.watcher.Errors
+	events := watcher.Events
+	errors := watcher.Errors
 	for {
 		select {
-		case <-l.watchCtx.Done():
+		case <-watchCtx.Done():
 			return
 
 		case event, ok := <-events:
