@@ -42,15 +42,6 @@ jobs:
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: true
           GITLEAKS_ENABLE_SUMMARY: true
 
-      - name: Upload Gitleaks Report
-        if: always()
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: gitleaks-report
-          path: |
-            gitleaks-results.sarif
-          retention-days: 7
-
   # ─────────────────────────────────────────────
   # Security & Code Quality
   # ─────────────────────────────────────────────
