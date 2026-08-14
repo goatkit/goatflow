@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/goatkit/goatflow/internal/platform/dbconfig"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -60,25 +61,24 @@ func main() {
 		Options:      make(map[string]string),
 	}
 
-	// Validate required fields
 	if config.Username == "" {
-		config.Username = os.Getenv("DB_USER")
+		config.Username = dbconfig.Env("USER")
 		if config.Username == "" {
-			log.Fatal("Database username is required (use -user or DB_USER env var)")
+			log.Fatal("Database username is required (use -user or DB_MYSQL_USER/DB_PGSQL_USER env var)")
 		}
 	}
 
 	if config.Password == "" {
-		config.Password = os.Getenv("DB_PASSWORD")
+		config.Password = dbconfig.Env("PASSWORD")
 		if config.Password == "" {
-			log.Fatal("Database password is required (use -password or DB_PASSWORD env var)")
+			log.Fatal("Database password is required (use -password or DB_MYSQL_PASSWORD/DB_PGSQL_PASSWORD env var)")
 		}
 	}
 
 	if config.Database == "" {
-		config.Database = os.Getenv("DB_NAME")
+		config.Database = dbconfig.Env("NAME")
 		if config.Database == "" {
-			log.Fatal("Database name is required (use -database or DB_NAME env var)")
+			log.Fatal("Database name is required (use -database or DB_MYSQL_NAME/DB_PGSQL_NAME env var)")
 		}
 	}
 

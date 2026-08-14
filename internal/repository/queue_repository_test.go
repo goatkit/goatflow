@@ -11,21 +11,22 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
+
+	"github.com/goatkit/goatflow/internal/platform/dbconfig"
 )
 
 // getTestDB returns a database connection for testing.
 func getTestDB() (*sql.DB, error) {
 	driver := currentDriver()
-
-	host := firstNonEmpty(os.Getenv("TEST_DB_HOST"), os.Getenv("DB_HOST"), defaultHost(driver))
-	user := firstNonEmpty(os.Getenv("TEST_DB_USER"), os.Getenv("DB_USER"), defaultUser(driver))
-	password := firstNonEmpty(os.Getenv("TEST_DB_PASSWORD"), os.Getenv("DB_PASSWORD"), defaultPassword(driver))
-	dbName := firstNonEmpty(os.Getenv("TEST_DB_NAME"), os.Getenv("DB_NAME"), defaultDBName(driver))
-	port := firstNonEmpty(os.Getenv("TEST_DB_PORT"), os.Getenv("DB_PORT"), defaultPort(driver))
+	host := firstNonEmpty(os.Getenv("TEST_DB_HOST"), dbconfig.Env("HOST"), defaultHost(driver))
+	user := firstNonEmpty(os.Getenv("TEST_DB_USER"), dbconfig.Env("USER"), defaultUser(driver))
+	password := firstNonEmpty(os.Getenv("TEST_DB_PASSWORD"), dbconfig.Env("PASSWORD"), defaultPassword(driver))
+	dbName := firstNonEmpty(os.Getenv("TEST_DB_NAME"), dbconfig.Env("NAME"), defaultDBName(driver))
+	port := firstNonEmpty(os.Getenv("TEST_DB_PORT"), dbconfig.Env("PORT"), defaultPort(driver))
 
 	switch driver {
 	case "postgres", "pgsql", "pg":
-		sslMode := firstNonEmpty(os.Getenv("TEST_DB_SSLMODE"), os.Getenv("DB_SSL_MODE"), "disable")
+		sslMode := firstNonEmpty(os.Getenv("TEST_DB_SSLMODE"), dbconfig.Env("SSLMODE"), "disable")
 		connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", user, password, host, port, dbName, sslMode)
 		return sql.Open("postgres", connStr)
 	case "mysql", "mariadb":

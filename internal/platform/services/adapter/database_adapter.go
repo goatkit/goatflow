@@ -13,6 +13,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
+	"github.com/goatkit/goatflow/internal/platform/dbconfig"
 	"github.com/goatkit/goatflow/internal/platform/services/database"
 	"github.com/goatkit/goatflow/internal/platform/services/registry"
 )
@@ -198,20 +199,20 @@ func buildDatabaseConfig() *registry.ServiceConfig {
 		config.Options["connection_url"] = dbURL
 	} else {
 		// Use individual environment variables (prefer TEST_ prefixed in test mode)
-		config.Host = getEnvOrDefault("TEST_DB_HOST", getEnvOrDefault("DB_HOST", "localhost"))
+		config.Host = getEnvOrDefault("TEST_DB_HOST", dbconfig.EnvDefault("HOST", "localhost"))
 		defaultPort := 3306
 		if provider == registry.ProviderPostgres {
 			defaultPort = 5432
 		}
-		config.Port = getEnvAsIntOrDefault("TEST_DB_PORT", getEnvAsIntOrDefault("DB_PORT", defaultPort))
-		config.Username = getEnvOrDefault("TEST_DB_USER", getEnvOrDefault("DB_USER", "goatflow_user"))
-		config.Password = getEnvOrDefault("TEST_DB_PASSWORD", getEnvOrDefault("DB_PASSWORD", "goatflow_password"))
-		config.Database = getEnvOrDefault("TEST_DB_NAME", getEnvOrDefault("DB_NAME", "goatflow"))
+		config.Port = getEnvAsIntOrDefault("TEST_DB_PORT", dbconfig.EnvInt("PORT", defaultPort))
+		config.Username = getEnvOrDefault("TEST_DB_USER", dbconfig.EnvDefault("USER", "goatflow_user"))
+		config.Password = getEnvOrDefault("TEST_DB_PASSWORD", dbconfig.EnvDefault("PASSWORD", "goatflow_password"))
+		config.Database = getEnvOrDefault("TEST_DB_NAME", dbconfig.EnvDefault("NAME", "goatflow"))
 
 		// SSL mode
 		if sslMode := os.Getenv("TEST_DB_SSLMODE"); sslMode != "" {
 			config.Options["sslmode"] = sslMode
-		} else if sslMode := os.Getenv("DB_SSLMODE"); sslMode != "" {
+		} else if sslMode := dbconfig.Env("SSLMODE"); sslMode != "" {
 			config.Options["sslmode"] = sslMode
 		}
 
@@ -332,8 +333,7 @@ func GetDB() (*sql.DB, error) {
 // GetDirectDB creates a direct database connection using environment variables.
 func GetDirectDB() *sql.DB {
 	if os.Getenv("APP_ENV") == "test" {
-		// Respect a very short timeout by ping, but don't attempt if no host
-		if os.Getenv("DB_HOST") == "" && os.Getenv("DATABASE_URL") == "" {
+		if dbconfig.Env("HOST") == "" && os.Getenv("DATABASE_URL") == "" {
 			return nil
 		}
 	}
@@ -349,12 +349,12 @@ func GetDirectDB() *sql.DB {
 		}
 	}
 
-	// Use individual environment variables
-	host := getEnvOrDefault("DB_HOST", "localhost")
-	port := getEnvAsIntOrDefault("DB_PORT", 3306)
-	user := getEnvOrDefault("DB_USER", "otrs")
-	password := getEnvOrDefault("DB_PASSWORD", "CHANGEME")
-	database := getEnvOrDefault("DB_NAME", "otrs")
+	// Use individual environment variables (namespaced per driver via dbconfig)
+	host := dbconfig.EnvDefault("HOST", "localhost")
+	port := dbconfig.EnvInt("PORT", 3306)
+	user := dbconfig.EnvDefault("USER", "otrs")
+	password := dbconfig.EnvDefault("PASSWORD", "CHANGEME")
+	database := dbconfig.EnvDefault("NAME", "otrs")
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true&multiStatements=true",
 		user, password, host, port, database)

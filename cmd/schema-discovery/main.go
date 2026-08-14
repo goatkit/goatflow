@@ -14,6 +14,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/goatkit/goatflow/internal/components/dynamic"
+	"github.com/goatkit/goatflow/internal/platform/dbconfig"
 )
 
 func main() {
@@ -21,7 +22,7 @@ func main() {
 		dbHost     = flag.String("host", "localhost", "Database host")
 		dbPort     = flag.Int("port", 5432, "Database port")
 		dbUser     = flag.String("user", "goatflow_user", "Database user")
-		dbPassword = flag.String("password", os.Getenv("DB_PASSWORD"), "Database password")
+		dbPassword = flag.String("password", dbconfig.Env("PASSWORD"), "Database password")
 		dbName     = flag.String("database", "goatflow", "Database name")
 		outputDir  = flag.String("output", "modules/generated", "Output directory for YAML files")
 		tableName  = flag.String("table", "", "Specific table to generate (empty for all)")

@@ -23,12 +23,17 @@ func isPostgres() bool {
 
 // Env returns the driver-scoped value of DB_<key>: DB_MYSQL_<key> when the
 // active driver is MySQL/MariaDB, DB_PGSQL_<key> when it is PostgreSQL.
+// Falls back to the legacy flat DB_<key> when the namespaced var is unset,
+// so test targets and scripts that inject flat DB_* credentials keep working.
 func Env(key string) string {
 	pfx := "DB_MYSQL_"
 	if isPostgres() {
 		pfx = "DB_PGSQL_"
 	}
-	return os.Getenv(pfx + key)
+	if v := os.Getenv(pfx + key); v != "" {
+		return v
+	}
+	return os.Getenv("DB_" + key)
 }
 
 // EnvDefault returns Env(key), or def when the driver-scoped value is unset or

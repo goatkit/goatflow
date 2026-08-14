@@ -7,6 +7,24 @@ include .env
 export $(shell sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' .env)
 endif
 
+# Derive flat DB_* vars from namespaced per-driver vars (single source of truth)
+# DB_MYSQL_* / DB_PGSQL_* are the canonical vars; these flat aliases keep
+# existing Makefile targets and scripts working without per-target edits.
+ifeq ($(DB_DRIVER),postgres)
+DB_HOST ?= $(DB_PGSQL_HOST)
+DB_PORT ?= $(DB_PGSQL_PORT)
+DB_NAME ?= $(DB_PGSQL_NAME)
+DB_USER ?= $(DB_PGSQL_USER)
+DB_PASSWORD ?= $(DB_PGSQL_PASSWORD)
+else
+DB_HOST ?= $(DB_MYSQL_HOST)
+DB_PORT ?= $(DB_MYSQL_PORT)
+DB_NAME ?= $(DB_MYSQL_NAME)
+DB_USER ?= $(DB_MYSQL_USER)
+DB_PASSWORD ?= $(DB_MYSQL_PASSWORD)
+endif
+export DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD
+
 # Fallback if .env doesn't exist or doesn't define GO_IMAGE
 GO_IMAGE ?= golang:1.25.12-alpine
 export GO_IMAGE
@@ -156,6 +174,22 @@ TEST_DB_PORT := $(TEST_DB_MYSQL_PORT)
 TEST_DB_NAME := $(TEST_DB_MYSQL_NAME)
 TEST_DB_USER := $(TEST_DB_MYSQL_USER)
 TEST_DB_PASSWORD := $(TEST_DB_MYSQL_PASSWORD)
+endif
+
+# Namespaced test DB vars (DB_MYSQL_* / DB_PGSQL_*) so dbconfig.Env() resolves
+# the test credentials when DB_DRIVER is set to the test driver.
+ifeq ($(TEST_DB_DRIVER),postgres)
+TEST_DB_PGSQL_HOST := $(TEST_DB_POSTGRES_HOST)
+TEST_DB_PGSQL_PORT := $(TEST_DB_POSTGRES_PORT)
+TEST_DB_PGSQL_NAME := $(TEST_DB_POSTGRES_NAME)
+TEST_DB_PGSQL_USER := $(TEST_DB_POSTGRES_USER)
+TEST_DB_PGSQL_PASSWORD := $(TEST_DB_POSTGRES_PASSWORD)
+else
+TEST_DB_MYSQL_HOST := $(TEST_DB_MYSQL_HOST)
+TEST_DB_MYSQL_PORT := $(TEST_DB_MYSQL_PORT)
+TEST_DB_MYSQL_NAME := $(TEST_DB_MYSQL_NAME)
+TEST_DB_MYSQL_USER := $(TEST_DB_MYSQL_USER)
+TEST_DB_MYSQL_PASSWORD := $(TEST_DB_MYSQL_PASSWORD)
 endif
 
 # Toolbox uses host network, so point to localhost with mapped port

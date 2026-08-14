@@ -154,15 +154,16 @@ func typeStrings(types []DatabaseType) []string {
 }
 
 // LoadConfigFromEnv loads database configuration from environment variables.
+// Uses namespaced per-driver vars (DB_MYSQL_* / DB_PGSQL_*) selected by DB_DRIVER.
 func LoadConfigFromEnv() DatabaseConfig {
 	config := DatabaseConfig{
 		Type:     PostgreSQL, // Default to PostgreSQL
-		Host:     getEnvWithDefault("DB_HOST", "postgres"),
-		Port:     getEnvWithDefault("DB_PORT", "5432"),
-		Database: getEnvWithDefault("DB_NAME", "goatflow"),
-		Username: getEnvWithDefault("DB_USER", "goatflow"),
-		Password: getEnvWithDefault("DB_PASSWORD", "goatflow_password"),
-		SSLMode:  getEnvWithDefault("DB_SSLMODE", "disable"),
+		Host:     EnvDefault("HOST", "postgres"),
+		Port:     EnvDefault("PORT", "5432"),
+		Database: EnvDefault("NAME", "goatflow"),
+		Username: EnvDefault("USER", "goatflow"),
+		Password: EnvDefault("PASSWORD", "goatflow_password"),
+		SSLMode:  EnvDefault("SSLMODE", "disable"),
 
 		// Connection pool defaults
 		MaxOpenConns:    25,

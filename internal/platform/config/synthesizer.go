@@ -253,28 +253,49 @@ func (s *Synthesizer) generateVariables(existing map[string]string, rotateOnly b
 		Key: "# Database", Value: "", Type: "section",
 	})
 	s.variables = append(s.variables, EnvVariable{
-		Key: "DB_HOST", Value: s.getOrDefault(existing, "DB_HOST", "localhost"), Type: "static",
+		Key: "DB_DRIVER", Value: s.getOrDefault(existing, "DB_DRIVER", "mariadb"), Type: "static",
 	})
 	s.variables = append(s.variables, EnvVariable{
-		Key: "DB_PORT", Value: s.getOrDefault(existing, "DB_PORT", "5432"), Type: "static",
+		Key: "DB_MYSQL_HOST", Value: s.getOrDefault(existing, "DB_MYSQL_HOST", "mariadb"), Type: "static",
 	})
 	s.variables = append(s.variables, EnvVariable{
-		Key: "DB_NAME", Value: s.getOrDefault(existing, "DB_NAME", "goatflow"), Type: "static",
+		Key: "DB_MYSQL_PORT", Value: s.getOrDefault(existing, "DB_MYSQL_PORT", "3306"), Type: "static",
 	})
 	s.variables = append(s.variables, EnvVariable{
-		Key: "DB_USER", Value: s.getOrDefault(existing, "DB_USER", "goatflow_user"), Type: "static",
+		Key: "DB_MYSQL_NAME", Value: s.getOrDefault(existing, "DB_MYSQL_NAME", "goatflow"), Type: "static",
+	})
+	s.variables = append(s.variables, EnvVariable{
+		Key: "DB_MYSQL_USER", Value: s.getOrDefault(existing, "DB_MYSQL_USER", "goatflow_user"), Type: "static",
 	})
 
 	dbPassword, _ := s.GenerateSecret(SecretTypePassword, 24, "", "")
 	s.variables = append(s.variables, EnvVariable{
-		Key:       "DB_PASSWORD",
-		Value:     s.getOrGenerate(existing, "DB_PASSWORD", dbPassword, rotateOnly),
+		Key:       "DB_MYSQL_PASSWORD",
+		Value:     s.getOrGenerate(existing, "DB_MYSQL_PASSWORD", dbPassword, rotateOnly),
 		Type:      "secret",
 		Generated: true,
 	})
 
 	s.variables = append(s.variables, EnvVariable{
-		Key: "DB_SSL_MODE", Value: s.getOrDefault(existing, "DB_SSL_MODE", "disable"), Type: "static",
+		Key: "DB_PGSQL_HOST", Value: s.getOrDefault(existing, "DB_PGSQL_HOST", "postgres"), Type: "static",
+	})
+	s.variables = append(s.variables, EnvVariable{
+		Key: "DB_PGSQL_PORT", Value: s.getOrDefault(existing, "DB_PGSQL_PORT", "5432"), Type: "static",
+	})
+	s.variables = append(s.variables, EnvVariable{
+		Key: "DB_PGSQL_NAME", Value: s.getOrDefault(existing, "DB_PGSQL_NAME", "goatflow"), Type: "static",
+	})
+	s.variables = append(s.variables, EnvVariable{
+		Key: "DB_PGSQL_USER", Value: s.getOrDefault(existing, "DB_PGSQL_USER", "goatflow_user"), Type: "static",
+	})
+	s.variables = append(s.variables, EnvVariable{
+		Key:       "DB_PGSQL_PASSWORD",
+		Value:     s.getOrGenerate(existing, "DB_PGSQL_PASSWORD", dbPassword, rotateOnly),
+		Type:      "secret",
+		Generated: true,
+	})
+	s.variables = append(s.variables, EnvVariable{
+		Key: "DB_PGSQL_SSLMODE", Value: s.getOrDefault(existing, "DB_PGSQL_SSLMODE", "disable"), Type: "static",
 	})
 	s.variables = append(s.variables, EnvVariable{Key: "", Value: "", Type: "blank"})
 

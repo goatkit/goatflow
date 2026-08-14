@@ -10,13 +10,13 @@ services:
     # then drops privileges to the mysql user (999) internally.
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_MYSQL_NAME}
+      MYSQL_USER: ${DB_MYSQL_USER}
+      MYSQL_PASSWORD: ${DB_MYSQL_PASSWORD}
       # MariaDB specific settings for better performance
       MYSQL_INITDB_SKIP_TZINFO: 1
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "${DB_MYSQL_PORT:-3306}:3306"
     expose:
       - "3306"
     volumes:
@@ -36,19 +36,19 @@ services:
   #   image: postgres:15-alpine
   #   container_name: goatflow-postgres
   #   environment:
-  #     POSTGRES_DB: ${DB_NAME}
-  #     POSTGRES_USER: ${DB_USER}
-  #     POSTGRES_PASSWORD: ${DB_PASSWORD}
+  #     POSTGRES_DB: ${DB_PGSQL_NAME}
+  #     POSTGRES_USER: ${DB_PGSQL_USER}
+  #     POSTGRES_PASSWORD: ${DB_PGSQL_PASSWORD}
   #     # Pass APP_ENV to prevent test database creation in production
   #     APP_ENV: ${APP_ENV:-development}
   #   ports:
-  #     - "${DB_PORT:-5432}:5432"
+  #     - "${DB_PGSQL_PORT:-5432}:5432"
   #   volumes:
   #     - postgres_data:/var/lib/postgresql/data
   #     # Init script handles any username and creates test database safely
   #     - ./docker/postgres/01-init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro,Z
   #   healthcheck:
-  #     test: ["CMD", "pg_isready", "-U", "${DB_USER}"]
+  #     test: ["CMD", "pg_isready", "-U", "${DB_PGSQL_USER}"]
   #     interval: 10s
   #     timeout: 5s
   #     retries: 5
@@ -105,9 +105,9 @@ services:
         # Run database migrations automatically
         echo '📦 Running database migrations...'
         if [ \"\$DB_DRIVER\" = 'postgres' ]; then
-          ./migrate -path /app/migrations/postgres -database \"postgres://\$DB_USER:\$DB_PASSWORD@\$DB_HOST:\$DB_PORT/\$DB_NAME?sslmode=disable\" up
+          ./migrate -path /app/migrations/postgres -database \"postgres://\$DB_PGSQL_USER:\$DB_PGSQL_PASSWORD@\$DB_PGSQL_HOST:\$DB_PGSQL_PORT/\$DB_PGSQL_NAME?sslmode=disable\" up
         else
-          ./migrate -path /app/migrations/mysql -database \"mysql://\$DB_USER:\$DB_PASSWORD@tcp(\$DB_HOST:\$DB_PORT)/\$DB_NAME?multiStatements=true\" up
+          ./migrate -path /app/migrations/mysql -database \"mysql://\$DB_MYSQL_USER:\$DB_MYSQL_PASSWORD@tcp(\$DB_MYSQL_HOST:\$DB_MYSQL_PORT)/\$DB_MYSQL_NAME?multiStatements=true\" up
         fi
         echo '✅ Database migrations complete'
         # Start the application
@@ -120,11 +120,16 @@ services:
       APP_ENV: ${APP_ENV:-development}
       APP_PORT: ${APP_PORT:-8080}
       DB_DRIVER: ${DB_DRIVER:-mariadb}
-      DB_HOST: ${DB_HOST:-mariadb}
-      DB_PORT: ${DB_PORT:-3306}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_MYSQL_HOST: ${DB_MYSQL_HOST:-mariadb}
+      DB_MYSQL_PORT: ${DB_MYSQL_PORT:-3306}
+      DB_MYSQL_NAME: ${DB_MYSQL_NAME}
+      DB_MYSQL_USER: ${DB_MYSQL_USER}
+      DB_MYSQL_PASSWORD: ${DB_MYSQL_PASSWORD}
+      DB_PGSQL_HOST: ${DB_PGSQL_HOST:-postgres}
+      DB_PGSQL_PORT: ${DB_PGSQL_PORT:-5432}
+      DB_PGSQL_NAME: ${DB_PGSQL_NAME}
+      DB_PGSQL_USER: ${DB_PGSQL_USER}
+      DB_PGSQL_PASSWORD: ${DB_PGSQL_PASSWORD}
       VALKEY_HOST: valkey
       VALKEY_PORT: 6379
       # JWT configuration; must be provided via environment (.env or shell)
@@ -192,11 +197,16 @@ services:
       ROOT_REDIRECT_PATH: /customer
       CUSTOMER_FE_ONLY: "true"
       DB_DRIVER: ${DB_DRIVER:-mariadb}
-      DB_HOST: ${DB_HOST:-mariadb}
-      DB_PORT: ${DB_PORT:-3306}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_MYSQL_HOST: ${DB_MYSQL_HOST:-mariadb}
+      DB_MYSQL_PORT: ${DB_MYSQL_PORT:-3306}
+      DB_MYSQL_NAME: ${DB_MYSQL_NAME}
+      DB_MYSQL_USER: ${DB_MYSQL_USER}
+      DB_MYSQL_PASSWORD: ${DB_MYSQL_PASSWORD}
+      DB_PGSQL_HOST: ${DB_PGSQL_HOST:-postgres}
+      DB_PGSQL_PORT: ${DB_PGSQL_PORT:-5432}
+      DB_PGSQL_NAME: ${DB_PGSQL_NAME}
+      DB_PGSQL_USER: ${DB_PGSQL_USER}
+      DB_PGSQL_PASSWORD: ${DB_PGSQL_PASSWORD}
       VALKEY_HOST: valkey
       VALKEY_PORT: 6379
       JWT_SECRET: ${JWT_SECRET}
@@ -237,11 +247,16 @@ services:
     command: ["./goats", "-mode", "runner"]
     environment:
       DB_DRIVER: ${DB_DRIVER:-mariadb}
-      DB_HOST: ${DB_HOST:-mariadb}
-      DB_PORT: ${DB_PORT:-3306}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_MYSQL_HOST: ${DB_MYSQL_HOST:-mariadb}
+      DB_MYSQL_PORT: ${DB_MYSQL_PORT:-3306}
+      DB_MYSQL_NAME: ${DB_MYSQL_NAME}
+      DB_MYSQL_USER: ${DB_MYSQL_USER}
+      DB_MYSQL_PASSWORD: ${DB_MYSQL_PASSWORD}
+      DB_PGSQL_HOST: ${DB_PGSQL_HOST:-postgres}
+      DB_PGSQL_PORT: ${DB_PGSQL_PORT:-5432}
+      DB_PGSQL_NAME: ${DB_PGSQL_NAME}
+      DB_PGSQL_USER: ${DB_PGSQL_USER}
+      DB_PGSQL_PASSWORD: ${DB_PGSQL_PASSWORD}
       # Email configuration for queue processing
       GOATFLOW_EMAIL_SMTP_HOST: ${SMTP_HOST:-smtp4dev}
       GOATFLOW_EMAIL_SMTP_PORT: ${SMTP_PORT:-25}
@@ -496,8 +511,8 @@ services:
   #   environment:
   #     - DB=postgresql
   #     - DB_PORT=5432
-  #     - POSTGRES_USER=${DB_USER}
-  #     - POSTGRES_PWD=${DB_PASSWORD}
+  #     - POSTGRES_USER=${DB_PGSQL_USER}
+  #     - POSTGRES_PWD=${DB_PGSQL_PASSWORD}
   #     - POSTGRES_SEEDS=postgres
   #     - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig.yaml
   #   ports:

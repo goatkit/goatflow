@@ -14,6 +14,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/dbconfig"
 )
 
 var (
@@ -227,7 +228,12 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 			dbDriver = "mariadb"
 		}
 	}
-	dbHost := os.Getenv("DB_HOST")
+	// Sync the resolver: dbconfig.Env() keys off DB_DRIVER, so make sure it
+	// reflects the normalized driver (DB_ENGINE fallback included).
+	if os.Getenv("DB_DRIVER") == "" {
+		os.Setenv("DB_DRIVER", dbDriver)
+	}
+	dbHost := dbconfig.Env("HOST")
 	if dbHost == "" {
 		// Prefer service names inside compose network
 		if dbDriver == "postgres" || dbDriver == "postgresql" {
@@ -236,7 +242,7 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 			dbHost = "mariadb"
 		}
 	}
-	dbPort := os.Getenv("DB_PORT")
+	dbPort := dbconfig.Env("PORT")
 	if dbPort == "" {
 		if dbDriver == "postgres" || dbDriver == "postgresql" {
 			dbPort = "5432"
@@ -244,11 +250,11 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 			dbPort = "3306"
 		}
 	}
-	dbName := os.Getenv("DB_NAME")
+	dbName := dbconfig.Env("NAME")
 	if dbName == "" {
 		dbName = "goatflow"
 	}
-	dbUser := os.Getenv("DB_USER")
+	dbUser := dbconfig.Env("USER")
 	if dbUser == "" {
 		if dbDriver == "postgres" || dbDriver == "postgresql" {
 			dbUser = "goatflow_user"
@@ -256,12 +262,12 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 			dbUser = "otrs"
 		}
 	}
-	dbPassword := os.Getenv("DB_PASSWORD")
+	dbPassword := dbconfig.Env("PASSWORD")
 	if dbPassword == "" {
 		dbPassword = os.Getenv("PGPASSWORD")
 	}
 	if dbPassword == "" {
-		return fmt.Errorf("database password environment variable is required (DB_PASSWORD or PGPASSWORD)")
+		return fmt.Errorf("database password environment variable is required (DB_MYSQL_PASSWORD/DB_PGSQL_PASSWORD or PGPASSWORD)")
 	}
 
 	// Connect to database

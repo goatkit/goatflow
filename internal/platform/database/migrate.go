@@ -116,12 +116,13 @@ func findMigrateBinary() string {
 }
 
 // buildDatabaseURL builds the database connection URL for migrate.
+// Uses namespaced per-driver vars (DB_MYSQL_* / DB_PGSQL_*) selected by DB_DRIVER.
 func buildDatabaseURL(driver string) (string, error) {
-	dbHost := firstNonEmpty(os.Getenv("DB_HOST"), "mariadb")
-	dbPort := firstNonEmpty(os.Getenv("DB_PORT"), "3306")
-	dbUser := firstNonEmpty(os.Getenv("DB_USER"), "otrs")
-	dbPass := os.Getenv("DB_PASSWORD")
-	dbName := firstNonEmpty(os.Getenv("DB_NAME"), "otrs")
+	dbHost := firstNonEmpty(Env("HOST"), "mariadb")
+	dbPort := firstNonEmpty(Env("PORT"), "3306")
+	dbUser := firstNonEmpty(Env("USER"), "otrs")
+	dbPass := Env("PASSWORD")
+	dbName := firstNonEmpty(Env("NAME"), "otrs")
 
 	switch driver {
 	case "mysql", "mariadb":
@@ -131,7 +132,7 @@ func buildDatabaseURL(driver string) (string, error) {
 
 	case "postgres", "postgresql":
 		// postgres://user:password@host:port/database?sslmode=disable
-		sslMode := firstNonEmpty(os.Getenv("DB_SSL_MODE"), "disable")
+		sslMode := firstNonEmpty(Env("SSLMODE"), "disable")
 		return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 			dbUser, dbPass, dbHost, dbPort, dbName, sslMode), nil
 

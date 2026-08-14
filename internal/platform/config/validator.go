@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/goatkit/goatflow/internal/platform/dbconfig"
 )
 
 type SecretValidator struct {
@@ -69,21 +71,20 @@ func (v *SecretValidator) validateJWTSecret(isProduction bool) {
 }
 
 func (v *SecretValidator) validateDatabasePassword(isProduction bool) {
-	password := os.Getenv("DB_PASSWORD")
-
+	password := dbconfig.Env("PASSWORD")
 	if password == "" {
-		v.addWarning("DB_PASSWORD is not set")
+		v.addWarning("DB password is not set (DB_MYSQL_PASSWORD / DB_PGSQL_PASSWORD)")
 		return
 	}
 
 	// Check for example value
 	if password == "goatflow_password" {
-		v.addError("DB_PASSWORD is using the default example value", isProduction)
+		v.addError("DB password is using the default example value", isProduction)
 		return
 	}
 
 	if len(password) < 12 {
-		v.addWarning("DB_PASSWORD should be at least 12 characters long")
+		v.addWarning("DB password should be at least 12 characters long")
 	}
 }
 
