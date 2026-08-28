@@ -104,10 +104,10 @@ services:
         fi
         # Run database migrations automatically
         echo '📦 Running database migrations...'
-        if [ \"\$DB_DRIVER\" = 'postgres' ]; then
-          ./migrate -path /app/migrations/postgres -database \"postgres://\$DB_PGSQL_USER:\$DB_PGSQL_PASSWORD@\$DB_PGSQL_HOST:\$DB_PGSQL_PORT/\$DB_PGSQL_NAME?sslmode=disable\" up
+        if [ \"$${DB_DRIVER}\" = 'postgres' ]; then
+          ./migrate -path /app/migrations/postgres -database \"postgres://$${DB_PGSQL_USER}:$${DB_PGSQL_PASSWORD}@$${DB_PGSQL_HOST}:$${DB_PGSQL_PORT}/$${DB_PGSQL_NAME}?sslmode=disable\" up
         else
-          ./migrate -path /app/migrations/mysql -database \"mysql://\$DB_MYSQL_USER:\$DB_MYSQL_PASSWORD@tcp(\$DB_MYSQL_HOST:\$DB_MYSQL_PORT)/\$DB_MYSQL_NAME?multiStatements=true\" up
+          ./migrate -path /app/migrations/mysql -database \"mysql://$${DB_MYSQL_USER}:$${DB_MYSQL_PASSWORD}@tcp($${DB_MYSQL_HOST}:$${DB_MYSQL_PORT})/$${DB_MYSQL_NAME}?multiStatements=true\" up
         fi
         echo '✅ Database migrations complete'
         # Start the application
