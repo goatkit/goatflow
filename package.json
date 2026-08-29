@@ -17,10 +17,11 @@
     "build": "bun run build-css && bun run build-js"
   },
   "devDependencies": {
+    "browserslist": "^4.28.4",
+    "caniuse-lite": "^1.0.30001799",
     "esbuild": "^0.28.1",
     "js-yaml": "^4.3.0",
-    "browserslist": "^4.28.4",
-    "caniuse-lite": "^1.0.30001799"
+    "wrangler": "^4.124.0"
   },
   "keywords": [
     "ticketing",
