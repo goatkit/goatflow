@@ -7,6 +7,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **HostAPI article attachments.** `CreateArticleAttachment` / `ListArticleAttachments` /
+  `DeleteArticleAttachment` on the plugin HostAPI (`pkg/plugin/plugin.go`) let any document-producing
+  plugin attach files to articles (first consumer: GoatCoach E2/E4/E5 deliverable attachments).
+  Backed by a `ProdHostAPI` implementation (`internal/platform/plugin/article_attachment.go`) that
+  writes the real OTRS-legacy `article_data_mime_attachment` table (article-existence + 10 MiB
+  size-limit from storage config, `ConvertPlaceholders` for both mysql/postgres, `created_by` FK),
+  plus grpc dispatch, plugin-client methods, and an `ArticleAttachment` struct.
+
 ## [0.9.0] - 2026-08-06
 
 ### Added
