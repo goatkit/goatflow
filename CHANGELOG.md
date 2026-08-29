@@ -14,6 +14,13 @@ project adheres to [Semantic Versioning](https://semver.org/).
   pdf_renderer.go`, default `BROWSERLESS_URL`/`BROWSERLESS_TOKEN`, added to the dev compose).
   Page size, margin and title are controllable via `PdfRenderOptions`. Generic: any plugin that
   exports a formatted deliverable (first consumer: GoatCoach E5 PDF export).
+- **HostAPI `CreateArticle`.** Plugins create a transcript/deliverable article on a ticket through
+  the platform (`pkg/plugin/plugin.go`), replacing hand-written article rows via raw SQL. The
+  `ProdHostAPI` implementation (`internal/platform/plugin/article_create.go`) enforces the OTRS
+  invariants in one transaction: ticket existence, `article` row (agent sender, internal channel,
+  `is_visible_for_customer`), `article_data_mime` row with utf8mb3-safe subject/body, and
+  driver-agnostic id retrieval (DB adapter `InsertWithReturningTx`/`ExecTx`). Generic: any
+  document/transcript-producing plugin (first consumer: GoatCoach session transcripts + deliverables).
 - **HostAPI article attachments.** `CreateArticleAttachment` / `ListArticleAttachments` /
   `DeleteArticleAttachment` on the plugin HostAPI (`pkg/plugin/plugin.go`) let any document-producing
   plugin attach files to articles (first consumer: GoatCoach E2/E4/E5 deliverable attachments).

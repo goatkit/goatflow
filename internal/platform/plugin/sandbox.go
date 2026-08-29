@@ -735,6 +735,13 @@ func (s *SandboxedHostAPI) RenderMarkdownToPdf(ctx context.Context, markdown str
 	return s.inner.RenderMarkdownToPdf(ctx, markdown, options)
 }
 
+// CreateArticle forwards to the inner host.
+func (s *SandboxedHostAPI) CreateArticle(ctx context.Context, ticketID, createdBy int64, subject, body string, visibleToCustomer bool) (int64, error) {
+	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
+	return s.inner.CreateArticle(ctx, ticketID, createdBy, subject, body, visibleToCustomer)
+}
+
 func (s *SandboxedHostAPI) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error {
 	s.stats.LastCallAt.Store(time.Now().UnixMilli())
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)

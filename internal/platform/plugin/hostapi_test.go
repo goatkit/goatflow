@@ -427,6 +427,9 @@ func (m *testHostAPI) CreateArticleAttachment(ctx context.Context, articleID, cr
 func (m *testHostAPI) RenderMarkdownToPdf(ctx context.Context, markdown string, options PdfRenderOptions) ([]byte, error) {
 	return nil, fmt.Errorf("not implemented")
 }
+func (m *testHostAPI) CreateArticle(ctx context.Context, ticketID, createdBy int64, subject, body string, visibleToCustomer bool) (int64, error) {
+	return 0, fmt.Errorf("not implemented")
+}
 func (m *testHostAPI) ListArticleAttachments(ctx context.Context, articleID int64) ([]ArticleAttachment, error) {
 	return nil, fmt.Errorf("not implemented")
 }

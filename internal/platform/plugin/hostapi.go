@@ -154,6 +154,11 @@ func (h *DefaultHostAPI) DeleteArticleAttachment(ctx context.Context, articleID,
 	return fmt.Errorf("article attachments not available in default host")
 }
 
+// CreateArticle is not available in default host.
+func (h *DefaultHostAPI) CreateArticle(ctx context.Context, ticketID, createdBy int64, subject, body string, visibleToCustomer bool) (int64, error) {
+	return 0, fmt.Errorf("article creation not available in default host")
+}
+
 // RenderMarkdownToPdf is not available in default host.
 func (h *DefaultHostAPI) RenderMarkdownToPdf(ctx context.Context, markdown string, options plugin.PdfRenderOptions) ([]byte, error) {
 	return nil, fmt.Errorf("pdf rendering not available in default host")

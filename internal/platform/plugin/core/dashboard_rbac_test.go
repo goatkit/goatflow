@@ -120,6 +120,9 @@ func (f *fakeHost) CreateArticleAttachment(ctx context.Context, articleID, creat
 func (f *fakeHost) RenderMarkdownToPdf(ctx context.Context, markdown string, options plugin.PdfRenderOptions) ([]byte, error) {
 	return nil, fmt.Errorf("not implemented")
 }
+func (f *fakeHost) CreateArticle(ctx context.Context, ticketID, createdBy int64, subject, body string, visibleToCustomer bool) (int64, error) {
+	return 0, fmt.Errorf("not implemented")
+}
 func (f *fakeHost) ListArticleAttachments(ctx context.Context, articleID int64) ([]plugin.ArticleAttachment, error) {
 	return nil, fmt.Errorf("not implemented")
 }

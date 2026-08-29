@@ -419,6 +419,9 @@ func (m *mockHostAPIForTag) CreateArticleAttachment(ctx context.Context, article
 func (m *mockHostAPIForTag) RenderMarkdownToPdf(ctx context.Context, markdown string, options PdfRenderOptions) ([]byte, error) {
 	return nil, fmt.Errorf("not implemented")
 }
+func (m *mockHostAPIForTag) CreateArticle(ctx context.Context, ticketID, createdBy int64, subject, body string, visibleToCustomer bool) (int64, error) {
+	return 0, fmt.Errorf("not implemented")
+}
 func (m *mockHostAPIForTag) ListArticleAttachments(ctx context.Context, articleID int64) ([]ArticleAttachment, error) {
 	return nil, fmt.Errorf("not implemented")
 }

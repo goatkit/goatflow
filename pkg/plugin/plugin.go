@@ -307,6 +307,14 @@ type HostAPI interface {
 	// DeleteArticleAttachment removes one attachment from an article.
 	DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error
 
+	// Articles
+	// CreateArticle creates an article (note/transcript/deliverable) on a ticket
+	// with the platform's OTRS invariants (article + article_data_mime rows,
+	// utf8mb3-safe body, agent sender, internal channel). visibleToCustomer sets
+	// is_visible_for_customer. Returns the new article id. Replaces plugins
+	// hand-writing article rows via raw SQL.
+	CreateArticle(ctx context.Context, ticketID, createdBy int64, subject, body string, visibleToCustomer bool) (int64, error)
+
 	// Rendering
 	// RenderMarkdownToPdf renders a markdown document to PDF bytes using the
 	// platform's headless-Chromium sidecar (Browserless). The plugin supplies raw

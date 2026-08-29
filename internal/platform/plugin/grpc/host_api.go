@@ -251,6 +251,23 @@ func dispatchHostCall(ctx context.Context, host plugin.HostAPI, method string, a
 		}
 		return json.Marshal(map[string]any{"pdf": pdf})
 
+	case "create_article":
+		var req struct {
+			TicketID          int64  `json:"ticket_id"`
+			CreatedBy         int64  `json:"created_by"`
+			Subject           string `json:"subject"`
+			Body              string `json:"body"`
+			VisibleToCustomer bool   `json:"visible_to_customer"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		id, err := host.CreateArticle(ctx, req.TicketID, req.CreatedBy, req.Subject, req.Body, req.VisibleToCustomer)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]int64{"id": id})
+
 	case "entity_soft_delete":
 		var req struct {
 			EntityType string `json:"entity_type"`

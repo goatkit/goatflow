@@ -218,6 +218,27 @@ func (c *HostAPIClient) CreateArticleAttachment(ctx context.Context, articleID, 
 	return out.ID, nil
 }
 
+// CreateArticle creates an article (note/transcript/deliverable) on a ticket.
+func (c *HostAPIClient) CreateArticle(ctx context.Context, ticketID, createdBy int64, subject, body string, visibleToCustomer bool) (int64, error) {
+	result, err := c.call("create_article", map[string]any{
+		"ticket_id":           ticketID,
+		"created_by":          createdBy,
+		"subject":             subject,
+		"body":                body,
+		"visible_to_customer": visibleToCustomer,
+	})
+	if err != nil {
+		return 0, err
+	}
+	var out struct {
+		ID int64 `json:"id"`
+	}
+	if err := json.Unmarshal(result, &out); err != nil {
+		return 0, err
+	}
+	return out.ID, nil
+}
+
 // ListArticleAttachments returns metadata for an article's attachments.
 func (c *HostAPIClient) ListArticleAttachments(ctx context.Context, articleID int64) ([]plugin.ArticleAttachment, error) {
 	raw, err := c.call("list_article_attachments", map[string]any{"article_id": articleID})
