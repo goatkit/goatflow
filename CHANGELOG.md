@@ -41,6 +41,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
   rendered — `ui_nav` is now a map (`{position, items}`), which also un-breaks the minimal shell.
   Whole-number badge counts (JSON `8.0`) are coerced to ints (`buildNavItems.wholeNumber`) so the
   badge shows "8" not "8.000000".
+- **Plugin UI routes now carry the authenticated identity.** `buildUIHandler`'s `_user_id` /
+  `_is_admin` / `_user_email` / `_user_login` / `_user_role` / `_org_id` args were previously a
+  no-op because UI routes got no session middleware — plugins could only guess who was calling (a
+  plugin like GoatCoach fell back to the first valid agent, and admin checks required a DB group
+  query). `RegisterUIRoutes` now takes a session-auth middleware (supplied by the API layer as
+  `SessionOrJWTAuth`, avoiding an import cycle) applied to session-authenticated UI groups, so the
+  identity reaches the plugin on UI page and mutation routes. UI routes are now authenticated (they
+  previously weren't). First consumer: GoatCoach per-coach attribution + admin gating on its UI.
 - **HostAPI article attachments.** `CreateArticleAttachment` / `ListArticleAttachments` /
   `DeleteArticleAttachment` on the plugin HostAPI (`pkg/plugin/plugin.go`) let any document-producing
   plugin attach files to articles (first consumer: GoatCoach E2/E4/E5 deliverable attachments).

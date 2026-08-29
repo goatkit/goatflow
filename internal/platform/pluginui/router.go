@@ -26,14 +26,14 @@ type TemplateRenderer interface {
 
 // RegisterUIRoutes registers all active plugin UI routes on the given gin engine.
 // Call this during dynamic engine rebuild, after YAML routes and before plugin routes.
-func RegisterUIRoutes(eng *gin.Engine, repo *Repository, caller PluginCaller, renderer TemplateRenderer, logger *slog.Logger) error {
+func RegisterUIRoutes(eng *gin.Engine, repo *Repository, caller PluginCaller, renderer TemplateRenderer, sessionAuth gin.HandlerFunc, logger *slog.Logger) error {
 	uis, err := repo.ListActive()
 	if err != nil {
 		return fmt.Errorf("load active plugin UIs: %w", err)
 	}
 
 	for _, ui := range uis {
-		if err := registerOneUI(eng, ui, caller, renderer, logger); err != nil {
+		if err := registerOneUI(eng, ui, caller, renderer, sessionAuth, logger); err != nil {
 			logger.Warn("failed to register plugin UI routes", "ui", ui.FullID, "error", err)
 		}
 	}
@@ -45,7 +45,7 @@ func RegisterUIRoutes(eng *gin.Engine, repo *Repository, caller PluginCaller, re
 	return nil
 }
 
-func registerOneUI(eng *gin.Engine, ui PluginUI, caller PluginCaller, renderer TemplateRenderer, logger *slog.Logger) error {
+func registerOneUI(eng *gin.Engine, ui PluginUI, caller PluginCaller, renderer TemplateRenderer, sessionAuth gin.HandlerFunc, logger *slog.Logger) error {
 	cfg, err := ui.ParsedConfig()
 	if err != nil {
 		return fmt.Errorf("parse config: %w", err)
@@ -55,7 +55,7 @@ func registerOneUI(eng *gin.Engine, ui PluginUI, caller PluginCaller, renderer T
 	group := eng.Group(basePath)
 
 	// Apply auth middleware based on UI type.
-	applyAuthMiddleware(group, ui, cfg)
+	applyAuthMiddleware(group, ui, cfg, sessionAuth)
 
 	// Register each route.
 	for _, route := range cfg.Routes {
@@ -313,7 +313,7 @@ func wholeNumber(v any) any {
 }
 
 // applyAuthMiddleware adds the correct auth middleware to a route group based on UI type.
-func applyAuthMiddleware(group *gin.RouterGroup, ui PluginUI, cfg *UIConfig) {
+func applyAuthMiddleware(group *gin.RouterGroup, ui PluginUI, cfg *UIConfig, sessionAuth gin.HandlerFunc) {
 	authMethod := DefaultAuthMethod(ui.UIType)
 	if cfg.Auth != nil && cfg.Auth.Method != "" {
 		authMethod = cfg.Auth.Method
@@ -321,8 +321,15 @@ func applyAuthMiddleware(group *gin.RouterGroup, ui PluginUI, cfg *UIConfig) {
 
 	switch authMethod {
 	case AuthSession:
-		// Session auth will be applied by the dynamic router's middleware chain.
-		// The UI type determines whether agent or customer session is checked.
+		// Session auth: authenticate the request (populating user_id /
+		// isInAdminGroup / user_email / username in the gin context) so
+		// buildUIHandler can forward the acting identity to the plugin. The
+		// middleware is supplied by the API layer (SessionOrJWTAuth) to avoid
+		// an import cycle. Previously UI routes were unauthenticated and the
+		// plugin could only guess who was calling.
+		if sessionAuth != nil {
+			group.Use(sessionAuth)
+		}
 	case AuthPIN:
 		// PIN auth handled by the plugin — platform provides the PIN entry route.
 	case AuthToken:

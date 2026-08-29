@@ -114,7 +114,7 @@ func TestRegisterUIRoutes(t *testing.T) {
 	}
 
 	eng := gin.New()
-	err := registerOneUI(eng, ui, caller, renderer, logger)
+	err := registerOneUI(eng, ui, caller, renderer, nil, logger)
 	if err != nil {
 		t.Fatalf("registerOneUI: %v", err)
 	}
@@ -272,7 +272,7 @@ func TestRegisterUIRoutes_Shells(t *testing.T) {
 			}
 
 			eng := gin.New()
-			registerOneUI(eng, ui, caller, renderer, logger)
+			registerOneUI(eng, ui, caller, renderer, nil, logger)
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", fmt.Sprintf("/ui/test_%s/", tt.shell), nil)
@@ -307,7 +307,7 @@ func TestRegisterUIRoutes_JSONResponse(t *testing.T) {
 	}
 
 	eng := gin.New()
-	registerOneUI(eng, ui, caller, renderer, logger)
+	registerOneUI(eng, ui, caller, renderer, nil, logger)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/ui/test_api/api/data", nil)
@@ -346,7 +346,7 @@ func TestRegisterUIRoutes_POSTRoute(t *testing.T) {
 	}
 
 	eng := gin.New()
-	registerOneUI(eng, ui, caller, renderer, logger)
+	registerOneUI(eng, ui, caller, renderer, nil, logger)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/ui/test_form/submit", nil)
@@ -373,5 +373,84 @@ func TestExtractParams(t *testing.T) {
 
 	if captured["id"] != "42" || captured["action"] != "edit" {
 		t.Errorf("params = %v", captured)
+	}
+}
+
+// TestUIRoutesForwardIdentity ensures buildUIHandler forwards the authenticated
+// user's identity (user_id, login, is_admin, role, org) into the plugin args on
+// UI page calls, mirroring what the API buildPluginArgs does. Regression for the
+// slice where UI routes received no session middleware and plugins could only
+// guess who was calling.
+func TestUIRoutesForwardIdentity(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	caller := &mockCaller{
+		responses: map[string]json.RawMessage{
+			"testplugin.ui_home": json.RawMessage(`{"html":"<h1>Home</h1>"}`),
+		},
+	}
+	renderer := &mockRenderer{}
+	logger := slog.Default()
+
+	cfgJSON, _ := json.Marshal(UIConfig{
+		Routes: []UIRouteConfig{{Path: "/", Handler: "ui_home"}},
+		Auth:   &UIAuthConfig{Method: AuthSession},
+	})
+	cfgRaw := json.RawMessage(cfgJSON)
+	ui := PluginUI{
+		ID:         2,
+		PluginName: "testplugin",
+		UIID:       "app",
+		FullID:     "testplugin_app",
+		Name:       "Test App",
+		UIType:     TypeAdminPage,
+		Shell:      ShellStandard,
+		Config:     &cfgRaw,
+		Enabled:    true,
+		ValidID:    1,
+	}
+
+	// sessionAuth stands in for SessionOrJWTAuth: it populates the gin context
+	// keys that buildUIHandler reads and forwards to the plugin.
+	sessionAuth := func(c *gin.Context) {
+		c.Set("user_id", 42)
+		c.Set("user_email", "coach@example.com")
+		c.Set("user_login", "coach42")
+		c.Set("isInAdminGroup", true)
+		c.Set("user_role", "Agent")
+		c.Set("org_id", 7)
+		c.Next()
+	}
+
+	eng := gin.New()
+	if err := registerOneUI(eng, ui, caller, renderer, sessionAuth, logger); err != nil {
+		t.Fatalf("registerOneUI: %v", err)
+	}
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/ui/testplugin_app/", nil)
+	eng.ServeHTTP(w, req)
+
+	if len(caller.calls) != 1 {
+		t.Fatalf("expected 1 plugin call, got %d", len(caller.calls))
+	}
+	var args map[string]any
+	if err := json.Unmarshal(caller.calls[0].Args, &args); err != nil {
+		t.Fatalf("unmarshal args: %v", err)
+	}
+	if args["_user_id"] != float64(42) {
+		t.Errorf("_user_id = %v, want 42", args["_user_id"])
+	}
+	if args["_user_login"] != "coach42" {
+		t.Errorf("_user_login = %v, want coach42", args["_user_login"])
+	}
+	if args["_is_admin"] != true {
+		t.Errorf("_is_admin = %v, want true", args["_is_admin"])
+	}
+	if args["_user_role"] != "Agent" {
+		t.Errorf("_user_role = %v, want Agent", args["_user_role"])
+	}
+	if args["_org_id"] != float64(7) {
+		t.Errorf("_org_id = %v, want 7", args["_org_id"])
 	}
 }

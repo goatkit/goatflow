@@ -72,7 +72,7 @@ func RebuildDynamicEngine() {
 	if pluginManager != nil {
 		if db, err := database.GetDB(); err == nil && db != nil {
 			repo := pluginui.NewRepositoryWithDB(db)
-			if err := pluginui.RegisterUIRoutes(eng, repo, pluginManager, getPongo2Renderer(), slog.Default()); err != nil {
+			if err := pluginui.RegisterUIRoutes(eng, repo, pluginManager, getPongo2Renderer(), SessionOrJWTAuth(), slog.Default()); err != nil {
 				log.Printf("⚠️  Dynamic engine: failed to load plugin UI routes: %v", err)
 			}
 		}
