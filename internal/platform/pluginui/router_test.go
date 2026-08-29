@@ -226,9 +226,20 @@ func TestRegisterUIRoutes(t *testing.T) {
 		if navItems[0]["active"] != true {
 			t.Error("Home should be active on /")
 		}
-		// Second item (Items) should have badge count.
+		// Second item (Items) should have a badge count.
 		if navItems[1]["badge_count"] != float64(5) {
 			t.Errorf("badge_count = %v, want 5", navItems[1]["badge_count"])
+		}
+		// ui_nav must be a map whose "position" the shell templates can resolve
+		// (pongo2 reads Go field names, not JSON tags, so the *UINavConfig struct
+		// would not expose `.position`). Regression: standard/minimal shell nav
+		// conditions were silently false before this.
+		uiNav, ok := renderer.lastData["ui_nav"].(map[string]any)
+		if !ok {
+			t.Fatal("ui_nav is not a map in template data")
+		}
+		if uiNav["position"] != "bottom" {
+			t.Errorf("ui_nav.position = %v, want bottom", uiNav["position"])
 		}
 	})
 }

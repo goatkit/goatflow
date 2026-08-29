@@ -35,7 +35,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
   plugin (e.g. GoatCoach) got no in-plugin navigation or badge counts and had to fall back to a
   count card. Badge counts come from the same `buildNavItems` resolution as the minimal shell
   (plugin badge fn returning `{"count": N}`). First consumer: GoatCoach side nav (Dashboard/
-  Clients/Prompt Specs/Capture) with the Dashboard "awaiting review" badge.
+  Clients/Prompt Specs/Capture) with the Dashboard "awaiting review" badge. Also fixes a latent
+  bug: the shell template context passed `ui_nav` as the `*UINavConfig` struct, but pongo2
+  resolves Go field names not JSON tags, so `ui_nav.position` never matched and no shell nav
+  rendered — `ui_nav` is now a map (`{position, items}`), which also un-breaks the minimal shell.
 - **HostAPI article attachments.** `CreateArticleAttachment` / `ListArticleAttachments` /
   `DeleteArticleAttachment` on the plugin HostAPI (`pkg/plugin/plugin.go`) let any document-producing
   plugin attach files to articles (first consumer: GoatCoach E2/E4/E5 deliverable attachments).

@@ -178,13 +178,22 @@ func buildUIHandler(ui PluginUI, cfg *UIConfig, route UIRouteConfig, caller Plug
 			branding = cfg.Branding
 		}
 
+		// ui_nav is exposed to templates as a map (not the struct) because pongo2
+		// resolves Go struct field names (Position) rather than JSON tags, and the
+		// shell templates check `ui_nav.position`. A nil Nav stays nil so the
+		// templates' `{% if ui_nav … %}` guard falls through.
+		var uiNavCtx any
+		if cfg.Nav != nil {
+			uiNavCtx = map[string]any{"position": cfg.Nav.Position, "items": cfg.Nav.Items}
+		}
+
 		tplData := pongo2.Context{
 			"PluginHTML":     html,
 			"ui_full_id":     ui.FullID,
 			"ui_type":        ui.UIType,
 			"ui_shell":       ui.Shell,
 			"ui_branding":    branding,
-			"ui_nav":         cfg.Nav,
+			"ui_nav":         uiNavCtx,
 			"ui_nav_items":   navItems,
 			"ui_pwa_enabled": cfg.PWA != nil && cfg.PWA.Enabled,
 			"ActivePage":     "plugin",
