@@ -1,10 +1,8 @@
 package api
 
 import (
-	"bytes"
 	"encoding/csv"
 	"fmt"
-	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -12,10 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yuin/goldmark"
-	"github.com/yuin/goldmark/extension"
-	"github.com/yuin/goldmark/parser"
-	"github.com/yuin/goldmark/renderer/html"
+	"github.com/goatkit/goatflow/pkg/markdown"
 )
 
 // InternalNote represents an internal note on a ticket.
@@ -115,36 +110,13 @@ var mockTickets = map[int]bool{
 	3: true,
 }
 
-// RenderMarkdown converts markdown content to HTML with Tailwind styling.
+// RenderMarkdown converts markdown content to sanitized HTML with Tailwind
+// styling. Markdown→HTML defers to the shared pkg/markdown renderer (goldmark
+// GFM + bluemonday), so ticket notes and plugin UI render identically and any
+// raw/unsafe HTML is stripped; addTailwindClasses layers Tailwind styling on
+// top of the sanitized output.
 func RenderMarkdown(content string) string {
-	// Create a Goldmark instance with extensions
-	md := goldmark.New(
-		goldmark.WithExtensions(
-			extension.GFM,
-			extension.Table,
-			extension.Strikethrough,
-		),
-		goldmark.WithParserOptions(
-			parser.WithAttribute(),
-		),
-		goldmark.WithRendererOptions(
-			html.WithUnsafe(), // Allow raw HTML in markdown
-		),
-	)
-
-	// Render to HTML
-	var buf bytes.Buffer
-	if err := md.Convert([]byte(content), &buf); err != nil {
-		log.Printf("ERROR: Failed to render markdown: %v", err)
-		return content // Fallback to original content
-	}
-
-	htmlContent := buf.String()
-
-	// Add Tailwind classes with minimal string replacements
-	htmlContent = addTailwindClasses(htmlContent)
-
-	return htmlContent
+	return addTailwindClasses(markdown.Render(content))
 }
 
 // addTailwindClasses adds Tailwind CSS classes to HTML elements for consistent styling.

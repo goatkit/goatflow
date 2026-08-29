@@ -21,6 +21,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `is_visible_for_customer`), `article_data_mime` row with utf8mb3-safe subject/body, and
   driver-agnostic id retrieval (DB adapter `InsertWithReturningTx`/`ExecTx`). Generic: any
   document/transcript-producing plugin (first consumer: GoatCoach session transcripts + deliverables).
+- **Importable `pkg/markdown` renderer.** `github.com/goatkit/goatflow/pkg/markdown` exposes
+  `Render(s string) string` (goldmark GFM + bluemonday sanitization: GFM tables/strikethrough/
+  autolinks, `class` attrs preserved so an outer layer can add Tailwind classes, safe to insert
+  into plugin UI / server-rendered pages). The core ticket-note path (`api.RenderMarkdown`) now
+  delegates to it — one canonical renderer instead of per-consumer goldmark copies; a side effect
+  is that raw/unsafe HTML in ticket notes/messages is now stripped (previously that path emitted
+  raw HTML un-sanitized). First plugin consumer: GoatCoach replaced its `internal/md` goldmark
+  shim with this package (shim deleted).
 - **HostAPI article attachments.** `CreateArticleAttachment` / `ListArticleAttachments` /
   `DeleteArticleAttachment` on the plugin HostAPI (`pkg/plugin/plugin.go`) let any document-producing
   plugin attach files to articles (first consumer: GoatCoach E2/E4/E5 deliverable attachments).
