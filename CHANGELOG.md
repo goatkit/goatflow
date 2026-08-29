@@ -14,6 +14,13 @@ project adheres to [Semantic Versioning](https://semver.org/).
   pdf_renderer.go`, default `BROWSERLESS_URL`/`BROWSERLESS_TOKEN`, added to the dev compose).
   Page size, margin and title are controllable via `PdfRenderOptions`. Generic: any plugin that
   exports a formatted deliverable (first consumer: GoatCoach E5 PDF export).
+- **PDF branding in `RenderMarkdownToPdf`.** `PdfRenderOptions` gains optional `BrandName`,
+  `BrandColor` (`#RRGGBB` accent on headings/links + 12%-alpha table-header wash) and `BrandLogoURL`
+  (https-only header logo). The running header becomes `logo + name — title` when any branding is
+  set; zero values print exactly as before. Values are strictly validated (regexp-checked colour,
+  https + attribute-safe logo URL, HTML-escaped name) so a plugin can never inject arbitrary CSS or
+  markup into the printed page (`internal/platform/plugin/pdf_renderer.go`). First consumer:
+  GoatCoach E5 branded deliverable export (branding sourced from the coach/client style profile).
 - **HostAPI `CreateArticle`.** Plugins create a transcript/deliverable article on a ticket through
   the platform (`pkg/plugin/plugin.go`), replacing hand-written article rows via raw SQL. The
   `ProdHostAPI` implementation (`internal/platform/plugin/article_create.go`) enforces the OTRS

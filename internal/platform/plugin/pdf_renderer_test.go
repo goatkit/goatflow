@@ -90,3 +90,71 @@ func TestRenderMarkdownToPdfUnconfigured(t *testing.T) {
 		t.Fatal("expected error when no renderer configured")
 	}
 }
+
+func TestBrandingCSS(t *testing.T) {
+	got := brandingCSS(PdfRenderOptions{BrandColor: "#7c3aed"})
+	if !strings.Contains(got, "color:#7c3aed") || !strings.Contains(got, "rgba(124,58,237,0.12)") {
+		t.Errorf("brandingCSS = %q", got)
+	}
+	for _, bad := range []string{"", "red", "#7c3aed;", "#7c3a", "#gggggg", "expression(alert(1))", "#7C3AED extra", " #7c3aed"} {
+		if out := brandingCSS(PdfRenderOptions{BrandColor: bad}); out != "" {
+			t.Errorf("brandingCSS(%q) = %q, want empty", bad, out)
+		}
+	}
+}
+
+func TestBrandHeader(t *testing.T) {
+	h := brandHeader(PdfRenderOptions{
+		BrandName:    `Copperforge <script>x</script>`,
+		BrandLogoURL: "https://example.com/logo.png",
+	})
+	if strings.Contains(h, "<script>") {
+		t.Errorf("name not escaped: %s", h)
+	}
+	if !strings.Contains(h, "Copperforge &lt;script&gt;") || !strings.Contains(h, `src="https://example.com/logo.png"`) {
+		t.Errorf("brand header missing escaped name or logo: %s", h)
+	}
+	for _, bad := range []string{"http://evil.example/logo.png", "javascript:alert(1)", `https://e.example/a" onload="x`, "https://e.example/a b"} {
+		if out := brandHeader(PdfRenderOptions{BrandLogoURL: bad}); out != "" {
+			t.Errorf("logo %q must be dropped, got %q", bad, out)
+		}
+	}
+}
+
+func TestWrapPDFDocumentBranding(t *testing.T) {
+	doc := wrapPDFDocument([]byte("<p>hi</p>"), PdfRenderOptions{BrandColor: "#7c3aed"})
+	if !strings.Contains(string(doc), "rgba(124,58,237,0.12)") {
+		t.Errorf("branding CSS not applied: %s", doc)
+	}
+	plain := wrapPDFDocument([]byte("<p>hi</p>"), PdfRenderOptions{})
+	if strings.Contains(string(plain), "rgba(124") {
+		t.Errorf("zero-value options changed rendering: %s", plain)
+	}
+}
+
+func TestPdfPageOptionsBrandingHeader(t *testing.T) {
+	// branding without title still turns the header on, without separator
+	opts := pdfPageOptions(PdfRenderOptions{BrandName: "Acme Coaching"})
+	if opts["displayHeaderFooter"] != true {
+		t.Fatal("branding-only header not enabled")
+	}
+	h := opts["headerTemplate"].(string)
+	if !strings.Contains(h, "Acme Coaching") || strings.Contains(h, "—") {
+		t.Errorf("branding-only header wrong: %s", h)
+	}
+	// with title: name — title
+	opts = pdfPageOptions(PdfRenderOptions{BrandName: "Acme Coaching", Title: "Action Plan"})
+	h = opts["headerTemplate"].(string)
+	if !strings.Contains(h, "Acme Coaching</span> — Action Plan") {
+		t.Errorf("brand+title header wrong: %s", h)
+	}
+	// zero values: unchanged (title-only header as before, no brand spans)
+	opts = pdfPageOptions(PdfRenderOptions{Title: "Action Plan"})
+	h = opts["headerTemplate"].(string)
+	if !strings.Contains(h, "Action Plan") || strings.Contains(h, "<span") {
+		t.Errorf("title-only header changed: %s", h)
+	}
+	if _, ok := pdfPageOptions(PdfRenderOptions{})["headerTemplate"]; ok {
+		t.Error("zero-value options must not emit a header")
+	}
+}

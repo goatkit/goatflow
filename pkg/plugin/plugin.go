@@ -327,6 +327,13 @@ type PdfRenderOptions struct {
 	PageSize string  // e.g. "A4" (default) or "Letter"
 	MarginMM float64 // page margin in millimetres; default 15
 	Title    string  // document title; shown in the PDF header when set
+
+	// Branding (Epic E5 "Branded templates", first consumer goatcoach):
+	// optional practice/coach identity applied to the printed document.
+	// Zero values render exactly as before.
+	BrandName    string // practice/coach name; shown in the running header
+	BrandColor   string // "#RRGGBB" accent for headings/table headers; anything else ignored
+	BrandLogoURL string // https URL for a logo in the header; non-https ignored
 }
 
 // ArticleAttachment describes a file attached to an article.

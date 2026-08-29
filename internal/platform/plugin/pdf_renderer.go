@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -108,6 +110,7 @@ func wrapPDFDocument(body []byte, options PdfRenderOptions) []byte {
 		`blockquote{border-left:4px solid #ddd;margin:0.4em 0;padding-left:12px;color:#555;}` +
 		`img{max-width:100%;}` +
 		`hr{border:none;border-top:1px solid #ddd;margin:1em 0;}` +
+		brandingCSS(options) +
 		`</style>`
 	titleTag := ""
 	if options.Title != "" {
@@ -136,14 +139,50 @@ func pdfPageOptions(options PdfRenderOptions) map[string]any {
 			"top": mm, "right": mm, "bottom": mm, "left": mm,
 		},
 	}
-	if options.Title != "" {
+	brand := brandHeader(options)
+	if options.Title != "" || brand != "" {
+		sep := ""
+		if brand != "" && options.Title != "" {
+			sep = ` — `
+		}
 		pageOpts["displayHeaderFooter"] = true
 		pageOpts["headerTemplate"] = `<div style="font-size:10px;width:100%;padding:0 15mm;color:#666;">` +
-			escapeHTML(options.Title) + `</div>`
+			brand + sep + escapeHTML(options.Title) + `</div>`
 		pageOpts["footerTemplate"] = `<div style="font-size:10px;width:100%;text-align:center;color:#666;">` +
 			`<span class="pageNumber"></span> / <span class="totalPages"></span></div>`
 	}
 	return pageOpts
+}
+
+// brandColorRe accepts only 6-digit hex colours; anything else is dropped so
+// a plugin can never smuggle arbitrary CSS into the printed page.
+var brandColorRe = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+
+// brandingCSS returns the accent styling for a valid BrandColor ("" otherwise):
+// headings and links take the brand colour; table headers get a 12%-alpha wash.
+func brandingCSS(options PdfRenderOptions) string {
+	if !brandColorRe.MatchString(options.BrandColor) {
+		return ""
+	}
+	r, _ := strconv.ParseInt(options.BrandColor[1:3], 16, 32)
+	g, _ := strconv.ParseInt(options.BrandColor[3:5], 16, 32)
+	b, _ := strconv.ParseInt(options.BrandColor[5:7], 16, 32)
+	return fmt.Sprintf(`h1,h2,h3,a{color:%s;}th{background:rgba(%d,%d,%d,0.12);}`,
+		options.BrandColor, r, g, b)
+}
+
+// brandHeader builds the running header's leading identity fragment
+// (https logo + bold name). Non-https or attribute-unsafe logo URLs are
+// dropped; the name is HTML-escaped.
+func brandHeader(options PdfRenderOptions) string {
+	out := ""
+	if strings.HasPrefix(options.BrandLogoURL, "https://") && !strings.ContainsAny(options.BrandLogoURL, "\"'<> \t\n") {
+		out += `<img src="` + escapeHTML(options.BrandLogoURL) + `" style="height:10px;vertical-align:middle;margin-right:4px;">`
+	}
+	if options.BrandName != "" {
+		out += `<span style="font-weight:600;vertical-align:middle;">` + escapeHTML(options.BrandName) + `</span>`
+	}
+	return out
 }
 
 // escapeHTML escapes the four HTML-sensitive characters.
