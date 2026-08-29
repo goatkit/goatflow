@@ -306,6 +306,19 @@ type HostAPI interface {
 	ListArticleAttachments(ctx context.Context, articleID int64) ([]ArticleAttachment, error)
 	// DeleteArticleAttachment removes one attachment from an article.
 	DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error
+
+	// Rendering
+	// RenderMarkdownToPdf renders a markdown document to PDF bytes using the
+	// platform's headless-Chromium sidecar (Browserless). The plugin supplies raw
+	// markdown; the host handles conversion and printing. Returns application/pdf bytes.
+	RenderMarkdownToPdf(ctx context.Context, markdown string, options PdfRenderOptions) ([]byte, error)
+}
+
+// PdfRenderOptions controls PDF page layout for RenderMarkdownToPdf.
+type PdfRenderOptions struct {
+	PageSize string  // e.g. "A4" (default) or "Letter"
+	MarginMM float64 // page margin in millimetres; default 15
+	Title    string  // document title; shown in the PDF header when set
 }
 
 // ArticleAttachment describes a file attached to an article.

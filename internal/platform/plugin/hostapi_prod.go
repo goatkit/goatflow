@@ -70,6 +70,7 @@ type ProdHostAPI struct {
 	PluginManager    *Manager           // For plugin-to-plugin calls
 	SSEBroker        *SSEBroker         // For publishing SSE events to browsers
 	thumbnailService ThumbnailGenerator // For image thumbnail generation
+	pdfRenderer      PdfRenderer        // For markdown-to-PDF rendering
 }
 
 // ThumbnailGenerator generates thumbnails from image data.
@@ -77,6 +78,29 @@ type ProdHostAPI struct {
 // layer doesn't import internal/service directly.
 type ThumbnailGenerator interface {
 	GenerateThumbnail(data []byte, contentType string, maxWidth, maxHeight int) ([]byte, string, error)
+}
+
+// PdfRenderer renders a markdown document to PDF bytes.
+// Implemented by the platform's headless-Chromium sidecar renderer so the
+// plugin does not need its own browser. Decoupled behind this interface so
+// tests (and main.go) can substitute a renderer.
+type PdfRenderer interface {
+	RenderMarkdownToPdf(ctx context.Context, markdown string, options PdfRenderOptions) ([]byte, error)
+}
+
+// PdfRendererAdapter wraps a render function to satisfy PdfRenderer.
+type PdfRendererAdapter struct {
+	renderFunc func(ctx context.Context, markdown string, options PdfRenderOptions) ([]byte, error)
+}
+
+// NewPdfRenderer creates a PdfRenderer from a function. This lets main.go or
+// tests supply a renderer without this package importing the render service.
+func NewPdfRenderer(fn func(ctx context.Context, markdown string, options PdfRenderOptions) ([]byte, error)) PdfRenderer {
+	return &PdfRendererAdapter{renderFunc: fn}
+}
+
+func (a *PdfRendererAdapter) RenderMarkdownToPdf(ctx context.Context, markdown string, options PdfRenderOptions) ([]byte, error) {
+	return a.renderFunc(ctx, markdown, options)
 }
 
 // thumbnailServiceAdapter wraps service.ThumbnailService to satisfy
@@ -149,6 +173,13 @@ func WithThumbnailService(ts ThumbnailGenerator) ProdHostAPIOption {
 	}
 }
 
+// WithPdfRenderer sets the markdown-to-PDF renderer.
+func WithPdfRenderer(r PdfRenderer) ProdHostAPIOption {
+	return func(h *ProdHostAPI) {
+		h.pdfRenderer = r
+	}
+}
+
 // NewProdHostAPI creates a production host API with the given options.
 func NewProdHostAPI(opts ...ProdHostAPIOption) *ProdHostAPI {
 	h := &ProdHostAPI{
@@ -161,6 +192,9 @@ func NewProdHostAPI(opts ...ProdHostAPIOption) *ProdHostAPI {
 	}
 	for _, opt := range opts {
 		opt(h)
+	}
+	if h.pdfRenderer == nil {
+		h.pdfRenderer = newDefaultPdfRenderer()
 	}
 	return h
 }

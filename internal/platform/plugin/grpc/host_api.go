@@ -237,6 +237,20 @@ func dispatchHostCall(ctx context.Context, host plugin.HostAPI, method string, a
 		}
 		return json.Marshal(map[string]string{"status": "ok"})
 
+	case "render_markdown_to_pdf":
+		var req struct {
+			Markdown string                  `json:"markdown"`
+			Options  plugin.PdfRenderOptions `json:"options"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		pdf, err := host.RenderMarkdownToPdf(ctx, req.Markdown, req.Options)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]any{"pdf": pdf})
+
 	case "entity_soft_delete":
 		var req struct {
 			EntityType string `json:"entity_type"`

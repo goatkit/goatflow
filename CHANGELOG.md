@@ -8,6 +8,12 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **HostAPI `RenderMarkdownToPdf`.** Plugins render a markdown document to PDF bytes
+  (`pkg/plugin/plugin.go`). The platform converts markdown to styled, sanitised HTML (goldmark +
+  bluemonday) and prints it via a Browserless headless-Chromium sidecar (`internal/platform/plugin/
+  pdf_renderer.go`, default `BROWSERLESS_URL`/`BROWSERLESS_TOKEN`, added to the dev compose).
+  Page size, margin and title are controllable via `PdfRenderOptions`. Generic: any plugin that
+  exports a formatted deliverable (first consumer: GoatCoach E5 PDF export).
 - **HostAPI article attachments.** `CreateArticleAttachment` / `ListArticleAttachments` /
   `DeleteArticleAttachment` on the plugin HostAPI (`pkg/plugin/plugin.go`) let any document-producing
   plugin attach files to articles (first consumer: GoatCoach E2/E4/E5 deliverable attachments).

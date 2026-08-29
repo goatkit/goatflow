@@ -728,6 +728,13 @@ func (s *SandboxedHostAPI) DeleteArticleAttachment(ctx context.Context, articleI
 	return s.inner.DeleteArticleAttachment(ctx, articleID, attachmentID)
 }
 
+// RenderMarkdownToPdf forwards to the inner host.
+func (s *SandboxedHostAPI) RenderMarkdownToPdf(ctx context.Context, markdown string, options plugin.PdfRenderOptions) ([]byte, error) {
+	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
+	return s.inner.RenderMarkdownToPdf(ctx, markdown, options)
+}
+
 func (s *SandboxedHostAPI) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error {
 	s.stats.LastCallAt.Store(time.Now().UnixMilli())
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)

@@ -670,6 +670,9 @@ func TestLoadWithOptions(t *testing.T) {
 func (m *mockHostAPI) CreateArticleAttachment(ctx context.Context, articleID, createdBy int64, filename, contentType string, content []byte) (int64, error) {
 	return 0, fmt.Errorf("not implemented")
 }
+func (m *mockHostAPI) RenderMarkdownToPdf(ctx context.Context, markdown string, options plugin.PdfRenderOptions) ([]byte, error) {
+	return nil, fmt.Errorf("not implemented")
+}
 func (m *mockHostAPI) ListArticleAttachments(ctx context.Context, articleID int64) ([]plugin.ArticleAttachment, error) {
 	return nil, fmt.Errorf("not implemented")
 }
@@ -690,6 +693,9 @@ func (m *mockHostAPI) ListFiles(ctx context.Context, prefix string) ([]plugin.Fi
 // File storage stubs
 func (m *trackingHostAPI) CreateArticleAttachment(ctx context.Context, articleID, createdBy int64, filename, contentType string, content []byte) (int64, error) {
 	return 0, fmt.Errorf("not implemented")
+}
+func (m *trackingHostAPI) RenderMarkdownToPdf(ctx context.Context, markdown string, options plugin.PdfRenderOptions) ([]byte, error) {
+	return nil, fmt.Errorf("not implemented")
 }
 func (m *trackingHostAPI) ListArticleAttachments(ctx context.Context, articleID int64) ([]plugin.ArticleAttachment, error) {
 	return nil, fmt.Errorf("not implemented")

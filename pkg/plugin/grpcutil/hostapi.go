@@ -242,6 +242,24 @@ func (c *HostAPIClient) DeleteArticleAttachment(ctx context.Context, articleID, 
 	return err
 }
 
+// RenderMarkdownToPdf renders a markdown document to PDF bytes via the host.
+func (c *HostAPIClient) RenderMarkdownToPdf(ctx context.Context, markdown string, options plugin.PdfRenderOptions) ([]byte, error) {
+	result, err := c.call("render_markdown_to_pdf", map[string]any{
+		"markdown": markdown,
+		"options":  options,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp struct {
+		PDF []byte `json:"pdf"`
+	}
+	if err := json.Unmarshal(result, &resp); err != nil {
+		return nil, err
+	}
+	return resp.PDF, nil
+}
+
 // EntitySoftDelete soft-deletes an entity.
 func (c *HostAPIClient) EntitySoftDelete(_ context.Context, entityType string, entityID int64, reason string) error {
 	_, err := c.call("entity_soft_delete", map[string]any{"entity_type": entityType, "entity_id": entityID, "reason": reason})

@@ -254,6 +254,9 @@ var _ plugin.HostAPI = (*mockHostAPIForUnit)(nil)
 func (m *mockHostAPIForUnit) CreateArticleAttachment(ctx context.Context, articleID, createdBy int64, filename, contentType string, content []byte) (int64, error) {
 	return 0, fmt.Errorf("not implemented")
 }
+func (m *mockHostAPIForUnit) RenderMarkdownToPdf(ctx context.Context, markdown string, options plugin.PdfRenderOptions) ([]byte, error) {
+	return nil, fmt.Errorf("not implemented")
+}
 func (m *mockHostAPIForUnit) ListArticleAttachments(ctx context.Context, articleID int64) ([]plugin.ArticleAttachment, error) {
 	return nil, fmt.Errorf("not implemented")
 }

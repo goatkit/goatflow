@@ -132,6 +132,10 @@ services:
       DB_PGSQL_PASSWORD: ${DB_PGSQL_PASSWORD}
       VALKEY_HOST: valkey
       VALKEY_PORT: 6379
+      # Browserless (headless Chromium) sidecar — powers plugin markdown->PDF
+      # rendering and JS page fetching. Reachable at http://browserless:3000.
+      BROWSERLESS_URL: http://browserless:3000
+      BROWSERLESS_TOKEN: gf_browserless
       # JWT configuration; must be provided via environment (.env or shell)
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY:-15m}
@@ -167,6 +171,20 @@ services:
       - goatflow-network
     # Production binary runs automatically from Dockerfile CMD
     # For development hot reload, volume mount handles code changes
+
+  # Browserless — headless Chromium sidecar for plugin markdown->PDF rendering
+  # and JS page fetching. Backend reaches it at http://browserless:3000.
+  browserless:
+    image: docker.io/browserless/chrome:latest
+    container_name: goatflow-browserless
+    environment:
+      MAX_CONCURRENT_SESSIONS: "4"
+      TOKEN: gf_browserless
+      CONNECTION_TIMEOUT: "60000"
+      MAX_FILE_SIZE: "50mb"
+    restart: unless-stopped
+    networks:
+      - goatflow-network
 
   # GoatFlow Customer Frontend - Dedicated customer-facing instance
   customer-fe:
