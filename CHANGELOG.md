@@ -29,6 +29,13 @@ project adheres to [Semantic Versioning](https://semver.org/).
   is that raw/unsafe HTML in ticket notes/messages is now stripped (previously that path emitted
   raw HTML un-sanitized). First plugin consumer: GoatCoach replaced its `internal/md` goldmark
   shim with this package (shim deleted).
+- **Standard plugin shell renders `ui_nav_items`.** `layouts/ui_standard.pongo2` (the default
+  shell for plugin UIs) now renders a plugin's page nav (side or top position) with label, icon,
+  active state and `badge_count` — previously only the minimal shell did, so a standard-shell
+  plugin (e.g. GoatCoach) got no in-plugin navigation or badge counts and had to fall back to a
+  count card. Badge counts come from the same `buildNavItems` resolution as the minimal shell
+  (plugin badge fn returning `{"count": N}`). First consumer: GoatCoach side nav (Dashboard/
+  Clients/Prompt Specs/Capture) with the Dashboard "awaiting review" badge.
 - **HostAPI article attachments.** `CreateArticleAttachment` / `ListArticleAttachments` /
   `DeleteArticleAttachment` on the plugin HostAPI (`pkg/plugin/plugin.go`) let any document-producing
   plugin attach files to articles (first consumer: GoatCoach E2/E4/E5 deliverable attachments).

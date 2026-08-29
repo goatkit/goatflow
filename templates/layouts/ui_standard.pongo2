@@ -1,5 +1,5 @@
 {# Standard shell for plugin UIs — full GoatFlow chrome, extends base layout #}
-{# This wraps plugin HTML in the normal GoatFlow page structure #}
+{# Renders the plugin's ui_nav_items (label + icon + active + badge_count) for side/top; the default shell previously emitted no in-plugin nav. #}
 {% extends "layouts/base.pongo2" %}
 
 {% block content %}
@@ -7,6 +7,38 @@
     {% if ui_branding.app_name %}
     <h1 class="text-2xl font-bold mb-6" style="color: var(--gk-text-primary);">{{ ui_branding.app_name }}</h1>
     {% endif %}
+
+    {% if ui_nav and ui_nav.position == "top" %}
+    <nav class="flex gap-1 mb-6 overflow-x-auto" style="border-bottom: 1px solid var(--gk-border-default);" role="navigation">
+        {% for item in ui_nav_items %}
+        <a href="/ui/{{ ui_full_id }}{{ item.path }}"
+           class="flex items-center gap-1.5 px-3 py-2 rounded-t-md text-sm whitespace-nowrap"
+           style="color: {% if item.active %}var(--gk-ui-brand, var(--gk-primary)){% else %}var(--gk-text-muted){% endif %}; {% if item.active %}border-bottom: 2px solid var(--gk-ui-brand, var(--gk-primary));{% endif %}">
+            <i class="fa-solid {{ item.icon }}"></i>
+            <span>{{ item.label }}</span>
+            {% if item.badge_count %}<span class="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{{ item.badge_count }}</span>{% endif %}
+        </a>
+        {% endfor %}
+    </nav>
+    {% endif %}
+
+    {% if ui_nav and ui_nav.position == "side" %}
+    <div class="flex gap-6">
+        <nav class="w-56 shrink-0 pr-4 space-y-1" style="border-right: 1px solid var(--gk-border-default);" role="navigation">
+            {% for item in ui_nav_items %}
+            <a href="/ui/{{ ui_full_id }}{{ item.path }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-md text-sm"
+               style="color: {% if item.active %}var(--gk-ui-brand, var(--gk-primary)){% else %}var(--gk-text-muted){% endif %}; {% if item.active %}background: var(--gk-bg-elevated);{% endif %}">
+                <i class="fa-solid {{ item.icon }} w-5 text-center"></i>
+                <span class="flex-1">{{ item.label }}</span>
+                {% if item.badge_count %}<span class="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{{ item.badge_count }}</span>{% endif %}
+            </a>
+            {% endfor %}
+        </nav>
+        <div class="flex-1 min-w-0">{{ PluginHTML|safe }}</div>
+    </div>
+    {% else %}
     {{ PluginHTML|safe }}
+    {% endif %}
 </div>
 {% endblock %}
