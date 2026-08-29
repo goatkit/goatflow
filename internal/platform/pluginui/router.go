@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"strings"
 
@@ -289,7 +290,7 @@ func buildNavItems(c *gin.Context, ui PluginUI, cfg *UIConfig, caller PluginCall
 				var badgeResp map[string]any
 				if json.Unmarshal(result, &badgeResp) == nil {
 					if count, ok := badgeResp["count"]; ok {
-						navItem["badge_count"] = count
+						navItem["badge_count"] = wholeNumber(count)
 					}
 				}
 			}
@@ -298,6 +299,17 @@ func buildNavItems(c *gin.Context, ui PluginUI, cfg *UIConfig, caller PluginCall
 		items = append(items, navItem)
 	}
 	return items
+}
+
+// wholeNumber coerces a JSON float that holds a whole value (e.g. the 8.0
+// produced by a badge fn returning `{"count": 8}`) to an int so templates render
+// "8" rather than "8.000000". Non-whole or non-numeric values pass through.
+func wholeNumber(v any) any {
+	f, ok := v.(float64)
+	if !ok || f != math.Trunc(f) {
+		return v
+	}
+	return int64(f)
 }
 
 // applyAuthMiddleware adds the correct auth middleware to a route group based on UI type.

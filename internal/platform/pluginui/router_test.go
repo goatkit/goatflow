@@ -227,7 +227,7 @@ func TestRegisterUIRoutes(t *testing.T) {
 			t.Error("Home should be active on /")
 		}
 		// Second item (Items) should have a badge count.
-		if navItems[1]["badge_count"] != float64(5) {
+		if navItems[1]["badge_count"] != int64(5) {
 			t.Errorf("badge_count = %v, want 5", navItems[1]["badge_count"])
 		}
 		// ui_nav must be a map whose "position" the shell templates can resolve

@@ -39,6 +39,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
   bug: the shell template context passed `ui_nav` as the `*UINavConfig` struct, but pongo2
   resolves Go field names not JSON tags, so `ui_nav.position` never matched and no shell nav
   rendered — `ui_nav` is now a map (`{position, items}`), which also un-breaks the minimal shell.
+  Whole-number badge counts (JSON `8.0`) are coerced to ints (`buildNavItems.wholeNumber`) so the
+  badge shows "8" not "8.000000".
 - **HostAPI article attachments.** `CreateArticleAttachment` / `ListArticleAttachments` /
   `DeleteArticleAttachment` on the plugin HostAPI (`pkg/plugin/plugin.go`) let any document-producing
   plugin attach files to articles (first consumer: GoatCoach E2/E4/E5 deliverable attachments).
