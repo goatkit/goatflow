@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+
+	plugin "github.com/goatkit/goatflow/pkg/plugin"
 )
 
 // DefaultHostAPI provides a basic implementation of HostAPI.
@@ -135,6 +137,21 @@ func (h *DefaultHostAPI) CustomFieldsSet(ctx context.Context, entityType string,
 // CustomFieldsQuery finds entities by custom field values.
 func (h *DefaultHostAPI) CustomFieldsQuery(ctx context.Context, entityType string, filters []CustomFieldFilter) ([]int64, error) {
 	return nil, nil
+}
+
+// CreateArticleAttachment is not available in default host.
+func (h *DefaultHostAPI) CreateArticleAttachment(ctx context.Context, articleID, createdBy int64, filename, contentType string, content []byte) (int64, error) {
+	return 0, fmt.Errorf("article attachments not available in default host")
+}
+
+// ListArticleAttachments is not available in default host.
+func (h *DefaultHostAPI) ListArticleAttachments(ctx context.Context, articleID int64) ([]plugin.ArticleAttachment, error) {
+	return nil, fmt.Errorf("article attachments not available in default host")
+}
+
+// DeleteArticleAttachment is not available in default host.
+func (h *DefaultHostAPI) DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error {
+	return fmt.Errorf("article attachments not available in default host")
 }
 
 // StoreFile is not available in default host.

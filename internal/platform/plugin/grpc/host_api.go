@@ -194,6 +194,49 @@ func dispatchHostCall(ctx context.Context, host plugin.HostAPI, method string, a
 		}
 		return json.Marshal(map[string]string{"status": "ok"})
 
+	case "create_article_attachment":
+		var req struct {
+			ArticleID   int64  `json:"article_id"`
+			CreatedBy   int64  `json:"created_by"`
+			Filename    string `json:"filename"`
+			ContentType string `json:"content_type"`
+			Content     []byte `json:"content"` // base64 over JSON
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		id, err := host.CreateArticleAttachment(ctx, req.ArticleID, req.CreatedBy, req.Filename, req.ContentType, req.Content)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]int64{"id": id})
+
+	case "list_article_attachments":
+		var req struct {
+			ArticleID int64 `json:"article_id"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		atts, err := host.ListArticleAttachments(ctx, req.ArticleID)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]any{"attachments": atts})
+
+	case "delete_article_attachment":
+		var req struct {
+			ArticleID    int64 `json:"article_id"`
+			AttachmentID int64 `json:"attachment_id"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		if err := host.DeleteArticleAttachment(ctx, req.ArticleID, req.AttachmentID); err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]string{"status": "ok"})
+
 	case "entity_soft_delete":
 		var req struct {
 			EntityType string `json:"entity_type"`

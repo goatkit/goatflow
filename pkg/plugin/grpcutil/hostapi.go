@@ -197,6 +197,51 @@ func (c *HostAPIClient) PublishEvent(_ context.Context, channel string, eventTyp
 	return err
 }
 
+// CreateArticleAttachment attaches a file to an article's thread.
+func (c *HostAPIClient) CreateArticleAttachment(ctx context.Context, articleID, createdBy int64, filename, contentType string, content []byte) (int64, error) {
+	raw, err := c.call("create_article_attachment", map[string]any{
+		"article_id":   articleID,
+		"created_by":   createdBy,
+		"filename":     filename,
+		"content_type": contentType,
+		"content":      content,
+	})
+	if err != nil {
+		return 0, err
+	}
+	var out struct {
+		ID int64 `json:"id"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return 0, err
+	}
+	return out.ID, nil
+}
+
+// ListArticleAttachments returns metadata for an article's attachments.
+func (c *HostAPIClient) ListArticleAttachments(ctx context.Context, articleID int64) ([]plugin.ArticleAttachment, error) {
+	raw, err := c.call("list_article_attachments", map[string]any{"article_id": articleID})
+	if err != nil {
+		return nil, err
+	}
+	var out struct {
+		Attachments []plugin.ArticleAttachment `json:"attachments"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, err
+	}
+	return out.Attachments, nil
+}
+
+// DeleteArticleAttachment removes one attachment from an article.
+func (c *HostAPIClient) DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error {
+	_, err := c.call("delete_article_attachment", map[string]any{
+		"article_id":    articleID,
+		"attachment_id": attachmentID,
+	})
+	return err
+}
+
 // EntitySoftDelete soft-deletes an entity.
 func (c *HostAPIClient) EntitySoftDelete(_ context.Context, entityType string, entityID int64, reason string) error {
 	_, err := c.call("entity_soft_delete", map[string]any{"entity_type": entityType, "entity_id": entityID, "reason": reason})

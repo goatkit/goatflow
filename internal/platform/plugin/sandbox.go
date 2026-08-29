@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/goatkit/goatflow/internal/platform/organisation"
+	plugin "github.com/goatkit/goatflow/pkg/plugin"
 )
 
 // SandboxedHostAPI wraps a HostAPI with per-plugin permission enforcement
@@ -711,6 +712,21 @@ func (s *SandboxedHostAPI) CustomFieldsQuery(ctx context.Context, entityType str
 }
 
 // ---- File Storage (sandboxed — plugin name injected into context) ----
+
+// CreateArticleAttachment forwards to the inner host.
+func (s *SandboxedHostAPI) CreateArticleAttachment(ctx context.Context, articleID, createdBy int64, filename, contentType string, content []byte) (int64, error) {
+	return s.inner.CreateArticleAttachment(ctx, articleID, createdBy, filename, contentType, content)
+}
+
+// ListArticleAttachments forwards to the inner host.
+func (s *SandboxedHostAPI) ListArticleAttachments(ctx context.Context, articleID int64) ([]plugin.ArticleAttachment, error) {
+	return s.inner.ListArticleAttachments(ctx, articleID)
+}
+
+// DeleteArticleAttachment forwards to the inner host.
+func (s *SandboxedHostAPI) DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error {
+	return s.inner.DeleteArticleAttachment(ctx, articleID, attachmentID)
+}
 
 func (s *SandboxedHostAPI) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error {
 	s.stats.LastCallAt.Store(time.Now().UnixMilli())

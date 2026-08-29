@@ -294,6 +294,29 @@ type HostAPI interface {
 	// Returns thumbnail bytes and output content type (always image/jpeg or image/png).
 	// For non-image types, returns a placeholder icon based on content type.
 	GenerateThumbnail(ctx context.Context, data []byte, contentType string, maxWidth, maxHeight int) (thumbData []byte, thumbContentType string, err error)
+
+	// Article Attachments
+	// CreateArticleAttachment attaches a file to an article's thread (visible
+	// in the ticket page and customer portal). createdBy is the acting user id
+	// (FK to users.id); filename/contentType are metadata; content is the raw
+	// file bytes (base64 over the RPC transport). Returns the attachment row id.
+	CreateArticleAttachment(ctx context.Context, articleID, createdBy int64, filename, contentType string, content []byte) (int64, error)
+	// ListArticleAttachments returns metadata for every attachment on an
+	// article. Content is not included (download via the platform endpoint).
+	ListArticleAttachments(ctx context.Context, articleID int64) ([]ArticleAttachment, error)
+	// DeleteArticleAttachment removes one attachment from an article.
+	DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error
+}
+
+// ArticleAttachment describes a file attached to an article.
+type ArticleAttachment struct {
+	ID          int64  `json:"id"`
+	ArticleID   int64  `json:"article_id"`
+	Filename    string `json:"filename"`
+	ContentType string `json:"content_type"`
+	Size        int64  `json:"size"`
+	CreatedAt   string `json:"created_at"`
+	CreatedBy   int64  `json:"created_by"`
 }
 
 // FileInfo describes a stored file.

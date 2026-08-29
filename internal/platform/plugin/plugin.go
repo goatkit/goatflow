@@ -29,6 +29,7 @@ type CascadeSpec = pkgplugin.CascadeSpec
 type CustomFieldSpec = pkgplugin.CustomFieldSpec
 type CustomFieldFilter = pkgplugin.CustomFieldFilter
 type FileInfo = pkgplugin.FileInfo
+type ArticleAttachment = pkgplugin.ArticleAttachment
 type UISpec = pkgplugin.UISpec
 type UIRouteSpec = pkgplugin.UIRouteSpec
 type UINavSpec = pkgplugin.UINavSpec
