@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -106,11 +108,21 @@ func (h *ProdHostAPI) ListArticleAttachments(ctx context.Context, articleID int6
 	return out, rows.Err()
 }
 
-// DeleteArticleAttachment removes one attachment from an article.
+// DeleteArticleAttachment removes one attachment from an article. The cached
+// thumbnail preview (storage/thumbs/<ticketID>/<attID>.png, written by the
+// api attachment thumbnail handlers) is removed alongside, so a deleted
+// document leaves no preview bytes on disk.
 func (h *ProdHostAPI) DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error {
 	db, err := h.getDB("")
 	if err != nil {
 		return err
+	}
+	// Resolve the ticket owning this article so the preview cache entry
+	// (keyed by ticket + attachment id) can be purged after the delete.
+	var ticketID int64
+	if err := db.QueryRowContext(ctx, database.ConvertPlaceholders(
+		`SELECT ticket_id FROM article WHERE id = ?`), articleID).Scan(&ticketID); err != nil {
+		ticketID = 0
 	}
 	res, err := db.ExecContext(ctx, database.ConvertPlaceholders(
 		`DELETE FROM article_data_mime_attachment WHERE id = ? AND article_id = ?`),
@@ -120,6 +132,10 @@ func (h *ProdHostAPI) DeleteArticleAttachment(ctx context.Context, articleID, at
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return fmt.Errorf("attachment %d not found on article %d", attachmentID, articleID)
+	}
+	if ticketID > 0 {
+		_ = os.Remove(filepath.Join("./storage", "thumbs", strconv.FormatInt(ticketID, 10),
+			fmt.Sprintf("%d.png", attachmentID))) //nolint:staticcheck // best-effort cache purge
 	}
 	return nil
 }
