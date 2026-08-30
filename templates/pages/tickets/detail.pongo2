@@ -490,6 +490,5 @@ function escapeHtml(text) {
 
 {% block scripts %}
 {{ block.super }}
-<script src="/static/js/tiptap.min.js"></script>
-<script src="/static/js/tiptap-editor.js"></script>
+{% include "partials/tiptap_editor.pongo2" %}
 {% endblock %}

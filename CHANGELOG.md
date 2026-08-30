@@ -8,6 +8,25 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Shared Tiptap editor partial for plugins (`static/js/gk-editor.js` + `templates/partials/tiptap_editor.pongo2`).**
+  Plugins previously copy-pasted the two Tiptap script tags plus a manual "retry until `TiptapEditor`
+  is defined" dance into every page. A single `<script src="/static/js/gk-editor.js"></script>`
+  now exposes the promise-based `GoatKitEditor` API (`init`, `content`, `set`, `setMode`, `destroy`,
+  `insertText`, `ready`), which lazily loads the platform's `tiptap.min.js` + `tiptap-editor.js` pair,
+  re-initialises a known id by pushing new content through the underlying cache-hit instance, and
+  queues early `set()` calls (draft restores, file drops) until the editor exists so they win over
+  init-time content. The eager pair stays in `templates/partials/tiptap_editor.pongo2` for platform
+  templates whose inline scripts call `TiptapEditor.*` synchronously; 10 platform templates
+  (ticket/agent/customer detail, ticket/new, admin template/signature/email-identity/dynamic-module
+  forms) now include the partial instead of repeating the script tags. First consumers: GoatCoach
+  (markdown-mode transcript + article editors with preview) and goat-kb (article editor).
+- **`POST /api/v1/markdown/render`.** Renders markdown to sanitized HTML via the canonical
+  `pkg/markdown` stack (goldmark GFM + bluemonday) for editor preview panes. Returns the bare
+  sanitized output — NOT the Tailwind-classed `RenderMarkdown` wrapper — so consumers style it
+  with their own theme (e.g. a plugin's prose variables). Protected by `unified_auth` (session
+  cookie or API token), body capped at 1 MiB (413), invalid JSON → 400. Generic renderer for
+  plugin preview panes; GoatCoach's modal uses its own composition of this renderer + the
+  transcript speaker-chip pass for display parity (platform never imports plugin-only code).
 - **PDF page thumbnails via the attachment thumbnail routes.** The attachment thumbnail
   endpoints (`/api/tickets/:id/attachments/:id/thumbnail` and the customer portal equivalent)
   now serve a PNG of a PDF's first page instead of redirecting to the raw file — the same URL

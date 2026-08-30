@@ -170,8 +170,7 @@
 
 {% block scripts %}
 {{ block.super }}
-<script src="/static/js/tiptap.min.js"></script>
-<script src="/static/js/tiptap-editor.js"></script>
+{% include "partials/tiptap_editor.pongo2" %}
 <script src="/static/js/ticket-attribute-relations.js"></script>
 <!-- Seed JSON for GoatKit autocomplete (customer-user) -->
 <script type="application/json" data-gk-seed="customer-user">[

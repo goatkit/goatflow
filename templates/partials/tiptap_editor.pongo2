@@ -1,0 +1,10 @@
+{# Shared editor asset partial — the canonical place for the Tiptap script pair. #}
+{# Platform pages include this in their script block; the scripts stay eagerly #}
+{# loaded here because template pages call TiptapEditor.* directly (ticket #}
+{# composers, template/signature forms, email identities) and expect the wrapper #}
+{# object to exist by the time their inline scripts run. #}
+{# Plugin UIs (HTML strings generated in Go) include /static/js/gk-editor.js #}
+{# instead — the promise-based loader that self-loads this same pair and #}
+{# exposes GoatKitEditor.init/content/set/… — see static/js/gk-editor.js. #}
+<script src="/static/js/tiptap.min.js"></script>
+<script src="/static/js/tiptap-editor.js"></script>

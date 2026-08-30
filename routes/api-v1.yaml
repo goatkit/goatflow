@@ -312,6 +312,13 @@ spec:
           handler: HandleUpdateSignatureAPI
           middleware:
           description: "Update signature"
+        # Markdown rendering (plugins use this for live preview panes; bare
+        # sanitized output so callers can apply their own theme)
+        - path: /markdown/render
+          method: POST
+          handler: HandleMarkdownRenderAPI
+          middleware:
+          description: "Render markdown to sanitized HTML"
 
         # Custom Fields (GoatKit PaaS Core)
         - path: /custom-fields/definitions

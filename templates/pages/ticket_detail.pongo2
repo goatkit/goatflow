@@ -97,8 +97,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
 
 {% block scripts %}
 {{ block.super }}
-<script src="/static/js/tiptap.min.js"></script>
-<script src="/static/js/tiptap-editor.js"></script>
+{% include "partials/tiptap_editor.pongo2" %}
 {% endblock %}
 
 {% block content %}
