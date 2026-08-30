@@ -15,6 +15,9 @@ import (
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer/html"
 )
 
 // browserlessPdfRenderer renders markdown -> HTML -> PDF via a Browserless
@@ -40,8 +43,16 @@ func newDefaultPdfRenderer() *browserlessPdfRenderer {
 		baseURL: baseURL,
 		token:   os.Getenv("BROWSERLESS_TOKEN"),
 		client:  &http.Client{Timeout: 90 * time.Second},
-		md:      goldmark.New(),
-		san:     bluemonday.UGCPolicy(),
+		md: goldmark.New(
+			// GFM so action-item tables, strikethrough and autolinks render
+			// like the on-screen article view (pkg/markdown uses the same
+			// stack); html.WithUnsafe is safe because bluemonday sanitizes
+			// the converted HTML before it is ever printed.
+			goldmark.WithExtensions(extension.GFM),
+			goldmark.WithParserOptions(parser.WithAttribute()),
+			goldmark.WithRendererOptions(html.WithUnsafe()),
+		),
+		san: bluemonday.UGCPolicy(),
 	}
 }
 

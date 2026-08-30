@@ -158,6 +158,17 @@ func buildUIHandler(ui PluginUI, cfg *UIConfig, route UIRouteConfig, caller Plug
 			return
 		}
 
+		// Raw asset passthrough (e.g. a plugin-embedded JS/CSS bundle served
+		// from a UI route): a response with content_type + content is served
+		// verbatim instead of being wrapped in the shell. Content is a string,
+		// so arbitrary bytes travel as JSON and arrive base64-free.
+		if contentType, ok := response["content_type"].(string); ok {
+			if content, ok := response["content"].(string); ok {
+				c.Data(http.StatusOK, contentType, []byte(content))
+				return
+			}
+		}
+
 		html, hasHTML := response["html"].(string)
 		if !hasHTML {
 			c.Data(http.StatusOK, "application/json", result)
