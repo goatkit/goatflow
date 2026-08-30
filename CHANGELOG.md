@@ -8,6 +8,16 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **PDF page thumbnails via the attachment thumbnail routes.** The attachment thumbnail
+  endpoints (`/api/tickets/:id/attachments/:id/thumbnail` and the customer portal equivalent)
+  now serve a PNG of a PDF's first page instead of redirecting to the raw file — the same URL
+  contract as image attachments, so any surface (agent ticket grid, customer list, plugins) can
+  render document previews with a plain `<img src="…/thumbnail">`. Rendering uses poppler's
+  `pdftoppm` (`poppler-utils` added to the runtime image) via `internal/pdfthumb.RenderPage1`
+  (page 1 at ≤400 px wide, aspect-preserved); agent-side thumbnails share the existing
+  `storage/thumbs/<ticketID>/<attID>.png` cache. When `pdftoppm` is unavailable or a PDF can't
+  be rasterized, the endpoint keeps its previous redirect-to-raw fallback (customer portal:
+  400). First consumer: GoatCoach E5 deliverable exports.
 - **HostAPI `RenderMarkdownToPdf`.** Plugins render a markdown document to PDF bytes
   (`pkg/plugin/plugin.go`). The platform converts markdown to styled, sanitised HTML (goldmark +
   bluemonday) and prints it via a Browserless headless-Chromium sidecar (`internal/platform/plugin/
@@ -139,6 +149,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
   v0.03 lockfile format written by newer bun versions.
 
 ### Fixed
+- **`RenderMarkdownToPdf` emitted markdown tables as literal pipe text.** The renderer used a bare
+  goldmark parser, so GFM tables (e.g. deliverables' action-item tables) passed through unconverted
+  and printed as `| A | B | :--- …`. It now uses the same goldmark GFM stack as `pkg/markdown`
+  (tables, strikethrough, autolinks; raw HTML still sanitized by bluemonday before printing).
+
 - **gRPC plugins failed to load in CI containers** ("Failed to read any lines from plugin's
   stdout"). `/tmp` is `0755 root:root` in alpine (not world-writable), so go-plugin could not
   create its unix socket. Fixed by pointing plugin `TMPDIR`/`HOME` at `/app/tmp` via

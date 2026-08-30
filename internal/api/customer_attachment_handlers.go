@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/pdfthumb"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -316,6 +317,15 @@ func handleCustomerGetThumbnail(db *sql.DB) gin.HandlerFunc {
 
 		// Only generate thumbnails for images
 		if !strings.HasPrefix(contentType, "image/") {
+			// PDFs rasterize page 1 via poppler (pdftoppm), so the thumbnail
+			// URL serves a PNG for PDFs exactly like for images.
+			if contentType == "application/pdf" {
+				if png, perr := pdfthumb.RenderPage1(contentBytes); perr == nil {
+					c.Header("Cache-Control", "public, max-age=86400")
+					c.Data(http.StatusOK, "image/png", png)
+					return
+				}
+			}
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Not an image"})
 			return
 		}

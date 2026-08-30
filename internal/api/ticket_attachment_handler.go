@@ -18,6 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/pdfthumb"
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/repository"
@@ -1610,14 +1611,30 @@ func handleGetThumbnail(c *gin.Context) {
 				contentType = detectContentType(filename, content)
 				ct = strings.ToLower(contentType)
 			}
-			if !strings.HasPrefix(ct, "image/") {
-				c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/api/tickets/%s/attachments/%d", ticketIDStr, attID))
-				return
-			}
 			// Cache key path in local fs cache under ./storage/thumbs/<ticketID>/<attID>.png
 			cacheDir := filepath.Join("./storage", "thumbs", strconv.Itoa(ticketID))
 			_ = os.MkdirAll(cacheDir, 0750) //nolint:errcheck // Best effort cache
 			cachePath := filepath.Join(cacheDir, fmt.Sprintf("%d.png", attID))
+			if !strings.HasPrefix(ct, "image/") {
+				// PDFs render page 1 via poppler (pdftoppm) into the same cache,
+				// so the thumbnail URL contract is uniform for images and PDFs.
+				if ct == "application/pdf" {
+					if png, perr := pdfthumb.RenderPage1(content); perr == nil {
+						if f, ferr := os.Create(cachePath); ferr == nil { //nolint:gosec // G304 false positive
+							_, _ = f.Write(png) //nolint:errcheck // Best effort cache
+							_ = f.Close()
+						}
+						c.Header("Content-Type", "image/png")
+						c.Header("Cache-Control", "public, max-age=86400")
+						c.Data(http.StatusOK, "image/png", png)
+						return
+					} else {
+						log.Printf("THUMBNAIL: pdf raster failed for %s: %v - redirecting to raw", filename, perr)
+					}
+				}
+				c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/api/tickets/%s/attachments/%d", ticketIDStr, attID))
+				return
+			}
 			if fi, err := os.Stat(cachePath); err == nil && fi.Size() > 0 {
 				// Serve cached
 				f, ferr := os.Open(cachePath) //nolint:gosec // G304: path is constructed from controlled inputs

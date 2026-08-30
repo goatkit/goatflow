@@ -188,6 +188,7 @@ RUN apk add --no-cache \
     ca-certificates \
     curl \
     postgresql15-client \
+    poppler-utils \
     tzdata \
     vips \
     vips-heif
