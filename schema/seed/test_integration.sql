@@ -105,6 +105,10 @@ INSERT INTO ticket (
     (2, 'TEST-0002', 'Another test ticket', 2, 1, 1, NULL, NULL, 1, 1, 3, 2, 'COMP1', 'john.customer', 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
 ON CONFLICT (id) DO NOTHING;
 
+-- Explicit-ID inserts above do not advance the SERIAL sequence; resync before
+-- auto-ID inserts so PG doesn't collide (MySQL bumps AUTO_INCREMENT implicitly).
+SELECT setval(pg_get_serial_sequence('ticket', 'id'), GREATEST(1, (SELECT MAX(id) FROM ticket)));
+
 INSERT INTO ticket (
     tn,
     title,

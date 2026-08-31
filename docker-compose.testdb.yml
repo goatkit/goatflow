@@ -2,7 +2,7 @@ services:
   postgres-test:
     image: docker.io/postgres:15-alpine
     container_name: goatflow-postgres-test
-    user: "999:999"
+    user: "70:70"
     environment:
       APP_ENV: ${APP_ENV:-test}
       POSTGRES_DB: ${TEST_DB_POSTGRES_NAME}
@@ -14,7 +14,8 @@ services:
     ports:
       - "${TEST_DB_POSTGRES_PORT}:5432"
     tmpfs:
-      - /var/lib/postgresql/data:rw,size=512m,uid=999,gid=999
+      - /var/lib/postgresql/data:rw,size=512m,uid=70,gid=70
+      - /var/run/postgresql:rw,uid=70,gid=70
     volumes:
       - ./docker/postgres/01-init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro,Z
       - ./docker/postgres/testdb/10-apply-migrations.sh:/docker-entrypoint-initdb.d/10-apply-migrations.sh:ro,Z
