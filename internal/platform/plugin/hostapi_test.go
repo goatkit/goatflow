@@ -436,6 +436,10 @@ func (m *testHostAPI) ChangeTicketStatus(ctx context.Context, ticketID, stateID,
 func (m *testHostAPI) ListTicketStates(ctx context.Context) ([]TicketStateInfo, error) {
 	return nil, fmt.Errorf("not implemented")
 }
+func (m *testHostAPI) ListTicketViews(ctx context.Context) ([]TicketViewInfo, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (m *testHostAPI) ListArticleAttachments(ctx context.Context, articleID int64) ([]ArticleAttachment, error) {
 	return nil, fmt.Errorf("not implemented")
 }

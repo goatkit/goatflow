@@ -307,6 +307,22 @@ func (c *HostAPIClient) ListTicketStates(ctx context.Context) ([]plugin.TicketSt
 	return out.States, nil
 }
 
+// ListTicketViews returns the ticket-view URL templates declared by the
+// enabled plugins.
+func (c *HostAPIClient) ListTicketViews(ctx context.Context) ([]plugin.TicketViewInfo, error) {
+	result, err := c.call("list_ticket_views", map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	var out struct {
+		Views []plugin.TicketViewInfo `json:"views"`
+	}
+	if err := json.Unmarshal(result, &out); err != nil {
+		return nil, err
+	}
+	return out.Views, nil
+}
+
 // EntitySoftDelete soft-deletes an entity.
 func (c *HostAPIClient) EntitySoftDelete(_ context.Context, entityType string, entityID int64, reason string) error {
 	_, err := c.call("entity_soft_delete", map[string]any{"entity_type": entityType, "entity_id": entityID, "reason": reason})

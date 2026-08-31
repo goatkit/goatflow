@@ -428,6 +428,10 @@ func (m *mockHostAPIForTag) ChangeTicketStatus(ctx context.Context, ticketID, st
 func (m *mockHostAPIForTag) ListTicketStates(ctx context.Context) ([]TicketStateInfo, error) {
 	return nil, fmt.Errorf("not implemented")
 }
+func (m *mockHostAPIForTag) ListTicketViews(ctx context.Context) ([]TicketViewInfo, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (m *mockHostAPIForTag) ListArticleAttachments(ctx context.Context, articleID int64) ([]ArticleAttachment, error) {
 	return nil, fmt.Errorf("not implemented")
 }

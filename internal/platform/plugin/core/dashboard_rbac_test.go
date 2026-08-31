@@ -129,6 +129,10 @@ func (f *fakeHost) ChangeTicketStatus(ctx context.Context, ticketID, stateID, us
 func (f *fakeHost) ListTicketStates(ctx context.Context) ([]plugin.TicketStateInfo, error) {
 	return nil, fmt.Errorf("not implemented")
 }
+func (f *fakeHost) ListTicketViews(ctx context.Context) ([]plugin.TicketViewInfo, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (f *fakeHost) ListArticleAttachments(ctx context.Context, articleID int64) ([]plugin.ArticleAttachment, error) {
 	return nil, fmt.Errorf("not implemented")
 }

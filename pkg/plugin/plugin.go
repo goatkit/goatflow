@@ -323,6 +323,10 @@ type HostAPI interface {
 	// ListTicketStates returns all valid ticket states with type info, for
 	// board/config UIs. Ordered by state id.
 	ListTicketStates(ctx context.Context) ([]TicketStateInfo, error)
+	// ListTicketViews returns the ticket-view URL templates declared by
+	// enabled plugins' enabled UIs. Each URL contains a {ticket_id}
+	// placeholder for the numeric ticket id. Nil when none declared.
+	ListTicketViews(ctx context.Context) ([]TicketViewInfo, error)
 
 	// Rendering
 	// RenderMarkdownToPdf renders a markdown document to PDF bytes using the
@@ -363,6 +367,15 @@ type TicketStateInfo struct {
 	Color    string `json:"color,omitempty"`
 	TypeID   int64  `json:"type_id"`
 	TypeName string `json:"type_name"`
+}
+
+// TicketViewInfo is a plugin-provided ticket view with its URL template.
+// URL contains the literal {ticket_id} placeholder.
+type TicketViewInfo struct {
+	PluginName string `json:"plugin_name"`
+	UIID       string `json:"ui_id"`
+	Label      string `json:"label"`
+	URL        string `json:"url"`
 }
 
 // FileInfo describes a stored file.
@@ -432,6 +445,12 @@ type UISpec struct {
 	PWA         *UIPWASpec      `json:"pwa,omitempty"`        // PWA manifest configuration
 	DataScope   string          `json:"data_scope,omitempty"` // self, org, all (for customer UIs)
 	RateLimit   int             `json:"rate_limit,omitempty"` // requests/min for public UIs (0 = default)
+
+	// TicketView declares that this UI can render a ticket as its primary
+	// view (e.g. a coaching ticket page). The host exposes the resolved
+	// URL template via HostAPI.ListTicketViews so other plugin UIs can
+	// deep-link into it.
+	TicketView *UITicketViewSpec `json:"ticket_view,omitempty"`
 }
 
 // UIRouteSpec defines a route within a plugin UI.
@@ -439,6 +458,16 @@ type UIRouteSpec struct {
 	Path    string `json:"path"`             // relative path, e.g. "/", "/items/:id"
 	Method  string `json:"method,omitempty"` // GET, POST, etc. (default: GET)
 	Handler string `json:"handler"`          // plugin function name
+}
+
+// UITicketViewSpec declares that a UI can render a single ticket as its
+// primary view. Path is a route of the UI (leading slash optional — the
+// host normalizes the join); Param is the query parameter that receives
+// the numeric ticket id.
+type UITicketViewSpec struct {
+	Path  string `json:"path"`  // e.g. "/ticket"
+	Param string `json:"param"` // e.g. "ticket_id"
+	Label string `json:"label,omitempty"`
 }
 
 // UINavSpec defines navigation for a plugin UI shell.

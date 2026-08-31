@@ -707,6 +707,10 @@ func (m *mockInnerHostAPI) ChangeTicketStatus(ctx context.Context, ticketID, sta
 func (m *mockInnerHostAPI) ListTicketStates(ctx context.Context) ([]TicketStateInfo, error) {
 	return nil, fmt.Errorf("not implemented")
 }
+func (m *mockInnerHostAPI) ListTicketViews(ctx context.Context) ([]TicketViewInfo, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (m *mockInnerHostAPI) ListArticleAttachments(ctx context.Context, articleID int64) ([]ArticleAttachment, error) {
 	return nil, fmt.Errorf("not implemented")
 }

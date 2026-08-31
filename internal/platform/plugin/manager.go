@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -932,6 +933,60 @@ func (m *Manager) IsEnabled(name string) bool {
 		return false
 	}
 	return rp.enabled
+}
+
+// ListTicketViews returns the ticket-view URL templates declared by enabled
+// plugins' enabled UIs. Each URL contains the literal {ticket_id}
+// placeholder. Nil when no plugin declares a ticket view.
+func (m *Manager) ListTicketViews(ctx context.Context) ([]TicketViewInfo, error) {
+	m.mu.RLock()
+	names := make([]string, 0, len(m.plugins))
+	for name, rp := range m.plugins {
+		if rp.enabled {
+			names = append(names, name)
+		}
+	}
+	m.mu.RUnlock()
+	if len(names) == 0 {
+		return nil, nil
+	}
+
+	repo, err := pluginui.NewRepository()
+	if err != nil {
+		return nil, fmt.Errorf("get db: %w", err)
+	}
+
+	var out []TicketViewInfo
+	for _, name := range names {
+		uis, err := repo.List(name, "", true)
+		if err != nil {
+			return nil, fmt.Errorf("list ticket views for %q: %w", name, err)
+		}
+		m.mu.RLock()
+		rp, exists := m.plugins[name]
+		m.mu.RUnlock()
+		if !exists {
+			continue
+		}
+		for _, u := range uis {
+			for _, spec := range rp.manifest.UIs {
+				if spec.ID != u.UIID || spec.TicketView == nil {
+					continue
+				}
+				label := spec.TicketView.Label
+				if label == "" {
+					label = spec.Name
+				}
+				out = append(out, TicketViewInfo{
+					PluginName: name,
+					UIID:       spec.ID,
+					Label:      label,
+					URL:        fmt.Sprintf("/ui/%s/%s?%s={ticket_id}", u.FullID, strings.TrimPrefix(spec.TicketView.Path, "/"), spec.TicketView.Param),
+				})
+			}
+		}
+	}
+	return out, nil
 }
 
 // Enable enables a previously disabled plugin.

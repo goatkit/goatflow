@@ -290,6 +290,13 @@ func dispatchHostCall(ctx context.Context, host plugin.HostAPI, method string, a
 		}
 		return json.Marshal(map[string]any{"states": states})
 
+	case "list_ticket_views":
+		views, err := host.ListTicketViews(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]any{"views": views})
+
 	case "entity_soft_delete":
 		var req struct {
 			EntityType string `json:"entity_type"`

@@ -169,6 +169,11 @@ func (h *DefaultHostAPI) ListTicketStates(ctx context.Context) ([]plugin.TicketS
 	return nil, fmt.Errorf("ticket state operations not available in default host")
 }
 
+// ListTicketViews is not available in default host.
+func (h *DefaultHostAPI) ListTicketViews(ctx context.Context) ([]plugin.TicketViewInfo, error) {
+	return nil, fmt.Errorf("ticket view operations not available in default host")
+}
+
 // RenderMarkdownToPdf is not available in default host.
 func (h *DefaultHostAPI) RenderMarkdownToPdf(ctx context.Context, markdown string, options plugin.PdfRenderOptions) ([]byte, error) {
 	return nil, fmt.Errorf("pdf rendering not available in default host")

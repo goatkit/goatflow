@@ -756,6 +756,13 @@ func (s *SandboxedHostAPI) ListTicketStates(ctx context.Context) ([]plugin.Ticke
 	return s.inner.ListTicketStates(ctx)
 }
 
+// ListTicketViews forwards to the inner host.
+func (s *SandboxedHostAPI) ListTicketViews(ctx context.Context) ([]plugin.TicketViewInfo, error) {
+	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
+	return s.inner.ListTicketViews(ctx)
+}
+
 func (s *SandboxedHostAPI) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error {
 	s.stats.LastCallAt.Store(time.Now().UnixMilli())
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
