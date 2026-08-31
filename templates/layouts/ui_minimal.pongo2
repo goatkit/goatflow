@@ -7,6 +7,35 @@
     <title>{{ ui_branding.app_name|default:AppName }}</title>
     {% if ui_pwa_enabled %}<link rel="manifest" href="/ui/{{ ui_full_id }}/manifest.json">{% endif %}
     {% if ui_branding.favicon %}<link rel="icon" href="{{ ui_branding.favicon }}">{% endif %}
+    <script>
+    (function() {
+        // Mirror base.pongo2 theme bootstrap so plugin UIs get --gk-* theme vars.
+        var BUILTIN = ['synthwave', 'goatflow-classic', 'seventies-vibes', 'nineties-vibe'];
+        function getCookie(name) {
+            var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+            return match ? match[2] : null;
+        }
+        function getThemePath(themeId) {
+            var base = BUILTIN.indexOf(themeId) !== -1 ? '/static/themes/builtin/' : '/static/themes/.cache/';
+            return base + themeId;
+        }
+        var cookieTheme = getCookie('goatflow_theme');
+        var cookieMode = getCookie('goatflow_mode');
+        var storedMode = localStorage.getItem('gk-theme-mode');
+        var storedTheme = localStorage.getItem('gk-theme-name') || 'synthwave';
+        var theme = cookieTheme || storedTheme;
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var mode = cookieMode || storedMode || (prefersDark ? 'dark' : 'light');
+        if (cookieTheme && cookieTheme !== storedTheme) { localStorage.setItem('gk-theme-name', cookieTheme); }
+        if (cookieMode && cookieMode !== storedMode) { localStorage.setItem('gk-theme-mode', cookieMode); }
+        document.documentElement.classList.add(mode);
+        document.documentElement.setAttribute('data-theme', theme);
+        document.write('<link id="gk-theme-stylesheet" rel="stylesheet" href="' + getThemePath(theme) + '/theme.css?v={{ assetVersion }}">');
+    })();
+    </script>
+    <noscript>
+        <link id="gk-theme-stylesheet" rel="stylesheet" href="/static/themes/builtin/synthwave/theme.css?v={{ assetVersion }}">
+    </noscript>
     <link rel="stylesheet" href="/static/css/output.css">
     <link rel="stylesheet" href="/static/css/fontawesome/all.min.css">
     <script src="/static/js/htmx.min.js" defer></script>
