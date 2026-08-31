@@ -480,7 +480,7 @@ type UINavSpec struct {
 type UINavItem struct {
 	Label string `json:"label"`           // display text (can be i18n key)
 	Icon  string `json:"icon"`            // FontAwesome class
-	Path  string `json:"path"`            // relative path within this UI
+	Path  string `json:"path"`            // relative path within this UI, or an absolute "/ui/..." path into another plugin's UI (shown only when that UI and its plugin are enabled)
 	Badge string `json:"badge,omitempty"` // plugin function returning badge count
 	Order int    `json:"order,omitempty"`
 }

@@ -17,6 +17,11 @@ import (
 type mockCaller struct {
 	responses map[string]json.RawMessage
 	calls     []mockCall
+	enabled   map[string]bool
+}
+
+func (m *mockCaller) IsEnabled(name string) bool {
+	return m.enabled[name]
 }
 
 type mockCall struct {
@@ -114,7 +119,7 @@ func TestRegisterUIRoutes(t *testing.T) {
 	}
 
 	eng := gin.New()
-	err := registerOneUI(eng, ui, caller, renderer, nil, logger)
+	err := registerOneUI(eng, ui, nil, caller, renderer, nil, logger)
 	if err != nil {
 		t.Fatalf("registerOneUI: %v", err)
 	}
@@ -272,7 +277,7 @@ func TestRegisterUIRoutes_Shells(t *testing.T) {
 			}
 
 			eng := gin.New()
-			registerOneUI(eng, ui, caller, renderer, nil, logger)
+			registerOneUI(eng, ui, nil, caller, renderer, nil, logger)
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", fmt.Sprintf("/ui/test_%s/", tt.shell), nil)
@@ -307,7 +312,7 @@ func TestRegisterUIRoutes_JSONResponse(t *testing.T) {
 	}
 
 	eng := gin.New()
-	registerOneUI(eng, ui, caller, renderer, nil, logger)
+	registerOneUI(eng, ui, nil, caller, renderer, nil, logger)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/ui/test_api/api/data", nil)
@@ -346,7 +351,7 @@ func TestRegisterUIRoutes_POSTRoute(t *testing.T) {
 	}
 
 	eng := gin.New()
-	registerOneUI(eng, ui, caller, renderer, nil, logger)
+	registerOneUI(eng, ui, nil, caller, renderer, nil, logger)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/ui/test_form/submit", nil)
@@ -423,7 +428,7 @@ func TestUIRoutesForwardIdentity(t *testing.T) {
 	}
 
 	eng := gin.New()
-	if err := registerOneUI(eng, ui, caller, renderer, sessionAuth, logger); err != nil {
+	if err := registerOneUI(eng, ui, nil, caller, renderer, sessionAuth, logger); err != nil {
 		t.Fatalf("registerOneUI: %v", err)
 	}
 
@@ -453,4 +458,87 @@ func TestUIRoutesForwardIdentity(t *testing.T) {
 	if args["_org_id"] != float64(7) {
 		t.Errorf("_org_id = %v, want 7", args["_org_id"])
 	}
+}
+
+// fakeUIInfo is a UIInfoLookup for nav-gating tests.
+type fakeUIInfo struct {
+	byFullID map[string]*PluginUI
+}
+
+func (f *fakeUIInfo) GetByFullID(fullID string) (*PluginUI, error) {
+	u, ok := f.byFullID[fullID]
+	if !ok {
+		return nil, fmt.Errorf("not found: %s", fullID)
+	}
+	return u, nil
+}
+
+func TestBuildNavItemsCrossPluginUI(t *testing.T) {
+	kanban := &PluginUI{PluginName: "goat-kanban", UIID: "board", FullID: "goat-kanban_board", Enabled: true, ValidID: 1}
+	kanbanOff := &PluginUI{PluginName: "goat-kanban", UIID: "board", FullID: "goat-kanban_board", Enabled: false, ValidID: 1}
+
+	repo := &fakeUIInfo{byFullID: map[string]*PluginUI{
+		"goat-kanban_board": kanban,
+	}}
+
+	caller := &mockCaller{enabled: map[string]bool{"goat-kanban": true}}
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request, _ = http.NewRequest("GET", "/ui/coach_main/", nil)
+
+	ui := PluginUI{PluginName: "goatcoach", UIID: "main", FullID: "goatcoach_main"}
+
+	t.Run("relative items keep ui-scoped href", func(t *testing.T) {
+		cfg := &UIConfig{Nav: &UINavConfig{Position: "side", Items: []UINavItemConfig{
+			{Label: "Dashboard", Icon: "fa-house", Path: "/dashboard"},
+		}}}
+		items := buildNavItems(c, ui, cfg, caller, "/dashboard", repo)
+		if len(items) != 1 || items[0]["href"] != "/ui/goatcoach_main/dashboard" {
+			t.Fatalf("items = %v", items)
+		}
+		if items[0]["active"] != true {
+			t.Error("expected active")
+		}
+	})
+
+	t.Run("absolute item shown when target ui+plugin enabled", func(t *testing.T) {
+		cfg := &UIConfig{Nav: &UINavConfig{Position: "side", Items: []UINavItemConfig{
+			{Label: "Boards", Icon: "fa-table-cells-large", Path: "/ui/goat-kanban_board/"},
+		}}}
+		items := buildNavItems(c, ui, cfg, caller, "/", repo)
+		if len(items) != 1 || items[0]["href"] != "/ui/goat-kanban_board/" {
+			t.Fatalf("items = %v", items)
+		}
+	})
+
+	t.Run("absolute item hidden when target ui disabled", func(t *testing.T) {
+		repo.byFullID["goat-kanban_board"] = kanbanOff
+		defer func() { repo.byFullID["goat-kanban_board"] = kanban }()
+		cfg := &UIConfig{Nav: &UINavConfig{Items: []UINavItemConfig{
+			{Label: "Boards", Path: "/ui/goat-kanban_board/"},
+		}}}
+		if items := buildNavItems(c, ui, cfg, caller, "/", repo); len(items) != 0 {
+			t.Fatalf("expected no items, got %v", items)
+		}
+	})
+
+	t.Run("absolute item hidden when target plugin disabled", func(t *testing.T) {
+		disabled := &mockCaller{enabled: map[string]bool{"goat-kanban": false}}
+		cfg := &UIConfig{Nav: &UINavConfig{Items: []UINavItemConfig{
+			{Label: "Boards", Path: "/ui/goat-kanban_board/"},
+		}}}
+		if items := buildNavItems(c, ui, cfg, disabled, "/", repo); len(items) != 0 {
+			t.Fatalf("expected no items, got %v", items)
+		}
+	})
+
+	t.Run("absolute item hidden for unknown ui", func(t *testing.T) {
+		empty := &fakeUIInfo{byFullID: map[string]*PluginUI{}}
+		cfg := &UIConfig{Nav: &UINavConfig{Items: []UINavItemConfig{
+			{Label: "Boards", Path: "/ui/goat-kanban_board/"},
+		}}}
+		if items := buildNavItems(c, ui, cfg, caller, "/", empty); len(items) != 0 {
+			t.Fatalf("expected no items, got %v", items)
+		}
+	})
 }

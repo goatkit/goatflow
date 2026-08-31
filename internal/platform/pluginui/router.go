@@ -29,12 +29,11 @@ type TemplateRenderer interface {
 func RegisterUIRoutes(eng *gin.Engine, repo *Repository, caller PluginCaller, renderer TemplateRenderer, sessionAuth gin.HandlerFunc, logger *slog.Logger) error {
 	uis, err := repo.ListActive()
 	if err != nil {
-		return fmt.Errorf("load active plugin UIs: %w", err)
+		return err
 	}
-
 	for _, ui := range uis {
-		if err := registerOneUI(eng, ui, caller, renderer, sessionAuth, logger); err != nil {
-			logger.Warn("failed to register plugin UI routes", "ui", ui.FullID, "error", err)
+		if err := registerOneUI(eng, ui, repo, caller, renderer, sessionAuth, logger); err != nil {
+			return err
 		}
 	}
 
@@ -45,7 +44,7 @@ func RegisterUIRoutes(eng *gin.Engine, repo *Repository, caller PluginCaller, re
 	return nil
 }
 
-func registerOneUI(eng *gin.Engine, ui PluginUI, caller PluginCaller, renderer TemplateRenderer, sessionAuth gin.HandlerFunc, logger *slog.Logger) error {
+func registerOneUI(eng *gin.Engine, ui PluginUI, repo *Repository, caller PluginCaller, renderer TemplateRenderer, sessionAuth gin.HandlerFunc, logger *slog.Logger) error {
 	cfg, err := ui.ParsedConfig()
 	if err != nil {
 		return fmt.Errorf("parse config: %w", err)
@@ -64,7 +63,7 @@ func registerOneUI(eng *gin.Engine, ui PluginUI, caller PluginCaller, renderer T
 			method = "GET"
 		}
 
-		handler := buildUIHandler(ui, cfg, route, caller, renderer)
+		handler := buildUIHandler(ui, cfg, route, repo, caller, renderer)
 
 		path := route.Path
 		if path == "" {
@@ -96,8 +95,13 @@ func registerOneUI(eng *gin.Engine, ui PluginUI, caller PluginCaller, renderer T
 	return nil
 }
 
+// UIInfoLookup resolves plugin UI rows (used for cross-UI nav gating).
+type UIInfoLookup interface {
+	GetByFullID(fullID string) (*PluginUI, error)
+}
+
 // buildUIHandler creates a gin handler that calls the plugin and wraps the response in the correct shell.
-func buildUIHandler(ui PluginUI, cfg *UIConfig, route UIRouteConfig, caller PluginCaller, renderer TemplateRenderer) gin.HandlerFunc {
+func buildUIHandler(ui PluginUI, cfg *UIConfig, route UIRouteConfig, repo UIInfoLookup, caller PluginCaller, renderer TemplateRenderer) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Build args for plugin call.
 		args := map[string]any{
@@ -171,7 +175,7 @@ func buildUIHandler(ui PluginUI, cfg *UIConfig, route UIRouteConfig, caller Plug
 		}
 
 		// Build nav items with active state and badge counts.
-		navItems := buildNavItems(c, ui, cfg, caller, currentPath)
+		navItems := buildNavItems(c, ui, cfg, caller, currentPath, repo)
 
 		// Build template data.
 		branding := &UIBrandingConfig{}
@@ -266,20 +270,31 @@ func buildManifestHandler(ui PluginUI, cfg *UIConfig) gin.HandlerFunc {
 	}
 }
 
-// buildNavItems resolves nav items with active state and badge counts.
-func buildNavItems(c *gin.Context, ui PluginUI, cfg *UIConfig, caller PluginCaller, currentPath string) []map[string]any {
+// buildNavItems resolves nav items with active state, badge counts, and
+// hrefs. An item Path that is an absolute "/ui/..." path links into another
+// plugin's UI; such items are only kept when the target UI is enabled and
+// its plugin is enabled.
+func buildNavItems(c *gin.Context, ui PluginUI, cfg *UIConfig, caller PluginCaller, currentPath string, repo UIInfoLookup) []map[string]any {
 	if cfg.Nav == nil || len(cfg.Nav.Items) == 0 {
 		return nil
 	}
 
 	items := make([]map[string]any, 0, len(cfg.Nav.Items))
 	for _, item := range cfg.Nav.Items {
+		href := "/ui/" + ui.FullID + item.Path
+		if strings.HasPrefix(item.Path, "/ui/") {
+			if !crossUIAvailable(repo, caller, item.Path) {
+				continue
+			}
+			href = item.Path
+		}
 		active := currentPath == item.Path || (item.Path != "/" && strings.HasPrefix(currentPath, item.Path))
 
 		navItem := map[string]any{
 			"label":  item.Label,
 			"icon":   item.Icon,
 			"path":   item.Path,
+			"href":   href,
 			"active": active,
 		}
 
@@ -299,6 +314,29 @@ func buildNavItems(c *gin.Context, ui PluginUI, cfg *UIConfig, caller PluginCall
 		items = append(items, navItem)
 	}
 	return items
+}
+
+// crossUIAvailable reports whether an absolute /ui/... nav path points at a
+// plugin UI that is currently usable: the target UI row is enabled and valid,
+// and the target plugin is enabled.
+func crossUIAvailable(repo UIInfoLookup, caller PluginCaller, path string) bool {
+	rest := strings.TrimPrefix(path, "/ui/")
+	fullID := rest
+	if i := strings.IndexByte(rest, '/'); i >= 0 {
+		fullID = rest[:i]
+	}
+	if repo == nil || fullID == "" {
+		return false
+	}
+	row, err := repo.GetByFullID(fullID)
+	if err != nil || row == nil || !row.Enabled || row.ValidID != 1 {
+		return false
+	}
+	enabler, ok := caller.(interface{ IsEnabled(string) bool })
+	if !ok || !enabler.IsEnabled(row.PluginName) {
+		return false
+	}
+	return true
 }
 
 // wholeNumber coerces a JSON float that holds a whole value (e.g. the 8.0

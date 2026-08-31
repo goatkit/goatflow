@@ -67,7 +67,7 @@
     <nav class="flex gap-1 px-4 py-2 overflow-x-auto"
          style="background: var(--gk-bg-surface); border-bottom: 1px solid var(--gk-border-default);">
         {% for item in ui_nav_items %}
-        <a href="/ui/{{ ui_full_id }}{{ item.path }}"
+        <a href="{{ item.href }}"
            class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm whitespace-nowrap"
            style="color: {% if item.active %}var(--gk-ui-brand, var(--gk-primary)){% else %}var(--gk-text-muted){% endif %}; {% if item.active %}background: var(--gk-bg-elevated);{% endif %}">
             <i class="fa-solid {{ item.icon }}"></i>
@@ -84,7 +84,7 @@
         <nav class="w-56 shrink-0 py-4 px-2 space-y-1"
              style="background: var(--gk-bg-surface); border-right: 1px solid var(--gk-border-default);">
             {% for item in ui_nav_items %}
-            <a href="/ui/{{ ui_full_id }}{{ item.path }}"
+            <a href="{{ item.href }}"
                class="flex items-center gap-2 px-3 py-2 rounded-md text-sm"
                style="color: {% if item.active %}var(--gk-ui-brand, var(--gk-primary)){% else %}var(--gk-text-muted){% endif %}; {% if item.active %}background: var(--gk-bg-elevated);{% endif %}">
                 <i class="fa-solid {{ item.icon }} w-5 text-center"></i>
@@ -108,7 +108,7 @@
     <nav class="fixed bottom-0 inset-x-0 z-40 flex justify-around py-2 safe-area-inset-bottom"
          style="background: var(--gk-bg-surface); border-top: 1px solid var(--gk-border-default);">
         {% for item in ui_nav_items %}
-        <a href="/ui/{{ ui_full_id }}{{ item.path }}"
+        <a href="{{ item.href }}"
            class="relative flex flex-col items-center gap-0.5 text-xs px-3 py-1"
            style="color: {% if item.active %}var(--gk-ui-brand, var(--gk-primary)){% else %}var(--gk-text-muted){% endif %};">
             <span class="relative">
