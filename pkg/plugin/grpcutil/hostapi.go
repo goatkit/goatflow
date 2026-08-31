@@ -281,6 +281,32 @@ func (c *HostAPIClient) RenderMarkdownToPdf(ctx context.Context, markdown string
 	return resp.PDF, nil
 }
 
+// ChangeTicketStatus changes a ticket's state with core semantics.
+func (c *HostAPIClient) ChangeTicketStatus(ctx context.Context, ticketID, stateID, userID int64, untilTime int64) error {
+	_, err := c.call("change_ticket_status", map[string]any{
+		"ticket_id":  ticketID,
+		"state_id":   stateID,
+		"user_id":    userID,
+		"until_time": untilTime,
+	})
+	return err
+}
+
+// ListTicketStates returns all valid ticket states with type info.
+func (c *HostAPIClient) ListTicketStates(ctx context.Context) ([]plugin.TicketStateInfo, error) {
+	result, err := c.call("list_ticket_states", map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	var out struct {
+		States []plugin.TicketStateInfo `json:"states"`
+	}
+	if err := json.Unmarshal(result, &out); err != nil {
+		return nil, err
+	}
+	return out.States, nil
+}
+
 // EntitySoftDelete soft-deletes an entity.
 func (c *HostAPIClient) EntitySoftDelete(_ context.Context, entityType string, entityID int64, reason string) error {
 	_, err := c.call("entity_soft_delete", map[string]any{"entity_type": entityType, "entity_id": entityID, "reason": reason})

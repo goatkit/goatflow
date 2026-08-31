@@ -422,6 +422,12 @@ func (m *mockHostAPIForTag) RenderMarkdownToPdf(ctx context.Context, markdown st
 func (m *mockHostAPIForTag) CreateArticle(ctx context.Context, ticketID, createdBy int64, subject, body string, visibleToCustomer bool) (int64, error) {
 	return 0, fmt.Errorf("not implemented")
 }
+func (m *mockHostAPIForTag) ChangeTicketStatus(ctx context.Context, ticketID, stateID, userID int64, untilTime int64) error {
+	return fmt.Errorf("not implemented")
+}
+func (m *mockHostAPIForTag) ListTicketStates(ctx context.Context) ([]TicketStateInfo, error) {
+	return nil, fmt.Errorf("not implemented")
+}
 func (m *mockHostAPIForTag) ListArticleAttachments(ctx context.Context, articleID int64) ([]ArticleAttachment, error) {
 	return nil, fmt.Errorf("not implemented")
 }

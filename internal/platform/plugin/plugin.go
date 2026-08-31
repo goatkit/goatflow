@@ -30,6 +30,7 @@ type CustomFieldSpec = pkgplugin.CustomFieldSpec
 type CustomFieldFilter = pkgplugin.CustomFieldFilter
 type FileInfo = pkgplugin.FileInfo
 type ArticleAttachment = pkgplugin.ArticleAttachment
+type TicketStateInfo = pkgplugin.TicketStateInfo
 type PdfRenderOptions = pkgplugin.PdfRenderOptions
 type UISpec = pkgplugin.UISpec
 type UIRouteSpec = pkgplugin.UIRouteSpec

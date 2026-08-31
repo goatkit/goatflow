@@ -742,6 +742,20 @@ func (s *SandboxedHostAPI) CreateArticle(ctx context.Context, ticketID, createdB
 	return s.inner.CreateArticle(ctx, ticketID, createdBy, subject, body, visibleToCustomer)
 }
 
+// ChangeTicketStatus forwards to the inner host.
+func (s *SandboxedHostAPI) ChangeTicketStatus(ctx context.Context, ticketID, stateID, userID int64, untilTime int64) error {
+	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
+	return s.inner.ChangeTicketStatus(ctx, ticketID, stateID, userID, untilTime)
+}
+
+// ListTicketStates forwards to the inner host.
+func (s *SandboxedHostAPI) ListTicketStates(ctx context.Context) ([]plugin.TicketStateInfo, error) {
+	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
+	return s.inner.ListTicketStates(ctx)
+}
+
 func (s *SandboxedHostAPI) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error {
 	s.stats.LastCallAt.Store(time.Now().UnixMilli())
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)

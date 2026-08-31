@@ -159,6 +159,16 @@ func (h *DefaultHostAPI) CreateArticle(ctx context.Context, ticketID, createdBy 
 	return 0, fmt.Errorf("article creation not available in default host")
 }
 
+// ChangeTicketStatus is not available in default host.
+func (h *DefaultHostAPI) ChangeTicketStatus(ctx context.Context, ticketID, stateID, userID int64, untilTime int64) error {
+	return fmt.Errorf("ticket state operations not available in default host")
+}
+
+// ListTicketStates is not available in default host.
+func (h *DefaultHostAPI) ListTicketStates(ctx context.Context) ([]plugin.TicketStateInfo, error) {
+	return nil, fmt.Errorf("ticket state operations not available in default host")
+}
+
 // RenderMarkdownToPdf is not available in default host.
 func (h *DefaultHostAPI) RenderMarkdownToPdf(ctx context.Context, markdown string, options plugin.PdfRenderOptions) ([]byte, error) {
 	return nil, fmt.Errorf("pdf rendering not available in default host")

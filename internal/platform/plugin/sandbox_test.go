@@ -701,6 +701,12 @@ func (m *mockInnerHostAPI) RenderMarkdownToPdf(ctx context.Context, markdown str
 func (m *mockInnerHostAPI) CreateArticle(ctx context.Context, ticketID, createdBy int64, subject, body string, visibleToCustomer bool) (int64, error) {
 	return 0, fmt.Errorf("not implemented")
 }
+func (m *mockInnerHostAPI) ChangeTicketStatus(ctx context.Context, ticketID, stateID, userID int64, untilTime int64) error {
+	return fmt.Errorf("not implemented")
+}
+func (m *mockInnerHostAPI) ListTicketStates(ctx context.Context) ([]TicketStateInfo, error) {
+	return nil, fmt.Errorf("not implemented")
+}
 func (m *mockInnerHostAPI) ListArticleAttachments(ctx context.Context, articleID int64) ([]ArticleAttachment, error) {
 	return nil, fmt.Errorf("not implemented")
 }

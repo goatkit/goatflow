@@ -268,6 +268,28 @@ func dispatchHostCall(ctx context.Context, host plugin.HostAPI, method string, a
 		}
 		return json.Marshal(map[string]int64{"id": id})
 
+	case "change_ticket_status":
+		var req struct {
+			TicketID  int64 `json:"ticket_id"`
+			StateID   int64 `json:"state_id"`
+			UserID    int64 `json:"user_id"`
+			UntilTime int64 `json:"until_time"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		if err := host.ChangeTicketStatus(ctx, req.TicketID, req.StateID, req.UserID, req.UntilTime); err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]string{"status": "ok"})
+
+	case "list_ticket_states":
+		states, err := host.ListTicketStates(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]any{"states": states})
+
 	case "entity_soft_delete":
 		var req struct {
 			EntityType string `json:"entity_type"`

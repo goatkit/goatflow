@@ -315,6 +315,15 @@ type HostAPI interface {
 	// hand-writing article rows via raw SQL.
 	CreateArticle(ctx context.Context, ticketID, createdBy int64, subject, body string, visibleToCustomer bool) (int64, error)
 
+	// Ticket States
+	// ChangeTicketStatus changes a ticket's state with core semantics:
+	// pending-type states require untilTime > 0 (unix seconds); non-pending
+	// states clear until_time. Replaces plugins hand-writing ticket UPDATEs.
+	ChangeTicketStatus(ctx context.Context, ticketID, stateID, userID int64, untilTime int64) error
+	// ListTicketStates returns all valid ticket states with type info, for
+	// board/config UIs. Ordered by state id.
+	ListTicketStates(ctx context.Context) ([]TicketStateInfo, error)
+
 	// Rendering
 	// RenderMarkdownToPdf renders a markdown document to PDF bytes using the
 	// platform's headless-Chromium sidecar (Browserless). The plugin supplies raw
@@ -345,6 +354,15 @@ type ArticleAttachment struct {
 	Size        int64  `json:"size"`
 	CreatedAt   string `json:"created_at"`
 	CreatedBy   int64  `json:"created_by"`
+}
+
+// TicketStateInfo describes a valid ticket state with its type.
+type TicketStateInfo struct {
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Color    string `json:"color,omitempty"`
+	TypeID   int64  `json:"type_id"`
+	TypeName string `json:"type_name"`
 }
 
 // FileInfo describes a stored file.

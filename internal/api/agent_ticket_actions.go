@@ -20,6 +20,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/notifications"
+	"github.com/goatkit/goatflow/internal/platform/ticketstate"
 	"github.com/goatkit/goatflow/internal/platform/utils"
 	"github.com/goatkit/goatflow/internal/repository"
 )
@@ -795,36 +796,41 @@ func handleAgentTicketStatus(db *sql.DB) gin.HandlerFunc {
 		statusID := c.PostForm("status_id")
 		pendingUntil := c.PostForm("pending_until")
 
-		// Handle pending time for pending states
-		var untilTime int64
-		pendingStates := map[string]bool{"6": true, "7": true, "8": true} // pending reminder, pending auto close+, pending auto close-
+		stateID, err := strconv.Atoi(statusID)
+		if err != nil || stateID <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status id"})
+			return
+		}
+		ticketNum, err := strconv.ParseInt(ticketID, 10, 64)
+		if err != nil || ticketNum <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket id"})
+			return
+		}
 
-		if pendingStates[statusID] {
+		pending, err := ticketstate.StateIsPending(c.Request.Context(), db, int64(stateID))
+		if err != nil {
+			log.Printf("Error looking up ticket state %s: %v", statusID, err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Unknown or invalid status"})
+			return
+		}
+
+		var untilTime int64
+		if pending {
 			if pendingUntil == "" {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Pending time is required for pending states"})
 				return
 			} // Parse the datetime-local format: 2006-01-02T15:04
-			if t, err := time.Parse("2006-01-02T15:04", pendingUntil); err == nil {
+			if t, perr := time.Parse("2006-01-02T15:04", pendingUntil); perr == nil {
 				untilTime = t.Unix()
 				log.Printf("Setting pending time for ticket %s to %v (unix: %d)", ticketID, t, t.Unix())
 			} else {
-				log.Printf("Failed to parse pending time '%s': %v", pendingUntil, err)
+				log.Printf("Failed to parse pending time '%s': %v", pendingUntil, perr)
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pending time format"})
 				return
 			}
-		} else {
-			// Clear pending time for non-pending states
-			untilTime = 0
 		}
 
-		// Update ticket status with pending time
-		_, err := db.Exec(database.ConvertPlaceholders(`
-			UPDATE ticket 
-			SET ticket_state_id = ?, until_time = ?, change_time = CURRENT_TIMESTAMP, change_by = ?
-			WHERE id = ?
-		`), statusID, untilTime, c.GetUint("user_id"), ticketID)
-
-		if err != nil {
+		if err := ticketstate.ChangeTicketStatus(c.Request.Context(), db, ticketNum, int64(stateID), int64(c.GetUint("user_id")), untilTime); err != nil {
 			log.Printf("Error updating ticket status: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status"})
 			return
