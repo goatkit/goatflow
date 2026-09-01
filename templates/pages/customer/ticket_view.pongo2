@@ -166,7 +166,7 @@
                         {% endif %}
                         <div class="text-sm" style="color: var(--gk-text-primary);">
                             {% if '<p' in article.body or '<div' in article.body or '<table' in article.body or '<br' in article.body or '<ul' in article.body or '<ol' in article.body or '<h1' in article.body or '<h2' in article.body or '<h3' in article.body %}
-                                <div data-article-body class="gk-article-content">{{ article.body|safe }}</div>
+                                <div data-article-body class="gk-article-content prose prose-sm prose-invert max-w-none break-words">{{ article.body|safe }}</div>
                             {% else %}
                                 <div data-article-body class="whitespace-pre-wrap break-words font-mono text-sm" style="color: var(--gk-text-primary);">{{ article.body }}</div>
                             {% endif %}

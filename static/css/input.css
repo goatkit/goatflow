@@ -2367,3 +2367,37 @@ html.gk-no-wallpaper .gk-grid-bg::before,
     width: 1.1rem;
     height: 1.1rem;
 }
+
+/* Themed tables inside rendered ticket article bodies (customer + agent
+   views). The shared [data-article-body] marker identifies article bodies;
+   colours come from the platform theme variables so light/dark both work. */
+[data-article-body] table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    border: 1px solid var(--gk-border-default) !important;
+    margin-bottom: 1rem !important;
+}
+
+[data-article-body] table th,
+[data-article-body] table td {
+    border: 1px solid var(--gk-border-default) !important;
+    padding: 0.5rem 0.75rem !important;
+    text-align: left !important;
+}
+
+[data-article-body] table th {
+    background-color: var(--gk-bg-elevated) !important;
+    font-weight: 600 !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    color: var(--gk-text-muted) !important;
+}
+
+[data-article-body] table td {
+    color: var(--gk-text-secondary) !important;
+}
+
+[data-article-body] table tbody tr {
+    border-bottom: 1px solid var(--gk-border-default) !important;
+}
