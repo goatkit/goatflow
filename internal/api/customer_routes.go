@@ -785,7 +785,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 
 		// Get articles for this ticket (only customer-visible ones)
 		rows, err := db.Query(database.ConvertPlaceholders(`
-			SELECT a.id, adm.a_subject, adm.a_body,
+		SELECT a.id, adm.a_subject, adm.a_body, adm.a_content_type,
 			       ast.name as sender_type,
 			       u.login as author,
 			       adm.a_from as customer_from,
@@ -807,13 +807,14 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 					ID           int
 					Subject      sql.NullString
 					Body         sql.NullString
+					ContentType  sql.NullString
 					SenderType   string
 					Author       sql.NullString
 					CustomerFrom sql.NullString
 					CreateTime   time.Time
 				}
 
-				if err := rows.Scan(&article.ID, &article.Subject, &article.Body,
+				if err := rows.Scan(&article.ID, &article.Subject, &article.Body, &article.ContentType,
 					&article.SenderType, &article.Author, &article.CustomerFrom,
 					&article.CreateTime); err != nil {
 					continue
@@ -836,6 +837,11 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 				if utils.IsHTML(articleBody) {
 					articleSanitizer := utils.NewHTMLSanitizer()
 					articleBody = articleSanitizer.Sanitize(articleBody)
+				} else if strings.Contains(article.ContentType.String, "text/markdown") || isMarkdownContent(articleBody) {
+					// Parity with the agent ticket view: markdown bodies
+					// (e.g. coaching deliverables) render as HTML instead of
+					// showing raw markdown as monospace ASCII.
+					articleBody = RenderMarkdown(articleBody)
 				}
 
 				articles = append(articles, map[string]interface{}{
