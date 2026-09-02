@@ -45,7 +45,7 @@ RUN apk add --no-cache nodejs
 WORKDIR /build
 
 # Copy package files and install dependencies
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
 # Copy source files needed for build

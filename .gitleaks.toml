@@ -39,8 +39,8 @@ paths = [
     '''test-secrets/''',
     # Generated files
     '''web/src/types/api\.ts''',
-    # Binary lockfiles (no secrets, just dependency metadata)
-    '''bun\.lockb''',
+    # Lockfiles (no secrets, just dependency metadata)
+    '''bun\.lock(b)?''',
     # Design docs contain example/placeholder tokens (gf_EXAMPLE_, sk_live_xxx, etc.)
     '''docs/design/.*\.md''',
     # MCP client config template (placeholder token, not real)

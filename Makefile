@@ -2910,14 +2910,14 @@ test-containerized:
 .PHONY: bun-updates css-deps css-build css-watch browserslist-update browserslist-update-one
 
 BROWSERSLIST_DIRS ?= . web sdk/typescript
-BROWSERSLIST_LOCKFILES ?= package-lock.json bun.lockb
+BROWSERSLIST_LOCKFILES ?= package-lock.json bun.lock
 
 browserslist-update-one:
 	@if [ -z "$(DIR)" ]; then \
 		echo "DIR is required"; \
 		exit 1; \
 	fi
-	@if ! [ -f "$(DIR)/package-lock.json" ] && ! [ -f "$(DIR)/bun.lockb" ]; then \
+	@if ! [ -f "$(DIR)/package-lock.json" ] && ! [ -f "$(DIR)/bun.lock" ]; then \
 		printf "ℹ️  Skipping %s (no lockfile)\n" "$(DIR)"; \
 	else \
 		printf "🌐 Updating Browserslist data (%s)…\n" "$(DIR)"; \
@@ -3114,7 +3114,7 @@ check-i18n:
 .PHONY: check-deps
 check-deps:
 	@printf "🔒 Auditing frontend dependencies...\n"
-	@if command -v bun >/dev/null 2>&1 && [ -f bun.lockb ] && bun audit --help >/dev/null 2>&1; then \
+	@if command -v bun >/dev/null 2>&1 && [ -f bun.lock ] && bun audit --help >/dev/null 2>&1; then \
 		bun audit >/dev/null 2>&1 || printf "  ⚠️  bun audit found issues (non-blocking)\n"; \
 	elif command -v npm >/dev/null 2>&1 && [ -f package-lock.json ]; then \
 		npm audit --omit=dev 2>/dev/null || printf "  ⚠️  npm audit found issues (non-blocking)\n"; \
