@@ -28,14 +28,18 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/goatkit/goatflow/internal/api"
 
@@ -47,6 +51,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/platform/logging"
 	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/notifications"
@@ -71,6 +76,11 @@ import (
 var valkeyCache *cache.RedisCache
 
 func main() {
+	// Configure structured logging from LOG_FORMAT/LOG_LEVEL/LOG_OUTPUT so
+	// both slog and legacy stdlib log call sites behave consistently.
+	logging.Configure()
+	defer logging.RunCleanupHooks()
+
 	// Initialize libvips for image processing (AVIF, HEIC, WebP, etc.)
 	vips.Startup(nil)
 	defer vips.Shutdown()
@@ -312,8 +322,8 @@ func main() {
 	}
 
 	// Initialize OIDC state store (in-memory) and HTTP client for IdP token exchanges
-auth.SetStateStore(auth.NewMemoryStateStore())
-auth.SetOIDCClient(&http.Client{Timeout: 30 * time.Second})
+	auth.SetStateStore(auth.NewMemoryStateStore())
+	auth.SetOIDCClient(&http.Client{Timeout: 30 * time.Second})
 
 	// Create router for YAML routes
 	r := gin.New()
@@ -712,29 +722,112 @@ auth.SetOIDCClient(&http.Client{Timeout: 30 * time.Second})
 	fmt.Println("  POST /api/v1/ldap/sync/users -> Sync users")
 	fmt.Println("  GET  /api/v1/ldap/config -> Get LDAP config")
 
-	if err := r.Run(":" + port); err != nil {
-		if schedulerCancel != nil {
-			schedulerCancel()
-		}
-		// Stop plugin hot reload watcher
-		pluginLoader.StopWatch()
-		// Shutdown plugins gracefully — bounded so one hung plugin
-		// can't delay the process exit indefinitely. Per-plugin
-		// timeouts are set from each plugin's ResourcePolicy inside
-		// ShutdownAll; this outer deadline is the hard cap.
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), gracefulShutdownTimeout)
-		if err := pluginMgr.ShutdownAll(shutdownCtx); err != nil {
-			log.Printf("⚠️  Plugin shutdown error: %v", err)
-		}
-		shutdownCancel()
-		log.Fatalf("server failed: %v", err)
+	// Serve via http.Server so SIGTERM can drain in-flight connections
+	// (connection draining) instead of killing requests mid-flight.
+	// TrueNAS/Docker send SIGTERM with a default 10s grace period; the
+	// DrainTimeout below is bounded well under that.
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: r,
+		// IdleTimeout must exceed ReadTimeout (default 0) to avoid the
+		// "http: Server.ReadTimeout is shorter than KeepAlive" warning;
+		// we rely on the default idle behaviour and cap it conservatively.
+		IdleTimeout: 120 * time.Second,
 	}
+
+	// Graceful shutdown on SIGTERM/SIGINT: stop accepting new connections,
+	// drain in-flight requests up to DrainTimeout, then shut down plugins.
+	drainTimeout := 10 * time.Second
+	if v := os.Getenv("DRAIN_TIMEOUT"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			drainTimeout = d
+		}
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		// Bind the listener up-front so a port conflict fails fast,
+		// matching r.Run's behaviour.
+		l, err := net.Listen("tcp", srv.Addr)
+		if err != nil {
+			done <- fmt.Errorf("listen on %s: %w", srv.Addr, err)
+			return
+		}
+		if err := srv.Serve(l); err != nil && err != http.ErrServerClosed {
+			done <- err
+			return
+		}
+		done <- nil
+	}()
+
+	// Optional standalone Prometheus endpoint on METRICS_PORT (default 9090),
+	// enabled when METRICS_ENABLED=true. This lets a monitoring stack scrape
+	// metrics without routing through the app port. When disabled/unset the
+	// /metrics route on the app port is still available.
+	if strings.EqualFold(os.Getenv("METRICS_ENABLED"), "true") || os.Getenv("METRICS_ENABLED") == "1" {
+		metricsPort := os.Getenv("METRICS_PORT")
+		if metricsPort == "" {
+			metricsPort = "9090"
+		}
+		metricsSrv := &http.Server{
+			Addr:        ":" + metricsPort,
+			Handler:     promhttp.Handler(),
+			IdleTimeout: 120 * time.Second,
+		}
+		go func() {
+			if err := metricsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Printf("⚠️  metrics listener on %s stopped: %v", metricsPort, err)
+			}
+		}()
+		log.Printf("Prometheus metrics exposed on :%s (METRICS_ENABLED)", metricsPort)
+		// Drain the metrics listener on shutdown as well.
+		defer func() {
+			mctx, mcancel := context.WithTimeout(context.Background(), drainTimeout)
+			defer mcancel()
+			_ = metricsSrv.Shutdown(mctx)
+		}()
+	}
+
+	// Signal watcher: on SIGTERM/SIGINT, shut the server down gracefully.
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
+
+	var stopReason string
+	select {
+	case sig := <-sigCh:
+		stopReason = fmt.Sprintf("received %v", sig)
+	case err := <-done:
+		if err != nil {
+			// Bind or runtime error: tear down plugins and exit non-zero.
+			if schedulerCancel != nil {
+				schedulerCancel()
+			}
+			pluginLoader.StopWatch()
+			pluginMgr.ShutdownAll(context.Background())
+			log.Fatalf("server failed: %v", err)
+		}
+		stopReason = "server stopped"
+	}
+
+	log.Printf("Shutting down: %s — draining connections (timeout %s)\n", stopReason, drainTimeout)
+
+	// Drain in-flight HTTP connections.
+	drainCtx, drainCancel := context.WithTimeout(context.Background(), drainTimeout)
+	if err := srv.Shutdown(drainCtx); err != nil {
+		log.Printf("⚠️  Connection drain incomplete: %v (forcing close)", err)
+		_ = srv.Close()
+	}
+	drainCancel()
+
 	if schedulerCancel != nil {
 		schedulerCancel()
 	}
 	// Stop plugin hot reload watcher
 	pluginLoader.StopWatch()
-	// Shutdown plugins gracefully — see note above.
+	// Shutdown plugins gracefully — bounded so one hung plugin can't delay
+	// the process exit indefinitely. Per-plugin timeouts are set from each
+	// plugin's ResourcePolicy inside ShutdownAll; this outer deadline is
+	// the hard cap.
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), gracefulShutdownTimeout)
 	if err := pluginMgr.ShutdownAll(shutdownCtx); err != nil {
 		log.Printf("⚠️  Plugin shutdown error: %v", err)

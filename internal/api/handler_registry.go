@@ -481,17 +481,12 @@ func ensureCoreHandlers() {
 		"handleAuthRefresh":  handleAuthRefresh,
 		"handleAuthRegister": handleAuthRegister,
 
-		// Health and metrics (lightweight for tests/dev)
-		"handleHealthCheck": func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "healthy"}) },
-		"handleDetailedHealthCheck": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"status":     "healthy",
-				"components": gin.H{"database": "unknown", "cache": "healthy", "queue": "healthy"},
-			})
-		},
-		"handleMetrics": func(c *gin.Context) {
-			c.String(http.StatusOK, "# HELP goatflow_up GoatFlow is up\n# TYPE goatflow_up gauge\ngoatflow_up 1\n")
-		},
+		// Health and metrics — real probes: /health pings the database with a
+		// short timeout so a dead DB reports 503; /health/detailed adds the
+		// cache check plus build/uptime info; /metrics serves Prometheus.
+		"handleHealthCheck":         HandleHealthCheck,
+		"handleDetailedHealthCheck": HandleDetailedHealthCheck,
+		"handleMetrics":             HandleMetrics,
 
 		// Redirect helpers
 		"handleQueuesRedirect":   HandleRedirectQueues,

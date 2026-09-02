@@ -1,0 +1,14 @@
+# Dockerfile.gocheck — test-only builder for local `go build`/`go test` runs
+# that need CGO + libvips (cmd/goats → internal/service → govips).
+#
+# Mirrors the `deps` stage of the main Dockerfile so the toolchain matches
+# CI. NOT used for any artifact; safe to delete.
+#
+#   docker build -f Dockerfile.gocheck -t goatflow-gocheck .
+#   docker run --rm -v "$PWD":/build -v gf-gobuild:/root/.cache/go-build \
+#     -w /build goatflow-gocheck go test -count=1 ./cmd/goats/
+FROM golang:1.25.12-alpine
+
+RUN apk add --no-cache git gcc musl-dev ca-certificates vips-dev vips-heif
+
+WORKDIR /build
