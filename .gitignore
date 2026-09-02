@@ -530,3 +530,7 @@ public/
 .hugo_build.lock
 .verify.sh
 .xdg-cache/
+
+# Go toolchain telemetry (created when containers run go with the repo as HOME)
+.config/go/
+.config/pulse/
