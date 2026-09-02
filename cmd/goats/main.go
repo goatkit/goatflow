@@ -159,6 +159,13 @@ func main() {
 		return
 	}
 
+	// First-boot admin bootstrap: on a fresh install the seeded admin
+	// (root@localhost) is factory-disabled with a random password. If the
+	// deployment provided GOATFLOW_ADMIN_PASSWORD (e.g. via the TrueNAS
+	// install wizard), apply it as the initial admin password — strictly
+	// one-shot, and never overriding a live account.
+	bootstrapAdminFromEnv(db)
+
 	// Set Gin mode
 	if os.Getenv("APP_ENV") == "production" {
 		gin.SetMode(gin.ReleaseMode)
