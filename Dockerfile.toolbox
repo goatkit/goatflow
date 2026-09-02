@@ -28,7 +28,9 @@ COPY . .
 
 # Install frontend dependencies in builder if package.json exists (using bun for speed)
 # Securely install Bun with GPG and checksum verification
-ARG BUN_VERSION=1.1.42
+# Bun >= 1.3 required to read the text-format bun.lock (legacy binary bun.lockb
+# is no longer written). Pinned to 1.3.14 for reproducible GPG/checksum install.
+ARG BUN_VERSION=1.3.14
 RUN if [ -f package.json ]; then \
         apk add --no-cache curl dirmngr gpg gpg-agent unzip && \
         arch="$(apk --print-arch)" && \
@@ -84,12 +86,14 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # Notes:
 # - golangci-lint v2 changed its import path to /v2/cmd/...; the
 #   line below reflects that.
-# - gosec and staticcheck use `latest` because we don't have a
+# - gosec and govulncheck use `latest` because we don't have a
 #   confident known-good pin and they're CI-only tools — refine
 #   to specific tags when convenient.
+# - staticcheck is pinned to v0.7.0: v0.8.0+ requires Go >= 1.26,
+#   which the 1.25 toolchain in this image can't satisfy (GOTOOLCHAIN=local).
 ARG GOIMPORTS_VERSION=v0.42.0
 ARG GOSEC_VERSION=latest
-ARG STATICCHECK_VERSION=latest
+ARG STATICCHECK_VERSION=v0.7.0
 ARG GOLANGCI_LINT_VERSION=v2.5.0
 ARG GOVULNCHECK_VERSION=latest
 ARG SWAG_VERSION=v1.16.4
@@ -115,7 +119,8 @@ ARG TOOLBOX_APKS='ca-certificates postgresql15-client mysql-client sqlite git ba
 RUN apk add --no-cache $TOOLBOX_APKS
 
 # Install bun (fast JavaScript runtime and package manager) with GPG and checksum verification
-ARG BUN_VERSION=1.1.42
+# Must stay >= 1.3 to read the text-format bun.lock (matches bun install in the frontend build).
+ARG BUN_VERSION=1.3.14
 RUN apk add --no-cache curl dirmngr gpg gpg-agent unzip && \
     arch="$(apk --print-arch)" && \
     case "${arch##*-}" in \
