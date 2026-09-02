@@ -660,10 +660,10 @@ Plugins receive org context automatically from the authenticated session, elimin
 - [ ] Theme preview in admin
 
 **Production Preparation**
-- [ ] Prometheus metrics endpoint with custom metrics
-- [ ] Structured JSON logging (configurable levels)
-- [ ] Health check endpoints (liveness, readiness, startup)
-- [ ] Graceful shutdown handling with connection draining
+- [x] Prometheus metrics endpoint with custom metrics — real exposition format on `/metrics` (default registerer; cache metrics via `promauto`) + `goatflow_up` / `goatflow_process_start_time_seconds` gauges; optional dedicated listener on `METRICS_PORT` when `METRICS_ENABLED=true` (0.9.x → Unreleased).
+- [x] Structured JSON logging (configurable levels) — `internal/platform/logging` drives both `slog` and legacy stdlib `log` from `LOG_FORMAT` / `LOG_LEVEL` / `LOG_OUTPUT` (`LOG_FILE_PATH` legacy alias) (Unreleased).
+- [x] Health check endpoints (liveness, readiness, startup) — `GET /health` does a real short-timeout DB ping (503 when unreachable); `GET /health/detailed` adds cache check + version/uptime; wired to the Dockerfile `HEALTHCHECK` and TrueNAS app probes (Unreleased).
+- [x] Graceful shutdown handling with connection draining — `http.Server` + SIGTERM/SIGINT: stop accepting, drain in-flight requests up to `DRAIN_TIMEOUT` (default 10 s), then the existing bounded plugin shutdown (Unreleased).
 - [ ] Distributed tracing (OpenTelemetry)
 - [ ] Circuit breakers for external dependencies
 

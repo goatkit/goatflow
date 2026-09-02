@@ -92,6 +92,82 @@ project adheres to [Semantic Versioning](https://semver.org/).
   writes the real OTRS-legacy `article_data_mime_attachment` table (article-existence + 10 MiB
   size-limit from storage config, `ConvertPlaceholders` for both mysql/postgres, `created_by` FK),
   plus grpc dispatch, plugin-client methods, and an `ArticleAttachment` struct.
+- **First-boot admin bootstrap honours `GOATFLOW_ADMIN_PASSWORD`.** A fresh
+  install previously left `root@localhost` in its factory-disabled state with a
+  random password, and the setup wizard that could set a password was itself
+  behind an admin login — so a clean install (TrueNAS, Docker, bare metal)
+  locked operators out. On first boot the backend now checks the
+  factory-disabled marker plus a `admin.bootstrap.applied` flag in
+  `sysconfig_modified`, and if still pristine it applies the wizard-supplied
+  password (bcrypt, matching both login paths) and enables the account.
+  One-shot and race-safe: the `UPDATE … WHERE valid_id <> 1` guard means any
+  later password change (via the UI or `goatflow reset-user`) makes the
+  wizard value a permanent no-op, and a disabled-again admin is treated as
+  intentional. Failures are logged and never block startup
+  (`cmd/goats/admin_bootstrap.go`). Verified end-to-end in a live Docker
+  stack: fresh MariaDB → migrations → bootstrap → successful login with the
+  wizard password, and a second boot is a no-op. Note: requires the next
+  image build; the pinned `0.9.0` image predates it.
+- **Real health probes.** `GET /health` now performs a 500 ms-timeout
+  database ping and returns 503 when the DB is unreachable, instead of the
+  previous static 200 that ignored the database. The Dockerfile `HEALTHCHECK`,
+  the TrueNAS app template and Kubernetes probes all point at this endpoint,
+  so a backend with a dead DB now reports unhealthy. `GET /health/detailed`
+  adds the Valkey cache check (`ok`/`error`/`disabled`), build version and
+  process uptime (`internal/api/health.go`).
+- **Prometheus metrics on `/metrics` and optional standalone listener.** The
+  `/metrics` route now serves the real Prometheus exposition format from the
+  default registerer (previously a hardcoded three-line stub), which brings
+  the Valkey cache metrics already recorded via `promauto`
+  (`cache_hits_total`, `cache_misses_total`, `cache_errors_total`,
+  `cache_set_total`, `cache_delete_total`, `cache_latency_seconds`,
+  `cache_size`) into the scrape for the first time. New process gauges:
+  `goatflow_up` and `goatflow_process_start_time_seconds`
+  (`internal/api/metrics.go`). When `METRICS_ENABLED=true` the server also
+  exposes a dedicated listener on `METRICS_PORT` (default 9090) — the
+  variable that was documented in `.env.example` but never wired — drained on
+  shutdown alongside the main server.
+- **Structured logging controlled by the environment.** New
+  `internal/platform/logging` package configures both `slog` and the legacy
+  stdlib `log` package from `LOG_FORMAT` (`json`|`text`, default text),
+  `LOG_LEVEL` (`debug`|`info`|`warn`|`error`, applied to `slog` lines) and
+  `LOG_OUTPUT` (`stdout` or a file path; directories are created, `stdout`
+  fallback on failure). `LOG_FILE_PATH` is honoured as a legacy alias for the
+  destination so existing deployments keep their log file. In JSON mode,
+  stdlib `log` lines are emitted as JSON records (`time`/`level`/`msg`) so a
+  log stream parses uniformly for log aggregators.
+- **Graceful shutdown with connection draining.** The server now runs under
+  `http.Server` with SIGTERM/SIGINT handling: stop accepting new connections,
+  drain in-flight requests up to `DRAIN_TIMEOUT` (default 10 s, overridable),
+  then run the existing bounded plugin shutdown. Port-bind conflicts still
+  fail fast exactly as before, and the runner path is untouched
+  (`cmd/goats/main.go`).
+
+### Fixed
+- **Last remaining Dependabot vulnerability: `postcss-selector-parser`
+  pinned to 6.1.4.** The transitive instances (via `tailwindcss ^6.1.2` and
+  `postcss-nested ^6.1.1`) resolved to 6.1.2, inside the vulnerable
+  `< 6.1.3` range flagged by Dependabot. A `package.json` override now forces
+  6.1.4 everywhere; all other open alerts were already covered by the
+  dependency bumps below. Together these clear all 11 open alerts
+  (7 high) on `dev` — they close on `main` once the merge lands.
+- **Go dependency security bumps.** `grpc v1.82.1 → v1.83.2`,
+  `moby/go-archive v0.2.0 → v0.3.3`, `golang.org/x/net v0.57.0 → v0.58.0`
+  (the high-severity Dependabot findings on the Go side). Build + vet clean.
+- **JavaScript dependency security bumps.** `postcss → 8.5.26`,
+  `js-yaml → 4.3.2`, `@tiptap/* → 3.31.0` (17 packages), `nanoid → 3.3.18`
+  (lockfile), resolving the remaining high/medium Dependabot findings on the
+  JS side.
+- **Tooling migrated from `bun.lockb` to text `bun.lock` (bun 1.3).** The
+  app `Dockerfile` (`COPY` line), three `Makefile` references and the
+  `.gitleaks.toml` lockfile-detection regex now match the text lockfile bun
+  1.3 writes; the regex still detects the legacy binary name.
+- **Toolbox build image no longer silently breaks.** `Dockerfile.toolbox`
+  pinned `BUN_VERSION=1.1.42`, which cannot read the text lockfile (its
+  failure was swallowed by `|| true`, masking the unit-test stage), and
+  `STATICCHECK_VERSION=latest`, which resolved to staticcheck 0.8+ requiring
+  Go 1.26. Pinned to bun 1.3.14 and staticcheck v0.7.0 (last release building
+  under Go 1.25.12).
 
 ### Changed
 - **API license metadata aligned to Apache-2.0.** The OpenAPI specs
