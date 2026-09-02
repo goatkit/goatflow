@@ -1,9 +1,10 @@
 apiVersion: v2
 name: goatflow
 version: 0.1.0
-appVersion: "1.0.0"
+appVersion: "0.9.0"
 description: GoatFlow - Go Ticket Request System
 type: application
+kubeVersion: ">=1.25.0"
 keywords:
   - ticketing
   - helpdesk

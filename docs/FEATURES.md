@@ -290,6 +290,7 @@
 - ✅ Kubernetes support (Helm chart with K8s 1.25+)
 - ✅ Helm charts (OCI registry + GitHub releases)
 - ✅ Terraform modules (infrastructure repo)
+- ⏳ TrueNAS SCALE app catalog (package ready in `docs/truenas-app/`, PR in submission)
 - ❌ Ansible playbooks (TODO)
 - ❌ Cloud marketplace (AWS, Azure, GCP) (TODO)
 - ❌ One-click installers (TODO)

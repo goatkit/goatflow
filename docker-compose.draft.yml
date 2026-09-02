@@ -1,0 +1,179 @@
+# Draft: canonical GoatFlow service definition (from packaging audit t_fc3c623e)
+# Minimal production-shaped stack: mariadb + valkey + backend + runner.
+# Drop-in replacement for the default services in docker-compose.yml;
+# customer-fe / caddy are optional add-ons (see docker-compose.prod.yml).
+#
+# Usage: docker compose -f docker-compose.draft.yml up -d
+# Prereq: .env with DB + JWT + SMTP values (see .env.example)
+
+services:
+  mariadb:
+    image: docker.io/mariadb:11
+    container_name: goatflow-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set in .env}
+      MYSQL_DATABASE: ${DB_MYSQL_NAME:?}
+      MYSQL_USER: ${DB_MYSQL_USER:?}
+      MYSQL_PASSWORD: ${DB_MYSQL_PASSWORD:?}
+      MYSQL_INITDB_SKIP_TZINFO: "1"
+    ports:
+      - "${DB_MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - /etc/localtime:/etc/localtime:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost --silent"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [goatflow-network]
+
+  valkey:
+    image: docker.io/valkey/valkey:7-alpine
+    container_name: goatflow-valkey
+    ports:
+      - "${VALKEY_PORT:-6388}:6379"
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [goatflow-network]
+
+  # One-time root chown of the plugins volume so the app user (UID 1000)
+  # can overwrite plugin files via the upload API.
+  plugin-init:
+    image: docker.io/alpine:3
+    user: "0:0"
+    volumes:
+      - goatflow_plugins:/app/config/plugins
+    command: ["sh", "-c", "chown -R ${HOST_UID:-1000}:${HOST_GID:-1000} /app/config/plugins"]
+    networks: [goatflow-network]
+
+  backend:
+    image: ghcr.io/goatkit/goatflow:${GOATFLOW_VERSION:-latest}
+    build:  # local dev only; omit when pulling the image
+      context: .
+      dockerfile: Dockerfile
+      args:
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
+    container_name: goatflow-backend
+    # Self-signed TLS bootstrap + schema migration, then start server.
+    command: >
+      sh -c "
+        if [ ! -f /app/certs/server.crt ] || [ ! -f /app/certs/server.key ]; then
+          mkdir -p /app/certs
+          openssl req -x509 -newkey rsa:4096 -keyout /app/certs/server.key -out /app/certs/server.crt -days 365 -nodes -subj '/CN=goatflow-backend'
+        fi
+        if [ \"$$DB_DRIVER\" = 'postgres' ]; then
+          ./migrate -path /app/migrations/postgres -database \"postgres://$${DB_PGSQL_USER}:$${DB_PGSQL_PASSWORD}@$${DB_PGSQL_HOST}:$${DB_PGSQL_PORT}/$${DB_PGSQL_NAME}?sslmode=disable\" up
+        else
+          ./migrate -path /app/migrations/mysql -database \"mysql://$${DB_MYSQL_USER}:$${DB_MYSQL_PASSWORD}@tcp($${DB_MYSQL_HOST}:$${DB_MYSQL_PORT})/$${DB_MYSQL_NAME}?multiStatements=true\" up
+        fi
+        exec ./goats
+      "
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      APP_PORT: "8080"
+      ENABLE_YAML_ROUTING: "true"
+      ROUTES_DIR: /app/routes
+      DB_DRIVER: ${DB_DRIVER:-mariadb}
+      DB_MYSQL_HOST: ${DB_MYSQL_HOST:-mariadb}
+      DB_MYSQL_PORT: "3306"
+      DB_MYSQL_NAME: ${DB_MYSQL_NAME}
+      DB_MYSQL_USER: ${DB_MYSQL_USER}
+      DB_MYSQL_PASSWORD: ${DB_MYSQL_PASSWORD}
+      DB_PGSQL_HOST: ${DB_PGSQL_HOST:-postgres}
+      DB_PGSQL_PORT: "5432"
+      DB_PGSQL_NAME: ${DB_PGSQL_NAME}
+      DB_PGSQL_USER: ${DB_PGSQL_USER}
+      DB_PGSQL_PASSWORD: ${DB_PGSQL_PASSWORD}
+      VALKEY_HOST: valkey
+      VALKEY_PORT: "6379"
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY:-15m}
+      JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY:-7d}
+      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY}
+      PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-sha256}
+      STORAGE_PATH: /app/storage
+      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}
+      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-pdf,doc,docx,txt,png,jpg,jpeg,gif,zip}
+      GOATFLOW_PLUGIN_LAZY_LOAD: "true"
+      GOATFLOW_PLUGIN_HOT_RELOAD: "false"
+      TLS_CERT_FILE: /app/certs/server.crt
+      TLS_KEY_FILE: /app/certs/server.key
+    ports:
+      - "${BACKEND_PORT:-8081}:8080"
+    volumes:
+      - ./storage:/app/storage
+      - goatflow_certs:/app/certs
+      - goatflow_plugins:/app/config/plugins
+    depends_on:
+      plugin-init:
+        condition: service_completed_successfully
+      mariadb:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [goatflow-network]
+    # No limits defined upstream — packagers SHOULD set these:
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: "2"
+    #       memory: 1G
+
+  runner:
+    image: ghcr.io/goatkit/goatflow:${GOATFLOW_VERSION:-latest}
+    container_name: goatflow-runner
+    command: ["./goats", "-mode", "runner"]
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DB_DRIVER: ${DB_DRIVER:-mariadb}
+      DB_MYSQL_HOST: ${DB_MYSQL_HOST:-mariadb}
+      DB_MYSQL_PORT: "3306"
+      DB_MYSQL_NAME: ${DB_MYSQL_NAME}
+      DB_MYSQL_USER: ${DB_MYSQL_USER}
+      DB_MYSQL_PASSWORD: ${DB_MYSQL_PASSWORD}
+      DB_PGSQL_HOST: ${DB_PGSQL_HOST:-postgres}
+      DB_PGSQL_PORT: "5432"
+      DB_PGSQL_NAME: ${DB_PGSQL_NAME}
+      DB_PGSQL_USER: ${DB_PGSQL_USER}
+      DB_PGSQL_PASSWORD: ${DB_PGSQL_PASSWORD}
+      GOATFLOW_EMAIL_SMTP_HOST: ${SMTP_HOST}
+      GOATFLOW_EMAIL_SMTP_PORT: ${SMTP_PORT:-25}
+      GOATFLOW_EMAIL_SMTP_USER: ${SMTP_USER}
+      GOATFLOW_EMAIL_SMTP_PASSWORD: ${SMTP_PASSWORD}
+      GOATFLOW_EMAIL_SMTP_TLS: ${SMTP_TLS:-false}
+      GOATFLOW_EMAIL_FROM: ${EMAIL_FROM}
+      GOATFLOW_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+    volumes:
+      - goatflow_plugins:/app/config/plugins
+    depends_on:
+      plugin-init:
+        condition: service_completed_successfully
+      mariadb:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "tr '\\0' ' ' < /proc/1/cmdline | grep -q -- './goats -mode runner'"]
+      start_period: 10s
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    networks: [goatflow-network]
+
+networks:
+  goatflow-network:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+  valkey_data:
+  goatflow_certs:
+  goatflow_plugins:

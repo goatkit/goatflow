@@ -9,8 +9,8 @@
 //	@contact.url	https://goatflow.io/support
 //	@contact.email	hello@goatflow.io
 //
-//	@license.name	AGPL-3.0
-//	@license.url	https://www.gnu.org/licenses/agpl-3.0.html
+//	@license.name	Apache-2.0
+//	@license.url	https://www.apache.org/licenses/LICENSE-2.0.html
 //
 //	@host		localhost:8080
 //	@BasePath	/api/v1

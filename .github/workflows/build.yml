@@ -264,7 +264,9 @@ jobs:
 
           # Update both version and appVersion in Chart.yaml
           sed -i "s/^version:.*/version: ${CHART_VERSION}/" charts/goatflow/Chart.yaml
-          sed -i "s/^appVersion:.*/appVersion: \"${TAG}\"/" charts/goatflow/Chart.yaml
+          # Strip the 'v' prefix: container image tags have no 'v' (ghcr.io/goatkit/goatflow:0.9.0, not :v0.9.0)
+          IMAGE_TAG="${TAG#v}"
+          sed -i "s/^appVersion:.*/appVersion: \"${IMAGE_TAG}\"/" charts/goatflow/Chart.yaml
 
           echo "version=$CHART_VERSION" >> $GITHUB_OUTPUT
           echo "Updated chart version to: $CHART_VERSION"

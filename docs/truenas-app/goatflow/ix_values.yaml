@@ -1,0 +1,24 @@
+images:
+  image:
+    repository: ghcr.io/goatkit/goatflow
+    tag: "0.9.0"
+  container_utils_image:
+    repository: ixsystems/container-utils
+    tag: 1.0.2
+  mariadb_image:
+    repository: mariadb
+    tag: "11"
+  valkey_image:
+    repository: valkey/valkey
+    tag: 7-alpine
+
+consts:
+  goatflow_container_name: goatflow-backend
+  runner_container_name: goatflow-runner
+  customer_fe_container_name: goatflow-customer-fe
+  perms_container_name: permissions
+  mariadb_container_name: mariadb
+  valkey_container_name: valkey
+  db_user: goatflow
+  db_name: goatflow
+  internal_app_port: 8080

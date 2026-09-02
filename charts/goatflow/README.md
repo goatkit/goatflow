@@ -35,7 +35,7 @@ helm install goatflow oci://ghcr.io/goatkit/charts/goatflow --version dev
 
 ```bash
 # Download and install from release assets
-helm install goatflow https://github.com/goatkit/goatflow/releases/download/v1.0.0/goatflow-0.1.0.tgz
+helm install goatflow https://github.com/goatkit/goatflow/releases/download/v0.9.0/goatflow-0.1.0.tgz
 ```
 
 ### Install from Cloned Repository
@@ -276,7 +276,7 @@ extraResources:
 | `global.commonLabels` | Labels applied to all resources | `{}` |
 | `backend.enabled` | Enable backend deployment | `true` |
 | `backend.replicaCount` | Number of backend replicas | `2` |
-| `backend.image.repository` | Backend image repository | `goatflow/backend` |
+| `backend.image.repository` | Backend image repository | `ghcr.io/goatkit/goatflow` |
 | `backend.image.tag` | Backend image tag | `""` (uses appVersion) |
 | `backend.podAnnotations` | Annotations for backend pods | `{}` |
 | `backend.podLabels` | Labels for backend pods | `{}` |

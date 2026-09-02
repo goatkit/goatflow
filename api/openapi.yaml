@@ -7,8 +7,8 @@ info:
     name: GoatFlow Team
     url: https://github.com/goatkit/goatflow
   license:
-    name: AGPL-3.0
-    url: https://opensource.org/licenses/AGPL-3.0
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
 
 servers:
   - url: http://localhost:8081

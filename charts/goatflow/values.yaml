@@ -24,7 +24,7 @@ backend:
   enabled: true
 
   image:
-    repository: goatflow/backend
+    repository: ghcr.io/goatkit/goatflow
     tag: ""  # Defaults to appVersion
     pullPolicy: IfNotPresent
 

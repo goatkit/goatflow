@@ -1,0 +1,56 @@
+annotations:
+  min_scale_version: 24.10.2.2
+app_version: 0.9.0
+capabilities: []
+categories:
+- productivity
+changelog_url: https://github.com/goatkit/goatflow/releases
+date_added: '2026-09-02'
+description: GoatFlow is an open-source support and ticket management platform with
+  an agent UI, customer portal, background task runner, and WASM plugin system.
+home: https://github.com/goatkit/goatflow
+host_mounts: []
+icon: https://media.sys.truenas.net/apps/goatflow/icons/icon.png
+keywords:
+- ticketing
+- support
+- helpdesk
+- customer-portal
+lib_version: 2.3.11
+lib_version_hash: 874636814efb275e5276ea9d709b7cd665fed42bb1d50328e853d9253a2e1229
+maintainers:
+- email: dev@truenas.com
+  name: truenas
+  url: https://www.truenas.com/
+name: goatflow
+run_as_context:
+- description: Container [goatflow-backend] runs as non-root user and group.
+  gid: 1000
+  group_name: Host group is [unknown (1000)]
+  uid: 1000
+  user_name: Host user is [unknown (1000)]
+- description: Container [goatflow-runner] runs as non-root user and group.
+  gid: 1000
+  group_name: Host group is [unknown (1000)]
+  uid: 1000
+  user_name: Host user is [unknown (1000)]
+- description: Container [mariadb] runs as non-root user and group.
+  gid: 999
+  group_name: Host group is [docker]
+  uid: 999
+  user_name: Host user is [netdata]
+- description: Container [valkey] runs as non-root user and group.
+  gid: 1000
+  group_name: Host group is [unknown (1000)]
+  uid: 1000
+  user_name: Host user is [unknown (1000)]
+screenshots:
+- https://media.sys.truenas.net/apps/goatflow/screenshots/screenshot1.png
+sources:
+- https://apps.truenas.com/catalog/goatflow_community/
+- https://github.com/goatkit/goatflow
+- https://github.com/goatkit/goatflow/blob/main/LICENSE
+- https://github.com/orgs/goatkit/packages/container/goatflow
+title: GoatFlow
+train: community
+version: 1.0.0

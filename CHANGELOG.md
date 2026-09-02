@@ -93,6 +93,37 @@ project adheres to [Semantic Versioning](https://semver.org/).
   size-limit from storage config, `ConvertPlaceholders` for both mysql/postgres, `created_by` FK),
   plus grpc dispatch, plugin-client methods, and an `ArticleAttachment` struct.
 
+### Changed
+- **API license metadata aligned to Apache-2.0.** The OpenAPI specs
+  (`api/openapi.yaml`, `api/openapi.bundle.yaml`), the generated Swagger docs
+  (`docs/api/swagger.{json,yaml}`, `docs/api/docs.go`) and the swagger
+  annotation in `cmd/goats/main.go` all declared `AGPL-3.0` — stale metadata
+  flagged by the packaging audit. They now match the actual project license
+  (Apache-2.0 in `LICENSE`, `README.md`, `docs/LICENSING.md`, `package.json`).
+  No functional change; license-only metadata.
+- **TrueNAS SCALE added to the supported platforms list.** `README.md`
+  (Container Runtime Support + Production Deployment) and `docs/FEATURES.md`
+  (Deployment Options) now mention TrueNAS SCALE 24.10+ — the official app
+  catalog package is ready in `docs/truenas-app/` (PR in submission); until it
+  merges, "Install via YAML" in the Apps Market works with the standard Compose stack.
+- **Helm chart version metadata fixed.** `charts/goatflow/Chart.yaml` declared
+  `appVersion: "1.0.0"` (no such app release exists — the real version is 0.9.0)
+  and had no `kubeVersion` gate; it now declares `appVersion: "0.9.0"` and
+  `kubeVersion: ">=1.25.0"`, matching the declared support floor in
+  `charts/goatflow/README.md` and the system requirements. The install-from-release
+  example in the chart README now points at `v0.9.0`. Chart `version` stays
+  `0.1.0` (bump when the first chart release ships). Verified with `helm lint`
+  (0 failures) and `helm template` render.
+- **Helm chart now references the real container image.** `charts/goatflow/values.yaml`
+  defaulted `backend.image.repository` to `goatflow/backend` — an image that never existed
+  (Docker Hub 404 / ghcr 403) and a leftover from the pre-rename era — so any out-of-the-box
+  `helm install` of the published charts ImagePullBackOff'd. The default is now
+  `ghcr.io/goatkit/goatflow`, matching the app's published image. Also, the CI chart-publish
+  step (`.github/workflows/build.yml`) wrote `appVersion` with a `v` prefix (`v0.9.0`) while the
+  container image tags have no `v` (`ghcr.io/goatkit/goatflow:0.9.0`), so the rendered image tag
+  never matched a real tag; it now strips the `v`. Verified: `helm template` renders
+  `image: ghcr.io/goatkit/goatflow:0.9.0`, which is pullable from ghcr.
+
 ## [0.9.0] - 2026-08-06
 
 ### Added

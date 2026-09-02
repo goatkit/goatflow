@@ -7,8 +7,8 @@ info:
     url: https://goatflow.io/support
   description: GoatFlow Ticket System REST API
   license:
-    name: AGPL-3.0
-    url: https://www.gnu.org/licenses/agpl-3.0.html
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
   termsOfService: https://goatflow.io/terms/
   title: GoatFlow API
   version: "1.0"

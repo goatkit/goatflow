@@ -47,6 +47,11 @@ GoatFlow is designed for container-first workflows and supports the following ru
   - Supported for both Docker and Podman; may require additional host configuration for ports and volumes
 - **SELinux-enabled hosts**
   - Volumes and bind mounts are compatible; use standard SELinux options/labels as required by your distribution
+- **Kubernetes**
+  - Via Helm chart (`charts/goatflow`), K8s 1.25+; see [Kubernetes Deployment Guide](docs/deployment/kubernetes.md)
+- **TrueNAS SCALE (24.10+)**
+  - Docker Compose-based app catalog; the official app store package is in submission
+    (`docs/truenas-app/`), until then install via YAML with the standard Compose stack
 
 All `make` targets (for example, `make up`, `make down`, `make restart`) automatically detect whether Docker or Podman is available and choose the appropriate Compose command.
 
@@ -234,13 +239,16 @@ GoatFlow maintains high code quality and security standards through comprehensiv
 - 16+ GB RAM
 - 100+ GB SSD storage
 - MariaDB 11+ or PostgreSQL 14+ cluster
-- Kubernetes 1.24+
+- Kubernetes 1.25+
 
 ### Production Deployment
 
 For production deployments, see our comprehensive guides:
 - [Docker Deployment Guide](docs/deployment/docker.md)
 - [Kubernetes Deployment Guide](docs/deployment/kubernetes.md)
+- [TrueNAS SCALE](docs/truenas-app-catalog-requirements.md) — official app catalog
+  submission in progress; in the meantime use Apps → Discover → "Install via YAML"
+  with the standard Compose stack on SCALE 24.10+
 
 > 💡 **Tip**: Start with Docker deployment for single-server setups, then scale to Kubernetes as your needs grow.
 
