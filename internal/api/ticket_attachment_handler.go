@@ -928,11 +928,22 @@ func handleViewAttachment(c *gin.Context) {
 	}
 
 	ct := strings.ToLower(contentType)
-	// Build the inner content element source using the download endpoint which handles inline types
-	contentURL := fmt.Sprintf("/api/tickets/%s/attachments/%d", ticketIDStr, attID)
+	// Build the inner content element source using the raw variant of this
+	// route: the global SecurityHeaders middleware sets frame-ancestors 'none'
+	// + X-Frame-Options DENY on every response, so plain download URLs cannot
+	// be embedded; the raw variant relaxes framing for same-origin only.
+	contentURL := fmt.Sprintf("/api/tickets/%s/attachments/%d/view?raw=1", ticketIDStr, attID)
 	// Decide embed tag
 	var embed string
 	switch {
+	case isICSSignalled(contentType, filename):
+		// Render calendar events as structured cards instead of raw text
+		embed = icsFallbackHTML(contentURL)
+		if content := loadAttachmentContent(c.Request.Context(), ticketID, attID); len(content) > 0 {
+			if events := parseICS(content); len(events) > 0 {
+				embed = icsEventHTML(events, contentURL)
+			}
+		}
 	case strings.HasPrefix(ct, "image/"):
 		// Escape percent signs in fmt format string for CSS percentages
 		embed = fmt.Sprintf(`<img src="%s" alt="%s" style="max-width: 100%%; max-height: 100%%; object-fit: contain;" />`, contentURL, htmlEscape(filename))
@@ -1126,6 +1137,23 @@ func handleViewAttachment(c *gin.Context) {
 
 // serveAttachmentInlineRaw serves the original inline content for /view?raw=1 and internal use.
 func serveAttachmentInlineRaw(c *gin.Context, ticketIDStr string, ticketID int, attID int) {
+	// This endpoint exists for embedding attachment content in same-origin
+	// viewer iframes. The global SecurityHeaders middleware sets
+	// frame-ancestors 'none' + X-Frame-Options DENY on every response, which
+	// would block any embedding; relax framing to same-origin for this route.
+	c.Header("X-Frame-Options", "SAMEORIGIN")
+	c.Header("Content-Security-Policy",
+		"default-src 'self'; "+
+			"script-src 'self' 'unsafe-inline' 'unsafe-eval'; "+
+			"style-src 'self' 'unsafe-inline'; "+
+			"img-src 'self' data: blob: *.giphy.com *.tenor.com media.tenor.com; "+
+			"media-src 'self' blob:; "+
+			"font-src 'self' data:; "+
+			"connect-src 'self'; "+
+			"frame-ancestors 'self'; "+
+			"base-uri 'self'; "+
+			"form-action 'self'")
+
 	// DB path first
 	if db := attachmentsDB(); db != nil {
 		var filename, contentType string
@@ -1868,6 +1896,10 @@ func renderAttachmentListHTML(attachments []gin.H) string {
 		} else if contentType == "application/pdf" {
 			icon = `<svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+			</svg>`
+		} else if isICSSignalled(contentType, filename) {
+			icon = `<svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
 			</svg>`
 		} else if strings.HasPrefix(contentType, "text/") {
 			icon = `<svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
