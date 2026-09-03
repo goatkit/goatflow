@@ -101,7 +101,9 @@ paths:
       tags:
         - Health
       summary: Detailed health check
-      description: Returns detailed health status including component status
+      description: Returns detailed health status including component status. Admin-only.
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Detailed health information

@@ -21,8 +21,6 @@ func CustomerOnlyGuard(enabled bool) gin.HandlerFunc {
 		"/api/themes",    // Public theme selector API
 		"/health",
 		"/healthz",
-		"/health/detailed",
-		"/metrics",
 		"/static",
 		"/assets",
 		"/runtime",

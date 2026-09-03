@@ -88,10 +88,13 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 	// Register middleware only - all route handlers are now in YAML
 	middlewares := map[string]gin.HandlerFunc{
 		"auth": func(c *gin.Context) {
-			// Public (unauthenticated) paths bypass auth
+			// Public (unauthenticated) paths bypass auth. /health is the probe
+			// target (Docker HEALTHCHECK, TrueNAS, k8s) and must stay open;
+			// /health/detailed and /metrics are auth-gated at route level
+			// (routes/basic.yaml) and intentionally have no bypass.
 			path := c.Request.URL.Path
 			if isPublicAuthPath(path) ||
-				path == "/health" || path == "/metrics" || path == "/favicon.ico" || path == "/manifest.json" || path == "/sw.js" || path == "/sw-config.json" || strings.HasPrefix(path, "/static/") ||
+				path == "/health" || path == "/favicon.ico" || path == "/manifest.json" || path == "/sw.js" || path == "/sw-config.json" || strings.HasPrefix(path, "/static/") ||
 				path == "/api/languages" || path == "/api/themes" || strings.HasPrefix(path, "/swagger/") {
 				c.Next()
 				return

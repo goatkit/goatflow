@@ -72,9 +72,9 @@ func HandleHealthCheck(c *gin.Context) {
 }
 
 // HandleDetailedHealthCheck reports every probeable component plus uptime
-// and build information. This endpoint is for operators (not on a tight
-// probe loop), so it may take up to detailedHealthCheckTimeout per
-// component.
+// and build information. It is admin-gated at route level
+// (routes/basic.yaml): an operator endpoint, not a probe target — /health
+// covers Docker/TrueNAS/k8s probes and stays public.
 func HandleDetailedHealthCheck(c *gin.Context) {
 	dbStatus := checkDatabase()
 	cacheStatus := checkCache()
@@ -89,7 +89,10 @@ func HandleDetailedHealthCheck(c *gin.Context) {
 	c.JSON(code, gin.H{
 		"status":     status,
 		"components": gin.H{"database": dbStatus, "cache": cacheStatus},
-		"version":    version.String(),
-		"uptime":     time.Since(processStart).String(),
+		// version.Short() only: no git commit SHA on any health endpoint.
+		// Operators wanting the full build string use the CLI/`goatflow
+		// version` or the admin UI, which already require credentials.
+		"version": version.Short(),
+		"uptime":  time.Since(processStart).String(),
 	})
 }

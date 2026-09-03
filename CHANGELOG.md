@@ -170,6 +170,21 @@ project adheres to [Semantic Versioning](https://semver.org/).
   under Go 1.25.12).
 
 ### Changed
+- **Health/metrics endpoints de-fingerprinted and admin-gated.** `GET
+  /health/detailed` and `GET /metrics` on the app port now require
+  admin authentication (route-level `auth` + `admin` middleware in
+  `routes/basic.yaml`), so build version, git commit, process uptime
+  and Valkey cache telemetry are no longer reachable unauthenticated.
+  The public liveness `GET /health` keeps the lean probe payload
+  (status + `version.Short()`, no commit SHA) so Docker HEALTHCHECK,
+  TrueNAS and k8s liveness/readiness probes continue to work;
+  `version.String()` (semver + short SHA) is now served nowhere over
+  HTTP. Prometheus scrapers use the unauthenticated standalone
+  listener on `METRICS_PORT` (default 9090) — internal network only,
+  not a published port. Both paths are also removed from the
+  customer-FE allowlist (`internal/api/customer_only_guard.go`), so
+  customer-facing deployments 404 them instead of serving them to the
+  portal network.
 - **API license metadata aligned to Apache-2.0.** The OpenAPI specs
   (`api/openapi.yaml`, `api/openapi.bundle.yaml`), the generated Swagger docs
   (`docs/api/swagger.{json,yaml}`, `docs/api/docs.go`) and the swagger

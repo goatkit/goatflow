@@ -23,17 +23,29 @@ spec:
           handler: handleHealthCheck
           description: "Basic health check endpoint"
 
-        # Detailed health check
+        # Detailed health check — admin-gated operator endpoint (build info,
+        # uptime, cache state). Docker/TrueNAS/k8s probes use /health.
+        # "auth" validates the session/JWT and resolves user_role; "admin"
+        # then enforces admin-group membership (gf_* API tokens are skipped
+        # by "auth" without setting user_role, so they get 401 — fail closed).
         - path: /health/detailed
           method: GET
           handler: handleDetailedHealthCheck
-          description: "Detailed health check with component status"
+          middleware:
+              - auth
+              - admin
+          description: "Detailed health check with component status (admin only)"
 
-        # Metrics endpoint
+        # Metrics endpoint — admin-gated. Prometheus scrapers use the
+        # unauthenticated METRICS_PORT listener (internal network, not
+        # published); the app-port route is for operator debugging.
         - path: /metrics
           method: GET
           handler: handleMetrics
-          description: "Prometheus metrics endpoint"
+          middleware:
+              - auth
+              - admin
+          description: "Prometheus metrics endpoint (admin only)"
 
         # Queues redirect - redirects to appropriate queues based on user role
         - path: /queues
