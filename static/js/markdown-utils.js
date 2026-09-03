@@ -22,8 +22,38 @@ export function markdownToHTML(markdown) {
     // Simple markdown parser - handles basic formatting
     let html = markdown;
 
-    // Code blocks (must come first)
-    html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    // Code blocks (must come first) - stash as placeholders so the inline
+    // conversion passes below cannot corrupt fence content.
+    const codeBlocks = [];
+    html = html.replace(/```([\s\S]*?)```/g, (match, code) => {
+        codeBlocks.push('<pre><code>' + code + '</code></pre>');
+        return '\u0000' + (codeBlocks.length - 1) + '\u0000';
+    });
+
+    // GFM tables - must run before the inline passes since cells are
+    // delimited by '|'. Escaped pipes ('\\|') inside cells are preserved.
+    html = html.replace(/(?:^[ \t]*\|[^\n]*(?:\n|$))+/gm, (block) => {
+        const lines = block.trim().split('\n');
+        if (lines.length < 2) return block;
+        const cut = (line) => {
+            line = line.replace(/\\\|/g, '\u0001').trim();
+            if (line.charAt(0) === '|') line = line.slice(1);
+            if (line.charAt(line.length - 1) === '|') line = line.slice(0, -1);
+            return line.split('|').map((cell) => cell.trim().replace(/\u0001/g, '\\|'));
+        };
+        const separator = cut(lines[1]);
+        if (!separator.length || !separator.every((cell) => /^:?-+:?$/.test(cell))) {
+            return block;
+        }
+        let out = '<table><thead><tr>'
+            + cut(lines[0]).map((cell) => '<th>' + cell + '</th>').join('')
+            + '</tr></thead><tbody>';
+        for (let i = 2; i < lines.length; i++) {
+            out += '<tr>' + cut(lines[i]).map((cell) => '<td>' + cell + '</td>').join('') + '</tr>';
+        }
+        out += '</tbody></table>';
+        return out;
+    });
 
     // Inline code
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -32,6 +62,9 @@ export function markdownToHTML(markdown) {
     html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
     html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
     html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    // Bullet lists with '*' markers - must run before the emphasis passes
+    // or a line-leading '*' would be consumed by the italic rule below.
+    html = html.replace(/^(\s*)\* +(.*)$/gm, '<li>$2</li>');
 
     // Bold and italic
     html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
@@ -48,15 +81,20 @@ export function markdownToHTML(markdown) {
     html = html.replace(/^(\s*)- (.*$)/gm, '<li>$2</li>');
     html = html.replace(/^(\s*)\d+\. (.*$)/gm, '<li>$2</li>');
 
-    // Wrap consecutive list items
-    html = html.replace(/(<li>.*<\/li>\s*)+/g, '<ul>$&</ul>');
+    // Wrap consecutive list items. Inter-item whitespace is stripped so the
+    // line-break pass below cannot turn it into <br> nodes that ProseMirror
+    // would parse as empty list items between real ones.
+    html = html.replace(/(<li>.*<\/li>\s*)+/g, (m) => '<ul>' + m.replace(/<\/li>\s+/g, '</li>') + '</ul>');
 
     // Line breaks
     html = html.replace(/\n\n/g, '</p><p>');
     html = html.replace(/\n/g, '<br>');
 
+    // Restore stashed code blocks
+    html = html.replace(/\u0000(\d+)\u0000/g, (match, index) => codeBlocks[Number(index)]);
+
     // Wrap in paragraph if not already wrapped
-    if (!html.match(/^<(h[1-6]|ul|ol|pre|blockquote)/)) {
+    if (!html.match(/^<(h[1-6]|ul|ol|pre|blockquote|table)/)) {
         html = '<p>' + html + '</p>';
     }
 
@@ -133,6 +171,28 @@ function convertElementToMarkdown(element) {
                         markdown += pContent + '\n\n';
                     }
                     break;
+                case 'table': {
+                    const rows = Array.from(child.querySelectorAll('tr'));
+                    if (rows.length) {
+                        const rowToMarkdown = (row) => {
+                            const cells = Array.from(row.children).map((cell) =>
+                                convertElementToMarkdown(cell)
+                                    .trim()
+                                    .replace(/\n+/g, ' ')
+                                    .replace(/\|/g, '\\|')
+                            );
+                            return '| ' + cells.join(' | ') + ' |';
+                        };
+                        const head = rows[0];
+                        markdown += rowToMarkdown(head) + '\n';
+                        markdown += '|' + Array(head.children.length).fill(' --- ').join('|') + '|\n';
+                        rows.slice(1).forEach((row) => {
+                            markdown += rowToMarkdown(row) + '\n';
+                        });
+                        markdown += '\n';
+                    }
+                    break;
+                }
                 case 'div':
                 case 'span':
                     // Check for styling
@@ -151,3 +211,4 @@ function convertElementToMarkdown(element) {
 
     return markdown.trim();
 }
+// cache-bust: force frontend-stage rebuild (GFM table support)

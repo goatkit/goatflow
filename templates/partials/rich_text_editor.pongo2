@@ -44,7 +44,15 @@
             linkUrlPrompt: '{{ t("editor.insert_link_prompt")|default:"Enter URL:" }}',
             onUpdate: function(content) {
                 if (hiddenField) {
-                    hiddenField.value = content;
+                    // Rich mode emits HTML; the hidden field is canonical
+                    // markdown, so convert back (GFM-table-aware).
+                    const inst = window['editor_' + editorId];
+                    if (inst && inst.getMode && inst.getMode() === 'richtext'
+                        && window.Tiptap && window.Tiptap.htmlToMarkdown) {
+                        hiddenField.value = window.Tiptap.htmlToMarkdown(content);
+                    } else {
+                        hiddenField.value = content;
+                    }
                 }
             }
         });
@@ -59,3 +67,4 @@
     }
 })();
 </script>
+

@@ -249,6 +249,37 @@ function createImagePasteExtension(uploadUrl) {
     });
 }
 
+// Content canonical everywhere is markdown; only strings that begin with an
+// HTML block tag count as HTML (same assumption markdown-utils.js makes
+// when deciding whether to wrap output in <p>). Everything else is treated
+// as markdown so GFM tables, lists and bold render properly instead of
+// appearing as raw markdown text in the rich editor.
+function isHTMLLike(content) {
+    return (
+        typeof content === "string" &&
+        /^\s*(<!doctype|<html|<body|<div|<table|<thead|<tbody|<tr\b|<td\b|<th\b|<p\b|<span|<br\s*\/?>|<h[1-6]|<ul|<ol|<li|<pre|<blockquote|<img|<a\s|<strong|<em)/i.test(content)
+    );
+}
+
+// Convert markdown to editor HTML when needed; HTML-like content passes
+// through untouched (email identities pass HTML bodies; markdown bodies
+// coming from the DB / hidden fields get converted).
+function asEditorHTML(content) {
+    if (isHTMLLike(content)) return content;
+    if (window.Tiptap && window.Tiptap.markdownToHTML) {
+        return window.Tiptap.markdownToHTML(content);
+    }
+    return content;
+}
+
+// Inverse of asEditorHTML for the markdown mode: markdown passes through,
+// HTML-like content is converted so the markdown field stays canonical.
+function asMarkdown(content) {
+    if (window.Tiptap && window.Tiptap.htmlToMarkdown && isHTMLLike(content)) {
+        return window.Tiptap.htmlToMarkdown(content);
+    }
+    return content;
+}
 function initTiptapEditor(elementId, options = {}) {
     console.log("initTiptapEditor called with elementId:", elementId);
 
@@ -600,7 +631,7 @@ function initTiptapEditor(elementId, options = {}) {
                 Image,
                 createImagePasteExtension(config.imageUploadUrl),
             ],
-            content: content,
+            content: asEditorHTML(content),
             editable: config.mode === "edit",
             onUpdate: ({ editor: updatedEditor }) => {
                 console.log("Rich text editor content updated");
@@ -1107,12 +1138,7 @@ function initTiptapEditor(elementId, options = {}) {
         setContent: (content, mode = null) => {
             const targetMode = mode || currentMode;
             if (targetMode === "richtext") {
-                const htmlContent =
-                    currentMode === "markdown"
-                        ? window.Tiptap.markdownToHTML
-                            ? window.Tiptap.markdownToHTML(content)
-                            : content
-                        : content;
+                const htmlContent = asEditorHTML(content);
                 if (editor) {
                     editor.commands.setContent(htmlContent);
                     // Explicitly trigger onUpdate callback since programmatic setContent
@@ -1122,12 +1148,7 @@ function initTiptapEditor(elementId, options = {}) {
                     }
                 }
             } else if (markdownTextarea) {
-                const markdownContent =
-                    currentMode === "richtext"
-                        ? window.Tiptap.htmlToMarkdown
-                            ? window.Tiptap.htmlToMarkdown(content)
-                            : content
-                        : content;
+                const markdownContent = asMarkdown(content);
                 markdownTextarea.value = markdownContent;
                 // Explicitly trigger onUpdate callback for markdown mode too
                 if (config.onUpdate) {
