@@ -91,7 +91,9 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			// Public (unauthenticated) paths bypass auth. /health is the probe
 			// target (Docker HEALTHCHECK, TrueNAS, k8s) and must stay open;
 			// /health/detailed and /metrics are auth-gated at route level
-			// (routes/basic.yaml) and intentionally have no bypass.
+			// (routes/basic.yaml) and intentionally have no bypass. /swagger/
+			// stays public: the OpenAPI spec ships in the open-source repo and
+			// every user can create API tokens, so the API docs are open to all.
 			path := c.Request.URL.Path
 			if isPublicAuthPath(path) ||
 				path == "/health" || path == "/favicon.ico" || path == "/manifest.json" || path == "/sw.js" || path == "/sw-config.json" || strings.HasPrefix(path, "/static/") ||

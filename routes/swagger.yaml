@@ -3,8 +3,10 @@
 # API documentation endpoint serving OpenAPI spec via Swagger UI.
 #
 # Access control:
-#   - Default: public (no auth required)
-#   - To require login: change middleware to [unified_auth]
+#   - Default: public (no auth required). The OpenAPI spec ships in the
+#     open-source repo and every user can create API tokens, so the docs
+#     stay open to all users — including anonymous visitors.
+#   - To require login: change middleware to [auth].
 #   - To disable: set GOATFLOW_SWAGGER_ENABLED=false or enabled: false
 #
 # Dark mode: enabled by default (handleSwaggerDark)
@@ -19,7 +21,7 @@ metadata:
   enabled: true
 spec:
   prefix: /swagger
-  middleware: []  # Public by default; change to [unified_auth] for protected access
+  middleware: []  # Public by default; change to [auth] to require login
   routes:
     - path: /*any
       method: GET
