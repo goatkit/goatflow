@@ -329,7 +329,9 @@ func crossUIAvailable(repo UIInfoLookup, caller PluginCaller, path string) bool 
 		return false
 	}
 	row, err := repo.GetByFullID(fullID)
-	if err != nil || row == nil || !row.Enabled || row.ValidID != 1 {
+	// Same predicate as ListActive's route registration, so a visible link
+	// can never point at an unregistered path.
+	if err != nil || row == nil || !row.IsActive() {
 		return false
 	}
 	enabler, ok := caller.(interface{ IsEnabled(string) bool })
