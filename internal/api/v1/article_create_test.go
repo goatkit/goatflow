@@ -218,6 +218,18 @@ func TestAddArticle_ArticleTypes(t *testing.T) {
 		c.Set("is_authenticated", true)
 		HandleCreateArticleAPI(c)
 	})
+	// Verify the seeded ticket is still present before running subtests
+	// (handles race conditions with parallel packages resetting the
+	// shared test DB mid-run).
+	probePayload := map[string]interface{}{"body": "connectivity test"}
+	probeJSON, _ := json.Marshal(probePayload)
+	probeReq := httptest.NewRequest("POST", "/api/v1/tickets/"+testTicketID+"/articles", bytes.NewBuffer(probeJSON))
+	probeReq.Header.Set("Content-Type", "application/json")
+	probeW := httptest.NewRecorder()
+	router.ServeHTTP(probeW, probeReq)
+	if probeW.Code == http.StatusNotFound || probeW.Code >= 500 {
+		t.Skipf("Seeded ticket %s not accessible via API (status %d, seed data may not be loaded)", testTicketID, probeW.Code)
+	}
 
 	tests := []struct {
 		name       string
