@@ -377,10 +377,7 @@ test-unit: toolbox-build test-stack-up
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
 		$(TOOLBOX_IMAGE) \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; \
-		echo "Running template tests..."; go test -count=1 -timeout=1m -buildvcs=false -v -p $(NPROC) ./internal/platform/template/... || true; \
-		CORE_PKGS=$$(go list ./... | rg -v "tests/e2e|tests/integration|internal/email/integration|internal/platform/template"); \
-		echo "Running core packages"; go test -count=1 -timeout=15m -buildvcs=false -v -p $(NPROC) $$CORE_PKGS'
+		bash /workspace/scripts/unit-test-phases.sh -count=1
 
 
 # Run unit tests with Go's result caching enabled (skips unchanged packages).
@@ -413,10 +410,7 @@ test-fast: toolbox-build test-stack-up
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
 		$(TOOLBOX_IMAGE) \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; \
-		echo "Running template tests..."; go test -timeout=1m -buildvcs=false -v -p $(NPROC) ./internal/platform/template/... || true; \
-		CORE_PKGS=$$(go list ./... | rg -v "tests/e2e|tests/integration|internal/email/integration|internal/platform/template"); \
-		echo "Running core packages"; go test -timeout=15m -buildvcs=false -v -p $(NPROC) $$CORE_PKGS'
+		bash /workspace/scripts/unit-test-phases.sh
 
 # Debug environment detection
 debug-env:
