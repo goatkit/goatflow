@@ -87,7 +87,11 @@ func HandleStaticFiles(c *gin.Context) {
 		return
 	}
 
-	// Serve the file
+	// App assets ship without content hashes; revalidate so browsers
+	// and service workers never serve a frozen stale copy across deploys.
+	if strings.HasPrefix(requestPath, "/static/") {
+		c.Header("Cache-Control", "no-cache")
+	}
 	c.File(filePath)
 }
 

@@ -246,7 +246,11 @@ self.addEventListener('fetch', function(event) {
             var strategy = rule ? rule.strategy : null;
 
             if (!strategy && url.pathname.indexOf('/static/') === 0) {
-                strategy = 'cache-first';
+                // App assets (JS/CSS) ship without content hashes; a
+                // cache-first default froze stale copies across deploys.
+                // Network-first keeps them fresh, the catch below still
+                // serves the cached copy when offline.
+                strategy = 'network-first';
             }
             if (!strategy && request.mode === 'navigate') {
                 strategy = config.default_navigation_strategy || 'network-first';

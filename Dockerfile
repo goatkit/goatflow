@@ -50,7 +50,7 @@ RUN bun install --frozen-lockfile
 
 # Copy source files needed for build
 COPY static/css/input.css static/css/
-COPY static/js/tiptap-bundle.js static/js/markdown-utils.js static/js/
+COPY static/js static/js/
 COPY tailwind.config.js ./
 COPY templates ./templates/
 
