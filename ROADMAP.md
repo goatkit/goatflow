@@ -4,7 +4,7 @@ Current status, past releases, and future plans for GoatFlow.
 
 ## 🚀 Current Status
 
-**Version**: 0.8.2 (April 2026) - MCP Dynamic API Discovery, SSE & Plugin Manager Resilience
+**Version**: 0.9.0 (August 2026) - Setup Assistant, SAML, Platform/Product Decoupling, Customer KB Pages
 
 GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ticketing and service management platform. It is built as a premier standalone solution for all organizations. Written in Go with a modular monolith architecture, GoatFlow provides enterprise-grade support ticketing, ITSM capabilities, and extensive customization options.
 
@@ -29,6 +29,10 @@ GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ti
 - **Wallpaper Toggle** — Per-theme background wallpaper control with cookie persistence
 - **Mobile Optimization** — Responsive tables, GridStack breakpoints, touch targets, mobile ticket creation, compact modals
 - **PWA & Push Notifications** — Web app manifest, service worker with offline fallback, VAPID push subscriptions, browser notification delivery
+- **Setup Assistant** — first-run wizard + re-runnable task catalog, plugin-extensible (`GKRegistration.SetupTasks`), JSON API at `/api/v1/admin/setup/*`
+- **Identity Providers (SAML2 + OIDC)** — SAML2 via `crewjam/saml`, OIDC client (Google + generic), per-org IdP config, login-page IdP buttons
+- **Platform/Product Decoupling** — plugin runtime separated from product code into `internal/platform/` (Phases 1–8), boundary linter enforced
+- **Customer Knowledge Base Pages** — list, search, and article view wired into the customer portal (backed by the goat-kb plugin)
 
 ### What Works
 - Agent Interface: Full ticket management with bulk actions and multi-theme UI (4 themes with wallpaper toggle)
@@ -52,6 +56,66 @@ GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ti
 ---
 
 ## 📜 Past Releases
+
+### [0.9.0] - August 6, 2026
+
+**Setup Assistant, SAML SSO, Platform Decoupling, and Customer KB Pages**
+
+Setup Assistant:
+
+- First-run wizard (auto-redirect on fresh installs): org type → teams → queues → agents → customers → SLAs → create
+- Re-runnable task catalog with entity snapshot and mini-wizards for common operations
+- Plugin-extensible via `GKRegistration.SetupTasks`; JSON API at `/api/v1/admin/setup/*`
+- Response templates, business hours, and email transport onboarding steps (i18n × 15 languages)
+- Customer onboarding wizard — provisions company, teams, users, SLAs, and inbound mailbox in one shot
+- Existing customer review mode (type-ahead search → load full config for review/edit)
+
+Identity Providers:
+
+- SAML2 support via `crewjam/saml` (admin UI for signing certs + private keys)
+- OIDC client (Google + generic) — already shipped in the 0.8.4 milestone (rolled into 0.9.0)
+- Login page IdP buttons dynamically rendered per-org; falls back to local login when none configured
+
+Platform:
+
+- **Platform/product decoupling (Phases 1–8)** — plugin runtime no longer transitively depends on ~16,000 lines of product code; `docs/PLATFORM_PRODUCT_DECOUPLING.md`
+- Customer-facing Knowledge Base pages (list, search, article view) wired into customer portal
+- Plugin raw body passthrough (`_body` / `_content_type`) and HTTP status code mapping for plugin JSON responses
+- RBAC-scoped core dashboard widgets (acting user's groups only)
+- Static-asset cache-busting (`?v=assetVersion` on all script/link includes)
+- Admin Users: reusable multi-select group control with search + chips; password policy checklist in add/edit modal
+- Plugin UI page handlers receive caller identity (`_user_id`, `_user_login`, etc.)
+
+Security:
+
+- 22 Dependabot vulnerabilities remediated (7 critical, 5 high, 10 moderate)
+- Go toolchain bumped to 1.25.12; all reachable `govulncheck` advisories cleared (0 reachable)
+
+### [0.8.3] - May 13, 2026
+
+**Passkey Login, Hardware-Key MFA, Plugin Auto-Recovery, and Bench/Load Harnesses**
+
+Authentication:
+
+- Passkey login for agents and customers (resident WebAuthn credentials, short-lived ceremonies, persisted in `gk_webauthn_ceremony`)
+- Hardware-key MFA (WebAuthn/FIDO2) — security keys as alternative 2FA, security-key-first challenge for key-only accounts
+- MFA + WebAuthn i18n strings across all 15 languages
+
+Plugin Resilience:
+
+- Auto-restart on health-check failure with exponential backoff (5s → 5min) and crash-loop guard
+- Admin UI widget on `/admin/plugins` with Healthy/Unhealthy summary cards, per-plugin health column, and "Reset" action
+- Rich health payloads (JSON from `__health_ping__` surfaced on `PluginHealth.Payload`)
+- Parallel plugin shutdown (total time = max per-plugin, not sum)
+- Configurable service-worker offline support (per-plugin `CacheRoutes`, `sw-config.json`)
+- Admin management for plugin UIs (`/admin/plugin-uis`)
+- Plugin cascade dispatch (`manifest.Cascades` wired into `deletion.Service`)
+- `GOATFLOW_PLUGIN_LOG_ECHO` mirrors plugin `host.Log()` to host stderr
+
+Quality:
+
+- `make bench` — curated Go benchmark suite with benchmem captures and `make bench-compare`
+- `make load-test` — k6 smoke profile against the test stack
 
 ### [0.8.2] - April 2026
 
@@ -592,7 +656,7 @@ Plugins receive org context automatically from the authenticated session, elimin
 
 ---
 
-### 0.8.3 - Target: June 2026
+### 0.8.3 - May 13, 2026 ✅
 
 **Plugin Manager — Auto-Recovery** ✅
 - [x] Auto-restart on health-check failure with exponential backoff (5s → 5min) and crash-loop guard (>5 attempts in 10min → abandoned, requires admin reset). Loader wired as `Restarter` via `Manager.SetRestarter`; opt out with `GOATFLOW_PLUGIN_AUTO_RESTART=false`.
@@ -613,7 +677,7 @@ Plugins receive org context automatically from the authenticated session, elimin
 
 ---
 
-### 0.8.4 - Target: July 2026
+### 0.8.4 - Shipped with 0.9.0 (August 2026) ✅
 
 **External Identity Provider Integration (OIDC Client)**
 - [x] Identity provider registry — `OIDCProvider` interface (type-asserted in handlers), `StateStore` with PKCE verifier + 5min TTL, `MemoryStateStore` implementation (`internal/platform/auth/`)
@@ -625,16 +689,16 @@ Plugins receive org context automatically from the authenticated session, elimin
 - [x] Integration tests — 5 OIDC integration tests with Keycloak 26.x testcontainer (`make test-oidc-integration`); unit tests for PKCE generation, provider name/priority, state store
 ---
 
-### 0.9.0 - Target: August 2026
+### 0.9.0 - August 6, 2026 ✅
 
-**FAQ / Knowledge Base Plugin** *(first-party, open source)*
-- [ ] Public and internal article categories with permissions
-- [ ] Rich text articles with attachments and images
-- [ ] Search with relevance ranking and filters
-- [ ] Article ratings, feedback, and usage analytics
-- [ ] Link articles to tickets for quick reference
-- [ ] Customer portal FAQ integration with search
-- [ ] Article approval workflow
+**FAQ / Knowledge Base Plugin** *(shipped in separate repo `github.com/goatkit/goat-kb`)*
+- [x] Public and internal article categories with permissions
+- [x] Rich text articles with attachments and images
+- [x] Search with relevance ranking and filters
+- [x] Article ratings, feedback, and usage analytics
+- [x] Link articles to tickets for quick reference
+- [x] Customer portal FAQ integration with search (customer-facing KB pages wired into 0.9.0)
+- [x] Article approval workflow
 
 **Calendar & Appointments Plugin** *(first-party, open source)*
 - [ ] Agent calendar view (day/week/month)
@@ -762,10 +826,10 @@ Enterprise plugins are paid, reusable horizontal capabilities built on GoatKit c
 | Version | Date | Status | Theme |
 |---------|------|--------|-------|
 | 1.0.0 | Nov 2026 | 🔮 Future | Production Release |
-| 0.9.0 | Aug 2026 | 🔮 Future | FAQ, Calendar, Process Management Plugins |
-| 0.8.4 | Jul 2026 | 🔧 In Progress | External Identity Provider Integration (OIDC Client) |
-| 0.8.3 | Jun 2026 | ✅ Complete | Plugin Auto-Restart, Plugin UI Offline, WebAuthn, Quality |
-| 0.8.2 | Apr 2026 | 🚀 Current | **MCP v2** + Plugin Manager Resilience (health checks, bounded shutdown) |
+| 0.9.0 | Aug 2026 | 🚀 Current | Setup Assistant, SAML + OIDC, Platform Decoupling, Customer KB Pages |
+| 0.8.4 | Aug 2026 | ✅ Released (with 0.9.0) | External Identity Provider Integration (OIDC Client) |
+| 0.8.3 | May 2026 | ✅ Complete | Plugin Auto-Restart, Plugin UI Offline, WebAuthn, Quality |
+| 0.8.2 | Apr 2026 | ✅ Released | **MCP v2** + Plugin Manager Resilience (health checks, bounded shutdown) |
 | 0.8.1 | Apr 2026 | ✅ Released | Mobile, PWA & Security |
 | 0.8.0 | Mar 2026 | ✅ Released | **PaaS Core** — Custom Fields, Plugin UIs, Multi-Tenancy, Deletion |
 | 0.7.0 | Mar 2026 | ✅ Released | Plugin Platform Complete, Sandbox & Security, Statistics API |
