@@ -7,6 +7,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.10.0] - Unreleased
+
 ### Added
 - **Shared Tiptap editor partial for plugins (`static/js/gk-editor.js` + `templates/partials/tiptap_editor.pongo2`).**
   Plugins previously copy-pasted the two Tiptap script tags plus a manual "retry until `TiptapEditor`
