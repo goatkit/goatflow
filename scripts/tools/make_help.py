@@ -348,9 +348,14 @@ GROUPS: List[Dict[str, object]] = [
         ],
     },
     {
-        "title": "Helm Chart",
+        "title": "Helm Chart & Release",
         "emoji": "⎈",
         "entries": [
+            {
+                "name": "prepare-release",
+                "usage": "make prepare-release VERSION=0.10.0",
+                "description": "DRY version bump for a release (changelog + all pins), no commit/tag",
+            },
             {"name": "helm-setup", "description": "Configure Helm repos (valkey)"},
             {"name": "helm-lint", "description": "Lint the GoatFlow Helm chart (included in make lint)"},
             {"name": "helm-template", "description": "Render chart templates (dry-run)"},

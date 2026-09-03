@@ -168,8 +168,8 @@ func ensureCoreHandlers() {
 		"handleOIDCRedirect":        handleOIDCRedirect,
 		"handleOIDCCallback":        handleOIDCCallback,
 		"handleSAMLRedirect":        handleSAMLRedirect,
-		"handleSAMLCallback":      handleSAMLCallback,
-		"handleSAMLMetadata":      handleSAMLMetadata,
+		"handleSAMLCallback":        handleSAMLCallback,
+		"handleSAMLMetadata":        handleSAMLMetadata,
 		"handleAuthLogin":           HandleAuthLogin,
 		"handlePasskeyLoginBegin":   handlePasskeyLoginBegin,
 		"handlePasskeyLoginFinish":  handlePasskeyLoginFinish,
@@ -353,27 +353,6 @@ func ensureCoreHandlers() {
 				return
 			}
 			handleCustomerChangePassword(db)(c)
-		},
-		"handleCustomerKnowledgeBase": func(c *gin.Context) {
-			db, ok := mustGetDB(c)
-			if !ok {
-				return
-			}
-			handleCustomerKnowledgeBase(db)(c)
-		},
-		"handleCustomerKBSearch": func(c *gin.Context) {
-			db, ok := mustGetDB(c)
-			if !ok {
-				return
-			}
-			handleCustomerKBSearch(db)(c)
-		},
-		"handleCustomerKBArticle": func(c *gin.Context) {
-			db, ok := mustGetDB(c)
-			if !ok {
-				return
-			}
-			handleCustomerKBArticle(db)(c)
 		},
 		"handleCustomerGetLanguage": func(c *gin.Context) {
 			db, ok := mustGetDB(c)

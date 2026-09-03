@@ -51,7 +51,9 @@ GoatFlow is designed for container-first workflows and supports the following ru
   - Via Helm chart (`charts/goatflow`), K8s 1.25+; see [Kubernetes Deployment Guide](docs/deployment/kubernetes.md)
 - **TrueNAS SCALE (24.10+)**
   - Docker Compose-based app catalog; the official app store package is in submission
-    (`docs/truenas-app/`), until then install via YAML with the standard Compose stack
+    (`docs/truenas-app/`, pins `ghcr.io/goatkit/goatflow:0.10.0`), so TrueNAS support
+    is from GoatFlow 0.10.0 onwards; until it's merged, install via YAML with the
+    standard Compose stack
 
 All `make` targets (for example, `make up`, `make down`, `make restart`) automatically detect whether Docker or Podman is available and choose the appropriate Compose command.
 

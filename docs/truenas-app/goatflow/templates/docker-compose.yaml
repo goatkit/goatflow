@@ -29,9 +29,9 @@
 {% endfor %}
 
 {#
-  0.9.0 (the pinned image) reads flat DB_* env; later images read namespaced
+  0.10.0 (the pinned image) reads flat DB_* env; later images read namespaced
   DB_MYSQL_* and fall back to flat DB_*. Emitting the flat set works for both.
-  Namespaced-only would break 0.9.0: it would dial localhost:3306.
+  Namespaced-only would break 0.10.0: it would dial localhost:3306.
 #}
 {% set db_env = {
   "DB_HOST": values.consts.mariadb_container_name,

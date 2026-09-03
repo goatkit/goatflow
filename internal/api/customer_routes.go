@@ -44,10 +44,8 @@ func RegisterCustomerRoutes(r *gin.RouterGroup, db *sql.DB) {
 	// r.GET("/profile/password", handleCustomerPasswordForm(db))
 	// r.POST("/profile/password", handleCustomerChangePassword(db))
 	//
-	// // Knowledge base
-	// r.GET("/kb", handleCustomerKnowledgeBase(db))
-	// r.GET("/kb/search", handleCustomerKBSearch(db))
-	// r.GET("/kb/article/:id", handleCustomerKBArticle(db))
+	// // Knowledge base — now served by the goat-kb plugin (/customer/kb,
+	// // /customer/kb/article/:id); the platform-side handlers were removed.
 	// }
 }
 
@@ -1555,50 +1553,9 @@ func getPasswordPolicyErrorMessage(code string) string {
 	}
 }
 
-// handleCustomerKnowledgeBase renders the KB listing page.
-// Data is loaded client-side via JS fetch('/knowledge-base') from the kb plugin.
-func handleCustomerKnowledgeBase(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if !requireCustomerAuth(c) {
-			return
-		}
-		username := c.GetString("username")
-		cfg := customerPortalConfigFromContext(c, db)
-		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/knowledge_base.pongo2", withPortalContextAndCustomer(pongo2.Context{
-			"Title":      cfg.Title,
-			"ActivePage": "kb",
-		}, cfg, db, username))
-	}
-}
-
-// handleCustomerKBSearch renders the KB search page.
-// Search is performed client-side via JS fetch('/kb/search?query=...') from the kb plugin.
-func handleCustomerKBSearch(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if !requireCustomerAuth(c) {
-			return
-		}
-		username := c.GetString("username")
-		cfg := customerPortalConfigFromContext(c, db)
-		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/kb_search.pongo2", withPortalContextAndCustomer(pongo2.Context{
-			"Title":      cfg.Title,
-			"ActivePage": "kb-search",
-		}, cfg, db, username))
-	}
-}
-
-// handleCustomerKBArticle renders a single KB article page.
-// The article is loaded client-side via JS fetch('/kb/article/:id') from the kb plugin.
-func handleCustomerKBArticle(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if !requireCustomerAuth(c) {
-			return
-		}
-		username := c.GetString("username")
-		cfg := customerPortalConfigFromContext(c, db)
-		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/kb_article.pongo2", withPortalContextAndCustomer(pongo2.Context{
-			"Title":      cfg.Title,
-			"ActivePage": "kb-article",
-		}, cfg, db, username))
-	}
-}
+// handleCustomerKnowledgeBase / handleCustomerKBSearch / handleCustomerKBArticle
+// were the pre-plugin customer KB pages (they rendered
+// pages/customer/{knowledge_base,kb_search,kb_article}.pongo2, which no longer
+// exist). The customer KB now lives entirely in the goat-kb plugin
+// (/customer/kb, /customer/kb/article/:id — see its GKRegister Routes), so the
+// platform-side handlers and their registry entries were removed 2026-09-03.

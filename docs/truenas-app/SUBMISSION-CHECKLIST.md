@@ -1,5 +1,10 @@
 # TrueNAS App Store — Requirements Checklist (GoatFlow)
 
+> **Re-pinned to 0.10.0 (2026-09-03).** `app_version`/image tag now target
+> `ghcr.io/goatkit/goatflow:0.10.0`. The CI-gate and live-app results below
+> were captured against **0.9.0** (dated 2026-09-02) — re-run them against
+> 0.10.0 before submitting.
+
 Cross-checked 2026-09-02 against `docs/truenas-app-catalog-requirements.md`
 (task t_fd5702ef) and the `trueapps-catalog-packaging` skill. App dir:
 `docs/truenas-app/goatflow/`. Train: `community`. Re-validated on 2026-09-02
@@ -11,7 +16,7 @@ Note: web port `30482 → 30484` after `dbrepairs` claimed 30482 upstream.
 | File | Required? | Present | Notes |
 | --- | --- | --- | --- |
 | `app.yaml` | yes | ✅ | steady-state; `generate_metadata.py` no-op |
-| `ix_values.yaml` | yes | ✅ | image `ghcr.io/goatkit/goatflow:0.9.0`, consts |
+| `ix_values.yaml` | yes | ✅ | image `ghcr.io/goatkit/goatflow:0.10.0`, consts |
 | `questions.yaml` | yes | ✅ | 6 groups; secrets required/private; ports 30484/30483 |
 | `templates/docker-compose.yaml` | yes | ✅ | Jinja2 render-lib; flat `DB_*` + `GOATFLOW_VALKEY_PASSWORD` |
 | `README.md` | yes | ✅ | services table + upgrade/rollback section |
@@ -24,7 +29,7 @@ Note: web port `30482 → 30484` after `dbrepairs` claimed 30482 upstream.
 
 | Field | Value | OK |
 | --- | --- | --- |
-| `app_version` | 0.9.0 (== image tag) | ✅ |
+| `app_version` | 0.10.0 (== image tag) | ✅ |
 | `capabilities` | [] (none required) | ✅ |
 | `categories` | [productivity] (single) | ✅ |
 | `date_added` | 2026-09-02 | ✅ |

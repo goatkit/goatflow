@@ -170,6 +170,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
   under Go 1.25.12).
 
 ### Changed
+- **Dead pre-plugin customer KB handlers removed.** `handleCustomerKnowledgeBase` /
+  `handleCustomerKBSearch` / `handleCustomerKBArticle` (plus their `GlobalHandlerMap`
+  registry entries and the commented-out `/kb*` route stubs) rendered
+  `pages/customer/{knowledge_base,kb_search,kb_article}.pongo2` — templates that
+  were deleted when the goat-kb plugin took over the customer KB
+  (`/customer/kb`, `/customer/kb/article/:id` in its `GKRegister` routes), leaving
+  the handlers as landmines: a route registered against them would 500 on a
+  missing template. No functional change to live behaviour; the customer KB was
+  already served entirely by the plugin.
 - **Health/metrics endpoints de-fingerprinted and admin-gated.** `GET
   /health/detailed` and `GET /metrics` on the app port now require
   admin authentication (route-level `auth` + `admin` middleware in

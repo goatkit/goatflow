@@ -10,7 +10,7 @@ import (
 // Build-time variables set via ldflags
 var (
 	// Version is the semantic version (e.g., "v0.5.1") or branch name if not a tagged build
-	Version = "0.9.0"
+	Version = "0.10.0"
 
 	// GitCommit is the short git commit SHA
 	GitCommit = "unknown"

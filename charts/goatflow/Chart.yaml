@@ -1,7 +1,7 @@
 apiVersion: v2
 name: goatflow
 version: 0.1.0
-appVersion: "0.9.0"
+appVersion: "0.10.0"
 description: GoatFlow - Go Ticket Request System
 type: application
 kubeVersion: ">=1.25.0"

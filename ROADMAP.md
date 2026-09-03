@@ -691,6 +691,63 @@ Plugins receive org context automatically from the authenticated session, elimin
 
 ### 0.9.0 - August 6, 2026 ✅
 
+**Setup Assistant, SAML SSO, Platform/Product Decoupling, and Customer KB Pages**
+
+**Setup Assistant**
+- [x] First-run wizard (auto-redirect on fresh installs): organization name/email/domain,
+      admin account (with `GOATFLOW_ADMIN_PASSWORD` bootstrap), Valkey cache enable,
+      database connection (auto-detected from the `goatflow` compose network)
+- [x] Re-runnable setup at `/setup` post-install
+- [x] `GOATFLOW_SETUP_ENABLED=false` disables the wizard entirely
+- [x] `SETUP_ADMIN_*` env overrides for headless installs (TrueNAS YAML, Docker)
+- [x] Wizard-supplied admin password survives re-boots; later `reset-user` wins
+
+**SAML 2.0 SSO** *(complements 0.8.4 OIDC — IdP-side SAML now supported too)*
+- [x] SAML service provider via `crewjam/saml` — auto service metadata, assertion
+      processing, attribute→role mapping
+- [x] Per-role admin bootstrap + auto-create for SAML sign-ins
+- [x] `GET /saml/metadata`, `GET /saml/acs`, `POST /saml/acs`, `/saml/login`
+- [x] SAML admin settings UI (IdP entity ID, SSO URL, X.509 cert, attribute claims)
+- [x] IdP integration tests (SAML testcontainer) + unit tests for metadata/claims
+
+**Platform/Product Decoupling**
+- [x] Core OTRS-style platform: tickets, queues, agents, sessions, RBAC, SSO
+- [x] Product modules (GoatDesk, GoatCoach, goat-kb) now ship as plugins via
+      HostAPI rather than platform imports — platform no longer imports
+      product-only code
+- [x] `pkg/plugin` HostAPI contract stable enough for external plugin authors
+
+**Customer Knowledge Base Pages**
+- [x] Customer portal pages surface goat-kb articles (via goat-kb plugin routes)
+- [x] Portal navigation + "browse articles" entry point
+- [x] Search + category filtering for end customers
+
+**Security sweep (release prep)**
+- [x] Password policy, session TTL, RBAC hardening
+- [x] `POST /auth/verify` session introspection endpoint
+- [x] `docs/SECURITY.md` threat model + `docs/PROMOTION.md` launch checklist
+
+**Quality**
+- [x] `make bench` pprof pipeline (CPU + heap) — no regressions since 0.8.3
+- [x] `make load-test` k6 suite (5 scenarios: baseline, load, spike, soak, WS)
+- [x] `make e2e` Playwright suite across ticket + KB + portal flows
+
+### 0.10.0 - Unreleased (in review)
+
+**Plugin Platform Expansion, Ops Hardening, and Security Cleanup**
+
+First release since the platform/product split, focused on the plugin-hosting
+surface (GoatCoach + goat-kb are the first real consumers), ops hardening
+(health/metrics/logging/shutdown), and clearing the Dependabot backlog.
+
+**Plugin platform**
+- [x] Shared Tiptap editor partial for plugins (`gk-editor.js`
+      + `tiptap_editor.pongo2`) — one promise-based `GoatKitEditor` API
+      instead of copy-pasted script tags + retry dance
+- [x] `POST /api/v1/markdown/render` — canonical goldmark+bluemonday renderer
+      for plugin preview panes (auth, 1 MiB cap)
+- [x] Importable `pkg/markdown` renderer (one canonical goldmark+b...[truncated]
+
 **FAQ / Knowledge Base Plugin** *(shipped in separate repo `github.com/goatkit/goat-kb`)*
 - [x] Public and internal article categories with permissions
 - [x] Rich text articles with attachments and images
@@ -825,8 +882,10 @@ Enterprise plugins are paid, reusable horizontal capabilities built on GoatKit c
 
 | Version | Date | Status | Theme |
 |---------|------|--------|-------|
+
 | 1.0.0 | Nov 2026 | 🔮 Future | Production Release |
-| 0.9.0 | Aug 2026 | 🚀 Current | Setup Assistant, SAML + OIDC, Platform Decoupling, Customer KB Pages |
+| 0.10.0 | Unreleased | 🚧 In review | Plugin platform, ops hardening, security cleanup |
+| 0.9.0 | Aug 2026 | 🚀 Current | Setup Assistant, SAML + OIDC, Platform Decoupl...[truncated]
 | 0.8.4 | Aug 2026 | ✅ Released (with 0.9.0) | External Identity Provider Integration (OIDC Client) |
 | 0.8.3 | May 2026 | ✅ Complete | Plugin Auto-Restart, Plugin UI Offline, WebAuthn, Quality |
 | 0.8.2 | Apr 2026 | ✅ Released | **MCP v2** + Plugin Manager Resilience (health checks, bounded shutdown) |

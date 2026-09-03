@@ -3123,6 +3123,27 @@ check-deps:
 	fi
 
 #########################################
+# RELEASE PREP
+#########################################
+
+## prepare-release: DRY version bump for a release (no commit, no tag)
+## Usage: make prepare-release VERSION=0.10.0
+## Bumps version.go, Chart.yaml, TrueNAS pins, CHANGELOG, README + ROADMAP,
+## then verifies all pins agree via the version-consistency test.
+.PHONY: prepare-release
+prepare-release:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Error: VERSION required. Usage: make prepare-release VERSION=0.10.0"; \
+		exit 1; \
+	fi
+	@chmod +x scripts/prepare-release.sh
+	@./scripts/prepare-release.sh $(VERSION)
+	@echo ""
+	@printf "🔎 Verifying all version pins agree...\n"
+	@go test -buildvcs=false -count=1 ./internal/platform/version/ -run TestVersionConsistency -v 2>/dev/null \
+		|| $(MAKE) toolbox-exec ARGS="go test -count=1 ./internal/platform/version/ -run TestVersionConsistency -v"
+
+#########################################
 # TEST OVERRIDES
 #########################################
 

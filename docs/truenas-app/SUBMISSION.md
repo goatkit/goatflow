@@ -1,5 +1,11 @@
 # TrueNAS App Store Submission — GoatFlow
 
+**Package re-pinned to 0.10.0** (2026-09-03): `app.yaml` `app_version` and
+`ix_values.yaml` image tag now point at `ghcr.io/goatkit/goatflow:0.10.0`.
+**Re-run the CI gates + live-app tests against 0.10.0 before submitting** —
+the evidence below (and the `TRUENAS-LOCAL-TEST-REPORT.md` dates) was captured
+against the 0.9.0 image and is not valid for 0.10.0.
+
 Prepared 2026-09-02, re-validated 2026-09-02 20:18 on a synced `origin/master`
 (b18f6a1). Everything below is validated locally with TrueNAS's own CI
 tooling against a clean checkout of `truenas/apps` (catalog clone at
@@ -18,7 +24,7 @@ on a synced checkout. One change since the first pass: `dbrepairs` claimed port
 | File | Role | Status |
 | --- | --- | --- |
 | `app.yaml` | metadata | steady-state (generate_metadata.py no-op) |
-| `ix_values.yaml` | static defaults | pinned `ghcr.io/goatkit/goatflow:0.9.0` |
+| `ix_values.yaml` | static defaults | pinned `ghcr.io/goatkit/goatflow:0.10.0` |
 | `questions.yaml` | wizard form | ports 30484/30483, secrets, storage, run_as |
 | `templates/docker-compose.yaml` | Jinja2 render-lib template | flat `DB_*` + `GOATFLOW_VALKEY_PASSWORD` (0.9.0-compatible) |
 | `templates/test_values/basic-values.yaml` | CI fixture | secrets filled, host paths under `/opt/tests` |
@@ -75,7 +81,7 @@ added — after which `generate_metadata.py` is a no-op, which is what the CI
 4. **Maintainers**: current `maintainers` block is the truenas default; optionally
    add `hello@goatflow.io` as an upstream maintainer.
 5. **Post-merge**: catalog updates daily on apps.truenas.com; renovate bot tracks
-   the `0.9.0` tag — bump `app_version` + image tag on upstream releases.
+   the `0.10.0` tag — bump `app_version` + image tag on upstream releases.
 
 ## PR description (paste into the truenas/apps PR)
 
@@ -103,7 +109,7 @@ Apache-2.0 licensed.
 - **Upstream**: https://github.com/goatkit/goatflow
 - **Documentation**: https://github.com/goatkit/goatflow (README) /
   https://apps.truenas.com/catalog/goatflow_community/ (post-merge)
-- **App Version**: 0.9.0
+- **App Version**: 0.10.0
 
 ## Testing
 
