@@ -1,8 +1,8 @@
 # GoatFlow Agent Manual
 
-## Coming Soon
-
-Complete guide for support agents using GoatFlow.
+> **Status: roadmap.** A full agent manual has not been written yet. The sections below
+> are the planned outline; the agent UI is available today and the feature overview in
+> [FEATURES.md](../FEATURES.md) covers what exists.
 
 ## Planned Content
 
@@ -76,34 +76,7 @@ Complete guide for support agents using GoatFlow.
 - Time management
 - Quality standards
 
-## Quick Tips
-
-### Keyboard Shortcuts
-- `Ctrl+N` - New ticket
-- `Ctrl+S` - Save changes
-- `Ctrl+Enter` - Send reply
-- `Ctrl+K` - Quick search
-- `Esc` - Close dialog
-
-### Ticket Status Flow
-```
-New → Open → Pending → Resolved → Closed
-         ↓
-      Escalated
-```
-
-### Priority Levels
-- 🔴 **Critical** - System down, urgent
-- 🟠 **High** - Major impact, important
-- 🟡 **Normal** - Standard request
-- 🟢 **Low** - Minor issue, can wait
-
 ## See Also
 
-- [Customer Portal Guide](../customer-portal/)
-- [Keyboard Shortcuts](../reference/shortcuts.md)
-- [FAQ](../faq.md)
-
----
-
-*Full agent documentation coming soon. For features overview, see [FEATURES.md](../FEATURES.md)*
+- Feature overview: [FEATURES.md](../FEATURES.md)
+- Security: [SECURITY.md](../SECURITY.md)

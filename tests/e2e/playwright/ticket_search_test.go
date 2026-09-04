@@ -84,27 +84,18 @@ func TestTicketSearchFiltersResults(t *testing.T) {
 		return true
 	}, 30*time.Second, 500*time.Millisecond, "search URL should update with query")
 
-	rowsMatchingB, err := browser.Page.Locator("tbody tr").Filter(playwright.LocatorFilterOptions{HasText: subjectB}).Count()
-	require.NoError(t, err)
-	if rowsMatchingB == 0 {
-		table := browser.Page.Locator("tbody")
-		if tableHTML, contentErr := table.InnerHTML(); contentErr == nil {
-			trimmed := tableHTML
-			if len(trimmed) > 1200 {
-				trimmed = trimmed[:1200] + "…"
-			}
-			t.Logf("tbody after search HTML:\n%s", trimmed)
-		} else if pageHTML, pageErr := browser.Page.Content(); pageErr == nil {
-			trimmed := pageHTML
-			if len(trimmed) > 1600 {
-				trimmed = trimmed[:1600] + "…"
-			}
-			t.Logf("page content fallback:\n%s", trimmed)
-		} else {
-			t.Logf("failed to capture table content: %v", contentErr)
+	rowsMatchingB := 0
+	require.Eventually(t, func() bool {
+		// The URL updates at navigation commit, before the new document is
+		// parsed; poll for the row so we count on the fully rendered page.
+		n, countErr := browser.Page.Locator("tbody tr").Filter(playwright.LocatorFilterOptions{HasText: subjectB}).Count()
+		if countErr != nil {
+			return false
 		}
-	}
-	assert.Greater(t, rowsMatchingB, 0, "search results should contain matching ticket")
+		rowsMatchingB = n
+		return n > 0
+	}, 15*time.Second, 250*time.Millisecond, "search results should contain matching ticket")
+	require.Greater(t, rowsMatchingB, 0, "search results should contain matching ticket")
 
 	rowsContainingA, err := browser.Page.Locator("tbody tr").Filter(playwright.LocatorFilterOptions{HasText: subjectA}).Count()
 	require.NoError(t, err)

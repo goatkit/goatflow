@@ -381,7 +381,7 @@ data_retention:
 | Session Management | ✅ | ✅ |
 | Audit Logging | Basic | Advanced |
 | Field Encryption | ❌ | ✅ |
-| SAML/OIDC | ❌ | ✅ |
+| SAML/OIDC | ✅ | ✅ |
 | Advanced MFA | ❌ | ✅ |
 | Compliance Reports | ❌ | ✅ |
 | Security Analytics | ❌ | ✅ |
@@ -439,16 +439,8 @@ We appreciate security researchers who help us maintain GoatFlow security.
 - RSS feed
 
 **Update Process:**
-```bash
-# Check for security updates
-goatflow-cli security check
-
-# Apply security patches
-goatflow-cli security update --apply
-
-# Verify security posture
-goatflow-cli security audit
-```
+Security fixes ship with regular releases (see [CHANGELOG.md](CHANGELOG.md)).
+Update by pulling the new image tag and restarting your deployment (Docker, Helm, or TrueNAS).
 
 ## Security Roadmap
 

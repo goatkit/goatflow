@@ -1,6 +1,6 @@
 ---
 # Basic Routes Configuration
-apiVersion: v1
+apiVersion: goatflow.io/v1
 kind: RouteGroup
 metadata:
     name: basic

@@ -17,11 +17,6 @@
   - Type safety
 
 ## Implementation Status
-**NOT YET IMPLEMENTED** - This decision is logged for future implementation when configuration management is needed.
-
-## Future Implementation Notes
-When implementing:
-1. Use Viper to read from `/etc/goatflow/config.yaml` (production) or `./config.yaml` (development)
-2. Allow environment variables to override any config value
-3. Use structured config with type-safe structs
-4. Provide sensible defaults for all values
+**IMPLEMENTED** - The Viper-based configuration system ships in `internal/platform/config/`
+(`config.go`): structured, type-safe config structs with defaults, environment variable
+override support, and validation (`validator.go`).

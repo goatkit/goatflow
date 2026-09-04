@@ -17,7 +17,7 @@ cd goatflow
 # Local dev (safe demo credentials; matches compose defaults)
 cp .env.development .env
 
-make up
+make up-d
 ```
 
 Useful commands:
@@ -30,8 +30,9 @@ make down
 
 ## 2) Where to access things
 
-- App UI: `http://localhost` (served via the frontend container)
-- API (same origin): `http://localhost/api`
+- Agent/admin UI (HTMX, served by the backend): `http://localhost:8080`
+- API (same origin): `http://localhost:8080/api`
+- Customer portal (React frontend): `http://localhost:8083/customer`
 - smtp4dev (email sandbox UI): `http://localhost:8025`
 - Adminer (DB UI, if enabled): `http://localhost:8090`
 
@@ -53,7 +54,7 @@ make down
 Use the built-in helper so URLs stay consistent with your `.env`:
 
 ```bash
-make api-call ENDPOINT=/api/v1/status
+make api-call ENDPOINT=/health
 ```
 
 ## 6) Sanity checks
@@ -73,5 +74,4 @@ make test
 
 - Deployment: [docs/deployment/docker.md](../deployment/docker.md)
 - Configuration: [docs/configuration.md](../configuration.md)
-- Demo instance: [docs/DEMO.md](../DEMO.md)
 - Database notes: [docs/development/DATABASE.md](../development/DATABASE.md)

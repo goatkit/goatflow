@@ -46,7 +46,7 @@ surfaces via metrics so operators can act.
 - Exposed via service layer for admin UI/API.
 
 ### 3.2 Protocol Connectors
-- Package: `internal/email/inbound/connector` (new).
+- Package: `internal/platform/email/inbound/connector`.
 - Interfaces:
   ```go
   type MessageFetcher interface {
@@ -66,7 +66,7 @@ surfaces via metrics so operators can act.
   - Integration coverage: SMTP4Dev flows exercise POP (delete/no-delete) and IMAP (folder metadata, non-destructive) under the `integration` build tag.
 
 ### 3.3 Scheduler Job
-- Package: `internal/services/scheduler` currently contains TODO placeholders.
+- Package: `internal/services/scheduler` (jobs registered in the scheduler handler registry).
 - New job: `InboundEmailPoller` that runs every N seconds (config) and:
   1. Loads active accounts from repository.
   2. Picks the right connector (POP3, IMAP, future Graph/OAuth) per account.
@@ -266,14 +266,12 @@ surfaces via metrics so operators can act.
 8. Once processing succeeds, connector marks UID as read/deleted based on account type.
 
 ## 5. Open Questions
-- (none) – remaining work is captured in the next-steps list below.
+- (none) – remaining work is captured in the status section below.
 
-## 6. Next Steps
-1. Finalize config schema and data model deltas (trusted flag, IMAP folder, dispatching mode).
-2. Scaffold Go packages (`internal/email/inbound/...`).
-3. Implement POP3 connector + simple scheduler loop to prove ingestion end-to-end with "new ticket"
-   path.
-4. Add filters/follow-up gradually until parity.
+## 6. Status
+Implemented: config schema (trusted flag, IMAP folder, dispatching mode), Go packages
+(`internal/platform/email/inbound/...`), POP3 + IMAP connectors, and the `email-ingest`
+scheduler job. Remaining: filters/follow-up parity with OTRS, added gradually.
 
 This design mirrors OTRS's architecture so teams migrating from OTRS know where to hook in their
 existing automations while staying idiomatic to GoatFlow (Go packages, containerized scheduler,

@@ -94,7 +94,7 @@ rows, err := db.Query(
 Do not write raw queries with `$n` placeholders without the conversion wrapper. Centralize queries in repositories; avoid SQL in handlers.
 
 ### Dynamic SQL with QueryBuilder (REQUIRED)
-For **dynamic WHERE clauses**, **variable column selection**, or **IN lists**, use the sqlx-based QueryBuilder (`internal/database/querybuilder.go`). This pattern is **mandatory** for security compliance (gosec G201/G202):
+For **dynamic WHERE clauses**, **variable column selection**, or **IN lists**, use the sqlx-based QueryBuilder (`internal/platform/database/querybuilder.go`). This pattern is **mandatory** for security compliance (gosec G201/G202):
 
 ```go
 // ❌ WRONG - triggers gosec G201 SQL injection warning
@@ -147,7 +147,7 @@ if err := rows.Err(); err != nil {
 return results, nil
 ```
 
-**Preferred: Use helper functions** from `internal/database/rows.go`:
+**Preferred: Use helper functions** from `internal/platform/database/rows.go`:
 ```go
 // CollectRows handles iteration and rows.Err() automatically
 users, err := database.CollectRows(rows, func(r *sql.Rows) (*User, error) {
@@ -537,7 +537,7 @@ Dynamic fields allow administrators to add custom fields to tickets, articles, a
 
 - **Field storage**: `dynamic_field` table with YAML config column
 - **Screen visibility**: `dynamic_field_screen_config` table controls which fields appear on which screens
-- **Cross-package wiring**: `DynamicFieldLoader` interface in `internal/routing/handlers.go` avoids import cycles; set in `internal/api/dynamic_field_init.go`
+- **Cross-package wiring**: `DynamicFieldLoader` interface in `internal/platform/routing/handlers.go` avoids import cycles; set in `internal/api/dynamic_field_init.go`
 
 ### Screen Configuration (IMPORTANT)
 Fields **only appear on forms** if they have a screen config entry:
@@ -789,7 +789,7 @@ document.addEventListener('keydown', (e) => {
 
 ### The Single Router
 
-All YAML route loading goes through `internal/routing/loader.go`:
+All YAML route loading goes through `internal/platform/routing/loader.go`:
 
 ```go
 // For production (main.go)
@@ -841,7 +841,7 @@ req.Header.Set("Authorization", "Bearer " + token)
 ### The Incident (Jan 27, 2026)
 
 We had TWO separate YAML loaders:
-- `internal/routing/loader.go` - Used by production
+- `internal/platform/routing/loader.go` - Used by production
 - `internal/api/yaml_router_loader.go` - Used by tests (with auth bypass)
 
 Result: Tests passed but production returned 401 because the loaders handled middleware differently.
@@ -858,8 +858,8 @@ Result: Tests passed but production returned 401 because the loaders handled mid
 
 ### Files
 
-- `internal/routing/loader.go` - THE router (production + tests)
-- `internal/routing/handlers.go` - Middleware registration (auth, admin, etc.)
+- `internal/platform/routing/loader.go` - THE router (production + tests)
+- `internal/platform/routing/handlers.go` - Middleware registration (auth, admin, etc.)
 - `internal/api/yaml_router_loader.go` - ONLY for manifest generation tooling
 
 **One router. Real auth. No exceptions.**
@@ -1094,7 +1094,7 @@ const THEME_METADATA = {
 
 ### Step 5: Add i18n Translations
 
-Add to ALL 15 language files in `internal/i18n/translations/*.json`:
+Add to ALL 15 language files in `internal/platform/i18n/translations/*.json`:
 
 ```json
 "theme": {
@@ -1123,7 +1123,7 @@ Languages: en, de, es, fr, pt, pl, ru, zh, ja, ar, he, fa, ur, uk, tlh
 2. `static/themes/builtin/{name}/theme.css` - Theme CSS (NEW)
 3. `static/themes/builtin/{name}/fonts/` - Fonts directory (NEW, if custom fonts)
 4. `static/js/theme-manager.js` - Add to AVAILABLE_THEMES, BUILTIN_THEMES, THEME_METADATA
-5. `internal/i18n/translations/*.json` - Add translations (15 files)
+5. `internal/platform/i18n/translations/*.json` - Add translations (15 files)
 6. `THIRD_PARTY_NOTICES.md` - Add font attribution (if custom fonts)
 
 **Backend auto-discovers themes** from `static/themes/builtin/` directories.

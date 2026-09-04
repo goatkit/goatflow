@@ -7,7 +7,7 @@ Lambda functions bring programmable business logic directly into YAML module con
 ## Architecture
 
 ```
-YAML Config (lambda: |...)  →  V8 JavaScript Engine  →  Safe Execution Context
+YAML Config (lambda: |...)  →  goja JavaScript Engine  →  Safe Execution Context
                               ↓
                          Database Access (read-only)
                               ↓  
@@ -17,15 +17,13 @@ YAML Config (lambda: |...)  →  V8 JavaScript Engine  →  Safe Execution Conte
 ## Key Features
 
 ### 🔒 **Security First**
-- **V8 Isolates**: Complete sandboxing prevents access to host system
+- **Isolated contexts**: Each lambda runs in its own goja context, isolated from the host system
 - **Read-only database**: Only SELECT queries allowed
 - **Timeout protection**: 5-second execution limit prevents runaway scripts
-- **Memory limits**: 32MB per lambda execution
 - **SQL injection prevention**: Parameterized queries only
 
 ### ⚡ **High Performance**
-- **V8 Engine**: Google's high-performance JavaScript engine
-- **Compiled execution**: JavaScript is compiled, not interpreted
+- **goja Engine**: Pure-Go JavaScript interpreter - no external JS runtime to deploy
 - **Resource limits**: Prevents performance degradation
 - **Concurrent execution**: Each module runs in isolated context
 
@@ -484,7 +482,7 @@ Lambda functions transform static YAML configurations into programmable, intelli
 
 **Key Benefits:**
 - 🎯 **Customer customization** without code changes
-- 🔒 **Enterprise security** with V8 sandboxing
+- 🔒 **Enterprise security** with goja sandboxing
 - ⚡ **High performance** JavaScript execution
 - 🛠️ **Developer friendly** with familiar syntax
 - 🔄 **Hot reload** for instant updates

@@ -1,4 +1,15 @@
 basePath: /api/v1
+definitions:
+  internal_api.adminSQLRequest:
+    properties:
+      args:
+        items: {}
+        type: array
+      query:
+        type: string
+    required:
+    - query
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -13,6 +24,42 @@ info:
   title: GoatFlow API
   version: "1.0"
 paths:
+  /api/v1/admin/sql:
+    post:
+      consumes:
+      - application/json
+      description: 'Execute a read-only SQL query (admin only). Allowed statements:
+        SELECT, DESCRIBE, EXPLAIN, SHOW TABLES, SHOW COLUMNS.'
+      parameters:
+      - description: SQL query and optional arguments
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.adminSQLRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Query results
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Execute read-only SQL query
+      tags:
+      - Admin
   /api/v1/i18n/coverage:
     get:
       responses: {}
@@ -178,6 +225,127 @@ paths:
       summary: List groups
       tags:
       - Groups
+  /mcp:
+    get:
+      description: Get information about the MCP endpoint and available tools
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: MCP info
+          schema:
+            additionalProperties: true
+            type: object
+      summary: MCP endpoint info
+      tags:
+      - MCP
+    post:
+      consumes:
+      - application/json
+      description: Model Context Protocol endpoint for AI assistant integration
+      parameters:
+      - description: JSON-RPC 2.0 request
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JSON-RPC 2.0 response
+          schema:
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: MCP JSON-RPC endpoint
+      tags:
+      - MCP
+  /mcp/sse:
+    delete:
+      description: Terminate an MCP Streamable HTTP session
+      parameters:
+      - description: MCP Session ID
+        in: header
+        name: Mcp-Session-Id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Session terminated
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Terminate MCP session
+      tags:
+      - MCP
+    get:
+      description: Server-sent events stream for MCP server-initiated notifications
+      parameters:
+      - description: MCP Session ID
+        in: header
+        name: Mcp-Session-Id
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE event stream
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: MCP SSE notification stream
+      tags:
+      - MCP
+    post:
+      consumes:
+      - application/json
+      description: MCP 2025-03-26 Streamable HTTP transport for AI assistant integration
+      parameters:
+      - description: MCP Session ID (required after initialize)
+        in: header
+        name: Mcp-Session-Id
+        type: string
+      - description: JSON-RPC 2.0 request
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JSON-RPC 2.0 response
+          schema:
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: MCP Streamable HTTP endpoint
+      tags:
+      - MCP
   /priorities:
     get:
       consumes:
@@ -350,7 +518,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all queues
+      description: Retrieve all queues the user has access to (RBAC filtered)
       parameters:
       - default: 1
         description: Page number
@@ -1375,7 +1543,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve dashboard statistics (ticket counts, trends)
+      description: Retrieve dashboard statistics (ticket counts, trends) - RBAC filtered
       produces:
       - application/json
       responses:

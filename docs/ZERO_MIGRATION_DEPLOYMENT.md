@@ -22,13 +22,13 @@ GoatFlow can connect directly to your existing OTRS MySQL/MariaDB database witho
 
 ### Option 1: Direct Database Connection (Recommended for Testing)
 ```yaml
-# GoatFlow configuration
-DATABASE_DRIVER: mysql
-DATABASE_HOST: your-otrs-db.example.com
-DATABASE_PORT: 3306
-DATABASE_NAME: otrs
-DATABASE_USER: otrs
-DATABASE_PASSWORD: your-password
+# GoatFlow configuration (.env)
+DB_DRIVER=mysql
+DB_MYSQL_HOST=your-otrs-db.example.com
+DB_MYSQL_PORT=3306
+DB_MYSQL_NAME=otrs
+DB_MYSQL_USER=otrs
+DB_MYSQL_PASSWORD=your-password
 ```
 
 No migration. No conversion. Just point and run.
@@ -104,18 +104,12 @@ We've successfully tested GoatFlow with:
 
 ## 🛡️ Safety Features
 
-### Read-Only Mode
-Start with GoatFlow in read-only mode to verify compatibility:
-```yaml
-GOATFLOW_READ_ONLY: true
-```
+### Read-Only Mode (planned)
+Start with GoatFlow in read-only mode to verify compatibility. Not yet implemented -
+until it ships, run GoatFlow against a copy of the OTRS database.
 
-### Audit Logging
-Track all GoatFlow operations without affecting OTRS:
-```yaml
-GOATFLOW_AUDIT_MODE: true
-GOATFLOW_AUDIT_LOG: /var/log/goatflow-audit.log
-```
+### Audit Logging (planned)
+Track all GoatFlow operations without affecting OTRS. Not yet implemented.
 
 ### Database Backup
 Always backup before testing (though no changes are made):

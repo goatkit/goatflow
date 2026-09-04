@@ -109,7 +109,7 @@ Restart GoatFlow to activate.
 ```
 
 **Flow:**
-1. Read installed plugin manifests from `plugins/*/manifest.yaml`
+1. Read installed plugin manifests from `plugins/*/plugin.yaml`
 2. Fetch marketplace index
 3. Compare versions (semver)
 4. Download and replace if newer version available
@@ -199,7 +199,7 @@ Plugin metadata (name, description, tags) in `marketplace.json` is **English onl
 
 The **admin UI chrome** (column headers, buttons, search labels, "Install", "Installed", "Update available") uses `t()` with translations in all 15 languages, like every other GoatFlow admin page.
 
-Plugin authors who want localised descriptions can optionally include them in their `manifest.yaml` under the existing `i18n` field. The admin UI renders the localised description if available for the user's language, falling back to English.
+Plugin authors who want localised descriptions can optionally include them in their `plugin.yaml` under the existing `i18n` field. The admin UI renders the localised description if available for the user's language, falling back to English.
 
 ## Security Considerations
 
@@ -213,7 +213,7 @@ Plugin authors who want localised descriptions can optionally include them in th
 ## Dependencies
 
 Already implemented in GoatFlow 0.7.0/0.8.0:
-- Plugin ZIP format with `manifest.yaml`
+- Plugin ZIP format with `plugin.yaml`
 - Ed25519 signature verification
 - Hot reload / blue-green plugin swap
 - Plugin sandbox and resource policies

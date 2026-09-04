@@ -331,9 +331,9 @@ tickets, err := queryBuilder.
 
 ## 📚 Additional Resources
 
-- **OTRS Database Schema**: Complete table definitions in `internal/database/schema/`
+- **OTRS Database Schema**: Complete table definitions in `internal/platform/database/schema/`
 - **Migration Guide**: `docs/OTRS_MIGRATION_GUIDE.md`
-- **Testing Patterns**: `internal/database/sql_compat_test.go`
+- **Testing Patterns**: `internal/platform/database/sql_compat_test.go`
 - **Environment Setup**: `.env.example` with database configurations
 
 ---

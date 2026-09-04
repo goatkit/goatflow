@@ -18,6 +18,60 @@
     "host": "localhost:8080",
     "basePath": "/api/v1",
     "paths": {
+        "/api/v1/admin/sql": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Execute a read-only SQL query (admin only). Allowed statements: SELECT, DESCRIBE, EXPLAIN, SHOW TABLES, SHOW COLUMNS.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Execute read-only SQL query",
+                "parameters": [
+                    {
+                        "description": "SQL query and optional arguments",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.adminSQLRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Query results",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/i18n/coverage": {
             "get": {
                 "responses": {}
@@ -262,6 +316,195 @@
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/mcp": {
+            "get": {
+                "description": "Get information about the MCP endpoint and available tools",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MCP"
+                ],
+                "summary": "MCP endpoint info",
+                "responses": {
+                    "200": {
+                        "description": "MCP info",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Model Context Protocol endpoint for AI assistant integration",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MCP"
+                ],
+                "summary": "MCP JSON-RPC endpoint",
+                "parameters": [
+                    {
+                        "description": "JSON-RPC 2.0 request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON-RPC 2.0 response",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/mcp/sse": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Server-sent events stream for MCP server-initiated notifications",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "MCP"
+                ],
+                "summary": "MCP SSE notification stream",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP Session ID",
+                        "name": "Mcp-Session-Id",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SSE event stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "MCP 2025-03-26 Streamable HTTP transport for AI assistant integration",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MCP"
+                ],
+                "summary": "MCP Streamable HTTP endpoint",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP Session ID (required after initialize)",
+                        "name": "Mcp-Session-Id",
+                        "in": "header"
+                    },
+                    {
+                        "description": "JSON-RPC 2.0 request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON-RPC 2.0 response",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Terminate an MCP Streamable HTTP session",
+                "tags": [
+                    "MCP"
+                ],
+                "summary": "Terminate MCP session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP Session ID",
+                        "name": "Mcp-Session-Id",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Session terminated"
                     },
                     "401": {
                         "description": "Unauthorized",
@@ -536,7 +779,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all queues",
+                "description": "Retrieve all queues the user has access to (RBAC filtered)",
                 "consumes": [
                     "application/json"
                 ],
@@ -2109,7 +2352,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve dashboard statistics (ticket counts, trends)",
+                "description": "Retrieve dashboard statistics (ticket counts, trends) - RBAC filtered",
                 "consumes": [
                     "application/json"
                 ],
@@ -4703,6 +4946,23 @@
                             "additionalProperties": true
                         }
                     }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "internal_api.adminSQLRequest": {
+            "type": "object",
+            "required": [
+                "query"
+            ],
+            "properties": {
+                "args": {
+                    "type": "array",
+                    "items": {}
+                },
+                "query": {
+                    "type": "string"
                 }
             }
         }

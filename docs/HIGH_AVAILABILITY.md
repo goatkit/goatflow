@@ -185,7 +185,7 @@ GoatFlow doesn't handle backups — your database does. Recommended approach:
 
 ```bash
 # Update via Helm
-helm upgrade goatflow ./charts/goatflow --set backend.image.tag=v0.6.5
+helm upgrade goatflow ./charts/goatflow --set backend.image.tag=0.9.0
 
 # Check rollout status
 kubectl rollout status deployment/goatflow-backend

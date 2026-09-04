@@ -11,7 +11,6 @@ This document analyzes the license compatibility of all third-party components u
 | **HTMX** | 0-Clause BSD (0BSD) | ✅ Yes | ✅ Yes | ❌ No |
 | **Alpine.js** | MIT | ✅ Yes | ✅ Yes | ✅ Yes (minimal) |
 | **Tailwind CSS** | MIT | ✅ Yes | ✅ Yes | ✅ Yes (minimal) |
-| **Temporal** | MIT | ✅ Yes | ✅ Yes | ✅ Yes (minimal) |
 | **Zinc Search** | Apache 2.0 | ✅ Yes | ✅ Yes | ✅ Yes |
 | **PostgreSQL** | PostgreSQL License | ✅ Yes | ✅ Yes | ✅ Yes (minimal) |
 | **Valkey** | BSD 3-Clause | ✅ Yes | ✅ Yes | ✅ Yes (minimal) |
@@ -41,12 +40,6 @@ This document analyzes the license compatibility of all third-party components u
 - **Risk**: None
 - **Notes**: The generated CSS includes license comment automatically
 
-### ✅ Temporal (MIT)
-- **License**: MIT License (server), some SDKs under Apache 2.0
-- **Compatibility**: EXCELLENT - Both MIT and Apache 2.0 are compatible
-- **Requirements**: Include copyright notice and license text
-- **Risk**: None
-- **Notes**: Can self-host freely or use their cloud service
 
 ### ✅ Zinc Search (Apache 2.0)
 - **License**: Apache License 2.0
@@ -112,7 +105,6 @@ If any license concerns arise:
 | Component | Alternative | License |
 |-----------|------------|---------|
 | Zinc | MeiliSearch | MIT |
-| Temporal | Asynq | MIT |
 | Alpine.js | Vanilla JS | N/A |
 | HTMX | Unpoly | MIT |
 

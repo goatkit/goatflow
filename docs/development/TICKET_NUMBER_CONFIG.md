@@ -54,7 +54,7 @@ ticket:
 
 ### Phase 2: Generator Implementations
 ```go
-// internal/service/ticket_number.go
+// internal/service/ticket_number/generator.go
 type TicketNumberGenerator interface {
     Generate() (string, error)
     Reset() error  // For daily/monthly resets

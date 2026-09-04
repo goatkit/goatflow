@@ -1,5 +1,7 @@
 # Temporal Workflows Documentation
 
+> **Status: design proposal.** Temporal is not currently a dependency of GoatFlow; the compose services and this design are kept for a future implementation.
+
 ## Overview
 
 GoatFlow uses Temporal for orchestrating complex business processes, particularly around ticket lifecycle management, SLA enforcement, and automated notifications. Temporal provides durable execution, automatic retries, and visibility into long-running processes.

@@ -6,8 +6,9 @@ We release patches for security vulnerabilities. Which versions are eligible for
 
 | Version | Supported          | Notes                           |
 | ------- | ------------------ | ------------------------------- |
-| 1.x.x   | :white_check_mark: | Current stable release          |
-| 0.x.x   | :x:                | Pre-release/development version |
+| 0.10.x  | :white_check_mark: | In development                  |
+| 0.9.x   | :white_check_mark: | Current stable release          |
+| <0.9.x  | :x:                | End of life                     |
 
 ## Reporting a Vulnerability
 
@@ -99,4 +100,4 @@ Gibbsoft Ltd and the GoatFlow team are committed to ensuring the security of Goa
 
 ---
 
-Last Updated: August 2025
+Last Updated: September 2026

@@ -500,5 +500,5 @@ var (
 	HandleAdminRevokeCustomerToken = HandleAdminRevokeTargetToken
 )
 
-// Note: Routes are defined in routes/api-tokens.yaml
+// Note: Routes are defined in routes/api-tokens-global.yaml
 // Handlers are registered automatically via the YAML routing system

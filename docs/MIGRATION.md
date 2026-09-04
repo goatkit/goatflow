@@ -195,14 +195,14 @@ goatflow-migrate -cmd=validate \
 
 | OTRS Table | GoatFlow Table | Notes |
 |------------|-------------|-------|
-| ticket | tickets | Core ticket data |
-| article | ticket_messages | Ticket communications |
+| ticket | ticket | Core ticket data |
+| article | article | Ticket communications |
 | users | users | Agent accounts |
-| customer_user | customers | Customer accounts |
-| queue | queues | Ticket queues |
-| ticket_type | ticket_types | Ticket categories |
-| ticket_state | ticket_states | Status values |
-| ticket_priority | ticket_priorities | Priority levels |
+| customer_user | customer_user | Customer accounts |
+| queue | queue | Ticket queues |
+| ticket_type | ticket_type | Ticket categories |
+| ticket_state | ticket_state | Status values |
+| ticket_priority | ticket_priority | Priority levels |
 
 ### Status Mapping
 

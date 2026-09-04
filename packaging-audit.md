@@ -79,7 +79,7 @@ so host bind mounts work without root.
 ## 5. Health endpoints
 
 - Container-level: `HEALTHCHECK` in Dockerfile — `wget --spider http://localhost:8080/health`, 30s interval, 5s start period.
-- App endpoints: `GET /health` (root, exempt from customer-only guard), `GET /api/v1/health`, `GET /api/v1/status`, `GET /api/v1/info`.
+- App endpoints: `GET /health`, `GET /health/detailed`, `GET /healthz`, `GET /metrics`.
 - Runner has **no HTTP endpoint** — compose healthcheck greps `/proc/1/cmdline` for `-mode runner`.
 
 ## 6. Resource usage
@@ -105,11 +105,11 @@ Swagger specs now declare Apache-2.0; see CHANGELOG.md [Unreleased] → Changed.
 ## 8. Versioning scheme
 
 - Binary version injected at build time via ldflags:
-  `internal/version.Version` (default `0.9.0` in
+  `internal/version.Version` (default `0.10.0` in
   `internal/platform/version/version.go`), plus `GitCommit`, `GitBranch`, `BuildDate`.
 - Container image: `ghcr.io/goatkit/goatflow:${GOATFLOW_VERSION:-latest}`;
   dev build default `VERSION=dev`.
-- Helm chart `charts/goatflow` now tracks the app: `appVersion: 0.9.0`,
+- Helm chart `charts/goatflow` now tracks the app: `appVersion: 0.10.0`,
   `kubeVersion: ">=1.25.0"` (was stale: `version 0.1.0` with appVersion "1.0.0"
   and no kubeVersion gate). Chart release `version` stays 0.1.0 — bump it to
   1.0.0 (or 0.2.0) when the first chart release ships.

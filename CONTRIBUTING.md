@@ -2,24 +2,17 @@
 
 Engineering assistants: See [docs/development/AGENT_GUIDE.md](docs/development/AGENT_GUIDE.md) for the canonical operating manual and workflow.
 
-## Coming Soon
+## Contributing
 
-Thank you for your interest in contributing to GoatFlow! 
+Contributions to GoatFlow are welcome.
 
-This document will contain:
-- Code of Conduct
-- Development setup instructions
-- Coding standards and style guide
-- Pull request process
-- Issue reporting guidelines
-- Testing requirements
-- Documentation standards
-- CLA (Contributor License Agreement) information
-
-For now, please check:
-- [README.md](README.md) for project overview
-- [ROADMAP.md](ROADMAP.md) for development priorities
-- [docs/development/MVP.md](docs/development/MVP.md) for current development focus
+- **Code of Conduct**: [.github/CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md)
+- **Development guide**: [docs/development/AGENT_GUIDE.md](docs/development/AGENT_GUIDE.md) - the canonical operating manual: container-first workflow, build, test, and deploy commands
+- **Pull requests**: [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md)
+- **Reporting issues**: [.github/ISSUE_TEMPLATE/](.github/ISSUE_TEMPLATE/)
+- **Testing**: `make test` (container-first - see the development guide)
+- **Contributor License Agreement**: [CLA.md](CLA.md)
+- **Legal information**: [LEGAL.md](LEGAL.md)
 
 ## Quick Start
 

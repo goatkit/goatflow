@@ -5,7 +5,7 @@
 ##   - Dashboard: routes/api-dashboard.yaml
 ##   - Tickets: routes/api-tickets.yaml
 ##   - etc.
-apiVersion: v1
+apiVersion: goatflow.io/v1
 kind: RouteGroup
 metadata:
   name: api-aliases-protected

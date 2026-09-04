@@ -265,7 +265,7 @@
 
 ### Extension Framework
 - ✅ Plugin architecture (dual-runtime: WASM via wazero + gRPC via go-plugin)
-- ❌ Plugin marketplace (TODO)
+- ✅ Plugin marketplace (admin UI at /admin/marketplace, gk marketplace CLI)
 - ✅ Theme system (4 built-in themes, package structure, dark/light modes)
 - ✅ Custom widgets (plugin-provided widgets via HostAPI, RBAC-filtered)
 - ✅ Widget drag/resize (gridstack.js, 12-column grid, per-user layout persistence)
@@ -278,7 +278,7 @@
 ### Monitoring & Observability
 - ✅ Health checks
 - ✅ Metrics (internal collection system)
-- ❌ Logging (structured) (TODO)
+- ✅ Logging (structured) (JSON)
 - ❌ Tracing (OpenTelemetry) (TODO)
 - ❌ Performance monitoring (TODO)
 - ❌ Error tracking (TODO)

@@ -77,7 +77,7 @@ This separation enables:
 
 ### Application Server (goats binary)
 
-- **Language**: Go 1.24
+- **Language**: Go 1.25
 - **Framework**: Gin
 - **Template Engine**: Pongo2
 - **Image Size**: ~45MB
@@ -104,7 +104,7 @@ rows, err := db.Query("SELECT * FROM ticket WHERE id = $1", id)
 | goatflow-toolbox | ~136MB | Development tools |
 | goatflow-tests | ~29MB | Test runner |
 
-## Implemented Features (0.5.0 MVP)
+## Implemented Features
 
 ### Agent Interface
 - Ticket creation with Tiptap editor
@@ -119,7 +119,7 @@ rows, err := db.Query("SELECT * FROM ticket WHERE id = $1", id)
 - Ticket submission with rich text
 - View own tickets with filtering
 - Reply to and close tickets
-- Full i18n (EN, DE, ES, FR, AR)
+- Full i18n (15 languages)
 
 ### Admin Modules
 | Module | Status |
@@ -161,10 +161,10 @@ rows, err := db.Query("SELECT * FROM ticket WHERE id = $1", id)
 ### Backend
 | Component | Version | Notes |
 |-----------|---------|-------|
-| Go | 1.24 | Latest stable with generics support |
-| Gin | 1.9.1 | HTTP web framework |
+| Go | 1.25 | Latest stable with generics support |
+| Gin | 1.11.0 | HTTP web framework |
 | Pongo2 | 6.0.0 | Django-style templates |
-| JWT | 5.3.0 | Authentication tokens |
+| JWT | 5.3.1 | Authentication tokens |
 
 **Key Patterns:**
 - No ORM - raw SQL with `ConvertPlaceholders` for cross-database compatibility
@@ -284,14 +284,14 @@ make clean           # Reset everything
 
 ## Platform Roadmap
 
-### Current: Modular Monolith (v0.5-0.6)
+### Current: Modular Monolith (v0.10.0)
 
 - Single `goats` binary with all features
 - YAML-based dynamic modules
-- Lambda functions (V8 JavaScript) for computed fields
+- Lambda functions (goja JavaScript) for computed fields
 - Theme engine with hot reload
 
-### Next: GoatKit Plugin Platform (v0.7.0+)
+### GoatKit Plugin Platform (shipped since v0.7.0)
 
 GoatKit evolves into a true platform with plugin extensibility:
 

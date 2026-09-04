@@ -26,17 +26,17 @@ FATAL: database "goatflow_user" does not exist
    make down
    make clean
 
-   # Edit .env file and change:
-   # DB_USER=goatflow_user  → DB_USER=goatflow
+   # Edit .env file so the user and database names match your stack:
+   # MariaDB (default): DB_MYSQL_USER=otrs / DB_MYSQL_NAME=otrs
+   # PostgreSQL:        DB_PGSQL_USER=goatflow / DB_PGSQL_NAME=goatflow
 
    # Start fresh
    make up
    ```
 
 3. **Verify the fix:**
-   - Check `.env` has `DB_USER=goatflow`
-   - Check `.env` has `DB_NAME=goatflow`
-   - Both should match for PostgreSQL to initialize correctly
+   - Check `.env`: the user and database names match for the active driver
+     (`DB_DRIVER=mariadb` default with `DB_MYSQL_*`, or `DB_DRIVER=pgsql` with `DB_PGSQL_*`)
 
 ### 2. Compose Command Not Found
 
@@ -214,7 +214,7 @@ make logs
 # Shell into container
 ./scripts/compose.sh exec backend sh
 # For database access (MariaDB default)
-./scripts/compose.sh exec mariadb mysql -u $$DB_USER -p$$DB_PASSWORD $$DB_NAME
+./scripts/compose.sh exec mariadb mysql -u $$DB_MYSQL_USER -p$$DB_MYSQL_PASSWORD $$DB_MYSQL_NAME
 ```
 
 ### Clean Slate Reset
@@ -235,9 +235,9 @@ grep DB_ .env
 ./scripts/compose.sh config
 
 # Test database connection
-./scripts/compose.sh exec mariadb mysqladmin ping -u $$DB_USER -p$$DB_PASSWORD || true
+./scripts/compose.sh exec mariadb mysqladmin ping -u $$DB_MYSQL_USER -p$$DB_MYSQL_PASSWORD || true
 # If you're running Postgres instead of MariaDB
-./scripts/compose.sh exec postgres pg_isready -U $$DB_USER || true
+./scripts/compose.sh exec postgres pg_isready -U $$DB_PGSQL_USER || true
 ```
 
 ## Getting Help

@@ -4432,6 +4432,72 @@
         ]
       }
     },
+    "/admin/setup": {
+      "get": {
+        "description": "First-run setup wizard",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Process setup wizard submission",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/setup/assistant": {
+      "get": {
+        "description": "Setup assistant task catalog",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/setup/task/:plugin/:task_id": {
+      "get": {
+        "description": "Run a setup task (core or plugin)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Process a setup task submission",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/admin/signatures": {
       "get": {
         "description": "Display email signatures management page",
@@ -7161,9 +7227,1149 @@
         ]
       }
     },
+    "/api/v1/admin/customer-users/:customerId/tokens": {
+      "get": {
+        "description": "List a specific customer's API tokens",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create API token for a customer",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/customer-users/:customerId/tokens/:tokenId": {
+      "delete": {
+        "description": "Revoke a specific customer's token",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/setup/customers/:customer_id": {
+      "get": {
+        "description": "Return full customer configuration for form auto-population",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/setup/customers/search/:query": {
+      "get": {
+        "description": "Search customers for dropdown type-ahead (supports name and ID)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/setup/onboard-customer": {
+      "post": {
+        "description": "Provision a customer company + portal users in one shot",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/setup/recce": {
+      "get": {
+        "description": "Return system snapshot (entity counts + setup status)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/setup/tasks": {
+      "get": {
+        "description": "Return the combined core + plugin setup task catalog",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/setup/tasks/:plugin/:task_id": {
+      "post": {
+        "description": "Dispatch a plugin setup task",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/setup/wizard": {
+      "post": {
+        "description": "Execute the first-run wizard from a single JSON payload",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/sql": {
+      "post": {
+        "description": "Execute read-only SQL query (SELECT, DESCRIBE, EXPLAIN, SHOW TABLES/COLUMNS — admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/tokens": {
+      "get": {
+        "description": "List all API tokens (admin)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/tokens/{id}": {
+      "delete": {
+        "description": "Revoke any API token (admin)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/users/:userId/tokens": {
+      "get": {
+        "description": "List a specific user's API tokens",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create API token for a user",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/users/:userId/tokens/:tokenId": {
+      "delete": {
+        "description": "Revoke a specific user's token",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "description": "Authenticate user and return JWT tokens",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/custom-fields/definitions": {
+      "get": {
+        "description": "List custom field definitions",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create custom field definition (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/custom-fields/definitions/{id}": {
+      "delete": {
+        "description": "Soft-delete custom field definition (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "Get custom field definition",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update custom field definition (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/custom-fields/query": {
+      "post": {
+        "description": "Query entities by custom field values",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/custom-fields/values/:entity_type/{id}": {
+      "get": {
+        "description": "Get custom field values for entity",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Set custom field values for entity",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/groups": {
+      "get": {
+        "description": "List groups",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/markdown/render": {
+      "post": {
+        "description": "Render markdown to sanitized HTML",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations": {
+      "get": {
+        "description": "List all organisations (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create organisation (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}": {
+      "delete": {
+        "description": "Delete organisation (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update organisation (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}/captive-plugin": {
+      "post": {
+        "description": "Set or clear the captive plugin for an organisation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}/config": {
+      "get": {
+        "description": "List per-org config overrides",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Set per-org config override",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}/config/:name": {
+      "delete": {
+        "description": "Remove per-org config override",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}/members": {
+      "get": {
+        "description": "List organisation members",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Add member to organisation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}/members/:member_id": {
+      "delete": {
+        "description": "Remove member from organisation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}/plugin-access": {
+      "get": {
+        "description": "List plugin-access bindings for an organisation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Set or replace plugin-access binding for an organisation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}/plugin-access/:plugin": {
+      "delete": {
+        "description": "Disable a plugin for an organisation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/priorities": {
+      "get": {
+        "description": "List priorities",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/priorities/{id}": {
+      "get": {
+        "description": "Get priority by ID",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/queues": {
+      "get": {
+        "description": "List queues",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create queue",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/queues/{id}": {
+      "delete": {
+        "description": "Delete queue",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "Get queue by ID",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update queue",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/queues/{id}/agents": {
+      "get": {
+        "description": "Get agents with permissions for queue",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/queues/{id}/groups": {
+      "post": {
+        "description": "Assign group to queue",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/queues/{id}/groups/:group_id": {
+      "delete": {
+        "description": "Remove group from queue",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/queues/{id}/stats": {
+      "get": {
+        "description": "Queue ticket statistics",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/salutations": {
+      "get": {
+        "description": "List salutations",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create salutation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/salutations/{id}": {
+      "put": {
+        "description": "Update salutation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/search": {
+      "post": {
+        "description": "Search tickets",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/search/health": {
+      "get": {
+        "description": "Search health",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/search/reindex": {
+      "post": {
+        "description": "Trigger search reindex",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/search/suggestions": {
+      "get": {
+        "description": "Search suggestions",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/services": {
+      "get": {
+        "description": "List services",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/session/org": {
+      "post": {
+        "description": "Switch active organisation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/session/orgs": {
+      "get": {
+        "description": "List current user's organisations",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/signatures": {
+      "get": {
+        "description": "List signatures",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create signature",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/signatures/{id}": {
+      "put": {
+        "description": "Update signature",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/states": {
+      "get": {
+        "description": "List ticket states",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/system-addresses": {
+      "get": {
+        "description": "List system addresses",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create system address",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/system-addresses/{id}": {
+      "put": {
+        "description": "Update system address",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/ticket-attribute-relations/evaluate": {
+      "get": {
+        "description": "Evaluate ticket attribute relations for filtering dropdowns",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets": {
+      "get": {
+        "description": "List tickets",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}": {
+      "delete": {
+        "description": "Delete ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "Get ticket by ID",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/articles": {
+      "get": {
+        "description": "Get ticket articles",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Add article to ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/articles/:article_id": {
+      "delete": {
+        "description": "Delete article",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "Get specific article",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update article",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/internal-notes": {
+      "get": {
+        "description": "Get internal notes for a ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create internal note for a ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/internal-notes/:note_id": {
+      "delete": {
+        "description": "Delete internal note",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update internal note",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/reopen": {
+      "post": {
+        "description": "Reopen ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/time": {
+      "post": {
+        "description": "Add time accounting entry to ticket",
         "responses": {
           "200": {
             "description": "Success"
@@ -7229,9 +8435,9 @@
         ]
       }
     },
-    "/auth/:provider": {
+    "/api/v1/types": {
       "get": {
-        "description": "Redirect to IdP for OIDC/OAuth2 authentication",
+        "description": "List ticket types",
         "responses": {
           "200": {
             "description": "Success"
@@ -7243,9 +8449,73 @@
         ]
       }
     },
-    "/auth/:provider/callback": {
+    "/api/v1/users": {
       "get": {
-        "description": "Handle OIDC/OAuth2 callback from IdP",
+        "description": "List users",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create user",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "description": "Get current user",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/users/{id}": {
+      "delete": {
+        "description": "Delete user",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "Get user by ID",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update user",
         "responses": {
           "200": {
             "description": "Success"
@@ -7260,6 +8530,76 @@
     "/auth/customer": {
       "get": {
         "description": "Customer login portal",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/auth/{id}": {
+      "get": {
+        "description": "Redirect to IdP for OIDC/OAuth2 authentication",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/auth/{id}/acs": {
+      "post": {
+        "description": "Handle SAML2 ACS POST response from IdP",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/auth/{id}/callback": {
+      "get": {
+        "description": "Handle OIDC/OAuth2 callback from IdP",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/auth/{id}/metadata": {
+      "get": {
+        "description": "Serve SAML2 SP metadata XML for IdP auto-configuration",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/auth/{id}/saml": {
+      "get": {
+        "description": "Initiate SAML2 SP-initiated login flow",
         "responses": {
           "200": {
             "description": "Success"
@@ -7504,6 +8844,60 @@
     "/customer/api/preferences/wallpaper": {
       "post": {
         "description": "Set wallpaper on/off preference for customer",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/api/v1/tokens/": {
+      "get": {
+        "description": "List my API tokens (customer)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create a new API token (customer)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/api/v1/tokens/scopes": {
+      "get": {
+        "description": "List available token scopes (customer)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/api/v1/tokens/{id}": {
+      "delete": {
+        "description": "Revoke an API token (customer)",
         "responses": {
           "200": {
             "description": "Success"
@@ -7877,7 +9271,7 @@
     },
     "/health/detailed": {
       "get": {
-        "description": "Detailed health check with component status",
+        "description": "Detailed health check with component status (admin only)",
         "responses": {
           "200": {
             "description": "Success"
@@ -7961,7 +9355,7 @@
     },
     "/metrics": {
       "get": {
-        "description": "Prometheus metrics endpoint",
+        "description": "Prometheus metrics endpoint (admin only)",
         "responses": {
           "200": {
             "description": "Success"

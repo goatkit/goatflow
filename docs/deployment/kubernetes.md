@@ -1,10 +1,31 @@
 # Kubernetes Deployment Guide
 
-## Coming Soon
+GoatFlow ships a Helm chart in the repository at `charts/goatflow/` (backend, database,
+frontend, ingress and secrets templates; see [charts/goatflow/README.md](../../charts/goatflow/README.md)).
 
-This guide will provide comprehensive instructions for deploying GoatFlow on Kubernetes.
+## Helm Installation
 
-## Planned Content
+The chart is not published to an external repository - install it from the checkout:
+
+```bash
+git clone https://github.com/goatkit/goatflow.git
+cd goatflow
+
+# MySQL (default)
+helm install goatflow ./charts/goatflow --namespace goatflow --create-namespace
+
+# PostgreSQL
+helm install goatflow ./charts/goatflow --namespace goatflow --create-namespace \
+  -f charts/goatflow/values-postgresql.yaml
+```
+
+Set the image tag (`backend.image.tag`) and database/secret values for your environment.
+The upstream image is `ghcr.io/goatkit/goatflow`.
+
+> **Status:** the chart works for a single-namespace deployment (verified against
+> microk8s); advanced topics below are on the roadmap.
+
+## Roadmap
 
 - Prerequisites and requirements
 - Kubernetes cluster setup (EKS, GKE, AKS, self-managed)
@@ -28,39 +49,6 @@ This guide will provide comprehensive instructions for deploying GoatFlow on Kub
 - Security policies and RBAC
 - Cost optimization
 
-## Quick Preview
-
-```yaml
-# Sample deployment manifest
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: goatflow
-  namespace: goatflow
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: goatflow
-  template:
-    metadata:
-      labels:
-        app: goatflow
-    spec:
-      containers:
-      - name: goatflow
-        image: goatflow/goatflow:latest
-        ports:
-        - containerPort: 8080
-```
-
-## Helm Installation (Coming Soon)
-
-```bash
-helm repo add goatflow https://charts.goatflow.io
-helm install goatflow goatflow/goatflow --namespace goatflow --create-namespace
-```
-
 ## See Also
 
 - [Docker Deployment](docker.md)
@@ -68,4 +56,4 @@ helm install goatflow goatflow/goatflow --namespace goatflow --create-namespace
 
 ---
 
-*Full documentation coming soon. For architecture details, see [ARCHITECTURE.md](../ARCHITECTURE.md)*
+*For architecture details, see [ARCHITECTURE.md](../ARCHITECTURE.md)*

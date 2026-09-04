@@ -133,6 +133,6 @@ Date: ______________________________________
 
 If you have questions about the CLA, please contact:
 - Email: hello@goatflow.io
-- GitHub Issues: https://github.com/goatflow/goatflow/issues
+- GitHub Issues: https://github.com/goatkit/goatflow/issues
 
 Thank you for contributing to GoatFlow!

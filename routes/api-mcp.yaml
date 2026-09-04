@@ -1,7 +1,7 @@
 ---
 # MCP (Model Context Protocol) routes
 # Enables AI assistants to interact with GoatFlow via API tokens
-apiVersion: v1
+apiVersion: goatflow.io/v1
 kind: RouteGroup
 metadata:
     name: api-mcp

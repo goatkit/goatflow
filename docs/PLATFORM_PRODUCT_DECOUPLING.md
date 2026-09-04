@@ -3,7 +3,7 @@
 > Version: 1.6
 > Date: 2026-06-29
 > Status: Phase 1-8 complete
-> Related: `docs/ARCHITECTURE.md`, `docs/PLUGIN_PLATFORM.md`, `docs/design/LLM_INTEGRATION.md`
+> Related: `docs/ARCHITECTURE.md`, `docs/PLUGIN_PLATFORM.md`
 
 ## 1. Goal
 

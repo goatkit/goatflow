@@ -32,8 +32,8 @@ info:
     url: https://github.com/goatkit/goatflow
     email: hello@goatflow.io
   license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
 
 servers:
   - url: http://localhost:8080
@@ -1952,7 +1952,7 @@ paths:
   # ===================
   # Admin - LDAP
   # ===================
-  /api/v1/admin/ldap/configure:
+  /api/v1/ldap/configure:
     post:
       tags:
         - LDAP
@@ -1972,7 +1972,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
-  /api/v1/admin/ldap/test:
+  /api/v1/ldap/test:
     post:
       tags:
         - LDAP
@@ -1999,7 +1999,7 @@ paths:
                     type: integer
                     description: Response time in milliseconds
 
-  /api/v1/admin/ldap/config:
+  /api/v1/ldap/config:
     get:
       tags:
         - LDAP
@@ -2013,7 +2013,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LDAPConfigResponse'
 
-  /api/v1/admin/ldap/disable:
+  /api/v1/ldap/disable:
     post:
       tags:
         - LDAP
@@ -2027,7 +2027,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
-  /api/v1/admin/ldap/authenticate:
+  /api/v1/ldap/authenticate:
     post:
       tags:
         - LDAP
@@ -2066,7 +2066,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/v1/admin/ldap/users/{username}:
+  /api/v1/ldap/users/{username}:
     get:
       tags:
         - LDAP
@@ -2096,7 +2096,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/v1/admin/ldap/users/search:
+  /api/v1/ldap/users/search:
     get:
       tags:
         - LDAP
@@ -2123,7 +2123,7 @@ paths:
                     items:
                       $ref: '#/components/schemas/LDAPUser'
 
-  /api/v1/admin/ldap/groups:
+  /api/v1/ldap/groups:
     get:
       tags:
         - LDAP
@@ -2145,7 +2145,7 @@ paths:
                   count:
                     type: integer
 
-  /api/v1/admin/ldap/sync/users:
+  /api/v1/ldap/sync/users:
     post:
       tags:
         - LDAP
@@ -2163,7 +2163,7 @@ paths:
                   result:
                     $ref: '#/components/schemas/LDAPSyncResult'
 
-  /api/v1/admin/ldap/sync/status:
+  /api/v1/ldap/sync/status:
     get:
       tags:
         - LDAP
@@ -2181,7 +2181,7 @@ paths:
                   status:
                     $ref: '#/components/schemas/LDAPSyncStatus'
 
-  /api/v1/admin/ldap/import/users:
+  /api/v1/ldap/import/users:
     post:
       tags:
         - LDAP
@@ -2219,7 +2219,7 @@ paths:
                   dry_run:
                     type: boolean
 
-  /api/v1/admin/ldap/mappings/users:
+  /api/v1/ldap/mappings/users:
     get:
       tags:
         - LDAP
@@ -2239,7 +2239,7 @@ paths:
                     items:
                       type: object
 
-  /api/v1/admin/ldap/mappings/groups:
+  /api/v1/ldap/mappings/groups:
     get:
       tags:
         - LDAP
@@ -2259,7 +2259,7 @@ paths:
                     items:
                       type: object
 
-  /api/v1/admin/ldap/logs/auth:
+  /api/v1/ldap/logs/auth:
     get:
       tags:
         - LDAP

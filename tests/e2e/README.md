@@ -14,12 +14,14 @@ Our E2E tests provide comprehensive UI testing capabilities that allow us to:
 
 ```
 tests/e2e/
-├── config/       # Test configuration
-├── helpers/      # Test utilities and helpers
-├── fixtures/     # Test data and setup
-├── auth_test.go  # Authentication tests
+├── config/        # Test configuration
+├── helpers/       # Test utilities and helpers
+├── playwright/    # Playwright test runner
+├── auth_test.go   # Authentication tests
+├── api_test.go    # API tests
 ├── queues_test.go # Queue management tests
-└── smoke_test.go # Basic smoke test
+├── smoke_test.go  # Basic smoke test
+└── ...            # 20+ more test files (admin, customer, groups, 2FA, ...)
 ```
 
 ## Running Tests
@@ -27,17 +29,20 @@ tests/e2e/
 ### Quick Start
 
 ```bash
-# Run all E2E tests (headless)
-make test-e2e
+# Run the full Go Playwright suite (headless)
+make test-e2e-playwright-go
+
+# Run a targeted subset
+make test-e2e TEST="Login|Groups|Queues"
 
 # Run with visible browser for debugging
-make test-e2e-debug
+make test-e2e-playwright-debug
 
 # Run in watch mode for development
-make test-e2e-watch
+make test-e2e-playwright-watch
 
 # View test results
-make test-e2e-report
+make test-e2e-playwright-report
 ```
 
 ### Environment Variables
@@ -100,12 +105,12 @@ Screenshots are saved to `test-results/screenshots/` when tests fail.
 
 ### Run with Visible Browser
 ```bash
-make test-e2e-debug
+make test-e2e-playwright-debug
 ```
 
 ### Enable Slow Motion
 ```bash
-SLOW_MO=500 make test-e2e-debug
+SLOW_MO=500 make test-e2e-playwright-debug
 ```
 
 ### View Videos
@@ -118,7 +123,7 @@ Videos are saved to `test-results/videos/`
 
 The tests run in a Docker container with:
 - Playwright browsers (Chromium, Firefox, WebKit)
-- Go 1.22
+- Go 1.25
 - All necessary dependencies
 
 To rebuild the container:
@@ -150,7 +155,7 @@ Run `make playwright-build` to build the container with browsers.
 Increase the timeout in `config/config.go` or check if the backend is running.
 
 ### Can't see what's happening
-Run `make test-e2e-debug` to see the browser or check screenshots in `test-results/`.
+Run `make test-e2e-playwright-debug` to see the browser or check screenshots in `test-results/`.
 
 ## Benefits
 

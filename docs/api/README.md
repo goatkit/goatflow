@@ -62,7 +62,7 @@ All API responses follow this structure:
 
 - **YAML**: [openapi.yaml](openapi.yaml)
 - **JSON**: [openapi.json](openapi.json)
-- **Interactive Docs**: `http://localhost:8080/api/docs` (when running)
+- **Interactive Docs**: `http://localhost:8080/swagger` (when running; enabled by default, `GOATFLOW_SWAGGER_ENABLED`)
 
 ### Route Documentation
 
@@ -150,15 +150,15 @@ All API responses follow this structure:
 ### LDAP Integration (Admin Only)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/v1/admin/ldap/configure` | Configure LDAP |
-| POST | `/api/v1/admin/ldap/test` | Test connection |
-| GET | `/api/v1/admin/ldap/config` | Get configuration |
-| POST | `/api/v1/admin/ldap/disable` | Disable LDAP |
-| POST | `/api/v1/admin/ldap/authenticate` | LDAP authentication |
-| GET | `/api/v1/admin/ldap/users/:username` | Get LDAP user |
-| GET | `/api/v1/admin/ldap/groups` | List LDAP groups |
-| POST | `/api/v1/admin/ldap/sync/users` | Sync users |
-| GET | `/api/v1/admin/ldap/sync/status` | Sync status |
+| POST | `/api/v1/ldap/configure` | Configure LDAP |
+| POST | `/api/v1/ldap/test` | Test connection |
+| GET | `/api/v1/ldap/config` | Get configuration |
+| POST | `/api/v1/ldap/disable` | Disable LDAP |
+| POST | `/api/v1/ldap/authenticate` | LDAP authentication |
+| GET | `/api/v1/ldap/users/:username` | Get LDAP user |
+| GET | `/api/v1/ldap/groups` | List LDAP groups |
+| POST | `/api/v1/ldap/sync/users` | Sync users |
+| GET | `/api/v1/ldap/sync/status` | Sync status |
 
 ## MCP Server (AI Integration)
 
@@ -171,8 +171,8 @@ The MCP (Model Context Protocol) server enables AI assistants to interact with G
 
 **Key Features:**
 - Multi-user proxy: token owner's RBAC permissions apply to all operations
-- 10 tools: `list_tickets`, `get_ticket`, `search_tickets`, `list_queues`, `list_users`, `get_statistics`, `execute_sql`, etc.
-- Admin-only tools: `execute_sql` requires admin group membership
+- Tools are generated dynamically from every `/api/v1` REST endpoint and enabled plugin route - adding an endpoint adds a tool
+- Admin-only tools (e.g. `create_admin_sql`, `POST /admin/sql`) require admin group membership
 - Bearer token authentication via API tokens
 
 ```bash
@@ -190,8 +190,6 @@ curl -X POST https://your-goatflow/api/mcp \
 | GET | `/health/detailed` | Detailed health with components |
 | GET | `/healthz` | Kubernetes liveness probe |
 | GET | `/metrics` | Prometheus metrics |
-| GET | `/api/v1/health` | API health check |
-| GET | `/api/v1/status` | System status |
 
 ## Rate Limiting
 

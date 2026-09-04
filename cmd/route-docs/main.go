@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/goatkit/goatflow/internal/platform/routing"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	"gopkg.in/yaml.v3"
 )
 
 // RouteConfig matches our YAML route structure.
@@ -134,12 +134,16 @@ func (g *DocumentationGenerator) loadRoutes() error {
 			return fmt.Errorf("reading %s: %w", path, err)
 		}
 
-		var config RouteConfig
-		if err := yaml.Unmarshal(data, &config); err != nil {
+		configs, err := routing.ParseYAMLDocuments[RouteConfig](data)
+		if err != nil {
 			return fmt.Errorf("parsing %s: %w", path, err)
 		}
-
-		g.routes = append(g.routes, config)
+		for i := range configs {
+			if configs[i].Metadata.Name == "" {
+				continue
+			}
+			g.routes = append(g.routes, configs[i])
+		}
 		return nil
 	})
 }

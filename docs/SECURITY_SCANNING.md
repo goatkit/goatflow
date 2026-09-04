@@ -61,18 +61,10 @@ make scan-vulnerabilities
 
 ### GitHub Actions
 
-Our GitHub Actions workflow (`.github/workflows/gitleaks.yml`) runs on:
-- Every push to main/develop branches
-- Every pull request
-- Weekly scheduled scans
-- Manual workflow dispatch
+Secret scanning runs as part of the test workflow (`.github/workflows/test.yml`) on every push and pull request:
 
-The workflow:
+The step:
 1. Scans for secrets with Gitleaks
-2. Scans for secrets and vulnerabilities with Trivy
-3. Uploads results as artifacts
-4. Creates GitHub issues if secrets are detected
-5. Comments on PRs with findings
 
 ### GitLab CI
 

@@ -30,7 +30,7 @@ sudo rpm-ostree install podman-compose
 systemctl reboot  # Required for rpm-ostree
 
 # Clone and start GoatFlow
-git clone https://github.com/goatflow/goatflow
+git clone https://github.com/goatkit/goatflow
 cd goatflow
 make setup
 make up

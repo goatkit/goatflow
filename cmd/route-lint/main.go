@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"github.com/goatkit/goatflow/internal/platform/routing"
 )
 
 // LintRule represents a validation rule.
@@ -59,6 +59,7 @@ type Route struct {
 	TestCases   []interface{}          `yaml:"testCases,omitempty"`
 	Params      map[string]interface{} `yaml:"params"`
 	Auth        interface{}            `yaml:"auth,omitempty"`
+	Middleware  []string               `yaml:"middleware"`
 }
 
 var lintRules = []LintRule{
@@ -73,7 +74,7 @@ var lintRules = []LintRule{
 	{
 		ID:          "naming-002",
 		Name:        "File name consistency",
-		Description: "File name should match metadata.name",
+		Description: "File name should match metadata.name or its <base>-global.yaml base prefix",
 		Severity:    "error",
 		Check:       checkFileNameConsistency,
 	},
@@ -222,9 +223,9 @@ func lintFile(path string) []LintIssue {
 		return issues
 	}
 
-	// Parse YAML
-	var config RouteConfig
-	if err := yaml.Unmarshal(data, &config); err != nil {
+	// Parse YAML (a file may contain multiple route-group documents)
+	configs, err := routing.ParseYAMLDocuments[RouteConfig](data)
+	if err != nil {
 		issues = append(issues, LintIssue{
 			Rule:     "yaml-parse",
 			Severity: "error",
@@ -234,15 +235,21 @@ func lintFile(path string) []LintIssue {
 		return issues
 	}
 
-	// Run all lint rules
-	for _, rule := range lintRules {
-		ruleIssues := rule.Check(&config, path)
-		for i := range ruleIssues {
-			ruleIssues[i].File = path
-			ruleIssues[i].Rule = rule.ID
-			ruleIssues[i].Severity = rule.Severity
+	// Run all lint rules against every route group in the file
+	for i := range configs {
+		config := &configs[i]
+		if config.Metadata.Name == "" {
+			continue
 		}
-		issues = append(issues, ruleIssues...)
+		for _, rule := range lintRules {
+			ruleIssues := rule.Check(config, path)
+			for j := range ruleIssues {
+				ruleIssues[j].File = path
+				ruleIssues[j].Rule = rule.ID
+				ruleIssues[j].Severity = rule.Severity
+			}
+			issues = append(issues, ruleIssues...)
+		}
 	}
 
 	return issues
@@ -276,9 +283,12 @@ func checkFileNameConsistency(config *RouteConfig, path string) []LintIssue {
 	issues := []LintIssue{}
 
 	filename := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-	if filename != config.Metadata.Name {
+	// Multi-audience files are named <base>-global.yaml and hold groups
+	// named <base>-<audience>; a group matches the file's base name.
+	base := strings.TrimSuffix(filename, "-global")
+	if config.Metadata.Name != base && !strings.HasPrefix(config.Metadata.Name, base+"-") {
 		issues = append(issues, LintIssue{
-			Message: fmt.Sprintf("File name '%s' doesn't match metadata.name '%s'", filename, config.Metadata.Name),
+			Message: fmt.Sprintf("File name '%s' doesn't match metadata.name '%s' (or its '%s-...' base)", filename, config.Metadata.Name, base),
 		})
 	}
 
@@ -373,13 +383,40 @@ func checkRESTfulPaths(config *RouteConfig, path string) []LintIssue {
 	return issues
 }
 
+// authMiddlewareNames are the middleware tokens that enforce an
+// authenticated principal (session/JWT auth or API-token auth).
+// Role checks like "admin" only read the context that "auth" sets
+// and fail closed without it, so they are not auth markers.
+var authMiddlewareNames = map[string]bool{
+	"auth":         true,
+	"unified_auth": true,
+	"api_token":    true,
+}
+
+// hasAuthMiddleware reports whether the named chain includes an
+// authentication-enforcing middleware.
+func hasAuthMiddleware(names []string) bool {
+	for _, name := range names {
+		if authMiddlewareNames[name] {
+			return true
+		}
+	}
+	return false
+}
+
 func checkAuthentication(config *RouteConfig, path string) []LintIssue {
 	issues := []LintIssue{}
 
 	// Check if this is an admin route
 	if config.Metadata.Namespace == "admin" || strings.Contains(config.Spec.Prefix, "/admin") {
+		// Group-level middleware is applied to every route in the group
+		// by the runtime loader (registerRouteConfig), so authentication
+		// declared at the group level satisfies the requirement for all
+		// of its routes.
 		for _, route := range config.Spec.Routes {
-			if route.Auth == nil {
+			if route.Auth == nil &&
+				!hasAuthMiddleware(route.Middleware) &&
+				!hasAuthMiddleware(config.Spec.Middleware) {
 				issues = append(issues, LintIssue{
 					Message: fmt.Sprintf("Admin route '%s' should require authentication", route.Path),
 				})

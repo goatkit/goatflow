@@ -170,6 +170,16 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `STATICCHECK_VERSION=latest`, which resolved to staticcheck 0.8+ requiring
   Go 1.26. Pinned to bun 1.3.14 and staticcheck v0.7.0 (last release building
   under Go 1.25.12).
+- **E2E ticket-search test raced the page load.** `TestTicketSearchFiltersResults`
+  waited for the URL to contain `search=…` and then counted matching rows once;
+  the URL flips at navigation commit, before the new HTML is parsed, so the count
+  could run on a half-loaded document and flake to 0. The count now polls
+  (`require.Eventually`, 15 s) until the row is present
+  (`tests/e2e/playwright/ticket_search_test.go`).
+- **Playwright Go test image apt failures on the MCR base.** `Dockerfile.playwright-go`
+  now restores `/tmp` to the standard mode 1777: the base image ships `/tmp` as
+  `0755 root:root`, and apt's unprivileged `_apt` signature-verification user
+  cannot create its queue/config temp files there.
 
 ### Changed
 - **Dead pre-plugin customer KB handlers removed.** `handleCustomerKnowledgeBase` /
@@ -225,6 +235,18 @@ project adheres to [Semantic Versioning](https://semver.org/).
   container image tags have no `v` (`ghcr.io/goatkit/goatflow:0.9.0`), so the rendered image tag
   never matched a real tag; it now strips the `v`. Verified: `helm template` renders
   `image: ghcr.io/goatkit/goatflow:0.9.0`, which is pullable from ghcr.
+- **Route YAML schema normalised and API-doc generation wired into the build.** All 33 route
+  groups now declare the fully-qualified `apiVersion: goatflow.io/v1` (previously bare `v1`),
+  and the multi-document route files were renamed to unambiguous names
+  (`api-tokens.yaml` → `api-tokens-global.yaml`, `api-v1.yaml` → `api-v1-global.yaml`,
+  `admin_dynamic_aliases.yaml` → `admin-dynamic-aliases.yaml`,
+  `admin_mail_account_status.yaml` → `admin-mail-account-status.yaml`). A shared
+  `routing.ParseYAMLDocuments` (`internal/platform/routing/parse.go`) decodes every document in a
+  multi-doc route file — a single `yaml.Unmarshal` call would silently return only the first —
+  and is now used by the `route-docs` / `route-lint` / `route-test` / `route-version` tools.
+  New `make api-docs` target builds `Dockerfile.route-tools` and regenerates `generated-docs/`
+  (OpenAPI + Swagger) from `routes/*.yaml`; the checked-in `docs/api/` and `generated-docs/`
+  outputs are that regeneration.
 
 ## [0.9.0] - 2026-08-06
 

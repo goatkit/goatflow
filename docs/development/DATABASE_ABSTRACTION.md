@@ -10,7 +10,7 @@ GoatFlow supports the same database backends as OTRS to ensure seamless migratio
 
 ## The Abstraction Layer
 
-Located in `internal/database/`, the abstraction layer provides:
+Located in `internal/platform/database/`, the abstraction layer provides:
 
 1. **IDatabase Interface**: Database-agnostic operations
 2. **Backend Implementations**: PostgreSQL, MySQL, Oracle, SQL Server
@@ -223,7 +223,7 @@ The abstraction layer adds minimal overhead:
 ## Getting Help
 
 - Check existing repositories for examples: `internal/repository/`
-- Read the interface documentation: `internal/database/interfaces.go`
+- Read the interface documentation: `internal/platform/database/interfaces.go`
 - Test with multiple backends before committing
 
 Remember: **Every direct SQL query is a compatibility bug waiting to happen!**

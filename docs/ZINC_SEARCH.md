@@ -2,7 +2,9 @@
 
 ## Overview
 
-GoatFlow uses Zinc as its search engine, providing Elasticsearch-compatible APIs for full-text search across tickets, knowledge base articles, and other content. Zinc is lightweight, requires no JVM, and offers excellent performance for ticketing system needs.
+GoatFlow integrates with Zinc as an optional search backend, providing Elasticsearch-compatible APIs for full-text search across tickets, knowledge base articles, and other content. Zinc is lightweight, requires no JVM, and offers excellent performance for ticketing system needs.
+
+Set `ZINC_ENDPOINT` to enable the real Zinc backend; without it the search service runs an in-app fallback. The `zinc` service in `docker-compose.yml` is currently commented out.
 
 ## Architecture
 

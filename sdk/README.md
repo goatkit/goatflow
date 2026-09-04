@@ -7,7 +7,7 @@ Software Development Kits (SDKs) for interacting with the GoatFlow API. These SD
 ### Go SDK
 - **Path**: `./go/`
 - **Package**: `github.com/goatkit/goatflow/sdk/go`
-- **Go Version**: 1.21+
+- **Go Version**: 1.23+
 - **Features**: Full type safety, context support, concurrent operations
 
 ### TypeScript/JavaScript SDK  
@@ -21,12 +21,6 @@ Software Development Kits (SDKs) for interacting with the GoatFlow API. These SD
 - **Package**: `goatflow-sdk`
 - **Python Version**: 3.8+
 - **Features**: Async/await support, type hints, Pydantic models
-
-### PHP SDK
-- **Path**: `./php/`
-- **Package**: `goatflow/sdk`
-- **PHP Version**: 8.1+
-- **Features**: PSR-4 autoloading, type declarations, Guzzle HTTP client
 
 ## Quick Start
 
@@ -116,4 +110,4 @@ See individual SDK directories for language-specific contribution guidelines.
 
 ## License
 
-MIT License - see LICENSE file for details.
+SDK packages are released under the MIT License; the GoatFlow platform itself is licensed under Apache-2.0.

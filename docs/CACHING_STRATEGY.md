@@ -1,5 +1,7 @@
 # Advanced Caching Strategy
 
+> **Status:** the Valkey (Redis) cache layer and `CacheConfig` are implemented; the CDN/Varnish/NGINX edge layers described below are a target design, not part of the current deployment (single `goats` binary + Valkey).
+
 ## Overview
 
 GoatFlow implements a multi-layered caching strategy to optimize performance and reduce database load. The caching system consists of:

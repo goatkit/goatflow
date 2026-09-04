@@ -23,7 +23,7 @@ Useful knobs:
 make bench BENCH_COUNT=5 BENCH_TIME=2s
 make bench BENCH_OUT=generated/benchmarks/baseline.txt
 make bench BENCH_REGEX='BenchmarkRouting|BenchmarkTemplateLoading'
-make bench BENCH_PACKAGES='./internal/api ./internal/routing'
+make bench BENCH_PACKAGES='./internal/api ./internal/platform/routing'
 ```
 
 Compare two captures with benchstat:

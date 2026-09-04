@@ -149,13 +149,11 @@ Browser tests use Go + Playwright with the `//go:build playwright` tag and run i
 
 GoatFlow uses a modern, hypermedia-driven architecture that scales from single-server deployments to large enterprise clusters:
 
-- **Core Services**: Authentication, Tickets, Users, Notifications, Workflow Engine
-- **Data Layer**: MariaDB/MySQL (default) or PostgreSQL, Valkey (cache), Zinc (search), S3-compatible storage (attachments)
+- **Core Services**: Authentication, Tickets, Users, Notifications
+- **Data Layer**: MariaDB/MySQL (default) or PostgreSQL, Valkey (cache), S3-compatible storage (attachments)
 - **API**: RESTful JSON APIs with HTMX hypermedia endpoints
 - **Frontend**: HTMX + Alpine.js for progressive enhancement with Tailwind CSS
-- **Workflow Engine**: Temporal for complex business processes and automation
 - **Real-time**: Server-Sent Events (SSE) for live updates
-- **Search**: Zinc with Elasticsearch compatibility for full-text search
 
 See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed technical documentation.
 
@@ -332,7 +330,7 @@ GoatFlow provides comprehensive multi-language support:
 
 1. Create translation file: `internal/i18n/translations/xx.json`
 2. Add language config to `internal/i18n/rtl.go` (single source of truth)
-3. Run tests: `make test-i18n`
+3. Run tests: `make check-i18n`
 4. Rebuild: `make build`
 
 See [i18n Contributing Guide](docs/i18n/CONTRIBUTING.md) for detailed instructions.

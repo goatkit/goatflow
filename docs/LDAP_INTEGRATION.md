@@ -85,27 +85,27 @@ LDAP_GROUP_FILTER=(&(objectClass=groupOfUniqueNames)(uniqueMember=%s))
 
 ### Configuration Management
 
-- `GET /api/v1/admin/ldap/config` - Get current LDAP configuration
-- `POST /api/v1/admin/ldap/config` - Set LDAP configuration
-- `PUT /api/v1/admin/ldap/config` - Update LDAP configuration
+- `GET /api/v1/ldap/config` - Get current LDAP configuration
+- `POST /api/v1/ldap/config` - Set LDAP configuration
+- `PUT /api/v1/ldap/config` - Update LDAP configuration
 
 ### Connection Testing
 
-- `POST /api/v1/admin/ldap/test` - Test LDAP connection
-- `POST /api/v1/admin/ldap/test-auth` - Test authentication with credentials
-- `GET /api/v1/admin/ldap/health` - Check LDAP health status
+- `POST /api/v1/ldap/test` - Test LDAP connection
+- `POST /api/v1/ldap/test-auth` - Test authentication with credentials
+- `GET /api/v1/ldap/health` - Check LDAP health status
 
 ### User Management
 
-- `GET /api/v1/admin/ldap/users/:username` - Get user info from LDAP
-- `POST /api/v1/admin/ldap/users/:username/sync` - Synchronize user from LDAP
-- `GET /api/v1/admin/ldap/users/:username/groups` - Get user groups
+- `GET /api/v1/ldap/users/:username` - Get user info from LDAP
+- `POST /api/v1/ldap/users/:username/sync` - Synchronize user from LDAP
+- `GET /api/v1/ldap/users/:username/groups` - Get user groups
 
 ### Templates and Documentation
 
-- `GET /api/v1/admin/ldap/templates` - List available configuration templates
-- `GET /api/v1/admin/ldap/templates/:type` - Get specific template
-- `GET /api/v1/admin/ldap/stats` - Get LDAP usage statistics
+- `GET /api/v1/ldap/templates` - List available configuration templates
+- `GET /api/v1/ldap/templates/:type` - Get specific template
+- `GET /api/v1/ldap/stats` - Get LDAP usage statistics
 
 ## Role Mapping
 
@@ -153,7 +153,7 @@ GoatFlow maps LDAP groups to three roles:
 
 1. **Test connectivity**:
 ```bash
-curl -X POST http://localhost:8080/api/v1/admin/ldap/test \
+curl -X POST http://localhost:8080/api/v1/ldap/test \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $$JWT_TOKEN"
 ```
@@ -172,7 +172,7 @@ curl -X POST http://localhost:8080/api/v1/admin/ldap/test \
 
 1. **Test user authentication**:
 ```bash
-curl -X POST http://localhost:8080/api/v1/admin/ldap/test-auth \
+curl -X POST http://localhost:8080/api/v1/ldap/test-auth \
   -H "Content-Type: application/json" \
   -d '{"username":"testuser","password":"testpass"}' \
   -H "Authorization: Bearer $$JWT_TOKEN"
@@ -185,7 +185,7 @@ curl -X POST http://localhost:8080/api/v1/admin/ldap/test-auth \
 
 3. **Verify group memberships**:
 ```bash
-curl -X GET http://localhost:8080/api/v1/admin/ldap/users/testuser/groups \
+curl -X GET http://localhost:8080/api/v1/ldap/users/testuser/groups \
   -H "Authorization: Bearer $$JWT_TOKEN"
 ```
 
@@ -219,7 +219,7 @@ User information is not cached by default. For improved performance:
 ### Monitoring
 Monitor LDAP integration through:
 
-- `/api/v1/admin/ldap/health` endpoint
+- `/api/v1/ldap/health` endpoint
 - Authentication success/failure rates
 - Connection response times
 - Error logs in application logs

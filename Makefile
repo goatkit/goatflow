@@ -884,7 +884,7 @@ toolbox-test:
 		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
 		echo Running: ./cmd/goats; go test -buildvcs=false -v ./cmd/goats; \
-		echo Running: ./internal/i18n; go test -buildvcs=false -v ./internal/i18n; \
+		echo Running: ./internal/platform/i18n; go test -buildvcs=false -v ./internal/platform/i18n; \
 		echo Running: ./internal/api focused; go test -buildvcs=false -v ./internal/api -run ^Test\(AdminType\|Queue\|Article\|Search\|Priority\|User\|TicketZoom\|AdminService\|AdminStates\|AdminGroupManagement\|HandleGetQueues\|HandleGetPriorities\|DatabaseIntegrity\); \
 		echo Running: ./internal/service; go test -buildvcs=false -v ./internal/service; \
 		echo Running: ./internal/services/escalation; go test -buildvcs=false -v ./internal/services/escalation'
@@ -2704,6 +2704,21 @@ clear-cache:
 	@printf "🗑️ Clearing Docker build cache...\n"
 	@$(CONTAINER_CMD) builder prune -f
 	@printf "✅ Build cache cleared\n"
+.PHONY: api-docs
+api-docs:
+	@printf "📚 Generating API documentation from routes/*.yaml...\n"
+	@$(CONTAINER_CMD) build \
+		--build-arg GO_IMAGE=$(GO_IMAGE) \
+		--cache-from goatflow-route-tools:latest \
+		--build-arg BUILDKIT_INLINE_CACHE=1 \
+		-f Dockerfile.route-tools -t goatflow-route-tools:latest .
+	@mkdir -p generated-docs
+	@$(CONTAINER_CMD) run --rm \
+		-v $$PWD/routes:/app/routes:ro \
+		-v $$PWD/generated-docs:/app/docs \
+		goatflow-route-tools:latest route-manager docs /app/docs
+	@printf "✅ API docs regenerated in generated-docs/\n"
+
 # Build specialized containers
 build-all-tools: build-cached toolbox-build
 	@printf "🛠️ Building all specialized tool containers...\n"

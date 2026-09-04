@@ -1,6 +1,6 @@
 ---
 # API v1 Public Routes Configuration
-apiVersion: v1
+apiVersion: goatflow.io/v1
 kind: RouteGroup
 metadata:
     name: api-v1-public
@@ -18,7 +18,7 @@ spec:
           description: "Authenticate user and return JWT tokens"
 ---
 # API v1 Protected Routes Configuration
-apiVersion: v1
+apiVersion: goatflow.io/v1
 kind: RouteGroup
 metadata:
     name: api-v1-protected

@@ -51,7 +51,7 @@
 ### 6. Manual Testing Protocol
 ```bash
 # 1. Build and restart
-make toolbox-exec ARGS="go build ./cmd/server" && make restart
+make toolbox-exec ARGS="go build ./cmd/goats" && make restart
 
 # 2. Check health
 curl -s http://localhost:8080/health
@@ -75,8 +75,12 @@ curl -X POST "http://localhost:8080/admin/MODULE/ID/update" \
   -d "name=Updated&valid_id=3"
 
 # 7. Verify in database
-PGPASSWORD=$DB_PASSWORD ./scripts/container-wrapper.sh exec goatflow-postgres \
-  psql -h localhost -U goatflow_user -d goatflow -c "SELECT * FROM table_name WHERE ..."
+# MariaDB (default driver):
+./scripts/compose.sh exec mariadb mysql -u $$DB_MYSQL_USER -p$$DB_MYSQL_PASSWORD $$DB_MYSQL_NAME \
+  -e "SELECT * FROM table_name LIMIT 1;"
+# PostgreSQL:
+PGPASSWORD=$DB_PGSQL_PASSWORD ./scripts/container-wrapper.sh exec goatflow-postgres \
+  psql -h localhost -U $$DB_PGSQL_USER -d $$DB_PGSQL_NAME -c "SELECT * FROM table_name WHERE ..."
 
 # 8. Check browser console for JavaScript errors
 Open browser DevTools Console - MUST show zero errors
@@ -103,4 +107,4 @@ Open browser DevTools Console - MUST show zero errors
 ## Research Resources
 - OTRS Admin Manual: https://doc.otrs.com/doc/manual/admin/
 - OTRS Community: https://forums.otterhub.org/
-- Database Schema: /migrations/001_initial_schema.sql
+- Database Schema: migrations/mysql/ and migrations/postgres/ (numbered `NNNNNN_*.sql` migrations)

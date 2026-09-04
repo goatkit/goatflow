@@ -29,7 +29,6 @@ All configuration is via environment variables in `.env`:
 | `DB_PASSWORD` | **Yes** | MariaDB user password | - |
 | `DB_NAME` | No | Database name | `goatflow` |
 | `JWT_SECRET` | **Yes** | JWT signing secret (32+ chars) | - |
-| `APP_PORT` | No | Host port for web UI | `8080` |
 | `BASE_URL` | No | Public URL for the application | `http://localhost:8080` |
 
 ## Image Tags
@@ -49,6 +48,8 @@ All configuration is via environment variables in `.env`:
 | `runner` | Background job processor |
 | `mariadb` | MariaDB database |
 | `valkey` | Redis-compatible cache |
+| `caddy` | Reverse proxy - serves 80/443 |
+| `customer-fe` | Customer portal frontend (same image, customer-only mode) |
 
 ## Operations
 

@@ -133,7 +133,7 @@ When `UNICODE_SUPPORT=false`, GoatFlow automatically filters out:
 - ✅ **Future-Proof:** Can enable full Unicode support without schema changes
 
 **Implementation Details:**
-- Filter logic in `internal/utils/unicode_filter.go`
+- Filter logic in `internal/platform/utils/unicode_filter.go`
 - Applied to article content before database storage
 - Environment variable controlled: `UNICODE_SUPPORT`
 - Default: OTRS-compatible mode for seamless migration

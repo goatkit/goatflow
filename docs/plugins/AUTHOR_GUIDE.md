@@ -482,8 +482,8 @@ through `ServiceWorker::*` sysconfig settings; supported strategies are
 
 ```
 my-plugin.zip
-├── manifest.yaml     # Plugin metadata
-├── plugin.wasm       # WASM binary (or binary + plugin.yaml for gRPC)
+├── plugin.yaml       # Plugin metadata (required)
+├── <binary>          # gRPC plugin binary (name from plugin.yaml)
 ├── assets/           # Optional static files
 └── i18n/             # Optional translation files
 ```

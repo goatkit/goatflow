@@ -1,6 +1,6 @@
 ---
 # Files API Routes - Migrated from protectedAPI code routes
-apiVersion: v1
+apiVersion: goatflow.io/v1
 kind: RouteGroup
 metadata:
   name: api-files-protected

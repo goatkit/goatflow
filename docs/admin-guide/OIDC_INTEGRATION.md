@@ -14,8 +14,8 @@ GoatFlow's OIDC client uses the standard Authorization Code Flow with PKCE and J
 | **Okta** | ✅ Yes — this guide's examples | `https://your-org.okta.com/oauth2/default` | Groups claim added via Authorization Server → Claims tab |
 | Keycloak | Not yet tested (CI test container exists) | `https://keycloak.example.com/realms/<realm>` | Groups sent by default in ID token if mappers configured |
 | Azure AD / Entra ID | Should work | `https://login.microsoftonline.com/{tenant}/v2.0` | Uses standard OIDC; claim names match defaults |
-| Google Workspace | Should work | `https://accounts.google.com` | Built-in support planned for 0.9.0 with pre-configured discovery URL |
-| Generic SAML2 providers | Future (SAML2 client pending) | — | Requires separate provider type and metadata fetch flow |
+| Google Workspace | Should work | `https://accounts.google.com/.well-known/openid-configuration` | Built-in Google provider (shipped in 0.9.0) with pre-configured discovery URL |
+| Generic SAML2 providers | Supported | — | SAML2 client shipped in 0.9.0 (configure via the admin identity-provider form) |
 
 > **Okta is the tested reference implementation.** Other providers should work by substituting their discovery URL and adjusting claim names. If a provider uses non-standard claim keys, override them in the GoatFlow provider form (User Claim Email/Name/Groups fields).
 
@@ -39,7 +39,7 @@ This is the standard [OIDC Authorization Code Flow with PKCE](https://openid.net
 
 ## Prerequisites
 
-- GoatFlow 0.8.4+ running and accessible
+- GoatFlow 0.9.0+ running and accessible (OIDC/SAML identity providers shipped in 0.9.0)
 - Access to your IdP admin console (Okta Admin Console in these instructions)
 - Ability to create OIDC applications in your IdP
 - Network connectivity from GoatFlow's backend to your IdP's public endpoints

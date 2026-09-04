@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v3"
+	"github.com/goatkit/goatflow/internal/platform/routing"
 )
 
 // RouteConfig matches our YAML route structure.
@@ -208,20 +208,26 @@ func (tr *TestRunner) LoadRoutes(routesDir string) error {
 			return fmt.Errorf("reading %s: %w", path, err)
 		}
 
-		var config RouteConfig
-		if err := yaml.Unmarshal(data, &config); err != nil {
+		configs, err := routing.ParseYAMLDocuments[RouteConfig](data)
+		if err != nil {
 			return fmt.Errorf("parsing %s: %w", path, err)
 		}
 
-		// Skip disabled route groups
-		if !config.Metadata.Enabled {
-			if tr.verbose {
-				fmt.Printf("⏭️  Skipping disabled route group: %s\n", config.Metadata.Name)
+		// A file may contain multiple route-group documents
+		for i := range configs {
+			config := configs[i]
+			if config.Metadata.Name == "" {
+				continue
 			}
-			return nil
+			// Skip disabled route groups
+			if !config.Metadata.Enabled {
+				if tr.verbose {
+					fmt.Printf("⏭️  Skipping disabled route group: %s\n", config.Metadata.Name)
+				}
+				continue
+			}
+			tr.routes = append(tr.routes, config)
 		}
-
-		tr.routes = append(tr.routes, config)
 		return nil
 	})
 }

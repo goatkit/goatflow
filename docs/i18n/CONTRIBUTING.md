@@ -13,9 +13,9 @@ This guide explains how to add new language support or improve existing translat
 
 To add or improve translations:
 
-1. Navigate to `internal/i18n/translations/`
+1. Navigate to `internal/platform/i18n/translations/`
 2. Edit existing language files or create new ones
-3. Test your translations using `make test-i18n`
+3. Test your translations using `make toolbox-exec ARGS="go test ./internal/platform/i18n/..."`
 4. Submit a PR with 100% coverage
 
 ### Check Current Coverage
@@ -33,7 +33,7 @@ make http-call ENDPOINT=/api/v1/i18n/missing/de
 
 ## Translation Structure
 
-Translation files are JSON files with nested structure located in `internal/i18n/translations/`:
+Translation files are JSON files with nested structure located in `internal/platform/i18n/translations/`:
 
 ```json
 {
@@ -61,7 +61,7 @@ Adding a new language requires two steps:
 
 1. Copy `en.json` as template:
 ```bash
-cp internal/i18n/translations/en.json internal/i18n/translations/xx.json
+cp internal/platform/i18n/translations/en.json internal/platform/i18n/translations/xx.json
 ```
 
 2. Replace `xx` with your language code (ISO 639-1, e.g., `pl` for Polish)
@@ -70,7 +70,7 @@ cp internal/i18n/translations/en.json internal/i18n/translations/xx.json
 
 ### Step 2: Add Language Configuration
 
-Add your language to the `SupportedLanguages` map in `internal/i18n/rtl.go`:
+Add your language to the `SupportedLanguages` map in `internal/platform/i18n/rtl.go`:
 
 ```go
 "xx": {
@@ -103,10 +103,10 @@ Run the i18n tests to ensure 100% coverage:
 
 ```bash
 # Run i18n validation tests
-make test-i18n
+make toolbox-exec ARGS="go test ./internal/platform/i18n/..."
 
 # Or run directly via Docker
-docker compose run --rm toolbox go test ./internal/i18n/... -v
+make toolbox-exec ARGS="go test ./internal/platform/i18n/... -v"
 ```
 
 To verify the language is now complete via the API:
@@ -137,10 +137,10 @@ make restart
 
 ```bash
 # Run all i18n tests
-make test-i18n
+make toolbox-exec ARGS="go test ./internal/platform/i18n/..."
 
 # Run specific test
-docker compose run --rm toolbox go test ./internal/i18n/... -run TestTranslationCompleteness -v
+docker compose run --rm toolbox go test ./internal/platform/i18n/... -run TestTranslationCompleteness -v
 ```
 
 ### Coverage Requirements
@@ -184,7 +184,7 @@ Preserve placeholders in translations:
 
 ### 5. Testing Process
 1. Complete all translations
-2. Run `make test-i18n`
+2. Run `make toolbox-exec ARGS="go test ./internal/platform/i18n/..."`
 3. Rebuild with `make build`
 4. Test in application UI
 5. Review with native speakers if possible
@@ -237,15 +237,15 @@ Some terms may remain in English depending on locale conventions:
 
 1. **Fork the repository**
 2. **Create feature branch**: `git checkout -b i18n/add-xx-language`
-3. **Add translation file**: `internal/i18n/translations/xx.json`
-4. **Add language config**: Update `internal/i18n/rtl.go`
-5. **Test thoroughly**: Run `make test-i18n`
+3. **Add translation file**: `internal/platform/i18n/translations/xx.json`
+4. **Add language config**: Update `internal/platform/i18n/rtl.go`
+5. **Test thoroughly**: Run `make toolbox-exec ARGS="go test ./internal/platform/i18n/..."`
 6. **Submit PR**: Include test output in description
 
 ### PR Checklist
 - [ ] Translation file created with all keys from `en.json`
 - [ ] Language config added to `rtl.go` with correct metadata
-- [ ] `make test-i18n` passes with 100% coverage
+- [ ] `make toolbox-exec ARGS="go test ./internal/platform/i18n/..."` passes with 100% coverage
 - [ ] `make build` succeeds
 - [ ] UI tested with new language
 - [ ] Native speaker review (preferred)
@@ -253,7 +253,7 @@ Some terms may remain in English depending on locale conventions:
 ## File Structure
 
 ```
-internal/i18n/
+internal/platform/i18n/
 ├── i18n.go              # Core i18n functionality
 ├── rtl.go               # Language configs (source of truth for names/metadata)
 ├── validation_test.go   # Translation coverage tests
@@ -306,7 +306,7 @@ Current language support (15 languages, 12 complete):
 
 ### Single Source of Truth
 
-Language metadata is centralized in `internal/i18n/rtl.go`:
+Language metadata is centralized in `internal/platform/i18n/rtl.go`:
 
 - `SupportedLanguages` map contains all language configurations
 - `GetLanguageConfig(code)` returns config for a language

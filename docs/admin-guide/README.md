@@ -1,8 +1,8 @@
 # GoatFlow Administrator Guide
 
-## Coming Soon
-
-Comprehensive documentation for GoatFlow system administrators.
+> **Status: roadmap.** A full administrator guide has not been written yet. The sections
+> below are the planned outline; day-to-day administration happens through the admin UI
+> under `/admin/*` (queues, users, groups, states, custom fields, LDAP, etc.).
 
 ## Planned Content
 
@@ -80,29 +80,6 @@ Comprehensive documentation for GoatFlow system administrators.
 - Error messages
 - Support resources
 
-## Quick Reference
-
-### Default Paths
-- Configuration: `/etc/goatflow/`
-- Logs: `/var/log/goatflow/`
-- Data: `/var/lib/goatflow/`
-- Attachments: `/var/lib/goatflow/attachments/`
-
-### Important Commands
-```bash
-# Check system status
-goatflow-cli status
-
-# Run database migrations
-goatflow-cli migrate up
-
-# Create admin user
-goatflow-cli user create --admin
-
-# Backup database
-goatflow-cli backup create
-```
-
 ## See Also
 
 - [Security Guide](../SECURITY.md)
@@ -111,4 +88,4 @@ goatflow-cli backup create
 
 ---
 
-*Full administrator documentation coming soon. For security information, see [SECURITY.md](../SECURITY.md)*
+*For security information, see [SECURITY.md](../SECURITY.md)*

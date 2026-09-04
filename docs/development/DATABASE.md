@@ -37,19 +37,33 @@ make db-apply-test-data  # Apply generated test data
 ### Migration Files Structure
 ```
 migrations/
-├── mysql/
-│   ├── 000001_schema_alignment.up.sql   # MySQL schema (OTRS baseline, 127 tables)
+├── mysql/      # 000001..000026 (up + down), e.g.:
+│   ├── 000001_schema_alignment.up.sql   # OTRS baseline schema + alignment
 │   ├── 000002_minimal_data.up.sql       # Essential lookup data
 │   ├── 000003_customer_portal_sysconfig.up.sql
 │   ├── 000004_dynamic_field_screen_config.up.sql
 │   ├── 000005_canned_response.up.sql    # GoatFlow extension tables
 │   ├── 000006_znuny_color_columns.up.sql # Znuny-compatible additions
 │   ├── 000007_api_tokens.up.sql         # GoatFlow extension: API tokens
-│   └── 000008_admin_audit_log.up.sql    # GoatFlow extension: audit logging
-├── postgres/
-│   ├── 000001_schema_alignment.up.sql   # PostgreSQL schema alignment
-│   └── 000004_generated_test_data.up.sql  # Dynamically generated test data (optional)
-└── legacy/                              # Old sequential migrations (archived)
+│   ├── 000008_admin_audit_log.up.sql    # GoatFlow extension: audit logging
+│   ├── 000009_custom_fields.up.sql      # Custom field definitions
+│   ├── 000010_plugin_uis.up.sql         # Plugin UI registration
+│   ├── 000011_organisations.up.sql      # Multi-tenancy
+│   ├── 000012_secure_settings.up.sql
+│   ├── 000013_entity_deletion.up.sql
+│   ├── 000014_self_service_auth.up.sql
+│   ├── 000015_push_subscriptions.up.sql
+│   ├── 000016_escalation_calendar_defaults.up.sql
+│   ├── 000017_org_plugin_access.up.sql
+│   ├── 000018_captive_plugin.up.sql
+│   ├── 000019_service_worker_cache_config.up.sql
+│   ├── 000020_webauthn_credentials.up.sql
+│   ├── 000021_webauthn_ceremonies.up.sql
+│   ├── 000022_totp_pending_sessions.up.sql
+│   ├── 000023_identity_providers.up.sql # OIDC/SAML IdP support
+│   ├── 000024_saml_fields.up.sql
+│   └── 000026_setup_assistant_sysconfig.up.sql
+└── postgres/   # Same numbered set (000001..000026)
 
 schema/
 ├── baseline/
@@ -96,7 +110,7 @@ Some GoatFlow features are built entirely on existing OTRS infrastructure:
 
 - **Two-Factor Auth (TOTP):** Secrets and recovery codes stored in `user_preferences` / `customer_preferences`
 - **SLA Management:** Uses existing `sla`, `sla_preferences`, `service_sla` tables
-- **Knowledge Base:** Planned `gk_kb_*` tables (future); Znuny `faq_*` import via `goatflow-migrate`.
+- **Knowledge Base:** Shipped via the goat-kb plugin (`gk_kb_*` tables created by the plugin); Znuny `faq_*` import via `goatflow-migrate`.
 - **GenericAgent:** Uses existing `generic_agent_jobs` table
 - **Plugin state:** Uses existing `sysconfig_default` / `sysconfig_modified` tables
 

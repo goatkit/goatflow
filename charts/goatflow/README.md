@@ -20,22 +20,22 @@ The chart is published with tags that mirror the container image tags:
 helm install goatflow oci://ghcr.io/goatkit/charts/goatflow --version latest
 
 # Install specific version (deploys matching container images)
-helm install goatflow oci://ghcr.io/goatkit/charts/goatflow --version v0.5.0
+helm install goatflow oci://ghcr.io/goatkit/charts/goatflow --version 0.9.0
 
 # Install from main branch (latest development)
-helm install goatflow oci://ghcr.io/goatkit/charts/goatflow --version main
+helm install goatflow oci://ghcr.io/goatkit/charts/goatflow --version 0.1.0-main
 
 # Install from dev branch
-helm install goatflow oci://ghcr.io/goatkit/charts/goatflow --version dev
+helm install goatflow oci://ghcr.io/goatkit/charts/goatflow --version 0.1.0-dev
 ```
 
-**Tag Mirroring:** The chart's `appVersion` matches the tag, so `--version v0.5.0` automatically deploys `:v0.5.0` container images.
+**Tag Mirroring:** The chart's `appVersion` matches the tag, so `--version 0.9.0` automatically deploys the `:0.9.0` container images.
 
 ### Install from GitHub Release
 
 ```bash
 # Download and install from release assets
-helm install goatflow https://github.com/goatkit/goatflow/releases/download/v0.9.0/goatflow-0.1.0.tgz
+helm install goatflow https://github.com/goatkit/goatflow/releases/download/v0.9.0/goatflow-helm-chart-0.9.0.tgz
 ```
 
 ### Install from Cloned Repository
@@ -62,16 +62,13 @@ helm install goatflow ./charts/goatflow --set backend.replicaCount=3
 
 ```bash
 # Lint the chart
-make helm-lint
+make helm ARGS="lint charts/goatflow"
 
 # Render templates (dry-run)
-make helm-template
+make helm ARGS="template goatflow charts/goatflow"
 
-# Render with PostgreSQL values
-make helm-template-pg
-
-# Package for distribution
-make helm-package
+# Update chart dependencies (valkey subchart)
+make helm ARGS="dependency update charts/goatflow"
 ```
 
 ## Configuration

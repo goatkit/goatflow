@@ -15,7 +15,7 @@ curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/docker-co
 curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/.env.example
 
 # Configure environment
-cp .env.example .env
+cp deploy/.env.example .env
 # Edit .env with your values (DOMAIN, DB_PASSWORD, JWT_SECRET, etc.)
 
 # Start GoatFlow
@@ -75,7 +75,7 @@ git clone https://github.com/goatkit/goatflow.git
 cd goatflow
 
 # Copy environment template
-cp .env.example .env
+cp .env.development .env
 # Edit .env if needed
 
 # Start all services (builds containers locally)
@@ -135,7 +135,7 @@ curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/docker-co
 curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/.env.example
 
 # Configure environment
-cp .env.example .env
+cp deploy/.env.example .env
 # Edit .env with your values
 
 # Start with Podman Compose

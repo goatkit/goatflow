@@ -1,6 +1,6 @@
 ---
 # API Tokens - Agent Routes
-apiVersion: v1
+apiVersion: goatflow.io/v1
 kind: RouteGroup
 metadata:
     name: api-tokens-agent
@@ -34,7 +34,7 @@ spec:
 
 ---
 # API Tokens - Admin Routes
-apiVersion: v1
+apiVersion: goatflow.io/v1
 kind: RouteGroup
 metadata:
     name: api-tokens-admin
@@ -91,7 +91,7 @@ spec:
 
 ---
 # API Tokens - Customer Routes
-apiVersion: v1
+apiVersion: goatflow.io/v1
 kind: RouteGroup
 metadata:
     name: api-tokens-customer

@@ -5,6 +5,1454 @@ Generated from YAML route definitions
 ## 📋 Route Groups
 
 
+### Default: admin-dynamic-aliases
+
+**Description:** Friendly URLs for dynamic admin modules  
+**Prefix:** `/admin`  
+**Middleware:** `auth` `admin` 
+
+
+#### 
+
+- **Path:** `/mail-accounts`
+- **Method:** `GET`
+- **Description:** List mail accounts
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/mail-accounts/export`
+- **Method:** `GET`
+- **Description:** Export mail accounts
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/mail-accounts/new`
+- **Method:** `GET`
+- **Description:** Render mail account creation form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/mail-accounts/:id`
+- **Method:** `GET`
+- **Description:** Show mail account details
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/mail-accounts/:id/edit`
+- **Method:** `GET`
+- **Description:** Render mail account edit form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/mail-accounts`
+- **Method:** `POST`
+- **Description:** Create a mail account
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/mail-accounts/:id`
+- **Method:** `PUT`
+- **Description:** Update a mail account
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/mail-accounts/:id`
+- **Method:** `POST`
+- **Description:** Update a mail account via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/mail-accounts/:id`
+- **Method:** `DELETE`
+- **Description:** Delete a mail account
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/mail-accounts/:id/status`
+- **Method:** `PUT`
+- **Description:** Toggle mail account status
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/mail-accounts/:id/status`
+- **Method:** `POST`
+- **Description:** Toggle mail account status via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/mail-accounts/:id/:action`
+- **Method:** `GET`
+- **Description:** Execute custom mail account action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/mail-accounts/:id/:action`
+- **Method:** `POST`
+- **Description:** Execute custom mail account action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/communication-channels`
+- **Method:** `GET`
+- **Description:** List communication channels
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/communication-channels/export`
+- **Method:** `GET`
+- **Description:** Export communication channels
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/communication-channels/new`
+- **Method:** `GET`
+- **Description:** Render communication channel creation form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/communication-channels/:id`
+- **Method:** `GET`
+- **Description:** Show communication channel details
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/communication-channels/:id/edit`
+- **Method:** `GET`
+- **Description:** Render communication channel edit form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/communication-channels`
+- **Method:** `POST`
+- **Description:** Create a communication channel
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/communication-channels/:id`
+- **Method:** `PUT`
+- **Description:** Update a communication channel
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/communication-channels/:id`
+- **Method:** `POST`
+- **Description:** Update a communication channel via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/communication-channels/:id`
+- **Method:** `DELETE`
+- **Description:** Delete a communication channel
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/communication-channels/:id/status`
+- **Method:** `PUT`
+- **Description:** Toggle communication channel status
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/communication-channels/:id/status`
+- **Method:** `POST`
+- **Description:** Toggle communication channel status via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/communication-channels/:id/:action`
+- **Method:** `GET`
+- **Description:** Execute custom communication channel action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/communication-channels/:id/:action`
+- **Method:** `POST`
+- **Description:** Execute custom communication channel action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/package-repositories`
+- **Method:** `GET`
+- **Description:** List package repositories
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/package-repositories/export`
+- **Method:** `GET`
+- **Description:** Export package repositories
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/package-repositories/new`
+- **Method:** `GET`
+- **Description:** Render package repository creation form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/package-repositories/:id`
+- **Method:** `GET`
+- **Description:** Show package repository details
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/package-repositories/:id/edit`
+- **Method:** `GET`
+- **Description:** Render package repository edit form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/package-repositories`
+- **Method:** `POST`
+- **Description:** Create a package repository
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/package-repositories/:id`
+- **Method:** `PUT`
+- **Description:** Update a package repository
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/package-repositories/:id`
+- **Method:** `POST`
+- **Description:** Update a package repository via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/package-repositories/:id`
+- **Method:** `DELETE`
+- **Description:** Delete a package repository
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/package-repositories/:id/status`
+- **Method:** `PUT`
+- **Description:** Toggle package repository status
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/package-repositories/:id/status`
+- **Method:** `POST`
+- **Description:** Toggle package repository status via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/package-repositories/:id/:action`
+- **Method:** `GET`
+- **Description:** Execute custom package repository action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/package-repositories/:id/:action`
+- **Method:** `POST`
+- **Description:** Execute custom package repository action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-responses`
+- **Method:** `GET`
+- **Description:** List auto responses
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-responses/export`
+- **Method:** `GET`
+- **Description:** Export auto responses
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-responses/new`
+- **Method:** `GET`
+- **Description:** Render auto response creation form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-responses/:id`
+- **Method:** `GET`
+- **Description:** Show auto response details
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-responses/:id/edit`
+- **Method:** `GET`
+- **Description:** Render auto response edit form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-responses`
+- **Method:** `POST`
+- **Description:** Create an auto response
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-responses/:id`
+- **Method:** `PUT`
+- **Description:** Update an auto response
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-responses/:id`
+- **Method:** `POST`
+- **Description:** Update an auto response via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-responses/:id`
+- **Method:** `DELETE`
+- **Description:** Delete an auto response
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-responses/:id/status`
+- **Method:** `PUT`
+- **Description:** Toggle auto response status
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-responses/:id/status`
+- **Method:** `POST`
+- **Description:** Toggle auto response status via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-responses/:id/:action`
+- **Method:** `GET`
+- **Description:** Execute custom auto response action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-responses/:id/:action`
+- **Method:** `POST`
+- **Description:** Execute custom auto response action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-response-types`
+- **Method:** `GET`
+- **Description:** List auto response types
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-response-types/export`
+- **Method:** `GET`
+- **Description:** Export auto response types
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-response-types/new`
+- **Method:** `GET`
+- **Description:** Render auto response type creation form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-response-types/:id`
+- **Method:** `GET`
+- **Description:** Show auto response type details
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-response-types/:id/edit`
+- **Method:** `GET`
+- **Description:** Render auto response type edit form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-response-types`
+- **Method:** `POST`
+- **Description:** Create an auto response type
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-response-types/:id`
+- **Method:** `PUT`
+- **Description:** Update an auto response type
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-response-types/:id`
+- **Method:** `POST`
+- **Description:** Update an auto response type via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-response-types/:id`
+- **Method:** `DELETE`
+- **Description:** Delete an auto response type
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-response-types/:id/status`
+- **Method:** `PUT`
+- **Description:** Toggle auto response type status
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-response-types/:id/status`
+- **Method:** `POST`
+- **Description:** Toggle auto response type status via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-response-types/:id/:action`
+- **Method:** `GET`
+- **Description:** Execute custom auto response type action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auto-response-types/:id/:action`
+- **Method:** `POST`
+- **Description:** Execute custom auto response type action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/follow-up-options`
+- **Method:** `GET`
+- **Description:** List follow up options
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/follow-up-options/export`
+- **Method:** `GET`
+- **Description:** Export follow up options
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/follow-up-options/new`
+- **Method:** `GET`
+- **Description:** Render follow up option creation form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/follow-up-options/:id`
+- **Method:** `GET`
+- **Description:** Show follow up option details
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/follow-up-options/:id/edit`
+- **Method:** `GET`
+- **Description:** Render follow up option edit form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/follow-up-options`
+- **Method:** `POST`
+- **Description:** Create a follow up option
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/follow-up-options/:id`
+- **Method:** `PUT`
+- **Description:** Update a follow up option
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/follow-up-options/:id`
+- **Method:** `POST`
+- **Description:** Update a follow up option via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/follow-up-options/:id`
+- **Method:** `DELETE`
+- **Description:** Delete a follow up option
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/follow-up-options/:id/status`
+- **Method:** `PUT`
+- **Description:** Toggle follow up option status
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/follow-up-options/:id/status`
+- **Method:** `POST`
+- **Description:** Toggle follow up option status via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/follow-up-options/:id/:action`
+- **Method:** `GET`
+- **Description:** Execute custom follow up option action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/follow-up-options/:id/:action`
+- **Method:** `POST`
+- **Description:** Execute custom follow up option action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-states`
+- **Method:** `GET`
+- **Description:** List link states
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-states/export`
+- **Method:** `GET`
+- **Description:** Export link states
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-states/new`
+- **Method:** `GET`
+- **Description:** Render link state creation form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-states/:id`
+- **Method:** `GET`
+- **Description:** Show link state details
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-states/:id/edit`
+- **Method:** `GET`
+- **Description:** Render link state edit form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-states`
+- **Method:** `POST`
+- **Description:** Create a link state
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-states/:id`
+- **Method:** `PUT`
+- **Description:** Update a link state
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-states/:id`
+- **Method:** `POST`
+- **Description:** Update a link state via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-states/:id`
+- **Method:** `DELETE`
+- **Description:** Delete a link state
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-states/:id/status`
+- **Method:** `PUT`
+- **Description:** Toggle link state status
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-states/:id/status`
+- **Method:** `POST`
+- **Description:** Toggle link state status via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-states/:id/:action`
+- **Method:** `GET`
+- **Description:** Execute custom link state action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-states/:id/:action`
+- **Method:** `POST`
+- **Description:** Execute custom link state action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-types`
+- **Method:** `GET`
+- **Description:** List link types
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-types/export`
+- **Method:** `GET`
+- **Description:** Export link types
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-types/new`
+- **Method:** `GET`
+- **Description:** Render link type creation form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-types/:id`
+- **Method:** `GET`
+- **Description:** Show link type details
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-types/:id/edit`
+- **Method:** `GET`
+- **Description:** Render link type edit form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-types`
+- **Method:** `POST`
+- **Description:** Create a link type
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-types/:id`
+- **Method:** `PUT`
+- **Description:** Update a link type
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-types/:id`
+- **Method:** `POST`
+- **Description:** Update a link type via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-types/:id`
+- **Method:** `DELETE`
+- **Description:** Delete a link type
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-types/:id/status`
+- **Method:** `PUT`
+- **Description:** Toggle link type status
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-types/:id/status`
+- **Method:** `POST`
+- **Description:** Toggle link type status via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-types/:id/:action`
+- **Method:** `GET`
+- **Description:** Execute custom link type action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/link-types/:id/:action`
+- **Method:** `POST`
+- **Description:** Execute custom link type action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queue-auto-responses`
+- **Method:** `GET`
+- **Description:** List queue auto responses
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queue-auto-responses/export`
+- **Method:** `GET`
+- **Description:** Export queue auto responses
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queue-auto-responses/new`
+- **Method:** `GET`
+- **Description:** Render queue auto response creation form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queue-auto-responses/:id`
+- **Method:** `GET`
+- **Description:** Show queue auto response details
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queue-auto-responses/:id/edit`
+- **Method:** `GET`
+- **Description:** Render queue auto response edit form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queue-auto-responses`
+- **Method:** `POST`
+- **Description:** Create a queue auto response
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queue-auto-responses/:id`
+- **Method:** `PUT`
+- **Description:** Update a queue auto response
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queue-auto-responses/:id`
+- **Method:** `POST`
+- **Description:** Update a queue auto response via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queue-auto-responses/:id`
+- **Method:** `DELETE`
+- **Description:** Delete a queue auto response
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queue-auto-responses/:id/status`
+- **Method:** `PUT`
+- **Description:** Toggle queue auto response status
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queue-auto-responses/:id/status`
+- **Method:** `POST`
+- **Description:** Toggle queue auto response status via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queue-auto-responses/:id/:action`
+- **Method:** `GET`
+- **Description:** Execute custom queue auto response action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queue-auto-responses/:id/:action`
+- **Method:** `POST`
+- **Description:** Execute custom queue auto response action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/article-colors`
+- **Method:** `GET`
+- **Description:** List article colors
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/article-colors/export`
+- **Method:** `GET`
+- **Description:** Export article colors
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/article-colors/new`
+- **Method:** `GET`
+- **Description:** Render article color creation form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/article-colors/:id`
+- **Method:** `GET`
+- **Description:** Show article color details
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/article-colors/:id/edit`
+- **Method:** `GET`
+- **Description:** Render article color edit form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/article-colors`
+- **Method:** `POST`
+- **Description:** Create an article color
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/article-colors/:id`
+- **Method:** `PUT`
+- **Description:** Update an article color
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/article-colors/:id`
+- **Method:** `POST`
+- **Description:** Update an article color via form submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/article-colors/:id`
+- **Method:** `DELETE`
+- **Description:** Delete an article color
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/article-colors/:id/:action`
+- **Method:** `GET`
+- **Description:** Execute custom article color action
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/article-colors/:id/:action`
+- **Method:** `POST`
+- **Description:** Execute custom article color action
+
+
+
+
+---
+
+
+
+### Default: admin-mail-account-status
+
+**Description:** Mail account poll status endpoints  
+**Prefix:** `/admin`  
+**Middleware:** `auth` `admin` 
+
+
+#### 
+
+- **Path:** `/mail-accounts/:id/poll-status`
+- **Method:** `GET`
+- **Description:** Fetch poll status for a mail account
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/dynamic/mail_account/:id/poll-status`
+- **Method:** `GET`
+- **Description:** Fetch poll status for a mail account (dynamic path)
+
+
+
+
+---
+
+
+
 ### Default: admin
 
 **Description:** Administrative routes for system management  
@@ -17,6 +1465,61 @@ Generated from YAML route definitions
 - **Path:** `/`
 - **Method:** `GET`
 - **Description:** Display admin dashboard with system overview
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/setup`
+- **Method:** `GET`
+- **Description:** First-run setup wizard
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/setup`
+- **Method:** `POST`
+- **Description:** Process setup wizard submission
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/setup/assistant`
+- **Method:** `GET`
+- **Description:** Setup assistant task catalog
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/setup/task/:plugin/:task_id`
+- **Method:** `GET`
+- **Description:** Run a setup task (core or plugin)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/setup/task/:plugin/:task_id`
+- **Method:** `POST`
+- **Description:** Process a setup task submission
 
 
 
@@ -2687,1454 +4190,6 @@ Generated from YAML route definitions
 
 
 
-### Default: admin-dynamic-aliases
-
-**Description:** Friendly URLs for dynamic admin modules  
-**Prefix:** `/admin`  
-**Middleware:** `auth` `admin` 
-
-
-#### 
-
-- **Path:** `/mail-accounts`
-- **Method:** `GET`
-- **Description:** List mail accounts
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/export`
-- **Method:** `GET`
-- **Description:** Export mail accounts
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/new`
-- **Method:** `GET`
-- **Description:** Render mail account creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id`
-- **Method:** `GET`
-- **Description:** Show mail account details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id/edit`
-- **Method:** `GET`
-- **Description:** Render mail account edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts`
-- **Method:** `POST`
-- **Description:** Create a mail account
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id`
-- **Method:** `PUT`
-- **Description:** Update a mail account
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id`
-- **Method:** `POST`
-- **Description:** Update a mail account via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a mail account
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle mail account status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle mail account status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom mail account action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom mail account action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels`
-- **Method:** `GET`
-- **Description:** List communication channels
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/export`
-- **Method:** `GET`
-- **Description:** Export communication channels
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/new`
-- **Method:** `GET`
-- **Description:** Render communication channel creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id`
-- **Method:** `GET`
-- **Description:** Show communication channel details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id/edit`
-- **Method:** `GET`
-- **Description:** Render communication channel edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels`
-- **Method:** `POST`
-- **Description:** Create a communication channel
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id`
-- **Method:** `PUT`
-- **Description:** Update a communication channel
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id`
-- **Method:** `POST`
-- **Description:** Update a communication channel via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a communication channel
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle communication channel status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle communication channel status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom communication channel action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom communication channel action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories`
-- **Method:** `GET`
-- **Description:** List package repositories
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/export`
-- **Method:** `GET`
-- **Description:** Export package repositories
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/new`
-- **Method:** `GET`
-- **Description:** Render package repository creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id`
-- **Method:** `GET`
-- **Description:** Show package repository details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id/edit`
-- **Method:** `GET`
-- **Description:** Render package repository edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories`
-- **Method:** `POST`
-- **Description:** Create a package repository
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id`
-- **Method:** `PUT`
-- **Description:** Update a package repository
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id`
-- **Method:** `POST`
-- **Description:** Update a package repository via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a package repository
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle package repository status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle package repository status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom package repository action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom package repository action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses`
-- **Method:** `GET`
-- **Description:** List auto responses
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/export`
-- **Method:** `GET`
-- **Description:** Export auto responses
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/new`
-- **Method:** `GET`
-- **Description:** Render auto response creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id`
-- **Method:** `GET`
-- **Description:** Show auto response details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id/edit`
-- **Method:** `GET`
-- **Description:** Render auto response edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses`
-- **Method:** `POST`
-- **Description:** Create an auto response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id`
-- **Method:** `PUT`
-- **Description:** Update an auto response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id`
-- **Method:** `POST`
-- **Description:** Update an auto response via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id`
-- **Method:** `DELETE`
-- **Description:** Delete an auto response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle auto response status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle auto response status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom auto response action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom auto response action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types`
-- **Method:** `GET`
-- **Description:** List auto response types
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/export`
-- **Method:** `GET`
-- **Description:** Export auto response types
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/new`
-- **Method:** `GET`
-- **Description:** Render auto response type creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id`
-- **Method:** `GET`
-- **Description:** Show auto response type details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id/edit`
-- **Method:** `GET`
-- **Description:** Render auto response type edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types`
-- **Method:** `POST`
-- **Description:** Create an auto response type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id`
-- **Method:** `PUT`
-- **Description:** Update an auto response type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id`
-- **Method:** `POST`
-- **Description:** Update an auto response type via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id`
-- **Method:** `DELETE`
-- **Description:** Delete an auto response type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle auto response type status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle auto response type status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom auto response type action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom auto response type action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options`
-- **Method:** `GET`
-- **Description:** List follow up options
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/export`
-- **Method:** `GET`
-- **Description:** Export follow up options
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/new`
-- **Method:** `GET`
-- **Description:** Render follow up option creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id`
-- **Method:** `GET`
-- **Description:** Show follow up option details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id/edit`
-- **Method:** `GET`
-- **Description:** Render follow up option edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options`
-- **Method:** `POST`
-- **Description:** Create a follow up option
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id`
-- **Method:** `PUT`
-- **Description:** Update a follow up option
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id`
-- **Method:** `POST`
-- **Description:** Update a follow up option via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a follow up option
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle follow up option status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle follow up option status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom follow up option action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom follow up option action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states`
-- **Method:** `GET`
-- **Description:** List link states
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/export`
-- **Method:** `GET`
-- **Description:** Export link states
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/new`
-- **Method:** `GET`
-- **Description:** Render link state creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id`
-- **Method:** `GET`
-- **Description:** Show link state details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id/edit`
-- **Method:** `GET`
-- **Description:** Render link state edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states`
-- **Method:** `POST`
-- **Description:** Create a link state
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id`
-- **Method:** `PUT`
-- **Description:** Update a link state
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id`
-- **Method:** `POST`
-- **Description:** Update a link state via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a link state
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle link state status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle link state status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom link state action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom link state action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types`
-- **Method:** `GET`
-- **Description:** List link types
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/export`
-- **Method:** `GET`
-- **Description:** Export link types
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/new`
-- **Method:** `GET`
-- **Description:** Render link type creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id`
-- **Method:** `GET`
-- **Description:** Show link type details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id/edit`
-- **Method:** `GET`
-- **Description:** Render link type edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types`
-- **Method:** `POST`
-- **Description:** Create a link type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id`
-- **Method:** `PUT`
-- **Description:** Update a link type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id`
-- **Method:** `POST`
-- **Description:** Update a link type via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a link type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle link type status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle link type status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom link type action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom link type action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses`
-- **Method:** `GET`
-- **Description:** List queue auto responses
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/export`
-- **Method:** `GET`
-- **Description:** Export queue auto responses
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/new`
-- **Method:** `GET`
-- **Description:** Render queue auto response creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id`
-- **Method:** `GET`
-- **Description:** Show queue auto response details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id/edit`
-- **Method:** `GET`
-- **Description:** Render queue auto response edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses`
-- **Method:** `POST`
-- **Description:** Create a queue auto response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id`
-- **Method:** `PUT`
-- **Description:** Update a queue auto response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id`
-- **Method:** `POST`
-- **Description:** Update a queue auto response via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a queue auto response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle queue auto response status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle queue auto response status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom queue auto response action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom queue auto response action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors`
-- **Method:** `GET`
-- **Description:** List article colors
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/export`
-- **Method:** `GET`
-- **Description:** Export article colors
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/new`
-- **Method:** `GET`
-- **Description:** Render article color creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/:id`
-- **Method:** `GET`
-- **Description:** Show article color details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/:id/edit`
-- **Method:** `GET`
-- **Description:** Render article color edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors`
-- **Method:** `POST`
-- **Description:** Create an article color
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/:id`
-- **Method:** `PUT`
-- **Description:** Update an article color
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/:id`
-- **Method:** `POST`
-- **Description:** Update an article color via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/:id`
-- **Method:** `DELETE`
-- **Description:** Delete an article color
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom article color action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom article color action
-
-
-
-
----
-
-
-
-### Default: admin-mail-account-status
-
-**Description:** Mail account poll status endpoints  
-**Prefix:** `/admin`  
-**Middleware:** `auth` `admin` 
-
-
-#### 
-
-- **Path:** `/mail-accounts/:id/poll-status`
-- **Method:** `GET`
-- **Description:** Fetch poll status for a mail account
-
-
-
-
----
-
-#### 
-
-- **Path:** `/dynamic/mail_account/:id/poll-status`
-- **Method:** `GET`
-- **Description:** Fetch poll status for a mail account (dynamic path)
-
-
-
-
----
-
-
-
 ### Default: agent
 
 **Description:** Agent-specific routes for ticket management  
@@ -5209,6 +5264,92 @@ Generated from YAML route definitions
 
 
 
+### Default: api-setup-admin
+
+**Description:** Setup assistant admin API (recce, wizard, task catalog)  
+**Prefix:** `/api/v1/admin/setup`  
+**Middleware:** `unified_auth` `admin` 
+
+
+#### 
+
+- **Path:** `/recce`
+- **Method:** `GET`
+- **Description:** Return system snapshot (entity counts &#43; setup status)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/wizard`
+- **Method:** `POST`
+- **Description:** Execute the first-run wizard from a single JSON payload
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/onboard-customer`
+- **Method:** `POST`
+- **Description:** Provision a customer company &#43; portal users in one shot
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tasks`
+- **Method:** `GET`
+- **Description:** Return the combined core &#43; plugin setup task catalog
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tasks/:plugin/:task_id`
+- **Method:** `POST`
+- **Description:** Dispatch a plugin setup task
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/customers/search/:query`
+- **Method:** `GET`
+- **Description:** Search customers for dropdown type-ahead (supports name and ID)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/customers/:customer_id`
+- **Method:** `GET`
+- **Description:** Return full customer configuration for form auto-population
+
+
+
+
+---
+
+
+
 ### Default: api-ticket-messages
 
 **Description:** Ticket message retrieval and creation endpoints  
@@ -5654,6 +5795,156 @@ Generated from YAML route definitions
 
 
 
+### Default: api-tokens-admin
+
+**Description:** API token admin management  
+**Prefix:** `/api/v1/admin`  
+**Middleware:** `unified_auth` `admin` 
+
+
+#### 
+
+- **Path:** `/tokens`
+- **Method:** `GET`
+- **Description:** List all API tokens (admin)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tokens/:id`
+- **Method:** `DELETE`
+- **Description:** Revoke any API token (admin)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/users/:userId/tokens`
+- **Method:** `GET`
+- **Description:** List a specific user&#39;s API tokens
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/users/:userId/tokens`
+- **Method:** `POST`
+- **Description:** Create API token for a user
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/users/:userId/tokens/:tokenId`
+- **Method:** `DELETE`
+- **Description:** Revoke a specific user&#39;s token
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/customer-users/:customerId/tokens`
+- **Method:** `GET`
+- **Description:** List a specific customer&#39;s API tokens
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/customer-users/:customerId/tokens`
+- **Method:** `POST`
+- **Description:** Create API token for a customer
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/customer-users/:customerId/tokens/:tokenId`
+- **Method:** `DELETE`
+- **Description:** Revoke a specific customer&#39;s token
+
+
+
+
+---
+
+
+
+### Default: api-tokens-customer
+
+**Description:** API token management for customers  
+**Prefix:** `/customer/api/v1/tokens`  
+**Middleware:** `unified_auth` 
+
+
+#### 
+
+- **Path:** `/`
+- **Method:** `GET`
+- **Description:** List my API tokens (customer)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/`
+- **Method:** `POST`
+- **Description:** Create a new API token (customer)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/:id`
+- **Method:** `DELETE`
+- **Description:** Revoke an API token (customer)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/scopes`
+- **Method:** `GET`
+- **Description:** List available token scopes (customer)
+
+
+
+
+---
+
+
+
 ### Default: api-types-protected
 
 **Description:** Ticket type management API endpoints (protected)  
@@ -5708,6 +5999,862 @@ Generated from YAML route definitions
 - **Path:** `/auth/login`
 - **Method:** `POST`
 - **Description:** Authenticate user and return JWT tokens
+
+
+
+
+---
+
+
+
+### Default: api-v1-protected
+
+**Description:** REST API v1 protected endpoints  
+**Prefix:** `/api/v1`  
+**Middleware:** `unified_auth` 
+
+
+#### 
+
+- **Path:** `/tickets`
+- **Method:** `GET`
+- **Description:** List tickets
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets`
+- **Method:** `POST`
+- **Description:** Create ticket
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id`
+- **Method:** `GET`
+- **Description:** Get ticket by ID
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id`
+- **Method:** `PUT`
+- **Description:** Update ticket
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id`
+- **Method:** `DELETE`
+- **Description:** Delete ticket
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id/reopen`
+- **Method:** `POST`
+- **Description:** Reopen ticket
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id/time`
+- **Method:** `POST`
+- **Description:** Add time accounting entry to ticket
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id/articles`
+- **Method:** `GET`
+- **Description:** Get ticket articles
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id/articles`
+- **Method:** `POST`
+- **Description:** Add article to ticket
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id/articles/:article_id`
+- **Method:** `GET`
+- **Description:** Get specific article
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id/internal-notes`
+- **Method:** `GET`
+- **Description:** Get internal notes for a ticket
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id/internal-notes`
+- **Method:** `POST`
+- **Description:** Create internal note for a ticket
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id/internal-notes/:note_id`
+- **Method:** `PUT`
+- **Description:** Update internal note
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id/internal-notes/:note_id`
+- **Method:** `DELETE`
+- **Description:** Delete internal note
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/users`
+- **Method:** `GET`
+- **Description:** List users
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/users/:id`
+- **Method:** `GET`
+- **Description:** Get user by ID
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/users/me`
+- **Method:** `GET`
+- **Description:** Get current user
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/groups`
+- **Method:** `GET`
+- **Description:** List groups
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queues`
+- **Method:** `GET`
+- **Description:** List queues
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queues/:id`
+- **Method:** `GET`
+- **Description:** Get queue by ID
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queues/:id/agents`
+- **Method:** `GET`
+- **Description:** Get agents with permissions for queue
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/priorities`
+- **Method:** `GET`
+- **Description:** List priorities
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/priorities/:id`
+- **Method:** `GET`
+- **Description:** Get priority by ID
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/types`
+- **Method:** `GET`
+- **Description:** List ticket types
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/states`
+- **Method:** `GET`
+- **Description:** List ticket states
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/services`
+- **Method:** `GET`
+- **Description:** List services
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/ticket-attribute-relations/evaluate`
+- **Method:** `GET`
+- **Description:** Evaluate ticket attribute relations for filtering dropdowns
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/search`
+- **Method:** `POST`
+- **Description:** Search tickets
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/search/suggestions`
+- **Method:** `GET`
+- **Description:** Search suggestions
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/search/reindex`
+- **Method:** `POST`
+- **Description:** Trigger search reindex
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/search/health`
+- **Method:** `GET`
+- **Description:** Search health
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/users`
+- **Method:** `POST`
+- **Description:** Create user
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/users/:id`
+- **Method:** `PUT`
+- **Description:** Update user
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/users/:id`
+- **Method:** `DELETE`
+- **Description:** Delete user
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id/articles/:article_id`
+- **Method:** `PUT`
+- **Description:** Update article
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id/articles/:article_id`
+- **Method:** `DELETE`
+- **Description:** Delete article
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queues`
+- **Method:** `POST`
+- **Description:** Create queue
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queues/:id`
+- **Method:** `PUT`
+- **Description:** Update queue
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queues/:id`
+- **Method:** `DELETE`
+- **Description:** Delete queue
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queues/:id/stats`
+- **Method:** `GET`
+- **Description:** Queue ticket statistics
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queues/:id/groups`
+- **Method:** `POST`
+- **Description:** Assign group to queue
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/queues/:id/groups/:group_id`
+- **Method:** `DELETE`
+- **Description:** Remove group from queue
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/system-addresses`
+- **Method:** `GET`
+- **Description:** List system addresses
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/system-addresses`
+- **Method:** `POST`
+- **Description:** Create system address
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/system-addresses/:id`
+- **Method:** `PUT`
+- **Description:** Update system address
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/salutations`
+- **Method:** `GET`
+- **Description:** List salutations
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/salutations`
+- **Method:** `POST`
+- **Description:** Create salutation
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/salutations/:id`
+- **Method:** `PUT`
+- **Description:** Update salutation
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/signatures`
+- **Method:** `GET`
+- **Description:** List signatures
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/signatures`
+- **Method:** `POST`
+- **Description:** Create signature
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/signatures/:id`
+- **Method:** `PUT`
+- **Description:** Update signature
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/markdown/render`
+- **Method:** `POST`
+- **Description:** Render markdown to sanitized HTML
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/custom-fields/definitions`
+- **Method:** `GET`
+- **Description:** List custom field definitions
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/custom-fields/definitions/:id`
+- **Method:** `GET`
+- **Description:** Get custom field definition
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/custom-fields/definitions`
+- **Method:** `POST`
+- **Description:** Create custom field definition (admin only)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/custom-fields/definitions/:id`
+- **Method:** `PUT`
+- **Description:** Update custom field definition (admin only)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/custom-fields/definitions/:id`
+- **Method:** `DELETE`
+- **Description:** Soft-delete custom field definition (admin only)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/custom-fields/values/:entity_type/:id`
+- **Method:** `GET`
+- **Description:** Get custom field values for entity
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/custom-fields/values/:entity_type/:id`
+- **Method:** `PUT`
+- **Description:** Set custom field values for entity
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/custom-fields/query`
+- **Method:** `POST`
+- **Description:** Query entities by custom field values
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/session/orgs`
+- **Method:** `GET`
+- **Description:** List current user&#39;s organisations
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/session/org`
+- **Method:** `POST`
+- **Description:** Switch active organisation
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/organisations`
+- **Method:** `GET`
+- **Description:** List all organisations (admin only)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/organisations`
+- **Method:** `POST`
+- **Description:** Create organisation (admin only)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/organisations/:id`
+- **Method:** `PUT`
+- **Description:** Update organisation (admin only)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/organisations/:id`
+- **Method:** `DELETE`
+- **Description:** Delete organisation (admin only)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/organisations/:id/members`
+- **Method:** `GET`
+- **Description:** List organisation members
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/organisations/:id/members`
+- **Method:** `POST`
+- **Description:** Add member to organisation
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/organisations/:id/members/:member_id`
+- **Method:** `DELETE`
+- **Description:** Remove member from organisation
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/organisations/:id/plugin-access`
+- **Method:** `GET`
+- **Description:** List plugin-access bindings for an organisation
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/organisations/:id/plugin-access`
+- **Method:** `POST`
+- **Description:** Set or replace plugin-access binding for an organisation
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/organisations/:id/plugin-access/:plugin`
+- **Method:** `DELETE`
+- **Description:** Disable a plugin for an organisation
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/organisations/:id/captive-plugin`
+- **Method:** `POST`
+- **Description:** Set or clear the captive plugin for an organisation
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/organisations/:id/config`
+- **Method:** `GET`
+- **Description:** List per-org config overrides
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/organisations/:id/config`
+- **Method:** `PUT`
+- **Description:** Set per-org config override
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/organisations/:id/config/:name`
+- **Method:** `DELETE`
+- **Description:** Remove per-org config override
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/admin/sql`
+- **Method:** `POST`
+- **Description:** Execute read-only SQL query (SELECT, DESCRIBE, EXPLAIN, SHOW TABLES/COLUMNS — admin only)
 
 
 
@@ -5978,7 +7125,7 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/auth/:provider`
+- **Path:** `/auth/:id`
 - **Method:** `GET`
 - **Description:** Redirect to IdP for OIDC/OAuth2 authentication
 
@@ -5989,9 +7136,42 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/auth/:provider/callback`
+- **Path:** `/auth/:id/callback`
 - **Method:** `GET`
 - **Description:** Handle OIDC/OAuth2 callback from IdP
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auth/:id/saml`
+- **Method:** `GET`
+- **Description:** Initiate SAML2 SP-initiated login flow
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auth/:id/acs`
+- **Method:** `POST`
+- **Description:** Handle SAML2 ACS POST response from IdP
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/auth/:id/metadata`
+- **Method:** `GET`
+- **Description:** Serve SAML2 SP metadata XML for IdP auto-configuration
 
 
 
@@ -6033,7 +7213,7 @@ Generated from YAML route definitions
 
 - **Path:** `/health/detailed`
 - **Method:** `GET`
-- **Description:** Detailed health check with component status
+- **Description:** Detailed health check with component status (admin only)
 
 
 
@@ -6044,7 +7224,7 @@ Generated from YAML route definitions
 
 - **Path:** `/metrics`
 - **Method:** `GET`
-- **Description:** Prometheus metrics endpoint
+- **Description:** Prometheus metrics endpoint (admin only)
 
 
 

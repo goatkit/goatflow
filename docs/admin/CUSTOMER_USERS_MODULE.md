@@ -20,24 +20,24 @@ The AdminCustomerUser module provides comprehensive customer user management fun
 - **Dark Mode**: Full dark theme support
 - **Professional Dialogs**: Branded delete confirmations (no browser alerts)
 
-### 2. Backend Handlers (`internal/api/customer_user_handlers.go`)
-- `handleGetCustomerUsers` - List with search/filter support
-- `handleCreateCustomerUser` - Create with duplicate detection  
-- `handleUpdateCustomerUser` - Update all customer fields
-- `handleDeleteCustomerUser` - Soft delete (valid_id = 2)
-- `handleGetCustomerUserDetails` - Detailed view with stats
-- `handleImportCustomerUsers` - CSV bulk import
-- `handleGetAvailableCompanies` - Company dropdown data
+### 2. Backend Handlers (`internal/api/admin_customer_users_handlers.go`)
+- `HandleAdminCustomerUsersList` - List with search/filter support
+- `HandleAdminCustomerUsersGet` - Detail view with stats
+- `HandleAdminCustomerUsersCreate` - Create with duplicate detection
+- `HandleAdminCustomerUsersUpdate` - Update all customer fields
+- `HandleAdminCustomerUsersDelete` - Soft delete (valid_id = 2)
+- `HandleAdminCustomerUsersTickets` - Per-customer ticket stats
+- `HandleAdminCustomerUsersImportForm` / `HandleAdminCustomerUsersImport` - CSV bulk import
+- `HandleAdminCustomerUsersExport` - CSV export
+- `HandleAdminCustomerUsersBulkAction` - Bulk operations
 
-### 3. Test Coverage (`internal/api/customer_user_handlers_test.go`)
-- TestGetCustomerUsers - List and filter operations
-- TestGetCustomerUsersWithFilters - Company filtering
-- TestCreateCustomerUser - Creation with validation
-- TestCreateCustomerUserDuplicateLogin - Duplicate prevention
-- TestUpdateCustomerUser - Field updates
-- TestDeleteCustomerUser - Soft deletion
-- TestGetCustomerUserDetails - Detail retrieval
-- TestImportCustomerUsersCSV - Bulk import
+Supporting code: `internal/api/admin_customer_user_services.go` (service layer),
+`internal/api/admin_customer_user_groups_handlers.go` (customer-user group permissions).
+Routes are declared in `routes/admin.yaml` under `/admin/customer-users`.
+
+### 3. Test Coverage
+- `internal/api/admin_customer_user_groups_test.go` - customer user group permission CRUD
+- `internal/api/admin_customer_user_services_test.go` - service-layer behaviour
 - TestGetAvailableCompanies - Company list
 
 ### 4. API Routes (Added to `htmx_routes.go`)

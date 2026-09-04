@@ -2,6 +2,11 @@
 # Multi-arch: supports both amd64 and arm64
 FROM mcr.microsoft.com/playwright:v1.60.0-jammy
 
+# MCR base ships /tmp as 0755 root:root. apt's acquire queue verifies
+# signatures as the unprivileged _apt user, which cannot create its
+# config temp files there; restore the standard 1777 so apt works.
+RUN chmod 1777 /tmp
+
 # Install Go toolchain (match project toolchain if needed)
 # Detects architecture automatically (amd64 or arm64)
 ARG GO_VERSION=1.25.12

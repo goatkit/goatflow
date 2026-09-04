@@ -45,7 +45,7 @@ This is similar to how:
 
 ## License
 
-GoatFlow-CE is licensed under [LICENSE TYPE - TO BE DETERMINED], which allows for commercial and non-commercial use while ensuring the project remains open source.
+GoatFlow-CE is licensed under the Apache License, Version 2.0 (Apache-2.0), which allows for commercial and non-commercial use while ensuring the project remains open source.
 
 ## Contributing
 
@@ -57,8 +57,8 @@ Contributors must:
 
 ## Contact
 
-If you have any concerns about the legal aspects of this project, please contact [CONTACT INFORMATION].
+If you have any concerns about the legal aspects of this project, please contact hello@goatflow.io.
 
 ---
 
-*This document was last updated on January 2025*
+*This document was last updated on September 2026*

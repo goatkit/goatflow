@@ -3,7 +3,7 @@
 Status: Active
 
 ## Manifest & Drift Governance (Added)
-We generate `runtime/routes-manifest.json` from YAML definitions. A baseline `runtime/routes-manifest.baseline.json` is auto-created if missing. Drift detection now classifies:
+We generate `generated/routes-manifest.json` from YAML definitions. A baseline `generated/routes-manifest.baseline.json` is auto-created if missing. Drift detection now classifies:
 * Added routes (method|path newly present)
 * Removed routes
 * Changed attributes per stable key (handler, redirectTo, status, middleware set, websocket flag)
@@ -12,7 +12,7 @@ Script: `scripts/check_routes_manifest.sh` (invoked by governance targets) print
 
 Machine-friendly diff: `cmd/routes-diff` outputs JSON object `{added, removed, changed}` for CI or tooling.
 
-Runtime directory is mounted as a named volume (`goatflow_runtime`) to ensure writes from toolbox and backend containers are consistent without permission fallbacks.
+The manifest is generated into the repository `generated/` directory; `generated/routes-manifest.json` is produced by the build/tests and compared against the committed baseline `generated/routes-manifest.baseline.json`.
 
 ## Single Source of Truth
 All business and API routes must be defined in YAML route files under `routes/`.
@@ -69,7 +69,7 @@ If a non-business route must remain in code (e.g. temporary diagnostics), prefix
 | Route map empty | No `/api/` references in templates/JS or grep pattern too strict | Adjust `scripts/api_map.sh` regex |
 
 ## Scripts Overview
-* `scripts/api_map.sh` – scans `web/templates` + `static/js` for `/api/` references; builds graphs.
+* `scripts/api_map.sh` – scans `templates` + `static/js` for `/api/` references; builds graphs.
 * `scripts/validate_routes.sh` – audits `htmx_routes.go` for code-defined routes vs baseline.
 
 ## Future Enhancements (Optional)

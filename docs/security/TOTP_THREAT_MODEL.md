@@ -72,7 +72,7 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 - [x] 30-second TOTP window limits valid codes
 - [x] Response includes `attempts_remaining` for user feedback
 
-**Implementation:** `internal/auth/totp_session.go` - `TOTPSessionManager.RecordFailedAttempt()`
+**Implementation:** `internal/platform/auth/totp_session.go` - `TOTPSessionManager.RecordFailedAttempt()`
 
 **Test:** `TestVuln_V3_RateLimitingEnforced`, `TestVuln_V3_SessionLockedAfterMaxAttempts`
 
@@ -90,7 +90,7 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 - [x] Audit log when recovery code is used
 - [x] Recovery codes are single-use (consumed on use)
 
-**Implementation:** `internal/service/totp_service.go` - 16 bytes from crypto/rand, base64-encoded to 12 chars
+**Implementation:** `internal/platform/service/totp_service.go` - 16 bytes from crypto/rand, base64-encoded to 12 chars
 
 **Test:** `TestVuln_V6_RecoveryCodeEntropy`, `TestVuln_V6_RecoveryCodesNotShort`
 
@@ -111,7 +111,7 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 - [x] Strict IP binding - session rejected if client IP changes during 2FA window
 - [x] UA mismatch logging for security monitoring (soft enforcement)
 
-**Implementation:** `internal/auth/totp_session.go` - `TOTPSessionManager`
+**Implementation:** `internal/platform/auth/totp_session.go` - `TOTPSessionManager`
 
 **Test:** `TestVuln_V2_PendingTokenNotPredictable`, `TestVuln_V5_SessionValidatedServerSide`
 
@@ -146,7 +146,7 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 - [x] Audit logging excludes secret values (only logs events, not secrets)
 - [x] QR code generated server-side
 
-**Implementation:** `internal/auth/totp_audit.go` - structured logging without sensitive data
+**Implementation:** `internal/platform/auth/totp_audit.go` - structured logging without sensitive data
 
 **Test:** `TestTOTP_StatusResponseDoesNotExposeSecret`, `TestVuln_V8_AuditLogFormat`
 
@@ -179,7 +179,7 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 - [x] Pending 2FA session stores user identity server-side
 - [x] Customer login stored server-side, not in cookie
 
-**Implementation:** `internal/auth/totp_session.go` - stores UserID/Login in server memory, cookie only has random token
+**Implementation:** `internal/platform/auth/totp_session.go` - stores UserID/Login in server memory, cookie only has random token
 
 **Test:** `TestVuln_V1_IDOR_UserIDNotFromRequestBody`, `TestVuln_V4_CustomerLoginNotInCookie`
 
@@ -197,7 +197,7 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 - [x] Email notification when 2FA disabled
 - [x] Require re-authentication before disable (future enhancement)
 
-**Implementation:** `internal/auth/totp_audit.go` - `LogTOTPDisabled()`
+**Implementation:** `internal/platform/auth/totp_audit.go` - `LogTOTPDisabled()`
 
 **Test:** `TestTOTP_DisableRequiresCodeInRequest`, `TestVuln_V8_AuditEventsExist`
 
@@ -229,7 +229,7 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 - [x] Email notification when 2FA enabled
 - [x] Require password re-entry before 2FA setup (future enhancement)
 
-**Implementation:** `internal/auth/totp_audit.go` - `LogTOTPSetupCompleted()`
+**Implementation:** `internal/platform/auth/totp_audit.go` - `LogTOTPSetupCompleted()`
 
 **Test:** `TestVuln_V8_AuditEventsExist`
 
@@ -325,7 +325,7 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 
 ## Audit Events
 
-The following events are logged via `internal/auth/totp_audit.go`:
+The following events are logged via `internal/platform/auth/totp_audit.go`:
 
 | Event | Description |
 |-------|-------------|

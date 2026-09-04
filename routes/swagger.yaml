@@ -12,7 +12,7 @@
 # Dark mode: enabled by default (handleSwaggerDark)
 # Light mode: change handler to handleSwagger
 #
-apiVersion: v1
+apiVersion: goatflow.io/v1
 kind: RouteGroup
 metadata:
   name: swagger-ui

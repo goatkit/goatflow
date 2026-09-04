@@ -9,8 +9,6 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/goatkit/goatflow/internal/platform/routing"
 )
 
@@ -349,27 +347,34 @@ func validateRoutes(routesDir string) {
 			return nil //nolint:nilerr // continue walking on error
 		}
 
-		var config routing.RouteConfig
-		if err := yaml.Unmarshal(data, &config); err != nil {
+		docs, err := routing.ParseYAMLDocuments[routing.RouteConfig](data)
+		if err != nil {
 			fmt.Printf("❌ %s: Invalid YAML: %v\n", relPath, err)
 			errorCount++
 			return nil
 		}
 
-		// Validate configuration
-		issues := validateRouteConfig(&config)
+		// Validate every route group in the file
+		for i := range docs {
+			config := &docs[i]
+			if config.Metadata.Name == "" {
+				continue
+			}
+			label := fmt.Sprintf("%s (%s)", relPath, config.Metadata.Name)
 
-		if len(issues) == 0 {
-			fmt.Printf("✅ %s: Valid\n", relPath)
-			validCount++
-		} else {
-			for _, issue := range issues {
-				if strings.HasPrefix(issue, "Warning") {
-					fmt.Printf("⚠️  %s: %s\n", relPath, issue)
-					warningCount++
-				} else {
-					fmt.Printf("❌ %s: %s\n", relPath, issue)
-					errorCount++
+			issues := validateRouteConfig(config)
+			if len(issues) == 0 {
+				fmt.Printf("✅ %s: Valid\n", label)
+				validCount++
+			} else {
+				for _, issue := range issues {
+					if strings.HasPrefix(issue, "Warning") {
+						fmt.Printf("⚠️  %s: %s\n", label, issue)
+						warningCount++
+					} else {
+						fmt.Printf("❌ %s: %s\n", label, issue)
+						errorCount++
+					}
 				}
 			}
 		}
@@ -383,7 +388,7 @@ func validateRoutes(routesDir string) {
 	}
 
 	fmt.Printf("\n📊 Summary:\n")
-	fmt.Printf("   Valid:    %d files\n", validCount)
+	fmt.Printf("   Valid:    %d route groups\n", validCount)
 	fmt.Printf("   Warnings: %d issues\n", warningCount)
 	fmt.Printf("   Errors:   %d issues\n", errorCount)
 
@@ -448,14 +453,19 @@ func loadRoutesFromDir(dir string) (map[string]*routing.RouteConfig, error) {
 			return err
 		}
 
-		var config routing.RouteConfig
-		if err := yaml.Unmarshal(data, &config); err != nil {
+		docs, err := routing.ParseYAMLDocuments[routing.RouteConfig](data)
+		if err != nil {
 			return fmt.Errorf("parsing %s: %w", path, err)
 		}
 
-		// Use filename without extension as key
-		name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-		routes[name] = &config
+		// A file may hold several route groups; key by group name
+		for i := range docs {
+			config := &docs[i]
+			if config.Metadata.Name == "" {
+				continue
+			}
+			routes[config.Metadata.Name] = config
+		}
 
 		return nil
 	})
@@ -489,7 +499,7 @@ func validateRouteConfig(config *routing.RouteConfig) []string {
 			issues = append(issues, fmt.Sprintf("Route %d: missing path", i))
 		}
 
-		if route.Method == nil {
+		if route.Method == nil && len(route.Handlers) == 0 {
 			issues = append(issues, fmt.Sprintf("Route %d: missing method", i))
 		}
 

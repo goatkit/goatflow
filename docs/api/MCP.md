@@ -34,7 +34,7 @@ The MCP server acts as a thin adapter over the existing REST API. At startup, it
 
 Tools are generated automatically at startup from two sources:
 
-1. **REST API routes** (`routes/api-v1.yaml`) — each route becomes an MCP tool with input schema derived from the OpenAPI spec
+1. **REST API routes** (`routes/api-v1-global.yaml`) — each route becomes an MCP tool with input schema derived from the OpenAPI spec
 2. **Plugin routes** — each enabled plugin's routes become MCP tools, namespaced by plugin name
 
 No manual tool registration is needed. Adding a new API endpoint or plugin route automatically makes it available via MCP.

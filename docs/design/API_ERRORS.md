@@ -35,7 +35,7 @@ All error codes are namespaced to prevent collisions and clarify ownership:
 
 ## Core Error Codes
 
-Defined in `internal/errors/codes.go`:
+Defined in `internal/platform/apierrors/codes.go`:
 
 | Code | HTTP Status | Description |
 |------|-------------|-------------|

@@ -19,17 +19,11 @@ GoatFlow provides comprehensive LDAP and Active Directory integration for enterp
 
 ### 1. Development Setup with OpenLDAP
 
-GoatFlow includes a pre-configured OpenLDAP container for development and testing:
+LDAP support is implemented in the application (see [LDAP_INTEGRATION.md](LDAP_INTEGRATION.md)).
+The OpenLDAP and phpLDAPadmin containers in `docker-compose.yml` are provided for testing but
+are currently commented out - point `LDAP_HOST`/`LDAP_PORT` at your own LDAP server.
 
-```bash
-# Start the full stack including OpenLDAP
-make up
-
-# Or start with tools (includes phpLDAPadmin)
-docker-compose --profile tools up -d
-```
-
-The development LDAP server includes:
+When enabled, the development LDAP server is configured with:
 - **Domain**: `goatflow.local`
 - **Base DN**: `dc=goatflow,dc=local`
 - **Admin User**: `cn=admin,dc=goatflow,dc=local` (password: set `LDAP_ADMIN_PASSWORD` in `.env`)
