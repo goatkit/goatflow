@@ -212,6 +212,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
   could run on a half-loaded document and flake to 0. The count now polls
   (`require.Eventually`, 15 s) until the row is present
   (`tests/e2e/playwright/ticket_search_test.go`).
+- **MariaDB test DB came up without most of its schema.** `docker/mariadb/testdb/10-apply-migrations.sh`
+  applied a hard-coded list of migrations 1–4 (one name stale), and the test DB lives on tmpfs, so
+  every container recreation lost `canned_response`, `user_api_tokens`, `gk_identity_provider` and
+  the rest; 12 `internal/api` tests failed. The script now applies every `*.up.sql` in order.
 - **Playwright Go test image apt failures on the MCR base.** `Dockerfile.playwright-go`
   now restores `/tmp` to the standard mode 1777: the base image ships `/tmp` as
   `0755 root:root`, and apt's unprivileged `_apt` signature-verification user

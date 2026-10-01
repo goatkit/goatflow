@@ -25,22 +25,22 @@ mariadb_root_cli() {
         "${MARIADB_DATABASE}"
 }
 
+# Apply every up migration in version order, so the test DB has the same
+# schema as a migrated install. The data dir is tmpfs: each container
+# (re)creation starts empty and relies on this script alone. A hard-coded
+# list here went stale and left later tables (canned_response,
+# user_api_tokens, gk_identity_provider, ...) missing.
 MIGRATIONS_DIR="/docker-entrypoint-initdb.d/migrations"
-MIGRATION_FILES=(
-    000001_schema_alignment.up.sql
-    000002_minimal_data.up.sql
-    000003_queue_email_address.up.sql
-    000004_dynamic_field_screen_config.up.sql
-)
+shopt -s nullglob
+MIGRATION_FILES=("${MIGRATIONS_DIR}"/*.up.sql)
+if [ "${#MIGRATION_FILES[@]}" -eq 0 ]; then
+    echo "No migrations found in ${MIGRATIONS_DIR}" >&2
+    exit 1
+fi
 
-for file in "${MIGRATION_FILES[@]}"; do
-    path="${MIGRATIONS_DIR}/${file}"
-    if [ -f "$path" ]; then
-        echo "Applying migration: ${file}"
-        mariadb_cli < "$path"
-    else
-        echo "Skipping missing migration: ${file}"
-    fi
+for path in "${MIGRATION_FILES[@]}"; do
+    echo "Applying migration: $(basename "$path")"
+    mariadb_cli < "$path"
 done
 
 echo "Ensuring '${MARIADB_USER}' has remote access"
