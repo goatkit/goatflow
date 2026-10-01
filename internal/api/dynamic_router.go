@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/pluginui"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 )
@@ -56,6 +57,10 @@ func MountDynamicEngine(r *gin.Engine, routesDir string) {
 func RebuildDynamicEngine() {
 	eng := gin.New()
 	eng.Use(gin.Recovery())
+	// HandleContext (NoRoute -> this engine) resets the gin.Context keys the
+	// main engine's middleware set, so language detection runs again here;
+	// without it YAML and plugin routes never see the user's language.
+	eng.Use(middleware.NewI18nMiddleware().Handle())
 
 	// 1. YAML routes
 	if dynRouteDir != "" {

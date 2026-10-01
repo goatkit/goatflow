@@ -10,6 +10,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.10.0] - Unreleased
 
 ### Added
+- **Plugins receive the user's language as `_lang`.** Route calls (`buildPluginArgs`) and plugin
+  UI page calls (`pluginui`) now carry the i18n middleware's resolved language code next to the
+  identity keys. gRPC plugins could not localise before: their `HostAPI.Translate` callback runs
+  without the request context and always resolved `en`. A plugin that ships its own translations
+  (`I18nSpec`) now looks strings up locally with `_lang` (first consumer: `goatkit-calendar`).
 - **Shared Tiptap editor partial for plugins (`static/js/gk-editor.js` + `templates/partials/tiptap_editor.pongo2`).**
   Plugins previously copy-pasted the two Tiptap script tags plus a manual "retry until `TiptapEditor`
   is defined" dance into every page. A single `<script src="/static/js/gk-editor.js"></script>`
@@ -146,6 +151,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
   (`cmd/goats/main.go`).
 
 ### Fixed
+- **Plugin pages and YAML routes now see the user's language.** Both are served by the dynamic
+  engine via `NoRoute` → `HandleContext`, which resets the gin.Context keys the main engine's i18n
+  middleware set, so `c.Get("language")` was always empty there (plugin UI shells rendered LTR
+  English even with `?lang=ar`). The dynamic engine now runs the i18n middleware itself.
 - **Last remaining Dependabot vulnerability: `postcss-selector-parser`
   pinned to 6.1.4.** The transitive instances (via `tailwindcss ^6.1.2` and
   `postcss-nested ^6.1.1`) resolved to 6.1.2, inside the vulnerable

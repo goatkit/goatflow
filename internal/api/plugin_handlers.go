@@ -518,6 +518,13 @@ func buildPluginArgs(c *gin.Context, pluginName ...string) json.RawMessage {
 	if isAdmin, exists := c.Get("isInAdminGroup"); exists {
 		args["_is_admin"] = isAdmin
 	}
+	// The user's resolved UI language (i18n middleware: ?lang=, cookie, user
+	// preference, Accept-Language). Plugins that ship their own translations
+	// look strings up locally with it; HostAPI callbacks carry no request
+	// context, so the language must travel with the call.
+	if lang, exists := c.Get(middleware.LanguageContextKey); exists {
+		args["_lang"] = lang
+	}
 
 	// Inject org context from the authenticated session unless the plugin opts out.
 	// Use the cookie-aware helper rather than OrgIDFromContext(ctx) because

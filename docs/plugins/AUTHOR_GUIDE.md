@@ -444,6 +444,13 @@ Access in handlers:
 title := host.Translate(ctx, "my_plugin.widget_title")
 ```
 
+Every plugin call from a route or UI page carries the user's resolved
+language in `args["_lang"]` (`?lang=`, cookie, user preference,
+Accept-Language). gRPC plugins should look strings up locally with it: their
+`host.Translate` callback crosses the RPC boundary without the request
+context, so it always resolves the default language (`en`). Declaring the
+same maps in `I18nSpec` still registers them with the host catalogue.
+
 ## Plugin UI Offline Caching
 
 Plugin UIs can enable PWA support and ask GoatFlow's root service worker to

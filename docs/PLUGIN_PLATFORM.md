@@ -277,6 +277,7 @@ When the platform routes an HTTP request to a plugin handler, it builds the
 - **Request metadata** — `_method`, `_path`
 - **Authenticated user** — `_user_id`, `_user_email`, `_user_login`, `_customer_login`, `_user_role`, `_is_admin`
 - **Org context** — `_org_id` and `org_id` (int64) from the active session, unless the plugin sets `SkipOrgInjection: true`
+- **Language** — `_lang`, the user's resolved UI language code (e.g. `de`); also sent to plugin UI page handlers
 
 The handler returns `(json.RawMessage, error)`. The dynamic router
 (`internal/api/dynamic_router.go`) interprets the JSON response as follows:

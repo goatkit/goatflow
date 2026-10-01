@@ -11,6 +11,8 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
+	"github.com/goatkit/goatflow/internal/platform/middleware"
 )
 
 // PluginCaller is an interface for calling plugin functions.
@@ -144,6 +146,11 @@ func buildUIHandler(ui PluginUI, cfg *UIConfig, route UIRouteConfig, repo UIInfo
 		if orgID, exists := c.Get("org_id"); exists {
 			args["_org_id"] = orgID
 			args["org_id"] = orgID
+		}
+		// The user's resolved UI language, for plugins that ship their own
+		// translations (same key as the API buildPluginArgs).
+		if lang, exists := c.Get(middleware.LanguageContextKey); exists {
+			args["_lang"] = lang
 		}
 
 		argsJSON, _ := json.Marshal(args)
