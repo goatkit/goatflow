@@ -212,6 +212,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
   could run on a half-loaded document and flake to 0. The count now polls
   (`require.Eventually`, 15 s) until the row is present
   (`tests/e2e/playwright/ticket_search_test.go`).
+- **PostgreSQL installs could not run migrations at all.** `migrations/postgres/` still held the
+  old copies of three migrations after they were renumbered to match MySQL
+  (`000005_customer_portal_sysconfig`, `000024_saml_fields`, `000025_user_table_for_idp_routing`), so
+  golang-migrate stopped with "duplicate migration file". The stale copies are removed (the
+  customer-portal down migration moves to `000003`); the PostgreSQL and MySQL migration sets now have
+  the same 26 versions and `migrate up` runs 1–26 on an empty PostgreSQL database. The PostgreSQL
+  test DB init script (`docker/postgres/testdb/10-apply-migrations.sh`) applied only migration 1; it
+  now applies every `*.up.sql` in order, like the MariaDB one.
 - **MariaDB test DB came up without most of its schema.** `docker/mariadb/testdb/10-apply-migrations.sh`
   applied a hard-coded list of migrations 1–4 (one name stale), and the test DB lives on tmpfs, so
   every container recreation lost `canned_response`, `user_api_tokens`, `gk_identity_provider` and

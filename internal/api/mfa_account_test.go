@@ -48,7 +48,7 @@ func TestTurnOff2FARemovesPasskeysToo(t *testing.T) {
 		mock.ExpectExec("DELETE FROM user_preferences").WithArgs(42, key).WillReturnResult(sqlmock.NewResult(0, 1))
 	}
 	mock.ExpectCommit()
-	mock.ExpectExec(`DELETE FROM gk_webauthn_credential WHERE user_type = \? AND user_key = \?`).
+	mock.ExpectExec("DELETE FROM gk_webauthn_credential WHERE user_type").
 		WithArgs("agent", "42").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -74,7 +74,7 @@ func TestTurnOff2FARejectsWrongCodeAndKeepsPasskeys(t *testing.T) {
 
 func TestRemovingPasskeyClearsRecoveryCodesOnlyWithLastFactor(t *testing.T) {
 	expectDelete := func(mock sqlmock.Sqlmock) {
-		mock.ExpectExec(`DELETE FROM gk_webauthn_credential WHERE id = \?`).
+		mock.ExpectExec("DELETE FROM gk_webauthn_credential WHERE id").
 			WithArgs(int64(7), "agent", "42").
 			WillReturnResult(sqlmock.NewResult(0, 1))
 		mock.ExpectQuery("SELECT preferences_value FROM user_preferences").

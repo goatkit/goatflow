@@ -11,16 +11,19 @@ apply_migration() {
     "${psql[@]}" -f "$MIGRATIONS_DIR/$file"
 }
 
-MIGRATION_FILES=(
-    000001_schema_alignment.up.sql
-)
+# Apply every up migration in version order, so the test DB has the same
+# schema as a migrated install. The data dir is tmpfs: each container
+# (re)creation starts empty and relies on this script alone. A hard-coded
+# list here went stale and left every table after migration 1 missing.
+shopt -s nullglob
+MIGRATION_FILES=("$MIGRATIONS_DIR"/*.up.sql)
+if [ "${#MIGRATION_FILES[@]}" -eq 0 ]; then
+    echo "No migrations found in $MIGRATIONS_DIR" >&2
+    exit 1
+fi
 
-for file in "${MIGRATION_FILES[@]}"; do
-    if [ -f "$MIGRATIONS_DIR/$file" ]; then
-        apply_migration "$file"
-    else
-        echo "Skipping missing migration: $file"
-    fi
+for path in "${MIGRATION_FILES[@]}"; do
+    apply_migration "$(basename "$path")"
 done
 
 echo "All migrations applied successfully."
