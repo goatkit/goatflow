@@ -126,6 +126,10 @@ func handleUpdateState(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
 		return
 	}
+	if !fitsSmallint(id) {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "State not found"})
+		return
+	}
 	query := `UPDATE ticket_state SET change_by = ?, change_time = CURRENT_TIMESTAMP`
 	args := []interface{}{1}
 	resp := gin.H{"id": id}
@@ -170,6 +174,10 @@ func handleDeleteState(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"success": true, "message": "State deleted successfully"})
+		return
+	}
+	if !fitsSmallint(id) {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "State not found"})
 		return
 	}
 	// Args match query order: change_by, id

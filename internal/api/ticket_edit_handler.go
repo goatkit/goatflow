@@ -236,7 +236,7 @@ func handleUpdateTicketEnhanced(c *gin.Context) {
 		`), updateReq.Status).Scan(&exists)
 		if err != nil || !exists {
 			// Get valid state types for error message
-			rows, qErr := db.Query("SELECT DISTINCT name FROM ticket_state_type ORDER BY name")
+			rows, qErr := db.Query(database.ConvertPlaceholders("SELECT DISTINCT name FROM ticket_state_type ORDER BY name"))
 			var validTypes []string
 			if qErr == nil && rows != nil {
 				defer rows.Close()

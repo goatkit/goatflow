@@ -247,26 +247,26 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Get database adapter
-	adapter := database.GetAdapter()
-
 	// Insert ticket
-	ticketTypeColumn := database.TicketTypeColumn()
-	ticketQuery := database.ConvertPlaceholders(fmt.Sprintf(`
+	ticketQuery := database.ConvertPlaceholders(`
 		INSERT INTO ticket (
-			tn, title, queue_id, %s, ticket_state_id, 
+			tn, title, queue_id, type_id, ticket_state_id,
 			ticket_priority_id, customer_user_id, customer_id,
 			ticket_lock_id, user_id, responsible_user_id,
+			timeout, until_time, escalation_time, escalation_update_time,
+			escalation_response_time, escalation_solution_time,
 			create_time, create_by, change_time, change_by
 		) VALUES (
-			?, ?, ?, ?, ?, 
+			?, ?, ?, ?, ?,
 			?, ?, ?,
 			1, ?, ?,
+			0, 0, 0, 0,
+			0, 0,
 			NOW(), ?, NOW(), ?
 		) RETURNING id
-	`, ticketTypeColumn)) //nolint:gk-sql-sprintf // hardcoded column fragment; user values bound via ?
+	`)
 
-	ticketID, err := adapter.InsertWithReturningTx(
+	ticketID, err := database.GetAdapter().InsertWithReturningTx(
 		tx,
 		ticketQuery,
 		ticketNumber, ticketRequest.Title, ticketRequest.QueueID,
@@ -310,7 +310,7 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 			) RETURNING id
 		`)
 
-		articleID, err := adapter.InsertWithReturningTx(
+		articleID, err := database.GetAdapter().InsertWithReturningTx(
 			tx,
 			articleQuery,
 			ticketID, senderTypeID, userID, userID,
@@ -325,16 +325,16 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 		if subject != "" || body != "" {
 			contentQuery := database.ConvertPlaceholders(`
 				INSERT INTO article_data_mime (
-					article_id, a_subject, a_body, a_content_type,
+					article_id, a_subject, a_body, a_content_type, incoming_time,
 					create_time, create_by, change_time, change_by
 				) VALUES (
-					?, ?, ?, ?,
+					?, ?, ?, ?, ?,
 					NOW(), ?, NOW(), ?
 				)
 			`)
 
 			_, err = tx.Exec(contentQuery,
-				articleID, subject, body, contentType,
+				articleID, subject, body, contentType, time.Now().Unix(),
 				userID, userID,
 			)
 
@@ -778,13 +778,11 @@ func (router *APIRouter) HandleDeleteTicket(c *gin.Context) {
 			change_by
 		) VALUES (
 			?, 1, 1, 0, 0, NOW(), ?, NOW(), ?
-		)
+		) RETURNING id
 	`)
 
-	articleResult, err := db.Exec(insertArticleQuery, ticketID, userID, userID)
+	articleID, err := database.GetAdapter().InsertWithReturning(db, insertArticleQuery, ticketID, userID, userID)
 	if err == nil {
-		articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort
-
 		// Insert article content
 		insertMimeQuery := database.ConvertPlaceholders(`
 			INSERT INTO article_data_mime (
@@ -918,13 +916,11 @@ func (router *APIRouter) HandleAssignTicket(c *gin.Context) {
 				change_by
 			) VALUES (
 				?, 1, 1, 0, 0, NOW(), ?, NOW(), ?
-			)
+			) RETURNING id
 		`)
 
-		articleResult, err := tx.Exec(insertArticleQuery, ticketID, userID, userID)
+		articleID, err := database.GetAdapter().InsertWithReturningTx(tx, insertArticleQuery, ticketID, userID, userID)
 		if err == nil {
-			articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort
-
 			// Build assignment message
 			var previousAssignee string
 			if currentResponsibleID.Valid {
@@ -1086,13 +1082,11 @@ func (router *APIRouter) HandleCloseTicket(c *gin.Context) {
 				change_by
 			) VALUES (
 				?, 1, 1, 1, 0, NOW(), ?, NOW(), ?
-			)
+			) RETURNING id
 		`)
 
-		articleResult, err := tx.Exec(insertArticleQuery, ticketID, userID, userID)
+		articleID, err := database.GetAdapter().InsertWithReturningTx(tx, insertArticleQuery, ticketID, userID, userID)
 		if err == nil {
-			articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort
-
 			// Insert article content
 			subject := fmt.Sprintf("Ticket Closed: %s", closeRequest.Resolution)
 			body := closeRequest.Comment
@@ -1236,13 +1230,11 @@ func (router *APIRouter) HandleReopenTicket(c *gin.Context) {
 			change_by
 		) VALUES (
 			?, 1, 1, 1, 0, NOW(), ?, NOW(), ?
-		)
+		) RETURNING id
 	`)
 
-	articleResult, err := tx.Exec(insertArticleQuery, ticketID, userID, userID)
+	articleID, err := database.GetAdapter().InsertWithReturningTx(tx, insertArticleQuery, ticketID, userID, userID)
 	if err == nil {
-		articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort
-
 		// Insert article content
 		insertMimeQuery := database.ConvertPlaceholders(`
 			INSERT INTO article_data_mime (

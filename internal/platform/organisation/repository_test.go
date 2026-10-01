@@ -17,7 +17,7 @@ func getTestDB(t *testing.T) *sql.DB {
 	}
 	var count int
 	err = db.QueryRow(
-		"SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'gk_organisation'",
+		database.ConvertPlaceholders("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'gk_organisation'"),
 	).Scan(&count)
 	if err != nil || count == 0 {
 		t.Skipf("gk_organisation table not found — run migration 000011")
@@ -27,11 +27,11 @@ func getTestDB(t *testing.T) *sql.DB {
 
 func cleanupTestOrgs(t *testing.T, db *sql.DB, prefix string) {
 	t.Helper()
-	db.Exec("SET FOREIGN_KEY_CHECKS=0")
+	db.Exec(database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS=0"))
 	db.Exec(database.ConvertPlaceholders("DELETE FROM sysconfig_org WHERE org_id IN (SELECT id FROM gk_organisation WHERE slug LIKE ?)"), prefix+"%")
 	db.Exec(database.ConvertPlaceholders("DELETE FROM gk_user_organisation WHERE org_id IN (SELECT id FROM gk_organisation WHERE slug LIKE ?)"), prefix+"%")
 	db.Exec(database.ConvertPlaceholders("DELETE FROM gk_organisation WHERE slug LIKE ?"), prefix+"%")
-	db.Exec("SET FOREIGN_KEY_CHECKS=1")
+	db.Exec(database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS=1"))
 }
 
 func TestRepository_OrgCRUD(t *testing.T) {

@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
@@ -97,8 +99,7 @@ func (h *BaseCRUDHandler) RegisterRoutes(router *gin.RouterGroup) {
 
 // List handles GET requests for listing entities.
 func (h *BaseCRUDHandler) List(c *gin.Context) {
-	query := h.buildListQuery()
-	rows, err := h.DB.Query(query)
+	rows, err := h.DB.Query(database.ConvertPlaceholders(h.buildListQuery()))
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -135,8 +136,7 @@ func (h *BaseCRUDHandler) List(c *gin.Context) {
 func (h *BaseCRUDHandler) Get(c *gin.Context) {
 	id := c.Param("id")
 
-	query := h.buildGetQuery()
-	row := h.DB.QueryRow(query, id)
+	row := h.DB.QueryRow(database.ConvertPlaceholders(h.buildGetQuery()), id)
 
 	entity := h.scanEntity(row)
 	if entity == nil {
@@ -165,16 +165,13 @@ func (h *BaseCRUDHandler) Create(c *gin.Context) {
 		return
 	}
 
-	query := h.buildInsertQuery()
 	args := h.buildInsertArgs(data)
 
-	result, err := h.DB.Exec(query, args...)
+	id, err := database.GetAdapter().InsertWithReturning(h.DB, database.ConvertPlaceholders(h.buildInsertQuery()+" RETURNING id"), args...)
 	if err != nil {
 		h.handleError(c, err)
 		return
 	}
-
-	id, _ := result.LastInsertId()
 
 	c.JSON(http.StatusCreated, gin.H{
 		"success": true,
@@ -196,10 +193,9 @@ func (h *BaseCRUDHandler) Update(c *gin.Context) {
 		return
 	}
 
-	query := h.buildUpdateQuery()
 	args := h.buildUpdateArgs(data, id)
 
-	_, err := h.DB.Exec(query, args...)
+	_, err := h.DB.Exec(database.ConvertPlaceholders(h.buildUpdateQuery()), args...)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -215,14 +211,12 @@ func (h *BaseCRUDHandler) Update(c *gin.Context) {
 func (h *BaseCRUDHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 
-	var query string
+	deleteSQL := fmt.Sprintf("DELETE FROM %s WHERE id = ?", h.Config.TableName) //nolint:gk-sql-sprintf // trusted table name from validated CRUD config; values bound via ?
 	if h.Config.SoftDelete {
-		query = fmt.Sprintf("UPDATE %s SET valid_id = 2 WHERE id = ?", h.Config.TableName) //nolint:gk-sql-sprintf // trusted table name from validated CRUD config; values bound via ?
-	} else {
-		query = fmt.Sprintf("DELETE FROM %s WHERE id = ?", h.Config.TableName) //nolint:gk-sql-sprintf // trusted table name from validated CRUD config; values bound via ?
+		deleteSQL = fmt.Sprintf("UPDATE %s SET valid_id = 2 WHERE id = ?", h.Config.TableName) //nolint:gk-sql-sprintf // trusted table name from validated CRUD config; values bound via ?
 	}
 
-	_, err := h.DB.Exec(query, id)
+	_, err := h.DB.Exec(database.ConvertPlaceholders(deleteSQL), id)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -265,8 +259,12 @@ func (h *BaseCRUDHandler) Search(c *gin.Context) {
 		return
 	}
 
-	query := h.buildSearchQuery(searchTerm)
-	rows, err := h.DB.Query(query, "%"+searchTerm+"%")
+	query, fieldCount := h.buildSearchQuery()
+	args := make([]interface{}, fieldCount)
+	for i := range args {
+		args[i] = "%" + searchTerm + "%"
+	}
+	rows, err := h.DB.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -318,6 +316,7 @@ func (h *BaseCRUDHandler) buildInsertQuery() string {
 		placeholders = append(placeholders, "1")
 	}
 
+	// RETURNING id is appended by the caller, at the InsertWithReturning call.
 	return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
 		h.Config.TableName,
 		joinStrings(columns, ", "),
@@ -337,7 +336,8 @@ func (h *BaseCRUDHandler) buildUpdateQuery() string {
 		joinStrings(sets, ", ")) //nolint:gk-sql-sprintf // trusted table name from validated CRUD config; values bound via ?
 }
 
-func (h *BaseCRUDHandler) buildSearchQuery(searchTerm string) string {
+// buildSearchQuery returns the search SQL and the number of search placeholders it binds.
+func (h *BaseCRUDHandler) buildSearchQuery() (string, int) {
 	searchableFields := []string{}
 	for _, field := range h.Config.Fields {
 		if field.Searchable {
@@ -345,9 +345,12 @@ func (h *BaseCRUDHandler) buildSearchQuery(searchTerm string) string {
 				fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", field.DBColumn))
 		}
 	}
+	if len(searchableFields) == 0 {
+		searchableFields = append(searchableFields, "1 = 0")
+	}
 
 	columns := h.getSelectColumns()
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE %s",
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE (%s)",
 		columns,
 		h.Config.TableName,
 		joinStrings(searchableFields, " OR ")) //nolint:gk-sql-sprintf // trusted table name from validated CRUD config; values bound via ?
@@ -356,7 +359,7 @@ func (h *BaseCRUDHandler) buildSearchQuery(searchTerm string) string {
 		query += " AND valid_id = 1"
 	}
 
-	return query
+	return query, strings.Count(query, "?")
 }
 
 func (h *BaseCRUDHandler) getSelectColumns() string {

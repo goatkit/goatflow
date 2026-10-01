@@ -152,3 +152,77 @@ func TestNoRewriteWhenNotNeeded(t *testing.T) {
 		}
 	})
 }
+
+func TestConvertPlaceholdersPostgreSQLRewrites(t *testing.T) {
+	cases := []struct{ name, in, want string }{
+		{"parameterised DATE_SUB", "WHERE create_time >= DATE_SUB(NOW(), INTERVAL ? DAY)",
+			"WHERE create_time >= (NOW() - ($1 * INTERVAL '1 day'))"},
+		{"parameterised DATE_ADD", "SELECT DATE_ADD(NOW(), INTERVAL ? HOUR) WHERE id = ?",
+			"SELECT (NOW() + ($1 * INTERVAL '1 hour')) WHERE id = $2"},
+		{"INSERT IGNORE", "INSERT IGNORE INTO group_user (user_id, group_id) VALUES (?, ?)",
+			"INSERT INTO group_user (user_id, group_id) VALUES ($1, $2) ON CONFLICT DO NOTHING"},
+		{"INSERT IGNORE before RETURNING", "insert ignore into t (a) values (?) RETURNING id;",
+			"INSERT INTO t (a) values ($1) ON CONFLICT DO NOTHING RETURNING id"},
+		{"backticks quoted, literal kept", "SELECT `name` FROM `groups` WHERE note = 'a`b'",
+			`SELECT "name" FROM "groups" WHERE note = 'a` + "`" + `b'`},
+		{"UUID", "INSERT INTO c (salt) VALUES (UUID())", "INSERT INTO c (salt) VALUES (gen_random_uuid()::text)"},
+		{"FK checks off", "SET FOREIGN_KEY_CHECKS = 0", "SET session_replication_role = replica"},
+		{"FK checks on", "SET FOREIGN_KEY_CHECKS=1;", "SET session_replication_role = DEFAULT"},
+		{"FROM_UNIXTIME", "WHERE FROM_UNIXTIME(t.escalation_time) < NOW()", "WHERE to_timestamp(t.escalation_time) < NOW()"},
+	}
+	withDriver(t, "postgres", func() {
+		for _, c := range cases {
+			if got := ConvertPlaceholders(c.in); got != c.want {
+				t.Errorf("%s:\n got  %s\n want %s", c.name, got, c.want)
+			}
+		}
+	})
+}
+
+func TestConvertPlaceholdersLeavesMySQLDialectOnMySQL(t *testing.T) {
+	withDriver(t, "mysql", func() {
+		for _, q := range []string{
+			"INSERT IGNORE INTO group_user (user_id) VALUES (?)",
+			"SELECT `name` FROM `groups` WHERE id = ?",
+			"WHERE t >= DATE_SUB(NOW(), INTERVAL ? DAY) AND u = UUID()",
+		} {
+			if got := ConvertPlaceholders(q); got != q {
+				t.Errorf("mysql query changed:\n got  %s\n want %s", got, q)
+			}
+		}
+	})
+}
+
+func TestConvertUpsert(t *testing.T) {
+	onDup := "INSERT INTO user_preferences (user_id, preferences_key, preferences_value) VALUES (?, ?, ?) " +
+		"ON DUPLICATE KEY UPDATE preferences_value = VALUES(preferences_value), change_by = ?"
+	replace := "REPLACE INTO user_preferences (user_id, preferences_key, preferences_value) VALUES (?, ?, ?)"
+
+	withDriver(t, "postgres", func() {
+		if got, want := ConvertUpsert(onDup, "user_id", "preferences_key"),
+			"INSERT INTO user_preferences (user_id, preferences_key, preferences_value) VALUES ($1, $2, $3) "+
+				"ON CONFLICT (user_id, preferences_key) DO UPDATE SET preferences_value = EXCLUDED.preferences_value, change_by = $4"; got != want {
+			t.Errorf("on duplicate:\n got  %s\n want %s", got, want)
+		}
+		if got, want := ConvertUpsert(replace, "user_id", "preferences_key"),
+			"INSERT INTO user_preferences (user_id, preferences_key, preferences_value) VALUES ($1, $2, $3) "+
+				"ON CONFLICT (user_id, preferences_key) DO UPDATE SET preferences_value = EXCLUDED.preferences_value"; got != want {
+			t.Errorf("replace:\n got  %s\n want %s", got, want)
+		}
+		if got, want := ConvertUpsert("REPLACE INTO service_sla (service_id, sla_id) VALUES (?, ?)", "service_id", "sla_id"),
+			"INSERT INTO service_sla (service_id, sla_id) VALUES ($1, $2) ON CONFLICT (service_id, sla_id) DO NOTHING"; got != want {
+			t.Errorf("all-key replace:\n got  %s\n want %s", got, want)
+		}
+		defer func() {
+			if recover() == nil {
+				t.Error("ConvertUpsert without conflict columns must panic on PostgreSQL")
+			}
+		}()
+		ConvertUpsert(onDup)
+	})
+	withDriver(t, "mysql", func() {
+		if got := ConvertUpsert(onDup, "user_id"); got != onDup {
+			t.Errorf("mysql upsert changed: %s", got)
+		}
+	})
+}

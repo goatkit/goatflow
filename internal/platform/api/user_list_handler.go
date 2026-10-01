@@ -123,10 +123,9 @@ func HandleListUsersAPI(c *gin.Context) {
 	if len(where) > 0 {
 		countQuery += " WHERE " + strings.Join(where, " AND ")
 	}
-	countQuery = database.ConvertPlaceholders(countQuery)
 
 	var total int
-	err = db.QueryRow(countQuery, args...).Scan(&total)
+	err = db.QueryRow(database.ConvertPlaceholders(countQuery), args...).Scan(&total)
 	if err != nil {
 		if shouldFallbackToMock(err) {
 			respondWithMockUsers(c, page, perPage)
@@ -146,11 +145,8 @@ func HandleListUsersAPI(c *gin.Context) {
 	query += " OFFSET ?"
 	args = append(args, offset)
 
-	// Convert placeholders for the database
-	query = database.ConvertPlaceholders(query)
-
 	// Execute query
-	rows, err := db.Query(query, args...)
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		if shouldFallbackToMock(err) {
 			respondWithMockUsers(c, page, perPage)

@@ -958,7 +958,7 @@ func handleCustomer2FAVerify(c *gin.Context) {
 	// Look up user to get full details
 	var userID uint
 	var email, firstName, lastName string
-	query := "SELECT id, email, first_name, last_name FROM customer_user WHERE login = ?"
+	query := database.ConvertPlaceholders("SELECT id, email, first_name, last_name FROM customer_user WHERE login = ?")
 	if err := db.QueryRow(query, session.UserLogin).Scan(&userID, &email, &firstName, &lastName); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to load user"})
 		return

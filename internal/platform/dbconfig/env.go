@@ -12,7 +12,8 @@ import (
 	"strings"
 )
 
-func isPostgres() bool {
+// IsPostgres reports whether DB_DRIVER selects PostgreSQL.
+func IsPostgres() bool {
 	switch strings.ToLower(strings.TrimSpace(os.Getenv("DB_DRIVER"))) {
 	case "postgres", "postgresql", "pgsql":
 		return true
@@ -27,7 +28,7 @@ func isPostgres() bool {
 // so test targets and scripts that inject flat DB_* credentials keep working.
 func Env(key string) string {
 	pfx := "DB_MYSQL_"
-	if isPostgres() {
+	if IsPostgres() {
 		pfx = "DB_PGSQL_"
 	}
 	if v := os.Getenv(pfx + key); v != "" {

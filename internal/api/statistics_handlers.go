@@ -564,7 +564,7 @@ func HandleAgentPerformanceAPI(c *gin.Context) {
 	start := time.Now().UTC().Add(-interval)
 
 	// Load active agents
-	userRows, err := db.Query("SELECT id, login FROM users WHERE valid_id = 1")
+	userRows, err := db.Query(database.ConvertPlaceholders("SELECT id, login FROM users WHERE valid_id = 1"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load agents"})
 		return

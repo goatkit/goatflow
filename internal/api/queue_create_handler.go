@@ -109,8 +109,7 @@ func HandleCreateQueueAPI(c *gin.Context) {
 	// Get user ID for DB parameters
 	createdBy := GetUserIDFromCtx(c, 1)
 
-	// Create queue - adapter handles MySQL vs PostgreSQL differences
-	// Note: ? is used for both create_by and change_by (repeated placeholder)
+	// Create queue
 	insertQuery := `
 		INSERT INTO queue (
 			name, group_id, system_address_id, salutation_id, signature_id,
@@ -122,7 +121,7 @@ func HandleCreateQueueAPI(c *gin.Context) {
 			NOW(), ?, NOW(), ?
 		) RETURNING id`
 
-	queueID64, err := database.GetAdapter().InsertWithReturningTx(tx, insertQuery,
+	queueID64, err := database.GetAdapter().InsertWithReturningTx(tx, database.ConvertPlaceholders(insertQuery),
 		req.Name,
 		req.GroupID,
 		req.SystemAddressID,

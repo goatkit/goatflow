@@ -186,8 +186,7 @@ func ensurePortalDefault(db *sql.DB, targetName string, def portalKeyDef, userID
 		return err
 	}
 
-	if database.IsMySQL() {
-		_, insertErr := db.Exec(database.ConvertPlaceholders(`
+	_, insertErr := db.Exec(database.ConvertUpsert(`
 			INSERT INTO sysconfig_default (
 				name, description, navigation, is_invisible, is_readonly, is_required, is_valid,
 				has_configlevel, user_modification_possible, user_modification_active, user_preferences_group,
@@ -195,7 +194,7 @@ func ensurePortalDefault(db *sql.DB, targetName string, def portalKeyDef, userID
 				exclusive_lock_guid, exclusive_lock_user_id, exclusive_lock_expiry_time,
 				create_time, create_by, change_time, change_by
 			) VALUES (
-				?, ?, 'Frontend::Customer::Portal', 0, 0, 0, 1,
+				?, ?, ?, 0, 0, 0, 1,
 				0, 1, 1, NULL,
 				?, ?, 'CustomerPortal.xml', ?, 0,
 				'', NULL, NULL,
@@ -208,33 +207,7 @@ func ensurePortalDefault(db *sql.DB, targetName string, def portalKeyDef, userID
 				effective_value = VALUES(effective_value),
 				change_time = CURRENT_TIMESTAMP,
 				change_by = VALUES(change_by)
-		`), targetName, def.description, def.xml, def.xml, def.defaultVal, userID, userID)
-		return insertErr
-	}
-
-	insertErr := db.QueryRow(database.ConvertPlaceholders(`
-		INSERT INTO sysconfig_default (
-			name, description, navigation, is_invisible, is_readonly, is_required, is_valid,
-			has_configlevel, user_modification_possible, user_modification_active, user_preferences_group,
-			xml_content_raw, xml_content_parsed, xml_filename, effective_value, is_dirty,
-			exclusive_lock_guid, exclusive_lock_user_id, exclusive_lock_expiry_time,
-			create_time, create_by, change_time, change_by
-		) VALUES (
-			?, ?, 'Frontend::Customer::Portal', 0, 0, 0, 1,
-			0, 1, 1, NULL,
-			?, ?, 'CustomerPortal.xml', ?, 0,
-			'', NULL, NULL,
-			CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?
-		)
-		ON CONFLICT (name) DO UPDATE SET
-			description = EXCLUDED.description,
-			xml_content_raw = EXCLUDED.xml_content_raw,
-			xml_content_parsed = EXCLUDED.xml_content_parsed,
-			effective_value = EXCLUDED.effective_value,
-			change_time = EXCLUDED.change_time,
-			change_by = EXCLUDED.change_by
-		RETURNING id
-	`), targetName, def.description, def.xml, def.xml, def.defaultVal, userID).Scan(&id)
+		`, "name"), targetName, def.description, "Frontend::Customer::Portal", def.xml, def.xml, def.defaultVal, userID, userID)
 	return insertErr
 }
 

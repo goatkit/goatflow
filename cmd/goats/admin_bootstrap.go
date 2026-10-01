@@ -157,7 +157,7 @@ func setAdminBootstrapMarker(db *sql.DB) error {
 	if err != nil {
 		// Fall back to any sysconfig_default row (the marker's own meaning is
 		// independent of which default it points at).
-		if fallbackErr := db.QueryRow("SELECT id FROM sysconfig_default ORDER BY id LIMIT 1").Scan(&defaultID); fallbackErr != nil {
+		if fallbackErr := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM sysconfig_default ORDER BY id LIMIT 1")).Scan(&defaultID); fallbackErr != nil {
 			return fmt.Errorf("write bootstrap marker: no sysconfig_default row available: %w", fallbackErr)
 		}
 	}

@@ -82,7 +82,7 @@ func HandleRegisterWebhookAPI(c *gin.Context) {
 		return
 	}
 
-	// Insert webhook - adapter handles placeholder conversion and arg remapping for ? repeated
+	// Insert webhook
 	insertQuery := `
 		INSERT INTO webhooks (
 			name, url, secret, events, active,
@@ -94,7 +94,7 @@ func HandleRegisterWebhookAPI(c *gin.Context) {
 		) RETURNING id
 	`
 	// Args: name, url, secret, events, retry_count, timeout_seconds, headers, create_by, change_by
-	webhookID64, err := database.GetAdapter().InsertWithReturning(db, insertQuery,
+	webhookID64, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(insertQuery),
 		req.Name, req.URL, req.Secret, string(eventsJSON),
 		req.RetryCount, req.TimeoutSeconds, string(headersJSON),
 		userID, userID,
@@ -836,7 +836,7 @@ func HandleRetryWebhookDeliveryAPI(c *gin.Context) {
 		WHERE id = ?
 	`, nextRetryExpr) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 
-	_, err = database.GetAdapter().Exec(db, updateQuery, deliveryID)
+	_, err = db.Exec(database.ConvertPlaceholders(updateQuery), deliveryID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to queue retry"})
 		return

@@ -149,21 +149,19 @@ func TestCleanupFailedEmails_Integration(t *testing.T) {
 	oldTime := time.Now().Add(-8 * 24 * time.Hour)
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO mail_queue (recipient, raw_message, attempts, create_time)
-		VALUES (?, ?, ?, ?)
+		VALUES (?, ?, ?, ?) RETURNING id
 	`)
-	result, err := db.ExecContext(ctx, insertQuery, "old@test.com", []byte("test message"), MaxRetries, oldTime)
+	oldID, err := database.GetAdapter().InsertWithReturning(db, insertQuery, "old@test.com", []byte("test message"), MaxRetries, oldTime)
 	if err != nil {
-		t.Skipf("Could not insert test data: %v", err)
+		t.Fatalf("Could not insert test data: %v", err)
 	}
-	oldID, _ := result.LastInsertId()
 
 	// Insert recent failed email (< 7 days old)
 	recentTime := time.Now().Add(-2 * 24 * time.Hour)
-	result, err = db.ExecContext(ctx, insertQuery, "recent@test.com", []byte("test message"), MaxRetries, recentTime)
+	recentID, err := database.GetAdapter().InsertWithReturning(db, insertQuery, "recent@test.com", []byte("test message"), MaxRetries, recentTime)
 	if err != nil {
-		t.Skipf("Could not insert test data: %v", err)
+		t.Fatalf("Could not insert test data: %v", err)
 	}
-	recentID, _ := result.LastInsertId()
 
 	// Run cleanup
 	err = task.cleanupFailedEmails(ctx)

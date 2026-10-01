@@ -51,8 +51,7 @@ func (r *EmailAccountRepository) Create(account *models.EmailAccount) (int, erro
 		) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
 		RETURNING id`)
 
-	var id int
-	err := r.db.QueryRow(query,
+	id, err := database.GetAdapter().InsertWithReturning(r.db, query,
 		acct.Login,
 		acct.PasswordEncrypted,
 		acct.Host,
@@ -66,13 +65,13 @@ func (r *EmailAccountRepository) Create(account *models.EmailAccount) (int, erro
 		createdBy,
 		now,
 		updatedBy,
-	).Scan(&id)
+	)
 
 	if err != nil {
 		return 0, fmt.Errorf("failed to create email account: %w", err)
 	}
 
-	return id, nil
+	return int(id), nil
 }
 
 func (r *EmailAccountRepository) GetByID(id int) (*models.EmailAccount, error) {

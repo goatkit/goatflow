@@ -16,8 +16,8 @@ func getTestDB(t *testing.T) *sql.DB {
 		t.Skip("Test database not available")
 	}
 	var count int
-	err = db.QueryRow(
-		"SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'gk_auth_token'",
+	err = db.QueryRow(database.ConvertPlaceholders(
+		"SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ?"), "gk_auth_token",
 	).Scan(&count)
 	if err != nil || count == 0 {
 		t.Skipf("gk_auth_token table not found — run migration 000014")

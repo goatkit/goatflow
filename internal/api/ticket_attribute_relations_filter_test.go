@@ -35,7 +35,7 @@ func setupTestFilterData(t *testing.T, db *sql.DB) *testFilterData {
 	data := &testFilterData{}
 
 	// Cleanup any leftover test data
-	_, _ = db.Exec(`DELETE FROM acl_ticket_attribute_relations WHERE filename LIKE 'filtertest_%'`)
+	_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM acl_ticket_attribute_relations WHERE filename LIKE 'filtertest_%'`))
 
 	return data
 }
@@ -48,7 +48,7 @@ func cleanupTestFilterData(t *testing.T, db *sql.DB, data *testFilterData) {
 	for _, id := range data.relationIDs {
 		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM acl_ticket_attribute_relations WHERE id = ?`), id)
 	}
-	_, _ = db.Exec(`DELETE FROM acl_ticket_attribute_relations WHERE filename LIKE 'filtertest_%'`)
+	_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM acl_ticket_attribute_relations WHERE filename LIKE 'filtertest_%'`))
 
 	// Delete test services (soft delete by setting valid_id = 2)
 	for _, id := range data.serviceIDs {
@@ -73,12 +73,10 @@ func createTestService(t *testing.T, db *sql.DB, name string) int64 {
 	query := database.ConvertPlaceholders(`
 		INSERT INTO service (name, valid_id, comments, create_time, create_by, change_time, change_by)
 		VALUES (?, 1, 'Test service', NOW(), 1, NOW(), 1)
+		RETURNING id
 	`)
 
-	result, err := db.Exec(query, name)
-	require.NoError(t, err)
-
-	id, err := result.LastInsertId()
+	id, err := database.GetAdapter().InsertWithReturning(db, query, name)
 	require.NoError(t, err)
 
 	return id
@@ -91,12 +89,10 @@ func createTestSLA(t *testing.T, db *sql.DB, name string) int64 {
 	query := database.ConvertPlaceholders(`
 		INSERT INTO sla (name, first_response_time, solution_time, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, 60, 240, 1, NOW(), 1, NOW(), 1)
+		RETURNING id
 	`)
 
-	result, err := db.Exec(query, name)
-	require.NoError(t, err)
-
-	id, err := result.LastInsertId()
+	id, err := database.GetAdapter().InsertWithReturning(db, query, name)
 	require.NoError(t, err)
 
 	return id
@@ -109,12 +105,10 @@ func createTestType(t *testing.T, db *sql.DB, name string) int64 {
 	query := database.ConvertPlaceholders(`
 		INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, 1, NOW(), 1, NOW(), 1)
+		RETURNING id
 	`)
 
-	result, err := db.Exec(query, name)
-	require.NoError(t, err)
-
-	id, err := result.LastInsertId()
+	id, err := database.GetAdapter().InsertWithReturning(db, query, name)
 	require.NoError(t, err)
 
 	return id

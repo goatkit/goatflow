@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -38,18 +37,17 @@ func TestStatisticsAPI(t *testing.T) {
 	}
 
 	// Create test tickets with various states and dates
-	ticketTypeColumn := database.TicketTypeColumn()
-	ticketQuery := database.ConvertPlaceholders(fmt.Sprintf(`
-		INSERT INTO tickets (tn, title, queue_id, %s, ticket_state_id, 
+	ticketQuery := database.ConvertPlaceholders(`
+		INSERT INTO tickets (tn, title, queue_id, type_id, ticket_state_id, 
 			ticket_priority_id, customer_user_id, user_id, responsible_user_id,
 			create_time, create_by, change_time, change_by)
 		VALUES 
-			(?, 'Open ticket 1', 1, 1, 1, 3, 'customer1@example.com', 1, 1, NOW() - INTERVAL '7 days', 1, NOW(), 1),
-			(?, 'Open ticket 2', 1, 1, 1, 2, 'customer2@example.com', 2, 2, NOW() - INTERVAL '3 days', 1, NOW(), 1),
-			(?, 'Closed ticket 1', 2, 1, 2, 3, 'customer3@example.com', 1, 1, NOW() - INTERVAL '14 days', 1, NOW() - INTERVAL '10 days', 1),
-			(?, 'Closed ticket 2', 2, 1, 2, 1, 'customer4@example.com', 2, 2, NOW() - INTERVAL '1 day', 1, NOW(), 1),
-			(?, 'Pending ticket', 1, 1, 3, 2, 'customer5@example.com', 1, 2, NOW() - INTERVAL '2 days', 1, NOW(), 1)
-	`, ticketTypeColumn))
+			(?, 'Open ticket 1', 1, 1, 1, 3, 'customer1@example.com', 1, 1, DATE_SUB(NOW(), INTERVAL 7 DAY), 1, NOW(), 1),
+			(?, 'Open ticket 2', 1, 1, 1, 2, 'customer2@example.com', 2, 2, DATE_SUB(NOW(), INTERVAL 3 DAY), 1, NOW(), 1),
+			(?, 'Closed ticket 1', 2, 1, 2, 3, 'customer3@example.com', 1, 1, DATE_SUB(NOW(), INTERVAL 14 DAY), 1, DATE_SUB(NOW(), INTERVAL 10 DAY), 1),
+			(?, 'Closed ticket 2', 2, 1, 2, 1, 'customer4@example.com', 2, 2, DATE_SUB(NOW(), INTERVAL 1 DAY), 1, NOW(), 1),
+			(?, 'Pending ticket', 1, 1, 3, 2, 'customer5@example.com', 1, 2, DATE_SUB(NOW(), INTERVAL 2 DAY), 1, NOW(), 1)
+	`)
 	db.Exec(ticketQuery, "2024120100001", "2024120100002", "2024120100003", "2024120100004", "2024120100005")
 
 	// Create test articles for response time metrics
@@ -57,9 +55,9 @@ func TestStatisticsAPI(t *testing.T) {
 		INSERT INTO article (ticket_id, article_type_id, article_sender_type_id,
 			from_email, to_email, subject, body, create_time, create_by, change_time, change_by)
 		VALUES 
-			(1, 1, 3, 'customer1@example.com', 'support@example.com', 'Initial request', 'Help needed', NOW() - INTERVAL '7 days', 1, NOW(), 1),
-			(1, 1, 1, 'support@example.com', 'customer1@example.com', 'Response', 'We are looking into it', NOW() - INTERVAL '6 days', 1, NOW(), 1),
-			(2, 1, 3, 'customer2@example.com', 'support@example.com', 'Problem', 'System down', NOW() - INTERVAL '3 days', 1, NOW(), 1)
+			(1, 1, 3, 'customer1@example.com', 'support@example.com', 'Initial request', 'Help needed', DATE_SUB(NOW(), INTERVAL 7 DAY), 1, NOW(), 1),
+			(1, 1, 1, 'support@example.com', 'customer1@example.com', 'Response', 'We are looking into it', DATE_SUB(NOW(), INTERVAL 6 DAY), 1, NOW(), 1),
+			(2, 1, 3, 'customer2@example.com', 'support@example.com', 'Problem', 'System down', DATE_SUB(NOW(), INTERVAL 3 DAY), 1, NOW(), 1)
 	`)
 	db.Exec(articleQuery)
 

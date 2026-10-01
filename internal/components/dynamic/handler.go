@@ -1059,36 +1059,16 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 		placeholders = append(placeholders, "1")
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) RETURNING id",
+	insertSQL := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) RETURNING id",
 		config.Module.Table,
 		strings.Join(columns, ", "),
 		strings.Join(placeholders, ", ")) //nolint:gk-sql-sprintf // trusted schema identifier from validated field config; values bound via ?
 
-	query, useLastInsert := database.ConvertReturning(query)
-
-	var newID int64
-	var err error
-	if useLastInsert && database.IsMySQL() {
-		res, err := h.exec(query, values...)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		lastID, err := res.LastInsertId()
-		if err != nil {
-			fallbackRow := h.queryRow("SELECT LAST_INSERT_ID()")
-			if fallbackErr := fallbackRow.Scan(&lastID); fallbackErr != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": fallbackErr.Error()})
-				return
-			}
-		}
-		newID = lastID
-	} else {
-		err = h.queryRow(query, values...).Scan(&newID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
+	newID, err := database.GetAdapter().InsertWithReturning(h.db, database.ConvertPlaceholders(insertSQL), values...)
+	if err != nil {
+		fmt.Printf("Dynamic module insert failed: %s (args=%v): %v\n", insertSQL, values, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	// Handle group assignments for users module

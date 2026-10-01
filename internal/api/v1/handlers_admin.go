@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 	"runtime"
 	"strconv"
@@ -63,11 +65,11 @@ func (router *APIRouter) handleGetSystemSettings(c *gin.Context) {
 		return
 	}
 
-	// Get settings from sysconfig_modified table (user overrides)
+	// Get global setting overrides from sysconfig_modified
 	query := database.ConvertQuery(`
-		SELECT name, value 
-		FROM sysconfig_modified 
-		WHERE is_valid = 1
+		SELECT name, effective_value
+		FROM sysconfig_modified
+		WHERE is_valid = 1 AND user_id IS NULL
 		ORDER BY name
 	`)
 
@@ -130,14 +132,7 @@ func (router *APIRouter) handleUpdateSystemSettings(c *gin.Context) {
 			continue
 		}
 
-		// Upsert into sysconfig_modified
-		query := database.ConvertQuery(`
-			INSERT INTO sysconfig_modified (name, value, is_valid, create_time, create_by, change_time, change_by)
-			VALUES (?, ?, 1, ?, ?, ?, ?)
-			ON DUPLICATE KEY UPDATE value = ?, change_time = ?, change_by = ?
-		`)
-		_, err := db.Exec(query, name, valueStr, now, userID, now, userID, valueStr, now, userID)
-		if err == nil {
+		if saveGlobalSysconfig(db, name, valueStr, userID, now) == nil {
 			updated++
 		}
 	}
@@ -147,6 +142,40 @@ func (router *APIRouter) handleUpdateSystemSettings(c *gin.Context) {
 		Message: "Settings updated successfully",
 		Data:    gin.H{"updated": updated},
 	})
+}
+
+// saveGlobalSysconfig stores a global (user_id NULL) override of an existing
+// sysconfig_default setting. The table's unique key is (sysconfig_default_id,
+// user_id), which never matches a NULL user_id, so an upsert cannot find the
+// existing row: update it when present, insert it otherwise.
+func saveGlobalSysconfig(db *sql.DB, name, value string, userID int, now time.Time) error {
+	var defaultID int
+	if err := db.QueryRow(database.ConvertPlaceholders(
+		"SELECT id FROM sysconfig_default WHERE name = ?"), name).Scan(&defaultID); err != nil {
+		return err
+	}
+
+	var modifiedID int
+	err := db.QueryRow(database.ConvertPlaceholders(
+		"SELECT id FROM sysconfig_modified WHERE sysconfig_default_id = ? AND user_id IS NULL"),
+		defaultID).Scan(&modifiedID)
+	switch {
+	case err == nil:
+		_, err = db.Exec(database.ConvertPlaceholders(`
+			UPDATE sysconfig_modified
+			SET effective_value = ?, is_valid = 1, user_modification_active = 1, is_dirty = 0,
+				reset_to_default = 0, change_time = ?, change_by = ?
+			WHERE id = ?
+		`), []byte(value), now, userID, modifiedID)
+	case errors.Is(err, sql.ErrNoRows):
+		_, err = db.Exec(database.ConvertPlaceholders(`
+			INSERT INTO sysconfig_modified (
+				sysconfig_default_id, name, user_id, is_valid, user_modification_active,
+				effective_value, is_dirty, reset_to_default, create_time, create_by, change_time, change_by
+			) VALUES (?, ?, NULL, 1, 1, ?, 0, 0, ?, ?, ?, ?)
+		`), defaultID, name, []byte(value), now, userID, now, userID)
+	}
+	return err
 }
 
 func (router *APIRouter) handleListBackups(c *gin.Context) {
@@ -423,14 +452,14 @@ func (router *APIRouter) handleGetTicketReports(c *gin.Context) {
 	}
 	report["by_queue"] = byQueue
 
-	// Created this month
+	// Created this month (month start computed here: DATE_FORMAT is MySQL-only)
 	var thisMonth int
 	monthQuery := database.ConvertQuery(`
-		SELECT COUNT(*) FROM ticket 
-		WHERE archive_flag = 0 
-		AND create_time >= DATE_FORMAT(CURRENT_DATE, '%Y-%m-01')
+		SELECT COUNT(*) FROM ticket
+		WHERE archive_flag = 0
+		AND create_time >= ?
 	`)
-	db.QueryRow(monthQuery).Scan(&thisMonth)
+	db.QueryRow(monthQuery, time.Now().Format("2006-01")+"-01").Scan(&thisMonth)
 	report["created_this_month"] = thisMonth
 
 	c.JSON(http.StatusOK, APIResponse{
@@ -484,21 +513,9 @@ func (router *APIRouter) handleToggleMaintenanceMode(c *gin.Context) {
 		enabledStr = "1"
 	}
 
-	// Store maintenance mode in sysconfig_modified
-	query := database.ConvertQuery(`
-		INSERT INTO sysconfig_modified (name, value, is_valid, create_time, create_by, change_time, change_by)
-		VALUES ('MaintenanceMode', ?, 1, ?, ?, ?, ?)
-		ON DUPLICATE KEY UPDATE value = ?, change_time = ?, change_by = ?
-	`)
-	db.Exec(query, enabledStr, now, userID, now, userID, enabledStr, now, userID)
-
-	// Store maintenance message
-	msgQuery := database.ConvertQuery(`
-		INSERT INTO sysconfig_modified (name, value, is_valid, create_time, create_by, change_time, change_by)
-		VALUES ('MaintenanceMessage', ?, 1, ?, ?, ?, ?)
-		ON DUPLICATE KEY UPDATE value = ?, change_time = ?, change_by = ?
-	`)
-	db.Exec(msgQuery, req.Message, now, userID, now, userID, req.Message, now, userID)
+	// Store maintenance mode and message as sysconfig overrides
+	_ = saveGlobalSysconfig(db, "MaintenanceMode", enabledStr, userID, now)
+	_ = saveGlobalSysconfig(db, "MaintenanceMessage", req.Message, userID, now)
 
 	c.JSON(http.StatusOK, APIResponse{
 		Success: true,

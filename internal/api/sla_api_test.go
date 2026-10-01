@@ -466,7 +466,7 @@ func ensureSLATestSchema(t *testing.T, db *sql.DB) {
 	}
 
 	for _, stmt := range statements {
-		_, err := db.Exec(stmt)
+		_, err := db.Exec(database.ConvertPlaceholders(stmt))
 		require.NoError(t, err)
 	}
 }
@@ -474,9 +474,9 @@ func ensureSLATestSchema(t *testing.T, db *sql.DB) {
 func resetSLATestData(t *testing.T, db *sql.DB) {
 	t.Helper()
 
-	_, err := db.Exec("DELETE FROM service_sla")
+	_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM service_sla"))
 	require.NoError(t, err)
-	_, err = db.Exec("DELETE FROM sla")
+	_, err = db.Exec(database.ConvertPlaceholders("DELETE FROM sla"))
 	require.NoError(t, err)
 }
 
@@ -501,7 +501,7 @@ func insertTestSLA(t *testing.T, db *sql.DB, params insertSLAParams) int {
 		changeBy = createBy
 	}
 
-	query := database.ConvertPlaceholders(`
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO sla (
 			name, calendar_name,
 			first_response_time, first_response_notify,
@@ -512,10 +512,7 @@ func insertTestSLA(t *testing.T, db *sql.DB, params insertSLAParams) int {
 			?, ?, ?, ?, ?, ?, ?, ?,
 			?, NOW(), ?, NOW(), ?
 		) RETURNING id
-	`)
-
-	query, useLastInsert := database.ConvertReturning(query)
-	args := []interface{}{
+	`),
 		params.Name,
 		calendarArg,
 		params.FirstResponseTime,
@@ -527,23 +524,7 @@ func insertTestSLA(t *testing.T, db *sql.DB, params insertSLAParams) int {
 		validID,
 		createBy,
 		changeBy,
-	}
-
-	if useLastInsert && database.IsMySQL() {
-		res, err := db.Exec(query, args...)
-		require.NoError(t, err)
-		id, err := res.LastInsertId()
-		require.NoError(t, err)
-		if id == 0 {
-			var fallbackID int64
-			require.NoError(t, db.QueryRow("SELECT LAST_INSERT_ID()").Scan(&fallbackID))
-			id = fallbackID
-		}
-		return int(id)
-	}
-
-	var slaID int
-	err := db.QueryRow(query, args...).Scan(&slaID)
+	)
 	require.NoError(t, err)
-	return slaID
+	return int(id)
 }

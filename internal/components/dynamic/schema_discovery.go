@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -47,16 +48,28 @@ func NewSchemaDiscovery(db *sql.DB) *SchemaDiscovery {
 
 // GetTables retrieves all tables from the database.
 func (sd *SchemaDiscovery) GetTables() ([]TableInfo, error) {
-	query := `
-		SELECT 
+	var query string
+	if database.IsMySQL() {
+		query = database.ConvertPlaceholders(`
+		SELECT
 			table_name,
-			COALESCE(obj_description(pgclass.oid), '') as table_comment
+			COALESCE(table_comment, '') AS table_comment
 		FROM information_schema.tables
-		LEFT JOIN pg_class pgclass ON pgclass.relname = table_name
-		WHERE table_schema = 'public' 
+		WHERE table_schema = DATABASE()
 		AND table_type = 'BASE TABLE'
-		ORDER BY table_name
-	`
+		ORDER BY table_name`)
+	} else {
+		query = database.ConvertPlaceholders(`
+		SELECT
+			t.table_name,
+			COALESCE(obj_description(pgclass.oid, 'pg_class'), '') AS table_comment
+		FROM information_schema.tables t
+		LEFT JOIN pg_namespace pgns ON pgns.nspname = t.table_schema
+		LEFT JOIN pg_class pgclass ON pgclass.relname = t.table_name AND pgclass.relnamespace = pgns.oid
+		WHERE t.table_schema = current_schema()
+		AND t.table_type = 'BASE TABLE'
+		ORDER BY t.table_name`)
+	}
 
 	rows, err := sd.db.Query(query)
 	if err != nil {
@@ -81,20 +94,36 @@ func (sd *SchemaDiscovery) GetTables() ([]TableInfo, error) {
 
 // GetTableColumns retrieves column information for a specific table.
 func (sd *SchemaDiscovery) GetTableColumns(tableName string) ([]ColumnInfo, error) {
-	query := `
-		SELECT 
+	var query string
+	if database.IsMySQL() {
+		query = database.ConvertPlaceholders(`
+		SELECT
 			column_name,
 			data_type,
 			is_nullable,
 			column_default,
 			character_maximum_length,
-			COALESCE(col_description(pgclass.oid, ordinal_position), '') as column_comment
+			COALESCE(column_comment, '') AS column_comment
 		FROM information_schema.columns
-		LEFT JOIN pg_class pgclass ON pgclass.relname = table_name
-		WHERE table_name = ? 
-		AND table_schema = 'public'
-		ORDER BY ordinal_position
-	`
+		WHERE table_name = ?
+		AND table_schema = DATABASE()
+		ORDER BY ordinal_position`)
+	} else {
+		query = database.ConvertPlaceholders(`
+		SELECT
+			c.column_name,
+			c.data_type,
+			c.is_nullable,
+			c.column_default,
+			c.character_maximum_length,
+			COALESCE(col_description(pgclass.oid, c.ordinal_position), '') AS column_comment
+		FROM information_schema.columns c
+		LEFT JOIN pg_namespace pgns ON pgns.nspname = c.table_schema
+		LEFT JOIN pg_class pgclass ON pgclass.relname = c.table_name AND pgclass.relnamespace = pgns.oid
+		WHERE c.table_name = ?
+		AND c.table_schema = current_schema()
+		ORDER BY c.ordinal_position`)
+	}
 
 	rows, err := sd.db.Query(query, tableName)
 	if err != nil {
@@ -164,8 +193,12 @@ func (sd *SchemaDiscovery) GetTableColumns(tableName string) ([]ColumnInfo, erro
 
 // GetTableConstraints retrieves constraint information for a table.
 func (sd *SchemaDiscovery) GetTableConstraints(tableName string) ([]ConstraintInfo, error) {
-	query := `
-		SELECT 
+	schemaExpr := "current_schema()"
+	if database.IsMySQL() {
+		schemaExpr = "DATABASE()"
+	}
+	query := database.ConvertPlaceholders(`
+		SELECT
 			tc.constraint_name,
 			tc.constraint_type,
 			kcu.column_name
@@ -173,10 +206,10 @@ func (sd *SchemaDiscovery) GetTableConstraints(tableName string) ([]ConstraintIn
 		JOIN information_schema.key_column_usage kcu
 			ON tc.constraint_name = kcu.constraint_name
 			AND tc.table_schema = kcu.table_schema
+			AND tc.table_name = kcu.table_name
 		WHERE tc.table_name = ?
-		AND tc.table_schema = 'public'
-		ORDER BY tc.constraint_type, kcu.ordinal_position
-	`
+		AND tc.table_schema = ` + schemaExpr + `
+		ORDER BY tc.constraint_type, kcu.ordinal_position`)
 
 	rows, err := sd.db.Query(query, tableName)
 	if err != nil {

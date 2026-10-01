@@ -198,10 +198,26 @@ echo -e "${GREEN}✅ No attribution detected${NC}"
 echo -e "${BLUE}🧯 Running SQL guard...${NC}"
 
 if [ -x scripts/tools/check-sql.sh ]; then
-    scripts/tools/check-sql.sh --staged || true
+    scripts/tools/check-sql.sh --staged
 else
     echo -e "${YELLOW}⚠️  SQL guard script not found at scripts/tools/check-sql.sh${NC}"
     echo -e "${YELLOW}   Skipping (recommended to run scripts/tools/check-sql.sh manually)${NC}"
+fi
+
+# Check 5: SQL portability + platform boundary (cmd/gk-lint). Every statement
+# must go through the database conversion layer so it runs on MySQL and
+# PostgreSQL. Type-checks without cgo for speed; CI (make lint-platform) runs
+# the same rules with cgo in the toolbox.
+if git diff --cached --name-only --diff-filter=ACM | grep -q '\.go$'; then
+    echo -e "${BLUE}🧭 Running gk-lint (SQL portability, platform boundary)...${NC}"
+    if command -v go &> /dev/null; then
+        if ! CGO_ENABLED=0 go run ./cmd/gk-lint/; then
+            echo -e "${RED}❌ gk-lint failed. Commit aborted.${NC}"
+            exit 1
+        fi
+    else
+        echo -e "${YELLOW}⚠️  go not found; skipping gk-lint (CI still runs make lint-platform)${NC}"
+    fi
 fi
 
 echo -e "${GREEN}🎉 All pre-commit checks passed!${NC}"

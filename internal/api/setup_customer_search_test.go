@@ -289,7 +289,7 @@ func TestCustomerSearch_NoMatch_ReturnsEmptyList(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Success bool `json:"success"`
+		Success bool          `json:"success"`
 		Data    []interface{} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
@@ -416,11 +416,11 @@ func TestCustomerConfigAPI_ReturnsAllFields(t *testing.T) {
 
 	// Create a customer with full address data.
 	err := svc.CreateCustomerCompany(ctx, cid, "Config API Co "+sfx, map[string]string{
-		"street":  "789 API Avenue",
-		"city":    "Test City",
-		"zip":     "54321",
-		"country": "GB",
-		"url":     "https://config.test",
+		"street":   "789 API Avenue",
+		"city":     "Test City",
+		"zip":      "54321",
+		"country":  "GB",
+		"url":      "https://config.test",
 		"comments": "Full config test",
 	}, 1)
 	require.NoError(t, err)
@@ -696,7 +696,7 @@ func TestSetupAssistant_LoadExistingCustomer_WithSLA(t *testing.T) {
 	// Find a real SLA id.
 	db, _ := database.GetDB()
 	var slaID int
-	_ = db.QueryRow("SELECT id FROM sla WHERE valid_id = 1 LIMIT 1").Scan(&slaID)
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM sla WHERE valid_id = 1 LIMIT 1")).Scan(&slaID)
 	if slaID == 0 {
 		t.Skip("no SLA available in test DB")
 	}
@@ -739,7 +739,7 @@ func TestSetupAssistant_LoadExistingCustomer_WithMailAccount(t *testing.T) {
 	// Find a real queue id to target.
 	db, _ := database.GetDB()
 	var queueID int
-	_ = db.QueryRow("SELECT id FROM queue WHERE valid_id = 1 LIMIT 1").Scan(&queueID)
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM queue WHERE valid_id = 1 LIMIT 1")).Scan(&queueID)
 	require.Greater(t, queueID, 0, "test DB needs at least one active queue")
 
 	res := svc.OnboardCustomer(ctx, service.OnboardCustomerRequest{
@@ -789,8 +789,8 @@ func TestSetupAssistant_LoadExistingCustomer_CreateManagingTeam(t *testing.T) {
 	teamName := "LoadMGT Team " + sfx
 
 	res := svc.OnboardCustomer(ctx, service.OnboardCustomerRequest{
-		CustomerID:             cid,
-		Name:                   "MGT Load Co " + sfx,
+		CustomerID:              cid,
+		Name:                    "MGT Load Co " + sfx,
 		CreateManagingGroupName: teamName,
 		Users: []service.CustomerUserInput{
 			{Login: "mgtuser" + sfx, Email: "mgt" + sfx + "@test.com", FirstName: "MGT", LastName: "Load"},

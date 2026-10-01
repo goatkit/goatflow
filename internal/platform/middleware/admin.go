@@ -33,11 +33,11 @@ func RequireAdminGroup() gin.HandlerFunc {
 		query := `
 			SELECT COUNT(*) 
 			FROM group_user gu 
-			JOIN groups g ON gu.group_id = g.id 
+			JOIN ` + "`groups`" + ` g ON gu.group_id = g.id
 			WHERE gu.user_id = ? AND g.name = 'admin' AND g.valid_id = 1
 		`
 
-		err = db.QueryRow(query, userID).Scan(&count)
+		err = db.QueryRow(database.ConvertPlaceholders(query), userID).Scan(&count)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check admin status"})
 			c.Abort()

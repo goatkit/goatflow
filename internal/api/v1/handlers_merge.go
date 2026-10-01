@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/repository"
 )
@@ -168,38 +169,35 @@ func (router *APIRouter) handleSplitTicket(c *gin.Context) {
 
 	now := time.Now()
 
-	// Generate ticket number
-	var ticketNumber string
-	tnQuery := database.ConvertQuery(`SELECT COALESCE(MAX(CAST(tn AS UNSIGNED)), 0) + 1 FROM ticket WHERE tn REGEXP '^[0-9]+$'`)
-	db.QueryRow(tnQuery).Scan(&ticketNumber)
-	if ticketNumber == "" {
-		ticketNumber = now.Format("2006010215040500001")
-	}
-
-	// Create new ticket
-	createQuery := database.ConvertQuery(`
-		INSERT INTO ticket
-			(tn, title, queue_id, ticket_priority_id, ticket_state_id, 
-			 customer_id, customer_user_id, user_id, responsible_user_id,
-			 create_time, create_by, change_time, change_by, timeout, until_time,
-			 escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time,
-			 archive_flag)
-		VALUES (?, ?, ?, ?, 
-			(SELECT id FROM ticket_state WHERE name = 'new' LIMIT 1),
-			?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 0, 0)
-	`)
-
-	result, err := db.Exec(createQuery,
-		ticketNumber, req.NewTicketTitle, req.NewTicketQueue, source.TicketPriorityID,
-		source.CustomerID, source.CustomerUserID, source.UserID, source.ResponsibleUserID,
-		now, userID, now, userID,
-	)
-	if err != nil {
-		sendError(c, http.StatusInternalServerError, "Failed to create new ticket")
+	var newStateID int
+	if err := db.QueryRow(database.ConvertPlaceholders(
+		"SELECT id FROM ticket_state WHERE name = ?"), "new").Scan(&newStateID); err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to look up ticket state")
 		return
 	}
 
-	newTicketID, _ := result.LastInsertId()
+	// Create the new ticket through the repository so it gets a ticket number
+	// from the configured generator and its id portably.
+	newTicket := &models.Ticket{
+		Title:             req.NewTicketTitle,
+		QueueID:           int(req.NewTicketQueue),
+		TicketLockID:      1,
+		TypeID:            source.TypeID,
+		UserID:            source.UserID,
+		ResponsibleUserID: source.ResponsibleUserID,
+		CustomerID:        source.CustomerID,
+		CustomerUserID:    source.CustomerUserID,
+		TicketStateID:     newStateID,
+		TicketPriorityID:  source.TicketPriorityID,
+		CreateBy:          int(userID),
+		ChangeBy:          int(userID),
+	}
+	if err := ticketRepo.Create(newTicket); err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to create new ticket")
+		return
+	}
+	newTicketID := newTicket.ID
+	ticketNumber := newTicket.TicketNumber
 
 	// Move selected articles to new ticket
 	movedCount := 0

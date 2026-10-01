@@ -62,7 +62,7 @@ func handleCustomerGetAttachments(db *sql.DB) gin.HandlerFunc {
 		rows, err := db.Query(database.ConvertPlaceholders(`
 			SELECT att.id, att.filename,
 			       COALESCE(att.content_type, 'application/octet-stream'),
-			       COALESCE(att.content_size, 0),
+			       COALESCE(att.content_size, '0'),
 			       att.create_time, att.create_by,
 			       att.article_id
 			FROM article_data_mime_attachment att
@@ -161,18 +161,17 @@ func handleCustomerUploadAttachment(db *sql.DB) gin.HandlerFunc {
 		`), ticketID).Scan(&articleID)
 		if err != nil {
 			// No article exists, create one
-			result, insertErr := db.Exec(database.ConvertPlaceholders(`
+			articleIDInt64, insertErr := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 				INSERT INTO article (
 					ticket_id, article_sender_type_id, communication_channel_id,
 					is_visible_for_customer, search_index_needs_rebuild,
 					create_time, create_by, change_time, change_by
-				) VALUES (?, 3, 1, 1, 1, NOW(), ?, NOW(), ?)
+				) VALUES (?, 3, 1, 1, 1, NOW(), ?, NOW(), ?) RETURNING id
 			`), ticketID, systemUserID, systemUserID)
 			if insertErr != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create article for attachment"})
 				return
 			}
-			articleIDInt64, _ := result.LastInsertId()
 			articleID = int(articleIDInt64)
 
 			// Insert article_data_mime record
@@ -233,7 +232,7 @@ func handleCustomerDownloadAttachment(db *sql.DB) gin.HandlerFunc {
 		)
 		row := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT att.filename, COALESCE(att.content_type,'application/octet-stream'),
-				   COALESCE(att.content_size,0), att.content
+				   COALESCE(att.content_size, '0'), att.content
 			FROM article_data_mime_attachment att
 			INNER JOIN article a ON att.article_id = a.id
 			WHERE att.id = ? AND a.ticket_id = ? AND a.is_visible_for_customer = 1

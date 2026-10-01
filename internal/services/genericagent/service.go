@@ -369,9 +369,7 @@ func (s *Service) matchTickets(ctx context.Context, job *models.GenericAgentJob)
 	// Add reasonable limit
 	query += " ORDER BY t.id LIMIT 1000"
 
-	query = database.ConvertPlaceholders(query)
-
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := s.db.QueryContext(ctx, database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -493,9 +491,8 @@ func (s *Service) applyActions(ctx context.Context, ticketID int, actions *model
 		args = append(args, now, userID, ticketID)
 
 		query := fmt.Sprintf("UPDATE ticket SET %s WHERE id = ?", strings.Join(setClauses, ", ")) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-		query = database.ConvertPlaceholders(query)
 
-		if _, err := s.db.ExecContext(ctx, query, args...); err != nil {
+		if _, err := s.db.ExecContext(ctx, database.ConvertPlaceholders(query), args...); err != nil {
 			return fmt.Errorf("failed to update ticket: %w", err)
 		}
 	}

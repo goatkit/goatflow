@@ -109,25 +109,14 @@ func ConvertPlaceholders(query string) string {
 	return query
 }
 
-// rewriteForPostgreSQL converts MySQL-specific SQL functions to PostgreSQL equivalents.
+// rewriteForPostgreSQL converts MySQL-specific SQL to PostgreSQL equivalents.
+// It runs after ? has become $N, so interval amounts may be placeholders.
 func rewriteForPostgreSQL(query string) string {
-	// DATE_SUB(expr, INTERVAL n UNIT) → (expr - INTERVAL 'n UNIT')
-	query = reDateSub.ReplaceAllStringFunc(query, func(match string) string {
-		parts := reDateSub.FindStringSubmatch(match)
-		if len(parts) == 4 {
-			return fmt.Sprintf("(%s - INTERVAL '%s %s')", parts[1], parts[2], strings.ToLower(parts[3]))
-		}
-		return match
-	})
-
-	// DATE_ADD(expr, INTERVAL n UNIT) → (expr + INTERVAL 'n UNIT')
-	query = reDateAdd.ReplaceAllStringFunc(query, func(match string) string {
-		parts := reDateAdd.FindStringSubmatch(match)
-		if len(parts) == 4 {
-			return fmt.Sprintf("(%s + INTERVAL '%s %s')", parts[1], parts[2], strings.ToLower(parts[3]))
-		}
-		return match
-	})
+	// DATE_SUB(expr, INTERVAL n UNIT) → (expr - INTERVAL 'n unit')
+	// DATE_SUB(expr, INTERVAL ? UNIT) → (expr - ($N * INTERVAL '1 unit'))
+	query = rewriteInterval(reDateSub, "-", query)
+	// DATE_ADD(expr, INTERVAL n UNIT) → (expr + INTERVAL 'n unit')
+	query = rewriteInterval(reDateAdd, "+", query)
 
 	// UNIX_TIMESTAMP(expr) → EXTRACT(EPOCH FROM expr)::bigint
 	query = reUnixTSExpr.ReplaceAllString(query, "EXTRACT(EPOCH FROM $1)::bigint")
@@ -138,7 +127,77 @@ func rewriteForPostgreSQL(query string) string {
 	// CURDATE() → CURRENT_DATE
 	query = reCurdate.ReplaceAllString(query, "CURRENT_DATE")
 
-	return query
+	// SET FOREIGN_KEY_CHECKS = 0|1 → SET session_replication_role = replica|DEFAULT.
+	// Used by test fixtures that load or clear rows out of FK order; the
+	// PostgreSQL form needs a superuser, which the test database user is.
+	if m := reFKChecks.FindStringSubmatch(query); m != nil {
+		if m[1] == "0" {
+			return "SET session_replication_role = replica"
+		}
+		return "SET session_replication_role = DEFAULT"
+	}
+
+	// FROM_UNIXTIME(expr) → to_timestamp(expr)
+	query = reFromUnixtime.ReplaceAllString(query, "to_timestamp(")
+
+	// UUID() → gen_random_uuid()::text (built in since PostgreSQL 13)
+	query = reUUID.ReplaceAllString(query, "gen_random_uuid()::text")
+
+	// INSERT IGNORE INTO … → INSERT INTO … ON CONFLICT DO NOTHING. The
+	// target-less form skips a row that violates any unique constraint,
+	// which is what INSERT IGNORE does, and works on tables without an id.
+	if reInsertIgnore.MatchString(query) {
+		query = reInsertIgnore.ReplaceAllString(query, "${1}INSERT INTO")
+		if !reOnConflict.MatchString(query) {
+			query = appendBeforeReturning(query, " ON CONFLICT DO NOTHING")
+		}
+	}
+
+	// `identifier` → "identifier"
+	return backticksToDoubleQuotes(query)
+}
+
+func rewriteInterval(re *regexp.Regexp, op, query string) string {
+	return re.ReplaceAllStringFunc(query, func(match string) string {
+		parts := re.FindStringSubmatch(match)
+		if len(parts) != 4 {
+			return match
+		}
+		unit := strings.ToLower(parts[3])
+		if strings.HasPrefix(parts[2], "$") {
+			return fmt.Sprintf("(%s %s (%s * INTERVAL '1 %s'))", parts[1], op, parts[2], unit)
+		}
+		return fmt.Sprintf("(%s %s INTERVAL '%s %s')", parts[1], op, parts[2], unit)
+	})
+}
+
+// appendBeforeReturning adds clause at the end of an INSERT, ahead of any
+// RETURNING clause, ignoring a trailing semicolon.
+func appendBeforeReturning(query, clause string) string {
+	trimmed := strings.TrimRight(query, " \t\r\n;")
+	if loc := reReturning.FindStringIndex(trimmed); loc != nil {
+		return trimmed[:loc[0]] + clause + trimmed[loc[0]:]
+	}
+	return trimmed + clause
+}
+
+// backticksToDoubleQuotes turns MySQL `quoted` identifiers into standard
+// "quoted" ones, leaving backticks inside single-quoted literals alone.
+func backticksToDoubleQuotes(query string) string {
+	if !strings.Contains(query, "`") {
+		return query
+	}
+	b := []byte(query)
+	inString := false
+	for i, c := range b {
+		switch {
+		case c == '\'':
+			inString = !inString
+		case c == '`' && !inString:
+			b[i] = '"'
+		}
+	}
+	return string(b)
 }
 
 // rewriteForMySQL converts PostgreSQL-specific SQL functions to MySQL equivalents.
@@ -153,13 +212,68 @@ func rewriteForMySQL(query string) string {
 
 // Compiled regexes for SQL function rewriting (case-insensitive).
 var (
-	reDateSub      = regexp.MustCompile(`(?i)DATE_SUB\(\s*([^,]+?)\s*,\s*INTERVAL\s+(\d+)\s+(\w+)\s*\)`)
-	reDateAdd      = regexp.MustCompile(`(?i)DATE_ADD\(\s*([^,]+?)\s*,\s*INTERVAL\s+(\d+)\s+(\w+)\s*\)`)
+	reDateSub      = regexp.MustCompile(`(?i)DATE_SUB\(\s*([^,]+?)\s*,\s*INTERVAL\s+(\d+|\$\d+)\s+(\w+)\s*\)`)
+	reDateAdd      = regexp.MustCompile(`(?i)DATE_ADD\(\s*([^,]+?)\s*,\s*INTERVAL\s+(\d+|\$\d+)\s+(\w+)\s*\)`)
+	reFromUnixtime = regexp.MustCompile(`(?i)\bFROM_UNIXTIME\(`)
+	reFKChecks     = regexp.MustCompile(`(?i)^\s*SET\s+FOREIGN_KEY_CHECKS\s*=\s*([01])\s*;?\s*$`)
+	reUUID         = regexp.MustCompile(`(?i)\bUUID\(\s*\)`)
+	reInsertIgnore = regexp.MustCompile(`(?i)^(\s*)INSERT\s+IGNORE\s+INTO`)
+	reOnConflict   = regexp.MustCompile(`(?i)\bON\s+CONFLICT\b`)
+	reReturning    = regexp.MustCompile(`(?i)\s+RETURNING\s`)
+	reOnDuplicate  = regexp.MustCompile(`(?is)\s+ON\s+DUPLICATE\s+KEY\s+UPDATE\s+(.*)$`)
+	reReplaceInto  = regexp.MustCompile(`(?is)^(\s*)REPLACE\s+INTO\s+(\S+)\s*\(([^)]*)\)`)
+	reValuesFunc   = regexp.MustCompile(`(?i)\bVALUES\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)`)
 	reUnixTSExpr   = regexp.MustCompile(`(?i)UNIX_TIMESTAMP\(\s*([^)]+?)\s*\)`)
 	reUnixTS       = regexp.MustCompile(`(?i)UNIX_TIMESTAMP\(\s*\)`)
 	reCurdate      = regexp.MustCompile(`(?i)CURDATE\(\s*\)`)
 	reExtractEpoch = regexp.MustCompile(`(?i)EXTRACT\(\s*EPOCH\s+FROM\s+(.+?)\s*\)::bigint`)
 )
+
+// ConvertUpsert converts a MySQL-dialect upsert for the active driver and
+// then applies ConvertPlaceholders. Write the query the MySQL way, either
+//
+//	INSERT INTO t (a, b, c) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE c = VALUES(c), d = ?
+//	REPLACE INTO t (a, b, c) VALUES (?, ?, ?)
+//
+// and name the unique key that decides a conflict in conflictCols. MySQL
+// gets the query unchanged. PostgreSQL needs that key spelled out, so it gets
+// ON CONFLICT (conflictCols) DO UPDATE SET …, with VALUES(col) rewritten to
+// EXCLUDED.col; REPLACE INTO updates every non-key column. Placeholder order
+// is preserved.
+func ConvertUpsert(query string, conflictCols ...string) string {
+	if IsMySQL() {
+		return ConvertPlaceholders(query)
+	}
+	if len(conflictCols) == 0 {
+		panic(fmt.Sprintf("ConvertUpsert: conflict columns are required for PostgreSQL.\nQuery: %s", query))
+	}
+	target := " ON CONFLICT (" + strings.Join(conflictCols, ", ") + ") DO UPDATE SET "
+
+	if m := reReplaceInto.FindStringSubmatch(query); m != nil {
+		isKey := make(map[string]bool, len(conflictCols))
+		for _, c := range conflictCols {
+			isKey[strings.ToLower(strings.TrimSpace(c))] = true
+		}
+		var sets []string
+		for _, col := range strings.Split(m[3], ",") {
+			col = strings.Trim(strings.TrimSpace(col), "`\"")
+			if !isKey[strings.ToLower(col)] {
+				sets = append(sets, col+" = EXCLUDED."+col)
+			}
+		}
+		query = reReplaceInto.ReplaceAllString(query, "${1}INSERT INTO ${2} (${3})")
+		if len(sets) == 0 {
+			return ConvertPlaceholders(appendBeforeReturning(query, " ON CONFLICT ("+strings.Join(conflictCols, ", ")+") DO NOTHING"))
+		}
+		return ConvertPlaceholders(appendBeforeReturning(query, target+strings.Join(sets, ", ")))
+	}
+
+	if loc := reOnDuplicate.FindStringSubmatchIndex(query); loc != nil {
+		assignments := reValuesFunc.ReplaceAllString(query[loc[2]:loc[3]], "EXCLUDED.$1")
+		return ConvertPlaceholders(query[:loc[0]] + target + strings.TrimRight(assignments, " \t\r\n;"))
+	}
+	return ConvertPlaceholders(query)
+}
 
 // MySQL: Use LastInsertId() after insert.
 func ConvertReturning(query string) (string, bool) {

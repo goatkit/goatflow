@@ -190,12 +190,12 @@ type TestGroup struct {
 func setupGroupAssignmentTestUser(t *testing.T, db *sql.DB) TestUser {
 	// Create test user
 	login := "test_group_user_" + randomString(8)
-	var userID int
 	query := database.ConvertPlaceholders(`
         INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
         VALUES (?, '', ?, ?, 1, NOW(), 1, NOW(), 1)
         RETURNING id`)
-	err := db.QueryRow(query, login, "Test", "User").Scan(&userID)
+	id64, err := database.GetAdapter().InsertWithReturning(db, query, login, "Test", "User")
+	userID := int(id64)
 	require.NoError(t, err, "Failed to create test user")
 
 	return TestUser{
@@ -221,7 +221,7 @@ func cleanupGroupAssignmentTestUser(t *testing.T, db *sql.DB, userID int) {
 }
 
 func verifyTestGroups(t *testing.T, db *sql.DB) []TestGroup {
-	rows, err := db.Query("SELECT id, name FROM groups WHERE valid_id = 1 ORDER BY name LIMIT 5")
+	rows, err := db.Query(database.ConvertPlaceholders("SELECT id, name FROM groups WHERE valid_id = 1 ORDER BY name LIMIT 5"))
 	require.NoError(t, err, "Failed to query groups")
 	defer rows.Close()
 

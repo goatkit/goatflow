@@ -48,15 +48,13 @@ func (r *Repository) List(pluginName, uiType string, enabledOnly bool) ([]Plugin
 		args = append(args, uiType)
 	}
 	if enabledOnly {
-		conditions = append(conditions, "enabled = 1 AND valid_id = 1")
+		conditions = append(conditions, "enabled = TRUE AND valid_id = 1")
 	}
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 	query += " ORDER BY plugin_name, ui_type, name"
-	query = database.ConvertPlaceholders(query)
-
-	rows, err := r.db.Query(query, args...)
+	rows, err := r.db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		return nil, fmt.Errorf("list plugin UIs: %w", err)
 	}
@@ -97,9 +95,9 @@ func (r *Repository) Create(u *PluginUI, userID int) (int64, error) {
 			plugin_name, ui_id, full_id, name, description,
 			ui_type, shell, icon, config, enabled, custom_domain,
 			valid_id, create_time, create_by, change_time, change_by
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
 	`)
-	result, err := r.db.Exec(query,
+	id, err := database.GetAdapter().InsertWithReturning(r.db, query,
 		u.PluginName, u.UIID, u.FullID, u.Name, u.Description,
 		u.UIType, u.Shell, u.Icon, u.Config, u.Enabled, u.CustomDomain,
 		u.ValidID, now, userID, now, userID,
@@ -107,7 +105,7 @@ func (r *Repository) Create(u *PluginUI, userID int) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("create plugin UI: %w", err)
 	}
-	return result.LastInsertId()
+	return id, nil
 }
 
 // Update updates an existing plugin UI.

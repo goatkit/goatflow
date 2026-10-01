@@ -34,8 +34,7 @@ func cleanupPriorityTestData(t *testing.T, names ...string) {
 		args[i] = name
 	}
 	query := fmt.Sprintf("DELETE FROM ticket_priority WHERE name IN (%s)", strings.Join(placeholders, ", "))
-	query = database.ConvertPlaceholders(query)
-	_, err = db.Exec(query, args...)
+	_, err = db.Exec(database.ConvertPlaceholders(query), args...)
 	require.NoError(t, err)
 }
 
@@ -113,13 +112,13 @@ func TestPriorityAPI(t *testing.T) {
 
 		// Create a test priority first
 		db, _ := database.GetDB()
-		var priorityID int
 		query := database.ConvertPlaceholders(`
 			INSERT INTO ticket_priority (name, valid_id, color, create_time, create_by, change_time, change_by)
 			VALUES (?, 1, ?, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
-		db.QueryRow(query, "Test Priority", "#123456").Scan(&priorityID)
+		id64, _ := database.GetAdapter().InsertWithReturning(db, query, "Test Priority", "#123456")
+		priorityID := int(id64)
 
 		// Test getting the priority
 		req := httptest.NewRequest("GET", "/api/v1/priorities/"+strconv.Itoa(priorityID), nil)
@@ -218,13 +217,13 @@ func TestPriorityAPI(t *testing.T) {
 
 		// Create a test priority
 		db, _ := database.GetDB()
-		var priorityID int
 		query := database.ConvertPlaceholders(`
 			INSERT INTO ticket_priority (name, valid_id, color, create_time, create_by, change_time, change_by)
 			VALUES (?, 1, ?, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
-		db.QueryRow(query, "Update Test Priority", "#abcdef").Scan(&priorityID)
+		id64, _ := database.GetAdapter().InsertWithReturning(db, query, "Update Test Priority", "#abcdef")
+		priorityID := int(id64)
 
 		// Test updating priority
 		payload := map[string]interface{}{
@@ -285,7 +284,7 @@ func TestPriorityAPI(t *testing.T) {
 		adapter := database.GetAdapter()
 		query := database.ConvertPlaceholders(`
 			INSERT INTO ticket_priority (name, valid_id, color, create_time, create_by, change_time, change_by)
-			VALUES (?, 1, ?, NOW(), 1, NOW(), 1)
+			VALUES (?, 1, ?, NOW(), 1, NOW(), 1) RETURNING id
 		`)
 		priorityID, err := adapter.InsertWithReturning(db, query, "Delete Test Priority", "#654321")
 		if err != nil {

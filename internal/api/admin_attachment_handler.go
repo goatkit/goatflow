@@ -200,20 +200,15 @@ func handleAdminAttachmentCreate(c *gin.Context) {
 		commentsPtr = &comments
 	}
 
-	result, err := db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO standard_attachment 
-			(name, filename, content_type, content, comments, valid_id, 
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO standard_attachment
+			(name, filename, content_type, content, comments, valid_id,
 			 create_time, create_by, change_time, change_by)
 		VALUES (?, ?, ?, ?, ?, ?, NOW(), 1, NOW(), 1)
+		RETURNING id
 	`), name, header.Filename, header.Header.Get("Content-Type"), content, commentsPtr, validID)
 	if err != nil {
 		jsonError(c, http.StatusInternalServerError, "Failed to create attachment: "+err.Error())
-		return
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		jsonError(c, http.StatusInternalServerError, "Failed to get attachment ID")
 		return
 	}
 

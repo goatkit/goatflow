@@ -55,8 +55,9 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 	// Apply filters
 	if search != "" {
 		searchPattern := "%" + search + "%"
-		searchWhere := "(cu.login LIKE ? OR cu.email LIKE ? OR cu.first_name LIKE ? " +
-			"OR cu.last_name LIKE ? OR cc.name LIKE ?)"
+		searchWhere := "(LOWER(cu.login) LIKE LOWER(?) OR LOWER(cu.email) LIKE LOWER(?) " +
+			"OR LOWER(cu.first_name) LIKE LOWER(?) OR LOWER(cu.last_name) LIKE LOWER(?) " +
+			"OR LOWER(cc.name) LIKE LOWER(?))"
 		sb = sb.Where(searchWhere,
 			searchPattern, searchPattern, searchPattern, searchPattern, searchPattern)
 		countBuilder = countBuilder.Where(searchWhere,
@@ -89,7 +90,7 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 	}
 
 	var totalCount int
-	err = db.QueryRow(countQuery, countArgs...).Scan(&totalCount)
+	err = qb.QueryRow(countQuery, countArgs...).Scan(&totalCount)
 	if err != nil {
 		totalCount = 0
 	}
@@ -104,7 +105,7 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 		return
 	}
 
-	rows, err := db.Query(query, args...)
+	rows, err := qb.Query(query, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -172,10 +173,10 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 
 	// Prefetch 2FA status for all customer users
 	totp2fa := map[string]bool{}
-	if tr, terr := db.Query(`
-		SELECT user_id FROM customer_preferences 
-		WHERE preferences_key = 'UserTOTPEnabled' 
-		AND preferences_value = '1'`); terr == nil {
+	if tr, terr := db.Query(database.ConvertPlaceholders(`
+		SELECT user_id FROM customer_preferences
+		WHERE preferences_key = 'UserTOTPEnabled'
+		AND preferences_value = '1'`)); terr == nil {
 		defer tr.Close()
 		for tr.Next() {
 			var login string
@@ -191,7 +192,7 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 	}
 
 	// Get companies for filter dropdown
-	companiesQuery := "SELECT DISTINCT customer_id, name FROM customer_company WHERE valid_id = 1 ORDER BY name"
+	companiesQuery := database.ConvertPlaceholders("SELECT DISTINCT customer_id, name FROM customer_company WHERE valid_id = 1 ORDER BY name")
 	companyRows, err := db.Query(companiesQuery)
 	var companies []map[string]interface{}
 	if err == nil && companyRows != nil {
@@ -264,15 +265,14 @@ func HandleAdminCustomerUsersGet(c *gin.Context) {
 	}
 
 	// Get customer user details
-	query := `
-		SELECT cu.id, cu.login, cu.email, cu.customer_id, cu.pw, cu.title, 
-		       cu.first_name, cu.last_name, cu.phone, cu.fax, cu.mobile, 
+	query := database.ConvertPlaceholders(`
+		SELECT cu.id, cu.login, cu.email, cu.customer_id, cu.pw, cu.title,
+		       cu.first_name, cu.last_name, cu.phone, cu.fax, cu.mobile,
 		       cu.street, cu.zip, cu.city, cu.country, cu.comments, cu.valid_id,
 		       cc.name as company_name
 		FROM customer_user cu
 		LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
-		WHERE cu.id = ?`
-	query = database.ConvertPlaceholders(query)
+		WHERE cu.id = ?`)
 
 	var customer = make(map[string]interface{})
 	var companyName sql.NullString
@@ -399,21 +399,19 @@ func HandleAdminCustomerUsersCreate(c *gin.Context) {
 	}
 
 	// Create customer user
-	insertQuery := `
+	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO customer_user (
 			login, email, customer_id, pw, title, first_name, last_name,
 			phone, fax, mobile, street, zip, city, country, comments,
 			valid_id, create_time, change_time, create_by, change_by
 		) VALUES (
 			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, 1
-		) RETURNING id`
-	insertQuery = database.ConvertPlaceholders(insertQuery)
-	var newID int
-	err = db.QueryRow(insertQuery,
+		) RETURNING id`)
+	newID, err := database.GetAdapter().InsertWithReturning(db, insertQuery,
 		req.Login, req.Email, req.CustomerID, hashedPassword, req.Title,
 		req.FirstName, req.LastName, req.Phone, req.Fax, req.Mobile,
 		req.Street, req.Zip, req.City, req.Country, req.Comments, req.ValidID,
-	).Scan(&newID)
+	)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -527,9 +525,8 @@ func HandleAdminCustomerUsersUpdate(c *gin.Context) {
 		updateQuery += " WHERE id = ?"
 		args = append(args, id)
 	}
-	updateQuery = database.ConvertPlaceholders(updateQuery)
 
-	result, err := db.Exec(updateQuery, args...)
+	result, err := db.Exec(database.ConvertPlaceholders(updateQuery), args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -588,11 +585,10 @@ func HandleAdminCustomerUsersDelete(c *gin.Context) {
 	}
 
 	// Soft delete by setting valid_id to 2 (invalid)
-	updateQuery := `
-		UPDATE customer_user 
+	updateQuery := database.ConvertPlaceholders(`
+		UPDATE customer_user
 		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1
-		WHERE id = ?`
-	updateQuery = database.ConvertPlaceholders(updateQuery)
+		WHERE id = ?`)
 
 	result, err := db.Exec(updateQuery, id)
 	if err != nil {
@@ -654,7 +650,7 @@ func HandleAdminCustomerUsersTickets(c *gin.Context) {
 	}
 
 	// Get tickets for this customer
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT t.id, t.title, t.ticket_number, t.create_time,
 		       ts.name as state, tp.name as priority, q.name as queue
 		FROM ticket t
@@ -663,8 +659,7 @@ func HandleAdminCustomerUsersTickets(c *gin.Context) {
 		LEFT JOIN queue q ON t.queue_id = q.id
 		WHERE t.customer_user_id = ?
 		ORDER BY t.create_time DESC
-		LIMIT 100`
-	query = database.ConvertPlaceholders(query)
+		LIMIT 100`)
 
 	rows, err := db.Query(query, customerLogin)
 	if err != nil {
@@ -813,15 +808,14 @@ func HandleAdminCustomerUsersImport(c *gin.Context) {
 		}
 
 		// Insert customer user
-		insertQuery := `
+		insertQuery := database.ConvertPlaceholders(`
 			INSERT INTO customer_user (
 				login, email, customer_id, title, first_name, last_name,
 				phone, fax, mobile, street, zip, city, country, comments,
 				valid_id, create_by, change_by
 			) VALUES (
 				?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1
-			)`
-		insertQuery = database.ConvertPlaceholders(insertQuery)
+			)`)
 
 		_, err = db.Exec(insertQuery,
 			login,
@@ -868,13 +862,13 @@ func HandleAdminCustomerUsersExport(c *gin.Context) {
 		return
 	}
 
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT cu.login, cu.email, cu.customer_id, cu.title, cu.first_name, cu.last_name,
 		       cu.phone, cu.fax, cu.mobile, cu.street, cu.zip, cu.city, cu.country,
 		       cu.comments, cu.valid_id, cc.name as company_name
 		FROM customer_user cu
 		LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
-		ORDER BY cu.last_name, cu.first_name`
+		ORDER BY cu.last_name, cu.first_name`)
 
 	rows, err := db.Query(query)
 	if err != nil {

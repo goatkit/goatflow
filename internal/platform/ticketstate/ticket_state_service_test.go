@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/goatkit/goatflow/internal/platform/database"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -24,22 +25,22 @@ func newTestDB(t *testing.T) *sql.DB {
 			type_id INTEGER NOT NULL,
 			valid_id INTEGER NOT NULL DEFAULT 1)`,
 	} {
-		if _, err := db.Exec(q); err != nil {
+		if _, err := db.Exec(database.ConvertPlaceholders(q)); err != nil {
 			t.Fatalf("exec ddl: %v", err)
 		}
 	}
-	if _, err := db.Exec(`
+	if _, err := db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO ticket_state_type (id, name) VALUES
-			(1, 'new'), (2, 'open'), (3, 'pending reminder'), (4, 'pending auto')`); err != nil {
+			(1, 'new'), (2, 'open'), (3, 'pending reminder'), (4, 'pending auto')`)); err != nil {
 		t.Fatalf("seed types: %v", err)
 	}
-	if _, err := db.Exec(`
+	if _, err := db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO ticket_state (id, name, type_id, valid_id) VALUES
 			(1, 'new', 1, 1),
 			(2, 'open', 2, 1),
 			(3, 'Pending custom', 3, 1),
 			(4, 'Auto close+', 4, 1),
-			(5, 'removed', 2, 0)`); err != nil {
+			(5, 'removed', 2, 0)`)); err != nil {
 		t.Fatalf("seed states: %v", err)
 	}
 	return db

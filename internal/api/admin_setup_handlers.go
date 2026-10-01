@@ -197,8 +197,8 @@ func handleAdminSetupCustomerSearch(c *gin.Context) {
 	}
 
 	// Search customer companies by name or customer_id
-	rows, err := db.QueryContext(c.Request.Context(),
-		"SELECT customer_id, name FROM customer_company WHERE name LIKE ? OR customer_id LIKE ? LIMIT 50",
+	rows, err := db.QueryContext(c.Request.Context(), database.ConvertPlaceholders(
+		"SELECT customer_id, name FROM customer_company WHERE LOWER(name) LIKE LOWER(?) OR LOWER(customer_id) LIKE LOWER(?) LIMIT 50"),
 		likeQuery, likeQuery)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database error: " + err.Error()})

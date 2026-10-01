@@ -166,18 +166,13 @@ func (r *UserRepository) Create(user *models.User) error {
 		user.Title = user.Title[:50]
 	}
 
-	rawQuery := `
+	id, err := database.GetAdapter().InsertWithReturning(r.db, database.ConvertPlaceholders(`
 		INSERT INTO users (
 			login, pw, title, first_name, last_name,
 			valid_id, create_time, create_by, change_time, change_by
 		) VALUES (
 			?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-		) RETURNING id`
-
-	query, useLastInsert := database.ConvertReturning(rawQuery)
-	query = database.ConvertPlaceholders(query)
-
-	args := []interface{}{
+		) RETURNING id`),
 		user.Login,
 		user.Password,
 		user.Title,
@@ -188,23 +183,12 @@ func (r *UserRepository) Create(user *models.User) error {
 		user.CreateBy,
 		user.ChangeTime,
 		user.ChangeBy,
+	)
+	if err != nil {
+		return err
 	}
-
-	if useLastInsert && database.IsMySQL() {
-		result, err := r.db.Exec(query, args...)
-		if err != nil {
-			return err
-		}
-
-		lastID, err := result.LastInsertId()
-		if err != nil {
-			return err
-		}
-		user.ID = uint(lastID)
-		return nil
-	}
-
-	return r.db.QueryRow(query, args...).Scan(&user.ID)
+	user.ID = uint(id)
+	return nil
 }
 
 // Update updates a user.
@@ -390,6 +374,7 @@ func (r *UserRepository) SyncGroups(userID uint, groupNames []string) error {
 	}
 	return nil
 }
+
 // List retrieves all users (both active and inactive).
 func (r *UserRepository) List() ([]*models.User, error) {
 	query := database.ConvertPlaceholders(`

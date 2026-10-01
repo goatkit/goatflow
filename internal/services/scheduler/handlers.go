@@ -381,11 +381,11 @@ func getTicketCount(db *sql.DB, countType string, days int) int {
 
 // getOpenTicketCount returns the count of currently open tickets.
 func getOpenTicketCount(db *sql.DB) int {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT COUNT(*)
 		FROM ticket
 		WHERE ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2, 4))
-	`
+	`)
 	var count int
 	_ = db.QueryRow(query).Scan(&count)
 	return count

@@ -157,16 +157,18 @@ func (f *AuthTestFixtures) setup() error {
 	// -------------------------------------------------------------------------
 	// 0. Clean up any existing test data (disable FK checks for clean slate)
 	// -------------------------------------------------------------------------
-	_, _ = f.db.Exec("SET FOREIGN_KEY_CHECKS=0")
-	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM user_api_tokens WHERE user_id >= 90000 OR name LIKE 'agent-%' OR name LIKE 'customer-%'"))
-	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id >= 90000"))
-	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM queue WHERE id >= 90000 OR name LIKE 'AuthTest-%'"))
-	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id >= 90000 OR group_id >= 90000"))
-	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM customer_user WHERE login LIKE '%authtest%'"))
-	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM customer_company WHERE customer_id LIKE 'authtest-%'"))
-	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM `groups` WHERE id >= 90000 OR name LIKE 'AuthTest-%'"))
-	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id >= 90000 OR login LIKE 'authtest-%'"))
-	_, _ = f.db.Exec("SET FOREIGN_KEY_CHECKS=1")
+	if err := withoutFKChecks(f.db, func(exec func(query string, args ...any) error) {
+		_ = exec("DELETE FROM user_api_tokens WHERE user_id >= 90000 OR name LIKE 'agent-%' OR name LIKE 'customer-%'")
+		_ = exec("DELETE FROM ticket WHERE id >= 90000")
+		_ = exec("DELETE FROM queue WHERE id >= 90000 OR name LIKE 'AuthTest-%'")
+		_ = exec("DELETE FROM group_user WHERE user_id >= 90000 OR group_id >= 90000")
+		_ = exec("DELETE FROM customer_user WHERE login LIKE '%authtest%'")
+		_ = exec("DELETE FROM customer_company WHERE customer_id LIKE 'authtest-%'")
+		_ = exec("DELETE FROM `groups` WHERE id >= 90000 OR name LIKE 'AuthTest-%'")
+		_ = exec("DELETE FROM users WHERE id >= 90000 OR login LIKE 'authtest-%'")
+	}); err != nil {
+		return fmt.Errorf("failed to clean up auth fixtures: %w", err)
+	}
 
 	// -------------------------------------------------------------------------
 	// 1. Create Groups

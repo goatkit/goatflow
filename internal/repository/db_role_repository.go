@@ -127,29 +127,15 @@ func (r *DBRoleRepository) Create(role *models.DBRole) error {
 	role.CreateTime = now
 	role.ChangeTime = now
 
-	if database.IsMySQL() {
-		result, err := r.db.Exec(`
-			INSERT INTO roles (name, comments, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
-		`, role.Name, nullString(role.Comments), role.ValidID, role.CreateTime, role.CreateBy, role.ChangeTime, role.ChangeBy)
-		if err != nil {
-			return fmt.Errorf("failed to create role: %w", err)
-		}
-		id, err := result.LastInsertId()
-		if err != nil {
-			return fmt.Errorf("failed to get role ID: %w", err)
-		}
-		role.ID = int(id)
-	} else {
-		err := r.db.QueryRow(`
-			INSERT INTO roles (name, comments, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
-			RETURNING id
-		`, role.Name, nullString(role.Comments), role.ValidID, role.CreateTime, role.CreateBy, role.ChangeTime, role.ChangeBy).Scan(&role.ID)
-		if err != nil {
-			return fmt.Errorf("failed to create role: %w", err)
-		}
+	id, err := database.GetAdapter().InsertWithReturning(r.db, database.ConvertPlaceholders(`
+		INSERT INTO roles (name, comments, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		RETURNING id
+	`), role.Name, nullString(role.Comments), role.ValidID, role.CreateTime, role.CreateBy, role.ChangeTime, role.ChangeBy)
+	if err != nil {
+		return fmt.Errorf("failed to create role: %w", err)
 	}
+	role.ID = int(id)
 
 	return nil
 }
@@ -300,28 +286,33 @@ func (r *DBRoleRepository) ListUserRoles(userID int) ([]*models.DBRole, error) {
 	return roles, nil
 }
 
-// AddUserToRole adds a user to a role.
+// AddUserToRole adds a user to a role, refreshing the change audit fields when
+// the user already has it. role_user has no unique key on (user_id, role_id),
+// so this checks for the row instead of relying on an upsert.
 func (r *DBRoleRepository) AddUserToRole(userID, roleID, createdBy int) error {
 	now := time.Now()
 
-	if database.IsMySQL() {
-		_, err := r.db.Exec(`
-			INSERT INTO role_user (user_id, role_id, create_time, create_by, change_time, change_by)
-			VALUES (?, ?, ?, ?, ?, ?)
-			ON DUPLICATE KEY UPDATE change_time = VALUES(change_time), change_by = VALUES(change_by)
-		`, userID, roleID, now, createdBy, now, createdBy)
-		if err != nil {
-			return fmt.Errorf("failed to add user to role: %w", err)
-		}
+	var exists bool
+	err := r.db.QueryRow(database.ConvertPlaceholders(`
+		SELECT EXISTS(SELECT 1 FROM role_user WHERE user_id = ? AND role_id = ?)
+	`), userID, roleID).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("failed to check role membership: %w", err)
+	}
+
+	if exists {
+		_, err = r.db.Exec(database.ConvertPlaceholders(`
+			UPDATE role_user SET change_time = ?, change_by = ?
+			WHERE user_id = ? AND role_id = ?
+		`), now, createdBy, userID, roleID)
 	} else {
-		_, err := r.db.Exec(`
+		_, err = r.db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO role_user (user_id, role_id, create_time, create_by, change_time, change_by)
 			VALUES (?, ?, ?, ?, ?, ?)
-			ON CONFLICT (user_id, role_id) DO UPDATE SET change_time = EXCLUDED.change_time, change_by = EXCLUDED.change_by
-		`, userID, roleID, now, createdBy, now, createdBy)
-		if err != nil {
-			return fmt.Errorf("failed to add user to role: %w", err)
-		}
+		`), userID, roleID, now, createdBy, now, createdBy)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to add user to role: %w", err)
 	}
 
 	return nil
@@ -354,20 +345,13 @@ func (r *DBRoleRepository) SetRoleUsers(roleID int, userIDs []int, changedBy int
 	}
 
 	// Insert new users
+	insertQuery := database.ConvertPlaceholders(`
+		INSERT INTO role_user (user_id, role_id, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`)
 	now := time.Now()
 	for _, userID := range userIDs {
-		if database.IsMySQL() {
-			_, err = tx.Exec(`
-				INSERT INTO role_user (user_id, role_id, create_time, create_by, change_time, change_by)
-				VALUES (?, ?, ?, ?, ?, ?)
-			`, userID, roleID, now, changedBy, now, changedBy)
-		} else {
-			_, err = tx.Exec(`
-				INSERT INTO role_user (user_id, role_id, create_time, create_by, change_time, change_by)
-				VALUES (?, ?, ?, ?, ?, ?)
-			`, userID, roleID, now, changedBy, now, changedBy)
-		}
-		if err != nil {
+		if _, err = tx.Exec(insertQuery, userID, roleID, now, changedBy, now, changedBy); err != nil {
 			return fmt.Errorf("failed to add user to role: %w", err)
 		}
 	}
@@ -391,20 +375,13 @@ func (r *DBRoleRepository) SetUserRoles(userID int, roleIDs []int, changedBy int
 	}
 
 	// Insert new roles
+	insertQuery := database.ConvertPlaceholders(`
+		INSERT INTO role_user (user_id, role_id, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`)
 	now := time.Now()
 	for _, roleID := range roleIDs {
-		if database.IsMySQL() {
-			_, err = tx.Exec(`
-				INSERT INTO role_user (user_id, role_id, create_time, create_by, change_time, change_by)
-				VALUES (?, ?, ?, ?, ?, ?)
-			`, userID, roleID, now, changedBy, now, changedBy)
-		} else {
-			_, err = tx.Exec(`
-				INSERT INTO role_user (user_id, role_id, create_time, create_by, change_time, change_by)
-				VALUES (?, ?, ?, ?, ?, ?)
-			`, userID, roleID, now, changedBy, now, changedBy)
-		}
-		if err != nil {
+		if _, err = tx.Exec(insertQuery, userID, roleID, now, changedBy, now, changedBy); err != nil {
 			return fmt.Errorf("failed to add role to user: %w", err)
 		}
 	}

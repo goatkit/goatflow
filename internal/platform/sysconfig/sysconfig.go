@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // Manager handles system configuration loading and deployment.
@@ -95,7 +97,7 @@ func (m *Manager) Load() error {
 		ORDER BY navigation, name
 	`
 
-	rows, err := m.db.Query(query)
+	rows, err := m.db.Query(database.ConvertPlaceholders(query))
 	if err != nil {
 		return fmt.Errorf("failed to query sysconfig_default: %w", err)
 	}
@@ -315,7 +317,7 @@ func (m *Manager) getModifiedValue(name string) (interface{}, error) {
 	`
 
 	var value sql.NullString
-	err := m.db.QueryRow(query, name).Scan(&value)
+	err := m.db.QueryRow(database.ConvertPlaceholders(query), name).Scan(&value)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil //nolint:nilnil // No modified value
@@ -354,15 +356,27 @@ func (m *Manager) Set(name, value string, userID int) error {
 	}
 
 	// Insert or update in sysconfig_modified
-	query := `
-		INSERT INTO sysconfig_modified 
-		(sysconfig_default_id, name, effective_value, is_valid, create_by, change_by)
-		VALUES (?, ?, ?, 1, ?, ?)
-		ON CONFLICT (name) DO UPDATE SET
-		effective_value = ?, change_by = ?, change_time = CURRENT_TIMESTAMP
-	`
+	// The only unique key is (sysconfig_default_id, user_id) and user_id is
+	// NULL for global values, so neither driver can upsert on it: update
+	// the existing global row, insert when there is none.
+	res, err := m.db.Exec(database.ConvertPlaceholders(`
+		UPDATE sysconfig_modified
+		SET effective_value = ?, change_by = ?, change_time = CURRENT_TIMESTAMP
+		WHERE name = ? AND user_id IS NULL
+	`), value, userID, name)
+	if err != nil {
+		return fmt.Errorf("failed to update setting: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		return nil
+	}
 
-	_, err := m.db.Exec(query, setting.ID, name, value, userID)
+	_, err = m.db.Exec(database.ConvertPlaceholders(`
+		INSERT INTO sysconfig_modified
+		(sysconfig_default_id, name, user_id, effective_value, is_valid, user_modification_active,
+		 is_dirty, reset_to_default, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, NULL, ?, 1, 0, 0, 0, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
+	`), setting.ID, name, value, userID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to update setting: %w", err)
 	}
@@ -488,6 +502,6 @@ func (m *Manager) Reset(name string, userID int) error {
 		WHERE name = ?
 	`
 
-	_, err := m.db.Exec(query, name)
+	_, err := m.db.Exec(database.ConvertPlaceholders(query), name)
 	return err
 }

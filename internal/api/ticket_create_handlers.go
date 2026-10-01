@@ -49,7 +49,7 @@ func loadTicketFormData(db *sql.DB, screenName string) ticketFormData {
 	}
 
 	// Get queues from database
-	qRows, err := db.Query("SELECT id, name FROM queue WHERE valid_id = 1 ORDER BY name")
+	qRows, err := db.Query(database.ConvertPlaceholders("SELECT id, name FROM queue WHERE valid_id = 1 ORDER BY name"))
 	if err == nil {
 		defer qRows.Close()
 		for qRows.Next() {
@@ -65,7 +65,7 @@ func loadTicketFormData(db *sql.DB, screenName string) ticketFormData {
 	}
 
 	// Get priorities from database
-	pRows, err := db.Query("SELECT id, name FROM ticket_priority WHERE valid_id = 1 ORDER BY id")
+	pRows, err := db.Query(database.ConvertPlaceholders("SELECT id, name FROM ticket_priority WHERE valid_id = 1 ORDER BY id"))
 	if err == nil {
 		defer pRows.Close()
 		for pRows.Next() {
@@ -92,7 +92,7 @@ func loadTicketFormData(db *sql.DB, screenName string) ticketFormData {
 	}
 
 	// Get ticket types from database
-	tRows, err := db.Query("SELECT id, name FROM ticket_type WHERE valid_id = 1 ORDER BY name")
+	tRows, err := db.Query(database.ConvertPlaceholders("SELECT id, name FROM ticket_type WHERE valid_id = 1 ORDER BY name"))
 	if err == nil {
 		defer tRows.Close()
 		for tRows.Next() {

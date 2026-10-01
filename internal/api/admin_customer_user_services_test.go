@@ -48,36 +48,19 @@ func createTestServiceForCustomerUser(t *testing.T, name string) (int, bool) {
 		return 0, false
 	}
 
-	var id int
-	if database.IsMySQL() {
-		result, execErr := db.Exec(`
-			INSERT INTO service (name, comments, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, ?, 1, NOW(), 1, NOW(), 1)`, name, "Test service for customer user services")
-		if execErr != nil {
-			t.Logf("Insert service failed: %v", execErr)
-			return 0, false
-		}
-		lastID, _ := result.LastInsertId()
-		id = int(lastID)
-	} else {
-		err = db.QueryRow(`
-			INSERT INTO service (name, comments, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, ?, 1, NOW(), 1, NOW(), 1)
-			RETURNING id`, name, "Test service for customer user services").Scan(&id)
-		if err != nil {
-			t.Logf("Insert service failed: %v", err)
-			return 0, false
-		}
+	id64, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO service (name, comments, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, 1, NOW(), 1, NOW(), 1)
+		RETURNING id`), name, "Test service for customer user services")
+	if err != nil {
+		t.Logf("Insert service failed: %v", err)
+		return 0, false
 	}
+	id := int(id64)
 
 	t.Cleanup(func() {
-		if database.IsMySQL() {
-			_, _ = db.Exec(`DELETE FROM service_customer_user WHERE service_id = ?`, id)
-			_, _ = db.Exec(`DELETE FROM service WHERE id = ?`, id)
-		} else {
-			_, _ = db.Exec(`DELETE FROM service_customer_user WHERE service_id = ?`, id)
-			_, _ = db.Exec(`DELETE FROM service WHERE id = ?`, id)
-		}
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM service_customer_user WHERE service_id = ?`), id)
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM service WHERE id = ?`), id)
 	})
 
 	return id, true
@@ -91,31 +74,18 @@ func createTestCustomerUserForServices(t *testing.T, login string) bool {
 		return false
 	}
 
-	var execErr error
-	if database.IsMySQL() {
-		_, execErr = db.Exec(`
-			INSERT INTO customer_user (login, email, customer_id, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, ?, 'test-company', 'test', 'Test', 'User', 1, NOW(), 1, NOW(), 1)
-			ON DUPLICATE KEY UPDATE email = VALUES(email)`, login, login+"@test.local")
-	} else {
-		_, execErr = db.Exec(`
-			INSERT INTO customer_user (login, email, customer_id, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, ?, 'test-company', 'test', 'Test', 'User', 1, NOW(), 1, NOW(), 1)
-			ON CONFLICT (login) DO NOTHING`, login, login+"@test.local")
-	}
+	_, execErr := db.Exec(database.ConvertUpsert(`
+		INSERT INTO customer_user (login, email, customer_id, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, 'test-company', 'test', 'Test', 'User', 1, NOW(), 1, NOW(), 1)
+		ON DUPLICATE KEY UPDATE email = VALUES(email)`, "login"), login, login+"@test.local")
 	if execErr != nil {
 		t.Logf("Insert customer_user failed: %v", execErr)
 		return false
 	}
 
 	t.Cleanup(func() {
-		if database.IsMySQL() {
-			_, _ = db.Exec(`DELETE FROM service_customer_user WHERE customer_user_login = ?`, login)
-			_, _ = db.Exec(`DELETE FROM customer_user WHERE login = ?`, login)
-		} else {
-			_, _ = db.Exec(`DELETE FROM service_customer_user WHERE customer_user_login = ?`, login)
-			_, _ = db.Exec(`DELETE FROM customer_user WHERE login = ?`, login)
-		}
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM service_customer_user WHERE customer_user_login = ?`), login)
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM customer_user WHERE login = ?`), login)
 	})
 
 	return true
@@ -127,11 +97,7 @@ func cleanupDefaultServices(t *testing.T) {
 	if err != nil || db == nil {
 		return
 	}
-	if database.IsMySQL() {
-		_, _ = db.Exec(`DELETE FROM service_customer_user WHERE customer_user_login = '<DEFAULT>'`)
-	} else {
-		_, _ = db.Exec(`DELETE FROM service_customer_user WHERE customer_user_login = '<DEFAULT>'`)
-	}
+	_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM service_customer_user WHERE customer_user_login = '<DEFAULT>'`))
 }
 
 func TestAdminCustomerUserServicesPage(t *testing.T) {

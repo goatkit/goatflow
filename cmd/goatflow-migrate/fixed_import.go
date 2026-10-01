@@ -38,7 +38,7 @@ func importSQLDumpFixed(sqlFile, dbURL string, verbose, dryRun, force bool) erro
 	var db *sql.DB
 	if !dryRun {
 		var err error
-		db, err = sql.Open("postgres", dbURL)
+		db, err = openDB(dbURL)
 		if err != nil {
 			return fmt.Errorf("failed to connect to database: %w", err)
 		}
@@ -146,17 +146,16 @@ func importTickets(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, verbose
 			}
 
 			// Build INSERT without ID (let it auto-generate)
-			insertSQL := `INSERT INTO ticket (
+			insertSQL := database.ConvertPlaceholders(`INSERT INTO ticket (
 			tn, title, queue_id, ticket_lock_id, type_id, service_id, sla_id,
 			user_id, responsible_user_id, ticket_priority_id, ticket_state_id,
 			customer_id, customer_user_id, timeout, until_time,
 			escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time,
 			archive_flag, create_time, create_by, change_time, change_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING id`
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`)
 
 			if !dryRun {
-				var newID int
-				err := db.QueryRow(insertSQL,
+				newID64, err := database.GetAdapter().InsertWithReturning(db, insertSQL,
 					values[1], values[2], parseIntOrNull(values[3]), parseIntOrNull(values[4]),
 					parseIntOrNull(values[5]), parseIntOrNull(values[6]), parseIntOrNull(values[7]),
 					parseIntOrNull(values[8]), parseIntOrNull(values[9]), parseIntOrNull(values[10]),
@@ -164,7 +163,8 @@ func importTickets(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, verbose
 					parseIntOrNull(values[15]), parseIntOrNull(values[16]), parseIntOrNull(values[17]),
 					parseIntOrNull(values[18]), parseIntOrNull(values[19]), parseIntOrNull(values[20]),
 					values[21], parseIntOrNull(values[22]), values[23], parseIntOrNull(values[24]),
-				).Scan(&newID)
+				)
+				newID := int(newID64)
 
 				if err != nil {
 					if verbose {
@@ -234,21 +234,21 @@ func importArticles(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, verbos
 			}
 
 			// Build INSERT without ID but with mapped ticket_id
-			insertSQL := `INSERT INTO article (
+			insertSQL := database.ConvertPlaceholders(`INSERT INTO article (
 			ticket_id, article_sender_type_id, communication_channel_id, 
 			is_visible_for_customer, search_index_needs_rebuild,
 			insert_fingerprint, create_time, create_by, change_time, change_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`)
 
 			if !dryRun {
-				var newArticleID int
-				err := db.QueryRow(insertSQL,
+				newArticleID64, err := database.GetAdapter().InsertWithReturning(db, insertSQL,
 					newTicketID, // Use mapped ticket ID
 					parseIntOrNull(values[2]), parseIntOrNull(values[3]),
 					parseIntOrNull(values[4]), parseIntOrNull(values[5]),
 					values[6], values[7], parseIntOrNull(values[8]),
 					values[9], parseIntOrNull(values[10]),
-				).Scan(&newArticleID)
+				)
+				newArticleID := int(newArticleID64)
 
 				if err != nil {
 					if verbose {
@@ -336,7 +336,7 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 							a_in_reply_to, a_references, a_content_type, a_body,
 							incoming_time, content_path, create_time, create_by,
 							change_time, change_by
-						) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+						) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 					`), newArticleID, values[2], parseNull(values[3]), parseNull(values[4]),
 						parseNull(values[5]), parseNull(values[6]), values[7], parseNull(values[8]),
 						parseNull(values[9]), parseNull(values[10]), parseNull(values[11]),
@@ -373,12 +373,11 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 
 					if !dryRun {
 						_, err := db.Exec(database.ConvertPlaceholders(`
-							INSERT INTO customer_user (
+							INSERT IGNORE INTO customer_user (
 								login, email, customer_id, pw, title, first_name, last_name,
 								phone, fax, mobile, street, zip, city, country, comments,
 								valid_id, create_time, create_by, change_time, change_by
-							) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
-							ON CONFLICT (login) DO NOTHING
+							) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 						`), values[1], values[2], values[3], parseNull(values[4]), parseNull(values[5]),
 							parseNull(values[6]), parseNull(values[7]), parseNull(values[8]),
 							parseNull(values[9]), parseNull(values[10]), parseNull(values[11]),
@@ -429,17 +428,17 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 							validID = 1 // Default to valid
 						}
 
-						_, err := db.Exec(database.ConvertPlaceholders(`
+						_, err := db.Exec(database.ConvertUpsert(`
 							INSERT INTO queue (
 								id, name, group_id, system_address_id, salutation_id, signature_id,
 								follow_up_id, follow_up_lock, unlock_timeout, calendar_name, default_sign_key,
 								comments, valid_id, create_time, create_by, change_time, change_by
-							) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-							ON CONFLICT (id) DO UPDATE SET
-								name = EXCLUDED.name,
-								group_id = EXCLUDED.group_id,
-								valid_id = EXCLUDED.valid_id
-						`), parseIntOrNull(values[0]), values[1], parseIntOrNull(values[2]),
+							) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+							ON DUPLICATE KEY UPDATE
+								name = VALUES(name),
+								group_id = VALUES(group_id),
+								valid_id = VALUES(valid_id)
+						`, "id"), parseIntOrNull(values[0]), values[1], parseIntOrNull(values[2]),
 							parseIntOrNull(values[3]), salutationID, parseIntOrNull(values[5]),
 							parseIntOrNull(values[6]), parseIntOrNull(values[7]), parseIntOrNull(values[8]),
 							parseNull(values[9]), parseNull(values[10]), parseNull(values[11]),
@@ -476,15 +475,15 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 
 					if !dryRun {
 						// groups structure: id, name, comments, valid_id, create_time, create_by, change_time, change_by
-						_, err := db.Exec(database.ConvertPlaceholders(`
-							INSERT INTO groups (
+						_, err := db.Exec(database.ConvertUpsert(`
+							INSERT INTO `+"`groups`"+` (
 								id, name, comments, valid_id, create_time, create_by, change_time, change_by
-							) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-							ON CONFLICT (id) DO UPDATE SET
-								name = EXCLUDED.name,
-								comments = EXCLUDED.comments,
-								valid_id = EXCLUDED.valid_id
-						`), parseIntOrNull(values[0]), values[1], parseNull(values[2]),
+							) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+							ON DUPLICATE KEY UPDATE
+								name = VALUES(name),
+								comments = VALUES(comments),
+								valid_id = VALUES(valid_id)
+						`, "id"), parseIntOrNull(values[0]), values[1], parseNull(values[2]),
 							parseIntOrNull(values[3]), parseTimestamp(values[4]),
 							parseIntOrNull(values[5]), parseTimestamp(values[6]), parseIntOrNull(values[7]))
 
@@ -519,17 +518,17 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 					if !dryRun {
 						// users structure: id, login, pw, title, first_name, last_name,
 						// valid_id, create_time, create_by, change_time, change_by
-						_, err := db.Exec(database.ConvertPlaceholders(`
+						_, err := db.Exec(database.ConvertUpsert(`
 							INSERT INTO users (
 								id, login, pw, title, first_name, last_name,
 								valid_id, create_time, create_by, change_time, change_by
-							) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-							ON CONFLICT (id) DO UPDATE SET
-								login = EXCLUDED.login,
-								first_name = EXCLUDED.first_name,
-								last_name = EXCLUDED.last_name,
-								valid_id = EXCLUDED.valid_id
-						`), parseIntOrNull(values[0]), values[1], values[2],
+							) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+							ON DUPLICATE KEY UPDATE
+								login = VALUES(login),
+								first_name = VALUES(first_name),
+								last_name = VALUES(last_name),
+								valid_id = VALUES(valid_id)
+						`, "id"), parseIntOrNull(values[0]), values[1], values[2],
 							parseNull(values[3]), parseNull(values[4]), parseNull(values[5]),
 							parseIntOrNull(values[6]), parseTimestamp(values[7]),
 							parseIntOrNull(values[8]), parseTimestamp(values[9]), parseIntOrNull(values[10]))
@@ -564,15 +563,15 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 
 					if !dryRun {
 						// ticket_priority structure: id, name, valid_id, color, create_time, create_by, change_time, change_by
-						_, err := db.Exec(database.ConvertPlaceholders(`
+						_, err := db.Exec(database.ConvertUpsert(`
 							INSERT INTO ticket_priority (
 								id, name, valid_id, color, create_time, create_by, change_time, change_by
-							) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-							ON CONFLICT (id) DO UPDATE SET
-								name = EXCLUDED.name,
-								valid_id = EXCLUDED.valid_id,
-								color = EXCLUDED.color
-						`), parseIntOrNull(values[0]), values[1], parseIntOrNull(values[2]), values[3],
+							) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+							ON DUPLICATE KEY UPDATE
+								name = VALUES(name),
+								valid_id = VALUES(valid_id),
+								color = VALUES(color)
+						`, "id"), parseIntOrNull(values[0]), values[1], parseIntOrNull(values[2]), values[3],
 							parseTimestamp(values[4]), parseIntOrNull(values[5]),
 							parseTimestamp(values[6]), parseIntOrNull(values[7]))
 
@@ -606,16 +605,16 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 
 					if !dryRun {
 						// ticket_state structure: id, name, comments, type_id, valid_id, create_time, create_by, change_time, change_by
-						_, err := db.Exec(database.ConvertPlaceholders(`
+						_, err := db.Exec(database.ConvertUpsert(`
 							INSERT INTO ticket_state (
 								id, name, comments, type_id, valid_id, create_time, create_by, change_time, change_by
-							) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-							ON CONFLICT (id) DO UPDATE SET
-								name = EXCLUDED.name,
-								comments = EXCLUDED.comments,
-								type_id = EXCLUDED.type_id,
-								valid_id = EXCLUDED.valid_id
-						`), parseIntOrNull(values[0]), values[1], parseNull(values[2]),
+							) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+							ON DUPLICATE KEY UPDATE
+								name = VALUES(name),
+								comments = VALUES(comments),
+								type_id = VALUES(type_id),
+								valid_id = VALUES(valid_id)
+						`, "id"), parseIntOrNull(values[0]), values[1], parseNull(values[2]),
 							parseIntOrNull(values[3]), parseIntOrNull(values[4]),
 							parseTimestamp(values[5]), parseIntOrNull(values[6]),
 							parseTimestamp(values[7]), parseIntOrNull(values[8]))
@@ -688,7 +687,7 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 								name, history_type_id, ticket_id, article_id,
 								type_id, queue_id, owner_id, priority_id,
 								state_id, create_time, create_by, change_time, change_by
-							) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+							) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 						`), values[1], historyTypeID, newTicketID,
 							articleIDVal, parseIntOrNull(values[5]),
 							parseIntOrNull(values[6]), parseIntOrNull(values[7]),
@@ -798,6 +797,12 @@ func parseTimestamp(s string) interface{} {
 }
 
 func fixSequences(db *sql.DB) {
+	// MySQL AUTO_INCREMENT already moves past explicitly inserted ids; only
+	// PostgreSQL sequences need resetting after the import.
+	if !database.IsPostgreSQL() {
+		return
+	}
+
 	sequences := []struct {
 		table string
 		seq   string
@@ -815,8 +820,8 @@ func fixSequences(db *sql.DB) {
 	}
 
 	for _, s := range sequences {
-		query := fmt.Sprintf("SELECT setval('%s', COALESCE((SELECT MAX(id) FROM %s), 0) + 1, false)", s.seq, s.table) //nolint:gosec // table/seq names from hardcoded list //nolint:gk-sql-sprintf // internal migration schema name
-		if _, err := db.Exec(query); err != nil {
+		query := fmt.Sprintf("SELECT setval('%s', COALESCE((SELECT MAX(id) FROM `%s`), 0) + 1, false)", s.seq, s.table) //nolint:gosec // table/seq names from hardcoded list //nolint:gk-sql-sprintf // internal migration schema name
+		if _, err := db.Exec(database.ConvertPlaceholders(query)); err != nil {
 			// Some sequences might not exist, that's okay
 			log.Printf("Note: Could not fix sequence %s: %v", s.seq, err)
 		}
@@ -897,7 +902,7 @@ func validateDatabaseState(db *sql.DB, force bool) error {
 	nonEmptyTables := []string{}
 	for _, table := range tables {
 		var count int
-		err := db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s", table)).Scan(&count) //nolint:gk-sql-sprintf // internal migration schema name
+		err := db.QueryRow(database.ConvertPlaceholders(fmt.Sprintf("SELECT COUNT(*) FROM `%s`", table))).Scan(&count) //nolint:gk-sql-sprintf // internal migration schema name
 		if err != nil {
 			// Table might not exist, that's okay
 			continue
@@ -946,11 +951,15 @@ func validateDatabaseState(db *sql.DB, force bool) error {
 
 		for _, table := range clearOrder {
 			fmt.Printf("   🗑️  Clearing %s...\n", table)
-			if _, err := db.Exec(fmt.Sprintf("TRUNCATE %s CASCADE", table)); err != nil {
-				// Some tables might not exist or have dependencies
-				if _, err := db.Exec(fmt.Sprintf("DELETE FROM %s", table)); err != nil { //nolint:gk-sql-sprintf // internal migration schema name
-					log.Printf("   Warning: Could not clear %s: %v", table, err)
+			// TRUNCATE … CASCADE (PostgreSQL only) also empties dependent tables;
+			// elsewhere, or if it fails, fall back to DELETE.
+			if database.IsPostgreSQL() {
+				if _, err := db.Exec(database.ConvertPlaceholders(fmt.Sprintf("TRUNCATE `%s` CASCADE", table))); err == nil { //nolint:gk-sql-sprintf // internal migration schema name
+					continue
 				}
+			}
+			if _, err := db.Exec(database.ConvertPlaceholders(fmt.Sprintf("DELETE FROM `%s`", table))); err != nil { //nolint:gk-sql-sprintf // internal migration schema name
+				log.Printf("   Warning: Could not clear %s: %v", table, err)
 			}
 		}
 		fmt.Printf("\n✅ Database cleared and ready for import\n\n")

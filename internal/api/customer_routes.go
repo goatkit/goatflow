@@ -329,8 +329,7 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 		sortOrder := c.DefaultQuery("order", "desc")
 		query += fmt.Sprintf(" ORDER BY t.%s %s", sanitizeSortColumn(sortBy), sortOrder)
 
-		// Execute query - adapter handles placeholder conversion and arg remapping
-		rows, err := database.GetAdapter().Query(db, query, args...)
+		rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -573,9 +572,6 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Create ticket
-		var ticketID int64
-		typeColumn := database.TicketTypeColumn()
-
 		// Handle empty serviceID
 		var serviceIDVal interface{}
 		if serviceID == "" {
@@ -584,9 +580,9 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 			serviceIDVal = serviceID
 		}
 
-		result, err := db.Exec(database.ConvertPlaceholders(fmt.Sprintf(`
+		ticketID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 			INSERT INTO ticket (
-				tn, title, queue_id, %s, service_id,
+				tn, title, queue_id, type_id, service_id,
 				ticket_state_id, ticket_priority_id, ticket_lock_id,
 				user_id, responsible_user_id,
 				customer_id, customer_user_id,
@@ -601,19 +597,12 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 				0, 0,
 				0, 0, 0, 0,
 				NOW(), ?, NOW(), ?
-			)
-		`, typeColumn)), tn, title, queueID, serviceIDVal, priorityID, systemUserID, systemUserID, customerID, username, systemUserID, systemUserID) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
+			) RETURNING id
+		`), tn, title, queueID, serviceIDVal, priorityID, systemUserID, systemUserID, customerID, username, systemUserID, systemUserID)
 
 		if err != nil {
 			log.Printf("Customer create ticket error: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create ticket"})
-			return
-		}
-
-		ticketID, err = result.LastInsertId()
-		if err != nil {
-			log.Printf("Customer create ticket error (get ID): %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get ticket ID"})
 			return
 		}
 
@@ -640,8 +629,7 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 		defer func() { _ = tx.Rollback() }()
 
 		// Create first article (OTRS schema: subject/body are in article_data_mime)
-		var articleID int64
-		articleResult, err := tx.Exec(database.ConvertPlaceholders(`
+		articleID, err := database.GetAdapter().InsertWithReturningTx(tx, database.ConvertPlaceholders(`
 			INSERT INTO article (
 				ticket_id, article_sender_type_id, communication_channel_id,
 				is_visible_for_customer, search_index_needs_rebuild,
@@ -650,19 +638,12 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 				?, 3, 1,
 				1, 1,
 				NOW(), ?, NOW(), ?
-			)
+			) RETURNING id
 		`), ticketID, systemUserID, systemUserID)
 
 		if err != nil {
 			log.Printf("Customer create article error: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create article"})
-			return
-		}
-
-		articleID, err = articleResult.LastInsertId()
-		if err != nil {
-			log.Printf("Customer create article error (get ID): %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get article ID"})
 			return
 		}
 
@@ -949,7 +930,7 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 		// Create article (OTRS schema: article + article_data_mime)
 		// article_sender_type_id: 3 = customer
 		// communication_channel_id: 1 = email (Internal is typically 5, but we use 1 for customer web replies)
-		result, err := db.Exec(database.ConvertPlaceholders(`
+		articleID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 			INSERT INTO article (
 				ticket_id, article_sender_type_id, communication_channel_id,
 				is_visible_for_customer, search_index_needs_rebuild,
@@ -958,19 +939,12 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 				?, 3, 1,
 				1, 1,
 				NOW(), ?, NOW(), ?
-			)
+			) RETURNING id
 		`), ticketID, systemUserID, systemUserID)
 
 		if err != nil {
 			log.Printf("Customer reply error (article insert): %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add reply"})
-			return
-		}
-
-		articleID, err := result.LastInsertId()
-		if err != nil {
-			log.Printf("Customer reply error (get article ID): %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get article ID"})
 			return
 		}
 
@@ -1071,7 +1045,7 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Add a note about closure - insert into article table first
-		result, err := db.Exec(database.ConvertPlaceholders(`
+		articleID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 			INSERT INTO article (
 				ticket_id, article_sender_type_id, communication_channel_id,
 				is_visible_for_customer,
@@ -1080,23 +1054,21 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 				?, 3, 1,
 				1,
 				NOW(), ?, NOW(), ?
-			)
+			) RETURNING id
 		`), ticketID, systemUserID, systemUserID)
 
 		if err == nil {
-			if articleID, err := result.LastInsertId(); err == nil {
-				// Insert article content into article_data_mime (incoming_time is required)
-				//nolint:errcheck // Best-effort article data insert
-				_, _ = db.Exec(database.ConvertPlaceholders(`
-					INSERT INTO article_data_mime (
-						article_id, a_from, a_to, a_subject, a_body, a_content_type,
-						incoming_time, create_time, create_by, change_time, change_by
-					) VALUES (
-						?, 'Customer', '', 'Ticket closed by customer', 'Customer closed this ticket.', 'text/plain',
-						UNIX_TIMESTAMP(), NOW(), ?, NOW(), ?
-					)
-				`), articleID, systemUserID, systemUserID)
-			}
+			// Insert article content into article_data_mime (incoming_time is required)
+			//nolint:errcheck // Best-effort article data insert
+			_, _ = db.Exec(database.ConvertPlaceholders(`
+				INSERT INTO article_data_mime (
+					article_id, a_from, a_to, a_subject, a_body, a_content_type,
+					incoming_time, create_time, create_by, change_time, change_by
+				) VALUES (
+					?, 'Customer', '', 'Ticket closed by customer', 'Customer closed this ticket.', 'text/plain',
+					UNIX_TIMESTAMP(), NOW(), ?, NOW(), ?
+				)
+			`), articleID, systemUserID, systemUserID)
 		}
 
 		// Redirect to tickets list

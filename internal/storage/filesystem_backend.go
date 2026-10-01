@@ -309,41 +309,11 @@ func (f *FilesystemBackend) storeReference(ctx context.Context, ref *StorageRefe
 		return nil // No database, references not tracked
 	}
 
-	query := database.ConvertPlaceholders(`
+	id, err := database.GetAdapter().InsertWithReturning(f.db, database.ConvertPlaceholders(`
         INSERT INTO article_storage_references (
             article_id, backend, location, content_type,
             file_name, file_size, checksum, created_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-
-	if database.IsMySQL() {
-		// Try update first
-		_, _ = f.db.ExecContext(ctx, database.ConvertPlaceholders(`
-            UPDATE article_storage_references
-            SET location = ?, checksum = ?, accessed_time = NOW()
-            WHERE article_id = ? AND file_name = ? AND backend = ?
-        `),
-			ref.ArticleID, ref.Backend, ref.Location, ref.Location, ref.FileName, ref.FileSize, ref.Checksum,
-		)
-		res, err := f.db.ExecContext(ctx, query,
-			ref.ArticleID,
-			ref.Backend,
-			ref.Location,
-			ref.ContentType,
-			ref.FileName,
-			ref.FileSize,
-			ref.Checksum,
-			ref.CreatedTime,
-		)
-		if err != nil {
-			return err
-		}
-		id, _ := res.LastInsertId()
-		ref.ID = id
-		return nil
-	}
-
-	err := f.db.QueryRowContext(ctx, query+" RETURNING id",
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`),
 		ref.ArticleID,
 		ref.Backend,
 		ref.Location,
@@ -352,9 +322,12 @@ func (f *FilesystemBackend) storeReference(ctx context.Context, ref *StorageRefe
 		ref.FileSize,
 		ref.Checksum,
 		ref.CreatedTime,
-	).Scan(&ref.ID)
-
-	return err
+	)
+	if err != nil {
+		return err
+	}
+	ref.ID = id
+	return nil
 }
 
 func (f *FilesystemBackend) getReferences(ctx context.Context, articleID int64) ([]*StorageReference, error) {
@@ -363,13 +336,13 @@ func (f *FilesystemBackend) getReferences(ctx context.Context, articleID int64) 
 		return f.scanFilesystem(articleID)
 	}
 
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT 
 			id, article_id, backend, location, content_type,
 			file_name, file_size, checksum, created_time, accessed_time
 		FROM article_storage_references
 		WHERE article_id = ? AND backend = 'FS'
-		ORDER BY id`
+		ORDER BY id`)
 
 	rows, err := f.db.QueryContext(ctx, query, articleID)
 	if err != nil {
@@ -472,9 +445,9 @@ func (f *FilesystemBackend) deleteReference(ctx context.Context, ref *StorageRef
 		return nil
 	}
 
-	query := `
+	query := database.ConvertPlaceholders(`
 		DELETE FROM article_storage_references
-		WHERE article_id = ? AND backend = 'FS' AND location = ?`
+		WHERE article_id = ? AND backend = 'FS' AND location = ?`)
 
 	_, err := f.db.ExecContext(ctx, query, ref.ArticleID, ref.Location)
 	return err

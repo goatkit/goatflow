@@ -256,6 +256,7 @@ func (s *PostgresService) Query(ctx context.Context, query string, args ...inter
 	}
 
 	start := time.Now()
+	// sql-converted: DatabaseService pass-through; callers own conversion (platform/database imports this package, so it cannot convert here)
 	rows, err := db.QueryContext(ctx, query, args...)
 	duration := time.Since(start)
 
@@ -284,6 +285,7 @@ func (s *PostgresService) QueryRow(ctx context.Context, query string, args ...in
 	s.metrics.Requests++
 	s.mu.Unlock()
 
+	// sql-converted: DatabaseService pass-through; callers own conversion
 	return db.QueryRowContext(ctx, query, args...)
 }
 
@@ -298,6 +300,7 @@ func (s *PostgresService) Exec(ctx context.Context, query string, args ...interf
 	}
 
 	start := time.Now()
+	// sql-converted: DatabaseService pass-through; callers own conversion
 	result, err := db.ExecContext(ctx, query, args...)
 	duration := time.Since(start)
 
@@ -384,6 +387,7 @@ func (s *PostgresService) GetSchemaVersion() (int, error) {
 	}
 
 	var version int
+	// sql-converted: PostgresService-only, parameterless portable SQL; platform/database cannot be imported here (cycle)
 	err := db.QueryRow("SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1").Scan(&version)
 	if err != nil {
 		return 0, err

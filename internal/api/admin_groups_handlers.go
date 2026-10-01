@@ -913,11 +913,11 @@ func handleGetGroups(c *gin.Context) {
 	}
 
 	// Query for all groups
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id
 		FROM groups
 		WHERE valid_id = 1
-		ORDER BY name`
+		ORDER BY name`)
 
 	rows, err := db.Query(query)
 	if err != nil {
@@ -1035,7 +1035,7 @@ func handleGetGroupAPI(c *gin.Context) {
 	var name, comments sql.NullString
 	var validID sql.NullInt32
 
-	query := `SELECT id, name, comments, valid_id FROM groups WHERE id = ?`
+	query := database.ConvertPlaceholders(`SELECT id, name, comments, valid_id FROM groups WHERE id = ?`)
 	err = db.QueryRow(query, groupID).Scan(&id, &name, &comments, &validID)
 	if err != nil {
 		if err == sql.ErrNoRows {

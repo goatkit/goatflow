@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/goatkit/goatflow/internal/platform/database"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -242,11 +243,11 @@ func TestProdHostAPI_DBQuery(t *testing.T) {
 	defer db.Close()
 
 	// Create test table
-	_, err = db.Exec("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
+	_, err = db.Exec(database.ConvertPlaceholders("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)"))
 	if err != nil {
 		t.Fatalf("failed to create table: %v", err)
 	}
-	_, err = db.Exec("INSERT INTO test (name) VALUES ('Alice'), ('Bob')")
+	_, err = db.Exec(database.ConvertPlaceholders("INSERT INTO test (name) VALUES ('Alice'), ('Bob')"))
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
@@ -298,7 +299,7 @@ func TestProdHostAPI_DBQuery(t *testing.T) {
 func TestProdHostAPI_DBExec(t *testing.T) {
 	db, _ := sql.Open("sqlite3", ":memory:")
 	defer db.Close()
-	db.Exec("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
+	db.Exec(database.ConvertPlaceholders("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)"))
 
 	h := NewProdHostAPI(WithDB("default", db))
 	ctx := context.Background()

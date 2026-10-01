@@ -156,16 +156,12 @@ func (r *WebserviceRepository) Create(ctx context.Context, ws *models.Webservice
 	query := database.ConvertPlaceholders(`
 		INSERT INTO gi_webservice_config (name, config, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
+		RETURNING id
 	`)
 
-	result, err := r.db.ExecContext(ctx, query,
+	id, err := database.GetAdapter().InsertWithReturning(r.db, query,
 		ws.Name, configYAML, ws.ValidID, now, userID, now, userID,
 	)
-	if err != nil {
-		return 0, err
-	}
-
-	id, err := result.LastInsertId()
 	if err != nil {
 		return 0, err
 	}

@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
@@ -17,10 +18,18 @@ import (
 )
 
 func main() {
+	// The SQL goes through database.ConvertPlaceholders, which follows
+	// DB_DRIVER, so the connection must use the same driver.
+	driver := database.GetDBDriver()
+	defaultPort := "5432"
+	if database.IsMySQL() {
+		defaultPort = "3306"
+	}
+
 	// Define command-line flags
 	var (
 		dbHost     = flag.String("db-host", getEnv("DB_HOST", "localhost"), "Database host")
-		dbPort     = flag.String("db-port", getEnv("DB_PORT", "5432"), "Database port")
+		dbPort     = flag.String("db-port", getEnv("DB_PORT", defaultPort), "Database port")
 		dbName     = flag.String("db-name", getEnv("DB_NAME", "goatflow"), "Database name")
 		dbUser     = flag.String("db-user", getEnv("DB_USER", "goatflow"), "Database user")
 		dbPassword = flag.String("db-password", getEnv("DB_PASSWORD", ""), "Database password")
@@ -55,10 +64,7 @@ func main() {
 	}
 
 	// Connect to database
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		*dbHost, *dbPort, *dbUser, *dbPassword, *dbName)
-
-	db, err := sql.Open("postgres", dsn)
+	db, err := openDB(driver, *dbHost, *dbPort, *dbUser, *dbPassword, *dbName)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -101,6 +107,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("Command failed: %v", err)
 	}
+}
+
+// openDB connects with the driver selected by DB_DRIVER (see GetDBDriver).
+func openDB(driver, host, port, user, password, name string) (*sql.DB, error) {
+	if database.IsMySQL() {
+		return sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
+			user, password, host, port, name))
+	}
+	if driver != "postgres" {
+		return nil, fmt.Errorf("unsupported DB_DRIVER %q", driver)
+	}
+	return sql.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host, port, user, password, name))
 }
 
 // SwitchOptions contains options for storage backend switching.
@@ -305,12 +324,12 @@ func showStatus(ctx context.Context, db *sql.DB, fsPath string, verbose bool) er
 	var dbArticles, dbAttachments int
 	var dbSize int64
 
-	db.QueryRow("SELECT COUNT(*) FROM article_data_mime").Scan(&dbArticles)
-	db.QueryRow("SELECT COUNT(*) FROM article_data_mime_attachment").Scan(&dbAttachments)
-	db.QueryRow("SELECT COALESCE(SUM(octet_length(a_body)), 0) FROM article_data_mime").Scan(&dbSize)
+	db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM article_data_mime")).Scan(&dbArticles)
+	db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM article_data_mime_attachment")).Scan(&dbAttachments)
+	db.QueryRow(database.ConvertPlaceholders("SELECT COALESCE(SUM(octet_length(a_body)), 0) FROM article_data_mime")).Scan(&dbSize)
 
 	var attachmentSize int64
-	db.QueryRow("SELECT COALESCE(SUM(octet_length(content)), 0) FROM article_data_mime_attachment").Scan(&attachmentSize)
+	db.QueryRow(database.ConvertPlaceholders("SELECT COALESCE(SUM(octet_length(content)), 0) FROM article_data_mime_attachment")).Scan(&attachmentSize)
 	dbSize += attachmentSize
 
 	fmt.Printf("\nDatabase Storage (ArticleStorageDB):\n")
@@ -320,7 +339,7 @@ func showStatus(ctx context.Context, db *sql.DB, fsPath string, verbose bool) er
 
 	// Check filesystem storage
 	var fsReferences int
-	db.QueryRow("SELECT COUNT(*) FROM article_storage_references WHERE backend = 'FS'").Scan(&fsReferences)
+	db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM article_storage_references WHERE backend = 'FS'")).Scan(&fsReferences)
 
 	fmt.Printf("\nFilesystem Storage (ArticleStorageFS):\n")
 	fmt.Printf("  Base Path: %s\n", fsPath)
@@ -351,7 +370,7 @@ func showStatus(ctx context.Context, db *sql.DB, fsPath string, verbose bool) er
 
 	// Check for active migrations
 	var activeMigrations int
-	db.QueryRow("SELECT COUNT(*) FROM article_storage_migration WHERE status IN ('pending', 'in_progress')").Scan(&activeMigrations)
+	db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM article_storage_migration WHERE status IN ('pending', 'in_progress')")).Scan(&activeMigrations)
 
 	if activeMigrations > 0 {
 		fmt.Printf("\nActive Migrations: %d\n", activeMigrations)
@@ -397,7 +416,7 @@ func verifyStorage(ctx context.Context, db *sql.DB, fsPath string, verbose bool)
 	}
 
 	// Get all articles
-	rows, err := db.Query("SELECT id FROM article ORDER BY id")
+	rows, err := db.Query(database.ConvertPlaceholders("SELECT id FROM article ORDER BY id"))
 	if err != nil {
 		return fmt.Errorf("failed to query articles: %w", err)
 	}
@@ -459,24 +478,23 @@ func verifyStorage(ctx context.Context, db *sql.DB, fsPath string, verbose bool)
 // Helper functions
 
 func startMigration(ctx context.Context, db *sql.DB, source, target string) (int, error) {
-	var id int
-	err := db.QueryRowContext(ctx, `
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO article_storage_migration (
 			source_backend, target_backend, status, start_time
-		) VALUES ($1, $2, 'in_progress', NOW())
-		RETURNING id`, source, target).Scan(&id)
-	return id, err
+		) VALUES (?, ?, 'in_progress', NOW())
+		RETURNING id`), source, target)
+	return int(id), err
 }
 
 func updateMigration(ctx context.Context, db *sql.DB, id, total, processed, failed int, lastArticleID int64) {
-	db.ExecContext(ctx, `
+	db.ExecContext(ctx, database.ConvertPlaceholders(`
 		UPDATE article_storage_migration 
-		SET total_articles = $2,
-		    processed_articles = $3,
-		    failed_articles = $4,
-		    last_article_id = $5,
+		SET total_articles = ?,
+		    processed_articles = ?,
+		    failed_articles = ?,
+		    last_article_id = ?,
 		    updated_at = NOW()
-		WHERE id = $1`, id, total, processed, failed, lastArticleID)
+		WHERE id = ?`), total, processed, failed, lastArticleID, id)
 }
 
 func completeMigration(ctx context.Context, db *sql.DB, id, total, processed, failed int) {
@@ -485,15 +503,15 @@ func completeMigration(ctx context.Context, db *sql.DB, id, total, processed, fa
 		status = "completed_with_errors"
 	}
 
-	db.ExecContext(ctx, `
+	db.ExecContext(ctx, database.ConvertPlaceholders(`
 		UPDATE article_storage_migration 
-		SET status = $2,
-		    total_articles = $3,
-		    processed_articles = $4,
-		    failed_articles = $5,
+		SET status = ?,
+		    total_articles = ?,
+		    processed_articles = ?,
+		    failed_articles = ?,
 		    end_time = NOW(),
 		    updated_at = NOW()
-		WHERE id = $1`, id, status, total, processed, failed)
+		WHERE id = ?`), status, total, processed, failed, id)
 }
 
 func formatBytes(bytes int64) string {

@@ -40,31 +40,16 @@ func createTestCustomerCompany(t *testing.T, db *sql.DB, customerID string) {
 	city := "Test City"
 	country := "Test Country"
 
-	if database.IsMySQL() {
-		_, err := db.Exec(`
-			INSERT INTO customer_company (customer_id, name, street, city, country, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, ?, ?, ?, ?, 1, NOW(), 1, NOW(), 1)
-			ON DUPLICATE KEY UPDATE
-				name = VALUES(name),
-				street = VALUES(street),
-				city = VALUES(city),
-				country = VALUES(country),
-				change_time = NOW()
-		`, customerID, name, street, city, country)
-		require.NoError(t, err, "Failed to create test customer company")
-		return
-	}
-
-	_, err := db.Exec(database.ConvertPlaceholders(`
+	_, err := db.Exec(database.ConvertUpsert(`
 		INSERT INTO customer_company (customer_id, name, street, city, country, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, ?, ?, ?, ?, 1, NOW(), 1, NOW(), 1)
-		ON CONFLICT (customer_id) DO UPDATE SET
-			name = EXCLUDED.name,
-			street = EXCLUDED.street,
-			city = EXCLUDED.city,
-			country = EXCLUDED.country,
+		ON DUPLICATE KEY UPDATE
+			name = VALUES(name),
+			street = VALUES(street),
+			city = VALUES(city),
+			country = VALUES(country),
 			change_time = NOW()
-	`), customerID, name, street, city, country)
+	`, "customer_id"), customerID, name, street, city, country)
 	require.NoError(t, err, "Failed to create test customer company")
 }
 
@@ -1015,12 +1000,13 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 
 		t.Run("activate company", func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/RELTEST001/activate", nil)
+			req.Header.Set("Accept", "application/json")
 			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
-			// Should succeed or return not found
-			assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusNotFound)
+			// Company exists (already valid): activation is an idempotent success.
+			assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 		})
 
 		t.Run("view company users", func(t *testing.T) {

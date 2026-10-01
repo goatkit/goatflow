@@ -141,10 +141,9 @@ func HandleListQueuesAPI(c *gin.Context) {
 	}
 
 	query += " ORDER BY q.name"
-	query = database.ConvertPlaceholders(query)
 
 	// Execute query
-	rows, err := db.Query(query, args...)
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,

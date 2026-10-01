@@ -18,7 +18,7 @@ func getTestDB(t *testing.T) *sql.DB {
 	}
 	var count int
 	err = db.QueryRow(
-		"SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'gk_plugin_ui'",
+		database.ConvertPlaceholders("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'gk_plugin_ui'"),
 	).Scan(&count)
 	if err != nil || count == 0 {
 		t.Skipf("gk_plugin_ui table not found — run migration 000010")

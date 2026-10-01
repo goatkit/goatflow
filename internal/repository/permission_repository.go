@@ -109,13 +109,27 @@ func (r *PermissionRepository) SetUserGroupPermission(userID, groupID uint, perm
 		return nil
 	}
 
-	// Insert or update permission (value = 1 means grant permission)
-	insertQuery := database.ConvertPlaceholders(`
-		INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
-		VALUES (?, ?, ?, NOW(), ?, NOW(), ?)
-		ON DUPLICATE KEY UPDATE change_time = NOW(), change_by = ?`)
+	// Grant the permission, refreshing the audit fields when it is already
+	// granted. group_user has no unique key, so check for the row first.
+	var exists bool
+	err := r.db.QueryRow(database.ConvertPlaceholders(`
+		SELECT EXISTS(SELECT 1 FROM group_user WHERE user_id = ? AND group_id = ? AND permission_key = ?)`),
+		userID, groupID, permKey).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("failed to check permission: %w", err)
+	}
 
-	_, err := r.db.Exec(insertQuery, userID, groupID, permKey, userID)
+	if exists {
+		_, err = r.db.Exec(database.ConvertPlaceholders(`
+			UPDATE group_user SET change_time = NOW(), change_by = ?
+			WHERE user_id = ? AND group_id = ? AND permission_key = ?`),
+			userID, userID, groupID, permKey)
+	} else {
+		_, err = r.db.Exec(database.ConvertPlaceholders(`
+			INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+			VALUES (?, ?, ?, NOW(), ?, NOW(), ?)`),
+			userID, groupID, permKey, userID, userID)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to set permission: %w", err)
 	}
@@ -180,15 +194,9 @@ func (r *PermissionRepository) SetUserGroupMatrix(userID, groupID uint, permissi
 		INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
 		VALUES (?, ?, ?, NOW(), ?, NOW(), ?)`)
 
-	stmt, err := tx.Prepare(insertQuery)
-	if err != nil {
-		return fmt.Errorf("failed to prepare insert: %w", err)
-	}
-	defer stmt.Close()
-
 	for permKey, enabled := range permissions {
 		if enabled {
-			_, err = stmt.Exec(userID, groupID, permKey, 1, 1) // Using system user (1) for audit fields
+			_, err = tx.Exec(insertQuery, userID, groupID, permKey, 1, 1) // Using system user (1) for audit fields
 			if err != nil {
 				return fmt.Errorf("failed to insert permission %s: %w", permKey, err)
 			}

@@ -38,7 +38,7 @@ func ensureArticleTestPermissions(t *testing.T, db *sql.DB, ticketID int) {
 		), groupID, perm).Scan(&count)
 		if count == 0 {
 			_, _ = db.Exec(database.ConvertPlaceholders(
-				"INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by) VALUES (1, ?, ?, 1, NOW(), 1, NOW(), 1)",
+				"INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by) VALUES (1, ?, ?, NOW(), 1, NOW(), 1)",
 			), groupID, perm)
 		}
 	}
@@ -54,7 +54,7 @@ func TestAddArticle_BasicArticle(t *testing.T) {
 	}
 
 	var seedTicketID int
-	err = db.QueryRow("SELECT id FROM ticket ORDER BY id LIMIT 1").Scan(&seedTicketID)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket ORDER BY id LIMIT 1")).Scan(&seedTicketID)
 	if err != nil {
 		t.Skipf("No seeded ticket available: %v", err)
 	}
@@ -203,7 +203,7 @@ func TestAddArticle_ArticleTypes(t *testing.T) {
 	}
 
 	var seedTicketID int
-	err = db.QueryRow("SELECT id FROM ticket ORDER BY id LIMIT 1").Scan(&seedTicketID)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket ORDER BY id LIMIT 1")).Scan(&seedTicketID)
 	if err != nil {
 		t.Skipf("No seeded ticket available: %v", err)
 	}
@@ -362,7 +362,7 @@ func TestAddArticle_Validation(t *testing.T) {
 	}
 
 	var seedTicketID int
-	err = db.QueryRow("SELECT id FROM ticket ORDER BY id LIMIT 1").Scan(&seedTicketID)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket ORDER BY id LIMIT 1")).Scan(&seedTicketID)
 	validTicketID := "1" // fallback
 	if err == nil {
 		ensureArticleTestPermissions(t, db, seedTicketID)
@@ -493,11 +493,11 @@ func TestAddArticle_Permissions(t *testing.T) {
 	require.NotNil(t, db)
 
 	// Clean up any leftover data from previous failed test runs
-	db.Exec(database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS=0"))
-	db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime WHERE article_id IN (SELECT id FROM article WHERE ticket_id = (SELECT id FROM ticket WHERE tn = 'PERM-TEST-001'))"))
-	db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE ticket_id = (SELECT id FROM ticket WHERE tn = 'PERM-TEST-001')"))
-	db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE tn = 'PERM-TEST-001'"))
-	db.Exec(database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS=1"))
+	require.NoError(t, withoutFKChecks(db, func(exec func(query string, args ...any) error) {
+		_ = exec("DELETE FROM article_data_mime WHERE article_id IN (SELECT id FROM article WHERE ticket_id = (SELECT id FROM ticket WHERE tn = 'PERM-TEST-001'))")
+		_ = exec("DELETE FROM article WHERE ticket_id = (SELECT id FROM ticket WHERE tn = 'PERM-TEST-001')")
+		_ = exec("DELETE FROM ticket WHERE tn = 'PERM-TEST-001'")
+	}))
 
 	// Insert test ticket owned by test.customer
 	_, err = db.Exec(database.ConvertPlaceholders(`
@@ -524,11 +524,11 @@ func TestAddArticle_Permissions(t *testing.T) {
 
 	// Clean up after test
 	t.Cleanup(func() {
-		db.Exec(database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS=0"))
-		db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime WHERE article_id IN (SELECT id FROM article WHERE ticket_id = ?)"), testTicketID)
-		db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE ticket_id = ?"), testTicketID)
-		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id = ?"), testTicketID)
-		db.Exec(database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS=1"))
+		_ = withoutFKChecks(db, func(exec func(query string, args ...any) error) {
+			_ = exec("DELETE FROM article_data_mime WHERE article_id IN (SELECT id FROM article WHERE ticket_id = ?)", testTicketID)
+			_ = exec("DELETE FROM article WHERE ticket_id = ?", testTicketID)
+			_ = exec("DELETE FROM ticket WHERE id = ?", testTicketID)
+		})
 	})
 
 	tests := []struct {
@@ -624,7 +624,7 @@ func TestAddArticle_EmailHeaders(t *testing.T) {
 
 	// Use seeded ticket from test database (same pattern as TestAddArticle_BasicArticle)
 	var ticketID int
-	err = db.QueryRow("SELECT id FROM ticket ORDER BY id LIMIT 1").Scan(&ticketID)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket ORDER BY id LIMIT 1")).Scan(&ticketID)
 	if err != nil {
 		t.Skipf("No seeded ticket available: %v", err)
 	}
@@ -686,7 +686,7 @@ func TestAddArticle_UpdatesTicketChangeTime(t *testing.T) {
 
 	// Use seeded ticket from test database (same pattern as TestAddArticle_EmailHeaders)
 	var ticketID int
-	err = db.QueryRow("SELECT id FROM ticket ORDER BY id LIMIT 1").Scan(&ticketID)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket ORDER BY id LIMIT 1")).Scan(&ticketID)
 	if err != nil {
 		t.Skipf("No seeded ticket available: %v", err)
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"regexp"
-	"strings"
 )
 
 // TestDB wraps *sql.DB for tests so that SQL can be written portably with
@@ -12,19 +11,22 @@ import (
 // against whichever driver the test harness selected (MySQL or PostgreSQL).
 //
 // Every query-taking method routes through the same driver-aware conversion the
-// application uses. Conversion is guarded to be a no-op on already-converted
-// ($N) queries, so tests that pre-convert still work.
+// application uses, including placeholder-free MySQL-isms (INSERT IGNORE,
+// UUID(), SET FOREIGN_KEY_CHECKS, …). Conversion is skipped for
+// already-converted ($N) queries, so tests that pre-convert still work.
 type TestDB struct {
 	*sql.DB
 }
 
-var quotedRe = regexp.MustCompile(`\$\d+`)
+// dollarPlaceholderRe matches PostgreSQL $N placeholders, the mark of SQL that
+// has already been through ConvertPlaceholders.
+var dollarPlaceholderRe = regexp.MustCompile(`\$\d+`)
 
 func (t *TestDB) convert(q string) string {
-	if (strings.Contains(q, "?") || strings.Contains(q, "`")) && !quotedRe.MatchString(q) {
-		return ConvertPlaceholders(q)
+	if dollarPlaceholderRe.MatchString(q) {
+		return q
 	}
-	return q
+	return ConvertPlaceholders(q)
 }
 
 // NewTestDB returns a converting wrapper around the configured test database.
@@ -47,25 +49,25 @@ type sqlErr struct{ msg string }
 func (e *sqlErr) Error() string { return e.msg }
 
 func (t *TestDB) Exec(query string, args ...interface{}) (sql.Result, error) {
-	return t.DB.Exec(t.convert(query), args...)
+	return t.DB.Exec(t.convert(query), args...) // sql-converted: t.convert applies ConvertPlaceholders
 }
 
 func (t *TestDB) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return t.DB.ExecContext(ctx, t.convert(query), args...)
+	return t.DB.ExecContext(ctx, t.convert(query), args...) // sql-converted: t.convert applies ConvertPlaceholders
 }
 
 func (t *TestDB) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	return t.DB.Query(t.convert(query), args...)
+	return t.DB.Query(t.convert(query), args...) // sql-converted: t.convert applies ConvertPlaceholders
 }
 
 func (t *TestDB) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	return t.DB.QueryContext(ctx, t.convert(query), args...)
+	return t.DB.QueryContext(ctx, t.convert(query), args...) // sql-converted: t.convert applies ConvertPlaceholders
 }
 
 func (t *TestDB) QueryRow(query string, args ...interface{}) *sql.Row {
-	return t.DB.QueryRow(t.convert(query), args...)
+	return t.DB.QueryRow(t.convert(query), args...) // sql-converted: t.convert applies ConvertPlaceholders
 }
 
 func (t *TestDB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return t.DB.QueryRowContext(ctx, t.convert(query), args...)
+	return t.DB.QueryRowContext(ctx, t.convert(query), args...) // sql-converted: t.convert applies ConvertPlaceholders
 }

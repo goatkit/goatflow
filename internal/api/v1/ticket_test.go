@@ -25,18 +25,13 @@ func TestCreateTicket_AcceptanceTest(t *testing.T) {
 	// Test data matching OTRS structure
 	ticketData := map[string]interface{}{
 		"title":            "Test ticket for customer issue",
-		"queue_id":         1, // Raw queue
-		"type_id":          1, // Incident
+		"queue_id":         1, // Postmaster
+		"type_id":          1, // Unclassified
 		"state_id":         1, // new
 		"priority_id":      3, // 3 normal
 		"customer_user_id": "customer@example.com",
 		"customer_id":      "ACME Corp",
-		"article": map[string]interface{}{
-			"subject":         "Initial problem description",
-			"body":            "Customer reports that the system is not working properly.",
-			"article_type_id": 1, // email-external
-			"sender_type_id":  3, // customer
-		},
+		"body":             "Customer reports that the system is not working properly.",
 	}
 
 	jsonData, _ := json.Marshal(ticketData)
@@ -59,11 +54,11 @@ func TestCreateTicket_AcceptanceTest(t *testing.T) {
 	data := response["data"].(map[string]interface{})
 
 	// Verify ticket number format (OTRS style: YYYYMMDDHHMMSS + counter)
-	assert.Regexp(t, `^\d{14}\d+$`, data["ticket_number"])
+	assert.Regexp(t, `^\d{14}\d+$`, data["tn"])
 	assert.NotNil(t, data["id"])
 	assert.Equal(t, "Test ticket for customer issue", data["title"])
 	assert.Equal(t, float64(1), data["queue_id"])
-	assert.Equal(t, float64(1), data["state_id"])
+	assert.Equal(t, float64(1), data["ticket_state_id"])
 }
 
 // Acceptance Test: As an agent, I can list tickets with filters.
@@ -92,9 +87,11 @@ func TestListTickets_AcceptanceTest(t *testing.T) {
 	assert.True(t, response["success"].(bool))
 
 	// Check pagination
-	assert.NotNil(t, response["page"])
-	assert.NotNil(t, response["per_page"])
-	assert.NotNil(t, response["total"])
+	pagination, ok := response["pagination"].(map[string]interface{})
+	require.True(t, ok, "response should carry pagination")
+	assert.NotNil(t, pagination["page"])
+	assert.NotNil(t, pagination["per_page"])
+	assert.NotNil(t, pagination["total"])
 
 	// Check data structure
 	data := response["data"].([]interface{})
@@ -136,17 +133,15 @@ func TestGetTicketDetails_AcceptanceTest(t *testing.T) {
 	data := response["data"].(map[string]interface{})
 
 	// Verify complete ticket structure
-	assert.Equal(t, ticketID, data["id"])
+	assert.Equal(t, ticketID, strconv.FormatInt(int64(data["id"].(float64)), 10))
 	assert.NotNil(t, data["ticket_number"])
 	assert.NotNil(t, data["title"])
 	assert.NotNil(t, data["queue"])
 	assert.NotNil(t, data["state"])
 	assert.NotNil(t, data["priority"])
-	assert.NotNil(t, data["articles"], "Should include articles")
 
-	// Check articles
-	articles := data["articles"].([]interface{})
-	assert.GreaterOrEqual(t, len(articles), 1, "Should have at least initial article")
+	// The ticket was created with a body, which becomes its first article
+	assert.GreaterOrEqual(t, data["article_count"], float64(1), "Should have at least initial article")
 }
 
 // Acceptance Test: As an agent, I can update ticket state.
@@ -224,12 +219,7 @@ func createTestTicket(t *testing.T, router *gin.Engine) string {
 		"state_id":         1,
 		"priority_id":      3,
 		"customer_user_id": "test@example.com",
-		"article": map[string]interface{}{
-			"subject":         "Test",
-			"body":            "Test body",
-			"article_type_id": 1,
-			"sender_type_id":  3,
-		},
+		"body":             "Test body",
 	}
 
 	jsonData, _ := json.Marshal(ticketData)

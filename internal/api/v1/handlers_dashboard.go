@@ -25,15 +25,15 @@ func (router *APIRouter) handleGetDashboardStats(c *gin.Context) {
 	var totalTickets, openTickets, closedToday int
 
 	// Total tickets
-	row1 := db.QueryRow("SELECT COUNT(*) FROM ticket")
+	row1 := db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket"))
 	_ = row1.Scan(&totalTickets) //nolint:errcheck // Defaults to 0
 
 	// Open tickets (state types: new=1, open=2, pending reminder=4, pending auto=5)
-	row2 := db.QueryRow(`
+	row2 := db.QueryRow(database.ConvertPlaceholders(`
 		SELECT COUNT(*) FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		WHERE ts.type_id IN (1, 2, 4, 5)
-	`)
+	`))
 	_ = row2.Scan(&openTickets) //nolint:errcheck // Defaults to 0
 
 	// Closed today (state type 3 = closed)
@@ -59,8 +59,9 @@ func (router *APIRouter) handleGetDashboardStats(c *gin.Context) {
 }
 
 // fetchChartData executes a query expecting (name, count) rows and returns labels/data for charts.
+// query uses ? placeholders; it is converted for the active driver here.
 func fetchChartData(db *sql.DB, query string) ([]string, []int, error) {
-	rows, err := db.Query(query)
+	rows, err := db.Query(database.ConvertPlaceholders(query))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -341,7 +342,7 @@ func (router *APIRouter) handleGetMyTickets(c *gin.Context) {
 		WHERE t.responsible_user_id = ? OR t.user_id = ?
 		ORDER BY t.create_time DESC
 		LIMIT 20
-	`), userID)
+	`), userID, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, APIResponse{
 			Success: false,

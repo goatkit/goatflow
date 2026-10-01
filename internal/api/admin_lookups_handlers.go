@@ -50,7 +50,7 @@ func handleAdminQueues(c *gin.Context) {
 
 	// Get groups for dropdown
 	var groups []gin.H
-	groupRows, err := db.Query("SELECT id, name FROM groups WHERE valid_id = 1 ORDER BY name")
+	groupRows, err := db.Query(database.ConvertPlaceholders("SELECT id, name FROM groups WHERE valid_id = 1 ORDER BY name"))
 	if err == nil {
 		defer groupRows.Close()
 		for groupRows.Next() {
@@ -253,13 +253,13 @@ func handleAdminLookups(c *gin.Context) {
 	// Get various lookup data
 	// Ticket States (with type name from ticket_state_type table)
 	var ticketStates []gin.H
-	stateRows, err := db.Query(`
+	stateRows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT ts.id, ts.name, ts.type_id, ts.comments, tst.name as type_name
 		FROM ticket_state ts
 		JOIN ticket_state_type tst ON ts.type_id = tst.id
 		WHERE ts.valid_id = 1
 		ORDER BY ts.name
-	`)
+	`))
 	if err == nil {
 		defer stateRows.Close()
 		for stateRows.Next() {
@@ -289,7 +289,7 @@ func handleAdminLookups(c *gin.Context) {
 
 	// Ticket Priorities
 	var priorities []gin.H
-	priorityRows, err := db.Query("SELECT id, name FROM ticket_priority WHERE valid_id = 1 ORDER BY id")
+	priorityRows, err := db.Query(database.ConvertPlaceholders("SELECT id, name FROM ticket_priority WHERE valid_id = 1 ORDER BY id"))
 	if err == nil {
 		defer priorityRows.Close()
 		for priorityRows.Next() {
@@ -313,7 +313,7 @@ func handleAdminLookups(c *gin.Context) {
 
 	// Ticket Types
 	var types []gin.H
-	typeRows, err := db.Query("SELECT id, name FROM ticket_type WHERE valid_id = 1 ORDER BY name")
+	typeRows, err := db.Query(database.ConvertPlaceholders("SELECT id, name FROM ticket_type WHERE valid_id = 1 ORDER BY name"))
 	if err == nil {
 		defer typeRows.Close()
 		for typeRows.Next() {
@@ -337,7 +337,7 @@ func handleAdminLookups(c *gin.Context) {
 
 	// Services
 	var services []gin.H
-	serviceRows, err := db.Query("SELECT id, name FROM service WHERE valid_id = 1 ORDER BY name")
+	serviceRows, err := db.Query(database.ConvertPlaceholders("SELECT id, name FROM service WHERE valid_id = 1 ORDER BY name"))
 	if err == nil {
 		defer serviceRows.Close()
 		for serviceRows.Next() {
@@ -355,7 +355,7 @@ func handleAdminLookups(c *gin.Context) {
 
 	// SLAs
 	var slas []gin.H
-	slaRows, err := db.Query("SELECT id, name FROM sla WHERE valid_id = 1 ORDER BY name")
+	slaRows, err := db.Query(database.ConvertPlaceholders("SELECT id, name FROM sla WHERE valid_id = 1 ORDER BY name"))
 	if err == nil {
 		defer slaRows.Close()
 		for slaRows.Next() {
@@ -422,10 +422,10 @@ func handleAdminDashboard(c *gin.Context) {
 
 	db, _ := database.GetDB() //nolint:errcheck // Dashboard stats - default to 0 on error
 	if db != nil {
-		_ = db.QueryRow("SELECT COUNT(*) FROM users WHERE valid_id = 1").Scan(&userCount)                      //nolint:errcheck
-		_ = db.QueryRow("SELECT COUNT(*) FROM groups WHERE valid_id = 1").Scan(&groupCount)                    //nolint:errcheck
-		_ = db.QueryRow("SELECT COUNT(*) FROM queue WHERE valid_id = 1").Scan(&queueCount)                     //nolint:errcheck
-		_ = db.QueryRow("SELECT COUNT(*) FROM ticket WHERE ticket_state_id IN (1,2,3,4)").Scan(&activeTickets) //nolint:errcheck
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM users WHERE valid_id = 1")).Scan(&userCount)                      //nolint:errcheck
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM groups WHERE valid_id = 1")).Scan(&groupCount)                    //nolint:errcheck
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM queue WHERE valid_id = 1")).Scan(&queueCount)                     //nolint:errcheck
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id IN (1,2,3,4)")).Scan(&activeTickets) //nolint:errcheck
 	}
 
 	// First-run nudge: on a system with no groups/queues and setup not yet marked
@@ -596,11 +596,11 @@ func getTicketCountForDashboard(db *sql.DB, countType string, days int) int {
 
 // getOpenTicketCountForDashboard returns the count of currently open tickets.
 func getOpenTicketCountForDashboard(db *sql.DB) int {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT COUNT(*)
 		FROM ticket
 		WHERE ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2, 4))
-	`
+	`)
 	var count int
 	_ = db.QueryRow(query).Scan(&count) //nolint:errcheck
 	return count
@@ -648,7 +648,7 @@ func handleCustomerSearch(c *gin.Context) {
 		       OR LOWER(last_name) LIKE LOWER(?)
 		       OR LOWER(CONCAT(first_name, ' ', last_name)) LIKE LOWER(?))
 		LIMIT 10`),
-		searchTerm)
+		searchTerm, searchTerm, searchTerm, searchTerm, searchTerm)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search customers"})

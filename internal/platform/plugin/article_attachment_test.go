@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goatkit/goatflow/internal/platform/database"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -45,11 +46,11 @@ func newAttachmentTestHost(t *testing.T) *ProdHostAPI {
 			change_by INTEGER)`,
 	}
 	for _, q := range ddl {
-		if _, err := db.Exec(q); err != nil {
+		if _, err := db.Exec(database.ConvertPlaceholders(q)); err != nil {
 			t.Fatalf("create table: %v (%s)", err, q)
 		}
 	}
-	if _, err := db.Exec(`INSERT INTO article (ticket_id, create_by, change_by) VALUES (1, 1, 1)`); err != nil {
+	if _, err := db.Exec(database.ConvertPlaceholders(`INSERT INTO article (ticket_id, create_by, change_by) VALUES (1, 1, 1)`)); err != nil {
 		t.Fatalf("seed article: %v", err)
 	}
 	return NewProdHostAPI(WithDB("default", db))

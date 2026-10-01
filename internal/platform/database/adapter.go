@@ -63,41 +63,41 @@ type PostgreSQLAdapter struct{}
 func (p *PostgreSQLAdapter) InsertWithReturning(db *sql.DB, query string, args ...interface{}) (int64, error) {
 	// PostgreSQL supports RETURNING directly
 	var id int64
-	err := db.QueryRow(query, args...).Scan(&id)
+	err := db.QueryRow(query, args...).Scan(&id) // sql-converted: adapter contract; caller passes ConvertPlaceholders output
 	return id, err
 }
 
 func (p *PostgreSQLAdapter) InsertWithReturningTx(tx *sql.Tx, query string, args ...interface{}) (int64, error) {
 	// PostgreSQL supports RETURNING directly
 	var id int64
-	err := tx.QueryRow(query, args...).Scan(&id)
+	err := tx.QueryRow(query, args...).Scan(&id) // sql-converted: adapter contract; caller passes ConvertPlaceholders output
 	return id, err
 }
 
 func (p *PostgreSQLAdapter) Exec(db *sql.DB, query string, args ...interface{}) (sql.Result, error) {
 	// PostgreSQL handles $N placeholders and repeated references natively
-	return db.Exec(query, args...)
+	return db.Exec(query, args...) // sql-converted: adapter contract; caller passes ConvertPlaceholders output
 }
 
 func (p *PostgreSQLAdapter) ExecTx(tx *sql.Tx, query string, args ...interface{}) (sql.Result, error) {
 	// PostgreSQL handles $N placeholders and repeated references natively
-	return tx.Exec(query, args...)
+	return tx.Exec(query, args...) // sql-converted: adapter contract; caller passes ConvertPlaceholders output
 }
 
 func (p *PostgreSQLAdapter) Query(db *sql.DB, query string, args ...interface{}) (*sql.Rows, error) {
-	return db.Query(query, args...)
+	return db.Query(query, args...) // sql-converted: adapter contract; caller passes ConvertPlaceholders output
 }
 
 func (p *PostgreSQLAdapter) QueryTx(tx *sql.Tx, query string, args ...interface{}) (*sql.Rows, error) {
-	return tx.Query(query, args...)
+	return tx.Query(query, args...) // sql-converted: adapter contract; caller passes ConvertPlaceholders output
 }
 
 func (p *PostgreSQLAdapter) QueryRow(db *sql.DB, query string, args ...interface{}) *sql.Row {
-	return db.QueryRow(query, args...)
+	return db.QueryRow(query, args...) // sql-converted: adapter contract; caller passes ConvertPlaceholders output
 }
 
 func (p *PostgreSQLAdapter) QueryRowTx(tx *sql.Tx, query string, args ...interface{}) *sql.Row {
-	return tx.QueryRow(query, args...)
+	return tx.QueryRow(query, args...) // sql-converted: adapter contract; caller passes ConvertPlaceholders output
 }
 
 func (p *PostgreSQLAdapter) CaseInsensitiveLike(column, pattern string) string {
@@ -121,21 +121,21 @@ type MySQLAdapter struct{}
 func (m *MySQLAdapter) InsertWithReturning(db *sql.DB, query string, args ...interface{}) (int64, error) {
 	// Expand args for repeated placeholders and convert query if needed
 	query, expandedArgs := prepareQueryForMySQL(query, args)
-	result, err := db.Exec(query, expandedArgs...)
+	result, err := db.Exec(query, expandedArgs...) // sql-converted: prepareQueryForMySQL normalized caller's converted/$N SQL to ?
 	if err != nil {
 		return 0, err
 	}
-	return result.LastInsertId()
+	return result.LastInsertId() // sql-converted: MySQLAdapter is the InsertWithReturning implementation for MySQL
 }
 
 func (m *MySQLAdapter) InsertWithReturningTx(tx *sql.Tx, query string, args ...interface{}) (int64, error) {
 	// Expand args for repeated placeholders and convert query if needed
 	query, expandedArgs := prepareQueryForMySQL(query, args)
-	result, err := tx.Exec(query, expandedArgs...)
+	result, err := tx.Exec(query, expandedArgs...) // sql-converted: prepareQueryForMySQL normalized caller's converted/$N SQL to ?
 	if err != nil {
 		return 0, err
 	}
-	return result.LastInsertId()
+	return result.LastInsertId() // sql-converted: MySQLAdapter is the InsertWithReturning implementation for MySQL
 }
 
 func (m *MySQLAdapter) Exec(db *sql.DB, query string, args ...interface{}) (sql.Result, error) {
@@ -292,22 +292,13 @@ func ResetAdapterForTest() {
 	adapterMu.Unlock()
 }
 
+// buildAdapterFromEnv picks the adapter for the driver that ConvertPlaceholders
+// converts for (GetDBDriver), so a converted query always meets its adapter.
 func buildAdapterFromEnv() DBAdapter {
-	// In test mode, prefer TEST_ prefixed environment variables
-	dbDriver := os.Getenv("TEST_DB_DRIVER")
-	if dbDriver == "" {
-		dbDriver = os.Getenv("DB_DRIVER")
-	}
-	if dbDriver == "" {
-		dbDriver = "postgres"
-	}
-
-	switch dbDriver {
-	case "mysql", "mariadb":
+	if IsMySQL() {
 		return &MySQLAdapter{}
-	default:
-		return &PostgreSQLAdapter{}
 	}
+	return &PostgreSQLAdapter{}
 }
 
 // This extends the existing ConvertPlaceholders functionality.

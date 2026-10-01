@@ -163,6 +163,18 @@ project adheres to [Semantic Versioning](https://semver.org/).
   then run the existing bounded plugin shutdown. Port-bind conflicts still
   fail fast exactly as before, and the runner path is untouched
   (`cmd/goats/main.go`).
+- **`database.ConvertUpsert(query, conflictCols...)`.** Write an upsert the MySQL way
+  (`ON DUPLICATE KEY UPDATE … VALUES(c)` or `REPLACE INTO`) and name its unique key; PostgreSQL gets
+  `ON CONFLICT (cols) DO UPDATE SET … EXCLUDED.c`. `ConvertPlaceholders` also now rewrites, on
+  PostgreSQL: backtick identifiers, `INSERT IGNORE` (→ `ON CONFLICT DO NOTHING`), `UUID()`,
+  `FROM_UNIXTIME`, `DATE_SUB/DATE_ADD` with a `?` interval, and `SET FOREIGN_KEY_CHECKS`.
+- **SQL portability lint (`cmd/gk-lint`, `make lint-platform`, pre-commit).** Type-checks the whole
+  module, tests and build-tagged files included, and fails on SQL that reaches `database/sql`
+  without the conversion layer (`sql-unconverted`), `LastInsertId()` (`sql-last-insert-id`),
+  MySQL-only SQL (`sql-mysql-only`) and PostgreSQL-only SQL (`sql-postgres-only`: `RETURNING`
+  outside `InsertWithReturning`, `ON CONFLICT`, `::`, `||`, `INTERVAL '…'`, full-text functions).
+  Reviewed exceptions carry `// sql-converted: <reason>`. See
+  `docs/development/DATABASE_ACCESS_PATTERNS.md`.
 
 ### Fixed
 - **"Disable 2FA" left passkeys active, which could lock users out.** Turning 2FA off removed
@@ -228,6 +240,41 @@ project adheres to [Semantic Versioning](https://semver.org/).
   now restores `/tmp` to the standard mode 1777: the base image ships `/tmp` as
   `0755 root:root`, and apt's unprivileged `_apt` signature-verification user
   cannot create its queue/config temp files there.
+- **`POST /api/v1/search` returned nothing on every database.** The built-in search backend
+  (`postgresql`) used PostgreSQL full-text functions and queried tables that exist on neither
+  driver (`tickets`, `queues`, `article.subject/body`), so every search errored and the handler
+  answered with empty hits. It is replaced by the portable `database` backend
+  (`internal/platform/search/database_backend.go`): every query word must match (case-insensitive
+  `LIKE`) ticket number/title/article text, article subject/body/sender, or customer
+  login/email/name; results rank exact ticket number/title/subject/login matches first. Works
+  identically on MySQL/MariaDB and PostgreSQL; `/api/v1/search/health` and `/reindex` now report
+  backend `database`.
+
+- **GoatFlow did not work on PostgreSQL, and several paths were broken on MySQL too.** About 470
+  queries reached the database without the conversion layer, plus 70 `LastInsertId()` calls,
+  MySQL-only upserts/`INSERT IGNORE`/`DATE_FORMAT`/`FROM_UNIXTIME`/`GROUP_CONCAT`, and
+  PostgreSQL-only `RETURNING`/`ON CONFLICT`/`||` SQL. Every statement now goes through
+  `database.ConvertPlaceholders` / `ConvertUpsert` / `InsertWithReturning`, and the Go suite passes
+  on both MySQL/MariaDB and PostgreSQL. Bugs found on the way that were wrong on both databases
+  include: ticket repository updates/lock/unlock passing arguments in the wrong order; placeholder
+  and argument counts not matching (customer search, canned responses, attachment insert,
+  sysconfig, `GetTicketsByOwner`, dashboard "my tickets"); `REPLACE INTO user_preferences`
+  duplicating rows (the table has no unique key); `INSERT IGNORE` into `role_user` without its
+  NOT NULL timestamps; v1 admin settings writing a non-existent `value` column; queries on columns
+  or tables that exist on neither database (`ticket_type.comments`, `group_user.permission_value`,
+  `queue.comment`, `user_group`, the ticket-state in-use check on `tickets`).
+- **PostgreSQL: lookup handlers returned 500 for ids above 32767.** Priority, state and type
+  update/delete now answer not-found on both databases (the ids are `SMALLINT`).
+- **PostgreSQL: some test packages hung for 10 minutes.** `adapter.GetDirectDB` always opened a
+  MySQL connection, which waited out PostgreSQL's 60-second authentication timeout on every call.
+  It now uses the configured driver, with 5-second connect timeouts.
+- **PostgreSQL schema had 37 foreign keys; MySQL has 304.** Migration `000027` adds the missing 267
+  to PostgreSQL with the same names and rules (a no-op on MySQL). On an existing database, a key
+  that old rows would violate is left `NOT VALID` with a notice instead of failing the migration.
+- **PostgreSQL test DB setup.** Its seed now matches MySQL (roles, de-duplicated `group_user`), and a
+  new `docker/postgres/testdb/60-set-admin-password.sh` sets the test admin password like the
+  MariaDB one. `scripts/tools/check-sql.sh` (the pre-commit SQL guard) ran with `|| true` and could
+  never block a commit; it now does.
 
 ### Changed
 - **Dead pre-plugin customer KB handlers removed.** `handleCustomerKnowledgeBase` /

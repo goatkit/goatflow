@@ -337,39 +337,49 @@ func GetDirectDB() *sql.DB {
 			return nil
 		}
 	}
+	driver := "mysql"
+	if dbconfig.IsPostgres() {
+		driver = "postgres"
+	}
+
 	// Check for DATABASE_URL first
 	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
-		db, err := sql.Open("mysql", dbURL)
-		if err == nil {
-			// Test the connection
-			if err := db.Ping(); err == nil {
-				return db
-			}
-			db.Close()
+		if db := openAndPing(driver, dbURL); db != nil {
+			return db
 		}
 	}
 
 	// Use individual environment variables (namespaced per driver via dbconfig)
 	host := dbconfig.EnvDefault("HOST", "localhost")
-	port := dbconfig.EnvInt("PORT", 3306)
 	user := dbconfig.EnvDefault("USER", "otrs")
 	password := dbconfig.EnvDefault("PASSWORD", "CHANGEME")
-	database := dbconfig.EnvDefault("NAME", "otrs")
+	name := dbconfig.EnvDefault("NAME", "otrs")
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true&multiStatements=true",
-		user, password, host, port, database)
+	var dsn string
+	if driver == "postgres" {
+		sslMode := dbconfig.EnvDefault("SSLMODE", "disable")
+		dsn = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s connect_timeout=5",
+			host, dbconfig.EnvInt("PORT", 5432), user, password, name, sslMode)
+	} else {
+		dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true&multiStatements=true&timeout=5s",
+			user, password, host, dbconfig.EnvInt("PORT", 3306), name)
+	}
+	return openAndPing(driver, dsn)
+}
 
-	db, err := sql.Open("mysql", dsn)
+// openAndPing opens a connection pool and verifies it within a bounded time,
+// returning nil when the server is unreachable.
+func openAndPing(driver, dsn string) *sql.DB {
+	db, err := sql.Open(driver, dsn)
 	if err != nil {
 		return nil
 	}
-
-	// Test the connection
-	if err := db.Ping(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := db.PingContext(ctx); err != nil {
 		db.Close()
 		return nil
 	}
-
 	return db
 }
 

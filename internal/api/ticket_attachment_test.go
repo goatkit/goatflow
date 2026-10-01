@@ -31,39 +31,36 @@ func createTestTicketWithAttachment(t *testing.T, db *sql.DB) (ticketID int, art
 	var existingTicketID int
 	err = db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket WHERE tn = 'ATT-TEST-001' LIMIT 1`)).Scan(&existingTicketID)
 	if err != nil {
-		result, execErr := db.Exec(database.ConvertPlaceholders(`
+		id, execErr := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 			INSERT INTO ticket (tn, title, queue_id, ticket_lock_id, type_id, user_id, responsible_user_id, ticket_priority_id, ticket_state_id, timeout, until_time, escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time, archive_flag, create_time, create_by, change_time, change_by)
-			VALUES ('ATT-TEST-001', 'Attachment Test Ticket', 1, 1, 1, 1, 1, 3, 1, 0, 0, 0, 0, 0, 0, 0, NOW(), 1, NOW(), 1)
+			VALUES ('ATT-TEST-001', 'Attachment Test Ticket', 1, 1, 1, 1, 1, 3, 1, 0, 0, 0, 0, 0, 0, 0, NOW(), 1, NOW(), 1) RETURNING id
 		`))
 		if execErr != nil {
 			return 0, 0, 0, execErr
 		}
-		id, _ := result.LastInsertId()
 		ticketID = int(id)
 	} else {
 		ticketID = existingTicketID
 	}
 
 	// Create a test article for the ticket
-	result, err := db.Exec(database.ConvertPlaceholders(`
+	artID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer, create_time, create_by, change_time, change_by)
-		VALUES (?, 1, 1, 1, NOW(), 1, NOW(), 1)
+		VALUES (?, 1, 1, 1, NOW(), 1, NOW(), 1) RETURNING id
 	`), ticketID)
 	if err != nil {
 		return 0, 0, 0, err
 	}
-	artID, _ := result.LastInsertId()
 	articleID = int(artID)
 
 	// Create a test attachment
-	result, err = db.Exec(database.ConvertPlaceholders(`
+	attID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO article_data_mime_attachment (article_id, filename, content_size, content_type, disposition, content, create_time, create_by, change_time, change_by)
-		VALUES (?, 'existing_test.txt', '20', 'text/plain', 'attachment', 'Existing test content', NOW(), 1, NOW(), 1)
+		VALUES (?, 'existing_test.txt', '20', 'text/plain', 'attachment', 'Existing test content', NOW(), 1, NOW(), 1) RETURNING id
 	`), articleID)
 	if err != nil {
 		return ticketID, articleID, 0, err
 	}
-	attID, _ := result.LastInsertId()
 	attachmentID = int(attID)
 
 	return ticketID, articleID, attachmentID, nil
@@ -107,33 +104,30 @@ func setupAttachmentTestDB(t *testing.T) (ticketID int, articleID int, attachmen
 	err = db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket WHERE tn = 'ATT-TEST-001' LIMIT 1`)).Scan(&existingTicketID)
 	if err != nil {
 		// Create new test ticket
-		result, err := db.Exec(database.ConvertPlaceholders(`
+		id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 			INSERT INTO ticket (tn, title, queue_id, ticket_lock_id, type_id, user_id, responsible_user_id, ticket_priority_id, ticket_state_id, timeout, until_time, escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time, archive_flag, create_time, create_by, change_time, change_by)
-			VALUES ('ATT-TEST-001', 'Attachment Test Ticket', 1, 1, 1, 1, 1, 3, 1, 0, 0, 0, 0, 0, 0, 0, NOW(), 1, NOW(), 1)
+			VALUES ('ATT-TEST-001', 'Attachment Test Ticket', 1, 1, 1, 1, 1, 3, 1, 0, 0, 0, 0, 0, 0, 0, NOW(), 1, NOW(), 1) RETURNING id
 		`))
 		require.NoError(t, err, "Failed to create test ticket")
-		id, _ := result.LastInsertId()
 		ticketID = int(id)
 	} else {
 		ticketID = existingTicketID
 	}
 
 	// Create a test article for the ticket
-	result, err := db.Exec(database.ConvertPlaceholders(`
+	artID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer, create_time, create_by, change_time, change_by)
-		VALUES (?, 1, 1, 1, NOW(), 1, NOW(), 1)
+		VALUES (?, 1, 1, 1, NOW(), 1, NOW(), 1) RETURNING id
 	`), ticketID)
 	require.NoError(t, err, "Failed to create test article")
-	artID, _ := result.LastInsertId()
 	articleID = int(artID)
 
 	// Create a test attachment
-	result, err = db.Exec(database.ConvertPlaceholders(`
+	attID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO article_data_mime_attachment (article_id, filename, content_size, content_type, disposition, content, create_time, create_by, change_time, change_by)
-		VALUES (?, 'existing_test.txt', '20', 'text/plain', 'attachment', 'Existing test content', NOW(), 1, NOW(), 1)
+		VALUES (?, 'existing_test.txt', '20', 'text/plain', 'attachment', 'Existing test content', NOW(), 1, NOW(), 1) RETURNING id
 	`), articleID)
 	require.NoError(t, err, "Failed to create test attachment")
-	attID, _ := result.LastInsertId()
 	attachmentID = int(attID)
 
 	// Cleanup function to remove test data

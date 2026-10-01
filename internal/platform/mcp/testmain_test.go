@@ -56,7 +56,7 @@ func cleanupMCPTestData() {
 	if err != nil || db == nil {
 		return
 	}
-	db.Exec("SET FOREIGN_KEY_CHECKS=0")
+	db.Exec(database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS=0"))
 	db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id >= 80000 AND id < 90000"))
 	db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE ticket_id >= 80000 AND ticket_id < 90000"))
 	db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_history WHERE ticket_id >= 80000 AND ticket_id < 90000"))
@@ -68,5 +68,5 @@ func cleanupMCPTestData() {
 	db.Exec(database.ConvertPlaceholders("DELETE FROM queue WHERE id >= 80000 AND id < 90000"))
 	db.Exec(database.ConvertPlaceholders("DELETE FROM `groups` WHERE id >= 80000 AND id < 90000"))
 	db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id >= 80000 AND id < 90000"))
-	db.Exec("SET FOREIGN_KEY_CHECKS=1")
+	db.Exec(database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS=1"))
 }

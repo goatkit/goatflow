@@ -289,24 +289,15 @@ func ensureTestSLAWithEscalation(t *testing.T, db *sql.DB) int {
 	}
 
 	// Create test SLA
-	insertQuery := database.ConvertPlaceholders(`
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO sla (name, first_response_time, first_response_notify,
 			update_time, update_notify, solution_time, solution_notify,
 			valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, 60, 80, 120, 80, 480, 80, 1, NOW(), 1, NOW(), 1)
-	`)
-
-	insertQuery, useLastInsert := database.ConvertReturning(insertQuery + " RETURNING id")
-	if useLastInsert {
-		result, err := db.Exec(insertQuery, "Test Escalation SLA")
-		require.NoError(t, err)
-		id, _ := result.LastInsertId()
-		return int(id)
-	}
-
-	err = db.QueryRow(insertQuery, "Test Escalation SLA").Scan(&slaID)
+		RETURNING id
+	`), "Test Escalation SLA")
 	require.NoError(t, err)
-	return slaID
+	return int(id)
 }
 
 func ensureTestTicket(t *testing.T, db *sql.DB) int {
@@ -334,26 +325,16 @@ func ensureTestTicket(t *testing.T, db *sql.DB) int {
 
 	tn := time.Now().Format("20060102150405") + fmt.Sprintf("%06d", time.Now().UnixNano()%1000000)
 
-	insertQuery := database.ConvertPlaceholders(`
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO ticket (tn, title, queue_id, ticket_state_id, ticket_priority_id,
 			type_id, ticket_lock_id, timeout, until_time,
 			escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time,
 			user_id, responsible_user_id, create_time, create_by, change_time, change_by)
 		VALUES (?, ?, ?, ?, ?, ?, 1, 0, 0, 0, 0, 0, 0, 1, 1, NOW(), 1, NOW(), 1)
-	`)
-
-	insertQuery, useLastInsert := database.ConvertReturning(insertQuery + " RETURNING id")
-	if useLastInsert {
-		result, err := db.Exec(insertQuery, tn, "Test Escalation Ticket", queueID, stateID, priorityID, typeID)
-		require.NoError(t, err)
-		id, _ := result.LastInsertId()
-		return int(id)
-	}
-
-	var ticketID int
-	err := db.QueryRow(insertQuery, tn, "Test Escalation Ticket", queueID, stateID, priorityID, typeID).Scan(&ticketID)
+		RETURNING id
+	`), tn, "Test Escalation Ticket", queueID, stateID, priorityID, typeID)
 	require.NoError(t, err)
-	return ticketID
+	return int(id)
 }
 
 func ensureClosedTestTicket(t *testing.T, db *sql.DB) int {
@@ -511,25 +492,16 @@ func createTestTicketForEscalation(t *testing.T, db *sql.DB) int {
 	// Create unique ticket number
 	tn := fmt.Sprintf("ESCTEST-%d-%d", time.Now().UnixNano(), time.Now().Nanosecond())
 
-	insertQuery := database.ConvertPlaceholders(`
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO ticket (tn, title, queue_id, ticket_state_id, ticket_priority_id,
 			type_id, ticket_lock_id, timeout, until_time,
 			escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time,
 			user_id, responsible_user_id, create_time, create_by, change_time, change_by)
 		VALUES (?, ?, ?, ?, ?, ?, 1, 0, 0, 0, 0, 0, 0, 1, 1, NOW(), 1, NOW(), 1)
-	`)
-
-	var ticketID int
-	insertQuery, useLastInsert := database.ConvertReturning(insertQuery + " RETURNING id")
-	if useLastInsert {
-		result, err := db.Exec(insertQuery, tn, "Test Escalation Event Ticket", queueID, stateID, priorityID, typeID)
-		require.NoError(t, err, "Should be able to create test ticket")
-		id, _ := result.LastInsertId()
-		ticketID = int(id)
-	} else {
-		err := db.QueryRow(insertQuery, tn, "Test Escalation Event Ticket", queueID, stateID, priorityID, typeID).Scan(&ticketID)
-		require.NoError(t, err, "Should be able to create test ticket")
-	}
+		RETURNING id
+	`), tn, "Test Escalation Event Ticket", queueID, stateID, priorityID, typeID)
+	require.NoError(t, err, "Should be able to create test ticket")
+	ticketID := int(id)
 
 	require.NotZero(t, ticketID, "Ticket ID should be non-zero")
 	return ticketID
@@ -625,13 +597,13 @@ Sun: []
 			xml_content_raw, xml_content_parsed, xml_filename, effective_value,
 			is_dirty, exclusive_lock_guid, create_time, create_by, change_time, change_by
 		) VALUES (
-			?, 'Working hours configuration', 'Core::Time', 0, 0, 0,
+			?, 'Working hours configuration', ?, 0, 0, 0,
 			1, 0, 0, 0,
 			'', '', 'Calendar.xml', ?,
 			0, '', NOW(), 1, NOW(), 1
 		)
 	`)
-	_, err = db.Exec(insertQuery, "TimeWorkingHours", workingHoursYAML)
+	_, err = db.Exec(insertQuery, "TimeWorkingHours", "Core::Time", workingHoursYAML)
 	if err != nil {
 		t.Logf("Warning: could not insert TimeWorkingHours: %v", err)
 	}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/goatkit/goatflow/internal/platform/database"
 	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
 
@@ -129,7 +130,7 @@ func (p *DatabaseAuthProvider) authenticateCustomerUser(ctx context.Context, use
 		WHERE login = ? OR email = ?
 	`
 
-	err := p.db.QueryRowContext(ctx, query, username, username).Scan(
+	err := p.db.QueryRowContext(ctx, database.ConvertPlaceholders(query), username, username).Scan(
 		&id, &login, &email, &customerID, &firstName, &lastName, &pw, &validID,
 	)
 	if err != nil {

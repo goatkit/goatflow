@@ -3,14 +3,13 @@ package api
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -174,71 +173,90 @@ func TestAttachmentDisplayInTicketDetail(t *testing.T) {
 }
 
 func TestAttachmentDownloadHandler(t *testing.T) {
-	// Get database connection
 	db, err := database.GetDB()
 	if err != nil || db == nil {
 		t.Skip("Database not available, skipping integration test")
 	}
+	t.Setenv("ATTACHMENTS_USE_DB", "1")
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	SetupHTMXRoutes(router)
+	router.GET("/api/tickets/:id/attachments/:attachment_id", handleDownloadAttachment)
 
-	token := GetTestAuthToken(t)
+	ticketID, articleID := createAttachmentTestArticle(t, db, "Download Article", "Download body")
+	testContent := []byte("Test download content")
 
 	t.Run("Download existing attachment", func(t *testing.T) {
-		// First, we need to create an attachment record in the database
-		db, err := database.GetDB()
-		require.NoError(t, err)
-
-		// Create a test file
-		testDir := filepath.Join(os.TempDir(), "test-attachments")
-		testFile := filepath.Join(testDir, "test-download.txt")
-		testContent := []byte("Test download content")
-		require.NoError(t, os.MkdirAll(testDir, 0755))
-		err = os.WriteFile(testFile, testContent, 0644)
-		require.NoError(t, err)
-		defer os.RemoveAll(testDir)
-
-		// Insert test attachment record
-		var attachmentID int
-		err = db.QueryRow(database.ConvertPlaceholders(`
+		attachmentID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 			INSERT INTO article_data_mime_attachment
-			(article_id, filename, content_type, content_size, content, disposition, create_by, change_by)
-			VALUES (1, 'test-download.txt', 'text/plain', '21', ?, 'attachment', 1, 1)
+			(article_id, filename, content_type, content_size, content, disposition,
+			 create_time, create_by, change_time, change_by)
+			VALUES (?, 'test-download.txt', 'text/plain', ?, ?, 'attachment', NOW(), 1, NOW(), 1)
 			RETURNING id
-		`), []byte(testFile)).Scan(&attachmentID)
+		`), articleID, fmt.Sprint(len(testContent)), testContent)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime_attachment WHERE id = ?"), attachmentID)
+		})
 
-		if err != nil {
-			t.Skip("Could not create test attachment in database")
-		}
-
-		// Request the attachment download
-		req := httptest.NewRequest("GET", fmt.Sprintf("/api/attachments/%d/download", attachmentID), nil)
-		AddTestAuthCookie(req, token)
-
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/tickets/%d/attachments/%d", ticketID, attachmentID), nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		// Check response
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Equal(t, "text/plain", w.Header().Get("Content-Type"))
 		assert.Contains(t, w.Header().Get("Content-Disposition"), "test-download.txt")
 		assert.Equal(t, string(testContent), w.Body.String())
-
-		// Clean up
-		db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime_attachment WHERE id = ?"), attachmentID)
 	})
 
 	t.Run("Download non-existent attachment", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/attachments/99999/download", nil)
-		AddTestAuthCookie(req, token)
-
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/tickets/%d/attachments/99999999", ticketID), nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
 	})
+}
+
+// createAttachmentTestArticle inserts a ticket and an article (subject/body in
+// article_data_mime) using the real schema, removing them when the test ends.
+func createAttachmentTestArticle(t *testing.T, db *sql.DB, subject, body string) (ticketID, articleID int64) {
+	t.Helper()
+	tn := fmt.Sprintf("TEST-ATT-%d", time.Now().UnixNano())
+	ticketID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO ticket (tn, title, queue_id, type_id, ticket_state_id, ticket_priority_id,
+		                    ticket_lock_id, user_id, responsible_user_id,
+		                    timeout, until_time, escalation_time, escalation_update_time,
+		                    escalation_response_time, escalation_solution_time,
+		                    create_time, create_by, change_time, change_by)
+		VALUES (?, 'Test Ticket for Attachments', 1, 1, 1, 1, 1, 1, 1,
+		        0, 0, 0, 0, 0, 0, NOW(), 1, NOW(), 1)
+		RETURNING id
+	`), tn)
+	require.NoError(t, err)
+
+	articleID, err = database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id,
+		                     is_visible_for_customer, create_time, create_by, change_time, change_by)
+		VALUES (?, 3, 1, 1, NOW(), 1, NOW(), 1)
+		RETURNING id
+	`), ticketID)
+	require.NoError(t, err)
+
+	_, err = db.Exec(database.ConvertPlaceholders(`
+		INSERT INTO article_data_mime (article_id, a_subject, a_body, a_content_type, incoming_time,
+		                               create_time, create_by, change_time, change_by)
+		VALUES (?, ?, ?, 'text/plain', 0, NOW(), 1, NOW(), 1)
+	`), articleID, subject, body)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime_attachment WHERE article_id = ?"), articleID)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime WHERE article_id = ?"), articleID)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE id = ?"), articleID)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id = ?"), ticketID)
+	})
+	return ticketID, articleID
 }
 
 func TestGetMessagesWithAttachments(t *testing.T) {
@@ -256,47 +274,17 @@ func TestGetMessagesWithAttachments(t *testing.T) {
 		}
 
 		// Create a test ticket
-		ticketTypeColumn := database.TicketTypeColumn()
-		var ticketID int
-		err = db.QueryRow(database.ConvertPlaceholders(fmt.Sprintf(`
-			INSERT INTO ticket (tn, title, queue_id, %s, ticket_state_id, ticket_priority_id, 
-			                   ticket_lock_id, timeout, create_by, change_by)
-			VALUES ('TEST-ATT-001', 'Test Ticket for Attachments', 1, 1, 1, 1, 1, 0, 1, 1)
-	            RETURNING id
-	        `, ticketTypeColumn))).Scan(&ticketID)
-
-		if err != nil {
-			t.Skip("Could not create test ticket")
-		}
-		defer db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id = ?"), ticketID)
-
-		// Create an article for the ticket
-		var articleID int
-		err = db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO article (ticket_id, subject, body, sender_type_id, communication_channel_id,
-			                    is_visible_for_customer, create_by, change_by)
-			VALUES (?, 'Test Article', 'Test article body', 3, 1, 1, 1, 1)
-			RETURNING id
-		`), ticketID).Scan(&articleID)
-
-		require.NoError(t, err)
-		defer db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE id = ?"), articleID)
+		ticketID, articleID := createAttachmentTestArticle(t, db, "Test Article", "Test article body")
 
 		// Create an attachment for the article
-		testFile := "/tmp/test-article-attachment.pdf"
-		os.WriteFile(testFile, []byte("PDF content"), 0644)
-		defer os.Remove(testFile)
-
-		var attachmentID int
-		err = db.QueryRow(database.ConvertPlaceholders(`
+		attachmentID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 			INSERT INTO article_data_mime_attachment
-			(article_id, filename, content_type, content_size, content, disposition, create_by, change_by)
-			VALUES (?, 'document.pdf', 'application/pdf', '11', ?, 'attachment', 1, 1)
+			(article_id, filename, content_type, content_size, content, disposition,
+			 create_time, create_by, change_time, change_by)
+			VALUES (?, 'document.pdf', 'application/pdf', '11', ?, 'attachment', NOW(), 1, NOW(), 1)
 			RETURNING id
-		`), articleID, []byte(testFile)).Scan(&attachmentID)
-
+		`), articleID, []byte("PDF content"))
 		require.NoError(t, err)
-		defer db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime_attachment WHERE id = ?"), attachmentID)
 
 		// Get the ticket service and retrieve messages
 		ticketService := GetTicketService()
@@ -315,6 +303,6 @@ func TestGetMessagesWithAttachments(t *testing.T) {
 		assert.Equal(t, "document.pdf", attachment.Filename)
 		assert.Equal(t, "application/pdf", attachment.ContentType)
 		assert.Equal(t, int64(11), attachment.Size)
-		assert.Contains(t, attachment.URL, "/api/attachments/")
+		assert.Contains(t, attachment.URL, fmt.Sprintf("/%d/", attachmentID))
 	})
 }

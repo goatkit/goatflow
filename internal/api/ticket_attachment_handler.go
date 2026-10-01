@@ -517,7 +517,7 @@ func handleGetAttachments(c *gin.Context) {
 	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT att.id, att.filename,
 		       COALESCE(att.content_type, 'application/octet-stream'),
-		       COALESCE(att.content_size, 0),
+		       COALESCE(att.content_size, '0'),
 		       att.create_time, att.create_by,
 		       att.article_id
 		FROM article_data_mime_attachment att
@@ -613,7 +613,7 @@ func handleDownloadAttachment(c *gin.Context) {
 		)
 		row := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT att.filename, COALESCE(att.content_type,'application/octet-stream'),
-				   COALESCE(att.content_size,0), att.content
+				   COALESCE(att.content_size, '0'), att.content
 			FROM article_data_mime_attachment att
 			INNER JOIN article a ON att.article_id = a.id
 			WHERE att.id = ? AND a.ticket_id = ?
@@ -865,7 +865,7 @@ func handleViewAttachment(c *gin.Context) {
 	if db := attachmentsDB(); db != nil {
 		// content type + filename + size + timestamps
 		if err := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT att.filename, COALESCE(att.content_type,''), COALESCE(att.content_size, 0), att.create_time, att.create_by
+			SELECT att.filename, COALESCE(att.content_type,''), COALESCE(att.content_size, '0'), att.create_time, att.create_by
 			FROM article_data_mime_attachment att
 			JOIN article a ON a.id = att.article_id
 			WHERE att.id = ? AND a.ticket_id = ? LIMIT 1`), attID, ticketID).Scan(&filename, &contentType, &contentSize, &createTime, &createBy); err != nil {

@@ -194,8 +194,8 @@ func TestAdminGroupManagement(t *testing.T) {
 
 		// Create a dedicated group for this test to ensure it exists.
 		groupName := fmt.Sprintf("delete-test-%d", time.Now().UnixNano())
-		_, execErr := db.Exec(
-			"INSERT INTO `groups` (name, valid_id, create_time, change_time, create_by, change_by) VALUES (?, 1, NOW(), NOW(), 1, 1)",
+		_, execErr := db.Exec(database.ConvertPlaceholders(
+			"INSERT INTO `groups` (name, valid_id, create_time, change_time, create_by, change_by) VALUES (?, 1, NOW(), NOW(), 1, 1)"),
 			groupName)
 		if execErr != nil {
 			t.Skipf("Could not create test group: %v", execErr)
@@ -203,7 +203,7 @@ func TestAdminGroupManagement(t *testing.T) {
 
 		// Get the ID of the group we just created.
 		var groupID int64
-		row := db.QueryRow("SELECT id FROM `groups` WHERE name = ?", groupName)
+		row := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM `groups` WHERE name = ?"), groupName)
 		if err := row.Scan(&groupID); err != nil {
 			t.Skipf("Could not find created group: %v", err)
 		}
@@ -410,7 +410,7 @@ func TestGroupMembership(t *testing.T) {
 		if err := json.Unmarshal(w.Body.Bytes(), &response); err == nil {
 			// Check if member was added or already exists
 			if response["success"].(bool) {
-				assert.Equal(t, "Member added successfully", response["message"])
+				assert.Equal(t, "User assigned to group successfully", response["message"])
 			}
 		}
 	})

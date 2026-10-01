@@ -20,15 +20,12 @@ func NewQueueRepository(db *sql.DB) *QueueRepository {
 
 // GetByID retrieves a queue by ID.
 func (r *QueueRepository) GetByID(id uint) (*models.Queue, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, system_address_id, salutation_id, signature_id,
 		       follow_up_id, follow_up_lock, unlock_timeout, group_id,
 		       comments, valid_id, create_time, create_by, change_time, change_by
 		FROM queue
-		WHERE id = ?`
-
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+		WHERE id = ?`)
 
 	var queue models.Queue
 	var systemAddressID, salutationID, signatureID sql.NullInt32
@@ -84,15 +81,12 @@ func (r *QueueRepository) GetByID(id uint) (*models.Queue, error) {
 
 // GetByName retrieves a queue by name.
 func (r *QueueRepository) GetByName(name string) (*models.Queue, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, system_address_id, salutation_id, signature_id,
 		       follow_up_id, follow_up_lock, unlock_timeout, group_id,
 		       comments, valid_id, create_time, create_by, change_time, change_by
 		FROM queue
-		WHERE name = ? AND valid_id = 1`
-
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+		WHERE name = ? AND valid_id = 1`)
 
 	var queue models.Queue
 	var systemAddressID, salutationID, signatureID sql.NullInt32
@@ -148,7 +142,7 @@ func (r *QueueRepository) GetByName(name string) (*models.Queue, error) {
 
 // List retrieves all active queues.
 func (r *QueueRepository) List() ([]*models.Queue, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT q.id, q.name, q.system_address_id, q.salutation_id, q.signature_id,
 		       q.follow_up_id, q.follow_up_lock, q.unlock_timeout, q.group_id,
 		       q.comments, q.valid_id, q.create_time, q.create_by, q.change_time, q.change_by,
@@ -156,7 +150,7 @@ func (r *QueueRepository) List() ([]*models.Queue, error) {
 		FROM queue q
 		LEFT JOIN groups g ON q.group_id = g.id
 		WHERE q.valid_id = 1
-		ORDER BY q.name`
+		ORDER BY q.name`)
 
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -256,7 +250,8 @@ func (r *QueueRepository) Create(queue *models.Queue) error {
 		comments = sql.NullString{String: queue.Comment, Valid: true}
 	}
 
-	err := r.db.QueryRow(
+	id, err := database.GetAdapter().InsertWithReturning(
+		r.db,
 		database.ConvertPlaceholders(query),
 		queue.Name,
 		systemAddressID,
@@ -272,9 +267,12 @@ func (r *QueueRepository) Create(queue *models.Queue) error {
 		queue.CreateBy,
 		queue.ChangeTime,
 		queue.ChangeBy,
-	).Scan(&queue.ID)
-
-	return err
+	)
+	if err != nil {
+		return err
+	}
+	queue.ID = uint(id)
+	return nil
 }
 
 // Update updates a queue.

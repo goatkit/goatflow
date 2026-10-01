@@ -109,13 +109,14 @@ func TestTicketStateAPI(t *testing.T) {
 		// Create a test state first
 		db := requireTicketStateTable(t)
 		stateName := fmt.Sprintf("Test State %d", time.Now().UnixNano())
-		var stateID int
 		query := database.ConvertPlaceholders(`
 			INSERT INTO ticket_state (name, type_id, valid_id, create_time, create_by, change_time, change_by)
 			VALUES (?, 1, 1, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
-		if err := db.QueryRow(query, stateName).Scan(&stateID); err != nil {
+		id64, err := database.GetAdapter().InsertWithReturning(db, query, stateName)
+		stateID := int(id64)
+		if err != nil {
 			t.Skipf("Failed to insert ticket state: %v", err)
 		}
 
@@ -210,13 +211,14 @@ func TestTicketStateAPI(t *testing.T) {
 		// Create a test state
 		db := requireTicketStateTable(t)
 		stateName := fmt.Sprintf("Update Test State %d", time.Now().UnixNano())
-		var stateID int
 		query := database.ConvertPlaceholders(`
 			INSERT INTO ticket_state (name, type_id, valid_id, create_time, create_by, change_time, change_by)
 			VALUES (?, 1, 1, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
-		if err := db.QueryRow(query, stateName).Scan(&stateID); err != nil {
+		id64, err := database.GetAdapter().InsertWithReturning(db, query, stateName)
+		stateID := int(id64)
+		if err != nil {
 			t.Skipf("Failed to insert ticket state for update: %v", err)
 		}
 
@@ -271,13 +273,14 @@ func TestTicketStateAPI(t *testing.T) {
 		// Create a test state
 		db := requireTicketStateTable(t)
 		stateName := fmt.Sprintf("Delete Test State %d", time.Now().UnixNano())
-		var stateID int
 		query := database.ConvertPlaceholders(`
 			INSERT INTO ticket_state (name, type_id, valid_id, create_time, create_by, change_time, change_by)
 			VALUES (?, 1, 1, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
-		if err := db.QueryRow(query, stateName).Scan(&stateID); err != nil {
+		id64, err := database.GetAdapter().InsertWithReturning(db, query, stateName)
+		stateID := int(id64)
+		if err != nil {
 			t.Skipf("Failed to insert ticket state for delete: %v", err)
 		}
 

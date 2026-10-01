@@ -15,6 +15,7 @@ import (
 
 	"github.com/crewjam/saml"
 
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/models"
 )
 
@@ -26,17 +27,17 @@ const (
 
 // SAMLConfig holds SAML2 service provider configuration derived from an IdentityProvider row.
 type SAMLConfig struct {
-	EntityID       string // SP entity ID
-	AcsURL         string // Assertion Consumer Service URL on this host
-	IdPMetadataURL string // IdP metadata endpoint URL
-	IdPMetadataXML string // raw IdP metadata XML (alternative to URL)
-	SigningCert    string // PEM-encoded X.509 certificate for signing
-	PrivateKey     string // PEM-encoded private key
-	UserClaimEmail string // attribute name/oid mapped to email (default "email")
-	UserClaimName  string // attribute name/oid mapped to display name (default "name")
+	EntityID        string // SP entity ID
+	AcsURL          string // Assertion Consumer Service URL on this host
+	IdPMetadataURL  string // IdP metadata endpoint URL
+	IdPMetadataXML  string // raw IdP metadata XML (alternative to URL)
+	SigningCert     string // PEM-encoded X.509 certificate for signing
+	PrivateKey      string // PEM-encoded private key
+	UserClaimEmail  string // attribute name/oid mapped to email (default "email")
+	UserClaimName   string // attribute name/oid mapped to display name (default "name")
 	UserClaimGroups string // attribute name mapped to groups (default "groups")
-	AutoProvision  bool   // create users not found in the database
-	UserTable      string // "users" (agent) or "customer" (service_customer_user)
+	AutoProvision   bool   // create users not found in the database
+	UserTable       string // "users" (agent) or "customer" (service_customer_user)
 }
 
 // samlProvider implements AuthProvider for SAML2 SP-initiated login flow.
@@ -312,9 +313,9 @@ func (p *samlProvider) createOAuthUser(email, givenName, familyName string) (*mo
 	groupName := "users"
 	if p.db != nil {
 		var gid int64
-		err := p.db.QueryRow("SELECT id FROM groups WHERE name = ?", groupName).Scan(&gid)
+		err := p.db.QueryRow(database.ConvertPlaceholders("SELECT id FROM `groups` WHERE name = ?"), groupName).Scan(&gid)
 		if err == nil && gid > 0 {
-			p.db.Exec("INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by) VALUES (?, ?, 'rw', NOW(), 1, NOW(), 1)", int(user.ID), gid)
+			p.db.Exec(database.ConvertPlaceholders("INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by) VALUES (?, ?, 'rw', NOW(), 1, NOW(), 1)"), int(user.ID), gid)
 		}
 	}
 

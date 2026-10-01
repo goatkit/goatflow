@@ -184,36 +184,17 @@ func (s *Service) Create(ctx context.Context, relation *models.TicketAttributeRe
 	tempPriority := relation.Priority * 10
 
 	now := time.Now()
-	query := database.ConvertPlaceholders(`
+	id, err := database.GetAdapter().InsertWithReturning(s.db, database.ConvertPlaceholders(`
 		INSERT INTO acl_ticket_attribute_relations
 		(filename, attribute_1, attribute_2, acl_data, priority, create_time, create_by, change_time, change_by)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`)
-
-	// Handle RETURNING for PostgreSQL vs LastInsertId for MySQL
-	query, useLastInsert := database.ConvertReturning(query + " RETURNING id")
-
-	var id int64
-	if useLastInsert {
-		result, err := s.db.ExecContext(ctx, query,
-			relation.Filename, relation.Attribute1, relation.Attribute2, relation.ACLData,
-			tempPriority, now, userID, now, userID,
-		)
-		if err != nil {
-			return 0, fmt.Errorf("insert relation: %w", err)
-		}
-		id, err = result.LastInsertId()
-		if err != nil {
-			return 0, fmt.Errorf("get last insert id: %w", err)
-		}
-	} else {
-		err := s.db.QueryRowContext(ctx, query,
-			relation.Filename, relation.Attribute1, relation.Attribute2, relation.ACLData,
-			tempPriority, now, userID, now, userID,
-		).Scan(&id)
-		if err != nil {
-			return 0, fmt.Errorf("insert relation: %w", err)
-		}
+		RETURNING id
+	`),
+		relation.Filename, relation.Attribute1, relation.Attribute2, relation.ACLData,
+		tempPriority, now, userID, now, userID,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("insert relation: %w", err)
 	}
 
 	// Post-reorder priorities to sequential values
@@ -293,7 +274,7 @@ func (s *Service) Delete(ctx context.Context, id int64) error {
 
 // GetNextPriority returns the next available priority value.
 func (s *Service) GetNextPriority(ctx context.Context) (int64, error) {
-	query := `SELECT COALESCE(MAX(priority), 0) + 1 FROM acl_ticket_attribute_relations`
+	query := database.ConvertPlaceholders(`SELECT COALESCE(MAX(priority), 0) + 1 FROM acl_ticket_attribute_relations`)
 
 	var next int64
 	err := s.db.QueryRowContext(ctx, query).Scan(&next)
@@ -307,7 +288,7 @@ func (s *Service) GetNextPriority(ctx context.Context) (int64, error) {
 // preReorderPriorities multiplies all priorities by 10 and adds 1.
 // This creates gaps for inserting new priorities.
 func (s *Service) preReorderPriorities(ctx context.Context) error {
-	query := `UPDATE acl_ticket_attribute_relations SET priority = priority * 10 + 1`
+	query := database.ConvertPlaceholders(`UPDATE acl_ticket_attribute_relations SET priority = priority * 10 + 1`)
 	_, err := s.db.ExecContext(ctx, query)
 	return err
 }
@@ -315,7 +296,7 @@ func (s *Service) preReorderPriorities(ctx context.Context) error {
 // postReorderPriorities reassigns sequential priority values starting from 1.
 func (s *Service) postReorderPriorities(ctx context.Context) error {
 	// Get all relations ordered by current priority
-	query := `SELECT id, priority FROM acl_ticket_attribute_relations ORDER BY priority ASC`
+	query := database.ConvertPlaceholders(`SELECT id, priority FROM acl_ticket_attribute_relations ORDER BY priority ASC`)
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return err

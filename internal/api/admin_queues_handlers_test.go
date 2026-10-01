@@ -60,24 +60,11 @@ func setupQueueTestRouter() *gin.Engine {
 
 // Helper function to create a test queue.
 func createTestQueue(t *testing.T, db *sql.DB, name string) int64 {
-	var queueID int64
-
-	if database.IsMySQL() {
-		result, err := db.Exec(`
-			INSERT INTO queue (name, group_id, system_address_id, salutation_id, signature_id, follow_up_id, follow_up_lock, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, 1, 1, 1, 1, 1, 0, 1, NOW(), 1, NOW(), 1)
-		`, name)
-		require.NoError(t, err, "Failed to create test queue")
-		queueID, err = result.LastInsertId()
-		require.NoError(t, err)
-		return queueID
-	}
-
-	err := db.QueryRow(database.ConvertPlaceholders(`
+	queueID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO queue (name, group_id, system_address_id, salutation_id, signature_id, follow_up_id, follow_up_lock, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, 1, 1, 1, 1, 1, 0, 1, NOW(), 1, NOW(), 1)
 		RETURNING id
-	`), name).Scan(&queueID)
+	`), name)
 	require.NoError(t, err, "Failed to create test queue")
 
 	return queueID

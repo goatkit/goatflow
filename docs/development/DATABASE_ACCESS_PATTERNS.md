@@ -1,430 +1,150 @@
-# Database Access Patterns - GoatFlow MySQL Compatibility
+# Database Access Patterns
 
-## 🎯 Critical Achievement: MySQL Compatibility Restored (August 29, 2025)
+GoatFlow runs on **MySQL/MariaDB and PostgreSQL**. Nothing may be MySQL-only or
+PostgreSQL-only. Every SQL statement — production code and tests — goes through
+the conversion layer in `internal/platform/database` before it reaches a
+`database/sql` handle (`*sql.DB`, `*sql.Tx`, `*sql.Conn`, prepared statements).
 
-GoatFlow now has **full MySQL compatibility** with zero placeholder conversion errors. This document establishes the **mandatory patterns** for all database access going forward.
+Write SQL in MySQL dialect with `?` placeholders; the layer adapts it to the
+active driver (`DB_DRIVER`, or `TEST_DB_DRIVER` in tests).
 
-## 🚨 MANDATORY: No Direct SQL Without ConvertPlaceholders
+## The conversion API
 
-**NEVER write direct SQL queries. ALWAYS use the ConvertPlaceholders wrapper.**
-
-### ❌ WRONG - Direct SQL (Breaks MySQL)
-```go
-// DON'T DO THIS - Will fail on MySQL with "$1" errors
-db.QueryRow("SELECT id FROM users WHERE login = $1", login)
-db.Exec("UPDATE ticket SET status = $1 WHERE id = $2", status, id)
-```
-
-### ✅ CORRECT - ConvertPlaceholders Pattern
-```go
-// ALWAYS DO THIS - Works on both PostgreSQL and MySQL
-db.QueryRow(database.ConvertPlaceholders(`
-    SELECT id FROM users WHERE login = $1
-`), login)
-
-db.Exec(database.ConvertPlaceholders(`
-    UPDATE ticket SET status = $1 WHERE id = $2
-`), status, id)
-```
-
-## 📝 ConvertPlaceholders Syntax Rules
-
-### 1. Parenthesis Placement - CRITICAL
-```go
-// ❌ WRONG - Parenthesis after arguments
-db.Query(database.ConvertPlaceholders(`SELECT * FROM ticket WHERE id = $1`, ticketID))
-
-// ✅ CORRECT - Parenthesis after backtick, then comma and arguments
-db.Query(database.ConvertPlaceholders(`SELECT * FROM ticket WHERE id = $1`), ticketID)
-```
-
-### 2. Multi-line Queries
-```go
-// ✅ CORRECT - Clean formatting with proper parenthesis placement
-rows, err := db.Query(database.ConvertPlaceholders(`
-    SELECT t.id, t.tn, t.title,
-           ts.name as state,
-           tp.name as priority
-    FROM ticket t
-    JOIN ticket_state ts ON t.ticket_state_id = ts.id
-    JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
-    WHERE t.queue_id = $1 
-      AND t.ticket_state_id IN ($2, $3)
-    ORDER BY t.create_time DESC
-    LIMIT $4
-`), queueID, state1, state2, limit)
-```
-
-### 3. Complex Queries with Multiple Conditions
-```go
-// ✅ CORRECT - Complex conditional logic
-query := `SELECT * FROM ticket WHERE 1=1`
-args := []interface{}{}
-argCount := 0
-
-if status != "" {
-    argCount++
-    query += fmt.Sprintf(" AND status = $%d", argCount)
-    args = append(args, status)
-}
-
-if queueID > 0 {
-    argCount++
-    query += fmt.Sprintf(" AND queue_id = $%d", argCount)
-    args = append(args, queueID)
-}
-
-rows, err := db.Query(database.ConvertPlaceholders(query), args...)
-```
-
-## 🔧 How ConvertPlaceholders Works
-
-The function automatically converts PostgreSQL-style placeholders to the target database format:
+| Need | Use |
+|---|---|
+| Any query | `database.ConvertPlaceholders(sql)` |
+| Query that also uses PostgreSQL `::` casts | `database.ConvertQuery(sql)` |
+| Upsert (`ON DUPLICATE KEY UPDATE`, `REPLACE INTO`) | `database.ConvertUpsert(sql, conflictCols...)` |
+| Insert that needs the new id | `database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders("INSERT … RETURNING id"), args...)` (`…Tx` for transactions) |
+| Test setup SQL | `database.NewTestDB()` — its `Exec`/`Query`/`QueryRow` convert automatically |
 
 ```go
-func ConvertPlaceholders(query string) string {
-    if !IsMySQL() {
-        return query // PostgreSQL uses $1, $2, etc. directly
-    }
-    
-    // For MySQL: Convert $1, $2, $3 -> ?, ?, ?
-    re := regexp.MustCompile(`\$\d+`)
-    placeholders := re.FindAllString(query, -1)
-    
-    result := query
-    for _, placeholder := range placeholders {
-        result = strings.Replace(result, placeholder, "?", 1)
-    }
-    
-    return result
-}
+row := db.QueryRow(database.ConvertPlaceholders(`
+    SELECT id, title FROM ticket WHERE queue_id = ? AND ticket_state_id = ?
+`), queueID, stateID)
 ```
 
-**Result**:
-- **PostgreSQL**: `SELECT * FROM users WHERE id = $1` → `SELECT * FROM users WHERE id = $1` (unchanged)
-- **MySQL**: `SELECT * FROM users WHERE id = $1` → `SELECT * FROM users WHERE id = ?` (converted)
+Convert once, at the point of use. `ConvertPlaceholders` **panics** on `$N`
+placeholders and on stacked (`;`-separated) statements, so never pass it an
+already-converted string.
 
-## 📊 Database Driver Detection
+### What `ConvertPlaceholders` rewrites on PostgreSQL
 
-The system automatically detects the database driver from environment variables:
+- `?` → `$1, $2, …`
+- `` `identifier` `` → `"identifier"`
+- `INSERT IGNORE INTO …` → `INSERT INTO … ON CONFLICT DO NOTHING` (skips any
+  row that violates a unique constraint, like MySQL)
+- `DATE_SUB/DATE_ADD(expr, INTERVAL n UNIT)` and `INTERVAL ? UNIT`
+- `UNIX_TIMESTAMP(…)`, `FROM_UNIXTIME(x)` → `to_timestamp(x)`, `CURDATE()`,
+  `UUID()` → `gen_random_uuid()::text`
+- `SET FOREIGN_KEY_CHECKS = 0|1` → `SET session_replication_role = replica|DEFAULT`
+  (test fixtures only; needs a superuser, which the test database user is)
+
+On MySQL it rewrites `ILIKE` → `LIKE` and `EXTRACT(EPOCH FROM x)::bigint` →
+`UNIX_TIMESTAMP(x)`.
+
+### Upserts
+
+PostgreSQL needs the conflict target spelled out, so name the unique key:
 
 ```go
-func IsMySQL() bool {
-    driver := os.Getenv("DB_DRIVER")
-    return driver == "mysql"
-}
+_, err := db.Exec(database.ConvertUpsert(`
+    INSERT INTO user_preferences (user_id, preferences_key, preferences_value)
+    VALUES (?, ?, ?)
+    ON DUPLICATE KEY UPDATE preferences_value = VALUES(preferences_value)
+`, "user_id", "preferences_key"), userID, key, value)
 ```
 
-**Environment Configuration**:
-```bash
-# MySQL (OTRS compatibility)
-DB_DRIVER=mysql
-DB_HOST=mysql
-DB_USER=otrs
-DB_PASSWORD=CHANGEME
-DB_NAME=otrs
-DB_PORT=3306
+MySQL receives the query unchanged. PostgreSQL receives
+`ON CONFLICT (user_id, preferences_key) DO UPDATE SET preferences_value = EXCLUDED.preferences_value`.
+`REPLACE INTO t (cols) VALUES (…)` becomes an upsert that updates every
+non-key column. The conflict columns must match a real `UNIQUE`/primary key in
+both `migrations/mysql` and `migrations/postgres`.
 
-# PostgreSQL (development)
-DB_DRIVER=postgres
-DB_HOST=postgres
-DB_USER=goatflow_user
-DB_PASSWORD=your_postgres_password_here
-DB_NAME=goatflow
-DB_PORT=5432
-```
+### Inserted ids
 
-## 🛠️ Common Patterns and Examples
-
-### 1. Simple Queries
-```go
-// User lookup
-var user models.User
-err := db.QueryRow(database.ConvertPlaceholders(`
-    SELECT id, login, first_name, last_name, valid_id
-    FROM users
-    WHERE id = $1
-`), userID).Scan(&user.ID, &user.Login, &user.FirstName, &user.LastName, &user.ValidID)
-```
-
-### 2. Insert with RETURNING (PostgreSQL) vs Last Insert ID (MySQL)
-```go
-// This pattern works on both databases
-var ticketID int64
-err = db.QueryRow(database.ConvertPlaceholders(`
-    INSERT INTO ticket (tn, title, queue_id, create_time, create_by)
-    VALUES ($1, $2, $3, NOW(), $4)
-    RETURNING id
-`), ticketNumber, title, queueID, userID).Scan(&ticketID)
-
-if err != nil && IsMySQL() {
-    // MySQL fallback: Use LastInsertId() if RETURNING not supported
-    result, execErr := db.Exec(database.ConvertPlaceholders(`
-        INSERT INTO ticket (tn, title, queue_id, create_time, create_by)
-        VALUES ($1, $2, $3, NOW(), $4)
-    `), ticketNumber, title, queueID, userID)
-    
-    if execErr == nil {
-        ticketID, _ = result.LastInsertId()
-    }
-}
-```
-
-### 3. Transactions
-```go
-tx, err := db.Begin()
-if err != nil {
-    return err
-}
-defer tx.Rollback()
-
-// All queries in transaction must use ConvertPlaceholders
-_, err = tx.Exec(database.ConvertPlaceholders(`
-    UPDATE ticket SET status = $1 WHERE id = $2
-`), newStatus, ticketID)
-
-if err != nil {
-    return err
-}
-
-_, err = tx.Exec(database.ConvertPlaceholders(`
-    INSERT INTO article (ticket_id, subject, body, create_time, create_by)
-    VALUES ($1, $2, $3, NOW(), $4)
-`), ticketID, subject, body, userID)
-
-if err != nil {
-    return err
-}
-
-return tx.Commit()
-```
-
-### 4. Dynamic Query Building
-```go
-// Build query dynamically while maintaining placeholder pattern
-func buildTicketQuery(filters map[string]interface{}) (string, []interface{}) {
-    query := `
-        SELECT t.id, t.tn, t.title, ts.name as state
-        FROM ticket t
-        JOIN ticket_state ts ON t.ticket_state_id = ts.id
-        WHERE 1=1
-    `
-    
-    args := []interface{}{}
-    argCount := 0
-    
-    if status, exists := filters["status"]; exists {
-        argCount++
-        query += fmt.Sprintf(" AND t.ticket_state_id = $%d", argCount)
-        args = append(args, status)
-    }
-    
-    if queueID, exists := filters["queue_id"]; exists {
-        argCount++
-        query += fmt.Sprintf(" AND t.queue_id = $%d", argCount)
-        args = append(args, queueID)
-    }
-    
-    if search, exists := filters["search"]; exists {
-        argCount++
-        query += fmt.Sprintf(" AND (t.tn ILIKE $%d OR t.title ILIKE $%d)", argCount, argCount)
-        args = append(args, "%"+search.(string)+"%")
-    }
-    
-    query += " ORDER BY t.create_time DESC LIMIT 50"
-    
-    return query, args
-}
-
-// Usage
-query, args := buildTicketQuery(filters)
-rows, err := db.Query(database.ConvertPlaceholders(query), args...)
-```
-
-## ⚠️ Common Mistakes to Avoid
-
-### 1. Wrong Parenthesis Placement
-```go
-// ❌ This breaks compilation
-db.Query(database.ConvertPlaceholders(`SELECT * FROM ticket`, args...))
-//                                                          ^
-//                                               Wrong placement
-
-// ✅ Correct placement
-db.Query(database.ConvertPlaceholders(`SELECT * FROM ticket`), args...)
-//                                                            ^
-//                                                    Correct placement
-```
-
-### 2. Forgetting ConvertPlaceholders
-```go
-// ❌ Direct SQL - will fail on MySQL
-rows, err := db.Query("SELECT * FROM ticket WHERE queue_id = $1", queueID)
-
-// ✅ Always wrap with ConvertPlaceholders
-rows, err := db.Query(database.ConvertPlaceholders(
-    "SELECT * FROM ticket WHERE queue_id = $1"), queueID)
-```
-
-### 3. Mixing Direct SQL with ConvertPlaceholders
-```go
-// ❌ Inconsistent - some queries wrapped, others not
-db.QueryRow("SELECT COUNT(*) FROM ticket")  // Direct SQL - inconsistent
-db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket WHERE tn = $1`), ticketNumber)
-
-// ✅ Consistent - all queries use ConvertPlaceholders
-db.QueryRow(database.ConvertPlaceholders(`SELECT COUNT(*) FROM ticket`))
-db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket WHERE tn = $1`), ticketNumber)
-```
-
-## 🏆 Success Metrics
-
-**Before (August 28, 2025)**:
-- ❌ 500+ compilation errors with "$1" placeholder syntax
-- ❌ "Error 1054 (42S22): Unknown column '$1'" on MySQL
-- ❌ Complete inability to connect to OTRS MySQL databases
-
-**After (August 29, 2025)**:
-- ✅ Zero compilation errors
-- ✅ Zero MySQL placeholder errors
-- ✅ Full compatibility with OTRS MySQL databases
-- ✅ Agent/tickets endpoint working without database errors
-- ✅ Established mandatory database access patterns
-
-## 🚀 Future Considerations
-
-### 1. Migration to Repository Pattern
-Once the immediate MySQL compatibility is stable, consider moving to a repository pattern:
+`sql.Result.LastInsertId()` does not work on PostgreSQL. Use the adapter:
 
 ```go
-type TicketRepository interface {
-    GetByID(id int) (*models.Ticket, error)
-    GetByStatus(status string) ([]*models.Ticket, error)
-    Create(ticket *models.Ticket) error
-    Update(ticket *models.Ticket) error
-}
-
-type ticketRepository struct {
-    db database.IDatabase
-}
-
-func (r *ticketRepository) GetByID(id int) (*models.Ticket, error) {
-    // ConvertPlaceholders usage encapsulated in repository
-    // Business logic never sees SQL
-}
+id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+    INSERT INTO ticket (tn, title, queue_id) VALUES (?, ?, ?) RETURNING id
+`), tn, title, queueID)
 ```
 
-### 2. Query Builder Integration
-For complex dynamic queries, consider a query builder that automatically uses ConvertPlaceholders:
+PostgreSQL runs the `RETURNING`; the MySQL adapter strips it and uses
+`LastInsertId`.
 
-```go
-tickets, err := queryBuilder.
-    Select("t.id, t.tn, t.title").
-    From("ticket t").
-    Join("ticket_state ts", "t.ticket_state_id = ts.id").
-    Where("t.queue_id", "=", queueID).
-    Where("t.status", "IN", []int{1, 2}).
-    OrderBy("t.create_time", "DESC").
-    Limit(50).
-    Execute()
-```
+### Dynamic queries
 
-## 📚 Additional Resources
-
-- **OTRS Database Schema**: Complete table definitions in `internal/platform/database/schema/`
-- **Migration Guide**: `docs/OTRS_MIGRATION_GUIDE.md`
-- **Testing Patterns**: `internal/platform/database/sql_compat_test.go`
-- **Environment Setup**: `.env.example` with database configurations
-
----
-
-**⚠️ CRITICAL REMINDER**: Every single database query MUST use `database.ConvertPlaceholders()`. No exceptions. This ensures MySQL compatibility and prevents the "$1" placeholder errors that took significant effort to fix.
-
-*This pattern is now mandatory for all GoatFlow development going forward.*
-
-## Guardrails
-
-- Pre-commit: scan for direct `$[0-9]+` usage not wrapped by `ConvertPlaceholders`.
-- CI: run tests against PostgreSQL and MySQL matrices.
-- Code review: reject PRs with unwrapped SQL or DAL/ORM introductions.
-
-
-## 🔎 Case-Insensitive Search (ILIKE)
-
-There are three safe ways to implement case-insensitive LIKE across PostgreSQL and MySQL:
-
-- Use ILIKE in the SQL and wrap with `database.ConvertPlaceholders` or `database.ConvertQuery`.
-  - `ConvertPlaceholders` already converts `ILIKE` to `LIKE` on MySQL.
-  - `ConvertQuery` extends this with additional adaptations (e.g., type cast conversions).
-- Use `database.GetAdapter().CaseInsensitiveLike(column, patternParam)` to generate a DB-specific expression.
-  - PostgreSQL: `column ILIKE $n`
-  - MySQL: `LOWER(column) LIKE LOWER($n)`
-- Avoid manual LOWER(...) on values only; prefer adapter-based or ILIKE-based patterns for portability.
-
-### Recommended patterns
-
-```go
-// Simple: write ILIKE and wrap
-rows, err := db.Query(database.ConvertPlaceholders(`
-    SELECT id, title FROM ticket
-    WHERE title ILIKE $1 OR tn ILIKE $1
-    ORDER BY create_time DESC
-    LIMIT 50
-`), "%"+search+"%")
-```
-
-```go
-// Explicit: build with adapter for complex/dynamic queries
-argCount++
-p := fmt.Sprintf("$%d", argCount)
-conds = append(conds, fmt.Sprintf("(%s OR %s)",
-    database.GetAdapter().CaseInsensitiveLike("t.tn", p),
-    database.GetAdapter().CaseInsensitiveLike("t.title", p),
-))
-args = append(args, "%"+search+"%")
-```
-
-```go
-// ConvertQuery: when your SQL also uses PG-specific casts or you prefer one call
-query := `SELECT * FROM users WHERE login ILIKE $1::text`
-rows, err := db.Query(database.ConvertQuery(query), "%"+login+"%")
-```
-
-### Dynamic query building tips
-
-- Keep placeholder indexing with `fmt.Sprintf("$%d", ...)` while appending conditions.
-- Always pass the final SQL through `database.ConvertPlaceholders(...)` or `database.ConvertQuery(...)` at execution time.
-- For multi-column search, prefer the adapter helper to avoid sprinkling `ILIKE` across fragments.
+Build with `?`, convert at execution:
 
 ```go
 query := "SELECT t.id, t.tn, t.title FROM ticket t WHERE 1=1"
 var args []interface{}
-arg := 0
 if search != "" {
-    arg++
-    p := fmt.Sprintf("$%d", arg)
-    query += " AND (" +
-        database.GetAdapter().CaseInsensitiveLike("t.tn", p) +
-        " OR " + database.GetAdapter().CaseInsensitiveLike("t.title", p) + ")"
-    args = append(args, "%"+search+"%")
+    query += " AND (t.tn ILIKE ? OR t.title ILIKE ?)"
+    args = append(args, "%"+search+"%", "%"+search+"%")
 }
-query += " ORDER BY t.create_time DESC LIMIT 50"
 rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 ```
 
-### When to choose which
+Values always go in `args`, never into the SQL text (`gk-lint` rejects SQL built
+with `%s`/`%v`).
 
-- `ConvertPlaceholders`: default choice; handles placeholders and `ILIKE`→`LIKE` for MySQL.
-- `ConvertQuery`: use when your SQL also needs cross-DB tweaks beyond placeholders (casts, etc.).
-- `GetAdapter().CaseInsensitiveLike`: best for dynamic builders or when you want explicit per-DB expressions.
+## SQL with no portable rewrite
 
-### Anti-patterns
+Write these portably instead:
 
-- Writing raw SQL without conversion wrappers.
-- Applying `LOWER(value)` without applying it to the column on MySQL.
-- Mixing different patterns within the same module — be consistent.
+| MySQL-only | Portable |
+|---|---|
+| `IFNULL(a, b)` | `COALESCE(a, b)` |
+| `LAST_INSERT_ID()` | `InsertWithReturning` |
+| `DATE_FORMAT(…)`, `STR_TO_DATE(…)` | compute the date in Go and bind it |
+| `GROUP_CONCAT(…)` | aggregate in Go |
 
-### Verification
+## Schema conventions that affect queries
 
-- Run the guard: `scripts/tools/check-sql.sh --all` and ensure no critical issues.
-- Optional: prefer adapter-based construction to reduce ILIKE warnings in dynamic builders.
+- Flag columns that the Go code writes as `bool` are `BOOLEAN` on PostgreSQL
+  (`gk_custom_field_def.required`, `gk_identity_provider.enabled`/`auto_provision`,
+  `gk_plugin_ui.enabled`, `gk_totp_pending_session.is_customer`,
+  `gk_user_organisation.is_default`): bind a Go `bool` or write `= TRUE`/`= FALSE`
+  and scan into `bool`. Never compare with `= 1`.
+- OTRS lookup ids (`ticket_state`, `ticket_type`, `ticket_priority`, …) are
+  `SMALLINT` on both databases.
+- `migrations/mysql` and `migrations/postgres` must list the same versions;
+  every schema change ships in both.
+
+## sqlmock tests
+
+The SQL a test sees depends on the active driver, so expectations must not
+hard-code `\?` or `$1`. Match a placeholder-free statement prefix
+(`mock.ExpectExec("DELETE FROM gk_webauthn_credential WHERE id")`) or build the
+expectation with `regexp.QuoteMeta(database.ConvertPlaceholders(q))`.
+
+## Enforcement
+
+`cmd/gk-lint` type-checks the module (production and tests) and fails on:
+
+- **`sql-unconverted`** — SQL reaching a `database/sql` call without
+  `database.Convert*` (directly, or via a local variable whose every
+  assignment is a `Convert*` call);
+- **`sql-last-insert-id`** — any `sql.Result.LastInsertId()`;
+- **`sql-mysql-only`** — an SQL literal with `ON DUPLICATE KEY UPDATE` /
+  `REPLACE INTO` that doesn't reach `ConvertUpsert`, or with `LAST_INSERT_ID`,
+  `DATE_FORMAT`, `STR_TO_DATE`, `GROUP_CONCAT`, `IFNULL`;
+- **`sql-sprintf`** — SQL built with `%s`/`%v`.
+
+A reviewed exception — the conversion layer itself, a helper whose callers pass
+converted SQL — carries `// sql-converted: <reason>` on the call's first line
+or the line above.
+
+It runs in the pre-commit hook (`.githooks/pre-commit`, host, without cgo) and
+in CI (`make lint-platform`, toolbox). The hook also runs
+`scripts/tools/check-sql.sh --staged`, which rejects raw `$N` placeholders,
+direct `Rebind()` calls and warns on `ILIKE` outside the layer (`// sql-ok`
+suppresses a false positive).
+
+Run the Go suite against both databases before merging database changes. The
+test databases (`mariadb-test`, `postgres-test` in `docker-compose.testdb.yml`)
+are built at container start by `docker/*/testdb/10-apply-migrations.sh`,
+which applies every migration in order.

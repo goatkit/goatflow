@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -277,48 +278,57 @@ func resetTestDatabase() error {
 		return fmt.Errorf("failed to get DB connection: %w", err)
 	}
 
+	// All cleanup runs on one dedicated connection: disabling FK checks is
+	// session state (MySQL FOREIGN_KEY_CHECKS, PostgreSQL
+	// session_replication_role), so it must not leak into the pool.
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get DB connection: %w", err)
+	}
+	defer conn.Close()
+
+	var errs []error
+	exec := func(query string, args ...any) {
+		if _, err := conn.ExecContext(ctx, database.ConvertPlaceholders(query), args...); err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", strings.Join(strings.Fields(query), " "), err))
+		}
+	}
+
 	// Disable foreign key checks for cleanup
-	db.Exec("SET FOREIGN_KEY_CHECKS = 0")
-	defer db.Exec("SET FOREIGN_KEY_CHECKS = 1")
-	// Run schema migrations that don't use IF NOT EXISTS (new columns)
-	// Migration 0024: Add user_table column to identity_providers
-	db.Exec("ALTER TABLE gk_identity_provider ADD COLUMN IF NOT EXISTS user_table VARCHAR(20) NOT NULL DEFAULT 'users'")
-	// Migration 0025: Add SAML2-specific fields (signing_cert, private_key, etc.)
-	db.Exec("ALTER TABLE gk_identity_provider ADD COLUMN IF NOT EXISTS signing_cert TEXT DEFAULT ''")
-	db.Exec("ALTER TABLE gk_identity_provider ADD COLUMN IF NOT EXISTS private_key TEXT DEFAULT ''")
-	db.Exec("ALTER TABLE gk_identity_provider ADD COLUMN IF NOT EXISTS entity_id VARCHAR(500) DEFAULT ''")
-	db.Exec("ALTER TABLE gk_identity_provider ADD COLUMN IF NOT EXISTS acs_url VARCHAR(500) DEFAULT ''")
-	db.Exec("ALTER TABLE gk_identity_provider ADD COLUMN IF NOT EXISTS idp_metadata_xml TEXT DEFAULT ''")
+	exec("SET FOREIGN_KEY_CHECKS = 0")
+	defer conn.ExecContext(ctx, database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS = 1"))
+
 	// Clean ALL tickets - we'll recreate canonical test data
-	db.Exec("DELETE FROM ticket_history")
-	db.Exec("DELETE FROM article_data_mime")
-	db.Exec("DELETE FROM article_data_mime_attachment")
-	db.Exec("DELETE FROM article")
-	db.Exec("DELETE FROM ticket")
+	exec("DELETE FROM ticket_history")
+	exec("DELETE FROM article_data_mime")
+	exec("DELETE FROM article_data_mime_attachment")
+	exec("DELETE FROM article")
+	exec("DELETE FROM ticket")
 
 	// Clean API tokens (all test tokens)
-	db.Exec("DELETE FROM user_api_tokens")
+	exec("DELETE FROM user_api_tokens")
 
 	// Clean test states (preserve IDs 1-5)
-	db.Exec("DELETE FROM ticket_state WHERE id > 5")
+	exec("DELETE FROM ticket_state WHERE id > 5")
 
 	// Clean test types (preserve IDs 1-5)
-	db.Exec("DELETE FROM ticket_type WHERE id > 5")
+	exec("DELETE FROM ticket_type WHERE id > 5")
 
 	// Clean test queues (preserve IDs 1-4)
-	db.Exec("DELETE FROM queue WHERE id > 4")
+	exec("DELETE FROM queue WHERE id > 4")
 
 	// Clean test groups (preserve IDs 1-4: users, admin, stats, support)
-	db.Exec("DELETE FROM group_user WHERE group_id > 4")
-	db.Exec("DELETE FROM groups WHERE id > 4")
+	exec("DELETE FROM group_user WHERE group_id > 4")
+	exec("DELETE FROM groups WHERE id > 4")
 
 	// Clean test users (preserve IDs 1-2, 15 for testuser)
-	db.Exec("DELETE FROM group_user WHERE user_id > 2 AND user_id != 15")
-	db.Exec("DELETE FROM users WHERE id > 2 AND id != 15")
+	exec("DELETE FROM group_user WHERE user_id > 2 AND user_id != 15")
+	exec("DELETE FROM users WHERE id > 2 AND id != 15")
 
 	// Clean test dynamic fields
-	db.Exec("DELETE FROM dynamic_field_value WHERE id > 0")
-	db.Exec("DELETE FROM dynamic_field WHERE id > 10")
+	exec("DELETE FROM dynamic_field_value WHERE id > 0")
+	exec("DELETE FROM dynamic_field WHERE id > 10")
 
 	// Restore canonical state names
 	canonicalStates := map[int]string{
@@ -329,7 +339,7 @@ func resetTestDatabase() error {
 		5: "closed unsuccessful",
 	}
 	for id, name := range canonicalStates {
-		db.Exec("UPDATE ticket_state SET name = ? WHERE id = ?", name, id)
+		exec("UPDATE ticket_state SET name = ? WHERE id = ?", name, id)
 	}
 
 	// Restore canonical type names
@@ -341,7 +351,7 @@ func resetTestDatabase() error {
 		5: "Change Request",
 	}
 	for id, name := range canonicalTypes {
-		db.Exec("UPDATE ticket_type SET name = ? WHERE id = ?", name, id)
+		exec("UPDATE ticket_type SET name = ? WHERE id = ?", name, id)
 	}
 
 	// Restore canonical priority names
@@ -353,7 +363,7 @@ func resetTestDatabase() error {
 		5: "5 very high",
 	}
 	for id, name := range canonicalPriorities {
-		db.Exec("UPDATE ticket_priority SET name = ? WHERE id = ?", name, id)
+		exec("UPDATE ticket_priority SET name = ? WHERE id = ?", name, id)
 	}
 
 	// Restore canonical queue names, valid_id, and group_id (from migrations)
@@ -365,19 +375,21 @@ func resetTestDatabase() error {
 		4: "Misc",
 	}
 	for id, name := range canonicalQueues {
-		db.Exec("INSERT IGNORE INTO queue (id, name, group_id, valid_id, create_time, create_by, change_time, change_by) VALUES (?, ?, 1, 1, NOW(), 1, NOW(), 1)", id, name)
-		db.Exec("UPDATE queue SET name = ?, group_id = 1, valid_id = 1 WHERE id = ?", name, id)
+		exec(`INSERT IGNORE INTO queue (id, name, group_id, system_address_id, salutation_id, signature_id,
+			follow_up_id, follow_up_lock, valid_id, create_time, create_by, change_time, change_by)
+			VALUES (?, ?, 1, 1, 1, 1, 1, 0, 1, NOW(), 1, NOW(), 1)`, id, name)
+		exec("UPDATE queue SET name = ?, group_id = 1, valid_id = 1 WHERE id = ?", name, id)
 	}
 
 	// Seed canonical test tickets
 	// Raw queue (id=2) has 2 tickets
-	db.Exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id, 
+	exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id, 
 		responsible_user_id, ticket_priority_id, ticket_state_id, customer_id, customer_user_id,
 		timeout, until_time, escalation_time, escalation_update_time, escalation_response_time,
 		escalation_solution_time, archive_flag, create_time, create_by, change_time, change_by)
 		VALUES (1, 'RAW-0001', 'First Raw queue ticket', 2, 1, 1, 1, 1, 3, 2,
 		'test-customer', 'test@example.com', 0, 0, 0, 0, 0, 0, 0, NOW(), 1, NOW(), 1)`)
-	db.Exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id, 
+	exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id, 
 		responsible_user_id, ticket_priority_id, ticket_state_id, customer_id, customer_user_id,
 		timeout, until_time, escalation_time, escalation_update_time, escalation_response_time,
 		escalation_solution_time, archive_flag, create_time, create_by, change_time, change_by)
@@ -385,7 +397,7 @@ func resetTestDatabase() error {
 		'test-customer', 'test@example.com', 0, 0, 0, 0, 0, 0, 0, NOW(), 1, NOW(), 1)`)
 
 	// Junk queue (id=3) has 1 ticket
-	db.Exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id, 
+	exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id, 
 		responsible_user_id, ticket_priority_id, ticket_state_id, customer_id, customer_user_id,
 		timeout, until_time, escalation_time, escalation_update_time, escalation_response_time,
 		escalation_solution_time, archive_flag, create_time, create_by, change_time, change_by)
@@ -393,7 +405,7 @@ func resetTestDatabase() error {
 		'test-customer', 'test@example.com', 0, 0, 0, 0, 0, 0, 0, NOW(), 1, NOW(), 1)`)
 
 	// Ticket 123 for attachment tests
-	db.Exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id, 
+	exec(`INSERT INTO ticket (id, tn, title, queue_id, ticket_lock_id, type_id, user_id, 
 		responsible_user_id, ticket_priority_id, ticket_state_id, customer_id, customer_user_id,
 		timeout, until_time, escalation_time, escalation_update_time, escalation_response_time,
 		escalation_solution_time, archive_flag, create_time, create_by, change_time, change_by)
@@ -401,39 +413,45 @@ func resetTestDatabase() error {
 		'test-customer', 'test@example.com', 0, 0, 0, 0, 0, 0, 0, NOW(), 1, NOW(), 1)`)
 
 	// Seed support group (id=4) for admin user tests
-	db.Exec(`INSERT IGNORE INTO groups (id, name, valid_id, create_time, create_by, change_time, change_by)
+	exec(`INSERT IGNORE INTO groups (id, name, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (4, 'support', 1, NOW(), 1, NOW(), 1)`)
 
 	// Seed testuser (id=15) for admin user tests
-	db.Exec(`INSERT IGNORE INTO users (id, login, pw, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (15, 'testuser', 'test', 1, NOW(), 1, NOW(), 1)`)
+	exec(`INSERT IGNORE INTO users (id, login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (15, 'testuser', 'test', 'Test', 'Agent', 1, NOW(), 1, NOW(), 1)`)
 
 	// Ensure canonical groups exist (users=1, admin=2, stats=3, support=4)
-	db.Exec(`INSERT IGNORE INTO groups (id, name, valid_id, create_time, create_by, change_time, change_by)
+	exec(`INSERT IGNORE INTO groups (id, name, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (1, 'users', 1, NOW(), 1, NOW(), 1)`)
-	db.Exec(`INSERT IGNORE INTO groups (id, name, valid_id, create_time, create_by, change_time, change_by)
+	exec(`INSERT IGNORE INTO groups (id, name, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (2, 'admin', 1, NOW(), 1, NOW(), 1)`)
-	db.Exec(`INSERT IGNORE INTO groups (id, name, valid_id, create_time, create_by, change_time, change_by)
+	exec(`INSERT IGNORE INTO groups (id, name, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (3, 'stats', 1, NOW(), 1, NOW(), 1)`)
 
 	// CRITICAL: Grant user 1 (root) full permissions for queue access middleware
 	// The queue_access middleware checks group_user for permission_key
 	// 'rw' supersedes all other permissions (ro, create, move_into, etc.)
-	db.Exec(`INSERT IGNORE INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
-		VALUES (1, 1, 'rw', NOW(), 1, NOW(), 1)`)
-	db.Exec(`INSERT IGNORE INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
-		VALUES (1, 2, 'rw', NOW(), 1, NOW(), 1)`)
-	db.Exec(`INSERT IGNORE INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
-		VALUES (1, 3, 'rw', NOW(), 1, NOW(), 1)`)
-	db.Exec(`INSERT IGNORE INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
-		VALUES (1, 4, 'rw', NOW(), 1, NOW(), 1)`)
+	// group_user has no unique key, so replace the grant instead of INSERT IGNORE.
+	for groupID := 1; groupID <= 4; groupID++ {
+		exec("DELETE FROM group_user WHERE user_id = 1 AND group_id = ? AND permission_key = 'rw'", groupID)
+		exec(`INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+			VALUES (1, ?, 'rw', NOW(), 1, NOW(), 1)`, groupID)
+	}
+
+	// Rows above were inserted with explicit ids; PostgreSQL sequences do not
+	// follow explicit ids, so move them past the highest id.
+	if database.IsPostgreSQL() {
+		for _, table := range []string{"ticket", "queue", "groups", "users"} {
+			exec(fmt.Sprintf("SELECT setval(pg_get_serial_sequence('%[1]s', 'id'), (SELECT COALESCE(MAX(id), 1) FROM %[1]s))", table))
+		}
+	}
 
 	// Re-initialize the ticket number generator in case a previous test set it to nil
 	if err := initTestTicketNumberGenerator(); err != nil {
-		return fmt.Errorf("failed to re-initialize ticket number generator: %w", err)
+		errs = append(errs, fmt.Errorf("failed to re-initialize ticket number generator: %w", err))
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // initTestTicketNumberGenerator initializes the global ticket number generator.

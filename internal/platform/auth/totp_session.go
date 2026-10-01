@@ -311,42 +311,23 @@ func (m *TOTPSessionManager) storeSessionDB(session *PendingTOTPSession) error {
 		return err
 	}
 
-	var query string
-	if database.IsMySQL() {
-		query = `
-			INSERT INTO gk_totp_pending_session
-				(session_key, user_id, user_login, username, is_customer, created_at, expires_at, attempts, max_attempts, client_ip, user_agent)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			ON DUPLICATE KEY UPDATE
-				user_id = VALUES(user_id),
-				user_login = VALUES(user_login),
-				username = VALUES(username),
-				is_customer = VALUES(is_customer),
-				created_at = VALUES(created_at),
-				expires_at = VALUES(expires_at),
-				attempts = VALUES(attempts),
-				max_attempts = VALUES(max_attempts),
-				client_ip = VALUES(client_ip),
-				user_agent = VALUES(user_agent)`
-	} else {
-		query = `
-			INSERT INTO gk_totp_pending_session
-				(session_key, user_id, user_login, username, is_customer, created_at, expires_at, attempts, max_attempts, client_ip, user_agent)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			ON CONFLICT (session_key) DO UPDATE SET
-				user_id = EXCLUDED.user_id,
-				user_login = EXCLUDED.user_login,
-				username = EXCLUDED.username,
-				is_customer = EXCLUDED.is_customer,
-				created_at = EXCLUDED.created_at,
-				expires_at = EXCLUDED.expires_at,
-				attempts = EXCLUDED.attempts,
-				max_attempts = EXCLUDED.max_attempts,
-				client_ip = EXCLUDED.client_ip,
-				user_agent = EXCLUDED.user_agent`
-	}
+	query := database.ConvertUpsert(`
+		INSERT INTO gk_totp_pending_session
+			(session_key, user_id, user_login, username, is_customer, created_at, expires_at, attempts, max_attempts, client_ip, user_agent)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON DUPLICATE KEY UPDATE
+			user_id = VALUES(user_id),
+			user_login = VALUES(user_login),
+			username = VALUES(username),
+			is_customer = VALUES(is_customer),
+			created_at = VALUES(created_at),
+			expires_at = VALUES(expires_at),
+			attempts = VALUES(attempts),
+			max_attempts = VALUES(max_attempts),
+			client_ip = VALUES(client_ip),
+			user_agent = VALUES(user_agent)`, "session_key")
 
-	_, err = db.Exec(database.ConvertPlaceholders(query),
+	_, err = db.Exec(query,
 		totpSessionKey(session.Token),
 		session.UserID,
 		session.UserLogin,

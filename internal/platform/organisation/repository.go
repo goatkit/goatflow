@@ -53,9 +53,7 @@ func (r *Repository) ListOrgs(status string, activeOnly bool) ([]Organisation, e
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 	query += " ORDER BY name"
-	query = database.ConvertPlaceholders(query)
-
-	rows, err := r.db.Query(query, args...)
+	rows, err := r.db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		return nil, fmt.Errorf("list orgs: %w", err)
 	}
@@ -81,16 +79,16 @@ func (r *Repository) CreateOrg(o *Organisation, userID int) (int64, error) {
 	query := database.ConvertPlaceholders(`
 		INSERT INTO gk_organisation (name, slug, parent_id, status, customer_company_id,
 			valid_id, create_time, create_by, change_time, change_by)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
 	`)
-	result, err := r.db.Exec(query,
+	id, err := database.GetAdapter().InsertWithReturning(r.db, query,
 		o.Name, o.Slug, o.ParentID, o.Status, o.CustomerCompanyID,
 		o.ValidID, now, userID, now, userID,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("create org: %w", err)
 	}
-	return result.LastInsertId()
+	return id, nil
 }
 
 // UpdateOrg updates an existing organisation.
@@ -222,15 +220,15 @@ func (r *Repository) AddMember(m *UserOrganisation, createdBy int) (int64, error
 	now := time.Now()
 	query := database.ConvertPlaceholders(`
 		INSERT INTO gk_user_organisation (org_id, user_id, customer_login, role, is_default, create_time, create_by)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
 	`)
-	result, err := r.db.Exec(query,
+	id, err := database.GetAdapter().InsertWithReturning(r.db, query,
 		m.OrgID, m.UserID, m.CustomerLogin, m.Role, m.IsDefault, now, createdBy,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("add member: %w", err)
 	}
-	return result.LastInsertId()
+	return id, nil
 }
 
 // RemoveMember removes a membership by ID.

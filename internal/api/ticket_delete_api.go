@@ -181,13 +181,11 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 			change_by
 		) VALUES (
 			?, 1, 1, 0, 0, NOW(), ?, NOW(), ?
-		)
+		) RETURNING id
 	`)
 
-	articleResult, err := db.Exec(insertArticleQuery, ticketID, userID, userID)
+	articleID, err := database.GetAdapter().InsertWithReturning(db, insertArticleQuery, ticketID, userID, userID)
 	if err == nil {
-		articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort article creation
-
 		// Insert article content
 		insertMimeQuery := database.ConvertPlaceholders(`
 			INSERT INTO article_data_mime (

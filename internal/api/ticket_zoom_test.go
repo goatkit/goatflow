@@ -30,7 +30,7 @@ func seededTicketID(t *testing.T) int {
 		t.Fatalf("GetDB failed: %v", err)
 	}
 	var id int
-	if err := db.QueryRow("SELECT id FROM ticket ORDER BY id LIMIT 1").Scan(&id); err != nil {
+	if err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket ORDER BY id LIMIT 1")).Scan(&id); err != nil {
 		t.Fatalf("failed to load seeded ticket id: %v", err)
 	}
 	return id

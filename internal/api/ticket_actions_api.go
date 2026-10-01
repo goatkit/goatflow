@@ -162,13 +162,11 @@ func HandleCloseTicketAPI(c *gin.Context) {
 				change_by
 			) VALUES (
 				?, 1, 1, 1, 0, NOW(), ?, NOW(), ?
-			)
+			) RETURNING id
 		`)
 
-		articleResult, err := tx.Exec(insertArticleQuery, ticketID, userID, userID)
+		articleID, err := database.GetAdapter().InsertWithReturningTx(tx, insertArticleQuery, ticketID, userID, userID)
 		if err == nil {
-			articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort
-
 			// Insert article content
 			subject := fmt.Sprintf("Ticket Closed: %s", closeRequest.Resolution)
 			body := closeRequest.Comment
@@ -360,13 +358,11 @@ func HandleReopenTicketAPI(c *gin.Context) {
 			change_by
 		) VALUES (
 			?, 1, 1, 1, 0, NOW(), ?, NOW(), ?
-		)
+		) RETURNING id
 	`)
 
-	articleResult, err := tx.Exec(insertArticleQuery, ticketID, userID, userID)
+	articleID, err := database.GetAdapter().InsertWithReturningTx(tx, insertArticleQuery, ticketID, userID, userID)
 	if err == nil {
-		articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort
-
 		// Insert article content
 		insertMimeQuery := database.ConvertPlaceholders(`
 			INSERT INTO article_data_mime (
@@ -561,13 +557,11 @@ func HandleAssignTicketAPI(c *gin.Context) {
 				change_by
 			) VALUES (
 				?, 1, 1, 0, 0, NOW(), ?, NOW(), ?
-			)
+			) RETURNING id
 		`)
 
-		articleResult, err := tx.Exec(insertArticleQuery, ticketID, userID, userID)
+		articleID, err := database.GetAdapter().InsertWithReturningTx(tx, insertArticleQuery, ticketID, userID, userID)
 		if err == nil {
-			articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort
-
 			// Build assignment message
 			var previousAssignee string
 			if currentResponsibleID.Valid {

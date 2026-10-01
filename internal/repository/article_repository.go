@@ -44,34 +44,27 @@ func (r *ArticleRepository) articleColumnExpressions() (string, string, error) {
 	return articleTypeExpr, commChannelExpr, nil
 }
 
+// hasArticleColumn reports whether the article table has the given column.
+// The column set is read once from an empty result set, which works the same
+// on every driver and only ever sees the connected database.
 func (r *ArticleRepository) hasArticleColumn(column string) (bool, error) {
 	if r.articleColumnCache == nil {
-		r.articleColumnCache = make(map[string]bool)
-	}
-
-	if val, ok := r.articleColumnCache[column]; ok {
-		return val, nil
-	}
-
-	var cnt int
-	if database.IsMySQL() {
-		row := r.db.QueryRow(`SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'article' AND COLUMN_NAME = ?`, column)
-		if err := row.Scan(&cnt); err != nil {
+		rows, err := r.db.Query(database.ConvertPlaceholders(`SELECT * FROM article WHERE 1 = 0`))
+		if err != nil {
 			return false, err
 		}
-	} else {
-		query := database.ConvertPlaceholders(`
-			SELECT COUNT(*) FROM information_schema.columns
-			WHERE table_name = 'article' AND column_name = ?`)
-		row := r.db.QueryRow(query, column)
-		if err := row.Scan(&cnt); err != nil {
+		cols, err := rows.Columns()
+		rows.Close()
+		if err != nil {
 			return false, err
 		}
+		cache := make(map[string]bool, len(cols))
+		for _, c := range cols {
+			cache[strings.ToLower(c)] = true
+		}
+		r.articleColumnCache = cache
 	}
-
-	has := cnt > 0
-	r.articleColumnCache[column] = has
-	return has, nil
+	return r.articleColumnCache[strings.ToLower(column)], nil
 }
 
 // NewArticleRepository creates a new article repository.
@@ -196,8 +189,8 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 			) RETURNING id`)
 
 		contentSize := len(bodyStr)
-		var attachmentID64 int64
-		err = tx.QueryRow(
+		_, err = adapter.InsertWithReturningTx(
+			tx,
 			attachmentQuery,
 			articleID64,
 			"html-body.html", // Special filename for HTML body like OTRS
@@ -211,7 +204,7 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 			article.CreateBy,
 			now,
 			article.ChangeBy,
-		).Scan(&attachmentID64)
+		)
 
 		if err != nil {
 			return fmt.Errorf("failed to create HTML body attachment: %w", err)
@@ -574,7 +567,7 @@ func (r *ArticleRepository) Delete(id uint, userID uint) error {
 		SET valid_id = 0, change_time = ?, change_by = ?
 		WHERE id = ?`)
 
-	result, err := r.db.Exec(query, id, time.Now(), userID)
+	result, err := r.db.Exec(query, time.Now(), userID, id)
 	if err != nil {
 		return err
 	}
@@ -594,7 +587,7 @@ func (r *ArticleRepository) Delete(id uint, userID uint) error {
 		SET change_time = ?, change_by = ?
 		WHERE id = ?`)
 
-	_, err = r.db.Exec(updateTicketQuery, ticketID, time.Now(), userID)
+	_, err = r.db.Exec(updateTicketQuery, time.Now(), userID, ticketID)
 
 	return err
 }
@@ -620,7 +613,7 @@ func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Ar
 		whereParts = append(whereParts, validPredicate)
 	}
 	//nolint:gosec // articleTypeExpr, commChannelExpr, selectValid are from schema detection, not user input
-	query := fmt.Sprintf(`
+	query := database.ConvertPlaceholders(fmt.Sprintf(`
 		SELECT
 			a.id, a.ticket_id, %s AS article_type_id, a.article_sender_type_id,
 			%s AS communication_channel_id, a.is_visible_for_customer,
@@ -634,8 +627,7 @@ func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Ar
 		LEFT JOIN article_data_mime adm ON a.id = adm.article_id
 		WHERE %s
 		ORDER BY a.create_time DESC, a.id DESC
-		LIMIT 1`, articleTypeExpr, commChannelExpr, selectValid, strings.Join(whereParts, " AND ")) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-	query = database.ConvertPlaceholders(query)
+		LIMIT 1`, articleTypeExpr, commChannelExpr, selectValid, strings.Join(whereParts, " AND "))) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	var article models.Article
 	var subject, body, contentType sql.NullString
@@ -700,7 +692,7 @@ func (r *ArticleRepository) GetLatestCustomerArticleForTicket(ticketID uint) (*m
 		whereParts = append(whereParts, validPredicate)
 	}
 	//nolint:gosec // articleTypeExpr, commChannelExpr, selectValid are from schema detection, not user input
-	query := fmt.Sprintf(`
+	query := database.ConvertPlaceholders(fmt.Sprintf(`
 		SELECT
 			a.id, a.ticket_id, %s AS article_type_id, a.article_sender_type_id,
 			%s AS communication_channel_id, a.is_visible_for_customer,
@@ -717,8 +709,7 @@ func (r *ArticleRepository) GetLatestCustomerArticleForTicket(ticketID uint) (*m
 		LEFT JOIN article_data_mime adm ON a.id = adm.article_id
 		WHERE %s
 		ORDER BY a.create_time DESC, a.id DESC
-		LIMIT 1`, articleTypeExpr, commChannelExpr, selectValid, strings.Join(whereParts, " AND ")) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-	query = database.ConvertPlaceholders(query)
+		LIMIT 1`, articleTypeExpr, commChannelExpr, selectValid, strings.Join(whereParts, " AND "))) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
 
 	var article models.Article
 	var subject, body, contentType sql.NullString
@@ -846,7 +837,8 @@ func (r *ArticleRepository) CreateAttachment(attachment *models.Attachment) erro
 			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 		) RETURNING id`)
 
-	err := r.db.QueryRow(
+	id, err := database.GetAdapter().InsertWithReturning(
+		r.db,
 		query,
 		attachment.ArticleID,
 		attachment.Filename,
@@ -860,9 +852,12 @@ func (r *ArticleRepository) CreateAttachment(attachment *models.Attachment) erro
 		attachment.CreateBy,
 		attachment.ChangeTime,
 		attachment.ChangeBy,
-	).Scan(&attachment.ID)
-
-	return err
+	)
+	if err != nil {
+		return err
+	}
+	attachment.ID = uint(id)
+	return nil
 }
 
 // GetAttachmentsByArticleID retrieves all attachments for an article.

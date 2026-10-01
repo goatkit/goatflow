@@ -9,6 +9,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
+	"github.com/goatkit/goatflow/internal/platform/service"
 )
 
 // handleHealth returns API health status.
@@ -215,8 +216,10 @@ func (router *APIRouter) handleUpdateUserPreferences(c *gin.Context) {
 	}
 
 	now := time.Now()
+	prefs := service.NewUserPreferencesService(db)
 
-	// Update each preference using REPLACE (upsert)
+	// user_preferences has no unique key, so the service replaces each key
+	// (delete + insert in a transaction) instead of an upsert.
 	for key, value := range prefsRequest {
 		valueStr := ""
 		switch v := value.(type) {
@@ -232,11 +235,10 @@ func (router *APIRouter) handleUpdateUserPreferences(c *gin.Context) {
 			continue // Skip complex types
 		}
 
-		query := database.ConvertQuery(`
-			REPLACE INTO user_preferences (user_id, preferences_key, preferences_value)
-			VALUES (?, ?, ?)
-		`)
-		db.Exec(query, userID, key, valueStr)
+		if err := prefs.SetPreference(int(userID), key, valueStr); err != nil {
+			sendError(c, http.StatusInternalServerError, "Failed to update preferences")
+			return
+		}
 	}
 
 	sendSuccess(c, gin.H{

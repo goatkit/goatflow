@@ -413,8 +413,9 @@ func handleAdminUpdateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Update company
-		result, err := db.Exec(database.ConvertPlaceholders(`
+		// Update company. Existence was checked above; RowsAffected is not consulted because
+		// MySQL reports changed rows (0 for a same-second no-op) while PostgreSQL reports matched rows.
+		_, err = db.Exec(database.ConvertPlaceholders(`
 			UPDATE customer_company SET
 				name = ?, street = NULLIF(?, ''), zip = NULLIF(?, ''),
 				city = NULLIF(?, ''), country = NULLIF(?, ''),
@@ -428,19 +429,6 @@ func handleAdminUpdateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 				shared.SendToastResponse(c, false, "Failed to update customer company", "")
 			} else {
 				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update customer company"})
-			}
-			return
-		}
-
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			rowsAffected = 0
-		}
-		if rowsAffected == 0 {
-			if c.GetHeader("HX-Request") == "true" {
-				shared.SendToastResponse(c, false, "Customer company not found", "")
-			} else {
-				c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Customer company not found"})
 			}
 			return
 		}
@@ -485,7 +473,7 @@ func handleAdminDeleteCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		if err != nil {
 			rowsAffected = 0
 		}
-		if rowsAffected == 0 {
+		if rowsAffected == 0 && !customerCompanyExists(db, customerID) {
 			if c.GetHeader("HX-Request") == "true" {
 				shared.SendToastResponse(c, false, "Customer company not found", "")
 			} else {
@@ -533,7 +521,7 @@ func handleAdminActivateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		if err != nil {
 			rowsAffected = 0
 		}
-		if rowsAffected == 0 {
+		if rowsAffected == 0 && !customerCompanyExists(db, customerID) {
 			if c.GetHeader("HX-Request") == "true" {
 				shared.SendToastResponse(c, false, "Customer company not found", "")
 			} else {
@@ -545,6 +533,16 @@ func handleAdminActivateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		redirectURL := fmt.Sprintf("/admin/customer/companies/%s/edit", customerID)
 		shared.SendToastResponse(c, true, "Customer company activated successfully", redirectURL)
 	}
+}
+
+// customerCompanyExists reports whether the company row exists. Used after an
+// UPDATE affected 0 rows: MySQL counts changed rows, so a no-op update of an
+// existing row also reports 0.
+func customerCompanyExists(db *sql.DB, customerID string) bool {
+	var exists bool
+	err := db.QueryRow(database.ConvertPlaceholders(
+		"SELECT EXISTS(SELECT 1 FROM customer_company WHERE customer_id = ?)"), customerID).Scan(&exists)
+	return err == nil && exists
 }
 
 // handleAdminCustomerCompanyUsers shows users belonging to a customer company.

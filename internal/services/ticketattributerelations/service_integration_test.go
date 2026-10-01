@@ -27,7 +27,7 @@ func setupTestRelationData(t *testing.T, db *sql.DB) *testRelationData {
 	data := &testRelationData{}
 
 	// Cleanup any leftover test data
-	_, _ = db.Exec(`DELETE FROM acl_ticket_attribute_relations WHERE filename LIKE 'inttest_%'`)
+	_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM acl_ticket_attribute_relations WHERE filename LIKE 'inttest_%'`))
 
 	return data
 }
@@ -36,10 +36,10 @@ func setupTestRelationData(t *testing.T, db *sql.DB) *testRelationData {
 func cleanupTestRelationData(t *testing.T, db *sql.DB, data *testRelationData) {
 	t.Helper()
 	for _, id := range data.relationIDs {
-		_, _ = db.Exec(`DELETE FROM acl_ticket_attribute_relations WHERE id = $1`, id)
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM acl_ticket_attribute_relations WHERE id = ?`), id)
 	}
 	// Also cleanup by filename pattern
-	_, _ = db.Exec(`DELETE FROM acl_ticket_attribute_relations WHERE filename LIKE 'inttest_%'`)
+	_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM acl_ticket_attribute_relations WHERE filename LIKE 'inttest_%'`))
 }
 
 func TestTicketAttributeRelationsIntegration(t *testing.T) {

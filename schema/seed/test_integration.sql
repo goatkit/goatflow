@@ -29,7 +29,15 @@ INSERT INTO queue (
     change_by
 ) VALUES
     (5, 'Support', 1, 1, 1, 1, 0, 1, 0, 'Primary support queue for agents', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1),
-    (6, 'OBC', 1, 1, 1, 1, 0, 1, 0, 'OBC customer queue required by compatibility tests', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+    (6, 'OBC', 1, 1, 1, 1, 0, 1, 0, 'Outbound communication queue', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+ON CONFLICT (id) DO NOTHING;
+
+-- Seed test roles for admin role permissions tests
+INSERT INTO roles (id, name, comments, valid_id, create_time, create_by, change_time, change_by)
+VALUES
+    (1, 'Admin', 'System administrators with full access', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1),
+    (2, 'Agent', 'Standard support agents', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1),
+    (3, 'Supervisor', 'Team supervisors with elevated permissions', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
 ON CONFLICT (id) DO NOTHING;
 
 -- Seed a deterministic test user referenced by admin integration tests
@@ -182,6 +190,7 @@ ON CONFLICT (id) DO NOTHING;
 SELECT setval('groups_id_seq', GREATEST((SELECT COALESCE(MAX(id), 1) FROM groups), 4));
 SELECT setval('queue_id_seq', GREATEST((SELECT COALESCE(MAX(id), 1) FROM queue), 6));
 SELECT setval('users_id_seq', GREATEST((SELECT COALESCE(MAX(id), 1) FROM users), 15));
+SELECT setval('roles_id_seq', GREATEST((SELECT COALESCE(MAX(id), 1) FROM roles), 3));
 SELECT setval('dynamic_field_id_seq', GREATEST((SELECT COALESCE(MAX(id), 1) FROM dynamic_field), 7));
 
 COMMIT;

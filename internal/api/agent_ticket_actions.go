@@ -330,15 +330,14 @@ func handleAgentTicketReply(db *sql.DB) gin.HandlerFunc {
 					contentType = http.DetectContentType(content)
 				}
 
-				// Insert attachment - adapter handles placeholder conversion and arg remapping
 				attachmentInsert := `
 					INSERT INTO article_data_mime_attachment (
 						article_id, filename, content_type, content, content_size,
 						create_time, create_by, change_time, change_by
 					) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
 				`
-				_, err = database.GetAdapter().ExecTx(tx, attachmentInsert,
-					articleID, fileHeader.Filename, contentType, content, len(content), userID)
+				_, err = tx.Exec(database.ConvertPlaceholders(attachmentInsert),
+					articleID, fileHeader.Filename, contentType, content, strconv.Itoa(len(content)), userID, userID)
 
 				if err != nil {
 					log.Printf("Error saving attachment %s: %v", fileHeader.Filename, err)
@@ -965,7 +964,7 @@ func handleAgentTicketMerge(db *sql.DB) gin.HandlerFunc {
 
 		// Find target ticket ID by ticket number
 		var targetTicketID int
-		err = tx.QueryRow("SELECT id FROM ticket WHERE tn = ?", targetTN).Scan(&targetTicketID)
+		err = tx.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket WHERE tn = ?"), targetTN).Scan(&targetTicketID)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Target ticket not found"})
 			return

@@ -96,9 +96,9 @@ func handleDashboard(c *gin.Context) {
 
 	// Get actual ticket state IDs from database
 	var openStateID, pendingStateID, closedStateID int
-	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'open'").Scan(&openStateID)       //nolint:errcheck
-	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'pending'").Scan(&pendingStateID) //nolint:errcheck
-	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'closed'").Scan(&closedStateID)   //nolint:errcheck
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = 'open'")).Scan(&openStateID)       //nolint:errcheck
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = 'pending'")).Scan(&pendingStateID) //nolint:errcheck
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = 'closed'")).Scan(&closedStateID)   //nolint:errcheck
 
 	// Count open tickets (with RBAC queue filter)
 	if openStateID > 0 {
@@ -398,9 +398,9 @@ func handleDashboardStats(c *gin.Context) {
 
 	// Get actual ticket state IDs from database instead of hardcoded values
 	var openStateID, pendingStateID, closedStateID int
-	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'open'").Scan(&openStateID)       //nolint:errcheck // Defaults to 0
-	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'pending'").Scan(&pendingStateID) //nolint:errcheck // Defaults to 0
-	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'closed'").Scan(&closedStateID)   //nolint:errcheck // Defaults to 0
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = 'open'")).Scan(&openStateID)       //nolint:errcheck // Defaults to 0
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = 'pending'")).Scan(&pendingStateID) //nolint:errcheck // Defaults to 0
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = 'closed'")).Scan(&closedStateID)   //nolint:errcheck // Defaults to 0
 
 	// Count open tickets (with queue filter)
 	if openStateID > 0 {
@@ -779,7 +779,7 @@ func handleActivityStream(c *gin.Context) {
 		select {
 		case <-ticker.C:
 			// Query recent ticket activity (last 24 hours)
-			rows, err := db.Query(`
+			rows, err := db.Query(database.ConvertPlaceholders(`
 				SELECT
 					th.name,
 					tht.name as history_type,
@@ -793,7 +793,7 @@ func handleActivityStream(c *gin.Context) {
 				WHERE th.create_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
 				ORDER BY th.create_time DESC
 				LIMIT 5
-			`)
+			`))
 
 			if err == nil && rows != nil {
 				activities := make([]gin.H, 0, 5) // Preallocate for expected LIMIT 5

@@ -56,19 +56,15 @@ func (h *ProdHostAPI) CreateArticleAttachment(ctx context.Context, articleID, cr
 	// content_size is VARCHAR in the OTRS-legacy schema, so it is stored as a
 	// string. disposition is fixed to "attachment" (mirrors the upload path).
 	now := time.Now()
-	res, err := db.ExecContext(ctx, database.ConvertPlaceholders(`
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO article_data_mime_attachment
 			(article_id, filename, content_size, content_type, disposition, content,
 			 create_time, create_by, change_time, change_by)
-		VALUES (?, ?, ?, ?, 'attachment', ?, ?, ?, ?, ?)`),
+		VALUES (?, ?, ?, ?, 'attachment', ?, ?, ?, ?, ?) RETURNING id`),
 		articleID, filename, strconv.FormatInt(int64(len(content)), 10), contentType,
 		content, now, createdBy, now, createdBy)
 	if err != nil {
 		return 0, fmt.Errorf("insert article attachment: %w", err)
-	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		return 0, fmt.Errorf("attachment inserted but id unavailable: %w", err)
 	}
 	return id, nil
 }

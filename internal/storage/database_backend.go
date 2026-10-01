@@ -6,6 +6,8 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
@@ -38,32 +40,30 @@ func (d *DatabaseBackend) Store(ctx context.Context, articleID int64, content *A
 
 	// Check if this is the main article body or an attachment
 	if content.FileName == "" || content.FileName == "body" {
-		// Update article_data_mime with the body content
-		query := database.ConvertPlaceholders(`
+		// Update the existing body row if present, otherwise insert a new one.
+		var mimeID int64
+		err = tx.QueryRowContext(ctx, database.ConvertPlaceholders(
+			"SELECT id FROM article_data_mime WHERE article_id = ? ORDER BY id LIMIT 1"), articleID).Scan(&mimeID)
+		switch {
+		case err == nil:
+			_, err = tx.ExecContext(ctx, database.ConvertPlaceholders(`
+                UPDATE article_data_mime
+                SET a_body = ?, a_content_type = ?, change_time = ?, change_by = ?
+                WHERE id = ?`),
+				content.Content,
+				content.ContentType,
+				time.Now(),
+				content.CreatedBy,
+				mimeID,
+			)
+		case err == sql.ErrNoRows:
+			mimeID, err = database.GetAdapter().InsertWithReturningTx(tx, database.ConvertPlaceholders(`
             INSERT INTO article_data_mime (
                 article_id, a_subject, a_body, a_content_type,
                 incoming_time, create_time, create_by, change_time, change_by
             ) VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?
-            )`)
-
-		var mimeID int64
-		// Handle MySQL (no ON CONFLICT/RETURNING)
-		if database.IsMySQL() {
-			// Try update existing record first
-			_, _ = tx.ExecContext(ctx, database.ConvertPlaceholders(`
-                UPDATE article_data_mime
-                SET a_body = ?, a_content_type = ?, change_time = ?, change_by = ?
-                WHERE article_id = ?
-            `),
-				articleID,
-				content.Content,
-				content.ContentType,
-				time.Now(),
-				content.CreatedBy,
-			)
-			// Then attempt insert if no row exists
-			res, errExec := tx.ExecContext(ctx, query,
+            ) RETURNING id`),
 				articleID,
 				content.Metadata["subject"],
 				content.Content,
@@ -74,26 +74,8 @@ func (d *DatabaseBackend) Store(ctx context.Context, articleID int64, content *A
 				time.Now(),
 				content.CreatedBy,
 			)
-			if errExec == nil {
-				mimeID, _ = res.LastInsertId()
-			}
-		} else {
-			// PostgreSQL with RETURNING id
-			queryPg := query + " RETURNING id"
-			err = tx.QueryRowContext(ctx, queryPg,
-				articleID,
-				content.Metadata["subject"],
-				content.Content,
-				content.ContentType,
-				time.Now().Unix(),
-				content.CreatedTime,
-				content.CreatedBy,
-				time.Now(),
-				content.CreatedBy,
-			).Scan(&mimeID)
 		}
-
-		if !database.IsMySQL() && err != nil {
+		if err != nil {
 			return nil, fmt.Errorf("failed to store article body: %w", err)
 		}
 
@@ -118,53 +100,29 @@ func (d *DatabaseBackend) Store(ctx context.Context, articleID int64, content *A
 	}
 
 	// Store as attachment
-	query := database.ConvertPlaceholders(`
+	attachmentID, err := database.GetAdapter().InsertWithReturningTx(tx, database.ConvertPlaceholders(`
         INSERT INTO article_data_mime_attachment (
             article_id, filename, content_type, content_size,
             content, content_id, content_alternative, disposition,
             create_time, create_by, change_time, change_by
         ) VALUES (
             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-        )`)
-
-	var attachmentID int64
-	if database.IsMySQL() {
-		res, errExec := tx.ExecContext(ctx, query,
-			articleID,
-			content.FileName,
-			content.ContentType,
-			fmt.Sprintf("%d", content.FileSize),
-			content.Content,
-			content.Metadata["content_id"],
-			content.Metadata["content_alternative"],
-			content.Metadata["disposition"],
-			content.CreatedTime,
-			content.CreatedBy,
-			time.Now(),
-			content.CreatedBy,
-		)
-		if errExec != nil {
-			return nil, fmt.Errorf("failed to store attachment: %w", errExec)
-		}
-		attachmentID, _ = res.LastInsertId()
-	} else {
-		err = tx.QueryRowContext(ctx, query+" RETURNING id",
-			articleID,
-			content.FileName,
-			content.ContentType,
-			fmt.Sprintf("%d", content.FileSize),
-			content.Content,
-			content.Metadata["content_id"],
-			content.Metadata["content_alternative"],
-			content.Metadata["disposition"],
-			content.CreatedTime,
-			content.CreatedBy,
-			time.Now(),
-			content.CreatedBy,
-		).Scan(&attachmentID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to store attachment: %w", err)
-		}
+        ) RETURNING id`),
+		articleID,
+		content.FileName,
+		content.ContentType,
+		fmt.Sprintf("%d", content.FileSize),
+		content.Content,
+		content.Metadata["content_id"],
+		content.Metadata["content_alternative"],
+		content.Metadata["disposition"],
+		content.CreatedTime,
+		content.CreatedBy,
+		time.Now(),
+		content.CreatedBy,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to store attachment: %w", err)
 	}
 
 	// Commit transaction
@@ -195,14 +153,14 @@ func (d *DatabaseBackend) Retrieve(ctx context.Context, ref *StorageReference) (
 	}
 
 	// Check if this is article body or attachment
-	if ref.FileName == "body" || ref.Location[:len("article_data_mime:")] == "article_data_mime:" {
+	if ref.FileName == "body" || strings.HasPrefix(ref.Location, "article_data_mime:") {
 		// Retrieve from article_data_mime
-		query := `
+		query := database.ConvertPlaceholders(`
 			SELECT 
 				a_body, a_content_type, a_subject, 
 				create_time, create_by
 			FROM article_data_mime
-			WHERE article_id = ?`
+			WHERE article_id = ?`)
 
 		var subject sql.NullString
 		err := d.db.QueryRowContext(ctx, query, ref.ArticleID).Scan(
@@ -230,13 +188,13 @@ func (d *DatabaseBackend) Retrieve(ctx context.Context, ref *StorageReference) (
 	}
 
 	// Retrieve attachment
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT 
 			content, content_type, filename, content_size,
 			content_id, content_alternative, disposition,
 			create_time, create_by
 		FROM article_data_mime_attachment
-		WHERE article_id = ? AND filename = ?`
+		WHERE article_id = ? AND filename = ?`)
 
 	var contentID, contentAlt, disposition sql.NullString
 	var contentSize string
@@ -286,14 +244,14 @@ func (d *DatabaseBackend) Delete(ctx context.Context, ref *StorageReference) err
 	// Check if this is article body or attachment
 	if ref.FileName == "body" || (len(ref.Location) > 17 && ref.Location[:17] == "article_data_mime") {
 		// Delete from article_data_mime
-		_, err = tx.ExecContext(ctx, "DELETE FROM article_data_mime WHERE article_id = ?", ref.ArticleID)
+		_, err = tx.ExecContext(ctx, database.ConvertPlaceholders("DELETE FROM article_data_mime WHERE article_id = ?"), ref.ArticleID)
 		if err != nil {
 			return fmt.Errorf("failed to delete article body: %w", err)
 		}
 	} else {
 		// Delete attachment
 		_, err = tx.ExecContext(ctx,
-			"DELETE FROM article_data_mime_attachment WHERE article_id = ? AND filename = ?",
+			database.ConvertPlaceholders("DELETE FROM article_data_mime_attachment WHERE article_id = ? AND filename = ?"),
 			ref.ArticleID, ref.FileName)
 		if err != nil {
 			return fmt.Errorf("failed to delete attachment: %w", err)
@@ -308,12 +266,12 @@ func (d *DatabaseBackend) Exists(ctx context.Context, ref *StorageReference) (bo
 	var exists bool
 
 	if ref.FileName == "body" {
-		query := "SELECT EXISTS(SELECT 1 FROM article_data_mime WHERE article_id = ?)"
+		query := database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM article_data_mime WHERE article_id = ?)")
 		err := d.db.QueryRowContext(ctx, query, ref.ArticleID).Scan(&exists)
 		return exists, err
 	}
 
-	query := "SELECT EXISTS(SELECT 1 FROM article_data_mime_attachment WHERE article_id = ? AND filename = ?)"
+	query := database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM article_data_mime_attachment WHERE article_id = ? AND filename = ?)")
 	err := d.db.QueryRowContext(ctx, query, ref.ArticleID, ref.FileName).Scan(&exists)
 	return exists, err
 }
@@ -325,7 +283,7 @@ func (d *DatabaseBackend) List(ctx context.Context, articleID int64) ([]*Storage
 	// Check for article body
 	var hasMime bool
 	err := d.db.QueryRowContext(ctx,
-		"SELECT EXISTS(SELECT 1 FROM article_data_mime WHERE article_id = ?)",
+		database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM article_data_mime WHERE article_id = ?)"),
 		articleID).Scan(&hasMime)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check article body: %w", err)
@@ -333,12 +291,12 @@ func (d *DatabaseBackend) List(ctx context.Context, articleID int64) ([]*Storage
 
 	if hasMime {
 		// Get article body info
-		query := `
+		query := database.ConvertPlaceholders(`
 			SELECT 
 				id, a_content_type, octet_length(a_body) as size,
 				create_time
 			FROM article_data_mime
-			WHERE article_id = ?`
+			WHERE article_id = ?`)
 
 		var mimeID int64
 		var contentType string
@@ -363,13 +321,13 @@ func (d *DatabaseBackend) List(ctx context.Context, articleID int64) ([]*Storage
 	}
 
 	// Get attachments
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT 
-			id, filename, content_type, content_size::bigint,
+			id, filename, content_type, COALESCE(content_size, '0'),
 			create_time
 		FROM article_data_mime_attachment
 		WHERE article_id = ?
-		ORDER BY id`
+		ORDER BY id`)
 
 	rows, err := d.db.QueryContext(ctx, query, articleID)
 	if err != nil {
@@ -382,16 +340,18 @@ func (d *DatabaseBackend) List(ctx context.Context, articleID int64) ([]*Storage
 		ref.ArticleID = articleID
 		ref.Backend = "DB"
 
+		var contentSize string
 		err := rows.Scan(
 			&ref.ID,
 			&ref.FileName,
 			&ref.ContentType,
-			&ref.FileSize,
+			&contentSize,
 			&ref.CreatedTime,
 		)
 		if err != nil {
 			continue
 		}
+		ref.FileSize, _ = strconv.ParseInt(strings.TrimSpace(contentSize), 10, 64)
 
 		ref.Location = fmt.Sprintf("attachment:%d", ref.ID)
 		refs = append(refs, &ref)
@@ -429,21 +389,21 @@ func (d *DatabaseBackend) GetInfo() *BackendInfo {
 	defer cancel()
 
 	// Count articles
-	d.db.QueryRowContext(ctx,
+	d.db.QueryRowContext(ctx, // sql-converted: static query, no placeholders or dialect constructs
 		"SELECT COUNT(*) FROM article_data_mime").Scan(&stats.TotalFiles)
 
 	// Count attachments
 	var attachments int64
-	d.db.QueryRowContext(ctx,
+	d.db.QueryRowContext(ctx, // sql-converted: static query, no placeholders or dialect constructs
 		"SELECT COUNT(*) FROM article_data_mime_attachment").Scan(&attachments)
 	stats.TotalFiles += attachments
 
 	// Get total size
-	d.db.QueryRowContext(ctx,
+	d.db.QueryRowContext(ctx, // sql-converted: static portable query (octet_length exists on both)
 		"SELECT COALESCE(SUM(octet_length(a_body)), 0) FROM article_data_mime").Scan(&stats.TotalSize)
 
 	var attachmentSize int64
-	d.db.QueryRowContext(ctx,
+	d.db.QueryRowContext(ctx, // sql-converted: static portable query (octet_length exists on both)
 		"SELECT COALESCE(SUM(octet_length(content)), 0) FROM article_data_mime_attachment").Scan(&attachmentSize)
 	stats.TotalSize += attachmentSize
 

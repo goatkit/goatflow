@@ -834,52 +834,29 @@ func (s *SetupAssistantService) CreateService(ctx context.Context, name string, 
 	if createBy <= 0 {
 		createBy = 1
 	}
-	query := `
+	id, err := database.GetAdapter().InsertWithReturning(s.db, database.ConvertPlaceholders(`
 		INSERT INTO service (name, valid_id, comments, create_time, create_by, change_time, change_by)
 		VALUES (?, 1, '', NOW(), ?, NOW(), ?)
-		RETURNING id`
-	execQuery, useLastInsert := database.ConvertReturning(query)
-	execQuery = database.ConvertPlaceholders(execQuery)
-	if useLastInsert && database.IsMySQL() {
-		res, err := s.db.ExecContext(ctx, execQuery, name, createBy, createBy)
-		if err != nil {
-			if isDuplicateErr(err) {
-				return 0, fmt.Errorf("service %q already exists", name)
-			}
-			return 0, fmt.Errorf("create service: %w", err)
-		}
-		last, err := res.LastInsertId()
-		if err != nil {
-			return 0, fmt.Errorf("create service: %w", err)
-		}
-		return int(last), nil
-	}
-	var id int
-	if err := s.db.QueryRowContext(ctx, execQuery, name, createBy, createBy).Scan(&id); err != nil {
+		RETURNING id`), name, createBy, createBy)
+	if err != nil {
 		if isDuplicateErr(err) {
 			return 0, fmt.Errorf("service %q already exists", name)
 		}
 		return 0, fmt.Errorf("create service: %w", err)
 	}
-	return id, nil
+	return int(id), nil
 }
 
 // LinkServiceSLA links an SLA to a service via the OTRS `service_sla` table.
-// Idempotent: a duplicate link is not an error (INSERT IGNORE / ON CONFLICT).
+// Idempotent: a duplicate link is not an error (INSERT IGNORE on the
+// service_sla (service_id, sla_id) unique key).
 func (s *SetupAssistantService) LinkServiceSLA(ctx context.Context, serviceID, slaID int) error {
 	if serviceID <= 0 || slaID <= 0 {
 		return errors.New("service_id and sla_id are required")
 	}
-	var err error
-	if database.IsMySQL() {
-		_, err = s.db.ExecContext(ctx,
-			database.ConvertPlaceholders("INSERT IGNORE INTO service_sla (service_id, sla_id) VALUES (?, ?)"),
-			serviceID, slaID)
-	} else {
-		_, err = s.db.ExecContext(ctx,
-			database.ConvertPlaceholders("INSERT INTO service_sla (service_id, sla_id) VALUES (?, ?) ON CONFLICT (service_id, sla_id) DO NOTHING"),
-			serviceID, slaID)
-	}
+	_, err := s.db.ExecContext(ctx,
+		database.ConvertPlaceholders("INSERT IGNORE INTO service_sla (service_id, sla_id) VALUES (?, ?)"),
+		serviceID, slaID)
 	if err != nil && !isDuplicateErr(err) {
 		return fmt.Errorf("link service/SLA: %w", err)
 	}
@@ -976,7 +953,7 @@ func (s *SetupAssistantService) LoadExistingCustomer(ctx context.Context, custom
 
 	// Load customer company details
 	row := s.db.QueryRowContext(ctx,
-		"SELECT name, street, zip, city, country, url, comments FROM customer_company WHERE customer_id = ?",
+		database.ConvertPlaceholders("SELECT name, street, zip, city, country, url, comments FROM customer_company WHERE customer_id = ?"),
 		customerID)
 
 	var customer CustomerCompany
@@ -1126,7 +1103,7 @@ type AgentInputWithGroupIDs struct {
 // Helper methods to load customer associations
 func (s *SetupAssistantService) loadCustomerGroups(ctx context.Context, customerID string) ([]GroupWithID, error) {
 	rows, err := s.db.QueryContext(ctx,
-		"SELECT g.id, g.name FROM group_customer gc JOIN groups g ON gc.group_id = g.id WHERE gc.customer_id = ?",
+		database.ConvertPlaceholders("SELECT g.id, g.name FROM group_customer gc JOIN groups g ON gc.group_id = g.id WHERE gc.customer_id = ?"),
 		customerID)
 	if err != nil {
 		return nil, err
@@ -1147,9 +1124,9 @@ func (s *SetupAssistantService) loadCustomerGroups(ctx context.Context, customer
 func (s *SetupAssistantService) loadCustomerQueues(ctx context.Context, customerID string) ([]QueueWithGroupIDs, error) {
 	// Queues are linked to customers through groups: queue.group_id → group_customer.group_id → customer_id
 	rows, err := s.db.QueryContext(ctx,
-		"SELECT DISTINCT q.id, q.name FROM queue q "+
+		database.ConvertPlaceholders("SELECT DISTINCT q.id, q.name FROM queue q "+
 			"JOIN group_customer gc ON q.group_id = gc.group_id "+
-			"WHERE gc.customer_id = ? AND q.valid_id = 1",
+			"WHERE gc.customer_id = ? AND q.valid_id = 1"),
 		customerID)
 	if err != nil {
 		return nil, err
@@ -1176,10 +1153,10 @@ func (s *SetupAssistantService) loadCustomerAgents(ctx context.Context, customer
 
 func (s *SetupAssistantService) loadCustomerMailAccounts(ctx context.Context, customerID string) ([]MailAccountInput, error) {
 	rows, err := s.db.QueryContext(ctx,
-		"SELECT ma.login, ma.pw, ma.host, ma.account_type, ma.queue_id, ma.trusted, ma.imap_folder, ma.comments "+
+		database.ConvertPlaceholders("SELECT ma.login, ma.pw, ma.host, ma.account_type, ma.queue_id, ma.trusted, ma.imap_folder, ma.comments "+
 			"FROM mail_account ma "+
 			"JOIN queue q ON ma.queue_id = q.id JOIN group_customer gc ON q.group_id = gc.group_id "+
-			"WHERE gc.customer_id = ?",
+			"WHERE gc.customer_id = ?"),
 		customerID)
 	if err != nil {
 		return nil, err
@@ -1208,7 +1185,7 @@ func (s *SetupAssistantService) loadCustomerMailAccounts(ctx context.Context, cu
 
 func (s *SetupAssistantService) loadCustomerServicesAndSLAs(ctx context.Context, customerID string) ([]string, []SLAInput, error) {
 	rows, err := s.db.QueryContext(ctx,
-		"SELECT s.name FROM service s JOIN service_customer_user scu ON s.id = scu.service_id JOIN customer_user cu ON scu.customer_user_login = cu.login WHERE cu.customer_id = ?",
+		database.ConvertPlaceholders("SELECT s.name FROM service s JOIN service_customer_user scu ON s.id = scu.service_id JOIN customer_user cu ON scu.customer_user_login = cu.login WHERE cu.customer_id = ?"),
 		customerID)
 	if err != nil {
 		return nil, nil, err
@@ -1276,7 +1253,7 @@ func (s *SetupAssistantService) AssignGroupsToCustomer(ctx context.Context, cust
 // loadCustomerPortalUsers loads customer_user records for a given customer.
 func (s *SetupAssistantService) loadCustomerPortalUsers(ctx context.Context, customerID string) ([]PortalUserInfo, error) {
 	rows, err := s.db.QueryContext(ctx,
-		"SELECT login, email, first_name, last_name, phone, title FROM customer_user WHERE customer_id = ? AND valid_id = 1 ORDER BY login",
+		database.ConvertPlaceholders("SELECT login, email, first_name, last_name, phone, title FROM customer_user WHERE customer_id = ? AND valid_id = 1 ORDER BY login"),
 		customerID)
 	if err != nil {
 		return nil, err
@@ -1351,39 +1328,20 @@ func (s *SetupAssistantService) CreateSLA(ctx context.Context, name string, firs
 		createBy = 1
 	}
 
-	query := database.ConvertPlaceholders(`
+	id, err := database.GetAdapter().InsertWithReturning(s.db, database.ConvertPlaceholders(`
 		INSERT INTO sla (
 			name, calendar_name, first_response_time, first_response_notify,
 			update_time, update_notify, solution_time, solution_notify,
 			valid_id, comments, create_time, create_by, change_time, change_by
 		) VALUES (?, 'Default', ?, 0, 0, 0, ?, 0, 1, '', NOW(), ?, NOW(), ?)
-		RETURNING id`)
-
-	// MySQL has no RETURNING — strip it and use LastInsertId when on MySQL.
-	execQuery, useLastInsert := database.ConvertReturning(query)
-	var id int
-	if useLastInsert && database.IsMySQL() {
-		res, err := s.db.ExecContext(ctx, execQuery, name, firstResponseTime, solutionTime, createBy, createBy)
-		if err != nil {
-			if isDuplicateErr(err) {
-				return 0, fmt.Errorf("sla %q already exists", name)
-			}
-			return 0, fmt.Errorf("create sla: %w", err)
+		RETURNING id`), name, firstResponseTime, solutionTime, createBy, createBy)
+	if err != nil {
+		if isDuplicateErr(err) {
+			return 0, fmt.Errorf("sla %q already exists", name)
 		}
-		last, err := res.LastInsertId()
-		if err != nil {
-			return 0, fmt.Errorf("create sla: %w", err)
-		}
-		id = int(last)
-	} else {
-		if err := s.db.QueryRowContext(ctx, execQuery, name, firstResponseTime, solutionTime, createBy, createBy).Scan(&id); err != nil {
-			if isDuplicateErr(err) {
-				return 0, fmt.Errorf("sla %q already exists", name)
-			}
-			return 0, fmt.Errorf("create sla: %w", err)
-		}
+		return 0, fmt.Errorf("create sla: %w", err)
 	}
-	return id, nil
+	return int(id), nil
 }
 
 // ExecuteWizard creates every entity in WizardRequest in dependency order:

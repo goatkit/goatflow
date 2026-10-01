@@ -107,7 +107,7 @@ func handleAdminSLA(c *gin.Context) {
 	}
 	query += fmt.Sprintf(" ORDER BY %s %s", sortBy, sortOrder)
 
-	rows, err := db.Query(query, args...)
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to fetch SLAs")
 		return
@@ -172,7 +172,7 @@ func handleAdminSLA(c *gin.Context) {
 
 	// Get calendars for dropdown (if calendar table exists)
 	var calendars []string
-	calRows, err := db.Query("SELECT name FROM calendar ORDER BY name")
+	calRows, err := db.Query(database.ConvertPlaceholders("SELECT name FROM calendar ORDER BY name"))
 	if err == nil {
 		defer calRows.Close()
 		for calRows.Next() {

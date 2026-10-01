@@ -122,7 +122,7 @@ func (f *MCPTestFixtures) setup() error {
 	f.QueueBilling = 80002
 
 	// Clean up any existing test data (thorough — covers all linked tables)
-	_, _ = f.db.Exec("SET FOREIGN_KEY_CHECKS=0")
+	_, _ = f.db.Exec(database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS=0"))
 	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_history WHERE ticket_id >= 80000 AND ticket_id < 90000"))
 	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime WHERE article_id IN (SELECT id FROM article WHERE ticket_id >= 80000 AND ticket_id < 90000)"))
 	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE ticket_id >= 80000 AND ticket_id < 90000"))
@@ -134,7 +134,7 @@ func (f *MCPTestFixtures) setup() error {
 	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM customer_company WHERE customer_id LIKE 'mcptest-%'"))
 	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM `groups` WHERE id >= 80000 AND id < 90000"))
 	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id >= 80000 AND id < 90000"))
-	_, _ = f.db.Exec("SET FOREIGN_KEY_CHECKS=1")
+	_, _ = f.db.Exec(database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS=1"))
 
 	suffix := fmt.Sprintf("_%d", time.Now().UnixNano()%100000)
 
@@ -798,7 +798,7 @@ func TestCreateTicket_QueuePermissions(t *testing.T) {
 
 		// Count tickets before attempt
 		var countBefore int
-		fixtures.db.QueryRow("SELECT COUNT(*) FROM ticket WHERE title = 'Should fail - no permission'").Scan(&countBefore)
+		fixtures.db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE title = 'Should fail - no permission'")).Scan(&countBefore)
 
 		result, err := callMCPTool(t, server, "create_ticket", map[string]any{
 			"title":    "Should fail - no permission",
@@ -812,7 +812,7 @@ func TestCreateTicket_QueuePermissions(t *testing.T) {
 
 		// Verify ticket was NOT created
 		var countAfter int
-		fixtures.db.QueryRow("SELECT COUNT(*) FROM ticket WHERE title = 'Should fail - no permission'").Scan(&countAfter)
+		fixtures.db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE title = 'Should fail - no permission'")).Scan(&countAfter)
 		assert.Equal(t, countBefore, countAfter, "No ticket should have been created")
 	})
 

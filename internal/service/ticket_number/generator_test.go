@@ -16,6 +16,8 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // Test database connection for integration tests.
@@ -68,7 +70,7 @@ func getTestDB(t *testing.T) *sql.DB {
 		t.Skipf("Database ping failed: %v", err)
 	}
 
-	_, _ = db.Exec("DELETE FROM ticket_number_counter")
+	_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_number_counter"))
 
 	return db
 }
@@ -183,7 +185,7 @@ func TestAutoIncrementGenerator(t *testing.T) {
 
 	t.Run("StartsFromConfiguredValue", func(t *testing.T) {
 		// Reset for clean test
-		_, _ = db.Exec("DELETE FROM ticket_number_counter WHERE counter_uid = 'test_auto_increment'")
+		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_number_counter WHERE counter_uid = 'test_auto_increment'"))
 
 		testGen := &AutoIncrementGenerator{
 			db:         db,

@@ -44,12 +44,12 @@ func createAdminTestService(t *testing.T, name string) (int, bool) {
 		return 0, false
 	}
 
-	var id int
 	query := database.ConvertPlaceholders(`
 		INSERT INTO service (name, comments, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, ?, 1, NOW(), 1, NOW(), 1)
 		RETURNING id`)
-	err = db.QueryRow(query, name, "Admin service test").Scan(&id)
+	id64, err := database.GetAdapter().InsertWithReturning(db, query, name, "Admin service test")
+	id := int(id64)
 	if err != nil {
 		return 0, false
 	}

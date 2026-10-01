@@ -726,12 +726,12 @@ func HandleAdminUserGroups(c *gin.Context) {
 	}
 
 	// Get user's groups
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT g.id, g.name
 		FROM groups g
 		JOIN group_user gu ON g.id = gu.group_id
 		WHERE gu.user_id = ? AND g.valid_id = 1
-		ORDER BY g.name`
+		ORDER BY g.name`)
 
 	rows, err := db.Query(query, id)
 	if err != nil {

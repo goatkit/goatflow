@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/yamlmgmt"
 )
@@ -107,13 +108,13 @@ func (s *AuthService) checkAdminGroup(userID uint) bool {
 		return false
 	}
 	var isAdmin bool
-	err := s.db.QueryRow(`
+	err := s.db.QueryRow(database.ConvertPlaceholders(`
 		SELECT EXISTS(
 			SELECT 1 FROM group_user gu
 			JOIN `+"`groups`"+` g ON gu.group_id = g.id
 			WHERE gu.user_id = ? AND g.name = 'admin'
 		)
-	`, userID).Scan(&isAdmin)
+	`), userID).Scan(&isAdmin)
 	if err != nil {
 		return false
 	}

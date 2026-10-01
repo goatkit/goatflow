@@ -32,7 +32,7 @@ func handleAdminGenericAgent(c *gin.Context) {
 	validFilter := c.DefaultQuery("valid", "all")
 
 	// Get all unique job names
-	query := `SELECT DISTINCT job_name FROM generic_agent_jobs ORDER BY job_name`
+	query := database.ConvertPlaceholders(`SELECT DISTINCT job_name FROM generic_agent_jobs ORDER BY job_name`)
 	rows, err := db.Query(query)
 	if err != nil {
 		sendErrorResponse(c, http.StatusInternalServerError, "Failed to fetch generic agent jobs")

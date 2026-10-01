@@ -33,16 +33,16 @@ func NewRepositoryWithDB(db *sql.DB) *Repository {
 func (r *Repository) AddToRecycleBin(entry *RecycleBinEntry) (int64, error) {
 	query := database.ConvertPlaceholders(`
 		INSERT INTO gk_recycle_bin (entity_type, entity_id, entity_name, deleted_by, deleted_at, expires_at, org_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
 	`)
-	result, err := r.db.Exec(query,
+	id, err := database.GetAdapter().InsertWithReturning(r.db, query,
 		entry.EntityType, entry.EntityID, entry.EntityName,
 		entry.DeletedBy, entry.DeletedAt, entry.ExpiresAt, entry.OrgID,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("add to recycle bin: %w", err)
 	}
-	return result.LastInsertId()
+	return id, nil
 }
 
 // ListRecycleBin lists entries in the recycle bin, optionally filtered by entity type.
@@ -70,9 +70,8 @@ func (r *Repository) ListRecycleBin(entityType string, orgID int64) ([]RecycleBi
 		}
 	}
 	query += " ORDER BY deleted_at DESC"
-	query = database.ConvertPlaceholders(query)
 
-	rows, err := r.db.Query(query, args...)
+	rows, err := r.db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		return nil, fmt.Errorf("list recycle bin: %w", err)
 	}

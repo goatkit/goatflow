@@ -134,15 +134,10 @@ func (d *PostgreSQLDriver) DropTable(tableName string) (database.Query, error) {
 
 // TableExists checks if a table exists.
 func (d *PostgreSQLDriver) TableExists(tableName string) (bool, error) {
-	query := `
-		SELECT EXISTS (
-			SELECT 1 FROM information_schema.tables 
-			WHERE table_schema = 'public' 
-			AND table_name = ?
-		)`
+	query := `SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1)` // sql-ok: PostgreSQL dialect driver; native $N SQL
 
 	var exists bool
-	err := d.db.QueryRow(query, tableName).Scan(&exists)
+	err := d.db.QueryRow(query, tableName).Scan(&exists) // sql-converted: PostgreSQL dialect driver; native $N SQL
 	return exists, err
 }
 
@@ -296,7 +291,7 @@ func (d *PostgreSQLDriver) Exec(ctx context.Context, query string, args ...inter
 	if d.db == nil {
 		return nil, sql.ErrConnDone
 	}
-	return d.db.ExecContext(ctx, query, args...)
+	return d.db.ExecContext(ctx, query, args...) // sql-converted: PostgreSQL dialect driver; caller passes this driver's native SQL
 }
 
 // Query executes a query that returns rows.
@@ -304,7 +299,7 @@ func (d *PostgreSQLDriver) Query(ctx context.Context, query string, args ...inte
 	if d.db == nil {
 		return nil, sql.ErrConnDone
 	}
-	return d.db.QueryContext(ctx, query, args...)
+	return d.db.QueryContext(ctx, query, args...) // sql-converted: PostgreSQL dialect driver; caller passes this driver's native SQL
 }
 
 // QueryRow executes a query that returns at most one row.
@@ -312,7 +307,7 @@ func (d *PostgreSQLDriver) QueryRow(ctx context.Context, query string, args ...i
 	if d.db == nil {
 		return nil
 	}
-	return d.db.QueryRowContext(ctx, query, args...)
+	return d.db.QueryRowContext(ctx, query, args...) // sql-converted: PostgreSQL dialect driver; caller passes this driver's native SQL
 }
 
 // pgTransaction wraps sql.Tx to implement Transaction interface.
@@ -329,15 +324,15 @@ func (t *pgTransaction) Rollback() error {
 }
 
 func (t *pgTransaction) Exec(query string, args ...interface{}) (sql.Result, error) {
-	return t.tx.Exec(query, args...)
+	return t.tx.Exec(query, args...) // sql-converted: PostgreSQL dialect driver; caller passes this driver's native SQL
 }
 
 func (t *pgTransaction) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	return t.tx.Query(query, args...)
+	return t.tx.Query(query, args...) // sql-converted: PostgreSQL dialect driver; caller passes this driver's native SQL
 }
 
 func (t *pgTransaction) QueryRow(query string, args ...interface{}) *sql.Row {
-	return t.tx.QueryRow(query, args...)
+	return t.tx.QueryRow(query, args...) // sql-converted: PostgreSQL dialect driver; caller passes this driver's native SQL
 }
 
 func init() {

@@ -116,19 +116,19 @@ func (router *APIRouter) handleCreateCannedResponse(c *gin.Context) {
 	}
 
 	now := time.Now()
-	query := database.ConvertQuery(`
+	query := database.ConvertPlaceholders(`
 		INSERT INTO standard_template
 			(name, text, template_type, content_type, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)
+		RETURNING id
 	`)
 
-	result, err := db.Exec(query, req.Name, req.Content, req.TemplateType, req.ContentType, now, userID, now, userID)
+	id, err := database.GetAdapter().InsertWithReturning(db, query,
+		req.Name, req.Content, req.TemplateType, req.ContentType, now, userID, now, userID)
 	if err != nil {
 		sendError(c, http.StatusInternalServerError, "Failed to create template")
 		return
 	}
-
-	id, _ := result.LastInsertId()
 
 	c.JSON(http.StatusCreated, APIResponse{
 		Success: true,
@@ -408,19 +408,19 @@ func (router *APIRouter) handleCreateTicketTemplate(c *gin.Context) {
 	}
 
 	now := time.Now()
-	query := database.ConvertQuery(`
+	query := database.ConvertPlaceholders(`
 		INSERT INTO standard_template
 			(name, text, template_type, content_type, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, ?, 'Create', ?, 1, ?, ?, ?, ?)
+		RETURNING id
 	`)
 
-	result, err := db.Exec(query, req.Name, req.Content, req.ContentType, now, userID, now, userID)
+	id, err := database.GetAdapter().InsertWithReturning(db, query,
+		req.Name, req.Content, req.ContentType, now, userID, now, userID)
 	if err != nil {
 		sendError(c, http.StatusInternalServerError, "Failed to create template")
 		return
 	}
-
-	id, _ := result.LastInsertId()
 
 	c.JSON(http.StatusCreated, APIResponse{
 		Success: true,
@@ -703,7 +703,7 @@ func (router *APIRouter) handleGetMyWorkload(c *gin.Context) {
 		}
 	}
 
-	// Count overdue (escalation_time in the past)
+	// Count overdue (escalation_time, a unix timestamp, in the past)
 	overdueQuery := database.ConvertQuery(`
 		SELECT COUNT(*) FROM ticket t
 		JOIN ticket_state ts ON ts.id = t.ticket_state_id
@@ -711,10 +711,10 @@ func (router *APIRouter) handleGetMyWorkload(c *gin.Context) {
 		AND ts.type_id IN (1, 4)
 		AND t.archive_flag = 0
 		AND t.escalation_time > 0
-		AND FROM_UNIXTIME(t.escalation_time) < NOW()
+		AND t.escalation_time < ?
 	`)
 	var overdue int
-	db.QueryRow(overdueQuery, userID).Scan(&overdue)
+	db.QueryRow(overdueQuery, userID, time.Now().Unix()).Scan(&overdue)
 
 	c.JSON(http.StatusOK, APIResponse{
 		Success: true,
@@ -742,12 +742,14 @@ func (router *APIRouter) handleGetMyResponseTimes(c *gin.Context) {
 	}
 
 	// Calculate response times based on article creation times
-	// This measures time between customer articles and agent responses
+	// This measures time between customer articles and agent responses.
+	// Gaps are in seconds via UNIX_TIMESTAMP, which the conversion layer
+	// rewrites for PostgreSQL (TIMESTAMPDIFF is MySQL-only).
 	query := database.ConvertQuery(`
 		SELECT DATE(a.create_time) as day,
-			AVG(TIMESTAMPDIFF(MINUTE, prev.create_time, a.create_time)) as avg_minutes,
-			MIN(TIMESTAMPDIFF(MINUTE, prev.create_time, a.create_time)) as min_minutes,
-			MAX(TIMESTAMPDIFF(MINUTE, prev.create_time, a.create_time)) as max_minutes,
+			AVG(UNIX_TIMESTAMP(a.create_time) - UNIX_TIMESTAMP(prev.create_time)) as avg_seconds,
+			MIN(UNIX_TIMESTAMP(a.create_time) - UNIX_TIMESTAMP(prev.create_time)) as min_seconds,
+			MAX(UNIX_TIMESTAMP(a.create_time) - UNIX_TIMESTAMP(prev.create_time)) as max_seconds,
 			COUNT(*) as responses
 		FROM article a
 		JOIN article prev ON prev.ticket_id = a.ticket_id AND prev.id < a.id
@@ -765,13 +767,14 @@ func (router *APIRouter) handleGetMyResponseTimes(c *gin.Context) {
 		defer rows.Close()
 		for rows.Next() {
 			var day time.Time
-			var avgMin, minMin, maxMin, responses int
-			if rows.Scan(&day, &avgMin, &minMin, &maxMin, &responses) == nil {
+			var avgSec, minSec, maxSec float64
+			var responses int
+			if rows.Scan(&day, &avgSec, &minSec, &maxSec, &responses) == nil {
 				responseTimes = append(responseTimes, gin.H{
 					"date":      day.Format("2006-01-02"),
-					"avg_min":   avgMin,
-					"min_min":   minMin,
-					"max_min":   maxMin,
+					"avg_min":   int(avgSec / 60),
+					"min_min":   int(minSec / 60),
+					"max_min":   int(maxSec / 60),
 					"responses": responses,
 				})
 			}

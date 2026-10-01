@@ -116,23 +116,23 @@ func (router *APIRouter) handleCreateUser(c *gin.Context) {
 	}
 
 	now := time.Now()
-	query := database.ConvertQuery(`
+	query := database.ConvertPlaceholders(`
 		INSERT INTO users
 			(login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)
+		RETURNING id
 	`)
 
-	result, err := db.Exec(query, req.Login, string(hashedPassword), req.FirstName, req.LastName, now, adminID, now, adminID)
+	id, err := database.GetAdapter().InsertWithReturning(db, query,
+		req.Login, string(hashedPassword), req.FirstName, req.LastName, now, adminID, now, adminID)
 	if err != nil {
-		if strings.Contains(err.Error(), "Duplicate") {
+		if strings.Contains(err.Error(), "Duplicate") || strings.Contains(err.Error(), "duplicate key") {
 			sendError(c, http.StatusConflict, "User with this login already exists")
 			return
 		}
 		sendError(c, http.StatusInternalServerError, "Failed to create user")
 		return
 	}
-
-	id, _ := result.LastInsertId()
 
 	c.JSON(http.StatusCreated, APIResponse{
 		Success: true,

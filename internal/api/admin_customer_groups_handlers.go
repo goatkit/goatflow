@@ -457,9 +457,8 @@ func loadCustomerCompanies(db *sql.DB, search string) ([]CustomerCompanyInfo, er
 	}
 
 	query += " ORDER BY cc.name"
-	query = database.ConvertPlaceholders(query)
 
-	rows, err := db.Query(query, args...)
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -477,13 +476,12 @@ func loadCustomerCompanies(db *sql.DB, search string) ([]CustomerCompanyInfo, er
 }
 
 func loadCustomerCompany(db *sql.DB, customerID string) (*CustomerCompanyInfo, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT cc.customer_id, cc.name, cc.valid_id, COALESCE(v.name, 'valid') as valid_name
 		FROM customer_company cc
 		LEFT JOIN valid v ON cc.valid_id = v.id
 		WHERE cc.customer_id = ?
-	`
-	query = database.ConvertPlaceholders(query)
+	`)
 
 	var c CustomerCompanyInfo
 	err := db.QueryRow(query, customerID).Scan(&c.CustomerID, &c.Name, &c.ValidID, &c.ValidName)
@@ -494,14 +492,13 @@ func loadCustomerCompany(db *sql.DB, customerID string) (*CustomerCompanyInfo, e
 }
 
 func loadGroups(db *sql.DB) ([]GroupInfo, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT g.id, g.name, g.valid_id, COALESCE(v.name, 'valid') as valid_name
 		FROM groups g
 		LEFT JOIN valid v ON g.valid_id = v.id
 		WHERE g.valid_id = 1
 		ORDER BY g.name
-	`
-	query = database.ConvertPlaceholders(query)
+	`)
 
 	rows, err := db.Query(query)
 	if err != nil {
@@ -521,13 +518,12 @@ func loadGroups(db *sql.DB) ([]GroupInfo, error) {
 }
 
 func loadGroup(db *sql.DB, groupID int) (*GroupInfo, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT g.id, g.name, g.valid_id, COALESCE(v.name, 'valid') as valid_name
 		FROM groups g
 		LEFT JOIN valid v ON g.valid_id = v.id
 		WHERE g.id = ?
-	`
-	query = database.ConvertPlaceholders(query)
+	`)
 
 	var g GroupInfo
 	err := db.QueryRow(query, groupID).Scan(&g.ID, &g.Name, &g.ValidID, &g.ValidName)
@@ -538,12 +534,11 @@ func loadGroup(db *sql.DB, groupID int) (*GroupInfo, error) {
 }
 
 func loadCustomerGroupPermissions(db *sql.DB, customerID string) (map[int]map[string]bool, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT group_id, permission_key, permission_value
 		FROM group_customer
 		WHERE customer_id = ?
-	`
-	query = database.ConvertPlaceholders(query)
+	`)
 
 	rows, err := db.Query(query, customerID)
 	if err != nil {
@@ -568,12 +563,11 @@ func loadCustomerGroupPermissions(db *sql.DB, customerID string) (map[int]map[st
 }
 
 func loadGroupCustomerPermissions(db *sql.DB, groupID int) (map[string]map[string]bool, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT customer_id, permission_key, permission_value
 		FROM group_customer
 		WHERE group_id = ?
-	`
-	query = database.ConvertPlaceholders(query)
+	`)
 
 	rows, err := db.Query(query, groupID)
 	if err != nil {

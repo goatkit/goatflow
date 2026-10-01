@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/goatkit/goatflow/internal/platform/database"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -44,11 +45,11 @@ func newArticleCreateTestHost(t *testing.T) *ProdHostAPI {
 			change_by INTEGER)`,
 	}
 	for _, q := range ddl {
-		if _, err := db.Exec(q); err != nil {
+		if _, err := db.Exec(database.ConvertPlaceholders(q)); err != nil {
 			t.Fatalf("exec ddl %q: %v", q, err)
 		}
 	}
-	if _, err := db.Exec(`INSERT INTO ticket (id, customer_user_id) VALUES (1, 'j@x.com')`); err != nil {
+	if _, err := db.Exec(database.ConvertPlaceholders(`INSERT INTO ticket (id, customer_user_id) VALUES (1, 'j@x.com')`)); err != nil {
 		t.Fatalf("seed ticket: %v", err)
 	}
 	return NewProdHostAPI(WithDB("default", db))
@@ -69,7 +70,7 @@ func TestCreateArticle(t *testing.T) {
 	db, _ := h.getDB("")
 	var visible int
 	var sender, channel int
-	if err := db.QueryRow(`SELECT is_visible_for_customer, article_sender_type_id, communication_channel_id FROM article WHERE id = ?`, id).
+	if err := db.QueryRow(database.ConvertPlaceholders(`SELECT is_visible_for_customer, article_sender_type_id, communication_channel_id FROM article WHERE id = ?`), id).
 		Scan(&visible, &sender, &channel); err != nil {
 		t.Fatalf("load article: %v", err)
 	}
@@ -81,7 +82,7 @@ func TestCreateArticle(t *testing.T) {
 	}
 
 	var subject, body, ct string
-	if err := db.QueryRow(`SELECT a_subject, a_body, a_content_type FROM article_data_mime WHERE article_id = ?`, id).
+	if err := db.QueryRow(database.ConvertPlaceholders(`SELECT a_subject, a_body, a_content_type FROM article_data_mime WHERE article_id = ?`), id).
 		Scan(&subject, &body, &ct); err != nil {
 		t.Fatalf("load mime: %v", err)
 	}
@@ -100,7 +101,7 @@ func TestCreateArticleInvisible(t *testing.T) {
 	}
 	db, _ := h.getDB("")
 	var visible int
-	if err := db.QueryRow(`SELECT is_visible_for_customer FROM article WHERE id = ?`, id).Scan(&visible); err != nil {
+	if err := db.QueryRow(database.ConvertPlaceholders(`SELECT is_visible_for_customer FROM article WHERE id = ?`), id).Scan(&visible); err != nil {
 		t.Fatalf("load article: %v", err)
 	}
 	if visible != 0 {
@@ -129,7 +130,7 @@ func TestCreateArticleSanitizesAstralRunes(t *testing.T) {
 	}
 	db, _ := h.getDB("")
 	var stored string
-	if err := db.QueryRow(`SELECT a_body FROM article_data_mime WHERE article_id = ?`, id).Scan(&stored); err != nil {
+	if err := db.QueryRow(database.ConvertPlaceholders(`SELECT a_body FROM article_data_mime WHERE article_id = ?`), id).Scan(&stored); err != nil {
 		t.Fatalf("load mime: %v", err)
 	}
 	if stored != "intro  out" {

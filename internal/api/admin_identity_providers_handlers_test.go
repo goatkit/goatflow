@@ -120,11 +120,12 @@ func TestHandleAdminIdentityProviderCreate(t *testing.T) {
 		json.NewDecoder(w.Body).Decode(&resp)
 		assert.True(t, resp["success"] == true)
 		assert.NotEmpty(t, resp["id"])
-		var id, enabled, autoProvision int
+		var id int
+		var enabled, autoProvision bool
 		err := db.QueryRow(database.ConvertPlaceholders(`SELECT id, enabled, auto_provision FROM gk_identity_provider WHERE name = ?`), testName).Scan(&id, &enabled, &autoProvision)
 		require.NoError(t, err)
-		assert.Equal(t, 1, enabled)
-		assert.Equal(t, 0, autoProvision)
+		assert.True(t, enabled)
+		assert.False(t, autoProvision)
 		cleanupProvider(db, uint(id))
 	})
 	t.Run("POST rejects missing required fields", func(t *testing.T) {
@@ -196,11 +197,11 @@ func TestHandleAdminIdentityProviderCreate(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code, "Create with toggles should succeed: %s", w.Body.String())
-		var enabled, autoProvision int
+		var enabled, autoProvision bool
 		err := db.QueryRow(database.ConvertPlaceholders(`SELECT enabled, auto_provision FROM gk_identity_provider WHERE name = ?`), testName).Scan(&enabled, &autoProvision)
 		require.NoError(t, err)
-		assert.Equal(t, 1, enabled)
-		assert.Equal(t, 1, autoProvision)
+		assert.True(t, enabled)
+		assert.True(t, autoProvision)
 		var id uint
 		db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM gk_identity_provider WHERE name = ?`), testName).Scan(&id)
 		cleanupProvider(db, id)
@@ -279,14 +280,14 @@ func TestHandleAdminIdentityProviderUpdate(t *testing.T) {
 		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code, "Update should succeed: %s", w.Body.String())
 		var name, providerType, clientID string
-		var enabled, autoProvision int
+		var enabled, autoProvision bool
 		err := db.QueryRow(database.ConvertPlaceholders(`SELECT name, provider_type, client_id, enabled, auto_provision FROM gk_identity_provider WHERE id = ?`), providerID).Scan(&name, &providerType, &clientID, &enabled, &autoProvision)
 		require.NoError(t, err)
 		assert.Equal(t, testName, name)
 		assert.Equal(t, "google", providerType)
 		assert.Equal(t, "updated-client-id", clientID)
-		assert.Equal(t, 0, enabled)
-		assert.Equal(t, 1, autoProvision)
+		assert.False(t, enabled)
+		assert.True(t, autoProvision)
 	})
 	t.Run("PUT preserves client_secret if not provided", func(t *testing.T) {
 		db := getTestDB(t)
@@ -419,7 +420,7 @@ func TestHandleAdminIdentityProviderToggle(t *testing.T) {
 		testName := fmt.Sprintf("TestEnable_%d", time.Now().UnixNano())
 		providerID := createTestProvider(db, testName, "oidc", "enable-client")
 		defer cleanupProvider(db, providerID)
-		db.Exec(database.ConvertPlaceholders(`UPDATE gk_identity_provider SET enabled = 0 WHERE id = ?`), providerID)
+		db.Exec(database.ConvertPlaceholders(`UPDATE gk_identity_provider SET enabled = ? WHERE id = ?`), false, providerID)
 		router := NewSimpleRouterWithDB(db)
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/identity-providers/%d/enable", providerID), nil)
 		req.Header.Set("Accept", "application/json")
@@ -431,10 +432,10 @@ func TestHandleAdminIdentityProviderToggle(t *testing.T) {
 		json.NewDecoder(w.Body).Decode(&resp)
 		assert.True(t, resp["success"] == true)
 		assert.Equal(t, true, resp["enabled"])
-		var enabled int
+		var enabled bool
 		err := db.QueryRow(database.ConvertPlaceholders(`SELECT enabled FROM gk_identity_provider WHERE id = ?`), providerID).Scan(&enabled)
 		require.NoError(t, err)
-		assert.Equal(t, 1, enabled)
+		assert.True(t, enabled)
 	})
 	t.Run("Toggle disable provider", func(t *testing.T) {
 		db := getTestDB(t)
@@ -455,10 +456,10 @@ func TestHandleAdminIdentityProviderToggle(t *testing.T) {
 		json.NewDecoder(w.Body).Decode(&resp)
 		assert.True(t, resp["success"] == true)
 		assert.Equal(t, false, resp["enabled"])
-		var enabled int
+		var enabled bool
 		err := db.QueryRow(database.ConvertPlaceholders(`SELECT enabled FROM gk_identity_provider WHERE id = ?`), providerID).Scan(&enabled)
 		require.NoError(t, err)
-		assert.Equal(t, 0, enabled)
+		assert.False(t, enabled)
 	})
 	t.Run("Toggle invalid action returns 400", func(t *testing.T) {
 		db := getTestDB(t)

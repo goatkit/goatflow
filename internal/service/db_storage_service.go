@@ -49,15 +49,16 @@ func (s *DatabaseStorageService) Store(ctx context.Context, file multipart.File,
 	contentType := header.Header.Get("Content-Type")
 
 	// Insert attachment
-	res, err := s.db.Exec(database.ConvertPlaceholders(`
+	attID, err := database.GetAdapter().InsertWithReturning(s.db, database.ConvertPlaceholders(`
         INSERT INTO article_data_mime_attachment (
             article_id, filename, content_type, content_size, content,
             disposition, create_time, create_by, change_time, change_by
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`),
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        RETURNING id`),
 		articleID,
 		header.Filename,
 		contentType,
-		int64(len(content)),
+		strconv.Itoa(len(content)),
 		content,
 		"attachment",
 		now, uid, now, uid,
@@ -65,8 +66,6 @@ func (s *DatabaseStorageService) Store(ctx context.Context, file multipart.File,
 	if err != nil {
 		return nil, fmt.Errorf("attachment insert failed: %w", err)
 	}
-
-	attID, _ := res.LastInsertId()
 
 	md := &FileMetadata{
 		ID:           strconv.FormatInt(attID, 10),

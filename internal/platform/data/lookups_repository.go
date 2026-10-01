@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // LookupItem represents a database lookup value.
@@ -50,7 +52,7 @@ func (r *LookupsRepository) GetTicketStates(ctx context.Context) ([]LookupItem, 
 			name
 	`
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, database.ConvertPlaceholders(query))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query ticket states: %w", err)
 	}
@@ -93,7 +95,7 @@ func (r *LookupsRepository) GetTicketPriorities(ctx context.Context) ([]LookupIt
 			name
 	`
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, database.ConvertPlaceholders(query))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query ticket priorities: %w", err)
 	}
@@ -126,7 +128,7 @@ func (r *LookupsRepository) GetQueues(ctx context.Context) ([]LookupItem, error)
 		ORDER BY name
 	`
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, database.ConvertPlaceholders(query))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query queues: %w", err)
 	}
@@ -151,26 +153,6 @@ func (r *LookupsRepository) GetQueues(ctx context.Context) ([]LookupItem, error)
 
 // GetTicketTypes fetches all ticket types from the database.
 func (r *LookupsRepository) GetTicketTypes(ctx context.Context) ([]LookupItem, error) {
-	// Check if ticket_types table exists
-	var tableExists bool
-	err := r.db.QueryRowContext(ctx, `
-		SELECT EXISTS (
-			SELECT FROM information_schema.tables 
-			WHERE table_schema = 'public' 
-			AND table_name = 'ticket_types'
-		)
-	`).Scan(&tableExists)
-
-	if err != nil || !tableExists {
-		// Return default types if table doesn't exist
-		return []LookupItem{
-			{ID: 1, Name: "Unclassified", ValidID: 1, IsSystem: true},
-			{ID: 2, Name: "Incident", ValidID: 1, IsSystem: true},
-			{ID: 3, Name: "Problem", ValidID: 1, IsSystem: true},
-			{ID: 4, Name: "Change Request", ValidID: 1, IsSystem: true},
-		}, nil
-	}
-
 	query := `
 		SELECT id, name, valid_id,
 		       CASE WHEN name IN ('Unclassified', 'Incident', 'Problem', 'Change Request') 
@@ -180,9 +162,15 @@ func (r *LookupsRepository) GetTicketTypes(ctx context.Context) ([]LookupItem, e
 		ORDER BY name
 	`
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, database.ConvertPlaceholders(query))
 	if err != nil {
-		return nil, fmt.Errorf("failed to query ticket types: %w", err)
+		// Legacy ticket_types table absent: fall back to the default types.
+		return []LookupItem{
+			{ID: 1, Name: "Unclassified", ValidID: 1, IsSystem: true},
+			{ID: 2, Name: "Incident", ValidID: 1, IsSystem: true},
+			{ID: 3, Name: "Problem", ValidID: 1, IsSystem: true},
+			{ID: 4, Name: "Change Request", ValidID: 1, IsSystem: true},
+		}, nil
 	}
 	defer rows.Close()
 
@@ -213,7 +201,7 @@ func (r *LookupsRepository) GetTranslation(ctx context.Context, tableName, field
 		LIMIT 1
 	`
 
-	err := r.db.QueryRowContext(ctx, query, tableName, fieldValue, lang).Scan(&translation)
+	err := r.db.QueryRowContext(ctx, database.ConvertPlaceholders(query), tableName, fieldValue, lang).Scan(&translation)
 	if err == sql.ErrNoRows {
 		// No translation found - this is ok, we'll use the original value
 		return "", nil
@@ -231,14 +219,14 @@ func (r *LookupsRepository) GetTranslation(ctx context.Context, tableName, field
 
 // AddTranslation adds a new translation to the database.
 func (r *LookupsRepository) AddTranslation(ctx context.Context, tableName, fieldValue, lang, translation string, isSystem bool) error {
-	query := `
+	query := database.ConvertUpsert(`
 		INSERT INTO lookup_translations (table_name, field_value, language_code, translation, is_system, create_time, change_time)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT (table_name, field_value, language_code) 
-		DO UPDATE SET translation = ?, change_time = ?
-	`
+		ON DUPLICATE KEY UPDATE translation = VALUES(translation), change_time = VALUES(change_time)
+	`, "table_name", "field_value", "language_code")
 
-	_, err := r.db.ExecContext(ctx, query, tableName, fieldValue, lang, translation, isSystem, time.Now())
+	now := time.Now()
+	_, err := r.db.ExecContext(ctx, query, tableName, fieldValue, lang, translation, isSystem, now, now)
 	if err != nil {
 		// Check if table doesn't exist - silently ignore since translations are optional
 		if strings.Contains(err.Error(), "lookup_translations") && strings.Contains(err.Error(), "does not exist") {
@@ -258,7 +246,7 @@ func (r *LookupsRepository) GetAllTranslations(ctx context.Context, lang string)
 		WHERE language_code = ?
 	`
 
-	rows, err := r.db.QueryContext(ctx, query, lang)
+	rows, err := r.db.QueryContext(ctx, database.ConvertPlaceholders(query), lang)
 	if err != nil {
 		// Check if table doesn't exist - return empty map instead of error
 		if strings.Contains(err.Error(), "lookup_translations") && strings.Contains(err.Error(), "does not exist") {

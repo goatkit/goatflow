@@ -43,20 +43,12 @@ func getNextCounter(db *sql.DB, counterUID string) (int64, error) {
 	`), counterUID).Scan(&counter)
 
 	if err == sql.ErrNoRows {
-		// Counter doesn't exist, create it with value 1
-		if database.IsMySQL() {
-			_, err = tx.Exec(`
-				INSERT INTO ticket_number_counter (counter, counter_uid, create_time)
-				VALUES (?, ?, NOW())
-				ON DUPLICATE KEY UPDATE counter = counter
-			`, 1, counterUID)
-		} else {
-			_, err = tx.Exec(`
-				INSERT INTO ticket_number_counter (counter, counter_uid, create_time)
-				VALUES (?, ?, NOW())
-				ON CONFLICT (counter_uid) DO NOTHING
-			`, 1, counterUID)
-		}
+		// Counter doesn't exist, create it with value 1 (a concurrent creator wins)
+		_, err = tx.Exec(database.ConvertUpsert(`
+			INSERT INTO ticket_number_counter (counter, counter_uid, create_time)
+			VALUES (?, ?, NOW())
+			ON DUPLICATE KEY UPDATE counter = ticket_number_counter.counter
+		`, "counter_uid"), 1, counterUID)
 
 		if err != nil {
 			return 0, fmt.Errorf("failed to insert counter: %w", err)
@@ -97,20 +89,10 @@ func getNextCounter(db *sql.DB, counterUID string) (int64, error) {
 
 // resetCounter resets a counter to a specific value.
 func resetCounter(db *sql.DB, counterUID string, value int64) error {
-	if database.IsMySQL() {
-		_, err := db.Exec(`
-			INSERT INTO ticket_number_counter (counter, counter_uid, create_time)
-			VALUES (?, ?, NOW())
-			ON DUPLICATE KEY UPDATE counter = VALUES(counter), create_time = NOW()
-		`, value, counterUID)
-		return err
-	}
-
-	_, err := db.Exec(`
+	_, err := db.Exec(database.ConvertUpsert(`
 		INSERT INTO ticket_number_counter (counter, counter_uid, create_time)
 		VALUES (?, ?, NOW())
-		ON CONFLICT (counter_uid) DO UPDATE 
-		SET counter = EXCLUDED.counter, create_time = NOW()
-	`, value, counterUID)
+		ON DUPLICATE KEY UPDATE counter = VALUES(counter), create_time = NOW()
+	`, "counter_uid"), value, counterUID)
 	return err
 }

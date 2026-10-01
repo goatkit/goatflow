@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
@@ -160,24 +161,31 @@ func (r *GroupSQLRepository) Create(group *models.Group) error {
 		return errors.New("group name is required")
 	}
 
+	now := time.Now()
 	query := database.ConvertPlaceholders(`
 		INSERT INTO groups (name, comments, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
-		RETURNING id, create_time, change_time`)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		RETURNING id`)
 
-	err := r.db.QueryRow(
+	id, err := database.GetAdapter().InsertWithReturning(
+		r.db,
 		query,
 		group.Name,
 		group.Comments,
 		group.ValidID,
+		now,
 		group.CreateBy,
+		now,
 		group.ChangeBy,
-	).Scan(&group.ID, &group.CreateTime, &group.ChangeTime)
+	)
 
 	if err != nil {
 		return fmt.Errorf("failed to create group: %w", err)
 	}
 
+	group.ID = id
+	group.CreateTime = now
+	group.ChangeTime = now
 	return nil
 }
 

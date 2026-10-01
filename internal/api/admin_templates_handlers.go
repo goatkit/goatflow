@@ -268,32 +268,20 @@ func CreateStandardTemplate(t *StandardTemplate, userID int) (int, error) {
 		comments = t.Comments
 	}
 
-	query := `
+	query := database.ConvertPlaceholders(`
 		INSERT INTO standard_template
 			(name, text, content_type, template_type, comments, valid_id,
 			 create_time, create_by, change_time, change_by)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`
+		RETURNING id
+	`)
 
-	result, err := db.Exec(database.ConvertPlaceholders(query),
+	id, err := database.GetAdapter().InsertWithReturning(db, query,
 		t.Name, text, contentType, templateType, comments, t.ValidID,
 		now, userID, now, userID,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("insert failed: %w", err)
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		// For PostgreSQL, query the ID
-		var newID int
-		err = db.QueryRow(database.ConvertPlaceholders(
-			`SELECT id FROM standard_template WHERE name = ? AND create_by = ? ORDER BY id DESC LIMIT 1`,
-		), t.Name, userID).Scan(&newID)
-		if err != nil {
-			return 0, err
-		}
-		return newID, nil
 	}
 
 	return int(id), nil

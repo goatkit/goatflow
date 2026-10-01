@@ -22,7 +22,7 @@ func getTestDB(t *testing.T) *sql.DB {
 	// errors from querying a non-existent table directly.
 	var count int
 	err = db.QueryRow(
-		"SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'gk_custom_field_def'",
+		database.ConvertPlaceholders("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'gk_custom_field_def'"),
 	).Scan(&count)
 	if err != nil || count == 0 {
 		t.Skipf("gk_custom_field_def table not found (count=%d, err=%v) — run migration 000009", count, err)

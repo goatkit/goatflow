@@ -203,6 +203,15 @@ func valueOrNil[T any](ptr *T) interface{} {
 	return *ptr
 }
 
+// archivedFilter restricts a ticket query to unarchived tickets unless
+// archived ones are requested.
+func archivedFilter(includeArchived bool) string {
+	if includeArchived {
+		return ""
+	}
+	return " AND t.archive_flag = 0"
+}
+
 // isUniqueTNError detects a unique constraint violation on the ticket number.
 func isUniqueTNError(err error) bool {
 	if err == nil {
@@ -220,7 +229,7 @@ func isUniqueTNError(err error) bool {
 
 // GetByID retrieves a ticket by its ID.
 func (r *TicketRepository) GetByID(id uint) (*models.Ticket, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT
 			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
@@ -230,10 +239,7 @@ func (r *TicketRepository) GetByID(id uint) (*models.Ticket, error) {
 			t.escalation_solution_time, t.archive_flag,
 			t.create_time, t.create_by, t.change_time, t.change_by
 		FROM ticket t
-		WHERE t.id = ?`
-
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+		WHERE t.id = ?`)
 
 	var ticket models.Ticket
 	err := r.db.QueryRow(query, id).Scan(
@@ -272,7 +278,7 @@ func (r *TicketRepository) GetByID(id uint) (*models.Ticket, error) {
 
 // GetByTN retrieves a ticket by its ticket number.
 func (r *TicketRepository) GetByTN(tn string) (*models.Ticket, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT
 			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
@@ -282,10 +288,7 @@ func (r *TicketRepository) GetByTN(tn string) (*models.Ticket, error) {
 			t.escalation_solution_time, t.archive_flag,
 			t.create_time, t.create_by, t.change_time, t.change_by
 		FROM ticket t
-		WHERE t.tn = ?`
-
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+		WHERE t.tn = ?`)
 
 	var ticket models.Ticket
 	err := r.db.QueryRow(query, tn).Scan(
@@ -326,7 +329,7 @@ func (r *TicketRepository) GetByTN(tn string) (*models.Ticket, error) {
 func (r *TicketRepository) Update(ticket *models.Ticket) error {
 	ticket.ChangeTime = time.Now()
 
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE ticket SET
 			title = ?,
 			queue_id = ?,
@@ -348,14 +351,10 @@ func (r *TicketRepository) Update(ticket *models.Ticket) error {
 			archive_flag = ?,
 			change_time = ?,
 			change_by = ?
-		WHERE id = ?`
-
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+		WHERE id = ?`)
 
 	result, err := r.db.Exec(
 		query,
-		ticket.ID,
 		ticket.Title,
 		ticket.QueueID,
 		ticket.TicketLockID,
@@ -376,6 +375,7 @@ func (r *TicketRepository) Update(ticket *models.Ticket) error {
 		ticket.ArchiveFlag,
 		ticket.ChangeTime,
 		ticket.ChangeBy,
+		ticket.ID,
 	)
 
 	if err != nil {
@@ -396,9 +396,7 @@ func (r *TicketRepository) Update(ticket *models.Ticket) error {
 
 // Delete deletes a ticket from the database.
 func (r *TicketRepository) Delete(id uint) error {
-	query := `DELETE FROM ticket WHERE id = ?`
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+	query := database.ConvertPlaceholders(`DELETE FROM ticket WHERE id = ?`)
 	result, err := r.db.Exec(query, id)
 	if err != nil {
 		return err
@@ -604,7 +602,7 @@ func (r *TicketRepository) List(req *models.TicketListRequest) (*models.TicketLi
 
 // GetTicketsByCustomer retrieves all tickets for a specific customer.
 func (r *TicketRepository) GetTicketsByCustomer(customerID uint, includeArchived bool) ([]models.Ticket, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT
 			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
@@ -614,16 +612,8 @@ func (r *TicketRepository) GetTicketsByCustomer(customerID uint, includeArchived
 			t.escalation_solution_time, t.archive_flag,
 			t.create_time, t.create_by, t.change_time, t.change_by
 		FROM ticket t
-		WHERE t.customer_id = ?`
-
-	if !includeArchived {
-		query += " AND t.archive_flag = 0"
-	}
-
-	query += " ORDER BY t.create_time DESC"
-
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+		WHERE t.customer_id = ?` + archivedFilter(includeArchived) + `
+		ORDER BY t.create_time DESC`)
 
 	rows, err := r.db.Query(query, customerID)
 	if err != nil {
@@ -649,7 +639,7 @@ func (r *TicketRepository) GetTicketsByCustomer(customerID uint, includeArchived
 
 // GetTicketsByOwner retrieves all tickets assigned to a specific user.
 func (r *TicketRepository) GetTicketsByOwner(ownerID uint, includeArchived bool) ([]models.Ticket, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT
 			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
@@ -659,18 +649,10 @@ func (r *TicketRepository) GetTicketsByOwner(ownerID uint, includeArchived bool)
 			t.escalation_solution_time, t.archive_flag,
 			t.create_time, t.create_by, t.change_time, t.change_by
 		FROM ticket t
-		WHERE (t.user_id = ? OR t.responsible_user_id = ?)`
+		WHERE (t.user_id = ? OR t.responsible_user_id = ?)` + archivedFilter(includeArchived) + `
+		ORDER BY t.create_time DESC`)
 
-	if !includeArchived {
-		query += " AND t.archive_flag = 0"
-	}
-
-	query += " ORDER BY t.create_time DESC"
-
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
-
-	rows, err := r.db.Query(query, ownerID)
+	rows, err := r.db.Query(query, ownerID, ownerID)
 	if err != nil {
 		return nil, err
 	}
@@ -694,7 +676,7 @@ func (r *TicketRepository) GetTicketsByOwner(ownerID uint, includeArchived bool)
 
 // GetTicketWithRelations retrieves a ticket with all related data.
 func (r *TicketRepository) GetTicketWithRelations(id uint) (*models.Ticket, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT
 			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
@@ -703,17 +685,14 @@ func (r *TicketRepository) GetTicketWithRelations(id uint) (*models.Ticket, erro
 			t.escalation_update_time, t.escalation_response_time,
 			t.escalation_solution_time, t.archive_flag,
 			t.create_time, t.create_by, t.change_time, t.change_by,
-			q.id, q.name, q.group_id, q.comment,
+			q.id, q.name, q.group_id, COALESCE(q.comments, ''),
 			ts.id, ts.name, ts.type_id,
 			tp.id, tp.name
 		FROM ticket t
 		LEFT JOIN queue q ON t.queue_id = q.id
 		LEFT JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		LEFT JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
-		WHERE t.id = ?`
-
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+		WHERE t.id = ?`)
 
 	var ticket models.Ticket
 	var queue models.Queue
@@ -773,21 +752,18 @@ func (r *TicketRepository) GetTicketWithRelations(id uint) (*models.Ticket, erro
 
 // LockTicket locks a ticket for a specific user.
 func (r *TicketRepository) LockTicket(ticketID uint, userID uint, lockType int) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE ticket
 		SET ticket_lock_id = ?, user_id = ?, change_time = ?, change_by = ?
-		WHERE id = ? AND ticket_lock_id = ?`
-
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+		WHERE id = ? AND ticket_lock_id = ?`)
 
 	result, err := r.db.Exec(
 		query,
-		ticketID,
 		lockType,
 		userID,
 		time.Now(),
 		userID,
+		ticketID,
 		models.TicketUnlocked,
 	)
 
@@ -809,20 +785,17 @@ func (r *TicketRepository) LockTicket(ticketID uint, userID uint, lockType int) 
 
 // UnlockTicket unlocks a ticket.
 func (r *TicketRepository) UnlockTicket(ticketID uint, userID uint) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE ticket
 		SET ticket_lock_id = ?, change_time = ?, change_by = ?
-		WHERE id = ?`
-
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+		WHERE id = ?`)
 
 	_, err := r.db.Exec(
 		query,
-		ticketID,
 		models.TicketUnlocked,
 		time.Now(),
 		userID,
+		ticketID,
 	)
 
 	return err
@@ -830,86 +803,68 @@ func (r *TicketRepository) UnlockTicket(ticketID uint, userID uint) error {
 
 // ArchiveTicket archives a ticket.
 func (r *TicketRepository) ArchiveTicket(ticketID uint, userID uint) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE ticket
 		SET archive_flag = 1, change_time = ?, change_by = ?
-		WHERE id = ?`
+		WHERE id = ?`)
 
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
-
-	_, err := r.db.Exec(query, ticketID, time.Now(), userID)
+	_, err := r.db.Exec(query, time.Now(), userID, ticketID)
 	return err
 }
 
 // RestoreTicket restores an archived ticket.
 func (r *TicketRepository) RestoreTicket(ticketID uint, userID uint) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE ticket
 		SET archive_flag = 0, change_time = ?, change_by = ?
-		WHERE id = ?`
+		WHERE id = ?`)
 
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
-
-	_, err := r.db.Exec(query, ticketID, time.Now(), userID)
+	_, err := r.db.Exec(query, time.Now(), userID, ticketID)
 	return err
 }
 
 // UpdateStatus updates the status of a ticket.
 func (r *TicketRepository) UpdateStatus(ticketID uint, stateID uint, userID uint) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE ticket
 		SET ticket_state_id = ?, change_time = ?, change_by = ?
-		WHERE id = ?`
+		WHERE id = ?`)
 
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
-
-	_, err := r.db.Exec(query, ticketID, stateID, time.Now(), userID)
+	_, err := r.db.Exec(query, stateID, time.Now(), userID, ticketID)
 	return err
 }
 
 // UpdatePriority updates the priority of a ticket.
 func (r *TicketRepository) UpdatePriority(ticketID uint, priorityID uint, userID uint) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE ticket
 		SET ticket_priority_id = ?, change_time = ?, change_by = ?
-		WHERE id = ?`
+		WHERE id = ?`)
 
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
-
-	_, err := r.db.Exec(query, ticketID, priorityID, time.Now(), userID)
+	_, err := r.db.Exec(query, priorityID, time.Now(), userID, ticketID)
 	return err
 }
 
 // UpdateQueue transfers a ticket to a different queue.
 func (r *TicketRepository) UpdateQueue(ticketID uint, queueID uint, userID uint) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE ticket
 		SET queue_id = ?, change_time = ?, change_by = ?
-		WHERE id = ?`
+		WHERE id = ?`)
 
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
-
-	_, err := r.db.Exec(query, ticketID, queueID, time.Now(), userID)
+	_, err := r.db.Exec(query, queueID, time.Now(), userID, ticketID)
 	return err
 }
 
 // GetQueues retrieves all active queues.
 func (r *TicketRepository) GetQueues() ([]models.Queue, error) {
-	query := `
-		SELECT id, name, group_id, comment, unlock_timeout,
+	query := database.ConvertPlaceholders(`
+		SELECT id, name, group_id, COALESCE(comments, ''), COALESCE(unlock_timeout, 0),
 		       follow_up_id, follow_up_lock, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM queue
 		WHERE valid_id = 1
-		ORDER BY name`
-
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+		ORDER BY name`)
 
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -949,15 +904,12 @@ func (r *TicketRepository) GetQueues() ([]models.Queue, error) {
 
 // GetTicketStates retrieves all active ticket states.
 func (r *TicketRepository) GetTicketStates() ([]models.TicketState, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, type_id, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM ticket_state
 		WHERE valid_id = 1
-		ORDER BY name`
-
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+		ORDER BY name`)
 
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -993,15 +945,12 @@ func (r *TicketRepository) GetTicketStates() ([]models.TicketState, error) {
 
 // GetTicketPriorities retrieves all active ticket priorities.
 func (r *TicketRepository) GetTicketPriorities() ([]models.TicketPriority, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM ticket_priority
 		WHERE valid_id = 1
-		ORDER BY id`
-
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+		ORDER BY id`)
 
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -1037,7 +986,7 @@ func (r *TicketRepository) GetTicketPriorities() ([]models.TicketPriority, error
 // GetByTicketNumber retrieves a ticket by its ticket number.
 func (r *TicketRepository) GetByTicketNumber(ticketNumber string) (*models.Ticket, error) {
 	var ticket models.Ticket
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT
 			id, tn, title, queue_id, ticket_lock_id, type_id,
 			service_id, sla_id, user_id, responsible_user_id, customer_id,
@@ -1047,10 +996,7 @@ func (r *TicketRepository) GetByTicketNumber(ticketNumber string) (*models.Ticke
 			change_time, change_by
 		FROM ticket
 		WHERE tn = ?
-	`
-
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+	`)
 
 	err := r.db.QueryRow(query, ticketNumber).Scan(
 		&ticket.ID,
@@ -1089,9 +1035,7 @@ func (r *TicketRepository) GetByTicketNumber(ticketNumber string) (*models.Ticke
 // Count returns the total number of tickets.
 func (r *TicketRepository) Count() (int, error) {
 	var count int
-	query := `SELECT COUNT(*) FROM ticket`
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+	query := database.ConvertPlaceholders(`SELECT COUNT(*) FROM ticket`)
 	err := r.db.QueryRow(query).Scan(&count)
 	return count, err
 }
@@ -1099,14 +1043,12 @@ func (r *TicketRepository) Count() (int, error) {
 // CountByStatus returns the number of tickets with a specific status.
 func (r *TicketRepository) CountByStatus(status string) (int, error) {
 	var count int
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT COUNT(*)
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		WHERE ts.name = ?
-	`
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+	`)
 	err := r.db.QueryRow(query, status).Scan(&count)
 	return count, err
 }
@@ -1114,9 +1056,7 @@ func (r *TicketRepository) CountByStatus(status string) (int, error) {
 // CountByStateID returns the number of tickets with a specific state ID.
 func (r *TicketRepository) CountByStateID(stateID int) (int, error) {
 	var count int
-	query := `SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?`
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+	query := database.ConvertPlaceholders(`SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?`)
 	err := r.db.QueryRow(query, stateID).Scan(&count)
 	return count, err
 }
@@ -1124,13 +1064,11 @@ func (r *TicketRepository) CountByStateID(stateID int) (int, error) {
 // CountClosedToday returns the number of tickets closed today.
 func (r *TicketRepository) CountClosedToday() (int, error) {
 	var count int
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT COUNT(*) FROM ticket
 		WHERE ticket_state_id = 3
 		AND change_time >= CURRENT_DATE
-	`
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
+	`)
 	err := r.db.QueryRow(query).Scan(&count)
 	return count, err
 }
@@ -1402,12 +1340,7 @@ func (r *TicketRepository) GetTicketLinks(ticketID uint, limit int) ([]models.Ti
 		LIMIT ?
 	`
 
-	args := []interface{}{ticketKey, limit}
-	if database.IsMySQL() {
-		args = []interface{}{ticketKey, ticketKey, limit}
-	}
-
-	rows, err := r.db.Query(database.ConvertQuery(query), args...)
+	rows, err := r.db.Query(database.ConvertQuery(query), ticketKey, ticketKey, limit)
 	if err != nil {
 		return nil, err
 	}

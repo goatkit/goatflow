@@ -48,10 +48,15 @@ func (qb *QueryBuilder) DB() *sqlx.DB {
 	return qb.db
 }
 
-// Rebind converts a query with ? placeholders to the appropriate format for the database.
-// This allows writing queries in MySQL format and auto-converting for PostgreSQL.
+// Rebind converts a query with ? placeholders for the active driver through
+// ConvertPlaceholders, so MySQL-dialect SQL gets the same rewrites as the rest
+// of the codebase. Already-converted ($N) queries pass through unchanged, so the
+// output of In and ToSQL can be handed back to Query/Exec.
 func (qb *QueryBuilder) Rebind(query string) string {
-	return qb.db.Rebind(query)
+	if dollarPlaceholderRe.MatchString(query) {
+		return query
+	}
+	return ConvertPlaceholders(query)
 }
 
 // Select executes a query and scans results into dest (slice of structs).
@@ -76,32 +81,32 @@ func (qb *QueryBuilder) GetContext(ctx context.Context, dest interface{}, query 
 
 // Exec executes a query without returning rows.
 func (qb *QueryBuilder) Exec(query string, args ...interface{}) (sql.Result, error) {
-	return qb.db.Exec(qb.Rebind(query), args...)
+	return qb.db.Exec(qb.Rebind(query), args...) // sql-converted: qb.Rebind applies ConvertPlaceholders
 }
 
 // ExecContext executes a query with context without returning rows.
 func (qb *QueryBuilder) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return qb.db.ExecContext(ctx, qb.Rebind(query), args...)
+	return qb.db.ExecContext(ctx, qb.Rebind(query), args...) // sql-converted: qb.Rebind applies ConvertPlaceholders
 }
 
 // QueryRow executes a query expecting a single row.
 func (qb *QueryBuilder) QueryRow(query string, args ...interface{}) *sql.Row {
-	return qb.db.QueryRow(qb.Rebind(query), args...)
+	return qb.db.QueryRow(qb.Rebind(query), args...) // sql-converted: qb.Rebind applies ConvertPlaceholders
 }
 
 // QueryRowContext executes a query with context expecting a single row.
 func (qb *QueryBuilder) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return qb.db.QueryRowContext(ctx, qb.Rebind(query), args...)
+	return qb.db.QueryRowContext(ctx, qb.Rebind(query), args...) // sql-converted: qb.Rebind applies ConvertPlaceholders
 }
 
 // Query executes a query returning multiple rows.
 func (qb *QueryBuilder) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	return qb.db.Query(qb.Rebind(query), args...)
+	return qb.db.Query(qb.Rebind(query), args...) // sql-converted: qb.Rebind applies ConvertPlaceholders
 }
 
 // QueryContext executes a query with context returning multiple rows.
 func (qb *QueryBuilder) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	return qb.db.QueryContext(ctx, qb.Rebind(query), args...)
+	return qb.db.QueryContext(ctx, qb.Rebind(query), args...) // sql-converted: qb.Rebind applies ConvertPlaceholders
 }
 
 // In expands slice arguments for IN clauses.

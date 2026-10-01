@@ -47,26 +47,14 @@ func setupDynamicFieldTestRouter(t *testing.T) *gin.Engine {
 }
 
 func createTestDynamicField(t *testing.T, db *sql.DB, name string, fieldType string, objectType string) int64 {
-	var fieldID int64
 	now := time.Now()
 	config := "---\nDefaultValue: test\n"
 
-	if database.IsMySQL() {
-		result, err := db.Exec(`
-			INSERT INTO dynamic_field (internal_field, name, label, field_order, field_type, object_type, config, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (0, ?, ?, 1, ?, ?, ?, 1, ?, 1, ?, 1)
-		`, name, name, fieldType, objectType, config, now, now)
-		require.NoError(t, err, "Failed to create test dynamic field")
-		fieldID, err = result.LastInsertId()
-		require.NoError(t, err)
-		return fieldID
-	}
-
-	err := db.QueryRow(database.ConvertPlaceholders(`
+	fieldID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO dynamic_field (internal_field, name, label, field_order, field_type, object_type, config, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (0, ?, ?, 1, ?, ?, ?, 1, ?, 1, ?, 1)
 		RETURNING id
-	`), name, name, fieldType, objectType, config, now, now).Scan(&fieldID)
+	`), name, name, fieldType, objectType, config, now, now)
 	require.NoError(t, err, "Failed to create test dynamic field")
 
 	return fieldID

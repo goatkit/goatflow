@@ -179,7 +179,7 @@ func portalSysconfigAvailable(t *testing.T, db *sql.DB) bool {
 	}
 
 	var count int
-	err := db.QueryRow(query).Scan(&count)
+	err := db.QueryRow(database.ConvertPlaceholders(query)).Scan(&count)
 	require.NoError(t, err)
 	return count >= 2
 }

@@ -17,10 +17,10 @@ func init() {
 	// Initialize search manager
 	searchManager = search.NewSearchManager()
 
-	// Register PostgreSQL backend as primary by default, but only if DB is reachable
+	// Register the database backend as primary by default, but only if DB is reachable
 	if os.Getenv("APP_ENV") != "test" { // tests can run without DB
-		if pgBackend, err := search.NewPostgresBackend(); err == nil {
-			searchManager.RegisterBackend("postgresql", pgBackend, true)
+		if dbBackend, err := search.NewDatabaseBackend(); err == nil {
+			searchManager.RegisterBackend("database", dbBackend, true)
 		}
 	}
 
@@ -115,7 +115,7 @@ func HandleSearchAPI(c *gin.Context) {
 	// Perform search
 	results, err := searchManager.Search(ctx, req)
 	if err != nil {
-		// On database backends that may not support advanced search (e.g. MySQL), fall back to empty results
+		// Backend failure (e.g. Elasticsearch down): degrade to empty results with a warning
 		c.JSON(http.StatusOK, gin.H{
 			"hits":       []interface{}{},
 			"total_hits": 0,
@@ -211,11 +211,11 @@ func HandleReindexAPI(c *gin.Context) {
 		return
 	}
 
-	// For PostgreSQL backend, reindexing is not needed
-	if backend.GetBackendName() == "postgresql" {
+	// The database backend searches the live tables, so reindexing is not needed
+	if backend.GetBackendName() == "database" {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "PostgreSQL backend does not require reindexing",
-			"backend": "postgresql",
+			"message": "Database backend does not require reindexing",
+			"backend": "database",
 		})
 		return
 	}

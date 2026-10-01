@@ -54,14 +54,17 @@ func GetUserMapForTemplate(c *gin.Context) map[string]interface{} {
 			var login, firstName, lastName, email sql.NullString
 			var isAdmin bool
 
-			err := db.QueryRow(`
-				SELECT u.login, u.first_name, u.last_name, u.email,
-				       EXISTS(SELECT 1 FROM user_group ug 
-				              JOIN groups g ON ug.group_id = g.id 
-				              WHERE ug.user_id = u.id AND g.name = 'admin') as is_admin
-				FROM users u 
+			// Agent email lives in user_preferences (UserEmail); membership in group_user.
+			err := db.QueryRow(database.ConvertPlaceholders(`
+				SELECT u.login, u.first_name, u.last_name,
+				       (SELECT up.preferences_value FROM user_preferences up
+				        WHERE up.user_id = u.id AND up.preferences_key = 'UserEmail' LIMIT 1),
+				       EXISTS(SELECT 1 FROM group_user gu
+				              JOIN `+"`groups`"+` g ON gu.group_id = g.id
+				              WHERE gu.user_id = u.id AND g.name = 'admin') as is_admin
+				FROM users u
 				WHERE u.id = ?
-			`, userID).Scan(&login, &firstName, &lastName, &email, &isAdmin)
+			`), userID).Scan(&login, &firstName, &lastName, &email, &isAdmin)
 
 			if err == nil {
 				userMap["ID"] = userID

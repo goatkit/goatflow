@@ -224,6 +224,7 @@ func (s *MySQLService) Query(ctx context.Context, query string, args ...interfac
 		return nil, fmt.Errorf("database connection not established")
 	}
 
+	// sql-converted: DatabaseService pass-through; callers own conversion (platform/database imports this package, so it cannot convert here)
 	return db.QueryContext(ctx, query, args...)
 }
 
@@ -237,6 +238,7 @@ func (s *MySQLService) QueryRow(ctx context.Context, query string, args ...inter
 		return nil
 	}
 
+	// sql-converted: DatabaseService pass-through; callers own conversion
 	return db.QueryRowContext(ctx, query, args...)
 }
 
@@ -250,6 +252,7 @@ func (s *MySQLService) Exec(ctx context.Context, query string, args ...interface
 		return nil, fmt.Errorf("database connection not established")
 	}
 
+	// sql-converted: DatabaseService pass-through; callers own conversion
 	return db.ExecContext(ctx, query, args...)
 }
 

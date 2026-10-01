@@ -11,6 +11,7 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/models"
 )
 
@@ -277,7 +278,7 @@ func (p *oidcProvider) lookupOrProvisionUser(_ context.Context, email, givenName
 	if honorific != "" && user.Title != honorific {
 		user.Title = honorific
 		if p.db != nil {
-			p.db.Exec("UPDATE users SET title = ?, change_time = NOW() WHERE id = ?", honorific, int(user.ID))
+			p.db.Exec(database.ConvertPlaceholders("UPDATE users SET title = ?, change_time = NOW() WHERE id = ?"), honorific, int(user.ID))
 		}
 	}
 
@@ -321,9 +322,9 @@ func (p *oidcProvider) provisionAgent(email, givenName, familyName string) (*mod
 	groupName := "users"
 	if p.db != nil {
 		var gid int64
-		err := p.db.QueryRow("SELECT id FROM groups WHERE name = ?", groupName).Scan(&gid)
+		err := p.db.QueryRow(database.ConvertPlaceholders("SELECT id FROM `groups` WHERE name = ?"), groupName).Scan(&gid)
 		if err == nil && gid > 0 {
-			p.db.Exec("INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by) VALUES (?, ?, 'rw', NOW(), 1, NOW(), 1)", int(user.ID), gid)
+			p.db.Exec(database.ConvertPlaceholders("INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by) VALUES (?, ?, 'rw', NOW(), 1, NOW(), 1)"), int(user.ID), gid)
 		}
 	}
 
@@ -336,17 +337,13 @@ func (p *oidcProvider) provisionCustomer(login, name, email string) (*models.Use
 		return nil, fmt.Errorf("database unavailable for customer provisioning")
 	}
 	now := time.Now()
-	query := `INSERT INTO service_customer_user (customer_user_login, service_id, create_time, create_by) VALUES (?, 1, ?, ?)`
-	result, err := p.db.Exec(query, login, now, 1)
-	if err != nil {
+	// service_customer_user has no surrogate id column, so there is no
+	// inserted id to read back (LastInsertId errors on PostgreSQL).
+	query := database.ConvertPlaceholders(`INSERT INTO service_customer_user (customer_user_login, service_id, create_time, create_by) VALUES (?, 1, ?, ?)`)
+	if _, err := p.db.Exec(query, login, now, 1); err != nil {
 		return nil, fmt.Errorf("create OIDC customer: %w", err)
 	}
-	customerID, err := result.LastInsertId()
-	if err != nil {
-		return nil, fmt.Errorf("get customer ID: %w", err)
-	}
 	return &models.User{
-		ID:    uint(customerID),
 		Login: login,
 		Email: email,
 		Title: name,

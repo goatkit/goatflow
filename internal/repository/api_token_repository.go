@@ -37,9 +37,10 @@ func (r *APITokenRepository) Create(ctx context.Context, token *models.APIToken)
 			user_id, user_type, name, prefix, token_hash, scopes,
 			expires_at, rate_limit, created_at, created_by
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		RETURNING id
 	`)
 
-	result, err := r.db.ExecContext(ctx, query,
+	id, err := database.GetAdapter().InsertWithReturning(r.db, query,
 		token.UserID,
 		token.UserType,
 		token.Name,
@@ -55,7 +56,7 @@ func (r *APITokenRepository) Create(ctx context.Context, token *models.APIToken)
 		return 0, fmt.Errorf("insert token: %w", err)
 	}
 
-	return result.LastInsertId()
+	return id, nil
 }
 
 // GetByPrefix retrieves tokens matching a prefix (for verification)
@@ -164,25 +165,18 @@ func (r *APITokenRepository) Revoke(ctx context.Context, id int64, revokedBy int
 
 // ListAll retrieves all tokens (admin only)
 func (r *APITokenRepository) ListAll(ctx context.Context, includeRevoked bool) ([]*models.APIToken, error) {
-	var query string
+	revokedFilter := "WHERE revoked_at IS NULL"
 	if includeRevoked {
-		query = `
-			SELECT id, user_id, user_type, name, prefix, token_hash, scopes,
-				   expires_at, last_used_at, last_used_ip, rate_limit,
-				   created_at, created_by, revoked_at, revoked_by
-			FROM user_api_tokens
-			ORDER BY created_at DESC
-		`
-	} else {
-		query = `
-			SELECT id, user_id, user_type, name, prefix, token_hash, scopes,
-				   expires_at, last_used_at, last_used_ip, rate_limit,
-				   created_at, created_by, revoked_at, revoked_by
-			FROM user_api_tokens
-			WHERE revoked_at IS NULL
-			ORDER BY created_at DESC
-		`
+		revokedFilter = ""
 	}
+	query := database.ConvertPlaceholders(`
+		SELECT id, user_id, user_type, name, prefix, token_hash, scopes,
+			   expires_at, last_used_at, last_used_ip, rate_limit,
+			   created_at, created_by, revoked_at, revoked_by
+		FROM user_api_tokens
+		` + revokedFilter + `
+		ORDER BY created_at DESC
+	`)
 
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {

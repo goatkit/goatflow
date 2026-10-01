@@ -10,10 +10,10 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
-// We maintain exactly one row per counter_uid and atomically increment using dialect specific UPSERT:
-//
-//	Postgres: INSERT ... ON CONFLICT(counter_uid) DO UPDATE SET counter = ticket_number_counter.counter + EXCLUDED.counter RETURNING counter
-//	MySQL: INSERT ... ON DUPLICATE KEY UPDATE counter = LAST_INSERT_ID(counter + VALUES(counter)); SELECT LAST_INSERT_ID()
+// DBStore keeps exactly one ticket_number_counter row per counter_uid and
+// increments it atomically: the row is created on first use, then the
+// increment and the read-back happen in one transaction under the row lock,
+// so concurrent callers always see distinct values on every driver.
 //
 // dateScoped controls daily UID suffix (YYYYMMDD) for date-based generators.
 type DBStore struct {
@@ -36,67 +36,32 @@ func (s *DBStore) Add(ctx context.Context, dateScoped bool, offset int64) (int64
 		now := s.clock().UTC()
 		uid = fmt.Sprintf("%s_%04d%02d%02d", s.systemID, now.Year(), int(now.Month()), now.Day())
 	}
-	// Dialect specific atomic increment
-	if database.IsPostgreSQL() {
-		// Use upsert with RETURNING to atomically add offset
-		q := `INSERT INTO ticket_number_counter (counter, counter_uid, create_time)
-              VALUES ($2, $1, NOW())
-              ON CONFLICT (counter_uid) DO UPDATE SET counter = ticket_number_counter.counter + EXCLUDED.counter
-              RETURNING counter`
-		var c int64
-		if err := s.db.QueryRowContext(ctx, q, uid, offset).Scan(&c); err != nil {
-			return 0, err
-		}
-		return c, nil
+
+	// Create the counter row on first use; a concurrent creator's row is kept.
+	if _, err := s.db.ExecContext(ctx, database.ConvertUpsert(`
+		INSERT INTO ticket_number_counter (counter, counter_uid, create_time)
+		VALUES (0, ?, NOW())
+		ON DUPLICATE KEY UPDATE counter = ticket_number_counter.counter`, "counter_uid"), uid); err != nil {
+		return 0, err
 	}
-	if database.IsMySQL() {
-		// Use MySQL LAST_INSERT_ID trick and read it from Exec result to stay on the same session/connection.
-		// This avoids relying on a subsequent SELECT LAST_INSERT_ID() that might hit a different pooled connection.
-		q := `INSERT INTO ticket_number_counter (counter, counter_uid, create_time)
-              VALUES (?, ?, NOW())
-              ON DUPLICATE KEY UPDATE counter = LAST_INSERT_ID(counter + VALUES(counter))`
-		res, err := s.db.ExecContext(ctx, q, offset, uid)
-		if err != nil {
-			return 0, err
-		}
-		c, err := res.LastInsertId()
-		if err != nil {
-			return 0, err
-		}
-		return c, nil
-	}
-	// Generic fallback (rare path): emulate with transaction + SELECT FOR UPDATE
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
 	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
-	var current int64
-	row := tx.QueryRowContext(ctx, database.ConvertPlaceholders(`SELECT counter FROM ticket_number_counter WHERE counter_uid = ? FOR UPDATE`), uid)
-	scanErr := row.Scan(&current)
-	switch scanErr {
-	case nil:
-		newVal := current + offset
-		if _, err = tx.ExecContext(ctx, database.ConvertPlaceholders(`UPDATE ticket_number_counter SET counter=? WHERE counter_uid=?`), newVal, uid); err != nil {
-			return 0, err
-		}
-		if err = tx.Commit(); err != nil {
-			return 0, err
-		}
-		return newVal, nil
-	case sql.ErrNoRows:
-		if _, err = tx.ExecContext(ctx, database.ConvertPlaceholders(`INSERT INTO ticket_number_counter (counter, counter_uid, create_time) VALUES (?, ?, NOW())`), offset, uid); err != nil {
-			return 0, err
-		}
-		if err = tx.Commit(); err != nil {
-			return 0, err
-		}
-		return offset, nil
-	default:
-		return 0, scanErr
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.ExecContext(ctx, database.ConvertPlaceholders(
+		`UPDATE ticket_number_counter SET counter = counter + ? WHERE counter_uid = ?`), offset, uid); err != nil {
+		return 0, err
 	}
+	var c int64
+	if err := tx.QueryRowContext(ctx, database.ConvertPlaceholders(
+		`SELECT counter FROM ticket_number_counter WHERE counter_uid = ?`), uid).Scan(&c); err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return c, nil
 }

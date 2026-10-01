@@ -64,9 +64,7 @@ func (r *Repository) ListDefs(entityType, ownerType, ownerName string, activeOnl
 	}
 
 	query += " ORDER BY entity_type, section, field_order, name"
-	query = database.ConvertPlaceholders(query)
-
-	rows, err := r.db.Query(query, args...)
+	rows, err := r.db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		return nil, fmt.Errorf("list custom field defs: %w", err)
 	}
@@ -115,10 +113,10 @@ func (r *Repository) CreateDef(f *FieldDef, userID int) (int64, error) {
 			section, field_order, description, placeholder,
 			required, config, valid_id,
 			create_time, create_by, change_time, change_by
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
 	`)
 
-	result, err := r.db.Exec(query,
+	id, err := database.GetAdapter().InsertWithReturning(r.db, query,
 		f.Name, f.Label, f.EntityType, f.FieldType,
 		f.OwnerType, f.OwnerName, f.MigratedFrom,
 		f.Section, f.FieldOrder, f.Description, f.Placeholder,
@@ -128,7 +126,7 @@ func (r *Repository) CreateDef(f *FieldDef, userID int) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("create custom field def: %w", err)
 	}
-	return result.LastInsertId()
+	return id, nil
 }
 
 // UpdateDef updates an existing field definition.
@@ -208,8 +206,7 @@ func (r *Repository) GetValues(entityType string, objectID int64, fieldNames []s
 		query += " AND d.name IN (" + strings.Join(placeholders, ",") + ")"
 	}
 
-	query = database.ConvertPlaceholders(query)
-	rows, err := r.db.Query(query, args...)
+	rows, err := r.db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		return nil, fmt.Errorf("get custom field values: %w", err)
 	}
@@ -302,9 +299,7 @@ func (r *Repository) QueryByFields(entityType string, filters []FieldFilter) ([]
 
 	// Intersect all subqueries.
 	query := strings.Join(subqueries, " INTERSECT ")
-	query = database.ConvertPlaceholders(query)
-
-	rows, err := r.db.Query(query, args...)
+	rows, err := r.db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		return nil, fmt.Errorf("query custom fields: %w", err)
 	}

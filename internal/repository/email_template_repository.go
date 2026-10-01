@@ -26,8 +26,7 @@ func (r *EmailTemplateRepository) Create(template *models.EmailTemplate) (int, e
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		RETURNING id`)
 
-	var id int
-	err := r.db.QueryRow(query,
+	id, err := database.GetAdapter().InsertWithReturning(r.db, query,
 		template.TemplateName,
 		template.SubjectTemplate,
 		template.BodyTemplate,
@@ -37,13 +36,13 @@ func (r *EmailTemplateRepository) Create(template *models.EmailTemplate) (int, e
 		template.CreatedBy,
 		time.Now(),
 		template.UpdatedBy,
-	).Scan(&id)
+	)
 
 	if err != nil {
 		return 0, fmt.Errorf("failed to create email template: %w", err)
 	}
 
-	return id, nil
+	return int(id), nil
 }
 
 func (r *EmailTemplateRepository) GetByID(id int) (*models.EmailTemplate, error) {

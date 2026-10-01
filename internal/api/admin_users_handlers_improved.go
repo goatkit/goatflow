@@ -40,10 +40,10 @@ func ImprovedHandleAdminUserGet(c *gin.Context) {
 
 	// Get user details
 	var user models.User
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, login, title, first_name, last_name, valid_id
 		FROM users
-		WHERE id = ?`
+		WHERE id = ?`)
 
 	err = db.QueryRow(query, id).Scan(
 		&user.ID,
@@ -66,12 +66,12 @@ func ImprovedHandleAdminUserGet(c *gin.Context) {
 	fmt.Printf("INFO: User %d found: %s %s\n", id, user.FirstName, user.LastName)
 
 	// Get user's groups with enhanced logging
-	groupQuery := `
+	groupQuery := database.ConvertPlaceholders(`
 		SELECT g.id, g.name, gu.permission_key, gu.permission_value
 		FROM groups g
 		JOIN group_user gu ON g.id = gu.group_id
 		WHERE gu.user_id = ? AND g.valid_id = 1
-		ORDER BY g.name`
+		ORDER BY g.name`)
 
 	rows, err := db.Query(groupQuery, id)
 	if err != nil {

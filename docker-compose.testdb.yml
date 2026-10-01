@@ -9,6 +9,8 @@ services:
       POSTGRES_USER: ${TEST_DB_POSTGRES_USER}
       POSTGRES_PASSWORD: ${TEST_DB_POSTGRES_PASSWORD}
       PGPASSWORD: ${TEST_DB_POSTGRES_PASSWORD}
+      TEST_USERNAME: ${TEST_USERNAME:-root@localhost}
+      TEST_PASSWORD: ${TEST_PASSWORD}
     expose:
       - "5432"
     ports:
@@ -23,6 +25,7 @@ services:
       - ./schema/baseline/required_lookups.sql:/docker-entrypoint-initdb.d/30-required-lookups.sql:ro,Z
       - ./schema/seed/minimal.sql:/docker-entrypoint-initdb.d/40-minimal-seed.sql:ro,Z
       - ./schema/seed/test_integration.sql:/docker-entrypoint-initdb.d/50-test-integration.sql:ro,Z
+      - ./docker/postgres/testdb/60-set-admin-password.sh:/docker-entrypoint-initdb.d/60-set-admin-password.sh:ro,Z
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${TEST_DB_POSTGRES_USER} -d ${TEST_DB_POSTGRES_NAME}"]
       interval: 5s

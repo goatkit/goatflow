@@ -469,17 +469,12 @@ func HandleCreateNotificationEvent(c *gin.Context) {
 	// Insert notification_event
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO notification_event (name, valid_id, comments, create_time, create_by, change_time, change_by)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		RETURNING id`)
 
-	result, err := tx.ExecContext(ctx, insertQuery, input.Name, input.ValidID, input.Comments, now, userID, now, userID)
+	notificationID, err := database.GetAdapter().InsertWithReturningTx(tx, insertQuery, input.Name, input.ValidID, input.Comments, now, userID, now, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create notification: " + err.Error()})
-		return
-	}
-
-	notificationID, err := result.LastInsertId()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to get notification ID"})
 		return
 	}
 

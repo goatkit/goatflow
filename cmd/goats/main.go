@@ -592,7 +592,7 @@ func main() {
 
 	// Initialize real DB-backed ticket number store (OTRS-compatible)
 	if db, dbErr := database.GetDB(); dbErr == nil && db != nil && ticketNumGen != nil {
-		if _, err := db.Exec("SELECT 1 FROM ticket_number_counter LIMIT 1"); err != nil {
+		if _, err := db.Exec(database.ConvertPlaceholders("SELECT 1 FROM ticket_number_counter LIMIT 1")); err != nil {
 			log.Printf("🚨 ticket_number_counter table not accessible: %v", err)
 		} else {
 			store := ticketnumber.NewDBStore(db, systemID)

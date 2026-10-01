@@ -225,7 +225,7 @@ func sessionServiceAvailable() bool {
 	if database.IsMySQL() {
 		query = "SELECT COUNT(*) > 0 FROM information_schema.tables WHERE table_name = 'sessions' AND table_schema = DATABASE()"
 	}
-	if err := db.QueryRow(query).Scan(&exists); err != nil {
+	if err := db.QueryRow(database.ConvertPlaceholders(query)).Scan(&exists); err != nil {
 		return false
 	}
 	return exists

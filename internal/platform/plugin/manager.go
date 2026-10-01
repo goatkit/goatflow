@@ -297,11 +297,11 @@ func (m *Manager) seedDefaultDisabled(ctx context.Context, name string) {
 		 has_configlevel, user_modification_possible, user_modification_active,
 		 xml_content_raw, xml_content_parsed, xml_filename, effective_value, 
 		 is_dirty, exclusive_lock_guid, create_by, change_by, create_time, change_time)
-		VALUES (?, 'Plugin enabled state', 'Admin::Plugins', 1, 0, 0, 1,
+		VALUES (?, 'Plugin enabled state', ?, 1, 0, 0, 1,
 		 0, 1, 0,
 		 '', '', '', '0',
 		 0, '', 1, 1, NOW(), NOW())
-	`, key)
+	`, key, "Admin::Plugins")
 }
 
 // savePluginEnabled persists a plugin's enabled state to sysconfig_modified.
@@ -324,16 +324,7 @@ func (m *Manager) savePluginEnabled(ctx context.Context, name string, enabled bo
 
 	defaultID := rows[0]["id"]
 
-	// Upsert into sysconfig_modified with the correct FK reference
-	query := `
-		INSERT INTO sysconfig_modified 
-		(sysconfig_default_id, name, effective_value, is_valid, user_modification_active, 
-		 is_dirty, reset_to_default, create_by, change_by, create_time, change_time)
-		VALUES (?, ?, ?, 1, 0, 0, 0, 1, 1, NOW(), NOW())
-		ON DUPLICATE KEY UPDATE effective_value = ?, change_time = NOW(), change_by = 1
-	`
-	_, err = m.host.DBExec(ctx, query, defaultID, key, val, val)
-	return err
+	return m.setGlobalSysconfig(ctx, defaultID, key, val)
 }
 
 // SetLazyLoader sets the lazy loader for on-demand plugin loading.
@@ -1230,15 +1221,25 @@ func (m *Manager) savePolicy(ctx context.Context, name string, policy *ResourceP
 		return fmt.Errorf("failed to serialize policy: %w", err)
 	}
 
-	jsonStr := string(jsonData)
+	return m.setGlobalSysconfig(ctx, 0, key, string(jsonData))
+}
 
-	// Upsert into sysconfig_modified
-	query := `
-		INSERT INTO sysconfig_modified (sysconfig_default_id, name, effective_value, is_valid, create_by, change_by, create_time, change_time)
-		VALUES (0, ?, ?, 1, 1, 1, NOW(), NOW())
-		ON DUPLICATE KEY UPDATE effective_value = ?, change_time = NOW(), change_by = 1
-	`
-	_, err = m.host.DBExec(ctx, query, key, jsonStr, jsonStr)
+// setGlobalSysconfig writes the global (user_id NULL) sysconfig_modified
+// value for key. The table's only unique key is (sysconfig_default_id,
+// user_id), which never conflicts on NULL user_id, so no upsert can target
+// it: update the existing row and insert when there is none.
+func (m *Manager) setGlobalSysconfig(ctx context.Context, defaultID any, key, val string) error {
+	affected, err := m.host.DBExec(ctx, `
+		UPDATE sysconfig_modified SET effective_value = ?, change_time = CURRENT_TIMESTAMP, change_by = 1
+		WHERE name = ? AND user_id IS NULL`, val, key)
+	if err != nil || affected > 0 {
+		return err
+	}
+	_, err = m.host.DBExec(ctx, `
+		INSERT INTO sysconfig_modified
+		(sysconfig_default_id, name, user_id, effective_value, is_valid, user_modification_active,
+		 is_dirty, reset_to_default, create_by, change_by, create_time, change_time)
+		VALUES (?, ?, NULL, ?, 1, 0, 0, 0, 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`, defaultID, key, val)
 	return err
 }
 

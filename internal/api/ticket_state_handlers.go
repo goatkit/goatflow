@@ -123,14 +123,13 @@ func HandleCreateTicketStateAPI(c *gin.Context) {
 	}
 
 	// Create state
-	var stateID int
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO ticket_state (name, type_id, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, ?, 1, NOW(), ?, NOW(), ?)
 		RETURNING id
 	`)
 
-	err = db.QueryRow(insertQuery, req.Name, req.TypeID, userID).Scan(&stateID)
+	stateID, err := database.GetAdapter().InsertWithReturning(db, insertQuery, req.Name, req.TypeID, userID, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create ticket state"})
 		return
@@ -290,7 +289,7 @@ func HandleDeleteTicketStateAPI(c *gin.Context) {
 	// Check if state is used by any tickets
 	var ticketCount int
 	ticketQuery := database.ConvertPlaceholders(`
-		SELECT COUNT(*) FROM tickets 
+		SELECT COUNT(*) FROM ticket
 		WHERE ticket_state_id = ?
 	`)
 	row2 := db.QueryRow(ticketQuery, stateID)

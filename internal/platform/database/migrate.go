@@ -146,7 +146,7 @@ func getMigrationVersion(db *sql.DB) (int, bool, error) {
 	var version int
 	var dirty bool
 
-	query := "SELECT version, dirty FROM schema_migrations LIMIT 1"
+	query := ConvertPlaceholders("SELECT version, dirty FROM schema_migrations LIMIT 1")
 	err := db.QueryRow(query).Scan(&version, &dirty)
 	if err != nil {
 		if err == sql.ErrNoRows {

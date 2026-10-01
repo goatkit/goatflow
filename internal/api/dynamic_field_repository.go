@@ -42,9 +42,8 @@ func getDynamicFieldsWithDB(db *sql.DB, objectType, fieldType string) ([]Dynamic
 	}
 
 	query += " ORDER BY object_type, field_order, name"
-	query = database.ConvertPlaceholders(query)
 
-	rows, err := db.Query(query, args...)
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query dynamic fields: %w", err)
 	}
@@ -64,14 +63,13 @@ func GetDynamicFields(objectType, fieldType string) ([]DynamicField, error) {
 
 // getDynamicFieldWithDB retrieves a single dynamic field by ID.
 func getDynamicFieldWithDB(db *sql.DB, id int) (*DynamicField, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, internal_field, name, label, field_order,
 		       field_type, object_type, config, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM dynamic_field
 		WHERE id = ?
-	`
-	query = database.ConvertPlaceholders(query)
+	`)
 
 	row := db.QueryRow(query, id)
 	return scanDynamicField(row)
@@ -88,14 +86,13 @@ func GetDynamicField(id int) (*DynamicField, error) {
 
 // getDynamicFieldByNameWithDB retrieves a single dynamic field by name.
 func getDynamicFieldByNameWithDB(db *sql.DB, name string) (*DynamicField, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, internal_field, name, label, field_order,
 		       field_type, object_type, config, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM dynamic_field
 		WHERE name = ?
-	`
-	query = database.ConvertPlaceholders(query)
+	`)
 
 	row := db.QueryRow(query, name)
 	return scanDynamicField(row)
@@ -117,16 +114,16 @@ func createDynamicFieldWithDB(db *sql.DB, field *DynamicField, userID int) (int6
 	}
 
 	now := time.Now()
-	query := `
+	query := database.ConvertPlaceholders(`
 		INSERT INTO dynamic_field (
 			internal_field, name, label, field_order,
 			field_type, object_type, config, valid_id,
 			create_time, create_by, change_time, change_by
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`
-	query = database.ConvertPlaceholders(query)
+		RETURNING id
+	`)
 
-	result, err := db.Exec(query,
+	id, err := database.GetAdapter().InsertWithReturning(db, query,
 		field.InternalField,
 		field.Name,
 		field.Label,
@@ -144,7 +141,7 @@ func createDynamicFieldWithDB(db *sql.DB, field *DynamicField, userID int) (int6
 		return 0, fmt.Errorf("failed to create dynamic field: %w", err)
 	}
 
-	return result.LastInsertId()
+	return id, nil
 }
 
 // CreateDynamicField creates a new dynamic field.
@@ -163,7 +160,7 @@ func updateDynamicFieldWithDB(db *sql.DB, field *DynamicField, userID int) error
 	}
 
 	now := time.Now()
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE dynamic_field SET
 			name = ?,
 			label = ?,
@@ -175,8 +172,7 @@ func updateDynamicFieldWithDB(db *sql.DB, field *DynamicField, userID int) error
 			change_time = ?,
 			change_by = ?
 		WHERE id = ?
-	`
-	query = database.ConvertPlaceholders(query)
+	`)
 
 	_, err := db.Exec(query,
 		field.Name,
@@ -236,11 +232,10 @@ func DeleteDynamicField(id int) error {
 
 // checkDynamicFieldNameExistsWithDB checks if a field name already exists.
 func checkDynamicFieldNameExistsWithDB(db *sql.DB, name string, excludeID int) (bool, error) {
-	query := `
-		SELECT COUNT(*) FROM dynamic_field 
+	query := database.ConvertPlaceholders(`
+		SELECT COUNT(*) FROM dynamic_field
 		WHERE name = ? AND id != ?
-	`
-	query = database.ConvertPlaceholders(query)
+	`)
 
 	var count int
 	err := db.QueryRow(query, name, excludeID).Scan(&count)
@@ -264,13 +259,12 @@ func CheckDynamicFieldNameExists(name string, excludeID int) (bool, error) {
 
 // getDynamicFieldValuesWithDB retrieves all values for an object.
 func getDynamicFieldValuesWithDB(db *sql.DB, objectID int64) ([]DynamicFieldValue, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, field_id, object_id, value_text, value_date, value_int
 		FROM dynamic_field_value
 		WHERE object_id = ?
 		ORDER BY field_id
-	`
-	query = database.ConvertPlaceholders(query)
+	`)
 
 	rows, err := db.Query(query, objectID)
 	if err != nil {

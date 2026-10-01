@@ -86,18 +86,18 @@ func (router *APIRouter) handleCreatePriority(c *gin.Context) {
 	}
 
 	now := time.Now()
-	query := database.ConvertQuery(`
-		INSERT INTO ticket_priority (name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (?, 1, ?, ?, ?, ?)
+	// color is NOT NULL without a default; new priorities start neutral grey.
+	query := database.ConvertPlaceholders(`
+		INSERT INTO ticket_priority (name, valid_id, color, create_time, create_by, change_time, change_by)
+		VALUES (?, 1, '#cdcdcd', ?, ?, ?, ?)
+		RETURNING id
 	`)
 
-	result, err := db.Exec(query, req.Name, now, userID, now, userID)
+	id, err := database.GetAdapter().InsertWithReturning(db, query, req.Name, now, userID, now, userID)
 	if err != nil {
 		sendError(c, http.StatusInternalServerError, "Failed to create priority")
 		return
 	}
-
-	id, _ := result.LastInsertId()
 
 	c.JSON(http.StatusCreated, APIResponse{
 		Success: true,

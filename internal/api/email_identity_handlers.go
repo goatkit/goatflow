@@ -703,7 +703,7 @@ func fetchSignatures(db *sql.DB) ([]signatureDTO, error) {
 }
 
 func fetchQueueOptions(db *sql.DB) ([]queueOptionDTO, error) {
-	rows, err := db.Query("SELECT id, name FROM queue WHERE valid_id = 1 ORDER BY name")
+	rows, err := db.Query(database.ConvertPlaceholders("SELECT id, name FROM queue WHERE valid_id = 1 ORDER BY name"))
 	if err != nil {
 		return nil, err
 	}

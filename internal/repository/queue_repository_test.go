@@ -12,6 +12,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/dbconfig"
 )
 
@@ -57,8 +58,7 @@ func TestRequiredQueueExists(t *testing.T) {
 
 	// Check if the queue exists
 	var count int
-	query := fmt.Sprintf("SELECT COUNT(*) FROM queue WHERE name = %s", placeholder(currentDriver(), 1))
-	err = db.QueryRow(query, queueName).Scan(&count)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM queue WHERE name = ?"), queueName).Scan(&count)
 	if err != nil {
 		t.Fatalf("Failed to query for queue %s: %v", queueName, err)
 	}
@@ -71,8 +71,7 @@ func TestRequiredQueueExists(t *testing.T) {
 	// Also check that it's valid (active)
 	if count > 0 {
 		var validID int
-		validQuery := fmt.Sprintf("SELECT valid_id FROM queue WHERE name = %s", placeholder(currentDriver(), 1))
-		err = db.QueryRow(validQuery, queueName).Scan(&validID)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT valid_id FROM queue WHERE name = ?"), queueName).Scan(&validID)
 		if err != nil {
 			t.Fatalf("Failed to get valid_id for queue %s: %v", queueName, err)
 		}
@@ -102,8 +101,7 @@ func TestEssentialQueuesExist(t *testing.T) {
 	for _, queueName := range essentialQueues {
 		t.Run("Queue_"+queueName, func(t *testing.T) {
 			var count int
-			query := fmt.Sprintf("SELECT COUNT(*) FROM queue WHERE name = %s", placeholder(currentDriver(), 1))
-			err := db.QueryRow(query, queueName).Scan(&count)
+			err := db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM queue WHERE name = ?"), queueName).Scan(&count)
 			if err != nil {
 				t.Fatalf("Failed to query for queue %s: %v", queueName, err)
 			}
@@ -189,13 +187,4 @@ func currentDriver() string {
 		}
 	}
 	return driver
-}
-
-func placeholder(driver string, position int) string {
-	switch driver {
-	case "mysql", "mariadb":
-		return "?"
-	default:
-		return fmt.Sprintf("$%d", position)
-	}
 }

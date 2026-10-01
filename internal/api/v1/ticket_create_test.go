@@ -101,12 +101,14 @@ func TestCreateTicket_Integration(t *testing.T) {
 			wantError:  true,
 		},
 		{
-			name: "invalid queue_id",
+			// The queue permission check runs first, and nobody holds a
+			// permission on a queue that does not exist.
+			name: "unknown queue_id",
 			payload: map[string]interface{}{
 				"title":    "Test Ticket",
-				"queue_id": 99999,
+				"queue_id": 32000,
 			},
-			wantStatus: http.StatusBadRequest,
+			wantStatus: http.StatusForbidden,
 			wantError:  true,
 		},
 	}
@@ -171,7 +173,7 @@ func TestCreateTicket_Validation(t *testing.T) {
 				"title":    string(make([]byte, 256)), // 256 chars
 				"queue_id": 1,
 			},
-			wantError: "Title too long",
+			wantError: "title too long",
 		},
 	}
 

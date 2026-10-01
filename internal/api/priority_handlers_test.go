@@ -125,22 +125,11 @@ func TestUpdatePriority(t *testing.T) {
 	router.PUT("/api/priorities/:id", HandleUpdatePriorityAPI)
 
 	testName := "update_test_" + time.Now().Format("150405")
-	var testID int64
-
-	if database.IsMySQL() {
-		result, err := db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO ticket_priority (name, color, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, '#aaaaaa', 1, NOW(), 1, NOW(), 1)
-		`), testName)
-		require.NoError(t, err)
-		testID, _ = result.LastInsertId()
-	} else {
-		err := db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO ticket_priority (name, color, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, '#aaaaaa', 1, NOW(), 1, NOW(), 1) RETURNING id
-		`), testName).Scan(&testID)
-		require.NoError(t, err)
-	}
+	testID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO ticket_priority (name, color, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, '#aaaaaa', 1, NOW(), 1, NOW(), 1) RETURNING id
+	`), testName)
+	require.NoError(t, err)
 
 	defer func() {
 		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_priority WHERE id = ?"), testID)
@@ -221,22 +210,11 @@ func TestDeletePriority(t *testing.T) {
 	router.DELETE("/api/priorities/:id", HandleDeletePriorityAPI)
 
 	testName := "delete_test_" + time.Now().Format("150405")
-	var testID int64
-
-	if database.IsMySQL() {
-		result, err := db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO ticket_priority (name, color, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, '#cccccc', 1, NOW(), 1, NOW(), 1)
-		`), testName)
-		require.NoError(t, err)
-		testID, _ = result.LastInsertId()
-	} else {
-		err := db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO ticket_priority (name, color, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, '#cccccc', 1, NOW(), 1, NOW(), 1) RETURNING id
-		`), testName).Scan(&testID)
-		require.NoError(t, err)
-	}
+	testID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO ticket_priority (name, color, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, '#cccccc', 1, NOW(), 1, NOW(), 1) RETURNING id
+	`), testName)
+	require.NoError(t, err)
 
 	defer func() {
 		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_priority WHERE id = ?"), testID)

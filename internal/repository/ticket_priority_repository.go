@@ -127,7 +127,8 @@ func (r *TicketPriorityRepository) Create(priority *models.TicketPriority) error
 			?, ?, ?, ?, ?, ?, ?
 		) RETURNING id`)
 
-	err := r.db.QueryRow(
+	id, err := database.GetAdapter().InsertWithReturning(
+		r.db,
 		query,
 		priority.Name,
 		priority.ValidID,
@@ -136,9 +137,12 @@ func (r *TicketPriorityRepository) Create(priority *models.TicketPriority) error
 		priority.CreateBy,
 		priority.ChangeTime,
 		priority.ChangeBy,
-	).Scan(&priority.ID)
-
-	return err
+	)
+	if err != nil {
+		return err
+	}
+	priority.ID = uint(id)
+	return nil
 }
 
 // Update updates a ticket priority.

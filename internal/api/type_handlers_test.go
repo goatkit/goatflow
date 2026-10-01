@@ -119,23 +119,12 @@ func TestUpdateType(t *testing.T) {
 	router.PUT("/api/types/:id", handleUpdateType)
 
 	testName := "update_type_" + time.Now().Format("150405")
-	var testID int64
-
 	// Note: ticket_type table doesn't have a comments column
-	if database.IsMySQL() {
-		result, err := db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, 1, NOW(), 1, NOW(), 1)
-		`), testName)
-		require.NoError(t, err)
-		testID, _ = result.LastInsertId()
-	} else {
-		err := db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, 1, NOW(), 1, NOW(), 1) RETURNING id
-		`), testName).Scan(&testID)
-		require.NoError(t, err)
-	}
+	testID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, 1, NOW(), 1, NOW(), 1) RETURNING id
+	`), testName)
+	require.NoError(t, err)
 
 	defer func() {
 		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_type WHERE id = ?"), testID)
@@ -215,23 +204,12 @@ func TestDeleteType(t *testing.T) {
 	router.DELETE("/api/types/:id", handleDeleteType)
 
 	testName := "delete_type_" + time.Now().Format("150405")
-	var testID int64
-
 	// Note: ticket_type table doesn't have a comments column
-	if database.IsMySQL() {
-		result, err := db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, 1, NOW(), 1, NOW(), 1)
-		`), testName)
-		require.NoError(t, err)
-		testID, _ = result.LastInsertId()
-	} else {
-		err := db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, 1, NOW(), 1, NOW(), 1) RETURNING id
-		`), testName).Scan(&testID)
-		require.NoError(t, err)
-	}
+	testID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, 1, NOW(), 1, NOW(), 1) RETURNING id
+	`), testName)
+	require.NoError(t, err)
 
 	defer func() {
 		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_type WHERE id = ?"), testID)

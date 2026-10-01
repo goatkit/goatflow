@@ -8,6 +8,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
+// insertWebhookRow runs an INSERT (written without RETURNING) and returns the new id.
 func insertWebhookRow(t *testing.T, query string, args ...interface{}) int {
 	t.Helper()
 
@@ -15,8 +16,7 @@ func insertWebhookRow(t *testing.T, query string, args ...interface{}) int {
 	require.NoError(t, err)
 	require.NotNil(t, db)
 
-	// Use adapter which handles placeholder conversion, arg remapping, and RETURNING
-	id64, err := database.GetAdapter().InsertWithReturning(db, query, args...)
+	id64, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(query+" RETURNING id"), args...)
 	require.NoError(t, err)
 	return int(id64)
 }
@@ -96,8 +96,8 @@ func ensureWebhookTables(t *testing.T) {
 			)`
 	}
 
-	_, err = db.Exec(createWebhooks)
+	_, err = db.Exec(database.ConvertPlaceholders(createWebhooks))
 	require.NoError(t, err)
-	_, err = db.Exec(createDeliveries)
+	_, err = db.Exec(database.ConvertPlaceholders(createDeliveries))
 	require.NoError(t, err)
 }

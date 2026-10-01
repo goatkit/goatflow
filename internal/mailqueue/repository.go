@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // MailQueueItem represents an email in the queue.
@@ -40,12 +42,12 @@ func NewMailQueueRepository(db *sql.DB) *MailQueueRepository {
 
 // Insert adds a new email to the queue.
 func (r *MailQueueRepository) Insert(ctx context.Context, item *MailQueueItem) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		INSERT INTO mail_queue (
 			insert_fingerprint, article_id, attempts, sender, recipient,
 			raw_message, due_time, create_time
 		) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-	`
+	`)
 
 	_, err := r.db.ExecContext(ctx, query,
 		item.InsertFingerprint,
@@ -59,7 +61,7 @@ func (r *MailQueueRepository) Insert(ctx context.Context, item *MailQueueItem) e
 
 	if err != nil {
 		// Handle duplicate key errors (article_id or insert_fingerprint already exists)
-		if mysqlErr, ok := err.(*mysql.MySQLError); ok && mysqlErr.Number == 1062 {
+		if mysqlErr, ok := err.(*mysql.MySQLError); (ok && mysqlErr.Number == 1062) || strings.Contains(err.Error(), "duplicate key value") {
 			return fmt.Errorf("email already queued: %w", err)
 		}
 		return fmt.Errorf("failed to insert mail queue item: %w", err)
@@ -70,14 +72,14 @@ func (r *MailQueueRepository) Insert(ctx context.Context, item *MailQueueItem) e
 
 // GetPending retrieves emails that are ready to be sent (due_time is null or past).
 func (r *MailQueueRepository) GetPending(ctx context.Context, limit int) ([]*MailQueueItem, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, insert_fingerprint, article_id, attempts, sender, recipient,
 			   raw_message, due_time, last_smtp_code, last_smtp_message, create_time
 		FROM mail_queue
 		WHERE (due_time IS NULL OR due_time <= NOW())
 		ORDER BY create_time ASC
 		LIMIT ?
-	`
+	`)
 
 	rows, err := r.db.QueryContext(ctx, query, limit)
 	if err != nil {
@@ -112,14 +114,14 @@ func (r *MailQueueRepository) GetPending(ctx context.Context, limit int) ([]*Mai
 
 // UpdateAttempts increments the attempt count and sets the next due time.
 func (r *MailQueueRepository) UpdateAttempts(ctx context.Context, id int64, smtpCode *int, smtpMessage *string, nextDueTime *time.Time) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE mail_queue
 		SET attempts = attempts + 1,
 			last_smtp_code = ?,
 			last_smtp_message = ?,
 			due_time = ?
 		WHERE id = ?
-	`
+	`)
 
 	_, err := r.db.ExecContext(ctx, query, smtpCode, smtpMessage, nextDueTime, id)
 	if err != nil {
@@ -131,7 +133,7 @@ func (r *MailQueueRepository) UpdateAttempts(ctx context.Context, id int64, smtp
 
 // Delete removes a successfully sent email from the queue.
 func (r *MailQueueRepository) Delete(ctx context.Context, id int64) error {
-	query := `DELETE FROM mail_queue WHERE id = ?`
+	query := database.ConvertPlaceholders(`DELETE FROM mail_queue WHERE id = ?`)
 
 	_, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
@@ -143,14 +145,14 @@ func (r *MailQueueRepository) Delete(ctx context.Context, id int64) error {
 
 // GetFailed retrieves emails that have exceeded max attempts.
 func (r *MailQueueRepository) GetFailed(ctx context.Context, maxAttempts int, limit int) ([]*MailQueueItem, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, insert_fingerprint, article_id, attempts, sender, recipient,
 			   raw_message, due_time, last_smtp_code, last_smtp_message, create_time
 		FROM mail_queue
 		WHERE attempts >= ?
 		ORDER BY create_time ASC
 		LIMIT ?
-	`
+	`)
 
 	rows, err := r.db.QueryContext(ctx, query, maxAttempts, limit)
 	if err != nil {

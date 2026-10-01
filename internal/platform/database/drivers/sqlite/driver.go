@@ -37,7 +37,7 @@ func (d *SQLiteDriver) Connect(ctx context.Context, dsn string) error {
 	}
 
 	// Enable foreign keys
-	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil { // sql-converted: SQLite dialect driver; native SQLite pragma
 		db.Close()
 		return err
 	}
@@ -154,7 +154,7 @@ func (d *SQLiteDriver) TableExists(tableName string) (bool, error) {
 		AND name = ?`
 
 	var exists bool
-	err := d.db.QueryRow(query, tableName).Scan(&exists)
+	err := d.db.QueryRow(query, tableName).Scan(&exists) // sql-converted: SQLite dialect driver; native SQLite SQL
 	return exists, err
 }
 
@@ -258,7 +258,7 @@ func (d *SQLiteDriver) MapType(schemaType string) string {
 func (d *SQLiteDriver) SupportsReturning() bool {
 	// Check SQLite version to determine RETURNING support
 	var version string
-	err := d.db.QueryRow("SELECT sqlite_version()").Scan(&version)
+	err := d.db.QueryRow("SELECT sqlite_version()").Scan(&version) // sql-converted: SQLite dialect driver; native SQLite SQL
 	if err != nil {
 		return false
 	}
@@ -306,7 +306,7 @@ func (d *SQLiteDriver) Exec(ctx context.Context, query string, args ...interface
 	if d.db == nil {
 		return nil, sql.ErrConnDone
 	}
-	return d.db.ExecContext(ctx, query, args...)
+	return d.db.ExecContext(ctx, query, args...) // sql-converted: SQLite dialect driver; caller passes this driver's native SQL
 }
 
 // Query executes a query that returns rows.
@@ -314,7 +314,7 @@ func (d *SQLiteDriver) Query(ctx context.Context, query string, args ...interfac
 	if d.db == nil {
 		return nil, sql.ErrConnDone
 	}
-	return d.db.QueryContext(ctx, query, args...)
+	return d.db.QueryContext(ctx, query, args...) // sql-converted: SQLite dialect driver; caller passes this driver's native SQL
 }
 
 // QueryRow executes a query that returns at most one row.
@@ -322,7 +322,7 @@ func (d *SQLiteDriver) QueryRow(ctx context.Context, query string, args ...inter
 	if d.db == nil {
 		return nil
 	}
-	return d.db.QueryRowContext(ctx, query, args...)
+	return d.db.QueryRowContext(ctx, query, args...) // sql-converted: SQLite dialect driver; caller passes this driver's native SQL
 }
 
 // sqliteTransaction wraps sql.Tx to implement Transaction interface.
@@ -339,15 +339,15 @@ func (t *sqliteTransaction) Rollback() error {
 }
 
 func (t *sqliteTransaction) Exec(query string, args ...interface{}) (sql.Result, error) {
-	return t.tx.Exec(query, args...)
+	return t.tx.Exec(query, args...) // sql-converted: SQLite dialect driver; caller passes this driver's native SQL
 }
 
 func (t *sqliteTransaction) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	return t.tx.Query(query, args...)
+	return t.tx.Query(query, args...) // sql-converted: SQLite dialect driver; caller passes this driver's native SQL
 }
 
 func (t *sqliteTransaction) QueryRow(query string, args ...interface{}) *sql.Row {
-	return t.tx.QueryRow(query, args...)
+	return t.tx.QueryRow(query, args...) // sql-converted: SQLite dialect driver; caller passes this driver's native SQL
 }
 
 func init() {

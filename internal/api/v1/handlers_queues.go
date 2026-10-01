@@ -115,23 +115,23 @@ func (router *APIRouter) handleCreateQueue(c *gin.Context) {
 	}
 
 	now := time.Now()
-	query := database.ConvertQuery(`
+	query := database.ConvertPlaceholders(`
 		INSERT INTO queue
 			(name, group_id, system_address_id, calendar_name,
 			 first_response_time, update_time, solution_time, comment,
 			 valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+		RETURNING id
 	`)
 
-	result, err := db.Exec(query, req.Name, req.GroupID, req.SystemAddressID, req.CalendarName,
+	id, err := database.GetAdapter().InsertWithReturning(db, query,
+		req.Name, req.GroupID, req.SystemAddressID, req.CalendarName,
 		req.FirstResponseTime, req.UpdateTime, req.SolutionTime, req.Comment,
 		now, userID, now, userID)
 	if err != nil {
 		sendError(c, http.StatusInternalServerError, "Failed to create queue")
 		return
 	}
-
-	id, _ := result.LastInsertId()
 
 	c.JSON(http.StatusCreated, APIResponse{
 		Success: true,

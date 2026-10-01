@@ -122,22 +122,11 @@ func TestUpdateState(t *testing.T) {
 	router.PUT("/api/states/:id", handleUpdateState)
 
 	testName := "update_state_" + time.Now().Format("150405")
-	var testID int64
-
-	if database.IsMySQL() {
-		result, err := db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, 2, 'Test comments', 1, NOW(), 1, NOW(), 1)
-		`), testName)
-		require.NoError(t, err)
-		testID, _ = result.LastInsertId()
-	} else {
-		err := db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, 2, 'Test comments', 1, NOW(), 1, NOW(), 1) RETURNING id
-		`), testName).Scan(&testID)
-		require.NoError(t, err)
-	}
+	testID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, 2, 'Test comments', 1, NOW(), 1, NOW(), 1) RETURNING id
+	`), testName)
+	require.NoError(t, err)
 
 	defer func() {
 		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_state WHERE id = ?"), testID)
@@ -216,22 +205,11 @@ func TestDeleteState(t *testing.T) {
 	router.DELETE("/api/states/:id", handleDeleteState)
 
 	testName := "delete_state_" + time.Now().Format("150405")
-	var testID int64
-
-	if database.IsMySQL() {
-		result, err := db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, 2, 'To be deleted', 1, NOW(), 1, NOW(), 1)
-		`), testName)
-		require.NoError(t, err)
-		testID, _ = result.LastInsertId()
-	} else {
-		err := db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, 2, 'To be deleted', 1, NOW(), 1, NOW(), 1) RETURNING id
-		`), testName).Scan(&testID)
-		require.NoError(t, err)
-	}
+	testID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, 2, 'To be deleted', 1, NOW(), 1, NOW(), 1) RETURNING id
+	`), testName)
+	require.NoError(t, err)
 
 	defer func() {
 		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_state WHERE id = ?"), testID)

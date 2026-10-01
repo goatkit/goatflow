@@ -63,6 +63,12 @@ func main() {
 	}
 	violations = append(violations, sqlViolations...)
 
+	conversion, err := scanSQLConversion(root, "./...")
+	if err != nil {
+		fatal(err)
+	}
+	violations = append(violations, conversion...)
+
 	if len(violations) > 0 {
 		printViolations(violations)
 		os.Exit(1)
@@ -459,6 +465,11 @@ func printViolations(violations []violation) {
 			fmt.Fprintf(os.Stderr, "  transitive: internal/platform dependency closure includes product package %s\n", v.Import)
 		case "sql-sprintf":
 			fmt.Fprintf(os.Stderr, "  sql-sprintf: %s:%d builds SQL with %%s/%%v — use parameterised queries instead\n", v.File, v.Line)
+			if v.Detail != "" {
+				fmt.Fprintf(os.Stderr, "    %s\n", v.Detail)
+			}
+		case "sql-unconverted", "sql-last-insert-id", "sql-mysql-only", "sql-postgres-only":
+			fmt.Fprintf(os.Stderr, "  %s: %s:%d %s\n", v.Kind, v.File, v.Line, sqlRuleKindNotes[v.Kind])
 			if v.Detail != "" {
 				fmt.Fprintf(os.Stderr, "    %s\n", v.Detail)
 			}

@@ -75,36 +75,36 @@ func setupCannedResponseTestData(t *testing.T, db *sql.DB) *cannedResponseTestDa
 	data := &cannedResponseTestData{testUserID: 1}
 
 	// Cleanup any leftover test data
-	db.Exec(`DELETE FROM canned_response WHERE name LIKE 'IntTest%'`)
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM canned_response WHERE name LIKE 'IntTest%'`))
 
 	// Create personal response
-	result, err := db.Exec(`
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO canned_response 
 		(name, category, content, content_type, tags, scope, owner_id, placeholders, usage_count, valid_id, create_time, create_by, change_time, change_by)
 		VALUES ('IntTest Personal Response', 'General', 'Thank you for contacting support.', 'text', '["greeting"]', 'personal', 1, '[]', 0, 1, NOW(), 1, NOW(), 1)
-	`)
+		RETURNING id
+	`))
 	require.NoError(t, err)
-	id, _ := result.LastInsertId()
 	data.personalResponseID = int(id)
 
 	// Create team response with placeholders
-	result, err = db.Exec(`
+	id, err = database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO canned_response 
 		(name, category, content, content_type, tags, scope, owner_id, team_id, placeholders, usage_count, valid_id, create_time, create_by, change_time, change_by)
 		VALUES ('IntTest Team Response', 'Account', 'Hello {{customer_name}}, your ticket #{{ticket_id}} has been updated.', 'text', '["ticket","update"]', 'team', 1, 1, '["customer_name","ticket_id"]', 5, 1, NOW(), 1, NOW(), 1)
-	`)
+		RETURNING id
+	`))
 	require.NoError(t, err)
-	id, _ = result.LastInsertId()
 	data.teamResponseID = int(id)
 
 	// Create global response
-	result, err = db.Exec(`
+	id, err = database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO canned_response 
 		(name, category, content, content_type, tags, scope, owner_id, placeholders, usage_count, valid_id, create_time, create_by, change_time, change_by)
 		VALUES ('IntTest Global Response', 'System', 'System maintenance in progress.', 'text', '["system"]', 'global', 1, '[]', 10, 1, NOW(), 1, NOW(), 1)
-	`)
+		RETURNING id
+	`))
 	require.NoError(t, err)
-	id, _ = result.LastInsertId()
 	data.globalResponseID = int(id)
 
 	return data
@@ -112,7 +112,7 @@ func setupCannedResponseTestData(t *testing.T, db *sql.DB) *cannedResponseTestDa
 
 func cleanupCannedResponseTestData(t *testing.T, db *sql.DB, data *cannedResponseTestData) {
 	t.Helper()
-	db.Exec(`DELETE FROM canned_response WHERE name LIKE 'IntTest%'`)
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM canned_response WHERE name LIKE 'IntTest%'`))
 }
 
 //nolint:unparam // userID is intentionally always 1 in tests for simplicity
@@ -211,7 +211,7 @@ func testCreateCannedResponse(t *testing.T, db *sql.DB) {
 	}
 
 	// Cleanup test-created responses
-	db.Exec(`DELETE FROM canned_response WHERE name LIKE 'IntTest New%' OR name LIKE 'IntTest With%'`)
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM canned_response WHERE name LIKE 'IntTest New%' OR name LIKE 'IntTest With%'`))
 }
 
 func testGetCannedResponses(t *testing.T, db *sql.DB, data *cannedResponseTestData) {
@@ -289,7 +289,7 @@ func testUpdateCannedResponse(t *testing.T, db *sql.DB, data *cannedResponseTest
 			"content": "Updated content here.",
 		}
 		body, _ := json.Marshal(payload)
-		req := httptest.NewRequest(http.MethodPut, "/api/canned-responses/"+itoa(data.personalResponseID), bytes.NewReader(body))
+		req := httptest.NewRequest(http.MethodPut, "/api/canned-responses/"+cannedItoa(data.personalResponseID), bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
@@ -320,7 +320,8 @@ func testUseCannedResponse(t *testing.T, db *sql.DB, data *cannedResponseTestDat
 	router := createTestRouter(1, "agent", 1)
 
 	t.Run("Use response without placeholders", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/api/canned-responses/"+itoa(data.personalResponseID)+"/use", nil)
+		// The personal response is rewritten by testUpdateCannedResponse, so use the untouched global one.
+		req := httptest.NewRequest(http.MethodPost, "/api/canned-responses/"+cannedItoa(data.globalResponseID)+"/use", nil)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -329,7 +330,7 @@ func testUseCannedResponse(t *testing.T, db *sql.DB, data *cannedResponseTestDat
 
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.Contains(t, resp["content"], "support")
+		assert.Contains(t, resp["content"], "maintenance")
 	})
 
 	t.Run("Use response with placeholder substitution", func(t *testing.T) {
@@ -340,7 +341,7 @@ func testUseCannedResponse(t *testing.T, db *sql.DB, data *cannedResponseTestDat
 			},
 		}
 		body, _ := json.Marshal(payload)
-		req := httptest.NewRequest(http.MethodPost, "/api/canned-responses/"+itoa(data.teamResponseID)+"/use", bytes.NewReader(body))
+		req := httptest.NewRequest(http.MethodPost, "/api/canned-responses/"+cannedItoa(data.teamResponseID)+"/use", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
@@ -358,31 +359,32 @@ func testUseCannedResponse(t *testing.T, db *sql.DB, data *cannedResponseTestDat
 
 	t.Run("Usage count incremented", func(t *testing.T) {
 		var usageCount int
-		db.QueryRow("SELECT usage_count FROM canned_response WHERE id = ?", data.teamResponseID).Scan(&usageCount)
+		db.QueryRow(database.ConvertPlaceholders("SELECT usage_count FROM canned_response WHERE id = ?"), data.teamResponseID).Scan(&usageCount)
 		initialCount := usageCount
 
-		req := httptest.NewRequest(http.MethodPost, "/api/canned-responses/"+itoa(data.teamResponseID)+"/use", nil)
+		req := httptest.NewRequest(http.MethodPost, "/api/canned-responses/"+cannedItoa(data.teamResponseID)+"/use", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		db.QueryRow("SELECT usage_count FROM canned_response WHERE id = ?", data.teamResponseID).Scan(&usageCount)
+		db.QueryRow(database.ConvertPlaceholders("SELECT usage_count FROM canned_response WHERE id = ?"), data.teamResponseID).Scan(&usageCount)
 		assert.Equal(t, initialCount+1, usageCount)
 	})
 }
 
 func testDeleteCannedResponse(t *testing.T, db *sql.DB, data *cannedResponseTestData) {
 	// Create a response to delete
-	result, _ := db.Exec(`
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO canned_response 
 		(name, content, content_type, scope, owner_id, valid_id, create_time, create_by, change_time, change_by)
 		VALUES ('IntTest To Delete', 'Delete me', 'text', 'personal', 1, 1, NOW(), 1, NOW(), 1)
-	`)
-	id, _ := result.LastInsertId()
+		RETURNING id
+	`))
+	require.NoError(t, err)
 
 	router := createTestRouter(1, "agent", 1)
 
 	t.Run("Delete own response", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodDelete, "/api/canned-responses/"+itoa(int(id)), nil)
+		req := httptest.NewRequest(http.MethodDelete, "/api/canned-responses/"+cannedItoa(int(id)), nil)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -391,7 +393,7 @@ func testDeleteCannedResponse(t *testing.T, db *sql.DB, data *cannedResponseTest
 
 		// Verify soft delete (valid_id = 2)
 		var validID int
-		db.QueryRow("SELECT valid_id FROM canned_response WHERE id = ?", id).Scan(&validID)
+		db.QueryRow(database.ConvertPlaceholders("SELECT valid_id FROM canned_response WHERE id = ?"), id).Scan(&validID)
 		assert.Equal(t, 2, validID)
 	})
 
@@ -409,7 +411,7 @@ func testCopyCannedResponse(t *testing.T, db *sql.DB, data *cannedResponseTestDa
 	router := createTestRouter(1, "agent", 1)
 
 	t.Run("Copy global response to personal", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/api/canned-responses/"+itoa(data.globalResponseID)+"/copy", nil)
+		req := httptest.NewRequest(http.MethodPost, "/api/canned-responses/"+cannedItoa(data.globalResponseID)+"/copy", nil)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -424,7 +426,7 @@ func testCopyCannedResponse(t *testing.T, db *sql.DB, data *cannedResponseTestDa
 	})
 
 	// Cleanup copied response
-	db.Exec(`DELETE FROM canned_response WHERE name LIKE '%Copy%'`)
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM canned_response WHERE name LIKE '%Copy%'`))
 }
 
 func testGetCategories(t *testing.T, db *sql.DB) {
@@ -443,6 +445,6 @@ func testGetCategories(t *testing.T, db *sql.DB) {
 	assert.GreaterOrEqual(t, len(categories), 1)
 }
 
-func itoa(i int) string {
+func cannedItoa(i int) string {
 	return strconv.Itoa(i)
 }

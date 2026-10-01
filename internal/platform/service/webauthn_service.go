@@ -464,15 +464,10 @@ func (s *WebAuthnService) storeCredential(userType, userKey, name string, creden
 	query := database.ConvertPlaceholders(`
 		INSERT INTO gk_webauthn_credential
 			(user_type, user_key, credential_id, credential_json, name, sign_count, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-	res, err := s.db.Exec(query, userType, userKey, credentialID, string(credentialJSON), name, credential.Authenticator.SignCount, now, now)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`)
+	id, err := database.GetAdapter().InsertWithReturning(s.db, query, userType, userKey, credentialID, string(credentialJSON), name, credential.Authenticator.SignCount, now, now)
 	if err != nil {
 		return nil, err
-	}
-	id, _ := res.LastInsertId()
-	if id == 0 {
-		lookup := database.ConvertPlaceholders("SELECT id FROM gk_webauthn_credential WHERE credential_id = ?")
-		_ = s.db.QueryRow(lookup, credentialID).Scan(&id)
 	}
 	return &WebAuthnCredentialRecord{
 		ID:           id,
@@ -591,33 +586,18 @@ func (s *WebAuthnService) storeCeremonyDB(ceremony webAuthnCeremony) error {
 		return err
 	}
 
-	var query string
-	if database.IsMySQL() {
-		query = `
-			INSERT INTO gk_webauthn_ceremony
-				(ceremony_key, user_type, user_key, purpose, session_json, expires_at, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
-			ON DUPLICATE KEY UPDATE
-				user_type = VALUES(user_type),
-				user_key = VALUES(user_key),
-				purpose = VALUES(purpose),
-				session_json = VALUES(session_json),
-				expires_at = VALUES(expires_at),
-				created_at = VALUES(created_at)`
-	} else {
-		query = `
-			INSERT INTO gk_webauthn_ceremony
-				(ceremony_key, user_type, user_key, purpose, session_json, expires_at, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
-			ON CONFLICT (ceremony_key) DO UPDATE SET
-				user_type = EXCLUDED.user_type,
-				user_key = EXCLUDED.user_key,
-				purpose = EXCLUDED.purpose,
-				session_json = EXCLUDED.session_json,
-				expires_at = EXCLUDED.expires_at,
-				created_at = EXCLUDED.created_at`
-	}
-	_, err = s.db.Exec(database.ConvertPlaceholders(query),
+	query := database.ConvertUpsert(`
+		INSERT INTO gk_webauthn_ceremony
+			(ceremony_key, user_type, user_key, purpose, session_json, expires_at, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON DUPLICATE KEY UPDATE
+			user_type = VALUES(user_type),
+			user_key = VALUES(user_key),
+			purpose = VALUES(purpose),
+			session_json = VALUES(session_json),
+			expires_at = VALUES(expires_at),
+			created_at = VALUES(created_at)`, "ceremony_key")
+	_, err = s.db.Exec(query,
 		webAuthnCeremonyKey(ceremony.UserType, ceremony.UserKey, ceremony.Purpose),
 		ceremony.UserType,
 		ceremony.UserKey,

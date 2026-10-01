@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/models"
 )
 
 var (
@@ -32,14 +32,16 @@ func (r *IdentityProviderRepository) CreateProvider(p *models.IdentityProvider) 
 		 org_id, enabled, auto_provision, user_table, auto_add_to_group,
 		 signing_cert, private_key, entity_id, acs_url, idp_metadata_xml,
 		 create_time, create_by, change_time, change_by)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		RETURNING id`,
 	)
 	var orgIDVal *int64
 	if p.OrgID != nil {
 		v := int64(*p.OrgID)
 		orgIDVal = &v
 	}
-	result, err := r.db.Exec(
+	id, err := database.GetAdapter().InsertWithReturning(
+		r.db,
 		query,
 		p.Name,
 		p.ProviderType,
@@ -66,10 +68,6 @@ func (r *IdentityProviderRepository) CreateProvider(p *models.IdentityProvider) 
 	)
 	if err != nil {
 		return fmt.Errorf("create identity provider: %w", err)
-	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return fmt.Errorf("get last insert id: %w", err)
 	}
 	p.ID = uint(id)
 	return nil
@@ -126,8 +124,8 @@ func (r *IdentityProviderRepository) GetProvidersByOrg(orgID uint) ([]*models.Id
 		 enabled, auto_provision, user_table, auto_add_to_group,
 		 create_time, create_by, change_time, change_by
 		FROM gk_identity_provider
-		WHERE (org_id = ? OR org_id IS NULL) AND enabled = 1
-		ORDER BY org_id DESC, name`,
+		WHERE (org_id = ? OR org_id IS NULL) AND enabled = TRUE
+		ORDER BY org_id IS NULL, org_id DESC, name`,
 	)
 	rows, err := r.db.Query(query, orgID)
 	if err != nil {
@@ -145,7 +143,7 @@ func (r *IdentityProviderRepository) GetGlobalProviders() ([]*models.IdentityPro
 		 enabled, auto_provision, user_table, auto_add_to_group,
 		 create_time, create_by, change_time, change_by
 		FROM gk_identity_provider
-		WHERE org_id IS NULL AND enabled = 1
+		WHERE org_id IS NULL AND enabled = TRUE
 		ORDER BY name`,
 	)
 	rows, err := r.db.Query(query)
@@ -198,8 +196,8 @@ func (r *IdentityProviderRepository) GetProviderByOrgAndType(orgID uint, provide
 		 enabled, auto_provision, user_table, auto_add_to_group,
 		 create_time, create_by, change_time, change_by
 		FROM gk_identity_provider
-		WHERE (org_id = ? OR org_id IS NULL) AND provider_type = ? AND enabled = 1
-		ORDER BY org_id DESC
+		WHERE (org_id = ? OR org_id IS NULL) AND provider_type = ? AND enabled = TRUE
+		ORDER BY org_id IS NULL, org_id DESC
 		LIMIT 1`,
 	)
 	var p models.IdentityProvider

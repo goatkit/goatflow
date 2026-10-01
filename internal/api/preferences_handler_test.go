@@ -361,7 +361,7 @@ func TestHandleUpdateProfile_DataPersistence(t *testing.T) {
 
 	// Get original values to restore later
 	var origFirstName, origLastName, origTitle sql.NullString
-	err = db.QueryRow("SELECT first_name, last_name, title FROM users WHERE id = ?", userID).
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT first_name, last_name, title FROM users WHERE id = ?"), userID).
 		Scan(&origFirstName, &origLastName, &origTitle)
 	require.NoError(t, err, "Should be able to read original user data")
 
@@ -401,7 +401,7 @@ func TestHandleUpdateProfile_DataPersistence(t *testing.T) {
 
 	// Now verify the data was actually persisted by reading from database directly
 	var dbFirstName, dbLastName, dbTitle sql.NullString
-	err = db.QueryRow("SELECT first_name, last_name, title FROM users WHERE id = ?", userID).
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT first_name, last_name, title FROM users WHERE id = ?"), userID).
 		Scan(&dbFirstName, &dbLastName, &dbTitle)
 	require.NoError(t, err, "Should be able to read updated user data from DB")
 
@@ -461,7 +461,7 @@ func TestHandleUpdateProfile_EmptyTitleAllowed(t *testing.T) {
 
 	// Verify database has empty title
 	var dbTitle sql.NullString
-	err = db.QueryRow("SELECT title FROM users WHERE id = ?", userID).Scan(&dbTitle)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT title FROM users WHERE id = ?"), userID).Scan(&dbTitle)
 	require.NoError(t, err)
 	assert.Equal(t, "", dbTitle.String, "Empty title should be persisted")
 }

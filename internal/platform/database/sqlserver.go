@@ -59,17 +59,17 @@ func (s *SQLServerDatabase) GetConfig() DatabaseConfig {
 
 // Query executes a query and returns rows.
 func (s *SQLServerDatabase) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	return s.db.QueryContext(ctx, query, args...)
+	return s.db.QueryContext(ctx, query, args...) // sql-converted: unreachable; SQL Server Connect() is an unimplemented stub, s.db/tx never set
 }
 
 // QueryRow executes a query and returns a single row.
 func (s *SQLServerDatabase) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return s.db.QueryRowContext(ctx, query, args...)
+	return s.db.QueryRowContext(ctx, query, args...) // sql-converted: unreachable; SQL Server Connect() is an unimplemented stub, s.db/tx never set
 }
 
 // Exec executes a query and returns the result.
 func (s *SQLServerDatabase) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return s.db.ExecContext(ctx, query, args...)
+	return s.db.ExecContext(ctx, query, args...) // sql-converted: unreachable; SQL Server Connect() is an unimplemented stub, s.db/tx never set
 }
 
 // Begin starts a transaction.
@@ -111,7 +111,7 @@ func (s *SQLServerDatabase) CreateTable(ctx context.Context, definition *TableDe
 // DropTable drops a table.
 func (s *SQLServerDatabase) DropTable(ctx context.Context, tableName string) error {
 	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", s.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
-	_, err := s.db.ExecContext(ctx, query)
+	_, err := s.db.ExecContext(ctx, query)                              // sql-converted: unreachable; SQL Server Connect() is an unimplemented stub, s.db/tx never set
 	return err
 }
 
@@ -124,7 +124,7 @@ func (s *SQLServerDatabase) CreateIndex(ctx context.Context, tableName, indexNam
 // DropIndex drops an index.
 func (s *SQLServerDatabase) DropIndex(ctx context.Context, tableName, indexName string) error {
 	query := fmt.Sprintf("DROP INDEX %s ON %s", s.Quote(indexName), s.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
-	_, err := s.db.ExecContext(ctx, query)
+	_, err := s.db.ExecContext(ctx, query)                                              // sql-converted: unreachable; SQL Server Connect() is an unimplemented stub, s.db/tx never set
 	return err
 }
 
@@ -247,15 +247,15 @@ type SQLServerTransaction struct {
 }
 
 func (t *SQLServerTransaction) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	return t.tx.QueryContext(ctx, query, args...)
+	return t.tx.QueryContext(ctx, query, args...) // sql-converted: unreachable; SQL Server Connect() is an unimplemented stub, s.db/tx never set
 }
 
 func (t *SQLServerTransaction) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return t.tx.QueryRowContext(ctx, query, args...)
+	return t.tx.QueryRowContext(ctx, query, args...) // sql-converted: unreachable; SQL Server Connect() is an unimplemented stub, s.db/tx never set
 }
 
 func (t *SQLServerTransaction) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return t.tx.ExecContext(ctx, query, args...)
+	return t.tx.ExecContext(ctx, query, args...) // sql-converted: unreachable; SQL Server Connect() is an unimplemented stub, s.db/tx never set
 }
 
 func (t *SQLServerTransaction) Commit() error {

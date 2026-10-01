@@ -108,16 +108,16 @@ func (r *Repository) CleanupExpired() (int64, error) {
 func (r *Repository) CreateRegistration(req *RegistrationRequest) (int64, error) {
 	query := database.ConvertPlaceholders(`
 		INSERT INTO gk_registration_request (email, first_name, last_name, customer_id, status, approval_token, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
 	`)
-	result, err := r.db.Exec(query,
+	id, err := database.GetAdapter().InsertWithReturning(r.db, query,
 		req.Email, req.FirstName, req.LastName, req.CustomerID,
 		req.Status, req.ApprovalToken, req.CreatedAt,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("create registration: %w", err)
 	}
-	return result.LastInsertId()
+	return id, nil
 }
 
 // GetRegistration retrieves a registration request by ID.

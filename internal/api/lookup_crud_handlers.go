@@ -1,6 +1,7 @@
 package api
 
 import (
+	"math"
 	"net/http"
 	"os"
 	"strconv"
@@ -117,6 +118,10 @@ func handleUpdateType(c *gin.Context) {
 	}
 
 	if db, dErr := database.GetDB(); dErr == nil && db != nil {
+		if !fitsSmallint(id) {
+			c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Type not found"})
+			return
+		}
 		// Note: ticket_type table doesn't have a comments column
 		// Update only valid_id and name
 		res, execErr := db.Exec(database.ConvertPlaceholders(`
@@ -173,6 +178,10 @@ func handleDeleteType(c *gin.Context) {
 	}
 
 	if db, err := database.GetDB(); err == nil && db != nil {
+		if !fitsSmallint(id) {
+			c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Type not found"})
+			return
+		}
 		// Args order: change_by, id
 		res, execErr := db.Exec(database.ConvertPlaceholders(`
             UPDATE ticket_type
@@ -199,4 +208,12 @@ func checkAdminPermission(c *gin.Context) bool {
 	// In production, check actual user permissions from JWT/session
 	userRole := c.GetString("user_role")
 	return userRole == "Admin"
+}
+
+// fitsSmallint reports whether id can name a row in a table whose id column
+// is SMALLINT (ticket_priority, ticket_state, ticket_type). An id outside that
+// range matches no row; handlers answer not-found without querying, because
+// PostgreSQL rejects such a parameter with an error where MySQL finds nothing.
+func fitsSmallint(id int) bool {
+	return id >= math.MinInt16 && id <= math.MaxInt16
 }

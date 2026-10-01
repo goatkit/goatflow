@@ -453,9 +453,8 @@ func loadCustomerUsers(db *sql.DB, search string) ([]CustomerUserInfo, error) {
 	}
 
 	query += " ORDER BY cu.last_name, cu.first_name, cu.login"
-	query = database.ConvertPlaceholders(query)
 
-	rows, err := db.Query(query, args...)
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -473,14 +472,13 @@ func loadCustomerUsers(db *sql.DB, search string) ([]CustomerUserInfo, error) {
 }
 
 func loadCustomerUser(db *sql.DB, login string) (*CustomerUserInfo, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT cu.login, COALESCE(cu.first_name, ''), COALESCE(cu.last_name, ''),
 		       COALESCE(cu.email, ''), cu.valid_id, COALESCE(v.name, 'valid') as valid_name
 		FROM customer_user cu
 		LEFT JOIN valid v ON cu.valid_id = v.id
 		WHERE cu.login = ?
-	`
-	query = database.ConvertPlaceholders(query)
+	`)
 
 	var u CustomerUserInfo
 	err := db.QueryRow(query, login).Scan(&u.Login, &u.FirstName, &u.LastName, &u.Email, &u.ValidID, &u.ValidName)
@@ -491,12 +489,11 @@ func loadCustomerUser(db *sql.DB, login string) (*CustomerUserInfo, error) {
 }
 
 func loadCustomerUserGroupPermissions(db *sql.DB, userLogin string) (map[int]map[string]bool, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT group_id, permission_key, permission_value
 		FROM group_customer_user
 		WHERE user_id = ?
-	`
-	query = database.ConvertPlaceholders(query)
+	`)
 
 	rows, err := db.Query(query, userLogin)
 	if err != nil {
@@ -521,12 +518,11 @@ func loadCustomerUserGroupPermissions(db *sql.DB, userLogin string) (map[int]map
 }
 
 func loadGroupCustomerUserPermissions(db *sql.DB, groupID int) (map[string]map[string]bool, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT user_id, permission_key, permission_value
 		FROM group_customer_user
 		WHERE group_id = ?
-	`
-	query = database.ConvertPlaceholders(query)
+	`)
 
 	rows, err := db.Query(query, groupID)
 	if err != nil {

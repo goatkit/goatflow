@@ -12,14 +12,17 @@ import (
 	"regexp"
 	"strings"
 
+	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
+
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 func main() {
 	var (
 		command = flag.String("cmd", "", "Command: analyze, import, validate")
 		sqlFile = flag.String("sql", "", "Path to OTRS SQL dump file")
-		dbURL   = flag.String("db", "", "PostgreSQL connection URL")
+		dbURL   = flag.String("db", "", "Database URL: postgres://… or a MySQL DSN (user:pass@tcp(host:3306)/db?parseTime=true)")
 		verbose = flag.Bool("v", false, "Verbose output")
 		dryRun  = flag.Bool("dry-run", false, "Show what would be imported without executing")
 		force   = flag.Bool("force", false, "Force import by clearing existing data (DESTRUCTIVE!)")
@@ -87,6 +90,26 @@ func main() {
 	default:
 		log.Fatalf("Unknown command: %s", *command)
 	}
+}
+
+// openDB opens dbURL with the driver the database package converts SQL for.
+// A MySQL DSN (user:pass@tcp(host:3306)/db, optionally mysql://-prefixed)
+// selects MySQL; anything else is a PostgreSQL URL or keyword DSN. When
+// neither DB_DRIVER nor TEST_DB_DRIVER is set, the URL decides the driver.
+func openDB(dbURL string) (*sql.DB, error) {
+	driver, dsn := "postgres", dbURL
+	if strings.HasPrefix(dbURL, "mysql://") || strings.Contains(dbURL, "@tcp(") || strings.Contains(dbURL, "@unix(") {
+		driver, dsn = "mysql", strings.TrimPrefix(dbURL, "mysql://")
+	}
+	if os.Getenv("DB_DRIVER") == "" && os.Getenv("TEST_DB_DRIVER") == "" {
+		if err := os.Setenv("DB_DRIVER", driver); err != nil {
+			return nil, err
+		}
+	}
+	if (driver == "postgres") != database.IsPostgreSQL() {
+		return nil, fmt.Errorf("database URL is for %s but DB_DRIVER selects %s", driver, database.GetDBDriver())
+	}
+	return sql.Open(driver, dsn)
 }
 
 type TableInfo struct {
@@ -370,7 +393,7 @@ func importSQLDump(sqlFile, dbURL string, verbose, dryRun bool) error {
 						continue
 					}
 
-					_, err := db.ExecContext(context.Background(), stmt)
+					_, err := db.ExecContext(context.Background(), stmt) // sql-converted: dead code; importSQLDump has no callers (nolint:unused), superseded by importSQLDumpFixed
 					if err != nil {
 						if verbose {
 							fmt.Printf("⚠️  Warning: Failed to execute statement for %s: %v\n", tableName, err)
@@ -652,7 +675,7 @@ func convertInsertStatement(sql, tableName string) string {
 func validateImportedData(dbURL string, verbose bool) error {
 	fmt.Printf("🔍 Validating imported OTRS data\n")
 
-	db, err := sql.Open("postgres", dbURL)
+	db, err := openDB(dbURL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -676,7 +699,7 @@ func validateImportedData(dbURL string, verbose bool) error {
 
 	for _, table := range coreTables {
 		var count int
-		query := fmt.Sprintf("SELECT COUNT(*) FROM %s", table) //nolint:gosec // table names from hardcoded list //nolint:gk-sql-sprintf // internal migration schema name
+		query := database.ConvertPlaceholders(fmt.Sprintf("SELECT COUNT(*) FROM `%s`", table)) //nolint:gosec // table names from hardcoded list //nolint:gk-sql-sprintf // internal migration schema name
 
 		err := db.QueryRowContext(ctx, query).Scan(&count)
 		if err != nil {
@@ -700,7 +723,7 @@ func validateImportedData(dbURL string, verbose bool) error {
 
 	// Check if tickets have corresponding articles
 	var ticketsWithoutArticles int
-	query := `SELECT COUNT(*) FROM ticket t WHERE NOT EXISTS (SELECT 1 FROM article a WHERE a.ticket_id = t.id)`
+	query := database.ConvertPlaceholders(`SELECT COUNT(*) FROM ticket t WHERE NOT EXISTS (SELECT 1 FROM article a WHERE a.ticket_id = t.id)`)
 	err = db.QueryRowContext(ctx, query).Scan(&ticketsWithoutArticles)
 	if err != nil {
 		fmt.Printf("  Tickets without articles: ❌ Error checking\n")
@@ -714,7 +737,7 @@ func validateImportedData(dbURL string, verbose bool) error {
 
 	// Check if customer users have companies
 	var customersWithoutCompany int
-	query = `SELECT COUNT(*) FROM customer_user cu WHERE cu.customer_id = '' OR cu.customer_id IS NULL`
+	query = database.ConvertPlaceholders(`SELECT COUNT(*) FROM customer_user cu WHERE cu.customer_id = '' OR cu.customer_id IS NULL`)
 	err = db.QueryRowContext(ctx, query).Scan(&customersWithoutCompany)
 	if err != nil {
 		fmt.Printf("  Customers without company: ❌ Error checking\n")

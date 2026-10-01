@@ -23,12 +23,12 @@ func createTestNotificationEvent(t *testing.T, name string) (int64, bool) {
 		return 0, false
 	}
 
-	var id int64
 	query := database.ConvertPlaceholders(`
 		INSERT INTO notification_event (name, valid_id, comments, create_time, create_by, change_time, change_by)
 		VALUES (?, 1, ?, NOW(), 1, NOW(), 1)
 		RETURNING id`)
-	require.NoError(t, db.QueryRow(query, name, "Test notification event").Scan(&id))
+	id, err := database.GetAdapter().InsertWithReturning(db, query, name, "Test notification event")
+	require.NoError(t, err)
 
 	t.Cleanup(func() {
 		// Delete related items first due to foreign key constraints
@@ -328,12 +328,12 @@ func TestDeleteNotificationEvent(t *testing.T) {
 		}
 
 		// Create notification without cleanup (we're testing deletion)
-		var id int64
 		query := database.ConvertPlaceholders(`
 			INSERT INTO notification_event (name, valid_id, comments, create_time, create_by, change_time, change_by)
 			VALUES (?, 1, ?, NOW(), 1, NOW(), 1)
 			RETURNING id`)
-		require.NoError(t, db.QueryRow(query, "TestDeleteNotification", "To be deleted").Scan(&id))
+		id, err := database.GetAdapter().InsertWithReturning(db, query, "TestDeleteNotification", "To be deleted")
+		require.NoError(t, err)
 
 		router := gin.New()
 		router.DELETE("/admin/api/notification-events/:id", HandleDeleteNotificationEvent)

@@ -78,17 +78,17 @@ func (p *PostgreSQLDatabase) GetConfig() DatabaseConfig {
 
 // Query executes a query and returns rows.
 func (p *PostgreSQLDatabase) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	return p.db.QueryContext(ctx, query, args...)
+	return p.db.QueryContext(ctx, query, args...) // sql-converted: PostgreSQL IDatabase impl (dialect fixed by config.Type); caller passes PostgreSQL SQL
 }
 
 // QueryRow executes a query and returns a single row.
 func (p *PostgreSQLDatabase) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return p.db.QueryRowContext(ctx, query, args...)
+	return p.db.QueryRowContext(ctx, query, args...) // sql-converted: PostgreSQL IDatabase impl (dialect fixed by config.Type); caller passes PostgreSQL SQL
 }
 
 // Exec executes a query and returns the result.
 func (p *PostgreSQLDatabase) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return p.db.ExecContext(ctx, query, args...)
+	return p.db.ExecContext(ctx, query, args...) // sql-converted: PostgreSQL IDatabase impl (dialect fixed by config.Type); caller passes PostgreSQL SQL
 }
 
 // Begin starts a transaction.
@@ -111,20 +111,18 @@ func (p *PostgreSQLDatabase) BeginTx(ctx context.Context, opts *sql.TxOptions) (
 
 // TableExists checks if a table exists.
 func (p *PostgreSQLDatabase) TableExists(ctx context.Context, tableName string) (bool, error) {
-	query := `
-		SELECT EXISTS (
-			SELECT FROM information_schema.tables 
-			WHERE table_schema = 'public' 
-			AND table_name = ?
-		)`
+	// Native PostgreSQL SQL: this type is chosen by config.Type, which need not
+	// match DB_DRIVER, so ConvertPlaceholders cannot pick the dialect here.
+	query := `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1)` // sql-ok: native PostgreSQL IDatabase SQL
 
 	var exists bool
-	err := p.db.QueryRowContext(ctx, query, tableName).Scan(&exists)
+	err := p.db.QueryRowContext(ctx, query, tableName).Scan(&exists) // sql-converted: PostgreSQL IDatabase impl; native $N SQL
 	return exists, err
 }
 
 // GetTableColumns returns column information for a table.
 func (p *PostgreSQLDatabase) GetTableColumns(ctx context.Context, tableName string) ([]ColumnInfo, error) {
+	// Native PostgreSQL SQL (see TableExists).
 	query := `
 		SELECT 
 			c.column_name,
@@ -137,18 +135,19 @@ func (p *PostgreSQLDatabase) GetTableColumns(ctx context.Context, tableName stri
 		FROM information_schema.columns c
 		LEFT JOIN (
 			SELECT 
+				t.relname as table_name,
 				a.attname as column_name,
 				true as is_primary
 			FROM pg_index i
 			JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
 			JOIN pg_class t ON t.oid = i.indrelid
-			WHERE i.indisprimary 
-			AND t.relname = ?
-		) pk ON pk.column_name = c.column_name
-		WHERE c.table_schema = 'public' AND c.table_name = ?
-		ORDER BY c.ordinal_position`
+			JOIN pg_namespace n ON n.oid = t.relnamespace AND n.nspname = 'public'
+			WHERE i.indisprimary
+		) pk ON pk.table_name = c.table_name AND pk.column_name = c.column_name
+		WHERE c.table_schema = 'public' AND c.table_name = $1 ` + // sql-ok: native PostgreSQL IDatabase SQL
+		`ORDER BY c.ordinal_position`
 
-	rows, err := p.db.QueryContext(ctx, query, tableName)
+	rows, err := p.db.QueryContext(ctx, query, tableName) // sql-converted: PostgreSQL IDatabase impl; native $N SQL
 	if err != nil {
 		return nil, err
 	}
@@ -190,14 +189,14 @@ func (p *PostgreSQLDatabase) GetTableColumns(ctx context.Context, tableName stri
 // CreateTable creates a table from definition.
 func (p *PostgreSQLDatabase) CreateTable(ctx context.Context, definition *TableDefinition) error {
 	sql := p.buildCreateTableSQL(definition)
-	_, err := p.db.ExecContext(ctx, sql)
+	_, err := p.db.ExecContext(ctx, sql) // sql-converted: PostgreSQL IDatabase impl; native PostgreSQL DDL, no placeholders
 	return err
 }
 
 // DropTable drops a table.
 func (p *PostgreSQLDatabase) DropTable(ctx context.Context, tableName string) error {
 	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", p.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
-	_, err := p.db.ExecContext(ctx, query)
+	_, err := p.db.ExecContext(ctx, query)                              // sql-converted: PostgreSQL IDatabase impl; native PostgreSQL DDL, no placeholders
 	return err
 }
 
@@ -219,14 +218,14 @@ func (p *PostgreSQLDatabase) CreateIndex(ctx context.Context, tableName, indexNa
 		p.Quote(tableName),
 		strings.Join(quotedColumns, ", ")) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
-	_, err := p.db.ExecContext(ctx, query)
+	_, err := p.db.ExecContext(ctx, query) // sql-converted: PostgreSQL IDatabase impl; native PostgreSQL DDL, no placeholders
 	return err
 }
 
 // DropIndex drops an index.
 func (p *PostgreSQLDatabase) DropIndex(ctx context.Context, tableName, indexName string) error {
 	query := fmt.Sprintf("DROP INDEX IF EXISTS %s", p.Quote(indexName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
-	_, err := p.db.ExecContext(ctx, query)
+	_, err := p.db.ExecContext(ctx, query)                              // sql-converted: PostgreSQL IDatabase impl; native PostgreSQL DDL, no placeholders
 	return err
 }
 
@@ -462,15 +461,15 @@ type PostgreSQLTransaction struct {
 }
 
 func (t *PostgreSQLTransaction) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	return t.tx.QueryContext(ctx, query, args...)
+	return t.tx.QueryContext(ctx, query, args...) // sql-converted: PostgreSQL IDatabase impl (dialect fixed by config.Type); caller passes PostgreSQL SQL
 }
 
 func (t *PostgreSQLTransaction) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return t.tx.QueryRowContext(ctx, query, args...)
+	return t.tx.QueryRowContext(ctx, query, args...) // sql-converted: PostgreSQL IDatabase impl (dialect fixed by config.Type); caller passes PostgreSQL SQL
 }
 
 func (t *PostgreSQLTransaction) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return t.tx.ExecContext(ctx, query, args...)
+	return t.tx.ExecContext(ctx, query, args...) // sql-converted: PostgreSQL IDatabase impl (dialect fixed by config.Type); caller passes PostgreSQL SQL
 }
 
 func (t *PostgreSQLTransaction) Commit() error {

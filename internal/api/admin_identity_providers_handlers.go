@@ -226,7 +226,7 @@ func handleAdminIdentityProviderEdit(c *gin.Context) {
 			"ID":              p.ID,
 			"OrgID":           p.OrgID,
 			"Name":            p.Name,
-			"IdPMetadataXML": p.IdPMetadataXML,
+			"IdPMetadataXML":  p.IdPMetadataXML,
 			"SigningCert":     p.SigningCert,
 			"PrivateKey":      p.PrivateKey,
 			"EntityID":        p.EntityID,

@@ -279,7 +279,6 @@ func handleCreateQueue(c *gin.Context) {
 		input.SignatureID = &one
 	}
 
-	var id int64
 	// Check for duplicate queue name
 	var existingID int
 	err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM queue WHERE name = ?"), input.Name).Scan(&existingID)
@@ -288,14 +287,13 @@ func handleCreateQueue(c *gin.Context) {
 		return
 	}
 
-	// Use Exec + LastInsertId for MySQL compatibility (not QueryRow + RETURNING)
 	query := `
         INSERT INTO queue (
             name, group_id, system_address_id, salutation_id, signature_id,
             unlock_timeout, follow_up_id, follow_up_lock, comments, valid_id, create_by, change_by, create_time, change_time
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?, NOW(), NOW())`
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?, NOW(), NOW()) RETURNING id`
 
-	result, err := db.Exec(database.ConvertPlaceholders(query),
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(query),
 		input.Name, input.GroupID, input.SystemAddressID, input.SalutationID, input.SignatureID,
 		input.UnlockTimeout, input.FollowUpID, input.FollowUpLock, input.Comments,
 		1, 1, 1,
@@ -304,7 +302,6 @@ func handleCreateQueue(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to create queue"})
 		return
 	}
-	id, _ = result.LastInsertId() //nolint:errcheck // 0 on error is acceptable
 
 	c.JSON(http.StatusCreated, gin.H{
 		"success": true,
@@ -437,10 +434,9 @@ func handleDeleteQueue(c *gin.Context) {
 		return
 	}
 
-	// Soft delete queue - adapter handles placeholder conversion
-	// Args order: change_by, id
-	deleteQuery := `UPDATE queue SET valid_id = 2, change_by = ?, change_time = CURRENT_TIMESTAMP WHERE id = ?`
-	result, err := database.GetAdapter().Exec(db, deleteQuery, 1, id)
+	// Soft delete queue. Args order: change_by, id
+	result, err := db.Exec(database.ConvertPlaceholders(
+		`UPDATE queue SET valid_id = 2, change_by = ?, change_time = CURRENT_TIMESTAMP WHERE id = ?`), 1, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete queue"})
 		return

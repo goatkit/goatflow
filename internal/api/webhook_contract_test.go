@@ -163,7 +163,6 @@ func TestWebhookAPIContract(t *testing.T) {
 		insertQuery := `
 			INSERT INTO webhooks (name, url, secret, events, active, create_by, change_by)
 			VALUES (?, ?, ?, ?, true, 1, 1)
-			RETURNING id
 		`
 		webhookID := insertWebhookRow(t, insertQuery,
 			"Get Test", "https://get.test", "secret", "ticket.created",
@@ -207,7 +206,6 @@ func TestWebhookAPIContract(t *testing.T) {
 		insertQuery := `
 			INSERT INTO webhooks (name, url, events, active, create_by, change_by)
 			VALUES (?, ?, ?, true, 1, 1)
-			RETURNING id
 		`
 		webhookID := insertWebhookRow(t, insertQuery,
 			"Update Test", "https://old.url", "ticket.created",
@@ -260,7 +258,6 @@ func TestWebhookAPIContract(t *testing.T) {
 		insertQuery := `
 			INSERT INTO webhooks (name, url, events, active, create_by, change_by)
 			VALUES (?, ?, ?, true, 1, 1)
-			RETURNING id
 		`
 		webhookID := insertWebhookRow(t, insertQuery,
 			"Delete Test", "https://delete.test", "ticket.created",
@@ -304,7 +301,6 @@ func TestWebhookAPIContract(t *testing.T) {
 		insertQuery := `
 			INSERT INTO webhooks (name, url, secret, events, active, create_by, change_by)
 			VALUES (?, ?, ?, ?, true, 1, 1)
-			RETURNING id
 		`
 		webhookID := insertWebhookRow(t, insertQuery,
 			"Test Webhook", "https://httpbin.org/post", "secret", "ticket.created",
@@ -348,7 +344,6 @@ func TestWebhookAPIContract(t *testing.T) {
 		insertQuery := `
 			INSERT INTO webhooks (name, url, events, active, create_by, change_by)
 			VALUES (?, ?, ?, true, 1, 1)
-			RETURNING id
 		`
 		webhookID := insertWebhookRow(t, insertQuery,
 			"Delivery Test", "https://example.com", "ticket.created",
@@ -395,7 +390,6 @@ func TestWebhookAPIContract(t *testing.T) {
 		insertWebhook := `
 			INSERT INTO webhooks (name, url, events, active, create_by, change_by)
 			VALUES (?, ?, ?, true, 1, 1)
-			RETURNING id
 		`
 		webhookID := insertWebhookRow(t, insertWebhook,
 			"Retry Test", "https://httpbin.org/post", "ticket.created",
@@ -405,7 +399,6 @@ func TestWebhookAPIContract(t *testing.T) {
 		insertDelivery := `
 			INSERT INTO webhook_deliveries (webhook_id, event_type, payload, status_code, attempts, success)
 			VALUES (?, 'ticket.created', '{"test": "retry"}', 500, 3, false)
-			RETURNING id
 		`
 		deliveryID := insertWebhookRow(t, insertDelivery, webhookID)
 

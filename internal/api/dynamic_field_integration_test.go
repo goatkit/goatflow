@@ -70,55 +70,55 @@ func setupTestDynamicFields(t *testing.T, db *sql.DB) *testDynamicFieldSet {
 	fields := &testDynamicFieldSet{}
 
 	// Cleanup any leftover test data first
-	db.Exec(`DELETE FROM dynamic_field_screen_config WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTest%')`)
-	db.Exec(`DELETE FROM dynamic_field_value WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTest%')`)
-	db.Exec(`DELETE FROM dynamic_field WHERE name LIKE 'IntTest%'`)
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_screen_config WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTest%')`))
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_value WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTest%')`))
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field WHERE name LIKE 'IntTest%'`))
 
 	// Create Text field
-	_, err := db.Exec(`INSERT INTO dynamic_field 
+	_, err := db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field 
 		(internal_field, name, label, field_order, field_type, object_type, config, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (0, 'IntTestText', 'Integration Test Text', 100, 'Text', 'Ticket', 'DefaultValue: ""\nMaxLength: 200', 1, NOW(), 1, NOW(), 1)`)
+		VALUES (0, 'IntTestText', 'Integration Test Text', 100, 'Text', 'Ticket', ?, 1, NOW(), 1, NOW(), 1)`), []byte("DefaultValue: \"\"\nMaxLength: 200"))
 	require.NoError(t, err)
 
 	// Create TextArea field
-	_, err = db.Exec(`INSERT INTO dynamic_field 
+	_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field 
 		(internal_field, name, label, field_order, field_type, object_type, config, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (0, 'IntTestTextArea', 'Integration Test TextArea', 200, 'TextArea', 'Ticket', 'Rows: 5', 1, NOW(), 1, NOW(), 1)`)
+		VALUES (0, 'IntTestTextArea', 'Integration Test TextArea', 200, 'TextArea', 'Ticket', ?, 1, NOW(), 1, NOW(), 1)`), []byte("Rows: 5"))
 	require.NoError(t, err)
 
 	// Create Checkbox field
-	_, err = db.Exec(`INSERT INTO dynamic_field 
+	_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field 
 		(internal_field, name, label, field_order, field_type, object_type, config, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (0, 'IntTestCheckbox', 'Integration Test Checkbox', 300, 'Checkbox', 'Ticket', 'DefaultValue: 0', 1, NOW(), 1, NOW(), 1)`)
+		VALUES (0, 'IntTestCheckbox', 'Integration Test Checkbox', 300, 'Checkbox', 'Ticket', ?, 1, NOW(), 1, NOW(), 1)`), []byte("DefaultValue: 0"))
 	require.NoError(t, err)
 
 	// Create Dropdown field
-	_, err = db.Exec(`INSERT INTO dynamic_field 
+	_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field 
 		(internal_field, name, label, field_order, field_type, object_type, config, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (0, 'IntTestDropdown', 'Integration Test Dropdown', 400, 'Dropdown', 'Ticket', 'PossibleValues:\n  low: Low\n  medium: Medium\n  high: High', 1, NOW(), 1, NOW(), 1)`)
+		VALUES (0, 'IntTestDropdown', 'Integration Test Dropdown', 400, 'Dropdown', 'Ticket', ?, 1, NOW(), 1, NOW(), 1)`), []byte("PossibleValues:\n  low: Low\n  medium: Medium\n  high: High"))
 	require.NoError(t, err)
 
 	// Create Multiselect field
-	_, err = db.Exec(`INSERT INTO dynamic_field 
+	_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field 
 		(internal_field, name, label, field_order, field_type, object_type, config, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (0, 'IntTestMultiselect', 'Integration Test Multiselect', 500, 'Multiselect', 'Ticket', 'PossibleValues:\n  opt1: Option 1\n  opt2: Option 2\n  opt3: Option 3', 1, NOW(), 1, NOW(), 1)`)
+		VALUES (0, 'IntTestMultiselect', 'Integration Test Multiselect', 500, 'Multiselect', 'Ticket', ?, 1, NOW(), 1, NOW(), 1)`), []byte("PossibleValues:\n  opt1: Option 1\n  opt2: Option 2\n  opt3: Option 3"))
 	require.NoError(t, err)
 
 	// Create Date field
-	_, err = db.Exec(`INSERT INTO dynamic_field 
+	_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field 
 		(internal_field, name, label, field_order, field_type, object_type, config, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (0, 'IntTestDate', 'Integration Test Date', 600, 'Date', 'Ticket', 'YearsInPast: 5\nYearsInFuture: 5', 1, NOW(), 1, NOW(), 1)`)
+		VALUES (0, 'IntTestDate', 'Integration Test Date', 600, 'Date', 'Ticket', ?, 1, NOW(), 1, NOW(), 1)`), []byte("YearsInPast: 5\nYearsInFuture: 5"))
 	require.NoError(t, err)
 
 	// Create DateTime field
-	_, err = db.Exec(`INSERT INTO dynamic_field 
+	_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field 
 		(internal_field, name, label, field_order, field_type, object_type, config, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (0, 'IntTestDateTime', 'Integration Test DateTime', 700, 'DateTime', 'Ticket', 'YearsInPast: 5\nYearsInFuture: 5', 1, NOW(), 1, NOW(), 1)`)
+		VALUES (0, 'IntTestDateTime', 'Integration Test DateTime', 700, 'DateTime', 'Ticket', ?, 1, NOW(), 1, NOW(), 1)`), []byte("YearsInPast: 5\nYearsInFuture: 5"))
 	require.NoError(t, err)
 
 	// Add screen config entries for AgentTicketPhone screen
-	_, err = db.Exec(`INSERT INTO dynamic_field_screen_config (field_id, screen_key, config_value, create_time, create_by, change_time, change_by)
-		SELECT id, 'AgentTicketPhone', 1, NOW(), 1, NOW(), 1 FROM dynamic_field WHERE name LIKE 'IntTest%'`)
+	_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field_screen_config (field_id, screen_key, config_value, create_time, create_by, change_time, change_by)
+		SELECT id, 'AgentTicketPhone', 1, NOW(), 1, NOW(), 1 FROM dynamic_field WHERE name LIKE 'IntTest%'`))
 	require.NoError(t, err)
 
 	return fields
@@ -128,19 +128,19 @@ func cleanupTestDynamicFields(t *testing.T, db *sql.DB, fields *testDynamicField
 	t.Helper()
 
 	// Delete screen configs
-	_, _ = db.Exec(`DELETE FROM dynamic_field_screen_config WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTest%')`)
+	_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_screen_config WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTest%')`))
 
 	// Delete values
-	_, _ = db.Exec(`DELETE FROM dynamic_field_value WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTest%')`)
+	_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_value WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTest%')`))
 
 	// Delete fields
-	_, _ = db.Exec(`DELETE FROM dynamic_field WHERE name LIKE 'IntTest%'`)
+	_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field WHERE name LIKE 'IntTest%'`))
 }
 
 func testDynamicFieldCRUDWorkflow(t *testing.T, db *sql.DB, fields *testDynamicFieldSet) {
 	// Get a test field ID
 	var fieldID int
-	err := db.QueryRow(`SELECT id FROM dynamic_field WHERE name = 'IntTestText' LIMIT 1`).Scan(&fieldID)
+	err := db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM dynamic_field WHERE name = 'IntTestText' LIMIT 1`)).Scan(&fieldID)
 	require.NoError(t, err)
 	require.NotZero(t, fieldID, "Test field should exist")
 
@@ -177,7 +177,7 @@ func testDynamicFieldCRUDWorkflow(t *testing.T, db *sql.DB, fields *testDynamicF
 	assert.Equal(t, newTextValue, *values[0].ValueText)
 
 	// Cleanup
-	db.Exec(`DELETE FROM dynamic_field_value WHERE object_id = ?`, testObjectID)
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_value WHERE object_id = ?`), testObjectID)
 }
 
 func testTicketCreateWithDynamicFields(t *testing.T, db *sql.DB, fields *testDynamicFieldSet) {
@@ -237,7 +237,7 @@ func testAllFieldTypesValuePersistence(t *testing.T, db *sql.DB, fields *testDyn
 	fieldIDs := make(map[string]int)
 	for _, name := range []string{"IntTestText", "IntTestTextArea", "IntTestCheckbox", "IntTestDropdown", "IntTestDate", "IntTestDateTime"} {
 		var id int
-		err := db.QueryRow(`SELECT id FROM dynamic_field WHERE name = ? LIMIT 1`, name).Scan(&id)
+		err := db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM dynamic_field WHERE name = ? LIMIT 1`), name).Scan(&id)
 		require.NoError(t, err, "Field %s should exist", name)
 		fieldIDs[name] = id
 	}
@@ -365,7 +365,7 @@ func testAllFieldTypesValuePersistence(t *testing.T, db *sql.DB, fields *testDyn
 	})
 
 	// Cleanup
-	db.Exec(`DELETE FROM dynamic_field_value WHERE object_id = ?`, testObjectID)
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_value WHERE object_id = ?`), testObjectID)
 }
 
 func testScreenConfigFiltering(t *testing.T, db *sql.DB, fields *testDynamicFieldSet) {
@@ -400,7 +400,7 @@ func testMultiselectFieldPersistence(t *testing.T, db *sql.DB, fields *testDynam
 
 	// Get multiselect field ID
 	var fieldID int
-	err := db.QueryRow(`SELECT id FROM dynamic_field WHERE name = 'IntTestMultiselect' LIMIT 1`).Scan(&fieldID)
+	err := db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM dynamic_field WHERE name = 'IntTestMultiselect' LIMIT 1`)).Scan(&fieldID)
 	require.NoError(t, err)
 	require.NotZero(t, fieldID)
 
@@ -427,7 +427,7 @@ func testMultiselectFieldPersistence(t *testing.T, db *sql.DB, fields *testDynam
 	}
 
 	// Cleanup
-	db.Exec(`DELETE FROM dynamic_field_value WHERE object_id = ?`, testObjectID)
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_value WHERE object_id = ?`), testObjectID)
 }
 
 func TestProcessDynamicFieldsFromFormIntegration(t *testing.T) {
@@ -485,7 +485,7 @@ func TestProcessDynamicFieldsFromFormIntegration(t *testing.T) {
 	})
 
 	// Cleanup
-	db.Exec(`DELETE FROM dynamic_field_value WHERE object_id = ?`, testObjectID)
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_value WHERE object_id = ?`), testObjectID)
 }
 
 func TestGetDynamicFieldValuesForDisplayIntegration(t *testing.T) {
@@ -534,7 +534,7 @@ func TestGetDynamicFieldValuesForDisplayIntegration(t *testing.T) {
 	}
 
 	// Cleanup
-	db.Exec(`DELETE FROM dynamic_field_value WHERE object_id = ?`, testObjectID)
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_value WHERE object_id = ?`), testObjectID)
 }
 
 // TestArticleDynamicFieldsIntegration tests Article-level dynamic fields.
@@ -571,22 +571,20 @@ func TestArticleDynamicFieldsIntegration(t *testing.T) {
 	t.Run("ProcessArticleDynamicFieldsFromForm", func(t *testing.T) {
 		// Get an existing ticket ID
 		var ticketID int
-		err := db.QueryRow(`SELECT id FROM ticket ORDER BY id LIMIT 1`).Scan(&ticketID)
+		err := db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket ORDER BY id LIMIT 1`)).Scan(&ticketID)
 		if err != nil {
 			t.Skip("No existing ticket in test database, skipping article test")
 		}
 
 		// Create a test article (article body is stored separately in article_data_mime)
 		var articleID int64
-		result, err := db.Exec(`INSERT INTO article 
+		articleID, err = database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`INSERT INTO article 
 			(ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer, 
 			 search_index_needs_rebuild, create_time, create_by, change_time, change_by)
-			VALUES (?, 1, 3, 0, 0, NOW(), 1, NOW(), 1)`, ticketID)
+			VALUES (?, 1, 3, 0, 0, NOW(), 1, NOW(), 1) RETURNING id`), ticketID)
 		require.NoError(t, err)
-		articleID, err = result.LastInsertId()
-		require.NoError(t, err)
-		defer db.Exec("DELETE FROM article WHERE id = ?", articleID)
-		defer db.Exec("DELETE FROM dynamic_field_value WHERE object_id = ?", articleID)
+		defer db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE id = ?"), articleID)
+		defer db.Exec(database.ConvertPlaceholders("DELETE FROM dynamic_field_value WHERE object_id = ?"), articleID)
 
 		// Create form values with Article prefix
 		formValues := map[string][]string{
@@ -599,8 +597,7 @@ func TestArticleDynamicFieldsIntegration(t *testing.T) {
 
 		// Verify value was saved
 		var savedValue string
-		err = db.QueryRow(`SELECT value_text FROM dynamic_field_value WHERE field_id = ? AND object_id = ?`,
-			articleFields.textField.ID, articleID).Scan(&savedValue)
+		err = db.QueryRow(database.ConvertPlaceholders(`SELECT value_text FROM dynamic_field_value WHERE field_id = ? AND object_id = ?`), articleFields.textField.ID, articleID).Scan(&savedValue)
 		require.NoError(t, err)
 		assert.Equal(t, "Article test value", savedValue)
 	})
@@ -608,26 +605,23 @@ func TestArticleDynamicFieldsIntegration(t *testing.T) {
 	t.Run("GetArticleDynamicFieldValuesForDisplay", func(t *testing.T) {
 		// Get an existing ticket ID
 		var ticketID int
-		err := db.QueryRow(`SELECT id FROM ticket ORDER BY id LIMIT 1`).Scan(&ticketID)
+		err := db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket ORDER BY id LIMIT 1`)).Scan(&ticketID)
 		if err != nil {
 			t.Skip("No existing ticket in test database, skipping article test")
 		}
 
 		// Create a test article
 		var articleID int64
-		result, err := db.Exec(`INSERT INTO article 
+		articleID, err = database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`INSERT INTO article 
 			(ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer, 
 			 search_index_needs_rebuild, create_time, create_by, change_time, change_by)
-			VALUES (?, 1, 3, 0, 0, NOW(), 1, NOW(), 1)`, ticketID)
+			VALUES (?, 1, 3, 0, 0, NOW(), 1, NOW(), 1) RETURNING id`), ticketID)
 		require.NoError(t, err)
-		articleID, err = result.LastInsertId()
-		require.NoError(t, err)
-		defer db.Exec("DELETE FROM article WHERE id = ?", articleID)
-		defer db.Exec("DELETE FROM dynamic_field_value WHERE object_id = ?", articleID)
+		defer db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE id = ?"), articleID)
+		defer db.Exec(database.ConvertPlaceholders("DELETE FROM dynamic_field_value WHERE object_id = ?"), articleID)
 
 		// Save a value directly
-		_, err = db.Exec(`INSERT INTO dynamic_field_value (field_id, object_id, value_text) VALUES (?, ?, ?)`,
-			articleFields.textField.ID, articleID, "Display test value")
+		_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field_value (field_id, object_id, value_text) VALUES (?, ?, ?)`), articleFields.textField.ID, articleID, "Display test value")
 		require.NoError(t, err)
 
 		// Retrieve for display
@@ -657,29 +651,29 @@ func setupTestArticleDynamicFields(t *testing.T, db *sql.DB) *testArticleDynamic
 	fields := &testArticleDynamicFieldSet{}
 
 	// Cleanup any leftover test data first
-	db.Exec(`DELETE FROM dynamic_field_screen_config WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTestArticle%')`)
-	db.Exec(`DELETE FROM dynamic_field_value WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTestArticle%')`)
-	db.Exec(`DELETE FROM dynamic_field WHERE name LIKE 'IntTestArticle%'`)
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_screen_config WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTestArticle%')`))
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_value WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTestArticle%')`))
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field WHERE name LIKE 'IntTestArticle%'`))
 
 	// Create Text field for Article object type
-	_, err := db.Exec(`INSERT INTO dynamic_field 
+	_, err := db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field 
 		(internal_field, name, label, field_order, field_type, object_type, config, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (0, 'IntTestArticleText', 'Integration Test Article Text', 100, 'Text', 'Article', 'DefaultValue: ""', 1, NOW(), 1, NOW(), 1)`)
+		VALUES (0, 'IntTestArticleText', 'Integration Test Article Text', 100, 'Text', 'Article', ?, 1, NOW(), 1, NOW(), 1)`), []byte("DefaultValue: \"\""))
 	require.NoError(t, err)
 
 	// Get the created field
-	row := db.QueryRow(`SELECT id, name, label, field_type, object_type FROM dynamic_field WHERE name = 'IntTestArticleText'`)
+	row := db.QueryRow(database.ConvertPlaceholders(`SELECT id, name, label, field_type, object_type FROM dynamic_field WHERE name = 'IntTestArticleText'`))
 	textField := &DynamicField{}
 	err = row.Scan(&textField.ID, &textField.Name, &textField.Label, &textField.FieldType, &textField.ObjectType)
 	require.NoError(t, err)
 	fields.textField = textField
 
 	// Enable field for Article screens
-	_, err = db.Exec(`INSERT INTO dynamic_field_screen_config (field_id, screen_key, config_value, create_time, create_by, change_time, change_by) VALUES (?, 'AgentArticleNote', 1, NOW(), 1, NOW(), 1)`, textField.ID)
+	_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field_screen_config (field_id, screen_key, config_value, create_time, create_by, change_time, change_by) VALUES (?, 'AgentArticleNote', 1, NOW(), 1, NOW(), 1)`), textField.ID)
 	require.NoError(t, err)
-	_, err = db.Exec(`INSERT INTO dynamic_field_screen_config (field_id, screen_key, config_value, create_time, create_by, change_time, change_by) VALUES (?, 'AgentArticleClose', 1, NOW(), 1, NOW(), 1)`, textField.ID)
+	_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field_screen_config (field_id, screen_key, config_value, create_time, create_by, change_time, change_by) VALUES (?, 'AgentArticleClose', 1, NOW(), 1, NOW(), 1)`), textField.ID)
 	require.NoError(t, err)
-	_, err = db.Exec(`INSERT INTO dynamic_field_screen_config (field_id, screen_key, config_value, create_time, create_by, change_time, change_by) VALUES (?, 'AgentArticleZoom', 1, NOW(), 1, NOW(), 1)`, textField.ID)
+	_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field_screen_config (field_id, screen_key, config_value, create_time, create_by, change_time, change_by) VALUES (?, 'AgentArticleZoom', 1, NOW(), 1, NOW(), 1)`), textField.ID)
 	require.NoError(t, err)
 
 	return fields
@@ -687,9 +681,9 @@ func setupTestArticleDynamicFields(t *testing.T, db *sql.DB) *testArticleDynamic
 
 func cleanupTestArticleDynamicFields(t *testing.T, db *sql.DB) {
 	t.Helper()
-	db.Exec(`DELETE FROM dynamic_field_screen_config WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTestArticle%')`)
-	db.Exec(`DELETE FROM dynamic_field_value WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTestArticle%')`)
-	db.Exec(`DELETE FROM dynamic_field WHERE name LIKE 'IntTestArticle%'`)
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_screen_config WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTestArticle%')`))
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_value WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTestArticle%')`))
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field WHERE name LIKE 'IntTestArticle%'`))
 }
 
 func setupIntegrationTestRouter(t *testing.T) *gin.Engine {
@@ -777,16 +771,15 @@ func TestCustomerPortalDynamicFieldsIntegration(t *testing.T) {
 
 		// Get an existing ticket ID
 		var ticketID int
-		err := db.QueryRow("SELECT id FROM ticket ORDER BY id LIMIT 1").Scan(&ticketID)
+		err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket ORDER BY id LIMIT 1")).Scan(&ticketID)
 		if err != nil {
 			t.Skip("No existing ticket in test database")
 		}
 
 		// Save a test value
-		_, err = db.Exec(`INSERT INTO dynamic_field_value (field_id, object_id, value_text) VALUES (?, ?, ?)`,
-			fields.ticketTextField.ID, ticketID, "Customer visible value")
+		_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field_value (field_id, object_id, value_text) VALUES (?, ?, ?)`), fields.ticketTextField.ID, ticketID, "Customer visible value")
 		require.NoError(t, err)
-		defer db.Exec("DELETE FROM dynamic_field_value WHERE field_id = ? AND object_id = ?", fields.ticketTextField.ID, ticketID)
+		defer db.Exec(database.ConvertPlaceholders("DELETE FROM dynamic_field_value WHERE field_id = ? AND object_id = ?"), fields.ticketTextField.ID, ticketID)
 
 		// Retrieve for display via CustomerTicketZoom screen
 		displayFields, err := GetDynamicFieldValuesForDisplay(ticketID, DFObjectTicket, "CustomerTicketZoom")
@@ -832,22 +825,20 @@ func TestCustomerPortalDynamicFieldsIntegration(t *testing.T) {
 
 		// Get an existing ticket ID
 		var ticketID int
-		err := db.QueryRow("SELECT id FROM ticket ORDER BY id LIMIT 1").Scan(&ticketID)
+		err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket ORDER BY id LIMIT 1")).Scan(&ticketID)
 		if err != nil {
 			t.Skip("No existing ticket in test database")
 		}
 
 		// Create a test article for customer reply
 		var articleID int64
-		result, err := db.Exec(`INSERT INTO article 
+		articleID, err = database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`INSERT INTO article 
 			(ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer, 
 			 search_index_needs_rebuild, create_time, create_by, change_time, change_by)
-			VALUES (?, 3, 1, 1, 0, NOW(), 1, NOW(), 1)`, ticketID)
+			VALUES (?, 3, 1, 1, 0, NOW(), 1, NOW(), 1) RETURNING id`), ticketID)
 		require.NoError(t, err)
-		articleID, err = result.LastInsertId()
-		require.NoError(t, err)
-		defer db.Exec("DELETE FROM article WHERE id = ?", articleID)
-		defer db.Exec("DELETE FROM dynamic_field_value WHERE object_id = ?", articleID)
+		defer db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE id = ?"), articleID)
+		defer db.Exec(database.ConvertPlaceholders("DELETE FROM dynamic_field_value WHERE object_id = ?"), articleID)
 
 		// Simulate form submission with article dynamic field
 		formData := url.Values{}
@@ -859,8 +850,7 @@ func TestCustomerPortalDynamicFieldsIntegration(t *testing.T) {
 
 		// Verify the value was saved
 		var savedValue string
-		err = db.QueryRow(`SELECT value_text FROM dynamic_field_value WHERE field_id = ? AND object_id = ?`,
-			fields.articleTextField.ID, articleID).Scan(&savedValue)
+		err = db.QueryRow(database.ConvertPlaceholders(`SELECT value_text FROM dynamic_field_value WHERE field_id = ? AND object_id = ?`), fields.articleTextField.ID, articleID).Scan(&savedValue)
 		require.NoError(t, err)
 		assert.Equal(t, "Customer reply note", savedValue)
 	})
@@ -880,37 +870,37 @@ func setupTestCustomerPortalFields(t *testing.T, db *sql.DB) *testCustomerPortal
 	cleanupTestCustomerPortalFields(t, db)
 
 	// Create Ticket Text field for CustomerTicketZoom
-	_, err := db.Exec(`INSERT INTO dynamic_field 
+	_, err := db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field 
 		(internal_field, name, label, field_order, field_type, object_type, config, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (0, 'IntTestCustPortalTicket', 'Customer Portal Ticket Field', 200, 'Text', 'Ticket', 'DefaultValue: ""', 1, NOW(), 1, NOW(), 1)`)
+		VALUES (0, 'IntTestCustPortalTicket', 'Customer Portal Ticket Field', 200, 'Text', 'Ticket', ?, 1, NOW(), 1, NOW(), 1)`), []byte("DefaultValue: \"\""))
 	require.NoError(t, err)
 
 	// Get the created ticket field
-	row := db.QueryRow(`SELECT id, name, label, field_type, object_type FROM dynamic_field WHERE name = 'IntTestCustPortalTicket'`)
+	row := db.QueryRow(database.ConvertPlaceholders(`SELECT id, name, label, field_type, object_type FROM dynamic_field WHERE name = 'IntTestCustPortalTicket'`))
 	ticketField := &DynamicField{}
 	err = row.Scan(&ticketField.ID, &ticketField.Name, &ticketField.Label, &ticketField.FieldType, &ticketField.ObjectType)
 	require.NoError(t, err)
 	fields.ticketTextField = ticketField
 
 	// Enable field for CustomerTicketZoom screen
-	_, err = db.Exec(`INSERT INTO dynamic_field_screen_config (field_id, screen_key, config_value, create_time, create_by, change_time, change_by) VALUES (?, 'CustomerTicketZoom', 1, NOW(), 1, NOW(), 1)`, ticketField.ID)
+	_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field_screen_config (field_id, screen_key, config_value, create_time, create_by, change_time, change_by) VALUES (?, 'CustomerTicketZoom', 1, NOW(), 1, NOW(), 1)`), ticketField.ID)
 	require.NoError(t, err)
 
 	// Create Article Text field for CustomerArticleReply
-	_, err = db.Exec(`INSERT INTO dynamic_field 
+	_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field 
 		(internal_field, name, label, field_order, field_type, object_type, config, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (0, 'IntTestCustPortalArticle', 'Customer Portal Article Field', 201, 'Text', 'Article', 'DefaultValue: ""', 1, NOW(), 1, NOW(), 1)`)
+		VALUES (0, 'IntTestCustPortalArticle', 'Customer Portal Article Field', 201, 'Text', 'Article', ?, 1, NOW(), 1, NOW(), 1)`), []byte("DefaultValue: \"\""))
 	require.NoError(t, err)
 
 	// Get the created article field
-	row = db.QueryRow(`SELECT id, name, label, field_type, object_type FROM dynamic_field WHERE name = 'IntTestCustPortalArticle'`)
+	row = db.QueryRow(database.ConvertPlaceholders(`SELECT id, name, label, field_type, object_type FROM dynamic_field WHERE name = 'IntTestCustPortalArticle'`))
 	articleField := &DynamicField{}
 	err = row.Scan(&articleField.ID, &articleField.Name, &articleField.Label, &articleField.FieldType, &articleField.ObjectType)
 	require.NoError(t, err)
 	fields.articleTextField = articleField
 
 	// Enable field for CustomerArticleReply screen with required flag (config_value=2)
-	_, err = db.Exec(`INSERT INTO dynamic_field_screen_config (field_id, screen_key, config_value, create_time, create_by, change_time, change_by) VALUES (?, 'CustomerArticleReply', 2, NOW(), 1, NOW(), 1)`, articleField.ID)
+	_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO dynamic_field_screen_config (field_id, screen_key, config_value, create_time, create_by, change_time, change_by) VALUES (?, 'CustomerArticleReply', 2, NOW(), 1, NOW(), 1)`), articleField.ID)
 	require.NoError(t, err)
 
 	return fields
@@ -918,7 +908,7 @@ func setupTestCustomerPortalFields(t *testing.T, db *sql.DB) *testCustomerPortal
 
 func cleanupTestCustomerPortalFields(t *testing.T, db *sql.DB) {
 	t.Helper()
-	db.Exec(`DELETE FROM dynamic_field_screen_config WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTestCustPortal%')`)
-	db.Exec(`DELETE FROM dynamic_field_value WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTestCustPortal%')`)
-	db.Exec(`DELETE FROM dynamic_field WHERE name LIKE 'IntTestCustPortal%'`)
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_screen_config WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTestCustPortal%')`))
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field_value WHERE field_id IN (SELECT id FROM dynamic_field WHERE name LIKE 'IntTestCustPortal%')`))
+	db.Exec(database.ConvertPlaceholders(`DELETE FROM dynamic_field WHERE name LIKE 'IntTestCustPortal%'`))
 }

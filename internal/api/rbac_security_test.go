@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -93,14 +94,27 @@ func (f *RBACTestFixtures) setup() error {
 	f.AgentBeta = 95002
 	f.AgentBoth = 95003
 
-	// Clean up any existing test data
-	_, _ = f.db.Exec("SET FOREIGN_KEY_CHECKS=0")
-	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id >= 95000"))
-	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM queue WHERE id >= 95000"))
-	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id >= 95000 OR group_id >= 95000"))
-	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM `groups` WHERE id >= 95000"))
-	_, _ = f.db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id >= 95000"))
-	_, _ = f.db.Exec("SET FOREIGN_KEY_CHECKS=1")
+	// Clean up any existing test data. FK checks are session state, so the
+	// cleanup runs on one dedicated connection that is closed afterwards.
+	ctx := context.Background()
+	conn, err := f.db.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	for _, q := range []string{
+		"SET FOREIGN_KEY_CHECKS=0",
+		"DELETE FROM ticket WHERE id >= 95000",
+		"DELETE FROM queue WHERE id >= 95000",
+		"DELETE FROM group_user WHERE user_id >= 95000 OR group_id >= 95000",
+		"DELETE FROM `groups` WHERE id >= 95000",
+		"DELETE FROM users WHERE id >= 95000",
+		"SET FOREIGN_KEY_CHECKS=1",
+	} {
+		_, _ = conn.ExecContext(ctx, database.ConvertPlaceholders(q))
+	}
+	if err := conn.Close(); err != nil {
+		return err
+	}
 
 	exec := func(query string, args ...interface{}) error {
 		_, err := f.db.Exec(database.ConvertPlaceholders(query), args...)

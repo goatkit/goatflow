@@ -18,14 +18,12 @@ type ArticleInsertParams struct {
 // insertArticle creates an article record and returns the article ID.
 // This handles both MySQL and PostgreSQL with appropriate ID retrieval.
 func insertArticle(tx *sql.Tx, params ArticleInsertParams) (int64, error) {
-	// Do NOT call ConvertPlaceholders here - let InsertWithReturningTx handle it
-	// so that repeated placeholders (? used twice) are properly expanded for MySQL
-	query := `
+	query := database.ConvertPlaceholders(`
 		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id,
 			is_visible_for_customer, create_time, create_by, change_time, change_by)
 		VALUES (?, 1, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
 		RETURNING id
-	`
+	`)
 	// Args: ticket_id, communication_channel_id, is_visible_for_customer, create_by, change_by
 	args := []interface{}{params.TicketID, params.CommunicationChannel, params.IsVisibleForCustomer, params.CreateBy, params.CreateBy}
 	return database.GetAdapter().InsertWithReturningTx(tx, query, args...)
@@ -72,8 +70,7 @@ func insertArticleMimeData(tx *sql.Tx, params ArticleMimeParams) error {
 		}
 	}
 
-	// Adapter handles placeholder conversion and arg remapping for repeated $N
-	_, err := database.GetAdapter().ExecTx(tx, insertQuery, args...)
+	_, err := tx.Exec(database.ConvertPlaceholders(insertQuery), args...)
 	return err
 }
 

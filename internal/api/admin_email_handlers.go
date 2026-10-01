@@ -34,13 +34,13 @@ func handleAdminEmailQueue(c *gin.Context) {
 	}
 
 	// Get email queue items from database
-	rows, err := db.Query(`
+	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT id, insert_fingerprint, article_id, attempts, sender, recipient,
 			   due_time, last_smtp_code, last_smtp_message, create_time
 		FROM mail_queue
 		ORDER BY create_time DESC
 		LIMIT 100
-	`)
+	`))
 	if err != nil {
 		sendErrorResponse(c, http.StatusInternalServerError, "Failed to fetch email queue")
 		return
@@ -105,9 +105,9 @@ func handleAdminEmailQueue(c *gin.Context) {
 
 	// Get queue statistics - defaults to 0 on error
 	var totalEmails, pendingEmails, failedEmails int
-	_ = db.QueryRow("SELECT COUNT(*) FROM mail_queue").Scan(&totalEmails)                                                           //nolint:errcheck
-	_ = db.QueryRow("SELECT COUNT(*) FROM mail_queue WHERE (due_time IS NULL OR due_time <= NOW())").Scan(&pendingEmails)           //nolint:errcheck
-	_ = db.QueryRow("SELECT COUNT(*) FROM mail_queue WHERE last_smtp_code IS NOT NULL AND last_smtp_code != 0").Scan(&failedEmails) //nolint:errcheck
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM mail_queue")).Scan(&totalEmails)                                                           //nolint:errcheck
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM mail_queue WHERE (due_time IS NULL OR due_time <= NOW())")).Scan(&pendingEmails)           //nolint:errcheck
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM mail_queue WHERE last_smtp_code IS NOT NULL AND last_smtp_code != 0")).Scan(&failedEmails) //nolint:errcheck
 
 	processedEmails := totalEmails - pendingEmails
 
@@ -138,11 +138,11 @@ func handleAdminEmailQueueRetry(c *gin.Context) {
 	}
 
 	// Reset the email for retry by clearing due_time and last_smtp_code/message
-	_, err = db.Exec(`
+	_, err = db.Exec(database.ConvertPlaceholders(`
 		UPDATE mail_queue
 		SET due_time = NULL, last_smtp_code = NULL, last_smtp_message = NULL
 		WHERE id = ?
-	`, id)
+	`), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to retry email"})
 		return
@@ -167,7 +167,7 @@ func handleAdminEmailQueueDelete(c *gin.Context) {
 	}
 
 	// Delete the email from the queue
-	result, err := db.Exec(`DELETE FROM mail_queue WHERE id = ?`, id)
+	result, err := db.Exec(database.ConvertPlaceholders(`DELETE FROM mail_queue WHERE id = ?`), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete email"})
 		return
@@ -194,13 +194,13 @@ func handleAdminEmailQueueRetryAll(c *gin.Context) {
 	}
 
 	// Reset all failed emails for retry (emails with SMTP errors, attempts > 0, or error messages)
-	result, err := db.Exec(`
+	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE mail_queue
 		SET due_time = NULL, last_smtp_code = NULL, last_smtp_message = NULL
 		WHERE last_smtp_code IS NOT NULL AND last_smtp_code != 0
 		   OR attempts > 0
 		   OR last_smtp_message IS NOT NULL
-	`)
+	`))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to retry all emails"})
 		return

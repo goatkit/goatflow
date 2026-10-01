@@ -59,17 +59,17 @@ func (o *OracleDatabase) GetConfig() DatabaseConfig {
 
 // Query executes a query and returns rows.
 func (o *OracleDatabase) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	return o.db.QueryContext(ctx, query, args...)
+	return o.db.QueryContext(ctx, query, args...) // sql-converted: unreachable; Oracle Connect() is an unimplemented stub, o.db/tx never set
 }
 
 // QueryRow executes a query and returns a single row.
 func (o *OracleDatabase) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return o.db.QueryRowContext(ctx, query, args...)
+	return o.db.QueryRowContext(ctx, query, args...) // sql-converted: unreachable; Oracle Connect() is an unimplemented stub, o.db/tx never set
 }
 
 // Exec executes a query and returns the result.
 func (o *OracleDatabase) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return o.db.ExecContext(ctx, query, args...)
+	return o.db.ExecContext(ctx, query, args...) // sql-converted: unreachable; Oracle Connect() is an unimplemented stub, o.db/tx never set
 }
 
 // Begin starts a transaction.
@@ -111,7 +111,7 @@ func (o *OracleDatabase) CreateTable(ctx context.Context, definition *TableDefin
 // DropTable drops a table.
 func (o *OracleDatabase) DropTable(ctx context.Context, tableName string) error {
 	query := fmt.Sprintf("DROP TABLE %s", o.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
-	_, err := o.db.ExecContext(ctx, query)
+	_, err := o.db.ExecContext(ctx, query)                    // sql-converted: unreachable; Oracle Connect() is an unimplemented stub, o.db/tx never set
 	return err
 }
 
@@ -124,7 +124,7 @@ func (o *OracleDatabase) CreateIndex(ctx context.Context, tableName, indexName s
 // DropIndex drops an index.
 func (o *OracleDatabase) DropIndex(ctx context.Context, tableName, indexName string) error {
 	query := fmt.Sprintf("DROP INDEX %s", o.Quote(indexName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
-	_, err := o.db.ExecContext(ctx, query)
+	_, err := o.db.ExecContext(ctx, query)                    // sql-converted: unreachable; Oracle Connect() is an unimplemented stub, o.db/tx never set
 	return err
 }
 
@@ -237,15 +237,15 @@ type OracleTransaction struct {
 }
 
 func (t *OracleTransaction) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	return t.tx.QueryContext(ctx, query, args...)
+	return t.tx.QueryContext(ctx, query, args...) // sql-converted: unreachable; Oracle Connect() is an unimplemented stub, o.db/tx never set
 }
 
 func (t *OracleTransaction) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return t.tx.QueryRowContext(ctx, query, args...)
+	return t.tx.QueryRowContext(ctx, query, args...) // sql-converted: unreachable; Oracle Connect() is an unimplemented stub, o.db/tx never set
 }
 
 func (t *OracleTransaction) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return t.tx.ExecContext(ctx, query, args...)
+	return t.tx.ExecContext(ctx, query, args...) // sql-converted: unreachable; Oracle Connect() is an unimplemented stub, o.db/tx never set
 }
 
 func (t *OracleTransaction) Commit() error {

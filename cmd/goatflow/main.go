@@ -397,7 +397,7 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 // ensureUsersTable creates a minimal users table if absent (portable across postgres/mysql).
 func ensureUsersTable(db *sql.DB, driverName string) error {
 	// Check existence
-	checkSQL := "SELECT 1 FROM users LIMIT 1"
+	checkSQL := database.ConvertPlaceholders("SELECT 1 FROM users LIMIT 1")
 	if _, err := db.Exec(checkSQL); err == nil {
 		return nil
 	}
@@ -435,7 +435,7 @@ CREATE TABLE IF NOT EXISTS users (
     change_by INT NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
 	}
-	_, err := db.Exec(createSQL)
+	_, err := db.Exec(database.ConvertPlaceholders(createSQL))
 	return err
 }
 

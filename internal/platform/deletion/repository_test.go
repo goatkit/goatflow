@@ -17,9 +17,9 @@ func getTestDB(t *testing.T) *sql.DB {
 		t.Skip("Test database not available")
 	}
 	var count int
-	err = db.QueryRow(
+	err = db.QueryRow(database.ConvertPlaceholders(
 		"SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'gk_recycle_bin'",
-	).Scan(&count)
+	)).Scan(&count)
 	if err != nil || count == 0 {
 		t.Skipf("gk_recycle_bin table not found — run migration 000013")
 	}

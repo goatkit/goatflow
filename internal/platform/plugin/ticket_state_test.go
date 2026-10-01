@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goatkit/goatflow/internal/platform/database"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -39,7 +40,7 @@ func newTicketStateTestHost(t *testing.T) *ProdHostAPI {
 			valid_id INTEGER NOT NULL DEFAULT 1)`,
 	}
 	for _, q := range ddl {
-		if _, err := db.Exec(q); err != nil {
+		if _, err := db.Exec(database.ConvertPlaceholders(q)); err != nil {
 			t.Fatalf("exec ddl %q: %v", q, err)
 		}
 	}
@@ -54,7 +55,7 @@ func newTicketStateTestHost(t *testing.T) *ProdHostAPI {
 		`INSERT INTO ticket (id, ticket_state_id, until_time, change_by) VALUES (1, 1, 0, 7)`,
 	}
 	for _, q := range seeds {
-		if _, err := db.Exec(q); err != nil {
+		if _, err := db.Exec(database.ConvertPlaceholders(q)); err != nil {
 			t.Fatalf("seed %q: %v", q, err)
 		}
 	}
@@ -64,7 +65,7 @@ func newTicketStateTestHost(t *testing.T) *ProdHostAPI {
 func scanTicketState(t *testing.T, h *ProdHostAPI, ticketID int64) (stateID, untilTime, changeBy int64) {
 	t.Helper()
 	db, _ := h.getDB("")
-	if err := db.QueryRow(`SELECT ticket_state_id, until_time, change_by FROM ticket WHERE id = ?`, ticketID).
+	if err := db.QueryRow(database.ConvertPlaceholders(`SELECT ticket_state_id, until_time, change_by FROM ticket WHERE id = ?`), ticketID).
 		Scan(&stateID, &untilTime, &changeBy); err != nil {
 		t.Fatalf("scan ticket: %v", err)
 	}
@@ -106,7 +107,7 @@ func TestChangeTicketStatus_NonPendingClearsUntil(t *testing.T) {
 	ctx := context.Background()
 
 	db, _ := h.getDB("")
-	if _, err := db.Exec(`UPDATE ticket SET until_time = 1893456000 WHERE id = 1`); err != nil {
+	if _, err := db.Exec(database.ConvertPlaceholders(`UPDATE ticket SET until_time = 1893456000 WHERE id = 1`)); err != nil {
 		t.Fatalf("seed until: %v", err)
 	}
 

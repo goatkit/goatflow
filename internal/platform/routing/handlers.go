@@ -501,7 +501,7 @@ func HandleAgentNewTicket(c *gin.Context) {
 
 	// Queues
 	queues := []gin.H{}
-	if rows, err := db.QueryContext(c.Request.Context(), `SELECT id, name FROM queue WHERE valid_id = 1 ORDER BY name`); err == nil {
+	if rows, err := db.QueryContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT id, name FROM queue WHERE valid_id = 1 ORDER BY name`)); err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var id int
@@ -514,7 +514,7 @@ func HandleAgentNewTicket(c *gin.Context) {
 	}
 	// Priorities
 	priorities := []gin.H{}
-	if rows, err := db.QueryContext(c.Request.Context(), `SELECT id, name FROM ticket_priority WHERE valid_id = 1 ORDER BY id`); err == nil {
+	if rows, err := db.QueryContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT id, name FROM ticket_priority WHERE valid_id = 1 ORDER BY id`)); err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var id int
@@ -527,7 +527,7 @@ func HandleAgentNewTicket(c *gin.Context) {
 	}
 	// Types
 	types := []gin.H{}
-	if rows, err := db.QueryContext(c.Request.Context(), `SELECT id, name FROM ticket_type WHERE valid_id = 1 ORDER BY name`); err == nil {
+	if rows, err := db.QueryContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT id, name FROM ticket_type WHERE valid_id = 1 ORDER BY name`)); err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var id int
@@ -540,7 +540,7 @@ func HandleAgentNewTicket(c *gin.Context) {
 	}
 	// Customer users seed (limited)
 	customerUsers := []gin.H{}
-	if rows, err := db.QueryContext(c.Request.Context(), `SELECT login, email, first_name, last_name, customer_id FROM customer_user WHERE valid_id = 1 ORDER BY last_name, first_name, email LIMIT 250`); err == nil {
+	if rows, err := db.QueryContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT login, email, first_name, last_name, customer_id FROM customer_user WHERE valid_id = 1 ORDER BY last_name, first_name, email LIMIT 250`)); err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var login, email, fn, ln, cid sql.NullString

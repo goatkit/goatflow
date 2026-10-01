@@ -130,7 +130,7 @@ func handleQueues(c *gin.Context) {
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		GROUP BY queue_id, ts.name`
-	rows, qerr := db.Query(query)
+	rows, qerr := db.Query(database.ConvertPlaceholders(query))
 	stats := map[uint]map[string]int{}
 	if qerr == nil {
 		defer rows.Close()

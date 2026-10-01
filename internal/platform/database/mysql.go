@@ -77,17 +77,17 @@ func (m *MySQLDatabase) GetConfig() DatabaseConfig {
 
 // Query executes a query and returns rows.
 func (m *MySQLDatabase) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	return m.db.QueryContext(ctx, query, args...)
+	return m.db.QueryContext(ctx, query, args...) // sql-converted: MySQL IDatabase impl (dialect fixed by config.Type); caller passes MySQL SQL
 }
 
 // QueryRow executes a query and returns a single row.
 func (m *MySQLDatabase) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return m.db.QueryRowContext(ctx, query, args...)
+	return m.db.QueryRowContext(ctx, query, args...) // sql-converted: MySQL IDatabase impl (dialect fixed by config.Type); caller passes MySQL SQL
 }
 
 // Exec executes a query and returns the result.
 func (m *MySQLDatabase) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return m.db.ExecContext(ctx, query, args...)
+	return m.db.ExecContext(ctx, query, args...) // sql-converted: MySQL IDatabase impl (dialect fixed by config.Type); caller passes MySQL SQL
 }
 
 // Begin starts a transaction.
@@ -117,7 +117,7 @@ func (m *MySQLDatabase) TableExists(ctx context.Context, tableName string) (bool
 		AND table_name = ?`
 
 	var exists bool
-	err := m.db.QueryRowContext(ctx, query, tableName).Scan(&exists)
+	err := m.db.QueryRowContext(ctx, query, tableName).Scan(&exists) // sql-converted: MySQL IDatabase impl; native MySQL SQL
 	return exists, err
 }
 
@@ -136,7 +136,7 @@ func (m *MySQLDatabase) CreateTable(ctx context.Context, definition *TableDefini
 // DropTable drops a table.
 func (m *MySQLDatabase) DropTable(ctx context.Context, tableName string) error {
 	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", m.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
-	_, err := m.db.ExecContext(ctx, query)
+	_, err := m.db.ExecContext(ctx, query)                              // sql-converted: MySQL IDatabase impl; native MySQL DDL, no placeholders
 	return err
 }
 
@@ -158,14 +158,14 @@ func (m *MySQLDatabase) CreateIndex(ctx context.Context, tableName, indexName st
 		m.Quote(tableName),
 		strings.Join(quotedColumns, ", ")) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
 
-	_, err := m.db.ExecContext(ctx, query)
+	_, err := m.db.ExecContext(ctx, query) // sql-converted: MySQL IDatabase impl; native MySQL DDL, no placeholders
 	return err
 }
 
 // DropIndex drops an index.
 func (m *MySQLDatabase) DropIndex(ctx context.Context, tableName, indexName string) error {
 	query := fmt.Sprintf("DROP INDEX %s ON %s", m.Quote(indexName), m.Quote(tableName)) //nolint:gk-sql-sprintf // quoted DDL identifier; not a SQL bind position
-	_, err := m.db.ExecContext(ctx, query)
+	_, err := m.db.ExecContext(ctx, query)                                              // sql-converted: MySQL IDatabase impl; native MySQL DDL, no placeholders
 	return err
 }
 
@@ -289,15 +289,15 @@ type MySQLTransaction struct {
 }
 
 func (t *MySQLTransaction) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	return t.tx.QueryContext(ctx, query, args...)
+	return t.tx.QueryContext(ctx, query, args...) // sql-converted: MySQL IDatabase impl (dialect fixed by config.Type); caller passes MySQL SQL
 }
 
 func (t *MySQLTransaction) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return t.tx.QueryRowContext(ctx, query, args...)
+	return t.tx.QueryRowContext(ctx, query, args...) // sql-converted: MySQL IDatabase impl (dialect fixed by config.Type); caller passes MySQL SQL
 }
 
 func (t *MySQLTransaction) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return t.tx.ExecContext(ctx, query, args...)
+	return t.tx.ExecContext(ctx, query, args...) // sql-converted: MySQL IDatabase impl (dialect fixed by config.Type); caller passes MySQL SQL
 }
 
 func (t *MySQLTransaction) Commit() error {

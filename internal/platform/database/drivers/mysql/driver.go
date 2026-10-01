@@ -150,7 +150,7 @@ func (d *MySQLDriver) TableExists(tableName string) (bool, error) {
 		AND table_name = ?`
 
 	var exists bool
-	err := d.db.QueryRow(query, tableName).Scan(&exists)
+	err := d.db.QueryRow(query, tableName).Scan(&exists) // sql-converted: MySQL dialect driver; native MySQL SQL
 	return exists, err
 }
 
@@ -297,7 +297,7 @@ func (d *MySQLDriver) Exec(ctx context.Context, query string, args ...interface{
 	if d.db == nil {
 		return nil, sql.ErrConnDone
 	}
-	return d.db.ExecContext(ctx, query, args...)
+	return d.db.ExecContext(ctx, query, args...) // sql-converted: MySQL dialect driver; caller passes this driver's native SQL
 }
 
 // Query executes a query that returns rows.
@@ -305,7 +305,7 @@ func (d *MySQLDriver) Query(ctx context.Context, query string, args ...interface
 	if d.db == nil {
 		return nil, sql.ErrConnDone
 	}
-	return d.db.QueryContext(ctx, query, args...)
+	return d.db.QueryContext(ctx, query, args...) // sql-converted: MySQL dialect driver; caller passes this driver's native SQL
 }
 
 // QueryRow executes a query that returns at most one row.
@@ -313,7 +313,7 @@ func (d *MySQLDriver) QueryRow(ctx context.Context, query string, args ...interf
 	if d.db == nil {
 		return nil
 	}
-	return d.db.QueryRowContext(ctx, query, args...)
+	return d.db.QueryRowContext(ctx, query, args...) // sql-converted: MySQL dialect driver; caller passes this driver's native SQL
 }
 
 // mysqlTransaction wraps sql.Tx to implement Transaction interface.
@@ -330,15 +330,15 @@ func (t *mysqlTransaction) Rollback() error {
 }
 
 func (t *mysqlTransaction) Exec(query string, args ...interface{}) (sql.Result, error) {
-	return t.tx.Exec(query, args...)
+	return t.tx.Exec(query, args...) // sql-converted: MySQL dialect driver; caller passes this driver's native SQL
 }
 
 func (t *mysqlTransaction) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	return t.tx.Query(query, args...)
+	return t.tx.Query(query, args...) // sql-converted: MySQL dialect driver; caller passes this driver's native SQL
 }
 
 func (t *mysqlTransaction) QueryRow(query string, args ...interface{}) *sql.Row {
-	return t.tx.QueryRow(query, args...)
+	return t.tx.QueryRow(query, args...) // sql-converted: MySQL dialect driver; caller passes this driver's native SQL
 }
 
 func init() {

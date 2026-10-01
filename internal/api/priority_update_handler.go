@@ -56,6 +56,10 @@ func HandleUpdatePriorityAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
 		return
 	}
+	if !fitsSmallint(priorityID) {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Priority not found"})
+		return
+	}
 
 	// Determine target color so response reflects final state
 	currentColor := req.Color

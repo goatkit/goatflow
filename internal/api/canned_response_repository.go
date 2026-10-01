@@ -3,7 +3,6 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
-	"strconv"
 	"strings"
 	"time"
 
@@ -102,17 +101,16 @@ func (r *CannedResponseRepository) Create(cr *CannedResponse, userID int) (int, 
 		(name, category, content, content_type, tags, scope, owner_id, team_id, placeholders, 
 		 usage_count, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, NOW(), ?, NOW(), ?)
+		RETURNING id
 	`)
 
-	result, err := r.db.Exec(query,
+	id, err := database.GetAdapter().InsertWithReturning(r.db, query,
 		cr.Name, category, cr.Content, cr.ContentType, string(tagsJSON),
-		cr.Scope, cr.OwnerID, teamID, string(placeholdersJSON), userID)
+		cr.Scope, cr.OwnerID, teamID, string(placeholdersJSON), userID, userID)
 	if err != nil {
 		return 0, err
 	}
-
-	id, err := result.LastInsertId()
-	return int(id), err
+	return int(id), nil
 }
 
 // GetByID retrieves a canned response by ID.
@@ -141,7 +139,6 @@ func (r *CannedResponseRepository) GetByID(id int) (*CannedResponse, error) {
 // ListAccessible returns canned responses accessible to a user.
 func (r *CannedResponseRepository) ListAccessible(userID, teamID int, filters CannedResponseFilters) ([]*CannedResponse, error) {
 	var args []interface{}
-	argIdx := 1
 
 	query := `
 		SELECT id, name, category, content, content_type, tags, scope, owner_id, team_id,
@@ -149,59 +146,46 @@ func (r *CannedResponseRepository) ListAccessible(userID, teamID int, filters Ca
 		FROM canned_response WHERE valid_id = 1 AND (`
 
 	// Build scope conditions
-	conditions := []string{}
-	conditions = append(conditions, "scope = 'global'")
-
-	conditions = append(conditions, "(scope = 'personal' AND owner_id = $"+strconv.Itoa(argIdx)+")")
+	conditions := []string{"scope = 'global'", "(scope = 'personal' AND owner_id = ?)"}
 	args = append(args, userID)
-	argIdx++
-
 	if teamID > 0 {
-		conditions = append(conditions, "(scope = 'team' AND team_id = $"+strconv.Itoa(argIdx)+")")
+		conditions = append(conditions, "(scope = 'team' AND team_id = ?)")
 		args = append(args, teamID)
-		argIdx++
 	}
-
 	query += strings.Join(conditions, " OR ") + ")"
 
 	// Apply filters
 	if filters.Category != "" {
-		query += " AND category = $" + strconv.Itoa(argIdx)
+		query += " AND category = ?"
 		args = append(args, filters.Category)
-		argIdx++
 	}
 	if filters.Scope != "" {
-		query += " AND scope = $" + strconv.Itoa(argIdx)
+		query += " AND scope = ?"
 		args = append(args, filters.Scope)
-		argIdx++
 	}
 	if filters.Search != "" {
-		query += " AND (name LIKE $" + strconv.Itoa(argIdx) + " OR content LIKE $" + strconv.Itoa(argIdx) + ")"
-		args = append(args, "%"+filters.Search+"%")
-		argIdx++
+		search := "%" + filters.Search + "%"
+		query += " AND (LOWER(name) LIKE LOWER(?) OR LOWER(content) LIKE LOWER(?))"
+		args = append(args, search, search)
 	}
-	if len(filters.Tags) > 0 {
-		for _, tag := range filters.Tags {
-			query += " AND tags LIKE $" + strconv.Itoa(argIdx)
-			args = append(args, "%\""+tag+"\"%")
-			argIdx++
-		}
+	for _, tag := range filters.Tags {
+		query += " AND tags LIKE ?"
+		args = append(args, "%\""+tag+"\"%")
 	}
 
-	// Sorting
+	// Sorting: usage and recent are always newest/most-used first (unused
+	// responses, with NULL last_used, after used ones on both databases);
+	// sort_order=desc reverses the name sort.
 	switch filters.SortBy {
-	case "name":
-		query += " ORDER BY name"
 	case "usage":
 		query += " ORDER BY usage_count DESC"
 	case "recent":
-		query += " ORDER BY last_used DESC NULLS LAST"
+		query += " ORDER BY last_used IS NULL, last_used DESC"
 	default:
 		query += " ORDER BY name"
-	}
-
-	if filters.SortOrder == "desc" {
-		query += " DESC"
+		if filters.SortOrder == "desc" {
+			query += " DESC"
+		}
 	}
 
 	rows, err := r.db.Query(database.ConvertPlaceholders(query), args...)
@@ -305,7 +289,7 @@ func (r *CannedResponseRepository) CheckDuplicate(name, scope string, ownerID, t
 
 // ListCategories returns all canned response categories.
 func (r *CannedResponseRepository) ListCategories() ([]string, error) {
-	query := `SELECT DISTINCT name FROM canned_response_category WHERE valid_id = 1 ORDER BY name`
+	query := database.ConvertPlaceholders(`SELECT DISTINCT name FROM canned_response_category WHERE valid_id = 1 ORDER BY name`)
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err

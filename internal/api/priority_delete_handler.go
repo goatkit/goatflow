@@ -48,11 +48,14 @@ func HandleDeletePriorityAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
 		return
 	}
+	if !fitsSmallint(priorityID) {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Priority not found"})
+		return
+	}
 
 	// Soft delete priority (OTRS style - set valid_id = 2)
-	adapter := database.GetAdapter()
-	result, err := adapter.Exec(db,
-		`UPDATE ticket_priority SET valid_id = 2, change_time = NOW(), change_by = ? WHERE id = ?`,
+	result, err := db.Exec(database.ConvertPlaceholders(
+		`UPDATE ticket_priority SET valid_id = 2, change_time = NOW(), change_by = ? WHERE id = ?`),
 		userID, priorityID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete priority"})

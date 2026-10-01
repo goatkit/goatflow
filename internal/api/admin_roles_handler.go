@@ -75,7 +75,7 @@ func handleAdminRoles(c *gin.Context) {
 	var args []interface{}
 
 	if searchQuery != "" {
-		query += " AND (LOWER(r.name) LIKE ? OR LOWER(r.comments) LIKE ?)"
+		query += " AND (LOWER(r.name) LIKE LOWER(?) OR LOWER(r.comments) LIKE LOWER(?))"
 		searchPattern := "%" + searchQuery + "%"
 		args = append(args, searchPattern, searchPattern)
 	}
@@ -93,7 +93,7 @@ func handleAdminRoles(c *gin.Context) {
 	query += " GROUP BY r.id, r.name, r.comments, r.valid_id, r.create_time, r.create_by, r.change_time, r.change_by"
 	query += " ORDER BY r.name ASC"
 
-	rows, err := db.Query(query, args...)
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to fetch roles: "+err.Error())
 		return
@@ -885,11 +885,16 @@ func handleAdminRoleUserAdd(c *gin.Context) {
 		return
 	}
 
-	// Add user to role (use INSERT IGNORE for MySQL compatibility)
-	_, err = db.Exec(database.ConvertPlaceholders(`
-		INSERT IGNORE INTO role_user (role_id, user_id, create_by, change_by)
-		VALUES (?, ?, 1, 1)
-	`), roleID, input.UserID)
+	// Add user to role; role_user has no unique key, so skip existing memberships explicitly.
+	var existing int
+	err = db.QueryRow(database.ConvertPlaceholders(
+		`SELECT COUNT(*) FROM role_user WHERE role_id = ? AND user_id = ?`), roleID, input.UserID).Scan(&existing)
+	if err == nil && existing == 0 {
+		_, err = db.Exec(database.ConvertPlaceholders(`
+			INSERT INTO role_user (role_id, user_id, create_time, create_by, change_time, change_by)
+			VALUES (?, ?, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+		`), roleID, input.UserID)
+	}
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

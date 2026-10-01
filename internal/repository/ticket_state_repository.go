@@ -169,7 +169,8 @@ func (r *TicketStateRepository) Create(state *models.TicketState) error {
 			?, ?, ?, ?, ?, ?, ?, ?
 		) RETURNING id`)
 
-	err := r.db.QueryRow(
+	id, err := database.GetAdapter().InsertWithReturning(
+		r.db,
 		query,
 		state.Name,
 		state.TypeID,
@@ -179,9 +180,12 @@ func (r *TicketStateRepository) Create(state *models.TicketState) error {
 		state.CreateBy,
 		state.ChangeTime,
 		state.ChangeBy,
-	).Scan(&state.ID)
-
-	return err
+	)
+	if err != nil {
+		return err
+	}
+	state.ID = uint(id)
+	return nil
 }
 
 // Update updates a ticket state.

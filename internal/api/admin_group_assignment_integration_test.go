@@ -29,23 +29,35 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
 		ensureTestUserWithGroups(t, db, config)
 	}
 
-	aggregateQuery := func() string {
-		if database.IsMySQL() {
-			return `
-				SELECT GROUP_CONCAT(g.name SEPARATOR ', ') as groups
-				FROM users u
-				LEFT JOIN group_user gu ON u.id = gu.user_id
-				LEFT JOIN groups g ON gu.group_id = g.id
-				WHERE u.login = ?
-				GROUP BY u.id, u.login, u.first_name, u.last_name`
-		}
-		return `
-			SELECT string_agg(g.name, ', ') as groups
+	// userGroupNames returns the user's group names joined with ", "; sql.ErrNoRows
+	// when the user is missing or has no groups.
+	userGroupNames := func(db *sql.DB, login string) (string, error) {
+		rows, err := db.Query(database.ConvertPlaceholders(`
+			SELECT g.name
 			FROM users u
-			LEFT JOIN group_user gu ON u.id = gu.user_id
-			LEFT JOIN groups g ON gu.group_id = g.id
+			JOIN group_user gu ON u.id = gu.user_id
+			JOIN groups g ON gu.group_id = g.id
 			WHERE u.login = ?
-			GROUP BY u.id, u.login, u.first_name, u.last_name`
+			ORDER BY g.name`), login)
+		if err != nil {
+			return "", err
+		}
+		defer rows.Close()
+		var names []string
+		for rows.Next() {
+			var name string
+			if err := rows.Scan(&name); err != nil {
+				return "", err
+			}
+			names = append(names, name)
+		}
+		if err := rows.Err(); err != nil {
+			return "", err
+		}
+		if len(names) == 0 {
+			return "", sql.ErrNoRows
+		}
+		return strings.Join(names, ", "), nil
 	}
 
 	// Manual database check first - this should pass based on our earlier query
@@ -58,8 +70,7 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
 		ensureTestUserWithGroups(t, db, config)
 
 		// Query to verify user groups
-		var groups string
-		err = db.QueryRow(database.ConvertPlaceholders(aggregateQuery()), config.UserLogin).Scan(&groups)
+		groups, err := userGroupNames(db, config.UserLogin)
 
 		if err != nil {
 			t.Logf("Could not find test user or query failed: %v", err)
@@ -171,8 +182,7 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
 		t.Logf("Update response body: %s", w.Body.String())
 
 		// Now check if the database was actually updated
-		var newGroups string
-		err = db.QueryRow(database.ConvertPlaceholders(aggregateQuery()), config.UserLogin).Scan(&newGroups)
+		newGroups, err := userGroupNames(db, config.UserLogin)
 
 		if err == nil {
 			t.Logf("Groups after update: %s", newGroups)

@@ -64,9 +64,9 @@ func TestGroupAssignmentNotPersisting(t *testing.T) {
 
 		// ASSERT: Groups should actually be persisted in database
 		var actualGroups []string
-		rows, err := db.Query(`SELECT LOWER(g.name) FROM groups g 
-			JOIN group_user gu ON g.id = gu.group_id 
-			WHERE gu.user_id = 15 AND g.valid_id = 1`)
+		rows, err := db.Query(database.ConvertPlaceholders(`SELECT LOWER(g.name) FROM groups g
+			JOIN group_user gu ON g.id = gu.group_id
+			WHERE gu.user_id = 15 AND g.valid_id = 1`))
 		require.NoError(t, err)
 		defer rows.Close()
 
@@ -292,12 +292,12 @@ func TestUserWorkflowEndToEnd(t *testing.T) {
 
 		// ASSERT: Verify changes are actually persisted by querying database directly
 		var dbGroups []string
-		groupQuery := `
-			SELECT g.name 
-			FROM groups g 
-			JOIN group_user gu ON g.id = gu.group_id 
+		groupQuery := database.ConvertPlaceholders(`
+			SELECT g.name
+			FROM groups g
+			JOIN group_user gu ON g.id = gu.group_id
 			WHERE gu.user_id = 15 AND g.valid_id = 1
-			ORDER BY g.name`
+			ORDER BY g.name`)
 
 		rows, err := db.Query(groupQuery)
 		require.NoError(t, err)

@@ -108,7 +108,7 @@ func handleAssignTicket(c *gin.Context) {
 	var agentName string
 	if db != nil {
 		nameErr := db.QueryRow(database.ConvertPlaceholders(`
-            SELECT first_name || ' ' || last_name
+            SELECT CONCAT(first_name, ' ', last_name)
             FROM users
             WHERE id = ?
 	        `), agentID).Scan(&agentName)
@@ -419,10 +419,10 @@ func handleReopenTicket(c *gin.Context) {
 
 	// Insert article for reopen note (internal note, channel 3)
 	// First insert article record
-	articleResult, err := db.Exec(database.ConvertPlaceholders(`
+	articleID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id,
 			is_visible_for_customer, search_index_needs_rebuild, create_time, create_by, change_time, change_by)
-		VALUES (?, 1, 3, 0, 1, NOW(), ?, NOW(), ?)
+		VALUES (?, 1, 3, 0, 1, NOW(), ?, NOW(), ?) RETURNING id
 	`), ticketIDInt, userID, userID)
 
 	if err != nil {
@@ -430,7 +430,6 @@ func handleReopenTicket(c *gin.Context) {
 		fmt.Printf("Warning: Failed to add reopen article: %v\n", err)
 	} else {
 		// Insert article_data_mime with the actual content
-		articleID, _ := articleResult.LastInsertId()
 		if articleID > 0 {
 			_, mimeErr := db.Exec(database.ConvertPlaceholders(`
 				INSERT INTO article_data_mime (article_id, a_from, a_subject, a_body,
@@ -928,11 +927,10 @@ func handleGetAvailableAgents(c *gin.Context) {
 		WHERE t.id = ?
 		  AND u.valid_id = 1
 		  AND ug.permission_key IN ('rw', 'move_into', 'create', 'owner')
-		  AND ug.permission_value = 1
 		ORDER BY u.id
 	`
 
-	rows, err := db.Query(query, ticketIDInt)
+	rows, err := db.Query(database.ConvertPlaceholders(query), ticketIDInt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch agents"})
 		return
