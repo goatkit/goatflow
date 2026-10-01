@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -1090,6 +1091,19 @@ func (m *Manager) MenuItems(location string) []PluginMenuItem {
 			}
 		}
 	}
+	// m.plugins is a map, so without a sort the nav order changed between
+	// restarts. Order is the author's intent; plugin name and item ID break
+	// ties so equal Orders still render the same way every time.
+	sort.Slice(items, func(a, b int) bool {
+		x, y := items[a], items[b]
+		if x.Order != y.Order {
+			return x.Order < y.Order
+		}
+		if x.PluginName != y.PluginName {
+			return x.PluginName < y.PluginName
+		}
+		return x.ID < y.ID
+	})
 	return items
 }
 

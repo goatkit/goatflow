@@ -126,6 +126,21 @@
             </div>
         </div>
 
+        {# Connected accounts: plugin MenuItems with Location "profile" (per-user connections such as a calendar). #}
+        {% if PluginProfileMenuItems %}
+        <div class="gk-card-body" style="border-top: 1px solid var(--gk-border-default);" data-section="connected-accounts">
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-1" style="color: var(--gk-text-muted);">{{ t("settings.connected_accounts")|default:"Connected accounts" }}</h4>
+            <p class="text-xs mb-3" style="color: var(--gk-text-muted);">{{ t("settings.connected_accounts_help")|default:"Services you connect to your own account, such as your calendar." }}</p>
+            <div class="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-6">
+                {% for pmi in PluginProfileMenuItems %}
+                <a href="{{ pmi.Path }}" class="inline-flex items-center text-sm gk-link-neon">
+                    {% if pmi.Icon %}<i class="fa-solid {{ pmi.Icon }} mr-1.5" aria-hidden="true"></i>{% endif %}{{ t(pmi.Label) }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Two-Factor Authentication -->
         {% if User.IsDemo %}
         <div class="gk-card-body" style="border-top: 1px solid var(--gk-border-default);">

@@ -3174,6 +3174,8 @@
     "api_keys": "Clés API",
     "api_tokens": "Jetons API",
     "api_tokens_description": "Créer et gérer des jetons d'accès personnel pour l'authentification API",
+    "connected_accounts": "Comptes connectés",
+    "connected_accounts_help": "Services que vous connectez à votre propre compte, comme votre calendrier.",
     "appearance": "Apparence",
     "auto_theme": "Auto",
     "backup": "Sauvegarde",

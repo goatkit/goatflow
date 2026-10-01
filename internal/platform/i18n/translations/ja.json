@@ -3174,6 +3174,8 @@
     "api_keys": "APIキー",
     "api_tokens": "APIトークン",
     "api_tokens_description": "API認証用の個人アクセストークンを作成・管理",
+    "connected_accounts": "連携アカウント",
+    "connected_accounts_help": "カレンダーなど、ご自身のアカウントに連携したサービスです。",
     "appearance": "外観",
     "auto_theme": "自動",
     "backup": "バックアップ",

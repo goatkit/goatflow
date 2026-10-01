@@ -3200,6 +3200,8 @@
     "api_keys": "API کیز",
     "api_tokens": "API ٹوکنز",
     "api_tokens_description": "API تصدیق کے لیے ذاتی رسائی ٹوکنز بنائیں اور منظم کریں",
+    "connected_accounts": "منسلک اکاؤنٹس",
+    "connected_accounts_help": "وہ سروسز جو آپ نے اپنے اکاؤنٹ سے منسلک کی ہیں، جیسے آپ کا کیلنڈر۔",
     "appearance": "ظاہری شکل",
     "auto_theme": "خودکار",
     "backup": "بیک اپ",

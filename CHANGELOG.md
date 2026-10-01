@@ -10,6 +10,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.10.0] - Unreleased
 
 ### Added
+- **Plugin menu location `profile`: Profile → Connected accounts.** Per-user settings pages
+  (connecting your own calendar or mailbox) get a home next to 2FA and API tokens instead of a
+  top-nav slot, which promises a place to work in. The section only renders when an enabled
+  plugin declares a `profile` item. Agent profile only; customers are unaffected.
 - **Plugins receive the user's language as `_lang`.** Route calls (`buildPluginArgs`) and plugin
   UI page calls (`pluginui`) now carry the i18n middleware's resolved language code next to the
   identity keys. gRPC plugins could not localise before: their `HostAPI.Translate` callback runs
@@ -151,6 +155,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
   (`cmd/goats/main.go`).
 
 ### Fixed
+- **Plugin menu items render in a stable order and translate their labels.** `Manager.MenuItems`
+  iterated a map, so plugin nav links could swap places between restarts and `Order` was
+  ignored; items now sort by `Order`, then plugin name, then ID. Labels go through `t()` in the
+  top nav, mobile sidebar, admin cards and Profile, so a plugin can use a key from its
+  `I18nSpec` (plain labels render unchanged).
 - **Plugin pages and YAML routes now see the user's language.** Both are served by the dynamic
   engine via `NoRoute` → `HandleContext`, which resets the gin.Context keys the main engine's i18n
   middleware set, so `c.Get("language")` was always empty there (plugin UI shells rendered LTR

@@ -3181,6 +3181,8 @@
     "api_keys": "מפתחות API",
     "api_tokens": "אסימוני API",
     "api_tokens_description": "יצירה וניהול של אסימוני גישה אישיים לאימות API",
+    "connected_accounts": "חשבונות מקושרים",
+    "connected_accounts_help": "שירותים שחיברת לחשבון שלך, כמו לוח השנה שלך.",
     "appearance": "מראה",
     "auto_theme": "אוטומטי",
     "backup": "גיבוי",

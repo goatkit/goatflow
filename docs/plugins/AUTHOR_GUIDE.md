@@ -322,6 +322,19 @@ On Linux, gRPC plugins run with OS-level restrictions:
 
 Plugins can customize the GoatFlow navigation to create focused, single-purpose experiences — for example, a plugin that replaces the helpdesk UI entirely with its own interface.
 
+### Menu Item Locations
+
+Pick the location by what the page is for, not by who builds it:
+
+| `Location` | Where it appears | Use for |
+|------------|------------------|---------|
+| `agent` | Agent top nav + mobile sidebar | Pages agents work in every day |
+| `admin` | Card in **Admin → Plugin Administration** | Organisation-wide settings (gate the route with `admin` middleware) |
+| `profile` | **Profile → Connected accounts** | Per-user settings an agent sets once, e.g. connecting their own calendar or mailbox |
+| `customer` | Customer portal nav (filtered by plugin access) | Customer-facing pages |
+
+A settings page that a user visits once should not take a top-nav slot: a nav entry promises a place to work in. Items are sorted by `Order` (ascending), then plugin name, then `ID`. `Label` may be an i18n key from the plugin's `I18nSpec` (e.g. `calendar.menu.connections`); every location renders it through `t()`, so plain text labels still work.
+
 ### Hiding Default Menu Items
 
 Use `HideMenuItems` to remove built-in navigation entries when your plugin is enabled:

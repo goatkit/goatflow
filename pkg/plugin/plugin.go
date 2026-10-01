@@ -149,12 +149,12 @@ type SetupTaskSpec struct {
 // MenuItemSpec defines a navigation menu entry.
 type MenuItemSpec struct {
 	ID       string         `json:"id"`                 // unique identifier
-	Label    string         `json:"label"`              // display text (can be i18n key)
+	Label    string         `json:"label"`              // display text or i18n key (e.g. "<namespace>.menu.x" from the plugin's I18nSpec)
 	Icon     string         `json:"icon,omitempty"`     // icon name or SVG
 	Path     string         `json:"path"`               // URL path when clicked
-	Location string         `json:"location"`           // where to insert: "admin", "agent", "customer"
+	Location string         `json:"location"`           // where to insert: "agent" (top nav), "admin" (admin dashboard card), "customer" (portal nav), "profile" (agent Profile page, Connected accounts)
 	Parent   string         `json:"parent,omitempty"`   // parent menu ID for submenus
-	Order    int            `json:"order,omitempty"`    // sort order within location
+	Order    int            `json:"order,omitempty"`    // sort order within location (ascending; ties by plugin name, then ID)
 	Children []MenuItemSpec `json:"children,omitempty"` // nested menu items
 }
 

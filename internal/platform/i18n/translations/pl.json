@@ -3230,6 +3230,8 @@
     "api_keys": "Klucze API",
     "api_tokens": "Tokeny API",
     "api_tokens_description": "Tworzenie i zarządzanie osobistymi tokenami dostępu do uwierzytelniania API",
+    "connected_accounts": "Połączone konta",
+    "connected_accounts_help": "Usługi połączone z Twoim własnym kontem, np. Twój kalendarz.",
     "appearance": "Wygląd",
     "appearance_desc": "Dostosuj wygląd interfejsu",
     "auto_theme": "Automatyczny",

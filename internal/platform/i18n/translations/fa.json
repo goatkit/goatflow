@@ -3171,6 +3171,8 @@
     "api_keys": "کلیدهای API",
     "api_tokens": "توکن‌های API",
     "api_tokens_description": "ایجاد و مدیریت توکن‌های دسترسی شخصی برای احراز هویت API",
+    "connected_accounts": "حساب‌های متصل",
+    "connected_accounts_help": "سرویس‌هایی که به حساب خود متصل کرده‌اید، مانند تقویم شما.",
     "appearance": "ظاهر",
     "auto_theme": "خودکار",
     "backup": "پشتیبان",

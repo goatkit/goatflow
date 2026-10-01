@@ -220,6 +220,11 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 		if _, hasIt := ctx["PluginAgentMenuItems"]; !hasIt {
 			ctx["PluginAgentMenuItems"] = globalPluginMenuProvider("agent")
 		}
+		// "profile": per-user settings pages (connected accounts such as a
+		// calendar), listed on the agent's own Profile page.
+		if _, hasIt := ctx["PluginProfileMenuItems"]; !hasIt && !isCustomer {
+			ctx["PluginProfileMenuItems"] = globalPluginMenuProvider("profile")
+		}
 		if _, hasIt := ctx["PluginCustomerMenuItems"]; !hasIt {
 			items := globalPluginMenuProvider("customer")
 			if isCustomer && globalPluginAccessChecker != nil {

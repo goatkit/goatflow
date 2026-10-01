@@ -3609,6 +3609,8 @@
     "api_keys": "API Keys",
     "api_tokens": "API Tokens",
     "api_tokens_description": "Create and manage personal access tokens for API authentication",
+    "connected_accounts": "Connected accounts",
+    "connected_accounts_help": "Services you connect to your own account, such as your calendar.",
     "appearance": "Appearance",
     "auto_theme": "Auto",
     "backup": "Backup",

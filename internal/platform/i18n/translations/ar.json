@@ -3174,6 +3174,8 @@
     "api_keys": "مفاتيح API",
     "api_tokens": "رموز API",
     "api_tokens_description": "إنشاء وإدارة رموز الوصول الشخصية لمصادقة API",
+    "connected_accounts": "الحسابات المرتبطة",
+    "connected_accounts_help": "الخدمات التي تربطها بحسابك الخاص، مثل التقويم الخاص بك.",
     "appearance": "المظهر",
     "auto_theme": "تلقائي",
     "backup": "النسخ الاحتياطي",

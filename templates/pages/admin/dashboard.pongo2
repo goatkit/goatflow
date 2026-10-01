@@ -600,7 +600,7 @@
                             {% if item.Icon %}<i class="fa-solid {{ item.Icon }} text-xl" aria-hidden="true"></i>{% else %}<i class="fa-solid fa-puzzle-piece text-xl" aria-hidden="true"></i>{% endif %}
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ item.Label }}</h3>
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t(item.Label) }}</h3>
                             <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ item.PluginName }}</p>
                         </div>
                     </div>

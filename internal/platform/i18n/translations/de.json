@@ -3196,6 +3196,8 @@
     "api_keys": "API-Schlüssel",
     "api_tokens": "API-Token",
     "api_tokens_description": "Persönliche Zugriffstoken für API-Authentifizierung erstellen und verwalten",
+    "connected_accounts": "Verbundene Konten",
+    "connected_accounts_help": "Dienste, die Sie mit Ihrem eigenen Konto verbinden, z. B. Ihren Kalender.",
     "appearance": "Erscheinungsbild",
     "auto_theme": "Automatisch",
     "backup": "Sicherung",
