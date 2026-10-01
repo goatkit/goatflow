@@ -31,6 +31,7 @@ func init() {
 	routing.RegisterHandler("handleTOTPConfirm", handleTOTPConfirm)
 	routing.RegisterHandler("handleTOTPDisable", handleTOTPDisable)
 	routing.RegisterHandler("handleTOTPVerify", handleTOTPVerify)
+	routing.RegisterHandler("handleRecoveryCodesRegenerate", handleRecoveryCodesRegenerate)
 
 	// Customer 2FA handlers
 	routing.RegisterHandler("handleCustomerTOTPStatus", handleCustomerTOTPStatus)
@@ -39,6 +40,7 @@ func init() {
 	routing.RegisterHandler("handleCustomerTOTPDisable", handleCustomerTOTPDisable)
 	routing.RegisterHandler("handleCustomer2FAPage", handleCustomer2FAPage)
 	routing.RegisterHandler("handleCustomer2FAVerify", handleCustomer2FAVerify)
+	routing.RegisterHandler("handleCustomerRecoveryCodesRegenerate", handleCustomerRecoveryCodesRegenerate)
 
 	// Admin 2FA override handlers
 	routing.RegisterHandler("handleAdmin2FAOverride", handleAdmin2FAOverride)
@@ -214,7 +216,9 @@ func handleTOTPConfirm(c *gin.Context) {
 	})
 }
 
-// handleTOTPDisable disables 2FA for the current user.
+// handleTOTPDisable turns 2FA off for the current user: authenticator app,
+// recovery codes and every passkey. Leaving passkeys behind would keep them
+// required at login after the user chose "off".
 // V9: Requires password re-verification to prevent session hijacking attacks.
 func handleTOTPDisable(c *gin.Context) {
 	userID := getTOTPUserID(c)
@@ -250,10 +254,7 @@ func handleTOTPDisable(c *gin.Context) {
 		return
 	}
 
-	totpService := service.NewTOTPService(db, "GoatFlow")
-
-	if err := totpService.Disable(userID, req.Code); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+	if !turnOffSecondFactors(c, db, agentMFAAccount(userID), req.Code) {
 		return
 	}
 
@@ -353,6 +354,80 @@ This is an automated security notification from GoatFlow.
 	} else {
 		log.Printf("[SECURITY] Admin 2FA override notification sent to %s", email)
 	}
+}
+
+// turnOffSecondFactors checks code (authenticator or recovery code), then
+// removes the authenticator app, recovery codes and all passkeys. It writes
+// the error response and returns false on failure.
+func turnOffSecondFactors(c *gin.Context, db *sql.DB, account mfaAccount, code string) bool {
+	if err := account.totp(db).Disable(account.userID, code); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+		return false
+	}
+	if err := account.deleteAllPasskeys(db, c.Request); err != nil {
+		log.Printf("[SECURITY] 2FA turned off but passkeys not removed user_type=%s user=%s: %v", account.userType, account.webAuthnKey(), err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to remove passkeys"})
+		return false
+	}
+	auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "MFA_TURNED_OFF", UserID: account.userID, UserLogin: account.webAuthnKey(), IsCustomer: account.isCustomer(), ClientIP: c.ClientIP(), Success: true, Details: "authenticator app, recovery codes and passkeys removed"})
+	return true
+}
+
+// handleRecoveryCodesRegenerate replaces the current agent's recovery codes.
+func handleRecoveryCodesRegenerate(c *gin.Context) {
+	userID := getTOTPUserID(c)
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "unauthorized"})
+		return
+	}
+	regenerateRecoveryCodes(c, agentMFAAccount(userID), func(db *sql.DB, password string) bool {
+		_, err := verifyAgentPasswordAndDisplayName(db, userID, password)
+		return err == nil
+	})
+}
+
+// handleCustomerRecoveryCodesRegenerate replaces the current customer's recovery codes.
+func handleCustomerRecoveryCodesRegenerate(c *gin.Context) {
+	customerLogin := getCustomerLogin(c)
+	if customerLogin == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "unauthorized"})
+		return
+	}
+	regenerateRecoveryCodes(c, customerMFAAccount(customerLogin), func(db *sql.DB, password string) bool {
+		return verifyCustomerPassword(db, customerLogin, password)
+	})
+}
+
+// regenerateRecoveryCodes issues a new set of recovery codes after a password
+// check. Only accounts with a second factor have codes; old codes stop working.
+func regenerateRecoveryCodes(c *gin.Context, account mfaAccount, passwordOK func(db *sql.DB, password string) bool) {
+	var req struct {
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "password is required"})
+		return
+	}
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "database unavailable"})
+		return
+	}
+	if !passwordOK(db, req.Password) {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
+		return
+	}
+	if !account.hasAnySecondFactor(db, c.Request) {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "two-factor authentication is not enabled"})
+		return
+	}
+	codes, err := account.totp(db).RegenerateRecoveryCodes(account.userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to create recovery codes"})
+		return
+	}
+	auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "RECOVERY_CODES_REGENERATED", UserID: account.userID, UserLogin: account.webAuthnKey(), IsCustomer: account.isCustomer(), ClientIP: c.ClientIP(), Success: true, Details: "recovery codes replaced"})
+	c.JSON(http.StatusOK, gin.H{"success": true, "recovery_codes": codes})
 }
 
 // handleTOTPVerify verifies a TOTP code during login (called after password verification).
@@ -669,7 +744,7 @@ func handleCustomerTOTPConfirm(c *gin.Context) {
 	})
 }
 
-// handleCustomerTOTPDisable disables 2FA for a customer.
+// handleCustomerTOTPDisable turns 2FA off for a customer (see handleTOTPDisable).
 // V9: Requires password re-verification to prevent session hijacking attacks.
 func handleCustomerTOTPDisable(c *gin.Context) {
 	customerLogin := getCustomerLogin(c)
@@ -699,10 +774,7 @@ func handleCustomerTOTPDisable(c *gin.Context) {
 		return
 	}
 
-	totpService := service.NewTOTPService(db, "GoatFlow")
-
-	if err := totpService.DisableForCustomer(customerLogin, req.Code); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+	if !turnOffSecondFactors(c, db, customerMFAAccount(customerLogin), req.Code) {
 		return
 	}
 

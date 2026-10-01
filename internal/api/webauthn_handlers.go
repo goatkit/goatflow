@@ -102,7 +102,7 @@ func handleWebAuthnRegisterFinish(c *gin.Context) {
 		return
 	}
 	auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "WEBAUTHN_REGISTERED", UserID: userID, UserLogin: displayName, ClientIP: c.ClientIP(), Success: true, Details: "security key registered"})
-	c.JSON(http.StatusOK, gin.H{"success": true, "credential": publicWebAuthnCredential(rec)})
+	respondPasskeyRegistered(c, db, agentMFAAccount(userID), rec)
 }
 
 func handleWebAuthnCredentials(c *gin.Context) {
@@ -144,7 +144,7 @@ func handleWebAuthnCredentialDelete(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": err.Error()})
 		return
 	}
-	deleteWebAuthnCredential(c, db, service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(userID))
+	deleteWebAuthnCredential(c, db, agentMFAAccount(userID))
 }
 
 func handleWebAuthnLoginBegin(c *gin.Context) {
@@ -262,7 +262,7 @@ func handleCustomerWebAuthnRegisterFinish(c *gin.Context) {
 		return
 	}
 	auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "WEBAUTHN_REGISTERED", UserLogin: customerLogin, IsCustomer: true, ClientIP: c.ClientIP(), Success: true, Details: "customer security key registered"})
-	c.JSON(http.StatusOK, gin.H{"success": true, "credential": publicWebAuthnCredential(rec)})
+	respondPasskeyRegistered(c, db, customerMFAAccount(customerLogin), rec)
 }
 
 func handleCustomerWebAuthnCredentials(c *gin.Context) {
@@ -304,7 +304,7 @@ func handleCustomerWebAuthnCredentialDelete(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
-	deleteWebAuthnCredential(c, db, service.WebAuthnUserTypeCustomer, customerLogin)
+	deleteWebAuthnCredential(c, db, customerMFAAccount(customerLogin))
 }
 
 func handleCustomerWebAuthnLoginBegin(c *gin.Context) {
@@ -545,7 +545,11 @@ func listWebAuthnCredentials(c *gin.Context, userType, userKey string) {
 	}
 	credentials := make([]gin.H, 0, len(records))
 	for i := range records {
-		credentials = append(credentials, publicWebAuthnCredential(&records[i]))
+		out := publicWebAuthnCredential(&records[i])
+		origin := wa.CredentialOrigin(&records[i])
+		out["registered_host"] = origin.Host
+		out["usable_here"] = origin.UsableHere
+		credentials = append(credentials, out)
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "credentials": credentials})
 }
@@ -575,19 +579,44 @@ func renameWebAuthnCredential(c *gin.Context, userType, userKey string) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-func deleteWebAuthnCredential(c *gin.Context, db *sql.DB, userType, userKey string) {
+// deleteWebAuthnCredential removes one passkey. Removing the last second
+// factor also drops the recovery codes, which turns 2FA off.
+func deleteWebAuthnCredential(c *gin.Context, db *sql.DB, account mfaAccount) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "invalid credential id"})
 		return
 	}
-	wa, _ := service.NewWebAuthnService(db, c.Request)
-	if err := wa.DeleteCredential(userType, userKey, id); err != nil {
+	wa, err := service.NewWebAuthnService(db, c.Request)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "security key management unavailable"})
+		return
+	}
+	if err := wa.DeleteCredential(account.userType, account.webAuthnKey(), id); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "failed to remove security key"})
 		return
 	}
-	auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "WEBAUTHN_REMOVED", UserLogin: userKey, IsCustomer: userType == service.WebAuthnUserTypeCustomer, ClientIP: c.ClientIP(), Success: true, Details: "security key removed"})
+	auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "WEBAUTHN_REMOVED", UserLogin: account.webAuthnKey(), IsCustomer: account.isCustomer(), ClientIP: c.ClientIP(), Success: true, Details: "security key removed"})
+	if err := account.clearRecoveryCodesIfNoSecondFactor(db, c.Request); err != nil {
+		log.Printf("[SECURITY] failed to clear recovery codes after last passkey removed user_type=%s user=%s: %v", account.userType, account.webAuthnKey(), err)
+	}
 	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// respondPasskeyRegistered answers a successful passkey registration. An
+// account without recovery codes gets its first set here, returned once as
+// recovery_codes so the user can save them.
+func respondPasskeyRegistered(c *gin.Context, db *sql.DB, account mfaAccount, rec *service.WebAuthnCredentialRecord) {
+	resp := gin.H{"success": true, "credential": publicWebAuthnCredential(rec)}
+	codes, err := account.totp(db).EnsureRecoveryCodes(account.userID)
+	if err != nil {
+		log.Printf("[SECURITY] failed to issue recovery codes after passkey registration user_type=%s user=%s: %v", account.userType, account.webAuthnKey(), err)
+	}
+	if len(codes) > 0 {
+		auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "RECOVERY_CODES_ISSUED", UserID: account.userID, UserLogin: account.webAuthnKey(), IsCustomer: account.isCustomer(), ClientIP: c.ClientIP(), Success: true, Details: "recovery codes issued with first passkey"})
+		resp["recovery_codes"] = codes
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 func publicWebAuthnCredential(rec *service.WebAuthnCredentialRecord) gin.H {

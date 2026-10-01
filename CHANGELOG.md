@@ -10,6 +10,16 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.10.0] - Unreleased
 
 ### Added
+- **Passkey management and recovery codes for passkey users (agents and customers).** Profile
+  lists each passkey/security key with when it was added and last used, the host name it was set
+  up on, and a "Does not work on this address" warning when that host differs from the current
+  one (passkeys are bound to their host name). Each key has a Remove button (password required);
+  removing the last second factor turns 2FA off and deletes the recovery codes. The first passkey
+  now comes with a set of recovery codes, shown once, and "New recovery codes" replaces the set
+  (`POST /api/preferences/2fa/recovery-codes`, `/customer/api/preferences/2fa/recovery-codes`).
+  On the login 2FA step, a passkey-only account gets **Other ways to sign in** with a
+  recovery-code form, or, with no codes, a pointer to an administrator. A password-only fallback
+  is deliberately not offered: it would bypass 2FA.
 - **Plugin menu location `profile`: Profile → Connected accounts.** Per-user settings pages
   (connecting your own calendar or mailbox) get a home next to 2FA and API tokens instead of a
   top-nav slot, which promises a place to work in. The section only renders when an enabled
@@ -155,6 +165,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
   (`cmd/goats/main.go`).
 
 ### Fixed
+- **"Disable 2FA" left passkeys active, which could lock users out.** Turning 2FA off removed
+  only the authenticator app; any passkey stayed required at sign-in, and a passkey made on another
+  host name could not be used at all. Turning 2FA off now removes the authenticator app, every
+  passkey and the recovery codes, and accepts a recovery code as well as an authenticator code.
+- **Recovery codes only worked alongside an authenticator app.** Code validation required a TOTP
+  secret before checking recovery codes; recovery codes now work on their own.
+- **Recovery codes could not be submitted on the 2FA login form.** The code field had a digits-only
+  `pattern`, so the browser blocked the 12-character recovery codes the hint invited.
 - **Plugin menu items render in a stable order and translate their labels.** `Manager.MenuItems`
   iterated a map, so plugin nav links could swap places between restarts and `Order` was
   ignored; items now sort by `Order`, then plugin name, then ID. Labels go through `t()` in the

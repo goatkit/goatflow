@@ -155,7 +155,11 @@
                     <span id="webauthn-info" class="hidden text-sm" style="color: var(--gk-text-muted);">
                         <span id="webauthn-count">0</span> {{ t("settings.2fa.security_keys_registered")|default:"security keys registered" }}
                     </span>
+                    <button type="button" id="mfa-recovery-new-btn" class="hidden gk-btn-secondary text-sm" onclick="gkMFAConfirmNewRecoveryCodes()">
+                        {{ t("settings.2fa.recovery_codes_new")|default:"New recovery codes" }}
+                    </button>
                 </div>
+                <ul id="webauthn-list" class="hidden mt-4" aria-label="{{ t('settings.2fa.passkeys_heading')|default:'Passkeys and security keys' }}"></ul>
             </div>
         </div>
 
@@ -200,7 +204,7 @@
 </div>
 
 <script>
-{% include "partials/mfa_profile_status.pongo2" %}
+{% include "partials/mfa_profile_status.pongo2" with mfa_api_base="/customer/api/preferences/2fa" %}
 
 function showProfileError(msg) {
     const errorToast = document.getElementById('error-toast');
@@ -707,7 +711,11 @@ async function submitSecurityKeyPassword() {
         const finishData = await finish.json();
         if (!finishData.success) throw new Error(finishData.error || '{{ t("settings.2fa.security_key_register_failed")|default:"Failed to register security key"|escapejs }}');
         closeSecurityKeyPasswordModal();
-        window.location.reload();
+        if (finishData.recovery_codes && finishData.recovery_codes.length) {
+            gkMFAShowRecoveryCodes(finishData.recovery_codes, true);
+        } else {
+            window.location.reload();
+        }
     } catch (error) {
         errorEl.textContent = error.message || '{{ t("errors.generic")|default:"An error occurred. Please try again."|escapejs }}';
         errorEl.classList.remove('hidden');
@@ -877,13 +885,13 @@ async function submitSecurityKeyPassword() {
 
                 <div class="mt-4 space-y-4">
                     <p class="text-sm" style="color: var(--gk-text-secondary);">
-                        {{ t("settings.2fa.disable_warning")|default:"Enter your verification code to disable two-factor authentication. This will make your account less secure." }}
+                        {{ t("settings.2fa.turn_off_warning")|default:"This removes your authenticator app, all your passkeys and security keys, and your recovery codes. Enter a code from your authenticator app, or a recovery code, and your password." }}
                     </p>
                     
                     <div>
-                        <label class="gk-form-label">{{ t("auth.verification_code")|default:"Verification Code" }}</label>
-                        <input type="text" id="2fa-disable-code" inputmode="numeric" pattern="[0-9]*"
-                               maxlength="8" class="gk-input-neon mt-1 text-center text-xl tracking-widest"
+                        <label for="2fa-disable-code" class="gk-form-label">{{ t("settings.2fa.app_or_recovery_code")|default:"Authenticator code or recovery code" }}</label>
+                        <input type="text" id="2fa-disable-code" autocomplete="off" autocapitalize="off" spellcheck="false"
+                               maxlength="20" class="gk-input-neon mt-1 text-center text-xl tracking-widest"
                                placeholder="000000" style="letter-spacing: 0.3em;">
                     </div>
                     
@@ -919,4 +927,5 @@ async function submitSecurityKeyPassword() {
         </div>
     </div>
 </div>
+{% include "partials/mfa_profile_modals.pongo2" %}
 {% endblock %}

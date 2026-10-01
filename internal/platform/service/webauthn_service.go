@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/go-webauthn/webauthn/protocol/webauthncbor"
 	"github.com/go-webauthn/webauthn/webauthn"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
@@ -168,6 +170,55 @@ func splitCSV(raw string) []string {
 		}
 	}
 	return out
+}
+
+// WebAuthnCredentialOrigin says where a credential was registered and whether
+// it can sign in here. A passkey is bound to the RP ID (host name) it was
+// created for, so one made on another address can never be used on this one.
+type WebAuthnCredentialOrigin struct {
+	Host       string // host the credential was registered on; "" if unknown
+	UsableHere bool
+}
+
+// CredentialOrigin reads the registration origin and RP ID hash stored with
+// the credential and compares the hash with this request's RP ID. Credentials
+// without stored registration data are assumed usable.
+func (s *WebAuthnService) CredentialOrigin(rec *WebAuthnCredentialRecord) WebAuthnCredentialOrigin {
+	out := WebAuthnCredentialOrigin{UsableHere: true}
+	var cred webauthn.Credential
+	if err := json.Unmarshal(rec.credentialJSON, &cred); err != nil {
+		return out
+	}
+	var clientData struct {
+		Origin string `json:"origin"`
+	}
+	if json.Unmarshal(cred.Attestation.ClientDataJSON, &clientData) == nil {
+		if u, err := url.Parse(clientData.Origin); err == nil {
+			out.Host = u.Hostname()
+		}
+	}
+	if rpIDHash := credentialRPIDHash(cred.Attestation); rpIDHash != nil {
+		want := sha256.Sum256([]byte(s.webauthn.Config.RPID))
+		out.UsableHere = bytes.Equal(rpIDHash, want[:])
+	}
+	return out
+}
+
+// credentialRPIDHash returns the SHA-256 RP ID hash that opens the
+// authenticator data, read from the raw authenticator data or, failing that,
+// from the CBOR attestation object.
+func credentialRPIDHash(att webauthn.CredentialAttestation) []byte {
+	authData := att.AuthenticatorData
+	if len(authData) < sha256.Size && len(att.Object) > 0 {
+		var obj protocol.AttestationObject
+		if webauthncbor.Unmarshal(att.Object, &obj) == nil {
+			authData = obj.RawAuthData
+		}
+	}
+	if len(authData) < sha256.Size {
+		return nil
+	}
+	return authData[:sha256.Size]
 }
 
 func (s *WebAuthnService) IsEnabled(userType, userKey string) bool {

@@ -1,0 +1,50 @@
+{# Profile 2FA modals shared by the agent and customer profile pages; scripts live in partials/mfa_profile_status.pongo2. #}
+<div id="mfa-confirm-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="mfa-confirm-title">
+    <div class="fixed inset-0 bg-black/50" onclick="gkMFACloseConfirm()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="gk-card-glow max-w-md w-full relative" style="background: var(--gk-bg-surface);">
+            <div class="p-6">
+                <h3 id="mfa-confirm-title" class="gk-card-title"></h3>
+                <div class="mt-4 space-y-4">
+                    <p id="mfa-confirm-message" class="text-sm" style="color: var(--gk-text-secondary);"></p>
+                    <p id="mfa-confirm-warning" class="hidden text-sm font-medium" style="color: var(--gk-warning);"></p>
+                    <div>
+                        <label for="mfa-confirm-password" class="gk-form-label">{{ t("auth.password")|default:"Password" }}</label>
+                        <input type="password" id="mfa-confirm-password" class="gk-input-neon mt-1"
+                               placeholder="{{ t('settings.2fa.password_placeholder')|default:'Enter your password' }}"
+                               autocomplete="current-password"
+                               onkeydown="if(event.key==='Enter') gkMFASubmitConfirm()">
+                        <p id="mfa-confirm-error" class="hidden mt-2 text-sm" style="color: var(--gk-error);"></p>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 mt-6 pt-4" style="border-top: 1px solid var(--gk-border-default);">
+                    <button type="button" onclick="gkMFACloseConfirm()" class="gk-btn-secondary">{{ t("buttons.cancel")|default:"Cancel" }}</button>
+                    <button type="button" onclick="gkMFASubmitConfirm()" id="mfa-confirm-btn" class="gk-btn-neon"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="mfa-recovery-codes-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="mfa-recovery-codes-title">
+    <div class="fixed inset-0 bg-black/50"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="gk-card-glow max-w-md w-full relative" style="background: var(--gk-bg-surface);">
+            <div class="p-6">
+                <h3 id="mfa-recovery-codes-title" class="gk-card-title">{{ t("settings.2fa.recovery_codes_title")|default:"Save your recovery codes" }}</h3>
+                <div class="mt-4 space-y-3">
+                    <p id="mfa-recovery-codes-passkey-intro" class="hidden text-sm" style="color: var(--gk-text-secondary);">
+                        {{ t("settings.2fa.recovery_codes_passkey_intro")|default:"If you cannot use your passkey, sign in with one of these codes instead." }}
+                    </p>
+                    <p class="text-sm font-medium" style="color: var(--gk-warning);">
+                        {{ t("settings.2fa.recovery_codes_warning")|default:"Save these codes in a safe place. Each code can only be used once." }}
+                    </p>
+                    <div id="mfa-recovery-codes-list" class="grid grid-cols-2 gap-2 font-mono text-sm"></div>
+                </div>
+                <div class="flex justify-end mt-6 pt-4" style="border-top: 1px solid var(--gk-border-default);">
+                    <button type="button" onclick="window.location.reload()" id="mfa-recovery-codes-done-btn" class="gk-btn-neon">{{ t("settings.2fa.recovery_codes_done")|default:"I have saved these codes" }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

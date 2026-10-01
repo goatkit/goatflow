@@ -29,35 +29,7 @@
             </div>
 
             {% if show_totp_form %}
-                <form id="2fa-form" class="space-y-5">
-                    <div>
-                        <label for="code" class="form-label">{{ t("auth.verification_code")|default:"Verification Code" }}</label>
-                        <div class="mt-2">
-                            <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]*"
-                                   autocomplete="one-time-code" required autofocus
-                                   maxlength="16"
-                                   class="gk-input-neon text-center text-2xl tracking-widest"
-                                   placeholder="000000"
-                                   style="letter-spacing: 0.5em;">
-                        </div>
-                        <p class="mt-2 text-xs" style="color: var(--gk-text-muted);">
-                            {{ t("auth.2fa_recovery_hint")|default:"You can also use a recovery code" }}
-                        </p>
-                    </div>
-
-                    <div>
-                        <button type="submit" id="verify-btn" class="gk-btn-neon w-full">
-                            <span id="btn-text">{{ t("auth.verify")|default:"Verify" }}</span>
-                            <span id="btn-loading" class="hidden">
-                                <svg class="animate-spin h-5 w-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                {{ t("common.verifying")|default:"Verifying..." }}
-                            </span>
-                        </button>
-                    </div>
-                </form>
+                {% include "partials/mfa_code_form.pongo2" %}
             {% endif %}
 
             {% if webauthn_enabled %}
@@ -66,6 +38,23 @@
                         {{ t("auth.use_security_key")|default:"Use security key" }}
                     </button>
                 </div>
+            {% endif %}
+
+            {% if security_key_only %}
+                <details id="other-sign-in-ways" class="mt-6">
+                    <summary class="text-sm text-center cursor-pointer gk-link-neon">
+                        {{ t("auth.other_ways_to_sign_in")|default:"Other ways to sign in" }}
+                    </summary>
+                    <div class="mt-4">
+                        {% if show_recovery_form %}
+                            {% include "partials/mfa_code_form.pongo2" with code_mode="recovery" %}
+                        {% else %}
+                            <p class="text-sm" style="color: var(--gk-text-secondary);">
+                                {{ t("auth.no_other_sign_in_ways")|default:"No other ways to sign in are set up for this account. Ask an administrator to reset your two-factor authentication." }}
+                            </p>
+                        {% endif %}
+                    </div>
+                </details>
             {% endif %}
 
             <div class="mt-6 text-center">
@@ -142,6 +131,14 @@ async function verifyCode() {
         btnLoading.classList.add('hidden');
         verifyBtn.disabled = false;
     }
+}
+
+const otherSignInWays = document.getElementById('other-sign-in-ways');
+if (otherSignInWays) {
+    otherSignInWays.addEventListener('toggle', function() {
+        const field = document.getElementById('code');
+        if (otherSignInWays.open && field) field.focus();
+    });
 }
 
 const twoFAForm = document.getElementById('2fa-form');

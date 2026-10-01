@@ -193,6 +193,8 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 
 **Mitigations:**
 - [x] Disable requires valid TOTP code or recovery code
+- [x] Disable removes every second factor (authenticator app, recovery codes, passkeys); a passkey left behind stayed required at login after the user chose "off"
+- [x] Removing the last passkey with no authenticator app also deletes the recovery codes
 - [x] Audit log when 2FA disabled
 - [x] Email notification when 2FA disabled
 - [x] Require re-authentication before disable (future enhancement)
@@ -305,7 +307,8 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 **Operational notes:**
 
 1. Production deployments must configure HTTPS origins and a stable relying-party ID.
-2. TOTP and recovery codes remain available as fallback methods.
+2. TOTP and recovery codes remain available as fallback methods. The first passkey on an account without recovery codes issues a set (shown once), so passkey-only accounts are never one lost or host-mismatched passkey away from lockout. The login page offers them under "Other ways to sign in"; there is deliberately no password-only fallback.
+4. A passkey only works on the RP ID (host name) it was registered for. Profile shows each passkey's registration host and flags ones that cannot be used on the current address (`WebAuthnService.CredentialOrigin`, from the stored RP ID hash).
 3. Credentials registered before resident-key/passkey options were enabled may need to be removed and re-registered before browsers/password managers offer them for passwordless login.
 
 ## Test Coverage Matrix
@@ -339,6 +342,9 @@ The following events are logged via `internal/platform/auth/totp_audit.go`:
 | `2FA_SESSION_EXPIRED` | Pending session timed out |
 | `2FA_SESSION_LOCKED` | Session locked after max attempts |
 | `2FA_RECOVERY_CODE_USED` | Recovery code consumed |
+| `MFA_TURNED_OFF` | User turned 2FA off: authenticator app, recovery codes and passkeys removed |
+| `RECOVERY_CODES_ISSUED` | First recovery codes issued with a passkey |
+| `RECOVERY_CODES_REGENERATED` | User replaced their recovery codes |
 
 ## References
 

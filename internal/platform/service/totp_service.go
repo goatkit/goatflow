@@ -377,21 +377,25 @@ func (s *TOTPService) ValidateCodeForCustomer(userLogin string, code string) (bo
 
 func (s *TOTPService) validateCodeWithBackend(backend PreferencesBackend, code string) (bool, error) {
 	secret, err := backend.Get("UserTOTPSecret")
-	if err != nil || secret == "" {
-		return false, fmt.Errorf("2FA not configured for user")
+	if err != nil {
+		secret = ""
 	}
 
 	// Try TOTP code first
-	if validateAuthenticatorCode(code, secret) {
+	if secret != "" && validateAuthenticatorCode(code, secret) {
 		return true, nil
 	}
 
-	// Try recovery code
+	// Recovery codes back up every second factor, so they are accepted even
+	// when no authenticator app is set up (a passkey-only account).
 	valid, err := s.useRecoveryCodeWithBackend(backend, code)
 	if err == nil && valid {
 		return true, nil
 	}
 
+	if secret == "" && s.getRemainingRecoveryCodesWithBackend(backend) == 0 {
+		return false, fmt.Errorf("2FA not configured for user")
+	}
 	return false, nil
 }
 
@@ -517,6 +521,45 @@ func (s *TOTPService) getRemainingRecoveryCodesWithBackend(backend PreferencesBa
 		return 0
 	}
 	return len(codes)
+}
+
+// EnsureRecoveryCodes gives the account its first set of recovery codes and
+// returns them so they can be shown once. It returns nil when the account
+// already holds codes. Called when a passkey is added, so a passkey is never
+// the only way through the second step.
+func (s *TOTPService) EnsureRecoveryCodes(userID int) ([]string, error) {
+	backend := s.getBackend(userID)
+	if s.getRemainingRecoveryCodesWithBackend(backend) > 0 {
+		return nil, nil
+	}
+	return s.replaceRecoveryCodesWithBackend(backend)
+}
+
+// RegenerateRecoveryCodes replaces the account's recovery codes with a new
+// set and returns it. The old codes stop working.
+func (s *TOTPService) RegenerateRecoveryCodes(userID int) ([]string, error) {
+	return s.replaceRecoveryCodesWithBackend(s.getBackend(userID))
+}
+
+// ClearRecoveryCodes deletes the account's recovery codes. Used when the last
+// second factor is removed, so leftover codes cannot keep 2FA half-on.
+func (s *TOTPService) ClearRecoveryCodes(userID int) error {
+	return s.getBackend(userID).Delete("UserTOTPRecoveryCodes")
+}
+
+func (s *TOTPService) replaceRecoveryCodesWithBackend(backend PreferencesBackend) ([]string, error) {
+	codes, err := generateRecoveryCodes(8)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate recovery codes: %w", err)
+	}
+	codesJSON, err := json.Marshal(codes)
+	if err != nil {
+		return nil, err
+	}
+	if err := backend.Set("UserTOTPRecoveryCodes", string(codesJSON)); err != nil {
+		return nil, fmt.Errorf("failed to store recovery codes: %w", err)
+	}
+	return codes, nil
 }
 
 // Internal helpers

@@ -1,0 +1,44 @@
+{# Second-step code form for the agent and customer login pages; code_mode="recovery" asks for a recovery code only. #}
+<form id="2fa-form" class="space-y-5">
+    <div>
+        {% if code_mode == "recovery" %}
+        <label for="code" class="form-label">{{ t("auth.recovery_code")|default:"Recovery code" }}</label>
+        <div class="mt-2">
+            <input id="code" name="code" type="text"
+                   autocomplete="off" autocapitalize="off" spellcheck="false" required
+                   maxlength="20"
+                   class="gk-input-neon text-center text-xl tracking-widest font-mono"
+                   placeholder="xxxxxxxxxxxx">
+        </div>
+        <p class="mt-2 text-xs" style="color: var(--gk-text-muted);">
+            {{ t("auth.recovery_code_hint")|default:"Enter one of the recovery codes you saved. Each code works once." }}
+        </p>
+        {% else %}
+        <label for="code" class="form-label">{{ t("auth.verification_code")|default:"Verification Code" }}</label>
+        <div class="mt-2">
+            <input id="code" name="code" type="text" inputmode="numeric"
+                   autocomplete="one-time-code" required autofocus
+                   maxlength="16"
+                   class="gk-input-neon text-center text-2xl tracking-widest"
+                   placeholder="000000"
+                   style="letter-spacing: 0.5em;">
+        </div>
+        <p class="mt-2 text-xs" style="color: var(--gk-text-muted);">
+            {{ t("auth.2fa_recovery_hint")|default:"You can also use a recovery code" }}
+        </p>
+        {% endif %}
+    </div>
+
+    <div>
+        <button type="submit" id="verify-btn" class="gk-btn-neon w-full">
+            <span id="btn-text">{{ t("auth.verify")|default:"Verify" }}</span>
+            <span id="btn-loading" class="hidden">
+                <svg class="animate-spin h-5 w-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {{ t("common.verifying")|default:"Verifying..." }}
+            </span>
+        </button>
+    </div>
+</form>

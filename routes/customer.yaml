@@ -135,6 +135,12 @@ spec:
       middleware: [demo-guard]
       description: "Disable 2FA for customer (requires valid code)"
 
+    - path: /api/preferences/2fa/recovery-codes
+      method: POST
+      handler: handleCustomerRecoveryCodesRegenerate
+      middleware: [demo-guard]
+      description: "Replace customer recovery codes (password required)"
+
     - path: /api/preferences/2fa/webauthn/register/begin
       method: POST
       handler: handleCustomerWebAuthnRegisterBegin

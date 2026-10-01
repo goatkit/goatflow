@@ -520,3 +520,96 @@ func TestTOTP_RecoveryCodesGenerated(t *testing.T) {
 		seen[code] = true
 	}
 }
+
+// =============================================================================
+// Recovery codes as a stand-alone second factor (passkey-only accounts)
+// =============================================================================
+
+// A passkey-only account has recovery codes but no authenticator secret. The
+// codes must still get it through the second step, or a lost/mismatched
+// passkey locks the account until an admin steps in.
+func TestTOTP_RecoveryCodeWorksWithoutAuthenticatorApp(t *testing.T) {
+	db, mock := setupMockDB(t)
+	defer db.Close()
+
+	svc := NewTOTPService(db, "GoatFlow")
+	userID := 123
+	codesJSON, _ := json.Marshal([]string{"abcd1234efgh", "ijkl5678mnop"})
+
+	mock.ExpectQuery("SELECT preferences_value FROM user_preferences").
+		WithArgs(userID, "UserTOTPSecret").
+		WillReturnRows(sqlmock.NewRows([]string{"preferences_value"}))
+	mock.ExpectQuery("SELECT preferences_value FROM user_preferences").
+		WithArgs(userID, "UserTOTPRecoveryCodes").
+		WillReturnRows(sqlmock.NewRows([]string{"preferences_value"}).AddRow(string(codesJSON)))
+	mock.ExpectExec("UPDATE user_preferences").
+		WithArgs(`["ijkl5678mnop"]`, userID, "UserTOTPRecoveryCodes").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	valid, err := svc.ValidateCode(userID, "ABCD-1234-EFGH")
+	require.NoError(t, err)
+	assert.True(t, valid, "recovery code must work without an authenticator app")
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestTOTP_WrongCodeWithoutAuthenticatorAppIsRejectedNotUnconfigured(t *testing.T) {
+	db, mock := setupMockDB(t)
+	defer db.Close()
+
+	svc := NewTOTPService(db, "GoatFlow")
+	userID := 123
+	codesJSON, _ := json.Marshal([]string{"abcd1234efgh"})
+
+	mock.ExpectQuery("SELECT preferences_value FROM user_preferences").
+		WithArgs(userID, "UserTOTPSecret").
+		WillReturnRows(sqlmock.NewRows([]string{"preferences_value"}))
+	mock.ExpectQuery("SELECT preferences_value FROM user_preferences").
+		WithArgs(userID, "UserTOTPRecoveryCodes").
+		WillReturnRows(sqlmock.NewRows([]string{"preferences_value"}).AddRow(string(codesJSON)))
+	mock.ExpectQuery("SELECT preferences_value FROM user_preferences").
+		WithArgs(userID, "UserTOTPRecoveryCodes").
+		WillReturnRows(sqlmock.NewRows([]string{"preferences_value"}).AddRow(string(codesJSON)))
+
+	valid, err := svc.ValidateCode(userID, "zzzz9999zzzz")
+	assert.NoError(t, err)
+	assert.False(t, valid)
+}
+
+func TestTOTP_EnsureRecoveryCodesIssuesFirstSetOnly(t *testing.T) {
+	t.Run("no codes yet: issues and stores a set", func(t *testing.T) {
+		db, mock := setupMockDB(t)
+		defer db.Close()
+		svc := NewTOTPService(db, "GoatFlow")
+
+		mock.ExpectQuery("SELECT preferences_value FROM user_preferences").
+			WithArgs(7, "UserTOTPRecoveryCodes").
+			WillReturnRows(sqlmock.NewRows([]string{"preferences_value"}))
+		mock.ExpectExec("UPDATE user_preferences").
+			WithArgs(sqlmock.AnyArg(), 7, "UserTOTPRecoveryCodes").
+			WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("INSERT INTO user_preferences").
+			WithArgs(7, "UserTOTPRecoveryCodes", sqlmock.AnyArg()).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+
+		codes, err := svc.EnsureRecoveryCodes(7)
+		require.NoError(t, err)
+		assert.Len(t, codes, 8)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("codes exist: keeps them and shows nothing", func(t *testing.T) {
+		db, mock := setupMockDB(t)
+		defer db.Close()
+		svc := NewTOTPService(db, "GoatFlow")
+		codesJSON, _ := json.Marshal([]string{"abcd1234efgh"})
+
+		mock.ExpectQuery("SELECT preferences_value FROM user_preferences").
+			WithArgs(7, "UserTOTPRecoveryCodes").
+			WillReturnRows(sqlmock.NewRows([]string{"preferences_value"}).AddRow(string(codesJSON)))
+
+		codes, err := svc.EnsureRecoveryCodes(7)
+		require.NoError(t, err)
+		assert.Nil(t, codes)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+}

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -249,4 +250,41 @@ func expectCeremonyStore(mock sqlmock.Sqlmock, userType, userKey, purpose string
 
 func webAuthnCredentialColumns() []string {
 	return []string{"id", "user_type", "user_key", "credential_id", "credential_json", "name", "sign_count", "last_used_at", "created_at", "updated_at"}
+}
+
+// A passkey only works on the RP ID it was created for. CredentialOrigin must
+// say where it was made and flag one made on another address.
+func TestCredentialOriginFlagsPasskeyFromAnotherAddress(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	defer db.Close()
+	svc := newTestWebAuthnService(t, db) // RP ID example.com
+
+	record := func(origin, rpID string) *WebAuthnCredentialRecord {
+		hash := sha256.Sum256([]byte(rpID))
+		cred := webauthn.Credential{Attestation: webauthn.CredentialAttestation{
+			ClientDataJSON:    []byte(`{"type":"webauthn.create","origin":"` + origin + `"}`),
+			AuthenticatorData: append(hash[:], 0x45, 0, 0, 0, 1),
+		}}
+		raw, err := json.Marshal(cred)
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		return &WebAuthnCredentialRecord{credentialJSON: raw}
+	}
+
+	got := svc.CredentialOrigin(record("https://old.example.net", "old.example.net"))
+	if got.Host != "old.example.net" || got.UsableHere {
+		t.Fatalf("other address: got %+v, want host old.example.net, not usable", got)
+	}
+	got = svc.CredentialOrigin(record("https://example.com", "example.com"))
+	if got.Host != "example.com" || !got.UsableHere {
+		t.Fatalf("this address: got %+v, want host example.com, usable", got)
+	}
+	got = svc.CredentialOrigin(&WebAuthnCredentialRecord{credentialJSON: []byte(`{"id":"AQ"}`)})
+	if got.Host != "" || !got.UsableHere {
+		t.Fatalf("no registration data: got %+v, want unknown host, assumed usable", got)
+	}
 }
