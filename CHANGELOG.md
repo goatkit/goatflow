@@ -242,6 +242,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
   unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **Webhook deliveries cut short by the end of a dispatch run.** When the run ended while an endpoint still had
+  time to answer, the delivery was recorded as failed with "no response within N seconds" and used up a retry
+  (or failed for good with no retries left). It now goes back to pending, due at once, with its attempt count
+  unchanged and the message "run ended before the endpoint answered; will try again".
 - **`make test` / `make test-unit` flaky webhook test.** The test stack's runner (`goatflow-runner-test`)
   shares the unit tests' database, and every 10 seconds its webhook dispatch claimed the deliveries a test
   had just queued (`TestService_SlowEndpointDoesNotStarveOthers` failed about 1 run in 4). `test-unit` and

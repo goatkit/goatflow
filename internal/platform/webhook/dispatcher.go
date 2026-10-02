@@ -200,6 +200,10 @@ func (d *Dispatcher) Redeliver(ctx context.Context, deliveryID int64) (*Delivery
 // another worker takes it over.
 const recordTimeout = 30 * time.Second
 
+// runEndedMessage records an attempt cut short because the dispatch run
+// ended before the endpoint's own timeout.
+const runEndedMessage = "run ended before the endpoint answered; will try again"
+
 // send performs one HTTP attempt for a delivery already in "delivering" state
 // and records the outcome. With retry, a failed attempt is rescheduled while
 // the webhook's retry budget lasts; otherwise it is final.
@@ -230,6 +234,16 @@ func (d *Dispatcher) send(ctx context.Context, id int64, retry bool) (*Delivery,
 	}
 
 	res := d.post(ctx, w, secret, del)
+	rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), recordTimeout)
+	defer cancel()
+	if retry && res.status != StatusDelivered && ctx.Err() != nil {
+		// The run ended, not the endpoint's time: hand the delivery back
+		// without counting the attempt.
+		if err := d.repo.releaseDelivery(rctx, id, runEndedMessage); err != nil {
+			return nil, err
+		}
+		return d.repo.GetDelivery(rctx, id)
+	}
 	attempts := del.Attempts + 1
 	if res.status != StatusDelivered {
 		res.status = StatusFailed
@@ -238,8 +252,6 @@ func (d *Dispatcher) send(ctx context.Context, id int64, retry bool) (*Delivery,
 			res.retryAfter = backoff(attempts)
 		}
 	}
-	rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), recordTimeout)
-	defer cancel()
 	if err := d.repo.recordAttempt(rctx, id, res); err != nil {
 		return nil, err
 	}

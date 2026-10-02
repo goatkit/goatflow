@@ -456,6 +456,41 @@ func TestService_SlowEndpointDoesNotStarveOthers(t *testing.T) {
 	assert.NoError(t, runErr, "a run that runs out of time is not an error")
 }
 
+// TestService_RunEndingMidAttemptKeepsDeliveryPending: when the run ends
+// while an endpoint still has time to answer, the attempt was cut short by
+// GoatFlow, not failed by the endpoint. The delivery stays pending, due at
+// once, without using up an attempt.
+func TestService_RunEndingMidAttemptKeepsDeliveryPending(t *testing.T) {
+	db := testDB(t)
+	svc := caughtUpService(t, db)
+	t.Setenv(webhook.AllowPrivateTargetsEnv, "true")
+	release := make(chan struct{})
+	slow := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+		case <-release:
+		}
+	}))
+	t.Cleanup(func() { close(release); slow.Close() })
+
+	wh := createWebhook(t, db, slow.URL, "", 0, EventTicketCreated)
+	_, err := db.Exec(database.ConvertPlaceholders(`UPDATE gk_webhook SET timeout_seconds = 30 WHERE id = ?`), wh.ID)
+	require.NoError(t, err)
+	insertDeliveries(t, db, wh.ID, 1, webhook.StatusPending, time.Now().UTC())
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_, _, runErr := svc.RunOnce(ctx)
+	require.NoError(t, runErr)
+
+	d := deliveriesOf(t, db, wh.ID)[0]
+	assert.Equal(t, webhook.StatusPending, d.Status, "no retries left, yet the endpoint never had its full time")
+	assert.Zero(t, d.Attempts, "the cut-short attempt is not counted")
+	assert.Equal(t, "run ended before the endpoint answered; will try again", d.Error)
+	require.NotNil(t, d.NextAttemptAt)
+	assert.False(t, d.NextAttemptAt.After(time.Now().UTC()), "due again at once")
+}
+
 // TestService_PrunesOldDeliveries: delivered and failed deliveries older than
 // the retention (default 30 days) are deleted; pending ones are kept, and a
 // retention of 0 keeps everything.

@@ -594,6 +594,16 @@ func (r *Repository) failDelivery(ctx context.Context, id int64, reason string) 
 	return err
 }
 
+// releaseDelivery returns a claimed delivery to pending, due at once, without
+// counting an attempt.
+func (r *Repository) releaseDelivery(ctx context.Context, id int64, reason string) error {
+	ts := now()
+	_, err := r.db.ExecContext(ctx, database.ConvertPlaceholders(`
+		UPDATE gk_webhook_delivery SET status = ?, error_message = ?, next_attempt_time = ?, change_time = ?
+		WHERE id = ?`), StatusPending, truncate(reason, maxErrorLength), ts, ts, id)
+	return err
+}
+
 // Cursor returns the last processed id of an event source. When the source
 // has no cursor yet it is created at start() so only later rows become events.
 func (r *Repository) Cursor(ctx context.Context, source string, start func(context.Context) (int64, error)) (int64, error) {
