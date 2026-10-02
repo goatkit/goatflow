@@ -18,6 +18,8 @@ func TestSetupAssistant_AssignAgentToGroup(t *testing.T) {
 	ctx := context.Background()
 
 	agentLogin := "rel_agent" + sfx
+	cleanupAgentByLogin(t, agentLogin)
+	cleanupGroupByNameAtEnd(t, "RelTeam"+sfx)
 	agentID, err := svc.CreateAgent(ctx, agentLogin, "Rel", "Agent", "", nil, 1)
 	require.NoError(t, err)
 
@@ -53,56 +55,53 @@ func TestSetupAssistant_AssignAgentToGroup(t *testing.T) {
 	require.Error(t, err)
 }
 
-// TestSetupAssistant_AssignQueueToGroup verifies an existing queue gains
-// queue_group access, is idempotent, and validates inputs.
+// TestSetupAssistant_AssignQueueToGroup verifies the queue's one owning team
+// (queue.group_id) is replaced, the change is idempotent, and inputs are
+// validated.
 func TestSetupAssistant_AssignQueueToGroup(t *testing.T) {
 	svc, sfx := setupSvcTestDB(t)
 	ctx := context.Background()
 
+	cleanupGroupByNameAtEnd(t, "RelQTeam"+sfx)
+	cleanupGroupByNameAtEnd(t, "RelQOther"+sfx)
+	cleanupQueueByNameAtEnd(t, "RelQueue"+sfx)
 	teamID, err := svc.CreateGroup(ctx, "RelQTeam"+sfx, "relation-task test", 1)
 	require.NoError(t, err)
-	queueID, err := svc.CreateQueue(ctx, "RelQueue"+sfx, []int{teamID}, "relation-task test", 1)
+	queueID, err := svc.CreateQueue(ctx, "RelQueue"+sfx, teamID, "relation-task test", 1)
 	require.NoError(t, err)
 
 	otherTeamID, err := svc.CreateGroup(ctx, "RelQOther"+sfx, "relation-task test", 1)
 	require.NoError(t, err)
 
-	require.NoError(t, svc.AssignQueueToGroup(ctx, queueID, otherTeamID, 1))
-
 	db, err := database.GetDB()
 	require.NoError(t, err)
-	var owner int
-	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
-		"SELECT group_id FROM queue WHERE id = ?"), queueID).Scan(&owner))
-	assert.Equal(t, otherTeamID, owner)
+	owner := func() int {
+		var gid int
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+			"SELECT group_id FROM queue WHERE id = ?"), queueID).Scan(&gid))
+		return gid
+	}
+	require.Equal(t, teamID, owner())
+
+	require.NoError(t, svc.AssignQueueToGroup(ctx, queueID, otherTeamID, 1))
+	assert.Equal(t, otherTeamID, owner())
+
+	// Idempotent.
+	require.NoError(t, svc.AssignQueueToGroup(ctx, queueID, otherTeamID, 1))
+	assert.Equal(t, otherTeamID, owner())
 
 	// Validation: unknown queue.
 	err = svc.AssignQueueToGroup(ctx, 9999999, teamID, 1)
 	require.Error(t, err)
 	assert.Contains(t, strings.ToLower(err.Error()), "not found")
 
+	// Validation: unknown team leaves the owner unchanged.
+	err = svc.AssignQueueToGroup(ctx, queueID, 9999999, 1)
+	require.Error(t, err)
+	assert.Contains(t, strings.ToLower(err.Error()), "not found")
+	assert.Equal(t, otherTeamID, owner())
+
 	// Validation: no team.
 	err = svc.AssignQueueToGroup(ctx, queueID, 0, 1)
 	require.Error(t, err)
-}
-
-// TestSetupTaskForm_HasAssignBranches verifies the setup task form template
-// declares an inline branch for both relation tasks so they never hit the
-// "no inline form" fallback.
-func TestSetupTaskForm_HasAssignBranches(t *testing.T) {
-	src, err := readFile("../../templates/pages/admin/setup_task_form.pongo2")
-	require.NoError(t, err)
-	s := string(src)
-	assert.Contains(t, s, `Task.ID == "assign_agent_group"`)
-	assert.Contains(t, s, `Task.ID == "assign_queue_group"`)
-	assert.Contains(t, s, `name="agent_id"`)
-	assert.Contains(t, s, `name="queue_id"`)
-	// The agent picker must use the GoatKit searchable combobox (scales to many
-	// agents), not a plain <select>.
-	assert.Contains(t, s, `data-gk-autocomplete="agents"`)
-	assert.Contains(t, s, `data-hidden-target="agentId"`)
-	assert.Contains(t, s, `data-gk-seed="agents"`)
-	assert.NotContains(t, s, `select name="agent_id"`)
-	// The fallback line must still exist but be reachable only by unknown tasks.
-	assert.Contains(t, s, "This task has no inline form.")
 }

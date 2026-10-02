@@ -3,7 +3,10 @@
 package e2e
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,424 +16,311 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestProfilePreferencesPage tests the agent profile/preferences page functionality.
-// This is a TDD test - it documents expected behavior and will fail until the page is fixed.
+// The profile tests sign in as the dedicated non-admin seeded agent (not the
+// shared admin) and restore its profile and preferences afterwards, so other
+// suites running against the same stack never see a renamed or German admin.
+
+// agentProfile is the editable state behind /profile.
+type agentProfile struct {
+	FirstName      string
+	LastName       string
+	Title          string
+	Language       string
+	SessionTimeout int
+}
+
+// TestProfilePreferencesPage covers the agent profile page (/profile): one
+// form that saves personal details, language and session timeout.
 func TestProfilePreferencesPage(t *testing.T) {
-	browser := helpers.NewBrowserHelper(t)
-	err := browser.Setup()
-	require.NoError(t, err, "Failed to setup browser")
-	defer browser.TearDown()
+	browser, page := loginProfileAgent(t)
+	original := readAgentProfile(t, page)
+	t.Cleanup(func() { restoreAgentProfile(t, page, original) })
 
-	auth := helpers.NewAuthHelper(browser)
+	openProfile := func(t *testing.T) {
+		t.Helper()
+		require.NoError(t, browser.NavigateTo("/profile"))
+		// Language options and the 2FA status load asynchronously; network
+		// idle also means the form has recorded its original values.
+		require.NoError(t, page.Locator("#language-select option[value='de']").WaitFor(
+			playwright.LocatorWaitForOptions{State: playwright.WaitForSelectorStateAttached}))
+		require.NoError(t, page.Locator("[id='2fa-status-loading']").WaitFor(
+			playwright.LocatorWaitForOptions{State: playwright.WaitForSelectorStateHidden}))
+		require.NoError(t, page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateNetworkidle}))
+	}
 
-	// Login as admin first
-	err = auth.LoginAsAdmin()
-	require.NoError(t, err, "Login should succeed")
-
-	t.Run("Profile page loads without errors", func(t *testing.T) {
-		err := browser.NavigateTo("/agent/profile")
-		require.NoError(t, err, "Should navigate to profile page")
-
-		// Wait for page to load
-		err = browser.WaitForLoad()
-		require.NoError(t, err, "Page should load")
-
-		// Check page title contains "Profile"
-		title, err := browser.Page.Title()
+	t.Run("Profile page shows the signed-in agent", func(t *testing.T) {
+		openProfile(t)
+		title, err := page.Title()
 		require.NoError(t, err)
-		assert.Contains(t, title, "Profile", "Page title should contain 'Profile'")
-
-		// Check profile form exists
-		profileForm := browser.Page.Locator("#profile-form")
-		count, _ := profileForm.Count()
-		assert.Equal(t, 1, count, "Profile form should exist")
+		assert.Contains(t, title, "Profile")
+		assert.Equal(t, original.FirstName, inputValue(t, page, "#first-name"))
+		assert.Equal(t, original.LastName, inputValue(t, page, "#last-name"))
+		login, err := page.Locator("#profile-form dl dd").First().TextContent()
+		require.NoError(t, err)
+		assert.Equal(t, helpers.Seed2FAAgentLogin, strings.TrimSpace(login))
 	})
 
-	t.Run("Language dropdown has multiple options", func(t *testing.T) {
-		err := browser.NavigateTo("/agent/profile")
-		require.NoError(t, err)
-
-		// Wait for page and JS to initialize
-		err = browser.WaitForHTMX()
-		require.NoError(t, err)
-
-		// Give JavaScript time to populate the dropdown
-		time.Sleep(2 * time.Second)
-
-		// Check language dropdown has options beyond just "Default"
-		languageSelect := browser.Page.Locator("#language-select")
-		count, _ := languageSelect.Count()
-		require.Equal(t, 1, count, "Language select should exist")
-
-		// Get all options
-		options := browser.Page.Locator("#language-select option")
-		optionCount, _ := options.Count()
-
-		// Should have at least 7 options: Default + 6 languages (en, de, es, fr, ar, tlh)
-		assert.GreaterOrEqual(t, optionCount, 7,
-			"Language dropdown should have Default + 6 language options (en, de, es, fr, ar, tlh), but has %d options", optionCount)
-
-		// Check that we have actual language options, not just "Default"
-		if optionCount > 1 {
-			secondOption := browser.Page.Locator("#language-select option:nth-child(2)")
-			value, _ := secondOption.GetAttribute("value")
-			text, _ := secondOption.TextContent()
-			t.Logf("Second option: value=%q, text=%q", value, text)
-			assert.NotEmpty(t, value, "Language options should have values")
+	t.Run("Language dropdown lists every supported language", func(t *testing.T) {
+		openProfile(t)
+		var langs struct {
+			Available []struct {
+				Code string `json:"code"`
+			} `json:"available"`
 		}
+		profileAPI(t, page, "GET", "/agent/api/preferences/language", nil, 200, &langs)
+		require.NotEmpty(t, langs.Available)
+
+		values, err := page.Locator("#language-select option").EvaluateAll(`opts => opts.map(o => o.value)`)
+		require.NoError(t, err)
+		want := []interface{}{""}
+		for _, l := range langs.Available {
+			want = append(want, l.Code)
+		}
+		assert.Equal(t, want, values, "dropdown = System Default + every available language")
+		assert.Equal(t, original.Language, inputValue(t, page, "#language-select"))
 	})
 
 	t.Run("No JavaScript console errors on profile page", func(t *testing.T) {
-		// Collect console errors
-		var consoleErrors []string
-		browser.Page.On("console", func(msg playwright.ConsoleMessage) {
-			if msg.Type() == "error" {
+		var (
+			mu            sync.Mutex
+			collect       = true
+			consoleErrors []string
+		)
+		page.OnConsole(func(msg playwright.ConsoleMessage) {
+			mu.Lock()
+			defer mu.Unlock()
+			if collect && msg.Type() == "error" {
 				consoleErrors = append(consoleErrors, msg.Text())
 			}
 		})
 
-		err := browser.NavigateTo("/agent/profile")
-		require.NoError(t, err)
-
-		// Wait for all JS to execute
-		err = browser.WaitForHTMX()
-		require.NoError(t, err)
-		time.Sleep(2 * time.Second)
-
-		// Filter out known acceptable errors (if any)
-		var relevantErrors []string
-		for _, errMsg := range consoleErrors {
-			// Skip any acceptable errors here
-			if strings.Contains(errMsg, "favicon") {
-				continue
-			}
-			relevantErrors = append(relevantErrors, errMsg)
-		}
-
-		assert.Empty(t, relevantErrors,
-			"Profile page should have no JavaScript console errors, but found: %v", relevantErrors)
+		openProfile(t)
+		mu.Lock()
+		defer mu.Unlock()
+		collect = false
+		assert.Empty(t, consoleErrors, "profile page logged console errors")
 	})
 
-	t.Run("Profile form saves successfully", func(t *testing.T) {
-		err := browser.NavigateTo("/agent/profile")
-		require.NoError(t, err)
+	t.Run("Saving personal details persists them", func(t *testing.T) {
+		openProfile(t)
+		suffix := fmt.Sprintf("%d", time.Now().UnixNano()%1000000)
+		first, last, title := "Profile"+suffix, "Tester"+suffix, "Dr."
+		require.NoError(t, page.Locator("#first-name").Fill(first))
+		require.NoError(t, page.Locator("#last-name").Fill(last))
+		require.NoError(t, page.Locator("#title").Fill(title))
 
-		err = browser.WaitForHTMX()
-		require.NoError(t, err)
+		resp := submitProfileForm(t, page, "/agent/api/profile")
+		assert.Equal(t, 200, resp.Status())
+		// Save and Close returns to the dashboard when the language is unchanged.
+		require.NoError(t, page.WaitForURL("**/dashboard"))
 
-		// Fill in first name
-		firstName := browser.Page.Locator("#first-name")
-		err = firstName.Fill("TestFirst")
-		require.NoError(t, err)
+		saved := readAgentProfile(t, page)
+		assert.Equal(t, first, saved.FirstName)
+		assert.Equal(t, last, saved.LastName)
+		assert.Equal(t, title, saved.Title)
 
-		// Fill in last name
-		lastName := browser.Page.Locator("#last-name")
-		err = lastName.Fill("TestLast")
-		require.NoError(t, err)
-
-		// Track if we get an alert (error case)
-		var alertMessage string
-		browser.Page.On("dialog", func(dialog playwright.Dialog) {
-			alertMessage = dialog.Message()
-			dialog.Dismiss()
-		})
-
-		// Submit the profile form
-		submitBtn := browser.Page.Locator("#profile-form button[type='submit']")
-		err = submitBtn.Click()
-		require.NoError(t, err)
-
-		// Wait for response
-		time.Sleep(2 * time.Second)
-
-		// Check for success feedback
-		feedback := browser.Page.Locator("#profile-save-feedback")
-		isVisible, _ := feedback.IsVisible()
-
-		// Either the success feedback should be visible OR there should be no error alert
-		if !isVisible && alertMessage != "" {
-			t.Errorf("Profile save failed with alert: %s", alertMessage)
-		}
-
-		// The alert message should NOT contain "Unknown error" or authentication errors
-		if alertMessage != "" {
-			assert.NotContains(t, alertMessage, "Unknown error",
-				"Profile save should not show 'Unknown error'")
-			assert.NotContains(t, alertMessage, "not authenticated",
-				"Profile save should not show authentication error")
-			assert.NotContains(t, alertMessage, "Missing authorization",
-				"Profile save should not show authorization error")
-		}
+		openProfile(t)
+		assert.Equal(t, first, inputValue(t, page, "#first-name"))
+		assert.Equal(t, last, inputValue(t, page, "#last-name"))
+		assert.Equal(t, title, inputValue(t, page, "#title"))
 	})
 
-	t.Run("Language preference saves successfully", func(t *testing.T) {
-		err := browser.NavigateTo("/agent/profile")
+	t.Run("Saving a language switches the interface language", func(t *testing.T) {
+		openProfile(t)
+		lang := "de"
+		if original.Language == "de" {
+			lang = "fr"
+		}
+		_, err := page.Locator("#language-select").SelectOption(playwright.SelectOptionValues{Values: &[]string{lang}})
 		require.NoError(t, err)
 
-		err = browser.WaitForHTMX()
-		require.NoError(t, err)
-		time.Sleep(2 * time.Second)
-
-		// Check if we have language options
-		options := browser.Page.Locator("#language-select option")
-		optionCount, _ := options.Count()
-
-		if optionCount < 2 {
-			t.Skip("Skipping language save test - no language options available")
-		}
-
-		// Track alert messages
-		var alertMessage string
-		browser.Page.On("dialog", func(dialog playwright.Dialog) {
-			alertMessage = dialog.Message()
-			dialog.Dismiss()
-		})
-
-		// Select a language (German)
-		languageSelect := browser.Page.Locator("#language-select")
-		_, err = languageSelect.SelectOption(playwright.SelectOptionValues{
-			Values: &[]string{"de"},
-		})
-		if err != nil {
-			t.Logf("Could not select 'de' option: %v", err)
-		}
-
-		// Submit the language form
-		submitBtn := browser.Page.Locator("#language-preferences-form button[type='submit']")
-		err = submitBtn.Click()
-		require.NoError(t, err)
-
-		// Wait for response
-		time.Sleep(2 * time.Second)
-
-		// Check for success feedback or error
-		feedback := browser.Page.Locator("#language-save-feedback")
-		isVisible, _ := feedback.IsVisible()
-
-		if !isVisible && alertMessage != "" {
-			t.Errorf("Language preference save failed with alert: %s", alertMessage)
-		}
-
-		// The alert message should NOT contain errors
-		if alertMessage != "" {
-			assert.NotContains(t, alertMessage, "Unknown error",
-				"Language save should not show 'Unknown error'")
-			assert.NotContains(t, alertMessage, "not authenticated",
-				"Language save should not show authentication error")
-		}
+		resp := submitProfileForm(t, page, "/agent/api/preferences/language")
+		assert.Equal(t, 200, resp.Status())
+		// A language change reloads the profile page in the new language.
+		require.NoError(t, page.Locator(fmt.Sprintf("html[lang='%s']", lang)).WaitFor(
+			playwright.LocatorWaitForOptions{State: playwright.WaitForSelectorStateAttached}))
+		assert.Equal(t, lang, readAgentProfile(t, page).Language)
 	})
 
-	t.Run("Session timeout preference saves successfully", func(t *testing.T) {
-		err := browser.NavigateTo("/agent/profile")
-		require.NoError(t, err)
-
-		err = browser.WaitForHTMX()
-		require.NoError(t, err)
-
-		// Track alert messages
-		var alertMessage string
-		browser.Page.On("dialog", func(dialog playwright.Dialog) {
-			alertMessage = dialog.Message()
-			dialog.Dismiss()
-		})
-
-		// Select a timeout value (1 hour)
-		timeoutSelect := browser.Page.Locator("#session-timeout")
-		_, err = timeoutSelect.SelectOption(playwright.SelectOptionValues{
-			Values: &[]string{"3600"},
-		})
-		require.NoError(t, err)
-
-		// Submit the session preferences form
-		submitBtn := browser.Page.Locator("#session-preferences-form button[type='submit']")
-		err = submitBtn.Click()
-		require.NoError(t, err)
-
-		// Wait for response
-		time.Sleep(2 * time.Second)
-
-		// Check for success or error
-		feedback := browser.Page.Locator("#save-feedback")
-		isVisible, _ := feedback.IsVisible()
-
-		if !isVisible && alertMessage != "" {
-			t.Errorf("Session timeout save failed with alert: %s", alertMessage)
+	t.Run("Saving the session timeout persists it", func(t *testing.T) {
+		openProfile(t)
+		timeout := "3600"
+		if original.SessionTimeout == 3600 {
+			timeout = "14400"
 		}
+		_, err := page.Locator("#session-timeout").SelectOption(playwright.SelectOptionValues{Values: &[]string{timeout}})
+		require.NoError(t, err)
 
-		// The alert message should NOT contain errors
-		if alertMessage != "" {
-			assert.NotContains(t, alertMessage, "Unknown error",
-				"Session timeout save should not show 'Unknown error'")
-			assert.NotContains(t, alertMessage, "not authenticated",
-				"Session timeout save should not show authentication error")
-		}
+		resp := submitProfileForm(t, page, "/agent/api/preferences/session-timeout")
+		assert.Equal(t, 200, resp.Status())
+		require.NoError(t, page.WaitForURL("**/dashboard"))
+		assert.Equal(t, timeout, fmt.Sprint(readAgentProfile(t, page).SessionTimeout))
 	})
 }
 
-// TestProfileAPIEndpoints directly tests the API endpoints used by the profile page.
+// TestProfileAPIEndpoints exercises the JSON endpoints behind the profile page.
 func TestProfileAPIEndpoints(t *testing.T) {
+	_, page := loginProfileAgent(t)
+	original := readAgentProfile(t, page)
+	t.Cleanup(func() { restoreAgentProfile(t, page, original) })
+
+	t.Run("GET /agent/api/preferences/language lists the built-in languages", func(t *testing.T) {
+		var got struct {
+			Success   bool `json:"success"`
+			Available []struct {
+				Code       string `json:"code"`
+				NativeName string `json:"native_name"`
+			} `json:"available"`
+		}
+		profileAPI(t, page, "GET", "/agent/api/preferences/language", nil, 200, &got)
+		assert.True(t, got.Success)
+		codes := map[string]string{}
+		for _, l := range got.Available {
+			codes[l.Code] = l.NativeName
+		}
+		for _, code := range []string{"ar", "de", "en", "es", "fa", "fr", "he", "ja", "pl", "pt", "ru", "tlh", "uk", "ur", "zh"} {
+			assert.Contains(t, codes, code)
+		}
+		assert.Equal(t, "Deutsch", codes["de"])
+	})
+
+	t.Run("POST /agent/api/preferences/language rejects unknown languages", func(t *testing.T) {
+		var got struct {
+			Success bool   `json:"success"`
+			Error   string `json:"error"`
+		}
+		profileAPI(t, page, "POST", "/agent/api/preferences/language", map[string]any{"value": "xx"}, 400, &got)
+		assert.False(t, got.Success)
+		assert.Contains(t, got.Error, "Unsupported language")
+		assert.Equal(t, original.Language, readAgentProfile(t, page).Language)
+	})
+
+	t.Run("Session timeout round-trips", func(t *testing.T) {
+		want := 28800
+		if original.SessionTimeout == want {
+			want = 86400
+		}
+		profileAPI(t, page, "POST", "/agent/api/preferences/session-timeout", map[string]any{"value": want}, 200, nil)
+		assert.Equal(t, want, readAgentProfile(t, page).SessionTimeout)
+	})
+
+	t.Run("GET /agent/api/profile returns the signed-in agent", func(t *testing.T) {
+		var got struct {
+			Success bool `json:"success"`
+			Profile struct {
+				Login string `json:"login"`
+			} `json:"profile"`
+		}
+		profileAPI(t, page, "GET", "/agent/api/profile", nil, 200, &got)
+		assert.True(t, got.Success)
+		assert.Equal(t, helpers.Seed2FAAgentLogin, got.Profile.Login)
+	})
+
+	t.Run("POST /agent/api/profile saves and validates", func(t *testing.T) {
+		profileAPI(t, page, "POST", "/agent/api/profile",
+			map[string]any{"first_name": "Api", "last_name": "Agent", "title": "Ms."}, 200, nil)
+		saved := readAgentProfile(t, page)
+		assert.Equal(t, "Api", saved.FirstName)
+		assert.Equal(t, "Agent", saved.LastName)
+		assert.Equal(t, "Ms.", saved.Title)
+
+		var got struct {
+			Error string `json:"error"`
+		}
+		profileAPI(t, page, "POST", "/agent/api/profile",
+			map[string]any{"first_name": "", "last_name": "Agent"}, 400, &got)
+		assert.Contains(t, got.Error, "First name and last name are required")
+		assert.Equal(t, "Api", readAgentProfile(t, page).FirstName, "rejected update must not change the profile")
+	})
+}
+
+// loginProfileAgent opens a browser signed in as the seeded non-admin agent.
+func loginProfileAgent(t *testing.T) (*helpers.BrowserHelper, playwright.Page) {
+	t.Helper()
 	browser := helpers.NewBrowserHelper(t)
-	err := browser.Setup()
-	require.NoError(t, err, "Failed to setup browser")
-	defer browser.TearDown()
+	require.NoError(t, browser.Setup(), "Failed to setup browser")
+	t.Cleanup(browser.TearDown)
+	require.NoError(t, helpers.NewAuthHelper(browser).Login(helpers.Seed2FAAgentLogin, helpers.Seed2FAAgentPassword))
+	require.NoError(t, browser.Page.WaitForURL("**/dashboard"), "seeded agent %q must sign in without 2FA", helpers.Seed2FAAgentLogin)
+	return browser, browser.Page
+}
 
-	auth := helpers.NewAuthHelper(browser)
-
-	// Login first to get a session
-	err = auth.LoginAsAdmin()
-	require.NoError(t, err, "Login should succeed")
-
-	t.Run("GET /agent/api/preferences/language returns available languages", func(t *testing.T) {
-		// Navigate to any page first to ensure we have a session
-		err := browser.NavigateTo("/agent/dashboard")
-		require.NoError(t, err)
-
-		// Make API call via JavaScript and capture result
-		result, err := browser.Page.Evaluate(`async () => {
-			try {
-				const response = await fetch('/agent/api/preferences/language', {
-					credentials: 'include',
-					headers: { 'Accept': 'application/json' }
-				});
-				const data = await response.json();
-				return { status: response.status, data: data };
-			} catch (e) {
-				return { error: e.message };
-			}
-		}`)
-		require.NoError(t, err)
-
-		resultMap := result.(map[string]interface{})
-
-		// Check for error
-		if errMsg, hasErr := resultMap["error"]; hasErr {
-			t.Fatalf("API call failed: %v", errMsg)
+// profileAPI calls a same-origin JSON endpoint with the page's session,
+// asserts the status and decodes the body into out (when non-nil).
+func profileAPI(t *testing.T, page playwright.Page, method, path string, body any, wantStatus int, out any) {
+	t.Helper()
+	res, err := page.Evaluate(`async ([method, path, body]) => {
+		const opts = { method, credentials: 'same-origin', headers: { 'Accept': 'application/json' } };
+		if (body !== null) {
+			opts.headers['Content-Type'] = 'application/json';
+			opts.body = JSON.stringify(body);
 		}
+		const r = await fetch(path, opts);
+		return { status: r.status, text: await r.text() };
+	}`, []any{method, path, body})
+	require.NoError(t, err)
+	m := res.(map[string]any)
+	text := m["text"].(string)
+	require.EqualValues(t, wantStatus, m["status"], "%s %s: %s", method, path, text)
+	if out != nil {
+		require.NoError(t, json.Unmarshal([]byte(text), out), "%s %s: %s", method, path, text)
+	}
+}
 
-		status := resultMap["status"].(float64)
-		data := resultMap["data"].(map[string]interface{})
+// readAgentProfile reads the editable profile state through the API.
+func readAgentProfile(t *testing.T, page playwright.Page) agentProfile {
+	t.Helper()
+	var profile struct {
+		Profile struct {
+			FirstName string `json:"first_name"`
+			LastName  string `json:"last_name"`
+			Title     string `json:"title"`
+		} `json:"profile"`
+	}
+	profileAPI(t, page, "GET", "/agent/api/profile", nil, 200, &profile)
+	var lang struct {
+		Value string `json:"value"`
+	}
+	profileAPI(t, page, "GET", "/agent/api/preferences/language", nil, 200, &lang)
+	var timeout struct {
+		Value int `json:"value"`
+	}
+	profileAPI(t, page, "GET", "/agent/api/preferences/session-timeout", nil, 200, &timeout)
+	return agentProfile{
+		FirstName:      profile.Profile.FirstName,
+		LastName:       profile.Profile.LastName,
+		Title:          profile.Profile.Title,
+		Language:       lang.Value,
+		SessionTimeout: timeout.Value,
+	}
+}
 
-		// Should return 200 OK
-		assert.Equal(t, float64(200), status, "GET /agent/api/preferences/language should return 200")
+// restoreAgentProfile writes back a profile captured by readAgentProfile.
+func restoreAgentProfile(t *testing.T, page playwright.Page, p agentProfile) {
+	t.Helper()
+	profileAPI(t, page, "POST", "/agent/api/profile",
+		map[string]any{"first_name": p.FirstName, "last_name": p.LastName, "title": p.Title}, 200, nil)
+	profileAPI(t, page, "POST", "/agent/api/preferences/language", map[string]any{"value": p.Language}, 200, nil)
+	profileAPI(t, page, "POST", "/agent/api/preferences/session-timeout", map[string]any{"value": p.SessionTimeout}, 200, nil)
+	require.Equal(t, p, readAgentProfile(t, page), "profile not restored")
+}
 
-		// Should have success: true
-		assert.True(t, data["success"].(bool), "Response should have success: true")
+// submitProfileForm clicks Save and Close and returns the save request's
+// response from path (the page is idle, so the next response there is the POST).
+func submitProfileForm(t *testing.T, page playwright.Page, path string) playwright.Response {
+	t.Helper()
+	resp, err := page.ExpectResponse(func(url string) bool {
+		return strings.HasSuffix(strings.SplitN(url, "?", 2)[0], path)
+	}, func() error { return page.Locator("#save-btn").Click() })
+	require.NoError(t, err)
+	require.Equal(t, "POST", resp.Request().Method())
+	return resp
+}
 
-		// Should have available languages
-		available, hasAvailable := data["available"]
-		assert.True(t, hasAvailable, "Response should have 'available' field")
-
-		if hasAvailable {
-			languages := available.([]interface{})
-			assert.GreaterOrEqual(t, len(languages), 6,
-				"Should have at least 6 available languages, got %d", len(languages))
-			t.Logf("Available languages: %v", languages)
-		}
-	})
-
-	t.Run("GET /agent/api/preferences/session-timeout returns value", func(t *testing.T) {
-		err := browser.NavigateTo("/agent/dashboard")
-		require.NoError(t, err)
-
-		result, err := browser.Page.Evaluate(`async () => {
-			try {
-				const response = await fetch('/agent/api/preferences/session-timeout', {
-					credentials: 'include',
-					headers: { 'Accept': 'application/json' }
-				});
-				const data = await response.json();
-				return { status: response.status, data: data };
-			} catch (e) {
-				return { error: e.message };
-			}
-		}`)
-		require.NoError(t, err)
-
-		resultMap := result.(map[string]interface{})
-
-		if errMsg, hasErr := resultMap["error"]; hasErr {
-			t.Fatalf("API call failed: %v", errMsg)
-		}
-
-		status := resultMap["status"].(float64)
-		data := resultMap["data"].(map[string]interface{})
-
-		assert.Equal(t, float64(200), status, "GET /agent/api/preferences/session-timeout should return 200")
-		assert.True(t, data["success"].(bool), "Response should have success: true")
-	})
-
-	t.Run("GET /agent/api/profile returns user data", func(t *testing.T) {
-		err := browser.NavigateTo("/agent/dashboard")
-		require.NoError(t, err)
-
-		result, err := browser.Page.Evaluate(`async () => {
-			try {
-				const response = await fetch('/agent/api/profile', {
-					credentials: 'include',
-					headers: { 'Accept': 'application/json' }
-				});
-				const data = await response.json();
-				return { status: response.status, data: data };
-			} catch (e) {
-				return { error: e.message };
-			}
-		}`)
-		require.NoError(t, err)
-
-		resultMap := result.(map[string]interface{})
-
-		if errMsg, hasErr := resultMap["error"]; hasErr {
-			t.Fatalf("API call failed: %v", errMsg)
-		}
-
-		status := resultMap["status"].(float64)
-		data := resultMap["data"].(map[string]interface{})
-
-		assert.Equal(t, float64(200), status, "GET /agent/api/profile should return 200")
-		assert.True(t, data["success"].(bool), "Response should have success: true")
-
-		// Should have profile data
-		_, hasProfile := data["profile"]
-		assert.True(t, hasProfile, "Response should have 'profile' field")
-	})
-
-	t.Run("POST /agent/api/profile saves profile data", func(t *testing.T) {
-		err := browser.NavigateTo("/agent/dashboard")
-		require.NoError(t, err)
-
-		result, err := browser.Page.Evaluate(`async () => {
-			try {
-				const response = await fetch('/agent/api/profile', {
-					method: 'POST',
-					credentials: 'include',
-					headers: {
-						'Accept': 'application/json',
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						first_name: 'Test',
-						last_name: 'User',
-						title: 'Mr.'
-					})
-				});
-				const data = await response.json();
-				return { status: response.status, data: data };
-			} catch (e) {
-				return { error: e.message };
-			}
-		}`)
-		require.NoError(t, err)
-
-		resultMap := result.(map[string]interface{})
-
-		if errMsg, hasErr := resultMap["error"]; hasErr {
-			t.Fatalf("API call failed: %v", errMsg)
-		}
-
-		status := resultMap["status"].(float64)
-		data := resultMap["data"].(map[string]interface{})
-
-		assert.Equal(t, float64(200), status, "POST /agent/api/profile should return 200")
-		assert.True(t, data["success"].(bool), "Response should have success: true")
-	})
+// inputValue returns the current value of an input or select.
+func inputValue(t *testing.T, page playwright.Page, selector string) string {
+	t.Helper()
+	v, err := page.Locator(selector).InputValue()
+	require.NoError(t, err)
+	return v
 }

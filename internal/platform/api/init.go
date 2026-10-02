@@ -6,7 +6,6 @@ func init() {
 	routing.RegisterHandler("HandleLoginAPI", HandleLoginAPI)
 	routing.RegisterHandler("HandleRefreshTokenAPI", HandleRefreshTokenAPI)
 	routing.RegisterHandler("HandleLogoutAPI", HandleLogoutAPI)
-	routing.RegisterHandler("HandleRegisterAPI", HandleRegisterAPI)
 	routing.RegisterHandler("HandleUserMeAPI", HandleUserMeAPI)
 	routing.RegisterHandler("HandleListUsersAPI", HandleListUsersAPI)
 	routing.RegisterHandler("HandleGetUserAPI", HandleGetUserAPI)

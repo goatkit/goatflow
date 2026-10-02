@@ -1,383 +1,560 @@
-/**
- * TypeScript types for the GoatFlow API
- */
+// Request and response shapes of the GoatFlow REST API (/api/v1). Field sets
+// mirror what the handlers send; where two endpoints describe the same
+// resource differently (ticket list rows vs. a single ticket) they get
+// separate types. Timestamps are RFC 3339 strings.
 
+/** The "pagination" object paginated list endpoints send next to "data". */
+export interface Pagination {
+  page: number;
+  per_page: number;
+  total: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+export interface GroupRef {
+  id: number;
+  name: string;
+}
+
+// Tickets
+
+/** One row of GET /api/v1/tickets. */
+export interface TicketSummary {
+  id: number;
+  tn: string;
+  ticket_number: string;
+  title: string;
+  queue_id: number;
+  queue_name: string;
+  state_id: number;
+  state_name: string;
+  priority_id: number;
+  priority_name: string;
+  customer_user_id: string;
+  customer_id: string;
+  /** Owner. */
+  user_id: number;
+  responsible_user_id: number | null;
+  created_at: string;
+  updated_at: string;
+  /** Only with include: ['article_count']. */
+  article_count?: number;
+  /** Only with include: ['last_article']; null when the ticket has no article. */
+  last_article?: { subject: string; created_at: string } | null;
+}
+
+export interface TicketListOptions {
+  page?: number;
+  /** 1-100, server default 20. */
+  per_page?: number;
+  /** "open", "closed", "pending" or an exact state name. */
+  status?: string;
+  queue_id?: number;
+  priority_id?: number;
+  customer_user_id?: string;
+  /** Responsible agent. */
+  assigned_user_id?: number;
+  search?: string;
+  sort?: 'created' | 'updated' | 'priority' | 'tn' | 'title';
+  order?: 'asc' | 'desc';
+  include?: Array<'article_count' | 'last_article'>;
+}
+
+export interface TicketList {
+  tickets: TicketSummary[];
+  pagination: Pagination;
+}
+
+/** GET /api/v1/tickets/:id. */
 export interface Ticket {
   id: number;
   ticket_number: string;
   title: string;
-  description: string;
-  status: string;
+  state_id: number;
+  state: string;
+  priority_id: number;
   priority: string;
-  type: string;
   queue_id: number;
-  customer_id: number;
-  assigned_to?: number;
-  created_at: string;
-  updated_at: string;
-  closed_at?: string;
-  tags?: string[];
-  custom_fields?: Record<string, any>;
-  customer?: User;
-  assigned_user?: User;
-  queue?: Queue;
-  messages?: TicketMessage[];
-  attachments?: Attachment[];
+  queue: string;
+  type_id?: number;
+  customer_id?: string;
+  customer_user_id?: string;
+  owner_user_id: number;
+  responsible_user_id?: number;
+  article_count: number;
+  create_time: string;
+  change_time: string;
 }
 
-export interface TicketMessage {
-  id: number;
-  ticket_id: number;
-  content: string;
-  message_type: string;
-  is_internal: boolean;
-  author_id: number;
-  created_at: string;
-  updated_at: string;
-  author?: User;
-  attachments?: Attachment[];
-  custom_fields?: Record<string, any>;
-}
-
-export interface User {
-  id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  login: string;
+/** Body of POST /api/v1/tickets; body becomes the first article. */
+export interface TicketCreateRequest {
   title: string;
-  role: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  last_login_at: string;
+  queue_id: number;
+  body?: string;
+  priority_id?: number;
+  state_id?: number;
+  type_id?: number;
+  customer_email?: string;
+  customer_id?: string;
+  customer_user_id?: string;
 }
 
-export interface Queue {
+/** Data of POST /api/v1/tickets. */
+export interface CreatedTicket {
   id: number;
-  name: string;
-  description: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  tn: string;
+  title: string;
+  queue_id: number;
+  ticket_state_id: number;
+  ticket_priority_id: number;
 }
 
-export interface Attachment {
+/** Body of PUT /api/v1/tickets/:id; omitted fields are unchanged. */
+export interface TicketUpdateRequest {
+  title?: string;
+  queue_id?: number;
+  type_id?: number;
+  state_id?: number;
+  priority_id?: number;
+  customer_user_id?: string;
+  customer_id?: string;
+  /** Owner. */
+  user_id?: number;
+  responsible_user_id?: number;
+  ticket_lock_id?: number;
+}
+
+/** Data of PUT /api/v1/tickets/:id: the ticket row after the update. */
+export interface TicketRecord {
+  id: number;
+  tn: string;
+  title: string;
+  queue_id: number;
+  type_id: number;
+  state_id: number;
+  priority_id: number;
+  user_id: number;
+  responsible_user_id: number | null;
+  ticket_lock_id: number;
+  customer_user_id: string;
+  customer_id: string;
+  create_time: string;
+  create_by: number;
+  change_time: string;
+  change_by: number;
+}
+
+/** Response of POST /api/v1/tickets/:id/reopen. */
+export interface ReopenResult {
+  id: number;
+  state_id: number;
+  state: string;
+  reason: string;
+  reopened_at: string;
+}
+
+// Articles
+
+export interface ArticleAttachment {
   id: number;
   filename: string;
   content_type: string;
   size: number;
-  ticket_id: number;
-  message_id?: number;
-  uploaded_by: number;
-  created_at: string;
+  disposition: string;
 }
 
-export interface Group {
-  id: number;
-  name: string;
-  description: string;
-  type: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface DashboardStats {
-  total_tickets: number;
-  open_tickets: number;
-  closed_tickets: number;
-  pending_tickets: number;
-  overdue_tickets: number;
-  unassigned_tickets: number;
-  my_tickets: number;
-  tickets_by_status: Record<string, number>;
-  tickets_by_priority: Record<string, number>;
-  tickets_by_queue: Record<string, number>;
-}
-
-export interface SearchResult {
-  total_count: number;
-  page: number;
-  page_size: number;
-  tickets: Ticket[];
-}
-
-export interface InternalNote {
+export interface Article {
   id: number;
   ticket_id: number;
-  content: string;
-  category: string;
-  is_important: boolean;
-  is_pinned: boolean;
-  tags: string[];
-  author_id: number;
-  author_name: string;
-  author_email: string;
-  created_at: string;
-  updated_at: string;
-  edited_at: string;
-  edited_by: number;
+  article_sender_type_id: number;
+  sender_type?: string;
+  communication_channel_id: number;
+  is_visible_for_customer: boolean;
+  /** e.g. "email-external", "note-internal", "phone". */
+  article_type: string;
+  from?: string;
+  to?: string;
+  cc?: string;
+  subject: string;
+  body: string;
+  content_type: string;
+  message_id?: string;
+  create_time: string;
+  create_by: number;
+  change_time?: string;
+  change_by?: number;
+  /** Only when requested with includeAttachments. */
+  attachments?: ArticleAttachment[];
 }
 
-export interface NoteTemplate {
+/** GET /api/v1/tickets/:id/articles, newest first. */
+export interface ArticleList {
+  articles: Article[];
+  total: number;
+}
+
+/** Body of POST /api/v1/tickets/:id/articles; body is required. */
+export interface ArticleCreateRequest {
+  subject?: string;
+  body: string;
+  content_type?: string;
+  /** e.g. "note-internal" (alias "note"), "note-external", "email-external" (alias "email"), "phone". */
+  article_type?: string;
+  sender_type?: 'agent' | 'customer' | 'system';
+  is_visible_for_customer?: boolean;
+  from?: string;
+  to?: string;
+  cc?: string;
+  time_unit?: number;
+}
+
+/** Body of PUT /api/v1/tickets/:id/articles/:aid; at least one field. */
+export interface ArticleUpdateRequest {
+  subject?: string;
+  body?: string;
+}
+
+export interface ArticleUpdate {
+  id: number;
+  ticket_id: number;
+  subject: string;
+  body: string;
+}
+
+// Users
+
+/** Group membership with permission keys (ro, move_into, create, note, owner, priority, rw). */
+export interface UserGroup {
   id: number;
   name: string;
-  content: string;
-  category: string;
-  tags: string[];
-  is_important: boolean;
-  created_by: number;
-  created_at: string;
-  updated_at: string;
+  permissions: string[];
 }
 
-export interface LDAPUser {
-  dn: string;
-  username: string;
+/** An agent from GET /api/v1/users or /api/v1/users/:id. */
+export interface User {
+  id: number;
+  login: string;
+  first_name?: string;
+  last_name?: string;
+  valid_id: number;
+  valid: boolean;
+  create_time?: string;
+  change_time?: string;
+  groups: UserGroup[];
+  /** Only from GET /api/v1/users/:id. */
+  email?: string;
+  /** Only from GET /api/v1/users/:id. */
+  preferences?: Record<string, string>;
+}
+
+export interface UserListOptions {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  /** "1" valid only, "2" invalid only. */
+  valid?: '1' | '2';
+  group_id?: number;
+}
+
+export interface UserList {
+  users: User[];
+  pagination: Pagination;
+}
+
+/** GET /api/v1/users/me. */
+export interface CurrentUser {
+  id: number;
+  login: string;
   email: string;
   first_name: string;
   last_name: string;
-  display_name: string;
-  phone: string;
-  department: string;
-  title: string;
-  manager: string;
-  groups: string[];
-  attributes: Record<string, string>;
-  object_guid: string;
-  object_sid: string;
-  last_login: string;
-  is_active: boolean;
+  active: boolean;
+  groups: GroupRef[];
 }
 
-export interface LDAPSyncResult {
-  users_found: number;
-  users_created: number;
-  users_updated: number;
-  users_disabled: number;
-  groups_found: number;
-  groups_created: number;
-  groups_updated: number;
-  errors: string[];
-  start_time: string;
-  end_time: string;
-  duration: string;
-  dry_run: boolean;
+/** Body of POST /api/v1/users; password needs 8+ characters, valid_id defaults to 1. */
+export interface UserCreateRequest {
+  login: string;
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
+  valid_id?: number;
+  /** Group IDs to add the user to. */
+  groups?: number[];
 }
+
+/** Data of POST /api/v1/users. */
+export interface CreatedUser {
+  id: number;
+  login: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  valid_id: number;
+  valid: boolean;
+  groups: number[];
+  created_at: string;
+}
+
+/** Body of PUT /api/v1/users/:id; omitted fields are unchanged. */
+export interface UserUpdateRequest {
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  password?: string;
+  valid_id?: number;
+}
+
+// Queues
+
+/**
+ * A ticket queue. valid, comment, create_time, change_time and the ticket
+ * counts are only sent by GET /api/v1/queues; comments, salutation_id and
+ * signature_id only by GET /api/v1/queues/:id.
+ */
+export interface Queue {
+  id: number;
+  name: string;
+  valid_id: number;
+  valid?: boolean;
+  group_id?: number;
+  group_name?: string;
+  groups: GroupRef[];
+  system_address_id?: number;
+  salutation_id?: number;
+  signature_id?: number;
+  unlock_timeout?: number;
+  follow_up_id?: number;
+  follow_up_lock?: number;
+  comment?: string;
+  comments?: string;
+  create_time?: string;
+  change_time?: string;
+  /** Only with include_stats. */
+  ticket_count?: number;
+  open_tickets?: number;
+  closed_tickets?: number;
+  pending_tickets?: number;
+}
+
+export interface QueueListOptions {
+  valid?: '1' | '2';
+  include_stats?: boolean;
+}
+
+// Statistics
+
+/** GET /api/v1/statistics/dashboard, limited to the caller's readable queues. */
+export interface DashboardStatistics {
+  overview: {
+    total_tickets: number;
+    open_tickets: number;
+    closed_tickets: number;
+    pending_tickets: number;
+  };
+  by_queue: Array<{ queue_id: number; queue_name: string; count: number }>;
+  by_priority: Array<{ priority_id: number; priority_name: string; count: number }>;
+  /** The ten newest tickets. */
+  recent_activity: Array<{ type: string; ticket_id: number; ticket_tn: string; timestamp: string }>;
+}
+
+// Search
+
+/** Body of POST /api/v1/search. */
+export interface SearchQuery {
+  query: string;
+  /** Defaults to ticket, article and customer. */
+  types?: string[];
+  filters?: Record<string, string>;
+  offset?: number;
+  /** Default 20, max 100. */
+  limit?: number;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+  highlight?: boolean;
+  facets?: string[];
+}
+
+export interface SearchHit {
+  id: string;
+  type: string;
+  score: number;
+  title: string;
+  content: string;
+  highlights?: Record<string, string[]>;
+  metadata: Record<string, unknown>;
+}
+
+/** Response of POST /api/v1/search; warning is set when the search backend is unavailable. */
+export interface SearchResults {
+  query?: string;
+  total_hits: number;
+  took_ms: number;
+  hits: SearchHit[];
+  facets?: Record<string, Array<{ value: string; count: number }>>;
+  suggestions?: string[];
+  warning?: string;
+}
+
+// Webhooks
 
 export interface Webhook {
   id: number;
   name: string;
   url: string;
   events: string[];
-  secret?: string;
-  is_active: boolean;
+  headers: Record<string, string>;
+  has_secret: boolean;
+  secret_hint?: string;
   retry_count: number;
-  timeout: number;
-  headers?: Record<string, string>;
+  timeout_seconds: number;
+  is_active: boolean;
   created_at: string;
+  created_by: number;
   updated_at: string;
-  last_fired_at?: string;
+  updated_by: number;
+}
+
+export interface WebhookRequest {
+  name?: string;
+  url?: string;
+  events?: string[];
+  /** 16-512 characters; empty string removes the secret. */
+  secret?: string;
+  headers?: Record<string, string>;
+  retry_count?: number;
+  timeout_seconds?: number;
+  is_active?: boolean;
 }
 
 export interface WebhookDelivery {
   id: number;
   webhook_id: number;
   event: string;
-  payload: string;
-  status_code: number;
-  response: string;
+  status: 'pending' | 'delivering' | 'delivered' | 'failed';
   success: boolean;
-  attempt: number;
-  delivered_at: string;
-}
-
-// Request types
-export interface TicketCreateRequest {
-  title: string;
-  description: string;
-  priority?: string;
-  type?: string;
-  queue_id?: number;
-  customer_id?: number;
-  assigned_to?: number;
-  tags?: string[];
-  custom_fields?: Record<string, any>;
-}
-
-export interface TicketUpdateRequest {
-  title?: string;
-  description?: string;
-  status?: string;
-  priority?: string;
-  type?: string;
-  queue_id?: number;
-  assigned_to?: number;
-  tags?: string[];
-  custom_fields?: Record<string, any>;
-}
-
-export interface TicketListOptions {
-  page?: number;
-  page_size?: number;
-  status?: string[];
-  priority?: string[];
-  queue_id?: number[];
-  assigned_to?: number;
-  customer_id?: number;
-  search?: string;
-  tags?: string[];
-  created_after?: string;
-  created_before?: string;
-  sort_by?: string;
-  sort_order?: string;
-}
-
-export interface TicketListResponse {
-  tickets: Ticket[];
-  total_count: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
-}
-
-export interface MessageCreateRequest {
-  content: string;
-  message_type?: string;
-  is_internal?: boolean;
-  custom_fields?: Record<string, any>;
-}
-
-export interface UserCreateRequest {
-  email: string;
-  first_name: string;
-  last_name: string;
-  login: string;
-  title?: string;
-  role?: string;
-  password: string;
-}
-
-export interface UserUpdateRequest {
-  email?: string;
-  first_name?: string;
-  last_name?: string;
-  title?: string;
-  role?: string;
-  is_active?: boolean;
-}
-
-export interface AuthLoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface AuthLoginResponse {
-  token: string;
-  refresh_token: string;
-  expires_at: string;
-  user: User;
-}
-
-export interface APIResponse<T = any> {
-  success: boolean;
-  data?: T;
+  attempts: number;
+  status_code: number | null;
   error?: string;
-  message?: string;
+  duration_ms: number | null;
+  next_attempt_at?: string;
+  delivered_at?: string;
+  /** Only on getDelivery. */
+  payload?: string;
+  /** Only on getDelivery; first 4 KiB of the response body. */
+  response?: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface ErrorResponse {
-  error: string;
-  message: string;
-  code: number;
+// Auth
+
+/**
+ * Response of POST /api/v1/auth/login and POST /api/v1/auth/refresh. Every
+ * refresh rotates the refresh token.
+ */
+export interface TokenPair {
+  success: true;
+  user: {
+    id: number;
+    login: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    role: string;
+  };
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  /** Access token lifetime in seconds. */
+  expires_in: number;
+  /** Refresh token lifetime in seconds. */
+  refresh_expires_in: number;
 }
 
-// Configuration types
+/** GET /health. */
+export interface Health {
+  status: string;
+  components: Record<string, string>;
+  version: string;
+}
+
+// Client configuration
+
 export interface ClientConfig {
+  /** Server root, e.g. "https://goatflow.example.com". */
   baseURL: string;
   auth?: AuthConfig;
+  /** Per-request timeout in milliseconds; default 30000. */
   timeout?: number;
-  retries?: number;
-  debug?: boolean;
   userAgent?: string;
+  /** fetch implementation; defaults to the global fetch (Node 18+, browsers). */
+  fetch?: typeof fetch;
 }
 
-export interface AuthConfig {
-  type: 'api-key' | 'jwt' | 'oauth2';
-  apiKey?: string;
-  token?: string;
-  refreshToken?: string;
-  expiresAt?: Date;
-  refreshFunction?: (refreshToken: string) => Promise<{
-    accessToken: string;
-    refreshToken: string;
-    expiresAt: Date;
-  }>;
-}
+/**
+ * Credentials, sent as "Authorization: Bearer <token>".
+ * - api-key: a GoatFlow API token (gf_...).
+ * - jwt: an access token from POST /api/v1/auth/login. When expiresAt is less
+ *   than a minute ahead, refreshFunction is called with refreshToken first.
+ *   GoatflowClient.login() and withJWT() set one backed by
+ *   POST /api/v1/auth/refresh.
+ */
+export type AuthConfig =
+  | { type: 'api-key'; apiKey: string }
+  | {
+      type: 'jwt';
+      token: string;
+      refreshToken?: string;
+      expiresAt?: Date;
+      refreshFunction?: (refreshToken: string) => Promise<{
+        accessToken: string;
+        refreshToken: string;
+        expiresAt: Date;
+      }>;
+    };
 
-// Event types for WebSocket
-export interface WebSocketEvent {
-  type: string;
-  data: any;
-  timestamp: string;
-}
+// Errors
 
-export interface TicketEvent extends WebSocketEvent {
-  type: 'ticket.created' | 'ticket.updated' | 'ticket.closed' | 'ticket.assigned';
-  data: Ticket;
-}
-
-export interface MessageEvent extends WebSocketEvent {
-  type: 'message.created' | 'message.updated';
-  data: TicketMessage;
-}
-
-// Error types
+/**
+ * A non-successful API response: HTTP status outside 2xx, or a 2xx response
+ * whose envelope says {"success": false}. code is set when the API sent one
+ * (e.g. "core:invalid_token"); body holds the raw body when it was not JSON.
+ */
 export class GoatflowError extends Error {
-  public statusCode?: number;
-  public code?: string;
-  public details?: string;
-
-  constructor(message: string, statusCode?: number, code?: string, details?: string) {
+  constructor(
+    message: string,
+    public readonly statusCode?: number,
+    public readonly code?: string,
+    public readonly body?: string
+  ) {
     super(message);
     this.name = 'GoatflowError';
-    this.statusCode = statusCode;
-    this.code = code;
-    this.details = details;
   }
 }
 
-export class ValidationError extends GoatflowError {
-  public field: string;
-  public value?: any;
-
-  constructor(field: string, message: string, value?: any) {
-    super(`Validation error for field '${field}': ${message}`);
-    this.name = 'ValidationError';
-    this.field = field;
-    this.value = value;
-  }
-}
-
+/** The request produced no HTTP response. */
 export class NetworkError extends GoatflowError {
-  public operation: string;
-  public url: string;
-
-  constructor(operation: string, url: string, message: string) {
-    super(`Network error during ${operation} to ${url}: ${message}`);
+  constructor(
+    public readonly method: string,
+    public readonly url: string,
+    cause: string
+  ) {
+    super(`Network error during ${method} ${url}: ${cause}`);
     this.name = 'NetworkError';
-    this.operation = operation;
-    this.url = url;
   }
 }
 
 export class TimeoutError extends GoatflowError {
-  public timeout: number;
-
-  constructor(operation: string, timeout: number) {
-    super(`Timeout error during ${operation} after ${timeout}ms`);
+  constructor(
+    public readonly method: string,
+    public readonly url: string,
+    public readonly timeout: number
+  ) {
+    super(`${method} ${url} timed out after ${timeout}ms`);
     this.name = 'TimeoutError';
-    this.timeout = timeout;
   }
 }

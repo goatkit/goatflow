@@ -1,7 +1,10 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -307,21 +310,55 @@ func handleCoreSetupTask(c *gin.Context, svc *service.SetupAssistantService, tas
 	ctx["Task"] = spec
 	ctx["Title"] = spec.Title
 
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		log.Printf("handleCoreSetupTask: database unavailable: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+	failLoad := func(what string, err error) {
+		log.Printf("handleCoreSetupTask %s: load %s: %v", taskID, what, err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Failed to load form options")
+	}
+	groups, err := listActiveGroups(db)
+	if err != nil {
+		failLoad("groups", err)
+		return
+	}
+	queues, err := listActiveQueues(db)
+	if err != nil {
+		failLoad("queues", err)
+		return
+	}
+	ctx["Groups"] = groups
+	ctx["Queues"] = queues
+
 	// Customer onboarding is a multi-step wizard with its own template.
 	if taskID == "create_customer" {
+		slas, err := listActiveSLAs(db)
+		if err != nil {
+			failLoad("SLAs", err)
+			return
+		}
+		companies, err := listExistingCompanies(db)
+		if err != nil {
+			failLoad("companies", err)
+			return
+		}
 		ctx["Countries"] = lookups.Countries()
-		ctx["SLAs"] = listActiveSLAs()
-		ctx["Groups"] = listActiveGroups()
-		ctx["Queues"] = listActiveQueues()
-		ctx["Companies"] = listExistingCompanies()
+		ctx["SLAs"] = slas
+		ctx["Companies"] = companies
 		getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/onboard_customer.pongo2", ctx)
 		return
 	}
 
-	ctx["NeedsGroups"] = taskID == "create_queue" || taskID == "create_agent" || taskID == "assign_queue_group" || taskID == "assign_agent_group"
-	ctx["Groups"] = listActiveGroups()
-	ctx["Agents"] = listActiveAgents()
-	ctx["Queues"] = listActiveQueues()
+	agents, err := listActiveAgents(db)
+	if err != nil {
+		failLoad("agents", err)
+		return
+	}
+	ctx["NeedsGroups"] = taskID == "create_agent" || taskID == "assign_agent_group"
+	ctx["Agents"] = agents
 	if taskID == "mark_complete" {
 		ctx["IsMarkComplete"] = true
 	}
@@ -340,7 +377,7 @@ func handleCoreSetupTaskSubmit(c *gin.Context, svc *service.SetupAssistantServic
 		respondCore(c, err, "group", name, id, "/admin/setup/assistant")
 		return
 	case "create_queue":
-		id, err := svc.CreateQueue(ctx, strings.TrimSpace(c.PostForm("name")), postFormInts(c, "group_ids"), c.PostForm("comments"), createBy)
+		id, err := svc.CreateQueue(ctx, strings.TrimSpace(c.PostForm("name")), postFormInt(c, "group_id", 0), c.PostForm("comments"), createBy)
 		respondCore(c, err, "queue", c.PostForm("name"), id, "/admin/setup/assistant")
 		return
 	case "create_agent":
@@ -390,7 +427,11 @@ func handleCoreSetupTaskSubmit(c *gin.Context, svc *service.SetupAssistantServic
 			return
 		}
 		if err := svc.CreateBusinessHours(ctx, req, createBy); err != nil {
-			c.JSON(http.StatusOK, gin.H{"success": false, "error": err.Error()})
+			status := http.StatusOK
+			if errors.Is(err, service.ErrInvalidGroup) {
+				status = http.StatusBadRequest
+			}
+			c.JSON(status, gin.H{"success": false, "error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"success": true})
@@ -468,16 +509,12 @@ func respondCore(c *gin.Context, err error, kind, name string, id int, redirect 
 	})
 }
 
-// listActiveGroups returns id/name pairs for active groups, for task forms that
+// listActiveGroups returns id/name pairs for groups, for task forms that
 // need group selection. Uses the repository (no raw SQL in handlers).
-func listActiveGroups() []models.Group {
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		return nil
-	}
+func listActiveGroups(db *sql.DB) ([]models.Group, error) {
 	groups, err := repository.NewGroupRepository(db).List()
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	out := make([]models.Group, 0, len(groups))
 	for _, g := range groups {
@@ -486,36 +523,13 @@ func listActiveGroups() []models.Group {
 		}
 		out = append(out, *g)
 	}
-	return out
+	return out, nil
 }
 
 // slaOption is a minimal {id, name} view for SLA dropdowns in setup forms.
 type slaOption struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
-}
-
-// listActiveSLAs returns id/name pairs for active SLAs, for the onboarding
-// wizard's Service/SLA step. Uses a parameterised query (no user input).
-func listActiveSLAs() []slaOption {
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		return nil
-	}
-	rows, err := db.Query(database.ConvertPlaceholders(
-		"SELECT id, name FROM sla WHERE valid_id = 1 ORDER BY name"))
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-	out := make([]slaOption, 0)
-	for rows.Next() {
-		var o slaOption
-		if err := rows.Scan(&o.ID, &o.Name); err == nil {
-			out = append(out, o)
-		}
-	}
-	return out
 }
 
 // queueOption is a minimal {id, name} view for queue dropdowns in setup forms.
@@ -530,79 +544,85 @@ type agentOption struct {
 	Login string `json:"login"`
 }
 
-// listActiveAgents returns id/login pairs for active agents, for the
-// assign-agent-to-team setup task form's agent dropdown.
-func listActiveAgents() []agentOption {
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		return nil
-	}
-	rows, err := db.Query(database.ConvertPlaceholders(
-		"SELECT id, login FROM users WHERE valid_id = 1 ORDER BY login"))
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-	out := make([]agentOption, 0)
-	for rows.Next() {
-		var a agentOption
-		if err := rows.Scan(&a.ID, &a.Login); err == nil {
-			out = append(out, a)
-		}
-	}
-	return out
-}
-
-// listActiveQueues returns id/name pairs for active queues, for the mail-account
-// destination dropdown in the onboarding wizard.
-func listActiveQueues() []queueOption {
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		return nil
-	}
-	rows, err := db.Query(database.ConvertPlaceholders(
-		"SELECT id, name FROM queue WHERE valid_id = 1 ORDER BY name"))
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-	out := make([]queueOption, 0)
-	for rows.Next() {
-		var q queueOption
-		if err := rows.Scan(&q.ID, &q.Name); err == nil {
-			out = append(out, q)
-		}
-	}
-	return out
-}
-
 // companyOption is a minimal customer_company row for the autocomplete seed.
 type companyOption struct {
 	CustomerID string `json:"customer_id"`
 	Name       string `json:"name"`
 }
 
-// listExistingCompanies returns all active customer companies for the
-// onboarding form's company-name autocomplete (seed data for data-gk-autocomplete).
-func listExistingCompanies() []companyOption {
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		return nil
-	}
-	rows, err := db.Query(database.ConvertPlaceholders(
-		"SELECT customer_id, name FROM customer_company WHERE valid_id = 1 ORDER BY name"))
+// querySetupOptions runs a parameterless two-column option query and scans each row via scan.
+func querySetupOptions(db *sql.DB, query string, scan func(*sql.Rows) error) error {
+	rows, err := db.Query(database.ConvertPlaceholders(query))
 	if err != nil {
-		return nil
+		return err
 	}
 	defer rows.Close()
-	out := make([]companyOption, 0)
 	for rows.Next() {
-		var c companyOption
-		if err := rows.Scan(&c.CustomerID, &c.Name); err == nil {
-			out = append(out, c)
+		if err := scan(rows); err != nil {
+			return err
 		}
 	}
-	return out
+	return rows.Err()
+}
+
+// listActiveSLAs returns id/name pairs for active SLAs, for the onboarding
+// wizard's Service/SLA step.
+func listActiveSLAs(db *sql.DB) ([]slaOption, error) {
+	out := make([]slaOption, 0)
+	err := querySetupOptions(db, "SELECT id, name FROM sla WHERE valid_id = 1 ORDER BY name", func(r *sql.Rows) error {
+		var o slaOption
+		if err := r.Scan(&o.ID, &o.Name); err != nil {
+			return err
+		}
+		out = append(out, o)
+		return nil
+	})
+	return out, err
+}
+
+// listActiveAgents returns id/login pairs for active agents, for the
+// assign-agent-to-team setup task form's agent dropdown.
+func listActiveAgents(db *sql.DB) ([]agentOption, error) {
+	out := make([]agentOption, 0)
+	err := querySetupOptions(db, "SELECT id, login FROM users WHERE valid_id = 1 ORDER BY login", func(r *sql.Rows) error {
+		var a agentOption
+		if err := r.Scan(&a.ID, &a.Login); err != nil {
+			return err
+		}
+		out = append(out, a)
+		return nil
+	})
+	return out, err
+}
+
+// listActiveQueues returns id/name pairs for active queues, for the mail-account
+// destination dropdown in the onboarding wizard.
+func listActiveQueues(db *sql.DB) ([]queueOption, error) {
+	out := make([]queueOption, 0)
+	err := querySetupOptions(db, "SELECT id, name FROM queue WHERE valid_id = 1 ORDER BY name", func(r *sql.Rows) error {
+		var q queueOption
+		if err := r.Scan(&q.ID, &q.Name); err != nil {
+			return err
+		}
+		out = append(out, q)
+		return nil
+	})
+	return out, err
+}
+
+// listExistingCompanies returns all active customer companies for the
+// onboarding form's company-name autocomplete (seed data for data-gk-autocomplete).
+func listExistingCompanies(db *sql.DB) ([]companyOption, error) {
+	out := make([]companyOption, 0)
+	err := querySetupOptions(db, "SELECT customer_id, name FROM customer_company WHERE valid_id = 1 ORDER BY name", func(r *sql.Rows) error {
+		var co companyOption
+		if err := r.Scan(&co.CustomerID, &co.Name); err != nil {
+			return err
+		}
+		out = append(out, co)
+		return nil
+	})
+	return out, err
 }
 
 // postFormInts parses a repeated/comma-separated form field into []int.

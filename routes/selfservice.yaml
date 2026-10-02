@@ -1,0 +1,75 @@
+---
+# Self-service account routes (public, no auth): forgotten-password reset for
+# agents and customers (features.lost_password) and customer sign-up with
+# email confirmation (features.registration). Handlers answer 404 while their
+# feature switch is off. Implemented in internal/selfservice.
+apiVersion: goatflow.io/v1
+kind: RouteGroup
+metadata:
+  name: selfservice
+  description: "Password reset and customer self-registration"
+  namespace: default
+  enabled: true
+spec:
+  prefix: ""
+  middleware: []
+  routes:
+    # Agent password reset
+    - path: /forgot-password
+      method: GET
+      handler: handleAgentForgotPasswordPage
+      template: pages/forgot_password.pongo2
+      description: "Agent forgot-password form"
+    - path: /forgot-password
+      method: POST
+      handler: handleAgentForgotPasswordSubmit
+      description: "Email an agent a password reset link (same answer for unknown accounts)"
+    - path: /reset-password
+      method: GET
+      handler: handleAgentResetPasswordPage
+      template: pages/reset_password.pongo2
+      description: "Agent choose-new-password form (token from email)"
+    - path: /reset-password
+      method: POST
+      handler: handleAgentResetPasswordSubmit
+      description: "Set a new agent password with a reset token"
+
+    # Customer password reset
+    - path: /customer/forgot-password
+      method: GET
+      handler: handleCustomerForgotPasswordPage
+      template: pages/forgot_password.pongo2
+      description: "Customer forgot-password form"
+    - path: /customer/forgot-password
+      method: POST
+      handler: handleCustomerForgotPasswordSubmit
+      description: "Email a customer a password reset link (same answer for unknown accounts)"
+    - path: /customer/reset-password
+      method: GET
+      handler: handleCustomerResetPasswordPage
+      template: pages/reset_password.pongo2
+      description: "Customer choose-new-password form (token from email)"
+    - path: /customer/reset-password
+      method: POST
+      handler: handleCustomerResetPasswordSubmit
+      description: "Set a new customer password with a reset token"
+
+    # Customer self-registration
+    - path: /customer/register
+      method: GET
+      handler: handleCustomerRegisterPage
+      template: pages/customer/register.pongo2
+      description: "Customer sign-up form"
+    - path: /customer/register
+      method: POST
+      handler: handleCustomerRegisterSubmit
+      description: "Email a sign-up confirmation link"
+    - path: /customer/register/complete
+      method: GET
+      handler: handleCustomerRegisterCompletePage
+      template: pages/reset_password.pongo2
+      description: "Confirm email address and choose a password (token from email)"
+    - path: /customer/register/complete
+      method: POST
+      handler: handleCustomerRegisterCompleteSubmit
+      description: "Create the customer account"

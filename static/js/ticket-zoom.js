@@ -25,9 +25,6 @@ function initTicketZoom(ticketId) {
     
     // Initialize keyboard shortcuts
     initializeKeyboardShortcuts();
-    
-    // Initialize auto-save for drafts
-    initializeAutoSave();
 }
 
 /**
@@ -837,25 +834,6 @@ function initializeKeyboardShortcuts() {
                 break;
         }
     });
-}
-
-/**
- * Initialize auto-save functionality
- */
-function initializeAutoSave() {
-    // Auto-save drafts every 30 seconds
-    setInterval(() => {
-        if (isComposing) {
-            saveDraft();
-        }
-    }, 30000);
-}
-
-/**
- * Save draft - placeholder for future implementation
- */
-function saveDraft() {
-    console.log('Auto-saving draft...');
 }
 
 // Close modals on Escape key (duplicate from template - keeping for compatibility)  

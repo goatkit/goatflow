@@ -6,8 +6,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
-	"html/template"
+	"errors"
 	"log"
 	"net/http"
 	"net/url"
@@ -33,6 +32,7 @@ func init() {
 	routing.RegisterHandler("handleAdminPermissions", handleAdminPermissions)
 	routing.RegisterHandler("handleGetUserPermissionMatrix", handleGetUserPermissionMatrix)
 	routing.RegisterHandler("handleUpdateUserPermissions", handleUpdateUserPermissions)
+	routing.RegisterHandler("handleClonePermissions", handleClonePermissions)
 	routing.RegisterHandler("handleAddUserToGroup", handleAddUserToGroup)
 	routing.RegisterHandler("handleRemoveUserFromGroup", handleRemoveUserFromGroup)
 	routing.RegisterHandler("handleGroupPermissions", handleGroupPermissions)
@@ -135,202 +135,12 @@ func makeAdminGroupEntry(group *models.Group, memberCount int) gin.H {
 	}
 }
 
-func renderAdminGroupsTestFallback(c *gin.Context, groups []gin.H, searchTerm, statusTerm string) {
-	defaultGroups := []gin.H{
-		{
-			"ID":          1,
-			"Name":        "admin",
-			"Description": "System administrators",
-			"Comments":    "System administrators",
-			"MemberCount": 3,
-			"IsActive":    true,
-			"IsSystem":    true,
-			"ValidID":     1,
-		},
-		{
-			"ID":          2,
-			"Name":        "users",
-			"Description": "All registered users",
-			"Comments":    "All registered users",
-			"MemberCount": 12,
-			"IsActive":    true,
-			"IsSystem":    true,
-			"ValidID":     1,
-		},
-		{
-			"ID":          3,
-			"Name":        "support",
-			"Description": "Frontline support team",
-			"Comments":    "Frontline support team",
-			"MemberCount": 6,
-			"IsActive":    true,
-			"IsSystem":    false,
-			"ValidID":     1,
-		},
-		{
-			"ID":          4,
-			"Name":        "legacy",
-			"Description": "Inactive legacy queue",
-			"Comments":    "Inactive legacy queue",
-			"MemberCount": 0,
-			"IsActive":    false,
-			"IsSystem":    false,
-			"ValidID":     2,
-		},
-	}
-
-	if len(groups) == 0 {
-		groups = defaultGroups
-	}
-
-	search := strings.ToLower(strings.TrimSpace(searchTerm))
-	statusFilter := strings.ToLower(strings.TrimSpace(statusTerm))
-
-	filtered := make([]gin.H, 0, len(groups))
-	for _, group := range groups {
-		name := strings.ToLower(fmt.Sprint(group["Name"]))
-		description := strings.ToLower(fmt.Sprint(group["Description"]))
-		if search != "" && !strings.Contains(name, search) && !strings.Contains(description, search) {
-			continue
-		}
-
-		isActive := true
-		switch v := group["IsActive"].(type) {
-		case bool:
-			isActive = v
-		case int:
-			isActive = v == 1
-		case int64:
-			isActive = int(v) == 1
-		case uint:
-			isActive = int(v) == 1
-		case uint64:
-			isActive = int(v) == 1
-		default:
-			if raw, ok := group["ValidID"]; ok {
-				isActive = fmt.Sprint(raw) == "1"
-			}
-		}
-
-		switch statusFilter {
-		case "active":
-			if !isActive {
-				continue
-			}
-		case "inactive":
-			if isActive {
-				continue
-			}
-		}
-
-		clone := gin.H{}
-		for k, v := range group {
-			clone[k] = v
-		}
-		clone["IsActive"] = isActive
-		filtered = append(filtered, clone)
-	}
-
-	buildListHTML := func(data []gin.H) string {
-		var list strings.Builder
-		list.WriteString(`<div id="group-table" class="group-list" role="region" aria-live="polite">`)
-		if len(data) == 0 {
-			list.WriteString(`<p class="empty-state">No groups match your filters.</p>`)
-		}
-		for _, group := range data {
-			id := template.HTMLEscapeString(fmt.Sprint(group["ID"]))
-			name := template.HTMLEscapeString(fmt.Sprint(group["Name"]))
-			rawDescription := group["Comments"]
-			if rawDescription == nil || fmt.Sprint(rawDescription) == "" {
-				rawDescription = group["Description"]
-			}
-			description := template.HTMLEscapeString(fmt.Sprint(rawDescription))
-			members := template.HTMLEscapeString(fmt.Sprint(group["MemberCount"]))
-			isSystem := fmt.Sprint(group["IsSystem"]) == "true"
-			status := "active"
-			statusLabel := "Active"
-			if active, ok := group["IsActive"].(bool); ok && !active {
-				status = "inactive"
-				statusLabel = "Inactive"
-			}
-
-			list.WriteString(`<article class="group-row" data-group-id="` + id + `">`)
-			list.WriteString(`<header><h2>` + name + `</h2>`)
-			if isSystem {
-				list.WriteString(`<span class="badge system">System</span>`)
-			}
-			list.WriteString(`</header>`)
-			list.WriteString(`<p class="group-description">` + description + `</p>`)
-			list.WriteString(`<div class="group-meta">`)
-			list.WriteString(`<span class="badge members">` + members + ` members</span>`)
-			list.WriteString(`<span class="badge status status-` + status + `">` + statusLabel + `</span>`)
-			list.WriteString(`</div>`)
-			list.WriteString(`<div class="group-actions">`)
-			list.WriteString(`<button type="button" class="btn btn-small" hx-get="/admin/groups/` +
-				id + `" hx-target="#group-detail">View</button>`)
-			list.WriteString(`<button type="button" class="btn btn-small" hx-get="/admin/groups/` +
-				id + `/permissions" hx-target="#group-permissions">Permissions</button>`)
-			list.WriteString(`</div>`)
-			list.WriteString(`</article>`)
-		}
-		list.WriteString(`</div>`)
-		return list.String()
-	}
-
-	hxRequest := strings.EqualFold(c.GetHeader("HX-Request"), "true")
-	if hxRequest {
-		html := buildListHTML(filtered)
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, html)
-		return
-	}
-
-	var page strings.Builder
-	page.WriteString(`<!doctype html><html lang="en"><head>` +
-		`<meta charset="utf-8"/><title>Group Management</title></head>`)
-	page.WriteString(`<body class="admin-groups">`)
-	page.WriteString(`<main class="container">`)
-	page.WriteString(`<header class="page-header"><h1>Group Management</h1>`)
-	page.WriteString(`<a id="add-group-link" class="btn btn-primary" href="/admin/groups/new" ` +
-		`hx-get="/admin/groups/new" hx-target="#modal">Add Group</a>`)
-	page.WriteString(`</header>`)
-	page.WriteString(`<form id="group-filter-form" method="GET" hx-get="/admin/groups" ` +
-		`hx-target="#group-table" class="filters">`)
-	page.WriteString(`<label for="group-search">Search</label>`)
-	page.WriteString(`<input id="group-search" type="search" name="search" value="` +
-		template.HTMLEscapeString(searchTerm) + `" placeholder="Search groups" />`)
-	page.WriteString(`<label for="group-status">Status</label>`)
-	sel := func(current, expected string) string {
-		if strings.EqualFold(current, expected) {
-			return " selected"
-		}
-		return ""
-	}
-	statusValue := strings.ToLower(strings.TrimSpace(statusTerm))
-	page.WriteString(`<select id="group-status" name="status">`)
-	page.WriteString(`<option value=""` + sel(statusValue, "") + `>All</option>`)
-	page.WriteString(`<option value="active"` + sel(statusValue, "active") + `>Active</option>`)
-	page.WriteString(`<option value="inactive"` + sel(statusValue, "inactive") + `>Inactive</option>`)
-	page.WriteString(`</select>`)
-	page.WriteString(`<button type="submit" class="btn">Apply</button>`)
-	page.WriteString(`<button type="reset" class="btn btn-secondary" hx-get="/admin/groups" hx-target="#group-table">Clear</button>`)
-	page.WriteString(`</form>`)
-	page.WriteString(`<section aria-label="Group List">`)
-	page.WriteString(buildListHTML(filtered))
-	page.WriteString(`</section>`)
-	page.WriteString(`<section id="group-detail" aria-live="polite"></section>`)
-	page.WriteString(`<section id="group-permissions" aria-live="polite"></section>`)
-	page.WriteString(`</main></body></html>`)
-
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	c.String(http.StatusOK, page.String())
-}
-
 // handleCreateGroup creates a new group.
 func handleCreateGroup(c *gin.Context) {
 	var groupForm struct {
 		Name     string `form:"name" json:"name" binding:"required"`
 		Comments string `form:"comments" json:"comments"`
+		ValidID  int    `form:"valid_id" json:"valid_id"`
 	}
 
 	if err := c.ShouldBind(&groupForm); err != nil {
@@ -352,11 +162,16 @@ func handleCreateGroup(c *gin.Context) {
 		}
 	}
 
+	validID := groupForm.ValidID
+	if validID <= 0 {
+		validID = 1 // Active unless a status was chosen
+	}
+
 	groupRepo := repository.NewGroupRepository(db)
 	group := &models.Group{
 		Name:     groupForm.Name,
 		Comments: groupForm.Comments,
-		ValidID:  1, // Active by default
+		ValidID:  validID,
 		CreateBy: userID,
 		ChangeBy: userID,
 	}
@@ -727,6 +542,41 @@ func handleUpdateUserPermissions(c *gin.Context) {
 	})
 }
 
+// handleClonePermissions replaces the target agent's group permissions with a
+// copy of the source agent's (the "Clone Permissions" modal on /admin/permissions).
+func handleClonePermissions(c *gin.Context) {
+	parseID := func(field string) (uint, bool) {
+		id, err := strconv.ParseUint(strings.TrimSpace(c.PostForm(field)), 10, 32)
+		return uint(id), err == nil && id > 0
+	}
+	sourceID, okSource := parseID("source_user_id")
+	targetID, okTarget := parseID("target_user_id")
+	if !okSource || !okTarget {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "source_user_id and target_user_id must be user IDs"})
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
+		return
+	}
+
+	actorID := GetUserIDFromCtxUint(c, 1)
+	err = service.NewPermissionService(db).CloneUserPermissions(sourceID, targetID, actorID)
+	switch {
+	case err == nil:
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": "Permissions cloned successfully"})
+	case errors.Is(err, service.ErrCloneSameUser):
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Source and target users must be different"})
+	case errors.Is(err, repository.ErrPermissionUserNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "User not found"})
+	default:
+		log.Printf("clone permissions %d -> %d: %v", sourceID, targetID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to clone permissions"})
+	}
+}
+
 // handleAddUserToGroup assigns a user to a group.
 func handleAddUserToGroup(c *gin.Context) {
 	groupIDStr := c.Param("id")
@@ -817,10 +667,6 @@ func handleGroupPermissions(c *gin.Context) {
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		if htmxHandlerSkipDB() {
-			respondWithGroupPermissionsJSON(c, stubGroupPermissionsData(groupID))
-			return
-		}
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
 		return
 	}
@@ -869,10 +715,6 @@ func handleSaveGroupPermissions(c *gin.Context) {
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		if htmxHandlerSkipDB() {
-			respondWithGroupPermissionsJSON(c, stubGroupPermissionsData(groupID))
-			return
-		}
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
 		return
 	}

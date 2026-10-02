@@ -343,7 +343,9 @@
         "test_success": "Configuration test successful",
         "title": "Web Service Configuration",
         "webservice": "Web Service",
-        "webservice_hint": "Select the web service to use for fetching data"
+        "webservice_hint": "Select the web service to use for fetching data",
+        "test_save_first": "Save the field first to test its web service configuration.",
+        "test_saved_hint": "Tests the saved configuration; save your changes first."
       },
       "years_in_future": "Years in Future",
       "years_in_past": "Years in Past"
@@ -1266,16 +1268,8 @@
     "no_plugins": "No plugins installed",
     "no_plugins_match": "No plugins match your search criteria.",
     "password": "Password",
-    "password_requirement_contains_default": "Contains uppercase, lowercase, and number",
-    "password_requirement_contains_template": "Contains {requirements}",
-    "password_requirement_digit": "number",
-    "password_requirement_length_initial": "At least 8 characters",
-    "password_requirement_length_template": "At least {min} characters",
-    "password_requirement_lowercase": "lowercase",
     "password_requirement_match": "Passwords match",
     "password_requirement_none": "No additional requirements",
-    "password_requirement_special": "special character (!@#$%^&*)",
-    "password_requirement_uppercase": "uppercase",
     "password_requirements_incomplete": "Please ensure all password requirements are met",
     "password_reset_error": "Failed to reset password",
     "password_reset_success": "Password reset successfully",
@@ -1545,7 +1539,110 @@
       "transport_settings": "Transport Settings",
       "update_success": "Web service updated successfully"
     },
-    "search_groups": "Search groups..."
+    "search_groups": "Search groups...",
+    "webhooks": {
+      "actions": {
+        "activate": "Activate",
+        "deactivate": "Deactivate",
+        "deliveries": "Deliveries",
+        "test": "Send test"
+      },
+      "active": "Active",
+      "add": "Add webhook",
+      "columns": {
+        "events": "Events",
+        "last_delivery": "Last delivery",
+        "url": "URL"
+      },
+      "deliveries": {
+        "attempts": "Attempts",
+        "details": "Details",
+        "duration": "Duration",
+        "empty": "No deliveries yet.",
+        "event": "Event",
+        "status_code": "HTTP status",
+        "time": "Time",
+        "title": "Deliveries: {name}"
+      },
+      "delivery": {
+        "created_at": "Created",
+        "delivered_at": "Delivered",
+        "duration_ms": "{ms} ms",
+        "error": "Error",
+        "next_attempt": "Next attempt",
+        "no_response": "No response body.",
+        "payload": "Payload",
+        "redeliver": "Redeliver",
+        "response": "Response",
+        "title": "Delivery #{id}"
+      },
+      "description": "Send ticket and article events to external systems as signed HTTP POST requests.",
+      "empty": "No webhooks configured yet.",
+      "events": {
+        "article_created": "An article (note, reply, email, phone call, web request) was added to a ticket.",
+        "ticket_assigned": "The ticket owner changed.",
+        "ticket_closed": "The ticket state changed to a closed state.",
+        "ticket_created": "A ticket was created (any channel).",
+        "ticket_escalated": "A response, update or solution time escalation started.",
+        "ticket_merged": "The ticket was merged.",
+        "ticket_priority_changed": "The ticket priority changed.",
+        "ticket_queue_moved": "The ticket moved to another queue.",
+        "ticket_state_changed": "The ticket state changed to a state that is not closed.",
+        "ticket_updated": "Ticket title, customer, type, service, SLA, responsible, lock, pending time or a dynamic field changed."
+      },
+      "form": {
+        "active_help": "Inactive webhooks receive no events.",
+        "add_header": "Add header",
+        "create_title": "Add webhook",
+        "edit_title": "Edit webhook",
+        "events": "Events",
+        "events_help": "The webhook is called for the selected events.",
+        "events_required": "Select at least one event.",
+        "header_name": "Header name",
+        "header_value": "Value",
+        "headers": "Custom headers",
+        "headers_help": "Sent with every delivery. Content-Type, User-Agent and the X-Webhook-* headers are set by GoatFlow.",
+        "remove_header": "Remove header",
+        "remove_secret": "Remove the secret (deliveries will not be signed)",
+        "retry_count": "Retries",
+        "retry_count_help": "Additional attempts after a failed delivery.",
+        "secret": "Signing secret",
+        "secret_help": "16 to 512 characters. Each delivery is signed in the X-Webhook-Signature header (sha256=HMAC of the body). A saved secret cannot be displayed again.",
+        "secret_none": "No secret is set: deliveries are not signed.",
+        "secret_placeholder_keep": "Leave empty to keep the current secret",
+        "secret_placeholder_new": "Optional signing secret",
+        "secret_set": "A secret is set ({hint}).",
+        "timeout": "Timeout (seconds)",
+        "timeout_help": "How long to wait for the endpoint to respond.",
+        "url": "Payload URL",
+        "url_help": "An absolute http:// or https:// URL. GoatFlow sends a JSON POST request to it for each event."
+      },
+      "inactive": "Inactive",
+      "load_failed": "Could not load webhooks.",
+      "messages": {
+        "activated": "Webhook activated.",
+        "confirm_delete": "Delete the webhook \"{name}\" and its delivery log?",
+        "created": "Webhook created.",
+        "deactivated": "Webhook deactivated.",
+        "deleted": "Webhook deleted.",
+        "network_error": "The server could not be reached.",
+        "redeliver_failed": "Redelivery failed.",
+        "redelivered": "Delivery sent again successfully.",
+        "request_failed": "Request failed: {error}",
+        "test_failed": "Test delivery failed.",
+        "test_succeeded": "Test delivery succeeded.",
+        "updated": "Webhook saved."
+      },
+      "never": "Never",
+      "retry": "Try again",
+      "status": {
+        "delivered": "Delivered",
+        "delivering": "Delivering",
+        "failed": "Failed",
+        "pending": "Pending"
+      },
+      "title": "Webhooks"
+    }
   },
   "admin_dashboard": {
     "acl": "Access Control Lists",
@@ -1644,14 +1741,61 @@
     "tickets_created": "tickets created",
     "tickets_open": "tickets open",
     "user_management": "User Management",
-    "user_management_desc": "Manage agent and customer accounts"
+    "user_management_desc": "Manage agent and customer accounts",
+    "webhooks": "Webhooks",
+    "webhooks_desc": "Send ticket events to external systems"
+  },
+  "admin_reports": {
+    "title": "Reports & Analytics",
+    "description": "Ticket statistics for the queues you can read.",
+    "period_label": "Period",
+    "period_24h": "Last 24 hours",
+    "period_7d": "Last 7 days",
+    "period_30d": "Last 30 days",
+    "trend_label": "Trend",
+    "trend_daily_7": "Daily, last 7 days",
+    "trend_daily_30": "Daily, last 30 days",
+    "trend_monthly_12": "Monthly, last 12 months",
+    "error_forbidden": "You need read access to at least one queue to see reports.",
+    "error_generic": "Some report data could not be loaded. Please try again.",
+    "scope_note": "Figures only include tickets in queues you can read. Dates are in UTC.",
+    "overview_heading": "Overview",
+    "total_tickets": "Total tickets",
+    "open_tickets": "Open",
+    "pending_tickets": "Pending",
+    "closed_tickets": "Closed",
+    "trends_heading": "Created vs. closed",
+    "created": "Created",
+    "closed": "Closed",
+    "closure_rate": "Closure rate",
+    "queues_heading": "Queues",
+    "backlog_hint": "Backlog: open tickets older than 24 hours.",
+    "queue": "Queue",
+    "backlog": "Backlog",
+    "agents_heading": "Agent activity",
+    "agents_hint": "Tickets created and closed as responsible agent, and articles written, in the selected period.",
+    "agent": "Agent",
+    "assigned": "Assigned",
+    "articles": "Articles",
+    "customers_heading": "Top customers",
+    "total_customers": "Customers",
+    "active_customers": "Active (30 days)",
+    "new_customers": "New this month",
+    "customer": "Customer",
+    "email": "Email",
+    "last_activity": "Last ticket",
+    "export_heading": "Export",
+    "export_description": "Download the figures for the selected period.",
+    "export_summary_csv": "Summary (CSV)",
+    "export_tickets_csv": "Tickets (CSV)",
+    "export_summary_json": "Summary (JSON)",
+    "no_data": "No data for this selection."
   },
   "admin_queues": {
     "add_queue": "Add Queue",
     "advanced_settings": "Advanced Settings",
     "basic_info": "Basic Information",
     "calendar": "Calendar",
-    "delete_queue": "Delete Queue",
     "description": "Manage queues for organizing and routing tickets.",
     "edit_queue": "Edit Queue",
     "email_settings": "Email Settings",
@@ -2097,6 +2241,23 @@
       "required": "*"
     },
     "company": "Company",
+    "company_page": {
+      "address": "Address",
+      "columns": {
+        "email": "Email",
+        "name": "Name",
+        "title": "Title"
+      },
+      "customer_id": "Customer ID",
+      "info_title": "Company Information",
+      "no_company": "Your account is not linked to a company.",
+      "no_users": "No users found.",
+      "not_set": "Not provided",
+      "user_count": "View users (%d)",
+      "users_description": "People in your company who use the customer portal.",
+      "website": "Website",
+      "you": "You"
+    },
     "dashboard": {
       "announcements": "Announcements",
       "closed_tickets": "Closed Tickets",
@@ -2118,23 +2279,6 @@
     "email": "Email",
     "error_invalid_article": "Invalid article ID",
     "error_loading": "Error loading content",
-    "kb_article": {
-      "title": "Knowledge Base Article"
-    },
-    "kb_search": {
-      "button": "Search",
-      "description": "Search for articles across the knowledge base",
-      "empty_query": "Please enter a search term",
-      "no_results": "No results found",
-      "placeholder": "Enter your search terms...",
-      "query": "Search query",
-      "title": "Search Knowledge Base"
-    },
-    "knowledge_base": {
-      "description": "Browse our knowledge base for helpful articles and guides",
-      "no_articles": "No articles available yet",
-      "title": "Knowledge Base"
-    },
     "loading": "Loading...",
     "name": "Name",
     "nav": {
@@ -2178,16 +2322,6 @@
       "title": "Create New Support Ticket"
     },
     "phone": "Phone",
-    "placeholder_pages": {
-      "company_info_title": "Company Info",
-      "company_users_title": "Company Users",
-      "knowledge_base_article": "Knowledge Base Article",
-      "knowledge_base_search": "Knowledge Base Search",
-      "knowledge_base_title": "Knowledge Base",
-      "password_title": "Change Password",
-      "profile_title": "Customer Profile",
-      "under_construction": "This page is under construction."
-    },
     "portal": {
       "login_title": "Customer Support Login",
       "title": "Customer Portal"
@@ -2255,7 +2389,6 @@
     }
   },
   "customer_company_form": {
-    "assigned_services": "Assigned Services",
     "branding": "Branding",
     "company_details": "Company Details",
     "features": "Features",
@@ -2264,26 +2397,56 @@
     "save_capture_setting": "Save Capture Setting",
     "save_portal_settings": "Save Portal Settings"
   },
+  "customer_company_pages": {
+    "customer_id": "Customer ID",
+    "sections": "Company sections",
+    "nav": {
+      "details": "Details",
+      "users": "Customer Users",
+      "tickets": "Tickets",
+      "services": "Services"
+    }
+  },
   "customer_company_services": {
-    "description": "Manage services assigned to customer companies.",
-    "heading": "Customer Company Services",
+    "description": "Services are assigned to customer users. Tick the customer users of this company who may use each service.",
+    "heading": "Services",
     "title": "Customer Company Services",
-    "under_construction": "Under Construction",
-    "under_construction_message": "This feature is currently being developed."
+    "saved": "Service assignments saved.",
+    "no_services": "There are no valid services.",
+    "manage_services": "Manage services",
+    "no_users": "This company has no customer users, so there is nobody to assign services to.",
+    "all_users": "All users",
+    "save": "Save assignments",
+    "columns": {
+      "service": "Service",
+      "assigned": "Assigned",
+      "customer_users": "Customer Users"
+    }
   },
   "customer_company_tickets": {
-    "description": "View and manage tickets for customer companies.",
-    "heading": "Customer Company Tickets",
+    "description": "Tickets of this company in the queues you can access, newest first.",
+    "heading": "Tickets",
     "title": "Customer Company Tickets",
-    "under_construction": "Under Construction",
-    "under_construction_message": "This feature is currently being developed."
+    "empty": "No tickets for this company in the queues you can access.",
+    "columns": {
+      "title": "Title",
+      "customer_user": "Customer User"
+    }
   },
   "customer_company_users": {
-    "description": "Manage users assigned to customer companies.",
-    "heading": "Customer Company Users",
+    "description": "Customer users that belong to this company.",
+    "heading": "Customer Users",
     "title": "Customer Company Users",
-    "under_construction": "Under Construction",
-    "under_construction_message": "This feature is currently being developed."
+    "manage_users": "Manage customer users",
+    "empty": "This company has no customer users yet.",
+    "columns": {
+      "login": "Login",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "tickets": "Tickets",
+      "status": "Status"
+    }
   },
   "customer_group": {
     "by_group_heading": "Customer Permissions by Group",
@@ -2331,7 +2494,7 @@
     "heading": "Default Customer Portal Settings",
     "landing_page": "Landing Page",
     "landing_page_help": "The default page shown when customers access the portal",
-    "per_company_note": "Settings can be customized per company",
+    "per_company_note": "Each customer company can override these defaults on the Portal Settings tab of its edit page.",
     "require_login": "Require Login",
     "require_login_help": "Require customers to login before accessing the portal",
     "title": "Default Customer Portal Settings",
@@ -2381,30 +2544,17 @@
     "performance": "Performance",
     "quick_actions": "Quick Actions",
     "quick_stats": "Quick Stats",
-    "realtime": {
-      "title": "Real-time Dashboard"
-    },
     "recent_activity": "Recent Activity",
     "recent_tickets": "Recent Tickets",
     "statistics": "Statistics",
-    "stats": {
-      "closed_today": "Closed Today",
-      "my_open": "My Open",
-      "my_pending": "My Pending",
-      "new_today": "New Today",
-      "open_tickets": "Open Tickets",
-      "overdue": "Overdue",
-      "pending": "Pending",
-      "total_assigned": "Total Assigned",
-      "unassigned": "Unassigned"
-    },
     "tickets_count": "tickets",
     "title": "Dashboard",
     "unassigned_count": "unassigned",
     "welcome_back": "Welcome back",
     "welcome_message": "Here's what's happening with your tickets today",
     "widget_config_desc": "Choose which widgets appear on your dashboard. Drag to reorder.",
-    "widget_settings_save_error": "Failed to save widget settings"
+    "widget_settings_save_error": "Failed to save widget settings",
+    "widget_unavailable": "This widget is currently unavailable. Please try again later."
   },
   "demo": {
     "security_disabled": "Password and MFA changes are disabled in demo mode."
@@ -2437,11 +2587,6 @@
       "delete": "Delete field",
       "edit": "Edit field"
     }
-  },
-  "dynamic_test": {
-    "heading": "Dynamic Module Testing",
-    "testing_instructions": "Testing Instructions",
-    "title": "Dynamic Module Testing"
   },
   "editor": {
     "insert_image_prompt": "Enter image URL (or leave empty to pick a file):",
@@ -2535,7 +2680,6 @@
     "bad_request": "Bad request",
     "error_occurred": "An error occurred",
     "failed_delete_priority": "Failed to delete priority",
-    "failed_delete_queue": "Failed to delete queue",
     "failed_delete_state": "Failed to delete state",
     "failed_delete_type": "Failed to delete type",
     "failed_load_priorities": "Failed to load priorities",
@@ -2584,38 +2728,18 @@
     "mandatory_note": "All fields marked with an asterisk (*) are mandatory.",
     "select": "Select"
   },
-  "group_form": {
-    "description": "Create and manage groups for organizing users and permissions.",
-    "heading": "Group Form",
-    "title": "Group Form",
-    "under_construction": "Under Construction",
-    "under_construction_message": "This feature is currently being developed."
-  },
-  "group_members": {
-    "description": "Manage members assigned to this group.",
-    "heading": "Group Members",
-    "title": "Group Members",
-    "under_construction": "Under Construction",
-    "under_construction_message": "This feature is currently being developed."
-  },
   "group_permissions": {
     "permission_matrix": "Permission Matrix",
     "queue_permissions": "Queue Permissions",
     "queues": "Queues",
     "title": "Group Permissions"
   },
-  "group_view": {
-    "description": "View and manage group details and settings.",
-    "heading": "Group Details",
-    "title": "Group",
-    "under_construction": "Under Construction",
-    "under_construction_message": "This feature is currently being developed."
-  },
   "groups": {
     "add_group": "Add Group",
     "add_user": "Add User to Group",
     "add_user_btn": "Add User",
     "confirm_delete": "Are you sure you want to delete this group?",
+    "delete_keeps_group": "The group will be set to inactive. It stays in the list with its members and permissions and can be reactivated by editing it.",
     "current_members": "Current Members",
     "delete_success": "Group deleted successfully",
     "group": "Group",
@@ -2848,7 +2972,6 @@
       "delete_item": "Are you sure you want to delete this item?",
       "delete_lookup": "Are you sure you want to delete this item? This action cannot be undone.",
       "delete_priority": "Are you sure you want to delete this priority? This action cannot be undone.",
-      "delete_queue": "Are you sure you want to delete this queue? All tickets in this queue will need to be reassigned. This action cannot be undone.",
       "delete_queue_simple": "Are you sure you want to delete this queue?",
       "delete_queues_bulk": "Are you sure you want to delete the selected queue(s)?",
       "delete_state": "Are you sure you want to delete this state?",
@@ -2895,7 +3018,6 @@
     "failed_remove_user": "Failed to remove user",
     "failed_save_field": "Failed to save field",
     "failed_update_screen_config": "Failed to update screen configuration",
-    "failed_update_services": "Failed to update services",
     "groups": {
       "select_user": "Please select a user to add"
     },
@@ -2904,7 +3026,6 @@
     "item_deleted": "Item deleted successfully",
     "item_updated": "Item updated successfully",
     "loading": "Loading...",
-    "loading_customer_users": "Loading customer users...",
     "network_error": "Network error",
     "no_agents_available": "No agents available",
     "no_data": "No data available",
@@ -2930,8 +3051,6 @@
     "processing": "Processing...",
     "queue": "Queue",
     "required_fields": "Please fill in all required fields",
-    "save_company_before_services": "Save the company before assigning services.",
-    "save_company_first": "Save the company before assigning services.",
     "saving": "Saving...",
     "select_at_least_one_queue": "Please select at least one queue",
     "select_template_type": "Please select at least one template type.",
@@ -2940,8 +3059,6 @@
     "service": "Service",
     "service_created": "Service created successfully",
     "service_updated": "Service updated successfully",
-    "services_updated": "Services updated successfully",
-    "services_updated_success": "Services updated successfully",
     "session_expired": "Your session has expired",
     "sla": "SLA",
     "state_created": "State created successfully",
@@ -3205,9 +3322,7 @@
     "title": "Permission Management"
   },
   "placeholders": {
-    "contains": "Contains...",
-    "note_subject": "Note subject",
-    "separate_emails": "Separate multiple emails with commas"
+    "contains": "Contains..."
   },
   "priorities": {
     "add_priority": "Add Priority",
@@ -3336,20 +3451,6 @@
       "view_details": "View details"
     },
     "total_count": "total"
-  },
-  "realtime": {
-    "active_alerts": "Active Alerts",
-    "heading": "Real-Time Dashboard",
-    "no_tickets": "No tickets",
-    "queue_distribution": "Queue Distribution",
-    "queue_status": "Queue Status",
-    "recent_tickets": "Recent Tickets",
-    "stats": {
-      "active_agents": "Active Agents",
-      "avg_response_time": "Avg Response Time",
-      "open_tickets": "Open Tickets"
-    },
-    "ticket_volume": "Ticket Volume (24h)"
   },
   "realtime_dashboard": {
     "title": "Real-time Dashboard"
@@ -3506,29 +3607,51 @@
     "search_results": "Search Results"
   },
   "self_service": {
+    "email": {
+      "register_body": "Hello %s,\n\nThank you for signing up. Open this link within %d hours to confirm your email address and choose your password:\n%s\n\nIf you did not sign up, ignore this email.",
+      "register_exists_body": "Hello,\n\nSomeone tried to create an account with this email address, but an account already exists for it.\n\nIf you forgot your password, you can choose a new one here:\n%s\n\nIf this was not you, ignore this email.",
+      "register_exists_subject": "Your account",
+      "register_subject": "Confirm your email address",
+      "reset_body": "Hello %s,\n\nA password reset was requested for your account \"%s\".\n\nOpen this link within %d minutes to choose a new password:\n%s\n\nIf you did not request this, ignore this email. Your password has not been changed.",
+      "reset_subject": "Password reset"
+    },
+    "error": "Something went wrong. Please try again.",
     "forgot_password": {
-      "email_label": "Email Address",
+      "identifier_label": "Username or email address",
+      "identifier_required": "Enter your username or email address.",
+      "intro": "Enter your username or email address. If it matches an account, we will email you a link to choose a new password.",
       "submit": "Send Reset Link",
       "success": "If an account exists, a reset link has been sent.",
       "title": "Forgot Password"
     },
+    "rate_limited": "Too many requests. Please try again later.",
     "register": {
+      "account_exists": "An account with this email address already exists. Use \"Forgot password\" to sign in.",
+      "complete_submit": "Create account",
+      "complete_success": "Your account has been created. You can now sign in.",
+      "complete_title": "Choose your password",
       "email": "Email",
+      "fields_required": "First name, last name and email address are required.",
       "first_name": "First Name",
+      "intro": "Enter your details. We will email you a link to confirm your address and choose your password.",
+      "invalid_input": "Enter a valid email address and names of at most 100 characters.",
       "last_name": "Last Name",
+      "start_again": "Register again",
       "submit": "Register",
       "success": "Registration submitted. Check your email.",
       "title": "Create Account"
     },
     "reset_password": {
       "confirm": "Confirm Password",
+      "invalid_link": "This link is invalid or has expired.",
       "new_password": "New Password",
+      "policy_regexp": "Password does not match the required pattern",
+      "request_new": "Request a new link",
+      "required": "Enter a new password.",
       "submit": "Reset Password",
       "success": "Password reset successfully.",
-      "title": "Reset Password"
-    },
-    "verify_email": {
-      "success": "Email verified successfully."
+      "title": "Reset Password",
+      "too_long": "The password is too long."
     }
   },
   "service_catalog": {
@@ -3652,7 +3775,6 @@
     "last_used": "Last Used",
     "leave_empty_full_access": "leave empty for full access",
     "light_theme": "Light",
-    "more_coming": "More settings coming soon",
     "never_expires": "Never expires",
     "never_used": "Never used",
     "no_tokens": "No API tokens found",
@@ -3746,7 +3868,7 @@
       "org_support": "IT Support Team",
       "org_type_heading": "What kind of organisation is this?",
       "queue_name_ph": "Queue name (e.g. Support Inbox)",
-      "queues_desc": "A queue is an inbox tickets land in. Assign each queue to one or more teams.",
+      "queues_desc": "A queue is an inbox tickets land in. Each queue belongs to one team; members of that team can work its tickets.",
       "queues_heading": "Create ticket queues",
       "remove": "Remove",
       "review_agents": "Agents",
@@ -3891,7 +4013,6 @@
   "tickets": {
     "actions": "Actions",
     "add_comment": "Add Comment",
-    "add_internal_note": "Add Internal Note",
     "add_note": "Add Note",
     "additional_fields": "Additional Fields",
     "additional_info_placeholder": "Any additional information or context...",
@@ -3915,11 +4036,7 @@
     "attachments": "Attachments",
     "auto_close": {
       "at": "at",
-      "minus_help": "Ticket will close automatically at specified time regardless of activity.",
-      "minus_title": "Pending Auto Close-",
       "overdue": "Auto-close overdue",
-      "plus_help": "Ticket will close automatically if no customer response by specified time.",
-      "plus_title": "Pending Auto Close+",
       "scheduled": "Auto-close scheduled",
       "should_have_closed_at": "Ticket should have auto-closed at",
       "while_pending": "while in pending auto close state",
@@ -3940,7 +4057,6 @@
     "comment_placeholder": "Type your comment here...",
     "comments": "Comments",
     "communication": "Communication",
-    "compose_reply": "Compose Reply",
     "created": "Created",
     "created_at": "Created At",
     "created_by": "Created By",
@@ -3952,7 +4068,6 @@
     "customer_visible_badge": "Customer sees this",
     "customer_wrote_badge": "Customer wrote this",
     "description": "Description",
-    "details": "Details",
     "due_date": "Due Date",
     "dynamic_field_filters": "Dynamic Field Filters",
     "email": "Email",
@@ -4009,13 +4124,11 @@
     "owner": "Owner",
     "pending_reminder": {
       "ago": "ago",
-      "help": "Ticket will return to \"open\" state at specified time.",
       "in": "in",
       "no_time_scheduled": "No reminder time scheduled.",
       "not_scheduled": "Reminder not scheduled",
       "overdue": "Reminder overdue",
       "scheduled": "Reminder scheduled",
-      "title": "Pending Reminder",
       "was_scheduled_for": "Reminder was scheduled for",
       "will_reopen_at": "Ticket will re-open at"
     },

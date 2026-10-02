@@ -105,11 +105,11 @@ func TestHandleListUserOrgs(t *testing.T) {
 
 	eng.GET("/api/v1/session/orgs", func(c *gin.Context) {
 		c.Set("user_id", 1)
-		setOrgContext(c, orgID)
 	}, HandleListUserOrgs(repo))
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/v1/session/orgs", nil)
+	req.AddCookie(&http.Cookie{Name: "active_org_id", Value: fmt.Sprintf("%d", orgID)})
 	eng.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -278,80 +278,6 @@ func TestHandleAdminOrgCRUD(t *testing.T) {
 
 		if w.Code != http.StatusOK {
 			t.Errorf("status = %d", w.Code)
-		}
-	})
-}
-
-func TestMiddleware(t *testing.T) {
-	db := getTestDB(t)
-	repo := NewRepositoryWithDB(db)
-	prefix := fmt.Sprintf("test-%d-", time.Now().UnixNano()%100000)
-	t.Cleanup(func() { cleanupTestOrgs(t, repo.db, prefix) })
-
-	orgID, _ := repo.CreateOrg(&Organisation{
-		Name: "MW Test", Slug: prefix + "mw", Status: StatusActive, ValidID: 1,
-	}, 1)
-	userID := 1
-	repo.AddMember(&UserOrganisation{OrgID: orgID, UserID: &userID, Role: RoleMember, IsDefault: true}, 1)
-
-	gin.SetMode(gin.TestMode)
-
-	t.Run("resolves from cookie", func(t *testing.T) {
-		eng := gin.New()
-		eng.Use(func(c *gin.Context) { c.Set("user_id", 1) })
-		eng.Use(Middleware(repo))
-		var capturedOrgID int64
-		eng.GET("/test", func(c *gin.Context) {
-			capturedOrgID = ActiveOrgFromGin(c)
-			c.String(200, "ok")
-		})
-
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/test", nil)
-		req.AddCookie(&http.Cookie{Name: "active_org_id", Value: fmt.Sprintf("%d", orgID)})
-		eng.ServeHTTP(w, req)
-
-		if capturedOrgID != orgID {
-			t.Errorf("org from cookie = %d, want %d", capturedOrgID, orgID)
-		}
-	})
-
-	t.Run("falls back to default org", func(t *testing.T) {
-		eng := gin.New()
-		eng.Use(func(c *gin.Context) { c.Set("user_id", 1) })
-		eng.Use(Middleware(repo))
-		var capturedOrgID int64
-		eng.GET("/test", func(c *gin.Context) {
-			capturedOrgID = ActiveOrgFromGin(c)
-			c.String(200, "ok")
-		})
-
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/test", nil)
-		// No cookie — should resolve from default org.
-		eng.ServeHTTP(w, req)
-
-		if capturedOrgID != orgID {
-			t.Errorf("org from default = %d, want %d", capturedOrgID, orgID)
-		}
-	})
-
-	t.Run("no org context when no membership", func(t *testing.T) {
-		eng := gin.New()
-		eng.Use(func(c *gin.Context) { c.Set("user_id", 99999) }) // user with no membership
-		eng.Use(Middleware(repo))
-		var capturedOrgID int64
-		eng.GET("/test", func(c *gin.Context) {
-			capturedOrgID = ActiveOrgFromGin(c)
-			c.String(200, "ok")
-		})
-
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/test", nil)
-		eng.ServeHTTP(w, req)
-
-		if capturedOrgID != 0 {
-			t.Errorf("expected 0 (no org), got %d", capturedOrgID)
 		}
 	})
 }

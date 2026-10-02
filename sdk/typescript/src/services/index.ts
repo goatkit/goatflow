@@ -1,40 +1,56 @@
-import { HttpClient } from '../client';
+import { HttpClient } from '../client.js';
 import {
+  CreatedUser,
+  CurrentUser,
+  DashboardStatistics,
+  GoatflowError,
+  TokenPair,
+  Queue,
+  QueueListOptions,
+  SearchQuery,
+  SearchResults,
   User,
   UserCreateRequest,
+  UserList,
+  UserListOptions,
   UserUpdateRequest,
-  Queue,
-  DashboardStats,
-  LDAPUser,
-  LDAPSyncResult,
   Webhook,
   WebhookDelivery,
-  InternalNote,
-  NoteTemplate,
-  AuthLoginRequest,
-  AuthLoginResponse,
-} from '../types';
+  WebhookRequest,
+} from '../types.js';
 
-/**
- * Service for managing users
- */
+export { TicketsService, ArticlesService } from './tickets.js';
+
+/** /api/v1/users (agents) */
 export class UsersService {
-  constructor(private client: HttpClient) {}
+  constructor(private readonly client: HttpClient) {}
 
-  async list(): Promise<User[]> {
-    return this.client.get<User[]>('/api/v1/users');
+  /** One page of agents. */
+  async list(options: UserListOptions = {}): Promise<UserList> {
+    const { data, pagination } = await this.client.request<User[]>('GET', '/api/v1/users', { query: { ...options } });
+    if (!pagination) {
+      throw new GoatflowError('User list response has no pagination');
+    }
+    return { users: data, pagination };
   }
 
+  /** One agent, including email and preferences. */
   async get(id: number): Promise<User> {
     return this.client.get<User>(`/api/v1/users/${id}`);
   }
 
-  async create(data: UserCreateRequest): Promise<User> {
-    return this.client.post<User>('/api/v1/users', data);
+  /** The authenticated agent. */
+  async me(): Promise<CurrentUser> {
+    return this.client.get<CurrentUser>('/api/v1/users/me');
   }
 
-  async update(id: number, data: UserUpdateRequest): Promise<User> {
-    return this.client.put<User>(`/api/v1/users/${id}`, data);
+  async create(data: UserCreateRequest): Promise<CreatedUser> {
+    return this.client.post<CreatedUser>('/api/v1/users', data);
+  }
+
+  /** Changes the given fields. The API answers only with the id; use get() to read the result. */
+  async update(id: number, data: UserUpdateRequest): Promise<void> {
+    await this.client.put(`/api/v1/users/${id}`, data);
   }
 
   async delete(id: number): Promise<void> {
@@ -42,14 +58,13 @@ export class UsersService {
   }
 }
 
-/**
- * Service for managing queues
- */
+/** /api/v1/queues */
 export class QueuesService {
-  constructor(private client: HttpClient) {}
+  constructor(private readonly client: HttpClient) {}
 
-  async list(): Promise<Queue[]> {
-    return this.client.get<Queue[]>('/api/v1/queues');
+  /** Queues the caller can read. */
+  async list(options: QueueListOptions = {}): Promise<Queue[]> {
+    return this.client.get<Queue[]>('/api/v1/queues', { ...options });
   }
 
   async get(id: number): Promise<Queue> {
@@ -57,57 +72,28 @@ export class QueuesService {
   }
 }
 
-/**
- * Service for dashboard operations
- */
-export class DashboardService {
-  constructor(private client: HttpClient) {}
+/** /api/v1/statistics */
+export class StatisticsService {
+  constructor(private readonly client: HttpClient) {}
 
-  async getStats(): Promise<DashboardStats> {
-    return this.client.get<DashboardStats>('/api/v1/dashboard/stats');
-  }
-
-  async getMyTickets(): Promise<any[]> {
-    return this.client.get<any[]>('/api/v1/dashboard/my-tickets');
-  }
-
-  async getRecentTickets(): Promise<any[]> {
-    return this.client.get<any[]>('/api/v1/dashboard/recent-tickets');
+  /** Ticket counts overall, per queue and per priority, and the newest tickets. */
+  async dashboard(): Promise<DashboardStatistics> {
+    return this.client.get<DashboardStatistics>('/api/v1/statistics/dashboard');
   }
 }
 
-/**
- * Service for LDAP operations
- */
-export class LDAPService {
-  constructor(private client: HttpClient) {}
+/** POST /api/v1/search */
+export class SearchService {
+  constructor(private readonly client: HttpClient) {}
 
-  async getUsers(): Promise<LDAPUser[]> {
-    return this.client.get<LDAPUser[]>('/api/v1/ldap/users');
-  }
-
-  async getUser(username: string): Promise<LDAPUser> {
-    return this.client.get<LDAPUser>(`/api/v1/ldap/users/${username}`);
-  }
-
-  async syncUsers(): Promise<LDAPSyncResult> {
-    return this.client.post<LDAPSyncResult>('/api/v1/ldap/sync');
-  }
-
-  async testConnection(): Promise<void> {
-    await this.client.post('/api/v1/ldap/test');
-  }
-
-  async getSyncStatus(): Promise<Record<string, any>> {
-    return this.client.get<Record<string, any>>('/api/v1/ldap/sync/status');
+  async query(query: SearchQuery): Promise<SearchResults> {
+    return this.client.post<SearchResults>('/api/v1/search', query);
   }
 }
 
-/**
- * Service for webhook management
- */
+/** /api/v1/webhooks (admin only) */
 export class WebhooksService {
-  constructor(private client: HttpClient) {}
+  constructor(private readonly client: HttpClient) {}
 
   async list(): Promise<Webhook[]> {
     return this.client.get<Webhook[]>('/api/v1/webhooks');
@@ -117,11 +103,11 @@ export class WebhooksService {
     return this.client.get<Webhook>(`/api/v1/webhooks/${id}`);
   }
 
-  async create(data: Partial<Webhook>): Promise<Webhook> {
+  async create(data: WebhookRequest): Promise<Webhook> {
     return this.client.post<Webhook>('/api/v1/webhooks', data);
   }
 
-  async update(id: number, data: Partial<Webhook>): Promise<Webhook> {
+  async update(id: number, data: WebhookRequest): Promise<Webhook> {
     return this.client.put<Webhook>(`/api/v1/webhooks/${id}`, data);
   }
 
@@ -129,76 +115,49 @@ export class WebhooksService {
     await this.client.delete(`/api/v1/webhooks/${id}`);
   }
 
-  async test(id: number): Promise<void> {
-    await this.client.post(`/api/v1/webhooks/${id}/test`);
+  /** Sends a webhook.test event now and returns the recorded delivery. */
+  async test(id: number): Promise<WebhookDelivery> {
+    return this.client.post<WebhookDelivery>(`/api/v1/webhooks/${id}/test`);
   }
 
-  async getDeliveries(id: number): Promise<WebhookDelivery[]> {
-    return this.client.get<WebhookDelivery[]>(`/api/v1/webhooks/${id}/deliveries`);
-  }
-}
-
-/**
- * Service for internal notes
- */
-export class NotesService {
-  constructor(private client: HttpClient) {}
-
-  async getNotes(ticketId: number): Promise<InternalNote[]> {
-    return this.client.get<InternalNote[]>(`/api/v1/tickets/${ticketId}/notes`);
+  /** Newest deliveries first, without payload and response bodies. */
+  async getDeliveries(id: number, limit?: number): Promise<WebhookDelivery[]> {
+    return this.client.get<WebhookDelivery[]>(`/api/v1/webhooks/${id}/deliveries`, { limit });
   }
 
-  async getNote(ticketId: number, noteId: number): Promise<InternalNote> {
-    return this.client.get<InternalNote>(`/api/v1/tickets/${ticketId}/notes/${noteId}`);
+  /** One delivery including payload and response body. */
+  async getDelivery(deliveryId: number): Promise<WebhookDelivery> {
+    return this.client.get<WebhookDelivery>(`/api/v1/webhooks/deliveries/${deliveryId}`);
   }
 
-  async createNote(ticketId: number, data: Partial<InternalNote>): Promise<InternalNote> {
-    return this.client.post<InternalNote>(`/api/v1/tickets/${ticketId}/notes`, data);
-  }
-
-  async updateNote(ticketId: number, noteId: number, data: Partial<InternalNote>): Promise<InternalNote> {
-    return this.client.put<InternalNote>(`/api/v1/tickets/${ticketId}/notes/${noteId}`, data);
-  }
-
-  async deleteNote(ticketId: number, noteId: number): Promise<void> {
-    await this.client.delete(`/api/v1/tickets/${ticketId}/notes/${noteId}`);
-  }
-
-  async getTemplates(): Promise<NoteTemplate[]> {
-    return this.client.get<NoteTemplate[]>('/api/v1/notes/templates');
-  }
-
-  async createTemplate(data: Partial<NoteTemplate>): Promise<NoteTemplate> {
-    return this.client.post<NoteTemplate>('/api/v1/notes/templates', data);
+  /** Sends a delivery's payload again and returns the new delivery. */
+  async redeliver(deliveryId: number): Promise<WebhookDelivery> {
+    return this.client.post<WebhookDelivery>(`/api/v1/webhooks/deliveries/${deliveryId}/redeliver`);
   }
 }
 
-/**
- * Service for authentication
- */
+/** POST /api/v1/auth/login and /api/v1/auth/refresh, sent without the client's credentials. */
 export class AuthService {
-  constructor(private client: HttpClient) {}
+  constructor(private readonly client: HttpClient) {}
 
-  async login(data: AuthLoginRequest): Promise<AuthLoginResponse> {
-    return this.client.post<AuthLoginResponse>('/api/v1/auth/login', data);
+  /** Exchanges an agent's login and password for a token pair. */
+  async login(login: string, password: string): Promise<TokenPair> {
+    const { data } = await this.client.request<TokenPair>('POST', '/api/v1/auth/login', {
+      body: { login, password },
+      authenticate: false,
+    });
+    return data;
   }
 
-  async logout(): Promise<void> {
-    await this.client.post('/api/v1/auth/logout');
-  }
-
-  async refreshToken(refreshToken: string): Promise<AuthLoginResponse> {
-    return this.client.post<AuthLoginResponse>('/api/v1/auth/refresh', { refresh_token: refreshToken });
-  }
-
-  async getProfile(): Promise<User> {
-    return this.client.get<User>('/api/v1/auth/profile');
-  }
-
-  async updateProfile(data: UserUpdateRequest): Promise<User> {
-    return this.client.put<User>('/api/v1/auth/profile', data);
+  /**
+   * Exchanges a refresh token for a new access token and a new (rotated)
+   * refresh token. A rejected refresh token throws a 401 GoatflowError.
+   */
+  async refresh(refreshToken: string): Promise<TokenPair> {
+    const { data } = await this.client.request<TokenPair>('POST', '/api/v1/auth/refresh', {
+      body: { refresh_token: refreshToken },
+      authenticate: false,
+    });
+    return data;
   }
 }
-
-// Re-export TicketsService
-export { TicketsService } from './tickets';

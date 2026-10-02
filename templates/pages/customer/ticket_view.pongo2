@@ -197,7 +197,7 @@
     </div>
 
     <!-- Reply Form -->
-    {% if Ticket.state_id != 3 %}
+    {% if not Ticket.is_closed %}
     <div class="gk-card-glow" id="reply">
         <div class="gk-card-header">
             <h2 class="gk-card-title">{{ t("customer.ticket_view.add_reply") }}</h2>

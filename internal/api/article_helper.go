@@ -4,13 +4,14 @@ package api
 import (
 	"database/sql"
 
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 // ArticleInsertParams holds parameters for creating an article.
 type ArticleInsertParams struct {
 	TicketID             int64
-	CommunicationChannel int // 1=email, 2=phone, 3=internal, 4=chat
+	CommunicationChannel int // constants.CommunicationChannel*
 	IsVisibleForCustomer int
 	CreateBy             int64
 }
@@ -21,11 +22,11 @@ func insertArticle(tx *sql.Tx, params ArticleInsertParams) (int64, error) {
 	query := database.ConvertPlaceholders(`
 		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id,
 			is_visible_for_customer, create_time, create_by, change_time, change_by)
-		VALUES (?, 1, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
+		VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
 		RETURNING id
 	`)
-	// Args: ticket_id, communication_channel_id, is_visible_for_customer, create_by, change_by
-	args := []interface{}{params.TicketID, params.CommunicationChannel, params.IsVisibleForCustomer, params.CreateBy, params.CreateBy}
+	// Args: ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer, create_by, change_by
+	args := []interface{}{params.TicketID, constants.ArticleSenderAgent, params.CommunicationChannel, params.IsVisibleForCustomer, params.CreateBy, params.CreateBy}
 	return database.GetAdapter().InsertWithReturningTx(tx, query, args...)
 }
 
@@ -77,13 +78,13 @@ func insertArticleMimeData(tx *sql.Tx, params ArticleMimeParams) error {
 // defaultNoteSubject returns a default subject based on communication channel.
 func defaultNoteSubject(channelID int) string {
 	switch channelID {
-	case 1:
+	case constants.CommunicationChannelEmail:
 		return "Email Note"
-	case 2:
+	case constants.CommunicationChannelPhone:
 		return "Phone Note"
-	case 3:
+	case constants.CommunicationChannelInternal:
 		return "Internal Note"
-	case 4:
+	case constants.CommunicationChannelChat:
 		return "Chat Note"
 	default:
 		return "Note"

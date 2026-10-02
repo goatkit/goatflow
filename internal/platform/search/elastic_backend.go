@@ -58,6 +58,13 @@ func (eb *ElasticBackend) GetBackendName() string {
 
 // Search performs a search using Elasticsearch/Zinc.
 func (eb *ElasticBackend) Search(ctx context.Context, query SearchQuery) (*SearchResults, error) {
+	// Indexed documents carry no queue information GoatFlow controls, so a
+	// queue-restricted search cannot be enforced here: refuse it rather than
+	// return tickets from queues the caller cannot read.
+	if query.RestrictQueues {
+		return nil, ErrQueueRestrictionUnsupported
+	}
+
 	// Build Elasticsearch query
 	esQuery := map[string]interface{}{
 		"query": map[string]interface{}{

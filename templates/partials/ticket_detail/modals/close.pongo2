@@ -21,8 +21,9 @@
                         {{ t("tickets.close_state")|default:"Close State" }} <span style="color: var(--gk-error);">*</span>
                     </label>
                     <select id="closeState" name="closeState" required class="gk-select-neon w-full">
-                        <option value="3">{{ t("tickets.closed_successful")|default:"Closed Successful" }}</option>
-                        <option value="4">{{ t("tickets.closed_unsuccessful")|default:"Closed Unsuccessful" }}</option>
+                        {% for s in TicketStates %}{% if s.type_name == "closed" %}
+                        <option value="{{ s.id }}"{% if s.name == "closed successful" %} selected{% endif %}>{% if s.name == "closed successful" %}{{ t("tickets.closed_successful")|default:"Closed Successful" }}{% elif s.name == "closed unsuccessful" %}{{ t("tickets.closed_unsuccessful")|default:"Closed Unsuccessful" }}{% else %}{{ s.name }}{% endif %}</option>
+                        {% endif %}{% endfor %}
                     </select>
                 </div>
 

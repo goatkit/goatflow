@@ -12,7 +12,7 @@ func TestComputePendingReminderMetaScheduled(t *testing.T) {
 	ticket := &models.Ticket{UntilTime: int(due.Unix())}
 	now := due.Add(-time.Hour)
 
-	meta := computePendingReminderMeta(ticket, "pending reminder", pendingReminderStateTypeID, now)
+	meta := computePendingReminderMeta(ticket, "pending reminder", "pending reminder", now)
 
 	if !meta.pending {
 		t.Fatalf("expected pending reminder state to be recognized")
@@ -32,7 +32,7 @@ func TestComputePendingReminderMetaMissingUntilTime(t *testing.T) {
 	ticket := &models.Ticket{}
 	now := time.Date(2025, 10, 17, 15, 0, 0, 0, time.UTC)
 
-	meta := computePendingReminderMeta(ticket, "pending reminder", pendingReminderStateTypeID, now)
+	meta := computePendingReminderMeta(ticket, "pending reminder", "pending reminder", now)
 
 	if !meta.pending {
 		t.Fatalf("expected pending reminder state to be recognized")

@@ -7,6 +7,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/ticketutil"
 )
 
@@ -26,7 +27,7 @@ func (r *TicketRepository) FindDuePendingReminders(ctx context.Context, now time
 FROM ticket t
 JOIN ticket_state ts ON ts.id = t.ticket_state_id
 LEFT JOIN queue q ON q.id = t.queue_id
-WHERE ts.type_id = 4
+WHERE t.ticket_state_id IN (` + lookups.PendingReminderStateIDsSQL + `)
   AND ((t.until_time > 0 AND t.until_time <= ?) OR t.until_time = 0)
   AND t.archive_flag = 0
 ORDER BY CASE WHEN t.until_time = 0 THEN 0 ELSE t.until_time END ASC

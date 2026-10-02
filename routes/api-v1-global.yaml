@@ -16,13 +16,19 @@ spec:
           method: POST
           handler: HandleLoginAPI
           description: "Authenticate user and return JWT tokens"
+        - path: /auth/refresh
+          method: POST
+          handler: HandleRefreshTokenAPI
+          description: "Exchange a refresh token for a new access token and a rotated refresh token"
 ---
-# API v1 Protected Routes Configuration
+# API v1 routes customers may call too (customer JWTs and customer API
+# tokens). Agents need queue permissions; customers only ever see their own
+# tickets and customer-visible articles (checked in middleware + handler).
 apiVersion: goatflow.io/v1
 kind: RouteGroup
 metadata:
-    name: api-v1-protected
-    description: "REST API v1 protected endpoints"
+    name: api-v1-customer-readable
+    description: "REST API v1 ticket reads shared by agents and customers"
     namespace: default
     enabled: true
 spec:
@@ -34,20 +40,47 @@ spec:
           method: GET
           handler: HandleListTicketsAPI
           middleware:
-              - queue_ro # Require read access to at least one queue
+              - customer_or_queue_ro # agents: ro on some queue; customers: own tickets only (handler filter)
           description: "List tickets"
+        - path: /tickets/:id
+          method: GET
+          handler: HandleGetTicketAPI
+          middleware:
+              - ticket_access_customer_ro # agents: ro on the ticket's queue; customers: own ticket
+          description: "Get ticket by ID"
+        - path: /tickets/:id/articles
+          method: GET
+          handler: HandleListArticlesAPI
+          middleware:
+              - ticket_access_customer_ro # handler hides internal articles from customers
+          description: "Get ticket articles"
+        - path: /tickets/:id/articles/:article_id
+          method: GET
+          handler: HandleGetArticleAPI
+          middleware:
+              - ticket_access_customer_ro # handler hides internal articles from customers
+          description: "Get specific article"
+---
+# API v1 Protected Routes Configuration (agents only)
+apiVersion: goatflow.io/v1
+kind: RouteGroup
+metadata:
+    name: api-v1-protected
+    description: "REST API v1 protected endpoints"
+    namespace: default
+    enabled: true
+spec:
+    prefix: /api/v1
+    middleware:
+        - unified_auth
+        - agent # customer JWTs / customer API tokens only reach api-v1-customer-readable
+    routes:
         - path: /tickets
           method: POST
           handler: HandleCreateTicketAPI
           middleware:
               - queue_access_create # Require create access to target queue
           description: "Create ticket"
-        - path: /tickets/:id
-          method: GET
-          handler: HandleGetTicketAPI
-          middleware:
-              - ticket_access_ro # Require read access to ticket's queue
-          description: "Get ticket by ID"
         - path: /tickets/:id
           method: PUT
           handler: HandleUpdateTicketAPI
@@ -73,25 +106,13 @@ spec:
           middleware:
               - ticket_access_note # Require note permission
           description: "Add time accounting entry to ticket"
-        # Article endpoints
-        - path: /tickets/:id/articles
-          method: GET
-          handler: HandleListArticlesAPI
-          middleware:
-              - ticket_access_ro # Require read access
-          description: "Get ticket articles"
+        # Article endpoints (GET routes are in api-v1-customer-readable)
         - path: /tickets/:id/articles
           method: POST
           handler: HandleCreateArticleAPI
           middleware:
               - ticket_access_note # Require note permission
           description: "Add article to ticket"
-        - path: /tickets/:id/articles/:article_id
-          method: GET
-          handler: HandleGetArticleAPI
-          middleware:
-              - ticket_access_ro # Require read access
-          description: "Get specific article"
         # Internal notes endpoints
         - path: /tickets/:id/internal-notes
           method: GET
@@ -165,6 +186,24 @@ spec:
           handler: HandleGetPriorityAPI
           middleware:
           description: "Get priority by ID"
+        - path: /priorities
+          method: POST
+          handler: HandleCreatePriorityAPI
+          middleware:
+              - admin
+          description: "Create priority (admin only)"
+        - path: /priorities/:id
+          method: PUT
+          handler: HandleUpdatePriorityAPI
+          middleware:
+              - admin
+          description: "Update priority (admin only)"
+        - path: /priorities/:id
+          method: DELETE
+          handler: HandleDeletePriorityAPI
+          middleware:
+              - admin
+          description: "Invalidate priority (admin only)"
         # Types, states, and services
         - path: /types
           method: GET
@@ -181,6 +220,55 @@ spec:
           handler: HandleListServicesAPI
           middleware:
           description: "List services"
+        # Statistics (agent-only; counts cover only the queues the caller can read)
+        - path: /statistics/dashboard
+          method: GET
+          handler: HandleDashboardStatisticsAPI
+          middleware:
+              - queue_ro # Require read access to at least one queue
+          description: "Dashboard statistics (ticket counts by state, queue, priority; recent tickets)"
+        - path: /statistics/trends
+          method: GET
+          handler: HandleTicketTrendsAPI
+          middleware:
+              - queue_ro # Require read access to at least one queue
+          description: "Ticket created/closed trends (daily or monthly)"
+        - path: /statistics/agents
+          method: GET
+          handler: HandleAgentPerformanceAPI
+          middleware:
+              - queue_ro # Require read access to at least one queue
+          description: "Agent performance (tickets assigned/closed, articles written)"
+        - path: /statistics/queues
+          method: GET
+          handler: HandleQueueMetricsAPI
+          middleware:
+              - queue_ro # Require read access to at least one queue
+          description: "Queue metrics (total, open, backlog)"
+        - path: /statistics/analytics
+          method: GET
+          handler: HandleTimeBasedAnalyticsAPI
+          middleware:
+              - queue_ro # Require read access to at least one queue
+          description: "Ticket distribution by hour of day or day of week"
+        - path: /statistics/customers
+          method: GET
+          handler: HandleCustomerStatisticsAPI
+          middleware:
+              - queue_ro # Require read access to at least one queue
+          description: "Customer statistics (top customers, activity)"
+        - path: /statistics/export
+          method: GET
+          handler: HandleExportStatisticsAPI
+          middleware:
+              - queue_ro # Require read access to at least one queue
+          description: "Export statistics summary or ticket list as JSON or CSV"
+        - path: /ticket-states/statistics
+          method: GET
+          handler: HandleTicketStateStatisticsAPI
+          middleware:
+              - queue_ro # Require read access to at least one queue
+          description: "Ticket counts per ticket state"
         # Ticket attribute relations evaluation (for form filtering)
         - path: /ticket-attribute-relations/evaluate
           method: GET
@@ -193,79 +281,86 @@ spec:
           handler: HandleSearchAPI
           middleware:
           description: "Search tickets"
-        - path: /search/suggestions
-          method: GET
-          handler: HandleSearchSuggestionsAPI
-          middleware:
-          description: "Search suggestions"
         - path: /search/reindex
           method: POST
           handler: HandleReindexAPI
           middleware:
-          description: "Trigger search reindex"
+              - admin
+          description: "Trigger search reindex (admin only)"
         - path: /search/health
           method: GET
           handler: HandleSearchHealthAPI
           middleware:
           description: "Search health"
-        # User mutations
+        # User mutations (agent account management: admins only)
         - path: /users
           method: POST
           handler: HandleCreateUserAPI
           middleware:
+              - admin
           description: "Create user"
         - path: /users/:id
           method: PUT
           handler: HandleUpdateUserAPI
           middleware:
+              - admin
           description: "Update user"
         - path: /users/:id
           method: DELETE
           handler: HandleDeleteUserAPI
           middleware:
+              - admin
           description: "Delete user"
         # Article mutations
         - path: /tickets/:id/articles/:article_id
           method: PUT
           handler: HandleUpdateArticleAPI
           middleware:
+              - ticket_access_rw # Require rw on the ticket's queue
           description: "Update article"
         - path: /tickets/:id/articles/:article_id
           method: DELETE
           handler: HandleDeleteArticleAPI
           middleware:
+              - ticket_access_rw # Require rw on the ticket's queue
           description: "Delete article"
-        # Queue mutations and extras
+        # Queue mutations and extras (admin only: queue.group_id decides who can see a queue)
         - path: /queues
           method: POST
           handler: HandleCreateQueueAPI
           middleware:
-          description: "Create queue"
+              - admin
+          description: "Create queue (admin only)"
         - path: /queues/:id
           method: PUT
           handler: HandleUpdateQueueAPI
           middleware:
-          description: "Update queue"
+              - admin
+          description: "Update queue, including its group (admin only)"
         - path: /queues/:id
           method: DELETE
           handler: HandleDeleteQueueAPI
           middleware:
-          description: "Delete queue"
+              - admin
+          description: "Delete queue (admin only)"
         - path: /queues/:id/stats
           method: GET
           handler: HandleGetQueueStatsAPI
           middleware:
+              - queue_access_ro # Require read access to the specific queue
           description: "Queue ticket statistics"
         - path: /queues/:id/groups
           method: POST
           handler: HandleAssignQueueGroupAPI
           middleware:
-          description: "Assign group to queue"
+              - admin
+          description: "Set the queue's group (admin only)"
         - path: /queues/:id/groups/:group_id
           method: DELETE
           handler: HandleRemoveQueueGroupAPI
           middleware:
-          description: "Remove group from queue"
+              - admin
+          description: "Remove the queue's group: always rejected, a queue must have a group (admin only)"
         # Email identity endpoints
         - path: /system-addresses
           method: GET
@@ -276,12 +371,14 @@ spec:
           method: POST
           handler: HandleCreateSystemAddressAPI
           middleware:
-          description: "Create system address"
+              - admin
+          description: "Create system address (admin only)"
         - path: /system-addresses/:id
           method: PUT
           handler: HandleUpdateSystemAddressAPI
           middleware:
-          description: "Update system address"
+              - admin
+          description: "Update system address (admin only)"
         - path: /salutations
           method: GET
           handler: HandleListSalutationsAPI
@@ -291,12 +388,14 @@ spec:
           method: POST
           handler: HandleCreateSalutationAPI
           middleware:
-          description: "Create salutation"
+              - admin
+          description: "Create salutation (admin only)"
         - path: /salutations/:id
           method: PUT
           handler: HandleUpdateSalutationAPI
           middleware:
-          description: "Update salutation"
+              - admin
+          description: "Update salutation (admin only)"
         - path: /signatures
           method: GET
           handler: HandleListSignaturesAPI
@@ -306,12 +405,14 @@ spec:
           method: POST
           handler: HandleCreateSignatureAPI
           middleware:
-          description: "Create signature"
+              - admin
+          description: "Create signature (admin only)"
         - path: /signatures/:id
           method: PUT
           handler: HandleUpdateSignatureAPI
           middleware:
-          description: "Update signature"
+              - admin
+          description: "Update signature (admin only)"
         # Markdown rendering (plugins use this for live preview panes; bare
         # sanitized output so callers can apply their own theme)
         - path: /markdown/render

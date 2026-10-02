@@ -62,13 +62,6 @@ func TestSetupRoutes(t *testing.T) {
 			needsAuth:  false,
 		},
 		{
-			name:       "HTMX dashboard stats endpoint",
-			method:     "GET",
-			path:       "/api/dashboard/stats",
-			statusCode: http.StatusOK,
-			needsAuth:  true,
-		},
-		{
 			name:       "Non-existent route returns 404",
 			method:     "GET",
 			path:       "/nonexistent",
@@ -105,21 +98,9 @@ func TestHTMXEndpoints(t *testing.T) {
 		statusCode int
 	}{
 		{
-			name:       "Dashboard stats returns HTML fragment",
-			method:     "GET",
-			path:       "/api/dashboard/stats",
-			statusCode: http.StatusOK,
-		},
-		{
 			name:       "Recent tickets returns HTML fragment",
 			method:     "GET",
 			path:       "/api/dashboard/recent-tickets",
-			statusCode: http.StatusOK,
-		},
-		{
-			name:       "Activity feed returns HTML fragment",
-			method:     "GET",
-			path:       "/api/dashboard/activity",
 			statusCode: http.StatusOK,
 		},
 		{

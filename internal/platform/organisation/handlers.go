@@ -57,9 +57,6 @@ func HandleSwitchOrg(repo *Repository) gin.HandlerFunc {
 		// Set the active org cookie (30 day expiry).
 		c.SetCookie("active_org_id", strconv.FormatInt(req.OrgID, 10), 86400*30, "/", "", false, true)
 
-		// Update context for current request.
-		setOrgContext(c, req.OrgID)
-
 		c.JSON(http.StatusOK, gin.H{
 			"status": "switched",
 			"org_id": req.OrgID,
@@ -84,17 +81,12 @@ func HandleListUserOrgs(repo *Repository) gin.HandlerFunc {
 			return
 		}
 
-		// Prefer the gin context (set by organisation.Middleware when
-		// installed), but fall back to the cookie directly. The middleware
-		// isn't wired into the plugin route chain, so without the cookie
-		// fallback the picker can't highlight the user's active org.
-		activeOrgID := ActiveOrgFromGin(c)
-		if activeOrgID == 0 {
-			if cookie, err := c.Cookie("active_org_id"); err == nil && cookie != "" {
-				var n int64
-				if _, scanErr := fmt.Sscanf(cookie, "%d", &n); scanErr == nil {
-					activeOrgID = n
-				}
+		// The org switcher stores the active org in the active_org_id cookie;
+		// it only marks which of the caller's own orgs is highlighted.
+		var activeOrgID int64
+		if cookie, err := c.Cookie("active_org_id"); err == nil && cookie != "" {
+			if _, scanErr := fmt.Sscanf(cookie, "%d", &activeOrgID); scanErr != nil {
+				activeOrgID = 0
 			}
 		}
 
@@ -440,4 +432,16 @@ func getAdminUserID(c *gin.Context) int {
 		}
 	}
 	return 1
+}
+
+func toInt(v any) (int, bool) {
+	switch n := v.(type) {
+	case int:
+		return n, true
+	case int64:
+		return int(n), true
+	case float64:
+		return int(n), true
+	}
+	return 0, false
 }

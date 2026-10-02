@@ -114,8 +114,11 @@ func Load(ctx context.Context, wasmBytes []byte, opts ...LoadOption) (*WASMPlugi
 		return nil, fmt.Errorf("define host functions: %w", err)
 	}
 
-	// Compile and instantiate the module
-	module, err := r.Instantiate(ctx, wasmBytes)
+	// Compile and instantiate the module. wazero's default clocks are fake
+	// (walltime starts at 2022-01-01 and advances 1ms per read), so give the
+	// guest the real system clocks or time.Now() inside a plugin is wrong.
+	moduleConfig := wazero.NewModuleConfig().WithSysWalltime().WithSysNanotime()
+	module, err := r.InstantiateWithConfig(ctx, wasmBytes, moduleConfig)
 	if err != nil {
 		r.Close(ctx)
 		return nil, fmt.Errorf("instantiate wasm: %w", err)
@@ -333,6 +336,12 @@ func (p *WASMPlugin) dispatchHostCall(ctx context.Context, fn string, args []byt
 			return nil, err
 		}
 		return json.Marshal(map[string]string{"value": val})
+
+	case "time_now":
+		// The server's local time, offset included. TinyGo guests have no
+		// timezone data, and ticket timestamps are stored as server-local wall
+		// clock, so plugins need the host's offset to compute "today" etc.
+		return json.Marshal(map[string]string{"now": time.Now().Format(time.RFC3339Nano)})
 
 	case "translate":
 		var req struct {

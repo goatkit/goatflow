@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -483,11 +482,9 @@ func handleCreateSignature(c *gin.Context) {
 		return
 	}
 
-	userID := 1
-	if u, exists := c.Get("userID"); exists {
-		if uid, ok := u.(int); ok {
-			userID = uid
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	if input.ValidID == 0 {
@@ -545,11 +542,9 @@ func handleUpdateSignature(c *gin.Context) {
 		return
 	}
 
-	userID := 1
-	if u, exists := c.Get("userID"); exists {
-		if uid, ok := u.(int); ok {
-			userID = uid
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	if input.ValidID == 0 {
@@ -717,8 +712,12 @@ func handleImportSignatures(c *gin.Context) {
 	}
 
 	overwrite := c.PostForm("overwrite") == "true"
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
 
-	imported, skipped, err := ImportSignatures(content, overwrite)
+	imported, skipped, err := ImportSignatures(content, overwrite, userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
 		return
@@ -737,8 +736,8 @@ func handleImportSignatures(c *gin.Context) {
 	})
 }
 
-// ImportSignatures imports signatures from YAML data.
-func ImportSignatures(data []byte, overwrite bool) (imported int, skipped int, err error) {
+// ImportSignatures imports signatures from YAML data, attributing the writes to userID.
+func ImportSignatures(data []byte, overwrite bool, userID int) (imported int, skipped int, err error) {
 	var exports []SignatureExportData
 
 	// Try array first
@@ -749,13 +748,6 @@ func ImportSignatures(data []byte, overwrite bool) (imported int, skipped int, e
 			return 0, 0, fmt.Errorf("invalid YAML format")
 		}
 		exports = []SignatureExportData{single}
-	}
-
-	userID := 1 // Default to admin
-	if os.Getenv("GOATFLOW_IMPORT_USER_ID") != "" {
-		if id, err := strconv.Atoi(os.Getenv("GOATFLOW_IMPORT_USER_ID")); err == nil {
-			userID = id
-		}
 	}
 
 	for _, exp := range exports {

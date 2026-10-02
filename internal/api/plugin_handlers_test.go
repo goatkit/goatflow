@@ -16,6 +16,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/organisation"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/plugin/example"
@@ -109,8 +110,35 @@ func TestHandlePluginCall(t *testing.T) {
 		t.Fatalf("failed to parse response: %v", err)
 	}
 
-	if result["message"] == nil {
-		t.Error("expected message in response")
+	if result["message"] != "Hello, Test!" {
+		t.Errorf("expected message %q, got %v", "Hello, Test!", result["message"])
+	}
+}
+
+// The hello plugin's greeting comes from its registered I18n spec, so the
+// request language picks the translation.
+func TestHandlePluginCallTranslatedGreeting(t *testing.T) {
+	setupPluginTestRouter(t)
+
+	r := gin.New()
+	r.Use(func(c *gin.Context) { c.Set(middleware.LanguageContextKey, "de"); c.Next() })
+	RegisterPluginAPIRoutes(r.Group("/api/v1"))
+
+	req := httptest.NewRequest("POST", "/api/v1/plugins/hello/call/hello", bytes.NewBufferString(`{"name": "Test"}`))
+	req.Header.Set("Content-Type", "application/json")
+	addAuthHeader(req)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var result map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if result["message"] != "Hallo, Test!" {
+		t.Errorf("expected message %q, got %v", "Hallo, Test!", result["message"])
 	}
 }
 
@@ -678,6 +706,7 @@ func setupSessionAuthRouter(t *testing.T, sessionMW gin.HandlerFunc) *gin.Engine
 // RequireAdmin (admin-only). Anything not matching is treated as
 // authenticated-but-not-admin. Keep in sync with RegisterPluginAPIRoutes.
 var pluginAdminPathMarkers = []string{
+	"/call/",
 	"/enable",
 	"/disable",
 	"/upload",
@@ -930,45 +959,6 @@ func TestBuildPluginArgsSkipOrgInjection(t *testing.T) {
 	if _, ok := m["_org_id"]; !ok {
 		t.Error("hello plugin should receive _org_id (SkipOrgInjection=false)")
 	}
-}
-
-func TestInjectOrgID(t *testing.T) {
-	t.Run("into existing object", func(t *testing.T) {
-		args := json.RawMessage(`{"name":"test","count":5}`)
-		result := injectOrgID(args, 42)
-
-		var m map[string]json.RawMessage
-		if err := json.Unmarshal(result, &m); err != nil {
-			t.Fatalf("failed to unmarshal: %v", err)
-		}
-		if string(m["_org_id"]) != "42" {
-			t.Errorf("expected _org_id=42, got %s", string(m["_org_id"]))
-		}
-		// Original fields preserved
-		if _, ok := m["name"]; !ok {
-			t.Error("original 'name' field should be preserved")
-		}
-	})
-
-	t.Run("into nil args", func(t *testing.T) {
-		result := injectOrgID(nil, 7)
-
-		var m map[string]json.RawMessage
-		json.Unmarshal(result, &m)
-		if string(m["_org_id"]) != "7" {
-			t.Errorf("expected _org_id=7, got %s", string(m["_org_id"]))
-		}
-	})
-
-	t.Run("into empty args", func(t *testing.T) {
-		result := injectOrgID(json.RawMessage(`{}`), 100)
-
-		var m map[string]json.RawMessage
-		json.Unmarshal(result, &m)
-		if string(m["_org_id"]) != "100" {
-			t.Errorf("expected _org_id=100, got %s", string(m["_org_id"]))
-		}
-	})
 }
 
 func TestHandlePluginCallWithOrgContext(t *testing.T) {

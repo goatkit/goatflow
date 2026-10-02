@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -89,6 +91,35 @@ func TestAdminNotificationEventNew(t *testing.T) {
 
 		// Should render the form template with notification-related content
 		assert.Contains(t, body, "notification")
+	})
+
+	t.Run("GET /admin/notification-events/new lists valid groups as group recipients", func(t *testing.T) {
+		db, err := database.GetDB()
+		require.NoError(t, err)
+		name := fmt.Sprintf("notif-recipient-%d", time.Now().UnixNano())
+		groupID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+			INSERT INTO groups (name, comments, valid_id, create_time, create_by, change_time, change_by)
+			VALUES (?, '', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+			RETURNING id`), name)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM groups WHERE id = ?`), groupID)
+		})
+
+		router := gin.New()
+		router.GET("/admin/notification-events/new", HandleAdminNotificationEventNew)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/admin/notification-events/new", nil))
+		require.Equal(t, http.StatusOK, w.Code)
+
+		body := w.Body.String()
+		start := strings.Index(body, `name="recipient_RecipientGroups"`)
+		require.GreaterOrEqual(t, start, 0, "group recipient select missing")
+		end := strings.Index(body[start:], "</select>")
+		require.Greater(t, end, 0)
+		groupSelect := body[start : start+end]
+		assert.Contains(t, groupSelect, fmt.Sprintf(`<option value="%d"`, groupID))
+		assert.Contains(t, groupSelect, name)
 	})
 }
 

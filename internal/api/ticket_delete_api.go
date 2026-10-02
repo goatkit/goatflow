@@ -2,13 +2,16 @@ package api
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/services"
 )
 
@@ -46,41 +49,25 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 	}
 
 	// Enforce authentication before mutating state
-	idValue, exists := c.Get("user_id")
-	if !exists {
-		if _, authExists := c.Get("is_authenticated"); !authExists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   "Authentication required",
-			})
-			return
-		}
-	}
-
-	userID := 1
-	if exists {
-		switch v := idValue.(type) {
-		case int:
-			userID = v
-		case uint:
-			userID = int(v)
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	// Get database connection
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Authentication required"})
+		log.Printf("HandleDeleteTicketAPI: database unavailable: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database unavailable"})
 		return
 	}
 
 	// Check if ticket exists and get current state
 	var currentStateID int
-	var customerUserID string
 	var queueID int
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT ticket_state_id, customer_user_id, queue_id FROM ticket WHERE id = ?",
-	), ticketID).Scan(&currentStateID, &customerUserID, &queueID)
+		"SELECT ticket_state_id, queue_id FROM ticket WHERE id = ?",
+	), ticketID).Scan(&currentStateID, &queueID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -126,9 +113,17 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 		return
 	}
 
-	// Check if ticket is already archived/closed
-	// States: 2 = closed successful, 3 = closed unsuccessful, 9 = merged
-	if currentStateID == 2 || currentStateID == 3 || currentStateID == 9 {
+	// Check if ticket is already archived/closed (state type closed/removed/merged)
+	ctx := c.Request.Context()
+	currentTypeName, err := lookups.StateTypeNameOfState(ctx, db, currentStateID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to resolve ticket state",
+		})
+		return
+	}
+	if lookups.IsClosedStateType(currentTypeName) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "Ticket is already closed",
@@ -136,17 +131,26 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 		return
 	}
 
+	closedStateID, err := lookups.ID(ctx, db, lookups.StateLookup, lookups.StateClosedSuccessful)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to resolve closed state",
+		})
+		return
+	}
+
 	// Archive the ticket by setting state to "closed successful" and archive_flag to 1
 	updateQuery := database.ConvertPlaceholders(`
 		UPDATE ticket 
-		SET ticket_state_id = 2,
+		SET ticket_state_id = ?,
 		    archive_flag = 1,
 		    change_time = NOW(),
 		    change_by = ?
 		WHERE id = ?
 	`)
 
-	result, err := db.Exec(updateQuery, userID, ticketID)
+	result, err := db.Exec(updateQuery, closedStateID, userID, ticketID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -180,11 +184,12 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 			change_time,
 			change_by
 		) VALUES (
-			?, 1, 1, 0, 0, NOW(), ?, NOW(), ?
+			?, ?, ?, 0, 0, NOW(), ?, NOW(), ?
 		) RETURNING id
 	`)
 
-	articleID, err := database.GetAdapter().InsertWithReturning(db, insertArticleQuery, ticketID, userID, userID)
+	articleID, err := database.GetAdapter().InsertWithReturning(db, insertArticleQuery, ticketID,
+		constants.ArticleSenderAgent, constants.CommunicationChannelEmail, userID, userID)
 	if err == nil {
 		// Insert article content
 		insertMimeQuery := database.ConvertPlaceholders(`

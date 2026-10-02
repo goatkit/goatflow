@@ -20,10 +20,7 @@ func TestSimpleBrowser(t *testing.T) {
 	baseURL := cfg.BaseURL
 	_ = playwright.Install(&playwright.RunOptions{Browsers: []string{"chromium"}})
 	pw, err := playwright.Run()
-	if err != nil {
-		t.Skipf("Could not start Playwright: %v", err)
-		return
-	}
+	require.NoError(t, err, "start Playwright")
 	defer pw.Stop()
 	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{Headless: playwright.Bool(true)})
 	require.NoError(t, err)

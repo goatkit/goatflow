@@ -1,13 +1,11 @@
 package api
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 	"time"
 
@@ -26,7 +24,6 @@ import (
 
 type RBACTestFixtures struct {
 	db *sql.DB
-	mu sync.Mutex
 
 	// Groups
 	GroupAlpha int // Only AgentAlpha has access
@@ -49,37 +46,54 @@ type RBACTestFixtures struct {
 	TicketsBoth  []int // Tickets in Both queue
 }
 
-var (
-	rbacFixtures     *RBACTestFixtures
-	rbacFixturesOnce sync.Once
-	rbacFixturesErr  error
-)
+// rbacFixtureMinID is the lowest id of every row the RBAC fixtures insert.
+const rbacFixtureMinID = 95000
 
-// getRBACFixtures returns shared test fixtures for RBAC security tests
+// getRBACFixtures creates the RBAC fixtures for one test and removes them when
+// the test ends.
 func getRBACFixtures(t *testing.T) *RBACTestFixtures {
 	t.Helper()
 
 	db, err := database.GetDB()
-	if err != nil || db == nil {
-		t.Skip("Database not available for RBAC security tests")
-	}
+	require.NoError(t, err)
+	require.NotNil(t, db)
 
-	rbacFixturesOnce.Do(func() {
-		rbacFixtures = &RBACTestFixtures{db: db}
-		rbacFixturesErr = rbacFixtures.setup()
+	f := &RBACTestFixtures{db: db}
+	// Rows left behind by an aborted earlier run would collide with the fixed ids.
+	require.NoError(t, f.cleanup())
+	t.Cleanup(func() {
+		if err := f.cleanup(); err != nil {
+			t.Errorf("RBAC fixture cleanup: %v", err)
+		}
 	})
+	require.NoError(t, f.setup())
+	return f
+}
 
-	if rbacFixturesErr != nil {
-		t.Skipf("Failed to setup RBAC fixtures: %v", rbacFixturesErr)
+// cleanup deletes every fixture row, children before parents, so it needs no
+// foreign-key switch and behaves the same on MySQL and PostgreSQL. Only the
+// fixed fixture ids are touched: on MySQL the explicit ids raise
+// AUTO_INCREMENT, so rows other tests create later get ids above them.
+func (f *RBACTestFixtures) cleanup() error {
+	const lo, hi, ticketHi = rbacFixtureMinID + 1, rbacFixtureMinID + 3, rbacFixtureMinID + 10
+	for _, s := range []struct {
+		query string
+		args  []interface{}
+	}{
+		{"DELETE FROM ticket WHERE id BETWEEN ? AND ?", []interface{}{lo, ticketHi}},
+		{"DELETE FROM group_user WHERE user_id BETWEEN ? AND ? OR group_id BETWEEN ? AND ?", []interface{}{lo, hi, lo, hi}},
+		{"DELETE FROM queue WHERE id BETWEEN ? AND ?", []interface{}{lo, hi}},
+		{"DELETE FROM `groups` WHERE id BETWEEN ? AND ?", []interface{}{lo, hi}},
+		{"DELETE FROM users WHERE id BETWEEN ? AND ?", []interface{}{lo, hi}},
+	} {
+		if _, err := f.db.Exec(database.ConvertPlaceholders(s.query), s.args...); err != nil {
+			return fmt.Errorf("%s: %w", s.query, err)
+		}
 	}
-
-	return rbacFixtures
+	return nil
 }
 
 func (f *RBACTestFixtures) setup() error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
 	now := time.Now()
 	suffix := fmt.Sprintf("_%d", time.Now().UnixNano()%100000)
 
@@ -93,28 +107,6 @@ func (f *RBACTestFixtures) setup() error {
 	f.AgentAlpha = 95001
 	f.AgentBeta = 95002
 	f.AgentBoth = 95003
-
-	// Clean up any existing test data. FK checks are session state, so the
-	// cleanup runs on one dedicated connection that is closed afterwards.
-	ctx := context.Background()
-	conn, err := f.db.Conn(ctx)
-	if err != nil {
-		return err
-	}
-	for _, q := range []string{
-		"SET FOREIGN_KEY_CHECKS=0",
-		"DELETE FROM ticket WHERE id >= 95000",
-		"DELETE FROM queue WHERE id >= 95000",
-		"DELETE FROM group_user WHERE user_id >= 95000 OR group_id >= 95000",
-		"DELETE FROM `groups` WHERE id >= 95000",
-		"DELETE FROM users WHERE id >= 95000",
-		"SET FOREIGN_KEY_CHECKS=1",
-	} {
-		_, _ = conn.ExecContext(ctx, database.ConvertPlaceholders(q))
-	}
-	if err := conn.Close(); err != nil {
-		return err
-	}
 
 	exec := func(query string, args ...interface{}) error {
 		_, err := f.db.Exec(database.ConvertPlaceholders(query), args...)

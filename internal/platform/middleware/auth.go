@@ -169,34 +169,37 @@ func (m *AuthMiddleware) RequirePermission(permission auth.Permission) gin.Handl
 
 func (m *AuthMiddleware) OptionalAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := m.extractToken(c)
-		if token == "" {
-			// No token provided, continue without authentication
-			c.Next()
-			return
-		}
-
-		claims, err := m.jwtManager.ValidateToken(token)
-		if err != nil {
-			// Invalid token, continue without authentication
-			c.Next()
-			return
-		}
-
-		// Set user information in context
-		c.Set("user_id", claims.UserID)
-		c.Set("user_email", claims.Email)
-		c.Set("user_role", claims.Role)
-		c.Set("tenant_id", claims.TenantID)
-		c.Set("userID", int(claims.UserID))
-		c.Set("username", claims.Login)
-		c.Set("is_customer", claims.Role == "Customer")
-		c.Set("tenant_host", c.Request.Host)
-		c.Set("claims", claims)
-		c.Set("authenticated", true)
-
+		m.identify(c)
 		c.Next()
 	}
+}
+
+// identify sets the caller's identity from a valid JWT, if any, without
+// running the rest of the handler chain. Callers that must decide after
+// identification (e.g. CustomerPortalGate) use this instead of OptionalAuth,
+// whose c.Next() would run the route handler before their check.
+func (m *AuthMiddleware) identify(c *gin.Context) {
+	token := m.extractToken(c)
+	if token == "" {
+		return
+	}
+	claims, err := m.jwtManager.ValidateToken(token)
+	if err != nil {
+		return
+	}
+	c.Set("user_id", claims.UserID)
+	c.Set("user_email", claims.Email)
+	c.Set("user_role", claims.Role)
+	c.Set("tenant_id", claims.TenantID)
+	c.Set("userID", int(claims.UserID))
+	c.Set("username", claims.Login)
+	c.Set("is_customer", claims.Role == "Customer")
+	if claims.Role == "Customer" {
+		c.Set("customer_login", claims.Login)
+	}
+	c.Set("tenant_host", c.Request.Host)
+	c.Set("claims", claims)
+	c.Set("authenticated", true)
 }
 
 func (m *AuthMiddleware) extractToken(c *gin.Context) string {

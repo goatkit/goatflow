@@ -3,12 +3,12 @@ package config
 import (
 	"bufio"
 	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 )
 
@@ -71,11 +71,9 @@ func GetConfig() *TestConfig {
 	if baseURL == "" {
 		baseURL = "http://localhost:8080"
 	}
-	if os.Getenv("E2E_BASEURL_AUTODETECT") != "false" {
-		baseURL = detectReachableBaseURLVerbose(baseURL)
-		baseURL = fallbackBackendHost(baseURL)
-	}
-	log.Printf("[e2e-config] Resolved BaseURL=%s (RAW_BASE_URL=%s)", baseURL, os.Getenv("RAW_BASE_URL"))
+	// No auto-detection: probing alternative hosts could silently aim the suite at
+	// the wrong stack (e.g. the dev backend instead of backend-test).
+	log.Printf("[e2e-config] BaseURL=%s", baseURL)
 
 	adminEmail := firstNonEmpty(
 		os.Getenv("TEST_USERNAME"),
@@ -140,125 +138,16 @@ func firstNonEmpty(vals ...string) string {
 	return ""
 }
 
-// detectReachableBaseURL attempts to find a responsive backend if the provided baseURL is not reachable.
-func detectReachableBaseURLVerbose(initial string) string {
-	start := time.Now()
-	// Fast path: if initial works, keep it.
-	if reachable(initial) {
-		return initial
-	}
-
-	// Build candidate list: start with initial (already failed), then variations.
-	tried := []string{initial}
-	candidates := []string{}
-
-	// Extract host/port from initial for port permutations.
-	u, err := url.Parse(initial)
-	if err == nil {
-		host := u.Hostname()
-		port := u.Port()
-		if port == "" {
-			port = "8080"
-		}
-		// If host contains underscores (compose service) also try localhost / 127.0.0.1 with same port first.
-		basePorts := []string{port, "8082", "8080", "18080", "8081"}
-		if testPort := os.Getenv("TEST_BACKEND_PORT"); testPort != "" {
-			basePorts = append([]string{testPort}, basePorts...)
-		}
-		// Preserve order but de-dupe later.
-		if host != "localhost" && host != "127.0.0.1" {
-			for _, p := range basePorts {
-				candidates = append(candidates, "http://localhost:"+p)
-			}
-			for _, p := range basePorts {
-				candidates = append(candidates, "http://127.0.0.1:"+p)
-			}
-		}
-		// If original host looked like backend service include its canonical variants.
-		if strings.Contains(host, "backend") {
-			for _, p := range []string{"8080", "18080", "8081"} {
-				candidates = append(candidates, "http://backend:"+p)
-			}
-		}
-	}
-	if tb := os.Getenv("TEST_BACKEND_BASE_URL"); tb != "" {
-		candidates = append([]string{tb}, candidates...)
-	}
-	// Always ensure plain localhost:8080 present.
-	candidates = append(candidates, "http://localhost:8080")
-
-	// De-dupe while preserving order and skipping the failed initial.
-	seen := map[string]struct{}{initial: {}}
-	uniq := []string{}
-	for _, c := range candidates {
-		if _, ok := seen[c]; ok {
-			continue
-		}
-		seen[c] = struct{}{}
-		uniq = append(uniq, c)
-	}
-
-	for _, c := range uniq {
-		tried = append(tried, c)
-		if reachable(c) {
-			log.Printf("[e2e-config] Auto-detect switched BaseURL %s -> %s (%.0fms; order=%v)", initial, c, time.Since(start).Seconds()*1000, tried)
-			return c
-		}
-	}
-	log.Printf("[e2e-config] Auto-detect kept unreachable BaseURL=%s (no reachable candidates; tried=%v in %.0fms)", initial, tried, time.Since(start).Seconds()*1000)
-	return initial
-}
-
-func reachable(base string) bool {
-	// TCP probe
-	u, err := url.Parse(base)
+// RequireReachable fails the test unless the backend under test answers GET /login.
+func (c *TestConfig) RequireReachable(t testing.TB) {
+	t.Helper()
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get(c.BaseURL + "/login")
 	if err != nil {
-		return false
+		t.Fatalf("backend under test not reachable at %s/login: %v (set BASE_URL to a running GoatFlow server)", c.BaseURL, err)
 	}
-	host := u.Host
-	if !strings.Contains(host, ":") {
-		host += ":80"
+	_ = resp.Body.Close()
+	if resp.StatusCode >= 500 {
+		t.Fatalf("backend under test at %s/login answered %d", c.BaseURL, resp.StatusCode)
 	}
-	d := net.Dialer{Timeout: 250 * time.Millisecond}
-	conn, err := d.Dial("tcp", host)
-	if err != nil {
-		return false
-	}
-	_ = conn.Close()
-	client := &http.Client{Timeout: 800 * time.Millisecond}
-	// Prefer /healthz quick check
-	for _, path := range []string{"/healthz", "/login"} {
-		req, _ := http.NewRequest("GET", base+path, nil)
-		resp, err := client.Do(req)
-		if err == nil {
-			_ = resp.Body.Close()
-			return true
-		}
-	}
-	return false
-}
-
-// fallbackBackendHost converts host 'backend' to 'localhost' if 'backend' is not reachable but localhost alternative is.
-func fallbackBackendHost(current string) string {
-	u, err := url.Parse(current)
-	if err != nil {
-		return current
-	}
-	if u.Hostname() != "backend" {
-		return current
-	}
-	// Try backend first
-	if reachable(current) {
-		return current
-	}
-	// Replace with localhost: same port
-	port := u.Port()
-	if port == "" {
-		port = "8080"
-	}
-	candidate := u.Scheme + "://localhost:" + port
-	if reachable(candidate) {
-		return candidate
-	}
-	return current
 }

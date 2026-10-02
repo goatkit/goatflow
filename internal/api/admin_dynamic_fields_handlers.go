@@ -1,7 +1,9 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 )
@@ -54,14 +57,51 @@ func handleAdminDynamicFieldNew(c *gin.Context) {
 		return
 	}
 
+	webservices, err := webserviceOptions(c, "")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load web services"})
+		return
+	}
+
 	renderer.HTML(c, http.StatusOK, "pages/admin/dynamic_field_form.pongo2", gin.H{
 		"Title":       "New Dynamic Field",
 		"Field":       &DynamicField{ValidID: 1, FieldOrder: 1},
 		"IsNew":       true,
 		"ObjectTypes": ValidObjectTypes(),
 		"FieldTypes":  ValidFieldTypes(),
+		"Webservices": webservices,
 		"ActivePage":  "admin",
 	})
+}
+
+// webserviceOptions lists the web services a webservice dynamic field can use
+// (valid ones with at least one invoker), plus the field's current web service
+// so editing a field never silently drops it.
+func webserviceOptions(c *gin.Context, current string) ([]*models.WebserviceConfig, error) {
+	svc := getGIService()
+	if svc == nil {
+		return nil, fmt.Errorf("web service backend unavailable")
+	}
+	options, err := svc.GetWebservicesForField(c.Request.Context())
+	if err != nil {
+		return nil, err
+	}
+	if current == "" {
+		return options, nil
+	}
+	for _, ws := range options {
+		if ws.Name == current {
+			return options, nil
+		}
+	}
+	ws, err := svc.GetWebservice(c.Request.Context(), current)
+	if errors.Is(err, sql.ErrNoRows) {
+		return options, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return append(options, ws), nil
 }
 
 func handleAdminDynamicFieldEdit(c *gin.Context) {
@@ -89,12 +129,23 @@ func handleAdminDynamicFieldEdit(c *gin.Context) {
 		return
 	}
 
+	current := ""
+	if field.Config != nil {
+		current = field.Config.Webservice
+	}
+	webservices, err := webserviceOptions(c, current)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load web services"})
+		return
+	}
+
 	renderer.HTML(c, http.StatusOK, "pages/admin/dynamic_field_form.pongo2", gin.H{
 		"Title":       "Edit Dynamic Field",
 		"Field":       field,
 		"IsNew":       false,
 		"ObjectTypes": ValidObjectTypes(),
 		"FieldTypes":  ValidFieldTypes(),
+		"Webservices": webservices,
 		"ActivePage":  "admin",
 	})
 }
@@ -346,6 +397,29 @@ func parseDynamicFieldForm(c *gin.Context) (*DynamicField, error) {
 			}
 			if cols := c.PostForm("cols"); cols != "" {
 				config.Cols, _ = strconv.Atoi(cols) //nolint:errcheck // Defaults to 0
+			}
+
+		case DFTypeWebserviceDropdown, DFTypeWebserviceMultiselect:
+			config.Webservice = strings.TrimSpace(c.PostForm("webservice"))
+			config.InvokerSearch = strings.TrimSpace(c.PostForm("invoker_search"))
+			config.InvokerGet = strings.TrimSpace(c.PostForm("invoker_get"))
+			config.StoredValue = strings.TrimSpace(c.PostForm("stored_value"))
+			config.DisplayedValues = strings.TrimSpace(c.PostForm("displayed_values"))
+			config.DisplayedValuesSeparator = c.PostForm("displayed_values_separator")
+			for name, dst := range map[string]*int{
+				"autocomplete_min_length": &config.AutocompleteMinLength,
+				"limit":                   &config.Limit,
+				"cache_ttl":               &config.CacheTTL,
+			} {
+				raw := strings.TrimSpace(c.PostForm(name))
+				if raw == "" {
+					continue
+				}
+				n, err := strconv.Atoi(raw)
+				if err != nil || n < 0 {
+					return nil, fmt.Errorf("%s must be a non-negative whole number", name)
+				}
+				*dst = n
 			}
 		}
 	}

@@ -3,95 +3,102 @@ package api
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
-// TestAllStubRoutesReturn200 verifies all stub routes return 200 OK.
-func TestAllStubRoutesReturn200(t *testing.T) {
+// TestLogoutKillsSessionAndClearsAuthCookies drives both logout routes of
+// routes/auth.yaml through the real router: GET /logout (the "Sign out" link in
+// templates/layouts/base.pongo2) and POST /api/auth/logout. Each must delete
+// the server-side session row, expire every agent auth cookie the login set,
+// and redirect to the login page.
+func TestLogoutKillsSessionAndClearsAuthCookies(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-
+	db := getTestDB(t)
 	router := NewSimpleRouter()
 
-	// Test all the routes we added
-	routes := []struct {
-		method string
-		path   string
-		desc   string
-	}{
-		// User pages
-		{"GET", "/profile", "Profile page"},
+	sessions := shared.GetSessionService()
+	require.NotNil(t, sessions, "session service must be wired")
+	cfg := GetTestAuthConfig()
 
-		// Admin pages (only those guaranteed in minimal router)
-		{"GET", "/admin/users", "User management"},
+	authCookies := []string{"access_token", "auth_token", "token", "refresh_token", "session_id", "goatflow_logged_in"}
 
-		// Auth endpoints
-		{"POST", "/logout", "Logout POST"},
-		{"GET", "/logout", "Logout GET"},
-		{"POST", "/api/auth/refresh", "Auth refresh"},
-		{"POST", "/api/auth/register", "Auth register"},
-
-		// API v1 endpoints not guaranteed in unit router are omitted
-
-		// Others omitted if not guaranteed in unit router
-		{"GET", "/health", "Health check"},
+	sessionRows := func(sessionID string) int {
+		var n int
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+			"SELECT COUNT(*) FROM sessions WHERE session_id = ?"), sessionID).Scan(&n))
+		return n
 	}
 
-	failedRoutes := []string{}
+	for _, tc := range []struct {
+		method string
+		path   string
+	}{
+		{http.MethodGet, "/logout"},
+		{http.MethodPost, "/api/auth/logout"},
+	} {
+		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
+			sessionID, err := sessions.CreateSession(int(cfg.UserID), cfg.Email, "User", "192.0.2.10", "logout-test")
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = sessions.KillSession(sessionID) })
+			require.Positive(t, sessionRows(sessionID), "session row must exist before logout")
 
-	for _, route := range routes {
-		t.Run(route.desc, func(t *testing.T) {
-			req := httptest.NewRequest(route.method, route.path, nil)
+			req := httptest.NewRequest(tc.method, tc.path, nil)
+			req.AddCookie(&http.Cookie{Name: "access_token", Value: GetTestAuthToken(t)})
+			req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+			req.AddCookie(&http.Cookie{Name: "refresh_token", Value: "refresh-token-from-login"})
+			req.AddCookie(&http.Cookie{Name: "goatflow_logged_in", Value: "1"})
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
-			if w.Code == http.StatusNotFound {
-				failedRoutes = append(failedRoutes, route.method+" "+route.path)
-				t.Errorf("%s %s returned 404", route.method, route.path)
-			} else if w.Code >= 400 && w.Code != http.StatusUnauthorized {
-				// 401 is OK for protected routes
-				t.Logf("Warning: %s %s returned %d", route.method, route.path, w.Code)
-			}
-		})
-	}
+			require.Equal(t, http.StatusFound, w.Code, w.Body.String())
+			assert.Equal(t, "/login", w.Header().Get("Location"))
 
-	if len(failedRoutes) > 0 {
-		t.Errorf("\nSummary: %d routes returned 404:", len(failedRoutes))
-		for _, route := range failedRoutes {
-			t.Errorf("  - %s", route)
-		}
-	} else {
-		t.Logf("\nSuccess: All %d stub routes are working!", len(routes))
+			expired := map[string]bool{}
+			for _, ck := range w.Result().Cookies() {
+				if ck.Value == "" && ck.MaxAge < 0 {
+					expired[ck.Name] = true
+				}
+			}
+			for _, name := range authCookies {
+				assert.True(t, expired[name], "cookie %q must be expired by logout", name)
+			}
+
+			assert.Zero(t, sessionRows(sessionID), "logout must delete the session row")
+		})
 	}
 }
 
-// TestStaticFilesServed verifies static files are accessible.
+// TestStaticFilesServed: handleStaticFiles resolves ./static relative to the
+// working directory (the repo root in the container), so run from there and
+// check the files' bytes come back.
 func TestStaticFilesServed(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-
+	t.Chdir(filepath.Join("..", ".."))
 	router := NewSimpleRouter()
 
-	// Note: In test environment, static files might not be served
-	// as the working directory might be different
-	t.Run("Favicon.ico", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/favicon.ico", nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
+	for path, file := range map[string]string{
+		"/favicon.ico":        "static/favicon.ico",
+		"/static/favicon.svg": "static/favicon.svg",
+	} {
+		t.Run(path, func(t *testing.T) {
+			want, err := os.ReadFile(file)
+			require.NoError(t, err)
 
-		// In test environment, this might 404 if files aren't in the right place
-		if w.Code == http.StatusNotFound {
-			t.Skip("Static files not available in test environment")
-		}
-	})
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
 
-	t.Run("Static favicon.svg", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/static/favicon.svg", nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		if w.Code == http.StatusNotFound {
-			t.Skip("Static files not available in test environment")
-		}
-	})
+			require.Equal(t, http.StatusOK, w.Code)
+			assert.Equal(t, want, w.Body.Bytes())
+		})
+	}
 }

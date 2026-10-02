@@ -64,10 +64,7 @@ func handleTOTPStatus(c *gin.Context) {
 	totpService := service.NewTOTPService(db, "GoatFlow")
 	enabled := totpService.IsEnabled(userID)
 	remaining := totpService.GetRemainingRecoveryCodes(userID)
-	webauthnCount := 0
-	if wa, err := service.NewWebAuthnService(db, c.Request); err == nil {
-		webauthnCount, _ = wa.CountCredentials(service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(userID))
-	}
+	webauthnCount, _ := service.CountWebAuthnCredentials(db, service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(userID))
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":                  true,
@@ -364,7 +361,7 @@ func turnOffSecondFactors(c *gin.Context, db *sql.DB, account mfaAccount, code s
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
 		return false
 	}
-	if err := account.deleteAllPasskeys(db, c.Request); err != nil {
+	if err := account.deleteAllPasskeys(db); err != nil {
 		log.Printf("[SECURITY] 2FA turned off but passkeys not removed user_type=%s user=%s: %v", account.userType, account.webAuthnKey(), err)
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to remove passkeys"})
 		return false
@@ -417,7 +414,7 @@ func regenerateRecoveryCodes(c *gin.Context, account mfaAccount, passwordOK func
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
-	if !account.hasAnySecondFactor(db, c.Request) {
+	if !account.hasAnySecondFactor(db) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "two-factor authentication is not enabled"})
 		return
 	}
@@ -597,10 +594,7 @@ func handleCustomerTOTPStatus(c *gin.Context) {
 	totpService := service.NewTOTPService(db, "GoatFlow")
 	enabled := totpService.IsEnabledForCustomer(customerLogin)
 	remaining := totpService.GetRemainingRecoveryCodesForCustomer(customerLogin)
-	webauthnCount := 0
-	if wa, err := service.NewWebAuthnService(db, c.Request); err == nil {
-		webauthnCount, _ = wa.CountCredentials(service.WebAuthnUserTypeCustomer, customerLogin)
-	}
+	webauthnCount, _ := service.CountWebAuthnCredentials(db, service.WebAuthnUserTypeCustomer, customerLogin)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":                  true,
@@ -870,9 +864,15 @@ func handleCustomer2FAPage(c *gin.Context) {
 		return
 	}
 
-	status := mfaStatus{TOTPEnabled: true, WebAuthnEnabled: true}
-	if db, err := database.GetDB(); err == nil && db != nil {
-		status = customerMFAStatus(db, c.Request, session.UserLogin)
+	db, err := database.GetDB()
+	var status mfaStatus
+	if err == nil {
+		status, err = customerMFAStatus(db, session.UserLogin)
+	}
+	if err != nil {
+		log.Printf("customer 2FA page: second-factor status for %s unavailable: %v", session.UserLogin, err)
+		c.String(http.StatusInternalServerError, "Login temporarily unavailable")
+		return
 	}
 
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/login_2fa.pongo2", mfaLoginPageContext(status))
@@ -1036,21 +1036,21 @@ func handleAdmin2FAOverride(c *gin.Context) {
 	}
 
 	// Check if 2FA is enabled
-	totpService := service.NewTOTPService(db, "GoatFlow")
-	wa, _ := service.NewWebAuthnService(db, c.Request)
-	webauthnEnabled := wa != nil && wa.IsEnabled(service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(targetUserID))
-	if !totpService.IsEnabled(targetUserID) && !webauthnEnabled {
+	account := agentMFAAccount(targetUserID)
+	if !account.hasAnySecondFactor(db) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "2FA is not enabled for this user"})
 		return
 	}
 
 	// Disable 2FA (bypassing code verification)
-	if err := totpService.ForceDisable(targetUserID); err != nil {
+	if err := account.totp(db).ForceDisable(targetUserID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to disable 2FA"})
 		return
 	}
-	if wa != nil {
-		_ = wa.DeleteAllCredentials(service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(targetUserID))
+	if err := account.deleteAllPasskeys(db); err != nil {
+		log.Printf("[SECURITY] admin 2FA override: passkeys not removed user=%d: %v", targetUserID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to remove passkeys"})
+		return
 	}
 
 	// Log the action
@@ -1102,21 +1102,21 @@ func handleAdminCustomer2FAOverride(c *gin.Context) {
 	}
 
 	// Check if 2FA is enabled
-	totpService := service.NewTOTPService(db, "GoatFlow")
-	wa, _ := service.NewWebAuthnService(db, c.Request)
-	webauthnEnabled := wa != nil && wa.IsEnabled(service.WebAuthnUserTypeCustomer, customerLogin)
-	if !totpService.IsEnabledForCustomer(customerLogin) && !webauthnEnabled {
+	account := customerMFAAccount(customerLogin)
+	if !account.hasAnySecondFactor(db) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "2FA is not enabled for this customer"})
 		return
 	}
 
 	// Disable 2FA
-	if err := totpService.ForceDisableForCustomer(customerLogin); err != nil {
+	if err := account.totp(db).ForceDisableForCustomer(customerLogin); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to disable 2FA"})
 		return
 	}
-	if wa != nil {
-		_ = wa.DeleteAllCredentials(service.WebAuthnUserTypeCustomer, customerLogin)
+	if err := account.deleteAllPasskeys(db); err != nil {
+		log.Printf("[SECURITY] admin 2FA override: passkeys not removed customer=%s: %v", customerLogin, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to remove passkeys"})
+		return
 	}
 
 	// Log the action

@@ -1,6 +1,9 @@
 package api
 
 import (
+	"database/sql"
+	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -50,11 +53,18 @@ func HandleListStatesAPI(c *gin.Context) {
 	for rows.Next() {
 		var id, validID int
 		var name string
-		if err := rows.Scan(&id, &name, &validID); err == nil {
-			items = append(items, gin.H{"id": id, "name": name, "valid_id": validID})
+		if err := rows.Scan(&id, &name, &validID); err != nil {
+			c.Header("X-Guru-Error", "States lookup failed: scan error")
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "states lookup failed: scan error"})
+			return
 		}
+		items = append(items, gin.H{"id": id, "name": name, "valid_id": validID})
 	}
-	_ = rows.Err() //nolint:errcheck // Check for iteration errors
+	if err := rows.Err(); err != nil {
+		c.Header("X-Guru-Error", "States lookup failed: query error")
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "states lookup failed: query error"})
+		return
+	}
 	// If DB returned zero rows, fail clearly to avoid masking misconfigurations
 	if len(items) == 0 {
 		c.Header("X-Guru-Error", "States lookup returned 0 rows (check seeds/migrations)")
@@ -66,7 +76,10 @@ func HandleListStatesAPI(c *gin.Context) {
 	filterAttr := c.Query("filter_attribute")
 	filterValue := c.Query("filter_value")
 	if filterAttr != "" && filterValue != "" {
-		items = filterByTicketAttributeRelations(c, db, items, "State", filterAttr, filterValue)
+		if items, err = filterByTicketAttributeRelations(c, db, items, "State", filterAttr, filterValue); err != nil {
+			respondAttributeRelationFilterError(c, err)
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": items})
@@ -76,22 +89,19 @@ func HandleListStatesAPI(c *gin.Context) {
 // targetAttribute is what we're filtering (e.g., "State", "Priority")
 // filterAttribute is what we're filtering by (e.g., "Queue")
 // filterValue is the current value of filterAttribute (e.g., "Sales")
-func filterByTicketAttributeRelations(c *gin.Context, db interface{}, items []gin.H, targetAttribute, filterAttribute, filterValue string) []gin.H {
-	dbConn, err := database.GetDB()
-	if err != nil || dbConn == nil {
-		return items // Return unfiltered if DB unavailable
-	}
-
-	svc := ticketattributerelations.NewService(dbConn)
+// It fails closed: if the relations cannot be evaluated the caller gets an error,
+// never the unfiltered list.
+func filterByTicketAttributeRelations(c *gin.Context, db *sql.DB, items []gin.H, targetAttribute, filterAttribute, filterValue string) ([]gin.H, error) {
+	svc := ticketattributerelations.NewService(db)
 	result, err := svc.EvaluateRelations(c.Request.Context(), filterAttribute, filterValue)
 	if err != nil {
-		return items // Return unfiltered on error
+		return nil, fmt.Errorf("evaluate %s relations for %s=%q: %w", targetAttribute, filterAttribute, filterValue, err)
 	}
 
 	// Check if there are any restrictions for this target attribute
 	allowedValues, hasRestrictions := result[targetAttribute]
 	if !hasRestrictions || len(allowedValues) == 0 {
-		return items // No restrictions, return all
+		return items, nil // No restrictions, return all
 	}
 
 	// Build allowed set for fast lookup
@@ -100,8 +110,10 @@ func filterByTicketAttributeRelations(c *gin.Context, db interface{}, items []gi
 		allowedSet[v] = true
 	}
 
-	// Filter items by name
-	var filtered []gin.H
+	// Filter items by name. Restrictions exist, so an item no allowed value
+	// names is not offered: no match means an empty list (fail closed, OTRS
+	// ACL semantics), never the unrestricted one.
+	filtered := make([]gin.H, 0, len(allowedValues))
 	for _, item := range items {
 		name, ok := item["name"].(string)
 		if ok && allowedSet[name] {
@@ -109,11 +121,12 @@ func filterByTicketAttributeRelations(c *gin.Context, db interface{}, items []gi
 		}
 	}
 
-	// If filtering would remove all items, return original list
-	// (this prevents broken UX if relations are misconfigured)
-	if len(filtered) == 0 {
-		return items
-	}
+	return filtered, nil
+}
 
-	return filtered
+// respondAttributeRelationFilterError logs a relation-evaluation failure and
+// answers 500 so a list endpoint never leaks the unrestricted list.
+func respondAttributeRelationFilterError(c *gin.Context, err error) {
+	log.Printf("ticket attribute relations filter failed: %v", err)
+	c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "ticket attribute relations evaluation failed"})
 }

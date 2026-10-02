@@ -1,472 +1,467 @@
 package storage
 
 import (
+	"bufio"
 	"context"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
-	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
-// FilesystemBackend implements article storage on the filesystem (OTRS ArticleStorageFS).
-type FilesystemBackend struct {
-	basePath string
-	db       *sql.DB // For storing metadata
+// OTRS ArticleStorageFS file names.
+const (
+	plainFile          = "plain.txt"
+	suffixContentType  = ".content_type"
+	suffixContentID    = ".content_id"
+	suffixContentAlt   = ".content_alternative"
+	suffixDisposition  = ".disposition"
+	maxFilenameBytes   = 220
+	tempFilePrefix     = ".goatflow-tmp-"
+	dirPerm            = 0o750
+	filePerm           = 0o640
+	fallbackFilename   = "file"
+	reservedNameSuffix = "_"
+)
+
+var sidecarSuffixes = []string{suffixContentType, suffixContentID, suffixContentAlt, suffixDisposition}
+
+// FilesystemStore keeps attachments and raw emails in an OTRS ArticleStorageFS
+// tree: <dir>/<content_path>/<article_id>/. The content path comes from
+// article_data_mime.content_path, or from the article's create_time when unset.
+type FilesystemStore struct {
+	dir string
+	db  *sql.DB
+	tx  *sql.Tx
 }
 
-// NewFilesystemBackend creates a new filesystem storage backend.
-func NewFilesystemBackend(basePath string, db *sql.DB) (*FilesystemBackend, error) {
-	// Ensure base path exists
-	if err := os.MkdirAll(basePath, 0750); err != nil {
-		return nil, fmt.Errorf("failed to create base path: %w", err)
-	}
-
-	return &FilesystemBackend{
-		basePath: basePath,
-		db:       db,
-	}, nil
+// NewFilesystemStore returns an FS-backed article store rooted at dir (the
+// OTRS ArticleDataDir, e.g. /opt/otrs/var/article).
+func NewFilesystemStore(dir string, db *sql.DB) *FilesystemStore {
+	return &FilesystemStore{dir: dir, db: db}
 }
 
-// Store saves article content to the filesystem.
-func (f *FilesystemBackend) Store(ctx context.Context, articleID int64, content *ArticleContent) (*StorageReference, error) {
-	// Calculate checksum
-	hash := sha256.Sum256(content.Content)
-	checksum := hex.EncodeToString(hash[:])
+// Backend returns BackendFS.
+func (s *FilesystemStore) Backend() string { return BackendFS }
 
-	// Create directory structure: YYYY/MM/DD/ArticleID/
-	now := content.CreatedTime
-	dirPath := f.getArticlePath(articleID, now)
+// Dir returns the root directory of the tree.
+func (s *FilesystemStore) Dir() string { return s.dir }
 
-	if err := os.MkdirAll(dirPath, 0750); err != nil {
-		return nil, fmt.Errorf("failed to create directory: %w", err)
+// WithTx returns a store whose article lookups run on tx (file writes are not
+// transactional).
+func (s *FilesystemStore) WithTx(tx *sql.Tx) ArticleStore {
+	return &FilesystemStore{dir: s.dir, db: s.db, tx: tx}
+}
+
+func (s *FilesystemStore) q() querier {
+	if s.tx != nil {
+		return s.tx
 	}
+	return s.db
+}
 
-	// Determine filename
-	var filename string
-	if content.FileName == "" || content.FileName == "body" {
-		if content.ContentType == "text/html" {
-			filename = "file-2" // HTML part
-		} else {
-			filename = "file-1" // Plain text part
+// ArticleDir returns the article's directory, or ErrNotFound when the article does not exist.
+func (s *FilesystemStore) ArticleDir(ctx context.Context, articleID int64) (string, error) {
+	var contentPath sql.NullString
+	err := s.q().QueryRowContext(ctx, database.ConvertPlaceholders(`
+		SELECT content_path FROM article_data_mime
+		WHERE article_id = ? AND content_path IS NOT NULL AND content_path <> ''
+		ORDER BY id LIMIT 1`), articleID).Scan(&contentPath)
+	switch {
+	case err == nil:
+	case errors.Is(err, sql.ErrNoRows):
+		var created time.Time
+		err = s.q().QueryRowContext(ctx, database.ConvertPlaceholders(
+			"SELECT create_time FROM article WHERE id = ?"), articleID).Scan(&created)
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", ErrNotFound
 		}
-	} else {
-		filename = content.FileName
+		if err != nil {
+			return "", fmt.Errorf("look up article %d: %w", articleID, err)
+		}
+		contentPath = sql.NullString{String: ContentPath(created), Valid: true}
+	default:
+		return "", fmt.Errorf("look up content path of article %d: %w", articleID, err)
 	}
 
-	// Write content to file
-	filePath := filepath.Join(dirPath, filename)
-	if err := os.WriteFile(filePath, content.Content, 0644); err != nil {
-		return nil, fmt.Errorf("failed to write file: %w", err)
+	rel := filepath.Clean(filepath.FromSlash(contentPath.String))
+	if filepath.IsAbs(rel) || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("article %d has an invalid content_path %q", articleID, contentPath.String)
 	}
+	return filepath.Join(s.dir, rel, fmt.Sprintf("%d", articleID)), nil
+}
 
-	// Write metadata file
-	metadataPath := filepath.Join(dirPath, filename+".meta")
-	metadata := map[string]interface{}{
-		"article_id":   articleID,
-		"content_type": content.ContentType,
-		"file_size":    content.FileSize,
-		"checksum":     checksum,
-		"created_time": content.CreatedTime,
-		"created_by":   content.CreatedBy,
-		"metadata":     content.Metadata,
+// fsEntry is one attachment file in an article directory.
+type fsEntry struct {
+	Attachment
+	path     string
+	oldStyle bool // content type on the first line of the file (pre-sidecar OTRS)
+}
+
+// index lists the attachment files of an article directory the way OTRS
+// ArticleAttachmentIndexRaw does: sorted names, skipping dot files, sidecars
+// and plain.txt.
+func index(dir string, articleID int64) ([]fsEntry, error) {
+	files, err := os.ReadDir(dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
 	}
-
-	metadataJSON, err := json.MarshalIndent(metadata, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+		return nil, fmt.Errorf("read article directory: %w", err)
 	}
 
-	if err := os.WriteFile(metadataPath, metadataJSON, 0644); err != nil {
-		return nil, fmt.Errorf("failed to write metadata: %w", err)
-	}
-
-	// Store reference in database
-	ref := &StorageReference{
-		ArticleID:   articleID,
-		Backend:     "FS",
-		Location:    filePath,
-		ContentType: content.ContentType,
-		FileName:    filename,
-		FileSize:    content.FileSize,
-		Checksum:    checksum,
-		CreatedTime: content.CreatedTime,
-	}
-
-	if err := f.storeReference(ctx, ref); err != nil {
-		// Clean up files on error
-		os.Remove(filePath)
-		os.Remove(metadataPath)
-		return nil, fmt.Errorf("failed to store reference: %w", err)
-	}
-
-	return ref, nil
-}
-
-// Retrieve gets article content from the filesystem.
-func (f *FilesystemBackend) Retrieve(ctx context.Context, ref *StorageReference) (*ArticleContent, error) {
-	// Read content from file
-	contentBytes, err := os.ReadFile(ref.Location)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("file not found: %s", ref.Location)
+	entries := make([]fsEntry, 0, len(files))
+	for _, f := range files {
+		name := f.Name()
+		if f.IsDir() || strings.HasPrefix(name, ".") || name == plainFile || isSidecar(name) {
+			continue
 		}
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-
-	// Read metadata
-	metadataPath := ref.Location + ".meta"
-	var metadata map[string]interface{}
-
-	if metadataBytes, err := os.ReadFile(metadataPath); err == nil { //nolint:gosec // G304 false positive - sanitized path
-		if err := json.Unmarshal(metadataBytes, &metadata); err == nil {
-			// Metadata loaded successfully
+		info, err := f.Info()
+		if err != nil {
+			return nil, fmt.Errorf("stat %s: %w", name, err)
 		}
-	}
-
-	content := &ArticleContent{
-		ArticleID:   ref.ArticleID,
-		ContentType: ref.ContentType,
-		FileName:    ref.FileName,
-		FileSize:    int64(len(contentBytes)),
-		Content:     contentBytes,
-		Metadata:    make(map[string]string),
-		CreatedTime: ref.CreatedTime,
-	}
-
-	// Extract metadata strings
-	if metadata != nil {
-		if meta, ok := metadata["metadata"].(map[string]interface{}); ok {
-			for k, v := range meta {
-				if str, ok := v.(string); ok {
-					content.Metadata[k] = str
-				}
+		e := fsEntry{
+			Attachment: Attachment{
+				ArticleID:  articleID,
+				FileID:     int64(len(entries) + 1),
+				Filename:   name,
+				Size:       info.Size(),
+				CreateTime: info.ModTime(),
+			},
+			path: filepath.Join(dir, name),
+		}
+		ct, ok, err := readSidecar(e.path + suffixContentType)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			e.ContentType = ct
+			if e.ContentID, _, err = readSidecar(e.path + suffixContentID); err != nil {
+				return nil, err
 			}
+			if e.ContentAlternative, _, err = readSidecar(e.path + suffixContentAlt); err != nil {
+				return nil, err
+			}
+			if e.Disposition, _, err = readSidecar(e.path + suffixDisposition); err != nil {
+				return nil, err
+			}
+		} else {
+			line, err := readFirstLine(e.path)
+			if err != nil {
+				return nil, err
+			}
+			e.oldStyle = true
+			e.ContentType = strings.TrimRight(line, "\r\n")
+			e.Size -= int64(len(line))
 		}
-		if createdBy, ok := metadata["created_by"].(float64); ok {
-			content.CreatedBy = int(createdBy)
+		if e.Disposition == "" {
+			e.Disposition = defaultDisposition(e.Filename, e.ContentType, e.ContentID)
 		}
+		entries = append(entries, e)
 	}
-
-	return content, nil
+	return entries, nil
 }
 
-// Delete removes article content from the filesystem.
-func (f *FilesystemBackend) Delete(ctx context.Context, ref *StorageReference) error {
-	// Remove file
-	if err := os.Remove(ref.Location); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to delete file: %w", err)
+func isSidecar(name string) bool {
+	for _, suffix := range sidecarSuffixes {
+		if strings.HasSuffix(name, suffix) {
+			return true
+		}
 	}
-
-	// Remove metadata file
-	metadataPath := ref.Location + ".meta"
-	if err := os.Remove(metadataPath); err != nil && !os.IsNotExist(err) {
-		// Don't fail if metadata doesn't exist
-	}
-
-	// Try to remove directory if empty
-	dir := filepath.Dir(ref.Location)
-	os.Remove(dir) // Ignore error, directory might not be empty
-
-	// Remove reference from database
-	if err := f.deleteReference(ctx, ref); err != nil {
-		return fmt.Errorf("failed to delete reference: %w", err)
-	}
-
-	return nil
+	return false
 }
 
-// Exists checks if article content exists on the filesystem.
-func (f *FilesystemBackend) Exists(ctx context.Context, ref *StorageReference) (bool, error) {
-	_, err := os.Stat(ref.Location)
+func readSidecar(path string) (string, bool, error) {
+	b, err := os.ReadFile(path) //nolint:gosec // path built from the article directory and an index entry
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", false, nil
+	}
 	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
+		return "", false, fmt.Errorf("read %s: %w", filepath.Base(path), err)
 	}
-	return true, nil
+	return strings.TrimRight(string(b), "\r\n"), true, nil
 }
 
-// List returns all storage references for an article.
-func (f *FilesystemBackend) List(ctx context.Context, articleID int64) ([]*StorageReference, error) {
-	// Get references from database
-	refs, err := f.getReferences(ctx, articleID)
+func readFirstLine(path string) (string, error) {
+	f, err := os.Open(path) //nolint:gosec // path built from the article directory and an index entry
+	if err != nil {
+		return "", fmt.Errorf("open %s: %w", filepath.Base(path), err)
+	}
+	defer f.Close()
+	line, err := bufio.NewReader(f).ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", fmt.Errorf("read %s: %w", filepath.Base(path), err)
+	}
+	return line, nil
+}
+
+// ListAttachments returns the article's attachments in OTRS index order. An
+// unknown article has no attachments.
+func (s *FilesystemStore) ListAttachments(ctx context.Context, articleID int64) ([]Attachment, error) {
+	dir, err := s.ArticleDir(ctx, articleID)
+	if errors.Is(err, ErrNotFound) {
+		return []Attachment{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
-
-	// Verify files still exist
-	validRefs := make([]*StorageReference, 0, len(refs))
-	for _, ref := range refs {
-		if _, err := os.Stat(ref.Location); err == nil {
-			validRefs = append(validRefs, ref)
-		}
-	}
-
-	return validRefs, nil
-}
-
-// Migrate moves content to another backend.
-func (f *FilesystemBackend) Migrate(ctx context.Context, ref *StorageReference, target Backend) (*StorageReference, error) {
-	// Retrieve content
-	content, err := f.Retrieve(ctx, ref)
+	entries, err := index(dir, articleID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve content for migration: %w", err)
+		return nil, fmt.Errorf("list attachments of article %d: %w", articleID, err)
 	}
+	list := make([]Attachment, len(entries))
+	for i, e := range entries {
+		list[i] = e.Attachment
+	}
+	return list, nil
+}
 
-	// Store in target
-	newRef, err := target.Store(ctx, ref.ArticleID, content)
+func (s *FilesystemStore) entry(ctx context.Context, articleID, fileID int64) (fsEntry, error) {
+	dir, err := s.ArticleDir(ctx, articleID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to store content in target: %w", err)
+		return fsEntry{}, err
 	}
-
-	return newRef, nil
+	entries, err := index(dir, articleID)
+	if err != nil {
+		return fsEntry{}, fmt.Errorf("attachment %d of article %d: %w", fileID, articleID, err)
+	}
+	if fileID < 1 || fileID > int64(len(entries)) {
+		return fsEntry{}, ErrNotFound
+	}
+	return entries[fileID-1], nil
 }
 
-// GetInfo returns backend information.
-func (f *FilesystemBackend) GetInfo() *BackendInfo {
-	stats := &BackendStats{}
-
-	// Get filesystem statistics
-	var totalSize int64
-	var totalFiles int64
-
-	filepath.Walk(f.basePath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil //nolint:nilerr // continue walking on error
-		}
-		if !info.IsDir() && !strings.HasSuffix(path, ".meta") {
-			totalFiles++
-			totalSize += info.Size()
-		}
-		return nil
-	})
-
-	stats.TotalFiles = totalFiles
-	stats.TotalSize = totalSize
-
-	// Get free space
-	if _, err := os.Stat(f.basePath); err == nil {
-		// This is platform-specific and would need proper implementation
-		stats.FreeSpace = 0 // TODO: Implement free space calculation
+// GetAttachment returns attachment number fileID of the article and its content.
+func (s *FilesystemStore) GetAttachment(ctx context.Context, articleID, fileID int64) (Attachment, []byte, error) {
+	e, err := s.entry(ctx, articleID, fileID)
+	if err != nil {
+		return Attachment{}, nil, err
 	}
-
-	return &BackendInfo{
-		Name: "FilesystemBackend",
-		Type: "FS",
-		Capabilities: []string{
-			"store",
-			"retrieve",
-			"delete",
-			"list",
-			"streaming",
-		},
-		Status:     "active",
-		Statistics: stats,
+	content, err := os.ReadFile(e.path)
+	if err != nil {
+		return Attachment{}, nil, fmt.Errorf("read attachment %d of article %d: %w", fileID, articleID, err)
 	}
-}
-
-// HealthCheck verifies the filesystem is accessible.
-func (f *FilesystemBackend) HealthCheck(ctx context.Context) error {
-	// Check if base path is accessible
-	testFile := filepath.Join(f.basePath, ".health_check")
-	if err := os.WriteFile(testFile, []byte("ok"), 0644); err != nil {
-		return fmt.Errorf("filesystem not writable: %w", err)
-	}
-
-	if err := os.Remove(testFile); err != nil {
-		return fmt.Errorf("filesystem cleanup failed: %w", err)
-	}
-
-	// Check database connection
-	if f.db != nil {
-		if err := f.db.PingContext(ctx); err != nil {
-			return fmt.Errorf("database not accessible: %w", err)
+	if e.oldStyle {
+		if i := strings.IndexByte(string(content), '\n'); i >= 0 {
+			content = content[i+1:]
+		} else {
+			content = []byte{}
 		}
 	}
-
-	return nil
+	return e.Attachment, content, nil
 }
 
-// Helper methods
+// WriteAttachment writes the attachment and its sidecar files.
+func (s *FilesystemStore) WriteAttachment(ctx context.Context, articleID int64, in NewAttachment) (Attachment, error) {
+	in = normalizeAttachment(in)
+	dir, err := s.ArticleDir(ctx, articleID)
+	if err != nil {
+		return Attachment{}, fmt.Errorf("write attachment of article %d: %w", articleID, err)
+	}
+	entries, err := index(dir, articleID)
+	if err != nil {
+		return Attachment{}, fmt.Errorf("write attachment of article %d: %w", articleID, err)
+	}
+	used := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		used[e.Filename] = true
+	}
+	name := uniqueFilename(cleanFilename(in.Filename), used)
 
-func (f *FilesystemBackend) getArticlePath(articleID int64, t time.Time) string {
-	year := t.Format("2006")
-	month := t.Format("01")
-	day := t.Format("02")
-	return filepath.Join(f.basePath, year, month, day, fmt.Sprintf("%d", articleID))
-}
-
-func (f *FilesystemBackend) storeReference(ctx context.Context, ref *StorageReference) error {
-	if f.db == nil {
-		return nil // No database, references not tracked
+	if err := os.MkdirAll(dir, dirPerm); err != nil {
+		return Attachment{}, fmt.Errorf("create article directory: %w", err)
+	}
+	path := filepath.Join(dir, name)
+	sidecars := []struct{ suffix, value string }{
+		{suffixContentType, in.ContentType},
+		{suffixContentID, in.ContentID},
+		{suffixContentAlt, in.ContentAlternative},
+		{suffixDisposition, in.Disposition},
+	}
+	for _, sc := range sidecars {
+		if sc.value == "" {
+			continue
+		}
+		if err := writeFileAtomic(path+sc.suffix, []byte(sc.value)); err != nil {
+			return Attachment{}, err
+		}
+	}
+	if err := writeFileAtomic(path, in.Content); err != nil {
+		return Attachment{}, err
 	}
 
-	id, err := database.GetAdapter().InsertWithReturning(f.db, database.ConvertPlaceholders(`
-        INSERT INTO article_storage_references (
-            article_id, backend, location, content_type,
-            file_name, file_size, checksum, created_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`),
-		ref.ArticleID,
-		ref.Backend,
-		ref.Location,
-		ref.ContentType,
-		ref.FileName,
-		ref.FileSize,
-		ref.Checksum,
-		ref.CreatedTime,
-	)
+	entries, err = index(dir, articleID)
+	if err != nil {
+		return Attachment{}, err
+	}
+	for _, e := range entries {
+		if e.Filename == name {
+			return e.Attachment, nil
+		}
+	}
+	return Attachment{}, fmt.Errorf("attachment %s of article %d missing after write", name, articleID)
+}
+
+// DeleteAttachment removes attachment number fileID and its sidecars. Later
+// attachments of the article move down one index.
+func (s *FilesystemStore) DeleteAttachment(ctx context.Context, articleID, fileID int64) error {
+	e, err := s.entry(ctx, articleID, fileID)
 	if err != nil {
 		return err
 	}
-	ref.ID = id
+	for _, p := range append([]string{e.path}, sidecarPaths(e.path)...) {
+		if err := os.Remove(p); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("delete attachment %d of article %d: %w", fileID, articleID, err)
+		}
+	}
 	return nil
 }
 
-func (f *FilesystemBackend) getReferences(ctx context.Context, articleID int64) ([]*StorageReference, error) {
-	if f.db == nil {
-		// No database, scan filesystem
-		return f.scanFilesystem(articleID)
+func sidecarPaths(path string) []string {
+	paths := make([]string, len(sidecarSuffixes))
+	for i, suffix := range sidecarSuffixes {
+		paths[i] = path + suffix
 	}
+	return paths
+}
 
-	query := database.ConvertPlaceholders(`
-		SELECT 
-			id, article_id, backend, location, content_type,
-			file_name, file_size, checksum, created_time, accessed_time
-		FROM article_storage_references
-		WHERE article_id = ? AND backend = 'FS'
-		ORDER BY id`)
+// WritePlain writes plain.txt.
+func (s *FilesystemStore) WritePlain(ctx context.Context, articleID int64, raw []byte, _ int) error {
+	dir, err := s.ArticleDir(ctx, articleID)
+	if err != nil {
+		return fmt.Errorf("write plain email of article %d: %w", articleID, err)
+	}
+	if err := os.MkdirAll(dir, dirPerm); err != nil {
+		return fmt.Errorf("create article directory: %w", err)
+	}
+	return writeFileAtomic(filepath.Join(dir, plainFile), raw)
+}
 
-	rows, err := f.db.QueryContext(ctx, query, articleID)
+// ReadPlain reads plain.txt.
+func (s *FilesystemStore) ReadPlain(ctx context.Context, articleID int64) ([]byte, error) {
+	dir, err := s.ArticleDir(ctx, articleID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	refs := make([]*StorageReference, 0)
-	for rows.Next() {
-		var ref StorageReference
-		var accessedTime sql.NullTime
-
-		err := rows.Scan(
-			&ref.ID,
-			&ref.ArticleID,
-			&ref.Backend,
-			&ref.Location,
-			&ref.ContentType,
-			&ref.FileName,
-			&ref.FileSize,
-			&ref.Checksum,
-			&ref.CreatedTime,
-			&accessedTime,
-		)
-		if err != nil {
-			continue
-		}
-
-		if accessedTime.Valid {
-			ref.AccessedTime = accessedTime.Time
-		}
-
-		refs = append(refs, &ref)
+	raw, err := os.ReadFile(filepath.Join(dir, plainFile)) //nolint:gosec // path built from the article directory
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, ErrNotFound
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return refs, nil
-}
-
-func (f *FilesystemBackend) scanFilesystem(articleID int64) ([]*StorageReference, error) {
-	refs := make([]*StorageReference, 0)
-
-	// Search for article directories
-	pattern := filepath.Join(f.basePath, "*", "*", "*", fmt.Sprintf("%d", articleID))
-	matches, err := filepath.Glob(pattern)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read plain email of article %d: %w", articleID, err)
 	}
-
-	for _, dir := range matches {
-		// List files in directory
-		files, err := os.ReadDir(dir)
-		if err != nil {
-			continue
-		}
-
-		for _, file := range files {
-			if file.IsDir() || strings.HasSuffix(file.Name(), ".meta") {
-				continue
-			}
-
-			info, err := file.Info()
-			if err != nil {
-				continue
-			}
-
-			ref := &StorageReference{
-				ArticleID:   articleID,
-				Backend:     "FS",
-				Location:    filepath.Join(dir, file.Name()),
-				FileName:    file.Name(),
-				FileSize:    info.Size(),
-				CreatedTime: info.ModTime(),
-			}
-
-			// Try to read metadata
-			if metaBytes, err := os.ReadFile(ref.Location + ".meta"); err == nil {
-				var metadata map[string]interface{}
-				if err := json.Unmarshal(metaBytes, &metadata); err == nil {
-					if ct, ok := metadata["content_type"].(string); ok {
-						ref.ContentType = ct
-					}
-					if cs, ok := metadata["checksum"].(string); ok {
-						ref.Checksum = cs
-					}
-				}
-			}
-
-			refs = append(refs, ref)
-		}
-	}
-
-	return refs, nil
+	return raw, nil
 }
 
-func (f *FilesystemBackend) deleteReference(ctx context.Context, ref *StorageReference) error {
-	if f.db == nil {
+// DeleteArticle removes the article directory.
+func (s *FilesystemStore) DeleteArticle(ctx context.Context, articleID int64) error {
+	dir, err := s.ArticleDir(ctx, articleID)
+	if errors.Is(err, ErrNotFound) {
 		return nil
 	}
-
-	query := database.ConvertPlaceholders(`
-		DELETE FROM article_storage_references
-		WHERE article_id = ? AND backend = 'FS' AND location = ?`)
-
-	_, err := f.db.ExecContext(ctx, query, ref.ArticleID, ref.Location)
-	return err
+	if err != nil {
+		return err
+	}
+	if err := os.RemoveAll(dir); err != nil {
+		return fmt.Errorf("delete content of article %d: %w", articleID, err)
+	}
+	return nil
 }
 
-// Register the filesystem backend with the factory.
-func init() {
-	DefaultFactory.Register("FS", func(config map[string]interface{}) (Backend, error) {
-		basePath, ok := config["base_path"].(string)
-		if !ok {
-			return nil, fmt.Errorf("filesystem backend requires 'base_path' configuration")
+// Stats counts the content files (attachments and plain.txt, not sidecars)
+// in the tree and their bytes.
+func (s *FilesystemStore) Stats() (files, size int64, err error) {
+	err = filepath.WalkDir(s.dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) && path == s.dir {
+				return fs.SkipAll
+			}
+			return err
 		}
-
-		// Database is optional for reference tracking
-		var db *sql.DB
-		if dbInterface, ok := config["db"]; ok {
-			db, _ = dbInterface.(*sql.DB)
+		name := d.Name()
+		if d.IsDir() || strings.HasPrefix(name, ".") || isSidecar(name) {
+			return nil
 		}
-
-		return NewFilesystemBackend(basePath, db)
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		files++
+		size += info.Size()
+		return nil
 	})
+	if err != nil {
+		return 0, 0, fmt.Errorf("scan %s: %w", s.dir, err)
+	}
+	return files, size, nil
+}
+
+// writeFileAtomic writes data to a temp file in the target directory and renames it into place.
+func writeFileAtomic(path string, data []byte) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), tempFilePrefix+"*")
+	if err != nil {
+		return fmt.Errorf("create temp file: %w", err)
+	}
+	tmpName := tmp.Name()
+	_, werr := tmp.Write(data)
+	cerr := tmp.Close()
+	if werr == nil {
+		werr = cerr
+	}
+	if werr == nil {
+		werr = os.Chmod(tmpName, filePerm)
+	}
+	if werr == nil {
+		werr = os.Rename(tmpName, path)
+	}
+	if werr != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("write %s: %w", filepath.Base(path), werr)
+	}
+	return nil
+}
+
+// cleanFilename makes an attachment filename safe as a single file name in an
+// article directory: no path separators or control characters, no leading dot,
+// no clash with plain.txt or sidecar names, at most maxFilenameBytes bytes.
+func cleanFilename(name string) string {
+	var b strings.Builder
+	for _, r := range name {
+		if r == '/' || r == '\\' || r < 0x20 || r == 0x7f || r == utf8.RuneError {
+			b.WriteByte('_')
+			continue
+		}
+		b.WriteRune(r)
+	}
+	name = strings.TrimSpace(b.String())
+	if strings.HasPrefix(name, ".") {
+		name = "_" + strings.TrimLeft(name, ".")
+	}
+	if name == "" || name == "_" {
+		name = fallbackFilename
+	}
+	if len(name) > maxFilenameBytes {
+		ext := filepath.Ext(name)
+		if len(ext) > 20 {
+			ext = ""
+		}
+		base := name[:len(name)-len(ext)]
+		limit := maxFilenameBytes - len(ext)
+		for limit > 0 && !utf8.RuneStart(base[limit]) {
+			limit--
+		}
+		name = base[:limit] + ext
+	}
+	if name == plainFile || isSidecar(name) {
+		name += reservedNameSuffix
+	}
+	return name
 }

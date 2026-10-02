@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -153,75 +154,86 @@ func (f *fakeHost) GenerateThumbnail(_ context.Context, _ []byte, _ string, _, _
 	return nil, "", fmt.Errorf("not implemented")
 }
 
-// setupRBACTestDB seeds two groups, two queues (one per group), and a user
-// belonging to only the first group. Returns the restricted user id and the
-// first (accessible) queue name.
+// cleanupRows registers a t.Cleanup that runs each statement with id, in
+// order (dependent rows first), failing the test on any error.
+func cleanupRows(t *testing.T, id int64, queries ...string) {
+	t.Helper()
+	t.Cleanup(func() {
+		db, err := database.GetDB()
+		if err != nil {
+			t.Errorf("cleanup %d: %v", id, err)
+			return
+		}
+		for _, q := range queries {
+			if _, err := db.Exec(database.ConvertPlaceholders(q), id); err != nil {
+				t.Errorf("cleanup %d: %s: %v", id, q, err)
+			}
+		}
+	})
+}
+
 // seedQueues creates two queues owned by two fresh groups and returns their
-// names plus their owning group IDs, registering cleanup.
+// names plus their owning group IDs. Every row is deleted when the test ends.
 func seedQueues(t *testing.T) (qa, qb string, g1id, g2id int) {
 	db, err := database.GetDB()
 	require.NoError(t, err)
+	adapter := database.GetAdapter()
 	sfx := fmt.Sprintf("%d", time.Now().UnixNano())
-	g1 := "rbac_g1_" + sfx
-	g2 := "rbac_g2_" + sfx
-	_, err = db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO `+"`groups`"+` (name, comments, valid_id, create_time, change_time, create_by, change_by)
-		VALUES (?, 'test', 1, NOW(), NOW(), 1, 1),
-		       (?, 'test', 1, NOW(), NOW(), 1, 1)`), g1, g2)
-	require.NoError(t, err)
-	require.NoError(t, db.QueryRow(database.ConvertPlaceholders("SELECT id FROM `groups` WHERE name = ?"), g1).Scan(&g1id))
-	require.NoError(t, db.QueryRow(database.ConvertPlaceholders("SELECT id FROM `groups` WHERE name = ?"), g2).Scan(&g2id))
-	t.Cleanup(func() {
-		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM `groups` WHERE id IN (?, ?)"), g1id, g2id)
-	})
+	newGroup := func(name string) int {
+		id, err := adapter.InsertWithReturning(db, database.ConvertPlaceholders(`
+			INSERT INTO `+"`groups`"+` (name, comments, valid_id, create_time, change_time, create_by, change_by)
+			VALUES (?, 'test', 1, NOW(), NOW(), 1, 1) RETURNING id`), name)
+		require.NoError(t, err)
+		cleanupRows(t, id,
+			"DELETE FROM group_user WHERE group_id = ?",
+			"DELETE FROM queue WHERE group_id = ?",
+			"DELETE FROM `groups` WHERE id = ?")
+		return int(id)
+	}
+	g1id = newGroup("rbac_g1_" + sfx)
+	g2id = newGroup("rbac_g2_" + sfx)
 
-	qa = "rbac_qa_" + sfx
-	qb = "rbac_qb_" + sfx
 	// Reuse an existing queue's follow_up_id (a valid FK) so this test does not
 	// depend on a specific seed row in follow_up_possible being present.
 	var followUpID int
-	if err := db.QueryRow(database.ConvertPlaceholders("SELECT follow_up_id FROM queue ORDER BY id LIMIT 1")).Scan(&followUpID); err != nil {
-		followUpID = 1
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders("SELECT follow_up_id FROM queue ORDER BY id LIMIT 1")).Scan(&followUpID))
+	newQueue := func(name string, groupID int) {
+		id, err := adapter.InsertWithReturning(db, database.ConvertPlaceholders(`
+			INSERT INTO queue (name, group_id, system_address_id, salutation_id, signature_id,
+				follow_up_id, follow_up_lock, valid_id, create_time, change_time, create_by, change_by)
+			VALUES (?, ?, 1, 1, 1, ?, 0, 1, NOW(), NOW(), 1, 1) RETURNING id`), name, groupID, followUpID)
+		require.NoError(t, err)
+		cleanupRows(t, id, "DELETE FROM queue WHERE id = ?")
 	}
-	_, err = db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO queue (name, group_id, system_address_id, salutation_id, signature_id,
-			follow_up_id, follow_up_lock, valid_id, create_time, change_time, create_by, change_by)
-		VALUES (?, ?, 1, 1, 1, ?, 0, 1, NOW(), NOW(), 1, 1),
-		       (?, ?, 1, 1, 1, ?, 0, 1, NOW(), NOW(), 1, 1)`), qa, g1id, followUpID, qb, g2id, followUpID)
-	require.NoError(t, err)
-	var qaID, qbID int
-	require.NoError(t, db.QueryRow(database.ConvertPlaceholders("SELECT id FROM queue WHERE name = ?"), qa).Scan(&qaID))
-	require.NoError(t, db.QueryRow(database.ConvertPlaceholders("SELECT id FROM queue WHERE name = ?"), qb).Scan(&qbID))
-	t.Cleanup(func() {
-		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM queue WHERE id IN (?, ?)"), qaID, qbID)
-	})
+	qa = "rbac_qa_" + sfx
+	qb = "rbac_qb_" + sfx
+	newQueue(qa, g1id)
+	newQueue(qb, g2id)
 	return qa, qb, g1id, g2id
 }
 
 // createUserInGroup creates an active user with rw membership in one group.
+// The user and its memberships are deleted when the test ends.
 func createUserInGroup(t *testing.T, login string, groupID int) int {
 	db, err := database.GetDB()
 	require.NoError(t, err)
-	_, err = db.Exec(database.ConvertPlaceholders(`
+	uid, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (?, 'x', 'RBAC', 'User', 1, NOW(), 1, NOW(), 1)`), login)
+		VALUES (?, 'x', 'RBAC', 'User', 1, NOW(), 1, NOW(), 1) RETURNING id`), login)
 	require.NoError(t, err)
-	// Resolve the id by login rather than trusting LastInsertID: the shared
-	// test DB can race other tests, so we re-query to bind group_user to the
-	// actual committed row.
-	var uid int
-	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM users WHERE login = ?`), login).Scan(&uid))
+	cleanupRows(t, uid,
+		"DELETE FROM group_user WHERE user_id = ?",
+		"DELETE FROM users WHERE id = ?")
 	_, err = db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO group_user (user_id, group_id, permission_key, create_time, change_time, create_by, change_by)
 		VALUES (?, ?, 'rw', NOW(), NOW(), 1, 1)`), uid, groupID)
 	require.NoError(t, err)
-	t.Cleanup(func() {
-		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = ?"), uid)
-		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), uid)
-	})
 	return int(uid)
 }
 
+// setupRBACTestDB seeds two groups, two queues (one per group), and a user
+// belonging to only the first group. Returns the restricted user id, the
+// accessible queue name and the hidden queue name.
 func setupRBACTestDB(t *testing.T) (restrictedUser int, accessibleQueue, hiddenQueue string) {
 	qa, qb, g1id, _ := seedQueues(t)
 	login := fmt.Sprintf("rbac_u_%d", time.Now().UnixNano())
@@ -254,24 +266,10 @@ func TestQueueStatus_RBAC(t *testing.T) {
 		qa, qb, _, _ := seedQueues(t)
 
 		// Admin user: member of the real 'admin' group (bypasses RBAC).
-		login := fmt.Sprintf("rbac_admin_%d", time.Now().UnixNano())
-		_, err = db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, 'x', 'RBAC', 'Admin', 1, NOW(), 1, NOW(), 1)`), login)
-		require.NoError(t, err)
-		var uid int
-		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM users WHERE login = ?`), login).Scan(&uid))
 		var adminGrp int
 		err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM `groups` WHERE name = 'admin' AND valid_id = 1 LIMIT 1")).Scan(&adminGrp)
 		require.NoError(t, err)
-		_, err = db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO group_user (user_id, group_id, permission_key, create_time, change_time, create_by, change_by)
-			VALUES (?, ?, 'rw', NOW(), NOW(), 1, 1)`), uid, adminGrp)
-		require.NoError(t, err)
-		t.Cleanup(func() {
-			_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = ?"), uid)
-			_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), uid)
-		})
+		uid := createUserInGroup(t, fmt.Sprintf("rbac_admin_%d", time.Now().UnixNano()), adminGrp)
 
 		args, _ := json.Marshal(map[string]any{"_user_id": uid})
 		res, err := p.callQueueStatus(ctx, args)
@@ -308,4 +306,39 @@ func (p *DashboardPlugin) callQueueStatus(ctx context.Context, args json.RawMess
 	return data.HTML, nil
 }
 
-var _ = strings.Contains // keep import used across builds
+// failingHost fails every DBQuery whose text contains failOn ("" = all).
+type failingHost struct {
+	fakeHost
+	failOn string
+}
+
+func (f *failingHost) DBQuery(ctx context.Context, query string, args ...any) ([]map[string]any, error) {
+	if f.failOn == "" || strings.Contains(query, f.failOn) {
+		return nil, errors.New("database down")
+	}
+	return f.fakeHost.DBQuery(ctx, query, args...)
+}
+
+// A widget whose data cannot be loaded reports an error (the dashboard shows
+// it as unavailable); it must not render an invented empty state.
+func TestDashboardWidgets_QueryFailureIsError(t *testing.T) {
+	ctx := context.Background()
+	args, _ := json.Marshal(map[string]any{"_user_id": 1})
+
+	p := &DashboardPlugin{host: &failingHost{}}
+	_, err := p.handleQueueStatus(ctx, args)
+	require.Error(t, err)
+	_, err = p.handleRecentTickets(ctx, args)
+	require.Error(t, err)
+
+	// Only the admin-group check fails: that must not fall back to the
+	// non-admin view either.
+	if err := database.InitTestDB(); err != nil {
+		t.Fatalf("test database not available: %v", err)
+	}
+	p = &DashboardPlugin{host: &failingHost{failOn: "g.name = 'admin'"}}
+	_, err = p.handleQueueStatus(ctx, args)
+	require.Error(t, err)
+	_, err = p.handleRecentTickets(ctx, args)
+	require.Error(t, err)
+}

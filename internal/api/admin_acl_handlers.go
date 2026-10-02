@@ -205,6 +205,10 @@ func handleAdminACLCreate(c *gin.Context) {
 		})
 		return
 	}
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
 
 	db, err := database.GetDB()
 	if err != nil {
@@ -257,7 +261,7 @@ func handleAdminACLCreate(c *gin.Context) {
 			create_time, create_by, change_time, change_by
 		) VALUES (
 			?, ?, ?, ?, ?, ?, ?,
-			CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1
+			CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?
 		) RETURNING id
 	`)
 
@@ -265,7 +269,7 @@ func handleAdminACLCreate(c *gin.Context) {
 	id64, err := adapter.InsertWithReturning(db, insertQuery,
 		input.Name, input.Comments, input.Description,
 		input.ValidID, stopAfterMatch,
-		configMatchBytes, configChangeBytes)
+		configMatchBytes, configChangeBytes, actorID, actorID)
 	id := int(id64)
 
 	if err != nil {
@@ -331,10 +335,14 @@ func handleAdminACLUpdate(c *gin.Context) {
 		})
 		return
 	}
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
 
 	// Build update query dynamically
-	updates := []string{"change_time = CURRENT_TIMESTAMP", "change_by = 1"}
-	args := []interface{}{}
+	updates := []string{"change_time = CURRENT_TIMESTAMP", "change_by = ?"}
+	args := []interface{}{actorID}
 
 	if input.Name != nil && *input.Name != "" {
 		updates = append(updates, "name = ?")
@@ -430,6 +438,10 @@ func handleAdminACLDelete(c *gin.Context) {
 		})
 		return
 	}
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
 
 	db, err := database.GetDB()
 	if err != nil {
@@ -443,9 +455,9 @@ func handleAdminACLDelete(c *gin.Context) {
 	// Soft delete (mark as invalid)
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE acl
-		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1
+		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = ?
 		WHERE id = ?
-	`), id)
+	`), actorID, id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

@@ -41,7 +41,11 @@ import (
 // A reviewed exception carries a "// sql-converted: <reason>" comment on the
 // call's first line or the line above (e.g. the conversion layer itself, a
 // helper whose callers pass converted SQL, a branch that only runs on MySQL).
+// Schema rule exceptions (a test-only temporary table, SQL that is data
+// rather than a statement) use "// sql-schema: <reason>" the same way.
 const sqlConvertedDirective = "sql-converted:"
+
+const sqlSchemaDirective = "sql-schema:"
 
 const databasePkgPath = "github.com/goatkit/goatflow/internal/platform/database"
 
@@ -63,17 +67,20 @@ var (
 		"sql-last-insert-id": "LastInsertId does not work on PostgreSQL; use database.GetAdapter().InsertWithReturning",
 		"sql-mysql-only":     "MySQL-only SQL; use database.ConvertUpsert for upserts, portable SQL otherwise",
 		"sql-postgres-only":  "PostgreSQL-only SQL; use InsertWithReturning for RETURNING, ConvertUpsert for upserts, ConvertQuery for :: casts, portable SQL otherwise",
+		"sql-unknown-table":  "no migration creates this table on both MySQL and PostgreSQL",
+		"sql-unknown-column": "this column is not in the table on both MySQL and PostgreSQL migrations",
 	}
 )
 
 // sqlLintBuildTags are the opt-in build tags used in the module. Packages
 // are type-checked once without tags and once with all of them, so files
 // behind //go:build integration (and the rest) are linted too.
-const sqlLintBuildTags = "integration,graphql,mcp_legacy_tests,debug"
+const sqlLintBuildTags = "integration,e2e"
 
 // scanSQLConversion loads the given package patterns (relative to root) with
-// type information and applies the SQL portability rules.
-func scanSQLConversion(root string, patterns ...string) ([]violation, error) {
+// type information and applies the SQL portability rules. A nil schema skips
+// the schema rules.
+func scanSQLConversion(root string, schema sqlSchema, patterns ...string) ([]violation, error) {
 	var pkgs []*packages.Package
 	for _, flags := range [][]string{nil, {"-tags=" + sqlLintBuildTags}} {
 		cfg := &packages.Config{
@@ -95,17 +102,21 @@ func scanSQLConversion(root string, patterns ...string) ([]violation, error) {
 			continue
 		}
 		for _, file := range pkg.Syntax {
-			directives := directiveLines(pkg.Fset, file)
+			directives, schemaDirectives := directiveLines(pkg.Fset, file)
 			report := func(pos token.Pos, kind, detail string) {
 				p := pkg.Fset.Position(pos)
-				if directives[p.Line] || directives[p.Line-1] {
+				skip := directives
+				if kind == "sql-unknown-table" || kind == "sql-unknown-column" {
+					skip = schemaDirectives
+				}
+				if skip[p.Line] || skip[p.Line-1] {
 					return
 				}
 				rel, relErr := filepath.Rel(root, p.Filename)
 				if relErr != nil {
 					rel = p.Filename
 				}
-				key := kind + rel + strconv.Itoa(p.Line)
+				key := kind + rel + strconv.Itoa(p.Line) + detail
 				if seen[key] {
 					return
 				}
@@ -115,7 +126,7 @@ func scanSQLConversion(root string, patterns ...string) ([]violation, error) {
 			dialectLayer := pkg.PkgPath == databasePkgPath || strings.HasPrefix(pkg.PkgPath, databasePkgPath+"/")
 			for _, decl := range file.Decls {
 				if fd, ok := decl.(*ast.FuncDecl); ok && fd.Body != nil {
-					checkSQLFunc(pkg.TypesInfo, fd.Body, dialectLayer, report)
+					checkSQLFunc(pkg.TypesInfo, fd.Body, dialectLayer, schema, report)
 				}
 			}
 		}
@@ -123,16 +134,22 @@ func scanSQLConversion(root string, patterns ...string) ([]violation, error) {
 	return violations, nil
 }
 
-func directiveLines(fset *token.FileSet, file *ast.File) map[int]bool {
-	out := make(map[int]bool)
+// directiveLines returns the lines carrying a sql-converted and a sql-schema
+// directive.
+func directiveLines(fset *token.FileSet, file *ast.File) (converted, schema map[int]bool) {
+	converted, schema = make(map[int]bool), make(map[int]bool)
 	for _, group := range file.Comments {
 		for _, c := range group.List {
+			line := fset.Position(c.Pos()).Line
 			if strings.Contains(c.Text, sqlConvertedDirective) {
-				out[fset.Position(c.Pos()).Line] = true
+				converted[line] = true
+			}
+			if strings.Contains(c.Text, sqlSchemaDirective) {
+				schema[line] = true
 			}
 		}
 	}
-	return out
+	return converted, schema
 }
 
 // convertCallName returns the database.Convert* function a call expression
@@ -155,7 +172,7 @@ func convertCallName(info *types.Info, e ast.Expr) string {
 	return obj.Name()
 }
 
-func checkSQLFunc(info *types.Info, body *ast.BlockStmt, dialectLayer bool, report func(token.Pos, string, string)) {
+func checkSQLFunc(info *types.Info, body *ast.BlockStmt, dialectLayer bool, schema sqlSchema, report func(token.Pos, string, string)) {
 	// Every value assigned to each local variable in this function.
 	assigns := make(map[types.Object][]ast.Expr)
 	ast.Inspect(body, func(n ast.Node) bool {
@@ -210,7 +227,8 @@ func checkSQLFunc(info *types.Info, body *ast.BlockStmt, dialectLayer bool, repo
 	}
 
 	// sqlSources returns the string literals an expression's SQL is built
-	// from, following Convert* calls and local variables.
+	// from, following Convert* calls, fmt.Sprintf, + concatenation and local
+	// variables.
 	var sqlSources func(e ast.Expr, depth int, out map[ast.Expr]bool)
 	sqlSources = func(e ast.Expr, depth int, out map[ast.Expr]bool) {
 		if depth > 4 {
@@ -224,6 +242,11 @@ func checkSQLFunc(info *types.Info, body *ast.BlockStmt, dialectLayer bool, repo
 			if (convertCallName(info, x) != "" || isSprintf(info, x)) && len(x.Args) > 0 {
 				sqlSources(x.Args[0], depth+1, out)
 			}
+		case *ast.BinaryExpr:
+			if x.Op == token.ADD {
+				sqlSources(x.X, depth+1, out)
+				sqlSources(x.Y, depth+1, out)
+			}
 		case *ast.Ident:
 			for _, v := range assigns[info.Uses[x]] {
 				sqlSources(v, depth+1, out)
@@ -233,6 +256,7 @@ func checkSQLFunc(info *types.Info, body *ast.BlockStmt, dialectLayer bool, repo
 	upsertLits := make(map[ast.Expr]bool)    // reach ConvertUpsert
 	castLits := make(map[ast.Expr]bool)      // reach ConvertQuery
 	returningLits := make(map[ast.Expr]bool) // reach InsertWithReturning(Tx)
+	dbLits := make(map[ast.Expr]bool)        // reach a Convert* or database/sql call
 	ast.Inspect(body, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)
 		if !ok {
@@ -243,6 +267,16 @@ func checkSQLFunc(info *types.Info, body *ast.BlockStmt, dialectLayer bool, repo
 			sqlSources(call, 0, upsertLits)
 		case "ConvertQuery":
 			sqlSources(call, 0, castLits)
+		}
+		if convertCallName(info, call) != "" {
+			sqlSources(call, 0, dbLits)
+		}
+		if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+			if selection := info.Selections[sel]; selection != nil && selection.Obj().Pkg() != nil && selection.Obj().Pkg().Path() == "database/sql" {
+				if idx, ok := sqlArgIndex[sel.Sel.Name]; ok && len(call.Args) > idx {
+					sqlSources(call.Args[idx], 0, dbLits)
+				}
+			}
 		}
 		if sel, ok := call.Fun.(*ast.SelectorExpr); ok && len(call.Args) > 1 &&
 			(sel.Sel.Name == "InsertWithReturning" || sel.Sel.Name == "InsertWithReturningTx") {
@@ -260,7 +294,17 @@ func checkSQLFunc(info *types.Info, body *ast.BlockStmt, dialectLayer bool, repo
 				return true
 			}
 			raw, err := strconv.Unquote(node.Value)
-			if dialectLayer || err != nil || !database.IsSQLQuery(raw) {
+			if dialectLayer || err != nil {
+				return true
+			}
+			// Schema rules run on every literal that reaches the database,
+			// fragments included; checkSQLSchema skips non-statements itself.
+			if schema != nil && dbLits[node] {
+				for _, f := range checkSQLSchema(schema, raw) {
+					report(node.Pos(), f.kind, f.detail)
+				}
+			}
+			if !database.IsSQLQuery(raw) {
 				return true
 			}
 			code := withoutStringLiterals(raw)

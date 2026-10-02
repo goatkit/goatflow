@@ -133,6 +133,16 @@ azure-pipelines.yml
 # ============================================
 tmp/
 temp/
+# Toolbox caches (GOCACHE, GOMODCACHE, bun, XDG, golangci-lint): tens of GB
+# of host-side build state that no image needs.
+.go-build/
+.gomodcache/
+.golangci-lint/
+.bun/
+.xdg-cache/
+# Runtime data of the local dev stack (article files, thumbnails, plugin
+# binaries): never part of an image.
+/storage/
 *.tmp
 *.log
 *.pid

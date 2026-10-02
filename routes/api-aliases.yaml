@@ -16,5 +16,6 @@ spec:
   prefix: /api
   middleware:
     - unified_auth
+    - agent
   routes: []
   # All routes migrated to dedicated YAML files

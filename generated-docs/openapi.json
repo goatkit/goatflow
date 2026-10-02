@@ -1634,20 +1634,6 @@
         ]
       }
     },
-    "/admin/backup": {
-      "get": {
-        "description": "Display backup and restore placeholder",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
     "/admin/communication-channels": {
       "get": {
         "description": "List communication channels",
@@ -2386,18 +2372,6 @@
         "tags": [
           "default"
         ]
-      },
-      "put": {
-        "description": "Update customer company services",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
       }
     },
     "/admin/customer/companies/{id}/tickets": {
@@ -2428,9 +2402,10 @@
         ]
       }
     },
-    "/admin/customer/portal/logo/upload": {
-      "post": {
-        "description": "Upload customer portal logo",
+    "/admin/customer/portal/settings": {},
+    "/admin/debug/config-sources": {
+      "get": {
+        "description": "Configuration settings with their source",
         "responses": {
           "200": {
             "description": "Success"
@@ -2442,7 +2417,20 @@
         ]
       }
     },
-    "/admin/customer/portal/settings": {},
+    "/admin/debug/ticket-number": {
+      "get": {
+        "description": "Current ticket number generator",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/admin/dynamic-fields": {
       "get": {
         "description": "List all dynamic fields",
@@ -2859,20 +2847,6 @@
         ]
       }
     },
-    "/admin/groups/new": {
-      "get": {
-        "description": "Display new group creation form",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
     "/admin/groups/{id}": {
       "delete": {
         "description": "Delete group",
@@ -2900,20 +2874,6 @@
       },
       "put": {
         "description": "Update existing group",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/admin/groups/{id}/edit": {
-      "get": {
-        "description": "Display group edit form",
         "responses": {
           "200": {
             "description": "Success"
@@ -3583,20 +3543,6 @@
         ]
       }
     },
-    "/admin/modules": {
-      "get": {
-        "description": "List available dynamic modules",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
     "/admin/modules/:module": {},
     "/admin/modules/:module/{id}": {},
     "/admin/modules/:module/{id}/:action": {},
@@ -3829,6 +3775,20 @@
     "/admin/permissions": {
       "get": {
         "description": "Display permission management page",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/permissions/clone": {
+      "post": {
+        "description": "Replace a user's permissions with a copy of another user's",
         "responses": {
           "200": {
             "description": "Success"
@@ -4192,7 +4152,7 @@
     },
     "/admin/reports": {
       "get": {
-        "description": "Display reports overview",
+        "description": "Display ticket reports (queue-scoped statistics, trends, CSV export)",
         "responses": {
           "200": {
             "description": "Success"
@@ -4418,20 +4378,6 @@
         ]
       }
     },
-    "/admin/settings": {
-      "get": {
-        "description": "Display system configuration page",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
     "/admin/setup": {
       "get": {
         "description": "First-run setup wizard",
@@ -4627,6 +4573,48 @@
     "/admin/states": {
       "get": {
         "description": "Display state management page",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/states/create": {
+      "post": {
+        "description": "Create a ticket state",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/states/{id}/delete": {
+      "delete": {
+        "description": "Soft-delete a ticket state",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/states/{id}/update": {
+      "put": {
+        "description": "Update a ticket state",
         "responses": {
           "200": {
             "description": "Success"
@@ -4848,6 +4836,48 @@
         ]
       }
     },
+    "/admin/types/create": {
+      "post": {
+        "description": "Create a ticket type",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/types/{id}/delete": {
+      "post": {
+        "description": "Soft-delete a ticket type",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/admin/types/{id}/update": {
+      "post": {
+        "description": "Update a ticket type",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/admin/users": {
       "get": {
         "description": "Display user management page",
@@ -4969,6 +4999,20 @@
       }
     },
     "/admin/users/{id}/status": {},
+    "/admin/webhooks": {
+      "get": {
+        "description": "Manage outbound webhooks, test sends and the delivery log",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/admin/webservices": {
       "get": {
         "description": "Display web services management page",
@@ -5407,20 +5451,6 @@
         ]
       }
     },
-    "/agent/tickets/{id}/draft": {
-      "post": {
-        "description": "Save draft reply for ticket",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
     "/agent/tickets/{id}/history": {
       "get": {
         "description": "HTMX fragment: ticket history",
@@ -5743,37 +5773,21 @@
         ]
       }
     },
-    "/api/auth/refresh": {
-      "post": {
-        "description": "Placeholder for token refresh",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/auth/register": {
-      "post": {
-        "description": "Placeholder for user registration",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
     "/api/canned-responses/": {
       "get": {
-        "description": "List all canned responses",
+        "description": "List canned responses visible to the caller (filters: category, scope, search, tags, sort_by, sort_order, limit)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create a canned response",
         "responses": {
           "200": {
             "description": "Success"
@@ -5813,9 +5827,9 @@
         ]
       }
     },
-    "/api/canned-responses/popular": {
+    "/api/canned-responses/export": {
       "get": {
-        "description": "Get popular responses",
+        "description": "Export responses as JSON or CSV (format=csv)",
         "responses": {
           "200": {
             "description": "Success"
@@ -5827,9 +5841,23 @@
         ]
       }
     },
-    "/api/canned-responses/quick": {
+    "/api/canned-responses/import": {
+      "post": {
+        "description": "Import personal responses from a CSV upload (field: file)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/canned-responses/popular": {
       "get": {
-        "description": "Get quick access responses",
+        "description": "Most used responses first (limit)",
         "responses": {
           "200": {
             "description": "Success"
@@ -5843,7 +5871,21 @@
     },
     "/api/canned-responses/search": {
       "get": {
-        "description": "Search canned responses",
+        "description": "Search canned responses by name or content (q)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/canned-responses/statistics": {
+      "get": {
+        "description": "Usage statistics for the caller's responses",
         "responses": {
           "200": {
             "description": "Success"
@@ -5870,8 +5912,74 @@
       }
     },
     "/api/canned-responses/{id}": {
+      "delete": {
+        "description": "Delete a canned response",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
       "get": {
         "description": "Get response by ID",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update a canned response",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/canned-responses/{id}/copy": {
+      "post": {
+        "description": "Copy a response into the caller's personal scope",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/canned-responses/{id}/share": {
+      "post": {
+        "description": "Change a response's scope (global requires admin)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/canned-responses/{id}/use": {
+      "post": {
+        "description": "Render a response with placeholder context and count the use",
         "responses": {
           "200": {
             "description": "Success"
@@ -5897,20 +6005,6 @@
         ]
       }
     },
-    "/api/dashboard/activity": {
-      "get": {
-        "description": "Activity feed widget",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
     "/api/dashboard/activity-stream": {
       "get": {
         "description": "Activity stream endpoint",
@@ -5925,65 +6019,9 @@
         ]
       }
     },
-    "/api/dashboard/notifications": {
-      "get": {
-        "description": "Notifications widget",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/dashboard/performance": {
-      "get": {
-        "description": "Performance metrics widget",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/dashboard/quick-actions": {
-      "get": {
-        "description": "Quick actions widget",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
     "/api/dashboard/recent-tickets": {
       "get": {
         "description": "Recent tickets widget",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/dashboard/stats": {
-      "get": {
-        "description": "Dashboard statistics widget",
         "responses": {
           "200": {
             "description": "Success"
@@ -6024,20 +6062,6 @@
       },
       "post": {
         "description": "Update user's dashboard widget configuration",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/files/*path": {
-      "get": {
-        "description": "Serve uploaded files",
         "responses": {
           "200": {
             "description": "Success"
@@ -6296,6 +6320,20 @@
     "/api/preferences/2fa/disable": {
       "post": {
         "description": "Disable 2FA (requires valid code)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/preferences/2fa/recovery-codes": {
+      "post": {
+        "description": "Replace recovery codes (password required)",
         "responses": {
           "200": {
             "description": "Success"
@@ -6671,20 +6709,6 @@
         ]
       }
     },
-    "/api/tickets/advanced-search": {
-      "get": {
-        "description": "Advanced ticket search",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
     "/api/tickets/filter": {
       "get": {
         "description": "Filter tickets",
@@ -6702,140 +6726,6 @@
     "/api/tickets/search": {
       "get": {
         "description": "Search tickets",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/tickets/search/export": {
-      "get": {
-        "description": "Export search results",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/tickets/search/history": {
-      "get": {
-        "description": "Get search history",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      },
-      "post": {
-        "description": "Save search to history",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/tickets/search/history/{id}": {
-      "delete": {
-        "description": "Delete search history item",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/tickets/search/saved": {
-      "get": {
-        "description": "Get saved searches",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      },
-      "post": {
-        "description": "Create saved search",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/tickets/search/saved/{id}": {
-      "delete": {
-        "description": "Delete saved search",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      },
-      "put": {
-        "description": "Update saved search",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/tickets/search/saved/{id}/execute": {
-      "get": {
-        "description": "Execute saved search",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/tickets/search/suggestions": {
-      "get": {
-        "description": "Get search suggestions",
         "responses": {
           "200": {
             "description": "Success"
@@ -6874,6 +6764,60 @@
       },
       "put": {
         "description": "Update ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/tickets/{id}/articles/:article_id/attachments/:file_id": {
+      "delete": {
+        "description": "Delete an attachment of one of the ticket's articles",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "Download an attachment of one of the ticket's articles",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/tickets/{id}/articles/:article_id/attachments/:file_id/thumbnail": {
+      "get": {
+        "description": "PNG preview of an attachment (images, PDF page 1, type placeholder otherwise)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/tickets/{id}/articles/:article_id/attachments/:file_id/view": {
+      "get": {
+        "description": "Attachment viewer page; ?raw=1 serves the content for the viewer frame",
         "responses": {
           "200": {
             "description": "Success"
@@ -6925,60 +6869,6 @@
         ]
       }
     },
-    "/api/tickets/{id}/attachments/:attachment_id": {
-      "delete": {
-        "description": "Delete a specific attachment",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      },
-      "get": {
-        "description": "Download a specific attachment",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/tickets/{id}/attachments/:attachment_id/thumbnail": {
-      "get": {
-        "description": "Get thumbnail/preview for an image attachment",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/tickets/{id}/attachments/:attachment_id/view": {
-      "get": {
-        "description": "Inline viewer for common attachment types",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
     "/api/tickets/{id}/available-agents": {
       "get": {
         "description": "Get available agents for assignment",
@@ -7010,34 +6900,6 @@
     "/api/tickets/{id}/history": {
       "get": {
         "description": "Get ticket history",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/tickets/{id}/merge": {
-      "post": {
-        "description": "Merge tickets",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/api/tickets/{id}/merge-history": {
-      "get": {
-        "description": "Get merge history",
         "responses": {
           "200": {
             "description": "Success"
@@ -7173,20 +7035,6 @@
         ]
       }
     },
-    "/api/tickets/{id}/unmerge": {
-      "post": {
-        "description": "Unmerge ticket",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
     "/api/types/": {
       "post": {
         "description": "Create new ticket type",
@@ -7216,6 +7064,46 @@
       },
       "put": {
         "description": "Update ticket type",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/customer-users/:customerId/tokens": {
+      "get": {
+        "description": "List a specific customer's API tokens",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create API token for a customer",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/customer-users/:customerId/tokens/:tokenId": {
+      "delete": {
+        "description": "Revoke a specific customer's token",
         "responses": {
           "200": {
             "description": "Success"
@@ -7325,9 +7213,1251 @@
         ]
       }
     },
+    "/api/v1/admin/sql": {
+      "post": {
+        "description": "Execute read-only SQL query (SELECT, DESCRIBE, EXPLAIN, SHOW TABLES/COLUMNS — admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/tokens": {
+      "get": {
+        "description": "List all API tokens (admin)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/tokens/{id}": {
+      "delete": {
+        "description": "Revoke any API token (admin)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/users/:userId/tokens": {
+      "get": {
+        "description": "List a specific user's API tokens",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create API token for a user",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/admin/users/:userId/tokens/:tokenId": {
+      "delete": {
+        "description": "Revoke a specific user's token",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "description": "Authenticate user and return JWT tokens",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "description": "Exchange a refresh token for a new access token and a rotated refresh token",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/custom-fields/definitions": {
+      "get": {
+        "description": "List custom field definitions",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create custom field definition (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/custom-fields/definitions/{id}": {
+      "delete": {
+        "description": "Soft-delete custom field definition (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "Get custom field definition",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update custom field definition (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/custom-fields/query": {
+      "post": {
+        "description": "Query entities by custom field values",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/custom-fields/values/:entity_type/{id}": {
+      "get": {
+        "description": "Get custom field values for entity",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Set custom field values for entity",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/groups": {
+      "get": {
+        "description": "List groups",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/markdown/render": {
+      "post": {
+        "description": "Render markdown to sanitized HTML",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations": {
+      "get": {
+        "description": "List all organisations (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create organisation (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}": {
+      "delete": {
+        "description": "Delete organisation (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update organisation (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}/captive-plugin": {
+      "post": {
+        "description": "Set or clear the captive plugin for an organisation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}/config": {
+      "get": {
+        "description": "List per-org config overrides",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Set per-org config override",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}/config/:name": {
+      "delete": {
+        "description": "Remove per-org config override",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}/members": {
+      "get": {
+        "description": "List organisation members",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Add member to organisation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}/members/:member_id": {
+      "delete": {
+        "description": "Remove member from organisation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}/plugin-access": {
+      "get": {
+        "description": "List plugin-access bindings for an organisation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Set or replace plugin-access binding for an organisation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/organisations/{id}/plugin-access/:plugin": {
+      "delete": {
+        "description": "Disable a plugin for an organisation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/priorities": {
+      "get": {
+        "description": "List priorities",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create priority (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/priorities/{id}": {
+      "delete": {
+        "description": "Invalidate priority (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "Get priority by ID",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update priority (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/queues": {
+      "get": {
+        "description": "List queues",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create queue (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/queues/{id}": {
+      "delete": {
+        "description": "Delete queue (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "Get queue by ID",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update queue, including its group (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/queues/{id}/agents": {
+      "get": {
+        "description": "Get agents with permissions for queue",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/queues/{id}/groups": {
+      "post": {
+        "description": "Set the queue's group (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/queues/{id}/groups/:group_id": {
+      "delete": {
+        "description": "Remove the queue's group: always rejected, a queue must have a group (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/queues/{id}/stats": {
+      "get": {
+        "description": "Queue ticket statistics",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/salutations": {
+      "get": {
+        "description": "List salutations",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create salutation (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/salutations/{id}": {
+      "put": {
+        "description": "Update salutation (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/search": {
+      "post": {
+        "description": "Search tickets",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/search/health": {
+      "get": {
+        "description": "Search health",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/search/reindex": {
+      "post": {
+        "description": "Trigger search reindex (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/search/saved": {
+      "get": {
+        "description": "List the caller's saved ticket searches",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Save a ticket search",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/search/saved/:name": {
+      "delete": {
+        "description": "Delete a saved ticket search",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "Get a saved ticket search",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Replace the parameters of a saved ticket search",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/search/saved/:name/execute": {
+      "post": {
+        "description": "Run a saved ticket search",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/search/tickets": {
+      "get": {
+        "description": "Search tickets (ticket, article and customer fields)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/services": {
+      "get": {
+        "description": "List services",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/session/org": {
+      "post": {
+        "description": "Switch active organisation",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/session/orgs": {
+      "get": {
+        "description": "List current user's organisations",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/signatures": {
+      "get": {
+        "description": "List signatures",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create signature (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/signatures/{id}": {
+      "put": {
+        "description": "Update signature (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/states": {
+      "get": {
+        "description": "List ticket states",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/statistics/agents": {
+      "get": {
+        "description": "Agent performance (tickets assigned/closed, articles written)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/statistics/analytics": {
+      "get": {
+        "description": "Ticket distribution by hour of day or day of week",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/statistics/customers": {
+      "get": {
+        "description": "Customer statistics (top customers, activity)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/statistics/dashboard": {
+      "get": {
+        "description": "Dashboard statistics (ticket counts by state, queue, priority; recent tickets)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/statistics/export": {
+      "get": {
+        "description": "Export statistics summary or ticket list as JSON or CSV",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/statistics/queues": {
+      "get": {
+        "description": "Queue metrics (total, open, backlog)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/statistics/trends": {
+      "get": {
+        "description": "Ticket created/closed trends (daily or monthly)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/system-addresses": {
+      "get": {
+        "description": "List system addresses",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create system address (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/system-addresses/{id}": {
+      "put": {
+        "description": "Update system address (admin only)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/ticket-attribute-relations/evaluate": {
+      "get": {
+        "description": "Evaluate ticket attribute relations for filtering dropdowns",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/ticket-states/statistics": {
+      "get": {
+        "description": "Ticket counts per ticket state",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets": {
+      "get": {
+        "description": "List tickets",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}": {
+      "delete": {
+        "description": "Delete ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "Get ticket by ID",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/articles": {
+      "get": {
+        "description": "Get ticket articles",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Add article to ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/articles/:article_id": {
+      "delete": {
+        "description": "Delete article",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "Get specific article",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update article",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/internal-notes": {
+      "get": {
+        "description": "Get internal notes for a ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create internal note for a ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/internal-notes/:note_id": {
+      "delete": {
+        "description": "Delete internal note",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update internal note",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/reopen": {
+      "post": {
+        "description": "Reopen ticket",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/time": {
+      "post": {
+        "description": "Add time accounting entry to ticket",
         "responses": {
           "200": {
             "description": "Success"
@@ -7382,6 +8512,232 @@
     "/api/v1/tokens/{id}": {
       "delete": {
         "description": "Revoke an API token",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/types": {
+      "get": {
+        "description": "List ticket types",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "description": "List users",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create user",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "description": "Get current user",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/users/{id}": {
+      "delete": {
+        "description": "Delete user",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "Get user by ID",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update user",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/webhooks": {
+      "get": {
+        "description": "List webhooks (optional ?active=true|false)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create webhook",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/webhooks/deliveries/{id}": {
+      "get": {
+        "description": "Get delivery including payload and response",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/webhooks/deliveries/{id}/redeliver": {
+      "post": {
+        "description": "Send a delivery's payload again as a new delivery",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/webhooks/events": {
+      "get": {
+        "description": "List subscribable webhook events",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/webhooks/{id}": {
+      "delete": {
+        "description": "Delete webhook and its delivery log",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "get": {
+        "description": "Get webhook",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "put": {
+        "description": "Update webhook (partial)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/webhooks/{id}/deliveries": {
+      "get": {
+        "description": "List recent deliveries (optional ?limit=1..200)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/api/v1/webhooks/{id}/test": {
+      "post": {
+        "description": "Send a webhook.test event now",
         "responses": {
           "200": {
             "description": "Success"
@@ -7508,6 +8864,20 @@
     "/customer/api/preferences/2fa/disable": {
       "post": {
         "description": "Disable 2FA for customer (requires valid code)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/api/preferences/2fa/recovery-codes": {
+      "post": {
+        "description": "Replace customer recovery codes (password required)",
         "responses": {
           "200": {
             "description": "Success"
@@ -7721,6 +9091,114 @@
         ]
       }
     },
+    "/customer/api/v1/tokens/": {
+      "get": {
+        "description": "List my API tokens (customer)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create a new API token (customer)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/api/v1/tokens/scopes": {
+      "get": {
+        "description": "List available token scopes (customer)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/api/v1/tokens/{id}": {
+      "delete": {
+        "description": "Revoke an API token (customer)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/company": {
+      "get": {
+        "description": "Display the logged-in customer's own company details",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/company/users": {
+      "get": {
+        "description": "List the valid customer users of the logged-in customer's own company",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/forgot-password": {
+      "get": {
+        "description": "Customer forgot-password form",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Email a customer a password reset link (same answer for unknown accounts)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/customer/login": {
       "get": {
         "description": "Alias customer login path",
@@ -7831,6 +9309,84 @@
         ]
       }
     },
+    "/customer/register": {
+      "get": {
+        "description": "Customer sign-up form",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Email a sign-up confirmation link",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/register/complete": {
+      "get": {
+        "description": "Confirm email address and choose a password (token from email)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Create the customer account",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/reset-password": {
+      "get": {
+        "description": "Customer choose-new-password form (token from email)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Set a new customer password with a reset token",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/customer/tickets": {
       "get": {
         "description": "Display customer's ticket list",
@@ -7887,6 +9443,48 @@
         ]
       }
     },
+    "/customer/tickets/{id}/articles/:article_id/attachments/:file_id": {
+      "get": {
+        "description": "Download an attachment of a customer-visible article (?download=1 forces a download)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/tickets/{id}/articles/:article_id/attachments/:file_id/thumbnail": {
+      "get": {
+        "description": "Get a PNG thumbnail of an attachment",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/customer/tickets/{id}/articles/:article_id/attachments/:file_id/view": {
+      "get": {
+        "description": "View attachment in a viewer page (?raw=1 serves the embeddable content)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/customer/tickets/{id}/attachments": {
       "get": {
         "description": "Get attachments for a customer ticket",
@@ -7902,48 +9500,6 @@
       },
       "post": {
         "description": "Upload attachment to a customer ticket",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/customer/tickets/{id}/attachments/:attachment_id": {
-      "get": {
-        "description": "Download attachment from a customer ticket",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/customer/tickets/{id}/attachments/:attachment_id/thumbnail": {
-      "get": {
-        "description": "Get thumbnail for an image attachment",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/customer/tickets/{id}/attachments/:attachment_id/view": {
-      "get": {
-        "description": "View attachment in modal viewer",
         "responses": {
           "200": {
             "description": "Success"
@@ -8025,20 +9581,6 @@
         ]
       }
     },
-    "/dashboard/api/stats": {
-      "get": {
-        "description": "Get dashboard statistics and metrics",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
     "/favicon.ico": {
       "get": {
         "description": "Serve favicon.ico file",
@@ -8056,6 +9598,32 @@
     "/favicon.svg": {
       "get": {
         "description": "Serve favicon.svg file",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
+    "/forgot-password": {
+      "get": {
+        "description": "Agent forgot-password form",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Email an agent a password reset link (same answer for unknown accounts)",
         "responses": {
           "200": {
             "description": "Success"
@@ -8235,6 +9803,32 @@
         ]
       }
     },
+    "/reset-password": {
+      "get": {
+        "description": "Agent choose-new-password form (token from email)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      },
+      "post": {
+        "description": "Set a new agent password with a reset token",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "default"
+        ]
+      }
+    },
     "/settings/tokens": {
       "get": {
         "description": "Manage personal API tokens",
@@ -8376,20 +9970,6 @@
       },
       "post": {
         "description": "Process new ticket creation",
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "",
-        "tags": [
-          "default"
-        ]
-      }
-    },
-    "/tickets/api/search": {
-      "get": {
-        "description": "Search tickets with filters",
         "responses": {
           "200": {
             "description": "Success"

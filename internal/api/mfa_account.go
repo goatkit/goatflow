@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"net/http"
 
 	"github.com/goatkit/goatflow/internal/platform/service"
 )
@@ -47,28 +46,24 @@ func (a mfaAccount) totp(db *sql.DB) *service.TOTPService {
 
 // hasAnySecondFactor reports whether the account still has an authenticator
 // app or at least one passkey.
-func (a mfaAccount) hasAnySecondFactor(db *sql.DB, r *http.Request) bool {
+func (a mfaAccount) hasAnySecondFactor(db *sql.DB) bool {
 	if a.totp(db).IsEnabled(a.userID) {
 		return true
 	}
-	wa, err := service.NewWebAuthnService(db, r)
-	return err == nil && wa.IsEnabled(a.userType, a.webAuthnKey())
+	count, err := service.CountWebAuthnCredentials(db, a.userType, a.webAuthnKey())
+	return err == nil && count > 0
 }
 
 // clearRecoveryCodesIfNoSecondFactor drops recovery codes once the last second
 // factor is gone, so 2FA is fully off rather than left half-on.
-func (a mfaAccount) clearRecoveryCodesIfNoSecondFactor(db *sql.DB, r *http.Request) error {
-	if a.hasAnySecondFactor(db, r) {
+func (a mfaAccount) clearRecoveryCodesIfNoSecondFactor(db *sql.DB) error {
+	if a.hasAnySecondFactor(db) {
 		return nil
 	}
 	return a.totp(db).ClearRecoveryCodes(a.userID)
 }
 
 // deleteAllPasskeys removes every passkey/security key on the account.
-func (a mfaAccount) deleteAllPasskeys(db *sql.DB, r *http.Request) error {
-	wa, err := service.NewWebAuthnService(db, r)
-	if err != nil {
-		return err
-	}
-	return wa.DeleteAllCredentials(a.userType, a.webAuthnKey())
+func (a mfaAccount) deleteAllPasskeys(db *sql.DB) error {
+	return service.DeleteAllWebAuthnCredentials(db, a.userType, a.webAuthnKey())
 }

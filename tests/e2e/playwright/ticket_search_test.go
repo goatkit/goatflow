@@ -17,9 +17,7 @@ import (
 
 func TestTicketSearchFiltersResults(t *testing.T) {
 	browser := helpers.NewBrowserHelper(t)
-	if browser.Config.AdminEmail == "" || browser.Config.AdminPassword == "" {
-		t.Skip("Admin credentials not configured")
-	}
+
 	require.NoError(t, browser.Setup())
 	defer browser.TearDown()
 
@@ -37,31 +35,16 @@ func TestTicketSearchFiltersResults(t *testing.T) {
 		WaitUntil: playwright.WaitUntilStateCommit,
 	})
 	require.NoError(t, err)
-	currentURL := browser.Page.URL()
-	t.Logf("landed on %s", currentURL)
 
-	rowsInitialA, err := browser.Page.Locator("tbody tr").Filter(playwright.LocatorFilterOptions{HasText: subjectA}).Count()
-	require.NoError(t, err)
-	rowsInitialB, err := browser.Page.Locator("tbody tr").Filter(playwright.LocatorFilterOptions{HasText: subjectB}).Count()
-	require.NoError(t, err)
-	require.Greater(t, rowsInitialA, 0, "precondition failed: ticket %s missing before search", subjectA)
-	require.Greater(t, rowsInitialB, 0, "precondition failed: ticket %s missing before search", subjectB)
+	// The navigation resolves at commit, before the list is parsed: wait for
+	// the rows instead of counting them straight away.
+	rows := browser.Page.Locator("tbody tr")
+	require.NoError(t, rows.Filter(playwright.LocatorFilterOptions{HasText: subjectA}).First().WaitFor(),
+		"precondition failed: ticket %s missing before search", subjectA)
+	require.NoError(t, rows.Filter(playwright.LocatorFilterOptions{HasText: subjectB}).First().WaitFor(),
+		"precondition failed: ticket %s missing before search", subjectB)
 
 	searchInput := browser.Page.Locator("#search-input")
-	count, err := searchInput.Count()
-	require.NoError(t, err)
-	if count == 0 {
-		html, contentErr := browser.Page.Content()
-		if contentErr == nil {
-			lower := strings.ToLower(html)
-			if idx := strings.Index(lower, "<body"); idx >= 0 {
-				body := strings.TrimSpace(html[idx:])
-				t.Fatalf("search input missing; body snippet: %.4000s", body)
-			}
-			t.Fatalf("search input missing; page content snippet: %.3200s", strings.TrimSpace(html))
-		}
-		t.Fatalf("search input missing and content unavailable: %v", contentErr)
-	}
 	require.NoError(t, searchInput.WaitFor(playwright.LocatorWaitForOptions{State: playwright.WaitForSelectorStateVisible}))
 	require.NoError(t, searchInput.Fill(subjectB))
 

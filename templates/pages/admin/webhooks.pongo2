@@ -1,0 +1,794 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("admin.webhooks.title") }} - GoatFlow Admin{% endblock %}
+
+{% block content %}
+<style>
+    .wh-pre {
+        background: var(--gk-bg-base);
+        border: 1px solid var(--gk-border-default);
+        border-radius: var(--gk-radius-md);
+        color: var(--gk-text-primary);
+        font-family: var(--gk-font-mono);
+        font-size: 0.75rem;
+        line-height: 1.4;
+        max-height: 20rem;
+        overflow: auto;
+        padding: 0.75rem;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+    .wh-box {
+        border: 1px solid var(--gk-border-default);
+        border-radius: var(--gk-radius-md);
+        background: var(--gk-bg-base);
+    }
+    .wh-modal-panel { max-height: 90vh; overflow-y: auto; }
+    .wh-check { accent-color: var(--gk-primary); }
+    .wh-icon-btn { color: var(--gk-text-secondary); }
+    .wh-icon-btn:hover:not(:disabled) { color: var(--gk-primary); background: var(--gk-primary-subtle); }
+    .wh-icon-btn.wh-danger:hover:not(:disabled) { color: var(--gk-error); background: var(--gk-error-subtle); }
+    .wh-icon-btn:disabled { opacity: 0.5; cursor: wait; }
+    .wh-dl dt { color: var(--gk-text-muted); }
+    .wh-dl dd { color: var(--gk-text-primary); }
+</style>
+
+<div class="container mx-auto px-4 py-8 min-h-screen" id="webhooks-page">
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("admin.webhooks.title") }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.webhooks.description") }}</p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <button type="button" id="wh-add" class="gk-btn-neon gap-2" title="{{ t('admin.webhooks.add') }}">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                    <span>{{ t("admin.webhooks.add") }}</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="gk-card-glow overflow-x-auto rounded-lg">
+        <table class="gk-table" id="wh-table">
+            <thead>
+                <tr>
+                    <th scope="col">{{ t("common.name") }}</th>
+                    <th scope="col">{{ t("admin.webhooks.columns.url") }}</th>
+                    <th scope="col">{{ t("admin.webhooks.columns.events") }}</th>
+                    <th scope="col">{{ t("common.status") }}</th>
+                    <th scope="col">{{ t("admin.webhooks.columns.last_delivery") }}</th>
+                    <th scope="col">{{ t("common.actions") }}</th>
+                </tr>
+            </thead>
+            <tbody id="wh-rows">
+                <tr>
+                    <td colspan="6" class="px-4 py-8 text-center" style="color: var(--gk-text-muted);">{{ t("common.loading") }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# Edit / create webhook #}
+<div id="wh-form-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="wh-form-title">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" data-close="wh-form-modal"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="gk-modal wh-modal-panel inline-block align-bottom text-left transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+            <form id="wh-form" novalidate>
+                <div class="gk-modal-header">
+                    <h2 id="wh-form-title" class="text-lg font-semibold" style="color: var(--gk-text-primary);"></h2>
+                    <button type="button" class="p-1 rounded wh-icon-btn" data-close="wh-form-modal" aria-label="{{ t('buttons.close') }}" title="{{ t('buttons.close') }}">
+                        <i class="fa-solid fa-xmark text-xl" aria-hidden="true"></i>
+                    </button>
+                </div>
+
+                <div class="gk-modal-body space-y-6">
+                    <div id="wh-form-error" class="hidden rounded-md p-3 text-sm" role="alert" style="background: var(--gk-error-subtle); color: var(--gk-error); border: 1px solid var(--gk-error);"></div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="wh-name" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.name") }} <span style="color: var(--gk-error);">*</span></label>
+                            <input type="text" id="wh-name" name="name" required maxlength="200" autocomplete="off" class="gk-input-neon w-full">
+                        </div>
+                        <div>
+                            <label for="wh-url" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webhooks.form.url") }} <span style="color: var(--gk-error);">*</span></label>
+                            <input type="url" id="wh-url" name="url" required maxlength="2000" autocomplete="off" placeholder="https://" dir="ltr" class="gk-input-neon w-full font-mono">
+                            <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.webhooks.form.url_help") }}</p>
+                        </div>
+                    </div>
+
+                    <fieldset>
+                        <legend class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webhooks.form.events") }} <span style="color: var(--gk-error);">*</span></legend>
+                        <p class="mb-2 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.webhooks.form.events_help") }}</p>
+                        <div id="wh-events" class="wh-box p-3 space-y-2 max-h-64 overflow-y-auto"></div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webhooks.form.headers") }}</legend>
+                        <p class="mb-2 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.webhooks.form.headers_help") }}</p>
+                        <div id="wh-headers" class="space-y-2"></div>
+                        <button type="button" id="wh-add-header" class="gk-btn-secondary gap-2 mt-2">
+                            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                            <span>{{ t("admin.webhooks.form.add_header") }}</span>
+                        </button>
+                    </fieldset>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="wh-retry" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webhooks.form.retry_count") }}</label>
+                            <input type="number" id="wh-retry" name="retry_count" required min="0" max="{{ MaxRetryCount }}" step="1" class="gk-input-neon w-full">
+                            <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.webhooks.form.retry_count_help") }}</p>
+                        </div>
+                        <div>
+                            <label for="wh-timeout" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webhooks.form.timeout") }}</label>
+                            <input type="number" id="wh-timeout" name="timeout_seconds" required min="1" max="{{ MaxTimeoutSeconds }}" step="1" class="gk-input-neon w-full">
+                            <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.webhooks.form.timeout_help") }}</p>
+                        </div>
+                        <div>
+                            <span class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.status") }}</span>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="wh-active" name="is_active" class="w-4 h-4 wh-check">
+                                <span class="text-sm" style="color: var(--gk-text-primary);">{{ t("admin.webhooks.active") }}</span>
+                            </label>
+                            <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.webhooks.form.active_help") }}</p>
+                        </div>
+                    </div>
+
+                    <fieldset class="border-t pt-4" style="border-color: var(--gk-border-default);">
+                        <legend class="sr-only">{{ t("admin.webhooks.form.secret") }}</legend>
+                        <label for="wh-secret" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webhooks.form.secret") }}</label>
+                        <p id="wh-secret-status" class="mb-2 text-sm" style="color: var(--gk-text-primary);"></p>
+                        <input type="password" id="wh-secret" name="secret" minlength="16" maxlength="512" autocomplete="new-password" spellcheck="false" dir="ltr" class="gk-input-neon w-full font-mono" aria-describedby="wh-secret-help">
+                        <p id="wh-secret-help" class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.webhooks.form.secret_help") }}</p>
+                        <label id="wh-remove-secret-row" class="hidden flex items-center gap-2 mt-2 cursor-pointer">
+                            <input type="checkbox" id="wh-remove-secret" class="w-4 h-4 wh-check">
+                            <span class="text-sm" style="color: var(--gk-text-primary);">{{ t("admin.webhooks.form.remove_secret") }}</span>
+                        </label>
+                    </fieldset>
+                </div>
+
+                <div class="gk-modal-footer">
+                    <button type="button" class="gk-btn-secondary" data-close="wh-form-modal">{{ t("buttons.cancel") }}</button>
+                    <button type="submit" id="wh-save" class="gk-btn-neon">{{ t("buttons.save") }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Delivery log of one webhook #}
+<div id="wh-deliveries-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="wh-deliveries-title">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" data-close="wh-deliveries-modal"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="gk-modal wh-modal-panel inline-block align-bottom text-left transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+            <div class="gk-modal-header">
+                <h2 id="wh-deliveries-title" class="text-lg font-semibold" style="color: var(--gk-text-primary);"></h2>
+                <button type="button" class="p-1 rounded wh-icon-btn" data-close="wh-deliveries-modal" aria-label="{{ t('buttons.close') }}" title="{{ t('buttons.close') }}">
+                    <i class="fa-solid fa-xmark text-xl" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="gk-modal-body space-y-4">
+                <div class="flex flex-wrap items-center justify-end gap-2">
+                    <button type="button" id="wh-deliveries-test" class="gk-btn-secondary gap-2">
+                        <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                        <span>{{ t("admin.webhooks.actions.test") }}</span>
+                    </button>
+                    <button type="button" id="wh-deliveries-refresh" class="gk-btn-secondary gap-2">
+                        <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                        <span>{{ t("buttons.refresh") }}</span>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="gk-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">{{ t("common.status") }}</th>
+                                <th scope="col">{{ t("admin.webhooks.deliveries.event") }}</th>
+                                <th scope="col">{{ t("admin.webhooks.deliveries.attempts") }}</th>
+                                <th scope="col">{{ t("admin.webhooks.deliveries.status_code") }}</th>
+                                <th scope="col">{{ t("admin.webhooks.deliveries.duration") }}</th>
+                                <th scope="col">{{ t("admin.webhooks.deliveries.time") }}</th>
+                                <th scope="col"><span class="sr-only">{{ t("common.actions") }}</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="wh-deliveries-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="gk-modal-footer">
+                <button type="button" class="gk-btn-secondary" data-close="wh-deliveries-modal">{{ t("buttons.close") }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# One delivery: request payload, response, redeliver #}
+<div id="wh-delivery-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="wh-delivery-title">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" data-close="wh-delivery-modal"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="gk-modal wh-modal-panel inline-block align-bottom text-left transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+            <div class="gk-modal-header">
+                <h2 id="wh-delivery-title" class="text-lg font-semibold" style="color: var(--gk-text-primary);"></h2>
+                <button type="button" class="p-1 rounded wh-icon-btn" data-close="wh-delivery-modal" aria-label="{{ t('buttons.close') }}" title="{{ t('buttons.close') }}">
+                    <i class="fa-solid fa-xmark text-xl" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="gk-modal-body space-y-4">
+                <dl id="wh-delivery-fields" class="wh-dl grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm"></dl>
+                <div id="wh-delivery-error-block" class="hidden">
+                    <h3 class="text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webhooks.delivery.error") }}</h3>
+                    <pre id="wh-delivery-error" class="wh-pre" dir="ltr" style="color: var(--gk-error);"></pre>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webhooks.delivery.payload") }}</h3>
+                    <pre id="wh-delivery-payload" class="wh-pre" dir="ltr"></pre>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webhooks.delivery.response") }}</h3>
+                    <pre id="wh-delivery-response" class="wh-pre" dir="ltr"></pre>
+                </div>
+            </div>
+            <div class="gk-modal-footer">
+                <button type="button" class="gk-btn-secondary" data-close="wh-delivery-modal">{{ t("buttons.close") }}</button>
+                <button type="button" id="wh-redeliver" class="gk-btn-neon gap-2">
+                    <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+                    <span>{{ t("admin.webhooks.delivery.redeliver") }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="wh-i18n" hidden
+    data-create-title="{{ t('admin.webhooks.form.create_title') }}"
+    data-edit-title="{{ t('admin.webhooks.form.edit_title') }}"
+    data-empty="{{ t('admin.webhooks.empty') }}"
+    data-loading="{{ t('common.loading') }}"
+    data-load-failed="{{ t('admin.webhooks.load_failed') }}"
+    data-retry="{{ t('admin.webhooks.retry') }}"
+    data-active="{{ t('admin.webhooks.active') }}"
+    data-inactive="{{ t('admin.webhooks.inactive') }}"
+    data-never="{{ t('admin.webhooks.never') }}"
+    data-edit="{{ t('common.edit') }}"
+    data-delete="{{ t('common.delete') }}"
+    data-activate="{{ t('admin.webhooks.actions.activate') }}"
+    data-deactivate="{{ t('admin.webhooks.actions.deactivate') }}"
+    data-test="{{ t('admin.webhooks.actions.test') }}"
+    data-deliveries="{{ t('admin.webhooks.actions.deliveries') }}"
+    data-header-name="{{ t('admin.webhooks.form.header_name') }}"
+    data-header-value="{{ t('admin.webhooks.form.header_value') }}"
+    data-remove-header="{{ t('admin.webhooks.form.remove_header') }}"
+    data-secret-set="{{ t('admin.webhooks.form.secret_set') }}"
+    data-secret-none="{{ t('admin.webhooks.form.secret_none') }}"
+    data-secret-placeholder-new="{{ t('admin.webhooks.form.secret_placeholder_new') }}"
+    data-secret-placeholder-keep="{{ t('admin.webhooks.form.secret_placeholder_keep') }}"
+    data-events-required="{{ t('admin.webhooks.form.events_required') }}"
+    data-created="{{ t('admin.webhooks.messages.created') }}"
+    data-updated="{{ t('admin.webhooks.messages.updated') }}"
+    data-deleted="{{ t('admin.webhooks.messages.deleted') }}"
+    data-activated="{{ t('admin.webhooks.messages.activated') }}"
+    data-deactivated="{{ t('admin.webhooks.messages.deactivated') }}"
+    data-confirm-delete="{{ t('admin.webhooks.messages.confirm_delete') }}"
+    data-request-failed="{{ t('admin.webhooks.messages.request_failed') }}"
+    data-network-error="{{ t('admin.webhooks.messages.network_error') }}"
+    data-test-succeeded="{{ t('admin.webhooks.messages.test_succeeded') }}"
+    data-test-failed="{{ t('admin.webhooks.messages.test_failed') }}"
+    data-redelivered="{{ t('admin.webhooks.messages.redelivered') }}"
+    data-redeliver-failed="{{ t('admin.webhooks.messages.redeliver_failed') }}"
+    data-deliveries-title="{{ t('admin.webhooks.deliveries.title') }}"
+    data-deliveries-empty="{{ t('admin.webhooks.deliveries.empty') }}"
+    data-details="{{ t('admin.webhooks.deliveries.details') }}"
+    data-event="{{ t('admin.webhooks.deliveries.event') }}"
+    data-attempts="{{ t('admin.webhooks.deliveries.attempts') }}"
+    data-status-code="{{ t('admin.webhooks.deliveries.status_code') }}"
+    data-duration="{{ t('admin.webhooks.deliveries.duration') }}"
+    data-status="{{ t('common.status') }}"
+    data-delivery-title="{{ t('admin.webhooks.delivery.title') }}"
+    data-created-at="{{ t('admin.webhooks.delivery.created_at') }}"
+    data-delivered-at="{{ t('admin.webhooks.delivery.delivered_at') }}"
+    data-next-attempt="{{ t('admin.webhooks.delivery.next_attempt') }}"
+    data-no-response="{{ t('admin.webhooks.delivery.no_response') }}"
+    data-duration-ms="{{ t('admin.webhooks.delivery.duration_ms') }}"
+    data-status-pending="{{ t('admin.webhooks.status.pending') }}"
+    data-status-delivering="{{ t('admin.webhooks.status.delivering') }}"
+    data-status-delivered="{{ t('admin.webhooks.status.delivered') }}"
+    data-status-failed="{{ t('admin.webhooks.status.failed') }}"
+    data-default-retry="{{ DefaultRetryCount }}"
+    data-default-timeout="{{ DefaultTimeoutSeconds }}"></div>
+<ul id="wh-event-labels" hidden>
+    {% for e in EventLabels %}<li data-event="{{ e.Event }}">{{ t(e.Key) }}</li>{% endfor %}
+</ul>
+
+<script>
+(function () {
+    'use strict';
+
+    var API = '/api/v1/webhooks';
+    var I18N = document.getElementById('wh-i18n').dataset;
+    var LOCALE = document.documentElement.lang || undefined;
+    var EVENT_LABELS = {};
+    document.querySelectorAll('#wh-event-labels [data-event]').forEach(function (li) {
+        EVENT_LABELS[li.dataset.event] = li.textContent;
+    });
+    var STATUS_BADGE = { delivered: 'gk-badge-success', failed: 'gk-badge-error', pending: 'gk-badge-warning', delivering: 'gk-badge-warning' };
+    var STATUS_LABEL = { delivered: I18N.statusDelivered, failed: I18N.statusFailed, pending: I18N.statusPending, delivering: I18N.statusDelivering };
+
+    var state = { hooks: [], events: [], editing: null, deliveriesHook: null, delivery: null, openers: {} };
+
+    // ---- helpers (all user-controlled data goes through textContent / attributes) ----
+
+    function fmt(template, vars) {
+        return String(template).replace(/\{(\w+)\}/g, function (m, k) {
+            return Object.prototype.hasOwnProperty.call(vars, k) ? String(vars[k]) : m;
+        });
+    }
+
+    function el(tag, props, children) {
+        var node = document.createElement(tag);
+        if (props) {
+            Object.keys(props).forEach(function (k) {
+                var v = props[k];
+                if (v === undefined || v === null) return;
+                if (k === 'text') node.textContent = v;
+                else if (k === 'className') node.className = v;
+                else if (k === 'style') node.setAttribute('style', v);
+                else if (k === 'dataset') Object.keys(v).forEach(function (d) { node.dataset[d] = v[d]; });
+                else if (k.indexOf('on') === 0) node.addEventListener(k.slice(2), v);
+                else if (k in node && k.indexOf('aria') !== 0) node[k] = v;
+                else node.setAttribute(k, v);
+            });
+        }
+        (children || []).forEach(function (c) {
+            if (c === null || c === undefined) return;
+            node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+        });
+        return node;
+    }
+
+    function icon(name) {
+        return el('i', { className: 'fa-solid ' + name, 'aria-hidden': 'true' });
+    }
+
+    function iconButton(iconName, label, onClick, danger) {
+        return el('button', {
+            type: 'button',
+            className: 'p-1 rounded wh-icon-btn' + (danger ? ' wh-danger' : ''),
+            title: label,
+            'aria-label': label,
+            onclick: onClick
+        }, [icon(iconName)]);
+    }
+
+    function formatTime(value) {
+        if (!value) return '\u2014';
+        var d = new Date(value);
+        if (isNaN(d.getTime()) || d.getFullYear() < 1971) return '\u2014';
+        return d.toLocaleString(LOCALE);
+    }
+
+    function statusBadge(status) {
+        return el('span', { className: 'gk-badge ' + (STATUS_BADGE[status] || 'gk-badge-muted'), text: STATUS_LABEL[status] || status });
+    }
+
+    function toast(message, type) {
+        if (typeof window.showToast === 'function') window.showToast(message, type || 'info');
+    }
+
+    function failMessage(err) {
+        return fmt(I18N.requestFailed, { error: err && err.message ? err.message : String(err) });
+    }
+
+    async function api(method, url, body) {
+        var opts = { method: method, credentials: 'same-origin', headers: { Accept: 'application/json' } };
+        if (body !== undefined) {
+            opts.headers['Content-Type'] = 'application/json';
+            opts.body = JSON.stringify(body);
+        }
+        var res;
+        try {
+            res = await fetch(url, opts);
+        } catch (e) {
+            throw new Error(I18N.networkError);
+        }
+        var payload = null;
+        try { payload = await res.json(); } catch (e) { payload = null; }
+        if (!res.ok || !payload || payload.success !== true) {
+            var msg = '';
+            if (payload && typeof payload.error === 'string') msg = payload.error;
+            else if (payload && payload.error && payload.error.message) msg = payload.error.message;
+            var err = new Error(msg || (res.status + ' ' + res.statusText));
+            err.status = res.status;
+            throw err;
+        }
+        return payload.data;
+    }
+
+    // ---- modals ----
+
+    function openModal(id, opener) {
+        state.openers[id] = opener || document.activeElement;
+        document.getElementById(id).classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+        var modal = document.getElementById(id);
+        if (modal.classList.contains('hidden')) return;
+        modal.classList.add('hidden');
+        var opener = state.openers[id];
+        delete state.openers[id];
+        if (opener && document.body.contains(opener) && typeof opener.focus === 'function') opener.focus();
+    }
+
+    document.querySelectorAll('[data-close]').forEach(function (node) {
+        node.addEventListener('click', function () { closeModal(node.dataset.close); });
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        var order = ['wh-delivery-modal', 'wh-deliveries-modal', 'wh-form-modal'];
+        for (var i = 0; i < order.length; i++) {
+            if (!document.getElementById(order[i]).classList.contains('hidden')) {
+                closeModal(order[i]);
+                return;
+            }
+        }
+    });
+
+    // ---- list ----
+
+    var rowsEl = document.getElementById('wh-rows');
+
+    function messageRow(text, action) {
+        rowsEl.replaceChildren(el('tr', null, [
+            el('td', { colSpan: 6, className: 'px-4 py-8 text-center', style: 'color: var(--gk-text-muted);' }, [
+                el('p', { text: text }),
+                action || null
+            ])
+        ]));
+    }
+
+    function lastDeliveryCell(cell, hook) {
+        api('GET', API + '/' + hook.id + '/deliveries?limit=1').then(function (list) {
+            cell.replaceChildren();
+            if (!list || list.length === 0) {
+                cell.appendChild(el('span', { text: I18N.never, style: 'color: var(--gk-text-muted);' }));
+                return;
+            }
+            var d = list[0];
+            cell.appendChild(el('div', { className: 'flex flex-wrap items-center gap-2' }, [
+                statusBadge(d.status),
+                el('span', { className: 'text-xs', style: 'color: var(--gk-text-muted);', text: formatTime(d.created_at) })
+            ]));
+        }).catch(function () {
+            cell.textContent = '\u2014';
+        });
+    }
+
+    function renderRows() {
+        if (state.hooks.length === 0) {
+            messageRow(I18N.empty);
+            return;
+        }
+        var rows = state.hooks.map(function (hook) {
+            var lastCell = el('td', { dataset: { role: 'last-delivery' } }, [
+                el('span', { text: '\u2026', style: 'color: var(--gk-text-muted);' })
+            ]);
+            var testBtn = iconButton('fa-paper-plane', I18N.test, function () { sendTest(hook, testBtn); });
+            var row = el('tr', { dataset: { webhookId: String(hook.id) } }, [
+                el('td', null, [el('span', { className: 'font-medium', style: 'color: var(--gk-text-primary);', text: hook.name })]),
+                el('td', null, [el('div', { className: 'font-mono text-xs truncate max-w-xs', dir: 'ltr', title: hook.url, text: hook.url })]),
+                el('td', null, [el('span', { title: (hook.events || []).join(', '), text: String((hook.events || []).length) })]),
+                el('td', null, [el('span', {
+                    className: 'gk-badge ' + (hook.is_active ? 'gk-badge-success' : 'gk-badge-muted'),
+                    text: hook.is_active ? I18N.active : I18N.inactive
+                })]),
+                lastCell,
+                el('td', null, [el('div', { className: 'flex items-center justify-end gap-1' }, [
+                    iconButton('fa-pen', I18N.edit, function (e) { openForm(hook, e.currentTarget); }),
+                    iconButton(hook.is_active ? 'fa-toggle-on' : 'fa-toggle-off', hook.is_active ? I18N.deactivate : I18N.activate, function () { toggleActive(hook); }),
+                    testBtn,
+                    iconButton('fa-list', I18N.deliveries, function (e) { openDeliveries(hook, e.currentTarget); }),
+                    iconButton('fa-trash', I18N.delete, function () { deleteHook(hook); }, true)
+                ])])
+            ]);
+            lastDeliveryCell(lastCell, hook);
+            return row;
+        });
+        rowsEl.replaceChildren.apply(rowsEl, rows);
+    }
+
+    async function loadHooks() {
+        try {
+            var results = await Promise.all([
+                state.events.length ? Promise.resolve(state.events) : api('GET', API + '/events'),
+                api('GET', API)
+            ]);
+            state.events = results[0] || [];
+            state.hooks = results[1] || [];
+            renderRows();
+        } catch (err) {
+            messageRow(I18N.loadFailed + ' ' + (err.message || ''), el('button', {
+                type: 'button', className: 'gk-btn-secondary mt-2', text: I18N.retry, onclick: function () {
+                    messageRow(I18N.loading);
+                    loadHooks();
+                }
+            }));
+        }
+    }
+
+    function refreshLastDelivery(hookId) {
+        var row = rowsEl.querySelector('tr[data-webhook-id="' + String(Number(hookId)) + '"]');
+        var hook = state.hooks.find(function (h) { return h.id === hookId; });
+        if (row && hook) lastDeliveryCell(row.querySelector('[data-role="last-delivery"]'), hook);
+    }
+
+    async function toggleActive(hook) {
+        try {
+            await api('PUT', API + '/' + hook.id, { is_active: !hook.is_active });
+            toast(hook.is_active ? I18N.deactivated : I18N.activated, 'success');
+            await loadHooks();
+        } catch (err) {
+            toast(failMessage(err), 'error');
+        }
+    }
+
+    async function deleteHook(hook) {
+        if (!window.confirm(fmt(I18N.confirmDelete, { name: hook.name }))) return;
+        try {
+            await api('DELETE', API + '/' + hook.id);
+            toast(I18N.deleted, 'success');
+            await loadHooks();
+        } catch (err) {
+            toast(failMessage(err), 'error');
+        }
+    }
+
+    async function sendTest(hook, button) {
+        if (button) button.disabled = true;
+        try {
+            var delivery = await api('POST', API + '/' + hook.id + '/test');
+            toast(delivery.success ? I18N.testSucceeded : I18N.testFailed, delivery.success ? 'success' : 'error');
+            refreshLastDelivery(hook.id);
+            if (state.deliveriesHook && state.deliveriesHook.id === hook.id) loadDeliveries();
+            showDelivery(delivery, button);
+        } catch (err) {
+            toast(failMessage(err), 'error');
+        } finally {
+            if (button) button.disabled = false;
+        }
+    }
+
+    // ---- create / edit form ----
+
+    var form = document.getElementById('wh-form');
+    var formError = document.getElementById('wh-form-error');
+    var headersEl = document.getElementById('wh-headers');
+    var secretInput = document.getElementById('wh-secret');
+    var removeSecret = document.getElementById('wh-remove-secret');
+
+    function showFormError(message) {
+        formError.textContent = message;
+        formError.classList.toggle('hidden', !message);
+    }
+
+    function addHeaderRow(name, value) {
+        var row = el('div', { className: 'flex items-center gap-2', dataset: { role: 'header-row' } }, [
+            el('input', { type: 'text', className: 'gk-input-neon w-full font-mono', dir: 'ltr', placeholder: I18N.headerName, 'aria-label': I18N.headerName, value: name || '', maxLength: 256, autocomplete: 'off', dataset: { role: 'header-name' } }),
+            el('input', { type: 'text', className: 'gk-input-neon w-full font-mono', dir: 'ltr', placeholder: I18N.headerValue, 'aria-label': I18N.headerValue, value: value || '', autocomplete: 'off', dataset: { role: 'header-value' } })
+        ]);
+        row.appendChild(iconButton('fa-trash', I18N.removeHeader, function () { row.remove(); }, true));
+        headersEl.appendChild(row);
+        return row;
+    }
+
+    function renderEventChoices(selected) {
+        var box = document.getElementById('wh-events');
+        var chosen = {};
+        (selected || []).forEach(function (e) { chosen[e] = true; });
+        box.replaceChildren.apply(box, state.events.map(function (ev) {
+            return el('label', { className: 'flex items-start gap-2 cursor-pointer' }, [
+                el('input', { type: 'checkbox', className: 'w-4 h-4 wh-check', name: 'events', value: ev.event, checked: !!chosen[ev.event], style: 'margin-top: 0.2rem;' }),
+                el('span', { className: 'text-sm' }, [
+                    el('span', { className: 'font-mono', dir: 'ltr', style: 'color: var(--gk-text-primary);', text: ev.event }),
+                    el('span', { className: 'block text-xs', style: 'color: var(--gk-text-muted);', text: EVENT_LABELS[ev.event] || ev.description || '' })
+                ])
+            ]);
+        }));
+    }
+
+    function syncSecretControls() {
+        secretInput.disabled = removeSecret.checked;
+        if (removeSecret.checked) secretInput.value = '';
+    }
+    removeSecret.addEventListener('change', syncSecretControls);
+
+    function openForm(hook, opener) {
+        state.editing = hook || null;
+        form.reset();
+        showFormError('');
+        headersEl.replaceChildren();
+        document.getElementById('wh-form-title').textContent = hook ? I18N.editTitle : I18N.createTitle;
+        document.getElementById('wh-name').value = hook ? hook.name : '';
+        document.getElementById('wh-url').value = hook ? hook.url : '';
+        document.getElementById('wh-retry').value = hook ? hook.retry_count : I18N.defaultRetry;
+        document.getElementById('wh-timeout').value = hook ? hook.timeout_seconds : I18N.defaultTimeout;
+        document.getElementById('wh-active').checked = hook ? !!hook.is_active : true;
+        renderEventChoices(hook ? hook.events : []);
+        Object.keys((hook && hook.headers) || {}).sort().forEach(function (k) { addHeaderRow(k, hook.headers[k]); });
+
+        var hasSecret = !!(hook && hook.has_secret);
+        document.getElementById('wh-secret-status').textContent = hasSecret
+            ? fmt(I18N.secretSet, { hint: hook.secret_hint || '' })
+            : I18N.secretNone;
+        secretInput.placeholder = hasSecret ? I18N.secretPlaceholderKeep : I18N.secretPlaceholderNew;
+        document.getElementById('wh-remove-secret-row').classList.toggle('hidden', !hasSecret);
+        removeSecret.checked = false;
+        syncSecretControls();
+
+        openModal('wh-form-modal', opener);
+        document.getElementById('wh-name').focus();
+    }
+
+    document.getElementById('wh-add').addEventListener('click', function (e) { openForm(null, e.currentTarget); });
+    document.getElementById('wh-add-header').addEventListener('click', function () {
+        addHeaderRow('', '').querySelector('input').focus();
+    });
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        showFormError('');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        var events = Array.prototype.map.call(form.querySelectorAll('input[name="events"]:checked'), function (cb) { return cb.value; });
+        if (events.length === 0) {
+            showFormError(I18N.eventsRequired);
+            return;
+        }
+        var headers = {};
+        headersEl.querySelectorAll('[data-role="header-row"]').forEach(function (row) {
+            var name = row.querySelector('[data-role="header-name"]').value.trim();
+            if (name) headers[name] = row.querySelector('[data-role="header-value"]').value;
+        });
+        var body = {
+            name: document.getElementById('wh-name').value.trim(),
+            url: document.getElementById('wh-url').value.trim(),
+            events: events,
+            headers: headers,
+            retry_count: parseInt(document.getElementById('wh-retry').value, 10),
+            timeout_seconds: parseInt(document.getElementById('wh-timeout').value, 10),
+            is_active: document.getElementById('wh-active').checked
+        };
+        if (state.editing && removeSecret.checked) body.secret = '';
+        else if (secretInput.value !== '') body.secret = secretInput.value;
+
+        var saveBtn = document.getElementById('wh-save');
+        saveBtn.disabled = true;
+        try {
+            if (state.editing) await api('PUT', API + '/' + state.editing.id, body);
+            else await api('POST', API, body);
+            toast(state.editing ? I18N.updated : I18N.created, 'success');
+            closeModal('wh-form-modal');
+            await loadHooks();
+        } catch (err) {
+            showFormError(failMessage(err));
+        } finally {
+            saveBtn.disabled = false;
+        }
+    });
+
+    // ---- deliveries ----
+
+    var deliveryRowsEl = document.getElementById('wh-deliveries-rows');
+
+    function deliveryMessageRow(text) {
+        deliveryRowsEl.replaceChildren(el('tr', null, [
+            el('td', { colSpan: 7, className: 'px-4 py-8 text-center', style: 'color: var(--gk-text-muted);', text: text })
+        ]));
+    }
+
+    async function loadDeliveries() {
+        var hook = state.deliveriesHook;
+        if (!hook) return;
+        try {
+            var list = await api('GET', API + '/' + hook.id + '/deliveries?limit=50');
+            if (state.deliveriesHook !== hook) return;
+            if (!list || list.length === 0) {
+                deliveryMessageRow(I18N.deliveriesEmpty);
+                return;
+            }
+            deliveryRowsEl.replaceChildren.apply(deliveryRowsEl, list.map(function (d) {
+                return el('tr', { dataset: { deliveryId: String(d.id) } }, [
+                    el('td', null, [statusBadge(d.status)]),
+                    el('td', { className: 'font-mono text-xs', dir: 'ltr', text: d.event }),
+                    el('td', { text: String(d.attempts) }),
+                    el('td', { text: d.status_code === null || d.status_code === undefined ? '\u2014' : String(d.status_code) }),
+                    el('td', { className: 'whitespace-nowrap', text: d.duration_ms === null || d.duration_ms === undefined ? '\u2014' : fmt(I18N.durationMs, { ms: d.duration_ms }) }),
+                    el('td', { className: 'whitespace-nowrap', text: formatTime(d.created_at) }),
+                    el('td', null, [iconButton('fa-magnifying-glass', I18N.details, function (e) { openDelivery(d.id, e.currentTarget); })])
+                ]);
+            }));
+        } catch (err) {
+            deliveryMessageRow(failMessage(err));
+        }
+    }
+
+    function openDeliveries(hook, opener) {
+        state.deliveriesHook = hook;
+        document.getElementById('wh-deliveries-title').textContent = fmt(I18N.deliveriesTitle, { name: hook.name });
+        deliveryMessageRow(I18N.loading);
+        openModal('wh-deliveries-modal', opener);
+        loadDeliveries();
+    }
+
+    document.getElementById('wh-deliveries-refresh').addEventListener('click', loadDeliveries);
+    document.getElementById('wh-deliveries-test').addEventListener('click', function (e) {
+        if (state.deliveriesHook) sendTest(state.deliveriesHook, e.currentTarget);
+    });
+
+    function prettyBody(text) {
+        if (!text) return '';
+        try { return JSON.stringify(JSON.parse(text), null, 2); } catch (e) { return text; }
+    }
+
+    function showDelivery(d, opener) {
+        state.delivery = d;
+        document.getElementById('wh-delivery-title').textContent = fmt(I18N.deliveryTitle, { id: d.id });
+        var fields = [
+            [I18N.status, statusBadge(d.status)],
+            [I18N.event, el('span', { className: 'font-mono', dir: 'ltr', text: d.event })],
+            [I18N.attempts, String(d.attempts)],
+            [I18N.statusCode, d.status_code === null || d.status_code === undefined ? '\u2014' : String(d.status_code)],
+            [I18N.duration, d.duration_ms === null || d.duration_ms === undefined ? '\u2014' : fmt(I18N.durationMs, { ms: d.duration_ms })],
+            [I18N.createdAt, formatTime(d.created_at)]
+        ];
+        if (d.delivered_at) fields.push([I18N.deliveredAt, formatTime(d.delivered_at)]);
+        if (d.next_attempt_at && (d.status === 'pending' || d.status === 'delivering')) fields.push([I18N.nextAttempt, formatTime(d.next_attempt_at)]);
+        var dl = document.getElementById('wh-delivery-fields');
+        dl.replaceChildren();
+        fields.forEach(function (f) {
+            dl.appendChild(el('div', null, [el('dt', { text: f[0] }), el('dd', null, [f[1]])]));
+        });
+        document.getElementById('wh-delivery-error').textContent = d.error || '';
+        document.getElementById('wh-delivery-error-block').classList.toggle('hidden', !d.error);
+        document.getElementById('wh-delivery-payload').textContent = prettyBody(d.payload);
+        document.getElementById('wh-delivery-response').textContent = d.response ? prettyBody(d.response) : I18N.noResponse;
+        if (document.getElementById('wh-delivery-modal').classList.contains('hidden')) openModal('wh-delivery-modal', opener);
+    }
+
+    async function openDelivery(id, opener) {
+        try {
+            showDelivery(await api('GET', API + '/deliveries/' + encodeURIComponent(id)), opener);
+        } catch (err) {
+            toast(failMessage(err), 'error');
+        }
+    }
+
+    document.getElementById('wh-redeliver').addEventListener('click', async function (e) {
+        var current = state.delivery;
+        if (!current) return;
+        var button = e.currentTarget;
+        button.disabled = true;
+        try {
+            var d = await api('POST', API + '/deliveries/' + encodeURIComponent(current.id) + '/redeliver');
+            toast(d.success ? I18N.redelivered : I18N.redeliverFailed, d.success ? 'success' : 'error');
+            showDelivery(d);
+            refreshLastDelivery(d.webhook_id);
+            if (state.deliveriesHook && state.deliveriesHook.id === d.webhook_id) loadDeliveries();
+        } catch (err) {
+            toast(failMessage(err), 'error');
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    loadHooks();
+})();
+</script>
+{% endblock %}

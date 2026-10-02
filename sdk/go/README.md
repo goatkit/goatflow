@@ -1,6 +1,6 @@
 # GoatFlow Go SDK
 
-The official Go SDK for the GoatFlow ticketing system API.
+Go client for the GoatFlow REST API (`/api/v1`).
 
 ## Installation
 
@@ -8,7 +8,7 @@ The official Go SDK for the GoatFlow ticketing system API.
 go get github.com/goatkit/goatflow/sdk/go
 ```
 
-## Quick Start
+## Quick start
 
 ```go
 package main
@@ -18,341 +18,172 @@ import (
     "fmt"
     "log"
 
-    "github.com/goatkit/goatflow/sdk/go"
+    "github.com/goatkit/goatflow/sdk/go/client"
     "github.com/goatkit/goatflow/sdk/go/types"
 )
 
 func main() {
-    // Create client with API key
-    client := goatflow.NewClientWithAPIKey("https://your-goatflow-instance.com", "your-api-key")
-
+    gf := client.NewClientWithAPIKey("https://goatflow.example.com", "gf_...")
     ctx := context.Background()
 
-    // List tickets
-    tickets, err := client.Tickets.List(ctx, &types.TicketListOptions{
-        PageSize: 10,
-        Status:   []string{"open"},
-    })
+    tickets, err := gf.Tickets.List(ctx, &types.TicketListOptions{Status: "open", PerPage: 20})
     if err != nil {
         log.Fatal(err)
     }
-
-    fmt.Printf("Found %d tickets\n", tickets.TotalCount)
+    fmt.Printf("%d open tickets\n", tickets.Pagination.Total)
+    for _, t := range tickets.Tickets {
+        fmt.Printf("#%s %s (%s)\n", t.TicketNumber, t.Title, t.StateName)
+    }
 }
+```
+
+A runnable walkthrough is in [`examples/basic_usage.go`](examples/basic_usage.go):
+
+```bash
+GOATFLOW_URL=https://goatflow.example.com GOATFLOW_TOKEN=gf_... go run ./examples
 ```
 
 ## Authentication
 
-### API Key (Recommended for server-to-server)
+Both kinds of credential are sent as `Authorization: Bearer <token>`.
 
 ```go
-client := goatflow.NewClientWithAPIKey("https://goatflow.example.com", "your-api-key")
+// API token (gf_...), from the API Tokens settings page or POST /api/v1/tokens
+gf := client.NewClientWithAPIKey(baseURL, "gf_...")
+
+// JWT: Login switches the client to the returned access token
+gf := client.NewClient(&client.Config{BaseURL: baseURL})
+pair, err := gf.Login(ctx, "agent@example.com", "password")
+
+// or resume from a stored pair
+gf := client.NewClientWithJWT(baseURL, accessToken, refreshToken, expiresAt)
+
+// explicit refresh: new access token and a rotated refresh token
+pair, err = gf.Auth.Refresh(ctx, pair.RefreshToken)
 ```
 
-### JWT Token
+A client from `Login` or `NewClientWithJWT` renews its token pair through `POST /api/v1/auth/refresh` when the access token is within a minute of expiry; concurrent requests share one refresh. A rejected refresh token (401) fails the request. For your own renewal logic pass any `auth.RefreshFunc` to `auth.NewJWTAuth` (`gf.Auth.RefreshFunc()` is the built-in one).
+
+## Configuration
 
 ```go
-expiresAt := time.Now().Add(24 * time.Hour)
-client := goatflow.NewClientWithJWT("https://goatflow.example.com", "jwt-token", "refresh-token", expiresAt)
-```
-
-### OAuth2
-
-```go
-oauth2Auth := goatflow.NewOAuth2Auth("access-token", "refresh-token", "Bearer", expiresAt)
-client := goatflow.NewClient(&goatflow.Config{
-    BaseURL: "https://goatflow.example.com",
-    Auth:    oauth2Auth,
-})
-```
-
-### Custom Configuration
-
-```go
-client := goatflow.NewClient(&goatflow.Config{
+gf := client.NewClient(&client.Config{
     BaseURL:    "https://goatflow.example.com",
-    Auth:       goatflow.NewAPIKeyAuth("your-api-key"),
-    UserAgent:  "my-app/1.0.0",
-    Timeout:    30 * time.Second,
-    RetryCount: 3,
-    Debug:      true,
+    Auth:       auth.NewAPIKeyAuth("gf_..."),
+    Timeout:    30 * time.Second, // default
+    RetryCount: 0,                // retries after transport errors only; default 0
+    UserAgent:  "my-app/1.0",
+    Debug:      false,
 })
 ```
 
-## Features
+## Services
 
-### Ticket Management
+### Tickets
 
 ```go
-// Create ticket
-ticket, err := client.Tickets.Create(ctx, &types.TicketCreateRequest{
-    Title:       "New Issue",
-    Description: "Something is broken",
-    Priority:    "high",
-    QueueID:     1,
-    CustomerID:  123,
+list, err := gf.Tickets.List(ctx, &types.TicketListOptions{
+    QueueID: 3, Status: "open", Sort: "updated", Order: "desc",
+    Include: []string{"article_count", "last_article"},
+})
+ticket, err := gf.Tickets.Get(ctx, 123)
+
+created, err := gf.Tickets.Create(ctx, &types.TicketCreateRequest{
+    Title: "Printer on fire", QueueID: 3, Body: "Smoke everywhere", PriorityID: 4,
 })
 
-// Get ticket
-ticket, err := client.Tickets.Get(ctx, ticketID)
-
-// Update ticket
-updatedTicket, err := client.Tickets.Update(ctx, ticketID, &types.TicketUpdateRequest{
-    Status: &status,
-})
-
-// Search tickets
-results, err := client.Tickets.Search(ctx, "error", &types.TicketListOptions{
-    Priority: []string{"high", "urgent"},
-})
-
-// Close ticket
-closedTicket, err := client.Tickets.Close(ctx, ticketID, "Issue resolved")
+// closedID: the id of the "closed successful" state from GET /api/v1/states
+// (ids differ between installations, so resolve by name)
+updated, err := gf.Tickets.Update(ctx, created.ID, &types.TicketUpdateRequest{StateID: &closedID})
+reopened, err := gf.Tickets.Reopen(ctx, created.ID, "Customer replied")
+err = gf.Tickets.Delete(ctx, created.ID)
 ```
 
-### Messages and Attachments
+### Articles
 
 ```go
-// Add message
-message, err := client.Tickets.AddMessage(ctx, ticketID, &types.MessageCreateRequest{
-    Content:    "This is a response",
-    IsInternal: false,
+articles, err := gf.Articles.List(ctx, ticketID, true) // with attachment lists
+note, err := gf.Articles.Create(ctx, ticketID, &types.ArticleCreateRequest{
+    Subject: "Call back", Body: "Customer asked for a call", ArticleType: "note-internal",
 })
-
-// Get attachments
-attachments, err := client.Tickets.GetAttachments(ctx, ticketID)
-
-// Download attachment
-data, err := client.Tickets.DownloadAttachment(ctx, ticketID, attachmentID)
+body := "Corrected text"
+_, err = gf.Articles.Update(ctx, ticketID, note.ID, &types.ArticleUpdateRequest{Body: &body})
+err = gf.Articles.Delete(ctx, ticketID, note.ID)
 ```
 
-### User Management
+### Users, queues, statistics, search
 
 ```go
-// List users
-users, err := client.Users.List(ctx)
+me, err := gf.Users.Me(ctx)
+agents, err := gf.Users.List(ctx, &types.UserListOptions{Search: "smith", Valid: "1"})
+agent, err := gf.Users.Get(ctx, 5)
 
-// Create user
-user, err := client.Users.Create(ctx, &types.UserCreateRequest{
-    Email:     "user@example.com",
-    FirstName: "John",
-    LastName:  "Doe",
-    Role:      "agent",
-})
+queues, err := gf.Queues.List(ctx, &types.QueueListOptions{IncludeStats: true})
+queue, err := gf.Queues.Get(ctx, 3)
 
-// Get current user profile
-profile, err := client.Auth.GetProfile(ctx)
-```
+stats, err := gf.Statistics.Dashboard(ctx)
 
-### Dashboard & Analytics
-
-```go
-// Get dashboard statistics
-stats, err := client.Dashboard.GetStats(ctx)
-fmt.Printf("Open tickets: %d\n", stats.OpenTickets)
-
-// Get my tickets
-myTickets, err := client.Dashboard.GetMyTickets(ctx)
-```
-
-### LDAP Integration
-
-```go
-// Sync users from LDAP
-result, err := client.LDAP.SyncUsers(ctx)
-fmt.Printf("Synced %d users\n", result.UsersCreated)
-
-// Get LDAP users
-ldapUsers, err := client.LDAP.GetUsers(ctx)
-
-// Test LDAP connection
-err := client.LDAP.TestConnection(ctx)
+results, err := gf.Search.Query(ctx, &types.SearchQuery{Query: "printer", Types: []string{"ticket"}})
 ```
 
 ### Webhooks
 
+Admin only. Deliveries carry `X-Webhook-Event`, `X-Webhook-Delivery` and, with a
+secret, `X-Webhook-Signature: sha256=<hex HMAC-SHA256 of the raw body>`.
+
 ```go
-// Create webhook
-webhook, err := client.Webhooks.Create(ctx, &types.Webhook{
+// Create webhook (signed)
+secret := "a-signing-secret-of-16+-chars"
+webhook, err := gf.Webhooks.Create(ctx, &types.Webhook{
     Name:   "My Webhook",
     URL:    "https://example.com/webhook",
-    Events: []string{"ticket.created", "ticket.updated"},
+    Events: []string{"ticket.created", "ticket.closed", "article.created"},
+    Secret: &secret,
 })
 
-// Test webhook
-err := client.Webhooks.Test(ctx, webhookID)
+// Send a webhook.test event now
+delivery, err := gf.Webhooks.Test(ctx, webhook.ID)
 
-// Get webhook deliveries
-deliveries, err := client.Webhooks.GetDeliveries(ctx, webhookID)
+// Delivery log, one delivery with payload/response, and redelivery
+deliveries, err := gf.Webhooks.GetDeliveries(ctx, webhook.ID)
+detail, err := gf.Webhooks.GetDelivery(ctx, deliveries[0].ID)
+again, err := gf.Webhooks.Redeliver(ctx, detail.ID)
 ```
 
-### Internal Notes
+### Other endpoints
+
+`Get`, `Post`, `Put` and `Delete` on the client apply the same envelope and error handling to any path:
 
 ```go
-// Create note
-note, err := client.Notes.CreateNote(ctx, ticketID, &types.InternalNote{
-    Content:     "Internal investigation notes",
-    Category:    "Investigation",
-    IsImportant: true,
-})
-
-// Get note templates
-templates, err := client.Notes.GetTemplates(ctx)
+var priorities []map[string]interface{}
+err := gf.Get(ctx, "/api/v1/priorities", &priorities)
 ```
 
-## Error Handling
+## Errors
 
-The SDK provides structured error handling:
+Error responses (HTTP status outside 2xx, or `{"success": false}`) are returned as `*errors.APIError` with `StatusCode`, `Message` and, when the API sent one, `Code` (e.g. `core:invalid_token`). Requests without an HTTP response return `*errors.NetworkError`; a 2xx body that does not match the expected type returns `*errors.DecodeError`.
 
 ```go
-ticket, err := client.Tickets.Get(ctx, ticketID)
-if err != nil {
-    if goatflow.IsNotFound(err) {
-        fmt.Println("Ticket not found")
-        return
+import sdkerrors "github.com/goatkit/goatflow/sdk/go/errors"
+
+ticket, err := gf.Tickets.Get(ctx, 123)
+switch {
+case sdkerrors.IsNotFound(err):
+    // 404
+case sdkerrors.IsUnauthorized(err):
+    // 401: missing, invalid or expired token
+case err != nil:
+    if apiErr, ok := sdkerrors.AsAPIError(err); ok {
+        log.Printf("HTTP %d: %s (%s)", apiErr.StatusCode, apiErr.Message, apiErr.Code)
     }
-    if goatflow.IsUnauthorized(err) {
-        fmt.Println("Authentication failed")
-        return
-    }
-    if goatflow.IsRateLimited(err) {
-        fmt.Println("Rate limit exceeded")
-        return
-    }
-    // Handle other errors
-    log.Fatal(err)
 }
-```
-
-### Error Types
-
-- `goatflow.IsNotFound(err)` - 404 Not Found
-- `goatflow.IsUnauthorized(err)` - 401 Unauthorized  
-- `goatflow.IsForbidden(err)` - 403 Forbidden
-- `goatflow.IsRateLimited(err)` - 429 Too Many Requests
-- `goatflow.IsAPIError(err)` - Any API error
-
-## Pagination
-
-Most list operations support pagination:
-
-```go
-options := &types.TicketListOptions{
-    Page:     1,
-    PageSize: 50,
-    SortBy:   "created_at",
-    SortOrder: "desc",
-}
-
-tickets, err := client.Tickets.List(ctx, options)
-fmt.Printf("Page %d of %d (Total: %d)\n", 
-    tickets.Page, tickets.TotalPages, tickets.TotalCount)
-```
-
-## Context and Timeouts
-
-All operations accept a context for cancellation and timeouts:
-
-```go
-// With timeout
-ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-defer cancel()
-
-tickets, err := client.Tickets.List(ctx, nil)
-
-// With cancellation
-ctx, cancel := context.WithCancel(context.Background())
-go func() {
-    time.Sleep(5 * time.Second)
-    cancel() // Cancel operation after 5 seconds
-}()
-
-ticket, err := client.Tickets.Get(ctx, ticketID)
-```
-
-## Concurrent Operations
-
-The SDK is thread-safe and supports concurrent operations:
-
-```go
-var wg sync.WaitGroup
-results := make(chan *types.Ticket, 10)
-
-// Create multiple tickets concurrently
-for i := 0; i < 10; i++ {
-    wg.Add(1)
-    go func(index int) {
-        defer wg.Done()
-        ticket, err := client.Tickets.Create(ctx, &types.TicketCreateRequest{
-            Title: fmt.Sprintf("Ticket %d", index),
-            // ...
-        })
-        if err == nil {
-            results <- ticket
-        }
-    }(i)
-}
-
-wg.Wait()
-close(results)
-
-for ticket := range results {
-    fmt.Printf("Created ticket #%s\n", ticket.TicketNumber)
-}
-```
-
-## Rate Limiting
-
-The SDK automatically handles rate limiting with exponential backoff:
-
-```go
-// Configure retry behavior
-client := goatflow.NewClient(&goatflow.Config{
-    BaseURL:    "https://goatflow.example.com",
-    Auth:       goatflow.NewAPIKeyAuth("your-api-key"),
-    RetryCount: 5, // Retry up to 5 times
-})
 ```
 
 ## Testing
 
-The SDK includes comprehensive test coverage. Run tests with:
-
 ```bash
-go test ./...
+go vet ./... && go test ./...   # from sdk/go
+make test-sdk-go                # same, in the toolbox container (repo root)
 ```
 
-For integration tests against a live API:
-
-```bash
-export GOATFLOW_BASE_URL="https://your-test-instance.com"
-export GOATFLOW_API_KEY="your-test-api-key"
-go test -tags=integration ./...
-```
-
-## Examples
-
-See the `examples/` directory for complete working examples:
-
-- `basic_usage.go` - Basic CRUD operations
-- `advanced_features.go` - Advanced features like webhooks and LDAP
-- `error_handling.go` - Comprehensive error handling
-- `concurrent_operations.go` - Concurrent API calls
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
-
-## License
-
-MIT License - see LICENSE file for details.
-
-## Support
-
-- Documentation: https://docs.goatflow.io/sdk/go
-- Issues: https://github.com/goatkit/goatflow/issues
-- Discussions: https://github.com/goatkit/goatflow/discussions
+The tests run the client against `httptest` servers that answer with the response bodies in [`../testdata`](../testdata).

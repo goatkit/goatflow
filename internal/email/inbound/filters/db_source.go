@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"errors"
 	"log"
 	"net/mail"
 	"regexp"
@@ -30,8 +31,11 @@ func (f *DBSourceFilter) ID() string { return "db_source" }
 
 // Apply loads filters from the database and applies matching rules to the message.
 func (f *DBSourceFilter) Apply(ctx context.Context, m *MessageContext) error {
-	if f.db == nil || m == nil || m.Message == nil || len(m.Message.Raw) == 0 {
+	if m == nil || m.Message == nil || len(m.Message.Raw) == 0 {
 		return nil
+	}
+	if f.db == nil {
+		return errors.New("db_source: database unavailable, postmaster filters cannot be applied")
 	}
 
 	// Parse the email message to access headers

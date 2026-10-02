@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -446,6 +448,126 @@ func TestAllFieldTypesCanBeCreated(t *testing.T) {
 				"Expected success for %s, got %d: %s", tc.fieldType, w.Code, w.Body.String())
 		})
 	}
+}
+
+// TestWebserviceDynamicFieldAdminForm covers configuring a WebserviceDropdown
+// field through the admin form: the web service select lists the valid web
+// services, and the posted web service settings are stored on the field.
+func TestWebserviceDynamicFieldAdminForm(t *testing.T) {
+	db := getTestDB(t)
+	router := setupDynamicFieldTestRouter(t)
+	svc := getGIService()
+	require.NotNil(t, svc)
+	ctx := context.Background()
+
+	newWS := func(name string, validID int) {
+		t.Helper()
+		id, err := svc.CreateWebservice(ctx, &models.WebserviceConfig{
+			Name:    name,
+			ValidID: validID,
+			Config: &models.WebserviceConfigData{
+				Requester: models.RequesterConfig{
+					Invoker:   map[string]models.InvokerConfig{"Search": {Type: "Generic::PassThrough"}},
+					Transport: models.TransportConfig{Type: "HTTP::REST", Config: models.TransportHTTPConfig{Host: "http://127.0.0.1:1"}},
+				},
+			},
+		}, 1)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = svc.DeleteWebservice(ctx, id) })
+	}
+	validWS := testDFName("TestWSValid")
+	invalidWS := testDFName("TestWSInvalid")
+	newWS(validWS, 1)
+	newWS(invalidWS, 2)
+
+	get := func(path string) string {
+		t.Helper()
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+		require.Equal(t, http.StatusOK, w.Code, "GET %s: %s", path, w.Body.String())
+		return w.Body.String()
+	}
+
+	t.Run("new form lists valid web services only", func(t *testing.T) {
+		body := get("/admin/dynamic-fields/new")
+		assert.Contains(t, body, `<option value="`+validWS+`"`)
+		assert.NotContains(t, body, invalidWS)
+	})
+
+	fieldName := testDFName("TestDFWebservice")
+	t.Cleanup(func() { cleanupTestDynamicFieldByName(t, db, fieldName) })
+
+	t.Run("posted web service settings are stored", func(t *testing.T) {
+		form := url.Values{}
+		form.Set("name", fieldName)
+		form.Set("label", "Webservice field")
+		form.Set("field_type", DFTypeWebserviceDropdown)
+		form.Set("object_type", DFObjectTicket)
+		form.Set("webservice", validWS)
+		form.Set("invoker_search", "Search")
+		form.Set("invoker_get", "Get")
+		form.Set("stored_value", "ID")
+		form.Set("displayed_values", "Name,Code")
+		form.Set("displayed_values_separator", " / ")
+		form.Set("autocomplete_min_length", "2")
+		form.Set("limit", "15")
+		form.Set("cache_ttl", "30")
+		req := httptest.NewRequest(http.MethodPost, "/api/dynamic-fields", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		require.Contains(t, []int{http.StatusOK, http.StatusCreated}, w.Code, "create: %s", w.Body.String())
+
+		field, err := GetDynamicFieldByName(fieldName)
+		require.NoError(t, err)
+		require.NotNil(t, field)
+		require.NotNil(t, field.Config)
+		assert.Equal(t, validWS, field.Config.Webservice)
+		assert.Equal(t, "Search", field.Config.InvokerSearch)
+		assert.Equal(t, "Get", field.Config.InvokerGet)
+		assert.Equal(t, "ID", field.Config.StoredValue)
+		assert.Equal(t, "Name,Code", field.Config.DisplayedValues)
+		assert.Equal(t, " / ", field.Config.DisplayedValuesSeparator)
+		assert.Equal(t, 2, field.Config.AutocompleteMinLength)
+		assert.Equal(t, 15, field.Config.Limit)
+		assert.Equal(t, 30, field.Config.CacheTTL)
+
+		body := get(fmt.Sprintf("/admin/dynamic-fields/%d", field.ID))
+		assert.Regexp(t, `<option value="`+validWS+`"\s+selected`, body, "edit form should preselect the stored web service")
+	})
+
+	t.Run("edit form keeps a field's invalid web service", func(t *testing.T) {
+		name := testDFName("TestDFWebserviceOld")
+		t.Cleanup(func() { cleanupTestDynamicFieldByName(t, db, name) })
+		id, err := CreateDynamicField(&DynamicField{
+			Name: name, Label: name, FieldType: DFTypeWebserviceDropdown, ObjectType: DFObjectTicket,
+			FieldOrder: 1, ValidID: 1,
+			Config: &DynamicFieldConfig{Webservice: invalidWS, InvokerSearch: "Search", StoredValue: "ID", DisplayedValues: "Name"},
+		}, 1)
+		require.NoError(t, err)
+
+		body := get(fmt.Sprintf("/admin/dynamic-fields/%d", id))
+		assert.Regexp(t, `<option value="`+invalidWS+`"\s+selected`, body)
+		assert.Contains(t, body, `<option value="`+validWS+`"`)
+	})
+
+	t.Run("invalid numbers are rejected", func(t *testing.T) {
+		form := url.Values{}
+		form.Set("name", testDFName("TestDFWebserviceBad"))
+		form.Set("label", "Bad")
+		form.Set("field_type", DFTypeWebserviceDropdown)
+		form.Set("webservice", validWS)
+		form.Set("invoker_search", "Search")
+		form.Set("stored_value", "ID")
+		form.Set("displayed_values", "Name")
+		form.Set("limit", "many")
+		req := httptest.NewRequest(http.MethodPost, "/api/dynamic-fields", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Contains(t, w.Body.String(), "limit")
+	})
 }
 
 func TestScreenConfigHandler(t *testing.T) {

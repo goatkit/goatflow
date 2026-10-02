@@ -5,41 +5,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestUser(t *testing.T) {
-	t.Run("SetPassword hashes password", func(t *testing.T) {
-		user := &User{}
-		plainPassword := "mySecurePassword123"
-
-		err := user.SetPassword(plainPassword)
-		require.NoError(t, err)
-
-		// Password should be hashed, not plain
-		assert.NotEqual(t, plainPassword, user.Password)
-		assert.NotEmpty(t, user.Password)
-
-		// Hashed password should be longer than original
-		assert.Greater(t, len(user.Password), len(plainPassword))
-	})
-
-	t.Run("CheckPassword validates correct password", func(t *testing.T) {
-		user := &User{}
-		plainPassword := "correctPassword123"
-
-		err := user.SetPassword(plainPassword)
-		require.NoError(t, err)
-
-		// Check with correct password
-		assert.True(t, user.CheckPassword(plainPassword))
-
-		// Check with incorrect password
-		assert.False(t, user.CheckPassword("wrongPassword"))
-		assert.False(t, user.CheckPassword(""))
-		assert.False(t, user.CheckPassword("correctPassword")) // Missing numbers
-	})
-
 	t.Run("IsLocked checks lock status", func(t *testing.T) {
 		user := &User{}
 
@@ -154,55 +122,4 @@ func TestUserGroups(t *testing.T) {
 		assert.Len(t, user.Groups, 0)
 		assert.Empty(t, user.Groups)
 	})
-}
-
-func TestUserSecurity(t *testing.T) {
-	t.Run("Different passwords produce different hashes", func(t *testing.T) {
-		user1 := &User{}
-		user2 := &User{}
-
-		err1 := user1.SetPassword("password123")
-		require.NoError(t, err1)
-
-		err2 := user2.SetPassword("password123")
-		require.NoError(t, err2)
-
-		// Same password should produce different hashes (due to salt)
-		assert.NotEqual(t, user1.Password, user2.Password)
-	})
-
-	t.Run("Password is never exposed in JSON", func(t *testing.T) {
-		// The Password field has json:"-" tag, which is tested implicitly
-		// by the struct definition
-		user := User{
-			ID:       1,
-			Email:    "test@example.com",
-			Password: "hashedPassword",
-		}
-
-		// This test verifies the struct tag is present
-		assert.NotEmpty(t, user.Password)
-	})
-}
-
-func BenchmarkSetPassword(b *testing.B) {
-	user := &User{}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		err := user.SetPassword("benchmarkPassword123")
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkCheckPassword(b *testing.B) {
-	user := &User{}
-	user.SetPassword("benchmarkPassword123")
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		user.CheckPassword("benchmarkPassword123")
-	}
 }

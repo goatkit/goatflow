@@ -295,19 +295,6 @@ func GetScreenConfigMatrix(objectType string) (*ScreenConfigMatrix, error) {
 	return getScreenConfigMatrixWithDB(db, objectType)
 }
 
-// Returns []interface{} to avoid import cycles.
-func GetDynamicFieldsForScreenGeneric(screenKey, objectType string) ([]interface{}, error) {
-	fields, err := GetFieldsForScreenWithConfig(screenKey, objectType)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]interface{}, len(fields))
-	for i, f := range fields {
-		result[i] = f
-	}
-	return result, nil
-}
-
 // Helper functions
 
 func scanScreenConfigs(rows *sql.Rows) ([]DynamicFieldScreenConfig, error) {

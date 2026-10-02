@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/plugin/wasm"
@@ -441,6 +442,35 @@ func TestHostAPIPlugin(t *testing.T) {
 		}
 
 		t.Logf("Host API test results: %v", results)
+	})
+
+	t.Run("guest clock is real and time_now carries the host offset", func(t *testing.T) {
+		before := time.Now()
+		result, err := p.Call(ctx, "test_clock", json.RawMessage(`{}`))
+		if err != nil {
+			t.Fatalf("Call failed: %v", err)
+		}
+		var resp struct {
+			GuestUnix int64  `json:"guest_unix"`
+			HostNow   string `json:"host_now"`
+		}
+		if err := json.Unmarshal(result, &resp); err != nil {
+			t.Fatalf("decode %s: %v", result, err)
+		}
+		if d := resp.GuestUnix - before.Unix(); d < -5 || d > 5 {
+			t.Errorf("guest time.Now() is %d, host is %d (off by %ds)", resp.GuestUnix, before.Unix(), d)
+		}
+		hostNow, err := time.Parse(time.RFC3339Nano, resp.HostNow)
+		if err != nil {
+			t.Fatalf("time_now returned %q: %v", resp.HostNow, err)
+		}
+		if d := hostNow.Sub(before); d < 0 || d > 5*time.Second {
+			t.Errorf("time_now %v not within 5s after %v", hostNow, before)
+		}
+		_, wantOff := before.Zone()
+		if _, gotOff := hostNow.Zone(); gotOff != wantOff {
+			t.Errorf("time_now offset %ds, host local offset %ds", gotOff, wantOff)
+		}
 	})
 }
 

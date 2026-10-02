@@ -1,14 +1,22 @@
 package api
 
 import (
+	"crypto/rand"
+	"errors"
+	"math/big"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 )
+
+// maxGeneratedPasswordAttempts bounds how many random passwords a reset tries
+// before giving up on a policy (e.g. a PasswordRegExp) they cannot satisfy.
+const maxGeneratedPasswordAttempts = 100
 
 // HandleAdminUserResetPassword handles password reset for a user by admin.
 func HandleAdminUserResetPassword(c *gin.Context) {
@@ -34,39 +42,65 @@ func HandleAdminUserResetPassword(c *gin.Context) {
 		return
 	}
 
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Database connection failed",
-		})
+	db, ok := adminUsersDB(c)
+	if !ok {
 		return
 	}
 
-	// Generate password if not provided
 	newPassword := req.Password
-	if newPassword == "" {
-		// Generate a random password
-		newPassword = generateRandomPassword()
+	if newPassword != "" {
+		if !checkAdminSetPassword(c, db, newPassword, nil) {
+			return
+		}
+	} else {
+		// Generate one that satisfies the agent password policy.
+		policy, err := sysconfig.LoadAgentPasswordPolicy(db)
+		if err != nil {
+			adminUsersFail(c, "Failed to load password policy", err)
+			return
+		}
+		for range maxGeneratedPasswordAttempts {
+			candidate, err := generateRandomPassword()
+			if err != nil {
+				adminUsersFail(c, "Failed to generate password", err)
+				return
+			}
+			if policy.ValidatePassword(candidate) == nil {
+				newPassword = candidate
+				break
+			}
+		}
+		if newPassword == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Could not generate a password matching the password policy; enter one",
+			})
+			return
+		}
 	}
 
-	// Hash the password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	hashedPassword, err := auth.NewPasswordHasher().HashPassword(newPassword)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(passwordHashErrorStatus(err), gin.H{
 			"success": false,
-			"error":   "Failed to hash password",
+			"error":   "Failed to hash password: " + err.Error(),
 		})
 		return
 	}
 
-	// Update the user's password
-	updateQuery := "UPDATE users SET pw = ?, change_time = NOW() WHERE id = ?"
-	_, err = db.Exec(database.ConvertPlaceholders(updateQuery), string(hashedPassword), id)
+	res, err := db.Exec(database.ConvertPlaceholders(
+		"UPDATE users SET pw = ?, change_time = CURRENT_TIMESTAMP WHERE id = ?"), hashedPassword, id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		adminUsersFail(c, "Failed to update password", err)
+		return
+	}
+	if n, err := res.RowsAffected(); err != nil {
+		adminUsersFail(c, "Failed to update password", err)
+		return
+	} else if n == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
-			"error":   "Failed to update password",
+			"error":   "User not found",
 		})
 		return
 	}
@@ -84,13 +118,26 @@ func HandleAdminUserResetPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// generateRandomPassword generates a secure random password.
-func generateRandomPassword() string {
-	// Simple implementation - in production, use a more secure method
+// generateRandomPassword returns a 16-character password from crypto/rand.
+func generateRandomPassword() (string, error) {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%"
-	b := make([]byte, 12)
+	limit := big.NewInt(int64(len(charset)))
+	b := make([]byte, 16)
 	for i := range b {
-		b[i] = charset[i%len(charset)]
+		n, err := rand.Int(rand.Reader, limit)
+		if err != nil {
+			return "", err
+		}
+		b[i] = charset[n.Int64()]
 	}
-	return string(b)
+	return string(b), nil
+}
+
+// passwordHashErrorStatus maps an auth.PasswordHasher error to an HTTP status:
+// a password the configured algorithm cannot hash is the caller's fault.
+func passwordHashErrorStatus(err error) int {
+	if errors.Is(err, auth.ErrPasswordTooLong) {
+		return http.StatusBadRequest
+	}
+	return http.StatusInternalServerError
 }

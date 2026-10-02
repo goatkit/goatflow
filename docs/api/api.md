@@ -1473,6 +1473,28 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/debug/ticket-number`
+- **Method:** `GET`
+- **Description:** Current ticket number generator
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/debug/config-sources`
+- **Method:** `GET`
+- **Description:** Configuration settings with their source
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/setup`
 - **Method:** `GET`
 - **Description:** First-run setup wizard
@@ -1660,17 +1682,6 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/groups/new`
-- **Method:** `GET`
-- **Description:** Display new group creation form
-
-
-
-
----
-
-#### 
-
 - **Path:** `/groups`
 - **Method:** `POST`
 - **Description:** Create new group
@@ -1685,17 +1696,6 @@ Generated from YAML route definitions
 - **Path:** `/groups/:id`
 - **Method:** `GET`
 - **Description:** Display group details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups/:id/edit`
-- **Method:** `GET`
-- **Description:** Display group edit form
 
 
 
@@ -1924,6 +1924,17 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/permissions/clone`
+- **Method:** `POST`
+- **Description:** Replace a user&#39;s permissions with a copy of another user&#39;s
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/roles`
 - **Method:** `GET`
 - **Description:** Display role management page
@@ -2056,9 +2067,75 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/states/create`
+- **Method:** `POST`
+- **Description:** Create a ticket state
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/states/:id/update`
+- **Method:** `PUT`
+- **Description:** Update a ticket state
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/states/:id/delete`
+- **Method:** `DELETE`
+- **Description:** Soft-delete a ticket state
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/types`
 - **Method:** `GET`
 - **Description:** Display type management page
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/types/create`
+- **Method:** `POST`
+- **Description:** Create a ticket type
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/types/:id/update`
+- **Method:** `POST`
+- **Description:** Update a ticket type
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/types/:id/delete`
+- **Method:** `POST`
+- **Description:** Soft-delete a ticket type
 
 
 
@@ -2309,17 +2386,6 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/customer/companies/:id/services`
-- **Method:** `PUT`
-- **Description:** Update customer company services
-
-
-
-
----
-
-#### 
-
 - **Path:** `/customer/companies/:id/portal-settings`
 - **Method:** `GET`
 - **Description:** Display customer portal settings for a company
@@ -2345,17 +2411,6 @@ Generated from YAML route definitions
 - **Path:** `/customer/portal/settings`
 - **Method:** ``
 - **Description:** Display and update global customer portal settings
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/portal/logo/upload`
-- **Method:** `POST`
-- **Description:** Upload customer portal logo
 
 
 
@@ -2551,31 +2606,9 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/settings`
-- **Method:** `GET`
-- **Description:** Display system configuration page
-
-
-
-
----
-
-#### 
-
 - **Path:** `/reports`
 - **Method:** `GET`
-- **Description:** Display reports overview
-
-
-
-
----
-
-#### 
-
-- **Path:** `/backup`
-- **Method:** `GET`
-- **Description:** Display backup and restore placeholder
+- **Description:** Display ticket reports (queue-scoped statistics, trends, CSV export)
 
 
 
@@ -3148,17 +3181,6 @@ Generated from YAML route definitions
 - **Path:** `/api/attachments/:id/preview`
 - **Method:** `GET`
 - **Description:** Preview a standard attachment inline
-
-
-
-
----
-
-#### 
-
-- **Path:** `/modules`
-- **Method:** `GET`
-- **Description:** List available dynamic modules
 
 
 
@@ -3794,6 +3816,17 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/webhooks`
+- **Method:** `GET`
+- **Description:** Manage outbound webhooks, test sends and the delivery log
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/webservices`
 - **Method:** `GET`
 - **Description:** Display web services management page
@@ -4194,7 +4227,7 @@ Generated from YAML route definitions
 
 **Description:** Agent-specific routes for ticket management  
 **Prefix:** `/agent`  
-**Middleware:** `auth` `queue_ro` 
+**Middleware:** `auth` `agent` `queue_ro` 
 
 
 #### 
@@ -4334,17 +4367,6 @@ Generated from YAML route definitions
 - **Path:** `/tickets/:id/links`
 - **Method:** `GET`
 - **Description:** HTMX fragment: ticket links
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/draft`
-- **Method:** `POST`
-- **Description:** Save draft reply for ticket
 
 
 
@@ -4621,7 +4643,7 @@ Generated from YAML route definitions
 
 **Description:** Legacy /api alias routes - most moved to dedicated files  
 **Prefix:** `/api`  
-**Middleware:** `unified_auth` 
+**Middleware:** `unified_auth` `agent` 
 
 
 
@@ -4630,7 +4652,7 @@ Generated from YAML route definitions
 
 **Description:** Ticket attachment API endpoints  
 **Prefix:** `/api`  
-**Middleware:** `unified_auth` 
+**Middleware:** `unified_auth` `agent` 
 
 
 #### 
@@ -4657,9 +4679,9 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/tickets/:id/attachments/:attachment_id`
+- **Path:** `/tickets/:id/articles/:article_id/attachments/:file_id`
 - **Method:** `GET`
-- **Description:** Download a specific attachment
+- **Description:** Download an attachment of one of the ticket&#39;s articles
 
 
 
@@ -4668,9 +4690,9 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/tickets/:id/attachments/:attachment_id`
+- **Path:** `/tickets/:id/articles/:article_id/attachments/:file_id`
 - **Method:** `DELETE`
-- **Description:** Delete a specific attachment
+- **Description:** Delete an attachment of one of the ticket&#39;s articles
 
 
 
@@ -4679,9 +4701,9 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/tickets/:id/attachments/:attachment_id/thumbnail`
+- **Path:** `/tickets/:id/articles/:article_id/attachments/:file_id/thumbnail`
 - **Method:** `GET`
-- **Description:** Get thumbnail/preview for an image attachment
+- **Description:** PNG preview of an attachment (images, PDF page 1, type placeholder otherwise)
 
 
 
@@ -4690,9 +4712,9 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/tickets/:id/attachments/:attachment_id/view`
+- **Path:** `/tickets/:id/articles/:article_id/attachments/:file_id/view`
 - **Method:** `GET`
-- **Description:** Inline viewer for common attachment types
+- **Description:** Attachment viewer page; ?raw=1 serves the content for the viewer frame
 
 
 
@@ -4703,16 +4725,16 @@ Generated from YAML route definitions
 
 ### Default: api-canned-responses-protected
 
-**Description:** Canned response management API endpoints (protected)  
+**Description:** Canned response management API endpoints (protected, agents only)  
 **Prefix:** `/api/canned-responses`  
-**Middleware:** `unified_auth` 
+**Middleware:** `unified_auth` `agent` 
 
 
 #### 
 
 - **Path:** `/`
 - **Method:** `GET`
-- **Description:** List all canned responses
+- **Description:** List canned responses visible to the caller (filters: category, scope, search, tags, sort_by, sort_order, limit)
 
 
 
@@ -4721,9 +4743,9 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/quick`
-- **Method:** `GET`
-- **Description:** Get quick access responses
+- **Path:** `/`
+- **Method:** `POST`
+- **Description:** Create a canned response
 
 
 
@@ -4734,7 +4756,7 @@ Generated from YAML route definitions
 
 - **Path:** `/popular`
 - **Method:** `GET`
-- **Description:** Get popular responses
+- **Description:** Most used responses first (limit)
 
 
 
@@ -4767,7 +4789,7 @@ Generated from YAML route definitions
 
 - **Path:** `/search`
 - **Method:** `GET`
-- **Description:** Search canned responses
+- **Description:** Search canned responses by name or content (q)
 
 
 
@@ -4787,9 +4809,97 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/statistics`
+- **Method:** `GET`
+- **Description:** Usage statistics for the caller&#39;s responses
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/export`
+- **Method:** `GET`
+- **Description:** Export responses as JSON or CSV (format=csv)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/import`
+- **Method:** `POST`
+- **Description:** Import personal responses from a CSV upload (field: file)
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/:id`
 - **Method:** `GET`
 - **Description:** Get response by ID
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/:id`
+- **Method:** `PUT`
+- **Description:** Update a canned response
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/:id`
+- **Method:** `DELETE`
+- **Description:** Delete a canned response
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/:id/use`
+- **Method:** `POST`
+- **Description:** Render a response with placeholder context and count the use
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/:id/share`
+- **Method:** `POST`
+- **Description:** Change a response&#39;s scope (global requires admin)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/:id/copy`
+- **Method:** `POST`
+- **Description:** Copy a response into the caller&#39;s personal scope
 
 
 
@@ -4802,7 +4912,7 @@ Generated from YAML route definitions
 
 **Description:** Customer management API endpoints (protected)  
 **Prefix:** `/api/customers`  
-**Middleware:** `unified_auth` 
+**Middleware:** `unified_auth` `agent` 
 
 
 #### 
@@ -4822,19 +4932,8 @@ Generated from YAML route definitions
 
 **Description:** Dashboard widget endpoints (protected)  
 **Prefix:** `/api/dashboard`  
-**Middleware:** `unified_auth` 
+**Middleware:** `unified_auth` `agent` 
 
-
-#### 
-
-- **Path:** `/stats`
-- **Method:** `GET`
-- **Description:** Dashboard statistics widget
-
-
-
-
----
 
 #### 
 
@@ -4849,53 +4948,9 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/notifications`
-- **Method:** `GET`
-- **Description:** Notifications widget
-
-
-
-
----
-
-#### 
-
-- **Path:** `/quick-actions`
-- **Method:** `GET`
-- **Description:** Quick actions widget
-
-
-
-
----
-
-#### 
-
-- **Path:** `/activity`
-- **Method:** `GET`
-- **Description:** Activity feed widget
-
-
-
-
----
-
-#### 
-
 - **Path:** `/activity-stream`
 - **Method:** `GET`
 - **Description:** Activity stream endpoint
-
-
-
-
----
-
-#### 
-
-- **Path:** `/performance`
-- **Method:** `GET`
-- **Description:** Performance metrics widget
 
 
 
@@ -4937,31 +4992,11 @@ Generated from YAML route definitions
 
 
 
-### Default: api-files-protected
-
-**Description:** File serving endpoint (protected)  
-**Prefix:** `/api/files`  
-**Middleware:** `unified_auth` 
-
-
-#### 
-
-- **Path:** `/*path`
-- **Method:** `GET`
-- **Description:** Serve uploaded files
-
-
-
-
----
-
-
-
 ### Default: api-groups-protected
 
 **Description:** Group management API endpoints (protected)  
 **Prefix:** `/api/groups`  
-**Middleware:** `unified_auth` 
+**Middleware:** `unified_auth` `agent` 
 
 
 #### 
@@ -5003,7 +5038,7 @@ Generated from YAML route definitions
 
 **Description:** Lookup API endpoints  
 **Prefix:** `/api`  
-**Middleware:** `unified_auth` 
+**Middleware:** `unified_auth` `agent` 
 
 
 #### 
@@ -5142,7 +5177,7 @@ Generated from YAML route definitions
 
 **Description:** Notification API endpoints  
 **Prefix:** `/api`  
-**Middleware:** `unified_auth` 
+**Middleware:** `unified_auth` `agent` 
 
 
 #### 
@@ -5162,7 +5197,7 @@ Generated from YAML route definitions
 
 **Description:** Push notification API endpoints  
 **Prefix:** `/api`  
-**Middleware:** `unified_auth` 
+**Middleware:** `unified_auth` `agent` 
 
 
 #### 
@@ -5204,7 +5239,7 @@ Generated from YAML route definitions
 
 **Description:** Queue API endpoints for frontend  
 **Prefix:** `/api/queues`  
-**Middleware:** `unified_auth` `queue_ro` 
+**Middleware:** `unified_auth` `agent` `queue_ro` 
 
 
 #### 
@@ -5256,6 +5291,92 @@ Generated from YAML route definitions
 - **Path:** `/:id/status`
 - **Method:** `PUT`
 - **Description:** Update queue status
+
+
+
+
+---
+
+
+
+### Default: api-v1-search
+
+**Description:** REST API v1 ticket search and saved searches (agents only)  
+**Prefix:** `/api/v1/search`  
+**Middleware:** `unified_auth` `scope_tickets_read` `queue_ro` 
+
+
+#### 
+
+- **Path:** `/tickets`
+- **Method:** `GET`
+- **Description:** Search tickets (ticket, article and customer fields)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/saved`
+- **Method:** `GET`
+- **Description:** List the caller&#39;s saved ticket searches
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/saved`
+- **Method:** `POST`
+- **Description:** Save a ticket search
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/saved/:name`
+- **Method:** `GET`
+- **Description:** Get a saved ticket search
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/saved/:name`
+- **Method:** `PUT`
+- **Description:** Replace the parameters of a saved ticket search
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/saved/:name`
+- **Method:** `DELETE`
+- **Description:** Delete a saved ticket search
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/saved/:name/execute`
+- **Method:** `POST`
+- **Description:** Run a saved ticket search
 
 
 
@@ -5354,7 +5475,7 @@ Generated from YAML route definitions
 
 **Description:** Ticket message retrieval and creation endpoints  
 **Prefix:** `/api`  
-**Middleware:** `unified_auth` 
+**Middleware:** `unified_auth` `agent` 
 
 
 #### 
@@ -5385,7 +5506,7 @@ Generated from YAML route definitions
 
 **Description:** Ticket management API endpoints (protected)  
 **Prefix:** `/api/tickets`  
-**Middleware:** `unified_auth` `scope_tickets_read` `queue_ro` 
+**Middleware:** `unified_auth` `agent` `scope_tickets_read` `queue_ro` 
 
 
 #### 
@@ -5586,167 +5707,13 @@ Generated from YAML route definitions
 
 ---
 
-#### 
-
-- **Path:** `/advanced-search`
-- **Method:** `GET`
-- **Description:** Advanced ticket search
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search/suggestions`
-- **Method:** `GET`
-- **Description:** Get search suggestions
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search/export`
-- **Method:** `GET`
-- **Description:** Export search results
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search/history`
-- **Method:** `POST`
-- **Description:** Save search to history
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search/history`
-- **Method:** `GET`
-- **Description:** Get search history
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search/history/:id`
-- **Method:** `DELETE`
-- **Description:** Delete search history item
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search/saved`
-- **Method:** `POST`
-- **Description:** Create saved search
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search/saved`
-- **Method:** `GET`
-- **Description:** Get saved searches
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search/saved/:id/execute`
-- **Method:** `GET`
-- **Description:** Execute saved search
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search/saved/:id`
-- **Method:** `PUT`
-- **Description:** Update saved search
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search/saved/:id`
-- **Method:** `DELETE`
-- **Description:** Delete saved search
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/merge`
-- **Method:** `POST`
-- **Description:** Merge tickets
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/unmerge`
-- **Method:** `POST`
-- **Description:** Unmerge ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/merge-history`
-- **Method:** `GET`
-- **Description:** Get merge history
-
-
-
-
----
-
 
 
 ### Default: api-tokens-agent
 
 **Description:** API token management for agents  
 **Prefix:** `/api/v1/tokens`  
-**Middleware:** `unified_auth` 
+**Middleware:** `unified_auth` `agent` 
 
 
 #### 
@@ -5896,7 +5863,7 @@ Generated from YAML route definitions
 
 **Description:** API token management for customers  
 **Prefix:** `/customer/api/v1/tokens`  
-**Middleware:** `unified_auth` 
+**Middleware:** `unified_auth` `customer` 
 
 
 #### 
@@ -5949,7 +5916,7 @@ Generated from YAML route definitions
 
 **Description:** Ticket type management API endpoints (protected)  
 **Prefix:** `/api/types`  
-**Middleware:** `unified_auth` 
+**Middleware:** `unified_auth` `admin` 
 
 
 #### 
@@ -6005,11 +5972,22 @@ Generated from YAML route definitions
 
 ---
 
+#### 
+
+- **Path:** `/auth/refresh`
+- **Method:** `POST`
+- **Description:** Exchange a refresh token for a new access token and a rotated refresh token
 
 
-### Default: api-v1-protected
 
-**Description:** REST API v1 protected endpoints  
+
+---
+
+
+
+### Default: api-v1-customer-readable
+
+**Description:** REST API v1 ticket reads shared by agents and customers  
 **Prefix:** `/api/v1`  
 **Middleware:** `unified_auth` 
 
@@ -6027,9 +6005,9 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/tickets`
-- **Method:** `POST`
-- **Description:** Create ticket
+- **Path:** `/tickets/:id`
+- **Method:** `GET`
+- **Description:** Get ticket by ID
 
 
 
@@ -6038,9 +6016,40 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/tickets/:id`
+- **Path:** `/tickets/:id/articles`
 - **Method:** `GET`
-- **Description:** Get ticket by ID
+- **Description:** Get ticket articles
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/tickets/:id/articles/:article_id`
+- **Method:** `GET`
+- **Description:** Get specific article
+
+
+
+
+---
+
+
+
+### Default: api-v1-protected
+
+**Description:** REST API v1 protected endpoints  
+**Prefix:** `/api/v1`  
+**Middleware:** `unified_auth` `agent` 
+
+
+#### 
+
+- **Path:** `/tickets`
+- **Method:** `POST`
+- **Description:** Create ticket
 
 
 
@@ -6094,30 +6103,8 @@ Generated from YAML route definitions
 #### 
 
 - **Path:** `/tickets/:id/articles`
-- **Method:** `GET`
-- **Description:** Get ticket articles
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/articles`
 - **Method:** `POST`
 - **Description:** Add article to ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/articles/:article_id`
-- **Method:** `GET`
-- **Description:** Get specific article
 
 
 
@@ -6269,6 +6256,39 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/priorities`
+- **Method:** `POST`
+- **Description:** Create priority (admin only)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/priorities/:id`
+- **Method:** `PUT`
+- **Description:** Update priority (admin only)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/priorities/:id`
+- **Method:** `DELETE`
+- **Description:** Invalidate priority (admin only)
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/types`
 - **Method:** `GET`
 - **Description:** List ticket types
@@ -6302,6 +6322,94 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/statistics/dashboard`
+- **Method:** `GET`
+- **Description:** Dashboard statistics (ticket counts by state, queue, priority; recent tickets)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/statistics/trends`
+- **Method:** `GET`
+- **Description:** Ticket created/closed trends (daily or monthly)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/statistics/agents`
+- **Method:** `GET`
+- **Description:** Agent performance (tickets assigned/closed, articles written)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/statistics/queues`
+- **Method:** `GET`
+- **Description:** Queue metrics (total, open, backlog)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/statistics/analytics`
+- **Method:** `GET`
+- **Description:** Ticket distribution by hour of day or day of week
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/statistics/customers`
+- **Method:** `GET`
+- **Description:** Customer statistics (top customers, activity)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/statistics/export`
+- **Method:** `GET`
+- **Description:** Export statistics summary or ticket list as JSON or CSV
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/ticket-states/statistics`
+- **Method:** `GET`
+- **Description:** Ticket counts per ticket state
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/ticket-attribute-relations/evaluate`
 - **Method:** `GET`
 - **Description:** Evaluate ticket attribute relations for filtering dropdowns
@@ -6324,20 +6432,9 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/search/suggestions`
-- **Method:** `GET`
-- **Description:** Search suggestions
-
-
-
-
----
-
-#### 
-
 - **Path:** `/search/reindex`
 - **Method:** `POST`
-- **Description:** Trigger search reindex
+- **Description:** Trigger search reindex (admin only)
 
 
 
@@ -6414,7 +6511,7 @@ Generated from YAML route definitions
 
 - **Path:** `/queues`
 - **Method:** `POST`
-- **Description:** Create queue
+- **Description:** Create queue (admin only)
 
 
 
@@ -6425,7 +6522,7 @@ Generated from YAML route definitions
 
 - **Path:** `/queues/:id`
 - **Method:** `PUT`
-- **Description:** Update queue
+- **Description:** Update queue, including its group (admin only)
 
 
 
@@ -6436,7 +6533,7 @@ Generated from YAML route definitions
 
 - **Path:** `/queues/:id`
 - **Method:** `DELETE`
-- **Description:** Delete queue
+- **Description:** Delete queue (admin only)
 
 
 
@@ -6458,7 +6555,7 @@ Generated from YAML route definitions
 
 - **Path:** `/queues/:id/groups`
 - **Method:** `POST`
-- **Description:** Assign group to queue
+- **Description:** Set the queue&#39;s group (admin only)
 
 
 
@@ -6469,7 +6566,7 @@ Generated from YAML route definitions
 
 - **Path:** `/queues/:id/groups/:group_id`
 - **Method:** `DELETE`
-- **Description:** Remove group from queue
+- **Description:** Remove the queue&#39;s group: always rejected, a queue must have a group (admin only)
 
 
 
@@ -6491,7 +6588,7 @@ Generated from YAML route definitions
 
 - **Path:** `/system-addresses`
 - **Method:** `POST`
-- **Description:** Create system address
+- **Description:** Create system address (admin only)
 
 
 
@@ -6502,7 +6599,7 @@ Generated from YAML route definitions
 
 - **Path:** `/system-addresses/:id`
 - **Method:** `PUT`
-- **Description:** Update system address
+- **Description:** Update system address (admin only)
 
 
 
@@ -6524,7 +6621,7 @@ Generated from YAML route definitions
 
 - **Path:** `/salutations`
 - **Method:** `POST`
-- **Description:** Create salutation
+- **Description:** Create salutation (admin only)
 
 
 
@@ -6535,7 +6632,7 @@ Generated from YAML route definitions
 
 - **Path:** `/salutations/:id`
 - **Method:** `PUT`
-- **Description:** Update salutation
+- **Description:** Update salutation (admin only)
 
 
 
@@ -6557,7 +6654,7 @@ Generated from YAML route definitions
 
 - **Path:** `/signatures`
 - **Method:** `POST`
-- **Description:** Create signature
+- **Description:** Create signature (admin only)
 
 
 
@@ -6568,7 +6665,7 @@ Generated from YAML route definitions
 
 - **Path:** `/signatures/:id`
 - **Method:** `PUT`
-- **Description:** Update signature
+- **Description:** Update signature (admin only)
 
 
 
@@ -6863,6 +6960,125 @@ Generated from YAML route definitions
 
 
 
+### Default: api-webhooks
+
+**Description:** Outbound webhook configuration, delivery log, test and redelivery (admin only)  
+**Prefix:** `/api/v1`  
+**Middleware:** `unified_auth` `admin` 
+
+
+#### 
+
+- **Path:** `/webhooks`
+- **Method:** `GET`
+- **Description:** List webhooks (optional ?active=true|false)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/webhooks`
+- **Method:** `POST`
+- **Description:** Create webhook
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/webhooks/events`
+- **Method:** `GET`
+- **Description:** List subscribable webhook events
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/webhooks/deliveries/:id`
+- **Method:** `GET`
+- **Description:** Get delivery including payload and response
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/webhooks/deliveries/:id/redeliver`
+- **Method:** `POST`
+- **Description:** Send a delivery&#39;s payload again as a new delivery
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/webhooks/:id`
+- **Method:** `GET`
+- **Description:** Get webhook
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/webhooks/:id`
+- **Method:** `PUT`
+- **Description:** Update webhook (partial)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/webhooks/:id`
+- **Method:** `DELETE`
+- **Description:** Delete webhook and its delivery log
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/webhooks/:id/test`
+- **Method:** `POST`
+- **Description:** Send a webhook.test event now
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/webhooks/:id/deliveries`
+- **Method:** `GET`
+- **Description:** List recent deliveries (optional ?limit=1..200)
+
+
+
+
+---
+
+
+
 ### Default: auth
 
 **Description:** Authentication routes for login/logout  
@@ -6930,28 +7146,6 @@ Generated from YAML route definitions
 - **Path:** `/logout`
 - **Method:** `GET`
 - **Description:** GET logout route that redirects to login
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/refresh`
-- **Method:** `POST`
-- **Description:** Placeholder for token refresh
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/register`
-- **Method:** `POST`
-- **Description:** Placeholder for user registration
 
 
 
@@ -7504,6 +7698,28 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/company`
+- **Method:** `GET`
+- **Description:** Display the logged-in customer&#39;s own company details
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/company/users`
+- **Method:** `GET`
+- **Description:** List the valid customer users of the logged-in customer&#39;s own company
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/api/preferences/language`
 - **Method:** `GET`
 - **Description:** Get customer language preference
@@ -7636,6 +7852,17 @@ Generated from YAML route definitions
 
 #### 
 
+- **Path:** `/api/preferences/2fa/recovery-codes`
+- **Method:** `POST`
+- **Description:** Replace customer recovery codes (password required)
+
+
+
+
+---
+
+#### 
+
 - **Path:** `/api/preferences/2fa/webauthn/register/begin`
 - **Method:** `POST`
 - **Description:** Begin customer hardware security key registration
@@ -7735,9 +7962,9 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/tickets/:id/attachments/:attachment_id`
+- **Path:** `/tickets/:id/articles/:article_id/attachments/:file_id`
 - **Method:** `GET`
-- **Description:** Download attachment from a customer ticket
+- **Description:** Download an attachment of a customer-visible article (?download=1 forces a download)
 
 
 
@@ -7746,9 +7973,9 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/tickets/:id/attachments/:attachment_id/thumbnail`
+- **Path:** `/tickets/:id/articles/:article_id/attachments/:file_id/thumbnail`
 - **Method:** `GET`
-- **Description:** Get thumbnail for an image attachment
+- **Description:** Get a PNG thumbnail of an attachment
 
 
 
@@ -7757,9 +7984,9 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/tickets/:id/attachments/:attachment_id/view`
+- **Path:** `/tickets/:id/articles/:article_id/attachments/:file_id/view`
 - **Method:** `GET`
-- **Description:** View attachment in modal viewer
+- **Description:** View attachment in a viewer page (?raw=1 serves the embeddable content)
 
 
 
@@ -7772,7 +7999,7 @@ Generated from YAML route definitions
 
 **Description:** Dashboard routes for main application  
 **Prefix:** `/dashboard`  
-**Middleware:** `auth` `queue_ro` 
+**Middleware:** `auth` `agent` `queue_ro` 
 
 
 #### 
@@ -7799,17 +8026,6 @@ Generated from YAML route definitions
 
 #### 
 
-- **Path:** `/api/stats`
-- **Method:** `GET`
-- **Description:** Get dashboard statistics and metrics
-
-
-
-
----
-
-#### 
-
 - **Path:** `/api/recent-tickets`
 - **Method:** `GET`
 - **Description:** Get recent ticket activity for dashboard widget
@@ -7825,7 +8041,7 @@ Generated from YAML route definitions
 
 **Description:** User profile routes  
 **Prefix:** `/profile`  
-**Middleware:** `auth` 
+**Middleware:** `auth` `agent` 
 
 
 #### 
@@ -7841,12 +8057,144 @@ Generated from YAML route definitions
 
 
 
-### Default: redirects
+### Default: selfservice
 
-**Description:** Simple redirect/alias routes  
+**Description:** Password reset and customer self-registration  
 **Prefix:** ``  
-**Middleware:** `auth` 
+**Middleware:** 
 
+
+#### 
+
+- **Path:** `/forgot-password`
+- **Method:** `GET`
+- **Description:** Agent forgot-password form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/forgot-password`
+- **Method:** `POST`
+- **Description:** Email an agent a password reset link (same answer for unknown accounts)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/reset-password`
+- **Method:** `GET`
+- **Description:** Agent choose-new-password form (token from email)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/reset-password`
+- **Method:** `POST`
+- **Description:** Set a new agent password with a reset token
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/customer/forgot-password`
+- **Method:** `GET`
+- **Description:** Customer forgot-password form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/customer/forgot-password`
+- **Method:** `POST`
+- **Description:** Email a customer a password reset link (same answer for unknown accounts)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/customer/reset-password`
+- **Method:** `GET`
+- **Description:** Customer choose-new-password form (token from email)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/customer/reset-password`
+- **Method:** `POST`
+- **Description:** Set a new customer password with a reset token
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/customer/register`
+- **Method:** `GET`
+- **Description:** Customer sign-up form
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/customer/register`
+- **Method:** `POST`
+- **Description:** Email a sign-up confirmation link
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/customer/register/complete`
+- **Method:** `GET`
+- **Description:** Confirm email address and choose a password (token from email)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/customer/register/complete`
+- **Method:** `POST`
+- **Description:** Create the customer account
+
+
+
+
+---
 
 
 
@@ -7854,7 +8202,7 @@ Generated from YAML route definitions
 
 **Description:** User preferences API routes (used by profile page)  
 **Prefix:** ``  
-**Middleware:** `auth` 
+**Middleware:** `auth` `agent` 
 
 
 #### 
@@ -7994,6 +8342,17 @@ Generated from YAML route definitions
 - **Path:** `/api/preferences/2fa/disable`
 - **Method:** `POST`
 - **Description:** Disable 2FA (requires valid code)
+
+
+
+
+---
+
+#### 
+
+- **Path:** `/api/preferences/2fa/recovery-codes`
+- **Method:** `POST`
+- **Description:** Replace recovery codes (password required)
 
 
 
@@ -8156,7 +8515,7 @@ Generated from YAML route definitions
 
 **Description:** Ticket management routes  
 **Prefix:** `/tickets`  
-**Middleware:** `auth` `queue_ro` 
+**Middleware:** `auth` `agent` `queue_ro` 
 
 
 #### 
@@ -8219,17 +8578,6 @@ Generated from YAML route definitions
 - **Path:** `/:id/attachments`
 - **Method:** `POST`
 - **Description:** Upload file attachment to ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/search`
-- **Method:** `GET`
-- **Description:** Search tickets with filters
 
 
 

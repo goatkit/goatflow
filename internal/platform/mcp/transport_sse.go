@@ -44,7 +44,7 @@ func WriteSSEHeartbeat(w http.ResponseWriter, flusher http.Flusher) {
 func HandleStreamableHTTPPost(
 	w http.ResponseWriter, r *http.Request,
 	sessions *SessionManager, bridge *APIBridge,
-	userID int, userLogin, userRole string,
+	user UserContext,
 ) {
 	body := make([]byte, 0)
 	if r.Body != nil {
@@ -65,9 +65,9 @@ func HandleStreamableHTTPPost(
 
 	if req.Method == "initialize" {
 		// Create a new session
-		session := sessions.Create(userID, userLogin, userRole, bridge)
+		session := sessions.Create(user.Principal, bridge)
 
-		response, err := session.Server.HandleMessage(r.Context(), body)
+		response, err := session.Server.HandleMessage(r.Context(), user, body)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -94,13 +94,13 @@ func HandleStreamableHTTPPost(
 	}
 
 	// Verify user matches session
-	if session.UserID != userID {
+	if session.Principal != user.Principal {
 		writeJSONError(w, http.StatusForbidden, "Session user mismatch")
 		return
 	}
 
 	// Process the message
-	response, err := session.Server.HandleMessage(r.Context(), body)
+	response, err := session.Server.HandleMessage(r.Context(), user, body)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -122,7 +122,7 @@ func HandleStreamableHTTPPost(
 func HandleStreamableHTTPGet(
 	w http.ResponseWriter, r *http.Request,
 	sessions *SessionManager,
-	userID int,
+	user UserContext,
 ) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
@@ -142,7 +142,7 @@ func HandleStreamableHTTPGet(
 		return
 	}
 
-	if session.UserID != userID {
+	if session.Principal != user.Principal {
 		writeJSONError(w, http.StatusForbidden, "Session user mismatch")
 		return
 	}
@@ -178,7 +178,7 @@ func HandleStreamableHTTPGet(
 func HandleStreamableHTTPDelete(
 	w http.ResponseWriter, r *http.Request,
 	sessions *SessionManager,
-	userID int,
+	user UserContext,
 ) {
 	sessionID := r.Header.Get(SessionHeader)
 	if sessionID == "" {
@@ -192,7 +192,7 @@ func HandleStreamableHTTPDelete(
 		return
 	}
 
-	if session.UserID != userID {
+	if session.Principal != user.Principal {
 		writeJSONError(w, http.StatusForbidden, "Session user mismatch")
 		return
 	}

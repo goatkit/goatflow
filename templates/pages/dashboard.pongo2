@@ -132,7 +132,11 @@
                     </span>
                 </div>
                 <div class="gk-card-body plugin-widget-content" style="overflow: auto;">
+                    {% if widget.Unavailable %}
+                    <p class="text-sm" role="alert" style="color: var(--gk-error);">{{ t("dashboard.widget_unavailable") }}</p>
+                    {% else %}
                     {{ widget.HTML|safe }}
+                    {% endif %}
                 </div>
             </div>
         </div>

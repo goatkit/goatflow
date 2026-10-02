@@ -697,7 +697,7 @@ func setupIntegrationTestRouter(t *testing.T) *gin.Engine {
 	if err == nil {
 		repository.SetTicketNumberGenerator(gen, ticketnumber.NewDBStore(db, "10"))
 		t.Cleanup(func() {
-			repository.SetTicketNumberGenerator(nil, nil)
+			require.NoError(t, initTestTicketNumberGenerator())
 		})
 	}
 

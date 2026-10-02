@@ -2,27 +2,23 @@ package api
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/search"
 )
 
 var searchManager *search.SearchManager
 
 func init() {
-	// Initialize search manager
+	// Initialize search manager. Without an explicitly configured primary
+	// backend, requests search the application database (see primarySearchBackend).
 	searchManager = search.NewSearchManager()
-
-	// Register the database backend as primary by default, but only if DB is reachable
-	if os.Getenv("APP_ENV") != "test" { // tests can run without DB
-		if dbBackend, err := search.NewDatabaseBackend(); err == nil {
-			searchManager.RegisterBackend("database", dbBackend, true)
-		}
-	}
 
 	// Register Elasticsearch/Zinc backend if configured
 	if esEndpoint := os.Getenv("ELASTICSEARCH_ENDPOINT"); esEndpoint != "" {
@@ -97,81 +93,49 @@ func HandleSearchAPI(c *gin.Context) {
 		req.Limit = 100 // Max limit
 	}
 
+	// Tickets and articles only from queues the agent can read (admins: all).
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database unavailable"})
+		return
+	}
+	scope, ok := resolveTicketReadScope(c, db, false)
+	if !ok {
+		return
+	}
+	if !scope.queues.all {
+		req.RestrictQueues = true
+		req.QueueIDs = scope.queues.queueIDs
+	}
+
 	// Create context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	// If no backend available (common in tests without DB), return empty results
-	backend := searchManager.GetPrimaryBackend()
-	if backend == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"hits":       []interface{}{},
-			"total_hits": 0,
-			"took_ms":    0,
-		})
+	backend, err := primarySearchBackend()
+	if err != nil {
+		log.Printf("HandleSearchAPI: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Search backend unavailable"})
 		return
 	}
 
-	// Perform search
-	results, err := searchManager.Search(ctx, req)
+	results, err := backend.Search(ctx, req)
 	if err != nil {
-		// Backend failure (e.g. Elasticsearch down): degrade to empty results with a warning
-		c.JSON(http.StatusOK, gin.H{
-			"hits":       []interface{}{},
-			"total_hits": 0,
-			"took_ms":    0,
-			"warning":    "search backend unavailable",
-		})
+		log.Printf("HandleSearchAPI: %s search failed: %v", backend.GetBackendName(), err)
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Search backend unavailable"})
 		return
 	}
 
 	c.JSON(http.StatusOK, results)
 }
 
-// HandleSearchSuggestionsAPI handles GET /api/v1/search/suggestions.
-//
-//	@Summary		Get search suggestions
-//	@Description	Get autocomplete suggestions for search
-//	@Tags			Search
-//	@Accept			json
-//	@Produce		json
-//	@Param			q	query		string	true	"Search query prefix"
-//	@Success		200	{object}	map[string]interface{}	"Suggestions"
-//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
-//	@Security		BearerAuth
-//	@Router			/search/suggestions [get]
-func HandleSearchSuggestionsAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
+// primarySearchBackend returns the configured primary backend (Elasticsearch
+// or Zinc), or a database backend bound to the current connection.
+func primarySearchBackend() (search.SearchBackend, error) {
+	if backend := searchManager.GetPrimaryBackend(); backend != nil {
+		return backend, nil
 	}
-	_ = userID
-
-	query := c.Query("q")
-	if query == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Query parameter 'q' is required"})
-		return
-	}
-
-	entityType := c.DefaultQuery("type", "all")
-
-	// For now, return simple suggestions based on recent searches
-	// In production, this would query a suggestions index
-	suggestions := []string{
-		query + " open",
-		query + " closed",
-		query + " urgent",
-		query + " customer",
-		query + " today",
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"query":       query,
-		"type":        entityType,
-		"suggestions": suggestions,
-	})
+	return search.NewDatabaseBackend()
 }
 
 // HandleReindexAPI handles POST /api/v1/search/reindex.
@@ -204,10 +168,10 @@ func HandleReindexAPI(c *gin.Context) {
 		req.Types = []string{"ticket", "article", "customer"}
 	}
 
-	// Get the primary backend
-	backend := searchManager.GetPrimaryBackend()
-	if backend == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "No search backend available"})
+	backend, err := primarySearchBackend()
+	if err != nil {
+		log.Printf("HandleReindexAPI: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Search backend unavailable"})
 		return
 	}
 
@@ -220,16 +184,8 @@ func HandleReindexAPI(c *gin.Context) {
 		return
 	}
 
-	// For Elasticsearch/Zinc, we would need to fetch all documents and reindex
-	// This is a simplified version - in production, this would be done in batches
-	go func() {
-		// This would run in the background
-		// Fetch all tickets, articles, customers and index them
-		// Log progress and errors
-	}()
-
-	c.JSON(http.StatusAccepted, gin.H{
-		"message": "Reindexing started in background",
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"error":   "Reindexing is not supported for this search backend",
 		"types":   req.Types,
 		"backend": backend.GetBackendName(),
 	})
@@ -255,8 +211,9 @@ func HandleSearchHealthAPI(c *gin.Context) {
 	}
 	_ = userID
 
-	backend := searchManager.GetPrimaryBackend()
-	if backend == nil {
+	backend, err := primarySearchBackend()
+	if err != nil {
+		log.Printf("HandleSearchHealthAPI: %v", err)
 		c.JSON(http.StatusServiceUnavailable, gin.H{
 			"status":  "unhealthy",
 			"message": "No search backend available",

@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/flosch/pongo2/v6"
@@ -66,6 +68,17 @@ func (m *mockRenderer) HTML(c *gin.Context, code int, name string, data interfac
 	c.String(code, "rendered: "+name)
 }
 
+// stubAuth stands in for SessionOrJWTAuth: it authenticates every request as
+// the given principal.
+func stubAuth(userID int, role string) UIAuth {
+	return UIAuth{Authenticate: func(c *gin.Context) {
+		c.Set("user_id", userID)
+		c.Set("user_role", role)
+		c.Set("is_customer", role == "Customer")
+		c.Next()
+	}}
+}
+
 func TestRegisterUIRoutes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -119,7 +132,7 @@ func TestRegisterUIRoutes(t *testing.T) {
 	}
 
 	eng := gin.New()
-	err := registerOneUI(eng, ui, nil, caller, renderer, nil, logger)
+	err := registerOneUI(eng, ui, nil, caller, renderer, stubAuth(5, "Customer"), logger)
 	if err != nil {
 		t.Fatalf("registerOneUI: %v", err)
 	}
@@ -277,7 +290,7 @@ func TestRegisterUIRoutes_Shells(t *testing.T) {
 			}
 
 			eng := gin.New()
-			registerOneUI(eng, ui, nil, caller, renderer, nil, logger)
+			registerOneUI(eng, ui, nil, caller, renderer, stubAuth(2, "Agent"), logger)
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", fmt.Sprintf("/ui/test_%s/", tt.shell), nil)
@@ -312,7 +325,7 @@ func TestRegisterUIRoutes_JSONResponse(t *testing.T) {
 	}
 
 	eng := gin.New()
-	registerOneUI(eng, ui, nil, caller, renderer, nil, logger)
+	registerOneUI(eng, ui, nil, caller, renderer, stubAuth(2, "Agent"), logger)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/ui/test_api/api/data", nil)
@@ -351,7 +364,7 @@ func TestRegisterUIRoutes_POSTRoute(t *testing.T) {
 	}
 
 	eng := gin.New()
-	registerOneUI(eng, ui, nil, caller, renderer, nil, logger)
+	registerOneUI(eng, ui, nil, caller, renderer, stubAuth(2, "Agent"), logger)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/ui/test_form/submit", nil)
@@ -428,7 +441,7 @@ func TestUIRoutesForwardIdentity(t *testing.T) {
 	}
 
 	eng := gin.New()
-	if err := registerOneUI(eng, ui, nil, caller, renderer, sessionAuth, logger); err != nil {
+	if err := registerOneUI(eng, ui, nil, caller, renderer, UIAuth{Authenticate: sessionAuth}, logger); err != nil {
 		t.Fatalf("registerOneUI: %v", err)
 	}
 
@@ -541,4 +554,187 @@ func TestBuildNavItemsCrossPluginUI(t *testing.T) {
 			t.Fatalf("expected no items, got %v", items)
 		}
 	})
+}
+
+// headerAuth authenticates from the X-Test-Principal header ("agent:<id>" or
+// "customer:<id>") and answers 401 without it, like SessionOrJWTAuth. Its
+// RequireGroup admits callers whose X-Test-Groups header lists the group.
+func headerAuth() UIAuth {
+	return UIAuth{
+		Authenticate: func(c *gin.Context) {
+			kind, idText, _ := strings.Cut(c.GetHeader("X-Test-Principal"), ":")
+			id, err := strconv.Atoi(idText)
+			if err != nil || (kind != "agent" && kind != "customer") {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+				return
+			}
+			c.Set("user_id", id)
+			if kind == "customer" {
+				c.Set("user_role", "Customer")
+				c.Set("is_customer", true)
+			} else {
+				c.Set("user_role", "Agent")
+				c.Set("is_customer", false)
+			}
+			c.Next()
+		},
+		RequireGroup: func(name string) gin.HandlerFunc {
+			return func(c *gin.Context) {
+				for _, g := range strings.Split(c.GetHeader("X-Test-Groups"), ",") {
+					if g == name {
+						c.Next()
+						return
+					}
+				}
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "access denied: requires group " + name})
+			}
+		},
+	}
+}
+
+func gatedUI(uiType string, auth *UIAuthConfig) PluginUI {
+	cfgJSON, _ := json.Marshal(UIConfig{Routes: []UIRouteConfig{{Path: "/", Handler: "home"}}, Auth: auth})
+	cfgRaw := json.RawMessage(cfgJSON)
+	return PluginUI{
+		PluginName: "gate", UIID: "ui", FullID: "gate_ui", Name: "Gate",
+		UIType: uiType, Shell: ShellNone, Config: &cfgRaw, Enabled: true, ValidID: 1,
+	}
+}
+
+// TestUIAuthGates: every UI auth method either gates the routes or the UI is
+// not registered. token and pin used to add no middleware at all, auth.groups
+// were ignored, and agent/admin UIs admitted customers (whose customer_user id
+// can equal an agent's users id).
+func TestUIAuthGates(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	type req struct {
+		principal, groups string
+		want              int
+	}
+	tests := []struct {
+		name   string
+		uiType string
+		auth   *UIAuthConfig
+		reqs   []req
+	}{
+		{"agent_app default session", TypeAgentApp, nil, []req{
+			{"", "", http.StatusUnauthorized},
+			{"customer:2", "", http.StatusForbidden},
+			{"agent:2", "", http.StatusOK},
+		}},
+		{"admin_page refuses customers", TypeAdminPage, nil, []req{
+			{"customer:1", "", http.StatusForbidden},
+			{"agent:1", "", http.StatusOK},
+		}},
+		{"customer_app refuses agents", TypeCustomerApp, nil, []req{
+			{"", "", http.StatusUnauthorized},
+			{"agent:3", "", http.StatusForbidden},
+			{"customer:3", "", http.StatusOK},
+		}},
+		{"token method authenticates", TypeAgentApp, &UIAuthConfig{Method: AuthToken}, []req{
+			{"", "", http.StatusUnauthorized},
+			{"customer:2", "", http.StatusForbidden},
+			{"agent:2", "", http.StatusOK},
+		}},
+		{"auth groups enforced", TypeAgentApp, &UIAuthConfig{Method: AuthSession, Groups: []string{"coach"}}, []req{
+			{"agent:2", "users", http.StatusForbidden},
+			{"agent:2", "users,coach", http.StatusOK},
+		}},
+		{"public_page stays public", TypePublicPage, nil, []req{
+			{"", "", http.StatusOK},
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			eng := gin.New()
+			if err := registerOneUI(eng, gatedUI(tt.uiType, tt.auth), nil, &mockCaller{}, &mockRenderer{}, headerAuth(), slog.Default()); err != nil {
+				t.Fatalf("registerOneUI: %v", err)
+			}
+			for _, r := range tt.reqs {
+				w := httptest.NewRecorder()
+				hr, _ := http.NewRequest("GET", "/ui/gate_ui/", nil)
+				if r.principal != "" {
+					hr.Header.Set("X-Test-Principal", r.principal)
+				}
+				hr.Header.Set("X-Test-Groups", r.groups)
+				eng.ServeHTTP(w, hr)
+				if w.Code != r.want {
+					t.Errorf("principal %q groups %q: status %d, want %d (body %s)", r.principal, r.groups, w.Code, r.want, w.Body.String())
+				}
+				if r.want == http.StatusOK && w.Body.String() != "<p>Hello from plugin</p>" {
+					t.Errorf("principal %q: body %q, want plugin HTML", r.principal, w.Body.String())
+				}
+			}
+		})
+	}
+}
+
+// TestUIAuthUnenforceableConfigNotRegistered: an auth setting nothing can
+// enforce leaves the UI unregistered (404) instead of serving it openly.
+func TestUIAuthUnenforceableConfigNotRegistered(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name   string
+		uiType string
+		auth   *UIAuthConfig
+		uiAuth UIAuth
+	}{
+		{"pin (no platform PIN flow)", TypeKiosk, &UIAuthConfig{Method: "pin"}, headerAuth()},
+		{"unknown method", TypeAgentApp, &UIAuthConfig{Method: "sesion"}, headerAuth()},
+		{"session without authenticator", TypeAgentApp, nil, UIAuth{}},
+		{"groups on a public UI", TypePublicPage, &UIAuthConfig{Groups: []string{"coach"}}, headerAuth()},
+		{"groups on a customer UI", TypeCustomerApp, &UIAuthConfig{Groups: []string{"coach"}}, headerAuth()},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			eng := gin.New()
+			caller := &mockCaller{}
+			if err := registerOneUI(eng, gatedUI(tt.uiType, tt.auth), nil, caller, &mockRenderer{}, tt.uiAuth, slog.Default()); err == nil {
+				t.Error("registerOneUI succeeded, want an error")
+			}
+			w := httptest.NewRecorder()
+			hr, _ := http.NewRequest("GET", "/ui/gate_ui/", nil)
+			eng.ServeHTTP(w, hr)
+			if w.Code != http.StatusNotFound {
+				t.Errorf("status %d, want 404", w.Code)
+			}
+			if len(caller.calls) != 0 {
+				t.Errorf("plugin was called %d times", len(caller.calls))
+			}
+		})
+	}
+}
+
+// TestUIArgsAdminFlagNotSpoofable: _is_admin is always sent, so a plugin that
+// overlays the host's identity keys on the client form body (goatcoach) never
+// keeps a client-supplied "_is_admin": true for a non-admin agent.
+func TestUIArgsAdminFlagNotSpoofable(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfgJSON, _ := json.Marshal(UIConfig{Routes: []UIRouteConfig{{Path: "/save", Method: "POST", Handler: "save"}}})
+	cfgRaw := json.RawMessage(cfgJSON)
+	ui := PluginUI{PluginName: "gate", UIID: "ui", FullID: "gate_ui", Name: "Gate", UIType: TypeAgentApp, Shell: ShellNone, Config: &cfgRaw, Enabled: true, ValidID: 1}
+	caller := &mockCaller{}
+	eng := gin.New()
+	if err := registerOneUI(eng, ui, nil, caller, &mockRenderer{}, headerAuth(), slog.Default()); err != nil {
+		t.Fatalf("registerOneUI: %v", err)
+	}
+	w := httptest.NewRecorder()
+	hr, _ := http.NewRequest("POST", "/ui/gate_ui/save", strings.NewReader(`{"_is_admin":true}`))
+	hr.Header.Set("X-Test-Principal", "agent:9")
+	eng.ServeHTTP(w, hr)
+	if len(caller.calls) != 1 {
+		t.Fatalf("expected 1 plugin call, got %d (status %d)", len(caller.calls), w.Code)
+	}
+	var args map[string]any
+	if err := json.Unmarshal(caller.calls[0].Args, &args); err != nil {
+		t.Fatalf("unmarshal args: %v", err)
+	}
+	if v, ok := args["_is_admin"]; !ok || v != false {
+		t.Errorf("_is_admin = %v (present %v), want false", v, ok)
+	}
+	if args["_user_id"] != float64(9) {
+		t.Errorf("_user_id = %v, want 9", args["_user_id"])
+	}
 }

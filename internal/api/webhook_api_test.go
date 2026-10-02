@@ -2,10 +2,14 @@ package api
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
+	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,395 +17,455 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/routing"
+	"github.com/goatkit/goatflow/internal/platform/secureconfig"
+	"github.com/goatkit/goatflow/internal/platform/shared"
+	"github.com/goatkit/goatflow/internal/platform/webhook"
 )
 
-func TestWebhookAPI(t *testing.T) {
-	// Initialize test database
-	database.InitTestDB()
-	defer database.CloseTestDB()
-
-	// Create test JWT manager
-	jwtManager := auth.NewJWTManager("test-secret", time.Hour)
-
-	// Create test token
-	token, _ := jwtManager.GenerateToken(1, "testuser@example.com", "Agent", 0)
-
-	// Set Gin to test mode
-	gin.SetMode(gin.TestMode)
-
-	// Setup test data
-	db, _ := database.GetDB()
-	if db == nil {
-		t.Skip("Database not available for webhook tests")
+// webhookTestDB returns the test database; webhook tests need the real
+// gk_webhook* schema from migration 000028.
+func webhookTestDB(t *testing.T) *sql.DB {
+	t.Helper()
+	if os.Getenv("TEST_DB_HOST") == "" {
+		t.Skip("webhook tests need a test database (TEST_DB_HOST)")
 	}
+	require.NoError(t, database.InitTestDB())
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	require.NotNil(t, db)
+	return db
+}
 
-	ensureWebhookTables(t)
+// webhookReceiver is an HTTP endpoint that records what it receives.
+type webhookReceiver struct {
+	mu     sync.Mutex
+	status int
+	got    []receivedRequest
+	server *httptest.Server
+}
 
-	t.Run("Register Webhook", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
+type receivedRequest struct {
+	header http.Header
+	body   []byte
+}
+
+func newWebhookReceiver(t *testing.T) *webhookReceiver {
+	r := &webhookReceiver{status: http.StatusOK}
+	r.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		body, _ := io.ReadAll(req.Body)
+		r.mu.Lock()
+		r.got = append(r.got, receivedRequest{header: req.Header.Clone(), body: body})
+		status := r.status
+		r.mu.Unlock()
+		w.WriteHeader(status)
+		_, _ = w.Write([]byte(`{"received":true}`))
+	}))
+	t.Cleanup(r.server.Close)
+	return r
+}
+
+func (r *webhookReceiver) setStatus(code int) {
+	r.mu.Lock()
+	r.status = code
+	r.mu.Unlock()
+}
+
+func (r *webhookReceiver) requests() []receivedRequest {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]receivedRequest(nil), r.got...)
+}
+
+// webhookAdminRouter registers the webhook handlers behind a stub that
+// authenticates user 1 (the YAML route test covers the real middleware).
+func webhookAdminRouter() *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(func(c *gin.Context) { c.Set("user_id", 1); c.Next() })
+	g := r.Group("/api/v1")
+	g.GET("/webhooks", handleWebhookList)
+	g.POST("/webhooks", handleWebhookCreate)
+	g.GET("/webhooks/events", handleWebhookEvents)
+	g.GET("/webhooks/deliveries/:id", handleWebhookDeliveryGet)
+	g.POST("/webhooks/deliveries/:id/redeliver", handleWebhookRedeliver)
+	g.GET("/webhooks/:id", handleWebhookGet)
+	g.PUT("/webhooks/:id", handleWebhookUpdate)
+	g.DELETE("/webhooks/:id", handleWebhookDelete)
+	g.POST("/webhooks/:id/test", handleWebhookTest)
+	g.GET("/webhooks/:id/deliveries", handleWebhookDeliveries)
+	return r
+}
+
+type apiEnvelope struct {
+	Success bool            `json:"success"`
+	Data    json.RawMessage `json:"data"`
+	Error   string          `json:"error"`
+}
+
+func doWebhookRequest(t *testing.T, r http.Handler, method, path string, body interface{}, header ...string) (int, apiEnvelope) {
+	t.Helper()
+	var reader io.Reader
+	if body != nil {
+		b, err := json.Marshal(body)
+		require.NoError(t, err)
+		reader = bytes.NewReader(b)
+	}
+	req := httptest.NewRequest(method, path, reader)
+	req.Header.Set("Content-Type", "application/json")
+	for i := 0; i+1 < len(header); i += 2 {
+		req.Header.Set(header[i], header[i+1])
+	}
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	var env apiEnvelope
+	_ = json.Unmarshal(w.Body.Bytes(), &env)
+	return w.Code, env
+}
+
+func decodeWebhook(t *testing.T, raw json.RawMessage) webhook.Webhook {
+	t.Helper()
+	var w webhook.Webhook
+	require.NoError(t, json.Unmarshal(raw, &w), string(raw))
+	return w
+}
+
+func decodeDelivery(t *testing.T, raw json.RawMessage) webhook.Delivery {
+	t.Helper()
+	var d webhook.Delivery
+	require.NoError(t, json.Unmarshal(raw, &d), string(raw))
+	return d
+}
+
+func uniqueWebhookName(t *testing.T) string {
+	return fmt.Sprintf("%s-%d", t.Name(), time.Now().UnixNano())
+}
+
+func deleteWebhookOnCleanup(t *testing.T, db *sql.DB, id int64) {
+	t.Cleanup(func() {
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM gk_webhook WHERE id = ?`), id)
+	})
+}
+
+func TestWebhookAPI_CreateValidatesInput(t *testing.T) {
+	webhookTestDB(t)
+	r := webhookAdminRouter()
+	valid := func() map[string]interface{} {
+		return map[string]interface{}{
+			"name":   uniqueWebhookName(t),
+			"url":    "https://example.com/hook",
+			"events": []string{"ticket.created"},
+		}
+	}
+	cases := []struct {
+		name   string
+		mutate func(map[string]interface{})
+		want   string
+	}{
+		{"missing name", func(b map[string]interface{}) { delete(b, "name") }, "name is required"},
+		{"missing events", func(b map[string]interface{}) { delete(b, "events") }, "at least one event is required"},
+		{"unknown event", func(b map[string]interface{}) { b["events"] = []string{"ticket.exploded"} }, `unknown event "ticket.exploded"`},
+		{"non-http url", func(b map[string]interface{}) { b["url"] = "ftp://example.com/x" }, "url must be an absolute http or https URL"},
+		{"relative url", func(b map[string]interface{}) { b["url"] = "/hook" }, "url must be an absolute http or https URL"},
+		{"short secret", func(b map[string]interface{}) { b["secret"] = "tooshort" }, "secret must be between 16 and 512 characters"},
+		{"reserved header", func(b map[string]interface{}) { b["headers"] = map[string]string{"X-Webhook-Signature": "x"} },
+			`header "X-Webhook-Signature" is set by GoatFlow and cannot be overridden`},
+		{"timeout too long", func(b map[string]interface{}) { b["timeout_seconds"] = 61 }, "timeout_seconds must be between 1 and 60"},
+		{"too many retries", func(b map[string]interface{}) { b["retry_count"] = 11 }, "retry_count must be between 0 and 10"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			body := valid()
+			tc.mutate(body)
+			code, env := doWebhookRequest(t, r, http.MethodPost, "/api/v1/webhooks", body)
+			assert.Equal(t, http.StatusBadRequest, code)
+			assert.False(t, env.Success)
+			assert.Equal(t, tc.want, env.Error)
 		})
-		router.POST("/api/v1/webhooks", HandleRegisterWebhookAPI)
+	}
+}
 
-		payload := map[string]interface{}{
-			"name":   "Slack Integration",
-			"url":    "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXX",
-			"secret": "webhook-secret-key",
-			"events": []string{
-				"ticket.created",
-				"ticket.updated",
-				"ticket.closed",
-				"article.created",
-			},
-			"retry_count":     3,
-			"timeout_seconds": 30,
-			"headers": map[string]string{
-				"X-Custom-Header": "CustomValue",
-			},
-		}
-		body, _ := json.Marshal(payload)
+func TestWebhookAPI_CRUD(t *testing.T) {
+	db := webhookTestDB(t)
+	r := webhookAdminRouter()
+	const secret = "s3cret-signing-key-0123"
+	name := uniqueWebhookName(t)
 
-		req := httptest.NewRequest("POST", "/api/v1/webhooks", bytes.NewBuffer(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
+	code, env := doWebhookRequest(t, r, http.MethodPost, "/api/v1/webhooks", map[string]interface{}{
+		"name":    name,
+		"url":     "https://example.com/hook",
+		"secret":  secret,
+		"events":  []string{"ticket.created", "article.created", "ticket.created"},
+		"headers": map[string]string{"X-Team": "support"},
+	})
+	require.Equal(t, http.StatusCreated, code, env.Error)
+	created := decodeWebhook(t, env.Data)
+	deleteWebhookOnCleanup(t, db, created.ID)
 
-		router.ServeHTTP(w, req)
+	assert.Equal(t, name, created.Name)
+	assert.Equal(t, []string{"ticket.created", "article.created"}, created.Events, "duplicates removed, order kept")
+	assert.Equal(t, map[string]string{"X-Team": "support"}, created.Headers)
+	assert.Equal(t, webhook.DefaultRetryCount, created.RetryCount)
+	assert.Equal(t, webhook.DefaultTimeoutSeconds, created.TimeoutSeconds)
+	assert.True(t, created.IsActive)
+	assert.True(t, created.HasSecret)
+	assert.Equal(t, "••••••••0123", created.SecretHint)
+	assert.NotContains(t, string(env.Data), secret, "secret must never be returned")
+	assert.Equal(t, 1, created.CreatedBy)
 
-		assert.Equal(t, http.StatusCreated, w.Code)
+	// The secret is stored encrypted, not in clear text.
+	var stored []byte
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		`SELECT secret_encrypted FROM gk_webhook WHERE id = ?`), created.ID).Scan(&stored))
+	assert.NotContains(t, string(stored), secret)
+	key, err := secureconfig.GetKey()
+	require.NoError(t, err)
+	plain, err := secureconfig.Decrypt(stored, key)
+	require.NoError(t, err)
+	assert.Equal(t, secret, string(plain))
 
-		var response struct {
-			ID     int      `json:"id"`
-			Name   string   `json:"name"`
-			URL    string   `json:"url"`
-			Events []string `json:"events"`
-			Active bool     `json:"active"`
-		}
-		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.NotZero(t, response.ID)
-		assert.Equal(t, "Slack Integration", response.Name)
-		assert.True(t, response.Active)
-		assert.Contains(t, response.Events, "ticket.created")
+	t.Run("duplicate name is a conflict", func(t *testing.T) {
+		code, env := doWebhookRequest(t, r, http.MethodPost, "/api/v1/webhooks", map[string]interface{}{
+			"name": name, "url": "https://example.com/other", "events": []string{"ticket.closed"},
+		})
+		assert.Equal(t, http.StatusConflict, code)
+		assert.Equal(t, webhook.ErrDuplicateName.Error(), env.Error)
 	})
 
-	t.Run("List Webhooks", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
-		})
-		router.GET("/api/v1/webhooks", HandleListWebhooksAPI)
-
-		// Create test webhooks
-		webhookQuery := database.ConvertPlaceholders(`
-			INSERT INTO webhooks (name, url, secret, events, active, create_by, change_by)
-			VALUES 
-				(?, ?, ?, ?, true, 1, 1),
-				(?, ?, ?, ?, false, 1, 1)
-		`)
-		db.Exec(webhookQuery,
-			"Teams Webhook", "https://teams.microsoft.com/webhook", "secret1", "ticket.created,ticket.updated",
-			"Discord Webhook", "https://discord.com/api/webhooks/123", "secret2", "article.created",
-		)
-
-		req := httptest.NewRequest("GET", "/api/v1/webhooks", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		var response struct {
-			Webhooks []struct {
-				ID     int    `json:"id"`
-				Name   string `json:"name"`
-				URL    string `json:"url"`
-				Active bool   `json:"active"`
-			} `json:"webhooks"`
-			Total int `json:"total"`
-		}
-		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.NotEmpty(t, response.Webhooks)
-		assert.Greater(t, response.Total, 0)
-
-		// Test with active filter
-		req = httptest.NewRequest("GET", "/api/v1/webhooks?active=true", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w = httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusOK, w.Code)
+	t.Run("get", func(t *testing.T) {
+		code, env := doWebhookRequest(t, r, http.MethodGet, fmt.Sprintf("/api/v1/webhooks/%d", created.ID), nil)
+		require.Equal(t, http.StatusOK, code)
+		assert.Equal(t, created, decodeWebhook(t, env.Data))
 	})
 
-	t.Run("Get Webhook", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
+	t.Run("partial update keeps omitted fields", func(t *testing.T) {
+		code, env := doWebhookRequest(t, r, http.MethodPut, fmt.Sprintf("/api/v1/webhooks/%d", created.ID), map[string]interface{}{
+			"is_active":       false,
+			"timeout_seconds": 5,
+			"secret":          "",
 		})
-		router.GET("/api/v1/webhooks/:id", HandleGetWebhookAPI)
-
-		insertQuery := `
-			INSERT INTO webhooks (name, url, secret, events, active, create_by, change_by)
-			VALUES (?, ?, ?, ?, true, 1, 1)
-		`
-		webhookID := insertWebhookRow(t, insertQuery,
-			"Test Webhook", "https://example.com/webhook", "secret", "ticket.created",
-		)
-
-		req := httptest.NewRequest("GET", "/api/v1/webhooks/"+strconv.Itoa(webhookID), nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		var webhook struct {
-			ID     int      `json:"id"`
-			Name   string   `json:"name"`
-			URL    string   `json:"url"`
-			Events []string `json:"events"`
-			Active bool     `json:"active"`
-		}
-		json.Unmarshal(w.Body.Bytes(), &webhook)
-		assert.Equal(t, webhookID, webhook.ID)
-		assert.Equal(t, "Test Webhook", webhook.Name)
-		assert.True(t, webhook.Active)
+		require.Equal(t, http.StatusOK, code, env.Error)
+		updated := decodeWebhook(t, env.Data)
+		assert.False(t, updated.IsActive)
+		assert.Equal(t, 5, updated.TimeoutSeconds)
+		assert.False(t, updated.HasSecret, "empty secret removes it")
+		assert.Empty(t, updated.SecretHint)
+		assert.Equal(t, created.URL, updated.URL)
+		assert.Equal(t, created.Events, updated.Events)
+		assert.Equal(t, created.Headers, updated.Headers)
 	})
 
-	t.Run("Update Webhook", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
+	t.Run("update validates", func(t *testing.T) {
+		code, env := doWebhookRequest(t, r, http.MethodPut, fmt.Sprintf("/api/v1/webhooks/%d", created.ID), map[string]interface{}{
+			"events": []string{},
 		})
-		router.PUT("/api/v1/webhooks/:id", HandleUpdateWebhookAPI)
-
-		insertQuery := `
-			INSERT INTO webhooks (name, url, secret, events, active, create_by, change_by)
-			VALUES (?, ?, ?, ?, true, 1, 1)
-		`
-		webhookID := insertWebhookRow(t, insertQuery,
-			"Update Test", "https://old.url/webhook", "oldsecret", "ticket.created",
-		)
-
-		payload := map[string]interface{}{
-			"name":   "Updated Webhook",
-			"url":    "https://new.url/webhook",
-			"events": []string{"ticket.created", "ticket.closed"},
-			"active": false,
-		}
-		body, _ := json.Marshal(payload)
-
-		req := httptest.NewRequest("PUT", "/api/v1/webhooks/"+strconv.Itoa(webhookID), bytes.NewBuffer(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		var response struct {
-			ID     int      `json:"id"`
-			Name   string   `json:"name"`
-			URL    string   `json:"url"`
-			Events []string `json:"events"`
-			Active bool     `json:"active"`
-		}
-		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.Equal(t, "Updated Webhook", response.Name)
-		assert.Equal(t, "https://new.url/webhook", response.URL)
-		assert.False(t, response.Active)
+		assert.Equal(t, http.StatusBadRequest, code)
+		assert.Equal(t, "at least one event is required", env.Error)
 	})
 
-	t.Run("Delete Webhook", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
-		})
-		router.DELETE("/api/v1/webhooks/:id", HandleDeleteWebhookAPI)
-
-		// Create a test webhook
-		insertQuery := `
-			INSERT INTO webhooks (name, url, secret, events, active, create_by, change_by)
-			VALUES (?, ?, ?, ?, true, 1, 1)
-		`
-		webhookID := insertWebhookRow(t, insertQuery,
-			"Delete Test", "https://delete.url/webhook", "secret", "ticket.created",
-		)
-
-		req := httptest.NewRequest("DELETE", "/api/v1/webhooks/"+strconv.Itoa(webhookID), nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		// Verify webhook is deleted
-		var count int
-		countQuery := database.ConvertPlaceholders(`
-			SELECT COUNT(*) FROM webhooks WHERE id = ?
-		`)
-		db.QueryRow(countQuery, webhookID).Scan(&count)
-		assert.Equal(t, 0, count)
+	t.Run("list filters by active", func(t *testing.T) {
+		ids := func(path string) []int64 {
+			code, env := doWebhookRequest(t, r, http.MethodGet, path, nil)
+			require.Equal(t, http.StatusOK, code)
+			var list []webhook.Webhook
+			require.NoError(t, json.Unmarshal(env.Data, &list))
+			out := []int64{}
+			for _, w := range list {
+				out = append(out, w.ID)
+			}
+			return out
+		}
+		assert.Contains(t, ids("/api/v1/webhooks"), created.ID)
+		assert.Contains(t, ids("/api/v1/webhooks?active=false"), created.ID)
+		assert.NotContains(t, ids("/api/v1/webhooks?active=true"), created.ID)
+		code, _ := doWebhookRequest(t, r, http.MethodGet, "/api/v1/webhooks?active=maybe", nil)
+		assert.Equal(t, http.StatusBadRequest, code)
 	})
 
-	t.Run("Test Webhook", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
-		})
-		router.POST("/api/v1/webhooks/:id/test", HandleTestWebhookAPI)
-
-		// Create a test webhook
-		insertQuery := `
-			INSERT INTO webhooks (name, url, secret, events, active, create_by, change_by)
-			VALUES (?, ?, ?, ?, true, 1, 1)
-		`
-		webhookID := insertWebhookRow(t, insertQuery,
-			"Test Webhook", "https://example.com/webhook", "secret", "ticket.created",
-		)
-
-		payload := map[string]interface{}{
-			"event_type": "ticket.created",
-			"test_payload": map[string]interface{}{
-				"ticket_id": 123,
-				"title":     "Test Ticket",
-			},
-		}
-		body, _ := json.Marshal(payload)
-
-		req := httptest.NewRequest("POST", "/api/v1/webhooks/"+strconv.Itoa(webhookID)+"/test", bytes.NewBuffer(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		var response struct {
-			Success      bool   `json:"success"`
-			Message      string `json:"message"`
-			StatusCode   int    `json:"status_code"`
-			ResponseTime int    `json:"response_time_ms"`
-		}
-		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.NotNil(t, response)
-	})
-
-	t.Run("Webhook Deliveries", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
-		})
-		router.GET("/api/v1/webhooks/:id/deliveries", HandleWebhookDeliveriesAPI)
-
-		// Create a test webhook with deliveries
-		insertQuery := `
-			INSERT INTO webhooks (name, url, secret, events, active, create_by, change_by)
-			VALUES (?, ?, ?, ?, true, 1, 1)
-		`
-		webhookID := insertWebhookRow(t, insertQuery,
-			"Delivery Test", "https://example.com/webhook", "secret", "ticket.created",
-		)
-
-		// Create test deliveries
-		deliveryQuery := database.ConvertPlaceholders(`
-			INSERT INTO webhook_deliveries (webhook_id, event_type, payload, status_code, attempts, delivered_at)
-			VALUES
-				(?, 'ticket.created', '{"test": "data1"}', 200, 1, NOW()),
-				(?, 'ticket.updated', '{"test": "data2"}', 500, 3, NULL)
-		`)
-		// Pass webhookID twice since we use ? placeholders (not ? which can be reused)
-		_, err := db.Exec(deliveryQuery, webhookID, webhookID)
+	t.Run("delete removes webhook and its deliveries", func(t *testing.T) {
+		_, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+			INSERT INTO gk_webhook_delivery (webhook_id, event_type, payload, status, attempts, create_time, change_time)
+			VALUES (?, 'ticket.created', '{}', 'failed', 1, ?, ?) RETURNING id`), created.ID, time.Now(), time.Now())
 		require.NoError(t, err)
 
-		req := httptest.NewRequest("GET", "/api/v1/webhooks/"+strconv.Itoa(webhookID)+"/deliveries", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		var response struct {
-			Deliveries []struct {
-				ID         int    `json:"id"`
-				EventType  string `json:"event_type"`
-				StatusCode int    `json:"status_code"`
-				Attempts   int    `json:"attempts"`
-				Success    bool   `json:"success"`
-			} `json:"deliveries"`
-			Total int `json:"total"`
-		}
-		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.NotEmpty(t, response.Deliveries)
-		assert.Equal(t, 2, response.Total)
+		code, _ := doWebhookRequest(t, r, http.MethodDelete, fmt.Sprintf("/api/v1/webhooks/%d", created.ID), nil)
+		require.Equal(t, http.StatusOK, code)
+		code, _ = doWebhookRequest(t, r, http.MethodGet, fmt.Sprintf("/api/v1/webhooks/%d", created.ID), nil)
+		assert.Equal(t, http.StatusNotFound, code)
+		var n int
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+			`SELECT COUNT(*) FROM gk_webhook_delivery WHERE webhook_id = ?`), created.ID).Scan(&n))
+		assert.Zero(t, n)
+		code, _ = doWebhookRequest(t, r, http.MethodDelete, fmt.Sprintf("/api/v1/webhooks/%d", created.ID), nil)
+		assert.Equal(t, http.StatusNotFound, code)
 	})
+}
 
-	t.Run("Retry Failed Delivery", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
-		})
-		router.POST("/api/v1/webhooks/deliveries/:id/retry", HandleRetryWebhookDeliveryAPI)
+func TestWebhookAPI_TestDeliveryAndRedeliver(t *testing.T) {
+	db := webhookTestDB(t)
+	r := webhookAdminRouter()
+	recv := newWebhookReceiver(t)
+	const secret = "another-signing-secret"
 
-		// Create a failed delivery
-		var deliveryID int
-		var webhookID int
-
-		insertWebhook := `
-			INSERT INTO webhooks (name, url, secret, events, active, create_by, change_by)
-			VALUES (?, ?, ?, ?, true, 1, 1)
-		`
-		webhookID = insertWebhookRow(t, insertWebhook,
-			"Retry Test", "https://example.com/webhook", "secret", "ticket.created",
-		)
-
-		insertDelivery := `
-			INSERT INTO webhook_deliveries (webhook_id, event_type, payload, status_code, attempts)
-			VALUES (?, 'ticket.created', '{"test": "retry"}', 500, 3)
-		`
-		deliveryID = insertWebhookRow(t, insertDelivery, webhookID)
-
-		req := httptest.NewRequest("POST", "/api/v1/webhooks/deliveries/"+strconv.Itoa(deliveryID)+"/retry", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		var response struct {
-			Success bool   `json:"success"`
-			Message string `json:"message"`
-		}
-		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.NotNil(t, response)
+	code, env := doWebhookRequest(t, r, http.MethodPost, "/api/v1/webhooks", map[string]interface{}{
+		"name":    uniqueWebhookName(t),
+		"url":     recv.server.URL + "/hook",
+		"secret":  secret,
+		"events":  []string{"ticket.created"},
+		"headers": map[string]string{"X-Team": "support"},
 	})
+	require.Equal(t, http.StatusCreated, code, env.Error)
+	wh := decodeWebhook(t, env.Data)
+	deleteWebhookOnCleanup(t, db, wh.ID)
 
-	t.Run("Unauthorized Access", func(t *testing.T) {
-		router := gin.New()
-		router.GET("/api/v1/webhooks", HandleListWebhooksAPI)
+	// Successful test delivery: signed, recorded, custom headers sent.
+	code, env = doWebhookRequest(t, r, http.MethodPost, fmt.Sprintf("/api/v1/webhooks/%d/test", wh.ID), nil)
+	require.Equal(t, http.StatusOK, code, env.Error)
+	first := decodeDelivery(t, env.Data)
+	assert.True(t, first.Success)
+	assert.Equal(t, webhook.StatusDelivered, first.Status)
+	require.NotNil(t, first.StatusCode)
+	assert.Equal(t, http.StatusOK, *first.StatusCode)
+	assert.Equal(t, 1, first.Attempts)
+	assert.Equal(t, webhook.TestEvent, first.Event)
+	assert.NotNil(t, first.DeliveredAt)
 
-		req := httptest.NewRequest("GET", "/api/v1/webhooks", nil)
-		w := httptest.NewRecorder()
+	got := recv.requests()
+	require.Len(t, got, 1)
+	assert.Equal(t, webhook.Sign(secret, got[0].body), got[0].header.Get(webhook.SignatureHeader))
+	assert.Equal(t, webhook.TestEvent, got[0].header.Get(webhook.EventHeader))
+	assert.Equal(t, fmt.Sprint(first.ID), got[0].header.Get(webhook.DeliveryHeader))
+	assert.Equal(t, "support", got[0].header.Get("X-Team"))
+	assert.Equal(t, "application/json", got[0].header.Get("Content-Type"))
+	var envelope struct {
+		Event string                 `json:"event"`
+		Data  map[string]interface{} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(got[0].body, &envelope))
+	assert.Equal(t, webhook.TestEvent, envelope.Event)
+	assert.Equal(t, float64(wh.ID), envelope.Data["webhook_id"])
 
-		router.ServeHTTP(w, req)
+	// Failing endpoint: recorded as failed, no automatic retry for tests.
+	recv.setStatus(http.StatusInternalServerError)
+	code, env = doWebhookRequest(t, r, http.MethodPost, fmt.Sprintf("/api/v1/webhooks/%d/test", wh.ID), nil)
+	require.Equal(t, http.StatusOK, code, env.Error)
+	failed := decodeDelivery(t, env.Data)
+	assert.False(t, failed.Success)
+	assert.Equal(t, webhook.StatusFailed, failed.Status)
+	require.NotNil(t, failed.StatusCode)
+	assert.Equal(t, http.StatusInternalServerError, *failed.StatusCode)
+	assert.Equal(t, "endpoint returned HTTP 500", failed.Error)
+	assert.Nil(t, failed.NextAttemptAt)
 
-		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	// Delivery detail carries payload and response.
+	code, env = doWebhookRequest(t, r, http.MethodGet, fmt.Sprintf("/api/v1/webhooks/deliveries/%d", failed.ID), nil)
+	require.Equal(t, http.StatusOK, code)
+	detail := decodeDelivery(t, env.Data)
+	assert.Equal(t, string(recv.requests()[1].body), detail.Payload)
+	assert.Equal(t, `{"received":true}`, detail.Response)
+
+	// Redeliver once the endpoint recovers: new delivery, same payload.
+	recv.setStatus(http.StatusNoContent)
+	code, env = doWebhookRequest(t, r, http.MethodPost, fmt.Sprintf("/api/v1/webhooks/deliveries/%d/redeliver", failed.ID), nil)
+	require.Equal(t, http.StatusOK, code, env.Error)
+	redelivered := decodeDelivery(t, env.Data)
+	assert.NotEqual(t, failed.ID, redelivered.ID)
+	assert.True(t, redelivered.Success)
+	assert.Equal(t, webhook.StatusDelivered, redelivered.Status)
+	got = recv.requests()
+	require.Len(t, got, 3)
+	assert.Equal(t, got[1].body, got[2].body, "redelivery sends the original payload")
+	assert.Equal(t, fmt.Sprint(redelivered.ID), got[2].header.Get(webhook.DeliveryHeader))
+	assert.Equal(t, webhook.Sign(secret, got[2].body), got[2].header.Get(webhook.SignatureHeader))
+
+	// The failed delivery is unchanged.
+	var status string
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		`SELECT status FROM gk_webhook_delivery WHERE id = ?`), failed.ID).Scan(&status))
+	assert.Equal(t, webhook.StatusFailed, status)
+
+	// Delivery log: newest first, without bodies.
+	code, env = doWebhookRequest(t, r, http.MethodGet, fmt.Sprintf("/api/v1/webhooks/%d/deliveries", wh.ID), nil)
+	require.Equal(t, http.StatusOK, code)
+	var list []webhook.Delivery
+	require.NoError(t, json.Unmarshal(env.Data, &list))
+	require.Len(t, list, 3)
+	assert.Equal(t, []int64{redelivered.ID, failed.ID, first.ID}, []int64{list[0].ID, list[1].ID, list[2].ID})
+	assert.Empty(t, list[0].Payload)
+	assert.True(t, list[0].Success)
+	assert.False(t, list[1].Success)
+
+	code, env = doWebhookRequest(t, r, http.MethodGet, fmt.Sprintf("/api/v1/webhooks/%d/deliveries?limit=1", wh.ID), nil)
+	require.Equal(t, http.StatusOK, code)
+	require.NoError(t, json.Unmarshal(env.Data, &list))
+	assert.Len(t, list, 1)
+
+	code, _ = doWebhookRequest(t, r, http.MethodPost, "/api/v1/webhooks/deliveries/999999999/redeliver", nil)
+	assert.Equal(t, http.StatusNotFound, code)
+	code, _ = doWebhookRequest(t, r, http.MethodPost, "/api/v1/webhooks/999999999/test", nil)
+	assert.Equal(t, http.StatusNotFound, code)
+	code, _ = doWebhookRequest(t, r, http.MethodGet, "/api/v1/webhooks/999999999/deliveries", nil)
+	assert.Equal(t, http.StatusNotFound, code)
+}
+
+func TestWebhookAPI_UnreachableEndpointIsRecorded(t *testing.T) {
+	db := webhookTestDB(t)
+	r := webhookAdminRouter()
+	closed := httptest.NewServer(http.NotFoundHandler())
+	url := closed.URL
+	closed.Close()
+
+	code, env := doWebhookRequest(t, r, http.MethodPost, "/api/v1/webhooks", map[string]interface{}{
+		"name": uniqueWebhookName(t), "url": url, "events": []string{"ticket.created"},
 	})
+	require.Equal(t, http.StatusCreated, code, env.Error)
+	wh := decodeWebhook(t, env.Data)
+	deleteWebhookOnCleanup(t, db, wh.ID)
+
+	code, env = doWebhookRequest(t, r, http.MethodPost, fmt.Sprintf("/api/v1/webhooks/%d/test", wh.ID), nil)
+	require.Equal(t, http.StatusOK, code)
+	d := decodeDelivery(t, env.Data)
+	assert.Equal(t, webhook.StatusFailed, d.Status)
+	assert.Nil(t, d.StatusCode)
+	assert.Contains(t, d.Error, "connection refused")
+	assert.Equal(t, 1, d.Attempts)
+}
+
+// TestWebhookRoutes exercises the YAML routes with the real auth and admin
+// middleware: before routes/api-webhooks.yaml the endpoints did not exist.
+func TestWebhookRoutes(t *testing.T) {
+	db := webhookTestDB(t)
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	require.NoError(t, routing.LoadYAMLRoutesForTesting(router))
+
+	jwt := shared.GetJWTManager()
+	adminToken, err := jwt.GenerateToken(1, "root@localhost", "Admin", 0)
+	require.NoError(t, err)
+	agentToken, err := jwt.GenerateToken(1, "root@localhost", "Agent", 0)
+	require.NoError(t, err)
+
+	code, _ := doWebhookRequest(t, router, http.MethodGet, "/api/v1/webhooks", nil)
+	assert.Equal(t, http.StatusUnauthorized, code)
+	code, _ = doWebhookRequest(t, router, http.MethodGet, "/api/v1/webhooks", nil, "Authorization", "Bearer "+agentToken)
+	assert.Equal(t, http.StatusForbidden, code)
+
+	admin := []string{"Authorization", "Bearer " + adminToken}
+	code, env := doWebhookRequest(t, router, http.MethodGet, "/api/v1/webhooks/events", nil, admin...)
+	require.Equal(t, http.StatusOK, code)
+	assert.Contains(t, string(env.Data), `"ticket.created"`)
+
+	code, env = doWebhookRequest(t, router, http.MethodPost, "/api/v1/webhooks", map[string]interface{}{
+		"name": uniqueWebhookName(t), "url": "https://example.com/hook", "events": []string{"ticket.closed"},
+	}, admin...)
+	require.Equal(t, http.StatusCreated, code, env.Error)
+	wh := decodeWebhook(t, env.Data)
+	deleteWebhookOnCleanup(t, db, wh.ID)
+
+	code, env = doWebhookRequest(t, router, http.MethodGet, fmt.Sprintf("/api/v1/webhooks/%d", wh.ID), nil, admin...)
+	require.Equal(t, http.StatusOK, code)
+	assert.Equal(t, wh.ID, decodeWebhook(t, env.Data).ID)
+	code, _ = doWebhookRequest(t, router, http.MethodGet, fmt.Sprintf("/api/v1/webhooks/%d/deliveries", wh.ID), nil, admin...)
+	assert.Equal(t, http.StatusOK, code)
 }

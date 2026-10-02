@@ -105,7 +105,8 @@ isDebug := cfg.App.Debug
 - Queue configuration
 
 ### Storage Configuration
-- Local or S3 storage
+- Article attachment backend: database (`db`, default) or OTRS-layout filesystem (`fs`);
+  see [Article Storage](../ARTICLE_STORAGE.md)
 - Attachment settings
 - File size limits
 

@@ -5,13 +5,16 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/history"
+	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/repository"
 )
 
@@ -104,11 +107,20 @@ func handleBulkTicketStatus(db *sql.DB) gin.HandlerFunc {
 			pendingUntil = req.PendingUntil
 		}
 
+		authz := agentTicketAuthzOrAbort(c, db)
+		if authz == nil {
+			return
+		}
 		result := BulkActionResult{Total: len(req.TicketIDs)}
 		ticketRepo := repository.NewTicketRepository(db)
 		recorder := history.NewRecorder(ticketRepo)
 
 		for _, ticketID := range req.TicketIDs {
+			if msg := authz.bulkDenial(ticketID, "rw"); msg != "" {
+				result.Failed++
+				result.Errors = append(result.Errors, msg)
+				continue
+			}
 			// Get previous state for history
 			prevTicket, err := ticketRepo.GetByID(uint(ticketID))
 			if err != nil {
@@ -182,11 +194,20 @@ func handleBulkTicketPriority(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		authz := agentTicketAuthzOrAbort(c, db)
+		if authz == nil {
+			return
+		}
 		result := BulkActionResult{Total: len(req.TicketIDs)}
 		ticketRepo := repository.NewTicketRepository(db)
 		recorder := history.NewRecorder(ticketRepo)
 
 		for _, ticketID := range req.TicketIDs {
+			if msg := authz.bulkDenial(ticketID, "priority"); msg != "" {
+				result.Failed++
+				result.Errors = append(result.Errors, msg)
+				continue
+			}
 			// Get previous priority for history
 			prevTicket, err := ticketRepo.GetByID(uint(ticketID))
 			if err != nil {
@@ -260,11 +281,20 @@ func handleBulkTicketQueue(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		authz := agentTicketAuthzOrAbort(c, db)
+		if authz == nil || !authz.moveTargetOrAbort(c, req.QueueID) {
+			return
+		}
 		result := BulkActionResult{Total: len(req.TicketIDs)}
 		ticketRepo := repository.NewTicketRepository(db)
 		recorder := history.NewRecorder(ticketRepo)
 
 		for _, ticketID := range req.TicketIDs {
+			if msg := authz.bulkDenial(ticketID, "move_into"); msg != "" {
+				result.Failed++
+				result.Errors = append(result.Errors, msg)
+				continue
+			}
 			// Get previous queue for history
 			prevTicket, err := ticketRepo.GetByID(uint(ticketID))
 			if err != nil {
@@ -341,11 +371,20 @@ func handleBulkTicketAssign(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		authz := agentTicketAuthzOrAbort(c, db)
+		if authz == nil {
+			return
+		}
 		result := BulkActionResult{Total: len(req.TicketIDs)}
 		ticketRepo := repository.NewTicketRepository(db)
 		recorder := history.NewRecorder(ticketRepo)
 
 		for _, ticketID := range req.TicketIDs {
+			if msg := authz.bulkDenial(ticketID, "owner"); msg != "" {
+				result.Failed++
+				result.Errors = append(result.Errors, msg)
+				continue
+			}
 			// Get previous owner for history
 			prevTicket, err := ticketRepo.GetByID(uint(ticketID))
 			if err != nil {
@@ -409,19 +448,27 @@ func handleBulkTicketLock(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Lock ID: 1 = unlock, 2 = lock
-		lockID := 1
+		lockID := models.TicketUnlocked
 		lockAction := "Unlocked"
 		if req.Lock {
-			lockID = 2
+			lockID = models.TicketLocked
 			lockAction = "Locked"
 		}
 
+		authz := agentTicketAuthzOrAbort(c, db)
+		if authz == nil {
+			return
+		}
 		result := BulkActionResult{Total: len(req.TicketIDs)}
 		ticketRepo := repository.NewTicketRepository(db)
 		recorder := history.NewRecorder(ticketRepo)
 
 		for _, ticketID := range req.TicketIDs {
+			if msg := authz.bulkDenial(ticketID, "rw"); msg != "" {
+				result.Failed++
+				result.Errors = append(result.Errors, msg)
+				continue
+			}
 			_, err := ticketRepo.GetByID(uint(ticketID))
 			if err != nil {
 				result.Failed++
@@ -480,7 +527,11 @@ func handleBulkTicketMerge(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Verify target ticket exists
+		// The target gains the sources' articles: it needs rw like the sources.
+		authz := agentTicketAuthzOrAbort(c, db)
+		if authz == nil || !authz.ticketOrAbort(c, req.TargetTicketID, "rw", "Target ticket") {
+			return
+		}
 		ticketRepo := repository.NewTicketRepository(db)
 		targetTicket, err := ticketRepo.GetByID(uint(req.TargetTicketID))
 		if err != nil {
@@ -514,6 +565,11 @@ func handleBulkTicketMerge(db *sql.DB) gin.HandlerFunc {
 		mergedTicketNumbers := make([]string, 0)
 
 		for _, sourceID := range sourceIDs {
+			if msg := authz.bulkDenial(sourceID, "rw"); msg != "" {
+				result.Failed++
+				result.Errors = append(result.Errors, msg)
+				continue
+			}
 			// Get source ticket info
 			sourceTicket, err := ticketRepo.GetByID(uint(sourceID))
 			if err != nil {
@@ -564,7 +620,7 @@ func handleBulkTicketMerge(db *sql.DB) gin.HandlerFunc {
 
 		// Record merge history on target ticket
 		if len(mergedTicketNumbers) > 0 {
-			recordBulkMergeHistory(c, int(targetTicket.ID), sourceIDs, strings.Join(mergedTicketNumbers, ", "))
+			recordBulkMergeHistory(c, db, int(targetTicket.ID), sourceIDs, strings.Join(mergedTicketNumbers, ", "))
 		}
 
 		result.Success = result.Failed == 0
@@ -579,14 +635,10 @@ func handleBulkTicketMerge(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// recordBulkMergeHistory records the merge action in ticket history for bulk operations
-func recordBulkMergeHistory(c *gin.Context, targetTicketID int, sourceTicketIDs []int, sourceTicketNumbers string) {
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		log.Printf("Failed to get database connection for merge history: %v", err)
-		return
-	}
-
+// recordBulkMergeHistory records the merge action in ticket history for bulk operations.
+// It runs after the merge transaction committed, on the same connection pool the merge used;
+// failures are logged because the merge itself cannot be undone at this point.
+func recordBulkMergeHistory(c *gin.Context, db *sql.DB, targetTicketID int, sourceTicketIDs []int, sourceTicketNumbers string) {
 	userID := c.GetUint("user_id")
 	ticketRepo := repository.NewTicketRepository(db)
 	recorder := history.NewRecorder(ticketRepo)
@@ -604,8 +656,10 @@ func recordBulkMergeHistory(c *gin.Context, targetTicketID int, sourceTicketIDs 
 		message = fmt.Sprintf("Merged %d tickets into this ticket", len(sourceTicketIDs))
 	}
 
-	_ = recorder.Record(c.Request.Context(), nil, targetTicket, nil,
-		history.TypeMerged, message, int(userID))
+	if err := recorder.Record(c.Request.Context(), nil, targetTicket, nil,
+		history.TypeMerged, message, int(userID)); err != nil {
+		log.Printf("Failed to record bulk merge history for ticket %d: %v", targetTicketID, err)
+	}
 }
 
 // handleGetFilteredTicketIds returns all ticket IDs matching the current filter
@@ -645,43 +699,31 @@ func handleGetFilteredTicketIds(db *sql.DB) gin.HandlerFunc {
 
 		// Apply status filter
 		if status == "open" {
-			query += " AND t.ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2))"
+			query += " AND t.ticket_state_id IN (" + lookups.NewOpenStateIDsSQL + ")"
 		} else if status == "pending" {
-			query += " AND t.ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (4, 5))"
+			query += " AND t.ticket_state_id IN (" + lookups.PendingStateIDsSQL + ")"
 		} else if status == "closed" {
-			query += " AND t.ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)"
+			query += " AND t.ticket_state_id IN (" + lookups.ClosedStateIDsSQL + ")"
 		} else if status == "not_closed" {
-			query += " AND t.ticket_state_id NOT IN (SELECT id FROM ticket_state WHERE type_id = 3)"
+			query += " AND t.ticket_state_id NOT IN (" + lookups.ClosedStateIDsSQL + ")"
 		}
 
-		// Apply queue filter
+		scope, ok := resolveTicketReadScope(c, db, false)
+		if !ok {
+			return
+		}
 		if queue != "all" {
-			query += " AND t.queue_id = ?"
-			args = append(args, queue)
-		} else {
-			// Check if user is admin
-			var isAdmin bool
-			adminCheckErr := db.QueryRow(database.ConvertPlaceholders(`
-				SELECT EXISTS(
-					SELECT 1 FROM group_user gu
-					JOIN groups g ON gu.group_id = g.id
-					WHERE gu.user_id = ? AND g.name = 'admin'
-				)
-			`), userID).Scan(&isAdmin)
-
-			if adminCheckErr == nil && isAdmin {
-				// Admin sees all queues - no filter needed
-			} else {
-				// Regular agents see only queues they have access to
-				query += ` AND t.queue_id IN (
-					SELECT DISTINCT q2.id FROM queue q2
-					WHERE q2.group_id IN (
-						SELECT group_id FROM group_user WHERE user_id = ?
-					)
-				)`
-				args = append(args, userID)
+			queueID, err := strconv.Atoi(queue)
+			if err != nil || !scope.canReadQueue(queueID) {
+				c.JSON(http.StatusForbidden, gin.H{"error": "You do not have permission to access tickets in this queue"})
+				return
 			}
+			query += " AND t.queue_id = ?"
+			args = append(args, queueID)
 		}
+		scopeCond, scopeArgs := scope.filter("t")
+		query += " AND " + scopeCond
+		args = append(args, scopeArgs...)
 
 		// Apply assignee filter
 		if assignee == "me" {

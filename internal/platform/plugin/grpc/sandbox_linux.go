@@ -19,10 +19,10 @@ func buildSysProcAttr(policy plugin.ResourcePolicy) *syscall.SysProcAttr {
 		Pdeathsig: syscall.SIGKILL,
 	}
 
-	// Apply namespace isolation where available (requires Linux kernel support)
-	// This provides basic process isolation but isn't as strong as containers
-	// Skip namespace isolation in testing environments
-	if supportsNamespaces() && !isTestEnvironment() {
+	// Apply namespace isolation where available and permitted (requires Linux
+	// kernel support and privileges). This provides basic process isolation but
+	// isn't as strong as containers.
+	if supportsNamespaces() {
 		attr.Cloneflags = syscall.CLONE_NEWNS | syscall.CLONE_NEWPID
 	}
 
@@ -105,6 +105,12 @@ func supportsNamespaces() bool {
 		return false
 	}
 
+	// CLONE_NEWNS|CLONE_NEWPID without a user namespace needs CAP_SYS_ADMIN:
+	// a non-root process gets EPERM and the plugin would never start.
+	if os.Geteuid() != 0 {
+		return false
+	}
+
 	// Detect container environment where namespace creation is typically denied.
 	// Check /.dockerenv (Docker) or /run/.containerenv (Podman).
 	if _, err := os.Stat("/.dockerenv"); err == nil {
@@ -124,19 +130,6 @@ func supportsNamespaces() bool {
 	}
 
 	return true
-}
-
-// isTestEnvironment detects if we're running in a test environment.
-func isTestEnvironment() bool {
-	// Check if we're running under 'go test'
-	if os.Getenv("GO_TEST") == "1" {
-		return true
-	}
-	// Alternative detection: check if the current executable contains "test"
-	if exe, err := os.Executable(); err == nil {
-		return filepath.Base(exe) == "test" || strings.Contains(exe, ".test") || strings.Contains(exe, "_test")
-	}
-	return false
 }
 
 // applyProcessSandbox applies OS-level restrictions to the plugin command.

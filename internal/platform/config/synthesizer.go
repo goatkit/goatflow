@@ -416,9 +416,6 @@ func (s *Synthesizer) generateVariables(existing map[string]string, rotateOnly b
 	s.variables = append(s.variables, EnvVariable{
 		Key: "FEATURE_AI_SUGGESTIONS", Value: s.getOrDefault(existing, "FEATURE_AI_SUGGESTIONS", "false"), Type: "static",
 	})
-	s.variables = append(s.variables, EnvVariable{
-		Key: "FEATURE_WEBHOOKS", Value: s.getOrDefault(existing, "FEATURE_WEBHOOKS", "true"), Type: "static",
-	})
 	s.variables = append(s.variables, EnvVariable{Key: "", Value: "", Type: "blank"})
 
 	s.variables = append(s.variables, EnvVariable{

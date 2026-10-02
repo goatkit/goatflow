@@ -35,8 +35,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // bootstrapAdminLogin is the system admin account seeded by migration 000002
@@ -50,15 +50,16 @@ const bootstrapMarkerName = "admin.bootstrap.applied"
 // bootstrapAdminFromEnv applies the first-boot admin bootstrap on the server
 // startup path, right after migrations. It is a no-op unless
 // GOATFLOW_ADMIN_PASSWORD is set and the admin account is still factory
-// disabled. Safe to call with a nil db.
+// disabled. Without a database it cannot run; that is logged and the
+// bootstrap is attempted again on the next start (the marker is unset).
 func bootstrapAdminFromEnv(db *sql.DB) {
-	if db == nil {
-		return
-	}
-
 	adminPassword := strings.TrimSpace(os.Getenv("GOATFLOW_ADMIN_PASSWORD"))
 	if adminPassword == "" {
 		return // not a bootstrap deployment (or nothing configured)
+	}
+	if db == nil {
+		log.Printf("⚠️  GOATFLOW_ADMIN_PASSWORD is set but the database is unavailable; admin bootstrap skipped until the next start")
+		return
 	}
 
 	// 1. Already applied? The marker is authoritative: once the bootstrap has
@@ -92,7 +93,7 @@ func bootstrapAdminFromEnv(db *sql.DB) {
 
 	// 3. Apply. The WHERE clause repeats the guard so the check-then-act cannot
 	// race: only a still-disabled admin row is ever updated.
-	hashed, err := hashForBootstrap(adminPassword)
+	hashed, err := auth.NewPasswordHasher().HashPassword(adminPassword)
 	if err != nil {
 		log.Printf("⚠️  Admin bootstrap failed: %v", err)
 		return
@@ -172,22 +173,4 @@ func setAdminBootstrapMarker(db *sql.DB) error {
 		return fmt.Errorf("write bootstrap marker: %w", err)
 	}
 	return nil
-}
-
-// hashForBootstrap hashes the bootstrap password. Indirection keeps the
-// hashing scheme in one place and lets tests observe/skip the bcrypt call.
-func hashForBootstrap(password string) (string, error) {
-	return bcryptHash(password)
-}
-
-// bcryptHash is the concrete hashing implementation. It produces a bcrypt
-// hash ($2a$...), which both the modern auth.PasswordHasher.VerifyPassword and
-// the legacy OTRS verifyPassword path accept (they auto-detect the bcrypt
-// prefix). Splitting it out keeps hashForBootstrap trivially testable.
-func bcryptHash(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return "", fmt.Errorf("bcrypt: %w", err)
-	}
-	return string(hash), nil
 }

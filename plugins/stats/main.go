@@ -2,6 +2,20 @@
 
 // Package main implements the stats WASM plugin for GoatKit.
 // Provides ticket statistics dashboard widgets and API endpoints.
+//
+// Time handling: ticket timestamps are stored as the server's local wall
+// clock, so every window boundary (start of today, now-30d, ...) is computed
+// here from the host's time_now answer and bound as a "YYYY-MM-DD HH:MM:SS"
+// parameter. No SQL date function is used, so MySQL and PostgreSQL give the
+// same answer whatever their session time zone.
+//
+// Queue access: non-admin agents only see tickets in queues whose group they
+// hold rw on, directly (group_user) or through a role (role_user ->
+// group_role), the same rule as service.QueueAccessService. A call without an
+// identified user sees nothing.
+//
+// Errors: a failed query never renders as a number. Widgets show the
+// "unavailable" state; API routes answer {"error":"query_failed"} (HTTP 500).
 package main
 
 import (
@@ -9,13 +23,16 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 	"unsafe"
 )
+
+const pluginVersion = "2.1.0"
 
 // Manifest defines the plugin's capabilities
 var manifestJSON = `{
   "name": "stats",
-  "version": "2.0.0",
+  "version": "` + pluginVersion + `",
   "description": "Ticket statistics, reporting, and analytics",
   "author": "GoatFlow Team",
   "license": "Apache-2.0",
@@ -24,70 +41,70 @@ var manifestJSON = `{
       "method": "GET",
       "path": "/api/plugins/stats/overview",
       "handler": "overview",
-      "description": "Get ticket statistics overview (supports ?range=7d|30d|90d|all)",
+      "description": "Get ticket statistics overview (supports ?range=7d|30d|90d|365d|all)",
       "middleware": ["auth"]
     },
     {
       "method": "GET",
       "path": "/api/plugins/stats/by-status",
       "handler": "by_status",
-      "description": "Get ticket counts by status",
+      "description": "Get ticket counts by status (supports ?range=7d|30d|90d|365d|all)",
       "middleware": ["auth"]
     },
     {
       "method": "GET",
       "path": "/api/plugins/stats/by-queue",
       "handler": "by_queue",
-      "description": "Get ticket counts by queue",
+      "description": "Get ticket counts by queue (supports ?range=7d|30d|90d|365d|all)",
       "middleware": ["auth"]
     },
     {
       "method": "GET",
       "path": "/api/plugins/stats/by-priority",
       "handler": "by_priority",
-      "description": "Get ticket counts by priority",
+      "description": "Get ticket counts by priority (supports ?range=7d|30d|90d|365d|all)",
       "middleware": ["auth"]
     },
     {
       "method": "GET",
       "path": "/api/plugins/stats/by-type",
       "handler": "by_type",
-      "description": "Get ticket counts by ticket type",
+      "description": "Get ticket counts by ticket type (supports ?range=7d|30d|90d|365d|all)",
       "middleware": ["auth"]
     },
     {
       "method": "GET",
       "path": "/api/plugins/stats/by-owner",
       "handler": "by_owner",
-      "description": "Get ticket counts by owner/agent",
+      "description": "Get ticket counts by owner/agent (supports ?range=7d|30d|90d|365d|all)",
       "middleware": ["auth"]
     },
     {
       "method": "GET",
       "path": "/api/plugins/stats/recent-activity",
       "handler": "recent_activity",
-      "description": "Get recent ticket activity",
+      "description": "Get recently changed tickets (supports ?limit=1..50)",
       "middleware": ["auth"]
     },
     {
       "method": "GET",
       "path": "/api/plugins/stats/timeline",
       "handler": "timeline",
-      "description": "Get ticket creation timeline (daily counts)",
+      "description": "Get daily ticket creation counts (supports ?range=7d|30d|90d, default 30d)",
       "middleware": ["auth"]
     },
     {
       "method": "GET",
       "path": "/api/plugins/stats/sla-compliance",
       "handler": "sla_compliance",
-      "description": "SLA compliance rates by queue (supports ?range=7d|30d|90d|all)",
+      "description": "Open tickets with a running SLA per queue, and how many are past their escalation time (supports ?range=7d|30d|90d|365d|all)",
       "middleware": ["auth"]
     },
     {
       "method": "GET",
       "path": "/api/plugins/stats/time-tracking",
       "handler": "time_tracking",
-      "description": "Time tracking analytics by agent and queue (supports ?range=7d|30d|90d|all)",
+      "description": "Time tracking analytics by agent and queue (supports ?range=7d|30d|90d|365d|all)",
       "middleware": ["auth"]
     }
   ],
@@ -150,67 +167,14 @@ var manifestJSON = `{
       {
         "type": "db",
         "access": "read",
-        "scope": ["ticket", "ticket_state", "ticket_state_type", "queue", "ticket_priority", "ticket_type", "users", "group_user", "groups", "time_accounting"]
+        "scope": ["ticket", "ticket_state", "ticket_state_type", "queue", "ticket_priority", "ticket_type", "users", "user_preferences", "groups", "group_user", "role_user", "roles", "group_role", "time_accounting"]
       },
       {"type": "email"}
     ]
   },
-  "i18n": {
-    "en": {
-      "stats.title": "Statistics",
-      "stats.overview": "Overview",
-      "stats.open_tickets": "Open Tickets",
-      "stats.new_today": "New Today",
-      "stats.pending_tickets": "Pending",
-      "stats.overdue_tickets": "Overdue",
-      "stats.by_status": "By Status",
-      "stats.by_queue": "By Queue",
-      "stats.by_priority": "By Priority",
-      "stats.by_type": "By Type",
-      "stats.by_owner": "By Owner",
-      "stats.no_data": "No data available",
-      "stats.last_7_days": "Last 7 Days",
-      "stats.last_30_days": "Last 30 Days",
-      "stats.last_90_days": "Last 90 Days",
-      "stats.all_time": "All Time",
-      "stats.sla_compliance": "SLA Compliance",
-      "stats.sla_met": "Met",
-      "stats.sla_breached": "Breached",
-      "stats.time_tracking": "Time Tracking",
-      "stats.total_hours": "Total Hours",
-      "stats.weekly_report": "Weekly Report",
-      "stats.weekly_report_subject": "Weekly Statistics Report"
-    },
-    "de": {
-      "stats.title": "Statistiken",
-      "stats.overview": "Übersicht",
-      "stats.open_tickets": "Offene Tickets",
-      "stats.new_today": "Heute neu",
-      "stats.pending_tickets": "Wartend",
-      "stats.overdue_tickets": "Überfällig",
-      "stats.by_status": "Nach Status",
-      "stats.by_queue": "Nach Warteschlange",
-      "stats.by_priority": "Nach Priorität",
-      "stats.by_type": "Nach Typ",
-      "stats.by_owner": "Nach Besitzer",
-      "stats.no_data": "Keine Daten verfügbar",
-      "stats.last_7_days": "Letzte 7 Tage",
-      "stats.last_30_days": "Letzte 30 Tage",
-      "stats.last_90_days": "Letzte 90 Tage",
-      "stats.all_time": "Gesamt",
-      "stats.sla_compliance": "SLA-Einhaltung",
-      "stats.sla_met": "Eingehalten",
-      "stats.sla_breached": "Verletzt",
-      "stats.time_tracking": "Zeiterfassung",
-      "stats.total_hours": "Gesamtstunden",
-      "stats.weekly_report": "Wochenbericht",
-      "stats.weekly_report_subject": "Wöchentlicher Statistikbericht"
-    }
-  },
   "error_codes": [
     {"code": "query_failed", "message": "Database query failed", "http_status": 500},
-    {"code": "invalid_range", "message": "Invalid date range specified", "http_status": 400},
-    {"code": "no_data", "message": "No statistics data available", "http_status": 404}
+    {"code": "invalid_range", "message": "Invalid date range specified", "http_status": 400}
   ]
 }`
 
@@ -239,41 +203,41 @@ func gk_call(fnPtr, fnLen, argsPtr, argsLen uint32) uint64 {
 	var result string
 	switch fn {
 	case "overview":
-		result = handleOverview(args)
+		result = handleRoute(args, routeOverview)
 	case "by_status":
-		result = handleByStatus(args)
+		result = handleRoute(args, routeByStatus)
 	case "by_queue":
-		result = handleByQueue(args)
+		result = handleRoute(args, routeByQueue)
 	case "by_priority":
-		result = handleByPriority(args)
+		result = handleRoute(args, routeByPriority)
 	case "by_type":
-		result = handleByType(args)
+		result = handleRoute(args, routeByType)
 	case "by_owner":
-		result = handleByOwner(args)
+		result = handleRoute(args, routeByOwner)
 	case "recent_activity":
-		result = handleRecentActivity(args)
+		result = handleRoute(args, routeRecentActivity)
 	case "timeline":
-		result = handleTimeline(args)
+		result = handleRoute(args, routeTimeline)
 	case "sla_compliance":
-		result = handleSLACompliance(args)
+		result = handleRoute(args, routeSLACompliance)
 	case "time_tracking":
-		result = handleTimeTracking(args)
+		result = handleRoute(args, routeTimeTracking)
 	case "widget_overview":
-		result = handleWidgetOverview(args)
+		result = handleWidget(args, widgetOverview)
 	case "widget_by_status":
-		result = handleWidgetByStatus(args)
+		result = handleWidget(args, widgetByStatus)
 	case "widget_chart":
-		result = handleWidgetChart(args)
+		result = handleWidget(args, widgetChart)
 	case "widget_sla":
-		result = handleWidgetSLA(args)
+		result = handleWidget(args, widgetSLA)
 	case "widget_time_tracking":
-		result = handleWidgetTimeTracking(args)
+		result = handleWidget(args, widgetTimeTracking)
 	case "report_email":
-		result = handleReportEmail(args)
+		result = handleReportEmail()
 	case "__health_ping__":
 		result = handleHealthPing()
 	default:
-		result = `{"error":"unknown function: ` + fn + `"}`
+		result = jsonString(map[string]any{"error": "unknown function: " + fn, "status": 404})
 	}
 
 	ptr := gk_malloc(uint32(len(result)))
@@ -295,7 +259,10 @@ func readString(ptr, length uint32) string {
 func hostCall(fnPtr, fnLen, argsPtr, argsLen uint32) uint64
 
 func callHost(fn string, args any) ([]byte, error) {
-	argsJSON, _ := json.Marshal(args)
+	argsJSON, err := json.Marshal(args)
+	if err != nil {
+		return nil, err
+	}
 
 	fnPtr := gk_malloc(uint32(len(fn)))
 	copy(unsafe.Slice((*byte)(unsafe.Pointer(uintptr(fnPtr))), len(fn)), fn)
@@ -305,7 +272,7 @@ func callHost(fn string, args any) ([]byte, error) {
 
 	result := hostCall(fnPtr, uint32(len(fn)), argsPtr, uint32(len(argsJSON)))
 	if result == 0 {
-		return nil, fmt.Errorf("host call failed")
+		return nil, fmt.Errorf("host call %s failed", fn)
 	}
 
 	ptr := uint32(result >> 32)
@@ -314,349 +281,444 @@ func callHost(fn string, args any) ([]byte, error) {
 }
 
 func dbQuery(query string, args ...any) ([]map[string]any, error) {
-	req := map[string]any{"query": query, "args": args}
-	resp, err := callHost("db_query", req)
+	if args == nil {
+		args = []any{}
+	}
+	resp, err := callHost("db_query", map[string]any{"query": query, "args": args})
 	if err != nil {
 		return nil, err
 	}
 	var rows []map[string]any
-	json.Unmarshal(resp, &rows)
+	if err := json.Unmarshal(resp, &rows); err != nil {
+		return nil, fmt.Errorf("decode db_query result: %v", err)
+	}
 	return rows, nil
 }
 
-func handleHealthPing() string {
-	data, _ := json.Marshal(map[string]any{
-		"status":  "ok",
-		"runtime": "tinygo-wasm",
-		"version": "2.0.0",
-		"routes":  10,
-		"widgets": 5,
-		"jobs":    1,
-	})
+// queryOne runs an aggregate query that must return exactly one row.
+func queryOne(query string, args ...any) (map[string]any, error) {
+	rows, err := dbQuery(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) != 1 {
+		return nil, fmt.Errorf("aggregate query returned %d rows", len(rows))
+	}
+	return rows[0], nil
+}
+
+//go:wasmimport gk log
+func hostLog(level, msgPtr, msgLen uint32)
+
+// Host log levels (see wasm runtime hostLog).
+const (
+	levelInfo  = 1
+	levelWarn  = 2
+	levelError = 3
+)
+
+func writeLog(level uint32, message string) {
+	if message == "" {
+		return
+	}
+	ptr := gk_malloc(uint32(len(message)))
+	copy(unsafe.Slice((*byte)(unsafe.Pointer(uintptr(ptr))), len(message)), message)
+	hostLog(level, ptr, uint32(len(message)))
+}
+
+func logError(message string) {
+	writeLog(levelError, message)
+}
+
+func jsonString(v any) string {
+	data, _ := json.Marshal(v)
 	return string(data)
 }
 
-// Request args parsing
-type RequestArgs struct {
-	Query map[string]string `json:"query"`
+func handleHealthPing() string {
+	var m struct {
+		Routes  []json.RawMessage `json:"routes"`
+		Widgets []json.RawMessage `json:"widgets"`
+		Jobs    []json.RawMessage `json:"jobs"`
+	}
+	json.Unmarshal([]byte(manifestJSON), &m)
+	return jsonString(map[string]any{
+		"status":  "ok",
+		"runtime": "tinygo-wasm",
+		"version": pluginVersion,
+		"routes":  len(m.Routes),
+		"widgets": len(m.Widgets),
+		"jobs":    len(m.Jobs),
+	})
 }
 
-func parseArgs(argsJSON string) RequestArgs {
-	var args RequestArgs
-	json.Unmarshal([]byte(argsJSON), &args)
-	if args.Query == nil {
-		args.Query = make(map[string]string)
-	}
-	return args
+// --- Request context ---
+
+// callArgs are the host-supplied args: query parameters at the top level plus
+// the caller envelope (_user_id, _is_admin, _lang).
+type callArgs struct {
+	Range   any  `json:"range"`
+	Limit   any  `json:"limit"`
+	UserID  any  `json:"_user_id"`
+	IsAdmin bool `json:"_is_admin"`
 }
 
-// Date range filter - returns SQL WHERE clause fragment and whether it's active
-func getDateFilter(args RequestArgs, dateColumn string) (string, bool) {
-	rangeParam := args.Query["range"]
-	if rangeParam == "" || rangeParam == "all" {
-		return "", false
-	}
+func parseCallArgs(argsJSON string) callArgs {
+	var a callArgs
+	json.Unmarshal([]byte(argsJSON), &a)
+	return a
+}
 
-	var days int
-	switch rangeParam {
-	case "7d":
-		days = 7
-	case "30d":
-		days = 30
-	case "90d":
-		days = 90
-	case "365d":
-		days = 365
+// scope is whose tickets a call may count.
+type scope struct {
+	admin  bool
+	userID int
+}
+
+func (a callArgs) scope() scope {
+	return scope{admin: a.IsAdmin, userID: toInt(a.UserID)}
+}
+
+// agentQueueFilter restricts t.queue_id to valid queues of valid groups the
+// user holds rw on directly or through a valid role. Both ? are the user id.
+const agentQueueFilter = `
+		  AND t.queue_id IN (
+			SELECT aq.id FROM queue aq
+			JOIN ` + "`groups`" + ` ag ON ag.id = aq.group_id
+			WHERE aq.valid_id = 1 AND ag.valid_id = 1
+			  AND aq.group_id IN (
+				SELECT gu.group_id FROM group_user gu
+				WHERE gu.user_id = ? AND gu.permission_key = 'rw'
+				UNION
+				SELECT gr.group_id FROM role_user ru
+				JOIN roles r ON r.id = ru.role_id
+				JOIN group_role gr ON gr.role_id = ru.role_id
+				WHERE ru.user_id = ? AND r.valid_id = 1
+				  AND gr.permission_key = 'rw' AND gr.permission_value = 1
+			  )
+		  )`
+
+// queueFilter returns the WHERE fragment (starting with AND, on alias t) and
+// its args. Admins see every queue; an unidentified caller sees nothing.
+func (s scope) queueFilter() (string, []any) {
+	if s.admin {
+		return "", nil
+	}
+	if s.userID <= 0 {
+		return " AND 1=0", nil
+	}
+	return agentQueueFilter, []any{s.userID, s.userID}
+}
+
+// --- Time ---
+
+const sqlTimestamp = "2006-01-02 15:04:05"
+
+// serverNow returns the host's current time in the server's local zone.
+func serverNow() (time.Time, error) {
+	resp, err := callHost("time_now", map[string]any{})
+	if err != nil {
+		return time.Time{}, err
+	}
+	var r struct {
+		Now string `json:"now"`
+	}
+	if err := json.Unmarshal(resp, &r); err != nil {
+		return time.Time{}, err
+	}
+	return time.Parse(time.RFC3339Nano, r.Now)
+}
+
+// wall formats t as the wall-clock literal the ticket tables store.
+func wall(t time.Time) string {
+	return t.Format(sqlTimestamp)
+}
+
+func startOfDay(t time.Time) time.Time {
+	y, m, d := t.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, t.Location())
+}
+
+// dateRange is a "last N days" window; days == 0 means all time.
+type dateRange struct {
+	name string
+	days int
+}
+
+type requestError struct {
+	code    string
+	status  int
+	message string
+}
+
+func (e *requestError) Error() string { return e.message }
+
+func parseRange(v any, allowed map[string]int, def string) (dateRange, error) {
+	s, _ := v.(string)
+	if s == "" {
+		s = def
+	}
+	days, ok := allowed[s]
+	if !ok {
+		return dateRange{}, &requestError{code: "invalid_range", status: 400, message: "invalid range " + strconv.Quote(s)}
+	}
+	return dateRange{name: s, days: days}, nil
+}
+
+var statRanges = map[string]int{"all": 0, "7d": 7, "30d": 30, "90d": 90, "365d": 365}
+
+// filter returns " AND col >= ?" and its arg, or nothing for all time.
+func (r dateRange) filter(col string, now time.Time) (string, []any) {
+	if r.days == 0 {
+		return "", nil
+	}
+	return " AND " + col + " >= ?", []any{wall(now.AddDate(0, 0, -r.days))}
+}
+
+// --- Conversions ---
+
+// toInt converts various types to int (mirrors internal/convert.ToInt)
+// WASM plugins can't import internal packages, so we replicate the logic here.
+func toInt(v any) int {
+	switch n := v.(type) {
+	case float64:
+		return int(n)
+	case int:
+		return n
+	case int64:
+		return int(n)
+	case string:
+		// MariaDB returns SUM/aggregates as strings
+		if i, err := strconv.Atoi(n); err == nil {
+			return i
+		}
+		if f, err := strconv.ParseFloat(n, 64); err == nil {
+			return int(f)
+		}
+		return 0
 	default:
-		return "", false
+		return 0
 	}
-	// Use DATE_SUB for MySQL/MariaDB compatibility
-	return fmt.Sprintf("%s >= DATE_SUB(NOW(), INTERVAL %d DAY)", dateColumn, days), true
 }
 
-// getQueueFilter returns a SQL WHERE fragment restricting to queues the user can access.
-// Expects standard host args: _user_id (float64/int) and _is_admin (bool).
-func getQueueFilter(argsJSON string) string {
-	// Debug: include args length in filter comment
-	// Note: filter comment will appear in generated SQL as comment
-	// _ = argsJSON // use argsJSON to avoid unused variable warning if debug removed
-
-	var widgetArgs struct {
-		UserID  interface{} `json:"_user_id"`
-		IsAdmin bool        `json:"_is_admin"`
+// toFloat converts numeric values, including DECIMAL sums returned as strings.
+func toFloat(v any) float64 {
+	switch n := v.(type) {
+	case float64:
+		return n
+	case int:
+		return float64(n)
+	case int64:
+		return float64(n)
+	case string:
+		f, _ := strconv.ParseFloat(n, 64)
+		return f
+	default:
+		return 0
 	}
-	_ = json.Unmarshal([]byte(argsJSON), &widgetArgs)
+}
 
-	userID := toInt(widgetArgs.UserID)
-	if widgetArgs.IsAdmin || userID <= 0 {
+func toStr(v any) string {
+	if v == nil {
 		return ""
 	}
-
-	// Resolve user's groups via group_user, then queues owned by those groups.
-	rows, err := dbQuery(`
-		SELECT DISTINCT q.id
-		FROM queue q
-		JOIN ` + "`groups`" + ` g ON q.group_id = g.id
-		JOIN group_user gu ON gu.group_id = g.id
-		WHERE gu.user_id = ?
-		  AND g.valid_id = 1
-		  AND q.valid_id = 1
-		  AND (gu.permission_key = 'rw' OR gu.permission_key = 'ro')
-	`, userID)
-	if err != nil || len(rows) == 0 {
-		return " AND 1=0" // no accessible queues
+	if s, ok := v.(string); ok {
+		return s
 	}
-
-	ids := make([]string, 0, len(rows))
-	for _, r := range rows {
-		if id := toInt(r["id"]); id > 0 {
-			ids = append(ids, fmt.Sprintf("%d", id))
-		}
-	}
-	if len(ids) == 0 {
-		return " AND 1=0"
-	}
-	return " AND t.queue_id IN (" + strings.Join(ids, ",") + ")"
+	return fmt.Sprintf("%v", v)
 }
-// API Handlers
 
-func handleOverview(argsJSON string) string {
-	args := parseArgs(argsJSON)
-	dateFilter, hasDate := getDateFilter(args, "t.create_time")
+var htmlEscaper = strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;", `"`, "&#34;", "'", "&#39;")
 
-	whereClause := ""
-	if hasDate {
-		whereClause = "WHERE " + dateFilter
+func esc(v any) string {
+	return htmlEscaper.Replace(toStr(v))
+}
+
+func personName(v any) string {
+	return strings.TrimSpace(toStr(v))
+}
+
+// --- Route plumbing ---
+
+type routeFn func(a callArgs, now time.Time) (map[string]any, error)
+
+func handleRoute(argsJSON string, fn routeFn) string {
+	now, err := serverNow()
+	if err != nil {
+		logError("stats: server time unavailable: " + err.Error())
+		return jsonString(map[string]any{"error": "query_failed", "status": 500})
 	}
+	result, err := fn(parseCallArgs(argsJSON), now)
+	if err != nil {
+		if re, ok := err.(*requestError); ok {
+			return jsonString(map[string]any{"error": re.code, "message": re.message, "status": re.status})
+		}
+		logError("stats: " + err.Error())
+		return jsonString(map[string]any{"error": "query_failed", "status": 500})
+	}
+	return jsonString(result)
+}
 
-	query := fmt.Sprintf(`
-		SELECT 
-			COUNT(*) as total,
-			SUM(CASE WHEN tst.name IN ('open', 'new') THEN 1 ELSE 0 END) as open_count,
-			SUM(CASE WHEN tst.name IN ('pending auto', 'pending reminder') THEN 1 ELSE 0 END) as pending_count,
-			SUM(CASE WHEN tst.name IN ('closed', 'merged', 'removed') THEN 1 ELSE 0 END) as closed_count
-		FROM ticket t
+// --- Statistics (shared by routes and the weekly report) ---
+
+const stateJoins = `
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		JOIN ticket_state_type tst ON ts.type_id = tst.id
-		%s
-	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
+		JOIN ticket_state_type tst ON ts.type_id = tst.id`
 
-	rows, err := dbQuery(query)
-	if err != nil || len(rows) == 0 {
-		return `{"total":0,"open":0,"pending":0,"closed":0}`
+func statOverview(sc scope, r dateRange, now time.Time) (map[string]any, error) {
+	dateSQL, dateArgs := r.filter("t.create_time", now)
+	qf, qArgs := sc.queueFilter()
+	row, err := queryOne(`
+		SELECT
+			COUNT(*) AS total,
+			COALESCE(SUM(CASE WHEN tst.name IN ('new', 'open') THEN 1 ELSE 0 END), 0) AS open_count,
+			COALESCE(SUM(CASE WHEN tst.name IN ('pending reminder', 'pending auto') THEN 1 ELSE 0 END), 0) AS pending_count,
+			COALESCE(SUM(CASE WHEN tst.name IN ('closed', 'merged', 'removed') THEN 1 ELSE 0 END), 0) AS closed_count
+		FROM ticket t`+stateJoins+`
+		WHERE 1=1`+dateSQL+qf, //nolint:gk-sql-sprintf // fixed fragments; values bound via ?
+		append(dateArgs, qArgs...)...)
+	if err != nil {
+		return nil, fmt.Errorf("overview: %v", err)
 	}
-
-	row := rows[0]
-	result := map[string]any{
+	return map[string]any{
 		"total":   toInt(row["total"]),
 		"open":    toInt(row["open_count"]),
 		"pending": toInt(row["pending_count"]),
 		"closed":  toInt(row["closed_count"]),
-		"range":   args.Query["range"],
-	}
-	data, _ := json.Marshal(result)
-	return string(data)
+		"range":   r.name,
+	}, nil
 }
 
-func handleByStatus(argsJSON string) string {
-	args := parseArgs(argsJSON)
-	dateFilter, hasDate := getDateFilter(args, "t.create_time")
-
-	whereClause := ""
-	if hasDate {
-		whereClause = "WHERE " + dateFilter
+// statGrouped runs "SELECT <label>, COUNT(*) ... GROUP BY ..." and returns
+// [{name, count}] under key.
+func statGrouped(sc scope, r dateRange, now time.Time, key, query string, suffix string) (map[string]any, error) {
+	dateSQL, dateArgs := r.filter("t.create_time", now)
+	qf, qArgs := sc.queueFilter()
+	rows, err := dbQuery(query+dateSQL+qf+suffix, append(dateArgs, qArgs...)...) //nolint:gk-sql-sprintf // fixed fragments; values bound via ?
+	if err != nil {
+		return nil, fmt.Errorf("%s: %v", key, err)
 	}
+	items := make([]map[string]any, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, map[string]any{"name": row["name"], "count": toInt(row["count"])})
+	}
+	return map[string]any{key: items, "range": r.name}, nil
+}
 
-	query := fmt.Sprintf(`
-		SELECT ts.name as status, COUNT(*) as count
+func statByStatus(sc scope, r dateRange, now time.Time) (map[string]any, error) {
+	return statGrouped(sc, r, now, "statuses", `
+		SELECT ts.name AS name, COUNT(*) AS count
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		%s
+		WHERE 1=1`, `
 		GROUP BY ts.name
-		ORDER BY count DESC
-	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-
-	rows, err := dbQuery(query)
-	if err != nil {
-		return `{"statuses":[]}`
-	}
-
-	statuses := make([]map[string]any, 0, len(rows))
-	for _, row := range rows {
-		statuses = append(statuses, map[string]any{
-			"name":  row["status"],
-			"count": toInt(row["count"]),
-		})
-	}
-	data, _ := json.Marshal(map[string]any{"statuses": statuses})
-	return string(data)
+		ORDER BY count DESC, ts.name`)
 }
 
-func handleByQueue(argsJSON string) string {
-	args := parseArgs(argsJSON)
-	dateFilter, hasDate := getDateFilter(args, "t.create_time")
-
-	whereClause := ""
-	if hasDate {
-		whereClause = "WHERE " + dateFilter
-	}
-
-	query := fmt.Sprintf(`
-		SELECT q.name as queue, COUNT(*) as count
+func statByQueue(sc scope, r dateRange, now time.Time) (map[string]any, error) {
+	return statGrouped(sc, r, now, "queues", `
+		SELECT q.name AS name, COUNT(*) AS count
 		FROM ticket t
 		JOIN queue q ON t.queue_id = q.id
-		%s
+		WHERE 1=1`, `
 		GROUP BY q.name
-		ORDER BY count DESC
-		LIMIT 10
-	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-
-	rows, err := dbQuery(query)
-	if err != nil {
-		return `{"queues":[]}`
-	}
-
-	queues := make([]map[string]any, 0, len(rows))
-	for _, row := range rows {
-		queues = append(queues, map[string]any{
-			"name":  row["queue"],
-			"count": toInt(row["count"]),
-		})
-	}
-	data, _ := json.Marshal(map[string]any{"queues": queues})
-	return string(data)
+		ORDER BY count DESC, q.name
+		LIMIT 10`)
 }
 
-func handleByPriority(argsJSON string) string {
-	args := parseArgs(argsJSON)
-	dateFilter, hasDate := getDateFilter(args, "t.create_time")
-
-	whereClause := ""
-	if hasDate {
-		whereClause = "WHERE " + dateFilter
+func routeOverview(a callArgs, now time.Time) (map[string]any, error) {
+	r, err := parseRange(a.Range, statRanges, "all")
+	if err != nil {
+		return nil, err
 	}
+	return statOverview(a.scope(), r, now)
+}
 
-	query := fmt.Sprintf(`
-		SELECT tp.name as priority, COUNT(*) as count
+func routeByStatus(a callArgs, now time.Time) (map[string]any, error) {
+	r, err := parseRange(a.Range, statRanges, "all")
+	if err != nil {
+		return nil, err
+	}
+	return statByStatus(a.scope(), r, now)
+}
+
+func routeByQueue(a callArgs, now time.Time) (map[string]any, error) {
+	r, err := parseRange(a.Range, statRanges, "all")
+	if err != nil {
+		return nil, err
+	}
+	return statByQueue(a.scope(), r, now)
+}
+
+func routeByPriority(a callArgs, now time.Time) (map[string]any, error) {
+	r, err := parseRange(a.Range, statRanges, "all")
+	if err != nil {
+		return nil, err
+	}
+	return statGrouped(a.scope(), r, now, "priorities", `
+		SELECT tp.name AS name, COUNT(*) AS count
 		FROM ticket t
 		JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
-		%s
-		GROUP BY tp.name
-		ORDER BY tp.id
-	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-
-	rows, err := dbQuery(query)
-	if err != nil {
-		return `{"priorities":[]}`
-	}
-
-	priorities := make([]map[string]any, 0, len(rows))
-	for _, row := range rows {
-		priorities = append(priorities, map[string]any{
-			"name":  row["priority"],
-			"count": toInt(row["count"]),
-		})
-	}
-	data, _ := json.Marshal(map[string]any{"priorities": priorities})
-	return string(data)
+		WHERE 1=1`, `
+		GROUP BY tp.id, tp.name
+		ORDER BY tp.id`)
 }
 
-func handleByType(argsJSON string) string {
-	args := parseArgs(argsJSON)
-	dateFilter, hasDate := getDateFilter(args, "t.create_time")
-
-	whereClause := ""
-	if hasDate {
-		whereClause = "WHERE " + dateFilter
+func routeByType(a callArgs, now time.Time) (map[string]any, error) {
+	r, err := parseRange(a.Range, statRanges, "all")
+	if err != nil {
+		return nil, err
 	}
-
-	query := fmt.Sprintf(`
-		SELECT COALESCE(tt.name, 'Unclassified') as type, COUNT(*) as count
+	return statGrouped(a.scope(), r, now, "types", `
+		SELECT COALESCE(tt.name, 'Unclassified') AS name, COUNT(*) AS count
 		FROM ticket t
 		LEFT JOIN ticket_type tt ON t.type_id = tt.id
-		%s
+		WHERE 1=1`, `
 		GROUP BY tt.name
-		ORDER BY count DESC
-	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-
-	rows, err := dbQuery(query)
-	if err != nil {
-		return `{"types":[]}`
-	}
-
-	types := make([]map[string]any, 0, len(rows))
-	for _, row := range rows {
-		types = append(types, map[string]any{
-			"name":  row["type"],
-			"count": toInt(row["count"]),
-		})
-	}
-	data, _ := json.Marshal(map[string]any{"types": types})
-	return string(data)
+		ORDER BY count DESC`)
 }
 
-func handleByOwner(argsJSON string) string {
-	args := parseArgs(argsJSON)
-	dateFilter, hasDate := getDateFilter(args, "t.create_time")
-
-	whereClause := "WHERE t.user_id > 1" // Exclude system user
-	if hasDate {
-		whereClause += " AND " + dateFilter
+func routeByOwner(a callArgs, now time.Time) (map[string]any, error) {
+	r, err := parseRange(a.Range, statRanges, "all")
+	if err != nil {
+		return nil, err
 	}
-
-	query := fmt.Sprintf(`
-		SELECT CONCAT(u.first_name, ' ', u.last_name) as owner, COUNT(*) as count
+	res, err := statGrouped(a.scope(), r, now, "owners", `
+		SELECT CONCAT(u.first_name, ' ', u.last_name) AS name, COUNT(*) AS count
 		FROM ticket t
 		JOIN users u ON t.user_id = u.id
-		%s
+		WHERE t.user_id > 1`, `
 		GROUP BY u.id, u.first_name, u.last_name
 		ORDER BY count DESC
-		LIMIT 10
-	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-
-	rows, err := dbQuery(query)
+		LIMIT 10`)
 	if err != nil {
-		return `{"owners":[]}`
+		return nil, err
 	}
-
-	owners := make([]map[string]any, 0, len(rows))
-	for _, row := range rows {
-		name := row["owner"]
-		if name == nil || name == " " {
-			name = "Unassigned"
-		}
-		owners = append(owners, map[string]any{
-			"name":  name,
-			"count": toInt(row["count"]),
-		})
+	for _, o := range res["owners"].([]map[string]any) {
+		o["name"] = personName(o["name"])
 	}
-	data, _ := json.Marshal(map[string]any{"owners": owners})
-	return string(data)
+	return res, nil
 }
 
-func handleRecentActivity(argsJSON string) string {
-	args := parseArgs(argsJSON)
+func routeRecentActivity(a callArgs, now time.Time) (map[string]any, error) {
 	limit := 10
-	if l := args.Query["limit"]; l != "" {
-		fmt.Sscanf(l, "%d", &limit)
-		if limit > 50 {
-			limit = 50
+	if a.Limit != nil {
+		limit = toInt(a.Limit)
+		if limit < 1 || limit > 50 {
+			return nil, &requestError{code: "invalid_limit", status: 400, message: "limit must be between 1 and 50"}
 		}
 	}
-
-	query := `
-		SELECT t.tn as ticket_number, t.title, ts.name as status, t.change_time as changed_at
+	qf, qArgs := a.scope().queueFilter()
+	rows, err := dbQuery(`
+		SELECT t.tn AS ticket_number, t.title, ts.name AS status, t.change_time AS changed_at
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
+		WHERE 1=1`+qf+`
 		ORDER BY t.change_time DESC
-		LIMIT ?
-	`
-
-	rows, err := dbQuery(query, limit)
+		LIMIT ?`, append(qArgs, limit)...) //nolint:gk-sql-sprintf // fixed fragments; values bound via ?
 	if err != nil {
-		return `{"activity":[]}`
+		return nil, fmt.Errorf("recent activity: %v", err)
 	}
-
 	activity := make([]map[string]any, 0, len(rows))
 	for _, row := range rows {
 		activity = append(activity, map[string]any{
@@ -666,146 +728,272 @@ func handleRecentActivity(argsJSON string) string {
 			"changed_at":    row["changed_at"],
 		})
 	}
-	data, _ := json.Marshal(map[string]any{"activity": activity})
-	return string(data)
+	return map[string]any{"activity": activity}, nil
 }
 
-func handleTimeline(argsJSON string) string {
-	args := parseArgs(argsJSON)
-	days := 30 // Default to 30 days
-	if rangeParam := args.Query["range"]; rangeParam != "" {
-		switch rangeParam {
-		case "7d":
-			days = 7
-		case "30d":
-			days = 30
-		case "90d":
-			days = 90
-		}
+// dailyCounts returns ticket creation counts for the last `days` local days
+// (oldest first, today last). Each day is a bound [start, next start) pair,
+// so no SQL date function is involved.
+func dailyCounts(sc scope, days int, now time.Time) ([]time.Time, []int, error) {
+	today := startOfDay(now)
+	starts := make([]time.Time, days)
+	cols := make([]string, days)
+	args := make([]any, 0, days*2+2)
+	for i := range days {
+		y, m, d := today.Date()
+		start := time.Date(y, m, d-(days-1-i), 0, 0, 0, 0, today.Location())
+		next := time.Date(y, m, d-(days-1-i)+1, 0, 0, 0, 0, today.Location())
+		starts[i] = start
+		cols[i] = fmt.Sprintf("COALESCE(SUM(CASE WHEN t.create_time >= ? AND t.create_time < ? THEN 1 ELSE 0 END), 0) AS d%d", i)
+		args = append(args, wall(start), wall(next))
 	}
-
-	query := fmt.Sprintf(`
-		SELECT DATE(t.create_time) as date, COUNT(*) as count
+	qf, qArgs := sc.queueFilter()
+	args = append(args, wall(starts[0]))
+	args = append(args, qArgs...)
+	row, err := queryOne(`
+		SELECT `+strings.Join(cols, ",\n\t\t\t")+`
 		FROM ticket t
-		WHERE t.create_time >= DATE_SUB(NOW(), INTERVAL %d DAY)
-		GROUP BY DATE(t.create_time)
-		ORDER BY date
-	`, days)
-
-	rows, err := dbQuery(query)
+		WHERE t.create_time >= ?`+qf, args...) //nolint:gk-sql-sprintf // generated column list; values bound via ?
 	if err != nil {
-		return `{"timeline":[]}`
+		return nil, nil, fmt.Errorf("daily counts: %v", err)
 	}
+	counts := make([]int, days)
+	for i := range counts {
+		counts[i] = toInt(row[fmt.Sprintf("d%d", i)])
+	}
+	return starts, counts, nil
+}
 
-	timeline := make([]map[string]any, 0, len(rows))
+func routeTimeline(a callArgs, now time.Time) (map[string]any, error) {
+	r, err := parseRange(a.Range, map[string]int{"7d": 7, "30d": 30, "90d": 90}, "30d")
+	if err != nil {
+		return nil, err
+	}
+	starts, counts, err := dailyCounts(a.scope(), r.days, now)
+	if err != nil {
+		return nil, err
+	}
+	timeline := make([]map[string]any, len(starts))
+	for i := range starts {
+		timeline[i] = map[string]any{"date": starts[i].Format("2006-01-02"), "count": counts[i]}
+	}
+	return map[string]any{"timeline": timeline, "days": r.days}, nil
+}
+
+// statSLA counts, per queue, open tickets with a running SLA
+// (escalation_time > 0) and how many of them are past it. Closing a ticket
+// clears its escalation times, so closed tickets carry no SLA outcome and are
+// not counted.
+func statSLA(sc scope, r dateRange, now time.Time, limit int) ([]map[string]any, error) {
+	dateSQL, dateArgs := r.filter("t.create_time", now)
+	qf, qArgs := sc.queueFilter()
+	args := append([]any{now.Unix()}, dateArgs...)
+	args = append(args, qArgs...)
+	suffix := `
+		GROUP BY q.id, q.name
+		ORDER BY breached DESC, q.name`
+	if limit > 0 {
+		suffix += fmt.Sprintf("\n\t\tLIMIT %d", limit)
+	}
+	rows, err := dbQuery(`
+		SELECT q.id AS queue_id, q.name AS queue,
+			COUNT(*) AS total,
+			COALESCE(SUM(CASE WHEN t.escalation_time < ? THEN 1 ELSE 0 END), 0) AS breached
+		FROM ticket t
+		JOIN queue q ON t.queue_id = q.id`+stateJoins+`
+		WHERE tst.name IN ('new', 'open', 'pending reminder', 'pending auto')
+		  AND t.escalation_time > 0`+dateSQL+qf+suffix, args...) //nolint:gk-sql-sprintf // fixed fragments; values bound via ?
+	if err != nil {
+		return nil, fmt.Errorf("sla: %v", err)
+	}
+	queues := make([]map[string]any, 0, len(rows))
 	for _, row := range rows {
-		timeline = append(timeline, map[string]any{
-			"date":  row["date"],
-			"count": toInt(row["count"]),
+		total := toInt(row["total"])
+		breached := toInt(row["breached"])
+		met := total - breached
+		queues = append(queues, map[string]any{
+			"queue_id": toInt(row["queue_id"]),
+			"queue":    row["queue"],
+			"total":    total,
+			"met":      met,
+			"breached": breached,
+			"rate":     met * 100 / total,
 		})
 	}
-	data, _ := json.Marshal(map[string]any{"timeline": timeline, "days": days})
-	return string(data)
+	return queues, nil
 }
 
-// Widget Handlers
+func routeSLACompliance(a callArgs, now time.Time) (map[string]any, error) {
+	r, err := parseRange(a.Range, statRanges, "all")
+	if err != nil {
+		return nil, err
+	}
+	queues, err := statSLA(a.scope(), r, now, 0)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"queues": queues, "range": r.name}, nil
+}
 
-func handleWidgetOverview(argsJSON string) string {
-	queueFilter := getQueueFilter(argsJSON)
+func hours(minutes float64) string {
+	return fmt.Sprintf("%.1f", minutes/60)
+}
 
-	// Open tickets (state type 'open' or 'new')
-	openRows, err := dbQuery(fmt.Sprintf(`
-		SELECT COUNT(*) as cnt
-		FROM ticket t
-		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		JOIN ticket_state_type tst ON ts.type_id = tst.id
-		WHERE tst.name IN ('open', 'new')%s
-	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-	open := 0
-	if err == nil && len(openRows) > 0 {
-		open = toInt(openRows[0]["cnt"])
+func statTimeTracking(sc scope, r dateRange, now time.Time) (map[string]any, error) {
+	dateSQL, dateArgs := r.filter("ta.create_time", now)
+	qf, qArgs := sc.queueFilter()
+	args := append(dateArgs, qArgs...)
+
+	agentRows, err := dbQuery(`
+		SELECT CONCAT(u.first_name, ' ', u.last_name) AS agent,
+			SUM(ta.time_unit) AS total_minutes,
+			COUNT(DISTINCT ta.ticket_id) AS ticket_count
+		FROM time_accounting ta
+		JOIN ticket t ON ta.ticket_id = t.id
+		JOIN users u ON ta.create_by = u.id
+		WHERE 1=1`+dateSQL+qf+`
+		GROUP BY u.id, u.first_name, u.last_name
+		ORDER BY total_minutes DESC
+		LIMIT 10`, args...) //nolint:gk-sql-sprintf // fixed fragments; values bound via ?
+	if err != nil {
+		return nil, fmt.Errorf("time by agent: %v", err)
+	}
+	agents := make([]map[string]any, 0, len(agentRows))
+	for _, row := range agentRows {
+		minutes := toFloat(row["total_minutes"])
+		agents = append(agents, map[string]any{
+			"agent":        personName(row["agent"]),
+			"minutes":      minutes,
+			"hours":        hours(minutes),
+			"ticket_count": toInt(row["ticket_count"]),
+		})
 	}
 
-	// New today (created today)
-	newTodayRows, err := dbQuery(fmt.Sprintf(`
-		SELECT COUNT(*) as cnt
-		FROM ticket t
-		WHERE DATE(t.create_time) = CURDATE()%s
-	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-	newToday := 0
-	if err == nil && len(newTodayRows) > 0 {
-		newToday = toInt(newTodayRows[0]["cnt"])
+	queueRows, err := dbQuery(`
+		SELECT q.name AS queue,
+			SUM(ta.time_unit) AS total_minutes,
+			COUNT(DISTINCT ta.ticket_id) AS ticket_count
+		FROM time_accounting ta
+		JOIN ticket t ON ta.ticket_id = t.id
+		JOIN queue q ON t.queue_id = q.id
+		WHERE 1=1`+dateSQL+qf+`
+		GROUP BY q.id, q.name
+		ORDER BY total_minutes DESC
+		LIMIT 10`, args...) //nolint:gk-sql-sprintf // fixed fragments; values bound via ?
+	if err != nil {
+		return nil, fmt.Errorf("time by queue: %v", err)
+	}
+	queues := make([]map[string]any, 0, len(queueRows))
+	for _, row := range queueRows {
+		minutes := toFloat(row["total_minutes"])
+		queues = append(queues, map[string]any{
+			"queue":        row["queue"],
+			"minutes":      minutes,
+			"hours":        hours(minutes),
+			"ticket_count": toInt(row["ticket_count"]),
+		})
 	}
 
-	// Pending tickets
-	pendingRows, err := dbQuery(fmt.Sprintf(`
-		SELECT COUNT(*) as cnt
-		FROM ticket t
-		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		JOIN ticket_state_type tst ON ts.type_id = tst.id
-		WHERE tst.name IN ('pending auto', 'pending reminder')%s
-	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-	pending := 0
-	if err == nil && len(pendingRows) > 0 {
-		pending = toInt(pendingRows[0]["cnt"])
+	total, err := queryOne(`
+		SELECT COALESCE(SUM(ta.time_unit), 0) AS total
+		FROM time_accounting ta
+		JOIN ticket t ON ta.ticket_id = t.id
+		WHERE 1=1`+dateSQL+qf, args...) //nolint:gk-sql-sprintf // fixed fragments; values bound via ?
+	if err != nil {
+		return nil, fmt.Errorf("time total: %v", err)
+	}
+	totalMinutes := toFloat(total["total"])
+
+	return map[string]any{
+		"by_agent":      agents,
+		"by_queue":      queues,
+		"total_minutes": totalMinutes,
+		"total_hours":   hours(totalMinutes),
+		"range":         r.name,
+	}, nil
+}
+
+func routeTimeTracking(a callArgs, now time.Time) (map[string]any, error) {
+	r, err := parseRange(a.Range, statRanges, "all")
+	if err != nil {
+		return nil, err
+	}
+	return statTimeTracking(a.scope(), r, now)
+}
+
+// --- Widgets ---
+
+type widgetFn func(sc scope, now time.Time) (string, error)
+
+// handleWidget renders a widget; a failed query renders the unavailable
+// state instead of numbers.
+func handleWidget(argsJSON string, fn widgetFn) string {
+	sc := parseCallArgs(argsJSON).scope()
+	now, err := serverNow()
+	var html string
+	if err == nil {
+		html, err = fn(sc, now)
+	}
+	if err != nil {
+		logError("stats widget: " + err.Error())
+		html = unavailableHTML()
+	}
+	return jsonString(map[string]string{"html": html})
+}
+
+func unavailableHTML() string {
+	msg := "This widget is currently unavailable. Please try again later."
+	if resp, err := callHost("translate", map[string]any{"key": "dashboard.widget_unavailable"}); err == nil {
+		var r struct {
+			Value string `json:"value"`
+		}
+		if json.Unmarshal(resp, &r) == nil && r.Value != "" && r.Value != "dashboard.widget_unavailable" {
+			msg = r.Value
+		}
+	}
+	return `<div class="stats-unavailable text-center py-4" role="alert" style="color: var(--gk-text-muted);">` + esc(msg) + `</div>`
+}
+
+func widgetOverview(sc scope, now time.Time) (string, error) {
+	today := startOfDay(now)
+	y, m, d := today.Date()
+	tomorrow := time.Date(y, m, d+1, 0, 0, 0, 0, today.Location())
+	qf, qArgs := sc.queueFilter()
+	args := append([]any{wall(today), wall(tomorrow), now.Unix()}, qArgs...)
+
+	row, err := queryOne(`
+		SELECT
+			COUNT(*) AS total,
+			COALESCE(SUM(CASE WHEN tst.name IN ('new', 'open') THEN 1 ELSE 0 END), 0) AS open_count,
+			COALESCE(SUM(CASE WHEN tst.name IN ('closed', 'merged', 'removed') THEN 1 ELSE 0 END), 0) AS closed_count,
+			COALESCE(SUM(CASE WHEN t.create_time >= ? AND t.create_time < ? THEN 1 ELSE 0 END), 0) AS new_today,
+			COALESCE(SUM(CASE WHEN tst.name IN ('pending reminder', 'pending auto') THEN 1 ELSE 0 END), 0) AS pending_count,
+			COALESCE(SUM(CASE WHEN tst.name IN ('new', 'open', 'pending reminder', 'pending auto')
+				AND t.escalation_time > 0 AND t.escalation_time < ? THEN 1 ELSE 0 END), 0) AS overdue
+		FROM ticket t`+stateJoins+`
+		WHERE 1=1`+qf, args...) //nolint:gk-sql-sprintf // fixed fragments; values bound via ?
+	if err != nil {
+		return "", fmt.Errorf("overview: %v", err)
 	}
 
-	// Overdue: open/pending tickets past SLA escalation time
-	// escalation_time is an epoch int (0 = no escalation set)
-	overdueRows, err := dbQuery(fmt.Sprintf(`
-		SELECT COUNT(*) as cnt
-		FROM ticket t
-		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		JOIN ticket_state_type tst ON ts.type_id = tst.id
-		WHERE tst.name IN ('open', 'new', 'pending auto', 'pending reminder')
-		  AND t.escalation_time > 0
-		  AND t.escalation_time < UNIX_TIMESTAMP()%s
-	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-	overdue := 0
-	if err == nil && len(overdueRows) > 0 {
-		overdue = toInt(overdueRows[0]["cnt"])
-	}
-	// If query failed (e.g. column missing), overdue stays 0
-
-	// Total tickets
-	totalQuery := "SELECT COUNT(*) as cnt FROM ticket t WHERE 1=1" + queueFilter
-	totalRows, err := dbQuery(totalQuery)
-	total := 0
-	if err == nil && len(totalRows) > 0 {
-		total = toInt(totalRows[0]["cnt"])
-	}
-
-	// Closed tickets
-	closedRows, err := dbQuery(fmt.Sprintf(`
-		SELECT COUNT(*) as cnt
-		FROM ticket t
-		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		JOIN ticket_state_type tst ON ts.type_id = tst.id
-		WHERE tst.name IN ('closed', 'merged', 'removed')%s
-	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-	closed := 0
-	if err == nil && len(closedRows) > 0 {
-		closed = toInt(closedRows[0]["cnt"])
-	}
-
-	html := fmt.Sprintf(`
+	return fmt.Sprintf(`
 <style>.gk-stat-link{text-decoration:none;color:inherit;display:block;border-radius:var(--gk-radius,8px);transition:transform .15s,box-shadow .15s}.gk-stat-link:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15)}</style>
 <div class="stats-overview grid grid-cols-3 gap-4 mb-4">
   <a href="/tickets?status=all" class="gk-stat-link">
     <div class="gk-stat-card text-center">
-      <div class="gk-stat-value">%d</div>
+      <div class="gk-stat-value" data-stat="total">%d</div>
       <div class="gk-stat-label">Total</div>
     </div>
   </a>
   <a href="/tickets?status=open" class="gk-stat-link">
     <div class="gk-stat-card success text-center">
-      <div class="gk-stat-value">%d</div>
+      <div class="gk-stat-value" data-stat="open">%d</div>
       <div class="gk-stat-label">Open</div>
     </div>
   </a>
   <a href="/tickets?status=closed" class="gk-stat-link">
     <div class="gk-stat-card text-center">
-      <div class="gk-stat-value">%d</div>
+      <div class="gk-stat-value" data-stat="closed">%d</div>
       <div class="gk-stat-label">Closed</div>
     </div>
   </a>
@@ -813,98 +1001,74 @@ func handleWidgetOverview(argsJSON string) string {
 <div class="stats-overview grid grid-cols-3 gap-4">
   <a href="/tickets?status=open&sort=create_time&order=desc" class="gk-stat-link">
     <div class="gk-stat-card success text-center">
-      <div class="gk-stat-value">%d</div>
+      <div class="gk-stat-value" data-stat="new_today">%d</div>
       <div class="gk-stat-label">New Today</div>
     </div>
   </a>
   <a href="/tickets?status=pending" class="gk-stat-link">
     <div class="gk-stat-card warning text-center">
-      <div class="gk-stat-value">%d</div>
+      <div class="gk-stat-value" data-stat="pending">%d</div>
       <div class="gk-stat-label">Pending</div>
     </div>
   </a>
   <a href="/tickets?status=overdue" class="gk-stat-link">
     <div class="gk-stat-card error text-center">
-      <div class="gk-stat-value">%d</div>
+      <div class="gk-stat-value" data-stat="overdue">%d</div>
       <div class="gk-stat-label">Overdue</div>
     </div>
   </a>
-</div>`, total, open, closed, newToday, pending, overdue)
-
-	result := map[string]string{"html": html}
-	data, _ := json.Marshal(result)
-	return string(data)
+</div>`, toInt(row["total"]), toInt(row["open_count"]), toInt(row["closed_count"]),
+		toInt(row["new_today"]), toInt(row["pending_count"]), toInt(row["overdue"])), nil
 }
 
-func handleWidgetByStatus(argsJSON string) string {
-	queueFilter := getQueueFilter(argsJSON)
-
-	rows, err := dbQuery(fmt.Sprintf(`
-		SELECT ts.id as state_id, ts.name as status, COUNT(*) as count
+func widgetByStatus(sc scope, now time.Time) (string, error) {
+	qf, qArgs := sc.queueFilter()
+	rows, err := dbQuery(`
+		SELECT ts.id AS state_id, ts.name AS status, COUNT(*) AS count
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		WHERE 1=1%s
+		WHERE 1=1`+qf+`
 		GROUP BY ts.id, ts.name
-		ORDER BY count DESC
-		LIMIT 5
-	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-
-	var items string
-	if err == nil {
-		for i, row := range rows {
-			border := `border-bottom: 1px solid var(--gk-border-default);`
-			if i == len(rows)-1 {
-				border = ""
-			}
-			stateID := toInt(row["state_id"])
-			items += fmt.Sprintf(`
+		ORDER BY count DESC, ts.name
+		LIMIT 5`, qArgs...) //nolint:gk-sql-sprintf // fixed fragments; values bound via ?
+	if err != nil {
+		return "", fmt.Errorf("by status: %v", err)
+	}
+	if len(rows) == 0 {
+		return `<div class="stats-by-status"><div class="text-center py-4" style="color: var(--gk-text-muted);">No data</div></div>`, nil
+	}
+	var b strings.Builder
+	b.WriteString(`<div class="stats-by-status">`)
+	for i, row := range rows {
+		border := `border-bottom: 1px solid var(--gk-border-default);`
+		if i == len(rows)-1 {
+			border = ""
+		}
+		fmt.Fprintf(&b, `
   <a href="/tickets?status=%d" style="text-decoration:none;color:inherit;display:block;">
     <div class="flex justify-between items-center py-2" style="%s">
       <span class="capitalize" style="color: var(--gk-text-primary);">%s</span>
       <span class="gk-badge gk-badge-muted">%d</span>
     </div>
-  </a>`, stateID, border, row["status"], toInt(row["count"]))
-		}
+  </a>`, toInt(row["state_id"]), border, esc(row["status"]), toInt(row["count"]))
 	}
-
-	if items == "" {
-		items = `<div class="text-center py-4" style="color: var(--gk-text-muted);">No data</div>`
-	}
-
-	html := fmt.Sprintf(`<div class="stats-by-status">%s</div>`, items)
-	result := map[string]string{"html": html}
-	data, _ := json.Marshal(result)
-	return string(data)
+	b.WriteString(`</div>`)
+	return b.String(), nil
 }
 
-func handleWidgetChart(argsJSON string) string {
-	queueFilter := getQueueFilter(argsJSON)
-
-	// Get timeline data for chart
-	rows, err := dbQuery(fmt.Sprintf(`
-		SELECT DATE(t.create_time) as date, COUNT(*) as count
-		FROM ticket t
-		WHERE t.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)%s
-		GROUP BY DATE(t.create_time)
-		ORDER BY date
-	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-
-	var labels, dataPoints []string
-	if err == nil {
-		for _, row := range rows {
-			date := fmt.Sprintf("%v", row["date"])
-			if len(date) >= 10 {
-				labels = append(labels, `"`+date[5:10]+`"`) // MM-DD format
-			}
-			dataPoints = append(dataPoints, fmt.Sprintf("%d", toInt(row["count"])))
-		}
+func widgetChart(sc scope, now time.Time) (string, error) {
+	starts, counts, err := dailyCounts(sc, 30, now)
+	if err != nil {
+		return "", err
+	}
+	labels := make([]string, len(starts))
+	points := make([]string, len(counts))
+	for i := range starts {
+		labels[i] = `"` + starts[i].Format("01-02") + `"`
+		points[i] = strconv.Itoa(counts[i])
 	}
 
-	labelsJS := "[" + strings.Join(labels, ",") + "]"
-	dataJS := "[" + strings.Join(dataPoints, ",") + "]"
-
-	// Chart.js via CDN - renders a line chart
-	html := fmt.Sprintf(`
+	return fmt.Sprintf(`
 <div class="stats-chart">
   <canvas id="statsChart" height="200"></canvas>
   <script src="/static/vendor/chart.min.js"></script>
@@ -914,10 +1078,10 @@ func handleWidgetChart(argsJSON string) string {
       new Chart(ctx, {
         type: 'line',
         data: {
-          labels: %s,
+          labels: [%s],
           datasets: [{
             label: 'Tickets Created',
-            data: %s,
+            data: [%s],
             borderColor: getComputedStyle(document.documentElement).getPropertyValue('--gk-primary').trim() || '#00E5FF',
             backgroundColor: 'rgba(0, 229, 255, 0.1)',
             fill: true,
@@ -938,257 +1102,189 @@ func handleWidgetChart(argsJSON string) string {
       });
     })();
   </script>
-</div>`, labelsJS, dataJS)
-
-	result := map[string]string{"html": html}
-	data, _ := json.Marshal(result)
-	return string(data)
+</div>`, strings.Join(labels, ","), strings.Join(points, ",")), nil
 }
 
-// toInt converts various types to int (mirrors internal/convert.ToInt)
-// WASM plugins can't import internal packages, so we replicate the logic here.
-func toInt(v any) int {
-	switch n := v.(type) {
-	case float64:
-		return int(n)
-	case int:
-		return n
-	case int64:
-		return int(n)
-	case string:
-		// MariaDB returns SUM/aggregates as strings
-		if i, err := strconv.Atoi(n); err == nil {
-			return i
-		}
-		return 0
-	default:
-		return 0
-	}
-}
-
-// --- SLA Compliance ---
-
-func handleSLACompliance(argsJSON string) string {
-	args := parseArgs(argsJSON)
-	dateFilter, hasDate := getDateFilter(args, "t.create_time")
-
-	whereClause := ""
-	if hasDate {
-		whereClause = "AND " + dateFilter
-	}
-
-	// SLA compliance: tickets with escalation_time set vs those that breached.
-	// escalation_time > 0 means SLA is configured; breached if escalation_time < close time or still open past escalation.
-	query := fmt.Sprintf(`
-		SELECT q.name as queue,
-			COUNT(*) as total,
-			SUM(CASE
-				WHEN t.escalation_time > 0 AND (
-					tst.name IN ('closed', 'merged', 'removed')
-					AND UNIX_TIMESTAMP(t.change_time) <= t.escalation_time
-				) THEN 1
-				WHEN t.escalation_time = 0 THEN 1
-				ELSE 0
-			END) as met,
-			SUM(CASE
-				WHEN t.escalation_time > 0 AND (
-					(tst.name IN ('closed', 'merged', 'removed') AND UNIX_TIMESTAMP(t.change_time) > t.escalation_time)
-					OR (tst.name NOT IN ('closed', 'merged', 'removed') AND t.escalation_time < UNIX_TIMESTAMP())
-				) THEN 1
-				ELSE 0
-			END) as breached
-		FROM ticket t
-		JOIN queue q ON t.queue_id = q.id
-		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		JOIN ticket_state_type tst ON ts.type_id = tst.id
-		WHERE 1=1 %s
-		GROUP BY q.id, q.name
-		ORDER BY queue
-	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-
-	rows, err := dbQuery(query)
+func widgetSLA(sc scope, now time.Time) (string, error) {
+	queues, err := statSLA(sc, dateRange{name: "all"}, now, 5)
 	if err != nil {
-		return `{"queues":[]}`
+		return "", err
 	}
-
-	queues := make([]map[string]any, 0, len(rows))
-	for _, row := range rows {
-		total := toInt(row["total"])
-		met := toInt(row["met"])
-		rate := 0.0
-		if total > 0 {
-			rate = float64(met) / float64(total) * 100
+	if len(queues) == 0 {
+		return `<div class="stats-sla"><div class="text-center py-4" style="color: var(--gk-text-muted);">No SLA data</div></div>`, nil
+	}
+	var b strings.Builder
+	b.WriteString(`<div class="stats-sla">`)
+	for i, q := range queues {
+		rate := q["rate"].(int)
+		color := "var(--gk-success)"
+		if rate < 80 {
+			color = "var(--gk-danger)"
+		} else if rate < 95 {
+			color = "var(--gk-warning)"
 		}
-		queues = append(queues, map[string]any{
-			"queue":    row["queue"],
-			"total":    total,
-			"met":      met,
-			"breached": toInt(row["breached"]),
-			"rate":     int(rate),
-		})
+		border := `border-bottom: 1px solid var(--gk-border-default);`
+		if i == len(queues)-1 {
+			border = ""
+		}
+		fmt.Fprintf(&b, `
+  <a href="/tickets?queue=%d" style="text-decoration:none;color:inherit;display:block;">
+    <div class="flex justify-between items-center py-2" style="%s">
+      <span style="color: var(--gk-text-primary);">%s</span>
+      <span class="gk-badge" style="background:%s;color:#fff;" title="%d/%d">%d%%</span>
+    </div>
+  </a>`, q["queue_id"].(int), border, esc(q["queue"]), color, q["met"].(int), q["total"].(int), rate)
 	}
-	data, _ := json.Marshal(map[string]any{"queues": queues})
-	return string(data)
+	b.WriteString(`</div>`)
+	return b.String(), nil
 }
 
-// --- Time Tracking ---
+func widgetTimeTracking(sc scope, now time.Time) (string, error) {
+	qf, qArgs := sc.queueFilter()
+	args := append([]any{wall(now.AddDate(0, 0, -30))}, qArgs...)
 
-func handleTimeTracking(argsJSON string) string {
-	args := parseArgs(argsJSON)
-	dateFilter, hasDate := getDateFilter(args, "ta.create_time")
-
-	whereClause := ""
-	if hasDate {
-		whereClause = "WHERE " + dateFilter
-	}
-
-	// By agent
-	agentQuery := fmt.Sprintf(`
-		SELECT CONCAT(u.first_name, ' ', u.last_name) as agent,
-			SUM(ta.time_unit) as total_minutes,
-			COUNT(DISTINCT ta.ticket_id) as ticket_count
+	agentRows, err := dbQuery(`
+		SELECT u.id AS user_id, CONCAT(u.first_name, ' ', u.last_name) AS agent,
+			SUM(ta.time_unit) AS total_minutes
 		FROM time_accounting ta
 		JOIN users u ON ta.create_by = u.id
-		%s
+		JOIN ticket t ON ta.ticket_id = t.id
+		WHERE ta.create_time >= ?`+qf+`
 		GROUP BY u.id, u.first_name, u.last_name
 		ORDER BY total_minutes DESC
-		LIMIT 10
-	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-
-	agentRows, err := dbQuery(agentQuery)
-	agents := make([]map[string]any, 0)
-	if err == nil {
-		for _, row := range agentRows {
-			name := row["agent"]
-			if name == nil || name == " " {
-				name = "Unknown"
-			}
-			minutes := toInt(row["total_minutes"])
-			agents = append(agents, map[string]any{
-				"agent":        name,
-				"minutes":      minutes,
-				"hours":        fmt.Sprintf("%.1f", float64(minutes)/60),
-				"ticket_count": toInt(row["ticket_count"]),
-			})
-		}
+		LIMIT 5`, args...) //nolint:gk-sql-sprintf // fixed fragments; values bound via ?
+	if err != nil {
+		return "", fmt.Errorf("time by agent: %v", err)
 	}
-
-	// By queue
-	queueQuery := fmt.Sprintf(`
-		SELECT q.name as queue,
-			SUM(ta.time_unit) as total_minutes,
-			COUNT(DISTINCT ta.ticket_id) as ticket_count
+	total, err := queryOne(`
+		SELECT COALESCE(SUM(ta.time_unit), 0) AS total
 		FROM time_accounting ta
 		JOIN ticket t ON ta.ticket_id = t.id
-		JOIN queue q ON t.queue_id = q.id
-		%s
-		GROUP BY q.id, q.name
-		ORDER BY total_minutes DESC
-		LIMIT 10
-	`, whereClause) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
+		WHERE ta.create_time >= ?`+qf, args...) //nolint:gk-sql-sprintf // fixed fragments; values bound via ?
+	if err != nil {
+		return "", fmt.Errorf("time total: %v", err)
+	}
 
-	queueRows, err := dbQuery(queueQuery)
-	queues := make([]map[string]any, 0)
-	if err == nil {
-		for _, row := range queueRows {
-			minutes := toInt(row["total_minutes"])
-			queues = append(queues, map[string]any{
-				"queue":        row["queue"],
-				"minutes":      minutes,
-				"hours":        fmt.Sprintf("%.1f", float64(minutes)/60),
-				"ticket_count": toInt(row["ticket_count"]),
-			})
+	var b strings.Builder
+	fmt.Fprintf(&b, `
+<div class="stats-time-tracking">
+  <div class="gk-stat-card text-center mb-4">
+    <div class="gk-stat-value">%s</div>
+    <div class="gk-stat-label">Hours (30d)</div>
+  </div>`, hours(toFloat(total["total"])))
+
+	if len(agentRows) == 0 {
+		b.WriteString(`<div class="text-center py-4" style="color: var(--gk-text-muted);">No time data</div>`)
+	}
+	for i, row := range agentRows {
+		border := `border-bottom: 1px solid var(--gk-border-default);`
+		if i == len(agentRows)-1 {
+			border = ""
 		}
+		fmt.Fprintf(&b, `
+  <a href="/tickets?owner=%d" style="text-decoration:none;color:inherit;display:block;">
+    <div class="flex justify-between items-center py-2" style="%s">
+      <span style="color: var(--gk-text-primary);">%s</span>
+      <span class="gk-badge gk-badge-muted">%sh</span>
+    </div>
+  </a>`, toInt(row["user_id"]), border, esc(personName(row["agent"])), hours(toFloat(row["total_minutes"])))
 	}
-
-	// Total
-	totalQuery := "SELECT COALESCE(SUM(time_unit), 0) as total FROM time_accounting"
-	if whereClause != "" {
-		totalQuery = "SELECT COALESCE(SUM(ta.time_unit), 0) as total FROM time_accounting ta " + whereClause
-	}
-	totalRows, _ := dbQuery(totalQuery)
-	totalMinutes := 0
-	if len(totalRows) > 0 {
-		totalMinutes = toInt(totalRows[0]["total"])
-	}
-
-	data, _ := json.Marshal(map[string]any{
-		"by_agent":      agents,
-		"by_queue":      queues,
-		"total_minutes": totalMinutes,
-		"total_hours":   fmt.Sprintf("%.1f", float64(totalMinutes)/60),
-	})
-	return string(data)
+	b.WriteString(`</div>`)
+	return b.String(), nil
 }
 
 // --- Scheduled Report Email ---
 
-func handleReportEmail(argsJSON string) string {
-	// Gather statistics for the report
-	overview := handleOverview(`{"query":{"range":"7d"}}`)
-	var overviewData map[string]any
-	json.Unmarshal([]byte(overview), &overviewData)
+// handleReportEmail mails last week's statistics to valid admin-group
+// members. Any failed query aborts the run: a report with invented zeros is
+// worse than no report.
+func handleReportEmail() string {
+	fail := func(err error) string {
+		logError("stats weekly report: " + err.Error())
+		return jsonString(map[string]any{"error": "query_failed", "status": 500})
+	}
+	now, err := serverNow()
+	if err != nil {
+		return fail(err)
+	}
+	all := scope{admin: true}
+	week := dateRange{name: "7d", days: 7}
 
-	byStatus := handleByStatus(`{"query":{"range":"7d"}}`)
-	var statusData map[string]any
-	json.Unmarshal([]byte(byStatus), &statusData)
-
-	byQueue := handleByQueue(`{"query":{"range":"7d"}}`)
-	var queueData map[string]any
-	json.Unmarshal([]byte(byQueue), &queueData)
-
-	sla := handleSLACompliance(`{"query":{"range":"7d"}}`)
-	var slaData map[string]any
-	json.Unmarshal([]byte(sla), &slaData)
-
-	timeTrack := handleTimeTracking(`{"query":{"range":"7d"}}`)
-	var timeData map[string]any
-	json.Unmarshal([]byte(timeTrack), &timeData)
-
-	// Build HTML email body
-	html := buildReportHTML(overviewData, statusData, queueData, slaData, timeData)
-
-	// Get admin email addresses for report delivery
-	adminRows, err := dbQuery(`
-		SELECT u.email FROM users u
-		JOIN group_user gu ON u.id = gu.user_id
-		JOIN groups g ON gu.group_id = g.id
-		WHERE g.name = 'admin' AND u.valid_id = 1 AND gu.permission_key = 'rw'
-		ORDER BY u.id LIMIT 10
-	`)
-	if err != nil || len(adminRows) == 0 {
-		callHost("log", map[string]any{
-			"level":   "warn",
-			"message": "No admin recipients found for weekly report",
-		})
-		return `{"status":"skipped","reason":"no recipients"}`
+	overview, err := statOverview(all, week, now)
+	if err != nil {
+		return fail(err)
+	}
+	byQueue, err := statByQueue(all, week, now)
+	if err != nil {
+		return fail(err)
+	}
+	sla, err := statSLA(all, week, now, 0)
+	if err != nil {
+		return fail(err)
+	}
+	timeData, err := statTimeTracking(all, week, now)
+	if err != nil {
+		return fail(err)
 	}
 
-	sent := 0
+	html := buildReportHTML(overview, byQueue["queues"].([]map[string]any), sla, timeData)
+
+	// Agent email addresses live in user_preferences (UserEmail); admins are
+	// rw members of the admin group, directly or through a role.
+	adminRows, err := dbQuery(`
+		SELECT DISTINCT u.id AS id, up.preferences_value AS email
+		FROM users u
+		JOIN user_preferences up ON up.user_id = u.id AND up.preferences_key = 'UserEmail'
+		WHERE u.valid_id = 1 AND u.id IN (
+			SELECT gu.user_id FROM group_user gu
+			JOIN ` + "`groups`" + ` g ON g.id = gu.group_id
+			WHERE g.name = 'admin' AND g.valid_id = 1 AND gu.permission_key = 'rw'
+			UNION
+			SELECT ru.user_id FROM role_user ru
+			JOIN roles r ON r.id = ru.role_id
+			JOIN group_role gr ON gr.role_id = ru.role_id
+			JOIN ` + "`groups`" + ` g ON g.id = gr.group_id
+			WHERE g.name = 'admin' AND g.valid_id = 1 AND r.valid_id = 1
+			  AND gr.permission_key = 'rw' AND gr.permission_value = 1
+		)
+		ORDER BY u.id`)
+	if err != nil {
+		return fail(err)
+	}
+
+	sent, failed := 0, 0
 	for _, row := range adminRows {
-		email, _ := row["email"].(string)
+		email := toStr(row["email"])
 		if email == "" {
 			continue
 		}
-		callHost("send_email", map[string]any{
+		if _, err := callHost("send_email", map[string]any{
 			"to":      email,
 			"subject": "GoatFlow Weekly Statistics Report",
 			"body":    html,
 			"html":    true,
-		})
+		}); err != nil {
+			failed++
+			continue
+		}
 		sent++
 	}
 
-	callHost("log", map[string]any{
-		"level":   "info",
-		"message": fmt.Sprintf("Weekly report sent to %d recipients", sent),
-	})
-
-	data, _ := json.Marshal(map[string]any{"status": "sent", "recipients": sent})
-	return string(data)
+	if sent == 0 && failed == 0 {
+		writeLog(levelWarn, "stats weekly report: no admin recipients with an email address")
+		return jsonString(map[string]any{"status": "skipped", "reason": "no recipients"})
+	}
+	if failed > 0 {
+		logError(fmt.Sprintf("stats weekly report: sending failed for %d of %d recipients", failed, sent+failed))
+	}
+	if sent == 0 {
+		return jsonString(map[string]any{"error": "send_failed", "status": 500})
+	}
+	writeLog(levelInfo, fmt.Sprintf("stats weekly report sent to %d recipients", sent))
+	return jsonString(map[string]any{"status": "sent", "recipients": sent, "failed": failed})
 }
 
-func buildReportHTML(overview, status, queue, sla, timeData map[string]any) string {
+func buildReportHTML(overview map[string]any, queues, sla []map[string]any, timeData map[string]any) string {
 	var b strings.Builder
 
 	b.WriteString(`<!DOCTYPE html><html><head><style>
@@ -1208,62 +1304,44 @@ th { color: #666; font-weight: 600; }
 .footer { padding: 16px 24px; text-align: center; color: #999; font-size: 11px; }
 </style></head><body><div class="container">`)
 
-	b.WriteString(`<div class="header"><h1>Weekly Statistics Report</h1><p style="margin:8px 0 0;opacity:0.8;font-size:13px;">Last 7 days</p></div>`)
+	b.WriteString(`<div class="header"><h1>Weekly Statistics Report</h1><p style="margin:8px 0 0;opacity:0.8;font-size:13px;">Tickets created in the last 7 days</p></div>`)
 
-	// Overview section
-	total := toInt(overview["total"])
-	open := toInt(overview["open"])
-	pending := toInt(overview["pending"])
-	closed := toInt(overview["closed"])
-	b.WriteString(fmt.Sprintf(`<div class="section"><h2>Overview</h2><div class="stat-grid">
+	fmt.Fprintf(&b, `<div class="section"><h2>Overview</h2><div class="stat-grid">
 <div class="stat"><div class="stat-value">%d</div><div class="stat-label">Total</div></div>
 <div class="stat"><div class="stat-value">%d</div><div class="stat-label">Open</div></div>
 <div class="stat"><div class="stat-value">%d</div><div class="stat-label">Pending</div></div>
 <div class="stat"><div class="stat-value">%d</div><div class="stat-label">Closed</div></div>
-</div></div>`, total, open, pending, closed))
+</div></div>`, overview["total"].(int), overview["open"].(int), overview["pending"].(int), overview["closed"].(int))
 
-	// Top queues
-	if queues, ok := queue["queues"].([]any); ok && len(queues) > 0 {
+	if len(queues) > 0 {
 		b.WriteString(`<div class="section"><h2>Top Queues</h2><table><tr><th>Queue</th><th>Tickets</th></tr>`)
 		for i, q := range queues {
 			if i >= 5 {
 				break
 			}
-			if qm, ok := q.(map[string]any); ok {
-				b.WriteString(fmt.Sprintf(`<tr><td>%v</td><td>%d</td></tr>`, qm["name"], toInt(qm["count"])))
-			}
+			fmt.Fprintf(&b, `<tr><td>%s</td><td>%d</td></tr>`, esc(q["name"]), q["count"].(int))
 		}
 		b.WriteString(`</table></div>`)
 	}
 
-	// SLA compliance
-	if slaQueues, ok := sla["queues"].([]any); ok && len(slaQueues) > 0 {
-		b.WriteString(`<div class="section"><h2>SLA Compliance</h2><table><tr><th>Queue</th><th>Met</th><th>Breached</th><th>Rate</th></tr>`)
-		for _, q := range slaQueues {
-			if qm, ok := q.(map[string]any); ok {
-				b.WriteString(fmt.Sprintf(`<tr><td>%v</td><td>%d</td><td>%d</td><td>%d%%</td></tr>`,
-					qm["queue"], toInt(qm["met"]), toInt(qm["breached"]), toInt(qm["rate"])))
-			}
+	if len(sla) > 0 {
+		b.WriteString(`<div class="section"><h2>Open Tickets Within SLA</h2><table><tr><th>Queue</th><th>Within SLA</th><th>Breached</th><th>Rate</th></tr>`)
+		for _, q := range sla {
+			fmt.Fprintf(&b, `<tr><td>%s</td><td>%d</td><td>%d</td><td>%d%%</td></tr>`,
+				esc(q["queue"]), q["met"].(int), q["breached"].(int), q["rate"].(int))
 		}
 		b.WriteString(`</table></div>`)
 	}
 
-	// Time tracking
-	totalHours := "0.0"
-	if h, ok := timeData["total_hours"].(string); ok {
-		totalHours = h
-	}
-	b.WriteString(fmt.Sprintf(`<div class="section"><h2>Time Tracking</h2><p>Total hours logged: <strong>%s</strong></p>`, totalHours))
-	if agents, ok := timeData["by_agent"].([]any); ok && len(agents) > 0 {
+	fmt.Fprintf(&b, `<div class="section"><h2>Time Tracking</h2><p>Total hours logged: <strong>%s</strong></p>`, timeData["total_hours"].(string))
+	if agents := timeData["by_agent"].([]map[string]any); len(agents) > 0 {
 		b.WriteString(`<table><tr><th>Agent</th><th>Hours</th><th>Tickets</th></tr>`)
 		for i, a := range agents {
 			if i >= 5 {
 				break
 			}
-			if am, ok := a.(map[string]any); ok {
-				b.WriteString(fmt.Sprintf(`<tr><td>%v</td><td>%v</td><td>%d</td></tr>`,
-					am["agent"], am["hours"], toInt(am["ticket_count"])))
-			}
+			fmt.Fprintf(&b, `<tr><td>%s</td><td>%s</td><td>%d</td></tr>`,
+				esc(a["agent"]), a["hours"].(string), a["ticket_count"].(int))
 		}
 		b.WriteString(`</table>`)
 	}
@@ -1272,140 +1350,6 @@ th { color: #666; font-weight: 600; }
 	b.WriteString(`<div class="footer">Generated by GoatFlow Statistics Plugin</div></div></body></html>`)
 
 	return b.String()
-}
-func handleWidgetSLA(argsJSON string) string {
-	queueFilter := getQueueFilter(argsJSON)
-
-	rows, err := dbQuery(fmt.Sprintf(`
-		SELECT q.id as queue_id, q.name as queue,
-			COUNT(*) as total,
-			SUM(CASE
-				WHEN t.escalation_time > 0 AND (
-					tst.name IN ('closed', 'merged', 'removed')
-					AND UNIX_TIMESTAMP(t.change_time) <= t.escalation_time
-				) THEN 1
-				WHEN t.escalation_time = 0 THEN 1
-				ELSE 0
-			END) as met,
-			SUM(CASE
-				WHEN t.escalation_time > 0 AND (
-					(tst.name IN ('closed', 'merged', 'removed') AND UNIX_TIMESTAMP(t.change_time) > t.escalation_time)
-					OR (tst.name NOT IN ('closed', 'merged', 'removed') AND t.escalation_time < UNIX_TIMESTAMP())
-				) THEN 1
-				ELSE 0
-			END) as breached
-		FROM ticket t
-		JOIN queue q ON t.queue_id = q.id
-		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		JOIN ticket_state_type tst ON ts.type_id = tst.id
-		WHERE t.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)%s
-		GROUP BY q.id, q.name
-		ORDER BY queue
-		LIMIT 5
-	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-
-	var items string
-	if err == nil {
-		for i, row := range rows {
-			total := toInt(row["total"])
-			met := toInt(row["met"])
-			rate := 0
-			if total > 0 {
-				rate = met * 100 / total
-			}
-			color := "var(--gk-success)"
-			if rate < 80 {
-				color = "var(--gk-danger)"
-			} else if rate < 95 {
-				color = "var(--gk-warning)"
-			}
-			border := `border-bottom: 1px solid var(--gk-border-default);`
-			if i == len(rows)-1 {
-				border = ""
-			}
-			queueID := toInt(row["queue_id"])
-			items += fmt.Sprintf(`
-  <a href="/tickets?queue=%d" style="text-decoration:none;color:inherit;display:block;">
-    <div class="flex justify-between items-center py-2" style="%s">
-      <span style="color: var(--gk-text-primary);">%s</span>
-      <span class="gk-badge" style="background:%s;color:#fff;">%d%%</span>
-    </div>
-  </a>`, queueID, border, row["queue"], color, rate)
-		}
-	}
-
-	if items == "" {
-		items = `<div class="text-center py-4" style="color: var(--gk-text-muted);">No SLA data</div>`
-	}
-
-	html := fmt.Sprintf(`<div class="stats-sla">%s</div>`, items)
-	result := map[string]string{"html": html}
-	data, _ := json.Marshal(result)
-	return string(data)
-}
-
-func handleWidgetTimeTracking(argsJSON string) string {
-	queueFilter := getQueueFilter(argsJSON)
-
-	agentRows, err := dbQuery(fmt.Sprintf(`
-		SELECT u.id as user_id, CONCAT(u.first_name, ' ', u.last_name) as agent,
-			SUM(ta.time_unit) as total_minutes
-		FROM time_accounting ta
-		JOIN users u ON ta.create_by = u.id
-		JOIN ticket t ON ta.ticket_id = t.id
-		WHERE ta.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)%s
-		GROUP BY u.id, u.first_name, u.last_name
-		ORDER BY total_minutes DESC
-		LIMIT 5
-	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-
-	// Total
-	totalRows, _ := dbQuery(fmt.Sprintf(`
-		SELECT COALESCE(SUM(ta.time_unit), 0) as total
-		FROM time_accounting ta
-		JOIN ticket t ON ta.ticket_id = t.id
-		WHERE ta.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)%s
-	`, queueFilter)) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-	totalMin := 0
-	if len(totalRows) > 0 {
-		totalMin = toInt(totalRows[0]["total"])
-	}
-
-	html := fmt.Sprintf(`
-<div class="stats-time-tracking">
-  <div class="gk-stat-card text-center mb-4">
-    <div class="gk-stat-value">%.1f</div>
-    <div class="gk-stat-label">Hours (30d)</div>
-  </div>`, float64(totalMin)/60)
-
-	if err == nil && len(agentRows) > 0 {
-		for i, row := range agentRows {
-			name := row["agent"]
-			if name == nil || name == " " {
-				name = "Unknown"
-			}
-			minutes := toInt(row["total_minutes"])
-			userID := toInt(row["user_id"])
-			border := `border-bottom: 1px solid var(--gk-border-default);`
-			if i == len(agentRows)-1 {
-				border = ""
-			}
-			html += fmt.Sprintf(`
-  <a href="/tickets?owner=%d" style="text-decoration:none;color:inherit;display:block;">
-    <div class="flex justify-between items-center py-2" style="%s">
-      <span style="color: var(--gk-text-primary);">%s</span>
-      <span class="gk-badge gk-badge-muted">%.1fh</span>
-    </div>
-  </a>`, userID, border, name, float64(minutes)/60)
-		}
-	} else {
-		html += `<div class="text-center py-4" style="color: var(--gk-text-muted);">No time data</div>`
-	}
-
-	html += `</div>`
-	result := map[string]string{"html": html}
-	data, _ := json.Marshal(result)
-	return string(data)
 }
 
 func main() {}

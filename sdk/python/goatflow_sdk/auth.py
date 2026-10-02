@@ -1,203 +1,88 @@
-"""Authentication classes for the GoatFlow SDK."""
+"""Credentials for the GoatFlow SDK.
+
+GoatFlow accepts two kinds, both sent as ``Authorization: Bearer <token>``:
+API tokens (``gf_...``) and JWT access tokens from ``POST /api/v1/auth/login``.
+"""
 
 import asyncio
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any, Callable, Awaitable, Union
+from datetime import datetime, timedelta, timezone
+from typing import Awaitable, Callable, Dict, Optional, Tuple
 
 from .exceptions import AuthenticationError
 
+#: Called with the refresh token when the access token is about to expire;
+#: returns ``(access_token, refresh_token, expires_at)``. GoatFlow has no
+#: refresh endpoint, so a typical implementation logs in again.
+RefreshFunction = Callable[
+    [Optional[str]], Awaitable[Tuple[str, Optional[str], Optional[datetime]]]
+]
+
 
 class Authenticator(ABC):
-    """Base class for authentication methods."""
-    
+    """Supplies the headers that authenticate a request."""
+
     @abstractmethod
-    def get_auth_headers(self) -> Dict[str, str]:
-        """Get authentication headers for requests."""
-        pass
-    
-    @abstractmethod
-    def is_expired(self) -> bool:
-        """Check if the authentication is expired."""
-        pass
-    
-    @abstractmethod
-    async def refresh(self) -> None:
-        """Refresh the authentication if possible."""
-        pass
-    
-    @property
-    @abstractmethod
-    def auth_type(self) -> str:
-        """Get the authentication type."""
-        pass
+    async def headers(self) -> Dict[str, str]:
+        """Headers to add to a request, refreshing credentials first if needed."""
+
+
+class NoAuth(Authenticator):
+    """No credentials (only login and /health work without them)."""
+
+    async def headers(self) -> Dict[str, str]:
+        return {}
 
 
 class APIKeyAuth(Authenticator):
-    """API key authentication."""
-    
-    def __init__(self, api_key: str, header_name: str = "X-API-Key") -> None:
+    """A GoatFlow API token (``gf_...``)."""
+
+    def __init__(self, api_key: str) -> None:
         self.api_key = api_key
-        self.header_name = header_name
-    
-    def get_auth_headers(self) -> Dict[str, str]:
-        """Get API key headers."""
-        return {self.header_name: self.api_key}
-    
-    def is_expired(self) -> bool:
-        """API keys don't expire."""
-        return False
-    
-    async def refresh(self) -> None:
-        """API keys don't need refreshing."""
-        pass
-    
-    @property
-    def auth_type(self) -> str:
-        return "api-key"
+
+    async def headers(self) -> Dict[str, str]:
+        return {"Authorization": f"Bearer {self.api_key}"}
 
 
 class JWTAuth(Authenticator):
-    """JWT token authentication with automatic refresh."""
-    
+    """A JWT access token.
+
+    When ``expires_at`` is less than a minute ahead, ``refresh_function`` is
+    awaited before the request; without one an expired token raises
+    :class:`AuthenticationError`.
+    """
+
     def __init__(
         self,
         token: str,
         refresh_token: Optional[str] = None,
         expires_at: Optional[datetime] = None,
-        refresh_function: Optional[
-            Callable[[str], Awaitable[Dict[str, Any]]]
-        ] = None,
+        refresh_function: Optional[RefreshFunction] = None,
     ) -> None:
         self.token = token
         self.refresh_token = refresh_token
         self.expires_at = expires_at
         self.refresh_function = refresh_function
-        self._refresh_lock = asyncio.Lock()
-    
-    def get_auth_headers(self) -> Dict[str, str]:
-        """Get JWT authorization headers."""
+        self._lock = asyncio.Lock()
+
+    def _expired(self) -> bool:
+        if self.expires_at is None:
+            return False
+        expires_at = self.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        return expires_at - timedelta(minutes=1) <= datetime.now(timezone.utc)
+
+    async def headers(self) -> Dict[str, str]:
+        if self._expired():
+            async with self._lock:
+                if self._expired():
+                    if self.refresh_function is None:
+                        raise AuthenticationError(
+                            f"Access token expired at {self.expires_at} and no refresh_function is configured"
+                        )
+                    token, refresh_token, expires_at = await self.refresh_function(self.refresh_token)
+                    self.token = token
+                    self.refresh_token = refresh_token or self.refresh_token
+                    self.expires_at = expires_at
         return {"Authorization": f"Bearer {self.token}"}
-    
-    def is_expired(self) -> bool:
-        """Check if the JWT token is expired."""
-        if not self.expires_at:
-            return False
-        
-        # Add 1 minute buffer
-        buffer_time = datetime.now(timezone.utc).timestamp() + 60
-        return self.expires_at.timestamp() <= buffer_time
-    
-    async def refresh(self) -> None:
-        """Refresh the JWT token."""
-        if not self.refresh_function or not self.refresh_token:
-            raise AuthenticationError("No refresh function or refresh token available")
-        
-        async with self._refresh_lock:
-            # Check again in case another coroutine already refreshed
-            if not self.is_expired():
-                return
-            
-            try:
-                result = await self.refresh_function(self.refresh_token)
-                self.token = result["access_token"]
-                self.refresh_token = result.get("refresh_token", self.refresh_token)
-                
-                if "expires_at" in result:
-                    if isinstance(result["expires_at"], str):
-                        self.expires_at = datetime.fromisoformat(
-                            result["expires_at"].replace("Z", "+00:00")
-                        )
-                    else:
-                        self.expires_at = result["expires_at"]
-                        
-            except Exception as e:
-                raise AuthenticationError(f"Failed to refresh token: {e}") from e
-    
-    @property
-    def auth_type(self) -> str:
-        return "jwt"
-
-
-class OAuth2Auth(Authenticator):
-    """OAuth2 token authentication."""
-    
-    def __init__(
-        self,
-        access_token: str,
-        refresh_token: Optional[str] = None,
-        token_type: str = "Bearer",
-        expires_at: Optional[datetime] = None,
-        refresh_function: Optional[
-            Callable[[str], Awaitable[Dict[str, Any]]]
-        ] = None,
-    ) -> None:
-        self.access_token = access_token
-        self.refresh_token = refresh_token
-        self.token_type = token_type
-        self.expires_at = expires_at
-        self.refresh_function = refresh_function
-        self._refresh_lock = asyncio.Lock()
-    
-    def get_auth_headers(self) -> Dict[str, str]:
-        """Get OAuth2 authorization headers."""
-        return {"Authorization": f"{self.token_type} {self.access_token}"}
-    
-    def is_expired(self) -> bool:
-        """Check if the OAuth2 token is expired."""
-        if not self.expires_at:
-            return False
-        
-        # Add 1 minute buffer
-        buffer_time = datetime.now(timezone.utc).timestamp() + 60
-        return self.expires_at.timestamp() <= buffer_time
-    
-    async def refresh(self) -> None:
-        """Refresh the OAuth2 token."""
-        if not self.refresh_function or not self.refresh_token:
-            raise AuthenticationError("No refresh function or refresh token available")
-        
-        async with self._refresh_lock:
-            # Check again in case another coroutine already refreshed
-            if not self.is_expired():
-                return
-            
-            try:
-                result = await self.refresh_function(self.refresh_token)
-                self.access_token = result["access_token"]
-                self.refresh_token = result.get("refresh_token", self.refresh_token)
-                
-                if "expires_at" in result:
-                    if isinstance(result["expires_at"], str):
-                        self.expires_at = datetime.fromisoformat(
-                            result["expires_at"].replace("Z", "+00:00")
-                        )
-                    else:
-                        self.expires_at = result["expires_at"]
-                        
-            except Exception as e:
-                raise AuthenticationError(f"Failed to refresh token: {e}") from e
-    
-    @property
-    def auth_type(self) -> str:
-        return "oauth2"
-
-
-class NoAuth(Authenticator):
-    """No authentication."""
-    
-    def get_auth_headers(self) -> Dict[str, str]:
-        """Return empty headers."""
-        return {}
-    
-    def is_expired(self) -> bool:
-        """Never expires."""
-        return False
-    
-    async def refresh(self) -> None:
-        """Nothing to refresh."""
-        pass
-    
-    @property
-    def auth_type(self) -> str:
-        return "none"

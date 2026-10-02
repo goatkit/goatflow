@@ -3,9 +3,11 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -203,8 +205,10 @@ func TestQueueAPI(t *testing.T) {
 			})
 			router.POST("/api/v1/queues", HandleCreateQueueAPI)
 
+			name := fmt.Sprintf("Support Queue %d", time.Now().UnixNano())
+			cleanupQueueByNameAtEnd(t, name)
 			body := map[string]interface{}{
-				"name":              "Support Queue",
+				"name":              name,
 				"group_id":          1,
 				"system_address_id": 1,
 				"comment":           "General support queue",
@@ -225,7 +229,7 @@ func TestQueueAPI(t *testing.T) {
 
 				data := response["data"].(map[string]interface{})
 				assert.NotNil(t, data["id"])
-				assert.Equal(t, "Support Queue", data["name"])
+				assert.Equal(t, name, data["name"])
 			}
 		})
 
@@ -239,7 +243,8 @@ func TestQueueAPI(t *testing.T) {
 			router.POST("/api/v1/queues", HandleCreateQueueAPI)
 
 			body := map[string]interface{}{
-				"name": "Raw", // Assuming this exists
+				"name":     "Raw", // Assuming this exists
+				"group_id": 1,
 			}
 			jsonBody, _ := json.Marshal(body)
 
@@ -284,24 +289,30 @@ func TestQueueAPI(t *testing.T) {
 			})
 			router.PUT("/api/v1/queues/:id", HandleUpdateQueueAPI)
 
+			queueID, _ := createIsolatedQueue(t, "update_fields")
 			body := map[string]interface{}{
 				"comment":        "Updated queue comment",
-				"group_id":       2,
 				"unlock_timeout": 60,
 			}
 			jsonBody, _ := json.Marshal(body)
 
-			req := httptest.NewRequest("PUT", "/api/v1/queues/1", bytes.NewBuffer(jsonBody))
+			req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/queues/%d", queueID), bytes.NewBuffer(jsonBody))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
-			if w.Code == http.StatusOK {
-				var response map[string]interface{}
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				require.NoError(t, err)
-				assert.Equal(t, true, response["success"])
-			}
+			require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+			var response map[string]interface{}
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			require.NoError(t, err)
+			assert.Equal(t, true, response["success"])
+
+			db, err := database.GetDB()
+			require.NoError(t, err)
+			var unlockTimeout int
+			require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+				"SELECT unlock_timeout FROM queue WHERE id = ?"), queueID).Scan(&unlockTimeout))
+			assert.Equal(t, 60, unlockTimeout)
 		})
 
 		t.Run("should not allow renaming to existing queue name", func(t *testing.T) {
@@ -312,22 +323,29 @@ func TestQueueAPI(t *testing.T) {
 			})
 			router.PUT("/api/v1/queues/:id", HandleUpdateQueueAPI)
 
+			queueID, queueName := createIsolatedQueue(t, "rename_conflict")
 			body := map[string]interface{}{
 				"name": "Raw", // Trying to rename to existing queue
 			}
 			jsonBody, _ := json.Marshal(body)
 
-			req := httptest.NewRequest("PUT", "/api/v1/queues/2", bytes.NewBuffer(jsonBody))
+			req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/queues/%d", queueID), bytes.NewBuffer(jsonBody))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
-			if w.Code == http.StatusConflict {
-				var response map[string]interface{}
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				require.NoError(t, err)
-				assert.Equal(t, false, response["success"])
-			}
+			assert.Equal(t, http.StatusConflict, w.Code, w.Body.String())
+			var response map[string]interface{}
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			require.NoError(t, err)
+			assert.Equal(t, "Queue name already exists", response["error"])
+
+			db, err := database.GetDB()
+			require.NoError(t, err)
+			var name string
+			require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+				"SELECT name FROM queue WHERE id = ?"), queueID).Scan(&name))
+			assert.Equal(t, queueName, name)
 		})
 	})
 
@@ -351,14 +369,22 @@ func TestQueueAPI(t *testing.T) {
 			})
 			router.DELETE("/api/v1/queues/:id", HandleDeleteQueueAPI)
 
-			req := httptest.NewRequest("DELETE", "/api/v1/queues/2", nil)
+			queueID, _ := createIsolatedQueue(t, "soft_delete")
+			req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/queues/%d", queueID), nil)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
-			// Should return 204 No Content on success
-			if w.Code == http.StatusNoContent {
-				assert.Equal(t, 0, w.Body.Len())
-			}
+			require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+			var response map[string]interface{}
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+			assert.Equal(t, true, response["success"])
+
+			db, err := database.GetDB()
+			require.NoError(t, err)
+			var validID int
+			require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+				"SELECT valid_id FROM queue WHERE id = ?"), queueID).Scan(&validID))
+			assert.Equal(t, 2, validID)
 		})
 
 		t.Run("should not delete queue with active tickets", func(t *testing.T) {
@@ -431,52 +457,6 @@ func TestQueueAPI(t *testing.T) {
 				assert.NotNil(t, data["total_tickets"])
 				assert.NotNil(t, data["open_tickets"])
 				assert.NotNil(t, data["closed_tickets"])
-			}
-		})
-	})
-
-	t.Run("Queue Groups", func(t *testing.T) {
-		t.Run("should assign group to queue", func(t *testing.T) {
-			router := gin.New()
-			router.Use(func(c *gin.Context) {
-				c.Set("user_id", uint(1))
-				c.Next()
-			})
-			router.POST("/api/v1/queues/:id/groups", HandleAssignQueueGroupAPI)
-
-			body := map[string]interface{}{
-				"group_id":    2,
-				"permissions": "rw",
-			}
-			jsonBody, _ := json.Marshal(body)
-
-			req := httptest.NewRequest("POST", "/api/v1/queues/1/groups", bytes.NewBuffer(jsonBody))
-			req.Header.Set("Content-Type", "application/json")
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-
-			if w.Code == http.StatusOK {
-				var response map[string]interface{}
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				require.NoError(t, err)
-				assert.Equal(t, true, response["success"])
-			}
-		})
-
-		t.Run("should remove group from queue", func(t *testing.T) {
-			router := gin.New()
-			router.Use(func(c *gin.Context) {
-				c.Set("user_id", uint(1))
-				c.Next()
-			})
-			router.DELETE("/api/v1/queues/:id/groups/:group_id", HandleRemoveQueueGroupAPI)
-
-			req := httptest.NewRequest("DELETE", "/api/v1/queues/1/groups/2", nil)
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-
-			if w.Code == http.StatusNoContent {
-				assert.Equal(t, 0, w.Body.Len())
 			}
 		})
 	})

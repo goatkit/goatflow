@@ -4,33 +4,6 @@ import (
 	"testing"
 )
 
-func TestStateTypeIDToName(t *testing.T) {
-	s := &Service{}
-
-	tests := []struct {
-		typeID int
-		want   string
-	}{
-		{1, "new"},
-		{2, "open"},
-		{3, "closed"},
-		{4, "pending reminder"},
-		{5, "pending auto"},
-		{6, "removed"},
-		{7, "merged"},
-		{99, "open"}, // Unknown defaults to open
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.want, func(t *testing.T) {
-			got := s.stateTypeIDToName(tt.typeID)
-			if got != tt.want {
-				t.Errorf("stateTypeIDToName(%d) = %q, want %q", tt.typeID, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestEscalationPreferencesDefault(t *testing.T) {
 	prefs := &EscalationPreferences{}
 

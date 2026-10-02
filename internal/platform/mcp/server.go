@@ -18,30 +18,22 @@ const (
 	ServerVersion   = "0.7.0"
 )
 
-// Server handles MCP protocol messages.
-// Each request is authenticated by an API token, and the token owner's
-// permissions are enforced via middleware when tools invoke API handlers.
+// Server handles MCP protocol messages. It holds no identity: every message
+// is handled for the principal that authenticated that request, so tool calls
+// always run with the caller's current permissions and token scopes.
 type Server struct {
-	userID    int
-	userLogin string
-	userRole  string
-	bridge    *APIBridge
+	bridge *APIBridge
 
 	initialized bool
 }
 
 // NewServer creates a new MCP server instance.
-func NewServer(userID int, userLogin, userRole string, bridge *APIBridge) *Server {
-	return &Server{
-		userID:    userID,
-		userLogin: userLogin,
-		userRole:  userRole,
-		bridge:    bridge,
-	}
+func NewServer(bridge *APIBridge) *Server {
+	return &Server{bridge: bridge}
 }
 
-// HandleMessage processes a JSON-RPC message and returns a response.
-func (s *Server) HandleMessage(ctx context.Context, msg []byte) ([]byte, error) {
+// HandleMessage processes a JSON-RPC message for user and returns a response.
+func (s *Server) HandleMessage(ctx context.Context, user UserContext, msg []byte) ([]byte, error) {
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(msg, &raw); err != nil {
 		resp := ErrorResponse(nil, ErrCodeParse, "Parse error: "+err.Error())
@@ -84,7 +76,7 @@ func (s *Server) HandleMessage(ctx context.Context, msg []byte) ([]byte, error) 
 	case "tools/list":
 		resp = s.handleToolsList(req)
 	case "tools/call":
-		resp = s.handleToolsCall(ctx, req)
+		resp = s.handleToolsCall(ctx, user, req)
 	case "ping":
 		resp = SuccessResponse(req.ID, map[string]string{})
 	default:
@@ -127,13 +119,13 @@ func (s *Server) handleToolsList(req Request) Response {
 	})
 }
 
-func (s *Server) handleToolsCall(ctx context.Context, req Request) Response {
+func (s *Server) handleToolsCall(ctx context.Context, user UserContext, req Request) Response {
 	var params ToolCallParams
 	if err := json.Unmarshal(req.Params, &params); err != nil {
 		return ErrorResponse(req.ID, ErrCodeInvalidParams, "Invalid params: "+err.Error())
 	}
 
-	result, err := s.executeTool(ctx, params.Name, params.Arguments)
+	result, err := s.executeTool(ctx, user, params.Name, params.Arguments)
 	if err != nil {
 		return SuccessResponse(req.ID, ToolCallResult{
 			Content: []ContentBlock{TextContent(fmt.Sprintf("Error: %v", err))},
@@ -144,17 +136,11 @@ func (s *Server) handleToolsCall(ctx context.Context, req Request) Response {
 	return SuccessResponse(req.ID, result)
 }
 
-func (s *Server) executeTool(ctx context.Context, name string, args map[string]any) (*ToolCallResult, error) {
+func (s *Server) executeTool(ctx context.Context, user UserContext, name string, args map[string]any) (*ToolCallResult, error) {
 	toolsMap := GetDynamicToolsMap()
 	tool, ok := toolsMap[name]
 	if !ok {
 		return nil, fmt.Errorf("unknown tool: %s", name)
-	}
-
-	user := UserContext{
-		UserID:    s.userID,
-		UserLogin: s.userLogin,
-		UserRole:  s.userRole,
 	}
 
 	if tool.IsPlugin {

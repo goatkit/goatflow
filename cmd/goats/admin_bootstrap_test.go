@@ -9,7 +9,6 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // withMySQLDriver makes database.ConvertPlaceholders pass `?` through
@@ -131,14 +130,4 @@ func TestBootstrap_UpdateFails_NeverMarks(t *testing.T) {
 
 	bootstrapAdminFromEnv(db)
 	assert.NoError(t, mock.ExpectationsWereMet(), "a failed update must not reach the marker write")
-}
-
-func TestBootstrapHash_UsesBcrypt(t *testing.T) {
-	h, err := hashForBootstrap("p@ssw0rd")
-	require.NoError(t, err)
-	require.True(t, len(h) >= 60 && (h[:4] == "$2a$" || h[:4] == "$2b$"), "expected a bcrypt hash, got %q", h)
-
-	// Round-trip through the same verify the app's login paths use.
-	assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(h), []byte("p@ssw0rd")))
-	assert.Error(t, bcrypt.CompareHashAndPassword([]byte(h), []byte("wrong")))
 }

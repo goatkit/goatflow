@@ -68,7 +68,7 @@ spec:
 			t.Fatalf("unexpected handler without prefix: status %d", w.Code)
 		}
 	})
- }
+}
 
 func TestLoadYAMLRoutesFromGlobalMap_SetsGlobalRegistry(t *testing.T) {
 	t.Parallel()
@@ -124,4 +124,60 @@ spec:
 	if handler == nil {
 		t.Fatal("Handler should not be nil")
 	}
- }
+}
+
+// A group with an empty prefix must not turn its middleware into engine-wide
+// middleware for groups registered after it (routes/redirects.yaml has prefix
+// "" and middleware [auth]; config order is map order, so the leak made
+// unrelated API routes randomly redirect to the login page).
+func TestRegisterRouteConfig_EmptyPrefixMiddlewareStaysInGroup(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	registry := NewHandlerRegistry()
+	if err := registry.RegisterMiddleware("deny", func(c *gin.Context) {
+		c.AbortWithStatus(http.StatusSeeOther)
+	}); err != nil {
+		t.Fatalf("register middleware failed: %v", err)
+	}
+	ok := func(c *gin.Context) { c.Status(http.StatusNoContent) }
+	if err := registry.Register("rootHandler", ok); err != nil {
+		t.Fatalf("register handler failed: %v", err)
+	}
+	if err := registry.Register("apiHandler", ok); err != nil {
+		t.Fatalf("register handler failed: %v", err)
+	}
+	loader, err := NewRouteLoader(t.TempDir(), registry, router)
+	if err != nil {
+		t.Fatalf("NewRouteLoader failed: %v", err)
+	}
+
+	root := &RouteConfig{
+		Metadata: RouteMetadata{Name: "root", Enabled: true},
+		Spec: RouteSpec{Prefix: "", Middleware: []string{"deny"}, Routes: []RouteDefinition{
+			{Path: "/guarded", Method: "GET", Handler: "rootHandler"},
+		}},
+	}
+	api := &RouteConfig{
+		Metadata: RouteMetadata{Name: "api", Enabled: true},
+		Spec: RouteSpec{Prefix: "/api", Routes: []RouteDefinition{
+			{Path: "/open", Method: "GET", Handler: "apiHandler"},
+		}},
+	}
+	// Root group first: the order that leaked.
+	if err := loader.registerRouteConfig(root); err != nil {
+		t.Fatalf("register root: %v", err)
+	}
+	if err := loader.registerRouteConfig(api); err != nil {
+		t.Fatalf("register api: %v", err)
+	}
+
+	for path, want := range map[string]int{"/guarded": http.StatusSeeOther, "/api/open": http.StatusNoContent} {
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+		if w.Code != want {
+			t.Errorf("GET %s: got %d, want %d", path, w.Code, want)
+		}
+	}
+}

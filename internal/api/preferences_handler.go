@@ -383,7 +383,15 @@ func HandleGetRemindersEnabled(c *gin.Context) {
 	}
 
 	prefService := platformservice.NewUserPreferencesService(db)
-	enabled := prefService.GetRemindersEnabled(userID)
+	enabled, err := prefService.GetRemindersEnabled(userID)
+	if err != nil {
+		log.Printf("HandleGetRemindersEnabled: user %d: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to load preference",
+		})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -1084,9 +1092,9 @@ func HandleAgentChangePassword(c *gin.Context) {
 	newHash, err := hasher.HashPassword(request.NewPassword)
 	if err != nil {
 		log.Printf("Error hashing new password: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(passwordHashErrorStatus(err), gin.H{
 			"success": false,
-			"error":   "Failed to process new password",
+			"error":   "Failed to process new password: " + err.Error(),
 		})
 		return
 	}

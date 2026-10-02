@@ -177,6 +177,11 @@ func handleAdminAttachmentCreate(c *gin.Context) {
 		return
 	}
 
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
+
 	db, err := database.GetDB()
 	if err != nil {
 		jsonError(c, http.StatusInternalServerError, "Database connection failed")
@@ -204,9 +209,9 @@ func handleAdminAttachmentCreate(c *gin.Context) {
 		INSERT INTO standard_attachment
 			(name, filename, content_type, content, comments, valid_id,
 			 create_time, create_by, change_time, change_by)
-		VALUES (?, ?, ?, ?, ?, ?, NOW(), 1, NOW(), 1)
+		VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, NOW(), ?)
 		RETURNING id
-	`), name, header.Filename, header.Header.Get("Content-Type"), content, commentsPtr, validID)
+	`), name, header.Filename, header.Header.Get("Content-Type"), content, commentsPtr, validID, actorID, actorID)
 	if err != nil {
 		jsonError(c, http.StatusInternalServerError, "Failed to create attachment: "+err.Error())
 		return
@@ -230,14 +235,19 @@ func handleAdminAttachmentUpdate(c *gin.Context) {
 
 	_ = c.Request.ParseMultipartForm(10 << 20) //nolint:errcheck // file is optional
 
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
+
 	db, err := database.GetDB()
 	if err != nil {
 		jsonError(c, http.StatusInternalServerError, "Database connection failed")
 		return
 	}
 
-	updates := []string{"change_time = CURRENT_TIMESTAMP", "change_by = 1"}
-	var args []interface{}
+	updates := []string{"change_time = CURRENT_TIMESTAMP", "change_by = ?"}
+	args := []interface{}{actorID}
 
 	if name := c.PostForm("name"); name != "" {
 		updates = append(updates, "name = ?")
@@ -300,6 +310,11 @@ func handleAdminAttachmentDelete(c *gin.Context) {
 		return
 	}
 
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
+
 	db, err := database.GetDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -311,10 +326,10 @@ func handleAdminAttachmentDelete(c *gin.Context) {
 
 	// Soft delete by setting valid_id = 2
 	result, err := db.Exec(database.ConvertPlaceholders(`
-		UPDATE standard_attachment 
-		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1 
+		UPDATE standard_attachment
+		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = ?
 		WHERE id = ?
-	`), id)
+	`), actorID, id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -449,6 +464,11 @@ func handleAdminAttachmentToggle(c *gin.Context) {
 		return
 	}
 
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
+
 	db, err := database.GetDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -459,10 +479,10 @@ func handleAdminAttachmentToggle(c *gin.Context) {
 	}
 
 	result, err := db.Exec(database.ConvertPlaceholders(`
-		UPDATE standard_attachment 
-		SET valid_id = ?, change_time = CURRENT_TIMESTAMP, change_by = 1 
+		UPDATE standard_attachment
+		SET valid_id = ?, change_time = CURRENT_TIMESTAMP, change_by = ?
 		WHERE id = ?
-	`), input.ValidID, id)
+	`), input.ValidID, actorID, id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

@@ -119,7 +119,8 @@ func HandlePluginList(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"plugins": plugins})
 }
 
-// HandlePluginCall invokes a plugin function.
+// HandlePluginCall invokes a plugin function directly, bypassing the
+// plugin's own route middleware, so it is mounted admin-only.
 // POST /api/v1/plugins/:name/call/:fn
 func HandlePluginCall(c *gin.Context) {
 	if pluginManager == nil {
@@ -130,39 +131,55 @@ func HandlePluginCall(c *gin.Context) {
 	pluginName := c.Param("name")
 	fnName := c.Param("fn")
 
-	// Read request body as args
-	var args json.RawMessage
-	if err := c.ShouldBindJSON(&args); err != nil {
-		args = nil
-	}
-
-	// Inject org context into params unless the plugin opts out.
-	if !pluginManager.SkipsOrgInjection(pluginName) {
-		if orgID := orgIDFromContext(c); orgID != 0 {
-			args = injectOrgID(args, orgID)
-		}
-	}
-
-	result, err := pluginManager.Call(c.Request.Context(), pluginName, fnName, args)
+	// The request body (a JSON object, optional) carries the function args.
+	raw, err := io.ReadAll(io.LimitReader(c.Request.Body, maxPluginBodySize+1))
 	if err != nil {
-		// Return 404 for plugin not found errors
-		var notFoundErr *plugin.PluginNotFoundError
-		if errors.As(err, &notFoundErr) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
+		return
+	}
+	if int64(len(raw)) > maxPluginBodySize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "plugin request body too large"})
+		return
+	}
+	args := make(map[string]any)
+	if len(bytes.TrimSpace(raw)) > 0 {
+		if err := json.Unmarshal(raw, &args); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "request body must be a JSON object"})
 			return
 		}
-		// Return 403 for disabled plugin errors
-		var disabledErr *plugin.PluginDisabledError
-		if errors.As(err, &disabledErr) {
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-			return
-		}
+	}
+	stripPluginEnvelope(args)
+	addPluginEnvelope(c, args, pluginName)
+	argsJSON, err := json.Marshal(args)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	result, err := pluginManager.Call(pluginContextWithLanguage(c), pluginName, fnName, argsJSON)
+	if err != nil {
+		writePluginCallError(c, err, http.StatusBadRequest)
 		return
 	}
 
 	// Return raw JSON result
 	c.Data(http.StatusOK, "application/json", result)
+}
+
+// writePluginCallError maps a plugin manager Call error to an HTTP response:
+// unknown plugin 404, disabled plugin 403, anything else the fallback status.
+func writePluginCallError(c *gin.Context, err error, fallback int) {
+	var notFoundErr *plugin.PluginNotFoundError
+	if errors.As(err, &notFoundErr) {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	var disabledErr *plugin.PluginDisabledError
+	if errors.As(err, &disabledErr) {
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(fallback, gin.H{"error": err.Error()})
 }
 
 // HandlePluginHealth returns the live health snapshot for every loaded
@@ -368,10 +385,20 @@ func GetPluginWidgets(ctx context.Context, location string, ginCtx ...*gin.Conte
 	results := make([]PluginWidgetData, 0, len(widgets))
 
 	for _, w := range widgets {
+		widget := PluginWidgetData{
+			ID:          w.ID,
+			Title:       w.Title,
+			PluginName:  w.PluginName,
+			Size:        w.Size,
+			Refreshable: w.Refreshable,
+			RefreshSec:  w.RefreshSec,
+		}
 		// Call the widget handler to get HTML (ctx should already have language if from gin)
 		result, err := pluginManager.Call(ctx, w.PluginName, w.Handler, widgetArgs)
 		if err != nil {
 			log.Printf("🔌 Widget %s:%s call failed: %v", w.PluginName, w.Handler, err)
+			widget.Unavailable = true
+			results = append(results, widget)
 			continue
 		}
 
@@ -380,29 +407,26 @@ func GetPluginWidgets(ctx context.Context, location string, ginCtx ...*gin.Conte
 		}
 		if err := json.Unmarshal(result, &data); err != nil {
 			log.Printf("🔌 Widget %s:%s unmarshal failed: %v (raw: %s)", w.PluginName, w.Handler, err, string(result))
+			widget.Unavailable = true
+			results = append(results, widget)
 			continue
 		}
-
-		results = append(results, PluginWidgetData{
-			ID:          w.ID,
-			Title:       w.Title,
-			PluginName:  w.PluginName,
-			HTML:        data.HTML,
-			Size:        w.Size,
-			Refreshable: w.Refreshable,
-			RefreshSec:  w.RefreshSec,
-		})
+		widget.HTML = data.HTML
+		results = append(results, widget)
 	}
 
 	return results
 }
 
-// PluginWidgetData is the rendered widget data for templates.
+// PluginWidgetData is the rendered widget data for templates. Unavailable
+// marks a widget whose plugin call failed; it is shown with an error state
+// instead of content.
 type PluginWidgetData struct {
 	ID          string
 	Title       string
 	PluginName  string
 	HTML        string
+	Unavailable bool
 	Size        string
 	Refreshable bool
 	RefreshSec  int
@@ -420,16 +444,11 @@ func GetPluginMenuItems(location string) []plugin.PluginMenuItem {
 	return pluginManager.MenuItems(location)
 }
 
-// RegisterPluginRoutes is a no-op kept for backwards compatibility.
-// Plugin routes are now handled by the unified dynamic engine (MountDynamicEngine).
-// Deprecated: Use MountDynamicEngine instead.
-func RegisterPluginRoutes(r *gin.Engine) int {
-	return 0
-}
-
 // buildPluginArgs extracts request data into JSON args for the plugin.
 func buildPluginArgs(c *gin.Context, pluginName ...string) json.RawMessage {
 	args := make(map[string]any)
+	var rawBody, rawContentType string
+	var hasRawBody bool
 
 	// URL parameters
 	for _, param := range c.Params {
@@ -482,17 +501,48 @@ func buildPluginArgs(c *gin.Context, pluginName ...string) json.RawMessage {
 				}
 			} else {
 				// Non-JSON payload: pass the raw body through verbatim.
-				args["_body"] = string(raw)
-				args["_content_type"] = contentType
+				rawBody, rawContentType, hasRawBody = string(raw), contentType, true
 			}
 		}
+	}
+
+	stripPluginEnvelope(args)
+	if hasRawBody {
+		args["_body"] = rawBody
+		args["_content_type"] = rawContentType
 	}
 
 	// Include request metadata
 	args["_method"] = c.Request.Method
 	args["_path"] = c.Request.URL.Path
 
-	// Include authenticated user context
+	addPluginEnvelope(c, args, pluginName...)
+
+	result, _ := json.Marshal(args)
+	return result
+}
+
+// pluginEnvelopeKeys are the args keys the host writes for every plugin call.
+// Plugins trust them (caller identity, admin flag, organisation, language,
+// request metadata), so a client-supplied value under one of these names is
+// dropped before the host sets its own; otherwise a body such as
+// {"_is_admin": true} would reach the plugin whenever the auth middleware did
+// not set the matching context key.
+var pluginEnvelopeKeys = []string{
+	"_user_id", "_user_email", "_user_login", "_customer_login", "_user_role", "_is_admin",
+	"_org_id", "_lang", "_method", "_path", "_body", "_content_type",
+}
+
+func stripPluginEnvelope(args map[string]any) {
+	for _, k := range pluginEnvelopeKeys {
+		delete(args, k)
+	}
+}
+
+// addPluginEnvelope writes the authenticated caller's identity, language and
+// organisation into args. _is_admin is always present so plugins never fall
+// back to a client-controlled value.
+func addPluginEnvelope(c *gin.Context, args map[string]any, pluginName ...string) {
 	if userID, exists := c.Get("user_id"); exists {
 		args["_user_id"] = userID
 	}
@@ -512,12 +562,12 @@ func buildPluginArgs(c *gin.Context, pluginName ...string) json.RawMessage {
 	if customerLogin, exists := c.Get("customer_login"); exists {
 		args["_customer_login"] = customerLogin
 	}
-	if role, exists := c.Get("user_role"); exists {
+	role, hasRole := c.Get("user_role")
+	if hasRole {
 		args["_user_role"] = role
 	}
-	if isAdmin, exists := c.Get("isInAdminGroup"); exists {
-		args["_is_admin"] = isAdmin
-	}
+	inAdminGroup, _ := c.Get("isInAdminGroup")
+	args["_is_admin"] = inAdminGroup == true || role == "Admin"
 	// The user's resolved UI language (i18n middleware: ?lang=, cookie, user
 	// preference, Accept-Language). Plugins that ship their own translations
 	// look strings up locally with it; HostAPI callbacks carry no request
@@ -538,31 +588,8 @@ func buildPluginArgs(c *gin.Context, pluginName ...string) json.RawMessage {
 			args["org_id"] = orgID
 		}
 	}
-
-	result, _ := json.Marshal(args)
-	return result
 }
 
-// injectOrgID merges org_id / _org_id into a JSON args object. If args is nil
-// or not a JSON object, it creates a new object with those keys.
-func injectOrgID(args json.RawMessage, orgID int64) json.RawMessage {
-	m := make(map[string]json.RawMessage)
-	if len(args) > 0 {
-		_ = json.Unmarshal(args, &m)
-	}
-	idBytes, _ := json.Marshal(orgID)
-	m["_org_id"] = idBytes
-	m["org_id"] = idBytes
-	out, _ := json.Marshal(m)
-	return out
-}
-
-// RegisterPluginAPIRoutes registers the plugin management API endpoints.
-// GET  /api/v1/plugins                    - List all plugins (authenticated)
-// POST /api/v1/plugins/:name/call/:fn     - Call a plugin function (authenticated)
-// GET  /api/v1/plugins/:name/widgets/:id  - Get widget HTML (authenticated, HTMX-friendly)
-// POST /api/v1/plugins/:name/enable       - Enable a plugin (admin only)
-// POST /api/v1/plugins/:name/disable      - Disable a plugin (admin only)
 // SessionOrJWTAuth middleware accepts either session-based auth (cookie) or JWT token auth.
 // Session auth is checked first (user_id already set by session middleware), then falls back to JWT.
 func SessionOrJWTAuth() gin.HandlerFunc {
@@ -671,19 +698,40 @@ func enrichContextFromToken(c *gin.Context) {
 
 // HandlePluginSSEChannel serves an SSE stream scoped to a specific plugin and channel.
 // GET /api/v1/plugins/:name/events/:channel
-// Auth-scoped: requires a valid session or JWT token.
+// Agents only (route group). When the plugin declares an EventAuthorizer, the
+// plugin decides per caller and channel before the stream is opened.
 func HandlePluginSSEChannel(c *gin.Context) {
-	if pluginSSEBroker == nil {
+	if pluginSSEBroker == nil || pluginManager == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "SSE not available"})
 		return
 	}
 	pluginName := c.Param("name")
 	channel := c.Param("channel")
 
-	// Validate plugin exists
-	if pluginManager != nil {
-		if _, ok := pluginManager.Get(pluginName); !ok {
-			c.JSON(http.StatusNotFound, gin.H{"error": "plugin not found"})
+	p, ok := pluginManager.Get(pluginName)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "plugin not found"})
+		return
+	}
+	if authorizer := p.GKRegister().EventAuthorizer; authorizer != "" {
+		args := map[string]any{"channel": channel}
+		addPluginEnvelope(c, args, pluginName)
+		argsJSON, err := json.Marshal(args)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "subscription check failed"})
+			return
+		}
+		result, err := pluginManager.Call(pluginContextWithLanguage(c), pluginName, authorizer, argsJSON)
+		if err != nil {
+			log.Printf("plugin %s: event authorizer %s failed for channel %q: %v", pluginName, authorizer, channel, err)
+			c.JSON(http.StatusBadGateway, gin.H{"error": "subscription check failed"})
+			return
+		}
+		var decision struct {
+			Allow bool `json:"allow"`
+		}
+		if err := json.Unmarshal(result, &decision); err != nil || !decision.Allow {
+			c.JSON(http.StatusForbidden, gin.H{"error": "subscription not allowed"})
 			return
 		}
 	}
@@ -740,17 +788,21 @@ func HandlePluginUninstall(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "plugin uninstalled", "name": name})
 }
+
+// RegisterPluginAPIRoutes registers the plugin management API endpoints.
+// Listing, health, widgets and per-plugin SSE channels are for agents only:
+// their callers are the agent dashboard and admin pages, and customers'
+// customer_user ids overlap users ids. Direct function calls skip the plugin's
+// own route middleware, so they are admin-only alongside the management
+// endpoints.
 func RegisterPluginAPIRoutes(r *gin.RouterGroup) {
-	// Plugin list and call - require authentication (session or JWT)
 	plugins := r.Group("/plugins")
-	plugins.Use(SessionOrJWTAuth())
+	plugins.Use(SessionOrJWTAuth(), middleware.RequireAgent())
 	{
 		plugins.GET("", HandlePluginList)
 		plugins.GET("/health", HandlePluginHealth)
-		plugins.POST("/:name/call/:fn", HandlePluginCall)
 		plugins.GET("/widgets", HandlePluginWidgetList)
 		plugins.GET("/:name/widgets/:id", HandlePluginWidget)
-		// Per-plugin SSE channel endpoint (auth-scoped)
 		plugins.GET("/:name/events/:channel", HandlePluginSSEChannel)
 	}
 
@@ -758,6 +810,7 @@ func RegisterPluginAPIRoutes(r *gin.RouterGroup) {
 	pluginAdmin := r.Group("/plugins")
 	pluginAdmin.Use(SessionOrJWTAuth(), RequireAdmin())
 	{
+		pluginAdmin.POST("/:name/call/:fn", HandlePluginCall)
 		pluginAdmin.POST("/:name/enable", HandlePluginEnable)
 		pluginAdmin.POST("/:name/disable", HandlePluginDisable)
 		pluginAdmin.POST("/:name/reset-crashloop", HandlePluginResetCrashLoop)
@@ -798,11 +851,18 @@ func RequireAdmin() gin.HandlerFunc {
 	}
 }
 
-// RequireGroup checks that the authenticated user belongs to a specific group.
-// Admin users (role=Admin or isInAdminGroup) bypass group checks.
+// RequireGroup checks that the authenticated agent belongs to a specific group.
+// Admin users (role=Admin or isInAdminGroup) bypass group checks. Customers are
+// refused: groups hold agents (group_user.user_id = users.id), and a customer's
+// customer_user.id would otherwise match an unrelated agent's memberships.
 // Used by plugins via "group:<name>" middleware, e.g. "group:myplugin-users".
 func RequireGroup(groupName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if middleware.IsCustomerPrincipal(c) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "access denied: requires group " + groupName})
+			c.Abort()
+			return
+		}
 		// Admin users bypass group checks.
 		if role, exists := c.Get("user_role"); exists && role == "Admin" {
 			c.Next()
@@ -887,10 +947,8 @@ func RequirePluginAccess(pluginName, agentGroup string) gin.HandlerFunc {
 			return
 		}
 
-		role, _ := c.Get("user_role")
-
 		// Customer branch.
-		if role == "Customer" {
+		if middleware.IsCustomerPrincipal(c) {
 			var login string
 			if v, ok := c.Get("customer_login"); ok {
 				login, _ = v.(string)
@@ -1036,12 +1094,66 @@ func orgIDFromContext(c *gin.Context) int64 {
 	if orgID := organisation.OrgIDFromContext(c.Request.Context()); orgID != 0 {
 		return orgID
 	}
-	if cookie, err := c.Cookie("active_org_id"); err == nil && cookie != "" {
-		var n int64
-		_, _ = fmt.Sscan(cookie, &n)
-		return n
+	if orgID := activeOrgCookie(c); orgID != 0 && callerIsOrgMember(c, orgID) {
+		return orgID
 	}
 	return 0
+}
+
+// activeOrgCookie returns the org id from the client-controlled active_org_id
+// cookie, unvalidated. Only use it where it selects nothing private (the login
+// page's identity-provider buttons); everything else goes through
+// orgIDFromContext, which checks membership.
+func activeOrgCookie(c *gin.Context) int64 {
+	cookie, err := c.Cookie("active_org_id")
+	if err != nil || cookie == "" {
+		return 0
+	}
+	var n int64
+	if _, err := fmt.Sscan(cookie, &n); err != nil || n <= 0 {
+		return 0
+	}
+	return n
+}
+
+// callerIsOrgMember reports whether the authenticated caller belongs to
+// orgID: customers through their company's org or a gk_user_organisation row,
+// agents through gk_user_organisation.
+func callerIsOrgMember(c *gin.Context, orgID int64) bool {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		return false
+	}
+	repo := organisation.NewRepositoryWithDB(db)
+	var orgs []organisation.Organisation
+	if role, _ := c.Get("user_role"); role == "Customer" { //nolint:errcheck // nil when absent
+		login := c.GetString("customer_login")
+		if login == "" {
+			login = c.GetString("username")
+		}
+		if login == "" {
+			return false
+		}
+		if primaryOrgForCustomer(db, login) == orgID {
+			return true
+		}
+		orgs, err = repo.GetCustomerOrgs(login)
+	} else {
+		uid := shared.GetUserIDFromCtx(c, 0)
+		if uid <= 0 {
+			return false
+		}
+		orgs, err = repo.GetUserOrgs(uid)
+	}
+	if err != nil {
+		return false
+	}
+	for _, o := range orgs {
+		if o.ID == orgID {
+			return true
+		}
+	}
+	return false
 }
 
 // maxPluginBodySize is the maximum request body size passed through to a

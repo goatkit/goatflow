@@ -1,7 +1,6 @@
 package api
 
 import (
-	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,11 +13,6 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
-
-// NewMultipartWriter creates a multipart writer for tests
-func NewMultipartWriter(body *strings.Builder) *multipart.Writer {
-	return multipart.NewWriter(body)
-}
 
 func seededTicketID(t *testing.T) int {
 	t.Helper()
@@ -304,67 +298,11 @@ func TestCustomerEmailPrePopulation(t *testing.T) {
 	})
 }
 
-// TestTicketNoteWithAttachment tests note creation with file attachment
-func TestTicketNoteWithAttachment(t *testing.T) {
+// TestTicketNoteWithoutAttachment posts a plain url-encoded note (uploads are
+// covered by TestAgentNoteStoresAttachment).
+func TestTicketNoteWithoutAttachment(t *testing.T) {
 	seedID := seededTicketID(t)
 	validID := strconv.Itoa(seedID)
-
-	t.Run("Note with attachment succeeds", func(t *testing.T) {
-		r := newZoomRouter()
-		r.POST("/agent/tickets/:id/note", HandleAgentTicketNote)
-
-		// Create multipart form with attachment
-		body := &strings.Builder{}
-		writer := NewMultipartWriter(body)
-
-		// Add form fields
-		writer.WriteField("body", "This is a test note with attachment")
-		writer.WriteField("subject", "Test Note with Attachment")
-
-		// Add test file attachment
-		part, err := writer.CreateFormFile("attachments", "test.txt")
-		if err != nil {
-			t.Fatalf("Failed to create form file: %v", err)
-		}
-		part.Write([]byte("Test file content"))
-		writer.Close()
-
-		req := httptest.NewRequest("POST", "/agent/tickets/"+validID+"/note",
-			strings.NewReader(body.String()))
-		req.Header.Set("Content-Type", writer.FormDataContentType())
-		w := httptest.NewRecorder()
-
-		r.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code, "Note with attachment should succeed")
-
-		// Verify note was created
-		db, _ := database.GetDB()
-		if db != nil {
-			var articleID int
-			err := db.QueryRow(database.ConvertPlaceholders(`
-				SELECT a.id FROM article a
-				JOIN ticket t ON a.ticket_id = t.id
-				WHERE t.id = ?
-				ORDER BY a.id DESC LIMIT 1
-			`), seedID).Scan(&articleID)
-
-			if err == nil && articleID > 0 {
-				// Check if attachment was saved
-				var attachCount int
-				db.QueryRow(database.ConvertPlaceholders(`
-					SELECT COUNT(*) FROM article_data_mime_attachment
-					WHERE article_id = ?
-				`), articleID).Scan(&attachCount)
-
-				if attachCount > 0 {
-					t.Logf("Attachment saved successfully for article %d", articleID)
-				} else {
-					t.Logf("Note created (article %d) but attachment not found - may be storage config", articleID)
-				}
-			}
-		}
-	})
 
 	t.Run("Note without attachment succeeds", func(t *testing.T) {
 		r := newZoomRouter()

@@ -15,11 +15,11 @@
 - ✅ Email notifications
 
 ### User Management
-- ✅ User registration and login
+- ✅ Login; customer self-registration with email confirmation (`features.registration`, off by default)
 - ✅ Role-based access control (Admin, Agent, Customer)
 - ✅ User profiles
 - ✅ User preferences (language, theme, session timeout, reminder notifications)
-- ✅ Password reset
+- ✅ Password reset by email for agents and customers (`features.lost_password`; links use `BASE_URL`)
 - ✅ Session management
 - ✅ Basic permissions
 
@@ -127,7 +127,7 @@
 - ❌ SAML 2.0 (TODO)
 - ✅ OAuth 2.0 (OAuth2 provider implemented)
 - ❌ OpenID Connect (TODO)
-- ✅ LDAP/Active Directory (LDAP provider implemented)
+- ✅ LDAP/Active Directory agent login (bind + search, StartTLS/LDAPS with certificate verification, optional account creation, name/email sync and admin-group mapping; see [LDAP.md](LDAP.md))
 - ✅ Multi-factor authentication — TOTP QR setup, recovery codes, WebAuthn/FIDO2 security keys, passkey login, admin override, audit logging
 - ❌ Biometric authentication (TODO)
 - ✅ API key management (personal access tokens with scoped permissions, expiration, rate limiting)
@@ -254,7 +254,6 @@
 
 ### Developer Tools
 - ✅ REST API v1 (OpenAPI 3.0 spec, 94 endpoints, Swagger UI)
-- ✅ GraphQL API (schema + resolver implemented)
 - ✅ WebSocket support (dashboard metrics)
 - ✅ Webhook system
 - ✅ SDK (Go, Python, TypeScript)

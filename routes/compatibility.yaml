@@ -17,6 +17,8 @@ spec:
       method: GET
       middleware:
         - auth
+        - agent
+        - ticket_access_ro # the redirect reveals the ticket's tn
       handler: HandleLegacyAgentTicketViewRedirect
       description: "Redirect legacy agent ticket URL to unified /ticket/:tn"
 
@@ -25,5 +27,7 @@ spec:
       method: GET
       middleware:
         - auth
+        - agent
+        - ticket_access_ro # the redirect reveals the ticket's tn
       handler: HandleLegacyTicketsViewRedirect
       description: "Redirect legacy tickets URL to unified /ticket/:tn"

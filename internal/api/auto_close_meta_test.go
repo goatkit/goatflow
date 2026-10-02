@@ -16,7 +16,7 @@ func TestComputeAutoCloseMetaPendingAutoWithoutUntilTime(t *testing.T) {
 	}
 
 	now := time.Date(2025, 10, 16, 0, 0, 0, 0, time.UTC)
-	meta := computeAutoCloseMeta(ticket, "pending auto close+", pendingAutoStateTypeID, now)
+	meta := computeAutoCloseMeta(ticket, "pending auto close+", "pending auto", now)
 
 	if !meta.pending {
 		t.Fatalf("expected pending auto state to be recognized")

@@ -242,12 +242,12 @@ func TestProdHostAPI_DBQuery(t *testing.T) {
 	}
 	defer db.Close()
 
-	// Create test table
+	// Create test table (sql-schema: in-memory SQLite scratch table for the HostAPI pass-through tests)
 	_, err = db.Exec(database.ConvertPlaceholders("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)"))
 	if err != nil {
 		t.Fatalf("failed to create table: %v", err)
 	}
-	_, err = db.Exec(database.ConvertPlaceholders("INSERT INTO test (name) VALUES ('Alice'), ('Bob')"))
+	_, err = db.Exec(database.ConvertPlaceholders("INSERT INTO test (name) VALUES ('Alice'), ('Bob')")) // sql-schema: SQLite scratch table
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
@@ -299,7 +299,7 @@ func TestProdHostAPI_DBQuery(t *testing.T) {
 func TestProdHostAPI_DBExec(t *testing.T) {
 	db, _ := sql.Open("sqlite3", ":memory:")
 	defer db.Close()
-	db.Exec(database.ConvertPlaceholders("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)"))
+	db.Exec(database.ConvertPlaceholders("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")) // sql-schema: in-memory SQLite scratch table
 
 	h := NewProdHostAPI(WithDB("default", db))
 	ctx := context.Background()

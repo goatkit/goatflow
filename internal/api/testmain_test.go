@@ -309,22 +309,22 @@ func resetTestDatabase() error {
 	// Clean API tokens (all test tokens)
 	exec("DELETE FROM user_api_tokens")
 
-	// Clean test states (preserve IDs 1-5)
-	exec("DELETE FROM ticket_state WHERE id > 5")
+	// Clean test states (preserve IDs 1-5 and the OTRS default states from 000029)
+	exec("DELETE FROM ticket_state WHERE id > 5 AND name NOT IN ('pending auto close+', 'pending auto close-', 'removed', 'merged')")
 
 	// Clean test types (preserve IDs 1-5)
 	exec("DELETE FROM ticket_type WHERE id > 5")
 
-	// Clean test queues (preserve IDs 1-4)
-	exec("DELETE FROM queue WHERE id > 4")
+	// Clean test queues (preserve the seeded IDs 1-6: migration 000002 + test_integration seed)
+	exec("DELETE FROM queue WHERE id > 6")
 
-	// Clean test groups (preserve IDs 1-4: users, admin, stats, support)
-	exec("DELETE FROM group_user WHERE group_id > 4")
-	exec("DELETE FROM groups WHERE id > 4")
+	// Clean test groups (preserve the seeded IDs 1-5: users, admin, stats, support, testgroup)
+	exec("DELETE FROM group_user WHERE group_id > 5")
+	exec("DELETE FROM `groups` WHERE id > 5")
 
-	// Clean test users (preserve IDs 1-2, 15 for testuser)
-	exec("DELETE FROM group_user WHERE user_id > 2 AND user_id != 15")
-	exec("DELETE FROM users WHERE id > 2 AND id != 15")
+	// Clean test users (preserve the seeded agents: 1-2, 15 testuser, e2e-2fa-agent)
+	exec("DELETE FROM group_user WHERE user_id IN (SELECT id FROM users WHERE id > 2 AND id <> 15 AND login <> 'e2e-2fa-agent')")
+	exec("DELETE FROM users WHERE id > 2 AND id <> 15 AND login <> 'e2e-2fa-agent'")
 
 	// Clean test dynamic fields
 	exec("DELETE FROM dynamic_field_value WHERE id > 0")

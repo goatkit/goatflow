@@ -10,8 +10,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/bcrypt"
 
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/dbconfig"
@@ -74,7 +74,7 @@ var versionCmd = &cobra.Command{
 var resetUserCmd = &cobra.Command{
 	Use:   "reset-user",
 	Short: "Reset a user's password and optionally enable their account",
-	Long: `Reset a user's password in the database using bcrypt hashing.
+	Long: `Reset a user's password in the database, hashed with PASSWORD_HASH_TYPE (default bcrypt).
 
 Optionally enables the account by setting valid_id = 1 (OTRS compatible).
 Connects directly to the database using environment variables.`,
@@ -324,9 +324,9 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Generate bcrypt hash for the password
+	// Hash with the configured algorithm (PASSWORD_HASH_TYPE, default bcrypt)
 	fmt.Printf("🔒 Generating password hash...\n")
-	hash, err := bcrypt.GenerateFromPassword([]byte(passwordFlag), bcrypt.DefaultCost)
+	hash, err := auth.NewPasswordHasher().HashPassword(passwordFlag)
 	if err != nil {
 		return fmt.Errorf("failed to generate password hash: %w", err)
 	}
@@ -342,14 +342,14 @@ func runResetUser(cmd *cobra.Command, args []string) error {
             change_time = NOW(),
             change_by = 1
         WHERE login = ?`)
-		sqlArgs = []any{string(hash), usernameFlag}
+		sqlArgs = []any{hash, usernameFlag}
 	} else {
 		sqlQuery = database.ConvertPlaceholders(`UPDATE users SET
             pw = ?,
             change_time = NOW(),
             change_by = 1
         WHERE login = ?`)
-		sqlArgs = []any{string(hash), usernameFlag}
+		sqlArgs = []any{hash, usernameFlag}
 	}
 
 	// Execute update

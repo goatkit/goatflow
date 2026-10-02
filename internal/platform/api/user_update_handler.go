@@ -2,14 +2,18 @@ package api
 
 import (
 	"database/sql"
+	"encoding/json"
+	"errors"
+	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -59,19 +63,25 @@ func HandleUpdateUserAPI(c *gin.Context) {
 		return
 	}
 
-	// Parse request
+	// Parse request once; the raw map detects attempts to change the login.
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Failed to read request body",
+		})
+		return
+	}
 	var req UpdateUserRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var rawBody map[string]json.RawMessage
+	if err := json.Unmarshal(body, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   err.Error(),
 		})
 		return
 	}
-
-	// Check if login field was provided (should not be allowed)
-	var rawBody map[string]interface{}
-	if err := c.ShouldBindJSON(&rawBody); err == nil {
+	if err := json.Unmarshal(body, &rawBody); err == nil {
 		if _, hasLogin := rawBody["login"]; hasLogin {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -81,30 +91,22 @@ func HandleUpdateUserAPI(c *gin.Context) {
 		}
 	}
 
-	// Get database connection
 	db, err := database.GetDB()
-	if err != nil || db == nil {
-		// Fallback: pretend success with echo of updatable fields
-		resp := gin.H{"id": userID}
-		if req.Email != nil {
-			resp["email"] = *req.Email
-		}
-		if req.FirstName != nil {
-			resp["first_name"] = *req.FirstName
-		}
-		if req.LastName != nil {
-			resp["last_name"] = *req.LastName
-		}
-		c.JSON(http.StatusOK, gin.H{"success": true, "data": resp})
+	if err == nil && db == nil {
+		err = errors.New("database connection is nil")
+	}
+	if err != nil {
+		log.Printf("HandleUpdateUserAPI: database unavailable: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database unavailable",
+		})
 		return
 	}
 
 	// Check if user exists
 	var existingLogin string
-	checkQuery := database.ConvertPlaceholders(`
-		SELECT login FROM users WHERE id = ?
-	`)
-	err = db.QueryRow(checkQuery, userID).Scan(&existingLogin)
+	err = db.QueryRow(database.ConvertPlaceholders(`SELECT login FROM users WHERE id = ?`), userID).Scan(&existingLogin)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -112,46 +114,75 @@ func HandleUpdateUserAPI(c *gin.Context) {
 		})
 		return
 	}
+	if err != nil {
+		log.Printf("HandleUpdateUserAPI: load user %d: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to load user",
+		})
+		return
+	}
 
-	// Build update query dynamically using ? placeholders (sqlx will rebind)
 	updates := []string{}
 	args := []interface{}{}
 
+	var email string
 	if req.Email != nil {
-		// Check if email is already taken by another user
-		var otherUserID int
-		emailCheckQuery := database.ConvertPlaceholders(`
-			SELECT id FROM users WHERE email = ? AND id != ?
-		`)
-		err = db.QueryRow(emailCheckQuery, *req.Email, userID).Scan(&otherUserID)
-		if err != sql.ErrNoRows {
+		email = strings.TrimSpace(*req.Email)
+		if email == "" || !strings.Contains(email, "@") {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Invalid email address",
+			})
+			return
+		}
+		// The OTRS users table has no email column; the agent's address is
+		// the UserEmail preference, which must stay unique among agents.
+		var taken int
+		err = db.QueryRow(database.ConvertPlaceholders(`
+			SELECT COUNT(*) FROM user_preferences
+			WHERE preferences_key = 'UserEmail' AND preferences_value = ? AND user_id <> ?
+		`), []byte(email), userID).Scan(&taken)
+		if err != nil {
+			log.Printf("HandleUpdateUserAPI: email uniqueness check: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to check email",
+			})
+			return
+		}
+		if taken > 0 {
 			c.JSON(http.StatusConflict, gin.H{
 				"success": false,
 				"error":   "Email already in use",
 			})
 			return
 		}
-
-		updates = append(updates, "email = ?")
-		args = append(args, *req.Email)
 	}
 
+	// first_name and last_name are NOT NULL in the users table.
 	if req.FirstName != nil {
-		updates = append(updates, "first_name = ?")
-		if *req.FirstName == "" {
-			args = append(args, sql.NullString{Valid: false})
-		} else {
-			args = append(args, *req.FirstName)
+		if strings.TrimSpace(*req.FirstName) == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "First name cannot be empty",
+			})
+			return
 		}
+		updates = append(updates, "first_name = ?")
+		args = append(args, *req.FirstName)
 	}
 
 	if req.LastName != nil {
-		updates = append(updates, "last_name = ?")
-		if *req.LastName == "" {
-			args = append(args, sql.NullString{Valid: false})
-		} else {
-			args = append(args, *req.LastName)
+		if strings.TrimSpace(*req.LastName) == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Last name cannot be empty",
+			})
+			return
 		}
+		updates = append(updates, "last_name = ?")
+		args = append(args, *req.LastName)
 	}
 
 	if req.Password != nil && *req.Password != "" {
@@ -165,17 +196,21 @@ func HandleUpdateUserAPI(c *gin.Context) {
 		}
 
 		// Hash the new password
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+		hashedPassword, err := auth.NewPasswordHasher().HashPassword(*req.Password)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
+			status := http.StatusInternalServerError
+			if errors.Is(err, auth.ErrPasswordTooLong) {
+				status = http.StatusBadRequest
+			}
+			c.JSON(status, gin.H{
 				"success": false,
-				"error":   "Failed to process password",
+				"error":   "Failed to process password: " + err.Error(),
 			})
 			return
 		}
 
 		updates = append(updates, "pw = ?")
-		args = append(args, string(hashedPassword))
+		args = append(args, hashedPassword)
 	}
 
 	if req.ValidID != nil {
@@ -192,8 +227,7 @@ func HandleUpdateUserAPI(c *gin.Context) {
 		args = append(args, *req.ValidID)
 	}
 
-	// If no updates, return error
-	if len(updates) == 0 {
+	if len(updates) == 0 && req.Email == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "No valid fields to update",
@@ -201,29 +235,24 @@ func HandleUpdateUserAPI(c *gin.Context) {
 		return
 	}
 
-	// Add change tracking
-	updates = append(updates, "change_time = ?")
-	args = append(args, time.Now())
+	// Change tracking is written even for email-only updates.
+	updates = append(updates, "change_time = ?", "change_by = ?")
+	args = append(args, time.Now(), currentUserID, userID)
 
-	updates = append(updates, "change_by = ?")
-	args = append(args, currentUserID)
-
-	// Add WHERE clause parameter
-	args = append(args, userID)
-
-	// Build and execute update query using QueryBuilder for rebinding
-	qb, err := database.GetQueryBuilder()
+	tx, err := db.Begin()
 	if err != nil {
+		log.Printf("HandleUpdateUserAPI: begin: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "Database connection failed",
+			"error":   "Failed to update user",
 		})
 		return
 	}
+	defer func() { _ = tx.Rollback() }()
 
 	updateQuery := database.ConvertPlaceholders("UPDATE users SET " + strings.Join(updates, ", ") + " WHERE id = ?")
-	result, err := qb.DB().Exec(updateQuery, args...)
-	if err != nil {
+	if _, err := tx.Exec(updateQuery, args...); err != nil {
+		log.Printf("HandleUpdateUserAPI: update user %d: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   "Failed to update user",
@@ -231,11 +260,22 @@ func HandleUpdateUserAPI(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil || rowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{
+	if req.Email != nil {
+		if err := setUserEmailPreference(tx, userID, email); err != nil {
+			log.Printf("HandleUpdateUserAPI: update email of user %d: %v", userID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to update user",
+			})
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("HandleUpdateUserAPI: commit: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "User not found or no changes made",
+			"error":   "Failed to update user",
 		})
 		return
 	}
@@ -247,4 +287,16 @@ func HandleUpdateUserAPI(c *gin.Context) {
 			"id": userID,
 		},
 	})
+}
+
+// setUserEmailPreference replaces the agent's UserEmail preference.
+func setUserEmailPreference(tx *sql.Tx, userID int, email string) error {
+	if _, err := tx.Exec(database.ConvertPlaceholders(
+		`DELETE FROM user_preferences WHERE user_id = ? AND preferences_key = 'UserEmail'`), userID); err != nil {
+		return err
+	}
+	_, err := tx.Exec(database.ConvertPlaceholders(
+		`INSERT INTO user_preferences (user_id, preferences_key, preferences_value) VALUES (?, 'UserEmail', ?)`),
+		userID, []byte(email))
+	return err
 }

@@ -23,26 +23,18 @@ func wrapDBHandler(handlerFactory func(*sql.DB) gin.HandlerFunc) gin.HandlerFunc
 
 // AgentHandlerExports provides exported handler functions for agent routes.
 var AgentHandlerExports = struct {
-	HandleAgentTickets         gin.HandlerFunc
-	HandleAgentTicketReply     gin.HandlerFunc
-	HandleAgentTicketNote      gin.HandlerFunc
-	HandleAgentTicketPhone     gin.HandlerFunc
-	HandleAgentTicketStatus    gin.HandlerFunc
-	HandleAgentTicketAssign    gin.HandlerFunc
-	HandleAgentTicketPriority  gin.HandlerFunc
-	HandleAgentTicketQueue     gin.HandlerFunc
-	HandleAgentTicketMerge     gin.HandlerFunc
-	HandleAgentTicketDraft     gin.HandlerFunc
-	HandleAgentCustomerTickets gin.HandlerFunc
-	HandleAgentCustomerView    gin.HandlerFunc
-	HandleAgentSearch          gin.HandlerFunc
-	HandleAgentSearchResults   gin.HandlerFunc
-	HandleAgentNewTicket       gin.HandlerFunc
-	HandleAgentCreateTicket    gin.HandlerFunc
-	HandleAgentQueues          gin.HandlerFunc
-	HandleAgentQueueView       gin.HandlerFunc
-	HandleAgentQueueLock       gin.HandlerFunc
-	HandleAgentCustomers       gin.HandlerFunc
+	HandleAgentTickets        gin.HandlerFunc
+	HandleAgentTicketReply    gin.HandlerFunc
+	HandleAgentTicketNote     gin.HandlerFunc
+	HandleAgentTicketPhone    gin.HandlerFunc
+	HandleAgentTicketStatus   gin.HandlerFunc
+	HandleAgentTicketAssign   gin.HandlerFunc
+	HandleAgentTicketPriority gin.HandlerFunc
+	HandleAgentTicketQueue    gin.HandlerFunc
+	HandleAgentTicketMerge    gin.HandlerFunc
+	HandleAgentNewTicket      gin.HandlerFunc
+	HandleAgentCreateTicket   gin.HandlerFunc
+	HandleAgentQueues         gin.HandlerFunc
 	// Bulk ticket actions
 	HandleBulkTicketStatus     gin.HandlerFunc
 	HandleBulkTicketPriority   gin.HandlerFunc
@@ -53,26 +45,18 @@ var AgentHandlerExports = struct {
 	HandleGetBulkActionOptions gin.HandlerFunc
 	HandleGetFilteredTicketIds gin.HandlerFunc
 }{
-	HandleAgentTickets:         wrapDBHandler(handleAgentTickets),
-	HandleAgentTicketReply:     wrapDBHandler(handleAgentTicketReply),
-	HandleAgentTicketNote:      wrapDBHandler(handleAgentTicketNote),
-	HandleAgentTicketPhone:     wrapDBHandler(handleAgentTicketPhone),
-	HandleAgentTicketStatus:    wrapDBHandler(handleAgentTicketStatus),
-	HandleAgentTicketAssign:    wrapDBHandler(handleAgentTicketAssign),
-	HandleAgentTicketPriority:  wrapDBHandler(handleAgentTicketPriority),
-	HandleAgentTicketQueue:     wrapDBHandler(handleAgentTicketQueue),
-	HandleAgentTicketMerge:     wrapDBHandler(handleAgentTicketMerge),
-	HandleAgentTicketDraft:     wrapDBHandler(handleAgentTicketDraft),
-	HandleAgentCustomerTickets: wrapDBHandler(handleAgentCustomerTickets),
-	HandleAgentCustomerView:    wrapDBHandler(handleAgentCustomerView),
-	HandleAgentSearch:          wrapDBHandler(handleAgentSearch),
-	HandleAgentSearchResults:   wrapDBHandler(handleAgentSearchResults),
-	HandleAgentNewTicket:       wrapDBHandler(HandleAgentNewTicket),
-	HandleAgentCreateTicket:    wrapDBHandler(HandleAgentCreateTicket),
-	HandleAgentQueues:          wrapDBHandler(handleAgentQueues),
-	HandleAgentQueueView:       wrapDBHandler(handleAgentQueueView),
-	HandleAgentQueueLock:       wrapDBHandler(handleAgentQueueLock),
-	HandleAgentCustomers:       wrapDBHandler(handleAgentCustomers),
+	HandleAgentTickets:        wrapDBHandler(handleAgentTickets),
+	HandleAgentTicketReply:    wrapDBHandler(handleAgentTicketReply),
+	HandleAgentTicketNote:     wrapDBHandler(handleAgentTicketNote),
+	HandleAgentTicketPhone:    wrapDBHandler(handleAgentTicketPhone),
+	HandleAgentTicketStatus:   wrapDBHandler(handleAgentTicketStatus),
+	HandleAgentTicketAssign:   wrapDBHandler(handleAgentTicketAssign),
+	HandleAgentTicketPriority: wrapDBHandler(handleAgentTicketPriority),
+	HandleAgentTicketQueue:    wrapDBHandler(handleAgentTicketQueue),
+	HandleAgentTicketMerge:    wrapDBHandler(handleAgentTicketMerge),
+	HandleAgentNewTicket:      wrapDBHandler(HandleAgentNewTicket),
+	HandleAgentCreateTicket:   wrapDBHandler(HandleAgentCreateTicket),
+	HandleAgentQueues:         wrapDBHandler(handleAgentQueues),
 	// Bulk ticket actions
 	HandleBulkTicketStatus:     wrapDBHandler(handleBulkTicketStatus),
 	HandleBulkTicketPriority:   wrapDBHandler(handleBulkTicketPriority),
@@ -95,7 +79,6 @@ var (
 	HandleAgentTicketPriority = AgentHandlerExports.HandleAgentTicketPriority
 	HandleAgentTicketQueue    = AgentHandlerExports.HandleAgentTicketQueue
 	HandleAgentTicketMerge    = AgentHandlerExports.HandleAgentTicketMerge
-	HandleAgentTicketDraft    = AgentHandlerExports.HandleAgentTicketDraft
 )
 
 // RegisterAgentHandlers registers agent handlers for YAML routing.

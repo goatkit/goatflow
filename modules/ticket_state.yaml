@@ -34,15 +34,11 @@ fields:
     required: true
     show_in_list: true
     show_in_form: true
-    options:
-      - value: 1
-        label: New
-      - value: 2
-        label: Open
-      - value: 3
-        label: Pending
-      - value: 4
-        label: Closed
+    options: []
+    lookup_table: ticket_state_type
+    lookup_key: id
+    lookup_display: name
+    lookup_condition: "id > 0"
 
   - name: valid_id
     type: int
@@ -92,19 +88,12 @@ features:
 
 filters:
   - field: type_id
-    type: select
+    type: multi_select
     label: Type
-    options:
-      - value: ""
-        label: "All Types"
-      - value: "1"
-        label: "New"
-      - value: "2"
-        label: "Open"
-      - value: "3"
-        label: "Pending"
-      - value: "4"
-        label: "Closed"
+    source: database
+    lookup_table: ticket_state_type
+    lookup_key: id
+    lookup_display: name
   - field: valid_id
     type: select
     label: Status

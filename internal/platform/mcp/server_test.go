@@ -6,9 +6,11 @@ import (
 	"testing"
 )
 
+var testAdmin = UserContext{UserID: 1, UserLogin: "admin", UserRole: "Admin", Principal: "agent:1"}
+
 func TestServerInitialize(t *testing.T) {
 	bridge := NewAPIBridge()
-	server := NewServer(1, "admin", "Admin", bridge)
+	server := NewServer(bridge)
 
 	req := Request{
 		JSONRPC: "2.0",
@@ -18,7 +20,7 @@ func TestServerInitialize(t *testing.T) {
 	}
 
 	reqBytes, _ := json.Marshal(req)
-	respBytes, err := server.HandleMessage(context.Background(), reqBytes)
+	respBytes, err := server.HandleMessage(context.Background(), testAdmin, reqBytes)
 	if err != nil {
 		t.Fatalf("HandleMessage failed: %v", err)
 	}
@@ -47,7 +49,7 @@ func TestServerToolsList(t *testing.T) {
 	initTestTools(t)
 
 	bridge := NewAPIBridge()
-	server := NewServer(1, "admin", "Admin", bridge)
+	server := NewServer(bridge)
 
 	req := Request{
 		JSONRPC: "2.0",
@@ -56,7 +58,7 @@ func TestServerToolsList(t *testing.T) {
 	}
 
 	reqBytes, _ := json.Marshal(req)
-	respBytes, err := server.HandleMessage(context.Background(), reqBytes)
+	respBytes, err := server.HandleMessage(context.Background(), testAdmin, reqBytes)
 	if err != nil {
 		t.Fatalf("HandleMessage failed: %v", err)
 	}
@@ -87,7 +89,7 @@ func TestServerToolsList(t *testing.T) {
 
 func TestServerMethodNotFound(t *testing.T) {
 	bridge := NewAPIBridge()
-	server := NewServer(1, "admin", "Admin", bridge)
+	server := NewServer(bridge)
 
 	req := Request{
 		JSONRPC: "2.0",
@@ -96,7 +98,7 @@ func TestServerMethodNotFound(t *testing.T) {
 	}
 
 	reqBytes, _ := json.Marshal(req)
-	respBytes, err := server.HandleMessage(context.Background(), reqBytes)
+	respBytes, err := server.HandleMessage(context.Background(), testAdmin, reqBytes)
 	if err != nil {
 		t.Fatalf("HandleMessage failed: %v", err)
 	}
@@ -117,14 +119,14 @@ func TestServerMethodNotFound(t *testing.T) {
 
 func TestServerIgnoresNotifications(t *testing.T) {
 	bridge := NewAPIBridge()
-	server := NewServer(1, "admin", "Admin", bridge)
+	server := NewServer(bridge)
 
 	for _, msg := range []string{
 		`{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}`,
 		`{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":1}}`,
 		`{"jsonrpc":"2.0","method":"unknown/notification"}`,
 	} {
-		respBytes, err := server.HandleMessage(context.Background(), []byte(msg))
+		respBytes, err := server.HandleMessage(context.Background(), testAdmin, []byte(msg))
 		if err != nil {
 			t.Fatalf("HandleMessage failed: %v", err)
 		}
@@ -136,7 +138,7 @@ func TestServerIgnoresNotifications(t *testing.T) {
 
 func TestServerPing(t *testing.T) {
 	bridge := NewAPIBridge()
-	server := NewServer(1, "admin", "Admin", bridge)
+	server := NewServer(bridge)
 
 	req := Request{
 		JSONRPC: "2.0",
@@ -145,7 +147,7 @@ func TestServerPing(t *testing.T) {
 	}
 
 	reqBytes, _ := json.Marshal(req)
-	respBytes, err := server.HandleMessage(context.Background(), reqBytes)
+	respBytes, err := server.HandleMessage(context.Background(), testAdmin, reqBytes)
 	if err != nil {
 		t.Fatalf("HandleMessage failed: %v", err)
 	}

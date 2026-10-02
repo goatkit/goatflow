@@ -278,20 +278,6 @@ func GetAdapter() DBAdapter {
 	return dbAdapter
 }
 
-// SetAdapter overrides the global adapter, primarily for tests.
-func SetAdapter(adapter DBAdapter) {
-	adapterMu.Lock()
-	dbAdapter = adapter
-	adapterMu.Unlock()
-}
-
-// ResetAdapterForTest clears the cached adapter so tests can rebuild state.
-func ResetAdapterForTest() {
-	adapterMu.Lock()
-	dbAdapter = nil
-	adapterMu.Unlock()
-}
-
 // buildAdapterFromEnv picks the adapter for the driver that ConvertPlaceholders
 // converts for (GetDBDriver), so a converted query always meets its adapter.
 func buildAdapterFromEnv() DBAdapter {

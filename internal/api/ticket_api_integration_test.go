@@ -4,6 +4,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/ticketnumber"
 )
@@ -111,7 +113,11 @@ func TestTicketAPIIntegration(t *testing.T) {
 		err = json.Unmarshal(w.Body.Bytes(), &getResponse)
 		require.NoError(t, err)
 		ticketData := getResponse["data"].(map[string]interface{})
-		assert.Equal(t, float64(2), ticketData["state_id"]) // Closed state
+		db, err := database.GetDB()
+		require.NoError(t, err)
+		closedID, err := lookups.ID(context.Background(), db, lookups.StateLookup, lookups.StateClosedSuccessful)
+		require.NoError(t, err)
+		assert.Equal(t, float64(closedID), ticketData["state_id"])
 	})
 }
 
@@ -127,7 +133,7 @@ func setupAuthenticatedRouter(t *testing.T) *gin.Engine {
 
 	repository.SetTicketNumberGenerator(gen, ticketnumber.NewDBStore(db, "10"))
 	t.Cleanup(func() {
-		repository.SetTicketNumberGenerator(nil, nil)
+		require.NoError(t, initTestTicketNumberGenerator())
 	})
 
 	router := gin.New()

@@ -15,7 +15,7 @@ Run the curated baseline suite:
 make bench
 ```
 
-By default this runs existing benchmarks across routing, middleware, API shell setup, config, models, HTML sanitizing, and LDAP config helpers. The output is written to `generated/benchmarks/go-<timestamp>.txt`.
+By default this runs existing benchmarks across routing, middleware, API shell setup, config, models and HTML sanitizing. The output is written to `generated/benchmarks/go-<timestamp>.txt`.
 
 Useful knobs:
 
@@ -35,7 +35,7 @@ make bench BENCH_OUT=generated/benchmarks/candidate.txt
 make bench-compare BASE=generated/benchmarks/base.txt CANDIDATE=generated/benchmarks/candidate.txt
 ```
 
-When adding new benchmarks, keep them deterministic and fast enough for the default suite. Prefer benchmarks that exercise a stable boundary: routing setup, permission checks, serialization, parser logic, template rendering, cache access, or service helpers. Benchmarks requiring external services should stay opt-in, like the LDAP integration benchmark.
+When adding new benchmarks, keep them deterministic and fast enough for the default suite. Prefer benchmarks that exercise a stable boundary: routing setup, permission checks, serialization, parser logic, template rendering, cache access, or service helpers. Benchmarks requiring external services should stay opt-in.
 
 ## k6 Load Tests
 

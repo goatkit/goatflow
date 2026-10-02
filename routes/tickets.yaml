@@ -11,6 +11,7 @@ spec:
     prefix: /tickets
     middleware:
         - auth
+        - agent # Customers' JWTs must not reach agent routes
         - queue_ro # Require read access to at least one queue
     routes:
         # Tickets list page - shows all tickets with filtering and bulk actions
@@ -69,12 +70,6 @@ spec:
               - auth
               - ticket_access_note # Require note permission for ticket's queue
           description: "Upload file attachment to ticket"
-
-        # Search tickets API
-        - path: /api/search
-          method: GET
-          handler: handleAgentSearch
-          description: "Search tickets with filters"
 
         # Ticket priority update
         - path: /:id/priority

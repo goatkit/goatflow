@@ -2,13 +2,14 @@ package api
 
 import (
 	"bytes"
+	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -19,315 +20,273 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/shared"
+	"github.com/goatkit/goatflow/internal/service"
 )
 
-// TestPasswordHashingModes verifies both SHA256 (OTRS-compatible) and bcrypt modes
-// for customer users and agents.
-func TestPasswordHashingModes(t *testing.T) {
+const pwHashTestCompany = "PWHASHCO"
+
+func otrsSHA2Hash(password string) string {
+	sum := sha256.Sum256([]byte(password))
+	return hex.EncodeToString(sum[:])
+}
+
+func requireHashType(t *testing.T, want auth.PasswordHashType, password, stored string) {
+	t.Helper()
+	switch want {
+	case auth.HashTypeBcrypt:
+		require.NoError(t, bcrypt.CompareHashAndPassword([]byte(stored), []byte(password)), "want bcrypt, got %q", stored)
+	case auth.HashTypeSHA256:
+		require.Equal(t, otrsSHA2Hash(password), stored, "want OTRS sha2")
+	default:
+		t.Fatalf("unknown hash type %q", want)
+	}
+}
+
+func pwOf(t *testing.T, db *sql.DB, table, login string) string {
+	t.Helper()
+	var pw string
+	query := "SELECT pw FROM users WHERE login = ?"
+	if table == "customer_user" {
+		query = "SELECT pw FROM customer_user WHERE login = ?"
+	}
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(query), login).Scan(&pw))
+	return pw
+}
+
+func idOf(t *testing.T, db *sql.DB, table, login string) int {
+	t.Helper()
+	var id int
+	query := "SELECT id FROM users WHERE login = ?"
+	if table == "customer_user" {
+		query = "SELECT id FROM customer_user WHERE login = ?"
+	}
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(query), login).Scan(&id))
+	return id
+}
+
+// seedAccount inserts an agent (users) or customer (customer_user) whose pw is
+// an OTRS sha2 hash, the format an OTRS import leaves behind.
+func seedAccount(t *testing.T, db *sql.DB, table, login, password string) {
+	t.Helper()
+	if table == "users" {
+		_, err := db.Exec(database.ConvertPlaceholders(`
+			INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+			VALUES (?, ?, 'Hash', 'Agent', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)`), login, otrsSHA2Hash(password))
+		require.NoError(t, err)
+	} else {
+		createTestCustomerCompany(t, db, pwHashTestCompany)
+		_, err := db.Exec(database.ConvertPlaceholders(`
+			INSERT INTO customer_user (login, email, customer_id, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+			VALUES (?, ?, ?, ?, 'Hash', 'Customer', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)`),
+			login, login+"@example.test", pwHashTestCompany, otrsSHA2Hash(password))
+		require.NoError(t, err)
+	}
+	cleanupAccount(t, db, table, login)
+}
+
+func cleanupAccount(t *testing.T, db *sql.DB, table, login string) {
+	t.Cleanup(func() {
+		if table == "customer_user" {
+			_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM customer_user WHERE login = ?`), login) //nolint:errcheck // cleanup
+			return
+		}
+		for _, q := range []string{
+			`DELETE FROM group_user WHERE user_id IN (SELECT id FROM users WHERE login = ?)`,
+			`DELETE FROM user_preferences WHERE user_id IN (SELECT id FROM users WHERE login = ?)`,
+			`DELETE FROM users WHERE login = ?`,
+		} {
+			_, _ = db.Exec(database.ConvertPlaceholders(q), login) //nolint:errcheck // cleanup
+		}
+	})
+}
+
+func sendJSON(t *testing.T, r *gin.Engine, method, path string, body any) (int, string) {
+	t.Helper()
+	b, err := json.Marshal(body)
+	require.NoError(t, err)
+	req := httptest.NewRequest(method, path, bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w.Code, w.Body.String()
+}
+
+// Every HTTP path that stores a new password hashes it with the hasher
+// selected by PASSWORD_HASH_TYPE (default bcrypt), for agents and customers.
+func TestPasswordCreationPathsUseConfiguredHash(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	db := getTestDB(t)
+	const oldPw, newPw = "0ld-Pass-Word-A", "N3w-Pass-Word-B"
 
-	db := getTestDB(t) // Test uses db for helper functions
-
-	testCases := []struct {
-		name       string
-		hashType   string
-		verifyFunc func(t *testing.T, password, hash string)
-	}{
-		{
-			name:     "SHA256 (OTRS compatible)",
-			hashType: "sha256",
-			verifyFunc: func(t *testing.T, password, hash string) {
-				// SHA256 produces 64 character hex string
-				assert.Len(t, hash, 64, "SHA256 hash should be 64 characters")
-				assert.Regexp(t, `^[a-f0-9]{64}$`, hash, "SHA256 hash should be hex only")
-
-				// Should NOT start with bcrypt prefix
-				assert.False(t, strings.HasPrefix(hash, "$2"), "SHA256 hash should not have bcrypt prefix")
-
-				// Verify with hasher
-				hasher := auth.NewPasswordHasher()
-				assert.True(t, hasher.VerifyPassword(password, hash), "Password should verify")
-			},
-		},
-		{
-			name:     "bcrypt (stronger security)",
-			hashType: "bcrypt",
-			verifyFunc: func(t *testing.T, password, hash string) {
-				// Bcrypt hashes start with $2a$, $2b$, or $2y$
-				assert.True(t, strings.HasPrefix(hash, "$2"), "bcrypt hash should start with $2")
-
-				// Should be able to verify with bcrypt directly
-				err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-				assert.NoError(t, err, "bcrypt.CompareHashAndPassword should succeed")
-
-				// Verify with hasher
-				hasher := auth.NewPasswordHasher()
-				assert.True(t, hasher.VerifyPassword(password, hash), "Password should verify")
-			},
-		},
+	type creationPath struct {
+		name  string
+		table string
+		// run stores newPw for login via the handler and returns the HTTP status/body.
+		run func(t *testing.T, login string) (int, string)
+	}
+	paths := []creationPath{
+		{"admin agent create", "users", func(t *testing.T, login string) (int, string) {
+			cleanupAccount(t, db, "users", login)
+			r := seedAdminRouter()
+			r.POST("/admin/users", HandleAdminUserCreate)
+			return sendJSON(t, r, http.MethodPost, "/admin/users", gin.H{
+				"login": login, "first_name": "Hash", "last_name": "Agent", "password": newPw, "valid_id": 1,
+			})
+		}},
+		{"admin agent update", "users", func(t *testing.T, login string) (int, string) {
+			seedAccount(t, db, "users", login, oldPw)
+			r := seedAdminRouter()
+			r.PUT("/admin/users/:id", HandleAdminUserUpdate)
+			return sendJSON(t, r, http.MethodPut, fmt.Sprintf("/admin/users/%d", idOf(t, db, "users", login)), gin.H{
+				"login": login, "first_name": "Hash", "last_name": "Agent", "password": newPw, "valid_id": 1,
+			})
+		}},
+		{"admin agent reset password", "users", func(t *testing.T, login string) (int, string) {
+			seedAccount(t, db, "users", login, oldPw)
+			r := seedAdminRouter()
+			r.POST("/admin/users/:id/reset-password", HandleAdminUserResetPassword)
+			return sendJSON(t, r, http.MethodPost, fmt.Sprintf("/admin/users/%d/reset-password", idOf(t, db, "users", login)), gin.H{
+				"password": newPw,
+			})
+		}},
+		{"agent self-service change", "users", func(t *testing.T, login string) (int, string) {
+			seedAccount(t, db, "users", login, oldPw)
+			id := idOf(t, db, "users", login)
+			r := seedAdminRouter()
+			r.Use(func(c *gin.Context) { c.Set("user_id", uint(id)); c.Next() })
+			r.POST("/agent/password/change", HandleAgentChangePassword)
+			return sendJSON(t, r, http.MethodPost, "/agent/password/change", gin.H{
+				"current_password": oldPw, "new_password": newPw, "confirm_password": newPw,
+			})
+		}},
+		{"admin customer user create", "customer_user", func(t *testing.T, login string) (int, string) {
+			createTestCustomerCompany(t, db, pwHashTestCompany)
+			cleanupAccount(t, db, "customer_user", login)
+			r := seedAdminRouter()
+			r.POST("/admin/customer-users", HandleAdminCustomerUsersCreate)
+			return sendJSON(t, r, http.MethodPost, "/admin/customer-users", gin.H{
+				"login": login, "email": login + "@example.test", "customer_id": pwHashTestCompany,
+				"first_name": "Hash", "last_name": "Customer", "password": newPw, "valid_id": 1,
+			})
+		}},
+		{"admin customer user update", "customer_user", func(t *testing.T, login string) (int, string) {
+			seedAccount(t, db, "customer_user", login, oldPw)
+			r := seedAdminRouter()
+			r.PUT("/admin/customer-users/:id", HandleAdminCustomerUsersUpdate)
+			return sendJSON(t, r, http.MethodPut, fmt.Sprintf("/admin/customer-users/%d", idOf(t, db, "customer_user", login)), gin.H{
+				"login": login, "email": login + "@example.test", "customer_id": pwHashTestCompany,
+				"first_name": "Hash", "last_name": "Customer", "password": newPw, "valid_id": 1,
+			})
+		}},
+		{"customer self-service change", "customer_user", func(t *testing.T, login string) (int, string) {
+			seedAccount(t, db, "customer_user", login, oldPw)
+			r := seedAdminRouter()
+			r.Use(func(c *gin.Context) { c.Set("username", login); c.Set("user_role", "Customer"); c.Next() })
+			r.POST("/customer/password/change", handleCustomerChangePassword(db))
+			return sendJSON(t, r, http.MethodPost, "/customer/password/change", gin.H{
+				"current_password": oldPw, "new_password": newPw, "confirm_password": newPw,
+			})
+		}},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Set the hash type for this test
-			originalHashType := os.Getenv("PASSWORD_HASH_TYPE")
-			os.Setenv("PASSWORD_HASH_TYPE", tc.hashType)
-			defer os.Setenv("PASSWORD_HASH_TYPE", originalHashType)
+	for _, cfg := range []struct {
+		env  string
+		want auth.PasswordHashType
+	}{
+		{"", auth.HashTypeBcrypt},
+		{"sha256", auth.HashTypeSHA256},
+	} {
+		for _, p := range paths {
+			t.Run(fmt.Sprintf("%s/PASSWORD_HASH_TYPE=%s", p.name, cfg.env), func(t *testing.T) {
+				t.Setenv(auth.EnvPasswordHashType, cfg.env)
+				login := fmt.Sprintf("pwh%d", time.Now().UnixNano())
+				code, body := p.run(t, login)
+				require.Contains(t, []int{http.StatusOK, http.StatusCreated}, code, body)
+				requireHashType(t, cfg.want, newPw, pwOf(t, db, p.table, login))
+			})
+		}
+	}
+}
 
-			t.Run("customer user create", func(t *testing.T) {
-				testCustomerUserPasswordHashing(t, db, tc.hashType, tc.verifyFunc)
+// Setup assistant onboarding hashes the generated portal password with the
+// configured algorithm.
+func TestSetupAssistantOnboardPasswordHashFollowsConfig(t *testing.T) {
+	db := getTestDB(t)
+	svc := service.NewSetupAssistantService(db, nil)
+	for _, cfg := range []struct {
+		env  string
+		want auth.PasswordHashType
+	}{
+		{"", auth.HashTypeBcrypt},
+		{"sha256", auth.HashTypeSHA256},
+	} {
+		t.Run("PASSWORD_HASH_TYPE="+cfg.env, func(t *testing.T) {
+			t.Setenv(auth.EnvPasswordHashType, cfg.env)
+			sfx := fmt.Sprint(time.Now().UnixNano())
+			cid, login := "PWHONB"+sfx, "pwhonb"+sfx
+			cleanupAccount(t, db, "customer_user", login)
+			t.Cleanup(func() {
+				_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM customer_company WHERE customer_id = ?`), cid) //nolint:errcheck // cleanup
 			})
 
-			t.Run("agent user reset password", func(t *testing.T) {
-				testAgentPasswordReset(t, db, tc.hashType, tc.verifyFunc)
+			res := svc.OnboardCustomer(context.Background(), service.OnboardCustomerRequest{
+				CustomerID: cid, Name: "Hash Onboard " + sfx,
+				Users: []service.CustomerUserInput{{Login: login, Email: login + "@example.test", FirstName: "On", LastName: "Board"}},
 			})
+			require.True(t, res.Success, res.Error)
+			require.Len(t, res.UsersCreated, 1)
+			requireHashType(t, cfg.want, res.UsersCreated[0].Password, pwOf(t, db, "customer_user", login))
 		})
 	}
 }
 
-func testCustomerUserPasswordHashing(t *testing.T, db *sql.DB, hashType string, verify func(*testing.T, string, string)) {
-	testLogin := "cuhash_" + hashType + "_" + time.Now().Format("150405")
-	testPassword := "TestPassword123!"
-	testEmail := testLogin + "@example.com"
-	testCustomerID := "TESTCUST"
-
-	// Ensure test customer company exists
-	createTestCustomerCompany(t, db, testCustomerID)
-
-	// Cleanup after test
-	defer func() {
-		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM customer_user WHERE login = ?"), testLogin)
-	}()
-
-	// Hash the password using the auth hasher (simulating what the handler does)
-	hasher := auth.NewPasswordHasher()
-	hashedPassword, err := hasher.HashPassword(testPassword)
-	require.NoError(t, err, "Failed to hash password")
-
-	// Insert directly into DB (bypassing handler to focus on password hashing)
-	_, err = db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO customer_user (login, email, customer_id, pw, first_name, last_name, valid_id,
-			create_time, create_by, change_time, change_by)
-		VALUES (?, ?, ?, ?, 'Test', 'User', 1, NOW(), 1, NOW(), 1)
-	`), testLogin, testEmail, testCustomerID, hashedPassword)
-	require.NoError(t, err, "Failed to insert customer user")
-
-	// Query the stored hash
-	var storedHash string
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT pw FROM customer_user WHERE login = ?"), testLogin).Scan(&storedHash)
-	require.NoError(t, err, "Failed to query stored password")
-
-	// Password should NOT be stored as plain text
-	assert.NotEqual(t, testPassword, storedHash, "Password was stored as plain text!")
-
-	// Verify hash format and correctness
-	verify(t, testPassword, storedHash)
-}
-
-func testAgentPasswordReset(t *testing.T, db *sql.DB, hashType string, verify func(*testing.T, string, string)) {
-	// Create a test agent user
-	testLogin := "agenthash_" + hashType + "_" + time.Now().Format("150405")
-	testPassword := "AgentPass456!"
-
-	// Use a fixed high ID (70000 range) to avoid collision with other test packages
-	// that clean up IDs >= 80000 (MCP) or >= 90000 (api/v1).
-	agentID := int64(70001)
-	_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), agentID)
-
-	// Insert test agent with fixed ID
-	_, err := db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO users (id, login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (?, ?, 'placeholder', 'Test', 'Agent', 1, NOW(), 1, NOW(), 1)
-	`), agentID, testLogin)
-	require.NoError(t, err, "Failed to create test agent")
-
-	// Cleanup after test
-	defer func() {
-		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), agentID)
-	}()
-
-	// Create router with auth context
-	router := gin.New()
-	router.Use(func(c *gin.Context) {
-		c.Set("userID", int64(1)) // Admin user
-		c.Next()
-	})
-	router.POST("/admin/users/:id/reset-password", HandleAdminUserResetPassword)
-
-	// Reset password via API
-	payload := map[string]string{"password": testPassword}
-	body, _ := json.Marshal(payload)
-
-	req := httptest.NewRequest(http.MethodPost, "/admin/users/"+strconv.FormatInt(agentID, 10)+"/reset-password", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	require.Equal(t, http.StatusOK, w.Code, "Expected 200 OK, got %d: %s", w.Code, w.Body.String())
-
-	// Query the stored hash
-	var storedHash string
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT pw FROM users WHERE id = ?"), agentID).Scan(&storedHash)
-	require.NoError(t, err, "Failed to query stored password")
-
-	// Password should NOT be stored as plain text
-	assert.NotEqual(t, testPassword, storedHash, "Password was stored as plain text!")
-
-	// Note: Agent password handler uses bcrypt regardless of PASSWORD_HASH_TYPE
-	// This is intentional - agents should always use stronger security
-	// Verify it's a bcrypt hash
-	assert.True(t, strings.HasPrefix(storedHash, "$2"), "Agent passwords should always use bcrypt") // sql-ok: bcrypt prefix check, not SQL placeholder
-
-	// Verify with bcrypt
-	err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(testPassword))
-	assert.NoError(t, err, "bcrypt verification should succeed")
-}
-
-// TestCustomerUserPasswordHashFormat verifies the exact hash format stored in DB
-func TestCustomerUserPasswordHashFormat(t *testing.T) {
+// Imported OTRS sha2 passwords log in on every live login endpoint. With
+// MIGRATE_PASSWORD_HASHES=true the stored hash becomes bcrypt on that login and
+// keeps working; with it off the stored hash is left alone.
+func TestLoginPasswordHashMigration(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	db := getTestDB(t)
+	const password = "Otrs-Imported-1"
 
-	getTestDB(t) // Initialize test database
+	endpoints := []struct {
+		name  string
+		table string
+		path  string
+		h     gin.HandlerFunc
+	}{
+		{"agent web login", "users", "/api/auth/login", HandleAuthLogin},
+		{"agent API login", "users", "/api/v1/auth/login", HandleAPIv1AuthLogin},
+		{"customer portal login", "customer_user", "/api/auth/customer/login", handleCustomerLogin(shared.GetJWTManager())},
+		{"customer API login", "customer_user", "/api/v1/auth/login", HandleAPIv1AuthLogin},
+	}
+	for _, ep := range endpoints {
+		for _, migrate := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/MIGRATE_PASSWORD_HASHES=%v", ep.name, migrate), func(t *testing.T) {
+				t.Setenv(auth.EnvPasswordHashType, "")
+				t.Setenv(auth.EnvMigratePasswordHashes, fmt.Sprint(migrate))
+				login := fmt.Sprintf("pwm%d", time.Now().UnixNano())
+				seedAccount(t, db, ep.table, login, password)
+				r := gin.New()
+				r.POST(ep.path, ep.h)
 
-	t.Run("SHA256 produces correct format", func(t *testing.T) {
-		originalHashType := os.Getenv("PASSWORD_HASH_TYPE")
-		os.Setenv("PASSWORD_HASH_TYPE", "sha256")
-		defer os.Setenv("PASSWORD_HASH_TYPE", originalHashType)
+				code, body := sendJSON(t, r, http.MethodPost, ep.path, gin.H{"login": login, "password": password})
+				require.Equal(t, http.StatusOK, code, body)
 
-		hasher := auth.NewPasswordHasher()
-		hash, err := hasher.HashPassword("TestPassword123!")
-		require.NoError(t, err)
+				stored := pwOf(t, db, ep.table, login)
+				if migrate {
+					requireHashType(t, auth.HashTypeBcrypt, password, stored)
+				} else {
+					assert.Equal(t, otrsSHA2Hash(password), stored, "hash must be unchanged when migration is off")
+				}
 
-		// SHA256 format: 64 hex characters
-		assert.Len(t, hash, 64)
-		assert.Regexp(t, `^[a-f0-9]+$`, hash)
-
-		// Same password should produce same hash (SHA256 is deterministic)
-		hash2, _ := hasher.HashPassword("TestPassword123!")
-		assert.Equal(t, hash, hash2, "SHA256 should be deterministic")
-	})
-
-	t.Run("bcrypt produces correct format", func(t *testing.T) {
-		originalHashType := os.Getenv("PASSWORD_HASH_TYPE")
-		os.Setenv("PASSWORD_HASH_TYPE", "bcrypt")
-		defer os.Setenv("PASSWORD_HASH_TYPE", originalHashType)
-
-		hasher := auth.NewPasswordHasher()
-		hash, err := hasher.HashPassword("TestPassword123!")
-		require.NoError(t, err)
-
-		// bcrypt format: starts with $2a$, $2b$, or $2y$
-		assert.True(t, strings.HasPrefix(hash, "$2"))
-
-		// Same password should produce different hash (bcrypt uses random salt)
-		hash2, _ := hasher.HashPassword("TestPassword123!")
-		assert.NotEqual(t, hash, hash2, "bcrypt should use random salt")
-
-		// But both should verify
-		assert.True(t, hasher.VerifyPassword("TestPassword123!", hash))
-		assert.True(t, hasher.VerifyPassword("TestPassword123!", hash2))
-	})
-}
-
-// TestPasswordVerificationCrossCompatibility verifies passwords hashed with one
-// algorithm can be verified after switching algorithms (for migration scenarios)
-func TestPasswordVerificationCrossCompatibility(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	password := "TestPassword123!"
-
-	// Hash with SHA256
-	os.Setenv("PASSWORD_HASH_TYPE", "sha256")
-	sha256Hasher := auth.NewPasswordHasher()
-	sha256Hash, _ := sha256Hasher.HashPassword(password)
-
-	// Hash with bcrypt
-	os.Setenv("PASSWORD_HASH_TYPE", "bcrypt")
-	bcryptHasher := auth.NewPasswordHasher()
-	bcryptHash, _ := bcryptHasher.HashPassword(password)
-
-	// Reset env
-	os.Unsetenv("PASSWORD_HASH_TYPE")
-
-	t.Run("SHA256 hash verifies with any hasher config", func(t *testing.T) {
-		// Even if we switch to bcrypt mode, SHA256 hashes should still verify
-		os.Setenv("PASSWORD_HASH_TYPE", "bcrypt")
-		defer os.Unsetenv("PASSWORD_HASH_TYPE")
-
-		hasher := auth.NewPasswordHasher()
-		assert.True(t, hasher.VerifyPassword(password, sha256Hash),
-			"SHA256 hash should verify even when bcrypt is default")
-	})
-
-	t.Run("bcrypt hash verifies with any hasher config", func(t *testing.T) {
-		// Even if we switch to SHA256 mode, bcrypt hashes should still verify
-		os.Setenv("PASSWORD_HASH_TYPE", "sha256")
-		defer os.Unsetenv("PASSWORD_HASH_TYPE")
-
-		hasher := auth.NewPasswordHasher()
-		assert.True(t, hasher.VerifyPassword(password, bcryptHash),
-			"bcrypt hash should verify even when SHA256 is default")
-	})
-}
-
-// TestAgentPasswordAlwaysBcrypt verifies agent passwords always use bcrypt
-// regardless of PASSWORD_HASH_TYPE setting (security requirement)
-func TestAgentPasswordAlwaysBcrypt(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	db := getTestDB(t) // Test uses db for queries
-
-	// Even with SHA256 mode, agent passwords should use bcrypt
-	originalHashType := os.Getenv("PASSWORD_HASH_TYPE")
-	os.Setenv("PASSWORD_HASH_TYPE", "sha256")
-	defer os.Setenv("PASSWORD_HASH_TYPE", originalHashType)
-
-	testLogin := "agentbcrypt_" + time.Now().Format("150405")
-	testPassword := "AgentSecure789!"
-
-	// Use fixed high ID to avoid collision with other test packages.
-	agentID := int64(70002)
-	_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), agentID)
-
-	// Insert test agent with fixed ID
-	_, err := db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO users (id, login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (?, ?, 'placeholder', 'Test', 'Agent', 1, NOW(), 1, NOW(), 1)
-	`), agentID, testLogin)
-	require.NoError(t, err)
-
-	defer func() {
-		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), agentID)
-	}()
-
-	// Create router
-	router := gin.New()
-	router.Use(func(c *gin.Context) {
-		c.Set("userID", int64(1))
-		c.Next()
-	})
-	router.POST("/admin/users/:id/reset-password", HandleAdminUserResetPassword)
-
-	payload := map[string]string{"password": testPassword}
-	body, _ := json.Marshal(payload)
-
-	req := httptest.NewRequest(http.MethodPost, "/admin/users/"+strconv.FormatInt(agentID, 10)+"/reset-password", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	require.Equal(t, http.StatusOK, w.Code)
-
-	// Verify it's bcrypt despite SHA256 being configured
-	var storedHash string
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT pw FROM users WHERE id = ?"), agentID).Scan(&storedHash)
-	require.NoError(t, err)
-
-	assert.True(t, strings.HasPrefix(storedHash, "$2"), // sql-ok: bcrypt prefix check, not SQL placeholder
-		"Agent passwords MUST use bcrypt regardless of PASSWORD_HASH_TYPE. Got: %s", storedHash)
-
-	// Verify password works
-	err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(testPassword))
-	assert.NoError(t, err, "Password should verify with bcrypt")
+				code, body = sendJSON(t, r, http.MethodPost, ep.path, gin.H{"login": login, "password": password})
+				require.Equal(t, http.StatusOK, code, "second login: %s", body)
+				code, _ = sendJSON(t, r, http.MethodPost, ep.path, gin.H{"login": login, "password": password + "x"})
+				assert.Equal(t, http.StatusUnauthorized, code)
+				assert.Equal(t, stored, pwOf(t, db, ep.table, login), "a failed login must not touch the hash")
+			})
+		}
+	}
 }

@@ -138,7 +138,7 @@
                             <option value="" data-state-id="" data-state-type="" selected>{{ t("tickets_form.state.keep_open")|default:"(leave as open)" }}</option>
                             {% if TicketStates %}
                                 {% for state in TicketStates %}
-                                    <option value="{{ state.Slug }}" data-state-id="{{ state.ID }}" data-state-type="{{ state.TypeID }}">{{ state.Name }}</option>
+                                    <option value="{{ state.Slug }}" data-state-id="{{ state.ID }}" data-state-pending="{% if state.Pending %}true{% else %}false{% endif %}">{{ state.Name }}</option>
                                 {% endfor %}
                             {% endif %}
                         </select>
@@ -603,14 +603,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 var option = nextStateSel.options[nextStateSel.selectedIndex];
                 var slug = nextStateSel.value || '';
                 var stateId = option ? option.getAttribute('data-state-id') : '';
-                var typeIdAttr = option ? option.getAttribute('data-state-type') : '';
+                var pendingAttr = option ? option.getAttribute('data-state-pending') : '';
                 if (nextStateIdInput) {
                     nextStateIdInput.value = stateId || '';
                 }
                 if (pendingWrap) {
-                    var typeId = parseInt(typeIdAttr || '', 10);
                     var shouldShow = false;
-                    if (!isNaN(typeId) && (typeId === 4 || typeId === 5)) {
+                    if (pendingAttr === 'true') {
                         shouldShow = true;
                     } else if (slug && slug.toLowerCase().startsWith('pending')) {
                         shouldShow = true;

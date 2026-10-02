@@ -37,6 +37,12 @@ type SearchQuery struct {
 	SortOrder string            `json:"sort_order"` // asc or desc
 	Highlight bool              `json:"highlight"`  // Enable result highlighting
 	Facets    []string          `json:"facets"`     // Fields to generate facets for
+
+	// RestrictQueues limits ticket and article hits to tickets in QueueIDs (an
+	// empty QueueIDs then matches none). Set by the server from the caller's
+	// permissions, never from the request body.
+	RestrictQueues bool  `json:"-"`
+	QueueIDs       []int `json:"-"`
 }
 
 // Document represents a searchable document.
@@ -126,6 +132,9 @@ var (
 	ErrNoBackendAvailable = &SearchError{Code: "NO_BACKEND", Message: "No search backend available"}
 	ErrInvalidQuery       = &SearchError{Code: "INVALID_QUERY", Message: "Invalid search query"}
 	ErrIndexingFailed     = &SearchError{Code: "INDEXING_FAILED", Message: "Failed to index document"}
+	// ErrQueueRestrictionUnsupported: the backend cannot limit hits to the
+	// caller's readable queues.
+	ErrQueueRestrictionUnsupported = &SearchError{Code: "QUEUE_RESTRICTION_UNSUPPORTED", Message: "Search backend cannot restrict results to permitted queues"}
 )
 
 // SearchError represents a search-related error.

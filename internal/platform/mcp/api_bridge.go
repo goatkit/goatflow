@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -17,12 +16,21 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/routing"
 )
 
-// UserContext carries the authenticated user's identity for bridge calls.
+// UserContext carries the authenticated caller of an MCP request.
 type UserContext struct {
 	UserID    int
 	UserLogin string
 	UserEmail string
 	UserRole  string
+	// Principal identifies who the caller is across requests ("agent:<id>" or
+	// "customer:<id>"); SSE sessions are bound to it. users.id and
+	// customer_user.id overlap, so the numeric id alone is not enough.
+	Principal string
+	// AuthKeys are the gin context keys the auth middleware set on the MCP
+	// request (user_role, isInAdminGroup, api_token with its scopes,
+	// is_customer, customer_login, ...). They are copied onto every tool
+	// call so the tool's middleware sees exactly what the REST route would.
+	AuthKeys map[string]any
 }
 
 // PluginCaller is the interface for calling plugin functions.
@@ -31,11 +39,25 @@ type PluginCaller interface {
 	Call(ctx context.Context, pluginName, fn string, args []byte) ([]byte, error)
 }
 
+// PluginGate applies a plugin route's access rules to MCP plugin tools. It is
+// implemented by the API layer, which owns the plugin route middleware.
+type PluginGate interface {
+	// Authorize returns the authorization handlers for a plugin route's
+	// middleware list (the caller is already authenticated). An error means
+	// the route cannot be called this way.
+	Authorize(pluginName string, middleware []string) ([]gin.HandlerFunc, error)
+	// Envelope writes the host's identity envelope into the plugin args,
+	// replacing any client-supplied values under those keys.
+	Envelope(c *gin.Context, args map[string]any, pluginName string)
+}
+
 // APIBridge executes generated MCP tools by invoking real Gin handlers
 // with a synthetic request context. RBAC middleware runs as normal.
-// For plugin tools, it delegates to the PluginCaller.
+// For plugin tools, it applies the plugin route's middleware through the
+// PluginGate and then delegates to the PluginCaller.
 type APIBridge struct {
 	pluginCaller PluginCaller
+	pluginGate   PluginGate
 }
 
 // NewAPIBridge creates a new API bridge.
@@ -46,6 +68,53 @@ func NewAPIBridge() *APIBridge {
 // SetPluginCaller sets the plugin manager for executing plugin tools.
 func (b *APIBridge) SetPluginCaller(caller PluginCaller) {
 	b.pluginCaller = caller
+}
+
+// SetPluginGate sets the authorizer for plugin tools. Without one, plugin
+// tools are refused.
+func (b *APIBridge) SetPluginGate(gate PluginGate) {
+	b.pluginGate = gate
+}
+
+// newCallerContext builds a gin context for a synthetic request carrying the
+// MCP caller's identity.
+func newCallerContext(req *http.Request, user UserContext) (*gin.Context, *httptest.ResponseRecorder) {
+	gin.SetMode(gin.ReleaseMode)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = req
+
+	c.Set("user_id", user.UserID)
+	c.Set("user_login", user.UserLogin)
+	c.Set("user_email", user.UserEmail)
+	c.Set("user_role", user.UserRole)
+	for k, v := range user.AuthKeys {
+		c.Set(k, v)
+	}
+	c.Set("authenticated", true)
+	return c, recorder
+}
+
+// deniedResult converts an aborted middleware chain into a tool error.
+func deniedResult(recorder *httptest.ResponseRecorder) *ToolCallResult {
+	status := recorder.Code
+	body := recorder.Body.String()
+	msg := "Permission denied"
+	if body != "" {
+		var errResp map[string]any
+		if err := json.Unmarshal([]byte(body), &errResp); err == nil {
+			if errMsg, ok := errResp["error"].(string); ok {
+				msg = errMsg
+			}
+		}
+	}
+	if status == 0 {
+		status = http.StatusForbidden
+	}
+	return &ToolCallResult{
+		Content: []ContentBlock{TextContent(fmt.Sprintf("Error (%d): %s", status, msg))},
+		IsError: true,
+	}
 }
 
 // Execute invokes the Gin handler for a generated tool, running RBAC middleware.
@@ -106,14 +175,8 @@ func (b *APIBridge) Execute(ctx context.Context, tool *GeneratedTool, args map[s
 	}
 	req.Header.Set("Accept", "application/json")
 
-	// Create response recorder
-	recorder := httptest.NewRecorder()
-
-	// Create gin context
-	gin.SetMode(gin.ReleaseMode)
-	engine := gin.New()
-	c, _ := gin.CreateTestContext(recorder)
-	c.Request = req
+	// Auth was done at the MCP layer; the caller's auth keys are copied in.
+	c, recorder := newCallerContext(req, user)
 
 	// Set gin params
 	var ginParams gin.Params
@@ -124,26 +187,15 @@ func (b *APIBridge) Execute(ctx context.Context, tool *GeneratedTool, args map[s
 	}
 	c.Params = ginParams
 
-	// Pre-populate user context (auth already done at MCP layer)
-	c.Set("user_id", user.UserID)
-	c.Set("user_login", user.UserLogin)
-	c.Set("user_email", user.UserEmail)
-	c.Set("user_role", user.UserRole)
-	// Mark as authenticated so RBAC middleware doesn't reject
-	c.Set("authenticated", true)
-
-	_ = engine // Ensure gin.SetMode takes effect
-
-	// Build and run middleware + handler chain
-	// Skip auth middleware (unified_auth, api_token, auth) — already authenticated
-	rbacMiddleware := filterRBACMiddleware(tool.Middleware)
-
+	// Build and run middleware + handler chain. Authentication middleware
+	// (unified_auth, api_token, auth) is skipped: the MCP request already
+	// authenticated. Every other middleware must exist; running the handler
+	// without one would drop the route's access rule.
 	var chain []gin.HandlerFunc
-	for _, mwName := range rbacMiddleware {
+	for _, mwName := range filterRBACMiddleware(tool.Middleware) {
 		mw, err := registry.GetMiddleware(mwName)
 		if err != nil {
-			log.Printf("mcp bridge: warning: middleware %q not found (skipping)", mwName)
-			continue
+			return nil, fmt.Errorf("tool %s: middleware %q is not available", tool.Name, mwName)
 		}
 		chain = append(chain, mw)
 	}
@@ -166,25 +218,7 @@ func (b *APIBridge) Execute(ctx context.Context, tool *GeneratedTool, args map[s
 
 	// Check for abort (middleware denied access)
 	if c.IsAborted() {
-		status := recorder.Code
-		body := recorder.Body.String()
-		msg := "Permission denied"
-		if body != "" {
-			// Try to extract error message from JSON
-			var errResp map[string]any
-			if err := json.Unmarshal([]byte(body), &errResp); err == nil {
-				if errMsg, ok := errResp["error"].(string); ok {
-					msg = errMsg
-				}
-			}
-		}
-		if status == 0 {
-			status = http.StatusForbidden
-		}
-		return &ToolCallResult{
-			Content: []ContentBlock{TextContent(fmt.Sprintf("Error (%d): %s", status, msg))},
-			IsError: true,
-		}, nil
+		return deniedResult(recorder), nil
 	}
 
 	// Convert response
@@ -215,25 +249,45 @@ func (b *APIBridge) Execute(ctx context.Context, tool *GeneratedTool, args map[s
 	}, nil
 }
 
-// ExecutePlugin invokes a plugin handler via the plugin manager.
-// It constructs the same args object that buildPluginArgs does in plugin_handlers.go,
-// merging tool arguments with user context fields.
+// ExecutePlugin invokes a plugin handler via the plugin manager after
+// applying the plugin route's middleware to the caller, and passes the same
+// identity envelope the HTTP plugin routes send.
 func (b *APIBridge) ExecutePlugin(ctx context.Context, tool *GeneratedTool, args map[string]any, user UserContext) (*ToolCallResult, error) {
 	if b.pluginCaller == nil {
 		return nil, fmt.Errorf("plugin system not available")
 	}
+	if b.pluginGate == nil {
+		return nil, fmt.Errorf("plugin tool authorization not configured")
+	}
 
-	// Build args matching buildPluginArgs pattern
-	pluginArgs := make(map[string]any)
+	chain, err := b.pluginGate.Authorize(tool.PluginName, tool.Middleware)
+	if err != nil {
+		return nil, fmt.Errorf("tool %s: %w", tool.Name, err)
+	}
+
+	method, path := tool.Method, tool.Path
+	if method == "" {
+		method = http.MethodPost
+	}
+	if path == "" {
+		path = "/"
+	}
+	req, err := http.NewRequestWithContext(ctx, method, path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	c, recorder := newCallerContext(req, user)
+	executeChain(c, chain)
+	if c.IsAborted() {
+		return deniedResult(recorder), nil
+	}
+
+	pluginArgs := make(map[string]any, len(args)+8)
 	for k, v := range args {
 		pluginArgs[k] = v
 	}
-
-	// Inject user context (same fields as buildPluginArgs)
-	pluginArgs["_user_id"] = user.UserID
-	pluginArgs["_user_login"] = user.UserLogin
-	pluginArgs["_user_email"] = user.UserEmail
-	pluginArgs["_user_role"] = user.UserRole
+	b.pluginGate.Envelope(c, pluginArgs, tool.PluginName)
 	pluginArgs["_method"] = tool.Method
 	pluginArgs["_path"] = tool.Path
 
@@ -257,10 +311,9 @@ func (b *APIBridge) ExecutePlugin(ctx context.Context, tool *GeneratedTool, args
 
 // executeChain runs a chain of gin handlers sequentially, respecting c.Abort().
 func executeChain(c *gin.Context, chain []gin.HandlerFunc) {
-	for i, h := range chain {
+	for _, h := range chain {
 		h(c)
 		if c.IsAborted() {
-			_ = i
 			return
 		}
 	}

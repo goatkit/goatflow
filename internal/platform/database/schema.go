@@ -267,17 +267,11 @@ func (c *SchemaConverter) convertDataType(dbType string) string {
 
 // convertXMLDataType converts XML data type to database-specific data type.
 func (c *SchemaConverter) convertXMLDataType(xmlType string) string {
-	// This would need to be database-specific
-	// For now, assume PostgreSQL mappings
 	switch c.sourceDB.GetType() {
 	case PostgreSQL:
 		return c.convertXMLToPostgreSQL(xmlType)
 	case MySQL:
 		return c.convertXMLToMySQL(xmlType)
-	case Oracle:
-		return c.convertXMLToOracle(xmlType)
-	case SQLServer:
-		return c.convertXMLToSQLServer(xmlType)
 	default:
 		return xmlType
 	}
@@ -328,56 +322,6 @@ func (c *SchemaConverter) convertXMLToMySQL(xmlType string) string {
 
 	if mysqlType, exists := typeMap[xmlType]; exists {
 		return mysqlType
-	}
-
-	return xmlType
-}
-
-// convertXMLToOracle converts XML type to Oracle type.
-func (c *SchemaConverter) convertXMLToOracle(xmlType string) string {
-	typeMap := map[string]string{
-		"INTEGER":   "NUMBER",
-		"BIGINT":    "NUMBER",
-		"VARCHAR":   "VARCHAR2",
-		"CHAR":      "CHAR",
-		"TEXT":      "CLOB",
-		"SMALLINT":  "NUMBER",
-		"TIMESTAMP": "TIMESTAMP",
-		"DATE":      "DATE",
-		"TIME":      "TIMESTAMP",
-		"BOOLEAN":   "NUMBER(1)",
-		"DECIMAL":   "NUMBER",
-		"REAL":      "REAL",
-		"DOUBLE":    "BINARY_DOUBLE",
-	}
-
-	if oracleType, exists := typeMap[xmlType]; exists {
-		return oracleType
-	}
-
-	return xmlType
-}
-
-// convertXMLToSQLServer converts XML type to SQL Server type.
-func (c *SchemaConverter) convertXMLToSQLServer(xmlType string) string {
-	typeMap := map[string]string{
-		"INTEGER":   "INT",
-		"BIGINT":    "BIGINT",
-		"VARCHAR":   "VARCHAR",
-		"CHAR":      "CHAR",
-		"TEXT":      "TEXT",
-		"SMALLINT":  "SMALLINT",
-		"TIMESTAMP": "DATETIME2",
-		"DATE":      "DATE",
-		"TIME":      "TIME",
-		"BOOLEAN":   "BIT",
-		"DECIMAL":   "DECIMAL",
-		"REAL":      "REAL",
-		"DOUBLE":    "FLOAT",
-	}
-
-	if sqlServerType, exists := typeMap[xmlType]; exists {
-		return sqlServerType
 	}
 
 	return xmlType

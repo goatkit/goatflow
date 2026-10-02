@@ -4,9 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"strings"
 
-	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/components/dynamic"
@@ -113,10 +111,6 @@ func GetDynamicHandler() *dynamic.DynamicModuleHandler {
 	return dynamicHandler
 }
 
-func HandleAdminDynamicIndex(c *gin.Context) {
-	handleAdminDynamicIndex(c)
-}
-
 func HandleAdminDynamicModule(c *gin.Context) {
 	handleAdminDynamicModule(c)
 }
@@ -141,45 +135,6 @@ func injectModuleParam(c *gin.Context, module string) {
 	if !replaced {
 		c.Params = append(c.Params, gin.Param{Key: "module", Value: module})
 	}
-}
-
-func handleAdminDynamicIndex(c *gin.Context) {
-	handler := GetDynamicHandler()
-	if handler == nil {
-		respondDynamicUnavailable(c)
-		return
-	}
-
-	modules := handler.GetAvailableModules()
-	if strings.EqualFold(c.GetHeader("X-Requested-With"), "XMLHttpRequest") || wantsJSONResponse(c) {
-		c.JSON(http.StatusOK, gin.H{"success": true, "modules": modules})
-		return
-	}
-
-	comparisons := make([]map[string]interface{}, 0, len(modules))
-	for _, module := range modules {
-		friendly := friendlyPathForModule(module)
-		comparison := map[string]interface{}{
-			"name":         module,
-			"static_url":   "/admin/" + module,
-			"has_static":   module == "users" || module == "groups" || module == "queues" || module == "priorities",
-			"friendly_url": friendly,
-			"has_friendly": friendly != "",
-		}
-		comparisons = append(comparisons, comparison)
-	}
-
-	if getPongo2Renderer() == nil || getPongo2Renderer().TemplateSet() == nil {
-		c.JSON(http.StatusOK, gin.H{"success": true, "modules": comparisons})
-		return
-	}
-
-	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/dynamic_test.pongo2", pongo2.Context{
-		"Modules":    comparisons,
-		"User":       getUserMapForTemplate(c),
-		"ActivePage": "admin",
-		"Title":      "Dynamic Module Testing",
-	})
 }
 
 func handleAdminDynamicModule(c *gin.Context) {

@@ -20,6 +20,17 @@ spec:
           template: pages/admin/dashboard.pongo2
           description: "Display admin dashboard with system overview"
 
+        # Operator introspection (was registered on the main engine with no auth)
+        - path: /debug/ticket-number
+          method: GET
+          handler: HandleDebugTicketNumber
+          description: "Current ticket number generator"
+
+        - path: /debug/config-sources
+          method: GET
+          handler: HandleDebugConfigSources
+          description: "Configuration settings with their source"
+
         # Setup assistant (first-run wizard + re-runnable task catalog)
         - path: /setup
           method: GET
@@ -114,12 +125,6 @@ spec:
           template: pages/admin/groups.pongo2
           description: "Display group management page"
 
-        - path: /groups/new
-          method: GET
-          handler: handleCreateGroup
-          template: pages/admin/group_form.pongo2
-          description: "Display new group creation form"
-
         - path: /groups
           method: POST
           handler: handleCreateGroup
@@ -128,14 +133,7 @@ spec:
         - path: /groups/:id
           method: GET
           handler: handleGetGroup
-          template: pages/admin/group_view.pongo2
           description: "Display group details"
-
-        - path: /groups/:id/edit
-          method: GET
-          handler: handleGetGroup
-          template: pages/admin/group_form.pongo2
-          description: "Display group edit form"
 
         - path: /groups/:id
           method: PUT
@@ -150,7 +148,6 @@ spec:
         - path: /groups/:id/members
           method: GET
           handler: handleGroupMembers
-          template: pages/admin/group_members.pongo2
           description: "Display group members"
 
         - path: /groups/:id/members
@@ -250,6 +247,11 @@ spec:
           handler: handleUpdateUserPermissions
           description: "Update user permissions"
 
+        - path: /permissions/clone
+          method: POST
+          handler: handleClonePermissions
+          description: "Replace a user's permissions with a copy of another user's"
+
         # Role management
         - path: /roles
           method: GET
@@ -316,12 +318,42 @@ spec:
           template: pages/admin/states.pongo2
           description: "Display state management page"
 
+        - path: /states/create
+          method: POST
+          handler: handleAdminStateCreate
+          description: "Create a ticket state"
+
+        - path: /states/:id/update
+          method: PUT
+          handler: handleAdminStateUpdate
+          description: "Update a ticket state"
+
+        - path: /states/:id/delete
+          method: DELETE
+          handler: handleAdminStateDelete
+          description: "Soft-delete a ticket state"
+
         # Type management
         - path: /types
           method: GET
           handler: handleAdminTypes
           template: pages/admin/types.pongo2
           description: "Display type management page"
+
+        - path: /types/create
+          method: POST
+          handler: handleAdminTypeCreate
+          description: "Create a ticket type"
+
+        - path: /types/:id/update
+          method: POST
+          handler: handleAdminTypeUpdate
+          description: "Update a ticket type"
+
+        - path: /types/:id/delete
+          method: POST
+          handler: handleAdminTypeDelete
+          description: "Soft-delete a ticket type"
 
         # Service management
         - path: /services
@@ -446,11 +478,6 @@ spec:
           handler: handleAdminUpdateCustomerCompanyServices
           description: "Update customer company services"
 
-        - path: /customer/companies/:id/services
-          method: PUT
-          handler: handleAdminUpdateCustomerCompanyServices
-          description: "Update customer company services"
-
         - path: /customer/companies/:id/portal-settings
           method: GET
           handler: handleAdminCustomerPortalSettings
@@ -468,11 +495,6 @@ spec:
               POST: handleAdminUpdateCustomerPortalSettings
           template: pages/admin/customer_portal_settings.pongo2
           description: "Display and update global customer portal settings"
-
-        - path: /customer/portal/logo/upload
-          method: POST
-          handler: handleAdminUploadCustomerPortalLogo
-          description: "Upload customer portal logo"
 
         # Customer user management
         - path: /customer-users
@@ -564,25 +586,13 @@ spec:
           description: "Update default service assignments"
 
         # System operations
-        - path: /settings
-          method: GET
-          handler: handleAdminSettings
-          template: pages/under_construction.pongo2
-          description: "Display system configuration page"
-
         - path: /reports
           method: GET
           handler: handleAdminReports
-          template: pages/under_construction.pongo2
-          description: "Display reports overview"
+          template: pages/admin/reports.pongo2
+          description: "Display ticket reports (queue-scoped statistics, trends, CSV export)"
 
         # /logs is now handled by admin_audit_log.yaml module
-
-        - path: /backup
-          method: GET
-          handler: handleAdminBackup
-          template: pages/under_construction.pongo2
-          description: "Display backup and restore placeholder"
 
         # Dynamic Fields management
         - path: /dynamic-fields
@@ -867,11 +877,6 @@ spec:
           description: "Preview a standard attachment inline"
 
         # Dynamic module system routes
-        - path: /modules
-          method: GET
-          handler: handleAdminDynamicIndex
-          description: "List available dynamic modules"
-
         - path: /modules/:module
           handlers:
               GET: handleAdminDynamicModule
@@ -1195,6 +1200,13 @@ spec:
           method: GET
           handler: handleGetCustomerUserGroupPermissions
           description: "Get customer user group permissions"
+
+        # Outbound webhooks (data via /api/v1/webhooks)
+        - path: /webhooks
+          method: GET
+          handler: handleAdminWebhooks
+          template: pages/admin/webhooks.pongo2
+          description: "Manage outbound webhooks, test sends and the delivery log"
 
         # GenericInterface Web Services management
         - path: /webservices

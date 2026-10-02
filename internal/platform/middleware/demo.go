@@ -3,6 +3,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/goatkit/goatflow/internal/platform/config"
@@ -55,21 +56,16 @@ func DemoGuard() gin.HandlerFunc {
 	}
 }
 
-// isAdmin checks if the current user belongs to the admin group.
+// isAdmin reports whether the auth middleware marked the user as a member of
+// the admin group (group_user) or gave them the Admin role.
 func isAdmin(c *gin.Context) bool {
-	// Check for admin group membership (set by auth middleware)
-	if groups, exists := c.Get("user_groups"); exists {
-		if groupList, ok := groups.([]string); ok {
-			for _, g := range groupList {
-				if g == "admin" {
-					return true
-				}
-			}
+	if v, exists := c.Get("isInAdminGroup"); exists {
+		if b, ok := v.(bool); ok && b {
+			return true
 		}
 	}
-	// Check role-based admin flag
 	if role, exists := c.Get("user_role"); exists {
-		if r, ok := role.(string); ok && r == "admin" {
+		if r, ok := role.(string); ok && strings.EqualFold(r, "admin") {
 			return true
 		}
 	}

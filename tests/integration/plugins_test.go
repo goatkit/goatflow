@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/plugin/example"
@@ -33,6 +34,8 @@ func TestPluginWithRealDatabase(t *testing.T) {
 	helloPlugin := example.NewHelloPlugin()
 	err = mgr.Register(ctx, helloPlugin)
 	require.NoError(t, err, "Failed to register hello plugin")
+	// Newly registered plugins start disabled (seeded default); enable it like an admin would.
+	require.NoError(t, mgr.Enable("hello"))
 
 	t.Run("List plugins", func(t *testing.T) {
 		plugins := mgr.List()
@@ -147,10 +150,16 @@ func TestProdHostAPIWithRealDatabase(t *testing.T) {
 		assert.True(t, found, "Log should be in buffer")
 	})
 
-	t.Run("ConfigGet returns values", func(t *testing.T) {
-		// This may return empty if config not set, but shouldn't error
-		_, err := hostAPI.ConfigGet(ctx, "app.name")
-		assert.NoError(t, err, "ConfigGet should not error")
+	t.Run("ConfigGet returns loaded config values", func(t *testing.T) {
+		// The server loads config/default.yaml at startup (cmd/goats); do the same here.
+		require.NoError(t, config.Load("../../config"))
+
+		name, err := hostAPI.ConfigGet(ctx, "app.name")
+		require.NoError(t, err)
+		assert.Equal(t, "GoatFlow", name, "app.name from config/default.yaml")
+
+		_, err = hostAPI.ConfigGet(ctx, "no.such.key")
+		assert.Error(t, err, "unknown keys must be rejected")
 	})
 }
 
@@ -165,6 +174,7 @@ func TestPluginManagerConcurrency(t *testing.T) {
 	helloPlugin := example.NewHelloPlugin()
 	err = mgr.Register(ctx, helloPlugin)
 	require.NoError(t, err)
+	require.NoError(t, mgr.Enable("hello"))
 
 	// Run concurrent calls
 	const numGoroutines = 10

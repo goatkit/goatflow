@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/repository"
 )
@@ -23,11 +24,7 @@ func init() {
 	routing.RegisterHandler("handleAdminQueues", handleAdminQueues)
 	routing.RegisterHandler("handleAdminPriorities", handleAdminPriorities)
 	routing.RegisterHandler("handleAdminLookups", handleAdminLookups)
-	routing.RegisterHandler("handleAdminSettings", handleAdminSettings)
-	routing.RegisterHandler("handleAdminTemplates", handleAdminTemplates)
 	routing.RegisterHandler("handleAdminReports", handleAdminReports)
-	routing.RegisterHandler("handleAdminLogs", handleAdminLogs)
-	routing.RegisterHandler("handleAdminBackup", handleAdminBackup)
 	routing.RegisterHandler("handleAdminDashboard", handleAdminDashboard)
 	routing.RegisterHandler("handleCustomerSearch", handleCustomerSearch)
 }
@@ -40,9 +37,10 @@ func handleAdminQueues(c *gin.Context) {
 		return
 	}
 
-	// Get queues from database
+	// All queues, including invalid ones: the page filters by status and its
+	// toggle re-enables invalid queues.
 	queueRepo := repository.NewQueueRepository(db)
-	queues, err := queueRepo.List()
+	queues, err := queueRepo.ListAll()
 	if err != nil {
 		sendErrorResponse(c, http.StatusInternalServerError, "Failed to fetch queues")
 		return
@@ -222,21 +220,8 @@ func handleAdminLookups(c *gin.Context) {
 		currentTab = "priorities" // Default to priorities tab
 	}
 
-	// Provide a minimal fallback when tests skip templates or renderer is unavailable
-	if htmxHandlerSkipDB() || getPongo2Renderer() == nil || getPongo2Renderer().TemplateSet() == nil {
-		html := `<!doctype html><html><head><title>Manage Lookup Values</title></head><body>
-			<h1>Manage Lookup Values</h1>
-			<nav>
-				<ul>
-					<li>Queues</li>
-					<li>Priorities</li>
-					<li>Ticket Types</li>
-					<li>Statuses</li>
-				</ul>
-			</nav>
-			<button>Refresh Cache</button>
-		</body></html>`
-		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
+	if getPongo2Renderer() == nil || getPongo2Renderer().TemplateSet() == nil {
+		sendErrorResponse(c, http.StatusInternalServerError, "Template renderer unavailable")
 		return
 	}
 
@@ -285,6 +270,28 @@ func handleAdminLookups(c *gin.Context) {
 		if err := stateRows.Err(); err != nil {
 			log.Printf("error iterating ticket states: %v", err)
 		}
+	}
+
+	// Ticket state types for the state editor's Type select (ids differ per install)
+	var stateTypes []gin.H
+	stateTypeRows, err := db.Query(database.ConvertPlaceholders("SELECT id, name FROM ticket_state_type ORDER BY id"))
+	if err != nil {
+		log.Printf("error loading ticket state types: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to load ticket state types"})
+		return
+	}
+	defer stateTypeRows.Close()
+	for stateTypeRows.Next() {
+		var id int
+		var name string
+		if err := stateTypeRows.Scan(&id, &name); err != nil {
+			log.Printf("error scanning ticket state type: %v", err)
+			continue
+		}
+		stateTypes = append(stateTypes, gin.H{"ID": id, "Name": name})
+	}
+	if err := stateTypeRows.Err(); err != nil {
+		log.Printf("error iterating ticket state types: %v", err)
 	}
 
 	// Ticket Priorities
@@ -373,6 +380,7 @@ func handleAdminLookups(c *gin.Context) {
 
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/lookups.pongo2", pongo2.Context{
 		"TicketStates": ticketStates,
+		"StateTypes":   stateTypes,
 		"Priorities":   priorities,
 		"TicketTypes":  types,
 		"Services":     services,
@@ -383,24 +391,14 @@ func handleAdminLookups(c *gin.Context) {
 	})
 }
 
-func handleAdminSettings(c *gin.Context) {
-	underConstruction("System Settings")(c)
-}
-
-func handleAdminTemplates(c *gin.Context) {
-	underConstruction("Template Management")(c)
-}
-
+// handleAdminReports renders the reports page. The page loads its figures from
+// the queue-scoped /api/v1/statistics/* endpoints, so each viewer only sees
+// tickets in queues they can read.
 func handleAdminReports(c *gin.Context) {
-	underConstruction("Reports")(c)
-}
-
-func handleAdminLogs(c *gin.Context) {
-	underConstruction("Audit Logs")(c)
-}
-
-func handleAdminBackup(c *gin.Context) {
-	underConstruction("Backup & Restore")(c)
+	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/reports.pongo2", pongo2.Context{
+		"User":       getUserMapForTemplate(c),
+		"ActivePage": "admin",
+	})
 }
 
 // Admin handlers
@@ -415,31 +413,59 @@ func handleAdminDashboard(c *gin.Context) {
 		return
 	}
 
-	userCount := 0
-	groupCount := 0
-	activeTickets := 0
-	queueCount := 0
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		log.Printf("handleAdminDashboard: database unavailable: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
 
-	db, _ := database.GetDB() //nolint:errcheck // Dashboard stats - default to 0 on error
-	if db != nil {
-		_ = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM users WHERE valid_id = 1")).Scan(&userCount)                      //nolint:errcheck
-		_ = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM groups WHERE valid_id = 1")).Scan(&groupCount)                    //nolint:errcheck
-		_ = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM queue WHERE valid_id = 1")).Scan(&queueCount)                     //nolint:errcheck
-		_ = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id IN (1,2,3,4)")).Scan(&activeTickets) //nolint:errcheck
+	var userCount, groupCount, activeTickets, queueCount int
+	counts := []struct {
+		query string
+		dest  *int
+	}{
+		{"SELECT COUNT(*) FROM users WHERE valid_id = 1", &userCount},
+		{"SELECT COUNT(*) FROM groups WHERE valid_id = 1", &groupCount},
+		{"SELECT COUNT(*) FROM queue WHERE valid_id = 1", &queueCount},
+		{"SELECT COUNT(*) FROM ticket WHERE ticket_state_id IN (" + lookups.ViewableStateIDsSQL + ")", &activeTickets},
+	}
+	for _, q := range counts {
+		if err := db.QueryRow(database.ConvertPlaceholders(q.query)).Scan(q.dest); err != nil {
+			log.Printf("handleAdminDashboard: %s: %v", q.query, err)
+			sendErrorResponse(c, http.StatusInternalServerError, "Failed to load dashboard statistics")
+			return
+		}
 	}
 
 	// First-run nudge: on a system with no groups/queues and setup not yet marked
 	// complete, send the admin to the setup wizard instead of an empty dashboard.
-	if !setupCompleted(db) && groupCount == 0 && queueCount == 0 {
+	done, err := setupCompleted(db)
+	if err != nil {
+		log.Printf("handleAdminDashboard: setup status: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Failed to load setup status")
+		return
+	}
+	if !done && groupCount == 0 && queueCount == 0 {
 		c.Redirect(http.StatusSeeOther, "/admin/setup")
 		return
 	}
 
 	// Get ticket activity metrics from cache with fallback to calculation
-	ticketActivity := getTicketActivityFromCache(c, db)
+	ticketActivity, err := getTicketActivityFromCache(c, db)
+	if err != nil {
+		log.Printf("handleAdminDashboard: ticket activity: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Failed to load dashboard statistics")
+		return
+	}
 
 	// Get recent admin audit log entries
-	recentActivity := getRecentAdminActivity(db)
+	recentActivity, err := getRecentAdminActivity(db)
+	if err != nil {
+		log.Printf("handleAdminDashboard: recent admin activity: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Failed to load recent admin activity")
+		return
+	}
 
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/dashboard.pongo2", pongo2.Context{
 		"UserCount":      userCount,
@@ -454,23 +480,14 @@ func handleAdminDashboard(c *gin.Context) {
 }
 
 // setupCompleted reports whether first-run setup has been marked done via the
-// setup.assistant.completed sysconfig flag.
-func setupCompleted(db *sql.DB) bool {
-	if db == nil {
-		return false
-	}
-	done, _ := sysconfigBool(db, "setup.assistant.completed")
-	return done
+// setup.assistant.completed sysconfig flag. No sysconfig row means not done.
+func setupCompleted(db *sql.DB) (bool, error) {
+	done, _, err := sysconfigBool(db, "setup.assistant.completed")
+	return done, err
 }
 
-// getTicketActivityFromCache retrieves ticket activity metrics from Valkey cache,
-// falling back to direct calculation if cache is unavailable or empty.
 // getRecentAdminActivity fetches the most recent admin audit log entries.
-func getRecentAdminActivity(db *sql.DB) []map[string]string {
-	if db == nil {
-		return nil
-	}
-
+func getRecentAdminActivity(db *sql.DB) ([]map[string]string, error) {
 	query := database.ConvertQuery(`
 		SELECT aat.name AS action, al.target_type, al.target_identifier,
 			al.reason, al.create_time, u.login AS admin_login
@@ -483,7 +500,7 @@ func getRecentAdminActivity(db *sql.DB) []map[string]string {
 
 	rows, err := db.Query(query)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -492,7 +509,7 @@ func getRecentAdminActivity(db *sql.DB) []map[string]string {
 		var action, targetType, targetID, reason, adminLogin sql.NullString
 		var createTime time.Time
 		if err := rows.Scan(&action, &targetType, &targetID, &reason, &createTime, &adminLogin); err != nil {
-			continue
+			return nil, err
 		}
 
 		entry := map[string]string{
@@ -506,7 +523,7 @@ func getRecentAdminActivity(db *sql.DB) []map[string]string {
 		}
 		results = append(results, entry)
 	}
-	return results
+	return results, rows.Err()
 }
 
 // timeAgo returns a human-readable relative time string.
@@ -538,83 +555,72 @@ func timeAgo(t time.Time) string {
 	}
 }
 
-func getTicketActivityFromCache(c *gin.Context, db *sql.DB) map[string]int {
-	// Default values
-	metrics := map[string]int{
-		"closed_day":    0,
-		"closed_week":   0,
-		"closed_month":  0,
-		"created_day":   0,
-		"created_week":  0,
-		"created_month": 0,
-		"open":          0,
-	}
-
-	// Try cache first
+// getTicketActivityFromCache retrieves ticket activity metrics from Valkey cache,
+// falling back to direct calculation on a cache miss.
+func getTicketActivityFromCache(c *gin.Context, db *sql.DB) (map[string]int, error) {
 	if valkeyCache != nil {
 		var cached map[string]int
 		if err := valkeyCache.GetObject(c, "metrics:ticket_activity", &cached); err == nil && cached != nil {
-			return cached
+			return cached, nil
 		}
 	}
 
-	// Cache miss - calculate directly
-	if db != nil {
-		metrics["closed_day"] = getTicketCountForDashboard(db, "closed", 1)
-		metrics["closed_week"] = getTicketCountForDashboard(db, "closed", 7)
-		metrics["closed_month"] = getTicketCountForDashboard(db, "closed", 30)
-		metrics["created_day"] = getTicketCountForDashboard(db, "created", 1)
-		metrics["created_week"] = getTicketCountForDashboard(db, "created", 7)
-		metrics["created_month"] = getTicketCountForDashboard(db, "created", 30)
-		metrics["open"] = getOpenTicketCountForDashboard(db)
+	metrics := map[string]int{}
+	for _, m := range []struct {
+		key       string
+		countType string
+		days      int
+	}{
+		{"closed_day", "closed", 1}, {"closed_week", "closed", 7}, {"closed_month", "closed", 30},
+		{"created_day", "created", 1}, {"created_week", "created", 7}, {"created_month", "created", 30},
+	} {
+		n, err := getTicketCountForDashboard(db, m.countType, m.days)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", m.key, err)
+		}
+		metrics[m.key] = n
 	}
-
-	return metrics
+	open, err := getOpenTicketCountForDashboard(db)
+	if err != nil {
+		return nil, fmt.Errorf("open: %w", err)
+	}
+	metrics["open"] = open
+	return metrics, nil
 }
 
 // getTicketCountForDashboard returns the count of tickets closed or created within the specified days.
-func getTicketCountForDashboard(db *sql.DB, countType string, days int) int {
+func getTicketCountForDashboard(db *sql.DB, countType string, days int) (int, error) {
 	var query string
 	if countType == "closed" {
 		query = database.ConvertPlaceholders(`
 			SELECT COUNT(*)
 			FROM ticket
-			WHERE ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)
-			  AND change_time >= DATE_SUB(NOW(), INTERVAL ? DAY)
+			WHERE ticket_state_id IN (` + lookups.ClosedStateIDsSQL + `)
+			  AND change_time >= ?
 		`)
 	} else {
 		query = database.ConvertPlaceholders(`
 			SELECT COUNT(*)
 			FROM ticket
-			WHERE create_time >= DATE_SUB(NOW(), INTERVAL ? DAY)
+			WHERE create_time >= ?
 		`)
 	}
+	cutoff := time.Now().AddDate(0, 0, -days)
 	var count int
-	_ = db.QueryRow(query, days).Scan(&count) //nolint:errcheck
-	return count
+	err := db.QueryRow(query, cutoff).Scan(&count)
+	return count, err
 }
 
 // getOpenTicketCountForDashboard returns the count of currently open tickets.
-func getOpenTicketCountForDashboard(db *sql.DB) int {
+func getOpenTicketCountForDashboard(db *sql.DB) (int, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT COUNT(*)
 		FROM ticket
-		WHERE ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2, 4))
+		WHERE ticket_state_id IN (` + lookups.ViewableStateIDsSQL + `)
 	`)
 	var count int
-	_ = db.QueryRow(query).Scan(&count) //nolint:errcheck
-	return count
-}
-
-// Helper function to show under construction message.
-func underConstruction(feature string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		getPongo2Renderer().HTML(c, http.StatusOK, "pages/under_construction.pongo2", pongo2.Context{
-			"Feature":    feature,
-			"User":       getUserMapForTemplate(c),
-			"ActivePage": "admin",
-		})
-	}
+	err := db.QueryRow(query).Scan(&count)
+	return count, err
 }
 
 // handleCustomerSearch handles customer search for autocomplete.

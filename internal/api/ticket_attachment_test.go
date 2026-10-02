@@ -5,486 +5,553 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/html"
 
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/routing"
+	"github.com/goatkit/goatflow/internal/platform/shared"
+	"github.com/goatkit/goatflow/internal/storage"
 )
 
-// Test-Driven Development for Ticket Attachment Feature
-// Attachments allow users to upload files to tickets
-// Tests use the actual test database with seeded data
+// attachmentAPI drives the agent attachment routes through the real YAML
+// routes and auth middleware as an authenticated agent (user 1).
+type attachmentAPI struct {
+	t      *testing.T
+	router *gin.Engine
+	auth   string
+}
 
-// createTestTicketWithAttachment creates a test ticket with an article and attachment.
-func createTestTicketWithAttachment(t *testing.T, db *sql.DB) (ticketID int, articleID int, attachmentID int, err error) {
+func newAttachmentAPI(t *testing.T) *attachmentAPI {
 	t.Helper()
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	require.NoError(t, routing.LoadYAMLRoutesForTesting(router))
+	token, err := shared.GetJWTManager().GenerateToken(1, "root@localhost", "Agent", 0)
+	require.NoError(t, err)
+	return &attachmentAPI{t: t, router: router, auth: "Bearer " + token}
+}
 
-	// Create a test ticket if it doesn't exist
-	var existingTicketID int
-	err = db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket WHERE tn = 'ATT-TEST-001' LIMIT 1`)).Scan(&existingTicketID)
-	if err != nil {
-		id, execErr := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
-			INSERT INTO ticket (tn, title, queue_id, ticket_lock_id, type_id, user_id, responsible_user_id, ticket_priority_id, ticket_state_id, timeout, until_time, escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time, archive_flag, create_time, create_by, change_time, change_by)
-			VALUES ('ATT-TEST-001', 'Attachment Test Ticket', 1, 1, 1, 1, 1, 3, 1, 0, 0, 0, 0, 0, 0, 0, NOW(), 1, NOW(), 1) RETURNING id
-		`))
-		if execErr != nil {
-			return 0, 0, 0, execErr
+func (a *attachmentAPI) do(method, path string, body io.Reader, headers ...string) *httptest.ResponseRecorder {
+	a.t.Helper()
+	req := httptest.NewRequest(method, path, body)
+	req.Header.Set("Authorization", a.auth)
+	for i := 0; i+1 < len(headers); i += 2 {
+		req.Header.Set(headers[i], headers[i+1])
+	}
+	w := httptest.NewRecorder()
+	a.router.ServeHTTP(w, req)
+	return w
+}
+
+// uploadResponse is the 201 body of POST /api/tickets/:id/attachments.
+type uploadResponse struct {
+	ArticleID    int64  `json:"article_id"`
+	FileID       int64  `json:"file_id"`
+	Filename     string `json:"filename"`
+	Size         int64  `json:"size"`
+	ContentType  string `json:"content_type"`
+	DownloadURL  string `json:"download_url"`
+	ThumbnailURL string `json:"thumbnail_url"`
+}
+
+// upload posts one file; contentType is the part's browser-provided type.
+func (a *attachmentAPI) upload(tn, filename, contentType string, content []byte) *httptest.ResponseRecorder {
+	a.t.Helper()
+	body := &bytes.Buffer{}
+	mw := multipart.NewWriter(body)
+	h := make(textproto.MIMEHeader)
+	quote := strings.NewReplacer(`\`, `\\`, `"`, `\"`)
+	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file"; filename="%s"`, quote.Replace(filename)))
+	h.Set("Content-Type", contentType)
+	part, err := mw.CreatePart(h)
+	require.NoError(a.t, err)
+	_, err = part.Write(content)
+	require.NoError(a.t, err)
+	require.NoError(a.t, mw.Close())
+	return a.do(http.MethodPost, "/api/tickets/"+tn+"/attachments", body, "Content-Type", mw.FormDataContentType())
+}
+
+func (a *attachmentAPI) mustUpload(tn, filename, contentType string, content []byte) uploadResponse {
+	a.t.Helper()
+	w := a.upload(tn, filename, contentType, content)
+	require.Equal(a.t, http.StatusCreated, w.Code, w.Body.String())
+	var resp uploadResponse
+	require.NoError(a.t, json.Unmarshal(w.Body.Bytes(), &resp))
+	return resp
+}
+
+type attachmentListResponse struct {
+	Attachments []attachmentListItem `json:"attachments"`
+	Total       int                  `json:"total"`
+}
+
+func (a *attachmentAPI) list(tn string) attachmentListResponse {
+	a.t.Helper()
+	w := a.do(http.MethodGet, "/api/tickets/"+tn+"/attachments", nil)
+	require.Equal(a.t, http.StatusOK, w.Code, w.Body.String())
+	var resp attachmentListResponse
+	require.NoError(a.t, json.Unmarshal(w.Body.Bytes(), &resp))
+	return resp
+}
+
+func findListItem(t *testing.T, items []attachmentListItem, filename string) attachmentListItem {
+	t.Helper()
+	for _, it := range items {
+		if it.Filename == filename {
+			return it
 		}
-		ticketID = int(id)
-	} else {
-		ticketID = existingTicketID
 	}
-
-	// Create a test article for the ticket
-	artID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
-		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer, create_time, create_by, change_time, change_by)
-		VALUES (?, 1, 1, 1, NOW(), 1, NOW(), 1) RETURNING id
-	`), ticketID)
-	if err != nil {
-		return 0, 0, 0, err
-	}
-	articleID = int(artID)
-
-	// Create a test attachment
-	attID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
-		INSERT INTO article_data_mime_attachment (article_id, filename, content_size, content_type, disposition, content, create_time, create_by, change_time, change_by)
-		VALUES (?, 'existing_test.txt', '20', 'text/plain', 'attachment', 'Existing test content', NOW(), 1, NOW(), 1) RETURNING id
-	`), articleID)
-	if err != nil {
-		return ticketID, articleID, 0, err
-	}
-	attachmentID = int(attID)
-
-	return ticketID, articleID, attachmentID, nil
+	require.Failf(t, "attachment not listed", "%q not in %+v", filename, items)
+	return attachmentListItem{}
 }
 
-// setupAttachmentTestDB initializes the test database and returns a cleanup function.
-//
-//nolint:unparam // articleID is used internally for cleanup but not needed by callers
-func setupAttachmentTestDB(t *testing.T) (ticketID int, articleID int, attachmentID int, cleanup func()) {
+// eachArticleStorage runs fn once with the DB backend and once with the FS
+// backend (articleDir is "" for DB).
+func eachArticleStorage(t *testing.T, fn func(t *testing.T, articleDir string)) {
+	t.Run("DB", func(t *testing.T) {
+		require.NoError(t, storage.Configure(storage.Config{Backend: storage.BackendDB}))
+		fn(t, "")
+	})
+	t.Run("FS", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, storage.Configure(storage.Config{Backend: storage.BackendFS, ArticleDir: dir}))
+		t.Cleanup(func() { _ = storage.Configure(storage.Config{Backend: storage.BackendDB}) })
+		fn(t, dir)
+	})
+}
+
+func attachmentTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-
-	// Enable DB access for attachment handlers in test environment
-	t.Setenv("ATTACHMENTS_USE_DB", "1")
-
-	// Get a fresh database connection from the adapter
+	require.NoError(t, database.InitTestDB())
 	db, err := database.GetDB()
-	if err != nil || db == nil {
-		// Reinitialize if needed
-		err = database.InitTestDB()
-		require.NoError(t, err, "Failed to initialize test database")
-		db, err = database.GetDB()
-		require.NoError(t, err, "Failed to get database connection")
-	}
-	require.NotNil(t, db, "Database connection is nil")
+	require.NoError(t, err)
+	return db
+}
 
-	// Verify connection is alive
-	err = db.Ping()
-	if err != nil {
-		// Connection is dead, reinitialize
-		err = database.InitTestDB()
-		require.NoError(t, err, "Failed to reinitialize test database")
-		db, err = database.GetDB()
-		require.NoError(t, err, "Failed to get new database connection")
-		require.NotNil(t, db, "New database connection is nil")
-		err = db.Ping()
-		require.NoError(t, err, "Database connection still not responding")
-	}
+func ticketTN(t *testing.T, db *sql.DB, ticketID int64) string {
+	t.Helper()
+	var tn string
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders("SELECT tn FROM ticket WHERE id = ?"), ticketID).Scan(&tn))
+	return tn
+}
 
-	// Create a test ticket if it doesn't exist
-	var existingTicketID int
-	err = db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket WHERE tn = 'ATT-TEST-001' LIMIT 1`)).Scan(&existingTicketID)
-	if err != nil {
-		// Create new test ticket
-		id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
-			INSERT INTO ticket (tn, title, queue_id, ticket_lock_id, type_id, user_id, responsible_user_id, ticket_priority_id, ticket_state_id, timeout, until_time, escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time, archive_flag, create_time, create_by, change_time, change_by)
-			VALUES ('ATT-TEST-001', 'Attachment Test Ticket', 1, 1, 1, 1, 1, 3, 1, 0, 0, 0, 0, 0, 0, 0, NOW(), 1, NOW(), 1) RETURNING id
-		`))
-		require.NoError(t, err, "Failed to create test ticket")
-		ticketID = int(id)
+// createAttachmentTestTicket inserts a ticket without articles; everything
+// attached to it is removed when the test ends.
+func createAttachmentTestTicket(t *testing.T, db *sql.DB) (ticketID int64, tn string) {
+	t.Helper()
+	tn = fmt.Sprintf("TEST-ATTN-%d", time.Now().UnixNano())
+	ticketID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO ticket (tn, title, queue_id, type_id, ticket_state_id, ticket_priority_id,
+		                    ticket_lock_id, user_id, responsible_user_id,
+		                    timeout, until_time, escalation_time, escalation_update_time,
+		                    escalation_response_time, escalation_solution_time,
+		                    create_time, create_by, change_time, change_by)
+		VALUES (?, 'Ticket without articles', 1, 1, 1, 1, 1, 1, 1,
+		        0, 0, 0, 0, 0, 0, NOW(), 1, NOW(), 1)
+		RETURNING id
+	`), tn)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		sub := "(SELECT id FROM article WHERE ticket_id = ?)"
+		db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime_attachment WHERE article_id IN "+sub), ticketID)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime WHERE article_id IN "+sub), ticketID)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE ticket_id = ?"), ticketID)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id = ?"), ticketID)
+	})
+	return ticketID, tn
+}
+
+// articleStorageDir is where OTRS ArticleStorageFS keeps an article's files:
+// <article dir>/<content_path, or the article's create date>/<article id>.
+func articleStorageDir(t *testing.T, db *sql.DB, articleDir string, articleID int64) string {
+	t.Helper()
+	var contentPath sql.NullString
+	err := db.QueryRow(database.ConvertPlaceholders(`
+		SELECT content_path FROM article_data_mime
+		WHERE article_id = ? AND content_path IS NOT NULL AND content_path <> ''`), articleID).Scan(&contentPath)
+	if err == sql.ErrNoRows {
+		var created time.Time
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+			"SELECT create_time FROM article WHERE id = ?"), articleID).Scan(&created))
+		contentPath = sql.NullString{String: created.Format("2006/01/02"), Valid: true}
 	} else {
-		ticketID = existingTicketID
+		require.NoError(t, err)
 	}
-
-	// Create a test article for the ticket
-	artID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
-		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer, create_time, create_by, change_time, change_by)
-		VALUES (?, 1, 1, 1, NOW(), 1, NOW(), 1) RETURNING id
-	`), ticketID)
-	require.NoError(t, err, "Failed to create test article")
-	articleID = int(artID)
-
-	// Create a test attachment
-	attID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
-		INSERT INTO article_data_mime_attachment (article_id, filename, content_size, content_type, disposition, content, create_time, create_by, change_time, change_by)
-		VALUES (?, 'existing_test.txt', '20', 'text/plain', 'attachment', 'Existing test content', NOW(), 1, NOW(), 1) RETURNING id
-	`), articleID)
-	require.NoError(t, err, "Failed to create test attachment")
-	attachmentID = int(attID)
-
-	// Cleanup function to remove test data
-	cleanup = func() {
-		db.Exec(database.ConvertPlaceholders(`DELETE FROM article_data_mime_attachment WHERE article_id = ?`), articleID)
-		db.Exec(database.ConvertPlaceholders(`DELETE FROM article WHERE id = ?`), articleID)
-		// Don't call ResetDB() as it closes the shared connection and breaks other tests
-	}
-
-	return ticketID, articleID, attachmentID, cleanup
+	return filepath.Join(articleDir, filepath.FromSlash(contentPath.String), fmt.Sprint(articleID))
 }
 
-func TestUploadAttachment(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	// Enable DB access for attachment handlers
-	t.Setenv("ATTACHMENTS_USE_DB", "1")
-
-	// Get database connection once for all tests
-	err := database.InitTestDB()
-	require.NoError(t, err, "Failed to initialize test database")
-	db, err := database.GetDB()
-	require.NoError(t, err, "Failed to get database connection")
-	require.NotNil(t, db, "Database connection is nil")
-
-	// Create test ticket with attachment
-	ticketID, articleID, _, err := createTestTicketWithAttachment(t, db)
-	require.NoError(t, err, "Failed to create test ticket with attachment")
-
-	// Pre-populate the mock map so the handler can find our ticket
-	// This is a workaround for the handler's mixed mock/DB logic
-	attachmentsByTicket[ticketID] = make([]int, 0)
-
-	// Cleanup
-	defer func() {
-		delete(attachmentsByTicket, ticketID)
-		db.Exec(database.ConvertPlaceholders(`DELETE FROM article_data_mime_attachment WHERE article_id = ?`), articleID)
-		db.Exec(database.ConvertPlaceholders(`DELETE FROM article WHERE id = ?`), articleID)
-	}()
-
-	tests := []struct {
-		name        string
-		ticketID    string
-		fileName    string
-		fileContent string
-		fileType    string
-		wantStatus  int
-		checkResp   func(t *testing.T, resp map[string]interface{})
-	}{
-		{
-			name:        "Upload text file successfully",
-			ticketID:    fmt.Sprintf("%d", ticketID),
-			fileName:    "test.txt",
-			fileContent: "This is a test file content",
-			fileType:    "text/plain",
-			wantStatus:  http.StatusCreated,
-			checkResp: func(t *testing.T, resp map[string]interface{}) {
-				assert.Equal(t, "Attachment uploaded successfully", resp["message"])
-				assert.Contains(t, resp, "attachment_id")
-				assert.Equal(t, "test.txt", resp["filename"])
-				assert.Equal(t, float64(27), resp["size"]) // Length of content
-			},
-		},
-		{
-			name:        "Upload PDF file",
-			ticketID:    fmt.Sprintf("%d", ticketID),
-			fileName:    "document.pdf",
-			fileContent: "%PDF-1.4 test content",
-			fileType:    "application/pdf",
-			wantStatus:  http.StatusCreated,
-			checkResp: func(t *testing.T, resp map[string]interface{}) {
-				assert.Contains(t, resp, "attachment_id")
-				assert.Equal(t, "document.pdf", resp["filename"])
-				assert.Equal(t, "application/pdf", resp["content_type"])
-			},
-		},
-		{
-			name:        "Upload image file",
-			ticketID:    fmt.Sprintf("%d", ticketID),
-			fileName:    "screenshot.png",
-			fileContent: "PNG fake content",
-			fileType:    "image/png",
-			wantStatus:  http.StatusCreated,
-			checkResp: func(t *testing.T, resp map[string]interface{}) {
-				assert.Contains(t, resp, "attachment_id")
-				assert.Equal(t, "screenshot.png", resp["filename"])
-				assert.Contains(t, resp, "thumbnail_url") // Images should have thumbnails
-			},
-		},
-		{
-			name:        "File too large",
-			ticketID:    fmt.Sprintf("%d", ticketID),
-			fileName:    "huge.bin",
-			fileContent: strings.Repeat("x", 11*1024*1024), // 11MB
-			fileType:    "application/octet-stream",
-			wantStatus:  http.StatusRequestEntityTooLarge,
-			checkResp: func(t *testing.T, resp map[string]interface{}) {
-				assert.Contains(t, resp["error"], "File size exceeds maximum")
-			},
-		},
-		{
-			name:        "Invalid ticket ID (non-numeric)",
-			ticketID:    "invalid",
-			fileName:    "test.txt",
-			fileContent: "content",
-			fileType:    "text/plain",
-			wantStatus:  http.StatusNotFound, // With DB: treated as TN lookup which fails
-			checkResp: func(t *testing.T, resp map[string]interface{}) {
-				// When DB is available, "invalid" is treated as a TN and not found
-				assert.Contains(t, resp["error"], "Ticket not found")
-			},
-		},
-		{
-			name:        "Ticket not found",
-			ticketID:    "999999",
-			fileName:    "test.txt",
-			fileContent: "content",
-			fileType:    "text/plain",
-			wantStatus:  http.StatusNotFound,
-			checkResp: func(t *testing.T, resp map[string]interface{}) {
-				assert.Contains(t, resp["error"], "Ticket not found")
-			},
-		},
-		{
-			name:        "Blocked file type",
-			ticketID:    fmt.Sprintf("%d", ticketID),
-			fileName:    "malware.exe",
-			fileContent: "MZ executable content",
-			fileType:    "application/x-msdownload",
-			wantStatus:  http.StatusBadRequest,
-			checkResp: func(t *testing.T, resp map[string]interface{}) {
-				assert.Contains(t, resp["error"], "file type not allowed")
-			},
-		},
+func testPNG(t *testing.T, w, h int) []byte {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	for y := range h {
+		for x := range w {
+			img.Set(x, y, color.RGBA{R: uint8(x), G: uint8(y), B: 200, A: 255})
+		}
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			router := gin.New()
-			router.POST("/api/tickets/:id/attachments", handleUploadAttachment)
-
-			// Create multipart form
-			body := &bytes.Buffer{}
-			writer := multipart.NewWriter(body)
-
-			// Add file
-			part, err := writer.CreateFormFile("file", tt.fileName)
-			require.NoError(t, err)
-			_, err = io.WriteString(part, tt.fileContent)
-			require.NoError(t, err)
-
-			// Add other fields if needed
-			writer.WriteField("description", "Test upload")
-
-			err = writer.Close()
-			require.NoError(t, err)
-
-			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("POST", "/api/tickets/"+tt.ticketID+"/attachments", body)
-			req.Header.Set("Content-Type", writer.FormDataContentType())
-			router.ServeHTTP(w, req)
-
-			assert.Equal(t, tt.wantStatus, w.Code)
-
-			var response map[string]interface{}
-			err = json.Unmarshal(w.Body.Bytes(), &response)
-			require.NoError(t, err)
-
-			if tt.checkResp != nil {
-				tt.checkResp(t, response)
-			}
-		})
-	}
+	var buf bytes.Buffer
+	require.NoError(t, png.Encode(&buf, img))
+	return buf.Bytes()
 }
 
-func TestGetAttachments(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+const testPDF = "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n" +
+	"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n" +
+	"3 0 obj<</Type/Page/MediaBox[0 0 200 200]/Parent 2 0 R>>endobj\n" +
+	"trailer<</Root 1 0 R>>\n%%EOF\n"
 
-	// Enable DB access for attachment handlers
-	t.Setenv("ATTACHMENTS_USE_DB", "1")
+// TestAgentAttachmentAPI walks upload, list, download, thumbnail, viewer,
+// ticket scoping and delete through the real routes, on both storage backends.
+func TestAgentAttachmentAPI(t *testing.T) {
+	db := attachmentTestDB(t)
+	api := newAttachmentAPI(t)
 
-	ticketID, _, _, cleanup := setupAttachmentTestDB(t)
-	defer cleanup()
+	eachArticleStorage(t, func(t *testing.T, articleDir string) {
+		ticketID, articleID := createAttachmentTestArticle(t, db, "Attachments", "body")
+		tn := ticketTN(t, db, ticketID)
+		base := "/api/tickets/" + tn
+		pngBytes := testPNG(t, 640, 480)
 
-	tests := []struct {
-		name       string
-		ticketID   string
-		wantStatus int
-		checkResp  func(t *testing.T, resp map[string]interface{})
-	}{
-		{
-			name:       "Get attachments for ticket with files",
-			ticketID:   fmt.Sprintf("%d", ticketID),
-			wantStatus: http.StatusOK,
-			checkResp: func(t *testing.T, resp map[string]interface{}) {
-				attachments := resp["attachments"].([]interface{})
-				assert.Greater(t, len(attachments), 0)
+		up := api.mustUpload(tn, "screenshot.png", "image/png", pngBytes)
+		assert.Equal(t, articleID, up.ArticleID, "attached to the ticket's latest article")
+		assert.Equal(t, "screenshot.png", up.Filename)
+		assert.Equal(t, int64(len(pngBytes)), up.Size)
+		assert.Equal(t, "image/png", up.ContentType)
+		assert.Equal(t, fmt.Sprintf("%s/articles/%d/attachments/%d", base, articleID, up.FileID), up.DownloadURL)
+		assert.Equal(t, up.DownloadURL+"/thumbnail", up.ThumbnailURL)
 
-				first := attachments[0].(map[string]interface{})
-				assert.Contains(t, first, "id")
-				assert.Contains(t, first, "filename")
-				assert.Contains(t, first, "size")
-				assert.Contains(t, first, "content_type")
-				assert.Contains(t, first, "uploaded_at")
-				assert.Contains(t, first, "uploaded_by")
-			},
-		},
-		{
-			name:       "Invalid ticket ID (non-numeric)",
-			ticketID:   "invalid",
-			wantStatus: http.StatusNotFound, // With DB, "invalid" is TN lookup which fails
-			checkResp: func(t *testing.T, resp map[string]interface{}) {
-				assert.Contains(t, resp["error"], "Ticket not found")
-			},
-		},
-	}
+		// Browser sent application/octet-stream: the type is detected.
+		upPDF := api.mustUpload(tn, "diagram.pdf", "application/octet-stream", []byte(testPDF))
+		assert.Equal(t, articleID, upPDF.ArticleID)
+		assert.Equal(t, "application/pdf", upPDF.ContentType)
+		assert.Equal(t, upPDF.DownloadURL+"/thumbnail", upPDF.ThumbnailURL)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			router := gin.New()
-			router.GET("/api/tickets/:id/attachments", handleGetAttachments)
-
-			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("GET", "/api/tickets/"+tt.ticketID+"/attachments", nil)
-			router.ServeHTTP(w, req)
-
-			assert.Equal(t, tt.wantStatus, w.Code)
-
-			var response map[string]interface{}
-			err := json.Unmarshal(w.Body.Bytes(), &response)
+		if articleDir != "" {
+			dir := articleStorageDir(t, db, articleDir, articleID)
+			onDisk, err := os.ReadFile(filepath.Join(dir, "screenshot.png"))
+			require.NoError(t, err, "FS stores the file under <article dir>/<date>/<article id>/<name>")
+			assert.Equal(t, pngBytes, onDisk)
+			ct, err := os.ReadFile(filepath.Join(dir, "screenshot.png.content_type"))
 			require.NoError(t, err)
+			assert.Equal(t, "image/png", string(ct))
+		} else {
+			var stored []byte
+			var createBy int
+			require.NoError(t, db.QueryRow(database.ConvertPlaceholders(`
+				SELECT content, create_by FROM article_data_mime_attachment
+				WHERE article_id = ? AND filename = ?`), articleID, "screenshot.png").Scan(&stored, &createBy))
+			assert.Equal(t, pngBytes, stored)
+			assert.Equal(t, 1, createBy, "create_by is the uploading agent")
+		}
 
-			if tt.checkResp != nil {
-				tt.checkResp(t, response)
+		// List (JSON). FS file ids are positions in the sorted name list, so
+		// the list (not the upload responses) is the source of current URLs.
+		listed := api.list(tn)
+		require.Equal(t, 2, listed.Total)
+		require.Len(t, listed.Attachments, 2)
+		shot := findListItem(t, listed.Attachments, "screenshot.png")
+		pdf := findListItem(t, listed.Attachments, "diagram.pdf")
+		shotURL := fmt.Sprintf("%s/articles/%d/attachments/%d", base, articleID, shot.FileID)
+		assert.Equal(t, articleID, shot.ArticleID)
+		assert.Equal(t, shotURL, shot.DownloadURL)
+		assert.Equal(t, shotURL+"/view", shot.ViewURL)
+		assert.Equal(t, shotURL, shot.DeleteURL)
+		assert.Equal(t, shotURL+"/thumbnail", shot.ThumbnailURL)
+		assert.Equal(t, int64(len(pngBytes)), shot.Size)
+		assert.Equal(t, "image/png", shot.ContentType)
+		assert.Equal(t, formatFileSize(int64(len(pngBytes))), shot.SizeFormatted)
+		assert.False(t, shot.UploadedAt.IsZero())
+		assert.Equal(t, "application/pdf", pdf.ContentType)
+
+		// List (HTMX partial) links the same article-scoped URLs.
+		w := api.do(http.MethodGet, base+"/attachments", nil, "HX-Request", "true")
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Header().Get("Content-Type"), "text/html")
+		for _, it := range listed.Attachments {
+			assert.Contains(t, w.Body.String(), `href="`+it.ViewURL+`"`)
+			assert.Contains(t, w.Body.String(), `href="`+it.DownloadURL+`"`)
+		}
+
+		// Download: byte-exact, inline for safe types, safe disposition.
+		w = api.do(http.MethodGet, shot.DownloadURL, nil)
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, pngBytes, w.Body.Bytes())
+		assert.Equal(t, "image/png", w.Header().Get("Content-Type"))
+		assert.Equal(t, "nosniff", w.Header().Get("X-Content-Type-Options"))
+		disp, params, err := mime.ParseMediaType(w.Header().Get("Content-Disposition"))
+		require.NoError(t, err)
+		assert.Equal(t, "inline", disp)
+		assert.Equal(t, "screenshot.png", params["filename"])
+
+		w = api.do(http.MethodGet, pdf.DownloadURL, nil)
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, testPDF, w.Body.String())
+		assert.Equal(t, "application/pdf", w.Header().Get("Content-Type"))
+
+		// Thumbnail: a scaled PNG, revalidated by ETag.
+		w = api.do(http.MethodGet, shot.ThumbnailURL, nil)
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "image/png", w.Header().Get("Content-Type"))
+		cfg, err := png.DecodeConfig(bytes.NewReader(w.Body.Bytes()))
+		require.NoError(t, err)
+		assert.LessOrEqual(t, cfg.Width, thumbnailMaxW)
+		assert.LessOrEqual(t, cfg.Height, thumbnailMaxH)
+		etag := w.Header().Get("ETag")
+		require.NotEmpty(t, etag)
+		w = api.do(http.MethodGet, shot.ThumbnailURL, nil, "If-None-Match", etag)
+		assert.Equal(t, http.StatusNotModified, w.Code)
+		assert.Empty(t, w.Body.Bytes())
+
+		// Viewer page: navigation walks the ticket's list order.
+		order := []attachmentListItem{listed.Attachments[0], listed.Attachments[1]}
+		w = api.do(http.MethodGet, order[0].ViewURL, nil)
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Header().Get("Content-Type"), "text/html")
+		assert.Contains(t, w.Body.String(), `class="nav right"><a class="nav-btn" href="`+order[1].ViewURL+`"`)
+		assert.NotContains(t, w.Body.String(), `class="nav left"`)
+		assert.Contains(t, w.Body.String(), `src="`+order[0].DownloadURL+`/view?raw=1"`)
+		w = api.do(http.MethodGet, order[1].ViewURL, nil)
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), `class="nav left"><a class="nav-btn" href="`+order[0].ViewURL+`"`)
+		assert.NotContains(t, w.Body.String(), `class="nav right"`)
+
+		// Raw view: the content, framable by the same origin only.
+		w = api.do(http.MethodGet, shot.ViewURL+"?raw=1", nil)
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, pngBytes, w.Body.Bytes())
+		assert.Equal(t, "image/png", w.Header().Get("Content-Type"))
+		assert.Equal(t, "SAMEORIGIN", w.Header().Get("X-Frame-Options"))
+		assert.Contains(t, w.Header().Get("Content-Security-Policy"), "frame-ancestors 'self'")
+
+		// Another ticket's attachment is not reachable through this ticket.
+		otherTicketID, otherArticleID := createAttachmentTestArticle(t, db, "Other", "body")
+		otherTN := ticketTN(t, db, otherTicketID)
+		other := api.mustUpload(otherTN, "secret.txt", "text/plain", []byte("other ticket"))
+		require.Equal(t, otherArticleID, other.ArticleID)
+		foreign := fmt.Sprintf("%s/articles/%d/attachments/%d", base, other.ArticleID, other.FileID)
+		for _, path := range []string{foreign, foreign + "/thumbnail", foreign + "/view", foreign + "/view?raw=1"} {
+			assert.Equal(t, http.StatusNotFound, api.do(http.MethodGet, path, nil).Code, path)
+		}
+		assert.Equal(t, http.StatusNotFound, api.do(http.MethodDelete, foreign, nil).Code)
+		w = api.do(http.MethodGet, other.DownloadURL, nil)
+		require.Equal(t, http.StatusOK, w.Code, "foreign delete must not remove it")
+		assert.Equal(t, "other ticket", w.Body.String())
+		missing := fmt.Sprintf("%s/articles/%d/attachments/%d", base, articleID, 999999)
+		assert.Equal(t, http.StatusNotFound, api.do(http.MethodGet, missing, nil).Code)
+		assert.Equal(t, http.StatusBadRequest, api.do(http.MethodGet, base+"/articles/x/attachments/1", nil).Code)
+
+		// Delete. (FS: screenshot.png sorts after diagram.pdf, so the PDF
+		// keeps its index and the deleted index stays unused.)
+		assert.Equal(t, http.StatusUnauthorized, httptestDelete(api.router, shot.DeleteURL).Code)
+		w = api.do(http.MethodDelete, shot.DeleteURL, nil)
+		require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+		var del struct {
+			Success bool `json:"success"`
+		}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &del))
+		assert.True(t, del.Success)
+		assert.Equal(t, http.StatusNotFound, api.do(http.MethodGet, shot.DownloadURL, nil).Code)
+		assert.Equal(t, http.StatusNotFound, api.do(http.MethodDelete, shot.DeleteURL, nil).Code)
+		after := api.list(tn)
+		require.Equal(t, 1, after.Total)
+		assert.Equal(t, "diagram.pdf", after.Attachments[0].Filename)
+		if articleDir != "" {
+			dir := articleStorageDir(t, db, articleDir, articleID)
+			for _, name := range []string{"screenshot.png", "screenshot.png.content_type", "screenshot.png.disposition"} {
+				_, err := os.Stat(filepath.Join(dir, name))
+				assert.ErrorIs(t, err, os.ErrNotExist, name)
 			}
-		})
-	}
+			_, err := os.Stat(filepath.Join(dir, "diagram.pdf"))
+			assert.NoError(t, err)
+		} else {
+			var n int
+			require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+				"SELECT COUNT(*) FROM article_data_mime_attachment WHERE article_id = ?"), articleID).Scan(&n))
+			assert.Equal(t, 1, n)
+		}
+	})
 }
 
-func TestDownloadAttachment(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	ticketID, _, attachmentID, cleanup := setupAttachmentTestDB(t)
-	defer cleanup()
-
-	tests := []struct {
-		name         string
-		ticketID     string
-		attachmentID string
-		wantStatus   int
-		checkHeaders func(t *testing.T, w *httptest.ResponseRecorder)
-	}{
-		{
-			name:         "Download existing attachment",
-			ticketID:     fmt.Sprintf("%d", ticketID),
-			attachmentID: fmt.Sprintf("%d", attachmentID),
-			wantStatus:   http.StatusOK,
-			checkHeaders: func(t *testing.T, w *httptest.ResponseRecorder) {
-				assert.Contains(t, w.Header().Get("Content-Type"), "text/plain")
-				assert.Contains(t, w.Header().Get("Content-Disposition"), "attachment")
-			},
-		},
-		{
-			name:         "Attachment not found",
-			ticketID:     fmt.Sprintf("%d", ticketID),
-			attachmentID: "999999",
-			wantStatus:   http.StatusNotFound,
-		},
-		{
-			name:         "Invalid attachment ID",
-			ticketID:     fmt.Sprintf("%d", ticketID),
-			attachmentID: "invalid",
-			wantStatus:   http.StatusBadRequest,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			router := gin.New()
-			router.GET("/api/tickets/:id/attachments/:attachment_id/download", handleDownloadAttachment)
-
-			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("GET", fmt.Sprintf("/api/tickets/%s/attachments/%s/download", tt.ticketID, tt.attachmentID), nil)
-			router.ServeHTTP(w, req)
-
-			assert.Equal(t, tt.wantStatus, w.Code)
-
-			if tt.checkHeaders != nil {
-				tt.checkHeaders(t, w)
-			}
-		})
-	}
+// httptestDelete sends an unauthenticated DELETE.
+func httptestDelete(router *gin.Engine, path string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodDelete, path, nil))
+	return w
 }
 
-func TestDeleteAttachment(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+// TestAgentAttachmentHostileFilename: a filename with quotes and markup must
+// stay inert in the HTMX list (HTML and the onclick JS) and in the
+// Content-Disposition header.
+func TestAgentAttachmentHostileFilename(t *testing.T) {
+	db := attachmentTestDB(t)
+	api := newAttachmentAPI(t)
+	const name = `q'uote"<img src=x onerror=alert(1)>.png`
 
-	ticketID, _, attachmentID, cleanup := setupAttachmentTestDB(t)
-	defer cleanup()
+	eachArticleStorage(t, func(t *testing.T, _ string) {
+		ticketID, _ := createAttachmentTestArticle(t, db, "Hostile", "body")
+		tn := ticketTN(t, db, ticketID)
+		pngBytes := testPNG(t, 4, 4)
+		up := api.mustUpload(tn, name, "image/png", pngBytes)
+		require.Equal(t, name, up.Filename)
 
-	tests := []struct {
-		name         string
-		userRole     string
-		userID       int
-		attachmentID string
-		wantStatus   int
-		checkResp    func(t *testing.T, resp map[string]interface{})
-	}{
-		{
-			name:         "Delete attachment successfully",
-			userRole:     "admin",
-			userID:       1,
-			attachmentID: fmt.Sprintf("%d", attachmentID),
-			wantStatus:   http.StatusOK,
-			checkResp: func(t *testing.T, resp map[string]interface{}) {
-				assert.Equal(t, true, resp["success"])
-			},
-		},
-		{
-			name:         "Invalid attachment ID",
-			userRole:     "admin",
-			userID:       1,
-			attachmentID: "invalid",
-			wantStatus:   http.StatusBadRequest,
-			checkResp: func(t *testing.T, resp map[string]interface{}) {
-				assert.Contains(t, resp["error"], "Invalid attachment ID")
-			},
-		},
-	}
+		w := api.do(http.MethodGet, "/api/tickets/"+tn+"/attachments", nil, "HX-Request", "true")
+		require.Equal(t, http.StatusOK, w.Code)
+		body := w.Body.String()
+		assert.NotContains(t, body, "<img src=x")
+		assert.NotContains(t, body, "onerror=alert(1)>")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			router := gin.New()
-
-			router.Use(func(c *gin.Context) {
-				c.Set("user_role", tt.userRole)
-				c.Set("user_id", tt.userID)
-				c.Next()
-			})
-
-			router.DELETE("/api/tickets/:id/attachments/:attachment_id", handleDeleteAttachment)
-
-			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("DELETE", fmt.Sprintf("/api/tickets/%d/attachments/%s", ticketID, tt.attachmentID), nil)
-			router.ServeHTTP(w, req)
-
-			assert.Equal(t, tt.wantStatus, w.Code)
-
-			var response map[string]interface{}
-			err := json.Unmarshal(w.Body.Bytes(), &response)
-			require.NoError(t, err)
-
-			if tt.checkResp != nil {
-				tt.checkResp(t, response)
+		doc, err := html.Parse(strings.NewReader(body))
+		require.NoError(t, err)
+		var linkText, onclick string
+		var walk func(n *html.Node)
+		walk = func(n *html.Node) {
+			if n.Type == html.ElementNode {
+				for _, a := range n.Attr {
+					if n.Data == "a" && a.Key == "href" && a.Val == up.DownloadURL+"/view" && n.FirstChild != nil && linkText == "" {
+						linkText = strings.TrimSpace(n.FirstChild.Data)
+					}
+					if n.Data == "button" && a.Key == "onclick" {
+						onclick = a.Val
+					}
+				}
+				if n.Data == "img" {
+					for _, a := range n.Attr {
+						assert.NotEqual(t, "onerror", a.Key, "filename markup became an element")
+					}
+				}
 			}
-		})
-	}
+			for c := n.FirstChild; c != nil; c = c.NextSibling {
+				walk(c)
+			}
+		}
+		walk(doc)
+		assert.Equal(t, name, linkText, "the link shows the filename as text")
+
+		// onclick is deleteAttachment(<url>, <filename>) with JS string literals.
+		require.True(t, strings.HasPrefix(onclick, "deleteAttachment(") && strings.HasSuffix(onclick, ")"), onclick)
+		var args []string
+		require.NoError(t, json.Unmarshal([]byte("["+strings.TrimSuffix(strings.TrimPrefix(onclick, "deleteAttachment("), ")")+"]"), &args), onclick)
+		assert.Equal(t, []string{up.DownloadURL, name}, args)
+
+		w = api.do(http.MethodGet, up.DownloadURL, nil)
+		require.Equal(t, http.StatusOK, w.Code)
+		cd := w.Header().Get("Content-Disposition")
+		disp, params, err := mime.ParseMediaType(cd)
+		require.NoError(t, err, cd)
+		assert.Equal(t, "inline", disp)
+		assert.Equal(t, name, params["filename"])
+
+		w = api.do(http.MethodGet, up.DownloadURL+"/view", nil)
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.NotContains(t, w.Body.String(), "<img src=x")
+	})
+}
+
+// TestAgentAttachmentUploadCreatesArticle: a ticket without articles gets an
+// agent note (internal channel, customer visible) carrying the upload.
+func TestAgentAttachmentUploadCreatesArticle(t *testing.T) {
+	db := attachmentTestDB(t)
+	api := newAttachmentAPI(t)
+
+	eachArticleStorage(t, func(t *testing.T, articleDir string) {
+		ticketID, tn := createAttachmentTestTicket(t, db)
+		up := api.mustUpload(tn, "notes.txt", "text/plain", []byte("hello"))
+
+		var articleTicket, sender, channel, visible, createBy int
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(`
+			SELECT ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer, create_by
+			FROM article WHERE id = ?`), up.ArticleID).Scan(&articleTicket, &sender, &channel, &visible, &createBy))
+		assert.Equal(t, int(ticketID), articleTicket)
+		assert.Equal(t, constants.ArticleSenderAgent, sender)
+		assert.Equal(t, constants.CommunicationChannelInternal, channel)
+		assert.Equal(t, 1, visible)
+		assert.Equal(t, 1, createBy)
+
+		w := api.do(http.MethodGet, up.DownloadURL, nil)
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "hello", w.Body.String())
+		disp, _, err := mime.ParseMediaType(w.Header().Get("Content-Disposition"))
+		require.NoError(t, err)
+		assert.Equal(t, "attachment", disp, "text is never served inline")
+
+		if articleDir != "" {
+			onDisk, err := os.ReadFile(filepath.Join(articleStorageDir(t, db, articleDir, up.ArticleID), "notes.txt"))
+			require.NoError(t, err)
+			assert.Equal(t, "hello", string(onDisk))
+		}
+
+		// The second upload goes to the same (now latest) article.
+		second := api.mustUpload(tn, "more.txt", "text/plain", []byte("again"))
+		assert.Equal(t, up.ArticleID, second.ArticleID)
+	})
+}
+
+// TestAgentAttachmentViewerICS: calendar attachments render as event cards
+// from the stored content, on both backends.
+func TestAgentAttachmentViewerICS(t *testing.T) {
+	db := attachmentTestDB(t)
+	api := newAttachmentAPI(t)
+	ics := "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:1@test\r\n" +
+		"DTSTART:20260301T100000Z\r\nDTEND:20260301T110000Z\r\nSUMMARY:Quarterly <Review>\r\n" +
+		"END:VEVENT\r\nEND:VCALENDAR\r\n"
+
+	eachArticleStorage(t, func(t *testing.T, _ string) {
+		ticketID, _ := createAttachmentTestArticle(t, db, "Invite", "body")
+		tn := ticketTN(t, db, ticketID)
+		up := api.mustUpload(tn, "invite.ics", "application/octet-stream", []byte(ics))
+		assert.Equal(t, "text/calendar", up.ContentType, "detected from the extension")
+		// Browsers send text/calendar for .ics files; it must be accepted.
+		assert.Equal(t, "text/calendar", api.mustUpload(tn, "second.ics", "text/calendar", []byte(ics)).ContentType)
+
+		w := api.do(http.MethodGet, up.DownloadURL+"/view", nil)
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), "Quarterly &lt;Review&gt;")
+
+		w = api.do(http.MethodGet, up.DownloadURL+"/view?raw=1", nil)
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "text/plain; charset=utf-8", w.Header().Get("Content-Type"))
+		assert.Equal(t, ics, w.Body.String())
+	})
+}
+
+// TestAgentAttachmentUploadValidation: rejected uploads store nothing.
+func TestAgentAttachmentUploadValidation(t *testing.T) {
+	db := attachmentTestDB(t)
+	api := newAttachmentAPI(t)
+	ticketID, articleID := createAttachmentTestArticle(t, db, "Validation", "body")
+	tn := ticketTN(t, db, ticketID)
+
+	w := api.upload(tn, "malware.exe", "application/octet-stream", []byte("MZ"))
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "file type not allowed")
+
+	w = api.upload(tn, "huge.bin", "application/octet-stream", bytes.Repeat([]byte("x"), MaxFileSize+1))
+	assert.Equal(t, http.StatusRequestEntityTooLarge, w.Code)
+
+	w = api.upload("NO-SUCH-TICKET", "a.txt", "text/plain", []byte("x"))
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	var n int
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		"SELECT COUNT(*) FROM article_data_mime_attachment WHERE article_id = ?"), articleID).Scan(&n))
+	assert.Equal(t, 0, n)
 }
 
 func TestAttachmentValidation(t *testing.T) {
@@ -560,44 +627,6 @@ func TestAttachmentValidation(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestAttachmentMetadata(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	ticketID, _, attachmentID, cleanup := setupAttachmentTestDB(t)
-	defer cleanup()
-
-	t.Run("Store and retrieve metadata", func(t *testing.T) {
-		router := gin.New()
-		router.GET("/api/tickets/:id/attachments", handleGetAttachments)
-
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", fmt.Sprintf("/api/tickets/%d/attachments", ticketID), nil)
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		var response map[string]interface{}
-		err := json.Unmarshal(w.Body.Bytes(), &response)
-		require.NoError(t, err)
-
-		attachments := response["attachments"].([]interface{})
-		assert.Greater(t, len(attachments), 0)
-
-		// Find our test attachment
-		found := false
-		for _, att := range attachments {
-			a := att.(map[string]interface{})
-			if a["id"] == float64(attachmentID) {
-				found = true
-				assert.Equal(t, "existing_test.txt", a["filename"])
-				assert.Contains(t, a["content_type"], "text/plain")
-				break
-			}
-		}
-		assert.True(t, found, "Test attachment not found in response")
-	})
 }
 
 func TestAttachmentSecurity(t *testing.T) {
@@ -680,61 +709,4 @@ func TestAttachmentSecurity(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestAttachmentQuota(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	t.Setenv("ATTACHMENTS_USE_DB", "1")
-
-	ticketID, _, _, cleanup := setupAttachmentTestDB(t)
-	defer cleanup()
-
-	// WORKAROUND: Handler bug - handleUploadAttachment checks the in-memory mock map
-	// even when database is available. Must pre-populate this map for tests to pass.
-	// TODO: Fix handler to not check mock map when DB is available
-	attachmentsByTicket[ticketID] = make([]int, 0)
-
-	t.Run("Enforce per-ticket attachment limit", func(t *testing.T) {
-		router := gin.New()
-		router.POST("/api/tickets/:id/attachments", handleUploadAttachment)
-
-		// The test verifies that if we have an attachment, we can still add more up to the limit
-		// We won't actually test hitting the limit as that would require many uploads
-
-		// Upload a file
-		body := &bytes.Buffer{}
-		writer := multipart.NewWriter(body)
-		part, _ := writer.CreateFormFile("file", "quota_test.txt")
-		io.WriteString(part, "Quota test content")
-		writer.Close()
-
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("POST", fmt.Sprintf("/api/tickets/%d/attachments", ticketID), body)
-		req.Header.Set("Content-Type", writer.FormDataContentType())
-		router.ServeHTTP(w, req)
-
-		// Should succeed as we're well under the limit
-		assert.Equal(t, http.StatusCreated, w.Code)
-	})
-
-	t.Run("Enforce total size limit per ticket", func(t *testing.T) {
-		router := gin.New()
-		router.POST("/api/tickets/:id/attachments", handleUploadAttachment)
-
-		// Try to upload a file that's just over the limit (if implemented)
-		// For now, we verify that a reasonably sized file is accepted
-		body := &bytes.Buffer{}
-		writer := multipart.NewWriter(body)
-		part, _ := writer.CreateFormFile("file", "size_test.txt")
-		io.WriteString(part, strings.Repeat("x", 1024)) // 1KB file
-		writer.Close()
-
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("POST", fmt.Sprintf("/api/tickets/%d/attachments", ticketID), body)
-		req.Header.Set("Content-Type", writer.FormDataContentType())
-		router.ServeHTTP(w, req)
-
-		// Should succeed as 1KB is well under any reasonable limit
-		assert.Equal(t, http.StatusCreated, w.Code)
-	})
 }

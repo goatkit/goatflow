@@ -53,6 +53,8 @@
             </div>
         </a>
 
+        {# The customer KB is served by the goat-kb plugin; show the card only when its menu item is registered. #}
+        {% for pmi in PluginCustomerMenuItems %}{% if pmi.Path == "/customer/kb" %}
         <a href="/customer/kb" class="block group">
             <div class="gk-card-glow p-6 transition-all duration-300 group-hover:scale-[1.02]" style="border-color: var(--gk-secondary);">
                 <div class="flex items-center">
@@ -68,6 +70,7 @@
                 </div>
             </div>
         </a>
+        {% endif %}{% endfor %}
     </div>
 
     <!-- Statistics -->

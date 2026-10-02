@@ -1,536 +1,171 @@
 # GoatFlow TypeScript SDK
 
-The official TypeScript/JavaScript SDK for the GoatFlow ticketing system API.
+TypeScript/JavaScript client for the GoatFlow REST API (`/api/v1`). ESM, no runtime dependencies; uses `fetch` (Node 18+, Bun, browsers).
 
 ## Installation
 
 ```bash
 npm install @goatflow/sdk
-# or
-yarn add @goatflow/sdk
-# or
-pnpm add @goatflow/sdk
 ```
 
-## Quick Start
+## Quick start
 
 ```typescript
 import { GoatflowClient } from '@goatflow/sdk';
 
-// Create client with API key
-const client = GoatflowClient.withApiKey('https://your-goatflow-instance.com', 'your-api-key');
+const gf = GoatflowClient.withApiKey('https://goatflow.example.com', 'gf_...');
 
-// List tickets
-const tickets = await client.tickets.list({
-  page_size: 10,
-  status: ['open'],
-});
+const tickets = await gf.tickets.list({ status: 'open', per_page: 20 });
+console.log(`${tickets.pagination.total} open tickets`);
+for (const t of tickets.tickets) {
+  console.log(`#${t.ticket_number} ${t.title} (${t.state_name})`);
+}
+```
 
-console.log(`Found ${tickets.total_count} tickets`);
+A runnable walkthrough is in [`examples/basic-usage.ts`](examples/basic-usage.ts):
+
+```bash
+GOATFLOW_URL=https://goatflow.example.com GOATFLOW_TOKEN=gf_... bun examples/basic-usage.ts
 ```
 
 ## Authentication
 
-### API Key (Recommended for server-to-server)
+Both kinds of credential are sent as `Authorization: Bearer <token>`.
 
 ```typescript
-const client = GoatflowClient.withApiKey('https://goatflow.example.com', 'your-api-key');
+// API token (gf_...), from the API Tokens settings page or POST /api/v1/tokens
+const gf = GoatflowClient.withApiKey(baseURL, 'gf_...');
+
+// JWT: login() switches the client to the returned access token
+const gf = new GoatflowClient({ baseURL });
+const pair = await gf.login('agent@example.com', 'password');
+
+// or resume from a stored pair
+const gf = GoatflowClient.withJWT(baseURL, accessToken, refreshToken, expiresAt);
+
+// explicit refresh: new access token and a rotated refresh token
+const next = await gf.auth.refresh(pair.refresh_token);
 ```
 
-### JWT Token
+A client from `login()`, `withJWT()` or `useJWT()` renews its token pair through `POST /api/v1/auth/refresh` when the access token is within a minute of expiry; concurrent requests share one refresh. A rejected refresh token (401) fails the request. For your own renewal logic pass a `refreshFunction` via `setAuth({ type: 'jwt', ... })`.
+
+## Configuration
 
 ```typescript
-const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-const client = GoatflowClient.withJWT(
-  'https://goatflow.example.com',
-  'jwt-token',
-  'refresh-token',
-  expiresAt
-);
-```
-
-### OAuth2
-
-```typescript
-const client = GoatflowClient.withOAuth2(
-  'https://goatflow.example.com',
-  'access-token',
-  'refresh-token',
-  expiresAt
-);
-```
-
-### Login Flow
-
-```typescript
-// Create client without auth
-const client = new GoatflowClient({ baseURL: 'https://goatflow.example.com' });
-
-// Login with credentials
-await client.login('user@example.com', 'password');
-
-// Now the client is authenticated and tokens will be managed automatically
-const profile = await client.auth.getProfile();
-```
-
-### Custom Configuration
-
-```typescript
-const client = new GoatflowClient({
+const gf = new GoatflowClient({
   baseURL: 'https://goatflow.example.com',
-  auth: {
-    type: 'api-key',
-    apiKey: 'your-api-key',
-  },
-  timeout: 30000,
-  retries: 3,
-  debug: true,
-  userAgent: 'my-app/1.0.0',
+  auth: { type: 'api-key', apiKey: 'gf_...' },
+  timeout: 30000, // ms, default
+  userAgent: 'my-app/1.0',
+  fetch: customFetch, // optional, defaults to globalThis.fetch
 });
 ```
 
-## Features
+## Services
 
-### Ticket Management
+### Tickets
 
 ```typescript
-// Create ticket
-const ticket = await client.tickets.create({
-  title: 'New Issue',
-  description: 'Something is broken',
-  priority: 'high',
-  queue_id: 1,
-  customer_id: 123,
-  tags: ['bug', 'urgent'],
+const list = await gf.tickets.list({
+  queue_id: 3,
+  status: 'open',
+  sort: 'updated',
+  order: 'desc',
+  include: ['article_count', 'last_article'],
 });
+const ticket = await gf.tickets.get(123);
 
-// Get ticket
-const ticket = await client.tickets.get(ticketId);
-
-// Update ticket
-const updatedTicket = await client.tickets.update(ticketId, {
-  status: 'in-progress',
-  priority: 'urgent',
-});
-
-// Search tickets
-const results = await client.tickets.search('error', {
-  priority: ['high', 'urgent'],
-  page_size: 20,
-});
-
-// Close ticket
-const closedTicket = await client.tickets.close(ticketId, 'Issue resolved');
-
-// Assign ticket
-const assignedTicket = await client.tickets.assign(ticketId, userId);
+const created = await gf.tickets.create({ title: 'Printer on fire', queue_id: 3, body: 'Smoke everywhere', priority_id: 4 });
+// State ids differ between installations; resolve them by name.
+const states = await gf.http.get<Array<{ id: number; name: string }>>('/api/v1/states');
+const closed = states.find((s) => s.name === 'closed successful')!;
+const updated = await gf.tickets.update(created.id, { state_id: closed.id });
+const reopened = await gf.tickets.reopen(created.id, 'Customer replied');
+await gf.tickets.delete(created.id);
 ```
 
-### Messages and Attachments
+### Articles
 
 ```typescript
-// Add message
-const message = await client.tickets.addMessage(ticketId, {
-  content: 'This is a response',
-  is_internal: false,
+const { articles, total } = await gf.articles.list(ticketId, true); // with attachment lists
+const note = await gf.articles.create(ticketId, {
+  subject: 'Call back',
+  body: 'Customer asked for a call',
+  article_type: 'note-internal',
 });
-
-// Get messages
-const messages = await client.tickets.getMessages(ticketId);
-
-// Upload attachment (Node.js)
-const fileBuffer = fs.readFileSync('document.pdf');
-const attachment = await client.tickets.uploadAttachment(ticketId, fileBuffer, 'document.pdf');
-
-// Upload attachment (Browser)
-const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-const file = fileInput.files[0];
-const attachment = await client.tickets.uploadAttachment(ticketId, file);
-
-// Download attachment
-const data = await client.tickets.downloadAttachment(ticketId, attachmentId);
+await gf.articles.update(ticketId, note.id, { body: 'Corrected text' });
+await gf.articles.delete(ticketId, note.id);
 ```
 
-### User Management
+### Users, queues, statistics, search
 
 ```typescript
-// List users
-const users = await client.users.list();
+const me = await gf.users.me();
+const agents = await gf.users.list({ search: 'smith', valid: '1' });
+const agent = await gf.users.get(5);
 
-// Create user
-const user = await client.users.create({
-  email: 'user@example.com',
-  first_name: 'John',
-  last_name: 'Doe',
-  role: 'agent',
-  password: 'secure-password',
-});
+const queues = await gf.queues.list({ include_stats: true });
+const queue = await gf.queues.get(3);
 
-// Get current user profile
-const profile = await client.auth.getProfile();
+const stats = await gf.statistics.dashboard();
 
-// Update profile
-const updatedProfile = await client.auth.updateProfile({
-  first_name: 'Jane',
-  title: 'Senior Support Agent',
-});
-```
-
-### Dashboard & Analytics
-
-```typescript
-// Get dashboard statistics
-const stats = await client.dashboard.getStats();
-console.log({
-  totalTickets: stats.total_tickets,
-  openTickets: stats.open_tickets,
-  myTickets: stats.my_tickets,
-  ticketsByStatus: stats.tickets_by_status,
-});
-
-// Get my assigned tickets
-const myTickets = await client.dashboard.getMyTickets();
-
-// Get recent tickets
-const recentTickets = await client.dashboard.getRecentTickets();
-```
-
-### Real-time Events
-
-```typescript
-// Connect to real-time events
-await client.events.connect();
-
-// Listen for ticket events
-const ticketSubscription = client.events.onTicket((event) => {
-  console.log(`Ticket ${event.type}:`, event.data.ticket_number);
-});
-
-// Listen for message events
-const messageSubscription = client.events.onMessage((event) => {
-  console.log(`New message on ticket ${event.data.ticket_id}`);
-});
-
-// Listen for all events
-const allEventsSubscription = client.events.onAny((event) => {
-  console.log(`Event: ${event.type}`, event.data);
-});
-
-// Handle connection events
-const connectionSubscription = client.events.onConnection({
-  connected: () => console.log('Connected to real-time events'),
-  disconnected: (event) => console.log('Disconnected:', event.reason),
-  error: (error) => console.error('WebSocket error:', error),
-});
-
-// Cleanup
-ticketSubscription.unsubscribe();
-messageSubscription.unsubscribe();
-allEventsSubscription.unsubscribe();
-connectionSubscription.unsubscribe();
-
-// Disconnect
-client.events.disconnect();
-```
-
-### LDAP Integration
-
-```typescript
-// Sync users from LDAP
-const result = await client.ldap.syncUsers();
-console.log(`Synced ${result.users_created} new users`);
-
-// Get LDAP users
-const ldapUsers = await client.ldap.getUsers();
-
-// Test LDAP connection
-await client.ldap.testConnection();
-
-// Get sync status
-const status = await client.ldap.getSyncStatus();
+const results = await gf.search.query({ query: 'printer', types: ['ticket'] });
 ```
 
 ### Webhooks
 
+Admin only. Deliveries carry `X-Webhook-Event`, `X-Webhook-Delivery` and, with a
+secret, `X-Webhook-Signature: sha256=<hex HMAC-SHA256 of the raw body>`.
+
 ```typescript
-// Create webhook
-const webhook = await client.webhooks.create({
+// Create webhook (signed)
+const webhook = await gf.webhooks.create({
   name: 'My Webhook',
   url: 'https://example.com/webhook',
-  events: ['ticket.created', 'ticket.updated'],
-  secret: 'webhook-secret',
+  events: ['ticket.created', 'ticket.closed', 'article.created'],
+  secret: 'a-signing-secret-of-16+-chars',
 });
 
-// Test webhook
-await client.webhooks.test(webhook.id);
+// Send a webhook.test event now
+const delivery = await gf.webhooks.test(webhook.id);
 
-// Get webhook deliveries
-const deliveries = await client.webhooks.getDeliveries(webhook.id);
+// Delivery log, one delivery with payload/response, and redelivery
+const deliveries = await gf.webhooks.getDeliveries(webhook.id);
+const detail = await gf.webhooks.getDelivery(deliveries[0].id);
+const again = await gf.webhooks.redeliver(detail.id);
 ```
 
-### Internal Notes
+### Other endpoints
+
+`gf.http` applies the same envelope and error handling to any path:
 
 ```typescript
-// Create note
-const note = await client.notes.createNote(ticketId, {
-  content: 'Internal investigation notes',
-  category: 'Investigation',
-  is_important: true,
-  tags: ['investigation', 'priority'],
-});
-
-// Get note templates
-const templates = await client.notes.getTemplates();
-
-// Create note from template
-const template = templates.find(t => t.name === 'Investigation Started');
-const noteFromTemplate = await client.notes.createNote(ticketId, {
-  content: template.content.replace('{{time}}', new Date().toISOString()),
-  category: template.category,
-  is_important: template.is_important,
-});
+const priorities = await gf.http.get<Array<{ id: number; name: string }>>('/api/v1/priorities');
 ```
 
-## Error Handling
+## Errors
 
-The SDK provides structured error handling with specific error types:
+Error responses (HTTP status outside 2xx, or `{"success": false}`) throw `GoatflowError` with `statusCode`, `message` and, when the API sent one, `code` (e.g. `core:invalid_token`). Requests without an HTTP response throw `NetworkError` or `TimeoutError` (both extend `GoatflowError`).
 
 ```typescript
-import {
-  isNotFoundError,
-  isUnauthorizedError,
-  isForbiddenError,
-  isRateLimitError,
-  isValidationError,
-  isNetworkError,
-  isTimeoutError,
-} from '@goatflow/sdk';
+import { GoatflowError, isNotFoundError } from '@goatflow/sdk';
 
 try {
-  const ticket = await client.tickets.get(ticketId);
+  await gf.tickets.get(123);
 } catch (error) {
   if (isNotFoundError(error)) {
-    console.log('Ticket not found');
-  } else if (isUnauthorizedError(error)) {
-    console.log('Authentication failed');
-  } else if (isForbiddenError(error)) {
-    console.log('Permission denied');
-  } else if (isRateLimitError(error)) {
-    console.log('Rate limit exceeded');
-  } else if (isValidationError(error)) {
-    console.log('Validation error:', error.field, error.message);
-  } else if (isNetworkError(error)) {
-    console.log('Network error:', error.operation, error.url);
-  } else if (isTimeoutError(error)) {
-    console.log('Request timeout:', error.timeout);
-  } else {
-    console.log('Unknown error:', error);
+    // 404
+  } else if (error instanceof GoatflowError) {
+    console.error(error.statusCode, error.message, error.code);
   }
 }
 ```
-
-## Pagination
-
-Most list operations support pagination:
-
-```typescript
-// Basic pagination
-const tickets = await client.tickets.list({
-  page: 1,
-  page_size: 50,
-});
-
-console.log(`Page ${tickets.page} of ${tickets.total_pages}`);
-console.log(`Total tickets: ${tickets.total_count}`);
-
-// Iterate through all pages
-let page = 1;
-let allTickets = [];
-
-while (true) {
-  const response = await client.tickets.list({
-    page,
-    page_size: 100,
-  });
-  
-  allTickets.push(...response.tickets);
-  
-  if (page >= response.total_pages) {
-    break;
-  }
-  
-  page++;
-}
-
-console.log(`Loaded ${allTickets.length} tickets total`);
-```
-
-## TypeScript Support
-
-The SDK is written in TypeScript and provides full type safety:
-
-```typescript
-import { Ticket, TicketCreateRequest, TicketListOptions } from '@goatflow/sdk';
-
-// Type-safe ticket creation
-const ticketData: TicketCreateRequest = {
-  title: 'New Issue',
-  description: 'Description here',
-  priority: 'high', // TypeScript will enforce valid values
-  queue_id: 1,
-  customer_id: 123,
-};
-
-// Type-safe response handling
-const ticket: Ticket = await client.tickets.create(ticketData);
-
-// Type-safe filtering options
-const options: TicketListOptions = {
-  status: ['open', 'in-progress'], // TypeScript autocomplete
-  priority: ['high', 'urgent'],
-  page_size: 25,
-};
-```
-
-## Browser Support
-
-The SDK works in both Node.js and browser environments:
-
-### Browser Usage
-
-```html
-<script type="module">
-  import { GoatflowClient } from 'https://unpkg.com/@goatflow/sdk@latest/dist/index.esm.js';
-  
-  const client = GoatflowClient.withApiKey('https://your-goatflow.com', 'api-key');
-  const tickets = await client.tickets.list();
-  console.log(tickets);
-</script>
-```
-
-### Node.js Usage
-
-```javascript
-// CommonJS
-const { GoatflowClient } = require('@goatflow/sdk');
-
-// ES Modules
-import { GoatflowClient } from '@goatflow/sdk';
-```
-
-## Rate Limiting
-
-The SDK automatically handles rate limiting with exponential backoff:
-
-```typescript
-// Configure retry behavior
-const client = new GoatflowClient({
-  baseURL: 'https://goatflow.example.com',
-  auth: { type: 'api-key', apiKey: 'your-key' },
-  retries: 5, // Retry up to 5 times
-  timeout: 30000, // 30 second timeout
-});
-```
-
-## Concurrent Operations
-
-The SDK is designed for concurrent use:
-
-```typescript
-// Perform multiple operations in parallel
-const [stats, tickets, users] = await Promise.all([
-  client.dashboard.getStats(),
-  client.tickets.list({ page_size: 10 }),
-  client.users.list(),
-]);
-
-// Create multiple tickets concurrently
-const ticketPromises = Array.from({ length: 5 }, (_, i) =>
-  client.tickets.create({
-    title: `Ticket ${i + 1}`,
-    description: `Description ${i + 1}`,
-    queue_id: 1,
-    customer_id: 1,
-  })
-);
-
-const createdTickets = await Promise.all(ticketPromises);
-console.log(`Created ${createdTickets.length} tickets`);
-```
-
-## Testing
-
-```bash
-# Install dependencies
-npm install
-
-# Run tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-
-# Run tests in watch mode
-npm run test:watch
-```
-
-For integration tests:
-
-```bash
-export GOATFLOW_BASE_URL="https://your-test-instance.com"
-export GOATFLOW_API_KEY="your-test-api-key"
-npm run test:integration
-```
-
-## Examples
-
-See the `examples/` directory for complete working examples:
-
-- `basic-usage.ts` - Basic CRUD operations
-- `authentication.ts` - Different authentication methods
-- `real-time-events.ts` - WebSocket event handling
-- `file-upload.ts` - File attachment handling
-- `error-handling.ts` - Comprehensive error handling
-- `advanced-features.ts` - LDAP, webhooks, and more
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/new-feature`
-3. Add tests for new functionality
-4. Ensure all tests pass: `npm test`
-5. Build the project: `npm run build`
-6. Submit a pull request
 
 ## Development
 
 ```bash
-# Install dependencies
-npm install
-
-# Start development mode with hot reload
-npm run dev
-
-# Type checking
-npm run typecheck
-
-# Linting
-npm run lint
-npm run lint:fix
-
-# Build for production
-npm run build
-
-# Generate documentation
-npm run docs
+npm install --ignore-scripts
+npm run typecheck   # tsc --noEmit (src, examples, tests)
+npm test            # bun test, against the response bodies in ../testdata
+npm run build       # ESM + .d.ts into dist/
 ```
-
-## License
-
-MIT License - see LICENSE file for details.
-
-## Support
-
-- Documentation: https://docs.goatflow.io/sdk/typescript
-- Issues: https://github.com/goatkit/goatflow/issues
-- Discussions: https://github.com/goatkit/goatflow/discussions

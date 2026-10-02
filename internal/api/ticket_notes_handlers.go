@@ -18,6 +18,7 @@ import (
 	"github.com/goatkit/goatflow/internal/mailqueue"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/config"
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/notifications"
 	"github.com/goatkit/goatflow/internal/platform/routing"
@@ -79,7 +80,12 @@ func handleAddTicketNote(c *gin.Context) {
 		return
 	}
 
-	requireTimeUnits := isTimeUnitsRequired(db)
+	requireTimeUnits, err := isTimeUnitsRequired(db)
+	if err != nil {
+		log.Printf("addTicketNote: time units setting: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to load note settings"})
+		return
+	}
 	if requireTimeUnits && noteData.TimeUnits <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Time units are required for notes"})
 		return
@@ -97,12 +103,9 @@ func handleAddTicketNote(c *gin.Context) {
 		}
 		ticketIDInt = ticket.ID
 	}
-	// Get current user
-	userID := 1 // Default system user
-	if userCtx, ok := c.Get("user"); ok {
-		if user, ok := userCtx.(*models.User); ok && user.ID > 0 {
-			userID = int(user.ID)
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	// Create article (note) in database
@@ -111,8 +114,8 @@ func handleAddTicketNote(c *gin.Context) {
 		TicketID:               ticketIDInt,
 		Subject:                "Note",
 		Body:                   noteData.Content,
-		SenderTypeID:           1, // Agent
-		CommunicationChannelID: 7, // Note
+		SenderTypeID:           constants.ArticleSenderAgent,
+		CommunicationChannelID: constants.CommunicationChannelInternal,
 		IsVisibleForCustomer:   0, // Internal note by default
 		CreateBy:               userID,
 		ChangeBy:               userID,
@@ -190,7 +193,11 @@ func handleAddTicketNote(c *gin.Context) {
 				if cfg := config.Get(); cfg != nil {
 					emailCfg = &cfg.Email
 				}
-				renderCtx := notifications.BuildRenderContext(context.Background(), db, *ticket.CustomerUserID, userID)
+				renderCtx, rcErr := notifications.BuildRenderContext(context.Background(), db, *ticket.CustomerUserID, userID)
+				if rcErr != nil {
+					log.Printf("Note notification for ticket %d not sent: %v", ticket.ID, rcErr)
+					return
+				}
 				branding, brandErr := notifications.PrepareQueueEmail(
 					context.Background(),
 					db,
@@ -290,12 +297,9 @@ func handleAddTicketTime(c *gin.Context) {
 		ticketIDInt = t.ID
 	}
 
-	// Current user
-	userID := 1
-	if userCtx, ok := c.Get("user"); ok {
-		if user, ok := userCtx.(*models.User); ok && user.ID > 0 {
-			userID = int(user.ID)
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	taRepo := repository.NewTimeAccountingRepository(db)
@@ -320,28 +324,67 @@ func handleAddTicketTime(c *gin.Context) {
 // It delegates to handleAddTicketTime to keep the implementation in one place.
 func HandleAddTicketTime(c *gin.Context) { handleAddTicketTime(c) }
 
-// handleGetTicketHistory returns ticket history.
+// handleGetTicketHistory returns the ticket_history rows of a ticket, newest
+// first, with history type, actor and the queue/state/priority snapshot.
+// Optional query parameter limit (1-1000, default 100).
 func handleGetTicketHistory(c *gin.Context) {
-	ticketID := c.Param("id")
+	ticketID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || ticketID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid ticket ID"})
+		return
+	}
+	limit := 100
+	if raw := strings.TrimSpace(c.Query("limit")); raw != "" {
+		limit, err = strconv.Atoi(raw)
+		if err != nil || limit < 1 || limit > 1000 {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "limit must be between 1 and 1000"})
+			return
+		}
+	}
 
-	history := []gin.H{
-		{
-			"id":     "1",
-			"action": "created",
-			"user":   "System",
-			"time":   "2024-01-10 09:00",
-		},
-		{
-			"id":      "2",
-			"action":  "assigned",
-			"user":    "Admin",
-			"time":    "2024-01-10 09:05",
-			"details": "Assigned to Alice Agent",
-		},
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
+		return
+	}
+	var exists bool
+	if err := db.QueryRow(database.ConvertPlaceholders(
+		"SELECT EXISTS(SELECT 1 FROM ticket WHERE id = ?)"), ticketID).Scan(&exists); err != nil {
+		log.Printf("handleGetTicketHistory: ticket lookup failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to load history"})
+		return
+	}
+	if !exists {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Ticket not found"})
+		return
+	}
+
+	entries, err := repository.NewTicketRepository(db).GetTicketHistoryEntries(uint(ticketID), limit)
+	if err != nil {
+		log.Printf("handleGetTicketHistory: query failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to load history"})
+		return
+	}
+
+	items := make([]gin.H, 0, len(entries))
+	for _, e := range entries {
+		items = append(items, gin.H{
+			"id":              e.ID,
+			"history_type":    e.HistoryType,
+			"name":            e.Name,
+			"message":         history.NormalizeHistoryName(e),
+			"created_at":      e.CreatedAt.UTC().Format(time.RFC3339),
+			"created_by":      gin.H{"login": e.CreatorLogin, "name": e.CreatorFullName},
+			"queue":           e.QueueName,
+			"state":           e.StateName,
+			"priority":        e.PriorityName,
+			"article_subject": e.ArticleSubject,
+		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"ticketId": ticketID,
-		"history":  history,
+		"success":   true,
+		"ticket_id": ticketID,
+		"history":   items,
 	})
 }

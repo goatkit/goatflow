@@ -17,7 +17,9 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/platform/utils"
 	"github.com/goatkit/goatflow/internal/repository"
@@ -33,14 +35,6 @@ func init() {
 func handleTicketDetail(c *gin.Context) {
 	ticketID := c.Param("id")
 	log.Printf("DEBUG: handleTicketDetail called with id=%s", ticketID)
-
-	// Fallback: support /tickets/new returning a minimal HTML form in tests
-	if ticketID == "new" {
-		if htmxHandlerSkipDB() || getPongo2Renderer() == nil || getPongo2Renderer().TemplateSet() == nil {
-			renderTicketCreationFallback(c, "email")
-			return
-		}
-	}
 
 	// Get database connection
 	db, err := database.GetDB()
@@ -108,11 +102,11 @@ func handleTicketDetail(c *gin.Context) {
 			firstArticleSenderColor = senderTypeColors[article.SenderTypeID]
 			// Determine first article sender type
 			switch article.SenderTypeID {
-			case 1:
+			case constants.ArticleSenderAgent:
 				firstArticleSenderType = "agent"
-			case 2:
+			case constants.ArticleSenderSystem:
 				firstArticleSenderType = "system"
-			case 3:
+			case constants.ArticleSenderCustomer:
 				firstArticleSenderType = "customer"
 			default:
 				firstArticleSenderType = "system"
@@ -122,11 +116,11 @@ func handleTicketDetail(c *gin.Context) {
 		// Determine sender type from article's SenderTypeID
 		senderType := "system"
 		switch article.SenderTypeID {
-		case 1:
+		case constants.ArticleSenderAgent:
 			senderType = "agent"
-		case 2:
+		case constants.ArticleSenderSystem:
 			senderType = "system"
-		case 3:
+		case constants.ArticleSenderCustomer:
 			senderType = "customer"
 		}
 
@@ -222,19 +216,20 @@ func handleTicketDetail(c *gin.Context) {
 
 	// Get state name and type from database
 	stateName := "unknown"
-	stateTypeID := 0
+	stateTypeName := ""
 	var stateRow struct {
-		Name   string
-		TypeID int
+		Name     string
+		TypeName string
 	}
 	err = db.QueryRow(database.ConvertPlaceholders(`
-		SELECT ts.name, ts.type_id
+		SELECT ts.name, tst.name
 		FROM ticket_state ts
+		JOIN ticket_state_type tst ON tst.id = ts.type_id
 		WHERE ts.id = ?
-	`), ticket.TicketStateID).Scan(&stateRow.Name, &stateRow.TypeID)
+	`), ticket.TicketStateID).Scan(&stateRow.Name, &stateRow.TypeName)
 	if err == nil {
 		stateName = stateRow.Name
-		stateTypeID = stateRow.TypeID
+		stateTypeName = stateRow.TypeName
 	}
 
 	// Get priority name
@@ -260,30 +255,8 @@ func handleTicketDetail(c *gin.Context) {
 		}
 	}
 
-	// Check if ticket is closed (state type ID 3 = closed in ticket_state_type)
-	isClosed := stateTypeID == models.TicketStateClosed
-
-	// Get customer information
-	var customerName, customerEmail, customerPhone string
-	if ticket.CustomerUserID != nil && *ticket.CustomerUserID != "" {
-		// Match on login OR email since customer_user_id could contain either
-		customerRow := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT CONCAT(first_name, ' ', last_name), email, phone
-			FROM customer_user
-			WHERE (login = ? OR email = ?) AND valid_id = 1
-		`), *ticket.CustomerUserID, *ticket.CustomerUserID)
-		err = customerRow.Scan(&customerName, &customerEmail, &customerPhone)
-		if err != nil {
-			// Fallback if customer not found
-			customerName = *ticket.CustomerUserID
-			customerEmail = ""
-			customerPhone = ""
-		}
-	} else {
-		customerName = "Unknown Customer"
-		customerEmail = ""
-		customerPhone = ""
-	}
+	// Check if ticket is closed (state type 'closed')
+	isClosed := stateTypeName == lookups.StateTypeClosed
 
 	// Get owner information
 	ownerName := "Unassigned"
@@ -488,8 +461,8 @@ func handleTicketDetail(c *gin.Context) {
 			"login": responsibleLogin,
 		}
 	}
-	autoCloseMeta := computeAutoCloseMeta(ticket, stateName, stateTypeID, time.Now().UTC())
-	pendingReminderMeta := computePendingReminderMeta(ticket, stateName, stateTypeID, time.Now().UTC())
+	autoCloseMeta := computeAutoCloseMeta(ticket, stateName, stateTypeName, time.Now().UTC())
+	pendingReminderMeta := computePendingReminderMeta(ticket, stateName, stateTypeName, time.Now().UTC())
 	ticketData := gin.H{
 		"id":                 ticket.ID,
 		"tn":                 ticket.TicketNumber,
@@ -503,7 +476,6 @@ func handleTicketDetail(c *gin.Context) {
 		"priority_id":        ticket.TicketPriorityID,
 		"queue":              queueName,
 		"queue_id":           ticket.QueueID,
-		"customer_name":      customerName,
 		"customer_user_id":   ticket.CustomerUserID,
 		"customer_id": func() string {
 			if ticket.CustomerID != nil {
@@ -511,11 +483,6 @@ func handleTicketDetail(c *gin.Context) {
 			}
 			return ""
 		}(),
-		"customer": gin.H{
-			"name":  customerName,
-			"email": customerEmail,
-			"phone": customerPhone,
-		},
 		"agent":                              agent,
 		"assigned_to":                        assignedTo,
 		"owner":                              ownerName,
@@ -658,7 +625,12 @@ func handleTicketDetail(c *gin.Context) {
 		}
 	}
 
-	requireTimeUnits := isTimeUnitsRequired(db)
+	requireTimeUnits, err := isTimeUnitsRequired(db)
+	if err != nil {
+		log.Printf("handleTicketDetail: time units setting for ticket %d: %v", ticket.ID, err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Failed to load ticket settings")
+		return
+	}
 
 	// Get dynamic field values for display on ticket zoom
 	var dynamicFieldsDisplay []DynamicFieldDisplay

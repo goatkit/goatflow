@@ -1,44 +1,90 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{{ t("customer_company_services.title")|default:"Customer Company Services" }} - GoatFlow Admin{% endblock %}
+{% block title %}{{ t("customer_company_services.title")|default:"Customer Company Services" }}: {{ Company.Name }} - GoatFlow Admin{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8 min-h-screen">
-    <!-- Page header -->
-    <header class="mb-8">
-        <div class="sm:flex sm:items-center sm:justify-between">
-            <div class="flex items-center">
-                <a href="/admin/customer-companies" class="gk-btn-secondary mr-4">
-                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                    </svg>
-                    {{ t("common.back") }}
-                </a>
-                <div>
-                    <h1 class="text-3xl font-bold gk-heading">
-                        <span class="gk-text-gradient">{{ t("customer_company_services.heading")|default:"Customer Company Services" }}</span>
-                    </h1>
-                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("customer_company_services.description")|default:"Manage services available to customer companies" }}</p>
-                </div>
-            </div>
-        </div>
-    </header>
+    {% include "partials/customer_company_header.pongo2" with active="services" %}
 
-    <!-- Under Construction Notice -->
-    <div class="gk-card-glow rounded-lg overflow-hidden">
-        <div class="p-12 text-center">
-            <svg class="mx-auto h-16 w-16 mb-4" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-            </svg>
-            <h3 class="text-lg font-medium mb-2" style="color: var(--gk-text-primary);">{{ t("customer_company_services.under_construction")|default:"Under Construction" }}</h3>
-            <p class="text-sm mb-6" style="color: var(--gk-text-muted);">{{ t("customer_company_services.under_construction_message")|default:"This feature is currently being developed. Please check back soon." }}</p>
-            <a href="/admin/customer-companies" class="gk-btn-neon">
-                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                </svg>
-                {{ t("common.back_to_list")|default:"Back to Customer Companies" }}
-            </a>
-        </div>
+    {% if Saved %}
+    <div id="services-saved" role="status" class="mb-4 rounded-md p-4 text-sm" style="background: rgba(var(--gk-success-rgb), 0.1); border: 1px solid var(--gk-success); color: var(--gk-success);">
+        {{ t("customer_company_services.saved")|default:"Service assignments saved." }}
     </div>
+    {% endif %}
+
+    <form method="post" action="/admin/customer/companies/{{ CompanyPath }}/services">
+        <div class="gk-card-glow overflow-hidden rounded-lg">
+            <div class="px-6 py-4 border-b" style="border-color: var(--gk-border-default);">
+                <h2 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("customer_company_services.heading")|default:"Services" }}</h2>
+                <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("customer_company_services.description")|default:"Services are assigned to customer users. Tick the customer users of this company who may use each service." }}</p>
+            </div>
+
+            {% if not Services %}
+            <div class="px-6 py-12 text-center text-sm" style="color: var(--gk-text-muted);">
+                {{ t("customer_company_services.no_services")|default:"There are no valid services." }}
+                <a href="/admin/services" class="hover:underline" style="color: var(--gk-primary);">{{ t("customer_company_services.manage_services")|default:"Manage services" }}</a>
+            </div>
+            {% elif UserCount == 0 %}
+            <div class="px-6 py-12 text-center text-sm" style="color: var(--gk-text-muted);">
+                {{ t("customer_company_services.no_users")|default:"This company has no customer users, so there is nobody to assign services to." }}
+            </div>
+            {% else %}
+            <div class="overflow-x-auto">
+                <table class="gk-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ t("customer_company_services.columns.service")|default:"Service" }}</th>
+                            <th scope="col" class="text-center">{{ t("customer_company_services.columns.assigned")|default:"Assigned" }}</th>
+                            <th scope="col">{{ t("customer_company_services.columns.customer_users")|default:"Customer users" }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in Services %}
+                        <tr data-service-id="{{ s.ID }}">
+                            <td class="align-top">
+                                <div class="text-sm font-medium" style="color: var(--gk-text-primary);">{{ s.Name }}</div>
+                                {% if s.Comments %}<div class="text-xs" style="color: var(--gk-text-muted);">{{ s.Comments }}</div>{% endif %}
+                            </td>
+                            <td class="align-top text-center text-sm whitespace-nowrap" style="color: var(--gk-text-primary);">{{ s.AssignedCount }} / {{ UserCount }}</td>
+                            <td class="align-top">
+                                <div class="flex flex-wrap gap-x-6 gap-y-2">
+                                    <label class="inline-flex items-center text-sm font-medium" style="color: var(--gk-text-secondary);">
+                                        <input type="checkbox" class="h-4 w-4 rounded mr-2" style="accent-color: var(--gk-primary);" data-select-all="{{ s.ID }}" {% if s.AssignedCount == UserCount %}checked{% endif %}>
+                                        {{ t("customer_company_services.all_users")|default:"All users" }}
+                                    </label>
+                                    {% for cell in s.Users %}
+                                    <label class="inline-flex items-center text-sm" style="color: var(--gk-text-primary);" title="{{ cell.FullName }}">
+                                        <input type="checkbox" name="assign" value="{{ s.ID }}:{{ cell.UserID }}" class="h-4 w-4 rounded mr-2" style="accent-color: var(--gk-primary);" data-service="{{ s.ID }}" {% if cell.Assigned %}checked{% endif %}>
+                                        {{ cell.Login }}
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="px-6 py-4 flex justify-end gap-3 border-t" style="border-color: var(--gk-border-default); background: var(--gk-bg-tertiary);">
+                <a href="/admin/customer/companies" class="gk-btn-secondary">{{ t("common.cancel")|default:"Cancel" }}</a>
+                <button type="submit" class="gk-btn-neon">{{ t("customer_company_services.save")|default:"Save assignments" }}</button>
+            </div>
+            {% endif %}
+        </div>
+    </form>
 </div>
+
+<script>
+document.querySelectorAll('input[data-select-all]').forEach(function (all) {
+    var boxes = document.querySelectorAll('input[data-service="' + all.dataset.selectAll + '"]');
+    all.addEventListener('change', function () {
+        boxes.forEach(function (b) { b.checked = all.checked; });
+    });
+    boxes.forEach(function (b) {
+        b.addEventListener('change', function () {
+            all.checked = Array.prototype.every.call(boxes, function (x) { return x.checked; });
+        });
+    });
+});
+</script>
 {% endblock %}

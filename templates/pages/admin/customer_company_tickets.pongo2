@@ -1,44 +1,71 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{{ t("customer_company_tickets.title")|default:"Customer Company Tickets" }} - GoatFlow Admin{% endblock %}
+{% block title %}{{ t("customer_company_tickets.title")|default:"Customer Company Tickets" }}: {{ Company.Name }} - GoatFlow Admin{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8 min-h-screen">
-    <!-- Page header -->
-    <header class="mb-8">
-        <div class="sm:flex sm:items-center sm:justify-between">
-            <div class="flex items-center">
-                <a href="/admin/customer-companies" class="gk-btn-secondary mr-4">
-                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                    </svg>
-                    {{ t("common.back") }}
-                </a>
-                <div>
-                    <h1 class="text-3xl font-bold gk-heading">
-                        <span class="gk-text-gradient">{{ t("customer_company_tickets.heading")|default:"Customer Company Tickets" }}</span>
-                    </h1>
-                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("customer_company_tickets.description")|default:"View tickets associated with customer companies" }}</p>
-                </div>
-            </div>
-        </div>
-    </header>
+    {% include "partials/customer_company_header.pongo2" with active="tickets" %}
 
-    <!-- Under Construction Notice -->
-    <div class="gk-card-glow rounded-lg overflow-hidden">
-        <div class="p-12 text-center">
-            <svg class="mx-auto h-16 w-16 mb-4" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-            </svg>
-            <h3 class="text-lg font-medium mb-2" style="color: var(--gk-text-primary);">{{ t("customer_company_tickets.under_construction")|default:"Under Construction" }}</h3>
-            <p class="text-sm mb-6" style="color: var(--gk-text-muted);">{{ t("customer_company_tickets.under_construction_message")|default:"This feature is currently being developed. Please check back soon." }}</p>
-            <a href="/admin/customer-companies" class="gk-btn-neon">
-                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                </svg>
-                {{ t("common.back_to_list")|default:"Back to Customer Companies" }}
-            </a>
+    <div class="gk-card-glow overflow-hidden rounded-lg">
+        <div class="px-6 py-4 flex items-center justify-between border-b" style="border-color: var(--gk-border-default);">
+            <div>
+                <h2 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("customer_company_tickets.heading")|default:"Tickets" }}</h2>
+                <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("customer_company_tickets.description")|default:"Tickets of this company in the queues you can access, newest first." }}</p>
+            </div>
+            <span class="text-sm" style="color: var(--gk-text-muted);">{{ t("pagination.total")|default:"total" }}: <span id="company-ticket-total" style="color: var(--gk-text-primary);">{{ Total }}</span></span>
         </div>
+        <div class="overflow-x-auto">
+            <table class="gk-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ t("tickets.ticket_number")|default:"Ticket #" }}</th>
+                        <th scope="col">{{ t("customer_company_tickets.columns.title")|default:"Title" }}</th>
+                        <th scope="col">{{ t("customer_company_tickets.columns.customer_user")|default:"Customer User" }}</th>
+                        <th scope="col">{{ t("tickets.queue")|default:"Queue" }}</th>
+                        <th scope="col">{{ t("tickets.state")|default:"State" }}</th>
+                        <th scope="col">{{ t("tickets.priority")|default:"Priority" }}</th>
+                        <th scope="col">{{ t("tickets.age")|default:"Age" }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ticket in Tickets %}
+                    <tr data-tn="{{ ticket.TN }}">
+                        <td class="whitespace-nowrap">
+                            <a href="/ticket/{{ ticket.TN }}" class="text-sm font-mono hover:underline" style="color: var(--gk-primary);">{{ ticket.TN }}</a>
+                        </td>
+                        <td class="text-sm" style="color: var(--gk-text-primary);">
+                            <a href="/ticket/{{ ticket.TN }}" class="hover:underline">{{ ticket.Title }}</a>
+                        </td>
+                        <td class="text-sm whitespace-nowrap" style="color: var(--gk-text-primary);">{{ ticket.CustomerUser }}</td>
+                        <td class="text-sm whitespace-nowrap" style="color: var(--gk-text-primary);">{{ ticket.Queue }}</td>
+                        <td class="whitespace-nowrap">
+                            <span class="gk-badge {% if ticket.StateType == "closed" or ticket.StateType == "removed" or ticket.StateType == "merged" %}gk-badge-muted{% elif ticket.StateType == "new" %}gk-badge-primary{% elif ticket.StateType == "pending reminder" or ticket.StateType == "pending auto" %}gk-badge-warning{% else %}gk-badge-success{% endif %}">{{ ticket.State }}</span>
+                        </td>
+                        <td class="text-sm whitespace-nowrap" style="color: var(--gk-text-primary);">{{ ticket.Priority }}</td>
+                        <td class="text-sm whitespace-nowrap" style="color: var(--gk-text-muted);" title="{{ ticket.CreateTime|date:"2006-01-02 15:04" }}">
+                            {{ ticket.AgeValue }}
+                            {% if ticket.AgeUnit == "days" %}{{ t("time.days")|default:"days" }}{% elif ticket.AgeUnit == "hours" %}{{ t("time.hours")|default:"hours" }}{% else %}{{ t("time.minutes")|default:"minutes" }}{% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-sm" style="color: var(--gk-text-muted);">
+                            {{ t("customer_company_tickets.empty")|default:"No tickets for this company in the queues you can access." }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if TotalPages > 1 %}
+        <nav class="px-6 py-4 flex items-center justify-between border-t" style="border-color: var(--gk-border-default);" aria-label="{{ t("pagination.page")|default:"Page" }}">
+            <span class="text-sm" style="color: var(--gk-text-muted);">{{ t("pagination.page")|default:"Page" }} {{ Page }} {{ t("pagination.of")|default:"of" }} {{ TotalPages }}</span>
+            <div class="flex gap-2">
+                {% if Page > 1 %}<a href="/admin/customer/companies/{{ CompanyPath }}/tickets?page={{ PrevPage }}" class="gk-btn-secondary">{{ t("pagination.previous")|default:"Previous" }}</a>{% endif %}
+                {% if Page < TotalPages %}<a href="/admin/customer/companies/{{ CompanyPath }}/tickets?page={{ NextPage }}" class="gk-btn-secondary">{{ t("pagination.next")|default:"Next" }}</a>{% endif %}
+            </div>
+        </nav>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

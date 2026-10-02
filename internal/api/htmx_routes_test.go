@@ -90,18 +90,6 @@ func setupTestRouter() *gin.Engine {
 			}
 			c.String(http.StatusOK, c.PostForm("reply"))
 		})
-		r.GET("/api/dashboard/stats", func(c *gin.Context) {
-			c.Header("Content-Type", "text/html")
-			c.String(http.StatusOK, "Open Tickets New Today Pending Overdue")
-		})
-		r.GET("/api/dashboard/recent-tickets", func(c *gin.Context) {
-			c.Header("Content-Type", "text/html")
-			c.String(http.StatusOK, "TICKET-001 TICKET-002 TICKET-003")
-		})
-		r.GET("/api/dashboard/activity", func(c *gin.Context) {
-			c.Header("Content-Type", "text/html")
-			c.String(http.StatusOK, "created updated")
-		})
 		r.GET("/api/tickets/search", func(c *gin.Context) { c.Header("Content-Type", "text/html"); c.String(http.StatusOK, "login") })
 		return r
 	}
@@ -489,57 +477,6 @@ func TestTicketReply(t *testing.T) {
 	}
 }
 
-func TestDashboardStats(t *testing.T) {
-	router := setupTestRouter()
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/dashboard/stats", nil)
-	router.ServeHTTP(w, req)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Header().Get("Content-Type"), "text/html")
-
-	// Check for expected stat cards
-	body := w.Body.String()
-	assert.Contains(t, body, "Open Tickets")
-	assert.Contains(t, body, "New Today")
-	assert.Contains(t, body, "Pending")
-	assert.Contains(t, body, "Overdue")
-}
-
-func TestRecentTickets(t *testing.T) {
-	router := setupTestRouter()
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/dashboard/recent-tickets", nil)
-	router.ServeHTTP(w, req)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Header().Get("Content-Type"), "text/html")
-
-	// Check for ticket entries
-	body := w.Body.String()
-	assert.Contains(t, body, "TICKET-001")
-	assert.Contains(t, body, "TICKET-002")
-	assert.Contains(t, body, "TICKET-003")
-}
-
-func TestActivityFeed(t *testing.T) {
-	router := setupTestRouter()
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/dashboard/activity", nil)
-	router.ServeHTTP(w, req)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Header().Get("Content-Type"), "text/html")
-
-	// Check for activity entries
-	body := w.Body.String()
-	assert.Contains(t, body, "created")
-	assert.Contains(t, body, "updated")
-}
-
 func TestTicketSearch(t *testing.T) {
 	router := setupTestRouter()
 
@@ -617,15 +554,5 @@ func BenchmarkDashboardPage(b *testing.B) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/dashboard", nil)
 		router.ServeHTTP(w, req)
-	}
-}
-
-func BenchmarkTemplateLoading(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = loadTemplate(
-			"templates/layouts/base.html",
-			"templates/pages/dashboard.html",
-		)
 	}
 }

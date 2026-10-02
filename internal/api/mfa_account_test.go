@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,6 +13,8 @@ import (
 	"github.com/pquerna/otp/totp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 func newMFATestContext(t *testing.T) (*gin.Context, *httptest.ResponseRecorder) {
@@ -109,6 +112,50 @@ func TestRemovingPasskeyClearsRecoveryCodesOnlyWithLastFactor(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 		require.NoError(t, mock.ExpectationsWereMet())
 	})
+}
+
+// Turning 2FA off removes stored passkeys with plain SQL; it must not depend
+// on a WebAuthn relying-party config, which cannot be built for a single-label
+// host name such as an intranet "helpdesk" (it returned 500 after the
+// authenticator app was already gone).
+func TestTurnOff2FAOnSingleLabelHost(t *testing.T) {
+	db := getTestDB(t)
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, 'x', 'Desk', 'Agent', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+		RETURNING id`), fmt.Sprintf("mfa-desk-%d", time.Now().UnixNano()))
+	require.NoError(t, err)
+	userID := int(id)
+	account := agentMFAAccount(userID)
+	key := account.webAuthnKey()
+	t.Cleanup(func() {
+		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM user_preferences WHERE user_id = ?"), userID)
+		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM gk_webauthn_credential WHERE user_type = ? AND user_key = ?"), "agent", key)
+		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), userID)
+	})
+
+	totpSvc := account.totp(db)
+	setup, err := totpSvc.GenerateSetup(userID, "helpdesk@example.com")
+	require.NoError(t, err)
+	code, err := totp.GenerateCode(setup.Secret, time.Now())
+	require.NoError(t, err)
+	require.NoError(t, totpSvc.ConfirmSetup(userID, code))
+	_, err = db.Exec(database.ConvertPlaceholders(`
+		INSERT INTO gk_webauthn_credential (user_type, user_key, credential_id, credential_json, name, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`), "agent", key, fmt.Sprintf("cred-%d", userID), "{}", "Desk key")
+	require.NoError(t, err)
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "http://helpdesk:8080/api/preferences/2fa/disable", nil)
+
+	require.True(t, turnOffSecondFactors(c, db, account, code), w.Body.String())
+	assert.False(t, totpSvc.IsEnabled(userID), "authenticator app should be off")
+	var passkeys int
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		"SELECT COUNT(*) FROM gk_webauthn_credential WHERE user_type = ? AND user_key = ?"), "agent", key).Scan(&passkeys))
+	assert.Zero(t, passkeys, "passkeys should be removed")
 }
 
 // A passkey-only account must be offered its recovery codes on the second

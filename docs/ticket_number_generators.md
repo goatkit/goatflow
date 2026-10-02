@@ -58,6 +58,7 @@ If an unknown value is provided, the system logs a warning and falls back to `Da
 On unique constraint violation of `ticket.tn` the repository automatically retries generation (max 5 attempts). Each collision logs a warning with attempt count. Persistent failure after retries surfaces the DB error upstream.
 
 ## Debug & Introspection
+Both endpoints need an admin login (session cookie or admin JWT; `gf_` API tokens are not accepted on `/admin` routes).
 - Current generator: `GET /admin/debug/ticket-number`
 - Config sources listing: `GET /admin/debug/config-sources` (shows effective `Ticket::NumberGenerator` and origin).
 
@@ -108,7 +109,7 @@ Checklist before switching production:
 After editing `Config.yaml`:
 ```bash
 make restart
-curl -s localhost:8080/admin/debug/ticket-number | jq
+curl -s -H "Authorization: Bearer $ADMIN_JWT" localhost:8080/admin/debug/ticket-number | jq
 ```
 
 If not using `jq`, just inspect raw JSON output.

@@ -3,7 +3,6 @@
 package playwright
 
 import (
-	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -15,18 +14,8 @@ import (
 )
 
 func TestTranslationKeys(t *testing.T) {
-	browser := helpers.NewBrowserHelper(t)
-	if browser.Config.AdminEmail == "" || browser.Config.AdminPassword == "" {
-		t.Skip("Admin credentials not configured")
-	}
+	browser := helpers.NewBrowserHelper(t) // fails the test if BASE_URL is unreachable
 	t.Logf("Using BASE_URL: %s", browser.Config.BaseURL)
-	// Quick reachability check
-	client := &http.Client{Timeout: 800 * time.Millisecond}
-	if resp, err := client.Get(browser.Config.BaseURL + "/login"); err != nil {
-		t.Skipf("Backend not reachable at %s/login: %v", browser.Config.BaseURL, err)
-	} else {
-		_ = resp.Body.Close()
-	}
 	err := browser.Setup()
 	require.NoError(t, err)
 	defer browser.TearDown()

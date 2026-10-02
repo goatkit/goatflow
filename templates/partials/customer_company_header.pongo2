@@ -1,0 +1,39 @@
+{# Header + section tabs for /admin/customer/companies/:id sub-pages. Needs Company, CompanyPath and active (users|tickets|services). #}
+<header class="mb-6">
+    <div class="flex items-center">
+        <a href="/admin/customer/companies" class="gk-btn-secondary mr-4">
+            <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            {{ t("common.back")|default:"Back" }}
+        </a>
+        <div>
+            <nav class="flex mb-2" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                    <li class="inline-flex items-center">
+                        <a href="/admin/customer/companies" class="text-sm transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">{{ t("customer_companies.heading")|default:"Customer Companies" }}</a>
+                    </li>
+                    <li>
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4" style="color: var(--gk-text-muted);" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
+                            <span class="ml-1 text-sm font-medium" style="color: var(--gk-text-muted);">{{ Company.Name }}</span>
+                        </div>
+                    </li>
+                </ol>
+            </nav>
+            <h1 class="text-3xl font-bold gk-heading">
+                <span class="gk-text-gradient">{{ Company.Name }}</span>
+            </h1>
+            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">
+                {{ t("customer_company_pages.customer_id")|default:"Customer ID" }}: <span class="font-mono">{{ Company.CustomerID }}</span>
+                {% if Company.ValidID != 1 %}<span class="gk-badge gk-badge-error ml-2">{{ Company.ValidName }}</span>{% endif %}
+            </p>
+        </div>
+    </div>
+    <nav class="mt-6 flex space-x-6" style="border-bottom: 1px solid var(--gk-border-default);" aria-label="{{ t("customer_company_pages.sections")|default:"Company sections" }}">
+        <a href="/admin/customer/companies/{{ CompanyPath }}/edit" class="whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium" style="border-color: transparent; color: var(--gk-text-muted);">{{ t("customer_company_pages.nav.details")|default:"Details" }}</a>
+        <a href="/admin/customer/companies/{{ CompanyPath }}/users" class="whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium" {% if active == "users" %}aria-current="page" style="border-color: var(--gk-primary); color: var(--gk-primary);"{% else %}style="border-color: transparent; color: var(--gk-text-muted);"{% endif %}>{{ t("customer_company_pages.nav.users")|default:"Customer Users" }}</a>
+        <a href="/admin/customer/companies/{{ CompanyPath }}/tickets" class="whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium" {% if active == "tickets" %}aria-current="page" style="border-color: var(--gk-primary); color: var(--gk-primary);"{% else %}style="border-color: transparent; color: var(--gk-text-muted);"{% endif %}>{{ t("customer_company_pages.nav.tickets")|default:"Tickets" }}</a>
+        <a href="/admin/customer/companies/{{ CompanyPath }}/services" class="whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium" {% if active == "services" %}aria-current="page" style="border-color: var(--gk-primary); color: var(--gk-primary);"{% else %}style="border-color: transparent; color: var(--gk-text-muted);"{% endif %}>{{ t("customer_company_pages.nav.services")|default:"Services" }}</a>
+    </nav>
+</header>

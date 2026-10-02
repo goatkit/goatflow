@@ -28,6 +28,8 @@ func TestSetupAssistant_CreateCannedResponses(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Create two response templates.
+	deleteAtEnd(t, `DELETE FROM canned_response WHERE name = ?`, "Greeting "+sfx)
+	deleteAtEnd(t, `DELETE FROM canned_response WHERE name = ?`, "Closing "+sfx)
 	err = svc.CreateCannedResponses(ctx, []service.ResponseTemplateInput{
 		{Name: "Greeting " + sfx, Shortcut: "/hi", Content: "Hello!", ContentType: "text/html"},
 		{Name: "Closing " + sfx, Shortcut: "/bye", Content: "Goodbye!", ContentType: "text/html"},
@@ -65,11 +67,137 @@ func TestSetupAssistant_CreateBusinessHours(t *testing.T) {
 	}, 1)
 	assert.Error(t, err)
 
-	// Valid calendar is created with unique name.
+	teamID, _ := createIsolatedGroup(t, "bh_team")
+	agentID := agentIDNotAGroupID(t)
+	usersGroupID := groupIDByName(t, "users")
+
+	// No group chosen: the calendar belongs to the default "users" permission
+	// group, never to the acting user's id.
+	cleanupBusinessHoursAtEnd(t, "BH"+sfx)
 	err = svc.CreateBusinessHours(ctx, service.BusinessHoursInput{
 		Name: "BH" + sfx, Timezone: "Europe/London",
-	}, 1)
+	}, agentID)
 	require.NoError(t, err)
+	assert.Equal(t, usersGroupID, calendarGroupID(t, "BH"+sfx))
+
+	// Explicit group.
+	cleanupBusinessHoursAtEnd(t, "BH Team"+sfx)
+	err = svc.CreateBusinessHours(ctx, service.BusinessHoursInput{
+		Name: "BH Team" + sfx, Timezone: "Europe/London", GroupID: teamID,
+	}, agentID)
+	require.NoError(t, err)
+	assert.Equal(t, teamID, calendarGroupID(t, "BH Team"+sfx))
+
+	// Unknown group is rejected and nothing is written.
+	cleanupBusinessHoursAtEnd(t, "BH Bad"+sfx)
+	err = svc.CreateBusinessHours(ctx, service.BusinessHoursInput{
+		Name: "BH Bad" + sfx, Timezone: "Europe/London", GroupID: missingGroupID(t),
+	}, agentID)
+	assert.ErrorIs(t, err, service.ErrInvalidGroup)
+	assert.Equal(t, 0, calendarCount(t, "BH Bad"+sfx))
+}
+
+// TestSetupAssistant_ConfigureBusinessHoursTask drives the configure_business_hours
+// task through the real handler as an agent whose id is not a group id.
+func TestSetupAssistant_ConfigureBusinessHoursTask(t *testing.T) {
+	_, sfx := setupSvcTestDB(t)
+	teamID, _ := createIsolatedGroup(t, "bh_task_team")
+	agentID := agentIDNotAGroupID(t)
+	usersGroupID := groupIDByName(t, "users")
+
+	r := gin.New()
+	r.Use(func(c *gin.Context) { c.Set("user_id", agentID); c.Next() })
+	r.POST("/admin/setup/task/:plugin/:task_id", handleAdminSetupTask)
+	post := func(body map[string]interface{}) (int, map[string]interface{}) {
+		raw, err := json.Marshal(body)
+		require.NoError(t, err)
+		req := httptest.NewRequest(http.MethodPost, "/admin/setup/task/setup-assistant/configure_business_hours", strings.NewReader(string(raw)))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		out := map[string]interface{}{}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &out), w.Body.String())
+		return w.Code, out
+	}
+
+	cleanupBusinessHoursAtEnd(t, "BH Task"+sfx)
+	code, out := post(map[string]interface{}{"name": "BH Task" + sfx, "timezone": "UTC"})
+	require.Equal(t, http.StatusOK, code, "%v", out)
+	require.Equal(t, true, out["success"], "%v", out)
+	assert.Equal(t, usersGroupID, calendarGroupID(t, "BH Task"+sfx))
+
+	cleanupBusinessHoursAtEnd(t, "BH Task Team"+sfx)
+	code, out = post(map[string]interface{}{"name": "BH Task Team" + sfx, "timezone": "UTC", "group_id": teamID})
+	require.Equal(t, http.StatusOK, code, "%v", out)
+	require.Equal(t, true, out["success"], "%v", out)
+	assert.Equal(t, teamID, calendarGroupID(t, "BH Task Team"+sfx))
+
+	cleanupBusinessHoursAtEnd(t, "BH Task Bad"+sfx)
+	code, out = post(map[string]interface{}{"name": "BH Task Bad" + sfx, "timezone": "UTC", "group_id": missingGroupID(t)})
+	assert.Equal(t, http.StatusBadRequest, code, "%v", out)
+	assert.Equal(t, false, out["success"], "%v", out)
+	assert.Equal(t, 0, calendarCount(t, "BH Task Bad"+sfx))
+}
+
+// agentIDNotAGroupID creates a test-owned agent whose users.id matches no
+// groups.id, so a calendar stamped with the user id is distinguishable from
+// one assigned to a real group.
+func agentIDNotAGroupID(t *testing.T) int {
+	t.Helper()
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	for range 20 {
+		id, _ := createIsolatedAgent(t, "bh_agent")
+		var n int
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+			"SELECT COUNT(*) FROM `groups` WHERE id = ?"), id).Scan(&n))
+		if n == 0 {
+			return id
+		}
+	}
+	t.Fatal("could not create an agent whose id differs from every group id")
+	return 0
+}
+
+func groupIDByName(t *testing.T, name string) int {
+	t.Helper()
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	var id int
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		"SELECT id FROM `groups` WHERE name = ?"), name).Scan(&id))
+	return id
+}
+
+// missingGroupID returns an id no groups row has.
+func missingGroupID(t *testing.T) int {
+	t.Helper()
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	var maxID int
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		"SELECT COALESCE(MAX(id), 0) FROM `groups`")).Scan(&maxID))
+	return maxID + 100000
+}
+
+func calendarGroupID(t *testing.T, name string) int {
+	t.Helper()
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	var id int
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		"SELECT group_id FROM calendar WHERE name = ?"), name).Scan(&id))
+	return id
+}
+
+func calendarCount(t *testing.T, name string) int {
+	t.Helper()
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	var n int
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		"SELECT COUNT(*) FROM calendar WHERE name = ?"), name).Scan(&n))
+	return n
 }
 
 func TestSetupAssistant_CreateEmailTransport(t *testing.T) {
@@ -102,6 +230,8 @@ func TestSetupAssistant_CreateEmailTransport(t *testing.T) {
 func TestSetupAssistant_Wizard_WithResponseTemplates(t *testing.T) {
 	svc, sfx := setupSvcTestDB(t)
 	ctx := context.Background()
+	cleanupGroupByNameAtEnd(t, "Team "+sfx)
+	deleteAtEnd(t, `DELETE FROM canned_response WHERE name = ?`, "Wizard Greeting "+sfx)
 
 	res := svc.ExecuteWizard(ctx, service.WizardRequest{
 		Groups: []service.GroupInput{
@@ -125,28 +255,29 @@ func TestSetupAssistant_Wizard_WithResponseTemplates(t *testing.T) {
 func TestSetupAssistant_Wizard_WithBusinessHours(t *testing.T) {
 	svc, sfx := setupSvcTestDB(t)
 	ctx := context.Background()
+	cleanupGroupByNameAtEnd(t, "BH Team "+sfx)
+	cleanupBusinessHoursAtEnd(t, "BH Wizard "+sfx)
 
 	res := svc.ExecuteWizard(ctx, service.WizardRequest{
 		Groups: []service.GroupInput{
 			{Name: "BH Team " + sfx},
 		},
+		// GroupID 1 references the first team created by this wizard run.
 		BusinessHours: []service.BusinessHoursInput{
-			{Name: "BH Wizard " + sfx, Timezone: "Australia/Sydney"},
+			{Name: "BH Wizard " + sfx, Timezone: "Australia/Sydney", GroupID: 1},
 		},
 	})
 	require.True(t, res.Success, "wizard should succeed, got: %v", res.Error)
 
-	// Verify calendar was created.
-	db, _ := database.GetDB()
-	var n int
-	_ = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT COUNT(*) FROM calendar WHERE name LIKE ?"), "%BH Wizard "+sfx+"%").Scan(&n)
-	assert.Greater(t, n, 0, "business hours calendar should exist from wizard step 7")
+	// The calendar belongs to the team the wizard just created.
+	teamID := groupIDByName(t, "BH Team "+sfx)
+	assert.Equal(t, teamID, calendarGroupID(t, "BH Wizard "+sfx))
 }
 
 func TestSetupAssistant_Wizard_WithEmailTransport(t *testing.T) {
 	svc, sfx := setupSvcTestDB(t)
 	ctx := context.Background()
+	cleanupGroupByNameAtEnd(t, "Mail Team "+sfx)
 
 	res := svc.ExecuteWizard(ctx, service.WizardRequest{
 		Groups: []service.GroupInput{
@@ -194,6 +325,7 @@ func TestCustomerSearch_FindsByCompanyName(t *testing.T) {
 
 	// Create a customer company.
 	cid := "SrchCo" + sfx
+	cleanupCustomerCompanyAtEnd(t, cid)
 	err := svc.CreateCustomerCompany(ctx, cid, "Searchable Company "+sfx, nil, 1)
 	require.NoError(t, err)
 
@@ -229,6 +361,7 @@ func TestCustomerSearch_FindsByPartialName(t *testing.T) {
 	ctx := context.Background()
 
 	cid := "Part" + sfx
+	cleanupCustomerCompanyAtEnd(t, cid)
 	err := svc.CreateCustomerCompany(ctx, cid, "Partial Match Inc "+sfx, nil, 1)
 	require.NoError(t, err)
 
@@ -305,6 +438,7 @@ func TestCustomerSearch_QueryStringFallback(t *testing.T) {
 	ctx := context.Background()
 
 	cid := "QS" + sfx
+	cleanupCustomerCompanyAtEnd(t, cid)
 	err := svc.CreateCustomerCompany(ctx, cid, "Query String Co "+sfx, nil, 1)
 	require.NoError(t, err)
 
@@ -413,6 +547,7 @@ func TestCustomerConfigAPI_ReturnsAllFields(t *testing.T) {
 	svc, sfx := setupSvcTestDB(t)
 	ctx := context.Background()
 	cid := "CfgAPI" + sfx
+	cleanupCustomerCompanyAtEnd(t, cid)
 
 	// Create a customer with full address data.
 	err := svc.CreateCustomerCompany(ctx, cid, "Config API Co "+sfx, map[string]string{
@@ -472,6 +607,7 @@ func TestCustomerConfigAPI_ReturnsPortalUsers(t *testing.T) {
 	svc, sfx := setupSvcTestDB(t)
 	ctx := context.Background()
 	cid := "PortalUsers" + sfx
+	cleanupCustomerCompanyAtEnd(t, cid)
 
 	// Create customer company directly (doesn't need seed data like OnboardCustomer does).
 	err := svc.CreateCustomerCompany(ctx, cid, "Portal Users Co "+sfx, nil, 1)
@@ -514,6 +650,7 @@ func TestSetupAssistant_LoadExistingCustomer(t *testing.T) {
 			{Login: "minuser" + sfx, Email: "min" + sfx + "@test.com", FirstName: "Min", LastName: "User"},
 		},
 	})
+	cleanupOnboardingAtEnd(t, res)
 	require.True(t, res.Success, "onboarding should succeed: %v", res.Error)
 
 	// Load it back — even minimal data must populate Customer.
@@ -539,12 +676,14 @@ func TestSetupAssistant_LoadExistingCustomer_AllFieldsPopulated(t *testing.T) {
 	// Create a DEDICATED group so this customer's associations are isolated
 	// from seed data and other tests. This ensures queues/mail accounts only
 	// appear because WE created them, not because of a shared group_id=1.
+	cleanupGroupByNameAtEnd(t, "IsolatedGrp "+sfx)
+	cleanupQueueByNameAtEnd(t, "IsolatedQ "+sfx)
 	dedicatedGroupID, err := svc.CreateGroup(ctx, "IsolatedGrp "+sfx, "dedicated test group", 1)
 	require.NoError(t, err)
 	require.Greater(t, dedicatedGroupID, 0)
 
 	// Create a dedicated queue owned by the dedicated group.
-	dedicatedQueueID, err := svc.CreateQueue(ctx, "IsolatedQ "+sfx, []int{dedicatedGroupID}, "dedicated test queue", 1)
+	dedicatedQueueID, err := svc.CreateQueue(ctx, "IsolatedQ "+sfx, dedicatedGroupID, "dedicated test queue", 1)
 	require.NoError(t, err)
 	require.Greater(t, dedicatedQueueID, 0)
 
@@ -572,6 +711,7 @@ func TestSetupAssistant_LoadExistingCustomer_AllFieldsPopulated(t *testing.T) {
 			QueueID:     dedicatedQueueID,
 		},
 	})
+	cleanupOnboardingAtEnd(t, res)
 	require.True(t, res.Success, "onboarding should succeed: %v", res.Error)
 
 	config, err := svc.LoadExistingCustomer(ctx, cid)
@@ -644,6 +784,7 @@ func TestSetupAssistant_LoadExistingCustomer_NewCompanyIsEmpty(t *testing.T) {
 	// Create a bare customer with NO managing teams, NO SLA, NO mail account.
 	// Use a unique group that has NO queues and NO mail accounts.
 	cid := "Bare" + sfx
+	cleanupCustomerCompanyAtEnd(t, cid)
 	err := svc.CreateCustomerCompany(ctx, cid, "Bare Bones Co "+sfx, map[string]string{
 		"street":  "456 Empty Lane",
 		"city":    "Nowhere",
@@ -693,13 +834,9 @@ func TestSetupAssistant_LoadExistingCustomer_WithSLA(t *testing.T) {
 	ctx := context.Background()
 	cid := "SLA" + sfx
 
-	// Find a real SLA id.
-	db, _ := database.GetDB()
-	var slaID int
-	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM sla WHERE valid_id = 1 LIMIT 1")).Scan(&slaID)
-	if slaID == 0 {
-		t.Skip("no SLA available in test DB")
-	}
+	// An SLA owned by this test; the onboarding links a new service to it.
+	slaID := createAdminTestSLA(t)
+	serviceName := "Premium " + sfx
 
 	res := svc.OnboardCustomer(ctx, service.OnboardCustomerRequest{
 		CustomerID: cid,
@@ -708,8 +845,9 @@ func TestSetupAssistant_LoadExistingCustomer_WithSLA(t *testing.T) {
 			{Login: "slauser" + sfx, Email: "sla" + sfx + "@test.com", FirstName: "SLA", LastName: "Test"},
 		},
 		SLAID:       slaID,
-		ServiceName: "Premium " + sfx,
+		ServiceName: serviceName,
 	})
+	cleanupOnboardingAtEnd(t, res)
 	require.True(t, res.Success, "onboarding with SLA should succeed: %v", res.Error)
 
 	config, err := svc.LoadExistingCustomer(ctx, cid)
@@ -757,6 +895,7 @@ func TestSetupAssistant_LoadExistingCustomer_WithMailAccount(t *testing.T) {
 			QueueID:     queueID,
 		},
 	})
+	cleanupOnboardingAtEnd(t, res)
 	require.True(t, res.Success, "onboarding with mail should succeed: %v", res.Error)
 
 	config, err := svc.LoadExistingCustomer(ctx, cid)
@@ -796,6 +935,7 @@ func TestSetupAssistant_LoadExistingCustomer_CreateManagingTeam(t *testing.T) {
 			{Login: "mgtuser" + sfx, Email: "mgt" + sfx + "@test.com", FirstName: "MGT", LastName: "Load"},
 		},
 	})
+	cleanupOnboardingAtEnd(t, res)
 	require.True(t, res.Success, "onboarding with managing team should succeed: %v", res.Error)
 	require.Greater(t, res.CreatedGroupID, 0)
 

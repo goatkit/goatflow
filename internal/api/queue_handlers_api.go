@@ -2,6 +2,8 @@ package api
 
 import (
 	"database/sql"
+	"html"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -11,10 +13,12 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
-// queueDB returns the database handle for queue operations.
+// queueDB returns the database handle for queue operations, or nil (logged) when
+// unavailable; every caller answers nil with HTTP 500.
 func queueDB() *sql.DB {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
+		log.Printf("queue handlers: database unavailable: %v", err)
 		return nil
 	}
 	return db
@@ -31,7 +35,7 @@ func handleGetQueuesAPI(c *gin.Context) {
 	}
 
 	respond := func(data []queueItem) {
-		// Apply query parameter filters consistently for stub and DB backed flows
+		// Apply query parameter filters
 		search := strings.ToLower(strings.TrimSpace(c.Query("search")))
 		statusFilter := strings.ToLower(strings.TrimSpace(c.Query("status")))
 
@@ -72,9 +76,8 @@ func handleGetQueuesAPI(c *gin.Context) {
 			if item.TicketCount == 1 {
 				label = "ticket"
 			}
-			b.WriteString("  <li=")
-			b.WriteString(">")
-			b.WriteString(item.Name + " <span>")
+			b.WriteString("  <li>")
+			b.WriteString(html.EscapeString(item.Name) + " <span>")
 			b.WriteString(strconv.Itoa(item.TicketCount))
 			b.WriteString("</span> " + label + "</li>\n")
 		}
@@ -82,34 +85,13 @@ func handleGetQueuesAPI(c *gin.Context) {
 		c.String(http.StatusOK, b.String())
 	}
 
-	// Helper to surface stub data whenever no database is reachable
-	respondWithStub := func() {
-		// Force error path when requested (for tests)
-		if strings.Contains(strings.ToLower(c.Query("force_error")), "true") {
-			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "simulated error"})
-			return
-		}
-		// Stub data matches canonical migrations: Postmaster(1), Raw(2), Junk(3), Misc(4)
-		respond([]queueItem{
-			{ID: 1, Name: "Postmaster", Comment: "Default queue for incoming emails", TicketCount: 0, Status: "active"},
-			{ID: 2, Name: "Raw", Comment: "Queue for unprocessed emails", TicketCount: 2, Status: "active"},
-			{ID: 3, Name: "Junk", Comment: "Queue for junk/spam", TicketCount: 1, Status: "active"},
-			{ID: 4, Name: "Misc", Comment: "Miscellaneous queue", TicketCount: 0, Status: "active"},
-		})
-	}
-
 	db := queueDB()
 	if db == nil {
-		respondWithStub()
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database not available"})
 		return
 	}
 
-	if strings.Contains(strings.ToLower(c.Query("force_error")), "true") {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "forced error"})
-		return
-	}
-
-	// Select queues and attach ticket counts for integration tests
+	// Select queues and attach ticket counts
 	query := `
 		SELECT q.id, q.name, q.comments, q.valid_id, COALESCE(tc.ticket_count, 0)
 		FROM queue q
@@ -123,6 +105,7 @@ func handleGetQueuesAPI(c *gin.Context) {
 
 	rows, err := db.Query(database.ConvertPlaceholders(query))
 	if err != nil {
+		log.Printf("handleGetQueuesAPI: query queues: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch queues"})
 		return
 	}
@@ -138,7 +121,9 @@ func handleGetQueuesAPI(c *gin.Context) {
 			ticketCount int
 		)
 		if scanErr := rows.Scan(&id, &name, &comment, &validID, &ticketCount); scanErr != nil {
-			continue
+			log.Printf("handleGetQueuesAPI: scan queue: %v", scanErr)
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch queues"})
+			return
 		}
 
 		status := "inactive"
@@ -165,9 +150,6 @@ func handleGetQueuesAPI(c *gin.Context) {
 
 	respond(items)
 }
-
-// handleQueuesAPI is an alias expected by tests; routes to handleGetQueuesAPI.
-func handleQueuesAPI(c *gin.Context) { handleGetQueuesAPI(c) }
 
 // handleCreateQueueWrapper wraps handleCreateQueue with form-to-JSON conversion for YAML routes.
 func handleCreateQueueWrapper(c *gin.Context) {

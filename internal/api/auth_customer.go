@@ -93,8 +93,15 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		// Clear rate limit on successful login
 		auth.DefaultLoginRateLimiter.RecordSuccess(clientIP, login)
 
-		// Check if 2FA is enabled for this customer
-		if isCustomerMFAEnabled(db, c.Request, user.Login) {
+		// Check if 2FA is enabled for this customer. A failed lookup aborts
+		// the login rather than skipping the second factor.
+		mfa, err := customerMFAStatus(db, user.Login)
+		if err != nil {
+			log.Printf("customer login: second-factor status for %s unavailable: %v", user.Login, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Login temporarily unavailable"})
+			return
+		}
+		if mfa.Enabled() {
 			// SECURITY FIX (V3/V4/V5/V7): Use session manager - customer login stored server-side
 			sessionMgr := auth.GetTOTPSessionManager()
 			token, err := sessionMgr.CreateCustomerSession(user.Login, c.ClientIP(), c.Request.UserAgent())

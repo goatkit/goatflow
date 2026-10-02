@@ -2,361 +2,516 @@ package selfservice
 
 import (
 	"context"
-	"fmt"
+	"database/sql"
+	"errors"
 	"log/slog"
 	"net/http"
-	"time"
+	"net/mail"
+	"strconv"
+	"strings"
 
+	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 
-	"github.com/goatkit/goatflow/internal/mailqueue"
+	"github.com/goatkit/goatflow/internal/platform/auth"
+	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/middleware"
+	"github.com/goatkit/goatflow/internal/platform/shared"
+	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 )
 
-// HandleForgotPassword renders the forgot password form.
-// Title is set via i18n in the template using t("self_service.forgot_password.title").
-func HandleForgotPassword(c *gin.Context) {
-	c.HTML(http.StatusOK, "pages/forgot_password.pongo2", gin.H{})
+// Field length limits from the customer_user / gk_registration_request schema.
+const (
+	maxIdentifierLen = 200
+	maxEmailLen      = 150
+	maxNameLen       = 100
+)
+
+// portal describes the agent or customer side of the self-service pages.
+type portal struct {
+	Type        string // UserAgent or UserCustomer
+	LoginURL    string
+	ForgotURL   string
+	ResetURL    string
+	RegisterURL string
 }
 
-// HandleForgotPasswordSubmit processes the forgot password form.
-// Generates a reset token and sends an email with the reset link.
-func HandleForgotPasswordSubmit(captchaCfg *CAPTCHAConfig) gin.HandlerFunc {
+var (
+	agentPortal = portal{
+		Type:      UserAgent,
+		LoginURL:  "/login",
+		ForgotURL: "/forgot-password",
+		ResetURL:  "/reset-password",
+	}
+	customerPortal = portal{
+		Type:        UserCustomer,
+		LoginURL:    "/customer/login",
+		ForgotURL:   "/customer/forgot-password",
+		ResetURL:    "/customer/reset-password",
+		RegisterURL: "/customer/register",
+	}
+)
+
+const registerCompleteURL = "/customer/register/complete"
+
+func lostPasswordEnabled() bool {
+	cfg := config.Get()
+	return cfg != nil && cfg.Features.LostPassword
+}
+
+func registrationEnabled() bool {
+	cfg := config.Get()
+	return cfg != nil && cfg.Features.Registration
+}
+
+// requireFeature answers 404 while the feature switch is off, exactly as if
+// the route did not exist.
+func requireFeature(enabled func() bool, h gin.HandlerFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		email := c.PostForm("email")
-		if email == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Email is required"})
+		if !enabled() {
+			c.String(http.StatusNotFound, "404 page not found")
 			return
 		}
-
-		// Verify CAPTCHA if configured.
-		if err := VerifyCAPTCHA(captchaCfg, c.PostForm("captcha_token")); err != nil {
-			c.JSON(http.StatusForbidden, gin.H{"error": "CAPTCHA verification failed"})
-			return
-		}
-
-		repo, err := NewRepository()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Service unavailable"})
-			return
-		}
-
-		// Generate token regardless of whether email exists (prevent enumeration).
-		token, err := GenerateToken()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Service unavailable"})
-			return
-		}
-
-		// Check if email belongs to a customer.
-		db, _ := database.GetDB()
-		var customerLogin string
-		if db != nil {
-			db.QueryRow(database.ConvertPlaceholders(
-				"SELECT login FROM customer_user WHERE email = ? AND valid_id = 1"), email).Scan(&customerLogin)
-		}
-
-		if customerLogin != "" {
-			authToken := &AuthToken{
-				Token:         token,
-				TokenType:     TokenPasswordReset,
-				UserType:      UserCustomer,
-				CustomerLogin: &customerLogin,
-				Email:         email,
-				ExpiresAt:     time.Now().Add(DefaultTokenExpiry),
-				CreatedAt:     time.Now(),
-			}
-			repo.CreateToken(authToken)
-
-			// Send reset email.
-			sendPasswordResetEmail(db, email, token)
-		}
-
-		// Always return success (anti-enumeration).
-		c.JSON(http.StatusOK, gin.H{
-			"message": "If an account exists with that email, a password reset link has been sent.",
-		})
+		h(c)
 	}
 }
 
-// HandleResetPassword processes the password reset form.
-func HandleResetPassword(c *gin.Context) {
-	token := c.Query("token")
-	if token == "" {
-		token = c.Param("token")
-	}
-
-	repo, err := NewRepository()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Service unavailable"})
+func render(c *gin.Context, code int, tpl string, ctx pongo2.Context) {
+	// Pages carrying tokens must not be cached or leak the token via Referer.
+	c.Header("Cache-Control", "no-store")
+	c.Header("Referrer-Policy", "no-referrer")
+	r := shared.GetGlobalRenderer()
+	if r == nil {
+		c.String(http.StatusInternalServerError, "template renderer unavailable")
 		return
 	}
-
-	authToken, err := repo.GetToken(token)
-	if err != nil || authToken == nil || !authToken.IsValid() {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired reset link"})
-		return
-	}
-
-	// GET: show reset form.
-	if c.Request.Method == "GET" {
-		c.HTML(http.StatusOK, "pages/reset_password.pongo2", gin.H{
-			"Token": token,
-		})
-		return
-	}
-
-	// POST: process password change.
-	password := c.PostForm("password")
-	confirmPassword := c.PostForm("confirm_password")
-	if password == "" || len(password) < 8 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Password must be at least 8 characters"})
-		return
-	}
-	if password != confirmPassword {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Passwords do not match"})
-		return
-	}
-
-	// Hash password.
-	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
-		return
-	}
-
-	// Update password in database.
-	db, _ := database.GetDB()
-	if db == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database unavailable"})
-		return
-	}
-
-	if authToken.UserType == UserCustomer && authToken.CustomerLogin != nil {
-		_, err = db.Exec(database.ConvertPlaceholders(
-			"UPDATE customer_user SET pw = ?, change_time = NOW(), change_by = 1 WHERE login = ?"),
-			string(hashed), *authToken.CustomerLogin)
-	} else if authToken.UserType == UserAgent && authToken.UserID != nil {
-		_, err = db.Exec(database.ConvertPlaceholders(
-			"UPDATE users SET pw = ?, change_time = NOW(), change_by = 1 WHERE id = ?"),
-			string(hashed), *authToken.UserID)
-	}
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
-		return
-	}
-
-	// Consume the token.
-	repo.ConsumeToken(token)
-
-	c.JSON(http.StatusOK, gin.H{"message": "Password has been reset successfully"})
+	r.HTML(c, code, tpl, ctx)
 }
 
-// HandleCustomerRegister processes customer self-registration.
-func HandleCustomerRegister(captchaCfg *CAPTCHAConfig) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Verify CAPTCHA.
-		if err := VerifyCAPTCHA(captchaCfg, c.PostForm("captcha_token")); err != nil {
-			c.JSON(http.StatusForbidden, gin.H{"error": "CAPTCHA verification failed"})
-			return
-		}
-
-		email := c.PostForm("email")
-		firstName := c.PostForm("first_name")
-		lastName := c.PostForm("last_name")
-
-		if email == "" || firstName == "" || lastName == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Email, first name, and last name are required"})
-			return
-		}
-
-		repo, err := NewRepository()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Service unavailable"})
-			return
-		}
-
-		// Generate approval token.
-		approvalToken, _ := GenerateToken()
-
-		req := &RegistrationRequest{
-			Email:         email,
-			FirstName:     firstName,
-			LastName:      lastName,
-			Status:        StatusPending,
-			ApprovalToken: &approvalToken,
-			CreatedAt:     time.Now(),
-		}
-
-		_, err = repo.CreateRegistration(req)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to submit registration"})
-			return
-		}
-
-		// Send verification email to the user.
-		db, _ := database.GetDB()
-		sendVerificationEmail(db, email, approvalToken)
-
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Registration submitted. Please check your email to verify your address.",
-		})
-	}
-}
-
-// HandleVerifyEmail processes the email verification link.
-func HandleVerifyEmail(c *gin.Context) {
-	token := c.Query("token")
-	if token == "" {
-		token = c.Param("token")
-	}
-
-	repo, err := NewRepository()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Service unavailable"})
-		return
-	}
-
-	authToken, err := repo.GetToken(token)
-	if err != nil || authToken == nil || !authToken.IsValid() {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired verification link"})
-		return
-	}
-
-	if authToken.TokenType != TokenEmailVerify {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid token type"})
-		return
-	}
-
-	// Consume the token.
-	repo.ConsumeToken(token)
-
-	c.JSON(http.StatusOK, gin.H{"message": "Email verified successfully. An admin will review your registration."})
-}
-
-// HandleAdminApproveRegistration approves a pending registration.
-func HandleAdminApproveRegistration(c *gin.Context) {
-	repo, err := NewRepository()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Service unavailable"})
-		return
-	}
-
-	var req struct {
-		ID int64 `json:"id"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil || req.ID == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Registration ID is required"})
-		return
-	}
-
-	userID := 1
-	if id, exists := c.Get("user_id"); exists {
-		if uid, ok := id.(int); ok {
-			userID = uid
-		}
-	}
-
-	if err := repo.ApproveRegistration(req.ID, userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"status": "approved"})
-}
-
-// HandleAdminRejectRegistration rejects a pending registration.
-func HandleAdminRejectRegistration(c *gin.Context) {
-	repo, err := NewRepository()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Service unavailable"})
-		return
-	}
-
-	var req struct {
-		ID     int64  `json:"id"`
-		Reason string `json:"reason"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil || req.ID == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Registration ID is required"})
-		return
-	}
-
-	userID := 1
-	if id, exists := c.Get("user_id"); exists {
-		if uid, ok := id.(int); ok {
-			userID = uid
-		}
-	}
-
-	if err := repo.RejectRegistration(req.ID, req.Reason, userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"status": "rejected"})
-}
-
-// HandleAdminListPendingRegistrations lists pending registrations.
-func HandleAdminListPendingRegistrations(c *gin.Context) {
-	repo, err := NewRepository()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Service unavailable"})
-		return
-	}
-
-	reqs, err := repo.ListPendingRegistrations()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"registrations": reqs})
-}
-
-// --- Email helpers ---
-
-func sendPasswordResetEmail(db interface{}, email, token string) {
-	resetURL := fmt.Sprintf("/reset-password?token=%s", token)
-	body := fmt.Sprintf(
-		"You requested a password reset.\n\nClick the link below to reset your password:\n%s\n\nThis link expires in 1 hour.\n\nIf you did not request this, ignore this email.",
-		resetURL,
-	)
-
-	slog.Info("password reset email queued", "email", email, "reset_url", resetURL)
-	queueEmail(email, "Password Reset", body)
-}
-
-func sendVerificationEmail(db interface{}, email, token string) {
-	verifyURL := fmt.Sprintf("/verify-email?token=%s", token)
-	body := fmt.Sprintf(
-		"Please verify your email address by clicking the link below:\n%s\n\nThis link expires in 24 hours.",
-		verifyURL,
-	)
-
-	slog.Info("verification email queued", "email", email)
-	queueEmail(email, "Verify Your Email", body)
-}
-
-func queueEmail(to, subject, body string) {
+func storeFor(c *gin.Context) (store, bool) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		slog.Warn("cannot queue email — no database", "to", to, "subject", subject)
+		slog.Error("selfservice: database unavailable", "error", err)
+		c.String(http.StatusServiceUnavailable, "service unavailable")
+		return store{}, false
+	}
+	return store{db: db}, true
+}
+
+// allowIP spends one unit of the client IP's hourly budget for public form posts.
+func allowIP(c *gin.Context) bool {
+	return middleware.GlobalRateLimiter().Allow("selfservice:ip:"+c.ClientIP(), ipRequestsPerHour)
+}
+
+// allowMailTo spends one unit of a recipient's hourly email budget.
+func allowMailTo(target string) bool {
+	return middleware.GlobalRateLimiter().Allow("selfservice:mail:"+strings.ToLower(target), mailsPerTargetPerHour)
+}
+
+// ---------------------------------------------------------------------------
+// Forgotten password
+// ---------------------------------------------------------------------------
+
+func forgotPasswordPage(p portal) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		render(c, http.StatusOK, "pages/forgot_password.pongo2", pongo2.Context{"Portal": p})
+	}
+}
+
+// forgotPasswordSubmit answers identically whether or not the identifier
+// matches an account; issuing tokens and queueing mail happens after the
+// response so its timing does not reveal a match either.
+func forgotPasswordSubmit(p portal) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		lang := middleware.GetLanguage(c)
+		identifier := strings.TrimSpace(c.PostForm("identifier"))
+		ctx := pongo2.Context{"Portal": p, "Identifier": identifier}
+
+		if !allowIP(c) {
+			ctx["Error"] = translate(lang, "self_service.rate_limited")
+			c.Header("Retry-After", "3600")
+			render(c, http.StatusTooManyRequests, "pages/forgot_password.pongo2", ctx)
+			return
+		}
+		if identifier == "" {
+			ctx["Error"] = translate(lang, "self_service.forgot_password.identifier_required")
+			render(c, http.StatusBadRequest, "pages/forgot_password.pongo2", ctx)
+			return
+		}
+		s, ok := storeFor(c)
+		if !ok {
+			return
+		}
+		if len(identifier) <= maxIdentifierLen {
+			accounts, err := s.findAccounts(c.Request.Context(), p.Type, identifier)
+			if err != nil {
+				slog.Error("selfservice: account lookup failed", "portal", p.Type, "error", err)
+			}
+			if len(accounts) > maxAccountsPerRequest {
+				accounts = accounts[:maxAccountsPerRequest]
+			}
+			if len(accounts) > 0 {
+				go sendResetLinks(s, p, lang, accounts)
+			}
+		}
+		ctx["Sent"] = true
+		ctx["Identifier"] = ""
+		render(c, http.StatusOK, "pages/forgot_password.pongo2", ctx)
+	}
+}
+
+func sendResetLinks(s store, p portal, lang string, accounts []Account) {
+	ctx := context.Background()
+	for _, acct := range accounts {
+		if !allowMailTo(acct.Type + ":" + strconv.Itoa(acct.ID)) {
+			slog.Warn("selfservice: reset email budget exhausted", "type", acct.Type, "login", acct.Login)
+			continue
+		}
+		raw, err := s.issueResetToken(ctx, acct)
+		if err != nil {
+			slog.Error("selfservice: issue reset token", "type", acct.Type, "login", acct.Login, "error", err)
+			continue
+		}
+		link, err := tokenLink(p.ResetURL, raw)
+		if err != nil {
+			slog.Error("selfservice: cannot build reset link", "error", err)
+			return
+		}
+		subject := translate(lang, "self_service.email.reset_subject")
+		body := translate(lang, "self_service.email.reset_body",
+			displayName(acct.FirstName, acct.LastName, acct.Login), acct.Login, int(ResetTokenTTL.Minutes()), link)
+		if err := queueMail(ctx, s.db, acct.Email, subject, body); err != nil {
+			slog.Error("selfservice: queue reset email", "login", acct.Login, "error", err)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Choosing a new password (reset and registration completion share the page)
+// ---------------------------------------------------------------------------
+
+// passwordPage is the template context for pages/reset_password.pongo2.
+func passwordPage(lang string, p portal, mode string, policy sysconfig.PasswordPolicy) pongo2.Context {
+	ctx := pongo2.Context{
+		"Portal":       p,
+		"Mode":         mode,
+		"Requirements": policyRequirements(lang, policy),
+	}
+	if mode == "register" {
+		ctx["Action"] = registerCompleteURL
+		ctx["RetryURL"] = p.RegisterURL
+	} else {
+		ctx["Action"] = p.ResetURL
+		ctx["RetryURL"] = p.ForgotURL
+	}
+	return ctx
+}
+
+func loadPolicy(db *sql.DB, accountType string) sysconfig.PasswordPolicy {
+	var (
+		policy sysconfig.PasswordPolicy
+		err    error
+	)
+	if accountType == UserAgent {
+		policy, err = sysconfig.LoadAgentPasswordPolicy(db)
+	} else {
+		policy, err = sysconfig.LoadCustomerPasswordPolicy(db)
+	}
+	if err != nil {
+		slog.Error("selfservice: load password policy", "type", accountType, "error", err)
+	}
+	return policy
+}
+
+func policyRequirements(lang string, p sysconfig.PasswordPolicy) []string {
+	var out []string
+	if p.PasswordMinSize > 0 {
+		out = append(out, policyMessage(lang, "min_size", p))
+	}
+	if p.PasswordMin2Lower2UpperCharacters {
+		out = append(out, policyMessage(lang, "min_2_lower_2_upper", p))
+	}
+	if p.PasswordNeedDigit {
+		out = append(out, policyMessage(lang, "need_digit", p))
+	}
+	if p.PasswordMin2Characters {
+		out = append(out, policyMessage(lang, "min_2_characters", p))
+	}
+	if p.PasswordRegExp != "" {
+		out = append(out, policyMessage(lang, "regexp_mismatch", p))
+	}
+	return out
+}
+
+func policyMessage(lang, code string, p sysconfig.PasswordPolicy) string {
+	return strings.ReplaceAll(translate(lang, sysconfig.PasswordRequirementKey(code)), "{n}", strconv.Itoa(p.PasswordMinSize))
+}
+
+// checkNewPassword validates the submitted password pair against the policy
+// and hashes it. A non-empty message is shown to the user.
+func checkNewPassword(c *gin.Context, lang string, policy sysconfig.PasswordPolicy) (hash, message string) {
+	password := c.PostForm("password")
+	if password == "" {
+		return "", translate(lang, "self_service.reset_password.required")
+	}
+	if password != c.PostForm("confirm_password") {
+		return "", translate(lang, "password.passwords_no_match")
+	}
+	if verr := policy.ValidatePassword(password); verr != nil {
+		return "", policyMessage(lang, verr.Code, policy)
+	}
+	hash, err := auth.NewPasswordHasher().HashPassword(password)
+	if errors.Is(err, auth.ErrPasswordTooLong) {
+		return "", translate(lang, "self_service.reset_password.too_long")
+	}
+	if err != nil {
+		slog.Error("selfservice: hash password", "error", err)
+		return "", translate(lang, "self_service.error")
+	}
+	return hash, ""
+}
+
+func invalidLink(c *gin.Context, ctx pongo2.Context, lang string) {
+	ctx["Invalid"] = true
+	ctx["Error"] = translate(lang, "self_service.reset_password.invalid_link")
+	render(c, http.StatusBadRequest, "pages/reset_password.pongo2", ctx)
+}
+
+func resetPasswordPage(p portal) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		lang := middleware.GetLanguage(c)
+		s, ok := storeFor(c)
+		if !ok {
+			return
+		}
+		ctx := passwordPage(lang, p, "reset", loadPolicy(s.db, p.Type))
+		raw := c.Query("token")
+		tok, err := s.lookupToken(c.Request.Context(), raw, TokenPasswordReset, p.Type)
+		if err == nil {
+			_, err = s.accountForToken(c.Request.Context(), p.Type, tok)
+		}
+		if err != nil {
+			if !errors.Is(err, errTokenInvalid) {
+				slog.Error("selfservice: reset link check", "error", err)
+			}
+			invalidLink(c, ctx, lang)
+			return
+		}
+		ctx["Token"] = raw
+		render(c, http.StatusOK, "pages/reset_password.pongo2", ctx)
+	}
+}
+
+func resetPasswordSubmit(p portal) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		lang := middleware.GetLanguage(c)
+		s, ok := storeFor(c)
+		if !ok {
+			return
+		}
+		reqCtx := c.Request.Context()
+		policy := loadPolicy(s.db, p.Type)
+		ctx := passwordPage(lang, p, "reset", policy)
+		raw := c.PostForm("token")
+
+		tok, err := s.lookupToken(reqCtx, raw, TokenPasswordReset, p.Type)
+		var acct *Account
+		if err == nil {
+			acct, err = s.accountForToken(reqCtx, p.Type, tok)
+		}
+		if err != nil {
+			if !errors.Is(err, errTokenInvalid) {
+				slog.Error("selfservice: reset token check", "error", err)
+			}
+			invalidLink(c, ctx, lang)
+			return
+		}
+		ctx["Token"] = raw
+
+		hash, msg := checkNewPassword(c, lang, policy)
+		if msg != "" {
+			ctx["Error"] = msg
+			render(c, http.StatusBadRequest, "pages/reset_password.pongo2", ctx)
+			return
+		}
+		if err := s.resetPassword(reqCtx, tok, acct, hash); err != nil {
+			if !errors.Is(err, errTokenInvalid) {
+				slog.Error("selfservice: reset password", "login", acct.Login, "error", err)
+			}
+			invalidLink(c, ctx, lang)
+			return
+		}
+		if n, err := s.killSessions(reqCtx, acct); err != nil {
+			slog.Error("selfservice: end sessions after reset", "login", acct.Login, "error", err)
+		} else {
+			slog.Info("selfservice: password reset", "type", acct.Type, "login", acct.Login, "sessions_ended", n)
+		}
+		auth.DefaultLoginRateLimiter.RecordSuccess(c.ClientIP(), acct.Login)
+
+		delete(ctx, "Token")
+		ctx["Done"] = true
+		ctx["Message"] = translate(lang, "self_service.reset_password.success")
+		render(c, http.StatusOK, "pages/reset_password.pongo2", ctx)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Customer self-registration
+// ---------------------------------------------------------------------------
+
+func registerPage(c *gin.Context) {
+	render(c, http.StatusOK, "pages/customer/register.pongo2", pongo2.Context{"Portal": customerPortal})
+}
+
+func registerSubmit(c *gin.Context) {
+	lang := middleware.GetLanguage(c)
+	firstName := strings.TrimSpace(c.PostForm("first_name"))
+	lastName := strings.TrimSpace(c.PostForm("last_name"))
+	email := strings.ToLower(strings.TrimSpace(c.PostForm("email")))
+	ctx := pongo2.Context{"Portal": customerPortal, "FirstName": firstName, "LastName": lastName, "Email": email}
+
+	if !allowIP(c) {
+		ctx["Error"] = translate(lang, "self_service.rate_limited")
+		c.Header("Retry-After", "3600")
+		render(c, http.StatusTooManyRequests, "pages/customer/register.pongo2", ctx)
 		return
 	}
-
-	repo := mailqueue.NewMailQueueRepository(db)
-	msg := mailqueue.BuildEmailMessage("noreply@goatflow.local", to, subject, body)
-
-	item := &mailqueue.MailQueueItem{
-		ArticleID:  nil,
-		Recipient:  to,
-		RawMessage: msg,
+	if firstName == "" || lastName == "" || email == "" {
+		ctx["Error"] = translate(lang, "self_service.register.fields_required")
+		render(c, http.StatusBadRequest, "pages/customer/register.pongo2", ctx)
+		return
 	}
+	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email || len(email) > maxEmailLen ||
+		len(firstName) > maxNameLen || len(lastName) > maxNameLen {
+		ctx["Error"] = translate(lang, "self_service.register.invalid_input")
+		render(c, http.StatusBadRequest, "pages/customer/register.pongo2", ctx)
+		return
+	}
+	s, ok := storeFor(c)
+	if !ok {
+		return
+	}
+	exists, err := customerExists(c.Request.Context(), s.db, email)
+	if err != nil {
+		slog.Error("selfservice: registration lookup", "error", err)
+		c.String(http.StatusServiceUnavailable, "service unavailable")
+		return
+	}
+	go sendRegistrationMail(s, lang, email, firstName, lastName, exists)
+
+	render(c, http.StatusOK, "pages/customer/register.pongo2", pongo2.Context{"Portal": customerPortal, "Sent": true})
+}
+
+// sendRegistrationMail emails a confirmation link, or, when the address
+// already has an account, a pointer to password reset instead. Both cases
+// look the same to whoever submitted the form.
+func sendRegistrationMail(s store, lang, email, firstName, lastName string, exists bool) {
 	ctx := context.Background()
-	if err := repo.Insert(ctx, item); err != nil {
-		slog.Warn("failed to queue email", "to", to, "error", err)
+	if !allowMailTo("register:" + email) {
+		slog.Warn("selfservice: registration email budget exhausted", "email", email)
+		return
 	}
+	if exists {
+		if !lostPasswordEnabled() {
+			return
+		}
+		base, err := publicBaseURL()
+		if err != nil {
+			slog.Error("selfservice: cannot build forgot-password link", "error", err)
+			return
+		}
+		body := translate(lang, "self_service.email.register_exists_body", base+customerPortal.ForgotURL)
+		if err := queueMail(ctx, s.db, email, translate(lang, "self_service.email.register_exists_subject"), body); err != nil {
+			slog.Error("selfservice: queue account-exists email", "error", err)
+		}
+		return
+	}
+	raw, err := s.createRegistration(ctx, email, firstName, lastName)
+	if err != nil {
+		slog.Error("selfservice: create registration", "error", err)
+		return
+	}
+	link, err := tokenLink(registerCompleteURL, raw)
+	if err != nil {
+		slog.Error("selfservice: cannot build confirmation link", "error", err)
+		return
+	}
+	body := translate(lang, "self_service.email.register_body",
+		displayName(firstName, lastName, email), int(VerifyTokenTTL.Hours()), link)
+	if err := queueMail(ctx, s.db, email, translate(lang, "self_service.email.register_subject"), body); err != nil {
+		slog.Error("selfservice: queue confirmation email", "error", err)
+	}
+}
+
+func registerCompletePage(c *gin.Context) {
+	lang := middleware.GetLanguage(c)
+	s, ok := storeFor(c)
+	if !ok {
+		return
+	}
+	ctx := passwordPage(lang, customerPortal, "register", loadPolicy(s.db, UserCustomer))
+	raw := c.Query("token")
+	_, reg, err := s.registrationForToken(c.Request.Context(), raw)
+	if err != nil {
+		if !errors.Is(err, errTokenInvalid) {
+			slog.Error("selfservice: confirmation link check", "error", err)
+		}
+		invalidLink(c, ctx, lang)
+		return
+	}
+	ctx["Token"] = raw
+	ctx["Login"] = reg.Email
+	render(c, http.StatusOK, "pages/reset_password.pongo2", ctx)
+}
+
+func registerCompleteSubmit(c *gin.Context) {
+	lang := middleware.GetLanguage(c)
+	s, ok := storeFor(c)
+	if !ok {
+		return
+	}
+	reqCtx := c.Request.Context()
+	policy := loadPolicy(s.db, UserCustomer)
+	ctx := passwordPage(lang, customerPortal, "register", policy)
+	raw := c.PostForm("token")
+	tok, reg, err := s.registrationForToken(reqCtx, raw)
+	if err != nil {
+		if !errors.Is(err, errTokenInvalid) {
+			slog.Error("selfservice: confirmation token check", "error", err)
+		}
+		invalidLink(c, ctx, lang)
+		return
+	}
+	ctx["Token"] = raw
+	ctx["Login"] = reg.Email
+
+	hash, msg := checkNewPassword(c, lang, policy)
+	if msg != "" {
+		ctx["Error"] = msg
+		render(c, http.StatusBadRequest, "pages/reset_password.pongo2", ctx)
+		return
+	}
+	err = s.completeRegistration(reqCtx, tok, reg, hash)
+	switch {
+	case errors.Is(err, errAccountExists):
+		delete(ctx, "Token")
+		ctx["Invalid"] = true
+		ctx["Error"] = translate(lang, "self_service.register.account_exists")
+		ctx["RetryURL"] = customerPortal.ForgotURL
+		ctx["AccountExists"] = true
+		render(c, http.StatusConflict, "pages/reset_password.pongo2", ctx)
+		return
+	case err != nil:
+		if !errors.Is(err, errTokenInvalid) {
+			slog.Error("selfservice: complete registration", "error", err)
+		}
+		invalidLink(c, ctx, lang)
+		return
+	}
+	slog.Info("selfservice: customer registered", "login", reg.Email)
+	delete(ctx, "Token")
+	ctx["Done"] = true
+	ctx["Message"] = translate(lang, "self_service.register.complete_success")
+	render(c, http.StatusOK, "pages/reset_password.pongo2", ctx)
 }

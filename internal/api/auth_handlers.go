@@ -111,39 +111,51 @@ var HandleAuthLogin = func(c *gin.Context) {
 		return
 	}
 
-	// Check if 2FA is enabled for this user
-	if db, err := database.GetDB(); err == nil && db != nil {
-		is2FAEnabled := isAgentMFAEnabled(db, c.Request, int(user.ID))
-		if is2FAEnabled {
-			// 2FA is enabled - don't complete login yet
-			sessionMgr := auth.GetTOTPSessionManager()
-			token, err := sessionMgr.CreateAgentSession(int(user.ID), username, c.ClientIP(), c.Request.UserAgent())
-			if err != nil {
-				if strings.Contains(contentType, "application/json") {
-					c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create 2FA session"})
-				} else {
-					c.Redirect(http.StatusSeeOther, "/login?error=2FA+session+error")
-				}
-				return
-			}
-
-			// Store token in cookie - user data is server-side
-			httpcookie.SetAuth(c, "2fa_pending", token, 300) // 5 min expiry
-
-			if c.GetHeader("HX-Request") == "true" {
-				// HTMX boosted form - use 302 redirect (hx-boost follows standard redirects)
-				c.Redirect(http.StatusFound, "/login/2fa")
-			} else if strings.Contains(contentType, "application/json") {
-				c.JSON(http.StatusOK, gin.H{
-					"success":      true,
-					"requires_2fa": true,
-					"redirect":     "/login/2fa",
-				})
+	// Check if 2FA is enabled for this user. A failed lookup aborts the
+	// login: skipping the second factor on an error would bypass it.
+	mfaDB, mfaErr := database.GetDB()
+	var mfa mfaStatus
+	if mfaErr == nil {
+		mfa, mfaErr = agentMFAStatus(mfaDB, int(user.ID))
+	}
+	if mfaErr != nil {
+		log.Printf("login: second-factor status for user %d unavailable: %v", user.ID, mfaErr)
+		if strings.Contains(contentType, "application/json") {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Login temporarily unavailable"})
+		} else {
+			c.Redirect(http.StatusSeeOther, "/login?error=server_error")
+		}
+		return
+	}
+	if mfa.Enabled() {
+		// 2FA is enabled - don't complete login yet
+		sessionMgr := auth.GetTOTPSessionManager()
+		token, err := sessionMgr.CreateAgentSession(int(user.ID), username, c.ClientIP(), c.Request.UserAgent())
+		if err != nil {
+			if strings.Contains(contentType, "application/json") {
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create 2FA session"})
 			} else {
-				c.Redirect(http.StatusFound, "/login/2fa")
+				c.Redirect(http.StatusSeeOther, "/login?error=2FA+session+error")
 			}
 			return
 		}
+
+		// Store token in cookie - user data is server-side
+		httpcookie.SetAuth(c, "2fa_pending", token, 300) // 5 min expiry
+
+		if c.GetHeader("HX-Request") == "true" {
+			// HTMX boosted form - use 302 redirect (hx-boost follows standard redirects)
+			c.Redirect(http.StatusFound, "/login/2fa")
+		} else if strings.Contains(contentType, "application/json") {
+			c.JSON(http.StatusOK, gin.H{
+				"success":      true,
+				"requires_2fa": true,
+				"redirect":     "/login/2fa",
+			})
+		} else {
+			c.Redirect(http.StatusFound, "/login/2fa")
+		}
+		return
 	}
 
 	// Get user's preferred session timeout and regenerate JWT with that duration.
@@ -235,58 +247,6 @@ var HandleAuthLogin = func(c *gin.Context) {
 		return
 	}
 	c.Redirect(http.StatusSeeOther, redirectTarget)
-}
-
-// HandleAuthLogout handles user logout.
-var HandleAuthLogout = func(c *gin.Context) {
-	// Delete session record from database
-	if sessionID, err := c.Cookie("session_id"); err == nil && sessionID != "" {
-		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
-			if err := sessionSvc.KillSession(sessionID); err != nil {
-				log.Printf("Failed to delete session record: %v", err)
-			}
-		}
-	}
-
-	// Clear cookies
-	httpcookie.SetAuth(c, "auth_token", "", -1)
-	httpcookie.SetAuth(c, "access_token", "", -1)
-	httpcookie.SetAuth(c, "refresh_token", "", -1)
-	httpcookie.SetAuth(c, "session_id", "", -1)
-	httpcookie.SetAuthState(c, "goatflow_logged_in", "", -1)
-
-	// Redirect to login
-	c.Redirect(http.StatusSeeOther, "/login")
-}
-
-// HandleAuthCheck checks if user is authenticated.
-var HandleAuthCheck = func(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"authenticated": false,
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"authenticated": true,
-		"userID":        userID,
-	})
-}
-
-func handleAuthRefresh(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{
-		"success": false,
-		"error":   "token refresh not implemented",
-	})
-}
-
-func handleAuthRegister(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{
-		"success": false,
-		"error":   "self-service registration disabled",
-	})
 }
 
 // getEnvDefault returns environment variable value or fallback default.

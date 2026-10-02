@@ -60,28 +60,26 @@ func TestMain(m *testing.M) {
 		Started:          true,
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: keycloak container start failed: %v\n", err)
-		os.Exit(m.Run())
+		fmt.Fprintf(os.Stderr, "FATAL: keycloak container start failed: %v\n(these tests need Docker; run them with `make test-oidc-integration`)\n", err)
+		os.Exit(1)
 	}
 	keycloakContainer = container
 	defer keycloakContainer.Terminate(ctx)
 
 	// Get the mapped port - use localhost since test runs with --network host
-	host, err := container.Host(ctx)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: host lookup failed: %v\n", err)
-		os.Exit(m.Run())
+	if _, err := container.Host(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "FATAL: keycloak host lookup failed: %v\n", err)
+		os.Exit(1)
 	}
 	port, err := container.MappedPort(ctx, "8080/tcp")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: port lookup failed: %v\n", err)
-		os.Exit(m.Run())
+		fmt.Fprintf(os.Stderr, "FATAL: keycloak port lookup failed: %v\n", err)
+		os.Exit(1)
 	}
 
-	// Force localhost: Keycloak reports issuer as localhost (KC_HOSTNAME=localhost),
-	// and the go-oidc library validates that discovery URL matches issuer claim.
-	// container.Host() returns the Docker bridge gateway (172.17.0.1) which mismatches.
-	_ = host
+	// Use localhost: Keycloak reports its issuer as localhost (KC_HOSTNAME=localhost)
+	// and go-oidc requires the discovery URL to match; container.Host() returns the
+	// Docker bridge gateway instead. Requires --network host (see the make target).
 	keycloakBaseURL = fmt.Sprintf("http://localhost:%s", port.Port())
 
 	// Wait for Keycloak to be fully ready (admin API can take a bit longer)
@@ -89,7 +87,8 @@ func TestMain(m *testing.M) {
 
 	// Setup realm, client, and user via Admin API
 	if err := setupKeycloakRealm(ctx, keycloakBaseURL); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: keycloak realm setup failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "FATAL: keycloak realm setup failed: %v\n", err)
+		os.Exit(1)
 	}
 
 	code := m.Run()
@@ -291,7 +290,7 @@ func TestOIDCIntegration_MissingEmailRejected(t *testing.T) {
 func TestOIDCIntegration_PKCE(t *testing.T) {
 	provider := oidcTestProvider(t, testClientID, testClientSecret)
 
-	authURL, err := provider.StartAuthFlow(context.Background(), state, "pkce-verifier-0123456789")
+	authURL, err := provider.StartAuthFlow(context.Background(), "pkce-state-"+t.Name(), "pkce-verifier-0123456789")
 	require.NoError(t, err)
 
 	// Verify PKCE params are present

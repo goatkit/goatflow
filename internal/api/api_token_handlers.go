@@ -149,6 +149,11 @@ func HandleCreateToken(c *gin.Context) {
 		req.Scopes = filteredScopes
 	}
 
+	if msg := tokenScopeAboveCaller(c, userType, req.Scopes); msg != "" {
+		apierrors.ErrorWithMessage(c, apierrors.CodeForbidden, msg)
+		return
+	}
+
 	resp, err := apiTokenService.GenerateToken(c.Request.Context(), &req, userID, userType, userID)
 	if err != nil {
 		// Determine specific error code based on error message
@@ -204,6 +209,46 @@ func HandleRevokeToken(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "revoked"})
+}
+
+// tokenScopeAboveCaller reports why the requested scopes exceed what the
+// caller holds, or "" when they don't. Admin scopes need an admin caller, and
+// a caller authenticated by a scoped API token can only mint tokens within its
+// own scopes (an empty scope list is full access, so it needs a full-access
+// caller).
+func tokenScopeAboveCaller(c *gin.Context, userType models.APITokenUserType, scopes []string) string {
+	if userType == models.APITokenUserAgent && !isAdminCaller(c) {
+		for _, s := range scopes {
+			if s == "*" || strings.HasPrefix(s, "admin:") {
+				return "Only administrators can create tokens with admin scopes"
+			}
+		}
+	}
+	v, exists := c.Get("api_token")
+	if !exists {
+		return ""
+	}
+	caller, ok := v.(*models.APIToken)
+	if !ok || len(caller.Scopes) == 0 {
+		return ""
+	}
+	if len(scopes) == 0 {
+		return "A scoped API token cannot create a full-access token"
+	}
+	for _, s := range scopes {
+		if !caller.HasScope(s) {
+			return "Token cannot grant scope it does not hold: " + s
+		}
+	}
+	return ""
+}
+
+func isAdminCaller(c *gin.Context) bool {
+	if c.GetBool("isInAdminGroup") {
+		return true
+	}
+	role, _ := c.Get("user_role") //nolint:errcheck // nil when absent
+	return role == "Admin"
 }
 
 // HandleGetScopes returns available scopes for token creation

@@ -63,7 +63,11 @@ func main() {
 	}
 	violations = append(violations, sqlViolations...)
 
-	conversion, err := scanSQLConversion(root, "./...")
+	schema, err := loadSQLSchema(filepath.Join(root, "migrations"))
+	if err != nil {
+		fatal(err)
+	}
+	conversion, err := scanSQLConversion(root, schema, "./...")
 	if err != nil {
 		fatal(err)
 	}
@@ -468,7 +472,7 @@ func printViolations(violations []violation) {
 			if v.Detail != "" {
 				fmt.Fprintf(os.Stderr, "    %s\n", v.Detail)
 			}
-		case "sql-unconverted", "sql-last-insert-id", "sql-mysql-only", "sql-postgres-only":
+		case "sql-unconverted", "sql-last-insert-id", "sql-mysql-only", "sql-postgres-only", "sql-unknown-table", "sql-unknown-column":
 			fmt.Fprintf(os.Stderr, "  %s: %s:%d %s\n", v.Kind, v.File, v.Line, sqlRuleKindNotes[v.Kind])
 			if v.Detail != "" {
 				fmt.Fprintf(os.Stderr, "    %s\n", v.Detail)

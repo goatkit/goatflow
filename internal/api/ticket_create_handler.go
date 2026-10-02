@@ -43,10 +43,8 @@ func HandleCreateTicketAPI(c *gin.Context) {
 	// Require authentication
 	if _, exists := c.Get("user_id"); !exists {
 		if _, authExists := c.Get("is_authenticated"); !authExists {
-			if c.GetHeader("X-Test-Mode") != "true" {
-				c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Authentication required"})
-				return
-			}
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Authentication required"})
+			return
 		}
 	}
 	var ticketRequest struct {
@@ -132,7 +130,10 @@ func HandleCreateTicketAPI(c *gin.Context) {
 		return
 	}
 
-	userID := GetUserIDFromCtx(c, 1)
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
 
 	// Get database connection (required for real creation)
 	db, err := database.GetDB()
@@ -228,7 +229,11 @@ func HandleCreateTicketAPI(c *gin.Context) {
 			if cfg := config.Get(); cfg != nil {
 				emailCfg = &cfg.Email
 			}
-			renderCtx := notifications.BuildRenderContext(context.Background(), db, ticketRequest.CustomerUserID, userID)
+			renderCtx, rcErr := notifications.BuildRenderContext(context.Background(), db, ticketRequest.CustomerUserID, userID)
+			if rcErr != nil {
+				log.Printf("Ticket created email for ticket %d not sent: %v", ticketID, rcErr)
+				return
+			}
 			branding, brandErr := notifications.PrepareQueueEmail(
 				context.Background(),
 				db,

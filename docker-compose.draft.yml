@@ -98,7 +98,10 @@ services:
       JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY:-15m}
       JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY:-7d}
       GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY}
-      PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-sha256}
+      # bcrypt for new passwords; OTRS sha2 hashes still verify. sha256 only
+      # when an OTRS must read the same user tables (see .env.example).
+      PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-bcrypt}
+      MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
       STORAGE_PATH: /app/storage
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}
       ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-pdf,doc,docx,txt,png,jpg,jpeg,gif,zip}

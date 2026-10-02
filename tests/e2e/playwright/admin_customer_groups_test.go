@@ -14,9 +14,7 @@ import (
 
 func TestAdminCustomerGroupsUI(t *testing.T) {
 	browser := helpers.NewBrowserHelper(t)
-	if browser.Config.AdminEmail == "" || browser.Config.AdminPassword == "" {
-		t.Skip("Admin credentials not configured")
-	}
+
 	err := browser.Setup()
 	require.NoError(t, err)
 	defer browser.TearDown()
@@ -87,11 +85,9 @@ func TestAdminCustomerGroupsUI(t *testing.T) {
 
 		// Get initial count of visible groups
 		groupsList := browser.Page.Locator("#groups-list li[data-group-name]")
-		initialCount, _ := groupsList.Count()
-
-		if initialCount == 0 {
-			t.Skip("No groups available to test filter")
-		}
+		initialCount, err := groupsList.Count()
+		require.NoError(t, err)
+		require.Greater(t, initialCount, 0, "groups list empty: migrations seed users/admin/stats and the test seed adds support/testgroup")
 
 		// Type in the filter - use a string that likely won't match
 		filterInput := browser.Page.Locator("input#group-search")
@@ -128,10 +124,7 @@ func TestAdminCustomerGroupsUI(t *testing.T) {
 
 		// Find first customer link
 		customerLink := browser.Page.Locator("a[href^='/admin/customer-groups/customer/']").First()
-		linkCount, _ := customerLink.Count()
-		if linkCount == 0 {
-			t.Skip("No customers available to test")
-		}
+		require.Greater(t, count(t, customerLink), 0, "no customer company links: seed provides COMP1, COMP2, TEST001")
 
 		// Click to navigate to customer edit page
 		err = customerLink.Click()
@@ -179,10 +172,7 @@ func TestAdminCustomerGroupsUI(t *testing.T) {
 
 		// Find first group link
 		groupLink := browser.Page.Locator("a[href^='/admin/customer-groups/group/']").First()
-		linkCount, _ := groupLink.Count()
-		if linkCount == 0 {
-			t.Skip("No groups available to test")
-		}
+		require.Greater(t, count(t, groupLink), 0, "no group links: migrations and the test seed provide groups")
 
 		// Click to navigate to group edit page
 		err = groupLink.Click()

@@ -383,8 +383,6 @@
                                 <select
                                     name="webservice"
                                     id="webservice"
-                                    x-model="webservice"
-                                    @change="loadInvokers()"
                                     class="gk-select-neon w-full"
                                 >
                                     <option value="">{{ t("common.select") }}...</option>
@@ -527,21 +525,31 @@
                             </div>
                         </div>
 
-                        {% if not IsNew %}
-                        <!-- Test Button -->
+                        <!-- Test the saved web service configuration -->
                         <div class="mt-4">
+                            {% if IsNew %}
+                            <p id="webservice-test-unsaved" class="text-sm" style="color: var(--gk-text-muted);">
+                                {{ t("admin.dynamic_fields.webservice.test_save_first") }}
+                            </p>
+                            {% else %}
                             <button
                                 type="button"
+                                id="webservice-test-btn"
                                 onclick="testWebserviceConfig({{ Field.ID }})"
                                 class="gk-btn-secondary"
                             >
                                 <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                 </svg>
-                                {{ t("admin.dynamic_fields.webservice.test")|default:"Test Connection" }}
+                                {{ t("admin.dynamic_fields.webservice.test") }}
                             </button>
+                            <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.webservice.test_saved_hint") }}</p>
+                            <p id="webservice-test-result" class="mt-2 text-sm hidden" role="status" aria-live="polite"
+                               data-testing="{{ t("messages.processing") }}"
+                               data-success="{{ t("admin.dynamic_fields.webservice.test_success") }}"
+                               data-failed="{{ t("admin.dynamic_fields.webservice.test_failed") }}"></p>
+                            {% endif %}
                         </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -599,9 +607,33 @@ document.getElementById('dynamicFieldForm').addEventListener('htmx:afterRequest'
     }
 });
 
+// Tests the saved web service configuration via
+// POST /admin/api/dynamic-fields/:id/webservice-test and shows the outcome.
 function testWebserviceConfig(fieldId) {
-    showToast('Testing webservice configuration...', 'info');
-    // Implementation would call the test API endpoint
+    const button = document.getElementById('webservice-test-btn');
+    const result = document.getElementById('webservice-test-result');
+    const show = (message, color) => {
+        result.textContent = message;
+        result.style.color = color;
+        result.classList.remove('hidden');
+    };
+    button.disabled = true;
+    show(result.dataset.testing, 'var(--gk-text-muted)');
+    fetch('/admin/api/dynamic-fields/' + fieldId + '/webservice-test', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                show(result.dataset.success, 'var(--gk-success)');
+            } else {
+                show(result.dataset.failed + ': ' + (data.error || ''), 'var(--gk-error)');
+            }
+        })
+        .catch(err => show(result.dataset.failed + ': ' + err.message, 'var(--gk-error)'))
+        .finally(() => { button.disabled = false; });
 }
 
 function showToast(message, type = 'info') {

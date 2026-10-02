@@ -43,19 +43,19 @@ type GroupInput struct {
 	Comments string `json:"comments,omitempty" form:"comments"`
 }
 
-// QueueInput defines a queue to create. GroupIDs are 1-based indices into
-// WizardRequest.Groups when submitted through the first-run wizard (the groups
-// do not have database IDs yet); ExecuteWizard resolves them to real IDs. When
-// CreateQueue is called directly (task handlers / API on an existing system),
-// GroupIDs must be real database group IDs.
+// QueueInput defines a queue to create. A queue is owned by exactly one team
+// (queue.group_id). In the first-run wizard GroupID is a 1-based index into
+// WizardRequest.Groups (the groups do not have database IDs yet) and
+// ExecuteWizard resolves it to the real ID; any value beyond that range is
+// taken as an existing database group ID.
 type QueueInput struct {
 	Name     string `json:"name" form:"name"`
-	GroupIDs []int  `json:"group_ids,omitempty" form:"group_ids"`
+	GroupID  int    `json:"group_id,omitempty" form:"group_id"`
 	Comments string `json:"comments,omitempty" form:"comments"`
 }
 
-// AgentInput defines an agent (system user) to create. GroupIDs follow the same
-// resolution rule as QueueInput.GroupIDs.
+// AgentInput defines an agent (system user) to create. Each GroupIDs entry
+// follows the same resolution rule as QueueInput.GroupID.
 type AgentInput struct {
 	Login     string `json:"login" form:"login"`
 	FirstName string `json:"first_name" form:"first_name"`
@@ -93,6 +93,10 @@ type BusinessHoursInput struct {
 	Name        string `json:"name" form:"name"`                   // Configuration name
 	Timezone    string `json:"timezone,omitempty" form:"timezone"` // e.g., "America/New_York"
 	Description string `json:"description,omitempty" form:"description"`
+	// GroupID is the permission group (calendar.group_id) whose members may use
+	// the calendar. 0 selects the default "users" group. In a WizardRequest it is
+	// a team reference resolved like QueueInput.GroupID.
+	GroupID int `json:"group_id,omitempty" form:"group_id"`
 }
 
 // EmailTransportInput configures outbound SMTP for the system.
@@ -249,10 +253,9 @@ func (s *SetupAssistantService) CreateGroup(ctx context.Context, name, comments 
 	return toIntID(group.ID), nil
 }
 
-// CreateQueue creates a queue and assigns it to the given groups. The first
-// group becomes the queue's primary group_id (NOT NULL); all groups additionally
-// receive queue_group access rows. groupIDs must be real database group IDs.
-func (s *SetupAssistantService) CreateQueue(ctx context.Context, name string, groupIDs []int, comments string, createBy int) (int, error) {
+// CreateQueue creates a queue owned by groupID (queue.group_id, the queue's
+// one permission group). groupID must be a real, valid database group ID.
+func (s *SetupAssistantService) CreateQueue(ctx context.Context, name string, groupID int, comments string, createBy int) (int, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return 0, errors.New("queue name is required")
@@ -260,8 +263,11 @@ func (s *SetupAssistantService) CreateQueue(ctx context.Context, name string, gr
 	if len(name) > 200 {
 		return 0, errors.New("queue name too long (max 200 characters)")
 	}
-	if len(groupIDs) == 0 {
-		return 0, errors.New("queue requires at least one group")
+	if groupID <= 0 {
+		return 0, errors.New("queue requires a team")
+	}
+	if err := s.requireValidGroup(ctx, groupID); err != nil {
+		return 0, err
 	}
 	if createBy <= 0 {
 		createBy = 1
@@ -269,7 +275,7 @@ func (s *SetupAssistantService) CreateQueue(ctx context.Context, name string, gr
 
 	queue := &models.Queue{
 		Name:     name,
-		GroupID:  uint(groupIDs[0]),
+		GroupID:  uint(groupID),
 		Comment:  strings.TrimSpace(comments),
 		ValidID:  1,
 		CreateBy: uint(createBy),
@@ -296,19 +302,29 @@ func (s *SetupAssistantService) CreateQueue(ctx context.Context, name string, gr
 		}
 		return 0, fmt.Errorf("create queue: %w", err)
 	}
-	queueID := int(queue.ID)
+	return int(queue.ID), nil
+}
 
-	// Additional group access via the queue_group auxiliary table. Best-effort:
-	// a minimal schema without queue_group still leaves the primary group_id set.
-	for _, gid := range groupIDs {
-		if gid <= 0 {
-			continue
-		}
-		_, _ = s.db.ExecContext(ctx,
-			database.ConvertPlaceholders("INSERT INTO queue_group (queue_id, group_id) VALUES (?, ?)"),
-			queueID, gid) //nolint:errcheck // auxiliary table; absence is non-fatal
+// ErrInvalidGroup is wrapped by errors for a team (groups row) that does not
+// exist or is not valid.
+var ErrInvalidGroup = errors.New("invalid team")
+
+// requireValidGroup returns an error wrapping ErrInvalidGroup unless groupID is
+// an existing, valid group.
+func (s *SetupAssistantService) requireValidGroup(ctx context.Context, groupID int) error {
+	var validID int
+	err := s.db.QueryRowContext(ctx, database.ConvertPlaceholders(
+		"SELECT valid_id FROM groups WHERE id = ?"), groupID).Scan(&validID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("%w: team %d not found", ErrInvalidGroup, groupID)
 	}
-	return queueID, nil
+	if err != nil {
+		return fmt.Errorf("look up team %d: %w", groupID, err)
+	}
+	if validID != 1 {
+		return fmt.Errorf("%w: team %d is not valid", ErrInvalidGroup, groupID)
+	}
+	return nil
 }
 
 // CreateAgent creates a system user and grants rw access to the given groups
@@ -325,9 +341,8 @@ func (s *SetupAssistantService) CreateAgent(ctx context.Context, login, firstNam
 		createBy = 1
 	}
 
-	// Default password; admins reset via the users page. Hashed by the repo path
-	// only if SetPassword is used — here we store a placeholder that cannot be
-	// used to log in until reset.
+	// No password: an empty pw never verifies, so the agent cannot log in
+	// until an admin sets one on the users page.
 	user := &models.User{
 		Login:      login,
 		Password:   "", // no usable credential until an admin sets one
@@ -408,10 +423,10 @@ func (s *SetupAssistantService) AssignAgentToGroups(ctx context.Context, userID 
 	return nil
 }
 
-// AssignQueueToGroup grants an existing team ownership/access of an existing
-// queue. In the canonical GoatFlow schema a queue is owned by a single team via
-// queue.group_id (users gain queue access by belonging to that team), so the
-// first team supplied becomes the queue's owner. Idempotent.
+// AssignQueueToGroup makes groupID the team that owns an existing queue. A
+// queue has exactly one permission group (queue.group_id; users reach the
+// queue through membership in that team), so this replaces the current owner.
+// Idempotent.
 func (s *SetupAssistantService) AssignQueueToGroup(ctx context.Context, queueID int, groupID int, createBy int) error {
 	if queueID <= 0 {
 		return errors.New("queue is required")
@@ -428,11 +443,14 @@ func (s *SetupAssistantService) AssignQueueToGroup(ctx context.Context, queueID 
 		"SELECT 1 FROM queue WHERE id = ? AND valid_id = 1"), queueID).Scan(&exists); err != nil {
 		return errors.New("queue not found")
 	}
+	if err := s.requireValidGroup(ctx, groupID); err != nil {
+		return err
+	}
 	_, err := s.db.ExecContext(ctx, database.ConvertPlaceholders(
 		"UPDATE queue SET group_id = ?, change_time = NOW(), change_by = ? WHERE id = ?"),
 		groupID, createBy, queueID)
 	if err != nil {
-		return fmt.Errorf("grant team %d queue access: %w", groupID, err)
+		return fmt.Errorf("set team %d as queue owner: %w", groupID, err)
 	}
 	return nil
 }
@@ -748,7 +766,7 @@ func (s *SetupAssistantService) resolveMailQueue(ctx context.Context, m *MailAcc
 	if gid <= 0 {
 		return 0, 0, errors.New("creating a queue requires an owning team")
 	}
-	id, err := s.CreateQueue(ctx, name, []int{gid}, "", createBy)
+	id, err := s.CreateQueue(ctx, name, gid, "", createBy)
 	if err != nil {
 		return 0, 0, fmt.Errorf("create queue for mailbox: %w", err)
 	}
@@ -905,14 +923,39 @@ func (s *SetupAssistantService) CreateEmailTransport(ctx context.Context, cfg Em
 	return s.writeSysconfig(ctx, sysconfigKey, configJSON)
 }
 
+// defaultCalendarGroup names the permission group a business hours calendar is
+// assigned to when the request does not choose one (OTRS default group).
+const defaultCalendarGroup = "users"
+
 // CreateBusinessHours creates a business hours calendar for SLA calculations.
+// calendar.group_id is the permission group cfg.GroupID (default: "users");
+// an unknown or invalid group yields an error wrapping ErrInvalidGroup.
 func (s *SetupAssistantService) CreateBusinessHours(ctx context.Context, cfg BusinessHoursInput, createBy int) error {
 	if strings.TrimSpace(cfg.Name) == "" {
 		return errors.New("business hours name is required")
 	}
 
+	groupID := cfg.GroupID
+	switch {
+	case groupID < 0:
+		return fmt.Errorf("%w: team %d not found", ErrInvalidGroup, groupID)
+	case groupID == 0:
+		err := s.db.QueryRowContext(ctx, database.ConvertPlaceholders(
+			"SELECT id FROM groups WHERE name = ? AND valid_id = 1"), defaultCalendarGroup).Scan(&groupID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("default team %q not found; choose a team for the calendar", defaultCalendarGroup)
+		}
+		if err != nil {
+			return fmt.Errorf("look up team %q: %w", defaultCalendarGroup, err)
+		}
+	default:
+		if err := s.requireValidGroup(ctx, groupID); err != nil {
+			return err
+		}
+	}
+
 	query := `INSERT INTO calendar (group_id, name, salt_string, color, ticket_appointments, valid_id, create_time, create_by, change_time, change_by) VALUES (?, ?, UUID(), '#3498db', '{}', 1, NOW(), ?, NOW(), ?)`
-	_, err := s.db.ExecContext(ctx, database.ConvertPlaceholders(query), createBy, cfg.Name, createBy, createBy)
+	_, err := s.db.ExecContext(ctx, database.ConvertPlaceholders(query), groupID, cfg.Name, createBy, createBy)
 	if err != nil {
 		return fmt.Errorf("creating business hours calendar %q: %w", cfg.Name, err)
 	}
@@ -1047,7 +1090,7 @@ func (s *SetupAssistantService) LoadExistingCustomer(ctx context.Context, custom
 type CustomerConfiguration struct {
 	Customer        *CustomerCompany         `json:"customer"`
 	Groups          []GroupWithID            `json:"groups"`
-	Queues          []QueueWithGroupIDs      `json:"queues"`
+	Queues          []QueueWithGroup         `json:"queues"`
 	Agents          []AgentInputWithGroupIDs `json:"agents"`
 	MailAccounts    []MailAccountInput       `json:"mail_accounts"`
 	Services        []string                 `json:"services"`
@@ -1085,10 +1128,10 @@ type GroupWithID struct {
 	ID   int    `json:"id"`
 }
 
-// QueueWithGroupIDs holds queue with group assignments
-type QueueWithGroupIDs struct {
-	Name     string `json:"name"`
-	GroupIDs []int  `json:"group_ids"`
+// QueueWithGroup is a queue with its owning team (queue.group_id).
+type QueueWithGroup struct {
+	Name    string `json:"name"`
+	GroupID int    `json:"group_id"`
 }
 
 // AgentInputWithGroupIDs extends AgentInput with ID and group assignments
@@ -1121,10 +1164,10 @@ func (s *SetupAssistantService) loadCustomerGroups(ctx context.Context, customer
 	return groups, rows.Err()
 }
 
-func (s *SetupAssistantService) loadCustomerQueues(ctx context.Context, customerID string) ([]QueueWithGroupIDs, error) {
+func (s *SetupAssistantService) loadCustomerQueues(ctx context.Context, customerID string) ([]QueueWithGroup, error) {
 	// Queues are linked to customers through groups: queue.group_id → group_customer.group_id → customer_id
 	rows, err := s.db.QueryContext(ctx,
-		database.ConvertPlaceholders("SELECT DISTINCT q.id, q.name FROM queue q "+
+		database.ConvertPlaceholders("SELECT DISTINCT q.id, q.name, q.group_id FROM queue q "+
 			"JOIN group_customer gc ON q.group_id = gc.group_id "+
 			"WHERE gc.customer_id = ? AND q.valid_id = 1"),
 		customerID)
@@ -1133,14 +1176,14 @@ func (s *SetupAssistantService) loadCustomerQueues(ctx context.Context, customer
 	}
 	defer rows.Close()
 
-	var queues []QueueWithGroupIDs
+	var queues []QueueWithGroup
 	for rows.Next() {
 		var id int
-		var name string
-		if err := rows.Scan(&id, &name); err != nil {
+		var q QueueWithGroup
+		if err := rows.Scan(&id, &q.Name, &q.GroupID); err != nil {
 			return nil, err
 		}
-		queues = append(queues, QueueWithGroupIDs{Name: name})
+		queues = append(queues, q)
 	}
 	return queues, rows.Err()
 }
@@ -1345,7 +1388,7 @@ func (s *SetupAssistantService) CreateSLA(ctx context.Context, name string, firs
 }
 
 // ExecuteWizard creates every entity in WizardRequest in dependency order:
-// groups → queues (queue_group) → agents (group_user) → customers → SLAs. On
+// groups → queues (queue.group_id) → agents (group_user) → customers → SLAs. On
 // any failure it returns a WizardResult describing what succeeded and what
 // failed. It is not wrapped in a single transaction (entity creation spans
 // several repositories); on a fresh system partial state is re-runnable.
@@ -1387,9 +1430,13 @@ func (s *SetupAssistantService) ExecuteWizard(ctx context.Context, req WizardReq
 		return out
 	}
 
-	// 2. Queues (+ queue_group assignments).
+	// 2. Queues, each owned by one team (queue.group_id).
 	for _, q := range req.Queues {
-		id, err := s.CreateQueue(ctx, q.Name, resolveGroups(q.GroupIDs), q.Comments, createBy)
+		gid := 0
+		if refs := resolveGroups([]int{q.GroupID}); len(refs) == 1 {
+			gid = refs[0]
+		}
+		id, err := s.CreateQueue(ctx, q.Name, gid, q.Comments, createBy)
 		if err != nil {
 			res.Error = fmt.Sprintf("queue %q: %v", q.Name, err)
 			return res
@@ -1434,8 +1481,11 @@ func (s *SetupAssistantService) ExecuteWizard(ctx context.Context, req WizardReq
 		}
 		res.Created = append(res.Created, CreatedEntity{Kind: "canned_response", Name: "templates"})
 	}
-	// 7. Business hours.
+	// 7. Business hours, each assigned to one permission group (calendar.group_id).
 	for _, bh := range req.BusinessHours {
+		if refs := resolveGroups([]int{bh.GroupID}); len(refs) == 1 {
+			bh.GroupID = refs[0]
+		}
 		if err := s.CreateBusinessHours(ctx, bh, createBy); err != nil {
 			res.Error = fmt.Sprintf("business hours %q: %v", bh.Name, err)
 			return res
@@ -1460,8 +1510,8 @@ func (s *SetupAssistantService) ExecuteWizard(ctx context.Context, req WizardReq
 func (s *SetupAssistantService) GetCoreTasks() []PluginSetupTask {
 	return []PluginSetupTask{
 		{Plugin: "setup-assistant", ID: "create_group", Title: "Create a team", Category: "teams", Handler: "create_group", Icon: "fa-users", Description: "Add a team or department that owns queues and tickets."},
-		{Plugin: "setup-assistant", ID: "create_queue", Title: "Create a queue", Category: "queues", Handler: "create_queue", Icon: "fa-inbox", Description: "Add a ticket queue and grant teams access to it."},
-		{Plugin: "setup-assistant", ID: "assign_queue_group", Title: "Grant queue access", Category: "queues", Handler: "assign_queue_group", Icon: "fa-lock", Description: "Give an existing team access to an existing queue."},
+		{Plugin: "setup-assistant", ID: "create_queue", Title: "Create a queue", Category: "queues", Handler: "create_queue", Icon: "fa-inbox", Description: "Add a ticket queue owned by a team; members of that team get access to it."},
+		{Plugin: "setup-assistant", ID: "assign_queue_group", Title: "Change queue team", Category: "queues", Handler: "assign_queue_group", Icon: "fa-lock", Description: "Make an existing team the owner of an existing queue. A queue has one team, so this replaces its current team."},
 		{Plugin: "setup-assistant", ID: "create_agent", Title: "Add an agent", Category: "teams", Handler: "create_agent", Icon: "fa-user-plus", Description: "Create a system user and assign them to teams."},
 		{Plugin: "setup-assistant", ID: "assign_agent_group", Title: "Assign agent to team", Category: "teams", Handler: "assign_agent_group", Icon: "fa-user-tag", Description: "Add an existing agent to an existing team."},
 		{Plugin: "setup-assistant", ID: "create_customer", Title: "Onboard a customer", Category: "customers", Handler: "create_customer", Icon: "fa-building", Description: "Create a customer company, provision portal users, and generate temporary passwords in one go."},

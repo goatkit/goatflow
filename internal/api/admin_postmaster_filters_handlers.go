@@ -3,6 +3,9 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -19,115 +22,73 @@ type LookupItem struct {
 	Name string `json:"name"`
 }
 
-// loadQueuesForForm loads all valid queues for form dropdowns.
-func loadQueuesForForm(ctx context.Context, db *sql.DB) []LookupItem {
+// formLookupQueries are the dropdown sources shared by the admin filter and notification forms.
+var formLookupQueries = map[string]string{
+	"Queues":     `SELECT id, name FROM queue WHERE valid_id = 1 ORDER BY name`,
+	"Priorities": `SELECT id, name FROM ticket_priority WHERE valid_id = 1 ORDER BY id`,
+	"States":     `SELECT id, name FROM ticket_state WHERE valid_id = 1 ORDER BY name`,
+	"Types":      `SELECT id, name FROM ticket_type WHERE valid_id = 1 ORDER BY name`,
+	"Locks":      `SELECT id, name FROM ticket_lock_type ORDER BY id`,
+	"Agents": `SELECT id, CONCAT(first_name, ' ', last_name, ' (', login, ')') AS name
+		FROM users WHERE valid_id = 1 ORDER BY login`,
+	"Roles":  `SELECT id, name FROM roles WHERE valid_id = 1 ORDER BY name`,
+	"Groups": `SELECT id, name FROM groups WHERE valid_id = 1 ORDER BY name`,
+}
+
+// loadFormLookups loads the named dropdown lists (keys of formLookupQueries) into ctxOut.
+func loadFormLookups(ctx context.Context, db *sql.DB, ctxOut pongo2.Context, keys ...string) error {
 	if db == nil {
-		return nil
+		return errors.New("database unavailable")
 	}
-	query := database.ConvertPlaceholders(`
-		SELECT id, name FROM queue WHERE valid_id = 1 ORDER BY name`)
-	rows, err := db.QueryContext(ctx, query)
+	for _, key := range keys {
+		items, err := queryLookupItems(ctx, db, formLookupQueries[key])
+		if err != nil {
+			return fmt.Errorf("load %s: %w", key, err)
+		}
+		ctxOut[key] = items
+	}
+	return nil
+}
+
+func queryLookupItems(ctx context.Context, db *sql.DB, query string) ([]LookupItem, error) {
+	rows, err := db.QueryContext(ctx, database.ConvertPlaceholders(query))
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	defer rows.Close()
 
-	var items []LookupItem
+	items := []LookupItem{}
 	for rows.Next() {
 		var item LookupItem
-		if err := rows.Scan(&item.ID, &item.Name); err == nil {
-			items = append(items, item)
+		if err := rows.Scan(&item.ID, &item.Name); err != nil {
+			return nil, err
 		}
+		items = append(items, item)
 	}
-	return items
+	return items, rows.Err()
 }
 
-// loadPrioritiesForForm loads all valid priorities for form dropdowns.
-func loadPrioritiesForForm(ctx context.Context, db *sql.DB) []LookupItem {
-	if db == nil {
-		return nil
-	}
-	query := database.ConvertPlaceholders(`
-		SELECT id, name FROM ticket_priority WHERE valid_id = 1 ORDER BY id`)
-	rows, err := db.QueryContext(ctx, query)
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-
-	var items []LookupItem
-	for rows.Next() {
-		var item LookupItem
-		if err := rows.Scan(&item.ID, &item.Name); err == nil {
-			items = append(items, item)
-		}
-	}
-	return items
-}
-
-// loadStatesForForm loads all valid ticket states for form dropdowns.
-func loadStatesForForm(ctx context.Context, db *sql.DB) []LookupItem {
-	if db == nil {
-		return nil
-	}
-	query := database.ConvertPlaceholders(`
-		SELECT id, name FROM ticket_state WHERE valid_id = 1 ORDER BY name`)
-	rows, err := db.QueryContext(ctx, query)
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-
-	var items []LookupItem
-	for rows.Next() {
-		var item LookupItem
-		if err := rows.Scan(&item.ID, &item.Name); err == nil {
-			items = append(items, item)
-		}
-	}
-	return items
-}
-
-// loadTypesForForm loads all valid ticket types for form dropdowns.
-func loadTypesForForm(ctx context.Context, db *sql.DB) []LookupItem {
-	if db == nil {
-		return nil
-	}
-	query := database.ConvertPlaceholders(`
-		SELECT id, name FROM ticket_type WHERE valid_id = 1 ORDER BY name`)
-	rows, err := db.QueryContext(ctx, query)
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-
-	var items []LookupItem
-	for rows.Next() {
-		var item LookupItem
-		if err := rows.Scan(&item.ID, &item.Name); err == nil {
-			items = append(items, item)
-		}
-	}
-	return items
-}
+var postmasterFormLookups = []string{"Queues", "Priorities", "States", "Types"}
 
 // handleAdminPostmasterFilters renders the postmaster filters management page.
 func HandleAdminPostmasterFilters(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		renderPostmasterFiltersFallback(c, nil)
+		log.Printf("HandleAdminPostmasterFilters: database unavailable: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Database unavailable")
 		return
 	}
 
 	repo := repository.NewPostmasterFilterRepository(db)
 	filters, err := repo.List(c.Request.Context())
 	if err != nil {
-		renderPostmasterFiltersFallback(c, err)
+		log.Printf("HandleAdminPostmasterFilters: list filters: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Failed to load postmaster filters")
 		return
 	}
 
 	if getPongo2Renderer() == nil {
-		renderPostmasterFiltersFallback(c, nil)
+		sendErrorResponse(c, http.StatusInternalServerError, "Template renderer unavailable")
 		return
 	}
 
@@ -146,21 +107,26 @@ func HandleAdminPostmasterFilterNew(c *gin.Context) {
 		return
 	}
 
-	// Load lookup data for form dropdowns
-	db, _ := database.GetDB()
-	ctx := c.Request.Context()
-
-	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/postmaster_filter_form.pongo2", pongo2.Context{
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		log.Printf("HandleAdminPostmasterFilterNew: database unavailable: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database not available"})
+		return
+	}
+	tplCtx := pongo2.Context{
 		"Title":      "New Postmaster Filter",
 		"IsNew":      true,
 		"Filter":     nil,
-		"Queues":     loadQueuesForForm(ctx, db),
-		"Priorities": loadPrioritiesForForm(ctx, db),
-		"States":     loadStatesForForm(ctx, db),
-		"Types":      loadTypesForForm(ctx, db),
 		"User":       getUserMapForTemplate(c),
 		"ActivePage": "admin",
-	})
+	}
+	if err := loadFormLookups(c.Request.Context(), db, tplCtx, postmasterFormLookups...); err != nil {
+		log.Printf("HandleAdminPostmasterFilterNew: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load form options"})
+		return
+	}
+
+	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/postmaster_filter_form.pongo2", tplCtx)
 }
 
 // handleAdminPostmasterFilterEdit renders the filter edit form.
@@ -191,17 +157,19 @@ func HandleAdminPostmasterFilterEdit(c *gin.Context) {
 		return
 	}
 
-	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/postmaster_filter_form.pongo2", pongo2.Context{
+	tplCtx := pongo2.Context{
 		"Title":      "Edit Postmaster Filter",
 		"IsNew":      false,
 		"Filter":     filter,
-		"Queues":     loadQueuesForForm(ctx, db),
-		"Priorities": loadPrioritiesForForm(ctx, db),
-		"States":     loadStatesForForm(ctx, db),
-		"Types":      loadTypesForForm(ctx, db),
 		"User":       getUserMapForTemplate(c),
 		"ActivePage": "admin",
-	})
+	}
+	if err := loadFormLookups(ctx, db, tplCtx, postmasterFormLookups...); err != nil {
+		log.Printf("HandleAdminPostmasterFilterEdit: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load form options"})
+		return
+	}
+	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/postmaster_filter_form.pongo2", tplCtx)
 }
 
 // handleAdminPostmasterFilterGet returns a filter's details as JSON.
@@ -380,33 +348,4 @@ func HandleDeletePostmasterFilter(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Filter deleted successfully"})
-}
-
-// renderPostmasterFiltersFallback renders a basic fallback for when DB is unavailable.
-func renderPostmasterFiltersFallback(c *gin.Context, err error) {
-	accept := c.GetHeader("Accept")
-	if strings.Contains(strings.ToLower(accept), "application/json") {
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
-		} else {
-			c.JSON(http.StatusOK, gin.H{"success": true, "data": []repository.PostmasterFilter{}})
-		}
-		return
-	}
-
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	c.String(http.StatusOK, `<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="utf-8">
-	<title>Postmaster Filters</title>
-	<link rel="stylesheet" href="/static/css/output.css">
-</head>
-<body>
-	<main class="container mx-auto px-4 py-8">
-		<h1 class="text-2xl font-bold mb-4">Postmaster Filters</h1>
-		<p class="text-gray-600">Database unavailable. Please try again later.</p>
-	</main>
-</body>
-</html>`)
 }

@@ -11,6 +11,7 @@ spec:
   prefix: /api/types
   middleware:
     - unified_auth
+    - admin # ticket type create/update/delete is system configuration
   routes:
     - path: /
       method: POST

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -25,7 +26,6 @@ type queueUpdateRequest struct {
 	FollowUpLock    *int    `json:"follow_up_lock"`
 	Comments        *string `json:"comments"`
 	ValidID         *int    `json:"valid_id"`
-	GroupAccess     *[]int  `json:"group_access"`
 }
 
 // HandleUpdateQueueAPI handles PUT /api/v1/queues/:id.
@@ -134,7 +134,6 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 	followLockProvided := req.FollowUpLock != nil
 	commentsProvided := fieldProvided(raw, "comments")
 	validProvided := req.ValidID != nil
-	groupAccessProvided := req.GroupAccess != nil
 
 	name := current.Name
 	if nameProvided {
@@ -161,11 +160,16 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 
 	groupID := current.GroupID
 	if groupProvided {
-		if req.GroupID == nil || *req.GroupID <= 0 {
+		if *req.GroupID <= 0 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "group_id must be greater than zero"})
 			return
 		}
 		groupID = *req.GroupID
+	}
+	groupName, err := lookupQueueGroup(db, groupID)
+	if err != nil && (groupProvided || !errors.Is(err, errQueueGroupInvalid)) {
+		respondQueueGroupError(c, groupID, err)
+		return
 	}
 
 	systemAddress := current.SystemAddressID
@@ -264,13 +268,6 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 		followUpProvided || followLockProvided || commentsProvided || validProvided
 	changeBy := normalizeUserID(userID)
 
-	tx, err := db.Begin()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
-		return
-	}
-	defer func() { _ = tx.Rollback() }()
-
 	if updateRequired {
 		updateQuery := database.ConvertPlaceholders(`
 			UPDATE queue SET
@@ -288,7 +285,7 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 				change_by = ?
 			WHERE id = ?
 		`)
-		if _, err := tx.Exec(updateQuery,
+		if _, err := db.Exec(updateQuery,
 			name,
 			groupID,
 			nullIntArg(systemAddress),
@@ -307,38 +304,12 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 		}
 	}
 
-	if groupAccessProvided {
-		deleteQuery := database.ConvertPlaceholders(`
-			DELETE FROM queue_group WHERE queue_id = ?
-		`)
-		if _, err := tx.Exec(deleteQuery, queueID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update group access"})
-			return
-		}
-
-		if req.GroupAccess != nil {
-			for _, gid := range *req.GroupAccess {
-				insertQuery := database.ConvertPlaceholders(`
-					INSERT INTO queue_group (queue_id, group_id)
-					VALUES (?, ?)
-				`)
-				if _, err := tx.Exec(insertQuery, queueID, gid); err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update group access"})
-					return
-				}
-			}
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
-		return
-	}
-
 	resp := gin.H{
 		"id":             queueID,
 		"name":           name,
 		"group_id":       groupID,
+		"group_name":     groupName,
+		"groups":         queueGroupList(groupID, groupName),
 		"unlock_timeout": unlockTimeout,
 		"follow_up_id":   followUpID,
 		"follow_up_lock": followUpLock,
@@ -355,24 +326,6 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 	}
 	if comment.Valid {
 		resp["comments"] = comment.String
-	}
-
-	groupQuery := database.ConvertPlaceholders(`
-		SELECT group_id FROM queue_group
-		WHERE queue_id = ?
-	`)
-	rows, err := db.Query(groupQuery, queueID)
-	if err == nil {
-		defer rows.Close()
-		var groups []int
-		for rows.Next() {
-			var gid int
-			if err := rows.Scan(&gid); err == nil {
-				groups = append(groups, gid)
-			}
-		}
-		_ = rows.Err() //nolint:errcheck // Check for iteration errors
-		resp["group_access"] = groups
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": resp})

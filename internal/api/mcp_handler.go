@@ -52,6 +52,7 @@ func ensureMCPInit() {
 		}
 
 		mcpBridge = mcp.NewAPIBridge()
+		mcpBridge.SetPluginGate(pluginMCPGate{})
 
 		// Wire up plugin tools if plugin manager is available
 		if mgr := GetPluginManager(); mgr != nil {
@@ -70,6 +71,19 @@ func RefreshPluginMCPTools() {
 			mcpBridge.SetPluginCaller(mgr)
 		}
 	}
+}
+
+// pluginMCPGate applies plugin route middleware and the plugin args envelope
+// to MCP plugin tool calls, the same rules the HTTP plugin routes use.
+type pluginMCPGate struct{}
+
+func (pluginMCPGate) Authorize(pluginName string, middleware []string) ([]gin.HandlerFunc, error) {
+	return pluginRouteMiddleware(pluginName, middleware, false)
+}
+
+func (pluginMCPGate) Envelope(c *gin.Context, args map[string]any, pluginName string) {
+	stripPluginEnvelope(args)
+	addPluginEnvelope(c, args, pluginName)
 }
 
 func refreshPluginMCPTools(mgr *plugin.Manager) {
@@ -117,28 +131,14 @@ func refreshPluginMCPTools(mgr *plugin.Manager) {
 //	@Router			/mcp [post]
 func HandleMCP(c *gin.Context) {
 	ensureMCPInit()
-
-	// Get user context from auth middleware
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+	if mcpBridge == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "MCP server not initialized"})
 		return
 	}
 
-	userLogin := ""
-	if login, ok := c.Get("user_login"); ok {
-		userLogin, _ = login.(string)
-	}
-
-	userRole := ""
-	if role, ok := c.Get("user_role"); ok {
-		userRole, _ = role.(string)
-	}
-
-	// API token middleware sets user_role to "User" for all agents.
-	// Resolve the actual role from admin group membership so RBAC middleware works.
-	if userRole == "" || userRole == "User" {
-		userRole, _ = resolveUserRole(uint(userID.(int)))
+	user, ok := mcpUserContext(c)
+	if !ok {
+		return
 	}
 
 	// Read request body
@@ -149,10 +149,10 @@ func HandleMCP(c *gin.Context) {
 	}
 
 	// Create MCP server instance for this request
-	server := mcp.NewServer(userID.(int), userLogin, userRole, mcpBridge)
+	server := mcp.NewServer(mcpBridge)
 
 	// Handle the message
-	response, err := server.HandleMessage(c.Request.Context(), body)
+	response, err := server.HandleMessage(c.Request.Context(), user, body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

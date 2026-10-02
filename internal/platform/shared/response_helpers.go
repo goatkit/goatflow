@@ -31,20 +31,15 @@ func SendToastResponse(c *gin.Context, success bool, message, redirectPath strin
 			`, message)
 			c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 		} else {
-			html := fmt.Sprintf(`
-				<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert">
-					%s
-				</div>
-			`, message)
-			c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte(html))
+			SendToastError(c, http.StatusBadRequest, message)
 		}
 		return
 	}
 
 	if acceptsJSONResponse(c) {
-		status := http.StatusOK
 		if !success {
-			status = http.StatusBadRequest
+			SendToastError(c, http.StatusBadRequest, message)
+			return
 		}
 
 		payload := gin.H{
@@ -56,7 +51,7 @@ func SendToastResponse(c *gin.Context, success bool, message, redirectPath strin
 			payload["redirect"] = redirectPath
 		}
 
-		c.JSON(status, payload)
+		c.JSON(http.StatusOK, payload)
 		return
 	}
 
@@ -71,6 +66,20 @@ func SendToastResponse(c *gin.Context, success bool, message, redirectPath strin
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": success, "message": message})
+}
+
+// SendToastError sends a failure toast (HTMX partial or JSON) with the given HTTP status.
+func SendToastError(c *gin.Context, status int, message string) {
+	if c.GetHeader("HX-Request") == "true" {
+		html := fmt.Sprintf(`
+				<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert">
+					%s
+				</div>
+			`, message)
+		c.Data(status, "text/html; charset=utf-8", []byte(html))
+		return
+	}
+	c.JSON(status, gin.H{"success": false, "message": message})
 }
 
 func acceptsJSONResponse(c *gin.Context) bool {

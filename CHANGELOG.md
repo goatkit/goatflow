@@ -10,6 +10,56 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.10.0] - Unreleased
 
 ### Added
+- **LDAP / Active Directory agent login works.** The `ldap` auth provider used to return "not yet
+  implemented"; it now searches the directory with a read-only service account (or anonymously),
+  binds as the user to check the password, and maps the entry to the GoatFlow agent with the same
+  login. StartTLS/LDAPS verify the server certificate (custom CA via `LDAP_TLS_CA_FILE`), empty
+  passwords are always refused, the login is escaped before it goes into the filter, and a filter
+  matching more than one entry refuses the login. Optional: create agents on first login
+  (`LDAP_AUTO_CREATE_USERS`, initial groups `LDAP_INITIAL_GROUPS`), sync name/email
+  (`LDAP_AUTO_UPDATE_USERS`), restrict logins to `LDAP_AGENT_GROUPS`, and make the GoatFlow
+  `admin` group follow `LDAP_ADMIN_GROUPS`. Users without a directory entry fall through to the
+  next provider. The provider order can now be set with `AUTH_PROVIDERS=ldap,database`
+  (Config.yaml `Auth::Providers` was never actually read at startup; it is now). Invalid `LDAP_*`
+  settings stop the server at startup with an error per variable. The Helm chart gained
+  `config.authProviders` and `config.ldap.*`. See docs/LDAP.md; `make test-ldap-integration` runs
+  the OpenLDAP (testcontainers) integration tests. The `/api/v1/ldap/*` endpoints listed in the API
+  docs never existed and are no longer documented; the unused LDAP HTTP handlers were deleted.
+- **Admin → Reports & Analytics is a real page.** `/admin/reports` (the admin dashboard card) no
+  longer shows "under construction": it shows ticket totals, a created-vs-closed trend chart
+  (7/30 days or 12 months), per-queue open/backlog counts, agent activity, top customers, and CSV
+  (summary, ticket list) / JSON exports for the last 24 hours, 7 or 30 days. Everything comes from
+  `/api/v1/statistics/*`, so each viewer only sees tickets in queues they can read.
+- **Customer portal: own company pages.** `/customer/company` shows the customer's company
+  (name, customer ID, address, website, number of users) and `/customer/company/users` lists the
+  company's valid customer users (name, title, email). Both are read-only and only ever show the
+  logged-in customer's own valid company (`customer_user.customer_id`); agent-only company
+  comments are not shown. A "Company Info" link appears in the portal navigation when the
+  customer belongs to a company.
+- **Forgotten-password reset for agents and customers, and customer self-registration.** The
+  "Forgot password" links on `/login` and `/customer/login` now lead somewhere:
+  `/forgot-password` and `/customer/forgot-password` take a username or email address, answer the
+  same way whether or not it matches an account, and email a one-hour, single-use link
+  (`/reset-password`, `/customer/reset-password`). Tokens are stored only as SHA-256 hashes, are
+  bound to the account and the address they were sent to, and a newer request revokes older
+  links; the new password goes through the agent/customer password policy, and setting it ends
+  the account's open sessions. With `features.registration: true`, `/customer/register` emails a
+  24-hour confirmation link; following it and choosing a password creates the customer account
+  (login and customer ID = email, as OTRS's CustomerPanelCreateAccount does). Both forms are
+  limited to 10 posts per IP per hour and 3 emails per recipient per hour. Switches:
+  `features.lost_password` (now on by default, as in OTRS) and `features.registration` (off).
+  Email links are built from `BASE_URL` (the public URL; docker-compose passes `APP_URL`, Helm
+  `config.baseUrl`) and are not sent while it is unset, because the request Host header cannot be
+  trusted. The agent login page's "Sign up" link, `pages/register.pongo2` and the 501 stubs
+  `POST /api/auth/register` / `HandleRegisterAPI` are gone: agents are created by administrators.
+- **OTRS-compatible article storage with a working `goatflow-storage` CLI.** Attachments and raw
+  emails are stored either in the database (`storage.type: db`, default) or in a true OTRS
+  ArticleStorageFS tree (`fs`: `<STORAGE_PATH>/var/article/<YYYY/MM/DD>/<article_id>/` with
+  `.content_type`/`.content_id`/`.content_alternative`/`.disposition` sidecars and `plain.txt`), so
+  a mounted OTRS/Znuny `var/article` tree is read as-is. Every upload, download, thumbnail, viewer,
+  postmaster and plugin path uses the one `internal/storage` ArticleStore. `goatflow-storage
+  status|migrate|verify` copies between backends (repeatable, `-delete-source` explicit), ships in
+  the backend image, and needs no tracking tables. See docs/ARTICLE_STORAGE.md.
 - **Passkey management and recovery codes for passkey users (agents and customers).** Profile
   lists each passkey/security key with when it was added and last used, the host name it was set
   up on, and a "Does not work on this address" warning when that host differs from the current
@@ -175,8 +225,240 @@ project adheres to [Semantic Versioning](https://semver.org/).
   outside `InsertWithReturning`, `ON CONFLICT`, `::`, `||`, `INTERVAL '…'`, full-text functions).
   Reviewed exceptions carry `// sql-converted: <reason>`. See
   `docs/development/DATABASE_ACCESS_PATTERNS.md`.
+- **Customer company pages.** `/admin/customer/companies/:id/users`, `/tickets` and `/services`
+  were "Under Construction" placeholders; they are now real pages, linked from the company list
+  and the company edit form. Users lists the company's customer users with ticket counts and
+  status. Tickets lists `ticket.customer_id` tickets newest first (state, queue, priority, age,
+  link to the ticket, 50 per page), limited to queues the admin can read unless they are in the
+  `admin` group. Services is a matrix of valid services × the company's customer users stored in
+  `service_customer_user` (OTRS has no company-level service table); assignments to invalid
+  services are kept. The company edit form's Services tab, which ticked a service if any user had
+  it and then overwrote every user's assignments, the JSON modals on the company list and the
+  unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **Customer portal tickets get proper ticket numbers.** Tickets created at
+  `/customer/tickets/new` took a `YYYYMMDDHHMMSS` timestamp as their number instead of the
+  configured generator (e.g. DateChecksum), so two customers submitting in the same second got
+  "Failed to create ticket" (duplicate `tn`). They now go through the ticket repository like agent
+  tickets; an invalid `priority_id`/`service_id` answers 400.
+- **Turning 2FA off works on single-label host names.** On hosts such as `helpdesk` (no dot),
+  "Disable 2FA" removed the authenticator app and then answered 500 "failed to remove passkeys",
+  and the 2FA status, recovery-code and admin-override checks counted no passkeys, because
+  counting/deleting stored passkeys built a WebAuthn relying-party config from the request host.
+  Those steps are plain database operations now; the admin override also reports a failed passkey
+  removal instead of ignoring it.
+- **Stats dashboard widgets and `/api/plugins/stats/*` count the right tickets.** "New today",
+  the 30-day chart, `?range=` windows and overdue/SLA checks are computed from the server's local
+  time and bound as parameters instead of `CURDATE()`/`NOW()`/`DATE()` (which followed the
+  database time zone and differed between MySQL and PostgreSQL); `?range=` was ignored entirely
+  and now works (unknown values answer 400 `invalid_range`). Non-admin agents now see only queues
+  they hold `rw` on, directly or through a role (previously `ro` counted, role grants did not, and
+  every API route plus a call without a user returned all tickets). A failed query shows the
+  "widget unavailable" state or `{"error":"query_failed"}` instead of zeros. The SLA widget/route
+  no longer counts tickets without an SLA or closed tickets (whose escalation times are cleared)
+  as "met"; it reports open tickets within SLA per queue. Time tracking sums DECIMAL minutes
+  correctly, `by-priority` works on PostgreSQL, queue/agent names are HTML-escaped, the weekly
+  report reads admin emails from `UserEmail` preferences (the `users.email` column it queried does
+  not exist) and refuses to send invented zeros, and plugin logging uses the real `log` host
+  function. WASM plugins now get the real system clock (wazero's default was a fake 2022 clock)
+  and a `time_now` host function returning the server's local time with offset.
+- **Dashboard shows real data or says it can't.** A dashboard widget whose data cannot be loaded
+  (plugin error, database failure) now stays on the dashboard with a "This widget is currently
+  unavailable" notice instead of disappearing; the built-in Recent Tickets and Queue Status
+  widgets no longer turn a failed query (including a failed admin-group check) into "No recent
+  tickets"/"No queues available". An unreadable saved widget layout, a failed ticket-state lookup
+  on the ticket list and queue pages (these used to fall back to hard-coded state ids 1-4), and a
+  failed reminders-preference lookup (`/agent/api/preferences/reminders-enabled`,
+  `/api/notifications/pending`) are now server errors rather than invented defaults. The canned
+  `/api/dashboard/notifications`, `/quick-actions`, `/activity` and `/performance` endpoints (no UI
+  used them), the unused real-time dashboard template and its random-number "live" stats,
+  `dashboard-simple.pongo2`, `internal/components/dashboard`, the dashboard page's never-displayed
+  ticket counts (whose "closed today" used `CURDATE()`) and the API docs for `/api/v1/dashboard/*`
+  routes that never existed are removed; dashboard statistics are served by
+  `/api/v1/statistics/dashboard`.
+- **Admin changes record who made them.** Creating, updating or deleting agents, group and role
+  memberships, ticket types, services, SLAs, ACLs, roles, standard attachments, customer companies,
+  customer users, service assignments, customer group permissions, signatures, web services, system
+  maintenance windows and organisation captive plugins stamped `create_by`/`change_by` with user 1
+  (or fell back to it because the handler read the wrong context key); they now record the signed-in
+  admin and refuse unauthenticated writes with 401. `PUT /api/types/:id` keeps fields the body omits
+  instead of blanking the name and re-validating the type. The unrouted `PUT` branch of
+  `/admin/roles/:id/permissions` (which could never insert, lacking `create_time`) is removed.
+- **No more fake successes when the database is missing or a lookup fails.** `/api/canned-responses`
+  served a hard-coded in-memory list and ignored the `canned_response` table (including the
+  responses the setup assistant creates); it now reads and writes the table, adds create, update,
+  delete, use, share, copy, import, export and statistics, and refuses customers. `POST`, `PUT` and
+  `DELETE /api/v1/users*` now require an admin; any authenticated token could previously create
+  agents or reset passwords. `PUT /api/v1/users/:id` no longer reports success without a database,
+  stores the e-mail address in the `UserEmail` preference (email changes used to fail), rejects
+  login changes and blank names. Login (password, customer, OIDC, SAML, passkey) now fails closed
+  when the second-factor status or the admin-group lookup cannot be read instead of skipping 2FA or
+  issuing a non-admin token. Pages render a 500 instead of a "GoatFlow" stub when templates are
+  missing, the server refuses to start without a templates directory, the dashboard returns 500
+  instead of zero counts, scheduler jobs fail instead of "succeeding" without a database, a plugin
+  whose enabled state cannot be read stays disabled, and the postmaster DB filter stage fails
+  instead of skipping configured filters.
+- **Plugin routes, plugin UIs, the plugin API and MCP enforce the caller's permissions.** Plugin
+  route middleware other than `auth`/`admin`/`group:`/`plugin:`/`webhook` (including the
+  documented `customer`) was silently ignored, so such a route, a typo, or a malformed `plugin:`
+  entry served everyone; `agent` and `customer` now work and anything else keeps the route
+  unregistered. `group:` no longer admits a customer whose `customer_user` id matches a group
+  member's `users` id. Plugin UIs with `token` or `pin` auth had no auth at all and `auth.groups`
+  was ignored: `token` now authenticates like `session`, `pin` (no PIN flow exists) and unknown
+  methods leave the UI unregistered, groups are enforced, `admin_page`/`agent_app` UIs refuse
+  customers and `customer_app` UIs refuse agents. Client-sent `_is_admin`, `_customer_login`,
+  `_user_*` and other host envelope args no longer reach plugins. `POST
+  /api/v1/plugins/:name/call/:fn` is admin-only; plugin list, health, widgets and SSE channels
+  refuse customers. MCP tools run with the request's real auth context (an admin's API token
+  without `admin:*` scope no longer gets admin tools), tools whose middleware is missing are
+  refused, plugin tools apply their route's middleware, and SSE sessions are bound to agent vs
+  customer principals.
+- **Ticket write APIs save what they report, and test modes no longer fake them.**
+  `POST /api/tickets/:id/reply` never saved the reply. It now writes the article and its MIME
+  data in one transaction (internal replies are not visible to the customer), links time units
+  to that article and answers 404 for an unknown ticket. Messages added through
+  `/api/tickets/:id/messages` are stored as articles instead of in memory. Internal notes
+  (`/api/v1/tickets/:id/internal-notes`) are stored as internal articles; only the author or an
+  admin can edit or delete one. Assign answers 404 for an unknown ticket. `PUT /api/v1/tickets/:id`
+  no longer reports success for a missing ticket under `APP_ENV=test`. The `X-Test-Mode` header
+  no longer bypasses authentication on ticket update, ticket create and article create.
+  `DELETE /api/v1/tickets/:id` works for tickets without a customer (was 500) and answers 500
+  instead of 401 when the database is down. The unauthenticated in-memory
+  `/api/tickets/:id/merge`, `/unmerge` and `/merge-history` endpoints are removed; merging uses
+  `/agent/tickets/:id/merge` and bulk merge.
+- **`PUT /api/tickets/:id` and `GET /api/tickets/:id/history` are real.** The update answered 200
+  without writing anything; it now runs the same handler as `PUT /api/v1/tickets/:id`. Both
+  update the ticket and write one OTRS history entry per changed field (`TitleUpdate`, `Move`,
+  `TypeUpdate`, `StateUpdate`, `PriorityUpdate`, `OwnerUpdate`, `ResponsibleUpdate`,
+  `CustomerUpdate`, `Lock`/`Unlock`) in the same transaction. Unknown fields, wrongly typed values,
+  unknown or invalid owners/responsibles/lock types and a `null` responsible are rejected with 400
+  (an unknown owner or `null` responsible used to fail with 500). The history endpoint returned
+  two hard-coded entries; it now reads `ticket_history` with type, actor, queue, state and
+  priority names (`?limit=`, default 100). The `/agent/tickets/:id/draft` route only logged the
+  request and nothing called it; it and the ticket-zoom "auto-save draft" placeholder are removed,
+  as are the unrouted queue view/lock and customer-list stub handlers.
+- **Ticket search, filtering and the ticket API read paths.** `/api/tickets/search` always
+  returned no results (its query had two placeholders but got one argument, and the error was
+  swallowed); it now finds tickets by title or number. Search and `/api/tickets/filter` only
+  return tickets from queues the agent can read; before, they returned tickets from every queue.
+  The `X-Test-Mode` header no longer bypasses authentication on `GET /api/v1/tickets` and
+  `GET /api/v1/tickets/:id`. `GET /api/tickets` returns the real paginated ticket list instead of
+  an empty stub, and the ticket list's filter form now refreshes from `/tickets`. Ticket reads,
+  lists, messages, search and lookup lists no longer return canned sample tickets, queues or
+  states when the database is unavailable; they answer 500 with a logged error. Lookup dropdowns
+  list every ticket state instead of only the first five.
+- **Admin ticket-type API no longer skips the admin check under `APP_ENV=test` (security), and
+  admin pages stop faking data.** `POST/PUT/DELETE /api/types` skipped the admin role check when
+  `APP_ENV=test`. They now always require the Admin role, and with no database they return 500
+  instead of an echoed success. The admin type, state, service, postmaster filter, notification
+  event, customer-user service, setup task and dashboard pages, and `/api/queues`, return a logged
+  500 when the database, a query or the template renderer fails. They no longer return canned HTML
+  with 200, empty dropdowns or zero counts. Service create/update/delete no longer report success
+  without a database. Queue names are HTML-escaped in the `/api/queues` fragment. Unused
+  test-only queue handlers (`queue_frontend_handlers.go`, `queue_test_helpers.go`) are removed.
+- **Admin agent editing: agents with no title, unknown ids and password policy.** Opening an
+  agent whose `users.title` is NULL (the seeded root agent, any OTRS-imported agent without one)
+  answered 404 "User not found"; it now loads. Updating, deleting, toggling or resetting the
+  password of an agent id that does not exist answers 404 (updates used to insert a new agent
+  under `APP_ENV=test` and report success; the other actions reported success). Create and update
+  reject unknown groups with 400 instead of creating them (create) or ignoring them (update),
+  and write the agent and its groups in one transaction. Passwords set by an admin (create,
+  update, reset) must satisfy the agent password policy (`PreferencesGroups###Password`, the one
+  agents' own password change enforces) and, from the form, match the confirmation field; a
+  generated reset password satisfies the policy. `/admin/password-policy` now returns that
+  policy instead of a hard-coded one, and the users page checks it client-side with the same
+  rules. A missing database is a 500 on every admin agent endpoint, and the users page no
+  longer answers a bare `<h1>Users</h1>` in tests or when the database is down.
+- **Customer password change with no stored password** answered 500; it now answers 401
+  "Current password is incorrect".
+- **Admin permissions: "Clone Permissions" works.** The modal posted to
+  `/admin/permissions/clone`, which had no route (404). The route now replaces the target agent's
+  group permissions with a copy of the source agent's in one transaction, as the modal warns
+  (the service used to add the source's permissions on top of the target's); unknown users give
+  404 and source = target gives 400.
+- **Placeholder admin pages removed.** `/admin/settings` and `/admin/backup` showed "Under
+  Construction" and were linked from nowhere; the routes and handlers are gone, as are the
+  never-rendered `group_form`, `group_members` and `group_view` placeholder templates.
+- **Admin → Groups: search, status filter, sort, Enter and "Inactive" work.** The search box,
+  the Active/Inactive filter and the column sorting only logged to the browser console; they now
+  filter and sort the list (search covers name and description, a "No groups found" row shows when
+  nothing matches, and search/filter survive a reload). Pressing Enter in the Add/Edit Group modal
+  threw a script error instead of saving; it now submits the form with the usual required-field
+  check. Creating a group with status Inactive stored it as active (`POST /admin/groups` ignored
+  `valid_id`). The delete dialog claimed the action could not be undone and removed all
+  memberships, but delete sets the group inactive (OTRS-style) and keeps its members; the dialog
+  now says so. A failure to load a group for editing shows a proper Guru Meditation code.
+- **Attachments:** single-attachment URLs are now article-scoped
+  (`/api/tickets/:id/articles/:article_id/attachments/:file_id`, same under `/customer`). The
+  agent attachment routes now require ticket queue permissions. Filenames are HTML/JS-escaped in
+  attachment lists and safely encoded in `Content-Disposition`. The local-storage double write
+  (file on disk plus a DB copy) and the in-memory mock attachments are gone. Thumbnails are
+  ETag-validated instead of cached under `./storage/thumbs`. The old storage CLI wrote to tables
+  that existed on neither database (`article_storage_references`, `article_storage_migration`).
+- **OTRS import** keeps OTRS ids for every imported table and `content_path`, imports
+  `article_data_mime_attachment`/`article_data_mime_plain` byte-exact, maps columns by name, resets
+  id sequences on both drivers, and runs in one transaction that rolls back on the first rejected
+  row instead of reporting success. It now covers the whole OTRS 6 / Znuny 6.x schema with a
+  printed per-table plan and report: agent group/role/customer-group permissions (imported agents
+  log in and see exactly the queues OTRS granted), preferences, dynamic fields, time accounting,
+  flags, links, watchers, templates with attachments, auto responses, notifications, generic agent
+  jobs, ACLs, services/SLAs and changed settings (`sysconfig_modified`, matched by name); sessions,
+  caches, logs and daemon state are skipped with a reason. `-source` reads an OTRS database on
+  MySQL/MariaDB or PostgreSQL directly (decoding OTRS's base64 blobs on PostgreSQL); `-sql` still
+  reads mysqldump files. The import sets GoatFlow's ticket number counters from the imported ticket
+  numbers (OTRS generator and SystemID), so a ticket created after a same-day migration no longer
+  fails on a duplicate `tn` and AutoIncrement numbering continues. `make migrate-analyze`,
+  `migrate-import`, `migrate-import-force` and `otrs-import` all run goatflow-migrate with `SQL=` or
+  `SOURCE=`; `otrs-import` on MariaDB no longer drops every table and loads the dump raw.
+  `make migrate-import-force` no longer hides failures, and the migrate targets build a MySQL or
+  PostgreSQL URL from `DB_DRIVER`.
+- **Ticket attribute relations failed open.** When relations restricted a list (states,
+  priorities, types, services, queues) but none of the allowed values matched an item, the list
+  endpoints returned the full unrestricted list. They now return an empty list, matching OTRS ACL
+  semantics.
+- **Outbound webhooks never worked.** The webhook API queried tables (`webhooks`,
+  `webhook_deliveries`, `webhook`) that no migration creates, its handlers were not routed, and
+  nothing ever sent an event. Rebuilt end to end: migration 000028 (`gk_webhook`,
+  `gk_webhook_delivery`, `gk_webhook_event_cursor`); admin API at `/api/v1/webhooks` (CRUD,
+  `/events`, `/:id/test`, `/:id/deliveries`, `/deliveries/:id`, `/deliveries/:id/redeliver`);
+  the runner's `webhook-dispatch` task publishes `ticket.created`, `article.created`,
+  `ticket.closed`, `ticket.state_changed`, `ticket.queue_moved`, `ticket.assigned`,
+  `ticket.priority_changed`, `ticket.merged`, `ticket.escalated` and `ticket.updated` from the
+  ticket, article and ticket_history tables (every write path, exactly once) and delivers them
+  with `X-Webhook-Signature: sha256=<HMAC>`, recorded attempts and exponential-backoff retries.
+  Signing secrets are encrypted with `GOATFLOW_SECURE_KEY`, which the runner now also receives
+  (docker-compose, deploy/docker-compose.yml). The unused `internal/api/v1` webhook handlers and
+  the repository-less `platform/webhook` manager were removed.
+- **Webhooks admin page; admin-scoped API tokens reach admin API routes.** Admin > Webhooks
+  (`/admin/webhooks`, linked from the admin dashboard) lists webhooks with their last delivery,
+  creates and edits them (events, custom headers, retries, timeout, write-only signing secret with
+  a remove option), activates/deactivates and deletes them, sends test deliveries, and shows each
+  webhook's delivery log with payload, response and Redeliver. The YAML `admin` route middleware
+  now also admits callers the auth layer marks as admin-group members (`*` / `admin:*` API tokens,
+  admin JWT claims) instead of answering 403 unless the role is `Admin`. The unused
+  `features.webhooks` / `integrations.webhook` settings and the `FEATURE_WEBHOOKS` variable were
+  removed (each webhook's active flag is the switch), as was the empty routes/redirects.yaml.
+- **YAML route groups with an empty prefix leaked their middleware.** A group with `prefix: ""`
+  and middleware (routes/redirects.yaml: `auth`) registered it on the engine's root group, so every
+  group loaded after it (random map order) inherited it; e.g. unauthenticated API calls got a 303
+  login redirect instead of 401 on some starts.
+- **Internal notes could be shown to customers.** Creating an article through the article
+  repository turned "not visible to the customer" into "visible", so internal notes (ticket notes,
+  GenericAgent notes, internal-note ticket creation) appeared in the customer portal. Ticket notes
+  and close notes also failed outright on both databases (they used a communication channel that
+  does not exist).
+- **Article REST API (`/api/v1/tickets/:id/articles`) works on MySQL/MariaDB and PostgreSQL.**
+  Get, list, update and delete queried tables and columns that do not exist (`article_type`,
+  `article_attachment`, subject/body on `article`). They now read `article` +
+  `article_data_mime`, list attachments from the article content store, and delete removes the
+  article with its MIME data, attachments, flags and search index while keeping history and time
+  accounting. The API's `article_type` is mapped to communication channel + customer visibility
+  in one place (`internal/core/channel_mapping.go`); unknown types are rejected and customers
+  always write as customer.
+- **Plugin HostAPI article attachment calls use the article content store.** `pkg/plugin`
+  `ArticleAttachment` no longer carries `created_at`/`created_by`; `id` is the attachment's id
+  within its article.
 - **"Disable 2FA" left passkeys active, which could lock users out.** Turning 2FA off removed
   only the authenticator app; any passkey stayed required at sign-in, and a passkey made on another
   host name could not be used at all. Turning 2FA off now removes the authenticator app, every
@@ -222,8 +504,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
   waited for the URL to contain `search=…` and then counted matching rows once;
   the URL flips at navigation commit, before the new HTML is parsed, so the count
   could run on a half-loaded document and flake to 0. The count now polls
-  (`require.Eventually`, 15 s) until the row is present
-  (`tests/e2e/playwright/ticket_search_test.go`).
+  (`require.Eventually`, 15 s) until the row is present. The precondition before the search
+  counted the two new tickets right after the same commit-only navigation and flaked the same
+  way; it now waits for both rows (`tests/e2e/playwright/ticket_search_test.go`).
 - **PostgreSQL installs could not run migrations at all.** `migrations/postgres/` still held the
   old copies of three migrations after they were renumbered to match MySQL
   (`000005_customer_portal_sysconfig`, `000024_saml_fields`, `000025_user_table_for_idp_routing`), so
@@ -240,6 +523,43 @@ project adheres to [Semantic Versioning](https://semver.org/).
   now restores `/tmp` to the standard mode 1777: the base image ships `/tmp` as
   `0755 root:root`, and apt's unprivileged `_apt` signature-verification user
   cannot create its queue/config temp files there.
+- **Browser e2e pages crashed after a handful of navigations.** In the `make test-e2e-go` /
+  `test-e2e-playwright-go` container an authenticated page failed after 7-9 navigations with
+  `net::ERR_INSUFFICIENT_RESOURCES` or "Page crashed". Playwright starts Chromium with
+  `--disable-dev-shm-usage`, so the browser keeps every shared-memory segment as a file under
+  `TMPDIR`, which pointed at the bind-mounted repository (`/workspace/tmp`). Each navigation
+  leaves about 38 MB of 2 MiB shared-memory buffers in the renderer (one per `no-cache` asset
+  revalidated with a 304) until its garbage collector runs, so a nearly full repository
+  filesystem ran out of space within a few pages. The container now gets its own tmpfs for
+  `/tmp` (`E2E_TMPFS_SIZE`, default 4g) and `TMPDIR` points there.
+- **Deactivate/Activate on the customer company list did nothing.** The buttons posted without
+  `Accept: application/json`, so the server answered with a redirect to the HTML list,
+  `response.json()` failed and the page neither reloaded nor showed an error (the company was
+  deactivated anyway). The requests now ask for JSON and failures are shown. The company ID is
+  passed through a `data-` attribute instead of being written into the `onclick` JavaScript
+  string, and the unused company name argument (which an admin-entered name containing a quote
+  could break out of) is gone.
+- **Saving a company's Portal Settings no longer switches its portal off.** Saving the per-company
+  portal form with no override ticked stored `enabled=false`/`login_required=false` overrides,
+  which disabled the customer portal for that company, and a browser post landed on raw JSON. The
+  form now always posts every override flag, unticked settings stay inherited, and a browser post
+  returns to the company's Portal Settings tab with a success message. The "saved (sysconfig
+  unavailable)" fake-success branches and the unused, fake customer portal logo upload route are
+  removed; the portal settings help text now describes the per-company tab (15 languages).
+- **Web service dynamic fields can be created and tested from the admin UI.** The New/Edit forms
+  never listed web services and ignored every `webservice_*` input, so a WebserviceDropdown or
+  WebserviceMultiselect field always failed with "requires a webservice". The form now offers the
+  valid web services that have invokers (plus the field's current one), saves the web service,
+  invokers, stored/displayed values, separator and autocomplete limits, and rejects bad numbers
+  with 400. "Test Connection" calls `POST /admin/api/dynamic-fields/:id/webservice-test` and shows
+  the result instead of a placeholder toast; an unsaved field asks to be saved first. The field
+  list's tab badges show the number of fields per tab instead of the number of object types.
+- **Admin → Users: duplicate logins get a clear error.** Creating a user with an existing login
+  answered 200 with `success:false` (the page showed "An error occurred"), detection only matched
+  PostgreSQL's error text, and renaming a user to another agent's login returned 500. Both now
+  answer 409 "User already exists", which the page shows next to the login field.
+- **Admin → Queues lists disabled queues.** The page listed only valid queues, so a disabled queue
+  could not be re-enabled from the UI.
 - **`POST /api/v1/search` returned nothing on every database.** The built-in search backend
   (`postgresql`) used PostgreSQL full-text functions and queried tables that exist on neither
   driver (`tickets`, `queues`, `article.subject/body`), so every search errored and the handler
@@ -277,6 +597,21 @@ project adheres to [Semantic Versioning](https://semver.org/).
   never block a commit; it now does.
 
 ### Changed
+- **Placeholder pages removed.** The `pages/under_construction.pongo2` template and its helper,
+  the never-routed customer placeholder templates' `customer.placeholder_pages` i18n block, the
+  unused customer KB keys (`customer.knowledge_base`, `customer.kb_search`,
+  `customer.kb_article`), the `/admin/modules` dynamic-module comparison page
+  (`pages/admin/dynamic_test.pongo2`, `dynamic_test.*` keys; `/admin/modules/:module` is unchanged)
+  and the misrouted `GET /admin/groups/new` (the create handler, always 400) and
+  `GET /admin/groups/:id/edit` (JSON) are gone. The customer dashboard's Knowledge Base card is
+  shown only when the goat-kb plugin registers its `/customer/kb` menu item; before, it linked to
+  a 404 when the plugin was not installed.
+- **Storage config:** `storage.type` is `db` or `fs` (env `STORAGE_TYPE`). The unimplemented
+  `storage.s3` and the unused `storage.local.public_path` are removed, and so are the Helm `s3`
+  values. The unused `/api/files/*path` route and the unrendered `pages/agent/ticket_view.pongo2`
+  (with 12 i18n keys only it used) are deleted.
+- **Dead queue delete dialog removed from Admin → Queues.** No control ever opened it. Queues are
+  removed by disabling them with the status toggle; `DELETE /api/v1/queues/:id` is unchanged.
 - **Dead pre-plugin customer KB handlers removed.** `handleCustomerKnowledgeBase` /
   `handleCustomerKBSearch` / `handleCustomerKBArticle` (plus their `GlobalHandlerMap`
   registry entries and the commented-out `/kb*` route stubs) rendered
@@ -342,6 +677,66 @@ project adheres to [Semantic Versioning](https://semver.org/).
   New `make api-docs` target builds `Dockerfile.route-tools` and regenerates `generated-docs/`
   (OpenAPI + Swagger) from `routes/*.yaml`; the checked-in `docs/api/` and `generated-docs/`
   outputs are that regeneration.
+
+### Security
+- **Admin status comes only from admin-group membership.** The template user map treated any agent
+  whose login contained "admin" (or user id 1) as an admin, and helpers that build the current user
+  fell back to user 1 with role `Admin` when the request carried no identity. Admin now comes only
+  from the admin group (or the `Admin` role the auth layer derives from it); no identity means no
+  user. The unreachable routing fallback `HandleAgentNewTicket` (with the same login heuristic) and
+  the unused manifest-engine `checkAdmin` were deleted.
+- **Admin → Groups: group names can no longer inject script.** The delete button put the group
+  name into an inline JavaScript string and the "deleted" toast inserted it as HTML, so a group
+  named e.g. `x');alert(1);('` ran script for the admin deleting it. The name is now read from a
+  data attribute and the toast message is set as text.
+- **Test/demo login shortcuts removed.** `handleHTMXLogin` (`DEMO_LOGIN_*` issued a user-1 JWT,
+  `TEST_AUTH_*` returned the literal token `test-token`) and `handleDemoCustomerLogin` (fake
+  customer cookie) had no route and are deleted. Demo mode (`app.demo_mode`) never logs anyone in.
+- **Ticket create/update APIs honour role-based and admin permissions.** `PermissionService` read
+  only `group_user`, so agents granted a queue through a role (`role_user` → `group_role`) or via
+  the admin group got 403 from `POST/PUT /api/v1/tickets` although the queue middleware admitted
+  them. It now uses the same effective permissions as the queue access middleware.
+- **Public plugin UI rate limit enforced.** `UISpec.RateLimit` (requests per minute per client IP,
+  60 when unset) is now applied to public (`auth: none`) plugin UIs; excess requests get 429.
+- **Plugins can authorize event subscriptions.** `GKRegistration.EventAuthorizer` names a plugin
+  function the host calls with the caller's identity and the channel before opening
+  `GET /api/v1/plugins/:name/events/:channel`; only `{"allow": true}` subscribes. Plugins without
+  one keep the previous behaviour (every agent may subscribe). See docs/plugins/AUTHOR_GUIDE.md.
+- **Dashboard recent-tickets fragment escapes ticket data.** `/api/dashboard/recent-tickets`
+  inserted ticket titles, numbers, customers and state/priority names into HTML unescaped, so a
+  ticket title could carry markup or script into an agent's page; the dashboard-core widget also
+  left the ticket-number link unescaped. Both now escape every value.
+- **Every route now enforces who may call it, and a route-table test keeps it that way.**
+  `TestRouteAuthorizationMatrix` (internal/api/route_authz_test.go) builds the production router
+  (YAML routes, main-engine routes, built-in plugin routes) and sends every route requests as an
+  anonymous caller, a customer (JWT and API token), a non-admin agent (JWT and API token): the
+  classes the route excludes must get 401/403 or a login redirect. A new route without the right
+  middleware fails CI. Gaps closed:
+  - Customer logins reached agent routes: `auth`/`unified_auth` accepted customer JWTs and the
+    queue/ticket permission middlewares looked up the customer's `customer_user.id` as an agent
+    id (the id spaces overlap, so a customer could act with an agent's or the admin's queue
+    permissions, change that agent's preferences/2FA, read every ticket via `/api/v1`). A new
+    `agent` middleware now guards every agent route group, and `queue_*` / `ticket_access_*`
+    refuse customers. Customers keep `GET /api/v1/tickets`, `/tickets/:id` and its articles
+    (own tickets and customer-visible articles only; `customer_or_queue_ro`,
+    `ticket_access_customer_ro`). MCP and `/customer/api/v1/tokens` (now `customer` only) follow.
+  - The customer portal gate ran the route handler before checking the caller: any agent or
+    anonymous request executed customer handlers (e.g. saved theme/wallpaper preferences) and only
+    then got 403.
+  - Every agent's unscoped API token counted as admin (`admin` middleware passed); a token is now
+    admin only with the `admin:*` scope and an owner who is currently an admin.
+  - `/admin/debug/config-sources` and `/admin/debug/ticket-number` had no authentication; they are
+    now admin routes in `routes/admin.yaml`. `/api/v1/sse` (all plugin events) now needs a login.
+  - Agents could change system configuration: ticket types (`/api/types`), salutations,
+    signatures, system addresses (`/api/v1/...` POST/PUT), search reindex and the lookup cache are
+    admin only. `/api/v1/queues/:id/stats` and `/api/tickets/:id/messages` check queue access.
+  - `ticket_access_*` resolved a numeric path value as a ticket number first; when a ticket's tn
+    equalled another ticket's id the check used one ticket and the handler changed the other. The
+    permission is now required on every ticket the value can name. `queue_access_*` refuses
+    requests whose path, query, form and JSON `queue_id` disagree.
+  - `auth` routes passed `gf_` API tokens through with no identity; they now get 401.
+  - Unrouted "TODO" stub handlers (`handleAgentSearch`, `…SearchResults`, `…CustomerTickets`,
+    `…CustomerView`) and the `GET /tickets/api/search` stub route were removed.
 
 ## [0.9.0] - 2026-08-06
 

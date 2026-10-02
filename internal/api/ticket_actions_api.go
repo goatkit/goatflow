@@ -10,7 +10,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 )
 
 // HandleCloseTicketAPI handles ticket closure via API.
@@ -59,12 +61,9 @@ func HandleCloseTicketAPI(c *gin.Context) {
 		return
 	}
 
-	// Get user ID from context
-	userID := 1 // Default for testing
-	if id, exists := c.Get("user_id"); exists {
-		if intID, ok := id.(int); ok {
-			userID = intID
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	// Get database connection
@@ -100,7 +99,15 @@ func HandleCloseTicketAPI(c *gin.Context) {
 	}
 
 	// Check if ticket is already closed
-	if currentStateID == 2 || currentStateID == 3 {
+	currentTypeName, err := lookups.StateTypeNameOfState(c.Request.Context(), db, currentStateID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to resolve ticket state",
+		})
+		return
+	}
+	if lookups.IsClosedStateType(currentTypeName) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "Ticket is already closed",
@@ -109,13 +116,19 @@ func HandleCloseTicketAPI(c *gin.Context) {
 	}
 
 	// Determine close state based on resolution
-	var newStateID int
+	stateName := lookups.StateClosedUnsuccessful
 	if strings.ToLower(closeRequest.Resolution) == "successful" ||
 		strings.ToLower(closeRequest.Resolution) == "resolved" ||
 		strings.ToLower(closeRequest.Resolution) == "fixed" {
-		newStateID = 2 // closed successful
-	} else {
-		newStateID = 3 // closed unsuccessful
+		stateName = lookups.StateClosedSuccessful
+	}
+	newStateID, err := lookups.ID(c.Request.Context(), db, lookups.StateLookup, stateName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to resolve close state",
+		})
+		return
 	}
 
 	// Start transaction
@@ -161,11 +174,12 @@ func HandleCloseTicketAPI(c *gin.Context) {
 				change_time,
 				change_by
 			) VALUES (
-				?, 1, 1, 1, 0, NOW(), ?, NOW(), ?
+				?, ?, ?, 1, 0, NOW(), ?, NOW(), ?
 			) RETURNING id
 		`)
 
-		articleID, err := database.GetAdapter().InsertWithReturningTx(tx, insertArticleQuery, ticketID, userID, userID)
+		articleID, err := database.GetAdapter().InsertWithReturningTx(tx, insertArticleQuery, ticketID,
+			constants.ArticleSenderAgent, constants.CommunicationChannelEmail, userID, userID)
 		if err == nil {
 			// Insert article content
 			subject := fmt.Sprintf("Ticket Closed: %s", closeRequest.Resolution)
@@ -205,11 +219,6 @@ func HandleCloseTicketAPI(c *gin.Context) {
 	}
 
 	// Return success response
-	stateName := "closed successful"
-	if newStateID == 3 {
-		stateName = "closed unsuccessful"
-	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"success":    true,
 		"id":         ticketID,
@@ -265,12 +274,9 @@ func HandleReopenTicketAPI(c *gin.Context) {
 		return
 	}
 
-	// Get user ID from context
-	userID := 1 // Default for testing
-	if id, exists := c.Get("user_id"); exists {
-		if intID, ok := id.(int); ok {
-			userID = intID
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	// Get database connection
@@ -306,10 +312,27 @@ func HandleReopenTicketAPI(c *gin.Context) {
 	}
 
 	// Check if ticket is not closed
-	if currentStateID != 2 && currentStateID != 3 {
+	currentTypeName, err := lookups.StateTypeNameOfState(c.Request.Context(), db, currentStateID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to resolve ticket state",
+		})
+		return
+	}
+	if currentTypeName != lookups.StateTypeClosed {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "Ticket is not closed",
+		})
+		return
+	}
+
+	openStateID, err := lookups.ID(c.Request.Context(), db, lookups.StateLookup, lookups.StateOpen)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to resolve open state",
 		})
 		return
 	}
@@ -328,14 +351,14 @@ func HandleReopenTicketAPI(c *gin.Context) {
 	// Update ticket state to open
 	updateQuery := database.ConvertPlaceholders(`
 		UPDATE ticket 
-		SET ticket_state_id = 4,
+		SET ticket_state_id = ?,
 		    archive_flag = 0,
 		    change_time = NOW(),
 		    change_by = ?
 		WHERE id = ?
 	`)
 
-	_, err = tx.Exec(updateQuery, userID, ticketID)
+	_, err = tx.Exec(updateQuery, openStateID, userID, ticketID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -357,11 +380,12 @@ func HandleReopenTicketAPI(c *gin.Context) {
 			change_time,
 			change_by
 		) VALUES (
-			?, 1, 1, 1, 0, NOW(), ?, NOW(), ?
+			?, ?, ?, 1, 0, NOW(), ?, NOW(), ?
 		) RETURNING id
 	`)
 
-	articleID, err := database.GetAdapter().InsertWithReturningTx(tx, insertArticleQuery, ticketID, userID, userID)
+	articleID, err := database.GetAdapter().InsertWithReturningTx(tx, insertArticleQuery, ticketID,
+		constants.ArticleSenderAgent, constants.CommunicationChannelEmail, userID, userID)
 	if err == nil {
 		// Insert article content
 		insertMimeQuery := database.ConvertPlaceholders(`
@@ -398,8 +422,8 @@ func HandleReopenTicketAPI(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success":     true,
 		"id":          ticketID,
-		"state_id":    4,
-		"state":       "open",
+		"state_id":    openStateID,
+		"state":       lookups.StateOpen,
 		"reason":      reopenRequest.Reason,
 		"reopened_at": time.Now().UTC(),
 	})
@@ -452,12 +476,9 @@ func HandleAssignTicketAPI(c *gin.Context) {
 		return
 	}
 
-	// Get user ID from context
-	userID := 1 // Default for testing
-	if id, exists := c.Get("user_id"); exists {
-		if intID, ok := id.(int); ok {
-			userID = intID
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	// Get database connection
@@ -556,11 +577,12 @@ func HandleAssignTicketAPI(c *gin.Context) {
 				change_time,
 				change_by
 			) VALUES (
-				?, 1, 1, 0, 0, NOW(), ?, NOW(), ?
+				?, ?, ?, 0, 0, NOW(), ?, NOW(), ?
 			) RETURNING id
 		`)
 
-		articleID, err := database.GetAdapter().InsertWithReturningTx(tx, insertArticleQuery, ticketID, userID, userID)
+		articleID, err := database.GetAdapter().InsertWithReturningTx(tx, insertArticleQuery, ticketID,
+			constants.ArticleSenderAgent, constants.CommunicationChannelEmail, userID, userID)
 		if err == nil {
 			// Build assignment message
 			var previousAssignee string

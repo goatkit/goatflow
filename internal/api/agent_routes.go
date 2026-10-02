@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 )
 
 // formatAge formats a timestamp as a human-readable relative time.
@@ -122,71 +123,39 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 
 		// Apply status filter
 		if status == "open" {
-			// Include both "new" (type_id=1) and "open" (type_id=2) tickets
-			query += " AND t.ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2))"
+			// Include tickets of state type "new" and "open"
+			query += " AND t.ticket_state_id IN (" + lookups.NewOpenStateIDsSQL + ")"
 		} else if status == "pending" {
 			// Pending states have type_id 4 and 5
-			query += " AND t.ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (4, 5))"
+			query += " AND t.ticket_state_id IN (" + lookups.PendingStateIDsSQL + ")"
 		} else if status == "closed" {
 			// Closed states have type_id 3
-			query += " AND t.ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)"
+			query += " AND t.ticket_state_id IN (" + lookups.ClosedStateIDsSQL + ")"
 		} else if status == "not_closed" {
 			// Exclude closed state types (type_id 3)
-			query += " AND t.ticket_state_id NOT IN (SELECT id FROM ticket_state WHERE type_id = 3)"
+			query += " AND t.ticket_state_id NOT IN (" + lookups.ClosedStateIDsSQL + ")"
 		}
 
-		// Check if user is admin
-		var isAdmin bool
-		adminCheckErr := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT EXISTS(
-				SELECT 1 FROM group_user gu
-				JOIN groups g ON gu.group_id = g.id
-				WHERE gu.user_id = ? AND g.name = 'admin'
-			)
-		`), userID).Scan(&isAdmin)
-		if adminCheckErr != nil {
-			isAdmin = false // Fail-safe: if we can't check, assume not admin
+		// Only tickets in queues the agent can read (admins: all); a queue
+		// filter on an unreadable queue is refused.
+		scope, ok := resolveTicketReadScope(c, db, false)
+		if !ok {
+			return
 		}
-
-		// Apply queue filter - SECURITY: Always validate queue access for non-admin users
 		if queue != "all" {
-			// SECURITY CHECK: Verify user has access to the requested queue
-			if !isAdmin {
-				var hasAccess bool
-				accessCheckErr := db.QueryRow(database.ConvertPlaceholders(`
-					SELECT EXISTS(
-						SELECT 1 FROM queue q
-						WHERE q.id = ?
-						AND q.group_id IN (
-							SELECT group_id FROM group_user WHERE user_id = ?
-						)
-					)
-				`), queue, userID).Scan(&hasAccess)
-
-				if accessCheckErr != nil || !hasAccess {
-					// User requested a queue they don't have access to - return 403
-					c.JSON(http.StatusForbidden, gin.H{
-						"error": "You do not have permission to access tickets in this queue",
-					})
-					return
-				}
+			queueID, err := strconv.Atoi(queue)
+			if err != nil || !scope.canReadQueue(queueID) {
+				c.JSON(http.StatusForbidden, gin.H{
+					"error": "You do not have permission to access tickets in this queue",
+				})
+				return
 			}
 			query += " AND t.queue_id = ?"
-			args = append(args, queue)
-		} else {
-			// No specific queue requested - filter by user's accessible queues (non-admin only)
-			if !isAdmin {
-				// Regular agents see only queues they have access to through group membership
-				query += ` AND t.queue_id IN (
-					SELECT DISTINCT q2.id FROM queue q2
-					WHERE q2.group_id IN (
-						SELECT group_id FROM group_user WHERE user_id = ?
-					)
-				)`
-				args = append(args, userID)
-			}
-			// Admin sees all queues - no filter needed
+			args = append(args, queueID)
 		}
+		scopeCond, scopeArgs := scope.filter("t")
+		query += " AND " + scopeCond
+		args = append(args, scopeArgs...)
 
 		// Apply assignee filter
 		if assignee == "me" {
@@ -265,6 +234,9 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 		// Add ordering and pagination
 		sortBy := c.DefaultQuery("sort", "create_time")
 		sortOrder := c.DefaultQuery("order", "desc")
+		if sortOrder != "asc" {
+			sortOrder = "desc"
+		}
 		query += fmt.Sprintf(" ORDER BY t.%s %s", sanitizeSortColumn(sortBy), sortOrder)
 		query += " LIMIT ?"
 		args = append(args, perPage)
@@ -326,14 +298,10 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 		}
 		_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
 
-		// Get available queues for filter
+		// Queues offered in the filter: the ones the agent can read
+		queueCond, queueArgs := scope.queues.filter("q.id")
 		queueRows, err := db.Query(database.ConvertPlaceholders(`
-			SELECT DISTINCT q.id, q.name
-			FROM queue q
-			JOIN group_user gu ON q.group_id = gu.group_id
-			WHERE gu.user_id = ?
-			ORDER BY q.name
-		`), userID)
+			SELECT q.id, q.name FROM queue q WHERE `+queueCond+` ORDER BY q.name`), queueArgs...)
 
 		availableQueues := []map[string]interface{}{}
 		if err == nil && queueRows != nil {
@@ -551,26 +519,26 @@ func handleAgentQueues(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		log.Printf("handleAgentQueues: userID = %d", userID)
-
-		// Build query to get queues the user has access to
+		// Only queues the agent can read (admins: all), with their ticket counts
+		scope, ok := resolveTicketReadScope(c, db, false)
+		if !ok {
+			return
+		}
+		queueCond, queueArgs := scope.queues.filter("q.id")
 		query := `
 			SELECT q.id, q.name, q.comments, q.valid_id,
 				   COUNT(t.id) as ticket_count,
 			       COUNT(CASE WHEN t.ticket_state_id IN (
-			           SELECT id FROM ticket_state WHERE type_id IN (1, 2)
+			           ` + lookups.NewOpenStateIDsSQL + `
 			       ) THEN 1 END) as open_ticket_count
 			FROM queue q
 			LEFT JOIN ticket t ON q.id = t.queue_id
-			WHERE q.group_id IN (
-				SELECT group_id FROM group_user WHERE user_id = ?
-			)
+			WHERE ` + queueCond + `
 			GROUP BY q.id, q.name, q.comments, q.valid_id
 			ORDER BY q.name
 		`
 
-		// Execute query
-		rows, err := db.Query(database.ConvertPlaceholders(query), userID)
+		rows, err := db.Query(database.ConvertPlaceholders(query), queueArgs...)
 		if err != nil {
 			log.Printf("handleAgentQueues: error querying queues: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -634,53 +602,5 @@ func handleAgentQueues(db *sql.DB) gin.HandlerFunc {
 			"IsInAdminGroup": adminGroupFlag,
 			"Queues":         queues,
 		})
-	}
-}
-
-func handleAgentQueueView(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Queue view"})
-	}
-}
-
-func handleAgentQueueLock(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Queue lock"})
-	}
-}
-
-func handleAgentQueueUnlock(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Queue unlock"})
-	}
-}
-
-func handleAgentCustomers(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Customer list"})
-	}
-}
-
-func handleAgentCustomerView(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Customer view"})
-	}
-}
-
-func handleAgentCustomerTickets(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Customer tickets"})
-	}
-}
-
-func handleAgentSearch(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Search form"})
-	}
-}
-
-func handleAgentSearchResults(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Search results"})
 	}
 }

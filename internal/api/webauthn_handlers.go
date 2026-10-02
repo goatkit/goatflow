@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -597,7 +596,7 @@ func deleteWebAuthnCredential(c *gin.Context, db *sql.DB, account mfaAccount) {
 		return
 	}
 	auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "WEBAUTHN_REMOVED", UserLogin: account.webAuthnKey(), IsCustomer: account.isCustomer(), ClientIP: c.ClientIP(), Success: true, Details: "security key removed"})
-	if err := account.clearRecoveryCodesIfNoSecondFactor(db, c.Request); err != nil {
+	if err := account.clearRecoveryCodesIfNoSecondFactor(db); err != nil {
 		log.Printf("[SECURITY] failed to clear recovery codes after last passkey removed user_type=%s user=%s: %v", account.userType, account.webAuthnKey(), err)
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true})
@@ -666,17 +665,21 @@ func pendingCustomer2FASession(c *gin.Context) (*auth.PendingTOTPSession, bool) 
 
 func completeAgentSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth.PendingTOTPSession) {
 	jwtManager := shared.GetJWTManager()
-	var token string
-	if jwtManager != nil {
-		role, isAdmin := resolveUserRole(uint(session.UserID))
-		tokenStr, err := jwtManager.GenerateTokenWithLogin(uint(session.UserID), session.Username, session.Username, role, isAdmin, 1)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to generate token"})
-			return
-		}
-		token = tokenStr
-	} else {
-		token = fmt.Sprintf("demo_session_%d_%d", session.UserID, time.Now().Unix())
+	if jwtManager == nil {
+		log.Printf("passkey login: JWT manager unavailable for user %d", session.UserID)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "authentication unavailable"})
+		return
+	}
+	role, isAdmin, err := resolveUserRole(uint(session.UserID))
+	if err != nil {
+		log.Printf("passkey login: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to generate token"})
+		return
+	}
+	token, err := jwtManager.GenerateTokenWithLogin(uint(session.UserID), session.Username, session.Username, role, isAdmin, 1)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to generate token"})
+		return
 	}
 
 	sessionTimeout := constants.DefaultSessionTimeout

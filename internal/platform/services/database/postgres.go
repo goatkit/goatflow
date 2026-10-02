@@ -271,24 +271,6 @@ func (s *PostgresService) Query(ctx context.Context, query string, args ...inter
 	return rows, err
 }
 
-// QueryRow executes a query that returns a single row.
-func (s *PostgresService) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	s.mu.RLock()
-	db := s.db
-	s.mu.RUnlock()
-
-	if db == nil {
-		return nil
-	}
-
-	s.mu.Lock()
-	s.metrics.Requests++
-	s.mu.Unlock()
-
-	// sql-converted: DatabaseService pass-through; callers own conversion
-	return db.QueryRowContext(ctx, query, args...)
-}
-
 // Exec executes a query that doesn't return rows.
 func (s *PostgresService) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	s.mu.RLock()

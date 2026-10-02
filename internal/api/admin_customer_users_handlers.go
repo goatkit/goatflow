@@ -364,6 +364,10 @@ func HandleAdminCustomerUsersCreate(c *gin.Context) {
 		})
 		return
 	}
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
 
 	db, err := database.GetDB()
 	if err != nil {
@@ -394,8 +398,11 @@ func HandleAdminCustomerUsersCreate(c *gin.Context) {
 	// Hash password if provided
 	hashedPassword := ""
 	if req.Password != "" {
-		hasher := auth.NewPasswordHasher()
-		hashedPassword, _ = hasher.HashPassword(req.Password)
+		hashedPassword, err = auth.NewPasswordHasher().HashPassword(req.Password)
+		if err != nil {
+			c.JSON(passwordHashErrorStatus(err), gin.H{"success": false, "error": "Failed to hash password: " + err.Error()})
+			return
+		}
 	}
 
 	// Create customer user
@@ -405,12 +412,12 @@ func HandleAdminCustomerUsersCreate(c *gin.Context) {
 			phone, fax, mobile, street, zip, city, country, comments,
 			valid_id, create_time, change_time, create_by, change_by
 		) VALUES (
-			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, 1
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?
 		) RETURNING id`)
 	newID, err := database.GetAdapter().InsertWithReturning(db, insertQuery,
 		req.Login, req.Email, req.CustomerID, hashedPassword, req.Title,
 		req.FirstName, req.LastName, req.Phone, req.Fax, req.Mobile,
-		req.Street, req.Zip, req.City, req.Country, req.Comments, req.ValidID,
+		req.Street, req.Zip, req.City, req.Country, req.Comments, req.ValidID, actorID, actorID,
 	)
 
 	if err != nil {
@@ -477,6 +484,10 @@ func HandleAdminCustomerUsersUpdate(c *gin.Context) {
 		})
 		return
 	}
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
 
 	db, err := database.GetDB()
 	if err != nil {
@@ -501,24 +512,27 @@ func HandleAdminCustomerUsersUpdate(c *gin.Context) {
 
 	// Build update query
 	updateQuery := `
-		UPDATE customer_user SET 
+		UPDATE customer_user SET
 			login = ?, email = ?, customer_id = ?, title = ?,
 			first_name = ?, last_name = ?, phone = ?, fax = ?,
 			mobile = ?, street = ?, zip = ?, city = ?,
 			country = ?, comments = ?, valid_id = ?,
-			change_time = CURRENT_TIMESTAMP, change_by = 1`
+			change_time = CURRENT_TIMESTAMP, change_by = ?`
 
 	args := []interface{}{
 		req.Login, req.Email, req.CustomerID, req.Title,
 		req.FirstName, req.LastName, req.Phone, req.Fax,
 		req.Mobile, req.Street, req.Zip, req.City,
-		req.Country, req.Comments, req.ValidID,
+		req.Country, req.Comments, req.ValidID, actorID,
 	}
 
 	// Add password if provided (hash it first)
 	if req.Password != "" {
-		hasher := auth.NewPasswordHasher()
-		hashedPassword, _ := hasher.HashPassword(req.Password)
+		hashedPassword, err := auth.NewPasswordHasher().HashPassword(req.Password)
+		if err != nil {
+			c.JSON(passwordHashErrorStatus(err), gin.H{"success": false, "error": "Failed to hash password: " + err.Error()})
+			return
+		}
 		updateQuery += ", pw = ? WHERE id = ?"
 		args = append(args, hashedPassword, id)
 	} else {
@@ -574,6 +588,10 @@ func HandleAdminCustomerUsersDelete(c *gin.Context) {
 		})
 		return
 	}
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
 
 	db, err := database.GetDB()
 	if err != nil {
@@ -587,10 +605,10 @@ func HandleAdminCustomerUsersDelete(c *gin.Context) {
 	// Soft delete by setting valid_id to 2 (invalid)
 	updateQuery := database.ConvertPlaceholders(`
 		UPDATE customer_user
-		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1
+		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = ?
 		WHERE id = ?`)
 
-	result, err := db.Exec(updateQuery, id)
+	result, err := db.Exec(updateQuery, actorID, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -968,6 +986,10 @@ func HandleAdminCustomerUsersBulkAction(c *gin.Context) {
 		})
 		return
 	}
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
 
 	qb, err := database.GetQueryBuilder()
 	if err != nil {
@@ -983,13 +1005,13 @@ func HandleAdminCustomerUsersBulkAction(c *gin.Context) {
 
 	switch req.Action {
 	case "enable":
-		setClause = "valid_id = 1, change_time = CURRENT_TIMESTAMP, change_by = 1"
+		setClause = "valid_id = 1, change_time = CURRENT_TIMESTAMP, change_by = ?"
 		message = "Customer users enabled successfully"
 	case "disable":
-		setClause = "valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1"
+		setClause = "valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = ?"
 		message = "Customer users disabled successfully"
 	case "delete":
-		setClause = "valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1"
+		setClause = "valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = ?"
 		message = "Customer users deleted successfully"
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -1014,7 +1036,7 @@ func HandleAdminCustomerUsersBulkAction(c *gin.Context) {
 	}
 
 	// Use sqlx.In for safe IN clause expansion (eliminates SQL injection risk)
-	query, args, err := qb.In("UPDATE customer_user SET "+setClause+" WHERE id IN (?)", intIDs)
+	query, args, err := qb.In("UPDATE customer_user SET "+setClause+" WHERE id IN (?)", actorID, intIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,

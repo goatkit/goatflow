@@ -226,6 +226,15 @@ appName, err := host.ConfigGet(ctx, "app.name")
 title := host.Translate(ctx, "my_plugin.title")
 ```
 
+### Time (WASM plugins)
+
+WASM guests get the real system clock, so `time.Now()` is correct, but TinyGo
+has no timezone data and reports UTC. Ticket timestamps are stored as the
+server's local wall clock, so call the `time_now` host function to get the
+server's local time with its offset (`{"now": "2026-10-01T14:03:00.123+02:00"}`)
+and compute day boundaries from that. Bind them as `?` parameters rather than
+using SQL date functions, whose results depend on the database time zone.
+
 ### Plugin-to-Plugin Calls
 
 ```go
@@ -399,10 +408,41 @@ Routes: []plugin.RouteSpec{
 
 ### Middleware Options
 
-- `auth` — Requires authenticated user
-- `admin` — Requires admin role
-- `customer` — Requires customer portal access
-- `api` — API-only (no session)
+- `auth`: any authenticated caller (session cookie, Bearer JWT or API token), agent or customer
+- `admin`: authenticated admin
+- `agent`: authenticated agent; customers get 403
+- `customer`: authenticated customer; agents get 403
+- `group:<name>`: authenticated agent in the group (admins bypass, customers refused)
+- `plugin:<plugin>:<agentGroup>`: admins, agents in `agentGroup`, or customers whose organisation was granted the plugin
+- `webhook`: no session; rate limited and HMAC-signature verified
+
+A route with no middleware is public. A route listing any other name (a typo, or an unsupported entry) is not registered: the host logs an error rather than serve it without the gate you asked for.
+
+Every call carries the caller in reserved args set by the host: `_user_id`, `_user_login`, `_user_email`, `_user_role`, `_customer_login`, `_is_admin` (always present), `_org_id`, `_lang`, `_method`, `_path`, and `_body` / `_content_type` for non-JSON bodies. Values a client sends under these names are dropped. `_user_id` is a `customer_user` id when `_user_role` is `Customer`; never treat it as an agent id.
+
+The same middleware applies when a route is called as an MCP tool. Declared `MCPTools` use the middleware of the routes that share their handler, or `agent` when no route does; `webhook` routes are not callable through MCP. `POST /api/v1/plugins/:name/call/:fn` bypasses route middleware and is admin-only.
+
+### UI Auth
+
+`UISpec.Auth.Method` is `session` (default for `admin_page`, `agent_app`, `customer_app`), `token`, or `none` (default for `public_page`, `kiosk`). `session` and `token` both accept a session cookie, Bearer JWT or API token; `admin_page` and `agent_app` UIs then admit agents only and `customer_app` UIs customers only. `Auth.Groups` lists agent groups the caller must all belong to (admins bypass), e.g. `[]string{"admin"}` for an admin-only page. A UI with any other method, or with groups on a `none` or `customer_app` UI, is not registered.
+
+A public UI (auth method `none`) is rate limited per client IP: `UISpec.RateLimit` requests per minute, 60 when unset. Requests over the budget get `429 Too Many Requests` with `Retry-After`. `RateLimit` has no effect on authenticated UIs.
+
+## Live Events (SSE)
+
+`HostAPI.PublishEvent(ctx, channel, eventType, data)` pushes an event to browsers subscribed to `GET /api/v1/plugins/{name}/events/{channel}` (Server-Sent Events). Only authenticated agents can subscribe.
+
+To decide per caller and channel who may subscribe, name an authorizer function in the registration:
+
+```go
+return &plugin.GKRegistration{
+    Name:            "my-plugin",
+    EventAuthorizer: "authorize_events",
+    // ...
+}
+```
+
+Before opening a stream the host calls it with `{"channel": "<channel>"}` plus the caller envelope (`_user_id`, `_user_login`, `_user_role`, `_is_admin`, `_org_id`, ...). Return `{"allow": true}` to admit the subscription; `{"allow": false}` (or any other answer) is a `403`, and an error from the function is a `502`. Without an `EventAuthorizer` every authenticated agent can subscribe to every channel of the plugin, so don't publish data on a channel that not all agents may see unless you declare one.
 
 ## Widgets
 
@@ -607,7 +647,7 @@ Modify your plugin file/binary and the platform reloads it automatically with 50
 
 See the source tree for examples:
 
-- `plugins/stats/` — WASM plugin with dashboard widgets and i18n
+- `plugins/stats/` — WASM plugin with dashboard widgets, API routes and a scheduled job
 - `internal/platform/plugin/grpc/example/` — gRPC plugin with routes and widgets
 
 ## Getting Help

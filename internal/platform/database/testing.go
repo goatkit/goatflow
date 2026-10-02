@@ -37,6 +37,18 @@ func InitTestDB() error {
 			return nil
 		}
 	}
+	// Keep a live connection: reconfiguring the database service reconnects
+	// and closes the old pool, breaking everything that holds the previous
+	// *sql.DB (e.g. the ticket number store set up in a package TestMain).
+	if !IsTestDBOverride() {
+		if db, err := GetDB(); err == nil && db != nil && db.Ping() == nil {
+			testDBMu.Lock()
+			testDB = db
+			testDBOverride = false
+			testDBMu.Unlock()
+			return nil
+		}
+	}
 	// Ensure the service registry and database are configured
 	if err := adapter.AutoConfigureDatabase(); err != nil {
 		// Not fatal; adapter.GetDB may still return a direct connection
@@ -67,11 +79,6 @@ func InitTestDB() error {
 func CloseTestDB() {
 	// Intentionally no-op. Tests that open dedicated connections must
 	// manage their own lifecycle.
-}
-
-// InitDB is kept for backward-compatibility with older tests; delegates to InitTestDB.
-func InitDB() error {
-	return InitTestDB()
 }
 
 // dbStack holds saved DB states for nested SetDB/ResetDB calls.

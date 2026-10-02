@@ -21,8 +21,8 @@ func handleGetVAPIDKey(c *gin.Context) {
 }
 
 func handlePushSubscribe(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
+	uid, userType, ok := getUserContext(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "not authenticated"})
 		return
 	}
@@ -39,24 +39,13 @@ func handlePushSubscribe(c *gin.Context) {
 		return
 	}
 
-	userType := "agent"
-	if ic, _ := c.Get("is_customer"); ic == true {
-		userType = "customer"
-	}
-
-	uid, ok := userID.(int)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user context"})
-		return
-	}
-
 	db, err := database.GetDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database unavailable"})
 		return
 	}
 
-	if err := push.SaveSubscription(c.Request.Context(), db, uid, userType, req.Endpoint, req.Keys.P256dh, req.Keys.Auth); err != nil {
+	if err := push.SaveSubscription(c.Request.Context(), db, uid, string(userType), req.Endpoint, req.Keys.P256dh, req.Keys.Auth); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save subscription"})
 		return
 	}
@@ -65,6 +54,11 @@ func handlePushSubscribe(c *gin.Context) {
 }
 
 func handlePushUnsubscribe(c *gin.Context) {
+	uid, userType, ok := getUserContext(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "not authenticated"})
+		return
+	}
 	var req struct {
 		Endpoint string `json:"endpoint" binding:"required"`
 	}
@@ -79,7 +73,7 @@ func handlePushUnsubscribe(c *gin.Context) {
 		return
 	}
 
-	if err := push.DeleteSubscriptionByEndpoint(c.Request.Context(), db, req.Endpoint); err != nil {
+	if err := push.DeleteUserSubscription(c.Request.Context(), db, uid, string(userType), req.Endpoint); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove subscription"})
 		return
 	}

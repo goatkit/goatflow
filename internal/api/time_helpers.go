@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -16,9 +17,14 @@ import (
 )
 
 // saveTimeEntry persists a time accounting entry if inputs are valid.
+// Nothing to record (no minutes / no ticket) is not an error; a missing
+// database is, so callers report the entry as not saved.
 func saveTimeEntry(db *sql.DB, ticketID int, articleID *int, minutes int, userID int) error {
-	if db == nil || minutes <= 0 || ticketID <= 0 {
+	if minutes <= 0 || ticketID <= 0 {
 		return nil
+	}
+	if db == nil {
+		return errors.New("time accounting: database unavailable")
 	}
 	taRepo := repository.NewTimeAccountingRepository(db)
 	_, err := taRepo.Create(&models.TimeAccounting{
@@ -47,39 +53,48 @@ func saveTimeEntry(db *sql.DB, ticketID int, articleID *int, minutes int, userID
 	return nil
 }
 
-// isTimeUnitsRequired checks configuration (sysconfig or static config) for mandatory time entry on notes.
-func isTimeUnitsRequired(db *sql.DB) bool {
-	if required, ok := sysconfigBool(db, "Ticket::Frontend::AgentTicketNote###RequiredTimeUnits"); ok {
-		return required
+// isTimeUnitsRequired reports whether notes must carry a time entry. A sysconfig
+// value (modified, then default) wins; with no sysconfig row the static config
+// default applies. A missing database or failed lookup is returned as an error.
+func isTimeUnitsRequired(db *sql.DB) (bool, error) {
+	required, ok, err := sysconfigBool(db, "Ticket::Frontend::AgentTicketNote###RequiredTimeUnits")
+	if err != nil {
+		return false, err
+	}
+	if ok {
+		return required, nil
 	}
 	if cfg := config.Get(); cfg != nil {
-		return cfg.Ticket.Frontend.AgentTicketNote.RequiredTimeUnits
+		return cfg.Ticket.Frontend.AgentTicketNote.RequiredTimeUnits, nil
 	}
-	return false
+	return false, nil
 }
 
-func sysconfigBool(db *sql.DB, name string) (bool, bool) {
-	value, ok := sysconfigValue(db, name)
-	if !ok {
-		return false, false
+// sysconfigBool reads a boolean sysconfig setting. ok is false when no row
+// holds a value; a stored value that is not a boolean is an error.
+func sysconfigBool(db *sql.DB, name string) (value bool, ok bool, err error) {
+	raw, ok, err := sysconfigValue(db, name)
+	if err != nil || !ok {
+		return false, false, err
 	}
-	trimmed := strings.TrimSpace(value)
-	if trimmed == "" {
-		return false, true
+	trimmed := strings.Trim(strings.TrimSpace(raw), "\"'")
+	parsed, perr := strconv.ParseBool(trimmed)
+	if perr != nil {
+		return false, false, fmt.Errorf("sysconfig %q: value %q is not a boolean", name, raw)
 	}
-	if parsed, err := strconv.ParseBool(trimmed); err == nil {
-		return parsed, true
-	}
-	trimmed = strings.Trim(trimmed, "\"'")
-	if parsed, err := strconv.ParseBool(trimmed); err == nil {
-		return parsed, true
-	}
-	return false, true
+	return parsed, true, nil
 }
 
-func sysconfigValue(db *sql.DB, name string) (string, bool) {
-	if db == nil || strings.TrimSpace(name) == "" {
-		return "", false
+// sysconfigValue returns the effective value of a sysconfig setting, preferring
+// the newest valid sysconfig_modified row over sysconfig_default. ok is false
+// when neither table holds a value for name; a missing database or a failed
+// query is returned as an error.
+func sysconfigValue(db *sql.DB, name string) (string, bool, error) {
+	if strings.TrimSpace(name) == "" {
+		return "", false, errors.New("sysconfig: empty setting name")
+	}
+	if db == nil {
+		return "", false, fmt.Errorf("sysconfig %q: database unavailable", name)
 	}
 	var value sql.NullString
 
@@ -92,11 +107,11 @@ func sysconfigValue(db *sql.DB, name string) (string, bool) {
         LIMIT 1
     `)
 	err := db.QueryRow(query, name).Scan(&value)
-	if err != nil && err != sql.ErrNoRows {
-		return "", false
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return "", false, fmt.Errorf("sysconfig %q: modified lookup: %w", name, err)
 	}
 	if err == nil && value.Valid {
-		return value.String, true
+		return value.String, true, nil
 	}
 
 	query = database.ConvertPlaceholders(`
@@ -105,8 +120,14 @@ func sysconfigValue(db *sql.DB, name string) (string, bool) {
         WHERE name = ?
     `)
 	err = db.QueryRow(query, name).Scan(&value)
-	if err != nil || !value.Valid {
-		return "", false
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
 	}
-	return value.String, true
+	if err != nil {
+		return "", false, fmt.Errorf("sysconfig %q: default lookup: %w", name, err)
+	}
+	if !value.Valid {
+		return "", false, nil
+	}
+	return value.String, true, nil
 }

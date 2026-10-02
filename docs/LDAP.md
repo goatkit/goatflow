@@ -1,485 +1,159 @@
-# LDAP/Active Directory Integration
+# LDAP / Active Directory Authentication
 
-GoatFlow provides comprehensive LDAP and Active Directory integration for enterprise authentication and user management.
+GoatFlow can verify **agent** passwords against an LDAP directory (OpenLDAP, 389 Directory Server,
+Active Directory). It works like OTRS/Znuny's `AuthModule` LDAP backend:
 
-## Features
+1. Connect to the server (plain LDAP, StartTLS or LDAPS) and bind with a read-only service account
+   (or search anonymously when no service account is configured).
+2. Search for exactly one entry matching `LDAP_USER_FILTER`, with the typed login escaped (RFC 4515)
+   so it can never change the filter.
+3. Optionally read the user's groups (`LDAP_GROUP_*`).
+4. Bind as that entry with the typed password. An empty password is always rejected (LDAP would
+   treat it as an anonymous bind that "succeeds").
+5. Map the entry to the GoatFlow agent whose `login` is the directory username, optionally creating
+   the account on first login and syncing name, email and administrator rights on every login.
 
-- **Multi-server support** with connection pooling and failover
-- **Flexible attribute mapping** supporting both Active Directory and generic LDAP
-- **Real-time authentication** with caching and performance optimization
-- **Background synchronization** with configurable intervals
-- **Role-based access control** through LDAP group membership mapping
-- **Comprehensive audit logging** for all authentication attempts
-- **Bulk import capabilities** with dry-run testing
-- **Connection testing and validation** with detailed error reporting
-- **User/group mapping management** with automatic provisioning/deprovisioning
-- **TLS/StartTLS encryption** support for secure connections
+Customer-portal logins are not authenticated against LDAP; customers keep using database
+authentication.
 
-## Quick Start
+## Enabling LDAP
 
-### 1. Development Setup with OpenLDAP
+Two settings are needed:
 
-LDAP support is implemented in the application (see [LDAP_INTEGRATION.md](LDAP_INTEGRATION.md)).
-The OpenLDAP and phpLDAPadmin containers in `docker-compose.yml` are provided for testing but
-are currently commented out - point `LDAP_HOST`/`LDAP_PORT` at your own LDAP server.
+- `LDAP_ENABLED=true` plus the connection settings below.
+- `ldap` in the authentication provider order. Set it with the `AUTH_PROVIDERS` environment
+  variable (comma separated, e.g. `AUTH_PROVIDERS=ldap,database`) or with the `Auth::Providers`
+  setting in `config/Config.yaml`; the environment variable wins.
 
-When enabled, the development LDAP server is configured with:
-- **Domain**: `goatflow.local`
-- **Base DN**: `dc=goatflow,dc=local`
-- **Admin User**: `cn=admin,dc=goatflow,dc=local` (password: set `LDAP_ADMIN_PASSWORD` in `.env`)
-- **Readonly User**: `cn=readonly,dc=goatflow,dc=local` (password: set `LDAP_READONLY_PASSWORD` in `.env`)
-- **phpLDAPadmin**: http://localhost:8091 (for browsing LDAP data)
+Providers are tried in order until one accepts the login:
 
-### 2. Test Users
+- A login that has no directory entry is passed on to the next provider, so with
+  `ldap,database` local accounts such as `root@localhost` keep working.
+- A wrong LDAP password is also passed on. Agents created by LDAP have no local password, so the
+  database provider cannot accept them; an agent that already had a local password can still use it.
+  List only `ldap` (or clear the local passwords) to make the directory the only authority.
 
-The development LDAP server comes with sample users:
+At startup GoatFlow validates every `LDAP_*` setting when `LDAP_ENABLED=true` and refuses to start
+with an error naming each invalid variable. It does not contact the directory at startup, so an LDAP
+outage never prevents GoatFlow from starting; during an outage LDAP logins fail and the next provider
+is tried. A mismatch between `LDAP_ENABLED` and the provider list is logged as a warning.
 
-| Username | Email | Role | Department | Groups |
-|----------|-------|------|------------|--------|
-| `jadmin` | john.admin@goatflow.local | System Administrator | IT | Domain Admins, IT Team, Users |
-| `smitchell` | sarah.mitchell@goatflow.local | IT Manager | IT | IT Team, Agents, Managers, Users |
-| `mwilson` | mike.wilson@goatflow.local | Senior Support Agent | Support | Support Team, Agents, Managers, Users |
-| `lchen` | lisa.chen@goatflow.local | Support Agent | Support | Support Team, Agents, Users |
-| `djohnson` | david.johnson@goatflow.local | Junior Support Agent | Support | Support Team, Agents, Users |
-| `arodriguez` | alex.rodriguez@goatflow.local | Senior Developer | IT | IT Team, Developers, Users |
-| `ethompson` | emma.thompson@goatflow.local | QA Engineer | IT | IT Team, QA Team, Users |
-| `rtaylor` | robert.taylor@contractor.goatflow.local | Contractor | IT | Developers, Users |
-| `jdavis` | jennifer.davis@goatflow.local | Sales Manager | Sales | Managers, Users |
-| `canderson` | chris.anderson@goatflow.local | Customer Success Manager | Support | Support Team, Agents, Managers, Users |
+## Settings
 
-All test users use the password: `password123`
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `LDAP_ENABLED` | `false` | Turns the LDAP provider on (it must also be in the provider order). |
+| `LDAP_TYPE` | — | `openldap`, `389ds` or `active_directory`: fills in the filter and attribute defaults below. |
+| `LDAP_HOST` | — (required) | Server host name, without scheme or port. Used for certificate name checking. |
+| `LDAP_PORT` | `389`, or `636` with `LDAP_USE_SSL` | Server port. |
+| `LDAP_USE_SSL` | `false` | Connect with LDAPS (TLS from the first byte). |
+| `LDAP_USE_TLS` | `false` | Upgrade a plain connection with StartTLS. Cannot be combined with `LDAP_USE_SSL`. |
+| `LDAP_TLS_CA_FILE` | system roots | PEM file with the CA certificate(s) that signed the server certificate. |
+| `LDAP_SKIP_TLS_VERIFY` | `false` | Disables certificate verification. For testing only; a warning is logged. |
+| `LDAP_TIMEOUT` | `10` | Seconds allowed for connecting and for each LDAP operation (1–300). The login request's own deadline is honoured too. |
+| `LDAP_BIND_DN` | — | Service account DN used for searches. Empty means anonymous search. |
+| `LDAP_BIND_PASSWORD` | — | Service account password; required when `LDAP_BIND_DN` is set. |
+| `LDAP_BASE_DN` | — (required) | Base DN of the directory. |
+| `LDAP_USER_BASE_DN` | `LDAP_BASE_DN` | Subtree searched for users. |
+| `LDAP_USER_FILTER` | from `LDAP_TYPE` | User search filter with exactly one `%s`, replaced by the escaped login. Must match a single entry; a filter matching several entries refuses the login. |
+| `LDAP_IS_ACTIVE_DIRECTORY` | from `LDAP_TYPE` | Also match `userPrincipalName`: logins containing `@` are tried as a UPN. |
+| `LDAP_DOMAIN` | — | Active Directory only: logins without `@` are also tried as `<login>@<LDAP_DOMAIN>`. |
+| `LDAP_USERNAME_ATTRIBUTE` | from `LDAP_TYPE` | Attribute whose value is the GoatFlow agent login (e.g. `uid`, `sAMAccountName`). Empty keeps the login as typed. |
+| `LDAP_EMAIL_ATTRIBUTE` | from `LDAP_TYPE` | Attribute copied to the agent's email (`UserEmail` preference). |
+| `LDAP_FIRST_NAME_ATTRIBUTE` | from `LDAP_TYPE` | Attribute copied to the agent's first name. |
+| `LDAP_LAST_NAME_ATTRIBUTE` | from `LDAP_TYPE` | Attribute copied to the agent's last name. |
+| `LDAP_DISPLAY_NAME_ATTRIBUTE` | from `LDAP_TYPE` | Used for the names when first/last name are empty. |
+| `LDAP_GROUP_BASE_DN` | — | Subtree searched for the user's groups. Required for `LDAP_AGENT_GROUPS` / `LDAP_ADMIN_GROUPS`. |
+| `LDAP_GROUP_FILTER` | from `LDAP_TYPE` | Group search filter with exactly one `%s`, replaced by the escaped member value. |
+| `LDAP_GROUP_MEMBER_VALUE` | `dn` | What replaces `%s` in the group filter: `dn` (user DN, for `member`/`uniqueMember`) or `username` (for `memberUid`). |
+| `LDAP_GROUP_ATTRIBUTE` | `cn` | Group attribute compared with the names in the two lists below. |
+| `LDAP_AGENT_GROUPS` | — | Comma-separated group names. When set, only members of these groups (or of `LDAP_ADMIN_GROUPS`) may log in via LDAP. |
+| `LDAP_ADMIN_GROUPS` | — | Comma-separated group names. When set, membership of the GoatFlow `admin` group follows LDAP on every login: added for members, removed for everyone else. |
+| `LDAP_AUTO_CREATE_USERS` | `false` | Create the GoatFlow agent on first successful LDAP login. Without it, the agent must already exist with a matching login. |
+| `LDAP_AUTO_UPDATE_USERS` | `false` | Overwrite first name, last name and email from the directory on every login. |
+| `LDAP_INITIAL_GROUPS` | `users` | Comma-separated GoatFlow groups (rw) given to agents created by `LDAP_AUTO_CREATE_USERS`. Every group must exist. |
 
-### 3. Configuration
+`LDAP_TYPE` defaults:
 
-Configure LDAP integration via environment variables or the API:
+| | `openldap` / `389ds` | `active_directory` |
+|---|---|---|
+| `LDAP_USER_FILTER` | `(&(objectClass=inetOrgPerson)(uid=%s))` | `(&(objectClass=user)(sAMAccountName=%s))` |
+| `LDAP_USERNAME_ATTRIBUTE` | `uid` | `sAMAccountName` |
+| `LDAP_EMAIL_ATTRIBUTE` | `mail` | `mail` |
+| `LDAP_FIRST_NAME_ATTRIBUTE` / `LDAP_LAST_NAME_ATTRIBUTE` | `givenName` / `sn` | `givenName` / `sn` |
+| `LDAP_DISPLAY_NAME_ATTRIBUTE` | `cn` | `displayName` |
+| `LDAP_GROUP_FILTER` | openldap: `(&(objectClass=groupOfNames)(member=%s))`; 389ds: `(&(objectClass=groupOfUniqueNames)(uniqueMember=%s))` | `(&(objectClass=group)(member=%s))` |
+| `LDAP_IS_ACTIVE_DIRECTORY` | `false` | `true` |
+
+## Account mapping
+
+- The agent login is the value of `LDAP_USERNAME_ATTRIBUTE` from the directory entry, so `JDoe` and
+  `jdoe` map to the same agent.
+- An agent marked invalid in GoatFlow cannot log in, whatever the directory says.
+- Agents created by LDAP get an empty local password, the configured initial groups and their email
+  as the `UserEmail` preference. `first_name` falls back to the display name, then the login.
+- Group membership other than the `admin` group (`LDAP_ADMIN_GROUPS`) is managed in GoatFlow.
+- Directory errors (unreachable server, TLS failure, wrong service-account password, failed group
+  search) fail the LDAP attempt closed and are logged with the cause; the user only sees
+  "invalid credentials".
+
+## Examples
+
+OpenLDAP with StartTLS and a private CA:
 
 ```bash
-# Environment variables (.env file)
-LDAP_HOST=openldap
-LDAP_PORT=389
-LDAP_BASE_DN=dc=goatflow,dc=local
-LDAP_BIND_DN=cn=readonly,dc=goatflow,dc=local
-LDAP_BIND_PASSWORD=readonly123
-
-# User search configuration
-LDAP_USER_SEARCH_BASE=ou=Users,dc=goatflow,dc=local
-LDAP_USER_FILTER=(&(objectClass=inetOrgPerson)(uid={username}))
-
-# Group search configuration
-LDAP_GROUP_SEARCH_BASE=ou=Groups,dc=goatflow,dc=local
-LDAP_GROUP_FILTER=(objectClass=groupOfNames)
-
-# Attribute mapping
-LDAP_ATTR_USERNAME=uid
-LDAP_ATTR_EMAIL=mail
-LDAP_ATTR_FIRST_NAME=givenName
-LDAP_ATTR_LAST_NAME=sn
-LDAP_ATTR_DISPLAY_NAME=displayName
-
-# Synchronization
+AUTH_PROVIDERS=ldap,database
+LDAP_ENABLED=true
+LDAP_TYPE=openldap
+LDAP_HOST=ldap.example.com
+LDAP_USE_TLS=true
+LDAP_TLS_CA_FILE=/etc/goatflow/ldap-ca.pem
+LDAP_BIND_DN=cn=goatflow,ou=system,dc=example,dc=com
+LDAP_BIND_PASSWORD=change-me
+LDAP_BASE_DN=dc=example,dc=com
+LDAP_USER_BASE_DN=ou=people,dc=example,dc=com
+LDAP_GROUP_BASE_DN=ou=groups,dc=example,dc=com
+LDAP_AGENT_GROUPS=helpdesk
+LDAP_ADMIN_GROUPS=goatflow-admins
 LDAP_AUTO_CREATE_USERS=true
 LDAP_AUTO_UPDATE_USERS=true
-LDAP_SYNC_INTERVAL=1h
-
-# Role mapping
-LDAP_ADMIN_GROUPS=Domain Admins,IT Team
-LDAP_AGENT_GROUPS=Agents,Support Team,Managers
-LDAP_USER_GROUPS=Users
 ```
 
-## API Usage
-
-### Configure LDAP
+Active Directory over LDAPS:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/ldap/configure \
-  -H "Content-Type: application/json" \
-  -d '{
-    "host": "openldap",
-    "port": 389,
-    "base_dn": "dc=goatflow,dc=local",
-    "bind_dn": "cn=readonly,dc=goatflow,dc=local",
-    "bind_password": "readonly123",
-    "user_search_base": "ou=Users,dc=goatflow,dc=local",
-    "user_filter": "(&(objectClass=inetOrgPerson)(uid={username}))",
-    "auto_create_users": true,
-    "auto_update_users": true,
-    "attribute_map": {
-      "username": "uid",
-      "email": "mail",
-      "first_name": "givenName",
-      "last_name": "sn",
-      "display_name": "displayName"
-    }
-  }'
+AUTH_PROVIDERS=ldap,database
+LDAP_ENABLED=true
+LDAP_TYPE=active_directory
+LDAP_HOST=dc01.corp.example.com
+LDAP_USE_SSL=true
+LDAP_BIND_DN=CN=svc-goatflow,OU=Service Accounts,DC=corp,DC=example,DC=com
+LDAP_BIND_PASSWORD=change-me
+LDAP_BASE_DN=DC=corp,DC=example,DC=com
+LDAP_DOMAIN=corp.example.com
+LDAP_GROUP_BASE_DN=OU=Groups,DC=corp,DC=example,DC=com
+# Nested groups:
+# LDAP_GROUP_FILTER=(&(objectClass=group)(member:1.2.840.113556.1.4.1941:=%s))
+LDAP_AGENT_GROUPS=GoatFlow Agents
+LDAP_ADMIN_GROUPS=GoatFlow Admins
+LDAP_AUTO_CREATE_USERS=true
 ```
 
-### Test Connection
-
-```bash
-curl -X POST http://localhost:8080/api/v1/ldap/test \
-  -H "Content-Type: application/json" \
-  -d '{
-    "host": "openldap",
-    "port": 389,
-    "base_dn": "dc=goatflow,dc=local",
-    "bind_dn": "cn=readonly,dc=goatflow,dc=local",
-    "bind_password": "readonly123"
-  }'
-```
-
-### Authenticate User
-
-```bash
-curl -X POST http://localhost:8080/api/v1/ldap/authenticate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "jadmin",
-    "password": "password123"
-  }'
-```
-
-### Get User Information
-
-```bash
-curl http://localhost:8080/api/v1/ldap/users/jadmin
-```
-
-### Synchronize Users
-
-```bash
-curl -X POST http://localhost:8080/api/v1/ldap/sync/users
-```
-
-### Import Specific Users
-
-```bash
-curl -X POST http://localhost:8080/api/v1/ldap/import/users \
-  -H "Content-Type: application/json" \
-  -d '{
-    "usernames": ["jadmin", "smitchell", "mwilson"],
-    "dry_run": false
-  }'
-```
+Kubernetes: see the `ldap` section of the Helm chart's `values.yaml`; the bind password is read from
+a Secret.
 
 ## Testing
 
-### Unit Tests
+Unit tests (configuration validation, filter escaping):
 
 ```bash
-# Run unit tests
-make toolbox-exec ARGS="go test ./internal/service -v -run TestLDAPService"
+make toolbox-exec ARGS="go test ./internal/platform/ldap/"
 ```
 
-### Integration Tests
-
-Integration tests require a running OpenLDAP server:
+Integration tests start an OpenLDAP container with testcontainers, then log in through
+`POST /api/auth/login` against the test database. They need Docker and the test database
+(`make test-db-up`), and fail rather than skip when either is missing:
 
 ```bash
-# Start OpenLDAP container
-make up
-
-# Run integration tests
-LDAP_INTEGRATION_TESTS=true make toolbox-exec ARGS="go test ./internal/service -v -run TestLDAPIntegration"
-
-# Run with race detection
-LDAP_INTEGRATION_TESTS=true make toolbox-exec ARGS="go test ./internal/service -v -race -run TestLDAPIntegration"
-
-# Run benchmarks
-LDAP_INTEGRATION_TESTS=true make toolbox-exec ARGS="go test ./internal/service -v -bench=BenchmarkLDAP"
+make test-ldap-integration
 ```
-
-### Test Coverage
-
-```bash
-# Generate coverage report
-LDAP_INTEGRATION_TESTS=true make toolbox-exec ARGS="go test ./internal/service -coverprofile=coverage.out"
-make toolbox-exec ARGS="go tool cover -html=coverage.out"
-```
-
-## Production Configuration
-
-### Active Directory
-
-```env
-# Active Directory configuration
-LDAP_HOST=ad.company.com
-LDAP_PORT=389
-LDAP_BASE_DN=dc=company,dc=com
-LDAP_BIND_DN=cn=goatflow-service,ou=Service Accounts,dc=company,dc=com
-LDAP_BIND_PASSWORD=secure-service-password
-
-# User search
-LDAP_USER_SEARCH_BASE=ou=Users,dc=company,dc=com
-LDAP_USER_FILTER=(&(objectClass=user)(sAMAccountName={username}))
-
-# Group search
-LDAP_GROUP_SEARCH_BASE=ou=Groups,dc=company,dc=com
-LDAP_GROUP_FILTER=(objectClass=group)
-
-# Active Directory attribute mapping
-LDAP_ATTR_USERNAME=sAMAccountName
-LDAP_ATTR_EMAIL=mail
-LDAP_ATTR_FIRST_NAME=givenName
-LDAP_ATTR_LAST_NAME=sn
-LDAP_ATTR_DISPLAY_NAME=displayName
-LDAP_ATTR_GROUPS=memberOf
-
-# Security
-LDAP_USE_TLS=true
-LDAP_START_TLS=false
-LDAP_INSECURE_SKIP_VERIFY=false
-
-# Role mapping based on AD groups
-LDAP_ADMIN_GROUPS=Domain Admins,GoatFlow Administrators
-LDAP_AGENT_GROUPS=GoatFlow Agents,Help Desk,Support Team
-LDAP_USER_GROUPS=Domain Users
-```
-
-### OpenLDAP/Generic LDAP
-
-```env
-# Generic LDAP configuration
-LDAP_HOST=ldap.company.com
-LDAP_PORT=389
-LDAP_BASE_DN=dc=company,dc=com
-LDAP_BIND_DN=cn=goatflow-bind,ou=System,dc=company,dc=com
-LDAP_BIND_PASSWORD=secure-bind-password
-
-# User search
-LDAP_USER_SEARCH_BASE=ou=People,dc=company,dc=com
-LDAP_USER_FILTER=(&(objectClass=inetOrgPerson)(uid={username}))
-
-# Group search
-LDAP_GROUP_SEARCH_BASE=ou=Groups,dc=company,dc=com
-LDAP_GROUP_FILTER=(objectClass=groupOfNames)
-
-# Standard LDAP attribute mapping
-LDAP_ATTR_USERNAME=uid
-LDAP_ATTR_EMAIL=mail
-LDAP_ATTR_FIRST_NAME=givenName
-LDAP_ATTR_LAST_NAME=sn
-LDAP_ATTR_DISPLAY_NAME=displayName
-LDAP_ATTR_GROUPS=memberOf
-
-# Role mapping
-LDAP_ADMIN_GROUPS=admins,system-administrators
-LDAP_AGENT_GROUPS=support,helpdesk,agents
-LDAP_USER_GROUPS=users,employees
-```
-
-## Security Considerations
-
-### Connection Security
-
-- **Always use TLS/StartTLS** in production environments
-- **Validate certificates** (set `LDAP_INSECURE_SKIP_VERIFY=false`)
-- **Use dedicated service accounts** with minimal required privileges
-- **Rotate service account passwords** regularly
-
-### Access Control
-
-- **Principle of least privilege**: Service account should only have read access
-- **Network security**: Restrict LDAP server access to GoatFlow servers only
-- **Audit logging**: Monitor all LDAP authentication attempts
-- **Account lockout**: Implement account lockout policies
-
-### Data Protection
-
-- **Encrypt sensitive configuration** values in production
-- **Secure credential storage** using vault systems
-- **Regular security audits** of LDAP integration
-- **Compliance requirements** (GDPR, HIPAA, SOX)
-
-## Monitoring and Troubleshooting
-
-### Health Checks
-
-The LDAP service provides health check endpoints:
-
-```bash
-# Check LDAP configuration status
-curl http://localhost:8080/api/v1/ldap/config
-
-# Check sync status
-curl http://localhost:8080/api/v1/ldap/sync/status
-
-# View authentication logs
-curl http://localhost:8080/api/v1/ldap/logs/auth?limit=50
-```
-
-### Common Issues
-
-#### Connection Timeouts
-
-```bash
-# Test network connectivity
-telnet ldap.company.com 389
-
-# Check DNS resolution
-nslookup ldap.company.com
-
-# Verify firewall rules
-curl -v telnet://ldap.company.com:389
-```
-
-#### Authentication Failures
-
-```bash
-# Test with ldapsearch
-ldapsearch -x -H ldap://ldap.company.com \
-  -D "cn=service,dc=company,dc=com" \
-  -w "password" \
-  -b "dc=company,dc=com" \
-  "(uid=testuser)"
-
-# Check user DN format
-ldapsearch -x -H ldap://ldap.company.com \
-  -D "cn=service,dc=company,dc=com" \
-  -w "password" \
-  -b "ou=Users,dc=company,dc=com" \
-  "(uid=testuser)" dn
-```
-
-#### Certificate Issues
-
-```bash
-# Test TLS connection
-openssl s_client -connect ldap.company.com:636 -showcerts
-
-# Verify certificate chain
-openssl verify -CAfile /path/to/ca.crt /path/to/ldap.crt
-```
-
-### Logging
-
-Enable detailed LDAP logging:
-
-```env
-LOG_LEVEL=debug
-LDAP_DEBUG=true
-```
-
-Log files will contain:
-- Connection attempts and results
-- Authentication successes/failures
-- Sync operations and results
-- Performance metrics
-- Error details and stack traces
-
-## Performance Optimization
-
-### Connection Pooling
-
-```go
-// Configure connection pool settings
-config := &LDAPConfig{
-    MaxConnections: 10,
-    MaxIdleConnections: 5,
-    ConnectionTimeout: 30 * time.Second,
-    IdleTimeout: 5 * time.Minute,
-}
-```
-
-### Caching
-
-- **User authentication cache**: 5 minutes default
-- **Group membership cache**: 15 minutes default
-- **User attribute cache**: 10 minutes default
-
-### Sync Optimization
-
-```env
-# Optimize sync performance
-LDAP_SYNC_INTERVAL=2h           # Reduce sync frequency
-LDAP_SYNC_BATCH_SIZE=100        # Process in batches
-LDAP_SYNC_PARALLEL_WORKERS=3    # Parallel processing
-```
-
-## Advanced Configuration
-
-### Custom Attribute Mapping
-
-```json
-{
-  "attribute_map": {
-    "username": "sAMAccountName",
-    "email": "mail",
-    "first_name": "givenName", 
-    "last_name": "sn",
-    "display_name": "displayName",
-    "phone": "telephoneNumber",
-    "department": "department",
-    "title": "title",
-    "manager": "manager",
-    "employee_id": "employeeNumber",
-    "groups": "memberOf",
-    "object_guid": "objectGUID",
-    "object_sid": "objectSid"
-  }
-}
-```
-
-### Multi-Domain Support
-
-```env
-# Primary domain
-LDAP_HOST=dc1.company.com
-LDAP_BASE_DN=dc=company,dc=com
-
-# Additional domains
-LDAP_SECONDARY_HOSTS=dc2.company.com,dc3.company.com
-LDAP_FAILOVER_ENABLED=true
-LDAP_FAILOVER_TIMEOUT=10s
-```
-
-### Group-Based Role Mapping
-
-```json
-{
-  "role_mappings": [
-    {
-      "ldap_groups": ["Domain Admins", "GoatFlow Administrators"],
-      "goatflow_role": "admin",
-      "priority": 1
-    },
-    {
-      "ldap_groups": ["Support Team", "Help Desk"],
-      "goatflow_role": "agent", 
-      "priority": 2
-    },
-    {
-      "ldap_groups": ["Domain Users", "Employees"],
-      "goatflow_role": "user",
-      "priority": 3
-    }
-  ]
-}
-```
-
-## Migration Guide
-
-### From Local Authentication
-
-1. **Phase 1**: Configure LDAP alongside existing authentication
-2. **Phase 2**: Import existing users and map to LDAP accounts
-3. **Phase 3**: Switch authentication method to LDAP
-4. **Phase 4**: Disable local authentication (optional)
-
-### From Other LDAP Solutions
-
-1. **Export user mappings** from existing system
-2. **Configure GoatFlow LDAP** with same/similar schema
-3. **Import user mappings** using bulk import API
-4. **Test authentication** with sample users
-5. **Switch over** during maintenance window
-
-## Support
-
-For LDAP integration support:
-
-- **Documentation**: Check this guide and API documentation
-- **Logs**: Enable debug logging for detailed troubleshooting
-- **Testing**: Use provided integration tests to validate setup
-- **Community**: Ask questions in GoatFlow community forums
-- **Enterprise**: Contact support for enterprise LDAP assistance

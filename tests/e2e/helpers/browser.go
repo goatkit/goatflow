@@ -24,10 +24,14 @@ type BrowserHelper struct {
 // stringPtr returns a pointer to the given string value.
 func stringPtr(s string) *string { return &s }
 
-// NewBrowserHelper creates a new browser helper instance
+// NewBrowserHelper creates a new browser helper instance. It fails the test
+// immediately when the backend under test (BASE_URL) is unreachable.
 func NewBrowserHelper(t *testing.T) *BrowserHelper {
+	t.Helper()
+	cfg := config.GetConfig()
+	cfg.RequireReachable(t)
 	return &BrowserHelper{
-		Config: config.GetConfig(),
+		Config: cfg,
 		t:      t,
 	}
 }
@@ -86,17 +90,29 @@ func (b *BrowserHelper) Setup() error {
 	}
 	b.Page = page
 
-	// Dismiss all coachmarks so tooltips/backdrops don't block E2E interactions.
-	// The coachmark backdrop (z-index:9998, position:fixed, inset:0) covers the
-	// entire viewport and intercepts clicks, causing Playwright timeouts.
+	// Coachmarks (onboarding tips) show a full-viewport backdrop
+	// (#gk-coachmark-backdrop) that intercepts clicks. Every tip registered on
+	// a page is recorded as dismissed in localStorage before GoatCoach.init()
+	// runs, which is the state a user reaches by dismissing them.
 	err = page.AddInitScript(playwright.Script{
 		Content: playwright.String(`
-			// Pre-dismiss all known coachmarks and prevent new ones
 			(function() {
-				var state = {"theme-switcher":{"dismissed":true,"at":0}};
-				localStorage.setItem('gk_coachmarks', JSON.stringify(state));
-				// Monkey-patch to auto-dismiss any future registrations
-				if (typeof GoatCoach !== 'undefined') { GoatCoach.init = function(){}; }
+				var coach;
+				Object.defineProperty(window, 'GoatCoach', {
+					configurable: true,
+					get: function() { return coach; },
+					set: function(value) {
+						coach = value;
+						if (!value || typeof value.register !== 'function') { return; }
+						var register = value.register;
+						value.register = function(tip) {
+							var state = JSON.parse(localStorage.getItem('gk_coachmarks') || '{}');
+							state[tip.id] = { dismissed: true, at: 0 };
+							localStorage.setItem('gk_coachmarks', JSON.stringify(state));
+							return register.call(value, tip);
+						};
+					}
+				});
 			})();
 		`),
 	})

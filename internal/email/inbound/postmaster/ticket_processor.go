@@ -9,9 +9,7 @@ import (
 	"io"
 	"log"
 	"mime"
-	"mime/multipart"
 	stdmail "net/mail"
-	"net/textproto"
 	"regexp"
 	"strconv"
 	"strings"
@@ -25,9 +23,9 @@ import (
 	"github.com/goatkit/goatflow/internal/email/inbound/filters"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/constants"
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/storage"
 )
 
 type ticketCreator interface {
@@ -61,7 +59,6 @@ type TicketProcessor struct {
 	maxBodyBytes    int64
 	decoder         *mime.WordDecoder
 	queueLookup     QueueLookupFunc
-	storage         service.StorageService
 	articleLookup   articleFinder
 	ticketFinder    ticketFinder
 	queueFinder     queueFinder
@@ -194,15 +191,6 @@ func WithTicketProcessorMessageLookup(lookup messageTicketLookup) TicketProcesso
 	}
 }
 
-// WithTicketProcessorStorage wires the storage backend used for attachments.
-func WithTicketProcessorStorage(storage service.StorageService) TicketProcessorOption {
-	return func(tp *TicketProcessor) {
-		if storage != nil {
-			tp.storage = storage
-		}
-	}
-}
-
 // WithTicketProcessorArticleLookup provides access to created articles for attachment binding.
 func WithTicketProcessorArticleLookup(lookup articleFinder) TicketProcessorOption {
 	return func(tp *TicketProcessor) {
@@ -212,7 +200,7 @@ func WithTicketProcessorArticleLookup(lookup articleFinder) TicketProcessorOptio
 	}
 }
 
-// WithTicketProcessorDatabase sets the database connection used for attachment metadata inserts.
+// WithTicketProcessorDatabase sets the database the processor stores attachments with.
 func WithTicketProcessorDatabase(db *sql.DB) TicketProcessorOption {
 	return func(tp *TicketProcessor) {
 		if db != nil {
@@ -478,6 +466,14 @@ func (tp *TicketProcessor) readBodyParts(reader *gomail.Reader) (string, string,
 		}
 		switch header := part.Header.(type) {
 		case *gomail.InlineHeader:
+			// Inline non-text parts (e.g. images referenced by cid:) are
+			// attachments, not body candidates.
+			if t, _, _ := header.ContentType(); t != "" && !strings.HasPrefix(strings.ToLower(t), "text/") {
+				if att := tp.extractAttachment(part, &gomail.AttachmentHeader{Header: header.Header}); att != nil {
+					attachments = append(attachments, *att)
+				}
+				continue
+			}
 			body, mimeType, charset := tp.extractInlineBody(part, header)
 			if body == "" {
 				continue
@@ -523,6 +519,8 @@ type bodyCandidate struct {
 type attachmentPart struct {
 	filename    string
 	contentType string
+	contentID   string
+	disposition string
 	data        []byte
 }
 
@@ -550,6 +548,9 @@ func (tp *TicketProcessor) extractInlineBody(part *gomail.Part, header *gomail.I
 	return body, mimeType, charset
 }
 
+// extractAttachment reads a non-body MIME part. The part's Content-ID and
+// disposition are kept so inline images stay referable from the HTML body;
+// a part without a disposition is inline when it has a Content-ID.
 func (tp *TicketProcessor) extractAttachment(part *gomail.Part, header *gomail.AttachmentHeader) *attachmentPart {
 	if part == nil || header == nil {
 		return nil
@@ -566,6 +567,15 @@ func (tp *TicketProcessor) extractAttachment(part *gomail.Part, header *gomail.A
 	if mimeType == "" {
 		mimeType = "application/octet-stream"
 	}
+	contentID := strings.TrimSpace(header.Get("Content-Id"))
+	disposition, _, _ := header.ContentDisposition()
+	disposition = strings.ToLower(disposition)
+	if disposition == "" {
+		disposition = "attachment"
+		if contentID != "" {
+			disposition = "inline"
+		}
+	}
 	body, readErr := tp.readAttachmentBody(part.Body)
 	if readErr != nil {
 		tp.logf("postmaster: read attachment body failed: %v", readErr)
@@ -574,7 +584,9 @@ func (tp *TicketProcessor) extractAttachment(part *gomail.Part, header *gomail.A
 	if len(body) == 0 {
 		return nil
 	}
-	return &attachmentPart{filename: filename, contentType: mimeType, data: body}
+	return &attachmentPart{
+		filename: filename, contentType: mimeType, contentID: contentID, disposition: disposition, data: body,
+	}
 }
 
 func (tp *TicketProcessor) readPartBody(src io.Reader) (string, error) {
@@ -720,43 +732,32 @@ func (tp *TicketProcessor) resolveArticleID(ticketID int) int {
 }
 
 func (tp *TicketProcessor) storeAttachments(ctx context.Context, ticketID, articleID int, attachments []attachmentPart) {
-	if len(attachments) == 0 || ticketID <= 0 || articleID <= 0 || tp == nil || tp.storage == nil {
+	if len(attachments) == 0 || ticketID <= 0 || articleID <= 0 || tp == nil {
 		return
 	}
-	for _, att := range attachments {
-		tp.storeAttachment(ctx, ticketID, articleID, att)
-	}
-}
-
-func (tp *TicketProcessor) storeAttachment(ctx context.Context, ticketID, articleID int, att attachmentPart) {
-	if len(att.data) == 0 || att.filename == "" {
+	if tp.db == nil {
+		tp.logf("postmaster: no database configured, %d attachment(s) of article %d dropped", len(attachments), articleID)
 		return
 	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	ctx = service.WithArticleID(ctx, articleID)
-	ctx = service.WithUserID(ctx, tp.systemUserID)
-	file := newMemoryFile(att.data)
-	header := buildFileHeader(att)
-	path := service.GenerateOTRSStoragePath(ticketID, articleID, att.filename)
-	if _, err := tp.storage.Store(ctx, file, header, path); err != nil {
-		tp.logf("postmaster: attachment store failed for %s: %v", att.filename, err)
-		return
-	}
-	if !tp.storageIsDB() {
-		if err := tp.insertAttachmentRecord(articleID, att); err != nil {
-			tp.logf("postmaster: attachment metadata insert failed for %s: %v", att.filename, err)
+	store := storage.ForDB(tp.db)
+	for _, att := range attachments {
+		if len(att.data) == 0 || att.filename == "" {
+			continue
+		}
+		if _, err := store.WriteAttachment(ctx, int64(articleID), storage.NewAttachment{
+			Filename:    att.filename,
+			ContentType: att.contentType,
+			ContentID:   att.contentID,
+			Disposition: att.disposition,
+			Content:     att.data,
+			CreateBy:    tp.systemUserID,
+		}); err != nil {
+			tp.logf("postmaster: storing attachment %s of article %d failed: %v", att.filename, articleID, err)
 		}
 	}
-}
-
-func (tp *TicketProcessor) storageIsDB() bool {
-	if tp == nil || tp.storage == nil {
-		return false
-	}
-	_, ok := tp.storage.(*service.DatabaseStorageService)
-	return ok
 }
 
 func (tp *TicketProcessor) tryFollowUp(ctx context.Context, msg *connector.FetchedMessage, meta *filters.MessageContext, env *envelope) (Result, bool, error) {
@@ -876,65 +877,6 @@ func (tp *TicketProcessor) buildFollowUpArticle(ticketID int, env *envelope, msg
 		CreateBy:               tp.systemUserID,
 		ChangeBy:               tp.systemUserID,
 	}
-}
-
-func (tp *TicketProcessor) insertAttachmentRecord(articleID int, att attachmentPart) error {
-	db := tp.db
-	if db == nil {
-		var err error
-		db, err = database.GetDB()
-		if err != nil || db == nil {
-			return fmt.Errorf("database unavailable: %w", err)
-		}
-	}
-	contentType := att.contentType
-	if strings.TrimSpace(contentType) == "" {
-		contentType = "application/octet-stream"
-	}
-	now := time.Now()
-	_, err := db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO article_data_mime_attachment (
-			article_id, filename, content_type, content_size, content,
-			disposition, create_time, create_by, change_time, change_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`),
-		articleID,
-		att.filename,
-		contentType,
-		int64(len(att.data)),
-		att.data,
-		"attachment",
-		now, tp.systemUserID, now, tp.systemUserID,
-	)
-	return err
-}
-
-func buildFileHeader(att attachmentPart) *multipart.FileHeader {
-	headers := make(textproto.MIMEHeader)
-	if ct := strings.TrimSpace(att.contentType); ct != "" {
-		headers.Set("Content-Type", ct)
-	} else {
-		headers.Set("Content-Type", "application/octet-stream")
-	}
-	return &multipart.FileHeader{
-		Filename: att.filename,
-		Header:   headers,
-		Size:     int64(len(att.data)),
-	}
-}
-
-type memoryFile struct {
-	*bytes.Reader
-}
-
-func newMemoryFile(data []byte) *memoryFile {
-	if data == nil {
-		data = []byte{}
-	}
-	return &memoryFile{Reader: bytes.NewReader(data)}
-}
-
-func (m *memoryFile) Close() error {
-	return nil
 }
 
 var messageIDPattern = regexp.MustCompile(`<([^<>]+)>`)

@@ -206,8 +206,10 @@ GROUPS: List[Dict[str, object]] = [
                 "usage": "make babelfish-run ARGS='-help'",
                 "description": "Run babelfish CLI with custom arguments",
             },
-            {"name": "test-ldap", "description": "Run LDAP integration tests"},
-            {"name": "test-ldap-perf", "description": "Run LDAP performance benchmarks"},
+            {
+                "name": "test-ldap-integration",
+                "description": "Run LDAP integration tests (Docker OpenLDAP + test DB)",
+            },
         ],
     },
     {
@@ -315,6 +317,31 @@ GROUPS: List[Dict[str, object]] = [
             {
                 "name": "test-mysql-reset-password",
                 "description": "Reset password in MySQL test DB",
+            },
+        ],
+    },
+    {
+        "title": "Browser E2E (test stack)",
+        "emoji": "🎭",
+        "entries": [
+            {
+                "name": "test-stack-up",
+                "description": "Rebuild and start backend-test, runner-test and customer-fe-test",
+            },
+            {
+                "name": "test-e2e-playwright-go",
+                "usage": "make test-e2e-playwright-go ARGS='-run TestAdminGroupsUI'",
+                "description": "Run the Go Playwright suite (tests/e2e/playwright) against the test stack",
+            },
+            {
+                "name": "test-e2e-go",
+                "usage": "make test-e2e-go TEST='Groups|Queues'",
+                "description": "Run the Go browser e2e suite (tests/e2e), optionally filtered by -run pattern",
+            },
+            {
+                "name": "test-e2e",
+                "usage": "make test-e2e TEST='Login'",
+                "description": "Shortcut for test-e2e-go with a required TEST pattern",
             },
         ],
     },

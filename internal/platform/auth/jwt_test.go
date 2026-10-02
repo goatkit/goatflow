@@ -73,15 +73,54 @@ func TestJWTManager(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("GenerateRefreshToken creates valid refresh token", func(t *testing.T) {
-		userID := uint(3)
-		email := "refresh@example.com"
-
-		token, err := jwtManager.GenerateRefreshToken(userID, email)
+	t.Run("refresh token round-trips and carries the account", func(t *testing.T) {
+		token, err := jwtManager.GenerateRefreshToken(AccountKindCustomer, 3, "cust-login")
 		require.NoError(t, err)
-		assert.NotEmpty(t, token)
+
+		claims, err := jwtManager.ValidateRefreshToken(token)
+		require.NoError(t, err)
+		assert.Equal(t, uint(3), claims.UserID)
+		assert.Equal(t, AccountKindCustomer, claims.Kind)
+		assert.Equal(t, "cust-login", claims.Subject)
+		assert.WithinDuration(t, time.Now().Add(7*24*time.Hour), claims.ExpiresAt.Time, time.Minute)
+
+		other, err := jwtManager.GenerateRefreshToken(AccountKindCustomer, 3, "cust-login")
+		require.NoError(t, err)
+		assert.NotEqual(t, token, other, "each refresh token has its own id")
 	})
- }
+
+	t.Run("refresh token is not an access token", func(t *testing.T) {
+		token, err := jwtManager.GenerateRefreshToken(AccountKindAgent, 3, "agent-login")
+		require.NoError(t, err)
+		_, err = jwtManager.ValidateToken(token)
+		assert.ErrorIs(t, err, ErrInvalidToken)
+	})
+
+	t.Run("access token is not a refresh token", func(t *testing.T) {
+		token, err := jwtManager.GenerateTokenWithAdmin(3, "agent-login", "Admin", true, 0)
+		require.NoError(t, err)
+		_, err = jwtManager.ValidateRefreshToken(token)
+		assert.ErrorIs(t, err, ErrInvalidToken)
+	})
+
+	t.Run("refresh token rejects unknown kind, other key and expiry", func(t *testing.T) {
+		_, err := jwtManager.GenerateRefreshToken("robot", 3, "x")
+		assert.Error(t, err)
+
+		token, err := NewJWTManager("another-secret-key", time.Hour).GenerateRefreshToken(AccountKindAgent, 3, "agent-login")
+		require.NoError(t, err)
+		_, err = jwtManager.ValidateRefreshToken(token)
+		assert.ErrorIs(t, err, ErrInvalidToken)
+
+		short := NewJWTManager(secretKey, time.Hour)
+		short.SetRefreshTokenDuration(time.Nanosecond)
+		token, err = short.GenerateRefreshToken(AccountKindAgent, 3, "agent-login")
+		require.NoError(t, err)
+		time.Sleep(10 * time.Millisecond)
+		_, err = short.ValidateRefreshToken(token)
+		assert.ErrorIs(t, err, ErrExpiredToken)
+	})
+}
 
 func TestJWTManagerConcurrency(t *testing.T) {
 	jwtManager := NewJWTManager("test-secret", 1*time.Hour)

@@ -11,6 +11,7 @@ spec:
   prefix: /api
   middleware:
     - unified_auth
+    - agent
   routes:
     - path: /lookups/queues
       method: GET
@@ -40,4 +41,6 @@ spec:
     - path: /lookups/cache/invalidate
       method: POST
       handler: HandleInvalidateLookupCache
+      middleware:
+        - admin
       description: "Invalidate lookup cache"

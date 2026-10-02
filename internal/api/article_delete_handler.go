@@ -1,18 +1,22 @@
 package api
 
 import (
+	"context"
+	"database/sql"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/storage"
 )
 
 // HandleDeleteArticleAPI handles DELETE /api/v1/tickets/:ticket_id/articles/:id.
 //
 //	@Summary		Delete article
-//	@Description	Delete an article from a ticket
+//	@Description	Delete an article, its MIME data and attachments from a ticket
 //	@Tags			Articles
 //	@Accept			json
 //	@Produce		json
@@ -24,10 +28,8 @@ import (
 //	@Security		BearerAuth
 //	@Router			/tickets/{ticket_id}/articles/{id} [delete]
 func HandleDeleteArticleAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+	userID, ok := auditUserID(c)
+	if !ok {
 		return
 	}
 
@@ -58,69 +60,93 @@ func HandleDeleteArticleAPI(c *gin.Context) {
 		return
 	}
 
-	// Check if article exists and belongs to the ticket
-	var count int
-	checkQuery := database.ConvertPlaceholders(`
-		SELECT 1 FROM article
-		WHERE id = ? AND ticket_id = ?
-	`)
-	_ = db.QueryRow(checkQuery, articleID, ticketID).Scan(&count) //nolint:errcheck // Defaults to 0
-	if count != 1 {
+	if _, ok := authorizeTicketArticles(c, db, ticketID, "rw"); !ok {
+		return
+	}
+
+	var exists int
+	err = db.QueryRow(database.ConvertPlaceholders(`
+		SELECT 1 FROM article WHERE id = ? AND ticket_id = ?`), articleID, ticketID).Scan(&exists)
+	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
 		return
 	}
-
-	// Start transaction to delete article and its attachments
-	tx, err := db.Begin()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
-		return
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	// Delete attachments first
-	deleteAttachmentsQuery := database.ConvertPlaceholders(`
-		DELETE FROM article_attachment WHERE article_id = ?
-	`)
-	if _, err := tx.Exec(deleteAttachmentsQuery, articleID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete article attachments"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch article"})
 		return
 	}
 
-	// Delete article
-	deleteQuery := database.ConvertPlaceholders(`
-		DELETE FROM article 
-		WHERE id = ? AND ticket_id = ?
-	`)
-
-	result, err := tx.Exec(deleteQuery, articleID, ticketID)
-	if err != nil {
+	if err := deleteArticle(c.Request.Context(), db, ticketID, articleID, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete article"})
 		return
 	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil || rowsAffected == 0 {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete article"})
-		return
-	}
-
-	// Commit transaction
-	if err := tx.Commit(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
-		return
-	}
-
-	// Update ticket change time
-	updateTicketQuery := database.ConvertPlaceholders(`
-        UPDATE ticket 
-        SET change_time = NOW(), change_by = ?
-        WHERE id = ?
-    `)
-	_, _ = db.Exec(updateTicketQuery, userID, ticketID) //nolint:errcheck // Best-effort timestamp update
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Article deleted successfully",
 		"id":      articleID,
 	})
+}
+
+// deleteArticle removes an article and everything that references it, in one
+// transaction. Attachments and the raw email go through the article content
+// store (DB rows or OTRS ArticleStorageFS files). Every article_id foreign key
+// in the schema is RESTRICT, so the dependent rows go first. History and time
+// accounting are kept and only detached from the article (their article_id is
+// nullable).
+func deleteArticle(ctx context.Context, db *sql.DB, ticketID, articleID, userID int) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if err := storage.ForDB(db).WithTx(tx).DeleteArticle(ctx, int64(articleID)); err != nil {
+		return err
+	}
+
+	run := func(_ sql.Result, err error) error { return err }
+	steps := []func() error{
+		func() error {
+			return run(tx.ExecContext(ctx, database.ConvertPlaceholders(`DELETE FROM article_data_mime_send_error WHERE article_id = ?`), articleID))
+		},
+		func() error {
+			return run(tx.ExecContext(ctx, database.ConvertPlaceholders(`DELETE FROM article_data_mime WHERE article_id = ?`), articleID))
+		},
+		func() error {
+			return run(tx.ExecContext(ctx, database.ConvertPlaceholders(`DELETE FROM article_data_otrs_chat WHERE article_id = ?`), articleID))
+		},
+		func() error {
+			return run(tx.ExecContext(ctx, database.ConvertPlaceholders(`DELETE FROM article_flag WHERE article_id = ?`), articleID))
+		},
+		func() error {
+			return run(tx.ExecContext(ctx, database.ConvertPlaceholders(`DELETE FROM article_search_index WHERE article_id = ?`), articleID))
+		},
+		func() error {
+			return run(tx.ExecContext(ctx, database.ConvertPlaceholders(`DELETE FROM mail_queue WHERE article_id = ?`), articleID))
+		},
+		func() error {
+			return run(tx.ExecContext(ctx, database.ConvertPlaceholders(`
+				DELETE FROM dynamic_field_value
+				WHERE object_id = ?
+				  AND field_id IN (SELECT id FROM dynamic_field WHERE object_type = 'Article')`), articleID))
+		},
+		func() error {
+			return run(tx.ExecContext(ctx, database.ConvertPlaceholders(`UPDATE ticket_history SET article_id = NULL WHERE article_id = ?`), articleID))
+		},
+		func() error {
+			return run(tx.ExecContext(ctx, database.ConvertPlaceholders(`UPDATE time_accounting SET article_id = NULL WHERE article_id = ?`), articleID))
+		},
+		func() error {
+			return run(tx.ExecContext(ctx, database.ConvertPlaceholders(`DELETE FROM article WHERE id = ? AND ticket_id = ?`), articleID, ticketID))
+		},
+		func() error {
+			return run(tx.ExecContext(ctx, database.ConvertPlaceholders(`UPDATE ticket SET change_time = ?, change_by = ? WHERE id = ?`), time.Now(), userID, ticketID))
+		},
+	}
+	for _, step := range steps {
+		if err := step(); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }

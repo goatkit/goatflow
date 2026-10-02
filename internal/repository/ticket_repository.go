@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/ticketnumber"
 )
 
@@ -20,9 +20,6 @@ type TicketRepository struct {
 	db        *sql.DB
 	generator ticketnumber.Generator
 	store     ticketnumber.CounterStore
-
-	historyTypeCache map[string]int
-	historyMu        sync.RWMutex
 }
 
 // ExecContext represents the subset of database operations needed to insert history entries.
@@ -50,10 +47,9 @@ func TicketNumberGeneratorInfo() (string, bool) {
 // NewTicketRepository creates a new ticket repository.
 func NewTicketRepository(db *sql.DB) *TicketRepository {
 	return &TicketRepository{
-		db:               db,
-		generator:        defaultTicketNumberGen,
-		store:            defaultTicketNumberStore,
-		historyTypeCache: make(map[string]int),
+		db:        db,
+		generator: defaultTicketNumberGen,
+		store:     defaultTicketNumberStore,
 	}
 }
 
@@ -1061,18 +1057,6 @@ func (r *TicketRepository) CountByStateID(stateID int) (int, error) {
 	return count, err
 }
 
-// CountClosedToday returns the number of tickets closed today.
-func (r *TicketRepository) CountClosedToday() (int, error) {
-	var count int
-	query := database.ConvertPlaceholders(`
-		SELECT COUNT(*) FROM ticket
-		WHERE ticket_state_id = 3
-		AND change_time >= CURRENT_DATE
-	`)
-	err := r.db.QueryRow(query).Scan(&count)
-	return count, err
-}
-
 // AddTicketHistoryEntry persists a ticket_history row for the provided ticket snapshot.
 // The exec parameter accepts interface{} to satisfy the history.HistoryInserter interface,
 // but must be either nil or implement ExecContext.
@@ -1113,9 +1097,15 @@ func (r *TicketRepository) AddTicketHistoryEntry(ctx context.Context, exec inter
 		now = time.Now().UTC()
 	}
 
+	// ticket_history.type_id is NOT NULL with a foreign key to ticket_type,
+	// but tickets may have no type. Use the ticket's stored type, else the
+	// OTRS default type (Ticket::Type::Default = "Unclassified").
 	typeID := entry.TypeID
-	if typeID < 0 {
-		typeID = 0
+	if typeID <= 0 {
+		typeID, err = r.historyTicketTypeID(ctx, entry.TicketID)
+		if err != nil {
+			return err
+		}
 	}
 
 	var article interface{}
@@ -1162,34 +1152,34 @@ func (r *TicketRepository) getHistoryTypeID(ctx context.Context, name string) (i
 		return 0, errors.New("history type name required")
 	}
 
-	r.historyMu.RLock()
-	if id, ok := r.historyTypeCache[trimmed]; ok {
-		r.historyMu.RUnlock()
+	id, err := lookups.ID(ctx, r.db, lookups.HistoryType, trimmed)
+	if err == nil {
 		return id, nil
 	}
-	r.historyMu.RUnlock()
-
-	query := database.ConvertPlaceholders(`SELECT id FROM ticket_history_type WHERE name = ?`)
-	var id int
-	if err := r.db.QueryRowContext(ctx, query, trimmed).Scan(&id); err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			return 0, err
-		}
-
-		createdID, createErr := r.ensureHistoryType(ctx, trimmed)
-		if createErr != nil {
-			return 0, createErr
-		}
-		id = createdID
+	if !errors.Is(err, sql.ErrNoRows) {
+		return 0, err
 	}
+	// Not one of the OTRS default history types (000029 seeds those): create it.
+	return r.ensureHistoryType(ctx, trimmed)
+}
 
-	r.historyMu.Lock()
-	if r.historyTypeCache == nil {
-		r.historyTypeCache = make(map[string]int)
+// historyTicketTypeID returns the ticket_type id to store in ticket_history for
+// a ticket without a known type: the ticket's own type_id if set, else the OTRS
+// default ticket type "Unclassified".
+func (r *TicketRepository) historyTicketTypeID(ctx context.Context, ticketID int) (int, error) {
+	var typeID sql.NullInt64
+	err := r.db.QueryRowContext(ctx, database.ConvertPlaceholders(
+		`SELECT type_id FROM ticket WHERE id = ?`), ticketID).Scan(&typeID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return 0, fmt.Errorf("history ticket type: %w", err)
 	}
-	r.historyTypeCache[trimmed] = id
-	r.historyMu.Unlock()
-
+	if typeID.Valid && typeID.Int64 > 0 {
+		return int(typeID.Int64), nil
+	}
+	id, err := lookups.ID(ctx, r.db, lookups.TicketTypeTable, "Unclassified")
+	if err != nil {
+		return 0, fmt.Errorf("history ticket type: default type %q: %w", "Unclassified", err)
+	}
 	return id, nil
 }
 
@@ -1251,7 +1241,7 @@ func (r *TicketRepository) GetTicketHistoryEntries(ticketID uint, limit int) ([]
 		LEFT JOIN ticket_state ts ON ts.id = th.state_id
 		LEFT JOIN ticket_priority tp ON tp.id = th.priority_id
 		WHERE th.ticket_id = ?
-		ORDER BY th.create_time DESC
+		ORDER BY th.create_time DESC, th.id DESC
 		LIMIT ?
 	`
 

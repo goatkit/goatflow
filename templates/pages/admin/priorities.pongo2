@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', loadPriorities);
 
 async function loadPriorities() {
     try {
-        const data = await apiFetch('/api/priorities');
+        const data = await apiFetch('/api/v1/priorities?valid=all');
 
         if (data.success) {
             priorities = data.data || [];
@@ -311,7 +311,7 @@ async function savePriority(event) {
     };
 
     try {
-        const url = id ? `/api/priorities/${id}` : '/api/priorities';
+        const url = id ? `/api/v1/priorities/${id}` : '/api/v1/priorities';
         const method = id ? 'PUT' : 'POST';
 
         const response = await fetch(url, {
@@ -352,7 +352,7 @@ async function confirmDelete() {
     if (!deleteId) return;
 
     try {
-        const result = await apiFetch(`/api/priorities/${deleteId}`, {
+        const result = await apiFetch(`/api/v1/priorities/${deleteId}`, {
             method: 'DELETE'
         });
 

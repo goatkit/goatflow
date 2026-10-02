@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 	"strconv"
 
@@ -10,6 +9,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // GetUserIDFromCtx extracts the authenticated user's ID from gin context.
@@ -37,6 +37,18 @@ func GetUserIDFromCtx(c *gin.Context, fallback int) int {
 		}
 	}
 	return fallback
+}
+
+// auditUserID returns the authenticated user's ID for create_by/change_by
+// audit columns. It answers 401 and returns false when the request carries no
+// authenticated user, so writes are never attributed to a made-up account.
+func auditUserID(c *gin.Context) (int, bool) {
+	id := GetUserIDFromCtx(c, 0)
+	if id <= 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "authentication required"})
+		return 0, false
+	}
+	return id, true
 }
 
 // GetUserIDFromCtxUint is like GetUserIDFromCtx but returns uint.
@@ -84,41 +96,18 @@ func formatFileSize(size int64) string {
 	}
 }
 
-// getUserIDFromContext gets the user ID from the gin context
-// getUserIDFromContext returns user ID from context. Kept for future admin pages.
-// Deprecated: prefer extracting from JWT middleware claims.
-//
-//nolint:unused
-func getUserIDFromContext(c *gin.Context) int {
-	// Try to get user from context
-	userInterface, exists := c.Get("user")
-	if !exists {
-		return 1 // Default to admin user
-	}
-
-	// Try to cast to *models.User
-	if user, ok := userInterface.(*models.User); ok && user != nil {
-		return int(user.ID)
-	}
-
-	// Try to cast to models.User
-	if user, ok := userInterface.(models.User); ok {
-		return int(user.ID)
-	}
-
-	return 1 // Default to admin user
-}
-
-// getUserFromContext gets the user from the gin context.
+// getUserFromContext returns the authenticated user from the gin context, or
+// nil when the request carries no identity. It never invents one: a missing
+// user must not render as (or act for) the admin account.
 func getUserFromContext(c *gin.Context) *models.User {
-	role := getContextRole(c)
+	role := c.GetString("user_role")
 
 	userInterface, exists := c.Get("user")
 	if !exists {
 		return buildUserFromContext(c, role)
 	}
 
-	if user, ok := userInterface.(*models.User); ok {
+	if user, ok := userInterface.(*models.User); ok && user != nil {
 		user.Role = role
 		return user
 	}
@@ -128,38 +117,25 @@ func getUserFromContext(c *gin.Context) *models.User {
 		return &user
 	}
 
-	return &models.User{ID: 1, Login: "admin", Email: "root@localhost", Role: role}
+	return buildUserFromContext(c, role)
 }
 
-func getContextRole(c *gin.Context) string {
-	if userRole, exists := c.Get("user_role"); exists {
-		if role, ok := userRole.(string); ok {
-			return role
-		}
-	}
-	return "Admin"
-}
-
+// buildUserFromContext builds the user from the auth middleware's user_id /
+// user_email keys; nil when no user id is present.
 func buildUserFromContext(c *gin.Context, role string) *models.User {
-	user := &models.User{
-		ID:    1,
-		Login: "admin",
-		Email: "root@localhost",
-		Role:  role,
+	raw, ok := c.Get("user_id")
+	if !ok {
+		return nil
 	}
-
-	if id, ok := c.Get("user_id"); ok {
-		if idInt, ok := id.(int); ok {
-			user.ID = uint(idInt)
-		}
+	id := shared.ToUint(raw, 0)
+	if id == 0 {
+		return nil
 	}
-	if email, ok := c.Get("user_email"); ok {
-		if emailStr, ok := email.(string); ok && emailStr != "" {
-			user.Email = emailStr
-			user.Login = emailStr
-		}
+	user := &models.User{ID: id, Role: role}
+	if email := c.GetString("user_email"); email != "" {
+		user.Email = email
+		user.Login = email
 	}
-
 	return user
 }
 
@@ -216,42 +192,4 @@ func getPriorityID(priority string) int {
 		return priorityRow.ID
 	}
 	return 2 // Ultimate fallback
-}
-
-// loadTemplate loads and parses HTML template files.
-func loadTemplate(files ...string) (*template.Template, error) {
-	if len(files) == 0 {
-		return nil, fmt.Errorf("no template files provided")
-	}
-
-	// Provide minimal functions expected by templates during tests
-	funcMap := template.FuncMap{
-		"firstLetter": func(s string) string {
-			if len(s) == 0 {
-				return ""
-			}
-			return s[:1]
-		},
-		"L": func(key string, args ...any) string {
-			if len(args) == 0 {
-				return key
-			}
-			return fmt.Sprintf(key, args...)
-		},
-		"H": func(key string, args ...any) string {
-			if len(args) == 0 {
-				return key
-			}
-			return fmt.Sprintf(key, args...)
-		},
-	}
-
-	// Parse with func map to avoid "function not defined" errors in tests
-	tmpl := template.New("base").Funcs(funcMap)
-	var err error
-	tmpl, err = tmpl.ParseFiles(files...)
-	if err != nil {
-		return nil, err
-	}
-	return tmpl, nil
 }

@@ -119,6 +119,8 @@ services:
       ROUTES_DIR: /app/routes
       APP_ENV: ${APP_ENV:-development}
       APP_PORT: ${APP_PORT:-8080}
+      # Public URL of this instance; self-service (password reset / sign-up) email links use it.
+      BASE_URL: ${APP_URL:-http://localhost:${BACKEND_PORT:-8080}}
       DB_DRIVER: ${DB_DRIVER:-mariadb}
       DB_MYSQL_HOST: ${DB_MYSQL_HOST:-mariadb}
       DB_MYSQL_PORT: ${DB_MYSQL_PORT:-3306}
@@ -136,7 +138,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY:-15m}
       JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY:-7d}
-      PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-sha256}
+      PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-bcrypt}
       MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
       GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:-}
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
@@ -194,6 +196,7 @@ services:
       ROUTES_DIR: /app/routes
       APP_ENV: ${APP_ENV:-development}
       APP_PORT: ${CUSTOMER_FE_APP_PORT:-8080}
+      BASE_URL: http://localhost:${CUSTOMER_FE_PORT:-8083}
       ROOT_REDIRECT_PATH: /customer
       CUSTOMER_FE_ONLY: "true"
       DB_DRIVER: ${DB_DRIVER:-mariadb}
@@ -210,7 +213,7 @@ services:
       VALKEY_HOST: valkey
       VALKEY_PORT: 6379
       JWT_SECRET: ${JWT_SECRET}
-      PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-sha256}
+      PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-bcrypt}
       MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}
@@ -266,6 +269,8 @@ services:
       GOATFLOW_EMAIL_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-true}
       GOATFLOW_EMAIL_FROM: ${EMAIL_FROM:-noreply@goatflow.local}
       GOATFLOW_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+      # Must match the backend: the runner decrypts webhook signing secrets
+      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:-}
     volumes:
       - goatflow_plugins:/app/config/plugins
     depends_on:
@@ -370,6 +375,7 @@ services:
       ROUTES_DIR: /app/routes
       APP_ENV: test
       APP_PORT: ${APP_PORT:-8080}
+      BASE_URL: http://localhost:${BACKEND_TEST_PORT:-8082}
       # Test database configuration - credentials must be in .env
       DB_DRIVER: ${TEST_DB_DRIVER}
       DB_HOST: ${TEST_DB_MYSQL_HOST}
@@ -382,7 +388,7 @@ services:
       VALKEY_PORT: 6379
       # JWT secret must be provided via environment (.env or shell)
       JWT_SECRET: ${JWT_SECRET}
-      PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-sha256}
+      PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-bcrypt}
       MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}
@@ -469,6 +475,7 @@ services:
       ROUTES_DIR: /app/routes
       APP_ENV: test
       APP_PORT: ${CUSTOMER_FE_TEST_APP_PORT:-8080}
+      BASE_URL: http://localhost:${CUSTOMER_FE_TEST_PORT:-8084}
       ROOT_REDIRECT_PATH: /customer
       CUSTOMER_FE_ONLY: "true"
       # Test database configuration - credentials must be in .env
@@ -481,7 +488,7 @@ services:
       VALKEY_HOST: valkey-test
       VALKEY_PORT: 6379
       JWT_SECRET: ${JWT_SECRET}
-      PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-sha256}
+      PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-bcrypt}
       MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}

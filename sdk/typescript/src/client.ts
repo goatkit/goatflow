@@ -1,267 +1,209 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import {
-  ClientConfig,
-  AuthConfig,
-  GoatflowError,
-  NetworkError,
-  TimeoutError,
-  APIResponse,
-  ErrorResponse,
-} from './types';
+import { AuthConfig, ClientConfig, GoatflowError, NetworkError, Pagination, TimeoutError } from './types.js';
+
+export type QueryValue = string | number | boolean | undefined | null | ReadonlyArray<string | number>;
+
+export interface RequestOptions {
+  query?: Record<string, QueryValue>;
+  body?: unknown;
+  /** Send the client's credentials (default true). Login and refresh send none. */
+  authenticate?: boolean;
+}
+
+export interface DecodedResponse<T> {
+  data: T;
+  /** Set when a paginated list endpoint sent one next to "data". */
+  pagination?: Pagination;
+}
 
 /**
- * HTTP client for making requests to the GoatFlow API
+ * Turns an API response into its payload or throws GoatflowError.
+ *
+ * GoatFlow wraps most responses in {"success": bool, "data": ..., "error": ...}
+ * (paginated lists add "pagination"). Some endpoints answer
+ * {"success": true, ...fields} without "data", and some send a bare object;
+ * both are returned whole. Errors are {"error": "message"} or
+ * {"error": {"code": "...", "message": "..."}}, with or without "success".
+ */
+export function decodeResponse<T>(status: number, statusText: string, text: string): DecodedResponse<T> {
+  const trimmed = text.trim();
+  let parsed: unknown;
+  let isJSON = false;
+  if (trimmed !== '') {
+    try {
+      parsed = JSON.parse(trimmed);
+      isJSON = true;
+    } catch {
+      // Not JSON; handled below.
+    }
+  }
+  const fields =
+    isJSON && typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? (parsed as Envelope) : undefined;
+  const success = typeof fields?.success === 'boolean' ? fields.success : undefined;
+
+  if (status < 200 || status > 299 || success === false) {
+    throw apiError(status, statusText, trimmed, fields, isJSON);
+  }
+  if (trimmed === '') {
+    return { data: undefined as T };
+  }
+  if (!isJSON) {
+    throw new GoatflowError(`Response is not JSON (HTTP ${status})`, status, undefined, trimmed);
+  }
+  const pagination =
+    typeof fields?.pagination === 'object' && fields.pagination !== null ? (fields.pagination as Pagination) : undefined;
+  if (fields && success !== undefined && 'data' in fields) {
+    return { data: fields.data as T, pagination };
+  }
+  return { data: parsed as T, pagination };
+}
+
+/** Top-level keys of a GoatFlow JSON response; values are unchecked. */
+interface Envelope {
+  success?: unknown;
+  data?: unknown;
+  error?: unknown;
+  message?: unknown;
+  pagination?: unknown;
+}
+
+function apiError(status: number, statusText: string, body: string, fields: Envelope | undefined, isJSON: boolean): GoatflowError {
+  let message = '';
+  let code: string | undefined;
+  const error = fields?.error;
+  if (typeof error === 'string') {
+    message = error;
+  } else if (typeof error === 'object' && error !== null) {
+    const structured = error as { code?: unknown; message?: unknown };
+    if (typeof structured.message === 'string') message = structured.message;
+    if (typeof structured.code === 'string') code = structured.code;
+  }
+  if (!message && typeof fields?.message === 'string') {
+    message = fields.message;
+  }
+  if (!message && (status < 200 || status > 299)) {
+    message = statusText || `HTTP ${status}`;
+  }
+  return new GoatflowError(message || 'request failed', status, code, isJSON ? undefined : body);
+}
+
+/**
+ * HTTP transport for the GoatFlow API (fetch-based; Node 18+ or browsers).
  */
 export class HttpClient {
-  private axios: AxiosInstance;
+  private readonly baseURL: string;
+  private readonly timeout: number;
+  private readonly userAgent: string;
+  private readonly fetchImpl: typeof fetch;
   private auth?: AuthConfig;
+  /** In-flight token refresh shared by concurrent requests. */
+  private refreshing?: Promise<void>;
 
   constructor(config: ClientConfig) {
+    this.baseURL = config.baseURL.replace(/\/+$/, '');
+    this.timeout = config.timeout ?? 30000;
+    this.userAgent = config.userAgent ?? 'goatflow-ts-sdk/1.0.0';
+    this.fetchImpl = config.fetch ?? globalThis.fetch.bind(globalThis);
     this.auth = config.auth;
-
-    this.axios = axios.create({
-      baseURL: config.baseURL,
-      timeout: config.timeout || 30000,
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': config.userAgent || 'goatflow-ts-sdk/1.0.0',
-      },
-    });
-
-    // Request interceptor for authentication
-    this.axios.interceptors.request.use(
-      async (requestConfig) => {
-        if (this.auth) {
-          await this.setAuthHeaders(requestConfig);
-        }
-        return requestConfig;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    // Response interceptor for error handling
-    this.axios.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        throw this.handleError(error);
-      }
-    );
-
-    // Set up retries if configured
-    if (config.retries && config.retries > 0) {
-      this.setupRetries(config.retries);
-    }
   }
 
-  /**
-   * Set authentication headers on the request
-   */
-  private async setAuthHeaders(config: AxiosRequestConfig): Promise<void> {
-    if (!this.auth) return;
-
-    // Check if token is expired and refresh if needed
-    if (this.auth.type === 'jwt' || this.auth.type === 'oauth2') {
-      if (this.auth.expiresAt && new Date() >= this.auth.expiresAt) {
-        await this.refreshToken();
-      }
-    }
-
-    // Set appropriate auth header
-    switch (this.auth.type) {
-      case 'api-key':
-        if (this.auth.apiKey) {
-          config.headers = {
-            ...config.headers,
-            'X-API-Key': this.auth.apiKey,
-          };
-        }
-        break;
-      case 'jwt':
-      case 'oauth2':
-        if (this.auth.token) {
-          config.headers = {
-            ...config.headers,
-            Authorization: `Bearer ${this.auth.token}`,
-          };
-        }
-        break;
-    }
-  }
-
-  /**
-   * Refresh the authentication token
-   */
-  private async refreshToken(): Promise<void> {
-    if (!this.auth || !this.auth.refreshFunction || !this.auth.refreshToken) {
-      throw new GoatflowError('Cannot refresh token: no refresh function or refresh token available');
-    }
-
-    try {
-      const result = await this.auth.refreshFunction(this.auth.refreshToken);
-      this.auth.token = result.accessToken;
-      this.auth.refreshToken = result.refreshToken;
-      this.auth.expiresAt = result.expiresAt;
-    } catch (error) {
-      throw new GoatflowError('Failed to refresh token', undefined, 'TOKEN_REFRESH_FAILED', 
-        error instanceof Error ? error.message : 'Unknown error');
-    }
-  }
-
-  /**
-   * Handle HTTP errors and convert them to GoatflowError instances
-   */
-  private handleError(error: any): Error {
-    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-      return new TimeoutError('request', error.config?.timeout || 0);
-    }
-
-    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-      return new NetworkError('request', error.config?.url || '', error.message);
-    }
-
-    if (error.response) {
-      const statusCode = error.response.status;
-      let message = 'Unknown error';
-      let code = '';
-      let details = '';
-
-      // Try to parse error response
-      if (error.response.data) {
-        const data = error.response.data;
-        if (typeof data === 'object') {
-          message = data.message || data.error || message;
-          code = data.code || '';
-          details = data.details || '';
-        } else if (typeof data === 'string') {
-          message = data;
-        }
-      }
-
-      return new GoatflowError(message, statusCode, code, details);
-    }
-
-    if (error.request) {
-      return new NetworkError('request', error.config?.url || '', 'No response received');
-    }
-
-    return new GoatflowError(error.message || 'Unknown error');
-  }
-
-  /**
-   * Set up retry logic
-   */
-  private setupRetries(retries: number): void {
-    // Implement exponential backoff retry logic
-    const retryDelay = (retryNumber: number) => {
-      return Math.min(1000 * Math.pow(2, retryNumber), 30000);
-    };
-
-    this.axios.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        const config = error.config;
-        
-        if (!config || config.__retryCount >= retries) {
-          return Promise.reject(error);
-        }
-
-        // Only retry on specific status codes or network errors
-        const shouldRetry = 
-          !error.response || 
-          error.response.status >= 500 || 
-          error.response.status === 429 ||
-          error.code === 'ECONNABORTED' ||
-          error.code === 'ETIMEDOUT';
-
-        if (!shouldRetry) {
-          return Promise.reject(error);
-        }
-
-        config.__retryCount = config.__retryCount || 0;
-        config.__retryCount++;
-
-        const delay = retryDelay(config.__retryCount);
-        await new Promise(resolve => setTimeout(resolve, delay));
-
-        return this.axios(config);
-      }
-    );
-  }
-
-  /**
-   * Update authentication configuration
-   */
-  public setAuth(auth: AuthConfig): void {
+  setAuth(auth: AuthConfig | undefined): void {
     this.auth = auth;
+    this.refreshing = undefined;
   }
 
-  /**
-   * Make a GET request
-   */
-  public async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.axios.get<APIResponse<T>>(url, config);
-    return this.extractData(response);
+  async get<T>(path: string, query?: Record<string, QueryValue>): Promise<T> {
+    return (await this.request<T>('GET', path, { query })).data;
   }
 
-  /**
-   * Make a POST request
-   */
-  public async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.axios.post<APIResponse<T>>(url, data, config);
-    return this.extractData(response);
+  async post<T>(path: string, body?: unknown): Promise<T> {
+    return (await this.request<T>('POST', path, { body })).data;
   }
 
-  /**
-   * Make a PUT request
-   */
-  public async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.axios.put<APIResponse<T>>(url, data, config);
-    return this.extractData(response);
+  async put<T>(path: string, body?: unknown): Promise<T> {
+    return (await this.request<T>('PUT', path, { body })).data;
   }
 
-  /**
-   * Make a DELETE request
-   */
-  public async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.axios.delete<APIResponse<T>>(url, config);
-    return this.extractData(response);
+  async delete<T = void>(path: string): Promise<T> {
+    return (await this.request<T>('DELETE', path)).data;
   }
 
-  /**
-   * Make a PATCH request
-   */
-  public async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.axios.patch<APIResponse<T>>(url, data, config);
-    return this.extractData(response);
-  }
-
-  /**
-   * Extract data from API response
-   */
-  private extractData<T>(response: AxiosResponse<APIResponse<T>>): T {
-    const data = response.data;
-    
-    // Handle standard API response format
-    if (typeof data === 'object' && 'success' in data) {
-      if (!data.success) {
-        throw new GoatflowError(
-          data.error || 'API request failed',
-          response.status,
-          'API_ERROR',
-          data.message
-        );
-      }
-      return data.data as T;
+  /** Sends a request and returns the decoded payload plus pagination. */
+  async request<T>(method: string, path: string, options: RequestOptions = {}): Promise<DecodedResponse<T>> {
+    const url = this.baseURL + path + buildQuery(options.query);
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'User-Agent': this.userAgent,
+    };
+    if (options.authenticate !== false) {
+      const authorization = await this.authorizationHeader();
+      if (authorization) headers.Authorization = authorization;
+    }
+    let body: string | undefined;
+    if (options.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(options.body);
     }
 
-    // Return raw data if not in standard format
-    return data as T;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeout);
+    let response: Response;
+    let text: string;
+    try {
+      // Unauthenticated calls may be redirected to the login page; surface the
+      // redirect instead of following it to HTML.
+      response = await this.fetchImpl(url, { method, headers, body, signal: controller.signal, redirect: 'manual' });
+      text = await response.text();
+    } catch (error) {
+      if (controller.signal.aborted) throw new TimeoutError(method, url, this.timeout);
+      throw new NetworkError(method, url, error instanceof Error ? error.message : String(error));
+    } finally {
+      clearTimeout(timer);
+    }
+    if (response.type === 'opaqueredirect') {
+      throw new GoatflowError('Redirected (not authenticated?)', response.status || undefined);
+    }
+    return decodeResponse<T>(response.status, response.statusText, text);
   }
 
-  /**
-   * Get the underlying axios instance
-   */
-  public getAxios(): AxiosInstance {
-    return this.axios;
+  private async authorizationHeader(): Promise<string | undefined> {
+    const auth = this.auth;
+    if (!auth) return undefined;
+    if (auth.type === 'api-key') return `Bearer ${auth.apiKey}`;
+    if (auth.expiresAt && auth.expiresAt.getTime() - 60_000 <= Date.now()) {
+      this.refreshing ??= this.refresh(auth).finally(() => {
+        this.refreshing = undefined;
+      });
+      await this.refreshing;
+    }
+    return `Bearer ${auth.token}`;
   }
+
+  private async refresh(auth: Extract<AuthConfig, { type: 'jwt' }>): Promise<void> {
+    const expired = auth.expiresAt?.toISOString();
+    if (!auth.refreshFunction) {
+      throw new GoatflowError(`Access token expired at ${expired} and no refreshFunction is configured`);
+    }
+    if (!auth.refreshToken) {
+      throw new GoatflowError(`Access token expired at ${expired} and no refresh token is available`);
+    }
+    const refreshed = await auth.refreshFunction(auth.refreshToken);
+    auth.token = refreshed.accessToken;
+    auth.refreshToken = refreshed.refreshToken;
+    auth.expiresAt = refreshed.expiresAt;
+  }
+}
+
+function buildQuery(query: Record<string, QueryValue> | undefined): string {
+  if (!query) return '';
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || value === '' || value === false) continue;
+    if (Array.isArray(value)) {
+      if (value.length > 0) params.set(key, value.join(','));
+    } else {
+      params.set(key, String(value));
+    }
+  }
+  const encoded = params.toString();
+  return encoded ? `?${encoded}` : '';
 }

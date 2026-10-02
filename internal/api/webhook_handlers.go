@@ -1,850 +1,469 @@
 package api
 
 import (
-	"bytes"
-	"crypto/hmac"
-	"crypto/sha256"
-	"database/sql"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-	"io"
+	"errors"
+	"log"
 	"net/http"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/routing"
+	"github.com/goatkit/goatflow/internal/platform/webhook"
 	"github.com/goatkit/goatflow/internal/webhooks"
 )
 
-// HandleRegisterWebhookAPI handles POST /api/v1/webhooks.
-//
-//	@Summary		Register webhook
-//	@Description	Register a new webhook endpoint
-//	@Tags			Webhooks
-//	@Accept			json
-//	@Produce		json
-//	@Param			webhook	body		object	true	"Webhook data (url, events, secret)"
-//	@Success		201		{object}	map[string]interface{}	"Webhook registered"
-//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
-//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
-//	@Security		BearerAuth
-//	@Router			/webhooks [post]
-func HandleRegisterWebhookAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
+// Outbound webhook administration (routes/api-webhooks.yaml, admin only).
 
-	var req struct {
-		Name           string            `json:"name" binding:"required"`
-		URL            string            `json:"url" binding:"required,url"`
-		Secret         string            `json:"secret"`
-		Events         []string          `json:"events" binding:"required"`
-		RetryCount     int               `json:"retry_count"`
-		TimeoutSeconds int               `json:"timeout_seconds"`
-		Headers        map[string]string `json:"headers"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Set defaults
-	if req.RetryCount == 0 {
-		req.RetryCount = 3
-	}
-	if req.TimeoutSeconds == 0 {
-		req.TimeoutSeconds = 30
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
-
-	// Convert events and headers to JSON strings for storage
-	eventsJSON, err := json.Marshal(req.Events)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid events format"})
-		return
-	}
-	headersJSON, err := json.Marshal(req.Headers)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid headers format"})
-		return
-	}
-
-	// Insert webhook
-	insertQuery := `
-		INSERT INTO webhooks (
-			name, url, secret, events, active,
-			retry_count, timeout_seconds, headers,
-			create_time, create_by, change_time, change_by
-		) VALUES (
-			?, ?, ?, ?, true, ?, ?, ?,
-			NOW(), ?, NOW(), ?
-		) RETURNING id
-	`
-	// Args: name, url, secret, events, retry_count, timeout_seconds, headers, create_by, change_by
-	webhookID64, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(insertQuery),
-		req.Name, req.URL, req.Secret, string(eventsJSON),
-		req.RetryCount, req.TimeoutSeconds, string(headersJSON),
-		userID, userID,
-	)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to register webhook",
-			"details": err.Error(),
-		})
-		return
-	}
-	webhookID := int(webhookID64)
-
-	c.JSON(http.StatusCreated, gin.H{
-		"id":              webhookID,
-		"name":            req.Name,
-		"url":             req.URL,
-		"events":          req.Events,
-		"active":          true,
-		"retry_count":     req.RetryCount,
-		"timeout_seconds": req.TimeoutSeconds,
-	})
+func init() {
+	routing.RegisterHandler("handleWebhookList", handleWebhookList)
+	routing.RegisterHandler("handleWebhookCreate", handleWebhookCreate)
+	routing.RegisterHandler("handleWebhookEvents", handleWebhookEvents)
+	routing.RegisterHandler("handleWebhookGet", handleWebhookGet)
+	routing.RegisterHandler("handleWebhookUpdate", handleWebhookUpdate)
+	routing.RegisterHandler("handleWebhookDelete", handleWebhookDelete)
+	routing.RegisterHandler("handleWebhookTest", handleWebhookTest)
+	routing.RegisterHandler("handleWebhookDeliveries", handleWebhookDeliveries)
+	routing.RegisterHandler("handleWebhookDeliveryGet", handleWebhookDeliveryGet)
+	routing.RegisterHandler("handleWebhookRedeliver", handleWebhookRedeliver)
 }
 
-// HandleListWebhooksAPI handles GET /api/v1/webhooks.
+const (
+	defaultDeliveryListLimit = 50
+	maxDeliveryListLimit     = 200
+)
+
+// webhookRequest is the body of create (all of name, url, events required)
+// and update (only the fields present change). An empty secret removes it.
+type webhookRequest struct {
+	Name           *string            `json:"name"`
+	URL            *string            `json:"url"`
+	Secret         *string            `json:"secret"`
+	Events         *[]string          `json:"events"`
+	Headers        *map[string]string `json:"headers"`
+	RetryCount     *int               `json:"retry_count"`
+	TimeoutSeconds *int               `json:"timeout_seconds"`
+	IsActive       *bool              `json:"is_active"`
+}
+
+// apply copies the fields present in the request onto w.
+func (r *webhookRequest) apply(w *webhook.Webhook) {
+	if r.Name != nil {
+		w.Name = *r.Name
+	}
+	if r.URL != nil {
+		w.URL = *r.URL
+	}
+	if r.Events != nil {
+		w.Events = *r.Events
+	}
+	if r.Headers != nil {
+		w.Headers = *r.Headers
+	}
+	if r.RetryCount != nil {
+		w.RetryCount = *r.RetryCount
+	}
+	if r.TimeoutSeconds != nil {
+		w.TimeoutSeconds = *r.TimeoutSeconds
+	}
+	if r.IsActive != nil {
+		w.IsActive = *r.IsActive
+	}
+}
+
+func webhookFail(c *gin.Context, status int, msg string) {
+	c.JSON(status, gin.H{"success": false, "error": msg})
+}
+
+func webhookOK(c *gin.Context, status int, data interface{}) {
+	c.JSON(status, gin.H{"success": true, "data": data})
+}
+
+// webhookError maps repository/dispatcher errors to responses.
+func webhookError(c *gin.Context, action string, err error) {
+	var verr *webhook.ValidationError
+	switch {
+	case errors.As(err, &verr):
+		webhookFail(c, http.StatusBadRequest, verr.Message)
+	case errors.Is(err, webhook.ErrNotFound):
+		webhookFail(c, http.StatusNotFound, "not found")
+	case errors.Is(err, webhook.ErrDuplicateName):
+		webhookFail(c, http.StatusConflict, err.Error())
+	default:
+		log.Printf("webhooks: %s: %v", action, err)
+		webhookFail(c, http.StatusInternalServerError, "failed to "+action)
+	}
+}
+
+// webhookDeps returns the repository and dispatcher, or writes 503.
+func webhookDeps(c *gin.Context) (*webhook.Repository, *webhook.Dispatcher, bool) {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		webhookFail(c, http.StatusServiceUnavailable, "database unavailable")
+		return nil, nil, false
+	}
+	repo := webhook.NewRepository(db)
+	return repo, webhook.NewDispatcher(repo), true
+}
+
+func webhookActor(c *gin.Context) (int, bool) {
+	id := GetUserIDFromCtx(c, 0)
+	if id <= 0 {
+		webhookFail(c, http.StatusUnauthorized, "authentication required")
+		return 0, false
+	}
+	return id, true
+}
+
+func pathID(c *gin.Context, name string) (int64, bool) {
+	id, err := strconv.ParseInt(c.Param(name), 10, 64)
+	if err != nil || id <= 0 {
+		webhookFail(c, http.StatusBadRequest, "invalid "+name)
+		return 0, false
+	}
+	return id, true
+}
+
+// handleWebhookList handles GET /api/v1/webhooks[?active=true|false].
 //
 //	@Summary		List webhooks
-//	@Description	List all registered webhooks
+//	@Description	List outbound webhooks (admin only)
 //	@Tags			Webhooks
-//	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	map[string]interface{}	"List of webhooks"
-//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Param			active	query		bool	false	"Only active (true) or inactive (false) webhooks"
+//	@Success		200		{object}	map[string]interface{}	"success, data: []Webhook"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid filter"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		403		{object}	map[string]interface{}	"Admin access required"
 //	@Security		BearerAuth
 //	@Router			/webhooks [get]
-func HandleListWebhooksAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+func handleWebhookList(c *gin.Context) {
+	repo, _, ok := webhookDeps(c)
+	if !ok {
 		return
 	}
-	_ = userID
-
-	db, err := database.GetDB()
+	var active *bool
+	if v := c.Query("active"); v != "" {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			webhookFail(c, http.StatusBadRequest, "active must be true or false")
+			return
+		}
+		active = &b
+	}
+	list, err := repo.List(c.Request.Context(), active)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+		webhookError(c, "list webhooks", err)
 		return
 	}
-
-	// Build query
-	query := database.ConvertPlaceholders(`
-		SELECT id, name, url, events, active, retry_count, timeout_seconds, create_time
-		FROM webhooks
-		WHERE 1=1
-	`)
-	args := []interface{}{}
-
-	// Filter by active status
-	if activeFilter := c.Query("active"); activeFilter != "" {
-		if activeFilter == "true" {
-			query += database.ConvertPlaceholders(` AND active = true`)
-		} else {
-			query += database.ConvertPlaceholders(` AND active = false`)
-		}
-	}
-
-	query += ` ORDER BY id DESC`
-
-	rows, err := db.Query(query, args...)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch webhooks"})
-		return
-	}
-	defer rows.Close()
-
-	webhookList := []gin.H{}
-	for rows.Next() {
-		var webhook struct {
-			ID             int
-			Name           string
-			URL            string
-			EventsJSON     string
-			Active         bool
-			RetryCount     int
-			TimeoutSeconds int
-			CreateTime     time.Time
-		}
-
-		if err := rows.Scan(
-			&webhook.ID, &webhook.Name, &webhook.URL, &webhook.EventsJSON,
-			&webhook.Active, &webhook.RetryCount, &webhook.TimeoutSeconds,
-			&webhook.CreateTime,
-		); err != nil {
-			continue
-		}
-
-		// Parse events JSON
-		var events []string
-		if err := json.Unmarshal([]byte(webhook.EventsJSON), &events); err != nil {
-			events = []string{}
-		}
-
-		webhookList = append(webhookList, gin.H{
-			"id":              webhook.ID,
-			"name":            webhook.Name,
-			"url":             webhook.URL,
-			"events":          events,
-			"active":          webhook.Active,
-			"retry_count":     webhook.RetryCount,
-			"timeout_seconds": webhook.TimeoutSeconds,
-			"create_time":     webhook.CreateTime,
-		})
-	}
-	if err := rows.Err(); err != nil {
-		// Log or handle iteration errors
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"webhooks": webhookList,
-		"total":    len(webhookList),
-	})
+	webhookOK(c, http.StatusOK, list)
 }
 
-// HandleGetWebhookAPI handles GET /api/v1/webhooks/:id.
+// handleWebhookEvents handles GET /api/v1/webhooks/events.
 //
-//	@Summary		Get webhook
-//	@Description	Get webhook by ID
+//	@Summary		List webhook events
+//	@Description	Events a webhook can subscribe to
+//	@Tags			Webhooks
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"success, data: [{event, description}]"
+//	@Security		BearerAuth
+//	@Router			/webhooks/events [get]
+func handleWebhookEvents(c *gin.Context) {
+	webhookOK(c, http.StatusOK, webhooks.Events)
+}
+
+// handleWebhookCreate handles POST /api/v1/webhooks.
+//
+//	@Summary		Create webhook
+//	@Description	Create an outbound webhook; deliveries are signed with X-Webhook-Signature (sha256=HMAC of the body) when a secret is set
 //	@Tags			Webhooks
 //	@Accept			json
 //	@Produce		json
-//	@Param			id	path		int	true	"Webhook ID"
-//	@Success		200	{object}	map[string]interface{}	"Webhook details"
-//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
-//	@Failure		404	{object}	map[string]interface{}	"Webhook not found"
+//	@Param			webhook	body		object	true	"name, url, events (required); secret, headers, retry_count, timeout_seconds, is_active"
+//	@Success		201		{object}	map[string]interface{}	"success, data: Webhook"
+//	@Failure		400		{object}	map[string]interface{}	"Validation error"
+//	@Failure		409		{object}	map[string]interface{}	"Name already used"
 //	@Security		BearerAuth
-//	@Router			/webhooks/{id} [get]
-func HandleGetWebhookAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+//	@Router			/webhooks [post]
+func handleWebhookCreate(c *gin.Context) {
+	userID, ok := webhookActor(c)
+	if !ok {
 		return
 	}
-	_ = userID
-
-	webhookID, err := strconv.Atoi(c.Param("id"))
+	var req webhookRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		webhookFail(c, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	w := &webhook.Webhook{
+		RetryCount:     webhook.DefaultRetryCount,
+		TimeoutSeconds: webhook.DefaultTimeoutSeconds,
+		IsActive:       true,
+	}
+	req.apply(w)
+	if err := w.Normalize(webhooks.IsEvent); err != nil {
+		webhookError(c, "create webhook", err)
+		return
+	}
+	secret := ""
+	if req.Secret != nil {
+		secret = *req.Secret
+	}
+	if err := webhook.ValidateSecret(secret); err != nil {
+		webhookError(c, "create webhook", err)
+		return
+	}
+	repo, _, ok := webhookDeps(c)
+	if !ok {
+		return
+	}
+	created, err := repo.Create(c.Request.Context(), w, secret, userID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid webhook ID"})
+		webhookError(c, "create webhook", err)
 		return
 	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
-
-	var webhook struct {
-		ID             int
-		Name           string
-		URL            string
-		Secret         sql.NullString
-		EventsJSON     sql.NullString
-		Active         bool
-		RetryCount     int
-		TimeoutSeconds int
-		HeadersJSON    sql.NullString
-		CreateTime     time.Time
-	}
-
-	query := database.ConvertPlaceholders(`
-		SELECT id, name, url, secret, events, active, 
-			   retry_count, timeout_seconds, headers, create_time
-		FROM webhooks
-		WHERE id = ?
-	`)
-
-	err = db.QueryRow(query, webhookID).Scan(
-		&webhook.ID, &webhook.Name, &webhook.URL, &webhook.Secret,
-		&webhook.EventsJSON, &webhook.Active, &webhook.RetryCount,
-		&webhook.TimeoutSeconds, &webhook.HeadersJSON, &webhook.CreateTime,
-	)
-
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Webhook not found"})
-		return
-	}
-
-	// Parse JSON fields
-	var events []string
-	if webhook.EventsJSON.Valid {
-		if err := json.Unmarshal([]byte(webhook.EventsJSON.String), &events); err != nil {
-			events = []string{}
-		}
-	}
-
-	var headers map[string]string
-	if webhook.HeadersJSON.Valid {
-		if err := json.Unmarshal([]byte(webhook.HeadersJSON.String), &headers); err != nil {
-			headers = map[string]string{}
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"id":              webhook.ID,
-		"name":            webhook.Name,
-		"url":             webhook.URL,
-		"events":          events,
-		"active":          webhook.Active,
-		"retry_count":     webhook.RetryCount,
-		"timeout_seconds": webhook.TimeoutSeconds,
-		"headers":         headers,
-		"create_time":     webhook.CreateTime,
-	})
+	webhookOK(c, http.StatusCreated, created)
 }
 
-// HandleUpdateWebhookAPI handles PUT /api/v1/webhooks/:id.
+// handleWebhookGet handles GET /api/v1/webhooks/:id.
+//
+//	@Summary		Get webhook
+//	@Tags			Webhooks
+//	@Produce		json
+//	@Param			id	path		int	true	"Webhook ID"
+//	@Success		200	{object}	map[string]interface{}	"success, data: Webhook"
+//	@Failure		404	{object}	map[string]interface{}	"Not found"
+//	@Security		BearerAuth
+//	@Router			/webhooks/{id} [get]
+func handleWebhookGet(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	repo, _, ok := webhookDeps(c)
+	if !ok {
+		return
+	}
+	w, err := repo.Get(c.Request.Context(), id)
+	if err != nil {
+		webhookError(c, "load webhook", err)
+		return
+	}
+	webhookOK(c, http.StatusOK, w)
+}
+
+// handleWebhookUpdate handles PUT /api/v1/webhooks/:id (partial update).
 //
 //	@Summary		Update webhook
-//	@Description	Update a webhook
+//	@Description	Partial update: only fields present change; an empty secret removes it
 //	@Tags			Webhooks
 //	@Accept			json
 //	@Produce		json
 //	@Param			id		path		int		true	"Webhook ID"
-//	@Param			webhook	body		object	true	"Webhook update data"
-//	@Success		200		{object}	map[string]interface{}	"Updated webhook"
-//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
-//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
-//	@Failure		404		{object}	map[string]interface{}	"Webhook not found"
+//	@Param			webhook	body		object	true	"Fields to change"
+//	@Success		200		{object}	map[string]interface{}	"success, data: Webhook"
+//	@Failure		400		{object}	map[string]interface{}	"Validation error"
+//	@Failure		404		{object}	map[string]interface{}	"Not found"
+//	@Failure		409		{object}	map[string]interface{}	"Name already used"
 //	@Security		BearerAuth
 //	@Router			/webhooks/{id} [put]
-func HandleUpdateWebhookAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+func handleWebhookUpdate(c *gin.Context) {
+	userID, ok := webhookActor(c)
+	if !ok {
 		return
 	}
-
-	webhookID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid webhook ID"})
+	id, ok := pathID(c, "id")
+	if !ok {
 		return
 	}
-
-	var req struct {
-		Name           string            `json:"name"`
-		URL            string            `json:"url"`
-		Secret         string            `json:"secret"`
-		Events         []string          `json:"events"`
-		Active         *bool             `json:"active"`
-		RetryCount     int               `json:"retry_count"`
-		TimeoutSeconds int               `json:"timeout_seconds"`
-		Headers        map[string]string `json:"headers"`
-	}
-
+	var req webhookRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		webhookFail(c, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
-
-	db, err := database.GetDB()
+	repo, _, ok := webhookDeps(c)
+	if !ok {
+		return
+	}
+	w, err := repo.Get(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+		webhookError(c, "load webhook", err)
 		return
 	}
-
-	// Check if webhook exists
-	var count int
-	checkQuery := database.ConvertPlaceholders(`SELECT 1 FROM webhooks WHERE id = ?`)
-	if err := db.QueryRow(checkQuery, webhookID).Scan(&count); err != nil || count != 1 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Webhook not found"})
+	req.apply(w)
+	if err := w.Normalize(webhooks.IsEvent); err != nil {
+		webhookError(c, "update webhook", err)
 		return
 	}
-
-	// Build update query dynamically
-	updateParts := []string{"change_time = NOW()", "change_by = ?"}
-	args := []interface{}{userID}
-
-	if req.Name != "" {
-		updateParts = append(updateParts, "name = ?")
-		args = append(args, req.Name)
-	}
-	if req.URL != "" {
-		updateParts = append(updateParts, "url = ?")
-		args = append(args, req.URL)
-	}
-	if req.Secret != "" {
-		updateParts = append(updateParts, "secret = ?")
-		args = append(args, req.Secret)
-	}
-	if len(req.Events) > 0 {
-		eventsJSON, err := json.Marshal(req.Events)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid events format"})
+	var secret webhook.SecretChange
+	if req.Secret != nil {
+		if err := webhook.ValidateSecret(*req.Secret); err != nil {
+			webhookError(c, "update webhook", err)
 			return
 		}
-		updateParts = append(updateParts, "events = ?")
-		args = append(args, string(eventsJSON))
+		secret = webhook.SecretChange{Set: true, Value: *req.Secret}
 	}
-	if req.Active != nil {
-		updateParts = append(updateParts, "active = ?")
-		args = append(args, *req.Active)
-	}
-	if req.RetryCount > 0 {
-		updateParts = append(updateParts, "retry_count = ?")
-		args = append(args, req.RetryCount)
-	}
-	if req.TimeoutSeconds > 0 {
-		updateParts = append(updateParts, "timeout_seconds = ?")
-		args = append(args, req.TimeoutSeconds)
-	}
-	if req.Headers != nil {
-		headersJSON, err := json.Marshal(req.Headers)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid headers format"})
-			return
-		}
-		updateParts = append(updateParts, "headers = ?")
-		args = append(args, string(headersJSON))
-	}
-
-	args = append(args, webhookID)
-
-	updateQuery := database.ConvertPlaceholders(
-		fmt.Sprintf("UPDATE webhooks SET %s WHERE id = ?",
-			strings.Join(updateParts, ", ")), //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
-	)
-
-	_, err = db.Exec(updateQuery, args...)
+	updated, err := repo.Update(c.Request.Context(), w, secret, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update webhook"})
+		webhookError(c, "update webhook", err)
 		return
 	}
-
-	// Return updated webhook
-	c.JSON(http.StatusOK, gin.H{
-		"id":      webhookID,
-		"name":    req.Name,
-		"url":     req.URL,
-		"events":  req.Events,
-		"active":  req.Active,
-		"message": "Webhook updated successfully",
-	})
+	webhookOK(c, http.StatusOK, updated)
 }
 
-// HandleDeleteWebhookAPI handles DELETE /api/v1/webhooks/:id.
+// handleWebhookDelete handles DELETE /api/v1/webhooks/:id.
 //
 //	@Summary		Delete webhook
-//	@Description	Delete a webhook
+//	@Description	Deletes the webhook and its delivery log
 //	@Tags			Webhooks
-//	@Accept			json
 //	@Produce		json
 //	@Param			id	path		int	true	"Webhook ID"
-//	@Success		200	{object}	map[string]interface{}	"Webhook deleted"
-//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
-//	@Failure		404	{object}	map[string]interface{}	"Webhook not found"
+//	@Success		200	{object}	map[string]interface{}	"Deleted"
+//	@Failure		404	{object}	map[string]interface{}	"Not found"
 //	@Security		BearerAuth
 //	@Router			/webhooks/{id} [delete]
-func HandleDeleteWebhookAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+func handleWebhookDelete(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
 		return
 	}
-	_ = userID
-
-	webhookID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid webhook ID"})
+	repo, _, ok := webhookDeps(c)
+	if !ok {
 		return
 	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+	if err := repo.Delete(c.Request.Context(), id); err != nil {
+		webhookError(c, "delete webhook", err)
 		return
 	}
-
-	// Delete webhook and its deliveries
-	tx, err := db.Begin()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
-		return
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	// Delete deliveries first
-	deleteDeliveriesQuery := database.ConvertPlaceholders(`
-		DELETE FROM webhook_deliveries WHERE webhook_id = ?
-	`)
-	if _, err := tx.Exec(deleteDeliveriesQuery, webhookID); err != nil {
-		// Non-fatal, continue with webhook deletion
-	}
-
-	// Delete webhook
-	deleteWebhookQuery := database.ConvertPlaceholders(`
-		DELETE FROM webhooks WHERE id = ?
-	`)
-	result, err := tx.Exec(deleteWebhookQuery, webhookID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete webhook"})
-		return
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil || rowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Webhook not found"})
-		return
-	}
-
-	if err := tx.Commit(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Webhook deleted successfully",
-		"id":      webhookID,
-	})
+	webhookOK(c, http.StatusOK, gin.H{"id": id})
 }
 
-// HandleTestWebhookAPI handles POST /api/v1/webhooks/:id/test.
+// handleWebhookTest handles POST /api/v1/webhooks/:id/test: sends a
+// webhook.test event now and returns the recorded delivery.
 //
-//	@Summary		Test webhook
-//	@Description	Send a test event to a webhook
+//	@Summary		Send test delivery
+//	@Description	Sends a webhook.test event now (one attempt) and returns the recorded delivery
 //	@Tags			Webhooks
-//	@Accept			json
 //	@Produce		json
 //	@Param			id	path		int	true	"Webhook ID"
-//	@Success		200	{object}	map[string]interface{}	"Test result"
-//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
-//	@Failure		404	{object}	map[string]interface{}	"Webhook not found"
+//	@Success		200	{object}	map[string]interface{}	"success, data: WebhookDelivery"
+//	@Failure		404	{object}	map[string]interface{}	"Not found"
 //	@Security		BearerAuth
 //	@Router			/webhooks/{id}/test [post]
-func HandleTestWebhookAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+func handleWebhookTest(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
 		return
 	}
-	_ = userID
-
-	webhookID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid webhook ID"})
+	_, dispatcher, ok := webhookDeps(c)
+	if !ok {
 		return
 	}
-
-	var req struct {
-		EventType   string                 `json:"event_type"`
-		TestPayload map[string]interface{} `json:"test_payload"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		// Use default test payload
-		req.EventType = "test.webhook"
-		req.TestPayload = map[string]interface{}{
-			"message":   "This is a test webhook delivery",
-			"timestamp": time.Now(),
-		}
-	}
-
-	db, err := database.GetDB()
+	d, err := dispatcher.Test(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+		webhookError(c, "send test delivery", err)
 		return
 	}
-
-	// Get webhook details
-	var webhook struct {
-		URL            string
-		Secret         sql.NullString
-		TimeoutSeconds int
-		HeadersJSON    sql.NullString
-	}
-
-	query := database.ConvertPlaceholders(`
-		SELECT url, secret, timeout_seconds, headers
-		FROM webhooks
-		WHERE id = ?
-	`)
-
-	err = db.QueryRow(query, webhookID).Scan(
-		&webhook.URL, &webhook.Secret, &webhook.TimeoutSeconds, &webhook.HeadersJSON,
-	)
-
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Webhook not found"})
-		return
-	}
-
-	// Parse headers
-	var headers map[string]string
-	if webhook.HeadersJSON.Valid {
-		if err := json.Unmarshal([]byte(webhook.HeadersJSON.String), &headers); err != nil {
-			headers = map[string]string{}
-		}
-	}
-
-	// Prepare payload
-	payload := webhooks.WebhookPayload{
-		Event:     webhooks.EventType(req.EventType),
-		Timestamp: time.Now(),
-		Data:      req.TestPayload,
-	}
-
-	// Generate signature if secret is configured
-	if webhook.Secret.Valid && webhook.Secret.String != "" {
-		payloadJSON, err := json.Marshal(payload)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal payload"})
-			return
-		}
-		h := hmac.New(sha256.New, []byte(webhook.Secret.String))
-		h.Write(payloadJSON)
-		payload.Signature = hex.EncodeToString(h.Sum(nil))
-	}
-
-	// Send test webhook
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal payload"})
-		return
-	}
-	client := &http.Client{
-		Timeout: time.Duration(webhook.TimeoutSeconds) * time.Second,
-	}
-
-	startTime := time.Now()
-	httpReq, err := http.NewRequest("POST", webhook.URL, bytes.NewBuffer(payloadJSON))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
-		return
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	// Add custom headers
-	for key, value := range headers {
-		httpReq.Header.Set(key, value)
-	}
-
-	// Add signature header if available
-	if payload.Signature != "" {
-		httpReq.Header.Set("X-Webhook-Signature", payload.Signature)
-	}
-
-	resp, err := client.Do(httpReq)
-	responseTime := time.Since(startTime).Milliseconds()
-
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success":          false,
-			"message":          "Failed to deliver test webhook",
-			"error":            err.Error(),
-			"status_code":      0,
-			"response":         "",
-			"response_time_ms": responseTime,
-		})
-		return
-	}
-	defer resp.Body.Close()
-
-	// Read response body
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		responseBody = []byte("Failed to read response body")
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success":          resp.StatusCode >= 200 && resp.StatusCode < 300,
-		"message":          "Test webhook delivered",
-		"status_code":      resp.StatusCode,
-		"response":         string(responseBody),
-		"response_time_ms": responseTime,
-	})
+	webhookOK(c, http.StatusOK, d)
 }
 
-// HandleWebhookDeliveriesAPI handles GET /api/v1/webhooks/:id/deliveries.
+// handleWebhookDeliveries handles GET /api/v1/webhooks/:id/deliveries[?limit=N].
 //
 //	@Summary		List webhook deliveries
-//	@Description	List delivery history for a webhook
+//	@Description	Newest deliveries first, without payload and response bodies
 //	@Tags			Webhooks
-//	@Accept			json
 //	@Produce		json
-//	@Param			id	path		int	true	"Webhook ID"
-//	@Success		200	{object}	map[string]interface{}	"List of deliveries"
-//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
-//	@Failure		404	{object}	map[string]interface{}	"Webhook not found"
+//	@Param			id		path		int	true	"Webhook ID"
+//	@Param			limit	query		int	false	"1-200, default 50"
+//	@Success		200		{object}	map[string]interface{}	"success, data: []WebhookDelivery"
+//	@Failure		404		{object}	map[string]interface{}	"Not found"
 //	@Security		BearerAuth
 //	@Router			/webhooks/{id}/deliveries [get]
-func HandleWebhookDeliveriesAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+func handleWebhookDeliveries(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
 		return
 	}
-	_ = userID
-
-	webhookID, err := strconv.Atoi(c.Param("id"))
+	limit := defaultDeliveryListLimit
+	if v := c.Query("limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 || n > maxDeliveryListLimit {
+			webhookFail(c, http.StatusBadRequest, "limit must be between 1 and "+strconv.Itoa(maxDeliveryListLimit))
+			return
+		}
+		limit = n
+	}
+	repo, _, ok := webhookDeps(c)
+	if !ok {
+		return
+	}
+	if _, err := repo.Get(c.Request.Context(), id); err != nil {
+		webhookError(c, "load webhook", err)
+		return
+	}
+	list, err := repo.ListDeliveries(c.Request.Context(), id, limit)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid webhook ID"})
+		webhookError(c, "list deliveries", err)
 		return
 	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
-
-	// Get deliveries
-	query := database.ConvertPlaceholders(`
-		SELECT id, event_type, status_code, attempts, delivered_at, created_at
-		FROM webhook_deliveries
-		WHERE webhook_id = ?
-		ORDER BY created_at DESC
-		LIMIT 100
-	`)
-
-	rows, err := db.Query(query, webhookID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch deliveries"})
-		return
-	}
-	defer rows.Close()
-
-	deliveries := []gin.H{}
-	for rows.Next() {
-		var delivery struct {
-			ID          int
-			EventType   string
-			StatusCode  int
-			Attempts    int
-			DeliveredAt *time.Time
-			CreatedAt   time.Time
-		}
-
-		if err := rows.Scan(
-			&delivery.ID, &delivery.EventType, &delivery.StatusCode,
-			&delivery.Attempts, &delivery.DeliveredAt, &delivery.CreatedAt,
-		); err != nil {
-			continue
-		}
-
-		deliveryData := gin.H{
-			"id":          delivery.ID,
-			"event_type":  delivery.EventType,
-			"status_code": delivery.StatusCode,
-			"attempts":    delivery.Attempts,
-			"success":     delivery.StatusCode >= 200 && delivery.StatusCode < 300,
-			"created_at":  delivery.CreatedAt,
-		}
-
-		if delivery.DeliveredAt != nil {
-			deliveryData["delivered_at"] = delivery.DeliveredAt
-		}
-
-		deliveries = append(deliveries, deliveryData)
-	}
-	if err := rows.Err(); err != nil {
-		// Log or handle iteration errors
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"deliveries": deliveries,
-		"total":      len(deliveries),
-	})
+	webhookOK(c, http.StatusOK, list)
 }
 
-// HandleRetryWebhookDeliveryAPI handles POST /api/v1/webhooks/deliveries/:id/retry.
+// handleWebhookDeliveryGet handles GET /api/v1/webhooks/deliveries/:id
+// (includes payload and response body).
 //
-//	@Summary		Retry webhook delivery
-//	@Description	Retry a failed webhook delivery
+//	@Summary		Get webhook delivery
+//	@Description	One delivery including payload and response body
 //	@Tags			Webhooks
-//	@Accept			json
 //	@Produce		json
 //	@Param			id	path		int	true	"Delivery ID"
-//	@Success		200	{object}	map[string]interface{}	"Retry result"
-//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
-//	@Failure		404	{object}	map[string]interface{}	"Delivery not found"
+//	@Success		200	{object}	map[string]interface{}	"success, data: WebhookDelivery"
+//	@Failure		404	{object}	map[string]interface{}	"Not found"
 //	@Security		BearerAuth
-//	@Router			/webhooks/deliveries/{id}/retry [post]
-func HandleRetryWebhookDeliveryAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+//	@Router			/webhooks/deliveries/{id} [get]
+func handleWebhookDeliveryGet(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
 		return
 	}
-	_ = userID
-
-	deliveryID, err := strconv.Atoi(c.Param("id"))
+	repo, _, ok := webhookDeps(c)
+	if !ok {
+		return
+	}
+	d, err := repo.GetDelivery(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid delivery ID"})
+		webhookError(c, "load delivery", err)
 		return
 	}
+	webhookOK(c, http.StatusOK, d)
+}
 
-	db, err := database.GetDB()
+// handleWebhookRedeliver handles POST /api/v1/webhooks/deliveries/:id/redeliver:
+// sends the delivery's payload again now and returns the new delivery.
+//
+//	@Summary		Redeliver webhook delivery
+//	@Description	Sends the payload of an earlier delivery again now as a new delivery (one attempt)
+//	@Tags			Webhooks
+//	@Produce		json
+//	@Param			id	path		int	true	"Delivery ID"
+//	@Success		200	{object}	map[string]interface{}	"success, data: WebhookDelivery"
+//	@Failure		404	{object}	map[string]interface{}	"Not found"
+//	@Security		BearerAuth
+//	@Router			/webhooks/deliveries/{id}/redeliver [post]
+func handleWebhookRedeliver(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	_, dispatcher, ok := webhookDeps(c)
+	if !ok {
+		return
+	}
+	d, err := dispatcher.Redeliver(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+		webhookError(c, "redeliver", err)
 		return
 	}
-
-	// Get delivery and webhook details
-	var delivery struct {
-		WebhookID int
-		Payload   string
-		EventType string
-	}
-
-	query := database.ConvertPlaceholders(`
-		SELECT webhook_id, payload, event_type
-		FROM webhook_deliveries
-		WHERE id = ?
-	`)
-
-	err = db.QueryRow(query, deliveryID).Scan(
-		&delivery.WebhookID, &delivery.Payload, &delivery.EventType,
-	)
-
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Delivery not found"})
-		return
-	}
-
-	// Queue for retry (in production, this would use a job queue)
-	// For now, just update the retry time
-	nextRetryExpr := database.GetAdapter().IntervalAdd("NOW()", 1, "MINUTE")
-
-	updateQuery := fmt.Sprintf(`
-		UPDATE webhook_deliveries
-		SET next_retry = %s,
-			attempts = attempts + 1
-		WHERE id = ?
-	`, nextRetryExpr) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
-
-	_, err = db.Exec(database.ConvertPlaceholders(updateQuery), deliveryID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to queue retry"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success":     true,
-		"message":     "Webhook delivery queued for retry",
-		"delivery_id": deliveryID,
-	})
+	webhookOK(c, http.StatusOK, d)
 }

@@ -1,112 +1,66 @@
-# GoatFlow SDK
+# GoatFlow SDKs
 
-Software Development Kits (SDKs) for interacting with the GoatFlow API. These SDKs provide type-safe client libraries for various programming languages.
+Client libraries for the GoatFlow REST API (`/api/v1`).
 
-## Available SDKs
+| SDK | Path | Package | Runtime |
+|-----|------|---------|---------|
+| Go | [`go/`](go/) | `github.com/goatkit/goatflow/sdk/go` | Go 1.23+ |
+| TypeScript/JavaScript | [`typescript/`](typescript/) | `@goatflow/sdk` (ESM) | Node 18+, Bun, browsers (`fetch`) |
+| Python | [`python/`](python/) | `goatflow-sdk` | Python 3.8+, asyncio (httpx, Pydantic v2) |
 
-### Go SDK
-- **Path**: `./go/`
-- **Package**: `github.com/goatkit/goatflow/sdk/go`
-- **Go Version**: 1.23+
-- **Features**: Full type safety, context support, concurrent operations
+## Quick start
 
-### TypeScript/JavaScript SDK  
-- **Path**: `./typescript/`
-- **Package**: `@goatflow/sdk`
-- **Node Version**: 18+
-- **Features**: TypeScript definitions, Promise-based, browser/Node.js support
-
-### Python SDK
-- **Path**: `./python/`
-- **Package**: `goatflow-sdk`
-- **Python Version**: 3.8+
-- **Features**: Async/await support, type hints, Pydantic models
-
-## Quick Start
-
-### Go
 ```go
-import "github.com/goatkit/goatflow/sdk/go"
-
-client := goatflow.NewClient("https://your-goatflow-instance.com", "your-api-key")
-tickets, err := client.Tickets.List(ctx, &goatflow.TicketListOptions{})
+gf := client.NewClientWithAPIKey("https://goatflow.example.com", "gf_...")
+tickets, err := gf.Tickets.List(ctx, &types.TicketListOptions{Status: "open"})
 ```
 
-### TypeScript
 ```typescript
-import { GoatflowClient } from '@goatflow/sdk';
-
-const client = new GoatflowClient('https://your-goatflow-instance.com', 'your-api-key');
-const tickets = await client.tickets.list();
+const gf = GoatflowClient.withApiKey('https://goatflow.example.com', 'gf_...');
+const tickets = await gf.tickets.list({ status: 'open' });
 ```
 
-### Python
 ```python
-from goatflow_sdk import GoatflowClient
-
-client = GoatflowClient('https://your-goatflow-instance.com', 'your-api-key')
-tickets = await client.tickets.list()
-```
-
-### PHP
-```php
-use Goatflow\SDK\Client;
-
-$client = new Client('https://your-goatflow-instance.com', 'your-api-key');
-$tickets = $client->tickets()->list();
+async with GoatflowClient.with_api_key("https://goatflow.example.com", "gf_...") as gf:
+    tickets = await gf.tickets.list(status="open")
 ```
 
 ## Authentication
 
-All SDKs support multiple authentication methods:
+Every SDK sends `Authorization: Bearer <token>` with one of:
 
-1. **API Key** (recommended for server-to-server)
-2. **JWT Token** (for user-based authentication)
-3. **OAuth2** (for third-party integrations)
+- **API token** (`gf_...`), created on the API Tokens settings page (`/settings/tokens`) or via `POST /api/v1/tokens`. Recommended for integrations.
+- **JWT access token** from `POST /api/v1/auth/login` (`login` + `password`). Clients created by login (or from a stored token pair) renew it through `POST /api/v1/auth/refresh` before it expires; each refresh rotates the refresh token.
 
-## API Coverage
+## Responses and errors
 
-All SDKs provide complete coverage of the GoatFlow API:
+Most endpoints answer `{"success": true, "data": ...}` (paginated lists add `"pagination"`); a few answer `{"success": true, ...fields}` or a bare object. The SDKs unwrap all three and return the payload. Errors (`{"error": "message"}` or `{"error": {"code", "message"}}`, and `{"success": false}` even with HTTP 200) become a typed error carrying the HTTP status, the message and the code when present. A redirect (e.g. to the login page) is reported as an error instead of being followed.
 
-- ✅ Authentication & Session Management
-- ✅ Ticket Management (CRUD, search, attachments)
-- ✅ User Management
-- ✅ Queue Management
-- ✅ Dashboard & Analytics
-- ✅ LDAP Integration
-- ✅ Webhook Management
-- ✅ Real-time Events (WebSocket/SSE)
+## Coverage
 
-## Error Handling
+| Area | Endpoints |
+|------|-----------|
+| Tickets | `GET/POST /tickets`, `GET/PUT/DELETE /tickets/:id`, `POST /tickets/:id/reopen` |
+| Articles | `GET/POST /tickets/:id/articles`, `GET/PUT/DELETE /tickets/:id/articles/:article_id` |
+| Users (agents) | `GET/POST /users`, `GET /users/me`, `GET/PUT/DELETE /users/:id` |
+| Queues | `GET /queues`, `GET /queues/:id` |
+| Statistics | `GET /statistics/dashboard` |
+| Search | `POST /search` |
+| Webhooks (admin) | `GET/POST /webhooks`, `GET/PUT/DELETE /webhooks/:id`, `POST /webhooks/:id/test`, `GET /webhooks/:id/deliveries`, `GET /webhooks/deliveries/:id`, `POST /webhooks/deliveries/:id/redeliver` |
+| Auth | `POST /auth/login`, `POST /auth/refresh` |
+| Health | `GET /health` (outside `/api/v1`) |
 
-All SDKs implement consistent error handling:
-
-- **Network errors**: Connection timeouts, DNS failures
-- **HTTP errors**: 4xx/5xx status codes with detailed messages
-- **API errors**: GoatFlow-specific error codes and descriptions
-- **Validation errors**: Client-side validation before API calls
-
-## Rate Limiting
-
-SDKs automatically handle rate limiting:
-
-- Exponential backoff with jitter
-- Configurable retry policies
-- Rate limit header parsing
-- Queue management for bulk operations
+Other `/api/v1` endpoints (lookups, custom fields, organisations, tokens, ...) can be called through each client's generic request methods, which apply the same envelope and error handling.
 
 ## Testing
 
-Each SDK includes:
+All three test suites run against the same response bodies in [`testdata/`](testdata/): captured from a running server for read endpoints, the handler's JSON literal for endpoints that change data.
 
-- Unit tests with 90%+ coverage
-- Integration tests against live API
-- Mock server for offline testing
-- Examples and documentation
-
-## Contributing
-
-See individual SDK directories for language-specific contribution guidelines.
+```bash
+make test-sdk-go                                   # go vet + go test + build examples (toolbox)
+cd sdk/typescript && npm install --ignore-scripts && npm run typecheck && bun test
+cd sdk/python && python3 -m pytest                 # needs httpx, pydantic, pytest
+```
 
 ## License
 

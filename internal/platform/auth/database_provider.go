@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
@@ -15,14 +16,19 @@ import (
 type DatabaseAuthProvider struct {
 	userRepo UserLookup
 	db       *sql.DB
-	hasher   *PasswordHasher
 }
+
+// Statements that store an upgraded hash. The old hash is part of the WHERE
+// clause so a password changed concurrently is never overwritten.
+const (
+	upgradeAgentHashSQL    = "UPDATE users SET pw = ?, change_time = CURRENT_TIMESTAMP WHERE id = ? AND pw = ?"
+	upgradeCustomerHashSQL = "UPDATE customer_user SET pw = ?, change_time = CURRENT_TIMESTAMP WHERE id = ? AND pw = ?"
+)
 
 func NewDatabaseAuthProvider(db *sql.DB, userRepo UserLookup) *DatabaseAuthProvider {
 	return &DatabaseAuthProvider{
 		userRepo: userRepo,
 		db:       db,
-		hasher:   NewPasswordHasher(),
 	}
 }
 
@@ -31,6 +37,10 @@ func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, passw
 	if p.userRepo == nil {
 		return nil, ErrAuthBackendFailed
 	}
+	// Hash policy (PASSWORD_HASH_TYPE, MIGRATE_PASSWORD_HASHES) is read per
+	// login, like every other path that builds a PasswordHasher.
+	hasher := NewPasswordHasher()
+
 	// Try to find user by login or email
 	var user *platformmodels.User
 	var err error
@@ -42,7 +52,7 @@ func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, passw
 
 	// If agent lookup fails, try customer_user table
 	if err != nil {
-		user, err = p.authenticateCustomerUser(ctx, username, password)
+		user, err = p.authenticateCustomerUser(ctx, hasher, username, password)
 		if err != nil {
 			return nil, ErrUserNotFound
 		}
@@ -54,12 +64,12 @@ func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, passw
 		return nil, ErrUserDisabled
 	}
 
-	// Verify password using our configurable hasher
+	// Verify password: bcrypt, salted sha256 and OTRS sha2 are all accepted
 	if !isCustomer {
-		// Use our hasher which auto-detects hash type (SHA256 for OTRS, bcrypt for GoatFlow)
-		if !p.hasher.VerifyPassword(password, user.Password) {
+		if !hasher.VerifyPassword(password, user.Password) {
 			return nil, ErrInvalidCredentials
 		}
+		p.upgradeHash(ctx, hasher, upgradeAgentHashSQL, int64(user.ID), password, user.Password)
 	}
 
 	// Clear password from user object before returning
@@ -118,7 +128,7 @@ func (p *DatabaseAuthProvider) Priority() int {
 }
 
 // authenticateCustomerUser authenticates a customer user from the customer_user table.
-func (p *DatabaseAuthProvider) authenticateCustomerUser(ctx context.Context, username, password string) (*platformmodels.User, error) {
+func (p *DatabaseAuthProvider) authenticateCustomerUser(ctx context.Context, hasher *PasswordHasher, username, password string) (*platformmodels.User, error) {
 	// Query customer_user table - allow login by username OR email
 	var login, email, customerID, firstName, lastName, pw string
 	var validID int
@@ -146,9 +156,10 @@ func (p *DatabaseAuthProvider) authenticateCustomerUser(ctx context.Context, use
 	}
 
 	// Verify password
-	if !p.hasher.VerifyPassword(password, pw) {
+	if !hasher.VerifyPassword(password, pw) {
 		return nil, ErrInvalidCredentials
 	}
+	p.upgradeHash(ctx, hasher, upgradeCustomerHashSQL, id, password, pw)
 
 	// Convert to models.User format
 	user := &platformmodels.User{
@@ -163,6 +174,25 @@ func (p *DatabaseAuthProvider) authenticateCustomerUser(ctx context.Context, use
 	}
 
 	return user, nil
+}
+
+// upgradeHash rewrites a just-verified password in the configured hash format
+// when MIGRATE_PASSWORD_HASHES is enabled and the stored hash uses another
+// format. Best effort: a failure is logged and never fails the login.
+func (p *DatabaseAuthProvider) upgradeHash(ctx context.Context, hasher *PasswordHasher, stmt string, id int64, password, storedHash string) {
+	newHash, migrate, err := hasher.MigratePasswordHash(password, storedHash)
+	switch {
+	case err != nil:
+	case !migrate:
+		return
+	case p.db == nil:
+		err = errors.New("no database")
+	default:
+		_, err = p.db.ExecContext(ctx, database.ConvertPlaceholders(stmt), newHash, id, storedHash)
+	}
+	if err != nil {
+		log.Printf("auth: password hash upgrade failed (%s, id=%d): %v", stmt, id, err)
+	}
 }
 
 // Register database provider factory.

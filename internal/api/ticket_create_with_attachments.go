@@ -3,12 +3,11 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -162,6 +161,12 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
 		return
 	}
+	// The route middleware may have read queue_id from the query string;
+	// check the queue the ticket is actually created in.
+	authz := agentTicketAuthzOrAbort(c, db)
+	if authz == nil || !authz.createQueueOrAbort(c, int(queueID)) {
+		return
+	}
 
 	ticketRepo := repository.NewTicketRepository(db)
 	articleRepo := repository.NewArticleRepository(db)
@@ -216,7 +221,7 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 		ArticleSenderTypeID:           constants.ArticleSenderAgent,
 		ArticleTypeID:                 constants.ArticleTypeEmailExternal,
 		ArticleIsVisibleForCustomer:   &visible,
-		ArticleCommunicationChannelID: 1,
+		ArticleCommunicationChannelID: constants.CommunicationChannelEmail,
 		CustomerUserID:                customerEmail,
 		PendingUntil:                  pendingUnix,
 	}
@@ -263,138 +268,39 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 
 	if ticketSideEffectsDisabled() {
 		log.Printf("DEBUG: skipping attachment persistence for ticket %d due to side effect flag", ticket.ID)
-	} else if c.Request.MultipartForm != nil && c.Request.MultipartForm.File != nil {
-		// Check both singular and plural field names for compatibility
-		files := c.Request.MultipartForm.File["attachments"]
-		if files == nil {
-			files = c.Request.MultipartForm.File["attachment"]
-		}
-		if files == nil {
-			files = c.Request.MultipartForm.File["file"]
-		}
-		log.Printf("Processing %d attachment(s) for ticket %d", len(files), ticket.ID)
-
-		for _, fileHeader := range files {
-			// Validate file size (10MB max)
-			if fileHeader.Size > 10*1024*1024 {
-				log.Printf("ERROR: File %s too large (%d bytes)", fileHeader.Filename, fileHeader.Size)
-				c.JSON(http.StatusBadRequest, gin.H{"error": "file too large"})
-				return
+	} else if files := getFormFiles(c.Request.MultipartForm); len(files) > 0 {
+		if article == nil || article.ID <= 0 {
+			log.Printf("WARNING: No article available for attachments on ticket %d", ticket.ID)
+		} else {
+			cfg := loadAttachmentConfig()
+			params := attachmentProcessParams{
+				ctx:       c.Request.Context(),
+				db:        db,
+				ticketID:  ticket.ID,
+				articleID: article.ID,
+				userID:    GetUserIDFromCtx(c, int(createdBy)),
 			}
-
-			// Validate file type (basic security check)
-			ext := filepath.Ext(fileHeader.Filename)
-			blockedExtensions := map[string]bool{
-				".exe": true, ".bat": true, ".sh": true, ".cmd": true,
-				".com": true, ".scr": true, ".vbs": true, ".js": true,
-			}
-
-			if blockedExtensions[ext] {
-				log.Printf("ERROR: File type %s not allowed for %s", ext, fileHeader.Filename)
-				c.JSON(http.StatusBadRequest, gin.H{"error": "file type not allowed: " + ext})
-				return
-			}
-
-			// Open the uploaded file
-			file, err := fileHeader.Open()
-			if err != nil {
-				log.Printf("ERROR: Failed to open uploaded file %s: %v", fileHeader.Filename, err)
-				continue
-			}
-			// Ensure we close after processing this iteration
-			func() {
-				defer file.Close()
-
-				// Determine content type (fallback using simple detection)
-				contentType := fileHeader.Header.Get("Content-Type")
-				if contentType == "" || contentType == "application/octet-stream" {
-					buf := make([]byte, 512)
-					if n, _ := file.Read(buf); n > 0 { //nolint:errcheck // Best effort content type detection
-						contentType = detectContentType(fileHeader.Filename, buf[:n])
-					}
-					_, _ = file.Seek(0, 0) //nolint:errcheck // Best effort seek back
+			for _, fh := range files {
+				att, err := processOneAttachment(fh, cfg, params)
+				if errors.Is(err, errAttachmentRejected) {
+					log.Printf("attachment %q for ticket %d rejected: %v", fh.Filename, ticket.ID, err)
+					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+					return
 				}
-
-				// Enforce config limits/types if set
-				if cfg := config.Get(); cfg != nil {
-					max := cfg.Storage.Attachments.MaxSize
-					if max > 0 && fileHeader.Size > max {
-						log.Printf("WARNING: %s exceeds max size, skipping", fileHeader.Filename)
-						return
-					}
-					if len(cfg.Storage.Attachments.AllowedTypes) > 0 && contentType != "" && contentType != "application/octet-stream" {
-						allowed := map[string]struct{}{}
-						for _, t := range cfg.Storage.Attachments.AllowedTypes {
-							allowed[strings.ToLower(t)] = struct{}{}
-						}
-						if _, ok := allowed[strings.ToLower(contentType)]; !ok {
-							log.Printf("WARNING: %s type %s not allowed, skipping", fileHeader.Filename, contentType)
-							return
-						}
-					}
+				if err != nil {
+					log.Printf("ERROR: storing attachment %q for ticket %d article %d: %v", fh.Filename, ticket.ID, article.ID, err)
+					continue
 				}
-
-				// Resolve uploader ID
-				uploaderID := GetUserIDFromCtx(c, int(createdBy))
-
-				// Use unified storage service; ensure we have an article
-				if article != nil && article.ID > 0 {
-					storageSvc := GetStorageService()
-					storagePath := service.GenerateOTRSStoragePath(ticket.ID, article.ID, fileHeader.Filename)
-					ctx := c.Request.Context()
-					ctx = context.WithValue(ctx, service.CtxKeyArticleID, article.ID)
-					ctx = service.WithUserID(ctx, uploaderID)
-
-					if _, err := storageSvc.Store(ctx, file, fileHeader, storagePath); err != nil {
-						log.Printf("ERROR: storage Store failed for ticket %d article %d: %v", ticket.ID, article.ID, err)
-						return
-					}
-
-					// If backend is local FS, also insert DB metadata row for listing/download
-					if _, isDB := storageSvc.(*service.DatabaseStorageService); !isDB {
-						// Re-open to read bytes for DB row
-						if f2, e2 := fileHeader.Open(); e2 == nil {
-							defer f2.Close()
-							b, rerr := io.ReadAll(f2)
-							if rerr == nil {
-								ct := contentType
-								if ct == "" {
-									ct = "application/octet-stream"
-								}
-								_, ierr := db.Exec(database.ConvertPlaceholders(`
-									INSERT INTO article_data_mime_attachment (
-										article_id, filename, content_type, content_size, content,
-										disposition, create_time, create_by, change_time, change_by
-									) VALUES (?,?,?,?,?,?,?,?,?,?)`),
-									article.ID,
-									fileHeader.Filename,
-									ct,
-									int64(len(b)),
-									b,
-									"attachment",
-									time.Now(), uploaderID, time.Now(), uploaderID,
-								)
-								if ierr != nil {
-									log.Printf("ERROR: attachment metadata insert failed: %v", ierr)
-								}
-							}
-						}
-					}
-
-					// Track the info for response
-					attachmentInfo = append(attachmentInfo, map[string]interface{}{
-						"filename":     fileHeader.Filename,
-						"size":         fileHeader.Size,
-						"content_type": contentType,
-						"saved":        true,
-					})
-					c.Header("HX-Trigger", "attachments-updated")
-					log.Printf("Successfully saved attachment: %s (%d bytes) for ticket %d",
-						fileHeader.Filename, fileHeader.Size, ticket.ID)
-				} else {
-					log.Printf("WARNING: No article available for attachments on ticket %d", ticket.ID)
-				}
-			}()
+				attachmentInfo = append(attachmentInfo, map[string]interface{}{
+					"filename":     att.Filename,
+					"size":         att.Size,
+					"content_type": att.ContentType,
+					"saved":        true,
+				})
+			}
+			if len(attachmentInfo) > 0 {
+				c.Header("HX-Trigger", "attachments-updated")
+			}
 		}
 	}
 
@@ -476,7 +382,11 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 			if cfg := config.Get(); cfg != nil {
 				emailCfg = &cfg.Email
 			}
-			renderCtx := notifications.BuildRenderContext(context.Background(), db, req.CustomerUserID, actorID)
+			renderCtx, rcErr := notifications.BuildRenderContext(context.Background(), db, req.CustomerUserID, actorID)
+			if rcErr != nil {
+				log.Printf("Ticket created email for ticket %d not sent: %v", ticket.ID, rcErr)
+				return
+			}
 			branding, brandErr := notifications.PrepareQueueEmail(
 				context.Background(),
 				db,

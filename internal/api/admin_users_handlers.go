@@ -4,122 +4,175 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 
-	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/platform/services/adapter"
+	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/shared"
+	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 )
+
+// adminUsersDB returns the database handle, or answers 500 and reports false.
+func adminUsersDB(c *gin.Context) (*sql.DB, bool) {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		log.Printf("admin users: database unavailable: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database connection failed",
+		})
+		return nil, false
+	}
+	return db, true
+}
+
+// adminUsersFail logs err and answers 500 with message.
+func adminUsersFail(c *gin.Context, message string, err error) {
+	log.Printf("admin users: %s: %v", message, err)
+	c.JSON(http.StatusInternalServerError, gin.H{
+		"success": false,
+		"error":   message,
+	})
+}
 
 // HandleAdminUsers renders the admin users management page.
 func HandleAdminUsers(c *gin.Context) {
-	// Fallbacks for tests or when DB/templates are not ready
-	if os.Getenv("APP_ENV") == "test" {
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, "<h1>Users</h1>")
-		return
+	fail := func(what string, err error) {
+		log.Printf("admin users page: %s: %v", what, err)
+		c.String(http.StatusInternalServerError, "Failed to load users")
 	}
 
-	db, _ := database.GetDB() //nolint:errcheck // Graceful degradation if DB unavailable
-	users := make([]gin.H, 0)
-	groups := make([]gin.H, 0)
-
-	if db != nil {
-		// Users
-		rows, err := db.Query(database.ConvertPlaceholders(`
-			SELECT id, login, COALESCE(title,''), COALESCE(first_name,''), COALESCE(last_name,''), COALESCE(valid_id,1)
-			FROM users
-			ORDER BY last_name, first_name, id`))
-		if err == nil {
-			defer rows.Close()
-			type urow struct {
-				id                   int
-				login, title, fn, ln string
-				valid                int
-			}
-			var list []urow
-			for rows.Next() {
-				var r urow
-				if scanErr := rows.Scan(&r.id, &r.login, &r.title, &r.fn, &r.ln, &r.valid); scanErr == nil {
-					list = append(list, r)
-				}
-			}
-			_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
-			// Prefetch group memberships for all users
-			gm := map[int][]string{}
-			if gr, gerr := db.Query(database.ConvertPlaceholders(`
-				SELECT DISTINCT gu.user_id, g.name
-				FROM group_user gu
-				JOIN groups g ON g.id = gu.group_id
-				WHERE g.valid_id = 1`)); gerr == nil {
-				defer gr.Close()
-				for gr.Next() {
-					var uid int
-					var gname string
-					if err := gr.Scan(&uid, &gname); err == nil {
-						gm[uid] = append(gm[uid], gname)
-					}
-				}
-				_ = gr.Err() //nolint:errcheck // Iteration errors don't affect UI
-			}
-			// Prefetch 2FA status for all users
-			totp2fa := map[int]bool{}
-			if tr, terr := db.Query(database.ConvertPlaceholders(`
-				SELECT user_id FROM user_preferences 
-				WHERE preferences_key = 'UserTOTPEnabled' 
-				AND preferences_value = '1'`)); terr == nil {
-				defer tr.Close()
-				for tr.Next() {
-					var uid int
-					if err := tr.Scan(&uid); err == nil {
-						totp2fa[uid] = true
-					}
-				}
-				_ = tr.Err()
-			}
-
-			for _, r := range list {
-				users = append(users, gin.H{
-					"ID":             r.id,
-					"Login":          r.login,
-					"Title":          r.title,
-					"FirstName":      r.fn,
-					"LastName":       r.ln,
-					"ValidID":        r.valid,
-					"Groups":         gm[r.id],
-					"TOTP2FAEnabled": totp2fa[r.id],
-				})
-			}
-		}
-
-		// All groups for filters and modal
-		if gr, err := db.Query(database.ConvertPlaceholders(`SELECT id, name FROM groups WHERE valid_id = 1 ORDER BY name`)); err == nil {
-			defer gr.Close()
-			for gr.Next() {
-				var id int
-				var name string
-				if scanErr := gr.Scan(&id, &name); scanErr == nil {
-					groups = append(groups, gin.H{"ID": id, "Name": name})
-				}
-			}
-			_ = gr.Err() //nolint:errcheck // Iteration errors don't affect UI
-		}
-	}
-
-	// Render template
 	renderer := shared.GetGlobalRenderer()
 	if renderer == nil {
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, "<h1>Users</h1>")
+		fail("template renderer", errors.New("not initialised"))
 		return
 	}
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		fail("database unavailable", err)
+		return
+	}
+
+	type urow struct {
+		id                   int
+		login, title, fn, ln string
+		valid                int
+	}
+	var list []urow
+	rows, err := db.Query(database.ConvertPlaceholders(`
+		SELECT id, login, COALESCE(title,''), first_name, last_name, valid_id
+		FROM users
+		ORDER BY last_name, first_name, id`))
+	if err != nil {
+		fail("query users", err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var r urow
+		if err := rows.Scan(&r.id, &r.login, &r.title, &r.fn, &r.ln, &r.valid); err != nil {
+			fail("scan user", err)
+			return
+		}
+		list = append(list, r)
+	}
+	if err := rows.Err(); err != nil {
+		fail("iterate users", err)
+		return
+	}
+
+	// Group memberships for all users
+	gm := map[int][]string{}
+	gr, err := db.Query(database.ConvertPlaceholders(`
+		SELECT DISTINCT gu.user_id, g.name
+		FROM group_user gu
+		JOIN groups g ON g.id = gu.group_id
+		WHERE g.valid_id = 1`))
+	if err != nil {
+		fail("query group memberships", err)
+		return
+	}
+	defer gr.Close()
+	for gr.Next() {
+		var uid int
+		var gname string
+		if err := gr.Scan(&uid, &gname); err != nil {
+			fail("scan group membership", err)
+			return
+		}
+		gm[uid] = append(gm[uid], gname)
+	}
+	if err := gr.Err(); err != nil {
+		fail("iterate group memberships", err)
+		return
+	}
+
+	// 2FA status for all users
+	totp2fa := map[int]bool{}
+	tr, err := db.Query(database.ConvertPlaceholders(`
+		SELECT user_id FROM user_preferences
+		WHERE preferences_key = 'UserTOTPEnabled'
+		AND preferences_value = '1'`))
+	if err != nil {
+		fail("query 2FA status", err)
+		return
+	}
+	defer tr.Close()
+	for tr.Next() {
+		var uid int
+		if err := tr.Scan(&uid); err != nil {
+			fail("scan 2FA status", err)
+			return
+		}
+		totp2fa[uid] = true
+	}
+	if err := tr.Err(); err != nil {
+		fail("iterate 2FA status", err)
+		return
+	}
+
+	users := make([]gin.H, 0, len(list))
+	for _, r := range list {
+		users = append(users, gin.H{
+			"ID":             r.id,
+			"Login":          r.login,
+			"Title":          r.title,
+			"FirstName":      r.fn,
+			"LastName":       r.ln,
+			"ValidID":        r.valid,
+			"Groups":         gm[r.id],
+			"TOTP2FAEnabled": totp2fa[r.id],
+		})
+	}
+
+	// All groups for filters and modal
+	groups := make([]gin.H, 0)
+	ar, err := db.Query(database.ConvertPlaceholders(`SELECT id, name FROM groups WHERE valid_id = 1 ORDER BY name`))
+	if err != nil {
+		fail("query groups", err)
+		return
+	}
+	defer ar.Close()
+	for ar.Next() {
+		var id int
+		var name string
+		if err := ar.Scan(&id, &name); err != nil {
+			fail("scan group", err)
+			return
+		}
+		groups = append(groups, gin.H{"ID": id, "Name": name})
+	}
+	if err := ar.Err(); err != nil {
+		fail("iterate groups", err)
+		return
+	}
+
 	user := getUserMapForTemplate(c)
 	isInAdminGroup := false
 	if v, ok := user["IsInAdminGroup"].(bool); ok {
@@ -137,8 +190,7 @@ func HandleAdminUsers(c *gin.Context) {
 
 // HandleAdminUserGet handles GET /admin/users/:id.
 func HandleAdminUserGet(c *gin.Context) {
-	userID := c.Param("id")
-	id, err := strconv.Atoi(userID)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -147,150 +199,217 @@ func HandleAdminUserGet(c *gin.Context) {
 		return
 	}
 
-	dbService, err := adapter.GetDatabase()
-	if err != nil || dbService == nil || dbService.GetDB() == nil {
-		// DB-less fallback: return minimal user payload with empty groups
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"data": gin.H{
-				"id":            0,
-				"login":         "user@example.com",
-				"title":         "",
-				"first_name":    "Test",
-				"last_name":     "User",
-				"email":         "user@example.com",
-				"valid_id":      1,
-				"groups":        []string{},
-				"xlats":         gin.H{"valid_id": "valid"},
-				"valid_id_xlat": "valid",
-			},
-		})
-		return
-	}
-	db := dbService.GetDB()
-	if db == nil {
-		shared.SendToastResponse(c, true, "User updated successfully", "/admin/users")
+	db, ok := adminUsersDB(c)
+	if !ok {
 		return
 	}
 
-	// Get user details
-	var user models.User
-	query := database.ConvertPlaceholders(`
-		SELECT id, login, title, first_name, last_name, valid_id
-		FROM users
-		WHERE id = ?`)
-
-	err = db.QueryRow(query, id).Scan(
-		&user.ID,
-		&user.Login,
-		&user.Title,
-		&user.FirstName,
-		&user.LastName,
-		&user.ValidID,
+	// users.title is nullable (the seeded root@localhost agent has NULL).
+	var (
+		login, firstName, lastName string
+		title                      sql.NullString
+		validID                    int
 	)
-
-	if err != nil {
-		// In tests, return a stubbed user for predictable responses
-		if os.Getenv("APP_ENV") == "test" {
-			c.JSON(http.StatusOK, gin.H{
-				"success": true,
-				"data": gin.H{
-					"id":            0,
-					"login":         "user@example.com",
-					"title":         "",
-					"first_name":    "Test",
-					"last_name":     "User",
-					"email":         "user@example.com",
-					"valid_id":      1,
-					"groups":        []string{},
-					"xlats":         gin.H{"valid_id": "valid"},
-					"valid_id_xlat": "valid",
-				},
-			})
-			return
-		}
+	err = db.QueryRow(database.ConvertPlaceholders(`
+		SELECT login, title, first_name, last_name, valid_id
+		FROM users
+		WHERE id = ?`), id).Scan(&login, &title, &firstName, &lastName, &validID)
+	if errors.Is(err, sql.ErrNoRows) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
 			"error":   "User not found",
 		})
 		return
 	}
+	if err != nil {
+		adminUsersFail(c, "Failed to load user", err)
+		return
+	}
 
-	// Get user's groups
-	groupQuery := database.ConvertPlaceholders(`
+	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT DISTINCT g.id, g.name
 		FROM groups g
 		JOIN group_user gu ON g.id = gu.group_id
-		WHERE gu.user_id = ? AND g.valid_id = 1`)
-
-	groupNames := make([]string, 0)
-	rows, err := db.Query(groupQuery, id)
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var gid int
-			var gname string
-			if err := rows.Scan(&gid, &gname); err == nil {
-				groupNames = append(groupNames, gname)
-			}
-		}
-		_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
+		WHERE gu.user_id = ? AND g.valid_id = 1`), id)
+	if err != nil {
+		adminUsersFail(c, "Failed to load user groups", err)
+		return
 	}
-	user.Groups = groupNames
+	defer rows.Close()
+	groupNames := make([]string, 0)
+	for rows.Next() {
+		var gid int
+		var gname string
+		if err := rows.Scan(&gid, &gname); err != nil {
+			adminUsersFail(c, "Failed to load user groups", err)
+			return
+		}
+		groupNames = append(groupNames, gname)
+	}
+	if err := rows.Err(); err != nil {
+		adminUsersFail(c, "Failed to load user groups", err)
+		return
+	}
 
-	// Provide simple translations (xlats)
 	validXlat := "invalid"
-	if user.ValidID == 1 {
+	if validID == 1 {
 		validXlat = "valid"
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data": gin.H{
-			"id":            user.ID,
-			"login":         user.Login,
-			"title":         user.Title,
-			"first_name":    user.FirstName,
-			"last_name":     user.LastName,
-			"email":         user.Login, // OTRS uses login as email
-			"valid_id":      user.ValidID,
-			"groups":        user.Groups,
+			"id":            id,
+			"login":         login,
+			"title":         title.String,
+			"first_name":    firstName,
+			"last_name":     lastName,
+			"email":         login, // OTRS uses login as email
+			"valid_id":      validID,
+			"groups":        groupNames,
 			"xlats":         gin.H{"valid_id": validXlat},
 			"valid_id_xlat": validXlat,
 		},
 	})
 }
 
-// HandleAdminUserCreate handles POST /admin/users.
-func HandleAdminUserCreate(c *gin.Context) {
-	var req struct {
-		Login     string   `json:"login" form:"login"`
-		Title     string   `json:"title" form:"title"`
-		FirstName string   `json:"first_name" form:"first_name"`
-		LastName  string   `json:"last_name" form:"last_name"`
-		Email     string   `json:"email" form:"email"`
-		Password  string   `json:"password" form:"password"`
-		ValidID   int      `json:"valid_id" form:"valid_id"`
-		Groups    []string `json:"groups" form:"groups"`
-	}
+// adminUserRequest is the body of the admin create/update user endpoints.
+type adminUserRequest struct {
+	Login     string `json:"login" form:"login"`
+	Title     string `json:"title" form:"title"`
+	FirstName string `json:"first_name" form:"first_name"`
+	LastName  string `json:"last_name" form:"last_name"`
+	Email     string `json:"email" form:"email"`
+	Password  string `json:"password" form:"password"`
+	// ConfirmPassword is checked when the client sends it (the admin form
+	// always does); API clients may omit it.
+	ConfirmPassword *string  `json:"confirm_password" form:"confirm_password"`
+	ValidID         int      `json:"valid_id" form:"valid_id"`
+	Groups          []string `json:"groups" form:"groups"`
+}
 
+// bindAdminUserRequest binds the body and reports whether the client
+// submitted the groups field (an empty submitted selection clears memberships).
+func bindAdminUserRequest(c *gin.Context) (adminUserRequest, bool, bool) {
+	var req adminUserRequest
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "Invalid request data",
 		})
-		return
+		return req, false, false
 	}
-
-	// Some form encoders send groups[]; also ShouldBind can miss repeated keys for urlencoded PUT. Hydrate manually if empty.
+	// Some form encoders send groups[]; ShouldBind can miss repeated keys for urlencoded PUT.
+	groupsSubmitted := req.Groups != nil
 	if len(req.Groups) == 0 {
 		if arr := c.PostFormArray("groups"); len(arr) > 0 {
 			req.Groups = arr
+			groupsSubmitted = true
 		} else if arr := c.PostFormArray("groups[]"); len(arr) > 0 {
 			req.Groups = arr
+			groupsSubmitted = true
 		}
 	}
+	if strings.TrimSpace(c.PostForm("groups_submitted")) == "1" {
+		groupsSubmitted = true
+	}
+	return req, groupsSubmitted, true
+}
 
-	// Validate required fields
+// checkAdminSetPassword enforces the confirmation and the agent password
+// policy (PreferencesGroups###Password, the policy agents' own password change
+// applies) on a password an admin sets for an agent. It answers 400 and
+// reports false when the password is rejected.
+func checkAdminSetPassword(c *gin.Context, db *sql.DB, password string, confirm *string) bool {
+	if confirm != nil && *confirm != password {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Passwords do not match",
+			"code":    "mismatch",
+		})
+		return false
+	}
+	policy, err := sysconfig.LoadAgentPasswordPolicy(db)
+	if err != nil {
+		adminUsersFail(c, "Failed to load password policy", err)
+		return false
+	}
+	if verr := policy.ValidatePassword(password); verr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   passwordPolicyMessage(c, verr.Code, policy),
+			"code":    verr.Code,
+		})
+		return false
+	}
+	return true
+}
+
+// passwordPolicyMessage renders a policy violation in the request language.
+func passwordPolicyMessage(c *gin.Context, code string, policy sysconfig.PasswordPolicy) string {
+	msg := middleware.T(c, sysconfig.PasswordRequirementKey(code))
+	return strings.ReplaceAll(msg, "{n}", strconv.Itoa(policy.PasswordMinSize))
+}
+
+// errUnknownGroup marks a group token that names no valid group.
+var errUnknownGroup = errors.New("unknown group")
+
+// resolveAgentGroupIDs maps group IDs or names to valid group IDs.
+func resolveAgentGroupIDs(db *sql.DB, tokens []string) ([]int, error) {
+	ids := make([]int, 0, len(tokens))
+	seen := map[int]bool{}
+	for _, token := range tokens {
+		token = strings.TrimSpace(token)
+		if token == "" {
+			continue
+		}
+		var groupID int
+		var err error
+		if n, convErr := strconv.Atoi(token); convErr == nil {
+			err = db.QueryRow(database.ConvertPlaceholders(
+				"SELECT id FROM groups WHERE id = ? AND valid_id = 1"), n).Scan(&groupID)
+		} else {
+			err = db.QueryRow(database.ConvertPlaceholders(
+				"SELECT id FROM groups WHERE name = ? AND valid_id = 1"), token).Scan(&groupID)
+		}
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%w: %s", errUnknownGroup, token)
+		}
+		if err != nil {
+			return nil, err
+		}
+		if !seen[groupID] {
+			seen[groupID] = true
+			ids = append(ids, groupID)
+		}
+	}
+	return ids, nil
+}
+
+// resolveAgentGroupsOrFail resolves the submitted groups, answering 400 for an
+// unknown group and 500 for a database error.
+func resolveAgentGroupsOrFail(c *gin.Context, db *sql.DB, tokens []string) ([]int, bool) {
+	ids, err := resolveAgentGroupIDs(db, tokens)
+	if errors.Is(err, errUnknownGroup) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return nil, false
+	}
+	if err != nil {
+		adminUsersFail(c, "Failed to resolve groups", err)
+		return nil, false
+	}
+	return ids, true
+}
+
+// HandleAdminUserCreate handles POST /admin/users.
+func HandleAdminUserCreate(c *gin.Context) {
+	req, _, ok := bindAdminUserRequest(c)
+	if !ok {
+		return
+	}
+
 	if req.Login == "" || req.FirstName == "" || req.LastName == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -299,106 +418,78 @@ func HandleAdminUserCreate(c *gin.Context) {
 		return
 	}
 
-	dbService, err := adapter.GetDatabase()
-	if err != nil || dbService == nil || dbService.GetDB() == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"data": gin.H{
-				"id":         0,
-				"login":      req.Login,
-				"title":      "",
-				"first_name": req.FirstName,
-				"last_name":  req.LastName,
-				"email":      req.Login,
-				"valid_id":   req.ValidID,
-				"groups":     req.Groups,
-			},
-		})
+	actorID, ok := auditUserID(c)
+	if !ok {
 		return
 	}
-	db := dbService.GetDB()
-	if db == nil {
-		shared.SendToastResponse(c, true, "User updated successfully", "/admin/users")
+	db, ok := adminUsersDB(c)
+	if !ok {
 		return
 	}
 
-	// Check if user already exists
 	var exists bool
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM users WHERE login = ?)"), req.Login).Scan(&exists)
-	if err == nil && exists {
-		shared.SendToastResponse(c, false, "User already exists", "")
+	if err := db.QueryRow(database.ConvertPlaceholders(
+		"SELECT EXISTS(SELECT 1 FROM users WHERE login = ?)"), req.Login).Scan(&exists); err != nil {
+		adminUsersFail(c, "Failed to check existing user", err)
+		return
+	}
+	if exists {
+		c.JSON(http.StatusConflict, gin.H{"success": false, "error": "User already exists"})
 		return
 	}
 
-	// Hash password if provided
 	var hashedPassword string
 	if req.Password != "" {
-		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if !checkAdminSetPassword(c, db, req.Password, req.ConfirmPassword) {
+			return
+		}
+		var err error
+		hashedPassword, err = auth.NewPasswordHasher().HashPassword(req.Password)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
+			c.JSON(passwordHashErrorStatus(err), gin.H{
 				"success": false,
-				"error":   "Failed to hash password",
+				"error":   "Failed to hash password: " + err.Error(),
 			})
 			return
 		}
-		hashedPassword = string(hash)
 	}
 
-	insertQuery := database.ConvertPlaceholders(`
-		INSERT INTO users (login, pw, title, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (?, ?, ?, ?, ?, ?, NOW(), 1, NOW(), 1)
-		RETURNING id
-	`)
-	args := []interface{}{req.Login, hashedPassword, req.Title, req.FirstName, req.LastName, req.ValidID}
+	groupIDs, ok := resolveAgentGroupsOrFail(c, db, req.Groups)
+	if !ok {
+		return
+	}
 
-	userID64, err := database.GetAdapter().InsertWithReturning(db, insertQuery, args...)
+	tx, err := db.BeginTx(c.Request.Context(), nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   fmt.Sprintf("Failed to create user: %v", err),
-		})
+		adminUsersFail(c, "Failed to begin user create transaction", err)
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	userID64, err := database.GetAdapter().InsertWithReturningTx(tx, database.ConvertPlaceholders(`
+		INSERT INTO users (login, pw, title, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, NOW(), ?)
+		RETURNING id`),
+		req.Login, hashedPassword, req.Title, req.FirstName, req.LastName, req.ValidID, actorID, actorID)
+	if err != nil {
+		adminUsersFail(c, "Failed to create user", err)
 		return
 	}
 	userID := int(userID64)
 
-	// Add user to groups (accept IDs or names)
-	for _, token := range req.Groups {
-		token = strings.TrimSpace(token)
-		if token == "" {
-			continue
-		}
-		var groupID int
-		if n, convErr := strconv.Atoi(token); convErr == nil {
-			// Token is an ID; verify existence
-			query := database.ConvertPlaceholders("SELECT id FROM groups WHERE id = ? AND valid_id = 1")
-			if err := db.QueryRow(query, n).Scan(&groupID); err != nil {
-				continue
-			}
-		} else {
-			// Token is a name; ensure exists
-			query := database.ConvertPlaceholders("SELECT id FROM groups WHERE name = ? AND valid_id = 1")
-			if err := db.QueryRow(query, token).Scan(&groupID); err != nil {
-				// Create if missing (test-friendly)
-				insertQuery := database.ConvertPlaceholders(`
-					INSERT INTO groups (name, comments, valid_id, create_time, create_by, change_time, change_by)
-					SELECT ?, '', 1, NOW(), 1, NOW(), 1
-					WHERE NOT EXISTS (SELECT 1 FROM groups WHERE name = ?)`)
-				_, _ = db.Exec(insertQuery, token)           //nolint:errcheck // Best-effort group creation
-				_ = db.QueryRow(query, token).Scan(&groupID) //nolint:errcheck // Group may not exist
-				if groupID == 0 {
-					continue
-				}
-			}
-		}
-		//nolint:errcheck // Best-effort group association
-		_, _ = db.Exec(database.ConvertPlaceholders(`
+	for _, groupID := range groupIDs {
+		if _, err := tx.Exec(database.ConvertPlaceholders(`
 			INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
-			SELECT ?, ?, 'rw', NOW(), 1, NOW(), 1
-			WHERE NOT EXISTS (
-				SELECT 1 FROM group_user WHERE user_id = ? AND group_id = ? AND permission_key = 'rw'
-			)`),
-			userID, groupID, userID, groupID,
-		)
+			VALUES (?, ?, 'rw', NOW(), ?, NOW(), ?)`),
+			userID, groupID, actorID, actorID); err != nil {
+			adminUsersFail(c, "Failed to assign group", err)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		adminUsersFail(c, "Failed to commit user create", err)
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -410,8 +501,7 @@ func HandleAdminUserCreate(c *gin.Context) {
 
 // HandleAdminUserUpdate handles PUT /admin/users/:id.
 func HandleAdminUserUpdate(c *gin.Context) {
-	userID := c.Param("id")
-	id, err := strconv.Atoi(userID)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -420,200 +510,125 @@ func HandleAdminUserUpdate(c *gin.Context) {
 		return
 	}
 
-	var req struct {
-		Login     string   `json:"login" form:"login"`
-		Title     string   `json:"title" form:"title"`
-		FirstName string   `json:"first_name" form:"first_name"`
-		LastName  string   `json:"last_name" form:"last_name"`
-		Email     string   `json:"email" form:"email"`
-		Password  string   `json:"password" form:"password"`
-		ValidID   int      `json:"valid_id" form:"valid_id"`
-		Groups    []string `json:"groups" form:"groups"`
+	req, groupsSubmitted, ok := bindAdminUserRequest(c)
+	if !ok {
+		return
 	}
 
-	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
+	db, ok := adminUsersDB(c)
+	if !ok {
+		return
+	}
+
+	var exists int
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT 1 FROM users WHERE id = ?"), id).Scan(&exists)
+	if errors.Is(err, sql.ErrNoRows) {
+		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
-			"error":   "Invalid request data",
+			"error":   "User not found",
 		})
 		return
 	}
-
-	// Ensure groups captured for urlencoded PUT/POST; accept groups and groups[]
-	groupsFieldPresent := req.Groups != nil
-	if len(req.Groups) == 0 {
-		if arr := c.PostFormArray("groups"); len(arr) > 0 {
-			req.Groups = arr
-			groupsFieldPresent = true
-		} else if arr := c.PostFormArray("groups[]"); len(arr) > 0 {
-			req.Groups = arr
-			groupsFieldPresent = true
-		}
-	}
-
-	// Detect if the client explicitly submitted the groups field.
-	// When present, an empty selection means "clear all memberships".
-	groupsSubmitted := groupsFieldPresent
-	if v := strings.TrimSpace(c.PostForm("groups_submitted")); v == "1" {
-		groupsSubmitted = true
-	}
-
-	dbService, err := adapter.GetDatabase()
-	if err != nil || dbService == nil || dbService.GetDB() == nil {
-		// DB-less fallback: accept update and return success
-		shared.SendToastResponse(c, true, "User updated successfully", "/admin/users")
+	if err != nil {
+		adminUsersFail(c, "Failed to load user", err)
 		return
 	}
-	db := dbService.GetDB()
 
-	// Ensure user exists in test to satisfy FK on group_user
-	var exists int
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT 1 FROM users WHERE id = ?"), id).Scan(&exists)
-	if err == sql.ErrNoRows && os.Getenv("APP_ENV") == "test" {
-		// Create minimal user with specified ID
-		login := req.Login
-		if strings.TrimSpace(login) == "" {
-			login = fmt.Sprintf("user%d@example.com", id)
-		}
-		firstName := req.FirstName
-		if firstName == "" {
-			firstName = "Test"
-		}
-		lastName := req.LastName
-		if lastName == "" {
-			lastName = "User"
-		}
-		validID := req.ValidID
-		if validID == 0 {
-			validID = 1
-		}
-		if _, insertErr := db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO users (id, login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-			SELECT ?, ?, '', ?, ?, ?, NOW(), 1, NOW(), 1
-			WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = ?)`),
-			id, login, firstName, lastName, validID, id,
-		); insertErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   fmt.Sprintf("Failed to prepare test user: %v", insertErr),
-			})
-			return
-		}
+	var loginTaken bool
+	if err := db.QueryRow(database.ConvertPlaceholders(
+		"SELECT EXISTS(SELECT 1 FROM users WHERE login = ? AND id <> ?)"), req.Login, id).Scan(&loginTaken); err != nil {
+		adminUsersFail(c, "Failed to check existing user", err)
+		return
+	}
+	if loginTaken {
+		c.JSON(http.StatusConflict, gin.H{"success": false, "error": "User already exists"})
+		return
 	}
 
-	// Update user basic info
+	var hash string
 	if req.Password != "" {
-		// Update with new password
-		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if !checkAdminSetPassword(c, db, req.Password, req.ConfirmPassword) {
+			return
+		}
+		hash, err = auth.NewPasswordHasher().HashPassword(req.Password)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
+			c.JSON(passwordHashErrorStatus(err), gin.H{
 				"success": false,
-				"error":   "Failed to hash password",
-			})
-			return
-		}
-
-		if _, err := db.Exec(database.ConvertPlaceholders(`
-            UPDATE users 
-			SET login = ?, pw = ?, title = ?, first_name = ?, last_name = ?, 
-				valid_id = ?, change_time = NOW(), change_by = 1
-			WHERE id = ?`),
-			req.Login, string(hash), req.Title, req.FirstName, req.LastName, req.ValidID, id); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   fmt.Sprintf("Failed to update user: %v", err),
-			})
-			return
-		}
-	} else {
-		// Update without changing password
-		if _, err := db.Exec(database.ConvertPlaceholders(`
-            UPDATE users 
-			SET login = ?, title = ?, first_name = ?, last_name = ?, 
-				valid_id = ?, change_time = NOW(), change_by = 1
-			WHERE id = ?`),
-			req.Login, req.Title, req.FirstName, req.LastName, req.ValidID, id); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   fmt.Sprintf("Failed to update user: %v", err),
+				"error":   "Failed to hash password: " + err.Error(),
 			})
 			return
 		}
 	}
 
-	// Update group memberships.
-	// If the form explicitly submitted the groups field, we treat the selection as authoritative
-	// (including the empty set, which clears memberships). Otherwise, only update when non-empty
-	// groups are provided to avoid accidental wipes from serializers that omit multi-selects.
+	// When the form explicitly submitted the groups field the selection is
+	// authoritative (the empty set clears memberships). Otherwise memberships
+	// change only when non-empty groups are provided, so serializers that omit
+	// multi-selects don't wipe them.
 	cleaned := make([]string, 0, len(req.Groups))
 	for _, g := range req.Groups {
-		g = strings.TrimSpace(g)
-		if g != "" {
+		if g = strings.TrimSpace(g); g != "" {
 			cleaned = append(cleaned, g)
 		}
 	}
-	if groupsSubmitted || len(cleaned) > 0 {
-		auditID, err := ensureAuditUserID(db)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   fmt.Sprintf("Failed to resolve audit user: %v", err),
-			})
+	updateGroups := groupsSubmitted || len(cleaned) > 0
+	var groupIDs []int
+	if updateGroups {
+		if groupIDs, ok = resolveAgentGroupsOrFail(c, db, cleaned); !ok {
 			return
 		}
+	}
 
-		tx, err := db.BeginTx(c.Request.Context(), nil)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   "Failed to begin user update transaction",
-			})
+	tx, err := db.BeginTx(c.Request.Context(), nil)
+	if err != nil {
+		adminUsersFail(c, "Failed to begin user update transaction", err)
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if hash != "" {
+		_, err = tx.Exec(database.ConvertPlaceholders(`
+			UPDATE users
+			SET login = ?, pw = ?, title = ?, first_name = ?, last_name = ?,
+				valid_id = ?, change_time = NOW(), change_by = ?
+			WHERE id = ?`),
+			req.Login, hash, req.Title, req.FirstName, req.LastName, req.ValidID, actorID, id)
+	} else {
+		_, err = tx.Exec(database.ConvertPlaceholders(`
+			UPDATE users
+			SET login = ?, title = ?, first_name = ?, last_name = ?,
+				valid_id = ?, change_time = NOW(), change_by = ?
+			WHERE id = ?`),
+			req.Login, req.Title, req.FirstName, req.LastName, req.ValidID, actorID, id)
+	}
+	if err != nil {
+		adminUsersFail(c, "Failed to update user", err)
+		return
+	}
+
+	if updateGroups {
+		if _, err := tx.Exec(database.ConvertPlaceholders(
+			"DELETE FROM group_user WHERE user_id = ? AND permission_key = 'rw'"), id); err != nil {
+			adminUsersFail(c, "Failed to clear existing groups", err)
 			return
 		}
-		defer func() { _ = tx.Rollback() }()
-
-		delQuery := database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = ? AND permission_key = 'rw'")
-		if _, err := tx.Exec(delQuery, id); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   fmt.Sprintf("Failed to clear existing groups: %v", err),
-			})
-			return
-		}
-
-		for _, token := range cleaned {
-			groupID, err := ensureGroupID(tx, auditID, token)
-			if errors.Is(err, sql.ErrNoRows) {
-				// Ignore unknown groups rather than creating new ones
-				continue
-			}
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"success": false,
-					"error":   fmt.Sprintf("Failed to resolve group %s: %v", token, err),
-				})
-				return
-			}
-
+		for _, groupID := range groupIDs {
 			if _, err := tx.Exec(database.ConvertPlaceholders(`
 				INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
 				VALUES (?, ?, 'rw', NOW(), ?, NOW(), ?)`),
-				id, groupID, auditID, auditID); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"success": false,
-					"error":   fmt.Sprintf("Failed to assign group %s: %v", token, err),
-				})
+				id, groupID, actorID, actorID); err != nil {
+				adminUsersFail(c, "Failed to assign group", err)
 				return
 			}
 		}
+	}
 
-		if err := tx.Commit(); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   "Failed to commit user update",
-			})
-			return
-		}
+	if err := tx.Commit(); err != nil {
+		adminUsersFail(c, "Failed to commit user update", err)
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -622,53 +637,36 @@ func HandleAdminUserUpdate(c *gin.Context) {
 	})
 }
 
-func ensureAuditUserID(db *sql.DB) (int, error) {
-	var id int
-	query := database.ConvertPlaceholders("SELECT id FROM users WHERE id = ? AND valid_id = 1")
-	if err := db.QueryRow(query, 1).Scan(&id); err == nil {
-		return id, nil
+// setAgentValidID sets users.valid_id, answering 404 when the agent does not exist.
+func setAgentValidID(c *gin.Context, db *sql.DB, id, validID int) bool {
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return false
 	}
-	query = database.ConvertPlaceholders("SELECT id FROM users WHERE valid_id = 1 ORDER BY id LIMIT 1")
-	if err := db.QueryRow(query).Scan(&id); err == nil {
-		return id, nil
+	res, err := db.Exec(database.ConvertPlaceholders(
+		"UPDATE users SET valid_id = ?, change_time = NOW(), change_by = ? WHERE id = ?"), validID, actorID, id)
+	if err != nil {
+		adminUsersFail(c, "Failed to update user status", err)
+		return false
 	}
-	return 0, fmt.Errorf("no valid audit user")
-}
-
-func ensureGroupID(tx *sql.Tx, auditID int, token string) (int, error) {
-	if n, err := strconv.Atoi(token); err == nil {
-		var groupID int
-		query := database.ConvertPlaceholders("SELECT id FROM groups WHERE id = ? AND valid_id = 1")
-		if err := tx.QueryRow(query, n).Scan(&groupID); err != nil {
-			return 0, err
-		}
-		return groupID, nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		adminUsersFail(c, "Failed to update user status", err)
+		return false
 	}
-
-	var groupID int
-	var validID int
-	query := database.ConvertPlaceholders("SELECT id, valid_id FROM groups WHERE name = ?")
-	err := tx.QueryRow(query, token).Scan(&groupID, &validID)
-	if err == nil {
-		if validID != 1 {
-			reactivateQuery := `
-				UPDATE groups
-				SET valid_id = 1, change_time = NOW(), change_by = ?
-				WHERE id = ?`
-			// Adapter handles placeholder conversion
-			if _, updErr := database.GetAdapter().ExecTx(tx, reactivateQuery, auditID, groupID); updErr != nil {
-				return 0, updErr
-			}
-		}
-		return groupID, nil
+	if n == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   "User not found",
+		})
+		return false
 	}
-	return 0, err
+	return true
 }
 
 // HandleAdminUserDelete handles DELETE /admin/users/:id.
 func HandleAdminUserDelete(c *gin.Context) {
-	userID := c.Param("id")
-	id, err := strconv.Atoi(userID)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -677,23 +675,13 @@ func HandleAdminUserDelete(c *gin.Context) {
 		return
 	}
 
-	dbService, err := adapter.GetDatabase()
-	db := dbService.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Database connection failed",
-		})
+	db, ok := adminUsersDB(c)
+	if !ok {
 		return
 	}
 
 	// Soft delete - set valid_id = 2
-	_, err = db.Exec(database.ConvertPlaceholders("UPDATE users SET valid_id = 2, change_time = NOW() WHERE id = ?"), id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to delete user",
-		})
+	if !setAgentValidID(c, db, id, 2) {
 		return
 	}
 
@@ -705,8 +693,7 @@ func HandleAdminUserDelete(c *gin.Context) {
 
 // HandleAdminUserGroups handles GET /admin/users/:id/groups.
 func HandleAdminUserGroups(c *gin.Context) {
-	userID := c.Param("id")
-	id, err := strconv.Atoi(userID)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -715,50 +702,38 @@ func HandleAdminUserGroups(c *gin.Context) {
 		return
 	}
 
-	dbService, err := adapter.GetDatabase()
-	db := dbService.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Database connection failed",
-		})
+	db, ok := adminUsersDB(c)
+	if !ok {
 		return
 	}
 
-	// Get user's groups
-	query := database.ConvertPlaceholders(`
-		SELECT g.id, g.name
+	rows, err := db.Query(database.ConvertPlaceholders(`
+		SELECT DISTINCT g.id, g.name
 		FROM groups g
 		JOIN group_user gu ON g.id = gu.group_id
 		WHERE gu.user_id = ? AND g.valid_id = 1
-		ORDER BY g.name`)
-
-	rows, err := db.Query(query, id)
+		ORDER BY g.name`), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to fetch user groups",
-		})
+		adminUsersFail(c, "Failed to fetch user groups", err)
 		return
 	}
 	defer rows.Close()
 
-	var groups []gin.H
+	groups := make([]gin.H, 0)
 	for rows.Next() {
 		var gid int
 		var gname string
-		if err := rows.Scan(&gid, &gname); err == nil {
-			groups = append(groups, gin.H{
-				"id":   gid,
-				"name": gname,
-			})
+		if err := rows.Scan(&gid, &gname); err != nil {
+			adminUsersFail(c, "Failed to fetch user groups", err)
+			return
 		}
+		groups = append(groups, gin.H{
+			"id":   gid,
+			"name": gname,
+		})
 	}
 	if err := rows.Err(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Error iterating user groups",
-		})
+		adminUsersFail(c, "Error iterating user groups", err)
 		return
 	}
 
@@ -770,8 +745,7 @@ func HandleAdminUserGroups(c *gin.Context) {
 
 // HandleAdminUsersStatus handles PUT /admin/users/:id/status to toggle user valid status.
 func HandleAdminUsersStatus(c *gin.Context) {
-	userID := c.Param("id")
-	id, err := strconv.Atoi(userID)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -783,7 +757,6 @@ func HandleAdminUsersStatus(c *gin.Context) {
 	var req struct {
 		ValidID int `json:"valid_id" form:"valid_id"`
 	}
-
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -792,29 +765,26 @@ func HandleAdminUsersStatus(c *gin.Context) {
 		return
 	}
 
-	dbService, err := adapter.GetDatabase()
-	db := dbService.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Database connection failed",
-		})
+	db, ok := adminUsersDB(c)
+	if !ok {
 		return
 	}
 
 	// Toggle between valid (1) and invalid (2)
 	if req.ValidID == 0 {
-		// Get current status to toggle
 		var currentValid int
 		err = db.QueryRow(database.ConvertPlaceholders("SELECT valid_id FROM users WHERE id = ?"), id).Scan(&currentValid)
-		if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusNotFound, gin.H{
 				"success": false,
 				"error":   "User not found",
 			})
 			return
 		}
-
+		if err != nil {
+			adminUsersFail(c, "Failed to load user", err)
+			return
+		}
 		if currentValid == 1 {
 			req.ValidID = 2
 		} else {
@@ -822,13 +792,7 @@ func HandleAdminUsersStatus(c *gin.Context) {
 		}
 	}
 
-	// Update user status
-	_, err = db.Exec(database.ConvertPlaceholders("UPDATE users SET valid_id = ?, change_time = NOW() WHERE id = ?"), req.ValidID, id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to update user status",
-		})
+	if !setAgentValidID(c, db, id, req.ValidID) {
 		return
 	}
 
@@ -839,18 +803,19 @@ func HandleAdminUsersStatus(c *gin.Context) {
 	})
 }
 
-// HandlePasswordPolicy returns the current password policy settings.
+// HandlePasswordPolicy returns the agent password policy
+// (PreferencesGroups###Password) that admin-set and self-chosen agent
+// passwords are validated against.
 func HandlePasswordPolicy(c *gin.Context) {
-	// TODO: In the future, read these from the actual config system
-	// For now, return the defaults from Config.yaml
-	policy := gin.H{
-		"minLength":        8,     // PasswordMinLength default
-		"requireUppercase": true,  // PasswordRequireUppercase default
-		"requireLowercase": true,  // PasswordRequireLowercase default
-		"requireDigit":     true,  // PasswordRequireDigit default
-		"requireSpecial":   false, // PasswordRequireSpecial default
+	db, ok := adminUsersDB(c)
+	if !ok {
+		return
 	}
-
+	policy, err := sysconfig.LoadAgentPasswordPolicy(db)
+	if err != nil {
+		adminUsersFail(c, "Failed to load password policy", err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"policy":  policy,

@@ -157,6 +157,17 @@ function groupCheckboxesHTML(prefix, idx) {
     return names.map((n, i) => '<label class="chk"><input type="checkbox" data-prefix="' + prefix + '" data-row="' + idx + '" value="' + (i+1) + '" onchange="syncGroupIds()"> ' + n + '</label>').join(' ');
 }
 
+// A queue is owned by exactly one team, so each queue row offers radio buttons
+// (one radio group per row, named by a never-reused sequence number).
+let queueRowSeq = 0;
+function queueGroupRadiosHTML(card) {
+    const names = groupNames();
+    if (!names.length) return '<span class="text-xs" style="color: var(--gk-text-muted);">' + I18N.addTeamsFirst + '</span>';
+    const current = card.querySelector('.queue-groups input:checked');
+    let selected = current ? parseInt(current.value) : 1;
+    if (selected > names.length) selected = 1;
+    return names.map((n, i) => '<label class="chk"><input type="radio" name="' + card.dataset.groupField + '" value="' + (i+1) + '"' + ((i+1) === selected ? ' checked' : '') + '> ' + n + '</label>').join(' ');
+}
 function addGroupRow() {
     const c = document.getElementById('groupRows');
     const d = document.createElement('div'); d.className = 'row-card flex gap-2';
@@ -165,11 +176,11 @@ function addGroupRow() {
 }
 function addQueueRow() {
     const c = document.getElementById('queueRows');
-    const idx = c.children.length;
     const d = document.createElement('div'); d.className = 'row-card';
+    d.dataset.groupField = 'queue-group-' + (++queueRowSeq);
     d.innerHTML = '<div class="flex gap-2"><input type="text" class="queue-name gk-input-neon w-full" placeholder="' + I18N.queueName + '"><button type="button" class="gk-btn-secondary" onclick="this.closest(\'.row-card\').remove()">' + I18N.remove + '</button></div>' +
-        '<div class="queue-groups mt-2 text-sm">' + groupCheckboxesHTML('queue', idx) + '</div>' +
-        '<input type="hidden" class="queue-group-ids" data-row="' + idx + '">';
+        '<div class="queue-groups mt-2 text-sm"></div>';
+    d.querySelector('.queue-groups').innerHTML = queueGroupRadiosHTML(d);
     c.appendChild(d);
 }
 function addAgentRow() {
@@ -187,12 +198,12 @@ function addAgentRow() {
 function addCustomerRow() {
     const c = document.getElementById('customerRows');
     const d = document.createElement('div'); d.className = 'row-card grid grid-cols-1 sm:grid-cols-3 gap-2';
-    d.innerHTML = <div class="relative">
-            <input type="text" class="cust-search gk-input-neon w-full" placeholder="Type to search existing customer..." oninput="searchCustomer(this)">
-            <div class="customer-dropdown absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-32 overflow-y-auto hidden"></div>
-        </div>
-        <input type="text" class="cust-id gk-input-neon w-full" placeholder="' + I18N.customerId + '" onchange="syncCustomerId(this)">
-        <input type="text" class="cust-name gk-input-neon w-full" placeholder="' + I18N.companyName + '"><button type="button" class="gk-btn-secondary sm:col-span-3" onclick="this.closest(\'.row-card\').remove()">' + I18N.remove + '</button>';
+    d.innerHTML = '<div class="relative">' +
+        '<input type="text" class="cust-search gk-input-neon w-full" placeholder="Type to search existing customer..." oninput="searchCustomer(this)">' +
+        '<div class="customer-dropdown absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-32 overflow-y-auto hidden"></div>' +
+        '</div>' +
+        '<input type="text" class="cust-id gk-input-neon w-full" placeholder="' + I18N.customerId + '" onchange="syncCustomerId(this)">' +
+        '<input type="text" class="cust-name gk-input-neon w-full" placeholder="' + I18N.companyName + '"><button type="button" class="gk-btn-secondary sm:col-span-3" onclick="this.closest(\'.row-card\').remove()">' + I18N.remove + '</button>';
     c.appendChild(d);
 }
 
@@ -273,8 +284,8 @@ function addSlARow() {
 }
 
 function renderQueueGroupOptions() {
-    document.querySelectorAll('#queueRows .row-card').forEach((card, idx) => {
-        card.querySelector('.queue-groups').innerHTML = groupCheckboxesHTML('queue', idx);
+    document.querySelectorAll('#queueRows .row-card').forEach(card => {
+        card.querySelector('.queue-groups').innerHTML = queueGroupRadiosHTML(card);
     });
 }
 function renderAgentGroupOptions() {
@@ -283,10 +294,6 @@ function renderAgentGroupOptions() {
     });
 }
 function syncGroupIds() {
-    document.querySelectorAll('#queueRows .row-card').forEach(card => {
-        const ids = [...card.querySelectorAll('.queue-groups input:checked')].map(c => parseInt(c.value));
-        card.querySelector('.queue-group-ids').value = ids.join(',');
-    });
     document.querySelectorAll('#agentRows .row-card').forEach(card => {
         const ids = [...card.querySelectorAll('.agent-groups input:checked')].map(c => parseInt(c.value));
         card.querySelector('.agent-group-ids').value = ids.join(',');
@@ -298,7 +305,7 @@ function collect() {
     return {
         org_type: (document.querySelector('input[name=org_type]:checked')||{}).value || 'support',
         groups: [...document.querySelectorAll('#groupRows .row-card')].map(c => ({ name: c.querySelector('.group-name').value.trim(), comments: '' })).filter(g=>g.name),
-        queues: [...document.querySelectorAll('#queueRows .row-card')].map(c => ({ name: c.querySelector('.queue-name').value.trim(), group_ids: parseIds(c.querySelector('.queue-group-ids').value), comments: '' })).filter(q=>q.name),
+        queues: [...document.querySelectorAll('#queueRows .row-card')].map(c => ({ name: c.querySelector('.queue-name').value.trim(), group_id: parseInt((c.querySelector('.queue-groups input:checked') || {}).value) || 0, comments: '' })).filter(q=>q.name),
         agents: [...document.querySelectorAll('#agentRows .row-card')].map(c => ({ login: c.querySelector('.agent-login').value.trim(), first_name: c.querySelector('.agent-first').value.trim(), last_name: c.querySelector('.agent-last').value.trim(), email: c.querySelector('.agent-email').value.trim(), group_ids: parseIds(c.querySelector('.agent-group-ids').value) })).filter(a=>a.login),
         customer_companies: [...document.querySelectorAll('#customerRows .row-card')].map(c => ({ customer_id: c.querySelector('.cust-id').value.trim(), name: c.querySelector('.cust-name').value.trim(), fields: {} })).filter(x=>x.customer_id && x.name),
         slas: [...document.querySelectorAll('#slaRows .row-card')].map(c => ({ name: c.querySelector('.sla-name').value.trim(), first_response_time: parseInt(c.querySelector('.sla-frt').value)||0, solution_time: parseInt(c.querySelector('.sla-sol').value)||0 })).filter(s=>s.name)

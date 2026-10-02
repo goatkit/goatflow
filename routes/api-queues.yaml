@@ -11,6 +11,7 @@ spec:
     prefix: /api/queues
     middleware:
         - unified_auth
+        - agent
         - queue_ro # Require read access to at least one queue
     routes:
         - path: /

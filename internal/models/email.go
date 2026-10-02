@@ -27,20 +27,6 @@ type EmailAccount struct {
 	Queue               *Queue    `json:"queue,omitempty"`
 }
 
-// EmailTemplate represents an email template for automated responses.
-type EmailTemplate struct {
-	ID              int       `json:"id" db:"id"`
-	TemplateName    string    `json:"template_name" db:"template_name"`
-	SubjectTemplate *string   `json:"subject_template,omitempty" db:"subject_template"`
-	BodyTemplate    *string   `json:"body_template,omitempty" db:"body_template"`
-	TemplateType    *string   `json:"template_type,omitempty" db:"template_type"`
-	IsActive        bool      `json:"is_active" db:"is_active"`
-	CreatedAt       time.Time `json:"created_at" db:"created_at"`
-	CreatedBy       int       `json:"created_by" db:"created_by"`
-	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
-	UpdatedBy       int       `json:"updated_by" db:"updated_by"`
-}
-
 // Organization represents a customer organization.
 type Organization struct {
 	ID            string    `json:"id" db:"id"`
@@ -113,14 +99,3 @@ type ArticleAttachment struct {
 	ChangeTime         time.Time `json:"change_time" db:"change_time"`
 	ChangeBy           int       `json:"change_by" db:"change_by"`
 }
-
-// Template types.
-const (
-	TemplateTypeGreeting       = "greeting"
-	TemplateTypeSignature      = "signature"
-	TemplateTypeAutoReply      = "auto_reply"
-	TemplateTypeTicketNew      = "ticket_created"
-	TemplateTypeTicketUpdate   = "ticket_updated"
-	TemplateTypeTicketAssigned = "ticket_assigned"
-	TemplateTypeTicketClosed   = "ticket_closed"
-)

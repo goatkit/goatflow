@@ -170,7 +170,7 @@ async function deleteProvider(id, name) {
     }
 
     try {
-        const response = await fetch('/admin/identity-providers/' + id + '/delete', {
+        const response = await fetch('/admin/identity-providers/' + id, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' }
         });

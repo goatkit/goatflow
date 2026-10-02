@@ -52,8 +52,12 @@ var GoatCoach = (function () {
         saveState(state);
         hide();
 
-        // Also persist to server (best-effort)
-        fetch('/api/preferences/coachmarks/dismiss', {
+        // Also persist to server (best-effort). Customers have their own
+        // preference endpoint; the agent one refuses customer sessions.
+        var endpoint = window.location.pathname.startsWith('/customer')
+            ? '/customer/api/preferences/coachmarks/dismiss'
+            : '/api/preferences/coachmarks/dismiss';
+        fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: tipId })

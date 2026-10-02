@@ -1,195 +1,80 @@
+// Package auth provides the credentials the GoatFlow Go SDK sends with each
+// request. GoatFlow accepts two kinds, both in the Authorization header as
+// "Bearer <token>": API tokens (gf_..., created on the /settings/tokens page or
+// via /api/v1/tokens) and JWT access tokens returned by POST /api/v1/auth/login
+// and POST /api/v1/auth/refresh.
 package auth
 
 import (
+	"context"
 	"fmt"
+	"sync"
 	"time"
 )
 
-// AuthMethod represents different authentication methods
-type AuthMethod int
-
-const (
-	// AuthMethodAPIKey uses API key authentication
-	AuthMethodAPIKey AuthMethod = iota
-	// AuthMethodJWT uses JWT token authentication
-	AuthMethodJWT
-	// AuthMethodOAuth2 uses OAuth2 token authentication
-	AuthMethodOAuth2
-)
-
-// Authenticator interface for different auth methods
+// Authenticator supplies the Authorization header value for a request.
 type Authenticator interface {
-	// GetAuthHeader returns the authorization header value
-	GetAuthHeader() string
-	// IsExpired checks if the authentication is expired
-	IsExpired() bool
-	// Refresh refreshes the authentication if possible
-	Refresh() error
-	// Type returns the authentication method type
-	Type() AuthMethod
+	// AuthorizationHeader returns the value for the Authorization header,
+	// refreshing the credential first if it has expired.
+	AuthorizationHeader(ctx context.Context) (string, error)
 }
 
-// APIKeyAuth implements API key authentication
+// APIKeyAuth authenticates with a GoatFlow API token (gf_...).
 type APIKeyAuth struct {
-	APIKey string
-	Header string // Default: "X-API-Key"
+	Token string
 }
 
-// NewAPIKeyAuth creates a new API key authenticator
-func NewAPIKeyAuth(apiKey string) *APIKeyAuth {
-	return &APIKeyAuth{
-		APIKey: apiKey,
-		Header: "X-API-Key",
-	}
+// NewAPIKeyAuth returns an authenticator for a GoatFlow API token.
+func NewAPIKeyAuth(token string) *APIKeyAuth {
+	return &APIKeyAuth{Token: token}
 }
 
-// GetAuthHeader returns the API key header
-func (a *APIKeyAuth) GetAuthHeader() string {
-	return a.APIKey
+// AuthorizationHeader returns "Bearer <token>".
+func (a *APIKeyAuth) AuthorizationHeader(context.Context) (string, error) {
+	return "Bearer " + a.Token, nil
 }
 
-// IsExpired always returns false for API keys
-func (a *APIKeyAuth) IsExpired() bool {
-	return false
-}
+// RefreshFunc exchanges a refresh token for a new access token, a new
+// (rotated) refresh token and the access token's expiry.
+// client.AuthService.RefreshFunc returns one backed by POST /api/v1/auth/refresh.
+type RefreshFunc func(ctx context.Context, refreshToken string) (token, newRefreshToken string, expiresAt time.Time, err error)
 
-// Refresh is not applicable for API keys
-func (a *APIKeyAuth) Refresh() error {
-	return nil
-}
-
-// Type returns the authentication method type
-func (a *APIKeyAuth) Type() AuthMethod {
-	return AuthMethodAPIKey
-}
-
-// JWTAuth implements JWT token authentication
+// JWTAuth authenticates with a JWT access token. When ExpiresAt is set and
+// lies less than a minute ahead, the refresh function is called before the
+// request. It is safe for concurrent use; concurrent requests share one
+// refresh.
 type JWTAuth struct {
-	Token        string
-	RefreshToken string
-	ExpiresAt    time.Time
-	RefreshFunc  func(refreshToken string) (string, string, time.Time, error)
+	mu           sync.Mutex
+	token        string
+	refreshToken string
+	expiresAt    time.Time
+	refresh      RefreshFunc
 }
 
-// NewJWTAuth creates a new JWT authenticator
-func NewJWTAuth(token, refreshToken string, expiresAt time.Time) *JWTAuth {
-	return &JWTAuth{
-		Token:        token,
-		RefreshToken: refreshToken,
-		ExpiresAt:    expiresAt,
+// NewJWTAuth returns an authenticator for a JWT access token. A zero
+// expiresAt means the token is used until the API rejects it; refresh may be
+// nil, in which case an expired token is an error.
+func NewJWTAuth(token, refreshToken string, expiresAt time.Time, refresh RefreshFunc) *JWTAuth {
+	return &JWTAuth{token: token, refreshToken: refreshToken, expiresAt: expiresAt, refresh: refresh}
+}
+
+// AuthorizationHeader returns "Bearer <token>", refreshing it first if it is
+// about to expire.
+func (a *JWTAuth) AuthorizationHeader(ctx context.Context) (string, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if !a.expiresAt.IsZero() && time.Now().After(a.expiresAt.Add(-time.Minute)) {
+		if a.refresh == nil {
+			return "", fmt.Errorf("goatflow: access token expired at %s and no refresh function is configured", a.expiresAt.Format(time.RFC3339))
+		}
+		if a.refreshToken == "" {
+			return "", fmt.Errorf("goatflow: access token expired at %s and no refresh token is available", a.expiresAt.Format(time.RFC3339))
+		}
+		token, refreshToken, expiresAt, err := a.refresh(ctx, a.refreshToken)
+		if err != nil {
+			return "", fmt.Errorf("goatflow: refreshing access token: %w", err)
+		}
+		a.token, a.refreshToken, a.expiresAt = token, refreshToken, expiresAt
 	}
-}
-
-// GetAuthHeader returns the JWT token in Bearer format
-func (a *JWTAuth) GetAuthHeader() string {
-	return fmt.Sprintf("Bearer %s", a.Token)
-}
-
-// IsExpired checks if the JWT token is expired
-func (a *JWTAuth) IsExpired() bool {
-	return time.Now().After(a.ExpiresAt.Add(-1 * time.Minute)) // 1 minute buffer
-}
-
-// Refresh refreshes the JWT token using the refresh token
-func (a *JWTAuth) Refresh() error {
-	if a.RefreshFunc == nil {
-		return fmt.Errorf("no refresh function configured")
-	}
-
-	token, refreshToken, expiresAt, err := a.RefreshFunc(a.RefreshToken)
-	if err != nil {
-		return fmt.Errorf("failed to refresh token: %w", err)
-	}
-
-	a.Token = token
-	a.RefreshToken = refreshToken
-	a.ExpiresAt = expiresAt
-	return nil
-}
-
-// Type returns the authentication method type
-func (a *JWTAuth) Type() AuthMethod {
-	return AuthMethodJWT
-}
-
-// OAuth2Auth implements OAuth2 token authentication
-type OAuth2Auth struct {
-	AccessToken  string
-	RefreshToken string
-	TokenType    string // Usually "Bearer"
-	ExpiresAt    time.Time
-	RefreshFunc  func(refreshToken string) (string, string, time.Time, error)
-}
-
-// NewOAuth2Auth creates a new OAuth2 authenticator
-func NewOAuth2Auth(accessToken, refreshToken, tokenType string, expiresAt time.Time) *OAuth2Auth {
-	if tokenType == "" {
-		tokenType = "Bearer"
-	}
-	return &OAuth2Auth{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		TokenType:    tokenType,
-		ExpiresAt:    expiresAt,
-	}
-}
-
-// GetAuthHeader returns the OAuth2 token
-func (a *OAuth2Auth) GetAuthHeader() string {
-	return fmt.Sprintf("%s %s", a.TokenType, a.AccessToken)
-}
-
-// IsExpired checks if the OAuth2 token is expired
-func (a *OAuth2Auth) IsExpired() bool {
-	return time.Now().After(a.ExpiresAt.Add(-1 * time.Minute)) // 1 minute buffer
-}
-
-// Refresh refreshes the OAuth2 token using the refresh token
-func (a *OAuth2Auth) Refresh() error {
-	if a.RefreshFunc == nil {
-		return fmt.Errorf("no refresh function configured")
-	}
-
-	accessToken, refreshToken, expiresAt, err := a.RefreshFunc(a.RefreshToken)
-	if err != nil {
-		return fmt.Errorf("failed to refresh token: %w", err)
-	}
-
-	a.AccessToken = accessToken
-	a.RefreshToken = refreshToken
-	a.ExpiresAt = expiresAt
-	return nil
-}
-
-// Type returns the authentication method type
-func (a *OAuth2Auth) Type() AuthMethod {
-	return AuthMethodOAuth2
-}
-
-// NoAuth represents no authentication
-type NoAuth struct{}
-
-// NewNoAuth creates a new no-auth authenticator
-func NewNoAuth() *NoAuth {
-	return &NoAuth{}
-}
-
-// GetAuthHeader returns empty string
-func (a *NoAuth) GetAuthHeader() string {
-	return ""
-}
-
-// IsExpired always returns false
-func (a *NoAuth) IsExpired() bool {
-	return false
-}
-
-// Refresh is not applicable
-func (a *NoAuth) Refresh() error {
-	return nil
-}
-
-// Type returns a special value for no auth
-func (a *NoAuth) Type() AuthMethod {
-	return -1
+	return "Bearer " + a.token, nil
 }

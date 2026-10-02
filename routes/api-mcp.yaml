@@ -16,6 +16,7 @@ spec:
           handler: HandleMCP
           middleware:
               - api_token
+              - agent # MCP tools are agent API routes; customers are refused
           description: "MCP JSON-RPC endpoint"
 
         - path: /mcp
@@ -29,6 +30,7 @@ spec:
           handler: HandleMCPSSE
           middleware:
               - unified_auth
+              - agent
           description: "MCP Streamable HTTP endpoint (client-to-server)"
 
         - path: /mcp/sse
@@ -36,6 +38,7 @@ spec:
           handler: HandleMCPSSEStream
           middleware:
               - unified_auth
+              - agent
           description: "MCP SSE notification stream (server-to-client)"
 
         - path: /mcp/sse
@@ -43,4 +46,5 @@ spec:
           handler: HandleMCPSSEDelete
           middleware:
               - unified_auth
+              - agent
           description: "MCP session termination"

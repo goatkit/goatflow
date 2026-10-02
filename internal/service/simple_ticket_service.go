@@ -1,33 +1,35 @@
 package service
 
 import (
+	"context"
+	"database/sql"
+	"errors"
 	"fmt"
-	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/repository"
+	"github.com/goatkit/goatflow/internal/storage"
 )
 
-// This is for development/testing with in-memory repository.
+// SimpleTicketService provides ticket and article (message) access backed by the database.
 type SimpleTicketService struct {
 	ticketRepo repository.ITicketRepository
-	messages   map[uint][]*SimpleTicketMessage // In-memory message storage by ticket ID
-	messagesMu sync.RWMutex                    // Mutex for thread-safe access to messages
-	nextMsgID  uint                            // Auto-incrementing message ID
+	db         *sql.DB
 }
 
 // NewSimpleTicketService creates a new simple ticket service.
-func NewSimpleTicketService(repo repository.ITicketRepository) *SimpleTicketService {
+func NewSimpleTicketService(repo repository.ITicketRepository, db *sql.DB) *SimpleTicketService {
 	return &SimpleTicketService{
 		ticketRepo: repo,
-		messages:   make(map[uint][]*SimpleTicketMessage),
-		nextMsgID:  1,
+		db:         db,
 	}
 }
+
+var errNoTicketStore = errors.New("ticket service: database not available")
 
 // CreateTicket creates a new ticket.
 func (s *SimpleTicketService) CreateTicket(ticket *models.Ticket) error {
@@ -47,12 +49,7 @@ func (s *SimpleTicketService) CreateTicket(ticket *models.Ticket) error {
 // GetTicket retrieves a ticket by ID.
 func (s *SimpleTicketService) GetTicket(ticketID uint) (*models.Ticket, error) {
 	if s.ticketRepo == nil {
-		// DB-less mode in tests: only ticket 1 exists
-		if ticketID == 1 {
-			now := time.Now()
-			return &models.Ticket{ID: int(ticketID), TicketNumber: "T-TEST-1", Title: "Test Ticket", QueueID: 1, TicketStateID: 2, TicketPriorityID: 2, CreateTime: now, ChangeTime: now}, nil
-		}
-		return nil, fmt.Errorf("ticket not found")
+		return nil, errNoTicketStore
 	}
 	return s.ticketRepo.GetByID(ticketID)
 }
@@ -113,18 +110,13 @@ type SimpleAttachment struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-// AddMessage adds a message to a ticket.
+// AddMessage persists a message as an article (article + article_data_mime) on the ticket.
+// On success message.ID, TicketID and CreatedAt are set from the stored row.
 func (s *SimpleTicketService) AddMessage(ticketID uint, message *SimpleTicketMessage) error {
-	// Validate the ticket exists
-	var err error
-	if s.ticketRepo != nil {
-		_, err = s.ticketRepo.GetByID(ticketID)
-	} else {
-		if ticketID != 1 {
-			err = fmt.Errorf("ticket not found")
-		}
+	if s.ticketRepo == nil || s.db == nil {
+		return errNoTicketStore
 	}
-	if err != nil {
+	if _, err := s.ticketRepo.GetByID(ticketID); err != nil {
 		return fmt.Errorf("ticket not found: %w", err)
 	}
 
@@ -136,70 +128,74 @@ func (s *SimpleTicketService) AddMessage(ticketID uint, message *SimpleTicketMes
 		return fmt.Errorf("message body is required")
 	}
 
-	// Lock for thread-safe access
-	s.messagesMu.Lock()
-	defer s.messagesMu.Unlock()
+	senderTypeID := constants.ArticleSenderAgent
+	switch message.AuthorType {
+	case "Customer":
+		senderTypeID = constants.ArticleSenderCustomer
+	case "System":
+		senderTypeID = constants.ArticleSenderSystem
+	}
+	visible := 1
+	if message.IsInternal {
+		visible = 0
+	}
+	contentType := message.ContentType
+	if contentType == "" {
+		contentType = "text/plain; charset=utf-8"
+	}
+	now := time.Now()
 
-	// Set message metadata
-	message.ID = s.nextMsgID
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin add message: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	articleID, err := database.GetAdapter().InsertWithReturningTx(tx, database.ConvertPlaceholders(`
+		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id,
+			is_visible_for_customer, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
+		RETURNING id
+	`), ticketID, senderTypeID, constants.CommunicationChannelInternal, visible, message.CreatedBy, message.CreatedBy)
+	if err != nil {
+		return fmt.Errorf("insert article: %w", err)
+	}
+
+	if _, err := tx.Exec(database.ConvertPlaceholders(`
+		INSERT INTO article_data_mime (article_id, a_from, a_subject, a_body,
+			a_content_type, incoming_time, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
+	`), articleID, message.AuthorEmail, message.Subject, message.Body, contentType,
+		now.Unix(), message.CreatedBy, message.CreatedBy); err != nil {
+		return fmt.Errorf("insert article_data_mime: %w", err)
+	}
+
+	if _, err := tx.Exec(database.ConvertPlaceholders(`
+		UPDATE ticket SET change_time = CURRENT_TIMESTAMP, change_by = ? WHERE id = ?
+	`), message.CreatedBy, ticketID); err != nil {
+		return fmt.Errorf("touch ticket: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit add message: %w", err)
+	}
+
+	message.ID = uint(articleID)
 	message.TicketID = ticketID
-	message.CreatedAt = time.Now()
-	s.nextMsgID++
-
-	// Set default author info if not provided
-	if message.AuthorName == "" {
-		if message.AuthorType == "Customer" {
-			message.AuthorName = "Customer"
-		} else {
-			message.AuthorName = "System User"
-		}
-	}
-
-	if message.AuthorType == "" {
-		message.AuthorType = "System"
-	}
-
-	// Store the message
-	if s.messages[ticketID] == nil {
-		s.messages[ticketID] = make([]*SimpleTicketMessage, 0)
-	}
-	s.messages[ticketID] = append(s.messages[ticketID], message)
-
+	message.CreatedAt = now
+	message.SenderTypeID = senderTypeID
 	return nil
 }
 
-// GetMessages retrieves all messages for a ticket.
+// GetMessages retrieves all articles of a ticket as messages.
 func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage, error) {
-	// Validate the ticket exists
-	var err error
-	if s.ticketRepo != nil {
-		_, err = s.ticketRepo.GetByID(ticketID)
-	} else {
-		// DB-less mode: only ticket 1 exists
-		if ticketID != 1 {
-			err = fmt.Errorf("ticket not found")
-		}
+	if s.ticketRepo == nil || s.db == nil {
+		return nil, errNoTicketStore
 	}
-	if err != nil {
+	if _, err := s.ticketRepo.GetByID(ticketID); err != nil {
 		return nil, fmt.Errorf("ticket not found: %w", err)
 	}
-
-	// First check in-memory messages
-	s.messagesMu.RLock()
-	inMemoryMessages := s.messages[ticketID]
-	s.messagesMu.RUnlock()
-
-	// Also retrieve messages from the database (articles)
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		// If database is not available, return in-memory messages only
-		if inMemoryMessages == nil {
-			return make([]*SimpleTicketMessage, 0), nil
-		}
-		result := make([]*SimpleTicketMessage, len(inMemoryMessages))
-		copy(result, inMemoryMessages)
-		return result, nil
-	}
+	db := s.db
 
 	// Query articles from database - join with article_data_mime for content
 	rows, err := db.Query(database.ConvertPlaceholders(`
@@ -216,18 +212,11 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 		ORDER BY a.create_time ASC
 	`), ticketID)
 	if err != nil {
-		// If query fails, return in-memory messages
-		if inMemoryMessages == nil {
-			return make([]*SimpleTicketMessage, 0), nil
-		}
-		result := make([]*SimpleTicketMessage, len(inMemoryMessages))
-		copy(result, inMemoryMessages)
-		return result, nil
+		return nil, fmt.Errorf("query articles of ticket %d: %w", ticketID, err)
 	}
 	defer rows.Close()
 
-	var dbMessages []*SimpleTicketMessage
-	var articleIDs []int
+	dbMessages := make([]*SimpleTicketMessage, 0)
 
 	for rows.Next() {
 		var articleID int
@@ -238,14 +227,14 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 		err := rows.Scan(&articleID, &subject, &body, &contentType, &createTime, &createBy,
 			&fromAddr, &toAddr, &senderTypeID, &isVisible)
 		if err != nil {
-			continue
+			return nil, fmt.Errorf("scan article of ticket %d: %w", ticketID, err)
 		}
 
 		// Determine author type based on sender_type_id
 		authorType := "System"
-		if senderTypeID == 1 {
+		if senderTypeID == constants.ArticleSenderAgent {
 			authorType = "Agent"
-		} else if senderTypeID == 3 {
+		} else if senderTypeID == constants.ArticleSenderCustomer {
 			authorType = "Customer"
 		}
 
@@ -278,82 +267,34 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 		}
 
 		dbMessages = append(dbMessages, msg)
-		articleIDs = append(articleIDs, articleID)
 	}
-	_ = rows.Err() // Check for iteration errors
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate articles of ticket %d: %w", ticketID, err)
+	}
 
-	// Now query attachments for all articles using sqlx.In for safe IN clause
-	if len(articleIDs) > 0 {
-		qb, err := database.GetQueryBuilder()
+	// Attachments come from the article storage (DB or FS); HTML body parts
+	// are not attachments. Each one is addressed by ticket, article and file id.
+	store := storage.ForDB(db)
+	for _, msg := range dbMessages {
+		atts, err := store.ListAttachments(context.Background(), int64(msg.ID))
 		if err != nil {
-			return dbMessages, nil
+			return nil, fmt.Errorf("list attachments of article %d: %w", msg.ID, err)
 		}
-
-		query, args, err := qb.In(`
-			SELECT att.id, att.article_id, att.filename,
-			       COALESCE(att.content_type, 'application/octet-stream'),
-			       COALESCE(att.content_size, '0'),
-			       att.content
-			FROM article_data_mime_attachment att
-			WHERE att.article_id IN (?)
-			ORDER BY att.id
-		`, articleIDs)
-		if err != nil {
-			return dbMessages, nil
-		}
-
-		attachRows, err := qb.Query(query, args...)
-		if err == nil {
-			defer attachRows.Close()
-
-			// Create a map for quick message lookup
-			messageMap := make(map[uint]*SimpleTicketMessage)
-			for _, msg := range dbMessages {
-				messageMap[msg.ID] = msg
+		for _, a := range atts {
+			if storage.IsHTMLBody(a) {
+				continue
 			}
-
-			for attachRows.Next() {
-				var attID, articleID int
-				var filename, contentType, contentSize string
-				var content []byte
-
-				err := attachRows.Scan(&attID, &articleID, &filename,
-					&contentType, &contentSize, &content)
-				if err != nil {
-					continue
-				}
-
-				// Parse size
-				size, _ := strconv.ParseInt(contentSize, 10, 64)
-
-				// Add attachment to the corresponding message
-				if msg, ok := messageMap[uint(articleID)]; ok {
-					attachment := &SimpleAttachment{
-						ID:          uint(attID),
-						MessageID:   uint(articleID),
-						Filename:    filename,
-						ContentType: contentType,
-						Size:        size,
-						URL:         fmt.Sprintf("/api/attachments/%d/download", attID),
-						CreatedAt:   msg.CreatedAt,
-					}
-					msg.Attachments = append(msg.Attachments, attachment)
-				}
-			}
-			_ = attachRows.Err() // Check for iteration errors
+			msg.Attachments = append(msg.Attachments, &SimpleAttachment{
+				ID:          uint(a.FileID),
+				MessageID:   msg.ID,
+				Filename:    a.Filename,
+				ContentType: a.ContentType,
+				Size:        a.Size,
+				URL:         fmt.Sprintf("/api/tickets/%d/articles/%d/attachments/%d", ticketID, msg.ID, a.FileID),
+				CreatedAt:   msg.CreatedAt,
+			})
 		}
 	}
 
-	// Return database messages if found
-	if len(dbMessages) > 0 {
-		return dbMessages, nil
-	}
-
-	// Return in-memory messages if no database messages found
-	if inMemoryMessages == nil {
-		return make([]*SimpleTicketMessage, 0), nil
-	}
-	result := make([]*SimpleTicketMessage, len(inMemoryMessages))
-	copy(result, inMemoryMessages)
-	return result, nil
+	return dbMessages, nil
 }

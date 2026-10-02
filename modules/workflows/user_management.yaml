@@ -154,48 +154,6 @@ workflows:
         config:
           action: disable  # or delete
 
-  # Role permission changes notification
-  - id: permission_change_alert
-    name: Permission Change Alert
-    module: user_groups
-    description: Alert when user permissions are modified
-    enabled: true
-    triggers:
-      - type: event
-        event: update
-    conditions:
-      - type: field_change
-        field: permission_key
-    actions:
-      - type: log_activity
-        order: 1
-        config:
-          message: "Permissions changed for user {{user_id}} in group {{group_id}}"
-          level: security
-      - type: send_email
-        order: 2
-        config:
-          to: "{{security_team_email}}"
-          subject: "🔐 Permission Change Alert"
-          body: |
-            User: {{user_login}}
-            Group: {{group_name}}
-            Changed by: {{modified_by}}
-            Old permissions: {{old_permissions}}
-            New permissions: {{new_permissions}}
-            Timestamp: {{current_timestamp}}
-      - type: create_audit_record
-        order: 3
-        config:
-          module: audit_log
-          fields:
-            event_type: permission_change
-            user_id: "{{user_id}}"
-            group_id: "{{group_id}}"
-            old_value: "{{old_permissions}}"
-            new_value: "{{new_permissions}}"
-            changed_by: "{{modified_by}}"
-
   # Bulk user import validation
   - id: bulk_import_validation
     name: Bulk User Import Validation

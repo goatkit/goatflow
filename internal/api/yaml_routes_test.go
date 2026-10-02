@@ -7,8 +7,6 @@ import (
 
 // TestYAMLRoutesBasicAvailability ensures newly YAML-registered UI routes exist.
 func TestYAMLRoutesBasicAvailability(t *testing.T) {
-	// Force test mode to exercise fallback routes
-	t.Setenv("APP_ENV", "test")
 	r := NewSimpleRouter()
 	infos := r.Routes()
 	have := map[string]struct{}{}
@@ -20,7 +18,7 @@ func TestYAMLRoutesBasicAvailability(t *testing.T) {
 		"/api/tickets",
 		"/api/lookups/queues",
 		"/api/canned-responses",
-		"/api/tickets/:id/assign", // fallback stub in test mode
+		"/api/tickets/:id/assign",
 	}
 	for _, p := range expected {
 		if _, ok := have[p]; !ok {

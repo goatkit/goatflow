@@ -178,13 +178,10 @@ func CustomerPortalGate(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		}
 
 		if loginRequired {
+			// identify only reads the token; OptionalAuth would run the
+			// route handler (c.Next) before the role check below.
 			if jwtManager != nil {
-				optional := NewAuthMiddleware(jwtManager).OptionalAuth()
-				optional(c)
-				if c.IsAborted() {
-					redirectCustomerLoginIfHTML(c)
-					return
-				}
+				NewAuthMiddleware(jwtManager).identify(c)
 			}
 
 			if role, ok := c.Get("user_role"); !ok || role != "Customer" {
@@ -203,12 +200,7 @@ func CustomerPortalGate(jwtManager *auth.JWTManager) gin.HandlerFunc {
 
 		// Login not required: attempt optional auth to enrich context, but allow anonymous users through.
 		if jwtManager != nil {
-			optional := NewAuthMiddleware(jwtManager).OptionalAuth()
-			optional(c)
-			if c.IsAborted() {
-				redirectCustomerLoginIfHTML(c)
-				return
-			}
+			NewAuthMiddleware(jwtManager).identify(c)
 
 			if role, ok := c.Get("user_role"); ok && role != "Customer" {
 				if wantsHTML(c) {

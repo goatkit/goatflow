@@ -70,6 +70,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/goatflow cmd/goatflow/main.go 2>/dev/null || true && \
     CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/goatflow-babelfish cmd/goatflow-babelfish/main.go 2>/dev/null || true && \
     CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/goatflow-migrate ./cmd/goatflow-migrate/*.go 2>/dev/null || true && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/goatflow-storage ./cmd/goatflow-storage 2>/dev/null || true && \
     CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/goatflow-db cmd/goatflow-db/main.go 2>/dev/null || true && \
     CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/schema-discovery cmd/schema-discovery/main.go 2>/dev/null || true
 
@@ -86,16 +87,16 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # Notes:
 # - golangci-lint v2 changed its import path to /v2/cmd/...; the
 #   line below reflects that.
-# - gosec and govulncheck use `latest` because we don't have a
-#   confident known-good pin and they're CI-only tools — refine
-#   to specific tags when convenient.
+# - gosec and govulncheck are pinned to the newest releases that still
+#   build with Go 1.25: `latest` broke the toolbox build when
+#   golang.org/x/vuln v1.8.0 started requiring Go >= 1.26.
 # - staticcheck is pinned to v0.7.0: v0.8.0+ requires Go >= 1.26,
 #   which the 1.25 toolchain in this image can't satisfy (GOTOOLCHAIN=local).
 ARG GOIMPORTS_VERSION=v0.42.0
-ARG GOSEC_VERSION=latest
+ARG GOSEC_VERSION=v2.29.0
 ARG STATICCHECK_VERSION=v0.7.0
 ARG GOLANGCI_LINT_VERSION=v2.5.0
-ARG GOVULNCHECK_VERSION=latest
+ARG GOVULNCHECK_VERSION=v1.7.0
 ARG SWAG_VERSION=v1.16.4
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \

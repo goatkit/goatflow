@@ -61,9 +61,46 @@ func cases(db *sql.DB, tx *sql.Tx, external string) {
 
 	db.Query(database.ConvertPlaceholders("SELECT a FROM t ORDER BY a DESC NULLS LAST")) // want sql-postgres-only
 
-	db.Exec(database.ConvertPlaceholders("INSERT INTO t (nav, sep) VALUES ('Admin::Plugins', ' || ')"))
+	db.Exec(database.ConvertPlaceholders("INSERT INTO t (a, b) VALUES ('Admin::Plugins', ' || ')"))
 
 	db.Query(database.ConvertPlaceholders("SELECT id FROM t WHERE create_time > NOW() - INTERVAL '1 day'")) // want sql-postgres-only
 
 	db.Query(database.ConvertPlaceholders("SELECT ts_rank(to_tsvector('english', a), plainto_tsquery('english', ?)) FROM t"), "x") // want sql-postgres-only
+}
+
+// Schema rules: the fixture schema (testdata/sqlschema) has table t with
+// id, a, b, added, new_name, create_time on both drivers; mysql_only only
+// on MySQL; dropped and old_name were dropped/renamed; table gone was dropped.
+func schemaCases(db *sql.DB) {
+	db.Query(database.ConvertPlaceholders("SELECT id FROM missing_tbl WHERE id = ?"), 1) // want sql-unknown-table
+
+	db.Query(database.ConvertPlaceholders("SELECT id FROM gone")) // want sql-unknown-table
+
+	db.Exec(database.ConvertPlaceholders("INSERT INTO t (a, nope) VALUES (?, ?)"), 1, 2) // want sql-unknown-column
+
+	db.Exec(database.ConvertPlaceholders("UPDATE t SET b = ?, mysql_only = ? WHERE id = ?"), 1, 2, 3) // want sql-unknown-column
+
+	db.Exec(database.ConvertPlaceholders("UPDATE t SET dropped = 1")) // want sql-unknown-column
+
+	db.Exec(database.ConvertPlaceholders("UPDATE t x SET old_name = 1")) // want sql-unknown-column
+
+	db.Exec(database.ConvertPlaceholders("UPDATE t SET added = ?, new_name = ? WHERE a = ?"), 1, 2, "x")
+
+	db.Query(database.ConvertPlaceholders("WITH recent AS (SELECT id FROM t) SELECT id FROM recent"))
+
+	db.Query(database.ConvertPlaceholders("SELECT EXTRACT(YEAR FROM create_time) FROM t"))
+
+	db.Exec(database.ConvertUpsert("INSERT INTO t (id, a) VALUES (?, ?) ON DUPLICATE KEY UPDATE a = VALUES(a)", "id"), 1, "x")
+
+	db.Query(database.ConvertPlaceholders("SELECT id FROM t FOR UPDATE"))
+
+	q := "SELECT t.id " +
+		"FROM t " +
+		"JOIN gone g ON g.id = t.id" // want sql-unknown-table
+	db.Query(database.ConvertPlaceholders(q))
+
+	// sql-schema: fixture for the schema-rule directive
+	db.Exec(database.ConvertPlaceholders("CREATE TABLE scratch (id INT)"))
+
+	_ = fmt.Errorf("update failed for %s", "missing_tbl")
 }

@@ -172,19 +172,17 @@ type EmailInboundConfig struct {
 	TrustedHeaders []string      `mapstructure:"trusted_headers"`
 }
 
+// StorageConfig configures article attachment storage (internal/storage).
 type StorageConfig struct {
+	// Type selects the article storage backend: "db" (ArticleStorageDB,
+	// default) or "fs" (ArticleStorageFS). The STORAGE_TYPE environment
+	// variable overrides it.
 	Type  string `mapstructure:"type"`
 	Local struct {
-		Path       string `mapstructure:"path"`
-		PublicPath string `mapstructure:"public_path"`
+		// Path is the storage root (STORAGE_PATH overrides it); the fs
+		// backend keeps articles in <Path>/var/article in the OTRS layout.
+		Path string `mapstructure:"path"`
 	} `mapstructure:"local"`
-	S3 struct {
-		Bucket    string `mapstructure:"bucket"`
-		Region    string `mapstructure:"region"`
-		AccessKey string `mapstructure:"access_key"`
-		SecretKey string `mapstructure:"secret_key"`
-		Endpoint  string `mapstructure:"endpoint"`
-	} `mapstructure:"s3"`
 	Attachments struct {
 		MaxSize      int64    `mapstructure:"max_size"`
 		AllowedTypes []string `mapstructure:"allowed_types"`
@@ -264,7 +262,6 @@ type FeaturesConfig struct {
 	SocialLogin             bool `mapstructure:"social_login"`
 	TwoFactorAuth           bool `mapstructure:"two_factor_auth"`
 	APIKeys                 bool `mapstructure:"api_keys"`
-	Webhooks                bool `mapstructure:"webhooks"`
 	LDAP                    bool `mapstructure:"ldap"`
 	SAML                    bool `mapstructure:"saml"`
 	KnowledgeBase           bool `mapstructure:"knowledge_base"`
@@ -290,12 +287,6 @@ type IntegrationsConfig struct {
 		Enabled    bool   `mapstructure:"enabled"`
 		WebhookURL string `mapstructure:"webhook_url"`
 	} `mapstructure:"teams"`
-	Webhook struct {
-		Enabled       bool          `mapstructure:"enabled"`
-		Endpoints     []string      `mapstructure:"endpoints"`
-		Timeout       time.Duration `mapstructure:"timeout"`
-		RetryAttempts int           `mapstructure:"retry_attempts"`
-	} `mapstructure:"webhook"`
 }
 
 // RunnerConfig contains configuration for background task runner.

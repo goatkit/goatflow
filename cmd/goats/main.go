@@ -45,7 +45,6 @@ import (
 
 	"github.com/goatkit/goatflow/internal/email/inbound/filters"
 	"github.com/goatkit/goatflow/internal/email/inbound/postmaster"
-	platformapi "github.com/goatkit/goatflow/internal/platform/api"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/cache"
 	"github.com/goatkit/goatflow/internal/platform/config"
@@ -57,7 +56,6 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/notifications"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/plugin/core"
-	"github.com/goatkit/goatflow/internal/platform/plugin/example"
 	pluginloader "github.com/goatkit/goatflow/internal/platform/plugin/loader"
 	"github.com/goatkit/goatflow/internal/platform/runner"
 	platformservice "github.com/goatkit/goatflow/internal/platform/service"
@@ -70,6 +68,7 @@ import (
 	"github.com/goatkit/goatflow/internal/runner/tasks"
 	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/services/scheduler"
+	"github.com/goatkit/goatflow/internal/storage"
 	"github.com/goatkit/goatflow/internal/ticketnumber"
 )
 
@@ -136,6 +135,12 @@ func main() {
 	if valkeyCache != nil {
 		api.SetValkeyCache(valkeyCache)
 	}
+
+	// Article attachment storage backend (storage.type / STORAGE_TYPE).
+	if err := storage.Configure(storage.ConfigFromApp(cfg)); err != nil {
+		log.Fatalf("FATAL: article storage: %v", err)
+	}
+	log.Printf("Article storage: %s", storage.Active().Backend)
 
 	// Get database connection
 	db, dbErr := database.GetDB()
@@ -208,11 +213,17 @@ func main() {
 
 	// Ticket number generator wiring (prep refactor)
 	setup := ticketnumber.SetupFromConfig(configDir)
-	// Provide adapter to auth service (unchanged behavior)
+	// Provide the Config.yaml settings (Auth::Providers) to the auth service.
 	{
 		vm := yamlmgmt.NewVersionManager(configDir)
 		adapter := yamlmgmt.NewConfigAdapter(vm)
+		if err := adapter.ImportConfigYAML(filepath.Join(configDir, "Config.yaml")); err != nil {
+			log.Printf("Warning: auth provider order not read from Config.yaml: %v", err)
+		}
 		platformservice.SetConfigAdapter(adapter)
+	}
+	if err := platformservice.ValidateAuthProviders(); err != nil {
+		log.Fatalf("Auth configuration: %v", err)
 	}
 	auth.SetUserRepoFactory(func(db *sql.DB) auth.UserLookup {
 		return repository.NewUserRepository(db)
@@ -245,28 +256,6 @@ func main() {
 		articleRepo := repository.NewArticleRepository(db)
 		ticketSvc := service.NewTicketService(ticketRepo, service.WithArticleRepository(articleRepo))
 		queueRepo := repository.NewQueueRepository(db)
-		var storageSvc service.StorageService
-		if cfg := config.Get(); cfg != nil && strings.EqualFold(cfg.Storage.Type, "db") {
-			if svc, err := service.NewDatabaseStorageService(); err == nil {
-				storageSvc = svc
-			} else {
-				log.Printf("postmaster: database storage init failed: %v", err)
-			}
-		} else {
-			storagePath := os.Getenv("STORAGE_PATH")
-			if storagePath == "" {
-				if cfg := config.Get(); cfg != nil && cfg.Storage.Local.Path != "" {
-					storagePath = cfg.Storage.Local.Path
-				} else {
-					storagePath = filepath.Join(configDir, "storage")
-				}
-			}
-			if svc, err := service.NewLocalStorageService(storagePath); err == nil {
-				storageSvc = svc
-			} else {
-				log.Printf("postmaster: local storage init failed: %v", err)
-			}
-		}
 		dispatchRulesPath := filepath.Join(configDir, "email_dispatch.yaml")
 		dispatchProvider, err := filters.NewFileDispatchRuleProvider(dispatchRulesPath)
 		if err != nil {
@@ -285,7 +274,6 @@ func main() {
 				}
 				return int(queue.ID), nil
 			}),
-			postmaster.WithTicketProcessorStorage(storageSvc),
 			postmaster.WithTicketProcessorArticleLookup(articleRepo),
 			postmaster.WithTicketProcessorTicketFinder(ticketRepo),
 			postmaster.WithTicketProcessorQueueFinder(queueRepo),
@@ -367,20 +355,19 @@ func main() {
 			}
 		}
 		if templateDir == "" {
-			// Fall back to original relative path for test environments
-			templateDir = "./templates"
+			log.Fatalf("FATAL: templates directory not found (checked %v); set TEMPLATES_DIR", candidates)
 		}
 	}
-	if renderer, err := shared.NewTemplateRenderer(templateDir); err != nil {
-		log.Printf("⚠️  Failed to initialize template renderer (dir=%s): %v", templateDir, err)
-	} else {
-		shared.SetGlobalRenderer(renderer)
-		log.Printf("✅ Template renderer initialized (dir=%s)", templateDir)
+	renderer, err := shared.NewTemplateRenderer(templateDir)
+	if err != nil {
+		log.Fatalf("FATAL: failed to initialize template renderer (dir=%s): %v", templateDir, err)
 	}
+	shared.SetGlobalRenderer(renderer)
+	log.Printf("✅ Template renderer initialized (dir=%s)", templateDir)
 
 	// Initialize plugin system
 	log.Println("🔌 Initializing plugin system...")
-	pluginHostOpts := []plugin.ProdHostAPIOption{}
+	pluginHostOpts := []plugin.ProdHostAPIOption{plugin.WithArticleAttachmentStore(api.PluginArticleAttachmentStore{})}
 	if db != nil {
 		pluginHostOpts = append(pluginHostOpts, plugin.WithDB("default", db))
 	}
@@ -471,14 +458,6 @@ func main() {
 	shared.SetLandingPageProvider(func() string {
 		return pluginMgr.LandingPage()
 	})
-
-	// Register built-in example plugin (for development/testing)
-	helloPlugin := example.NewHelloPlugin()
-	if err := pluginMgr.Register(context.Background(), helloPlugin); err != nil {
-		log.Printf("⚠️  Failed to register hello plugin: %v", err)
-	} else {
-		log.Printf("✅ Plugin registered: %s v%s", helloPlugin.GKRegister().Name, helloPlugin.GKRegister().Version)
-	}
 
 	// Register core dashboard widgets plugin
 	dashboardPlugin := core.NewDashboardPlugin()
@@ -681,21 +660,9 @@ func main() {
 		}()
 		log.Println("scheduler: background job runner started")
 	}
-	// Ensure /api/v1 i18n endpoints are registered (after YAML so we can augment)
-	v1Group := r.Group("/api/v1")
-	i18nHandlers := platformapi.NewI18nHandlers()
-	i18nHandlers.RegisterRoutes(v1Group)
-
-	// Register plugin management API routes
-	api.RegisterPluginAPIRoutes(v1Group)
-
-	// Direct debug route for ticket number generator introspection
-	r.GET("/admin/debug/ticket-number", api.HandleDebugTicketNumber)
-	// Config sources introspection
-	r.GET("/admin/debug/config-sources", api.HandleDebugConfigSources)
-
-	// SSE endpoint for real-time plugin updates
-	r.GET("/api/v1/sse", gin.WrapF(sseBroker.ServeHTTP))
+	// Main-engine API routes (i18n, plugin management, plugin SSE stream).
+	// /admin/debug/* now live in routes/admin.yaml behind auth+admin.
+	api.RegisterCoreRoutes(r, sseBroker)
 
 	// Example of using generator early (warm path) – ensure repository updated elsewhere to accept it
 	_ = ticketNumGen
@@ -713,14 +680,6 @@ func main() {
 	fmt.Println("  GET  /customer/login -> Customer login page")
 	fmt.Println("  POST /customer/login -> Customer login submit")
 	fmt.Println("  POST /api/auth/login -> HTMX login")
-	fmt.Println("")
-	fmt.Println("LDAP API routes:")
-	fmt.Println("  POST /api/v1/ldap/configure -> Configure LDAP")
-	fmt.Println("  POST /api/v1/ldap/test -> Test LDAP connection")
-	fmt.Println("  POST /api/v1/ldap/authenticate -> Authenticate user")
-	fmt.Println("  GET  /api/v1/ldap/users/:username -> Get user info")
-	fmt.Println("  POST /api/v1/ldap/sync/users -> Sync users")
-	fmt.Println("  GET  /api/v1/ldap/config -> Get LDAP config")
 
 	// Serve via http.Server so SIGTERM can drain in-flight connections
 	// (connection draining) instead of killing requests mid-flight.
@@ -896,6 +855,9 @@ func runRunner(db *sql.DB) {
 	// Register session cleanup task
 	sessionCleanupTask := tasks.NewSessionCleanupTask(db)
 	registry.Register(sessionCleanupTask)
+
+	// Register outbound webhook dispatch task
+	registry.Register(tasks.NewWebhookDispatchTask(db))
 
 	log.Printf("Registered %d background tasks", len(registry.All()))
 

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -17,11 +18,12 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
-func createAdminTestState(t *testing.T, name string) (int, bool) {
+// createAdminTestState inserts a ticket state owned by the calling test and
+// removes it when the test ends, so handler tests never touch the seed states.
+func createAdminTestState(t *testing.T, name string) int {
+	t.Helper()
 	db, err := database.GetDB()
-	if err != nil || db == nil {
-		return 0, false
-	}
+	require.NoError(t, err)
 
 	query := database.ConvertPlaceholders(`
 		INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
@@ -32,79 +34,84 @@ func createAdminTestState(t *testing.T, name string) (int, bool) {
 	id := int(id64)
 
 	t.Cleanup(func() {
-		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM ticket_state WHERE id = ?`), id)
+		if _, err := db.Exec(database.ConvertPlaceholders(`DELETE FROM ticket_state WHERE id = ?`), id); err != nil {
+			t.Errorf("cleanup ticket_state %d: %v", id, err)
+		}
 	})
 
-	return id, true
+	return id
+}
+
+// cleanupAdminTestStateByName removes a state created through a handler under
+// test when the test ends.
+func cleanupAdminTestStateByName(t *testing.T, name string) {
+	t.Helper()
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if _, err := db.Exec(database.ConvertPlaceholders(`DELETE FROM ticket_state WHERE name = ?`), name); err != nil {
+			t.Errorf("cleanup ticket_state %q: %v", name, err)
+		}
+	})
 }
 
 func TestAdminStatesPage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	setupTemplateRenderer(t)
+	getTestDB(t)
 
-	t.Run("GET /admin/states renders states page", func(t *testing.T) {
+	suffix := fmt.Sprint(time.Now().UnixNano())
+	alpha := "PageStateAlpha" + suffix
+	beta := "PageStateBeta" + suffix
+	createAdminTestState(t, alpha)
+	createAdminTestState(t, beta)
+
+	get := func(path string) *httptest.ResponseRecorder {
 		router := gin.New()
 		router.GET("/admin/states", handleAdminStates)
-
-		req := httptest.NewRequest(http.MethodGet, "/admin/states", nil)
+		req := httptest.NewRequest(http.MethodGet, path, nil)
 		w := httptest.NewRecorder()
-
 		router.ServeHTTP(w, req)
+		return w
+	}
 
-		// Accept OK or error depending on environment; in OK case, assert content
-		body := w.Body.String()
-
-		// Skip if response is empty (template renderer issue in test environment)
-		if w.Code == http.StatusOK && len(body) == 0 {
-			t.Skip("Empty response - template renderer not initialized in this test run")
-		}
-
-		if w.Code == http.StatusOK {
-			// Check for Ticket States - should be present in both template and fallback
-			assert.Contains(t, body, "Ticket States", "Expected 'Ticket States' in response, body length: %d", len(body))
-			// Check for add button text (exists in both template and fallback HTML)
-			// Note: Translated value is "Add State", fallback is "Add New State"
-			hasAddButton := strings.Contains(body, "Add New State") || strings.Contains(body, "Add State") || strings.Contains(body, "add_state")
-			assert.True(t, hasAddButton, "Expected 'Add State', 'Add New State', or 'add_state' in response")
-		} else {
-			assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError)
-		}
+	t.Run("GET /admin/states lists states from the database", func(t *testing.T) {
+		w := get("/admin/states")
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), alpha)
+		assert.Contains(t, w.Body.String(), beta)
 	})
 
 	t.Run("GET /admin/states with search filters results", func(t *testing.T) {
-		router := gin.New()
-		router.GET("/admin/states", handleAdminStates)
-
-		req := httptest.NewRequest(http.MethodGet, "/admin/states?search=open", nil)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		// Accept OK or error depending on environment
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError)
+		w := get("/admin/states?search=" + url.QueryEscape(alpha))
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), alpha)
+		assert.NotContains(t, w.Body.String(), beta)
 	})
 
 	t.Run("GET /admin/states with sort and order", func(t *testing.T) {
-		router := gin.New()
-		router.GET("/admin/states", handleAdminStates)
-
-		req := httptest.NewRequest(http.MethodGet, "/admin/states?sort=name&order=desc", nil)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError)
+		w := get("/admin/states?sort=name&order=desc")
+		require.Equal(t, http.StatusOK, w.Code)
+		body := w.Body.String()
+		require.Contains(t, body, alpha)
+		require.Contains(t, body, beta)
+		assert.Less(t, strings.Index(body, beta), strings.Index(body, alpha))
 	})
 
 	t.Run("GET /admin/states with type filter", func(t *testing.T) {
-		router := gin.New()
-		router.GET("/admin/states", handleAdminStates)
+		var typeID, otherTypeID int
+		db, err := database.GetDB()
+		require.NoError(t, err)
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders("SELECT type_id FROM ticket_state WHERE name = ?"), alpha).Scan(&typeID))
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders("SELECT MIN(id) FROM ticket_state_type WHERE id <> ?"), typeID).Scan(&otherTypeID))
 
-		req := httptest.NewRequest(http.MethodGet, "/admin/states?type=1", nil)
-		w := httptest.NewRecorder()
+		w := get(fmt.Sprintf("/admin/states?type=%d", typeID))
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), alpha)
 
-		router.ServeHTTP(w, req)
-
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError)
+		w = get(fmt.Sprintf("/admin/states?type=%d", otherTypeID))
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.NotContains(t, w.Body.String(), alpha)
 	})
 
 	t.Run("GET /admin/states/types returns state types", func(t *testing.T) {
@@ -136,12 +143,13 @@ func TestAdminStatesCreate(t *testing.T) {
 		router := gin.New()
 		router.POST("/admin/states/create", handleAdminStateCreate)
 
+		name := fmt.Sprintf("Test State %d", time.Now().UnixNano())
+		cleanupAdminTestStateByName(t, name)
 		form := url.Values{}
-		form.Set("name", "Test State")
+		form.Set("name", name)
 		form.Set("type_id", "1")
 		form.Set("comments", "Test comment")
 		form.Set("valid_id", "1")
-
 		req := httptest.NewRequest(http.MethodPost, "/admin/states/create", bytes.NewBufferString(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
@@ -168,8 +176,10 @@ func TestAdminStatesCreate(t *testing.T) {
 		router := gin.New()
 		router.POST("/admin/states/create", handleAdminStateCreate)
 
+		name := fmt.Sprintf("JSON State %d", time.Now().UnixNano())
+		cleanupAdminTestStateByName(t, name)
 		payload := map[string]interface{}{
-			"name":    "JSON State",
+			"name":    name,
 			"type_id": 1,
 		}
 		jsonData, _ := json.Marshal(payload)
@@ -224,18 +234,25 @@ func TestAdminStatesUpdate(t *testing.T) {
 		router := gin.New()
 		router.POST("/admin/states/:id/update", handleAdminStateUpdate)
 
+		stateID := createAdminTestState(t, fmt.Sprintf("JSON Update Target %d", time.Now().UnixNano()))
+		newName := fmt.Sprintf("JSON Updated State %d", time.Now().UnixNano())
 		payload := map[string]interface{}{
-			"name": "JSON Updated State",
+			"name": newName,
 		}
 		jsonData, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest(http.MethodPost, "/admin/states/1/update", bytes.NewReader(jsonData))
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/states/%d/update", stateID), bytes.NewReader(jsonData))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
+		db, err := database.GetDB()
+		require.NoError(t, err)
+		var got string
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(`SELECT name FROM ticket_state WHERE id = ?`), stateID).Scan(&got))
+		assert.Equal(t, newName, got)
 	})
 
 	t.Run("POST /admin/states/:id/update with invalid ID", func(t *testing.T) {
@@ -254,10 +271,7 @@ func TestAdminStatesUpdate(t *testing.T) {
 		router := gin.New()
 		router.PUT("/admin/states/:id/update", handleAdminStateUpdate)
 
-		stateID, ok := createAdminTestState(t, "Admin Update Target")
-		if !ok {
-			t.Skip("database not available for admin state update test")
-		}
+		stateID := createAdminTestState(t, fmt.Sprintf("Admin Update Target %d", time.Now().UnixNano()))
 
 		t.Setenv("APP_ENV", "integration")
 
@@ -309,10 +323,7 @@ func TestAdminStatesDelete(t *testing.T) {
 		router := gin.New()
 		router.DELETE("/admin/states/:id/delete", handleAdminStateDelete)
 
-		stateID, ok := createAdminTestState(t, "Admin Delete Target")
-		if !ok {
-			t.Skip("database not available for admin state delete test")
-		}
+		stateID := createAdminTestState(t, fmt.Sprintf("Admin Delete Target %d", time.Now().UnixNano()))
 
 		t.Setenv("APP_ENV", "integration")
 
@@ -329,22 +340,18 @@ func TestAdminStatesDelete(t *testing.T) {
 		assert.True(t, response["success"].(bool))
 		assert.Equal(t, "State deleted successfully", response["message"])
 
-		if ok {
-			db, _ := database.GetDB()
-			var validID int
-			_ = db.QueryRow(database.ConvertPlaceholders(`SELECT valid_id FROM ticket_state WHERE id = ?`), stateID).Scan(&validID)
-			assert.Equal(t, 2, validID)
-		}
+		db, err := database.GetDB()
+		require.NoError(t, err)
+		var validID int
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(`SELECT valid_id FROM ticket_state WHERE id = ?`), stateID).Scan(&validID))
+		assert.Equal(t, 2, validID)
 	})
 
 	t.Run("DELETE /admin/states/:id/delete prevents deletion of states with tickets", func(t *testing.T) {
 		router := gin.New()
 		router.DELETE("/admin/states/:id/delete", handleAdminStateDelete)
 
-		stateID, ok := createAdminTestState(t, "Admin Delete Second Attempt")
-		if !ok {
-			t.Skip("database not available for duplicate delete scenario")
-		}
+		stateID := createAdminTestState(t, fmt.Sprintf("Admin Delete Second Attempt %d", time.Now().UnixNano()))
 
 		t.Setenv("APP_ENV", "integration")
 

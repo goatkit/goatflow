@@ -305,7 +305,9 @@
         "test_success": "Konfigurationstest erfolgreich",
         "title": "Web-Service-Konfiguration",
         "webservice": "Web-Service",
-        "webservice_hint": "Web-Service zum Abrufen von Daten auswählen"
+        "webservice_hint": "Web-Service zum Abrufen von Daten auswählen",
+        "test_save_first": "Speichern Sie das Feld zuerst, um seine Webservice-Konfiguration zu testen.",
+        "test_saved_hint": "Testet die gespeicherte Konfiguration; speichern Sie Ihre Änderungen zuerst."
       },
       "years_in_future": "Jahre in der Zukunft",
       "years_in_past": "Jahre in der Vergangenheit"
@@ -1169,16 +1171,8 @@
     "no_plugins": "Keine Plugins installiert",
     "no_plugins_match": "Keine Plugins entsprechen Ihren Suchkriterien.",
     "password": "Passwort",
-    "password_requirement_contains_default": "Enthält Großbuchstaben, Kleinbuchstaben und Zahl",
-    "password_requirement_contains_template": "Enthält {requirements}",
-    "password_requirement_digit": "Zahl",
-    "password_requirement_length_initial": "Mindestens 8 Zeichen",
-    "password_requirement_length_template": "Mindestens {min} Zeichen",
-    "password_requirement_lowercase": "Kleinbuchstaben",
     "password_requirement_match": "Passwörter stimmen überein",
     "password_requirement_none": "Keine zusätzlichen Anforderungen",
-    "password_requirement_special": "Sonderzeichen (!@#$%^&*)",
-    "password_requirement_uppercase": "Großbuchstaben",
     "password_requirements_incomplete": "Bitte stellen Sie sicher, dass alle Passwortanforderungen erfüllt sind",
     "password_reset_error": "Passwort konnte nicht zurückgesetzt werden",
     "password_reset_success": "Passwort erfolgreich zurückgesetzt",
@@ -1493,7 +1487,110 @@
         "delete": "Sind Sie sicher, dass Sie {name} löschen möchten?"
       }
     },
-    "search_groups": "Gruppen suchen..."
+    "search_groups": "Gruppen suchen...",
+    "webhooks": {
+      "actions": {
+        "activate": "Aktivieren",
+        "deactivate": "Deaktivieren",
+        "deliveries": "Zustellungen",
+        "test": "Test senden"
+      },
+      "active": "Aktiv",
+      "add": "Webhook hinzufügen",
+      "columns": {
+        "events": "Ereignisse",
+        "last_delivery": "Letzte Zustellung",
+        "url": "URL"
+      },
+      "deliveries": {
+        "attempts": "Versuche",
+        "details": "Details",
+        "duration": "Dauer",
+        "empty": "Noch keine Zustellungen.",
+        "event": "Ereignis",
+        "status_code": "HTTP-Status",
+        "time": "Zeitpunkt",
+        "title": "Zustellungen: {name}"
+      },
+      "delivery": {
+        "created_at": "Erstellt",
+        "delivered_at": "Zugestellt",
+        "duration_ms": "{ms} ms",
+        "error": "Fehler",
+        "next_attempt": "Nächster Versuch",
+        "no_response": "Kein Antwortinhalt.",
+        "payload": "Payload",
+        "redeliver": "Erneut zustellen",
+        "response": "Antwort",
+        "title": "Zustellung #{id}"
+      },
+      "description": "Ticket- und Artikelereignisse als signierte HTTP-POST-Anfragen an externe Systeme senden.",
+      "empty": "Noch keine Webhooks konfiguriert.",
+      "events": {
+        "article_created": "Einem Ticket wurde ein Artikel (Notiz, Antwort, E-Mail, Anruf, Webanfrage) hinzugefügt.",
+        "ticket_assigned": "Der Besitzer des Tickets wurde geändert.",
+        "ticket_closed": "Der Ticketstatus wurde in einen geschlossenen Status geändert.",
+        "ticket_created": "Ein Ticket wurde erstellt (beliebiger Kanal).",
+        "ticket_escalated": "Eine Eskalation der Reaktions-, Aktualisierungs- oder Lösungszeit hat begonnen.",
+        "ticket_merged": "Das Ticket wurde zusammengeführt.",
+        "ticket_priority_changed": "Die Priorität des Tickets wurde geändert.",
+        "ticket_queue_moved": "Das Ticket wurde in eine andere Queue verschoben.",
+        "ticket_state_changed": "Der Ticketstatus wurde in einen nicht geschlossenen Status geändert.",
+        "ticket_updated": "Titel, Kunde, Typ, Service, SLA, Verantwortlicher, Sperre, Wartezeit oder ein dynamisches Feld des Tickets wurde geändert."
+      },
+      "form": {
+        "active_help": "Inaktive Webhooks erhalten keine Ereignisse.",
+        "add_header": "Header hinzufügen",
+        "create_title": "Webhook hinzufügen",
+        "edit_title": "Webhook bearbeiten",
+        "events": "Ereignisse",
+        "events_help": "Der Webhook wird für die ausgewählten Ereignisse aufgerufen.",
+        "events_required": "Wählen Sie mindestens ein Ereignis aus.",
+        "header_name": "Header-Name",
+        "header_value": "Wert",
+        "headers": "Eigene Header",
+        "headers_help": "Werden bei jeder Zustellung mitgesendet. Content-Type, User-Agent und die X-Webhook-*-Header setzt GoatFlow selbst.",
+        "remove_header": "Header entfernen",
+        "remove_secret": "Geheimnis entfernen (Zustellungen werden nicht signiert)",
+        "retry_count": "Wiederholungen",
+        "retry_count_help": "Zusätzliche Versuche nach einer fehlgeschlagenen Zustellung.",
+        "secret": "Signaturgeheimnis",
+        "secret_help": "16 bis 512 Zeichen. Jede Zustellung wird im Header X-Webhook-Signature signiert (sha256=HMAC des Inhalts). Ein gespeichertes Geheimnis kann nicht erneut angezeigt werden.",
+        "secret_none": "Kein Geheimnis gesetzt: Zustellungen werden nicht signiert.",
+        "secret_placeholder_keep": "Leer lassen, um das aktuelle Geheimnis beizubehalten",
+        "secret_placeholder_new": "Optionales Signaturgeheimnis",
+        "secret_set": "Ein Geheimnis ist gesetzt ({hint}).",
+        "timeout": "Zeitlimit (Sekunden)",
+        "timeout_help": "Wie lange auf eine Antwort des Endpunkts gewartet wird.",
+        "url": "Payload-URL",
+        "url_help": "Eine absolute http://- oder https://-URL. GoatFlow sendet für jedes Ereignis eine JSON-POST-Anfrage an sie."
+      },
+      "inactive": "Inaktiv",
+      "load_failed": "Webhooks konnten nicht geladen werden.",
+      "messages": {
+        "activated": "Webhook aktiviert.",
+        "confirm_delete": "Den Webhook „{name}“ und sein Zustellprotokoll löschen?",
+        "created": "Webhook erstellt.",
+        "deactivated": "Webhook deaktiviert.",
+        "deleted": "Webhook gelöscht.",
+        "network_error": "Der Server ist nicht erreichbar.",
+        "redeliver_failed": "Erneute Zustellung fehlgeschlagen.",
+        "redelivered": "Zustellung erfolgreich erneut gesendet.",
+        "request_failed": "Anfrage fehlgeschlagen: {error}",
+        "test_failed": "Testzustellung fehlgeschlagen.",
+        "test_succeeded": "Testzustellung erfolgreich.",
+        "updated": "Webhook gespeichert."
+      },
+      "never": "Nie",
+      "retry": "Erneut versuchen",
+      "status": {
+        "delivered": "Zugestellt",
+        "delivering": "Wird zugestellt",
+        "failed": "Fehlgeschlagen",
+        "pending": "Ausstehend"
+      },
+      "title": "Webhooks"
+    }
   },
   "admin_dashboard": {
     "acl": "Zugriffskontrolllisten",
@@ -1587,7 +1684,55 @@
     "tickets_open": "offene Tickets",
     "uptime_this_month": "Betriebszeit diesen Monat",
     "user_management": "Benutzerverwaltung",
-    "user_management_desc": "Agenten- und Kundenkonten verwalten"
+    "user_management_desc": "Agenten- und Kundenkonten verwalten",
+    "webhooks": "Webhooks",
+    "webhooks_desc": "Ticketereignisse an externe Systeme senden"
+  },
+  "admin_reports": {
+    "title": "Berichte & Analysen",
+    "description": "Ticketstatistiken für die Queues, die Sie lesen dürfen.",
+    "period_label": "Zeitraum",
+    "period_24h": "Letzte 24 Stunden",
+    "period_7d": "Letzte 7 Tage",
+    "period_30d": "Letzte 30 Tage",
+    "trend_label": "Verlauf",
+    "trend_daily_7": "Täglich, letzte 7 Tage",
+    "trend_daily_30": "Täglich, letzte 30 Tage",
+    "trend_monthly_12": "Monatlich, letzte 12 Monate",
+    "error_forbidden": "Sie benötigen Lesezugriff auf mindestens eine Queue, um Berichte zu sehen.",
+    "error_generic": "Einige Berichtsdaten konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "scope_note": "Die Zahlen umfassen nur Tickets in Queues, die Sie lesen dürfen. Datumsangaben in UTC.",
+    "overview_heading": "Überblick",
+    "total_tickets": "Tickets gesamt",
+    "open_tickets": "Offen",
+    "pending_tickets": "Wartend",
+    "closed_tickets": "Geschlossen",
+    "trends_heading": "Erstellt vs. geschlossen",
+    "created": "Erstellt",
+    "closed": "Geschlossen",
+    "closure_rate": "Abschlussquote",
+    "queues_heading": "Queues",
+    "backlog_hint": "Rückstand: offene Tickets, die älter als 24 Stunden sind.",
+    "queue": "Queue",
+    "backlog": "Rückstand",
+    "agents_heading": "Agentenaktivität",
+    "agents_hint": "Als verantwortlicher Agent erstellte und geschlossene Tickets sowie verfasste Artikel im gewählten Zeitraum.",
+    "agent": "Agent",
+    "assigned": "Zugewiesen",
+    "articles": "Artikel",
+    "customers_heading": "Top-Kunden",
+    "total_customers": "Kunden",
+    "active_customers": "Aktiv (30 Tage)",
+    "new_customers": "Neu in diesem Monat",
+    "customer": "Kunde",
+    "email": "E-Mail",
+    "last_activity": "Letztes Ticket",
+    "export_heading": "Export",
+    "export_description": "Laden Sie die Zahlen für den gewählten Zeitraum herunter.",
+    "export_summary_csv": "Zusammenfassung (CSV)",
+    "export_tickets_csv": "Tickets (CSV)",
+    "export_summary_json": "Zusammenfassung (JSON)",
+    "no_data": "Keine Daten für diese Auswahl."
   },
   "admin_queues": {
     "add_queue": "Queue hinzufügen",
@@ -1980,6 +2125,23 @@
       "required": "*"
     },
     "company": "Firma",
+    "company_page": {
+      "address": "Adresse",
+      "columns": {
+        "email": "E-Mail",
+        "name": "Name",
+        "title": "Anrede"
+      },
+      "customer_id": "Kundennummer",
+      "info_title": "Firmeninformationen",
+      "no_company": "Ihr Konto ist keiner Firma zugeordnet.",
+      "no_users": "Keine Benutzer gefunden.",
+      "not_set": "Nicht angegeben",
+      "user_count": "Benutzer anzeigen (%d)",
+      "users_description": "Personen Ihrer Firma, die das Kundenportal nutzen.",
+      "website": "Webseite",
+      "you": "Sie"
+    },
     "dashboard": {
       "announcements": "Ankündigungen",
       "closed_tickets": "Geschlossene Tickets",
@@ -2041,16 +2203,6 @@
       "title": "Neues Support-Ticket erstellen"
     },
     "phone": "Telefon",
-    "placeholder_pages": {
-      "company_info_title": "Firmeninfo",
-      "company_users_title": "Firmenbenutzer",
-      "knowledge_base_article": "Wissensdatenbank-Artikel",
-      "knowledge_base_search": "Wissensdatenbank-Suche",
-      "knowledge_base_title": "Wissensdatenbank",
-      "password_title": "Passwort ändern",
-      "profile_title": "Kundenprofil",
-      "under_construction": "Diese Seite ist im Aufbau."
-    },
     "portal": {
       "login_title": "Kundensupport-Anmeldung",
       "title": "Kundenportal"
@@ -2118,7 +2270,6 @@
     }
   },
   "customer_company_form": {
-    "assigned_services": "Zugewiesene Services",
     "branding": "Markengestaltung",
     "company_details": "Firmendetails",
     "features": "Funktionen",
@@ -2127,17 +2278,56 @@
     "save_capture_setting": "Erfassungseinstellung speichern",
     "save_portal_settings": "Portal-Einstellungen speichern"
   },
+  "customer_company_pages": {
+    "customer_id": "Kunden-ID",
+    "sections": "Firmenbereiche",
+    "nav": {
+      "details": "Details",
+      "users": "Kundenbenutzer",
+      "tickets": "Tickets",
+      "services": "Services"
+    }
+  },
   "customer_company_services": {
-    "heading": "Kundenfirma Services",
-    "title": "Kundenfirma Services"
+    "heading": "Services",
+    "title": "Services der Kundenfirma",
+    "description": "Services werden Kundenbenutzern zugewiesen. Markieren Sie die Kundenbenutzer dieser Firma, die den jeweiligen Service nutzen dürfen.",
+    "saved": "Service-Zuweisungen gespeichert.",
+    "no_services": "Es gibt keine gültigen Services.",
+    "manage_services": "Services verwalten",
+    "no_users": "Diese Firma hat keine Kundenbenutzer, daher gibt es niemanden, dem Services zugewiesen werden können.",
+    "all_users": "Alle Benutzer",
+    "save": "Zuweisungen speichern",
+    "columns": {
+      "service": "Service",
+      "assigned": "Zugewiesen",
+      "customer_users": "Kundenbenutzer"
+    }
   },
   "customer_company_tickets": {
-    "heading": "Kundenfirma Tickets",
-    "title": "Kundenfirma Tickets"
+    "heading": "Tickets",
+    "title": "Tickets der Kundenfirma",
+    "description": "Tickets dieser Firma in den Queues, auf die Sie Zugriff haben, neueste zuerst.",
+    "empty": "Keine Tickets dieser Firma in den Queues, auf die Sie Zugriff haben.",
+    "columns": {
+      "title": "Titel",
+      "customer_user": "Kundenbenutzer"
+    }
   },
   "customer_company_users": {
-    "heading": "Kundenfirma Benutzer",
-    "title": "Kundenfirma Benutzer"
+    "heading": "Kundenbenutzer",
+    "title": "Benutzer der Kundenfirma",
+    "description": "Kundenbenutzer, die zu dieser Firma gehören.",
+    "manage_users": "Kundenbenutzer verwalten",
+    "empty": "Diese Firma hat noch keine Kundenbenutzer.",
+    "columns": {
+      "login": "Login",
+      "name": "Name",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "tickets": "Tickets",
+      "status": "Status"
+    }
   },
   "customer_group": {
     "by_group_heading": "Kundenberechtigungen nach Gruppe",
@@ -2163,7 +2353,8 @@
   },
   "customer_portal_settings": {
     "heading": "Kundenportal-Einstellungen",
-    "title": "Kundenportal-Einstellungen"
+    "title": "Kundenportal-Einstellungen",
+    "per_company_note": "Jede Kundenfirma kann diese Standardwerte im Tab „Portal-Einstellungen“ ihrer Bearbeitungsseite überschreiben."
   },
   "customer_user_services": {
     "title": "Kundenbenutzer Services"
@@ -2209,29 +2400,16 @@
     "performance": "Leistung",
     "quick_actions": "Schnellaktionen",
     "quick_stats": "Schnellstatistiken",
-    "realtime": {
-      "title": "Echtzeit-Übersicht"
-    },
     "recent_activity": "Aktuelle Aktivität",
     "recent_tickets": "Aktuelle Tickets",
     "statistics": "Statistiken",
-    "stats": {
-      "closed_today": "Heute geschlossen",
-      "my_open": "Meine offenen",
-      "my_pending": "Meine ausstehenden",
-      "new_today": "Heute neu",
-      "open_tickets": "Offene Tickets",
-      "overdue": "Überfällig",
-      "pending": "Ausstehend",
-      "total_assigned": "Gesamt zugewiesen",
-      "unassigned": "Nicht zugewiesen"
-    },
     "tickets_count": "Tickets",
     "title": "Übersicht",
     "unassigned_count": "nicht zugewiesen",
     "welcome_back": "Willkommen zurück",
     "welcome_message": "Hier sehen Sie, was heute mit Ihren Tickets passiert",
-    "widget_config_desc": "Wählen Sie aus, welche Widgets auf Ihrem Dashboard erscheinen. Ziehen zum Neuordnen."
+    "widget_config_desc": "Wählen Sie aus, welche Widgets auf Ihrem Dashboard erscheinen. Ziehen zum Neuordnen.",
+    "widget_unavailable": "Dieses Widget ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut."
   },
   "demo": {
     "security_disabled": "Passwort- und MFA-Änderungen sind im Demomodus deaktiviert."
@@ -2264,11 +2442,6 @@
       "delete": "Feld löschen",
       "edit": "Feld bearbeiten"
     }
-  },
-  "dynamic_test": {
-    "heading": "Dynamisches Modul-Test",
-    "testing_instructions": "Testanweisungen",
-    "title": "Dynamisches Modul-Test"
   },
   "editor": {
     "insert_image_prompt": "Bild-URL eingeben (oder leer lassen, um eine Datei auszuwählen):",
@@ -2353,29 +2526,18 @@
     "mandatory_note": "Alle mit einem Sternchen (*) gekennzeichneten Felder sind Pflichtfelder.",
     "select": "Auswählen"
   },
-  "group_form": {
-    "heading": "Gruppenformular",
-    "title": "Gruppenformular"
-  },
-  "group_members": {
-    "heading": "Gruppenmitglieder",
-    "title": "Gruppenmitglieder"
-  },
   "group_permissions": {
     "permission_matrix": "Berechtigungsmatrix",
     "queue_permissions": "Queue-Berechtigungen",
     "queues": "Warteschlangen",
     "title": "Gruppenberechtigungen"
   },
-  "group_view": {
-    "heading": "Gruppendetails",
-    "title": "Gruppe"
-  },
   "groups": {
     "add_group": "Gruppe hinzufügen",
     "add_user": "Benutzer zur Gruppe hinzufügen",
     "add_user_btn": "Benutzer hinzufügen",
     "confirm_delete": "Sind Sie sicher, dass Sie diese Gruppe löschen möchten?",
+    "delete_keeps_group": "Die Gruppe wird auf inaktiv gesetzt. Sie bleibt mit ihren Mitgliedern und Berechtigungen in der Liste und kann durch Bearbeiten wieder aktiviert werden.",
     "current_members": "Aktuelle Mitglieder",
     "delete_success": "Gruppe erfolgreich gelöscht",
     "group": "Gruppe",
@@ -2605,7 +2767,6 @@
       "delete_item": "Sind Sie sicher, dass Sie dieses Element löschen möchten?",
       "delete_lookup": "Sind Sie sicher, dass Sie dieses Element löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
       "delete_priority": "Sind Sie sicher, dass Sie diese Priorität löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
-      "delete_queue": "Sind Sie sicher, dass Sie diese Queue löschen möchten? Alle Tickets in dieser Queue müssen neu zugewiesen werden. Diese Aktion kann nicht rückgängig gemacht werden.",
       "delete_queue_simple": "Sind Sie sicher, dass Sie diese Queue löschen möchten?",
       "delete_queues_bulk": "Sind Sie sicher, dass Sie die ausgewählten Queues löschen möchten?",
       "delete_state": "Sind Sie sicher, dass Sie diesen Status löschen möchten?",
@@ -2648,7 +2809,6 @@
     "failed_remove_user": "Benutzer konnte nicht entfernt werden",
     "failed_save_field": "Feld konnte nicht gespeichert werden",
     "failed_update_screen_config": "Bildschirmkonfiguration konnte nicht aktualisiert werden",
-    "failed_update_services": "Services konnten nicht aktualisiert werden",
     "groups": {
       "select_user": "Bitte wählen Sie einen Benutzer zum Hinzufügen aus"
     },
@@ -2657,7 +2817,6 @@
     "item_deleted": "Element erfolgreich gelöscht",
     "item_updated": "Element erfolgreich aktualisiert",
     "loading": "Wird geladen...",
-    "loading_customer_users": "Kundenbenutzer werden geladen...",
     "network_error": "Netzwerkfehler",
     "no_agents_available": "Keine Agenten verfügbar",
     "no_data": "Keine Daten verfügbar",
@@ -2678,15 +2837,11 @@
     "please_wait": "Bitte warten...",
     "processing": "Wird verarbeitet...",
     "required_fields": "Bitte füllen Sie alle Pflichtfelder aus",
-    "save_company_before_services": "Speichern Sie die Firma, bevor Sie Services zuweisen.",
-    "save_company_first": "Speichern Sie die Firma, bevor Sie Services zuweisen.",
     "saving": "Wird gespeichert...",
     "select_at_least_one_queue": "Bitte wählen Sie mindestens eine Queue aus",
     "select_template_type": "Bitte wählen Sie mindestens einen Vorlagentyp aus.",
     "select_two_to_merge": "Bitte wählen Sie mindestens zwei Tickets zum Zusammenführen aus",
     "server_error": "Serverfehler",
-    "services_updated": "Services erfolgreich aktualisiert",
-    "services_updated_success": "Services erfolgreich aktualisiert",
     "session_expired": "Ihre Sitzung ist abgelaufen",
     "success": "Erfolg",
     "unauthorized": "Nicht autorisiert",
@@ -2853,9 +3008,7 @@
     "title": "Berechtigungsverwaltung"
   },
   "placeholders": {
-    "contains": "Enthält...",
-    "note_subject": "Notiz-Betreff",
-    "separate_emails": "Mehrere E-Mails durch Kommas trennen"
+    "contains": "Enthält..."
   },
   "priorities": {
     "heading": "Prioritätenverwaltung",
@@ -2972,20 +3125,6 @@
     },
     "total_count": "Gesamt"
   },
-  "realtime": {
-    "active_alerts": "Aktive Warnungen",
-    "heading": "Echtzeit-Dashboard",
-    "no_tickets": "Keine Tickets",
-    "queue_distribution": "Queue-Verteilung",
-    "queue_status": "Queue-Status",
-    "recent_tickets": "Aktuelle Tickets",
-    "stats": {
-      "active_agents": "Aktive Agenten",
-      "avg_response_time": "Durchschn. Antwortzeit",
-      "open_tickets": "Offene Tickets"
-    },
-    "ticket_volume": "Ticketaufkommen (24h)"
-  },
   "realtime_dashboard": {
     "title": "Echtzeit-Übersicht"
   },
@@ -3100,29 +3239,51 @@
     "search_results": "Suchergebnisse"
   },
   "self_service": {
+    "email": {
+      "register_body": "Hallo %s,\n\nvielen Dank für Ihre Registrierung. Öffnen Sie diesen Link innerhalb von %d Stunden, um Ihre E-Mail-Adresse zu bestätigen und Ihr Passwort festzulegen:\n%s\n\nWenn Sie sich nicht registriert haben, ignorieren Sie diese E-Mail.",
+      "register_exists_body": "Hallo,\n\njemand hat versucht, mit dieser E-Mail-Adresse ein Konto anzulegen, aber dafür existiert bereits ein Konto.\n\nWenn Sie Ihr Passwort vergessen haben, können Sie hier ein neues festlegen:\n%s\n\nWenn Sie das nicht waren, ignorieren Sie diese E-Mail.",
+      "register_exists_subject": "Ihr Konto",
+      "register_subject": "Bestätigen Sie Ihre E-Mail-Adresse",
+      "reset_body": "Hallo %s,\n\nfür Ihr Konto „%s“ wurde das Zurücksetzen des Passworts angefordert.\n\nÖffnen Sie diesen Link innerhalb von %d Minuten, um ein neues Passwort festzulegen:\n%s\n\nWenn Sie dies nicht angefordert haben, ignorieren Sie diese E-Mail. Ihr Passwort wurde nicht geändert.",
+      "reset_subject": "Passwort zurücksetzen"
+    },
+    "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
     "forgot_password": {
-      "email_label": "E-Mail-Adresse",
+      "identifier_label": "Benutzername oder E-Mail-Adresse",
+      "identifier_required": "Geben Sie Ihren Benutzernamen oder Ihre E-Mail-Adresse ein.",
+      "intro": "Geben Sie Ihren Benutzernamen oder Ihre E-Mail-Adresse ein. Wenn ein Konto passt, senden wir Ihnen per E-Mail einen Link, um ein neues Passwort festzulegen.",
       "submit": "Link senden",
       "success": "Falls ein Konto existiert, wurde ein Link gesendet.",
       "title": "Passwort vergessen"
     },
+    "rate_limited": "Zu viele Anfragen. Bitte versuchen Sie es später erneut.",
     "register": {
+      "account_exists": "Für diese E-Mail-Adresse gibt es bereits ein Konto. Verwenden Sie „Passwort vergessen“, um sich anzumelden.",
+      "complete_submit": "Konto erstellen",
+      "complete_success": "Ihr Konto wurde erstellt. Sie können sich jetzt anmelden.",
+      "complete_title": "Passwort festlegen",
       "email": "E-Mail",
+      "fields_required": "Vorname, Nachname und E-Mail-Adresse sind erforderlich.",
       "first_name": "Vorname",
+      "intro": "Geben Sie Ihre Daten ein. Wir senden Ihnen per E-Mail einen Link, um Ihre Adresse zu bestätigen und Ihr Passwort festzulegen.",
+      "invalid_input": "Geben Sie eine gültige E-Mail-Adresse und Namen mit höchstens 100 Zeichen ein.",
       "last_name": "Nachname",
+      "start_again": "Erneut registrieren",
       "submit": "Registrieren",
       "success": "Registrierung eingereicht. Prüfen Sie Ihre E-Mail.",
       "title": "Konto erstellen"
     },
     "reset_password": {
       "confirm": "Passwort bestätigen",
+      "invalid_link": "Dieser Link ist ungültig oder abgelaufen.",
       "new_password": "Neues Passwort",
+      "policy_regexp": "Das Passwort entspricht nicht dem geforderten Muster",
+      "request_new": "Neuen Link anfordern",
+      "required": "Geben Sie ein neues Passwort ein.",
       "submit": "Zurücksetzen",
       "success": "Passwort erfolgreich zurückgesetzt.",
-      "title": "Passwort zurücksetzen"
-    },
-    "verify_email": {
-      "success": "E-Mail erfolgreich verifiziert."
+      "title": "Passwort zurücksetzen",
+      "too_long": "Das Passwort ist zu lang."
     }
   },
   "service_catalog": {
@@ -3239,7 +3400,6 @@
     "last_used": "Zuletzt verwendet",
     "leave_empty_full_access": "leer lassen für Vollzugriff",
     "light_theme": "Hell",
-    "more_coming": "Weitere Einstellungen folgen bald",
     "never_expires": "Läuft nie ab",
     "never_used": "Nie verwendet",
     "no_tokens": "Keine API-Token gefunden",
@@ -3385,7 +3545,6 @@
   "tickets": {
     "actions": "Aktionen",
     "add_comment": "Kommentar hinzufügen",
-    "add_internal_note": "Interne Notiz hinzufügen",
     "add_note": "Notiz hinzufügen",
     "additional_fields": "Zusätzliche Felder",
     "additional_info_placeholder": "Zusätzliche Informationen oder Kontext...",
@@ -3407,11 +3566,7 @@
     "attachments": "Anhänge",
     "auto_close": {
       "at": "um",
-      "minus_help": "Ticket wird automatisch zum angegebenen Zeitpunkt geschlossen, unabhängig von Aktivitäten.",
-      "minus_title": "Warten auf automatisches Schließen-",
       "overdue": "Automatisches Schließen überfällig",
-      "plus_help": "Ticket wird automatisch geschlossen, wenn keine Kundenantwort bis zum angegebenen Zeitpunkt erfolgt.",
-      "plus_title": "Warten auf automatisches Schließen+",
       "scheduled": "Automatisches Schließen geplant",
       "should_have_closed_at": "Ticket hätte automatisch geschlossen werden sollen um",
       "while_pending": "während im Status Warten auf automatisches Schließen",
@@ -3432,7 +3587,6 @@
     "comment_placeholder": "Geben Sie hier Ihren Kommentar ein...",
     "comments": "Kommentare",
     "communication": "Kommunikation",
-    "compose_reply": "Antwort verfassen",
     "created_at": "Erstellt am",
     "created_by": "Erstellt von",
     "created_on": "Erstellt am",
@@ -3443,7 +3597,6 @@
     "customer_visible_badge": "Kunde sieht dies",
     "customer_wrote_badge": "Kunde hat dies geschrieben",
     "description": "Beschreibung",
-    "details": "Details",
     "due_date": "Fälligkeitsdatum",
     "dynamic_field_filters": "Dynamische Feldfilter",
     "email": "E-Mail",
@@ -3497,13 +3650,11 @@
     "owner": "Besitzer",
     "pending_reminder": {
       "ago": "vor",
-      "help": "Ticket wird zum angegebenen Zeitpunkt in den Status \"offen\" zurückkehren.",
       "in": "in",
       "no_time_scheduled": "Keine Erinnerungszeit geplant.",
       "not_scheduled": "Erinnerung nicht geplant",
       "overdue": "Erinnerung überfällig",
       "scheduled": "Erinnerung geplant",
-      "title": "Warten auf Erinnerung",
       "was_scheduled_for": "Erinnerung war geplant für",
       "will_reopen_at": "Ticket wird wieder geöffnet um"
     },
@@ -3749,7 +3900,7 @@
       "org_support": "IT-Support-Team",
       "org_type_heading": "Welche Art von Organisation ist das?",
       "queue_name_ph": "Queue-Name (z. B. Support-Postfach)",
-      "queues_desc": "Eine Queue ist ein Postfach, in dem Tickets landen. Weisen Sie jeder Queue ein oder mehrere Teams zu.",
+      "queues_desc": "Eine Queue ist ein Postfach, in dem Tickets landen. Jede Queue gehört genau einem Team; dessen Mitglieder bearbeiten ihre Tickets.",
       "queues_heading": "Ticket-Queues erstellen",
       "remove": "Entfernen",
       "review_agents": "Agenten",

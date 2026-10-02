@@ -191,37 +191,3 @@ func (s *CustomerPreferencesService) SetThemeMode(userLogin string, mode string)
 	}
 	return s.SetPreference(userLogin, "ThemeMode", mode)
 }
-
-// GetAllPreferences returns all preferences for a customer.
-func (s *CustomerPreferencesService) GetAllPreferences(userLogin string) (map[string]string, error) {
-	query := database.ConvertPlaceholders(`
-		SELECT preferences_key, preferences_value
-		FROM customer_preferences
-		WHERE user_id = ?
-	`)
-
-	rows, err := s.db.Query(query, userLogin)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get all preferences: %w", err)
-	}
-	defer rows.Close()
-
-	prefs := make(map[string]string)
-	for rows.Next() {
-		var key string
-		var value sql.NullString
-
-		if err := rows.Scan(&key, &value); err != nil {
-			return nil, fmt.Errorf("failed to scan preference: %w", err)
-		}
-
-		if value.Valid {
-			prefs[key] = value.String
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("failed to iterate preferences: %w", err)
-	}
-
-	return prefs, nil
-}

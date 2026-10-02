@@ -236,12 +236,9 @@ func handleCreateSystemMaintenance(c *gin.Context) {
 		return
 	}
 
-	// Get current user ID
-	userID := 1 // Default to 1 if not available
-	if u, exists := c.Get("user_id"); exists {
-		if uid, ok := u.(int); ok {
-			userID = uid
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	// Default valid_id to 1 if not provided
@@ -391,12 +388,9 @@ func handleUpdateSystemMaintenance(c *gin.Context) {
 		m.ValidID = *input.ValidID
 	}
 
-	// Get current user ID
-	userID := 1
-	if u, exists := c.Get("user_id"); exists {
-		if uid, ok := u.(int); ok {
-			userID = uid
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 	m.ChangeBy = userID
 

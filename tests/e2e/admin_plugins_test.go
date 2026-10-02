@@ -3,7 +3,11 @@
 package e2e
 
 import (
+	"fmt"
+	"net/http"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/goatkit/goatflow/tests/e2e/helpers"
 	"github.com/playwright-community/playwright-go"
@@ -11,408 +15,380 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAdminPluginsPage(t *testing.T) {
+// examplePlugin is the example WASM plugin shipped in config/plugins. It is
+// disabled by default (plugin.defaultDisabledPlugins), so tests that need it
+// running enable it and restore its previous state afterwards.
+const (
+	examplePlugin            = "hello-wasm"
+	examplePluginDescription = "A simple hello world WASM plugin"
+)
+
+var pluginWait = playwright.LocatorWaitForOptions{State: playwright.WaitForSelectorStateVisible, Timeout: playwright.Float(10000)}
+
+// pluginAPI calls a plugin admin endpoint with the browser session's cookies
+// and decodes the JSON response body.
+func pluginAPI(t *testing.T, b *helpers.BrowserHelper, method, path string, body any) (int, map[string]any) {
+	t.Helper()
+	opts := playwright.APIRequestContextFetchOptions{Method: playwright.String(method)}
+	if body != nil {
+		opts.Data = body
+	}
+	resp, err := b.Page.Request().Fetch(b.Config.BaseURL+path, opts)
+	require.NoError(t, err, "%s %s", method, path)
+	defer resp.Dispose()
+	var out map[string]any
+	require.NoError(t, resp.JSON(&out), "%s %s should return a JSON object", method, path)
+	return resp.Status(), out
+}
+
+// pluginEnabled reports the enabled flag of a plugin from GET /api/v1/plugins.
+func pluginEnabled(t *testing.T, b *helpers.BrowserHelper, name string) bool {
+	t.Helper()
+	status, body := pluginAPI(t, b, http.MethodGet, "/api/v1/plugins", nil)
+	require.Equal(t, http.StatusOK, status, "plugin list: %v", body)
+	plugins, ok := body["plugins"].([]any)
+	require.True(t, ok, "plugin list should carry a plugins array: %v", body)
+	for _, p := range plugins {
+		if m, ok := p.(map[string]any); ok && m["name"] == name {
+			enabled, ok := m["enabled"].(bool)
+			require.True(t, ok, "plugin %s should report enabled as a bool: %v", name, m)
+			return enabled
+		}
+	}
+	require.Failf(t, "plugin not listed", "plugin %s missing from /api/v1/plugins", name)
+	return false
+}
+
+// setPluginEnabled enables or disables a plugin through the admin API.
+func setPluginEnabled(t *testing.T, b *helpers.BrowserHelper, name string, enabled bool) {
+	t.Helper()
+	action, want := "disable", "disabled"
+	if enabled {
+		action, want = "enable", "enabled"
+	}
+	status, body := pluginAPI(t, b, http.MethodPost, "/api/v1/plugins/"+name+"/"+action, nil)
+	require.Equal(t, http.StatusOK, status, "%s %s: %v", action, name, body)
+	require.Equal(t, want, body["status"])
+}
+
+// adminPluginBrowser starts a browser logged in as admin. Cleanups registered
+// after this run before the browser is torn down.
+func adminPluginBrowser(t *testing.T) *helpers.BrowserHelper {
+	t.Helper()
 	browser := helpers.NewBrowserHelper(t)
-	err := browser.Setup()
-	require.NoError(t, err, "Failed to setup browser")
-	defer browser.TearDown()
+	require.NoError(t, browser.Setup(), "Failed to setup browser")
+	t.Cleanup(browser.TearDown)
+	require.NoError(t, helpers.NewAuthHelper(browser).LoginAsAdmin(), "Failed to login as admin")
+	return browser
+}
 
-	auth := helpers.NewAuthHelper(browser)
+// keepPluginState restores the plugin's current enabled state when the test ends.
+func keepPluginState(t *testing.T, b *helpers.BrowserHelper, name string) bool {
+	t.Helper()
+	initial := pluginEnabled(t, b, name)
+	t.Cleanup(func() {
+		if pluginEnabled(t, b, name) != initial {
+			setPluginEnabled(t, b, name, initial)
+		}
+	})
+	return initial
+}
+
+func TestAdminPluginsPage(t *testing.T) {
+	browser := adminPluginBrowser(t)
 	page := browser.Page
-
-	// Login as admin
-	err = auth.LoginAsAdmin()
-	require.NoError(t, err, "Failed to login as admin")
+	exampleRow := page.Locator("#plugin-row-" + examplePlugin)
 
 	t.Run("Navigate to plugins page", func(t *testing.T) {
-		err := browser.NavigateTo("/admin/plugins")
+		require.NoError(t, browser.NavigateTo("/admin/plugins"))
+		text, err := page.Locator("h1").TextContent()
 		require.NoError(t, err)
-
-		// Wait for page to load
-		err = page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
-			State: playwright.LoadStateDomcontentloaded,
-		})
-		require.NoError(t, err)
-
-		// Check page title contains plugins
-		title := page.Locator("h1")
-		text, err := title.TextContent()
-		require.NoError(t, err)
-		assert.Contains(t, text, "Plugin")
+		assert.Contains(t, text, "Plugins")
+		require.NoError(t, exampleRow.WaitFor(pluginWait), "plugin rows are rendered from /api/v1/plugins")
 	})
 
 	t.Run("View plugin list", func(t *testing.T) {
-		// Check that the plugins table exists
-		table := page.Locator("table")
-		visible, err := table.IsVisible()
-		require.NoError(t, err)
-		assert.True(t, visible, "plugins table should be visible")
+		status, body := pluginAPI(t, browser, http.MethodGet, "/api/v1/plugins", nil)
+		require.Equal(t, http.StatusOK, status)
+		plugins, ok := body["plugins"].([]any)
+		require.True(t, ok, "plugins array: %v", body)
 
-		// Check for the hello plugin (registered by default)
-		helloRow := page.Locator("text=hello")
-		count, err := helloRow.Count()
+		rows := page.Locator("#plugin-tbody tr[id^='plugin-row-']")
+		n, err := rows.Count()
 		require.NoError(t, err)
-		assert.GreaterOrEqual(t, count, 1, "hello plugin should be in the list")
+		assert.Equal(t, len(plugins), n, "one table row per registered plugin")
+		total, err := page.Locator("#stat-total").TextContent()
+		require.NoError(t, err)
+		assert.Equal(t, fmt.Sprint(len(plugins)), total)
+		for _, p := range plugins {
+			name := p.(map[string]any)["name"].(string)
+			visible, err := page.Locator("#plugin-row-" + name).IsVisible()
+			require.NoError(t, err)
+			assert.True(t, visible, "plugin %s should have a row", name)
+		}
+
+		rowText, err := exampleRow.TextContent()
+		require.NoError(t, err)
+		assert.Contains(t, rowText, examplePluginDescription)
+		assert.Contains(t, rowText, "1.0.0")
 	})
 
 	t.Run("View plugin details modal", func(t *testing.T) {
-		// Click on view details button for hello plugin
-		detailsBtn := page.Locator("button[title*='Details'], button:has-text('Details')").First()
-		visible, _ := detailsBtn.IsVisible()
-		if visible {
-			err := detailsBtn.Click()
-			require.NoError(t, err)
+		require.NoError(t, exampleRow.Locator("a", playwright.LocatorLocatorOptions{HasText: examplePlugin}).Click())
+		modal := page.Locator("#plugin-details-modal")
+		require.NoError(t, modal.WaitFor(pluginWait), "details modal should open")
 
-			// Wait for modal
-			modal := page.Locator("dialog[open], .modal.modal-open")
-			err = modal.WaitFor(playwright.LocatorWaitForOptions{
-				Timeout: playwright.Float(5000),
-			})
-			if err == nil {
-				// Check modal content
-				modalContent, _ := modal.TextContent()
-				assert.Contains(t, modalContent, "hello")
+		title, err := page.Locator("#modal-plugin-name").TextContent()
+		require.NoError(t, err)
+		assert.Equal(t, examplePlugin, title)
+		content, err := page.Locator("#modal-plugin-content").TextContent()
+		require.NoError(t, err)
+		assert.Contains(t, content, examplePluginDescription)
+		assert.Contains(t, content, "GoatFlow Team", "author")
+		assert.Contains(t, content, "/api/plugins/hello-wasm", "declared route")
+		assert.Contains(t, content, "Hello WASM", "declared widget")
 
-				// Close modal
-				closeBtn := modal.Locator("button:has-text('Close'), button:has-text('close')")
-				if count, _ := closeBtn.Count(); count > 0 {
-					closeBtn.Click()
-				}
-			}
-		}
+		require.NoError(t, modal.Locator(".gk-modal-footer button.gk-btn-secondary").Click())
+		require.NoError(t, modal.WaitFor(playwright.LocatorWaitForOptions{State: playwright.WaitForSelectorStateHidden, Timeout: playwright.Float(5000)}))
 	})
 
 	t.Run("Navigate to plugin logs", func(t *testing.T) {
-		// Click on View Logs button
-		logsBtn := page.Locator("a:has-text('View Logs'), a:has-text('Logs')")
-		visible, _ := logsBtn.IsVisible()
-		if visible {
-			err := logsBtn.Click()
-			require.NoError(t, err)
-
-			// Wait for navigation
-			err = page.WaitForURL("**/plugins/logs**", playwright.PageWaitForURLOptions{
-				Timeout: playwright.Float(5000),
-			})
-			if err == nil {
-				// Check logs page loaded
-				logsTable := page.Locator("table")
-				visible, _ := logsTable.IsVisible()
-				assert.True(t, visible, "logs table should be visible")
-			}
-		}
+		require.NoError(t, page.Locator("header a[href='/admin/plugins/logs']").Click())
+		require.NoError(t, page.WaitForURL("**/admin/plugins/logs"))
+		require.NoError(t, page.Locator("#log-tbody").WaitFor(pluginWait))
+		text, err := page.Locator("h1").TextContent()
+		require.NoError(t, err)
+		assert.Contains(t, text, "Plugin Logs")
 	})
 }
 
 func TestAdminPluginLogs(t *testing.T) {
-	browser := helpers.NewBrowserHelper(t)
-	err := browser.Setup()
-	require.NoError(t, err, "Failed to setup browser")
-	defer browser.TearDown()
-
-	auth := helpers.NewAuthHelper(browser)
+	browser := adminPluginBrowser(t)
 	page := browser.Page
+	page.OnDialog(func(d playwright.Dialog) { _ = d.Accept() })
 
-	// Login as admin
-	err = auth.LoginAsAdmin()
-	require.NoError(t, err, "Failed to login as admin")
+	// A failed enable of an unknown plugin logs an error entry under that
+	// plugin's name, so the entry is unique to this run.
+	missing := fmt.Sprintf("e2e-missing-%d", time.Now().UnixNano())
+	status, body := pluginAPI(t, browser, http.MethodPost, "/api/v1/plugins/"+missing+"/enable", nil)
+	require.Equal(t, http.StatusNotFound, status, "enable unknown plugin: %v", body)
+	missingRow := page.Locator("#log-tbody tr", playwright.PageLocatorOptions{HasText: missing})
 
 	t.Run("View plugin logs page", func(t *testing.T) {
-		err := browser.NavigateTo("/admin/plugins/logs")
+		require.NoError(t, browser.NavigateTo("/admin/plugins/logs"))
+		text, err := page.Locator("h1").TextContent()
 		require.NoError(t, err)
-
-		err = page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
-			State: playwright.LoadStateDomcontentloaded,
-		})
-		require.NoError(t, err)
-
-		// Check page title
-		title := page.Locator("h1")
-		text, err := title.TextContent()
-		require.NoError(t, err)
-		assert.Contains(t, text, "Log")
+		assert.Contains(t, text, "Plugin Logs")
+		require.NoError(t, missingRow.WaitFor(pluginWait), "logged error for %s should be listed", missing)
+		assert.Contains(t, mustText(t, missingRow), "Failed to enable plugin")
+		assert.Contains(t, mustText(t, missingRow), "ERROR")
 	})
 
-	t.Run("Filter logs by level", func(t *testing.T) {
-		// Find level filter
-		levelSelect := page.Locator("select#filter-level, select[name='level']")
-		visible, _ := levelSelect.IsVisible()
-		if visible {
-			// Select error level
-			_, err := levelSelect.SelectOption(playwright.SelectOptionValues{
-				Values: playwright.StringSlice("error"),
-			})
-			if err == nil {
-				// Wait for filter to apply
-				page.WaitForTimeout(500)
-
-				// Logs should be filtered (or show no results)
-				logsContainer := page.Locator("#log-tbody, .log-entries")
-				_, _ = logsContainer.TextContent()
-				// Just verify no error - filtering works
-			}
+	// selectLevel picks a level filter and waits until the table shows only
+	// badges of that level (or the empty-state row).
+	selectLevel := func(t *testing.T, value, badge string) {
+		t.Helper()
+		resp, err := page.ExpectResponse(func(u string) bool {
+			return strings.Contains(u, "/api/v1/plugins/logs?") && strings.Contains(u, "level="+value) == (value != "")
+		}, func() error {
+			_, err := page.Locator("#filter-level").SelectOption(playwright.SelectOptionValues{Values: playwright.StringSlice(value)})
+			return err
+		})
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, resp.Status())
+		if badge == "" {
+			return
 		}
+		_, err = page.WaitForFunction(`(badge) => [...document.querySelectorAll('#log-tbody .badge')].every(b => b.textContent.trim() === badge)`,
+			badge, playwright.PageWaitForFunctionOptions{Timeout: playwright.Float(10000)})
+		require.NoError(t, err, "only %s entries should be listed", badge)
+	}
+	gone := playwright.LocatorWaitForOptions{State: playwright.WaitForSelectorStateDetached, Timeout: playwright.Float(10000)}
+
+	t.Run("Filter logs by level", func(t *testing.T) {
+		selectLevel(t, "error", "ERROR")
+		require.NoError(t, missingRow.WaitFor(pluginWait), "error entry is listed under the error filter")
+
+		selectLevel(t, "info", "INFO")
+		require.NoError(t, missingRow.WaitFor(gone), "error entry is filtered out under the info filter")
 	})
 
 	t.Run("Clear logs", func(t *testing.T) {
-		// Find clear button
-		clearBtn := page.Locator("button:has-text('Clear')")
-		visible, _ := clearBtn.IsVisible()
-		if visible {
-			// Set up dialog handler
-			page.OnDialog(func(dialog playwright.Dialog) {
-				dialog.Accept()
-			})
+		selectLevel(t, "", "")
+		require.NoError(t, missingRow.WaitFor(pluginWait), "entry is listed again without a level filter")
 
-			err := clearBtn.Click()
-			if err == nil {
-				// Wait for clear to complete
-				page.WaitForTimeout(1000)
+		resp, err := page.ExpectResponse(func(u string) bool {
+			return u == browser.Config.BaseURL+"/api/v1/plugins/logs"
+		}, func() error {
+			return page.Locator("header button", playwright.PageLocatorOptions{HasText: "Clear Logs"}).Click()
+		})
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, resp.Status(), "DELETE /api/v1/plugins/logs")
+		require.NoError(t, missingRow.WaitFor(gone), "cleared entry disappears from the table")
 
-				// Verify logs cleared (count should show 0)
-				logCount := page.Locator("#log-count, .log-count")
-				if visible, _ := logCount.IsVisible(); visible {
-					text, _ := logCount.TextContent()
-					assert.Contains(t, text, "0")
-				}
-			}
-		}
+		status, body := pluginAPI(t, browser, http.MethodGet, "/api/v1/plugins/logs?plugin="+missing, nil)
+		require.Equal(t, http.StatusOK, status)
+		assert.EqualValues(t, 0, body["count"], "cleared buffer has no entries for %s: %v", missing, body)
 	})
 }
 
+func mustText(t *testing.T, l playwright.Locator) string {
+	t.Helper()
+	text, err := l.TextContent()
+	require.NoError(t, err)
+	return text
+}
+
 func TestPluginAPI(t *testing.T) {
-	browser := helpers.NewBrowserHelper(t)
-	err := browser.Setup()
-	require.NoError(t, err, "Failed to setup browser")
-	defer browser.TearDown()
-
-	auth := helpers.NewAuthHelper(browser)
-	page := browser.Page
-
-	// Login as admin to get auth token
-	err = auth.LoginAsAdmin()
-	require.NoError(t, err, "Failed to login as admin")
+	browser := adminPluginBrowser(t)
+	keepPluginState(t, browser, examplePlugin)
 
 	t.Run("List plugins via API", func(t *testing.T) {
-		// Use page.Evaluate to make authenticated API call
-		result, err := page.Evaluate(`async () => {
-			const response = await fetch('/api/v1/plugins');
-			if (!response.ok) {
-				return { error: response.status };
+		status, body := pluginAPI(t, browser, http.MethodGet, "/api/v1/plugins", nil)
+		require.Equal(t, http.StatusOK, status)
+		plugins, ok := body["plugins"].([]any)
+		require.True(t, ok, "plugins array: %v", body)
+		var example map[string]any
+		for _, p := range plugins {
+			if m := p.(map[string]any); m["name"] == examplePlugin {
+				example = m
 			}
-			return response.json();
-		}`)
-		require.NoError(t, err)
-
-		plugins, ok := result.([]interface{})
-		if ok {
-			// Should have at least the hello plugin
-			assert.GreaterOrEqual(t, len(plugins), 1)
 		}
+		require.NotNil(t, example, "%s should be listed: %v", examplePlugin, body)
+		assert.Equal(t, "1.0.0", example["version"])
+		assert.Equal(t, examplePluginDescription, example["description"])
+		assert.Equal(t, true, example["loaded"])
 	})
 
 	t.Run("Call plugin function via API", func(t *testing.T) {
-		result, err := page.Evaluate(`async () => {
-			const response = await fetch('/api/v1/plugins/hello/call/hello', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name: 'E2E Test' })
-			});
-			if (!response.ok) {
-				return { error: response.status };
-			}
-			return response.json();
-		}`)
-		require.NoError(t, err)
+		setPluginEnabled(t, browser, examplePlugin, true)
+		status, body := pluginAPI(t, browser, http.MethodPost, "/api/v1/plugins/"+examplePlugin+"/call/hello", map[string]any{"name": "E2E Test"})
+		require.Equal(t, http.StatusOK, status, "%v", body)
+		assert.Equal(t, "Hello from WASM, E2E Test!", body["message"])
+		assert.Equal(t, "tinygo-wasm", body["runtime"])
+	})
 
-		resultMap, ok := result.(map[string]interface{})
-		if ok {
-			// Should have a message in response
-			assert.Contains(t, resultMap, "message")
-		}
+	t.Run("Call on disabled plugin is refused", func(t *testing.T) {
+		setPluginEnabled(t, browser, examplePlugin, false)
+		status, body := pluginAPI(t, browser, http.MethodPost, "/api/v1/plugins/"+examplePlugin+"/call/hello", map[string]any{"name": "E2E Test"})
+		assert.Equal(t, http.StatusForbidden, status)
+		assert.Contains(t, body["error"], "disabled")
+	})
+
+	t.Run("Call on unknown plugin is 404", func(t *testing.T) {
+		status, body := pluginAPI(t, browser, http.MethodPost, "/api/v1/plugins/e2e-no-such-plugin/call/hello", map[string]any{})
+		assert.Equal(t, http.StatusNotFound, status)
+		assert.Contains(t, body["error"], "not found")
 	})
 
 	t.Run("Get plugin logs via API", func(t *testing.T) {
-		result, err := page.Evaluate(`async () => {
-			const response = await fetch('/api/v1/plugins/logs?limit=10');
-			if (!response.ok) {
-				return { error: response.status };
-			}
-			return response.json();
-		}`)
-		require.NoError(t, err)
-
-		resultMap, ok := result.(map[string]interface{})
-		if ok {
-			// Should have logs array
-			assert.Contains(t, resultMap, "logs")
-			assert.Contains(t, resultMap, "count")
-		}
+		// The enable/disable above were logged under the plugin's name.
+		status, body := pluginAPI(t, browser, http.MethodGet, "/api/v1/plugins/logs?plugin="+examplePlugin+"&level=info&limit=10", nil)
+		require.Equal(t, http.StatusOK, status)
+		logs, ok := body["logs"].([]any)
+		require.True(t, ok, "logs array: %v", body)
+		require.NotEmpty(t, logs)
+		assert.LessOrEqual(t, len(logs), 10)
+		assert.EqualValues(t, len(logs), body["count"])
+		newest := logs[0].(map[string]any)
+		assert.Equal(t, examplePlugin, newest["plugin"])
+		assert.Equal(t, "info", newest["level"])
+		assert.Equal(t, "Plugin disabled: "+examplePlugin, newest["message"])
 	})
 }
 
 func TestPluginEnableDisable(t *testing.T) {
-	browser := helpers.NewBrowserHelper(t)
-	err := browser.Setup()
-	require.NoError(t, err, "Failed to setup browser")
-	defer browser.TearDown()
-
-	auth := helpers.NewAuthHelper(browser)
+	browser := adminPluginBrowser(t)
 	page := browser.Page
+	if keepPluginState(t, browser, examplePlugin) {
+		setPluginEnabled(t, browser, examplePlugin, false)
+	}
+	row := page.Locator("#plugin-row-" + examplePlugin)
 
-	err = auth.LoginAsAdmin()
-	require.NoError(t, err, "Failed to login as admin")
-
-	t.Run("Disable plugin via UI", func(t *testing.T) {
-		err := browser.NavigateTo("/admin/plugins")
-		require.NoError(t, err)
-
-		err = page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
-			State: playwright.LoadStateNetworkidle,
+	toggleViaUI := func(t *testing.T, enable bool) {
+		t.Helper()
+		action := "disable"
+		if enable {
+			action = "enable"
+		}
+		require.NoError(t, browser.NavigateTo("/admin/plugins"))
+		require.NoError(t, row.WaitFor(pluginWait))
+		resp, err := page.ExpectResponse("**/api/v1/plugins/"+examplePlugin+"/"+action, func() error {
+			return row.Locator(fmt.Sprintf("button[onclick=\"togglePlugin('%s', %t)\"]", examplePlugin, enable)).Click()
 		})
 		require.NoError(t, err)
-
-		// Find the hello plugin row and its disable button
-		helloRow := page.Locator("tr:has-text('hello')")
-		visible, err := helloRow.IsVisible()
-		require.NoError(t, err)
-		require.True(t, visible, "hello plugin row should be visible")
-
-		// Check current status is Enabled
-		enabledBadge := helloRow.Locator(".badge-success, .badge:has-text('Enabled')")
-		if count, _ := enabledBadge.Count(); count > 0 {
-			// Click disable button (the one with the ban/disable icon)
-			disableBtn := helloRow.Locator("button[title*='Disable'], button:has(.text-warning)")
-			visible, _ := disableBtn.IsVisible()
-			if visible {
-				err := disableBtn.Click()
-				require.NoError(t, err)
-
-				// Wait for page reload
-				err = page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
-					State: playwright.LoadStateNetworkidle,
-				})
-				require.NoError(t, err)
-
-				// Verify status changed to Disabled
-				helloRow = page.Locator("tr:has-text('hello')")
-				disabledBadge := helloRow.Locator(".badge-warning, .badge:has-text('Disabled')")
-				count, err := disabledBadge.Count()
-				require.NoError(t, err)
-				assert.GreaterOrEqual(t, count, 1, "plugin should show Disabled status")
-			}
-		}
-	})
+		require.Equal(t, http.StatusOK, resp.Status())
+	}
 
 	t.Run("Enable plugin via UI", func(t *testing.T) {
-		err := browser.NavigateTo("/admin/plugins")
-		require.NoError(t, err)
-
-		err = page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
-			State: playwright.LoadStateNetworkidle,
-		})
-		require.NoError(t, err)
-
-		// Find the hello plugin row
-		helloRow := page.Locator("tr:has-text('hello')")
-
-		// Check current status is Disabled
-		disabledBadge := helloRow.Locator(".badge-warning, .badge:has-text('Disabled')")
-		if count, _ := disabledBadge.Count(); count > 0 {
-			// Click enable button (the one with the checkmark/enable icon)
-			enableBtn := helloRow.Locator("button[title*='Enable'], button:has(.text-success)")
-			visible, _ := enableBtn.IsVisible()
-			if visible {
-				err := enableBtn.Click()
-				require.NoError(t, err)
-
-				// Wait for page reload
-				err = page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
-					State: playwright.LoadStateNetworkidle,
-				})
-				require.NoError(t, err)
-
-				// Verify status changed to Enabled
-				helloRow = page.Locator("tr:has-text('hello')")
-				enabledBadge := helloRow.Locator(".badge-success, .badge:has-text('Enabled')")
-				count, err := enabledBadge.Count()
-				require.NoError(t, err)
-				assert.GreaterOrEqual(t, count, 1, "plugin should show Enabled status")
-			}
-		}
+		toggleViaUI(t, true)
+		require.NoError(t, row.Locator(".gk-badge-success", playwright.LocatorLocatorOptions{HasText: "Enabled"}).WaitFor(pluginWait))
+		assert.True(t, pluginEnabled(t, browser, examplePlugin))
 	})
 
-	t.Run("Disable plugin via API", func(t *testing.T) {
-		result, err := page.Evaluate(`async () => {
-			const response = await fetch('/api/v1/plugins/hello/disable', {
-				method: 'POST',
-				credentials: 'same-origin',
-				headers: { 'Content-Type': 'application/json' }
-			});
-			return { status: response.status, ok: response.ok, body: await response.json() };
-		}`)
-		require.NoError(t, err)
-
-		resultMap, ok := result.(map[string]interface{})
-		require.True(t, ok, "result should be a map")
-		assert.Equal(t, true, resultMap["ok"], "API call should succeed")
+	t.Run("Disable plugin via UI", func(t *testing.T) {
+		toggleViaUI(t, false)
+		require.NoError(t, row.Locator(".gk-badge-muted", playwright.LocatorLocatorOptions{HasText: "Disabled"}).WaitFor(pluginWait))
+		assert.False(t, pluginEnabled(t, browser, examplePlugin))
 	})
 
 	t.Run("Enable plugin via API", func(t *testing.T) {
-		result, err := page.Evaluate(`async () => {
-			const response = await fetch('/api/v1/plugins/hello/enable', {
-				method: 'POST',
-				credentials: 'same-origin',
-				headers: { 'Content-Type': 'application/json' }
-			});
-			return { status: response.status, ok: response.ok, body: await response.json() };
-		}`)
-		require.NoError(t, err)
+		setPluginEnabled(t, browser, examplePlugin, true)
+		assert.True(t, pluginEnabled(t, browser, examplePlugin))
+	})
 
-		resultMap, ok := result.(map[string]interface{})
-		require.True(t, ok, "result should be a map")
-		assert.Equal(t, true, resultMap["ok"], "API call should succeed")
+	t.Run("Disable plugin via API", func(t *testing.T) {
+		setPluginEnabled(t, browser, examplePlugin, false)
+		assert.False(t, pluginEnabled(t, browser, examplePlugin))
+	})
+
+	t.Run("Enable unknown plugin is 404", func(t *testing.T) {
+		status, body := pluginAPI(t, browser, http.MethodPost, "/api/v1/plugins/e2e-no-such-plugin/enable", nil)
+		assert.Equal(t, http.StatusNotFound, status)
+		assert.Contains(t, body["error"], "not found")
 	})
 }
 
 func TestPluginUpload(t *testing.T) {
-	browser := helpers.NewBrowserHelper(t)
-	err := browser.Setup()
-	require.NoError(t, err, "Failed to setup browser")
-	defer browser.TearDown()
-
-	auth := helpers.NewAuthHelper(browser)
+	browser := adminPluginBrowser(t)
 	page := browser.Page
-
-	err = auth.LoginAsAdmin()
-	require.NoError(t, err, "Failed to login as admin")
+	modal := page.Locator("#upload-modal")
+	uploadError := page.Locator("#uploadError")
 
 	t.Run("Upload modal opens", func(t *testing.T) {
-		err := browser.NavigateTo("/admin/plugins")
+		require.NoError(t, browser.NavigateTo("/admin/plugins"))
+		require.NoError(t, page.Locator("header button[onclick='showUploadModal()']").Click())
+		require.NoError(t, modal.WaitFor(pluginWait), "upload modal should open")
+
+		accept, err := modal.Locator("input#plugin-file").GetAttribute("accept")
 		require.NoError(t, err)
+		assert.Equal(t, ".wasm,.zip", accept)
+		hidden, err := uploadError.IsHidden()
+		require.NoError(t, err)
+		assert.True(t, hidden, "no error before an upload attempt")
+	})
 
-		// Find upload button
-		uploadBtn := page.Locator("button:has-text('Upload')")
-		visible, _ := uploadBtn.IsVisible()
-		if visible {
-			err := uploadBtn.Click()
-			require.NoError(t, err)
+	t.Run("Upload without file is rejected client-side", func(t *testing.T) {
+		require.NoError(t, page.Locator("#upload-btn").Click())
+		require.NoError(t, uploadError.WaitFor(pluginWait))
+		msg, err := page.Locator("#uploadErrorMessage").TextContent()
+		require.NoError(t, err)
+		assert.NotEmpty(t, msg)
+	})
 
-			// Wait for modal
-			modal := page.Locator("dialog#upload-modal, .modal:has-text('Upload')")
-			err = modal.WaitFor(playwright.LocatorWaitForOptions{
-				Timeout: playwright.Float(3000),
-			})
-			if err == nil {
-				visible, _ := modal.IsVisible()
-				assert.True(t, visible, "upload modal should be visible")
-
-				// Check file input accepts correct types
-				fileInput := modal.Locator("input[type='file']")
-				accept, _ := fileInput.GetAttribute("accept")
-				assert.Contains(t, accept, ".wasm")
-				assert.Contains(t, accept, ".zip")
-			}
-		}
+	t.Run("Upload of non-plugin file is rejected by the server", func(t *testing.T) {
+		require.NoError(t, page.Locator("#plugin-file").SetInputFiles([]playwright.InputFile{{
+			Name: "not-a-plugin.txt", MimeType: "text/plain", Buffer: []byte("plain text"),
+		}}))
+		resp, err := page.ExpectResponse("**/api/v1/plugins/upload", func() error {
+			return page.Locator("#upload-btn").Click()
+		})
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, resp.Status())
+		msg := page.Locator("#uploadErrorMessage", playwright.PageLocatorOptions{HasText: "Only .wasm and .zip files are allowed"})
+		require.NoError(t, msg.WaitFor(pluginWait))
+		visible, err := modal.IsVisible()
+		require.NoError(t, err)
+		assert.True(t, visible, "modal stays open on a rejected upload")
 	})
 }

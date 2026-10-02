@@ -18,14 +18,6 @@ type DBGroupRole = platformmodels.DBGroupRole
 type Group = platformmodels.Group
 type GroupMembership = platformmodels.GroupMembership
 
-type LDAPConfiguration = platformmodels.LDAPConfiguration
-type LDAPSyncHistory = platformmodels.LDAPSyncHistory
-type LDAPUserMapping = platformmodels.LDAPUserMapping
-type LDAPGroupMapping = platformmodels.LDAPGroupMapping
-type LDAPAuthenticationLog = platformmodels.LDAPAuthenticationLog
-type LDAPSyncStatistics = platformmodels.LDAPSyncStatistics
-type LDAPConnectionTest = platformmodels.LDAPConnectionTest
-
 type LookupItem = platformmodels.LookupItem
 
 type Role = platformmodels.Role
@@ -46,7 +38,6 @@ type User = platformmodels.User
 type UserRole = platformmodels.UserRole
 type LoginRequest = platformmodels.LoginRequest
 type LoginResponse = platformmodels.LoginResponse
-type RefreshTokenRequest = platformmodels.RefreshTokenRequest
 type ChangePasswordRequest = platformmodels.ChangePasswordRequest
 
 // ---- Const aliases ----
@@ -98,19 +89,6 @@ const (
 	GroupRoleMember   = platformmodels.GroupRoleMember
 	GroupRoleAdmin    = platformmodels.GroupRoleAdmin
 	GroupRoleOwner    = platformmodels.GroupRoleOwner
-)
-
-// LDAP consts
-const (
-	LDAPSyncStatusPending    = platformmodels.LDAPSyncStatusPending
-	LDAPSyncStatusRunning    = platformmodels.LDAPSyncStatusRunning
-	LDAPSyncStatusCompleted  = platformmodels.LDAPSyncStatusCompleted
-	LDAPSyncStatusFailed     = platformmodels.LDAPSyncStatusFailed
-	LDAPSyncStatusCancelled  = platformmodels.LDAPSyncStatusCancelled
-	LDAPSyncTriggerManual    = platformmodels.LDAPSyncTriggerManual
-	LDAPSyncTriggerScheduled = platformmodels.LDAPSyncTriggerScheduled
-	LDAPSyncTriggerAPI       = platformmodels.LDAPSyncTriggerAPI
-	LDAPSyncTriggerStartup   = platformmodels.LDAPSyncTriggerStartup
 )
 
 // Session consts

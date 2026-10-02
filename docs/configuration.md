@@ -45,11 +45,11 @@ Available generators (select via `Ticket::NumberGenerator`) quick reference:
 ## Switching Generators
 1. Edit `Config.yaml` setting `Ticket::NumberGenerator` and set `value` to desired generator name.
 2. Restart service (`make restart` in container workflow) so startup selects the new generator.
-3. Verify via: `GET /admin/debug/ticket-number` (returns current generator and dateBased flag).
+3. Verify via: `GET /admin/debug/ticket-number` (admin login required; returns current generator and dateBased flag).
 
-## Introspection (Planned Endpoint)
-Endpoint: `GET /admin/debug/config-sources`
-Will return JSON: each setting with its name, default, value, effective, and source (`value` or `default`).
+## Introspection
+Endpoint: `GET /admin/debug/config-sources` (admin login required)
+Returns JSON: each setting with its name, default, value, effective, and source (`value` or `default`).
 
 ## Collision Handling (Random)
 Random generator composes SystemID + 10 random digits. Collisions are improbable but possible. A retry loop (up to 5 attempts on unique `tn` constraint violation) will be added alongside a metric counter.
@@ -62,9 +62,9 @@ At startup a scan will log a warning if duplicate setting names are detected in 
 - Env var injection (e.g. GOATFLOW__Ticket__NumberGenerator)
 - Hot reload with audit log of changes
 
-## Operational Verification
+## Operational Verification (admin login required)
 - List current generator: `GET /admin/debug/ticket-number`
-- (Soon) List all settings with sources: `GET /admin/debug/config-sources`
+- List all settings with sources: `GET /admin/debug/config-sources`
 
 ## Failure Modes
 - Missing setting fetch → error returned to caller

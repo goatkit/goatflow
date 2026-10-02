@@ -19,17 +19,6 @@ func TestTicketHelpers(t *testing.T) {
 		assert.True(t, ticket.IsLocked())
 	})
 
-	t.Run("IsClosed returns correct status", func(t *testing.T) {
-		ticket := &Ticket{State: nil}
-		assert.False(t, ticket.IsClosed())
-
-		ticket.State = &TicketState{TypeID: TicketStateOpen}
-		assert.False(t, ticket.IsClosed())
-
-		ticket.State.TypeID = TicketStateClosed
-		assert.True(t, ticket.IsClosed())
-	})
-
 	t.Run("IsArchived returns correct status", func(t *testing.T) {
 		ticket := &Ticket{ArchiveFlag: 0}
 		assert.False(t, ticket.IsArchived())
@@ -112,29 +101,12 @@ func TestNullableHelpers(t *testing.T) {
 }
 
 func TestValidationFunctions(t *testing.T) {
-	t.Run("ValidateTicketState", func(t *testing.T) {
-		assert.True(t, ValidateTicketState(TicketStateNew))
-		assert.True(t, ValidateTicketState(TicketStateOpen))
-		assert.True(t, ValidateTicketState(TicketStateClosed))
-		assert.True(t, ValidateTicketState(TicketStatePending))
-		assert.False(t, ValidateTicketState(0))
-		assert.False(t, ValidateTicketState(10))
-	})
-
 	t.Run("ValidateTicketLock", func(t *testing.T) {
 		assert.True(t, ValidateTicketLock(TicketUnlocked))
 		assert.True(t, ValidateTicketLock(TicketLocked))
 		assert.True(t, ValidateTicketLock(TicketTmpLocked))
 		assert.False(t, ValidateTicketLock(0))
 		assert.False(t, ValidateTicketLock(4))
-	})
-
-	t.Run("ValidateArticleType", func(t *testing.T) {
-		assert.True(t, ValidateArticleType(ArticleTypeEmailExternal))
-		assert.True(t, ValidateArticleType(ArticleTypeNoteInternal))
-		assert.True(t, ValidateArticleType(ArticleTypeNoteExternal))
-		assert.False(t, ValidateArticleType(0))
-		assert.False(t, ValidateArticleType(10))
 	})
 
 	t.Run("ValidateSenderType", func(t *testing.T) {
@@ -164,7 +136,7 @@ func TestTicketStructure(t *testing.T) {
 			UserID:           &userID,
 			CustomerID:       &customerID,
 			CustomerUserID:   &customerUserID,
-			TicketStateID:    TicketStateNew,
+			TicketStateID:    1,
 			TicketPriorityID: 3,
 			CreateTime:       now,
 			CreateBy:         1,
@@ -190,7 +162,6 @@ func TestTicketStructure(t *testing.T) {
 		article := Article{
 			ID:                   1,
 			TicketID:             1,
-			ArticleTypeID:        ArticleTypeEmailExternal,
 			SenderTypeID:         SenderTypeCustomer,
 			IsVisibleForCustomer: 1,
 			Subject:              subject,
@@ -204,7 +175,6 @@ func TestTicketStructure(t *testing.T) {
 
 		assert.Equal(t, 1, article.ID)
 		assert.Equal(t, 1, article.TicketID)
-		assert.Equal(t, ArticleTypeEmailExternal, article.ArticleTypeID)
 		assert.Equal(t, SenderTypeCustomer, article.SenderTypeID)
 		assert.Equal(t, 1, article.IsVisibleForCustomer)
 		assert.Equal(t, subject, article.Subject)
@@ -248,7 +218,7 @@ func TestTicketRequests(t *testing.T) {
 			Title:          "New Ticket",
 			QueueID:        1,
 			PriorityID:     3,
-			StateID:        TicketStateNew,
+			StateID:        1,
 			CustomerID:     &customerID,
 			CustomerUserID: &customerUserID,
 			Body:           "Ticket description",
@@ -300,35 +270,5 @@ func TestTicketRequests(t *testing.T) {
 		assert.Equal(t, stateID, *req.StateID)
 		assert.Equal(t, "urgent", req.Search)
 		assert.True(t, req.ExcludeClosedStates)
-	})
-}
-
-func TestTicketConstants(t *testing.T) {
-	t.Run("Ticket state constants", func(t *testing.T) {
-		assert.Equal(t, 1, TicketStateNew)
-		assert.Equal(t, 2, TicketStateOpen)
-		assert.Equal(t, 3, TicketStateClosed)
-		assert.Equal(t, 4, TicketStateRemoved)
-		assert.Equal(t, 5, TicketStatePending)
-	})
-
-	t.Run("Ticket lock constants", func(t *testing.T) {
-		assert.Equal(t, 1, TicketUnlocked)
-		assert.Equal(t, 2, TicketLocked)
-		assert.Equal(t, 3, TicketTmpLocked)
-	})
-
-	t.Run("Article type constants", func(t *testing.T) {
-		assert.Equal(t, 1, ArticleTypeEmailExternal)
-		assert.Equal(t, 2, ArticleTypeEmailInternal)
-		assert.Equal(t, 3, ArticleTypePhone)
-		assert.Equal(t, 7, ArticleTypeNoteInternal)
-		assert.Equal(t, 8, ArticleTypeNoteExternal)
-	})
-
-	t.Run("Sender type constants", func(t *testing.T) {
-		assert.Equal(t, 1, SenderTypeAgent)
-		assert.Equal(t, 2, SenderTypeSystem)
-		assert.Equal(t, 3, SenderTypeCustomer)
 	})
 }

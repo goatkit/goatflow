@@ -2,13 +2,19 @@ package api
 
 import (
 	"encoding/json"
+	"html"
 	"net/http"
 	"net/http/httptest"
-	"strings"
+	"net/url"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 func TestQueueListAPI(t *testing.T) {
@@ -41,7 +47,7 @@ func TestQueueListAPI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
-			router.GET("/api/queues", handleQueuesAPI)
+			router.GET("/api/queues", handleGetQueuesAPI)
 			req, _ := http.NewRequest("GET", "/api/queues", nil)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
@@ -63,7 +69,6 @@ func TestQueueListJSON(t *testing.T) {
 		acceptHeader   string
 		expectedStatus int
 		checkResponse  func(t *testing.T, body string)
-		setupError     bool
 	}{
 		{
 			name:           "should return JSON when requested",
@@ -84,7 +89,13 @@ func TestQueueListJSON(t *testing.T) {
 				err := json.Unmarshal([]byte(body), &response)
 				assert.NoError(t, err)
 				assert.True(t, response.Success)
-				assert.Equal(t, 4, len(response.Data))
+				// Every queue (seeded ones included; the seed differs per
+				// test database) is listed.
+				db, err := database.GetDB()
+				require.NoError(t, err)
+				var queueCount int
+				require.NoError(t, db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM queue")).Scan(&queueCount))
+				assert.Equal(t, queueCount, len(response.Data))
 
 				// Check specific queue data (Raw is id=2 in migrations)
 				foundRaw := false
@@ -103,13 +114,9 @@ func TestQueueListJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
-			router.GET("/api/queues", handleQueuesAPI)
+			router.GET("/api/queues", handleGetQueuesAPI)
 
-			path := "/api/queues"
-			if tt.setupError {
-				path += "?force_error=true"
-			}
-			req, _ := http.NewRequest("GET", path, nil)
+			req, _ := http.NewRequest("GET", "/api/queues", nil)
 			if tt.acceptHeader != "" {
 				req.Header.Set("Accept", tt.acceptHeader)
 			}
@@ -124,44 +131,26 @@ func TestQueueListJSON(t *testing.T) {
 	}
 }
 
-func TestQueueListErrorHandling(t *testing.T) {
+// Queue names are HTML-escaped in the fragment, one well-formed <li> per queue.
+func TestQueueListHTMLEscapesNames(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	db := getTestDB(t)
 
-	tests := []struct {
-		name           string
-		setupError     bool
-		expectedStatus int
-		checkResponse  func(t *testing.T, body string)
-	}{
-		{
-			name:           "should handle database errors gracefully",
-			setupError:     true,
-			expectedStatus: http.StatusInternalServerError,
-			checkResponse: func(t *testing.T, body string) {
-				assert.Contains(t, strings.ToLower(body), "error")
-			},
-		},
-	}
+	name := "<b>q" + strconv.FormatInt(time.Now().UnixNano()%1000000, 10) + "</b>"
+	queueID := createTestQueue(t, db, name)
+	t.Cleanup(func() { cleanupTestQueue(t, db, queueID) })
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			router := gin.New()
-			router.GET("/api/queues", handleQueuesAPI)
+	router := gin.New()
+	router.GET("/api/queues", handleGetQueuesAPI)
+	req := httptest.NewRequest(http.MethodGet, "/api/queues?search="+url.QueryEscape(name), nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
 
-			path := "/api/queues"
-			if tt.setupError {
-				path += "?force_error=true"
-			}
-			req, _ := http.NewRequest("GET", path, nil)
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-
-			assert.Equal(t, tt.expectedStatus, w.Code)
-			if tt.checkResponse != nil {
-				tt.checkResponse(t, w.Body.String())
-			}
-		})
-	}
+	require.Equal(t, http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(t, body, "  <li>"+html.EscapeString(name)+" <span>0</span> tickets</li>")
+	assert.NotContains(t, body, name)
+	assert.NotContains(t, body, "<li=")
 }
 
 func TestQueueListFiltering(t *testing.T) {
@@ -197,7 +186,7 @@ func TestQueueListFiltering(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
-			router.GET("/api/queues", handleQueuesAPI)
+			router.GET("/api/queues", handleGetQueuesAPI)
 
 			req, _ := http.NewRequest("GET", "/api/queues"+tt.queryParams, nil)
 			w := httptest.NewRecorder()
@@ -246,7 +235,7 @@ func TestQueueListHTMXHeaders(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
-			router.GET("/api/queues", handleQueuesAPI)
+			router.GET("/api/queues", handleGetQueuesAPI)
 
 			req, _ := http.NewRequest("GET", "/api/queues", nil)
 			if tt.htmxRequest {

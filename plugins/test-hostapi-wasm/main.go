@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"time"
 	"unsafe"
 )
 
@@ -75,6 +76,8 @@ func gk_call(fnPtr, fnLen, argsPtr, argsLen uint32) uint64 {
 		result = runTests()
 	case "test_log":
 		result = testLog()
+	case "test_clock":
+		result = testClock()
 	case "__health_ping__":
 		result = healthPing()
 	default:
@@ -130,6 +133,20 @@ func testLog() string {
 	log(LogWarn, "Warn from WASM")
 	log(LogError, "Error from WASM")
 	data, _ := json.Marshal(map[string]any{"logged": 4})
+	return string(data)
+}
+
+// testClock reports the guest's own clock and the host's time_now answer so
+// the runtime test can check both are real.
+func testClock() string {
+	var host struct {
+		Now string `json:"now"`
+	}
+	json.Unmarshal([]byte(callHost("time_now", "{}")), &host)
+	data, _ := json.Marshal(map[string]any{
+		"guest_unix": time.Now().Unix(),
+		"host_now":   host.Now,
+	})
 	return string(data)
 }
 

@@ -29,7 +29,7 @@ All configuration is via environment variables in `.env`:
 | `DB_PASSWORD` | **Yes** | MariaDB user password | - |
 | `DB_NAME` | No | Database name | `goatflow` |
 | `JWT_SECRET` | **Yes** | JWT signing secret (32+ chars) | - |
-| `BASE_URL` | No | Public URL for the application | `http://localhost:8080` |
+| `BASE_URL` | No | Public URL for the application; password-reset and customer sign-up email links are built from it (they are not sent while it is unset) | `http://localhost:8080` |
 
 ## Image Tags
 

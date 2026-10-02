@@ -1,10 +1,67 @@
 {% extends "layouts/base.pongo2" %}
-{% block title %}{{ t("customer.placeholder_pages.company_info_title") }} - GoatFlow{% endblock %}
+
+{% block title %}{{ t("customer.company_page.info_title") }} - {{ Portal.Title }}{% endblock %}
+
 {% block content %}
-<div class="container mx-auto py-8">
-    <h1 class="text-2xl font-bold gk-heading mb-4"><span class="gk-text-gradient">{{ t("customer.placeholder_pages.company_info_title") }}</span></h1>
-    <div class="gk-card-glow rounded-lg p-6">
-        <p style="color: var(--gk-text-muted);">{{ t("customer.placeholder_pages.under_construction") }}</p>
+<div class="container mx-auto py-4 sm:py-6">
+    <nav class="flex items-center text-sm mb-4" aria-label="Breadcrumb">
+        <a href="/customer" class="gk-link-neon">{{ t("customer.nav.dashboard") }}</a>
+        <svg class="mx-2 h-4 w-4" style="color: var(--gk-text-muted);" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
+        <span class="font-medium" style="color: var(--gk-text-primary);">{{ t("customer.nav.company_info") }}</span>
+    </nav>
+
+    <h1 class="text-2xl font-bold gk-heading mb-4"><span class="gk-text-gradient">{{ t("customer.company_page.info_title") }}</span></h1>
+
+    {% if Company %}
+    <div class="gk-card-glow">
+        <div class="gk-card-header">
+            <div class="flex items-center space-x-4 min-w-0">
+                <div class="flex-shrink-0 h-12 w-12 rounded-lg flex items-center justify-center" style="background: var(--gk-primary-subtle); color: var(--gk-primary);">
+                    <i class="fa-solid fa-building text-xl" aria-hidden="true"></i>
+                </div>
+                <div class="min-w-0">
+                    <h2 id="company-name" class="text-lg font-medium truncate" style="color: var(--gk-text-primary);">{{ Company.Name }}</h2>
+                    <p class="text-sm truncate" style="color: var(--gk-text-secondary);">{{ t("customer.company_page.customer_id") }}: <span id="company-customer-id">{{ Company.CustomerID }}</span></p>
+                </div>
+            </div>
+        </div>
+        <div class="gk-card-body">
+            <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <dt class="text-xs font-semibold uppercase tracking-wider" style="color: var(--gk-text-muted);">{{ t("customer.company_page.address") }}</dt>
+                    <dd class="mt-1 text-sm" style="color: var(--gk-text-primary);">
+                        {% if Company.Street or Company.Zip or Company.City or Company.Country %}
+                            {% if Company.Street %}{{ Company.Street }}<br>{% endif %}
+                            {% if Company.Zip or Company.City %}{{ Company.Zip }} {{ Company.City }}<br>{% endif %}
+                            {% if Company.Country %}{{ Company.Country }}{% endif %}
+                        {% else %}
+                            <span style="color: var(--gk-text-muted);">{{ t("customer.company_page.not_set") }}</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-semibold uppercase tracking-wider" style="color: var(--gk-text-muted);">{{ t("customer.company_page.website") }}</dt>
+                    <dd class="mt-1 text-sm">
+                        {% if Company.URL %}
+                            <a href="{{ Company.URL }}" class="gk-link-neon break-all" target="_blank" rel="noopener noreferrer">{{ Company.URL }}</a>
+                        {% else %}
+                            <span style="color: var(--gk-text-muted);">{{ t("customer.company_page.not_set") }}</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-semibold uppercase tracking-wider" style="color: var(--gk-text-muted);">{{ t("customer.nav.company_users") }}</dt>
+                    <dd class="mt-1 text-sm" style="color: var(--gk-text-primary);">
+                        <a href="/customer/company/users" class="gk-link-neon" id="company-user-count">{{ t("customer.company_page.user_count", UserCount) }}</a>
+                    </dd>
+                </div>
+            </dl>
+        </div>
     </div>
+    {% else %}
+    <div class="gk-card-glow p-6" id="company-none">
+        <p style="color: var(--gk-text-secondary);">{{ t("customer.company_page.no_company") }}</p>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

@@ -108,29 +108,3 @@ func TestEnsurePendingTime(t *testing.T) {
 		})
 	}
 }
-
-func TestIsPendingStateType(t *testing.T) {
-	tests := []struct {
-		name   string
-		typeID int
-		want   bool
-	}{
-		{"type 1 (new) is not pending", 1, false},
-		{"type 2 (open) is not pending", 2, false},
-		{"type 3 (closed) is not pending", 3, false},
-		{"type 4 (pending reminder) is pending", 4, true},
-		{"type 5 (pending auto) is pending", 5, true},
-		{"type 6 is not pending", 6, false},
-		{"type 0 is not pending", 0, false},
-		{"negative type is not pending", -1, false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := IsPendingStateType(tt.typeID)
-			if got != tt.want {
-				t.Errorf("IsPendingStateType(%d) = %v, want %v", tt.typeID, got, tt.want)
-			}
-		})
-	}
-}

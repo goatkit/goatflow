@@ -4,17 +4,15 @@ package e2e
 
 import (
 	"net/http"
-	"os"
 	"testing"
 	"time"
+
+	"github.com/goatkit/goatflow/tests/e2e/config"
 )
 
 // TestConnectivity verifies we can reach the backend
 func TestConnectivity(t *testing.T) {
-	baseURL := os.Getenv("BASE_URL")
-	if baseURL == "" {
-		baseURL = "http://localhost:8080"
-	}
+	baseURL := config.GetConfig().BaseURL
 
 	client := &http.Client{
 		Timeout: 10 * time.Second,

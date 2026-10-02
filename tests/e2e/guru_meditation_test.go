@@ -299,59 +299,66 @@ func TestGuruMeditationStyling(t *testing.T) {
 	})
 }
 
+// TestAllDialogsHaveErrorHandling submits a rejected entry in the admin create
+// dialogs and checks the server's error is shown in the still-open dialog.
 func TestAllDialogsHaveErrorHandling(t *testing.T) {
 	browser := helpers.NewBrowserHelper(t)
-	err := browser.Setup()
-	require.NoError(t, err, "Failed to setup browser")
+	require.NoError(t, browser.Setup(), "Failed to setup browser")
 	defer browser.TearDown()
+	require.NoError(t, helpers.NewAuthHelper(browser).LoginAsAdmin())
+	page := browser.Page
+	visible := playwright.LocatorWaitForOptions{State: playwright.WaitForSelectorStateVisible}
 
-	auth := helpers.NewAuthHelper(browser)
-	err = auth.LoginAsAdmin()
-	require.NoError(t, err)
+	t.Run("Groups modal shows a duplicate name error", func(t *testing.T) {
+		require.NoError(t, browser.NavigateTo("/admin/groups"))
+		require.NoError(t, page.Locator("button:has-text('Add Group')").Click())
+		modal := page.Locator("#groupModal")
+		require.NoError(t, modal.WaitFor(visible))
 
-	t.Run("Groups modal has error handling", func(t *testing.T) {
-		err := browser.NavigateTo("/admin/groups")
+		// The OTRS "admin" group always exists.
+		require.NoError(t, page.Locator("#groupName").Fill("admin"))
+		require.NoError(t, modal.Locator("button[type='submit']").Click())
+		require.NoError(t, page.Locator("#formError").WaitFor(visible), "the duplicate name error should be shown")
+		msg, err := page.Locator("#errorMessage").TextContent()
 		require.NoError(t, err)
-		time.Sleep(2 * time.Second)
-
-		// Open modal
-		addButton := browser.Page.Locator("button:has-text('Add Group')")
-		err = addButton.Click()
+		assert.Equal(t, "Group with this name already exists", strings.TrimSpace(msg))
+		open, err := modal.IsVisible()
 		require.NoError(t, err)
-		time.Sleep(1 * time.Second)
-
-		// Check for error display element in modal
-		formError := browser.Page.Locator("#formError")
-		errorExists, _ := formError.Count()
-		assert.Equal(t, 1, errorExists, "Groups modal should have error display element")
-
-		// Close modal
-		closeButton := browser.Page.Locator("button:has-text('Cancel')")
-		closeButton.Click()
+		assert.True(t, open, "the dialog stays open so the name can be corrected")
 	})
 
-	t.Run("Users modal has error handling", func(t *testing.T) {
-		err := browser.NavigateTo("/admin/users")
+	t.Run("Users modal shows a duplicate login error", func(t *testing.T) {
+		require.NoError(t, browser.NavigateTo("/admin/users"))
+		require.NoError(t, page.Locator("button[onclick='showAddUserModal()']").Click())
+		modal := page.Locator("#userModal")
+		require.NoError(t, modal.WaitFor(visible))
+
+		// The admin the suite logs in with always exists.
+		require.NoError(t, page.Locator("#login").Fill(browser.Config.AdminEmail))
+		require.NoError(t, page.Locator("#firstName").Fill("Duplicate"))
+		require.NoError(t, page.Locator("#lastName").Fill("Login"))
+		// A new user needs a password that meets the policy, or the browser
+		// blocks the submit before the server sees the login.
+		const password = "Duplicate-Login-2026!"
+		require.NoError(t, page.Locator("#password").Fill(password))
+		require.NoError(t, page.Locator("#userConfirmPassword").Fill(password))
+		resp, err := page.ExpectResponse("**/admin/users", func() error {
+			return modal.Locator("button[type='submit']").Click()
+		})
 		require.NoError(t, err)
-		time.Sleep(2 * time.Second)
+		assert.Equal(t, 409, resp.Status())
 
-		// Check if add user button exists
-		addButton := browser.Page.Locator("button:has-text('Add User')")
-		if visible, _ := addButton.IsVisible(); visible {
-			err = addButton.Click()
-			require.NoError(t, err)
-			time.Sleep(1 * time.Second)
-
-			// Check for error display element in modal
-			formError := browser.Page.Locator("#userFormError, #formError, .error-message")
-			errorExists, _ := formError.Count()
-			assert.GreaterOrEqual(t, errorExists, 1, "Users modal should have error display element")
-
-			// Close modal
-			closeButton := browser.Page.Locator("button:has-text('Cancel')")
-			if visible, _ := closeButton.IsVisible(); visible {
-				closeButton.Click()
-			}
-		}
+		alert := modal.Locator(".gk-alert-error")
+		require.NoError(t, alert.WaitFor(visible), "the duplicate login error should be shown in the dialog")
+		msg, err := alert.TextContent()
+		require.NoError(t, err)
+		assert.Equal(t, "A user with this login already exists. Please choose a different login.", strings.TrimSpace(msg))
+		focused, err := page.Locator("#login").Evaluate("el => el === document.activeElement", nil)
+		require.NoError(t, err)
+		assert.Equal(t, true, focused, "the login field is focused for correction")
+		// The base layout always contains the (hidden) Guru Meditation box.
+		guru, err := page.Locator("#guru-meditation:visible").Count()
+		require.NoError(t, err)
+		assert.Equal(t, 0, guru, "a rejected login is not a system failure")
 	})
 }

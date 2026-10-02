@@ -2,7 +2,7 @@ package api
 
 import (
 	"database/sql"
-	"net/http"
+	"errors"
 
 	"github.com/flosch/pongo2/v6"
 
@@ -19,42 +19,39 @@ func (s mfaStatus) Enabled() bool {
 	return s.TOTPEnabled || s.WebAuthnEnabled
 }
 
-func agentMFAStatus(db *sql.DB, r *http.Request, userID int) mfaStatus {
-	status := mfaStatus{}
+var errMFAStatusNoDatabase = errors.New("second-factor status: database unavailable")
+
+// agentMFAStatus reads an agent's second-factor setup. Any lookup failure is
+// returned: login gates must fail closed rather than skip the second factor.
+func agentMFAStatus(db *sql.DB, userID int) (mfaStatus, error) {
 	if db == nil {
-		return status
+		return mfaStatus{}, errMFAStatusNoDatabase
 	}
-	totpService := service.NewTOTPService(db, "GoatFlow")
-	status.TOTPEnabled = totpService.IsEnabled(userID)
-	status.RecoveryCodes = totpService.GetRemainingRecoveryCodes(userID)
-	wa, err := service.NewWebAuthnService(db, r)
-	if err == nil && wa != nil {
-		status.WebAuthnEnabled = wa.IsEnabled(service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(userID))
+	totp, codes, err := service.NewTOTPService(db, "GoatFlow").LoginStatus(userID)
+	if err != nil {
+		return mfaStatus{}, err
 	}
-	return status
+	passkeys, err := service.CountWebAuthnCredentials(db, service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(userID))
+	if err != nil {
+		return mfaStatus{}, err
+	}
+	return mfaStatus{TOTPEnabled: totp, WebAuthnEnabled: passkeys > 0, RecoveryCodes: codes}, nil
 }
 
-func customerMFAStatus(db *sql.DB, r *http.Request, login string) mfaStatus {
-	status := mfaStatus{}
+// customerMFAStatus is agentMFAStatus for a customer account.
+func customerMFAStatus(db *sql.DB, login string) (mfaStatus, error) {
 	if db == nil {
-		return status
+		return mfaStatus{}, errMFAStatusNoDatabase
 	}
-	totpService := service.NewTOTPService(db, "GoatFlow")
-	status.TOTPEnabled = totpService.IsEnabledForCustomer(login)
-	status.RecoveryCodes = totpService.GetRemainingRecoveryCodesForCustomer(login)
-	wa, err := service.NewWebAuthnService(db, r)
-	if err == nil && wa != nil {
-		status.WebAuthnEnabled = wa.IsEnabled(service.WebAuthnUserTypeCustomer, login)
+	totp, codes, err := service.NewTOTPService(db, "GoatFlow").LoginStatusForCustomer(login)
+	if err != nil {
+		return mfaStatus{}, err
 	}
-	return status
-}
-
-func isAgentMFAEnabled(db *sql.DB, r *http.Request, userID int) bool {
-	return agentMFAStatus(db, r, userID).Enabled()
-}
-
-func isCustomerMFAEnabled(db *sql.DB, r *http.Request, login string) bool {
-	return customerMFAStatus(db, r, login).Enabled()
+	passkeys, err := service.CountWebAuthnCredentials(db, service.WebAuthnUserTypeCustomer, login)
+	if err != nil {
+		return mfaStatus{}, err
+	}
+	return mfaStatus{TOTPEnabled: totp, WebAuthnEnabled: passkeys > 0, RecoveryCodes: codes}, nil
 }
 
 // mfaLoginPageContext decides what the second-step login page offers. A

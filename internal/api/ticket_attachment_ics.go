@@ -1,14 +1,9 @@
 package api
 
 import (
-	"context"
 	"fmt"
-	"io"
 	"strings"
 	"time"
-
-	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/service"
 )
 
 // icsEvent holds the display fields of one VEVENT.
@@ -207,51 +202,6 @@ func unescapeICS(s string) string {
 		}
 	}
 	return b.String()
-}
-
-// loadAttachmentContent returns the stored bytes for an attachment, mirroring
-// the raw-serve fallback chain: DB column, storage service, local file.
-func loadAttachmentContent(ctx context.Context, ticketID, attID int) []byte {
-	db := attachmentsDB()
-	if db == nil {
-		return nil
-	}
-	var contentType string
-	var content []byte
-	var articleID int
-	row := db.QueryRow(database.ConvertPlaceholders(`
-		SELECT COALESCE(att.content_type,''), att.content, att.article_id
-		FROM article_data_mime_attachment att
-		JOIN article a ON a.id = att.article_id
-		WHERE att.id = ? AND a.ticket_id = ? LIMIT 1`), attID, ticketID)
-	if err := row.Scan(&contentType, &content, &articleID); err != nil {
-		return nil
-	}
-	if len(content) == 0 {
-		if ss := GetStorageService(); ss != nil {
-			var filename string
-			if err := db.QueryRow(database.ConvertPlaceholders(
-				`SELECT att.filename FROM article_data_mime_attachment att WHERE att.id = ? AND a.ticket_id = ?`), attID, ticketID).Scan(&filename); err == nil {
-				sp := service.GenerateOTRSStoragePath(ticketID, articleID, filename)
-				if rc, rerr := ss.Retrieve(ctx, sp); rerr == nil {
-					defer rc.Close()
-					if buf, berr := io.ReadAll(rc); berr == nil {
-						content = buf
-					}
-				}
-			}
-		}
-		if len(content) == 0 {
-			var filename string
-			if err := db.QueryRow(database.ConvertPlaceholders(
-				`SELECT att.filename FROM article_data_mime_attachment att WHERE att.id = ?`), attID).Scan(&filename); err == nil {
-				if buf, ok := findLocalStoredAttachmentBytes(ticketID, filename); ok {
-					content = buf
-				}
-			}
-		}
-	}
-	return content
 }
 
 // isICSSignalled reports whether the attachment should be treated as a

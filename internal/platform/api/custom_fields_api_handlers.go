@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -81,6 +82,9 @@ func handleAPIGetCustomFieldValues(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid entity type"})
 		return
 	}
+	if access := customFieldAccessOrAbort(c); access == nil || !access.checkOrAbort(entityType, objectID, false) {
+		return
+	}
 
 	repo, err := customfields.NewRepository()
 	if err != nil {
@@ -117,6 +121,9 @@ func handleAPISetCustomFieldValues(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if access := customFieldAccessOrAbort(c); access == nil || !access.checkOrAbort(entityType, objectID, true) {
 		return
 	}
 
@@ -166,6 +173,10 @@ func handleAPIQueryCustomFields(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid entity type"})
 		return
 	}
+	access := customFieldAccessOrAbort(c)
+	if access == nil {
+		return
+	}
 
 	repo, err := customfields.NewRepository()
 	if err != nil {
@@ -176,6 +187,11 @@ func handleAPIQueryCustomFields(c *gin.Context) {
 	ids, err := repo.QueryByFields(req.EntityType, req.Filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if ids, err = access.readable(req.EntityType, ids); err != nil {
+		log.Printf("custom field query permission filter: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check permissions"})
 		return
 	}
 

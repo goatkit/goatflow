@@ -71,6 +71,7 @@ type ProdHostAPI struct {
 	SSEBroker        *SSEBroker         // For publishing SSE events to browsers
 	thumbnailService ThumbnailGenerator // For image thumbnail generation
 	pdfRenderer      PdfRenderer        // For markdown-to-PDF rendering
+	attachments      ArticleAttachmentStore
 }
 
 // ThumbnailGenerator generates thumbnails from image data.

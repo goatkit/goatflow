@@ -467,7 +467,7 @@ function deleteState() {
     fetch(`/admin/states/${deleteStateId}/delete`, {
         method: 'DELETE'
     })
-
+    .then(response => response.json())
     .then(result => {
         if (result.success) {
             showSuccess('{{ t("messages.state_deleted")|default:"State deleted successfully" }}');

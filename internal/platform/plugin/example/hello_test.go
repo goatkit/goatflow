@@ -37,8 +37,10 @@ func (m *mockHostAPI) Log(ctx context.Context, level, message string, fields map
 	m.logs = append(m.logs, message)
 }
 func (m *mockHostAPI) ConfigGet(ctx context.Context, key string) (string, error) { return "", nil }
+
+// Translate mirrors ProdHostAPI for a key with no loaded translation: it echoes the key.
 func (m *mockHostAPI) Translate(ctx context.Context, key string, args ...any) string {
-	return ""
+	return key
 }
 func (m *mockHostAPI) CallPlugin(ctx context.Context, pluginName, function string, args json.RawMessage) (json.RawMessage, error) {
 	return nil, nil
@@ -131,8 +133,8 @@ func TestHelloPlugin(t *testing.T) {
 		if !ok {
 			t.Fatal("response should have 'message'")
 		}
-		if msg == "" {
-			t.Error("message should not be empty")
+		if msg != "Hello, TestUser!" {
+			t.Errorf("untranslated greeting should fall back to English, got %q", msg)
 		}
 	})
 
@@ -148,8 +150,8 @@ func TestHelloPlugin(t *testing.T) {
 
 		msg := response["message"].(string)
 		// Should use default name
-		if msg == "" {
-			t.Error("message should not be empty")
+		if msg != "Hello, World!" {
+			t.Errorf("expected default-name greeting, got %q", msg)
 		}
 	})
 

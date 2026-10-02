@@ -11,6 +11,7 @@ spec:
     prefix: /api/v1/tokens
     middleware:
         - unified_auth
+        - agent
     routes:
         - path: /
           method: GET
@@ -102,6 +103,7 @@ spec:
     prefix: /customer/api/v1/tokens
     middleware:
         - unified_auth
+        - customer
     routes:
         - path: /
           method: GET

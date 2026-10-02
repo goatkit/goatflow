@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -112,6 +113,7 @@ func (s *MySQLService) GetDB() *sql.DB {
 
 	if db == nil {
 		if err := s.Connect(context.Background()); err != nil {
+			log.Printf("database: mysql connect failed: %v", err)
 			return nil
 		}
 		s.mu.RLock()
@@ -226,20 +228,6 @@ func (s *MySQLService) Query(ctx context.Context, query string, args ...interfac
 
 	// sql-converted: DatabaseService pass-through; callers own conversion (platform/database imports this package, so it cannot convert here)
 	return db.QueryContext(ctx, query, args...)
-}
-
-// QueryRow executes a query that returns at most one row.
-func (s *MySQLService) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	s.mu.RLock()
-	db := s.db
-	s.mu.RUnlock()
-
-	if db == nil {
-		return nil
-	}
-
-	// sql-converted: DatabaseService pass-through; callers own conversion
-	return db.QueryRowContext(ctx, query, args...)
 }
 
 // Exec executes a query without returning any rows.

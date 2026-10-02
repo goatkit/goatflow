@@ -72,89 +72,60 @@ func cleanupTestServiceByName(t *testing.T, name string) {
 
 func TestAdminServicePage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	setupTemplateRenderer(t)
+	db := getTestDB(t)
 
-	t.Run("GET /admin/services renders service page", func(t *testing.T) {
+	suffix := fmt.Sprint(time.Now().UnixNano())
+	alpha := "PageServiceAlpha" + suffix
+	beta := "PageServiceBeta" + suffix
+	_, ok := createAdminTestService(t, alpha)
+	require.True(t, ok)
+	betaID, ok := createAdminTestService(t, beta)
+	require.True(t, ok)
+	_, err := db.Exec(database.ConvertPlaceholders("UPDATE service SET valid_id = 2 WHERE id = ?"), betaID)
+	require.NoError(t, err)
+
+	get := func(path string) *httptest.ResponseRecorder {
 		router := setupServiceTestRouter()
-
-		req := httptest.NewRequest(http.MethodGet, "/admin/services", nil)
+		req := httptest.NewRequest(http.MethodGet, path, nil)
 		w := httptest.NewRecorder()
-
 		router.ServeHTTP(w, req)
+		return w
+	}
 
-		// Accept either HTML page or JSON error depending on environment
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError)
-		body := w.Body.String()
-		if w.Code == http.StatusOK {
-			assert.Contains(t, body, "Service")
-		}
+	t.Run("GET /admin/services lists services from the database", func(t *testing.T) {
+		w := get("/admin/services")
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), alpha)
+		assert.Contains(t, w.Body.String(), beta)
 	})
 
 	t.Run("GET /admin/services with search filters results", func(t *testing.T) {
-		router := setupServiceTestRouter()
-
-		req := httptest.NewRequest(http.MethodGet, "/admin/services?search=incident", nil)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		// Accept OK or error depending on environment
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError)
+		w := get("/admin/services?search=" + url.QueryEscape(alpha))
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), alpha)
+		assert.NotContains(t, w.Body.String(), beta)
 	})
 
 	t.Run("GET /admin/services with sort and order", func(t *testing.T) {
-		router := setupServiceTestRouter()
-
-		req := httptest.NewRequest(http.MethodGet, "/admin/services?sort=name&order=desc", nil)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError)
+		w := get("/admin/services?sort=name&order=desc")
+		require.Equal(t, http.StatusOK, w.Code)
+		body := w.Body.String()
+		require.Contains(t, body, alpha)
+		require.Contains(t, body, beta)
+		assert.Less(t, strings.Index(body, beta), strings.Index(body, alpha))
 	})
 
 	t.Run("GET /admin/services with validity filter", func(t *testing.T) {
-		router := setupServiceTestRouter()
+		w := get("/admin/services?valid=valid")
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), alpha)
+		assert.NotContains(t, w.Body.String(), beta)
 
-		req := httptest.NewRequest(http.MethodGet, "/admin/services?validity=1", nil)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError)
-	})
-
-	t.Run("Page contains service table structure", func(t *testing.T) {
-		router := setupServiceTestRouter()
-
-		req := httptest.NewRequest(http.MethodGet, "/admin/services", nil)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		if w.Code == http.StatusOK {
-			body := w.Body.String()
-			// In test mode without DB, fallback template may not have full structure
-			// Accept either full template or fallback
-			assert.True(t, strings.Contains(body, "<table") || strings.Contains(body, "Service"),
-				"Page should contain either table structure or Service text")
-		}
-	})
-
-	t.Run("Page contains service modal form", func(t *testing.T) {
-		router := setupServiceTestRouter()
-
-		req := httptest.NewRequest(http.MethodGet, "/admin/services", nil)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		if w.Code == http.StatusOK {
-			body := w.Body.String()
-			// In test mode without DB, fallback template may not have full structure
-			// Accept either full template or fallback
-			assert.True(t, strings.Contains(body, "serviceForm") || strings.Contains(body, "Add New Service"),
-				"Page should contain either serviceForm or Add New Service button")
-		}
+		w = get("/admin/services?valid=invalid")
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.NotContains(t, w.Body.String(), alpha)
+		assert.Contains(t, w.Body.String(), beta)
 	})
 }
 
@@ -392,7 +363,8 @@ func TestAdminServiceUpdate(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		assert.True(t, w.Code == http.StatusNotFound || w.Code == http.StatusInternalServerError)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		assert.JSONEq(t, `{"success":false,"message":"Service not found"}`, w.Body.String())
 	})
 
 	t.Run("PUT /admin/services/:id/update with invalid ID", func(t *testing.T) {
@@ -403,9 +375,7 @@ func TestAdminServiceUpdate(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		// Handler may return 400 Bad Request or handle gracefully
-		assert.True(t, w.Code == http.StatusBadRequest || w.Code == http.StatusOK || w.Code == http.StatusInternalServerError,
-			"Expected error response for invalid ID, got %d", w.Code)
+		assert.JSONEq(t, `{"success":false,"message":"Invalid service ID"}`, w.Body.String())
 	})
 
 	t.Run("PUT /admin/services/:id/update toggles validity", func(t *testing.T) {
@@ -492,7 +462,7 @@ func TestAdminServiceDelete(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		assert.True(t, w.Code == http.StatusNotFound || w.Code == http.StatusOK)
+		assert.JSONEq(t, `{"success":false,"message":"Service not found"}`, w.Body.String())
 	})
 
 	t.Run("DELETE /admin/services/:id/delete with invalid ID", func(t *testing.T) {
@@ -503,9 +473,7 @@ func TestAdminServiceDelete(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		// Handler may return 400 Bad Request or handle gracefully
-		assert.True(t, w.Code == http.StatusBadRequest || w.Code == http.StatusOK || w.Code == http.StatusInternalServerError,
-			"Expected error response for invalid ID, got %d", w.Code)
+		assert.JSONEq(t, `{"success":false,"message":"Invalid service ID"}`, w.Body.String())
 	})
 }
 

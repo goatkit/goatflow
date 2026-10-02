@@ -11,6 +11,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/apierrors"
 	"github.com/goatkit/goatflow/internal/platform/auth"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
 
@@ -59,47 +60,8 @@ func APITokenAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		if tokenVerifier == nil {
-			apierrors.Error(c, apierrors.CodeServiceUnavailable)
-			c.Abort()
-			return
-		}
-
-		// Verify the token
-		apiToken, err := tokenVerifier.VerifyToken(c.Request.Context(), token)
-		if err != nil {
-			errMsg := err.Error()
-			switch {
-			case strings.Contains(errMsg, "expired"):
-				apierrors.Error(c, apierrors.CodeTokenExpired)
-			case strings.Contains(errMsg, "revoked"):
-				apierrors.Error(c, apierrors.CodeTokenRevoked)
-			default:
-				apierrors.Error(c, apierrors.CodeInvalidToken)
-			}
-			c.Abort()
-			return
-		}
-
-		// Update last used asynchronously
-		go func() {
-			_ = tokenVerifier.UpdateLastUsed(c.Request.Context(), apiToken.ID, c.ClientIP())
-		}()
-
-		// Set user context
-		c.Set("user_id", apiToken.UserID)
-		c.Set("api_token", apiToken)
-		c.Set("api_token_id", apiToken.ID)
-		c.Set("api_token_scopes", apiToken.Scopes)
-
-		if apiToken.UserType == platformmodels.APITokenUserAgent {
-			c.Set("user_role", "User")
-		} else {
-			c.Set("user_role", "Customer")
-			c.Set("customer_user_id", apiToken.UserID)
-		}
-
-		c.Next()
+		// Same context as unified_auth (admin flag, customer login, ...).
+		authenticateAPIToken(c, token)
 	}
 }
 
@@ -173,19 +135,42 @@ func authenticateAPIToken(c *gin.Context, token string) {
 
 	if apiToken.UserType == platformmodels.APITokenUserAgent {
 		c.Set("user_role", "User")
-		// Admin tokens (wildcard or admin:* scopes) pass RequireAdmin checks.
-		if apiToken.HasScope("*") || apiToken.HasScope("admin:*") {
+		// A token passes admin checks only when it carries the admin scope
+		// ('*', 'admin:*' or no scopes = inherit) AND its owner is an admin
+		// right now. Scope alone is not enough: every agent can mint an
+		// unscoped token, and HasScope is true for unscoped tokens.
+		if apiToken.HasScope("admin:*") && tokenOwnerIsAdmin(c, apiToken.UserID) {
 			c.Set("isInAdminGroup", true)
 		}
 	} else {
 		c.Set("user_role", "Customer")
+		c.Set("is_customer", true)
 		c.Set("customer_user_id", apiToken.UserID)
-		if apiToken.CustomerLogin != "" {
-			c.Set("customer_login", apiToken.CustomerLogin)
+		login := apiToken.CustomerLogin
+		if login == "" {
+			login = customerLoginByID(c, apiToken.UserID)
+		}
+		if login != "" {
+			c.Set("customer_login", login)
 		}
 	}
 
 	c.Next()
+}
+
+// customerLoginByID returns the login of customer_user id, or "" if unknown.
+// Ownership checks compare ticket.customer_user_id with this login.
+func customerLoginByID(c *gin.Context, id int) string {
+	db, err := database.GetDB()
+	if err != nil || db == nil || id <= 0 {
+		return ""
+	}
+	var login string
+	if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(
+		`SELECT login FROM customer_user WHERE id = ?`), id).Scan(&login); err != nil {
+		return ""
+	}
+	return login
 }
 
 // authenticateJWT handles standard JWT token authentication
@@ -204,8 +189,27 @@ func authenticateJWT(c *gin.Context, token string, jwtManager interface {
 	c.Set("user_role", claims.Role)
 	c.Set("claims", claims)
 	c.Set("isInAdminGroup", claims.IsAdmin)
+	c.Set("username", claims.Login)
+	c.Set("is_customer", claims.Role == "Customer")
+	if claims.Role == "Customer" {
+		c.Set("customer_login", claims.Login)
+	}
 
 	c.Next()
+}
+
+// tokenOwnerIsAdmin reports whether the agent owning an API token is
+// currently an admin. Any lookup failure counts as not admin.
+func tokenOwnerIsAdmin(c *gin.Context, userID int) bool {
+	if userID <= 0 || queueAccessCheckerFactory == nil {
+		return false
+	}
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		return false
+	}
+	isAdmin, err := queueAccessCheckerFactory(db).IsAdmin(c.Request.Context(), uint(userID))
+	return err == nil && isAdmin
 }
 
 // RequireScope middleware checks that the API token has the required scope.

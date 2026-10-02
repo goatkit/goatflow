@@ -29,6 +29,86 @@ func setupSvcTestDB(t *testing.T) (*service.SetupAssistantService, string) {
 	return svc, fmt.Sprintf("_setup_%d", time.Now().UnixNano()%100000)
 }
 
+// deleteAtEnd runs query with arg when the test ends, failing the test on error.
+func deleteAtEnd(t *testing.T, query string, arg any) {
+	t.Helper()
+	t.Cleanup(func() { execCleanup(t, query, arg) })
+}
+
+func execCleanup(t *testing.T, query string, arg any) {
+	t.Helper()
+	db, err := database.GetDB()
+	if err != nil {
+		t.Errorf("cleanup %v: %v", arg, err)
+		return
+	}
+	if _, err := db.Exec(database.ConvertPlaceholders(query), arg); err != nil {
+		t.Errorf("cleanup %v: %s: %v", arg, query, err)
+	}
+}
+
+// cleanupBusinessHoursAtEnd deletes a business-hours calendar created by the
+// setup assistant and its timezone setting.
+func cleanupBusinessHoursAtEnd(t *testing.T, name string) {
+	t.Helper()
+	t.Cleanup(func() {
+		execCleanup(t, `DELETE FROM calendar WHERE name = ?`, name)
+		execCleanup(t, `DELETE FROM sysconfig_default WHERE name = ?`, "BusinessHours."+name+".Timezone")
+	})
+}
+
+// customerCompanyCleanup deletes a customer company with its portal users and
+// managing-team links (argument: customer_id).
+var customerCompanyCleanup = []string{
+	`DELETE FROM customer_user WHERE customer_id = ?`,
+	`DELETE FROM group_customer WHERE customer_id = ?`,
+	`DELETE FROM customer_company WHERE customer_id = ?`,
+}
+
+// cleanupCustomerCompanyAtEnd deletes a customer company created by the test.
+func cleanupCustomerCompanyAtEnd(t *testing.T, customerID string) {
+	t.Helper()
+	t.Cleanup(func() {
+		for _, q := range customerCompanyCleanup {
+			execCleanup(t, q, customerID)
+		}
+	})
+}
+
+// cleanupOnboardingAtEnd deletes everything OnboardCustomer reports in res
+// when the test ends: the mailbox and the queue created for it, the service
+// with its SLA and user links, the company with its users and team links, and
+// the managing team created for it. Call it right after OnboardCustomer, also
+// when onboarding failed part-way.
+func cleanupOnboardingAtEnd(t *testing.T, res *service.OnboardCustomerResult) {
+	t.Helper()
+	t.Cleanup(func() {
+		if res.MailAccountID > 0 {
+			execCleanup(t, `DELETE FROM mail_account WHERE id = ?`, res.MailAccountID)
+		}
+		if res.CreatedQueueID > 0 {
+			deleteIsolatedRows(t, res.CreatedQueueID, queueCleanup)
+		}
+		if res.ServiceID > 0 {
+			for _, q := range []string{
+				`DELETE FROM service_customer_user WHERE service_id = ?`,
+				`DELETE FROM service_sla WHERE service_id = ?`,
+				`DELETE FROM service WHERE id = ?`,
+			} {
+				execCleanup(t, q, res.ServiceID)
+			}
+		}
+		if res.CustomerID != "" {
+			for _, q := range customerCompanyCleanup {
+				execCleanup(t, q, res.CustomerID)
+			}
+		}
+		if res.CreatedGroupID > 0 {
+			deleteIsolatedRows(t, res.CreatedGroupID, groupCleanup)
+		}
+	})
+}
+
 func TestSetupAssistant_Recce(t *testing.T) {
 	svc, _ := setupSvcTestDB(t)
 	snap, err := svc.Recce(context.Background())
@@ -44,9 +124,7 @@ func TestSetupAssistant_CreateGroup(t *testing.T) {
 	svc, sfx := setupSvcTestDB(t)
 	ctx := context.Background()
 	name := "SetupTestTeam" + sfx
-	t.Cleanup(func() {
-		_, _ = database.GetDB() //nolint:errcheck
-	})
+	cleanupGroupByNameAtEnd(t, name)
 
 	id, err := svc.CreateGroup(ctx, name, "created by setup test", 1)
 	require.NoError(t, err)
@@ -67,11 +145,13 @@ func TestSetupAssistant_ExecuteWizard(t *testing.T) {
 	ctx := context.Background()
 	team := "WizardTeam" + sfx
 	queue := "WizardQueue" + sfx
+	cleanupGroupByNameAtEnd(t, team)
+	cleanupQueueByNameAtEnd(t, queue)
 
 	res := svc.ExecuteWizard(ctx, service.WizardRequest{
 		Groups: []service.GroupInput{{Name: team}},
-		// group_ids: [1] is a 1-based index into the just-created groups → resolves to the team above.
-		Queues: []service.QueueInput{{Name: queue, GroupIDs: []int{1}}},
+		// group_id: 1 is a 1-based index into the just-created groups → resolves to the team above.
+		Queues: []service.QueueInput{{Name: queue, GroupID: 1}},
 	})
 	require.True(t, res.Success, "wizard should succeed, got error: %v", res.Error)
 	require.NotEmpty(t, res.Created)
@@ -84,25 +164,34 @@ func TestSetupAssistant_ExecuteWizard(t *testing.T) {
 	assert.Equal(t, "group", kinds[0])
 	assert.Contains(t, kinds, "queue")
 
-	// The queue exists in the DB and references the created group.
+	// The queue exists in the DB and is owned by the created team.
+	var teamID int
+	for _, c := range res.Created {
+		if c.Kind == "group" && c.Name == team {
+			teamID = c.ID
+		}
+	}
+	require.Greater(t, teamID, 0)
 	db, _ := database.GetDB()
 	var qID, qGroup int
 	err := db.QueryRow(database.ConvertPlaceholders(
 		"SELECT id, group_id FROM queue WHERE name = ?"), queue).Scan(&qID, &qGroup)
 	require.NoError(t, err)
 	assert.Greater(t, qID, 0)
-	assert.Greater(t, qGroup, 0, "queue.group_id must be the created team's id")
+	assert.Equal(t, teamID, qGroup, "queue.group_id must be the created team's id")
 }
 
 func TestSetupAssistant_ExecuteWizard_PartialFailure(t *testing.T) {
-	svc, _ := setupSvcTestDB(t)
+	svc, sfx := setupSvcTestDB(t)
 	ctx := context.Background()
+	okGroup := "PartialOK" + sfx
+	cleanupGroupByNameAtEnd(t, okGroup)
 
 	// First group valid, second invalid → wizard stops at the second, reports
 	// the error, and lists the first as created.
 	res := svc.ExecuteWizard(ctx, service.WizardRequest{
 		Groups: []service.GroupInput{
-			{Name: "PartialOK_" + fmt.Sprint(time.Now().UnixNano()%100000)},
+			{Name: okGroup},
 			{Name: "   "}, // invalid
 		},
 	})
@@ -164,6 +253,7 @@ func TestSetupAssistant_OnboardCustomer(t *testing.T) {
 			{Login: "bob" + sfx, Email: "bob" + sfx + "@example.com", FirstName: "Bob", LastName: "B"},
 		},
 	})
+	cleanupOnboardingAtEnd(t, res)
 	require.True(t, res.Success, "onboarding should succeed, got error: %v", res.Error)
 	assert.Equal(t, cid, res.CustomerID)
 	require.Len(t, res.UsersCreated, 2)
@@ -202,6 +292,7 @@ func TestSetupAssistant_OnboardCustomer_SuggestsID(t *testing.T) {
 	res := svc.OnboardCustomer(ctx, service.OnboardCustomerRequest{
 		Name: "Suggested ID Co " + sfx,
 	})
+	cleanupOnboardingAtEnd(t, res)
 	require.True(t, res.Success, res.Error)
 	assert.Equal(t, service.SuggestCustomerID("Suggested ID Co "+sfx), res.CustomerID)
 	assert.NotEmpty(t, res.CustomerID)
@@ -219,14 +310,15 @@ func TestSetupAssistant_OnboardCustomer_WithMailAndGroups(t *testing.T) {
 	require.Greater(t, queueID, 0, "test DB needs at least one active queue")
 
 	res := svc.OnboardCustomer(ctx, service.OnboardCustomerRequest{
-		CustomerID: cid,
-		Name:       "Mail Co " + sfx,
+		CustomerID:       cid,
+		Name:             "Mail Co " + sfx,
 		ManagingGroupIDs: []int{1},
 		MailAccount: &service.MailAccountInput{
 			Login: "support" + sfx + "@example.com", Password: "mailboxpass",
 			Host: "imap.example.com", AccountType: "IMAP", QueueID: queueID,
 		},
 	})
+	cleanupOnboardingAtEnd(t, res)
 	require.True(t, res.Success, "onboarding should succeed, got: %v", res.Error)
 	assert.Greater(t, res.MailAccountID, 0)
 	assert.Equal(t, []int{1}, res.ManagingGroupIDs)
@@ -259,6 +351,7 @@ func TestSetupAssistant_OnboardCustomer_CreateQueueForMailbox(t *testing.T) {
 			CreateQueueName: "Auto Queue " + sfx, CreateQueueGroupID: 1,
 		},
 	})
+	cleanupOnboardingAtEnd(t, res)
 	require.True(t, res.Success, "onboarding should succeed, got: %v", res.Error)
 	assert.Greater(t, res.MailAccountID, 0)
 	assert.Greater(t, res.CreatedQueueID, 0, "a new queue should have been created")
@@ -286,10 +379,11 @@ func TestSetupAssistant_OnboardCustomer_CreateManagingTeam(t *testing.T) {
 	teamName := "MGT Support " + sfx
 
 	res := svc.OnboardCustomer(ctx, service.OnboardCustomerRequest{
-		CustomerID:             cid,
-		Name:                   "MGT Co " + sfx,
+		CustomerID:              cid,
+		Name:                    "MGT Co " + sfx,
 		CreateManagingGroupName: teamName,
 	})
+	cleanupOnboardingAtEnd(t, res)
 	require.True(t, res.Success, "onboarding should succeed, got: %v", res.Error)
 	require.Greater(t, res.CreatedGroupID, 0, "a new team should have been created")
 	assert.Equal(t, teamName, res.CreatedGroupName)

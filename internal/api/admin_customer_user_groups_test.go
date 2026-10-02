@@ -27,7 +27,7 @@ func TestCustomerUserGroupsListPage(t *testing.T) {
 
 	// Setup router
 	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	router := seedAdminRouter()
 	router.GET("/admin/customer-user-groups", handleAdminCustomerUserGroups)
 
 	t.Run("should return 200 for customer user groups page", func(t *testing.T) {
@@ -170,7 +170,7 @@ func TestCustomerUserGroupEditHandler(t *testing.T) {
 	defer cleanupTestCustomerUser(t, db, userLogin)
 
 	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	router := seedAdminRouter()
 	router.GET("/admin/customer-user-groups/user/:id", handleAdminCustomerUserGroupEdit)
 
 	t.Run("should return customer user details and groups", func(t *testing.T) {
@@ -211,7 +211,7 @@ func TestCustomerUserGroupUpdateHandler(t *testing.T) {
 	require.NoError(t, err, "Need at least one valid group for test")
 
 	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	router := seedAdminRouter()
 	router.POST("/admin/customer-user-groups/user/:id", handleAdminCustomerUserGroupUpdate)
 
 	t.Run("should update permissions via form POST", func(t *testing.T) {
@@ -292,7 +292,7 @@ func TestCustomerUserGroupByGroupHandler(t *testing.T) {
 	require.NoError(t, err, "Need at least one valid group for test")
 
 	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	router := seedAdminRouter()
 	router.GET("/admin/customer-user-groups/group/:id", handleAdminCustomerUserGroupByGroup)
 
 	t.Run("should return group details and customer users", func(t *testing.T) {
@@ -327,7 +327,7 @@ func TestCustomerUserGroupGetPermissionsAPI(t *testing.T) {
 	defer cleanupTestCustomerUser(t, db, userLogin)
 
 	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	router := seedAdminRouter()
 	router.GET("/admin/api/customer-user-groups/permissions", handleGetCustomerUserGroupPermissions)
 
 	t.Run("should return permissions for user_login", func(t *testing.T) {

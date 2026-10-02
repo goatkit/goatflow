@@ -1,197 +1,16 @@
 package api
 
 import (
-	"fmt"
-	"log"
 	"net/http"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/services/adapter"
-	"github.com/goatkit/goatflow/internal/repository"
 )
 
 // Admin Users CRUD Handlers
-
-// HandleAdminUsersCreate handles POST /admin/users.
-func HandleAdminUsersCreate(c *gin.Context) {
-	var req struct {
-		Login     string   `json:"login" form:"login"`
-		FirstName string   `json:"first_name" form:"first_name"`
-		LastName  string   `json:"last_name" form:"last_name"`
-		Title     string   `json:"title" form:"title"`
-		Email     string   `json:"email" form:"email"`
-		Password  string   `json:"password" form:"password"`
-		ValidID   int      `json:"valid_id" form:"valid_id"`
-		Groups    []string `json:"groups" form:"groups"`
-	}
-
-	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
-		return
-	}
-
-	login := strings.TrimSpace(req.Login)
-	password := strings.TrimSpace(req.Password)
-	firstName := strings.TrimSpace(req.FirstName)
-	lastName := strings.TrimSpace(req.LastName)
-	title := strings.TrimSpace(req.Title)
-	if login == "" || password == "" || firstName == "" || lastName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required fields"})
-		return
-	}
-
-	validID := req.ValidID
-	if validID == 0 {
-		validID = 1
-	}
-
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
-
-	// Check for existing user with same login
-	var exists bool
-	existsQuery := "SELECT EXISTS(SELECT 1 FROM users WHERE login = ?)"
-	if err := db.QueryRow(database.ConvertPlaceholders(existsQuery), login).Scan(&exists); err == nil && exists {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "User already exists"})
-		return
-	}
-
-	user := &models.User{
-		Login:      login,
-		Email:      login,
-		Password:   "",
-		Title:      title,
-		FirstName:  firstName,
-		LastName:   lastName,
-		ValidID:    validID,
-		CreateBy:   1,
-		ChangeBy:   1,
-		CreateTime: time.Now(),
-		ChangeTime: time.Now(),
-	}
-
-	if err := user.SetPassword(password); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
-		return
-	}
-
-	userRepo := repository.NewUserRepository(db)
-	if err := userRepo.Create(user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to create user: %v", err)})
-		return
-	}
-
-	groupIDs := req.Groups
-	if len(groupIDs) == 0 {
-		groupIDs = c.PostFormArray("groups")
-	}
-
-	if len(groupIDs) > 0 {
-		groupRepo := repository.NewGroupRepository(db)
-		for _, rawID := range groupIDs {
-			idStr := strings.TrimSpace(rawID)
-			if idStr == "" {
-				continue
-			}
-			groupID, convErr := strconv.Atoi(idStr)
-			if convErr != nil {
-				// Cleanup on error - log but don't fail on cleanup errors
-				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = ?"), user.ID); err != nil {
-					log.Printf("cleanup error: %v", err)
-				}
-				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), user.ID); err != nil {
-					log.Printf("cleanup error: %v", err)
-				}
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid group ID"})
-				return
-			}
-			if err := groupRepo.AddUserToGroup(user.ID, uint(groupID)); err != nil {
-				// Cleanup on error - log but don't fail on cleanup errors
-				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = ?"), user.ID); err != nil {
-					log.Printf("cleanup error: %v", err)
-				}
-				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), user.ID); err != nil {
-					log.Printf("cleanup error: %v", err)
-				}
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign groups"})
-				return
-			}
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "User created", "user_id": user.ID})
-}
-
-// HandleAdminUsersUpdate handles PUT /admin/users/:id.
-func HandleAdminUsersUpdate(c *gin.Context) {
-	userID := c.Param("id")
-	id, err := strconv.Atoi(userID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	var req struct {
-		Login     string `json:"login" form:"login"`
-		FirstName string `json:"first_name" form:"first_name"`
-		LastName  string `json:"last_name" form:"last_name"`
-		Email     string `json:"email" form:"email"`
-		ValidID   int    `json:"valid_id" form:"valid_id"`
-	}
-
-	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
-
-	// TODO: Update user
-	_ = db
-	_ = id
-
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "User updated"})
-}
-
-// HandleAdminUsersDelete handles DELETE /admin/users/:id.
-func HandleAdminUsersDelete(c *gin.Context) {
-	userID := c.Param("id")
-	id, err := strconv.Atoi(userID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
-
-	// Soft delete - set valid_id = 2
-	_, err = db.Exec(database.ConvertPlaceholders("UPDATE users SET valid_id = 2 WHERE id = ?"), id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "User deleted"})
-}
-
-// HandleAdminUsersStatus is implemented in admin_users_handlers.go
 
 // HandleAdminUsersList handles GET /admin/users (JSON API).
 func HandleAdminUsersList(c *gin.Context) {
@@ -408,14 +227,34 @@ func HandleAdminGroupsAddUser(c *gin.Context) {
 		return
 	}
 
-	// Add user to group with default 'rw' permission (OTRS schema)
-	_, err = db.Exec(database.ConvertPlaceholders(`
-		INSERT IGNORE INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
-		VALUES (?, ?, 'rw', NOW(), 1, NOW(), 1)
-	`), req.UserID, id)
+	if req.UserID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required"})
+		return
+	}
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
+
+	// group_user has no unique key, so INSERT IGNORE would add a duplicate row on
+	// every call; only grant 'rw' when the user has no 'rw' row in this group yet.
+	var existing int
+	err = db.QueryRow(database.ConvertPlaceholders(`
+		SELECT COUNT(*) FROM group_user WHERE user_id = ? AND group_id = ? AND permission_key = 'rw'
+	`), req.UserID, id).Scan(&existing)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add user to group"})
 		return
+	}
+	if existing == 0 {
+		_, err = db.Exec(database.ConvertPlaceholders(`
+			INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+			VALUES (?, ?, 'rw', CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
+		`), req.UserID, id, actorID, actorID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add user to group"})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "User added to group"})

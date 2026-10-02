@@ -9,62 +9,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/goatkit/goatflow/internal/core"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/storage"
 )
 
 // ArticleRepository handles database operations for articles.
 type ArticleRepository struct {
-	db                        *sql.DB
-	hasArticleTypeID          *bool
-	hasCommunicationChannelID *bool
-	articleColumnCache        map[string]bool
-}
-
-func (r *ArticleRepository) articleColumnExpressions() (string, string, error) {
-	articleTypeExpr := "article_type_id"
-	commChannelExpr := "communication_channel_id"
-
-	hasType, err := r.ensureArticleTypeColumn()
-	if err != nil {
-		return "", "", err
-	}
-	if !hasType {
-		articleTypeExpr = "0"
-	}
-
-	hasComm, err := r.ensureCommunicationChannelColumn()
-	if err != nil {
-		return "", "", err
-	}
-	if !hasComm {
-		commChannelExpr = "0"
-	}
-
-	return articleTypeExpr, commChannelExpr, nil
-}
-
-// hasArticleColumn reports whether the article table has the given column.
-// The column set is read once from an empty result set, which works the same
-// on every driver and only ever sees the connected database.
-func (r *ArticleRepository) hasArticleColumn(column string) (bool, error) {
-	if r.articleColumnCache == nil {
-		rows, err := r.db.Query(database.ConvertPlaceholders(`SELECT * FROM article WHERE 1 = 0`))
-		if err != nil {
-			return false, err
-		}
-		cols, err := rows.Columns()
-		rows.Close()
-		if err != nil {
-			return false, err
-		}
-		cache := make(map[string]bool, len(cols))
-		for _, c := range cols {
-			cache[strings.ToLower(c)] = true
-		}
-		r.articleColumnCache = cache
-	}
-	return r.articleColumnCache[strings.ToLower(column)], nil
+	db *sql.DB
 }
 
 // NewArticleRepository creates a new article repository.
@@ -78,16 +32,16 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 
 	// Set defaults
 	if article.ArticleTypeID == 0 {
-		article.ArticleTypeID = 1 // external email default
+		article.ArticleTypeID = constants.ArticleTypeEmailExternal
 	}
 	if article.SenderTypeID == 0 {
-		article.SenderTypeID = 3 // Customer
+		article.SenderTypeID = constants.ArticleSenderCustomer
 	}
+	// The article type is not stored; it only selects the channel when the
+	// caller did not pick one. is_visible_for_customer is taken as given: 0 is
+	// a meaningful value (internal article), never a "not set" marker.
 	if article.CommunicationChannelID == 0 {
-		article.CommunicationChannelID = 1 // Email
-	}
-	if article.IsVisibleForCustomer == 0 {
-		article.IsVisibleForCustomer = 1 // Visible by default
+		article.CommunicationChannelID = core.MapCommunicationChannel(article.ArticleTypeID)
 	}
 	if article.CreateBy == 0 {
 		article.CreateBy = 1
@@ -103,40 +57,15 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Determine if schema has article_type_id; build INSERT accordingly
-	hasType, derr := r.ensureArticleTypeColumn()
-	if derr != nil {
-		return derr
+	articleQuery := database.ConvertPlaceholders(`
+		INSERT INTO article (
+			ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer,
+			create_time, create_by, change_time, change_by
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`)
+	args := []any{
+		article.TicketID, article.SenderTypeID, article.CommunicationChannelID, article.IsVisibleForCustomer,
+		now, article.CreateBy, now, article.ChangeBy,
 	}
-	// Determine if schema has communication_channel_id
-	hasComm, derr2 := r.ensureCommunicationChannelColumn()
-	if derr2 != nil {
-		return derr2
-	}
-
-	// Build column list and args dynamically to fit actual schema
-	cols := []string{"ticket_id"}
-	args := []interface{}{article.TicketID}
-	if hasType {
-		cols = append(cols, "article_type_id")
-		args = append(args, article.ArticleTypeID)
-	}
-	cols = append(cols, "article_sender_type_id")
-	args = append(args, article.SenderTypeID)
-	if hasComm {
-		cols = append(cols, "communication_channel_id")
-		args = append(args, article.CommunicationChannelID)
-	}
-	cols = append(cols, "is_visible_for_customer", "create_time", "create_by", "change_time", "change_by")
-	args = append(args, article.IsVisibleForCustomer, now, article.CreateBy, now, article.ChangeBy)
-
-	// Build placeholders - use ? and let ConvertPlaceholders handle DB-specific conversion
-	placeholders := make([]string, len(cols))
-	for i := range cols {
-		placeholders[i] = "?"
-	}
-	articleQuery := fmt.Sprintf("INSERT INTO article (%s) VALUES (%s) RETURNING id", strings.Join(cols, ", "), strings.Join(placeholders, ", ")) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-	articleQuery = database.ConvertPlaceholders(articleQuery)
 
 	// Use adapter for database-specific handling
 	adapter := database.GetAdapter()
@@ -152,10 +81,10 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	// Insert into article_data_mime table
 	mimeQuery := database.ConvertPlaceholders(`
 		INSERT INTO article_data_mime (
-			article_id, a_subject, a_body, a_content_type,
+			article_id, a_subject, a_body, a_content_type, content_path,
 			incoming_time, create_time, create_by, change_time, change_by
 		) VALUES (
-			?, ?, ?, ?, ?, ?, ?, ?, ?
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 		)`)
 
 	// Normalize body to string for MySQL TEXT column compatibility
@@ -178,34 +107,13 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 
 	// Handle HTML content securely like OTRS - store HTML in attachment
 	if strings.Contains(contentType, "text/html") && bodyStr != "" {
-		// Create HTML body attachment
-		attachmentQuery := database.ConvertPlaceholders(`
-			INSERT INTO article_data_mime_attachment (
-				article_id, filename, content_type, content_size, content,
-				content_id, content_alternative, disposition,
-				create_time, create_by, change_time, change_by
-			) VALUES (
-				?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-			) RETURNING id`)
-
-		contentSize := len(bodyStr)
-		_, err = adapter.InsertWithReturningTx(
-			tx,
-			attachmentQuery,
-			articleID64,
-			"html-body.html", // Special filename for HTML body like OTRS
-			"text/html; charset=utf-8",
-			contentSize,
-			bodyStr,
-			nil,      // content_id
-			"",       // content_alternative
-			"inline", // disposition - inline for HTML body
-			now,
-			article.CreateBy,
-			now,
-			article.ChangeBy,
-		)
-
+		_, err = storage.ForDB(r.db).WithTx(tx).WriteAttachment(context.Background(), articleID64, storage.NewAttachment{
+			Filename:    storage.HTMLBodyFilename,
+			ContentType: "text/html; charset=utf-8",
+			Disposition: "inline",
+			Content:     []byte(bodyStr),
+			CreateBy:    article.CreateBy,
+		})
 		if err != nil {
 			return fmt.Errorf("failed to create HTML body attachment: %w", err)
 		}
@@ -221,6 +129,7 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 		article.Subject,
 		bodyStr,
 		contentType,
+		storage.ContentPath(now),
 		int(now.Unix()),
 		now,
 		article.CreateBy,
@@ -249,43 +158,6 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 
 	// Commit transaction
 	return tx.Commit()
-}
-
-// ensureArticleTypeColumn checks once whether article.article_type_id exists.
-func (r *ArticleRepository) ensureArticleTypeColumn() (bool, error) {
-	if r.hasArticleTypeID != nil {
-		return *r.hasArticleTypeID, nil
-	}
-	has, err := r.hasArticleColumn("article_type_id")
-	if err != nil {
-		return false, err
-	}
-	r.hasArticleTypeID = &has
-	return has, nil
-}
-
-// ensureCommunicationChannelColumn checks once whether article.communication_channel_id exists.
-func (r *ArticleRepository) ensureCommunicationChannelColumn() (bool, error) {
-	if r.hasCommunicationChannelID != nil {
-		return *r.hasCommunicationChannelID, nil
-	}
-	has, err := r.hasArticleColumn("communication_channel_id")
-	if err != nil {
-		return false, err
-	}
-	r.hasCommunicationChannelID = &has
-	return has, nil
-}
-
-func (r *ArticleRepository) articleValidExpressions(alias string) (string, string, error) {
-	hasValid, err := r.hasArticleColumn("valid_id")
-	if err != nil {
-		return "", "", err
-	}
-	if hasValid {
-		return fmt.Sprintf("COALESCE(%s.valid_id, 1)", alias), fmt.Sprintf("%s.valid_id = 1", alias), nil
-	}
-	return "1", "", nil
 }
 
 func deriveBodyMeta(contentType string) (string, string) {
@@ -343,6 +215,7 @@ func (r *ArticleRepository) GetByID(id uint) (*models.Article, error) {
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("article not found")
 	}
+	article.ArticleTypeID = core.ArticleTypeFromStorage(article.CommunicationChannelID, article.IsVisibleForCustomer == 1)
 
 	if subject.Valid {
 		article.Subject = subject.String
@@ -361,46 +234,26 @@ func (r *ArticleRepository) GetByID(id uint) (*models.Article, error) {
 	return &article, err
 }
 
-// GetHTMLBodyAttachmentID finds the HTML body attachment for an article (OTRS-style).
-func (r *ArticleRepository) GetHTMLBodyAttachmentID(articleID uint) (*uint, error) {
-	query := database.ConvertPlaceholders(`
-		SELECT id FROM article_data_mime_attachment
-		WHERE article_id = ?
-		AND filename = 'html-body.html'
-		AND content_type LIKE 'text/html%'
-		AND disposition = 'inline'
-		ORDER BY id LIMIT 1`)
-
-	var attachmentID uint
-	err := r.db.QueryRow(query, articleID).Scan(&attachmentID)
-	if err == sql.ErrNoRows {
-		return nil, nil //nolint:nilnil // No HTML body attachment found
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return &attachmentID, nil
-}
-
-// GetHTMLBodyContent retrieves the HTML body content for an article.
+// GetHTMLBodyContent returns the article's HTML body (its last HTML body part,
+// see storage.IsHTMLBody), or "" when it has none.
 func (r *ArticleRepository) GetHTMLBodyContent(articleID uint) (string, error) {
-	query := database.ConvertPlaceholders(`
-		SELECT content FROM article_data_mime_attachment
-		WHERE article_id = ?
-		AND content_type LIKE 'text/html%'
-		ORDER BY id DESC LIMIT 1`)
-
-	var content []byte
-	err := r.db.QueryRow(query, articleID).Scan(&content)
-	if err == sql.ErrNoRows {
-		return "", nil // No HTML body attachment found
-	}
+	ctx := context.Background()
+	store := storage.ForDB(r.db)
+	atts, err := store.ListAttachments(ctx, int64(articleID))
 	if err != nil {
 		return "", err
 	}
-
-	return string(content), nil
+	for i := len(atts) - 1; i >= 0; i-- {
+		if !storage.IsHTMLBody(atts[i]) {
+			continue
+		}
+		_, content, err := store.GetAttachment(ctx, int64(articleID), atts[i].FileID)
+		if err != nil {
+			return "", err
+		}
+		return string(content), nil
+	}
+	return "", nil
 }
 
 // GetByTicketID retrieves all articles for a specific ticket.
@@ -465,6 +318,7 @@ func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) (
 		if contentType.Valid {
 			article.MimeType = contentType.String
 		}
+		article.ArticleTypeID = core.ArticleTypeFromStorage(article.CommunicationChannelID, article.IsVisibleForCustomer == 1)
 		if messageID.Valid {
 			article.MessageID = messageID.String
 		}
@@ -484,240 +338,39 @@ func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) (
 	return articles, nil
 }
 
-// Update updates an article in the database.
-func (r *ArticleRepository) Update(article *models.Article) error {
-	article.ChangeTime = time.Now()
-
-	query := database.ConvertPlaceholders(`
-		UPDATE article SET
-			article_type_id = ?,
-			article_sender_type_id = ?,
-			communication_channel_id = ?,
-			is_visible_for_customer = ?,
-			subject = ?,
-			body = ?,
-			body_type = ?,
-			charset = ?,
-			mime_type = ?,
-			content_path = ?,
-			valid_id = ?,
-			change_time = ?,
-			change_by = ?
-		WHERE id = ?`)
-
-	result, err := r.db.Exec(
-		query,
-		article.ID,
-		article.ArticleTypeID,
-		article.SenderTypeID,
-		article.CommunicationChannelID,
-		article.IsVisibleForCustomer,
-		article.Subject,
-		article.Body,
-		article.BodyType,
-		article.Charset,
-		article.MimeType,
-		article.ContentPath,
-		article.ValidID,
-		article.ChangeTime,
-		article.ChangeBy,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("article not found")
-	}
-
-	// Update ticket's change_time when an article is updated
-	// Use left-to-right placeholders so MySQL '?' binding matches arg order
-	updateTicketQuery := database.ConvertPlaceholders(`
-		UPDATE ticket
-		SET change_time = ?, change_by = ?
-		WHERE id = ?`)
-
-	_, err = r.db.Exec(updateTicketQuery, time.Now(), article.ChangeBy, article.TicketID)
-
-	return err
-}
-
-// Delete soft deletes an article by setting valid_id to 0.
-func (r *ArticleRepository) Delete(id uint, userID uint) error {
-	// First get the ticket ID for updating change_time
-	var ticketID uint
-	getTicketQuery := database.ConvertPlaceholders(`SELECT ticket_id FROM article WHERE id = ?`)
-	err := r.db.QueryRow(getTicketQuery, id).Scan(&ticketID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return fmt.Errorf("article not found")
-		}
-		return err
-	}
-
-	// Soft delete the article
-	query := database.ConvertPlaceholders(`
-		UPDATE article
-		SET valid_id = 0, change_time = ?, change_by = ?
-		WHERE id = ?`)
-
-	result, err := r.db.Exec(query, time.Now(), userID, id)
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("article not found")
-	}
-
-	// Update ticket's change_time
-	updateTicketQuery := database.ConvertPlaceholders(`
-		UPDATE ticket
-		SET change_time = ?, change_by = ?
-		WHERE id = ?`)
-
-	_, err = r.db.Exec(updateTicketQuery, time.Now(), userID, ticketID)
-
-	return err
-}
-
-// GetVisibleArticlesForCustomer retrieves all customer-visible articles for a ticket.
-func (r *ArticleRepository) GetVisibleArticlesForCustomer(ticketID uint) ([]models.Article, error) {
-	return r.GetByTicketID(ticketID, false)
-}
-
 // GetLatestArticleForTicket retrieves the most recent article for a ticket.
 func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Article, error) {
-	articleTypeExpr, commChannelExpr, err := r.articleColumnExpressions()
-	if err != nil {
-		return nil, err
-	}
-	validSelect, validPredicate, err := r.articleValidExpressions("a")
-	if err != nil {
-		return nil, err
-	}
-	selectValid := fmt.Sprintf("%s AS valid_id", validSelect)
-	whereParts := []string{"a.ticket_id = ?"}
-	if validPredicate != "" {
-		whereParts = append(whereParts, validPredicate)
-	}
-	//nolint:gosec // articleTypeExpr, commChannelExpr, selectValid are from schema detection, not user input
-	query := database.ConvertPlaceholders(fmt.Sprintf(`
-		SELECT
-			a.id, a.ticket_id, %s AS article_type_id, a.article_sender_type_id,
-			%s AS communication_channel_id, a.is_visible_for_customer,
-			COALESCE(adm.a_subject, '') AS subject,
-			COALESCE(adm.a_body, '') AS body,
-			COALESCE(adm.a_content_type, '') AS content_type,
-			adm.content_path,
-			%s,
-			a.create_time, a.create_by, a.change_time, a.change_by
-		FROM article a
-		LEFT JOIN article_data_mime adm ON a.id = adm.article_id
-		WHERE %s
+	return scanLatestArticle(r.db.QueryRow(database.ConvertPlaceholders(latestArticleColumns+`
+		WHERE a.ticket_id = ?
 		ORDER BY a.create_time DESC, a.id DESC
-		LIMIT 1`, articleTypeExpr, commChannelExpr, selectValid, strings.Join(whereParts, " AND "))) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
-
-	var article models.Article
-	var subject, body, contentType sql.NullString
-	var contentPath sql.NullString
-	err = r.db.QueryRow(query, ticketID).Scan(
-		&article.ID,
-		&article.TicketID,
-		&article.ArticleTypeID,
-		&article.SenderTypeID,
-		&article.CommunicationChannelID,
-		&article.IsVisibleForCustomer,
-		&subject,
-		&body,
-		&contentType,
-		&contentPath,
-		&article.ValidID,
-		&article.CreateTime,
-		&article.CreateBy,
-		&article.ChangeTime,
-		&article.ChangeBy,
-	)
-
-	if err == sql.ErrNoRows {
-		return nil, nil //nolint:nilnil // No articles yet
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	if subject.Valid {
-		article.Subject = subject.String
-	}
-	if body.Valid {
-		article.Body = body.String
-	}
-	if contentType.Valid {
-		article.MimeType = contentType.String
-	}
-	if contentPath.Valid {
-		cp := contentPath.String
-		article.ContentPath = &cp
-	}
-	bodyType, charset := deriveBodyMeta(article.MimeType)
-	article.BodyType = bodyType
-	article.Charset = charset
-	return &article, nil
+		LIMIT 1`), ticketID))
 }
 
 // GetLatestCustomerArticleForTicket gets the most recent customer article for a ticket.
 func (r *ArticleRepository) GetLatestCustomerArticleForTicket(ticketID uint) (*models.Article, error) {
-	articleTypeExpr, commChannelExpr, err := r.articleColumnExpressions()
-	if err != nil {
-		return nil, err
-	}
-	validSelect, validPredicate, err := r.articleValidExpressions("a")
-	if err != nil {
-		return nil, err
-	}
-	selectValid := fmt.Sprintf("%s AS valid_id", validSelect)
-	whereParts := []string{"a.ticket_id = ?", "a.article_sender_type_id = 3"}
-	if validPredicate != "" {
-		whereParts = append(whereParts, validPredicate)
-	}
-	//nolint:gosec // articleTypeExpr, commChannelExpr, selectValid are from schema detection, not user input
-	query := database.ConvertPlaceholders(fmt.Sprintf(`
-		SELECT
-			a.id, a.ticket_id, %s AS article_type_id, a.article_sender_type_id,
-			%s AS communication_channel_id, a.is_visible_for_customer,
-			COALESCE(adm.a_subject, '') AS subject,
-			COALESCE(adm.a_body, '') AS body,
-			COALESCE(adm.a_content_type, '') AS content_type,
-			adm.content_path,
-			adm.a_message_id,
-			adm.a_in_reply_to,
-			adm.a_references,
-			%s,
-			a.create_time, a.create_by, a.change_time, a.change_by
-		FROM article a
-		LEFT JOIN article_data_mime adm ON a.id = adm.article_id
-		WHERE %s
+	return scanLatestArticle(r.db.QueryRow(database.ConvertPlaceholders(latestArticleColumns+`
+		WHERE a.ticket_id = ? AND a.article_sender_type_id = ?
 		ORDER BY a.create_time DESC, a.id DESC
-		LIMIT 1`, articleTypeExpr, commChannelExpr, selectValid, strings.Join(whereParts, " AND "))) //nolint:gk-sql-sprintf // internal schema identifier; values bound via ?
+		LIMIT 1`), ticketID, constants.ArticleSenderCustomer))
+}
 
+const latestArticleColumns = `
+	SELECT
+		a.id, a.ticket_id, a.article_sender_type_id,
+		a.communication_channel_id, a.is_visible_for_customer,
+		adm.a_subject, adm.a_body, adm.a_content_type, adm.content_path,
+		adm.a_message_id, adm.a_in_reply_to, adm.a_references,
+		a.create_time, a.create_by, a.change_time, a.change_by
+	FROM article a
+	LEFT JOIN article_data_mime adm ON a.id = adm.article_id`
+
+// scanLatestArticle reads a latestArticleColumns row; (nil, nil) when no row.
+func scanLatestArticle(row *sql.Row) (*models.Article, error) {
 	var article models.Article
-	var subject, body, contentType sql.NullString
-	var contentPath, messageID, inReplyTo, references sql.NullString
-	err = r.db.QueryRow(query, ticketID).Scan(
+	var subject, body, contentType, contentPath, messageID, inReplyTo, references sql.NullString
+	err := row.Scan(
 		&article.ID,
 		&article.TicketID,
-		&article.ArticleTypeID,
 		&article.SenderTypeID,
 		&article.CommunicationChannelID,
 		&article.IsVisibleForCustomer,
@@ -728,46 +381,30 @@ func (r *ArticleRepository) GetLatestCustomerArticleForTicket(ticketID uint) (*m
 		&messageID,
 		&inReplyTo,
 		&references,
-		&article.ValidID,
 		&article.CreateTime,
 		&article.CreateBy,
 		&article.ChangeTime,
 		&article.ChangeBy,
 	)
-
 	if err == sql.ErrNoRows {
-		return nil, nil //nolint:nilnil // No customer articles yet
+		return nil, nil //nolint:nilnil // No matching article yet
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	if subject.Valid {
-		article.Subject = subject.String
-	}
-	if body.Valid {
-		article.Body = body.String
-	}
-	if contentType.Valid {
-		article.MimeType = contentType.String
-	}
+	article.ArticleTypeID = core.ArticleTypeFromStorage(article.CommunicationChannelID, article.IsVisibleForCustomer == 1)
+	article.Subject = subject.String
+	article.Body = body.String
+	article.MimeType = contentType.String
 	if contentPath.Valid {
 		cp := contentPath.String
 		article.ContentPath = &cp
 	}
-	if messageID.Valid {
-		article.MessageID = messageID.String
-	}
-	if inReplyTo.Valid {
-		article.InReplyTo = inReplyTo.String
-	}
-	if references.Valid {
-		article.References = references.String
-	}
-	bodyType, charset := deriveBodyMeta(article.MimeType)
-	article.BodyType = bodyType
-	article.Charset = charset
-
+	article.MessageID = messageID.String
+	article.InReplyTo = inReplyTo.String
+	article.References = references.String
+	article.BodyType, article.Charset = deriveBodyMeta(article.MimeType)
 	return &article, nil
 }
 
@@ -801,180 +438,6 @@ func (r *ArticleRepository) FindTicketByMessageID(ctx context.Context, messageID
 		return nil, err
 	}
 	return &models.Ticket{ID: id, TicketNumber: ticketNumber, QueueID: queueID}, nil
-}
-
-// CountArticlesForTicket counts the number of articles for a ticket.
-func (r *ArticleRepository) CountArticlesForTicket(ticketID uint, includeInternal bool) (int, error) {
-	query := database.ConvertPlaceholders(`
-		SELECT COUNT(*)
-		FROM article
-		WHERE ticket_id = ? AND valid_id = 1`)
-
-	if !includeInternal {
-		query += " AND is_visible_for_customer = 1"
-	}
-
-	var count int
-	err := r.db.QueryRow(query, ticketID).Scan(&count)
-	return count, err
-}
-
-// CreateAttachment creates a new attachment for an article.
-func (r *ArticleRepository) CreateAttachment(attachment *models.Attachment) error {
-	attachment.CreateTime = time.Now()
-	attachment.ChangeTime = time.Now()
-
-	if attachment.Disposition == "" {
-		attachment.Disposition = "attachment"
-	}
-
-	query := database.ConvertPlaceholders(`
-		INSERT INTO article_attachments (
-			article_id, filename, content_type, content_size,
-			content_id, content_alternative, disposition, content,
-			create_time, create_by, change_time, change_by
-		) VALUES (
-			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-		) RETURNING id`)
-
-	id, err := database.GetAdapter().InsertWithReturning(
-		r.db,
-		query,
-		attachment.ArticleID,
-		attachment.Filename,
-		attachment.ContentType,
-		attachment.ContentSize,
-		attachment.ContentID,
-		attachment.ContentAlternative,
-		attachment.Disposition,
-		attachment.Content,
-		attachment.CreateTime,
-		attachment.CreateBy,
-		attachment.ChangeTime,
-		attachment.ChangeBy,
-	)
-	if err != nil {
-		return err
-	}
-	attachment.ID = uint(id)
-	return nil
-}
-
-// GetAttachmentsByArticleID retrieves all attachments for an article.
-func (r *ArticleRepository) GetAttachmentsByArticleID(articleID uint) ([]models.Attachment, error) {
-	query := database.ConvertPlaceholders(`
-		SELECT
-			id, article_id, filename, content_type, content_size,
-			content_id, content_alternative, disposition, content,
-			create_time, create_by, change_time, change_by
-		FROM article_attachments
-		WHERE article_id = ?
-		ORDER BY create_time ASC`)
-
-	rows, err := r.db.Query(query, articleID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var attachments []models.Attachment
-	for rows.Next() {
-		var attachment models.Attachment
-		err := rows.Scan(
-			&attachment.ID,
-			&attachment.ArticleID,
-			&attachment.Filename,
-			&attachment.ContentType,
-			&attachment.ContentSize,
-			&attachment.ContentID,
-			&attachment.ContentAlternative,
-			&attachment.Disposition,
-			&attachment.Content,
-			&attachment.CreateTime,
-			&attachment.CreateBy,
-			&attachment.ChangeTime,
-			&attachment.ChangeBy,
-		)
-		if err != nil {
-			return nil, err
-		}
-		attachments = append(attachments, attachment)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return attachments, nil
-}
-
-// GetAttachmentByID retrieves a specific attachment.
-func (r *ArticleRepository) GetAttachmentByID(id uint) (*models.Attachment, error) {
-	query := database.ConvertPlaceholders(`
-		SELECT
-			id, article_id, filename, content_type, content_size,
-			content_id, content_alternative, disposition, content,
-			create_time, create_by, change_time, change_by
-		FROM article_attachments
-		WHERE id = ?`)
-
-	var attachment models.Attachment
-	err := r.db.QueryRow(query, id).Scan(
-		&attachment.ID,
-		&attachment.ArticleID,
-		&attachment.Filename,
-		&attachment.ContentType,
-		&attachment.ContentSize,
-		&attachment.ContentID,
-		&attachment.ContentAlternative,
-		&attachment.Disposition,
-		&attachment.Content,
-		&attachment.CreateTime,
-		&attachment.CreateBy,
-		&attachment.ChangeTime,
-		&attachment.ChangeBy,
-	)
-
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("attachment not found")
-	}
-
-	return &attachment, err
-}
-
-// DeleteAttachment removes an attachment.
-func (r *ArticleRepository) DeleteAttachment(id uint) error {
-	query := database.ConvertPlaceholders(`DELETE FROM article_attachments WHERE id = ?`)
-	result, err := r.db.Exec(query, id)
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("attachment not found")
-	}
-
-	return nil
-}
-
-// GetArticleWithAttachments retrieves an article with all its attachments.
-func (r *ArticleRepository) GetArticleWithAttachments(id uint) (*models.Article, error) {
-	article, err := r.GetByID(id)
-	if err != nil {
-		return nil, err
-	}
-
-	attachments, err := r.GetAttachmentsByArticleID(id)
-	if err != nil {
-		return nil, err
-	}
-
-	article.Attachments = attachments
-	return article, nil
 }
 
 // GetSenderTypeColors returns a map of sender_type_id to hex color.

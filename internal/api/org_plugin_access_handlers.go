@@ -163,16 +163,9 @@ func handleAPISetCaptivePlugin(c *gin.Context) {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database unavailable"})
 		return
 	}
-	userID := 1
-	if v, ok := c.Get("user_id"); ok {
-		switch n := v.(type) {
-		case int:
-			userID = n
-		case uint:
-			userID = int(n)
-		case int64:
-			userID = int(n)
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 	var ptr *string
 	if req.CaptivePlugin != "" {

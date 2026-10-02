@@ -2,7 +2,7 @@ package api
 
 import (
 	"database/sql"
-	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -20,11 +20,8 @@ func handleAdminCustomerUserServices(db *sql.DB) gin.HandlerFunc {
 			var err error
 			db, err = database.GetDB()
 			if err != nil || db == nil {
-				c.Header("Content-Type", "text/html; charset=utf-8")
-				c.String(http.StatusOK, `<!DOCTYPE html><html><head><title>Customer User Services</title></head><body>
-<h1>Customer User Services</h1>
-<p>Database not available</p>
-</body></html>`)
+				log.Printf("customer user services: database unavailable: %v", err)
+				sendErrorResponse(c, http.StatusInternalServerError, "Database not available")
 				return
 			}
 		}
@@ -44,40 +41,48 @@ func handleAdminCustomerUserServices(db *sql.DB) gin.HandlerFunc {
 			LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
 			WHERE cu.valid_id = 1
 		`
+		var customerArgs []interface{}
 		if search != "" {
-			customerQuery += fmt.Sprintf(` AND (
-				LOWER(cu.login) LIKE LOWER('%%%s%%') OR 
-				LOWER(cu.first_name) LIKE LOWER('%%%s%%') OR 
-				LOWER(cu.last_name) LIKE LOWER('%%%s%%') OR 
-				LOWER(cu.email) LIKE LOWER('%%%s%%') OR
-				LOWER(cc.name) LIKE LOWER('%%%s%%')
-			)`, search, search, search, search, search)
+			term := "%" + search + "%"
+			customerQuery += ` AND (
+				LOWER(cu.login) LIKE LOWER(?) OR
+				LOWER(cu.first_name) LIKE LOWER(?) OR
+				LOWER(cu.last_name) LIKE LOWER(?) OR
+				LOWER(cu.email) LIKE LOWER(?) OR
+				LOWER(cc.name) LIKE LOWER(?)
+			)`
+			customerArgs = append(customerArgs, term, term, term, term, term)
 		}
 		customerQuery += " ORDER BY cu.last_name, cu.first_name LIMIT 100"
 
-		rows, err := db.Query(database.ConvertPlaceholders(customerQuery))
-		if err == nil {
-			defer rows.Close()
-			for rows.Next() {
-				var login, firstName, lastName, email string
-				var customerID, companyName sql.NullString
-				var serviceCount int
-				if err := rows.Scan(&login, &firstName, &lastName, &email, &customerID, &companyName, &serviceCount); err == nil {
-					customerUsers = append(customerUsers, map[string]interface{}{
-						"login":         login,
-						"first_name":    firstName,
-						"last_name":     lastName,
-						"email":         email,
-						"customer_id":   customerID.String,
-						"company_name":  companyName.String,
-						"service_count": serviceCount,
-					})
-				}
-			}
-			if err := rows.Err(); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error iterating customer users"})
+		rows, err := db.Query(database.ConvertPlaceholders(customerQuery), customerArgs...)
+		if err != nil {
+			log.Printf("customer user services: customer query failed: %v", err)
+			sendErrorResponse(c, http.StatusInternalServerError, "Failed to load customer users")
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var login, firstName, lastName, email string
+			var customerID, companyName sql.NullString
+			var serviceCount int
+			if err := rows.Scan(&login, &firstName, &lastName, &email, &customerID, &companyName, &serviceCount); err != nil {
+				sendErrorResponse(c, http.StatusInternalServerError, "Failed to load customer users")
 				return
 			}
+			customerUsers = append(customerUsers, map[string]interface{}{
+				"login":         login,
+				"first_name":    firstName,
+				"last_name":     lastName,
+				"email":         email,
+				"customer_id":   customerID.String,
+				"company_name":  companyName.String,
+				"service_count": serviceCount,
+			})
+		}
+		if err := rows.Err(); err != nil {
+			sendErrorResponse(c, http.StatusInternalServerError, "Failed to load customer users")
+			return
 		}
 
 		// Get services with customer count
@@ -89,31 +94,35 @@ func handleAdminCustomerUserServices(db *sql.DB) gin.HandlerFunc {
 			ORDER BY s.name
 		`
 		sRows, err := db.Query(database.ConvertPlaceholders(serviceQuery))
-		if err == nil {
-			defer sRows.Close()
-			for sRows.Next() {
-				var id int
-				var name string
-				var comments sql.NullString
-				var customerCount int
-				if err := sRows.Scan(&id, &name, &comments, &customerCount); err == nil {
-					services = append(services, map[string]interface{}{
-						"id":             id,
-						"name":           name,
-						"comments":       comments.String,
-						"customer_count": customerCount,
-					})
-				}
-			}
-			if err := sRows.Err(); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error iterating services"})
+		if err != nil {
+			log.Printf("customer user services: service query failed: %v", err)
+			sendErrorResponse(c, http.StatusInternalServerError, "Failed to load services")
+			return
+		}
+		defer sRows.Close()
+		for sRows.Next() {
+			var id int
+			var name string
+			var comments sql.NullString
+			var customerCount int
+			if err := sRows.Scan(&id, &name, &comments, &customerCount); err != nil {
+				sendErrorResponse(c, http.StatusInternalServerError, "Failed to load services")
 				return
 			}
+			services = append(services, map[string]interface{}{
+				"id":             id,
+				"name":           name,
+				"comments":       comments.String,
+				"customer_count": customerCount,
+			})
+		}
+		if err := sRows.Err(); err != nil {
+			sendErrorResponse(c, http.StatusInternalServerError, "Failed to load services")
+			return
 		}
 
-		if getPongo2Renderer() == nil {
-			c.Header("Content-Type", "text/html; charset=utf-8")
-			c.String(http.StatusOK, `<h1>Customer User Services</h1><p>Template renderer not available</p>`)
+		if getPongo2Renderer() == nil || getPongo2Renderer().TemplateSet() == nil {
+			sendErrorResponse(c, http.StatusInternalServerError, "Template renderer unavailable")
 			return
 		}
 
@@ -140,6 +149,7 @@ func handleAdminCustomerUserServicesAllocate(db *sql.DB) gin.HandlerFunc {
 			var err error
 			db, err = database.GetDB()
 			if err != nil || db == nil {
+				log.Printf("customer user services: database unavailable: %v", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database not available"})
 				return
 			}
@@ -220,7 +230,8 @@ func handleAdminCustomerUserServicesUpdate(db *sql.DB) gin.HandlerFunc {
 			var err error
 			db, err = database.GetDB()
 			if err != nil || db == nil {
-				shared.SendToastResponse(c, false, "Database not available", "")
+				log.Printf("customer user services: database unavailable: %v", err)
+				shared.SendToastError(c, http.StatusInternalServerError, "Database not available")
 				return
 			}
 		}
@@ -241,6 +252,10 @@ func handleAdminCustomerUserServicesUpdate(db *sql.DB) gin.HandlerFunc {
 			selectedServices = req.Services
 		} else {
 			selectedServices = c.PostFormArray("services")
+		}
+		actorID, ok := auditUserID(c)
+		if !ok {
+			return
 		}
 
 		// Start transaction
@@ -263,8 +278,8 @@ func handleAdminCustomerUserServicesUpdate(db *sql.DB) gin.HandlerFunc {
 		for _, serviceID := range selectedServices {
 			_, err = tx.Exec(database.ConvertPlaceholders(`
 				INSERT INTO service_customer_user (customer_user_login, service_id, create_time, create_by)
-				VALUES (?, ?, NOW(), 1)
-			`), customerUserLogin, serviceID)
+				VALUES (?, ?, NOW(), ?)
+			`), customerUserLogin, serviceID, actorID)
 			if err != nil {
 				shared.SendToastResponse(c, false, "Failed to assign service", "")
 				return
@@ -287,6 +302,7 @@ func handleAdminServiceCustomerUsersAllocate(db *sql.DB) gin.HandlerFunc {
 			var err error
 			db, err = database.GetDB()
 			if err != nil || db == nil {
+				log.Printf("customer user services: database unavailable: %v", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database not available"})
 				return
 			}
@@ -365,7 +381,8 @@ func handleAdminServiceCustomerUsersUpdate(db *sql.DB) gin.HandlerFunc {
 			var err error
 			db, err = database.GetDB()
 			if err != nil || db == nil {
-				shared.SendToastResponse(c, false, "Database not available", "")
+				log.Printf("customer user services: database unavailable: %v", err)
+				shared.SendToastError(c, http.StatusInternalServerError, "Database not available")
 				return
 			}
 		}
@@ -387,6 +404,10 @@ func handleAdminServiceCustomerUsersUpdate(db *sql.DB) gin.HandlerFunc {
 		} else {
 			selectedUsers = c.PostFormArray("customer_users")
 		}
+		actorID, ok := auditUserID(c)
+		if !ok {
+			return
+		}
 
 		// Start transaction
 		tx, err := db.Begin()
@@ -407,8 +428,8 @@ func handleAdminServiceCustomerUsersUpdate(db *sql.DB) gin.HandlerFunc {
 		for _, userLogin := range selectedUsers {
 			_, err = tx.Exec(database.ConvertPlaceholders(`
 				INSERT INTO service_customer_user (customer_user_login, service_id, create_time, create_by)
-				VALUES (?, ?, NOW(), 1)
-			`), userLogin, serviceID)
+				VALUES (?, ?, NOW(), ?)
+			`), userLogin, serviceID, actorID)
 			if err != nil {
 				shared.SendToastResponse(c, false, "Failed to assign customer user", "")
 				return
@@ -441,6 +462,7 @@ func handleAdminDefaultServices(db *sql.DB) gin.HandlerFunc {
 			var err error
 			db, err = database.GetDB()
 			if err != nil || db == nil {
+				log.Printf("customer user services: database unavailable: %v", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database not available"})
 				return
 			}
@@ -493,7 +515,8 @@ func handleAdminDefaultServicesUpdate(db *sql.DB) gin.HandlerFunc {
 			var err error
 			db, err = database.GetDB()
 			if err != nil || db == nil {
-				shared.SendToastResponse(c, false, "Database not available", "")
+				log.Printf("customer user services: database unavailable: %v", err)
+				shared.SendToastError(c, http.StatusInternalServerError, "Database not available")
 				return
 			}
 		}
@@ -512,6 +535,10 @@ func handleAdminDefaultServicesUpdate(db *sql.DB) gin.HandlerFunc {
 			selectedServices = req.Services
 		} else {
 			selectedServices = c.PostFormArray("services")
+		}
+		actorID, ok := auditUserID(c)
+		if !ok {
+			return
 		}
 
 		// Start transaction
@@ -533,8 +560,8 @@ func handleAdminDefaultServicesUpdate(db *sql.DB) gin.HandlerFunc {
 		for _, serviceID := range selectedServices {
 			_, err = tx.Exec(database.ConvertPlaceholders(`
 				INSERT INTO service_customer_user (customer_user_login, service_id, create_time, create_by)
-				VALUES ('<DEFAULT>', ?, NOW(), 1)
-			`), serviceID)
+				VALUES ('<DEFAULT>', ?, NOW(), ?)
+			`), serviceID, actorID)
 			if err != nil {
 				shared.SendToastResponse(c, false, "Failed to assign default service", "")
 				return

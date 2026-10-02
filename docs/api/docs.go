@@ -208,7 +208,7 @@ const docTemplate = `{
         },
         "/auth/refresh": {
             "post": {
-                "description": "Exchange a refresh token for a new access token",
+                "description": "Exchange a refresh token (from login or a previous refresh) for a new access token and refresh token. The account is reloaded, so role and admin flag are current; disabled or deleted accounts are rejected.",
                 "consumes": [
                     "application/json"
                 ],
@@ -221,7 +221,7 @@ const docTemplate = `{
                 "summary": "Refresh token",
                 "parameters": [
                     {
-                        "description": "Refresh token",
+                        "description": "Refresh token: {\\",
                         "name": "token",
                         "in": "body",
                         "required": true,
@@ -232,63 +232,21 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "New access token",
+                        "description": "Same body as login: user, access_token, refresh_token, token_type, expires_in, refresh_expires_in",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "Invalid request",
+                        "description": "Missing refresh_token",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "401": {
-                        "description": "Invalid or expired refresh token",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/register": {
-            "post": {
-                "description": "Register a new user (if self-registration is enabled)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "Register user",
-                "parameters": [
-                    {
-                        "description": "User registration data",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Registered user",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request or registration disabled",
+                        "description": "Invalid, expired or revoked-account refresh token",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1161,7 +1119,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Assign a group to a queue",
+                "description": "Make the given group the queue's permission group (queue.group_id), replacing the current one. A queue has exactly one group.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1171,7 +1129,7 @@ const docTemplate = `{
                 "tags": [
                     "Queues"
                 ],
-                "summary": "Assign group to queue",
+                "summary": "Set queue group",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1181,7 +1139,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Group assignment (group_id, permission)",
+                        "description": "Group assignment (group_id)",
                         "name": "group",
                         "in": "body",
                         "required": true,
@@ -1199,7 +1157,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid request",
+                        "description": "Invalid request or group",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1207,6 +1165,13 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Queue not found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1222,7 +1187,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Remove a group assignment from a queue",
+                "description": "A queue has exactly one group, which cannot be removed. Returns 409 for the queue's group and 404 for any other group. Use POST /queues/{id}/groups to change it.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1232,7 +1197,7 @@ const docTemplate = `{
                 "tags": [
                     "Queues"
                 ],
-                "summary": "Remove group from queue",
+                "summary": "Remove group from queue (always rejected)",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1250,13 +1215,6 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Group removed",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
@@ -1265,7 +1223,14 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Not found",
+                        "description": "Queue not found or group not assigned",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Queue must keep its group",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1653,14 +1618,36 @@ const docTemplate = `{
                 }
             }
         },
-        "/search/suggestions": {
+        "/search/saved": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get autocomplete suggestions for search",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Search"
+                ],
+                "summary": "List saved searches",
+                "responses": {
+                    "200": {
+                        "description": "{success, data: {searches: [{name, type}], total}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -1670,19 +1657,396 @@ const docTemplate = `{
                 "tags": [
                     "Search"
                 ],
-                "summary": "Get search suggestions",
+                "summary": "Create saved search",
+                "parameters": [
+                    {
+                        "description": "{name, type: TicketSearch (optional), parameters: {\u003csearch parameter\u003e: string | [string]}}",
+                        "name": "search",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "{success, data: {name, type, parameters}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid name or parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Name already used",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/search/saved/{name}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Search"
+                ],
+                "summary": "Get saved search",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Search query prefix",
-                        "name": "q",
-                        "in": "query",
+                        "description": "Saved search name",
+                        "name": "name",
+                        "in": "path",
                         "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Suggestions",
+                        "description": "{success, data: {name, type, parameters, ignored_parameters}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Search"
+                ],
+                "summary": "Update saved search",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Saved search name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{parameters: {\u003csearch parameter\u003e: string | [string]}}",
+                        "name": "search",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: {name, type, parameters}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Search"
+                ],
+                "summary": "Delete saved search",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Saved search name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/search/saved/{name}/execute": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Search"
+                ],
+                "summary": "Execute saved search",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Saved search name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: {name, parameters, ignored_parameters, tickets, pagination}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/search/tickets": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Agent ticket search over ticket, article and customer data. Text parameters match case-insensitively anywhere ('*' is a wildcard); ID and state_type parameters take comma-separated or repeated values; created_/changed_ take YYYY-MM-DD (whole day) or timestamps.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Search"
+                ],
+                "summary": "Search tickets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Words that must each match ticket number, title, customer, customer user (login, name, email), company name, or an article's subject, body, from or to",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ticket number",
+                        "name": "tn",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ticket title",
+                        "name": "title",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Customer (company) ID",
+                        "name": "customer_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Customer user login",
+                        "name": "customer_user_login",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Article From",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Article To or Cc",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Article subject",
+                        "name": "subject",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Article body",
+                        "name": "body",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "State types (new, open, pending, pending reminder, pending auto, closed, merged, removed)",
+                        "name": "state_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "State IDs",
+                        "name": "state_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Queue IDs",
+                        "name": "queue_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Priority IDs",
+                        "name": "priority_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ticket type IDs",
+                        "name": "type_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Owner agent IDs",
+                        "name": "owner_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Responsible agent IDs",
+                        "name": "responsible_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Lock IDs",
+                        "name": "lock_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created at or after",
+                        "name": "created_after",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created before (date: up to the end of that day)",
+                        "name": "created_before",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Changed at or after",
+                        "name": "changed_after",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Changed before (date: up to the end of that day)",
+                        "name": "changed_before",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "created",
+                        "description": "created, changed, priority, tn, title",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "desc",
+                        "description": "asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 25,
+                        "description": "Page size (max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{success, data: {tickets, pagination: {page, limit, total}}}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameter",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1690,6 +2054,13 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Customer, or agent without queue access",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1883,314 +2254,6 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/slas": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve all SLA definitions",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "SLAs"
-                ],
-                "summary": "List SLAs",
-                "responses": {
-                    "200": {
-                        "description": "List of SLAs",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create a new SLA definition",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "SLAs"
-                ],
-                "summary": "Create SLA",
-                "parameters": [
-                    {
-                        "description": "SLA data",
-                        "name": "sla",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created SLA",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/slas/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve a single SLA definition",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "SLAs"
-                ],
-                "summary": "Get SLA by ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "SLA ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "SLA details",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "SLA not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update an existing SLA definition",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "SLAs"
-                ],
-                "summary": "Update SLA",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "SLA ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "SLA update data",
-                        "name": "sla",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Updated SLA",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "SLA not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Delete an SLA definition",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "SLAs"
-                ],
-                "summary": "Delete SLA",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "SLA ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "SLA deleted",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "SLA not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/slas/{id}/metrics": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve performance metrics for an SLA",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "SLAs"
-                ],
-                "summary": "Get SLA metrics",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "SLA ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "SLA metrics",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "SLA not found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2667,94 +2730,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/ticket-states": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve all ticket states (alias for /states)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "States"
-                ],
-                "summary": "List ticket states",
-                "responses": {
-                    "200": {
-                        "description": "List of states",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create a new ticket state",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "States"
-                ],
-                "summary": "Create ticket state",
-                "parameters": [
-                    {
-                        "description": "State data",
-                        "name": "state",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created state",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/ticket-states/statistics": {
             "get": {
                 "security": [
@@ -2783,174 +2758,6 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/ticket-states/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get a ticket state by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "States"
-                ],
-                "summary": "Get ticket state",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "State ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "State details",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "State not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update a ticket state",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "States"
-                ],
-                "summary": "Update ticket state",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "State ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "State update data",
-                        "name": "state",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Updated state",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "State not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Delete a ticket state",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "States"
-                ],
-                "summary": "Delete ticket state",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "State ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "State deleted",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "State not found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -3515,7 +3322,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all articles for a ticket",
+                "description": "Retrieve all articles for a ticket, newest first",
                 "consumes": [
                     "application/json"
                 ],
@@ -3535,29 +3342,9 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Items per page",
-                        "name": "per_page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Alias for per_page",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Offset for pagination",
-                        "name": "offset",
+                        "type": "boolean",
+                        "description": "Include attachment metadata",
+                        "name": "include_attachments",
                         "in": "query"
                     }
                 ],
@@ -3684,6 +3471,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Include attachment metadata",
+                        "name": "include_attachments",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3716,7 +3509,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Update an existing article",
+                "description": "Update the subject and/or body of an existing article",
                 "consumes": [
                     "application/json"
                 ],
@@ -3743,7 +3536,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Article update data",
+                        "description": "Article update data (subject, body)",
                         "name": "article",
                         "in": "body",
                         "required": true,
@@ -3789,7 +3582,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete an article from a ticket",
+                "description": "Delete an article, its MIME data and attachments from a ticket",
                 "consumes": [
                     "application/json"
                 ],
@@ -4024,7 +3817,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all ticket types",
+                "description": "Retrieve ticket types (valid ones by default)",
                 "consumes": [
                     "application/json"
                 ],
@@ -4035,6 +3828,14 @@ const docTemplate = `{
                     "Types"
                 ],
                 "summary": "List types",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by validity (true/1 = valid (default), false/0 = invalid, all)",
+                        "name": "valid",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "List of types",
@@ -4045,6 +3846,13 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Lookup failed",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4373,36 +4181,39 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/{id}/groups": {
+        "/webhooks": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "List groups a user belongs to",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "List outbound webhooks (admin only)",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Users"
+                    "Webhooks"
                 ],
-                "summary": "Get user groups",
+                "summary": "List webhooks",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
+                        "type": "boolean",
+                        "description": "Only active (true) or inactive (false) webhooks",
+                        "name": "active",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of groups",
+                        "description": "success, data: []Webhook",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid filter",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4415,8 +4226,8 @@ const docTemplate = `{
                             "additionalProperties": true
                         }
                     },
-                    "404": {
-                        "description": "User not found",
+                    "403": {
+                        "description": "Admin access required",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4430,7 +4241,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Add a user to a group",
+                "description": "Create an outbound webhook; deliveries are signed with X-Webhook-Signature (sha256=HMAC of the body) when a secret is set",
                 "consumes": [
                     "application/json"
                 ],
@@ -4438,20 +4249,13 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Users"
+                    "Webhooks"
                 ],
-                "summary": "Add user to group",
+                "summary": "Create webhook",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Group data (group_id, permission)",
-                        "name": "group",
+                        "description": "name, url, events (required); secret, headers, retry_count, timeout_seconds, is_active",
+                        "name": "webhook",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -4460,22 +4264,22 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "User added to group",
+                    "201": {
+                        "description": "success, data: Webhook",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "Invalid request",
+                        "description": "Validation error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    "409": {
+                        "description": "Name already used",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4484,50 +4288,33 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/{id}/groups/{group_id}": {
-            "delete": {
+        "/webhooks/deliveries/{id}": {
+            "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Remove a user from a group",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "One delivery including payload and response body",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Users"
+                    "Webhooks"
                 ],
-                "summary": "Remove user from group",
+                "summary": "Get webhook delivery",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "User ID",
+                        "description": "Delivery ID",
                         "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Group ID",
-                        "name": "group_id",
                         "in": "path",
                         "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "User removed from group",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
+                        "description": "success, data: WebhookDelivery",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4543,112 +4330,21 @@ const docTemplate = `{
                 }
             }
         },
-        "/webhooks": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "List all registered webhooks",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Webhooks"
-                ],
-                "summary": "List webhooks",
-                "responses": {
-                    "200": {
-                        "description": "List of webhooks",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
+        "/webhooks/deliveries/{id}/redeliver": {
             "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Register a new webhook endpoint",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Sends the payload of an earlier delivery again now as a new delivery (one attempt)",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Webhooks"
                 ],
-                "summary": "Register webhook",
-                "parameters": [
-                    {
-                        "description": "Webhook data (url, events, secret)",
-                        "name": "webhook",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Webhook registered",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/webhooks/deliveries/{id}/retry": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retry a failed webhook delivery",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Webhooks"
-                ],
-                "summary": "Retry webhook delivery",
+                "summary": "Redeliver webhook delivery",
                 "parameters": [
                     {
                         "type": "integer",
@@ -4660,21 +4356,40 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Retry result",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
+                        "description": "success, data: WebhookDelivery",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "404": {
-                        "description": "Delivery not found",
+                        "description": "Not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/webhooks/events": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Events a webhook can subscribe to",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "List webhook events",
+                "responses": {
+                    "200": {
+                        "description": "success, data: [{event, description}]",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4689,10 +4404,6 @@ const docTemplate = `{
                     {
                         "BearerAuth": []
                     }
-                ],
-                "description": "Get webhook by ID",
-                "consumes": [
-                    "application/json"
                 ],
                 "produces": [
                     "application/json"
@@ -4712,21 +4423,14 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Webhook details",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
+                        "description": "success, data: Webhook",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "404": {
-                        "description": "Webhook not found",
+                        "description": "Not found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4740,7 +4444,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Update a webhook",
+                "description": "Partial update: only fields present change; an empty secret removes it",
                 "consumes": [
                     "application/json"
                 ],
@@ -4760,7 +4464,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Webhook update data",
+                        "description": "Fields to change",
                         "name": "webhook",
                         "in": "body",
                         "required": true,
@@ -4771,28 +4475,28 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Updated webhook",
+                        "description": "success, data: Webhook",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
+                        "description": "Validation error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "404": {
-                        "description": "Webhook not found",
+                        "description": "Not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Name already used",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4806,10 +4510,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete a webhook",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Deletes the webhook and its delivery log",
                 "produces": [
                     "application/json"
                 ],
@@ -4828,21 +4529,14 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Webhook deleted",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
+                        "description": "Deleted",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "404": {
-                        "description": "Webhook not found",
+                        "description": "Not found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4858,10 +4552,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "List delivery history for a webhook",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Newest deliveries first, without payload and response bodies",
                 "produces": [
                     "application/json"
                 ],
@@ -4876,25 +4567,24 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "1-200, default 50",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of deliveries",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
+                        "description": "success, data: []WebhookDelivery",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "404": {
-                        "description": "Webhook not found",
+                        "description": "Not found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4910,17 +4600,14 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Send a test event to a webhook",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Sends a webhook.test event now (one attempt) and returns the recorded delivery",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Webhooks"
                 ],
-                "summary": "Test webhook",
+                "summary": "Send test delivery",
                 "parameters": [
                     {
                         "type": "integer",
@@ -4932,21 +4619,14 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Test result",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
+                        "description": "success, data: WebhookDelivery",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "404": {
-                        "description": "Webhook not found",
+                        "description": "Not found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true

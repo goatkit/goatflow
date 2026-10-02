@@ -1,144 +1,80 @@
-"""Exception classes for the GoatFlow SDK."""
+"""Exceptions raised by the GoatFlow SDK."""
 
-from typing import Optional, Any
+from typing import Optional
 
 
 class GoatflowError(Exception):
-    """Base exception for all GoatFlow API errors."""
-    
+    """A non-successful API response.
+
+    Raised for an HTTP status outside 2xx, or a 2xx response whose envelope
+    says ``{"success": false}``. ``code`` is set when the API sent one (e.g.
+    ``core:invalid_token``); ``body`` holds the raw body when it was not JSON.
+    """
+
     def __init__(
         self,
         message: str,
         status_code: Optional[int] = None,
         code: Optional[str] = None,
-        details: Optional[str] = None,
-        response_data: Optional[Any] = None,
+        body: Optional[str] = None,
     ) -> None:
         super().__init__(message)
         self.message = message
         self.status_code = status_code
         self.code = code
-        self.details = details
-        self.response_data = response_data
-    
+        self.body = body
+
     def __str__(self) -> str:
-        base_msg = self.message
-        if self.status_code:
-            base_msg = f"HTTP {self.status_code}: {base_msg}"
-        if self.details:
-            base_msg = f"{base_msg} - {self.details}"
-        return base_msg
-    
-    def __repr__(self) -> str:
-        return (
-            f"{self.__class__.__name__}("
-            f"message={self.message!r}, "
-            f"status_code={self.status_code}, "
-            f"code={self.code!r})"
-        )
-
-
-class ValidationError(GoatflowError):
-    """Raised when request validation fails."""
-    
-    def __init__(
-        self,
-        message: str,
-        field: Optional[str] = None,
-        value: Optional[Any] = None,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(message, **kwargs)
-        self.field = field
-        self.value = value
-
-
-class NetworkError(GoatflowError):
-    """Raised when a network operation fails."""
-    
-    def __init__(
-        self,
-        message: str,
-        operation: Optional[str] = None,
-        url: Optional[str] = None,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(message, **kwargs)
-        self.operation = operation
-        self.url = url
-
-
-class TimeoutError(GoatflowError):
-    """Raised when a request times out."""
-    
-    def __init__(
-        self,
-        message: str,
-        timeout: Optional[float] = None,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(message, **kwargs)
-        self.timeout = timeout
+        text = self.message
+        if self.status_code is not None:
+            text = f"HTTP {self.status_code}: {text}"
+        if self.code:
+            text = f"{text} ({self.code})"
+        return text
 
 
 class AuthenticationError(GoatflowError):
-    """Base class for authentication-related errors."""
-    pass
-
-
-class NotFoundError(GoatflowError):
-    """Raised when a resource is not found (HTTP 404)."""
-    
-    def __init__(self, message: str = "Resource not found", **kwargs: Any) -> None:
-        super().__init__(message, status_code=404, code="NOT_FOUND", **kwargs)
+    """The client could not produce credentials (e.g. an expired token)."""
 
 
 class UnauthorizedError(AuthenticationError):
-    """Raised when authentication is required or invalid (HTTP 401)."""
-    
-    def __init__(self, message: str = "Unauthorized", **kwargs: Any) -> None:
-        super().__init__(message, status_code=401, code="UNAUTHORIZED", **kwargs)
+    """HTTP 401."""
 
 
 class ForbiddenError(AuthenticationError):
-    """Raised when access is forbidden (HTTP 403)."""
-    
-    def __init__(self, message: str = "Forbidden", **kwargs: Any) -> None:
-        super().__init__(message, status_code=403, code="FORBIDDEN", **kwargs)
+    """HTTP 403."""
+
+
+class NotFoundError(GoatflowError):
+    """HTTP 404."""
 
 
 class RateLimitError(GoatflowError):
-    """Raised when rate limit is exceeded (HTTP 429)."""
-    
+    """HTTP 429. ``retry_after`` is the Retry-After header in seconds, if sent."""
+
     def __init__(
         self,
-        message: str = "Rate limit exceeded",
+        message: str,
+        status_code: Optional[int] = None,
+        code: Optional[str] = None,
+        body: Optional[str] = None,
         retry_after: Optional[int] = None,
-        **kwargs: Any,
     ) -> None:
-        super().__init__(message, status_code=429, code="RATE_LIMITED", **kwargs)
+        super().__init__(message, status_code, code, body)
         self.retry_after = retry_after
 
 
 class ServerError(GoatflowError):
-    """Raised when the server returns a 5xx error."""
-    
-    def __init__(self, message: str = "Internal server error", **kwargs: Any) -> None:
-        kwargs.setdefault("status_code", 500)
-        kwargs.setdefault("code", "SERVER_ERROR")
-        super().__init__(message, **kwargs)
+    """HTTP 5xx."""
 
 
-class ConfigurationError(GoatflowError):
-    """Raised when there's a configuration error."""
-    
-    def __init__(self, message: str, field: Optional[str] = None, **kwargs: Any) -> None:
-        super().__init__(message, code="CONFIG_ERROR", **kwargs)
-        self.field = field
+class NetworkError(GoatflowError):
+    """The request produced no HTTP response."""
 
 
-class WebSocketError(GoatflowError):
-    """Raised when WebSocket operations fail."""
-    
-    def __init__(self, message: str, **kwargs: Any) -> None:
-        super().__init__(message, code="WEBSOCKET_ERROR", **kwargs)
+class TimeoutError(NetworkError):
+    """The request timed out."""
+
+
+class ResponseShapeError(GoatflowError):
+    """A successful response whose body did not match the expected model."""

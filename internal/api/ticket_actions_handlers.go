@@ -16,7 +16,9 @@ import (
 
 	"github.com/goatkit/goatflow/internal/history"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/repository"
 )
@@ -26,7 +28,6 @@ func init() {
 	routing.RegisterHandler("handleCloseTicket", handleCloseTicket)
 	routing.RegisterHandler("handleReopenTicket", handleReopenTicket)
 	routing.RegisterHandler("handleTicketReply", handleTicketReply)
-	routing.RegisterHandler("handleUpdateTicket", handleUpdateTicket)
 	routing.RegisterHandler("handleDeleteTicket", handleDeleteTicket)
 	routing.RegisterHandler("handleUpdateTicketPriority", handleUpdateTicketPriority)
 	routing.RegisterHandler("handleUpdateTicketQueue", handleUpdateTicketQueue)
@@ -59,38 +60,32 @@ func handleAssignTicket(c *gin.Context) {
 		return
 	}
 
-	if htmxHandlerSkipDB() {
-		agentName := fmt.Sprintf("Agent %d", agentID)
-		c.Header("HX-Trigger", `{"showMessage":{"type":"success","text":"Assigned"},"success":true}`)
-		c.JSON(http.StatusOK, gin.H{
-			"message":   fmt.Sprintf("Ticket %s assigned to %s", ticketID, agentName),
-			"agent_id":  agentID,
-			"ticket_id": ticketID,
-			"time":      time.Now().Format("2006-01-02 15:04"),
-		})
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		log.Printf("handleAssignTicket: database unavailable: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database unavailable"})
 		return
 	}
 
-	// Get database connection
-	db, _ := database.GetDB() //nolint:errcheck // nil handled below
-
-	var repoPtr *repository.TicketRepository
-
-	// Get current user for change_by
-	changeByUserID := 1 // Default system user
-	if userCtx, ok := c.Get("user"); ok {
-		if userData, ok := userCtx.(*models.User); ok && userData != nil {
-			changeByUserID = int(userData.ID)
-		}
+	changeByUserID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
-	// If DB unavailable in tests, bypass DB write and return success
-	var updateErr error
-	if db != nil {
-		repoPtr = repository.NewTicketRepository(db)
-		ticketRepo = repoPtr
-		// Update the ticket's responsible_user_id
-		_, updateErr = db.Exec(database.ConvertPlaceholders(`
+	var exists int
+	if err := db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM ticket WHERE id = ?`), ticketIDInt).Scan(&exists); err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+			return
+		}
+		log.Printf("handleAssignTicket: lookup ticket %d failed: %v", ticketIDInt, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign ticket"})
+		return
+	}
+
+	repoPtr := repository.NewTicketRepository(db)
+	ticketRepo = repoPtr
+	_, updateErr := db.Exec(database.ConvertPlaceholders(`
 	            UPDATE ticket
 	            SET user_id = ?,
 	                responsible_user_id = ?,
@@ -98,37 +93,30 @@ func handleAssignTicket(c *gin.Context) {
 	                change_by = ?
 	            WHERE id = ?
 	        `), agentID, agentID, changeByUserID, ticketIDInt)
-		if updateErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign ticket"})
-			return
-		}
+	if updateErr != nil {
+		log.Printf("handleAssignTicket: update ticket %d failed: %v", ticketIDInt, updateErr)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign ticket"})
+		return
 	}
 
 	// Get the agent's name for the response
 	var agentName string
-	if db != nil {
-		nameErr := db.QueryRow(database.ConvertPlaceholders(`
+	if nameErr := db.QueryRow(database.ConvertPlaceholders(`
             SELECT CONCAT(first_name, ' ', last_name)
             FROM users
             WHERE id = ?
-	        `), agentID).Scan(&agentName)
-		if nameErr != nil {
-			agentName = fmt.Sprintf("Agent %d", agentID)
-		}
-	} else {
+	        `), agentID).Scan(&agentName); nameErr != nil {
 		agentName = fmt.Sprintf("Agent %d", agentID)
 	}
 
-	if db != nil && updateErr == nil && repoPtr != nil {
-		if ticket, terr := repoPtr.GetByID(uint(ticketIDInt)); terr == nil {
-			recorder := history.NewRecorder(repoPtr)
-			msg := fmt.Sprintf("Assigned to %s", agentName)
-			if err := recorder.Record(c.Request.Context(), nil, ticket, nil, history.TypeOwnerUpdate, msg, changeByUserID); err != nil {
-				log.Printf("history record (assign) failed: %v", err)
-			}
-		} else if terr != nil {
-			log.Printf("history snapshot (assign) failed: %v", terr)
+	if ticket, terr := repoPtr.GetByID(uint(ticketIDInt)); terr == nil {
+		recorder := history.NewRecorder(repoPtr)
+		msg := fmt.Sprintf("Assigned to %s", agentName)
+		if err := recorder.Record(c.Request.Context(), nil, ticket, nil, history.TypeOwnerUpdate, msg, changeByUserID); err != nil {
+			log.Printf("history record (assign) failed: %v", err)
 		}
+	} else {
+		log.Printf("history snapshot (assign) failed: %v", terr)
 	}
 
 	// HTMX trigger header expected by tests (include showMessage and success)
@@ -161,14 +149,21 @@ func handleCloseTicket(c *gin.Context) {
 		return
 	}
 
-	// Default to closed successful if not specified
-	if closeData.StateID == 0 {
-		closeData.StateID = 3
-	}
-
 	db, err := database.GetDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+		return
+	}
+	ctx := c.Request.Context()
+	if closeData.StateID == 0 {
+		// Default to closed successful if not specified
+		closeData.StateID, err = lookups.ID(ctx, db, lookups.StateLookup, lookups.StateClosedSuccessful)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve close state"})
+			return
+		}
+	} else if typeName, terr := lookups.StateTypeNameOfState(ctx, db, closeData.StateID); terr != nil || typeName != lookups.StateTypeClosed {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "state_id must be a closed state"})
 		return
 	}
 
@@ -190,24 +185,15 @@ func handleCloseTicket(c *gin.Context) {
 		log.Printf("history snapshot (close before) failed: %v", prevErr)
 	}
 
-	// Get current user
-	userID := 1 // Default system user
-	if userCtx, ok := c.Get("user"); ok {
-		if user, ok := userCtx.(*models.User); ok && user.ID > 0 {
-			userID = int(user.ID)
-		}
-	}
-
-	// Start transaction
-	tx, err := db.Begin()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+	userID, ok := auditUserID(c)
+	if !ok {
 		return
 	}
-	defer func() { _ = tx.Rollback() }()
 
-	// Update ticket state
-	_, err = tx.Exec(database.ConvertPlaceholders(`
+	// Update ticket state. Not wrapped in a transaction with the close
+	// article: the article repository updates the same ticket row on its own
+	// connection, which would wait forever on this transaction's row lock.
+	_, err = db.Exec(database.ConvertPlaceholders(`
 		UPDATE ticket
 		SET ticket_state_id = ?, change_time = NOW(), change_by = ?
 		WHERE id = ?
@@ -218,7 +204,7 @@ func handleCloseTicket(c *gin.Context) {
 		return
 	}
 
-	// Create close article (outside transaction - article repo doesn't support tx)
+	// Create close article
 	var closeArticleID int
 	if strings.TrimSpace(closeData.Notes) != "" {
 		articleRepo := repository.NewArticleRepository(db)
@@ -226,8 +212,8 @@ func handleCloseTicket(c *gin.Context) {
 			TicketID:               ticketIDInt,
 			Subject:                "Ticket Closed",
 			Body:                   closeData.Notes,
-			SenderTypeID:           1, // Agent
-			CommunicationChannelID: 7, // Note
+			SenderTypeID:           constants.ArticleSenderAgent,
+			CommunicationChannelID: constants.CommunicationChannelInternal,
 			IsVisibleForCustomer:   0, // Internal by default
 			CreateBy:               userID,
 			ChangeBy:               userID,
@@ -249,12 +235,6 @@ func handleCloseTicket(c *gin.Context) {
 			articleIDPtr = nil
 		}
 		_ = saveTimeEntry(db, ticketIDInt, articleIDPtr, closeData.TimeUnits, userID) //nolint:errcheck // Best-effort time entry
-	}
-
-	// Commit transaction
-	if err = tx.Commit(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
-		return
 	}
 
 	// Process dynamic fields from close form (after successful commit)
@@ -385,18 +365,28 @@ func handleReopenTicket(c *gin.Context) {
 		log.Printf("history snapshot (reopen before) failed: %v", prevErr)
 	}
 
-	// Default to state 4 (open) if not specified or invalid
-	// State IDs: 1=new, 2=closed successful, 3=closed unsuccessful, 4=open
+	// Reopen target must be a state of type new or open; default to the 'open' state.
+	ctx := c.Request.Context()
 	targetStateID := reopenData.StateID
-	if targetStateID != 1 && targetStateID != 4 {
-		targetStateID = 4 // Default to open
+	targetTypeName := lookups.StateTypeOpen
+	if targetStateID == 0 {
+		targetStateID, err = lookups.ID(ctx, db, lookups.StateLookup, lookups.StateOpen)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve open state"})
+			return
+		}
+	} else {
+		typeName, terr := lookups.StateTypeNameOfState(ctx, db, targetStateID)
+		if terr != nil || (typeName != lookups.StateTypeNew && typeName != lookups.StateTypeOpen) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "state_id must be a new or open state"})
+			return
+		}
+		targetTypeName = typeName
 	}
 
-	userID := 1
-	if userCtx, ok := c.Get("user"); ok {
-		if user, ok := userCtx.(*models.User); ok && user.ID > 0 {
-			userID = int(user.ID)
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	// Update ticket state
@@ -422,8 +412,8 @@ func handleReopenTicket(c *gin.Context) {
 	articleID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id,
 			is_visible_for_customer, search_index_needs_rebuild, create_time, create_by, change_time, change_by)
-		VALUES (?, 1, 3, 0, 1, NOW(), ?, NOW(), ?) RETURNING id
-	`), ticketIDInt, userID, userID)
+		VALUES (?, ?, ?, 0, 1, NOW(), ?, NOW(), ?) RETURNING id
+	`), ticketIDInt, constants.ArticleSenderAgent, constants.CommunicationChannelInternal, userID, userID)
 
 	if err != nil {
 		// Log the error but don't fail the reopen operation
@@ -481,10 +471,7 @@ func handleReopenTicket(c *gin.Context) {
 
 	// TODO: Implement customer notification if reopenData.NotifyCustomer is true
 
-	statusText := "open"
-	if targetStateID == 1 {
-		statusText = "new"
-	}
+	statusText := targetTypeName
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":    true,
@@ -513,23 +500,99 @@ func handleTicketReply(c *gin.Context) {
 		return
 	}
 
-	// No DB write in tests; continue to simple HTML fragment below
+	ticketIDInt, err := strconv.Atoi(ticketID)
+	if err != nil || ticketIDInt <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
+		return
+	}
 
-	// For unit tests, we don't require DB writes here. Generate a simple HTML fragment.
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		log.Printf("handleTicketReply: database unavailable: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database unavailable"})
+		return
+	}
+
+	var ticketTitle string
+	if err := db.QueryRow(database.ConvertPlaceholders(`SELECT title FROM ticket WHERE id = ?`), ticketIDInt).Scan(&ticketTitle); err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+			return
+		}
+		log.Printf("handleTicketReply: lookup ticket %d failed: %v", ticketIDInt, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load ticket"})
+		return
+	}
+
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
+	channelID := constants.CommunicationChannelEmail
+	visible := 1
+	subject := "Re: " + ticketTitle
+	if isInternal {
+		channelID = constants.CommunicationChannelInternal
+		visible = 0
+		subject = defaultNoteSubject(channelID)
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("handleTicketReply: begin tx failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save reply"})
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	articleID, err := insertArticle(tx, ArticleInsertParams{
+		TicketID:             int64(ticketIDInt),
+		CommunicationChannel: channelID,
+		IsVisibleForCustomer: visible,
+		CreateBy:             int64(userID),
+	})
+	if err != nil {
+		log.Printf("handleTicketReply: insert article failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save reply"})
+		return
+	}
+	if err := insertArticleMimeData(tx, ArticleMimeParams{
+		ArticleID:    articleID,
+		From:         "Agent",
+		Subject:      subject,
+		Body:         replyText,
+		ContentType:  "text/plain; charset=utf-8",
+		IncomingTime: time.Now().Unix(),
+		CreateBy:     int64(userID),
+	}); err != nil {
+		log.Printf("handleTicketReply: insert article_data_mime failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save reply"})
+		return
+	}
+	if _, err := tx.Exec(database.ConvertPlaceholders(`
+		UPDATE ticket SET change_time = CURRENT_TIMESTAMP, change_by = ? WHERE id = ?
+	`), userID, ticketIDInt); err != nil {
+		log.Printf("handleTicketReply: touch ticket failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save reply"})
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("handleTicketReply: commit failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save reply"})
+		return
+	}
+
 	badge := ""
 	if isInternal {
 		badge = `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ` +
 			`bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200 ml-2">Internal</span>`
 	}
 
-	// Persist time accounting if provided
 	if timeUnits > 0 {
-		if db, err := database.GetDB(); err == nil && db != nil {
-			if idInt, convErr := strconv.Atoi(ticketID); convErr == nil {
-				if err := saveTimeEntry(db, idInt, nil, timeUnits, 1); err != nil {
-					c.Header("X-Guru-Error", "Failed to save time entry (reply)")
-				}
-			}
+		aid := int(articleID)
+		if err := saveTimeEntry(db, ticketIDInt, &aid, timeUnits, userID); err != nil {
+			log.Printf("handleTicketReply: save time entry failed: %v", err)
+			c.Header("X-Guru-Error", "Failed to save time entry (reply)")
 		}
 	}
 
@@ -551,24 +614,6 @@ func handleTicketReply(c *gin.Context) {
 		time.Now().Format("2006-01-02 15:04"),
 		safe,
 	))
-}
-
-// handleUpdateTicket updates a ticket.
-func handleUpdateTicket(c *gin.Context) {
-	ticketID := c.Param("id")
-
-	var updates gin.H
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"ticket": gin.H{
-			"id":      ticketID,
-			"updated": time.Now().Format("2006-01-02 15:04"),
-		},
-	})
 }
 
 // handleDeleteTicket deletes a ticket (soft delete).
@@ -635,29 +680,15 @@ func handleUpdateTicketPriority(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetUint("user_id")
-	if userID == 0 {
-		if userCtx, ok := c.Get("user"); ok {
-			if user, ok := userCtx.(*models.User); ok && user != nil {
-				userID = user.ID
-			}
-		}
-	}
-	if userID == 0 {
-		userID = 1
-	}
-
-	if htmxHandlerSkipDB() {
-		c.JSON(http.StatusOK, gin.H{
-			"message":     fmt.Sprintf("Ticket %s priority updated", ticketID),
-			"priority":    priorityInput,
-			"priority_id": pid,
-		})
+	actorID, ok := auditUserID(c)
+	if !ok {
 		return
 	}
+	userID := uint(actorID)
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
+		log.Printf("handleUpdateTicketPriority: database unavailable: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
 		return
 	}
@@ -705,29 +736,23 @@ func handleUpdateTicketQueue(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetUint("user_id")
-	if userID == 0 {
-		if userCtx, ok := c.Get("user"); ok {
-			if user, ok := userCtx.(*models.User); ok && user != nil {
-				userID = user.ID
-			}
-		}
-	}
-	if userID == 0 {
-		userID = 1
-	}
-
-	if htmxHandlerSkipDB() {
-		c.JSON(http.StatusOK, gin.H{
-			"message":  fmt.Sprintf("Ticket %s moved to queue %d", ticketID, qid),
-			"queue_id": qid,
-		})
+	actorID, ok := auditUserID(c)
+	if !ok {
 		return
 	}
+	userID := uint(actorID)
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
+		log.Printf("handleUpdateTicketQueue: database unavailable: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		return
+	}
+
+	// The middleware checked the ticket's current queue; the target queue
+	// needs move_into too.
+	authz := agentTicketAuthzOrAbort(c, db)
+	if authz == nil || !authz.moveTargetOrAbort(c, qid) {
 		return
 	}
 
@@ -823,10 +848,11 @@ func handleUpdateTicketStatus(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket id"})
 		return
 	}
-	userID := c.GetUint("user_id")
-	if userID == 0 {
-		userID = 1
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
+	userID := uint(actorID)
 
 	var previousTicket *models.Ticket
 	if prev, perr := repo.GetByID(uint(tid)); perr == nil {

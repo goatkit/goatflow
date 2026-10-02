@@ -11,41 +11,17 @@ spec:
   prefix: /api/dashboard
   middleware:
     - unified_auth
+    - agent
   routes:
-    - path: /stats
-      method: GET
-      handler: handleDashboardStats
-      description: "Dashboard statistics widget"
-
     - path: /recent-tickets
       method: GET
       handler: handleRecentTickets
       description: "Recent tickets widget"
 
-    - path: /notifications
-      method: GET
-      handler: handleNotifications
-      description: "Notifications widget"
-
-    - path: /quick-actions
-      method: GET
-      handler: handleQuickActions
-      description: "Quick actions widget"
-
-    - path: /activity
-      method: GET
-      handler: handleActivity
-      description: "Activity feed widget"
-
     - path: /activity-stream
       method: GET
       handler: handleActivityStream
       description: "Activity stream endpoint"
-
-    - path: /performance
-      method: GET
-      handler: handlePerformance
-      description: "Performance metrics widget"
 
     - path: /widgets
       method: GET

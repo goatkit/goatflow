@@ -14,5 +14,4 @@ type ITicketRepository interface {
 	CountByStatus(status string) (int, error)
 	// Dashboard statistics methods
 	CountByStateID(stateID int) (int, error)
-	CountClosedToday() (int, error)
 }

@@ -669,12 +669,12 @@ if (noteForm) {
     });
 }
 
-function deleteAttachment(attachmentId, filename) {
-    if (!confirm('{{ t("messages.confirm.delete_attachment")|default:"Are you sure you want to delete this attachment?" }}')) {
+function deleteAttachment(deleteUrl, filename) {
+    if (!confirm('{{ t("messages.confirm.delete_attachment")|default:"Are you sure you want to delete this attachment?" }}' + '\n\n' + filename)) {
         return;
     }
 
-    apiFetch(`/api/tickets/${ticketId}/attachments/${attachmentId}`, {
+    apiFetch(deleteUrl, {
         method: 'DELETE'
     })
     .then(response => {

@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -145,10 +146,8 @@ func TestAPIBridge_Execute_WithPathParams(t *testing.T) {
 }
 
 func TestAPIBridge_Execute_AdminMiddleware_WithAdminRole(t *testing.T) {
-	// This test verifies that admin middleware passes when user_role is "Admin".
-	// The bug was: API token middleware sets user_role="User" for all agents,
-	// so admin users were rejected. The MCP handler now resolves the real role
-	// before passing it to the bridge.
+	// The admin middleware runs against the caller's role and auth keys
+	// exactly as on the REST route: role "Admin" passes, "User"/"Agent" do not.
 	registry := routing.NewHandlerRegistry()
 	routing.SetGlobalRegistryForTest(registry)
 	defer routing.SetGlobalRegistryForTest(nil)
@@ -317,6 +316,7 @@ func TestAPIBridge_ExecutePlugin_Success(t *testing.T) {
 	bridge.SetPluginCaller(&mockPluginCaller{
 		response: `{"result": "ok"}`,
 	})
+	bridge.SetPluginGate(stubGate{})
 
 	tool := &GeneratedTool{
 		Tool:        Tool{Name: "test_plugin_action"},
@@ -339,6 +339,152 @@ func TestAPIBridge_ExecutePlugin_Success(t *testing.T) {
 	}
 	if result.Content[0].Text != `{"result": "ok"}` {
 		t.Errorf("Unexpected response: %s", result.Content[0].Text)
+	}
+}
+
+// stubGate admits callers whose user_role is in the route's middleware list
+// (e.g. Middleware ["Admin"]) and copies identity like the host envelope.
+type stubGate struct{}
+
+func (stubGate) Authorize(_ string, middleware []string) ([]gin.HandlerFunc, error) {
+	var chain []gin.HandlerFunc
+	for _, want := range middleware {
+		if want == "webhook" {
+			return nil, fmt.Errorf("webhook routes cannot be called this way")
+		}
+		want := want
+		chain = append(chain, func(c *gin.Context) {
+			if c.GetString("user_role") != want {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "requires " + want})
+			}
+		})
+	}
+	return chain, nil
+}
+
+func (stubGate) Envelope(c *gin.Context, args map[string]any, _ string) {
+	args["_user_id"] = c.GetInt("user_id")
+}
+
+// A plugin tool runs only after the route's middleware admits the caller;
+// before, ExecutePlugin called the plugin for anyone holding an MCP token.
+func TestAPIBridge_ExecutePlugin_EnforcesRouteMiddleware(t *testing.T) {
+	caller := &mockPluginCaller{response: `{"result": "ok"}`}
+	bridge := NewAPIBridge()
+	bridge.SetPluginCaller(caller)
+	bridge.SetPluginGate(stubGate{})
+	tool := &GeneratedTool{
+		Tool:        Tool{Name: "testplugin_admin_action"},
+		HandlerName: "AdminAction",
+		IsPlugin:    true,
+		PluginName:  "testplugin",
+		Method:      "POST",
+		Path:        "/plugin/admin",
+		Middleware:  []string{"Admin"},
+	}
+
+	result, err := bridge.ExecutePlugin(context.Background(), tool, nil, UserContext{UserID: 7, UserRole: "Agent"})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !result.IsError || result.Content[0].Text != "Error (403): requires Admin" {
+		t.Fatalf("expected 403 denial, got %+v", result)
+	}
+	if caller.lastFn != "" {
+		t.Fatalf("plugin was called (%s) for a denied caller", caller.lastFn)
+	}
+
+	result, err = bridge.ExecutePlugin(context.Background(), tool, map[string]any{"_user_id": 1}, UserContext{UserID: 7, UserRole: "Admin"})
+	if err != nil || result.IsError {
+		t.Fatalf("admin call failed: %v %+v", err, result)
+	}
+	var args map[string]any
+	if err := json.Unmarshal(caller.lastArgs, &args); err != nil {
+		t.Fatalf("unmarshal args: %v", err)
+	}
+	if args["_user_id"] != float64(7) {
+		t.Errorf("_user_id = %v, want the caller (7), not the client value", args["_user_id"])
+	}
+}
+
+// Without a gate, or for a route the gate cannot authorize, plugin tools are
+// refused rather than run unchecked.
+func TestAPIBridge_ExecutePlugin_RefusesUnauthorizable(t *testing.T) {
+	caller := &mockPluginCaller{response: `{}`}
+	tool := &GeneratedTool{Tool: Tool{Name: "testplugin_hook"}, HandlerName: "Hook", IsPlugin: true, PluginName: "testplugin", Middleware: []string{"webhook"}}
+
+	bridge := NewAPIBridge()
+	bridge.SetPluginCaller(caller)
+	if _, err := bridge.ExecutePlugin(context.Background(), tool, nil, UserContext{UserID: 1, UserRole: "Admin"}); err == nil {
+		t.Error("expected an error without a plugin gate")
+	}
+	bridge.SetPluginGate(stubGate{})
+	if _, err := bridge.ExecutePlugin(context.Background(), tool, nil, UserContext{UserID: 1, UserRole: "Admin"}); err == nil {
+		t.Error("expected an error for a webhook route")
+	}
+	if caller.lastFn != "" {
+		t.Errorf("plugin was called (%s)", caller.lastFn)
+	}
+}
+
+// A tool whose route middleware is not registered is refused; before, the
+// missing middleware was skipped and the handler ran without the check.
+func TestAPIBridge_Execute_MissingMiddlewareRefused(t *testing.T) {
+	registry := routing.NewHandlerRegistry()
+	routing.SetGlobalRegistryForTest(registry)
+	defer routing.SetGlobalRegistryForTest(nil)
+
+	called := false
+	routing.GlobalHandlerMap["GuardedHandler"] = func(c *gin.Context) {
+		called = true
+		c.JSON(http.StatusOK, gin.H{"success": true})
+	}
+	defer delete(routing.GlobalHandlerMap, "GuardedHandler")
+
+	tool := &GeneratedTool{
+		Tool:        Tool{Name: "guarded"},
+		HandlerName: "GuardedHandler",
+		Method:      "GET",
+		Path:        "/api/v1/guarded",
+		Middleware:  []string{"unified_auth", "queue_rw"},
+	}
+	result, err := NewAPIBridge().Execute(context.Background(), tool, nil, UserContext{UserID: 1, UserRole: "Agent"})
+	if err == nil {
+		t.Fatalf("expected an error, got %+v", result)
+	}
+	if called {
+		t.Error("handler ran without its middleware")
+	}
+}
+
+// The caller's auth keys reach the tool's middleware, so a check on keys the
+// token middleware sets (admin flag, token scopes) sees the real caller.
+func TestAPIBridge_Execute_CopiesCallerAuthKeys(t *testing.T) {
+	registry := routing.NewHandlerRegistry()
+	routing.SetGlobalRegistryForTest(registry)
+	defer routing.SetGlobalRegistryForTest(nil)
+	registry.RegisterMiddleware("admin", func(c *gin.Context) { //nolint:errcheck
+		if c.GetString("user_role") == "Admin" || c.GetBool("isInAdminGroup") {
+			c.Next()
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+	})
+	routing.GlobalHandlerMap["KeyedAdminHandler"] = func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"success": true})
+	}
+	defer delete(routing.GlobalHandlerMap, "KeyedAdminHandler")
+
+	tool := &GeneratedTool{Tool: Tool{Name: "keyed"}, HandlerName: "KeyedAdminHandler", Method: "GET", Path: "/api/v1/keyed", Middleware: []string{"admin"}}
+	bridge := NewAPIBridge()
+
+	result, err := bridge.Execute(context.Background(), tool, nil, UserContext{UserID: 1, UserRole: "User"})
+	if err != nil || !result.IsError {
+		t.Fatalf("token without admin flag: want denial, got %v %+v", err, result)
+	}
+	result, err = bridge.Execute(context.Background(), tool, nil, UserContext{UserID: 1, UserRole: "User", AuthKeys: map[string]any{"isInAdminGroup": true}})
+	if err != nil || result.IsError {
+		t.Fatalf("admin-scoped token: want success, got %v %+v", err, result)
 	}
 }
 

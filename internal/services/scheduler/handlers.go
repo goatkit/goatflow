@@ -15,6 +15,7 @@ import (
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/platform/notifications"
 	"github.com/goatkit/goatflow/internal/platform/push"
 	"github.com/goatkit/goatflow/internal/services/escalation"
@@ -253,6 +254,10 @@ func (s *Service) markAccountPolled(accountID int, when time.Time) {
 	s.emailPollState.mu.Unlock()
 }
 
+// errSchedulerNoDatabase fails a DB-backed job run when the scheduler has no
+// database, so the run is recorded as failed instead of a silent success.
+var errSchedulerNoDatabase = errors.New("scheduler: database unavailable")
+
 func (s *Service) handleHousekeeping(ctx context.Context, job *models.ScheduledJob) error {
 	s.logger.Printf("scheduler: housekeeping placeholder running")
 	return nil
@@ -260,8 +265,7 @@ func (s *Service) handleHousekeeping(ctx context.Context, job *models.ScheduledJ
 
 func (s *Service) handleGenericAgentExecute(ctx context.Context, job *models.ScheduledJob) error {
 	if s.db == nil {
-		s.logger.Printf("scheduler: database unavailable, skipping genericAgent")
-		return nil
+		return errSchedulerNoDatabase
 	}
 
 	svc := genericagent.NewService(s.db, genericagent.WithLogger(s.logger))
@@ -270,8 +274,7 @@ func (s *Service) handleGenericAgentExecute(ctx context.Context, job *models.Sch
 
 func (s *Service) handleEscalationCheck(ctx context.Context, job *models.ScheduledJob) error {
 	if s.db == nil {
-		s.logger.Printf("scheduler: database unavailable, skipping escalation check")
-		return nil
+		return errSchedulerNoDatabase
 	}
 
 	// Initialize escalation service
@@ -316,8 +319,7 @@ func (s *Service) handleEscalationCheck(ctx context.Context, job *models.Schedul
 // for various time periods and caches them in Valkey.
 func (s *Service) handleMetricsTicketActivity(ctx context.Context, job *models.ScheduledJob) error {
 	if s.db == nil {
-		s.logger.Printf("scheduler: database unavailable, skipping ticket activity metrics")
-		return nil
+		return errSchedulerNoDatabase
 	}
 
 	metrics := calculateTicketActivityMetrics(s.db)
@@ -364,7 +366,7 @@ func getTicketCount(db *sql.DB, countType string, days int) int {
 		query = database.ConvertPlaceholders(`
 			SELECT COUNT(*)
 			FROM ticket
-			WHERE ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)
+			WHERE ticket_state_id IN (` + lookups.ClosedStateIDsSQL + `)
 			  AND change_time >= DATE_SUB(NOW(), INTERVAL ? DAY)
 		`)
 	} else {
@@ -384,7 +386,7 @@ func getOpenTicketCount(db *sql.DB) int {
 	query := database.ConvertPlaceholders(`
 		SELECT COUNT(*)
 		FROM ticket
-		WHERE ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2, 4))
+		WHERE ticket_state_id IN (` + lookups.ViewableStateIDsSQL + `)
 	`)
 	var count int
 	_ = db.QueryRow(query).Scan(&count)

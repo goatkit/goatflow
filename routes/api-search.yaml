@@ -1,0 +1,44 @@
+---
+# Agent ticket search and saved searches (OTRS search_profile)
+apiVersion: goatflow.io/v1
+kind: RouteGroup
+metadata:
+    name: api-v1-search
+    description: "REST API v1 ticket search and saved searches (agents only)"
+    namespace: default
+    enabled: true
+spec:
+    prefix: /api/v1/search
+    middleware:
+        - unified_auth
+        - scope_tickets_read # API tokens need tickets:read or higher
+        - queue_ro # Require read access to at least one queue; results are limited to readable queues
+    routes:
+        - path: /tickets
+          method: GET
+          handler: HandleTicketSearchAPI
+          description: "Search tickets (ticket, article and customer fields)"
+        - path: /saved
+          method: GET
+          handler: HandleListSavedSearchesAPI
+          description: "List the caller's saved ticket searches"
+        - path: /saved
+          method: POST
+          handler: HandleCreateSavedSearchAPI
+          description: "Save a ticket search"
+        - path: /saved/:name
+          method: GET
+          handler: HandleGetSavedSearchAPI
+          description: "Get a saved ticket search"
+        - path: /saved/:name
+          method: PUT
+          handler: HandleUpdateSavedSearchAPI
+          description: "Replace the parameters of a saved ticket search"
+        - path: /saved/:name
+          method: DELETE
+          handler: HandleDeleteSavedSearchAPI
+          description: "Delete a saved ticket search"
+        - path: /saved/:name/execute
+          method: POST
+          handler: HandleExecuteSavedSearchAPI
+          description: "Run a saved ticket search"

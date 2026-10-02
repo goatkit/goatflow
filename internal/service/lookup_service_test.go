@@ -1,420 +1,115 @@
 package service
 
 import (
-	"sync"
+	"database/sql"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
-func TestNewLookupService(t *testing.T) {
-	service := NewLookupService()
-
-	assert.NotNil(t, service)
-	assert.Equal(t, 5*time.Minute, service.cacheTTL)
-	assert.NotNil(t, service.cache)
-	assert.Empty(t, service.cache)
+func lookupTestDB(t *testing.T) *sql.DB {
+	t.Helper()
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	require.NotNil(t, db)
+	return db
 }
 
-func TestGetTicketFormData(t *testing.T) {
-	tests := []struct {
-		name     string
-		setup    func(*LookupService)
-		validate func(*testing.T, *LookupService)
-	}{
-		{
-			name: "Returns fresh data when cache is empty",
-			setup: func(s *LookupService) {
-				// Cache starts empty
-			},
-			validate: func(t *testing.T, s *LookupService) {
-				data := s.GetTicketFormData()
-				require.NotNil(t, data)
-				assert.NotEmpty(t, data.Queues)
-				assert.NotEmpty(t, data.Priorities)
-				assert.NotEmpty(t, data.Types)
-				assert.NotEmpty(t, data.Statuses)
-
-				// Verify cache was populated
-				assert.NotNil(t, s.cache)
-				assert.NotEmpty(t, s.cacheTime)
-				// Check that at least one cache time entry exists and is recent
-				for _, cacheTime := range s.cacheTime {
-					assert.WithinDuration(t, time.Now(), cacheTime, time.Second)
-					break
-				}
-			},
-		},
-		{
-			name: "Returns cached data when cache is valid",
-			setup: func(s *LookupService) {
-				// Populate cache
-				s.GetTicketFormData()
-				// Mark cache time for comparison
-				s.mu.Lock()
-				s.cacheTime["en"] = time.Now()
-				s.mu.Unlock()
-			},
-			validate: func(t *testing.T, s *LookupService) {
-				originalCacheTime := s.cacheTime
-				data := s.GetTicketFormData()
-
-				require.NotNil(t, data)
-				// Cache time should not have changed
-				assert.Equal(t, originalCacheTime, s.cacheTime)
-			},
-		},
-		{
-			name: "Refreshes cache when TTL expired",
-			setup: func(s *LookupService) {
-				// Populate cache with old timestamp
-				s.GetTicketFormData()
-				s.mu.Lock()
-				s.cacheTime["en"] = time.Now().Add(-6 * time.Minute)
-				s.mu.Unlock()
-			},
-			validate: func(t *testing.T, s *LookupService) {
-				oldCacheTime := s.cacheTime["en"]
-				data := s.GetTicketFormData()
-
-				require.NotNil(t, data)
-				// Cache time should be updated
-				assert.True(t, s.cacheTime["en"].After(oldCacheTime))
-				assert.WithinDuration(t, time.Now(), s.cacheTime["en"], time.Second)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			service := NewLookupService()
-			tt.setup(service)
-			tt.validate(t, service)
-		})
-	}
+func countRows(t *testing.T, db *sql.DB, query string) int {
+	t.Helper()
+	var n int
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(query)).Scan(&n))
+	return n
 }
 
-func TestGetQueues(t *testing.T) {
-	service := NewLookupService()
-
-	queues := service.GetQueues()
-
-	// Should have at least some queues (from DB or fallback)
-	assert.NotEmpty(t, queues, "Expected at least one queue")
-
-	// Verify queue structure
-	for _, queue := range queues {
-		assert.NotZero(t, queue.ID)
-		assert.NotEmpty(t, queue.Name)
-		// Description might be empty from DB
-		// assert.NotEmpty(t, queue.Description)
-		// Active flag should be set
-		// assert.True(t, queue.Active)
-	}
+func insertTicketType(t *testing.T, db *sql.DB, name string) int64 {
+	t.Helper()
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+		RETURNING id`), name)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM ticket_type WHERE id = ?`), id)
+	})
+	return id
 }
 
-func TestGetPriorities(t *testing.T) {
-	service := NewLookupService()
-
-	priorities := service.GetPriorities()
-
-	assert.NotEmpty(t, priorities)
-	assert.GreaterOrEqual(t, len(priorities), 4) // At least 4 priorities
-
-	// Verify priority structure
-	for i, priority := range priorities {
-		assert.NotEmpty(t, priority.Value)
-		assert.NotEmpty(t, priority.Label)
-		assert.Equal(t, i+1, priority.Order)
-		assert.True(t, priority.Active)
-	}
-
-	// Check that common priorities exist
-	priorityMap := make(map[string]bool)
-	for _, p := range priorities {
-		priorityMap[p.Value] = true
-	}
-
-	commonPriorities := []string{"low", "normal", "high", "urgent"}
-	for _, expected := range commonPriorities {
-		assert.True(t, priorityMap[expected] || priorityMap["1 very low"] || priorityMap["5 very high"],
-			"Expected to find priority %s or numbered variant", expected)
-	}
-}
-
-func TestGetTypes(t *testing.T) {
-	service := NewLookupService()
-
-	types := service.GetTypes()
-
-	assert.NotEmpty(t, types)
-	assert.Equal(t, 5, len(types))
-
-	// Verify each type has required fields
-	for _, typ := range types {
-		assert.NotZero(t, typ.ID)
-		assert.NotEmpty(t, typ.Value)
-		assert.NotEmpty(t, typ.Label)
-		assert.NotZero(t, typ.Order)
-		assert.True(t, typ.Active)
-	}
-}
-
-func TestGetStatuses(t *testing.T) {
-	service := NewLookupService()
-
-	statuses := service.GetStatuses()
-
-	assert.NotEmpty(t, statuses)
-	assert.Equal(t, 5, len(statuses)) // OTRS statuses in workflow order (by type_id)
-
-	// Verify statuses returned in workflow order: new (type 1), open (type 2), closed (type 5), pending (type 3)
-	expectedValues := []string{"new", "open", "closed successful", "closed unsuccessful", "pending reminder"}
-	for i, status := range statuses {
-		assert.Equal(t, expectedValues[i], status.Value, "status at index %d should be %s", i, expectedValues[i])
-		assert.NotEmpty(t, status.Label)
-		assert.Equal(t, i+1, status.Order)
-		assert.True(t, status.Active)
-	}
-}
-
-func TestInvalidateCache(t *testing.T) {
-	service := NewLookupService()
-
-	// Populate cache
-	_ = service.GetTicketFormData()
-	assert.NotNil(t, service.cache)
-
-	// Invalidate cache
-	service.InvalidateCache()
-
-	// Cache should be cleared (empty map, not nil)
-	assert.Empty(t, service.cache)
-
-	// Next call should repopulate
-	data := service.GetTicketFormData()
-	assert.NotNil(t, data)
-	assert.NotEmpty(t, service.cache)
-}
-
-func TestGetQueueByID(t *testing.T) {
-	service := NewLookupService()
-
-	tests := []struct {
-		name      string
-		id        int
-		wantFound bool
-	}{
-		{"Existing queue", 1, true},
-		{"Another existing queue", 3, true},
-		{"Non-existent queue", 999, false},
-		{"Zero ID", 0, false},
-		{"Negative ID", -1, false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			queue, found := service.GetQueueByID(tt.id)
-
-			assert.Equal(t, tt.wantFound, found)
-			if tt.wantFound {
-				assert.NotNil(t, queue)
-				assert.Equal(t, tt.id, queue.ID)
-				assert.NotEmpty(t, queue.Name)
-			} else {
-				assert.Nil(t, queue)
-			}
-		})
-	}
-}
-
-func TestGetPriorityByValue(t *testing.T) {
-	service := NewLookupService()
-	priorities := service.GetPriorities()
-	mapped := make(map[string]string, len(priorities))
-	for _, p := range priorities {
-		key := normalizePriorityValue(p.Value)
-		if key == "" {
-			continue
-		}
-		mapped[key] = p.Value
-	}
-
-	lowVal := mapped["low"]
-	normalVal := mapped["normal"]
-	highVal := mapped["high"]
-	urgentVal := mapped["very high"]
-
-	tests := []struct {
-		name      string
-		lookup    string
-		wantFound bool
-		expected  string
-	}{
-		{"Low priority canonical", lowVal, lowVal != "", lowVal},
-		{"Low priority alias", "low", lowVal != "", lowVal},
-		{"Normal priority canonical", normalVal, normalVal != "", normalVal},
-		{"High priority canonical", highVal, highVal != "", highVal},
-		{"Urgent priority canonical", urgentVal, urgentVal != "", urgentVal},
-		{"Invalid priority", "critical", false, ""},
-		{"Empty value", "", false, ""},
-		{"Case sensitive check", "HIGH", false, ""},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			priority, found := service.GetPriorityByValue(tt.lookup)
-
-			assert.Equal(t, tt.wantFound, found)
-			if tt.wantFound {
-				assert.NotNil(t, priority)
-				assert.Equal(t, tt.expected, priority.Value)
-				assert.NotEmpty(t, priority.Label)
-			} else {
-				assert.Nil(t, priority)
-			}
-		})
-	}
-}
-
-func TestGetTypeByID(t *testing.T) {
-	service := NewLookupService()
-
-	tests := []struct {
-		name      string
-		id        int
-		wantFound bool
-	}{
-		{"Incident type", 1, true},
-		{"Service request", 2, true},
-		{"Question type", 5, true},
-		{"Non-existent type", 99, false},
-		{"Zero ID", 0, false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			typ, found := service.GetTypeByID(tt.id)
-
-			assert.Equal(t, tt.wantFound, found)
-			if tt.wantFound {
-				assert.NotNil(t, typ)
-				assert.Equal(t, tt.id, typ.ID)
-				assert.NotEmpty(t, typ.Value)
-				assert.NotEmpty(t, typ.Label)
-			} else {
-				assert.Nil(t, typ)
-			}
-		})
-	}
-}
-
-func TestGetStatusByValue(t *testing.T) {
-	service := NewLookupService()
-
-	tests := []struct {
-		name      string
-		value     string
-		wantFound bool
-	}{
-		{"New status", "new", true},
-		{"Open status", "open", true},
-		{"Pending reminder status", "pending reminder", true},
-		{"Closed successful status", "closed successful", true},
-		{"Closed unsuccessful status", "closed unsuccessful", true},
-		{"Invalid status", "cancelled", false},
-		{"Empty value", "", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			status, found := service.GetStatusByValue(tt.value)
-
-			assert.Equal(t, tt.wantFound, found)
-			if tt.wantFound {
-				assert.NotNil(t, status)
-				assert.Equal(t, tt.value, status.Value)
-				assert.NotEmpty(t, status.Label)
-			} else {
-				assert.Nil(t, status)
-			}
-		})
-	}
-}
-
-func TestConcurrentAccess(t *testing.T) {
-	service := NewLookupService()
-
-	// Test concurrent reads and cache invalidation
-	var wg sync.WaitGroup
-	iterations := 100
-
-	wg.Add(iterations * 4)
-
-	// Concurrent reads
-	for i := 0; i < iterations; i++ {
-		go func() {
-			defer wg.Done()
-			data := service.GetTicketFormData()
-			assert.NotNil(t, data)
-		}()
-
-		go func() {
-			defer wg.Done()
-			queues := service.GetQueues()
-			assert.NotEmpty(t, queues)
-		}()
-
-		go func() {
-			defer wg.Done()
-			priorities := service.GetPriorities()
-			assert.NotEmpty(t, priorities)
-		}()
-
-		// Occasional cache invalidation
-		if i%10 == 0 {
-			go func() {
-				defer wg.Done()
-				service.InvalidateCache()
-			}()
-		} else {
-			go func() {
-				defer wg.Done()
-				// Just another read
-				_ = service.GetStatuses()
-			}()
+func findItem(items []models.LookupItem, id int) (models.LookupItem, bool) {
+	for _, it := range items {
+		if it.ID == id {
+			return it, true
 		}
 	}
-
-	wg.Wait()
-
-	// Verify service is still functional
-	data := service.GetTicketFormData()
-	assert.NotNil(t, data)
-	assert.NotEmpty(t, data.Queues)
+	return models.LookupItem{}, false
 }
 
-func TestCacheTTL(t *testing.T) {
-	service := NewLookupService()
-	// Use slightly larger TTL and sleeps to reduce flakiness on CI
-	service.cacheTTL = 150 * time.Millisecond
+// Every list in the form data mirrors its table: no invented default queues,
+// types or priorities, and no states dropped to a fixed "5-state workflow".
+func TestLookupFormDataMirrorsTables(t *testing.T) {
+	db := lookupTestDB(t)
 
-	// Get initial data
-	data1 := service.GetTicketFormData()
-	require.NotNil(t, data1)
-	cacheTime1 := service.cacheTime["en"]
+	stateName := fmt.Sprintf("lookup state %d", time.Now().UnixNano())
+	stateID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO ticket_state (name, comments, type_id, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, '', (SELECT id FROM ticket_state_type WHERE name = 'open'), 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+		RETURNING id`), stateName)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM ticket_state WHERE id = ?`), stateID)
+	})
+	typeName := fmt.Sprintf("LookupType%d", time.Now().UnixNano())
+	typeID := insertTicketType(t, db, typeName)
 
-	// Access within TTL - should use cache
-	time.Sleep(70 * time.Millisecond)
-	data2 := service.GetTicketFormData()
-	assert.Equal(t, cacheTime1, service.cacheTime["en"])
-	assert.Equal(t, data1, data2)
+	data, err := NewLookupService().GetTicketFormDataWithLang("en")
+	require.NoError(t, err)
 
-	// Access after TTL (total sleep > TTL) - should refresh
-	time.Sleep(110 * time.Millisecond)
-	data3 := service.GetTicketFormData()
-	assert.True(t, service.cacheTime["en"].After(cacheTime1))
-	require.NotNil(t, data3)
+	assert.Len(t, data.Statuses, countRows(t, db, `SELECT COUNT(*) FROM ticket_state`))
+	assert.Len(t, data.Priorities, countRows(t, db, `SELECT COUNT(*) FROM ticket_priority WHERE valid_id = 1`))
+	assert.Len(t, data.Queues, countRows(t, db, `SELECT COUNT(*) FROM queue WHERE valid_id = 1`))
+	assert.Len(t, data.Types, countRows(t, db, `SELECT COUNT(*) FROM ticket_type WHERE valid_id = 1`))
+
+	st, ok := findItem(data.Statuses, int(stateID))
+	require.True(t, ok, "new ticket_state row missing from statuses")
+	assert.Equal(t, stateName, st.Value)
+
+	typ, ok := findItem(data.Types, int(typeID))
+	require.True(t, ok, "new ticket_type row missing from types")
+	assert.Equal(t, typeName, typ.Value)
+	assert.Equal(t, typeName, typ.Label)
+	assert.True(t, typ.Active)
+
+	for _, q := range data.Queues {
+		var name string
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+			`SELECT name FROM queue WHERE id = ? AND valid_id = 1`), q.ID).Scan(&name), "queue id %d not a valid queue row", q.ID)
+	}
+}
+
+// Results are cached per language until InvalidateCache.
+func TestLookupFormDataCacheInvalidation(t *testing.T) {
+	db := lookupTestDB(t)
+	svc := NewLookupService()
+
+	_, err := svc.GetTicketFormDataWithLang("en")
+	require.NoError(t, err)
+
+	typeID := insertTicketType(t, db, fmt.Sprintf("LookupCache%d", time.Now().UnixNano()))
+
+	cached, err := svc.GetTicketFormDataWithLang("en")
+	require.NoError(t, err)
+	_, ok := findItem(cached.Types, int(typeID))
+	assert.False(t, ok, "cached data must not see rows inserted after the first load")
+
+	svc.InvalidateCache()
+	fresh, err := svc.GetTicketFormDataWithLang("en")
+	require.NoError(t, err)
+	_, ok = findItem(fresh.Types, int(typeID))
+	assert.True(t, ok, "invalidated cache must reload from the database")
 }

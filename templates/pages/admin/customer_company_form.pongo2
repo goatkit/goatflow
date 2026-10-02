@@ -50,9 +50,17 @@
         <button onclick="switchTab('portal')" id="tab-portal" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" style="border-color: transparent; color: var(--gk-text-muted);">
           Portal Settings
         </button>
-        <button onclick="switchTab('services')" id="tab-services" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" style="border-color: transparent; color: var(--gk-text-muted);">
-          Services
-        </button>
+        {% if not IsNew %}
+        <a href="/admin/customer/companies/{{ Company.customer_id }}/users" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" style="border-color: transparent; color: var(--gk-text-muted);">
+          {{ t("customer_company_pages.nav.users")|default:"Customer Users" }}
+        </a>
+        <a href="/admin/customer/companies/{{ Company.customer_id }}/tickets" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" style="border-color: transparent; color: var(--gk-text-muted);">
+          {{ t("customer_company_pages.nav.tickets")|default:"Tickets" }}
+        </a>
+        <a href="/admin/customer/companies/{{ Company.customer_id }}/services" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" style="border-color: transparent; color: var(--gk-text-muted);">
+          {{ t("customer_company_pages.nav.services")|default:"Services" }}
+        </a>
+        {% endif %}
       </nav>
     </div>
 
@@ -138,6 +146,7 @@
         <a href="/admin/customer/portal/settings" style="color: var(--gk-primary); text-decoration: underline;">Default Customer Portal Settings</a>
         unless overridden below. Toggle <strong>Override default</strong> to set a value specific to this company.
       </p>
+      {# Every override flag is always posted (hidden 0, checkbox 1 when ticked) so the handler can tell "nothing overridden" apart from a legacy effective-values post. #}
       <form method="post" action="/admin/customer/companies/{{ Company.customer_id }}/portal-settings" class="space-y-6">
         {# Boolean field — Enabled #}
         <div class="space-y-2 pb-4" style="border-bottom: 1px solid var(--gk-border-default);">
@@ -149,6 +158,7 @@
               </p>
             </div>
             <label class="inline-flex items-center gap-2 text-sm" style="color: var(--gk-text-secondary);">
+              <input type="hidden" name="override_enabled" value="0">
               <input type="checkbox" name="override_enabled" value="1" {% if PortalOverrides.enabled %}checked{% endif %}
                      class="h-4 w-4" style="accent-color: var(--gk-primary);"
                      onchange="toggleOverride(this,'enabled')">
@@ -174,6 +184,7 @@
               </p>
             </div>
             <label class="inline-flex items-center gap-2 text-sm" style="color: var(--gk-text-secondary);">
+              <input type="hidden" name="override_login_required" value="0">
               <input type="checkbox" name="override_login_required" value="1" {% if PortalOverrides.login %}checked{% endif %}
                      class="h-4 w-4" style="accent-color: var(--gk-primary);"
                      onchange="toggleOverride(this,'login_required')">
@@ -199,6 +210,7 @@
               </p>
             </div>
             <label class="inline-flex items-center gap-2 text-sm" style="color: var(--gk-text-secondary);">
+              <input type="hidden" name="override_title" value="0">
               <input type="checkbox" name="override_title" value="1" {% if PortalOverrides.title %}checked{% endif %}
                      class="h-4 w-4" style="accent-color: var(--gk-primary);"
                      onchange="toggleOverride(this,'title')">
@@ -222,6 +234,7 @@
               </p>
             </div>
             <label class="inline-flex items-center gap-2 text-sm" style="color: var(--gk-text-secondary);">
+              <input type="hidden" name="override_footer_text" value="0">
               <input type="checkbox" name="override_footer_text" value="1" {% if PortalOverrides.footer %}checked{% endif %}
                      class="h-4 w-4" style="accent-color: var(--gk-primary);"
                      onchange="toggleOverride(this,'footer_text')">
@@ -245,6 +258,7 @@
               </p>
             </div>
             <label class="inline-flex items-center gap-2 text-sm" style="color: var(--gk-text-secondary);">
+              <input type="hidden" name="override_landing_page" value="0">
               <input type="checkbox" name="override_landing_page" value="1" {% if PortalOverrides.landing %}checked{% endif %}
                      class="h-4 w-4" style="accent-color: var(--gk-primary);"
                      onchange="toggleOverride(this,'landing_page')">
@@ -342,31 +356,14 @@
       </div>
       {% endif %}
     </div>
-
-    <!-- Services Tab -->
-    <div id="content-services" class="tab-content p-6 hidden">
-      <div class="space-y-6">
-        <div>
-          <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("customer_company_form.assigned_services")|default:"Assigned Services" }}</h3>
-          <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">Manage which services are available to this customer company</p>
-        </div>
-
-        <div id="services-list" class="space-y-2">
-          <!-- Services will be loaded here via JavaScript -->
-        </div>
-
-        <div class="mt-6 flex justify-end">
-          <button type="button" onclick="saveServices()" class="gk-btn-neon">
-            Save Services
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 
 <script>
 function switchTab(tabName) {
+  if (!document.getElementById('content-' + tabName)) {
+    tabName = 'general';
+  }
   // Hide all tabs
   document.querySelectorAll('.tab-content').forEach(tab => {
     tab.classList.add('hidden');
@@ -383,67 +380,7 @@ function switchTab(tabName) {
   const activeTab = document.getElementById('tab-' + tabName);
   activeTab.style.borderColor = 'var(--gk-primary)';
   activeTab.style.color = 'var(--gk-primary)';
-
-  // Load services if switching to services tab
-  if (tabName === 'services') {
-    loadServices();
-  }
 }
-
-{% if IsNew %}
-function loadServices() {
-  const container = document.getElementById('services-list');
-  container.innerHTML = '<p class="text-sm" style="color: var(--gk-text-muted);">Save the company to assign services.</p>';
-}
-
-function saveServices() {
-  alert('{{ t("messages.save_company_before_services")|default:"Save the company before assigning services." }}');
-}
-{% else %}
-function loadServices() {
-  fetch(`/admin/customer/companies/{{ Company.customer_id }}/services`)
-    .then(response => response.json())
-    .then(data => {
-      const container = document.getElementById('services-list');
-      container.innerHTML = '';
-
-      data.services.forEach(service => {
-        const div = document.createElement('div');
-        div.className = 'flex items-center p-3 rounded-lg';
-        div.style.border = '1px solid var(--gk-border-default)';
-        div.innerHTML = `
-          <input type="checkbox" name="services" value="${service.id}" ${service.assigned ? 'checked' : ''}
-                 class="h-4 w-4 rounded focus:ring-2"
-                 style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
-          <div class="ml-3">
-            <div class="text-sm font-medium" style="color: var(--gk-text-primary);">${service.name}</div>
-            <div class="text-xs" style="color: var(--gk-text-muted);">${service.description || 'No description'}</div>
-          </div>
-        `;
-        container.appendChild(div);
-      });
-    });
-}
-
-function saveServices() {
-  const selectedServices = Array.from(document.querySelectorAll('input[name="services"]:checked'))
-    .map(cb => cb.value);
-
-  fetch(`/admin/customer/companies/{{ Company.customer_id }}/services`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ services: selectedServices })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      alert('{{ t("messages.services_updated_success")|default:"Services updated successfully" }}');
-    } else {
-      alert('{{ t("messages.failed_update_services")|default:"Failed to update services" }}: ' + (data.error || '{{ t("messages.unknown_error")|default:"Unknown error" }}'));
-    }
-  });
-}
-{% endif %}
 
 // Set active tab based on URL parameter or default to general
 const urlParams = new URLSearchParams(window.location.search);

@@ -2,438 +2,241 @@ package storage
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
-// DatabaseBackend implements article storage in the database (OTRS ArticleStorageDB).
-type DatabaseBackend struct {
+// DatabaseStore keeps attachments in article_data_mime_attachment and raw
+// emails in article_data_mime_plain (OTRS ArticleStorageDB).
+type DatabaseStore struct {
 	db *sql.DB
+	tx *sql.Tx
 }
 
-// NewDatabaseBackend creates a new database storage backend.
-func NewDatabaseBackend(db *sql.DB) *DatabaseBackend {
-	return &DatabaseBackend{
-		db: db,
-	}
+// NewDatabaseStore returns a DB-backed article store.
+func NewDatabaseStore(db *sql.DB) *DatabaseStore {
+	return &DatabaseStore{db: db}
 }
 
-// Store saves article content to the database.
-func (d *DatabaseBackend) Store(ctx context.Context, articleID int64, content *ArticleContent) (*StorageReference, error) {
-	// Calculate checksum
-	hash := sha256.Sum256(content.Content)
-	checksum := hex.EncodeToString(hash[:])
+// Backend returns BackendDB.
+func (s *DatabaseStore) Backend() string { return BackendDB }
 
-	// Begin transaction
-	tx, err := d.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	// Check if this is the main article body or an attachment
-	if content.FileName == "" || content.FileName == "body" {
-		// Update the existing body row if present, otherwise insert a new one.
-		var mimeID int64
-		err = tx.QueryRowContext(ctx, database.ConvertPlaceholders(
-			"SELECT id FROM article_data_mime WHERE article_id = ? ORDER BY id LIMIT 1"), articleID).Scan(&mimeID)
-		switch {
-		case err == nil:
-			_, err = tx.ExecContext(ctx, database.ConvertPlaceholders(`
-                UPDATE article_data_mime
-                SET a_body = ?, a_content_type = ?, change_time = ?, change_by = ?
-                WHERE id = ?`),
-				content.Content,
-				content.ContentType,
-				time.Now(),
-				content.CreatedBy,
-				mimeID,
-			)
-		case err == sql.ErrNoRows:
-			mimeID, err = database.GetAdapter().InsertWithReturningTx(tx, database.ConvertPlaceholders(`
-            INSERT INTO article_data_mime (
-                article_id, a_subject, a_body, a_content_type,
-                incoming_time, create_time, create_by, change_time, change_by
-            ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?
-            ) RETURNING id`),
-				articleID,
-				content.Metadata["subject"],
-				content.Content,
-				content.ContentType,
-				time.Now().Unix(),
-				content.CreatedTime,
-				content.CreatedBy,
-				time.Now(),
-				content.CreatedBy,
-			)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("failed to store article body: %w", err)
-		}
-
-		location := fmt.Sprintf("article_data_mime:%d", mimeID)
-
-		// Commit transaction
-		if err := tx.Commit(); err != nil {
-			return nil, fmt.Errorf("failed to commit transaction: %w", err)
-		}
-
-		return &StorageReference{
-			ID:          mimeID,
-			ArticleID:   articleID,
-			Backend:     "DB",
-			Location:    location,
-			ContentType: content.ContentType,
-			FileName:    "body",
-			FileSize:    content.FileSize,
-			Checksum:    checksum,
-			CreatedTime: content.CreatedTime,
-		}, nil
-	}
-
-	// Store as attachment
-	attachmentID, err := database.GetAdapter().InsertWithReturningTx(tx, database.ConvertPlaceholders(`
-        INSERT INTO article_data_mime_attachment (
-            article_id, filename, content_type, content_size,
-            content, content_id, content_alternative, disposition,
-            create_time, create_by, change_time, change_by
-        ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-        ) RETURNING id`),
-		articleID,
-		content.FileName,
-		content.ContentType,
-		fmt.Sprintf("%d", content.FileSize),
-		content.Content,
-		content.Metadata["content_id"],
-		content.Metadata["content_alternative"],
-		content.Metadata["disposition"],
-		content.CreatedTime,
-		content.CreatedBy,
-		time.Now(),
-		content.CreatedBy,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to store attachment: %w", err)
-	}
-
-	// Commit transaction
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	location := fmt.Sprintf("attachment:%d", attachmentID)
-
-	return &StorageReference{
-		ID:          attachmentID,
-		ArticleID:   articleID,
-		Backend:     "DB",
-		Location:    location,
-		ContentType: content.ContentType,
-		FileName:    content.FileName,
-		FileSize:    content.FileSize,
-		Checksum:    checksum,
-		CreatedTime: content.CreatedTime,
-	}, nil
+// WithTx returns a store running on tx.
+func (s *DatabaseStore) WithTx(tx *sql.Tx) ArticleStore {
+	return &DatabaseStore{db: s.db, tx: tx}
 }
 
-// Retrieve gets article content from the database.
-func (d *DatabaseBackend) Retrieve(ctx context.Context, ref *StorageReference) (*ArticleContent, error) {
-	content := &ArticleContent{
-		ArticleID: ref.ArticleID,
-		Metadata:  make(map[string]string),
+func (s *DatabaseStore) q() querier {
+	if s.tx != nil {
+		return s.tx
 	}
-
-	// Check if this is article body or attachment
-	if ref.FileName == "body" || strings.HasPrefix(ref.Location, "article_data_mime:") {
-		// Retrieve from article_data_mime
-		query := database.ConvertPlaceholders(`
-			SELECT 
-				a_body, a_content_type, a_subject, 
-				create_time, create_by
-			FROM article_data_mime
-			WHERE article_id = ?`)
-
-		var subject sql.NullString
-		err := d.db.QueryRowContext(ctx, query, ref.ArticleID).Scan(
-			&content.Content,
-			&content.ContentType,
-			&subject,
-			&content.CreatedTime,
-			&content.CreatedBy,
-		)
-
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, fmt.Errorf("article body not found")
-			}
-			return nil, fmt.Errorf("failed to retrieve article body: %w", err)
-		}
-
-		if subject.Valid {
-			content.Metadata["subject"] = subject.String
-		}
-		content.FileName = "body"
-		content.FileSize = int64(len(content.Content))
-
-		return content, nil
-	}
-
-	// Retrieve attachment
-	query := database.ConvertPlaceholders(`
-		SELECT 
-			content, content_type, filename, content_size,
-			content_id, content_alternative, disposition,
-			create_time, create_by
-		FROM article_data_mime_attachment
-		WHERE article_id = ? AND filename = ?`)
-
-	var contentID, contentAlt, disposition sql.NullString
-	var contentSize string
-
-	err := d.db.QueryRowContext(ctx, query, ref.ArticleID, ref.FileName).Scan(
-		&content.Content,
-		&content.ContentType,
-		&content.FileName,
-		&contentSize,
-		&contentID,
-		&contentAlt,
-		&disposition,
-		&content.CreatedTime,
-		&content.CreatedBy,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("attachment not found")
-		}
-		return nil, fmt.Errorf("failed to retrieve attachment: %w", err)
-	}
-
-	if contentID.Valid {
-		content.Metadata["content_id"] = contentID.String
-	}
-	if contentAlt.Valid {
-		content.Metadata["content_alternative"] = contentAlt.String
-	}
-	if disposition.Valid {
-		content.Metadata["disposition"] = disposition.String
-	}
-
-	content.FileSize = int64(len(content.Content))
-
-	return content, nil
+	return s.db
 }
 
-// Delete removes article content from the database.
-func (d *DatabaseBackend) Delete(ctx context.Context, ref *StorageReference) error {
-	tx, err := d.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	// Check if this is article body or attachment
-	if ref.FileName == "body" || (len(ref.Location) > 17 && ref.Location[:17] == "article_data_mime") {
-		// Delete from article_data_mime
-		_, err = tx.ExecContext(ctx, database.ConvertPlaceholders("DELETE FROM article_data_mime WHERE article_id = ?"), ref.ArticleID)
-		if err != nil {
-			return fmt.Errorf("failed to delete article body: %w", err)
-		}
-	} else {
-		// Delete attachment
-		_, err = tx.ExecContext(ctx,
-			database.ConvertPlaceholders("DELETE FROM article_data_mime_attachment WHERE article_id = ? AND filename = ?"),
-			ref.ArticleID, ref.FileName)
-		if err != nil {
-			return fmt.Errorf("failed to delete attachment: %w", err)
-		}
-	}
-
-	return tx.Commit()
-}
-
-// Exists checks if article content exists in the database.
-func (d *DatabaseBackend) Exists(ctx context.Context, ref *StorageReference) (bool, error) {
-	var exists bool
-
-	if ref.FileName == "body" {
-		query := database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM article_data_mime WHERE article_id = ?)")
-		err := d.db.QueryRowContext(ctx, query, ref.ArticleID).Scan(&exists)
-		return exists, err
-	}
-
-	query := database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM article_data_mime_attachment WHERE article_id = ? AND filename = ?)")
-	err := d.db.QueryRowContext(ctx, query, ref.ArticleID, ref.FileName).Scan(&exists)
-	return exists, err
-}
-
-// List returns all storage references for an article.
-func (d *DatabaseBackend) List(ctx context.Context, articleID int64) ([]*StorageReference, error) {
-	refs := make([]*StorageReference, 0)
-
-	// Check for article body
-	var hasMime bool
-	err := d.db.QueryRowContext(ctx,
-		database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM article_data_mime WHERE article_id = ?)"),
-		articleID).Scan(&hasMime)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check article body: %w", err)
-	}
-
-	if hasMime {
-		// Get article body info
-		query := database.ConvertPlaceholders(`
-			SELECT 
-				id, a_content_type, octet_length(a_body) as size,
-				create_time
-			FROM article_data_mime
-			WHERE article_id = ?`)
-
-		var mimeID int64
-		var contentType string
-		var size int64
-		var createdTime time.Time
-
-		err = d.db.QueryRowContext(ctx, query, articleID).Scan(
-			&mimeID, &contentType, &size, &createdTime,
-		)
-		if err == nil {
-			refs = append(refs, &StorageReference{
-				ID:          mimeID,
-				ArticleID:   articleID,
-				Backend:     "DB",
-				Location:    fmt.Sprintf("article_data_mime:%d", mimeID),
-				ContentType: contentType,
-				FileName:    "body",
-				FileSize:    size,
-				CreatedTime: createdTime,
-			})
-		}
-	}
-
-	// Get attachments
-	query := database.ConvertPlaceholders(`
-		SELECT 
-			id, filename, content_type, COALESCE(content_size, '0'),
-			create_time
+// ListAttachments returns the article's attachments ordered by id.
+func (s *DatabaseStore) ListAttachments(ctx context.Context, articleID int64) ([]Attachment, error) {
+	rows, err := s.q().QueryContext(ctx, database.ConvertPlaceholders(`
+		SELECT id, filename, content_type, content_id, content_alternative, disposition,
+			COALESCE(octet_length(content), 0), create_time, create_by
 		FROM article_data_mime_attachment
 		WHERE article_id = ?
-		ORDER BY id`)
-
-	rows, err := d.db.QueryContext(ctx, query, articleID)
+		ORDER BY id`), articleID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list attachments: %w", err)
+		return nil, fmt.Errorf("list attachments of article %d: %w", articleID, err)
 	}
 	defer rows.Close()
 
+	list := make([]Attachment, 0)
 	for rows.Next() {
-		var ref StorageReference
-		ref.ArticleID = articleID
-		ref.Backend = "DB"
-
-		var contentSize string
-		err := rows.Scan(
-			&ref.ID,
-			&ref.FileName,
-			&ref.ContentType,
-			&contentSize,
-			&ref.CreatedTime,
-		)
+		a, err := scanAttachment(rows.Scan, articleID)
 		if err != nil {
-			continue
+			return nil, fmt.Errorf("list attachments of article %d: %w", articleID, err)
 		}
-		ref.FileSize, _ = strconv.ParseInt(strings.TrimSpace(contentSize), 10, 64)
-
-		ref.Location = fmt.Sprintf("attachment:%d", ref.ID)
-		refs = append(refs, &ref)
+		list = append(list, a)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("failed to iterate attachments: %w", err)
+		return nil, fmt.Errorf("list attachments of article %d: %w", articleID, err)
 	}
-
-	return refs, nil
+	return list, nil
 }
 
-// Migrate is handled by the MixedModeBackend.
-func (d *DatabaseBackend) Migrate(ctx context.Context, ref *StorageReference, target Backend) (*StorageReference, error) {
-	// Retrieve content
-	content, err := d.Retrieve(ctx, ref)
+func scanAttachment(scan func(...interface{}) error, articleID int64, extra ...interface{}) (Attachment, error) {
+	a := Attachment{ArticleID: articleID}
+	var filename, contentType, contentID, contentAlt, disposition sql.NullString
+	dest := append([]interface{}{
+		&a.FileID, &filename, &contentType, &contentID, &contentAlt, &disposition, &a.Size, &a.CreateTime, &a.CreateBy,
+	}, extra...)
+	if err := scan(dest...); err != nil {
+		return a, err
+	}
+	a.Filename = filename.String
+	a.ContentType = contentType.String
+	a.ContentID = contentID.String
+	a.ContentAlternative = contentAlt.String
+	a.Disposition = disposition.String
+	if a.Disposition == "" {
+		a.Disposition = defaultDisposition(a.Filename, a.ContentType, a.ContentID)
+	}
+	return a, nil
+}
+
+// GetAttachment returns one attachment row and its content.
+func (s *DatabaseStore) GetAttachment(ctx context.Context, articleID, fileID int64) (Attachment, []byte, error) {
+	var content []byte
+	row := s.q().QueryRowContext(ctx, database.ConvertPlaceholders(`
+		SELECT id, filename, content_type, content_id, content_alternative, disposition,
+			COALESCE(octet_length(content), 0), create_time, create_by, content
+		FROM article_data_mime_attachment
+		WHERE id = ? AND article_id = ?`), fileID, articleID)
+	a, err := scanAttachment(row.Scan, articleID, &content)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Attachment{}, nil, ErrNotFound
+	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve content for migration: %w", err)
+		return Attachment{}, nil, fmt.Errorf("get attachment %d of article %d: %w", fileID, articleID, err)
 	}
+	if content == nil {
+		content = []byte{}
+	}
+	return a, content, nil
+}
 
-	// Store in target
-	newRef, err := target.Store(ctx, ref.ArticleID, content)
+// WriteAttachment inserts an attachment row.
+func (s *DatabaseStore) WriteAttachment(ctx context.Context, articleID int64, in NewAttachment) (Attachment, error) {
+	in = normalizeAttachment(in)
+	existing, err := s.ListAttachments(ctx, articleID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to store content in target: %w", err)
+		return Attachment{}, err
+	}
+	used := make(map[string]bool, len(existing))
+	for _, a := range existing {
+		used[a.Filename] = true
+	}
+	filename := uniqueFilename(in.Filename, used)
+
+	now := time.Now()
+	query := database.ConvertPlaceholders(`
+		INSERT INTO article_data_mime_attachment (
+			article_id, filename, content_type, content_size, content,
+			content_id, content_alternative, disposition,
+			create_time, create_by, change_time, change_by
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`)
+	args := []interface{}{
+		articleID, filename, in.ContentType, strconv.Itoa(len(in.Content)), in.Content,
+		nullIfEmpty(in.ContentID), nullIfEmpty(in.ContentAlternative), nullIfEmpty(in.Disposition),
+		now, in.CreateBy, now, in.CreateBy,
+	}
+	var id int64
+	if s.tx != nil {
+		id, err = database.GetAdapter().InsertWithReturningTx(s.tx, query, args...)
+	} else {
+		id, err = database.GetAdapter().InsertWithReturning(s.db, query, args...)
+	}
+	if err != nil {
+		return Attachment{}, fmt.Errorf("write attachment of article %d: %w", articleID, err)
 	}
 
-	return newRef, nil
-}
-
-// GetInfo returns backend information.
-func (d *DatabaseBackend) GetInfo() *BackendInfo {
-	stats := &BackendStats{}
-
-	// Get statistics
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	// Count articles
-	d.db.QueryRowContext(ctx, // sql-converted: static query, no placeholders or dialect constructs
-		"SELECT COUNT(*) FROM article_data_mime").Scan(&stats.TotalFiles)
-
-	// Count attachments
-	var attachments int64
-	d.db.QueryRowContext(ctx, // sql-converted: static query, no placeholders or dialect constructs
-		"SELECT COUNT(*) FROM article_data_mime_attachment").Scan(&attachments)
-	stats.TotalFiles += attachments
-
-	// Get total size
-	d.db.QueryRowContext(ctx, // sql-converted: static portable query (octet_length exists on both)
-		"SELECT COALESCE(SUM(octet_length(a_body)), 0) FROM article_data_mime").Scan(&stats.TotalSize)
-
-	var attachmentSize int64
-	d.db.QueryRowContext(ctx, // sql-converted: static portable query (octet_length exists on both)
-		"SELECT COALESCE(SUM(octet_length(content)), 0) FROM article_data_mime_attachment").Scan(&attachmentSize)
-	stats.TotalSize += attachmentSize
-
-	return &BackendInfo{
-		Name: "DatabaseBackend",
-		Type: "DB",
-		Capabilities: []string{
-			"store",
-			"retrieve",
-			"delete",
-			"list",
-			"transactional",
-		},
-		Status:     "active",
-		Statistics: stats,
+	disposition := in.Disposition
+	if disposition == "" {
+		disposition = defaultDisposition(filename, in.ContentType, in.ContentID)
 	}
+	return Attachment{
+		ArticleID:          articleID,
+		FileID:             id,
+		Filename:           filename,
+		ContentType:        in.ContentType,
+		ContentID:          in.ContentID,
+		ContentAlternative: in.ContentAlternative,
+		Disposition:        disposition,
+		Size:               int64(len(in.Content)),
+		CreateTime:         now,
+		CreateBy:           in.CreateBy,
+	}, nil
 }
 
-// HealthCheck verifies the database connection.
-func (d *DatabaseBackend) HealthCheck(ctx context.Context) error {
-	return d.db.PingContext(ctx)
+// DeleteAttachment deletes one attachment row.
+func (s *DatabaseStore) DeleteAttachment(ctx context.Context, articleID, fileID int64) error {
+	res, err := s.q().ExecContext(ctx, database.ConvertPlaceholders(
+		"DELETE FROM article_data_mime_attachment WHERE id = ? AND article_id = ?"), fileID, articleID)
+	if err != nil {
+		return fmt.Errorf("delete attachment %d of article %d: %w", fileID, articleID, err)
+	}
+	if n, err := res.RowsAffected(); err == nil && n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
-// Register the database backend with the factory.
-func init() {
-	DefaultFactory.Register("DB", func(config map[string]interface{}) (Backend, error) {
-		db, ok := config["db"].(*sql.DB)
-		if !ok {
-			return nil, fmt.Errorf("database backend requires 'db' configuration")
-		}
-		return NewDatabaseBackend(db), nil
-	})
+// WritePlain replaces the article's raw email.
+func (s *DatabaseStore) WritePlain(ctx context.Context, articleID int64, raw []byte, createBy int) error {
+	if createBy == 0 {
+		createBy = systemUserID
+	}
+	if _, err := s.q().ExecContext(ctx, database.ConvertPlaceholders(
+		"DELETE FROM article_data_mime_plain WHERE article_id = ?"), articleID); err != nil {
+		return fmt.Errorf("replace plain email of article %d: %w", articleID, err)
+	}
+	now := time.Now()
+	if _, err := s.q().ExecContext(ctx, database.ConvertPlaceholders(`
+		INSERT INTO article_data_mime_plain (article_id, body, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, ?, ?, ?, ?)`), articleID, raw, now, createBy, now, createBy); err != nil {
+		return fmt.Errorf("write plain email of article %d: %w", articleID, err)
+	}
+	return nil
+}
+
+// ReadPlain returns the article's raw email.
+func (s *DatabaseStore) ReadPlain(ctx context.Context, articleID int64) ([]byte, error) {
+	var raw []byte
+	err := s.q().QueryRowContext(ctx, database.ConvertPlaceholders(
+		"SELECT body FROM article_data_mime_plain WHERE article_id = ? ORDER BY id DESC LIMIT 1"), articleID).Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read plain email of article %d: %w", articleID, err)
+	}
+	return raw, nil
+}
+
+// DeleteArticle removes the article's attachments and raw email rows.
+func (s *DatabaseStore) DeleteArticle(ctx context.Context, articleID int64) error {
+	if _, err := s.q().ExecContext(ctx, database.ConvertPlaceholders(
+		"DELETE FROM article_data_mime_attachment WHERE article_id = ?"), articleID); err != nil {
+		return fmt.Errorf("delete attachments of article %d: %w", articleID, err)
+	}
+	if _, err := s.q().ExecContext(ctx, database.ConvertPlaceholders(
+		"DELETE FROM article_data_mime_plain WHERE article_id = ?"), articleID); err != nil {
+		return fmt.Errorf("delete plain email of article %d: %w", articleID, err)
+	}
+	return nil
+}
+
+// Stats counts attachment and plain-email rows and their bytes.
+func (s *DatabaseStore) Stats(ctx context.Context) (files, size int64, err error) {
+	var n, b int64
+	if err = s.q().QueryRowContext(ctx, database.ConvertPlaceholders(`
+		SELECT COUNT(*), COALESCE(SUM(octet_length(content)), 0)
+		FROM article_data_mime_attachment`)).Scan(&n, &b); err != nil {
+		return 0, 0, fmt.Errorf("count attachments: %w", err)
+	}
+	files, size = n, b
+	if err = s.q().QueryRowContext(ctx, database.ConvertPlaceholders(`
+		SELECT COUNT(*), COALESCE(SUM(octet_length(body)), 0)
+		FROM article_data_mime_plain`)).Scan(&n, &b); err != nil {
+		return 0, 0, fmt.Errorf("count plain emails: %w", err)
+	}
+	return files + n, size + b, nil
+}
+
+func nullIfEmpty(s string) interface{} {
+	if s == "" {
+		return nil
+	}
+	return s
 }

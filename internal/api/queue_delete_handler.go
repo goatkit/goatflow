@@ -3,7 +3,7 @@ package api
 
 import (
 	"database/sql"
-	"log"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -11,37 +11,6 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
-
-// deleteQueueInTransaction performs the queue deletion within a transaction.
-func deleteQueueInTransaction(tx *sql.Tx, queueID int, userID interface{}) error {
-	deleteGroupsQuery := database.ConvertPlaceholders(`DELETE FROM queue_group WHERE queue_id = ?`)
-	if _, err := tx.Exec(deleteGroupsQuery, queueID); err != nil {
-		return err
-	}
-
-	deleteQuery := database.ConvertPlaceholders(`
-		UPDATE queue
-		SET valid_id = 2, change_time = NOW(), change_by = ?
-		WHERE id = ?
-	`)
-
-	// Args order matches query: change_by=?, id=?
-	result, err := tx.Exec(deleteQuery, userID, queueID)
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rowsAffected == 0 {
-		return sql.ErrNoRows
-	}
-
-	return tx.Commit()
-}
 
 // HandleDeleteQueueAPI handles DELETE /api/v1/queues/:id.
 //
@@ -57,8 +26,7 @@ func deleteQueueInTransaction(tx *sql.Tx, queueID int, userID interface{}) error
 //	@Security		BearerAuth
 //	@Router			/queues/{id} [delete]
 func HandleDeleteQueueAPI(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
 		return
 	}
@@ -92,22 +60,23 @@ func HandleDeleteQueueAPI(c *gin.Context) {
 		return
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+	// Soft delete: the queue keeps its group (queue.group_id) so it can be
+	// restored as it was.
+	var exists int
+	err = db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM queue WHERE id = ?`), queueID).Scan(&exists)
+	if errors.Is(err, sql.ErrNoRows) {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Queue not found"})
 		return
 	}
-	defer func() {
-		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
-			log.Printf("queue_delete_handler: tx.Rollback failed: %v", err)
-		}
-	}()
-
-	if err := deleteQueueInTransaction(tx, queueID, userID); err != nil {
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Queue not found"})
-			return
-		}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to load queue"})
+		return
+	}
+	if _, err := db.Exec(database.ConvertPlaceholders(`
+		UPDATE queue
+		SET valid_id = 2, change_time = NOW(), change_by = ?
+		WHERE id = ?
+	`), GetUserIDFromCtx(c, 1), queueID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete queue"})
 		return
 	}

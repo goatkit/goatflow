@@ -1,8 +1,8 @@
 package api
 
 import (
-	"encoding/csv"
-	"fmt"
+	"database/sql"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -10,104 +10,85 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/goatkit/goatflow/internal/platform/constants"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/pkg/markdown"
 )
 
-// InternalNote represents an internal note on a ticket.
+// InternalNote is an internal (agent-only) note on a ticket. It is stored as an OTRS
+// article on the Internal communication channel that is not visible to the customer.
 type InternalNote struct {
-	ID               int        `json:"id"`
-	TicketID         int        `json:"ticket_id"`
-	Content          string     `json:"content"`
-	FormattedContent string     `json:"formatted_content"`
-	AuthorID         int        `json:"author_id"`
-	AuthorName       string     `json:"author_name"`
-	Visibility       string     `json:"visibility"`       // always "internal"
-	CustomerVisible  bool       `json:"customer_visible"` // always false
-	IsPriority       bool       `json:"is_priority"`
-	Category         string     `json:"category"`
-	Mentions         []string   `json:"mentions"`
-	HasMentions      bool       `json:"has_mentions"`
-	HasTeamMention   bool       `json:"has_team_mention"`
-	Attachments      []int      `json:"attachments"`
-	IsEdited         bool       `json:"is_edited"`
-	EditedAt         *time.Time `json:"edited_at,omitempty"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at"`
+	ID               int       `json:"id"`
+	TicketID         int       `json:"ticket_id"`
+	Content          string    `json:"content"`
+	FormattedContent string    `json:"formatted_content"`
+	AuthorID         int       `json:"author_id"`
+	AuthorName       string    `json:"author_name"`
+	Visibility       string    `json:"visibility"`       // always "internal"
+	CustomerVisible  bool      `json:"customer_visible"` // always false
+	Mentions         []string  `json:"mentions"`
+	HasMentions      bool      `json:"has_mentions"`
+	HasTeamMention   bool      `json:"has_team_mention"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
-// NoteHistory represents edit history for a note.
-type NoteHistory struct {
-	ID       int       `json:"id"`
-	NoteID   int       `json:"note_id"`
-	Content  string    `json:"content"`
-	EditedBy int       `json:"edited_by"`
-	EditedAt time.Time `json:"edited_at"`
-	Version  int       `json:"version"`
+const internalNoteSelect = `
+	SELECT a.id, a.ticket_id, a.create_by, a.create_time, a.change_time,
+	       COALESCE(adm.a_body, ''),
+	       COALESCE(u.first_name, ''), COALESCE(u.last_name, ''), COALESCE(u.login, '')
+	FROM article a
+	LEFT JOIN article_data_mime adm ON adm.article_id = a.id
+	LEFT JOIN users u ON u.id = a.create_by
+	WHERE a.ticket_id = ? AND a.communication_channel_id = ? AND a.is_visible_for_customer = 0`
+
+func scanInternalNote(row interface{ Scan(...any) error }) (*InternalNote, error) {
+	var n InternalNote
+	var first, last, login string
+	if err := row.Scan(&n.ID, &n.TicketID, &n.AuthorID, &n.CreatedAt, &n.UpdatedAt, &n.Content, &first, &last, &login); err != nil {
+		return nil, err
+	}
+	n.AuthorName = strings.TrimSpace(first + " " + last)
+	if n.AuthorName == "" {
+		n.AuthorName = login
+	}
+	n.FormattedContent = RenderMarkdown(n.Content)
+	n.Visibility = "internal"
+	n.CustomerVisible = false
+	n.Mentions = uniqueStrings(extractMentions(n.Content))
+	n.HasMentions = len(n.Mentions) > 0
+	for _, m := range n.Mentions {
+		if strings.HasPrefix(m, "team-") {
+			n.HasTeamMention = true
+			break
+		}
+	}
+	return &n, nil
 }
 
-// Mock data for development.
-var internalNotes = map[int]map[int]*InternalNote{
-	1: { // Ticket ID 1
-		1: {
-			ID:               1,
-			TicketID:         1,
-			Content:          "Customer has VIP status - expedite resolution",
-			FormattedContent: "Customer has VIP status - expedite resolution",
-			AuthorID:         1,
-			AuthorName:       "John Agent",
-			Visibility:       "internal",
-			CustomerVisible:  false,
-			Category:         "general",
-			CreatedAt:        time.Now().Add(-24 * time.Hour),
-			UpdatedAt:        time.Now().Add(-24 * time.Hour),
-		},
-		2: {
-			ID:               2,
-			TicketID:         1,
-			Content:          "Technical analysis: Database connection timeout issue",
-			FormattedContent: "Technical analysis: Database connection timeout issue",
-			AuthorID:         1,
-			AuthorName:       "John Agent",
-			Visibility:       "internal",
-			CustomerVisible:  false,
-			Category:         "technical",
-			CreatedAt:        time.Now().Add(-12 * time.Hour),
-			UpdatedAt:        time.Now().Add(-12 * time.Hour),
-		},
-		3: {
-			ID:               3,
-			TicketID:         1,
-			Content:          "Note from another user",
-			FormattedContent: "Note from another user",
-			AuthorID:         2,
-			AuthorName:       "Jane Support",
-			Visibility:       "internal",
-			CustomerVisible:  false,
-			CreatedAt:        time.Now().Add(-6 * time.Hour),
-			UpdatedAt:        time.Now().Add(-6 * time.Hour),
-		},
-	},
+func loadInternalNote(db *sql.DB, ticketID, noteID int) (*InternalNote, error) {
+	return scanInternalNote(db.QueryRow(database.ConvertPlaceholders(internalNoteSelect+` AND a.id = ?`),
+		ticketID, constants.CommunicationChannelInternal, noteID))
 }
 
-var nextNoteID = 4
-var noteHistories = map[int][]NoteHistory{
-	1: { // Mock history for note ID 1
-		{
-			ID:       1,
-			NoteID:   1,
-			Content:  "Original content before edit",
-			EditedBy: 1,
-			EditedAt: time.Now().Add(-1 * time.Hour),
-			Version:  1,
-		},
-	},
+func internalNoteDB(c *gin.Context, op string) *sql.DB {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		log.Printf("%s: database unavailable: %v", op, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database unavailable"})
+		return nil
+	}
+	return db
 }
 
-// Mock tickets for validation.
-var mockTickets = map[int]bool{
-	1: true,
-	2: true,
-	3: true,
+// canModifyInternalNote reports whether the current user may edit/delete the note:
+// its author, or an admin.
+func canModifyInternalNote(c *gin.Context, note *InternalNote) bool {
+	if role, _ := c.Get("user_role"); role == "admin" || role == "Admin" { //nolint:errcheck // nil when absent
+		return true
+	}
+	return note.AuthorID == GetUserIDFromCtx(c, 0)
 }
 
 // RenderMarkdown converts markdown content to sanitized HTML with Tailwind
@@ -159,161 +140,151 @@ func addTailwindClasses(html string) string {
 
 // HandleCreateInternalNote creates a new internal note.
 func HandleCreateInternalNote(c *gin.Context) {
-	ticketIDStr := c.Param("id")
-	ticketID, err := strconv.Atoi(ticketIDStr)
+	ticketID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
 		return
 	}
 
-	// Check if ticket exists
-	if !mockTickets[ticketID] {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
-		return
-	}
-
-	// Check permissions
-	userRole, _ := c.Get("user_role")
-	if userRole == "customer" {
+	if userRole, _ := c.Get("user_role"); userRole == "customer" { //nolint:errcheck // nil when absent
 		c.JSON(http.StatusForbidden, gin.H{"error": "Only agents can create internal notes"})
 		return
 	}
 
 	var req struct {
-		Content       string   `json:"content"`
-		Visibility    string   `json:"visibility"`
-		IsPriority    bool     `json:"is_priority"`
-		Category      string   `json:"category"`
-		Mentions      []string `json:"mentions"`
-		AttachmentIDs []int    `json:"attachment_ids"`
-		NotifyUsers   bool     `json:"notify_users"`
+		Content string `json:"content"`
 	}
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	// Validate required fields
-	if req.Content == "" {
+	if strings.TrimSpace(req.Content) == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Content is required"})
 		return
 	}
 
-	authorID := GetUserIDFromCtx(c, 0)
-	userName, exists := c.Get("user_name")
-	if !exists {
-		userName = "Test User"
+	db := internalNoteDB(c, "HandleCreateInternalNote")
+	if db == nil {
+		return
 	}
 
-	authorName := "Test User"
-	if name, ok := userName.(string); ok {
-		authorName = name
-	}
-
-	// Extract mentions from content
-	mentions := extractMentions(req.Content)
-	if len(req.Mentions) > 0 {
-		mentions = append(mentions, req.Mentions...)
-	}
-	mentions = uniqueStrings(mentions)
-
-	// Check for team mentions
-	hasTeamMention := false
-	for _, mention := range mentions {
-		if strings.HasPrefix(mention, "team-") {
-			hasTeamMention = true
-			break
+	var exists int
+	if err := db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM ticket WHERE id = ?`), ticketID).Scan(&exists); err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+			return
 		}
+		log.Printf("HandleCreateInternalNote: lookup ticket %d: %v", ticketID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create internal note"})
+		return
 	}
 
-	// Create note
-	note := &InternalNote{
-		ID:               nextNoteID,
-		TicketID:         ticketID,
-		Content:          req.Content,
-		FormattedContent: RenderMarkdown(req.Content),
-		AuthorID:         authorID,
-		AuthorName:       authorName,
-		Visibility:       "internal",
-		CustomerVisible:  false,
-		IsPriority:       req.IsPriority,
-		Category:         req.Category,
-		Mentions:         mentions,
-		HasMentions:      len(mentions) > 0,
-		HasTeamMention:   hasTeamMention,
-		Attachments:      req.AttachmentIDs,
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
+	authorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("HandleCreateInternalNote: begin: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create internal note"})
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	articleID, err := insertArticle(tx, ArticleInsertParams{
+		TicketID:             int64(ticketID),
+		CommunicationChannel: constants.CommunicationChannelInternal,
+		IsVisibleForCustomer: 0,
+		CreateBy:             int64(authorID),
+	})
+	if err == nil {
+		err = insertArticleMimeData(tx, ArticleMimeParams{
+			ArticleID:    articleID,
+			From:         "Agent",
+			Subject:      defaultNoteSubject(constants.CommunicationChannelInternal),
+			Body:         req.Content,
+			ContentType:  "text/plain; charset=utf-8",
+			IncomingTime: time.Now().Unix(),
+			CreateBy:     int64(authorID),
+		})
+	}
+	if err == nil {
+		_, err = tx.Exec(database.ConvertPlaceholders(
+			`UPDATE ticket SET change_time = CURRENT_TIMESTAMP, change_by = ? WHERE id = ?`), authorID, ticketID)
+	}
+	if err == nil {
+		err = tx.Commit()
+	}
+	if err != nil {
+		log.Printf("HandleCreateInternalNote: ticket %d: %v", ticketID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create internal note"})
+		return
 	}
 
-	// Initialize ticket notes map if needed
-	if internalNotes[ticketID] == nil {
-		internalNotes[ticketID] = make(map[int]*InternalNote)
+	note, err := loadInternalNote(db, ticketID, int(articleID))
+	if err != nil {
+		log.Printf("HandleCreateInternalNote: reload note %d: %v", articleID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load internal note"})
+		return
 	}
 
-	internalNotes[ticketID][nextNoteID] = note
-	nextNoteID++
-
-	response := gin.H{
+	c.JSON(http.StatusCreated, gin.H{
 		"message": "Internal note added successfully",
 		"note_id": note.ID,
 		"note":    note,
-	}
-
-	// Mock notification sending
-	if req.NotifyUsers && len(mentions) > 0 {
-		response["notifications_sent"] = mentions
-	}
-
-	c.JSON(http.StatusCreated, response)
+	})
 }
 
 // HandleGetInternalNotes returns internal notes for a ticket.
 func HandleGetInternalNotes(c *gin.Context) {
-	ticketIDStr := c.Param("id")
-	ticketID, err := strconv.Atoi(ticketIDStr)
+	ticketID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
 		return
 	}
 
-	// Check permissions
-	userRole, _ := c.Get("user_role")
-	if userRole == "customer" {
+	if userRole, _ := c.Get("user_role"); userRole == "customer" { //nolint:errcheck // nil when absent
 		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to view internal notes"})
 		return
 	}
 
-	// Parse filters
-	category := c.Query("category")
-	priorityStr := c.Query("priority")
-	search := c.Query("search")
-	hasMentionsStr := c.Query("has_mentions")
+	search := strings.ToLower(c.Query("search"))
+	onlyMentions := c.Query("has_mentions") == "true"
+
+	db := internalNoteDB(c, "HandleGetInternalNotes")
+	if db == nil {
+		return
+	}
+
+	rows, err := db.Query(database.ConvertPlaceholders(internalNoteSelect+` ORDER BY a.create_time, a.id`),
+		ticketID, constants.CommunicationChannelInternal)
+	if err != nil {
+		log.Printf("HandleGetInternalNotes: ticket %d: %v", ticketID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load internal notes"})
+		return
+	}
+	defer rows.Close()
 
 	notes := []InternalNote{}
-
-	if ticketNotes, exists := internalNotes[ticketID]; exists {
-		for _, note := range ticketNotes {
-			// Apply filters
-			if category != "" && note.Category != category {
-				continue
-			}
-
-			if priorityStr == "true" && !note.IsPriority {
-				continue
-			}
-
-			if search != "" && !strings.Contains(strings.ToLower(note.Content), strings.ToLower(search)) {
-				continue
-			}
-
-			if hasMentionsStr == "true" && !note.HasMentions {
-				continue
-			}
-
-			notes = append(notes, *note)
+	for rows.Next() {
+		note, err := scanInternalNote(rows)
+		if err != nil {
+			log.Printf("HandleGetInternalNotes: scan ticket %d: %v", ticketID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load internal notes"})
+			return
 		}
+		if search != "" && !strings.Contains(strings.ToLower(note.Content), search) {
+			continue
+		}
+		if onlyMentions && !note.HasMentions {
+			continue
+		}
+		notes = append(notes, *note)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("HandleGetInternalNotes: iterate ticket %d: %v", ticketID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load internal notes"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -322,80 +293,100 @@ func HandleGetInternalNotes(c *gin.Context) {
 	})
 }
 
-// HandleUpdateInternalNote updates an existing internal note.
-func HandleUpdateInternalNote(c *gin.Context) {
-	ticketIDStr := c.Param("id")
-	ticketID, err := strconv.Atoi(ticketIDStr)
+// parseInternalNoteIDs reads :id and :note_id; it writes a 400 and returns ok=false on error.
+func parseInternalNoteIDs(c *gin.Context) (ticketID, noteID int, ok bool) {
+	ticketID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
-		return
+		return 0, 0, false
 	}
-
-	noteIDStr := c.Param("note_id")
-	noteID, err := strconv.Atoi(noteIDStr)
+	noteID, err = strconv.Atoi(c.Param("note_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid note ID"})
-		return
+		return 0, 0, false
 	}
+	return ticketID, noteID, true
+}
 
-	// Find note
-	ticketNotes, exists := internalNotes[ticketID]
-	if !exists {
+// findInternalNoteForChange loads the note and checks ownership, writing the error response itself.
+func findInternalNoteForChange(c *gin.Context, db *sql.DB, ticketID, noteID int, op, denied string) *InternalNote {
+	note, err := loadInternalNote(db, ticketID, noteID)
+	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Internal note not found"})
-		return
+		return nil
 	}
-
-	note, exists := ticketNotes[noteID]
-	if !exists {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Internal note not found"})
-		return
+	if err != nil {
+		log.Printf("%s: load note %d: %v", op, noteID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load internal note"})
+		return nil
 	}
+	if !canModifyInternalNote(c, note) {
+		c.JSON(http.StatusForbidden, gin.H{"error": denied})
+		return nil
+	}
+	return note
+}
 
-	currentUserID := GetUserIDFromCtx(c, 0)
-	userRole, _ := c.Get("user_role")
-
-	// Check permissions
-	if userRole != "admin" && note.AuthorID != currentUserID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You can only edit your own notes"})
+// HandleUpdateInternalNote updates the content of an existing internal note.
+func HandleUpdateInternalNote(c *gin.Context) {
+	ticketID, noteID, ok := parseInternalNoteIDs(c)
+	if !ok {
 		return
 	}
 
 	var req struct {
-		Content    string `json:"content"`
-		IsPriority bool   `json:"is_priority"`
-		Category   string `json:"category"`
+		Content string `json:"content"`
 	}
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	// Save to history before updating
-	if req.Content != "" && req.Content != note.Content {
-		history := NoteHistory{
-			ID:       len(noteHistories[noteID]) + 1,
-			NoteID:   noteID,
-			Content:  note.Content,
-			EditedBy: currentUserID,
-			EditedAt: time.Now(),
-			Version:  len(noteHistories[noteID]) + 1,
-		}
-		noteHistories[noteID] = append(noteHistories[noteID], history)
-
-		note.Content = req.Content
-		note.FormattedContent = RenderMarkdown(req.Content)
-		note.IsEdited = true
-		now := time.Now()
-		note.EditedAt = &now
+	if strings.TrimSpace(req.Content) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Content is required"})
+		return
 	}
 
-	if req.Category != "" {
-		note.Category = req.Category
+	db := internalNoteDB(c, "HandleUpdateInternalNote")
+	if db == nil {
+		return
+	}
+	if findInternalNoteForChange(c, db, ticketID, noteID, "HandleUpdateInternalNote", "You can only edit your own notes") == nil {
+		return
 	}
 
-	note.IsPriority = req.IsPriority
-	note.UpdatedAt = time.Now()
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("HandleUpdateInternalNote: begin: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update internal note"})
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+	_, err = tx.Exec(database.ConvertPlaceholders(
+		`UPDATE article_data_mime SET a_body = ?, change_time = CURRENT_TIMESTAMP, change_by = ? WHERE article_id = ?`),
+		req.Content, userID, noteID)
+	if err == nil {
+		_, err = tx.Exec(database.ConvertPlaceholders(
+			`UPDATE article SET change_time = CURRENT_TIMESTAMP, change_by = ? WHERE id = ?`), userID, noteID)
+	}
+	if err == nil {
+		err = tx.Commit()
+	}
+	if err != nil {
+		log.Printf("HandleUpdateInternalNote: note %d: %v", noteID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update internal note"})
+		return
+	}
+
+	note, err := loadInternalNote(db, ticketID, noteID)
+	if err != nil {
+		log.Printf("HandleUpdateInternalNote: reload note %d: %v", noteID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load internal note"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Internal note updated successfully",
@@ -403,257 +394,33 @@ func HandleUpdateInternalNote(c *gin.Context) {
 	})
 }
 
-// HandleDeleteInternalNote deletes an internal note.
+// HandleDeleteInternalNote deletes an internal note (the underlying article).
 func HandleDeleteInternalNote(c *gin.Context) {
-	ticketIDStr := c.Param("id")
-	ticketID, err := strconv.Atoi(ticketIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
+	ticketID, noteID, ok := parseInternalNoteIDs(c)
+	if !ok {
 		return
 	}
 
-	noteIDStr := c.Param("note_id")
-	noteID, err := strconv.Atoi(noteIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid note ID"})
+	db := internalNoteDB(c, "HandleDeleteInternalNote")
+	if db == nil {
+		return
+	}
+	if findInternalNoteForChange(c, db, ticketID, noteID, "HandleDeleteInternalNote", "You can only delete your own notes") == nil {
 		return
 	}
 
-	// Find note
-	ticketNotes, exists := internalNotes[ticketID]
-	if !exists {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Internal note not found"})
+	actorID, ok := auditUserID(c)
+	if !ok {
 		return
 	}
-
-	note, exists := ticketNotes[noteID]
-	if !exists {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Internal note not found"})
+	if err := deleteArticle(c.Request.Context(), db, ticketID, noteID, actorID); err != nil {
+		log.Printf("HandleDeleteInternalNote: note %d: %v", noteID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete internal note"})
 		return
 	}
-
-	currentUserID := GetUserIDFromCtx(c, 0)
-	userRole, _ := c.Get("user_role")
-
-	// Check permissions
-	if userRole != "admin" && note.AuthorID != currentUserID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You can only delete your own notes"})
-		return
-	}
-
-	delete(ticketNotes, noteID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Internal note deleted successfully",
-	})
-}
-
-// handleGetInternalNoteHistory returns edit history for a note.
-func handleGetInternalNoteHistory(c *gin.Context) {
-	noteIDStr := c.Param("note_id")
-	noteID, err := strconv.Atoi(noteIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid note ID"})
-		return
-	}
-
-	history := noteHistories[noteID]
-	if history == nil {
-		history = []NoteHistory{}
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"history": history,
-		"total":   len(history),
-	})
-}
-
-// handleGetInternalNoteStats returns statistics for internal notes.
-func handleGetInternalNoteStats(c *gin.Context) {
-	ticketIDStr := c.Param("id")
-	ticketID, err := strconv.Atoi(ticketIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
-		return
-	}
-
-	// Calculate statistics
-	totalNotes := 0
-	priorityNotes := 0
-	notesWithMentions := 0
-	notesByCategory := make(map[string]int)
-	notesByAuthor := make(map[string]int)
-	totalLength := 0
-
-	if ticketNotes, exists := internalNotes[ticketID]; exists {
-		for _, note := range ticketNotes {
-			totalNotes++
-			totalLength += len(note.Content)
-
-			if note.IsPriority {
-				priorityNotes++
-			}
-			if note.HasMentions {
-				notesWithMentions++
-			}
-			if note.Category != "" {
-				notesByCategory[note.Category]++
-			}
-			notesByAuthor[note.AuthorName]++
-		}
-	}
-
-	avgLength := 0
-	if totalNotes > 0 {
-		avgLength = totalLength / totalNotes
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"statistics": gin.H{
-			"total_notes":         totalNotes,
-			"priority_notes":      priorityNotes,
-			"notes_with_mentions": notesWithMentions,
-			"notes_by_category":   notesByCategory,
-			"notes_by_author":     notesByAuthor,
-			"average_note_length": avgLength,
-		},
-	})
-}
-
-// handleExportInternalNotes exports internal notes in various formats.
-func handleExportInternalNotes(c *gin.Context) {
-	ticketIDStr := c.Param("id")
-	ticketID, err := strconv.Atoi(ticketIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
-		return
-	}
-
-	format := c.Query("format")
-	if format == "" {
-		format = "json"
-	}
-
-	// Collect notes
-	notes := []InternalNote{}
-	if ticketNotes, exists := internalNotes[ticketID]; exists {
-		for _, note := range ticketNotes {
-			notes = append(notes, *note)
-		}
-	}
-
-	timestamp := time.Now().Format("20060102-150405")
-
-	switch format {
-	case "json":
-		c.Header("Content-Type", "application/json")
-		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"internal-notes-ticket-%d-%s.json\"", ticketID, timestamp))
-		c.JSON(http.StatusOK, gin.H{
-			"ticket_id":   ticketID,
-			"notes":       notes,
-			"exported_at": time.Now(),
-		})
-
-	case "csv":
-		c.Header("Content-Type", "text/csv")
-		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"internal-notes-ticket-%d-%s.csv\"", ticketID, timestamp))
-
-		writer := csv.NewWriter(c.Writer)
-		_ = writer.Write([]string{"ID", "Author", "Content", "Category", "Priority", "Created"}) //nolint:errcheck // Best effort streaming
-
-		for _, note := range notes {
-			_ = writer.Write([]string{ //nolint:errcheck // Best effort streaming
-				strconv.Itoa(note.ID),
-				note.AuthorName,
-				note.Content,
-				note.Category,
-				strconv.FormatBool(note.IsPriority),
-				note.CreatedAt.Format("2006-01-02 15:04:05"),
-			})
-		}
-		writer.Flush()
-
-	case "pdf":
-		// Mock PDF export
-		c.Header("Content-Type", "application/pdf")
-		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"internal-notes-ticket-%d-%s.pdf\"", ticketID, timestamp))
-		c.String(http.StatusOK, "PDF content would be generated here")
-
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid format. Supported: json, csv, pdf"})
-	}
-}
-
-// handleCreateNoteFromTemplate creates a note from a template.
-func handleCreateNoteFromTemplate(c *gin.Context) {
-	ticketIDStr := c.Param("id")
-	ticketID, err := strconv.Atoi(ticketIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
-		return
-	}
-
-	// Check if ticket exists
-	if !mockTickets[ticketID] {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
-		return
-	}
-
-	var req struct {
-		TemplateID int               `json:"template_id"`
-		Variables  map[string]string `json:"variables"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Mock template content
-	templateContent := "Issue Type: {{issue_type}}\nRoot Cause: {{root_cause}}\nResolution: Pending investigation"
-
-	// Replace variables
-	for key, value := range req.Variables {
-		placeholder := "{{" + key + "}}"
-		templateContent = strings.ReplaceAll(templateContent, placeholder, value)
-	}
-
-	authorID := GetUserIDFromCtx(c, 0)
-	userName, exists := c.Get("user_name")
-	if !exists {
-		userName = "Test User"
-	}
-
-	authorName := "Test User"
-	if name, ok := userName.(string); ok {
-		authorName = name
-	}
-
-	// Create note
-	note := &InternalNote{
-		ID:              nextNoteID,
-		TicketID:        ticketID,
-		Content:         templateContent,
-		AuthorID:        authorID,
-		AuthorName:      authorName,
-		Visibility:      "internal",
-		CustomerVisible: false,
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
-	}
-
-	// Initialize ticket notes map if needed
-	if internalNotes[ticketID] == nil {
-		internalNotes[ticketID] = make(map[int]*InternalNote)
-	}
-
-	internalNotes[ticketID][nextNoteID] = note
-	nextNoteID++
-
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Internal note created from template",
-		"note_id": note.ID,
-		"note":    note,
 	})
 }
 

@@ -4,12 +4,6 @@ package ticketutil
 
 import "time"
 
-// Pending state type IDs
-const (
-	PendingReminderStateTypeID = 4
-	PendingAutoStateTypeID     = 5
-)
-
 // DefaultPendingDuration is the default duration to use when a pending ticket
 // has no explicit pending_until time set. This provides a fallback for
 // legacy/migrated data that may be missing the date.
@@ -40,10 +34,4 @@ func EnsurePendingTime(untilTime int) int {
 		return untilTime
 	}
 	return int(time.Now().UTC().Add(DefaultPendingDuration).Unix())
-}
-
-// IsPendingStateType returns true if the state type is a pending state
-// (either pending reminder or pending auto-close).
-func IsPendingStateType(typeID int) bool {
-	return typeID == PendingReminderStateTypeID || typeID == PendingAutoStateTypeID
 }

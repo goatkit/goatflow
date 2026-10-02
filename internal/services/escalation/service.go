@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 )
 
 // Service handles ticket escalation index calculation matching OTRS behavior.
@@ -115,16 +116,16 @@ func (s *Service) TicketEscalationIndexBuild(ctx context.Context, ticketID, user
 // getTicketInfo retrieves ticket information needed for escalation.
 func (s *Service) getTicketInfo(ctx context.Context, ticketID int) (*TicketInfo, error) {
 	query := database.ConvertPlaceholders(`
-		SELECT t.id, t.queue_id, t.sla_id, ts.type_id, t.create_time, COALESCE(t.user_id, 1)
+		SELECT t.id, t.queue_id, t.sla_id, tst.name, t.create_time, COALESCE(t.user_id, 1)
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
+		JOIN ticket_state_type tst ON ts.type_id = tst.id
 		WHERE t.id = ?
 	`)
 
 	var ticket TicketInfo
-	var stateTypeID int
 	err := s.db.QueryRowContext(ctx, query, ticketID).Scan(
-		&ticket.ID, &ticket.QueueID, &ticket.SLAID, &stateTypeID, &ticket.Created, &ticket.UserID,
+		&ticket.ID, &ticket.QueueID, &ticket.SLAID, &ticket.StateType, &ticket.Created, &ticket.UserID,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -132,32 +133,7 @@ func (s *Service) getTicketInfo(ctx context.Context, ticketID int) (*TicketInfo,
 	if err != nil {
 		return nil, err
 	}
-
-	// Map state type ID to name
-	ticket.StateType = s.stateTypeIDToName(stateTypeID)
 	return &ticket, nil
-}
-
-// stateTypeIDToName converts state type ID to name.
-func (s *Service) stateTypeIDToName(typeID int) string {
-	switch typeID {
-	case 1:
-		return "new"
-	case 2:
-		return "open"
-	case 3:
-		return "closed"
-	case 4:
-		return "pending reminder"
-	case 5:
-		return "pending auto"
-	case 6:
-		return "removed"
-	case 7:
-		return "merged"
-	default:
-		return "open"
-	}
 }
 
 // getEscalationPreferences gets escalation settings from SLA (preferred) or Queue.
@@ -363,7 +339,7 @@ func (s *Service) hasBeenClosed(ctx context.Context, ticketID int) (bool, error)
 		SELECT 1 FROM ticket_history th
 		JOIN ticket_history_type tht ON th.history_type_id = tht.id
 		WHERE th.ticket_id = ? AND tht.name = 'StateUpdate'
-		AND th.state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)
+		AND th.state_id IN (` + lookups.ClosedStateIDsSQL + `)
 		LIMIT 1
 	`)
 	var exists int
@@ -416,7 +392,7 @@ func (s *Service) RebuildAllTicketEscalations(ctx context.Context, userID int) e
 	query := database.ConvertPlaceholders(`
 		SELECT t.id FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		WHERE ts.type_id NOT IN (3, 6, 7)
+		WHERE t.ticket_state_id NOT IN (` + lookups.FinishedStateIDsSQL + `)
 	`)
 
 	rows, err := s.db.QueryContext(ctx, query)

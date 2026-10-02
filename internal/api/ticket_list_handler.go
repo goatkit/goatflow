@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/services"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 )
 
 // TicketListResponse represents the response for ticket list API.
@@ -56,18 +57,14 @@ type PaginationInfo struct {
 //	@Security		BearerAuth
 //	@Router			/tickets [get]
 func HandleListTicketsAPI(c *gin.Context) {
-	// Check authentication (temporarily relaxed for testing)
 	_, exists := c.Get("user_id")
 	if !exists {
 		if _, authExists := c.Get("is_authenticated"); !authExists {
-			// For testing without auth middleware, allow if specific header is set
-			if c.GetHeader("X-Test-Mode") != "true" {
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"success": false,
-					"error":   "Authentication required",
-				})
-				return
-			}
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error":   "Authentication required",
+			})
+			return
 		}
 	}
 
@@ -113,14 +110,14 @@ func HandleListTicketsAPI(c *gin.Context) {
 	filters := make(map[string]interface{})
 
 	if status := c.Query("status"); status != "" {
-		// Map status names to IDs
+		// Map status categories to state-id subqueries keyed by state type name
 		switch status {
 		case "open":
-			filters["state_id"] = []int{1, 4} // new, open
+			filters["state_ids_sql"] = lookups.NewOpenStateIDsSQL
 		case "closed":
-			filters["state_id"] = []int{2, 3} // closed successful, closed unsuccessful
+			filters["state_ids_sql"] = lookups.ClosedStateIDsSQL
 		case "pending":
-			filters["state_id"] = []int{6} // pending reminder
+			filters["state_ids_sql"] = lookups.PendingStateIDsSQL
 		default:
 			filters["state_name"] = status
 		}
@@ -175,42 +172,6 @@ func HandleListTicketsAPI(c *gin.Context) {
 		sortOrder = "desc"
 	}
 
-	// Check if user is a customer (limit to their tickets only)
-	// Handles both JWT auth (is_customer) and API token auth (user_role = "Customer")
-	isCustomer := false
-	if ic, exists := c.Get("is_customer"); exists {
-		if b, ok := ic.(bool); ok && b {
-			isCustomer = true
-		}
-	}
-	if role, exists := c.Get("user_role"); exists {
-		if r, ok := role.(string); ok && r == "Customer" {
-			isCustomer = true
-		}
-	}
-
-	if isCustomer {
-		// Customers can only see their own tickets
-		// Try user_email first (JWT auth), then look up by customer_user_id (API token auth)
-		if email, exists := c.Get("user_email"); exists {
-			if emailStr, ok := email.(string); ok {
-				filters["customer_user_id"] = emailStr
-			}
-		} else if custID, exists := c.Get("customer_user_id"); exists {
-			// API token auth - need to look up customer login from numeric ID
-			if custIDInt, ok := custID.(int); ok {
-				// Query customer_user table to get login
-				if db, err := database.GetDB(); err == nil && db != nil {
-					var login string
-					row := db.QueryRow(database.ConvertPlaceholders(`SELECT login FROM customer_user WHERE id = ?`), custIDInt)
-					if err := row.Scan(&login); err == nil && login != "" {
-						filters["customer_user_id"] = login
-					}
-				}
-			}
-		}
-	}
-
 	// Parse include parameter for related data
 	includes := strings.Split(c.Query("include"), ",")
 	includeLastArticle := false
@@ -228,88 +189,19 @@ func HandleListTicketsAPI(c *gin.Context) {
 	// Get database connection
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Fallback for test environment when DB is unavailable: return mock data
-		items := []map[string]interface{}{}
-		total := 0
-		// If asked for minimal listing in tests, synthesize a few rows
-		if c.GetHeader("Authorization") != "" {
-			total = 3
-			for i := 1; i <= total; i++ {
-				items = append(items, map[string]interface{}{
-					"id":            i,
-					"ticket_number": fmt.Sprintf("20250101%02d0001", i),
-					"tn":            fmt.Sprintf("20250101%02d0001", i),
-					"title":         fmt.Sprintf("Sample Ticket %d", i),
-					"queue_id":      1,
-					"state_id":      1,
-					"create_time":   "2025-01-01T10:00:00Z",
-				})
-			}
-		}
-		// Acceptance test expects flat fields for pagination
-		// Provide both flat fields and nested pagination for different tests
-		c.JSON(http.StatusOK, gin.H{
-			"success":     true,
-			"data":        items,
-			"page":        page,
-			"per_page":    perPage,
-			"total":       total,
-			"total_pages": 1,
-			"has_next":    false,
-			"has_prev":    page > 1,
-			"pagination": gin.H{
-				"page":        page,
-				"per_page":    perPage,
-				"total":       total,
-				"total_pages": 1,
-				"has_next":    false,
-				"has_prev":    page > 1,
-			},
+		log.Printf("HandleListTicketsAPI: database unavailable: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database unavailable",
 		})
 		return
 	}
 
-	// Queue permission filtering - use context values from middleware
-	// Customers are already restricted to their own tickets above
-	if !isCustomer {
-		isQueueAdmin := false
-		if val, exists := c.Get("is_queue_admin"); exists {
-			if admin, ok := val.(bool); ok {
-				isQueueAdmin = admin
-			}
-		}
-
-		if !isQueueAdmin {
-			if accessibleQueueIDs, exists := c.Get("accessible_queue_ids"); exists {
-				if queueIDs, ok := accessibleQueueIDs.([]uint); ok && len(queueIDs) > 0 {
-					filters["accessible_queue_ids"] = queueIDs
-				}
-			} else {
-				// Fallback for API token auth: get accessible queues from PermissionService
-				userID := 0
-				if ctxUserID, exists := c.Get("user_id"); exists {
-					switch v := ctxUserID.(type) {
-					case int:
-						userID = v
-					case int64:
-						userID = int(v)
-					case uint:
-						userID = int(v)
-					}
-				}
-				if userID > 0 {
-					permSvc := services.NewPermissionService(db)
-					queuePerms, err := permSvc.GetUserQueuePermissions(userID)
-					if err == nil && len(queuePerms) > 0 {
-						queueIDs := make([]uint, 0, len(queuePerms))
-						for qid := range queuePerms {
-							queueIDs = append(queueIDs, uint(qid))
-						}
-						filters["accessible_queue_ids"] = queueIDs
-					}
-				}
-			}
-		}
+	// Customers see only their own tickets; agents only tickets in queues they
+	// can read. An empty access set matches nothing.
+	scope, ok := resolveTicketReadScope(c, db, true)
+	if !ok {
+		return
 	}
 
 	// Build the query
@@ -342,13 +234,8 @@ func HandleListTicketsAPI(c *gin.Context) {
 	args := []interface{}{}
 
 	// Add filters to query
-	if stateIDs, ok := filters["state_id"].([]int); ok {
-		placeholders := []string{}
-		for _, sid := range stateIDs {
-			placeholders = append(placeholders, "?")
-			args = append(args, sid)
-		}
-		query += fmt.Sprintf(" AND t.ticket_state_id IN (%s)", strings.Join(placeholders, ","))
+	if stateIDsSQL, ok := filters["state_ids_sql"].(string); ok {
+		query += " AND t.ticket_state_id IN (" + stateIDsSQL + ")"
 	}
 
 	if queueID, ok := filters["queue_id"].(int); ok {
@@ -371,15 +258,9 @@ func HandleListTicketsAPI(c *gin.Context) {
 		args = append(args, responsibleUserID)
 	}
 
-	// Add queue permission filter (accessible queues)
-	if queueIDs, ok := filters["accessible_queue_ids"].([]uint); ok && len(queueIDs) > 0 {
-		placeholders := make([]string, len(queueIDs))
-		for i, qid := range queueIDs {
-			placeholders[i] = "?"
-			args = append(args, qid)
-		}
-		query += fmt.Sprintf(" AND t.queue_id IN (%s)", strings.Join(placeholders, ","))
-	}
+	scopeCond, scopeArgs := scope.filter("t")
+	query += " AND " + scopeCond
+	args = append(args, scopeArgs...)
 
 	// Add search condition
 	if search != "" {
@@ -454,7 +335,12 @@ func HandleListTicketsAPI(c *gin.Context) {
 			&ticket.UpdatedAt,
 		)
 		if err != nil {
-			continue
+			log.Printf("HandleListTicketsAPI: scan ticket row: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to fetch tickets",
+			})
+			return
 		}
 
 		// Convert to map for flexible response
@@ -540,7 +426,14 @@ func HandleListTicketsAPI(c *gin.Context) {
 
 		tickets = append(tickets, ticketMap)
 	}
-	_ = rows.Err() //nolint:errcheck // Check for iteration errors
+	if err := rows.Err(); err != nil {
+		log.Printf("HandleListTicketsAPI: iterate ticket rows: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to fetch tickets",
+		})
+		return
+	}
 
 	// Calculate pagination info
 	totalPages := (total + perPage - 1) / perPage

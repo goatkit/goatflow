@@ -2,13 +2,15 @@ package api
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -95,25 +97,37 @@ func HandleCreateUserAPI(c *gin.Context) {
 		return
 	}
 
-	// Check if email already exists
-	checkEmailQuery := database.ConvertPlaceholders(`
-		SELECT id FROM users WHERE email = ?
-	`)
-	err = db.QueryRow(checkEmailQuery, req.Email).Scan(&existingID)
-	if err != sql.ErrNoRows {
-		c.JSON(http.StatusConflict, gin.H{
-			"success": false,
-			"error":   "Email already exists",
-		})
-		return
+	// Every requested group must exist before anything is written; a bad id is a
+	// client error, not a reason to silently drop the membership.
+	for _, groupID := range req.Groups {
+		var found int
+		err = db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM groups WHERE id = ?`), groupID).Scan(&found)
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   fmt.Sprintf("Group %d does not exist", groupID),
+			})
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to validate groups",
+			})
+			return
+		}
 	}
 
 	// Hash the password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	hashedPassword, err := auth.NewPasswordHasher().HashPassword(req.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		status := http.StatusInternalServerError
+		if errors.Is(err, auth.ErrPasswordTooLong) {
+			status = http.StatusBadRequest
+		}
+		c.JSON(status, gin.H{
 			"success": false,
-			"error":   "Failed to process password",
+			"error":   "Failed to process password: " + err.Error(),
 		})
 		return
 	}
@@ -129,36 +143,29 @@ func HandleCreateUserAPI(c *gin.Context) {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Insert user using adapter for cross-database compatibility
+	// Insert user. The OTRS users table has no email column; the agent's address
+	// is the UserEmail preference.
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO users (
-			login, 
-			pw, 
-			email, 
-			first_name, 
-			last_name, 
-			valid_id,
-			create_time,
-			create_by,
-			change_time,
-			change_by
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			login, pw, first_name, last_name, valid_id,
+			create_time, create_by, change_time, change_by
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		RETURNING id
 	`)
 
+	now := time.Now()
 	adapter := database.GetAdapter()
 	newUserID64, err := adapter.InsertWithReturningTx(
 		tx,
 		insertQuery,
 		req.Login,
-		string(hashedPassword),
-		req.Email,
-		sql.NullString{String: req.FirstName, Valid: req.FirstName != ""},
-		sql.NullString{String: req.LastName, Valid: req.LastName != ""},
+		hashedPassword,
+		req.FirstName,
+		req.LastName,
 		req.ValidID,
-		time.Now(),
+		now,
 		currentUserID,
-		time.Now(),
+		now,
 		currentUserID,
 	)
 
@@ -172,40 +179,37 @@ func HandleCreateUserAPI(c *gin.Context) {
 
 	newUserID := int(newUserID64)
 
-	// Add user to groups if specified
-	if len(req.Groups) > 0 {
-		for _, groupID := range req.Groups {
-			groupInsertQuery := database.ConvertPlaceholders(`
-				INSERT INTO user_groups (
-					user_id,
-					group_id,
-					permission_key,
-					permission_value,
-					create_time,
-					create_by,
-					change_time,
-					change_by
-				) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-			`)
+	if _, err = tx.Exec(database.ConvertPlaceholders(`
+		INSERT INTO user_preferences (user_id, preferences_key, preferences_value) VALUES (?, 'UserEmail', ?)
+	`), newUserID, []byte(req.Email)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to create user",
+		})
+		return
+	}
 
-			_, err = tx.Exec(
-				groupInsertQuery,
-				newUserID,
-				groupID,
-				"rw", // Default permission
-				1,    // Default value
-				time.Now(),
-				currentUserID,
-				time.Now(),
-				currentUserID,
-			)
-
-			if err != nil {
-				// Log error but don't fail the whole operation
-				// Group assignment is optional
-				continue
-			}
+	// Membership lives in group_user; one row per permission_key. 'rw' implies
+	// every other OTRS permission.
+	groupInsertQuery := database.ConvertPlaceholders(`
+		INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, 'rw', ?, ?, ?, ?)
+	`)
+	groupIDs := make([]int, 0, len(req.Groups))
+	seen := make(map[int]bool, len(req.Groups))
+	for _, groupID := range req.Groups {
+		if seen[groupID] {
+			continue
 		}
+		seen[groupID] = true
+		if _, err = tx.Exec(groupInsertQuery, newUserID, groupID, now, currentUserID, now, currentUserID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to assign groups",
+			})
+			return
+		}
+		groupIDs = append(groupIDs, groupID)
 	}
 
 	// Commit transaction
@@ -224,7 +228,8 @@ func HandleCreateUserAPI(c *gin.Context) {
 		"email":      req.Email,
 		"valid_id":   req.ValidID,
 		"valid":      req.ValidID == 1,
-		"created_at": time.Now().Format("2006-01-02T15:04:05Z"),
+		"groups":     groupIDs,
+		"created_at": now.Format("2006-01-02T15:04:05Z"),
 	}
 
 	if req.FirstName != "" {

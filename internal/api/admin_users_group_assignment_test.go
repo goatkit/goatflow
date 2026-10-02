@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -18,160 +19,97 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
-// TestGroupAssignmentWorkflow tests the complete workflow that the user reported as broken.
+// TestGroupAssignmentWorkflow: groups submitted with an agent update are
+// persisted to group_user.
 func TestGroupAssignmentWorkflow(t *testing.T) {
-	// Initialize database connection
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		t.Skip("Database not available, skipping integration test")
-	}
-
-	// Setup test user and groups
+	db := getTestDB(t)
 	testUser := setupGroupAssignmentTestUser(t, db)
-	defer cleanupGroupAssignmentTestUser(t, db, testUser.ID)
 
-	// Verify test groups exist
 	groups := verifyTestGroups(t, db)
 	require.GreaterOrEqual(t, len(groups), 2, "Need at least 2 groups for testing")
 
-	t.Run("RED: User group assignment via API should persist to database", func(t *testing.T) {
-		// Setup Gin router
-		gin.SetMode(gin.TestMode)
-		router := gin.New()
+	w := putAgentGroups(t, testUser, groups[0].Name, groups[1].Name)
 
-		// Register the actual handler
-		router.PUT("/admin/users/:id", HandleAdminUserUpdate)
-
-		// Prepare form data to assign user to groups (mimicking UI behavior)
-		formData := url.Values{}
-		formData.Set("login", testUser.Login)
-		formData.Set("first_name", testUser.FirstName)
-		formData.Set("last_name", testUser.LastName)
-		formData.Set("valid_id", "1")
-
-		// Add multiple groups (like the UI would)
-		for _, group := range groups[:2] { // Assign to first 2 groups
-			formData.Add("groups", group.Name)
-		}
-
-		// Create request
-		req, err := http.NewRequest("PUT", "/admin/users/"+strconv.Itoa(testUser.ID),
-			strings.NewReader(formData.Encode()))
-		require.NoError(t, err)
-
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-		// Execute request
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		// Check API response
-		assert.Equal(t, http.StatusOK, w.Code, "API should return 200 OK")
-
-		var response map[string]interface{}
-		err = json.Unmarshal(w.Body.Bytes(), &response)
-		require.NoError(t, err, "Response should be valid JSON")
-
-		assert.True(t, response["success"].(bool), "API should report success")
-
-		// THE CRITICAL TEST: Check if groups were actually saved to database
-		actualGroups := getUserGroupsFromDB(t, db, testUser.ID)
-
-		// This should pass if the system works correctly
-		expectedGroups := []string{groups[0].Name, groups[1].Name}
-		assert.ElementsMatch(t, expectedGroups, actualGroups,
-			"Database should contain the groups assigned via API")
-	})
-
-	t.Run("GREEN: Fix the group assignment persistence issue", func(t *testing.T) {
-		// This test will initially fail, then pass after we fix the bug
-		t.Skip("Implement after identifying the root cause")
-	})
-
-	t.Run("REFACTOR: Ensure UI feedback matches database reality", func(t *testing.T) {
-		// Test that UI retrieval shows what's actually in the database
-		t.Skip("Implement after fixing the core issue")
-	})
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	var response map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	assert.Equal(t, true, response["success"])
+	assert.ElementsMatch(t, []string{groups[0].Name, groups[1].Name}, getUserGroupsFromDB(t, db, testUser.ID))
 }
 
 func TestGroupAssignmentEdgeCases(t *testing.T) {
-	// Initialize database connection
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		t.Skip("Database not available, skipping integration test")
+	db := getTestDB(t)
+	testUser := setupGroupAssignmentTestUser(t, db)
+
+	t.Run("Empty submitted groups remove all group memberships", func(t *testing.T) {
+		assignUserToGroups(t, db, testUser.ID, []string{"admin"})
+		require.Equal(t, []string{"admin"}, getUserGroupsFromDB(t, db, testUser.ID))
+
+		w := putAgentGroups(t, testUser)
+
+		require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+		assert.Empty(t, getUserGroupsFromDB(t, db, testUser.ID))
+	})
+
+	t.Run("Unknown group name is rejected with 400 and memberships stay unchanged", func(t *testing.T) {
+		clearUserGroups(t, db, testUser.ID)
+		assignUserToGroups(t, db, testUser.ID, []string{"users"})
+		invalidGroup := fmt.Sprintf("nonexistent_group_%d", time.Now().UnixNano())
+
+		w := putAgentGroups(t, testUser, "admin", invalidGroup)
+
+		require.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+		assert.Equal(t, false, response["success"])
+		assert.Equal(t, "unknown group: "+invalidGroup, response["error"])
+		assert.Equal(t, []string{"users"}, getUserGroupsFromDB(t, db, testUser.ID),
+			"a rejected update must not touch existing memberships")
+	})
+
+	t.Run("Valid group names and ids replace memberships", func(t *testing.T) {
+		clearUserGroups(t, db, testUser.ID)
+		assignUserToGroups(t, db, testUser.ID, []string{"users"})
+		var adminID int
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+			"SELECT id FROM groups WHERE name = ? AND valid_id = 1"), "admin").Scan(&adminID))
+
+		w := putAgentGroups(t, testUser, strconv.Itoa(adminID), "stats", "admin")
+
+		require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+		assert.Equal(t, []string{"admin", "stats"}, getUserGroupsFromDB(t, db, testUser.ID))
+	})
+}
+
+// putAgentGroups submits the agent edit form for user with the groups field
+// set to the given tokens, as the seeded test admin.
+func putAgentGroups(t *testing.T, user TestUser, groups ...string) *httptest.ResponseRecorder {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.PUT("/admin/users/:id", func(c *gin.Context) {
+		c.Set("user_id", GetTestAuthConfig().UserID)
+		HandleAdminUserUpdate(c)
+	})
+
+	formData := url.Values{}
+	formData.Set("login", user.Login)
+	formData.Set("first_name", user.FirstName)
+	formData.Set("last_name", user.LastName)
+	formData.Set("valid_id", "1")
+	formData.Set("groups_submitted", "1")
+	for _, g := range groups {
+		formData.Add("groups", g)
 	}
 
-	testUser := setupGroupAssignmentTestUser(t, db)
-	defer cleanupGroupAssignmentTestUser(t, db, testUser.ID)
+	req, err := http.NewRequest(http.MethodPut, "/admin/users/"+strconv.Itoa(user.ID),
+		strings.NewReader(formData.Encode()))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	t.Run("Empty groups array should remove all group memberships", func(t *testing.T) {
-		// First assign some groups
-		assignUserToGroups(t, db, testUser.ID, []string{"admin"})
-
-		// Verify groups were assigned
-		groups := getUserGroupsFromDB(t, db, testUser.ID)
-		require.Greater(t, len(groups), 0, "User should have groups")
-
-		// Now update with empty groups via API
-		gin.SetMode(gin.TestMode)
-		router := gin.New()
-		router.PUT("/admin/users/:id", HandleAdminUserUpdate)
-
-		formData := url.Values{}
-		formData.Set("login", testUser.Login)
-		formData.Set("first_name", testUser.FirstName)
-		formData.Set("last_name", testUser.LastName)
-		formData.Set("valid_id", "1")
-		// Explicitly indicate that groups was submitted with an empty selection
-		formData.Set("groups_submitted", "1")
-		// No groups added = should clear all memberships
-
-		req, err := http.NewRequest("PUT", "/admin/users/"+strconv.Itoa(testUser.ID),
-			strings.NewReader(formData.Encode()))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		// Check database - should have no groups
-		actualGroups := getUserGroupsFromDB(t, db, testUser.ID)
-		assert.Empty(t, actualGroups, "User should have no groups after empty update")
-	})
-
-	t.Run("Invalid group names should be ignored", func(t *testing.T) {
-		gin.SetMode(gin.TestMode)
-		router := gin.New()
-		router.PUT("/admin/users/:id", HandleAdminUserUpdate)
-
-		invalidGroup := "nonexistent_group_" + randomString(6)
-		cleanupGroupByName(t, db, invalidGroup)
-
-		formData := url.Values{}
-		formData.Set("login", testUser.Login)
-		formData.Set("first_name", testUser.FirstName)
-		formData.Set("last_name", testUser.LastName)
-		formData.Set("valid_id", "1")
-		formData.Add("groups", "admin")      // Valid group
-		formData.Add("groups", invalidGroup) // Invalid group
-
-		req, err := http.NewRequest("PUT", "/admin/users/"+strconv.Itoa(testUser.ID),
-			strings.NewReader(formData.Encode()))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		// Check database - should only have valid group
-		actualGroups := getUserGroupsFromDB(t, db, testUser.ID)
-		assert.Contains(t, actualGroups, "admin", "Should have valid group")
-		assert.NotContains(t, actualGroups, invalidGroup, "Should not have invalid group")
-	})
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	return w
 }
 
 // Helper functions.
@@ -188,15 +126,16 @@ type TestGroup struct {
 }
 
 func setupGroupAssignmentTestUser(t *testing.T, db *sql.DB) TestUser {
-	// Create test user
-	login := "test_group_user_" + randomString(8)
+	t.Helper()
+	login := fmt.Sprintf("test_group_user_%d", time.Now().UnixNano())
 	query := database.ConvertPlaceholders(`
         INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
         VALUES (?, '', ?, ?, 1, NOW(), 1, NOW(), 1)
         RETURNING id`)
 	id64, err := database.GetAdapter().InsertWithReturning(db, query, login, "Test", "User")
-	userID := int(id64)
 	require.NoError(t, err, "Failed to create test user")
+	userID := int(id64)
+	t.Cleanup(func() { cleanupGroupAssignmentTestUser(t, db, userID) })
 
 	return TestUser{
 		ID:        userID,
@@ -207,17 +146,14 @@ func setupGroupAssignmentTestUser(t *testing.T, db *sql.DB) TestUser {
 }
 
 func cleanupGroupAssignmentTestUser(t *testing.T, db *sql.DB, userID int) {
-	// Clean up group memberships
-	_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = ?"), userID)
-	if err != nil {
-		t.Logf("Warning: Failed to cleanup group memberships: %v", err)
-	}
+	clearUserGroups(t, db, userID)
+	_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), userID)
+	require.NoError(t, err, "Failed to cleanup test user")
+}
 
-	// Clean up user
-	_, err = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), userID)
-	if err != nil {
-		t.Logf("Warning: Failed to cleanup test user: %v", err)
-	}
+func clearUserGroups(t *testing.T, db *sql.DB, userID int) {
+	_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = ?"), userID)
+	require.NoError(t, err, "Failed to clear group memberships")
 }
 
 func verifyTestGroups(t *testing.T, db *sql.DB) []TestGroup {
@@ -228,18 +164,17 @@ func verifyTestGroups(t *testing.T, db *sql.DB) []TestGroup {
 	var groups []TestGroup
 	for rows.Next() {
 		var group TestGroup
-		err := rows.Scan(&group.ID, &group.Name)
-		require.NoError(t, err)
+		require.NoError(t, rows.Scan(&group.ID, &group.Name))
 		groups = append(groups, group)
 	}
-	_ = rows.Err() // Check for iteration errors
+	require.NoError(t, rows.Err())
 
 	return groups
 }
 
 func getUserGroupsFromDB(t *testing.T, db *sql.DB, userID int) []string {
 	sqlQuery := database.ConvertPlaceholders(`
-        SELECT g.name 
+        SELECT g.name
         FROM groups g
         JOIN group_user gu ON g.id = gu.group_id
         WHERE gu.user_id = ? AND g.valid_id = 1
@@ -251,11 +186,10 @@ func getUserGroupsFromDB(t *testing.T, db *sql.DB, userID int) []string {
 	var groups []string
 	for rows.Next() {
 		var groupName string
-		err := rows.Scan(&groupName)
-		require.NoError(t, err)
+		require.NoError(t, rows.Scan(&groupName))
 		groups = append(groups, groupName)
 	}
-	_ = rows.Err() // Check for iteration errors
+	require.NoError(t, rows.Err())
 
 	return groups
 }
@@ -272,26 +206,4 @@ func assignUserToGroups(t *testing.T, db *sql.DB, userID int, groupNames []strin
 			userID, groupID)
 		require.NoError(t, err, "Failed to assign user to group %s", groupName)
 	}
-}
-
-func cleanupGroupByName(t *testing.T, db *sql.DB, name string) {
-	_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM groups WHERE name = ?"), name)
-	if err != nil {
-		t.Logf("Warning: Failed to cleanup group %s: %v", name, err)
-	}
-}
-
-func randomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
-	b := make([]byte, length)
-	// Simple deterministic fallback using time-based index to avoid rand.Seed deprecation
-	now := time.Now().UnixNano()
-	for i := range b {
-		idx := int((now / int64(i+1))) % len(charset)
-		if idx < 0 {
-			idx = -idx
-		}
-		b[i] = charset[idx]
-	}
-	return string(b)
 }

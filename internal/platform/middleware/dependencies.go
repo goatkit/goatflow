@@ -26,10 +26,17 @@ type QueueAccessChecker interface {
 	GetAccessibleQueueIDs(ctx context.Context, userID uint, permType string) ([]uint, error)
 }
 
-// TicketQueueResolver resolves a ticket identifier to its queue ID.
-// Product code injects a concrete implementation via SetTicketQueueResolverFactory.
+// ResolvedTicket is a ticket a path identifier names, with its queue.
+type ResolvedTicket struct {
+	ID      uint64
+	QueueID uint
+}
+
+// TicketQueueResolver resolves a ticket identifier (tn or id) to the tickets
+// it can name. Product code injects a concrete implementation via
+// SetTicketQueueResolverFactory. It returns sql.ErrNoRows when none exists.
 type TicketQueueResolver interface {
-	ResolveQueueID(db *sql.DB, ticketIDStr string) (queueID uint, ticketID uint64, err error)
+	ResolveTickets(db *sql.DB, ticketIDStr string) ([]ResolvedTicket, error)
 }
 
 var (
@@ -55,6 +62,15 @@ func NewMaintenanceChecker(db *sql.DB) MaintenanceChecker {
 
 // SetQueueAccessCheckerFactory injects a queue access checker factory from product code.
 func SetQueueAccessCheckerFactory(f func(*sql.DB) QueueAccessChecker) { queueAccessCheckerFactory = f }
+
+// NewQueueAccessChecker creates a QueueAccessChecker from the injected factory.
+// Returns nil if no factory is set.
+func NewQueueAccessChecker(db *sql.DB) QueueAccessChecker {
+	if queueAccessCheckerFactory != nil {
+		return queueAccessCheckerFactory(db)
+	}
+	return nil
+}
 
 // SetTicketQueueResolverFactory injects a ticket queue resolver factory from product code.
 func SetTicketQueueResolverFactory(f func() TicketQueueResolver) { ticketQueueResolverFactory = f }

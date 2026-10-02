@@ -41,6 +41,24 @@ type PasswordValidationError struct {
 	Message string `json:"message"`
 }
 
+// PasswordRequirementKey returns the i18n key describing the requirement a
+// validation/requirement code stands for. The min_size text carries an {n}
+// placeholder for PasswordMinSize.
+func PasswordRequirementKey(code string) string {
+	switch code {
+	case "min_size":
+		return "password.min_characters"
+	case "min_2_lower_2_upper":
+		return "password.min_2_upper_2_lower"
+	case "need_digit":
+		return "password.need_digit"
+	case "min_2_characters":
+		return "password.min_2_letters"
+	default:
+		return "self_service.reset_password.policy_regexp"
+	}
+}
+
 // DefaultCustomerPasswordPolicy returns default policy (all disabled, matching OTRS defaults).
 func DefaultCustomerPasswordPolicy() PasswordPolicy {
 	return PasswordPolicy{

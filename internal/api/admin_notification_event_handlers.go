@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -195,100 +196,7 @@ func loadNotificationEventByID(ctx context.Context, db *sql.DB, id int) (*Notifi
 	return &e, nil
 }
 
-// loadLocksForForm loads all locks for form dropdowns.
-func loadLocksForForm(ctx context.Context, db *sql.DB) []LookupItem {
-	if db == nil {
-		return nil
-	}
-	query := database.ConvertPlaceholders(`
-		SELECT id, name FROM ticket_lock_type ORDER BY id`)
-	rows, err := db.QueryContext(ctx, query)
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-
-	var items []LookupItem
-	for rows.Next() {
-		var item LookupItem
-		if err := rows.Scan(&item.ID, &item.Name); err == nil {
-			items = append(items, item)
-		}
-	}
-	return items
-}
-
-// loadAgentsForForm loads all valid agents for recipient selection.
-func loadAgentsForForm(ctx context.Context, db *sql.DB) []LookupItem {
-	if db == nil {
-		return nil
-	}
-	query := database.ConvertPlaceholders(`
-		SELECT id, CONCAT(first_name, ' ', last_name, ' (', login, ')') as name
-		FROM users
-		WHERE valid_id = 1
-		ORDER BY login`)
-	rows, err := db.QueryContext(ctx, query)
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-
-	var items []LookupItem
-	for rows.Next() {
-		var item LookupItem
-		if err := rows.Scan(&item.ID, &item.Name); err == nil {
-			items = append(items, item)
-		}
-	}
-	return items
-}
-
-// loadRolesForForm loads all valid roles for recipient selection.
-func loadRolesForForm(ctx context.Context, db *sql.DB) []LookupItem {
-	if db == nil {
-		return nil
-	}
-	query := database.ConvertPlaceholders(`
-		SELECT id, name FROM roles WHERE valid_id = 1 ORDER BY name`)
-	rows, err := db.QueryContext(ctx, query)
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-
-	var items []LookupItem
-	for rows.Next() {
-		var item LookupItem
-		if err := rows.Scan(&item.ID, &item.Name); err == nil {
-			items = append(items, item)
-		}
-	}
-	return items
-}
-
-// loadGroupsForForm loads all valid groups for recipient selection.
-func loadGroupsForForm(ctx context.Context, db *sql.DB) []LookupItem {
-	if db == nil {
-		return nil
-	}
-	query := database.ConvertPlaceholders(`
-		SELECT id, name FROM groups_table WHERE valid_id = 1 ORDER BY name`)
-	rows, err := db.QueryContext(ctx, query)
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-
-	var items []LookupItem
-	for rows.Next() {
-		var item LookupItem
-		if err := rows.Scan(&item.ID, &item.Name); err == nil {
-			items = append(items, item)
-		}
-	}
-	return items
-}
+var notificationFormLookups = []string{"Queues", "Priorities", "States", "Types", "Locks", "Agents", "Roles", "Groups"}
 
 // loadLanguagesForForm loads available languages dynamically from i18n translation files.
 func loadLanguagesForForm() []LookupItem {
@@ -312,7 +220,9 @@ func HandleAdminNotificationEvents(c *gin.Context) {
 
 	events, err := loadNotificationEvents(c.Request.Context(), db)
 	if err != nil {
-		events = []NotificationEvent{}
+		log.Printf("HandleAdminNotificationEvents: load events: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load notification events"})
+		return
 	}
 
 	if getPongo2Renderer() == nil {
@@ -335,27 +245,29 @@ func HandleAdminNotificationEventNew(c *gin.Context) {
 		return
 	}
 
-	db, _ := database.GetDB()
-	ctx := c.Request.Context()
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		log.Printf("HandleAdminNotificationEventNew: database unavailable: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database not available"})
+		return
+	}
 
-	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/notification_event_form.pongo2", pongo2.Context{
+	tplCtx := pongo2.Context{
 		"Title":         "New Ticket Notification",
 		"IsNew":         true,
 		"Event":         nil,
 		"TicketEvents":  TicketEvents,
 		"ArticleEvents": ArticleEvents,
-		"Queues":        loadQueuesForForm(ctx, db),
-		"Priorities":    loadPrioritiesForForm(ctx, db),
-		"States":        loadStatesForForm(ctx, db),
-		"Types":         loadTypesForForm(ctx, db),
-		"Locks":         loadLocksForForm(ctx, db),
-		"Agents":        loadAgentsForForm(ctx, db),
-		"Roles":         loadRolesForForm(ctx, db),
-		"Groups":        loadGroupsForForm(ctx, db),
 		"Languages":     loadLanguagesForForm(),
 		"User":          getUserMapForTemplate(c),
 		"ActivePage":    "admin",
-	})
+	}
+	if err := loadFormLookups(c.Request.Context(), db, tplCtx, notificationFormLookups...); err != nil {
+		log.Printf("HandleAdminNotificationEventNew: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load form options"})
+		return
+	}
+	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/notification_event_form.pongo2", tplCtx)
 }
 
 // HandleAdminNotificationEventEdit renders the notification event edit form.
@@ -386,24 +298,22 @@ func HandleAdminNotificationEventEdit(c *gin.Context) {
 		return
 	}
 
-	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/notification_event_form.pongo2", pongo2.Context{
+	tplCtx := pongo2.Context{
 		"Title":         "Edit Ticket Notification",
 		"IsNew":         false,
 		"Event":         event,
 		"TicketEvents":  TicketEvents,
 		"ArticleEvents": ArticleEvents,
-		"Queues":        loadQueuesForForm(ctx, db),
-		"Priorities":    loadPrioritiesForForm(ctx, db),
-		"States":        loadStatesForForm(ctx, db),
-		"Types":         loadTypesForForm(ctx, db),
-		"Locks":         loadLocksForForm(ctx, db),
-		"Agents":        loadAgentsForForm(ctx, db),
-		"Roles":         loadRolesForForm(ctx, db),
-		"Groups":        loadGroupsForForm(ctx, db),
 		"Languages":     loadLanguagesForForm(),
 		"User":          getUserMapForTemplate(c),
 		"ActivePage":    "admin",
-	})
+	}
+	if err := loadFormLookups(ctx, db, tplCtx, notificationFormLookups...); err != nil {
+		log.Printf("HandleAdminNotificationEventEdit: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load form options"})
+		return
+	}
+	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/notification_event_form.pongo2", tplCtx)
 }
 
 // HandleAdminNotificationEventGet returns a notification event's details as JSON.

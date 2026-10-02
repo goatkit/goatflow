@@ -537,7 +537,6 @@ Dynamic fields allow administrators to add custom fields to tickets, articles, a
 
 - **Field storage**: `dynamic_field` table with YAML config column
 - **Screen visibility**: `dynamic_field_screen_config` table controls which fields appear on which screens
-- **Cross-package wiring**: `DynamicFieldLoader` interface in `internal/platform/routing/handlers.go` avoids import cycles; set in `internal/api/dynamic_field_init.go`
 
 ### Screen Configuration (IMPORTANT)
 Fields **only appear on forms** if they have a screen config entry:
@@ -567,7 +566,7 @@ Include the partial in ticket forms:
 {% include "partials/dynamic_fields.pongo2" with DynamicFields=DynamicFields %}
 ```
 
-Handler must load fields via `GetFieldsForScreenWithConfig(screenKey, objectType)` or use the `dynamicFieldLoader` callback.
+Handler must load fields via `GetFieldsForScreenWithConfig(screenKey, objectType)`.
 
 ### Troubleshooting
 - **Fields not appearing**: Check `/admin/dynamic-fields/{id}/screens` - field must be enabled for the target screen

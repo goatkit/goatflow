@@ -259,4 +259,44 @@ VALUES
     (6, 0, 'ArticleNote', 'Article Note Field', 1, 'Text', 'Article', '---\nDefaultValue: \n', 1, NOW(), 1, NOW(), 1),
     (7, 0, 'ArticleCategory', 'Article Category', 2, 'Dropdown', 'Article', '---\nPossibleValues:\n  internal: Internal\n  external: External\n  escalation: Escalation\nDefaultValue: internal\n', 1, NOW(), 1, NOW(), 1);
 
+-- E2E fixtures relied on by tests/e2e (constants in tests/e2e/helpers/fixtures.go).
+-- Portable SQL, byte-identical in test_integration.sql and test_integration_mysql.sql;
+-- each row is guarded by NOT EXISTS so re-applying the seed is a no-op.
+
+-- A standard template so /admin/templates renders its table and per-row
+-- edit/queues/attachments links.
+INSERT INTO standard_template (name, text, content_type, template_type, comments, valid_id, create_time, create_by, change_time, change_by)
+SELECT 'E2E Seed Answer', 'Thank you for contacting us.', 'text/plain', 'Answer', 'E2E fixture template', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1
+FROM (SELECT 1 AS one) seed
+WHERE NOT EXISTS (SELECT 1 FROM standard_template WHERE name = 'E2E Seed Answer');
+
+-- Company the admin customer-company e2e tests open at /admin/customer/companies/TEST001/edit.
+INSERT INTO customer_company (customer_id, name, comments, valid_id, create_time, create_by, change_time, change_by)
+SELECT 'TEST001', 'E2E Edit Company', 'E2E fixture company', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1
+FROM (SELECT 1 AS one) seed
+WHERE NOT EXISTS (SELECT 1 FROM customer_company WHERE customer_id = 'TEST001');
+
+-- Customer portal login for the customer ticket e2e tests.
+-- pw = unsalted SHA-256 of 'E2eCustomer!Seed1' (auth.PasswordHasher legacy format).
+INSERT INTO customer_user (login, email, customer_id, pw, first_name, last_name, comments, valid_id, create_time, create_by, change_time, change_by)
+SELECT 'e2e.customer', 'e2e.customer@example.test', 'COMP1', '7c3612493fd69f3d3535355da939372fd6d9b81b4c2652b7e6e22c23d029a7ae', 'E2E', 'Customer', 'E2E fixture customer', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1
+FROM (SELECT 1 AS one) seed
+WHERE NOT EXISTS (SELECT 1 FROM customer_user WHERE login = 'e2e.customer');
+
+-- Dedicated agent for the TOTP 2FA e2e flow, so enabling 2FA never touches the admin.
+-- pw = unsalted SHA-256 of 'E2eTwoFactor!Seed1'.
+INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+SELECT 'e2e-2fa-agent', '49fbb4bfa455cf2f477a526bcb32c013bd23491b846b1d012392f519a8eecd42', 'E2E', 'TwoFactor', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1
+FROM (SELECT 1 AS one) seed
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE login = 'e2e-2fa-agent');
+
+INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+SELECT u.id, 1, 'rw', CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1
+FROM users u
+WHERE u.login = 'e2e-2fa-agent'
+  AND NOT EXISTS (
+    SELECT 1 FROM group_user gu
+    WHERE gu.user_id = u.id AND gu.group_id = 1 AND gu.permission_key = 'rw'
+  );
+
 COMMIT;

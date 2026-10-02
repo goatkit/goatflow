@@ -49,7 +49,9 @@ Creates canned response templates in the `canned_response` table. Skippable (ret
 Stores SMTP config as JSON in sysconfig under key `Email.SMTP.Config`.
 
 #### `CreateBusinessHours(ctx, cfg BusinessHoursInput, createBy int) error`
-Creates a calendar entry in the `calendar` table for SLA working hours. Stores timezone reference in sysconfig.
+Creates a calendar entry in the `calendar` table for SLA working hours. `calendar.group_id` is the permission
+group `cfg.GroupID` (JSON `group_id`); 0 selects the default `users` group. An unknown or invalid group returns
+an error wrapping `ErrInvalidGroup`. Stores timezone reference in sysconfig.
 
 #### `LoadExistingCustomer(ctx, customerID string) (*CustomerConfiguration, error)`
 Loads complete existing customer configuration for review/edit mode. Returns:
@@ -79,7 +81,7 @@ Loads complete existing customer configuration for review/edit mode. Returns:
 Accepts JSON array of `ResponseTemplateInput`.
 
 #### `POST /admin/setup/task/setup-assistant/configure_business_hours`
-Accepts JSON `BusinessHoursInput`.
+Accepts JSON `BusinessHoursInput`. An unknown or invalid `group_id` returns HTTP 400.
 
 #### `POST /admin/setup/task/setup-assistant/configure_email_transport`
 Accepts JSON `EmailTransportInput`.

@@ -7,12 +7,12 @@ import (
 	"time"
 )
 
-// Session holds the state for a single MCP SSE connection.
+// Session holds the state for a single MCP SSE connection. It is bound to the
+// principal that created it (see UserContext.Principal); tool calls run with
+// the identity of each request, which must be the same principal.
 type Session struct {
 	ID         string
-	UserID     int
-	UserLogin  string
-	UserRole   string
+	Principal  string
 	Server     *Server
 	Created    time.Time
 	LastActive time.Time
@@ -36,18 +36,15 @@ func NewSessionManager(maxAge time.Duration) *SessionManager {
 	return sm
 }
 
-// Create creates a new session for the given user.
-func (sm *SessionManager) Create(userID int, userLogin, userRole string, bridge *APIBridge) *Session {
+// Create creates a new session bound to principal.
+func (sm *SessionManager) Create(principal string, bridge *APIBridge) *Session {
 	id := generateSessionID()
 	now := time.Now()
-	server := NewServer(userID, userLogin, userRole, bridge)
 
 	session := &Session{
 		ID:         id,
-		UserID:     userID,
-		UserLogin:  userLogin,
-		UserRole:   userRole,
-		Server:     server,
+		Principal:  principal,
+		Server:     NewServer(bridge),
 		Created:    now,
 		LastActive: now,
 		NotifyChan: make(chan []byte, 16),

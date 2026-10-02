@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"reflect"
 	"sync"
 	"testing"
 )
@@ -300,6 +301,33 @@ func TestGeneratePluginTools(t *testing.T) {
 	}
 	if !foundRouteTool {
 		t.Error("Missing myplugin_getstats tool")
+	}
+}
+
+// Declared plugin MCP tools carry an access rule: the middleware of every
+// route sharing their handler, or agent-only when no route exposes it. They
+// used to carry none, so any MCP caller could run them.
+func TestGeneratePluginTools_DeclaredToolMiddleware(t *testing.T) {
+	tools := GeneratePluginTools([]PluginRegistration{{
+		Name: "p",
+		Routes: []PluginRouteInput{
+			{Method: "POST", Path: "/p/list", Handler: "Shared", Middleware: []string{"auth"}},
+			{Method: "POST", Path: "/p/admin", Handler: "Shared", Middleware: []string{"auth", "admin"}},
+		},
+		MCPTools: []PluginMCPToolInput{
+			{Name: "shared_tool", Handler: "Shared"},
+			{Name: "unrouted_tool", Handler: "Unrouted"},
+		},
+	}})
+	got := map[string][]string{}
+	for _, tool := range tools {
+		got[tool.Name] = tool.Middleware
+	}
+	if want := []string{"auth", "admin"}; !reflect.DeepEqual(got["p_shared_tool"], want) {
+		t.Errorf("p_shared_tool middleware = %v, want %v", got["p_shared_tool"], want)
+	}
+	if want := []string{"agent"}; !reflect.DeepEqual(got["p_unrouted_tool"], want) {
+		t.Errorf("p_unrouted_tool middleware = %v, want %v", got["p_unrouted_tool"], want)
 	}
 }
 

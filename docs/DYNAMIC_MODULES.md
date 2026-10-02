@@ -265,7 +265,7 @@ computed_fields:
     label: Groups
     show_in_list: true
     show_in_form: false
-    source: "JOIN user_groups"
+    source: "JOIN group_user"
 ```
 
 The handler can implement custom logic for computed fields, such as:

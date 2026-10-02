@@ -11,6 +11,7 @@ import (
 	"github.com/goatkit/goatflow/internal/history"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/constants"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/repository"
 )
 
@@ -81,8 +82,15 @@ func (s *ticketService) Create(ctx context.Context, in CreateTicketInput) (*mode
 	if in.PriorityID == 0 {
 		in.PriorityID = 3
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if in.StateID == 0 {
-		in.StateID = models.TicketStateNew
+		newStateID, err := lookups.ID(ctx, s.repo.GetDB(), lookups.StateLookup, lookups.StateNew)
+		if err != nil {
+			return nil, fmt.Errorf("resolve default ticket state: %w", err)
+		}
+		in.StateID = newStateID
 	}
 
 	// Ensure queue exists before attempting insert
@@ -92,7 +100,7 @@ func (s *ticketService) Create(ctx context.Context, in CreateTicketInput) (*mode
 		return nil, errors.New("invalid queue")
 	}
 
-	var stateTypeID int
+	stateTypeName := ""
 	if in.StateID > 0 {
 		state, err := s.repo.GetTicketStateByID(in.StateID)
 		if err != nil {
@@ -101,7 +109,10 @@ func (s *ticketService) Create(ctx context.Context, in CreateTicketInput) (*mode
 		if state == nil || state.ValidID != 1 {
 			return nil, errors.New("invalid ticket state")
 		}
-		stateTypeID = state.TypeID
+		stateTypeName, err = lookups.Name(ctx, s.repo.GetDB(), lookups.StateType, state.TypeID)
+		if err != nil {
+			return nil, fmt.Errorf("resolve ticket state type: %w", err)
+		}
 	}
 
 	ticket := &models.Ticket{
@@ -129,18 +140,16 @@ func (s *ticketService) Create(ctx context.Context, in CreateTicketInput) (*mode
 		tid := in.TypeID
 		ticket.TypeID = &tid
 	}
-	if (stateTypeID == 4 || stateTypeID == 5) && in.PendingUntil > 0 {
+	isPending := lookups.IsPendingStateType(stateTypeName)
+	if isPending && in.PendingUntil > 0 {
 		ticket.UntilTime = in.PendingUntil
-	} else if (stateTypeID == 4 || stateTypeID == 5) && in.PendingUntil <= 0 {
+	} else if isPending && in.PendingUntil <= 0 {
 		return nil, errors.New("pending state requires pending until")
 	}
 	if err := s.repo.Create(ticket); err != nil {
 		return nil, err
 	}
 
-	if ctx == nil {
-		ctx = context.Background()
-	}
 	if ticket.ChangeTime.IsZero() {
 		ticket.ChangeTime = time.Now()
 	}
@@ -184,7 +193,7 @@ func (s *ticketService) createInitialArticle(ticket *models.Ticket, in CreateTic
 	}
 	channelID := in.ArticleCommunicationChannelID
 	if channelID <= 0 {
-		channelID = 1
+		channelID = constants.CommunicationChannelEmail
 	}
 	charset := strings.TrimSpace(in.ArticleCharset)
 	if charset == "" {

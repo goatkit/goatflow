@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -25,6 +26,7 @@ func handleSAMLRedirect(c *gin.Context) {
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
+		log.Printf("SAML redirect: database unavailable: %v", err)
 		c.Redirect(http.StatusFound, "/login?error=server_error")
 		return
 	}
@@ -103,6 +105,7 @@ func handleSAMLCallback(c *gin.Context) {
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
+		log.Printf("SAML callback: database unavailable: %v", err)
 		c.Redirect(http.StatusFound, "/login?error=server_error")
 		return
 	}
@@ -166,7 +169,13 @@ func handleSAMLCallback(c *gin.Context) {
 		return
 	}
 
-	if needs2FA(user.ID) {
+	mfaRequired, err := needs2FA(user.ID)
+	if err != nil {
+		log.Printf("SAML login: second-factor status for user %d unavailable: %v", user.ID, err)
+		c.Redirect(http.StatusFound, "/login?error=server_error")
+		return
+	}
+	if mfaRequired {
 		sessionMgr := auth.GetTOTPSessionManager()
 		if sessionMgr != nil {
 			token, err := sessionMgr.CreateAgentSession(int(user.ID), user.Login, c.ClientIP(), c.Request.UserAgent())
@@ -212,10 +221,10 @@ func handleSAMLMetadata(c *gin.Context) {
 	acsURL := shared.BuildRedirectURL(c, "/auth/"+idStr+"/acs")
 
 	cfg := &auth.SAMLConfig{
-		EntityID:      entityID,
-		AcsURL:        acsURL,
-		SigningCert:   provider.SigningCert,
-		PrivateKey:    provider.PrivateKey,
+		EntityID:       entityID,
+		AcsURL:         acsURL,
+		SigningCert:    provider.SigningCert,
+		PrivateKey:     provider.PrivateKey,
 		IdPMetadataURL: provider.DiscoveryURL,
 	}
 

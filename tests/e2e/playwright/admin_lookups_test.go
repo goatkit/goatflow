@@ -12,9 +12,7 @@ import (
 
 func TestAdminLookupsUI(t *testing.T) {
 	browser := helpers.NewBrowserHelper(t)
-	if browser.Config.AdminEmail == "" || browser.Config.AdminPassword == "" {
-		t.Skip("Admin credentials not configured")
-	}
+
 	err := browser.Setup()
 	require.NoError(t, err)
 	defer browser.TearDown()

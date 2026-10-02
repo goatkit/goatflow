@@ -222,18 +222,19 @@ var formatted = formatDate(item.create_time);
 ### Database Access
 
 #### db.queryRow(query, ...args)
-Executes a query that returns a single row.
+Executes a query that returns a single value. Use `?` placeholders (they work on
+MySQL/MariaDB and PostgreSQL); `$1`-style placeholders are rejected.
 
 ```javascript
-var result = db.queryRow("SELECT COUNT(*) as count FROM table WHERE id = $1", item.id.toString());
-// Returns: { count: 5 }
+var count = db.queryRow("SELECT COUNT(*) FROM ticket WHERE ticket_priority_id = ?", item.id);
+// Returns the value as a string, e.g. "5" ("" when no row matches)
 ```
 
 #### db.query(query, ...args) 
 Executes a query that returns multiple rows.
 
 ```javascript
-var rows = db.query("SELECT name FROM groups WHERE user_id = $1", item.id.toString());
+var rows = db.query("SELECT g.name FROM groups g JOIN group_user gu ON gu.group_id = g.id WHERE gu.user_id = ?", item.id);
 // Returns: [{ name: "admin" }, { name: "users" }]
 ```
 
@@ -294,8 +295,8 @@ computed_fields:
 ```javascript
 lambda: |
   try {
-    var result = db.queryRow("SELECT COUNT(*) FROM table WHERE id = $1", item.id.toString());
-    return result.count || 0;
+    var count = db.queryRow("SELECT COUNT(*) FROM ticket WHERE queue_id = ?", item.id);
+    return parseInt(count) || 0;
   } catch (error) {
     console.log("Database error:", error);
     return '<span class="text-red-400">Error loading data</span>';
@@ -422,8 +423,8 @@ lambda: |
     var hoursOpen = Math.floor((now - createdDate) / (1000 * 60 * 60));
     
     // Get SLA hours from database
-    var slaResult = db.queryRow("SELECT response_hours FROM sla WHERE priority_id = $1", item.priority_id.toString());
-    var slaHours = slaResult.response_hours || 24;
+    var slaResult = db.queryRow("SELECT first_response_time FROM sla WHERE id = ?", item.sla_id);
+    var slaHours = (parseInt(slaResult) || 1440) / 60;
     
     var remainingHours = slaHours - hoursOpen;
     

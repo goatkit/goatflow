@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -77,7 +78,8 @@ func RebuildDynamicEngine() {
 	if pluginManager != nil {
 		if db, err := database.GetDB(); err == nil && db != nil {
 			repo := pluginui.NewRepositoryWithDB(db)
-			if err := pluginui.RegisterUIRoutes(eng, repo, pluginManager, getPongo2Renderer(), SessionOrJWTAuth(), slog.Default()); err != nil {
+			uiAuth := pluginui.UIAuth{Authenticate: SessionOrJWTAuth(), RequireGroup: RequireGroup}
+			if err := pluginui.RegisterUIRoutes(eng, repo, pluginManager, getPongo2Renderer(), uiAuth, slog.Default()); err != nil {
 				log.Printf("⚠️  Dynamic engine: failed to load plugin UI routes: %v", err)
 			}
 		}
@@ -89,40 +91,24 @@ func RebuildDynamicEngine() {
 		for _, route := range routes {
 			pluginName := route.PluginName
 			handlerName := route.RouteSpec.Handler
-			middlewares := route.RouteSpec.Middleware
 
-			var mwChain []gin.HandlerFunc
-			for _, mw := range middlewares {
-				switch {
-				case mw == "auth":
-					mwChain = append(mwChain, SessionOrJWTAuth())
-				case mw == "admin":
-					mwChain = append(mwChain, SessionOrJWTAuth(), RequireAdmin())
-				case strings.HasPrefix(mw, "group:"):
-					groupName := strings.TrimPrefix(mw, "group:")
-					mwChain = append(mwChain, SessionOrJWTAuth(), RequireGroup(groupName))
-				case strings.HasPrefix(mw, "plugin:"):
-					// "plugin:<pluginName>:<agentGroup>" — agent gate name
-					// is required so the middleware knows which group a
-					// support agent must belong to (customers go through
-					// the per-org gk_org_plugin_access table instead).
-					rest := strings.TrimPrefix(mw, "plugin:")
-					parts := strings.SplitN(rest, ":", 2)
-					if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-						log.Printf("dynamic_router: malformed plugin middleware spec %q — expected plugin:<pluginName>:<agentGroup>", mw)
-						continue
-					}
-					mwChain = append(mwChain, SessionOrJWTAuth(), RequirePluginAccess(parts[0], parts[1]))
-				case mw == "webhook":
-					mwChain = append(mwChain, WebhookRateLimit(pluginName), WebhookAuth(pluginName))
-				}
+			mwChain, err := pluginRouteMiddleware(pluginName, route.RouteSpec.Middleware, true)
+			if err != nil {
+				log.Printf("ERROR dynamic_router: not registering plugin route %s %s (%s.%s): %v",
+					route.RouteSpec.Method, route.RouteSpec.Path, pluginName, handlerName, err)
+				continue
 			}
 
 			_handler := func(c *gin.Context) {
 				args := buildPluginArgs(c, pluginName)
+				if c.IsAborted() {
+					return
+				}
 				ctx := pluginContextWithLanguage(c)
 				result, err := pluginManager.Call(ctx, pluginName, handlerName, args)
 				if err != nil {
+					writePluginCallError(c, err, http.StatusInternalServerError)
+					return
 				}
 				var response map[string]any
 				if err := json.Unmarshal(result, &response); err == nil {
@@ -224,4 +210,69 @@ func RebuildDynamicEngine() {
 	dynMu.Unlock()
 
 	log.Println("🔄 Dynamic engine rebuilt")
+}
+
+// pluginRouteMiddleware turns a plugin RouteSpec middleware list into the gin
+// handlers that guard the route. Recognised entries:
+//
+//	auth                        authenticated caller (session, JWT or API token)
+//	admin                       auth + admin
+//	agent                       auth + agent principal (customers refused)
+//	customer                    auth + customer principal (agents refused)
+//	group:<name>                auth + agent member of the group (admins bypass)
+//	plugin:<plugin>:<agentGroup> auth + per-org plugin access / agent group
+//	webhook                     rate limit + request signature, no session
+//
+// Any other entry is an error, so a typo or an unsupported name never leaves
+// a route without the gate its author asked for. With authenticate=false
+// (MCP tool calls, whose caller is already authenticated) the session/JWT
+// step is omitted and webhook routes are refused: they authenticate by
+// request signature, which a tool call does not carry.
+func pluginRouteMiddleware(pluginName string, specs []string, authenticate bool) ([]gin.HandlerFunc, error) {
+	var pre, authz []gin.HandlerFunc
+	needsAuth := false
+	for _, mw := range specs {
+		switch {
+		case mw == "auth":
+			needsAuth = true
+		case mw == "admin":
+			needsAuth = true
+			authz = append(authz, RequireAdmin())
+		case mw == "agent":
+			needsAuth = true
+			authz = append(authz, middleware.RequireAgent())
+		case mw == "customer":
+			needsAuth = true
+			authz = append(authz, middleware.RequireCustomer())
+		case strings.HasPrefix(mw, "group:"):
+			groupName := strings.TrimPrefix(mw, "group:")
+			if groupName == "" {
+				return nil, fmt.Errorf("malformed middleware %q: expected group:<name>", mw)
+			}
+			needsAuth = true
+			authz = append(authz, RequireGroup(groupName))
+		case strings.HasPrefix(mw, "plugin:"):
+			// "plugin:<pluginName>:<agentGroup>": the agent group tells the
+			// middleware which group a support agent must belong to
+			// (customers go through gk_org_plugin_access instead).
+			parts := strings.SplitN(strings.TrimPrefix(mw, "plugin:"), ":", 2)
+			if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+				return nil, fmt.Errorf("malformed middleware %q: expected plugin:<pluginName>:<agentGroup>", mw)
+			}
+			needsAuth = true
+			authz = append(authz, RequirePluginAccess(parts[0], parts[1]))
+		case mw == "webhook":
+			if !authenticate {
+				return nil, fmt.Errorf("webhook routes are authenticated by request signature and cannot be called this way")
+			}
+			pre = append(pre, WebhookRateLimit(pluginName), WebhookAuth(pluginName))
+		default:
+			return nil, fmt.Errorf("unknown middleware %q", mw)
+		}
+	}
+	chain := pre
+	if needsAuth && authenticate {
+		chain = append(chain, SessionOrJWTAuth())
+	}
+	return append(chain, authz...), nil
 }

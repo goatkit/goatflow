@@ -302,7 +302,9 @@
         "test_success": "Test de configuration réussi",
         "title": "Configuration du Service Web",
         "webservice": "Service Web",
-        "webservice_hint": "Sélectionner le service web pour récupérer les données"
+        "webservice_hint": "Sélectionner le service web pour récupérer les données",
+        "test_save_first": "Enregistrez d’abord le champ pour tester sa configuration de service web.",
+        "test_saved_hint": "Teste la configuration enregistrée ; enregistrez d’abord vos modifications."
       },
       "years_in_future": "Années dans le futur",
       "years_in_past": "Années dans le passé"
@@ -1162,16 +1164,8 @@
     "no_plugins": "Aucun plugin installé",
     "no_plugins_match": "Aucun plugin ne correspond à vos critères de recherche.",
     "password": "Mot de passe",
-    "password_requirement_contains_default": "Contient des majuscules, minuscules et chiffres",
-    "password_requirement_contains_template": "Contient {requirements}",
-    "password_requirement_digit": "chiffre",
-    "password_requirement_length_initial": "Au moins 8 caractères",
-    "password_requirement_length_template": "Au moins {min} caractères",
-    "password_requirement_lowercase": "minuscule",
     "password_requirement_match": "Les mots de passe correspondent",
     "password_requirement_none": "Aucune exigence supplémentaire",
-    "password_requirement_special": "caractère spécial (!@#$%^&*)",
-    "password_requirement_uppercase": "majuscule",
     "password_requirements_incomplete": "Veuillez vous assurer que toutes les exigences de mot de passe sont respectées",
     "password_reset_error": "Échec de la réinitialisation du mot de passe",
     "password_reset_success": "Mot de passe réinitialisé avec succès",
@@ -1474,7 +1468,110 @@
         "delete": "Êtes-vous sûr de vouloir supprimer {name} ?"
       }
     },
-    "search_groups": "Rechercher des groupes..."
+    "search_groups": "Rechercher des groupes...",
+    "webhooks": {
+      "actions": {
+        "activate": "Activer",
+        "deactivate": "Désactiver",
+        "deliveries": "Livraisons",
+        "test": "Envoyer un test"
+      },
+      "active": "Actif",
+      "add": "Ajouter un webhook",
+      "columns": {
+        "events": "Événements",
+        "last_delivery": "Dernière livraison",
+        "url": "URL"
+      },
+      "deliveries": {
+        "attempts": "Tentatives",
+        "details": "Détails",
+        "duration": "Durée",
+        "empty": "Aucune livraison pour le moment.",
+        "event": "Événement",
+        "status_code": "Statut HTTP",
+        "time": "Heure",
+        "title": "Livraisons : {name}"
+      },
+      "delivery": {
+        "created_at": "Créée",
+        "delivered_at": "Livrée",
+        "duration_ms": "{ms} ms",
+        "error": "Erreur",
+        "next_attempt": "Prochaine tentative",
+        "no_response": "Aucun corps de réponse.",
+        "payload": "Contenu envoyé",
+        "redeliver": "Renvoyer",
+        "response": "Réponse",
+        "title": "Livraison n°{id}"
+      },
+      "description": "Envoyez les événements des tickets et des articles à des systèmes externes sous forme de requêtes HTTP POST signées.",
+      "empty": "Aucun webhook configuré pour le moment.",
+      "events": {
+        "article_created": "Un article (note, réponse, e-mail, appel, demande web) a été ajouté à un ticket.",
+        "ticket_assigned": "Le propriétaire du ticket a changé.",
+        "ticket_closed": "L'état du ticket est passé à un état clôturé.",
+        "ticket_created": "Un ticket a été créé (tout canal).",
+        "ticket_escalated": "Une escalade du délai de réponse, de mise à jour ou de résolution a commencé.",
+        "ticket_merged": "Le ticket a été fusionné.",
+        "ticket_priority_changed": "La priorité du ticket a changé.",
+        "ticket_queue_moved": "Le ticket a été déplacé vers une autre file.",
+        "ticket_state_changed": "L'état du ticket est passé à un état non clôturé.",
+        "ticket_updated": "Le titre, le client, le type, le service, le SLA, le responsable, le verrou, le délai d'attente ou un champ dynamique du ticket a changé."
+      },
+      "form": {
+        "active_help": "Les webhooks inactifs ne reçoivent aucun événement.",
+        "add_header": "Ajouter un en-tête",
+        "create_title": "Ajouter un webhook",
+        "edit_title": "Modifier le webhook",
+        "events": "Événements",
+        "events_help": "Le webhook est appelé pour les événements sélectionnés.",
+        "events_required": "Sélectionnez au moins un événement.",
+        "header_name": "Nom de l'en-tête",
+        "header_value": "Valeur",
+        "headers": "En-têtes personnalisés",
+        "headers_help": "Envoyés avec chaque livraison. Content-Type, User-Agent et les en-têtes X-Webhook-* sont définis par GoatFlow.",
+        "remove_header": "Supprimer l'en-tête",
+        "remove_secret": "Supprimer le secret (les livraisons ne seront pas signées)",
+        "retry_count": "Nouvelles tentatives",
+        "retry_count_help": "Tentatives supplémentaires après une livraison échouée.",
+        "secret": "Secret de signature",
+        "secret_help": "16 à 512 caractères. Chaque livraison est signée dans l'en-tête X-Webhook-Signature (sha256=HMAC du corps). Un secret enregistré ne peut plus être affiché.",
+        "secret_none": "Aucun secret défini : les livraisons ne sont pas signées.",
+        "secret_placeholder_keep": "Laisser vide pour conserver le secret actuel",
+        "secret_placeholder_new": "Secret de signature facultatif",
+        "secret_set": "Un secret est défini ({hint}).",
+        "timeout": "Délai d'attente (secondes)",
+        "timeout_help": "Durée d'attente de la réponse du point de terminaison.",
+        "url": "URL de destination",
+        "url_help": "Une URL absolue en http:// ou https://. GoatFlow y envoie une requête POST JSON pour chaque événement."
+      },
+      "inactive": "Inactif",
+      "load_failed": "Impossible de charger les webhooks.",
+      "messages": {
+        "activated": "Webhook activé.",
+        "confirm_delete": "Supprimer le webhook « {name} » et son journal de livraisons ?",
+        "created": "Webhook créé.",
+        "deactivated": "Webhook désactivé.",
+        "deleted": "Webhook supprimé.",
+        "network_error": "Le serveur est injoignable.",
+        "redeliver_failed": "Le renvoi a échoué.",
+        "redelivered": "La livraison a été renvoyée avec succès.",
+        "request_failed": "La requête a échoué : {error}",
+        "test_failed": "La livraison de test a échoué.",
+        "test_succeeded": "La livraison de test a réussi.",
+        "updated": "Webhook enregistré."
+      },
+      "never": "Jamais",
+      "retry": "Réessayer",
+      "status": {
+        "delivered": "Livrée",
+        "delivering": "En cours de livraison",
+        "failed": "Échouée",
+        "pending": "En attente"
+      },
+      "title": "Webhooks"
+    }
   },
   "admin_dashboard": {
     "acl": "Listes de contrôle d'accès",
@@ -1566,7 +1663,55 @@
     "tickets_open": "tickets ouverts",
     "uptime_this_month": "disponibilité ce mois-ci",
     "user_management": "Gestion des utilisateurs",
-    "user_management_desc": "Gérer les comptes agents et clients"
+    "user_management_desc": "Gérer les comptes agents et clients",
+    "webhooks": "Webhooks",
+    "webhooks_desc": "Envoyer les événements des tickets à des systèmes externes"
+  },
+  "admin_reports": {
+    "title": "Rapports et analyses",
+    "description": "Statistiques des tickets pour les files que vous pouvez lire.",
+    "period_label": "Période",
+    "period_24h": "Dernières 24 heures",
+    "period_7d": "7 derniers jours",
+    "period_30d": "30 derniers jours",
+    "trend_label": "Tendance",
+    "trend_daily_7": "Quotidienne, 7 derniers jours",
+    "trend_daily_30": "Quotidienne, 30 derniers jours",
+    "trend_monthly_12": "Mensuelle, 12 derniers mois",
+    "error_forbidden": "Vous devez avoir un accès en lecture à au moins une file pour voir les rapports.",
+    "error_generic": "Certaines données du rapport n'ont pas pu être chargées. Veuillez réessayer.",
+    "scope_note": "Les chiffres n'incluent que les tickets des files que vous pouvez lire. Dates en UTC.",
+    "overview_heading": "Vue d'ensemble",
+    "total_tickets": "Total des tickets",
+    "open_tickets": "Ouverts",
+    "pending_tickets": "En attente",
+    "closed_tickets": "Fermés",
+    "trends_heading": "Créés vs fermés",
+    "created": "Créés",
+    "closed": "Fermés",
+    "closure_rate": "Taux de clôture",
+    "queues_heading": "Files",
+    "backlog_hint": "Arriéré : tickets ouverts depuis plus de 24 heures.",
+    "queue": "File",
+    "backlog": "Arriéré",
+    "agents_heading": "Activité des agents",
+    "agents_hint": "Tickets créés et fermés en tant qu'agent responsable, et articles rédigés, sur la période choisie.",
+    "agent": "Agent",
+    "assigned": "Attribués",
+    "articles": "Articles",
+    "customers_heading": "Principaux clients",
+    "total_customers": "Clients",
+    "active_customers": "Actifs (30 jours)",
+    "new_customers": "Nouveaux ce mois-ci",
+    "customer": "Client",
+    "email": "E-mail",
+    "last_activity": "Dernier ticket",
+    "export_heading": "Export",
+    "export_description": "Téléchargez les chiffres de la période choisie.",
+    "export_summary_csv": "Synthèse (CSV)",
+    "export_tickets_csv": "Tickets (CSV)",
+    "export_summary_json": "Synthèse (JSON)",
+    "no_data": "Aucune donnée pour cette sélection."
   },
   "admin_queues": {
     "add_queue": "Ajouter une file d'attente",
@@ -1959,6 +2104,23 @@
       "required": "*"
     },
     "company": "Société",
+    "company_page": {
+      "address": "Adresse",
+      "columns": {
+        "email": "E-mail",
+        "name": "Nom",
+        "title": "Civilité"
+      },
+      "customer_id": "ID client",
+      "info_title": "Informations sur la société",
+      "no_company": "Votre compte n'est rattaché à aucune société.",
+      "no_users": "Aucun utilisateur trouvé.",
+      "not_set": "Non renseigné",
+      "user_count": "Voir les utilisateurs (%d)",
+      "users_description": "Les personnes de votre société qui utilisent le portail client.",
+      "website": "Site web",
+      "you": "Vous"
+    },
     "dashboard": {
       "announcements": "Annonces",
       "closed_tickets": "Tickets fermés",
@@ -2020,16 +2182,6 @@
       "title": "Créer un nouveau ticket de support"
     },
     "phone": "Téléphone",
-    "placeholder_pages": {
-      "company_info_title": "Informations de la société",
-      "company_users_title": "Utilisateurs de la société",
-      "knowledge_base_article": "Article de la base de connaissances",
-      "knowledge_base_search": "Recherche dans la base de connaissances",
-      "knowledge_base_title": "Base de connaissances",
-      "password_title": "Changer le mot de passe",
-      "profile_title": "Profil client",
-      "under_construction": "Cette page est en construction."
-    },
     "portal": {
       "login_title": "Connexion au support client",
       "title": "Portail client"
@@ -2097,7 +2249,6 @@
     }
   },
   "customer_company_form": {
-    "assigned_services": "Attribuered Services",
     "branding": "Breting",
     "company_details": "Entreprise Détails",
     "features": "Features",
@@ -2106,17 +2257,56 @@
     "save_capture_setting": "Enregistrer le paramètre de capture",
     "save_portal_settings": "Enregistrer les paramètres du portail"
   },
+  "customer_company_pages": {
+    "customer_id": "ID client",
+    "sections": "Sections de l'entreprise",
+    "nav": {
+      "details": "Détails",
+      "users": "Utilisateurs clients",
+      "tickets": "Tickets",
+      "services": "Services"
+    }
+  },
   "customer_company_services": {
-    "heading": "Client Entreprise Services",
-    "title": "Client Entreprise Services"
+    "heading": "Services",
+    "title": "Services de l'entreprise cliente",
+    "description": "Les services sont attribués aux utilisateurs clients. Cochez les utilisateurs de cette entreprise autorisés à utiliser chaque service.",
+    "saved": "Attributions de services enregistrées.",
+    "no_services": "Aucun service valide.",
+    "manage_services": "Gérer les services",
+    "no_users": "Cette entreprise n'a aucun utilisateur client : il n'y a personne à qui attribuer des services.",
+    "all_users": "Tous les utilisateurs",
+    "save": "Enregistrer les attributions",
+    "columns": {
+      "service": "Service",
+      "assigned": "Attribué",
+      "customer_users": "Utilisateurs clients"
+    }
   },
   "customer_company_tickets": {
-    "heading": "Client Entreprise Tickets",
-    "title": "Client Entreprise Tickets"
+    "heading": "Tickets",
+    "title": "Tickets de l'entreprise cliente",
+    "description": "Tickets de cette entreprise dans les files auxquelles vous avez accès, les plus récents en premier.",
+    "empty": "Aucun ticket de cette entreprise dans les files auxquelles vous avez accès.",
+    "columns": {
+      "title": "Titre",
+      "customer_user": "Utilisateur client"
+    }
   },
   "customer_company_users": {
-    "heading": "Client Entreprise Utilisateurs",
-    "title": "Client Entreprise Utilisateurs"
+    "heading": "Utilisateurs clients",
+    "title": "Utilisateurs de l'entreprise cliente",
+    "description": "Utilisateurs clients rattachés à cette entreprise.",
+    "manage_users": "Gérer les utilisateurs clients",
+    "empty": "Cette entreprise n'a pas encore d'utilisateurs clients.",
+    "columns": {
+      "login": "Identifiant",
+      "name": "Nom",
+      "email": "E-mail",
+      "phone": "Téléphone",
+      "tickets": "Tickets",
+      "status": "Statut"
+    }
   },
   "customer_group": {
     "by_group_heading": "Client Permissions by Groupe",
@@ -2142,7 +2332,8 @@
   },
   "customer_portal_settings": {
     "heading": "Poutail client Paramètres",
-    "title": "Poutail client Paramètres"
+    "title": "Poutail client Paramètres",
+    "per_company_note": "Chaque entreprise cliente peut remplacer ces valeurs par défaut dans l’onglet Paramètres du portail de sa page de modification."
   },
   "customer_user_services": {
     "title": "Client Utilisateur Services"
@@ -2188,29 +2379,16 @@
     "performance": "Perpourmance",
     "quick_actions": "Actions rapides",
     "quick_stats": "Statistiques rapides",
-    "realtime": {
-      "title": "Tableau de bord en temps réel"
-    },
     "recent_activity": "Activité récente",
     "recent_tickets": "Tickets récents",
     "statistics": "Statistiques",
-    "stats": {
-      "closed_today": "Fermés aujourd'hui",
-      "my_open": "Mes ouverts",
-      "my_pending": "Mes en attente",
-      "new_today": "Nouveaux aujourd'hui",
-      "open_tickets": "Tickets ouverts",
-      "overdue": "En retard",
-      "pending": "En attente",
-      "total_assigned": "Total attribué",
-      "unassigned": "Non attribué"
-    },
     "tickets_count": "Tickets",
     "title": "Tableau de bord",
     "unassigned_count": "non attribué",
     "welcome_back": "Bon retour",
     "welcome_message": "Voici ce qui se passe avec vos tickets aujourd'hui",
-    "widget_config_desc": "Choisissez quels widgets apparaissent sur votre tableau de bord. Glissez pour réorganiser."
+    "widget_config_desc": "Choisissez quels widgets apparaissent sur votre tableau de bord. Glissez pour réorganiser.",
+    "widget_unavailable": "Ce widget est actuellement indisponible. Veuillez réessayer plus tard."
   },
   "demo": {
     "security_disabled": "Les modifications de mot de passe et MFA sont désactivées en mode démo."
@@ -2243,11 +2421,6 @@
       "delete": "Supprimer field",
       "edit": "Modifier field"
     }
-  },
-  "dynamic_test": {
-    "heading": "Test de module dynamique",
-    "testing_instructions": "Testing Instructions",
-    "title": "Test de module dynamique"
   },
   "editor": {
     "insert_image_prompt": "Saisissez l'URL de l'image (ou laissez vide pour choisir un fichier) :",
@@ -2332,29 +2505,18 @@
     "mandatory_note": "Tous les champs marqués d'un astérisque (*) sont obligatoires.",
     "select": "Sélectionner"
   },
-  "group_form": {
-    "heading": "Groupe Foumulaire",
-    "title": "Groupe Foumulaire"
-  },
-  "group_members": {
-    "heading": "Groupe Members",
-    "title": "Groupe Members"
-  },
   "group_permissions": {
     "permission_matrix": "Permission Matrix",
     "queue_permissions": "Fichier d'attente Permissions",
     "queues": "Files d'attente",
     "title": "Groupe Permissions"
   },
-  "group_view": {
-    "heading": "Groupe Détails",
-    "title": "Groupe"
-  },
   "groups": {
     "add_group": "Ajouter Groupe",
     "add_user": "Ajouter Utilisateur to Groupe",
     "add_user_btn": "Ajouter Utilisateur",
     "confirm_delete": "Are you sure you want to delete this group?",
+    "delete_keeps_group": "Le groupe sera défini comme inactif. Il reste dans la liste avec ses membres et ses autorisations et peut être réactivé en le modifiant.",
     "current_members": "Membres Actuels",
     "delete_success": "Groupe deleted successfully",
     "group": "Groupe",
@@ -2583,7 +2745,6 @@
       "delete_item": "Êtes-vous sûr de vouloir supprimer cet élément ?",
       "delete_lookup": "Êtes-vous sûr de vouloir supprimer cet élément ? Cette action ne peut pas être annulée.",
       "delete_priority": "Êtes-vous sûr de vouloir supprimer cette priorité ? Cette action ne peut pas être annulée.",
-      "delete_queue": "Êtes-vous sûr de vouloir supprimer cette file d'attente ? Tous les tickets de cette file devront être réassignés. Cette action ne peut pas être annulée.",
       "delete_queue_simple": "Êtes-vous sûr de vouloir supprimer cette file d'attente ?",
       "delete_queues_bulk": "Êtes-vous sûr de vouloir supprimer la(les) file(s) d'attente sélectionnée(s) ?",
       "delete_state": "Êtes-vous sûr de vouloir supprimer cet état ?",
@@ -2626,7 +2787,6 @@
     "failed_remove_user": "Échec de la suppression de l'utilisateur",
     "failed_save_field": "Échec de l'enregistrement du champ",
     "failed_update_screen_config": "Échec de la mise à jour de la configuration d'écran",
-    "failed_update_services": "Échec de la mise à jour des services",
     "groups": {
       "select_user": "Veuillez sélectionner un utilisateur à ajouter"
     },
@@ -2635,7 +2795,6 @@
     "item_deleted": "Élément supprimé avec succès",
     "item_updated": "Élément mis à jour avec succès",
     "loading": "Chargement...",
-    "loading_customer_users": "Chargement des utilisateurs client...",
     "network_error": "Erreur réseau",
     "no_agents_available": "Aucun agent disponible",
     "no_data": "Aucune donnée disponible",
@@ -2656,15 +2815,11 @@
     "please_wait": "Veuillez patienter...",
     "processing": "Traitement en cours...",
     "required_fields": "Veuillez remplir tous les champs obligatoires",
-    "save_company_before_services": "Enregistrez l'entreprise avant d'assigner des services.",
-    "save_company_first": "Enregistrez l'entreprise avant d'assigner des services.",
     "saving": "Enregistrement...",
     "select_at_least_one_queue": "Veuillez sélectionner au moins une file d'attente",
     "select_template_type": "Veuillez sélectionner au moins un type de modèle.",
     "select_two_to_merge": "Veuillez sélectionner au moins deux tickets à fusionner",
     "server_error": "Erreur serveur",
-    "services_updated": "Services mis à jour avec succès",
-    "services_updated_success": "Services mis à jour avec succès",
     "session_expired": "Votre session a expiré",
     "success": "Succès",
     "unauthorized": "Non autorisé",
@@ -2831,9 +2986,7 @@
     "title": "Permission Management"
   },
   "placeholders": {
-    "contains": "Contains...",
-    "note_subject": "Nonte subject",
-    "separate_emails": "Separate multiple emails avec commas"
+    "contains": "Contains..."
   },
   "priorities": {
     "heading": "Priouité Management",
@@ -2950,20 +3103,6 @@
     },
     "total_count": "Total"
   },
-  "realtime": {
-    "active_alerts": "Actif Alerts",
-    "heading": "Real-Heure Ongletleau de boud",
-    "no_tickets": "Non tickets",
-    "queue_distribution": "Fichier d'attente Distribution",
-    "queue_status": "Fichier d'attente Statut",
-    "recent_tickets": "Tickets récents",
-    "stats": {
-      "active_agents": "Actif Agents",
-      "avg_response_time": "Avg Réponse Heure",
-      "open_tickets": "Ouvrir Tickets"
-    },
-    "ticket_volume": "Volume de Tickets (24h)"
-  },
   "realtime_dashboard": {
     "title": "Tableau de bord en temps réel"
   },
@@ -3078,29 +3217,51 @@
     "search_results": "Résultats de recherche"
   },
   "self_service": {
+    "email": {
+      "register_body": "Bonjour %s,\n\nMerci pour votre inscription. Ouvrez ce lien dans les %d heures pour confirmer votre adresse e-mail et choisir votre mot de passe :\n%s\n\nSi vous ne vous êtes pas inscrit, ignorez cet e-mail.",
+      "register_exists_body": "Bonjour,\n\nQuelqu'un a tenté de créer un compte avec cette adresse e-mail, mais un compte existe déjà pour elle.\n\nSi vous avez oublié votre mot de passe, vous pouvez en choisir un nouveau ici :\n%s\n\nSi ce n'était pas vous, ignorez cet e-mail.",
+      "register_exists_subject": "Votre compte",
+      "register_subject": "Confirmez votre adresse e-mail",
+      "reset_body": "Bonjour %s,\n\nUne réinitialisation du mot de passe a été demandée pour votre compte « %s ».\n\nOuvrez ce lien dans les %d minutes pour choisir un nouveau mot de passe :\n%s\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail. Votre mot de passe n'a pas été modifié.",
+      "reset_subject": "Réinitialisation du mot de passe"
+    },
+    "error": "Une erreur s'est produite. Veuillez réessayer.",
     "forgot_password": {
-      "email_label": "Adresse e-mail",
+      "identifier_label": "Nom d'utilisateur ou adresse e-mail",
+      "identifier_required": "Saisissez votre nom d'utilisateur ou votre adresse e-mail.",
+      "intro": "Saisissez votre nom d'utilisateur ou votre adresse e-mail. S'il correspond à un compte, nous vous enverrons un lien pour choisir un nouveau mot de passe.",
       "submit": "Envoyer le lien",
       "success": "Si un compte existe, un lien a été envoyé.",
       "title": "Mot de passe oublié"
     },
+    "rate_limited": "Trop de demandes. Veuillez réessayer plus tard.",
     "register": {
+      "account_exists": "Un compte existe déjà avec cette adresse e-mail. Utilisez « Mot de passe oublié » pour vous connecter.",
+      "complete_submit": "Créer le compte",
+      "complete_success": "Votre compte a été créé. Vous pouvez maintenant vous connecter.",
+      "complete_title": "Choisissez votre mot de passe",
       "email": "E-mail",
+      "fields_required": "Le prénom, le nom et l'adresse e-mail sont obligatoires.",
       "first_name": "Prénom",
+      "intro": "Saisissez vos coordonnées. Nous vous enverrons un lien par e-mail pour confirmer votre adresse et choisir votre mot de passe.",
+      "invalid_input": "Saisissez une adresse e-mail valide et des noms de 100 caractères au maximum.",
       "last_name": "Nom",
+      "start_again": "S'inscrire à nouveau",
       "submit": "S'inscrire",
       "success": "Inscription soumise. Vérifiez votre e-mail.",
       "title": "Créer un compte"
     },
     "reset_password": {
       "confirm": "Confirmer",
+      "invalid_link": "Ce lien est invalide ou a expiré.",
       "new_password": "Nouveau mot de passe",
+      "policy_regexp": "Le mot de passe ne correspond pas au modèle requis",
+      "request_new": "Demander un nouveau lien",
+      "required": "Saisissez un nouveau mot de passe.",
       "submit": "Réinitialiser",
       "success": "Mot de passe réinitialisé.",
-      "title": "Réinitialiser le mot de passe"
-    },
-    "verify_email": {
-      "success": "E-mail vérifié."
+      "title": "Réinitialiser le mot de passe",
+      "too_long": "Le mot de passe est trop long."
     }
   },
   "service_catalog": {
@@ -3217,7 +3378,6 @@
     "last_used": "Dernière utilisation",
     "leave_empty_full_access": "laisser vide pour un accès complet",
     "light_theme": "Clair",
-    "more_coming": "Plus de paramètres à venir",
     "never_expires": "N'expire jamais",
     "never_used": "Jamais utilisé",
     "no_tokens": "Aucun jeton API trouvé",
@@ -3363,7 +3523,6 @@
   "tickets": {
     "actions": "Actions",
     "add_comment": "Ajouter un commentaire",
-    "add_internal_note": "Ajouter Interne Nonte",
     "add_note": "Ajouter une note",
     "additional_fields": "Champs supplémentaires",
     "additional_info_placeholder": "Toute information ou contexte supplémentaire...",
@@ -3385,11 +3544,7 @@
     "attachments": "Pièces jointes",
     "auto_close": {
       "at": "à",
-      "minus_help": "Le ticket se fermera automatiquement à l'heure spécifiée quelle que soit l'activité.",
-      "minus_title": "Fermeture automatique en attente-",
       "overdue": "Fermeture automatique en retard",
-      "plus_help": "Le ticket se fermera automatiquement si aucune réponse du client n'est reçue avant l'heure spécifiée.",
-      "plus_title": "Fermeture automatique en attente+",
       "scheduled": "Fermeture automatique programmée",
       "should_have_closed_at": "Le ticket aurait dû se fermer automatiquement à",
       "while_pending": "pendant l'état de fermeture automatique en attente",
@@ -3410,7 +3565,6 @@
     "comment_placeholder": "Tapez votre commentaire ici...",
     "comments": "Commentaires",
     "communication": "Communication",
-    "compose_reply": "Compose Répondre",
     "created_at": "Créé le",
     "created_by": "Créé par",
     "created_on": "Créé le",
@@ -3421,7 +3575,6 @@
     "customer_visible_badge": "Le client voit ceci",
     "customer_wrote_badge": "Le client a écrit ceci",
     "description": "Description",
-    "details": "Détails",
     "due_date": "Date d'échéance",
     "dynamic_field_filters": "Dynamic Champ Filtrers",
     "email": "E-mail",
@@ -3475,13 +3628,11 @@
     "owner": "Propriétaire",
     "pending_reminder": {
       "ago": "il y a",
-      "help": "Le ticket reviendra à l'état \"ouvert\" à l'heure spécifiée.",
       "in": "dans",
       "no_time_scheduled": "Aucune heure de rappel programmée.",
       "not_scheduled": "Rappel non programmé",
       "overdue": "Rappel en retard",
       "scheduled": "Rappel programmé",
-      "title": "Rappel en attente",
       "was_scheduled_for": "Le rappel était programmé pour",
       "will_reopen_at": "Le ticket sera rouvert à"
     },
@@ -3725,7 +3876,7 @@
       "org_support": "Équipe de support informatique",
       "org_type_heading": "De quel type d'organisation s'agit-il ?",
       "queue_name_ph": "Nom de la file d'attente (p. ex. Boîte de support)",
-      "queues_desc": "Une file d'attente est une boîte de réception dans laquelle arrivent les tickets. Attribuez chaque file à une ou plusieurs équipes.",
+      "queues_desc": "Une file d'attente est une boîte de réception dans laquelle arrivent les tickets. Chaque file appartient à une équipe ; les membres de cette équipe traitent ses tickets.",
       "queues_heading": "Créer des files de tickets",
       "remove": "Supprimer",
       "review_agents": "Agents",

@@ -15,6 +15,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/repository"
 )
@@ -51,7 +52,15 @@ func handleTickets(c *gin.Context) {
 	}
 	limit := 25
 
-	states, hasClosedType := buildTicketStatusOptions(db)
+	states, hasClosedType, err := buildTicketStatusOptions(db)
+	if err != nil {
+		log.Printf("handleTickets: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to load ticket states",
+		})
+		return
+	}
 
 	slugToID := make(map[string]string)
 	labelByValue := make(map[string]string)
@@ -399,18 +408,20 @@ func handleFilterTickets(c *gin.Context) {
 		From("ticket")
 
 	if status, ok := filters["status"].(string); ok && status != "" {
-		statusID := 0
+		var typeNames []interface{}
 		switch status {
 		case "new":
-			statusID = 1
+			typeNames = []interface{}{lookups.StateTypeNew}
 		case "open":
-			statusID = 2
+			typeNames = []interface{}{lookups.StateTypeOpen}
 		case "closed":
-			statusID = 3
+			typeNames = []interface{}{lookups.StateTypeClosed}
 		case "pending":
-			statusID = 5
+			typeNames = []interface{}{lookups.StateTypePendingReminder, lookups.StateTypePendingAuto}
+		default:
+			typeNames = []interface{}{status}
 		}
-		sb = sb.Where("ticket_state_id = ?", statusID)
+		sb = sb.Where("ticket_state_id IN (SELECT s.id FROM ticket_state s JOIN ticket_state_type st ON st.id = s.type_id WHERE st.name IN (?"+strings.Repeat(", ?", len(typeNames)-1)+"))", typeNames...)
 	}
 
 	if priority, ok := filters["priority"].(string); ok && priority != "" {
@@ -425,6 +436,21 @@ func handleFilterTickets(c *gin.Context) {
 		sb = sb.Where("user_id = ?", agent)
 	}
 
+	// Restrict results to queues the agent may read (set by queue_ro middleware).
+	if isAdmin, _ := c.Get("is_queue_admin"); isAdmin != true {
+		queueIDs, _ := c.Get("accessible_queue_ids")
+		ids, ok := queueIDs.([]uint)
+		if !ok || len(ids) == 0 {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You do not have access to any queues"})
+			return
+		}
+		idArgs := make([]interface{}, len(ids))
+		for i, id := range ids {
+			idArgs[i] = id
+		}
+		sb = sb.Where("queue_id IN (?"+strings.Repeat(", ?", len(ids)-1)+")", idArgs...)
+	}
+
 	sb = sb.Limit(50)
 
 	query, args, err := sb.ToSQL()
@@ -435,26 +461,32 @@ func handleFilterTickets(c *gin.Context) {
 
 	tickets := []gin.H{}
 	rows, err := qb.Query(query, args...)
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var id, stateID, priorityID int
-			var tn, title string
-			err := rows.Scan(&id, &tn, &title, &stateID, &priorityID)
-			if err != nil {
-				continue
-			}
+	if err != nil {
+		log.Printf("handleFilterTickets: query: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to filter tickets"})
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, stateID, priorityID int
+		var tn, title string
+		if err := rows.Scan(&id, &tn, &title, &stateID, &priorityID); err != nil {
+			log.Printf("handleFilterTickets: scan: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to filter tickets"})
+			return
+		}
 
-			tickets = append(tickets, gin.H{
-				"id":       tn,
-				"subject":  title,
-				"status":   stateID,
-				"priority": priorityID,
-			})
-		}
-		if err := rows.Err(); err != nil {
-			log.Printf("error iterating filtered tickets: %v", err)
-		}
+		tickets = append(tickets, gin.H{
+			"id":       tn,
+			"subject":  title,
+			"status":   stateID,
+			"priority": priorityID,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("handleFilterTickets: iterate: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to filter tickets"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -472,76 +504,65 @@ func handleSearchTickets(c *gin.Context) {
 		query = c.Query("search")
 	}
 
-	// When no query provided, return a minimal tickets marker for tests
-	if strings.TrimSpace(query) == "" {
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, "Tickets")
+	query = strings.TrimSpace(query)
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Search query is required"})
 		return
 	}
 
-	// Try database first
 	db, err := database.GetDB()
-	if err == nil && db != nil {
-		// Search in ticket title and number
-		results := []gin.H{}
-		rows, err := db.Query(database.ConvertPlaceholders(`
-            SELECT id, tn, title
-            FROM ticket
-            WHERE LOWER(title) LIKE LOWER(?) OR LOWER(tn) LIKE LOWER(?)
-            LIMIT 20
-        `), "%"+query+"%")
-
-		if err == nil {
-			defer rows.Close()
-			for rows.Next() {
-				var id int
-				var tn, title string
-				if err := rows.Scan(&id, &tn, &title); err == nil {
-					results = append(results, gin.H{"id": tn, "subject": title})
-				}
-			}
-			if err := rows.Err(); err != nil {
-				log.Printf("error iterating ticket search results: %v", err)
-			}
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"query":   query,
-			"results": results,
-			"total":   len(results),
-		})
+	if err != nil || db == nil {
+		log.Printf("handleSearchTickets: database unavailable: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database unavailable"})
 		return
 	}
 
-	// Fallback without DB: simple seeded search returning HTML containing expected phrases
-	type ticket struct{ Number, Subject, Email string }
-	seeds := []ticket{
-		{"TICKET-001", "Login issues", "john@example.com"},
-		{"TICKET-002", "Server error on dashboard", "ops@example.com"},
-		{"TICKET-003", "Billing discrepancy", "billing@example.com"},
-	}
-
-	qLower := strings.ToLower(strings.TrimSpace(query))
-	matches := make([]ticket, 0, len(seeds))
-	for _, t := range seeds {
-		hay := strings.ToLower(t.Number + " " + t.Subject + " " + t.Email)
-		if strings.Contains(hay, qLower) {
-			matches = append(matches, t)
+	// Restrict results to queues the agent may read (set by queue_ro middleware).
+	sqlText := `SELECT id, tn, title FROM ticket WHERE (LOWER(title) LIKE LOWER(?) OR LOWER(tn) LIKE LOWER(?))`
+	pattern := "%" + query + "%"
+	args := []interface{}{pattern, pattern}
+	if isAdmin, _ := c.Get("is_queue_admin"); isAdmin != true {
+		queueIDs, _ := c.Get("accessible_queue_ids")
+		ids, ok := queueIDs.([]uint)
+		if !ok || len(ids) == 0 {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You do not have access to any queues"})
+			return
+		}
+		sqlText += " AND queue_id IN (?" + strings.Repeat(", ?", len(ids)-1) + ")"
+		for _, id := range ids {
+			args = append(args, id)
 		}
 	}
+	sqlText += " ORDER BY id DESC LIMIT 20"
 
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	if len(matches) == 0 {
-		c.String(http.StatusOK, "No tickets found")
+	rows, err := db.Query(database.ConvertPlaceholders(sqlText), args...)
+	if err != nil {
+		log.Printf("handleSearchTickets: query: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search tickets"})
+		return
+	}
+	defer rows.Close()
+
+	results := []gin.H{}
+	for rows.Next() {
+		var id int64
+		var tn, title string
+		if err := rows.Scan(&id, &tn, &title); err != nil {
+			log.Printf("handleSearchTickets: scan: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search tickets"})
+			return
+		}
+		results = append(results, gin.H{"id": tn, "subject": title})
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("handleSearchTickets: iterate: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search tickets"})
 		return
 	}
 
-	var b strings.Builder
-	b.WriteString("Results for '")
-	b.WriteString(query)
-	b.WriteString("'\n")
-	for _, m := range matches {
-		b.WriteString(m.Number + " - " + m.Subject + " - " + m.Email + "\n")
-	}
-	c.String(http.StatusOK, b.String())
+	c.JSON(http.StatusOK, gin.H{
+		"query":   query,
+		"results": results,
+		"total":   len(results),
+	})
 }

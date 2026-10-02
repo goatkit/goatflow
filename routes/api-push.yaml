@@ -10,6 +10,7 @@ spec:
   prefix: /api
   middleware:
     - unified_auth
+    - agent
   routes:
     - path: /push/vapid-key
       method: GET

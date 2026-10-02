@@ -3,6 +3,7 @@ package middleware
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -25,6 +26,11 @@ func RequireQueueAccess(permType string) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		if IsCustomerPrincipal(c) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Agent access required"})
+			c.Abort()
+			return
+		}
 
 		userIDUint := getQueueAccessUserIDFromCtxUint(c, 0)
 		if userIDUint == 0 {
@@ -33,45 +39,42 @@ func RequireQueueAccess(permType string) gin.HandlerFunc {
 			return
 		}
 
-		// Extract queue ID from URL param or query param
-		queueIDStr := c.Param("queue_id")
-		if queueIDStr == "" {
-			queueIDStr = c.Param("id") // Also check :id param
+		// Collect the queue ID from every place a handler may read it (path,
+		// query, form, JSON body). They must agree: otherwise the check could
+		// pass on one value while the handler acts on another.
+		var candidates []string
+		pathID := c.Param("queue_id")
+		if pathID == "" {
+			pathID = c.Param("id")
 		}
-		if queueIDStr == "" {
-			queueIDStr = c.Query("queue_id")
-		}
-		if queueIDStr == "" {
-			// Try to get from form data
-			queueIDStr = c.PostForm("queue_id")
-		}
-
-		if queueIDStr == "" {
-			// Try to get from JSON body - read body and restore it for downstream handlers
-			if c.Request.Body != nil && c.ContentType() == "application/json" {
-				bodyBytes, err := io.ReadAll(c.Request.Body)
-				if err == nil && len(bodyBytes) > 0 {
-					// Restore the body for downstream handlers
-					c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-
-					// Parse JSON to extract queue_id
-					var jsonBody map[string]interface{}
-					if json.Unmarshal(bodyBytes, &jsonBody) == nil {
-						if queueVal, ok := jsonBody["queue_id"]; ok && queueVal != nil {
-							switch v := queueVal.(type) {
-							case string:
-								queueIDStr = v
-							case float64:
-								queueIDStr = strconv.FormatInt(int64(v), 10)
-							case int:
-								queueIDStr = strconv.Itoa(v)
-							case int64:
-								queueIDStr = strconv.FormatInt(v, 10)
-							}
-						}
+		candidates = append(candidates, pathID, c.Query("queue_id"), c.PostForm("queue_id"))
+		if c.Request.Body != nil && c.ContentType() == "application/json" {
+			bodyBytes, err := io.ReadAll(c.Request.Body)
+			if err == nil && len(bodyBytes) > 0 {
+				// Restore the body for downstream handlers
+				c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+				var jsonBody map[string]interface{}
+				if json.Unmarshal(bodyBytes, &jsonBody) == nil {
+					switch v := jsonBody["queue_id"].(type) {
+					case string:
+						candidates = append(candidates, v)
+					case float64:
+						candidates = append(candidates, strconv.FormatInt(int64(v), 10))
 					}
 				}
 			}
+		}
+		queueIDStr := ""
+		for _, s := range candidates {
+			if s == "" {
+				continue
+			}
+			if queueIDStr != "" && s != queueIDStr {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Conflicting queue IDs in request"})
+				c.Abort()
+				return
+			}
+			queueIDStr = s
 		}
 
 		if queueIDStr == "" {
@@ -150,6 +153,11 @@ func RequireQueueAccessFromTicket(permType string) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		if IsCustomerPrincipal(c) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Agent access required"})
+			c.Abort()
+			return
+		}
 
 		userIDUint := getQueueAccessUserIDFromCtxUint(c, 0)
 		if userIDUint == 0 {
@@ -188,12 +196,18 @@ func RequireQueueAccessFromTicket(permType string) gin.HandlerFunc {
 			return
 		}
 		resolver := ticketQueueResolverFactory()
-		queueID, ticketID, err := resolver.ResolveQueueID(db, ticketIDStr)
-		if err != nil {
+		tickets, err := resolver.ResolveTickets(db, ticketIDStr)
+		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
 			c.Abort()
 			return
 		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch ticket"})
+			c.Abort()
+			return
+		}
+		queueID, ticketID := tickets[0].QueueID, tickets[0].ID
 
 		// Create queue access service
 		if queueAccessCheckerFactory == nil {
@@ -220,18 +234,20 @@ func RequireQueueAccessFromTicket(permType string) gin.HandlerFunc {
 			return
 		}
 
-		// Check if user has the required permission for this queue
-		hasAccess, err := queueAccessSvc.HasQueueAccess(c.Request.Context(), userIDUint, queueID, permType)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check queue permissions"})
-			c.Abort()
-			return
-		}
-
-		if !hasAccess {
-			c.JSON(http.StatusForbidden, gin.H{"error": "You do not have permission to access this queue"})
-			c.Abort()
-			return
+		// Check the required permission on the queue of every ticket the
+		// identifier names (a tn can equal another ticket's id).
+		for _, t := range tickets {
+			hasAccess, err := queueAccessSvc.HasQueueAccess(c.Request.Context(), userIDUint, t.QueueID, permType)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check queue permissions"})
+				c.Abort()
+				return
+			}
+			if !hasAccess {
+				c.JSON(http.StatusForbidden, gin.H{"error": "You do not have permission to access this queue"})
+				c.Abort()
+				return
+			}
 		}
 
 		// Store context values for downstream handlers
@@ -255,13 +271,12 @@ func RequireAnyQueueAccess(permType string) gin.HandlerFunc {
 			return
 		}
 
-		// Customers bypass queue checks - they access tickets via customer_user_id
-		if role, exists := c.Get("user_role"); exists {
-			if r, ok := role.(string); ok && r == "Customer" {
-				c.Set("is_customer", true)
-				c.Next()
-				return
-			}
+		// Queue permissions are agent permissions. Customers reach their own
+		// tickets through customer routes (or RequireCustomerOrAnyQueueAccess).
+		if IsCustomerPrincipal(c) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Agent access required"})
+			c.Abort()
+			return
 		}
 
 		userIDUint := getQueueAccessUserIDFromCtxUint(c, 0)
@@ -322,6 +337,66 @@ func RequireAnyQueueAccess(permType string) gin.HandlerFunc {
 		c.Set("accessible_queue_ids", accessibleQueueIDs)
 
 		// User has access, continue
+		c.Next()
+	}
+}
+
+// RequireCustomerOrAnyQueueAccess is RequireAnyQueueAccess for routes that
+// customers may also call: customers pass through and the handler must limit
+// them to their own tickets; agents need permType on at least one queue.
+func RequireCustomerOrAnyQueueAccess(permType string) gin.HandlerFunc {
+	agent := RequireAnyQueueAccess(permType)
+	return func(c *gin.Context) {
+		if _, exists := c.Get("user_id"); exists && IsCustomerPrincipal(c) {
+			c.Next()
+			return
+		}
+		agent(c)
+	}
+}
+
+// RequireTicketReadOrCustomerOwner admits agents with "ro" on the queue of
+// the ticket in the path (as RequireQueueAccessFromTicket("ro")) and customers
+// whose login is the ticket's customer_user_id. Other customers get 404, so
+// the existence of foreign tickets is not revealed. The handler must still
+// hide agent-only content (internal articles) from customers.
+func RequireTicketReadOrCustomerOwner() gin.HandlerFunc {
+	agent := RequireQueueAccessFromTicket("ro")
+	return func(c *gin.Context) {
+		if _, exists := c.Get("user_id"); !exists || !IsCustomerPrincipal(c) {
+			agent(c)
+			return
+		}
+		ticketID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+		if p := c.Param("ticket_id"); p != "" {
+			ticketID, err = strconv.ParseInt(p, 10, 64)
+		}
+		if err != nil || ticketID <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
+			c.Abort()
+			return
+		}
+		login := c.GetString("customer_login")
+		db, err := database.GetDB()
+		if err != nil || db == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+			c.Abort()
+			return
+		}
+		var owner sql.NullString
+		err = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(
+			`SELECT customer_user_id FROM ticket WHERE id = ?`), ticketID).Scan(&owner)
+		if err != nil && err != sql.ErrNoRows {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch ticket"})
+			c.Abort()
+			return
+		}
+		if err == sql.ErrNoRows || login == "" || !owner.Valid || owner.String != login {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+			c.Abort()
+			return
+		}
+		c.Set("ticket_id", uint64(ticketID))
 		c.Next()
 	}
 }

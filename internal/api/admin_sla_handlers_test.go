@@ -1,7 +1,9 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -13,11 +15,55 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
+
+// createAdminTestSLA inserts an SLA owned by the calling test and deletes it
+// when the test ends.
+func createAdminTestSLA(t *testing.T) int {
+	t.Helper()
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO sla (name, first_response_time, update_time, solution_time, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, 60, 120, 480, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+		RETURNING id`), fmt.Sprintf("Admin SLA Test %d", time.Now().UnixNano()))
+	require.NoError(t, err)
+	t.Cleanup(func() { deleteAdminTestSLA(t, int(id)) })
+	return int(id)
+}
+
+// cleanupAdminTestSLAByName deletes an SLA created through a handler under test.
+func cleanupAdminTestSLAByName(t *testing.T, name string) {
+	t.Helper()
+	t.Cleanup(func() {
+		db, err := database.GetDB()
+		require.NoError(t, err)
+		var id int
+		err = db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM sla WHERE name = ?`), name).Scan(&id)
+		if errors.Is(err, sql.ErrNoRows) {
+			return
+		}
+		require.NoError(t, err)
+		deleteAdminTestSLA(t, id)
+	})
+}
+
+func deleteAdminTestSLA(t *testing.T, id int) {
+	t.Helper()
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	for _, q := range []string{`DELETE FROM service_sla WHERE sla_id = ?`, `DELETE FROM sla WHERE id = ?`} {
+		if _, err := db.Exec(database.ConvertPlaceholders(q), id); err != nil {
+			t.Errorf("cleanup sla %d: %s: %v", id, q, err)
+		}
+	}
+}
 
 func TestAdminSLAHandlers(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	router := seedAdminRouter()
 
 	router.GET("/admin/sla", handleAdminSLA)
 	router.POST("/admin/sla/create", handleAdminSLACreate)
@@ -118,7 +164,7 @@ func TestAdminSLAHandlers(t *testing.T) {
 
 func TestAdminSLACreate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	router := seedAdminRouter()
 	router.POST("/admin/sla/create", handleAdminSLACreate)
 
 	t.Run("POST /admin/sla/create requires name", func(t *testing.T) {
@@ -160,6 +206,7 @@ func TestAdminSLACreate(t *testing.T) {
 
 	t.Run("POST /admin/sla/create with JSON payload", func(t *testing.T) {
 		uniqueName := fmt.Sprintf("Test SLA JSON %d", time.Now().UnixNano())
+		cleanupAdminTestSLAByName(t, uniqueName)
 		payload := fmt.Sprintf(`{"name": "%s", "first_response_time": 60, "solution_time": 480}`, uniqueName)
 
 		req := httptest.NewRequest("POST", "/admin/sla/create", strings.NewReader(payload))
@@ -174,6 +221,7 @@ func TestAdminSLACreate(t *testing.T) {
 
 	t.Run("POST /admin/sla/create with form data", func(t *testing.T) {
 		uniqueName := fmt.Sprintf("Form Test SLA %d", time.Now().UnixNano())
+		cleanupAdminTestSLAByName(t, uniqueName)
 		form := url.Values{}
 		form.Set("name", uniqueName)
 		form.Set("first_response_time", "30")
@@ -193,6 +241,7 @@ func TestAdminSLACreate(t *testing.T) {
 
 	t.Run("POST /admin/sla/create with notify percentages", func(t *testing.T) {
 		uniqueName := fmt.Sprintf("SLA with Notify %d", time.Now().UnixNano())
+		cleanupAdminTestSLAByName(t, uniqueName)
 		form := url.Values{}
 		form.Set("name", uniqueName)
 		form.Set("first_response_time", "60")
@@ -214,6 +263,7 @@ func TestAdminSLACreate(t *testing.T) {
 
 	t.Run("POST /admin/sla/create with calendar", func(t *testing.T) {
 		uniqueName := fmt.Sprintf("SLA with Calendar %d", time.Now().UnixNano())
+		cleanupAdminTestSLAByName(t, uniqueName)
 		form := url.Values{}
 		form.Set("name", uniqueName)
 		form.Set("calendar_name", "Business Hours")
@@ -232,7 +282,7 @@ func TestAdminSLACreate(t *testing.T) {
 
 func TestAdminSLAUpdate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	router := seedAdminRouter()
 	router.PUT("/admin/sla/:id/update", handleAdminSLAUpdate)
 
 	t.Run("PUT /admin/sla/:id/update with invalid ID", func(t *testing.T) {
@@ -255,58 +305,57 @@ func TestAdminSLAUpdate(t *testing.T) {
 		form.Set("name", "Updated SLA Name")
 		form.Set("solution_time", "720")
 
-		req := httptest.NewRequest("PUT", "/admin/sla/1/update", strings.NewReader(form.Encode()))
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/admin/sla/%d/update", createAdminTestSLA(t)), strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
 
-		// Without DB, returns 500 or 404, but verifies parsing works
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError || w.Code == http.StatusNotFound)
+		assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	})
 
 	t.Run("PUT /admin/sla/:id/update with JSON payload", func(t *testing.T) {
-		payload := `{"name": "JSON Updated SLA", "valid_id": 1}`
+		payload := `{"name": "JSON Updated SLA ` + fmt.Sprint(time.Now().UnixNano()) + `", "valid_id": 1}`
 
-		req := httptest.NewRequest("PUT", "/admin/sla/1/update", strings.NewReader(payload))
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/admin/sla/%d/update", createAdminTestSLA(t)), strings.NewReader(payload))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
 
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError || w.Code == http.StatusNotFound)
+		assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	})
 
 	t.Run("PUT /admin/sla/:id/update partial update", func(t *testing.T) {
 		form := url.Values{}
 		form.Set("first_response_time", "45")
 
-		req := httptest.NewRequest("PUT", "/admin/sla/1/update", strings.NewReader(form.Encode()))
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/admin/sla/%d/update", createAdminTestSLA(t)), strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
 
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError || w.Code == http.StatusNotFound)
+		assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	})
 
 	t.Run("PUT /admin/sla/:id/update deactivate SLA", func(t *testing.T) {
 		form := url.Values{}
 		form.Set("valid_id", "2")
 
-		req := httptest.NewRequest("PUT", "/admin/sla/1/update", strings.NewReader(form.Encode()))
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/admin/sla/%d/update", createAdminTestSLA(t)), strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
 
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError || w.Code == http.StatusNotFound)
+		assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	})
 }
 
 func TestAdminSLADelete(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	router := seedAdminRouter()
 	router.DELETE("/admin/sla/:id/delete", handleAdminSLADelete)
 
 	t.Run("DELETE /admin/sla/:id/delete with invalid ID", func(t *testing.T) {
@@ -325,13 +374,12 @@ func TestAdminSLADelete(t *testing.T) {
 	})
 
 	t.Run("DELETE /admin/sla/:id/delete valid request", func(t *testing.T) {
-		req := httptest.NewRequest("DELETE", "/admin/sla/1/delete", nil)
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/admin/sla/%d/delete", createAdminTestSLA(t)), nil)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
 
-		// Without DB, returns 500 or 404
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError || w.Code == http.StatusNotFound)
+		assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	})
 
 	t.Run("DELETE /admin/sla/:id/delete non-existent ID", func(t *testing.T) {
@@ -346,11 +394,13 @@ func TestAdminSLADelete(t *testing.T) {
 
 func TestAdminSLAValidation(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	router := seedAdminRouter()
 	router.POST("/admin/sla/create", handleAdminSLACreate)
 
 	t.Run("SLA name is trimmed and validated", func(t *testing.T) {
 		uniqueName := fmt.Sprintf("  Trimmed Name %d  ", time.Now().UnixNano())
+		cleanupAdminTestSLAByName(t, uniqueName)
+		cleanupAdminTestSLAByName(t, strings.TrimSpace(uniqueName))
 		form := url.Values{}
 		form.Set("name", uniqueName)
 		form.Set("first_response_time", "60")
@@ -367,6 +417,7 @@ func TestAdminSLAValidation(t *testing.T) {
 
 	t.Run("SLA times accept zero values", func(t *testing.T) {
 		uniqueName := fmt.Sprintf("Zero Times SLA %d", time.Now().UnixNano())
+		cleanupAdminTestSLAByName(t, uniqueName)
 		form := url.Values{}
 		form.Set("name", uniqueName)
 		form.Set("first_response_time", "0")

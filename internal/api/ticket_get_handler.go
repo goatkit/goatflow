@@ -3,8 +3,8 @@ package api
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -29,89 +29,7 @@ import (
 //	@Security		BearerAuth
 //	@Router			/tickets/{id} [get]
 func HandleGetTicketAPI(c *gin.Context) {
-	// Test-mode lightweight path: still enforce auth semantics and basic validation
-	if os.Getenv("APP_ENV") == "test" {
-		// Parse ticket id for basic validation
-		idStr := c.Param("id")
-		if idStr == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid ticket ID"})
-			return
-		}
-		n, err := strconv.Atoi(idStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid ticket ID"})
-			return
-		}
-		// In test mode without DB, treat very large IDs as not found
-		// Note: authorization tests use IDs 90001-90003, so threshold must be higher
-		if n > 100000 {
-			c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Ticket not found"})
-			return
-		}
-		// Enforce unauthenticated -> 401 unless explicit test bypass header is present
-		if _, exists := c.Get("user_id"); !exists {
-			if _, authExists := c.Get("is_authenticated"); !authExists {
-				if c.GetHeader("X-Test-Mode") != "true" {
-					c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Authentication required"})
-					return
-				}
-			}
-		}
-		// For tests simulating not-found, honor a sentinel header
-		if c.GetHeader("X-Test-NotFound") == "true" {
-			c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Ticket not found"})
-			return
-		}
-		// If database is available, use real path for proper authorization testing
-		if db, err := database.GetDB(); err == nil && db != nil {
-			// Fall through to real database path below
-		} else {
-			// No database - return minimal happy-path payload for basic tests
-			c.JSON(http.StatusOK, gin.H{
-				"success": true,
-				"data": gin.H{
-					"id":            idStr,
-					"ticket_number": time.Now().Format("20060102150405") + "1",
-					"title":         "Sample Ticket",
-					"queue":         "Raw",
-					"state":         "new",
-					"priority":      "normal",
-					"articles":      []interface{}{map[string]interface{}{"id": 1, "subject": "Initial", "body": "Initial body"}},
-				},
-			})
-			return
-		}
-	}
-	// Handle special 'new' case for new ticket form
 	ticketIDStr := c.Param("id")
-	if ticketIDStr == "new" {
-		// Return HTML form for new ticket creation
-		renderer := getPongo2Renderer()
-		if renderer != nil {
-			renderer.HTML(c, http.StatusOK, "pages/tickets/new.pongo2", gin.H{
-				"Title": "Create New Ticket",
-				"Queues": []gin.H{
-					{"ID": 1, "Name": "Raw"},
-					{"ID": 2, "Name": "Junk"},
-				},
-				"Types": []gin.H{
-					{"ID": 1, "Label": "Unclassified"},
-				},
-				"Priorities": []gin.H{
-					{"Value": "very_low", "Label": "1 very low"},
-					{"Value": "low", "Label": "2 low"},
-					{"Value": "normal", "Label": "3 normal"},
-					{"Value": "high", "Label": "4 high"},
-					{"Value": "very_high", "Label": "5 very high"},
-				},
-			})
-		} else {
-			renderTicketCreationFallback(c, "email")
-		}
-		return
-	}
-
-	// Get ticket ID from URL
 	ticketID, err := strconv.ParseInt(ticketIDStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -121,27 +39,22 @@ func HandleGetTicketAPI(c *gin.Context) {
 		return
 	}
 
-	// Check authentication
-	_, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		if _, authExists := c.Get("is_authenticated"); !authExists {
-			// For testing without auth middleware
-			if c.GetHeader("X-Test-Mode") != "true" {
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"success": false,
-					"error":   "Authentication required",
-				})
-				return
-			}
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error":   "Authentication required",
+			})
+			return
 		}
 	}
 
-	// Get database connection
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		c.JSON(http.StatusNotFound, gin.H{
+		log.Printf("HandleGetTicketAPI: database unavailable: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "Ticket not found",
+			"error":   "Database unavailable",
 		})
 		return
 	}
@@ -232,7 +145,7 @@ func HandleGetTicketAPI(c *gin.Context) {
 	userRole, _ := c.Get("user_role")
 	isCustomer := userRole == "Customer"
 	if !isCustomer {
-		userID := 1
+		userID := 0
 		if ctxUserID, exists := c.Get("user_id"); exists {
 			switch v := ctxUserID.(type) {
 			case int:
@@ -242,6 +155,13 @@ func HandleGetTicketAPI(c *gin.Context) {
 			case uint:
 				userID = int(v)
 			}
+		}
+		if userID <= 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error":   "Authentication required",
+			})
+			return
 		}
 
 		permSvc := services.NewPermissionService(db)
@@ -323,13 +243,17 @@ func HandleGetTicketAPI(c *gin.Context) {
 
 	// Get article count
 	var articleCount int
-	err = db.QueryRow(database.ConvertPlaceholders(`
+	if err := db.QueryRow(database.ConvertPlaceholders(`
 		SELECT COUNT(*) FROM article WHERE ticket_id = ?
-	`), ticketID).Scan(&articleCount)
-
-	if err == nil {
-		response["article_count"] = articleCount
+	`), ticketID).Scan(&articleCount); err != nil {
+		log.Printf("HandleGetTicketAPI: article count for ticket %d: %v", ticketID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to retrieve ticket",
+		})
+		return
 	}
+	response["article_count"] = articleCount
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

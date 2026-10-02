@@ -32,6 +32,18 @@ func DeleteSubscriptionByEndpoint(ctx context.Context, db *sql.DB, endpoint stri
 	return nil
 }
 
+// DeleteUserSubscription removes the caller's own push subscription for an
+// endpoint. A subscription owned by another user is left untouched.
+func DeleteUserSubscription(ctx context.Context, db *sql.DB, userID int, userType, endpoint string) error {
+	_, err := db.ExecContext(ctx, database.ConvertPlaceholders(
+		`DELETE FROM gk_push_subscription WHERE endpoint = ? AND user_id = ? AND user_type = ?`),
+		endpoint, userID, userType)
+	if err != nil {
+		return fmt.Errorf("delete push subscription: %w", err)
+	}
+	return nil
+}
+
 // GetSubscriptionsForUser returns all push subscriptions for a specific user.
 func GetSubscriptionsForUser(ctx context.Context, db *sql.DB, userID int, userType string) ([]Subscription, error) {
 	rows, err := db.QueryContext(ctx,

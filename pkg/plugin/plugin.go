@@ -55,6 +55,14 @@ type GKRegistration struct {
 	I18n       *I18nSpec       `json:"i18n,omitempty"`        // translations provided by plugin
 	ErrorCodes []ErrorCodeSpec `json:"error_codes,omitempty"` // API error codes provided by plugin
 
+	// EventAuthorizer names the plugin function the host calls before a
+	// browser subscribes to GET /api/v1/plugins/{name}/events/{channel}.
+	// The function receives {"channel": "<channel>"} plus the caller envelope
+	// (_user_id, _user_role, _is_admin, ...) and returns {"allow": true} to
+	// permit the subscription; anything else is refused with 403. Unset: any
+	// authenticated agent may subscribe to every channel of the plugin.
+	EventAuthorizer string `json:"event_authorizer,omitempty"`
+
 	// Navigation control
 	HideMenuItems []string `json:"hide_menu_items,omitempty"` // IDs of default menu items to hide (dashboard, tickets, queues, phone_ticket, email_ticket, admin)
 	LandingPage   string   `json:"landing_page,omitempty"`    // URL path to redirect to after login (e.g. "/myplugin")
@@ -107,11 +115,16 @@ type GroupSpec struct {
 // RouteSpec defines an HTTP route the plugin wants to handle.
 //
 // Middleware options:
-//   - "auth"          — session or JWT authentication required
-//   - "admin"         — auth + admin role required
-//   - "group:<name>"  — auth + group membership required
-//   - "webhook"       — no auth, HMAC signature verification, request logging
-//   - (empty)         — no middleware (use with caution)
+//   - "auth"                         — session, JWT or API token authentication required
+//   - "admin"                        — auth + admin role required
+//   - "agent"                        — auth + agent caller (customers refused)
+//   - "customer"                     — auth + customer caller (agents refused)
+//   - "group:<name>"                 — auth + agent group membership required
+//   - "plugin:<plugin>:<agentGroup>" — auth + per-org plugin access (customers) or agent group
+//   - "webhook"                      — no auth, HMAC signature verification, request logging
+//   - (empty)                        — no middleware: the route is public
+//
+// Any other entry keeps the route from being registered.
 type RouteSpec struct {
 	Method      string   `json:"method"`                // GET, POST, PUT, DELETE, etc.
 	Path        string   `json:"path"`                  // URL path, e.g. "/admin/stats"
@@ -349,15 +362,18 @@ type PdfRenderOptions struct {
 	BrandLogoURL string // https URL for a logo in the header; non-https ignored
 }
 
-// ArticleAttachment describes a file attached to an article.
+// ArticleAttachment describes a file attached to an article. ID addresses the
+// attachment within its article (always pair it with ArticleID): the OTRS
+// ArticleStorageFS backend numbers attachments per article. URL is the
+// same-origin download path built by the host; append "/view" for the inline
+// viewer or "/thumbnail" for a preview image. Plugins must not build it.
 type ArticleAttachment struct {
 	ID          int64  `json:"id"`
 	ArticleID   int64  `json:"article_id"`
 	Filename    string `json:"filename"`
 	ContentType string `json:"content_type"`
 	Size        int64  `json:"size"`
-	CreatedAt   string `json:"created_at"`
-	CreatedBy   int64  `json:"created_by"`
+	URL         string `json:"url"`
 }
 
 // TicketStateInfo describes a valid ticket state with its type.
@@ -444,7 +460,7 @@ type UISpec struct {
 	Auth        *UIAuthSpec     `json:"auth,omitempty"`       // auth configuration
 	PWA         *UIPWASpec      `json:"pwa,omitempty"`        // PWA manifest configuration
 	DataScope   string          `json:"data_scope,omitempty"` // self, org, all (for customer UIs)
-	RateLimit   int             `json:"rate_limit,omitempty"` // requests/min for public UIs (0 = default)
+	RateLimit   int             `json:"rate_limit,omitempty"` // requests/min per client IP for public (auth none) UIs (0 = 60)
 
 	// TicketView declares that this UI can render a ticket as its primary
 	// view (e.g. a coaching ticket page). The host exposes the resolved
@@ -494,9 +510,16 @@ type UIBrandingSpec struct {
 }
 
 // UIAuthSpec holds per-UI auth configuration.
+//
+// Method "session" (default for admin_page, agent_app, customer_app) and
+// "token" authenticate the caller by session cookie, Bearer JWT or API token;
+// admin_page/agent_app UIs then admit agents only, customer_app UIs customers
+// only. "none" (default for public_page, kiosk) leaves the UI public. Groups
+// are agent groups the caller must all belong to (admins bypass). A UI with
+// any other method is not registered.
 type UIAuthSpec struct {
-	Method string   `json:"method,omitempty"` // session, pin, token, none
-	Groups []string `json:"groups,omitempty"` // required groups
+	Method string   `json:"method,omitempty"` // session, token, none
+	Groups []string `json:"groups,omitempty"` // required agent groups (all of them)
 }
 
 // UIPWASpec holds PWA manifest configuration for a plugin UI.

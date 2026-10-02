@@ -302,19 +302,22 @@ config:
   # Log level: debug, info, warn, error
   logLevel: info
 
+  # Public URL users reach GoatFlow at, e.g. https://helpdesk.example.com
+  # (BASE_URL). Password-reset and customer sign-up emails link to it and are
+  # not sent while it is empty.
+  baseUrl: ""
+
   # Session configuration
   session:
     lifetime: 28800  # 8 hours in seconds
 
-  # File storage
+  # Article attachment storage (STORAGE_TYPE / STORAGE_PATH)
   storage:
-    type: local  # local or s3
+    # db (ArticleStorageDB) keeps attachments in the database. fs
+    # (ArticleStorageFS) needs a persistent volume at <path>/var/article,
+    # which this chart does not provision, so keep db unless you add one.
+    type: db
     path: /data/storage
-    # S3 configuration (when type=s3)
-    s3:
-      bucket: ""
-      region: ""
-      endpoint: ""
 
   # Email configuration
   email:
@@ -325,6 +328,65 @@ config:
       username: ""
       password: ""
       from: "goatflow@example.com"
+
+  # Authentication provider order (AUTH_PROVIDERS). Empty keeps the image's
+  # Config.yaml Auth::Providers (database only). With LDAP: ["ldap", "database"].
+  authProviders: []
+
+  # LDAP / Active Directory agent login (LDAP_* variables, see docs/LDAP.md).
+  # Also add "ldap" to authProviders. Empty values use GoatFlow's defaults
+  # (or the LDAP_TYPE defaults); invalid settings stop the backend at startup.
+  ldap:
+    enabled: false
+    # openldap | 389ds | active_directory
+    type: ""
+    host: ""
+    # Default 389, or 636 with useSSL
+    port: ""
+    # StartTLS (useTLS) or LDAPS (useSSL); the server certificate is verified
+    useTLS: true
+    useSSL: false
+    # PEM CA certificate(s) for the server certificate, mounted into the pod
+    # and passed as LDAP_TLS_CA_FILE. Empty uses the system roots.
+    caCert: ""
+    # Testing only: do not verify the server certificate
+    skipTLSVerify: false
+    # Seconds per connect / LDAP operation
+    timeout: ""
+    # Service account for searches (empty = anonymous search)
+    bindDN: ""
+    # Service account password: set existingSecret (key existingSecretKey),
+    # or bindPassword to let the chart create a Secret (secrets.create).
+    bindPassword: ""
+    existingSecret: ""
+    existingSecretKey: ldap-bind-password
+    baseDN: ""
+    userBaseDN: ""
+    # Exactly one %s, replaced by the escaped login
+    userFilter: ""
+    # "true"/"false"; empty uses the type default
+    isActiveDirectory: ""
+    # Active Directory: also match <login>@<domain>
+    domain: ""
+    usernameAttribute: ""
+    emailAttribute: ""
+    firstNameAttribute: ""
+    lastNameAttribute: ""
+    displayNameAttribute: ""
+    groupBaseDN: ""
+    groupFilter: ""
+    # dn | username
+    groupMemberValue: ""
+    groupAttribute: ""
+    # Only members of these groups (or adminGroups) may log in
+    agentGroups: []
+    # GoatFlow admin group membership follows membership of these groups
+    adminGroups: []
+    # Create the agent on first LDAP login / sync name and email on each login
+    autoCreateUsers: false
+    autoUpdateUsers: false
+    # GoatFlow groups given to auto-created agents (default: users)
+    initialGroups: []
 
 # =============================================================================
 # EXTRA RESOURCES

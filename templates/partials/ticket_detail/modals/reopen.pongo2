@@ -1,5 +1,5 @@
 {# Reopen Ticket Modal with Synthwave Styling #}
-{# Required variables: Ticket #}
+{# Required variables: Ticket, TicketStates (id, name, type_name) #}
 
 <div id="reopenTicketDialog" class="hidden fixed inset-0 z-50 overflow-y-auto">
     <div class="flex min-h-screen items-center justify-center px-4 py-12">
@@ -21,8 +21,9 @@
                         {{ t("tickets.target_state")|default:"Target State" }} <span style="color: var(--gk-error);">*</span>
                     </label>
                     <select id="reopenState" name="reopenState" required class="gk-select-neon w-full">
-                        <option value="1">{{ t("status.new") }}</option>
-                        <option value="2" selected>{{ t("status.open") }}</option>
+                        {% for s in TicketStates %}{% if s.type_name == "new" or s.type_name == "open" %}
+                        <option value="{{ s.id }}"{% if s.name == "open" %} selected{% endif %}>{% if s.name == "new" %}{{ t("status.new") }}{% elif s.name == "open" %}{{ t("status.open") }}{% else %}{{ s.name }}{% endif %}</option>
+                        {% endif %}{% endfor %}
                     </select>
                 </div>
 

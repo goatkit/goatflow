@@ -142,6 +142,16 @@ func (r *QueueRepository) GetByName(name string) (*models.Queue, error) {
 
 // List retrieves all active queues.
 func (r *QueueRepository) List() ([]*models.Queue, error) {
+	return r.list("WHERE q.valid_id = 1")
+}
+
+// ListAll retrieves every queue regardless of validity, for administration
+// screens where invalid queues must stay visible so they can be re-enabled.
+func (r *QueueRepository) ListAll() ([]*models.Queue, error) {
+	return r.list("")
+}
+
+func (r *QueueRepository) list(where string) ([]*models.Queue, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT q.id, q.name, q.system_address_id, q.salutation_id, q.signature_id,
 		       q.follow_up_id, q.follow_up_lock, q.unlock_timeout, q.group_id,
@@ -149,7 +159,7 @@ func (r *QueueRepository) List() ([]*models.Queue, error) {
 		       g.name as group_name
 		FROM queue q
 		LEFT JOIN groups g ON q.group_id = g.id
-		WHERE q.valid_id = 1
+		` + where + `
 		ORDER BY q.name`)
 
 	rows, err := r.db.Query(query)

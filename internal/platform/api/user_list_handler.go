@@ -61,7 +61,10 @@ func HandleListUsersAPI(c *gin.Context) {
 	// Get database connection
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		respondWithMockUsers(c, page, perPage)
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"success": false,
+			"error":   "Database connection not available",
+		})
 		return
 	}
 
@@ -81,13 +84,19 @@ func HandleListUsersAPI(c *gin.Context) {
 	where := []string{}
 	args := []interface{}{}
 
-	// Join with user_groups if filtering by group
+	// Filter by group membership (group_user)
 	if groupID != "" {
+		gid, err := strconv.Atoi(groupID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Invalid group_id",
+			})
+			return
+		}
 		query += " INNER JOIN group_user gu ON u.id = gu.user_id"
 		where = append(where, "gu.group_id = ?")
-		if gid, err := strconv.Atoi(groupID); err == nil {
-			args = append(args, gid)
-		}
+		args = append(args, gid)
 	}
 
 	// Add search filter
@@ -127,10 +136,6 @@ func HandleListUsersAPI(c *gin.Context) {
 	var total int
 	err = db.QueryRow(database.ConvertPlaceholders(countQuery), args...).Scan(&total)
 	if err != nil {
-		if shouldFallbackToMock(err) {
-			respondWithMockUsers(c, page, perPage)
-			return
-		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   "Failed to count users",
@@ -148,10 +153,6 @@ func HandleListUsersAPI(c *gin.Context) {
 	// Execute query
 	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
-		if shouldFallbackToMock(err) {
-			respondWithMockUsers(c, page, perPage)
-			return
-		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   "Failed to retrieve users",
@@ -182,7 +183,11 @@ func HandleListUsersAPI(c *gin.Context) {
 			&user.ChangeTime,
 		)
 		if err != nil {
-			continue
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to retrieve users",
+			})
+			return
 		}
 
 		userMap := map[string]interface{}{
@@ -205,37 +210,30 @@ func HandleListUsersAPI(c *gin.Context) {
 			userMap["change_time"] = user.ChangeTime.Time.Format("2006-01-02T15:04:05Z")
 		}
 
-		// Get user's groups
-		groupQuery := database.ConvertPlaceholders(`
-			SELECT g.id, g.name
-			FROM groups g
-			INNER JOIN group_user gu ON g.id = gu.group_id
-			WHERE gu.user_id = ?
-		`)
-
-		groupRows, err := db.Query(groupQuery, user.ID)
-		if err == nil {
-			defer groupRows.Close()
-			groups := []map[string]interface{}{}
-			for groupRows.Next() {
-				var groupID int
-				var groupName string
-				if err := groupRows.Scan(&groupID, &groupName); err == nil {
-					groups = append(groups, map[string]interface{}{
-						"id":   groupID,
-						"name": groupName,
-					})
-				}
-			}
-			_ = groupRows.Err() //nolint:errcheck // Check for iteration errors
-			userMap["groups"] = groups
-		} else if shouldFallbackToMock(err) {
-			userMap["groups"] = []map[string]interface{}{}
-		}
-
 		users = append(users, userMap)
 	}
-	_ = rows.Err() //nolint:errcheck // Check for iteration errors
+	if err := rows.Err(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to retrieve users",
+		})
+		return
+	}
+	rows.Close()
+
+	// Groups are loaded after the user cursor is closed: one open result set per
+	// connection keeps this safe on MySQL as well as PostgreSQL.
+	for _, userMap := range users {
+		groups, err := loadUserGroupPermissions(db, userMap["id"].(int))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to retrieve user groups",
+			})
+			return
+		}
+		userMap["groups"] = groups
+	}
 
 	// Calculate pagination info
 	totalPages := (total + perPage - 1) / perPage
@@ -252,33 +250,4 @@ func HandleListUsersAPI(c *gin.Context) {
 			"has_prev":    page > 1,
 		},
 	})
-}
-
-func respondWithMockUsers(c *gin.Context, page, perPage int) {
-	users := []gin.H{
-		{"id": 1, "login": "admin", "valid_id": 1, "valid": true, "groups": []gin.H{{"id": 1, "name": "Admin"}}},
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    users,
-		"pagination": gin.H{
-			"page": page, "per_page": perPage, "total": len(users), "total_pages": 1,
-			"has_next": false, "has_prev": false,
-		},
-	})
-}
-
-func shouldFallbackToMock(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := strings.ToLower(err.Error())
-	if strings.Contains(msg, "doesn't exist") || strings.Contains(msg, "no such table") ||
-		strings.Contains(msg, "relation") && strings.Contains(msg, "does not exist") {
-		return true
-	}
-	if strings.Contains(msg, "unknown table") || strings.Contains(msg, "table not found") {
-		return true
-	}
-	return false
 }

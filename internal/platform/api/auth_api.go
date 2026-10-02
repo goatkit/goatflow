@@ -2,7 +2,9 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,6 +12,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 )
@@ -100,8 +103,13 @@ func HandleLoginAPI(c *gin.Context) {
 	// Clear rate limit on successful login
 	auth.DefaultLoginRateLimiter.RecordSuccess(clientIP, loginRequest.Login)
 
-	// Return success with tokens
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, tokenPairResponse(user, accessToken, refreshToken))
+}
+
+// tokenPairResponse is the body returned by login and refresh.
+func tokenPairResponse(user *platformmodels.User, accessToken, refreshToken string) gin.H {
+	jwtManager := getJWTManager()
+	return gin.H{
 		"success": true,
 		"user": gin.H{
 			"id":         user.ID,
@@ -111,24 +119,26 @@ func HandleLoginAPI(c *gin.Context) {
 			"last_name":  user.LastName,
 			"role":       user.Role,
 		},
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-		"token_type":    "Bearer",
-		"expires_in":    int(shared.GetJWTManager().TokenDuration().Seconds()),
-	})
+		"access_token":       accessToken,
+		"refresh_token":      refreshToken,
+		"token_type":         "Bearer",
+		"expires_in":         int(jwtManager.TokenDuration().Seconds()),
+		"refresh_expires_in": int(jwtManager.RefreshTokenDuration().Seconds()),
+	}
 }
 
-// HandleRefreshTokenAPI refreshes an expired JWT token.
+// HandleRefreshTokenAPI exchanges a refresh token for a new access token and a
+// new (rotated) refresh token.
 //
 //	@Summary		Refresh token
-//	@Description	Exchange a refresh token for a new access token
+//	@Description	Exchange a refresh token (from login or a previous refresh) for a new access token and refresh token. The account is reloaded, so role and admin flag are current; disabled or deleted accounts are rejected.
 //	@Tags			Authentication
 //	@Accept			json
 //	@Produce		json
-//	@Param			token	body		object	true	"Refresh token"
-//	@Success		200		{object}	map[string]interface{}	"New access token"
-//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
-//	@Failure		401		{object}	map[string]interface{}	"Invalid or expired refresh token"
+//	@Param			token	body		object	true	"Refresh token: {\"refresh_token\": \"...\"}"
+//	@Success		200		{object}	map[string]interface{}	"Same body as login: user, access_token, refresh_token, token_type, expires_in, refresh_expires_in"
+//	@Failure		400		{object}	map[string]interface{}	"Missing refresh_token"
+//	@Failure		401		{object}	map[string]interface{}	"Invalid, expired or revoked-account refresh token"
 //	@Router			/auth/refresh [post]
 func HandleRefreshTokenAPI(c *gin.Context) {
 	var refreshRequest struct {
@@ -143,9 +153,8 @@ func HandleRefreshTokenAPI(c *gin.Context) {
 		return
 	}
 
-	// Get database connection
 	db, err := database.GetDB()
-	if err != nil {
+	if err != nil || db == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
 			"success": false,
 			"error":   "Database unavailable",
@@ -153,25 +162,25 @@ func HandleRefreshTokenAPI(c *gin.Context) {
 		return
 	}
 
-	// Create auth service
 	authService := service.NewAuthService(db, getJWTManager(), auth.GetOIDCClient(), auth.GetStateStore())
-
-	// Refresh the token
-	newAccessToken, err := authService.RefreshToken(refreshRequest.RefreshToken)
+	user, accessToken, refreshToken, err := authService.Refresh(c.Request.Context(), refreshRequest.RefreshToken)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
+		if errors.Is(err, service.ErrRefreshRejected) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error":   "Invalid or expired refresh token",
+			})
+			return
+		}
+		log.Printf("auth refresh: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "Invalid or expired refresh token",
+			"error":   "Token refresh failed",
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"success":      true,
-		"access_token": newAccessToken,
-		"token_type":   "Bearer",
-		"expires_in":   900, // 15 minutes in seconds
-	})
+	c.JSON(http.StatusOK, tokenPairResponse(user, accessToken, refreshToken))
 }
 
 // HandleLogoutAPI logs out a user (client-side token removal).
@@ -191,26 +200,6 @@ func HandleLogoutAPI(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Successfully logged out",
-	})
-}
-
-// HandleRegisterAPI registers a new user (if enabled).
-//
-//	@Summary		Register user
-//	@Description	Register a new user (if self-registration is enabled)
-//	@Tags			Authentication
-//	@Accept			json
-//	@Produce		json
-//	@Param			user	body		object	true	"User registration data"
-//	@Success		201		{object}	map[string]interface{}	"Registered user"
-//	@Failure		400		{object}	map[string]interface{}	"Invalid request or registration disabled"
-//	@Router			/auth/register [post]
-func HandleRegisterAPI(c *gin.Context) {
-	// Registration is typically disabled in OTRS-style systems
-	// Users are created by administrators
-	c.JSON(http.StatusNotImplemented, gin.H{
-		"success": false,
-		"error":   "User registration is disabled. Please contact an administrator.",
 	})
 }
 

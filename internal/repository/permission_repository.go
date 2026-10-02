@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
@@ -202,6 +203,73 @@ func (r *PermissionRepository) SetUserGroupMatrix(userID, groupID uint, permissi
 			}
 		}
 		// If not enabled, we don't insert anything (absence means no permission)
+	}
+
+	return tx.Commit()
+}
+
+// ErrPermissionUserNotFound is returned when a user referenced by a permission
+// operation does not exist.
+var ErrPermissionUserNotFound = errors.New("user not found")
+
+// ReplaceUserPermissionsFrom makes the target user's group permissions an exact
+// copy of the source user's: every group_user row of the target is removed and
+// each row of the source is recreated for the target, in one transaction.
+// changeBy is recorded in the audit columns of the new rows. Both users must
+// exist (ErrPermissionUserNotFound otherwise).
+func (r *PermissionRepository) ReplaceUserPermissionsFrom(sourceUserID, targetUserID, changeBy uint) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	for _, id := range []uint{sourceUserID, targetUserID} {
+		var exists bool
+		if err := tx.QueryRow(database.ConvertPlaceholders(
+			`SELECT EXISTS(SELECT 1 FROM users WHERE id = ?)`), id).Scan(&exists); err != nil {
+			return fmt.Errorf("failed to check user %d: %w", id, err)
+		}
+		if !exists {
+			return fmt.Errorf("%w: %d", ErrPermissionUserNotFound, id)
+		}
+	}
+
+	rows, err := tx.Query(database.ConvertPlaceholders(`
+		SELECT group_id, permission_key FROM group_user WHERE user_id = ?`), sourceUserID)
+	if err != nil {
+		return fmt.Errorf("failed to read source permissions: %w", err)
+	}
+	type grant struct {
+		groupID uint
+		key     string
+	}
+	var grants []grant
+	for rows.Next() {
+		var g grant
+		if err := rows.Scan(&g.groupID, &g.key); err != nil {
+			rows.Close()
+			return fmt.Errorf("failed to scan source permission: %w", err)
+		}
+		grants = append(grants, g)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("failed to read source permissions: %w", err)
+	}
+
+	if _, err := tx.Exec(database.ConvertPlaceholders(
+		`DELETE FROM group_user WHERE user_id = ?`), targetUserID); err != nil {
+		return fmt.Errorf("failed to clear target permissions: %w", err)
+	}
+
+	insert := database.ConvertPlaceholders(`
+		INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)`)
+	for _, g := range grants {
+		if _, err := tx.Exec(insert, targetUserID, g.groupID, g.key, changeBy, changeBy); err != nil {
+			return fmt.Errorf("failed to copy permission %s for group %d: %w", g.key, g.groupID, err)
+		}
 	}
 
 	return tx.Commit()

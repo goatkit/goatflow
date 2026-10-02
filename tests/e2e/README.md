@@ -28,32 +28,36 @@ tests/e2e/
 
 ### Quick Start
 
+Both suites run in the `goatflow-playwright-go` container against the **test stack**
+(never the dev backend). Credentials come from `.env` (`TEST_USERNAME` / `TEST_PASSWORD`).
+
 ```bash
-# Run the full Go Playwright suite (headless)
-make test-e2e-playwright-go
-
-# Run a targeted subset
-make test-e2e TEST="Login|Groups|Queues"
-
-# Run with visible browser for debugging
-make test-e2e-playwright-debug
-
-# Run in watch mode for development
-make test-e2e-playwright-watch
-
-# View test results
-make test-e2e-playwright-report
+make test-stack-up                                   # build + start backend-test, customer-fe-test
+make test-e2e-playwright-go                          # tests/e2e/playwright
+make test-e2e-go                                     # tests/e2e (all tests)
+make test-e2e-go TEST='Groups|Queues'                # go test -run pattern
+make test-e2e TEST='Login'                           # same as test-e2e-go TEST=...
+make test-e2e-playwright-go ARGS='-run TestAdminGroupsUI'
 ```
 
-### Environment Variables
+### Defaults and overrides (Makefile)
 
-- `BASE_URL`: Target URL for tests (default: http://localhost:8080)
-- `HEADLESS`: Run browser in headless mode (default: true)
-- `SLOW_MO`: Slow down actions by X milliseconds (useful for debugging)
-- `SCREENSHOTS`: Capture screenshots on failure (default: true)
-- `VIDEOS`: Record videos of test runs (default: false)
-- `DEMO_ADMIN_EMAIL`: Admin email for login tests
-- `DEMO_ADMIN_PASSWORD`: Admin password for login tests
+- `BASE_URL`: `http://backend-test:8080` on the compose network `goatflow_goatflow-network`
+  (customer portal `http://customer-fe-test:8080`). The `.env` `BASE_URL` (dev backend) is ignored;
+  pass `BASE_URL=...` on the make command line to override. A localhost URL such as
+  `BASE_URL=http://localhost:8082` switches to the host network and the published customer-fe-test
+  port (`TEST_CUSTOMER_FE_PORT`).
+- `PLAYWRIGHT_NETWORK`: force a docker network (e.g. `host`).
+- `CUSTOMER_PORTAL_URL`: override the customer portal URL.
+- `E2E_TIMEOUT`: `go test -timeout` for the whole run (default `30m`; go's default 10m is too short).
+- `E2E_TMPFS_SIZE`: size of the container's `/tmp` tmpfs (default `4g`), which is `TMPDIR` for
+  `go test` and Chromium. Playwright runs Chromium with `--disable-dev-shm-usage`, so the browser's
+  shared memory lives there; keep it off the bind-mounted repository, whose free space a page
+  otherwise exhausts within a few navigations (`net::ERR_INSUFFICIENT_RESOURCES` / "Page crashed").
+- `HEADLESS` (default true), `SLOW_MO`, `SCREENSHOTS` (default true), `VIDEOS` (default false).
+
+The image does not contain the source tree: the repository is bind-mounted at `/workspace`, so
+source changes never rebuild the image. Tests use `-count=1` (results are never cached).
 
 ## Writing Tests
 

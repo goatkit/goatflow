@@ -12,7 +12,6 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/platform/ldap"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/platform/shared"
@@ -21,18 +20,11 @@ import (
 // SetupHTMXRoutes sets up all HTMX routes on the given router.
 func SetupHTMXRoutes(r *gin.Engine) {
 	// For testing or when called without auth services
-	setupHTMXRoutesWithAuth(r, nil, nil, nil)
-}
-
-// NewHTMXRouter creates all routes for the HTMX UI.
-func NewHTMXRouter(jwtManager *auth.JWTManager, ldapProvider *ldap.Provider) *gin.Engine {
-	r := gin.Default()
-	setupHTMXRoutesWithAuth(r, jwtManager, ldapProvider, nil)
-	return r
+	setupHTMXRoutesWithAuth(r, nil, nil)
 }
 
 // setupHTMXRoutesWithAuth sets up all routes with optional authentication.
-func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapProvider *ldap.Provider, i18nSvc interface{}) {
+func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, i18nSvc interface{}) {
 	// Initialize pongo2 renderer (non-fatal if templates missing to allow route tests without UI assets)
 	templateDir := os.Getenv("TEMPLATES_DIR")
 	if templateDir == "" {
@@ -55,9 +47,6 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 
 	// Initialize Dynamic Module System (requires database)
 	initDynamicModules()
-
-	// Setup API v1 routes (OpenAPI-compliant endpoints)
-	SetupAPIv1Routes(r, jwtManager, ldapProvider, i18nSvc)
 
 	// Catch-all for undefined routes
 	r.NoRoute(func(c *gin.Context) {
@@ -154,22 +143,4 @@ func handleApiTokensPage(c *gin.Context) {
 		"User":       user,
 		"ActivePage": "settings",
 	})
-}
-
-// SetupAPIv1Routes configures the v1 API routes.
-func SetupAPIv1Routes(r *gin.Engine, jwtManager *auth.JWTManager, ldapProvider *ldap.Provider, i18nSvc interface{}) {
-	// Create RBAC instance
-	// rbac := auth.NewRBAC()
-
-	// Create LDAP handlers if provider exists
-	// var ldapHandlers *ldap.LDAPHandlers
-	// if ldapProvider != nil {
-	// 	ldapHandlers = ldap.NewLDAPHandlers(ldapProvider)
-	// }
-
-	// Create API v1 router
-	// apiRouter := v1.NewAPIRouter(rbac, jwtManager, ldapHandlers)
-
-	// Setup the routes
-	// apiRouter.SetupV1Routes(r)
 }

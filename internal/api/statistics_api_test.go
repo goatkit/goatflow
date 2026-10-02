@@ -1,374 +1,678 @@
 package api
 
 import (
+	"database/sql"
+	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
-func TestStatisticsAPI(t *testing.T) {
-	// Initialize test database; skip if unavailable
-	if err := database.InitTestDB(); err != nil {
-		t.Skip("Database not available, skipping Statistics API tests")
-	}
-	defer database.CloseTestDB()
+// statsFixtureTicket is one ticket row inserted by the statistics fixture.
+type statsFixtureTicket struct {
+	id          int64
+	queueID     int
+	state       string // ticket_state.name from the seed data
+	priorityID  int
+	customer    string
+	responsible int
+	created     time.Time
+	changed     time.Time
+}
 
-	// Create test JWT manager
-	jwtManager := auth.NewJWTManager("test-secret", time.Hour)
+// statsFixture owns two queues and the agents that can (or cannot) read them.
+//
+//	queueA: readable by agentA and agentAll
+//	queueB: readable by agentAll only
+//	agentNone: valid agent without any queue permission
+//	agentAdmin: member of the admin group only (admins count every queue)
+type statsFixture struct {
+	db  *sql.DB
+	now time.Time
 
-	// Create test token
-	token, _ := jwtManager.GenerateToken(1, "testuser@example.com", "Agent", 0)
+	queueA, queueB                             int
+	agentA, agentAll, agentNone, agentAdmin    int
+	loginA, loginAll, loginNone, loginAdmin    string
+	customer1, customer2, customer3, customer4 string
+	tickets                                    []statsFixtureTicket
+	stateIDs                                   map[string]int
+}
 
-	// Set Gin to test mode
-	gin.SetMode(gin.TestMode)
+func newStatsFixture(t *testing.T) *statsFixture {
+	t.Helper()
 
-	// Setup comprehensive test data
 	db, err := database.GetDB()
-	if err != nil || db == nil {
-		t.Skip("Database not available, skipping integration test setup")
+	require.NoError(t, err)
+	require.NotNil(t, db)
+
+	f := &statsFixture{db: db, now: time.Now().UTC().Truncate(time.Second), stateIDs: map[string]int{}}
+	sfx := fmt.Sprintf("%d", time.Now().UnixNano())
+
+	var groupIDs, queueIDs, userIDs []int
+	t.Cleanup(func() {
+		for _, q := range []struct {
+			sql string
+			ids []int
+		}{
+			{"DELETE FROM article WHERE ticket_id IN (SELECT id FROM ticket WHERE queue_id IN (%s))", queueIDs},
+			{"DELETE FROM ticket WHERE queue_id IN (%s)", queueIDs},
+			{"DELETE FROM group_user WHERE user_id IN (%s)", userIDs},
+			{"DELETE FROM queue WHERE id IN (%s)", queueIDs},
+			{"DELETE FROM `groups` WHERE id IN (%s)", groupIDs},
+			{"DELETE FROM users WHERE id IN (%s)", userIDs},
+		} {
+			if len(q.ids) == 0 {
+				continue
+			}
+			args := make([]interface{}, len(q.ids))
+			for i, id := range q.ids {
+				args[i] = id
+			}
+			placeholders := strings.TrimSuffix(strings.Repeat("?,", len(q.ids)), ",")
+			if _, err := db.Exec(database.ConvertPlaceholders(fmt.Sprintf(q.sql, placeholders)), args...); err != nil {
+				t.Errorf("cleanup %q: %v", q.sql, err)
+			}
+		}
+	})
+
+	mustID := func(id int64, err error) int {
+		t.Helper()
+		require.NoError(t, err)
+		return int(id)
+	}
+	newGroup := func(name string) int {
+		id := mustID(database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(
+			"INSERT INTO `groups` (name, comments, valid_id, create_time, create_by, change_time, change_by) VALUES (?, 'statistics test', 1, ?, 1, ?, 1) RETURNING id"),
+			name, f.now, f.now))
+		groupIDs = append(groupIDs, id)
+		return id
+	}
+	newQueue := func(name string, groupID int) int {
+		id := mustID(database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+			INSERT INTO queue (name, group_id, system_address_id, salutation_id, signature_id,
+				follow_up_id, follow_up_lock, comments, valid_id, create_time, create_by, change_time, change_by)
+			VALUES (?, ?, 1, 1, 1, 1, 0, 'statistics test', 1, ?, 1, ?, 1) RETURNING id`),
+			name, groupID, f.now, f.now))
+		queueIDs = append(queueIDs, id)
+		return id
+	}
+	newAgent := func(login string) int {
+		id := mustID(database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+			INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+			VALUES (?, 'x', 'Stats', 'Agent', 1, ?, 1, ?, 1) RETURNING id`),
+			login, f.now, f.now))
+		userIDs = append(userIDs, id)
+		return id
+	}
+	grant := func(userID, groupID int, key string) {
+		t.Helper()
+		_, err := db.Exec(database.ConvertPlaceholders(`INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+			VALUES (?, ?, ?, ?, 1, ?, 1)`), userID, groupID, key, f.now, f.now)
+		require.NoError(t, err)
 	}
 
-	// Create test tickets with various states and dates
-	ticketQuery := database.ConvertPlaceholders(`
-		INSERT INTO tickets (tn, title, queue_id, type_id, ticket_state_id, 
-			ticket_priority_id, customer_user_id, user_id, responsible_user_id,
-			create_time, create_by, change_time, change_by)
-		VALUES 
-			(?, 'Open ticket 1', 1, 1, 1, 3, 'customer1@example.com', 1, 1, DATE_SUB(NOW(), INTERVAL 7 DAY), 1, NOW(), 1),
-			(?, 'Open ticket 2', 1, 1, 1, 2, 'customer2@example.com', 2, 2, DATE_SUB(NOW(), INTERVAL 3 DAY), 1, NOW(), 1),
-			(?, 'Closed ticket 1', 2, 1, 2, 3, 'customer3@example.com', 1, 1, DATE_SUB(NOW(), INTERVAL 14 DAY), 1, DATE_SUB(NOW(), INTERVAL 10 DAY), 1),
-			(?, 'Closed ticket 2', 2, 1, 2, 1, 'customer4@example.com', 2, 2, DATE_SUB(NOW(), INTERVAL 1 DAY), 1, NOW(), 1),
-			(?, 'Pending ticket', 1, 1, 3, 2, 'customer5@example.com', 1, 2, DATE_SUB(NOW(), INTERVAL 2 DAY), 1, NOW(), 1)
-	`)
-	db.Exec(ticketQuery, "2024120100001", "2024120100002", "2024120100003", "2024120100004", "2024120100005")
+	groupA := newGroup("stats_a_" + sfx)
+	groupB := newGroup("stats_b_" + sfx)
+	f.queueA = newQueue("stats_qa_"+sfx, groupA)
+	f.queueB = newQueue("stats_qb_"+sfx, groupB)
 
-	// Create test articles for response time metrics
-	articleQuery := database.ConvertPlaceholders(`
-		INSERT INTO article (ticket_id, article_type_id, article_sender_type_id,
-			from_email, to_email, subject, body, create_time, create_by, change_time, change_by)
-		VALUES 
-			(1, 1, 3, 'customer1@example.com', 'support@example.com', 'Initial request', 'Help needed', DATE_SUB(NOW(), INTERVAL 7 DAY), 1, NOW(), 1),
-			(1, 1, 1, 'support@example.com', 'customer1@example.com', 'Response', 'We are looking into it', DATE_SUB(NOW(), INTERVAL 6 DAY), 1, NOW(), 1),
-			(2, 1, 3, 'customer2@example.com', 'support@example.com', 'Problem', 'System down', DATE_SUB(NOW(), INTERVAL 3 DAY), 1, NOW(), 1)
-	`)
-	db.Exec(articleQuery)
+	f.loginA, f.loginAll, f.loginNone, f.loginAdmin = "stats_a_"+sfx, "stats_all_"+sfx, "stats_none_"+sfx, "stats_admin_"+sfx
+	f.agentA = newAgent(f.loginA)
+	f.agentAll = newAgent(f.loginAll)
+	f.agentNone = newAgent(f.loginNone)
+	f.agentAdmin = newAgent(f.loginAdmin)
+	grant(f.agentA, groupA, "ro")
+	grant(f.agentAll, groupA, "rw")
+	grant(f.agentAll, groupB, "rw")
+	// A non-read permission on queueB must not expose its tickets to agentA.
+	grant(f.agentA, groupB, "create")
 
-	t.Run("Dashboard Statistics", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
+	var adminGroupID int
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders("SELECT id FROM `groups` WHERE name = 'admin'")).Scan(&adminGroupID))
+	grant(f.agentAdmin, adminGroupID, "rw")
+
+	rows, err := db.Query(database.ConvertPlaceholders("SELECT id, name FROM ticket_state"))
+	require.NoError(t, err)
+	for rows.Next() {
+		var id int
+		var name string
+		require.NoError(t, rows.Scan(&id, &name))
+		f.stateIDs[name] = id
+	}
+	require.NoError(t, rows.Err())
+	require.NoError(t, rows.Close())
+
+	f.customer1, f.customer2, f.customer3, f.customer4 = "c1_"+sfx, "c2_"+sfx, "c3_"+sfx, "c4_"+sfx
+	h, d := time.Hour, 24*time.Hour
+	f.tickets = []statsFixtureTicket{
+		{queueID: f.queueA, state: "new", priorityID: 3, customer: f.customer1, responsible: f.agentA, created: f.now.Add(-1 * h), changed: f.now.Add(-1 * h)},
+		{queueID: f.queueA, state: "open", priorityID: 3, customer: f.customer1, responsible: f.agentA, created: f.now.Add(-30 * h), changed: f.now.Add(-30 * h)},
+		{queueID: f.queueA, state: "closed successful", priorityID: 4, customer: f.customer2, responsible: f.agentA, created: f.now.Add(-3 * d), changed: f.now.Add(-1 * d)},
+		{queueID: f.queueA, state: "pending reminder", priorityID: 2, customer: f.customer2, responsible: f.agentAll, created: f.now.Add(-5 * d), changed: f.now.Add(-5 * d)},
+		{queueID: f.queueA, state: "closed successful", priorityID: 1, customer: f.customer4, responsible: f.agentA, created: f.now.Add(-40 * d), changed: f.now.Add(-40 * d)},
+		{queueID: f.queueB, state: "open", priorityID: 5, customer: f.customer3, responsible: f.agentAll, created: f.now.Add(-1 * h), changed: f.now.Add(-1 * h)},
+		{queueID: f.queueB, state: "closed unsuccessful", priorityID: 5, customer: f.customer3, responsible: f.agentAll, created: f.now.Add(-2 * d), changed: f.now.Add(-2 * d)},
+	}
+	for i := range f.tickets {
+		tk := &f.tickets[i]
+		stateID, ok := f.stateIDs[tk.state]
+		require.True(t, ok, "seed state %q missing", tk.state)
+		tk.id = int64(mustID(database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+			INSERT INTO ticket (tn, title, queue_id, ticket_lock_id, type_id, user_id, responsible_user_id,
+				ticket_priority_id, ticket_state_id, customer_id, customer_user_id, timeout, until_time,
+				escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time,
+				archive_flag, create_time, create_by, change_time, change_by)
+			VALUES (?, ?, ?, 1, 1, 1, ?, ?, ?, 'stats-co', ?, 0, 0, 0, 0, 0, 0, 0, ?, 1, ?, 1) RETURNING id`),
+			fmt.Sprintf("ST%s%d", sfx[len(sfx)-9:], i), fmt.Sprintf("stats ticket %d", i), tk.queueID,
+			tk.responsible, tk.priorityID, stateID, tk.customer, tk.created, tk.changed)))
+	}
+
+	// Articles written by agentA: one on a queueA ticket, one on a queueB ticket.
+	for _, ticketID := range []int64{f.tickets[0].id, f.tickets[5].id} {
+		_, err := db.Exec(database.ConvertPlaceholders(`
+			INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer,
+				create_time, create_by, change_time, change_by)
+			VALUES (?, 1, 3, 0, ?, ?, ?, ?)`),
+			ticketID, f.now.Add(-time.Hour), f.agentA, f.now.Add(-time.Hour), f.agentA)
+		require.NoError(t, err)
+	}
+
+	return f
+}
+
+func statsToken(t *testing.T, userID int, login, role string) string {
+	t.Helper()
+	token, err := shared.GetJWTManager().GenerateTokenWithAdmin(uint(userID), login, role, false, 0)
+	require.NoError(t, err)
+	return token
+}
+
+func statsGet(t *testing.T, router http.Handler, path, token string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	req.Header.Set("Accept", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	return w
+}
+
+func statsGetJSON(t *testing.T, router http.Handler, path, token string, out interface{}) {
+	t.Helper()
+	w := statsGet(t, router, path, token)
+	require.Equal(t, http.StatusOK, w.Code, "GET %s: %s", path, w.Body.String())
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), out), w.Body.String())
+}
+
+var statisticsPaths = []string{
+	"/api/v1/statistics/dashboard",
+	"/api/v1/statistics/trends",
+	"/api/v1/statistics/agents",
+	"/api/v1/statistics/queues",
+	"/api/v1/statistics/analytics",
+	"/api/v1/statistics/customers",
+	"/api/v1/statistics/export",
+	"/api/v1/ticket-states/statistics",
+}
+
+func TestStatisticsRoutesAuth(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	f := newStatsFixture(t)
+	router := NewSimpleRouter()
+
+	agentToken := statsToken(t, f.agentAll, f.loginAll, "Agent")
+	noQueueToken := statsToken(t, f.agentNone, f.loginNone, "Agent")
+	// A customer whose customer_user id collides with agentAll's users.id must not get agentAll's view.
+	customerToken := statsToken(t, f.agentAll, "customer@example.com", "Customer")
+
+	for _, path := range statisticsPaths {
+		t.Run(path, func(t *testing.T) {
+			assert.Equal(t, http.StatusUnauthorized, statsGet(t, router, path, "").Code, "no token")
+
+			w := statsGet(t, router, path, customerToken)
+			assert.Equal(t, http.StatusForbidden, w.Code, "customer token: %s", w.Body.String())
+
+			w = statsGet(t, router, path, noQueueToken)
+			assert.Equal(t, http.StatusForbidden, w.Code, "agent without queue access: %s", w.Body.String())
+
+			w = statsGet(t, router, path, agentToken)
+			assert.Equal(t, http.StatusOK, w.Code, "agent: %s", w.Body.String())
 		})
-		router.GET("/api/v1/statistics/dashboard", HandleDashboardStatisticsAPI)
+	}
 
-		req := httptest.NewRequest("GET", "/api/v1/statistics/dashboard", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
+	for _, path := range []string{
+		"/api/v1/statistics/trends?period=weekly",
+		"/api/v1/statistics/agents?period=1y",
+		"/api/v1/statistics/analytics?type=yearly",
+		"/api/v1/statistics/export?format=xml",
+		"/api/v1/statistics/export?type=everything",
+		"/api/v1/statistics/export?period=1y",
+	} {
+		w := statsGet(t, router, path, agentToken)
+		assert.Equal(t, http.StatusBadRequest, w.Code, "%s: %s", path, w.Body.String())
+	}
+}
 
-		router.ServeHTTP(w, req)
+func TestStatisticsDashboard(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	f := newStatsFixture(t)
+	router := NewSimpleRouter()
 
-		assert.Equal(t, http.StatusOK, w.Code)
+	type dashboard struct {
+		Overview struct {
+			Total   int `json:"total_tickets"`
+			Open    int `json:"open_tickets"`
+			Closed  int `json:"closed_tickets"`
+			Pending int `json:"pending_tickets"`
+		} `json:"overview"`
+		ByQueue []struct {
+			QueueID int `json:"queue_id"`
+			Count   int `json:"count"`
+		} `json:"by_queue"`
+		ByPriority []struct {
+			PriorityID int `json:"priority_id"`
+			Count      int `json:"count"`
+		} `json:"by_priority"`
+		RecentActivity []struct {
+			TicketID int64 `json:"ticket_id"`
+		} `json:"recent_activity"`
+	}
 
-		var response struct {
-			Overview struct {
-				TotalTickets   int `json:"total_tickets"`
-				OpenTickets    int `json:"open_tickets"`
-				ClosedTickets  int `json:"closed_tickets"`
-				PendingTickets int `json:"pending_tickets"`
-			} `json:"overview"`
-			ByQueue []struct {
-				QueueID   int    `json:"queue_id"`
-				QueueName string `json:"queue_name"`
-				Count     int    `json:"count"`
-			} `json:"by_queue"`
-			ByPriority []struct {
-				PriorityID   int    `json:"priority_id"`
-				PriorityName string `json:"priority_name"`
-				Count        int    `json:"count"`
-			} `json:"by_priority"`
-			RecentActivity []struct {
-				Type      string    `json:"type"`
-				TicketID  int       `json:"ticket_id"`
-				TicketTN  string    `json:"ticket_tn"`
-				Timestamp time.Time `json:"timestamp"`
-			} `json:"recent_activity"`
+	t.Run("agent with queueA only", func(t *testing.T) {
+		var resp dashboard
+		statsGetJSON(t, router, "/api/v1/statistics/dashboard", statsToken(t, f.agentA, f.loginA, "Agent"), &resp)
+
+		assert.Equal(t, 5, resp.Overview.Total)
+		assert.Equal(t, 2, resp.Overview.Open)
+		assert.Equal(t, 2, resp.Overview.Closed)
+		assert.Equal(t, 1, resp.Overview.Pending)
+
+		require.Len(t, resp.ByQueue, 1, "queueB must not be listed")
+		assert.Equal(t, f.queueA, resp.ByQueue[0].QueueID)
+		assert.Equal(t, 5, resp.ByQueue[0].Count)
+
+		byPriority := map[int]int{}
+		for _, p := range resp.ByPriority {
+			byPriority[p.PriorityID] = p.Count
 		}
+		assert.Equal(t, map[int]int{1: 1, 2: 1, 3: 2, 4: 1, 5: 0}, byPriority)
 
-		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.NotZero(t, response.Overview.TotalTickets)
-		assert.NotEmpty(t, response.ByQueue)
-		assert.NotEmpty(t, response.ByPriority)
-	})
-
-	t.Run("Ticket Trends", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
-		})
-		router.GET("/api/v1/statistics/trends", HandleTicketTrendsAPI)
-
-		// Test daily trends for last 7 days
-		req := httptest.NewRequest("GET", "/api/v1/statistics/trends?period=daily&days=7", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		var response struct {
-			Period string `json:"period"`
-			Days   int    `json:"days"`
-			Trends []struct {
-				Date    string `json:"date"`
-				Created int    `json:"created"`
-				Closed  int    `json:"closed"`
-				Open    int    `json:"open"`
-			} `json:"trends"`
-			Summary struct {
-				TotalCreated  int     `json:"total_created"`
-				TotalClosed   int     `json:"total_closed"`
-				AveragePerDay float64 `json:"average_per_day"`
-				ClosureRate   float64 `json:"closure_rate"`
-			} `json:"summary"`
+		var recent []int64
+		for _, a := range resp.RecentActivity {
+			recent = append(recent, a.TicketID)
 		}
-
-		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.Equal(t, "daily", response.Period)
-		assert.Equal(t, 7, response.Days)
-		assert.NotEmpty(t, response.Trends)
-
-		// Test monthly trends
-		req = httptest.NewRequest("GET", "/api/v1/statistics/trends?period=monthly&months=3", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w = httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
+		tk := f.tickets
+		assert.Equal(t, []int64{tk[0].id, tk[1].id, tk[2].id, tk[3].id, tk[4].id}, recent)
 	})
 
-	t.Run("Agent Performance", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
-		})
-		router.GET("/api/v1/statistics/agents", HandleAgentPerformanceAPI)
+	t.Run("agent with both queues", func(t *testing.T) {
+		var resp dashboard
+		statsGetJSON(t, router, "/api/v1/statistics/dashboard", statsToken(t, f.agentAll, f.loginAll, "Agent"), &resp)
 
-		req := httptest.NewRequest("GET", "/api/v1/statistics/agents?period=7d", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		var response struct {
-			Period string `json:"period"`
-			Agents []struct {
-				AgentID              int     `json:"agent_id"`
-				AgentName            string  `json:"agent_name"`
-				TicketsAssigned      int     `json:"tickets_assigned"`
-				TicketsClosed        int     `json:"tickets_closed"`
-				ArticlesCreated      int     `json:"articles_created"`
-				AvgResponseTime      float64 `json:"avg_response_time_hours"`
-				AvgResolutionTime    float64 `json:"avg_resolution_time_hours"`
-				CustomerSatisfaction float64 `json:"customer_satisfaction"`
-			} `json:"agents"`
-			TopPerformers []struct {
-				AgentID   int     `json:"agent_id"`
-				AgentName string  `json:"agent_name"`
-				Metric    string  `json:"metric"`
-				Value     float64 `json:"value"`
-			} `json:"top_performers"`
+		assert.Equal(t, 7, resp.Overview.Total)
+		assert.Equal(t, 3, resp.Overview.Open)
+		assert.Equal(t, 3, resp.Overview.Closed)
+		assert.Equal(t, 1, resp.Overview.Pending)
+		byQueue := map[int]int{}
+		for _, q := range resp.ByQueue {
+			byQueue[q.QueueID] = q.Count
 		}
-
-		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.Equal(t, "7d", response.Period)
-		assert.NotNil(t, response.Agents)
+		assert.Equal(t, map[int]int{f.queueA: 5, f.queueB: 2}, byQueue)
 	})
 
-	t.Run("Queue Metrics", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
-		})
-		router.GET("/api/v1/statistics/queues", HandleQueueMetricsAPI)
+	t.Run("admin counts every queue", func(t *testing.T) {
+		var resp dashboard
+		statsGetJSON(t, router, "/api/v1/statistics/dashboard", statsToken(t, f.agentAdmin, f.loginAdmin, "Agent"), &resp)
 
-		req := httptest.NewRequest("GET", "/api/v1/statistics/queues", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		var response struct {
-			Queues []struct {
-				QueueID           int     `json:"queue_id"`
-				QueueName         string  `json:"queue_name"`
-				TotalTickets      int     `json:"total_tickets"`
-				OpenTickets       int     `json:"open_tickets"`
-				AvgWaitTime       float64 `json:"avg_wait_time_hours"`
-				AvgResolutionTime float64 `json:"avg_resolution_time_hours"`
-				Backlog           int     `json:"backlog"`
-				SLACompliance     float64 `json:"sla_compliance_percent"`
-			} `json:"queues"`
-			Totals struct {
-				AllQueues         int     `json:"all_queues"`
-				TotalTickets      int     `json:"total_tickets"`
-				TotalOpen         int     `json:"total_open"`
-				OverallCompliance float64 `json:"overall_compliance_percent"`
-			} `json:"totals"`
+		byQueue := map[int]int{}
+		for _, q := range resp.ByQueue {
+			byQueue[q.QueueID] = q.Count
 		}
+		assert.Equal(t, 5, byQueue[f.queueA])
+		assert.Equal(t, 2, byQueue[f.queueB])
 
-		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.NotEmpty(t, response.Queues)
-		assert.NotZero(t, response.Totals.AllQueues)
+		var total int
+		require.NoError(t, f.db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket")).Scan(&total))
+		assert.Equal(t, total, resp.Overview.Total)
 	})
+}
 
-	t.Run("Time-based Analytics", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
-		})
-		router.GET("/api/v1/statistics/analytics", HandleTimeBasedAnalyticsAPI)
+func TestStatisticsTrends(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	f := newStatsFixture(t)
+	router := NewSimpleRouter()
 
-		// Hourly distribution
-		req := httptest.NewRequest("GET", "/api/v1/statistics/analytics?type=hourly", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
+	type trends struct {
+		Period string `json:"period"`
+		Trends []struct {
+			Date    string `json:"date"`
+			Created int    `json:"created"`
+			Closed  int    `json:"closed"`
+		} `json:"trends"`
+		Summary struct {
+			TotalCreated int `json:"total_created"`
+			TotalClosed  int `json:"total_closed"`
+		} `json:"summary"`
+	}
+	tk := f.tickets
 
-		router.ServeHTTP(w, req)
+	// queueA tickets inside the 7-day window: tickets 0-3 created, ticket 2 closed.
+	var daily trends
+	statsGetJSON(t, router, "/api/v1/statistics/trends?period=daily&days=7", statsToken(t, f.agentA, f.loginA, "Agent"), &daily)
+	require.Len(t, daily.Trends, 7)
+	assert.Equal(t, 4, daily.Summary.TotalCreated)
+	assert.Equal(t, 1, daily.Summary.TotalClosed)
+	created, closed := map[string]int{}, map[string]int{}
+	for _, d := range daily.Trends {
+		created[d.Date] += d.Created
+		closed[d.Date] += d.Closed
+	}
+	wantCreated := map[string]int{}
+	for _, i := range []int{0, 1, 2, 3} {
+		wantCreated[tk[i].created.Format("2006-01-02")]++
+	}
+	for day, n := range wantCreated {
+		assert.Equal(t, n, created[day], "created on %s", day)
+	}
+	assert.Equal(t, 1, closed[tk[2].changed.Format("2006-01-02")])
 
-		assert.Equal(t, http.StatusOK, w.Code)
+	// agentAll also sees queueB: tickets 5 and 6 created, ticket 6 closed.
+	statsGetJSON(t, router, "/api/v1/statistics/trends?period=daily&days=7", statsToken(t, f.agentAll, f.loginAll, "Agent"), &daily)
+	assert.Equal(t, 6, daily.Summary.TotalCreated)
+	assert.Equal(t, 2, daily.Summary.TotalClosed)
 
-		var hourlyResponse struct {
-			Type string `json:"type"`
-			Data []struct {
-				Hour    int `json:"hour"`
-				Created int `json:"created"`
-				Closed  int `json:"closed"`
-			} `json:"data"`
-			PeakHours []int `json:"peak_hours"`
+	// A 3-month window always contains the 40-day-old ticket 4 (created and closed then).
+	var monthly trends
+	statsGetJSON(t, router, "/api/v1/statistics/trends?period=monthly&months=3", statsToken(t, f.agentA, f.loginA, "Agent"), &monthly)
+	require.Len(t, monthly.Trends, 3)
+	assert.Equal(t, 5, monthly.Summary.TotalCreated)
+	assert.Equal(t, 2, monthly.Summary.TotalClosed)
+}
+
+func TestStatisticsAgents(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	f := newStatsFixture(t)
+	router := NewSimpleRouter()
+
+	type agentRow struct {
+		AgentID  int `json:"agent_id"`
+		Assigned int `json:"tickets_assigned"`
+		Closed   int `json:"tickets_closed"`
+		Articles int `json:"articles_created"`
+	}
+	get := func(token string) map[int]agentRow {
+		var resp struct {
+			Period string     `json:"period"`
+			Agents []agentRow `json:"agents"`
 		}
-
-		json.Unmarshal(w.Body.Bytes(), &hourlyResponse)
-		assert.Equal(t, "hourly", hourlyResponse.Type)
-		assert.Len(t, hourlyResponse.Data, 24) // 24 hours
-
-		// Day of week distribution
-		req = httptest.NewRequest("GET", "/api/v1/statistics/analytics?type=day_of_week", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w = httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		var weekResponse struct {
-			Type string `json:"type"`
-			Data []struct {
-				Day     string `json:"day"`
-				Created int    `json:"created"`
-				Closed  int    `json:"closed"`
-			} `json:"data"`
-			BusiestDays []string `json:"busiest_days"`
+		statsGetJSON(t, router, "/api/v1/statistics/agents?period=7d", token, &resp)
+		assert.Equal(t, "7d", resp.Period)
+		out := map[int]agentRow{}
+		for _, a := range resp.Agents {
+			out[a.AgentID] = a
 		}
+		return out
+	}
 
-		json.Unmarshal(w.Body.Bytes(), &weekResponse)
-		assert.Equal(t, "day_of_week", weekResponse.Type)
-		assert.Len(t, weekResponse.Data, 7) // 7 days of week
-	})
+	viewA := get(statsToken(t, f.agentA, f.loginA, "Agent"))
+	assert.Equal(t, agentRow{AgentID: f.agentA, Assigned: 3, Closed: 1, Articles: 1}, viewA[f.agentA])
+	assert.Equal(t, agentRow{AgentID: f.agentAll, Assigned: 1, Closed: 0, Articles: 0}, viewA[f.agentAll])
 
-	t.Run("Customer Statistics", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
-		})
-		router.GET("/api/v1/statistics/customers", HandleCustomerStatisticsAPI)
+	viewAll := get(statsToken(t, f.agentAll, f.loginAll, "Agent"))
+	assert.Equal(t, agentRow{AgentID: f.agentA, Assigned: 3, Closed: 1, Articles: 2}, viewAll[f.agentA])
+	assert.Equal(t, agentRow{AgentID: f.agentAll, Assigned: 3, Closed: 1, Articles: 0}, viewAll[f.agentAll])
+}
 
-		req := httptest.NewRequest("GET", "/api/v1/statistics/customers?top=10", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
+func TestStatisticsQueues(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	f := newStatsFixture(t)
+	router := NewSimpleRouter()
 
-		router.ServeHTTP(w, req)
+	type queueRow struct {
+		QueueID int `json:"queue_id"`
+		Total   int `json:"total_tickets"`
+		Open    int `json:"open_tickets"`
+		Backlog int `json:"backlog"`
+	}
+	var resp struct {
+		Queues []queueRow `json:"queues"`
+		Totals struct {
+			AllQueues int `json:"all_queues"`
+			Total     int `json:"total_tickets"`
+			Open      int `json:"total_open"`
+		} `json:"totals"`
+	}
+	statsGetJSON(t, router, "/api/v1/statistics/queues", statsToken(t, f.agentA, f.loginA, "Agent"), &resp)
+	assert.Equal(t, []queueRow{{QueueID: f.queueA, Total: 5, Open: 2, Backlog: 1}}, resp.Queues)
+	assert.Equal(t, 1, resp.Totals.AllQueues)
+	assert.Equal(t, 5, resp.Totals.Total)
+	assert.Equal(t, 2, resp.Totals.Open)
 
-		assert.Equal(t, http.StatusOK, w.Code)
+	statsGetJSON(t, router, "/api/v1/statistics/queues", statsToken(t, f.agentAll, f.loginAll, "Agent"), &resp)
+	assert.ElementsMatch(t, []queueRow{
+		{QueueID: f.queueA, Total: 5, Open: 2, Backlog: 1},
+		{QueueID: f.queueB, Total: 2, Open: 1, Backlog: 0},
+	}, resp.Queues)
+}
 
-		var response struct {
-			TopCustomers []struct {
-				CustomerID    string `json:"customer_id"`
-				CustomerEmail string `json:"customer_email"`
-				TicketCount   int    `json:"ticket_count"`
-				OpenTickets   int    `json:"open_tickets"`
-				LastActivity  string `json:"last_activity"`
-			} `json:"top_customers"`
-			CustomerMetrics struct {
-				TotalCustomers        int     `json:"total_customers"`
-				ActiveCustomers       int     `json:"active_customers"`
-				NewCustomersThisMonth int     `json:"new_customers_this_month"`
-				AvgTicketsPerCustomer float64 `json:"avg_tickets_per_customer"`
-			} `json:"customer_metrics"`
+func TestStatisticsAnalytics(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	f := newStatsFixture(t)
+	router := NewSimpleRouter()
+	tk := f.tickets
+	token := statsToken(t, f.agentA, f.loginA, "Agent")
+
+	// queueA inside the default 30-day window: tickets 0-3 created, ticket 2 closed.
+	var hourly struct {
+		Type string `json:"type"`
+		Days int    `json:"days"`
+		Data []struct {
+			Hour    int `json:"hour"`
+			Created int `json:"created"`
+			Closed  int `json:"closed"`
+		} `json:"data"`
+		PeakHours []int `json:"peak_hours"`
+	}
+	statsGetJSON(t, router, "/api/v1/statistics/analytics?type=hourly", token, &hourly)
+	assert.Equal(t, 30, hourly.Days)
+	require.Len(t, hourly.Data, 24)
+	wantCreated, wantClosed := make([]int, 24), make([]int, 24)
+	for _, i := range []int{0, 1, 2, 3} {
+		wantCreated[tk[i].created.Hour()]++
+	}
+	wantClosed[tk[2].changed.Hour()]++
+	gotCreated, gotClosed := make([]int, 24), make([]int, 24)
+	for _, d := range hourly.Data {
+		gotCreated[d.Hour], gotClosed[d.Hour] = d.Created, d.Closed
+	}
+	assert.Equal(t, wantCreated, gotCreated)
+	assert.Equal(t, wantClosed, gotClosed)
+	var wantPeak []int
+	maxCreated := 0
+	for h, n := range wantCreated {
+		if n > maxCreated {
+			maxCreated, wantPeak = n, []int{h}
+		} else if n == maxCreated && n > 0 {
+			wantPeak = append(wantPeak, h)
 		}
+	}
+	assert.Equal(t, wantPeak, hourly.PeakHours)
 
-		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.NotNil(t, response.TopCustomers)
-		assert.NotZero(t, response.CustomerMetrics.TotalCustomers)
-	})
+	var weekly struct {
+		Data []struct {
+			Day     string `json:"day"`
+			Created int    `json:"created"`
+			Closed  int    `json:"closed"`
+		} `json:"data"`
+	}
+	statsGetJSON(t, router, "/api/v1/statistics/analytics?type=day_of_week&days=60", token, &weekly)
+	require.Len(t, weekly.Data, 7)
+	wantDayCreated, wantDayClosed := map[string]int{}, map[string]int{}
+	for _, i := range []int{0, 1, 2, 3, 4} {
+		wantDayCreated[tk[i].created.Weekday().String()]++
+	}
+	wantDayClosed[tk[2].changed.Weekday().String()]++
+	wantDayClosed[tk[4].changed.Weekday().String()]++
+	for _, d := range weekly.Data {
+		assert.Equal(t, wantDayCreated[d.Day], d.Created, "created on %s", d.Day)
+		assert.Equal(t, wantDayClosed[d.Day], d.Closed, "closed on %s", d.Day)
+	}
+}
 
-	t.Run("Export Statistics", func(t *testing.T) {
-		router := gin.New()
-		router.Use(func(c *gin.Context) {
-			c.Set("user_id", 1)
-			c.Next()
-		})
-		router.GET("/api/v1/statistics/export", HandleExportStatisticsAPI)
+func TestStatisticsCustomers(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	f := newStatsFixture(t)
+	router := NewSimpleRouter()
+	tk := f.tickets
 
-		// Test CSV export
-		req := httptest.NewRequest("GET", "/api/v1/statistics/export?format=csv&type=tickets&period=7d", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w := httptest.NewRecorder()
+	type customerRow struct {
+		CustomerID   string `json:"customer_id"`
+		TicketCount  int    `json:"ticket_count"`
+		OpenTickets  int    `json:"open_tickets"`
+		LastActivity string `json:"last_activity"`
+	}
+	var resp struct {
+		TopCustomers []customerRow `json:"top_customers"`
+		Metrics      struct {
+			Total   int     `json:"total_customers"`
+			Active  int     `json:"active_customers"`
+			New     int     `json:"new_customers_this_month"`
+			AvgTkts float64 `json:"avg_tickets_per_customer"`
+		} `json:"customer_metrics"`
+	}
+	statsGetJSON(t, router, "/api/v1/statistics/customers?top=10", statsToken(t, f.agentA, f.loginA, "Agent"), &resp)
 
-		router.ServeHTTP(w, req)
+	// customer1: tickets 0,1 (new + open); customer2: tickets 2,3 (closed + pending); customer4: ticket 4 (40 days old).
+	assert.Equal(t, []customerRow{
+		{CustomerID: f.customer1, TicketCount: 2, OpenTickets: 2, LastActivity: tk[0].created.Format(time.RFC3339)},
+		{CustomerID: f.customer2, TicketCount: 2, OpenTickets: 0, LastActivity: tk[2].created.Format(time.RFC3339)},
+		{CustomerID: f.customer4, TicketCount: 1, OpenTickets: 0, LastActivity: tk[4].created.Format(time.RFC3339)},
+	}, resp.TopCustomers)
+	assert.Equal(t, 3, resp.Metrics.Total)
+	assert.Equal(t, 2, resp.Metrics.Active)
+	assert.InDelta(t, 5.0/3.0, resp.Metrics.AvgTkts, 0.0001)
 
-		assert.Equal(t, http.StatusOK, w.Code)
-		assert.Contains(t, w.Header().Get("Content-Type"), "text/csv")
-		assert.Contains(t, w.Header().Get("Content-Disposition"), "attachment")
+	monthStart := time.Date(f.now.Year(), f.now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	wantNew := 0
+	for _, first := range []time.Time{tk[1].created, tk[3].created, tk[4].created} {
+		if !first.Before(monthStart) {
+			wantNew++
+		}
+	}
+	assert.Equal(t, wantNew, resp.Metrics.New)
 
-		// Test JSON export
-		req = httptest.NewRequest("GET", "/api/v1/statistics/export?format=json&type=summary", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		w = httptest.NewRecorder()
+	statsGetJSON(t, router, "/api/v1/statistics/customers?top=1", statsToken(t, f.agentAll, f.loginAll, "Agent"), &resp)
+	require.Len(t, resp.TopCustomers, 1)
+	assert.Equal(t, 4, resp.Metrics.Total, "agentAll also sees customer3 on queueB")
+}
 
-		router.ServeHTTP(w, req)
+func TestStatisticsExport(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	f := newStatsFixture(t)
+	router := NewSimpleRouter()
+	tk := f.tickets
+	token := statsToken(t, f.agentA, f.loginA, "Agent")
 
-		assert.Equal(t, http.StatusOK, w.Code)
-		assert.Contains(t, w.Header().Get("Content-Type"), "application/json")
-	})
+	var summary struct {
+		Period  string `json:"period"`
+		Summary struct {
+			Total   int `json:"total_tickets"`
+			Open    int `json:"open_tickets"`
+			Closed  int `json:"closed_tickets"`
+			Pending int `json:"pending_tickets"`
+		} `json:"summary"`
+	}
+	statsGetJSON(t, router, "/api/v1/statistics/export?format=json&type=summary&period=7d", token, &summary)
+	assert.Equal(t, "7d", summary.Period)
+	assert.Equal(t, 4, summary.Summary.Total)
+	assert.Equal(t, 2, summary.Summary.Open)
+	assert.Equal(t, 1, summary.Summary.Closed)
+	assert.Equal(t, 1, summary.Summary.Pending)
 
-	t.Run("Unauthorized Access", func(t *testing.T) {
-		router := gin.New()
-		router.GET("/api/v1/statistics/dashboard", HandleDashboardStatisticsAPI)
+	var tickets []struct {
+		Title    string `json:"title"`
+		Customer string `json:"customer"`
+	}
+	statsGetJSON(t, router, "/api/v1/statistics/export?format=json&type=tickets&period=30d", token, &tickets)
+	var titles []string
+	for _, x := range tickets {
+		titles = append(titles, x.Title)
+	}
+	assert.Equal(t, []string{"stats ticket 0", "stats ticket 1", "stats ticket 2", "stats ticket 3"}, titles)
 
-		req := httptest.NewRequest("GET", "/api/v1/statistics/dashboard", nil)
-		w := httptest.NewRecorder()
+	w := statsGet(t, router, "/api/v1/statistics/export?format=csv&type=tickets&period=24h", token)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Contains(t, w.Header().Get("Content-Type"), "text/csv")
+	assert.Contains(t, w.Header().Get("Content-Disposition"), "attachment")
+	records, err := csv.NewReader(strings.NewReader(w.Body.String())).ReadAll()
+	require.NoError(t, err)
+	require.Len(t, records, 2, "header + ticket 0 (the only queueA ticket from the last 24h)")
+	assert.Equal(t, "Ticket Number", records[0][0])
+	assert.Equal(t, "stats ticket 0", records[1][1])
+	assert.Equal(t, tk[0].customer, records[1][5])
 
-		router.ServeHTTP(w, req)
+	w = statsGet(t, router, "/api/v1/statistics/export?format=csv&type=summary&period=7d", token)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	records, err = csv.NewReader(strings.NewReader(w.Body.String())).ReadAll()
+	require.NoError(t, err)
+	assert.Equal(t, [][]string{
+		{"Metric", "Value"},
+		{"total_tickets", "4"},
+		{"open_tickets", "2"},
+		{"closed_tickets", "1"},
+		{"pending_tickets", "1"},
+	}, records)
+}
 
-		assert.Equal(t, http.StatusUnauthorized, w.Code)
-	})
+func TestTicketStateStatistics(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	f := newStatsFixture(t)
+	router := NewSimpleRouter()
+
+	type stateStats struct {
+		Statistics []struct {
+			StateID     int    `json:"state_id"`
+			StateName   string `json:"state_name"`
+			TypeID      int    `json:"type_id"`
+			TicketCount int    `json:"ticket_count"`
+		} `json:"statistics"`
+		TotalTickets int `json:"total_tickets"`
+	}
+	countsByState := func(resp stateStats) map[string]int {
+		out := map[string]int{}
+		for _, s := range resp.Statistics {
+			out[s.StateName] = s.TicketCount
+			assert.Equal(t, f.stateIDs[s.StateName], s.StateID)
+		}
+		return out
+	}
+
+	var resp stateStats
+	statsGetJSON(t, router, "/api/v1/ticket-states/statistics", statsToken(t, f.agentA, f.loginA, "Agent"), &resp)
+	got := countsByState(resp)
+	assert.Equal(t, 1, got["new"])
+	assert.Equal(t, 1, got["open"])
+	assert.Equal(t, 1, got["pending reminder"])
+	assert.Equal(t, 2, got["closed successful"])
+	assert.Equal(t, 0, got["closed unsuccessful"], "queueB ticket must not be counted for agentA")
+	assert.Equal(t, 5, resp.TotalTickets)
+
+	statsGetJSON(t, router, "/api/v1/ticket-states/statistics", statsToken(t, f.agentAll, f.loginAll, "Agent"), &resp)
+	got = countsByState(resp)
+	assert.Equal(t, 2, got["open"])
+	assert.Equal(t, 1, got["closed unsuccessful"])
+	assert.Equal(t, 7, resp.TotalTickets)
 }

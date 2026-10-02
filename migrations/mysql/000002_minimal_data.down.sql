@@ -1,10 +1,14 @@
 -- Remove minimal upstream seed data from MySQL deployments.
-START TRANSACTION;
+-- Mirrors migrations/postgres/000002_minimal_data.down.sql. Every seeded row references
+-- users(1) via create_by/change_by while users(1) references valid(2), so the cycle is
+-- broken with FOREIGN_KEY_CHECKS = 0 (same as the up file).
+SET FOREIGN_KEY_CHECKS = 0;
 
+DELETE FROM group_user WHERE user_id = 1 AND group_id IN (1,2,3);
 DELETE FROM queue WHERE id IN (1,2,3,4);
 DELETE FROM signature WHERE id = 1;
 DELETE FROM salutation WHERE id = 1;
-DELETE FROM system_address WHERE id = 1;
+DELETE FROM system_address WHERE id IN (1,2,3,4);
 DELETE FROM groups WHERE id IN (1,2,3);
 DELETE FROM follow_up_possible WHERE id IN (1,2,3);
 DELETE FROM communication_channel WHERE id IN (1,2,3,4);
@@ -14,6 +18,7 @@ DELETE FROM ticket_type WHERE id IN (1,2,3,4,5);
 DELETE FROM ticket_priority WHERE id IN (1,2,3,4,5);
 DELETE FROM ticket_state WHERE id IN (1,2,3,4,5);
 DELETE FROM ticket_state_type WHERE id IN (1,2,3,4,5);
+DELETE FROM users WHERE id = 1;
 DELETE FROM valid WHERE id IN (1,2,3);
 
-COMMIT;
+SET FOREIGN_KEY_CHECKS = 1;

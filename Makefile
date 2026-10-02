@@ -220,7 +220,7 @@ TEST_COMPOSE_FILE := $(CURDIR)/docker-compose.yml:$(CURDIR)/docker-compose.testd
 # make bench BENCH_COUNT=5 BENCH_TIME=2s
 BENCH_COUNT ?= 3
 BENCH_TIME ?= 1s
-BENCH_REGEX ?= Benchmark(Sanitize|StripHTML|GetConfig|GetDSN|IsProduction|IsBusinessDay|IsWithinBusinessHours|SetPassword|CheckPassword|RecordRequest|GetStats|ValidateResponse|ValidateJSONSchema|Routing|TemplateLoading|DashboardPage|LinkChecker|LDAPService_ValidateConfig|LDAPService_GetUserAttributes)
+BENCH_REGEX ?= Benchmark(Sanitize|StripHTML|GetConfig|GetDSN|IsProduction|IsBusinessDay|IsWithinBusinessHours|SetPassword|CheckPassword|RecordRequest|GetStats|ValidateResponse|ValidateJSONSchema|Routing|TemplateLoading|DashboardPage|LinkChecker)
 BENCH_PACKAGES ?= ./internal/utils ./internal/config ./internal/models ./internal/routing ./internal/middleware ./internal/api ./internal/service
 BENCH_OUT ?=
 K6_IMAGE ?= docker.io/grafana/k6:latest
@@ -346,6 +346,12 @@ test-legacy: toolbox-build
 test-templates:
 	@printf "🎨 Running template tests (fail-fast)...\n"
 	@$(MAKE) toolbox-exec ARGS="go test -v -count=1 ./internal/platform/template/..."
+
+# Go SDK (sdk/go is a separate module): vet, test, and build the examples
+.PHONY: test-sdk-go
+test-sdk-go:
+	@printf "🧪 Running Go SDK checks...\n"
+	@$(MAKE) toolbox-exec ARGS="cd sdk/go && go vet ./... && go test -count=1 ./... && go build ./..."
 
 # Run all unit tests (templates + core packages, no integration/e2e)
 test-unit: toolbox-build test-stack-up
@@ -998,29 +1004,10 @@ load-test-smoke:
 
 
 .PHONY: test-e2e
+# Targeted root-suite run (tests/e2e) in the Playwright container; see test-e2e-go.
 test-e2e:
-	@echo "🎯 Running targeted E2E tests (set TEST=pattern, e.g., TEST=Login|Groups)"
-	@[ -n "$(TEST)" ] || (echo "Usage: make test-e2e TEST=Login|Groups|Queues" && exit 2)
-	@$(MAKE) toolbox-build
-	@HEADLESS=${HEADLESS:-true} \
-	 BASE_URL=${BASE_URL:-http://localhost:$(BACKEND_PORT)} \
-	 DEMO_ADMIN_EMAIL=${DEMO_ADMIN_EMAIL:-} \
-	 DEMO_ADMIN_PASSWORD=${DEMO_ADMIN_PASSWORD:-} \
-	 $(CONTAINER_CMD) run --rm \
-		--security-opt label=disable \
-		$(CONTAINER_USER) \
-		-v "$$PWD:/workspace" \
-		-w /workspace \
-		-u "$$(id -u):$$(id -g)" \
-		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
-		-e GOFLAGS=-buildvcs=false \
-		-e HEADLESS \
-		-e BASE_URL \
-		-e DEMO_ADMIN_EMAIL \
-		-e DEMO_ADMIN_PASSWORD \
-		$(TOOLBOX_IMAGE) \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; \
-		go test -tags e2e -count=1 -buildvcs=false -v ./tests/e2e -run "$(TEST)" | tee generated/test-results/e2e_$(shell echo $(TEST) | tr ' ' '_').log'
+	@[ -n "$(TEST)" ] || (echo "Usage: make test-e2e TEST='Login|Groups|Queues'" && exit 2)
+	@$(MAKE) test-e2e-go TEST='$(TEST)'
 
 # Run integration tests (requires running test DB stack)
 toolbox-test-integration:
@@ -1079,6 +1066,34 @@ test-oidc-integration: toolbox-build
 		-e GOFLAGS=-buildvcs=false \
 		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; echo "Running OIDC integration tests..."; go test -tags=integration -buildvcs=false -count=1 -timeout=10m -v ./internal/platform/auth/...'
+
+# Run LDAP integration tests: a testcontainers OpenLDAP server plus the test
+# database (login through /api/auth/login). Requires Docker and `make test-db-up`.
+.PHONY: test-ldap-integration
+test-ldap-integration: toolbox-build
+	@printf "\n🧪 Running LDAP integration tests (requires Docker + OpenLDAP + test DB)...\n"
+	@$(CONTAINER_CMD) run --rm \
+		--security-opt label=disable \
+		$(CONTAINER_USER) \
+		-v "$$PWD:/workspace" \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		--network host \
+		-w /workspace \
+		-u "$$UID:$$GID" \
+		--group-add "$$(stat -c '%g' /var/run/docker.sock)" \
+		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
+		-e GOFLAGS=-buildvcs=false \
+		-e APP_ENV=test \
+		-e GOATFLOW_TEST_DB_READY=1 \
+		-e DB_DRIVER=$(TEST_DB_DRIVER) -e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
+		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) -e TEST_DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
+		-e DB_PORT=$(TOOLBOX_TEST_DB_PORT) -e TEST_DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e DB_NAME=$(TEST_DB_NAME) -e TEST_DB_NAME=$(TEST_DB_NAME) \
+		-e DB_USER=$(TEST_DB_USER) -e TEST_DB_USER=$(TEST_DB_USER) \
+		-e DB_PASSWORD=$(TEST_DB_PASSWORD) -e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e DB_SSLMODE=disable -e TEST_DB_SSLMODE=disable \
+		$(TOOLBOX_IMAGE) \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; echo "Running LDAP integration tests..."; go test -tags=integration -buildvcs=false -count=1 -timeout=10m -v -run "^TestLDAP" ./internal/api/'
 
 # Run smtp4dev + POP/DB email integrations end-to-end
 toolbox-test-email-integration:
@@ -1979,117 +1994,75 @@ db-migrate-sql-test:
 	else \
 		printf "ℹ️  SQL migration replay only applies to PostgreSQL test databases\n"; \
 	fi
-# OTRS Migration Tools
-# Analyze OTRS SQL dump file
-migrate-analyze:
-	@$(MAKE) toolbox-build
-	@if [ -z "$(SQL)" ]; then \
-		echo "❌ SQL file required. Usage: make migrate-analyze SQL=/path/to/dump.sql"; \
-		exit 1; \
+# OTRS Migration Tools (goatflow-migrate)
+# The OTRS source is SQL=<mysqldump file> (mounted read-only) or SOURCE=<OTRS database DSN>
+# (MySQL: 'user:pass@tcp(host:3306)/otrs', PostgreSQL: 'postgres://user:pass@host:5432/otrs?sslmode=disable').
+# The GoatFlow database is the one DB_DRIVER/DB_* select.
+MIGRATE_SOURCE_CHECK = if [ -n "$(SQL)" ] && [ -n "$(SOURCE)" ]; then \
+		echo "❌ Use SQL=<dump file> or SOURCE=<OTRS database DSN>, not both"; exit 1; \
+	fi; \
+	if [ -z "$(SQL)$(SOURCE)" ]; then \
+		echo "❌ OTRS source required: SQL=/path/to/otrs_dump.sql or SOURCE=<OTRS database DSN>"; exit 1; \
 	fi
-	@printf "🔍 Analyzing OTRS SQL dump: $(SQL)\n"
-	@$(CONTAINER_CMD) run --rm \
-		-v "$$(dirname $(SQL)):/data:ro" \
+MIGRATE_SOURCE_MOUNT = $(if $(SQL),-v "$(dir $(abspath $(SQL))):/data:ro")
+MIGRATE_SOURCE_ARG = $(if $(SQL),-sql="/data/$(notdir $(SQL))",-source='$(SOURCE)')
+MIGRATE_RUN = $(CONTAINER_CMD) run --rm \
+		$(MIGRATE_SOURCE_MOUNT) \
 		-u "$$(id -u):$$(id -g)" \
+		-e DB_DRIVER="$(DB_DRIVER)" \
+		--network goatflow_goatflow-network \
 		$(TOOLBOX_IMAGE) \
-		goatflow-migrate -cmd=analyze -sql="/data/$$(basename $(SQL))"
+		goatflow-migrate
+
+# goatflow-migrate picks the driver from the URL form.
+ifeq ($(DB_DRIVER),postgres)
+MIGRATE_DB_URL = postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
+else
+MIGRATE_DB_URL = $(DB_USER):$(DB_PASSWORD)@tcp($(DB_HOST):$(DB_PORT))/$(DB_NAME)?parseTime=true
+endif
+
+# List the OTRS source's tables, row counts and what the import does with each
+migrate-analyze:
+	@$(MIGRATE_SOURCE_CHECK)
+	@$(MAKE) toolbox-build
+	@printf "🔍 Analyzing OTRS source\n"
+	@$(MIGRATE_RUN) -cmd=analyze $(MIGRATE_SOURCE_ARG)
 
 # Import OTRS data (dry run by default)
 migrate-import:
+	@$(MIGRATE_SOURCE_CHECK)
 	@$(MAKE) toolbox-build
-	@if [ -z "$(SQL)" ]; then \
-		echo "❌ SQL file required. Usage: make migrate-import SQL=/path/to/dump.sql [DRY_RUN=false]"; \
-		exit 1; \
-	fi
-	@printf "📥 Importing OTRS data from: $(SQL)\n"
+	@printf "📥 Importing OTRS data (driver: $(DB_DRIVER))\n"
 	@DRY_RUN_FLAG=""; \
 	if [ "$${DRY_RUN:-true}" = "true" ]; then \
 		DRY_RUN_FLAG="-dry-run"; \
 		echo "🧪 Running in DRY RUN mode (no data will be imported)"; \
 	fi; \
-	$(CONTAINER_CMD) run --rm \
-		-v "$$(dirname $(SQL)):/data:ro" \
-		-u "$$(id -u):$$(id -g)" \
-		--network goatflow_goatflow-network \
-		$(TOOLBOX_IMAGE) \
-		goatflow-migrate -cmd=import -sql="/data/$$(basename $(SQL))" \
-			-db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" \
-			$$DRY_RUN_FLAG -v
+	$(MIGRATE_RUN) -cmd=import $(MIGRATE_SOURCE_ARG) -db="$(MIGRATE_DB_URL)" $$DRY_RUN_FLAG -v
 
 # Force import - clears existing data before importing (DESTRUCTIVE!)
 migrate-import-force:
+	@$(MIGRATE_SOURCE_CHECK)
 	@$(MAKE) toolbox-build
-	@if [ -z "$(SQL)" ]; then \
-		echo "❌ SQL file required. Usage: make migrate-import-force SQL=/path/to/dump.sql"; \
-		exit 1; \
-	fi
-	@printf "⚠️  WARNING: Force import will CLEAR ALL EXISTING DATA!\n"
-	@printf "📥 Importing OTRS data from: $(SQL)\n"
-	@$(CONTAINER_CMD) run --rm \
-		-v "$$(dirname $(SQL)):/data:ro" \
-		-u "$$(id -u):$$(id -g)" \
-		--network goatflow_goatflow-network \
-		$(TOOLBOX_IMAGE) \
-		goatflow-migrate -cmd=import -sql="/data/$$(basename $(SQL))" \
-			-db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" \
-			-force -v || true
+	@printf "⚠️  WARNING: Force import deletes the existing tickets, articles and customers!\n"
+	@printf "📥 Importing OTRS data (driver: $(DB_DRIVER))\n"
+	@$(MIGRATE_RUN) -cmd=import $(MIGRATE_SOURCE_ARG) -db="$(MIGRATE_DB_URL)" -force -v
 	@printf "✅ Force import completed successfully!\n"
 # Validate imported OTRS data
 migrate-validate:
 	@$(MAKE) toolbox-build
 	@printf "🔍 Validating imported OTRS data\n"
-	@$(CONTAINER_CMD) run --rm \
-		-u "$$(id -u):$$(id -g)" \
-		--network goatflow_goatflow-network \
-		$(TOOLBOX_IMAGE) \
-		goatflow-migrate -cmd=validate \
-			-db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" -v
+	@$(MIGRATE_RUN) -cmd=validate -db="$(MIGRATE_DB_URL)"
 
+# Import OTRS data (writes by default; DRY_RUN=1 plans only, FORCE=1 clears existing data first)
 .PHONY: otrs-import
 otrs-import:
+	@$(MIGRATE_SOURCE_CHECK)
 	@$(MAKE) toolbox-build
-	@if [ -z "$(SQL)" ]; then \
-		echo "❌ SQL file required. Usage: make otrs-import SQL=/path/to/otrs_dump.sql"; \
-		exit 1; \
-	fi
-	@printf "📥 Importing OTRS dump (driver: $(DB_DRIVER)) from: $(SQL)\n"
-	@if [ "$(DB_DRIVER)" = "postgres" ]; then \
-		$(CONTAINER_CMD) run --rm \
-			--security-opt label=disable \
-		$(CONTAINER_USER) \
-			-v "$(dir $(abspath $(SQL))):/data:ro" \
-			-u "$(shell id -u):$(shell id -g)" \
-			--network goatflow_goatflow-network \
-			$(TOOLBOX_IMAGE) \
-			goatflow-migrate -cmd=import -sql="/data/$(notdir $(SQL))" \
-				-db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" \
-				$${DRY_RUN:+-dry-run} $${FORCE:+-force} -v; \
-	else \
-		printf "🧹 Preparing MariaDB schema (dropping all tables in $(DB_NAME))...\n"; \
-		$(CONTAINER_CMD) run --rm \
-			--security-opt label=disable \
-		$(CONTAINER_USER) \
-			--network goatflow_goatflow-network \
-			$(TOOLBOX_IMAGE) \
-			bash -lc 'mysql -h"$(DB_HOST)" -u"$(DB_USER)" -p"$(DB_PASSWORD)" -D"$(DB_NAME)" -e '\''\
-SET SESSION group_concat_max_len = 1000000;\
-SET FOREIGN_KEY_CHECKS=0;\
-SELECT CONCAT("DROP TABLE IF EXISTS ", GROUP_CONCAT(CONCAT("`", table_name, "`") SEPARATOR ", ")) INTO @sql\
-  FROM information_schema.tables WHERE table_schema = "$(DB_NAME)";\
-SET @sql = IFNULL(@sql, "SELECT 1");\
-PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;\
-SET FOREIGN_KEY_CHECKS=1;\
-'\'''; \
-		printf "📦 Loading dump into MariaDB...\n"; \
-		$(CONTAINER_CMD) run --rm \
-			--security-opt label=disable \
-		$(CONTAINER_USER) \
-			-v "$(dir $(abspath $(SQL))):/data:ro" \
-			--network goatflow_goatflow-network \
-			$(TOOLBOX_IMAGE) \
-			bash -lc 'mysql -h"$(DB_HOST)" -u"$(DB_USER)" -p"$(DB_PASSWORD)" "$(DB_NAME)" < "/data/$(notdir $(SQL))"'; \
-	fi
-	@printf "✅ OTRS dump import completed\n"
+	@printf "📥 Importing OTRS data (driver: $(DB_DRIVER))\n"
+	@$(MIGRATE_RUN) -cmd=import $(MIGRATE_SOURCE_ARG) -db="$(MIGRATE_DB_URL)" \
+		$${DRY_RUN:+-dry-run} $${FORCE:+-force} -v
+	@printf "✅ OTRS import completed\n"
 
 # Import test data with proper ID mapping
 import-test-data:
@@ -2120,7 +2093,7 @@ import-test-data:
 		-v "$(pwd)/bin:/bin:ro" \
 		--network goatflow_goatflow-network \
 		alpine:3.19 \
-		/bin/import-otrs -db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable"
+		/bin/import-otrs -db="$(MIGRATE_DB_URL)"
 	@printf "✅ Test data imported successfully with correct article mappings!\n"
 # Reset user password and enable account (using toolbox)
 reset-password:
@@ -2442,61 +2415,78 @@ else
     NATIVE_PLATFORM := linux/$(UNAME_M)
 endif
 
-.PHONY: test-e2e-playwright-go
-test-e2e-playwright-go:
-	@printf "\n🎭 Running Go Playwright-tagged e2e tests in dedicated container...\n"
-	@printf "   Platform: $(NATIVE_PLATFORM)\n"
-	$(CONTAINER_CMD) build --platform $(NATIVE_PLATFORM) -f Dockerfile.playwright-go -t goatflow-playwright-go:latest . >/dev/null
-	@# Ensure cache volume directories exist with correct ownership
-	# Prefer explicit BASE_URL provided on invocation; ignore .env for this target
-	@if [ -n "$(BASE_URL)" ]; then echo "[playwright-go] (explicit) BASE_URL=$(BASE_URL)"; else echo "[playwright-go] (default) BASE_URL=$${BASE_URL:-http://localhost:8080}"; fi
-	# Allow overriding network (e.g. PLAYWRIGHT_NETWORK=goatflow_default) to access compose service DNS
-	@if [ -n "$(PLAYWRIGHT_NETWORK)" ]; then echo "[playwright-go] Using network '$(PLAYWRIGHT_NETWORK)'"; else echo "[playwright-go] Using host network (override with PLAYWRIGHT_NETWORK=...)"; fi
-	$(CONTAINER_CMD) run --rm \
+# ---------------------------------------------------------------------------
+# Go + Playwright browser E2E suites. Both run in the goatflow-playwright-go
+# container against the TEST stack (make test-stack-up), never the dev backend:
+#
+#   make test-stack-up
+#   make test-e2e-playwright-go                  # tests/e2e/playwright
+#   make test-e2e-go                             # tests/e2e (all tests)
+#   make test-e2e-go TEST='Groups|Queues'        # subset (go test -run pattern)
+#   make test-e2e-playwright-go ARGS='-run TestAdminGroupsUI'
+#
+# Defaults: BASE_URL=http://backend-test:8080 on the compose network
+# (customer portal: http://customer-fe-test:8080). The .env BASE_URL points at
+# the dev backend and is ignored here; pass BASE_URL on the make command line
+# to override it. A localhost BASE_URL (e.g. BASE_URL=http://localhost:8082)
+# switches to the host network and the published customer-fe-test port.
+# Credentials come from .env (TEST_USERNAME/TEST_PASSWORD).
+# E2E_TIMEOUT bounds the whole go test run (go's default of 10m is too short).
+# TMPDIR is a tmpfs inside the container (E2E_TMPFS_SIZE), not the bind-mounted
+# repo: Playwright starts Chromium with --disable-dev-shm-usage, so the browser
+# keeps its profile and every shared-memory segment as files under TMPDIR, and a
+# page holds ~38 MB more per navigation until the renderer collects garbage. On a
+# nearly full repo filesystem pages then fail with net::ERR_INSUFFICIENT_RESOURCES
+# or "Page crashed". go test also builds its test binaries there.
+# ---------------------------------------------------------------------------
+E2E_TIMEOUT ?= 30m
+E2E_TMPFS_SIZE ?= 4g
+ifeq ($(origin BASE_URL),command line)
+E2E_BASE_URL := $(BASE_URL)
+else
+E2E_BASE_URL := http://$(or $(TEST_BACKEND_SERVICE_HOST),backend-test):$(or $(TEST_BACKEND_CONTAINER_PORT),8080)
+endif
+E2E_ON_HOST := $(filter http://localhost:% http://127.0.0.1:%,$(E2E_BASE_URL))
+E2E_NETWORK := $(or $(PLAYWRIGHT_NETWORK),$(if $(E2E_ON_HOST),host,goatflow_goatflow-network))
+ifeq ($(origin CUSTOMER_PORTAL_URL),command line)
+E2E_CUSTOMER_PORTAL_URL := $(CUSTOMER_PORTAL_URL)
+else
+E2E_CUSTOMER_PORTAL_URL := $(if $(E2E_ON_HOST),http://localhost:$(TEST_CUSTOMER_FE_PORT),http://customer-fe-test:8080)
+endif
+E2E_DOCKER_RUN = $(CONTAINER_CMD) run --rm \
 		--platform $(NATIVE_PLATFORM) \
 		--security-opt label=disable \
-		$(CONTAINER_USER) \
 		-u "$$(id -u):$$(id -g)" \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
-		$$( [ -n "$(PLAYWRIGHT_NETWORK)" ] && printf -- "--network $(PLAYWRIGHT_NETWORK)" || printf -- "--network host" ) \
+		--network $(E2E_NETWORK) \
 		-e HOME=/workspace \
-		-e BASE_URL=$(BASE_URL) \
-		-e RAW_BASE_URL=$(BASE_URL) \
-		-e TEST_USERNAME=$(TEST_USERNAME) \
-		-e TEST_PASSWORD=$(TEST_PASSWORD) \
-		-e DEMO_ADMIN_EMAIL=$(DEMO_ADMIN_EMAIL) \
-		-e DEMO_ADMIN_PASSWORD=$(DEMO_ADMIN_PASSWORD) \
+		-e BASE_URL=$(E2E_BASE_URL) \
+		-e RAW_BASE_URL=$(E2E_BASE_URL) \
+		-e CUSTOMER_PORTAL_URL=$(E2E_CUSTOMER_PORTAL_URL) \
+		-e TEST_USERNAME -e TEST_PASSWORD -e DEMO_ADMIN_EMAIL -e DEMO_ADMIN_PASSWORD \
+		-e HEADLESS=$(or $(HEADLESS),true) \
 		-e PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-cache/browsers \
 		-e XDG_CACHE_HOME=/workspace/.xdg-cache \
-		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
-		 goatflow-playwright-go:latest bash -lc "go test -tags e2e -v ./tests/e2e/playwright $${ARGS}"
+		--tmpfs /tmp:rw,exec,nosuid,nodev,mode=1777,size=$(E2E_TMPFS_SIZE) -e TMPDIR=/tmp \
+		-e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
+		goatflow-playwright-go:latest
+
+.PHONY: e2e-image
+e2e-image:
+	@$(CONTAINER_CMD) build --platform $(NATIVE_PLATFORM) -f Dockerfile.playwright-go -t goatflow-playwright-go:latest . >/dev/null
+	@mkdir -p tmp test-results/screenshots test-results/videos
+	@printf "[e2e] BASE_URL=%s network=%s portal=%s timeout=%s\n" "$(E2E_BASE_URL)" "$(E2E_NETWORK)" "$(E2E_CUSTOMER_PORTAL_URL)" "$(E2E_TIMEOUT)"
+
+.PHONY: test-e2e-playwright-go
+test-e2e-playwright-go: e2e-image
+	@printf "\n🎭 Running Go Playwright e2e suite (tests/e2e/playwright)...\n"
+	@$(E2E_DOCKER_RUN) bash -lc "go test -tags e2e -count=1 -timeout $(E2E_TIMEOUT) -v ./tests/e2e/playwright $(ARGS)"
 
 .PHONY: test-e2e-go
-test-e2e-go:
-	@printf "\n🎭 Running Go E2E tests (Playwright) via dedicated container...\n"
-	@printf "   Platform: $(NATIVE_PLATFORM)\n"
-	$(CONTAINER_CMD) build --platform $(NATIVE_PLATFORM) -f Dockerfile.playwright-go -t goatflow-playwright-go:latest . >/dev/null
-	@if [ -n "$(BASE_URL)" ]; then echo "[e2e-go] (explicit) BASE_URL=$(BASE_URL)"; else echo "[e2e-go] (default) BASE_URL=$${BASE_URL:-http://localhost:8080}"; fi
-	@TEST_PATTERN=$${TEST:-CustomerTicket}; echo "[e2e-go] Running pattern: $$TEST_PATTERN";
-	$(CONTAINER_CMD) run --rm \
-		--platform $(NATIVE_PLATFORM) \
-		--security-opt label=disable \
-		$(CONTAINER_USER) \
-		-u "$$UID:$$GID" \
-		-v "$$PWD:/workspace" \
-		-w /workspace \
-		--network host \
-		-e HOME=/workspace \
-		-e BASE_URL=$(BASE_URL) \
-		-e RAW_BASE_URL=$(BASE_URL) \
-		-e TEST_USERNAME=$(TEST_USERNAME) \
-		-e TEST_PASSWORD=$(TEST_PASSWORD) \
-		-e DEMO_ADMIN_EMAIL=$(DEMO_ADMIN_EMAIL) \
-		-e XDG_CACHE_HOME=/workspace/.xdg-cache \
-		-e PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-cache/browsers \
-		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
-		 goatflow-playwright-go:latest bash -lc "go test -tags e2e -v ./tests/e2e -run \"$${TEST:-CustomerTicket}\""
+test-e2e-go: e2e-image
+	@printf "\n🎭 Running Go e2e suite (tests/e2e), pattern '%s'...\n" "$(or $(TEST),.)"
+	@$(E2E_DOCKER_RUN) bash -lc "go test -tags e2e -count=1 -timeout $(E2E_TIMEOUT) -v ./tests/e2e -run '$(or $(TEST),.)'"
 
 PLAYWRIGHT_RESULTS_DIR ?= /tmp/playwright-results
 PLAYWRIGHT_OUTPUT_DIR ?= /tmp/playwright-artifacts
@@ -2814,101 +2804,6 @@ gen-migration:
 	echo "Created migration files:"; \
 	echo "  $(ACTIVE_MIGRATIONS_DIR)/$$timestamp\_$$name.up.sql"; \
 	echo "  $(ACTIVE_MIGRATIONS_DIR)/$$timestamp\_$$name.down.sql"
-
-# LDAP testing and administration commands
-.PHONY: test-ldap test-ldap-perf ldap-admin ldap-logs ldap-setup ldap-test-user
-
-# Run LDAP integration tests
-test-ldap:
-	@printf "Running LDAP integration tests...\n"
-	@printf "Starting LDAP server if not running...\n"	$(COMPOSE_CMD) up -d openldap
-	@printf "Waiting for LDAP server to be ready...\n"
-	@sleep 30
-	@printf "Running integration tests...\n"	$(COMPOSE_CMD) exec -e LDAP_INTEGRATION_TESTS=true -e LDAP_HOST=openldap backend go test -v ./internal/service -run TestLDAPIntegration
-
-# Run LDAP performance benchmarks
-test-ldap-perf:
-	@printf "Running LDAP performance benchmarks...\n"	$(COMPOSE_CMD) up -d openldap
-	@printf "Waiting for LDAP server...\n"
-	@sleep 30
-	$(COMPOSE_CMD) exec -e LDAP_INTEGRATION_TESTS=true -e LDAP_HOST=openldap backend go test -v ./internal/service -bench=BenchmarkLDAP -run=^$$
-
-# Open phpLDAPadmin in browser
-ldap-admin:
-	@printf "Starting phpLDAPadmin...\n"
-	$(COMPOSE_CMD) --profile tools up -d phpldapadmin
-	@printf "Opening phpLDAPadmin at http://localhost:8091\n"
-	@printf "Login with:\n"
-	@printf "  Login DN: cn=admin,dc=goatflow,dc=local\n"
-	@printf "  Password: (LDAP_ADMIN_PASSWORD from .env)\n"
-	@open http://localhost:8091 || xdg-open http://localhost:8091 || echo "Open http://localhost:8091"
-
-# View OpenLDAP logs
-ldap-logs:
-	$(COMPOSE_CMD) logs -f openldap
-
-# Setup LDAP for development (start services and wait)
-ldap-setup:
-	@if [ -z "$${LDAP_ADMIN_PASSWORD}" ]; then echo "ERROR: LDAP_ADMIN_PASSWORD must be set in .env"; exit 1; fi
-	@printf "Setting up LDAP development environment...\n"
-	$(COMPOSE_CMD) up -d openldap
-	@printf "Waiting for LDAP server to initialize (this may take up to 60 seconds)...\n"
-	@timeout=60; \
-	while [ $$timeout -gt 0 ]; do \
-		if $(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost -b "dc=goatflow,dc=local" -D "cn=admin,dc=goatflow,dc=local" -w "$${LDAP_ADMIN_PASSWORD}" "(objectclass=*)" dn > /dev/null 2>&1; then \
-			echo "✓ LDAP server is ready!"; \
-			break; \
-		else \
-			echo "Waiting for LDAP server... ($$timeout seconds remaining)"; \
-			sleep 5; \
-			timeout=$$((timeout-5)); \
-		fi; \
-	done; \
-	if [ $$timeout -le 0 ]; then \
-		echo "⚠ LDAP server startup timeout. Check logs with 'make ldap-logs'"; \
-		exit 1; \
-	fi
-	@printf "\n"
-	@printf "LDAP Server Configuration:\n"
-	@printf "=========================\n"
-	@printf "Host: localhost:389\n"
-	@printf "Base DN: dc=goatflow,dc=local\n"
-	@printf "Admin DN: cn=admin,dc=goatflow,dc=local\n"
-	@printf "Admin Password: (LDAP_ADMIN_PASSWORD from .env)\n"
-	@printf "Readonly DN: cn=readonly,dc=goatflow,dc=local\n"
-	@printf "Readonly Password: (LDAP_READONLY_PASSWORD from .env)\n"
-	@printf "\n"
-	@printf "Test Users (password from LDAP_TEST_USER_PASSWORD):\n"
-	@printf "===================================\n"
-	@printf "jadmin     - john.admin@goatflow.local (System Administrator)\n"
-	@printf "smitchell  - sarah.mitchell@goatflow.local (IT Manager)\n"
-	@printf "mwilson    - mike.wilson@goatflow.local (Senior Support Agent)\n"
-	@printf "lchen      - lisa.chen@goatflow.local (Support Agent)\n"
-	@printf "djohnson   - david.johnson@goatflow.local (Junior Support Agent)\n"
-	@printf "\n"
-	@printf "Web Interface:\n"
-	@printf "==============\n"
-	@printf "phpLDAPadmin: http://localhost:8091 (run 'make ldap-admin')\n"
-# Test LDAP authentication with a specific user
-ldap-test-user:
-	@if [ -z "$${LDAP_READONLY_PASSWORD}" ]; then echo "ERROR: LDAP_READONLY_PASSWORD must be set in .env"; exit 1; fi
-	@echo -n "Username to test: "; \
-	read username; \
-	echo "Testing LDAP authentication for user: $$username"; \
-	$(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost \
-		-D "cn=readonly,dc=goatflow,dc=local" -w "$${LDAP_READONLY_PASSWORD}" \
-		-b "ou=Users,dc=goatflow,dc=local" \
-		"(&(objectClass=inetOrgPerson)(uid=$$username))" \
-		uid mail displayName telephoneNumber departmentNumber title
-
-# Quick LDAP connectivity test
-ldap-test:
-	@if [ -z "$${LDAP_ADMIN_PASSWORD}" ]; then echo "ERROR: LDAP_ADMIN_PASSWORD must be set in .env"; exit 1; fi
-	@printf "Testing LDAP connectivity...\n"
-	$(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost \
-		-D "cn=admin,dc=goatflow,dc=local" -w "$${LDAP_ADMIN_PASSWORD}" \
-		-b "dc=goatflow,dc=local" \
-		"(objectclass=*)" dn | head -20
 
 # Test that all Makefile commands are properly containerized
 .PHONY: test-containerized

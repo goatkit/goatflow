@@ -18,6 +18,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/platform/notifications"
 	"github.com/goatkit/goatflow/internal/platform/utils"
 	"github.com/goatkit/goatflow/internal/repository"
@@ -32,12 +33,11 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 		// Get agent user info from context
-		userID := c.GetUint("user_id")
-		if userID == 0 {
-			// Fallback for now if auth middleware not applied (development/testing)
-			userID = 1
+		actorID, ok := auditUserID(c)
+		if !ok {
+			return
 		}
-		// username := c.GetString("username")
+		userID := uint(actorID)
 
 		// Get form data
 		title := c.PostForm("subject") // Agent form uses 'subject' field name
@@ -86,9 +86,6 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 		if typeID == "" {
 			typeID = "1" // Default type
 		}
-		if stateID == "" {
-			stateID = "1" // New state
-		}
 
 		// Map textual priority codes (form values) to numeric IDs
 		switch priorityID {
@@ -110,6 +107,14 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 		if db == nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database connection failed"})
 			return
+		}
+		if stateID == "" {
+			newStateID, lerr := lookups.ID(c.Request.Context(), db, lookups.StateLookup, lookups.StateNew)
+			if lerr != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve default ticket state"})
+				return
+			}
+			stateID = strconv.Itoa(newStateID)
 		}
 
 		// Parse numeric IDs
@@ -259,7 +264,7 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 		ticketModel := &models.Ticket{
 			Title:             title,
 			QueueID:           queueIDInt,
-			TicketLockID:      1,
+			TicketLockID:      models.TicketUnlocked,
 			TypeID:            typePtr,
 			ServiceID:         serviceIDPtr,
 			UserID:            &userIDInt,
@@ -376,7 +381,11 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 				if cfg := config.Get(); cfg != nil {
 					emailCfg = &cfg.Email
 				}
-				renderCtx := notifications.BuildRenderContext(context.Background(), db, customerUserIDValue.String, int(userID))
+				renderCtx, rcErr := notifications.BuildRenderContext(context.Background(), db, customerUserIDValue.String, int(userID))
+				if rcErr != nil {
+					log.Printf("Ticket created email for ticket %d not sent: %v", ticketModel.ID, rcErr)
+					return
+				}
 				branding, brandErr := notifications.PrepareQueueEmail(
 					context.Background(),
 					db,

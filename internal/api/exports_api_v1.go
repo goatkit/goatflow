@@ -332,8 +332,6 @@ var HandleAPIv1TicketAssign = HandleAssignTicketAPI
 
 // Auth handlers.
 var HandleAPIv1AuthLogin = platformapi.HandleLoginAPI
-var HandleAPIv1AuthRefresh = platformapi.HandleRefreshTokenAPI
 var HandleAPIv1AuthLogout = platformapi.HandleLogoutAPI
-var HandleAPIv1AuthRegister = platformapi.HandleRegisterAPI
 
 // Search API handler (using existing HandleSearchAPI from search_handler.go)

@@ -10,12 +10,13 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/goatkit/goatflow/internal/platform/shared"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 func init() {
@@ -47,46 +48,61 @@ func setupLookupsTestRouter() *gin.Engine {
 // =============================================================================
 
 func TestAdminTypesPageExtended(t *testing.T) {
+	setupTemplateRenderer(t)
 	router := setupLookupsTestRouter()
+	db := getTestDB(t)
 
-	t.Run("GET /admin/types renders page", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/types", nil)
-		req.Header.Set("Cookie", "access_token=test_token")
+	suffix := fmt.Sprint(time.Now().UnixNano())
+	alpha := "PageTypeAlpha" + suffix
+	beta := "PageTypeBeta" + suffix
+	for _, name := range []string{alpha, beta} {
+		cleanupAdminTestTypeByName(t, name)
+		_, err := db.Exec(database.ConvertPlaceholders(`INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
+			VALUES (?, 1, NOW(), 1, NOW(), 1)`), name)
+		require.NoError(t, err)
+	}
+
+	get := func(path string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
+		return w
+	}
 
-		assert.Equal(t, http.StatusOK, w.Code)
-		body := w.Body.String()
-		assert.Contains(t, body, "Type")
+	t.Run("GET /admin/types lists types from the database", func(t *testing.T) {
+		w := get("/admin/types")
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), alpha)
+		assert.Contains(t, w.Body.String(), beta)
 	})
 
-	t.Run("GET /admin/types with search", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/types?search=incident", nil)
-		req.Header.Set("Cookie", "access_token=test_token")
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
+	t.Run("GET /admin/types with search filters rows", func(t *testing.T) {
+		w := get("/admin/types?search=" + url.QueryEscape(alpha))
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), alpha)
+		assert.NotContains(t, w.Body.String(), beta)
 	})
 
 	t.Run("GET /admin/types with sort and order", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/types?sort=name&order=asc", nil)
-		req.Header.Set("Cookie", "access_token=test_token")
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
+		w := get("/admin/types?sort=name&order=desc")
+		require.Equal(t, http.StatusOK, w.Code)
+		body := w.Body.String()
+		require.Contains(t, body, alpha)
+		require.Contains(t, body, beta)
+		assert.Less(t, strings.Index(body, beta), strings.Index(body, alpha))
 	})
 }
 
 func TestAdminTypesCRUDExtended(t *testing.T) {
 	router := setupLookupsTestRouter()
 
-	var createdTypeID int
+	suffix := fmt.Sprint(time.Now().UnixNano())
 
 	t.Run("Create type returns created status", func(t *testing.T) {
+		name := "Test Type For Deletion " + suffix
+		cleanupAdminTestTypeByName(t, name)
 		payload := map[string]interface{}{
-			"name": "Test Type For Deletion",
+			"name": name,
 		}
 		jsonData, _ := json.Marshal(payload)
 
@@ -102,43 +118,36 @@ func TestAdminTypesCRUDExtended(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 		assert.True(t, response["success"].(bool))
-		// Extract the created type ID for later tests
-		if typeData, ok := response["type"].(map[string]interface{}); ok {
-			if id, ok := typeData["id"].(float64); ok {
-				createdTypeID = int(id)
-			}
-		}
 	})
 
 	t.Run("Update type returns success", func(t *testing.T) {
-		// Use a high ID that likely exists for update test
+		id := createAdminTestType(t, "Update Target "+suffix)
 		formData := url.Values{
-			"name": {"Updated Type Name"},
+			"name": {"Updated Type Name " + suffix},
 		}
 
-		req := httptest.NewRequest(http.MethodPost, "/admin/types/1/update", strings.NewReader(formData.Encode()))
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/types/%d/update", id), strings.NewReader(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Cookie", "access_token=test_token")
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
+		name, _ := adminTestTypeRow(t, id)
+		assert.Equal(t, "Updated Type Name "+suffix, name)
 	})
 
 	t.Run("Delete type returns success", func(t *testing.T) {
-		// Skip if we didn't get a created type ID - we need a type without tickets
-		if createdTypeID == 0 {
-			t.Skip("No created type ID available - skipping delete test")
-		}
-		// Delete the newly created type (which has no tickets)
-		deleteURL := fmt.Sprintf("/admin/types/%d/delete", createdTypeID)
-		req := httptest.NewRequest(http.MethodPost, deleteURL, nil)
+		// A fresh type has no tickets, so it is deletable.
+		id := createAdminTestType(t, "Delete Target "+suffix)
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/types/%d/delete", id), nil)
 		req.Header.Set("Cookie", "access_token=test_token")
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		// Type with no tickets should be deletable
 		assert.Equal(t, http.StatusOK, w.Code)
+		_, validID := adminTestTypeRow(t, id)
+		assert.Equal(t, 2, validID)
 	})
 
 	t.Run("Delete type with tickets returns error", func(t *testing.T) {
@@ -221,61 +230,35 @@ func TestAdminPrioritiesPage(t *testing.T) {
 // ADMIN LOOKUPS (COMBINED PAGE) TESTS
 // =============================================================================
 
-func TestAdminLookupsPageCombined(t *testing.T) {
-	// Clear global renderer and set test mode to ensure fallback HTML is used
-	shared.SetGlobalRenderer(nil)
-	t.Setenv("HTMX_HANDLER_TEST_MODE", "1")
-
+func TestAdminLookupsPage(t *testing.T) {
+	setupTemplateRenderer(t)
+	db := getTestDB(t)
 	router := setupLookupsTestRouter()
 
-	t.Run("GET /admin/lookups renders page", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/lookups", nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
+	typeName := fmt.Sprintf("LookupsPageType%d", time.Now().UnixNano())
+	cleanupAdminTestTypeByName(t, typeName)
+	_, err := db.Exec(database.ConvertPlaceholders(`INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, 1, NOW(), 1, NOW(), 1)`), typeName)
+	require.NoError(t, err)
 
-		assert.Equal(t, http.StatusOK, w.Code)
-		body := w.Body.String()
+	var priorityName, stateName, stateTypeName string
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		"SELECT name FROM ticket_priority WHERE valid_id = 1 ORDER BY id")).Scan(&priorityName))
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(`
+		SELECT ts.name, tst.name FROM ticket_state ts
+		JOIN ticket_state_type tst ON ts.type_id = tst.id
+		WHERE ts.valid_id = 1 ORDER BY ts.id`)).Scan(&stateName, &stateTypeName))
 
-		// Check for main page elements
-		assert.Contains(t, body, "Manage Lookup Values")
-		assert.Contains(t, body, "Queues")
-		assert.Contains(t, body, "Priorities")
-		assert.Contains(t, body, "Ticket Types")
-		assert.Contains(t, body, "Statuses")
-		assert.Contains(t, body, "Refresh Cache")
-	})
+	req := httptest.NewRequest(http.MethodGet, "/admin/lookups?tab=states", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
 
-	t.Run("GET /admin/lookups with tab param", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/lookups?tab=statuses", nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-
-	t.Run("GET /admin/lookups with priorities tab", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/lookups?tab=priorities", nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-
-	t.Run("GET /admin/lookups with types tab", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/lookups?tab=types", nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-
-	t.Run("GET /admin/lookups with queues tab", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/lookups?tab=queues", nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	body := w.Body.String()
+	assert.Contains(t, body, typeName, "ticket types come from the database")
+	assert.Contains(t, body, priorityName, "priorities come from the database")
+	assert.Contains(t, body, stateName, "states come from the database")
+	assert.Contains(t, body, stateTypeName, "state types come from the database")
 }
 
 // =============================================================================
@@ -325,7 +308,8 @@ func TestLookupAPIEndpointsExtended(t *testing.T) {
 		assert.Equal(t, 5, len(data))
 	})
 
-	t.Run("GET /api/lookups/types returns 5 items", func(t *testing.T) {
+	t.Run("GET /api/lookups/types returns the valid ticket types", func(t *testing.T) {
+		want := validTicketTypeCount(t)
 		req := httptest.NewRequest(http.MethodGet, "/api/lookups/types", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -338,10 +322,14 @@ func TestLookupAPIEndpointsExtended(t *testing.T) {
 
 		data, ok := response["data"].([]interface{})
 		require.True(t, ok)
-		assert.Equal(t, 5, len(data))
+		assert.Equal(t, want, len(data))
 	})
 
-	t.Run("GET /api/lookups/statuses returns 5 items", func(t *testing.T) {
+	t.Run("GET /api/lookups/statuses returns every ticket state", func(t *testing.T) {
+		var want int
+		require.NoError(t, getTestDB(t).QueryRow(database.ConvertPlaceholders(
+			`SELECT COUNT(*) FROM ticket_state`)).Scan(&want))
+		GetLookupService().InvalidateCache()
 		req := httptest.NewRequest(http.MethodGet, "/api/lookups/statuses", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -354,7 +342,7 @@ func TestLookupAPIEndpointsExtended(t *testing.T) {
 
 		data, ok := response["data"].([]interface{})
 		require.True(t, ok)
-		assert.Equal(t, 5, len(data))
+		assert.Equal(t, want, len(data))
 	})
 
 	t.Run("GET /api/lookups/form-data returns all lookups", func(t *testing.T) {
@@ -559,6 +547,7 @@ func TestTypeStructureValidationExtended(t *testing.T) {
 	})
 
 	t.Run("Types include expected values", func(t *testing.T) {
+		GetLookupService().InvalidateCache()
 		req := httptest.NewRequest(http.MethodGet, "/api/lookups/types", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -574,8 +563,7 @@ func TestTypeStructureValidationExtended(t *testing.T) {
 			values = append(values, typ["value"].(string))
 		}
 
-		assert.Contains(t, values, "incident")
-		assert.Contains(t, values, "service_request")
+		assert.ElementsMatch(t, validTicketTypeNames(t), values)
 	})
 }
 
@@ -615,67 +603,6 @@ func TestLookupConcurrentAccessExtended(t *testing.T) {
 		for i := 0; i < numRequests; i++ {
 			<-done
 		}
-	})
-}
-
-// =============================================================================
-// ADMIN LOOKUPS (COMBINED PAGE) TESTS
-// =============================================================================
-
-func TestAdminLookupsPage(t *testing.T) {
-	// Clear global renderer and set test mode to ensure fallback HTML is used
-	shared.SetGlobalRenderer(nil)
-	t.Setenv("HTMX_HANDLER_TEST_MODE", "1")
-
-	router := setupLookupsTestRouter()
-
-	t.Run("GET /admin/lookups renders page", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/lookups", nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-		body := w.Body.String()
-
-		// Check for main page elements
-		assert.Contains(t, body, "Manage Lookup Values")
-		assert.Contains(t, body, "Queues")
-		assert.Contains(t, body, "Priorities")
-		assert.Contains(t, body, "Ticket Types")
-		assert.Contains(t, body, "Statuses")
-		assert.Contains(t, body, "Refresh Cache")
-	})
-
-	t.Run("GET /admin/lookups with tab param", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/lookups?tab=statuses", nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-
-	t.Run("GET /admin/lookups with priorities tab", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/lookups?tab=priorities", nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-
-	t.Run("GET /admin/lookups with types tab", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/lookups?tab=types", nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-
-	t.Run("GET /admin/lookups with queues tab", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/lookups?tab=queues", nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
 	})
 }
 
@@ -726,7 +653,8 @@ func TestLookupAPIEndpoints(t *testing.T) {
 		assert.Equal(t, 5, len(data))
 	})
 
-	t.Run("GET /api/lookups/types returns 5 items", func(t *testing.T) {
+	t.Run("GET /api/lookups/types returns the valid ticket types", func(t *testing.T) {
+		want := validTicketTypeCount(t)
 		req := httptest.NewRequest(http.MethodGet, "/api/lookups/types", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -739,10 +667,14 @@ func TestLookupAPIEndpoints(t *testing.T) {
 
 		data, ok := response["data"].([]interface{})
 		require.True(t, ok)
-		assert.Equal(t, 5, len(data))
+		assert.Equal(t, want, len(data))
 	})
 
-	t.Run("GET /api/lookups/statuses returns 5 items", func(t *testing.T) {
+	t.Run("GET /api/lookups/statuses returns every ticket state", func(t *testing.T) {
+		var want int
+		require.NoError(t, getTestDB(t).QueryRow(database.ConvertPlaceholders(
+			`SELECT COUNT(*) FROM ticket_state`)).Scan(&want))
+		GetLookupService().InvalidateCache()
 		req := httptest.NewRequest(http.MethodGet, "/api/lookups/statuses", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -755,7 +687,7 @@ func TestLookupAPIEndpoints(t *testing.T) {
 
 		data, ok := response["data"].([]interface{})
 		require.True(t, ok)
-		assert.Equal(t, 5, len(data))
+		assert.Equal(t, want, len(data))
 	})
 
 	t.Run("GET /api/lookups/form-data returns all lookups", func(t *testing.T) {
@@ -960,6 +892,7 @@ func TestTypeStructureValidation(t *testing.T) {
 	})
 
 	t.Run("Types include expected values", func(t *testing.T) {
+		GetLookupService().InvalidateCache()
 		req := httptest.NewRequest(http.MethodGet, "/api/lookups/types", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -975,8 +908,7 @@ func TestTypeStructureValidation(t *testing.T) {
 			values = append(values, typ["value"].(string))
 		}
 
-		assert.Contains(t, values, "incident")
-		assert.Contains(t, values, "service_request")
+		assert.ElementsMatch(t, validTicketTypeNames(t), values)
 	})
 }
 

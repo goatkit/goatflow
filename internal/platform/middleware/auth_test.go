@@ -17,8 +17,8 @@ func TestAuthMiddleware(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	t.Setenv("APP_ENV", "production")
 
-	// Create JWT manager for testing
-	jwtManager := auth.NewJWTManager("test-secret", 1*time.Hour)
+	// Production rejects short/placeholder secrets, so use a real-length key.
+	jwtManager := auth.NewJWTManager("middleware-auth-suite-signing-key-0123456789", 1*time.Hour)
 	authMiddleware := NewAuthMiddleware(jwtManager)
 
 	t.Run("RequireAuth blocks unauthenticated requests", func(t *testing.T) {

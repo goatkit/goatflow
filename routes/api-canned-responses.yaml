@@ -1,31 +1,32 @@
 ---
-# Canned Responses API Routes - Migrated from protectedAPI code routes
+# Canned Responses API Routes (canned_response / canned_response_category tables)
 apiVersion: goatflow.io/v1
 kind: RouteGroup
 metadata:
   name: api-canned-responses-protected
-  description: "Canned response management API endpoints (protected)"
+  description: "Canned response management API endpoints (protected, agents only)"
   namespace: default
   enabled: true
 spec:
   prefix: /api/canned-responses
   middleware:
     - unified_auth
+    - agent
   routes:
     - path: /
       method: GET
       handler: cannedResponses_GetResponses
-      description: "List all canned responses"
+      description: "List canned responses visible to the caller (filters: category, scope, search, tags, sort_by, sort_order, limit)"
 
-    - path: /quick
-      method: GET
-      handler: cannedResponses_GetQuickResponses
-      description: "Get quick access responses"
+    - path: /
+      method: POST
+      handler: cannedResponses_CreateResponse
+      description: "Create a canned response"
 
     - path: /popular
       method: GET
       handler: cannedResponses_GetPopularResponses
-      description: "Get popular responses"
+      description: "Most used responses first (limit)"
 
     - path: /categories
       method: GET
@@ -40,14 +41,54 @@ spec:
     - path: /search
       method: GET
       handler: cannedResponses_SearchResponses
-      description: "Search canned responses"
+      description: "Search canned responses by name or content (q)"
 
     - path: /user
       method: GET
       handler: cannedResponses_GetResponsesForUser
       description: "Get responses for current user"
 
+    - path: /statistics
+      method: GET
+      handler: cannedResponses_GetStatistics
+      description: "Usage statistics for the caller's responses"
+
+    - path: /export
+      method: GET
+      handler: cannedResponses_ExportResponses
+      description: "Export responses as JSON or CSV (format=csv)"
+
+    - path: /import
+      method: POST
+      handler: cannedResponses_ImportResponses
+      description: "Import personal responses from a CSV upload (field: file)"
+
     - path: /:id
       method: GET
       handler: cannedResponses_GetResponseByID
       description: "Get response by ID"
+
+    - path: /:id
+      method: PUT
+      handler: cannedResponses_UpdateResponse
+      description: "Update a canned response"
+
+    - path: /:id
+      method: DELETE
+      handler: cannedResponses_DeleteResponse
+      description: "Delete a canned response"
+
+    - path: /:id/use
+      method: POST
+      handler: cannedResponses_UseResponse
+      description: "Render a response with placeholder context and count the use"
+
+    - path: /:id/share
+      method: POST
+      handler: cannedResponses_ShareResponse
+      description: "Change a response's scope (global requires admin)"
+
+    - path: /:id/copy
+      method: POST
+      handler: cannedResponses_CopyResponse
+      description: "Copy a response into the caller's personal scope"

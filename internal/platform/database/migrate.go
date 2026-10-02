@@ -220,17 +220,3 @@ func getMigrationsPath() string {
 
 	return ""
 }
-
-// GetMigrationVersion returns the current migration version (public API).
-func GetMigrationVersion(db *sql.DB) (uint, bool, error) {
-	if db == nil {
-		return 0, false, fmt.Errorf("database connection is nil")
-	}
-
-	version, dirty, err := getMigrationVersion(db)
-	if err != nil {
-		return 0, false, err
-	}
-
-	return uint(version), dirty, nil
-}

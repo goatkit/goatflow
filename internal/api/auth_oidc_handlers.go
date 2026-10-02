@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -14,8 +13,8 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
 	"github.com/goatkit/goatflow/internal/platform/models"
-	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/platform/shared"
+	"github.com/goatkit/goatflow/internal/repository"
 )
 
 func handleOIDCRedirect(c *gin.Context) {
@@ -32,6 +31,7 @@ func handleOIDCRedirect(c *gin.Context) {
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
+		log.Printf("OIDC redirect: database unavailable: %v", err)
 		c.Redirect(http.StatusFound, "/login?error=server_error")
 		return
 	}
@@ -113,6 +113,7 @@ func handleOIDCCallback(c *gin.Context) {
 	// Validate provider exists in DB
 	db, err := database.GetDB()
 	if err != nil || db == nil {
+		log.Printf("OIDC callback: database unavailable: %v", err)
 		c.Redirect(http.StatusFound, "/login?error=server_error")
 		return
 	}
@@ -164,7 +165,13 @@ func handleOIDCCallback(c *gin.Context) {
 		return
 	}
 
-	if needs2FA(user.ID) {
+	mfaRequired, err := needs2FA(user.ID)
+	if err != nil {
+		log.Printf("OIDC login: second-factor status for user %d unavailable: %v", user.ID, err)
+		c.Redirect(http.StatusFound, "/login?error=server_error")
+		return
+	}
+	if mfaRequired {
 		sessionMgr := auth.GetTOTPSessionManager()
 		if sessionMgr != nil {
 			token, err := sessionMgr.CreateAgentSession(int(user.ID), user.Login, c.ClientIP(), c.Request.UserAgent())
@@ -193,14 +200,19 @@ func generateCodeVerifier() string {
 	return hex.EncodeToString(buf)
 }
 
-func needs2FA(userID uint) bool {
-	if db, err := database.GetDB(); err == nil && db != nil {
-		var enabled int
-		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM totp_pending_session WHERE user_id = ? AND expires_at > ?")
-		_ = db.QueryRow(query, userID, time.Now().Format("2006-01-02 15:04:05")).Scan(&enabled)
-		return enabled > 0
+// needs2FA reports whether an SSO-authenticated agent must still pass the
+// second factor, using the same TOTP/passkey status as the password login.
+// Lookup failures are returned so callers refuse the login (fail closed).
+func needs2FA(userID uint) (bool, error) {
+	db, err := database.GetDB()
+	if err != nil {
+		return false, err
 	}
-	return false
+	status, err := agentMFAStatus(db, int(userID))
+	if err != nil {
+		return false, err
+	}
+	return status.Enabled(), nil
 }
 
 func createSession(c *gin.Context, user *models.User) {

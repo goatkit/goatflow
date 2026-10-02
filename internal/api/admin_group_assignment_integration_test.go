@@ -1,306 +1,78 @@
 package api
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/repository"
 )
 
-// 2. But UI/API might not be displaying or updating them correctly.
+// TestRealGroupAssignmentIssue checks that group memberships stored in
+// group_user are reported by HandleAdminUserGet and replaced by
+// HandleAdminUserUpdate. It runs on an agent created for the test, so the
+// seeded agents' memberships are never touched.
 func TestRealGroupAssignmentIssue(t *testing.T) {
-	config := GetTestConfig()
+	gin.SetMode(gin.TestMode)
+	db, err := database.GetDB()
+	require.NoError(t, err)
 
-	if db, err := database.GetDB(); err == nil && db != nil {
-		ensureTestUserWithGroups(t, db, config)
-	}
+	agentID, login := createIsolatedAgent(t, "group_assignment")
+	_, err = db.Exec(database.ConvertPlaceholders(`
+		INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+		SELECT ?, g.id, 'rw', CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1
+		FROM `+"`groups`"+` g WHERE g.name IN ('admin', 'users')`), agentID)
+	require.NoError(t, err)
 
-	// userGroupNames returns the user's group names joined with ", "; sql.ErrNoRows
-	// when the user is missing or has no groups.
-	userGroupNames := func(db *sql.DB, login string) (string, error) {
-		rows, err := db.Query(database.ConvertPlaceholders(`
-			SELECT g.name
-			FROM users u
-			JOIN group_user gu ON u.id = gu.user_id
-			JOIN groups g ON gu.group_id = g.id
-			WHERE u.login = ?
-			ORDER BY g.name`), login)
-		if err != nil {
-			return "", err
-		}
-		defer rows.Close()
-		var names []string
-		for rows.Next() {
-			var name string
-			if err := rows.Scan(&name); err != nil {
-				return "", err
-			}
-			names = append(names, name)
-		}
-		if err := rows.Err(); err != nil {
-			return "", err
-		}
-		if len(names) == 0 {
-			return "", sql.ErrNoRows
-		}
-		return strings.Join(names, ", "), nil
-	}
-
-	// Manual database check first - this should pass based on our earlier query
-	t.Run("Database verification: Test user should have groups", func(t *testing.T) {
-		db, err := database.GetDB()
-		if err != nil || db == nil {
-			t.Skip("Database not available")
-		}
-
-		ensureTestUserWithGroups(t, db, config)
-
-		// Query to verify user groups
-		groups, err := userGroupNames(db, config.UserLogin)
-
-		if err != nil {
-			t.Logf("Could not find test user or query failed: %v", err)
-			t.Skip("Test user not found - create him first through UI")
-		}
-
-		assert.NotEmpty(t, groups, "Test user should have groups in database")
-		// Check for expected groups from config
-		for _, expectedGroup := range config.UserGroups {
-			assert.Contains(t, groups, expectedGroup, "Test user should have %s group", expectedGroup)
-		}
-		t.Logf("SUCCESS: Database shows test user has groups: %s", groups)
+	t.Run("Database verification: agent has its groups", func(t *testing.T) {
+		assert.Equal(t, []string{"admin", "users"}, adminTestUserGroups(t, agentID))
 	})
 
-	t.Run("API GET verification: Does HandleAdminUserGet return the groups?", func(t *testing.T) {
-		db, err := database.GetDB()
-		if err != nil || db == nil {
-			t.Skip("Database not available")
-		}
-
-		ensureTestUserWithGroups(t, db, config)
-
-		// Get test user's ID
-		var testUserID int
-		testUsername := os.Getenv("TEST_USERNAME")
-		if testUsername == "" {
-			testUsername = "testuser"
-		}
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM users WHERE login = ?"), testUsername).Scan(&testUserID)
-		if err != nil {
-			t.Skip("Test user not found")
-		}
-
-		// Test the HandleAdminUserGet function directly
-		gin.SetMode(gin.TestMode)
-		router := gin.New()
+	t.Run("API GET verification: HandleAdminUserGet returns the groups", func(t *testing.T) {
+		router := seedAdminRouter()
 		router.GET("/admin/users/:id", HandleAdminUserGet)
 
-		// Make request
-		req, _ := http.NewRequest("GET", "/admin/users/"+strconv.Itoa(testUserID), nil)
+		req, _ := http.NewRequest("GET", "/admin/users/"+strconv.Itoa(agentID), nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		// Check response
-		assert.Equal(t, http.StatusOK, w.Code, "API should return 200")
-
+		require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 		var response map[string]interface{}
-		err = json.Unmarshal(w.Body.Bytes(), &response)
-		require.NoError(t, err)
-
-		// Check if response contains groups
-		if data, ok := response["data"].(map[string]interface{}); ok {
-			if groups, hasGroups := data["groups"]; hasGroups {
-				t.Logf("SUCCESS: API returns groups: %v", groups)
-			} else {
-				t.Error("FAILED: API does not include groups in response")
-			}
-		} else {
-			t.Error("FAILED: API response malformed")
-		}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+		data, ok := response["data"].(map[string]interface{})
+		require.True(t, ok, "response should contain data")
+		groups, ok := data["groups"].([]interface{})
+		require.True(t, ok, "data should contain a groups list")
+		assert.ElementsMatch(t, []interface{}{"admin", "users"}, groups)
 	})
 
-	t.Run("Form submission test: Can we update Test user's groups via HandleAdminUserUpdate?", func(t *testing.T) {
-		db, err := database.GetDB()
-		if err != nil || db == nil {
-			t.Skip("Database not available")
-		}
-
-		ensureTestUserWithGroups(t, db, config)
-
-		// Get test user's ID and current data
-		var testUserID int
-		var firstName, lastName, login string
-		testUsernameLocal := os.Getenv("TEST_USERNAME")
-		if testUsernameLocal == "" {
-			testUsernameLocal = "testuser"
-		}
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT id, login, first_name, last_name FROM users WHERE login = ?"), testUsernameLocal).Scan(&testUserID, &login, &firstName, &lastName)
-		if err != nil {
-			t.Skip("Test user not found")
-		}
-
-		// Test the HandleAdminUserUpdate function
-		gin.SetMode(gin.TestMode)
-		router := gin.New()
+	t.Run("Form submission: HandleAdminUserUpdate replaces the groups", func(t *testing.T) {
+		router := seedAdminRouter()
 		router.PUT("/admin/users/:id", HandleAdminUserUpdate)
 
-		// Create form data that adds test groups
 		formData := url.Values{}
 		formData.Set("login", login)
-		formData.Set("first_name", firstName)
-		formData.Set("last_name", lastName)
+		formData.Set("first_name", "Isolated")
+		formData.Set("last_name", "Agent")
 		formData.Set("valid_id", "1")
-		// Add groups from config
-		for _, group := range config.UserGroups {
-			formData.Add("groups", group)
-		}
+		formData.Add("groups", "stats")
+		formData.Add("groups", "users")
 
-		// Make request
-		req, _ := http.NewRequest("PUT", "/admin/users/"+strconv.Itoa(testUserID),
+		req, _ := http.NewRequest("PUT", "/admin/users/"+strconv.Itoa(agentID),
 			strings.NewReader(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		// Check response
-		t.Logf("Update response status: %d", w.Code)
-		t.Logf("Update response body: %s", w.Body.String())
-
-		// Now check if the database was actually updated
-		newGroups, err := userGroupNames(db, config.UserLogin)
-
-		if err == nil {
-			t.Logf("Groups after update: %s", newGroups)
-		} else {
-			t.Logf("Could not query groups after update: %v", err)
-		}
+		require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+		assert.Equal(t, []string{"stats", "users"}, adminTestUserGroups(t, agentID))
 	})
-}
-
-func ensureTestUserWithGroups(t *testing.T, db *sql.DB, config TestConfig) {
-	t.Helper()
-
-	userRepo := repository.NewUserRepository(db)
-	user, err := userRepo.GetByLogin(config.UserLogin)
-	if err != nil {
-		user, err = findUserAnyStatus(db, config.UserLogin)
-		if err != nil {
-			if err != sql.ErrNoRows {
-				require.NoError(t, err)
-			}
-
-			user = &models.User{
-				Login:      config.UserLogin,
-				Password:   "$2a$10$test",
-				FirstName:  config.UserFirstName,
-				LastName:   config.UserLastName,
-				ValidID:    1,
-				CreateBy:   1,
-				ChangeBy:   1,
-				CreateTime: time.Now(),
-				ChangeTime: time.Now(),
-			}
-
-			err = userRepo.Create(user)
-			if err != nil {
-				if isDuplicateKeyError(err) {
-					user, err = findUserAnyStatus(db, config.UserLogin)
-					require.NoError(t, err)
-				} else {
-					require.NoError(t, err)
-				}
-			}
-		}
-	}
-
-	if user.ValidID != 1 {
-		require.NoError(t, userRepo.SetValidID(user.ID, 1, 1, time.Now()))
-		user.ValidID = 1
-	}
-
-	groupRepo := repository.NewGroupRepository(db)
-	for _, groupName := range config.UserGroups {
-		groupID := ensureGroupExists(t, db, groupRepo, groupName)
-		require.NoError(t, groupRepo.AddUserToGroup(user.ID, groupID))
-	}
-}
-
-func findUserAnyStatus(db *sql.DB, login string) (*models.User, error) {
-	query := database.ConvertPlaceholders("SELECT id, valid_id FROM users WHERE login = ? LIMIT 1")
-	var id int64
-	var validID int
-	err := db.QueryRow(query, login).Scan(&id, &validID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &models.User{
-		ID:      uint(id),
-		Login:   login,
-		ValidID: validID,
-	}, nil
-}
-
-func isDuplicateKeyError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "duplicate entry") ||
-		strings.Contains(msg, "unique constraint") ||
-		strings.Contains(msg, "duplicate key value") ||
-		strings.Contains(msg, "unique violation")
-}
-
-func ensureGroupExists(t *testing.T, db *sql.DB, groupRepo *repository.GroupSQLRepository, name string) uint {
-	t.Helper()
-
-	query := database.ConvertPlaceholders("SELECT id FROM groups WHERE name = ?")
-	var existingID uint64
-	err := db.QueryRow(query, name).Scan(&existingID)
-	if err == nil {
-		return uint(existingID)
-	}
-
-	if err != sql.ErrNoRows {
-		require.NoError(t, err)
-	}
-
-	group := &models.Group{
-		Name:     name,
-		ValidID:  1,
-		CreateBy: 1,
-		ChangeBy: 1,
-	}
-
-	require.NoError(t, groupRepo.Create(group))
-	switch id := group.ID.(type) {
-	case int64:
-		return uint(id)
-	case int:
-		return uint(id)
-	case uint:
-		return id
-	case uint64:
-		return uint(id)
-	default:
-		require.Failf(t, "invalid group id", "unexpected group id type %T", group.ID)
-		return 0
-	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/services"
 )
 
@@ -84,14 +85,13 @@ func HandleGetQueueStatsAPI(c *gin.Context) {
 	}
 
 	// Compute stats from ticket table using OTRS semantics
-	// Map of state categories; adjust IDs per actual seed data if needed
 	var total, openCount, closedCount, pendingCount int
 	statsQuery := database.ConvertPlaceholders(`
 		SELECT 
 			COUNT(*) as total,
-			COUNT(CASE WHEN ticket_state_id IN (1,4) THEN 1 END) as open_count,
-			COUNT(CASE WHEN ticket_state_id IN (2,3) THEN 1 END) as closed_count,
-			COUNT(CASE WHEN ticket_state_id IN (5,6) THEN 1 END) as pending_count
+			COUNT(CASE WHEN ticket_state_id IN (` + lookups.NewOpenStateIDsSQL + `) THEN 1 END) as open_count,
+			COUNT(CASE WHEN ticket_state_id IN (` + lookups.ClosedStateIDsSQL + `) THEN 1 END) as closed_count,
+			COUNT(CASE WHEN ticket_state_id IN (` + lookups.PendingStateIDsSQL + `) THEN 1 END) as pending_count
 		FROM ticket
 		WHERE queue_id = ?
 	`)

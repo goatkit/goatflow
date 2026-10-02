@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,6 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
 func TestUserAPI(t *testing.T) {
@@ -185,75 +188,6 @@ func TestUserAPI(t *testing.T) {
 
 			assert.Equal(t, http.StatusBadRequest, w.Code)
 		})
-
-		t.Run("should create user with valid data", func(t *testing.T) {
-			router := gin.New()
-			router.Use(func(c *gin.Context) {
-				c.Set("user_id", uint(1))
-				c.Next()
-			})
-			router.POST("/api/v1/users", HandleCreateUserAPI)
-
-			body := map[string]interface{}{
-				"login":      "newuser",
-				"email":      "new@example.com",
-				"first_name": "New",
-				"last_name":  "User",
-				"password":   "SecurePass123!",
-				"valid_id":   1,
-			}
-			jsonBody, _ := json.Marshal(body)
-
-			req := httptest.NewRequest("POST", "/api/v1/users", bytes.NewBuffer(jsonBody))
-			req.Header.Set("Content-Type", "application/json")
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-
-			if w.Code == http.StatusCreated {
-				var response map[string]interface{}
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				require.NoError(t, err)
-				assert.Equal(t, true, response["success"])
-
-				data := response["data"].(map[string]interface{})
-				assert.NotNil(t, data["id"])
-				assert.Equal(t, "newuser", data["login"])
-			}
-		})
-
-		t.Run("should hash password before storing", func(t *testing.T) {
-			// This is tested implicitly - the handler should never return
-			// the password in the response
-			router := gin.New()
-			router.Use(func(c *gin.Context) {
-				c.Set("user_id", uint(1))
-				c.Next()
-			})
-			router.POST("/api/v1/users", HandleCreateUserAPI)
-
-			body := map[string]interface{}{
-				"login":    "pwdtest",
-				"email":    "pwd@test.com",
-				"password": "PlainTextPassword",
-			}
-			jsonBody, _ := json.Marshal(body)
-
-			req := httptest.NewRequest("POST", "/api/v1/users", bytes.NewBuffer(jsonBody))
-			req.Header.Set("Content-Type", "application/json")
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-
-			if w.Code == http.StatusCreated {
-				var response map[string]interface{}
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				require.NoError(t, err)
-
-				data := response["data"].(map[string]interface{})
-				// Password should never be in response
-				assert.Nil(t, data["password"])
-				assert.Nil(t, data["pw"])
-			}
-		})
 	})
 
 	t.Run("Update User", func(t *testing.T) {
@@ -282,24 +216,26 @@ func TestUserAPI(t *testing.T) {
 			})
 			router.PUT("/api/v1/users/:id", HandleUpdateUserAPI)
 
+			id, login := createUpdateTestUser(t)
 			body := map[string]interface{}{
 				"first_name": "Updated",
 				"last_name":  "Name",
-				"email":      "updated@example.com",
+				"email":      login + ".updated@example.test",
 			}
 			jsonBody, _ := json.Marshal(body)
 
-			req := httptest.NewRequest("PUT", "/api/v1/users/1", bytes.NewBuffer(jsonBody))
+			req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/users/%d", id), bytes.NewBuffer(jsonBody))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
-			if w.Code == http.StatusOK {
-				var response map[string]interface{}
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				require.NoError(t, err)
-				assert.Equal(t, true, response["success"])
-			}
+			require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+			var response map[string]interface{}
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+			assert.Equal(t, true, response["success"])
+			first, last, _, _ := userRow(t, id)
+			assert.Equal(t, "Updated", first)
+			assert.Equal(t, "Name", last)
 		})
 
 		t.Run("should not allow updating login", func(t *testing.T) {
@@ -310,19 +246,25 @@ func TestUserAPI(t *testing.T) {
 			})
 			router.PUT("/api/v1/users/:id", HandleUpdateUserAPI)
 
+			id, login := createUpdateTestUser(t)
 			body := map[string]interface{}{
 				"login": "changedlogin", // Should be ignored or rejected
-				"email": "test@example.com",
+				"email": login + ".other@example.test",
 			}
 			jsonBody, _ := json.Marshal(body)
 
-			req := httptest.NewRequest("PUT", "/api/v1/users/1", bytes.NewBuffer(jsonBody))
+			req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/users/%d", id), bytes.NewBuffer(jsonBody))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
 			// Handler should either ignore the login field or return an error
 			assert.NotEqual(t, http.StatusInternalServerError, w.Code)
+			db, err := database.GetDB()
+			require.NoError(t, err)
+			var got string
+			require.NoError(t, db.QueryRow(database.ConvertPlaceholders(`SELECT login FROM users WHERE id = ?`), id).Scan(&got))
+			assert.Equal(t, login, got, "login must not change")
 		})
 	})
 
@@ -346,16 +288,15 @@ func TestUserAPI(t *testing.T) {
 			})
 			router.DELETE("/api/v1/users/:id", HandleDeleteUserAPI)
 
-			req := httptest.NewRequest("DELETE", "/api/v1/users/2", nil)
+			id, _ := createUpdateTestUser(t)
+			req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/users/%d", id), nil)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
-			// Should return 204 No Content on success
-			if w.Code == http.StatusNoContent {
-				// User should be marked invalid, not actually deleted
-				// This would be verified in integration tests
-				assert.Equal(t, 0, w.Body.Len())
-			}
+			require.Equal(t, http.StatusNoContent, w.Code, w.Body.String())
+			assert.Equal(t, 0, w.Body.Len())
+			_, _, _, validID := userRow(t, id)
+			assert.Equal(t, 2, validID, "user is marked invalid, not removed")
 		})
 
 		t.Run("should not delete system users", func(t *testing.T) {
@@ -378,76 +319,6 @@ func TestUserAPI(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, false, response["success"])
 				assert.Contains(t, response["error"], "system user")
-			}
-		})
-	})
-
-	t.Run("User Groups", func(t *testing.T) {
-		t.Run("should get user's groups", func(t *testing.T) {
-			router := gin.New()
-			router.Use(func(c *gin.Context) {
-				c.Set("user_id", uint(1))
-				c.Next()
-			})
-			router.GET("/api/v1/users/:id/groups", HandleGetUserGroupsAPI)
-
-			req := httptest.NewRequest("GET", "/api/v1/users/1/groups", nil)
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-
-			if w.Code == http.StatusOK {
-				var response map[string]interface{}
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				require.NoError(t, err)
-				assert.Equal(t, true, response["success"])
-
-				data := response["data"].([]interface{})
-				// Should return array of groups
-				assert.NotNil(t, data)
-			}
-		})
-
-		t.Run("should add user to group", func(t *testing.T) {
-			router := gin.New()
-			router.Use(func(c *gin.Context) {
-				c.Set("user_id", uint(1))
-				c.Next()
-			})
-			router.POST("/api/v1/users/:id/groups", HandleAddUserToGroupAPI)
-
-			body := map[string]interface{}{
-				"group_id":    1,
-				"permissions": "rw",
-			}
-			jsonBody, _ := json.Marshal(body)
-
-			req := httptest.NewRequest("POST", "/api/v1/users/2/groups", bytes.NewBuffer(jsonBody))
-			req.Header.Set("Content-Type", "application/json")
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-
-			if w.Code == http.StatusOK {
-				var response map[string]interface{}
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				require.NoError(t, err)
-				assert.Equal(t, true, response["success"])
-			}
-		})
-
-		t.Run("should remove user from group", func(t *testing.T) {
-			router := gin.New()
-			router.Use(func(c *gin.Context) {
-				c.Set("user_id", uint(1))
-				c.Next()
-			})
-			router.DELETE("/api/v1/users/:id/groups/:group_id", HandleRemoveUserFromGroupAPI)
-
-			req := httptest.NewRequest("DELETE", "/api/v1/users/2/groups/1", nil)
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-
-			if w.Code == http.StatusNoContent {
-				assert.Equal(t, 0, w.Body.Len())
 			}
 		})
 	})

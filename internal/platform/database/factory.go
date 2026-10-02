@@ -2,7 +2,6 @@ package database
 
 import (
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -25,18 +24,30 @@ func (f *DatabaseFactory) Create(config DatabaseConfig) (IDatabase, error) {
 		return NewPostgreSQLDatabase(config), nil
 	case MySQL:
 		return NewMySQLDatabase(config), nil
-	case Oracle:
-		return NewOracleDatabase(config), nil
-	case SQLServer:
-		return NewSQLServerDatabase(config), nil
-	default:
-		return nil, fmt.Errorf("unsupported database type: %s", config.Type)
+	default: // Oracle, SQLServer: declared, not implemented
+		return newUnimplementedDatabase(config), nil
 	}
 }
 
-// GetSupportedTypes returns the list of supported database types.
+// supportedTypes lists the database types with a working implementation.
+var supportedTypes = []DatabaseType{PostgreSQL, MySQL}
+
+// plannedTypes lists declared database types without an implementation yet.
+// The factory hands out a stub for them whose Connect fails with
+// ErrDatabaseNotImplemented.
+var plannedTypes = []DatabaseType{Oracle, SQLServer}
+
+// GetSupportedTypes returns the database types with a working implementation.
 func (f *DatabaseFactory) GetSupportedTypes() []DatabaseType {
-	return []DatabaseType{PostgreSQL, MySQL, Oracle, SQLServer}
+	return append([]DatabaseType(nil), supportedTypes...)
+}
+
+func supportedTypesList() string {
+	names := make([]string, len(supportedTypes))
+	for i, t := range supportedTypes {
+		names[i] = string(t)
+	}
+	return strings.Join(names, ", ")
 }
 
 // ValidateConfig validates the database configuration.
@@ -61,19 +72,18 @@ func (f *DatabaseFactory) ValidateConfig(config DatabaseConfig) error {
 		return fmt.Errorf("database username is required")
 	}
 
-	// Validate database type is supported
-	supportedTypes := f.GetSupportedTypes()
-	found := false
-	for _, supportedType := range supportedTypes {
-		if config.Type == supportedType {
-			found = true
+	// Validate database type is known (implemented or planned)
+	known := false
+	for _, t := range append(f.GetSupportedTypes(), plannedTypes...) {
+		if config.Type == t {
+			known = true
 			break
 		}
 	}
 
-	if !found {
+	if !known {
 		return fmt.Errorf("unsupported database type: %s, supported types: %s",
-			config.Type, strings.Join(typeStrings(supportedTypes), ", "))
+			config.Type, supportedTypesList())
 	}
 
 	// Validate connection pool settings
@@ -117,75 +127,7 @@ func GetDatabaseFeatures(dbType DatabaseType) DatabaseFeatures {
 			MaxIdentifierLength:     64,
 			MaxIndexNameLength:      64,
 		}
-	case Oracle:
-		return DatabaseFeatures{
-			SupportsReturning:       true,
-			SupportsUpsert:          true, // MERGE statement
-			SupportsJSONColumn:      true, // Oracle 12c+
-			SupportsArrayColumn:     false,
-			SupportsWindowFunctions: true,
-			SupportsCTE:             true,
-			MaxIdentifierLength:     128, // Oracle 12c+, 30 for older
-			MaxIndexNameLength:      128,
-		}
-	case SQLServer:
-		return DatabaseFeatures{
-			SupportsReturning:       true, // OUTPUT clause
-			SupportsUpsert:          true, // MERGE statement
-			SupportsJSONColumn:      true, // SQL Server 2016+
-			SupportsArrayColumn:     false,
-			SupportsWindowFunctions: true,
-			SupportsCTE:             true,
-			MaxIdentifierLength:     128,
-			MaxIndexNameLength:      128,
-		}
 	default:
 		return DatabaseFeatures{}
 	}
-}
-
-// Helper function to convert DatabaseType slice to string slice.
-func typeStrings(types []DatabaseType) []string {
-	strings := make([]string, len(types))
-	for i, t := range types {
-		strings[i] = string(t)
-	}
-	return strings
-}
-
-// LoadConfigFromEnv loads database configuration from environment variables.
-// Uses namespaced per-driver vars (DB_MYSQL_* / DB_PGSQL_*) selected by DB_DRIVER.
-func LoadConfigFromEnv() DatabaseConfig {
-	config := DatabaseConfig{
-		Type:     PostgreSQL, // Default to PostgreSQL
-		Host:     EnvDefault("HOST", "postgres"),
-		Port:     EnvDefault("PORT", "5432"),
-		Database: EnvDefault("NAME", "goatflow"),
-		Username: EnvDefault("USER", "goatflow"),
-		Password: EnvDefault("PASSWORD", "goatflow_password"),
-		SSLMode:  EnvDefault("SSLMODE", "disable"),
-
-		// Connection pool defaults
-		MaxOpenConns:    25,
-		MaxIdleConns:    5,
-		ConnMaxLifetime: 0,
-		ConnMaxIdleTime: 0,
-
-		Options: make(map[string]string),
-	}
-
-	// Override database type if specified
-	if dbType := getEnvWithDefault("DB_TYPE", ""); dbType != "" {
-		config.Type = DatabaseType(dbType)
-	}
-
-	return config
-}
-
-// getEnvWithDefault gets environment variable with fallback default.
-func getEnvWithDefault(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
 }

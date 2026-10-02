@@ -1,260 +1,202 @@
+// Package webhook implements outbound webhooks: endpoint configuration stored in
+// gk_webhook, a durable delivery log in gk_webhook_delivery, HMAC-signed HTTP
+// delivery with bounded retries, and the event-source cursors product code uses
+// to turn database changes into events exactly once.
 package webhook
 
 import (
+	"errors"
+	"fmt"
+	"net/url"
+	"strings"
 	"time"
 )
 
-// WebhookEvent represents the type of event that triggers a webhook.
-type WebhookEvent string
-
+// Delivery status values stored in gk_webhook_delivery.status.
 const (
-	EventTicketCreated         WebhookEvent = "ticket.created"
-	EventTicketUpdated         WebhookEvent = "ticket.updated"
-	EventTicketClosed          WebhookEvent = "ticket.closed"
-	EventTicketReopened        WebhookEvent = "ticket.reopened"
-	EventTicketAssigned        WebhookEvent = "ticket.assigned"
-	EventTicketEscalated       WebhookEvent = "ticket.escalated"
-	EventTicketPriorityChanged WebhookEvent = "ticket.priority_changed"
-	EventTicketStatusChanged   WebhookEvent = "ticket.status_changed"
-	EventTicketQueueMoved      WebhookEvent = "ticket.queue_moved"
-
-	EventArticleAdded   WebhookEvent = "article.added"
-	EventArticleUpdated WebhookEvent = "article.updated"
-
-	EventUserCreated     WebhookEvent = "user.created"
-	EventUserUpdated     WebhookEvent = "user.updated"
-	EventUserActivated   WebhookEvent = "user.activated"
-	EventUserDeactivated WebhookEvent = "user.deactivated"
-
-	EventQueueCreated WebhookEvent = "queue.created"
-	EventQueueUpdated WebhookEvent = "queue.updated"
-	EventQueueDeleted WebhookEvent = "queue.deleted"
-
-	EventAttachmentUploaded WebhookEvent = "attachment.uploaded"
-	EventAttachmentDeleted  WebhookEvent = "attachment.deleted"
-
-	EventSystemMaintenance WebhookEvent = "system.maintenance"
-	EventSystemBackup      WebhookEvent = "system.backup"
-	EventSystemAlert       WebhookEvent = "system.alert"
+	StatusPending    = "pending"
+	StatusDelivering = "delivering"
+	StatusDelivered  = "delivered"
+	StatusFailed     = "failed"
 )
 
-// WebhookStatus represents the status of a webhook endpoint.
-type WebhookStatus string
-
+// HTTP headers set on every outbound delivery. The signature header carries
+// "sha256=<hex HMAC-SHA256 of the raw body keyed by the webhook secret>", the
+// format GoatFlow's own inbound plugin webhooks verify.
 const (
-	StatusActive   WebhookStatus = "active"
-	StatusInactive WebhookStatus = "inactive"
-	StatusFailed   WebhookStatus = "failed"
-	StatusDisabled WebhookStatus = "disabled"
+	SignatureHeader = "X-Webhook-Signature"
+	EventHeader     = "X-Webhook-Event"
+	DeliveryHeader  = "X-Webhook-Delivery"
+	UserAgent       = "GoatFlow-Webhook/1.0"
 )
 
-// WebhookDeliveryStatus represents the status of a webhook delivery attempt.
-type WebhookDeliveryStatus string
+// TestEvent is the event type of deliveries created by the test endpoint.
+const TestEvent = "webhook.test"
 
+// Limits and defaults for webhook configuration.
 const (
-	DeliveryPending  WebhookDeliveryStatus = "pending"
-	DeliverySuccess  WebhookDeliveryStatus = "success"
-	DeliveryFailed   WebhookDeliveryStatus = "failed"
-	DeliveryRetrying WebhookDeliveryStatus = "retrying"
-	DeliveryExpired  WebhookDeliveryStatus = "expired"
+	DefaultRetryCount     = 3
+	MaxRetryCount         = 10
+	DefaultTimeoutSeconds = 10
+	MaxTimeoutSeconds     = 60
+	maxNameLength         = 200
+	maxURLLength          = 2000
+	maxResponseBodyBytes  = 4096
+	maxErrorLength        = 1000
 )
 
-// Webhook represents a webhook endpoint configuration.
+// validActive and validInactive are the OTRS valid table ids used for valid_id.
+const (
+	validActive   = 1
+	validInactive = 2
+)
+
+// ErrNotFound is returned when a webhook or delivery does not exist.
+var ErrNotFound = errors.New("not found")
+
+// ErrDuplicateName is returned when another webhook already uses the name.
+var ErrDuplicateName = errors.New("a webhook with this name already exists")
+
+// ValidationError describes invalid webhook configuration.
+type ValidationError struct {
+	Message string
+}
+
+func (e *ValidationError) Error() string { return e.Message }
+
+func invalid(format string, args ...interface{}) error {
+	return &ValidationError{Message: fmt.Sprintf(format, args...)}
+}
+
+// Webhook is a configured outbound endpoint. The secret is write-only: it is
+// stored encrypted and only the masked hint is ever returned.
 type Webhook struct {
-	ID          uint           `json:"id" db:"id"`
-	Name        string         `json:"name" db:"name"`
-	URL         string         `json:"url" db:"url"`
-	Secret      string         `json:"secret,omitempty" db:"secret"` // HMAC secret for signature verification
-	Events      []WebhookEvent `json:"events" db:"events"`
-	Status      WebhookStatus  `json:"status" db:"status"`
-	Description string         `json:"description" db:"description"`
-
-	// Configuration
-	RetryCount    int           `json:"retry_count" db:"retry_count"`
-	RetryInterval time.Duration `json:"retry_interval" db:"retry_interval"`
-	Timeout       time.Duration `json:"timeout" db:"timeout"`
-
-	// Headers to include in webhook requests
-	Headers map[string]string `json:"headers,omitempty" db:"headers"`
-
-	// Filters for conditional webhook execution
-	Filters WebhookFilters `json:"filters,omitempty" db:"filters"`
-
-	// Statistics
-	TotalDeliveries      int        `json:"total_deliveries" db:"total_deliveries"`
-	SuccessfulDeliveries int        `json:"successful_deliveries" db:"successful_deliveries"`
-	FailedDeliveries     int        `json:"failed_deliveries" db:"failed_deliveries"`
-	LastDeliveryAt       *time.Time `json:"last_delivery_at,omitempty" db:"last_delivery_at"`
-	LastSuccessAt        *time.Time `json:"last_success_at,omitempty" db:"last_success_at"`
-	LastFailureAt        *time.Time `json:"last_failure_at,omitempty" db:"last_failure_at"`
-
-	// Metadata
-	CreatedBy uint      `json:"created_by" db:"created_by"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	ID             int64             `json:"id"`
+	Name           string            `json:"name"`
+	URL            string            `json:"url"`
+	Events         []string          `json:"events"`
+	Headers        map[string]string `json:"headers"`
+	HasSecret      bool              `json:"has_secret"`
+	SecretHint     string            `json:"secret_hint,omitempty"`
+	RetryCount     int               `json:"retry_count"`
+	TimeoutSeconds int               `json:"timeout_seconds"`
+	IsActive       bool              `json:"is_active"`
+	CreatedAt      time.Time         `json:"created_at"`
+	CreatedBy      int               `json:"created_by"`
+	UpdatedAt      time.Time         `json:"updated_at"`
+	UpdatedBy      int               `json:"updated_by"`
 }
 
-// WebhookFilters defines conditions for when webhooks should be triggered.
-type WebhookFilters struct {
-	// Queue filters - only trigger for specific queues
-	QueueIDs []int `json:"queue_ids,omitempty"`
-
-	// Priority filters - only trigger for specific priorities
-	Priorities []string `json:"priorities,omitempty"`
-
-	// Status filters - only trigger for specific statuses
-	Statuses []string `json:"statuses,omitempty"`
-
-	// User filters - only trigger for specific users
-	UserIDs []int `json:"user_ids,omitempty"`
-
-	// Custom field filters
-	CustomFields map[string]interface{} `json:"custom_fields,omitempty"`
+// Subscribes reports whether the webhook wants deliveries for event.
+func (w *Webhook) Subscribes(event string) bool {
+	for _, e := range w.Events {
+		if e == event {
+			return true
+		}
+	}
+	return false
 }
 
-// WebhookDelivery represents a webhook delivery attempt.
-type WebhookDelivery struct {
-	ID        uint                  `json:"id" db:"id"`
-	WebhookID uint                  `json:"webhook_id" db:"webhook_id"`
-	Event     WebhookEvent          `json:"event" db:"event"`
-	Payload   interface{}           `json:"payload" db:"payload"`
-	Status    WebhookDeliveryStatus `json:"status" db:"status"`
-
-	// Request details
-	RequestURL     string            `json:"request_url" db:"request_url"`
-	RequestHeaders map[string]string `json:"request_headers" db:"request_headers"`
-	RequestBody    string            `json:"request_body" db:"request_body"`
-
-	// Response details
-	ResponseStatusCode int               `json:"response_status_code,omitempty" db:"response_status_code"`
-	ResponseHeaders    map[string]string `json:"response_headers,omitempty" db:"response_headers"`
-	ResponseBody       string            `json:"response_body,omitempty" db:"response_body"`
-
-	// Timing
-	AttemptCount int           `json:"attempt_count" db:"attempt_count"`
-	Duration     time.Duration `json:"duration" db:"duration"`
-	NextRetryAt  *time.Time    `json:"next_retry_at,omitempty" db:"next_retry_at"`
-
-	// Error information
-	ErrorMessage string `json:"error_message,omitempty" db:"error_message"`
-
-	// Metadata
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+// Normalize trims input, applies defaults and validates the configuration.
+// knownEvent reports whether an event name may be subscribed to.
+func (w *Webhook) Normalize(knownEvent func(string) bool) error {
+	w.Name = strings.TrimSpace(w.Name)
+	w.URL = strings.TrimSpace(w.URL)
+	if w.Name == "" {
+		return invalid("name is required")
+	}
+	if len(w.Name) > maxNameLength {
+		return invalid("name must be at most %d characters", maxNameLength)
+	}
+	if w.URL == "" {
+		return invalid("url is required")
+	}
+	if len(w.URL) > maxURLLength {
+		return invalid("url must be at most %d characters", maxURLLength)
+	}
+	u, err := url.Parse(w.URL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return invalid("url must be an absolute http or https URL")
+	}
+	if len(w.Events) == 0 {
+		return invalid("at least one event is required")
+	}
+	seen := make(map[string]bool, len(w.Events))
+	events := make([]string, 0, len(w.Events))
+	for _, e := range w.Events {
+		e = strings.TrimSpace(e)
+		if !knownEvent(e) {
+			return invalid("unknown event %q", e)
+		}
+		if !seen[e] {
+			seen[e] = true
+			events = append(events, e)
+		}
+	}
+	w.Events = events
+	for k := range w.Headers {
+		if !validHeaderName(k) {
+			return invalid("invalid header name %q", k)
+		}
+		if isReservedHeader(k) {
+			return invalid("header %q is set by GoatFlow and cannot be overridden", k)
+		}
+	}
+	if w.Headers == nil {
+		w.Headers = map[string]string{}
+	}
+	if w.RetryCount < 0 || w.RetryCount > MaxRetryCount {
+		return invalid("retry_count must be between 0 and %d", MaxRetryCount)
+	}
+	if w.TimeoutSeconds < 1 || w.TimeoutSeconds > MaxTimeoutSeconds {
+		return invalid("timeout_seconds must be between 1 and %d", MaxTimeoutSeconds)
+	}
+	return nil
 }
 
-// WebhookPayload represents the structure of webhook payloads sent to external systems.
-type WebhookPayload struct {
-	// Event information
-	Event     WebhookEvent `json:"event"`
-	Timestamp time.Time    `json:"timestamp"`
-	ID        string       `json:"id"` // Unique delivery ID
-
-	// Source information
-	Source struct {
-		Name    string `json:"name"`
-		Version string `json:"version"`
-		URL     string `json:"url"`
-	} `json:"source"`
-
-	// Event data - the actual payload varies by event type
-	Data interface{} `json:"data"`
-
-	// Previous data (for update events)
-	PreviousData interface{} `json:"previous_data,omitempty"`
+func validHeaderName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for _, r := range name {
+		if r > 126 || r <= 32 || strings.ContainsRune("()<>@,;:\\\"/[]?={}", r) {
+			return false
+		}
+	}
+	return true
 }
 
-// TicketWebhookData represents ticket data in webhook payloads.
-type TicketWebhookData struct {
-	ID            int        `json:"id"`
-	Number        string     `json:"number"`
-	Title         string     `json:"title"`
-	Description   string     `json:"description,omitempty"`
+func isReservedHeader(name string) bool {
+	switch strings.ToLower(name) {
+	case "content-type", "content-length", "host", "user-agent",
+		strings.ToLower(SignatureHeader), strings.ToLower(EventHeader), strings.ToLower(DeliveryHeader):
+		return true
+	}
+	return false
+}
+
+// Delivery is one event sent (or to be sent) to one webhook.
+type Delivery struct {
+	ID            int64      `json:"id"`
+	WebhookID     int64      `json:"webhook_id"`
+	Event         string     `json:"event"`
+	Payload       string     `json:"payload,omitempty"`
 	Status        string     `json:"status"`
-	Priority      string     `json:"priority"`
-	QueueID       int        `json:"queue_id"`
-	QueueName     string     `json:"queue_name"`
-	AssignedTo    *int       `json:"assigned_to"`
-	AssignedName  *string    `json:"assigned_name"`
-	CustomerID    string     `json:"customer_id"`
-	CustomerEmail string     `json:"customer_email"`
-	Tags          []string   `json:"tags"`
+	Success       bool       `json:"success"`
+	Attempts      int        `json:"attempts"`
+	StatusCode    *int       `json:"status_code"`
+	Response      string     `json:"response,omitempty"`
+	Error         string     `json:"error,omitempty"`
+	DurationMS    *int       `json:"duration_ms"`
+	NextAttemptAt *time.Time `json:"next_attempt_at,omitempty"`
+	DeliveredAt   *time.Time `json:"delivered_at,omitempty"`
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
-	SLADue        *time.Time `json:"sla_due,omitempty"`
 }
 
-// ArticleWebhookData represents article data in webhook payloads.
-type ArticleWebhookData struct {
-	ID        int       `json:"id"`
-	TicketID  int       `json:"ticket_id"`
-	From      string    `json:"from"`
-	To        string    `json:"to"`
-	Subject   string    `json:"subject"`
-	Body      string    `json:"body"`
-	Type      string    `json:"type"`
-	Visible   bool      `json:"visible"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
-// UserWebhookData represents user data in webhook payloads.
-type UserWebhookData struct {
-	ID        int       `json:"id"`
-	Email     string    `json:"email"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
-	Role      string    `json:"role"`
-	Active    bool      `json:"active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-// QueueWebhookData represents queue data in webhook payloads.
-type QueueWebhookData struct {
-	ID          int       `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description,omitempty"`
-	GroupID     int       `json:"group_id"`
-	Active      bool      `json:"active"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-// WebhookRequest represents a request to create or update a webhook.
-type WebhookRequest struct {
-	Name        string            `json:"name" binding:"required"`
-	URL         string            `json:"url" binding:"required,url"`
-	Events      []WebhookEvent    `json:"events" binding:"required,min=1"`
-	Secret      string            `json:"secret"`
-	Description string            `json:"description"`
-	Headers     map[string]string `json:"headers"`
-	Filters     WebhookFilters    `json:"filters"`
-
-	// Configuration
-	RetryCount    int `json:"retry_count"`
-	RetryInterval int `json:"retry_interval"` // seconds
-	Timeout       int `json:"timeout"`        // seconds
-}
-
-// WebhookStatistics represents webhook usage statistics.
-type WebhookStatistics struct {
-	WebhookID            uint       `json:"webhook_id"`
-	TotalDeliveries      int        `json:"total_deliveries"`
-	SuccessfulDeliveries int        `json:"successful_deliveries"`
-	FailedDeliveries     int        `json:"failed_deliveries"`
-	SuccessRate          float64    `json:"success_rate"`
-	AverageResponseTime  int        `json:"average_response_time_ms"`
-	LastDeliveryAt       *time.Time `json:"last_delivery_at"`
-	LastSuccessAt        *time.Time `json:"last_success_at"`
-	LastFailureAt        *time.Time `json:"last_failure_at"`
-}
-
-// WebhookTestResult represents the result of testing a webhook.
-type WebhookTestResult struct {
-	Success      bool          `json:"success"`
-	StatusCode   int           `json:"status_code"`
-	ResponseTime time.Duration `json:"response_time_ms"`
-	ResponseBody string        `json:"response_body"`
-	ErrorMessage string        `json:"error_message,omitempty"`
-	TestedAt     time.Time     `json:"tested_at"`
+// Envelope is the JSON body POSTed to webhook endpoints.
+type Envelope struct {
+	Event      string      `json:"event"`
+	OccurredAt time.Time   `json:"occurred_at"`
+	Data       interface{} `json:"data"`
 }

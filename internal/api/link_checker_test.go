@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 )
 
 type linkTarget struct {
@@ -42,7 +43,6 @@ func TestAllLinksReturn200(t *testing.T) {
 			"/admin/customer/portal/settings": {http.StatusInternalServerError: {}}, // Requires DB
 			"/admin/queues":                   {http.StatusInternalServerError: {}}, // Requires DB
 			"/admin/sla":                      {http.StatusInternalServerError: {}}, // Requires DB
-			"/admin/groups/new":               {http.StatusBadRequest: {}},          // Validation error without context
 			"/queues":                         {http.StatusInternalServerError: {}, http.StatusBadRequest: {}},
 			"/queues/new":                     {http.StatusBadRequest: {}},
 			"/register":                       {http.StatusNotFound: {}},
@@ -282,7 +282,6 @@ func TestAllLinksReturn200(t *testing.T) {
 	apiEndpoints := []string{
 		"/api/auth/login",
 		"/api/auth/logout",
-		"/api/auth/refresh",
 		// V1 endpoints are not guaranteed in unit router; skip in this test
 		"/health",
 	}
@@ -342,18 +341,13 @@ func TestLogoutRouteExists(t *testing.T) {
 		description    string
 	}{
 		{
-			name:           "POST /api/auth/logout should exist",
+			// The API logout sits behind the auth middleware: without a
+			// session it answers 401 JSON (never a login redirect).
+			name:           "POST /api/auth/logout requires a session",
 			method:         "POST",
 			path:           "/api/auth/logout",
-			expectedStatus: http.StatusOK,
+			expectedStatus: http.StatusUnauthorized,
 			description:    "API logout endpoint",
-		},
-		{
-			name:           "POST /logout should redirect or handle",
-			method:         "POST",
-			path:           "/logout",
-			expectedStatus: http.StatusOK,
-			description:    "User-facing logout",
 		},
 		{
 			name:           "GET /logout might redirect to login",
@@ -370,28 +364,7 @@ func TestLogoutRouteExists(t *testing.T) {
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
-			// Allow redirect statuses or success
-			validStatuses := []int{
-				http.StatusOK,
-				http.StatusFound,
-				http.StatusSeeOther,
-				http.StatusTemporaryRedirect,
-				http.StatusPermanentRedirect,
-			}
-
-			isValidStatus := false
-			for _, status := range validStatuses {
-				if w.Code == status {
-					isValidStatus = true
-					break
-				}
-			}
-
-			if w.Code == http.StatusNotFound {
-				t.Errorf("%s returned 404 - route does not exist", tt.path)
-			} else if !isValidStatus && w.Code >= 400 {
-				t.Errorf("%s returned error %d", tt.path, w.Code)
-			}
+			assert.Equal(t, tt.expectedStatus, w.Code, "%s: %s", tt.description, w.Body.String())
 		})
 	}
 }
@@ -467,7 +440,6 @@ func TestHTMXEndpointsExist(t *testing.T) {
 		// {"GET", "/api/search", "Search"}, // not guaranteed in unit router
 		{"POST", "/api/auth/login", "Login"},
 		{"POST", "/api/auth/logout", "Logout"},
-		{"GET", "/api/dashboard/stats", "Dashboard stats"},
 	}
 
 	for _, endpoint := range htmxEndpoints {

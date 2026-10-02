@@ -197,12 +197,9 @@ func handleAdminCustomerUserGroupUpdate(c *gin.Context) {
 		return
 	}
 
-	// Get user ID from context
-	userID := 1 // Default to admin
-	if u, exists := c.Get("userID"); exists {
-		if uid, ok := u.(int); ok {
-			userID = uid
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	// Parse form data - format: permissions[group_id][permission_type] = "1" or absent
@@ -343,12 +340,9 @@ func handleAdminCustomerUserGroupByGroupUpdate(c *gin.Context) {
 		return
 	}
 
-	// Get user ID from context
-	userID := 1
-	if u, exists := c.Get("userID"); exists {
-		if uid, ok := u.(int); ok {
-			userID = uid
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	// Parse form data

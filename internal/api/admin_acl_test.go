@@ -14,7 +14,7 @@ import (
 
 func TestAdminACLHandlers(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	router := gin.New()
+	router := seedAdminRouter()
 
 	router.GET("/admin/acl", handleAdminACL)
 	router.POST("/admin/api/acl", handleAdminACLCreate)

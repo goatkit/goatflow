@@ -227,9 +227,18 @@ func (s *WebAuthnService) IsEnabled(userType, userKey string) bool {
 }
 
 func (s *WebAuthnService) CountCredentials(userType, userKey string) (int, error) {
+	return CountWebAuthnCredentials(s.db, userType, userKey)
+}
+
+// CountWebAuthnCredentials counts an account's registered passkeys. It needs
+// no relying-party configuration, so login gates can check it directly.
+func CountWebAuthnCredentials(db *sql.DB, userType, userKey string) (int, error) {
+	if db == nil {
+		return 0, errors.New("webauthn: database unavailable")
+	}
 	var count int
 	query := database.ConvertPlaceholders("SELECT COUNT(*) FROM gk_webauthn_credential WHERE user_type = ? AND user_key = ?")
-	err := s.db.QueryRow(query, userType, userKey).Scan(&count)
+	err := db.QueryRow(query, userType, userKey).Scan(&count)
 	return count, err
 }
 
@@ -424,9 +433,15 @@ func (s *WebAuthnService) DeleteCredential(userType, userKey string, id int64) e
 	return nil
 }
 
-func (s *WebAuthnService) DeleteAllCredentials(userType, userKey string) error {
+// DeleteAllWebAuthnCredentials removes every passkey of an account. Like
+// CountWebAuthnCredentials it needs no relying-party configuration, so it
+// works on hosts a WebAuthn config cannot be built for.
+func DeleteAllWebAuthnCredentials(db *sql.DB, userType, userKey string) error {
+	if db == nil {
+		return errors.New("webauthn: database unavailable")
+	}
 	query := database.ConvertPlaceholders("DELETE FROM gk_webauthn_credential WHERE user_type = ? AND user_key = ?")
-	_, err := s.db.Exec(query, userType, userKey)
+	_, err := db.Exec(query, userType, userKey)
 	return err
 }
 

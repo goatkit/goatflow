@@ -130,18 +130,14 @@ email:
             - X-OTRS-TicketNumber
 
 storage:
-    type: local # local, s3
+    # Article attachment storage: db (ArticleStorageDB, default) or fs
+    # (ArticleStorageFS). STORAGE_TYPE overrides. Switch with goatflow-storage.
+    type: db
     local:
+        # Storage root (STORAGE_PATH overrides). The fs backend keeps articles in
+        # <path>/var/article/<YYYY/MM/DD>/<article_id>/ in the OTRS layout, so an
+        # OTRS/Znuny var/article tree can be mounted there.
         path: /app/storage
-        public_path: /app/storage/public
-        # Layout fixed to OTRS:
-        #   var/article/YYYY/MM/DD/<ticket>/<article>/<filename>
-    s3:
-        bucket: ""
-        region: ""
-        access_key: ""
-        secret_key: ""
-        endpoint: ""
     attachments:
         max_size: 10485760 # 10MB in bytes
         allowed_types:
@@ -239,12 +235,14 @@ rate_limiting:
         - /metrics
 
 features:
+    # Customer self-registration (/customer/register) with email confirmation.
     registration: false
-    lost_password: false
+    # Forgotten-password reset for agents (/forgot-password) and customers
+    # (/customer/forgot-password). Reset links use BASE_URL.
+    lost_password: true
     social_login: false
     two_factor_auth: false
     api_keys: true
-    webhooks: false
     ldap: false
     saml: false
     knowledge_base: false
@@ -269,11 +267,6 @@ integrations:
     teams:
         enabled: false
         webhook_url: ""
-    webhook:
-        enabled: false
-        endpoints: []
-        timeout: 10s
-        retry_attempts: 3
 
 # Background task runner settings
 runner:

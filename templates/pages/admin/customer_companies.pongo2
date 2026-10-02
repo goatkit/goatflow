@@ -86,12 +86,12 @@
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <a href="#" onclick="showCompanyUsers('{{ company.customer_id }}')" class="text-sm hover:underline" style="color: var(--gk-primary);">
+                        <a href="/admin/customer/companies/{{ company.customer_id }}/users" class="text-sm hover:underline" style="color: var(--gk-primary);">
                             {{ company.user_count }} users
                         </a>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <a href="#" onclick="showCompanyTickets('{{ company.customer_id }}')" class="text-sm hover:underline" style="color: var(--gk-primary);">
+                        <a href="/admin/customer/companies/{{ company.customer_id }}/tickets" class="text-sm hover:underline" style="color: var(--gk-primary);">
                             {{ company.ticket_count }} tickets
                         </a>
                     </td>
@@ -105,7 +105,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div class="flex items-center justify-end space-x-2">
                             <!-- Portal Settings -->
-                            <button onclick="showPortalSettings('{{ company.customer_id }}')"
+                            <button data-company-id="{{ company.customer_id }}" onclick="showPortalSettings(this.dataset.companyId)"
                                     class="p-1 rounded transition-colors hover:bg-white/10"
                                     style="color: var(--gk-accent);"
                                     title="{{ t("customer_companies.tooltips.portal_settings")|default:"Portal Settings" }}">
@@ -114,14 +114,14 @@
                                 </svg>
                             </button>
                             <!-- Services -->
-                            <button onclick="showCompanyServices('{{ company.customer_id }}')"
-                                    class="p-1 rounded transition-colors hover:bg-white/10"
-                                    style="color: var(--gk-success);"
-                                    title="{{ t("customer_companies.tooltips.manage_services")|default:"Manage Services" }}">
+                            <a href="/admin/customer/companies/{{ company.customer_id }}/services"
+                               class="p-1 rounded transition-colors hover:bg-white/10"
+                               style="color: var(--gk-success);"
+                               title="{{ t("customer_companies.tooltips.manage_services")|default:"Manage Services" }}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                                 </svg>
-                            </button>
+                            </a>
                             <!-- Edit -->
                             <a href="/admin/customer/companies/{{ company.customer_id }}/edit"
                                class="p-1 rounded transition-colors hover:bg-white/10"
@@ -133,7 +133,7 @@
                             </a>
                             <!-- Deactivate -->
                             {% if company.valid_id == 1 %}
-                            <button onclick="deleteCompany('{{ company.customer_id }}', '{{ company.name }}')"
+                            <button data-company-id="{{ company.customer_id }}" onclick="deleteCompany(this.dataset.companyId)"
                                     class="p-1 rounded transition-colors hover:bg-white/10"
                                     style="color: var(--gk-warning);"
                                     title="{{ t("customer_companies.tooltips.deactivate")|default:"Deactivate Company" }}">
@@ -142,7 +142,7 @@
                                 </svg>
                             </button>
                             {% else %}
-                            <button onclick="activateCompany('{{ company.customer_id }}', '{{ company.name }}')"
+                            <button data-company-id="{{ company.customer_id }}" onclick="activateCompany(this.dataset.companyId)"
                                     class="p-1 rounded transition-colors hover:bg-white/10"
                                     style="color: var(--gk-success);"
                                     title="{{ t("customer_companies.tooltips.activate")|default:"Activate Company" }}">
@@ -166,133 +166,39 @@
     </div>
 </div>
 
-<!-- Modal for various actions -->
-<div id="companyModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closeModal()"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-            <div class="gk-modal-header">
-                <h3 id="modalTitle" class="text-lg font-semibold" style="color: var(--gk-text-primary);"></h3>
-                <button onclick="closeModal()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            <div id="modalContent" class="gk-modal-body">
-                <!-- Dynamic content loaded here -->
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
-function showCompanyUsers(companyId) {
-    fetch(`/admin/customer/companies/${companyId}/users`)
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('modalTitle').textContent = `Users in ${data.company_name}`;
-            let content = '<div class="overflow-x-auto"><table class="gk-table">';
-            content += '<thead><tr>';
-            content += '<th>Login</th>';
-            content += '<th>Name</th>';
-            content += '<th>Email</th>';
-            content += '<th>Tickets</th>';
-            content += '<th>Status</th>';
-            content += '</tr></thead><tbody>';
-
-            data.users.forEach(user => {
-                content += '<tr class="transition-colors hover:bg-white/5">';
-                content += `<td style="color: var(--gk-text-primary);">${user.login}</td>`;
-                content += `<td style="color: var(--gk-text-primary);">${user.first_name} ${user.last_name}</td>`;
-                content += `<td style="color: var(--gk-text-primary);">${user.email}</td>`;
-                content += `<td style="color: var(--gk-text-primary);">${user.ticket_count}</td>`;
-                content += `<td><span class="gk-badge ${user.valid_id === 1 ? 'gk-badge-success' : 'gk-badge-error'}">${user.valid_name}</span></td>`;
-                content += '</tr>';
-            });
-
-            content += '</tbody></table></div>';
-            document.getElementById('modalContent').innerHTML = content;
-            document.getElementById('companyModal').classList.remove('hidden');
-        });
-}
-
-function showCompanyTickets(companyId) {
-    fetch(`/admin/customer/companies/${companyId}/tickets`)
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('modalTitle').textContent = 'Recent Tickets';
-            let content = '<div class="overflow-x-auto max-h-96"><table class="gk-table">';
-            content += '<thead class="sticky top-0" style="background: var(--gk-bg-tertiary);"><tr>';
-            content += '<th>Ticket #</th>';
-            content += '<th>Title</th>';
-            content += '<th>State</th>';
-            content += '<th>Priority</th>';
-            content += '<th>Created</th>';
-            content += '</tr></thead><tbody>';
-
-            data.tickets.forEach(ticket => {
-                content += '<tr class="transition-colors hover:bg-white/5">';
-                content += `<td class="font-mono" style="color: var(--gk-text-primary);">#${ticket.tn}</td>`;
-                content += `<td style="color: var(--gk-text-primary);">${ticket.title}</td>`;
-                content += `<td style="color: var(--gk-text-primary);">${ticket.state}</td>`;
-                content += `<td style="color: var(--gk-text-primary);">${ticket.priority}</td>`;
-                content += `<td style="color: var(--gk-text-muted);">${ticket.create_time}</td>`;
-                content += '</tr>';
-            });
-
-            content += '</tbody></table></div>';
-            document.getElementById('modalContent').innerHTML = content;
-            document.getElementById('companyModal').classList.remove('hidden');
-        });
-}
-
 function showPortalSettings(companyId) {
-    window.location.href = `/admin/customer/companies/${companyId}/edit?tab=portal`;
+    window.location.href = `/admin/customer/companies/${encodeURIComponent(companyId)}/edit?tab=portal`;
 }
 
-function showCompanyServices(companyId) {
-    window.location.href = `/admin/customer/companies/${companyId}/edit?tab=services`;
+// The handlers answer JSON only when asked; without the Accept header they
+// redirect to an HTML page and response.json() fails.
+function setCompanyValidity(companyId, action, failureMessage) {
+    fetch(`/admin/customer/companies/${encodeURIComponent(companyId)}/${action}`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(failureMessage + (data.error || data.message || 'Unknown error'));
+        }
+    })
+    .catch(err => alert(failureMessage + err.message));
 }
 
-function deleteCompany(companyId, companyName) {
+function deleteCompany(companyId) {
     if (confirm('{{ t("messages.confirm.deactivate_company")|default:"Are you sure you want to deactivate this company? This will prevent all users from this company from accessing the portal." }}')) {
-        fetch(`/admin/customer/companies/${companyId}/delete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.reload();
-            } else {
-                alert('Failed to deactivate company: ' + (data.error || 'Unknown error'));
-            }
-        });
+        setCompanyValidity(companyId, 'delete', 'Failed to deactivate company: ');
     }
 }
 
-function activateCompany(companyId, companyName) {
+function activateCompany(companyId) {
     if (confirm('{{ t("messages.confirm.activate_company")|default:"Are you sure you want to activate this company? This will allow users from this company to access the portal." }}')) {
-        fetch(`/admin/customer/companies/${companyId}/activate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.reload();
-            } else {
-                alert('Failed to activate company: ' + (data.error || 'Unknown error'));
-            }
-        });
+        setCompanyValidity(companyId, 'activate', 'Failed to activate company: ');
     }
-}
-
-function closeModal() {
-    document.getElementById('companyModal').classList.add('hidden');
 }
 </script>
 {% endblock %}

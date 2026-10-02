@@ -514,6 +514,8 @@ runtime/
 certs/
 /routing/
 go/
+# ...but not the Go SDK module
+!sdk/go/
 
 # ============================================
 # Deploy reference files (NOT ignored)

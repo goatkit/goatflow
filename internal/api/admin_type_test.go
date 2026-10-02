@@ -3,16 +3,63 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
+
+// createAdminTestType inserts a ticket type owned by the calling test and
+// removes it when the test ends, so handler tests never touch the seed types.
+func createAdminTestType(t *testing.T, name string) int {
+	t.Helper()
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+		RETURNING id`), name)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if _, err := db.Exec(database.ConvertPlaceholders(`DELETE FROM ticket_type WHERE id = ?`), id); err != nil {
+			t.Errorf("cleanup ticket_type %d: %v", id, err)
+		}
+	})
+	return int(id)
+}
+
+// cleanupAdminTestTypeByName removes a ticket type created through a handler
+// under test when the test ends.
+func cleanupAdminTestTypeByName(t *testing.T, name string) {
+	t.Helper()
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if _, err := db.Exec(database.ConvertPlaceholders(`DELETE FROM ticket_type WHERE name = ?`), name); err != nil {
+			t.Errorf("cleanup ticket_type %q: %v", name, err)
+		}
+	})
+}
+
+func adminTestTypeRow(t *testing.T, id int) (string, int) {
+	t.Helper()
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	var name string
+	var validID int
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		`SELECT name, valid_id FROM ticket_type WHERE id = ?`), id).Scan(&name, &validID))
+	return name, validID
+}
 
 func TestAdminTypeHandlers(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -40,9 +87,13 @@ func TestAdminTypeHandlers(t *testing.T) {
 		assert.Contains(t, body, "Search")
 	})
 
+	suffix := fmt.Sprint(time.Now().UnixNano())
+
 	t.Run("Create ticket type with form data", func(t *testing.T) {
+		name := "Test Type " + suffix
+		cleanupAdminTestTypeByName(t, name)
 		formData := url.Values{
-			"name": {"Test Type"},
+			"name": {name},
 		}
 
 		req := httptest.NewRequest("POST", "/admin/types/create", strings.NewReader(formData.Encode()))
@@ -61,8 +112,10 @@ func TestAdminTypeHandlers(t *testing.T) {
 	})
 
 	t.Run("Create ticket type with JSON", func(t *testing.T) {
+		name := "JSON Type " + suffix
+		cleanupAdminTestTypeByName(t, name)
 		payload := map[string]interface{}{
-			"name": "JSON Type",
+			"name": name,
 		}
 		jsonData, _ := json.Marshal(payload)
 
@@ -82,11 +135,12 @@ func TestAdminTypeHandlers(t *testing.T) {
 	})
 
 	t.Run("Update ticket type with form data", func(t *testing.T) {
+		id := createAdminTestType(t, "Form Update Target "+suffix)
 		formData := url.Values{
-			"name": {"Updated Type"},
+			"name": {"Updated Type " + suffix},
 		}
 
-		req := httptest.NewRequest("POST", "/admin/types/1/update", strings.NewReader(formData.Encode()))
+		req := httptest.NewRequest("POST", fmt.Sprintf("/admin/types/%d/update", id), strings.NewReader(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Cookie", "access_token=test_token")
 		w := httptest.NewRecorder()
@@ -99,15 +153,18 @@ func TestAdminTypeHandlers(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 		assert.True(t, response["success"].(bool))
+		name, _ := adminTestTypeRow(t, id)
+		assert.Equal(t, "Updated Type "+suffix, name)
 	})
 
 	t.Run("Update ticket type with JSON", func(t *testing.T) {
+		id := createAdminTestType(t, "JSON Update Target "+suffix)
 		payload := map[string]interface{}{
-			"name": "JSON Updated",
+			"name": "JSON Updated " + suffix,
 		}
 		jsonData, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest("POST", "/admin/types/2/update", bytes.NewReader(jsonData))
+		req := httptest.NewRequest("POST", fmt.Sprintf("/admin/types/%d/update", id), bytes.NewReader(jsonData))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Cookie", "access_token=test_token")
 		w := httptest.NewRecorder()
@@ -115,10 +172,13 @@ func TestAdminTypeHandlers(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
+		name, _ := adminTestTypeRow(t, id)
+		assert.Equal(t, "JSON Updated "+suffix, name)
 	})
 
 	t.Run("Delete ticket type", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/admin/types/3/delete", nil)
+		id := createAdminTestType(t, "Delete Target "+suffix)
+		req := httptest.NewRequest("POST", fmt.Sprintf("/admin/types/%d/delete", id), nil)
 		req.Header.Set("Cookie", "access_token=test_token")
 		w := httptest.NewRecorder()
 
@@ -130,6 +190,8 @@ func TestAdminTypeHandlers(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 		assert.True(t, response["success"].(bool))
+		_, validID := adminTestTypeRow(t, id)
+		assert.Equal(t, 2, validID, "delete is a soft delete")
 	})
 
 	t.Run("Invalid type ID returns error", func(t *testing.T) {
@@ -266,6 +328,7 @@ func TestAdminTypeValidation(t *testing.T) {
 
 	t.Run("Long name validation", func(t *testing.T) {
 		longName := strings.Repeat("a", 201) // Assuming 200 char limit
+		cleanupAdminTestTypeByName(t, longName)
 		formData := url.Values{
 			"name": {longName},
 		}

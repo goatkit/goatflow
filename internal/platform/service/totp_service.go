@@ -443,6 +443,35 @@ func (s *TOTPService) isEnabledWithBackend(backend PreferencesBackend) bool {
 	return enabled == "1"
 }
 
+// LoginStatus reports whether TOTP is enabled for an agent and how many
+// recovery codes remain. Unlike IsEnabled it returns lookup errors, so a
+// login gate can fail closed instead of skipping the second factor.
+func (s *TOTPService) LoginStatus(userID int) (enabled bool, recoveryCodes int, err error) {
+	return loginStatusWithBackend(s.getBackend(userID))
+}
+
+// LoginStatusForCustomer is LoginStatus for a customer account.
+func (s *TOTPService) LoginStatusForCustomer(userLogin string) (enabled bool, recoveryCodes int, err error) {
+	return loginStatusWithBackend(NewCustomerPreferencesBackend(s.db, userLogin))
+}
+
+func loginStatusWithBackend(backend PreferencesBackend) (bool, int, error) {
+	enabled, err := backend.Get("UserTOTPEnabled")
+	if err != nil {
+		return false, 0, fmt.Errorf("read TOTP state: %w", err)
+	}
+	codesJSON, err := backend.Get("UserTOTPRecoveryCodes")
+	if err != nil {
+		return false, 0, fmt.Errorf("read recovery codes: %w", err)
+	}
+	// Unparseable codes are unusable, exactly as UseRecoveryCode treats them.
+	var codes []string
+	if codesJSON != "" && json.Unmarshal([]byte(codesJSON), &codes) != nil {
+		codes = nil
+	}
+	return enabled == "1", len(codes), nil
+}
+
 // Disable turns off 2FA for a user.
 func (s *TOTPService) Disable(userID int, code string) error {
 	backend := s.getBackend(userID)

@@ -1,0 +1,55 @@
+---
+# Outbound webhooks - Admin Routes
+apiVersion: goatflow.io/v1
+kind: RouteGroup
+metadata:
+    name: api-webhooks
+    description: "Outbound webhook configuration, delivery log, test and redelivery (admin only)"
+    namespace: default
+    enabled: true
+spec:
+    prefix: /api/v1
+    middleware:
+        - unified_auth
+        - admin
+    routes:
+        - path: /webhooks
+          method: GET
+          handler: handleWebhookList
+          description: "List webhooks (optional ?active=true|false)"
+        - path: /webhooks
+          method: POST
+          handler: handleWebhookCreate
+          description: "Create webhook"
+        - path: /webhooks/events
+          method: GET
+          handler: handleWebhookEvents
+          description: "List subscribable webhook events"
+        - path: /webhooks/deliveries/:id
+          method: GET
+          handler: handleWebhookDeliveryGet
+          description: "Get delivery including payload and response"
+        - path: /webhooks/deliveries/:id/redeliver
+          method: POST
+          handler: handleWebhookRedeliver
+          description: "Send a delivery's payload again as a new delivery"
+        - path: /webhooks/:id
+          method: GET
+          handler: handleWebhookGet
+          description: "Get webhook"
+        - path: /webhooks/:id
+          method: PUT
+          handler: handleWebhookUpdate
+          description: "Update webhook (partial)"
+        - path: /webhooks/:id
+          method: DELETE
+          handler: handleWebhookDelete
+          description: "Delete webhook and its delivery log"
+        - path: /webhooks/:id/test
+          method: POST
+          handler: handleWebhookTest
+          description: "Send a webhook.test event now"
+        - path: /webhooks/:id/deliveries
+          method: GET
+          handler: handleWebhookDeliveries
+          description: "List recent deliveries (optional ?limit=1..200)"

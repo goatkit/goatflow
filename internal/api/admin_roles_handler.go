@@ -165,6 +165,10 @@ func handleAdminRoleCreate(c *gin.Context) {
 	if input.ValidID == 0 {
 		input.ValidID = 1
 	}
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
 
 	db, err := database.GetDB()
 	if err != nil {
@@ -210,12 +214,12 @@ func handleAdminRoleCreate(c *gin.Context) {
 
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO roles (name, comments, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (?, ?, ?, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+		VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
 		RETURNING id
 	`)
 
 	adapter := database.GetAdapter()
-	id64, err := adapter.InsertWithReturning(db, insertQuery, input.Name, commentsPtr, input.ValidID)
+	id64, err := adapter.InsertWithReturning(db, insertQuery, input.Name, commentsPtr, input.ValidID, actorID, actorID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -228,7 +232,7 @@ func handleAdminRoleCreate(c *gin.Context) {
 
 	// Save permissions to group_role table
 	if len(input.Permissions) > 0 {
-		if err := saveRolePermissions(db, roleID, input.Permissions); err != nil {
+		if err := saveRolePermissions(db, roleID, input.Permissions, actorID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
 				"error":   "Failed to save permissions: " + err.Error(),
@@ -343,6 +347,10 @@ func handleAdminRoleUpdate(c *gin.Context) {
 		})
 		return
 	}
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
 
 	db, err := database.GetDB()
 	if err != nil {
@@ -378,9 +386,9 @@ func handleAdminRoleUpdate(c *gin.Context) {
 		    comments = ?,
 		    valid_id = ?,
 		    change_time = CURRENT_TIMESTAMP,
-		    change_by = 1
+		    change_by = ?
 		WHERE id = ?
-	`), input.Name, commentsVal, validIDVal, id)
+	`), input.Name, commentsVal, validIDVal, actorID, id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -404,7 +412,7 @@ func handleAdminRoleUpdate(c *gin.Context) {
 
 	// Update permissions if provided
 	if len(input.Permissions) > 0 {
-		if err := saveRolePermissions(db, id, input.Permissions); err != nil {
+		if err := saveRolePermissions(db, id, input.Permissions, actorID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
 				"error":   "Failed to update permissions: " + err.Error(),
@@ -421,7 +429,7 @@ func handleAdminRoleUpdate(c *gin.Context) {
 
 // saveRolePermissions saves role permissions to the group_role table.
 // Maps simple permission strings to group_role permission keys.
-func saveRolePermissions(db *sql.DB, roleID int, permissions []string) error {
+func saveRolePermissions(db *sql.DB, roleID int, permissions []string, actorID int) error {
 	if len(permissions) == 0 {
 		return nil
 	}
@@ -500,8 +508,8 @@ func saveRolePermissions(db *sql.DB, roleID int, permissions []string) error {
 		for _, permKey := range permKeys {
 			if _, err := db.Exec(database.ConvertPlaceholders(`
 				INSERT INTO group_role (role_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-				VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
-			`), roleID, groupID, permKey); err != nil {
+				VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
+			`), roleID, groupID, permKey, actorID, actorID); err != nil {
 				return err
 			}
 		}
@@ -619,6 +627,10 @@ func handleAdminRoleDelete(c *gin.Context) {
 		})
 		return
 	}
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
 
 	db, err := database.GetDB()
 	if err != nil {
@@ -632,9 +644,9 @@ func handleAdminRoleDelete(c *gin.Context) {
 	// Soft delete by setting valid_id = 2
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE roles
-		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1
+		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = ?
 		WHERE id = ?
-	`), id)
+	`), actorID, id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -875,6 +887,10 @@ func handleAdminRoleUserAdd(c *gin.Context) {
 		})
 		return
 	}
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
 
 	db, err := database.GetDB()
 	if err != nil {
@@ -892,8 +908,8 @@ func handleAdminRoleUserAdd(c *gin.Context) {
 	if err == nil && existing == 0 {
 		_, err = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO role_user (role_id, user_id, create_time, create_by, change_time, change_by)
-			VALUES (?, ?, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
-		`), roleID, input.UserID)
+			VALUES (?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
+		`), roleID, input.UserID, actorID, actorID)
 	}
 
 	if err != nil {
@@ -973,7 +989,7 @@ func handleAdminRoleUserRemove(c *gin.Context) {
 	})
 }
 
-// handleAdminRolePermissions manages group permissions for a role.
+// handleAdminRolePermissions renders the role-group permissions page.
 func handleAdminRolePermissions(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -981,15 +997,7 @@ func handleAdminRolePermissions(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid role ID"})
 		return
 	}
-
-	switch c.Request.Method {
-	case "GET":
-		handleAdminRolePermissionsGET(c, id)
-	case "PUT":
-		handleAdminRolePermissionsPUT(c, id)
-	default:
-		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Method not allowed"})
-	}
+	handleAdminRolePermissionsGET(c, id)
 }
 
 func handleAdminRolePermissionsGET(c *gin.Context, id int) {
@@ -1075,63 +1083,6 @@ func loadRoleGroupPermissions(db *sql.DB, roleID int) ([]RoleGroupPermission, er
 	return groups, rows.Err()
 }
 
-func handleAdminRolePermissionsPUT(c *gin.Context, id int) {
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
-		return
-	}
-
-	if err := c.Request.ParseForm(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid form data"})
-		return
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to start transaction"})
-		return
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	if _, err = tx.Exec(database.ConvertPlaceholders("DELETE FROM group_role WHERE role_id = ?"), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to clear permissions"})
-		return
-	}
-
-	if err := insertRolePermissionsFromForm(tx, id, c.Request.PostForm); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to save permissions"})
-		return
-	}
-
-	if err = tx.Commit(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to commit changes"})
-		return
-	}
-
-	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/roles/%d/permissions", id))
-}
-
-func insertRolePermissionsFromForm(tx *sql.Tx, roleID int, form map[string][]string) error {
-	for key, values := range form {
-		if len(key) <= 5 || key[:5] != "perm_" {
-			continue
-		}
-		var groupID int
-		var permType string
-		_, _ = fmt.Sscanf(key[5:], "%d_%s", &groupID, &permType) //nolint:errcheck // Parse errors handled by validation
-		if groupID > 0 && permType != "" && len(values) > 0 && values[0] == "1" {
-			_, err := tx.Exec(database.ConvertPlaceholders(`
-				INSERT INTO group_role (role_id, group_id, permission_key, permission_value, create_by, change_by)
-				VALUES (?, ?, ?, 1, 1, 1)`), roleID, groupID, permType)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // handleAdminRolePermissionsUpdate updates role-group permissions.
 func handleAdminRolePermissionsUpdate(c *gin.Context) {
 	idStr := c.Param("id")
@@ -1141,6 +1092,10 @@ func handleAdminRolePermissionsUpdate(c *gin.Context) {
 			"success": false,
 			"error":   "Invalid role ID",
 		})
+		return
+	}
+	actorID, ok := auditUserID(c)
+	if !ok {
 		return
 	}
 
@@ -1196,8 +1151,8 @@ func handleAdminRolePermissionsUpdate(c *gin.Context) {
 				INSERT INTO group_role (
 					role_id, group_id, permission_key, permission_value,
 					create_time, create_by, change_time, change_by)
-				VALUES (?, ?, ?, 1, NOW(), 1, NOW(), 1)
-				`), id, groupID, permType)
+				VALUES (?, ?, ?, 1, NOW(), ?, NOW(), ?)
+				`), id, groupID, permType, actorID, actorID)
 
 				if err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{

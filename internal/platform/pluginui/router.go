@@ -8,10 +8,12 @@ import (
 	"math"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/apierrors"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
 )
 
@@ -26,27 +28,43 @@ type TemplateRenderer interface {
 	HTML(c *gin.Context, code int, name string, data interface{})
 }
 
+// UIAuth carries the API layer's auth middlewares into UI registration (this
+// package cannot import internal/api).
+type UIAuth struct {
+	// Authenticate identifies the caller from a session cookie, JWT or API
+	// token and rejects anonymous requests.
+	Authenticate gin.HandlerFunc
+	// RequireGroup returns middleware admitting admins and members of the
+	// named agent group.
+	RequireGroup func(name string) gin.HandlerFunc
+}
+
 // RegisterUIRoutes registers all active plugin UI routes on the given gin engine.
 // Call this during dynamic engine rebuild, after YAML routes and before plugin routes.
-func RegisterUIRoutes(eng *gin.Engine, repo *Repository, caller PluginCaller, renderer TemplateRenderer, sessionAuth gin.HandlerFunc, logger *slog.Logger) error {
+// A UI whose config or auth settings cannot be honoured is logged and left
+// unregistered; the other UIs still register.
+func RegisterUIRoutes(eng *gin.Engine, repo *Repository, caller PluginCaller, renderer TemplateRenderer, auth UIAuth, logger *slog.Logger) error {
 	uis, err := repo.ListActive()
 	if err != nil {
 		return err
 	}
+	registered := 0
 	for _, ui := range uis {
-		if err := registerOneUI(eng, ui, repo, caller, renderer, sessionAuth, logger); err != nil {
-			return err
+		if err := registerOneUI(eng, ui, repo, caller, renderer, auth, logger); err != nil {
+			logger.Error("plugin UI not registered", "ui", ui.FullID, "error", err)
+			continue
 		}
+		registered++
 	}
 
-	if len(uis) > 0 {
-		logger.Info("registered plugin UI routes", "count", len(uis))
+	if registered > 0 {
+		logger.Info("registered plugin UI routes", "count", registered)
 	}
 
 	return nil
 }
 
-func registerOneUI(eng *gin.Engine, ui PluginUI, repo *Repository, caller PluginCaller, renderer TemplateRenderer, sessionAuth gin.HandlerFunc, logger *slog.Logger) error {
+func registerOneUI(eng *gin.Engine, ui PluginUI, repo *Repository, caller PluginCaller, renderer TemplateRenderer, auth UIAuth, logger *slog.Logger) error {
 	cfg, err := ui.ParsedConfig()
 	if err != nil {
 		return fmt.Errorf("parse config: %w", err)
@@ -55,8 +73,14 @@ func registerOneUI(eng *gin.Engine, ui PluginUI, repo *Repository, caller Plugin
 	basePath := "/ui/" + ui.FullID
 	group := eng.Group(basePath)
 
-	// Apply auth middleware based on UI type.
-	applyAuthMiddleware(group, ui, cfg, sessionAuth)
+	// Apply auth middleware based on UI type; an unsupported setting leaves
+	// the UI unregistered rather than open.
+	if err := applyAuthMiddleware(group, ui, cfg, auth); err != nil {
+		return err
+	}
+	if effectiveAuthMethod(ui, cfg) == AuthNone {
+		group.Use(publicRateLimit(ui.FullID, cfg.RateLimit))
+	}
 
 	// Register each route.
 	for _, route := range cfg.Routes {
@@ -137,12 +161,18 @@ func buildUIHandler(ui PluginUI, cfg *UIConfig, route UIRouteConfig, repo UIInfo
 		} else if email, exists := c.Get("user_email"); exists {
 			args["_user_login"] = email
 		}
-		if isAdmin, exists := c.Get("isInAdminGroup"); exists {
-			args["_is_admin"] = isAdmin
+		if customerLogin, exists := c.Get("customer_login"); exists {
+			args["_customer_login"] = customerLogin
 		}
-		if role, exists := c.Get("user_role"); exists {
+		// _is_admin is always set: plugins merge these keys over the
+		// client-supplied form body, so an absent key would let a body
+		// value such as "_is_admin": true stand.
+		role, hasRole := c.Get("user_role")
+		if hasRole {
 			args["_user_role"] = role
 		}
+		inAdminGroup, _ := c.Get("isInAdminGroup")
+		args["_is_admin"] = inAdminGroup == true || role == "Admin"
 		if orgID, exists := c.Get("org_id"); exists {
 			args["_org_id"] = orgID
 			args["org_id"] = orgID
@@ -359,33 +389,85 @@ func wholeNumber(v any) any {
 	return int64(f)
 }
 
-// applyAuthMiddleware adds the correct auth middleware to a route group based on UI type.
-func applyAuthMiddleware(group *gin.RouterGroup, ui PluginUI, cfg *UIConfig, sessionAuth gin.HandlerFunc) {
-	authMethod := DefaultAuthMethod(ui.UIType)
+// DefaultPublicRateLimit is the per-client request budget (requests per
+// minute) of a public plugin UI whose rate_limit is unset.
+const DefaultPublicRateLimit = 60
+
+// publicRateLimit limits each client IP to perMinute requests per minute on a
+// public (auth method none) plugin UI, using the shared rate limiter.
+func publicRateLimit(fullID string, perMinute int) gin.HandlerFunc {
+	if perMinute <= 0 {
+		perMinute = DefaultPublicRateLimit
+	}
+	return func(c *gin.Context) {
+		key := "pluginui:" + fullID + ":" + c.ClientIP()
+		if !middleware.GlobalRateLimiter().AllowPer(key, perMinute, time.Minute) {
+			c.Header("Retry-After", "60")
+			apierrors.Error(c, apierrors.CodeRateLimited)
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+// effectiveAuthMethod is the UI's configured auth method, or its type's
+// default when none is configured.
+func effectiveAuthMethod(ui PluginUI, cfg *UIConfig) string {
 	if cfg.Auth != nil && cfg.Auth.Method != "" {
-		authMethod = cfg.Auth.Method
+		return cfg.Auth.Method
+	}
+	return DefaultAuthMethod(ui.UIType)
+}
+
+// applyAuthMiddleware gates a UI's route group according to its auth method
+// and type. session and token both authenticate through auth.Authenticate
+// (session cookie, Bearer JWT or API token), then admin_page/agent_app UIs
+// admit agents only and customer_app UIs customers only; any auth.groups must
+// all be held. none leaves the UI public (the default for public_page and
+// kiosk). Any other method is an error: nothing would enforce it.
+func applyAuthMiddleware(group *gin.RouterGroup, ui PluginUI, cfg *UIConfig, auth UIAuth) error {
+	authMethod := effectiveAuthMethod(ui, cfg)
+	var groups []string
+	if cfg.Auth != nil {
+		groups = cfg.Auth.Groups
 	}
 
 	switch authMethod {
-	case AuthSession:
-		// Session auth: authenticate the request (populating user_id /
-		// isInAdminGroup / user_email / username in the gin context) so
-		// buildUIHandler can forward the acting identity to the plugin. The
-		// middleware is supplied by the API layer (SessionOrJWTAuth) to avoid
-		// an import cycle. Previously UI routes were unauthenticated and the
-		// plugin could only guess who was calling.
-		if sessionAuth != nil {
-			group.Use(sessionAuth)
-		}
-	case AuthPIN:
-		// PIN auth handled by the plugin — platform provides the PIN entry route.
-	case AuthToken:
-		// Token auth — accept Bearer tokens.
 	case AuthNone:
-		// No auth required.
+		if len(groups) > 0 {
+			return fmt.Errorf("auth groups %v need session or token auth, not %q", groups, AuthNone)
+		}
+		return nil
+	case AuthSession, AuthToken:
+	default:
+		return fmt.Errorf("unsupported auth method %q", authMethod)
 	}
-	// Note: actual middleware functions are wired in by the dynamic router,
-	// which has access to the auth middleware implementations.
+
+	if auth.Authenticate == nil {
+		return fmt.Errorf("auth method %q: no authentication middleware configured", authMethod)
+	}
+	handlers := []gin.HandlerFunc{auth.Authenticate}
+	switch ui.UIType {
+	case TypeAdminPage, TypeAgentApp:
+		handlers = append(handlers, middleware.RequireAgent())
+	case TypeCustomerApp:
+		if len(groups) > 0 {
+			return fmt.Errorf("auth groups %v are agent groups and cannot gate a %s UI", groups, TypeCustomerApp)
+		}
+		handlers = append(handlers, middleware.RequireCustomer())
+	}
+	for _, g := range groups {
+		if g == "" {
+			return fmt.Errorf("auth groups contain an empty group name")
+		}
+		if auth.RequireGroup == nil {
+			return fmt.Errorf("auth group %q: no group middleware configured", g)
+		}
+		handlers = append(handlers, auth.RequireGroup(g))
+	}
+	group.Use(handlers...)
+	return nil
 }
 
 // shellTemplateName returns the template path for a shell type.

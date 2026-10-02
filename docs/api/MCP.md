@@ -46,11 +46,13 @@ All tools inherit the RBAC of the underlying API endpoint:
 | Endpoint Type | Permission Source | Notes |
 |---------------|------------------|-------|
 | Ticket endpoints | Queue RBAC middleware | `ticket_access_ro`, `ticket_access_rw`, etc. |
-| Admin endpoints | Admin middleware | Requires admin group membership |
-| Plugin endpoints | Plugin middleware | `auth`, `admin`, `group:<name>` |
+| Admin endpoints | Admin middleware | Admin JWT, or an agent API token with the `admin:*` scope whose owner is an admin |
+| Plugin endpoints | Plugin route middleware | `auth`, `admin`, `agent`, `customer`, `group:<name>`, `plugin:<plugin>:<group>` |
 | Public endpoints | None | Health, info |
 
-The MCP server resolves the API token owner's actual role (Admin/Agent) from the database, ensuring admin middleware works correctly regardless of how the token was issued.
+Each tool call runs with the auth context of the MCP request itself (role, admin flag, API token and its scopes), exactly as the REST route would see it; the role is not re-derived from the token owner, so an admin's API token without the `admin:*` scope does not reach admin tools. A tool whose route names a middleware the server does not have is refused. Declared plugin `MCPTools` use the middleware of the plugin routes that share their handler, or `agent` when no route does; `webhook` plugin routes are not callable as tools. Plugin tools receive the same reserved identity args as plugin HTTP routes; client-supplied values for them are dropped.
+
+Streamable HTTP sessions are bound to the principal that created them (agent or customer plus id); every message runs with the identity of the request that carries it.
 
 ### Plugin Tools
 

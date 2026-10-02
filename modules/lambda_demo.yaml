@@ -114,9 +114,10 @@ computed_fields:
     show_in_form: false
     lambda: |
       try {
-        var count = db.queryRow("SELECT COUNT(*) as count FROM ticket WHERE ticket_priority_id = $1", item.id.toString());
-        if (count && count.count !== undefined) {
-          var num = parseInt(count.count);
+        // db.queryRow returns a single-column result as a string
+        var count = db.queryRow("SELECT COUNT(*) FROM ticket WHERE ticket_priority_id = ?", item.id);
+        if (count !== '' && String(count).indexOf('Error') !== 0) {
+          var num = parseInt(count);
           if (num === 0) {
             return '<span class="text-gray-400">Not used</span>';
           } else if (num === 1) {

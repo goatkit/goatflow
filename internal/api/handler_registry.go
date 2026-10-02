@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"sort"
-	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +15,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/platform/shared"
+	_ "github.com/goatkit/goatflow/internal/selfservice" // registers the self-service route handlers
 )
 
 // Simple global handler registry to decouple YAML route loader from hardcoded map.
@@ -207,8 +206,6 @@ func ensureCoreHandlers() {
 		"HandleGetStatuses":           HandleGetStatuses,
 		"HandleGetFormData":           HandleGetFormData,
 		"HandleInvalidateLookupCache": HandleInvalidateLookupCache,
-		// Optional customer info partial used by YAML
-		"HandleCustomerInfoPanel":     func(c *gin.Context) { c.String(200, "") },
 		"handleApiTokensPage":         handleApiTokensPage,
 		"handleProfile":               handleProfile,
 		"HandleGetSessionTimeout":     HandleGetSessionTimeout,
@@ -229,11 +226,7 @@ func ensureCoreHandlers() {
 		"HandleUpdateProfile":         HandleUpdateProfile,
 		"HandleAgentPasswordForm":     HandleAgentPasswordForm,
 		"HandleAgentChangePassword":   HandleAgentChangePassword,
-		"handleAdminSettings":         handleAdminSettings,
-		"handleAdminTemplates":        handleAdminTemplates,
 		"handleAdminReports":          handleAdminReports,
-		"handleAdminLogs":             handleAdminLogs,
-		"handleAdminBackup":           handleAdminBackup,
 		"HandleMailAccountPollStatus": HandleMailAccountPollStatus,
 
 		// Static and basic routes
@@ -267,7 +260,6 @@ func ensureCoreHandlers() {
 			c.Header("HX-Redirect", "/customer/login")
 			c.Redirect(http.StatusSeeOther, "/customer/login")
 		},
-		"handleDemoCustomerLogin": handleDemoCustomerLogin,
 		"handleCustomerLoginPage": handleCustomerLoginPage,
 		"handleCustomerLogin": func(c *gin.Context) {
 			handleCustomerLogin(shared.GetJWTManager())(c)
@@ -418,47 +410,9 @@ func ensureCoreHandlers() {
 			}
 			handleCustomerViewAttachment(db)(c)
 		},
-		"handleLogoutRedirect": func(c *gin.Context) {
-			// SECURITY: full logout parity with POST /api/auth/logout. The
-			// GET form was only clearing auth_token/access_token, so after a
-			// click-to-logout the server-side session record survived, the
-			// JWT stayed valid until expiry, and customer-side cookies (on
-			// shared browsers) lingered — producing the privilege-mix that
-			// made it possible for a subsequent customer login to inherit
-			// admin context on plugin routes. Kill session, wipe every
-			// auth-related cookie in both classes.
-			if sessionID, err := c.Cookie("session_id"); err == nil && sessionID != "" {
-				if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
-					_ = sessionSvc.KillSession(sessionID)
-				}
-			}
-			if sessionID, err := c.Cookie("customer_session_id"); err == nil && sessionID != "" {
-				if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
-					_ = sessionSvc.KillSession(sessionID)
-				}
-			}
-			// Agent cookies
-			httpcookie.SetAuth(c, "access_token", "", -1)
-			httpcookie.SetAuth(c, "auth_token", "", -1)
-			httpcookie.SetAuth(c, "token", "", -1)
-			httpcookie.SetAuth(c, "session_id", "", -1)
-			httpcookie.SetAuthState(c, "goatflow_logged_in", "", -1)
-			// Customer cookies
-			httpcookie.SetAuth(c, "customer_access_token", "", -1)
-			httpcookie.SetAuth(c, "customer_auth_token", "", -1)
-			httpcookie.SetAuth(c, "customer_session_id", "", -1)
-			httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "", -1)
-			target := loginRedirectPath(c)
-			if strings.Contains(c.Request.URL.Path, "/customer") {
-				target = "/customer/login"
-			}
-			c.Redirect(http.StatusFound, target)
-		},
 		"handleRoot": func(c *gin.Context) {
 			c.Redirect(http.StatusFound, RootRedirectTarget())
 		},
-		"handleAuthRefresh":  handleAuthRefresh,
-		"handleAuthRegister": handleAuthRegister,
 
 		// Health and metrics — real probes: /health pings the database with a
 		// short timeout so a dead DB reports 503; /health/detailed adds the
@@ -483,23 +437,21 @@ func ensureCoreHandlers() {
 		"handleAdminUserGroups":        HandleAdminUserGroups,
 		"handleAdminUsersStatus":       HandleAdminUsersStatus,
 		"HandleAdminUserResetPassword": HandleAdminUserResetPassword,
-		"handleAdminPasswordPolicy": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"min_length": 8, "require_special": true}})
-		},
-		"handleAdminGroups":          handleAdminGroups,
-		"handleCreateGroup":          handleCreateGroup,
-		"handleGetGroup":             handleGetGroup,
-		"handleUpdateGroup":          handleUpdateGroup,
-		"handleDeleteGroup":          handleDeleteGroup,
-		"handleGroupMembers":         handleGetGroupMembers,
-		"handleAddUserToGroup":       handleAddUserToGroup,
-		"handleRemoveUserFromGroup":  handleRemoveUserFromGroup,
-		"handleGroupPermissions":     handleGroupPermissions,
-		"handleSaveGroupPermissions": handleSaveGroupPermissions,
+		"handleAdminPasswordPolicy":    HandlePasswordPolicy,
+		"handleAdminGroups":            handleAdminGroups,
+		"handleCreateGroup":            handleCreateGroup,
+		"handleGetGroup":               handleGetGroup,
+		"handleUpdateGroup":            handleUpdateGroup,
+		"handleDeleteGroup":            handleDeleteGroup,
+		"handleGroupMembers":           handleGetGroupMembers,
+		"handleAddUserToGroup":         handleAddUserToGroup,
+		"handleRemoveUserFromGroup":    handleRemoveUserFromGroup,
+		"handleGroupPermissions":       handleGroupPermissions,
+		"handleSaveGroupPermissions":   handleSaveGroupPermissions,
 		// Additional admin group APIs used in YAML
-		"HandleAdminGroupsUsers":        func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"success": true, "data": []interface{}{}}) },
-		"HandleAdminGroupsAddUser":      func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"success": true}) },
-		"HandleAdminGroupsRemoveUser":   func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"success": true}) },
+		"HandleAdminGroupsUsers":        HandleAdminGroupsUsers,
+		"HandleAdminGroupsAddUser":      HandleAdminGroupsAddUser,
+		"HandleAdminGroupsRemoveUser":   HandleAdminGroupsRemoveUser,
 		"handleAdminQueues":             handleAdminQueues,
 		"handleAdminEmailIdentities":    handleAdminEmailIdentities,
 		"handleAdminPriorities":         handleAdminPriorities,
@@ -521,7 +473,6 @@ func ensureCoreHandlers() {
 		"handleAdminEmailQueueRetry":       handleAdminEmailQueueRetry,
 		"handleAdminEmailQueueDelete":      handleAdminEmailQueueDelete,
 		"handleAdminEmailQueueRetryAll":    handleAdminEmailQueueRetryAll,
-		"handleAdminDynamicIndex":          handleAdminDynamicIndex,
 		"handleAdminDynamicModule":         handleAdminDynamicModule,
 		// Dynamic Fields management handlers
 		"handleAdminDynamicFields":                  handleAdminDynamicFields,
@@ -564,7 +515,13 @@ func ensureCoreHandlers() {
 		"handleAdminWebserviceHistory":   handleAdminWebserviceHistory,
 		"handleRestoreWebserviceHistory": handleRestoreWebserviceHistory,
 		"handleAdminStates":              handleAdminStates,
+		"handleAdminStateCreate":         handleAdminStateCreate,
+		"handleAdminStateUpdate":         handleAdminStateUpdate,
+		"handleAdminStateDelete":         handleAdminStateDelete,
 		"handleAdminTypes":               handleAdminTypes,
+		"handleAdminTypeCreate":          handleAdminTypeCreate,
+		"handleAdminTypeUpdate":          handleAdminTypeUpdate,
+		"handleAdminTypeDelete":          handleAdminTypeDelete,
 		"handleAdminServices":            handleAdminServices,
 		"handleAdminServiceCreate":       handleAdminServiceCreate,
 		"handleAdminServiceUpdate":       handleAdminServiceUpdate,
@@ -574,21 +531,14 @@ func ensureCoreHandlers() {
 		"handleAdminSLAUpdate":           handleAdminSLAUpdate,
 		"handleAdminSLADelete":           handleAdminSLADelete,
 		"handleAdminLookups":             handleAdminLookups,
-		"dashboard_stats":                handleDashboardStats,
 		"dashboard_recent_tickets":       handleRecentTickets,
-		"dashboard_activity":             handleActivity,
 		"dashboard_activity_stream":      handleActivityStream,
 
 		// Customer company handlers - full implementations
 		"handleAdminCustomerCompanies": HandleAdminCustomerCompanies,
 		"handleAdminNewCustomerCompany": func(c *gin.Context) {
-			skipDB := htmxHandlerSkipDB()
 			db, err := database.GetDB()
 			if err != nil || db == nil {
-				if skipDB {
-					handleAdminNewCustomerCompany(nil)(c)
-					return
-				}
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
 				return
 			}
@@ -654,14 +604,6 @@ func ensureCoreHandlers() {
 			}
 			handleAdminUpdateCustomerPortalSettings(db)(c)
 		},
-		"handleAdminUploadCustomerPortalLogo": func(c *gin.Context) {
-			db, err := database.GetDB()
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-				return
-			}
-			handleAdminUploadCustomerPortalLogo(db)(c)
-		},
 
 		// Customer user handlers - full implementations
 		"HandleAdminCustomerUsersList":       HandleAdminCustomerUsersList,
@@ -701,14 +643,8 @@ func ensureCoreHandlers() {
 		"HandleCreateSignatureAPI":     HandleCreateSignatureAPI,
 		"HandleUpdateSignatureAPI":     HandleUpdateSignatureAPI,
 
-		// Agent handlers (wrap to avoid DB in tests)
-		"handleAgentTickets": func(c *gin.Context) {
-			if os.Getenv("APP_ENV") == "test" {
-				c.Data(http.StatusOK, "text/html; charset=utf-8", []byte("<main>Agent Tickets</main>"))
-				return
-			}
-			AgentHandlerExports.HandleAgentTickets(c)
-		},
+		// Agent handlers
+		"handleAgentTickets":        AgentHandlerExports.HandleAgentTickets,
 		"handleAgentTicketReply":    AgentHandlerExports.HandleAgentTicketReply,
 		"handleAgentTicketNote":     AgentHandlerExports.HandleAgentTicketNote,
 		"handleAgentTicketPhone":    AgentHandlerExports.HandleAgentTicketPhone,
@@ -717,15 +653,7 @@ func ensureCoreHandlers() {
 		"handleAgentTicketPriority": AgentHandlerExports.HandleAgentTicketPriority,
 		"handleAgentTicketQueue":    AgentHandlerExports.HandleAgentTicketQueue,
 		"handleAgentTicketMerge":    AgentHandlerExports.HandleAgentTicketMerge,
-		"handleAgentTicketDraft":    AgentHandlerExports.HandleAgentTicketDraft,
-		"handleAgentQueues": func(c *gin.Context) {
-			if os.Getenv("APP_ENV") == "test" {
-				c.Data(http.StatusOK, "text/html; charset=utf-8", []byte("<main>Agent Queues</main>"))
-				return
-			}
-			AgentHandlerExports.HandleAgentQueues(c)
-		},
-		"handleAgentSearch": AgentHandlerExports.HandleAgentSearch,
+		"handleAgentQueues":         AgentHandlerExports.HandleAgentQueues,
 		// Ticket action APIs (YAML routes)
 		"handleAddTicketTime":        handleAddTicketTime,
 		"handleUpdateTicketStatus":   handleUpdateTicketStatus,
@@ -762,50 +690,41 @@ func ensureCoreHandlers() {
 		"HandleRemoveQueueGroupAPI":  HandleRemoveQueueGroupAPI,
 		"HandleListPrioritiesAPI":    HandleListPrioritiesAPI,
 		"HandleGetPriorityAPI":       HandleGetPriorityAPI,
+		"HandleCreatePriorityAPI":    HandleCreatePriorityAPI,
+		"HandleUpdatePriorityAPI":    HandleUpdatePriorityAPI,
+		"HandleDeletePriorityAPI":    HandleDeletePriorityAPI,
 		"HandleListTypesAPI":         HandleListTypesAPI,
 		"HandleListStatesAPI":        HandleListStatesAPI,
 		"HandleSearchAPI":            HandleSearchAPI,
-		"HandleSearchSuggestionsAPI": HandleSearchSuggestionsAPI,
 		"HandleReindexAPI":           HandleReindexAPI,
 		"HandleSearchHealthAPI":      HandleSearchHealthAPI,
 
+		// Statistics API handlers
+		"HandleDashboardStatisticsAPI":   HandleDashboardStatisticsAPI,
+		"HandleTicketTrendsAPI":          HandleTicketTrendsAPI,
+		"HandleAgentPerformanceAPI":      HandleAgentPerformanceAPI,
+		"HandleQueueMetricsAPI":          HandleQueueMetricsAPI,
+		"HandleTimeBasedAnalyticsAPI":    HandleTimeBasedAnalyticsAPI,
+		"HandleCustomerStatisticsAPI":    HandleCustomerStatisticsAPI,
+		"HandleExportStatisticsAPI":      HandleExportStatisticsAPI,
+		"HandleTicketStateStatisticsAPI": HandleTicketStateStatisticsAPI,
+
 		// Ticket API handlers (migrated from protectedAPI routes)
-		"handleAPITickets":           handleAPITickets,
-		"handleCreateTicket":         handleCreateTicket,
-		"handleGetTicket":            handleGetTicket,
-		"handleUpdateTicket":         handleUpdateTicket,
-		"handleDeleteTicket":         handleDeleteTicket,
-		"handleAddTicketNote":        handleAddTicketNote,
-		"handleGetTicketHistory":     handleGetTicketHistory,
-		"handleGetAvailableAgents":   handleGetAvailableAgents,
-		"handleAssignTicket":         handleAssignTicket,
-		"handleCloseTicket":          handleCloseTicket,
-		"handleReopenTicket":         handleReopenTicket,
-		"handleSearchTickets":        handleSearchTickets,
-		"handleFilterTickets":        handleFilterTickets,
-		"handleAdvancedTicketSearch": handleAdvancedTicketSearch,
-		"handleSearchSuggestions":    handleSearchSuggestions,
-		"handleExportSearchResults":  handleExportSearchResults,
-		"handleSaveSearchHistory":    handleSaveSearchHistory,
-		"handleGetSearchHistory":     handleGetSearchHistory,
-		"handleDeleteSearchHistory":  handleDeleteSearchHistory,
-		"handleCreateSavedSearch":    handleCreateSavedSearch,
-		"handleGetSavedSearches":     handleGetSavedSearches,
-		"handleExecuteSavedSearch":   handleExecuteSavedSearch,
-		"handleUpdateSavedSearch":    handleUpdateSavedSearch,
-		"handleDeleteSavedSearch":    handleDeleteSavedSearch,
-		"handleMergeTickets":         handleMergeTickets,
-		"handleUnmergeTicket":        handleUnmergeTicket,
-		"handleGetMergeHistory":      handleGetMergeHistory,
+		"handleCreateTicket":       handleCreateTicket,
+		"handleGetTicket":          handleGetTicket,
+		"handleDeleteTicket":       handleDeleteTicket,
+		"handleAddTicketNote":      handleAddTicketNote,
+		"handleGetTicketHistory":   handleGetTicketHistory,
+		"handleGetAvailableAgents": handleGetAvailableAgents,
+		"handleAssignTicket":       handleAssignTicket,
+		"handleCloseTicket":        handleCloseTicket,
+		"handleReopenTicket":       handleReopenTicket,
+		"handleSearchTickets":      handleSearchTickets,
+		"handleFilterTickets":      handleFilterTickets,
 
 		// Dashboard API handlers (migrated from protectedAPI routes)
-		"handleDashboardStats": handleDashboardStats,
 		"handleRecentTickets":  handleRecentTickets,
-		"handleNotifications":  handleNotifications,
-		"handleQuickActions":   handleQuickActions,
-		"handleActivity":       handleActivity,
 		"handleActivityStream": handleActivityStream,
-		"handlePerformance":    handlePerformance,
 
 		// Queue API handlers (migrated from protectedAPI routes)
 		"handleGetQueuesAPI":       handleGetQueuesAPI,
@@ -821,21 +740,26 @@ func ensureCoreHandlers() {
 		"handleUpdateType": handleUpdateType,
 		"handleDeleteType": handleDeleteType,
 
-		// File handler (migrated from protectedAPI routes)
-		"handleServeFile": handleServeFile,
-
 		// Customer handler (migrated from protectedAPI routes)
 		"handleCustomerSearch": handleCustomerSearch,
 
-		// Canned response handlers (migrated from protectedAPI routes)
-		"cannedResponses_GetResponses":           CannedResponseHandlerExports.GetResponses,
-		"cannedResponses_GetQuickResponses":      CannedResponseHandlerExports.GetQuickResponses,
-		"cannedResponses_GetPopularResponses":    CannedResponseHandlerExports.GetPopularResponses,
-		"cannedResponses_GetCategories":          CannedResponseHandlerExports.GetCategories,
-		"cannedResponses_GetResponsesByCategory": CannedResponseHandlerExports.GetResponsesByCategory,
-		"cannedResponses_SearchResponses":        CannedResponseHandlerExports.SearchResponses,
-		"cannedResponses_GetResponsesForUser":    CannedResponseHandlerExports.GetResponsesForUser,
-		"cannedResponses_GetResponseByID":        CannedResponseHandlerExports.GetResponseByID,
+		// Canned response handlers (canned_response table)
+		"cannedResponses_GetResponses":           handleGetCannedResponses,
+		"cannedResponses_CreateResponse":         handleCreateCannedResponse,
+		"cannedResponses_GetPopularResponses":    handleGetPopularCannedResponses,
+		"cannedResponses_GetCategories":          handleGetCannedResponseCategories,
+		"cannedResponses_GetResponsesByCategory": handleGetCannedResponsesByCategory,
+		"cannedResponses_SearchResponses":        handleSearchCannedResponses,
+		"cannedResponses_GetResponsesForUser":    handleGetCannedResponses,
+		"cannedResponses_GetStatistics":          handleGetCannedResponseStatistics,
+		"cannedResponses_ExportResponses":        handleExportCannedResponses,
+		"cannedResponses_ImportResponses":        handleImportCannedResponses,
+		"cannedResponses_GetResponseByID":        handleGetCannedResponse,
+		"cannedResponses_UpdateResponse":         handleUpdateCannedResponse,
+		"cannedResponses_DeleteResponse":         handleDeleteCannedResponse,
+		"cannedResponses_UseResponse":            handleUseCannedResponse,
+		"cannedResponses_ShareResponse":          handleShareCannedResponse,
+		"cannedResponses_CopyResponse":           handleCopyCannedResponse,
 	}
 	for n, h := range pairs {
 		if _, ok := GetHandler(n); !ok {

@@ -146,7 +146,7 @@ rows, err := db.Query("SELECT * FROM ticket WHERE id = $1", id)
 
 ### Authentication
 - JWT with refresh tokens
-- LDAP integration (scaffolded)
+- LDAP / Active Directory auth provider for agents (`internal/platform/auth/ldap_provider.go` on the `internal/platform/ldap` client)
 - Database auth provider
 - External identity providers (OIDC client — Google, GitHub, Keycloak, Azure AD, generic OIDC)
 

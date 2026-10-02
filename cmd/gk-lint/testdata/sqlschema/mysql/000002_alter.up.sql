@@ -1,0 +1,5 @@
+SET @sql := IF(@exists = 0, 'ALTER TABLE t ADD COLUMN added INT', 'SELECT 1');
+ALTER TABLE t DROP COLUMN dropped;
+ALTER TABLE t CHANGE COLUMN old_name new_name INT;
+ALTER TABLE t ADD INDEX idx_t_b (b);
+DROP TABLE IF EXISTS gone;

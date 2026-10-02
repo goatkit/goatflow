@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -10,300 +11,157 @@ import (
 	"github.com/goatkit/goatflow/sdk/go/types"
 )
 
-// TicketsService handles ticket-related API operations
+// TicketsService covers /api/v1/tickets.
 type TicketsService struct {
 	client *Client
 }
 
-// List retrieves a list of tickets
-func (s *TicketsService) List(ctx context.Context, options *types.TicketListOptions) (*types.TicketListResponse, error) {
-	path := "/api/v1/tickets"
-
-	if options != nil {
-		query := url.Values{}
-
-		if options.Page > 0 {
-			query.Set("page", strconv.Itoa(options.Page))
-		}
-		if options.PageSize > 0 {
-			query.Set("page_size", strconv.Itoa(options.PageSize))
-		}
-		if len(options.Status) > 0 {
-			query.Set("status", strings.Join(options.Status, ","))
-		}
-		if len(options.Priority) > 0 {
-			query.Set("priority", strings.Join(options.Priority, ","))
-		}
-		if len(options.QueueID) > 0 {
-			queueIDs := make([]string, len(options.QueueID))
-			for i, id := range options.QueueID {
-				queueIDs[i] = strconv.FormatUint(uint64(id), 10)
-			}
-			query.Set("queue_id", strings.Join(queueIDs, ","))
-		}
-		if options.AssignedTo != nil {
-			query.Set("assigned_to", strconv.FormatUint(uint64(*options.AssignedTo), 10))
-		}
-		if options.CustomerID != nil {
-			query.Set("customer_id", strconv.FormatUint(uint64(*options.CustomerID), 10))
-		}
-		if options.Search != "" {
-			query.Set("search", options.Search)
-		}
-		if len(options.Tags) > 0 {
-			query.Set("tags", strings.Join(options.Tags, ","))
-		}
-		if options.CreatedAfter != nil {
-			query.Set("created_after", options.CreatedAfter.Format("2006-01-02T15:04:05Z"))
-		}
-		if options.CreatedBefore != nil {
-			query.Set("created_before", options.CreatedBefore.Format("2006-01-02T15:04:05Z"))
-		}
-		if options.SortBy != "" {
-			query.Set("sort_by", options.SortBy)
-		}
-		if options.SortOrder != "" {
-			query.Set("sort_order", options.SortOrder)
-		}
-
-		if len(query) > 0 {
-			path += "?" + query.Encode()
-		}
+// List returns one page of tickets the caller can read.
+func (s *TicketsService) List(ctx context.Context, options *types.TicketListOptions) (*types.TicketList, error) {
+	query := url.Values{}
+	if o := options; o != nil {
+		setInt(query, "page", o.Page)
+		setInt(query, "per_page", o.PerPage)
+		setString(query, "status", o.Status)
+		setUint(query, "queue_id", o.QueueID)
+		setUint(query, "priority_id", o.PriorityID)
+		setString(query, "customer_user_id", o.CustomerUserID)
+		setUint(query, "assigned_user_id", o.AssignedUserID)
+		setString(query, "search", o.Search)
+		setString(query, "sort", o.Sort)
+		setString(query, "order", o.Order)
+		setString(query, "include", strings.Join(o.Include, ","))
 	}
-
-	var result types.TicketListResponse
-	err := s.client.Get(ctx, path, &result)
-	return &result, err
+	list := &types.TicketList{}
+	pagination, err := s.client.do(ctx, http.MethodGet, "/api/v1/tickets", query, nil, &list.Tickets)
+	if err != nil {
+		return nil, err
+	}
+	if pagination != nil {
+		list.Pagination = *pagination
+	}
+	return list, nil
 }
 
-// Get retrieves a specific ticket by ID
+// Get returns one ticket.
 func (s *TicketsService) Get(ctx context.Context, id uint) (*types.Ticket, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d", id)
-
-	var result types.Ticket
-	err := s.client.Get(ctx, path, &result)
-	return &result, err
+	var ticket types.Ticket
+	if _, err := s.client.do(ctx, http.MethodGet, ticketPath(id), nil, nil, &ticket); err != nil {
+		return nil, err
+	}
+	return &ticket, nil
 }
 
-// GetByNumber retrieves a specific ticket by ticket number
-func (s *TicketsService) GetByNumber(ctx context.Context, ticketNumber string) (*types.Ticket, error) {
-	path := fmt.Sprintf("/api/v1/tickets/number/%s", ticketNumber)
-
-	var result types.Ticket
-	err := s.client.Get(ctx, path, &result)
-	return &result, err
+// Create creates a ticket.
+func (s *TicketsService) Create(ctx context.Context, request *types.TicketCreateRequest) (*types.CreatedTicket, error) {
+	var created types.CreatedTicket
+	if _, err := s.client.do(ctx, http.MethodPost, "/api/v1/tickets", nil, request, &created); err != nil {
+		return nil, err
+	}
+	return &created, nil
 }
 
-// Create creates a new ticket
-func (s *TicketsService) Create(ctx context.Context, request *types.TicketCreateRequest) (*types.Ticket, error) {
-	path := "/api/v1/tickets"
-
-	var result types.Ticket
-	err := s.client.Post(ctx, path, request, &result)
-	return &result, err
+// Update changes the non-nil fields of request and returns the updated row.
+func (s *TicketsService) Update(ctx context.Context, id uint, request *types.TicketUpdateRequest) (*types.TicketRecord, error) {
+	var record types.TicketRecord
+	if _, err := s.client.do(ctx, http.MethodPut, ticketPath(id), nil, request, &record); err != nil {
+		return nil, err
+	}
+	return &record, nil
 }
 
-// Update updates an existing ticket
-func (s *TicketsService) Update(ctx context.Context, id uint, request *types.TicketUpdateRequest) (*types.Ticket, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d", id)
-
-	var result types.Ticket
-	err := s.client.Put(ctx, path, request, &result)
-	return &result, err
-}
-
-// Delete deletes a ticket
+// Delete deletes a ticket.
 func (s *TicketsService) Delete(ctx context.Context, id uint) error {
-	path := fmt.Sprintf("/api/v1/tickets/%d", id)
-	return s.client.Delete(ctx, path, nil)
+	_, err := s.client.do(ctx, http.MethodDelete, ticketPath(id), nil, nil, nil)
+	return err
 }
 
-// Close closes a ticket
-func (s *TicketsService) Close(ctx context.Context, id uint, reason string) (*types.Ticket, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/close", id)
-
+// Reopen moves a closed ticket back to "open" and records the reason as an
+// article.
+func (s *TicketsService) Reopen(ctx context.Context, id uint, reason string) (*types.ReopenResult, error) {
+	var result types.ReopenResult
 	body := map[string]string{"reason": reason}
-	var result types.Ticket
-	err := s.client.Post(ctx, path, body, &result)
-	return &result, err
-}
-
-// Reopen reopens a closed ticket
-func (s *TicketsService) Reopen(ctx context.Context, id uint, reason string) (*types.Ticket, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/reopen", id)
-
-	body := map[string]string{"reason": reason}
-	var result types.Ticket
-	err := s.client.Post(ctx, path, body, &result)
-	return &result, err
-}
-
-// Assign assigns a ticket to a user
-func (s *TicketsService) Assign(ctx context.Context, id uint, userID uint) (*types.Ticket, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/assign", id)
-
-	body := map[string]uint{"user_id": userID}
-	var result types.Ticket
-	err := s.client.Post(ctx, path, body, &result)
-	return &result, err
-}
-
-// Unassign removes assignment from a ticket
-func (s *TicketsService) Unassign(ctx context.Context, id uint) (*types.Ticket, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/unassign", id)
-
-	var result types.Ticket
-	err := s.client.Post(ctx, path, nil, &result)
-	return &result, err
-}
-
-// AddMessage adds a message to a ticket
-func (s *TicketsService) AddMessage(ctx context.Context, id uint, request *types.MessageCreateRequest) (*types.TicketMessage, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/messages", id)
-
-	var result types.TicketMessage
-	err := s.client.Post(ctx, path, request, &result)
-	return &result, err
-}
-
-// GetMessages retrieves messages for a ticket
-func (s *TicketsService) GetMessages(ctx context.Context, id uint) ([]types.TicketMessage, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/messages", id)
-
-	var result []types.TicketMessage
-	err := s.client.Get(ctx, path, &result)
-	return result, err
-}
-
-// GetMessage retrieves a specific message
-func (s *TicketsService) GetMessage(ctx context.Context, ticketID, messageID uint) (*types.TicketMessage, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/messages/%d", ticketID, messageID)
-
-	var result types.TicketMessage
-	err := s.client.Get(ctx, path, &result)
-	return &result, err
-}
-
-// UpdateMessage updates a ticket message
-func (s *TicketsService) UpdateMessage(ctx context.Context, ticketID, messageID uint, content string) (*types.TicketMessage, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/messages/%d", ticketID, messageID)
-
-	body := map[string]string{"content": content}
-	var result types.TicketMessage
-	err := s.client.Put(ctx, path, body, &result)
-	return &result, err
-}
-
-// DeleteMessage deletes a ticket message
-func (s *TicketsService) DeleteMessage(ctx context.Context, ticketID, messageID uint) error {
-	path := fmt.Sprintf("/api/v1/tickets/%d/messages/%d", ticketID, messageID)
-	return s.client.Delete(ctx, path, nil)
-}
-
-// GetAttachments retrieves attachments for a ticket
-func (s *TicketsService) GetAttachments(ctx context.Context, id uint) ([]types.Attachment, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/attachments", id)
-
-	var result []types.Attachment
-	err := s.client.Get(ctx, path, &result)
-	return result, err
-}
-
-// GetAttachment retrieves a specific attachment
-func (s *TicketsService) GetAttachment(ctx context.Context, ticketID, attachmentID uint) (*types.Attachment, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/attachments/%d", ticketID, attachmentID)
-
-	var result types.Attachment
-	err := s.client.Get(ctx, path, &result)
-	return &result, err
-}
-
-// DownloadAttachment downloads an attachment's content
-func (s *TicketsService) DownloadAttachment(ctx context.Context, ticketID, attachmentID uint) ([]byte, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/attachments/%d/download", ticketID, attachmentID)
-
-	resp, err := s.client.httpClient.R().
-		SetContext(ctx).
-		Get(path)
-
-	if err != nil {
+	if _, err := s.client.do(ctx, http.MethodPost, ticketPath(id)+"/reopen", nil, body, &result); err != nil {
 		return nil, err
 	}
-
-	return resp.Body(), nil
+	return &result, nil
 }
 
-// DeleteAttachment deletes an attachment
-func (s *TicketsService) DeleteAttachment(ctx context.Context, ticketID, attachmentID uint) error {
-	path := fmt.Sprintf("/api/v1/tickets/%d/attachments/%d", ticketID, attachmentID)
-	return s.client.Delete(ctx, path, nil)
+// ArticlesService covers /api/v1/tickets/:id/articles.
+type ArticlesService struct {
+	client *Client
 }
 
-// Search searches tickets with advanced options
-func (s *TicketsService) Search(ctx context.Context, query string, options *types.TicketListOptions) (*types.SearchResult, error) {
-	path := "/api/v1/tickets/search"
-
-	params := url.Values{}
-	params.Set("q", query)
-
-	if options != nil {
-		if options.Page > 0 {
-			params.Set("page", strconv.Itoa(options.Page))
-		}
-		if options.PageSize > 0 {
-			params.Set("page_size", strconv.Itoa(options.PageSize))
-		}
-		if len(options.Status) > 0 {
-			params.Set("status", strings.Join(options.Status, ","))
-		}
-		if len(options.Priority) > 0 {
-			params.Set("priority", strings.Join(options.Priority, ","))
-		}
-		if len(options.QueueID) > 0 {
-			queueIDs := make([]string, len(options.QueueID))
-			for i, id := range options.QueueID {
-				queueIDs[i] = strconv.FormatUint(uint64(id), 10)
-			}
-			params.Set("queue_id", strings.Join(queueIDs, ","))
-		}
-	}
-
-	path += "?" + params.Encode()
-
-	var result types.SearchResult
-	err := s.client.Get(ctx, path, &result)
-	return &result, err
-}
-
-// GetHistory retrieves ticket history
-func (s *TicketsService) GetHistory(ctx context.Context, id uint) ([]map[string]interface{}, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/history", id)
-
-	var result []map[string]interface{}
-	err := s.client.Get(ctx, path, &result)
-	return result, err
-}
-
-// AddTags adds tags to a ticket
-func (s *TicketsService) AddTags(ctx context.Context, id uint, tags []string) (*types.Ticket, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/tags", id)
-
-	body := map[string][]string{"tags": tags}
-	var result types.Ticket
-	err := s.client.Post(ctx, path, body, &result)
-	return &result, err
-}
-
-// RemoveTags removes tags from a ticket
-func (s *TicketsService) RemoveTags(ctx context.Context, id uint, tags []string) (*types.Ticket, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/tags", id)
-
-	body := map[string][]string{"tags": tags}
-	err := s.client.Delete(ctx, path, body)
-	if err != nil {
+// List returns a ticket's articles, newest first. includeAttachments adds
+// each article's attachment list.
+func (s *ArticlesService) List(ctx context.Context, ticketID uint, includeAttachments bool) (*types.ArticleList, error) {
+	var list types.ArticleList
+	if _, err := s.client.do(ctx, http.MethodGet, ticketPath(ticketID)+"/articles", attachmentsQuery(includeAttachments), nil, &list); err != nil {
 		return nil, err
 	}
+	return &list, nil
+}
 
-	// Get updated ticket
-	return s.Get(ctx, id)
+// Get returns one article of a ticket.
+func (s *ArticlesService) Get(ctx context.Context, ticketID, articleID uint, includeAttachments bool) (*types.Article, error) {
+	var article types.Article
+	if _, err := s.client.do(ctx, http.MethodGet, articlePath(ticketID, articleID), attachmentsQuery(includeAttachments), nil, &article); err != nil {
+		return nil, err
+	}
+	return &article, nil
+}
+
+// Create adds an article to a ticket.
+func (s *ArticlesService) Create(ctx context.Context, ticketID uint, request *types.ArticleCreateRequest) (*types.Article, error) {
+	var article types.Article
+	if _, err := s.client.do(ctx, http.MethodPost, ticketPath(ticketID)+"/articles", nil, request, &article); err != nil {
+		return nil, err
+	}
+	return &article, nil
+}
+
+// Update changes an article's subject and/or body.
+func (s *ArticlesService) Update(ctx context.Context, ticketID, articleID uint, request *types.ArticleUpdateRequest) (*types.ArticleUpdate, error) {
+	var updated types.ArticleUpdate
+	if _, err := s.client.do(ctx, http.MethodPut, articlePath(ticketID, articleID), nil, request, &updated); err != nil {
+		return nil, err
+	}
+	return &updated, nil
+}
+
+// Delete deletes an article and its attachments.
+func (s *ArticlesService) Delete(ctx context.Context, ticketID, articleID uint) error {
+	_, err := s.client.do(ctx, http.MethodDelete, articlePath(ticketID, articleID), nil, nil, nil)
+	return err
+}
+
+func ticketPath(id uint) string { return fmt.Sprintf("/api/v1/tickets/%d", id) }
+
+func articlePath(ticketID, articleID uint) string {
+	return fmt.Sprintf("/api/v1/tickets/%d/articles/%d", ticketID, articleID)
+}
+
+func attachmentsQuery(include bool) url.Values {
+	if !include {
+		return nil
+	}
+	return url.Values{"include_attachments": {"true"}}
+}
+
+func setString(q url.Values, key, value string) {
+	if value != "" {
+		q.Set(key, value)
+	}
+}
+
+func setInt(q url.Values, key string, value int) {
+	if value != 0 {
+		q.Set(key, strconv.Itoa(value))
+	}
+}
+
+func setUint(q url.Values, key string, value uint) {
+	if value != 0 {
+		q.Set(key, strconv.FormatUint(uint64(value), 10))
+	}
 }

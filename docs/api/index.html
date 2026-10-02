@@ -1503,6 +1503,28 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
+                    <code class="path">/debug/ticket-number</code>
+                    <p>Current ticket number generator</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/debug/config-sources</code>
+                    <p>Configuration settings with their source</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
                     <code class="path">/setup</code>
                     <p>First-run setup wizard</p>
                     
@@ -1689,17 +1711,6 @@
                 
                 <div class="route">
                     <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/groups/new</code>
-                    <p>Display new group creation form</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
                     <div class="method POST">POST</div>
                     <code class="path">/groups</code>
                     <p>Create new group</p>
@@ -1714,17 +1725,6 @@
                     <div class="method GET">GET</div>
                     <code class="path">/groups/:id</code>
                     <p>Display group details</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/groups/:id/edit</code>
-                    <p>Display group edit form</p>
                     
                     
                     
@@ -1953,6 +1953,17 @@
                 
                 <div class="route">
                     <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/permissions/clone</code>
+                    <p>Replace a user&#39;s permissions with a copy of another user&#39;s</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
                     <div class="method GET">GET</div>
                     <code class="path">/roles</code>
                     <p>Display role management page</p>
@@ -2085,9 +2096,75 @@
                 
                 <div class="route">
                     <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/states/create</code>
+                    <p>Create a ticket state</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method PUT">PUT</div>
+                    <code class="path">/states/:id/update</code>
+                    <p>Update a ticket state</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method DELETE">DELETE</div>
+                    <code class="path">/states/:id/delete</code>
+                    <p>Soft-delete a ticket state</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
                     <div class="method GET">GET</div>
                     <code class="path">/types</code>
                     <p>Display type management page</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/types/create</code>
+                    <p>Create a ticket type</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/types/:id/update</code>
+                    <p>Update a ticket type</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/types/:id/delete</code>
+                    <p>Soft-delete a ticket type</p>
                     
                     
                     
@@ -2338,17 +2415,6 @@
                 
                 <div class="route">
                     <h3></h3>
-                    <div class="method PUT">PUT</div>
-                    <code class="path">/customer/companies/:id/services</code>
-                    <p>Update customer company services</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
                     <div class="method GET">GET</div>
                     <code class="path">/customer/companies/:id/portal-settings</code>
                     <p>Display customer portal settings for a company</p>
@@ -2374,17 +2440,6 @@
                     <div class="method "></div>
                     <code class="path">/customer/portal/settings</code>
                     <p>Display and update global customer portal settings</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method POST">POST</div>
-                    <code class="path">/customer/portal/logo/upload</code>
-                    <p>Upload customer portal logo</p>
                     
                     
                     
@@ -2581,30 +2636,8 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
-                    <code class="path">/settings</code>
-                    <p>Display system configuration page</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
                     <code class="path">/reports</code>
-                    <p>Display reports overview</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/backup</code>
-                    <p>Display backup and restore placeholder</p>
+                    <p>Display ticket reports (queue-scoped statistics, trends, CSV export)</p>
                     
                     
                     
@@ -3177,17 +3210,6 @@
                     <div class="method GET">GET</div>
                     <code class="path">/api/attachments/:id/preview</code>
                     <p>Preview a standard attachment inline</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/modules</code>
-                    <p>List available dynamic modules</p>
                     
                     
                     
@@ -3824,6 +3846,17 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
+                    <code class="path">/webhooks</code>
+                    <p>Manage outbound webhooks, test sends and the delivery log</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
                     <code class="path">/webservices</code>
                     <p>Display web services management page</p>
                     
@@ -4373,17 +4406,6 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method POST">POST</div>
-                    <code class="path">/tickets/:id/draft</code>
-                    <p>Save draft reply for ticket</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method POST">POST</div>
                     <code class="path">/tickets/bulk/status</code>
                     <p>Bulk update ticket status</p>
                     
@@ -4690,8 +4712,8 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
-                    <code class="path">/tickets/:id/attachments/:attachment_id</code>
-                    <p>Download a specific attachment</p>
+                    <code class="path">/tickets/:id/articles/:article_id/attachments/:file_id</code>
+                    <p>Download an attachment of one of the ticket&#39;s articles</p>
                     
                     
                     
@@ -4701,8 +4723,8 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method DELETE">DELETE</div>
-                    <code class="path">/tickets/:id/attachments/:attachment_id</code>
-                    <p>Delete a specific attachment</p>
+                    <code class="path">/tickets/:id/articles/:article_id/attachments/:file_id</code>
+                    <p>Delete an attachment of one of the ticket&#39;s articles</p>
                     
                     
                     
@@ -4712,8 +4734,8 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
-                    <code class="path">/tickets/:id/attachments/:attachment_id/thumbnail</code>
-                    <p>Get thumbnail/preview for an image attachment</p>
+                    <code class="path">/tickets/:id/articles/:article_id/attachments/:file_id/thumbnail</code>
+                    <p>PNG preview of an attachment (images, PDF page 1, type placeholder otherwise)</p>
                     
                     
                     
@@ -4723,8 +4745,8 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
-                    <code class="path">/tickets/:id/attachments/:attachment_id/view</code>
-                    <p>Inline viewer for common attachment types</p>
+                    <code class="path">/tickets/:id/articles/:article_id/attachments/:file_id/view</code>
+                    <p>Attachment viewer page; ?raw=1 serves the content for the viewer frame</p>
                     
                     
                     
@@ -4737,7 +4759,7 @@
         <div class="route-group">
             <div class="group-header">
                 <h2>Default: api-canned-responses-protected</h2>
-                <p>Canned response management API endpoints (protected)</p>
+                <p>Canned response management API endpoints (protected, agents only)</p>
             </div>
             <div class="group-content">
                 
@@ -4745,7 +4767,7 @@
                     <h3></h3>
                     <div class="method GET">GET</div>
                     <code class="path">/</code>
-                    <p>List all canned responses</p>
+                    <p>List canned responses visible to the caller (filters: category, scope, search, tags, sort_by, sort_order, limit)</p>
                     
                     
                     
@@ -4754,9 +4776,9 @@
                 
                 <div class="route">
                     <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/quick</code>
-                    <p>Get quick access responses</p>
+                    <div class="method POST">POST</div>
+                    <code class="path">/</code>
+                    <p>Create a canned response</p>
                     
                     
                     
@@ -4767,7 +4789,7 @@
                     <h3></h3>
                     <div class="method GET">GET</div>
                     <code class="path">/popular</code>
-                    <p>Get popular responses</p>
+                    <p>Most used responses first (limit)</p>
                     
                     
                     
@@ -4800,7 +4822,7 @@
                     <h3></h3>
                     <div class="method GET">GET</div>
                     <code class="path">/search</code>
-                    <p>Search canned responses</p>
+                    <p>Search canned responses by name or content (q)</p>
                     
                     
                     
@@ -4821,8 +4843,96 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
+                    <code class="path">/statistics</code>
+                    <p>Usage statistics for the caller&#39;s responses</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/export</code>
+                    <p>Export responses as JSON or CSV (format=csv)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/import</code>
+                    <p>Import personal responses from a CSV upload (field: file)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
                     <code class="path">/:id</code>
                     <p>Get response by ID</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method PUT">PUT</div>
+                    <code class="path">/:id</code>
+                    <p>Update a canned response</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method DELETE">DELETE</div>
+                    <code class="path">/:id</code>
+                    <p>Delete a canned response</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/:id/use</code>
+                    <p>Render a response with placeholder context and count the use</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/:id/share</code>
+                    <p>Change a response&#39;s scope (global requires admin)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/:id/copy</code>
+                    <p>Copy a response into the caller&#39;s personal scope</p>
                     
                     
                     
@@ -4863,17 +4973,6 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
-                    <code class="path">/stats</code>
-                    <p>Dashboard statistics widget</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
                     <code class="path">/recent-tickets</code>
                     <p>Recent tickets widget</p>
                     
@@ -4885,52 +4984,8 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
-                    <code class="path">/notifications</code>
-                    <p>Notifications widget</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/quick-actions</code>
-                    <p>Quick actions widget</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/activity</code>
-                    <p>Activity feed widget</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
                     <code class="path">/activity-stream</code>
                     <p>Activity stream endpoint</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/performance</code>
-                    <p>Performance metrics widget</p>
                     
                     
                     
@@ -4964,27 +5019,6 @@
                     <div class="method POST">POST</div>
                     <code class="path">/widgets/config</code>
                     <p>Update user&#39;s dashboard widget configuration</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-            </div>
-        </div>
-        
-        <div class="route-group">
-            <div class="group-header">
-                <h2>Default: api-files-protected</h2>
-                <p>File serving endpoint (protected)</p>
-            </div>
-            <div class="group-content">
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/*path</code>
-                    <p>Serve uploaded files</p>
                     
                     
                     
@@ -5298,6 +5332,93 @@
                     <div class="method PUT">PUT</div>
                     <code class="path">/:id/status</code>
                     <p>Update queue status</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        <div class="route-group">
+            <div class="group-header">
+                <h2>Default: api-v1-search</h2>
+                <p>REST API v1 ticket search and saved searches (agents only)</p>
+            </div>
+            <div class="group-content">
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/tickets</code>
+                    <p>Search tickets (ticket, article and customer fields)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/saved</code>
+                    <p>List the caller&#39;s saved ticket searches</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/saved</code>
+                    <p>Save a ticket search</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/saved/:name</code>
+                    <p>Get a saved ticket search</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method PUT">PUT</div>
+                    <code class="path">/saved/:name</code>
+                    <p>Replace the parameters of a saved ticket search</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method DELETE">DELETE</div>
+                    <code class="path">/saved/:name</code>
+                    <p>Delete a saved ticket search</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/saved/:name/execute</code>
+                    <p>Run a saved ticket search</p>
                     
                     
                     
@@ -5631,160 +5752,6 @@
                     
                 </div>
                 
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/advanced-search</code>
-                    <p>Advanced ticket search</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/search/suggestions</code>
-                    <p>Get search suggestions</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/search/export</code>
-                    <p>Export search results</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method POST">POST</div>
-                    <code class="path">/search/history</code>
-                    <p>Save search to history</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/search/history</code>
-                    <p>Get search history</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method DELETE">DELETE</div>
-                    <code class="path">/search/history/:id</code>
-                    <p>Delete search history item</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method POST">POST</div>
-                    <code class="path">/search/saved</code>
-                    <p>Create saved search</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/search/saved</code>
-                    <p>Get saved searches</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/search/saved/:id/execute</code>
-                    <p>Execute saved search</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method PUT">PUT</div>
-                    <code class="path">/search/saved/:id</code>
-                    <p>Update saved search</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method DELETE">DELETE</div>
-                    <code class="path">/search/saved/:id</code>
-                    <p>Delete saved search</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method POST">POST</div>
-                    <code class="path">/:id/merge</code>
-                    <p>Merge tickets</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method POST">POST</div>
-                    <code class="path">/:id/unmerge</code>
-                    <p>Unmerge ticket</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/:id/merge-history</code>
-                    <p>Get merge history</p>
-                    
-                    
-                    
-                    
-                </div>
-                
             </div>
         </div>
         
@@ -6055,13 +6022,24 @@
                     
                 </div>
                 
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/auth/refresh</code>
+                    <p>Exchange a refresh token for a new access token and a rotated refresh token</p>
+                    
+                    
+                    
+                    
+                </div>
+                
             </div>
         </div>
         
         <div class="route-group">
             <div class="group-header">
-                <h2>Default: api-v1-protected</h2>
-                <p>REST API v1 protected endpoints</p>
+                <h2>Default: api-v1-customer-readable</h2>
+                <p>REST API v1 ticket reads shared by agents and customers</p>
             </div>
             <div class="group-content">
                 
@@ -6078,9 +6056,9 @@
                 
                 <div class="route">
                     <h3></h3>
-                    <div class="method POST">POST</div>
-                    <code class="path">/tickets</code>
-                    <p>Create ticket</p>
+                    <div class="method GET">GET</div>
+                    <code class="path">/tickets/:id</code>
+                    <p>Get ticket by ID</p>
                     
                     
                     
@@ -6090,8 +6068,40 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
-                    <code class="path">/tickets/:id</code>
-                    <p>Get ticket by ID</p>
+                    <code class="path">/tickets/:id/articles</code>
+                    <p>Get ticket articles</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/tickets/:id/articles/:article_id</code>
+                    <p>Get specific article</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        <div class="route-group">
+            <div class="group-header">
+                <h2>Default: api-v1-protected</h2>
+                <p>REST API v1 protected endpoints</p>
+            </div>
+            <div class="group-content">
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/tickets</code>
+                    <p>Create ticket</p>
                     
                     
                     
@@ -6144,31 +6154,9 @@
                 
                 <div class="route">
                     <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/tickets/:id/articles</code>
-                    <p>Get ticket articles</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
                     <div class="method POST">POST</div>
                     <code class="path">/tickets/:id/articles</code>
                     <p>Add article to ticket</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/tickets/:id/articles/:article_id</code>
-                    <p>Get specific article</p>
                     
                     
                     
@@ -6320,6 +6308,39 @@
                 
                 <div class="route">
                     <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/priorities</code>
+                    <p>Create priority (admin only)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method PUT">PUT</div>
+                    <code class="path">/priorities/:id</code>
+                    <p>Update priority (admin only)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method DELETE">DELETE</div>
+                    <code class="path">/priorities/:id</code>
+                    <p>Invalidate priority (admin only)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
                     <div class="method GET">GET</div>
                     <code class="path">/types</code>
                     <p>List ticket types</p>
@@ -6354,6 +6375,94 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
+                    <code class="path">/statistics/dashboard</code>
+                    <p>Dashboard statistics (ticket counts by state, queue, priority; recent tickets)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/statistics/trends</code>
+                    <p>Ticket created/closed trends (daily or monthly)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/statistics/agents</code>
+                    <p>Agent performance (tickets assigned/closed, articles written)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/statistics/queues</code>
+                    <p>Queue metrics (total, open, backlog)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/statistics/analytics</code>
+                    <p>Ticket distribution by hour of day or day of week</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/statistics/customers</code>
+                    <p>Customer statistics (top customers, activity)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/statistics/export</code>
+                    <p>Export statistics summary or ticket list as JSON or CSV</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/ticket-states/statistics</code>
+                    <p>Ticket counts per ticket state</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
                     <code class="path">/ticket-attribute-relations/evaluate</code>
                     <p>Evaluate ticket attribute relations for filtering dropdowns</p>
                     
@@ -6375,20 +6484,9 @@
                 
                 <div class="route">
                     <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/search/suggestions</code>
-                    <p>Search suggestions</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
                     <div class="method POST">POST</div>
                     <code class="path">/search/reindex</code>
-                    <p>Trigger search reindex</p>
+                    <p>Trigger search reindex (admin only)</p>
                     
                     
                     
@@ -6465,7 +6563,7 @@
                     <h3></h3>
                     <div class="method POST">POST</div>
                     <code class="path">/queues</code>
-                    <p>Create queue</p>
+                    <p>Create queue (admin only)</p>
                     
                     
                     
@@ -6476,7 +6574,7 @@
                     <h3></h3>
                     <div class="method PUT">PUT</div>
                     <code class="path">/queues/:id</code>
-                    <p>Update queue</p>
+                    <p>Update queue, including its group (admin only)</p>
                     
                     
                     
@@ -6487,7 +6585,7 @@
                     <h3></h3>
                     <div class="method DELETE">DELETE</div>
                     <code class="path">/queues/:id</code>
-                    <p>Delete queue</p>
+                    <p>Delete queue (admin only)</p>
                     
                     
                     
@@ -6509,7 +6607,7 @@
                     <h3></h3>
                     <div class="method POST">POST</div>
                     <code class="path">/queues/:id/groups</code>
-                    <p>Assign group to queue</p>
+                    <p>Set the queue&#39;s group (admin only)</p>
                     
                     
                     
@@ -6520,7 +6618,7 @@
                     <h3></h3>
                     <div class="method DELETE">DELETE</div>
                     <code class="path">/queues/:id/groups/:group_id</code>
-                    <p>Remove group from queue</p>
+                    <p>Remove the queue&#39;s group: always rejected, a queue must have a group (admin only)</p>
                     
                     
                     
@@ -6542,7 +6640,7 @@
                     <h3></h3>
                     <div class="method POST">POST</div>
                     <code class="path">/system-addresses</code>
-                    <p>Create system address</p>
+                    <p>Create system address (admin only)</p>
                     
                     
                     
@@ -6553,7 +6651,7 @@
                     <h3></h3>
                     <div class="method PUT">PUT</div>
                     <code class="path">/system-addresses/:id</code>
-                    <p>Update system address</p>
+                    <p>Update system address (admin only)</p>
                     
                     
                     
@@ -6575,7 +6673,7 @@
                     <h3></h3>
                     <div class="method POST">POST</div>
                     <code class="path">/salutations</code>
-                    <p>Create salutation</p>
+                    <p>Create salutation (admin only)</p>
                     
                     
                     
@@ -6586,7 +6684,7 @@
                     <h3></h3>
                     <div class="method PUT">PUT</div>
                     <code class="path">/salutations/:id</code>
-                    <p>Update salutation</p>
+                    <p>Update salutation (admin only)</p>
                     
                     
                     
@@ -6608,7 +6706,7 @@
                     <h3></h3>
                     <div class="method POST">POST</div>
                     <code class="path">/signatures</code>
-                    <p>Create signature</p>
+                    <p>Create signature (admin only)</p>
                     
                     
                     
@@ -6619,7 +6717,7 @@
                     <h3></h3>
                     <div class="method PUT">PUT</div>
                     <code class="path">/signatures/:id</code>
-                    <p>Update signature</p>
+                    <p>Update signature (admin only)</p>
                     
                     
                     
@@ -6917,6 +7015,126 @@
         
         <div class="route-group">
             <div class="group-header">
+                <h2>Default: api-webhooks</h2>
+                <p>Outbound webhook configuration, delivery log, test and redelivery (admin only)</p>
+            </div>
+            <div class="group-content">
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/webhooks</code>
+                    <p>List webhooks (optional ?active=true|false)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/webhooks</code>
+                    <p>Create webhook</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/webhooks/events</code>
+                    <p>List subscribable webhook events</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/webhooks/deliveries/:id</code>
+                    <p>Get delivery including payload and response</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/webhooks/deliveries/:id/redeliver</code>
+                    <p>Send a delivery&#39;s payload again as a new delivery</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/webhooks/:id</code>
+                    <p>Get webhook</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method PUT">PUT</div>
+                    <code class="path">/webhooks/:id</code>
+                    <p>Update webhook (partial)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method DELETE">DELETE</div>
+                    <code class="path">/webhooks/:id</code>
+                    <p>Delete webhook and its delivery log</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/webhooks/:id/test</code>
+                    <p>Send a webhook.test event now</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/webhooks/:id/deliveries</code>
+                    <p>List recent deliveries (optional ?limit=1..200)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        <div class="route-group">
+            <div class="group-header">
                 <h2>Default: auth</h2>
                 <p>Authentication routes for login/logout</p>
             </div>
@@ -6982,28 +7200,6 @@
                     <div class="method GET">GET</div>
                     <code class="path">/logout</code>
                     <p>GET logout route that redirects to login</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method POST">POST</div>
-                    <code class="path">/api/auth/refresh</code>
-                    <p>Placeholder for token refresh</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method POST">POST</div>
-                    <code class="path">/api/auth/register</code>
-                    <p>Placeholder for user registration</p>
                     
                     
                     
@@ -7560,6 +7756,28 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
+                    <code class="path">/company</code>
+                    <p>Display the logged-in customer&#39;s own company details</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/company/users</code>
+                    <p>List the valid customer users of the logged-in customer&#39;s own company</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
                     <code class="path">/api/preferences/language</code>
                     <p>Get customer language preference</p>
                     
@@ -7692,6 +7910,17 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method POST">POST</div>
+                    <code class="path">/api/preferences/2fa/recovery-codes</code>
+                    <p>Replace customer recovery codes (password required)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
                     <code class="path">/api/preferences/2fa/webauthn/register/begin</code>
                     <p>Begin customer hardware security key registration</p>
                     
@@ -7791,8 +8020,8 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
-                    <code class="path">/tickets/:id/attachments/:attachment_id</code>
-                    <p>Download attachment from a customer ticket</p>
+                    <code class="path">/tickets/:id/articles/:article_id/attachments/:file_id</code>
+                    <p>Download an attachment of a customer-visible article (?download=1 forces a download)</p>
                     
                     
                     
@@ -7802,8 +8031,8 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
-                    <code class="path">/tickets/:id/attachments/:attachment_id/thumbnail</code>
-                    <p>Get thumbnail for an image attachment</p>
+                    <code class="path">/tickets/:id/articles/:article_id/attachments/:file_id/thumbnail</code>
+                    <p>Get a PNG thumbnail of an attachment</p>
                     
                     
                     
@@ -7813,8 +8042,8 @@
                 <div class="route">
                     <h3></h3>
                     <div class="method GET">GET</div>
-                    <code class="path">/tickets/:id/attachments/:attachment_id/view</code>
-                    <p>View attachment in modal viewer</p>
+                    <code class="path">/tickets/:id/articles/:article_id/attachments/:file_id/view</code>
+                    <p>View attachment in a viewer page (?raw=1 serves the embeddable content)</p>
                     
                     
                     
@@ -7847,17 +8076,6 @@
                     <div class="method GET">GET</div>
                     <code class="path">/api/activity-stream</code>
                     <p>Server-sent events for dashboard activity updates</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/api/stats</code>
-                    <p>Get dashboard statistics and metrics</p>
                     
                     
                     
@@ -7901,10 +8119,142 @@
         
         <div class="route-group">
             <div class="group-header">
-                <h2>Default: redirects</h2>
-                <p>Simple redirect/alias routes</p>
+                <h2>Default: selfservice</h2>
+                <p>Password reset and customer self-registration</p>
             </div>
             <div class="group-content">
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/forgot-password</code>
+                    <p>Agent forgot-password form</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/forgot-password</code>
+                    <p>Email an agent a password reset link (same answer for unknown accounts)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/reset-password</code>
+                    <p>Agent choose-new-password form (token from email)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/reset-password</code>
+                    <p>Set a new agent password with a reset token</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/customer/forgot-password</code>
+                    <p>Customer forgot-password form</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/customer/forgot-password</code>
+                    <p>Email a customer a password reset link (same answer for unknown accounts)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/customer/reset-password</code>
+                    <p>Customer choose-new-password form (token from email)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/customer/reset-password</code>
+                    <p>Set a new customer password with a reset token</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/customer/register</code>
+                    <p>Customer sign-up form</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/customer/register</code>
+                    <p>Email a sign-up confirmation link</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method GET">GET</div>
+                    <code class="path">/customer/register/complete</code>
+                    <p>Confirm email address and choose a password (token from email)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/customer/register/complete</code>
+                    <p>Create the customer account</p>
+                    
+                    
+                    
+                    
+                </div>
                 
             </div>
         </div>
@@ -8053,6 +8403,17 @@
                     <div class="method POST">POST</div>
                     <code class="path">/api/preferences/2fa/disable</code>
                     <p>Disable 2FA (requires valid code)</p>
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div class="route">
+                    <h3></h3>
+                    <div class="method POST">POST</div>
+                    <code class="path">/api/preferences/2fa/recovery-codes</code>
+                    <p>Replace recovery codes (password required)</p>
                     
                     
                     
@@ -8281,17 +8642,6 @@
                     <div class="method POST">POST</div>
                     <code class="path">/:id/attachments</code>
                     <p>Upload file attachment to ticket</p>
-                    
-                    
-                    
-                    
-                </div>
-                
-                <div class="route">
-                    <h3></h3>
-                    <div class="method GET">GET</div>
-                    <code class="path">/api/search</code>
-                    <p>Search tickets with filters</p>
                     
                     
                     

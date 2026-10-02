@@ -1,9 +1,10 @@
 package api
 
 import (
-	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"html"
 	"log"
 	"net/http"
 	"strconv"
@@ -12,9 +13,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/goatkit/goatflow/internal/pdfthumb"
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/storage"
 )
+
+// Customers see the attachments of the customer-visible articles of their own
+// tickets. A single attachment is addressed like on the agent side:
+// /customer/tickets/:id/articles/:article_id/attachments/:file_id.
 
 // verifyCustomerOwnsTicket checks if the authenticated customer owns the specified ticket.
 // Returns the ticket ID if valid, or 0 and sends an error response if not.
@@ -44,156 +50,129 @@ func verifyCustomerOwnsTicket(c *gin.Context, db *sql.DB, ticketIDStr, username 
 	return ticketID, true
 }
 
+// customerAttachment is one entry of the customer attachment list.
+type customerAttachment struct {
+	ArticleID     int64  `json:"article_id"`
+	FileID        int64  `json:"file_id"`
+	Filename      string `json:"filename"`
+	ContentType   string `json:"content_type"`
+	Size          int64  `json:"size"`
+	SizeFormatted string `json:"size_formatted"`
+	UploadedAt    string `json:"uploaded_at"`
+	UploadedBy    int    `json:"uploaded_by"`
+	DownloadURL   string `json:"download_url"`
+	ViewURL       string `json:"view_url"`
+	ThumbnailURL  string `json:"thumbnail_url"`
+}
+
+// customerTicketBase is the URL prefix of a ticket in the customer portal.
+func customerTicketBase(ticketID int) string {
+	return fmt.Sprintf("/customer/tickets/%d", ticketID)
+}
+
 // handleCustomerGetAttachments returns list of attachments for a customer's ticket.
 func handleCustomerGetAttachments(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !requireCustomerAuth(c) {
 			return
 		}
-		username := c.GetString("username")
-		ticketIDStr := c.Param("id")
-
-		ticketID, ok := verifyCustomerOwnsTicket(c, db, ticketIDStr, username)
+		ticketID, ok := verifyCustomerOwnsTicket(c, db, c.Param("id"), c.GetString("username"))
 		if !ok {
 			return
 		}
 
-		// Query attachments from database - only customer-visible articles
-		rows, err := db.Query(database.ConvertPlaceholders(`
-			SELECT att.id, att.filename,
-			       COALESCE(att.content_type, 'application/octet-stream'),
-			       COALESCE(att.content_size, '0'),
-			       att.create_time, att.create_by,
-			       att.article_id
-			FROM article_data_mime_attachment att
-			INNER JOIN article a ON att.article_id = a.id
-			WHERE a.ticket_id = ? AND a.is_visible_for_customer = 1
-			ORDER BY att.id
-		`), ticketID)
+		atts, err := listTicketAttachments(c.Request.Context(), db, ticketID, true)
 		if err != nil {
+			log.Printf("customer attachments: list ticket %d: %v", ticketID, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query attachments"})
 			return
 		}
-		defer rows.Close()
 
-		result := []gin.H{}
-		for rows.Next() {
-			var attID, articleID, createBy int
-			var filename, contentType string
-			var contentSize int64
-			var createTime time.Time
-
-			err := rows.Scan(&attID, &filename, &contentType, &contentSize, &createTime, &createBy, &articleID)
-			if err != nil {
-				continue
-			}
-
-			publicAtt := gin.H{
-				"id":             attID,
-				"filename":       filename,
-				"size":           contentSize,
-				"size_formatted": formatFileSize(contentSize),
-				"content_type":   contentType,
-				"uploaded_at":    createTime.Format("Jan 2, 2006 3:04 PM"),
-				"uploaded_by":    createBy,
-				"article_id":     articleID,
-				"download_url":   fmt.Sprintf("/customer/tickets/%d/attachments/%d", ticketID, attID),
-			}
-
-			// Add thumbnail URL for images
-			if strings.HasPrefix(contentType, "image/") {
-				publicAtt["thumbnail_url"] = fmt.Sprintf("/customer/tickets/%d/attachments/%d/thumbnail", ticketID, attID)
-			}
-
-			result = append(result, publicAtt)
-		}
-		if err := rows.Err(); err != nil {
-			log.Printf("Error iterating attachments: %v", err)
-		}
-
-		// Check if this is an HTMX request
-		if c.GetHeader("HX-Request") == "true" {
-			html := renderCustomerAttachmentListHTML(result, ticketID)
-			c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
-		} else {
-			c.JSON(http.StatusOK, gin.H{
-				"attachments": result,
-				"total":       len(result),
+		base := customerTicketBase(ticketID)
+		result := make([]customerAttachment, 0, len(atts))
+		for _, a := range atts {
+			url := attachmentURL(base, a.ArticleID, a.FileID)
+			result = append(result, customerAttachment{
+				ArticleID:     a.ArticleID,
+				FileID:        a.FileID,
+				Filename:      a.Filename,
+				ContentType:   a.ContentType,
+				Size:          a.Size,
+				SizeFormatted: formatFileSize(a.Size),
+				UploadedAt:    a.CreateTime.Format("Jan 2, 2006 3:04 PM"),
+				UploadedBy:    a.CreateBy,
+				DownloadURL:   url,
+				ViewURL:       url + "/view",
+				ThumbnailURL:  url + "/thumbnail",
 			})
 		}
+
+		if c.GetHeader("HX-Request") == "true" {
+			c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(renderCustomerAttachmentListHTML(result)))
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"attachments": result,
+			"total":       len(result),
+		})
 	}
 }
 
 // handleCustomerUploadAttachment handles file upload for customer tickets.
+// Files go to the latest customer-visible article; a ticket without one gets
+// a new customer article to carry them.
 func handleCustomerUploadAttachment(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !requireCustomerAuth(c) {
 			return
 		}
 		username := c.GetString("username")
-		ticketIDStr := c.Param("id")
 		systemUserID := 1 // System user for create_by/change_by
 
-		ticketID, ok := verifyCustomerOwnsTicket(c, db, ticketIDStr, username)
+		ticketID, ok := verifyCustomerOwnsTicket(c, db, c.Param("id"), username)
 		if !ok {
 			return
 		}
 
-		// Parse multipart form
 		if err := c.Request.ParseMultipartForm(10 << 20); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse form"})
 			return
 		}
-
-		// Get files from form
 		files := getFormFiles(c.Request.MultipartForm)
 		if len(files) == 0 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "No files uploaded"})
 			return
 		}
 
-		// Get the latest customer-visible article for this ticket to attach files to
+		ctx := c.Request.Context()
 		var articleID int
-		err := db.QueryRow(database.ConvertPlaceholders(`
+		err := db.QueryRowContext(ctx, database.ConvertPlaceholders(`
 			SELECT id FROM article
 			WHERE ticket_id = ? AND is_visible_for_customer = 1
 			ORDER BY id DESC LIMIT 1
 		`), ticketID).Scan(&articleID)
-		if err != nil {
-			// No article exists, create one
-			articleIDInt64, insertErr := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
-				INSERT INTO article (
-					ticket_id, article_sender_type_id, communication_channel_id,
-					is_visible_for_customer, search_index_needs_rebuild,
-					create_time, create_by, change_time, change_by
-				) VALUES (?, 3, 1, 1, 1, NOW(), ?, NOW(), ?) RETURNING id
-			`), ticketID, systemUserID, systemUserID)
-			if insertErr != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			articleID, err = createCustomerAttachmentArticle(db, ticketID, username, systemUserID)
+			if err != nil {
+				log.Printf("customer attachments: create article for ticket %d: %v", ticketID, err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create article for attachment"})
 				return
 			}
-			articleID = int(articleIDInt64)
-
-			// Insert article_data_mime record
-			_, _ = db.Exec(database.ConvertPlaceholders(`
-				INSERT INTO article_data_mime (
-					article_id, a_from, a_subject, a_body, a_content_type,
-					incoming_time, create_time, create_by, change_time, change_by
-				) VALUES (?, ?, 'Attachment', '', 'text/plain',
-					UNIX_TIMESTAMP(), NOW(), ?, NOW(), ?)
-			`), articleID, username, systemUserID, systemUserID)
+		case err != nil:
+			log.Printf("customer attachments: find article of ticket %d: %v", ticketID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find article for attachment"})
+			return
 		}
 
-		// Process attachments using the shared helper
 		processFormAttachments(files, attachmentProcessParams{
-			ctx:       context.Background(),
+			ctx:       ctx,
 			db:        db,
 			ticketID:  ticketID,
 			articleID: articleID,
 			userID:    systemUserID,
 		})
 
-		// Return success with HTMX trigger
 		c.Header("HX-Trigger", "attachments-updated")
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
@@ -202,215 +181,127 @@ func handleCustomerUploadAttachment(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+// createCustomerAttachmentArticle creates the customer-visible article that
+// carries attachments uploaded to a ticket without one.
+func createCustomerAttachmentArticle(db *sql.DB, ticketID int, from string, userID int) (int, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback() }() //nolint:errcheck // no-op after commit
+
+	now := time.Now()
+	articleID, err := database.GetAdapter().InsertWithReturningTx(tx, database.ConvertPlaceholders(`
+		INSERT INTO article (
+			ticket_id, article_sender_type_id, communication_channel_id,
+			is_visible_for_customer, search_index_needs_rebuild,
+			create_time, create_by, change_time, change_by
+		) VALUES (?, ?, ?, 1, 1, ?, ?, ?, ?) RETURNING id
+	`), ticketID, constants.ArticleSenderCustomer, constants.CommunicationChannelEmail, now, userID, now, userID)
+	if err != nil {
+		return 0, fmt.Errorf("insert article: %w", err)
+	}
+	if _, err := tx.Exec(database.ConvertPlaceholders(`
+		INSERT INTO article_data_mime (
+			article_id, a_from, a_subject, a_body, a_content_type, content_path,
+			incoming_time, create_time, create_by, change_time, change_by
+		) VALUES (?, ?, 'Attachment', '', 'text/plain', ?, ?, ?, ?, ?, ?)
+	`), articleID, from, storage.ContentPath(now), now.Unix(), now, userID, now, userID); err != nil {
+		return 0, fmt.Errorf("insert article_data_mime: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return int(articleID), nil
+}
+
+// loadCustomerAttachment resolves the ticket (owned by the customer) and the
+// attachment (on one of its customer-visible articles). It writes the error
+// response and returns ok=false when either is not accessible.
+func loadCustomerAttachment(c *gin.Context, db *sql.DB) (ticketID int, a storage.Attachment, content []byte, ok bool) {
+	if !requireCustomerAuth(c) {
+		return 0, a, nil, false
+	}
+	ticketID, ok = verifyCustomerOwnsTicket(c, db, c.Param("id"), c.GetString("username"))
+	if !ok {
+		return 0, a, nil, false
+	}
+	articleID, fileID, ok := attachmentRefParams(c)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid attachment reference"})
+		return 0, a, nil, false
+	}
+	a, content, err := getTicketAttachment(c.Request.Context(), db, ticketID, articleID, fileID, true)
+	if errors.Is(err, storage.ErrNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Attachment not found"})
+		return 0, a, nil, false
+	}
+	if err != nil {
+		log.Printf("customer attachments: load %d/%d of ticket %d: %v", articleID, fileID, ticketID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load attachment"})
+		return 0, a, nil, false
+	}
+	return ticketID, a, content, true
+}
+
 // handleCustomerDownloadAttachment serves the attachment file for customers.
 func handleCustomerDownloadAttachment(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !requireCustomerAuth(c) {
-			return
+		if _, a, content, ok := loadCustomerAttachment(c, db); ok {
+			serveAttachment(c, a, content, c.Query("download") == "1")
 		}
-		username := c.GetString("username")
-		ticketIDStr := c.Param("id")
-		attachmentIDStr := c.Param("attachment_id")
-
-		ticketID, ok := verifyCustomerOwnsTicket(c, db, ticketIDStr, username)
-		if !ok {
-			return
-		}
-
-		attachmentID, err := strconv.Atoi(attachmentIDStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid attachment ID"})
-			return
-		}
-
-		// Get attachment - ensure it's from a customer-visible article
-		var (
-			filename     string
-			contentType  string
-			contentSize  int
-			contentBytes []byte
-		)
-		row := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT att.filename, COALESCE(att.content_type,'application/octet-stream'),
-				   COALESCE(att.content_size, '0'), att.content
-			FROM article_data_mime_attachment att
-			INNER JOIN article a ON att.article_id = a.id
-			WHERE att.id = ? AND a.ticket_id = ? AND a.is_visible_for_customer = 1
-			LIMIT 1`), attachmentID, ticketID)
-
-		if scanErr := row.Scan(&filename, &contentType, &contentSize, &contentBytes); scanErr != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Attachment not found"})
-			return
-		}
-
-		// If content is empty, try local storage
-		if len(contentBytes) == 0 {
-			if buf, ok := findLocalStoredAttachmentBytes(ticketID, filename); ok {
-				contentBytes = buf
-				contentSize = len(buf)
-				if contentType == "" || contentType == "application/octet-stream" {
-					contentType = detectContentType(filename, buf)
-				}
-			}
-		}
-
-		disposition := "attachment"
-		if strings.HasPrefix(contentType, "image/") || contentType == "application/pdf" {
-			disposition = "inline"
-		}
-		c.Header("Content-Disposition", fmt.Sprintf("%s; filename=\"%s\"", disposition, filename))
-		c.Header("Content-Type", contentType)
-		c.Header("Content-Length", strconv.Itoa(contentSize))
-		c.Data(http.StatusOK, contentType, contentBytes)
 	}
 }
 
-// handleCustomerGetThumbnail serves thumbnails for image attachments.
+// handleCustomerGetThumbnail serves a PNG preview of an attachment.
 func handleCustomerGetThumbnail(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !requireCustomerAuth(c) {
-			return
+		if _, a, content, ok := loadCustomerAttachment(c, db); ok {
+			serveThumbnail(c, a, content)
 		}
-		username := c.GetString("username")
-		ticketIDStr := c.Param("id")
-		attachmentIDStr := c.Param("attachment_id")
-
-		ticketID, ok := verifyCustomerOwnsTicket(c, db, ticketIDStr, username)
-		if !ok {
-			return
-		}
-
-		attachmentID, err := strconv.Atoi(attachmentIDStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid attachment ID"})
-			return
-		}
-
-		// Get attachment content - ensure it's from a customer-visible article
-		var (
-			filename     string
-			contentType  string
-			contentBytes []byte
-		)
-		row := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT att.filename, COALESCE(att.content_type,'application/octet-stream'), att.content
-			FROM article_data_mime_attachment att
-			INNER JOIN article a ON att.article_id = a.id
-			WHERE att.id = ? AND a.ticket_id = ? AND a.is_visible_for_customer = 1
-			LIMIT 1`), attachmentID, ticketID)
-
-		if scanErr := row.Scan(&filename, &contentType, &contentBytes); scanErr != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Attachment not found"})
-			return
-		}
-
-		// If content is empty, try local storage
-		if len(contentBytes) == 0 {
-			if buf, ok := findLocalStoredAttachmentBytes(ticketID, filename); ok {
-				contentBytes = buf
-				if contentType == "" || contentType == "application/octet-stream" {
-					contentType = detectContentType(filename, buf)
-				}
-			}
-		}
-
-		// Only generate thumbnails for images
-		if !strings.HasPrefix(contentType, "image/") {
-			// PDFs rasterize page 1 via poppler (pdftoppm), so the thumbnail
-			// URL serves a PNG for PDFs exactly like for images.
-			if contentType == "application/pdf" {
-				if png, perr := pdfthumb.RenderPage1(contentBytes); perr == nil {
-					c.Header("Cache-Control", "public, max-age=86400")
-					c.Data(http.StatusOK, "image/png", png)
-					return
-				}
-			}
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Not an image"})
-			return
-		}
-
-		// Serve the image with cache headers - browser will handle display scaling
-		c.Header("Cache-Control", "public, max-age=86400")
-		c.Data(http.StatusOK, contentType, contentBytes)
 	}
 }
 
-// handleCustomerViewAttachment serves an attachment viewer page.
+// handleCustomerViewAttachment serves an attachment viewer page; with ?raw=1
+// it serves the content for embedding in that page.
 func handleCustomerViewAttachment(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !requireCustomerAuth(c) {
-			return
-		}
-		username := c.GetString("username")
-		ticketIDStr := c.Param("id")
-		attachmentIDStr := c.Param("attachment_id")
-
-		ticketID, ok := verifyCustomerOwnsTicket(c, db, ticketIDStr, username)
+		ticketID, a, content, ok := loadCustomerAttachment(c, db)
 		if !ok {
 			return
 		}
-
-		attachmentID, err := strconv.Atoi(attachmentIDStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid attachment ID"})
+		if c.Query("raw") == "1" {
+			serveAttachmentRaw(c, a, content)
 			return
 		}
-
-		// Get attachment details - ensure it's from a customer-visible article
-		var filename, contentType string
-		row := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT att.filename, COALESCE(att.content_type,'application/octet-stream')
-			FROM article_data_mime_attachment att
-			INNER JOIN article a ON att.article_id = a.id
-			WHERE att.id = ? AND a.ticket_id = ? AND a.is_visible_for_customer = 1
-			LIMIT 1`), attachmentID, ticketID)
-
-		if scanErr := row.Scan(&filename, &contentType); scanErr != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Attachment not found"})
-			return
-		}
-
-		// Render viewer HTML
-		downloadURL := fmt.Sprintf("/customer/tickets/%d/attachments/%d", ticketID, attachmentID)
-		html := renderAttachmentViewerHTML(filename, contentType, downloadURL)
-		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
+		url := attachmentURL(customerTicketBase(ticketID), a.ArticleID, a.FileID)
+		page := renderAttachmentViewerHTML(a.Filename, attachmentContentType(a, content), url)
+		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(page))
 	}
 }
 
 // renderCustomerAttachmentListHTML renders attachment list as HTML for HTMX.
 // Note: Customers cannot delete attachments, so no delete button is shown.
-func renderCustomerAttachmentListHTML(attachments []gin.H, ticketID int) string {
+func renderCustomerAttachmentListHTML(attachments []customerAttachment) string {
 	if len(attachments) == 0 {
 		return `<div class="text-center py-4 text-sm" style="color: var(--gk-text-muted);">No attachments found</div>`
 	}
 
-	html := `<div class="space-y-2">`
+	var b strings.Builder
+	b.WriteString(`<div class="space-y-2">`)
 	for _, att := range attachments {
-		filename, _ := att["filename"].(string)
-		sizeFormatted, _ := att["size_formatted"].(string)
-		contentType, _ := att["content_type"].(string)
-		downloadURL, _ := att["download_url"].(string)
-
+		ct := normalizeMimeType(att.ContentType)
 		// Icon/thumb based on content type
 		icon := `<div class="w-10 h-10 rounded flex items-center justify-center" style="background: var(--gk-bg-elevated);">
 			<svg class="w-5 h-5" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
 			</svg>
 		</div>`
-
-		if strings.HasPrefix(contentType, "image/") {
-			if th, ok := att["thumbnail_url"]; ok {
-				if thStr, ok := th.(string); ok {
-					icon = fmt.Sprintf(`<img src="%s" alt="thumb" class="w-10 h-10 rounded object-cover" style="border: 1px solid var(--gk-border);"/>`, thStr)
-				}
-			} else {
-				icon = `<div class="w-10 h-10 rounded flex items-center justify-center" style="background: var(--gk-primary-subtle);">
-					<svg class="w-5 h-5" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2z"></path>
-					</svg>
-				</div>`
-			}
-		} else if contentType == "application/pdf" {
+		switch {
+		case strings.HasPrefix(ct, "image/"):
+			icon = fmt.Sprintf(`<img src="%s" alt="thumb" class="w-10 h-10 rounded object-cover" style="border: 1px solid var(--gk-border);"/>`,
+				html.EscapeString(att.ThumbnailURL))
+		case ct == "application/pdf":
 			icon = `<div class="w-10 h-10 rounded flex items-center justify-center" style="background: var(--gk-error-subtle);">
 				<svg class="w-5 h-5" style="color: var(--gk-error);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
@@ -418,7 +309,7 @@ func renderCustomerAttachmentListHTML(attachments []gin.H, ticketID int) string 
 			</div>`
 		}
 
-		html += fmt.Sprintf(`
+		fmt.Fprintf(&b, `
 		<div class="flex items-center justify-between p-3 rounded-lg transition-colors"
 		     style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border);"
 		     onmouseover="this.style.background='var(--gk-bg-elevated)'"
@@ -426,7 +317,7 @@ func renderCustomerAttachmentListHTML(attachments []gin.H, ticketID int) string 
 			<div class="flex items-center space-x-3">
 				%s
 				<div>
-					<a href="%s/view" target="_blank" class="text-sm font-medium transition-colors"
+					<a href="%s" target="_blank" class="text-sm font-medium transition-colors"
 					   style="color: var(--gk-primary);"
 					   onmouseover="this.style.textDecoration='underline'"
 					   onmouseout="this.style.textDecoration='none'">
@@ -436,7 +327,7 @@ func renderCustomerAttachmentListHTML(attachments []gin.H, ticketID int) string 
 				</div>
 			</div>
 			<div class="flex items-center space-x-2">
-				<a href="%s/view" target="_blank" class="p-2 rounded transition-colors"
+				<a href="%s" target="_blank" class="p-2 rounded transition-colors"
 				   style="color: var(--gk-text-muted);"
 				   onmouseover="this.style.color='var(--gk-primary)';this.style.background='var(--gk-primary-subtle)'"
 				   onmouseout="this.style.color='var(--gk-text-muted)';this.style.background='transparent'"
@@ -456,23 +347,31 @@ func renderCustomerAttachmentListHTML(attachments []gin.H, ticketID int) string 
 					</svg>
 				</a>
 			</div>
-		</div>`, icon, downloadURL, filename, sizeFormatted, downloadURL, downloadURL)
+		</div>`, icon, html.EscapeString(att.ViewURL), html.EscapeString(att.Filename), html.EscapeString(att.SizeFormatted),
+			html.EscapeString(att.ViewURL), html.EscapeString(att.DownloadURL+"?download=1"))
 	}
-	html += `</div>`
-
-	return html
+	b.WriteString(`</div>`)
+	return b.String()
 }
 
-// renderAttachmentViewerHTML renders an HTML page for viewing attachments.
-func renderAttachmentViewerHTML(filename, contentType, downloadURL string) string {
+// renderAttachmentViewerHTML renders an HTML page for viewing an attachment.
+// url is the attachment's download URL; the embedded preview loads its
+// framable /view?raw=1 variant.
+func renderAttachmentViewerHTML(filename, contentType, url string) string {
+	name := html.EscapeString(filename)
+	raw := html.EscapeString(url + "/view?raw=1")
+	download := html.EscapeString(url + "?download=1")
+	ct := normalizeMimeType(contentType)
+
 	var content string
-	if strings.HasPrefix(contentType, "image/") {
-		content = fmt.Sprintf(`<img src="%s" alt="%s" style="max-width: 100%%; max-height: 90vh; object-fit: contain;">`, downloadURL, filename)
-	} else if contentType == "application/pdf" {
-		content = fmt.Sprintf(`<iframe src="%s" style="width: 100%%; height: 90vh; border: none;"></iframe>`, downloadURL)
-	} else if strings.HasPrefix(contentType, "text/") {
-		content = fmt.Sprintf(`<iframe src="%s" style="width: 100%%; height: 90vh; border: 1px solid var(--gk-border); border-radius: 8px; background: var(--gk-bg-surface);"></iframe>`, downloadURL)
-	} else {
+	switch {
+	case inlineSafe(ct) && strings.HasPrefix(ct, "image/"):
+		content = fmt.Sprintf(`<img src="%s" alt="%s" style="max-width: 100%%; max-height: 90vh; object-fit: contain;">`, raw, name)
+	case inlineSafe(ct):
+		content = fmt.Sprintf(`<iframe src="%s" style="width: 100%%; height: 90vh; border: none;"></iframe>`, raw)
+	case rawAsText(ct):
+		content = fmt.Sprintf(`<iframe src="%s" style="width: 100%%; height: 90vh; border: 1px solid var(--gk-border); border-radius: 8px; background: var(--gk-bg-surface);"></iframe>`, raw)
+	default:
 		content = fmt.Sprintf(`
 			<div style="text-align: center; padding: 40px;">
 				<svg style="width: 64px; height: 64px; color: var(--gk-text-muted); margin-bottom: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -480,7 +379,7 @@ func renderAttachmentViewerHTML(filename, contentType, downloadURL string) strin
 				</svg>
 				<p style="color: var(--gk-text-secondary); margin-bottom: 16px;">Preview not available for this file type.</p>
 				<a href="%s" download class="gk-btn-neon" style="display: inline-flex; padding: 8px 16px;">Download File</a>
-			</div>`, downloadURL)
+			</div>`, download)
 	}
 
 	return fmt.Sprintf(`<!DOCTYPE html>
@@ -538,5 +437,5 @@ func renderAttachmentViewerHTML(filename, contentType, downloadURL string) strin
 		%s
 	</div>
 </body>
-</html>`, filename, filename, downloadURL, content)
+</html>`, name, name, download, content)
 }

@@ -165,6 +165,35 @@ func TestAdminQueuesListWithDB(t *testing.T) {
 	})
 }
 
+// The admin queues page lists invalid queues too: its status filter offers
+// "Inactive" and its toggle re-enables them, which is impossible if a
+// disabled queue disappears from the page. Queue comments render under the name.
+func TestAdminQueuesPageListsInactiveQueues(t *testing.T) {
+	setupTemplateRenderer(t)
+	db := getTestDB(t)
+
+	name := fmt.Sprintf("InactiveAdminQueue_%d", time.Now().UnixNano())
+	queueID := createTestQueue(t, db, name)
+	defer cleanupTestQueue(t, db, queueID)
+	_, err := db.Exec(database.ConvertPlaceholders(
+		"UPDATE queue SET valid_id = 2, comments = ? WHERE id = ?"), "inactive queue comment", queueID)
+	require.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	setupQueueTestRouter().ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/admin/queues", nil))
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	body := w.Body.String()
+	rowStart := strings.Index(body, fmt.Sprintf(`data-id="%d"`, queueID))
+	require.GreaterOrEqual(t, rowStart, 0, "inactive queue %s must be listed", name)
+	row := body[rowStart:]
+	row = row[:strings.Index(row, "</tr>")]
+	assert.Contains(t, row, fmt.Sprintf(`data-name="%s"`, strings.ToLower(name)))
+	assert.Contains(t, row, `data-status="2"`)
+	assert.Contains(t, row, "inactive queue comment")
+	assert.Contains(t, row, fmt.Sprintf("toggleQueueStatus(%d, 2)", queueID), "inactive queue offers the enable toggle")
+}
+
 func TestAdminQueuesCRUDWithDB(t *testing.T) {
 	db := getTestDB(t)
 

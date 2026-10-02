@@ -1,43 +1,54 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{{ t("customer_company_users.title")|default:"Customer Company Users" }} - GoatFlow Admin{% endblock %}
+{% block title %}{{ t("customer_company_users.title")|default:"Customer Company Users" }}: {{ Company.Name }} - GoatFlow Admin{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8 min-h-screen">
-    <!-- Page header -->
-    <header class="mb-8">
-        <div class="sm:flex sm:items-center sm:justify-between">
-            <div class="flex items-center">
-                <a href="/admin/customer-companies" class="gk-btn-secondary mr-4">
-                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                    </svg>
-                    {{ t("common.back") }}
-                </a>
-                <div>
-                    <h1 class="text-3xl font-bold gk-heading">
-                        <span class="gk-text-gradient">{{ t("customer_company_users.heading")|default:"Customer Company Users" }}</span>
-                    </h1>
-                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("customer_company_users.description")|default:"Manage users associated with customer companies" }}</p>
-                </div>
-            </div>
-        </div>
-    </header>
+    {% include "partials/customer_company_header.pongo2" with active="users" %}
 
-    <!-- Under Construction Notice -->
-    <div class="gk-card-glow rounded-lg overflow-hidden">
-        <div class="p-12 text-center">
-            <svg class="mx-auto h-16 w-16 mb-4" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-            </svg>
-            <h3 class="text-lg font-medium mb-2" style="color: var(--gk-text-primary);">{{ t("customer_company_users.under_construction")|default:"Under Construction" }}</h3>
-            <p class="text-sm mb-6" style="color: var(--gk-text-muted);">{{ t("customer_company_users.under_construction_message")|default:"This feature is currently being developed. Please check back soon." }}</p>
-            <a href="/admin/customer-companies" class="gk-btn-neon">
-                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                </svg>
-                {{ t("common.back_to_list")|default:"Back to Customer Companies" }}
-            </a>
+    <div class="gk-card-glow overflow-hidden rounded-lg">
+        <div class="px-6 py-4 flex items-center justify-between border-b" style="border-color: var(--gk-border-default);">
+            <div>
+                <h2 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("customer_company_users.heading")|default:"Customer Users" }}</h2>
+                <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("customer_company_users.description")|default:"Customer users that belong to this company." }}</p>
+            </div>
+            <a href="/admin/customer-users" class="gk-btn-secondary">{{ t("customer_company_users.manage_users")|default:"Manage customer users" }}</a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="gk-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ t("customer_company_users.columns.login")|default:"Login" }}</th>
+                        <th scope="col">{{ t("customer_company_users.columns.name")|default:"Name" }}</th>
+                        <th scope="col">{{ t("customer_company_users.columns.email")|default:"Email" }}</th>
+                        <th scope="col">{{ t("customer_company_users.columns.phone")|default:"Phone" }}</th>
+                        <th scope="col" class="text-right">{{ t("customer_company_users.columns.tickets")|default:"Tickets" }}</th>
+                        <th scope="col">{{ t("customer_company_users.columns.status")|default:"Status" }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in Users %}
+                    <tr data-login="{{ u.Login }}">
+                        <td class="whitespace-nowrap">
+                            <a href="/admin/customer-users?search={{ u.Login|urlencode }}" class="text-sm font-medium hover:underline" style="color: var(--gk-primary);">{{ u.Login }}</a>
+                        </td>
+                        <td class="text-sm" style="color: var(--gk-text-primary);">{{ u.FirstName }} {{ u.LastName }}</td>
+                        <td class="text-sm" style="color: var(--gk-text-primary);">{% if u.Email %}<a href="mailto:{{ u.Email }}" class="hover:underline">{{ u.Email }}</a>{% endif %}</td>
+                        <td class="text-sm whitespace-nowrap" style="color: var(--gk-text-muted);">{{ u.Phone }}{% if u.Phone and u.Mobile %}<br>{% endif %}{{ u.Mobile }}</td>
+                        <td class="text-sm text-right" style="color: var(--gk-text-primary);">{{ u.TicketCount }}</td>
+                        <td class="whitespace-nowrap">
+                            <span class="gk-badge {% if u.ValidID == 1 %}gk-badge-success{% else %}gk-badge-error{% endif %}">{{ u.ValidName }}</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-sm" style="color: var(--gk-text-muted);">
+                            {{ t("customer_company_users.empty")|default:"This company has no customer users yet." }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

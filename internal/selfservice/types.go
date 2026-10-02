@@ -1,92 +1,64 @@
-// Package selfservice implements self-service authentication:
-// password recovery, customer registration, email verification, and CAPTCHA.
+// Package selfservice implements the public self-service account pages:
+// forgotten-password reset for agents and customers, and customer
+// self-registration with email verification.
+//
+// Both flows are switched by config/default.yaml: features.lost_password
+// (agent + customer password reset) and features.registration (customer
+// sign-up). Links in emails are built from BASE_URL, the operator-set public
+// URL of the instance; the request Host header is never trusted for that.
 package selfservice
 
-import (
-	"time"
-)
+import "time"
 
-// Token types.
+// Token types stored in gk_auth_token.token_type.
 const (
-	TokenPasswordReset       = "password_reset"
-	TokenEmailVerify         = "email_verify"
-	TokenRegistrationApprove = "registration_approve"
+	TokenPasswordReset = "password_reset"
+	TokenEmailVerify   = "email_verify"
 )
 
-// User types.
+// Account types stored in gk_auth_token.user_type.
 const (
 	UserAgent    = "agent"
 	UserCustomer = "customer"
 )
 
-// Registration statuses.
+// Registration request statuses (gk_registration_request.status).
 const (
 	StatusPending  = "pending"
 	StatusApproved = "approved"
-	StatusRejected = "rejected"
 )
 
-// CAPTCHA providers.
+// Token lifetimes and request budgets.
 const (
-	CAPTCHANone      = ""
-	CAPTCHARecaptcha = "recaptcha_v3"
-	CAPTCHAHCaptcha  = "hcaptcha"
+	// ResetTokenTTL is how long a password reset link stays valid.
+	ResetTokenTTL = 1 * time.Hour
+	// VerifyTokenTTL is how long a registration confirmation link stays valid.
+	VerifyTokenTTL = 24 * time.Hour
+
+	// ipRequestsPerHour caps forgot-password and registration submissions per client IP.
+	ipRequestsPerHour = 10
+	// mailsPerTargetPerHour caps emails sent to one account or address, so the
+	// public forms cannot be used to flood someone's inbox.
+	mailsPerTargetPerHour = 3
+	// maxAccountsPerRequest bounds how many accounts one identifier may match.
+	maxAccountsPerRequest = 5
 )
 
-// AuthToken represents a row in gk_auth_token.
-type AuthToken struct {
-	ID            int64      `json:"id" db:"id"`
-	Token         string     `json:"token" db:"token"`
-	TokenType     string     `json:"token_type" db:"token_type"`
-	UserType      string     `json:"user_type" db:"user_type"`
-	UserID        *int       `json:"user_id,omitempty" db:"user_id"`
-	CustomerLogin *string    `json:"customer_login,omitempty" db:"customer_login"`
-	Email         string     `json:"email" db:"email"`
-	ExpiresAt     time.Time  `json:"expires_at" db:"expires_at"`
-	UsedAt        *time.Time `json:"used_at,omitempty" db:"used_at"`
-	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
+// Account is an agent (users) or customer (customer_user) that can receive a
+// reset link. Email is where the link goes; the token is bound to it.
+type Account struct {
+	Type      string
+	ID        int
+	Login     string
+	Email     string
+	FirstName string
+	LastName  string
 }
 
-// IsExpired returns true if the token has expired.
-func (t *AuthToken) IsExpired() bool {
-	return time.Now().After(t.ExpiresAt)
+// sessionUserType is the UserType value the session layer stores for the account type.
+func (a Account) sessionUserType() string {
+	if a.Type == UserCustomer {
+		return "Customer"
+	}
+	return "User"
 }
-
-// IsUsed returns true if the token has been consumed.
-func (t *AuthToken) IsUsed() bool {
-	return t.UsedAt != nil
-}
-
-// IsValid returns true if the token is not expired and not used.
-func (t *AuthToken) IsValid() bool {
-	return !t.IsExpired() && !t.IsUsed()
-}
-
-// RegistrationRequest represents a row in gk_registration_request.
-type RegistrationRequest struct {
-	ID             int64      `json:"id" db:"id"`
-	Email          string     `json:"email" db:"email"`
-	FirstName      string     `json:"first_name" db:"first_name"`
-	LastName       string     `json:"last_name" db:"last_name"`
-	CustomerID     *string    `json:"customer_id,omitempty" db:"customer_id"`
-	Status         string     `json:"status" db:"status"`
-	ApprovalToken  *string    `json:"approval_token,omitempty" db:"approval_token"`
-	ApprovedBy     *int       `json:"approved_by,omitempty" db:"approved_by"`
-	ApprovedAt     *time.Time `json:"approved_at,omitempty" db:"approved_at"`
-	RejectedReason *string    `json:"rejected_reason,omitempty" db:"rejected_reason"`
-	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
-}
-
-// CAPTCHAConfig holds CAPTCHA provider configuration.
-type CAPTCHAConfig struct {
-	Provider  string  `json:"provider"`   // recaptcha_v3, hcaptcha, or empty (disabled)
-	SiteKey   string  `json:"site_key"`   // public key for frontend
-	SecretKey string  `json:"secret_key"` // server-side verification key
-	Threshold float64 `json:"threshold"`  // minimum score for reCAPTCHA v3 (default: 0.5)
-}
-
-// DefaultTokenExpiry is the expiry duration for password reset tokens.
-const DefaultTokenExpiry = 1 * time.Hour
-
-// DefaultVerifyExpiry is the expiry duration for email verification tokens.
-const DefaultVerifyExpiry = 24 * time.Hour

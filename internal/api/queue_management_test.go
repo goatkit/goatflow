@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -95,6 +96,7 @@ func TestCreateQueueAPI(t *testing.T) {
 		},
 	}
 
+	cleanupQueueByNameAtEnd(t, "Customer Support")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
@@ -117,22 +119,25 @@ func TestUpdateQueueAPI(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	WithCleanDB(t)
 
+	// ownQueue cases run against a queue created for the case (its id replaces
+	// queueID), so the seeded queues are never renamed.
 	tests := []struct {
 		name           string
 		queueID        string
+		ownQueue       bool
 		requestBody    string
 		expectedStatus int
-		checkResponse  func(t *testing.T, body string)
+		checkResponse  func(t *testing.T, body string, queueID int)
 	}{
 		{
-			name:    "should update existing queue",
-			queueID: "1",
+			name:     "should update existing queue",
+			ownQueue: true,
 			requestBody: `{
 				"name": "Postmaster - Updated",
 				"comments": "Updated description for postmaster"
 			}`,
 			expectedStatus: http.StatusOK,
-			checkResponse: func(t *testing.T, body string) {
+			checkResponse: func(t *testing.T, body string, queueID int) {
 				var response struct {
 					Success bool `json:"success"`
 					Data    struct {
@@ -145,7 +150,7 @@ func TestUpdateQueueAPI(t *testing.T) {
 				err := json.Unmarshal([]byte(body), &response)
 				assert.NoError(t, err)
 				assert.True(t, response.Success)
-				assert.Equal(t, 1, response.Data.ID)
+				assert.Equal(t, queueID, response.Data.ID)
 				assert.Equal(t, "Postmaster - Updated", response.Data.Name)
 				assert.Contains(t, response.Data.Comments, "Updated description")
 			},
@@ -158,7 +163,7 @@ func TestUpdateQueueAPI(t *testing.T) {
 				"comments": "This should fail"
 			}`,
 			expectedStatus: http.StatusNotFound,
-			checkResponse: func(t *testing.T, body string) {
+			checkResponse: func(t *testing.T, body string, _ int) {
 				assert.Contains(t, strings.ToLower(body), "queue not found")
 			},
 		},
@@ -169,18 +174,18 @@ func TestUpdateQueueAPI(t *testing.T) {
 				"name": "Test Queue"
 			}`,
 			expectedStatus: http.StatusBadRequest,
-			checkResponse: func(t *testing.T, body string) {
+			checkResponse: func(t *testing.T, body string, _ int) {
 				assert.Contains(t, strings.ToLower(body), "invalid queue id")
 			},
 		},
 		{
-			name:    "should validate name uniqueness on update",
-			queueID: "3",
+			name:     "should validate name uniqueness on update",
+			ownQueue: true,
 			requestBody: `{
 				"name": "Raw"
 			}`,
 			expectedStatus: http.StatusBadRequest,
-			checkResponse: func(t *testing.T, body string) {
+			checkResponse: func(t *testing.T, body string, _ int) {
 				assert.Contains(t, strings.ToLower(body), "queue name already exists")
 			},
 		},
@@ -188,17 +193,23 @@ func TestUpdateQueueAPI(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			queueID := tt.queueID
+			id := 0
+			if tt.ownQueue {
+				id, _ = createIsolatedQueue(t, "update_queue")
+				queueID = strconv.Itoa(id)
+			}
 			router := gin.New()
 			router.PUT("/api/queues/:id", handleUpdateQueue)
 
-			req, _ := http.NewRequest("PUT", "/api/queues/"+tt.queueID, bytes.NewBufferString(tt.requestBody))
+			req, _ := http.NewRequest("PUT", "/api/queues/"+queueID, bytes.NewBufferString(tt.requestBody))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
 			if tt.checkResponse != nil {
-				tt.checkResponse(t, w.Body.String())
+				tt.checkResponse(t, w.Body.String(), id)
 			}
 		})
 	}
@@ -208,15 +219,18 @@ func TestDeleteQueueAPI(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	WithCleanDB(t)
 
+	// ownQueue cases run against a queue created for the case (its id replaces
+	// queueID), so the seeded queues are never deactivated.
 	tests := []struct {
 		name           string
 		queueID        string
+		ownQueue       bool
 		expectedStatus int
 		checkResponse  func(t *testing.T, body string)
 	}{
 		{
 			name:           "should soft delete queue with no tickets",
-			queueID:        "4", // Misc queue has no tickets
+			ownQueue:       true, // a fresh queue has no tickets
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, body string) {
 				var response struct {
@@ -268,10 +282,15 @@ func TestDeleteQueueAPI(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			queueID := tt.queueID
+			if tt.ownQueue {
+				id, _ := createIsolatedQueue(t, "delete_queue")
+				queueID = strconv.Itoa(id)
+			}
 			router := gin.New()
 			router.DELETE("/api/queues/:id", handleDeleteQueue)
 
-			req, _ := http.NewRequest("DELETE", "/api/queues/"+tt.queueID, nil)
+			req, _ := http.NewRequest("DELETE", "/api/queues/"+queueID, nil)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 

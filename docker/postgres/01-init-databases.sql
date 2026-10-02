@@ -28,8 +28,9 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'temporal_visibility')
 
 -- Create test database ONLY in development/test environments
 -- NEVER create test database in production
-\set app_env `echo "${APP_ENV:-development}"`
-\if :app_env != 'production'
+-- psql's \if only accepts a boolean, so the shell computes it.
+\set non_production `[ "${APP_ENV:-development}" = production ] && echo false || echo true`
+\if :non_production
     \echo 'Creating test database (non-production environment detected)...'
     
     -- Create test database with '_test' suffix

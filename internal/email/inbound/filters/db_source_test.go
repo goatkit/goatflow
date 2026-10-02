@@ -347,6 +347,8 @@ func TestDBSourceFilter_NoFilters(t *testing.T) {
 	}
 }
 
+// Without a database the configured postmaster filters cannot run; the
+// message must not continue through the chain as if none matched.
 func TestDBSourceFilter_NilDB(t *testing.T) {
 	filter := NewDBSourceFilter(nil, nil)
 
@@ -357,9 +359,11 @@ func TestDBSourceFilter_NilDB(t *testing.T) {
 		Annotations: make(map[string]any),
 	}
 
-	err := filter.Apply(context.Background(), ctx)
-	if err != nil {
-		t.Fatalf("Apply failed with nil DB: %v", err)
+	if err := filter.Apply(context.Background(), ctx); err == nil {
+		t.Fatal("Apply with nil DB must fail")
+	}
+	if len(ctx.Annotations) > 0 {
+		t.Errorf("expected no annotations, got %v", ctx.Annotations)
 	}
 }
 

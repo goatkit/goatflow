@@ -68,6 +68,19 @@ spec:
       handler: handleCustomerUpdateProfile
       description: "Update customer profile information"
 
+    # Own company (read-only; scoped to customer_user.customer_id)
+    - path: /company
+      method: GET
+      handler: handleCustomerCompanyInfo
+      template: pages/customer/company_info.pongo2
+      description: "Display the logged-in customer's own company details"
+
+    - path: /company/users
+      method: GET
+      handler: handleCustomerCompanyUsers
+      template: pages/customer/company_users.pongo2
+      description: "List the valid customer users of the logged-in customer's own company"
+
     # Preferences API
     - path: /api/preferences/language
       method: GET
@@ -196,18 +209,17 @@ spec:
       handler: handleCustomerUploadAttachment
       description: "Upload attachment to a customer ticket"
 
-    - path: /tickets/:id/attachments/:attachment_id
+    - path: /tickets/:id/articles/:article_id/attachments/:file_id
       method: GET
       handler: handleCustomerDownloadAttachment
-      description: "Download attachment from a customer ticket"
+      description: "Download an attachment of a customer-visible article (?download=1 forces a download)"
 
-    - path: /tickets/:id/attachments/:attachment_id/thumbnail
+    - path: /tickets/:id/articles/:article_id/attachments/:file_id/thumbnail
       method: GET
       handler: handleCustomerGetThumbnail
-      description: "Get thumbnail for an image attachment"
+      description: "Get a PNG thumbnail of an attachment"
 
-    - path: /tickets/:id/attachments/:attachment_id/view
+    - path: /tickets/:id/articles/:article_id/attachments/:file_id/view
       method: GET
       handler: handleCustomerViewAttachment
-      description: "View attachment in modal viewer"
-    # Company information handled by FAQ plugin
+      description: "View attachment in a viewer page (?raw=1 serves the embeddable content)"

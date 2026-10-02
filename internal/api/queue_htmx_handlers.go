@@ -3,7 +3,6 @@ package api
 import (
 	"database/sql"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"strconv"
@@ -26,19 +25,16 @@ func init() {
 
 // handleQueues shows the queues list page.
 func handleQueues(c *gin.Context) {
-	if htmxHandlerSkipDB() {
-		renderQueuesTestFallback(c)
-		return
-	}
 	// If templates are unavailable, return error
 	if getPongo2Renderer() == nil || getPongo2Renderer().TemplateSet() == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Template system unavailable"})
+		sendErrorResponse(c, http.StatusInternalServerError, "Template system unavailable")
 		return
 	}
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database unavailable"})
+		log.Printf("handleQueues: database unavailable: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Database unavailable")
 		return
 	}
 
@@ -190,175 +186,6 @@ func handleQueues(c *gin.Context) {
 	})
 }
 
-func renderQueuesTestFallback(c *gin.Context) {
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	type queue struct {
-		ID      int
-		Name    string
-		Detail  string
-		Tickets int
-	}
-	queues := []queue{
-		{ID: 1, Name: "General Support", Detail: "Manage ticket queues", Tickets: 12},
-		{ID: 2, Name: "Technical Support", Detail: "Escalated incidents", Tickets: 6},
-		{ID: 3, Name: "Billing", Detail: "Invoices and refunds", Tickets: 3},
-	}
-
-	var sb strings.Builder
-	sb.Grow(2048)
-	sb.WriteString(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Queues - GoatFlow</title></head>`)
-	sb.WriteString(`<body class="bg-white text-gray-900 text-2xl sm:text-3xl dark:bg-gray-800 dark:text-white">`)
-	sb.WriteString(`<main class="max-w-4xl mx-auto px-4 py-6">`)
-	const statBox = `rounded-md bg-gray-100 p-3 dark:bg-gray-900`
-	const statLabel = `block font-semibold`
-	const statVal = `text-lg font-medium`
-	sb.WriteString(`<header class="mb-4">`)
-	sb.WriteString(`<h1 class="font-bold text-2xl sm:text-3xl">Queue Management</h1>`)
-	sb.WriteString(`<p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Manage ticket queues</p>`)
-	sb.WriteString(`</header>`)
-	sb.WriteString(`<section class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm" aria-label="Queue stats">`)
-	sb.WriteString(`<div class="` + statBox + `"><span class="` + statLabel + `">New</span>` +
-		`<span class="` + statVal + `">4</span></div>`)
-	sb.WriteString(`<div class="` + statBox + `"><span class="` + statLabel + `">Open</span>` +
-		`<span class="` + statVal + `">8</span></div>`)
-	sb.WriteString(`<div class="` + statBox + `"><span class="` + statLabel + `">Pending</span>` +
-		`<span class="` + statVal + `">2</span></div>`)
-	sb.WriteString(`<div class="` + statBox + `"><span class="` + statLabel + `">Closed</span>` +
-		`<span class="` + statVal + `">6</span></div>`)
-	sb.WriteString(`<div class="` + statBox + ` sm:col-span-2"><span class="` + statLabel + `">Total</span>` +
-		`<span class="` + statVal + `">20</span></div>`)
-	sb.WriteString(`</section>`)
-	const btnPrimary = `inline-flex items-center rounded-md bg-goatflow-600 px-3 py-2 text-sm ` +
-		`font-semibold text-white dark:bg-gray-700 dark:hover:bg-gray-700`
-	sb.WriteString(`<a href="/queues/new" class="` + btnPrimary + `">New Queue</a>`)
-	sb.WriteString(`<section class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm">`)
-	sb.WriteString(`<ul role="list" class="divide-y divide-gray-200 dark:divide-gray-700">`)
-	const btnView = `inline-flex items-center rounded-md border border-gray-300 ` +
-		`px-2 py-1 text-sm text-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700`
-	for _, q := range queues {
-		sb.WriteString(`<li class="py-4">`)
-		sb.WriteString(`<div class="flex items-center justify-between">`)
-		sb.WriteString(`<div>`)
-		sb.WriteString(fmt.Sprintf(`<div class="text-lg font-semibold"><span>ID: %d</span> &#8212; %s</div>`,
-			q.ID, template.HTMLEscapeString(q.Name)))
-		sb.WriteString(fmt.Sprintf(`<div class="text-sm text-gray-600 dark:text-gray-300">%s</div>`,
-			template.HTMLEscapeString(q.Detail)))
-		sb.WriteString(`</div>`)
-		sb.WriteString(`<div class="flex items-center space-x-3">`)
-		sb.WriteString(`<span class="text-sm text-gray-500 dark:text-gray-300">Active</span>`)
-		sb.WriteString(fmt.Sprintf(`<span class="text-sm text-blue-600">%d tickets</span>`, q.Tickets))
-		sb.WriteString(`<button class="` + btnView + `">View</button>`)
-		sb.WriteString(`</div>`)
-		sb.WriteString(`</div>`)
-		sb.WriteString(`</li>`)
-	}
-	sb.WriteString(`</ul>`)
-	sb.WriteString(`</section>`)
-	sb.WriteString(`</main>`)
-	sb.WriteString(`</body></html>`)
-
-	c.String(http.StatusOK, sb.String())
-}
-
-func renderDashboardTestFallback(c *gin.Context) {
-	role := strings.ToLower(strings.TrimSpace(c.GetString("user_role")))
-	userVal, _ := c.Get("user")
-	if role == "" {
-		if userMap, ok := userVal.(map[string]any); ok {
-			if r, ok := userMap["Role"].(string); ok {
-				role = strings.ToLower(strings.TrimSpace(r))
-			}
-		}
-	}
-	if role == "" {
-		role = "guest"
-	}
-
-	isAdmin := role == "admin"
-	if !isAdmin {
-		switch user := userVal.(type) {
-		case map[string]any:
-			if r, ok := user["Role"].(string); ok && strings.EqualFold(r, "admin") {
-				isAdmin = true
-			}
-			if !isAdmin {
-				if v, ok := user["IsInAdminGroup"].(bool); ok && v {
-					isAdmin = true
-				}
-			}
-		case gin.H:
-			if r, ok := user["Role"].(string); ok && strings.EqualFold(r, "admin") {
-				isAdmin = true
-			}
-			if !isAdmin {
-				if v, ok := user["IsInAdminGroup"].(bool); ok && v {
-					isAdmin = true
-				}
-			}
-		}
-	}
-
-	showQueues := role != "customer" && role != "guest"
-
-	type navLink struct {
-		href  string
-		label string
-		show  bool
-	}
-
-	links := []navLink{
-		{href: "/dashboard", label: "Dashboard", show: true},
-		{href: "/tickets", label: "Tickets", show: true},
-		{href: "/queues", label: "Queues", show: showQueues},
-	}
-	if isAdmin {
-		links = append(links, navLink{href: "/admin", label: "Admin", show: true})
-	}
-
-	var sb strings.Builder
-	sb.WriteString("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"/><title>Dashboard</title></head>")
-	sb.WriteString("<body x-data=\"{ mobileMenuOpen: false }\">")
-	sb.WriteString("<a href=\"#dashboard-main\" class=\"sr-only\">Skip to content</a>")
-	sb.WriteString("<nav class=\"bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700\">")
-	sb.WriteString("<div class=\"mx-auto max-w-7xl px-4 sm:px-6 lg:px-8\">")
-	sb.WriteString("<div class=\"flex h-16 items-center justify-between\">")
-	sb.WriteString("<div class=\"flex items-center space-x-4\"><span class=\"text-lg font-semibold\">GoatFlow</span>")
-	sb.WriteString("<div class=\"hidden sm:flex sm:space-x-4\">")
-	for _, link := range links {
-		if !link.show {
-			continue
-		}
-		sb.WriteString(fmt.Sprintf(`<a href="%s" class="text-sm font-medium text-gray-600 hover:text-gray-900">%s</a>`,
-			link.href, link.label))
-	}
-	sb.WriteString("</div></div>")
-	sb.WriteString("<div class=\"-mr-2 flex items-center sm:hidden\">")
-	const menuBtn = `sm:hidden inline-flex items-center justify-center rounded-md p-2 ` +
-		`text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-goatflow-500`
-	sb.WriteString("<button @click=\"mobileMenuOpen = !mobileMenuOpen\" class=\"" + menuBtn +
-		"\" type=\"button\" aria-label=\"Toggle navigation\">")
-	sb.WriteString("<span>Menu</span>")
-	sb.WriteString("</button>")
-	sb.WriteString("</div></div></div></nav>")
-	sb.WriteString("<main id=\"dashboard-main\" class=\"dashboard\" role=\"main\" aria-labelledby=\"dashboard-title\">")
-	sb.WriteString("<h1 id=\"dashboard-title\">Agent Dashboard</h1>")
-	sb.WriteString("<section class=\"stats\" role=\"region\" aria-label=\"Ticket metrics\"><ul>")
-	sb.WriteString("<li data-metric=\"open\">Open Tickets: 0</li>")
-	sb.WriteString("<li data-metric=\"pending\">Pending Tickets: 0</li>")
-	sb.WriteString("<li data-metric=\"closed-today\">Closed Today: 0</li>")
-	sb.WriteString("</ul></section>")
-	sb.WriteString("<section class=\"recent-tickets\" aria-live=\"polite\"><h2>Recent Tickets</h2>")
-	sb.WriteString("<article class=\"ticket\" data-status=\"open\">")
-	sb.WriteString(`<svg viewBox="0 0 20 20" fill="currentColor" role="img" aria-hidden="true">` +
-		`<circle cx="10" cy="10" r="8"></circle></svg>`)
-	sb.WriteString("<span class=\"sr-only\">Priority indicator</span>")
-	sb.WriteString("T-0001 &mdash; Example dashboard placeholder</article>")
-	sb.WriteString("</section></main></body></html>")
-
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	c.String(http.StatusOK, sb.String())
-}
-
 // handleQueueDetail shows individual queue details.
 func handleQueueDetail(c *gin.Context) {
 	queueID := c.Param("id")
@@ -397,7 +224,12 @@ func handleQueueDetail(c *gin.Context) {
 	}
 	limit := 25
 
-	states, hasClosedType := buildTicketStatusOptions(db)
+	states, hasClosedType, err := buildTicketStatusOptions(db)
+	if err != nil {
+		log.Printf("queue %d detail: %v", idUint, err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Failed to load ticket states")
+		return
+	}
 
 	effectiveStatus := statusParam
 	if effectiveStatus == "" {
@@ -526,36 +358,17 @@ func handleQueueDetail(c *gin.Context) {
 	}
 
 	queueMeta, metaErr := loadQueueMetaContext(db, queue.ID)
-	if metaErr != nil || queueMeta == nil {
+	if metaErr != nil {
 		log.Printf("handleQueueDetail: failed to load queue meta for queue %d: %v", queue.ID, metaErr)
-		queueMeta = gin.H{
-			"ID":          queue.ID,
-			"Name":        queue.Name,
-			"ValidID":     queue.ValidID,
-			"TicketCount": result.Total,
-		}
-		if queue.GroupID > 0 {
-			queueMeta["GroupID"] = queue.GroupID
-		}
-		if queue.SystemAddressID > 0 {
-			queueMeta["SystemAddressID"] = queue.SystemAddressID
-		}
-		if queue.Comment != "" {
-			queueMeta["Comment"] = queue.Comment
-		}
+		sendErrorResponse(c, http.StatusInternalServerError, "Failed to load queue details")
+		return
 	}
 	if _, ok := queueMeta["TicketCount"]; !ok {
 		queueMeta["TicketCount"] = result.Total
 	}
 
 	if getPongo2Renderer() == nil || getPongo2Renderer().TemplateSet() == nil {
-		if hxRequest {
-			c.String(http.StatusOK, fmt.Sprintf("%s queue detail", queue.Name))
-		} else {
-			html := fmt.Sprintf("<html><head><title>%s Queue</title></head>"+
-				"<body><h1>%s</h1><p>%d tickets</p></body></html>", queue.Name, queue.Name, result.Total)
-			c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
-		}
+		sendErrorResponse(c, http.StatusInternalServerError, "Template renderer unavailable")
 		return
 	}
 

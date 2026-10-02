@@ -2,33 +2,30 @@
 
 ## Overview
 
-GoatFlow provides `goatflow-migrate` to import data from OTRS SQL dumps into GoatFlow. The tool handles schema translation between different database engines and migrates core ticket data, users, and article storage.
-
-> **Note**: Migration tooling is under active development. This document reflects current capabilities.
+GoatFlow provides `goatflow-migrate` to import an OTRS 6 / Znuny 6.x database into GoatFlow, reading the OTRS database directly (MySQL/MariaDB or PostgreSQL) or a `mysqldump` file. It keeps every OTRS id and migrates agents with their group and role permissions, customers, tickets, articles with attachments, history, dynamic fields, time accounting, templates, auto responses, notifications and changed settings; see the [import plan](OTRS_MIGRATION_GUIDE.md#import-plan) for every table.
 
 ## Supported Migration Paths
 
 ### Source → Target Database Support
 
-| Source Database | Target Database | Status |
-|-----------------|-----------------|--------|
-| MySQL 5.7+ / MariaDB 10.2+ | PostgreSQL 9.6+ | ✅ Supported |
-| MySQL 5.7+ / MariaDB 10.2+ | MySQL 8.0+ / MariaDB 10.2+ | ✅ Supported |
-| PostgreSQL 9.6+ | PostgreSQL 9.6+ | ✅ Supported |
-| PostgreSQL 9.6+ | MySQL 8.0+ / MariaDB 10.2+ | ✅ Supported |
+| Source | Target Database | Status |
+|--------|-----------------|--------|
+| OTRS MySQL/MariaDB database (`-source`) | PostgreSQL, MySQL 8.0+ / MariaDB 10.2+ | ✅ Supported |
+| OTRS PostgreSQL database (`-source`) | PostgreSQL, MySQL 8.0+ / MariaDB 10.2+ | ✅ Supported |
+| `mysqldump` / `mariadb-dump` file (`-sql`) | PostgreSQL, MySQL 8.0+ / MariaDB 10.2+ | ✅ Supported |
+| `pg_dump` file | any | ✅ Restore into a scratch PostgreSQL database, then `-source` (Step 1) |
 
 ### Supported OTRS Versions
-- ✅ OTRS 6.x (Full support)
-- ✅ OTRS 5.x (Full support)
-- ⚠️ OTRS 4.x (Limited support, requires pre-migration upgrade)
-- ⚠️ OTRS 3.x (Requires intermediate migration to OTRS 5+)
+- ✅ OTRS 6.x and Znuny 6.x (the importer maps columns by name, so Znuny's extra columns such as `ticket_state.color` are picked up)
+- ❌ OTRS 5.x and older: the article tables changed in OTRS 6, and the importer refuses such sources. Upgrade the OTRS installation to 6.x before migrating.
 
 ## Pre-Migration Checklist
 
 ### 1. OTRS Preparation
 - [ ] OTRS system in maintenance mode
+- [ ] Pending mail sent (`bin/otrs.Console.pl Maint::Email::MailQueue --send`) and the OTRS daemon stopped: `mail_queue` is not migrated
 - [ ] Database backup completed
-- [ ] SQL dump exported (see export commands below)
+- [ ] SQL dump exported, or database access for `-source` (see Step 1)
 - [ ] Article storage location identified
 
 ### 2. GoatFlow Preparation
@@ -50,22 +47,34 @@ mysqldump -u otrs_user -p \
   otrs_database > otrs_dump.sql
 ```
 
-**From PostgreSQL:**
+The importer reads the `CREATE TABLE` and `INSERT INTO` statements of a
+`mysqldump`/`mariadb-dump` file (one-line or one-row-per-line extended INSERTs,
+`--hex-blob` or escaped binary strings).
+
+**Without a dump:** `goatflow-migrate` can read the OTRS database directly, on MySQL/MariaDB or
+PostgreSQL (`-source`, see [Direct Tool Usage](#direct-tool-usage)). Read-only database access is
+enough.
+
+**From PostgreSQL:** restore the `pg_dump` (e.g. OTRS `backup.pl`'s `DatabaseBackup.sql.gz`) into
+a scratch database and import from it with `-source`:
 ```bash
-pg_dump -U otrs_user -d otrs_database -f otrs_dump.sql
+createdb -h scratch-host otrs_restore
+gunzip -c DatabaseBackup.sql.gz | psql -h scratch-host -d otrs_restore
+goatflow-migrate -cmd=import -source="postgres://user:pass@scratch-host/otrs_restore?sslmode=disable" -db="$DB_URL" -dry-run
 ```
 
-### Step 2: Analyze the Dump
+### Step 2: Analyze the Source
 
 ```bash
 make migrate-analyze SQL=/path/to/otrs_dump.sql
+# or read the OTRS database directly (MySQL DSN or PostgreSQL URL)
+make migrate-analyze SOURCE='otrs:secret@tcp(otrs-db:3306)/otrs'
 ```
 
-Output includes:
-- Total lines and tables in the dump
-- Tables with data vs empty tables
-- Row counts per table
-- Core OTRS tables verification (users, groups, queue, ticket, article, etc.)
+Output lists every table of the source with its row count and what the import does with it
+(merge, replace, import, sysconfig, skip with the reason, or unknown for tables GoatFlow does
+not have). The dry run (Step 3) additionally prints the import order and the source columns
+GoatFlow has no column for.
 
 ### Step 3: Dry Run Import
 
@@ -99,65 +108,73 @@ To clear existing data and reimport from scratch:
 make migrate-import-force SQL=/path/to/otrs_dump.sql
 ```
 
-> ⚠️ **Warning**: This will DELETE ALL EXISTING DATA before importing!
+> ⚠️ **Warning**: This DELETES all tickets, articles (with their attachments, history, flags,
+> time accounting, links and dynamic field values), customer users, customer companies and the
+> other imported OTRS data (generic agent jobs, postmaster filters, ...) before importing, in the
+> same transaction as the import. Merged and replaced tables (agents, groups, queues, permissions,
+> ...) are not cleared; see Data Mapping.
 
 ## Article Storage Migration
 
-OTRS stores article attachments in the filesystem (typically `/opt/otrs/var/article/`). These must be migrated separately from the database.
-
-### Locate OTRS Article Storage
-
-```bash
-# Check OTRS config for ArticleDir
-grep -r "ArticleDir" /opt/otrs/Kernel/Config.pm
-
-# Default location
-ls -la /opt/otrs/var/article/
-```
-
-### Copy Article Storage
+OTRS keeps attachments either in the database (ArticleStorageDB, imported with
+the dump) or on disk (ArticleStorageFS, typically `/opt/otrs/var/article/`).
+Check which one the source uses:
 
 ```bash
-# Copy to GoatFlow storage location
-rsync -avz /opt/otrs/var/article/ /path/to/goatflow/storage/articles/
-
-# Or via container volume
-make toolbox-exec ARGS="cp -r /source/articles /app/storage/articles"
+grep -r "ArticleStorage\|ArticleDataDir" /opt/otrs/Kernel/Config.pm
 ```
 
-### Verify Article Paths
-
-After database import, verify attachment references:
+For ArticleStorageFS, mount or copy the tree to `<STORAGE_PATH>/var/article`
+(default `/app/storage/var/article`) and run GoatFlow with `STORAGE_TYPE=fs`;
+the layout is identical, so no conversion is needed:
 
 ```bash
-make migrate-validate
+rsync -a /opt/otrs/var/article/ /path/to/goatflow/storage/var/article/
 ```
+
+To keep everything in the database instead, copy the tree as above, then copy it
+into the database and switch:
+
+```bash
+docker compose exec backend ./goatflow-storage migrate -target DB
+docker compose exec backend ./goatflow-storage verify -target DB
+# then set STORAGE_TYPE=db (or storage.type: db) and restart
+```
+
+See [Article Storage](ARTICLE_STORAGE.md).
 
 ## Makefile Targets Reference
 
 | Target | Description |
 |--------|-------------|
-| `make migrate-analyze SQL=<file>` | Analyze OTRS dump structure and contents |
-| `make migrate-import SQL=<file> DRY_RUN=true` | Test import without changes |
-| `make migrate-import SQL=<file> DRY_RUN=false` | Execute actual import |
-| `make migrate-import-force SQL=<file>` | Clear data and reimport (destructive) |
+| `make migrate-analyze SQL=<file>` / `SOURCE=<dsn>` | List the source's tables, row counts and the import plan |
+| `make migrate-import SQL=<file>` / `SOURCE=<dsn>` `DRY_RUN=true` | Print the plan without writing |
+| `make migrate-import SQL=<file>` / `SOURCE=<dsn>` `DRY_RUN=false` | Execute actual import |
+| `make migrate-import-force SQL=<file>` / `SOURCE=<dsn>` | Clear data and reimport (destructive) |
+| `make otrs-import SQL=<file>` / `SOURCE=<dsn>` [`DRY_RUN=1`] [`FORCE=1`] | Import (writes unless `DRY_RUN` is set) |
 | `make migrate-validate` | Validate imported data integrity |
+
+Every target runs `goatflow-migrate` in the toolbox container against the GoatFlow database
+selected by `DB_DRIVER`/`DB_*`. `SQL=` mounts the dump file read-only; `SOURCE=` must be reachable
+from the `goatflow_goatflow-network` container network.
 
 ## Direct Tool Usage
 
-For advanced usage, scripting, or CI/CD pipelines, `goatflow-migrate` can be called directly inside containers:
+For advanced usage, scripting, or CI/CD pipelines, `goatflow-migrate` can be called directly
+inside containers. Reading the OTRS database directly (`-source`, `SOURCE=` in the Makefile
+targets) works for OTRS on MySQL/MariaDB and on PostgreSQL.
 
 ```bash
-# Analyze dump
-goatflow-migrate -cmd=analyze -sql=/path/to/dump.sql
+# Analyze the OTRS database
+goatflow-migrate -cmd=analyze -source="otrs:secret@tcp(otrs-db:3306)/otrs"
 
-# Import with dry run
+# Import with dry run (OTRS on PostgreSQL)
 goatflow-migrate -cmd=import \
-  -sql=/path/to/dump.sql \
+  -source="postgres://otrs:secret@otrs-db:5432/otrs?sslmode=disable" \
   -db="postgres://user:pass@host:5432/goatflow?sslmode=disable" \
-  -dry-run -v
+  -dry-run
 
-# Force import (clears existing data)
+# Force import from a dump file (clears existing data)
 goatflow-migrate -cmd=import \
   -sql=/path/to/dump.sql \
   -db="postgres://user:pass@host:5432/goatflow?sslmode=disable" \
@@ -165,7 +182,7 @@ goatflow-migrate -cmd=import \
 
 # Validate imported data
 goatflow-migrate -cmd=validate \
-  -db="postgres://user:pass@host:5432/goatflow?sslmode=disable" -v
+  -db="postgres://user:pass@host:5432/goatflow?sslmode=disable"
 ```
 
 ### goatflow-migrate Options
@@ -173,46 +190,45 @@ goatflow-migrate -cmd=validate \
 | Option | Description |
 |--------|-------------|
 | `-cmd` | Command: `analyze`, `import`, or `validate` |
-| `-sql` | Path to OTRS SQL dump file |
-| `-db` | Database connection URL |
-| `-dry-run` | Test import without making changes |
-| `-force` | Clear existing data before import (destructive!) |
-| `-v` | Verbose output |
+| `-source` | OTRS database to read: a PostgreSQL URL or a MySQL DSN |
+| `-sql` | OTRS `mysqldump` / `mariadb-dump` file to read (instead of `-source`) |
+| `-db` | GoatFlow database URL (or `DATABASE_URL`) |
+| `-dry-run` | Print the import plan and source row counts without writing |
+| `-force` | Delete the target's tickets, articles, customers and their data before import (destructive!) |
+| `-v` | Verbose output (prints the `-force` delete statements) |
 
 ### Database Connection URLs
+
+`-source` and `-db` take the same formats:
 
 ```bash
 # PostgreSQL
 -db="postgres://user:password@host:5432/database?sslmode=disable"
 
-# MySQL/MariaDB  
--db="mysql://user:password@tcp(host:3306)/database"
+# MySQL/MariaDB (go-sql-driver DSN, optionally prefixed with mysql://)
+-db="user:password@tcp(host:3306)/database"
 ```
 
 ## Data Mapping
 
-### Core Tables
+Every imported row keeps its OTRS primary key, so ticket numbers, ticket and article ids (the
+ArticleStorageFS directory names), history links, permissions and every other reference survive
+unchanged. After the import the id sequences (PostgreSQL) and `AUTO_INCREMENT` counters
+(MySQL/MariaDB) of every imported table are reset, so the next row GoatFlow creates gets the
+highest imported id + 1. The import runs in one transaction: if the database rejects a row the
+import stops, reports the table and error, and leaves the target unchanged.
 
-| OTRS Table | GoatFlow Table | Notes |
-|------------|-------------|-------|
-| ticket | ticket | Core ticket data |
-| article | article | Ticket communications |
-| users | users | Agent accounts |
-| customer_user | customer_user | Customer accounts |
-| queue | queue | Ticket queues |
-| ticket_type | ticket_type | Ticket categories |
-| ticket_state | ticket_state | Status values |
-| ticket_priority | ticket_priority | Priority levels |
+Every OTRS 6 / Znuny 6.x table is either merged (configuration, matched by id), replaced
+(permissions and preferences: the OTRS rows are authoritative), imported (tickets, articles,
+customers and their data: the target must be empty or `-force` is given), matched by name
+(`sysconfig_modified`) or skipped with a reason. The full per-table list is the
+[import plan](OTRS_MIGRATION_GUIDE.md#import-plan); the import prints it before writing and a
+per-table report at the end, and `-cmd=analyze` shows it for a source.
 
-### Status Mapping
-
-| OTRS Status | GoatFlow Status |
-|-------------|--------------|
-| new | new |
-| open | open |
-| pending reminder | pending |
-| closed successful | resolved |
-| closed unsuccessful | closed |
+For merged tables, each OTRS row replaces the GoatFlow row with the same id, or is inserted. A
+GoatFlow row with another id whose unique name an OTRS row uses is renamed to
+`<name> (pre-import <id>)`; the import prints every such rename. States, priorities and types are
+imported as they are in OTRS, not translated.
 
 ## Post-Migration Tasks
 
@@ -262,17 +278,19 @@ If you see encoding issues, ensure your OTRS dump was exported with UTF-8:
 mysqldump --default-character-set=utf8mb4 ...
 ```
 
-#### Large Dumps
-For very large databases, the import may take significant time. Use `-v` to see progress.
+#### Large Databases
+The import prints each table as it finishes. Everything is written in one transaction, so the
+target database needs room for the whole import before it commits.
 
 ## Limitations
 
 Current migration tool limitations:
-- Article attachments require separate filesystem copy (see Article Storage Migration above)
-- Custom fields (DynamicFields) require manual mapping review
-- Workflows/processes need to be recreated in GoatFlow
-- GenericInterface configurations are not migrated
-- OTRS-specific modules and customizations are not migrated
+- Only ArticleStorageDB attachments are in the database; ArticleStorageFS trees are mounted or copied separately (see Article Storage Migration above)
+- `pg_dump` files are restored into a scratch PostgreSQL database and imported with `-source` (see Step 1)
+- The skipped tables listed in the [import plan](OTRS_MIGRATION_GUIDE.md#import-plan) (sessions, caches, logs, daemon state, OTRS deployment history, unsent mail) are not migrated
+- Process management, GenericInterface, ACL and generic agent rows are preserved, but GoatFlow only acts on the features it implements
+- Tables of OTRS add-ons GoatFlow has no table for (e.g. ITSM) are listed and not migrated
+- Agent passwords stored as DES crypt or plaintext (`CryptType=plain`) do not verify; reset them after the import
 
 ---
 

@@ -302,7 +302,9 @@
         "test_success": "配置测试成功",
         "title": "Web服务配置",
         "webservice": "Web服务",
-        "webservice_hint": "选择用于获取数据的Web服务"
+        "webservice_hint": "选择用于获取数据的Web服务",
+        "test_save_first": "请先保存字段，然后再测试其 Web 服务配置。",
+        "test_saved_hint": "测试的是已保存的配置；请先保存您的更改。"
       },
       "years_in_future": "未来的年数",
       "years_in_past": "过去的年数"
@@ -1162,16 +1164,8 @@
     "no_plugins": "未安装插件",
     "no_plugins_match": "没有插件与您的搜索条件匹配。",
     "password": "密码",
-    "password_requirement_contains_default": "包含大写字母、小写字母和数字",
-    "password_requirement_contains_template": "包含{requirements}",
-    "password_requirement_digit": "数字",
-    "password_requirement_length_initial": "至少8个字符",
-    "password_requirement_length_template": "至少{min}个字符",
-    "password_requirement_lowercase": "小写字母",
     "password_requirement_match": "密码匹配",
     "password_requirement_none": "无额外要求",
-    "password_requirement_special": "特殊字符（!@#$%^&*）",
-    "password_requirement_uppercase": "大写字母",
     "password_requirements_incomplete": "请确保满足所有密码要求",
     "password_reset_error": "重置密码失败",
     "password_reset_success": "密码重置成功",
@@ -1474,7 +1468,110 @@
         "delete": "您确定要删除{name}吗？"
       }
     },
-    "search_groups": "搜索群组..."
+    "search_groups": "搜索群组...",
+    "webhooks": {
+      "actions": {
+        "activate": "启用",
+        "deactivate": "停用",
+        "deliveries": "投递记录",
+        "test": "发送测试"
+      },
+      "active": "已启用",
+      "add": "添加 Webhook",
+      "columns": {
+        "events": "事件",
+        "last_delivery": "最近投递",
+        "url": "URL"
+      },
+      "deliveries": {
+        "attempts": "尝试次数",
+        "details": "详情",
+        "duration": "耗时",
+        "empty": "暂无投递记录。",
+        "event": "事件",
+        "status_code": "HTTP 状态码",
+        "time": "时间",
+        "title": "投递记录：{name}"
+      },
+      "delivery": {
+        "created_at": "创建时间",
+        "delivered_at": "投递时间",
+        "duration_ms": "{ms} 毫秒",
+        "error": "错误",
+        "next_attempt": "下次尝试",
+        "no_response": "无响应内容。",
+        "payload": "请求内容",
+        "redeliver": "重新投递",
+        "response": "响应",
+        "title": "投递 #{id}"
+      },
+      "description": "将工单和文章事件以签名的 HTTP POST 请求发送到外部系统。",
+      "empty": "尚未配置任何 Webhook。",
+      "events": {
+        "article_created": "工单中添加了文章（备注、回复、邮件、电话、网页请求）。",
+        "ticket_assigned": "工单所有者发生了变化。",
+        "ticket_closed": "工单状态变更为关闭状态。",
+        "ticket_created": "创建了工单（任意渠道）。",
+        "ticket_escalated": "响应、更新或解决时间升级已开始。",
+        "ticket_merged": "工单已被合并。",
+        "ticket_priority_changed": "工单优先级发生了变化。",
+        "ticket_queue_moved": "工单被移动到另一个队列。",
+        "ticket_state_changed": "工单状态变更为非关闭状态。",
+        "ticket_updated": "工单的标题、客户、类型、服务、SLA、负责人、锁定、挂起时间或动态字段发生了变化。"
+      },
+      "form": {
+        "active_help": "停用的 Webhook 不会接收事件。",
+        "add_header": "添加请求头",
+        "create_title": "添加 Webhook",
+        "edit_title": "编辑 Webhook",
+        "events": "事件",
+        "events_help": "选中的事件发生时调用该 Webhook。",
+        "events_required": "请至少选择一个事件。",
+        "header_name": "请求头名称",
+        "header_value": "值",
+        "headers": "自定义请求头",
+        "headers_help": "随每次投递一起发送。Content-Type、User-Agent 和 X-Webhook-* 请求头由 GoatFlow 设置。",
+        "remove_header": "移除请求头",
+        "remove_secret": "移除密钥（投递将不再签名）",
+        "retry_count": "重试次数",
+        "retry_count_help": "投递失败后的额外尝试次数。",
+        "secret": "签名密钥",
+        "secret_help": "16 到 512 个字符。每次投递都会在 X-Webhook-Signature 请求头中签名（请求体的 sha256=HMAC）。密钥保存后无法再次显示。",
+        "secret_none": "未设置密钥：投递不会签名。",
+        "secret_placeholder_keep": "留空以保留当前密钥",
+        "secret_placeholder_new": "可选的签名密钥",
+        "secret_set": "已设置密钥（{hint}）。",
+        "timeout": "超时（秒）",
+        "timeout_help": "等待端点响应的时长。",
+        "url": "目标 URL",
+        "url_help": "以 http:// 或 https:// 开头的绝对 URL。每个事件发生时，GoatFlow 都会向其发送 JSON POST 请求。"
+      },
+      "inactive": "已停用",
+      "load_failed": "无法加载 Webhook。",
+      "messages": {
+        "activated": "Webhook 已启用。",
+        "confirm_delete": "删除 Webhook“{name}”及其投递记录？",
+        "created": "Webhook 已创建。",
+        "deactivated": "Webhook 已停用。",
+        "deleted": "Webhook 已删除。",
+        "network_error": "无法连接到服务器。",
+        "redeliver_failed": "重新投递失败。",
+        "redelivered": "已成功重新投递。",
+        "request_failed": "请求失败：{error}",
+        "test_failed": "测试投递失败。",
+        "test_succeeded": "测试投递成功。",
+        "updated": "Webhook 已保存。"
+      },
+      "never": "从未",
+      "retry": "重试",
+      "status": {
+        "delivered": "已投递",
+        "delivering": "投递中",
+        "failed": "失败",
+        "pending": "等待中"
+      },
+      "title": "Webhook"
+    }
   },
   "admin_dashboard": {
     "acl": "访问控制列表",
@@ -1566,7 +1663,55 @@
     "tickets_open": "开放工单",
     "uptime_this_month": "本月正常运行时间",
     "user_management": "用户管理",
-    "user_management_desc": "管理代理和客户账户"
+    "user_management_desc": "管理代理和客户账户",
+    "webhooks": "Webhook",
+    "webhooks_desc": "将工单事件发送到外部系统"
+  },
+  "admin_reports": {
+    "title": "报表与分析",
+    "description": "您有读取权限的队列的工单统计。",
+    "period_label": "时间段",
+    "period_24h": "最近 24 小时",
+    "period_7d": "最近 7 天",
+    "period_30d": "最近 30 天",
+    "trend_label": "趋势",
+    "trend_daily_7": "按日，最近 7 天",
+    "trend_daily_30": "按日，最近 30 天",
+    "trend_monthly_12": "按月，最近 12 个月",
+    "error_forbidden": "您至少需要一个队列的读取权限才能查看报表。",
+    "error_generic": "部分报表数据无法加载，请重试。",
+    "scope_note": "数据仅包含您有读取权限的队列中的工单。日期为 UTC。",
+    "overview_heading": "概览",
+    "total_tickets": "工单总数",
+    "open_tickets": "处理中",
+    "pending_tickets": "待定",
+    "closed_tickets": "已关闭",
+    "trends_heading": "新建与关闭",
+    "created": "新建",
+    "closed": "已关闭",
+    "closure_rate": "关闭率",
+    "queues_heading": "队列",
+    "backlog_hint": "积压：超过 24 小时仍未关闭的工单。",
+    "queue": "队列",
+    "backlog": "积压",
+    "agents_heading": "客服活动",
+    "agents_hint": "所选时间段内作为负责客服新建和关闭的工单，以及撰写的文章。",
+    "agent": "客服",
+    "assigned": "已分配",
+    "articles": "文章",
+    "customers_heading": "主要客户",
+    "total_customers": "客户数",
+    "active_customers": "活跃（30 天）",
+    "new_customers": "本月新增",
+    "customer": "客户",
+    "email": "电子邮件",
+    "last_activity": "最近工单",
+    "export_heading": "导出",
+    "export_description": "下载所选时间段的数据。",
+    "export_summary_csv": "摘要（CSV）",
+    "export_tickets_csv": "工单（CSV）",
+    "export_summary_json": "摘要（JSON）",
+    "no_data": "此选择没有数据。"
   },
   "admin_queues": {
     "add_queue": "添加队列",
@@ -1959,6 +2104,23 @@
       "required": "*"
     },
     "company": "公司",
+    "company_page": {
+      "address": "地址",
+      "columns": {
+        "email": "电子邮件",
+        "name": "姓名",
+        "title": "称谓"
+      },
+      "customer_id": "客户编号",
+      "info_title": "公司信息",
+      "no_company": "您的账户未关联任何公司。",
+      "no_users": "未找到用户。",
+      "not_set": "未提供",
+      "user_count": "查看用户 (%d)",
+      "users_description": "贵公司中使用客户门户的人员。",
+      "website": "网站",
+      "you": "您"
+    },
     "dashboard": {
       "announcements": "公告",
       "closed_tickets": "已关闭的工单",
@@ -2020,16 +2182,6 @@
       "title": "创建新的支持工单"
     },
     "phone": "电话",
-    "placeholder_pages": {
-      "company_info_title": "公司信息",
-      "company_users_title": "公司用户",
-      "knowledge_base_article": "知识库文章",
-      "knowledge_base_search": "知识库搜索",
-      "knowledge_base_title": "知识库",
-      "password_title": "修改密码",
-      "profile_title": "客户资料",
-      "under_construction": "此页面正在建设中。"
-    },
     "portal": {
       "login_title": "客户支持登录",
       "title": "客户门户"
@@ -2097,7 +2249,6 @@
     }
   },
   "customer_company_form": {
-    "assigned_services": "Assigned 服务",
     "branding": "Branding",
     "company_details": "公司 详情",
     "features": "Features",
@@ -2106,17 +2257,56 @@
     "save_capture_setting": "保存捕获设置",
     "save_portal_settings": "保存门户设置"
   },
+  "customer_company_pages": {
+    "customer_id": "客户 ID",
+    "sections": "公司栏目",
+    "nav": {
+      "details": "详情",
+      "users": "客户用户",
+      "tickets": "工单",
+      "services": "服务"
+    }
+  },
   "customer_company_services": {
-    "heading": "客户 公司 服务",
-    "title": "客户 公司 服务"
+    "heading": "服务",
+    "title": "客户公司服务",
+    "description": "服务分配给客户用户。请勾选该公司中可以使用各项服务的客户用户。",
+    "saved": "服务分配已保存。",
+    "no_services": "没有有效的服务。",
+    "manage_services": "管理服务",
+    "no_users": "该公司没有客户用户，因此无人可分配服务。",
+    "all_users": "所有用户",
+    "save": "保存分配",
+    "columns": {
+      "service": "服务",
+      "assigned": "已分配",
+      "customer_users": "客户用户"
+    }
   },
   "customer_company_tickets": {
-    "heading": "客户 公司 工单",
-    "title": "客户 公司 工单"
+    "heading": "工单",
+    "title": "客户公司工单",
+    "description": "该公司在您可访问的队列中的工单，最新的在前。",
+    "empty": "在您可访问的队列中没有该公司的工单。",
+    "columns": {
+      "title": "标题",
+      "customer_user": "客户用户"
+    }
   },
   "customer_company_users": {
-    "heading": "客户 公司 用户",
-    "title": "客户 公司 用户"
+    "heading": "客户用户",
+    "title": "客户公司用户",
+    "description": "属于该公司的客户用户。",
+    "manage_users": "管理客户用户",
+    "empty": "该公司还没有客户用户。",
+    "columns": {
+      "login": "登录名",
+      "name": "姓名",
+      "email": "电子邮件",
+      "phone": "电话",
+      "tickets": "工单",
+      "status": "状态"
+    }
   },
   "customer_group": {
     "by_group_heading": "客户 权限 by 组",
@@ -2142,7 +2332,8 @@
   },
   "customer_portal_settings": {
     "heading": "客户门户 设置",
-    "title": "客户门户 设置"
+    "title": "客户门户 设置",
+    "per_company_note": "每个客户公司都可以在其编辑页面的“门户设置”选项卡中覆盖这些默认值。"
   },
   "customer_user_services": {
     "title": "客户 用户 服务"
@@ -2188,29 +2379,16 @@
     "performance": "性能",
     "quick_actions": "快捷操作",
     "quick_stats": "快速统计",
-    "realtime": {
-      "title": "实时仪表盘"
-    },
     "recent_activity": "最近活动",
     "recent_tickets": "最近的工单",
     "statistics": "统计",
-    "stats": {
-      "closed_today": "今日已关闭",
-      "my_open": "我的待处理",
-      "my_pending": "我的挂起",
-      "new_today": "今日新建",
-      "open_tickets": "待处理工单",
-      "overdue": "已逾期",
-      "pending": "待处理",
-      "total_assigned": "总计分配",
-      "unassigned": "未分配"
-    },
     "tickets_count": "工单",
     "title": "控制台",
     "unassigned_count": "unassigned",
     "welcome_back": "欢迎回来",
     "welcome_message": "以下是您今天工单的情况",
-    "widget_config_desc": "选择在仪表板上显示哪些小组件。拖动以重新排序。"
+    "widget_config_desc": "选择在仪表板上显示哪些小组件。拖动以重新排序。",
+    "widget_unavailable": "此小组件当前不可用，请稍后重试。"
   },
   "demo": {
     "security_disabled": "演示模式下密码和MFA更改已禁用。"
@@ -2243,11 +2421,6 @@
       "delete": "删除 field",
       "edit": "编辑 field"
     }
-  },
-  "dynamic_test": {
-    "heading": "动态模块测试",
-    "testing_instructions": "Testing Instructions",
-    "title": "动态模块测试"
   },
   "editor": {
     "insert_image_prompt": "输入图片URL（或留空以选择文件）：",
@@ -2332,29 +2505,18 @@
     "mandatory_note": "所有标有星号（*）的字段为必填项。",
     "select": "选择"
   },
-  "group_form": {
-    "heading": "组 Form",
-    "title": "组 Form"
-  },
-  "group_members": {
-    "heading": "组 Members",
-    "title": "组 Members"
-  },
   "group_permissions": {
     "permission_matrix": "权限 Matrix",
     "queue_permissions": "队列 权限",
     "queues": "队列",
     "title": "组 权限"
   },
-  "group_view": {
-    "heading": "组 详情",
-    "title": "组"
-  },
   "groups": {
     "add_group": "添加 组",
     "add_user": "添加 用户 to 组",
     "add_user_btn": "添加 用户",
     "confirm_delete": "Are you sure you want to delete this group?",
+    "delete_keeps_group": "该组将被设为停用。它会连同成员和权限一起保留在列表中，编辑该组即可重新启用。",
     "current_members": "当前成员",
     "delete_success": "组 deleted successfully",
     "group": "组",
@@ -2583,7 +2745,6 @@
       "delete_item": "您确定要删除此项目吗？",
       "delete_lookup": "您确定要删除此项目吗？此操作无法撤销。",
       "delete_priority": "您确定要删除此优先级吗？此操作无法撤销。",
-      "delete_queue": "您确定要删除此队列吗？此队列中的所有工单都需要重新分配。此操作无法撤销。",
       "delete_queue_simple": "您确定要删除此队列吗？",
       "delete_queues_bulk": "您确定要删除所选的队列吗？",
       "delete_state": "您确定要删除此状态吗？",
@@ -2626,7 +2787,6 @@
     "failed_remove_user": "Failed to remove user",
     "failed_save_field": "Failed to save field",
     "failed_update_screen_config": "Failed to update screen configuration",
-    "failed_update_services": "Failed to update services",
     "groups": {
       "select_user": "Please select a user to add"
     },
@@ -2635,7 +2795,6 @@
     "item_deleted": "项目删除成功",
     "item_updated": "项目更新成功",
     "loading": "加载中...",
-    "loading_customer_users": "加载中 customer users...",
     "network_error": "网络错误",
     "no_agents_available": "否 agents available",
     "no_data": "无数据",
@@ -2656,15 +2815,11 @@
     "please_wait": "请稍候...",
     "processing": "处理中...",
     "required_fields": "请填写所有必填字段",
-    "save_company_before_services": "保存 the company before assigning services.",
-    "save_company_first": "保存 the company before assigning services.",
     "saving": "保存中...",
     "select_at_least_one_queue": "Please select at least one queue",
     "select_template_type": "Please select at least one template type.",
     "select_two_to_merge": "Please select at least two tickets to merge",
     "server_error": "服务器错误",
-    "services_updated": "服务 updated successfully",
-    "services_updated_success": "服务 updated successfully",
     "session_expired": "您的会话已过期",
     "success": "成功",
     "unauthorized": "未授权",
@@ -2831,9 +2986,7 @@
     "title": "权限 Management"
   },
   "placeholders": {
-    "contains": "Contains...",
-    "note_subject": "备注 subject",
-    "separate_emails": "Separate multiple emails with commas"
+    "contains": "Contains..."
   },
   "priorities": {
     "heading": "优先级 Management",
@@ -2950,20 +3103,6 @@
     },
     "total_count": "总计"
   },
-  "realtime": {
-    "active_alerts": "活动 Alerts",
-    "heading": "Real-时间 仪表盘",
-    "no_tickets": "否 tickets",
-    "queue_distribution": "队列 Distribution",
-    "queue_status": "队列 状态",
-    "recent_tickets": "Recent 工单",
-    "stats": {
-      "active_agents": "活动 代理",
-      "avg_response_time": "Avg Response 时间",
-      "open_tickets": "打开 工单"
-    },
-    "ticket_volume": "工单 Volume (24h)"
-  },
   "realtime_dashboard": {
     "title": "实时仪表盘"
   },
@@ -3078,29 +3217,51 @@
     "search_results": "搜索结果"
   },
   "self_service": {
+    "email": {
+      "register_body": "%s，您好：\n\n感谢您的注册。请在 %d 小时内打开以下链接，确认您的电子邮件地址并设置密码：\n%s\n\n如果您没有注册，请忽略此邮件。",
+      "register_exists_body": "您好：\n\n有人尝试使用此电子邮件地址创建帐户，但该地址已有帐户。\n\n如果您忘记了密码，可以在此设置新密码：\n%s\n\n如果这不是您本人的操作，请忽略此邮件。",
+      "register_exists_subject": "您的帐户",
+      "register_subject": "确认您的电子邮件地址",
+      "reset_body": "%s，您好：\n\n有人请求重置您的帐户“%s”的密码。\n\n请在 %d 分钟内打开以下链接设置新密码：\n%s\n\n如果这不是您本人的操作，请忽略此邮件。您的密码未被更改。",
+      "reset_subject": "密码重置"
+    },
+    "error": "出现问题，请重试。",
     "forgot_password": {
-      "email_label": "邮箱地址",
+      "identifier_label": "用户名或电子邮件地址",
+      "identifier_required": "请输入您的用户名或电子邮件地址。",
+      "intro": "请输入您的用户名或电子邮件地址。如果与某个帐户匹配，我们会通过电子邮件向您发送设置新密码的链接。",
       "submit": "发送重置链接",
       "success": "如果账户存在，重置链接已发送。",
       "title": "忘记密码"
     },
+    "rate_limited": "请求过多，请稍后再试。",
     "register": {
+      "account_exists": "此电子邮件地址已有帐户。请使用“忘记密码”登录。",
+      "complete_submit": "创建帐户",
+      "complete_success": "您的帐户已创建，现在可以登录。",
+      "complete_title": "设置密码",
       "email": "邮箱",
+      "fields_required": "名字、姓氏和电子邮件地址为必填项。",
       "first_name": "名",
+      "intro": "请填写您的信息。我们会通过电子邮件向您发送链接，用于确认地址并设置密码。",
+      "invalid_input": "请输入有效的电子邮件地址，且姓名不超过 100 个字符。",
       "last_name": "姓",
+      "start_again": "重新注册",
       "submit": "注册",
       "success": "注册已提交，请查收邮件。",
       "title": "创建账户"
     },
     "reset_password": {
       "confirm": "确认密码",
+      "invalid_link": "此链接无效或已过期。",
       "new_password": "新密码",
+      "policy_regexp": "密码不符合要求的格式",
+      "request_new": "申请新链接",
+      "required": "请输入新密码。",
       "submit": "重置",
       "success": "密码已重置。",
-      "title": "重置密码"
-    },
-    "verify_email": {
-      "success": "邮箱验证成功。"
+      "title": "重置密码",
+      "too_long": "密码太长。"
     }
   },
   "service_catalog": {
@@ -3217,7 +3378,6 @@
     "last_used": "最后使用",
     "leave_empty_full_access": "留空表示完全访问",
     "light_theme": "浅色",
-    "more_coming": "更多设置即将推出",
     "never_expires": "永不过期",
     "never_used": "从未使用",
     "no_tokens": "未找到API令牌",
@@ -3363,7 +3523,6 @@
   "tickets": {
     "actions": "操作",
     "add_comment": "添加备注",
-    "add_internal_note": "添加 内部 备注",
     "add_note": "添加备注",
     "additional_fields": "附加字段",
     "additional_info_placeholder": "任何附加信息或上下文...",
@@ -3385,11 +3544,7 @@
     "attachments": "附件",
     "auto_close": {
       "at": "于",
-      "minus_help": "无论活动状态如何，工单将在指定时间自动关闭。",
-      "minus_title": "待自动关闭-",
       "overdue": "自动关闭已过期",
-      "plus_help": "如果在指定时间前没有客户回复，工单将自动关闭。",
-      "plus_title": "待自动关闭+",
       "scheduled": "自动关闭已安排",
       "should_have_closed_at": "工单应在以下时间自动关闭",
       "while_pending": "处于待自动关闭状态时",
@@ -3410,7 +3565,6 @@
     "comment_placeholder": "在此输入您的备注...",
     "comments": "备注",
     "communication": "沟通",
-    "compose_reply": "Compose 回复",
     "created_at": "创建时间",
     "created_by": "创建者",
     "created_on": "创建日期",
@@ -3421,7 +3575,6 @@
     "customer_visible_badge": "客户可见",
     "customer_wrote_badge": "客户写的",
     "description": "描述",
-    "details": "详情",
     "due_date": "截止日期",
     "dynamic_field_filters": "Dynamic Field 筛选s",
     "email": "邮箱",
@@ -3475,13 +3628,11 @@
     "owner": "负责人",
     "pending_reminder": {
       "ago": "前",
-      "help": "工单将在指定时间返回\"打开\"状态。",
       "in": "后",
       "no_time_scheduled": "未安排提醒时间。",
       "not_scheduled": "提醒未安排",
       "overdue": "提醒已过期",
       "scheduled": "提醒已安排",
-      "title": "待处理提醒",
       "was_scheduled_for": "提醒原定于",
       "will_reopen_at": "工单将于以下时间重新打开"
     },
@@ -3725,7 +3876,7 @@
       "org_support": "IT支持团队",
       "org_type_heading": "这是什么类型的组织？",
       "queue_name_ph": "队列名称（例如：支持收件箱）",
-      "queues_desc": "队列是工单进入的收件箱。请将每个队列分配给一个或多个团队。",
+      "queues_desc": "队列是工单进入的收件箱。每个队列属于一个团队，该团队的成员处理其中的工单。",
       "queues_heading": "创建工单队列",
       "remove": "移除",
       "review_agents": "代理",

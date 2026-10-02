@@ -3,16 +3,14 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
-	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	platformservice "github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/platform/shared"
@@ -26,7 +24,6 @@ var (
 	priorityRepo        *repository.PriorityRepository
 	userRepo            *repository.UserRepository
 	simpleTicketService *service.SimpleTicketService
-	storageService      service.StorageService
 	lookupService       *service.LookupService
 	authService         *platformservice.AuthService
 
@@ -36,14 +33,20 @@ var (
 	servicesOverride    bool
 )
 
-// InitializeServices initializes singleton service instances.
+// InitializeServices (re)builds the singleton services for the current
+// database handle. Without a reachable database the DB-backed services stay
+// nil and the getters return nil, so handlers report the outage (HTTP 500)
+// instead of serving fake data; the next call after the database returns
+// rebuilds them.
 func InitializeServices() {
 	currentOverride := database.IsTestDBOverride()
 	db, dbErr := database.GetDB()
-	var pingErr error
+	if dbErr == nil && db == nil {
+		dbErr = errors.New("database connection is nil")
+	}
 	if db != nil {
-		pingErr = pingDatabase(db)
-		if pingErr != nil {
+		if pingErr := pingDatabase(db); pingErr != nil {
+			dbErr = fmt.Errorf("database ping failed: %w", pingErr)
 			db = nil
 		}
 	}
@@ -56,43 +59,24 @@ func InitializeServices() {
 	}
 
 	clearServicesLocked()
-
-	env := strings.ToLower(os.Getenv("APP_ENV"))
+	// LookupService resolves its own connection per call.
+	lookupService = service.NewLookupService()
+	servicesInitialized = true
+	servicesOverride = currentOverride
 
 	if db == nil {
-		if env == "test" {
-			initFallbackServicesLocked()
-			servicesInitialized = true
-			servicesDB = nil
-			servicesOverride = currentOverride
-			return
-		}
-		if pingErr != nil {
-			log.Fatalf("FATAL: Cannot initialize services without database connection: %v", pingErr)
-		}
-		log.Fatalf("FATAL: Cannot initialize services without database connection: %v", dbErr)
-	}
-
-	if env != "test" && pingErr != nil {
-		log.Fatalf("FATAL: database ping failed: %v", pingErr)
+		log.Printf("InitializeServices: database unavailable, DB-backed services not initialised: %v", dbErr)
+		return
 	}
 
 	initDatabaseServicesLocked(db)
-	servicesInitialized = true
 	servicesDB = db
-	servicesOverride = currentOverride
 }
 
 // GetTicketService returns the singleton simple ticket service instance.
 func GetTicketService() *service.SimpleTicketService {
 	InitializeServices()
 	return simpleTicketService
-}
-
-// GetStorageService returns the singleton storage service instance.
-func GetStorageService() service.StorageService {
-	InitializeServices()
-	return storageService
 }
 
 // GetTicketRepository returns the singleton ticket repository instance.
@@ -145,9 +129,6 @@ func needsServiceRebuildLocked(db *sql.DB, override bool) bool {
 }
 
 func pingDatabase(db *sql.DB) error {
-	if db == nil {
-		return nil
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 	return db.PingContext(ctx)
@@ -159,28 +140,11 @@ func clearServicesLocked() {
 	priorityRepo = nil
 	userRepo = nil
 	simpleTicketService = nil
-	storageService = nil
 	lookupService = nil
 	authService = nil
 	servicesDB = nil
 	servicesOverride = false
 	servicesInitialized = false
-}
-
-func initFallbackServicesLocked() {
-	log.Printf("InitializeServices: using lightweight test services (database unavailable)")
-	storagePath := os.Getenv("STORAGE_PATH")
-	if storagePath == "" {
-		storagePath = "/tmp"
-	}
-	if ss, err := service.NewLocalStorageService(storagePath); err == nil {
-		storageService = ss
-	} else {
-		log.Printf("WARNING: storage init failed in test: %v", err)
-		storageService = nil
-	}
-	simpleTicketService = service.NewSimpleTicketService(nil)
-	lookupService = service.NewLookupService()
 }
 
 func initDatabaseServicesLocked(db *sql.DB) {
@@ -189,25 +153,7 @@ func initDatabaseServicesLocked(db *sql.DB) {
 	priorityRepo = repository.NewPriorityRepository(db)
 	userRepo = repository.NewUserRepository(db)
 
-	simpleTicketService = service.NewSimpleTicketService(ticketRepo)
-	lookupService = service.NewLookupService()
-
-	cfg := config.Get()
-	var err error
-	if cfg != nil && cfg.Storage.Type == "db" {
-		storageService, err = service.NewDatabaseStorageService()
-		if err != nil {
-			log.Fatalf("FATAL: Cannot initialize DB storage service: %v", err)
-		}
-		log.Printf("StorageService: using DB backend")
-	} else {
-		storagePath := resolveStoragePath(cfg)
-		storageService, err = service.NewLocalStorageService(storagePath)
-		if err != nil {
-			log.Fatalf("FATAL: Cannot initialize storage service: %v", err)
-		}
-		log.Printf("StorageService: using local backend at %s", storagePath)
-	}
+	simpleTicketService = service.NewSimpleTicketService(ticketRepo, db)
 
 	// Initialize OIDC support
 	auth.SetStateStore(auth.NewMemoryStateStore())
@@ -217,47 +163,4 @@ func initDatabaseServicesLocked(db *sql.DB) {
 	jwtManager := shared.GetJWTManager()
 	authService = platformservice.NewAuthService(db, jwtManager, oidcClient, auth.GetStateStore())
 	log.Printf("Successfully connected to database")
-}
-
-func resolveStoragePath(cfg *config.Config) string {
-	if env := os.Getenv("STORAGE_PATH"); env != "" {
-		return env
-	}
-
-	if cfg != nil && cfg.Storage.Local.Path != "" {
-		return cfg.Storage.Local.Path
-	}
-
-	if isTestProcess() {
-		if tmp, err := os.MkdirTemp("", "goatflow-storage-"); err == nil {
-			return tmp
-		}
-	}
-
-	if root := findRepoRoot(); root != "" {
-		return filepath.Join(root, "storage")
-	}
-
-	return "./storage"
-}
-
-func isTestProcess() bool {
-	return strings.HasSuffix(os.Args[0], ".test")
-}
-
-func findRepoRoot() string {
-	dir, err := os.Getwd()
-	for err == nil {
-		if _, statErr := os.Stat(filepath.Join(dir, "go.mod")); statErr == nil {
-			return dir
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-
-	return ""
 }

@@ -171,27 +171,6 @@ func TestHandleKillUserSessionsValidation(t *testing.T) {
 	}
 }
 
-func TestSessionServiceAvailable(t *testing.T) {
-	// Without database, sessionServiceAvailable should return false
-	result := sessionServiceAvailable()
-	// This depends on whether the test environment has a database
-	// Just ensure it doesn't panic
-	t.Logf("sessionServiceAvailable() returned %v", result)
-}
-
-func TestGetSessionServiceReturnsNilWithoutDB(t *testing.T) {
-	// getSessionService should return nil, err when DB is not available
-	svc, err := getSessionService()
-	// In test environment without DB setup, this should fail gracefully
-	if err != nil {
-		t.Logf("getSessionService() returned expected error: %v", err)
-	} else if svc == nil {
-		t.Log("getSessionService() returned nil service (no DB)")
-	} else {
-		t.Log("getSessionService() returned a valid service (DB available)")
-	}
-}
-
 func TestSessionModelFields(t *testing.T) {
 	session := models.Session{
 		SessionID:   "abc123",

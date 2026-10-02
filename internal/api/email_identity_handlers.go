@@ -94,8 +94,8 @@ func handleTextEntityUpdate(c *gin.Context, tableName, entityName string) {
 }
 
 func handleAdminEmailIdentities(c *gin.Context) {
-	if htmxHandlerSkipDB() || getPongo2Renderer() == nil || getPongo2Renderer().TemplateSet() == nil {
-		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte("<main>Email Identities</main>"))
+	if getPongo2Renderer() == nil || getPongo2Renderer().TemplateSet() == nil {
+		sendErrorResponse(c, http.StatusInternalServerError, "Template renderer unavailable")
 		return
 	}
 

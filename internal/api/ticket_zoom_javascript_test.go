@@ -86,7 +86,6 @@ func TestStatusFormsExposePendingStateMetadata(t *testing.T) {
 	// ticket_detail.pongo2 includes the status modal partial which contains the attribute
 	paths := []string{
 		filepath.Join(baseDir, "..", "..", "templates", "partials", "ticket_detail", "modals", "status.pongo2"),
-		filepath.Join(baseDir, "..", "..", "templates", "pages", "agent", "ticket_view.pongo2"),
 	}
 	for _, path := range paths {
 		t.Run(path, func(t *testing.T) {

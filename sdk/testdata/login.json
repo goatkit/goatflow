@@ -1,0 +1,1 @@
+{"success":true,"user":{"id":1,"login":"root@localhost","email":"root@localhost","first_name":"Admin","last_name":"OTRS","role":"Admin"},"access_token":"eyJhbGciOiJIUzI1NiJ9.e30.sig","refresh_token":"eyJhbGciOiJIUzI1NiJ9.e30.ref","token_type":"Bearer","expires_in":86400,"refresh_expires_in":604800}

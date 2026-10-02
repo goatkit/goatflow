@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/platform/organisation"
 )
 
@@ -330,9 +331,13 @@ func (s *Service) softDeleteEntity(entityType string, entityID int64, userID int
 		var title string
 		database.ConvertPlaceholders("SELECT title FROM ticket WHERE id = ?")
 		db.QueryRow(database.ConvertPlaceholders("SELECT title FROM ticket WHERE id = ?"), entityID).Scan(&title)
-		_, err := db.Exec(database.ConvertPlaceholders(
-			"UPDATE ticket SET archive_flag = 1, ticket_state_id = 2, change_time = ?, change_by = ? WHERE id = ?"),
-			now, userID, entityID)
+		closedStateID, err := lookups.ID(context.Background(), db, lookups.StateLookup, lookups.StateClosedSuccessful)
+		if err != nil {
+			return title, err
+		}
+		_, err = db.Exec(database.ConvertPlaceholders(
+			"UPDATE ticket SET archive_flag = 1, ticket_state_id = ?, change_time = ?, change_by = ? WHERE id = ?"),
+			closedStateID, now, userID, entityID)
 		return title, err
 
 	case EntityContact:
@@ -389,9 +394,13 @@ func (s *Service) restoreEntity(entityType string, entityID int64, userID int) e
 	now := time.Now()
 	switch entityType {
 	case EntityTicket:
-		_, err := db.Exec(database.ConvertPlaceholders(
-			"UPDATE ticket SET archive_flag = 0, ticket_state_id = 1, change_time = ?, change_by = ? WHERE id = ?"),
-			now, userID, entityID)
+		newStateID, err := lookups.ID(context.Background(), db, lookups.StateLookup, lookups.StateNew)
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(database.ConvertPlaceholders(
+			"UPDATE ticket SET archive_flag = 0, ticket_state_id = ?, change_time = ?, change_by = ? WHERE id = ?"),
+			newStateID, now, userID, entityID)
 		return err
 
 	case EntityContact:

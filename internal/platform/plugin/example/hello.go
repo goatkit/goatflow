@@ -89,6 +89,27 @@ func (p *HelloPlugin) GKRegister() plugin.GKRegistration {
 			{Code: "name_required", Message: "Name parameter is required", HTTPStatus: 400},
 			{Code: "greeting_failed", Message: "Failed to generate greeting", HTTPStatus: 500},
 		},
+
+		I18n: &plugin.I18nSpec{
+			Namespace: "hello",
+			Translations: map[string]map[string]string{
+				"en":  {"greeting": "Hello, %s!"},
+				"ar":  {"greeting": "مرحبًا، %s!"},
+				"de":  {"greeting": "Hallo, %s!"},
+				"es":  {"greeting": "¡Hola, %s!"},
+				"fa":  {"greeting": "سلام، %s!"},
+				"fr":  {"greeting": "Bonjour, %s !"},
+				"he":  {"greeting": "שלום, %s!"},
+				"ja":  {"greeting": "こんにちは、%sさん！"},
+				"pl":  {"greeting": "Cześć, %s!"},
+				"pt":  {"greeting": "Olá, %s!"},
+				"ru":  {"greeting": "Привет, %s!"},
+				"tlh": {"greeting": "nuqneH, %s!"},
+				"uk":  {"greeting": "Привіт, %s!"},
+				"ur":  {"greeting": "سلام، %s!"},
+				"zh":  {"greeting": "你好，%s！"},
+			},
+		},
 	}
 }
 
@@ -144,22 +165,25 @@ func (p *HelloPlugin) handleHello(ctx context.Context, args json.RawMessage) (js
 		name = "World"
 	}
 
-	// Demonstrate using host API
-	if p.host != nil {
-		greeting := p.host.Translate(ctx, "hello_greeting", name)
-		if greeting == "" {
-			greeting = fmt.Sprintf("Hello, %s!", name)
-		}
-		return json.Marshal(map[string]any{
-			"message":   greeting,
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-		})
-	}
-
 	return json.Marshal(map[string]any{
-		"message":   fmt.Sprintf("Hello, %s!", name),
+		"message":   p.greeting(ctx, name),
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	})
+}
+
+// greetingKey is the namespaced i18n key registered through GKRegister's I18n spec.
+const greetingKey = "hello.greeting"
+
+// greeting returns the localized greeting. The host's Translate echoes the key
+// back when no translation is loaded, so that (or an empty string) falls back
+// to the English text.
+func (p *HelloPlugin) greeting(ctx context.Context, name string) string {
+	if p.host != nil {
+		if s := p.host.Translate(ctx, greetingKey, name); s != "" && s != greetingKey {
+			return s
+		}
+	}
+	return fmt.Sprintf("Hello, %s!", name)
 }
 
 func (p *HelloPlugin) handleStats(ctx context.Context) (json.RawMessage, error) {

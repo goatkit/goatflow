@@ -302,7 +302,9 @@
         "test_success": "نجح اختبار التكوين",
         "title": "تكوين خدمة الويب",
         "webservice": "خدمة الويب",
-        "webservice_hint": "حدد خدمة الويب لجلب البيانات"
+        "webservice_hint": "حدد خدمة الويب لجلب البيانات",
+        "test_save_first": "احفظ الحقل أولاً لاختبار إعدادات خدمة الويب الخاصة به.",
+        "test_saved_hint": "يختبر الإعدادات المحفوظة؛ احفظ تغييراتك أولاً."
       },
       "years_in_future": "السنوات في المستقبل",
       "years_in_past": "السنوات في الماضي"
@@ -1162,16 +1164,8 @@
     "no_plugins": "لا توجد إضافات مثبتة",
     "no_plugins_match": "لا توجد إضافات تطابق معايير البحث الخاصة بك.",
     "password": "كلمة المرور",
-    "password_requirement_contains_default": "يحتوي على أحرف كبيرة وصغيرة ورقم",
-    "password_requirement_contains_template": "يحتوي على {requirements}",
-    "password_requirement_digit": "رقم",
-    "password_requirement_length_initial": "8 أحرف على الأقل",
-    "password_requirement_length_template": "{min} أحرف على الأقل",
-    "password_requirement_lowercase": "أحرف صغيرة",
     "password_requirement_match": "كلمات المرور متطابقة",
     "password_requirement_none": "لا توجد متطلبات إضافية",
-    "password_requirement_special": "رمز خاص (!@#$%^&*)",
-    "password_requirement_uppercase": "أحرف كبيرة",
     "password_requirements_incomplete": "يرجى التأكد من استيفاء جميع متطلبات كلمة المرور",
     "password_reset_error": "فشل إعادة تعيين كلمة المرور",
     "password_reset_success": "تم إعادة تعيين كلمة المرور بنجاح",
@@ -1474,7 +1468,110 @@
         "delete": "هل أنت متأكد أنك تريد حذف {name}؟"
       }
     },
-    "search_groups": "البحث في المجموعات..."
+    "search_groups": "البحث في المجموعات...",
+    "webhooks": {
+      "actions": {
+        "activate": "تفعيل",
+        "deactivate": "إلغاء التفعيل",
+        "deliveries": "عمليات التسليم",
+        "test": "إرسال اختبار"
+      },
+      "active": "نشط",
+      "add": "إضافة خطاف ويب",
+      "columns": {
+        "events": "الأحداث",
+        "last_delivery": "آخر تسليم",
+        "url": "عنوان URL"
+      },
+      "deliveries": {
+        "attempts": "المحاولات",
+        "details": "التفاصيل",
+        "duration": "المدة",
+        "empty": "لا توجد عمليات تسليم بعد.",
+        "event": "الحدث",
+        "status_code": "حالة HTTP",
+        "time": "الوقت",
+        "title": "عمليات التسليم: {name}"
+      },
+      "delivery": {
+        "created_at": "تاريخ الإنشاء",
+        "delivered_at": "تاريخ التسليم",
+        "duration_ms": "{ms} مللي ثانية",
+        "error": "الخطأ",
+        "next_attempt": "المحاولة التالية",
+        "no_response": "لا يوجد محتوى في الاستجابة.",
+        "payload": "المحتوى المرسل",
+        "redeliver": "إعادة التسليم",
+        "response": "الاستجابة",
+        "title": "التسليم رقم {id}"
+      },
+      "description": "إرسال أحداث التذاكر والمقالات إلى الأنظمة الخارجية كطلبات HTTP POST موقّعة.",
+      "empty": "لم يتم تكوين أي خطافات ويب بعد.",
+      "events": {
+        "article_created": "أُضيفت مقالة (ملاحظة أو رد أو بريد إلكتروني أو مكالمة هاتفية أو طلب ويب) إلى تذكرة.",
+        "ticket_assigned": "تغيّر مالك التذكرة.",
+        "ticket_closed": "تغيّرت حالة التذكرة إلى حالة مغلقة.",
+        "ticket_created": "تم إنشاء تذكرة (من أي قناة).",
+        "ticket_escalated": "بدأ تصعيد وقت الاستجابة أو التحديث أو الحل.",
+        "ticket_merged": "تم دمج التذكرة.",
+        "ticket_priority_changed": "تغيّرت أولوية التذكرة.",
+        "ticket_queue_moved": "نُقلت التذكرة إلى قائمة انتظار أخرى.",
+        "ticket_state_changed": "تغيّرت حالة التذكرة إلى حالة غير مغلقة.",
+        "ticket_updated": "تغيّر عنوان التذكرة أو العميل أو النوع أو الخدمة أو اتفاقية مستوى الخدمة أو المسؤول أو القفل أو وقت الانتظار أو حقل ديناميكي."
+      },
+      "form": {
+        "active_help": "لا تتلقى خطافات الويب غير النشطة أي أحداث.",
+        "add_header": "إضافة ترويسة",
+        "create_title": "إضافة خطاف ويب",
+        "edit_title": "تعديل خطاف الويب",
+        "events": "الأحداث",
+        "events_help": "يُستدعى خطاف الويب عند وقوع الأحداث المحددة.",
+        "events_required": "اختر حدثًا واحدًا على الأقل.",
+        "header_name": "اسم الترويسة",
+        "header_value": "القيمة",
+        "headers": "ترويسات مخصصة",
+        "headers_help": "تُرسل مع كل تسليم. يضبط GoatFlow الترويسات Content-Type وUser-Agent وX-Webhook-* بنفسه.",
+        "remove_header": "إزالة الترويسة",
+        "remove_secret": "إزالة السر (لن تكون عمليات التسليم موقّعة)",
+        "retry_count": "مرات إعادة المحاولة",
+        "retry_count_help": "محاولات إضافية بعد فشل التسليم.",
+        "secret": "سر التوقيع",
+        "secret_help": "من 16 إلى 512 حرفًا. يُوقَّع كل تسليم في الترويسة X-Webhook-Signature (sha256=HMAC لمحتوى الطلب). لا يمكن عرض السر المحفوظ مرة أخرى.",
+        "secret_none": "لم يتم تعيين سر: عمليات التسليم غير موقّعة.",
+        "secret_placeholder_keep": "اتركه فارغًا للإبقاء على السر الحالي",
+        "secret_placeholder_new": "سر توقيع اختياري",
+        "secret_set": "تم تعيين سر ({hint}).",
+        "timeout": "مهلة الانتظار (بالثواني)",
+        "timeout_help": "مدة انتظار استجابة نقطة النهاية.",
+        "url": "عنوان URL الوجهة",
+        "url_help": "عنوان URL مطلق يبدأ بـ http:// أو https://. يرسل GoatFlow إليه طلب POST بصيغة JSON لكل حدث."
+      },
+      "inactive": "غير نشط",
+      "load_failed": "تعذّر تحميل خطافات الويب.",
+      "messages": {
+        "activated": "تم تفعيل خطاف الويب.",
+        "confirm_delete": "هل تريد حذف خطاف الويب \"{name}\" وسجل عمليات التسليم الخاص به؟",
+        "created": "تم إنشاء خطاف الويب.",
+        "deactivated": "تم إلغاء تفعيل خطاف الويب.",
+        "deleted": "تم حذف خطاف الويب.",
+        "network_error": "تعذّر الوصول إلى الخادم.",
+        "redeliver_failed": "فشلت إعادة التسليم.",
+        "redelivered": "تمت إعادة إرسال التسليم بنجاح.",
+        "request_failed": "فشل الطلب: {error}",
+        "test_failed": "فشل التسليم التجريبي.",
+        "test_succeeded": "نجح التسليم التجريبي.",
+        "updated": "تم حفظ خطاف الويب."
+      },
+      "never": "أبدًا",
+      "retry": "إعادة المحاولة",
+      "status": {
+        "delivered": "تم التسليم",
+        "delivering": "جارٍ التسليم",
+        "failed": "فشل",
+        "pending": "قيد الانتظار"
+      },
+      "title": "خطافات الويب"
+    }
   },
   "admin_dashboard": {
     "acl": "قوائم التحكم في الوصول",
@@ -1566,7 +1663,55 @@
     "tickets_open": "تذاكر مفتوحة",
     "uptime_this_month": "وقت التشغيل هذا الشهر",
     "user_management": "إدارة المستخدمين",
-    "user_management_desc": "إدارة حسابات الوكلاء والعملاء"
+    "user_management_desc": "إدارة حسابات الوكلاء والعملاء",
+    "webhooks": "خطافات الويب",
+    "webhooks_desc": "إرسال أحداث التذاكر إلى الأنظمة الخارجية"
+  },
+  "admin_reports": {
+    "title": "التقارير والتحليلات",
+    "description": "إحصاءات التذاكر للطوابير التي يمكنك قراءتها.",
+    "period_label": "الفترة",
+    "period_24h": "آخر 24 ساعة",
+    "period_7d": "آخر 7 أيام",
+    "period_30d": "آخر 30 يومًا",
+    "trend_label": "الاتجاه",
+    "trend_daily_7": "يوميًا، آخر 7 أيام",
+    "trend_daily_30": "يوميًا، آخر 30 يومًا",
+    "trend_monthly_12": "شهريًا، آخر 12 شهرًا",
+    "error_forbidden": "تحتاج إلى صلاحية قراءة لطابور واحد على الأقل لعرض التقارير.",
+    "error_generic": "تعذّر تحميل بعض بيانات التقرير. يرجى المحاولة مرة أخرى.",
+    "scope_note": "تشمل الأرقام فقط التذاكر في الطوابير التي يمكنك قراءتها. التواريخ بتوقيت UTC.",
+    "overview_heading": "نظرة عامة",
+    "total_tickets": "إجمالي التذاكر",
+    "open_tickets": "مفتوحة",
+    "pending_tickets": "معلّقة",
+    "closed_tickets": "مغلقة",
+    "trends_heading": "المُنشأة مقابل المغلقة",
+    "created": "المُنشأة",
+    "closed": "المغلقة",
+    "closure_rate": "نسبة الإغلاق",
+    "queues_heading": "الطوابير",
+    "backlog_hint": "المتراكم: تذاكر مفتوحة منذ أكثر من 24 ساعة.",
+    "queue": "الطابور",
+    "backlog": "المتراكم",
+    "agents_heading": "نشاط الوكلاء",
+    "agents_hint": "التذاكر المُنشأة والمغلقة بصفته الوكيل المسؤول والمقالات المكتوبة خلال الفترة المحددة.",
+    "agent": "الوكيل",
+    "assigned": "المُسندة",
+    "articles": "المقالات",
+    "customers_heading": "أبرز العملاء",
+    "total_customers": "العملاء",
+    "active_customers": "نشطون (30 يومًا)",
+    "new_customers": "جدد هذا الشهر",
+    "customer": "العميل",
+    "email": "البريد الإلكتروني",
+    "last_activity": "آخر تذكرة",
+    "export_heading": "تصدير",
+    "export_description": "نزّل أرقام الفترة المحددة.",
+    "export_summary_csv": "الملخص (CSV)",
+    "export_tickets_csv": "التذاكر (CSV)",
+    "export_summary_json": "الملخص (JSON)",
+    "no_data": "لا توجد بيانات لهذا الاختيار."
   },
   "admin_queues": {
     "add_queue": "إضافة قائمة انتظار",
@@ -1959,6 +2104,23 @@
       "required": "*"
     },
     "company": "الشركة",
+    "company_page": {
+      "address": "العنوان",
+      "columns": {
+        "email": "البريد الإلكتروني",
+        "name": "الاسم",
+        "title": "اللقب"
+      },
+      "customer_id": "معرّف العميل",
+      "info_title": "معلومات الشركة",
+      "no_company": "حسابك غير مرتبط بأي شركة.",
+      "no_users": "لم يتم العثور على مستخدمين.",
+      "not_set": "غير متوفر",
+      "user_count": "عرض المستخدمين (%d)",
+      "users_description": "الأشخاص في شركتك الذين يستخدمون بوابة العملاء.",
+      "website": "الموقع الإلكتروني",
+      "you": "أنت"
+    },
     "dashboard": {
       "announcements": "الإعلانات",
       "closed_tickets": "التذاكر المغلقة",
@@ -2020,16 +2182,6 @@
       "title": "إنشاء تذكرة دعم جديدة"
     },
     "phone": "الهاتف",
-    "placeholder_pages": {
-      "company_info_title": "معلومات الشركة",
-      "company_users_title": "مستخدمو الشركة",
-      "knowledge_base_article": "مقال قاعدة المعرفة",
-      "knowledge_base_search": "البحث في قاعدة المعرفة",
-      "knowledge_base_title": "قاعدة المعرفة",
-      "password_title": "تغيير كلمة المرور",
-      "profile_title": "ملف العميل",
-      "under_construction": "هذه الصفحة قيد الإنشاء."
-    },
     "portal": {
       "login_title": "تسجيل الدخول لدعم العملاء",
       "title": "بوابة العملاء"
@@ -2097,7 +2249,6 @@
     }
   },
   "customer_company_form": {
-    "assigned_services": "الخدمات المعينة",
     "branding": "العلامة التجارية",
     "company_details": "تفاصيل الشركة",
     "features": "الميزات",
@@ -2106,17 +2257,56 @@
     "save_capture_setting": "حفظ إعداد الالتقاط",
     "save_portal_settings": "حفظ إعدادات البوابة"
   },
+  "customer_company_pages": {
+    "customer_id": "معرّف العميل",
+    "sections": "أقسام الشركة",
+    "nav": {
+      "details": "التفاصيل",
+      "users": "مستخدمو العميل",
+      "tickets": "التذاكر",
+      "services": "الخدمات"
+    }
+  },
   "customer_company_services": {
-    "heading": "خدمات شركة العميل",
-    "title": "خدمات شركة العميل"
+    "heading": "الخدمات",
+    "title": "خدمات شركة العميل",
+    "description": "تُسنَد الخدمات إلى مستخدمي العملاء. حدّد مستخدمي هذه الشركة المسموح لهم باستخدام كل خدمة.",
+    "saved": "تم حفظ إسناد الخدمات.",
+    "no_services": "لا توجد خدمات صالحة.",
+    "manage_services": "إدارة الخدمات",
+    "no_users": "لا يوجد لهذه الشركة مستخدمو عملاء، لذا لا يوجد من تُسنَد إليه الخدمات.",
+    "all_users": "جميع المستخدمين",
+    "save": "حفظ الإسناد",
+    "columns": {
+      "service": "الخدمة",
+      "assigned": "مُسنَدة",
+      "customer_users": "مستخدمو العميل"
+    }
   },
   "customer_company_tickets": {
-    "heading": "تذاكر شركة العميل",
-    "title": "تذاكر شركة العميل"
+    "heading": "التذاكر",
+    "title": "تذاكر شركة العميل",
+    "description": "تذاكر هذه الشركة في قوائم الانتظار التي يمكنك الوصول إليها، الأحدث أولاً.",
+    "empty": "لا توجد تذاكر لهذه الشركة في قوائم الانتظار التي يمكنك الوصول إليها.",
+    "columns": {
+      "title": "العنوان",
+      "customer_user": "مستخدم العميل"
+    }
   },
   "customer_company_users": {
-    "heading": "مستخدمو شركة العميل",
-    "title": "مستخدمو شركة العميل"
+    "heading": "مستخدمو العميل",
+    "title": "مستخدمو شركة العميل",
+    "description": "مستخدمو العميل الذين ينتمون إلى هذه الشركة.",
+    "manage_users": "إدارة مستخدمي العملاء",
+    "empty": "لا يوجد مستخدمو عملاء لهذه الشركة بعد.",
+    "columns": {
+      "login": "اسم الدخول",
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "tickets": "التذاكر",
+      "status": "الحالة"
+    }
   },
   "customer_group": {
     "by_group_heading": "أذونات العملاء حسب المجموعة",
@@ -2142,7 +2332,8 @@
   },
   "customer_portal_settings": {
     "heading": "إعدادات بوابة العملاء",
-    "title": "إعدادات بوابة العملاء"
+    "title": "إعدادات بوابة العملاء",
+    "per_company_note": "يمكن لكل شركة عميلة تجاوز هذه القيم الافتراضية من علامة تبويب إعدادات البوابة في صفحة تحريرها."
   },
   "customer_user_services": {
     "title": "خدمات مستخدم العميل"
@@ -2188,29 +2379,16 @@
     "performance": "الأداء",
     "quick_actions": "إجراءات سريعة",
     "quick_stats": "إحصائيات سريعة",
-    "realtime": {
-      "title": "لوحة التحكم الفورية"
-    },
     "recent_activity": "النشاط الأخير",
     "recent_tickets": "التذاكر الأخيرة",
     "statistics": "الإحصائيات",
-    "stats": {
-      "closed_today": "مغلق اليوم",
-      "my_open": "المفتوحة لي",
-      "my_pending": "المعلقة لي",
-      "new_today": "جديد اليوم",
-      "open_tickets": "التذاكر المفتوحة",
-      "overdue": "متأخر",
-      "pending": "قيد الانتظار",
-      "total_assigned": "إجمالي المعينة",
-      "unassigned": "غير معينة"
-    },
     "tickets_count": "تذاكر",
     "title": "لوحة التحكم",
     "unassigned_count": "غير معينة",
     "welcome_back": "مرحبًا بعودتك",
     "welcome_message": "إليك ما يحدث مع تذاكرك اليوم",
-    "widget_config_desc": "اختر الأدوات التي تظهر في لوحة التحكم. اسحب لإعادة الترتيب."
+    "widget_config_desc": "اختر الأدوات التي تظهر في لوحة التحكم. اسحب لإعادة الترتيب.",
+    "widget_unavailable": "هذه الأداة غير متاحة حاليًا. يرجى المحاولة لاحقًا."
   },
   "demo": {
     "security_disabled": "تم تعطيل تغيير كلمة المرور والمصادقة الثنائية في وضع العرض التوضيحي."
@@ -2243,11 +2421,6 @@
       "delete": "حذف الحقل",
       "edit": "تحرير الحقل"
     }
-  },
-  "dynamic_test": {
-    "heading": "اختبار الوحدة الديناميكية",
-    "testing_instructions": "تعليمات الاختبار",
-    "title": "اختبار الوحدة الديناميكية"
   },
   "editor": {
     "insert_image_prompt": "أدخل عنوان URL للصورة (أو اتركه فارغًا لاختيار ملف):",
@@ -2332,29 +2505,18 @@
     "mandatory_note": "جميع الحقول المميزة بنجمة (*) إلزامية.",
     "select": "اختر"
   },
-  "group_form": {
-    "heading": "نموذج المجموعة",
-    "title": "نموذج المجموعة"
-  },
-  "group_members": {
-    "heading": "أعضاء المجموعة",
-    "title": "أعضاء المجموعة"
-  },
   "group_permissions": {
     "permission_matrix": "مصفوفة الأذونات",
     "queue_permissions": "أذونات قوائم الانتظار",
     "queues": "قوائم الانتظار",
     "title": "أذونات المجموعة"
   },
-  "group_view": {
-    "heading": "تفاصيل المجموعة",
-    "title": "المجموعة"
-  },
   "groups": {
     "add_group": "إضافة مجموعة",
     "add_user": "إضافة مستخدم إلى المجموعة",
     "add_user_btn": "إضافة مستخدم",
     "confirm_delete": "هل أنت متأكد من أنك تريد حذف هذه المجموعة؟",
+    "delete_keeps_group": "سيتم تعيين المجموعة كغير نشطة. تبقى في القائمة مع أعضائها وصلاحياتها ويمكن إعادة تفعيلها بتحريرها.",
     "current_members": "الأعضاء الحاليون",
     "delete_success": "تم حذف المجموعة بنجاح",
     "group": "المجموعة",
@@ -2583,7 +2745,6 @@
       "delete_item": "هل أنت متأكد من أنك تريد حذف هذا العنصر؟",
       "delete_lookup": "هل أنت متأكد من أنك تريد حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.",
       "delete_priority": "هل أنت متأكد من أنك تريد حذف هذه الأولوية؟ لا يمكن التراجع عن هذا الإجراء.",
-      "delete_queue": "هل أنت متأكد من أنك تريد حذف هذه القائمة؟ ستحتاج جميع التذاكر في هذه القائمة إلى إعادة تعيين. لا يمكن التراجع عن هذا الإجراء.",
       "delete_queue_simple": "هل أنت متأكد من أنك تريد حذف هذه القائمة؟",
       "delete_queues_bulk": "هل أنت متأكد من أنك تريد حذف القائمة (القوائم) المحددة؟",
       "delete_state": "هل أنت متأكد من أنك تريد حذف هذه الحالة؟",
@@ -2626,7 +2787,6 @@
     "failed_remove_user": "فشل إزالة المستخدم",
     "failed_save_field": "فشل حفظ الحقل",
     "failed_update_screen_config": "فشل تحديث تكوين الشاشة",
-    "failed_update_services": "فشل تحديث الخدمات",
     "groups": {
       "select_user": "الرجاء اختيار مستخدم للإضافة"
     },
@@ -2635,7 +2795,6 @@
     "item_deleted": "تم حذف العنصر بنجاح",
     "item_updated": "تم تحديث العنصر بنجاح",
     "loading": "جاري التحميل...",
-    "loading_customer_users": "جاري تحميل مستخدمي العملاء...",
     "network_error": "خطأ في الشبكة",
     "no_agents_available": "لا يوجد وكلاء متاحون",
     "no_data": "لا توجد بيانات متاحة",
@@ -2656,15 +2815,11 @@
     "please_wait": "يرجى الانتظار...",
     "processing": "جاري المعالجة...",
     "required_fields": "يرجى ملء جميع الحقول المطلوبة",
-    "save_company_before_services": "احفظ الشركة قبل تعيين الخدمات.",
-    "save_company_first": "احفظ الشركة قبل تعيين الخدمات.",
     "saving": "جاري الحفظ...",
     "select_at_least_one_queue": "الرجاء اختيار قائمة انتظار واحدة على الأقل",
     "select_template_type": "الرجاء اختيار نوع قالب واحد على الأقل.",
     "select_two_to_merge": "الرجاء اختيار تذكرتين على الأقل للدمج",
     "server_error": "خطأ في الخادم",
-    "services_updated": "تم تحديث الخدمات بنجاح",
-    "services_updated_success": "تم تحديث الخدمات بنجاح",
     "session_expired": "انتهت صلاحية جلستك",
     "success": "نجاح",
     "unauthorized": "غير مصرح",
@@ -2831,9 +2986,7 @@
     "title": "إدارة الأذونات"
   },
   "placeholders": {
-    "contains": "يحتوي على...",
-    "note_subject": "موضوع الملاحظة",
-    "separate_emails": "افصل بين البريد الإلكتروني بفواصل"
+    "contains": "يحتوي على..."
   },
   "priorities": {
     "heading": "إدارة الأولويات",
@@ -2950,20 +3103,6 @@
     },
     "total_count": "المجموع"
   },
-  "realtime": {
-    "active_alerts": "نشط Alerts",
-    "heading": "Real-الوقت لوحة التحكم",
-    "no_tickets": "لا tickets",
-    "queue_distribution": "قائمة انتظار Distribution",
-    "queue_status": "قائمة انتظار الحالة",
-    "recent_tickets": "Recent تذاكر",
-    "stats": {
-      "active_agents": "نشط وكلاء",
-      "avg_response_time": "Avg Response الوقت",
-      "open_tickets": "فتح تذاكر"
-    },
-    "ticket_volume": "تذكرة Volume (24h)"
-  },
   "realtime_dashboard": {
     "title": "لوحة التحكم في الوقت الفعلي"
   },
@@ -3078,29 +3217,51 @@
     "search_results": "نتائج البحث"
   },
   "self_service": {
+    "email": {
+      "register_body": "مرحبًا %s،\n\nشكرًا لتسجيلك. افتح هذا الرابط خلال %d ساعة لتأكيد بريدك الإلكتروني واختيار كلمة المرور:\n%s\n\nإذا لم تقم بالتسجيل، فتجاهل هذه الرسالة.",
+      "register_exists_body": "مرحبًا،\n\nحاول شخص ما إنشاء حساب بعنوان البريد الإلكتروني هذا، لكن يوجد حساب له بالفعل.\n\nإذا نسيت كلمة المرور، يمكنك اختيار كلمة مرور جديدة هنا:\n%s\n\nإذا لم تكن أنت، فتجاهل هذه الرسالة.",
+      "register_exists_subject": "حسابك",
+      "register_subject": "أكّد عنوان بريدك الإلكتروني",
+      "reset_body": "مرحبًا %s،\n\nتم طلب إعادة تعيين كلمة المرور لحسابك \"%s\".\n\nافتح هذا الرابط خلال %d دقيقة لاختيار كلمة مرور جديدة:\n%s\n\nإذا لم تطلب ذلك، فتجاهل هذه الرسالة. لم يتم تغيير كلمة المرور الخاصة بك.",
+      "reset_subject": "إعادة تعيين كلمة المرور"
+    },
+    "error": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
     "forgot_password": {
-      "email_label": "البريد الإلكتروني",
+      "identifier_label": "اسم المستخدم أو البريد الإلكتروني",
+      "identifier_required": "أدخل اسم المستخدم أو عنوان البريد الإلكتروني.",
+      "intro": "أدخل اسم المستخدم أو عنوان البريد الإلكتروني. إذا طابق حسابًا، فسنرسل إليك رابطًا لاختيار كلمة مرور جديدة.",
       "submit": "إرسال رابط",
       "success": "إذا كان الحساب موجوداً، تم إرسال رابط.",
       "title": "نسيت كلمة المرور"
     },
+    "rate_limited": "طلبات كثيرة جدًا. يرجى المحاولة لاحقًا.",
     "register": {
+      "account_exists": "يوجد حساب بهذا البريد الإلكتروني بالفعل. استخدم \"نسيت كلمة المرور\" لتسجيل الدخول.",
+      "complete_submit": "إنشاء الحساب",
+      "complete_success": "تم إنشاء حسابك. يمكنك الآن تسجيل الدخول.",
+      "complete_title": "اختر كلمة المرور",
       "email": "البريد",
+      "fields_required": "الاسم الأول واسم العائلة والبريد الإلكتروني مطلوبة.",
       "first_name": "الاسم الأول",
+      "intro": "أدخل بياناتك. سنرسل إليك رابطًا عبر البريد الإلكتروني لتأكيد عنوانك واختيار كلمة المرور.",
+      "invalid_input": "أدخل عنوان بريد إلكتروني صالحًا وأسماء لا تتجاوز 100 حرف.",
       "last_name": "اسم العائلة",
+      "start_again": "التسجيل مرة أخرى",
       "submit": "تسجيل",
       "success": "تم تقديم التسجيل.",
       "title": "إنشاء حساب"
     },
     "reset_password": {
       "confirm": "تأكيد",
+      "invalid_link": "هذا الرابط غير صالح أو منتهي الصلاحية.",
       "new_password": "كلمة مرور جديدة",
+      "policy_regexp": "كلمة المرور لا تطابق النمط المطلوب",
+      "request_new": "طلب رابط جديد",
+      "required": "أدخل كلمة مرور جديدة.",
       "submit": "إعادة تعيين",
       "success": "تم إعادة تعيين كلمة المرور.",
-      "title": "إعادة تعيين كلمة المرور"
-    },
-    "verify_email": {
-      "success": "تم التحقق من البريد."
+      "title": "إعادة تعيين كلمة المرور",
+      "too_long": "كلمة المرور طويلة جدًا."
     }
   },
   "service_catalog": {
@@ -3217,7 +3378,6 @@
     "last_used": "آخر استخدام",
     "leave_empty_full_access": "اتركه فارغاً للوصول الكامل",
     "light_theme": "فاتح",
-    "more_coming": "المزيد من الإعدادات قادمة قريبًا",
     "never_expires": "لا تنتهي صلاحيته",
     "never_used": "لم يُستخدم",
     "no_tokens": "لم يتم العثور على رموز API",
@@ -3363,7 +3523,6 @@
   "tickets": {
     "actions": "الإجراءات",
     "add_comment": "إضافة تعليق",
-    "add_internal_note": "إضافة داخلي ملاحظة",
     "add_note": "إضافة ملاحظة",
     "additional_fields": "حقول إضافية",
     "additional_info_placeholder": "أي معلومات أو سياق إضافي...",
@@ -3385,11 +3544,7 @@
     "attachments": "المرفقات",
     "auto_close": {
       "at": "في",
-      "minus_help": "سيتم إغلاق التذكرة تلقائياً في الوقت المحدد بغض النظر عن النشاط.",
-      "minus_title": "إغلاق تلقائي معلق-",
       "overdue": "الإغلاق التلقائي متأخر",
-      "plus_help": "سيتم إغلاق التذكرة تلقائياً إذا لم يرد العميل قبل الوقت المحدد.",
-      "plus_title": "إغلاق تلقائي معلق+",
       "scheduled": "الإغلاق التلقائي مجدول",
       "should_have_closed_at": "كان يجب إغلاق التذكرة تلقائياً في",
       "while_pending": "أثناء حالة الإغلاق التلقائي المعلق",
@@ -3410,7 +3565,6 @@
     "comment_placeholder": "اكتب تعليقك هنا...",
     "comments": "التعليقات",
     "communication": "الاتصال",
-    "compose_reply": "Compose رد",
     "created_at": "تاريخ الإنشاء",
     "created_by": "أنشئ بواسطة",
     "created_on": "تم الإنشاء في",
@@ -3421,7 +3575,6 @@
     "customer_visible_badge": "العميل يرى هذا",
     "customer_wrote_badge": "كتب العميل هذا",
     "description": "الوصف",
-    "details": "التفاصيل",
     "due_date": "تاريخ الاستحقاق",
     "dynamic_field_filters": "Dynamic Field تصفيةs",
     "email": "البريد الإلكتروني",
@@ -3475,13 +3628,11 @@
     "owner": "المالك",
     "pending_reminder": {
       "ago": "منذ",
-      "help": "ستعود التذكرة إلى حالة \"مفتوحة\" في الوقت المحدد.",
       "in": "خلال",
       "no_time_scheduled": "لم يتم جدولة وقت للتذكير.",
       "not_scheduled": "التذكير غير مجدول",
       "overdue": "التذكير متأخر",
       "scheduled": "التذكير مجدول",
-      "title": "تذكير معلق",
       "was_scheduled_for": "كان التذكير مجدولاً في",
       "will_reopen_at": "سيتم إعادة فتح التذكرة في"
     },
@@ -3743,7 +3894,7 @@
       "org_support": "فريق دعم تقنية المعلومات",
       "org_type_heading": "ما نوع هذه المؤسسة؟",
       "queue_name_ph": "اسم قائمة الانتظار (مثال: صندوق الدعم)",
-      "queues_desc": "قائمة الانتظار هي صندوق وارد تصل إليه التذاكر. عيِّن كل قائمة لفريق أو أكثر.",
+      "queues_desc": "قائمة الانتظار هي صندوق وارد تصل إليه التذاكر. تنتمي كل قائمة إلى فريق واحد، ويعمل أعضاء ذلك الفريق على تذاكرها.",
       "queues_heading": "إنشاء قوائم انتظار التذاكر",
       "remove": "إزالة",
       "review_agents": "الوكلاء",

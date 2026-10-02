@@ -272,28 +272,27 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 		}
 	}
 
-	// Get the template (fallback for tests when templates missing)
 	if r == nil || r.templateSet == nil {
-		// Minimal safe fallback for tests: render a tiny stub
-		c.String(code, "GoatFlow")
+		log.Printf("Template renderer unavailable; cannot render %q", name)
+		c.String(http.StatusInternalServerError, "Template renderer unavailable")
 		return
 	}
 	tmpl, err := r.templateSet.FromFile(name)
 	if err != nil {
 		log.Printf("Template renderer failed to load template %q: %v", name, err)
-		c.String(code, "Template not found: %s", name)
+		c.String(http.StatusInternalServerError, "Template not found: %s", name)
 		return
 	}
 
-	// Set response headers
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	c.Status(code)
-
-	// Render template
-	err = tmpl.ExecuteWriter(ctx, c.Writer)
+	// Render fully before writing so an execution error yields a clean 500
+	// rather than a half-written page under the caller's status code.
+	out, err := tmpl.ExecuteBytes(ctx)
 	if err != nil {
+		log.Printf("Template renderer failed to execute template %q: %v", name, err)
 		c.String(http.StatusInternalServerError, "Template execution error: %v", err)
+		return
 	}
+	c.Data(code, "text/html; charset=utf-8", out)
 }
 
 // getUserFromContext extracts the user from gin context (set by JWT middleware).

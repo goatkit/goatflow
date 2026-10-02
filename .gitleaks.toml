@@ -47,6 +47,10 @@ paths = [
     '''\.mcp\.json\.example''',
     # Crypto test uses a fake Stripe key (sk_live_abc123def456) for encryption/decryption tests
     '''internal/secureconfig/crypto_test\.go''',
+    # Webhook signing test uses a fixed fake HMAC secret
+    '''internal/api/webhook_api_test\.go''',
+    # SDK tests use fake JWT-shaped tokens ("e30" = {}) as mock responses
+    '''sdk/typescript/test/.*\.test\.ts''',
 ]
 
 # Stop words to prevent false positives

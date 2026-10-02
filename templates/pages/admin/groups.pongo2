@@ -63,7 +63,7 @@
                 </div>
             </div>
             <div class="flex gap-2">
-                <select id="statusFilter" onchange="filterGroups()" class="gk-select-neon">
+                <select id="statusFilter" onchange="savePageState(); filterGroups()" class="gk-select-neon">
                     <option value="">All Status</option>
                     <option value="1">Active</option>
                     <option value="2">Inactive</option>
@@ -94,7 +94,7 @@
         <table class="gk-table" id="groupsTable">
             <thead>
                 <tr>
-                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('name')">
+                    <th scope="col" data-sort="name" aria-sort="ascending" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('name')">
                         <div class="flex items-center gap-1">
                             Group Name
                             <span class="sort-icon" data-column="name">
@@ -105,7 +105,7 @@
                         </div>
                     </th>
                     <th scope="col">Description</th>
-                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('members')">
+                    <th scope="col" data-sort="members" aria-sort="none" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('members')">
                         <div class="flex items-center gap-1">
                             Members
                             <span class="sort-icon" data-column="members">
@@ -115,7 +115,7 @@
                             </span>
                         </div>
                     </th>
-                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('status')">
+                    <th scope="col" data-sort="status" aria-sort="none" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('status')">
                         <div class="flex items-center gap-1">
                             Status
                             <span class="sort-icon" data-column="status">
@@ -125,7 +125,7 @@
                             </span>
                         </div>
                     </th>
-                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('created')">
+                    <th scope="col" data-sort="created" aria-sort="none" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('created')">
                         <div class="flex items-center gap-1">
                             Created
                             <span class="sort-icon" data-column="created">
@@ -142,7 +142,7 @@
             </thead>
             <tbody id="groups-tbody">
                 {% for group in Groups %}
-                <tr id="group-row-{{ group.ID }}">
+                <tr id="group-row-{{ group.ID }}" data-group-name="{{ group.Name }}" data-group-comments="{{ group.Comments }}" data-active="{% if group.IsActive %}true{% else %}false{% endif %}" data-created="{{ group.CreateTime }}">
                     <td class="px-4 py-3 whitespace-nowrap">
                         <div class="text-sm font-medium" style="color: var(--gk-text-primary);">
                             {{ group.Name }}
@@ -197,7 +197,7 @@
                             </button>
                             {% if group.Name != "admin" and group.Name != "users" and group.Name != "stats" %}
                             <button
-                                onclick="confirmDeleteGroup({{ group.ID }}, '{{ group.Name }}')"
+                                onclick="confirmDeleteGroup({{ group.ID }}, this.closest('tr').dataset.groupName)"
                                 title="{{ t("groups.tooltips.delete")|default:"Delete group" }}"
                                 class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-error-subtle)]"
                                 style="color: var(--gk-error);"
@@ -233,6 +233,11 @@
                     </td>
                 </tr>
                 {% endfor %}
+                {% if Groups %}
+                <tr id="groupsNoMatch" class="hidden">
+                    <td colspan="6" class="px-6 py-12 text-center text-sm" style="color: var(--gk-text-muted);">{{ t("admin.no_groups_found") }}</td>
+                </tr>
+                {% endif %}
             </tbody>
         </table>
     </div>
@@ -263,7 +268,7 @@
                                 <svg class="inline h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                This action cannot be undone. All group memberships and permissions will be removed.
+                                {{ t("groups.delete_keeps_group") }}
                             </p>
                         </div>
                     </div>
@@ -472,13 +477,38 @@ function clearFilters() {
     filterGroups();
 }
 
-function filterGroups() {
-    const search = document.getElementById('groupSearch').value;
-    const status = document.getElementById('statusFilter').value;
-    console.log('Filtering groups:', { search, status });
+function groupRows() {
+    return Array.from(document.querySelectorAll('#groups-tbody tr[data-group-name]'));
 }
 
-// Sort functionality
+// Show only the rows whose name or description contains the search text and
+// whose status matches the status filter (1 = active, 2 = inactive).
+function filterGroups() {
+    const search = document.getElementById('groupSearch').value.trim().toLowerCase();
+    const status = document.getElementById('statusFilter').value;
+    let visible = 0;
+    groupRows().forEach(row => {
+        const text = (row.dataset.groupName + ' ' + row.dataset.groupComments).toLowerCase();
+        const active = row.dataset.active === 'true';
+        const show = (!search || text.includes(search)) && (!status || (status === '1') === active);
+        row.style.display = show ? '' : 'none';
+        if (show) {
+            visible++;
+        }
+    });
+    const noMatch = document.getElementById('groupsNoMatch');
+    if (noMatch) {
+        noMatch.classList.toggle('hidden', visible > 0);
+    }
+}
+
+// Sort functionality; the server renders the rows ordered by name.
+const sortKeys = {
+    name: row => row.dataset.groupName.toLowerCase(),
+    members: row => parseInt(row.querySelector('[id^="member-count-"]').textContent, 10) || 0,
+    status: row => (row.dataset.active === 'true' ? 0 : 1),
+    created: row => row.dataset.created
+};
 let sortColumn = 'name';
 let sortOrder = 'asc';
 
@@ -489,7 +519,27 @@ function sortTable(column) {
         sortColumn = column;
         sortOrder = 'asc';
     }
-    console.log('Sorting by:', column, sortOrder);
+    const key = sortKeys[column];
+    const direction = sortOrder === 'asc' ? 1 : -1;
+    const rows = groupRows();
+    rows.sort((a, b) => {
+        const ka = key(a);
+        const kb = key(b);
+        if (ka < kb) {
+            return -direction;
+        }
+        return ka > kb ? direction : 0;
+    });
+    const tbody = document.getElementById('groups-tbody');
+    rows.forEach(row => tbody.appendChild(row));
+    const noMatch = document.getElementById('groupsNoMatch');
+    if (noMatch) {
+        tbody.appendChild(noMatch);
+    }
+    document.querySelectorAll('#groupsTable th[data-sort]').forEach(th => {
+        const state = sortOrder === 'asc' ? 'ascending' : 'descending';
+        th.setAttribute('aria-sort', th.dataset.sort === column ? state : 'none');
+    });
 }
 
 // Modal functionality
@@ -528,7 +578,10 @@ function showEditGroupModal(groupId) {
         })
         .catch(error => {
             console.error('Error fetching group:', error);
-            showGuruMeditation('Failed to Load Group', 'Unable to fetch group details: ' + error);
+            showGuruMeditation('00000005.GRPLOAD0', 'Unable to fetch group details: ' + error, {
+                task: 'GROUP.LOAD',
+                location: `/admin/groups/${groupId}`
+            });
             closeGroupModal();
         });
 }
@@ -712,13 +765,13 @@ function showToast(type, message) {
                     </svg>
                 </div>
                 <div class="ml-3 w-0 flex-1 pt-0.5">
-                    <p class="text-sm font-medium" style="color: ${iconColor};">
-                        ${message}
-                    </p>
+                    <p class="text-sm font-medium" style="color: ${iconColor};"></p>
                 </div>
             </div>
         </div>
     `;
+    // The message can contain user-entered names: never parse it as HTML.
+    toast.querySelector('p').textContent = message;
 
     toastContainer.appendChild(toast);
 
@@ -923,17 +976,10 @@ function showGroupPermissions(groupId) {
     window.location.href = `/admin/groups/${groupId}/permissions`;
 }
 
-// Handle Enter key in modal
-document.getElementById('groupForm').addEventListener('keydown', function(event) {
-    if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
-        event.preventDefault();
-        handleGroupSubmit(event);
-    }
-});
-
 // Load member counts on page load
 document.addEventListener('DOMContentLoaded', function() {
     restorePageState();
+    filterGroups();
 
     {% for group in Groups %}
     fetch(`/admin/groups/{{ group.ID }}/members`, {
@@ -949,24 +995,5 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => console.error('Error loading members for group {{ group.ID }}:', error));
     {% endfor %}
 });
-
-// Guru Meditation error display (Amiga-style)
-function showGuruMeditation(title, message) {
-    const guru = document.createElement('div');
-    guru.className = 'fixed inset-0 z-50 flex items-center justify-center';
-    guru.style.background = 'var(--gk-bg-base)';
-    guru.innerHTML = `
-        <div class="text-center p-8 max-w-2xl" style="color: var(--gk-error); border: 4px solid var(--gk-error); background: var(--gk-bg-base);">
-            <div class="text-4xl mb-4 animate-pulse font-mono">Software Failure. Press left mouse button to continue.</div>
-            <div class="text-2xl mb-4 font-mono">Guru Meditation #00000025.65045338</div>
-            <div class="text-xl mb-4">${title}</div>
-            <div class="text-sm mb-6" style="color: var(--gk-error);">${message}</div>
-            <button onclick="this.closest('.fixed').remove()" class="gk-btn-danger px-6 py-2 font-bold">
-                LEFT MOUSE BUTTON
-            </button>
-        </div>
-    `;
-    document.body.appendChild(guru);
-}
 </script>
 {% endblock %}

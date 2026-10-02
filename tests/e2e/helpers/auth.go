@@ -94,24 +94,60 @@ func (a *AuthHelper) LoginAsAdmin() error {
 	return a.Login(a.browser.Config.AdminEmail, a.browser.Config.AdminPassword)
 }
 
-// Logout performs logout
-func (a *AuthHelper) Logout() error {
-	// Prefer clicking a visible logout control if present
-	logoutLink := a.browser.Page.Locator("a[href='/logout'], button:has-text('Logout')")
-	if count, _ := logoutLink.Count(); count > 0 {
-		if err := logoutLink.First().Click(); err == nil {
-			if err := a.browser.Page.WaitForURL("**/login", playwright.PageWaitForURLOptions{Timeout: playwright.Float(5000)}); err == nil {
-				return nil
-			}
-		}
-		// Fall through to direct navigation if click or wait fails
+// LoginAsCustomer signs in through the customer portal login form with the
+// seeded customer (SeedCustomerLogin) and waits until the portal redirect
+// leaves /customer/login.
+func (a *AuthHelper) LoginAsCustomer() error {
+	if err := a.browser.NavigateTo("/customer/login"); err != nil {
+		return fmt.Errorf("failed to navigate to customer login: %w", err)
 	}
+	loginInput := a.browser.Page.Locator("input#login")
+	if err := loginInput.WaitFor(); err != nil {
+		return fmt.Errorf("customer login input not found: %w", err)
+	}
+	if err := loginInput.Fill(SeedCustomerLogin); err != nil {
+		return fmt.Errorf("failed to fill customer login: %w", err)
+	}
+	if err := a.browser.Page.Locator("input#password").Fill(SeedCustomerPassword); err != nil {
+		return fmt.Errorf("failed to fill customer password: %w", err)
+	}
+	if err := a.browser.Page.Locator("form[action='/api/auth/customer/login'] button[type='submit']").Click(); err != nil {
+		return fmt.Errorf("failed to submit customer login: %w", err)
+	}
+	base := a.browser.Config.BaseURL
+	err := a.browser.Page.WaitForURL(func(url string) bool {
+		return strings.HasPrefix(url, base+"/customer") && !strings.Contains(url, "/customer/login")
+	}, playwright.PageWaitForURLOptions{Timeout: playwright.Float(10000)})
+	if err == nil {
+		return nil
+	}
+	body, _ := a.browser.Page.Locator("body").TextContent()
+	if len(body) > 400 {
+		body = body[:400]
+	}
+	return fmt.Errorf("customer login as %q did not leave the login page (url %s): %s",
+		SeedCustomerLogin, a.browser.Page.URL(), strings.TrimSpace(body))
+}
 
-	// Fallback: navigate directly to the logout endpoint
-	if _, err := a.browser.Page.Goto(a.browser.Config.BaseURL + "/logout"); err != nil {
+// Logout signs out through the user menu (avatar button -> Logout), the way a
+// user does, and waits for the redirect to the login page. On pages without
+// the app chrome it navigates to /logout directly.
+func (a *AuthHelper) Logout() error {
+	page := a.browser.Page
+	avatar := page.Locator("nav button.gk-avatar")
+	if n, err := avatar.Count(); err != nil {
+		return err
+	} else if n > 0 {
+		if err := avatar.First().Click(); err != nil {
+			return fmt.Errorf("failed to open user menu: %w", err)
+		}
+		if err := page.Locator(".gk-user-menu a[href$='/logout']").Click(); err != nil {
+			return fmt.Errorf("failed to click Logout: %w", err)
+		}
+	} else if _, err := page.Goto(a.browser.Config.BaseURL + "/logout"); err != nil {
 		return fmt.Errorf("failed to navigate to /logout: %w", err)
 	}
-	if err := a.browser.Page.WaitForURL("**/login", playwright.PageWaitForURLOptions{Timeout: playwright.Float(5000)}); err != nil {
+	if err := page.WaitForURL("**/login"); err != nil {
 		return fmt.Errorf("logout redirect failed: %w", err)
 	}
 	return nil

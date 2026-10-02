@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/services"
 )
 
@@ -68,6 +69,13 @@ func HandleListQueuesAPI(c *gin.Context) {
 			"success": false,
 			"error":   "Database connection not available",
 		})
+		return
+	}
+
+	// Ticket counts are only shown for queues the agent can read; the list
+	// itself also contains queues held with other permissions (e.g. move_into).
+	readScope, ok := resolveTicketReadScope(c, db, false)
+	if !ok {
 		return
 	}
 
@@ -228,14 +236,14 @@ func HandleListQueuesAPI(c *gin.Context) {
 		}
 
 		// Include statistics if requested
-		if includeStats {
+		if includeStats && readScope.canReadQueue(queue.ID) {
 			// Get ticket counts for this queue
 			statsQuery := database.ConvertPlaceholders(`
                 SELECT 
                     COUNT(*) as total,
-                    COUNT(CASE WHEN ticket_state_id IN (1, 4) THEN 1 END) as open_count,
-                    COUNT(CASE WHEN ticket_state_id IN (2, 3) THEN 1 END) as closed_count,
-                    COUNT(CASE WHEN ticket_state_id IN (5) THEN 1 END) as pending_count
+                    COUNT(CASE WHEN ticket_state_id IN (` + lookups.NewOpenStateIDsSQL + `) THEN 1 END) as open_count,
+                    COUNT(CASE WHEN ticket_state_id IN (` + lookups.ClosedStateIDsSQL + `) THEN 1 END) as closed_count,
+                    COUNT(CASE WHEN ticket_state_id IN (` + lookups.PendingStateIDsSQL + `) THEN 1 END) as pending_count
                 FROM ticket
                 WHERE queue_id = ?
             `)
@@ -250,33 +258,11 @@ func HandleListQueuesAPI(c *gin.Context) {
 			}
 		}
 
-		// Get groups that have access to this queue
-		groupQuery := database.ConvertPlaceholders(`
-			SELECT DISTINCT g.id, g.name
-			FROM groups g
-			INNER JOIN queue_group qg ON g.id = qg.group_id
-			WHERE qg.queue_id = ?
-			ORDER BY g.name
-		`)
-
-		groupRows, err := db.Query(groupQuery, queue.ID)
-		if err == nil {
-			defer groupRows.Close()
-			groups := []map[string]interface{}{}
-			for groupRows.Next() {
-				var groupID int
-				var groupName string
-				if err := groupRows.Scan(&groupID, &groupName); err == nil {
-					groups = append(groups, map[string]interface{}{
-						"id":   groupID,
-						"name": groupName,
-					})
-				}
-			}
-			_ = groupRows.Err() //nolint:errcheck // Check for iteration errors
-			queueMap["groups"] = groups
+		// The queue's one permission group (queue.group_id).
+		if queue.GroupID.Valid {
+			queueMap["groups"] = queueGroupList(int(queue.GroupID.Int32), queue.GroupName.String)
 		} else {
-			queueMap["groups"] = []interface{}{}
+			queueMap["groups"] = []gin.H{}
 		}
 
 		queues = append(queues, queueMap)
@@ -292,7 +278,10 @@ func HandleListQueuesAPI(c *gin.Context) {
 		for i, q := range queues {
 			items[i] = gin.H(q)
 		}
-		items = filterByTicketAttributeRelations(c, db, items, "Queue", filterAttr, filterValue)
+		if items, err = filterByTicketAttributeRelations(c, db, items, "Queue", filterAttr, filterValue); err != nil {
+			respondAttributeRelationFilterError(c, err)
+			return
+		}
 		// Convert back
 		queues = make([]map[string]interface{}, len(items))
 		for i, item := range items {

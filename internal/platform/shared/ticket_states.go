@@ -9,12 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-)
-
-// Pending state type IDs
-const (
-	PendingReminderStateTypeID = 4
-	PendingAutoStateTypeID     = 5
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 )
 
 // DefaultPendingDuration is the default duration to use when a pending ticket
@@ -49,22 +44,17 @@ func EnsurePendingTime(untilTime int) int {
 	return int(time.Now().UTC().Add(DefaultPendingDuration).Unix())
 }
 
-// IsPendingStateType returns true if the state type is a pending state
-// (either pending reminder or pending auto-close).
-func IsPendingStateType(typeID int) bool {
-	return typeID == PendingReminderStateTypeID || typeID == PendingAutoStateTypeID
-}
-
 // LoadTicketStatesForForm fetches valid ticket states and builds alias lookup data for forms.
 func LoadTicketStatesForForm(db *sql.DB) ([]gin.H, map[string]gin.H, error) {
 	if db == nil {
 		return nil, nil, fmt.Errorf("nil database connection")
 	}
 	rows, err := db.Query(database.ConvertPlaceholders(`
-			SELECT id, name, type_id
-			FROM ticket_state
-			WHERE valid_id = 1
-			ORDER BY name
+			SELECT ts.id, ts.name, ts.type_id, tst.name
+			FROM ticket_state ts
+			JOIN ticket_state_type tst ON tst.id = ts.type_id
+			WHERE ts.valid_id = 1
+			ORDER BY ts.name
 	`))
 	if err != nil {
 		return nil, nil, err
@@ -75,19 +65,22 @@ func LoadTicketStatesForForm(db *sql.DB) ([]gin.H, map[string]gin.H, error) {
 	lookup := make(map[string]gin.H)
 	for rows.Next() {
 		var (
-			id     int
-			name   string
-			typeID int
+			id       int
+			name     string
+			typeID   int
+			typeName string
 		)
-		if scanErr := rows.Scan(&id, &name, &typeID); scanErr != nil {
+		if scanErr := rows.Scan(&id, &name, &typeID, &typeName); scanErr != nil {
 			continue
 		}
 		slug := buildTicketStateSlug(name)
 		state := gin.H{
-			"ID":     id,
-			"Name":   name,
-			"TypeID": typeID,
-			"Slug":   slug,
+			"ID":       id,
+			"Name":     name,
+			"TypeID":   typeID,
+			"TypeName": typeName,
+			"Pending":  lookups.IsPendingStateType(typeName),
+			"Slug":     slug,
 		}
 		states = append(states, state)
 		for _, key := range ticketStateLookupKeys(name) {

@@ -3,137 +3,142 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
+	"time"
 
+	"github.com/goatkit/goatflow/sdk/go/auth"
 	"github.com/goatkit/goatflow/sdk/go/types"
 )
 
-// UsersService handles user-related API operations
+// UsersService covers /api/v1/users (agents).
 type UsersService struct {
 	client *Client
 }
 
-// List retrieves all users
-func (s *UsersService) List(ctx context.Context) ([]types.User, error) {
-	var result []types.User
-	err := s.client.Get(ctx, "/api/v1/users", &result)
-	return result, err
+// List returns one page of agents.
+func (s *UsersService) List(ctx context.Context, options *types.UserListOptions) (*types.UserList, error) {
+	query := url.Values{}
+	if o := options; o != nil {
+		setInt(query, "page", o.Page)
+		setInt(query, "per_page", o.PerPage)
+		setString(query, "search", o.Search)
+		setString(query, "valid", o.Valid)
+		setUint(query, "group_id", o.GroupID)
+	}
+	list := &types.UserList{}
+	pagination, err := s.client.do(ctx, http.MethodGet, "/api/v1/users", query, nil, &list.Users)
+	if err != nil {
+		return nil, err
+	}
+	if pagination != nil {
+		list.Pagination = *pagination
+	}
+	return list, nil
 }
 
-// Get retrieves a specific user by ID
+// Get returns one agent, including email and preferences.
 func (s *UsersService) Get(ctx context.Context, id uint) (*types.User, error) {
-	path := fmt.Sprintf("/api/v1/users/%d", id)
-	var result types.User
-	err := s.client.Get(ctx, path, &result)
-	return &result, err
+	var user types.User
+	if _, err := s.client.do(ctx, http.MethodGet, userPath(id), nil, nil, &user); err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
-// Create creates a new user
-func (s *UsersService) Create(ctx context.Context, request *types.UserCreateRequest) (*types.User, error) {
-	var result types.User
-	err := s.client.Post(ctx, "/api/v1/users", request, &result)
-	return &result, err
+// Me returns the authenticated agent.
+func (s *UsersService) Me(ctx context.Context) (*types.CurrentUser, error) {
+	var user types.CurrentUser
+	if _, err := s.client.do(ctx, http.MethodGet, "/api/v1/users/me", nil, nil, &user); err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
-// Update updates an existing user
-func (s *UsersService) Update(ctx context.Context, id uint, request *types.UserUpdateRequest) (*types.User, error) {
-	path := fmt.Sprintf("/api/v1/users/%d", id)
-	var result types.User
-	err := s.client.Put(ctx, path, request, &result)
-	return &result, err
+// Create creates an agent.
+func (s *UsersService) Create(ctx context.Context, request *types.UserCreateRequest) (*types.CreatedUser, error) {
+	var user types.CreatedUser
+	if _, err := s.client.do(ctx, http.MethodPost, "/api/v1/users", nil, request, &user); err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
-// Delete deletes a user
+// Update changes the non-nil fields of request. The API answers only with
+// the id; use Get to read the result.
+func (s *UsersService) Update(ctx context.Context, id uint, request *types.UserUpdateRequest) error {
+	_, err := s.client.do(ctx, http.MethodPut, userPath(id), nil, request, nil)
+	return err
+}
+
+// Delete deletes an agent.
 func (s *UsersService) Delete(ctx context.Context, id uint) error {
-	path := fmt.Sprintf("/api/v1/users/%d", id)
-	return s.client.Delete(ctx, path, nil)
+	_, err := s.client.do(ctx, http.MethodDelete, userPath(id), nil, nil, nil)
+	return err
 }
 
-// QueuesService handles queue-related API operations
+func userPath(id uint) string { return fmt.Sprintf("/api/v1/users/%d", id) }
+
+// QueuesService covers /api/v1/queues.
 type QueuesService struct {
 	client *Client
 }
 
-// List retrieves all queues
-func (s *QueuesService) List(ctx context.Context) ([]types.Queue, error) {
-	var result []types.Queue
-	err := s.client.Get(ctx, "/api/v1/queues", &result)
-	return result, err
+// List returns the queues the caller can read.
+func (s *QueuesService) List(ctx context.Context, options *types.QueueListOptions) ([]types.Queue, error) {
+	query := url.Values{}
+	if o := options; o != nil {
+		setString(query, "valid", o.Valid)
+		if o.IncludeStats {
+			query.Set("include_stats", "true")
+		}
+	}
+	var queues []types.Queue
+	if _, err := s.client.do(ctx, http.MethodGet, "/api/v1/queues", query, nil, &queues); err != nil {
+		return nil, err
+	}
+	return queues, nil
 }
 
-// Get retrieves a specific queue by ID
+// Get returns one queue.
 func (s *QueuesService) Get(ctx context.Context, id uint) (*types.Queue, error) {
-	path := fmt.Sprintf("/api/v1/queues/%d", id)
-	var result types.Queue
-	err := s.client.Get(ctx, path, &result)
-	return &result, err
+	var queue types.Queue
+	if _, err := s.client.do(ctx, http.MethodGet, fmt.Sprintf("/api/v1/queues/%d", id), nil, nil, &queue); err != nil {
+		return nil, err
+	}
+	return &queue, nil
 }
 
-// DashboardService handles dashboard-related API operations
-type DashboardService struct {
+// StatisticsService covers /api/v1/statistics.
+type StatisticsService struct {
 	client *Client
 }
 
-// GetStats retrieves dashboard statistics
-func (s *DashboardService) GetStats(ctx context.Context) (*types.DashboardStats, error) {
-	var result types.DashboardStats
-	err := s.client.Get(ctx, "/api/v1/dashboard/stats", &result)
-	return &result, err
+// Dashboard returns ticket counts overall, per queue and per priority, and
+// the newest tickets, limited to the queues the caller can read.
+func (s *StatisticsService) Dashboard(ctx context.Context) (*types.DashboardStatistics, error) {
+	var stats types.DashboardStatistics
+	if _, err := s.client.do(ctx, http.MethodGet, "/api/v1/statistics/dashboard", nil, nil, &stats); err != nil {
+		return nil, err
+	}
+	return &stats, nil
 }
 
-// GetMyTickets retrieves tickets assigned to the current user
-func (s *DashboardService) GetMyTickets(ctx context.Context) ([]types.Ticket, error) {
-	var result []types.Ticket
-	err := s.client.Get(ctx, "/api/v1/dashboard/my-tickets", &result)
-	return result, err
-}
-
-// GetRecentTickets retrieves recently created tickets
-func (s *DashboardService) GetRecentTickets(ctx context.Context) ([]types.Ticket, error) {
-	var result []types.Ticket
-	err := s.client.Get(ctx, "/api/v1/dashboard/recent-tickets", &result)
-	return result, err
-}
-
-// LDAPService handles LDAP-related API operations
-type LDAPService struct {
+// SearchService covers POST /api/v1/search.
+type SearchService struct {
 	client *Client
 }
 
-// GetUsers retrieves users from LDAP
-func (s *LDAPService) GetUsers(ctx context.Context) ([]types.LDAPUser, error) {
-	var result []types.LDAPUser
-	err := s.client.Get(ctx, "/api/v1/ldap/users", &result)
-	return result, err
+// Query runs a full-text search.
+func (s *SearchService) Query(ctx context.Context, query *types.SearchQuery) (*types.SearchResults, error) {
+	var results types.SearchResults
+	if _, err := s.client.do(ctx, http.MethodPost, "/api/v1/search", nil, query, &results); err != nil {
+		return nil, err
+	}
+	return &results, nil
 }
 
-// GetUser retrieves a specific user from LDAP
-func (s *LDAPService) GetUser(ctx context.Context, username string) (*types.LDAPUser, error) {
-	path := fmt.Sprintf("/api/v1/ldap/users/%s", username)
-	var result types.LDAPUser
-	err := s.client.Get(ctx, path, &result)
-	return &result, err
-}
-
-// SyncUsers synchronizes users from LDAP
-func (s *LDAPService) SyncUsers(ctx context.Context) (*types.LDAPSyncResult, error) {
-	var result types.LDAPSyncResult
-	err := s.client.Post(ctx, "/api/v1/ldap/sync", nil, &result)
-	return &result, err
-}
-
-// TestConnection tests LDAP connection
-func (s *LDAPService) TestConnection(ctx context.Context) error {
-	return s.client.Post(ctx, "/api/v1/ldap/test", nil, nil)
-}
-
-// GetSyncStatus retrieves LDAP sync status
-func (s *LDAPService) GetSyncStatus(ctx context.Context) (map[string]interface{}, error) {
-	var result map[string]interface{}
-	err := s.client.Get(ctx, "/api/v1/ldap/sync/status", &result)
-	return result, err
-}
-
-// WebhooksService handles webhook-related API operations
+// WebhooksService covers /api/v1/webhooks (admin only).
 type WebhooksService struct {
 	client *Client
 }
@@ -174,13 +179,15 @@ func (s *WebhooksService) Delete(ctx context.Context, id uint) error {
 	return s.client.Delete(ctx, path, nil)
 }
 
-// Test tests a webhook
-func (s *WebhooksService) Test(ctx context.Context, id uint) error {
+// Test sends a webhook.test event now and returns the recorded delivery
+func (s *WebhooksService) Test(ctx context.Context, id uint) (*types.WebhookDelivery, error) {
 	path := fmt.Sprintf("/api/v1/webhooks/%d/test", id)
-	return s.client.Post(ctx, path, nil, nil)
+	var result types.WebhookDelivery
+	err := s.client.Post(ctx, path, nil, &result)
+	return &result, err
 }
 
-// GetDeliveries retrieves webhook deliveries
+// GetDeliveries retrieves the newest deliveries of a webhook
 func (s *WebhooksService) GetDeliveries(ctx context.Context, id uint) ([]types.WebhookDelivery, error) {
 	path := fmt.Sprintf("/api/v1/webhooks/%d/deliveries", id)
 	var result []types.WebhookDelivery
@@ -188,98 +195,57 @@ func (s *WebhooksService) GetDeliveries(ctx context.Context, id uint) ([]types.W
 	return result, err
 }
 
-// NotesService handles internal notes-related API operations
-type NotesService struct {
-	client *Client
-}
-
-// GetNotes retrieves all notes for a ticket
-func (s *NotesService) GetNotes(ctx context.Context, ticketID uint) ([]types.InternalNote, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/notes", ticketID)
-	var result []types.InternalNote
-	err := s.client.Get(ctx, path, &result)
-	return result, err
-}
-
-// GetNote retrieves a specific note
-func (s *NotesService) GetNote(ctx context.Context, ticketID, noteID uint) (*types.InternalNote, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/notes/%d", ticketID, noteID)
-	var result types.InternalNote
+// GetDelivery retrieves one delivery including payload and response body
+func (s *WebhooksService) GetDelivery(ctx context.Context, deliveryID uint) (*types.WebhookDelivery, error) {
+	path := fmt.Sprintf("/api/v1/webhooks/deliveries/%d", deliveryID)
+	var result types.WebhookDelivery
 	err := s.client.Get(ctx, path, &result)
 	return &result, err
 }
 
-// CreateNote creates a new note
-func (s *NotesService) CreateNote(ctx context.Context, ticketID uint, note *types.InternalNote) (*types.InternalNote, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/notes", ticketID)
-	var result types.InternalNote
-	err := s.client.Post(ctx, path, note, &result)
+// Redeliver sends a delivery's payload again and returns the new delivery
+func (s *WebhooksService) Redeliver(ctx context.Context, deliveryID uint) (*types.WebhookDelivery, error) {
+	path := fmt.Sprintf("/api/v1/webhooks/deliveries/%d/redeliver", deliveryID)
+	var result types.WebhookDelivery
+	err := s.client.Post(ctx, path, nil, &result)
 	return &result, err
 }
 
-// UpdateNote updates an existing note
-func (s *NotesService) UpdateNote(ctx context.Context, ticketID, noteID uint, note *types.InternalNote) (*types.InternalNote, error) {
-	path := fmt.Sprintf("/api/v1/tickets/%d/notes/%d", ticketID, noteID)
-	var result types.InternalNote
-	err := s.client.Put(ctx, path, note, &result)
-	return &result, err
-}
-
-// DeleteNote deletes a note
-func (s *NotesService) DeleteNote(ctx context.Context, ticketID, noteID uint) error {
-	path := fmt.Sprintf("/api/v1/tickets/%d/notes/%d", ticketID, noteID)
-	return s.client.Delete(ctx, path, nil)
-}
-
-// GetTemplates retrieves all note templates
-func (s *NotesService) GetTemplates(ctx context.Context) ([]types.NoteTemplate, error) {
-	var result []types.NoteTemplate
-	err := s.client.Get(ctx, "/api/v1/notes/templates", &result)
-	return result, err
-}
-
-// CreateTemplate creates a new note template
-func (s *NotesService) CreateTemplate(ctx context.Context, template *types.NoteTemplate) (*types.NoteTemplate, error) {
-	var result types.NoteTemplate
-	err := s.client.Post(ctx, "/api/v1/notes/templates", template, &result)
-	return &result, err
-}
-
-// AuthService handles authentication-related operations
+// AuthService covers POST /api/v1/auth/login and /api/v1/auth/refresh. Both
+// are sent without the client's credentials.
 type AuthService struct {
 	client *Client
 }
 
-// Login authenticates a user and returns tokens
-func (s *AuthService) Login(ctx context.Context, request *types.AuthLoginRequest) (*types.AuthLoginResponse, error) {
-	var result types.AuthLoginResponse
-	err := s.client.Post(ctx, "/api/v1/auth/login", request, &result)
-	return &result, err
+// Login exchanges an agent's login and password for a token pair. It does
+// not change the client's credentials; Client.Login does.
+func (s *AuthService) Login(ctx context.Context, login, password string) (*types.TokenPair, error) {
+	body := types.LoginRequest{Login: login, Password: password}
+	return s.tokenPair(ctx, "/api/v1/auth/login", body)
 }
 
-// Logout logs out the current user
-func (s *AuthService) Logout(ctx context.Context) error {
-	return s.client.Post(ctx, "/api/v1/auth/logout", nil, nil)
+// Refresh exchanges a refresh token for a new access token and a new
+// (rotated) refresh token. A rejected refresh token is a 401 *errors.APIError.
+func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*types.TokenPair, error) {
+	return s.tokenPair(ctx, "/api/v1/auth/refresh", map[string]string{"refresh_token": refreshToken})
 }
 
-// RefreshToken refreshes the access token
-func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*types.AuthLoginResponse, error) {
-	body := map[string]string{"refresh_token": refreshToken}
-	var result types.AuthLoginResponse
-	err := s.client.Post(ctx, "/api/v1/auth/refresh", body, &result)
-	return &result, err
+// RefreshFunc returns an auth.RefreshFunc backed by Refresh, for
+// auth.NewJWTAuth.
+func (s *AuthService) RefreshFunc() auth.RefreshFunc {
+	return func(ctx context.Context, refreshToken string) (string, string, time.Time, error) {
+		pair, err := s.Refresh(ctx, refreshToken)
+		if err != nil {
+			return "", "", time.Time{}, err
+		}
+		return pair.AccessToken, pair.RefreshToken, pair.ExpiresAt(time.Now()), nil
+	}
 }
 
-// GetProfile retrieves the current user's profile
-func (s *AuthService) GetProfile(ctx context.Context) (*types.User, error) {
-	var result types.User
-	err := s.client.Get(ctx, "/api/v1/auth/profile", &result)
-	return &result, err
-}
-
-// UpdateProfile updates the current user's profile
-func (s *AuthService) UpdateProfile(ctx context.Context, request *types.UserUpdateRequest) (*types.User, error) {
-	var result types.User
-	err := s.client.Put(ctx, "/api/v1/auth/profile", request, &result)
-	return &result, err
+func (s *AuthService) tokenPair(ctx context.Context, path string, body interface{}) (*types.TokenPair, error) {
+	var pair types.TokenPair
+	if _, err := s.client.send(ctx, http.MethodPost, path, nil, body, &pair, false); err != nil {
+		return nil, err
+	}
+	return &pair, nil
 }

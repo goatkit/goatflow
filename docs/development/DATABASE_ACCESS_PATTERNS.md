@@ -16,7 +16,6 @@ active driver (`DB_DRIVER`, or `TEST_DB_DRIVER` in tests).
 | Query that also uses PostgreSQL `::` casts | `database.ConvertQuery(sql)` |
 | Upsert (`ON DUPLICATE KEY UPDATE`, `REPLACE INTO`) | `database.ConvertUpsert(sql, conflictCols...)` |
 | Insert that needs the new id | `database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders("INSERT … RETURNING id"), args...)` (`…Tx` for transactions) |
-| Test setup SQL | `database.NewTestDB()` — its `Exec`/`Query`/`QueryRow` convert automatically |
 
 ```go
 row := db.QueryRow(database.ConvertPlaceholders(`
@@ -132,11 +131,25 @@ expectation with `regexp.QuoteMeta(database.ConvertPlaceholders(q))`.
 - **`sql-mysql-only`** — an SQL literal with `ON DUPLICATE KEY UPDATE` /
   `REPLACE INTO` that doesn't reach `ConvertUpsert`, or with `LAST_INSERT_ID`,
   `DATE_FORMAT`, `STR_TO_DATE`, `GROUP_CONCAT`, `IFNULL`;
+- **`sql-postgres-only`** — `RETURNING` outside `InsertWithReturning`,
+  `ON CONFLICT`, `::` casts outside `ConvertQuery`, `||`, `NULLS FIRST/LAST`,
+  `INTERVAL '…'`, full-text functions, `string_agg`;
+- **`sql-unknown-table`** — SQL reaching the database names a table that the
+  migrations do not create on **both** drivers (a legacy OTRS name such as
+  `tickets`, or a table only a test creates);
+- **`sql-unknown-column`** — an `INSERT` column list or `UPDATE … SET` names a
+  column that table lacks on either driver;
 - **`sql-sprintf`** — SQL built with `%s`/`%v`.
+
+The schema rules read the schema from `migrations/mysql` and
+`migrations/postgres` (`CREATE TABLE`, `ALTER TABLE … ADD/DROP/CHANGE/RENAME
+COLUMN`, `DROP TABLE`), so a new table counts as soon as its migration exists.
+`SELECT` column lists are not checked.
 
 A reviewed exception — the conversion layer itself, a helper whose callers pass
 converted SQL — carries `// sql-converted: <reason>` on the call's first line
-or the line above.
+or the line above. A genuine scratch table (an in-memory SQLite table in a
+unit test) carries `// sql-schema: <reason>` the same way.
 
 It runs in the pre-commit hook (`.githooks/pre-commit`, host, without cgo) and
 in CI (`make lint-platform`, toolbox). The hook also runs

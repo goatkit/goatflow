@@ -53,7 +53,7 @@ Key configuration (with defaults):
 - `VALKEY_HOST`/`VALKEY_PORT`/`VALKEY_PASSWORD`/`VALKEY_DB` (Redis aliases `REDIS_*` also accepted)
 - `STORAGE_PATH` (/app/storage), `MAX_UPLOAD_SIZE` (10MB), `ALLOWED_FILE_TYPES`
 - `ENABLE_YAML_ROUTING` (true), `ROUTES_DIR` (/app/routes), `CONFIG_DIR` (/app/config), `PLUGIN_DIR` (<CONFIG_DIR>/plugins), `TEMPLATES_DIR`
-- `PASSWORD_HASH_TYPE` (sha256, OTRS-compatible), `MIGRATE_PASSWORD_HASHES`
+- `PASSWORD_HASH_TYPE` (bcrypt; `sha256` = OTRS sha2, only when an OTRS shares the user tables), `MIGRATE_PASSWORD_HASHES` (false)
 - `GOATFLOW_PLUGIN_LAZY_LOAD` (true), `GOATFLOW_PLUGIN_HOT_RELOAD` (false in prod image), `GOATFLOW_PLUGIN_HEALTH_CHECK`, `GOATFLOW_PLUGIN_AUTO_RESTART`; per-plugin config via `GOATFLOW_PLUGIN_<NAME>_<KEY>`
 - Runner: `GOATFLOW_EMAIL_SMTP_*`, `GOATFLOW_EMAIL_FROM`, `GOATFLOW_EMAIL_ENABLED`
 - TLS: `TLS_CERT_FILE`, `TLS_KEY_FILE` (compose auto-generates self-signed certs if absent)
@@ -127,8 +127,9 @@ Swagger specs now declare Apache-2.0; see CHANGELOG.md [Unreleased] → Changed.
   the old UID — the `plugin-init` sidecar (root chown to HOST_UID:HOST_GID)
   runs before backend start. Keep it in any upgraded stack.
 - Downgrade path exists (down migrations) but is untested for rollback.
-- `PASSWORD_HASH_TYPE` default `sha256` preserves OTRS-compatible hashes;
-  switching to argon2/bcrypt requires `MIGRATE_PASSWORD_HASHES=true` backfill.
+- New passwords use `PASSWORD_HASH_TYPE` (default bcrypt); imported OTRS sha2
+  hashes keep logging in. `MIGRATE_PASSWORD_HASHES=true` rehashes each password
+  to the configured type on that user's next successful login; no offline backfill.
 
 ## 10. Packaging constraints summary
 

@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"strings"
 	"time"
 
@@ -78,6 +79,9 @@ func NewCannedResponseRepository() (*CannedResponseRepository, error) {
 	if err != nil {
 		return nil, err
 	}
+	if db == nil {
+		return nil, errors.New("database connection is nil")
+	}
 	return &CannedResponseRepository{db: db}, nil
 }
 
@@ -113,12 +117,12 @@ func (r *CannedResponseRepository) Create(cr *CannedResponse, userID int) (int, 
 	return int(id), nil
 }
 
-// GetByID retrieves a canned response by ID.
+// GetByID retrieves a valid (not deleted) canned response by ID.
 func (r *CannedResponseRepository) GetByID(id int) (*CannedResponse, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, category, content, content_type, tags, scope, owner_id, team_id,
 		       placeholders, usage_count, last_used, valid_id, create_time, create_by, change_time, change_by
-		FROM canned_response WHERE id = ?
+		FROM canned_response WHERE id = ? AND valid_id = 1
 	`)
 
 	var dbr CannedResponseDB

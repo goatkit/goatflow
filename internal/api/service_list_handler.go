@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"net/http"
 	"strings"
 
@@ -75,27 +76,35 @@ func HandleListServicesAPI(c *gin.Context) {
 	}
 	defer rows.Close()
 
-	var items []gin.H
+	items := []gin.H{}
 	for rows.Next() {
 		var id, validID int
-		var name, comments string
+		var name string
+		var comments sql.NullString
 		if err := rows.Scan(&id, &name, &comments, &validID); err != nil {
-			continue
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch services"})
+			return
 		}
 		items = append(items, gin.H{
 			"id":       id,
 			"name":     name,
-			"comments": comments,
+			"comments": comments.String,
 			"valid_id": validID,
 		})
 	}
-	_ = rows.Err() //nolint:errcheck // Check for iteration errors
+	if err := rows.Err(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch services"})
+		return
+	}
 
 	// Apply ticket attribute relations filtering if requested
 	filterAttr := c.Query("filter_attribute")
 	filterValue := c.Query("filter_value")
 	if filterAttr != "" && filterValue != "" {
-		items = filterByTicketAttributeRelations(c, db, items, "Service", filterAttr, filterValue)
+		if items, err = filterByTicketAttributeRelations(c, db, items, "Service", filterAttr, filterValue); err != nil {
+			respondAttributeRelationFilterError(c, err)
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": items})

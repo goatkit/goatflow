@@ -6,18 +6,23 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/config"
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 	"github.com/goatkit/goatflow/internal/platform/utils"
+	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/service"
 )
 
@@ -163,7 +168,7 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 		row := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM ticket
 			WHERE customer_user_id = ?
-			AND ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2))
+			AND ticket_state_id IN (`+lookups.NewOpenStateIDsSQL+`)
 		`), username)
 		_ = row.Scan(&stats.OpenTickets) //nolint:errcheck // Count defaults to 0
 
@@ -171,7 +176,7 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 		row = db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM ticket
 			WHERE customer_user_id = ?
-			AND ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)
+			AND ticket_state_id IN (`+lookups.ClosedStateIDsSQL+`)
 		`), username)
 		_ = row.Scan(&stats.ClosedTickets) //nolint:errcheck // Count defaults to 0
 
@@ -313,9 +318,9 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 
 		// Apply status filter
 		if status == "open" {
-			query += " AND t.ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2))"
+			query += " AND t.ticket_state_id IN (" + lookups.NewOpenStateIDsSQL + ")"
 		} else if status == "closed" {
-			query += " AND t.ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)"
+			query += " AND t.ticket_state_id IN (" + lookups.ClosedStateIDsSQL + ")"
 		}
 
 		// Apply search
@@ -533,14 +538,23 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Generate ticket number
-		tn := fmt.Sprintf("%d%02d%02d%02d%02d%02d",
-			time.Now().Year(),
-			time.Now().Month(),
-			time.Now().Day(),
-			time.Now().Hour(),
-			time.Now().Minute(),
-			time.Now().Second())
+		if priorityID == "" {
+			priorityID = "3" // Normal priority
+		}
+		priority, err := strconv.Atoi(priorityID)
+		if err != nil || priority <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid priority"})
+			return
+		}
+		var servicePtr *int
+		if serviceID != "" {
+			sid, err := strconv.Atoi(serviceID)
+			if err != nil || sid <= 0 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid service"})
+				return
+			}
+			servicePtr = &sid
+		}
 
 		// Get customer's company
 		var customerID sql.NullString
@@ -566,45 +580,40 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 			}
 		}
 
-		// Set defaults
-		if priorityID == "" {
-			priorityID = "3" // Normal priority
-		}
-
-		// Create ticket
-		// Handle empty serviceID
-		var serviceIDVal interface{}
-		if serviceID == "" {
-			serviceIDVal = nil
-		} else {
-			serviceIDVal = serviceID
-		}
-
-		ticketID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
-			INSERT INTO ticket (
-				tn, title, queue_id, type_id, service_id,
-				ticket_state_id, ticket_priority_id, ticket_lock_id,
-				user_id, responsible_user_id,
-				customer_id, customer_user_id,
-				timeout, until_time,
-				escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time,
-				create_time, create_by, change_time, change_by
-			) VALUES (
-				?, ?, ?, 1, ?,
-				1, ?, 1,
-				?, ?,
-				?, ?,
-				0, 0,
-				0, 0, 0, 0,
-				NOW(), ?, NOW(), ?
-			) RETURNING id
-		`), tn, title, queueID, serviceIDVal, priorityID, systemUserID, systemUserID, customerID, username, systemUserID, systemUserID)
-
+		newStateID, err := lookups.ID(c.Request.Context(), db, lookups.StateLookup, lookups.StateNew)
 		if err != nil {
+			log.Printf("Customer create ticket: resolve new state: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create ticket"})
+			return
+		}
+
+		// The repository assigns the ticket number from the configured generator.
+		typeID := 1
+		var customerIDPtr *string
+		if customerID.Valid {
+			customerIDPtr = &customerID.String
+		}
+		ticketModel := &models.Ticket{
+			Title:             title,
+			QueueID:           queueID,
+			TicketLockID:      models.TicketUnlocked,
+			TypeID:            &typeID,
+			ServiceID:         servicePtr,
+			UserID:            &systemUserID,
+			ResponsibleUserID: &systemUserID,
+			TicketPriorityID:  priority,
+			TicketStateID:     newStateID,
+			CustomerID:        customerIDPtr,
+			CustomerUserID:    &username,
+			CreateBy:          systemUserID,
+			ChangeBy:          systemUserID,
+		}
+		if err := repository.NewTicketRepository(db).Create(ticketModel); err != nil {
 			log.Printf("Customer create ticket error: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create ticket"})
 			return
 		}
+		ticketID := int64(ticketModel.ID)
 
 		// Detect content type - check for HTML first, then markdown patterns
 		contentType := "text/plain"
@@ -635,11 +644,11 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 				is_visible_for_customer, search_index_needs_rebuild,
 				create_time, create_by, change_time, change_by
 			) VALUES (
-				?, 3, 1,
+				?, ?, ?,
 				1, 1,
 				NOW(), ?, NOW(), ?
 			) RETURNING id
-		`), ticketID, systemUserID, systemUserID)
+		`), ticketID, constants.ArticleSenderCustomer, constants.CommunicationChannelEmail, systemUserID, systemUserID)
 
 		if err != nil {
 			log.Printf("Customer create article error: %v", err)
@@ -711,7 +720,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			Title         string
 			State         string
 			StateID       int
-			StateTypeID   int
+			StateTypeName string
 			Priority      string
 			PriorityColor sql.NullString
 			Service       sql.NullString
@@ -724,7 +733,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT t.id, t.tn, t.title,
-			       ts.name as state, ts.id as state_id, ts.type_id as state_type_id,
+			       ts.name as state, ts.id as state_id, COALESCE(tst.name, '') as state_type_name,
 			       tp.name as priority,
 				   CASE
 				       WHEN tp.name LIKE '%very low%' THEN '#03c4f0'
@@ -741,6 +750,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			       t.create_time, t.change_time
 			FROM ticket t
 			LEFT JOIN ticket_state ts ON t.ticket_state_id = ts.id
+			LEFT JOIN ticket_state_type tst ON ts.type_id = tst.id
 			LEFT JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
 			LEFT JOIN service s ON t.service_id = s.id
 			LEFT JOIN queue q ON t.queue_id = q.id
@@ -749,7 +759,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			WHERE t.id = ? AND t.customer_user_id = ?
 		`), ticketID, username).Scan(
 			&ticket.ID, &ticket.TN, &ticket.Title,
-			&ticket.State, &ticket.StateID, &ticket.StateTypeID,
+			&ticket.State, &ticket.StateID, &ticket.StateTypeName,
 			&ticket.Priority, &ticket.PriorityColor,
 			&ticket.Service, &ticket.Queue,
 			&ticket.Owner, &ticket.Responsible,
@@ -842,8 +852,10 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 		// The article_flag table has a FK constraint to users.id, not customer_user.id.
 		// Customer "new message" tracking would require schema changes.
 
-		// Check if ticket can be closed by customer (type_id 3 = closed states)
-		canClose := ticket.StateTypeID != 3
+		// A ticket whose state type is closed/removed/merged is finished: the
+		// customer can neither close nor reply to it.
+		isClosed := lookups.IsClosedStateType(ticket.StateTypeName)
+		canClose := !isClosed
 
 		// Get dynamic field values for display on customer ticket view
 		var dynamicFieldsDisplay []DynamicFieldDisplay
@@ -883,6 +895,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 				"last_changed":   formatAge(ticket.ChangeTime),
 				"updated_at_iso": ticket.ChangeTime.UTC().Format(time.RFC3339),
 				"can_close":      canClose,
+				"is_closed":      isClosed,
 			},
 			"Articles":                  articles,
 			"DynamicFields":             dynamicFieldsDisplay,
@@ -928,19 +941,18 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 		_ = db.QueryRow(database.ConvertPlaceholders("SELECT email FROM customer_user WHERE login = ?"), username).Scan(&customerEmail) //nolint:errcheck // Defaults to empty
 
 		// Create article (OTRS schema: article + article_data_mime)
-		// article_sender_type_id: 3 = customer
-		// communication_channel_id: 1 = email (Internal is typically 5, but we use 1 for customer web replies)
+		// Customer web replies are recorded as customer-sent email articles.
 		articleID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 			INSERT INTO article (
 				ticket_id, article_sender_type_id, communication_channel_id,
 				is_visible_for_customer, search_index_needs_rebuild,
 				create_time, create_by, change_time, change_by
 			) VALUES (
-				?, 3, 1,
+				?, ?, ?,
 				1, 1,
 				NOW(), ?, NOW(), ?
 			) RETURNING id
-		`), ticketID, systemUserID, systemUserID)
+		`), ticketID, constants.ArticleSenderCustomer, constants.CommunicationChannelEmail, systemUserID, systemUserID)
 
 		if err != nil {
 			log.Printf("Customer reply error (article insert): %v", err)
@@ -988,12 +1000,21 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Update ticket state to open if it was pending
-		//nolint:errcheck // Best-effort state update
-		_, _ = db.Exec(database.ConvertPlaceholders(`
+		openStateID, err := lookups.ID(c.Request.Context(), db, lookups.StateLookup, lookups.StateOpen)
+		if err != nil {
+			log.Printf("Customer reply: resolve open state: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update ticket state"})
+			return
+		}
+		if _, err := db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket
-			SET ticket_state_id = 4, change_time = NOW(), change_by = ?
-			WHERE id = ? AND ticket_state_id IN (6, 7)
-		`), ticketID, systemUserID)
+			SET ticket_state_id = ?, change_time = NOW(), change_by = ?
+			WHERE id = ? AND ticket_state_id IN (`+lookups.PendingStateIDsSQL+`)
+		`), openStateID, systemUserID, ticketID); err != nil {
+			log.Printf("Customer reply: reopen pending ticket %s: %v", ticketID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update ticket state"})
+			return
+		}
 
 		// Redirect back to ticket view
 		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/customer/tickets/%s", ticketID))
@@ -1026,17 +1047,27 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		if stateID == 2 || stateID == 3 { // Already closed
+		stateTypeName, err := lookups.StateTypeNameOfState(c.Request.Context(), db, stateID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if lookups.IsClosedStateType(stateTypeName) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Ticket is already closed"})
 			return
 		}
+		closedStateID, err := lookups.ID(c.Request.Context(), db, lookups.StateLookup, lookups.StateClosedSuccessful)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 
-		// Close the ticket (args must match SQL text order: change_by first, then id)
+		// Close the ticket (args must match SQL text order: state, change_by, then id)
 		_, err = db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket
-			SET ticket_state_id = 2, change_time = NOW(), change_by = ?
+			SET ticket_state_id = ?, change_time = NOW(), change_by = ?
 			WHERE id = ?
-		`), systemUserID, ticketID)
+		`), closedStateID, systemUserID, ticketID)
 
 		if err != nil {
 			log.Printf("Failed to close ticket %s: %v", ticketID, err)
@@ -1051,11 +1082,11 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 				is_visible_for_customer,
 				create_time, create_by, change_time, change_by
 			) VALUES (
-				?, 3, 1,
+				?, ?, ?,
 				1,
 				NOW(), ?, NOW(), ?
 			) RETURNING id
-		`), ticketID, systemUserID, systemUserID)
+		`), ticketID, constants.ArticleSenderCustomer, constants.CommunicationChannelEmail, systemUserID, systemUserID)
 
 		if err == nil {
 			// Insert article content into article_data_mime (incoming_time is required)
@@ -1429,8 +1460,9 @@ func handleCustomerChangePassword(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Get current password hash from database
-		var currentHash string
+		// Get current password hash from database (customer_user.pw is nullable:
+		// an account without a password has no current password to match).
+		var currentHash sql.NullString
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT pw FROM customer_user WHERE login = ?
 		`), username).Scan(&currentHash)
@@ -1446,7 +1478,7 @@ func handleCustomerChangePassword(db *sql.DB) gin.HandlerFunc {
 
 		// Verify current password using auth package
 		hasher := auth.NewPasswordHasher()
-		if !hasher.VerifyPassword(request.CurrentPassword, currentHash) {
+		if currentHash.String == "" || !hasher.VerifyPassword(request.CurrentPassword, currentHash.String) {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"error":   "Current password is incorrect",
@@ -1483,9 +1515,9 @@ func handleCustomerChangePassword(db *sql.DB) gin.HandlerFunc {
 		newHash, err := hasher.HashPassword(request.NewPassword)
 		if err != nil {
 			log.Printf("Error hashing new password for customer %s: %v", username, err)
-			c.JSON(http.StatusInternalServerError, gin.H{
+			c.JSON(passwordHashErrorStatus(err), gin.H{
 				"success": false,
-				"error":   "Failed to process new password",
+				"error":   "Failed to process new password: " + err.Error(),
 			})
 			return
 		}

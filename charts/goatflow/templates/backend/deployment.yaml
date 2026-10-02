@@ -108,6 +108,10 @@ spec:
               value: "8080"
             - name: SESSION_TIMEOUT
               value: {{ .Values.config.session.lifetime | quote }}
+            {{- with .Values.config.baseUrl }}
+            - name: BASE_URL
+              value: {{ . | quote }}
+            {{- end }}
 
             # Secret key
             - name: APP_SECRET
@@ -115,6 +119,64 @@ spec:
                 secretKeyRef:
                   name: {{ include "goatflow.appSecretName" . }}
                   key: app-secret-key
+
+            {{- with .Values.config.authProviders }}
+            # Authentication provider order
+            - name: AUTH_PROVIDERS
+              value: {{ join "," . | quote }}
+            {{- end }}
+            {{- $ldap := .Values.config.ldap }}
+            {{- if $ldap.enabled }}
+            {{- if not $ldap.host }}{{ fail "config.ldap.host is required when config.ldap.enabled is true" }}{{ end }}
+            {{- if not $ldap.baseDN }}{{ fail "config.ldap.baseDN is required when config.ldap.enabled is true" }}{{ end }}
+            {{- if and $ldap.bindDN (not (or $ldap.bindPassword $ldap.existingSecret)) }}{{ fail "config.ldap.bindDN needs config.ldap.bindPassword or config.ldap.existingSecret" }}{{ end }}
+            # LDAP / Active Directory agent login (docs/LDAP.md)
+            - name: LDAP_ENABLED
+              value: "true"
+            - name: LDAP_USE_TLS
+              value: {{ $ldap.useTLS | quote }}
+            - name: LDAP_USE_SSL
+              value: {{ $ldap.useSSL | quote }}
+            - name: LDAP_SKIP_TLS_VERIFY
+              value: {{ $ldap.skipTLSVerify | quote }}
+            - name: LDAP_AUTO_CREATE_USERS
+              value: {{ $ldap.autoCreateUsers | quote }}
+            - name: LDAP_AUTO_UPDATE_USERS
+              value: {{ $ldap.autoUpdateUsers | quote }}
+            {{- $optional := dict
+              "LDAP_TYPE" $ldap.type "LDAP_HOST" $ldap.host "LDAP_PORT" $ldap.port "LDAP_TIMEOUT" $ldap.timeout
+              "LDAP_BIND_DN" $ldap.bindDN "LDAP_BASE_DN" $ldap.baseDN "LDAP_USER_BASE_DN" $ldap.userBaseDN
+              "LDAP_USER_FILTER" $ldap.userFilter "LDAP_IS_ACTIVE_DIRECTORY" $ldap.isActiveDirectory "LDAP_DOMAIN" $ldap.domain
+              "LDAP_USERNAME_ATTRIBUTE" $ldap.usernameAttribute "LDAP_EMAIL_ATTRIBUTE" $ldap.emailAttribute
+              "LDAP_FIRST_NAME_ATTRIBUTE" $ldap.firstNameAttribute "LDAP_LAST_NAME_ATTRIBUTE" $ldap.lastNameAttribute
+              "LDAP_DISPLAY_NAME_ATTRIBUTE" $ldap.displayNameAttribute "LDAP_GROUP_BASE_DN" $ldap.groupBaseDN
+              "LDAP_GROUP_FILTER" $ldap.groupFilter "LDAP_GROUP_MEMBER_VALUE" $ldap.groupMemberValue
+              "LDAP_GROUP_ATTRIBUTE" $ldap.groupAttribute }}
+            {{- range $name, $value := $optional }}
+            {{- if $value }}
+            - name: {{ $name }}
+              value: {{ $value | toString | quote }}
+            {{- end }}
+            {{- end }}
+            {{- $lists := dict "LDAP_AGENT_GROUPS" $ldap.agentGroups "LDAP_ADMIN_GROUPS" $ldap.adminGroups "LDAP_INITIAL_GROUPS" $ldap.initialGroups }}
+            {{- range $name, $value := $lists }}
+            {{- if $value }}
+            - name: {{ $name }}
+              value: {{ join "," $value | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if $ldap.caCert }}
+            - name: LDAP_TLS_CA_FILE
+              value: /etc/goatflow/ldap/ca.crt
+            {{- end }}
+            {{- if $ldap.bindDN }}
+            - name: LDAP_BIND_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "goatflow.ldap.secretName" . }}
+                  key: {{ $ldap.existingSecretKey }}
+            {{- end }}
+            {{- end }}
 
             {{- with .Values.backend.extraEnv }}
             {{- toYaml . | nindent 12 }}
@@ -139,9 +201,19 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            {{- if and .Values.config.ldap.enabled .Values.config.ldap.caCert }}
+            - name: ldap-ca
+              mountPath: /etc/goatflow/ldap
+              readOnly: true
+            {{- end }}
       volumes:
         - name: tmp
           emptyDir: {}
+        {{- if and .Values.config.ldap.enabled .Values.config.ldap.caCert }}
+        - name: ldap-ca
+          configMap:
+            name: {{ include "goatflow.fullname" . }}-ldap-ca
+        {{- end }}
       {{- with .Values.backend.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

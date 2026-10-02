@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/goatkit/goatflow/tests/e2e/config"
 	"github.com/playwright-community/playwright-go"
 	"github.com/stretchr/testify/require"
 )
@@ -18,10 +19,9 @@ func TestSimpleBrowser(t *testing.T) {
 		t.Skip("Skipping browser test")
 	}
 
-	baseURL := os.Getenv("BASE_URL")
-	if baseURL == "" {
-		baseURL = "http://backend:8080"
-	}
+	cfg := config.GetConfig()
+	cfg.RequireReachable(t)
+	baseURL := cfg.BaseURL
 
 	// Run Playwright
 	err := playwright.Install(&playwright.RunOptions{
@@ -32,10 +32,7 @@ func TestSimpleBrowser(t *testing.T) {
 	}
 
 	pw, err := playwright.Run()
-	if err != nil {
-		t.Skipf("Could not start Playwright: %v (browsers may not be installed)", err)
-		return
-	}
+	require.NoError(t, err, "start Playwright")
 	defer pw.Stop()
 
 	// Launch browser

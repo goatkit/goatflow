@@ -45,7 +45,9 @@ RUN go run github.com/playwright-community/playwright-go/cmd/playwright@v0.6000.
 # Set driver path for playwright-go to find at runtime
 ENV PLAYWRIGHT_DRIVER_PATH=/opt/playwright-cache/ms-playwright-go/1.60.0
 
-COPY --chown=pwuser:pwuser . .
+# The repository is bind-mounted at /workspace at run time (make test-e2e-go /
+# test-e2e-playwright-go), so the source tree is not copied into the image: a
+# COPY of the working tree added a multi-GB layer on every source change.
 
 # Ensure cache directories are writable by non-root user
 RUN mkdir -p /workspace/.cache && chown -R pwuser:pwuser /workspace/.cache
@@ -53,5 +55,5 @@ RUN mkdir -p /workspace/.cache && chown -R pwuser:pwuser /workspace/.cache
 # Switch to non-root user
 USER pwuser
 
-# Default command runs tests with playwright tag
-CMD ["bash","-lc","go test -tags playwright -v ./tests/e2e"]
+# Default command (expects the repository mounted at /workspace)
+CMD ["bash","-lc","go test -tags e2e -count=1 -timeout 30m -v ./tests/e2e"]

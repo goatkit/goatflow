@@ -165,14 +165,16 @@ func TestAdminCustomerCompanyCreate(t *testing.T) {
 		db := getTestDB(t)
 		// Note: Do not close singleton DB connection
 
-		// Create test data
-		customerID := "TEST_CREATE_" + fmt.Sprint(time.Now().Unix())
+		// customer_id is the primary key and name is UNIQUE (customer_company_name);
+		// both must be unique per run so rows already in the database cannot collide.
+		customerID := "TEST_CREATE_" + fmt.Sprint(time.Now().UnixNano())
+		t.Cleanup(func() { cleanupTestCustomerCompany(t, db, customerID) })
 
 		// Create router with test database
 		router := NewSimpleRouterWithDB(db)
 
 		// Test data
-		name := "Test Company Ltd"
+		name := "Test Company Ltd " + customerID
 		street := "123 Test Street"
 		city := "Test City"
 		country := "Test Country"
@@ -210,9 +212,6 @@ func TestAdminCustomerCompanyCreate(t *testing.T) {
 		assert.Equal(t, street, dbStreet, "Company street should match")
 		assert.Equal(t, city, dbCity, "Company city should match")
 		assert.Equal(t, country, dbCountry, "Company country should match")
-
-		// Cleanup
-		cleanupTestCustomerCompany(t, db, customerID)
 	})
 
 	t.Run("POST /admin/customer/companies with missing required fields", func(t *testing.T) {
@@ -329,7 +328,7 @@ func TestAdminCustomerCompanyUpdate(t *testing.T) {
 		router := NewSimpleRouterWithDB(db)
 
 		// Test data
-		updatedName := "Updated Test Company Ltd"
+		updatedName := "Updated Test Company Ltd " + customerID
 		updatedStreet := "456 Updated Street"
 		updatedCity := "Updated City"
 		updatedCountry := "Updated Country"
@@ -572,133 +571,6 @@ func TestAdminCustomerCompanyActivate(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
-	})
-}
-
-func TestAdminCustomerCompanyPortalSettings(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	token := GetTestAuthToken(t)
-
-	t.Run("POST /admin/customer/companies/:id/portal-settings updates portal settings", func(t *testing.T) {
-		db := getTestDB(t)
-		// Note: Do not close singleton DB connection
-
-		router := NewSimpleRouterWithDB(db)
-
-		// Test portal settings data
-		formData := url.Values{}
-		formData.Set("login_hint", "Use your company email")
-		formData.Set("theme", "dark")
-		formData.Set("custom_css", ".company-theme { color: blue; }")
-
-		req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/TEST001/portal-settings",
-			bytes.NewBufferString(formData.Encode()))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		AddTestAuthCookie(req, token)
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-}
-
-func TestAdminCustomerCompanyServices(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	token := GetTestAuthToken(t)
-
-	t.Run("POST /admin/customer/companies/:id/services assigns services", func(t *testing.T) {
-		db := getTestDB(t)
-		// Note: Do not close singleton DB connection
-
-		customerID := "TEST_SERVICES_" + fmt.Sprint(time.Now().Unix())
-		createTestCustomerCompany(t, db, customerID)
-		defer cleanupTestCustomerCompany(t, db, customerID)
-
-		router := NewSimpleRouterWithDB(db)
-
-		// Test service assignment data
-		formData := url.Values{}
-		formData.Add("services", "1")
-		formData.Add("services", "2")
-		formData.Add("services", "3")
-
-		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/customer/companies/%s/services", customerID),
-			bytes.NewBufferString(formData.Encode()))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		AddTestAuthCookie(req, token)
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusBadRequest)
-	})
-
-	t.Run("GET /admin/customer/companies/:id/services returns assigned services", func(t *testing.T) {
-		db := getTestDB(t)
-		// Note: Do not close singleton DB connection
-
-		customerID := "TEST_SERVICES2_" + fmt.Sprint(time.Now().Unix())
-		createTestCustomerCompany(t, db, customerID)
-		defer cleanupTestCustomerCompany(t, db, customerID)
-
-		router := NewSimpleRouterWithDB(db)
-
-		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/admin/customer/companies/%s/services", customerID), nil)
-		AddTestAuthCookie(req, token)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-}
-
-func TestAdminCustomerCompanyUsers(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	token := GetTestAuthToken(t)
-
-	t.Run("GET /admin/customer/companies/:id/users returns company users", func(t *testing.T) {
-		db := getTestDB(t)
-		// Note: Do not close singleton DB connection
-
-		customerID := "TEST_USERS_" + fmt.Sprint(time.Now().Unix())
-		createTestCustomerCompany(t, db, customerID)
-		defer cleanupTestCustomerCompany(t, db, customerID)
-
-		router := NewSimpleRouterWithDB(db)
-
-		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/admin/customer/companies/%s/users", customerID), nil)
-		AddTestAuthCookie(req, token)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-}
-
-func TestAdminCustomerCompanyTickets(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	token := GetTestAuthToken(t)
-
-	t.Run("GET /admin/customer/companies/:id/tickets returns company tickets", func(t *testing.T) {
-		db := getTestDB(t)
-		// Note: Do not close singleton DB connection
-
-		customerID := "TEST_TICKETS_" + fmt.Sprint(time.Now().Unix())
-		createTestCustomerCompany(t, db, customerID)
-		defer cleanupTestCustomerCompany(t, db, customerID)
-
-		router := NewSimpleRouterWithDB(db)
-
-		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/admin/customer/companies/%s/tickets", customerID), nil)
-		AddTestAuthCookie(req, token)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
 	})
 }
 
@@ -1007,49 +879,6 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 
 			// Company exists (already valid): activation is an idempotent success.
 			assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
-		})
-
-		t.Run("view company users", func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies/RELTEST001/users", nil)
-			AddTestAuthCookie(req, token)
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-
-			assert.Equal(t, http.StatusOK, w.Code)
-		})
-
-		t.Run("view company tickets", func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies/RELTEST001/tickets", nil)
-			AddTestAuthCookie(req, token)
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-
-			assert.Equal(t, http.StatusOK, w.Code)
-		})
-
-		t.Run("view company services", func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies/RELTEST001/services", nil)
-			AddTestAuthCookie(req, token)
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-
-			assert.Equal(t, http.StatusOK, w.Code)
-		})
-
-		t.Run("update company services", func(t *testing.T) {
-			formData := url.Values{}
-			formData.Add("services", "1")
-			formData.Add("services", "2")
-
-			req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/RELTEST001/services",
-				bytes.NewBufferString(formData.Encode()))
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-			AddTestAuthCookie(req, token)
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-
-			// Should succeed or return validation error
-			assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusBadRequest)
 		})
 	})
 }

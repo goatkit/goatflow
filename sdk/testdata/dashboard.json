@@ -1,0 +1,1 @@
+{"overview":{"total_tickets":12,"open_tickets":5,"closed_tickets":6,"pending_tickets":1},"by_queue":[{"queue_id":37,"queue_name":"Coaching","count":9}],"by_priority":[{"priority_id":3,"priority_name":"3 normal","count":12}],"recent_activity":[{"type":"created","ticket_id":37558,"ticket_tn":"COACH-9664946","timestamp":"2026-09-01T15:23:18Z"}]}

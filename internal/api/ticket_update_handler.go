@@ -1,103 +1,24 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
-	"time"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/history"
+	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
+	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/services"
 )
-
-func handleTicketUpdateTestFallback(c *gin.Context, ticketID int64, updateRequest map[string]interface{}, userID int) bool {
-	if os.Getenv("APP_ENV") != "test" {
-		return false
-	}
-
-	if ticketID == 999999 {
-		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Ticket not found"})
-		return true
-	}
-
-	if isCustomer, _ := c.Get("is_customer"); isCustomer == true {
-		c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "Access denied"})
-		return true
-	}
-
-	if v, ok := updateRequest["queue_id"].(float64); ok && int(v) == 99999 {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid queue_id"})
-		return true
-	}
-
-	if v, ok := updateRequest["state_id"].(float64); ok && int(v) == 99999 {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid state_id"})
-		return true
-	}
-
-	if v, ok := updateRequest["priority_id"].(float64); ok && int(v) == 99999 {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid priority_id"})
-		return true
-	}
-
-	if title, ok := updateRequest["title"].(string); ok && len(title) > 255 {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Title too long"})
-		return true
-	}
-
-	resp := gin.H{"id": ticketID}
-
-	if v, ok := updateRequest["state_id"].(float64); ok {
-		resp["state_id"] = v
-	}
-	if v, ok := updateRequest["priority_id"].(float64); ok {
-		resp["priority_id"] = v
-	}
-	if v, ok := updateRequest["queue_id"].(float64); ok {
-		resp["queue_id"] = v
-	}
-	if v, ok := updateRequest["type_id"].(float64); ok {
-		resp["type_id"] = v
-	}
-	if v, ok := updateRequest["user_id"].(float64); ok {
-		resp["user_id"] = v
-	}
-	if v, exists := updateRequest["responsible_user_id"]; exists {
-		resp["responsible_user_id"] = v
-	}
-	if v, ok := updateRequest["ticket_lock_id"].(float64); ok {
-		resp["ticket_lock_id"] = v
-	}
-	if v, ok := updateRequest["customer_user_id"].(string); ok {
-		resp["customer_user_id"] = v
-	}
-	if v, ok := updateRequest["customer_id"].(string); ok {
-		resp["customer_id"] = v
-	}
-	if v, ok := updateRequest["title"].(string); ok {
-		resp["title"] = v
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data": func() gin.H {
-			respCopy := gin.H{}
-			for k, v := range resp {
-				respCopy[k] = v
-			}
-			respCopy["change_by"] = userID
-			respCopy["change_time"] = time.Now().Format(time.RFC3339)
-			return respCopy
-		}(),
-	})
-
-	return true
-}
 
 // HandleUpdateTicketAPI handles PUT /api/v1/tickets/:id.
 //
@@ -127,34 +48,9 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 	}
 
 	// Check authentication
-	userID := 1
-	if ctxUserID, exists := c.Get("user_id"); exists {
-		switch v := ctxUserID.(type) {
-		case int:
-			userID = v
-		case int32:
-			userID = int(v)
-		case int64:
-			userID = int(v)
-		case uint:
-			userID = int(v)
-		case uint32:
-			userID = int(v)
-		case uint64:
-			userID = int(v)
-		default:
-			userID = 1
-		}
-	} else {
-		if _, authExists := c.Get("is_authenticated"); !authExists {
-			if c.GetHeader("X-Test-Mode") != "true" {
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"success": false,
-					"error":   "Authentication required",
-				})
-				return
-			}
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	// Parse request body
@@ -179,10 +75,7 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 	// Get database connection
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		if handleTicketUpdateTestFallback(c, ticketID, updateRequest, userID) {
-			return
-		}
-
+		log.Printf("HandleUpdateTicketAPI: database unavailable: %v", err)
 		c.JSON(http.StatusServiceUnavailable, gin.H{
 			"success": false,
 			"error":   "Database connection failed",
@@ -202,10 +95,6 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 	), ticketID).Scan(&currentTicket.ID, &currentTicket.CustomerUserID, &currentTicket.UserID)
 
 	if err == sql.ErrNoRows {
-		if handleTicketUpdateTestFallback(c, ticketID, updateRequest, userID) {
-			return
-		}
-
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
 			"error":   "Ticket not found",
@@ -302,260 +191,349 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 		}
 	}
 
-	if queueID, ok := updateRequest["queue_id"].(float64); ok {
+	ctx := c.Request.Context()
+	upd, errMsg, err := parseTicketUpdate(ctx, db, updateRequest)
+	if err != nil {
+		log.Printf("HandleUpdateTicketAPI: validate: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to validate update"})
+		return
+	}
+	if errMsg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": errMsg})
+		return
+	}
+
+	repo := repository.NewTicketRepository(db)
+	before, err := repo.GetByID(uint(ticketID))
+	if err != nil {
+		log.Printf("HandleUpdateTicketAPI: load ticket %d: %v", ticketID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch ticket"})
+		return
+	}
+
+	// The row update and its history entries commit together.
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Printf("HandleUpdateTicketAPI: begin: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update ticket"})
+		return
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op after Commit
+
+	setClause, args := upd.setClause(userID)
+	args = append(args, ticketID)
+	updateQuery := fmt.Sprintf("UPDATE ticket SET %s WHERE id = ?", setClause) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
+	if _, err := tx.ExecContext(ctx, database.ConvertPlaceholders(updateQuery), args...); err != nil {
+		log.Printf("HandleUpdateTicketAPI: update ticket %d: %v", ticketID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update ticket"})
+		return
+	}
+	if err := recordTicketUpdateHistory(ctx, db, tx, repo, before, upd, userID); err != nil {
+		log.Printf("HandleUpdateTicketAPI: history for ticket %d: %v", ticketID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to record ticket history"})
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("HandleUpdateTicketAPI: commit ticket %d: %v", ticketID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update ticket"})
+		return
+	}
+
+	after, err := repo.GetByID(uint(ticketID))
+	if err != nil {
+		log.Printf("HandleUpdateTicketAPI: reload ticket %d: %v", ticketID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Ticket updated but could not be reloaded"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": ticketRecordJSON(after)})
+}
+
+// ticketUpdate holds the validated fields of a ticket update request; nil
+// means "not changed".
+type ticketUpdate struct {
+	title                              *string
+	queueID, typeID, stateID, priority *int
+	ownerID, responsibleID, lockID     *int
+	customerID, customerUserID         *string
+}
+
+// parseTicketUpdate validates the request fields (types, lengths and that
+// referenced rows exist and are valid). A non-empty message is a client error.
+func parseTicketUpdate(ctx context.Context, db *sql.DB, req map[string]interface{}) (*ticketUpdate, string, error) {
+	upd := &ticketUpdate{}
+	intField := func(key string, v interface{}) (*int, string) {
+		f, ok := v.(float64)
+		if !ok || f < 1 || f != float64(int(f)) {
+			return nil, key + " must be a positive integer"
+		}
+		n := int(f)
+		return &n, ""
+	}
+	strField := func(key string, v interface{}, maxLen int) (*string, string) {
+		s, ok := v.(string)
+		if !ok {
+			return nil, key + " must be a string"
+		}
+		if utf8.RuneCountInString(s) > maxLen {
+			return nil, fmt.Sprintf("%s too long (max %d characters)", key, maxLen)
+		}
+		return &s, ""
+	}
+	for key, v := range req {
+		var msg string
+		switch key {
+		case "title":
+			if upd.title, msg = strField(key, v, 255); msg == "" && strings.TrimSpace(*upd.title) == "" {
+				msg = "Title cannot be empty"
+			}
+		case "customer_id":
+			upd.customerID, msg = strField(key, v, 150)
+		case "customer_user_id":
+			upd.customerUserID, msg = strField(key, v, 250)
+		case "queue_id":
+			upd.queueID, msg = intField(key, v)
+		case "type_id":
+			upd.typeID, msg = intField(key, v)
+		case "state_id":
+			upd.stateID, msg = intField(key, v)
+		case "priority_id":
+			upd.priority, msg = intField(key, v)
+		case "user_id":
+			upd.ownerID, msg = intField(key, v)
+		case "responsible_user_id":
+			upd.responsibleID, msg = intField(key, v)
+		case "ticket_lock_id":
+			upd.lockID, msg = intField(key, v)
+		default:
+			msg = "Unknown field: " + key
+		}
+		if msg != "" {
+			return nil, msg, nil
+		}
+	}
+
+	refs := []struct {
+		id    *int
+		query string
+		msg   string
+	}{
+		{upd.queueID, "SELECT EXISTS(SELECT 1 FROM queue WHERE id = ? AND valid_id = 1)", "Invalid queue_id"},
+		{upd.stateID, "SELECT EXISTS(SELECT 1 FROM ticket_state WHERE id = ? AND valid_id = 1)", "Invalid state_id"},
+		{upd.priority, "SELECT EXISTS(SELECT 1 FROM ticket_priority WHERE id = ? AND valid_id = 1)", "Invalid priority_id"},
+		{upd.typeID, "SELECT EXISTS(SELECT 1 FROM ticket_type WHERE id = ? AND valid_id = 1)", "Invalid type_id"},
+		{upd.ownerID, "SELECT EXISTS(SELECT 1 FROM users WHERE id = ? AND valid_id = 1)", "Invalid user_id"},
+		{upd.responsibleID, "SELECT EXISTS(SELECT 1 FROM users WHERE id = ? AND valid_id = 1)", "Invalid responsible_user_id"},
+		{upd.lockID, "SELECT EXISTS(SELECT 1 FROM ticket_lock_type WHERE id = ? AND valid_id = 1)", "Invalid ticket_lock_id"},
+	}
+	for _, ref := range refs {
+		if ref.id == nil {
+			continue
+		}
 		var exists bool
-		err := db.QueryRow(database.ConvertPlaceholders(
-			"SELECT EXISTS(SELECT 1 FROM queue WHERE id = ? AND valid_id = 1)",
-		), int(queueID)).Scan(&exists)
-		if err != nil || !exists {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "Invalid queue_id",
-			})
-			return
+		if err := db.QueryRowContext(ctx, database.ConvertPlaceholders(ref.query), *ref.id).Scan(&exists); err != nil {
+			return nil, "", err
+		}
+		if !exists {
+			return nil, ref.msg, nil
 		}
 	}
+	return upd, "", nil
+}
 
-	if stateID, ok := updateRequest["state_id"].(float64); ok {
-		var exists bool
-		err := db.QueryRow(database.ConvertPlaceholders(
-			"SELECT EXISTS(SELECT 1 FROM ticket_state WHERE id = ? AND valid_id = 1)",
-		), int(stateID)).Scan(&exists)
-		if err != nil || !exists {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "Invalid state_id",
-			})
-			return
-		}
-	}
-
-	if priorityID, ok := updateRequest["priority_id"].(float64); ok {
-		var exists bool
-		err := db.QueryRow(database.ConvertPlaceholders(
-			"SELECT EXISTS(SELECT 1 FROM ticket_priority WHERE id = ? AND valid_id = 1)",
-		), int(priorityID)).Scan(&exists)
-		if err != nil || !exists {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "Invalid priority_id",
-			})
-			return
-		}
-	}
-
-	if typeID, ok := updateRequest["type_id"].(float64); ok {
-		var exists bool
-		err := db.QueryRow(database.ConvertPlaceholders(
-			"SELECT EXISTS(SELECT 1 FROM ticket_type WHERE id = ? AND valid_id = 1)",
-		), int(typeID)).Scan(&exists)
-		if err != nil || !exists {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "Invalid type_id",
-			})
-			return
-		}
-	}
-
-	// Validate title length if provided
-	if title, ok := updateRequest["title"].(string); ok {
-		if len(title) > 255 {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "Title too long (max 255 characters)",
-			})
-			return
-		}
-		if len(title) == 0 {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "Title cannot be empty",
-			})
-			return
-		}
-	}
-
-	// Build UPDATE query dynamically
-	var updateFields []string
+// setClause returns the SET list and its arguments, including change_time/by.
+func (u *ticketUpdate) setClause(userID int) (string, []interface{}) {
+	var cols []string
 	var args []interface{}
+	addStr := func(col string, v *string) {
+		if v != nil {
+			cols = append(cols, col+" = ?")
+			args = append(args, *v)
+		}
+	}
+	addInt := func(col string, v *int) {
+		if v != nil {
+			cols = append(cols, col+" = ?")
+			args = append(args, *v)
+		}
+	}
+	addStr("title", u.title)
+	addInt("queue_id", u.queueID)
+	addInt(database.TicketTypeColumn(), u.typeID)
+	addInt("ticket_state_id", u.stateID)
+	addInt("ticket_priority_id", u.priority)
+	addStr("customer_user_id", u.customerUserID)
+	addStr("customer_id", u.customerID)
+	addInt("user_id", u.ownerID)
+	addInt("responsible_user_id", u.responsibleID)
+	addInt("ticket_lock_id", u.lockID)
+	cols = append(cols, "change_time = CURRENT_TIMESTAMP", "change_by = ?")
+	args = append(args, userID)
+	return strings.Join(cols, ", "), args
+}
 
-	// Map of allowed fields and their database columns
-	fieldMapping := map[string]string{
-		"title":               "title",
-		"queue_id":            "queue_id",
-		"type_id":             database.TicketTypeColumn(),
-		"state_id":            "ticket_state_id",
-		"priority_id":         "ticket_priority_id",
-		"customer_user_id":    "customer_user_id",
-		"customer_id":         "customer_id",
-		"user_id":             "user_id",
-		"responsible_user_id": "responsible_user_id",
-		"ticket_lock_id":      "ticket_lock_id",
+// recordTicketUpdateHistory writes one OTRS history entry per changed field
+// (TitleUpdate, Move, TypeUpdate, StateUpdate, PriorityUpdate, OwnerUpdate,
+// ResponsibleUpdate, CustomerUpdate, Lock/Unlock) inside tx, with the
+// ticket snapshot after the update.
+func recordTicketUpdateHistory(ctx context.Context, db *sql.DB, tx *sql.Tx, repo *repository.TicketRepository,
+	before *models.Ticket, upd *ticketUpdate, userID int) error {
+	after := *before
+	if upd.title != nil {
+		after.Title = *upd.title
+	}
+	if upd.queueID != nil {
+		after.QueueID = *upd.queueID
+	}
+	if upd.typeID != nil {
+		after.TypeID = upd.typeID
+	}
+	if upd.stateID != nil {
+		after.TicketStateID = *upd.stateID
+	}
+	if upd.priority != nil {
+		after.TicketPriorityID = *upd.priority
+	}
+	if upd.ownerID != nil {
+		after.UserID = upd.ownerID
+	}
+	if upd.responsibleID != nil {
+		after.ResponsibleUserID = upd.responsibleID
+	}
+	if upd.lockID != nil {
+		after.TicketLockID = *upd.lockID
+	}
+	if upd.customerID != nil {
+		after.CustomerID = upd.customerID
+	}
+	if upd.customerUserID != nil {
+		after.CustomerUserID = upd.customerUserID
 	}
 
-	for field, column := range fieldMapping {
-		if value, exists := updateRequest[field]; exists {
-			// Handle different value types
-			switch field {
-			case "title", "customer_user_id", "customer_id":
-				// String fields
-				if strVal, ok := value.(string); ok {
-					updateFields = append(updateFields, fmt.Sprintf("%s = ?", column))
-					args = append(args, strVal)
-				}
-			case "queue_id", "type_id", "state_id", "priority_id", "user_id", "ticket_lock_id":
-				// Integer fields
-				if floatVal, ok := value.(float64); ok {
-					updateFields = append(updateFields, fmt.Sprintf("%s = ?", column))
-					args = append(args, int(floatVal))
-				}
-			case "responsible_user_id":
-				// Nullable integer field
-				if value == nil {
-					updateFields = append(updateFields, column+" = NULL")
-				} else if floatVal, ok := value.(float64); ok {
-					updateFields = append(updateFields, fmt.Sprintf("%s = ?", column))
-					args = append(args, int(floatVal))
-				}
+	queueName := func(id int) (string, error) {
+		var name string
+		err := db.QueryRowContext(ctx, database.ConvertPlaceholders("SELECT name FROM queue WHERE id = ?"), id).Scan(&name)
+		return name, err
+	}
+	userLogin := func(id int) (string, error) {
+		var login string
+		err := db.QueryRowContext(ctx, database.ConvertPlaceholders("SELECT login FROM users WHERE id = ?"), id).Scan(&login)
+		return login, err
+	}
+	lookupName := func(t lookups.Table) func(int) (string, error) {
+		return func(id int) (string, error) { return lookups.Name(ctx, db, t, id) }
+	}
+	derefInt := func(p *int) int {
+		if p == nil {
+			return 0
+		}
+		return *p
+	}
+	derefStr := func(p *string) string {
+		if p == nil {
+			return ""
+		}
+		return *p
+	}
+
+	type change struct {
+		histType, field string
+		oldID, newID    int
+		name            func(int) (string, error)
+	}
+	var entries [][2]string // history type, message
+	if after.Title != before.Title {
+		entries = append(entries, [2]string{"TitleUpdate", history.ChangeMessage("Title",
+			truncateRunes(before.Title, 80), truncateRunes(after.Title, 80))})
+	}
+	for _, ch := range []change{
+		{history.TypeQueueMove, "Queue", before.QueueID, after.QueueID, queueName},
+		{"TypeUpdate", "Type", derefInt(before.TypeID), derefInt(after.TypeID), lookupName(lookups.TicketTypeTable)},
+		{history.TypeStateUpdate, "State", before.TicketStateID, after.TicketStateID, lookupName(lookups.StateLookup)},
+		{history.TypePriorityUpdate, "Priority", before.TicketPriorityID, after.TicketPriorityID, lookupName(lookups.PriorityTable)},
+		{history.TypeOwnerUpdate, "Owner", derefInt(before.UserID), derefInt(after.UserID), userLogin},
+		{"ResponsibleUpdate", "Responsible", derefInt(before.ResponsibleUserID), derefInt(after.ResponsibleUserID), userLogin},
+	} {
+		if ch.oldID == ch.newID {
+			continue
+		}
+		newName, err := ch.name(ch.newID)
+		if err != nil {
+			return fmt.Errorf("%s name of %d: %w", ch.field, ch.newID, err)
+		}
+		oldName := ""
+		if ch.oldID > 0 {
+			// The previous row may have been removed since; keep its id.
+			if oldName, err = ch.name(ch.oldID); err != nil {
+				oldName = fmt.Sprintf("#%d", ch.oldID)
 			}
 		}
+		entries = append(entries, [2]string{ch.histType, history.ChangeMessage(ch.field, oldName, newName)})
+	}
+	if derefStr(before.CustomerID) != derefStr(after.CustomerID) || derefStr(before.CustomerUserID) != derefStr(after.CustomerUserID) {
+		entries = append(entries, [2]string{"CustomerUpdate", truncateRunes(fmt.Sprintf("Customer set to %s / %s",
+			derefStr(after.CustomerID), derefStr(after.CustomerUserID)), 200)})
+	}
+	if after.TicketLockID != before.TicketLockID {
+		lockName, err := lookups.Name(ctx, db, lookups.LockType, after.TicketLockID)
+		if err != nil {
+			return fmt.Errorf("lock name of %d: %w", after.TicketLockID, err)
+		}
+		histType := "Lock"
+		if lockName == lookups.LockUnlock {
+			histType = "Unlock"
+		}
+		entries = append(entries, [2]string{histType, "Lock set to " + lockName})
 	}
 
-	// Always update change_time and change_by
-	updateFields = append(updateFields, "change_time = NOW()")
-	updateFields = append(updateFields, "change_by = ?")
-	args = append(args, userID)
-
-	// Add ticket ID to args
-	args = append(args, ticketID)
-
-	// Execute UPDATE query
-	updateQuery := fmt.Sprintf(
-		"UPDATE ticket SET %s WHERE id = ?",
-		strings.Join(updateFields, ", "),
-	) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
-
-	_, err = db.Exec(database.ConvertPlaceholders(updateQuery), args...)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   fmt.Sprintf("Failed to update ticket: %v", err),
-		})
-		return
+	recorder := history.NewRecorder(repo)
+	for _, e := range entries {
+		if err := recorder.Record(ctx, tx, &after, nil, e[0], truncateRunes(e[1], 200), userID); err != nil {
+			return fmt.Errorf("%s: %w", e[0], err)
+		}
 	}
-	// Fetch updated ticket data
-	typeSelect := fmt.Sprintf("%s AS type_id", database.QualifiedTicketTypeColumn("t"))
-	query := database.ConvertPlaceholders(fmt.Sprintf(`
-		SELECT
-			t.id,
-			t.tn,
-			t.title,
-			t.queue_id,
-			%s,
-			t.ticket_state_id AS state_id,
-			t.ticket_priority_id AS priority_id,
-			t.customer_user_id,
-			t.customer_id,
-			t.user_id,
-			t.responsible_user_id,
-			t.ticket_lock_id,
-			t.create_time,
-			t.create_by,
-			t.change_time,
-			t.change_by
-		FROM ticket t
-		WHERE t.id = ?
-	`, typeSelect)) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
+	return nil
+}
 
-	var ticket struct {
-		ID                int64     `json:"id"`
-		TN                string    `json:"tn"`
-		Title             string    `json:"title"`
-		QueueID           int       `json:"queue_id"`
-		TypeID            int       `json:"type_id"`
-		StateID           int       `json:"state_id"`
-		PriorityID        int       `json:"priority_id"`
-		CustomerUserID    *string   `json:"customer_user_id"`
-		CustomerID        *string   `json:"customer_id"`
-		UserID            int       `json:"user_id"`
-		ResponsibleUserID *int      `json:"responsible_user_id"`
-		TicketLockID      int       `json:"ticket_lock_id"`
-		CreateTime        time.Time `json:"create_time"`
-		CreateBy          int       `json:"create_by"`
-		ChangeTime        time.Time `json:"change_time"`
-		ChangeBy          int       `json:"change_by"`
+// truncateRunes shortens s to at most n runes, marking the cut with "...".
+func truncateRunes(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
 	}
+	return string(r[:n-3]) + "..."
+}
 
-	err = db.QueryRow(query, ticketID).Scan(
-		&ticket.ID,
-		&ticket.TN,
-		&ticket.Title,
-		&ticket.QueueID,
-		&ticket.TypeID,
-		&ticket.StateID,
-		&ticket.PriorityID,
-		&ticket.CustomerUserID,
-		&ticket.CustomerID,
-		&ticket.UserID,
-		&ticket.ResponsibleUserID,
-		&ticket.TicketLockID,
-		&ticket.CreateTime,
-		&ticket.CreateBy,
-		&ticket.ChangeTime,
-		&ticket.ChangeBy,
-	)
-
-	if err != nil {
-		// Update was successful but we can't fetch the updated data
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Ticket updated successfully",
-			"data": gin.H{
-				"id": ticketID,
-			},
-		})
-		return
+// ticketRecordJSON is the API representation of a ticket row (the shape of
+// the SDKs' TicketRecord).
+func ticketRecordJSON(t *models.Ticket) gin.H {
+	str := func(p *string) string {
+		if p == nil {
+			return ""
+		}
+		return *p
 	}
-
-	// Convert to response format
-	responseData := gin.H{
-		"id":             ticketID,
-		"tn":             ticket.TN,
-		"title":          ticket.Title,
-		"queue_id":       ticket.QueueID,
-		"type_id":        ticket.TypeID,
-		"state_id":       ticket.StateID,
-		"priority_id":    ticket.PriorityID,
-		"user_id":        ticket.UserID,
-		"ticket_lock_id": ticket.TicketLockID,
-		"create_time":    ticket.CreateTime,
-		"create_by":      ticket.CreateBy,
-		"change_time":    ticket.ChangeTime,
-		"change_by":      ticket.ChangeBy,
+	num := func(p *int) int {
+		if p == nil {
+			return 0
+		}
+		return *p
 	}
-
-	// Add nullable fields
-	if ticket.CustomerUserID != nil {
-		responseData["customer_user_id"] = *ticket.CustomerUserID
-	} else {
-		responseData["customer_user_id"] = ""
+	return gin.H{
+		"id":                  t.ID,
+		"tn":                  t.TicketNumber,
+		"title":               t.Title,
+		"queue_id":            t.QueueID,
+		"type_id":             num(t.TypeID),
+		"state_id":            t.TicketStateID,
+		"priority_id":         t.TicketPriorityID,
+		"user_id":             num(t.UserID),
+		"responsible_user_id": num(t.ResponsibleUserID),
+		"ticket_lock_id":      t.TicketLockID,
+		"customer_user_id":    str(t.CustomerUserID),
+		"customer_id":         str(t.CustomerID),
+		"create_time":         t.CreateTime,
+		"create_by":           t.CreateBy,
+		"change_time":         t.ChangeTime,
+		"change_by":           t.ChangeBy,
 	}
-
-	if ticket.CustomerID != nil {
-		responseData["customer_id"] = *ticket.CustomerID
-	} else {
-		responseData["customer_id"] = ""
-	}
-
-	if ticket.ResponsibleUserID != nil {
-		responseData["responsible_user_id"] = *ticket.ResponsibleUserID
-	} else {
-		responseData["responsible_user_id"] = nil
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    responseData,
-	})
 }

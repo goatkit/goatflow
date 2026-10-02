@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -18,34 +17,18 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
-// DynamicFieldLoader is a function type for loading dynamic fields to avoid import cycles.
-type DynamicFieldLoader func(screenKey, objectType string) ([]interface{}, error)
-
-// dynamicFieldLoader is set externally by api package during init.
-var dynamicFieldLoader DynamicFieldLoader
-
 // wantsHTMLResponse returns true if the request expects HTML response (browser-like).
+// API paths never do: an unauthenticated /api/** call gets a 401 JSON answer
+// whatever its Accept header says, instead of a redirect to the login page.
 func wantsHTMLResponse(c *gin.Context) bool {
+	if p := c.Request.URL.Path; p == "/api" || strings.HasPrefix(p, "/api/") {
+		return false
+	}
 	accept := strings.ToLower(c.GetHeader("Accept"))
 	if accept == "" {
 		return true
 	}
 	return strings.Contains(accept, "text/html") || strings.Contains(accept, "*/*")
-}
-
-// SetDynamicFieldLoader sets the function used to load dynamic fields (called by api package).
-func SetDynamicFieldLoader(loader DynamicFieldLoader) {
-	dynamicFieldLoader = loader
-}
-
-// buildUserContext produces a consistent User map and admin flags.
-func buildUserContext(c *gin.Context) (gin.H, bool) {
-	user := shared.GetUserMapForTemplate(c)
-	isAdminGroup := false
-	if v, ok := user["IsInAdminGroup"].(bool); ok {
-		isAdminGroup = v
-	}
-	return user, isAdminGroup
 }
 
 func nullable(val sql.NullString) string {
@@ -102,14 +85,15 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 				return
 			}
 
-			// API tokens (gf_*) bypass this middleware - handled by unified_auth
-			authHeader := c.GetHeader("Authorization")
-			if authHeader != "" && strings.Contains(authHeader, "gf_") {
-				c.Next()
+			// API tokens (gf_*) are accepted by unified_auth routes only.
+			// Refuse them here instead of passing the request on with no
+			// identity: handlers behind `auth` expect a session user.
+			token := middleware.ExtractToken(c)
+			if middleware.IsAPIToken(token) {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "API tokens are not accepted on this route"})
+				c.Abort()
 				return
 			}
-
-			token := middleware.ExtractToken(c)
 
 			// If no token found, redirect for HTML requests, JSON for APIs
 			if token == "" {
@@ -223,6 +207,7 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(query), resolveLogin).Scan(&cuID, &login, &firstName, &lastName); err == nil {
 						resolvedID = cuID
 						userObj = &platformmodels.User{ID: uint(cuID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Email: login.String, Role: "Customer", ValidID: 1}
+						c.Set("customer_login", login.String)
 					}
 				} else if resolvedID == 0 {
 					var id int64
@@ -292,35 +277,30 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			c.Next()
 		},
 
+		// Admins are session/JWT users with role "Admin" or callers the auth
+		// layer marked as admin-group members (isInAdminGroup=true: admin
+		// group membership in JWT claims, '*' / 'admin:*' scoped API tokens).
 		"admin": func(c *gin.Context) {
-			role, exists := c.Get("user_role")
-			if !exists || role != "Admin" {
-				c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
-				c.Abort()
+			if role, exists := c.Get("user_role"); exists && role == "Admin" {
+				c.Next()
 				return
 			}
-			c.Next()
+			if inAdminGroup, exists := c.Get("isInAdminGroup"); exists {
+				if b, isBool := inAdminGroup.(bool); isBool && b {
+					c.Next()
+					return
+				}
+			}
+			c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+			c.Abort()
 		},
 
-		"agent": func(c *gin.Context) {
-			role, exists := c.Get("user_role")
-			if !exists || (role != "Agent" && role != "Admin") {
-				c.JSON(http.StatusForbidden, gin.H{"error": "Agent access required"})
-				c.Abort()
-				return
-			}
-			c.Next()
-		},
+		// agent admits agent JWTs/sessions and agent API tokens; customers
+		// (whose customer_user ids overlap users ids) get 403.
+		"agent": middleware.RequireAgent(),
 
-		"customer": func(c *gin.Context) {
-			isCustomer, exists := c.Get("is_customer")
-			if !exists || !isCustomer.(bool) {
-				c.JSON(http.StatusForbidden, gin.H{"error": "Customer access required"})
-				c.Abort()
-				return
-			}
-			c.Next()
-		},
+		// customer admits customer JWTs/sessions and customer API tokens.
+		"customer": middleware.RequireCustomer(),
 
 		"audit": func(c *gin.Context) {
 			c.Next()
@@ -358,6 +338,11 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 		"ticket_access_owner":     middleware.RequireQueueAccessFromTicket("owner"),
 		"ticket_access_priority":  middleware.RequireQueueAccessFromTicket("priority"),
 		"ticket_access_move_into": middleware.RequireQueueAccessFromTicket("move_into"),
+		// Ticket read for routes customers may also use: agents need ro on
+		// the ticket's queue, customers must own the ticket.
+		"ticket_access_customer_ro": middleware.RequireTicketReadOrCustomerOwner(),
+		// Any-queue ro for agents; customers pass (handler limits to own tickets).
+		"customer_or_queue_ro": middleware.RequireCustomerOrAnyQueueAccess("ro"),
 
 		// API token authentication
 		"api_token":    middleware.APITokenAuthMiddleware(),
@@ -381,9 +366,6 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 
 	// Register non-API handlers referenced by YAML
 	registry.Override("HandleCustomerInfoPanel", HandleCustomerInfoPanel)
-	if !registry.HandlerExists("HandleAgentNewTicket") {
-		registry.Override("HandleAgentNewTicket", HandleAgentNewTicket)
-	}
 }
 
 // RegisterAPIHandlers registers API handlers with the registry.
@@ -482,164 +464,21 @@ func HandleCustomerInfoPanel(c *gin.Context) {
 		"Comment":  nullable(user.CompanyComment),
 	}
 
+	// Open = any state whose type is not closed (OTRS state types new/open/pending*).
 	var openCount int
-	_ = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT count(*) FROM tickets WHERE customer_user_id = ? AND state NOT IN ('closed','resolved')`), nullable(user.Login)).Scan(&openCount)
-
-	shared.GetGlobalRenderer().HTML(c, http.StatusOK, "partials/tickets/customer_info.pongo2", gin.H{"user": tmplUser, "company": tmplCompany, "open": openCount})
-}
-
-// HandleAgentNewTicket renders the new ticket form with proper nav context.
-func HandleAgentNewTicket(c *gin.Context) {
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "System unavailable"})
+	if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`
+		SELECT COUNT(*)
+		FROM ticket t
+		JOIN ticket_state ts ON ts.id = t.ticket_state_id
+		JOIN ticket_state_type tst ON tst.id = ts.type_id
+		WHERE t.customer_user_id = ?
+		  AND tst.name IN ('new', 'open', 'pending reminder', 'pending auto')`), user.Login.String).Scan(&openCount); err != nil {
+		log.Printf("customer-info: count open tickets for %q: %v", user.Login.String, err)
+		c.String(http.StatusInternalServerError, "failed to load customer tickets")
 		return
 	}
 
-	// Build user context consistently
-	user, isInAdminGroup := buildUserContext(c)
-
-	// Queues
-	queues := []gin.H{}
-	if rows, err := db.QueryContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT id, name FROM queue WHERE valid_id = 1 ORDER BY name`)); err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var id int
-			var name string
-			if err := rows.Scan(&id, &name); err == nil {
-				queues = append(queues, gin.H{"ID": id, "Name": name})
-			}
-		}
-		_ = rows.Err() // Check for iteration errors
-	}
-	// Priorities
-	priorities := []gin.H{}
-	if rows, err := db.QueryContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT id, name FROM ticket_priority WHERE valid_id = 1 ORDER BY id`)); err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var id int
-			var name string
-			if err := rows.Scan(&id, &name); err == nil {
-				priorities = append(priorities, gin.H{"ID": id, "Name": name})
-			}
-		}
-		_ = rows.Err() // Check for iteration errors
-	}
-	// Types
-	types := []gin.H{}
-	if rows, err := db.QueryContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT id, name FROM ticket_type WHERE valid_id = 1 ORDER BY name`)); err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var id int
-			var name string
-			if err := rows.Scan(&id, &name); err == nil {
-				types = append(types, gin.H{"ID": id, "Name": name})
-			}
-		}
-		_ = rows.Err() // Check for iteration errors
-	}
-	// Customer users seed (limited)
-	customerUsers := []gin.H{}
-	if rows, err := db.QueryContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT login, email, first_name, last_name, customer_id FROM customer_user WHERE valid_id = 1 ORDER BY last_name, first_name, email LIMIT 250`)); err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var login, email, fn, ln, cid sql.NullString
-			if err := rows.Scan(&login, &email, &fn, &ln, &cid); err == nil {
-				customerUsers = append(customerUsers, gin.H{"Login": login.String, "Email": email.String, "FirstName": fn.String, "LastName": ln.String, "CustomerID": cid.String})
-			}
-		}
-		_ = rows.Err() // Check for iteration errors
-	}
-	// Ticket states
-	ticketStates := []gin.H{}
-	ticketStateLookup := map[string]gin.H{}
-	if opts, lookup, stateErr := shared.LoadTicketStatesForForm(db); stateErr != nil {
-		log.Printf("agent route new ticket: failed to load ticket states: %v", stateErr)
-	} else {
-		ticketStates = opts
-		ticketStateLookup = lookup
-	}
-
-	// Render template set by YAML (pages/tickets/new.pongo2)
-	// Derive admin role similar to getUserMapForTemplate for consistency
-	isAdmin := false
-	// From group membership
-	if isInAdminGroup {
-		isAdmin = true
-	}
-	// From user ID heuristic (1/2)
-	if uid, ok := user["ID"]; ok {
-		switch v := uid.(type) {
-		case int:
-			if v == 1 || v == 2 {
-				isAdmin = true
-			}
-		case int32:
-			if v == 1 || v == 2 {
-				isAdmin = true
-			}
-		case int64:
-			if v == 1 || v == 2 {
-				isAdmin = true
-			}
-		case uint:
-			if v == 1 || v == 2 {
-				isAdmin = true
-			}
-		case uint32:
-			if v == 1 || v == 2 {
-				isAdmin = true
-			}
-		case uint64:
-			if v == 1 || v == 2 {
-				isAdmin = true
-			}
-		case float64:
-			if int(v) == 1 || int(v) == 2 {
-				isAdmin = true
-			}
-		case string:
-			if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
-				if n == 1 || n == 2 {
-					isAdmin = true
-				}
-			}
-		}
-	}
-	// From login naming
-	if !isAdmin {
-		if loginVal, ok := user["Login"].(string); ok {
-			if strings.Contains(strings.ToLower(loginVal), "admin") || loginVal == "root@localhost" {
-				isAdmin = true
-			}
-		}
-	}
-	user["IsAdmin"] = isAdmin
-	user["IsInAdminGroup"] = isInAdminGroup
-	user["Role"] = map[bool]string{true: "Admin", false: "Agent"}[isAdmin]
-
-	// Dynamic fields for AgentTicketPhone screen
-	var dynamicFields []interface{}
-	if dynamicFieldLoader != nil {
-		var dfErr error
-		dynamicFields, dfErr = dynamicFieldLoader("AgentTicketPhone", "Ticket")
-		if dfErr != nil {
-			log.Printf("Warning: failed to load dynamic fields for ticket create: %v", dfErr)
-		}
-	}
-
-	shared.GetGlobalRenderer().HTML(c, http.StatusOK, "pages/tickets/new.pongo2", gin.H{
-		"User":              user,
-		"IsInAdminGroup":    isInAdminGroup,
-		"ActivePage":        "tickets",
-		"Queues":            queues,
-		"Priorities":        priorities,
-		"Types":             types,
-		"CustomerUsers":     customerUsers,
-		"TicketStates":      ticketStates,
-		"TicketStateLookup": ticketStateLookup,
-		"DynamicFields":     dynamicFields,
-	})
+	shared.GetGlobalRenderer().HTML(c, http.StatusOK, "partials/tickets/customer_info.pongo2", gin.H{"user": tmplUser, "company": tmplCompany, "open": openCount})
 }
 
 func init() {

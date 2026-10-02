@@ -2,12 +2,15 @@ package api
 
 import (
 	"encoding/csv"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // CannedResponse represents a pre-written response.
@@ -28,36 +31,74 @@ type CannedResponse struct {
 	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
+// cannedResponseCaller identifies the agent calling a canned-response
+// endpoint. Canned responses are agent tooling: customers are rejected.
+type cannedResponseCaller struct {
+	userID  int
+	teamID  int
+	isAdmin bool
+}
+
+func getCannedResponseCaller(c *gin.Context) (cannedResponseCaller, bool) {
+	role, _ := c.Get("user_role") //nolint:errcheck // absent role handled below
+	roleStr := shared.ToString(role, "")
+	if strings.EqualFold(roleStr, "customer") || c.GetBool("is_customer") {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Canned responses are available to agents only"})
+		return cannedResponseCaller{}, false
+	}
+	userIDVal, _ := c.Get("user_id") //nolint:errcheck // absent id handled below
+	userID := shared.ToInt(userIDVal, 0)
+	if userID <= 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return cannedResponseCaller{}, false
+	}
+	teamIDVal, _ := c.Get("team_id") //nolint:errcheck // optional
+	return cannedResponseCaller{
+		userID:  userID,
+		teamID:  shared.ToInt(teamIDVal, 0),
+		isAdmin: c.GetBool("isInAdminGroup") || strings.EqualFold(roleStr, "admin"),
+	}, true
+}
+
 func getCannedResponseRepo(c *gin.Context) (*CannedResponseRepository, bool) {
 	repo, err := NewCannedResponseRepository()
 	if err != nil {
+		log.Printf("canned responses: database unavailable: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
 		return nil, false
 	}
 	return repo, true
 }
 
-// getContextInt safely extracts an int from gin context
-func getContextInt(c *gin.Context, key string) int {
-	if val, exists := c.Get(key); exists && val != nil {
-		if v, ok := val.(int); ok {
-			return v
-		}
+// loadAccessibleCannedResponse resolves :id to a valid response the caller may read.
+func loadAccessibleCannedResponse(c *gin.Context, repo *CannedResponseRepository, caller cannedResponseCaller) (*CannedResponse, bool) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid response ID"})
+		return nil, false
 	}
-	return 0
-}
-
-// getContextString safely extracts a string from gin context
-func getContextString(c *gin.Context, key string) string {
-	if val, exists := c.Get(key); exists && val != nil {
-		if v, ok := val.(string); ok {
-			return v
-		}
+	resp, err := repo.GetByID(id)
+	if err != nil {
+		log.Printf("canned responses: load %d: %v", id, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load canned response"})
+		return nil, false
 	}
-	return ""
+	if resp == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Canned response not found"})
+		return nil, false
+	}
+	if !caller.isAdmin && !canAccessResponse(resp, caller.userID, caller.teamID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have access to this response"})
+		return nil, false
+	}
+	return resp, true
 }
 
 func handleCreateCannedResponse(c *gin.Context) {
+	caller, ok := getCannedResponseCaller(c)
+	if !ok {
+		return
+	}
 	var req struct {
 		Name         string   `json:"name"`
 		Category     string   `json:"category"`
@@ -78,11 +119,14 @@ func handleCreateCannedResponse(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Name and content are required"})
 		return
 	}
-
-	userID := getContextInt(c, "user_id")
-	userRole := getContextString(c, "user_role")
-
-	if req.Scope == "global" && userRole != "admin" {
+	if req.Scope == "" {
+		req.Scope = "personal"
+	}
+	if req.Scope != "personal" && req.Scope != "team" && req.Scope != "global" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Scope must be personal, team or global"})
+		return
+	}
+	if req.Scope == "global" && !caller.isAdmin {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Only administrators can create global responses"})
 		return
 	}
@@ -92,13 +136,14 @@ func handleCreateCannedResponse(c *gin.Context) {
 		return
 	}
 
-	teamIDVal := getContextInt(c, "team_id")
+	teamIDVal := caller.teamID
 	if req.TeamID > 0 {
 		teamIDVal = req.TeamID
 	}
 
-	exists, err := repo.CheckDuplicate(req.Name, req.Scope, userID, teamIDVal)
+	exists, err := repo.CheckDuplicate(req.Name, req.Scope, caller.userID, teamIDVal)
 	if err != nil {
+		log.Printf("canned responses: duplicate check: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check for duplicates"})
 		return
 	}
@@ -109,9 +154,6 @@ func handleCreateCannedResponse(c *gin.Context) {
 
 	if req.ContentType == "" {
 		req.ContentType = "text"
-	}
-	if req.Scope == "" {
-		req.Scope = "personal"
 	}
 	if len(req.Placeholders) == 0 {
 		req.Placeholders = extractPlaceholders(req.Content)
@@ -124,20 +166,21 @@ func handleCreateCannedResponse(c *gin.Context) {
 		ContentType:  req.ContentType,
 		Tags:         req.Tags,
 		Scope:        req.Scope,
-		OwnerID:      userID,
+		OwnerID:      caller.userID,
 		TeamID:       teamIDVal,
 		Placeholders: req.Placeholders,
 	}
 
-	id, err := repo.Create(cr, userID)
+	id, err := repo.Create(cr, caller.userID)
 	if err != nil {
+		log.Printf("canned responses: create: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create canned response"})
 		return
 	}
 
 	cr.ID = id
 	cr.CreatedAt = time.Now()
-	cr.UpdatedAt = time.Now()
+	cr.UpdatedAt = cr.CreatedAt
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message":  "Canned response created successfully",
@@ -146,10 +189,13 @@ func handleCreateCannedResponse(c *gin.Context) {
 	})
 }
 
-func handleGetCannedResponses(c *gin.Context) {
-	userID := getContextInt(c, "user_id")
-	teamID := getContextInt(c, "team_id")
-
+// listCannedResponses lists the responses visible to the caller, narrowed by
+// the shared query filters plus any route-specific overrides.
+func listCannedResponses(c *gin.Context, override func(*CannedResponseFilters)) {
+	caller, ok := getCannedResponseCaller(c)
+	if !ok {
+		return
+	}
 	repo, ok := getCannedResponseRepo(c)
 	if !ok {
 		return
@@ -162,15 +208,24 @@ func handleGetCannedResponses(c *gin.Context) {
 		SortBy:    c.DefaultQuery("sort_by", "name"),
 		SortOrder: c.DefaultQuery("sort_order", "asc"),
 	}
-
 	if tagsParam := c.Query("tags"); tagsParam != "" {
 		filters.Tags = strings.Split(tagsParam, ",")
 	}
+	if override != nil {
+		override(&filters)
+	}
 
-	responses, err := repo.ListAccessible(userID, teamID, filters)
+	responses, err := repo.ListAccessible(caller.userID, caller.teamID, filters)
 	if err != nil {
+		log.Printf("canned responses: list: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load canned responses"})
 		return
+	}
+	if responses == nil {
+		responses = []*CannedResponse{}
+	}
+	if limit, err := strconv.Atoi(c.Query("limit")); err == nil && limit > 0 && limit < len(responses) {
+		responses = responses[:limit]
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -179,49 +234,71 @@ func handleGetCannedResponses(c *gin.Context) {
 	})
 }
 
-func handleUpdateCannedResponse(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid response ID"})
+func handleGetCannedResponses(c *gin.Context) {
+	listCannedResponses(c, nil)
+}
+
+func handleGetCannedResponsesByCategory(c *gin.Context) {
+	category := c.Param("category")
+	listCannedResponses(c, func(f *CannedResponseFilters) { f.Category = category })
+}
+
+func handleSearchCannedResponses(c *gin.Context) {
+	q := strings.TrimSpace(c.Query("q"))
+	if q == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Search query 'q' is required"})
 		return
 	}
+	listCannedResponses(c, func(f *CannedResponseFilters) { f.Search = q })
+}
 
+func handleGetPopularCannedResponses(c *gin.Context) {
+	listCannedResponses(c, func(f *CannedResponseFilters) { f.SortBy = "usage" })
+}
+
+func handleGetCannedResponse(c *gin.Context) {
+	caller, ok := getCannedResponseCaller(c)
+	if !ok {
+		return
+	}
+	repo, ok := getCannedResponseRepo(c)
+	if !ok {
+		return
+	}
+	resp, ok := loadAccessibleCannedResponse(c, repo, caller)
+	if !ok {
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"response": resp})
+}
+
+func handleUpdateCannedResponse(c *gin.Context) {
+	caller, ok := getCannedResponseCaller(c)
+	if !ok {
+		return
+	}
 	var req struct {
 		Name         string   `json:"name"`
 		Category     string   `json:"category"`
 		Content      string   `json:"content"`
 		ContentType  string   `json:"content_type"`
 		Tags         []string `json:"tags"`
-		Scope        string   `json:"scope"`
-		TeamID       int      `json:"team_id"`
 		Placeholders []string `json:"placeholders"`
 	}
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	userID := getContextInt(c, "user_id")
-	userRole := getContextString(c, "user_role")
-
 	repo, ok := getCannedResponseRepo(c)
 	if !ok {
 		return
 	}
-
-	existing, err := repo.GetByID(id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load canned response"})
+	existing, ok := loadAccessibleCannedResponse(c, repo, caller)
+	if !ok {
 		return
 	}
-	if existing == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Canned response not found"})
-		return
-	}
-
-	if !canModifyResponseTyped(existing, userID, userRole) {
+	if !canModifyResponse(existing, caller) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to modify this response"})
 		return
 	}
@@ -248,7 +325,8 @@ func handleUpdateCannedResponse(c *gin.Context) {
 		existing.Placeholders = req.Placeholders
 	}
 
-	if err := repo.Update(id, existing, userID); err != nil {
+	if err := repo.Update(existing.ID, existing, caller.userID); err != nil {
+		log.Printf("canned responses: update %d: %v", existing.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update canned response"})
 		return
 	}
@@ -260,37 +338,25 @@ func handleUpdateCannedResponse(c *gin.Context) {
 }
 
 func handleDeleteCannedResponse(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid response ID"})
+	caller, ok := getCannedResponseCaller(c)
+	if !ok {
 		return
 	}
-
-	userID := getContextInt(c, "user_id")
-	userRole := getContextString(c, "user_role")
-
 	repo, ok := getCannedResponseRepo(c)
 	if !ok {
 		return
 	}
-
-	existing, err := repo.GetByID(id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load canned response"})
+	existing, ok := loadAccessibleCannedResponse(c, repo, caller)
+	if !ok {
 		return
 	}
-	if existing == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Canned response not found"})
-		return
-	}
-
-	if !canModifyResponseTyped(existing, userID, userRole) {
+	if !canModifyResponse(existing, caller) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to delete this response"})
 		return
 	}
 
-	if err := repo.Delete(id, userID); err != nil {
+	if err := repo.Delete(existing.ID, caller.userID); err != nil {
+		log.Printf("canned responses: delete %d: %v", existing.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete canned response"})
 		return
 	}
@@ -299,33 +365,16 @@ func handleDeleteCannedResponse(c *gin.Context) {
 }
 
 func handleUseCannedResponse(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid response ID"})
+	caller, ok := getCannedResponseCaller(c)
+	if !ok {
 		return
 	}
-
-	userID := getContextInt(c, "user_id")
-	teamID := getContextInt(c, "team_id")
-
 	repo, ok := getCannedResponseRepo(c)
 	if !ok {
 		return
 	}
-
-	resp, err := repo.GetByID(id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load canned response"})
-		return
-	}
-	if resp == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Canned response not found"})
-		return
-	}
-
-	if !canAccessResponseTyped(resp, userID, teamID) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have access to this response"})
+	resp, ok := loadAccessibleCannedResponse(c, repo, caller)
+	if !ok {
 		return
 	}
 
@@ -335,13 +384,15 @@ func handleUseCannedResponse(c *gin.Context) {
 	_ = c.ShouldBindJSON(&req) //nolint:errcheck // Optional context
 
 	content := resp.Content
-	if req.Context != nil {
-		for key, value := range req.Context {
-			content = strings.ReplaceAll(content, "{{"+key+"}}", value)
-		}
+	for key, value := range req.Context {
+		content = strings.ReplaceAll(content, "{{"+key+"}}", value)
 	}
 
-	_ = repo.IncrementUsage(id) //nolint:errcheck // Best-effort usage tracking
+	if err := repo.IncrementUsage(resp.ID); err != nil {
+		log.Printf("canned responses: usage count %d: %v", resp.ID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to record usage"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"content":      content,
@@ -351,6 +402,9 @@ func handleUseCannedResponse(c *gin.Context) {
 }
 
 func handleGetCannedResponseCategories(c *gin.Context) {
+	if _, ok := getCannedResponseCaller(c); !ok {
+		return
+	}
 	repo, ok := getCannedResponseRepo(c)
 	if !ok {
 		return
@@ -358,35 +412,39 @@ func handleGetCannedResponseCategories(c *gin.Context) {
 
 	categories, err := repo.ListCategories()
 	if err != nil {
+		log.Printf("canned responses: categories: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load categories"})
 		return
+	}
+	if categories == nil {
+		categories = []string{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"categories": categories})
 }
 
 func handleGetCannedResponseStatistics(c *gin.Context) {
-	userID := getContextInt(c, "user_id")
-	teamID := getContextInt(c, "team_id")
-
+	caller, ok := getCannedResponseCaller(c)
+	if !ok {
+		return
+	}
 	repo, ok := getCannedResponseRepo(c)
 	if !ok {
 		return
 	}
 
-	responses, err := repo.ListAccessible(userID, teamID, CannedResponseFilters{})
+	responses, err := repo.ListAccessible(caller.userID, caller.teamID, CannedResponseFilters{})
 	if err != nil {
+		log.Printf("canned responses: statistics: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load statistics"})
 		return
 	}
 
 	stats := struct {
-		TotalCount   int            `json:"total_count"`
-		ByScope      map[string]int `json:"by_scope"`
-		ByCategory   map[string]int `json:"by_category"`
-		TotalUsage   int            `json:"total_usage"`
-		MostUsed     []gin.H        `json:"most_used"`
-		RecentlyUsed []gin.H        `json:"recently_used"`
+		TotalCount int            `json:"total_count"`
+		ByScope    map[string]int `json:"by_scope"`
+		ByCategory map[string]int `json:"by_category"`
+		TotalUsage int            `json:"total_usage"`
 	}{
 		ByScope:    make(map[string]int),
 		ByCategory: make(map[string]int),
@@ -405,13 +463,10 @@ func handleGetCannedResponseStatistics(c *gin.Context) {
 }
 
 func handleShareCannedResponse(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid response ID"})
+	caller, ok := getCannedResponseCaller(c)
+	if !ok {
 		return
 	}
-
 	var req struct {
 		Scope  string `json:"scope"`
 		TeamID int    `json:"team_id"`
@@ -420,32 +475,25 @@ func handleShareCannedResponse(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	userID := getContextInt(c, "user_id")
-	userRole := getContextString(c, "user_role")
+	if req.Scope != "personal" && req.Scope != "team" && req.Scope != "global" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Scope must be personal, team or global"})
+		return
+	}
+	if req.Scope == "global" && !caller.isAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only administrators can share globally"})
+		return
+	}
 
 	repo, ok := getCannedResponseRepo(c)
 	if !ok {
 		return
 	}
-
-	resp, err := repo.GetByID(id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load canned response"})
+	resp, ok := loadAccessibleCannedResponse(c, repo, caller)
+	if !ok {
 		return
 	}
-	if resp == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Canned response not found"})
-		return
-	}
-
-	if !canModifyResponseTyped(resp, userID, userRole) {
+	if !canModifyResponse(resp, caller) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to share this response"})
-		return
-	}
-
-	if req.Scope == "global" && userRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Only administrators can share globally"})
 		return
 	}
 
@@ -454,7 +502,8 @@ func handleShareCannedResponse(c *gin.Context) {
 		resp.TeamID = req.TeamID
 	}
 
-	if err := repo.Update(id, resp, userID); err != nil {
+	if err := repo.Update(resp.ID, resp, caller.userID); err != nil {
+		log.Printf("canned responses: share %d: %v", resp.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to share canned response"})
 		return
 	}
@@ -466,104 +515,83 @@ func handleShareCannedResponse(c *gin.Context) {
 }
 
 func handleCopyCannedResponse(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid response ID"})
+	caller, ok := getCannedResponseCaller(c)
+	if !ok {
 		return
 	}
-
-	userID := getContextInt(c, "user_id")
-	teamID := getContextInt(c, "team_id")
-
 	repo, ok := getCannedResponseRepo(c)
 	if !ok {
 		return
 	}
-
-	source, err := repo.GetByID(id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load canned response"})
-		return
-	}
-	if source == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Canned response not found"})
+	source, ok := loadAccessibleCannedResponse(c, repo, caller)
+	if !ok {
 		return
 	}
 
-	if !canAccessResponseTyped(source, userID, teamID) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have access to this response"})
-		return
-	}
-
-	copy := &CannedResponse{
+	dup := &CannedResponse{
 		Name:         source.Name + " (Copy)",
 		Category:     source.Category,
 		Content:      source.Content,
 		ContentType:  source.ContentType,
 		Tags:         source.Tags,
 		Scope:        "personal",
-		OwnerID:      userID,
+		OwnerID:      caller.userID,
 		Placeholders: source.Placeholders,
 	}
 
-	newID, err := repo.Create(copy, userID)
+	newID, err := repo.Create(dup, caller.userID)
 	if err != nil {
+		log.Printf("canned responses: copy %d: %v", source.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to copy canned response"})
 		return
 	}
 
-	copy.ID = newID
-	copy.CreatedAt = time.Now()
-	copy.UpdatedAt = time.Now()
+	dup.ID = newID
+	dup.CreatedAt = time.Now()
+	dup.UpdatedAt = dup.CreatedAt
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message":  "Canned response copied successfully",
-		"response": copy,
+		"response": dup,
 	})
 }
 
 func handleExportCannedResponses(c *gin.Context) {
-	userID := getContextInt(c, "user_id")
-	teamID := getContextInt(c, "team_id")
-
+	caller, ok := getCannedResponseCaller(c)
+	if !ok {
+		return
+	}
 	repo, ok := getCannedResponseRepo(c)
 	if !ok {
 		return
 	}
 
-	filters := CannedResponseFilters{
-		Scope: c.Query("scope"),
-	}
-
-	responses, err := repo.ListAccessible(userID, teamID, filters)
+	responses, err := repo.ListAccessible(caller.userID, caller.teamID, CannedResponseFilters{Scope: c.Query("scope")})
 	if err != nil {
+		log.Printf("canned responses: export: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load canned responses"})
 		return
 	}
 
-	format := c.DefaultQuery("format", "json")
-
-	if format == "csv" {
+	if c.DefaultQuery("format", "json") == "csv" {
 		c.Header("Content-Type", "text/csv")
 		c.Header("Content-Disposition", "attachment; filename=canned_responses.csv")
 
 		writer := csv.NewWriter(c.Writer)
-		_ = writer.Write([]string{"Name", "Category", "Content", "Tags", "Scope"}) //nolint:errcheck // Best-effort CSV write
-
+		_ = writer.Write([]string{"Name", "Category", "Content", "Tags", "Scope"}) //nolint:errcheck // flushed below
 		for _, r := range responses {
-			_ = writer.Write([]string{ //nolint:errcheck // Best-effort CSV write
-				r.Name,
-				r.Category,
-				r.Content,
-				strings.Join(r.Tags, ","),
-				r.Scope,
-			})
+			_ = writer.Write([]string{r.Name, r.Category, r.Content, strings.Join(r.Tags, ","), r.Scope}) //nolint:errcheck // flushed below
 		}
 		writer.Flush()
+		if err := writer.Error(); err != nil {
+			log.Printf("canned responses: csv export: %v", err)
+		}
 		return
 	}
 
+	if responses == nil {
+		responses = []*CannedResponse{}
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"responses": responses,
 		"count":     len(responses),
@@ -571,7 +599,10 @@ func handleExportCannedResponses(c *gin.Context) {
 }
 
 func handleImportCannedResponses(c *gin.Context) {
-	userID := getContextInt(c, "user_id")
+	caller, ok := getCannedResponseCaller(c)
+	if !ok {
+		return
+	}
 
 	file, _, err := c.Request.FormFile("file")
 	if err != nil {
@@ -585,13 +616,11 @@ func handleImportCannedResponses(c *gin.Context) {
 		return
 	}
 
-	reader := csv.NewReader(file)
-	records, err := reader.ReadAll()
+	records, err := csv.NewReader(file).ReadAll()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid CSV format"})
 		return
 	}
-
 	if len(records) < 2 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "CSV file is empty or has no data rows"})
 		return
@@ -599,31 +628,29 @@ func handleImportCannedResponses(c *gin.Context) {
 
 	imported := 0
 	skipped := 0
-
-	for i, record := range records[1:] {
+	for _, record := range records[1:] {
 		if len(record) < 3 {
 			skipped++
 			continue
 		}
-
 		name := strings.TrimSpace(record[0])
 		if name == "" {
 			skipped++
 			continue
 		}
 
-		exists, _ := repo.CheckDuplicate(name, "personal", userID, 0) //nolint:errcheck // False on error
+		exists, err := repo.CheckDuplicate(name, "personal", caller.userID, 0)
+		if err != nil {
+			log.Printf("canned responses: import duplicate check: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check for duplicates"})
+			return
+		}
 		if exists {
 			skipped++
 			continue
 		}
 
-		category := ""
-		if len(record) > 1 {
-			category = strings.TrimSpace(record[1])
-		}
 		content := strings.TrimSpace(record[2])
-
 		var tags []string
 		if len(record) > 3 && record[3] != "" {
 			tags = strings.Split(record[3], ",")
@@ -634,23 +661,20 @@ func handleImportCannedResponses(c *gin.Context) {
 
 		cr := &CannedResponse{
 			Name:         name,
-			Category:     category,
+			Category:     strings.TrimSpace(record[1]),
 			Content:      content,
 			ContentType:  "text",
 			Tags:         tags,
 			Scope:        "personal",
-			OwnerID:      userID,
+			OwnerID:      caller.userID,
 			Placeholders: extractPlaceholders(content),
 		}
-
-		_, err := repo.Create(cr, userID)
-		if err != nil {
-			skipped++
-			continue
+		if _, err := repo.Create(cr, caller.userID); err != nil {
+			log.Printf("canned responses: import %q: %v", name, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to import canned responses", "imported_count": imported})
+			return
 		}
 		imported++
-
-		_ = i // Suppress unused variable warning
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -665,7 +689,7 @@ func canAccessResponse(resp *CannedResponse, userID int, teamID int) bool {
 	case "personal":
 		return resp.OwnerID == userID
 	case "team":
-		return resp.TeamID == teamID
+		return teamID > 0 && resp.TeamID == teamID
 	case "global":
 		return true
 	default:
@@ -673,35 +697,18 @@ func canAccessResponse(resp *CannedResponse, userID int, teamID int) bool {
 	}
 }
 
-func canAccessResponseTyped(resp *CannedResponse, userID int, teamID int) bool {
-	return canAccessResponse(resp, userID, teamID)
-}
-
-func canModifyResponse(resp *CannedResponse, userID int, userRole interface{}) bool {
-	if userRole == "admin" {
+func canModifyResponse(resp *CannedResponse, caller cannedResponseCaller) bool {
+	if caller.isAdmin {
 		return true
 	}
-	if resp.Scope == "personal" {
-		return resp.OwnerID == userID
-	}
-	return false
-}
-
-func canModifyResponseTyped(resp *CannedResponse, userID int, userRole string) bool {
-	if userRole == "admin" {
-		return true
-	}
-	if resp.Scope == "personal" {
-		return resp.OwnerID == userID
-	}
-	return false
+	return resp.Scope == "personal" && resp.OwnerID == caller.userID
 }
 
 func extractPlaceholders(content string) []string {
 	var placeholders []string
 	seen := make(map[string]bool)
 
-	for i := 0; i < len(content)-3; i++ {
+	for i := range len(content) - 3 {
 		if content[i:i+2] == "{{" {
 			end := strings.Index(content[i+2:], "}}")
 			if end > 0 {
@@ -715,45 +722,4 @@ func extractPlaceholders(content string) []string {
 	}
 
 	return placeholders
-}
-
-// RegisterCannedResponseHandlers registers all canned response API routes.
-func RegisterCannedResponseHandlers(r *gin.RouterGroup) {
-	cr := r.Group("/canned-responses")
-	cr.POST("", handleCreateCannedResponse)
-	cr.GET("", handleGetCannedResponses)
-	cr.GET("/categories", handleGetCannedResponseCategories)
-	cr.GET("/statistics", handleGetCannedResponseStatistics)
-	cr.GET("/export", handleExportCannedResponses)
-	cr.POST("/import", handleImportCannedResponses)
-	cr.GET("/:id", func(c *gin.Context) {
-		idStr := c.Param("id")
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid response ID"})
-			return
-		}
-
-		repo, ok := getCannedResponseRepo(c)
-		if !ok {
-			return
-		}
-
-		resp, err := repo.GetByID(id)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load canned response"})
-			return
-		}
-		if resp == nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Canned response not found"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"response": resp})
-	})
-	cr.PUT("/:id", handleUpdateCannedResponse)
-	cr.DELETE("/:id", handleDeleteCannedResponse)
-	cr.POST("/:id/use", handleUseCannedResponse)
-	cr.POST("/:id/share", handleShareCannedResponse)
-	cr.POST("/:id/copy", handleCopyCannedResponse)
 }

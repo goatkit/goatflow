@@ -2,9 +2,10 @@ package api
 
 import (
 	"fmt"
+	"html"
+	"html/template"
 	"log"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/service"
@@ -47,8 +49,8 @@ func handleGetTicketMessages(c *gin.Context) {
 	// Get messages from the ticket service (real path)
 	ticketService := GetTicketService()
 	if ticketService == nil {
-		// As a last resort in tests, return empty
-		c.JSON(http.StatusOK, gin.H{"success": true, "messages": []string{}, "total": 0, "pagination": gin.H{"page": 1, "per_page": 50, "has_more": false}})
+		log.Printf("handleGetTicketMessages: ticket service unavailable (database not initialised)")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ticket service unavailable"})
 		return
 	}
 	messages, err := ticketService.GetMessages(uint(ticketID))
@@ -64,7 +66,9 @@ func handleGetTicketMessages(c *gin.Context) {
 	}
 
 	// Load sender type colors and apply to messages
-	if db, dbErr := database.GetDB(); dbErr == nil {
+	if db, dbErr := database.GetDB(); dbErr != nil {
+		log.Printf("handleGetTicketMessages: sender colours skipped, database unavailable: %v", dbErr)
+	} else {
 		articleRepo := repository.NewArticleRepository(db)
 		if senderColors, colorErr := articleRepo.GetSenderTypeColors(); colorErr == nil {
 			for _, msg := range messages {
@@ -81,7 +85,7 @@ func handleGetTicketMessages(c *gin.Context) {
 	if c.GetHeader("HX-Request") != "" {
 		// Return HTML fragment for HTMX
 		c.Header("Content-Type", "text/html")
-		c.String(http.StatusOK, renderSimpleMessagesHTML(messages, uint(ticketID)))
+		c.String(http.StatusOK, renderSimpleMessagesHTML(messages))
 		return
 	}
 
@@ -164,20 +168,21 @@ func handleAddTicketMessage(c *gin.Context) {
 
 	// Prepare article representation used in both paths
 	newMessage := models.Article{
-		ID:                   0,
-		TicketID:             int(ticketID),
-		Subject:              message.Subject,
-		Body:                 message.Body,
-		CreateTime:           message.CreatedAt,
-		CreateBy:             int(userID),
-		IsVisibleForCustomer: 1,
-		ArticleTypeID:        models.ArticleTypeNoteExternal,
-		SenderTypeID:         models.SenderTypeAgent,
-		BodyType:             "text/plain",
+		ID:                     0,
+		TicketID:               int(ticketID),
+		Subject:                message.Subject,
+		Body:                   message.Body,
+		CreateTime:             message.CreatedAt,
+		CreateBy:               int(userID),
+		IsVisibleForCustomer:   1,
+		ArticleTypeID:          constants.ArticleTypeNoteExternal,
+		CommunicationChannelID: constants.CommunicationChannelInternal,
+		SenderTypeID:           models.SenderTypeAgent,
+		BodyType:               "text/plain",
 	}
 	if isInternal {
 		newMessage.IsVisibleForCustomer = 0
-		newMessage.ArticleTypeID = models.ArticleTypeNoteInternal
+		newMessage.ArticleTypeID = constants.ArticleTypeNoteInternal
 	}
 	if roleLower == "customer" {
 		newMessage.SenderTypeID = models.SenderTypeCustomer
@@ -185,14 +190,21 @@ func handleAddTicketMessage(c *gin.Context) {
 
 	// Create new article/message using the service (real path)
 	ticketService := GetTicketService()
+	if ticketService == nil {
+		log.Printf("handleAddTicketMessage: ticket service unavailable (database not initialised)")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ticket service unavailable"})
+		return
+	}
 	if err := ticketService.AddMessage(uint(ticketID), message); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "ticket not found"})
 			return
 		}
+		log.Printf("handleAddTicketMessage: add message to ticket %d: %v", ticketID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create message"})
 		return
 	}
+	newMessage.ID = int(message.ID)
 
 	// Check if this is an HTMX request
 	if c.GetHeader("HX-Request") != "" {
@@ -242,22 +254,22 @@ func getCurrentUser(c *gin.Context) (uint, string, string, bool) {
 }
 
 // renderSimpleMessagesHTML renders SimpleTicketMessage objects as HTML.
-func renderSimpleMessagesHTML(messages []*service.SimpleTicketMessage, ticketID uint) string {
+func renderSimpleMessagesHTML(messages []*service.SimpleTicketMessage) string {
 	if len(messages) == 0 {
 		return `<div class="text-gray-500 text-center py-8">No messages found.</div>`
 	}
 
-	html := `<div class="space-y-4">`
+	out := `<div class="space-y-4">`
 	for _, msg := range messages {
-		html += renderSimpleMessageHTML(msg, ticketID)
+		out += renderSimpleMessageHTML(msg)
 	}
-	html += `</div>`
+	out += `</div>`
 
-	return html
+	return out
 }
 
 // renderSimpleMessageHTML renders a single SimpleTicketMessage as HTML.
-func renderSimpleMessageHTML(msg *service.SimpleTicketMessage, ticketID uint) string {
+func renderSimpleMessageHTML(msg *service.SimpleTicketMessage) string {
 	internalBadge := ""
 	if msg.IsInternal {
 		internalBadge = `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200 ml-2">Internal</span>`
@@ -280,30 +292,34 @@ func renderSimpleMessageHTML(msg *service.SimpleTicketMessage, ticketID uint) st
 			<div class="space-y-1">`
 
 		for _, att := range msg.Attachments {
-			// Format file size
+			// att.URL is the article-scoped attachment URL; /thumbnail and
+			// /view hang off it. Names come from senders, so escape them.
+			url := html.EscapeString(att.URL)
+			name := html.EscapeString(att.Filename)
+			ctype := html.EscapeString(att.ContentType)
+			onclick := html.EscapeString(fmt.Sprintf("previewAttachment('%s', '%s', '%s')",
+				template.JSEscapeString(att.URL), template.JSEscapeString(att.Filename),
+				template.JSEscapeString(att.ContentType)))
 			sizeStr := formatFileSize(att.Size)
 			// Use thumbnail for images, icon for others
 			var thumbnailHTML string
 			if service.IsSupportedImageType(att.ContentType) {
-				// Extract attachment ID from URL and use correct thumbnail endpoint
-				attachmentID := extractAttachmentID(att.URL)
-				thumbnailURL := fmt.Sprintf("/api/tickets/%d/attachments/%s/thumbnail", ticketID, attachmentID)
 				thumbnailHTML = fmt.Sprintf(`
 					<div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
-					     onclick="previewAttachment('%s', '%s', '%s')"
+					     onclick="%s"
 					     title="Click to preview">
-						<img src="%s" alt="%s" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+						<img src="%s/thumbnail" alt="%s" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
 						<div class="w-full h-full items-center justify-center hidden">
 							%s
 						</div>
-					</div>`, att.URL, att.Filename, att.ContentType, thumbnailURL, att.Filename, getAttachmentIcon(att.ContentType))
+					</div>`, onclick, url, name, getAttachmentIcon(att.ContentType))
 			} else {
 				thumbnailHTML = fmt.Sprintf(`
 					<div class="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-gray-500 transition-all"
-					     onclick="previewAttachment('%s', '%s', '%s')"
+					     onclick="%s"
 					     title="Click to preview">
 						%s
-					</div>`, att.URL, att.Filename, att.ContentType, getAttachmentIcon(att.ContentType))
+					</div>`, onclick, getAttachmentIcon(att.ContentType))
 			}
 
 			attachmentsHTML += fmt.Sprintf(`
@@ -332,9 +348,9 @@ func renderSimpleMessageHTML(msg *service.SimpleTicketMessage, ticketID uint) st
 						</a>
 					</div>
 				</div>`,
-				att.URL, att.Filename, att.ContentType,
-				thumbnailHTML, att.URL, att.Filename, att.ContentType, sizeStr,
-				att.URL, att.URL)
+				url, name, ctype,
+				thumbnailHTML, url, name, ctype, sizeStr,
+				url, url)
 		}
 
 		attachmentsHTML += `</div></div>`
@@ -540,14 +556,4 @@ func getAttachmentIcon(contentType string) string {
 	return `<svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
 	</svg>`
-}
-
-// extractAttachmentID extracts the attachment ID from a URL like /api/attachments/123/download.
-func extractAttachmentID(url string) string {
-	re := regexp.MustCompile(`/attachments/(\d+)/`)
-	matches := re.FindStringSubmatch(url)
-	if len(matches) > 1 {
-		return matches[1]
-	}
-	return ""
 }

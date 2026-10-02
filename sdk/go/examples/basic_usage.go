@@ -1,212 +1,107 @@
+// Command basic_usage walks through the GoatFlow Go SDK against a live server.
+//
+//	GOATFLOW_URL=https://goatflow.example.com GOATFLOW_TOKEN=gf_... go run ./examples
+//
+// Set GOATFLOW_QUEUE_ID to also create a ticket in that queue, add a note to
+// it and close it again.
 package main
 
 import (
 	"context"
 	"fmt"
 	"log"
-	"time"
+	"os"
+	"strconv"
 
+	"github.com/goatkit/goatflow/sdk/go/client"
+	sdkerrors "github.com/goatkit/goatflow/sdk/go/errors"
 	"github.com/goatkit/goatflow/sdk/go/types"
 )
 
 func main() {
-	// Initialize client with API key
-	client := goatflow.NewClientWithAPIKey("https://your-goatflow-instance.com", "your-api-key")
-
+	baseURL, token := os.Getenv("GOATFLOW_URL"), os.Getenv("GOATFLOW_TOKEN")
+	if baseURL == "" || token == "" {
+		log.Fatal("set GOATFLOW_URL and GOATFLOW_TOKEN (an API token, gf_...)")
+	}
+	gf := client.NewClientWithAPIKey(baseURL, token)
 	ctx := context.Background()
 
-	// Test connection
-	if err := client.Ping(ctx); err != nil {
-		log.Fatalf("Failed to connect to GoatFlow: %v", err)
+	health, err := gf.Health(ctx)
+	if err != nil {
+		log.Fatalf("health check: %v", err)
 	}
-	fmt.Println("✅ Connected to GoatFlow successfully")
+	fmt.Printf("GoatFlow %s is %s\n", health.Version, health.Status)
 
-	// List tickets
-	fmt.Println("\n📋 Listing tickets...")
-	tickets, err := client.Tickets.List(ctx, &types.TicketListOptions{
-		PageSize: 10,
-		Status:   []string{"open", "pending"},
+	me, err := gf.Users.Me(ctx)
+	if err != nil {
+		log.Fatalf("who am I: %v", err)
+	}
+	fmt.Printf("Authenticated as %s (%s %s)\n", me.Login, me.FirstName, me.LastName)
+
+	tickets, err := gf.Tickets.List(ctx, &types.TicketListOptions{PerPage: 5, Status: "open"})
+	if err != nil {
+		log.Fatalf("list tickets: %v", err)
+	}
+	fmt.Printf("%d open tickets, showing %d:\n", tickets.Pagination.Total, len(tickets.Tickets))
+	for _, t := range tickets.Tickets {
+		fmt.Printf("  #%s %s [%s, %s, %s]\n", t.TicketNumber, t.Title, t.QueueName, t.StateName, t.PriorityName)
+	}
+
+	queues, err := gf.Queues.List(ctx, nil)
+	if err != nil {
+		log.Fatalf("list queues: %v", err)
+	}
+	fmt.Printf("%d queues readable\n", len(queues))
+
+	if _, err := gf.Tickets.Get(ctx, 999999999); sdkerrors.IsNotFound(err) {
+		fmt.Println("Ticket 999999999 does not exist (404 as *errors.APIError)")
+	}
+
+	queueID, _ := strconv.ParseUint(os.Getenv("GOATFLOW_QUEUE_ID"), 10, 32) //nolint:errcheck // unset means skip
+	if queueID == 0 {
+		return
+	}
+
+	created, err := gf.Tickets.Create(ctx, &types.TicketCreateRequest{
+		Title:   "SDK example ticket",
+		QueueID: uint(queueID),
+		Body:    "Created by the GoatFlow Go SDK example.",
 	})
 	if err != nil {
-		log.Fatalf("Failed to list tickets: %v", err)
+		log.Fatalf("create ticket: %v", err)
 	}
-	fmt.Printf("Found %d tickets\n", tickets.TotalCount)
+	fmt.Printf("Created ticket #%s (id %d)\n", created.TN, created.ID)
 
-	for _, ticket := range tickets.Tickets {
-		fmt.Printf("- #%s: %s (Status: %s, Priority: %s)\n",
-			ticket.TicketNumber, ticket.Title, ticket.Status, ticket.Priority)
-	}
-
-	// Create a new ticket
-	fmt.Println("\n🎫 Creating a new ticket...")
-	newTicket, err := client.Tickets.Create(ctx, &types.TicketCreateRequest{
-		Title:       "SDK Test Ticket",
-		Description: "This ticket was created using the Go SDK",
-		Priority:    "normal",
-		Type:        "incident",
-		QueueID:     1,
-		CustomerID:  1,
-		Tags:        []string{"sdk", "test"},
+	note, err := gf.Articles.Create(ctx, created.ID, &types.ArticleCreateRequest{
+		Subject:     "Internal note",
+		Body:        "Added by the SDK example.",
+		ArticleType: "note-internal",
 	})
 	if err != nil {
-		log.Fatalf("Failed to create ticket: %v", err)
+		log.Fatalf("add note: %v", err)
 	}
-	fmt.Printf("✅ Created ticket #%s with ID %d\n", newTicket.TicketNumber, newTicket.ID)
+	fmt.Printf("Added article %d (%s)\n", note.ID, note.ArticleType)
 
-	// Add a message to the ticket
-	fmt.Println("\n💬 Adding a message...")
-	message, err := client.Tickets.AddMessage(ctx, newTicket.ID, &types.MessageCreateRequest{
-		Content:     "This is a test message added via the SDK",
-		MessageType: "note",
-		IsInternal:  false,
-	})
-	if err != nil {
-		log.Fatalf("Failed to add message: %v", err)
+	// State ids differ between installations; resolve the state by name.
+	var states []struct {
+		ID   uint   `json:"id"`
+		Name string `json:"name"`
 	}
-	fmt.Printf("✅ Added message with ID %d\n", message.ID)
-
-	// Update ticket priority
-	fmt.Println("\n🔄 Updating ticket priority...")
-	priority := "high"
-	updatedTicket, err := client.Tickets.Update(ctx, newTicket.ID, &types.TicketUpdateRequest{
-		Priority: &priority,
-	})
-	if err != nil {
-		log.Fatalf("Failed to update ticket: %v", err)
+	if err := gf.Get(ctx, "/api/v1/states", &states); err != nil {
+		log.Fatalf("list states: %v", err)
 	}
-	fmt.Printf("✅ Updated ticket priority to %s\n", updatedTicket.Priority)
-
-	// Assign ticket to user
-	fmt.Println("\n👤 Assigning ticket...")
-	assignedTicket, err := client.Tickets.Assign(ctx, newTicket.ID, 1) // Assign to user ID 1
-	if err != nil {
-		log.Fatalf("Failed to assign ticket: %v", err)
-	}
-	fmt.Printf("✅ Assigned ticket to user ID %d\n", *assignedTicket.AssignedTo)
-
-	// Search tickets
-	fmt.Println("\n🔍 Searching tickets...")
-	searchResults, err := client.Tickets.Search(ctx, "SDK", &types.TicketListOptions{
-		PageSize: 5,
-	})
-	if err != nil {
-		log.Fatalf("Failed to search tickets: %v", err)
-	}
-	fmt.Printf("Found %d tickets matching 'SDK'\n", searchResults.TotalCount)
-
-	// Get dashboard stats
-	fmt.Println("\n📊 Getting dashboard statistics...")
-	stats, err := client.Dashboard.GetStats(ctx)
-	if err != nil {
-		log.Fatalf("Failed to get dashboard stats: %v", err)
-	}
-	fmt.Printf("📈 Dashboard Stats:\n")
-	fmt.Printf("  Total Tickets: %d\n", stats.TotalTickets)
-	fmt.Printf("  Open Tickets: %d\n", stats.OpenTickets)
-	fmt.Printf("  Closed Tickets: %d\n", stats.ClosedTickets)
-	fmt.Printf("  My Tickets: %d\n", stats.MyTickets)
-
-	// Get user profile
-	fmt.Println("\n👤 Getting user profile...")
-	profile, err := client.Auth.GetProfile(ctx)
-	if err != nil {
-		log.Fatalf("Failed to get profile: %v", err)
-	}
-	fmt.Printf("Logged in as: %s %s (%s)\n", profile.FirstName, profile.LastName, profile.Email)
-
-	// Close the test ticket
-	fmt.Println("\n🔒 Closing test ticket...")
-	closedTicket, err := client.Tickets.Close(ctx, newTicket.ID, "Test completed")
-	if err != nil {
-		log.Fatalf("Failed to close ticket: %v", err)
-	}
-	fmt.Printf("✅ Closed ticket #%s\n", closedTicket.TicketNumber)
-
-	fmt.Println("\n✨ SDK example completed successfully!")
-}
-
-// Example of error handling
-func handleTicketOperations(client *goatflow.Client) {
-	ctx := context.Background()
-
-	// Example with proper error handling
-	ticket, err := client.Tickets.Get(ctx, 12345)
-	if err != nil {
-		if goatflow.IsNotFound(err) {
-			fmt.Println("Ticket not found")
-			return
-		}
-		if goatflow.IsUnauthorized(err) {
-			fmt.Println("Authentication failed")
-			return
-		}
-		if goatflow.IsRateLimited(err) {
-			fmt.Println("Rate limit exceeded, retrying later...")
-			time.Sleep(time.Minute)
-			return
-		}
-		log.Fatalf("Unexpected error: %v", err)
-	}
-
-	fmt.Printf("Found ticket: %s\n", ticket.Title)
-}
-
-// Example of using different authentication methods
-func authenticationExamples() {
-	// API Key authentication
-	client1 := goatflow.NewClientWithAPIKey("https://goatflow.example.com", "your-api-key")
-
-	// JWT authentication
-	expiresAt := time.Now().Add(24 * time.Hour)
-	client2 := goatflow.NewClientWithJWT("https://goatflow.example.com", "jwt-token", "refresh-token", expiresAt)
-
-	// OAuth2 authentication
-	oauth2Auth := goatflow.NewOAuth2Auth("access-token", "refresh-token", "Bearer", expiresAt)
-	client3 := goatflow.NewClient(&goatflow.Config{
-		BaseURL: "https://goatflow.example.com",
-		Auth:    oauth2Auth,
-		Timeout: 30 * time.Second,
-		Debug:   true,
-	})
-
-	// Use the clients...
-	_ = client1
-	_ = client2
-	_ = client3
-}
-
-// Example of concurrent operations
-func concurrentOperations(client *goatflow.Client) {
-	ctx := context.Background()
-
-	// Create multiple tickets concurrently
-	type ticketResult struct {
-		ticket *types.Ticket
-		err    error
-	}
-
-	results := make(chan ticketResult, 5)
-
-	for i := 0; i < 5; i++ {
-		go func(index int) {
-			ticket, err := client.Tickets.Create(ctx, &types.TicketCreateRequest{
-				Title:       fmt.Sprintf("Concurrent Ticket %d", index),
-				Description: fmt.Sprintf("Created concurrently #%d", index),
-				Priority:    "normal",
-				QueueID:     1,
-				CustomerID:  1,
-			})
-			results <- ticketResult{ticket: ticket, err: err}
-		}(i)
-	}
-
-	// Collect results
-	for i := 0; i < 5; i++ {
-		result := <-results
-		if result.err != nil {
-			fmt.Printf("Failed to create ticket: %v\n", result.err)
-		} else {
-			fmt.Printf("Created ticket #%s\n", result.ticket.TicketNumber)
+	var closedState uint
+	for _, s := range states {
+		if s.Name == "closed successful" {
+			closedState = s.ID
 		}
 	}
+	if closedState == 0 {
+		log.Fatal(`no "closed successful" ticket state`)
+	}
+	updated, err := gf.Tickets.Update(ctx, created.ID, &types.TicketUpdateRequest{StateID: &closedState})
+	if err != nil {
+		log.Fatalf("close ticket: %v", err)
+	}
+	fmt.Printf("Ticket %d now in state %d\n", updated.ID, updated.StateID)
 }

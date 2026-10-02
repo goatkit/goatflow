@@ -14,9 +14,7 @@ import (
 
 func TestAdminRolePermissionsUI(t *testing.T) {
 	browser := helpers.NewBrowserHelper(t)
-	if browser.Config.AdminEmail == "" || browser.Config.AdminPassword == "" {
-		t.Skip("Admin credentials not configured")
-	}
+
 	err := browser.Setup()
 	require.NoError(t, err)
 	defer browser.TearDown()
@@ -41,9 +39,7 @@ func TestAdminRolePermissionsUI(t *testing.T) {
 
 		// Check page title
 		pageTitle := browser.Page.Locator("h1:has-text('Role Permissions')")
-		if count(t, pageTitle) == 0 {
-			t.Skip("role permissions page not reachable")
-		}
+		require.Greater(t, count(t, pageTitle), 0, "role permissions page not reachable")
 
 		// Check for Save Permissions button
 		saveButton := browser.Page.Locator("button:has-text('Save Permissions')")

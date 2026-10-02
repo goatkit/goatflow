@@ -16,7 +16,6 @@ type DatabaseService interface {
 
 	// Database operations
 	Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row
 	Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 
 	// Transaction support

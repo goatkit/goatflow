@@ -64,6 +64,22 @@ func wordFilter(words []string, clause string) (string, []interface{}) {
 	return " WHERE " + strings.Join(parts, " AND "), args
 }
 
+// queueFilter returns the " AND ..." clause restricting t.queue_id to
+// query.QueueIDs when the query is queue-restricted ("" otherwise).
+func queueFilter(query SearchQuery) (string, []interface{}) {
+	if !query.RestrictQueues {
+		return "", nil
+	}
+	if len(query.QueueIDs) == 0 {
+		return " AND 1 = 0", nil
+	}
+	args := make([]interface{}, len(query.QueueIDs))
+	for i, id := range query.QueueIDs {
+		args[i] = id
+	}
+	return " AND t.queue_id IN (?" + strings.Repeat(", ?", len(args)-1) + ")", args
+}
+
 // Search searches the requested entity types. Hits are concatenated in the
 // order of query.Types, each type ordered by relevance, then paginated.
 func (db *DatabaseBackend) Search(ctx context.Context, query SearchQuery) (*SearchResults, error) {
@@ -147,6 +163,9 @@ const ticketWordClause = "(LOWER(t.tn)" + likeMatch +
 // subjects/bodies.
 func (db *DatabaseBackend) searchTickets(ctx context.Context, query SearchQuery, words []string, fetch int) ([]SearchHit, int, error) {
 	where, whereArgs := wordFilter(words, ticketWordClause)
+	qf, qfArgs := queueFilter(query)
+	where += qf
+	whereArgs = append(whereArgs, qfArgs...)
 
 	for _, f := range []struct{ key, column string }{
 		{"queue_id", "t.queue_id"},
@@ -251,6 +270,9 @@ const articleWordClause = "(LOWER(adm.a_subject)" + likeMatch +
 // searchArticles matches article subject, body and sender.
 func (db *DatabaseBackend) searchArticles(ctx context.Context, query SearchQuery, words []string, fetch int) ([]SearchHit, int, error) {
 	where, whereArgs := wordFilter(words, articleWordClause)
+	qf, qfArgs := queueFilter(query)
+	where += qf
+	whereArgs = append(whereArgs, qfArgs...)
 
 	total, err := db.count(ctx, articleFrom, where, whereArgs)
 	if err != nil {

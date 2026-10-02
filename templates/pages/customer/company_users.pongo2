@@ -1,10 +1,57 @@
 {% extends "layouts/base.pongo2" %}
-{% block title %}{{ t("customer.placeholder_pages.company_users_title") }} - GoatFlow{% endblock %}
+
+{% block title %}{{ t("customer.nav.company_users") }} - {{ Portal.Title }}{% endblock %}
+
 {% block content %}
-<div class="container mx-auto py-8">
-    <h1 class="text-2xl font-bold gk-heading mb-4"><span class="gk-text-gradient">{{ t("customer.placeholder_pages.company_users_title") }}</span></h1>
-    <div class="gk-card-glow rounded-lg p-6">
-        <p style="color: var(--gk-text-muted);">{{ t("customer.placeholder_pages.under_construction") }}</p>
+<div class="container mx-auto py-4 sm:py-6">
+    <nav class="flex items-center text-sm mb-4" aria-label="Breadcrumb">
+        <a href="/customer" class="gk-link-neon">{{ t("customer.nav.dashboard") }}</a>
+        <svg class="mx-2 h-4 w-4" style="color: var(--gk-text-muted);" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
+        <a href="/customer/company" class="gk-link-neon">{{ t("customer.nav.company_info") }}</a>
+        <svg class="mx-2 h-4 w-4" style="color: var(--gk-text-muted);" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
+        <span class="font-medium" style="color: var(--gk-text-primary);">{{ t("customer.nav.company_users") }}</span>
+    </nav>
+
+    <h1 class="text-2xl font-bold gk-heading mb-4"><span class="gk-text-gradient">{{ t("customer.nav.company_users") }}</span></h1>
+
+    {% if Company %}
+    <div class="gk-card-glow">
+        <div class="gk-card-header">
+            <h2 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ Company.Name }}</h2>
+            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("customer.company_page.users_description") }}</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="gk-table" id="company-users">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ t("customer.company_page.columns.name") }}</th>
+                        <th scope="col">{{ t("customer.company_page.columns.title") }}</th>
+                        <th scope="col">{{ t("customer.company_page.columns.email") }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in Users %}
+                    <tr>
+                        <td>
+                            {{ u.FullName }}
+                            {% if u.IsSelf %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style="background: var(--gk-primary-subtle); color: var(--gk-primary);">{{ t("customer.company_page.you") }}</span>{% endif %}
+                        </td>
+                        <td>{{ u.Title }}</td>
+                        <td><a href="mailto:{{ u.Email }}" class="gk-link-neon">{{ u.Email }}</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="px-6 py-12 text-center text-sm" style="color: var(--gk-text-muted);">{{ t("customer.company_page.no_users") }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
+    {% else %}
+    <div class="gk-card-glow p-6" id="company-none">
+        <p style="color: var(--gk-text-secondary);">{{ t("customer.company_page.no_company") }}</p>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

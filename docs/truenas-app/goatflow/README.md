@@ -27,8 +27,10 @@ plugin system, with MariaDB and Valkey bundled in the app.
   is not supported for data written by new columns.
 - The `permissions` sidecar re-chowns the plugin dataset after every start, so
   plugin ownership survives upgrades.
-- `PASSWORD_HASH_TYPE` stays `sha256` (OTRS-compatible); moving to argon2/bcrypt
-  later requires a one-off `MIGRATE_PASSWORD_HASHES=true` backfill.
+- New passwords are hashed with bcrypt (`PASSWORD_HASH_TYPE=bcrypt`). Imported
+  OTRS sha2 hashes still log in. Set `MIGRATE_PASSWORD_HASHES=true` to rehash each
+  such password to bcrypt on that user's next successful login. Use
+  `PASSWORD_HASH_TYPE=sha256` only while an OTRS must read the same user tables.
 
 ## Notes
 

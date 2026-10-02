@@ -1,96 +1,84 @@
-// Package webhooks provides webhook event types and payload definitions.
+// Package webhooks defines the ticket and article events GoatFlow publishes to
+// outbound webhooks and turns database changes into those events.
 package webhooks
 
-import (
-	"time"
-)
-
-// EventType represents the type of event that triggers a webhook.
-type EventType string
-
+// Event types a webhook can subscribe to.
 const (
-	// Ticket events.
-	EventTicketCreated   EventType = "ticket.created"
-	EventTicketUpdated   EventType = "ticket.updated"
-	EventTicketClosed    EventType = "ticket.closed"
-	EventTicketReopened  EventType = "ticket.reopened"
-	EventTicketAssigned  EventType = "ticket.assigned"
-	EventTicketEscalated EventType = "ticket.escalated"
-
-	// Article events.
-	EventArticleCreated EventType = "article.created"
-	EventArticleUpdated EventType = "article.updated"
-	EventArticleDeleted EventType = "article.deleted"
-
-	// Customer events.
-	EventCustomerCreated EventType = "customer.created"
-	EventCustomerUpdated EventType = "customer.updated"
-
-	// SLA events.
-	EventSLABreached EventType = "sla.breached"
-	EventSLAWarning  EventType = "sla.warning"
-
-	// Queue events.
-	EventQueueThreshold EventType = "queue.threshold"
+	EventTicketCreated         = "ticket.created"
+	EventTicketUpdated         = "ticket.updated"
+	EventTicketStateChanged    = "ticket.state_changed"
+	EventTicketClosed          = "ticket.closed"
+	EventTicketQueueMoved      = "ticket.queue_moved"
+	EventTicketAssigned        = "ticket.assigned"
+	EventTicketPriorityChanged = "ticket.priority_changed"
+	EventTicketMerged          = "ticket.merged"
+	EventTicketEscalated       = "ticket.escalated"
+	EventArticleCreated        = "article.created"
 )
 
-// AllEventTypes returns all available event types.
-func AllEventTypes() []EventType {
-	return []EventType{
-		EventTicketCreated, EventTicketUpdated, EventTicketClosed,
-		EventTicketReopened, EventTicketAssigned, EventTicketEscalated,
-		EventArticleCreated, EventArticleUpdated, EventArticleDeleted,
-		EventCustomerCreated, EventCustomerUpdated,
-		EventSLABreached, EventSLAWarning,
-		EventQueueThreshold,
+// EventInfo describes one subscribable event.
+type EventInfo struct {
+	Event       string `json:"event"`
+	Description string `json:"description"`
+}
+
+// Events is the catalogue of subscribable events, in display order.
+var Events = []EventInfo{
+	{EventTicketCreated, "A ticket was created (any channel)."},
+	{EventTicketUpdated, "Ticket title, customer, type, service, SLA, responsible, lock, pending time or a dynamic field changed."},
+	{EventTicketStateChanged, "The ticket state changed to a state that is not closed."},
+	{EventTicketClosed, "The ticket state changed to a closed state."},
+	{EventTicketQueueMoved, "The ticket moved to another queue."},
+	{EventTicketAssigned, "The ticket owner changed."},
+	{EventTicketPriorityChanged, "The ticket priority changed."},
+	{EventTicketMerged, "The ticket was merged."},
+	{EventTicketEscalated, "A response, update or solution time escalation started."},
+	{EventArticleCreated, "An article (note, reply, email, phone call, web request) was added to a ticket."},
+}
+
+// IsEvent reports whether name is a subscribable event.
+func IsEvent(name string) bool {
+	for _, e := range Events {
+		if e.Event == name {
+			return true
+		}
 	}
+	return false
 }
 
-// Event represents an event that can trigger webhooks.
-type Event struct {
-	Type      EventType              `json:"event_type"`
-	Timestamp time.Time              `json:"timestamp"`
-	Data      map[string]interface{} `json:"data"`
-	UserID    int                    `json:"user_id,omitempty"`
-	Source    string                 `json:"source"`
+// historyEvents maps OTRS ticket_history types to events. History types not
+// listed here (article history, notifications, time accounting, ...) do not
+// produce events; articles are published from the article table instead.
+var historyEvents = map[string]string{
+	"Move":                        EventTicketQueueMoved,
+	"OwnerUpdate":                 EventTicketAssigned,
+	"PriorityUpdate":              EventTicketPriorityChanged,
+	"Merged":                      EventTicketMerged,
+	"EscalationResponseTimeStart": EventTicketEscalated,
+	"EscalationUpdateTimeStart":   EventTicketEscalated,
+	"EscalationSolutionTimeStart": EventTicketEscalated,
+	"TitleUpdate":                 EventTicketUpdated,
+	"CustomerUpdate":              EventTicketUpdated,
+	"TypeUpdate":                  EventTicketUpdated,
+	"ServiceUpdate":               EventTicketUpdated,
+	"SLAUpdate":                   EventTicketUpdated,
+	"ResponsibleUpdate":           EventTicketUpdated,
+	"Lock":                        EventTicketUpdated,
+	"Unlock":                      EventTicketUpdated,
+	"SetPendingTime":              EventTicketUpdated,
+	"TicketDynamicFieldUpdate":    EventTicketUpdated,
+	"ArchiveFlagUpdate":           EventTicketUpdated,
 }
 
-// Webhook represents a configured webhook endpoint.
-type Webhook struct {
-	ID             int               `json:"id"`
-	Name           string            `json:"name"`
-	URL            string            `json:"url"`
-	Secret         string            `json:"secret,omitempty"`
-	Events         []string          `json:"events"`
-	Active         bool              `json:"active"`
-	RetryCount     int               `json:"retry_count"`
-	TimeoutSeconds int               `json:"timeout_seconds"`
-	Headers        map[string]string `json:"headers,omitempty"`
-	CreateTime     time.Time         `json:"create_time"`
-	CreateBy       int               `json:"create_by"`
-	ChangeTime     time.Time         `json:"change_time"`
-	ChangeBy       int               `json:"change_by"`
-}
-
-// WebhookDelivery represents a webhook delivery attempt.
-type WebhookDelivery struct {
-	ID          int        `json:"id"`
-	WebhookID   int        `json:"webhook_id"`
-	EventType   string     `json:"event_type"`
-	Payload     string     `json:"payload"`
-	StatusCode  int        `json:"status_code"`
-	Response    string     `json:"response,omitempty"`
-	Attempts    int        `json:"attempts"`
-	DeliveredAt *time.Time `json:"delivered_at,omitempty"`
-	NextRetry   *time.Time `json:"next_retry,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	Success     bool       `json:"success"`
-}
-
-// WebhookPayload represents the payload sent to webhook endpoints.
-type WebhookPayload struct {
-	Event     EventType              `json:"event"`
-	Timestamp time.Time              `json:"timestamp"`
-	Data      map[string]interface{} `json:"data"`
-	Signature string                 `json:"signature,omitempty"`
+// historyEvent returns the event for a ticket_history row; stateType is the
+// ticket_state_type name of the state recorded on that row.
+func historyEvent(historyType, stateType string) (string, bool) {
+	if historyType == "StateUpdate" {
+		if stateType == "closed" {
+			return EventTicketClosed, true
+		}
+		return EventTicketStateChanged, true
+	}
+	e, ok := historyEvents[historyType]
+	return e, ok
 }

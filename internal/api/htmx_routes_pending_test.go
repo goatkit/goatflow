@@ -6,12 +6,13 @@ func TestIsPendingAutoState(t *testing.T) {
 	cases := []struct {
 		name      string
 		stateName string
-		stateType int
+		stateType string
 		expected  bool
 	}{
-		{"typeMatch", "waiting on response", pendingAutoStateTypeID, true},
-		{"nameMatch", "Pending Auto-Close+", 1, true},
-		{"noMatch", "open", 1, false},
+		{"typeMatch", "waiting on response", "pending auto", true},
+		{"nameMatch", "Pending Auto-Close+", "new", true},
+		{"reminderTypeIsNotAuto", "waiting", "pending reminder", false},
+		{"noMatch", "open", "open", false},
 	}
 
 	for _, tc := range cases {

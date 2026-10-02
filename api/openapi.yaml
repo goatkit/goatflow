@@ -1281,278 +1281,6 @@ paths:
         '404':
           $ref: '#/components/responses/NotFoundError'
 
-  /api/v1/dashboard/stats:
-    get:
-      summary: Get dashboard statistics
-      description: Returns aggregated statistics for the dashboard
-      operationId: getDashboardStats
-      tags:
-        - Dashboard
-      responses:
-        '200':
-          description: Dashboard statistics
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      total_tickets:
-                        type: integer
-                      open_tickets:
-                        type: integer
-                      pending_tickets:
-                        type: integer
-                      closed_today:
-                        type: integer
-                      avg_response_time:
-                        type: string
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
-  /api/v1/dashboard/charts/tickets-by-status:
-    get:
-      summary: Get tickets by status chart data
-      description: Returns ticket counts grouped by status for charting
-      operationId: getTicketsByStatusChart
-      tags:
-        - Dashboard
-      responses:
-        '200':
-          description: Chart data
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      labels:
-                        type: array
-                        items:
-                          type: string
-                      values:
-                        type: array
-                        items:
-                          type: integer
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
-  /api/v1/dashboard/charts/tickets-by-priority:
-    get:
-      summary: Get tickets by priority chart data
-      description: Returns ticket counts grouped by priority for charting
-      operationId: getTicketsByPriorityChart
-      tags:
-        - Dashboard
-      responses:
-        '200':
-          description: Chart data
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      labels:
-                        type: array
-                        items:
-                          type: string
-                      values:
-                        type: array
-                        items:
-                          type: integer
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
-  /api/v1/dashboard/charts/tickets-over-time:
-    get:
-      summary: Get tickets over time chart data
-      description: Returns ticket creation trends over time
-      operationId: getTicketsOverTimeChart
-      tags:
-        - Dashboard
-      parameters:
-        - name: days
-          in: query
-          schema:
-            type: integer
-            default: 30
-      responses:
-        '200':
-          description: Chart data with daily ticket counts
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      labels:
-                        type: array
-                        items:
-                          type: string
-                      created:
-                        type: array
-                        items:
-                          type: integer
-                      closed:
-                        type: array
-                        items:
-                          type: integer
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
-  /api/v1/dashboard/activity:
-    get:
-      summary: Get recent activity
-      description: Returns recent ticket activity for the current user
-      operationId: getRecentActivity
-      tags:
-        - Dashboard
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-      responses:
-        '200':
-          description: Recent activity list
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        ticket_id:
-                          type: integer
-                        ticket_number:
-                          type: string
-                        action:
-                          type: string
-                        timestamp:
-                          type: string
-                          format: date-time
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
-  /api/v1/dashboard/my-tickets:
-    get:
-      summary: Get my assigned tickets
-      description: Returns tickets assigned to the current user
-      operationId: getMyTickets
-      tags:
-        - Dashboard
-      responses:
-        '200':
-          description: List of assigned tickets
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Ticket'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
-  /api/v1/dashboard/notifications:
-    get:
-      summary: Get notifications
-      description: Returns notifications for the current user
-      operationId: getNotifications
-      tags:
-        - Dashboard
-      parameters:
-        - name: unread_only
-          in: query
-          schema:
-            type: boolean
-            default: false
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-      responses:
-        '200':
-          description: List of notifications
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        type:
-                          type: string
-                        message:
-                          type: string
-                        ticket_id:
-                          type: integer
-                        read:
-                          type: boolean
-                        created_at:
-                          type: string
-                          format: date-time
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
-  /api/v1/dashboard/notifications/{notificationId}/read:
-    post:
-      summary: Mark notification as read
-      description: Mark a specific notification as read
-      operationId: markNotificationRead
-      tags:
-        - Dashboard
-      parameters:
-        - name: notificationId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Notification marked as read
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
   /api/v1/search:
     get:
       summary: Global search
@@ -2122,15 +1850,22 @@ paths:
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
-  /api/v1/admin/webhooks:
+  /api/v1/webhooks:
     get:
       summary: List webhooks
-      description: Retrieve all configured webhooks
+      description: List all outbound webhooks (admin only), ordered by name.
       operationId: listWebhooks
       tags:
         - Webhooks
       security:
         - bearerAuth: []
+      parameters:
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Only active (true) or inactive (false) webhooks
       responses:
         '200':
           description: List of webhooks
@@ -2138,6 +1873,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WebhookListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -2145,7 +1882,13 @@ paths:
 
     post:
       summary: Create webhook
-      description: Create a new webhook configuration
+      description: |
+        Create an outbound webhook. Subscribed events are POSTed as JSON
+        (`{"event", "occurred_at", "data"}`) with headers `X-Webhook-Event`,
+        `X-Webhook-Delivery` and, when a secret is set,
+        `X-Webhook-Signature: sha256=<hex HMAC-SHA256 of the raw body>`.
+        Any 2xx response counts as delivered; failures are retried
+        `retry_count` times with exponential backoff (30s, 1m, 2m, ... max 1h).
       operationId: createWebhook
       tags:
         - Webhooks
@@ -2156,10 +1899,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateWebhookRequest'
+              $ref: '#/components/schemas/WebhookRequest'
       responses:
         '201':
-          description: Webhook created successfully
+          description: Webhook created
           content:
             application/json:
               schema:
@@ -2170,146 +1913,21 @@ paths:
           $ref: '#/components/responses/UnauthorizedError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
+        '409':
+          description: A webhook with this name already exists
 
-  /api/v1/admin/webhooks/{webhookId}:
+  /api/v1/webhooks/events:
     get:
-      summary: Get webhook
-      description: Retrieve a specific webhook configuration
-      operationId: getWebhook
+      summary: List webhook events
+      description: Events a webhook can subscribe to.
+      operationId: listWebhookEvents
       tags:
         - Webhooks
-      parameters:
-        - name: webhookId
-          in: path
-          required: true
-          schema:
-            type: integer
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Webhook details
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WebhookResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-    put:
-      summary: Update webhook
-      description: Update a webhook configuration
-      operationId: updateWebhook
-      tags:
-        - Webhooks
-      parameters:
-        - name: webhookId
-          in: path
-          required: true
-          schema:
-            type: integer
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateWebhookRequest'
-      responses:
-        '200':
-          description: Webhook updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WebhookResponse'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-    delete:
-      summary: Delete webhook
-      description: Delete a webhook configuration
-      operationId: deleteWebhook
-      tags:
-        - Webhooks
-      parameters:
-        - name: webhookId
-          in: path
-          required: true
-          schema:
-            type: integer
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Webhook deleted successfully
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/admin/webhooks/{webhookId}/test:
-    post:
-      summary: Test webhook
-      description: Send a test payload to verify webhook configuration
-      operationId: testWebhook
-      tags:
-        - Webhooks
-      parameters:
-        - name: webhookId
-          in: path
-          required: true
-          schema:
-            type: integer
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Test result
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  response_code:
-                    type: integer
-                  response_time_ms:
-                    type: integer
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/admin/webhooks/{webhookId}/deliveries:
-    get:
-      summary: Get webhook deliveries
-      description: Get delivery history for a webhook
-      operationId: getWebhookDeliveries
-      tags:
-        - Webhooks
-      parameters:
-        - name: webhookId
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-            maximum: 100
-      responses:
-        '200':
-          description: Delivery history
+          description: Event catalogue
           content:
             application/json:
               schema:
@@ -2322,205 +1940,146 @@ paths:
                     items:
                       type: object
                       properties:
-                        id:
-                          type: integer
                         event:
+                          $ref: '#/components/schemas/WebhookEvent'
+                        description:
                           type: string
-                        status:
-                          type: string
-                          enum: [pending, success, failed]
-                        response_code:
-                          type: integer
-                        created_at:
-                          type: string
-                          format: date-time
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
 
-  /api/v1/admin/webhooks/{webhookId}/deliveries/{deliveryId}:
+  /api/v1/webhooks/{webhookId}:
+    parameters:
+      - name: webhookId
+        in: path
+        required: true
+        schema:
+          type: integer
     get:
-      summary: Get webhook delivery
-      description: Get details of a specific delivery
-      operationId: getWebhookDelivery
-      tags:
-        - Webhooks
-      parameters:
-        - name: webhookId
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: deliveryId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Delivery details
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      id:
-                        type: integer
-                      webhook_id:
-                        type: integer
-                      event:
-                        type: string
-                      status:
-                        type: string
-                      request_body:
-                        type: string
-                      response_code:
-                        type: integer
-                      response_body:
-                        type: string
-                      duration_ms:
-                        type: integer
-                      created_at:
-                        type: string
-                        format: date-time
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/admin/webhooks/deliveries/cleanup:
-    delete:
-      summary: Cleanup old deliveries
-      description: Delete old webhook delivery records
-      operationId: cleanupWebhookDeliveries
-      tags:
-        - Webhooks
-      parameters:
-        - name: older_than_days
-          in: query
-          schema:
-            type: integer
-            default: 30
-      responses:
-        '200':
-          description: Cleanup completed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  deleted:
-                    type: integer
-
-  /api/v1/admin/webhooks/{webhookId}/stats:
-    get:
-      summary: Get webhook stats
-      description: Get statistics for a specific webhook
-      operationId: getWebhookStats
-      tags:
-        - Webhooks
-      parameters:
-        - name: webhookId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Webhook statistics
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      total_deliveries:
-                        type: integer
-                      successful:
-                        type: integer
-                      failed:
-                        type: integer
-                      avg_response_time_ms:
-                        type: integer
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/admin/webhooks/stats:
-    get:
-      summary: Get global webhook stats
-      description: Get statistics for all webhooks
-      operationId: getGlobalWebhookStats
-      tags:
-        - Webhooks
-      responses:
-        '200':
-          description: Global webhook statistics
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      total_webhooks:
-                        type: integer
-                      active_webhooks:
-                        type: integer
-                      total_deliveries:
-                        type: integer
-                      success_rate:
-                        type: number
-
-  /api/v1/admin/webhooks/test-all:
-    post:
-      summary: Test all webhooks
-      description: Send test payload to all active webhooks
-      operationId: testAllWebhooks
-      tags:
-        - Webhooks
-      responses:
-        '200':
-          description: Test results
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      tested:
-                        type: integer
-                      successful:
-                        type: integer
-                      failed:
-                        type: integer
-
-  /api/v1/admin/webhooks/events:
-    get:
-      summary: List webhook events
-      description: Get list of available events that can trigger webhooks
-      operationId: listWebhookEvents
+      summary: Get webhook
+      operationId: getWebhook
       tags:
         - Webhooks
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: List of available events
+          description: Webhook
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    put:
+      summary: Update webhook
+      description: 'Partial update; only fields present in the body change. An empty "secret" removes the secret.'
+      operationId: updateWebhook
+      tags:
+        - Webhooks
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookRequest'
+      responses:
+        '200':
+          description: Updated webhook
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: A webhook with this name already exists
+    delete:
+      summary: Delete webhook
+      description: Deletes the webhook and its delivery log.
+      operationId: deleteWebhook
+      tags:
+        - Webhooks
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Webhook deleted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/webhooks/{webhookId}/test:
+    post:
+      summary: Send test delivery
+      description: Sends a `webhook.test` event now (one attempt, no retries) and returns the recorded delivery.
+      operationId: testWebhook
+      tags:
+        - Webhooks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Delivery result (check `data.success`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeliveryResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/webhooks/{webhookId}/deliveries:
+    get:
+      summary: List deliveries
+      description: Newest deliveries first, without payload and response bodies.
+      operationId: getWebhookDeliveries
+      tags:
+        - Webhooks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Deliveries
           content:
             application/json:
               schema:
@@ -2531,10 +2090,73 @@ paths:
                   data:
                     type: array
                     items:
-                      type: string
-                    example: ["ticket.created", "ticket.updated", "ticket.closed", "article.created"]
+                      $ref: '#/components/schemas/WebhookDelivery'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/webhooks/deliveries/{deliveryId}:
+    get:
+      summary: Get delivery
+      description: One delivery including the payload sent and the (truncated) response body.
+      operationId: getWebhookDelivery
+      tags:
+        - Webhooks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deliveryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Delivery
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeliveryResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/webhooks/deliveries/{deliveryId}/redeliver:
+    post:
+      summary: Redeliver
+      description: Sends the payload of an earlier delivery again now, as a new delivery (one attempt, no retries).
+      operationId: redeliverWebhookDelivery
+      tags:
+        - Webhooks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deliveryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: The new delivery (check `data.success`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeliveryResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
 
   /api/v1/files/upload:
     post:
@@ -4615,71 +4237,100 @@ components:
             total:
               type: integer
 
+    WebhookEvent:
+      type: string
+      enum:
+        - ticket.created
+        - ticket.updated
+        - ticket.state_changed
+        - ticket.closed
+        - ticket.queue_moved
+        - ticket.assigned
+        - ticket.priority_changed
+        - ticket.merged
+        - ticket.escalated
+        - article.created
+
     Webhook:
       type: object
-      required:
-        - id
-        - name
-        - url
-        - events
       properties:
         id:
           type: integer
         name:
           type: string
-          description: Friendly name for the webhook
         url:
           type: string
           format: uri
-          description: Target URL to receive webhook payloads
         events:
           type: array
           items:
-            type: string
-          description: List of events this webhook subscribes to
-        secret:
-          type: string
-          description: Secret used to sign webhook payloads (HMAC-SHA256)
-        active:
-          type: boolean
-          default: true
+            $ref: '#/components/schemas/WebhookEvent'
         headers:
           type: object
           additionalProperties:
             type: string
-          description: Custom headers to include in webhook requests
+          description: Extra headers sent with every delivery
+        has_secret:
+          type: boolean
+          description: Deliveries are signed (X-Webhook-Signature). The secret itself is never returned.
+        secret_hint:
+          type: string
+          description: Masked secret, e.g. "••••••••abcd"
+        retry_count:
+          type: integer
+        timeout_seconds:
+          type: integer
+        is_active:
+          type: boolean
         created_at:
           type: string
           format: date-time
+        created_by:
+          type: integer
         updated_at:
           type: string
           format: date-time
+        updated_by:
+          type: integer
 
-    CreateWebhookRequest:
+    WebhookRequest:
       type: object
-      required:
-        - name
-        - url
-        - events
+      description: On create, name, url and events are required.
       properties:
         name:
           type: string
-          maxLength: 255
+          maxLength: 200
         url:
           type: string
           format: uri
+          maxLength: 2000
+          description: Absolute http or https URL
         events:
           type: array
-          items:
-            type: string
           minItems: 1
+          items:
+            $ref: '#/components/schemas/WebhookEvent'
         secret:
           type: string
-          description: Optional secret for payload signing
+          description: HMAC signing secret (16-512 characters); stored encrypted. Empty string removes it.
         headers:
           type: object
           additionalProperties:
             type: string
+          description: Extra headers; Content-Type, User-Agent and X-Webhook-* cannot be overridden
+        retry_count:
+          type: integer
+          minimum: 0
+          maximum: 10
+          default: 3
+        timeout_seconds:
+          type: integer
+          minimum: 1
+          maximum: 60
+          default: 10
+        is_active:
+          type: boolean
+          default: true
 
     WebhookResponse:
       type: object
@@ -4704,6 +4355,62 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Webhook'
+
+    WebhookDelivery:
+      type: object
+      properties:
+        id:
+          type: integer
+        webhook_id:
+          type: integer
+        event:
+          type: string
+        status:
+          type: string
+          enum: [pending, delivering, delivered, failed]
+        success:
+          type: boolean
+        attempts:
+          type: integer
+        status_code:
+          type: integer
+          nullable: true
+          description: HTTP status of the last attempt; null when no response was received
+        error:
+          type: string
+        duration_ms:
+          type: integer
+          nullable: true
+        next_attempt_at:
+          type: string
+          format: date-time
+          description: Set while a retry is scheduled
+        delivered_at:
+          type: string
+          format: date-time
+        payload:
+          type: string
+          description: JSON body sent (single-delivery endpoint only)
+        response:
+          type: string
+          description: First 4 KiB of the response body (single-delivery endpoint only)
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    WebhookDeliveryResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/WebhookDelivery'
 
     GlobalSearchResponse:
       type: object

@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -13,55 +14,69 @@ import (
 //   - filter_attribute: The attribute to filter by (e.g., "Queue", "Service")
 //   - filter_value: The value of that attribute (e.g., "Sales", "Gold Support")
 //
-// HandleListTypesAPI handles GET /api/v1/types.
+// The list is restricted to valid types unless ?valid=false|0 or ?valid=all is given.
 //
 //	@Summary		List types
-//	@Description	Retrieve all ticket types
+//	@Description	Retrieve ticket types (valid ones by default)
 //	@Tags			Types
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	map[string]interface{}	"List of types"
-//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Param			valid	query		string	false	"Filter by validity (true/1 = valid (default), false/0 = invalid, all)"
+//	@Success		200		{object}	map[string]interface{}	"List of types"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		500		{object}	map[string]interface{}	"Lookup failed"
 //	@Security		BearerAuth
 //	@Router			/types [get]
 func HandleListTypesAPI(c *gin.Context) {
-	// Optional auth for now (treat as public list if no token)
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Fallback minimal list
-		c.JSON(http.StatusOK, gin.H{"success": true, "data": []gin.H{
-			{"id": 1, "name": "incident", "label": "Incident"},
-			{"id": 2, "name": "service_request", "label": "Service Request"},
-		}})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "types lookup failed: database unavailable"})
 		return
 	}
 
-	rows, err := db.Query(database.ConvertPlaceholders(`
-		SELECT id, name, comments, valid_id
-		FROM ticket_type
-		ORDER BY id
-	`))
+	query := `SELECT id, name, valid_id FROM ticket_type`
+	var args []interface{}
+	switch strings.ToLower(strings.TrimSpace(c.Query("valid"))) {
+	case "false", "0":
+		query += " WHERE valid_id <> ?"
+		args = append(args, 1)
+	case "all":
+	default:
+		query += " WHERE valid_id = ?"
+		args = append(args, 1)
+	}
+	query += " ORDER BY id"
+
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"success": true, "data": []interface{}{}})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "types lookup failed"})
 		return
 	}
 	defer rows.Close()
 
-	var items []gin.H
+	items := []gin.H{}
 	for rows.Next() {
 		var id, validID int
-		var name, comments string
-		if err := rows.Scan(&id, &name, &comments, &validID); err == nil {
-			items = append(items, gin.H{"id": id, "name": name, "valid_id": validID})
+		var name string
+		if err := rows.Scan(&id, &name, &validID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "types lookup failed"})
+			return
 		}
+		items = append(items, gin.H{"id": id, "name": name, "valid_id": validID})
 	}
-	_ = rows.Err() //nolint:errcheck // Check for iteration errors
+	if err := rows.Err(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "types lookup failed"})
+		return
+	}
 
 	// Apply ticket attribute relations filtering if requested
 	filterAttr := c.Query("filter_attribute")
 	filterValue := c.Query("filter_value")
 	if filterAttr != "" && filterValue != "" {
-		items = filterByTicketAttributeRelations(c, db, items, "Type", filterAttr, filterValue)
+		if items, err = filterByTicketAttributeRelations(c, db, items, "Type", filterAttr, filterValue); err != nil {
+			respondAttributeRelationFilterError(c, err)
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": items})

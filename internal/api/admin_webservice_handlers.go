@@ -269,14 +269,9 @@ func handleCreateWebservice(c *gin.Context) {
 		Config:  config,
 	}
 
-	// Get user ID from session
-	userID := 1 // Default to admin
-	if user, ok := c.Get("user"); ok {
-		if u, ok := user.(map[string]interface{}); ok {
-			if id, ok := u["id"].(int); ok {
-				userID = id
-			}
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	id, err := svc.CreateWebservice(c.Request.Context(), ws, userID)
@@ -392,14 +387,9 @@ func handleUpdateWebservice(c *gin.Context) {
 		ws.Config.RemoteSystem = input.RemoteSystem
 	}
 
-	// Get user ID from session
-	userID := 1
-	if user, ok := c.Get("user"); ok {
-		if u, ok := user.(map[string]interface{}); ok {
-			if uid, ok := u["id"].(int); ok {
-				userID = uid
-			}
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	err = svc.UpdateWebservice(c.Request.Context(), ws, userID)
@@ -587,14 +577,9 @@ func handleRestoreWebserviceHistory(c *gin.Context) {
 		return
 	}
 
-	// Get user ID from session
-	userID := 1
-	if user, ok := c.Get("user"); ok {
-		if u, ok := user.(map[string]interface{}); ok {
-			if uid, ok := u["id"].(int); ok {
-				userID = uid
-			}
-		}
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	err = svc.RestoreFromHistory(c.Request.Context(), historyID, userID)

@@ -11,13 +11,14 @@ spec:
     prefix: /api/tickets
     middleware:
         - unified_auth
+        - agent
         - scope_tickets_read  # API tokens need tickets:read or higher
         - queue_ro # Require read access to at least one queue
     routes:
         # Core CRUD
         - path: /
           method: GET
-          handler: handleAPITickets
+          handler: HandleListTicketsAPI
           description: "List tickets with filtering"
 
         - path: /
@@ -40,7 +41,7 @@ spec:
 
         - path: /:id
           method: PUT
-          handler: handleUpdateTicket
+          handler: HandleUpdateTicketAPI
           middleware:
               - unified_auth
               - scope_tickets_write
@@ -167,75 +168,3 @@ spec:
           handler: handleFilterTickets
           description: "Filter tickets"
 
-        - path: /advanced-search
-          method: GET
-          handler: handleAdvancedTicketSearch
-          description: "Advanced ticket search"
-
-        - path: /search/suggestions
-          method: GET
-          handler: handleSearchSuggestions
-          description: "Get search suggestions"
-
-        - path: /search/export
-          method: GET
-          handler: handleExportSearchResults
-          description: "Export search results"
-
-        # Search history
-        - path: /search/history
-          method: POST
-          handler: handleSaveSearchHistory
-          description: "Save search to history"
-
-        - path: /search/history
-          method: GET
-          handler: handleGetSearchHistory
-          description: "Get search history"
-
-        - path: /search/history/:id
-          method: DELETE
-          handler: handleDeleteSearchHistory
-          description: "Delete search history item"
-
-        # Saved searches
-        - path: /search/saved
-          method: POST
-          handler: handleCreateSavedSearch
-          description: "Create saved search"
-
-        - path: /search/saved
-          method: GET
-          handler: handleGetSavedSearches
-          description: "Get saved searches"
-
-        - path: /search/saved/:id/execute
-          method: GET
-          handler: handleExecuteSavedSearch
-          description: "Execute saved search"
-
-        - path: /search/saved/:id
-          method: PUT
-          handler: handleUpdateSavedSearch
-          description: "Update saved search"
-
-        - path: /search/saved/:id
-          method: DELETE
-          handler: handleDeleteSavedSearch
-          description: "Delete saved search"
-
-        # Merge operations
-        - path: /:id/merge
-          method: POST
-          handler: handleMergeTickets
-          description: "Merge tickets"
-
-        - path: /:id/unmerge
-          method: POST
-          handler: handleUnmergeTicket
-          description: "Unmerge ticket"
-
-        - path: /:id/merge-history
-          method: GET
-          handler: handleGetMergeHistory
-          description: "Get merge history"

@@ -223,6 +223,13 @@ App secret name
 {{- end }}
 
 {{/*
+LDAP bind password secret name
+*/}}
+{{- define "goatflow.ldap.secretName" -}}
+{{- .Values.config.ldap.existingSecret | default (printf "%s-ldap" (include "goatflow.fullname" .)) }}
+{{- end }}
+
+{{/*
 Backend image
 */}}
 {{- define "goatflow.backend.image" -}}

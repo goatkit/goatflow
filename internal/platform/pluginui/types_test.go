@@ -314,13 +314,6 @@ func TestGenerateMenuItems(t *testing.T) {
 	}
 }
 
-func TestValidAuthMethods(t *testing.T) {
-	methods := ValidAuthMethods()
-	if len(methods) != 4 {
-		t.Errorf("expected 4 auth methods, got %d", len(methods))
-	}
-}
-
 func TestValidDataScopes(t *testing.T) {
 	scopes := ValidDataScopes()
 	if len(scopes) != 3 {

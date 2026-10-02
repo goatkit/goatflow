@@ -4,6 +4,8 @@ package e2e
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,234 +15,166 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestQueueManagement covers the agent queue list (/queues) and the admin
+// queue management page (/admin/queues): create, edit, disable, re-enable and
+// filter. Queues are never hard-deleted (OTRS semantics); invalidating is the
+// removal path, so the test queue is invalidated on exit.
 func TestQueueManagement(t *testing.T) {
-	// Setup browser
 	browser := helpers.NewBrowserHelper(t)
-	err := browser.Setup()
-	require.NoError(t, err, "Failed to setup browser")
-	defer browser.TearDown()
+	require.NoError(t, browser.Setup(), "Failed to setup browser")
+	t.Cleanup(browser.TearDown)
+	require.NoError(t, helpers.NewAuthHelper(browser).LoginAsAdmin(), "Failed to login as admin")
+	page := browser.Page
 
-	auth := helpers.NewAuthHelper(browser)
+	// Confirm the status-toggle confirm() dialog.
+	page.OnDialog(func(d playwright.Dialog) { _ = d.Accept() })
 
-	// Login as admin
-	err = auth.LoginAsAdmin()
-	require.NoError(t, err, "Failed to login as admin")
+	visible := playwright.LocatorWaitForOptions{State: playwright.WaitForSelectorStateVisible, Timeout: playwright.Float(10000)}
+	attached := playwright.LocatorWaitForOptions{State: playwright.WaitForSelectorStateAttached, Timeout: playwright.Float(10000)}
+	row := func(name string) playwright.Locator {
+		return page.Locator(fmt.Sprintf("tr.queue-row[data-name='%s']", strings.ToLower(name)))
+	}
+	rowWithStatus := func(name string, validID int) playwright.Locator {
+		return page.Locator(fmt.Sprintf("tr.queue-row[data-name='%s'][data-status='%d']", strings.ToLower(name), validID))
+	}
+	openAdminQueues := func(t *testing.T) {
+		t.Helper()
+		require.NoError(t, browser.NavigateTo("/admin/queues"))
+		require.NoError(t, browser.WaitForLoad())
+	}
+	// saveQueueForm submits the queue modal and waits for the API response and
+	// the page reload that follows a successful save (the marker set on the
+	// old document disappears with it).
+	saveQueueForm := func(t *testing.T, apiURL string, wantStatus int) {
+		t.Helper()
+		_, err := page.Evaluate(`() => { window.__e2eBeforeSave = true }`)
+		require.NoError(t, err)
+		resp, err := page.ExpectResponse(apiURL, func() error {
+			return page.Locator("#queueForm button[type='submit']").Click()
+		})
+		require.NoError(t, err)
+		require.Equal(t, wantStatus, resp.Status())
+		_, err = page.WaitForFunction(`() => window.__e2eBeforeSave === undefined && document.readyState === 'complete'`, nil,
+			playwright.PageWaitForFunctionOptions{Timeout: playwright.Float(10000)})
+		require.NoError(t, err, "admin queues page should reload after saving")
+	}
+
+	// Shared across the sequential subtests below.
+	queueName := fmt.Sprintf("E2EQueue_%d", time.Now().UnixNano())
+	renamed := queueName + "_Updated"
+	queueID := ""
+	// Registered after browser.TearDown, so it runs first.
+	t.Cleanup(func() {
+		if queueID == "" {
+			return
+		}
+		resp, err := page.Request().Delete(browser.Config.BaseURL + "/api/v1/queues/" + queueID)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusOK, resp.Status(), "invalidate test queue %s", queueID)
+		}
+	})
 
 	t.Run("Queue list page loads", func(t *testing.T) {
-		err := browser.NavigateTo("/queues")
-		require.NoError(t, err)
+		require.NoError(t, browser.NavigateTo("/queues"))
+		require.NoError(t, browser.WaitForHTMX())
 
-		// Wait for page to load
-		err = browser.WaitForHTMX()
+		text, err := page.Locator("h1").First().TextContent()
 		require.NoError(t, err)
-
-		// Check page title
-		title := browser.Page.Locator("h1, h2").First()
-		text, _ := title.TextContent()
 		assert.Contains(t, text, "Queue", "Page should have queue-related title")
 
-		// Check for queue list or table
-		queueList := browser.Page.Locator("[data-queue-list], table, .queue-item")
-		count, _ := queueList.Count()
-		assert.Greater(t, count, 0, "Queue list should be present")
+		seeded := page.Locator("a[href='/queues/5']", playwright.PageLocatorOptions{HasText: helpers.SeedQueueName})
+		require.NoError(t, seeded.First().WaitFor(visible), "seeded queue %s should be listed", helpers.SeedQueueName)
 	})
 
 	t.Run("Create new queue", func(t *testing.T) {
-		err := browser.NavigateTo("/queues")
+		openAdminQueues(t)
+		require.NoError(t, page.Locator("header button[onclick='openQueueModal()']").Click(), "Add Queue button")
+		require.NoError(t, page.Locator("#queueModal #queueName").WaitFor(visible), "queue modal should open")
+
+		require.NoError(t, page.Locator("#queueName").Fill(queueName))
+		_, err := page.Locator("#queueGroup").SelectOption(playwright.SelectOptionValues{Values: &[]string{"1"}})
+		require.NoError(t, err, "group 'users' (id 1) must be selectable")
+		require.NoError(t, page.Locator("#queueComments").Fill("Created by E2E test"))
+
+		// Save reloads the page; the new row is rendered server-side.
+		saveQueueForm(t, browser.Config.BaseURL+"/api/v1/queues", http.StatusCreated)
+
+		created := row(queueName)
+		require.NoError(t, created.WaitFor(attached), "created queue %s should be listed", queueName)
+		queueID, err = created.GetAttribute("data-id")
 		require.NoError(t, err)
+		require.NotEmpty(t, queueID)
 
-		// Click new queue button
-		newQueueBtn := browser.Page.Locator("a[href*='/queues/new'], button:has-text('New Queue'), button:has-text('Add Queue')")
-		count, _ := newQueueBtn.Count()
-		require.Greater(t, count, 0, "New queue button should exist")
-
-		err = newQueueBtn.First().Click()
-		require.NoError(t, err, "Should be able to click new queue button")
-
-		// Wait for form to appear
-		_, err = browser.Page.WaitForSelector("form", playwright.PageWaitForSelectorOptions{
-			Timeout: playwright.Float(5000),
-		})
-		require.NoError(t, err, "New queue form should appear")
-
-		// Fill in queue details
-		testQueueName := fmt.Sprintf("TestQueue_%d", time.Now().Unix())
-
-		nameInput := browser.Page.Locator("input[name='name'], input#name")
-		err = nameInput.Fill(testQueueName)
-		require.NoError(t, err, "Should fill queue name")
-
-		descInput := browser.Page.Locator("textarea[name='comment'], textarea#comment, textarea[name='description']")
-		if count, _ := descInput.Count(); count > 0 {
-			err = descInput.Fill("Test queue created by E2E test")
-			assert.NoError(t, err, "Should fill description if field exists")
-		}
-
-		emailInput := browser.Page.Locator("input[name='system_address'], input#system_address")
-		if count, _ := emailInput.Count(); count > 0 {
-			err = emailInput.Fill("test@example.com")
-			assert.NoError(t, err, "Should fill email if field exists")
-		}
-
-		// Submit form
-		submitBtn := browser.Page.Locator("button[type='submit'], button:has-text('Save'), button:has-text('Create')")
-		err = submitBtn.Click()
-		require.NoError(t, err, "Should submit form")
-
-		// Wait for response
-		err = browser.WaitForHTMX()
+		text, err := created.TextContent()
 		require.NoError(t, err)
-
-		// Verify queue was created by checking if it appears in the list
-		browser.Page.WaitForTimeout(1000) // Give time for list to update
-		queueItem := browser.Page.Locator(fmt.Sprintf("*:has-text('%s')", testQueueName))
-		count, _ = queueItem.Count()
-		assert.Greater(t, count, 0, "New queue should appear in list")
+		assert.Contains(t, text, "Created by E2E test", "queue comment is shown under its name")
+		assert.Contains(t, text, "users", "queue group is shown")
 	})
 
 	t.Run("Edit queue", func(t *testing.T) {
-		err := browser.NavigateTo("/queues")
+		require.NotEmpty(t, queueID, "queue creation failed; this flow is sequential")
+		openAdminQueues(t)
+
+		require.NoError(t, row(queueName).Locator("button[onclick^='editQueue']").Click())
+		nameInput := page.Locator("#queueName")
+		require.NoError(t, nameInput.WaitFor(visible), "edit modal should open")
+		// editQueue fills the form from /api/queues/:id before showing it.
+		_, err := page.WaitForFunction(`(id) => document.getElementById('queueId').value === id`, queueID,
+			playwright.PageWaitForFunctionOptions{Timeout: playwright.Float(10000)})
+		require.NoError(t, err, "edit form should be loaded for queue %s", queueID)
+		value, err := nameInput.InputValue()
 		require.NoError(t, err)
-
-		// Wait for queue list to load
-		err = browser.WaitForHTMX()
+		require.Equal(t, queueName, value, "edit form should be populated with the queue name")
+		comments, err := page.Locator("#queueComments").InputValue()
 		require.NoError(t, err)
+		assert.Equal(t, "Created by E2E test", comments)
 
-		// Find edit button for first queue
-		editBtn := browser.Page.Locator("a[href*='/edit'], button:has-text('Edit')").First()
-		count, _ := editBtn.Count()
-
-		if count == 0 {
-			t.Skip("No queues available to edit")
-		}
-
-		err = editBtn.Click()
-		require.NoError(t, err, "Should click edit button")
-
-		// Wait for edit form
-		_, err = browser.Page.WaitForSelector("form", playwright.PageWaitForSelectorOptions{
-			Timeout: playwright.Float(5000),
-		})
-		require.NoError(t, err, "Edit form should appear")
-
-		// Check that fields are populated
-		nameInput := browser.Page.Locator("input[name='name'], input#name")
-		nameValue, _ := nameInput.InputValue()
-		assert.NotEmpty(t, nameValue, "Name field should be populated")
-
-		// Check description field
-		descInput := browser.Page.Locator("textarea[name='comment'], textarea#comment")
-		if count, _ := descInput.Count(); count > 0 {
-			descValue, _ := descInput.InputValue()
-			// Description might be empty, but field should exist
-			t.Logf("Description field value: %s", descValue)
-		}
-
-		// Update the name
-		updatedName := nameValue + "_Updated"
-		err = nameInput.Fill(updatedName)
-		require.NoError(t, err, "Should update name field")
-
-		// Submit the form
-		submitBtn := browser.Page.Locator("button[type='submit'], button:has-text('Save')")
-		err = submitBtn.Click()
-		require.NoError(t, err, "Should submit edit form")
-
-		// Wait for response
-		err = browser.WaitForHTMX()
-		require.NoError(t, err)
-
-		// Verify the update by checking if updated name appears
-		browser.Page.WaitForTimeout(1000)
-		updatedItem := browser.Page.Locator(fmt.Sprintf("*:has-text('%s')", updatedName))
-		count, _ = updatedItem.Count()
-		assert.Greater(t, count, 0, "Updated queue name should appear")
+		require.NoError(t, nameInput.Fill(renamed))
+		saveQueueForm(t, browser.Config.BaseURL+"/api/v1/queues/"+queueID, http.StatusOK)
+		require.NoError(t, rowWithStatus(renamed, 1).WaitFor(attached), "renamed queue %s should be listed", renamed)
 	})
 
-	t.Run("Delete queue", func(t *testing.T) {
-		err := browser.NavigateTo("/queues")
+	toggle := func(t *testing.T, from, to int) {
+		t.Helper()
+		require.NotEmpty(t, queueID, "queue creation failed; this flow is sequential")
+		openAdminQueues(t)
+		resp, err := page.ExpectResponse(browser.Config.BaseURL+"/api/queues/"+queueID+"/status", func() error {
+			return rowWithStatus(renamed, from).Locator("button[onclick^='toggleQueueStatus']").Click()
+		})
 		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, resp.Status())
+		// The page reloads after the toggle; inactive queues stay listed.
+		require.NoError(t, rowWithStatus(renamed, to).WaitFor(attached), "queue %s should have valid_id %d after the toggle", renamed, to)
+	}
 
-		// Wait for queue list
-		err = browser.WaitForHTMX()
+	t.Run("Disable queue", func(t *testing.T) {
+		toggle(t, 1, 2)
+		badge, err := rowWithStatus(renamed, 2).Locator(".gk-badge-muted").TextContent()
 		require.NoError(t, err)
+		assert.Contains(t, badge, "Inactive")
+	})
 
-		// Find a test queue to delete
-		testQueue := browser.Page.Locator("*:has-text('TestQueue_')").First()
-		count, _ := testQueue.Count()
-
-		if count == 0 {
-			t.Skip("No test queues available to delete")
-		}
-
-		// Get the queue name for verification
-		queueText, _ := testQueue.TextContent()
-
-		// Find delete button near the test queue
-		deleteBtn := browser.Page.Locator("button:has-text('Delete'), a[href*='/delete']").First()
-		count, _ = deleteBtn.Count()
-
-		if count == 0 {
-			t.Skip("Delete functionality not available")
-		}
-
-		err = deleteBtn.Click()
-		require.NoError(t, err, "Should click delete button")
-
-		// Handle confirmation dialog if it appears
-		confirmBtn := browser.Page.Locator("button:has-text('Confirm'), button:has-text('Yes')")
-		if count, _ := confirmBtn.Count(); count > 0 {
-			err = confirmBtn.Click()
-			assert.NoError(t, err, "Should confirm deletion")
-		}
-
-		// Wait for deletion to complete
-		err = browser.WaitForHTMX()
+	t.Run("Re-enable queue", func(t *testing.T) {
+		toggle(t, 2, 1)
+		badge, err := rowWithStatus(renamed, 1).Locator(".gk-badge-success").TextContent()
 		require.NoError(t, err)
-
-		// Verify queue is removed from list
-		browser.Page.WaitForTimeout(1000)
-		deletedQueue := browser.Page.Locator(fmt.Sprintf("*:has-text('%s')", queueText))
-		count, _ = deletedQueue.Count()
-
-		// The queue might be soft-deleted and still visible but marked as inactive
-		// So we just log the result
-		t.Logf("Queue presence after delete: %d occurrences", count)
+		assert.Contains(t, badge, "Active")
 	})
 
 	t.Run("Search queues", func(t *testing.T) {
-		err := browser.NavigateTo("/queues")
+		openAdminQueues(t)
+
+		// filterQueues runs on keyup, so type rather than fill.
+		search := page.Locator("#searchQueue")
+		require.NoError(t, search.Fill(""))
+		require.NoError(t, search.PressSequentially(strings.ToLower(helpers.SeedQueueName)))
+
+		supportVisible, err := row(helpers.SeedQueueName).IsVisible()
 		require.NoError(t, err)
+		assert.True(t, supportVisible, "seeded queue %q should match the search", helpers.SeedQueueName)
 
-		// Look for search input
-		searchInput := browser.Page.Locator("input[type='search'], input[placeholder*='Search'], input[name='search']")
-		count, _ := searchInput.Count()
-
-		if count == 0 {
-			t.Skip("Search functionality not available")
-		}
-
-		// Enter search term
-		err = searchInput.Fill("Test")
-		require.NoError(t, err, "Should enter search term")
-
-		// Trigger search (might be automatic or need button/enter)
-		searchBtn := browser.Page.Locator("button:has-text('Search')")
-		if count, _ := searchBtn.Count(); count > 0 {
-			err = searchBtn.Click()
-			assert.NoError(t, err)
-		} else {
-			// Press Enter to search
-			err = searchInput.Press("Enter")
-			assert.NoError(t, err)
-		}
-
-		// Wait for results
-		err = browser.WaitForHTMX()
+		rawHidden, err := row("Raw").IsHidden()
 		require.NoError(t, err)
-
-		// Results should be filtered
-		// This is hard to verify without knowing the data
-		t.Log("Search executed successfully")
+		assert.True(t, rawHidden, "queue Raw should be filtered out")
 	})
 }

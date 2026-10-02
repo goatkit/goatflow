@@ -210,6 +210,9 @@ type PluginMCPToolInput struct {
 
 // GeneratePluginTools creates MCP tools from plugin registrations.
 // Route-based tools are auto-generated; MCPTools override them on name collision.
+// Every plugin tool carries the middleware that guards it: a route tool its
+// route's list; a declared tool the combined lists of the routes sharing its
+// handler, or "agent" when no route exposes that handler.
 func GeneratePluginTools(plugins []PluginRegistration) []*GeneratedTool {
 	var tools []*GeneratedTool
 	seen := make(map[string]bool)
@@ -256,6 +259,7 @@ func GeneratePluginTools(plugins []PluginRegistration) []*GeneratedTool {
 					InputSchema: schema,
 				},
 				HandlerName: mt.Handler,
+				Middleware:  declaredToolMiddleware(p.Routes, mt.Handler),
 				IsPlugin:    true,
 				PluginName:  p.Name,
 			}
@@ -302,6 +306,32 @@ func GeneratePluginTools(plugins []PluginRegistration) []*GeneratedTool {
 	}
 
 	return tools
+}
+
+// declaredToolMiddleware returns the access rule for a declared plugin MCP
+// tool: every middleware entry of the plugin routes that use the same handler
+// (all must pass, so a handler shared by an auth route and an admin route is
+// admin-only), or agent-only when no route uses the handler.
+func declaredToolMiddleware(routes []PluginRouteInput, handler string) []string {
+	var mw []string
+	found := false
+	have := make(map[string]bool)
+	for _, rt := range routes {
+		if rt.Handler != handler {
+			continue
+		}
+		found = true
+		for _, m := range rt.Middleware {
+			if !have[m] {
+				have[m] = true
+				mw = append(mw, m)
+			}
+		}
+	}
+	if !found {
+		return []string{"agent"}
+	}
+	return mw
 }
 
 // AddPluginTools adds plugin-provided tools to the dynamic registry.

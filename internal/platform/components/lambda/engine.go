@@ -21,7 +21,30 @@ type ExecutionContext struct {
 
 // SafeDBInterface provides read-only database access for lambda functions.
 type SafeDBInterface struct {
-	db database.IDatabase
+	db     database.IDatabase
+	sqlErr error
+}
+
+// SQLError returns the first query a lambda issued that the database layer
+// rejects ($N placeholders, stacked statements). Such a query is a module
+// configuration bug, not a data problem, so callers should fail the request.
+func (db *SafeDBInterface) SQLError() error {
+	return db.sqlErr
+}
+
+// checkPortableSQL runs the database layer's query validation without letting
+// its panic escape, recording the first rejection.
+func (db *SafeDBInterface) checkPortableSQL(query string) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("invalid lambda SQL: %v", r)
+			if db.sqlErr == nil {
+				db.sqlErr = err
+			}
+		}
+	}()
+	database.ConvertPlaceholders(query)
+	return nil
 }
 
 // SafeRow provides access to query results.
@@ -100,6 +123,13 @@ func (e *Engine) ExecuteLambda(code string, execCtx ExecutionContext, config Lam
 	resultCh := make(chan result, 1)
 
 	go func() {
+		defer func() {
+			// A panic here would bypass gin's recovery (different goroutine) and
+			// take the whole server down; turn it into an execution error.
+			if r := recover(); r != nil {
+				resultCh <- result{error: fmt.Errorf("lambda panicked: %v", r)}
+			}
+		}()
 		val, err := runtime.RunString(wrappedCode)
 		resultCh <- result{value: val, error: err}
 	}()
@@ -184,6 +214,9 @@ func (e *Engine) handleQueryRow(runtime *goja.Runtime, call goja.FunctionCall, d
 
 	result, err := db.QueryRow(query, args...)
 	if err != nil {
+		if db.SQLError() != nil {
+			panic(runtime.NewGoError(err))
+		}
 		return runtime.ToValue(fmt.Sprintf("Error: %v", err))
 	}
 
@@ -224,6 +257,9 @@ func (e *Engine) handleQuery(runtime *goja.Runtime, call goja.FunctionCall, db *
 
 	result, err := db.Query(query, args...)
 	if err != nil {
+		if db.SQLError() != nil {
+			panic(runtime.NewGoError(err))
+		}
 		return runtime.ToValue(fmt.Sprintf("Error: %v", err))
 	}
 
@@ -235,6 +271,9 @@ func (e *Engine) handleQuery(runtime *goja.Runtime, call goja.FunctionCall, db *
 func (db *SafeDBInterface) QueryRow(query string, args ...interface{}) (*SafeRow, error) {
 	if !isReadOnlyQuery(query) {
 		return nil, fmt.Errorf("only SELECT queries are allowed")
+	}
+	if err := db.checkPortableSQL(query); err != nil {
+		return nil, err
 	}
 
 	ctx := context.Background()
@@ -256,7 +295,7 @@ func (db *SafeDBInterface) QueryRow(query string, args ...interface{}) (*SafeRow
 		return nil, err
 	}
 
-	result.data["value"] = value
+	result.data["value"] = textValue(value)
 	return result, nil
 }
 
@@ -264,6 +303,9 @@ func (db *SafeDBInterface) QueryRow(query string, args ...interface{}) (*SafeRow
 func (db *SafeDBInterface) Query(query string, args ...interface{}) (*SafeRows, error) {
 	if !isReadOnlyQuery(query) {
 		return nil, fmt.Errorf("only SELECT queries are allowed")
+	}
+	if err := db.checkPortableSQL(query); err != nil {
+		return nil, err
 	}
 
 	ctx := context.Background()
@@ -295,12 +337,22 @@ func (db *SafeDBInterface) Query(query string, args ...interface{}) (*SafeRows, 
 
 		rowData := make(map[string]interface{})
 		for i, col := range columns {
-			rowData[col] = values[i]
+			rowData[col] = textValue(values[i])
 		}
 		result.rows = append(result.rows, rowData)
 	}
 
 	return result, rows.Err()
+}
+
+// textValue turns driver byte slices into strings: MySQL returns VARCHAR/TEXT
+// as []byte when scanning into interface{}, which would reach JavaScript as a
+// number array instead of the text PostgreSQL yields.
+func textValue(v interface{}) interface{} {
+	if b, ok := v.([]byte); ok {
+		return string(b)
+	}
+	return v
 }
 
 // NewSafeDBInterface creates a new safe database interface.

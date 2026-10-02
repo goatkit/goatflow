@@ -29,7 +29,12 @@
                      <input type="text" name="name" required class="gk-input-neon w-full"></div>
                 <div><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">Comments</label>
                      <input type="text" name="comments" class="gk-input-neon w-full"></div>
-                {% include "pages/admin/_setup_group_checkboxes.pongo2" %}
+                <div><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">Team *</label>
+                    <select name="group_id" required class="gk-select-neon w-full">
+                        <option value="">Select a team...</option>
+                        {% for g in Groups %}<option value="{{ g.ID }}">{{ g.Name }}</option>{% endfor %}
+                    </select>
+                </div>
             {% elif Task.ID == "create_agent" %}
                 <div class="grid grid-cols-2 gap-3">
                     <div><label class="block text-xs mb-1" style="color: var(--gk-text-muted);">Login *</label><input type="text" name="login" required class="gk-input-neon w-full"></div>
@@ -174,7 +179,7 @@ function selectCustomerFromDropdown(c) {
     document.getElementById("customerDropdown").style.display = "none";
 
     // Existing customer selected - redirect to wizard review mode
-    window.location.href = "/admin/setup/wizard?existing_customer_id=" + encodeURIComponent(c.value);
+    window.location.href = "/admin/setup?existing_customer_id=" + encodeURIComponent(c.value);
 }
 
 // Close dropdown when clicking outside

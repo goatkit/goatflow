@@ -3,16 +3,16 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/goatkit/goatflow/internal/platform/config"
-	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/service"
+	"github.com/goatkit/goatflow/internal/storage"
 )
 
 type attachmentConfig struct {
@@ -73,96 +73,85 @@ func detectFileContentType(fh *multipart.FileHeader, f multipart.File) string {
 	return contentType
 }
 
+// attachmentProcessParams identifies the article that receives uploaded files.
+// With tx set, the attachments are written inside that transaction (the
+// article may not be committed yet).
 type attachmentProcessParams struct {
 	ctx       context.Context
 	db        *sql.DB
+	tx        *sql.Tx
 	ticketID  int
 	articleID int
 	userID    int
 }
 
+func (p attachmentProcessParams) store() storage.ArticleStore {
+	s := storage.ForDB(p.db)
+	if p.tx != nil {
+		s = s.WithTx(p.tx)
+	}
+	return s
+}
+
+// errAttachmentRejected marks an upload refused by the attachment policy
+// (size, extension, content type).
+var errAttachmentRejected = errors.New("attachment rejected")
+
+// processFormAttachments stores every acceptable uploaded file on the article.
+// Rejected or failing files are logged and skipped.
 func processFormAttachments(files []*multipart.FileHeader, params attachmentProcessParams) {
 	if len(files) == 0 {
 		return
 	}
-
 	cfg := loadAttachmentConfig()
-	storageSvc := GetStorageService()
-
 	for _, fh := range files {
 		if fh == nil {
 			continue
 		}
-		if fh.Size > cfg.maxSize {
-			log.Printf("attachment too large: %s", fh.Filename)
-			continue
+		if _, err := processOneAttachment(fh, cfg, params); err != nil {
+			log.Printf("attachment %q for ticket %d article %d not stored: %v",
+				fh.Filename, params.ticketID, params.articleID, err)
 		}
-		if isBlockedExtension(fh.Filename) {
-			log.Printf("blocked file type: %s", fh.Filename)
-			continue
-		}
-		processOneAttachment(fh, cfg, storageSvc, params)
 	}
 }
 
+// processOneAttachment checks one uploaded file against the attachment policy
+// and writes it to the article's attachment storage.
 func processOneAttachment(
-	fh *multipart.FileHeader, cfg attachmentConfig, storageSvc service.StorageService, params attachmentProcessParams,
-) {
+	fh *multipart.FileHeader, cfg attachmentConfig, params attachmentProcessParams,
+) (storage.Attachment, error) {
+	if fh.Size > cfg.maxSize {
+		return storage.Attachment{}, fmt.Errorf("%w: file too large (%d bytes, max %d)", errAttachmentRejected, fh.Size, cfg.maxSize)
+	}
+	if isBlockedExtension(fh.Filename) {
+		return storage.Attachment{}, fmt.Errorf("%w: file type not allowed: %s",
+			errAttachmentRejected, strings.ToLower(filepath.Ext(fh.Filename)))
+	}
 	f, err := fh.Open()
 	if err != nil {
-		log.Printf("open attachment failed: %v", err)
-		return
+		return storage.Attachment{}, fmt.Errorf("open upload: %w", err)
 	}
 	defer f.Close()
 
 	contentType := detectFileContentType(fh, f)
 	if !isAllowedContentType(contentType, cfg.allowedTypes) {
-		log.Printf("type not allowed: %s %s", fh.Filename, contentType)
-		return
+		return storage.Attachment{}, fmt.Errorf("%w: file type not allowed: %s", errAttachmentRejected, contentType)
 	}
-
-	ctx := service.WithUserID(params.ctx, params.userID)
-	ctx = service.WithArticleID(ctx, params.articleID)
-	storagePath := service.GenerateOTRSStoragePath(params.ticketID, params.articleID, fh.Filename)
-	if _, err := storageSvc.Store(ctx, f, fh, storagePath); err != nil {
-		log.Printf("storage Store failed: %v", err)
-		return
-	}
-
-	if _, isDB := storageSvc.(*service.DatabaseStorageService); isDB {
-		return
-	}
-	insertAttachmentMetadata(fh, contentType, params)
-}
-
-func insertAttachmentMetadata(fh *multipart.FileHeader, contentType string, params attachmentProcessParams) {
-	f, err := fh.Open()
+	content, err := io.ReadAll(f)
 	if err != nil {
-		return
+		return storage.Attachment{}, fmt.Errorf("read upload: %w", err)
 	}
-	defer f.Close()
-
-	bytes, err := io.ReadAll(f)
-	if err != nil {
-		return
+	ctx := params.ctx
+	if ctx == nil {
+		ctx = context.Background()
 	}
-
-	_, ierr := params.db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO article_data_mime_attachment (
-			article_id, filename, content_type, content_size, content,
-			disposition, create_time, create_by, change_time, change_by
-		) VALUES (?,?,?,?,?,?,?,?,?,?)`),
-		params.articleID,
-		fh.Filename,
-		contentType,
-		int64(len(bytes)),
-		bytes,
-		"attachment",
-		time.Now(), params.userID, time.Now(), params.userID,
-	)
-	if ierr != nil {
-		log.Printf("attachment metadata insert failed: %v", ierr)
-	}
+	return params.store().WriteAttachment(ctx, int64(params.articleID), storage.NewAttachment{
+		Filename:    fh.Filename,
+		ContentType: contentType,
+		Disposition: "attachment",
+		Content:     content,
+		CreateBy:    params.userID,
+	})
 }
 
 func getFormFiles(form *multipart.Form) []*multipart.FileHeader {

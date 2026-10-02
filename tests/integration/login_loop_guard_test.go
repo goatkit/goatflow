@@ -3,17 +3,20 @@
 package integration
 
 import (
-	"errors"
 	"fmt"
-	"net"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
-	"syscall"
 	"testing"
+	"time"
 )
 
+// These tests talk to a running GoatFlow server. `make test` starts the dedicated
+// test stack (backend-test) and passes TEST_BACKEND_BASE_URL; to run them by hand
+// against any server: TEST_BACKEND_BASE_URL=http://localhost:8080 go test -tags integration
+// -run 'TestLoginPage|TestRootRedirects' ./tests/integration
 var backendBaseURL = resolveBackendBaseURL()
 
 func resolveBackendBaseURL() string {
@@ -35,7 +38,7 @@ func resolveBackendBaseURL() string {
 	if port == "" {
 		port = "8080"
 	}
-	return fmt.Sprintf("http://%s:%s", strings.TrimSpace(host), strings.TrimSpace(port))
+	return fmt.Sprintf("http://%s:%s", host, port)
 }
 
 func firstNonEmpty(values ...string) string {
@@ -47,71 +50,60 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
-func httpGetOrFail(t *testing.T, path string) *http.Response {
+// noRedirectClient returns each response as-is so redirects can be asserted.
+var noRedirectClient = &http.Client{
+	Timeout: 15 * time.Second,
+	CheckRedirect: func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
+}
+
+func getNoRedirect(t *testing.T, path string) (*http.Response, string) {
 	t.Helper()
 	target := backendBaseURL + path
-	resp, err := http.Get(target)
+	resp, err := noRedirectClient.Get(target)
 	if err != nil {
-		handleConnectionError(t, err, target)
+		t.Fatalf("GET %s failed: %v (start the test stack with `make test-stack-up`, or set TEST_BACKEND_BASE_URL to a running server)", target, err)
 	}
-	return resp
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("reading %s: %v", target, err)
+	}
+	return resp, string(body)
 }
 
-func handleConnectionError(t *testing.T, err error, target string) {
-	t.Helper()
-	var opErr *net.OpError
-	if errors.As(err, &opErr) && opErr.Err != nil {
-		if errors.Is(opErr.Err, syscall.ECONNREFUSED) {
-			t.Fatalf("request to %s failed: backend not reachable (make test should provision the dedicated stack)", target)
-		}
-	}
-	var urlErr *url.Error
-	if errors.As(err, &urlErr) && urlErr.Err != nil {
-		handleConnectionError(t, urlErr.Err, target)
-		return
-	}
-	t.Fatalf("request to %s failed: %v", target, err)
-}
-
-// TestLoginPageServes200 ensures /login responds 200 (no redirect loop) for unauthenticated clients.
+// TestLoginPageServes200 ensures /login renders the login form directly for an
+// unauthenticated client (no redirect, so no loop).
 func TestLoginPageServes200(t *testing.T) {
-	resp := httpGetOrFail(t, "/login")
-	defer resp.Body.Close()
+	resp, body := getNoRedirect(t, "/login")
 	if resp.StatusCode != http.StatusOK {
-		// Accept Unauthorized if auth middleware enforces it differently, but not redirect loops
-		if resp.StatusCode == http.StatusFound || resp.StatusCode == http.StatusMovedPermanently {
-			// Provide extra context
-			loc := resp.Header.Get("Location")
-			if loc == "" {
-				loc = resp.Header.Get("location")
-			}
-			// Mark as failure explicitly
-			msg := "redirect instead of serving login page"
-			if loc != "" {
-				msg += ": location=" + loc
-			}
-			// Failing because we want stable 200 for automation
-			// If the environment legitimately requires redirect first, adjust test expectations.
-			t.Fatalf("/login returned %d %s", resp.StatusCode, msg)
-		}
+		t.Fatalf("/login returned %d (Location %q), want 200", resp.StatusCode, resp.Header.Get("Location"))
+	}
+	if !strings.Contains(body, `action="/api/auth/login"`) {
+		t.Fatalf("/login did not render the login form posting to /api/auth/login")
 	}
 }
 
-// TestRootReturnsLoginOrDashboard ensures root returns 200 login page or redirects only once to dashboard when authenticated.
-func TestRootReturnsLoginOrDashboard(t *testing.T) {
-	resp := httpGetOrFail(t, "/")
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusFound {
-		// Single redirect acceptable only if to /dashboard
-		loc := resp.Header.Get("Location")
-		if loc != "/dashboard" {
-			// Not acceptable to bounce elsewhere
-			t.Fatalf("unexpected redirect from / to %s", loc)
-		}
-	} else if resp.StatusCode != http.StatusOK {
-		// Want 200 login page otherwise
-		if resp.StatusCode == http.StatusMovedPermanently {
-			t.Fatalf("permanent redirect from / not expected")
-		}
+// TestRootRedirectsAnonymousToLogin ensures an unauthenticated GET / redirects
+// exactly once, to /login, and that target serves 200.
+func TestRootRedirectsAnonymousToLogin(t *testing.T) {
+	resp, _ := getNoRedirect(t, "/")
+	switch resp.StatusCode {
+	case http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect:
+	default:
+		t.Fatalf("GET / returned %d, want a temporary redirect to /login", resp.StatusCode)
+	}
+	loc, err := url.Parse(resp.Header.Get("Location"))
+	if err != nil {
+		t.Fatalf("GET / Location %q: %v", resp.Header.Get("Location"), err)
+	}
+	if loc.Path != "/login" {
+		t.Fatalf("GET / redirected to %q, want /login", loc.String())
+	}
+
+	next, _ := getNoRedirect(t, loc.RequestURI())
+	if next.StatusCode != http.StatusOK {
+		t.Fatalf("redirect target %s returned %d (Location %q): redirect chain does not settle", loc.RequestURI(), next.StatusCode, next.Header.Get("Location"))
 	}
 }

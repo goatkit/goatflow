@@ -4,12 +4,10 @@ package dynamic
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
 	"database/sql"
 	"encoding/csv"
-	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -25,38 +23,25 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/goatkit/goatflow/internal/mailaccountmeta"
+	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/components/lambda"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
 )
 
-// Format: sha256$salt$hash (similar to OTRS format).
-func hashPassword(password string) string {
-	// Generate a random salt (16 bytes = 32 hex chars)
-	salt := generateSalt()
-
-	// Combine password and salt, then hash
-	combined := password + salt
-	hash := sha256.Sum256([]byte(combined))
-	hashStr := hex.EncodeToString(hash[:])
-
-	// Return in format: sha256$salt$hash
-	return fmt.Sprintf("sha256$%s$%s", salt, hashStr)
-}
-
-// generateSalt generates a random salt for password hashing.
-func generateSalt() string {
-	// Generate 16 random bytes
-	salt := make([]byte, 16)
-	_, err := rand.Read(salt)
-	if err != nil {
-		// Fallback to timestamp-based salt if crypto/rand fails
-		data := fmt.Sprintf("%d", time.Now().UnixNano())
-		hash := sha256.Sum256([]byte(data))
-		return hex.EncodeToString(hash[:16])
+// hashPassword hashes an agent password with the configured
+// auth.PasswordHasher (PASSWORD_HASH_TYPE). It returns the HTTP status to
+// report when hashing fails.
+func hashPassword(password string) (string, int, error) {
+	hash, err := auth.NewPasswordHasher().HashPassword(password)
+	if errors.Is(err, auth.ErrPasswordTooLong) {
+		return "", http.StatusBadRequest, err
 	}
-	return hex.EncodeToString(salt)
+	if err != nil {
+		return "", http.StatusInternalServerError, err
+	}
+	return hash, http.StatusOK, nil
 }
 
 // ModuleConfig represents a module's configuration.
@@ -538,7 +523,10 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 	h.processLookups(items, config)
 
 	// Process computed fields for all items
-	h.processComputedFields(items, config)
+	if err := h.processComputedFields(items, config); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+		return
+	}
 
 	// Check if this is an API request
 	if h.isAPIRequest(c) {
@@ -838,7 +826,10 @@ func (h *DynamicModuleHandler) handleExport(c *gin.Context, config *ModuleConfig
 
 		items := h.scanRows(rows, config)
 		h.processLookups(items, config)
-		h.processComputedFields(items, config)
+		if err := h.processComputedFields(items, config); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+			return
+		}
 		h.generateCSVResponse(c, config, items)
 		return
 	}
@@ -866,7 +857,10 @@ func (h *DynamicModuleHandler) handleExport(c *gin.Context, config *ModuleConfig
 	h.processLookups(items, config)
 
 	// Process computed fields for all items
-	h.processComputedFields(items, config)
+	if err := h.processComputedFields(items, config); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+		return
+	}
 
 	// Generate CSV
 	var csvData bytes.Buffer
@@ -931,25 +925,32 @@ func (h *DynamicModuleHandler) handleGet(c *gin.Context, config *ModuleConfig, i
 	// For users module, fetch the user's groups
 	if config.Module.Name == "users" {
 		groupQuery := `
-			SELECT DISTINCT g.name 
-			FROM groups g 
-			INNER JOIN user_groups ug ON g.id = ug.group_id 
-			WHERE ug.user_id = ?
+			SELECT DISTINCT g.name
+			FROM groups g
+			INNER JOIN group_user gu ON g.id = gu.group_id
+			WHERE gu.user_id = ?
 			ORDER BY g.name`
 
 		rows, err := h.query(groupQuery, id)
-		if err == nil {
-			defer rows.Close()
-			groups := []string{}
-			for rows.Next() {
-				var groupName string
-				if err := rows.Scan(&groupName); err == nil {
-					groups = append(groups, groupName)
-				}
-			}
-			_ = rows.Err() // Check for iteration errors
-			item["Groups"] = groups
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load groups"})
+			return
 		}
+		defer rows.Close()
+		groups := []string{}
+		for rows.Next() {
+			var groupName string
+			if err := rows.Scan(&groupName); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load groups"})
+				return
+			}
+			groups = append(groups, groupName)
+		}
+		if err := rows.Err(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load groups"})
+			return
+		}
+		item["Groups"] = groups
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -1021,11 +1022,14 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 			if value, exists := data[field.Name]; exists {
 				columns = append(columns, field.DBColumn)
 
-				// Special handling for password fields - hash in Go instead of PostgreSQL
+				// Agent passwords are hashed with the configured algorithm
 				if field.Type == "password" && field.DBColumn == "pw" && config.Module.Name == "users" {
-					// Hash the password in Go using SHA256
 					if strValue, ok := value.(string); ok && strValue != "" {
-						hashedPassword := hashPassword(strValue)
+						hashedPassword, status, err := hashPassword(strValue)
+						if err != nil {
+							c.JSON(status, gin.H{"error": "Failed to hash password: " + err.Error()})
+							return
+						}
 						placeholders = append(placeholders, "?")
 						values = append(values, hashedPassword)
 					} else {
@@ -1074,19 +1078,14 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 	// Handle group assignments for users module
 	if config.Module.Name == "users" {
 		if groupsStr := c.PostForm("groups"); groupsStr != "" {
-			// Parse the selected group IDs
-			groupIDs := strings.Split(groupsStr, ",")
-			for _, groupID := range groupIDs {
-				if groupID != "" {
-					_, err = h.exec(`
-						INSERT INTO user_groups (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-						VALUES (?, ?, 'rw', 1, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)`,
-						newID, groupID, currentUserID)
-					if err != nil {
-						// Log but don't fail the whole operation
-						fmt.Printf("Warning: Failed to add user to group %s: %v\n", groupID, err)
-					}
-				}
+			groupIDs, err := h.parseUserGroupIDs(groupsStr)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			if err := h.insertUserGroups(newID, groupIDs, currentUserID); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign groups: " + err.Error()})
+				return
 			}
 		}
 	}
@@ -1145,8 +1144,11 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 				if field.Type == "password" && field.DBColumn == "pw" && config.Module.Name == "users" {
 					// Only update password if a new value was provided (not empty)
 					if strValue, ok := value.(string); ok && strValue != "" {
-						// Hash the password in Go using SHA256
-						hashedPassword := hashPassword(strValue)
+						hashedPassword, status, err := hashPassword(strValue)
+						if err != nil {
+							c.JSON(status, gin.H{"error": "Failed to hash password: " + err.Error()})
+							return
+						}
 						sets = append(sets, fmt.Sprintf("%s = ?", field.DBColumn))
 						values = append(values, hashedPassword)
 					}
@@ -1182,29 +1184,19 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 
 		// Only update groups if they were explicitly submitted
 		if groupsSubmitted {
-			// First, remove all existing group assignments
-			_, err = h.exec("DELETE FROM user_groups WHERE user_id = ?", id)
+			groupIDs, err := h.parseUserGroupIDs(groupsStr)
 			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			// Replace the user's memberships with the submitted set.
+			if _, err = h.exec("DELETE FROM group_user WHERE user_id = ?", id); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update groups: " + err.Error()})
 				return
 			}
-
-			// Add new group assignments
-			if groupsStr != "" {
-				// Parse the selected group IDs
-				groupIDs := strings.Split(groupsStr, ",")
-				for _, groupID := range groupIDs {
-					if groupID != "" {
-						_, err = h.exec(`
-							INSERT INTO user_groups (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-							VALUES (?, ?, 'rw', 1, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)`,
-							id, groupID, currentUserID)
-						if err != nil {
-							// Log but don't fail the whole operation
-							fmt.Printf("Warning: Failed to add user to group %s: %v\n", groupID, err)
-						}
-					}
-				}
+			if err := h.insertUserGroups(id, groupIDs, currentUserID); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update groups: " + err.Error()})
+				return
 			}
 		}
 		// If groups field wasn't submitted, preserve existing group memberships
@@ -1792,9 +1784,12 @@ func (h *DynamicModuleHandler) processLookups(items []map[string]interface{}, co
 }
 
 // processComputedFields processes all computed fields for the given items.
-func (h *DynamicModuleHandler) processComputedFields(items []map[string]interface{}, config *ModuleConfig) {
+// A lambda that issues SQL the database layer rejects is a module
+// configuration error and fails the whole request; other lambda failures are
+// shown in the field.
+func (h *DynamicModuleHandler) processComputedFields(items []map[string]interface{}, config *ModuleConfig) error {
 	if len(config.ComputedFields) == 0 {
-		return
+		return nil
 	}
 
 	// Get lambda configuration with defaults
@@ -1813,23 +1808,19 @@ func (h *DynamicModuleHandler) processComputedFields(items []map[string]interfac
 				continue
 			}
 
-			var value interface{}
-			var err error
-
-			// Process lambda functions
-			value, err = h.executeLambda(field.Lambda, items[i], dbInterface, lambdaConfig)
+			value, err := h.executeLambda(field.Lambda, items[i], dbInterface, lambdaConfig)
+			if sqlErr := dbInterface.SQLError(); sqlErr != nil {
+				return fmt.Errorf("computed field %q in module %q: %w", field.Name, config.Module.Name, sqlErr)
+			}
 			if err != nil {
-				// Log error and use fallback value
 				fmt.Printf("Lambda execution error for field %s: %v\n", field.Name, err)
-				value = fmt.Sprintf("Error: %v", err)
+				items[i][field.Name] = fmt.Sprintf("Error: %v", err)
+				continue
 			}
-
-			// Set the computed value
-			if value != nil {
-				items[i][field.Name] = value
-			}
+			items[i][field.Name] = value
 		}
 	}
+	return nil
 }
 
 // executeLambda executes a JavaScript lambda function for a computed field.
@@ -1860,15 +1851,15 @@ type simpleDatabaseWrapper struct {
 }
 
 func (w *simpleDatabaseWrapper) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return database.GetAdapter().QueryRow(w.db, query, args...)
+	return w.db.QueryRowContext(ctx, database.ConvertPlaceholders(query), args...)
 }
 
 func (w *simpleDatabaseWrapper) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	return database.GetAdapter().Query(w.db, query, args...)
+	return w.db.QueryContext(ctx, database.ConvertPlaceholders(query), args...)
 }
 
 func (w *simpleDatabaseWrapper) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return database.GetAdapter().Exec(w.db, query, args...)
+	return w.db.ExecContext(ctx, database.ConvertPlaceholders(query), args...)
 }
 
 // Implement the required interface methods (minimal implementation for lambda use).
@@ -2176,9 +2167,9 @@ func (h *DynamicModuleHandler) generateCSVResponse(c *gin.Context, config *Modul
 	c.Data(http.StatusOK, "text/csv", csvData.Bytes())
 }
 
-// query executes SQL with driver-compatible placeholders.
+// query runs a `?`-placeholder SELECT on either driver.
 func (h *DynamicModuleHandler) query(query string, args ...interface{}) (*sql.Rows, error) {
-	rows, err := database.GetAdapter().Query(h.db, query, args...)
+	rows, err := h.db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		fmt.Printf("Dynamic module query failed: %s (args=%v): %v\n", query, args, err)
 	}
@@ -2187,12 +2178,56 @@ func (h *DynamicModuleHandler) query(query string, args ...interface{}) (*sql.Ro
 
 // queryRow mirrors query but returns a single row handle.
 func (h *DynamicModuleHandler) queryRow(query string, args ...interface{}) *sql.Row {
-	return database.GetAdapter().QueryRow(h.db, query, args...)
+	return h.db.QueryRow(database.ConvertPlaceholders(query), args...)
 }
 
-// exec runs statements with automatic placeholder conversion.
+// parseUserGroupIDs parses the users form's comma-separated group ids and
+// checks each names an existing group, so a bad id is rejected before any
+// membership is touched.
+func (h *DynamicModuleHandler) parseUserGroupIDs(groupsStr string) ([]int, error) {
+	seen := map[int]bool{}
+	ids := []int{}
+	for _, raw := range strings.Split(groupsStr, ",") {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			continue
+		}
+		gid, err := strconv.Atoi(raw)
+		if err != nil {
+			return nil, fmt.Errorf("invalid group id %q", raw)
+		}
+		if seen[gid] {
+			continue
+		}
+		var found int
+		if err := h.queryRow("SELECT id FROM groups WHERE id = ?", gid).Scan(&found); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, fmt.Errorf("group %d does not exist", gid)
+			}
+			return nil, err
+		}
+		seen[gid] = true
+		ids = append(ids, gid)
+	}
+	return ids, nil
+}
+
+// insertUserGroups grants the user 'rw' (all OTRS permissions) in each group.
+func (h *DynamicModuleHandler) insertUserGroups(userID interface{}, groupIDs []int, changeBy int) error {
+	for _, gid := range groupIDs {
+		if _, err := h.exec(`
+			INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+			VALUES (?, ?, 'rw', CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)`,
+			userID, gid, changeBy, changeBy); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// exec runs a `?`-placeholder statement on either driver.
 func (h *DynamicModuleHandler) exec(query string, args ...interface{}) (sql.Result, error) {
-	res, err := database.GetAdapter().Exec(h.db, query, args...)
+	res, err := h.db.Exec(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		fmt.Printf("Dynamic module exec failed: %s (args=%v): %v\n", query, args, err)
 	}
@@ -2270,14 +2305,13 @@ func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *Mo
 
 			// Special handling for users module with group filter
 			if config.Module.Name == "users" && filter.Field == "group_id" {
-				// For users, we need to join with user_groups table
+				// Membership lives in group_user
 				placeholders := make([]string, len(values))
 				for i, val := range values {
 					placeholders[i] = "?"
 					args = append(args, strings.TrimSpace(val))
 				}
-				// Add subquery condition for users in selected groups
-				conditions = append(conditions, "id IN (SELECT user_id FROM user_groups WHERE group_id IN ("+strings.Join(placeholders, ", ")+"))")
+				conditions = append(conditions, "id IN (SELECT user_id FROM group_user WHERE group_id IN ("+strings.Join(placeholders, ", ")+"))")
 			} else {
 				// Regular multi-select for other fields
 				placeholders := make([]string, len(values))

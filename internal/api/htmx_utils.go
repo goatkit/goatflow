@@ -1,14 +1,10 @@
 package api
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,12 +12,12 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/ticketutil"
@@ -46,9 +42,7 @@ type TicketDisplay struct {
 	CustomerName string
 }
 
-const pendingAutoStateTypeID = 5
 const autoCloseNoTimeLabel = "No auto-close time scheduled"
-const pendingReminderStateTypeID = 4
 const pendingReminderNoTimeLabel = "No reminder time scheduled"
 
 // Kept for backwards compatibility - new code should use shared.GetGlobalRenderer() directly.
@@ -165,18 +159,6 @@ func wantsJSONResponse(c *gin.Context) bool {
 	return strings.Contains(accept, "application/json")
 }
 
-func stubGroupPermissionsData(groupID uint) *groupPermissionsData {
-	return &groupPermissionsData{
-		Group: groupPermissionsGroup{
-			ID:       groupID,
-			Name:     fmt.Sprintf("Group %d", groupID),
-			Comments: "",
-		},
-		Members: []groupPermissionMember{},
-		Queues:  []groupPermissionsQueue{},
-	}
-}
-
 func fetchGroupPermissionsData(db *sql.DB, groupID uint) (*groupPermissionsData, error) {
 	groupRepo := repository.NewGroupRepository(db)
 	group, err := groupRepo.GetByID(groupID)
@@ -275,27 +257,16 @@ func respondWithGroupPermissionsJSON(c *gin.Context, data *groupPermissionsData)
 	})
 }
 
-func htmxHandlerSkipDB() bool {
-	mode := strings.ToLower(strings.TrimSpace(os.Getenv("HTMX_HANDLER_TEST_MODE")))
-	if mode == "1" || mode == "true" || mode == "yes" {
-		return true
-	}
-	if strings.TrimSpace(os.Getenv("SKIP_DB_WAIT")) == "1" {
-		return true
-	}
-	return false
-}
-
-func isPendingAutoState(stateName string, stateTypeID int) bool {
-	if stateTypeID == pendingAutoStateTypeID {
+func isPendingAutoState(stateName, stateTypeName string) bool {
+	if strings.EqualFold(stateTypeName, lookups.StateTypePendingAuto) {
 		return true
 	}
 	normalized := strings.ReplaceAll(strings.ToLower(stateName), "-", " ")
 	return strings.Contains(normalized, "pending auto")
 }
 
-func isPendingReminderState(stateName string, stateTypeID int) bool {
-	if stateTypeID == pendingReminderStateTypeID {
+func isPendingReminderState(stateName, stateTypeName string) bool {
+	if strings.EqualFold(stateTypeName, lookups.StateTypePendingReminder) {
 		return true
 	}
 	normalized := strings.ReplaceAll(strings.ToLower(stateName), "-", " ")
@@ -310,9 +281,9 @@ type autoCloseMeta struct {
 	overdue  bool
 }
 
-func computeAutoCloseMeta(ticket *models.Ticket, stateName string, stateTypeID int, now time.Time) autoCloseMeta {
+func computeAutoCloseMeta(ticket *models.Ticket, stateName, stateTypeName string, now time.Time) autoCloseMeta {
 	meta := autoCloseMeta{}
-	meta.pending = isPendingAutoState(stateName, stateTypeID)
+	meta.pending = isPendingAutoState(stateName, stateTypeName)
 	if ticket == nil {
 		return meta
 	}
@@ -344,12 +315,12 @@ type pendingReminderMeta struct {
 	message  string
 }
 
-func computePendingReminderMeta(ticket *models.Ticket, stateName string, stateTypeID int, now time.Time) pendingReminderMeta {
+func computePendingReminderMeta(ticket *models.Ticket, stateName, stateTypeName string, now time.Time) pendingReminderMeta {
 	meta := pendingReminderMeta{}
 	if ticket == nil {
 		return meta
 	}
-	meta.pending = isPendingReminderState(stateName, stateTypeID)
+	meta.pending = isPendingReminderState(stateName, stateTypeName)
 
 	// Use the effective pending time - this handles legacy/migrated data with no date set
 	// by defaulting to now + 24 hours
@@ -370,36 +341,6 @@ func computePendingReminderMeta(ticket *models.Ticket, stateName string, stateTy
 		}
 	}
 	return meta
-}
-
-func hashPasswordSHA256(password, salt string) string { //nolint:unused
-	h := sha256.New()
-	h.Write([]byte(password + salt))
-	return hex.EncodeToString(h.Sum(nil))
-}
-
-func generateSalt() string { //nolint:unused
-	salt := make([]byte, 16)
-	if _, err := rand.Read(salt); err != nil {
-		return time.Now().Format(time.RFC3339Nano)
-	}
-	return hex.EncodeToString(salt)
-}
-
-func verifyPassword(password, storedPassword string) bool { //nolint:unused
-	if strings.HasPrefix(storedPassword, "$2a$") || strings.HasPrefix(storedPassword, "$2b$") || strings.HasPrefix(storedPassword, "$2y$") {
-		return bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(password)) == nil
-	}
-	if strings.HasPrefix(storedPassword, "sha256$") {
-		parts := strings.SplitN(storedPassword, "$", 3)
-		if len(parts) == 3 {
-			salt := parts[1]
-			storedHash := parts[2]
-			computedHash := hashPasswordSHA256(password, salt)
-			return storedHash == computedHash
-		}
-	}
-	return password == storedPassword
 }
 
 func isMarkdownContent(content string) bool {
@@ -627,12 +568,11 @@ func computeInitials(firstName, lastName string) string {
 }
 
 func buildUserMapFromModel(user *models.User) gin.H {
-	// SECURITY: the legacy heuristic (`user.ID == 1 || login contains "admin"`)
-	// mis-classifies customer_users when their id collides with an agent
-	// users.id — most obviously id=1, which is root on the agent side and
-	// the first-created customer on the customer side. If the caller
-	// already set a Role, trust it; otherwise fall back to admin-group
-	// lookup (keyed on users.id only, so customers never hit it).
+	// SECURITY: admin status comes only from admin-group membership (the
+	// auth layer's isInAdminGroup flag on the model, or group_user) or an
+	// Admin role the auth layer derived from it — never from the user id or
+	// login. Customer_user ids collide with users ids, so customers skip the
+	// agent-side group lookup entirely.
 	role := user.Role
 	isCustomer := strings.EqualFold(role, "Customer")
 	var isAdmin, isInAdminGroup bool
@@ -647,11 +587,13 @@ func buildUserMapFromModel(user *models.User) gin.H {
 			role = "Customer"
 		}
 	} else {
-		// Agent branch: use the existing heuristic + admin-group lookup.
-		isAdmin = user.ID == 1 || strings.Contains(strings.ToLower(user.Login), "admin")
-		if db, err := database.GetDB(); err == nil && db != nil {
-			isInAdminGroup = isUserInAdminGroup(db, user.ID)
+		isInAdminGroup = user.IsInAdminGroup
+		if !isInAdminGroup {
+			if db, err := database.GetDB(); err == nil && db != nil {
+				isInAdminGroup = isUserInAdminGroup(db, user.ID)
+			}
 		}
+		isAdmin = isInAdminGroup || isAdminRole(role)
 		if role == "" {
 			role = map[bool]string{true: "Admin", false: "Agent"}[isAdmin]
 		}
@@ -785,43 +727,5 @@ func sendErrorResponse(c *gin.Context, statusCode int, message string) {
 		})
 	} else {
 		c.String(statusCode, "Error: %s", message)
-	}
-}
-
-func checkAdmin() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		user := getUserMapForTemplate(c)
-
-		if userID, ok := user["ID"].(uint); ok {
-			if userID == 1 || userID == 2 {
-				c.Next()
-				return
-			}
-
-			db, err := database.GetDB()
-			if err == nil {
-				var count int
-				err = db.QueryRow(database.ConvertPlaceholders(`
-					SELECT COUNT(*)
-					FROM group_user ug
-					JOIN groups g ON ug.group_id = g.id
-					WHERE ug.user_id = ? AND LOWER(g.name) = 'admin'`),
-					userID).Scan(&count)
-				if err == nil && count > 0 {
-					c.Next()
-					return
-				}
-			}
-		}
-
-		if login, ok := user["Login"].(string); ok {
-			if strings.Contains(strings.ToLower(login), "admin") || login == "root@localhost" {
-				c.Next()
-				return
-			}
-		}
-
-		sendErrorResponse(c, http.StatusForbidden, "Access denied. Admin privileges required.")
-		c.Abort()
 	}
 }

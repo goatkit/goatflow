@@ -27,7 +27,10 @@ type PluginManifest = pkgplugin.PluginManifest
 
 // DiscoveredPlugin holds info about a plugin found but not yet loaded.
 type DiscoveredPlugin struct {
-	Name     string // Derived from filename or manifest
+	// Name is the key the plugin is tracked under. For gRPC plugins it is the
+	// manifest name. For WASM plugins it is the file name until the module is
+	// loaded, then the name the plugin registered with the manager.
+	Name     string
 	Path     string // Full path to .wasm file or plugin directory
 	Type     string // "wasm" or "grpc"
 	Loaded   bool   // Whether it's been loaded
@@ -113,6 +116,15 @@ func (l *Loader) DiscoverAll() (int, error) {
 
 	discovered := 0
 
+	l.mu.RLock()
+	knownWASM := make(map[string]bool, len(l.discovered))
+	for _, d := range l.discovered {
+		if d.Type == "wasm" {
+			knownWASM[d.Path] = true
+		}
+	}
+	l.mu.RUnlock()
+
 	// Walk for .wasm files
 	err := filepath.WalkDir(l.pluginDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -124,6 +136,11 @@ func (l *Loader) DiscoverAll() (int, error) {
 
 		ext := strings.ToLower(filepath.Ext(path))
 		if ext == ".wasm" {
+			// A WASM plugin is only renamed to its registered name once loaded,
+			// so an already known file must not be re-added under its file name.
+			if knownWASM[path] {
+				return nil
+			}
 			name := strings.TrimSuffix(filepath.Base(path), ".wasm")
 			l.mu.Lock()
 			l.discovered[name] = &DiscoveredPlugin{
@@ -276,7 +293,8 @@ func (l *Loader) EnsureLoaded(ctx context.Context, name string) error {
 	}
 
 	// Ground-truth check: is the plugin actually registered in the manager?
-	if _, registered := l.manager.Get(name); registered {
+	// Disabled plugins are registered too and must not be loaded again.
+	if l.manager.IsRegistered(name) {
 		// Refresh the cache flag so subsequent fast-path checks hit.
 		if !d.Loaded {
 			l.mu.Lock()
@@ -302,7 +320,7 @@ func (l *Loader) EnsureLoaded(ctx context.Context, name string) error {
 
 	// Re-check under the write lock — another goroutine may have won the
 	// race and registered the plugin by now.
-	if _, registered := l.manager.Get(name); registered {
+	if l.manager.IsRegistered(name) {
 		d.Loaded = true
 		if d.LoadedAt.IsZero() {
 			d.LoadedAt = time.Now()
@@ -312,27 +330,69 @@ func (l *Loader) EnsureLoaded(ctx context.Context, name string) error {
 
 	l.logger.Info("lazy loading plugin", "name", name, "type", d.Type)
 
-	var err error
 	switch d.Type {
 	case "wasm":
-		err = l.loadWASMPlugin(ctx, d.Path)
+		registered, err := l.loadWASMPlugin(ctx, d.Path)
+		if err != nil {
+			return err
+		}
+		l.recordWASMLoadedLocked(d.Path, registered)
+		return nil
 	case "grpc":
 		manifest := l.manifests[name]
 		if manifest == nil {
 			return fmt.Errorf("plugin %q missing manifest", name)
 		}
-		err = l.loadGRPCPlugin(ctx, d.Path, manifest)
+		if err := l.loadGRPCPlugin(ctx, d.Path, manifest); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("plugin %q has unknown type %q", name, d.Type)
-	}
-
-	if err != nil {
-		return err
 	}
 
 	d.Loaded = true
 	d.LoadedAt = time.Now()
 	return nil
+}
+
+// recordWASMLoadedLocked tracks the WASM module at path under the name it
+// registered with the manager, replacing any entry keyed by its file name.
+// Lookups (EnsureLoaded, Reload, Discovered) use registered names, so a
+// file-name key would never match the registry and trigger a reload on every
+// call. Caller must hold l.mu for writing.
+func (l *Loader) recordWASMLoadedLocked(path, name string) {
+	for key, d := range l.discovered {
+		if d.Type == "wasm" && d.Path == path {
+			delete(l.discovered, key)
+		}
+	}
+	l.discovered[name] = &DiscoveredPlugin{
+		Name:     name,
+		Path:     path,
+		Type:     "wasm",
+		Loaded:   true,
+		LoadedAt: time.Now(),
+	}
+}
+
+// recordWASMLoaded is recordWASMLoadedLocked for callers not holding l.mu.
+func (l *Loader) recordWASMLoaded(path, name string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.recordWASMLoadedLocked(path, name)
+}
+
+// wasmNameForPath returns the name the WASM plugin at path is tracked under,
+// falling back to its file name when the loader has not seen it.
+func (l *Loader) wasmNameForPath(path string) string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	for name, d := range l.discovered {
+		if d.Type == "wasm" && d.Path == path {
+			return name
+		}
+	}
+	return strings.TrimSuffix(filepath.Base(path), ".wasm")
 }
 
 // LoadAll discovers and loads all plugins from the plugin directory.
@@ -374,9 +434,17 @@ func (l *Loader) LoadAll(ctx context.Context) (int, []error) {
 				if manifest == nil {
 					continue
 				}
-				loadErr = l.loadGRPCPlugin(ctx, d.Path, manifest)
+				if loadErr = l.loadGRPCPlugin(ctx, d.Path, manifest); loadErr == nil {
+					l.mu.Lock()
+					d.Loaded = true
+					d.LoadedAt = time.Now()
+					l.mu.Unlock()
+				}
 			case "wasm":
-				loadErr = l.loadWASMPlugin(ctx, d.Path)
+				var registered string
+				if registered, loadErr = l.loadWASMPlugin(ctx, d.Path); loadErr == nil {
+					l.recordWASMLoaded(d.Path, registered)
+				}
 			default:
 				continue
 			}
@@ -385,10 +453,6 @@ func (l *Loader) LoadAll(ctx context.Context) (int, []error) {
 				loadErrors = append(loadErrors, fmt.Errorf("load %s plugin %s: %w", d.Type, d.Name, loadErr))
 				continue
 			}
-			l.mu.Lock()
-			d.Loaded = true
-			d.LoadedAt = time.Now()
-			l.mu.Unlock()
 			l.logger.Info("eager-loaded plugin at boot", "name", d.Name, "type", d.Type)
 		}
 
@@ -422,21 +486,15 @@ func (l *Loader) LoadAll(ctx context.Context) (int, []error) {
 		ext := strings.ToLower(filepath.Ext(path))
 		switch ext {
 		case ".wasm":
-			name := strings.TrimSuffix(filepath.Base(path), ".wasm")
-			// Track as discovered
-			l.mu.Lock()
-			l.discovered[name] = &DiscoveredPlugin{
-				Name:     name,
-				Path:     path,
-				Type:     "wasm",
-				Loaded:   true,
-				LoadedAt: time.Now(),
-			}
-			l.mu.Unlock()
-
-			if err := l.loadWASMPlugin(ctx, path); err != nil {
+			registered, err := l.loadWASMPlugin(ctx, path)
+			if err != nil {
+				name := strings.TrimSuffix(filepath.Base(path), ".wasm")
+				l.mu.Lock()
+				l.discovered[name] = &DiscoveredPlugin{Name: name, Path: path, Type: "wasm"}
+				l.mu.Unlock()
 				errors = append(errors, fmt.Errorf("load %s: %w", filepath.Base(path), err))
 			} else {
+				l.recordWASMLoaded(path, registered)
 				loaded++
 			}
 		case ".zip":
@@ -577,15 +635,16 @@ func (l *Loader) loadGRPCPlugin(ctx context.Context, pluginDir string, manifest 
 	return nil
 }
 
-// loadWASMPlugin loads a single WASM plugin file.
-func (l *Loader) loadWASMPlugin(ctx context.Context, path string) error {
+// loadWASMPlugin loads a single WASM plugin file and returns the name it
+// registered with the manager.
+func (l *Loader) loadWASMPlugin(ctx context.Context, path string) (string, error) {
 	l.logger.Info("loading WASM plugin", "path", path)
 
 	// Verify WASM signature if verification is enabled
 	if l.signatureVerification || signing.IsSignatureRequired() {
 		sigPath := signing.DefaultSignaturePath(path)
 		if err := signing.VerifyBinary(path, sigPath, l.trustedKeys); err != nil {
-			return fmt.Errorf("signature verification failed for WASM plugin %s: %w", filepath.Base(path), err)
+			return "", fmt.Errorf("signature verification failed for WASM plugin %s: %w", filepath.Base(path), err)
 		}
 		l.logger.Info("WASM plugin signature verified", "path", path)
 	} else {
@@ -598,7 +657,7 @@ func (l *Loader) loadWASMPlugin(ctx context.Context, path string) error {
 	// Load the WASM module
 	wp, err := wasm.LoadFromFile(ctx, path)
 	if err != nil {
-		return fmt.Errorf("load wasm: %w", err)
+		return "", fmt.Errorf("load wasm: %w", err)
 	}
 
 	// Get the manifest to log what we loaded
@@ -615,22 +674,24 @@ func (l *Loader) loadWASMPlugin(ctx context.Context, path string) error {
 	if err := l.manager.Register(ctx, wp); err != nil {
 		// Shutdown the plugin if registration fails
 		wp.Shutdown(ctx)
-		return fmt.Errorf("register: %w", err)
+		return "", fmt.Errorf("register: %w", err)
 	}
 
 	plugin.GetLogBuffer().Log(manifest.Name, "info", fmt.Sprintf("Plugin loaded: %s", manifest.Name), nil)
-	return nil
+	return manifest.Name, nil
 }
 
 // LoadWASM loads a single WASM plugin by name (without .wasm extension).
 func (l *Loader) LoadWASM(ctx context.Context, name string) error {
 	path := filepath.Join(l.pluginDir, name+".wasm")
-	return l.loadWASMPlugin(ctx, path)
+	_, err := l.loadWASMPlugin(ctx, path)
+	return err
 }
 
 // LoadWASMFromPath loads a WASM plugin from an arbitrary path.
 func (l *Loader) LoadWASMFromPath(ctx context.Context, path string) error {
-	return l.loadWASMPlugin(ctx, path)
+	_, err := l.loadWASMPlugin(ctx, path)
+	return err
 }
 
 // Unload unloads a plugin by name.
@@ -747,7 +808,8 @@ func (l *Loader) reloadWASM(ctx context.Context, name string) error {
 		}
 	}
 
-	return l.loadWASMPlugin(ctx, path)
+	_, err := l.loadWASMPlugin(ctx, path)
+	return err
 }
 
 // WatchDir sets up a file watcher for hot reload.
@@ -1079,15 +1141,16 @@ func (l *Loader) processGRPCBinaryChange(event fsnotify.Event) {
 // processFileChange handles WASM file changes (original behaviour).
 func (l *Loader) processFileChange(event fsnotify.Event) {
 	path := event.Name
-	name := strings.TrimSuffix(filepath.Base(path), ".wasm")
+	name := l.wasmNameForPath(path)
 
 	switch {
 	case event.Op&fsnotify.Create == fsnotify.Create:
 		l.logger.Info("🔌 new plugin detected", "name", name)
-		if err := l.loadWASMPlugin(l.watchCtx, path); err != nil {
+		if registered, err := l.loadWASMPlugin(l.watchCtx, path); err != nil {
 			l.logger.Error("failed to load new plugin", "name", name, "error", err)
 		} else {
-			l.logger.Info("✅ plugin loaded", "name", name)
+			l.recordWASMLoaded(path, registered)
+			l.logger.Info("✅ plugin loaded", "name", registered)
 		}
 
 	case event.Op&fsnotify.Write == fsnotify.Write:

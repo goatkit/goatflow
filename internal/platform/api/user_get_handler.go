@@ -55,36 +55,26 @@ func HandleGetUserAPI(c *gin.Context) {
 		return
 	}
 
-	// Query for user details
+	// Query for user details (OTRS users has no email column; see UserEmail preference below)
 	query := database.ConvertPlaceholders(`
-		SELECT 
-			id,
-			login,
-			email,
-			first_name,
-			last_name,
-			valid_id,
-			create_time,
-			change_time
+		SELECT id, login, first_name, last_name, valid_id, create_time, change_time
 		FROM users
 		WHERE id = ?
 	`)
 
 	var user struct {
-		ID         int            `json:"id"`
-		Login      string         `json:"login"`
-		Email      sql.NullString `json:"-"`
-		FirstName  sql.NullString `json:"-"`
-		LastName   sql.NullString `json:"-"`
-		ValidID    int            `json:"valid_id"`
-		CreateTime sql.NullTime   `json:"-"`
-		ChangeTime sql.NullTime   `json:"-"`
+		ID         int
+		Login      string
+		FirstName  sql.NullString
+		LastName   sql.NullString
+		ValidID    int
+		CreateTime sql.NullTime
+		ChangeTime sql.NullTime
 	}
 
 	err = db.QueryRow(query, userID).Scan(
 		&user.ID,
 		&user.Login,
-		&user.Email,
 		&user.FirstName,
 		&user.LastName,
 		&user.ValidID,
@@ -116,9 +106,6 @@ func HandleGetUserAPI(c *gin.Context) {
 		"valid":    user.ValidID == 1,
 	}
 
-	if user.Email.Valid {
-		response["email"] = user.Email.String
-	}
 	if user.FirstName.Valid {
 		response["first_name"] = user.FirstName.String
 	}
@@ -132,78 +119,57 @@ func HandleGetUserAPI(c *gin.Context) {
 		response["change_time"] = user.ChangeTime.Time.Format("2006-01-02T15:04:05Z")
 	}
 
-	// Get user's groups with permissions
-	groupQuery := database.ConvertPlaceholders(`
-		SELECT 
-			g.id, 
-			g.name,
-			ug.permission_key,
-			ug.permission_value
-		FROM groups g
-		INNER JOIN user_groups ug ON g.id = ug.group_id
-		WHERE ug.user_id = ?
-		ORDER BY g.name
-	`)
-
-	rows, err := db.Query(groupQuery, userID)
-	if err == nil {
-		defer rows.Close()
-
-		groups := []map[string]interface{}{}
-		for rows.Next() {
-			var groupID int
-			var groupName string
-			var permKey sql.NullString
-			var permValue sql.NullInt32
-
-			if err := rows.Scan(&groupID, &groupName, &permKey, &permValue); err == nil {
-				group := map[string]interface{}{
-					"id":   groupID,
-					"name": groupName,
-				}
-
-				// Add permission info if available
-				if permKey.Valid {
-					group["permission_key"] = permKey.String
-				}
-				if permValue.Valid {
-					group["permission_value"] = permValue.Int32
-				}
-
-				groups = append(groups, group)
-			}
-		}
-		_ = rows.Err() //nolint:errcheck // Check for iteration errors
-		response["groups"] = groups
-	} else {
-		// Even if groups query fails, return empty array
-		response["groups"] = []interface{}{}
+	groups, err := loadUserGroupPermissions(db, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to retrieve user groups",
+		})
+		return
 	}
+	response["groups"] = groups
 
-	// Get user preferences (if any)
-	prefsQuery := database.ConvertPlaceholders(`
-		SELECT 
-			preferences_key,
-			preferences_value
+	// Only display preferences leave the server: user_preferences also holds
+	// TOTP secrets, recovery codes and other credentials.
+	prefRows, err := db.Query(database.ConvertPlaceholders(`
+		SELECT preferences_key, preferences_value
 		FROM user_preferences
-		WHERE user_id = ?
-	`)
+		WHERE user_id = ? AND preferences_key IN (?, ?, ?, ?, ?, ?, ?)
+	`), userID, "UserEmail", "Language", "Theme", "ThemeMode", "SessionTimeout", "RemindersEnabled", "UserTimeZone")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to retrieve user preferences",
+		})
+		return
+	}
+	defer prefRows.Close()
 
-	prefRows, err := db.Query(prefsQuery, userID)
-	if err == nil {
-		defer prefRows.Close()
-
-		preferences := make(map[string]string)
-		for prefRows.Next() {
-			var key, value string
-			if err := prefRows.Scan(&key, &value); err == nil {
-				preferences[key] = value
-			}
+	preferences := make(map[string]string)
+	for prefRows.Next() {
+		var key string
+		var value []byte
+		if err := prefRows.Scan(&key, &value); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to retrieve user preferences",
+			})
+			return
 		}
-		_ = prefRows.Err() //nolint:errcheck // Check for iteration errors
-		if len(preferences) > 0 {
-			response["preferences"] = preferences
-		}
+		preferences[key] = string(value)
+	}
+	if err := prefRows.Err(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to retrieve user preferences",
+		})
+		return
+	}
+	if len(preferences) > 0 {
+		response["preferences"] = preferences
+	}
+	if email, ok := preferences["UserEmail"]; ok {
+		response["email"] = email
 	}
 
 	c.JSON(http.StatusOK, gin.H{

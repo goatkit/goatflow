@@ -129,18 +129,9 @@
         <button id="passkey-login-btn" type="button" class="gk-btn-secondary w-full" onclick="loginWithPasskey()">
             {{ t("auth.use_security_key")|default:"Use security key" }}
         </button>
-        {% if AllowLostPassword or AllowRegistration %}
+        {% if AllowLostPassword %}
         <p class="mt-6 text-center text-sm" style="color: var(--gk-text-muted);">
-            {% if AllowLostPassword %}
             <a href="/forgot-password" class="gk-link-neon">{{ t("auth.forgot_password")|default:"Forgot password?" }}</a>
-            {% endif %}
-            {% if AllowLostPassword and AllowRegistration %}
-            <span class="mx-2">|</span>
-            {% endif %}
-            {% if AllowRegistration %}
-            {{ t("auth.not_a_member")|default:"Not a member?" }}
-            <a href="/register" class="gk-link-neon ml-1">{{ t("auth.sign_up")|default:"Sign up" }}</a>
-            {% endif %}
         </p>
         {% endif %}
         </div><!-- end gk-login-card -->

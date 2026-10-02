@@ -302,7 +302,9 @@
         "test_success": "Test konfiguracji zakończony pomyślnie",
         "title": "Konfiguracja Usługi Sieciowej",
         "webservice": "Usługa Sieciowa",
-        "webservice_hint": "Wybierz usługę sieciową do pobierania danych"
+        "webservice_hint": "Wybierz usługę sieciową do pobierania danych",
+        "test_save_first": "Najpierw zapisz pole, aby przetestować jego konfigurację usługi sieciowej.",
+        "test_saved_hint": "Testuje zapisaną konfigurację; najpierw zapisz zmiany."
       },
       "years_in_future": "Lata w przyszłości",
       "years_in_past": "Lata w przeszłości"
@@ -1162,16 +1164,8 @@
     "no_plugins": "Brak zainstalowanych wtyczek",
     "no_plugins_match": "Żadna wtyczka nie pasuje do kryteriów wyszukiwania.",
     "password": "Hasło",
-    "password_requirement_contains_default": "Musi zawierać wielkie litery, małe litery i cyfry",
-    "password_requirement_contains_template": "Musi zawierać {requirements}",
-    "password_requirement_digit": "cyfra",
-    "password_requirement_length_initial": "Co najmniej 8 znaków",
-    "password_requirement_length_template": "Co najmniej {min} znaków",
-    "password_requirement_lowercase": "małe litery",
     "password_requirement_match": "Hasła pasują",
     "password_requirement_none": "Brak dodatkowych wymagań",
-    "password_requirement_special": "znak specjalny (!@#$%^&*)",
-    "password_requirement_uppercase": "wielkie litery",
     "password_requirements_incomplete": "Upewnij się, że wszystkie wymagania dotyczące hasła są spełnione",
     "password_reset_error": "Nie udało się zresetować hasła",
     "password_reset_success": "Hasło zresetowane pomyślnie",
@@ -1474,7 +1468,110 @@
         "delete": "Czy na pewno chcesz usunąć {name}?"
       }
     },
-    "search_groups": "Szukaj grup..."
+    "search_groups": "Szukaj grup...",
+    "webhooks": {
+      "actions": {
+        "activate": "Aktywuj",
+        "deactivate": "Dezaktywuj",
+        "deliveries": "Doręczenia",
+        "test": "Wyślij test"
+      },
+      "active": "Aktywny",
+      "add": "Dodaj webhook",
+      "columns": {
+        "events": "Zdarzenia",
+        "last_delivery": "Ostatnie doręczenie",
+        "url": "URL"
+      },
+      "deliveries": {
+        "attempts": "Próby",
+        "details": "Szczegóły",
+        "duration": "Czas trwania",
+        "empty": "Brak doręczeń.",
+        "event": "Zdarzenie",
+        "status_code": "Status HTTP",
+        "time": "Czas",
+        "title": "Doręczenia: {name}"
+      },
+      "delivery": {
+        "created_at": "Utworzono",
+        "delivered_at": "Doręczono",
+        "duration_ms": "{ms} ms",
+        "error": "Błąd",
+        "next_attempt": "Następna próba",
+        "no_response": "Brak treści odpowiedzi.",
+        "payload": "Treść żądania",
+        "redeliver": "Doręcz ponownie",
+        "response": "Odpowiedź",
+        "title": "Doręczenie #{id}"
+      },
+      "description": "Wysyłaj zdarzenia zgłoszeń i artykułów do systemów zewnętrznych jako podpisane żądania HTTP POST.",
+      "empty": "Nie skonfigurowano jeszcze żadnych webhooków.",
+      "events": {
+        "article_created": "Do zgłoszenia dodano artykuł (notatkę, odpowiedź, e-mail, rozmowę telefoniczną, zapytanie internetowe).",
+        "ticket_assigned": "Zmienił się właściciel zgłoszenia.",
+        "ticket_closed": "Stan zgłoszenia zmienił się na stan zamknięty.",
+        "ticket_created": "Utworzono zgłoszenie (dowolny kanał).",
+        "ticket_escalated": "Rozpoczęła się eskalacja czasu reakcji, aktualizacji lub rozwiązania.",
+        "ticket_merged": "Zgłoszenie zostało scalone.",
+        "ticket_priority_changed": "Zmienił się priorytet zgłoszenia.",
+        "ticket_queue_moved": "Zgłoszenie przeniesiono do innej kolejki.",
+        "ticket_state_changed": "Stan zgłoszenia zmienił się na stan inny niż zamknięty.",
+        "ticket_updated": "Zmienił się tytuł, klient, typ, usługa, SLA, osoba odpowiedzialna, blokada, czas oczekiwania lub pole dynamiczne zgłoszenia."
+      },
+      "form": {
+        "active_help": "Nieaktywne webhooki nie otrzymują zdarzeń.",
+        "add_header": "Dodaj nagłówek",
+        "create_title": "Dodaj webhook",
+        "edit_title": "Edytuj webhook",
+        "events": "Zdarzenia",
+        "events_help": "Webhook jest wywoływany dla wybranych zdarzeń.",
+        "events_required": "Wybierz co najmniej jedno zdarzenie.",
+        "header_name": "Nazwa nagłówka",
+        "header_value": "Wartość",
+        "headers": "Własne nagłówki",
+        "headers_help": "Wysyłane z każdym doręczeniem. Content-Type, User-Agent i nagłówki X-Webhook-* ustawia GoatFlow.",
+        "remove_header": "Usuń nagłówek",
+        "remove_secret": "Usuń sekret (doręczenia nie będą podpisywane)",
+        "retry_count": "Ponowienia",
+        "retry_count_help": "Dodatkowe próby po nieudanym doręczeniu.",
+        "secret": "Sekret podpisu",
+        "secret_help": "Od 16 do 512 znaków. Każde doręczenie jest podpisywane w nagłówku X-Webhook-Signature (sha256=HMAC treści). Zapisanego sekretu nie można ponownie wyświetlić.",
+        "secret_none": "Brak sekretu: doręczenia nie są podpisywane.",
+        "secret_placeholder_keep": "Pozostaw puste, aby zachować obecny sekret",
+        "secret_placeholder_new": "Opcjonalny sekret podpisu",
+        "secret_set": "Sekret jest ustawiony ({hint}).",
+        "timeout": "Limit czasu (sekundy)",
+        "timeout_help": "Jak długo czekać na odpowiedź punktu końcowego.",
+        "url": "Docelowy URL",
+        "url_help": "Bezwzględny adres URL http:// lub https://. GoatFlow wysyła na niego żądanie POST z JSON dla każdego zdarzenia."
+      },
+      "inactive": "Nieaktywny",
+      "load_failed": "Nie udało się wczytać webhooków.",
+      "messages": {
+        "activated": "Webhook aktywowany.",
+        "confirm_delete": "Usunąć webhook „{name}” wraz z dziennikiem doręczeń?",
+        "created": "Webhook utworzony.",
+        "deactivated": "Webhook dezaktywowany.",
+        "deleted": "Webhook usunięty.",
+        "network_error": "Nie można połączyć się z serwerem.",
+        "redeliver_failed": "Ponowne doręczenie nie powiodło się.",
+        "redelivered": "Doręczenie wysłano ponownie pomyślnie.",
+        "request_failed": "Żądanie nie powiodło się: {error}",
+        "test_failed": "Doręczenie testowe nie powiodło się.",
+        "test_succeeded": "Doręczenie testowe powiodło się.",
+        "updated": "Webhook zapisany."
+      },
+      "never": "Nigdy",
+      "retry": "Spróbuj ponownie",
+      "status": {
+        "delivered": "Doręczone",
+        "delivering": "W trakcie doręczania",
+        "failed": "Nieudane",
+        "pending": "Oczekujące"
+      },
+      "title": "Webhooki"
+    }
   },
   "admin_dashboard": {
     "acl": "Listy kontroli dostępu",
@@ -1566,7 +1663,55 @@
     "tickets_open": "otwarte zgłoszenia",
     "uptime_this_month": "czas działania w tym miesiącu",
     "user_management": "Zarządzanie użytkownikami",
-    "user_management_desc": "Zarządzanie kontami agentów i klientów"
+    "user_management_desc": "Zarządzanie kontami agentów i klientów",
+    "webhooks": "Webhooki",
+    "webhooks_desc": "Wysyłaj zdarzenia zgłoszeń do systemów zewnętrznych"
+  },
+  "admin_reports": {
+    "title": "Raporty i analizy",
+    "description": "Statystyki zgłoszeń dla kolejek, które możesz odczytać.",
+    "period_label": "Okres",
+    "period_24h": "Ostatnie 24 godziny",
+    "period_7d": "Ostatnie 7 dni",
+    "period_30d": "Ostatnie 30 dni",
+    "trend_label": "Trend",
+    "trend_daily_7": "Dziennie, ostatnie 7 dni",
+    "trend_daily_30": "Dziennie, ostatnie 30 dni",
+    "trend_monthly_12": "Miesięcznie, ostatnie 12 miesięcy",
+    "error_forbidden": "Aby zobaczyć raporty, potrzebujesz dostępu do odczytu co najmniej jednej kolejki.",
+    "error_generic": "Nie udało się wczytać części danych raportu. Spróbuj ponownie.",
+    "scope_note": "Liczby obejmują tylko zgłoszenia w kolejkach, które możesz odczytać. Daty w UTC.",
+    "overview_heading": "Przegląd",
+    "total_tickets": "Wszystkie zgłoszenia",
+    "open_tickets": "Otwarte",
+    "pending_tickets": "Oczekujące",
+    "closed_tickets": "Zamknięte",
+    "trends_heading": "Utworzone a zamknięte",
+    "created": "Utworzone",
+    "closed": "Zamknięte",
+    "closure_rate": "Wskaźnik zamknięć",
+    "queues_heading": "Kolejki",
+    "backlog_hint": "Zaległości: otwarte zgłoszenia starsze niż 24 godziny.",
+    "queue": "Kolejka",
+    "backlog": "Zaległości",
+    "agents_heading": "Aktywność agentów",
+    "agents_hint": "Zgłoszenia utworzone i zamknięte jako odpowiedzialny agent oraz napisane artykuły w wybranym okresie.",
+    "agent": "Agent",
+    "assigned": "Przypisane",
+    "articles": "Artykuły",
+    "customers_heading": "Najaktywniejsi klienci",
+    "total_customers": "Klienci",
+    "active_customers": "Aktywni (30 dni)",
+    "new_customers": "Nowi w tym miesiącu",
+    "customer": "Klient",
+    "email": "E-mail",
+    "last_activity": "Ostatnie zgłoszenie",
+    "export_heading": "Eksport",
+    "export_description": "Pobierz dane dla wybranego okresu.",
+    "export_summary_csv": "Podsumowanie (CSV)",
+    "export_tickets_csv": "Zgłoszenia (CSV)",
+    "export_summary_json": "Podsumowanie (JSON)",
+    "no_data": "Brak danych dla tego wyboru."
   },
   "admin_queues": {
     "add_queue": "Dodaj kolejkę",
@@ -1959,6 +2104,23 @@
       "required": "*"
     },
     "company": "Firma",
+    "company_page": {
+      "address": "Adres",
+      "columns": {
+        "email": "E-mail",
+        "name": "Imię i nazwisko",
+        "title": "Tytuł"
+      },
+      "customer_id": "ID klienta",
+      "info_title": "Informacje o firmie",
+      "no_company": "Twoje konto nie jest powiązane z żadną firmą.",
+      "no_users": "Nie znaleziono użytkowników.",
+      "not_set": "Nie podano",
+      "user_count": "Pokaż użytkowników (%d)",
+      "users_description": "Osoby z Twojej firmy korzystające z portalu klienta.",
+      "website": "Strona internetowa",
+      "you": "Ty"
+    },
     "dashboard": {
       "announcements": "Ogłoszenia",
       "closed_tickets": "Zamknięte zgłoszenia",
@@ -2020,16 +2182,6 @@
       "title": "Utwórz nowe zgłoszenie wsparcia"
     },
     "phone": "Telefon",
-    "placeholder_pages": {
-      "company_info_title": "Informacje o firmie",
-      "company_users_title": "Użytkownicy firmy",
-      "knowledge_base_article": "Artykuł bazy wiedzy",
-      "knowledge_base_search": "Wyszukiwanie bazy wiedzy",
-      "knowledge_base_title": "Baza wiedzy",
-      "password_title": "Zmień hasło",
-      "profile_title": "Profil klienta",
-      "under_construction": "Ta strona jest w budowie."
-    },
     "portal": {
       "login_title": "Logowanie do wsparcia klienta",
       "title": "Portal klienta"
@@ -2097,7 +2249,6 @@
     }
   },
   "customer_company_form": {
-    "assigned_services": "Przypisane usługi",
     "branding": "Branding",
     "company_details": "Szczegóły firmy",
     "features": "Funkcje",
@@ -2106,17 +2257,56 @@
     "save_capture_setting": "Zapisz ustawienie przechwytywania",
     "save_portal_settings": "Zapisz ustawienia portalu"
   },
+  "customer_company_pages": {
+    "customer_id": "ID klienta",
+    "sections": "Sekcje firmy",
+    "nav": {
+      "details": "Szczegóły",
+      "users": "Użytkownicy klienta",
+      "tickets": "Zgłoszenia",
+      "services": "Usługi"
+    }
+  },
   "customer_company_services": {
-    "heading": "Usługi firmy klienta",
-    "title": "Usługi firmy klienta"
+    "heading": "Usługi",
+    "title": "Usługi firmy klienta",
+    "description": "Usługi są przypisywane użytkownikom klienta. Zaznacz użytkowników tej firmy, którzy mogą korzystać z danej usługi.",
+    "saved": "Przypisania usług zapisane.",
+    "no_services": "Brak ważnych usług.",
+    "manage_services": "Zarządzaj usługami",
+    "no_users": "Ta firma nie ma użytkowników klienta, więc nie ma komu przypisać usług.",
+    "all_users": "Wszyscy użytkownicy",
+    "save": "Zapisz przypisania",
+    "columns": {
+      "service": "Usługa",
+      "assigned": "Przypisano",
+      "customer_users": "Użytkownicy klienta"
+    }
   },
   "customer_company_tickets": {
-    "heading": "Zgłoszenia firmy klienta",
-    "title": "Zgłoszenia firmy klienta"
+    "heading": "Zgłoszenia",
+    "title": "Zgłoszenia firmy klienta",
+    "description": "Zgłoszenia tej firmy w kolejkach, do których masz dostęp, od najnowszych.",
+    "empty": "Brak zgłoszeń tej firmy w kolejkach, do których masz dostęp.",
+    "columns": {
+      "title": "Tytuł",
+      "customer_user": "Użytkownik klienta"
+    }
   },
   "customer_company_users": {
-    "heading": "Użytkownicy firmy klienta",
-    "title": "Użytkownicy firmy klienta"
+    "heading": "Użytkownicy klienta",
+    "title": "Użytkownicy firmy klienta",
+    "description": "Użytkownicy klienta należący do tej firmy.",
+    "manage_users": "Zarządzaj użytkownikami klienta",
+    "empty": "Ta firma nie ma jeszcze użytkowników klienta.",
+    "columns": {
+      "login": "Login",
+      "name": "Imię i nazwisko",
+      "email": "E-mail",
+      "phone": "Telefon",
+      "tickets": "Zgłoszenia",
+      "status": "Status"
+    }
   },
   "customer_group": {
     "by_group_heading": "Uprawnienia klienta według grupy",
@@ -2142,7 +2332,8 @@
   },
   "customer_portal_settings": {
     "heading": "Ustawienia portalu klienta",
-    "title": "Ustawienia portalu klienta"
+    "title": "Ustawienia portalu klienta",
+    "per_company_note": "Każda firma klienta może nadpisać te wartości domyślne na karcie Ustawienia portalu na swojej stronie edycji."
   },
   "customer_user_services": {
     "title": "Usługi użytkownika klienta"
@@ -2188,29 +2379,16 @@
     "performance": "Wydajność",
     "quick_actions": "Szybkie akcje",
     "quick_stats": "Szybkie statystyki",
-    "realtime": {
-      "title": "Panel w czasie rzeczywistym"
-    },
     "recent_activity": "Ostatnia aktywność",
     "recent_tickets": "Ostatnie zgłoszenia",
     "statistics": "Statystyki",
-    "stats": {
-      "closed_today": "Zamknięte dzisiaj",
-      "my_open": "Moje otwarte",
-      "my_pending": "Moje oczekujące",
-      "new_today": "Nowe dzisiaj",
-      "open_tickets": "Otwarte zgłoszenia",
-      "overdue": "Przeterminowane",
-      "pending": "Oczekujące",
-      "total_assigned": "Łącznie przypisane",
-      "unassigned": "Nieprzypisane"
-    },
     "tickets_count": "Zgłoszenia",
     "title": "Panel",
     "unassigned_count": "nieprzypisane",
     "welcome_back": "Witaj ponownie",
     "welcome_message": "Oto, co dzisiaj dzieje się z Twoimi zgłoszeniami",
-    "widget_config_desc": "Wybierz, które widżety pojawią się na pulpicie. Przeciągnij, aby zmienić kolejność."
+    "widget_config_desc": "Wybierz, które widżety pojawią się na pulpicie. Przeciągnij, aby zmienić kolejność.",
+    "widget_unavailable": "Ten widżet jest obecnie niedostępny. Spróbuj ponownie później."
   },
   "demo": {
     "security_disabled": "Zmiany hasła i MFA są wyłączone w trybie demo."
@@ -2243,11 +2421,6 @@
       "delete": "Usuń pole",
       "edit": "Edytuj pole"
     }
-  },
-  "dynamic_test": {
-    "heading": "Testowanie modułu dynamicznego",
-    "testing_instructions": "Instrukcje testowania",
-    "title": "Testowanie modułu dynamicznego"
   },
   "editor": {
     "insert_image_prompt": "Wprowadź adres URL obrazu (lub pozostaw puste, aby wybrać plik):",
@@ -2332,29 +2505,18 @@
     "mandatory_note": "Wszystkie pola oznaczone gwiazdką (*) są wymagane.",
     "select": "Wybierz"
   },
-  "group_form": {
-    "heading": "Formularz grupy",
-    "title": "Formularz grupy"
-  },
-  "group_members": {
-    "heading": "Członkowie grupy",
-    "title": "Członkowie grupy"
-  },
   "group_permissions": {
     "permission_matrix": "Matryca uprawnień",
     "queue_permissions": "Uprawnienia kolejki",
     "queues": "Kolejki",
     "title": "Uprawnienia grupy"
   },
-  "group_view": {
-    "heading": "Szczegóły grupy",
-    "title": "Grupa"
-  },
   "groups": {
     "add_group": "Dodaj grupę",
     "add_user": "Dodaj użytkownika do grupy",
     "add_user_btn": "Dodaj użytkownika",
     "confirm_delete": "Czy na pewno chcesz usunąć tę grupę?",
+    "delete_keeps_group": "Grupa zostanie oznaczona jako nieaktywna. Pozostanie na liście wraz z członkami i uprawnieniami i można ją ponownie aktywować, edytując ją.",
     "current_members": "Aktualni członkowie",
     "delete_success": "Grupa usunięta pomyślnie",
     "group": "Grupa",
@@ -2583,7 +2745,6 @@
       "delete_item": "Czy na pewno chcesz usunąć ten element?",
       "delete_lookup": "Czy na pewno chcesz usunąć ten element? Tej akcji nie można cofnąć.",
       "delete_priority": "Czy na pewno chcesz usunąć ten priorytet? Tej akcji nie można cofnąć.",
-      "delete_queue": "Czy na pewno chcesz usunąć tę kolejkę? Wszystkie zgłoszenia w tej kolejce będą musiały zostać ponownie przypisane. Tej akcji nie można cofnąć.",
       "delete_queue_simple": "Czy na pewno chcesz usunąć tę kolejkę?",
       "delete_queues_bulk": "Czy na pewno chcesz usunąć wybrane kolejki?",
       "delete_state": "Czy na pewno chcesz usunąć ten stan?",
@@ -2626,7 +2787,6 @@
     "failed_remove_user": "Nie udało się usunąć użytkownika",
     "failed_save_field": "Nie udało się zapisać pola",
     "failed_update_screen_config": "Nie udało się zaktualizować konfiguracji ekranu",
-    "failed_update_services": "Nie udało się zaktualizować usług",
     "groups": {
       "select_user": "Proszę wybrać użytkownika do dodania"
     },
@@ -2635,7 +2795,6 @@
     "item_deleted": "Element usunięty pomyślnie",
     "item_updated": "Element zaktualizowany pomyślnie",
     "loading": "Ładowanie...",
-    "loading_customer_users": "Ładowanie użytkowników klientów...",
     "network_error": "Błąd sieci",
     "no_agents_available": "Brak dostępnych agentów",
     "no_data": "Brak dostępnych danych",
@@ -2656,15 +2815,11 @@
     "please_wait": "Proszę czekać...",
     "processing": "Przetwarzanie...",
     "required_fields": "Wypełnij wszystkie wymagane pola",
-    "save_company_before_services": "Zapisz firmę przed przypisaniem usług.",
-    "save_company_first": "Zapisz firmę przed przypisaniem usług.",
     "saving": "Zapisywanie...",
     "select_at_least_one_queue": "Proszę wybrać co najmniej jedną kolejkę",
     "select_template_type": "Proszę wybrać co najmniej jeden typ szablonu.",
     "select_two_to_merge": "Proszę wybrać co najmniej dwa zgłoszenia do scalenia",
     "server_error": "Błąd serwera",
-    "services_updated": "Usługi zaktualizowane pomyślnie",
-    "services_updated_success": "Usługi zaktualizowane pomyślnie",
     "session_expired": "Twoja sesja wygasła",
     "success": "Sukces",
     "unauthorized": "Nieautoryzowany",
@@ -2831,9 +2986,7 @@
     "title": "Zarządzanie uprawnieniami"
   },
   "placeholders": {
-    "contains": "Zawiera...",
-    "note_subject": "Temat notatki",
-    "separate_emails": "Oddziel wiele adresów e-mail przecinkami"
+    "contains": "Zawiera..."
   },
   "priorities": {
     "heading": "Zarządzanie priorytetami",
@@ -2950,20 +3103,6 @@
     },
     "total_count": "Suma"
   },
-  "realtime": {
-    "active_alerts": "Aktywne alerty",
-    "heading": "Panel w czasie rzeczywistym",
-    "no_tickets": "Brak zgłoszeń",
-    "queue_distribution": "Rozkład kolejek",
-    "queue_status": "Status kolejki",
-    "recent_tickets": "Ostatnie zgłoszenia",
-    "stats": {
-      "active_agents": "Aktywni agenci",
-      "avg_response_time": "Średni czas odpowiedzi",
-      "open_tickets": "Otwarte zgłoszenia"
-    },
-    "ticket_volume": "Wolumen zgłoszeń (24h)"
-  },
   "realtime_dashboard": {
     "title": "Panel w czasie rzeczywistym"
   },
@@ -3079,29 +3218,51 @@
     "search_results": "Wyniki wyszukiwania"
   },
   "self_service": {
+    "email": {
+      "register_body": "Witaj %s,\n\ndziękujemy za rejestrację. Otwórz ten link w ciągu %d godzin, aby potwierdzić adres e-mail i ustawić hasło:\n%s\n\nJeśli to nie Ty się rejestrowałeś, zignoruj tę wiadomość.",
+      "register_exists_body": "Witaj,\n\nktoś próbował utworzyć konto z tym adresem e-mail, ale takie konto już istnieje.\n\nJeśli nie pamiętasz hasła, możesz ustawić nowe tutaj:\n%s\n\nJeśli to nie Ty, zignoruj tę wiadomość.",
+      "register_exists_subject": "Twoje konto",
+      "register_subject": "Potwierdź swój adres e-mail",
+      "reset_body": "Witaj %s,\n\nzażądano zresetowania hasła do Twojego konta „%s”.\n\nOtwórz ten link w ciągu %d minut, aby ustawić nowe hasło:\n%s\n\nJeśli to nie Ty, zignoruj tę wiadomość. Twoje hasło nie zostało zmienione.",
+      "reset_subject": "Resetowanie hasła"
+    },
+    "error": "Coś poszło nie tak. Spróbuj ponownie.",
     "forgot_password": {
-      "email_label": "Adres e-mail",
+      "identifier_label": "Nazwa użytkownika lub adres e-mail",
+      "identifier_required": "Wpisz nazwę użytkownika lub adres e-mail.",
+      "intro": "Wpisz nazwę użytkownika lub adres e-mail. Jeśli pasuje do konta, wyślemy Ci e-mailem link do ustawienia nowego hasła.",
       "submit": "Wyślij link",
       "success": "Jeśli konto istnieje, link został wysłany.",
       "title": "Zapomniałem hasła"
     },
+    "rate_limited": "Zbyt wiele żądań. Spróbuj ponownie później.",
     "register": {
+      "account_exists": "Konto z tym adresem e-mail już istnieje. Użyj opcji „Nie pamiętasz hasła”, aby się zalogować.",
+      "complete_submit": "Utwórz konto",
+      "complete_success": "Twoje konto zostało utworzone. Możesz się teraz zalogować.",
+      "complete_title": "Ustaw hasło",
       "email": "E-mail",
+      "fields_required": "Imię, nazwisko i adres e-mail są wymagane.",
       "first_name": "Imię",
+      "intro": "Podaj swoje dane. Wyślemy Ci e-mailem link do potwierdzenia adresu i ustawienia hasła.",
+      "invalid_input": "Podaj prawidłowy adres e-mail oraz imię i nazwisko o długości maksymalnie 100 znaków.",
       "last_name": "Nazwisko",
+      "start_again": "Zarejestruj się ponownie",
       "submit": "Zarejestruj",
       "success": "Rejestracja wysłana.",
       "title": "Utwórz konto"
     },
     "reset_password": {
       "confirm": "Potwierdź",
+      "invalid_link": "Ten link jest nieprawidłowy lub wygasł.",
       "new_password": "Nowe hasło",
+      "policy_regexp": "Hasło nie pasuje do wymaganego wzorca",
+      "request_new": "Poproś o nowy link",
+      "required": "Wpisz nowe hasło.",
       "submit": "Resetuj",
       "success": "Hasło zresetowane.",
-      "title": "Resetuj hasło"
-    },
-    "verify_email": {
-      "success": "E-mail zweryfikowany."
+      "title": "Resetuj hasło",
+      "too_long": "Hasło jest za długie."
     }
   },
   "service": {
@@ -3299,7 +3460,6 @@
     "logout": "Wyloguj",
     "logout_confirm_message": "Czy na pewno chcesz się wylogować?",
     "logout_title": "Wyloguj",
-    "more_coming": "Więcej ustawień wkrótce",
     "never_expires": "Nigdy nie wygasa",
     "never_used": "Nigdy nie użyty",
     "new_password": "Nowe hasło",
@@ -3868,7 +4028,6 @@
   "tickets": {
     "actions": "Akcje",
     "add_comment": "Dodaj komentarz",
-    "add_internal_note": "Dodaj notatkę wewnętrzną",
     "add_note": "Dodaj notatkę",
     "additional_fields": "Dodatkowe pola",
     "additional_info_placeholder": "Dodatkowe informacje lub kontekst...",
@@ -3890,11 +4049,7 @@
     "attachments": "Załączniki",
     "auto_close": {
       "at": "o",
-      "minus_help": "Zgłoszenie zostanie automatycznie zamknięte o określonej godzinie niezależnie od aktywności.",
-      "minus_title": "Oczekujące automatyczne zamknięcie-",
       "overdue": "Automatyczne zamknięcie zaległe",
-      "plus_help": "Zgłoszenie zostanie automatycznie zamknięte, jeśli nie będzie odpowiedzi klienta do określonego czasu.",
-      "plus_title": "Oczekujące automatyczne zamknięcie+",
       "scheduled": "Automatyczne zamknięcie zaplanowane",
       "should_have_closed_at": "Zgłoszenie powinno zostać automatycznie zamknięte o",
       "while_pending": "podczas oczekiwania na automatyczne zamknięcie",
@@ -3915,7 +4070,6 @@
     "comment_placeholder": "Wpisz swój komentarz tutaj...",
     "comments": "Komentarze",
     "communication": "Komunikacja",
-    "compose_reply": "Napisz odpowiedź",
     "created_at": "Utworzono",
     "created_by": "Utworzone przez",
     "created_on": "Utworzono dnia",
@@ -3926,7 +4080,6 @@
     "customer_visible_badge": "Widoczne dla klienta",
     "customer_wrote_badge": "Klient to napisał",
     "description": "Opis",
-    "details": "Szczegóły",
     "due_date": "Termin",
     "dynamic_field_filters": "Filtry pól dynamicznych",
     "email": "E-mail",
@@ -3980,13 +4133,11 @@
     "owner": "Właściciel",
     "pending_reminder": {
       "ago": "temu",
-      "help": "Zgłoszenie powróci do stanu \"otwarte\" o określonej godzinie.",
       "in": "za",
       "no_time_scheduled": "Brak zaplanowanej godziny przypomnienia.",
       "not_scheduled": "Przypomnienie nie zaplanowane",
       "overdue": "Przypomnienie zaległe",
       "scheduled": "Przypomnienie zaplanowane",
-      "title": "Oczekujące przypomnienie",
       "was_scheduled_for": "Przypomnienie było zaplanowane na",
       "will_reopen_at": "Zgłoszenie zostanie ponownie otwarte o"
     },
@@ -4296,7 +4447,7 @@
       "org_support": "Zespół wsparcia IT",
       "org_type_heading": "Jaki to rodzaj organizacji?",
       "queue_name_ph": "Nazwa kolejki (np. Skrzynka wsparcia)",
-      "queues_desc": "Kolejka to skrzynka odbiorcza, do której trafiają bilety. Przypisz każdą kolejkę do jednego lub więcej zespołów.",
+      "queues_desc": "Kolejka to skrzynka odbiorcza, do której trafiają bilety. Każda kolejka należy do jednego zespołu; jego członkowie obsługują jej bilety.",
       "queues_heading": "Utwórz kolejki biletów",
       "remove": "Usuń",
       "review_agents": "Agenci",

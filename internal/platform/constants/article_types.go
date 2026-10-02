@@ -1,8 +1,11 @@
 // Package constants provides application-wide constant definitions.
 package constants
 
-// Article type IDs seeded via migrations (see legacy default data).
-// These mirror OTRS semantics and MUST remain stable for data compatibility.
+// Article type IDs are GoatFlow's API vocabulary for "what kind of article is
+// this". They are NOT stored: the OTRS 6+ schema persists an article as
+// communication_channel_id + is_visible_for_customer, and
+// internal/core/channel_mapping.go is the single translation between the two.
+// The IDs MUST remain stable because API clients send them.
 const (
 	ArticleTypeEmailExternal        = 1
 	ArticleTypeEmailInternal        = 2
@@ -26,8 +29,17 @@ const (
 	ArticleSenderCustomer = 3
 )
 
+// Communication channel IDs seeded by migrations/*/000002_minimal_data
+// (table communication_channel).
+const (
+	CommunicationChannelEmail    = 1
+	CommunicationChannelPhone    = 2
+	CommunicationChannelInternal = 3
+	CommunicationChannelChat     = 4
+)
+
 // InteractionType is a high-level UI-driven abstraction used to map
-// user intent to concrete article_type_id + visibility rules.
+// user intent to a concrete article type + visibility rules.
 // This keeps handler logic simple and centralized.
 type InteractionType string
 

@@ -1,14 +1,12 @@
 package api
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
@@ -23,22 +21,26 @@ import (
 )
 
 // resolveUserRole determines the role and admin status for a user by checking
-// their admin group membership. Used by all login paths (direct, 2FA, demo)
-// to ensure consistent JWT claims.
-func resolveUserRole(userID uint) (role string, isAdmin bool) {
-	role = "Agent"
+// their admin group membership. Used by all login paths (direct, 2FA)
+// to ensure consistent JWT claims. A failed lookup is an error: a guessed
+// role would silently demote administrators for the token's lifetime.
+func resolveUserRole(userID uint) (role string, isAdmin bool, err error) {
 	db, err := database.GetDB()
-	if err != nil || db == nil {
-		return
+	if err == nil && db == nil {
+		err = errors.New("database connection is nil")
+	}
+	if err != nil {
+		return "", false, fmt.Errorf("resolve role for user %d: %w", userID, err)
 	}
 	var cnt int
-	_ = db.QueryRow(database.ConvertPlaceholders(
-		`SELECT COUNT(*) FROM group_user gu JOIN `+"`groups`"+` g ON gu.group_id = g.id WHERE gu.user_id = ? AND LOWER(g.name) = 'admin'`), userID).Scan(&cnt)
-	if cnt > 0 {
-		role = "Admin"
-		isAdmin = true
+	if err := db.QueryRow(database.ConvertPlaceholders(
+		`SELECT COUNT(*) FROM group_user gu JOIN `+"`groups`"+` g ON gu.group_id = g.id WHERE gu.user_id = ? AND LOWER(g.name) = 'admin'`), userID).Scan(&cnt); err != nil {
+		return "", false, fmt.Errorf("resolve role for user %d: %w", userID, err)
 	}
-	return
+	if cnt > 0 {
+		return "Admin", true, nil
+	}
+	return "Agent", false, nil
 }
 
 // handleLoginPage shows the login page.
@@ -62,17 +64,17 @@ func handleLoginPage(c *gin.Context) {
 	errorMsg := ""
 	if rawErr := c.Query("error"); rawErr != "" {
 		messages := map[string]string{
-			"invalid_provider":    "Invalid login provider.",
-			"server_error":        "A server error occurred. Please try again.",
-			"provider_not_found":  "The selected login provider could not be found.",
-			"provider_disabled":   "This login provider has been disabled.",
-			"provider_mismatch":   "Authentication provider mismatch. Please try again.",
-			"auth_failed":         "Authentication failed. Please check your provider configuration or try again.",
-			"saml_config_error":   "SAML provider configuration error. Contact your administrator.",
-			"missing_params":      "Missing authentication parameters. Please try again.",
-			"missing_state":       "Authentication state missing. Please try again.",
-			"invalid_state":       "Authentication session expired. Please try again.",
-			"session_error":       "Failed to create a session. Please try again.",
+			"invalid_provider":   "Invalid login provider.",
+			"server_error":       "A server error occurred. Please try again.",
+			"provider_not_found": "The selected login provider could not be found.",
+			"provider_disabled":  "This login provider has been disabled.",
+			"provider_mismatch":  "Authentication provider mismatch. Please try again.",
+			"auth_failed":        "Authentication failed. Please check your provider configuration or try again.",
+			"saml_config_error":  "SAML provider configuration error. Contact your administrator.",
+			"missing_params":     "Missing authentication parameters. Please try again.",
+			"missing_state":      "Authentication state missing. Please try again.",
+			"invalid_state":      "Authentication session expired. Please try again.",
+			"session_error":      "Failed to create a session. Please try again.",
 		}
 		if msg, ok := messages[rawErr]; ok {
 			errorMsg = msg
@@ -81,12 +83,7 @@ func handleLoginPage(c *gin.Context) {
 		}
 	}
 
-	allowRegistration := false
-	allowLostPassword := false
-	if cfg != nil {
-		allowRegistration = cfg.Features.Registration
-		allowLostPassword = cfg.Features.LostPassword
-	}
+	allowLostPassword := cfg != nil && cfg.Features.LostPassword
 
 	// Get available OIDC providers for IdP buttons
 	var idpButtons []map[string]string
@@ -96,7 +93,7 @@ func handleLoginPage(c *gin.Context) {
 			WHERE (org_id IS NULL OR org_id = ?) AND enabled = 1
 			ORDER BY provider_type, name`,
 		)
-		rows, err := db.Query(query, orgIDFromContext(c))
+		rows, err := db.Query(query, activeOrgCookie(c))
 		if err == nil {
 			defer rows.Close()
 			for rows.Next() {
@@ -116,7 +113,6 @@ func handleLoginPage(c *gin.Context) {
 
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/login.pongo2", pongo2.Context{
 		"error":             errorMsg,
-		"AllowRegistration": allowRegistration,
 		"AllowLostPassword": allowLostPassword,
 		"IdPButtons":        idpButtons,
 	})
@@ -134,288 +130,13 @@ func handleCustomerLoginPage(c *gin.Context) {
 	}
 
 	errorMsg := c.Query("error")
+	cfg := config.Get()
 
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/login.pongo2", pongo2.Context{
-		"error": errorMsg,
+		"error":             errorMsg,
+		"AllowLostPassword": cfg != nil && cfg.Features.LostPassword,
+		"AllowRegistration": cfg != nil && cfg.Features.Registration,
 	})
-}
-
-// handleLogin processes login requests.
-func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		username := c.PostForm("username")
-		password := c.PostForm("password")
-
-		clientIP := c.ClientIP()
-		if blocked, remaining := auth.DefaultLoginRateLimiter.IsBlocked(clientIP, username); blocked {
-			if c.GetHeader("HX-Request") == "true" {
-				c.JSON(http.StatusTooManyRequests, gin.H{
-					"success":         false,
-					"error":           fmt.Sprintf("too many failed attempts, try again in %d seconds", int(remaining.Seconds())),
-					"retry_after_sec": int(remaining.Seconds()),
-				})
-			} else {
-				getPongo2Renderer().HTML(c, http.StatusTooManyRequests, "pages/login.pongo2", pongo2.Context{
-					"Error": fmt.Sprintf("Too many failed attempts. Please try again in %d seconds.", int(remaining.Seconds())),
-				})
-			}
-			return
-		}
-
-		validLogin := false
-		userID := uint(1)
-
-		db, err := database.GetDB()
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "Invalid credentials",
-			})
-			return
-		}
-
-		var dbUserID int
-		var dbPassword string
-		var validID int
-
-		query := database.ConvertPlaceholders(`
-			SELECT id, pw, valid_id
-			FROM users
-			WHERE login = ?
-			AND valid_id = 1`)
-		err = db.QueryRow(query, username).Scan(&dbUserID, &dbPassword, &validID)
-		if err != nil {
-			// User not found or other database error
-		} else if validID == 1 {
-			if verifyPassword(password, dbPassword) {
-				validLogin = true
-				userID = uint(dbUserID)
-			}
-		} else {
-			query2 := database.ConvertPlaceholders(`
-				SELECT id, pw, valid_id
-				FROM users
-				WHERE login = ?
-				AND pw = ?
-				AND valid_id = 1`)
-			err = db.QueryRow(query2, username, password).Scan(&dbUserID, &dbPassword, &validID)
-
-			if err == nil && validID == 1 {
-				validLogin = true
-				userID = uint(dbUserID)
-
-				salt := generateSalt()
-				combined := password + salt
-				hash := sha256.Sum256([]byte(combined))
-				hashedPassword := fmt.Sprintf("sha256$%s$%s", salt, hex.EncodeToString(hash[:]))
-
-				updateQuery := database.ConvertPlaceholders(`
-					UPDATE users
-					SET pw = ?,
-					    change_time = CURRENT_TIMESTAMP
-					WHERE id = ?`)
-				_, _ = db.Exec(updateQuery, hashedPassword, dbUserID) //nolint:errcheck // Best-effort password rehash
-			}
-		}
-
-		if !validLogin {
-			auth.DefaultLoginRateLimiter.RecordFailure(clientIP, username)
-			isHXRequest := c.GetHeader("HX-Request") == "true"
-			isJSONRequest := strings.Contains(c.GetHeader("Accept"), "application/json")
-			renderMissing := getPongo2Renderer() == nil || getPongo2Renderer().TemplateSet() == nil
-			if isHXRequest || isJSONRequest || renderMissing {
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"success": false,
-					"error":   "Invalid credentials",
-				})
-				return
-			}
-			getPongo2Renderer().HTML(c, http.StatusUnauthorized, "pages/login.pongo2", pongo2.Context{
-				"Error": "Invalid username or password",
-			})
-			return
-		}
-
-		auth.DefaultLoginRateLimiter.RecordSuccess(clientIP, username)
-
-		// Check if 2FA is enabled for this user
-		if isAgentMFAEnabled(db, c.Request, int(userID)) {
-			// 2FA is enabled - don't complete login yet
-			// SECURITY FIX (V3/V4/V5/V7): Use session manager instead of raw cookies
-			sessionMgr := auth.GetTOTPSessionManager()
-			token, err := sessionMgr.CreateAgentSession(int(userID), username, c.ClientIP(), c.Request.UserAgent())
-			if err != nil {
-				sendErrorResponse(c, http.StatusInternalServerError, "Failed to create 2FA session")
-				return
-			}
-
-			// Only store the token in cookie - user data is server-side
-			httpcookie.SetAuth(c, "2fa_pending", token, 300) // 5 min expiry
-
-			if c.GetHeader("HX-Request") == "true" {
-				c.Header("HX-Redirect", "/login/2fa")
-				c.JSON(http.StatusOK, gin.H{
-					"success":      true,
-					"requires_2fa": true,
-					"redirect":     "/login/2fa",
-				})
-				return
-			}
-
-			c.Redirect(http.StatusFound, "/login/2fa")
-			return
-		}
-
-		var token string
-		if jwtManager != nil {
-			role, isAdmin := resolveUserRole(userID)
-			tokenStr, err := jwtManager.GenerateTokenWithLogin(userID, username, username, role, isAdmin, 1)
-			if err != nil {
-				sendErrorResponse(c, http.StatusInternalServerError, "Failed to generate token")
-				return
-			}
-			token = tokenStr
-		} else {
-			token = fmt.Sprintf("demo_session_%d_%d", userID, time.Now().Unix())
-		}
-
-		sessionTimeout := constants.DefaultSessionTimeout
-		var userTheme, userThemeMode string
-		if db != nil {
-			prefService := service.NewUserPreferencesService(db)
-			if userTimeout := prefService.GetSessionTimeout(int(userID)); userTimeout > 0 {
-				sessionTimeout = userTimeout
-			}
-			// Load user's saved theme preferences from database
-			userTheme = prefService.GetTheme(int(userID))
-			userThemeMode = prefService.GetThemeMode(int(userID))
-		}
-
-		// SECURITY: wipe any pre-existing customer session cookies on agent
-		// login — see the symmetric comment in handleCustomerLogin for
-		// rationale. One browser, one identity.
-		httpcookie.SetAuth(c, "customer_access_token", "", -1)
-		httpcookie.SetAuth(c, "customer_auth_token", "", -1)
-		httpcookie.SetAuth(c, "customer_session_id", "", -1)
-		httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "", -1)
-		httpcookie.SetAuth(c, "access_token", token, sessionTimeout)
-		httpcookie.SetAuth(c, "auth_token", token, sessionTimeout)
-		// Set a non-httpOnly indicator so JavaScript can detect authentication
-		// (auth tokens are httpOnly for security, but JS needs to know user is logged in)
-		httpcookie.SetAuthState(c, "goatflow_logged_in", "1", sessionTimeout)
-
-		// Set theme cookies from database preferences (if user has saved preferences)
-		// These will override any login-page localStorage values in the browser
-		if userTheme != "" {
-			c.SetCookie("goatflow_theme", userTheme, sessionTimeout, "/", "", false, false)
-		}
-		if userThemeMode != "" {
-			c.SetCookie("goatflow_mode", userThemeMode, sessionTimeout, "/", "", false, false)
-		}
-
-		// Create session record in database for admin session management
-		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
-			sessionID, err := sessionSvc.CreateSession(
-				int(userID),
-				username,
-				"User",
-				c.ClientIP(),
-				c.Request.UserAgent(),
-			)
-			if err != nil {
-				// Log error but don't fail login - session tracking is non-critical
-				log.Printf("Failed to create session record: %v", err)
-			} else {
-				// Store session ID in a cookie for logout cleanup
-				httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
-			}
-		}
-
-		if c.GetHeader("HX-Request") == "true" {
-			c.Header("HX-Redirect", "/dashboard")
-			c.JSON(http.StatusOK, gin.H{
-				"success":  true,
-				"redirect": "/dashboard",
-			})
-			return
-		}
-
-		c.Redirect(http.StatusFound, "/dashboard")
-	}
-}
-
-// handleHTMXLogin handles HTMX login requests.
-func handleHTMXLogin(c *gin.Context) {
-	demoEmail := os.Getenv("DEMO_LOGIN_EMAIL")
-	demoPassword := os.Getenv("DEMO_LOGIN_PASSWORD")
-
-	var payload struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-	_ = c.ShouldBindJSON(&payload) //nolint:errcheck // Defaults to empty
-
-	if strings.TrimSpace(payload.Email) == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "email required"})
-		return
-	}
-
-	if demoEmail != "" || demoPassword != "" {
-		if payload.Email != demoEmail || payload.Password != demoPassword {
-			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Invalid credentials"})
-			return
-		}
-
-		token, err := shared.GetJWTManager().GenerateToken(1, demoEmail, "Agent", 0)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to generate token"})
-			return
-		}
-
-		c.Header("HX-Redirect", "/dashboard")
-		c.JSON(http.StatusOK, gin.H{
-			"success":      true,
-			"access_token": token,
-			"token_type":   "Bearer",
-			"user": gin.H{
-				"login":      demoEmail,
-				"email":      demoEmail,
-				"first_name": "Test",
-				"last_name":  "User",
-				"role":       "Agent",
-			},
-		})
-		return
-	}
-
-	testEmail := os.Getenv("TEST_AUTH_EMAIL")
-	testPass := os.Getenv("TEST_AUTH_PASSWORD")
-	if testEmail != "" && testPass != "" && payload.Email == testEmail && payload.Password == testPass {
-		token := "test-token"
-		c.Header("HX-Redirect", "/dashboard")
-		c.JSON(http.StatusOK, gin.H{
-			"success":      true,
-			"access_token": token,
-			"token_type":   "Bearer",
-			"user": gin.H{
-				"login":      payload.Email,
-				"email":      payload.Email,
-				"first_name": "Admin",
-				"last_name":  "User",
-				"role":       "Agent",
-			},
-		})
-		return
-	}
-
-	c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Invalid credentials"})
-}
-
-// handleDemoCustomerLogin creates a demo customer token for testing.
-func handleDemoCustomerLogin(c *gin.Context) {
-	token := fmt.Sprintf("demo_customer_%s_%d", "john.customer", time.Now().Unix())
-	httpcookie.SetAuth(c, "access_token", token, 86400)
-	c.Redirect(http.StatusFound, "/customer/")
 }
 
 // handleLogout handles logout requests.
@@ -440,6 +161,7 @@ func handleLogout(c *gin.Context) {
 	httpcookie.SetAuth(c, "access_token", "", -1)
 	httpcookie.SetAuth(c, "auth_token", "", -1)
 	httpcookie.SetAuth(c, "token", "", -1)
+	httpcookie.SetAuth(c, "refresh_token", "", -1)
 	httpcookie.SetAuth(c, "session_id", "", -1)
 	httpcookie.SetAuthState(c, "goatflow_logged_in", "", -1)
 
@@ -505,9 +227,15 @@ func handle2FAPage(c *gin.Context) {
 		return
 	}
 
-	status := mfaStatus{TOTPEnabled: true, WebAuthnEnabled: true}
-	if db, err := database.GetDB(); err == nil && db != nil {
-		status = agentMFAStatus(db, c.Request, session.UserID)
+	db, err := database.GetDB()
+	var status mfaStatus
+	if err == nil {
+		status, err = agentMFAStatus(db, session.UserID)
+	}
+	if err != nil {
+		log.Printf("2FA page: second-factor status for user %d unavailable: %v", session.UserID, err)
+		c.String(http.StatusInternalServerError, "Login temporarily unavailable")
+		return
 	}
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/login_2fa.pongo2", mfaLoginPageContext(status))
 }
@@ -596,20 +324,24 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		httpcookie.SetAuth(c, "2fa_pending", "", -1)
 
 		// Complete the login - generate token and set cookies
-		var token string
-		if jwtManager != nil {
-			role, isAdmin := resolveUserRole(uint(userID))
-			tokenStr, err := jwtManager.GenerateTokenWithLogin(uint(userID), username, username, role, isAdmin, 1)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"success": false,
-					"error":   "Failed to generate token",
-				})
-				return
-			}
-			token = tokenStr
-		} else {
-			token = fmt.Sprintf("demo_session_%d_%d", userID, time.Now().Unix())
+		if jwtManager == nil {
+			log.Printf("2FA login: JWT manager unavailable for user %d", userID)
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Authentication unavailable"})
+			return
+		}
+		role, isAdmin, err := resolveUserRole(uint(userID))
+		if err != nil {
+			log.Printf("2FA login: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to generate token"})
+			return
+		}
+		token, err := jwtManager.GenerateTokenWithLogin(uint(userID), username, username, role, isAdmin, 1)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to generate token",
+			})
+			return
 		}
 
 		sessionTimeout := constants.DefaultSessionTimeout

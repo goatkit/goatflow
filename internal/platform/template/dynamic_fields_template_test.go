@@ -1,6 +1,7 @@
 package template
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/flosch/pongo2/v6"
@@ -48,7 +49,7 @@ func TestDynamicFieldFormCreate(t *testing.T) {
 
 	// Title should indicate create (check for either i18n key or default text)
 	asserter.ContainsAny("Create Dynamic Field", "admin.dynamic_fields.create_heading")
- }
+}
 
 // TestDynamicFieldFormEdit tests the edit form uses hx-put.
 func TestDynamicFieldFormEdit(t *testing.T) {
@@ -91,7 +92,7 @@ func TestDynamicFieldFormEdit(t *testing.T) {
 
 	// Title should indicate edit (check for either i18n key or default text)
 	asserter.ContainsAny("Edit Dynamic Field", "admin.dynamic_fields.edit_heading")
- }
+}
 
 // TestDynamicFieldsListDeletePath tests delete buttons use correct API path.
 func TestDynamicFieldsListDeletePath(t *testing.T) {
@@ -120,7 +121,37 @@ func TestDynamicFieldsListDeletePath(t *testing.T) {
 
 	// Delete should use /admin/api path
 	asserter.Contains("/admin/api/dynamic-fields/")
- }
+}
+
+// TestDynamicFieldsListTabCounts checks each object-type tab badge shows the
+// number of fields of that type, not the number of object types with fields.
+func TestDynamicFieldsListTabCounts(t *testing.T) {
+	t.Parallel()
+	helper := NewTemplateTestHelper(t)
+
+	field := func(id int, name, objectType string) map[string]interface{} {
+		return map[string]interface{}{"ID": id, "Name": name, "Label": name, "FieldType": "Text", "ObjectType": objectType, "ValidID": 1}
+	}
+	ctx := pongo2.Context{
+		"ObjectTypes": []string{"Ticket", "Article", "CustomerUser"},
+		"FieldsGrouped": map[string]interface{}{
+			"Ticket":  []map[string]interface{}{field(1, "One", "Ticket"), field(2, "Two", "Ticket"), field(3, "Three", "Ticket")},
+			"Article": []map[string]interface{}{field(4, "Four", "Article")},
+		},
+		"t":           func(key string, args ...interface{}) string { return key },
+		"User":        map[string]interface{}{"Username": "admin", "IsAdmin": true},
+		"CurrentYear": 2025,
+	}
+
+	html, err := helper.RenderTemplate("pages/admin/dynamic_fields.pongo2", ctx)
+	require.NoError(t, err, "Template should render without error")
+
+	for objectType, want := range map[string]string{"Ticket": "3", "Article": "1", "CustomerUser": "0"} {
+		m := regexp.MustCompile(`data-field-count="` + objectType + `">\s*(\d+)\s*<`).FindStringSubmatch(html)
+		require.NotNil(t, m, "%s tab badge missing", objectType)
+		require.Equal(t, want, m[1], "%s tab badge count", objectType)
+	}
+}
 
 // TestDynamicFieldScreensAPIPath tests screen config uses correct API path.
 func TestDynamicFieldScreensAPIPath(t *testing.T) {
@@ -151,4 +182,4 @@ func TestDynamicFieldScreensAPIPath(t *testing.T) {
 	// Screen config API should use /admin/api path (singular "screen")
 	asserter.Contains("/admin/api/dynamic-fields/")
 	asserter.Contains("/screen")
- }
+}

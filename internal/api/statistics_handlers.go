@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -15,7 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/services"
+	"github.com/goatkit/goatflow/internal/service"
 )
 
 // extractUserIDForRBAC extracts user ID from gin context for RBAC checks
@@ -42,21 +43,6 @@ func extractUserIDForRBAC(c *gin.Context) int {
 	}
 }
 
-// getAccessibleQueueIDs returns list of queue IDs the user can access
-func getAccessibleQueueIDs(db *sql.DB, userID int) ([]int, error) {
-	permSvc := services.NewPermissionService(db)
-	perms, err := permSvc.GetUserQueuePermissions(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	ids := make([]int, 0, len(perms))
-	for queueID := range perms {
-		ids = append(ids, queueID)
-	}
-	return ids, nil
-}
-
 // buildQueueFilterClause creates SQL WHERE clause fragment for RBAC queue filtering
 func buildQueueFilterClause(queueIDs []int, queueIDColumn string) (string, []interface{}) {
 	if len(queueIDs) == 0 {
@@ -72,6 +58,252 @@ func buildQueueFilterClause(queueIDs []int, queueIDColumn string) (string, []int
 	return queueIDColumn + " IN (" + strings.Join(placeholders, ",") + ")", args
 }
 
+// statsScope is the set of queues whose tickets a statistics caller may count.
+type statsScope struct {
+	all      bool // admin: every queue
+	queueIDs []int
+}
+
+// filter returns the SQL fragment restricting queueIDColumn to the scope.
+func (s statsScope) filter(queueIDColumn string) (string, []interface{}) {
+	if s.all {
+		return "1 = 1", nil
+	}
+	return buildQueueFilterClause(s.queueIDs, queueIDColumn)
+}
+
+// statisticsScope authenticates a statistics request and resolves the queues the
+// caller may read. Statistics are agent-only: customer JWTs and customer API tokens
+// get 403, because their user_id is a customer_user id, not a users id. Admins
+// count every queue; other agents count the queues they hold 'ro' (or 'rw') on,
+// directly or through a role. On failure the error response is already written.
+func statisticsScope(c *gin.Context) (*sql.DB, statsScope, bool) {
+	userID := extractUserIDForRBAC(c)
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return nil, statsScope{}, false
+	}
+	if isCustomer, _ := c.Get("is_customer"); isCustomer == true || c.GetString("user_role") == "Customer" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Statistics are only available to agents"})
+		return nil, statsScope{}, false
+	}
+
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+		return nil, statsScope{}, false
+	}
+
+	scope, err := resolveStatsScope(c, db, userID)
+	if err != nil {
+		log.Printf("statistics: resolving queue access for user %d: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check permissions"})
+		return nil, statsScope{}, false
+	}
+	return db, scope, true
+}
+
+// resolveStatsScope reuses the queue_ro middleware's result when it ran and
+// otherwise asks the queue access service with the same rules.
+func resolveStatsScope(c *gin.Context, db *sql.DB, userID int) (statsScope, error) {
+	if isAdmin, exists := c.Get("is_queue_admin"); exists {
+		if isAdmin == true {
+			return statsScope{all: true}, nil
+		}
+		if ids, ok := c.Get("accessible_queue_ids"); ok {
+			if uids, ok := ids.([]uint); ok {
+				scope := statsScope{queueIDs: make([]int, len(uids))}
+				for i, id := range uids {
+					scope.queueIDs[i] = int(id)
+				}
+				return scope, nil
+			}
+		}
+	}
+
+	svc := service.NewQueueAccessService(db)
+	ctx := c.Request.Context()
+	isAdmin, err := svc.IsAdmin(ctx, uint(userID))
+	if err != nil {
+		return statsScope{}, err
+	}
+	if isAdmin {
+		return statsScope{all: true}, nil
+	}
+	uids, err := svc.GetAccessibleQueueIDs(ctx, uint(userID), "ro")
+	if err != nil {
+		return statsScope{}, err
+	}
+	scope := statsScope{queueIDs: make([]int, len(uids))}
+	for i, id := range uids {
+		scope.queueIDs[i] = int(id)
+	}
+	return scope, nil
+}
+
+// statsDBError logs a failed statistics query and answers 500 instead of
+// reporting zeros that would hide the failure.
+func statsDBError(c *gin.Context, what string, err error) {
+	log.Printf("statistics: %s: %v", what, err)
+	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load statistics"})
+}
+
+// statsIntParam reads a positive integer query parameter (default def, at most max).
+// On a bad value it answers 400 and returns ok=false.
+func statsIntParam(c *gin.Context, name string, def, max int) (int, bool) {
+	raw := c.Query(name)
+	if raw == "" {
+		return def, true
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n <= 0 || n > max {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("%s must be an integer between 1 and %d", name, max)})
+		return 0, false
+	}
+	return n, true
+}
+
+// statsLookback maps the period query parameter shared by the agents and export
+// endpoints to a duration. On a bad value it answers 400 and returns ok=false.
+func statsLookback(c *gin.Context) (string, time.Duration, bool) {
+	period := c.DefaultQuery("period", "7d")
+	switch period {
+	case "24h":
+		return period, 24 * time.Hour, true
+	case "7d":
+		return period, 7 * 24 * time.Hour, true
+	case "30d":
+		return period, 30 * 24 * time.Hour, true
+	}
+	c.JSON(http.StatusBadRequest, gin.H{"error": "period must be one of 24h, 7d, 30d"})
+	return "", 0, false
+}
+
+// Statistics state buckets, derived from ticket_state_type.name. State type IDs
+// differ between GoatFlow's seed data and OTRS imports, so only names are used.
+const (
+	statsOpen    = "open"    // state types new and open
+	statsClosed  = "closed"  // state type closed
+	statsPending = "pending" // state types pending reminder and pending auto
+)
+
+func ticketStateCategory(stateTypeName string) string {
+	switch {
+	case stateTypeName == "new" || stateTypeName == "open":
+		return statsOpen
+	case stateTypeName == "closed":
+		return statsClosed
+	case strings.HasPrefix(stateTypeName, "pending"):
+		return statsPending
+	}
+	return ""
+}
+
+// statsCounts holds ticket counts per state bucket.
+type statsCounts struct {
+	total, open, closed, pending int
+}
+
+// countTicketsByCategory counts the tickets in scope, optionally only those
+// created at or after since.
+func countTicketsByCategory(db *sql.DB, scope statsScope, since *time.Time) (statsCounts, error) {
+	filter, args := scope.filter("t.queue_id")
+	query := `
+		SELECT tst.name, COUNT(t.id)
+		FROM ticket t
+		JOIN ticket_state ts ON ts.id = t.ticket_state_id
+		JOIN ticket_state_type tst ON tst.id = ts.type_id
+		WHERE ` + filter
+	if since != nil {
+		query += " AND t.create_time >= ?"
+		args = append(args, *since)
+	}
+	query += " GROUP BY tst.name"
+
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
+	if err != nil {
+		return statsCounts{}, err
+	}
+	defer rows.Close()
+
+	var counts statsCounts
+	for rows.Next() {
+		var (
+			typeName string
+			n        int
+		)
+		if err := rows.Scan(&typeName, &n); err != nil {
+			return statsCounts{}, err
+		}
+		counts.total += n
+		switch ticketStateCategory(typeName) {
+		case statsOpen:
+			counts.open += n
+		case statsClosed:
+			counts.closed += n
+		case statsPending:
+			counts.pending += n
+		}
+	}
+	return counts, rows.Err()
+}
+
+// statsTicket is one ticket as seen by the statistics aggregations.
+type statsTicket struct {
+	queueID       int
+	responsibleID int
+	customer      string
+	created       time.Time
+	changed       time.Time
+	category      string
+}
+
+// closedAt reports when a closed ticket was closed. The ticket's last change
+// stands in for the close time.
+func (t statsTicket) closedAt() (time.Time, bool) {
+	return t.changed, t.category == statsClosed
+}
+
+// loadStatsTickets loads the tickets in scope. With since set, only tickets
+// created or changed at or after since are returned.
+func loadStatsTickets(db *sql.DB, scope statsScope, since *time.Time) ([]statsTicket, error) {
+	filter, args := scope.filter("t.queue_id")
+	query := `
+		SELECT t.queue_id, t.responsible_user_id, t.customer_user_id, t.create_time, t.change_time, tst.name
+		FROM ticket t
+		JOIN ticket_state ts ON ts.id = t.ticket_state_id
+		JOIN ticket_state_type tst ON tst.id = ts.type_id
+		WHERE ` + filter
+	if since != nil {
+		query += " AND (t.create_time >= ? OR t.change_time >= ?)"
+		args = append(args, *since, *since)
+	}
+
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tickets []statsTicket
+	for rows.Next() {
+		var (
+			tk       statsTicket
+			customer sql.NullString
+			typeName string
+		)
+		if err := rows.Scan(&tk.queueID, &tk.responsibleID, &customer, &tk.created, &tk.changed, &typeName); err != nil {
+			return nil, err
+		}
+		tk.customer = strings.TrimSpace(customer.String)
+		tk.created = tk.created.UTC()
+		tk.changed = tk.changed.UTC()
+		tk.category = ticketStateCategory(typeName)
+		tickets = append(tickets, tk)
+	}
+	return tickets, rows.Err()
+}
+
 // HandleDashboardStatisticsAPI handles GET /api/v1/statistics/dashboard.
 //
 //	@Summary		Get dashboard statistics
@@ -84,178 +316,117 @@ func buildQueueFilterClause(queueIDs []int, queueIDColumn string) (string, []int
 //	@Security		BearerAuth
 //	@Router			/statistics/dashboard [get]
 func HandleDashboardStatisticsAPI(c *gin.Context) {
-	// Check authentication and get user ID for RBAC
-	userID := extractUserIDForRBAC(c)
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+	db, scope, ok := statisticsScope(c)
+	if !ok {
 		return
 	}
 
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
-
-	// RBAC: Get accessible queue IDs
-	accessibleQueueIDs, err := getAccessibleQueueIDs(db, userID)
+	overview, err := countTicketsByCategory(db, scope, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check permissions"})
+		statsDBError(c, "dashboard overview", err)
 		return
 	}
 
-	// Build queue filter for all ticket queries
-	queueFilter, queueArgs := buildQueueFilterClause(accessibleQueueIDs, "queue_id")
-
-	// Overview counts using portable queries - RBAC filtered
-	var overview struct {
-		TotalTickets   int
-		OpenTickets    int
-		ClosedTickets  int
-		PendingTickets int
-	}
-
-	// Total tickets in accessible queues
-	totalQuery := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE " + queueFilter)
-	if err := db.QueryRow(totalQuery, queueArgs...).Scan(&overview.TotalTickets); err != nil {
-		overview.TotalTickets = 0
-	}
-
-	stateID := func(name string) int {
-		var id int
-		query := database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = ?")
-		if err := db.QueryRow(query, name).Scan(&id); err != nil {
-			return 0
-		}
-		return id
-	}
-
-	// Build state+queue filter
-	if id := stateID("open"); id > 0 {
-		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ? AND " + queueFilter)
-		args := append([]interface{}{id}, queueArgs...)
-		if err := db.QueryRow(query, args...).Scan(&overview.OpenTickets); err != nil {
-			overview.OpenTickets = 0
-		}
-	}
-	if id := stateID("closed"); id > 0 {
-		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ? AND " + queueFilter)
-		args := append([]interface{}{id}, queueArgs...)
-		if err := db.QueryRow(query, args...).Scan(&overview.ClosedTickets); err != nil {
-			overview.ClosedTickets = 0
-		}
-	}
-	if id := stateID("pending"); id > 0 {
-		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ? AND " + queueFilter)
-		args := append([]interface{}{id}, queueArgs...)
-		if err := db.QueryRow(query, args...).Scan(&overview.PendingTickets); err != nil {
-			overview.PendingTickets = 0
-		}
-	}
-
-	// Build queue ID filter for queue query (filter queues themselves)
-	queueIDFilter, queueIDArgs := buildQueueFilterClause(accessibleQueueIDs, "q.id")
-
-	// Tickets by queue - RBAC filtered
+	queueFilter, queueArgs := scope.filter("q.id")
 	byQueue := []gin.H{}
-	queueQuery := database.ConvertPlaceholders(`
+	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT q.id, q.name, COUNT(t.id) AS cnt
 		FROM queue q
-		LEFT JOIN ticket t ON q.id = t.queue_id
-		WHERE q.valid_id = 1 AND ` + queueIDFilter + `
+		LEFT JOIN ticket t ON t.queue_id = q.id
+		WHERE q.valid_id = 1 AND `+queueFilter+`
 		GROUP BY q.id, q.name
-		ORDER BY cnt DESC
-	`)
-	if rows, err := db.Query(queueQuery, queueIDArgs...); err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var (
-				queueID int
-				name    string
-				count   int64
-			)
-			if err := rows.Scan(&queueID, &name, &count); err == nil {
-				byQueue = append(byQueue, gin.H{
-					"queue_id":   queueID,
-					"queue_name": name,
-					"count":      int(count),
-				})
-			}
+		ORDER BY cnt DESC, q.name`), queueArgs...)
+	if err != nil {
+		statsDBError(c, "dashboard by queue", err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			queueID, count int
+			name           string
+		)
+		if err := rows.Scan(&queueID, &name, &count); err != nil {
+			statsDBError(c, "dashboard by queue", err)
+			return
 		}
-		if err := rows.Err(); err != nil {
-			// Log or handle iteration errors
-		}
+		byQueue = append(byQueue, gin.H{"queue_id": queueID, "queue_name": name, "count": count})
+	}
+	if err := rows.Err(); err != nil {
+		statsDBError(c, "dashboard by queue", err)
+		return
 	}
 
-	// Tickets by priority - RBAC filtered (only count tickets in accessible queues)
+	ticketFilter, ticketArgs := scope.filter("t.queue_id")
 	byPriority := []gin.H{}
-	priorityQuery := database.ConvertPlaceholders(`
+	prows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT p.id, p.name, COUNT(t.id) AS cnt
 		FROM ticket_priority p
-		LEFT JOIN ticket t ON p.id = t.ticket_priority_id AND ` + queueFilter + `
+		LEFT JOIN ticket t ON t.ticket_priority_id = p.id AND `+ticketFilter+`
 		WHERE p.valid_id = 1
 		GROUP BY p.id, p.name
-		ORDER BY p.id
-	`)
-	if rows, err := db.Query(priorityQuery, queueArgs...); err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var (
-				priorityID int
-				name       string
-				count      int64
-			)
-			if err := rows.Scan(&priorityID, &name, &count); err == nil {
-				byPriority = append(byPriority, gin.H{
-					"priority_id":   priorityID,
-					"priority_name": name,
-					"count":         int(count),
-				})
-			}
+		ORDER BY p.id`), ticketArgs...)
+	if err != nil {
+		statsDBError(c, "dashboard by priority", err)
+		return
+	}
+	defer prows.Close()
+	for prows.Next() {
+		var (
+			priorityID, count int
+			name              string
+		)
+		if err := prows.Scan(&priorityID, &name, &count); err != nil {
+			statsDBError(c, "dashboard by priority", err)
+			return
 		}
-		if err := rows.Err(); err != nil {
-			// Log or handle iteration errors
-		}
+		byPriority = append(byPriority, gin.H{"priority_id": priorityID, "priority_name": name, "count": count})
+	}
+	if err := prows.Err(); err != nil {
+		statsDBError(c, "dashboard by priority", err)
+		return
 	}
 
-	// Recent activity - RBAC filtered
 	recentActivity := []gin.H{}
-	activityQuery := database.ConvertPlaceholders(`
-		SELECT 'created' AS type, t.id, t.tn, t.create_time
+	arows, err := db.Query(database.ConvertPlaceholders(`
+		SELECT t.id, t.tn, t.create_time
 		FROM ticket t
-		WHERE ` + queueFilter + `
-		ORDER BY t.create_time DESC
-		LIMIT 10
-	`)
-	if rows, err := db.Query(activityQuery, queueArgs...); err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var (
-				typeLabel string
-				ticketID  int
-				tn        string
-				ts        time.Time
-			)
-			if err := rows.Scan(&typeLabel, &ticketID, &tn, &ts); err == nil {
-				recentActivity = append(recentActivity, gin.H{
-					"type":      typeLabel,
-					"ticket_id": ticketID,
-					"ticket_tn": tn,
-					"timestamp": ts,
-				})
-			}
+		WHERE `+ticketFilter+`
+		ORDER BY t.create_time DESC, t.id DESC
+		LIMIT 10`), ticketArgs...)
+	if err != nil {
+		statsDBError(c, "dashboard recent activity", err)
+		return
+	}
+	defer arows.Close()
+	for arows.Next() {
+		var (
+			ticketID int64
+			tn       string
+			ts       time.Time
+		)
+		if err := arows.Scan(&ticketID, &tn, &ts); err != nil {
+			statsDBError(c, "dashboard recent activity", err)
+			return
 		}
-		if err := rows.Err(); err != nil {
-			// Log or handle iteration errors
-		}
+		recentActivity = append(recentActivity, gin.H{
+			"type":      "created",
+			"ticket_id": ticketID,
+			"ticket_tn": tn,
+			"timestamp": ts.UTC(),
+		})
+	}
+	if err := arows.Err(); err != nil {
+		statsDBError(c, "dashboard recent activity", err)
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"overview": gin.H{
-			"total_tickets":   overview.TotalTickets,
-			"open_tickets":    overview.OpenTickets,
-			"closed_tickets":  overview.ClosedTickets,
-			"pending_tickets": overview.PendingTickets,
+			"total_tickets":   overview.total,
+			"open_tickets":    overview.open,
+			"closed_tickets":  overview.closed,
+			"pending_tickets": overview.pending,
 		},
 		"by_queue":        byQueue,
 		"by_priority":     byPriority,
@@ -276,240 +447,96 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 //	@Security		BearerAuth
 //	@Router			/statistics/trends [get]
 func HandleTicketTrendsAPI(c *gin.Context) {
-	// Check authentication and get user ID for RBAC
-	userID := extractUserIDForRBAC(c)
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+	db, scope, ok := statisticsScope(c)
+	if !ok {
 		return
 	}
 
 	period := c.DefaultQuery("period", "daily")
-	days := c.DefaultQuery("days", "7")
-	months := c.DefaultQuery("months", "3")
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+	if period != "daily" && period != "monthly" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "period must be daily or monthly"})
 		return
 	}
-
-	// RBAC: Get accessible queue IDs
-	accessibleQueueIDs, err := getAccessibleQueueIDs(db, userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check permissions"})
-		return
-	}
-
-	// Build queue filter for ticket queries
-	queueFilter, queueArgs := buildQueueFilterClause(accessibleQueueIDs, "t.queue_id")
-
-	trends := []gin.H{}
-	var totalCreated, totalClosed int
 
 	now := time.Now().UTC()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 
+	var (
+		start   time.Time
+		buckets []string
+		keyFmt  string
+		size    int
+	)
 	if period == "daily" {
-		daysInt, err := strconv.Atoi(days)
-		if err != nil || daysInt <= 0 {
-			daysInt = 7
+		days, ok := statsIntParam(c, "days", 7, 366)
+		if !ok {
+			return
 		}
-
-		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -(daysInt - 1))
-
-		records := make([]struct {
-			created time.Time
-			changed sql.NullTime
-			typeID  int
-		}, 0)
-
-		// RBAC: Filter to accessible queues only
-		query := database.ConvertPlaceholders(`
-			SELECT t.create_time, t.change_time, ts.type_id
-			FROM ticket t
-			JOIN ticket_state ts ON t.ticket_state_id = ts.id
-			WHERE (t.create_time >= ? OR (t.change_time IS NOT NULL AND t.change_time >= ?))
-			AND ` + queueFilter + `
-		`)
-		args := append([]interface{}{start, start}, queueArgs...)
-		rows, err := db.Query(query, args...)
-		if err == nil {
-			defer rows.Close()
-			for rows.Next() {
-				var (
-					createTime time.Time
-					changeTime sql.NullTime
-					typeID     int
-				)
-				if err := rows.Scan(&createTime, &changeTime, &typeID); err == nil {
-					records = append(records, struct {
-						created time.Time
-						changed sql.NullTime
-						typeID  int
-					}{createTime, changeTime, typeID})
-				}
-			}
-			if err := rows.Err(); err != nil {
-				// Log or handle iteration errors
-			}
+		size, keyFmt = days, "2006-01-02"
+		start = today.AddDate(0, 0, -(days - 1))
+		for d := start; !d.After(today); d = d.AddDate(0, 0, 1) {
+			buckets = append(buckets, d.Format(keyFmt))
 		}
-
-		createdCounts := map[string]int{}
-		closedCounts := map[string]int{}
-
-		for _, rec := range records {
-			day := rec.created.In(time.UTC).Format("2006-01-02")
-			createdCounts[day]++
-			if rec.typeID == 2 && rec.changed.Valid {
-				closeDay := rec.changed.Time.In(time.UTC).Format("2006-01-02")
-				closedCounts[closeDay]++
-			}
+	} else {
+		months, ok := statsIntParam(c, "months", 3, 24)
+		if !ok {
+			return
 		}
-
-		open := 0
-		for dateCursor := start; !dateCursor.After(now); dateCursor = dateCursor.AddDate(0, 0, 1) {
-			key := dateCursor.Format("2006-01-02")
-			created := createdCounts[key]
-			closed := closedCounts[key]
-			totalCreated += created
-			totalClosed += closed
-			open += created - closed
-			if open < 0 {
-				open = 0
-			}
-			trends = append(trends, gin.H{
-				"date":    key,
-				"created": created,
-				"closed":  closed,
-				"open":    open,
-			})
+		size, keyFmt = months, "2006-01"
+		start = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, -(months - 1), 0)
+		for m := start; !m.After(today); m = m.AddDate(0, 1, 0) {
+			buckets = append(buckets, m.Format(keyFmt))
 		}
+	}
 
-		daysIntValidated := len(trends)
-		response := gin.H{
-			"period": period,
-			"days":   daysInt,
-			"trends": trends,
-			"summary": gin.H{
-				"total_created": totalCreated,
-				"total_closed":  totalClosed,
-				"average_per_day": func() float64 {
-					if daysIntValidated == 0 {
-						return 0
-					}
-					return float64(totalCreated) / float64(daysIntValidated)
-				}(),
-				"closure_rate": func() float64 {
-					if totalCreated == 0 {
-						return 0
-					}
-					return float64(totalClosed) / float64(totalCreated) * 100
-				}(),
-			},
-		}
-		c.JSON(http.StatusOK, response)
+	tickets, err := loadStatsTickets(db, scope, &start)
+	if err != nil {
+		statsDBError(c, "trends", err)
 		return
-	}
-
-	// Monthly trends fallback
-	monthsInt, err := strconv.Atoi(months)
-	if err != nil || monthsInt <= 0 {
-		monthsInt = 3
-	}
-
-	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, -(monthsInt - 1), 0)
-
-	records := make([]struct {
-		created time.Time
-		changed sql.NullTime
-		typeID  int
-	}, 0)
-
-	// RBAC: Filter to accessible queues only
-	query := database.ConvertPlaceholders(`
-		SELECT t.create_time, t.change_time, ts.type_id
-		FROM ticket t
-		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		WHERE (t.create_time >= ? OR (t.change_time IS NOT NULL AND t.change_time >= ?))
-		AND ` + queueFilter + `
-	`)
-	monthlyArgs := append([]interface{}{firstOfMonth, firstOfMonth}, queueArgs...)
-	if rows, err := db.Query(query, monthlyArgs...); err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var (
-				createTime time.Time
-				changeTime sql.NullTime
-				typeID     int
-			)
-			if err := rows.Scan(&createTime, &changeTime, &typeID); err == nil {
-				records = append(records, struct {
-					created time.Time
-					changed sql.NullTime
-					typeID  int
-				}{createTime, changeTime, typeID})
-			}
-		}
-		if err := rows.Err(); err != nil {
-			// Log or handle iteration errors
-		}
 	}
 
 	createdCounts := map[string]int{}
 	closedCounts := map[string]int{}
-
-	for _, rec := range records {
-		monthKey := rec.created.In(time.UTC).Format("2006-01")
-		createdCounts[monthKey]++
-		if rec.typeID == 2 && rec.changed.Valid {
-			closeKey := rec.changed.Time.In(time.UTC).Format("2006-01")
-			closedCounts[closeKey]++
+	for _, tk := range tickets {
+		createdCounts[tk.created.Format(keyFmt)]++
+		if closedAt, closed := tk.closedAt(); closed {
+			closedCounts[closedAt.Format(keyFmt)]++
 		}
 	}
 
-	current := firstOfMonth
-	open := 0
-	for i := 0; i < monthsInt; i++ {
-		key := current.Format("2006-01")
-		created := createdCounts[key]
-		closed := closedCounts[key]
+	trends := make([]gin.H, 0, len(buckets))
+	var totalCreated, totalClosed, open int
+	for _, key := range buckets {
+		created, closed := createdCounts[key], closedCounts[key]
 		totalCreated += created
 		totalClosed += closed
 		open += created - closed
 		if open < 0 {
 			open = 0
 		}
-		trends = append(trends, gin.H{
-			"date":    key,
-			"created": created,
-			"closed":  closed,
-			"open":    open,
-		})
-		current = current.AddDate(0, 1, 0)
+		trends = append(trends, gin.H{"date": key, "created": created, "closed": closed, "open": open})
 	}
 
-	response := gin.H{
+	windowDays := int(today.Sub(start).Hours()/24) + 1
+	closureRate := 0.0
+	if totalCreated > 0 {
+		closureRate = float64(totalClosed) / float64(totalCreated) * 100
+	}
+	sizeKey := "days"
+	if period == "monthly" {
+		sizeKey = "months"
+	}
+	c.JSON(http.StatusOK, gin.H{
 		"period": period,
-		"months": monthsInt,
+		sizeKey:  size,
 		"trends": trends,
 		"summary": gin.H{
-			"total_created": totalCreated,
-			"total_closed":  totalClosed,
-			"average_per_day": func() float64 {
-				if len(trends) == 0 {
-					return 0
-				}
-				return float64(totalCreated) / float64(len(trends))
-			}(),
-			"closure_rate": func() float64 {
-				if totalCreated == 0 {
-					return 0
-				}
-				return float64(totalClosed) / float64(totalCreated) * 100
-			}(),
+			"total_created":   totalCreated,
+			"total_closed":    totalClosed,
+			"average_per_day": float64(totalCreated) / float64(windowDays),
+			"closure_rate":    closureRate,
 		},
-	}
-
-	c.JSON(http.StatusOK, response)
+	})
 }
 
 // HandleAgentPerformanceAPI handles GET /api/v1/statistics/agents.
@@ -524,180 +551,113 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 //	@Security		BearerAuth
 //	@Router			/statistics/agents [get]
 func HandleAgentPerformanceAPI(c *gin.Context) {
-	// Check authentication and get user ID for RBAC
-	userID := extractUserIDForRBAC(c)
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+	db, scope, ok := statisticsScope(c)
+	if !ok {
 		return
 	}
-
-	period := c.DefaultQuery("period", "7d")
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+	period, lookback, ok := statsLookback(c)
+	if !ok {
 		return
 	}
+	start := time.Now().UTC().Add(-lookback)
 
-	// RBAC: Get accessible queue IDs
-	accessibleQueueIDs, err := getAccessibleQueueIDs(db, userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check permissions"})
-		return
+	type agentStats struct {
+		id       int
+		name     string
+		assigned int
+		closed   int
+		articles int
 	}
 
-	// Build queue filter for ticket queries
-	queueFilter, queueArgs := buildQueueFilterClause(accessibleQueueIDs, "t.queue_id")
-
-	// Determine interval
-	var interval time.Duration
-	switch period {
-	case "24h":
-		interval = 24 * time.Hour
-	case "30d":
-		interval = 30 * 24 * time.Hour
-	case "7d":
-		interval = 7 * 24 * time.Hour
-	default:
-		interval = 7 * 24 * time.Hour
-	}
-	start := time.Now().UTC().Add(-interval)
-
-	// Load active agents
 	userRows, err := db.Query(database.ConvertPlaceholders("SELECT id, login FROM users WHERE valid_id = 1"))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load agents"})
+		statsDBError(c, "agents", err)
 		return
 	}
 	defer userRows.Close()
-
-	type agentStats struct {
-		id        int
-		name      string
-		assigned  int
-		closed    int
-		articles  int
-		respHours float64
-		reslHours float64
-		satScore  float64
-	}
-
 	agentMap := make(map[int]*agentStats)
 	for userRows.Next() {
-		var (
-			id   int
-			name string
-		)
-		if err := userRows.Scan(&id, &name); err != nil {
-			continue
+		var a agentStats
+		if err := userRows.Scan(&a.id, &a.name); err != nil {
+			statsDBError(c, "agents", err)
+			return
 		}
-		agentMap[id] = &agentStats{id: id, name: name}
+		agentMap[a.id] = &a
 	}
-
 	if err := userRows.Err(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read agents"})
+		statsDBError(c, "agents", err)
 		return
 	}
 
-	// Aggregate ticket assignments and closures - RBAC filtered
-	ticketQuery := database.ConvertPlaceholders(`
-		SELECT t.responsible_user_id, t.create_time, t.change_time, ts.type_id
-		FROM ticket t
-		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		WHERE t.responsible_user_id IS NOT NULL
-		AND (t.create_time >= ? OR (t.change_time IS NOT NULL AND t.change_time >= ?))
-		AND ` + queueFilter + `
-	`)
-	ticketArgs := append([]interface{}{start, start}, queueArgs...)
-	ticketRows, err := db.Query(ticketQuery, ticketArgs...)
-	if err == nil {
-		defer ticketRows.Close()
-		for ticketRows.Next() {
-			var (
-				agentID  int
-				createAt time.Time
-				changeAt sql.NullTime
-				typeID   int
-			)
-			if err := ticketRows.Scan(&agentID, &createAt, &changeAt, &typeID); err != nil {
-				continue
-			}
-			stats, ok := agentMap[agentID]
-			if !ok {
-				continue
-			}
-			if !createAt.Before(start) {
-				stats.assigned++
-			}
-			if typeID == 2 && changeAt.Valid && !changeAt.Time.Before(start) {
-				stats.closed++
-			}
+	tickets, err := loadStatsTickets(db, scope, &start)
+	if err != nil {
+		statsDBError(c, "agent tickets", err)
+		return
+	}
+	for _, tk := range tickets {
+		stats, ok := agentMap[tk.responsibleID]
+		if !ok {
+			continue
 		}
-		if err := ticketRows.Err(); err != nil {
-			// Log or handle iteration errors
+		if !tk.created.Before(start) {
+			stats.assigned++
+		}
+		if closedAt, closed := tk.closedAt(); closed && !closedAt.Before(start) {
+			stats.closed++
 		}
 	}
 
-	// Aggregate article counts per agent - RBAC filtered (only articles on accessible tickets)
-	articleQueueFilter, articleQueueArgs := buildQueueFilterClause(accessibleQueueIDs, "t.queue_id")
-	articleQuery := database.ConvertPlaceholders(`
+	articleFilter, articleArgs := scope.filter("t.queue_id")
+	articleRows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT a.create_by, COUNT(*)
 		FROM article a
 		JOIN ticket t ON a.ticket_id = t.id
-		WHERE a.create_by IS NOT NULL AND a.create_time >= ?
-		AND ` + articleQueueFilter + `
-		GROUP BY a.create_by
-	`)
-	articleArgs := append([]interface{}{start}, articleQueueArgs...)
-	articleRows, err := db.Query(articleQuery, articleArgs...)
-	if err == nil {
-		defer articleRows.Close()
-		for articleRows.Next() {
-			var (
-				creatorID int
-				count     int
-			)
-			if err := articleRows.Scan(&creatorID, &count); err != nil {
-				continue
-			}
-			if stats, ok := agentMap[creatorID]; ok {
-				stats.articles = count
-			}
+		WHERE a.create_time >= ? AND `+articleFilter+`
+		GROUP BY a.create_by`), append([]interface{}{start}, articleArgs...)...)
+	if err != nil {
+		statsDBError(c, "agent articles", err)
+		return
+	}
+	defer articleRows.Close()
+	for articleRows.Next() {
+		var creatorID, count int
+		if err := articleRows.Scan(&creatorID, &count); err != nil {
+			statsDBError(c, "agent articles", err)
+			return
 		}
-		if err := articleRows.Err(); err != nil {
-			// Log or handle iteration errors
+		if stats, ok := agentMap[creatorID]; ok {
+			stats.articles = count
 		}
+	}
+	if err := articleRows.Err(); err != nil {
+		statsDBError(c, "agent articles", err)
+		return
 	}
 
 	agentList := make([]agentStats, 0, len(agentMap))
 	for _, stats := range agentMap {
 		agentList = append(agentList, *stats)
 	}
-
 	sort.Slice(agentList, func(i, j int) bool {
-		if agentList[i].closed == agentList[j].closed {
-			if agentList[i].assigned == agentList[j].assigned {
-				return agentList[i].name < agentList[j].name
-			}
+		if agentList[i].closed != agentList[j].closed {
+			return agentList[i].closed > agentList[j].closed
+		}
+		if agentList[i].assigned != agentList[j].assigned {
 			return agentList[i].assigned > agentList[j].assigned
 		}
-		return agentList[i].closed > agentList[j].closed
+		return agentList[i].name < agentList[j].name
 	})
 
 	agents := make([]gin.H, 0, len(agentList))
 	topPerformers := make([]gin.H, 0, 3)
 	for _, stats := range agentList {
 		agents = append(agents, gin.H{
-			"agent_id":                  stats.id,
-			"agent_name":                stats.name,
-			"tickets_assigned":          stats.assigned,
-			"tickets_closed":            stats.closed,
-			"articles_created":          stats.articles,
-			"avg_response_time_hours":   stats.respHours,
-			"avg_resolution_time_hours": stats.reslHours,
-			"customer_satisfaction":     stats.satScore,
+			"agent_id":         stats.id,
+			"agent_name":       stats.name,
+			"tickets_assigned": stats.assigned,
+			"tickets_closed":   stats.closed,
+			"articles_created": stats.articles,
 		})
-
 		if len(topPerformers) < 3 && stats.closed > 0 {
 			topPerformers = append(topPerformers, gin.H{
 				"agent_id":   stats.id,
@@ -727,37 +687,10 @@ func HandleAgentPerformanceAPI(c *gin.Context) {
 //	@Security		BearerAuth
 //	@Router			/statistics/queues [get]
 func HandleQueueMetricsAPI(c *gin.Context) {
-	// Check authentication and get user ID for RBAC
-	userID := extractUserIDForRBAC(c)
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+	db, scope, ok := statisticsScope(c)
+	if !ok {
 		return
 	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
-
-	// RBAC: Get accessible queue IDs
-	accessibleQueueIDs, err := getAccessibleQueueIDs(db, userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check permissions"})
-		return
-	}
-
-	// Build queue filter
-	queueFilter, queueArgs := buildQueueFilterClause(accessibleQueueIDs, "id")
-
-	// Load queues - RBAC filtered
-	queueQuery := database.ConvertPlaceholders("SELECT id, name FROM queue WHERE valid_id = 1 AND " + queueFilter)
-	queueRows, err := db.Query(queueQuery, queueArgs...)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load queues"})
-		return
-	}
-	defer queueRows.Close()
 
 	type queueStats struct {
 		id      int
@@ -767,58 +700,45 @@ func HandleQueueMetricsAPI(c *gin.Context) {
 		backlog int
 	}
 
+	queueFilter, queueArgs := scope.filter("id")
+	queueRows, err := db.Query(database.ConvertPlaceholders("SELECT id, name FROM queue WHERE valid_id = 1 AND "+queueFilter), queueArgs...)
+	if err != nil {
+		statsDBError(c, "queues", err)
+		return
+	}
+	defer queueRows.Close()
 	queueMap := make(map[int]*queueStats)
 	for queueRows.Next() {
-		var (
-			id   int
-			name string
-		)
-		if err := queueRows.Scan(&id, &name); err != nil {
-			continue
+		var q queueStats
+		if err := queueRows.Scan(&q.id, &q.name); err != nil {
+			statsDBError(c, "queues", err)
+			return
 		}
-		queueMap[id] = &queueStats{id: id, name: name}
+		queueMap[q.id] = &q
 	}
-
 	if err := queueRows.Err(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read queues"})
+		statsDBError(c, "queues", err)
 		return
 	}
 
+	tickets, err := loadStatsTickets(db, scope, nil)
+	if err != nil {
+		statsDBError(c, "queue tickets", err)
+		return
+	}
+	// Backlog: open tickets older than a day.
 	threshold := time.Now().UTC().Add(-24 * time.Hour)
-	// RBAC: Filter tickets by accessible queues
-	ticketFilter, ticketArgs := buildQueueFilterClause(accessibleQueueIDs, "t.queue_id")
-	ticketQuery := database.ConvertPlaceholders(`
-		SELECT t.queue_id, t.create_time, ts.type_id
-		FROM ticket t
-		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		WHERE ` + ticketFilter + `
-	`)
-	ticketRows, err := db.Query(ticketQuery, ticketArgs...)
-	if err == nil {
-		defer ticketRows.Close()
-		for ticketRows.Next() {
-			var (
-				queueID   int
-				createdAt time.Time
-				typeID    int
-			)
-			if err := ticketRows.Scan(&queueID, &createdAt, &typeID); err != nil {
-				continue
-			}
-			stats, ok := queueMap[queueID]
-			if !ok {
-				continue
-			}
-			stats.total++
-			if typeID == 1 {
-				stats.open++
-				if createdAt.Before(threshold) {
-					stats.backlog++
-				}
-			}
+	for _, tk := range tickets {
+		stats, ok := queueMap[tk.queueID]
+		if !ok {
+			continue
 		}
-		if err := ticketRows.Err(); err != nil {
-			// Log or handle iteration errors
+		stats.total++
+		if tk.category == statsOpen {
+			stats.open++
+			if tk.created.Before(threshold) {
+				stats.backlog++
+			}
 		}
 	}
 
@@ -826,7 +746,6 @@ func HandleQueueMetricsAPI(c *gin.Context) {
 	for _, stats := range queueMap {
 		queueList = append(queueList, *stats)
 	}
-
 	sort.Slice(queueList, func(i, j int) bool {
 		if queueList[i].total == queueList[j].total {
 			return queueList[i].name < queueList[j].name
@@ -835,19 +754,15 @@ func HandleQueueMetricsAPI(c *gin.Context) {
 	})
 
 	queues := make([]gin.H, 0, len(queueList))
-	var totalQueues, totalTickets, totalOpen int
+	var totalTickets, totalOpen int
 	for _, stats := range queueList {
 		queues = append(queues, gin.H{
-			"queue_id":                  stats.id,
-			"queue_name":                stats.name,
-			"total_tickets":             stats.total,
-			"open_tickets":              stats.open,
-			"avg_wait_time_hours":       0.0,
-			"avg_resolution_time_hours": 0.0,
-			"backlog":                   stats.backlog,
-			"sla_compliance_percent":    0.0,
+			"queue_id":      stats.id,
+			"queue_name":    stats.name,
+			"total_tickets": stats.total,
+			"open_tickets":  stats.open,
+			"backlog":       stats.backlog,
 		})
-		totalQueues++
 		totalTickets += stats.total
 		totalOpen += stats.open
 	}
@@ -855,10 +770,9 @@ func HandleQueueMetricsAPI(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"queues": queues,
 		"totals": gin.H{
-			"all_queues":                 totalQueues,
-			"total_tickets":              totalTickets,
-			"total_open":                 totalOpen,
-			"overall_compliance_percent": 0.0,
+			"all_queues":    len(queueList),
+			"total_tickets": totalTickets,
+			"total_open":    totalOpen,
 		},
 	})
 }
@@ -876,87 +790,75 @@ func HandleQueueMetricsAPI(c *gin.Context) {
 //	@Security		BearerAuth
 //	@Router			/statistics/analytics [get]
 func HandleTimeBasedAnalyticsAPI(c *gin.Context) {
-	// Check authentication and get user ID for RBAC
-	userID := extractUserIDForRBAC(c)
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+	db, scope, ok := statisticsScope(c)
+	if !ok {
 		return
 	}
 
-	// NOTE: This handler currently returns simplified/mock data.
-	// When real data queries are added, they must be RBAC-filtered
-	// using getAccessibleQueueIDs(db, userID) and buildQueueFilterClause()
-
 	analysisType := c.DefaultQuery("type", "hourly")
-
-	if analysisType == "hourly" {
-		// Hourly distribution
-		data := []gin.H{}
-		peakHours := []int{}
-		maxCount := 0
-
-		for hour := 0; hour < 24; hour++ {
-			// Simplified - would query actual data
-			created := 0
-			closed := 0
-
-			if hour >= 9 && hour <= 17 {
-				created = 5 + hour%3
-				closed = 3 + hour%2
-			}
-
-			data = append(data, gin.H{
-				"hour":    hour,
-				"created": created,
-				"closed":  closed,
-			})
-
-			if created > maxCount {
-				maxCount = created
-				peakHours = []int{hour}
-			} else if created == maxCount && created > 0 {
-				peakHours = append(peakHours, hour)
-			}
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"type":       analysisType,
-			"data":       data,
-			"peak_hours": peakHours,
-		})
-	} else if analysisType == "day_of_week" {
-		// Day of week distribution
-		days := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
-		data := []gin.H{}
-		busiestDays := []string{}
-
-		for i, day := range days {
-			// Simplified - would query actual data
-			created := 10 - i
-			closed := 8 - i
-
-			if i < 5 { // Weekdays
-				created *= 2
-				closed *= 2
-			}
-
-			data = append(data, gin.H{
-				"day":     day,
-				"created": created,
-				"closed":  closed,
-			})
-
-			if i < 2 {
-				busiestDays = append(busiestDays, day)
-			}
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"type":         analysisType,
-			"data":         data,
-			"busiest_days": busiestDays,
-		})
+	if analysisType != "hourly" && analysisType != "day_of_week" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "type must be hourly or day_of_week"})
+		return
 	}
+	days, ok := statsIntParam(c, "days", 30, 366)
+	if !ok {
+		return
+	}
+	start := time.Now().UTC().AddDate(0, 0, -days)
+
+	tickets, err := loadStatsTickets(db, scope, &start)
+	if err != nil {
+		statsDBError(c, "analytics", err)
+		return
+	}
+
+	// Buckets are UTC hours of the day (0-23) or weekdays (Monday first).
+	nBuckets := 24
+	bucket := func(ts time.Time) int { return ts.Hour() }
+	if analysisType == "day_of_week" {
+		nBuckets = 7
+		bucket = func(ts time.Time) int { return (int(ts.Weekday()) + 6) % 7 }
+	}
+	created := make([]int, nBuckets)
+	closed := make([]int, nBuckets)
+	for _, tk := range tickets {
+		if !tk.created.Before(start) {
+			created[bucket(tk.created)]++
+		}
+		if closedAt, isClosed := tk.closedAt(); isClosed && !closedAt.Before(start) {
+			closed[bucket(closedAt)]++
+		}
+	}
+
+	// Peak buckets: those with the most created tickets (none when nothing was created).
+	peaks := []int{}
+	maxCreated := 0
+	for i, n := range created {
+		if n > maxCreated {
+			maxCreated, peaks = n, []int{i}
+		} else if n == maxCreated && n > 0 {
+			peaks = append(peaks, i)
+		}
+	}
+
+	data := make([]gin.H, nBuckets)
+	if analysisType == "hourly" {
+		for hour := range data {
+			data[hour] = gin.H{"hour": hour, "created": created[hour], "closed": closed[hour]}
+		}
+		c.JSON(http.StatusOK, gin.H{"type": analysisType, "days": days, "data": data, "peak_hours": peaks})
+		return
+	}
+
+	dayName := func(i int) string { return time.Weekday((i + 1) % 7).String() }
+	busiestDays := make([]string, len(peaks))
+	for i, p := range peaks {
+		busiestDays[i] = dayName(p)
+	}
+	for i := range data {
+		data[i] = gin.H{"day": dayName(i), "created": created[i], "closed": closed[i]}
+	}
+	c.JSON(http.StatusOK, gin.H{"type": analysisType, "days": days, "data": data, "busiest_days": busiestDays})
 }
 
 // HandleCustomerStatisticsAPI handles GET /api/v1/statistics/customers.
@@ -971,65 +873,33 @@ func HandleTimeBasedAnalyticsAPI(c *gin.Context) {
 //	@Security		BearerAuth
 //	@Router			/statistics/customers [get]
 func HandleCustomerStatisticsAPI(c *gin.Context) {
-	// Check authentication and get user ID for RBAC
-	userID := extractUserIDForRBAC(c)
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+	db, scope, ok := statisticsScope(c)
+	if !ok {
 		return
 	}
 
-	top := c.DefaultQuery("top", "10")
-	topInt, err := strconv.Atoi(top)
-	if err != nil {
-		topInt = 10
+	topInt := 10
+	if raw := c.Query("top"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "top must be an integer"})
+			return
+		}
+		topInt = n
 	}
 
-	db, err := database.GetDB()
+	tickets, err := loadStatsTickets(db, scope, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+		statsDBError(c, "customers", err)
 		return
 	}
-
-	// RBAC: Get accessible queue IDs
-	accessibleQueueIDs, err := getAccessibleQueueIDs(db, userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check permissions"})
-		return
-	}
-
-	// Build queue filter for ticket queries
-	queueFilter, queueArgs := buildQueueFilterClause(accessibleQueueIDs, "t.queue_id")
-
-	// Aggregate customer statistics in code for portability - RBAC filtered
-	query := database.ConvertPlaceholders(`
-		SELECT t.customer_user_id, t.create_time, ts.type_id
-		FROM ticket t
-		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		WHERE t.customer_user_id IS NOT NULL AND t.customer_user_id <> ''
-		AND ` + queueFilter + `
-	`)
-	rows, err := db.Query(query, queueArgs...)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"top_customers": []gin.H{},
-			"customer_metrics": gin.H{
-				"total_customers":          0,
-				"active_customers":         0,
-				"new_customers_this_month": 0,
-				"avg_tickets_per_customer": 0.0,
-			},
-		})
-		return
-	}
-	defer rows.Close()
 
 	type customerStats struct {
-		id               string
-		ticketCount      int
-		openTickets      int
-		lastActivity     time.Time
-		activeRecent     bool
-		createdThisMonth bool
+		id           string
+		ticketCount  int
+		openTickets  int
+		firstTicket  time.Time
+		lastActivity time.Time
 	}
 
 	now := time.Now().UTC()
@@ -1037,70 +907,39 @@ func HandleCustomerStatisticsAPI(c *gin.Context) {
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 	totalTickets := 0
 	customerMap := make(map[string]*customerStats)
-
-	for rows.Next() {
-		var (
-			customerID sql.NullString
-			createdAt  time.Time
-			typeID     int
-		)
-		if err := rows.Scan(&customerID, &createdAt, &typeID); err != nil {
+	for _, tk := range tickets {
+		if tk.customer == "" {
 			continue
 		}
-		if !customerID.Valid {
-			continue
-		}
-		id := strings.TrimSpace(customerID.String)
-		if id == "" {
-			continue
-		}
-		stats, ok := customerMap[id]
+		stats, ok := customerMap[tk.customer]
 		if !ok {
-			stats = &customerStats{id: id}
-			customerMap[id] = stats
+			stats = &customerStats{id: tk.customer, firstTicket: tk.created}
+			customerMap[tk.customer] = stats
 		}
-
 		stats.ticketCount++
 		totalTickets++
-		if typeID == 1 {
+		if tk.category == statsOpen {
 			stats.openTickets++
 		}
-		if createdAt.After(stats.lastActivity) {
-			stats.lastActivity = createdAt
+		if tk.created.After(stats.lastActivity) {
+			stats.lastActivity = tk.created
 		}
-		if createdAt.After(activeThreshold) {
-			stats.activeRecent = true
+		if tk.created.Before(stats.firstTicket) {
+			stats.firstTicket = tk.created
 		}
-		if createdAt.After(monthStart) {
-			stats.createdThisMonth = true
-		}
-	}
-
-	if err := rows.Err(); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"top_customers": []gin.H{},
-			"customer_metrics": gin.H{
-				"total_customers":          0,
-				"active_customers":         0,
-				"new_customers_this_month": 0,
-				"avg_tickets_per_customer": 0.0,
-			},
-		})
-		return
 	}
 
 	customerList := make([]customerStats, 0, len(customerMap))
 	var activeCustomers, newThisMonth int
 	for _, stats := range customerMap {
 		customerList = append(customerList, *stats)
-		if stats.activeRecent {
+		if stats.lastActivity.After(activeThreshold) {
 			activeCustomers++
 		}
-		if stats.createdThisMonth {
+		if !stats.firstTicket.Before(monthStart) {
 			newThisMonth++
 		}
 	}
-
 	sort.Slice(customerList, func(i, j int) bool {
 		if customerList[i].ticketCount == customerList[j].ticketCount {
 			return customerList[i].lastActivity.After(customerList[j].lastActivity)
@@ -1112,33 +951,57 @@ func HandleCustomerStatisticsAPI(c *gin.Context) {
 	if limit <= 0 || limit > len(customerList) {
 		limit = len(customerList)
 	}
+	top := customerList[:limit]
 
-	topCustomers := make([]gin.H, 0, limit)
-	for idx := 0; idx < limit; idx++ {
-		stats := customerList[idx]
-		last := ""
-		if !stats.lastActivity.IsZero() {
-			last = stats.lastActivity.UTC().Format(time.RFC3339)
+	// Registered customers' e-mail addresses (unregistered ones have none).
+	emails := map[string]string{}
+	if len(top) > 0 {
+		placeholders := make([]string, len(top))
+		args := make([]interface{}, len(top))
+		for i, stats := range top {
+			placeholders[i] = "?"
+			args[i] = stats.id
 		}
+		rows, err := db.Query(database.ConvertPlaceholders(
+			"SELECT login, email FROM customer_user WHERE login IN ("+strings.Join(placeholders, ",")+")"), args...)
+		if err != nil {
+			statsDBError(c, "customer e-mails", err)
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var login, email string
+			if err := rows.Scan(&login, &email); err != nil {
+				statsDBError(c, "customer e-mails", err)
+				return
+			}
+			emails[login] = email
+		}
+		if err := rows.Err(); err != nil {
+			statsDBError(c, "customer e-mails", err)
+			return
+		}
+	}
+
+	topCustomers := make([]gin.H, 0, len(top))
+	for _, stats := range top {
 		topCustomers = append(topCustomers, gin.H{
 			"customer_id":    stats.id,
-			"customer_email": stats.id,
+			"customer_email": emails[stats.id],
 			"ticket_count":   stats.ticketCount,
 			"open_tickets":   stats.openTickets,
-			"last_activity":  last,
+			"last_activity":  stats.lastActivity.Format(time.RFC3339),
 		})
 	}
 
-	totalCustomers := len(customerList)
 	avgTicketsPerCustomer := 0.0
-	if totalCustomers > 0 {
-		avgTicketsPerCustomer = float64(totalTickets) / float64(totalCustomers)
+	if len(customerList) > 0 {
+		avgTicketsPerCustomer = float64(totalTickets) / float64(len(customerList))
 	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"top_customers": topCustomers,
 		"customer_metrics": gin.H{
-			"total_customers":          totalCustomers,
+			"total_customers":          len(customerList),
 			"active_customers":         activeCustomers,
 			"new_customers_this_month": newThisMonth,
 			"avg_tickets_per_customer": avgTicketsPerCustomer,
@@ -1159,167 +1022,185 @@ func HandleCustomerStatisticsAPI(c *gin.Context) {
 //	@Security		BearerAuth
 //	@Router			/statistics/export [get]
 func HandleExportStatisticsAPI(c *gin.Context) {
-	// Check authentication and get user ID for RBAC
-	userID := extractUserIDForRBAC(c)
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+	db, scope, ok := statisticsScope(c)
+	if !ok {
 		return
 	}
 
 	format := c.DefaultQuery("format", "json")
+	if format != "json" && format != "csv" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "format must be json or csv"})
+		return
+	}
 	exportType := c.DefaultQuery("type", "summary")
-	period := c.DefaultQuery("period", "7d")
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+	if exportType != "summary" && exportType != "tickets" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "type must be summary or tickets"})
 		return
 	}
-
-	// RBAC: Get accessible queue IDs
-	accessibleQueueIDs, err := getAccessibleQueueIDs(db, userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check permissions"})
+	period, lookback, ok := statsLookback(c)
+	if !ok {
 		return
 	}
+	now := time.Now().UTC()
+	start := now.Add(-lookback)
 
-	// Build queue filter for ticket queries
-	queueFilter, queueArgs := buildQueueFilterClause(accessibleQueueIDs, "t.queue_id")
-
-	// Get data based on export type
-	var data interface{}
-
+	var (
+		data      interface{}
+		csvHeader []string
+		csvRows   [][]string
+	)
 	if exportType == "tickets" {
-		// Determine lookback duration from period
-		lookback := 7 * 24 * time.Hour
-		switch period {
-		case "24h":
-			lookback = 24 * time.Hour
-		case "30d":
-			lookback = 30 * 24 * time.Hour
-		case "7d":
-			lookback = 7 * 24 * time.Hour
-		}
-		start := time.Now().UTC().Add(-lookback)
-
-		// RBAC: Filter to accessible queues only
-		query := database.ConvertPlaceholders(`
-			SELECT t.tn, t.title, q.name as queue, ts.name as state,
-			       tp.name as priority, t.customer_user_id, t.create_time
+		filter, args := scope.filter("t.queue_id")
+		rows, err := db.Query(database.ConvertPlaceholders(`
+			SELECT t.tn, t.title, q.name, ts.name, tp.name, t.customer_user_id, t.create_time
 			FROM ticket t
 			JOIN queue q ON t.queue_id = q.id
 			JOIN ticket_state ts ON t.ticket_state_id = ts.id
 			JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
-			WHERE t.create_time >= ?
-			AND ` + queueFilter + `
-			ORDER BY t.create_time DESC
-		`)
-
-		exportArgs := append([]interface{}{start}, queueArgs...)
-		rows, err := db.Query(query, exportArgs...)
+			WHERE t.create_time >= ? AND `+filter+`
+			ORDER BY t.create_time DESC, t.id DESC`), append([]interface{}{start}, args...)...)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load tickets"})
+			statsDBError(c, "export tickets", err)
 			return
 		}
 		defer rows.Close()
 
-		tickets := []map[string]interface{}{}
+		tickets := []gin.H{}
+		csvHeader = []string{"Ticket Number", "Title", "Queue", "State", "Priority", "Customer", "Created"}
 		for rows.Next() {
-			var ticket struct {
-				TN           string
-				Title        string
-				Queue        string
-				State        string
-				Priority     string
-				CustomerUser sql.NullString
-				CreateTime   time.Time
+			var (
+				tn, queue, state, priority string
+				title, customer            sql.NullString
+				created                    time.Time
+			)
+			if err := rows.Scan(&tn, &title, &queue, &state, &priority, &customer, &created); err != nil {
+				statsDBError(c, "export tickets", err)
+				return
 			}
-
-			if err := rows.Scan(
-				&ticket.TN, &ticket.Title, &ticket.Queue,
-				&ticket.State, &ticket.Priority, &ticket.CustomerUser,
-				&ticket.CreateTime,
-			); err == nil {
-				customer := ""
-				if ticket.CustomerUser.Valid {
-					customer = ticket.CustomerUser.String
-				}
-				tickets = append(tickets, map[string]interface{}{
-					"ticket_number": ticket.TN,
-					"title":         ticket.Title,
-					"queue":         ticket.Queue,
-					"state":         ticket.State,
-					"priority":      ticket.Priority,
-					"customer":      customer,
-					"created":       ticket.CreateTime.UTC().Format("2006-01-02 15:04:05"),
-				})
-			}
+			createdStr := created.UTC().Format("2006-01-02 15:04:05")
+			tickets = append(tickets, gin.H{
+				"ticket_number": tn,
+				"title":         title.String,
+				"queue":         queue,
+				"state":         state,
+				"priority":      priority,
+				"customer":      customer.String,
+				"created":       createdStr,
+			})
+			csvRows = append(csvRows, []string{tn, title.String, queue, state, priority, customer.String, createdStr})
 		}
 		if err := rows.Err(); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read tickets"})
+			statsDBError(c, "export tickets", err)
 			return
 		}
 		data = tickets
 	} else {
-		// Summary data
+		counts, err := countTicketsByCategory(db, scope, &start)
+		if err != nil {
+			statsDBError(c, "export summary", err)
+			return
+		}
 		data = gin.H{
-			"export_date": time.Now().Format(time.RFC3339),
+			"export_date": now.Format(time.RFC3339),
 			"period":      period,
 			"type":        exportType,
 			"summary": gin.H{
-				"total_tickets":  100,
-				"open_tickets":   25,
-				"closed_tickets": 75,
+				"total_tickets":   counts.total,
+				"open_tickets":    counts.open,
+				"closed_tickets":  counts.closed,
+				"pending_tickets": counts.pending,
 			},
 		}
+		csvHeader = []string{"Metric", "Value"}
+		csvRows = [][]string{
+			{"total_tickets", strconv.Itoa(counts.total)},
+			{"open_tickets", strconv.Itoa(counts.open)},
+			{"closed_tickets", strconv.Itoa(counts.closed)},
+			{"pending_tickets", strconv.Itoa(counts.pending)},
+		}
 	}
 
+	stamp := now.Format("20060102_150405")
 	if format == "csv" {
-		// Export as CSV
 		var buf bytes.Buffer
 		writer := csv.NewWriter(&buf)
-
-		if tickets, ok := data.([]map[string]interface{}); ok && len(tickets) > 0 {
-			// Write headers
-			headers := []string{"Ticket Number", "Title", "Queue", "State", "Priority", "Customer", "Created"}
-			if err := writer.Write(headers); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write CSV headers"})
-				return
-			}
-
-			// Write data
-			for _, ticket := range tickets {
-				row := []string{
-					safeString(ticket["ticket_number"]),
-					safeString(ticket["title"]),
-					safeString(ticket["queue"]),
-					safeString(ticket["state"]),
-					safeString(ticket["priority"]),
-					safeString(ticket["customer"]),
-					safeString(ticket["created"]),
-				}
-				if err := writer.Write(row); err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write CSV row"})
-					return
-				}
-			}
-		}
-
-		writer.Flush()
-
-		c.Header("Content-Type", "text/csv")
-		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=statistics_%s.csv", time.Now().Format("20060102_150405")))
-		c.Data(http.StatusOK, "text/csv", buf.Bytes())
-	} else {
-		// Export as JSON
-		c.Header("Content-Type", "application/json")
-		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=statistics_%s.json", time.Now().Format("20060102_150405")))
-
-		jsonData, err := json.MarshalIndent(data, "", "  ")
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal JSON"})
+		if err := writer.Write(csvHeader); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write CSV"})
 			return
 		}
-		c.Data(http.StatusOK, "application/json", jsonData)
+		if err := writer.WriteAll(csvRows); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write CSV"})
+			return
+		}
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=statistics_%s.csv", stamp))
+		c.Data(http.StatusOK, "text/csv", buf.Bytes())
+		return
 	}
+
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal JSON"})
+		return
+	}
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=statistics_%s.json", stamp))
+	c.Data(http.StatusOK, "application/json", jsonData)
+}
+
+// HandleTicketStateStatisticsAPI handles GET /api/v1/ticket-states/statistics.
+//
+//	@Summary		Get state statistics
+//	@Description	Get ticket counts by state
+//	@Tags			States
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"State statistics"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/ticket-states/statistics [get]
+func HandleTicketStateStatisticsAPI(c *gin.Context) {
+	db, scope, ok := statisticsScope(c)
+	if !ok {
+		return
+	}
+
+	filter, args := scope.filter("t.queue_id")
+	rows, err := db.Query(database.ConvertPlaceholders(`
+		SELECT ts.id, ts.name, ts.type_id, COUNT(t.id)
+		FROM ticket_state ts
+		LEFT JOIN ticket t ON t.ticket_state_id = ts.id AND `+filter+`
+		WHERE ts.valid_id = 1
+		GROUP BY ts.id, ts.name, ts.type_id
+		ORDER BY ts.id`), args...)
+	if err != nil {
+		statsDBError(c, "ticket state statistics", err)
+		return
+	}
+	defer rows.Close()
+
+	statistics := []gin.H{}
+	totalTickets := 0
+	for rows.Next() {
+		var stateID, typeID, count int
+		var name string
+		if err := rows.Scan(&stateID, &name, &typeID, &count); err != nil {
+			statsDBError(c, "ticket state statistics", err)
+			return
+		}
+		statistics = append(statistics, gin.H{
+			"state_id":     stateID,
+			"state_name":   name,
+			"type_id":      typeID,
+			"ticket_count": count,
+		})
+		totalTickets += count
+	}
+	if err := rows.Err(); err != nil {
+		statsDBError(c, "ticket state statistics", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"statistics":    statistics,
+		"total_tickets": totalTickets,
+	})
 }

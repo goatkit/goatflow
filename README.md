@@ -150,7 +150,7 @@ Browser tests use Go + Playwright with the `//go:build playwright` tag and run i
 GoatFlow uses a modern, hypermedia-driven architecture that scales from single-server deployments to large enterprise clusters:
 
 - **Core Services**: Authentication, Tickets, Users, Notifications
-- **Data Layer**: MariaDB/MySQL (default) or PostgreSQL, Valkey (cache), S3-compatible storage (attachments)
+- **Data Layer**: MariaDB/MySQL (default) or PostgreSQL, Valkey (cache); attachments in the database or an OTRS-compatible filesystem tree ([Article Storage](docs/ARTICLE_STORAGE.md))
 - **API**: RESTful JSON APIs with HTMX hypermedia endpoints
 - **Frontend**: HTMX + Alpine.js for progressive enhancement with Tailwind CSS
 - **Real-time**: Server-Sent Events (SSE) for live updates
@@ -162,7 +162,7 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed technical documentation
 Authentication supports an ordered provider list configured via the `Auth::Providers` setting in `Config.yaml` (default: `[database]`). Implemented providers:
 
 - `database` (agents + customer users from the database)
-- `ldap` (optional; enable with environment variables `LDAP_ENABLED=true` and related LDAP settings)
+- `ldap` (agents from an LDAP / Active Directory server; also set `LDAP_ENABLED=true` and the `LDAP_*` settings in [docs/LDAP.md](docs/LDAP.md))
 - `static` (in-memory users for demos/tests)
 
 Static users are enabled by setting the environment variable `GOATFLOW_STATIC_USERS` at runtime (NOT committed). Format:

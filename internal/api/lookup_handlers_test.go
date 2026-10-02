@@ -12,7 +12,6 @@ import (
 
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 func TestHandleGetQueues(t *testing.T) {
@@ -102,6 +101,7 @@ func TestHandleGetTypes(t *testing.T) {
 
 	router := gin.New()
 	router.GET("/api/lookups/types", HandleGetTypes)
+	want := validTicketTypeCount(t)
 	req, _ := http.NewRequest("GET", "/api/lookups/types", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -116,7 +116,7 @@ func TestHandleGetTypes(t *testing.T) {
 
 	data, ok := response["data"].([]interface{})
 	require.True(t, ok, "data should be an array")
-	assert.Equal(t, 5, len(data)) // incident, service_request, change_request, problem, question
+	assert.Equal(t, want, len(data))
 
 	// Check structure (JSON tags are lowercase)
 	for _, item := range data {
@@ -266,50 +266,6 @@ func TestHandleInvalidateLookupCache(t *testing.T) {
 			}
 			if errorMsg, exists := tt.expectedBody["error"]; exists {
 				assert.Equal(t, errorMsg, response["error"])
-			}
-		})
-	}
-}
-
-func TestHandleAdminLookups(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	// Clear global renderer and set test mode to ensure fallback HTML is used
-	shared.SetGlobalRenderer(nil)
-	t.Setenv("HTMX_HANDLER_TEST_MODE", "1")
-
-	tests := []struct {
-		name           string
-		expectedStatus int
-		checkContent   []string
-	}{
-		{
-			name:           "Renders admin lookups page",
-			expectedStatus: http.StatusOK,
-			checkContent: []string{
-				"Manage Lookup Values",
-				"Queues",
-				"Priorities",
-				"Ticket Types",
-				"Statuses",
-				"Refresh Cache",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			router := gin.New()
-			router.GET("/admin/lookups", handleAdminLookups)
-
-			req, _ := http.NewRequest("GET", "/admin/lookups", nil)
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-
-			assert.Equal(t, tt.expectedStatus, w.Code)
-
-			body := w.Body.String()
-			for _, content := range tt.checkContent {
-				assert.Contains(t, body, content)
 			}
 		})
 	}

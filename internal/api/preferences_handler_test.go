@@ -351,19 +351,11 @@ func TestHandleUpdateProfile_InvalidJSON(t *testing.T) {
 // saved to the database and can be retrieved. This is a TDD test that proves the
 // profile save functionality works end-to-end.
 func TestHandleUpdateProfile_DataPersistence(t *testing.T) {
-	WithCleanDB(t)
-
 	db, err := database.GetDB()
 	require.NoError(t, err, "Database should be available")
 
-	// Use user ID 1 (admin user) which exists in canonical test data
-	userID := uint(1)
-
-	// Get original values to restore later
-	var origFirstName, origLastName, origTitle sql.NullString
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT first_name, last_name, title FROM users WHERE id = ?"), userID).
-		Scan(&origFirstName, &origLastName, &origTitle)
-	require.NoError(t, err, "Should be able to read original user data")
+	id, _ := createIsolatedAgent(t, "profile")
+	userID := uint(id)
 
 	// Set up router with auth middleware simulation
 	router := setupPreferencesTestRouter()
@@ -431,12 +423,13 @@ func TestHandleUpdateProfile_DataPersistence(t *testing.T) {
 // TestHandleUpdateProfile_EmptyTitleAllowed verifies that empty title is allowed
 // (title is optional, only first_name and last_name are required).
 func TestHandleUpdateProfile_EmptyTitleAllowed(t *testing.T) {
-	WithCleanDB(t)
-
 	db, err := database.GetDB()
 	require.NoError(t, err, "Database should be available")
 
-	userID := uint(1)
+	id, _ := createIsolatedAgent(t, "profile_title")
+	userID := uint(id)
+	_, err = db.Exec(database.ConvertPlaceholders("UPDATE users SET title = 'Dr.' WHERE id = ?"), id)
+	require.NoError(t, err)
 
 	router := setupPreferencesTestRouter()
 	router.Use(func(c *gin.Context) {

@@ -322,7 +322,9 @@
         "test_success": "chenmoHwI' waH Qap",
         "title": "jabbI'ID SeH chenmoHwI'",
         "webservice": "jabbI'ID SeH",
-        "webservice_hint": "De' Suq jabbI'ID SeH wIv"
+        "webservice_hint": "De' Suq jabbI'ID SeH wIv",
+        "test_save_first": "chenmoHwI' waH DaneHchugh, wej yotlh DapolnIS.",
+        "test_saved_hint": "chenmoHwI' polta'bogh waH; wej choHmeyraj Dapol."
       },
       "years_in_future": "DIS pIq",
       "years_in_past": "DIS paSt"
@@ -1182,16 +1184,8 @@
     "no_plugins": "ngogh tu'lu'be'",
     "no_plugins_match": "pagh plugins tu'lu' nej Dotlh.",
     "password": "pegh mu'",
-    "password_requirement_contains_default": "tIn, mach, mI' ghaj",
-    "password_requirement_contains_template": "{requirements} ghaj",
-    "password_requirement_digit": "mI'",
-    "password_requirement_length_initial": "chorgh ngutlh puS law'",
-    "password_requirement_length_template": "{min} ngutlh puS law'",
-    "password_requirement_lowercase": "mach ngutlh",
     "password_requirement_match": "pegh mu'mey rap",
     "password_requirement_none": "poQ chel pagh",
-    "password_requirement_special": "le' ngutlh (!@#$%^&*)",
-    "password_requirement_uppercase": "tIn ngutlh",
     "password_requirements_incomplete": "Hoch pegh mu' poQmey tu'",
     "password_reset_error": "pegh mu' choHlaHbe'",
     "password_reset_success": "pegh mu' choHlu'ta' Qapla'",
@@ -1494,7 +1488,110 @@
         "delete": "Qap Qap?"
       }
     },
-    "search_groups": "tay' ghom Sam"
+    "search_groups": "tay' ghom Sam",
+    "webhooks": {
+      "actions": {
+        "activate": "QapmoH",
+        "deactivate": "QapHa'moH",
+        "deliveries": "ngeHmeHmey",
+        "test": "chov ngeH"
+      },
+      "active": "Qap",
+      "add": "Webhook chel",
+      "columns": {
+        "events": "wanI'mey",
+        "last_delivery": "ngeHmeH Qav",
+        "url": "URL"
+      },
+      "deliveries": {
+        "attempts": "nIDmey",
+        "details": "De Sar",
+        "duration": "poH",
+        "empty": "ngeHmeH tu'lu'be'.",
+        "event": "wanI'",
+        "status_code": "HTTP Dotlh",
+        "time": "poH",
+        "title": "ngeHmeHmey: {name}"
+      },
+      "delivery": {
+        "created_at": "chenmoHlu'ta'",
+        "delivered_at": "ngeHlu'ta'",
+        "duration_ms": "{ms} ms",
+        "error": "Qagh",
+        "next_attempt": "nIDmeH veb",
+        "no_response": "jang ngoQ tu'lu'be'.",
+        "payload": "Payload",
+        "redeliver": "ngeHqa'",
+        "response": "jang",
+        "title": "ngeHmeH #{id}"
+      },
+      "description": "chaw' wanI'mey article wanI'mey je latlh pat'e' ngeH; HTTP POST qachmey ghItlhlu'bogh lo'.",
+      "empty": "Webhook SeHlu'pu'be'.",
+      "events": {
+        "article_created": "chaw' article chellu'pu' (note, jang, email, ghogh HablI', web qach).",
+        "ticket_assigned": "chaw' ghaH choHlu'pu'.",
+        "ticket_closed": "chaw' Dotlh choHlu'pu'; SoQ.",
+        "ticket_created": "chaw' chenmoHlu'pu' (Hoch channel).",
+        "ticket_escalated": "jang, choH pagh solution poH escalation tagh.",
+        "ticket_merged": "chaw' muvlu'pu'.",
+        "ticket_priority_changed": "chaw' priority choHlu'pu'.",
+        "ticket_queue_moved": "chaw' latlh Queue Dalu'pu'.",
+        "ticket_state_changed": "chaw' Dotlh choHlu'pu'; SoQbe'.",
+        "ticket_updated": "chaw' pong, customer, Segh, service, SLA, responsible, lock, pending poH pagh dynamic field choHlu'pu'."
+      },
+      "form": {
+        "active_help": "Webhooks Qapbe' wanI'mey Hevbe'.",
+        "add_header": "Header chel",
+        "create_title": "Webhook chel",
+        "edit_title": "Webhook choH",
+        "events": "wanI'mey",
+        "events_help": "wanI'mey wIvlu'bogh Webhook rIt.",
+        "events_required": "wa' wanI' wIv.",
+        "header_name": "Header pong",
+        "header_value": "lo'laHghach",
+        "headers": "Header mobmey",
+        "headers_help": "ngeHmeH Hoch ngeHlu'. Content-Type, User-Agent X-Webhook-* Header je GoatFlow cher.",
+        "remove_header": "Header teq",
+        "remove_secret": "pegh teq (ngeHmeHmey ghItlhlu'be')",
+        "retry_count": "nIDqa'meH mI'",
+        "retry_count_help": "ngeHmeH Qapbe'DI' latlh nIDmey.",
+        "secret": "ghItlhmeH pegh",
+        "secret_help": "16 512 je ngutlh. ngeHmeH Hoch X-Webhook-Signature Header ghItlhlu' (sha256=HMAC). pegh polta'lu'DI' leghlaHbe'.",
+        "secret_none": "pegh cherlu'be': ngeHmeHmey ghItlhlu'be'.",
+        "secret_placeholder_keep": "pegh DaH DapolmeH chIm yIpol",
+        "secret_placeholder_new": "ghItlhmeH pegh (DuH)",
+        "secret_set": "pegh cherlu'pu' ({hint}).",
+        "timeout": "poH van (lup)",
+        "timeout_help": "endpoint jang loS poH.",
+        "url": "Payload URL",
+        "url_help": "http:// pagh https:// URL naQ. wanI' Hoch GoatFlow JSON POST qach ngeH."
+      },
+      "inactive": "Qapbe'",
+      "load_failed": "Webhooks laHbe' lI'.",
+      "messages": {
+        "activated": "Webhook QapmoHlu'pu'.",
+        "confirm_delete": "Webhook \"{name}\" ngeHmeH ta' je DaQaw'?",
+        "created": "Webhook chenmoHlu'pu'.",
+        "deactivated": "Webhook QapHa'moHlu'pu'.",
+        "deleted": "Webhook Qaw'lu'pu'.",
+        "network_error": "jabwI' Sam laHbe'.",
+        "redeliver_failed": "ngeHqa'meH Qapbe'.",
+        "redelivered": "ngeHmeH ngeHqa'lu'pu' Qapla'.",
+        "request_failed": "qach Qapbe': {error}",
+        "test_failed": "chov ngeHmeH Qapbe'.",
+        "test_succeeded": "chov ngeHmeH Qap.",
+        "updated": "Webhook pollu'pu'."
+      },
+      "never": "not",
+      "retry": "nIDqa'",
+      "status": {
+        "delivered": "ngeHlu'ta'",
+        "delivering": "ngeHlu'taH",
+        "failed": "Qapbe'",
+        "pending": "loS"
+      },
+      "title": "Webhooks"
+    }
   },
   "admin_dashboard": {
     "acl": "'el SeH tetlh",
@@ -1586,7 +1683,55 @@
     "tickets_open": "poSbogh chaw'mey",
     "uptime_this_month": "jar poH DuSaQ",
     "user_management": "lo'wI' SeH",
-    "user_management_desc": "Duy'a' qorDu' je accounts SeH"
+    "user_management_desc": "Duy'a' qorDu' je accounts SeH",
+    "webhooks": "Webhooks",
+    "webhooks_desc": "chaw' wanI'mey latlh pat'e' ngeH"
+  },
+  "admin_reports": {
+    "title": "ja'meyvaD De' poj",
+    "description": "DIlaDlaHbogh tlhegh chaw' mI'mey.",
+    "period_label": "poH",
+    "period_24h": "24 rep ret",
+    "period_7d": "7 jaj ret",
+    "period_30d": "30 jaj ret",
+    "trend_label": "ghoch",
+    "trend_daily_7": "Hoch jaj, 7 jaj ret",
+    "trend_daily_30": "Hoch jaj, 30 jaj ret",
+    "trend_monthly_12": "Hoch jar, 12 jar ret",
+    "error_forbidden": "ja'meyvaD Dalegh DaneHchugh, wa' tlhegh laDmeH ghoq DaghajnIS.",
+    "error_generic": "ja' De' 'op lI'laHbe'lu'. yInIDqa'.",
+    "scope_note": "DIlaDlaHbogh tlhegh chaw' neH chellu'. DaHjaj UTC.",
+    "overview_heading": "bop",
+    "total_tickets": "Hoch chaw'",
+    "open_tickets": "poSmoHlu'",
+    "pending_tickets": "loS",
+    "closed_tickets": "SoQmoHlu'",
+    "trends_heading": "chenmoHlu' SoQmoHlu' je",
+    "created": "chenmoHlu'",
+    "closed": "SoQmoHlu'",
+    "closure_rate": "SoQmoH mI'",
+    "queues_heading": "tlhegh",
+    "backlog_hint": "ngo' chaw': poSbogh 24 rep ret qanbogh chaw'.",
+    "queue": "tlhegh",
+    "backlog": "ngo' chaw'",
+    "agents_heading": "Qumpin vang",
+    "agents_hint": "poH wIvlu'bogh qaStaHvIS Qumpin ngoQ chenmoHbogh SoQmoHbogh chaw' ghItlhbogh QIn je.",
+    "agent": "Qumpin",
+    "assigned": "nobta'",
+    "articles": "QIn",
+    "customers_heading": "je'wI' nIvqu'",
+    "total_customers": "je'wI'pu'",
+    "active_customers": "vangbogh (30 jaj)",
+    "new_customers": "jarvam chu'",
+    "customer": "je'wI'",
+    "email": "QIn Daq",
+    "last_activity": "chaw' Qav",
+    "export_heading": "lel",
+    "export_description": "poH wIvlu'bogh mI'mey yIlI'.",
+    "export_summary_csv": "bop (CSV)",
+    "export_tickets_csv": "chaw' (CSV)",
+    "export_summary_json": "bop (JSON)",
+    "no_data": "wIvvam De' tu'lu'be'."
   },
   "admin_queues": {
     "add_queue": "chel Queue",
@@ -1979,6 +2124,23 @@
       "required": "*"
     },
     "company": "tuq",
+    "company_page": {
+      "address": "Daq",
+      "columns": {
+        "email": "QIn",
+        "name": "pong",
+        "title": "patlh"
+      },
+      "customer_id": "je'wI' ngu'meH mI'",
+      "info_title": "kampa'nIy De'",
+      "no_company": "kampa'nIy Dararbe'.",
+      "no_users": "lo'wI' tu'lu'be'.",
+      "not_set": "nobbe'lu'",
+      "user_count": "lo'wI'pu' tu'lu' (%d)",
+      "users_description": "je'wI' Daq lo'bogh kampa'nIylIj ghot'e'.",
+      "website": "QIn Daq",
+      "you": "SoH"
+    },
     "dashboard": {
       "announcements": "QInmey",
       "closed_tickets": "SoQ chaw'mey",
@@ -2040,16 +2202,6 @@
       "title": "boQ chaw' chu' chenmoH"
     },
     "phone": "jatlh jan",
-    "placeholder_pages": {
-      "company_info_title": "tuq De'",
-      "company_users_title": "tuq lo'wI'mey",
-      "knowledge_base_article": "Sov pat QIn",
-      "knowledge_base_search": "Sov pat nej",
-      "knowledge_base_title": "Sov pat",
-      "password_title": "pegh mu' choH",
-      "profile_title": "mach ngoD",
-      "under_construction": "nav chenmoH taHvIS."
-    },
     "portal": {
       "login_title": "mach boQ 'el",
       "title": "mach lojmIt"
@@ -2117,7 +2269,6 @@
     }
   },
   "customer_company_form": {
-    "assigned_services": "Assigned Services",
     "branding": "Branding",
     "company_details": "Company De' Sov",
     "features": "Features",
@@ -2126,17 +2277,56 @@
     "save_capture_setting": "jon Qap pol",
     "save_portal_settings": "Portal Qap pol"
   },
+  "customer_company_pages": {
+    "customer_id": "je'wI' ngu'meH mI'",
+    "sections": "kampa'nIy 'ay'mey",
+    "nav": {
+      "details": "De'",
+      "users": "je'wI' lo'wI'pu'",
+      "tickets": "QIn'eQmey",
+      "services": "QaHmey"
+    }
+  },
   "customer_company_services": {
-    "heading": "je'wI' Company Services",
-    "title": "je'wI' Company Services"
+    "heading": "QaHmey",
+    "title": "je'wI' kampa'nIy QaHmey",
+    "description": "je'wI' lo'wI'pu'vaD QaHmey nob. QaH lo'laHbogh kampa'nIyvam lo'wI'pu' yIwIv.",
+    "saved": "QaH nobmey pollu'.",
+    "no_services": "QaH lo'laHbe'law' tu'lu'.",
+    "manage_services": "QaHmey yI'aw'",
+    "no_users": "kampa'nIyvam je'wI' lo'wI' tu'lu'be'; QaH nobmeH ghot tu'lu'be'.",
+    "all_users": "Hoch lo'wI'pu'",
+    "save": "nobmey yIpol",
+    "columns": {
+      "service": "QaH",
+      "assigned": "nobta'",
+      "customer_users": "je'wI' lo'wI'pu'"
+    }
   },
   "customer_company_tickets": {
-    "heading": "je'wI' Company Tickets",
-    "title": "je'wI' Company Tickets"
+    "heading": "QIn'eQmey",
+    "title": "je'wI' kampa'nIy QIn'eQmey",
+    "description": "kampa'nIyvam QIn'eQmey, Dun'aD DaSuqlaHbogh, chu'qu' wa'DIch.",
+    "empty": "Dun'aD DaSuqlaHbogh kampa'nIyvam QIn'eQ tu'lu'be'.",
+    "columns": {
+      "title": "per",
+      "customer_user": "je'wI' lo'wI'"
+    }
   },
   "customer_company_users": {
-    "heading": "je'wI' Company lo'wI'pu'",
-    "title": "je'wI' Company lo'wI'pu'"
+    "heading": "je'wI' lo'wI'pu'",
+    "title": "je'wI' kampa'nIy lo'wI'pu'",
+    "description": "kampa'nIyvam ghaH je'wI' lo'wI'pu'.",
+    "manage_users": "je'wI' lo'wI'pu' yI'aw'",
+    "empty": "kampa'nIyvam je'wI' lo'wI' tu'lu'be'.",
+    "columns": {
+      "login": "'el pong",
+      "name": "pong",
+      "email": "QIn De'wI'",
+      "phone": "ghogh HablI'",
+      "tickets": "QIn'eQmey",
+      "status": "Dotlh"
+    }
   },
   "customer_group": {
     "by_group_heading": "je'wI' Permissions by ghom",
@@ -2162,7 +2352,8 @@
   },
   "customer_portal_settings": {
     "heading": "je'wI' Portal Qap",
-    "title": "je'wI' Portal Qap"
+    "title": "je'wI' Portal Qap",
+    "per_company_note": "Hoch customer kompanI' choHlaH: ghItlh ghItlhmeH Daq Portal Settings ghItlh."
   },
   "customer_user_services": {
     "title": "je'wI' lo'wI' Services"
@@ -2208,27 +2399,16 @@
     "performance": "HoS",
     "quick_actions": "nom ta'mey",
     "quick_stats": "nom ngoD",
-    "realtime": {
-      "title": "DaHjaj SeHlaw"
-    },
     "recent_activity": "Qav ta'",
     "recent_tickets": "Qav chaw'mey",
     "statistics": "ngoD mI'mey",
-    "stats": {
-      "closed_today": "DaHjaj SoQmoH",
-      "my_open": "jIH poS",
-      "my_pending": "jIH loS",
-      "new_today": "DaHjaj chu'",
-      "open_tickets": "poS chaw'mey",
-      "total_assigned": "Hoch noblu'ta'",
-      "unassigned": "noblu'be'"
-    },
     "tickets_count": "chaw'mey",
     "title": "HaSta",
     "unassigned_count": "noblu'be'",
     "welcome_back": "nuqneH chegh",
     "welcome_message": "DaHjaj chaw'lIj vangmey legh",
-    "widget_config_desc": "jan DaqDaq 'ang jan yIwIv. yIqengHa'moH."
+    "widget_config_desc": "jan DaqDaq 'ang jan yIwIv. yIqengHa'moH.",
+    "widget_unavailable": "DaH lo'laHbe' SeHlaw'vam. tugh yInIDqa'."
   },
   "demo": {
     "security_disabled": "Demo SeHlaw: ngu'wI' choH pagh MFA choH chaw'be'lu'."
@@ -2261,11 +2441,6 @@
       "delete": "Qaw' field",
       "edit": "choH field"
     }
-  },
-  "dynamic_test": {
-    "heading": "Dynamic Module Testing",
-    "testing_instructions": "Testing Instructions",
-    "title": "Dynamic Module Testing"
   },
   "editor": {
     "insert_image_prompt": "nagh beQ URL yI'el (chIm tlhobwI' lo'choH):",
@@ -2350,29 +2525,18 @@
     "mandatory_note": "Hoch yoSmey (*) poQlu'.",
     "select": "wIv"
   },
-  "group_form": {
-    "heading": "ghom Form",
-    "title": "ghom Form"
-  },
-  "group_members": {
-    "heading": "ghom Members",
-    "title": "ghom Members"
-  },
   "group_permissions": {
     "permission_matrix": "Permission Matrix",
     "queue_permissions": "Queue Permissions",
     "queues": "tlhoy",
     "title": "ghom Permissions"
   },
-  "group_view": {
-    "heading": "ghom De' Sov",
-    "title": "ghom"
-  },
   "groups": {
     "add_group": "chel ghom",
     "add_user": "chel lo'wI' to ghom",
     "add_user_btn": "chel lo'wI'",
     "confirm_delete": "Are you sure you want to delete this group?",
+    "delete_keeps_group": "ghom Qapbe'moHlu'. tebwI'pu' chaq chaw'mey je ghaj ghom 'ej tetlhDaq ratlh. ghom DachoHmoHchugh, ghom Qapqa'moHlaH.",
     "current_members": "DaH tebwI'pu'",
     "delete_success": "ghom deleted successfully",
     "group": "ghom",
@@ -2600,7 +2764,6 @@
       "delete_item": "Dochvam DaQaw' 'e' DaneH'a'?",
       "delete_lookup": "Dochvam DaQaw' 'e' DaneH'a'? ta'vam lIjlaHbe'.",
       "delete_priority": "potlhvam DaQaw' 'e' DaneH'a'? ta'vam lIjlaHbe'.",
-      "delete_queue": "tlheghvam DaQaw' 'e' DaneH'a'? tlheghvam tIqwIjmey Hoch choHnIS. ta'vam lIjlaHbe'.",
       "delete_queue_simple": "tlheghvam DaQaw' 'e' DaneH'a'?",
       "delete_queues_bulk": "wIvlu'bogh tlheghmey DaQaw' 'e' DaneH'a'?",
       "delete_state": "Dotlhvam DaQaw' 'e' DaneH'a'?",
@@ -2643,7 +2806,6 @@
     "failed_remove_user": "Failed to remove user",
     "failed_save_field": "Failed to save field",
     "failed_update_screen_config": "Failed to update screen configuration",
-    "failed_update_services": "Failed to update services",
     "groups": {
       "select_user": "Please select a user to add"
     },
@@ -2652,7 +2814,6 @@
     "item_deleted": "Doch HeghmoHlu'ta' Qapla'",
     "item_updated": "Doch Dublu'ta' Qapla'",
     "loading": "laj...",
-    "loading_customer_users": "lulmeH customer users...",
     "network_error": "ghojmeH Qagh",
     "no_agents_available": "ghobe' agents available",
     "no_data": "De' tu'be'lu'",
@@ -2673,15 +2834,11 @@
     "please_wait": "loS...",
     "processing": "ta' taH...",
     "required_fields": "Hoch poQ yoSmey tebqu'",
-    "save_company_before_services": "pol the company before assigning services.",
-    "save_company_first": "pol the company before assigning services.",
     "saving": "choq...",
     "select_at_least_one_queue": "Please select at least one queue",
     "select_template_type": "Please select at least one template type.",
     "select_two_to_merge": "Please select at least two tickets to merge",
     "server_error": "qach Qagh",
-    "services_updated": "Services updated successfully",
-    "services_updated_success": "Services updated successfully",
     "session_expired": "yInlIj Qav",
     "success": "Qapla'",
     "unauthorized": "chaw'be'",
@@ -2848,9 +3005,7 @@
     "title": "Permission Management"
   },
   "placeholders": {
-    "contains": "Contains...",
-    "note_subject": "ghobe'te subject",
-    "separate_emails": "Separate multiple emails with commas"
+    "contains": "Contains..."
   },
   "priorities": {
     "heading": "Priority Management",
@@ -2967,20 +3122,6 @@
     },
     "total_count": "total"
   },
-  "realtime": {
-    "active_alerts": "Active Alerts",
-    "heading": "Real-poH SeHlaw",
-    "no_tickets": "ghobe' tickets",
-    "queue_distribution": "Queue Distribution",
-    "queue_status": "Queue Dotlh",
-    "recent_tickets": "ta'mey chu'",
-    "stats": {
-      "active_agents": "Active Duypu's",
-      "avg_response_time": "Avg Response poH",
-      "open_tickets": "poS Tickets"
-    },
-    "ticket_volume": "Ticket Volume (24h)"
-  },
   "realtime_dashboard": {
     "title": "DaHjaj SeHlaw"
   },
@@ -3095,29 +3236,51 @@
     "search_results": "nej Qu'mey"
   },
   "self_service": {
+    "email": {
+      "register_body": "nuqneH %s,\n\nbItoDmo' qatlho'. QIn navlIj yI'olmeH 'ej mu'wIj yIwIvmeH, %d rep qaSpa' rarwI'vam yIpoSmoH:\n%s\n\nbItoDbe'chugh, QInvam yIbuSHa'.",
+      "register_exists_body": "nuqneH,\n\nQIn navvam lo'meH jan chenmoHqang vay', 'ach jan tu'lu'pu'.\n\nmu'wIjlIj Dalijchugh, naDev mu'wIj chu' DawIvlaH:\n%s\n\nSoHbe'chugh, QInvam yIbuSHa'.",
+      "register_exists_subject": "janlIj",
+      "register_subject": "QIn navlIj yI'ol",
+      "reset_body": "nuqneH %s,\n\njanlIj \"%s\" mu'wIj choHmoHmeH tlhoblu'.\n\nmu'wIj chu' yIwIvmeH, %d tup qaSpa' rarwI'vam yIpoSmoH:\n%s\n\nbIlobbe'chugh, QInvam yIbuSHa'. mu'wIjlIj choHbe'lu'.",
+      "reset_subject": "mu'wIj choHmoH"
+    },
+    "error": "Qagh qaS. yInIDqa'.",
     "forgot_password": {
-      "email_label": "QIn nav",
+      "identifier_label": "pong ghap QIn nav",
+      "identifier_required": "pong ghap QIn nav yIlIH.",
+      "intro": "pong ghap QIn nav yIlIH. mI' 'ej jan rap, mu'wIj chu' yIwIvmeH rarwI' DangeHlaH.",
       "submit": "rarwI' ngeH",
       "success": "jan tu'lu'chugh, rarwI' ngeHta'.",
       "title": "ngoDmoHlu' mu'wIj"
     },
+    "rate_limited": "tlhoy law' tlhobmeH. tagha' yInIDqa'.",
     "register": {
+      "account_exists": "QIn navvam lo'bogh jan tu'lu'pu'. yI'elmeH \"pegh mu' lIj'a'?\" yIlo'.",
+      "complete_submit": "jan yIchenmoH",
+      "complete_success": "jan chenta'. DaH yI'el.",
+      "complete_title": "mu'wIj yIwIv",
       "email": "QIn",
+      "fields_required": "wa'DIch pong, tuq pong, QIn nav je poQlu'.",
       "first_name": "wa'DIch pong",
+      "intro": "De'lIj yIlIH. QIn nav yI'ollaHmeH 'ej mu'wIj yIwIvmeH rarwI' DangeH.",
+      "invalid_input": "QIn nav lI' yIlIH; pong 100 ngutlh tlhoy law'be'.",
       "last_name": "tuq pong",
+      "start_again": "toDqa'",
       "submit": "toD",
       "success": "toD ngeHta'.",
       "title": "jan chenmoH"
     },
     "reset_password": {
       "confirm": "laj",
+      "invalid_link": "rarwI' lI'be' ghap rIn poHDaj.",
       "new_password": "mu'wIj chu'",
+      "policy_regexp": "mu'wIj Hoch qelbe' mIw poQlu'bogh",
+      "request_new": "rarwI' chu' yItlhob",
+      "required": "mu'wIj chu' yIlIH.",
       "submit": "choH",
       "success": "mu'wIj choHta'.",
-      "title": "mu'wIj chu'"
-    },
-    "verify_email": {
-      "success": "QIn 'ollu'."
+      "title": "mu'wIj chu'",
+      "too_long": "tlhoy nI' mu'wIj."
     }
   },
   "service_catalog": {
@@ -3234,7 +3397,6 @@
     "last_used": "Qav lo",
     "leave_empty_full_access": "chIm choHwI Hoch Suq",
     "light_theme": "wov",
-    "more_coming": "DuHmey law' veb",
     "never_expires": "not Hegh",
     "never_used": "not lo",
     "no_tokens": "API pat tu be",
@@ -3379,7 +3541,6 @@
   "tickets": {
     "actions": "ta'mey",
     "add_comment": "QIn chel",
-    "add_internal_note": "chel Internal ghobe'te",
     "add_note": "ghItlh chel",
     "additional_fields": "yoSmey chel",
     "additional_info_placeholder": "De' chel pagh qun...",
@@ -3401,11 +3562,7 @@
     "attachments": "rarlu'bogh",
     "auto_close": {
       "at": "poH",
-      "minus_help": "poH wuqpu'bogh QIn SoQmoH, Qu' pagh.",
-      "minus_title": "SoQmoH loS-",
       "overdue": "qImHa' SoQmoH",
-      "plus_help": "qaStaHvIS poH wuqpu'bogh jang qoch pagh QIn SoQmoH.",
-      "plus_title": "SoQmoH loS+",
       "scheduled": "SoQmoH wuqpu'",
       "should_have_closed_at": "QIn SoQmoH 'e' poQ poH",
       "while_pending": "SoQmoH loS Dotlh",
@@ -3426,7 +3583,6 @@
     "comment_placeholder": "QInlIj naDev ghItlh...",
     "comments": "QInmey",
     "communication": "ja'chuq",
-    "compose_reply": "Compose Reply",
     "created_at": "chenmoHlu'ta'Daq",
     "created_by": "chenmoHwI'",
     "created_on": "chenmoHlu'ta' jaj",
@@ -3437,7 +3593,6 @@
     "customer_visible_badge": "mach leghlaH",
     "customer_wrote_badge": "qorwI' De'wI' ghItlh",
     "description": "Del",
-    "details": "De'mey",
     "due_date": "rIn jaj",
     "dynamic_field_filters": "Dynamic Field chuqs",
     "email": "QIn Daq",
@@ -3491,13 +3646,11 @@
     "owner": "ghajwI'",
     "pending_reminder": {
       "ago": "ret",
-      "help": "QIn \"poS\" Dotlh chegh poH wuqpu'bogh.",
       "in": "pIq",
       "no_time_scheduled": "qaw poH wuqbe'pu'.",
       "not_scheduled": "qaw wuqbe'pu'",
       "overdue": "qImHa' qaw",
       "scheduled": "qaw wuqpu'",
-      "title": "loS qaw",
       "was_scheduled_for": "qaw wuqpu' poH",
       "will_reopen_at": "QIn poSmoH poH"
     },
@@ -3741,7 +3894,7 @@
       "org_support": "IT bomwI' Team",
       "org_type_heading": "nuq luj woD?",
       "queue_name_ph": "Queue pong (ghun: bomwI' inbox)",
-      "queues_desc": "Queue 'oH inbox 'e' tIqeS Dallu'Daq. Queue Hoch nIteb wa' pagh cha' Teams DatuQ.",
+      "queues_desc": "Queue 'oH inbox 'e' tIqeS Dallu'Daq. wa' Teams ghaj Queue Hoch; tIqeSmeyDaq vum Teams ghom.",
       "queues_heading": "tIqeS Queues chenmoH",
       "remove": "teq",
       "review_agents": "Agents",

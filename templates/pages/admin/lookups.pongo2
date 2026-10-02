@@ -233,10 +233,9 @@
                         <div>
                             <label for="stateTypeId" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">Type</label>
                             <select name="type_id" id="stateTypeId" required class="gk-select-neon w-full">
-                                <option value="1">New</option>
-                                <option value="2">Open</option>
-                                <option value="3">Pending</option>
-                                <option value="4">Closed</option>
+                                {% for st in StateTypes %}
+                                <option value="{{ st.ID }}">{{ st.Name|capfirst }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div>
@@ -396,7 +395,7 @@ async function savePriority(event) {
     const formData = new FormData(event.target);
     const data = { name: formData.get('name'), color: formData.get('color') };
 
-    const url = currentEditId ? `/admin/priorities/${currentEditId}` : '/admin/priorities';
+    const url = currentEditId ? `/api/v1/priorities/${currentEditId}` : '/api/v1/priorities';
     const method = currentEditId ? 'PUT' : 'POST';
 
     try {
@@ -450,7 +449,7 @@ async function saveState(event) {
         comments: formData.get('comments') || null
     };
 
-    const url = currentEditId ? `/api/states/${currentEditId}` : '/api/states';
+    const url = currentEditId ? `/admin/states/${currentEditId}/update` : '/admin/states/create';
     const method = currentEditId ? 'PUT' : 'POST';
 
     try {
@@ -530,8 +529,8 @@ async function confirmDelete() {
     if (!deleteContext.type || !deleteContext.id) return;
 
     let url;
-    if (deleteContext.type === 'priority') url = `/admin/priorities/${deleteContext.id}`;
-    else if (deleteContext.type === 'state') url = `/api/states/${deleteContext.id}`;
+    if (deleteContext.type === 'priority') url = `/api/v1/priorities/${deleteContext.id}`;
+    else if (deleteContext.type === 'state') url = `/admin/states/${deleteContext.id}/delete`;
     else url = `/api/types/${deleteContext.id}`;
 
     try {

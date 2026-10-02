@@ -319,6 +319,11 @@
                                 {{ navTickets }}
                             </a>
                             {% endif %}
+                            {% if isCustomer and CustomerInfo.Company %}
+                            <a href="/customer/company" class="gk-nav-link {% if ActivePage == 'company' %}active{% endif %}">
+                                {{ t("customer.nav.company_info") }}
+                            </a>
+                            {% endif %}
                             {% if not isCustomer %}
                             {% if not HiddenNavItems.queues %}
                             <a href="{{ queuesHref }}" rel="nofollow" class="gk-nav-link {% if ActivePage == 'queues' %}active{% endif %}">
@@ -410,6 +415,11 @@
                             {% if not HiddenNavItems.tickets %}
                             <a href="{{ ticketsHref }}" class="gk-sidebar-link {% if ActivePage == 'tickets' %}active{% endif %}">
                                 {{ navTickets }}
+                            </a>
+                            {% endif %}
+                            {% if isCustomer and CustomerInfo.Company %}
+                            <a href="/customer/company" class="gk-sidebar-link {% if ActivePage == 'company' %}active{% endif %}">
+                                {{ t("customer.nav.company_info") }}
                             </a>
                             {% endif %}
                             {% if not isCustomer %}

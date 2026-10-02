@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/service"
 )
 
@@ -30,15 +30,8 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 			interactionType = "phone"
 		}
 
-		skipDB := htmxHandlerSkipDB() || strings.TrimSpace(os.Getenv("SKIP_DB_WAIT")) == "1"
-		// Test-mode fallback for when database access is intentionally skipped
-		if skipDB {
-			renderTicketCreationFallback(c, interactionType)
-			return
-		}
-
-		// Get database connection
 		if db == nil {
+			log.Printf("HandleAgentNewTicket: database connection is nil")
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database connection failed"})
 			return
 		}
@@ -108,7 +101,7 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 
 		stateOptions := []gin.H{}
 		stateLookup := map[string]gin.H{}
-		if opts, lookup, stateErr := LoadTicketStatesForForm(db); stateErr != nil {
+		if opts, lookup, stateErr := shared.LoadTicketStatesForForm(db); stateErr != nil {
 			log.Printf("agent new ticket: failed to load ticket states: %v", stateErr)
 		} else {
 			stateOptions = opts
@@ -132,31 +125,32 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 
 		// Render the form with data
 		renderer := getPongo2Renderer()
-		if renderer != nil {
-			user := GetUserMapForTemplate(c)
-			isInAdminGroup := false
-			if v, ok := user["IsInAdminGroup"].(bool); ok {
-				isInAdminGroup = v
-			}
-			renderer.HTML(c, http.StatusOK, "pages/tickets/new.pongo2", gin.H{
-				"Title":             "New Ticket - GoatFlow",
-				"User":              user,
-				"ActivePage":        "tickets",
-				"IsInAdminGroup":    isInAdminGroup,
-				"Queues":            queues,
-				"Types":             types,
-				"Priorities":        priorities,
-				"Services":          services,
-				"CustomerUsers":     customerUsers,
-				"TicketStates":      stateOptions,
-				"TicketStateLookup": stateLookup,
-				"DynamicFields":     dynamicFields,
-				"PreSelectedType":   interactionType,
-				"ArticleColors":     articleColors,
-			})
-		} else {
-			renderTicketCreationFallback(c, interactionType)
+		if renderer == nil {
+			log.Printf("HandleAgentNewTicket: template renderer not initialised")
+			c.String(http.StatusInternalServerError, "Template renderer unavailable")
+			return
 		}
+		user := GetUserMapForTemplate(c)
+		isInAdminGroup := false
+		if v, ok := user["IsInAdminGroup"].(bool); ok {
+			isInAdminGroup = v
+		}
+		renderer.HTML(c, http.StatusOK, "pages/tickets/new.pongo2", gin.H{
+			"Title":             "New Ticket - GoatFlow",
+			"User":              user,
+			"ActivePage":        "tickets",
+			"IsInAdminGroup":    isInAdminGroup,
+			"Queues":            queues,
+			"Types":             types,
+			"Priorities":        priorities,
+			"Services":          services,
+			"CustomerUsers":     customerUsers,
+			"TicketStates":      stateOptions,
+			"TicketStateLookup": stateLookup,
+			"DynamicFields":     dynamicFields,
+			"PreSelectedType":   interactionType,
+			"ArticleColors":     articleColors,
+		})
 	}
 }
 

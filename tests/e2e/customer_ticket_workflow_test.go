@@ -3,142 +3,81 @@
 package e2e
 
 import (
+	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/goatkit/goatflow/tests/e2e/helpers"
+	"github.com/playwright-community/playwright-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// TestCustomerTicketWorkflowComplete tests the complete customer ticket creation and management workflow
+// TestCustomerTicketWorkflowComplete covers access control, defaults and
+// validation of the customer new-ticket form and a ticket with a chosen
+// priority. Ticket number and initial article: TestCustomerTicketCreation.
 func TestCustomerTicketWorkflowComplete(t *testing.T) {
-	// Setup browser
 	browser := helpers.NewBrowserHelper(t)
-	err := browser.Setup()
-	require.NoError(t, err, "Failed to setup browser")
+	require.NoError(t, browser.Setup(), "Failed to setup browser")
 	defer browser.TearDown()
 
 	auth := helpers.NewAuthHelper(browser)
+	page := browser.Page
+	newTicketURL := browser.Config.BaseURL + "/customer/tickets/new"
 
-	t.Run("Customer ticket creation form is accessible and properly structured", func(t *testing.T) {
-		// Navigate to ticket creation form
-		err := browser.NavigateTo("/customer/tickets/new")
-		require.NoError(t, err)
-
-		// Should redirect to login for unauthenticated users
-		if browser.Page.URL() != browser.Config.BaseURL+"/customer/tickets/new" {
-			assert.Contains(t, browser.Page.URL(), "/login", "Should redirect to login")
-			return
-		}
-
-		// If we reached the form (authenticated), verify it loads correctly
-		assert.Equal(t, browser.Config.BaseURL+"/customer/tickets/new", browser.Page.URL())
-
-		// Check for required form elements
-		subjectInput := browser.Page.Locator("input[name='title'], input[name='subject']")
-		count, _ := subjectInput.Count()
-		assert.Greater(t, count, 0, "Subject/title input should be present")
-
-		messageTextarea := browser.Page.Locator("textarea[name='message'], textarea[name='body']")
-		count, _ = messageTextarea.Count()
-		assert.Greater(t, count, 0, "Message textarea should be present")
-
-		// Check for optional fields
-		prioritySelect := browser.Page.Locator("select[name='priority_id']")
-		count, _ = prioritySelect.Count()
-		assert.Greater(t, count, 0, "Priority select should be present")
-
-		serviceSelect := browser.Page.Locator("select[name='service_id']")
-		count, _ = serviceSelect.Count()
-		assert.Greater(t, count, 0, "Service select should be present")
-
-		// Check for submit button
-		submitButton := browser.Page.Locator("button[type='submit'], input[type='submit']")
-		count, _ = submitButton.Count()
-		assert.Greater(t, count, 0, "Submit button should be present")
-
-		// Check for form validation indicators (required fields)
-		requiredFields := browser.Page.Locator(".text-red-500, [required]")
-		count, _ = requiredFields.Count()
-		assert.Greater(t, count, 0, "Required field indicators should be present")
+	t.Run("Agent session cannot open the customer ticket form", func(t *testing.T) {
+		require.NoError(t, auth.LoginAsAdmin(), "Failed to login as admin")
+		require.NoError(t, browser.NavigateTo("/customer/tickets/new"))
+		assert.Equal(t, browser.Config.BaseURL+"/customer/login", page.URL(),
+			"an agent session must be sent to the customer login")
+		require.NoError(t, browser.Context.ClearCookies())
 	})
 
-	t.Run("Admin user cannot access customer ticket creation", func(t *testing.T) {
-		// Login as admin
-		err := auth.LoginAsAdmin()
-		require.NoError(t, err, "Failed to login as admin")
+	t.Run("Form offers the ticket fields with sensible defaults", func(t *testing.T) {
+		require.NoError(t, auth.LoginAsCustomer(),
+			"seeded customer %q (schema/seed/test_integration*.sql) must be able to log in", helpers.SeedCustomerLogin)
+		require.NoError(t, browser.NavigateTo("/customer/tickets/new"))
+		require.Equal(t, newTicketURL, page.URL(), "logged-in customer must reach the ticket creation form")
 
-		// Try to access customer ticket creation
-		err = browser.NavigateTo("/customer/tickets/new")
+		required, err := page.Locator("#title").GetAttribute("required")
 		require.NoError(t, err)
+		assert.NotNil(t, required, "subject must be required")
 
-		// Should get forbidden or redirect
-		currentURL := browser.Page.URL()
-		if currentURL == browser.Config.BaseURL+"/customer/tickets/new" {
-			// If we reached the page, check for error message
-			errorMsg := browser.Page.Locator(".error-message, .alert-danger, .text-red-600")
-			if count, _ := errorMsg.Count(); count > 0 {
-				text, _ := errorMsg.TextContent()
-				assert.Contains(t, text, "Customer", "Should show customer access required error")
-			}
-		} else {
-			// Should be redirected or show error
-			assert.NotEqual(t, browser.Config.BaseURL+"/customer/tickets/new", currentURL, "Admin should not access customer ticket creation")
-		}
+		priority, err := page.Locator("#priority_id option:checked").TextContent()
+		require.NoError(t, err)
+		assert.Equal(t, "3 normal", strings.TrimSpace(priority), "priority defaults to 3 normal")
 
-		// Logout for next test
-		auth.Logout()
+		// The message is a rich text editor that writes into the hidden
+		// textarea[name=message] the form submits.
+		require.NoError(t, page.Locator("#messageEditor .ProseMirror").WaitFor())
+		messageFields, err := page.Locator("form[action='/customer/tickets/create'] textarea[name='message']").Count()
+		require.NoError(t, err)
+		assert.Equal(t, 1, messageFields)
+
+		uploads, err := page.Locator("input[type='file'][name='attachments']").Count()
+		require.NoError(t, err)
+		assert.Equal(t, 1, uploads, "form accepts attachments")
 	})
 
-	t.Run("Customer ticket creation validates required fields", func(t *testing.T) {
-		// This test would require a customer user to be set up
-		// For now, we'll test the validation logic by examining the form
+	t.Run("Missing subject blocks submission", func(t *testing.T) {
+		require.NoError(t, browser.NavigateTo("/customer/tickets/new"))
+		require.NoError(t, page.Locator("form[action='/customer/tickets/create'] button[type='submit']").Click())
 
-		err := browser.NavigateTo("/customer/tickets/new")
+		missing, err := page.Locator("#title").Evaluate(`el => el.validity.valueMissing`, nil)
 		require.NoError(t, err)
-
-		// Skip if redirected to login
-		if browser.Page.URL() != browser.Config.BaseURL+"/customer/tickets/new" {
-			t.Skip("Customer authentication required for this test")
-			return
-		}
-
-		// Check for required field validation
-		titleInput := browser.Page.Locator("input[name='title'], input[name='subject']")
-		if count, _ := titleInput.Count(); count > 0 {
-			requiredAttr, _ := titleInput.GetAttribute("required")
-			assert.Equal(t, "required", requiredAttr, "Title field should be required")
-		}
-
-		messageTextarea := browser.Page.Locator("textarea[name='message'], textarea[name='body']")
-		if count, _ := messageTextarea.Count(); count > 0 {
-			requiredAttr, _ := messageTextarea.GetAttribute("required")
-			assert.Equal(t, "required", requiredAttr, "Message field should be required")
-		}
+		assert.Equal(t, true, missing, "empty subject should fail browser validation")
+		assert.Equal(t, newTicketURL, page.URL(), "the form must not be submitted")
 	})
 
-	t.Run("Customer ticket creation generates proper ticket number format", func(t *testing.T) {
-		// This test verifies the ticket number generation logic
-		// The format should be: YYYYMMDDHHMMSS based on the handler code
+	t.Run("Ticket keeps the priority chosen on the form", func(t *testing.T) {
+		title := fmt.Sprintf("Customer urgent outage %d", time.Now().UnixNano())
+		createCustomerTicket(t, browser, title, "The whole office is offline.", "4 high")
 
-		// For now, we'll verify the handler exists and is properly structured
-		// by checking that the route is registered
-
-		// Navigate to a test page to ensure the server is responding
-		err := browser.NavigateTo("/health")
+		heading, err := page.Locator("h1.gk-heading").TextContent()
 		require.NoError(t, err)
-
-		// The actual ticket number generation would be tested when we create a ticket
-		t.Log("Ticket number format should be: YYYYMMDDHHMMSS")
-	})
-
-	t.Run("Customer ticket creation creates associated article", func(t *testing.T) {
-		// This test verifies that when a ticket is created, an initial article is also created
-		// This is based on the handler code that creates both ticket and article
-
-		// For now, we'll verify the handler logic exists
-		// The handler creates a ticket and then creates an article with the same content
-
-		t.Log("Customer ticket creation should create both ticket and initial article")
+		assert.Equal(t, title, strings.TrimSpace(heading))
+		assert.NoError(t, page.Locator("dd").Filter(playwright.LocatorFilterOptions{HasText: "4 high"}).WaitFor(),
+			"ticket view should show the chosen priority")
 	})
 }

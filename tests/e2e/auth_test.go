@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/goatkit/goatflow/tests/e2e/helpers"
+	"github.com/playwright-community/playwright-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -37,10 +38,10 @@ func TestAuthenticationFlow(t *testing.T) {
 		count, _ = passwordInput.Count()
 		assert.Greater(t, count, 0, "Password input should be present")
 
-		// Check for dark mode toggle
-		darkModeToggle := browser.Page.Locator("button[onclick='toggleDarkMode()']")
-		count, _ = darkModeToggle.Count()
-		assert.Greater(t, count, 0, "Dark mode toggle should be present")
+		// Theme/appearance selector (replaced the old toggleDarkMode() button)
+		themeButton := browser.Page.Locator("button#login-theme-button")
+		count, _ = themeButton.Count()
+		assert.Equal(t, 1, count, "Theme selector should be present")
 	})
 
 	t.Run("Login with valid credentials", func(t *testing.T) {
@@ -83,46 +84,81 @@ func TestAuthenticationFlow(t *testing.T) {
 		assert.Contains(t, url, "/login", "Should remain on login page after failed login")
 	})
 
-	t.Run("Dark mode toggle works", func(t *testing.T) {
+	t.Run("Appearance switch works", func(t *testing.T) {
 		err := browser.NavigateTo("/login")
 		require.NoError(t, err)
 
-		// Get initial dark mode state
 		html := browser.Page.Locator("html")
-		initialClass, _ := html.GetAttribute("class")
-
-		// Click dark mode toggle
-		darkModeToggle := browser.Page.Locator("button[onclick='toggleDarkMode()']")
-		err = darkModeToggle.Click()
+		initialDark, err := htmlHasClass(html, "dark")
 		require.NoError(t, err)
+		target, restore := "dark", "light"
+		if initialDark {
+			target, restore = "light", "dark"
+		}
 
-		// Check class changed
-		newClass, _ := html.GetAttribute("class")
-		assert.NotEqual(t, initialClass, newClass, "HTML class should change after toggle")
+		selectMode := func(mode string) {
+			t.Helper()
+			require.NoError(t, browser.Page.Locator("button#login-theme-button").Click())
+			modeButton := browser.Page.Locator("button#login-mode-btn-" + mode)
+			require.NoError(t, modeButton.WaitFor())
+			// selectLoginMode() persists the choice via POST /api/themes, then applies it.
+			resp, err := browser.Page.ExpectResponse("**/api/themes", func() error { return modeButton.Click() })
+			require.NoError(t, err)
+			assert.Equal(t, 200, resp.Status())
+			_, err = browser.Page.WaitForFunction(
+				`(mode) => document.documentElement.classList.contains(mode)`, mode)
+			require.NoError(t, err, "html should switch to %s mode", mode)
+		}
 
-		// Toggle back
-		err = darkModeToggle.Click()
+		selectMode(target)
+		// The choice survives a reload.
+		_, err = browser.Page.Reload()
 		require.NoError(t, err)
+		has, err := htmlHasClass(html, target)
+		require.NoError(t, err)
+		assert.True(t, has, "%s mode should persist across reload", target)
 
-		// Check class reverted
-		finalClass, _ := html.GetAttribute("class")
-		assert.Equal(t, initialClass, finalClass, "HTML class should revert after second toggle")
+		selectMode(restore)
 	})
 
 	t.Run("Form field padding is correct", func(t *testing.T) {
 		err := browser.NavigateTo("/login")
 		require.NoError(t, err)
 
-		// Check email input has proper padding classes
-		emailInput := browser.Page.Locator("input#email")
-		classes, _ := emailInput.GetAttribute("class")
-		assert.Contains(t, classes, "px-3", "Email input should have px-3 padding")
-		assert.Contains(t, classes, "py-2.5", "Email input should have py-2.5 padding")
-
-		// Check password input has proper padding classes
-		passwordInput := browser.Page.Locator("input#password")
-		classes, _ = passwordInput.GetAttribute("class")
-		assert.Contains(t, classes, "px-3", "Password input should have px-3 padding")
-		assert.Contains(t, classes, "py-2.5", "Password input should have py-2.5 padding")
+		// Text must not sit against the input border: both login inputs get
+		// the theme input padding (gk-input-neon), with matching left inset.
+		padding := func(sel string) (left, top float64) {
+			t.Helper()
+			v, err := browser.Page.Locator(sel).Evaluate(
+				`el => { const s = getComputedStyle(el); return [parseFloat(s.paddingLeft), parseFloat(s.paddingTop)]; }`, nil)
+			require.NoError(t, err)
+			vals := v.([]interface{})
+			return toFloat(vals[0]), toFloat(vals[1])
+		}
+		emailLeft, emailTop := padding("input#email")
+		passwordLeft, passwordTop := padding("input#password")
+		assert.GreaterOrEqual(t, emailLeft, 12.0, "email input left padding")
+		assert.GreaterOrEqual(t, emailTop, 8.0, "email input top padding")
+		assert.Equal(t, emailLeft, passwordLeft, "email and password inputs share the left inset")
+		assert.Equal(t, emailTop, passwordTop, "email and password inputs share the top inset")
 	})
+}
+
+func htmlHasClass(html playwright.Locator, class string) (bool, error) {
+	v, err := html.Evaluate(`(el, c) => el.classList.contains(c)`, class)
+	if err != nil {
+		return false, err
+	}
+	b, _ := v.(bool)
+	return b, nil
+}
+
+func toFloat(v interface{}) float64 {
+	switch n := v.(type) {
+	case float64:
+		return n
+	case int:
+		return float64(n)
+	}
+	return -1
 }

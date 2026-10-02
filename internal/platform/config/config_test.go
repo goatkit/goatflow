@@ -316,51 +316,6 @@ func TestEmailConfig(t *testing.T) {
 	})
 }
 
-func TestStorageConfig(t *testing.T) {
-	t.Run("Local storage configuration", func(t *testing.T) {
-		storageConfig := StorageConfig{
-			Type: "local",
-		}
-		storageConfig.Local.Path = "/var/lib/goatflow/uploads"
-		storageConfig.Local.PublicPath = "/uploads"
-
-		assert.Equal(t, "local", storageConfig.Type)
-		assert.Equal(t, "/var/lib/goatflow/uploads", storageConfig.Local.Path)
-		assert.Equal(t, "/uploads", storageConfig.Local.PublicPath)
-	})
-
-	t.Run("S3 storage configuration", func(t *testing.T) {
-		storageConfig := StorageConfig{
-			Type: "s3",
-		}
-		storageConfig.S3.Bucket = "goatflow-attachments"
-		storageConfig.S3.Region = "us-east-1"
-		storageConfig.S3.AccessKey = "access-key"
-		storageConfig.S3.SecretKey = "secret-key"
-		storageConfig.S3.Endpoint = "https://s3.amazonaws.com"
-
-		assert.Equal(t, "s3", storageConfig.Type)
-		assert.Equal(t, "goatflow-attachments", storageConfig.S3.Bucket)
-		assert.Equal(t, "us-east-1", storageConfig.S3.Region)
-		assert.Equal(t, "https://s3.amazonaws.com", storageConfig.S3.Endpoint)
-	})
-
-	t.Run("Attachment configuration", func(t *testing.T) {
-		storageConfig := StorageConfig{}
-		storageConfig.Attachments.MaxSize = 10 * 1024 * 1024 // 10MB
-		storageConfig.Attachments.AllowedTypes = []string{
-			"image/jpeg",
-			"image/png",
-			"application/pdf",
-			"text/plain",
-		}
-
-		assert.Equal(t, int64(10*1024*1024), storageConfig.Attachments.MaxSize)
-		assert.Len(t, storageConfig.Attachments.AllowedTypes, 4)
-		assert.Contains(t, storageConfig.Attachments.AllowedTypes, "application/pdf")
-	})
-}
-
 func TestTicketConfig(t *testing.T) {
 	t.Run("Ticket ID configuration", func(t *testing.T) {
 		ticketConfig := TicketConfig{
@@ -410,7 +365,6 @@ func TestFeaturesConfig(t *testing.T) {
 			SocialLogin:             false,
 			TwoFactorAuth:           true,
 			APIKeys:                 true,
-			Webhooks:                true,
 			LDAP:                    false,
 			SAML:                    false,
 			KnowledgeBase:           true,
@@ -422,7 +376,6 @@ func TestFeaturesConfig(t *testing.T) {
 		assert.False(t, features.SocialLogin)
 		assert.True(t, features.TwoFactorAuth)
 		assert.True(t, features.APIKeys)
-		assert.True(t, features.Webhooks)
 		assert.False(t, features.LDAP)
 		assert.False(t, features.SAML)
 		assert.True(t, features.KnowledgeBase)
@@ -466,22 +419,6 @@ func TestIntegrationsConfig(t *testing.T) {
 
 		assert.True(t, integrations.Teams.Enabled)
 		assert.Contains(t, integrations.Teams.WebhookURL, "office.com")
-	})
-
-	t.Run("Generic webhook configuration", func(t *testing.T) {
-		integrations := IntegrationsConfig{}
-		integrations.Webhook.Enabled = true
-		integrations.Webhook.Endpoints = []string{
-			"https://api.example.com/webhook",
-			"https://webhook.site/xxx",
-		}
-		integrations.Webhook.Timeout = 30 * time.Second
-		integrations.Webhook.RetryAttempts = 3
-
-		assert.True(t, integrations.Webhook.Enabled)
-		assert.Len(t, integrations.Webhook.Endpoints, 2)
-		assert.Equal(t, 30*time.Second, integrations.Webhook.Timeout)
-		assert.Equal(t, 3, integrations.Webhook.RetryAttempts)
 	})
 }
 

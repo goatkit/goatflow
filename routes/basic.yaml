@@ -53,6 +53,7 @@ spec:
           handler: handleQueuesRedirect
           middleware:
               - auth
+              - agent
               - queue_ro # Require read access to at least one queue
           description: "Role-aware redirect/render for queues"
 
@@ -63,6 +64,7 @@ spec:
           template: pages/tickets.pongo2
           middleware:
               - auth
+              - agent
               - queue_access_ro # Require read access to the specific queue
           description: "Display tickets filtered by specific queue"
 
@@ -72,6 +74,7 @@ spec:
           handler: handleQueueMetaPartial
           middleware:
               - auth
+              - agent
               - queue_access_ro # Require read access to the specific queue
           description: "Render queue metadata panel or JSON payload"
 
@@ -81,6 +84,7 @@ spec:
           handler: handleTicketDetail
           middleware:
               - auth
+              - agent
               - ticket_access_ro # Require read access to ticket's queue
           description: "Display ticket detail using the unified handler"
 
@@ -91,6 +95,7 @@ spec:
           template: pages/tickets/new.pongo2
           middleware:
               - auth
+              - agent
               - queue_create # Require create access to at least one queue
           description: "Redirect to email ticket creation form"
 
@@ -100,6 +105,7 @@ spec:
           template: pages/tickets/new.pongo2
           middleware:
               - auth
+              - agent
               - queue_create # Require create access to at least one queue
           description: "Display email ticket creation form"
 
@@ -109,6 +115,7 @@ spec:
           template: pages/tickets/new.pongo2
           middleware:
               - auth
+              - agent
               - queue_create # Require create access to at least one queue
           description: "Display phone ticket creation form"
 

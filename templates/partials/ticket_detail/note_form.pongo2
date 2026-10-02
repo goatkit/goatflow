@@ -43,7 +43,7 @@
                         class="gk-select-neon w-full">
                     <option value="" selected>{{ t("tickets.keep_current_state")|default:"Keep current state" }} ({{ Ticket.status }})</option>
                     {% for state in TicketStates %}
-                    <option value="{{ state.id }}"{% if state.type_id == 5 %} data-pending="true"{% endif %}>{{ state.name }}</option>
+                    <option value="{{ state.id }}"{% if state.type_name == "pending reminder" or state.type_name == "pending auto" %} data-pending="true"{% endif %}>{{ state.name }}</option>
                     {% endfor %}
                 </select>
                 <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("tickets.next_state_help")|default:"Choose a new state or leave unchanged." }}</p>

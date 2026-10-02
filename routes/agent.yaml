@@ -11,6 +11,7 @@ spec:
     prefix: /agent
     middleware:
         - auth
+        - agent # Customers' JWTs must not reach agent routes
         - queue_ro # Require read access to at least one queue
     routes:
         # Agent tickets list page
@@ -131,15 +132,6 @@ spec:
               - auth
               - ticket_access_ro # Require read access
           description: "HTMX fragment: ticket links"
-
-        # Save draft for ticket
-        - path: /tickets/:id/draft
-          method: POST
-          handler: handleAgentTicketDraft
-          middleware:
-              - auth
-              - ticket_access_note # Require note permission
-          description: "Save draft reply for ticket"
 
         # Bulk ticket actions
         - path: /tickets/bulk/status

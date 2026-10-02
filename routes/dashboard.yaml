@@ -11,6 +11,7 @@ spec:
     prefix: /dashboard
     middleware:
         - auth
+        - agent # Customers' JWTs must not reach agent routes
         - queue_ro # Require read access to at least one queue
     routes:
         # Main dashboard page - shows overview and activity
@@ -25,12 +26,6 @@ spec:
           method: GET
           handler: dashboard_activity_stream
           description: "Server-sent events for dashboard activity updates"
-
-        # Dashboard statistics API
-        - path: /api/stats
-          method: GET
-          handler: dashboard_stats
-          description: "Get dashboard statistics and metrics"
 
         # Recent tickets widget
         - path: /api/recent-tickets

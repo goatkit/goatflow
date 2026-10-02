@@ -21,9 +21,7 @@ func templateCount(t *testing.T, loc playwright.Locator) int {
 
 func TestAdminTemplatesUI(t *testing.T) {
 	browser := helpers.NewBrowserHelper(t)
-	if browser.Config.AdminEmail == "" || browser.Config.AdminPassword == "" {
-		t.Skip("Admin credentials not configured")
-	}
+
 	err := browser.Setup()
 	require.NoError(t, err)
 	defer browser.TearDown()
@@ -41,9 +39,7 @@ func TestAdminTemplatesUI(t *testing.T) {
 
 		// Use data-testid selectors for stability
 		pageTitle := browser.Page.Locator("[data-testid='page-title']")
-		if templateCount(t, pageTitle) == 0 {
-			t.Skip("templates page not reachable")
-		}
+		require.Greater(t, templateCount(t, pageTitle), 0, "templates page not reachable")
 
 		addButton := browser.Page.Locator("[data-testid='add-template-btn']")
 		assert.Greater(t, templateCount(t, addButton), 0, "Add Template button should exist")
@@ -51,11 +47,10 @@ func TestAdminTemplatesUI(t *testing.T) {
 		searchInput := browser.Page.Locator("[data-testid='search-input']")
 		assert.Greater(t, templateCount(t, searchInput), 0, "Search input should exist")
 
-		// Table is only rendered when templates exist
+		// The seeded template guarantees the table renders.
 		templatesTable := browser.Page.Locator("[data-testid='templates-table']")
-		if templateCount(t, templatesTable) == 0 {
-			t.Log("Templates table not rendered (no templates in test database)")
-		}
+		require.Greater(t, templateCount(t, templatesTable), 0,
+			"templates table not rendered: seeded template %q missing", helpers.SeedTemplateName)
 	})
 
 	t.Run("Template list shows expected columns", func(t *testing.T) {
@@ -63,11 +58,9 @@ func TestAdminTemplatesUI(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, browser.WaitForLoad())
 
-		// Only check headers if table exists (templates present)
 		templatesTable := browser.Page.Locator("[data-testid='templates-table']")
-		if templateCount(t, templatesTable) == 0 {
-			t.Skip("No templates in test database - table not rendered")
-		}
+		require.Greater(t, templateCount(t, templatesTable), 0,
+			"templates table not rendered: seeded template %q missing", helpers.SeedTemplateName)
 
 		expectedHeaders := []string{"Name", "Type"}
 		for _, h := range expectedHeaders {
@@ -83,9 +76,7 @@ func TestAdminTemplatesUI(t *testing.T) {
 
 		// Check page loaded correctly
 		pageTitle := browser.Page.Locator("[data-testid='page-title']")
-		if templateCount(t, pageTitle) == 0 {
-			t.Skip("Template create page not reachable")
-		}
+		require.Greater(t, templateCount(t, pageTitle), 0, "Template create page not reachable")
 
 		nameInput := browser.Page.Locator("[data-testid='name-input'], input[name='name']")
 		assert.Greater(t, templateCount(t, nameInput), 0, "Name input should exist")
@@ -117,11 +108,10 @@ func TestAdminTemplatesUI(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, browser.WaitForLoad())
 
-		// Look for edit link on first template
-		editLink := browser.Page.Locator("a[href*='/admin/templates/']:not([href*='create'])")
-		if templateCount(t, editLink) == 0 {
-			t.Skip("No templates available to test attachment management")
-		}
+		// Edit link on the seeded template's row
+		editLink := browser.Page.Locator(fmt.Sprintf("tr:has-text('%s') a[href$='/edit']", helpers.SeedTemplateName))
+		require.Greater(t, templateCount(t, editLink), 0,
+			"edit link for seeded template %q missing", helpers.SeedTemplateName)
 
 		// Click the first edit link
 		require.NoError(t, editLink.First().Click())
@@ -144,9 +134,7 @@ func TestAdminTemplatesUI(t *testing.T) {
 
 func TestAdminTemplateQueueAssignment(t *testing.T) {
 	browser := helpers.NewBrowserHelper(t)
-	if browser.Config.AdminEmail == "" || browser.Config.AdminPassword == "" {
-		t.Skip("Admin credentials not configured")
-	}
+
 	err := browser.Setup()
 	require.NoError(t, err)
 	defer browser.TearDown()
@@ -161,20 +149,16 @@ func TestAdminTemplateQueueAssignment(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, browser.WaitForLoad())
 
-		// Look for a "Queues" action link on any template row
-		queueLink := browser.Page.Locator("a[href*='/queues']")
-		if templateCount(t, queueLink) == 0 {
-			t.Skip("No queue assignment links found - templates may not exist or feature not enabled")
-		}
+		// "Queues" action link on the seeded template's row
+		queueLink := browser.Page.Locator(fmt.Sprintf("tr:has-text('%s') a[href^='/admin/templates/'][href$='/queues']", helpers.SeedTemplateName))
+		require.Greater(t, templateCount(t, queueLink), 0,
+			"queue assignment link for seeded template %q missing", helpers.SeedTemplateName)
 
 		// Click the first queue assignment link
 		require.NoError(t, queueLink.First().Click())
 		require.NoError(t, browser.WaitForLoad())
 
-		url := browser.Page.URL()
-		if !assert.Contains(t, url, "/queues") {
-			t.Skip("Queue assignment page not found at expected URL")
-		}
+		require.Contains(t, browser.Page.URL(), "/queues", "queue assignment link must open the assignment page")
 
 		// Look for queue-template assignment elements
 		pageTitle := browser.Page.Locator("[data-testid='page-title']")
@@ -188,9 +172,7 @@ func TestAdminTemplateQueueAssignment(t *testing.T) {
 
 func TestAdminTemplateAttachmentAssignment(t *testing.T) {
 	browser := helpers.NewBrowserHelper(t)
-	if browser.Config.AdminEmail == "" || browser.Config.AdminPassword == "" {
-		t.Skip("Admin credentials not configured")
-	}
+
 	err := browser.Setup()
 	require.NoError(t, err)
 	defer browser.TearDown()
@@ -205,20 +187,16 @@ func TestAdminTemplateAttachmentAssignment(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, browser.WaitForLoad())
 
-		// Look for an "Attachments" action link on any template row
-		attachmentLink := browser.Page.Locator("a[href*='/attachments']")
-		if templateCount(t, attachmentLink) == 0 {
-			t.Skip("No attachment assignment links found - templates may not exist or feature not enabled")
-		}
+		// "Attachments" action link on the seeded template's row
+		attachmentLink := browser.Page.Locator(fmt.Sprintf("tr:has-text('%s') a[href^='/admin/templates/'][href$='/attachments']", helpers.SeedTemplateName))
+		require.Greater(t, templateCount(t, attachmentLink), 0,
+			"attachment assignment link for seeded template %q missing", helpers.SeedTemplateName)
 
 		// Click the first attachment assignment link
 		require.NoError(t, attachmentLink.First().Click())
 		require.NoError(t, browser.WaitForLoad())
 
-		url := browser.Page.URL()
-		if !assert.Contains(t, url, "/attachments") {
-			t.Skip("Attachment assignment page not found at expected URL")
-		}
+		require.Contains(t, browser.Page.URL(), "/attachments", "attachment assignment link must open the assignment page")
 
 		pageTitle := browser.Page.Locator("h1, h2")
 		assert.Greater(t, templateCount(t, pageTitle), 0, "Page should have a title")
@@ -240,9 +218,7 @@ func TestAdminTemplateAttachmentAssignment(t *testing.T) {
 
 		// Check if we have the add button (text is "Add Attachment")
 		addButton := browser.Page.Locator("button:has-text('Add Attachment'), button:has-text('Add'), button[onclick*='openUploadModal']")
-		if templateCount(t, addButton) == 0 {
-			t.Skip("Add attachment button not found")
-		}
+		require.Greater(t, templateCount(t, addButton), 0, "/admin/attachments must offer the Add Attachment button")
 
 		// Click add button to show modal
 		require.NoError(t, addButton.First().Click())

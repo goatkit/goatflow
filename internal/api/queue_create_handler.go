@@ -45,11 +45,14 @@ func HandleCreateQueueAPI(c *gin.Context) {
 		FollowUpID      int     `json:"follow_up_id"`
 		FollowUpLock    int     `json:"follow_up_lock"`
 		Comments        *string `json:"comments"`
-		GroupAccess     []int   `json:"group_access"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+	if req.GroupID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "group_id is required: every queue belongs to one group"})
 		return
 	}
 
@@ -59,11 +62,18 @@ func HandleCreateQueueAPI(c *gin.Context) {
 		return
 	}
 
-	// Check if queue with this name already exists
+	groupName, err := lookupQueueGroup(db, req.GroupID)
+	if err != nil {
+		respondQueueGroupError(c, req.GroupID, err)
+		return
+	}
+
+	// Check if queue with this name already exists (queue.name is UNIQUE,
+	// including invalid queues).
 	var count int
 	checkQuery := database.ConvertPlaceholders(`
         SELECT 1 FROM queue
-        WHERE name = ? AND valid_id = 1
+        WHERE name = ?
     `)
 	row := db.QueryRow(checkQuery, req.Name)
 	_ = row.Scan(&count) //nolint:errcheck // Count defaults to 0
@@ -72,18 +82,7 @@ func HandleCreateQueueAPI(c *gin.Context) {
 		return
 	}
 
-	// Start transaction
-	tx, err := db.Begin()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to start transaction"})
-		return
-	}
-	defer func() { _ = tx.Rollback() }()
-
 	// Defaults mirror baseline bootstrap data (schema/baseline/required_lookups.sql)
-	if req.GroupID == 0 {
-		req.GroupID = 1
-	} // Default to group 1
 	if req.SystemAddressID == nil {
 		d := 1
 		req.SystemAddressID = &d
@@ -99,9 +98,6 @@ func HandleCreateQueueAPI(c *gin.Context) {
 	if req.FollowUpID == 0 {
 		req.FollowUpID = 1
 	} // Default allowed follow-up
-	if req.FollowUpLock == 0 {
-		req.FollowUpLock = 0
-	}
 	if req.UnlockTimeout < 0 {
 		req.UnlockTimeout = 0
 	}
@@ -121,7 +117,7 @@ func HandleCreateQueueAPI(c *gin.Context) {
 			NOW(), ?, NOW(), ?
 		) RETURNING id`
 
-	queueID64, err := database.GetAdapter().InsertWithReturningTx(tx, database.ConvertPlaceholders(insertQuery),
+	queueID64, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(insertQuery),
 		req.Name,
 		req.GroupID,
 		req.SystemAddressID,
@@ -132,9 +128,9 @@ func HandleCreateQueueAPI(c *gin.Context) {
 		req.FollowUpLock,
 		req.Comments,
 		createdBy,
+		createdBy,
 	)
 	if err != nil {
-		_ = tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   fmt.Sprintf("Queue insert failed: %v", err),
@@ -143,38 +139,20 @@ func HandleCreateQueueAPI(c *gin.Context) {
 	}
 	queueID := int(queueID64)
 
-	// Add group access if specified
-	if len(req.GroupAccess) > 0 {
-		for _, groupID := range req.GroupAccess {
-			// Optional: only if auxiliary table exists in current schema
-			groupInsert := database.ConvertPlaceholders(`INSERT INTO queue_group (queue_id, group_id) VALUES (?, ?)`)
-			if _, err := tx.Exec(groupInsert, queueID, groupID); err != nil {
-				// Swallow error if table doesn't exist (compatibility with minimal schema)
-				// Comment out the early-return to avoid breaking core creation
-				// c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to set group access: %v", err)})
-			}
-		}
-	}
-
-	// Commit transaction
-	if err := tx.Commit(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to commit transaction"})
-		return
-	}
-
 	// Return created queue
 	response := gin.H{
-		"id":       queueID,
-		"name":     req.Name,
-		"group_id": req.GroupID,
+		"id":         queueID,
+		"name":       req.Name,
+		"group_id":   req.GroupID,
+		"group_name": groupName,
+		"groups":     queueGroupList(req.GroupID, groupName),
 		"comments": func() interface{} {
 			if req.Comments != nil {
 				return *req.Comments
 			}
 			return nil
 		}(),
-		"valid_id":     1,
-		"group_access": req.GroupAccess,
+		"valid_id": 1,
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"success": true, "data": response})

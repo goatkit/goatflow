@@ -322,7 +322,9 @@
         "test_success": "ترتیب کی جانچ کامیاب",
         "title": "ویب سروس ترتیب",
         "webservice": "ویب سروس",
-        "webservice_hint": "ڈیٹا حاصل کرنے کے لیے ویب سروس منتخب کریں"
+        "webservice_hint": "ڈیٹا حاصل کرنے کے لیے ویب سروس منتخب کریں",
+        "test_save_first": "ویب سروس کی ترتیب جانچنے کے لیے پہلے فیلڈ محفوظ کریں۔",
+        "test_saved_hint": "محفوظ شدہ ترتیب کی جانچ کرتا ہے؛ پہلے اپنی تبدیلیاں محفوظ کریں۔"
       },
       "years_in_future": "مستقبل کے سال",
       "years_in_past": "ماضی کے سال"
@@ -1191,16 +1193,8 @@
     "no_plugins": "کوئی پلگ ان انسٹال نہیں",
     "no_plugins_match": "آپ کے تلاش کے معیار سے کوئی پلگ ان مماثل نہیں ہے۔",
     "password": "پاس ورڈ",
-    "password_requirement_contains_default": "بڑے حروف، چھوٹے حروف، اور نمبر شامل ہیں",
-    "password_requirement_contains_template": "{requirements} شامل ہیں",
-    "password_requirement_digit": "نمبر",
-    "password_requirement_length_initial": "کم از کم 8 حروف",
-    "password_requirement_length_template": "کم از کم {min} حروف",
-    "password_requirement_lowercase": "چھوٹے حروف",
     "password_requirement_match": "پاس ورڈز مماثل ہیں",
     "password_requirement_none": "کوئی اضافی ضروریات نہیں",
-    "password_requirement_special": "خاص حرف (!@#$%^&*)",
-    "password_requirement_uppercase": "بڑے حروف",
     "password_requirements_incomplete": "براہ کرم یقینی بنائیں کہ پاس ورڈ کی تمام ضروریات پوری ہوں",
     "password_reset_error": "پاس ورڈ ری سیٹ کرنے میں ناکامی",
     "password_reset_success": "پاس ورڈ کامیابی سے ری سیٹ ہوا",
@@ -1503,7 +1497,110 @@
         "delete": "کیا آپ واقعی {name} کو حذف کرنا چاہتے ہیں؟"
       }
     },
-    "search_groups": "گروپ تلاش کریں..."
+    "search_groups": "گروپ تلاش کریں...",
+    "webhooks": {
+      "actions": {
+        "activate": "فعال کریں",
+        "deactivate": "غیر فعال کریں",
+        "deliveries": "ترسیلات",
+        "test": "ٹیسٹ بھیجیں"
+      },
+      "active": "فعال",
+      "add": "ویب ہُک شامل کریں",
+      "columns": {
+        "events": "واقعات",
+        "last_delivery": "آخری ترسیل",
+        "url": "URL"
+      },
+      "deliveries": {
+        "attempts": "کوششیں",
+        "details": "تفصیلات",
+        "duration": "دورانیہ",
+        "empty": "ابھی تک کوئی ترسیل نہیں ہوئی۔",
+        "event": "واقعہ",
+        "status_code": "HTTP اسٹیٹس",
+        "time": "وقت",
+        "title": "ترسیلات: {name}"
+      },
+      "delivery": {
+        "created_at": "تاریخ تخلیق",
+        "delivered_at": "تاریخ ترسیل",
+        "duration_ms": "{ms} ملی سیکنڈ",
+        "error": "خرابی",
+        "next_attempt": "اگلی کوشش",
+        "no_response": "جواب میں کوئی مواد نہیں۔",
+        "payload": "بھیجا گیا مواد",
+        "redeliver": "دوبارہ ترسیل کریں",
+        "response": "جواب",
+        "title": "ترسیل نمبر {id}"
+      },
+      "description": "ٹکٹ اور آرٹیکل کے واقعات کو دستخط شدہ HTTP POST درخواستوں کی صورت میں بیرونی سسٹمز کو بھیجیں۔",
+      "empty": "ابھی تک کوئی ویب ہُک ترتیب نہیں دیا گیا۔",
+      "events": {
+        "article_created": "ٹکٹ میں ایک آرٹیکل (نوٹ، جواب، ای میل، فون کال، ویب درخواست) شامل کیا گیا۔",
+        "ticket_assigned": "ٹکٹ کا مالک تبدیل ہوا۔",
+        "ticket_closed": "ٹکٹ کی حالت بند حالت میں تبدیل ہوئی۔",
+        "ticket_created": "ایک ٹکٹ بنایا گیا (کسی بھی چینل سے)۔",
+        "ticket_escalated": "جواب، اپ ڈیٹ یا حل کے وقت کی ایسکلیشن شروع ہوئی۔",
+        "ticket_merged": "ٹکٹ ضم کر دیا گیا۔",
+        "ticket_priority_changed": "ٹکٹ کی ترجیح تبدیل ہوئی۔",
+        "ticket_queue_moved": "ٹکٹ کو دوسری قطار میں منتقل کیا گیا۔",
+        "ticket_state_changed": "ٹکٹ کی حالت کسی غیر بند حالت میں تبدیل ہوئی۔",
+        "ticket_updated": "ٹکٹ کا عنوان، کسٹمر، قسم، سروس، SLA، ذمہ دار، لاک، زیر التوا وقت یا کوئی ڈائنامک فیلڈ تبدیل ہوا۔"
+      },
+      "form": {
+        "active_help": "غیر فعال ویب ہُکس کو کوئی واقعہ موصول نہیں ہوتا۔",
+        "add_header": "ہیڈر شامل کریں",
+        "create_title": "ویب ہُک شامل کریں",
+        "edit_title": "ویب ہُک میں ترمیم کریں",
+        "events": "واقعات",
+        "events_help": "منتخب واقعات پر ویب ہُک کو کال کیا جاتا ہے۔",
+        "events_required": "کم از کم ایک واقعہ منتخب کریں۔",
+        "header_name": "ہیڈر کا نام",
+        "header_value": "قدر",
+        "headers": "حسب ضرورت ہیڈرز",
+        "headers_help": "ہر ترسیل کے ساتھ بھیجے جاتے ہیں۔ Content-Type، User-Agent اور X-Webhook-* ہیڈرز GoatFlow خود سیٹ کرتا ہے۔",
+        "remove_header": "ہیڈر ہٹائیں",
+        "remove_secret": "راز ہٹائیں (ترسیلات پر دستخط نہیں ہوں گے)",
+        "retry_count": "دوبارہ کوششیں",
+        "retry_count_help": "ناکام ترسیل کے بعد اضافی کوششیں۔",
+        "secret": "دستخطی راز",
+        "secret_help": "16 سے 512 حروف۔ ہر ترسیل پر X-Webhook-Signature ہیڈر میں دستخط کیے جاتے ہیں (باڈی کا sha256=HMAC)۔ محفوظ کیا گیا راز دوبارہ نہیں دکھایا جا سکتا۔",
+        "secret_none": "کوئی راز سیٹ نہیں: ترسیلات پر دستخط نہیں ہوتے۔",
+        "secret_placeholder_keep": "موجودہ راز برقرار رکھنے کے لیے خالی چھوڑ دیں",
+        "secret_placeholder_new": "اختیاری دستخطی راز",
+        "secret_set": "راز سیٹ ہے ({hint})۔",
+        "timeout": "ٹائم آؤٹ (سیکنڈ)",
+        "timeout_help": "اینڈ پوائنٹ کے جواب کا کتنی دیر انتظار کیا جائے۔",
+        "url": "منزل کا URL",
+        "url_help": "http:// یا https:// والا مکمل URL۔ GoatFlow ہر واقعے پر اس پر JSON کی POST درخواست بھیجتا ہے۔"
+      },
+      "inactive": "غیر فعال",
+      "load_failed": "ویب ہُکس لوڈ نہیں ہو سکے۔",
+      "messages": {
+        "activated": "ویب ہُک فعال کر دیا گیا۔",
+        "confirm_delete": "کیا ویب ہُک \"{name}\" اور اس کا ترسیلی ریکارڈ حذف کریں؟",
+        "created": "ویب ہُک بنا دیا گیا۔",
+        "deactivated": "ویب ہُک غیر فعال کر دیا گیا۔",
+        "deleted": "ویب ہُک حذف کر دیا گیا۔",
+        "network_error": "سرور تک رسائی نہیں ہو سکی۔",
+        "redeliver_failed": "دوبارہ ترسیل ناکام رہی۔",
+        "redelivered": "ترسیل کامیابی سے دوبارہ بھیج دی گئی۔",
+        "request_failed": "درخواست ناکام ہو گئی: {error}",
+        "test_failed": "ٹیسٹ ترسیل ناکام رہی۔",
+        "test_succeeded": "ٹیسٹ ترسیل کامیاب رہی۔",
+        "updated": "ویب ہُک محفوظ ہو گیا۔"
+      },
+      "never": "کبھی نہیں",
+      "retry": "دوبارہ کوشش کریں",
+      "status": {
+        "delivered": "ترسیل ہو گئی",
+        "delivering": "ترسیل جاری",
+        "failed": "ناکام",
+        "pending": "زیر التوا"
+      },
+      "title": "ویب ہُکس"
+    }
   },
   "admin_dashboard": {
     "acl": "رسائی کنٹرول لسٹ",
@@ -1595,7 +1692,55 @@
     "tickets_open": "کھلے ٹکٹس",
     "uptime_this_month": "اس مہینے کا اپ ٹائم",
     "user_management": "صارف کا انتظام",
-    "user_management_desc": "ایجنٹ اور صارف اکاؤنٹس کا انتظام"
+    "user_management_desc": "ایجنٹ اور صارف اکاؤنٹس کا انتظام",
+    "webhooks": "ویب ہُکس",
+    "webhooks_desc": "ٹکٹ کے واقعات بیرونی سسٹمز کو بھیجیں"
+  },
+  "admin_reports": {
+    "title": "رپورٹس اور تجزیات",
+    "description": "ان قطاروں کے ٹکٹ اعداد و شمار جنہیں آپ پڑھ سکتے ہیں۔",
+    "period_label": "مدت",
+    "period_24h": "پچھلے 24 گھنٹے",
+    "period_7d": "پچھلے 7 دن",
+    "period_30d": "پچھلے 30 دن",
+    "trend_label": "رجحان",
+    "trend_daily_7": "روزانہ، پچھلے 7 دن",
+    "trend_daily_30": "روزانہ، پچھلے 30 دن",
+    "trend_monthly_12": "ماہانہ، پچھلے 12 مہینے",
+    "error_forbidden": "رپورٹس دیکھنے کے لیے کم از کم ایک قطار تک پڑھنے کی رسائی درکار ہے۔",
+    "error_generic": "رپورٹ کا کچھ ڈیٹا لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+    "scope_note": "اعداد میں صرف ان قطاروں کے ٹکٹ شامل ہیں جنہیں آپ پڑھ سکتے ہیں۔ تاریخیں UTC میں ہیں۔",
+    "overview_heading": "جائزہ",
+    "total_tickets": "کل ٹکٹ",
+    "open_tickets": "کھلے",
+    "pending_tickets": "زیر التواء",
+    "closed_tickets": "بند",
+    "trends_heading": "بنائے گئے بمقابلہ بند",
+    "created": "بنائے گئے",
+    "closed": "بند",
+    "closure_rate": "بندش کی شرح",
+    "queues_heading": "قطاریں",
+    "backlog_hint": "بیک لاگ: 24 گھنٹے سے پرانے کھلے ٹکٹ۔",
+    "queue": "قطار",
+    "backlog": "بیک لاگ",
+    "agents_heading": "ایجنٹ کی سرگرمی",
+    "agents_hint": "منتخب مدت میں ذمہ دار ایجنٹ کے طور پر بنائے اور بند کیے گئے ٹکٹ اور لکھے گئے مضامین۔",
+    "agent": "ایجنٹ",
+    "assigned": "تفویض شدہ",
+    "articles": "مضامین",
+    "customers_heading": "سرفہرست گاہک",
+    "total_customers": "گاہک",
+    "active_customers": "فعال (30 دن)",
+    "new_customers": "اس مہینے نئے",
+    "customer": "گاہک",
+    "email": "ای میل",
+    "last_activity": "آخری ٹکٹ",
+    "export_heading": "برآمد",
+    "export_description": "منتخب مدت کے اعداد ڈاؤن لوڈ کریں۔",
+    "export_summary_csv": "خلاصہ (CSV)",
+    "export_tickets_csv": "ٹکٹ (CSV)",
+    "export_summary_json": "خلاصہ (JSON)",
+    "no_data": "اس انتخاب کے لیے کوئی ڈیٹا نہیں۔"
   },
   "admin_queues": {
     "add_queue": "شامل کریں Queue",
@@ -1988,6 +2133,23 @@
       "required": "*"
     },
     "company": "کمپنی",
+    "company_page": {
+      "address": "پتہ",
+      "columns": {
+        "email": "ای میل",
+        "name": "نام",
+        "title": "لقب"
+      },
+      "customer_id": "گاہک آئی ڈی",
+      "info_title": "کمپنی کی معلومات",
+      "no_company": "آپ کا اکاؤنٹ کسی کمپنی سے منسلک نہیں ہے۔",
+      "no_users": "کوئی صارف نہیں ملا۔",
+      "not_set": "فراہم نہیں کیا گیا",
+      "user_count": "صارفین دیکھیں (%d)",
+      "users_description": "آپ کی کمپنی کے وہ افراد جو کسٹمر پورٹل استعمال کرتے ہیں۔",
+      "website": "ویب سائٹ",
+      "you": "آپ"
+    },
     "dashboard": {
       "announcements": "اعلانات",
       "closed_tickets": "بند ٹکٹس",
@@ -2049,16 +2211,6 @@
       "title": "نیا سپورٹ ٹکٹ بنائیں"
     },
     "phone": "فون",
-    "placeholder_pages": {
-      "company_info_title": "کمپنی کی معلومات",
-      "company_users_title": "کمپنی کے صارفین",
-      "knowledge_base_article": "علمی بنیاد کا مضمون",
-      "knowledge_base_search": "علمی بنیاد کی تلاش",
-      "knowledge_base_title": "علمی بنیاد",
-      "password_title": "پاس ورڈ تبدیل کریں",
-      "profile_title": "گاہک پروفائل",
-      "under_construction": "یہ صفحہ زیر تعمیر ہے۔"
-    },
     "portal": {
       "login_title": "گاہک سپورٹ لاگ ان",
       "title": "گاہک پورٹل"
@@ -2126,7 +2278,6 @@
     }
   },
   "customer_company_form": {
-    "assigned_services": "Assigned Services",
     "branding": "Branding",
     "company_details": "کمپنی تفصیلات",
     "features": "Features",
@@ -2135,17 +2286,56 @@
     "save_capture_setting": "کیپچر ترتیب محفوظ کریں",
     "save_portal_settings": "پورٹل ترتیبات محفوظ کریں"
   },
+  "customer_company_pages": {
+    "customer_id": "گاہک آئی ڈی",
+    "sections": "کمپنی کے حصے",
+    "nav": {
+      "details": "تفصیلات",
+      "users": "گاہک صارفین",
+      "tickets": "ٹکٹس",
+      "services": "خدمات"
+    }
+  },
   "customer_company_services": {
-    "heading": "گاہک کمپنی Services",
-    "title": "گاہک کمپنی Services"
+    "heading": "خدمات",
+    "title": "گاہک کمپنی کی خدمات",
+    "description": "خدمات گاہک صارفین کو تفویض کی جاتی ہیں۔ اس کمپنی کے ان صارفین کو نشان زد کریں جو ہر خدمت استعمال کر سکتے ہیں۔",
+    "saved": "خدمات کی تفویض محفوظ ہو گئی۔",
+    "no_services": "کوئی درست خدمت موجود نہیں۔",
+    "manage_services": "خدمات کا انتظام کریں",
+    "no_users": "اس کمپنی کے کوئی گاہک صارفین نہیں، اس لیے خدمات تفویض کرنے کے لیے کوئی نہیں۔",
+    "all_users": "تمام صارفین",
+    "save": "تفویض محفوظ کریں",
+    "columns": {
+      "service": "خدمت",
+      "assigned": "تفویض شدہ",
+      "customer_users": "گاہک صارفین"
+    }
   },
   "customer_company_tickets": {
-    "heading": "گاہک کمپنی Tickets",
-    "title": "گاہک کمپنی Tickets"
+    "heading": "ٹکٹس",
+    "title": "گاہک کمپنی کے ٹکٹس",
+    "description": "اس کمپنی کے ٹکٹس ان قطاروں میں جن تک آپ کی رسائی ہے، نئے پہلے۔",
+    "empty": "جن قطاروں تک آپ کی رسائی ہے ان میں اس کمپنی کا کوئی ٹکٹ نہیں۔",
+    "columns": {
+      "title": "عنوان",
+      "customer_user": "گاہک صارف"
+    }
   },
   "customer_company_users": {
-    "heading": "گاہک کمپنی صارفین",
-    "title": "گاہک کمپنی صارفین"
+    "heading": "گاہک صارفین",
+    "title": "گاہک کمپنی کے صارفین",
+    "description": "اس کمپنی سے تعلق رکھنے والے گاہک صارفین۔",
+    "manage_users": "گاہک صارفین کا انتظام کریں",
+    "empty": "اس کمپنی کے ابھی کوئی گاہک صارفین نہیں ہیں۔",
+    "columns": {
+      "login": "لاگ ان",
+      "name": "نام",
+      "email": "ای میل",
+      "phone": "فون",
+      "tickets": "ٹکٹس",
+      "status": "حیثیت"
+    }
   },
   "customer_group": {
     "by_group_heading": "گاہک Permissions by گروپ",
@@ -2171,7 +2361,8 @@
   },
   "customer_portal_settings": {
     "heading": "گاہک Portal ترتیبات",
-    "title": "گاہک Portal ترتیبات"
+    "title": "گاہک Portal ترتیبات",
+    "per_company_note": "ہر کسٹمر کمپنی اپنے ترمیمی صفحے کے پورٹل سیٹنگز ٹیب میں ان ڈیفالٹس کو تبدیل کر سکتی ہے۔"
   },
   "customer_user_services": {
     "title": "گاہک صارف Services"
@@ -2217,27 +2408,16 @@
     "performance": "کارکردگی",
     "quick_actions": "فوری اعمال",
     "quick_stats": "فوری اعداد و شمار",
-    "realtime": {
-      "title": "براہ راست ڈیش بورڈ"
-    },
     "recent_activity": "حالیہ سرگرمی",
     "recent_tickets": "حالیہ ٹکٹس",
     "statistics": "اعداد و شمار",
-    "stats": {
-      "closed_today": "آج بند ہوئے",
-      "my_open": "میرے کھلے",
-      "my_pending": "میرے زیر التوا",
-      "new_today": "آج نئے",
-      "open_tickets": "کھلے ٹکٹس",
-      "total_assigned": "کل تفویض شدہ",
-      "unassigned": "غیر تفویض شدہ"
-    },
     "tickets_count": "ٹکٹس",
     "title": "ڈیش بورڈ",
     "unassigned_count": "غیر تفویض شدہ",
     "welcome_back": "خوش آمدید",
     "welcome_message": "آج آپ کے ٹکٹس کے ساتھ کیا ہو رہا ہے یہ رہا",
-    "widget_config_desc": "منتخب کریں کہ آپ کے ڈیش بورڈ پر کون سے ویجٹس ظاہر ہوں۔ ترتیب بدلنے کے لیے گھسیٹیں۔"
+    "widget_config_desc": "منتخب کریں کہ آپ کے ڈیش بورڈ پر کون سے ویجٹس ظاہر ہوں۔ ترتیب بدلنے کے لیے گھسیٹیں۔",
+    "widget_unavailable": "یہ ویجیٹ فی الحال دستیاب نہیں ہے۔ براہ کرم بعد میں دوبارہ کوشش کریں۔"
   },
   "demo": {
     "security_disabled": "ڈیمو موڈ میں پاس ورڈ اور MFA تبدیلیاں غیر فعال ہیں۔"
@@ -2270,11 +2450,6 @@
       "delete": "حذف کریں field",
       "edit": "ترمیم field"
     }
-  },
-  "dynamic_test": {
-    "heading": "Dynamic Module Testing",
-    "testing_instructions": "Testing Instructions",
-    "title": "Dynamic Module Testing"
   },
   "editor": {
     "insert_image_prompt": "تصویر کا URL درج کریں (یا فائل منتخب کرنے کے لیے خالی چھوڑیں):",
@@ -2359,29 +2534,18 @@
     "mandatory_note": "ستارے (*) سے نشان زد تمام فیلڈز لازمی ہیں۔",
     "select": "منتخب کریں"
   },
-  "group_form": {
-    "heading": "گروپ Form",
-    "title": "گروپ Form"
-  },
-  "group_members": {
-    "heading": "گروپ Members",
-    "title": "گروپ Members"
-  },
   "group_permissions": {
     "permission_matrix": "Permission Matrix",
     "queue_permissions": "Queue Permissions",
     "queues": "قطاریں",
     "title": "گروپ Permissions"
   },
-  "group_view": {
-    "heading": "گروپ تفصیلات",
-    "title": "گروپ"
-  },
   "groups": {
     "add_group": "شامل کریں گروپ",
     "add_user": "شامل کریں صارف to گروپ",
     "add_user_btn": "شامل کریں صارف",
     "confirm_delete": "Are you sure you want to delete this group?",
+    "delete_keeps_group": "گروپ کو غیر فعال کر دیا جائے گا۔ یہ اپنے اراکین اور اجازتوں کے ساتھ فہرست میں رہتا ہے اور اس میں ترمیم کر کے اسے دوبارہ فعال کیا جا سکتا ہے۔",
     "current_members": "موجودہ ممبران",
     "delete_success": "گروپ deleted successfully",
     "group": "گروپ",
@@ -2609,7 +2773,6 @@
       "delete_item": "کیا آپ واقعی اس آئٹم کو حذف کرنا چاہتے ہیں؟",
       "delete_lookup": "کیا آپ واقعی اس آئٹم کو حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہو سکتا۔",
       "delete_priority": "کیا آپ واقعی اس ترجیح کو حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہو سکتا۔",
-      "delete_queue": "کیا آپ واقعی اس قطار کو حذف کرنا چاہتے ہیں؟ اس قطار کے تمام ٹکٹوں کو دوبارہ تفویض کرنا ہوگا۔ یہ عمل واپس نہیں ہو سکتا۔",
       "delete_queue_simple": "کیا آپ واقعی اس قطار کو حذف کرنا چاہتے ہیں؟",
       "delete_queues_bulk": "کیا آپ واقعی منتخب قطار(قطاروں) کو حذف کرنا چاہتے ہیں؟",
       "delete_state": "کیا آپ واقعی اس حالت کو حذف کرنا چاہتے ہیں؟",
@@ -2652,7 +2815,6 @@
     "failed_remove_user": "Failed to remove user",
     "failed_save_field": "Failed to save field",
     "failed_update_screen_config": "Failed to update screen configuration",
-    "failed_update_services": "Failed to update services",
     "groups": {
       "select_user": "Please select a user to add"
     },
@@ -2661,7 +2823,6 @@
     "item_deleted": "آئٹم کامیابی سے حذف ہوا",
     "item_updated": "آئٹم کامیابی سے اپ ڈیٹ ہوا",
     "loading": "لوڈ ہو رہا ہے...",
-    "loading_customer_users": "لوڈ ہو رہا ہے customer users...",
     "network_error": "نیٹ ورک کی خرابی",
     "no_agents_available": "نہیں agents available",
     "no_data": "کوئی ڈیٹا دستیاب نہیں",
@@ -2682,15 +2843,11 @@
     "please_wait": "براہ کرم انتظار کریں...",
     "processing": "پروسیسنگ...",
     "required_fields": "براہ کرم تمام لازمی فیلڈز پر کریں",
-    "save_company_before_services": "محفوظ کریں the company before assigning services.",
-    "save_company_first": "محفوظ کریں the company before assigning services.",
     "saving": "محفوظ ہو رہا ہے...",
     "select_at_least_one_queue": "Please select at least one queue",
     "select_template_type": "Please select at least one template type.",
     "select_two_to_merge": "Please select at least two tickets to merge",
     "server_error": "سرور کی خرابی",
-    "services_updated": "Services updated successfully",
-    "services_updated_success": "Services updated successfully",
     "session_expired": "آپ کا سیشن ختم ہو گیا",
     "success": "کامیابی",
     "unauthorized": "غیر مجاز",
@@ -2857,9 +3014,7 @@
     "title": "Permission Management"
   },
   "placeholders": {
-    "contains": "Contains...",
-    "note_subject": "نہیںte subject",
-    "separate_emails": "Separate multiple emails with commas"
+    "contains": "Contains..."
   },
   "priorities": {
     "heading": "Priority Management",
@@ -2976,20 +3131,6 @@
     },
     "total_count": "total"
   },
-  "realtime": {
-    "active_alerts": "فعال Alerts",
-    "heading": "Real-وقت ڈیش بورڈ",
-    "no_tickets": "نہیں tickets",
-    "queue_distribution": "Queue Distribution",
-    "queue_status": "Queue حیثیت",
-    "recent_tickets": "حالیہ ٹکٹ",
-    "stats": {
-      "active_agents": "فعال ایجنٹس",
-      "avg_response_time": "Avg Response وقت",
-      "open_tickets": "کھولیں Tickets"
-    },
-    "ticket_volume": "ٹکٹ کی تعداد (24 گھنٹے)"
-  },
   "realtime_dashboard": {
     "title": "براہ راست ڈیش بورڈ"
   },
@@ -3104,29 +3245,51 @@
     "search_results": "تلاش کے نتائج"
   },
   "self_service": {
+    "email": {
+      "register_body": "ہیلو %s،\n\nسائن اپ کرنے کا شکریہ۔ اپنے ای میل پتے کی تصدیق کرنے اور پاس ورڈ منتخب کرنے کے لیے یہ لنک %d گھنٹوں کے اندر کھولیں:\n%s\n\nاگر آپ نے سائن اپ نہیں کیا تو اس ای میل کو نظر انداز کریں۔",
+      "register_exists_body": "ہیلو،\n\nکسی نے اس ای میل پتے کے ساتھ اکاؤنٹ بنانے کی کوشش کی، لیکن اس کے لیے اکاؤنٹ پہلے سے موجود ہے۔\n\nاگر آپ اپنا پاس ورڈ بھول گئے ہیں تو یہاں نیا منتخب کر سکتے ہیں:\n%s\n\nاگر یہ آپ نہیں تھے تو اس ای میل کو نظر انداز کریں۔",
+      "register_exists_subject": "آپ کا اکاؤنٹ",
+      "register_subject": "اپنے ای میل پتے کی تصدیق کریں",
+      "reset_body": "ہیلو %s،\n\nآپ کے اکاؤنٹ \"%s\" کا پاس ورڈ ری سیٹ کرنے کی درخواست کی گئی ہے۔\n\nنیا پاس ورڈ منتخب کرنے کے لیے یہ لنک %d منٹ کے اندر کھولیں:\n%s\n\nاگر آپ نے یہ درخواست نہیں کی تو اس ای میل کو نظر انداز کریں۔ آپ کا پاس ورڈ تبدیل نہیں ہوا۔",
+      "reset_subject": "پاس ورڈ ری سیٹ"
+    },
+    "error": "کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔",
     "forgot_password": {
-      "email_label": "ای میل ایڈریس",
+      "identifier_label": "صارف نام یا ای میل پتہ",
+      "identifier_required": "اپنا صارف نام یا ای میل پتہ درج کریں۔",
+      "intro": "اپنا صارف نام یا ای میل پتہ درج کریں۔ اگر یہ کسی اکاؤنٹ سے ملتا ہے تو ہم آپ کو نیا پاس ورڈ منتخب کرنے کا لنک ای میل کریں گے۔",
       "submit": "لنک بھیجیں",
       "success": "اگر اکاؤنٹ موجود ہے تو لنک بھیجا گیا۔",
       "title": "پاسورڈ بھول گئے"
     },
+    "rate_limited": "بہت زیادہ درخواستیں۔ براہ کرم بعد میں دوبارہ کوشش کریں۔",
     "register": {
+      "account_exists": "اس ای میل پتے کے ساتھ ایک اکاؤنٹ پہلے سے موجود ہے۔ سائن ان کرنے کے لیے \"پاس ورڈ بھول گئے\" استعمال کریں۔",
+      "complete_submit": "اکاؤنٹ بنائیں",
+      "complete_success": "آپ کا اکاؤنٹ بن گیا ہے۔ اب آپ سائن ان کر سکتے ہیں۔",
+      "complete_title": "اپنا پاس ورڈ منتخب کریں",
       "email": "ای میل",
+      "fields_required": "پہلا نام، آخری نام اور ای میل پتہ لازمی ہیں۔",
       "first_name": "پہلا نام",
+      "intro": "اپنی تفصیلات درج کریں۔ ہم آپ کو اپنا پتہ تصدیق کرنے اور پاس ورڈ منتخب کرنے کا لنک ای میل کریں گے۔",
+      "invalid_input": "درست ای میل پتہ اور زیادہ سے زیادہ 100 حروف کے نام درج کریں۔",
       "last_name": "آخری نام",
+      "start_again": "دوبارہ رجسٹر کریں",
       "submit": "رجسٹر",
       "success": "رجسٹریشن جمع ہو گئی۔",
       "title": "اکاؤنٹ بنائیں"
     },
     "reset_password": {
       "confirm": "تصدیق",
+      "invalid_link": "یہ لنک غلط ہے یا اس کی میعاد ختم ہو چکی ہے۔",
       "new_password": "نیا پاسورڈ",
+      "policy_regexp": "پاس ورڈ مطلوبہ پیٹرن سے مطابقت نہیں رکھتا",
+      "request_new": "نیا لنک طلب کریں",
+      "required": "نیا پاس ورڈ درج کریں۔",
       "submit": "ری سیٹ",
       "success": "پاسورڈ ری سیٹ ہو گیا۔",
-      "title": "پاسورڈ ری سیٹ"
-    },
-    "verify_email": {
-      "success": "ای میل تصدیق ہو گئی۔"
+      "title": "پاسورڈ ری سیٹ",
+      "too_long": "پاس ورڈ بہت لمبا ہے۔"
     }
   },
   "service_catalog": {
@@ -3243,7 +3406,6 @@
     "last_used": "آخری استعمال",
     "leave_empty_full_access": "مکمل رسائی کے لیے خالی چھوڑیں",
     "light_theme": "ہلکا",
-    "more_coming": "مزید ترتیبات جلد آ رہی ہیں",
     "never_expires": "کبھی ختم نہیں ہوتا",
     "never_used": "کبھی استعمال نہیں ہوا",
     "no_tokens": "کوئی API ٹوکن نہیں ملا",
@@ -3388,7 +3550,6 @@
   "tickets": {
     "actions": "اعمال",
     "add_comment": "تبصرہ شامل کریں",
-    "add_internal_note": "شامل کریں Internal نہیںte",
     "add_note": "نوٹ شامل کریں",
     "additional_fields": "اضافی فیلڈز",
     "additional_info_placeholder": "کوئی بھی اضافی معلومات یا سیاق و سباق...",
@@ -3410,11 +3571,7 @@
     "attachments": "منسلکات",
     "auto_close": {
       "at": "پر",
-      "minus_help": "ٹکٹ سرگرمی سے قطع نظر مقررہ وقت پر خودکار طور پر بند ہو جائے گا۔",
-      "minus_title": "خودکار بند زیر التواء-",
       "overdue": "خودکار بند کی میعاد گزر گئی",
-      "plus_help": "اگر مقررہ وقت تک گاہک کا جواب نہیں آیا تو ٹکٹ خودکار طور پر بند ہو جائے گا۔",
-      "plus_title": "خودکار بند زیر التواء+",
       "scheduled": "خودکار بند طے شدہ",
       "should_have_closed_at": "ٹکٹ خودکار طور پر اس وقت بند ہونا چاہیے تھا",
       "while_pending": "خودکار بند کی زیر التواء حالت میں",
@@ -3435,7 +3592,6 @@
     "comment_placeholder": "اپنا تبصرہ یہاں ٹائپ کریں...",
     "comments": "تبصرے",
     "communication": "رابطہ",
-    "compose_reply": "Compose Reply",
     "created_at": "تخلیق کا وقت",
     "created_by": "تخلیق کنندہ",
     "created_on": "تخلیق کی تاریخ",
@@ -3446,7 +3602,6 @@
     "customer_visible_badge": "گاہک اسے دیکھتا ہے",
     "customer_wrote_badge": "گاہک نے یہ لکھا",
     "description": "تفصیل",
-    "details": "تفصیلات",
     "due_date": "آخری تاریخ",
     "dynamic_field_filters": "Dynamic Field فلٹرs",
     "email": "ای میل",
@@ -3500,13 +3655,11 @@
     "owner": "مالک",
     "pending_reminder": {
       "ago": "پہلے",
-      "help": "ٹکٹ مقررہ وقت پر \"کھلی\" حالت میں واپس آجائے گا۔",
       "in": "میں",
       "no_time_scheduled": "یاد دہانی کا وقت طے نہیں ہے۔",
       "not_scheduled": "یاد دہانی طے نہیں",
       "overdue": "یاد دہانی کی میعاد گزر گئی",
       "scheduled": "یاد دہانی طے شدہ",
-      "title": "زیر التواء یاد دہانی",
       "was_scheduled_for": "یاد دہانی اس وقت کے لیے طے تھی",
       "will_reopen_at": "ٹکٹ اس وقت دوبارہ کھلے گا"
     },
@@ -3750,7 +3903,7 @@
       "org_support": "آئی ٹی سپورٹ ٹیم",
       "org_type_heading": "یہ کس قسم کی تنظیم ہے؟",
       "queue_name_ph": "قطار کا نام (مثلاً سپورٹ ان باکس)",
-      "queues_desc": "قطار ایک ان باکس ہے جس میں ٹکٹ آتے ہیں۔ ہر قطار کو ایک یا زیادہ ٹیموں کو تفویض کریں۔",
+      "queues_desc": "قطار ایک ان باکس ہے جس میں ٹکٹ آتے ہیں۔ ہر قطار ایک ٹیم کی ہوتی ہے، اور اسی ٹیم کے اراکین اس کے ٹکٹوں پر کام کرتے ہیں۔",
       "queues_heading": "ٹکٹ قطاریں بنائیں",
       "remove": "ہٹائیں",
       "review_agents": "ایجنٹ",

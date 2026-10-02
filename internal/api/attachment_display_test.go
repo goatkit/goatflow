@@ -65,13 +65,12 @@ func TestAttachmentDisplayInTicketDetail(t *testing.T) {
 	}
 
 	repository.SetTicketNumberGenerator(&attachmentTicketNumberGenerator{}, attachmentCounterStore{})
-	t.Cleanup(func() { repository.SetTicketNumberGenerator(nil, nil) })
+	t.Cleanup(func() { require.NoError(t, initTestTicketNumberGenerator()) })
 
 	// Set up Gin in test mode
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	t.Setenv("APP_ENV", "integration")
-	t.Setenv("HTMX_HANDLER_TEST_MODE", "0")
 	SetupHTMXRoutes(router)
 
 	token := GetTestAuthToken(t)
@@ -172,52 +171,6 @@ func TestAttachmentDisplayInTicketDetail(t *testing.T) {
 	})
 }
 
-func TestAttachmentDownloadHandler(t *testing.T) {
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		t.Skip("Database not available, skipping integration test")
-	}
-	t.Setenv("ATTACHMENTS_USE_DB", "1")
-
-	gin.SetMode(gin.TestMode)
-	router := gin.New()
-	router.GET("/api/tickets/:id/attachments/:attachment_id", handleDownloadAttachment)
-
-	ticketID, articleID := createAttachmentTestArticle(t, db, "Download Article", "Download body")
-	testContent := []byte("Test download content")
-
-	t.Run("Download existing attachment", func(t *testing.T) {
-		attachmentID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
-			INSERT INTO article_data_mime_attachment
-			(article_id, filename, content_type, content_size, content, disposition,
-			 create_time, create_by, change_time, change_by)
-			VALUES (?, 'test-download.txt', 'text/plain', ?, ?, 'attachment', NOW(), 1, NOW(), 1)
-			RETURNING id
-		`), articleID, fmt.Sprint(len(testContent)), testContent)
-		require.NoError(t, err)
-		t.Cleanup(func() {
-			db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime_attachment WHERE id = ?"), attachmentID)
-		})
-
-		req := httptest.NewRequest("GET", fmt.Sprintf("/api/tickets/%d/attachments/%d", ticketID, attachmentID), nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-		assert.Equal(t, "text/plain", w.Header().Get("Content-Type"))
-		assert.Contains(t, w.Header().Get("Content-Disposition"), "test-download.txt")
-		assert.Equal(t, string(testContent), w.Body.String())
-	})
-
-	t.Run("Download non-existent attachment", func(t *testing.T) {
-		req := httptest.NewRequest("GET", fmt.Sprintf("/api/tickets/%d/attachments/99999999", ticketID), nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusNotFound, w.Code)
-	})
-}
-
 // createAttachmentTestArticle inserts a ticket and an article (subject/body in
 // article_data_mime) using the real schema, removing them when the test ends.
 func createAttachmentTestArticle(t *testing.T, db *sql.DB, subject, body string) (ticketID, articleID int64) {
@@ -257,52 +210,4 @@ func createAttachmentTestArticle(t *testing.T, db *sql.DB, subject, body string)
 		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id = ?"), ticketID)
 	})
 	return ticketID, articleID
-}
-
-func TestGetMessagesWithAttachments(t *testing.T) {
-	// Get database connection
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		t.Skip("Database not available, skipping integration test")
-	}
-
-	t.Run("GetMessages includes attachment data from database", func(t *testing.T) {
-		// Re-check DB availability (defensive)
-		db, err := database.GetDB()
-		if err != nil || db == nil {
-			t.Skip("Database not available, skipping integration test")
-		}
-
-		// Create a test ticket
-		ticketID, articleID := createAttachmentTestArticle(t, db, "Test Article", "Test article body")
-
-		// Create an attachment for the article
-		attachmentID, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
-			INSERT INTO article_data_mime_attachment
-			(article_id, filename, content_type, content_size, content, disposition,
-			 create_time, create_by, change_time, change_by)
-			VALUES (?, 'document.pdf', 'application/pdf', '11', ?, 'attachment', NOW(), 1, NOW(), 1)
-			RETURNING id
-		`), articleID, []byte("PDF content"))
-		require.NoError(t, err)
-
-		// Get the ticket service and retrieve messages
-		ticketService := GetTicketService()
-		messages, err := ticketService.GetMessages(uint(ticketID))
-
-		require.NoError(t, err)
-		require.NotEmpty(t, messages, "Should have at least one message")
-
-		// Verify the attachment is included
-		message := messages[0]
-		assert.Equal(t, "Test Article", message.Subject)
-		assert.Equal(t, "Test article body", message.Body)
-		require.NotEmpty(t, message.Attachments, "Message should have attachments")
-
-		attachment := message.Attachments[0]
-		assert.Equal(t, "document.pdf", attachment.Filename)
-		assert.Equal(t, "application/pdf", attachment.ContentType)
-		assert.Equal(t, int64(11), attachment.Size)
-		assert.Contains(t, attachment.URL, fmt.Sprintf("/%d/", attachmentID))
-	})
 }

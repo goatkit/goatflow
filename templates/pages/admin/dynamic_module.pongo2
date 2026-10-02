@@ -1162,9 +1162,9 @@ try {
     moduleConfig = {};
 }
 var moduleName = '{{ module.Name }}';
-// Support both /admin/users and /admin/dynamic/users paths
+// Generic module pages and their API live under /admin/modules/:module (routes/admin.yaml)
 var currentPath = window.location.pathname;
-var API_BASE = currentPath.includes('/dynamic/') ? '/admin/dynamic/' + moduleName : '/admin/' + moduleName;
+var API_BASE = '/admin/modules/' + moduleName;
 // Friendly aliases use hyphenated paths; align API_BASE so fetch hits the routed alias
 var friendlyAliases = {
     'mail_account': '/admin/mail-accounts',
@@ -2067,6 +2067,22 @@ function exportToCSV() {
     window.location.href = exportUrl;
 }
 
+// Resolve ticket_state_type ids by name from the server-rendered Type filter
+// options (ids differ between installations, names do not).
+function stateTypeFilterIDs(names) {
+    const select = document.getElementById('type_idFilter');
+    if (!select) {
+        throw new Error('Type filter not available');
+    }
+    const ids = Array.from(select.options)
+        .filter(o => o.value !== '' && names.includes(o.textContent.trim().toLowerCase()))
+        .map(o => o.value);
+    if (ids.length === 0) {
+        throw new Error('No state types named: ' + names.join(', '));
+    }
+    return ids.join(',');
+}
+
 // Apply quick filter presets
 function applyQuickFilter(preset) {
     const url = new URL(window.location);
@@ -2086,15 +2102,15 @@ function applyQuickFilter(preset) {
             params.set('filter_valid_id', '1');
             break;
         case 'open':
-            params.set('filter_type_id', '2');
+            params.set('filter_type_id', stateTypeFilterIDs(['new', 'open']));
             params.set('filter_valid_id', '1');
             break;
         case 'closed':
-            params.set('filter_type_id', '3,4'); // Both closed successful and unsuccessful
+            params.set('filter_type_id', stateTypeFilterIDs(['closed']));
             params.set('filter_valid_id', '1');
             break;
         case 'pending':
-            params.set('filter_type_id', '3');
+            params.set('filter_type_id', stateTypeFilterIDs(['pending reminder', 'pending auto']));
             params.set('filter_valid_id', '1');
             break;
 

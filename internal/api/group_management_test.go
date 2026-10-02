@@ -14,9 +14,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/repository"
 )
 
 // Note: Uses centralized GetTestAuthToken() and AddTestAuthCookie() from test_helpers.go
@@ -71,6 +71,7 @@ func TestAdminGroupManagement(t *testing.T) {
 
 		// Use unique group name to avoid conflicts with existing data
 		uniqueGroupName := fmt.Sprintf("test_group_%d", time.Now().UnixNano())
+		cleanupGroupByNameAtEnd(t, uniqueGroupName)
 
 		form := url.Values{}
 		form.Add("name", uniqueGroupName)
@@ -128,50 +129,19 @@ func TestAdminGroupManagement(t *testing.T) {
 	})
 
 	t.Run("UpdateGroup_ValidData", func(t *testing.T) {
-		if err := database.InitTestDB(); err != nil {
-			t.Skip("Database not available")
-		}
-		defer database.CloseTestDB()
-
 		db, err := database.GetDB()
-		if err != nil {
-			t.Skip("Database not available")
-		}
-
-		groupRepo := repository.NewGroupRepository(db)
-		groups, _ := groupRepo.List()
-
-		if len(groups) == 0 {
-			t.Skip("No groups available for testing")
-		}
+		require.NoError(t, err)
+		groupID, groupName := createIsolatedGroup(t, "update_group")
 
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
-		testGroup := groups[0]
-
 		form := url.Values{}
-		form.Add("name", testGroup.Name)
+		form.Add("name", groupName)
 		form.Add("comments", "Updated description")
 		form.Add("valid_id", "1")
 
-		// testGroup.ID is interface{}; assert to an int or string where possible
-		var idStr string
-		switch v := testGroup.ID.(type) {
-		case int:
-			idStr = strconv.Itoa(v)
-		case int64:
-			idStr = strconv.Itoa(int(v))
-		case uint:
-			idStr = strconv.Itoa(int(v))
-		case uint64:
-			idStr = strconv.Itoa(int(v))
-		case string:
-			idStr = v
-		default:
-			t.Skip("Unknown group ID type; skipping")
-		}
-		req, _ := http.NewRequest("PUT", "/admin/groups/"+idStr, strings.NewReader(form.Encode()))
+		req, _ := http.NewRequest("PUT", "/admin/groups/"+strconv.Itoa(groupID), strings.NewReader(form.Encode()))
 		AddTestAuthCookie(req, token)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -179,34 +149,18 @@ func TestAdminGroupManagement(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
+		var comments string
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+			"SELECT comments FROM `groups` WHERE id = ?"), groupID).Scan(&comments))
+		assert.Equal(t, "Updated description", comments)
 	})
 
 	t.Run("DeleteGroup_SoftDelete", func(t *testing.T) {
-		if err := database.InitTestDB(); err != nil {
-			t.Skip("Database not available")
-		}
-		defer database.CloseTestDB()
-
 		db, err := database.GetDB()
-		if err != nil {
-			t.Skip("Database not available")
-		}
-
-		// Create a dedicated group for this test to ensure it exists.
-		groupName := fmt.Sprintf("delete-test-%d", time.Now().UnixNano())
-		_, execErr := db.Exec(database.ConvertPlaceholders(
-			"INSERT INTO `groups` (name, valid_id, create_time, change_time, create_by, change_by) VALUES (?, 1, NOW(), NOW(), 1, 1)"),
-			groupName)
-		if execErr != nil {
-			t.Skipf("Could not create test group: %v", execErr)
-		}
-
-		// Get the ID of the group we just created.
-		var groupID int64
-		row := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM `groups` WHERE name = ?"), groupName)
-		if err := row.Scan(&groupID); err != nil {
-			t.Skipf("Could not find created group: %v", err)
-		}
+		require.NoError(t, err)
+		// A dedicated group for this test, removed again when it ends.
+		id, _ := createIsolatedGroup(t, "delete-test")
+		groupID := int64(id)
 
 		router := gin.New()
 		SetupHTMXRoutes(router)
@@ -219,6 +173,10 @@ func TestAdminGroupManagement(t *testing.T) {
 
 		// Should soft delete (set valid_id = 2)
 		assert.Equal(t, http.StatusOK, w.Code)
+		var validID int
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+			"SELECT valid_id FROM `groups` WHERE id = ?"), groupID).Scan(&validID))
+		assert.Equal(t, 2, validID)
 	})
 
 	t.Run("GetGroupPermissions", func(t *testing.T) {
@@ -244,17 +202,17 @@ func TestAdminGroupManagement(t *testing.T) {
 	})
 
 	t.Run("UpdateGroupPermissions", func(t *testing.T) {
-		if err := database.InitTestDB(); err != nil {
-			t.Skip("Database not available")
-		}
-		defer database.CloseTestDB()
+		db, err := database.GetDB()
+		require.NoError(t, err)
+		groupID, _ := createIsolatedGroup(t, "perm_group")
+		agentID, _ := createIsolatedAgent(t, "perm_agent")
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
 		payload := map[string]interface{}{
 			"assignments": []map[string]interface{}{
 				{
-					"user_id": 1,
+					"user_id": agentID,
 					"permissions": map[string]bool{
 						"ro":        true,
 						"move_into": true,
@@ -269,7 +227,7 @@ func TestAdminGroupManagement(t *testing.T) {
 		}
 
 		jsonBody, _ := json.Marshal(payload)
-		req, _ := http.NewRequest("POST", "/admin/groups/1/permissions", bytes.NewBuffer(jsonBody))
+		req, _ := http.NewRequest("POST", fmt.Sprintf("/admin/groups/%d/permissions", groupID), bytes.NewBuffer(jsonBody))
 		AddTestAuthCookie(req, token)
 		req.Header.Set("Content-Type", "application/json")
 
@@ -278,9 +236,21 @@ func TestAdminGroupManagement(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		var response map[string]interface{}
-		if err := json.Unmarshal(w.Body.Bytes(), &response); err == nil {
-			assert.True(t, response["success"].(bool))
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+		assert.True(t, response["success"].(bool))
+
+		rows, err := db.Query(database.ConvertPlaceholders(
+			"SELECT permission_key FROM group_user WHERE user_id = ? AND group_id = ? ORDER BY permission_key"), agentID, groupID)
+		require.NoError(t, err)
+		defer rows.Close()
+		var keys []string
+		for rows.Next() {
+			var k string
+			require.NoError(t, rows.Scan(&k))
+			keys = append(keys, k)
 		}
+		require.NoError(t, rows.Err())
+		assert.Equal(t, []string{"move_into", "ro"}, keys)
 	})
 }
 
@@ -368,11 +338,17 @@ func TestGroupFiltering(t *testing.T) {
 }
 
 func TestGroupMembership(t *testing.T) {
-	if err := database.InitTestDB(); err != nil {
-		t.Skip("Database not available")
-	}
-	defer database.CloseTestDB()
 	token := GetTestAuthToken(t)
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	groupID, _ := createIsolatedGroup(t, "member_group")
+	agentID, _ := createIsolatedAgent(t, "member_agent")
+	members := func() int {
+		var n int
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+			"SELECT COUNT(*) FROM group_user WHERE user_id = ? AND group_id = ?"), agentID, groupID).Scan(&n))
+		return n
+	}
 
 	t.Run("ListGroupMembers", func(t *testing.T) {
 		router := gin.New()
@@ -395,38 +371,36 @@ func TestGroupMembership(t *testing.T) {
 		SetupHTMXRoutes(router)
 
 		member := map[string]interface{}{
-			"user_id": 2,
+			"user_id": agentID,
 		}
 
 		jsonBody, _ := json.Marshal(member)
-		req, _ := http.NewRequest("POST", "/admin/groups/1/members", bytes.NewBuffer(jsonBody))
+		req, _ := http.NewRequest("POST", fmt.Sprintf("/admin/groups/%d/members", groupID), bytes.NewBuffer(jsonBody))
 		AddTestAuthCookie(req, token)
 		req.Header.Set("Content-Type", "application/json")
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
+		require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 		var response map[string]interface{}
-		if err := json.Unmarshal(w.Body.Bytes(), &response); err == nil {
-			// Check if member was added or already exists
-			if response["success"].(bool) {
-				assert.Equal(t, "User assigned to group successfully", response["message"])
-			}
-		}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+		assert.True(t, response["success"].(bool))
+		assert.Equal(t, "User assigned to group successfully", response["message"])
+		assert.Positive(t, members())
 	})
 
 	t.Run("RemoveMemberFromGroup", func(t *testing.T) {
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
-		req, _ := http.NewRequest("DELETE", "/admin/groups/1/members/2", nil)
+		req, _ := http.NewRequest("DELETE", fmt.Sprintf("/admin/groups/%d/members/%d", groupID, agentID), nil)
 		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		if w.Code != http.StatusOK {
-			t.Skipf("Route not available or DB not ready: got %d", w.Code)
-		}
+		assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
+		assert.Zero(t, members())
 	})
 }
 

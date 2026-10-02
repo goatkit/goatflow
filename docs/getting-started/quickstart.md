@@ -39,7 +39,7 @@ make down
 ## 3) Login
 
 - For local dev, demo credentials come from `.env.development` (copied into `.env`).
-- If `DEMO_MODE=true`, the login page shows demo accounts.
+- Demo mode (`app.demo_mode: true` or `GOATFLOW_APP_DEMO_MODE=true`) only stops non-admin users changing passwords/MFA and keeps preference changes session-only; it never logs anyone in automatically.
 - To use **real database users** instead of demo mode, run `make synthesize` to generate secure test credentials (see [DATABASE.md](../development/DATABASE.md#test-data-generation)).
 
 ## 4) Create your first ticket (UI)

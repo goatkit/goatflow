@@ -151,7 +151,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
         -X github.com/goatkit/goatflow/internal/version.GitCommit=${GIT_COMMIT} \
         -X github.com/goatkit/goatflow/internal/version.GitBranch=${GIT_BRANCH} \
         -X github.com/goatkit/goatflow/internal/version.BuildDate=${BUILD_DATE}" \
-    -installsuffix cgo -o goats ./cmd/goats
+    -installsuffix cgo -o goats ./cmd/goats && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o goatflow-storage ./cmd/goatflow-storage
 
 # ============================================
 # Stage 4: Export build artifacts
@@ -159,6 +160,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM scratch AS artifacts
 
 COPY --from=builder /build/goats /artifacts/goats
+COPY --from=builder /build/goatflow-storage /artifacts/goatflow-storage
 COPY --from=tools /go/bin/migrate /artifacts/migrate
 
 # ============================================
@@ -243,6 +245,7 @@ FROM runtime-base AS runtime
 # Copy binaries from build artifacts
 COPY --from=artifacts --chown=appuser:appgroup /artifacts/goats ./goats
 COPY --from=artifacts --chown=appuser:appgroup /artifacts/migrate ./migrate
+COPY --from=artifacts --chown=appuser:appgroup /artifacts/goatflow-storage ./goatflow-storage
 
 # Copy necessary files (our code)
 COPY --chown=appuser:appgroup templates ./templates/

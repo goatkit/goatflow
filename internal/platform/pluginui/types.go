@@ -27,10 +27,10 @@ const (
 	ShellStandard = "standard"
 )
 
-// Auth methods.
+// Auth methods. session and token both authenticate the caller (session
+// cookie, Bearer JWT or API token); none leaves the UI public.
 const (
 	AuthSession = "session"
-	AuthPIN     = "pin"
 	AuthToken   = "token"
 	AuthNone    = "none"
 )
@@ -57,11 +57,6 @@ func ValidUITypes() []string {
 // ValidShells returns all supported shell types.
 func ValidShells() []string {
 	return []string{ShellNone, ShellMinimal, ShellStandard}
-}
-
-// ValidAuthMethods returns all supported auth methods.
-func ValidAuthMethods() []string {
-	return []string{AuthSession, AuthPIN, AuthToken, AuthNone}
 }
 
 // ValidDataScopes returns all supported data scopes.

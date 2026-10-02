@@ -18,7 +18,11 @@ func TestSQLConversionRulesMatchFixture(t *testing.T) {
 	}
 	const fixture = "cmd/gk-lint/testdata/sqlconv"
 
-	got, err := scanSQLConversion(root, "./"+fixture)
+	schema, err := loadSQLSchema(filepath.Join(root, "cmd/gk-lint/testdata/sqlschema"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := scanSQLConversion(root, schema, "./"+fixture)
 	if err != nil {
 		t.Fatal(err)
 	}

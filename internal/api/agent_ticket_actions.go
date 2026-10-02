@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -18,6 +17,7 @@ import (
 	"github.com/goatkit/goatflow/internal/mailqueue"
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/config"
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/notifications"
 	"github.com/goatkit/goatflow/internal/platform/ticketstate"
@@ -51,7 +51,11 @@ func queueCustomerNoteNotification(params noteNotificationParams) {
 	emailBody := buildNoteEmailBody(params.Subject, params.Body)
 	inReplyTo, references := getThreadingHeaders(params.DB, uint(params.Ticket.ID))
 
-	branding := prepareNotificationBranding(params.DB, params.Ticket, params.UserID, emailBody)
+	branding, err := prepareNotificationBranding(params.DB, params.Ticket, params.UserID, emailBody)
+	if err != nil {
+		log.Printf("Note notification for ticket %d not sent: %v", params.Ticket.ID, err)
+		return
+	}
 	rawMsg := mailqueue.BuildEmailMessageWithThreading(
 		branding.HeaderFrom, customerEmail, emailSubject, branding.Body,
 		branding.Domain, inReplyTo, references)
@@ -112,9 +116,12 @@ func getThreadingHeaders(db *sql.DB, ticketID uint) (inReplyTo, references strin
 	return inReplyTo, references
 }
 
+// prepareNotificationBranding renders the queue-branded note email. It fails
+// when the placeholder names cannot be resolved, so no email goes out with
+// blank names.
 func prepareNotificationBranding(
 	db *sql.DB, ticket *models.Ticket, userID uint, emailBody string,
-) *notifications.EmailBranding {
+) (*notifications.EmailBranding, error) {
 	var emailCfg *config.EmailConfig
 	if cfg := config.Get(); cfg != nil {
 		emailCfg = &cfg.Email
@@ -123,14 +130,17 @@ func prepareNotificationBranding(
 	if ticket.CustomerUserID != nil {
 		customerLogin = *ticket.CustomerUserID
 	}
-	renderCtx := notifications.BuildRenderContext(context.Background(), db, customerLogin, int(userID))
+	renderCtx, err := notifications.BuildRenderContext(context.Background(), db, customerLogin, int(userID))
+	if err != nil {
+		return nil, err
+	}
 	branding, err := notifications.PrepareQueueEmail(
 		context.Background(), db, ticket.QueueID, emailBody, utils.IsHTML(emailBody), emailCfg, renderCtx,
 	)
 	if err != nil {
 		log.Printf("Queue identity lookup failed for ticket %d: %v", ticket.ID, err)
 	}
-	return branding
+	return branding, nil
 }
 
 func storeArticleThreadingHeaders(
@@ -178,7 +188,11 @@ func queueArticleNotificationEmail(db *sql.DB, ticketID int, articleID int64, cu
 	if cfg := config.Get(); cfg != nil {
 		emailCfg = &cfg.Email
 	}
-	renderCtx := notifications.BuildRenderContext(context.Background(), db, customerUserLogin, userID)
+	renderCtx, err := notifications.BuildRenderContext(context.Background(), db, customerUserLogin, userID)
+	if err != nil {
+		log.Printf("Article notification for ticket %d not sent: %v", ticketID, err)
+		return
+	}
 	branding, err := notifications.PrepareQueueEmail(context.Background(), db, queueID, body, utils.IsHTML(body), emailCfg, renderCtx)
 	if err != nil {
 		log.Printf("Queue identity lookup failed for ticket %d: %v", ticketID, err)
@@ -277,10 +291,10 @@ func handleAgentTicketReply(db *sql.DB) gin.HandlerFunc {
 		}
 		defer func() { _ = tx.Rollback() }()
 
-		// Insert article (communication_channel_id = 1 for email, visible to customer)
+		// Insert article (email channel, visible to customer)
 		articleID, err := insertArticle(tx, ArticleInsertParams{
 			TicketID:             int64(tid),
-			CommunicationChannel: 1, // email
+			CommunicationChannel: constants.CommunicationChannelEmail,
 			IsVisibleForCustomer: 1,
 			CreateBy:             int64(userID),
 		})
@@ -306,45 +320,16 @@ func handleAgentTicketReply(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Handle file attachments if present
-		if c.Request.MultipartForm != nil && c.Request.MultipartForm.File != nil {
-			files := c.Request.MultipartForm.File["attachments"]
-			for _, fileHeader := range files {
-				file, err := fileHeader.Open()
-				if err != nil {
-					log.Printf("Error opening attachment %s: %v", fileHeader.Filename, err)
-					continue
-				}
-				defer file.Close()
-
-				// Read file content
-				content, err := io.ReadAll(file)
-				if err != nil {
-					log.Printf("Error reading attachment %s: %v", fileHeader.Filename, err)
-					continue
-				}
-
-				// Detect content type
-				contentType := fileHeader.Header.Get("Content-Type")
-				if contentType == "" {
-					contentType = http.DetectContentType(content)
-				}
-
-				attachmentInsert := `
-					INSERT INTO article_data_mime_attachment (
-						article_id, filename, content_type, content, content_size,
-						create_time, create_by, change_time, change_by
-					) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
-				`
-				_, err = tx.Exec(database.ConvertPlaceholders(attachmentInsert),
-					articleID, fileHeader.Filename, contentType, content, strconv.Itoa(len(content)), userID, userID)
-
-				if err != nil {
-					log.Printf("Error saving attachment %s: %v", fileHeader.Filename, err)
-				} else {
-					log.Printf("Saved attachment %s for article %d", fileHeader.Filename, articleID)
-				}
-			}
+		// Attachments are written inside the reply's transaction.
+		if c.Request.MultipartForm != nil {
+			processFormAttachments(getFormFiles(c.Request.MultipartForm), attachmentProcessParams{
+				ctx:       c.Request.Context(),
+				db:        db,
+				tx:        tx,
+				ticketID:  tid,
+				articleID: int(articleID),
+				userID:    int(userID),
+			})
 		}
 
 		// Update ticket change time
@@ -406,10 +391,13 @@ func handleAgentTicketNote(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Get communication channel from form (defaults to Internal if not specified)
-		communicationChannelID := c.DefaultPostForm("communication_channel_id", "3")
-		channelID, err := strconv.Atoi(communicationChannelID)
-		if err != nil || channelID < 1 || channelID > 4 {
-			channelID = 3 // Default to Internal
+		channelID := constants.CommunicationChannelInternal
+		if v, convErr := strconv.Atoi(c.PostForm("communication_channel_id")); convErr == nil {
+			switch v {
+			case constants.CommunicationChannelEmail, constants.CommunicationChannelPhone,
+				constants.CommunicationChannelInternal, constants.CommunicationChannelChat:
+				channelID = v
+			}
 		}
 
 		// Get visibility flag (checkbox value will be "1" if checked, empty if not)
@@ -686,13 +674,13 @@ func noteLabel(channelID int, visibleForCustomer int) string {
 		return "Customer note added"
 	}
 	switch channelID {
-	case 1:
+	case constants.CommunicationChannelEmail:
 		return "Email note added"
-	case 2:
+	case constants.CommunicationChannelPhone:
 		return "Phone note added"
-	case 3:
+	case constants.CommunicationChannelInternal:
 		return "Internal note added"
-	case 4:
+	case constants.CommunicationChannelChat:
 		return "Chat note added"
 	default:
 		return "Note added"
@@ -745,10 +733,10 @@ func handleAgentTicketPhone(db *sql.DB) gin.HandlerFunc {
 		}
 		defer func() { _ = tx.Rollback() }()
 
-		// Insert article (phone communication channel = 2, visible to customer)
+		// Insert article (phone channel, visible to customer)
 		articleID, err := insertArticle(tx, ArticleInsertParams{
 			TicketID:             int64(tid),
-			CommunicationChannel: 2, // phone
+			CommunicationChannel: constants.CommunicationChannelPhone,
 			IsVisibleForCustomer: 1,
 			CreateBy:             int64(userID),
 		})
@@ -920,7 +908,17 @@ func handleAgentTicketPriority(db *sql.DB) gin.HandlerFunc {
 func handleAgentTicketQueue(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ticketID := c.Param("id")
-		queueID := c.PostForm("queue_id")
+		queueID, convErr := strconv.Atoi(strings.TrimSpace(c.PostForm("queue_id")))
+		if convErr != nil || queueID <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid queue"})
+			return
+		}
+		// The middleware checked the ticket's current queue; the target
+		// queue needs move_into too.
+		authz := agentTicketAuthzOrAbort(c, db)
+		if authz == nil || !authz.moveTargetOrAbort(c, queueID) {
+			return
+		}
 
 		// Update ticket queue
 		_, err := db.Exec(database.ConvertPlaceholders(`
@@ -969,6 +967,11 @@ func handleAgentTicketMerge(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Target ticket not found"})
 			return
 		}
+		// The target gains the source's articles: it needs rw like the source.
+		authz := agentTicketAuthzOrAbort(c, db)
+		if authz == nil || !authz.ticketOrAbort(c, targetTicketID, "rw", "Target ticket") {
+			return
+		}
 
 		// Move all articles from source to target ticket
 		_, err = tx.Exec(database.ConvertPlaceholders(`
@@ -1010,36 +1013,6 @@ func handleAgentTicketMerge(db *sql.DB) gin.HandlerFunc {
 			"success":       true,
 			"message":       fmt.Sprintf("Ticket merged into %s", targetTN),
 			"target_ticket": targetTN,
-		})
-	}
-}
-
-// handleAgentTicketDraft saves a draft reply for a ticket.
-func handleAgentTicketDraft(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		ticketID := c.Param("id")
-		userID, _ := c.Get("user_id")
-
-		var request struct {
-			Subject     string `json:"subject"`
-			Body        string `json:"body"`
-			To          string `json:"to"`
-			Cc          string `json:"cc"`
-			Bcc         string `json:"bcc"`
-			ContentType string `json:"content_type"`
-		}
-
-		if err := c.ShouldBindJSON(&request); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
-			return
-		}
-
-		log.Printf("Draft saved for ticket %s by user %v: subject='%s', body length=%d",
-			ticketID, userID, request.Subject, len(request.Body))
-
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Draft saved successfully",
 		})
 	}
 }

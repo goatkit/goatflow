@@ -3,13 +3,13 @@ package api
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
-	"github.com/lib/pq"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
@@ -43,55 +43,10 @@ type StateWithType struct {
 
 // handleAdminStates renders the admin states management page.
 func handleAdminStates(c *gin.Context) {
-	renderFallback := func() {
-		accept := c.GetHeader("Accept")
-		if strings.Contains(strings.ToLower(accept), "application/json") {
-			c.JSON(http.StatusOK, gin.H{
-				"success": true,
-				"data": []gin.H{
-					{"id": 1, "name": "open", "type": "new"},
-					{"id": 2, "name": "closed", "type": "closed"},
-				},
-			})
-			return
-		}
-
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, `<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="utf-8">
-	<title>Ticket States</title>
-	<link rel="stylesheet" href="/static/css/output.css">
-</head>
-<body>
-	<main>
-		<h1>Ticket States</h1>
-		<div class="controls">
-			<form id="stateSearch" hx-get="/admin/states" hx-target="#stateTable">
-				<label for="stateSearchInput">Search</label>
-				<input id="stateSearchInput" name="search" type="text" placeholder="Find a state">
-				<button type="submit">Filter</button>
-			</form>
-			<button id="addStateButton">Add New State</button>
-		</div>
-		<table id="stateTable" class="table">
-			<thead>
-				<tr><th>Name</th><th>Type</th><th>Valid</th></tr>
-			</thead>
-			<tbody>
-				<tr><td>open</td><td>new</td><td>valid</td></tr>
-				<tr><td>closed</td><td>closed</td><td>valid</td></tr>
-			</tbody>
-		</table>
-	</main>
-</body>
-</html>`)
-	}
-
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		renderFallback()
+		log.Printf("handleAdminStates: database unavailable: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Database unavailable")
 		return
 	}
 
@@ -140,14 +95,10 @@ func handleAdminStates(c *gin.Context) {
 	}
 	query += fmt.Sprintf(" ORDER BY %s %s", sortBy, sortOrder)
 
-	if db == nil {
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, `<h1>Ticket States</h1><button>Add New State</button>`)
-		return
-	}
 	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
-		renderFallback()
+		log.Printf("handleAdminStates: query states: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Failed to load ticket states")
 		return
 	}
 	defer rows.Close()
@@ -174,7 +125,8 @@ func handleAdminStates(c *gin.Context) {
 	// Get state types for dropdown
 	typeRows, err := db.Query(database.ConvertPlaceholders("SELECT id, name, comments FROM ticket_state_type ORDER BY id"))
 	if err != nil {
-		renderFallback()
+		log.Printf("handleAdminStates: query state types: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Failed to load state types")
 		return
 	}
 	defer typeRows.Close()
@@ -202,10 +154,9 @@ func handleAdminStates(c *gin.Context) {
 		typeFilterInt, _ = strconv.Atoi(typeFilter) //nolint:errcheck // Defaults to 0 on error
 	}
 
-	// Render the template or fallback if renderer not initialized
 	renderer := getPongo2Renderer()
 	if renderer == nil || renderer.TemplateSet() == nil {
-		renderFallback()
+		sendErrorResponse(c, http.StatusInternalServerError, "Template renderer unavailable")
 		return
 	}
 	renderer.HTML(c, http.StatusOK, "pages/admin/states.pongo2", pongo2.Context{
@@ -221,118 +172,75 @@ func handleAdminStates(c *gin.Context) {
 	})
 }
 
-// handleAdminStateCreate creates a new state.
+// handleAdminStateCreate creates a new state (POST /admin/states/create).
 func handleAdminStateCreate(c *gin.Context) {
 	var input struct {
-		Name     string  `json:"name" form:"name" binding:"required"`
-		TypeID   int     `json:"type_id" form:"type_id" binding:"required"`
+		Name     string  `json:"name" form:"name"`
+		TypeID   int     `json:"type_id" form:"type_id"`
 		Comments *string `json:"comments" form:"comments"`
 		ValidID  int     `json:"valid_id" form:"valid_id"`
 	}
-
-	// Try to bind based on content type
 	if err := c.ShouldBind(&input); err != nil {
-		// Prefer specific message for missing name to satisfy tests
-		if strings.TrimSpace(c.PostForm("name")) == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "Name is required",
-			})
-			return
-		}
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Name and type are required",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid request body"})
 		return
 	}
-
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		// Fallback: basic validation and success payload
-		if strings.TrimSpace(input.Name) == "" || input.TypeID == 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Name is required"})
-			return
-		}
-		typeID := input.TypeID
-		validID := input.ValidID
-		if validID == 0 {
-			validID = 1
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "State created successfully",
-			"data":    State{ID: 1, Name: input.Name, TypeID: &typeID, Comments: input.Comments, ValidID: &validID},
-		})
+	input.Name = strings.TrimSpace(input.Name)
+	if input.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Name is required"})
 		return
 	}
-
-	// Validate type_id exists
-	var typeExists bool
-	typeExistsQuery := "SELECT EXISTS(SELECT 1 FROM ticket_state_type WHERE id = ?)"
-	err = db.QueryRow(database.ConvertPlaceholders(typeExistsQuery), input.TypeID).Scan(&typeExists)
-	if err != nil || !typeExists {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Invalid state type",
-		})
-		return
-	}
-
-	// Default to valid if not specified
 	if input.ValidID == 0 {
 		input.ValidID = 1
 	}
 
-	// Create the state using the adapter for cross-database compatibility
-	query := database.ConvertPlaceholders(`
-		INSERT INTO ticket_state (name, type_id, comments, valid_id, create_by, change_by) 
-		VALUES (?, ?, ?, ?, 1, 1) 
-		RETURNING id
-	`)
-
-	adapter := database.GetAdapter()
-	id64, err := adapter.InsertWithReturning(db, query, input.Name, input.TypeID, input.Comments, input.ValidID)
-	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
-			c.JSON(http.StatusConflict, gin.H{
-				"success": false,
-				"error":   "A state with this name already exists",
-			})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to create state",
-		})
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database unavailable"})
 		return
 	}
 
-	id := int(id64)
-	typeID := input.TypeID
-	validID := input.ValidID
+	if ok, err := stateTypeExists(db, input.TypeID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to validate state type"})
+		return
+	} else if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid state type"})
+		return
+	}
+	if taken, err := stateNameTaken(db, input.Name, 0); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create state"})
+		return
+	} else if taken {
+		c.JSON(http.StatusConflict, gin.H{"success": false, "error": "A state with this name already exists"})
+		return
+	}
+
+	userID := GetUserIDFromCtx(c, 1)
+	id64, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
+		RETURNING id`), input.Name, input.TypeID, input.Comments, input.ValidID, userID, userID)
+	if err != nil {
+		if isUniqueViolation(err) {
+			c.JSON(http.StatusConflict, gin.H{"success": false, "error": "A state with this name already exists"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create state"})
+		return
+	}
+
+	typeID, validID := input.TypeID, input.ValidID
 	c.JSON(http.StatusCreated, gin.H{
 		"success": true,
 		"message": "State created successfully",
-		"data": State{
-			ID:       id,
-			Name:     input.Name,
-			TypeID:   &typeID,
-			Comments: input.Comments,
-			ValidID:  &validID,
-		},
+		"data":    State{ID: int(id64), Name: input.Name, TypeID: &typeID, Comments: input.Comments, ValidID: &validID},
 	})
 }
 
-// handleAdminStateUpdate updates an existing state.
+// handleAdminStateUpdate updates an existing state (PUT /admin/states/:id/update).
 func handleAdminStateUpdate(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Invalid state ID",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid state ID"})
 		return
 	}
 
@@ -342,132 +250,107 @@ func handleAdminStateUpdate(c *gin.Context) {
 		Comments *string `json:"comments" form:"comments"`
 		ValidID  *int    `json:"valid_id" form:"valid_id"`
 	}
-
-	// Try to bind based on content type
 	if err := c.ShouldBind(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Invalid request body",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid request body"})
 		return
 	}
+	input.Name = strings.TrimSpace(input.Name)
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Fallback: treat update success for normal IDs, 404 for obvious non-existent
-		if id >= 90000 {
-			c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "State not found"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"success": true, "message": "State updated successfully"})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database unavailable"})
 		return
 	}
 
-	// Validate type_id if provided
+	if found, err := stateExists(db, id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update state"})
+		return
+	} else if !found {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "State not found"})
+		return
+	}
 	if input.TypeID != nil {
-		var typeExists bool
-		typeExistsQuery := "SELECT EXISTS(SELECT 1 FROM ticket_state_type WHERE id = ?)"
-		err = db.QueryRow(database.ConvertPlaceholders(typeExistsQuery), *input.TypeID).Scan(&typeExists)
-		if err != nil || !typeExists {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "Invalid state type",
-			})
+		if ok, err := stateTypeExists(db, *input.TypeID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to validate state type"})
+			return
+		} else if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid state type"})
+			return
+		}
+	}
+	if input.Name != "" {
+		if taken, err := stateNameTaken(db, input.Name, id); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update state"})
+			return
+		} else if taken {
+			c.JSON(http.StatusConflict, gin.H{"success": false, "error": "A state with this name already exists"})
 			return
 		}
 	}
 
-	// Build update query dynamically
-	query := `UPDATE ticket_state SET change_by = 1, change_time = CURRENT_TIMESTAMP`
-	var args []interface{}
-
+	query := `UPDATE ticket_state SET change_by = ?, change_time = CURRENT_TIMESTAMP`
+	args := []interface{}{GetUserIDFromCtx(c, 1)}
 	if input.Name != "" {
 		query += ", name = ?"
 		args = append(args, input.Name)
 	}
-
 	if input.TypeID != nil {
 		query += ", type_id = ?"
 		args = append(args, *input.TypeID)
 	}
-
 	if input.Comments != nil {
 		query += ", comments = ?"
 		args = append(args, *input.Comments)
 	}
-
 	if input.ValidID != nil {
 		query += ", valid_id = ?"
 		args = append(args, *input.ValidID)
 	}
-
 	query += " WHERE id = ?"
 	args = append(args, id)
 
-	result, err := db.Exec(database.ConvertPlaceholders(query), args...)
-	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
-			c.JSON(http.StatusConflict, gin.H{
-				"success": false,
-				"error":   "A state with this name already exists",
-			})
+	// Existence was checked above: MySQL reports 0 affected rows when nothing
+	// changed, so RowsAffected cannot be used as a not-found signal.
+	if _, err := db.Exec(database.ConvertPlaceholders(query), args...); err != nil {
+		if isUniqueViolation(err) {
+			c.JSON(http.StatusConflict, gin.H{"success": false, "error": "A state with this name already exists"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to update state",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update state"})
 		return
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		rowsAffected = 0
-	}
-	if rowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{
-			"success": false,
-			"error":   "State not found",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "State updated successfully",
-	})
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "State updated successfully"})
 }
 
-// handleAdminStateDelete soft deletes a state.
+// handleAdminStateDelete soft deletes a state (DELETE /admin/states/:id/delete).
 func handleAdminStateDelete(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Invalid state ID",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid state ID"})
 		return
 	}
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Fallback: return OK soft-delete message
-		c.JSON(http.StatusOK, gin.H{"success": true, "message": "State deleted successfully"})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database unavailable"})
 		return
 	}
 
-	// Check if state is in use
+	if found, err := stateExists(db, id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete state"})
+		return
+	} else if !found {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "State not found"})
+		return
+	}
+
 	var ticketCount int
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?"), id).Scan(&ticketCount)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to check state usage",
-		})
+	if err := db.QueryRow(database.ConvertPlaceholders(
+		"SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?"), id).Scan(&ticketCount); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to check state usage"})
 		return
 	}
-
 	if ticketCount > 0 {
 		c.JSON(http.StatusConflict, gin.H{
 			"success": false,
@@ -476,50 +359,41 @@ func handleAdminStateDelete(c *gin.Context) {
 		return
 	}
 
-	// Soft delete by setting valid_id = 2
-	result, err := db.Exec(database.ConvertPlaceholders(`
-		UPDATE ticket_state 
-		SET valid_id = 2, change_by = 1, change_time = CURRENT_TIMESTAMP 
-		WHERE id = ?
-	`), id)
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to delete state",
-		})
+	if _, err := db.Exec(database.ConvertPlaceholders(`
+		UPDATE ticket_state
+		SET valid_id = 2, change_by = ?, change_time = CURRENT_TIMESTAMP
+		WHERE id = ?`), GetUserIDFromCtx(c, 1), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete state"})
 		return
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		rowsAffected = 0
-	}
-	if rowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{
-			"success": false,
-			"error":   "State not found",
-		})
-		return
-	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "State deleted successfully"})
+}
 
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "State deleted successfully",
-	})
+func stateExists(db *sql.DB, id int) (bool, error) {
+	var n int
+	err := db.QueryRow(database.ConvertPlaceholders(`SELECT COUNT(*) FROM ticket_state WHERE id = ?`), id).Scan(&n)
+	return n > 0, err
+}
+
+func stateTypeExists(db *sql.DB, typeID int) (bool, error) {
+	var n int
+	err := db.QueryRow(database.ConvertPlaceholders(`SELECT COUNT(*) FROM ticket_state_type WHERE id = ?`), typeID).Scan(&n)
+	return n > 0, err
+}
+
+func stateNameTaken(db *sql.DB, name string, exceptID int) (bool, error) {
+	var n int
+	err := db.QueryRow(database.ConvertPlaceholders(
+		`SELECT COUNT(*) FROM ticket_state WHERE name = ? AND id <> ?`), name, exceptID).Scan(&n)
+	return n > 0, err
 }
 
 // handleGetStateTypes returns all state types.
 func handleGetStateTypes(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Fallback: return a minimal list for tests
-		c.JSON(http.StatusOK, gin.H{"success": true, "data": []StateType{{ID: 1, Name: "open"}, {ID: 2, Name: "closed"}}})
-		return
-	}
-
-	if db == nil {
-		c.JSON(http.StatusOK, gin.H{"success": true, "data": []StateType{{ID: 1, Name: "open"}, {ID: 2, Name: "closed"}}})
+		c.JSON(http.StatusServiceUnavailable, gin.H{"success": false, "error": "Database unavailable"})
 		return
 	}
 	rows, err := db.Query(database.ConvertPlaceholders("SELECT id, name, comments FROM ticket_state_type ORDER BY id"))

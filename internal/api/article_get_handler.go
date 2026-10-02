@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"net/http"
 	"strconv"
 
@@ -16,21 +17,19 @@ import (
 //	@Tags			Articles
 //	@Accept			json
 //	@Produce		json
-//	@Param			ticket_id	path		int	true	"Ticket ID"
-//	@Param			id			path		int	true	"Article ID"
-//	@Success		200			{object}	map[string]interface{}	"Article details"
-//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
-//	@Failure		404			{object}	map[string]interface{}	"Article not found"
+//	@Param			ticket_id			path		int		true	"Ticket ID"
+//	@Param			id					path		int		true	"Article ID"
+//	@Param			include_attachments	query		bool	false	"Include attachment metadata"
+//	@Success		200					{object}	map[string]interface{}	"Article details"
+//	@Failure		401					{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404					{object}	map[string]interface{}	"Article not found"
 //	@Security		BearerAuth
 //	@Router			/tickets/{ticket_id}/articles/{id} [get]
 func HandleGetArticleAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	_ = userID // Will use for permission checks later
 
 	// Parse IDs (accept both :ticket_id and :id, article :article_id or :id)
 	ticketParam := c.Param("ticket_id")
@@ -59,92 +58,32 @@ func HandleGetArticleAPI(c *gin.Context) {
 		return
 	}
 
-	// Get article details
-	var article struct {
-		ID                  int
-		TicketID            int
-		ArticleTypeID       int
-		ArticleSenderTypeID int
-		FromEmail           string
-		ToEmail             string
-		CC                  *string
-		Subject             string
-		Body                string
-		CreateTime          string
-		CreateBy            int
-		ChangeTime          string
-		ChangeBy            int
-	}
-
-	query := database.ConvertPlaceholders(`
-		SELECT id, ticket_id, article_type_id, article_sender_type_id,
-			from_email, to_email, cc, subject, body,
-			create_time, create_by, change_time, change_by
-		FROM article
-		WHERE id = ? AND ticket_id = ?
-	`)
-
-	err = db.QueryRow(query, articleID, ticketID).Scan(
-		&article.ID, &article.TicketID, &article.ArticleTypeID, &article.ArticleSenderTypeID,
-		&article.FromEmail, &article.ToEmail, &article.CC, &article.Subject, &article.Body,
-		&article.CreateTime, &article.CreateBy, &article.ChangeTime, &article.ChangeBy,
-	)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
+	req, ok := authorizeTicketArticles(c, db, ticketID, "ro")
+	if !ok {
 		return
 	}
 
-	response := gin.H{
-		"id":                     article.ID,
-		"ticket_id":              article.TicketID,
-		"article_type_id":        article.ArticleTypeID,
-		"article_sender_type_id": article.ArticleSenderTypeID,
-		"from_email":             article.FromEmail,
-		"to_email":               article.ToEmail,
-		"subject":                article.Subject,
-		"body":                   article.Body,
-		"create_time":            article.CreateTime,
-		"create_by":              article.CreateBy,
-		"change_time":            article.ChangeTime,
-		"change_by":              article.ChangeBy,
+	// The article must belong to the ticket in the URL (access was checked on
+	// that ticket); customers only see customer-visible articles.
+	response, _, err := scanArticleAPIRow(db.QueryRow(database.ConvertPlaceholders(articleAPIColumns+`
+		WHERE a.id = ? AND a.ticket_id = ? AND (a.is_visible_for_customer = 1 OR ? = 0)`),
+		articleID, ticketID, boolToInt(req.customer)))
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch article"})
+		return
 	}
 
-	// Add optional CC field
-	if article.CC != nil {
-		response["cc"] = *article.CC
-	}
-
-	// Include attachments if requested
 	if c.Query("include_attachments") == "true" {
-		attachQuery := database.ConvertPlaceholders(`
-			SELECT id, filename, content_type, content_size
-			FROM article_attachment
-			WHERE article_id = ?
-		`)
-
-		rows, err := db.Query(attachQuery, articleID)
-		if err == nil {
-			defer rows.Close()
-			attachments := []gin.H{}
-			for rows.Next() {
-				var attachment struct {
-					ID          int
-					Filename    string
-					ContentType string
-					Size        int
-				}
-				if err := rows.Scan(&attachment.ID, &attachment.Filename, &attachment.ContentType, &attachment.Size); err == nil {
-					attachments = append(attachments, gin.H{
-						"id":           attachment.ID,
-						"filename":     attachment.Filename,
-						"content_type": attachment.ContentType,
-						"size":         attachment.Size,
-					})
-				}
-			}
-			_ = rows.Err() //nolint:errcheck // Iteration errors don't affect response
-			response["attachments"] = attachments
+		attachments, err := loadArticleAttachments(c.Request.Context(), db, articleID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch attachments"})
+			return
 		}
+		response["attachments"] = attachments
 	}
 
 	c.JSON(http.StatusOK, response)

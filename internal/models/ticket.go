@@ -103,8 +103,8 @@ type PendingReminder struct {
 type Article struct {
 	ID                     int         `json:"id" db:"id"`
 	TicketID               int         `json:"ticket_id" db:"ticket_id"`
-	ArticleTypeID          int         `json:"article_type_id" db:"article_type_id"` // 1=email-external, 2=email-internal, etc.
-	SenderTypeID           int         `json:"sender_type_id" db:"sender_type_id"`   // 1=agent, 2=system, 3=customer
+	ArticleTypeID          int         `json:"article_type_id" db:"-"`             // constants.ArticleType*; not stored, derived from channel + visibility (core/channel_mapping.go)
+	SenderTypeID           int         `json:"sender_type_id" db:"sender_type_id"` // 1=agent, 2=system, 3=customer
 	CommunicationChannelID int         `json:"communication_channel_id" db:"communication_channel_id"`
 	IsVisibleForCustomer   int         `json:"is_visible_for_customer" db:"is_visible_for_customer"`
 	Subject                string      `json:"subject" db:"subject"`
@@ -173,18 +173,6 @@ type TicketUpdateRequest struct {
 	TicketLockID      *int    `json:"ticket_lock_id,omitempty"`
 }
 
-// ArticleCreateRequest represents a request to add an article to a ticket.
-type ArticleCreateRequest struct {
-	TicketID             uint     `json:"ticket_id" binding:"required"`
-	ArticleTypeID        int      `json:"article_type_id,omitempty"` // defaults to note-internal
-	SenderTypeID         int      `json:"sender_type_id,omitempty"`  // defaults based on user role
-	IsVisibleForCustomer int      `json:"is_visible_for_customer,omitempty"`
-	Subject              *string  `json:"subject,omitempty"`
-	Body                 string   `json:"body" binding:"required"`
-	BodyType             string   `json:"body_type,omitempty"`   // defaults to text/plain
-	Attachments          []string `json:"attachments,omitempty"` // Base64 encoded files
-}
-
 // TicketListRequest represents query parameters for listing tickets.
 type TicketListRequest struct {
 	Page                int      `json:"page,omitempty" form:"page"`
@@ -215,35 +203,16 @@ type TicketListResponse struct {
 	TotalPages int      `json:"total_pages"`
 }
 
-// Constants for ticket states.
-const (
-	TicketStateNew     = 1
-	TicketStateOpen    = 2
-	TicketStateClosed  = 3
-	TicketStateRemoved = 4
-	TicketStatePending = 5
-)
-
-// Constants for ticket lock states.
+// Constants for ticket_lock_type ids. These ids are identical in OTRS-imported
+// and fresh GoatFlow installs, so they are safe to use as literals.
 const (
 	TicketUnlocked  = 1
 	TicketLocked    = 2
 	TicketTmpLocked = 3
 )
 
-// Constants for article types.
-const (
-	ArticleTypeEmailExternal = 1
-	ArticleTypeEmailInternal = 2
-	ArticleTypePhone         = 3
-	ArticleTypeFax           = 4
-	ArticleTypeSMS           = 5
-	ArticleTypeWebRequest    = 6
-	ArticleTypeNoteInternal  = 7
-	ArticleTypeNoteExternal  = 8
-)
-
-// Constants for sender types.
+// Constants for article_sender_type ids. These ids are identical in
+// OTRS-imported and fresh GoatFlow installs, so they are safe to use as literals.
 const (
 	SenderTypeAgent    = 1
 	SenderTypeSystem   = 2
@@ -255,11 +224,6 @@ const (
 // IsLocked returns true if the ticket is locked.
 func (t *Ticket) IsLocked() bool {
 	return t.TicketLockID != TicketUnlocked
-}
-
-// IsClosed returns true if the ticket is in a closed state.
-func (t *Ticket) IsClosed() bool {
-	return t.State != nil && t.State.TypeID == TicketStateClosed
 }
 
 // IsArchived returns true if the ticket is archived.
@@ -331,19 +295,9 @@ func DerefString(p *string) string {
 	return *p
 }
 
-// ValidateTicketState validates that a state ID is valid.
-func ValidateTicketState(stateID uint) bool {
-	return stateID >= TicketStateNew && stateID <= TicketStatePending
-}
-
 // ValidateTicketLock validates that a lock ID is valid.
 func ValidateTicketLock(lockID int) bool {
 	return lockID >= TicketUnlocked && lockID <= TicketTmpLocked
-}
-
-// ValidateArticleType validates that an article type ID is valid.
-func ValidateArticleType(typeID int) bool {
-	return typeID >= ArticleTypeEmailExternal && typeID <= ArticleTypeNoteExternal
 }
 
 // ValidateSenderType validates that a sender type ID is valid.

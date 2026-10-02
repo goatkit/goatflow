@@ -11,33 +11,52 @@ spec:
   prefix: /api
   middleware:
     - unified_auth
+    - agent
   routes:
     - path: /tickets/:id/attachments
       method: GET
       handler: HandleGetAttachments
+      middleware:
+        - scope_tickets_read
+        - ticket_access_ro
       description: "List attachments for a ticket"
 
     - path: /tickets/:id/attachments
       method: POST
       handler: HandleUploadAttachment
+      middleware:
+        - scope_tickets_write
+        - ticket_access_note
       description: "Upload attachment to a ticket"
 
-    - path: /tickets/:id/attachments/:attachment_id
+    - path: /tickets/:id/articles/:article_id/attachments/:file_id
       method: GET
       handler: HandleDownloadAttachment
-      description: "Download a specific attachment"
+      middleware:
+        - scope_tickets_read
+        - ticket_access_ro
+      description: "Download an attachment of one of the ticket's articles"
 
-    - path: /tickets/:id/attachments/:attachment_id
+    - path: /tickets/:id/articles/:article_id/attachments/:file_id
       method: DELETE
       handler: HandleDeleteAttachment
-      description: "Delete a specific attachment"
+      middleware:
+        - scope_tickets_write
+        - ticket_access_rw
+      description: "Delete an attachment of one of the ticket's articles"
 
-    - path: /tickets/:id/attachments/:attachment_id/thumbnail
+    - path: /tickets/:id/articles/:article_id/attachments/:file_id/thumbnail
       method: GET
       handler: HandleGetThumbnail
-      description: "Get thumbnail/preview for an image attachment"
+      middleware:
+        - scope_tickets_read
+        - ticket_access_ro
+      description: "PNG preview of an attachment (images, PDF page 1, type placeholder otherwise)"
 
-    - path: /tickets/:id/attachments/:attachment_id/view
+    - path: /tickets/:id/articles/:article_id/attachments/:file_id/view
       method: GET
       handler: HandleViewAttachment
-      description: "Inline viewer for common attachment types"
+      middleware:
+        - scope_tickets_read
+        - ticket_access_ro
+      description: "Attachment viewer page; ?raw=1 serves the content for the viewer frame"

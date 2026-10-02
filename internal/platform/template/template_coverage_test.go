@@ -34,13 +34,9 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/dynamic_field_screens.pongo2":         true,
 	"pages/admin/dynamic_fields.pongo2":                true,
 	"pages/admin/dynamic_module.pongo2":                true,
-	"pages/admin/dynamic_test.pongo2":                  true,
 	"pages/admin/email_identities.pongo2":              true,
 	"pages/admin/email_queue.pongo2":                   true,
-	"pages/admin/group_form.pongo2":                    true,
-	"pages/admin/group_members.pongo2":                 true,
 	"pages/admin/group_permissions.pongo2":             true,
-	"pages/admin/group_view.pongo2":                    true,
 	"pages/admin/identity_provider_form.pongo2":        true,
 	"pages/admin/identity_providers.pongo2":            true,
 	"pages/admin/groups.pongo2":                        true,
@@ -55,6 +51,7 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/priority.pongo2":                      true,
 	"pages/admin/queues.pongo2":                        true,
 	"pages/admin/recycle_bin.pongo2":                   true,
+	"pages/admin/reports.pongo2":                       true,
 	"pages/admin/roadmap.pongo2":                       true,
 	"pages/admin/role_permissions.pongo2":              true,
 	"pages/admin/role_users.pongo2":                    true,
@@ -101,6 +98,7 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/webservices.pongo2":                   true,
 	"pages/admin/webservice_form.pongo2":               true,
 	"pages/admin/webservice_history.pongo2":            true,
+	"pages/admin/webhooks.pongo2":                      true,
 	"pages/admin/sessions.pongo2":                      true,
 	"pages/admin/system_maintenance.pongo2":            true,
 	"pages/admin/system_maintenance_form.pongo2":       true,
@@ -111,9 +109,8 @@ var AllPageTemplates = map[string]bool{
 	"pages/plugin_wrapper.pongo2":                      true,
 
 	// Agent templates
-	"pages/agent/queues.pongo2":      true,
-	"pages/agent/ticket_view.pongo2": true,
-	"pages/agent/tickets.pongo2":     true,
+	"pages/agent/queues.pongo2":  true,
+	"pages/agent/tickets.pongo2": true,
 
 	// Customer templates
 	"pages/customer/company_info.pongo2":  true,
@@ -123,17 +120,15 @@ var AllPageTemplates = map[string]bool{
 	"pages/customer/login_2fa.pongo2":     true,
 	"pages/customer/new_ticket.pongo2":    true,
 	"pages/customer/password_form.pongo2": true,
+	"pages/customer/register.pongo2":      true,
 	"pages/customer/profile.pongo2":       true,
 	"pages/customer/ticket_view.pongo2":   true,
 	"pages/customer/tickets.pongo2":       true,
 
 	// Dashboard templates
-	"pages/dashboard.pongo2":          true,
-	"pages/dashboard-simple.pongo2":   true,
-	"pages/dashboard/realtime.pongo2": true,
+	"pages/dashboard.pongo2": true,
 
 	// Queue templates
-	"pages/queue_detail.pongo2":  true,
 	"pages/queues.pongo2":        true,
 	"pages/queues/detail.pongo2": true,
 	"pages/queues/list.pongo2":   true,
@@ -147,13 +142,13 @@ var AllPageTemplates = map[string]bool{
 
 	// Auth/Misc templates
 	"pages/error.pongo2":               true,
+	"pages/forgot_password.pongo2":     true,
 	"pages/login.pongo2":               true,
 	"pages/login_2fa.pongo2":           true,
 	"pages/password_form.pongo2":       true,
 	"pages/profile.pongo2":             true,
-	"pages/register.pongo2":            true,
+	"pages/reset_password.pongo2":      true,
 	"pages/settings/api_tokens.pongo2": true,
-	"pages/under_construction.pongo2":  true,
 }
 
 // =============================================================================
@@ -467,9 +462,14 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 			template: "pages/admin/customer_company_services.pongo2",
 			ctx: func() pongo2.Context {
 				ctx := adminContext()
-				ctx["Company"] = sampleCompany()
-				ctx["Services"] = []map[string]interface{}{sampleService()}
-				ctx["AllServices"] = []map[string]interface{}{sampleService()}
+				ctx["Company"] = map[string]interface{}{"CustomerID": "CUST001", "Name": "Test Company", "ValidID": 1}
+				ctx["CompanyPath"] = "CUST001"
+				ctx["UserCount"] = 1
+				ctx["Saved"] = true
+				ctx["Services"] = []map[string]interface{}{{
+					"ID": 1, "Name": "Email", "Comments": "Mail service", "AssignedCount": 1,
+					"Users": []map[string]interface{}{{"UserID": 7, "Login": "jane", "FullName": "Jane Doe", "Assigned": true}},
+				}}
 				return ctx
 			}(),
 		},
@@ -478,8 +478,18 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 			template: "pages/admin/customer_company_tickets.pongo2",
 			ctx: func() pongo2.Context {
 				ctx := adminContext()
-				ctx["Company"] = sampleCompany()
-				ctx["Tickets"] = []map[string]interface{}{sampleTicket()}
+				ctx["Company"] = map[string]interface{}{"CustomerID": "CUST001", "Name": "Test Company", "ValidID": 2, "ValidName": "invalid"}
+				ctx["CompanyPath"] = "CUST001"
+				ctx["Tickets"] = []map[string]interface{}{{
+					"TN": "2026100110000001", "Title": "Printer down", "State": "open", "StateType": "open",
+					"Priority": "3 normal", "Queue": "Raw", "CustomerUser": "jane", "CreateTime": time.Now(),
+					"AgeValue": 3, "AgeUnit": "hours",
+				}}
+				ctx["Total"] = 51
+				ctx["Page"] = 1
+				ctx["TotalPages"] = 2
+				ctx["PrevPage"] = 0
+				ctx["NextPage"] = 2
 				return ctx
 			}(),
 		},
@@ -488,8 +498,12 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 			template: "pages/admin/customer_company_users.pongo2",
 			ctx: func() pongo2.Context {
 				ctx := adminContext()
-				ctx["Company"] = sampleCompany()
-				ctx["Users"] = []map[string]interface{}{sampleUser()}
+				ctx["Company"] = map[string]interface{}{"CustomerID": "CUST001", "Name": "Test Company", "ValidID": 1}
+				ctx["CompanyPath"] = "CUST001"
+				ctx["Users"] = []map[string]interface{}{{
+					"ID": 7, "Login": "jane", "Email": "jane@example.com", "FirstName": "Jane", "LastName": "Doe",
+					"Phone": "123", "Mobile": "456", "ValidID": 1, "ValidName": "valid", "TicketCount": 4,
+				}}
 				return ctx
 			}(),
 		},
@@ -588,11 +602,6 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 			}(),
 		},
 		{
-			name:     "admin/dynamic_test",
-			template: "pages/admin/dynamic_test.pongo2",
-			ctx:      adminContext(),
-		},
-		{
 			name:     "admin/email_identities",
 			template: "pages/admin/email_identities.pongo2",
 			ctx: func() pongo2.Context {
@@ -612,45 +621,12 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 			}(),
 		},
 		{
-			name:     "admin/group_form",
-			template: "pages/admin/group_form.pongo2",
-			ctx: func() pongo2.Context {
-				ctx := adminContext()
-				ctx["IsNew"] = true
-				ctx["Group"] = sampleGroup()
-				ctx["ValidOptions"] = []map[string]interface{}{{"ID": 1, "Name": "valid"}}
-				return ctx
-			}(),
-		},
-		{
-			name:     "admin/group_members",
-			template: "pages/admin/group_members.pongo2",
-			ctx: func() pongo2.Context {
-				ctx := adminContext()
-				ctx["Group"] = sampleGroup()
-				ctx["Members"] = []map[string]interface{}{sampleUser()}
-				ctx["AllUsers"] = []map[string]interface{}{sampleUser()}
-				ctx["PermissionTypes"] = []string{"ro", "rw", "move_into", "create", "note", "owner", "priority"}
-				return ctx
-			}(),
-		},
-		{
 			name:     "admin/group_permissions",
 			template: "pages/admin/group_permissions.pongo2",
 			ctx: func() pongo2.Context {
 				ctx := adminContext()
 				ctx["Group"] = sampleGroup()
 				ctx["Permissions"] = []map[string]interface{}{samplePermission()}
-				return ctx
-			}(),
-		},
-		{
-			name:     "admin/group_view",
-			template: "pages/admin/group_view.pongo2",
-			ctx: func() pongo2.Context {
-				ctx := adminContext()
-				ctx["Group"] = sampleGroup()
-				ctx["Members"] = []map[string]interface{}{sampleUser()}
 				return ctx
 			}(),
 		},
@@ -777,6 +753,11 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 				ctx["entries"] = []map[string]interface{}{}
 				return ctx
 			}(),
+		},
+		{
+			name:     "admin/reports",
+			template: "pages/admin/reports.pongo2",
+			ctx:      adminContext(),
 		},
 		{
 			name:     "admin/roadmap",
@@ -1179,6 +1160,21 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 			ctx:      adminContext(),
 		},
 		{
+			name:     "admin/webhooks",
+			template: "pages/admin/webhooks.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["EventLabels"] = []map[string]interface{}{
+					{"Event": "ticket.created", "Key": "admin.webhooks.events.ticket_created"},
+				}
+				ctx["DefaultRetryCount"] = 3
+				ctx["MaxRetryCount"] = 10
+				ctx["DefaultTimeoutSeconds"] = 10
+				ctx["MaxTimeoutSeconds"] = 60
+				return ctx
+			}(),
+		},
+		{
 			name:     "admin/webservices",
 			template: "pages/admin/webservices.pongo2",
 			ctx: func() pongo2.Context {
@@ -1354,23 +1350,6 @@ func TestAllAgentTemplatesRender(t *testing.T) {
 			}(),
 		},
 		{
-			name:     "agent/ticket_view",
-			template: "pages/agent/ticket_view.pongo2",
-			ctx: func() pongo2.Context {
-				ctx := agentContext()
-				ctx["Ticket"] = sampleTicket()
-				ctx["TicketID"] = 123
-				ctx["Articles"] = []map[string]interface{}{sampleArticle()}
-				ctx["DynamicFields"] = emptySlice()
-				ctx["ArticleTypes"] = []map[string]interface{}{{"ID": 1, "Name": "note-internal"}}
-				ctx["Queues"] = []map[string]interface{}{sampleQueue()}
-				ctx["States"] = []map[string]interface{}{sampleState()}
-				ctx["Priorities"] = []map[string]interface{}{samplePriority()}
-				ctx["CanEdit"] = true
-				return ctx
-			}(),
-		},
-		{
 			name:     "agent/tickets",
 			template: "pages/agent/tickets.pongo2",
 			ctx: func() pongo2.Context {
@@ -1411,7 +1390,11 @@ func TestAllCustomerTemplatesRender(t *testing.T) {
 			template: "pages/customer/company_info.pongo2",
 			ctx: func() pongo2.Context {
 				ctx := customerContext()
-				ctx["Company"] = sampleCompany()
+				ctx["Company"] = map[string]interface{}{
+					"CustomerID": "CUST001", "Name": "Test Company", "Street": "123 Test St", "Zip": "12345",
+					"City": "Test City", "Country": "USA", "URL": "https://example.com",
+				}
+				ctx["UserCount"] = 3
 				return ctx
 			}(),
 		},
@@ -1420,10 +1403,18 @@ func TestAllCustomerTemplatesRender(t *testing.T) {
 			template: "pages/customer/company_users.pongo2",
 			ctx: func() pongo2.Context {
 				ctx := customerContext()
-				ctx["Company"] = sampleCompany()
-				ctx["Users"] = []map[string]interface{}{sampleUser()}
+				ctx["Company"] = map[string]interface{}{"CustomerID": "CUST001", "Name": "Test Company"}
+				ctx["Users"] = []map[string]interface{}{
+					{"FullName": "Ann Example", "Title": "Dr.", "Email": "ann@example.com", "IsSelf": true},
+					{"FullName": "Bob Example", "Title": "", "Email": "bob@example.com", "IsSelf": false},
+				}
 				return ctx
 			}(),
+		},
+		{
+			name:     "customer/company_info_no_company",
+			template: "pages/customer/company_info.pongo2",
+			ctx:      customerContext(),
 		},
 		{
 			name:     "customer/dashboard",
@@ -1538,30 +1529,10 @@ func TestAllDashboardTemplatesRender(t *testing.T) {
 			template: "pages/dashboard.pongo2",
 			ctx: func() pongo2.Context {
 				ctx := baseContext()
-				ctx["Stats"] = map[string]interface{}{
-					"OpenTickets":    10,
-					"PendingTickets": 5,
-					"ClosedToday":    3,
+				ctx["PluginWidgets"] = []map[string]interface{}{
+					{"ID": "recent_tickets", "PluginName": "dashboard-core", "Title": "Recent Tickets", "HTML": "<ul></ul>", "GridW": 6, "GridH": 6},
+					{"ID": "queue_status", "PluginName": "dashboard-core", "Title": "Queue Status", "Unavailable": true, "GridW": 6, "GridH": 4},
 				}
-				ctx["RecentTickets"] = []map[string]interface{}{sampleTicket()}
-				return ctx
-			}(),
-		},
-		{
-			name:     "dashboard-simple",
-			template: "pages/dashboard-simple.pongo2",
-			ctx: func() pongo2.Context {
-				ctx := baseContext()
-				ctx["Stats"] = map[string]interface{}{}
-				return ctx
-			}(),
-		},
-		{
-			name:     "dashboard/realtime",
-			template: "pages/dashboard/realtime.pongo2",
-			ctx: func() pongo2.Context {
-				ctx := baseContext()
-				ctx["Stats"] = map[string]interface{}{}
 				return ctx
 			}(),
 		},
@@ -1595,16 +1566,6 @@ func TestAllQueueTemplatesRender(t *testing.T) {
 		template string
 		ctx      pongo2.Context
 	}{
-		{
-			name:     "queue_detail",
-			template: "pages/queue_detail.pongo2",
-			ctx: func() pongo2.Context {
-				ctx := baseContext()
-				ctx["Queue"] = sampleQueue()
-				ctx["Tickets"] = []map[string]interface{}{sampleTicket()}
-				return ctx
-			}(),
-		},
 		{
 			name:     "queues",
 			template: "pages/queues.pongo2",
@@ -1793,11 +1754,37 @@ func TestAllMiscTemplatesRender(t *testing.T) {
 			}(),
 		},
 		{
-			name:     "register",
-			template: "pages/register.pongo2",
+			name:     "forgot_password",
+			template: "pages/forgot_password.pongo2",
 			ctx: func() pongo2.Context {
 				ctx := baseContext()
-				ctx["Error"] = ""
+				ctx["Portal"] = selfServicePortal()
+				ctx["Error"] = "Enter your username or email address."
+				ctx["Identifier"] = "agent.smith"
+				return ctx
+			}(),
+		},
+		{
+			name:     "reset_password",
+			template: "pages/reset_password.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := baseContext()
+				ctx["Portal"] = selfServicePortal()
+				ctx["Action"] = "/reset-password"
+				ctx["Mode"] = "reset"
+				ctx["RetryURL"] = "/forgot-password"
+				ctx["Token"] = "0123abcd"
+				ctx["Requirements"] = []string{"Minimum 8 characters"}
+				return ctx
+			}(),
+		},
+		{
+			name:     "customer/register",
+			template: "pages/customer/register.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := baseContext()
+				ctx["Portal"] = selfServicePortal()
+				ctx["FirstName"] = "Ada"
 				return ctx
 			}(),
 		},
@@ -1809,11 +1796,6 @@ func TestAllMiscTemplatesRender(t *testing.T) {
 				ctx["Tokens"] = []map[string]interface{}{}
 				return ctx
 			}(),
-		},
-		{
-			name:     "under_construction",
-			template: "pages/under_construction.pongo2",
-			ctx:      baseContext(),
 		},
 		{
 			name:     "plugin_wrapper",

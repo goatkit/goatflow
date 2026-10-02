@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/ticketutil"
 )
@@ -401,10 +403,11 @@ func (s *Service) applyActions(ctx context.Context, ticketID int, actions *model
 		setClauses = append(setClauses, "ticket_state_id = ?")
 		args = append(args, *id)
 		// Check if new state is a pending state
-		stateRepo := repository.NewTicketStateRepository(s.db)
-		if state, err := stateRepo.GetByID(uint(*id)); err == nil && state != nil {
-			newStateIsPending = ticketutil.IsPendingStateType(state.TypeID)
+		typeName, err := lookups.StateTypeNameOfState(ctx, s.db, *id)
+		if err != nil {
+			return fmt.Errorf("failed to resolve state type of state %d: %w", *id, err)
 		}
+		newStateIsPending = lookups.IsPendingStateType(typeName)
 	}
 
 	if id := actions.NewQueueID(); id != nil {
@@ -506,9 +509,9 @@ func (s *Service) applyActions(ctx context.Context, ticketID int, actions *model
 
 		article := &models.Article{
 			TicketID:               ticketID,
-			ArticleTypeID:          10, // note-internal
-			SenderTypeID:           1,  // agent
-			CommunicationChannelID: 1,
+			ArticleTypeID:          constants.ArticleTypeNoteInternal,
+			SenderTypeID:           constants.ArticleSenderAgent,
+			CommunicationChannelID: constants.CommunicationChannelInternal,
 			IsVisibleForCustomer:   0, // Internal note
 			Subject:                subject,
 			Body:                   body,

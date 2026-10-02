@@ -215,6 +215,35 @@ backend:
     service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
 ```
 
+### LDAP / Active Directory Login
+
+Agents can log in with directory credentials. Every `config.ldap.*` value maps to an `LDAP_*`
+variable documented in [docs/LDAP.md](../../docs/LDAP.md); empty values keep GoatFlow's defaults.
+The backend refuses to start when the LDAP settings are invalid.
+
+```yaml
+config:
+  authProviders: ["ldap", "database"]   # AUTH_PROVIDERS
+  ldap:
+    enabled: true
+    type: active_directory
+    host: dc01.corp.example.com
+    useTLS: false
+    useSSL: true
+    caCert: |                           # mounted, passed as LDAP_TLS_CA_FILE
+      -----BEGIN CERTIFICATE-----
+      ...
+      -----END CERTIFICATE-----
+    bindDN: CN=svc-goatflow,OU=Service Accounts,DC=corp,DC=example,DC=com
+    existingSecret: goatflow-ldap       # key: ldap-bind-password
+    baseDN: DC=corp,DC=example,DC=com
+    domain: corp.example.com
+    groupBaseDN: OU=Groups,DC=corp,DC=example,DC=com
+    agentGroups: ["GoatFlow Agents"]
+    adminGroups: ["GoatFlow Admins"]
+    autoCreateUsers: true
+```
+
 ### Extra Resources
 
 Define arbitrary Kubernetes resources with full Helm templating support:
@@ -288,6 +317,9 @@ extraResources:
 | `valkey.enabled` | Deploy Valkey subchart | `true` |
 | `ingress.enabled` | Enable ingress | `false` |
 | `config.logLevel` | Application log level | `info` |
+| `config.authProviders` | Auth provider order (`AUTH_PROVIDERS`), e.g. `["ldap", "database"]` | `[]` (Config.yaml) |
+| `config.ldap.enabled` | Enable LDAP agent login (see `config.ldap.*` in `values.yaml`) | `false` |
+| `config.ldap.existingSecret` | Secret holding the LDAP bind password | `""` |
 | `extraResources` | Additional K8s resources (templated) | `[]` |
 
 See `values.yaml` for full configuration options.

@@ -63,7 +63,7 @@ func TestLoginFormAction(t *testing.T) {
 	asserter.HasFormAction("/api/auth/login")
 	// Login uses hx-boost for progressive enhancement, not hx-post
 	asserter.Contains("hx-boost=\"true\"")
- }
+}
 
 func TestCustomerLoginFormAction(t *testing.T) {
 	t.Parallel()
@@ -76,20 +76,45 @@ func TestCustomerLoginFormAction(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/api/auth/customer/login")
- }
+}
 
-func TestRegisterFormAction(t *testing.T) {
+// selfServicePortal mirrors the portal struct internal/selfservice passes to its pages.
+func selfServicePortal() map[string]interface{} {
+	return map[string]interface{}{
+		"Type":        "customer",
+		"LoginURL":    "/customer/login",
+		"ForgotURL":   "/customer/forgot-password",
+		"ResetURL":    "/customer/reset-password",
+		"RegisterURL": "/customer/register",
+	}
+}
+
+// The self-service pages post plain forms to the routes in routes/selfservice.yaml.
+func TestSelfServiceFormActions(t *testing.T) {
 	t.Parallel()
 	helper := NewTemplateTestHelper(t)
-	ctx := baseContext()
-	ctx["Error"] = ""
 
-	html, err := helper.RenderTemplate("pages/register.pongo2", ctx)
-	require.NoError(t, err)
-
-	asserter := NewHTMLAsserter(t, html)
-	asserter.HasHTMXPost("/api/auth/register")
- }
+	cases := []struct {
+		template string
+		extra    pongo2.Context
+		action   string
+	}{
+		{"pages/forgot_password.pongo2", nil, "/customer/forgot-password"},
+		{"pages/reset_password.pongo2", pongo2.Context{"Action": "/customer/reset-password", "Token": "abc"}, "/customer/reset-password"},
+		{"pages/reset_password.pongo2", pongo2.Context{"Action": "/customer/register/complete", "Token": "abc"}, "/customer/register/complete"},
+		{"pages/customer/register.pongo2", nil, "/customer/register"},
+	}
+	for _, tc := range cases {
+		ctx := baseContext()
+		ctx["Portal"] = selfServicePortal()
+		for k, v := range tc.extra {
+			ctx[k] = v
+		}
+		html, err := helper.RenderTemplate(tc.template, ctx)
+		require.NoError(t, err, tc.template)
+		NewHTMLAsserter(t, html).HasFormAction(tc.action)
+	}
+}
 
 // =============================================================================
 // TICKET TEMPLATES
@@ -109,7 +134,7 @@ func TestNewTicketFormAction(t *testing.T) {
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/api/tickets")
 	asserter.HasHTMXPost("/api/tickets")
- }
+}
 
 func TestTicketDetailNoteForm(t *testing.T) {
 	t.Parallel()
@@ -125,7 +150,7 @@ func TestTicketDetailNoteForm(t *testing.T) {
 	asserter := NewHTMLAsserter(t, html)
 	// Note form should POST to agent ticket note endpoint
 	asserter.HasHTMXPost("/agent/tickets/123/note")
- }
+}
 
 func TestTicketDetailAttachmentForm(t *testing.T) {
 	t.Parallel()
@@ -139,7 +164,7 @@ func TestTicketDetailAttachmentForm(t *testing.T) {
 	asserter := NewHTMLAsserter(t, html)
 	// Attachment upload form
 	asserter.HasHTMXPost("/api/tickets/2025010112345678/attachments")
- }
+}
 
 func TestCustomerNewTicketFormAction(t *testing.T) {
 	t.Parallel()
@@ -155,7 +180,7 @@ func TestCustomerNewTicketFormAction(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/customer/tickets/create")
- }
+}
 
 func TestCustomerTicketReplyFormAction(t *testing.T) {
 	t.Parallel()
@@ -173,7 +198,7 @@ func TestCustomerTicketReplyFormAction(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/customer/tickets/456/reply")
- }
+}
 
 // =============================================================================
 // ADMIN TEMPLATES
@@ -194,7 +219,7 @@ func TestAdminCustomerPortalSettingsForm(t *testing.T) {
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/admin/customer/portal/settings")
 	asserter.HasHTMXPost("/admin/customer/portal/settings")
- }
+}
 
 func TestAdminCustomerCompanyFormCreate(t *testing.T) {
 	t.Parallel()
@@ -211,7 +236,7 @@ func TestAdminCustomerCompanyFormCreate(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/admin/customer/companies")
- }
+}
 
 func TestAdminCustomerCompanyFormEdit(t *testing.T) {
 	t.Parallel()
@@ -228,7 +253,7 @@ func TestAdminCustomerCompanyFormEdit(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/admin/customer/companies/CUST001/edit")
- }
+}
 
 func TestAdminIdentityProviderFormCreate(t *testing.T) {
 	t.Parallel()
@@ -243,7 +268,7 @@ func TestAdminIdentityProviderFormCreate(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.Contains("hx-post=\"/admin/identity-providers\"")
- }
+}
 
 func TestAdminIdentityProviderFormEdit(t *testing.T) {
 	t.Parallel()
@@ -257,7 +282,7 @@ func TestAdminIdentityProviderFormEdit(t *testing.T) {
 	require.NoError(t, err)
 	asserter := NewHTMLAsserter(t, html)
 	asserter.Contains("hx-put=\"/admin/identity-providers/1\"")
- }
+}
 
 func TestAdminEmailQueueRetryForms(t *testing.T) {
 	t.Parallel()
@@ -287,7 +312,7 @@ func TestAdminEmailQueueRetryForms(t *testing.T) {
 	// Individual retry/delete buttons
 	asserter.Contains("hx-post=\"/admin/email-queue/retry/")
 	asserter.Contains("hx-post=\"/admin/email-queue/delete/")
- }
+}
 
 // =============================================================================
 // SEARCH/FILTER FORMS (GET actions - verify they don't accidentally use POST)
@@ -306,7 +331,7 @@ func TestQueuesSearchFormIsGET(t *testing.T) {
 	asserter.HasFormAction("/queues")
 	// Search forms should be GET, not POST
 	asserter.NotContains("hx-post=\"/queues\"")
- }
+}
 
 func TestAdminSLASearchFormIsGET(t *testing.T) {
 	t.Parallel()
@@ -321,7 +346,7 @@ func TestAdminSLASearchFormIsGET(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/admin/sla")
- }
+}
 
 func TestAdminCustomerCompaniesSearchFormIsGET(t *testing.T) {
 	t.Parallel()
@@ -335,7 +360,7 @@ func TestAdminCustomerCompaniesSearchFormIsGET(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/admin/customer/companies")
- }
+}
 
 func TestAgentTicketsSearchFormIsGET(t *testing.T) {
 	t.Parallel()
@@ -351,7 +376,7 @@ func TestAgentTicketsSearchFormIsGET(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/agent/tickets")
- }
+}
 
 func TestCustomerTicketsSearchFormIsGET(t *testing.T) {
 	t.Parallel()
@@ -364,7 +389,7 @@ func TestCustomerTicketsSearchFormIsGET(t *testing.T) {
 
 	asserter := NewHTMLAsserter(t, html)
 	asserter.HasFormAction("/customer/tickets")
- }
+}
 
 // =============================================================================
 // TEMPLATE CONSISTENCY TESTS
@@ -391,7 +416,7 @@ func TestNoMixedHTMXAndTraditionalSubmit(t *testing.T) {
 	// Both action and hx-post should be /api/tickets
 	asserter.HasFormAction("/api/tickets")
 	asserter.HasHTMXPost("/api/tickets")
- }
+}
 
 // =============================================================================
 // ADMIN API PATH PREFIX TESTS
@@ -456,7 +481,7 @@ func TestAdminAPIPathsUseCorrectPrefix(t *testing.T) {
 			}
 		})
 	}
- }
+}
 
 // =============================================================================
 // FORM TEMPLATE TESTS
@@ -468,9 +493,11 @@ func TestAdminAPIPathsUseCorrectPrefix(t *testing.T) {
 // All page templates have basic render coverage in template_coverage_test.go.
 var testedFormTemplates = map[string]bool{
 	// Auth
-	"pages/login.pongo2":          true,
-	"pages/register.pongo2":       true,
-	"pages/customer/login.pongo2": true,
+	"pages/login.pongo2":             true,
+	"pages/customer/login.pongo2":    true,
+	"pages/forgot_password.pongo2":   true,
+	"pages/reset_password.pongo2":    true,
+	"pages/customer/register.pongo2": true,
 
 	// Tickets
 	"pages/tickets/new.pongo2":          true,
@@ -518,6 +545,10 @@ var testedFormTemplates = map[string]bool{
 	"pages/admin/customer_groups.pongo2":         true,
 	"pages/admin/customer_group_edit.pongo2":     true,
 	"pages/admin/customer_group_by_group.pongo2": true,
+
+	// Customer company services matrix; the form post is exercised through the
+	// router in internal/api/admin_customer_company_pages_test.go.
+	"pages/admin/customer_company_services.pongo2": true,
 
 	// Customer User Groups (customer user ↔ group permissions)
 	"pages/admin/customer_user_groups.pongo2":         true,
@@ -593,4 +624,4 @@ func TestFormTemplateCoverage(t *testing.T) {
 	})
 
 	require.NoError(t, err)
- }
+}

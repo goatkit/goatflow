@@ -37,3 +37,37 @@ func TestMapCommunicationChannel(t *testing.T) {
 		}
 	}
 }
+
+// Every type the API accepts and that the schema can represent must read back
+// as itself after being stored as channel + default visibility.
+func TestArticleTypeStorageRoundTrip(t *testing.T) {
+	for _, name := range []string{"email-external", "email-internal", "phone", "note-internal", "note-external", "chat-external", "chat-internal"} {
+		id, ok := ArticleTypeByName(name)
+		if !ok {
+			t.Fatalf("%s: not resolvable", name)
+		}
+		meta := constants.ArticleTypesMetadata[id]
+		got := ArticleTypeFromStorage(MapCommunicationChannel(id), meta.CustomerVisible)
+		if ArticleTypeName(got) != name {
+			t.Errorf("%s: stored then read back as %q", name, ArticleTypeName(got))
+		}
+	}
+}
+
+func TestArticleTypeByName(t *testing.T) {
+	cases := map[string]int{
+		"note":           constants.ArticleTypeNoteInternal,
+		"Email":          constants.ArticleTypeEmailExternal,
+		" note-report ":  constants.ArticleTypeNoteReport,
+		"webrequest":     constants.ArticleTypeWebRequest,
+		"email-internal": constants.ArticleTypeEmailInternal,
+	}
+	for name, want := range cases {
+		if got, ok := ArticleTypeByName(name); !ok || got != want {
+			t.Errorf("%q: got %d,%v want %d", name, got, ok, want)
+		}
+	}
+	if _, ok := ArticleTypeByName("letter"); ok {
+		t.Error("unknown name must not resolve")
+	}
+}

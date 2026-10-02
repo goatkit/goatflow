@@ -9,15 +9,15 @@ func TestSessionManager_CreateAndGet(t *testing.T) {
 	sm := NewSessionManager(5 * time.Minute)
 	bridge := NewAPIBridge()
 
-	session := sm.Create(1, "admin", "Admin", bridge)
+	session := sm.Create("agent:1", bridge)
 	if session == nil {
 		t.Fatal("Expected session to be created")
 	}
 	if session.ID == "" {
 		t.Error("Session should have a non-empty ID")
 	}
-	if session.UserID != 1 {
-		t.Errorf("Session UserID = %d, want 1", session.UserID)
+	if session.Principal != "agent:1" {
+		t.Errorf("Session Principal = %q, want agent:1", session.Principal)
 	}
 	if session.Server == nil {
 		t.Error("Session should have a Server")
@@ -51,7 +51,7 @@ func TestSessionManager_Delete(t *testing.T) {
 	sm := NewSessionManager(5 * time.Minute)
 	bridge := NewAPIBridge()
 
-	session := sm.Create(1, "admin", "Admin", bridge)
+	session := sm.Create("agent:1", bridge)
 	sm.Delete(session.ID)
 
 	got := sm.Get(session.ID)
@@ -67,7 +67,7 @@ func TestSessionManager_Cleanup(t *testing.T) {
 	sm := NewSessionManager(10 * time.Millisecond)
 	bridge := NewAPIBridge()
 
-	sm.Create(1, "admin", "Admin", bridge)
+	sm.Create("agent:1", bridge)
 	if sm.Count() != 1 {
 		t.Fatalf("Expected 1 session, got %d", sm.Count())
 	}
@@ -85,8 +85,8 @@ func TestSessionManager_MultipleSessions(t *testing.T) {
 	sm := NewSessionManager(5 * time.Minute)
 	bridge := NewAPIBridge()
 
-	s1 := sm.Create(1, "user1", "Admin", bridge)
-	s2 := sm.Create(2, "user2", "Agent", bridge)
+	s1 := sm.Create("agent:1", bridge)
+	s2 := sm.Create("agent:2", bridge)
 
 	if sm.Count() != 2 {
 		t.Errorf("Expected 2 sessions, got %d", sm.Count())

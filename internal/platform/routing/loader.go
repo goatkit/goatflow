@@ -254,14 +254,10 @@ func (l *RouteLoader) registerAllRoutes() error {
 
 // registerRouteConfig registers routes from a single configuration.
 func (l *RouteLoader) registerRouteConfig(config *RouteConfig) error {
-	// Create route group
-	var group *gin.RouterGroup
-	if config.Spec.Prefix != "" {
-		group = l.router.Group(config.Spec.Prefix)
-	} else {
-		// Use the router itself as the group
-		group = &l.router.RouterGroup
-	}
+	// Create route group. An empty prefix still gets its own group: calling
+	// Use on the engine's root group would make this config's middleware
+	// apply to every group registered after it.
+	group := l.router.Group(config.Spec.Prefix)
 
 	// Apply group middleware
 	for _, middlewareName := range config.Spec.Middleware {

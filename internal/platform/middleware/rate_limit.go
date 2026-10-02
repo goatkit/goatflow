@@ -43,22 +43,32 @@ func NewRateLimiter() *RateLimiter {
 	return rl
 }
 
-// Allow checks if a request is allowed and consumes a token
+// Allow checks if a request is allowed and consumes a token from a bucket of
+// limit requests per hour.
 func (rl *RateLimiter) Allow(key string, limit int) bool {
+	return rl.AllowPer(key, limit, time.Hour)
+}
+
+// AllowPer checks if a request is allowed and consumes a token from a bucket
+// of limit requests per window. A bucket whose limit or window changed (e.g.
+// a reconfigured plugin UI) adopts the new values.
+func (rl *RateLimiter) AllowPer(key string, limit int, window time.Duration) bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
+	refillRate := float64(limit) / window.Seconds()
 	b, exists := rl.buckets[key]
 	if !exists {
-		// Create new bucket with full tokens
-		// Default: limit requests per hour, refill at limit/3600 per second
 		b = &bucket{
 			tokens:     float64(limit),
 			limit:      float64(limit),
-			refillRate: float64(limit) / 3600.0, // per hour
+			refillRate: refillRate,
 			lastRefill: time.Now(),
 		}
 		rl.buckets[key] = b
+	} else if b.limit != float64(limit) || b.refillRate != refillRate {
+		b.limit = float64(limit)
+		b.refillRate = refillRate
 	}
 
 	// Refill tokens based on time elapsed

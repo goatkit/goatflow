@@ -1,9 +1,13 @@
+// Package client is the GoatFlow REST API client.
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -12,315 +16,258 @@ import (
 	"github.com/goatkit/goatflow/sdk/go/types"
 )
 
-// Client represents the GoatFlow API client
+// Client is a GoatFlow API client. It is safe for concurrent use; SetAuth
+// must not be called while requests are in flight.
 type Client struct {
 	httpClient *resty.Client
 	baseURL    string
 	auth       auth.Authenticator
-	userAgent  string
-	timeout    time.Duration
 
-	// Service clients
-	Tickets   *TicketsService
-	Users     *UsersService
-	Queues    *QueuesService
-	Dashboard *DashboardService
-	LDAP      *LDAPService
-	Webhooks  *WebhooksService
-	Notes     *NotesService
-	Auth      *AuthService
+	Tickets    *TicketsService
+	Articles   *ArticlesService
+	Users      *UsersService
+	Queues     *QueuesService
+	Statistics *StatisticsService
+	Search     *SearchService
+	Webhooks   *WebhooksService
+	Auth       *AuthService
 }
 
-// Config represents client configuration
+// Config configures a Client.
 type Config struct {
-	BaseURL    string
-	Auth       auth.Authenticator
-	UserAgent  string
-	Timeout    time.Duration
+	// BaseURL is the GoatFlow server root, e.g. "https://goatflow.example.com".
+	BaseURL string
+	// Auth supplies credentials; nil sends no Authorization header (only
+	// POST /api/v1/auth/login and /health work without one).
+	Auth      auth.Authenticator
+	UserAgent string
+	// Timeout per request; default 30s.
+	Timeout time.Duration
+	// RetryCount is how often a request is retried after a transport error
+	// (no HTTP response). Default 0: retrying a POST whose response was lost
+	// can create the resource twice.
 	RetryCount int
 	Debug      bool
 }
 
-// NewClient creates a new GoatFlow API client
+// NewClient creates a client.
 func NewClient(config *Config) *Client {
-	if config.UserAgent == "" {
-		config.UserAgent = "goatflow-go-sdk/1.0.0"
+	userAgent := config.UserAgent
+	if userAgent == "" {
+		userAgent = "goatflow-go-sdk/1.0.0"
 	}
-	if config.Timeout == 0 {
-		config.Timeout = 30 * time.Second
+	timeout := config.Timeout
+	if timeout == 0 {
+		timeout = 30 * time.Second
 	}
-	if config.RetryCount == 0 {
-		config.RetryCount = 3
-	}
+	baseURL := strings.TrimRight(config.BaseURL, "/")
 
 	httpClient := resty.New().
-		SetBaseURL(config.BaseURL).
-		SetTimeout(config.Timeout).
+		SetBaseURL(baseURL).
+		SetTimeout(timeout).
 		SetRetryCount(config.RetryCount).
-		SetHeader("User-Agent", config.UserAgent).
+		SetHeader("User-Agent", userAgent).
 		SetHeader("Accept", "application/json").
-		SetHeader("Content-Type", "application/json")
+		SetDebug(config.Debug).
+		// Unauthenticated API calls may be answered with a redirect to the
+		// login page; surface the 3xx instead of decoding the HTML page.
+		SetRedirectPolicy(resty.RedirectPolicyFunc(func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		}))
 
-	if config.Debug {
-		httpClient.SetDebug(true)
-	}
-
-	client := &Client{
-		httpClient: httpClient,
-		baseURL:    config.BaseURL,
-		auth:       config.Auth,
-		userAgent:  config.UserAgent,
-		timeout:    config.Timeout,
-	}
-
-	// Initialize service clients
-	client.Tickets = &TicketsService{client: client}
-	client.Users = &UsersService{client: client}
-	client.Queues = &QueuesService{client: client}
-	client.Dashboard = &DashboardService{client: client}
-	client.LDAP = &LDAPService{client: client}
-	client.Webhooks = &WebhooksService{client: client}
-	client.Notes = &NotesService{client: client}
-	client.Auth = &AuthService{client: client}
-
-	// Set up authentication middleware
-	httpClient.OnBeforeRequest(func(c *resty.Client, req *resty.Request) error {
-		return client.setAuth(req)
-	})
-
-	// Set up error handling middleware
-	httpClient.OnAfterResponse(func(c *resty.Client, resp *resty.Response) error {
-		return client.handleError(resp)
-	})
-
-	return client
+	c := &Client{httpClient: httpClient, baseURL: baseURL, auth: config.Auth}
+	c.Tickets = &TicketsService{client: c}
+	c.Articles = &ArticlesService{client: c}
+	c.Users = &UsersService{client: c}
+	c.Queues = &QueuesService{client: c}
+	c.Statistics = &StatisticsService{client: c}
+	c.Search = &SearchService{client: c}
+	c.Webhooks = &WebhooksService{client: c}
+	c.Auth = &AuthService{client: c}
+	return c
 }
 
-// NewClientWithAPIKey creates a new client with API key authentication
-func NewClientWithAPIKey(baseURL, apiKey string) *Client {
-	return NewClient(&Config{
-		BaseURL: baseURL,
-		Auth:    auth.NewAPIKeyAuth(apiKey),
-	})
+// NewClientWithAPIKey creates a client that authenticates with a GoatFlow
+// API token (gf_...).
+func NewClientWithAPIKey(baseURL, apiToken string) *Client {
+	return NewClient(&Config{BaseURL: baseURL, Auth: auth.NewAPIKeyAuth(apiToken)})
 }
 
-// NewClientWithJWT creates a new client with JWT authentication
+// NewClientWithJWT creates a client that authenticates with a JWT access
+// token from POST /api/v1/auth/login. When expiresAt is less than a minute
+// ahead, the client renews the pair through POST /api/v1/auth/refresh using
+// refreshToken (rotated on every refresh). A zero expiresAt disables renewal.
 func NewClientWithJWT(baseURL, token, refreshToken string, expiresAt time.Time) *Client {
-	return NewClient(&Config{
-		BaseURL: baseURL,
-		Auth:    auth.NewJWTAuth(token, refreshToken, expiresAt),
-	})
+	c := NewClient(&Config{BaseURL: baseURL})
+	c.auth = auth.NewJWTAuth(token, refreshToken, expiresAt, c.Auth.RefreshFunc())
+	return c
 }
 
-// setAuth sets authentication headers on requests
-func (c *Client) setAuth(req *resty.Request) error {
-	if c.auth == nil {
-		return nil
+// Login logs in with an agent's login and password and switches the client
+// to the returned access token, renewed automatically through
+// POST /api/v1/auth/refresh. Like SetAuth it must not be called while
+// requests are in flight.
+func (c *Client) Login(ctx context.Context, login, password string) (*types.TokenPair, error) {
+	pair, err := c.Auth.Login(ctx, login, password)
+	if err != nil {
+		return nil, err
 	}
-
-	// Check if token is expired and refresh if possible
-	if c.auth.IsExpired() {
-		if err := c.auth.Refresh(); err != nil {
-			return fmt.Errorf("failed to refresh authentication: %w", err)
-		}
-	}
-
-	authHeader := c.auth.GetAuthHeader()
-	if authHeader != "" {
-		switch c.auth.Type() {
-		case auth.AuthMethodAPIKey:
-			req.SetHeader("X-API-Key", authHeader)
-		case auth.AuthMethodJWT, auth.AuthMethodOAuth2:
-			req.SetHeader("Authorization", authHeader)
-		}
-	}
-
-	return nil
+	c.auth = auth.NewJWTAuth(pair.AccessToken, pair.RefreshToken, pair.ExpiresAt(time.Now()), c.Auth.RefreshFunc())
+	return pair, nil
 }
 
-// handleError processes API error responses
-func (c *Client) handleError(resp *resty.Response) error {
-	if resp.IsSuccess() {
-		return nil
-	}
-
-	// Try to parse error response
-	var apiResp types.APIResponse
-	if err := json.Unmarshal(resp.Body(), &apiResp); err == nil {
-		if !apiResp.Success && apiResp.Error != "" {
-			return errors.NewAPIError(resp.StatusCode(), apiResp.Error, "", apiResp.Message)
-		}
-	}
-
-	// Try to parse error details
-	var errorResp types.ErrorResponse
-	if err := json.Unmarshal(resp.Body(), &errorResp); err == nil {
-		return errors.NewAPIError(resp.StatusCode(), errorResp.Message, "", errorResp.Error)
-	}
-
-	// Fallback to status code based errors
-	switch resp.StatusCode() {
-	case 401:
-		return errors.ErrUnauthorized
-	case 403:
-		return errors.ErrForbidden
-	case 404:
-		return errors.ErrNotFound
-	case 429:
-		return errors.ErrRateLimited
-	case 500:
-		return errors.ErrInternalServer
-	default:
-		return errors.NewAPIError(resp.StatusCode(), "Unknown error", "", string(resp.Body()))
-	}
-}
-
-// SetAuth updates the client's authentication
+// SetAuth replaces the client's credentials.
 func (c *Client) SetAuth(authenticator auth.Authenticator) {
 	c.auth = authenticator
 }
 
-// SetTimeout updates the client's timeout
-func (c *Client) SetTimeout(timeout time.Duration) {
-	c.timeout = timeout
-	c.httpClient.SetTimeout(timeout)
-}
-
-// SetRetryCount updates the client's retry count
-func (c *Client) SetRetryCount(count int) {
-	c.httpClient.SetRetryCount(count)
-}
-
-// SetDebug enables or disables debug mode
-func (c *Client) SetDebug(debug bool) {
-	c.httpClient.SetDebug(debug)
-}
-
-// Get performs a GET request
+// Get sends a GET request and decodes the response into result (nil to
+// discard). Like all methods it unwraps the {"success": true, "data": ...}
+// envelope and returns *errors.APIError for error responses.
 func (c *Client) Get(ctx context.Context, path string, result interface{}) error {
-	resp, err := c.httpClient.R().
-		SetContext(ctx).
-		SetResult(result).
-		Get(path)
-
-	if err != nil {
-		return &errors.NetworkError{
-			Operation: "GET",
-			URL:       c.baseURL + path,
-			Err:       err,
-		}
-	}
-
-	return c.handleResponse(resp, result)
+	_, err := c.do(ctx, http.MethodGet, path, nil, nil, result)
+	return err
 }
 
-// Post performs a POST request
-func (c *Client) Post(ctx context.Context, path string, body interface{}, result interface{}) error {
-	req := c.httpClient.R().SetContext(ctx)
-
-	if body != nil {
-		req.SetBody(body)
-	}
-
-	if result != nil {
-		req.SetResult(result)
-	}
-
-	resp, err := req.Post(path)
-	if err != nil {
-		return &errors.NetworkError{
-			Operation: "POST",
-			URL:       c.baseURL + path,
-			Err:       err,
-		}
-	}
-
-	return c.handleResponse(resp, result)
+// Post sends a POST request with a JSON body (nil for none).
+func (c *Client) Post(ctx context.Context, path string, body, result interface{}) error {
+	_, err := c.do(ctx, http.MethodPost, path, nil, body, result)
+	return err
 }
 
-// Put performs a PUT request
-func (c *Client) Put(ctx context.Context, path string, body interface{}, result interface{}) error {
-	req := c.httpClient.R().SetContext(ctx)
-
-	if body != nil {
-		req.SetBody(body)
-	}
-
-	if result != nil {
-		req.SetResult(result)
-	}
-
-	resp, err := req.Put(path)
-	if err != nil {
-		return &errors.NetworkError{
-			Operation: "PUT",
-			URL:       c.baseURL + path,
-			Err:       err,
-		}
-	}
-
-	return c.handleResponse(resp, result)
+// Put sends a PUT request with a JSON body.
+func (c *Client) Put(ctx context.Context, path string, body, result interface{}) error {
+	_, err := c.do(ctx, http.MethodPut, path, nil, body, result)
+	return err
 }
 
-// Delete performs a DELETE request
+// Delete sends a DELETE request.
 func (c *Client) Delete(ctx context.Context, path string, result interface{}) error {
-	req := c.httpClient.R().SetContext(ctx)
-
-	if result != nil {
-		req.SetResult(result)
-	}
-
-	resp, err := req.Delete(path)
-	if err != nil {
-		return &errors.NetworkError{
-			Operation: "DELETE",
-			URL:       c.baseURL + path,
-			Err:       err,
-		}
-	}
-
-	return c.handleResponse(resp, result)
+	_, err := c.do(ctx, http.MethodDelete, path, nil, nil, result)
+	return err
 }
 
-// handleResponse processes successful responses
-func (c *Client) handleResponse(resp *resty.Response, result interface{}) error {
-	if !resp.IsSuccess() {
-		return nil // Error already handled by middleware
+// Health returns GET /health. An unhealthy server answers 503, which is
+// returned as *errors.APIError.
+func (c *Client) Health(ctx context.Context) (*types.Health, error) {
+	var health types.Health
+	if _, err := c.do(ctx, http.MethodGet, "/health", nil, nil, &health); err != nil {
+		return nil, err
 	}
-
-	// If result is provided, it's already unmarshaled by resty
-	if result != nil {
-		return nil
-	}
-
-	// Try to parse as standard API response
-	var apiResp types.APIResponse
-	if err := json.Unmarshal(resp.Body(), &apiResp); err == nil {
-		if !apiResp.Success && apiResp.Error != "" {
-			return errors.NewAPIError(resp.StatusCode(), apiResp.Error, "", apiResp.Message)
-		}
-	}
-
-	return nil
+	return &health, nil
 }
 
-// Ping checks if the API is reachable
+// Ping returns nil when the server reports itself healthy.
 func (c *Client) Ping(ctx context.Context) error {
-	resp, err := c.httpClient.R().
-		SetContext(ctx).
-		Get("/api/v1/health")
+	_, err := c.Health(ctx)
+	return err
+}
 
+// do performs an authenticated request; see send.
+func (c *Client) do(ctx context.Context, method, path string, query url.Values, body, out interface{}) (*types.Pagination, error) {
+	return c.send(ctx, method, path, query, body, out, true)
+}
+
+// send performs a request and decodes its response into out (if non-nil). It
+// returns the envelope's pagination, when the response has one. With
+// authenticate false no Authorization header is sent (login and refresh,
+// which must not trigger a token refresh themselves).
+func (c *Client) send(ctx context.Context, method, path string, query url.Values, body, out interface{}, authenticate bool) (*types.Pagination, error) {
+	req := c.httpClient.R().SetContext(ctx)
+	if authenticate && c.auth != nil {
+		header, err := c.auth.AuthorizationHeader(ctx)
+		if err != nil {
+			return nil, err
+		}
+		req.SetHeader("Authorization", header)
+	}
+	if len(query) > 0 {
+		req.SetQueryParamsFromValues(query)
+	}
+	if body != nil {
+		req.SetHeader("Content-Type", "application/json").SetBody(body)
+	}
+
+	resp, err := req.Execute(method, path)
 	if err != nil {
-		return &errors.NetworkError{
-			Operation: "PING",
-			URL:       c.baseURL + "/api/v1/health",
-			Err:       err,
+		return nil, &errors.NetworkError{Method: method, URL: c.baseURL + path, Err: err}
+	}
+	return decodeResponse(resp.StatusCode(), resp.Body(), out)
+}
+
+// decodeResponse turns an API response into out or an error.
+//
+// GoatFlow wraps most responses in {"success": bool, "data": ..., "error": ...}
+// (paginated lists add "pagination"). Some endpoints answer
+// {"success": true, ...fields} without "data", and some send a bare object;
+// both are decoded as a whole. Errors are {"error": "message"} or
+// {"error": {"code": "...", "message": "..."}}, with or without "success".
+func decodeResponse(status int, body []byte, out interface{}) (*types.Pagination, error) {
+	body = bytes.TrimSpace(body)
+	var fields map[string]json.RawMessage
+	isObject := len(body) > 0 && body[0] == '{' && json.Unmarshal(body, &fields) == nil
+
+	success, hasSuccess := boolField(fields, "success")
+	if status < 200 || status > 299 || (hasSuccess && !success) {
+		return nil, apiError(status, body, fields, isObject)
+	}
+
+	var pagination *types.Pagination
+	if raw, ok := fields["pagination"]; ok {
+		pagination = &types.Pagination{}
+		if err := json.Unmarshal(raw, pagination); err != nil {
+			return nil, &errors.DecodeError{StatusCode: status, Body: string(body), Err: err}
 		}
 	}
 
-	if !resp.IsSuccess() {
-		return errors.NewAPIError(resp.StatusCode(), "Health check failed", "", string(resp.Body()))
+	if out == nil || len(body) == 0 {
+		return pagination, nil
 	}
+	payload := body
+	if data, ok := fields["data"]; ok && hasSuccess {
+		payload = data
+	}
+	if err := json.Unmarshal(payload, out); err != nil {
+		return nil, &errors.DecodeError{StatusCode: status, Body: string(body), Err: err}
+	}
+	return pagination, nil
+}
 
-	return nil
+func boolField(fields map[string]json.RawMessage, key string) (value, ok bool) {
+	raw, present := fields[key]
+	if !present {
+		return false, false
+	}
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return false, false
+	}
+	return value, true
+}
+
+func apiError(status int, body []byte, fields map[string]json.RawMessage, isObject bool) *errors.APIError {
+	e := &errors.APIError{StatusCode: status}
+	if raw, ok := fields["error"]; ok {
+		var structured struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		}
+		if json.Unmarshal(raw, &e.Message) != nil && json.Unmarshal(raw, &structured) == nil {
+			e.Code, e.Message = structured.Code, structured.Message
+		}
+	}
+	if e.Message == "" {
+		if raw, ok := fields["message"]; ok {
+			_ = json.Unmarshal(raw, &e.Message) //nolint:errcheck // a non-string message is ignored
+		}
+	}
+	if e.Message == "" && (status < 200 || status > 299) {
+		e.Message = http.StatusText(status)
+	}
+	if e.Message == "" {
+		e.Message = "request failed"
+	}
+	if !isObject {
+		e.Body = string(body)
+	}
+	return e
 }

@@ -44,7 +44,16 @@ func createTestRole(t *testing.T, name string) (int, bool) {
 
 	id := int(result)
 	t.Cleanup(func() {
-		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM roles WHERE id = ?`), id)
+		// Permission and membership rows reference the role: delete them first.
+		for _, q := range []string{
+			`DELETE FROM group_role WHERE role_id = ?`,
+			`DELETE FROM role_user WHERE role_id = ?`,
+			`DELETE FROM roles WHERE id = ?`,
+		} {
+			if _, err := db.Exec(database.ConvertPlaceholders(q), id); err != nil {
+				t.Errorf("cleanup role %d: %s: %v", id, q, err)
+			}
+		}
 	})
 
 	return id, true

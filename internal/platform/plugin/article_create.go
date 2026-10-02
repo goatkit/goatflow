@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -71,9 +72,9 @@ func (h *ProdHostAPI) CreateArticle(ctx context.Context, ticketID, createdBy int
 	id, err := database.GetAdapter().InsertWithReturningTx(tx, `
 		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id,
 			is_visible_for_customer, create_time, create_by, change_time, change_by)
-		VALUES (?, 1, 3, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
+		VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
 		RETURNING id`,
-		ticketID, visible, createdBy, createdBy)
+		ticketID, constants.ArticleSenderAgent, constants.CommunicationChannelInternal, visible, createdBy, createdBy)
 	if err != nil {
 		return 0, fmt.Errorf("insert article: %w", err)
 	}

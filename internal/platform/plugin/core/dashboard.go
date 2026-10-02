@@ -100,7 +100,7 @@ func (p *DashboardPlugin) handleRecentTickets(ctx context.Context, args json.Raw
 		// Unauthenticated: no tickets.
 		rows = nil
 	} else if groupIDs, isAdmin, gErr := p.userEffectiveGroupIDs(ctx, userID); gErr != nil {
-		err = gErr
+		return nil, gErr
 	} else if isAdmin {
 		// Admin sees all recent tickets.
 		rows, err = p.host.DBQuery(ctx, `
@@ -147,11 +147,14 @@ func (p *DashboardPlugin) handleRecentTickets(ctx context.Context, args json.Raw
 			LIMIT 5`
 		rows, err = p.host.DBQuery(ctx, query, argsList...)
 	}
+	if err != nil {
+		return nil, fmt.Errorf("recent tickets: %w", err)
+	}
 
 	var html strings.Builder
 	html.WriteString(`<ul role="list" class="-my-5 divide-y" style="border-color: var(--gk-border-default);">`)
 
-	if err != nil || len(rows) == 0 {
+	if len(rows) == 0 {
 		noTickets := p.host.Translate(ctx, "dashboard.no_recent_tickets")
 		if noTickets == "" {
 			noTickets = "No recent tickets"
@@ -173,8 +176,8 @@ func (p *DashboardPlugin) handleRecentTickets(ctx context.Context, args json.Raw
 			customer := toString(row["customer_user_id"])
 
 			// Truncate title if too long
-			if len(title) > 50 {
-				title = title[:47] + "..."
+			if r := []rune(title); len(r) > 50 {
+				title = string(r[:47]) + "..."
 			}
 
 			// Priority badge style (matches static Recent Tickets)
@@ -227,7 +230,7 @@ func (p *DashboardPlugin) handleRecentTickets(ctx context.Context, args json.Raw
 						</div>
 					</div>
 				</li>`,
-				ticketNum,
+				escapeHTML(ticketNum),
 				escapeHTML(ticketNum), escapeHTML(title),
 				priorityStyle, escapeHTML(priority),
 				statusStyle, escapeHTML(status),
@@ -283,7 +286,7 @@ func (p *DashboardPlugin) handleQueueStatus(ctx context.Context, args json.RawMe
 	if userID <= 0 {
 		rows = nil
 	} else if groupIDs, isAdmin, gErr := p.userEffectiveGroupIDs(ctx, userID); gErr != nil {
-		err = gErr
+		return nil, gErr
 	} else if isAdmin {
 		// Admin sees all queues.
 		rows, err = p.host.DBQuery(ctx, query+`
@@ -307,10 +310,13 @@ func (p *DashboardPlugin) handleQueueStatus(ctx context.Context, args json.RawMe
 			LIMIT 10
 		`, argsList...)
 	}
+	if err != nil {
+		return nil, fmt.Errorf("queue status: %w", err)
+	}
 
 	var html strings.Builder
 
-	if err != nil || len(rows) == 0 {
+	if len(rows) == 0 {
 		noQueues := p.host.Translate(ctx, "dashboard.no_queues_assigned")
 		if noQueues == "" {
 			noQueues = "No queues available"
@@ -343,8 +349,8 @@ func (p *DashboardPlugin) handleQueueStatus(ctx context.Context, args json.RawMe
 
 			// Truncate long queue names
 			displayName := queueName
-			if len(displayName) > 35 {
-				displayName = displayName[:32] + "..."
+			if r := []rune(displayName); len(r) > 35 {
+				displayName = string(r[:32]) + "..."
 			}
 
 			queueURL := fmt.Sprintf("/queues/%d", queueID)
@@ -427,25 +433,26 @@ func widgetArgsUserID(args json.RawMessage) int {
 	return 0
 }
 
-// userEffectiveGroupIDs returns the set of group IDs the user has 'rw' access
-// to, mirroring QueueAccessService.GetUserEffectiveGroupIDs (direct group_user
-// plus role_user -> group_role). Returns ok=false if the user is admin (admin
-// bypasses queue RBAC and sees everything) or on a query error.
+// userEffectiveGroupIDs returns the set of group IDs the user has 'rw' or
+// 'ro' access to, mirroring QueueAccessService.GetUserEffectiveGroupIDs
+// (direct group_user plus role_user -> group_role). isAdmin is true for members
+// of the admin group, who bypass queue RBAC and see everything. Query failures
+// are returned, never treated as "no access" or "admin".
 func (p *DashboardPlugin) userEffectiveGroupIDs(ctx context.Context, userID int) ([]int, bool, error) {
 	if userID <= 0 {
 		return nil, false, nil
 	}
-	// Admin bypass.
 	admRows, err := p.host.DBQuery(ctx, `
 		SELECT COUNT(*) as c
 		FROM group_user gu
 		JOIN `+"`groups`"+` g ON gu.group_id = g.id
 		WHERE gu.user_id = ? AND g.name = 'admin' AND g.valid_id = 1
 	`, userID)
-	if err == nil && len(admRows) > 0 {
-		if toInt(admRows[0]["c"]) > 0 {
-			return nil, true, nil
-		}
+	if err != nil {
+		return nil, false, fmt.Errorf("admin group check: %w", err)
+	}
+	if len(admRows) > 0 && toInt(admRows[0]["c"]) > 0 {
+		return nil, true, nil
 	}
 
 	rows, err := p.host.DBQuery(ctx, `
@@ -468,7 +475,7 @@ func (p *DashboardPlugin) userEffectiveGroupIDs(ctx context.Context, userID int)
 		  AND gr.permission_value = 1
 	`, userID, userID)
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("effective groups: %w", err)
 	}
 
 	seen := make(map[int]struct{})

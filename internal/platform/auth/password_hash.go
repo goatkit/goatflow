@@ -2,181 +2,160 @@ package auth
 
 import (
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
-	"fmt"
+	"errors"
+	"log"
 	"os"
+	"strconv"
 	"strings"
+	"sync"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-// PasswordHashType represents the hashing algorithm to use.
+// PasswordHashType is the algorithm used to create new password hashes.
 type PasswordHashType string
 
 const (
+	// HashTypeBcrypt is the default: salted, adaptive bcrypt.
 	HashTypeBcrypt PasswordHashType = "bcrypt"
+	// HashTypeSHA256 is OTRS's unsalted sha2 format (64 hex chars). Only for
+	// running side by side with an OTRS that must read the same user tables.
 	HashTypeSHA256 PasswordHashType = "sha256"
-	HashTypeSHA512 PasswordHashType = "sha512"
-	HashTypeMD5    PasswordHashType = "md5"
-	HashTypeAuto   PasswordHashType = "auto" // Auto-detect from hash format
 )
 
-// PasswordHasher handles password hashing and verification.
+// Environment variables that configure password hashing.
+const (
+	// EnvPasswordHashType selects the algorithm for new hashes (bcrypt|sha256).
+	EnvPasswordHashType = "PASSWORD_HASH_TYPE"
+	// EnvMigratePasswordHashes, when true, rehashes a password with the
+	// configured algorithm on successful login if the stored hash uses another.
+	EnvMigratePasswordHashes = "MIGRATE_PASSWORD_HASHES"
+)
+
+// ErrPasswordTooLong is returned by HashPassword when bcrypt is configured and
+// the password exceeds bcrypt's 72-byte input limit.
+var ErrPasswordTooLong = errors.New("password must be at most 72 bytes")
+
+var unknownHashTypeWarned sync.Map
+
+// PasswordHasher is the single place that creates and verifies password hashes
+// for agents (users.pw) and customers (customer_user.pw). Its configuration is
+// read once at construction and never mutated, so it is safe for concurrent use.
 type PasswordHasher struct {
-	defaultType PasswordHashType
+	hashType PasswordHashType
+	migrate  bool
 }
 
-// NewPasswordHasher creates a new password hasher.
+// NewPasswordHasher returns a hasher configured from PASSWORD_HASH_TYPE
+// (default bcrypt) and MIGRATE_PASSWORD_HASHES (default false).
 func NewPasswordHasher() *PasswordHasher {
-	// Get hash type from environment, default to SHA256 for OTRS compatibility
-	hashType := os.Getenv("PASSWORD_HASH_TYPE")
-	if hashType == "" {
-		hashType = "sha256" // Default to OTRS-compatible SHA256
-	}
-
+	migrate, _ := strconv.ParseBool(strings.TrimSpace(os.Getenv(EnvMigratePasswordHashes))) //nolint:errcheck // unset/invalid means disabled
 	return &PasswordHasher{
-		defaultType: PasswordHashType(strings.ToLower(hashType)),
+		hashType: ConfiguredPasswordHashType(),
+		migrate:  migrate,
 	}
+}
+
+// ConfiguredPasswordHashType returns the algorithm selected by
+// PASSWORD_HASH_TYPE. Unset means bcrypt; an unknown value logs a warning and
+// falls back to bcrypt rather than to a weaker algorithm.
+func ConfiguredPasswordHashType() PasswordHashType {
+	raw := strings.ToLower(strings.TrimSpace(os.Getenv(EnvPasswordHashType)))
+	switch PasswordHashType(raw) {
+	case "", HashTypeBcrypt:
+		return HashTypeBcrypt
+	case HashTypeSHA256:
+		return HashTypeSHA256
+	default:
+		if _, seen := unknownHashTypeWarned.LoadOrStore(raw, true); !seen {
+			log.Printf("auth: unknown %s=%q, using bcrypt (supported: bcrypt, sha256)", EnvPasswordHashType, raw)
+		}
+		return HashTypeBcrypt
+	}
+}
+
+// HashType returns the algorithm this hasher uses for new hashes.
+func (h *PasswordHasher) HashType() PasswordHashType {
+	return h.hashType
 }
 
 // HashPassword hashes a password using the configured algorithm.
 func (h *PasswordHasher) HashPassword(password string) (string, error) {
-	switch h.defaultType {
-	case HashTypeBcrypt:
-		return h.hashBcrypt(password)
-	case HashTypeSHA256, "": // SHA256 is default for OTRS compatibility
-		return h.hashSHA256(password), nil
-	default:
-		// Fallback to SHA256 for unknown types
-		return h.hashSHA256(password), nil
+	if h.hashType == HashTypeSHA256 {
+		return hashSHA256(password), nil
 	}
-}
-
-// VerifyPassword checks if a password matches the hash.
-func (h *PasswordHasher) VerifyPassword(password, hash string) bool {
-	// Use the consolidated password verification logic
-	return h.verifyPassword(password, hash)
-}
-
-// detectHashType determines the hash algorithm from the hash format
-// detectHashType determines the hash algorithm from the hash format.
-//
-//nolint:unused
-func (h *PasswordHasher) detectHashType(hash string) PasswordHashType {
-	// Bcrypt hashes start with $2a$, $2b$, or $2y$
-	if strings.HasPrefix(hash, "?") {
-		return HashTypeBcrypt
+	b, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if errors.Is(err, bcrypt.ErrPasswordTooLong) {
+		return "", ErrPasswordTooLong
 	}
-
-	// SHA256 produces 64 character hex strings
-	if len(hash) == 64 && isHex(hash) {
-		return HashTypeSHA256
-	}
-
-	// SHA512 produces 128 character hex strings
-	if len(hash) == 128 && isHex(hash) {
-		return HashTypeSHA512
-	}
-
-	// MD5 produces 32 character hex strings
-	if len(hash) == 32 && isHex(hash) {
-		return HashTypeMD5
-	}
-
-	// Default to SHA256 for OTRS compatibility
-	return HashTypeSHA256
-}
-
-// hashBcrypt creates a bcrypt hash.
-func (h *PasswordHasher) hashBcrypt(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err
 	}
-	return string(bytes), nil
+	return string(b), nil
 }
 
-// verifyBcrypt checks a bcrypt hash
-// verifyBcrypt checks a bcrypt hash.
-//
-//nolint:unused
-func (h *PasswordHasher) verifyBcrypt(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
-}
-
-// hashSHA256 creates a SHA256 hash (OTRS compatible).
-func (h *PasswordHasher) hashSHA256(password string) string {
-	hasher := sha256.New()
-	hasher.Write([]byte(password))
-	return hex.EncodeToString(hasher.Sum(nil))
-}
-
-// verifySHA256 checks a SHA256 hash (supports both salted and unsalted formats)
-// verifySHA256 checks a SHA256 hash (supports both salted and unsalted formats).
-//
-//nolint:unused
-func (h *PasswordHasher) verifySHA256(password, hash string) bool {
-	return h.verifyPassword(password, hash)
-}
-
-// This is the consolidated password verification logic.
-func (h *PasswordHasher) verifyPassword(password, hashedPassword string) bool {
-	// Check if it's a bcrypt hash (starts with $2a$, $2b$, or $2y$)
-	if strings.HasPrefix(hashedPassword, "$2a$") || strings.HasPrefix(hashedPassword, "$2b$") || strings.HasPrefix(hashedPassword, "$2y$") {
-		// Use bcrypt to compare
-		err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
-		return err == nil
+// VerifyPassword checks a password against a stored hash in any supported
+// format, regardless of the configured algorithm: bcrypt ($2a$/$2b$/$2y$),
+// salted "sha256$salt$hash", and the OTRS/Znuny formats (see verifyOTRSHash).
+func (h *PasswordHasher) VerifyPassword(password, storedHash string) bool {
+	if isBcryptHash(storedHash) {
+		return bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password)) == nil
 	}
-
-	// Check if it's a salted SHA256 hash (format: sha256$salt$hash)
-	parts := strings.Split(hashedPassword, "$")
-	if len(parts) == 3 && parts[0] == "sha256" {
-		// Extract salt and hash
-		salt := parts[1]
-		expectedHash := parts[2]
-
-		// Hash the password with the salt
-		combined := password + salt
-		hash := sha256.Sum256([]byte(combined))
-		actualHash := hex.EncodeToString(hash[:])
-
-		return actualHash == expectedHash
+	if parts := strings.Split(storedHash, "$"); len(parts) == 3 && parts[0] == "sha256" {
+		sum := sha256.Sum256([]byte(password + parts[1]))
+		return constantTimeEqual(hex.EncodeToString(sum[:]), parts[2])
 	}
-
-	// Otherwise, treat as unsalted SHA256 hash (legacy)
-	return h.hashSHA256(password) == hashedPassword
+	return verifyOTRSHash(password, storedHash)
 }
 
-// isHex checks if a string contains only hexadecimal characters
-// isHex checks if a string contains only hexadecimal characters.
-//
-//nolint:unused
-func isHex(s string) bool {
+// MigratePasswordHash returns a new hash of password in the configured format
+// when MIGRATE_PASSWORD_HASHES is enabled and storedHash is in another format.
+// The caller must already have verified password against storedHash. When no
+// migration is due it returns ("", false, nil).
+func (h *PasswordHasher) MigratePasswordHash(password, storedHash string) (string, bool, error) {
+	if !h.migrate || hashTypeOf(storedHash) == h.hashType {
+		return "", false, nil
+	}
+	newHash, err := h.HashPassword(password)
+	if err != nil {
+		return "", false, err
+	}
+	return newHash, true, nil
+}
+
+// hashTypeOf reports which configurable algorithm produced storedHash, or ""
+// for formats GoatFlow no longer creates (e.g. salted "sha256$salt$hash").
+func hashTypeOf(storedHash string) PasswordHashType {
+	switch {
+	case isBcryptHash(storedHash):
+		return HashTypeBcrypt
+	case len(storedHash) == 64 && isLowerHex(storedHash):
+		return HashTypeSHA256
+	default:
+		return ""
+	}
+}
+
+func isBcryptHash(s string) bool {
+	return strings.HasPrefix(s, "$2a$") || strings.HasPrefix(s, "$2b$") || strings.HasPrefix(s, "$2y$")
+}
+
+func hashSHA256(password string) string {
+	sum := sha256.Sum256([]byte(password))
+	return hex.EncodeToString(sum[:])
+}
+
+func isLowerHex(s string) bool {
 	for _, c := range s {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
 			return false
 		}
 	}
 	return true
 }
 
-// MigratePasswordHash optionally upgrades password hash on successful login.
-func (h *PasswordHasher) MigratePasswordHash(password, oldHash string, targetType PasswordHashType) (string, error) {
-	// Only migrate if configured to do so
-	if os.Getenv("MIGRATE_PASSWORD_HASHES") != "true" {
-		return oldHash, nil
-	}
-
-	// Verify the password is correct first
-	if !h.VerifyPassword(password, oldHash) {
-		return "", fmt.Errorf("password verification failed")
-	}
-
-	// Generate new hash with target algorithm
-	h.defaultType = targetType
-	newHash, err := h.HashPassword(password)
-	h.defaultType = PasswordHashType(os.Getenv("PASSWORD_HASH_TYPE")) // Reset to default
-
-	return newHash, err
+func constantTimeEqual(a, b string) bool {
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }

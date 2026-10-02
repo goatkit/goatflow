@@ -2,6 +2,7 @@ package service
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/goatkit/goatflow/internal/models"
@@ -205,24 +206,19 @@ func (s *PermissionService) GetGroupPermissionMatrix(groupID uint) (*GroupUserMa
 	return matrix, nil
 }
 
-// CloneUserPermissions copies all permissions from one user to another.
-func (s *PermissionService) CloneUserPermissions(sourceUserID, targetUserID uint) error {
-	// Get source user permissions
-	permissions, err := s.permRepo.GetUserPermissions(sourceUserID)
-	if err != nil {
-		return fmt.Errorf("failed to get source permissions: %w", err)
-	}
+// ErrCloneSameUser is returned when the clone source and target are the same user.
+var ErrCloneSameUser = errors.New("source and target user must differ")
 
-	// Apply permissions to target user
-	for groupID, perms := range permissions {
-		for _, permKey := range perms {
-			err = s.permRepo.SetUserGroupPermission(targetUserID, groupID, permKey, 1)
-			if err != nil {
-				return fmt.Errorf("failed to set permission %s for group %d: %w", permKey, groupID, err)
-			}
-		}
+// CloneUserPermissions replaces all group permissions of targetUserID with a
+// copy of sourceUserID's. actorID is recorded in the audit columns. A missing
+// source or target yields repository.ErrPermissionUserNotFound.
+func (s *PermissionService) CloneUserPermissions(sourceUserID, targetUserID, actorID uint) error {
+	if sourceUserID == targetUserID {
+		return ErrCloneSameUser
 	}
-
+	if err := s.permRepo.ReplaceUserPermissionsFrom(sourceUserID, targetUserID, actorID); err != nil {
+		return fmt.Errorf("failed to clone permissions: %w", err)
+	}
 	return nil
 }
 

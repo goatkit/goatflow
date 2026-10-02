@@ -229,8 +229,10 @@ func pluginConfigKey(name string) string {
 // loadPluginEnabled checks if a plugin is enabled via sysconfig.
 // Queries sysconfig_modified then sysconfig_default for an explicit
 // enabled/disabled setting. If a valid "effective_value" is found,
-// that value is authoritative. If no valid sysconfig entry exists
-// (no DB, mock DB, fresh install without seed data), defaults to enabled.
+// that value is authoritative. If no sysconfig entry exists (fresh install
+// without seed data), defaults to enabled. A failed lookup leaves the plugin
+// disabled: treating a DB error as "enabled" would re-enable plugins an
+// administrator switched off.
 //
 // To disable example plugins in production, seed sysconfig_default with
 // effective_value="0" for Plugin::<name>::Enabled during DB migration.
@@ -241,29 +243,25 @@ func (m *Manager) loadPluginEnabled(ctx context.Context, name string) bool {
 
 	key := pluginConfigKey(name)
 
-	// Query sysconfig_modified first (user overrides)
-	query := `
+	// sysconfig_modified (user overrides) first, then sysconfig_default.
+	for _, query := range []string{`
 		SELECT effective_value FROM sysconfig_modified 
 		WHERE name = ? AND is_valid = 1 
 		ORDER BY change_time DESC LIMIT 1
-	`
-	rows, err := m.host.DBQuery(ctx, query, key)
-	if err == nil && len(rows) > 0 {
-		if val, ok := rows[0]["effective_value"].(string); ok {
-			return val != "0" && val != "false"
-		}
-	}
-
-	// Fall back to sysconfig_default
-	query = `
+	`, `
 		SELECT effective_value FROM sysconfig_default 
 		WHERE name = ? AND is_valid = 1 
 		LIMIT 1
-	`
-	rows, err = m.host.DBQuery(ctx, query, key)
-	if err == nil && len(rows) > 0 {
-		if val, ok := rows[0]["effective_value"].(string); ok {
-			return val != "0" && val != "false"
+	`} {
+		rows, err := m.host.DBQuery(ctx, query, key)
+		if err != nil {
+			slog.Error("plugin enabled-state lookup failed; leaving plugin disabled", "plugin", name, "error", err)
+			return false
+		}
+		if len(rows) > 0 {
+			if val, ok := rows[0]["effective_value"].(string); ok {
+				return val != "0" && val != "false"
+			}
 		}
 	}
 
@@ -731,6 +729,15 @@ func (m *Manager) Get(name string) (Plugin, bool) {
 		return nil, false
 	}
 	return rp.plugin, true
+}
+
+// IsRegistered reports whether a plugin is in the registry, enabled or not.
+func (m *Manager) IsRegistered(name string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	_, exists := m.plugins[name]
+	return exists
 }
 
 // SkipsOrgInjection returns true if the named plugin has opted out of

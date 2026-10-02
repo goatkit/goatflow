@@ -42,6 +42,7 @@ func HandleAPIQueueGet(c *gin.Context) {
 		ID              int
 		Name            string
 		GroupID         int
+		GroupName       sql.NullString
 		SystemAddressID sql.NullInt32
 		SalutationID    sql.NullInt32
 		SignatureID     sql.NullInt32
@@ -53,13 +54,15 @@ func HandleAPIQueueGet(c *gin.Context) {
 	}
 
 	err = db.QueryRow(database.ConvertPlaceholders(`
-		SELECT id, name, group_id, system_address_id,
-		       salutation_id, signature_id,
-		       comments, unlock_timeout,
-		       follow_up_id, follow_up_lock,
-		       valid_id
-		FROM queue WHERE id = ?
-	`), id).Scan(&queue.ID, &queue.Name, &queue.GroupID, &queue.SystemAddressID,
+		SELECT q.id, q.name, q.group_id, g.name, q.system_address_id,
+		       q.salutation_id, q.signature_id,
+		       q.comments, q.unlock_timeout,
+		       q.follow_up_id, q.follow_up_lock,
+		       q.valid_id
+		FROM queue q
+		LEFT JOIN groups g ON g.id = q.group_id
+		WHERE q.id = ?
+	`), id).Scan(&queue.ID, &queue.Name, &queue.GroupID, &queue.GroupName, &queue.SystemAddressID,
 		&queue.SalutationID, &queue.SignatureID,
 		&queue.Comments, &queue.UnlockTimeout,
 		&queue.FollowUpID, &queue.FollowUpLock,
@@ -70,32 +73,13 @@ func HandleAPIQueueGet(c *gin.Context) {
 		return
 	}
 
-	groups := make([]gin.H, 0)
-	groupRows, err := db.Query(database.ConvertPlaceholders(`
-		SELECT g.id, g.name
-		FROM groups g
-		INNER JOIN queue_group qg ON g.id = qg.group_id
-		WHERE qg.queue_id = ?
-		ORDER BY g.name
-	`), queue.ID)
-	if err == nil {
-		defer groupRows.Close()
-		for groupRows.Next() {
-			var gid int
-			var gname string
-			if scanErr := groupRows.Scan(&gid, &gname); scanErr == nil {
-				groups = append(groups, gin.H{"id": gid, "name": gname})
-			}
-		}
-		_ = groupRows.Err() //nolint:errcheck // Check for iteration errors
-	}
-
 	response := gin.H{
-		"id":       queue.ID,
-		"name":     queue.Name,
-		"group_id": queue.GroupID,
-		"valid_id": queue.ValidID,
-		"groups":   groups,
+		"id":         queue.ID,
+		"name":       queue.Name,
+		"group_id":   queue.GroupID,
+		"group_name": queue.GroupName.String,
+		"valid_id":   queue.ValidID,
+		"groups":     queueGroupList(queue.GroupID, queue.GroupName.String),
 	}
 	if queue.SystemAddressID.Valid {
 		response["system_address_id"] = queue.SystemAddressID.Int32

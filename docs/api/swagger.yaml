@@ -145,9 +145,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Exchange a refresh token for a new access token
+      description: Exchange a refresh token (from login or a previous refresh) for
+        a new access token and refresh token. The account is reloaded, so role and
+        admin flag are current; disabled or deleted accounts are rejected.
       parameters:
-      - description: Refresh token
+      - description: 'Refresh token: {\'
         in: body
         name: token
         required: true
@@ -157,49 +159,22 @@ paths:
       - application/json
       responses:
         "200":
-          description: New access token
+          description: 'Same body as login: user, access_token, refresh_token, token_type,
+            expires_in, refresh_expires_in'
           schema:
             additionalProperties: true
             type: object
         "400":
-          description: Invalid request
+          description: Missing refresh_token
           schema:
             additionalProperties: true
             type: object
         "401":
-          description: Invalid or expired refresh token
+          description: Invalid, expired or revoked-account refresh token
           schema:
             additionalProperties: true
             type: object
       summary: Refresh token
-      tags:
-      - Authentication
-  /auth/register:
-    post:
-      consumes:
-      - application/json
-      description: Register a new user (if self-registration is enabled)
-      parameters:
-      - description: User registration data
-        in: body
-        name: user
-        required: true
-        schema:
-          type: object
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Registered user
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid request or registration disabled
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Register user
       tags:
       - Authentication
   /groups:
@@ -765,14 +740,15 @@ paths:
     post:
       consumes:
       - application/json
-      description: Assign a group to a queue
+      description: Make the given group the queue's permission group (queue.group_id),
+        replacing the current one. A queue has exactly one group.
       parameters:
       - description: Queue ID
         in: path
         name: id
         required: true
         type: integer
-      - description: Group assignment (group_id, permission)
+      - description: Group assignment (group_id)
         in: body
         name: group
         required: true
@@ -787,7 +763,7 @@ paths:
             additionalProperties: true
             type: object
         "400":
-          description: Invalid request
+          description: Invalid request or group
           schema:
             additionalProperties: true
             type: object
@@ -796,16 +772,23 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "404":
+          description: Queue not found
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
-      summary: Assign group to queue
+      summary: Set queue group
       tags:
       - Queues
   /queues/{id}/groups/{group_id}:
     delete:
       consumes:
       - application/json
-      description: Remove a group assignment from a queue
+      description: A queue has exactly one group, which cannot be removed. Returns
+        409 for the queue's group and 404 for any other group. Use POST /queues/{id}/groups
+        to change it.
       parameters:
       - description: Queue ID
         in: path
@@ -820,24 +803,24 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: Group removed
-          schema:
-            additionalProperties: true
-            type: object
         "401":
           description: Unauthorized
           schema:
             additionalProperties: true
             type: object
         "404":
-          description: Not found
+          description: Queue not found or group not assigned
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Queue must keep its group
           schema:
             additionalProperties: true
             type: object
       security:
       - BearerAuth: []
-      summary: Remove group from queue
+      summary: Remove group from queue (always rejected)
       tags:
       - Queues
   /queues/{id}/stats:
@@ -1086,22 +1069,290 @@ paths:
       summary: Reindex search
       tags:
       - Search
-  /search/suggestions:
+  /search/saved:
     get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: {searches: [{name, type}], total}}'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List saved searches
+      tags:
+      - Search
+    post:
       consumes:
       - application/json
-      description: Get autocomplete suggestions for search
       parameters:
-      - description: Search query prefix
-        in: query
-        name: q
+      - description: '{name, type: TicketSearch (optional), parameters: {<search parameter>:
+          string | [string]}}'
+        in: body
+        name: search
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: '{success, data: {name, type, parameters}}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid name or parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Name already used
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create saved search
+      tags:
+      - Search
+  /search/saved/{name}:
+    delete:
+      parameters:
+      - description: Saved search name
+        in: path
+        name: name
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete saved search
+      tags:
+      - Search
+    get:
+      parameters:
+      - description: Saved search name
+        in: path
+        name: name
         required: true
         type: string
       produces:
       - application/json
       responses:
         "200":
-          description: Suggestions
+          description: '{success, data: {name, type, parameters, ignored_parameters}}'
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get saved search
+      tags:
+      - Search
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Saved search name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: '{parameters: {<search parameter>: string | [string]}}'
+        in: body
+        name: search
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: {name, type, parameters}}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update saved search
+      tags:
+      - Search
+  /search/saved/{name}/execute:
+    post:
+      parameters:
+      - description: Saved search name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: {name, parameters, ignored_parameters, tickets,
+            pagination}}'
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Execute saved search
+      tags:
+      - Search
+  /search/tickets:
+    get:
+      description: Agent ticket search over ticket, article and customer data. Text
+        parameters match case-insensitively anywhere ('*' is a wildcard); ID and state_type
+        parameters take comma-separated or repeated values; created_/changed_ take
+        YYYY-MM-DD (whole day) or timestamps.
+      parameters:
+      - description: Words that must each match ticket number, title, customer, customer
+          user (login, name, email), company name, or an article's subject, body,
+          from or to
+        in: query
+        name: q
+        type: string
+      - description: Ticket number
+        in: query
+        name: tn
+        type: string
+      - description: Ticket title
+        in: query
+        name: title
+        type: string
+      - description: Customer (company) ID
+        in: query
+        name: customer_id
+        type: string
+      - description: Customer user login
+        in: query
+        name: customer_user_login
+        type: string
+      - description: Article From
+        in: query
+        name: from
+        type: string
+      - description: Article To or Cc
+        in: query
+        name: to
+        type: string
+      - description: Article subject
+        in: query
+        name: subject
+        type: string
+      - description: Article body
+        in: query
+        name: body
+        type: string
+      - description: State types (new, open, pending, pending reminder, pending auto,
+          closed, merged, removed)
+        in: query
+        name: state_type
+        type: string
+      - description: State IDs
+        in: query
+        name: state_id
+        type: string
+      - description: Queue IDs
+        in: query
+        name: queue_id
+        type: string
+      - description: Priority IDs
+        in: query
+        name: priority_id
+        type: string
+      - description: Ticket type IDs
+        in: query
+        name: type_id
+        type: string
+      - description: Owner agent IDs
+        in: query
+        name: owner_id
+        type: string
+      - description: Responsible agent IDs
+        in: query
+        name: responsible_id
+        type: string
+      - description: Lock IDs
+        in: query
+        name: lock_id
+        type: string
+      - description: Created at or after
+        in: query
+        name: created_after
+        type: string
+      - description: 'Created before (date: up to the end of that day)'
+        in: query
+        name: created_before
+        type: string
+      - description: Changed at or after
+        in: query
+        name: changed_after
+        type: string
+      - description: 'Changed before (date: up to the end of that day)'
+        in: query
+        name: changed_before
+        type: string
+      - default: created
+        description: created, changed, priority, tn, title
+        in: query
+        name: sort
+        type: string
+      - default: desc
+        description: asc or desc
+        in: query
+        name: order
+        type: string
+      - default: 1
+        description: Page
+        in: query
+        name: page
+        type: integer
+      - default: 25
+        description: Page size (max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{success, data: {tickets, pagination: {page, limit, total}}}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid parameter
           schema:
             additionalProperties: true
             type: object
@@ -1110,9 +1361,14 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "403":
+          description: Customer, or agent without queue access
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
-      summary: Get search suggestions
+      summary: Search tickets
       tags:
       - Search
   /services:
@@ -1240,208 +1496,6 @@ paths:
       summary: Update signature
       tags:
       - Email Identity
-  /slas:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve all SLA definitions
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of SLAs
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List SLAs
-      tags:
-      - SLAs
-    post:
-      consumes:
-      - application/json
-      description: Create a new SLA definition
-      parameters:
-      - description: SLA data
-        in: body
-        name: sla
-        required: true
-        schema:
-          type: object
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created SLA
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create SLA
-      tags:
-      - SLAs
-  /slas/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: Delete an SLA definition
-      parameters:
-      - description: SLA ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: SLA deleted
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: SLA not found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Delete SLA
-      tags:
-      - SLAs
-    get:
-      consumes:
-      - application/json
-      description: Retrieve a single SLA definition
-      parameters:
-      - description: SLA ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: SLA details
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: SLA not found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get SLA by ID
-      tags:
-      - SLAs
-    put:
-      consumes:
-      - application/json
-      description: Update an existing SLA definition
-      parameters:
-      - description: SLA ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: SLA update data
-        in: body
-        name: sla
-        required: true
-        schema:
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Updated SLA
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: SLA not found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update SLA
-      tags:
-      - SLAs
-  /slas/{id}/metrics:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve performance metrics for an SLA
-      parameters:
-      - description: SLA ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: SLA metrics
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: SLA not found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get SLA metrics
-      tags:
-      - SLAs
   /states:
     get:
       consumes:
@@ -1743,174 +1797,6 @@ paths:
       summary: Update system address
       tags:
       - Email Identity
-  /ticket-states:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve all ticket states (alias for /states)
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of states
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List ticket states
-      tags:
-      - States
-    post:
-      consumes:
-      - application/json
-      description: Create a new ticket state
-      parameters:
-      - description: State data
-        in: body
-        name: state
-        required: true
-        schema:
-          type: object
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created state
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create ticket state
-      tags:
-      - States
-  /ticket-states/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: Delete a ticket state
-      parameters:
-      - description: State ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: State deleted
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: State not found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Delete ticket state
-      tags:
-      - States
-    get:
-      consumes:
-      - application/json
-      description: Get a ticket state by ID
-      parameters:
-      - description: State ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: State details
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: State not found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get ticket state
-      tags:
-      - States
-    put:
-      consumes:
-      - application/json
-      description: Update a ticket state
-      parameters:
-      - description: State ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: State update data
-        in: body
-        name: state
-        required: true
-        schema:
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Updated state
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: State not found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update ticket state
-      tags:
-      - States
   /ticket-states/statistics:
     get:
       consumes:
@@ -2305,31 +2191,17 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all articles for a ticket
+      description: Retrieve all articles for a ticket, newest first
       parameters:
       - description: Ticket ID
         in: path
         name: ticket_id
         required: true
         type: integer
-      - default: 1
-        description: Page number
+      - description: Include attachment metadata
         in: query
-        name: page
-        type: integer
-      - default: 20
-        description: Items per page
-        in: query
-        name: per_page
-        type: integer
-      - description: Alias for per_page
-        in: query
-        name: limit
-        type: integer
-      - description: Offset for pagination
-        in: query
-        name: offset
-        type: integer
+        name: include_attachments
+        type: boolean
       produces:
       - application/json
       responses:
@@ -2401,7 +2273,7 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Delete an article from a ticket
+      description: Delete an article, its MIME data and attachments from a ticket
       parameters:
       - description: Ticket ID
         in: path
@@ -2451,6 +2323,10 @@ paths:
         name: id
         required: true
         type: integer
+      - description: Include attachment metadata
+        in: query
+        name: include_attachments
+        type: boolean
       produces:
       - application/json
       responses:
@@ -2477,7 +2353,7 @@ paths:
     put:
       consumes:
       - application/json
-      description: Update an existing article
+      description: Update the subject and/or body of an existing article
       parameters:
       - description: Ticket ID
         in: path
@@ -2489,7 +2365,7 @@ paths:
         name: id
         required: true
         type: integer
-      - description: Article update data
+      - description: Article update data (subject, body)
         in: body
         name: article
         required: true
@@ -2641,7 +2517,13 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all ticket types
+      description: Retrieve ticket types (valid ones by default)
+      parameters:
+      - description: Filter by validity (true/1 = valid (default), false/0 = invalid,
+          all)
+        in: query
+        name: valid
+        type: string
       produces:
       - application/json
       responses:
@@ -2652,6 +2534,11 @@ paths:
             type: object
         "401":
           description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Lookup failed
           schema:
             additionalProperties: true
             type: object
@@ -2847,118 +2734,6 @@ paths:
       summary: Update user
       tags:
       - Users
-  /users/{id}/groups:
-    get:
-      consumes:
-      - application/json
-      description: List groups a user belongs to
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of groups
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: User not found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get user groups
-      tags:
-      - Users
-    post:
-      consumes:
-      - application/json
-      description: Add a user to a group
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Group data (group_id, permission)
-        in: body
-        name: group
-        required: true
-        schema:
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: User added to group
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Add user to group
-      tags:
-      - Users
-  /users/{id}/groups/{group_id}:
-    delete:
-      consumes:
-      - application/json
-      description: Remove a user from a group
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Group ID
-        in: path
-        name: group_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: User removed from group
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Remove user from group
-      tags:
-      - Users
   /users/me:
     get:
       consumes:
@@ -2984,19 +2759,32 @@ paths:
       - Users
   /webhooks:
     get:
-      consumes:
-      - application/json
-      description: List all registered webhooks
+      description: List outbound webhooks (admin only)
+      parameters:
+      - description: Only active (true) or inactive (false) webhooks
+        in: query
+        name: active
+        type: boolean
       produces:
       - application/json
       responses:
         "200":
-          description: List of webhooks
+          description: 'success, data: []Webhook'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid filter
           schema:
             additionalProperties: true
             type: object
         "401":
           description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Admin access required
           schema:
             additionalProperties: true
             type: object
@@ -3008,9 +2796,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Register a new webhook endpoint
+      description: Create an outbound webhook; deliveries are signed with X-Webhook-Signature
+        (sha256=HMAC of the body) when a secret is set
       parameters:
-      - description: Webhook data (url, events, secret)
+      - description: name, url, events (required); secret, headers, retry_count, timeout_seconds,
+          is_active
         in: body
         name: webhook
         required: true
@@ -3020,30 +2810,28 @@ paths:
       - application/json
       responses:
         "201":
-          description: Webhook registered
+          description: 'success, data: Webhook'
           schema:
             additionalProperties: true
             type: object
         "400":
-          description: Invalid request
+          description: Validation error
           schema:
             additionalProperties: true
             type: object
-        "401":
-          description: Unauthorized
+        "409":
+          description: Name already used
           schema:
             additionalProperties: true
             type: object
       security:
       - BearerAuth: []
-      summary: Register webhook
+      summary: Create webhook
       tags:
       - Webhooks
   /webhooks/{id}:
     delete:
-      consumes:
-      - application/json
-      description: Delete a webhook
+      description: Deletes the webhook and its delivery log
       parameters:
       - description: Webhook ID
         in: path
@@ -3054,17 +2842,12 @@ paths:
       - application/json
       responses:
         "200":
-          description: Webhook deleted
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
+          description: Deleted
           schema:
             additionalProperties: true
             type: object
         "404":
-          description: Webhook not found
+          description: Not found
           schema:
             additionalProperties: true
             type: object
@@ -3074,9 +2857,6 @@ paths:
       tags:
       - Webhooks
     get:
-      consumes:
-      - application/json
-      description: Get webhook by ID
       parameters:
       - description: Webhook ID
         in: path
@@ -3087,17 +2867,12 @@ paths:
       - application/json
       responses:
         "200":
-          description: Webhook details
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
+          description: 'success, data: Webhook'
           schema:
             additionalProperties: true
             type: object
         "404":
-          description: Webhook not found
+          description: Not found
           schema:
             additionalProperties: true
             type: object
@@ -3109,14 +2884,15 @@ paths:
     put:
       consumes:
       - application/json
-      description: Update a webhook
+      description: 'Partial update: only fields present change; an empty secret removes
+        it'
       parameters:
       - description: Webhook ID
         in: path
         name: id
         required: true
         type: integer
-      - description: Webhook update data
+      - description: Fields to change
         in: body
         name: webhook
         required: true
@@ -3126,22 +2902,22 @@ paths:
       - application/json
       responses:
         "200":
-          description: Updated webhook
+          description: 'success, data: Webhook'
           schema:
             additionalProperties: true
             type: object
         "400":
-          description: Invalid request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
+          description: Validation error
           schema:
             additionalProperties: true
             type: object
         "404":
-          description: Webhook not found
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Name already used
           schema:
             additionalProperties: true
             type: object
@@ -3152,30 +2928,27 @@ paths:
       - Webhooks
   /webhooks/{id}/deliveries:
     get:
-      consumes:
-      - application/json
-      description: List delivery history for a webhook
+      description: Newest deliveries first, without payload and response bodies
       parameters:
       - description: Webhook ID
         in: path
         name: id
         required: true
         type: integer
+      - description: 1-200, default 50
+        in: query
+        name: limit
+        type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: List of deliveries
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
+          description: 'success, data: []WebhookDelivery'
           schema:
             additionalProperties: true
             type: object
         "404":
-          description: Webhook not found
+          description: Not found
           schema:
             additionalProperties: true
             type: object
@@ -3186,9 +2959,8 @@ paths:
       - Webhooks
   /webhooks/{id}/test:
     post:
-      consumes:
-      - application/json
-      description: Send a test event to a webhook
+      description: Sends a webhook.test event now (one attempt) and returns the recorded
+        delivery
       parameters:
       - description: Webhook ID
         in: path
@@ -3199,30 +2971,23 @@ paths:
       - application/json
       responses:
         "200":
-          description: Test result
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
+          description: 'success, data: WebhookDelivery'
           schema:
             additionalProperties: true
             type: object
         "404":
-          description: Webhook not found
+          description: Not found
           schema:
             additionalProperties: true
             type: object
       security:
       - BearerAuth: []
-      summary: Test webhook
+      summary: Send test delivery
       tags:
       - Webhooks
-  /webhooks/deliveries/{id}/retry:
-    post:
-      consumes:
-      - application/json
-      description: Retry a failed webhook delivery
+  /webhooks/deliveries/{id}:
+    get:
+      description: One delivery including payload and response body
       parameters:
       - description: Delivery ID
         in: path
@@ -3233,23 +2998,62 @@ paths:
       - application/json
       responses:
         "200":
-          description: Retry result
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
+          description: 'success, data: WebhookDelivery'
           schema:
             additionalProperties: true
             type: object
         "404":
-          description: Delivery not found
+          description: Not found
           schema:
             additionalProperties: true
             type: object
       security:
       - BearerAuth: []
-      summary: Retry webhook delivery
+      summary: Get webhook delivery
+      tags:
+      - Webhooks
+  /webhooks/deliveries/{id}/redeliver:
+    post:
+      description: Sends the payload of an earlier delivery again now as a new delivery
+        (one attempt)
+      parameters:
+      - description: Delivery ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success, data: WebhookDelivery'
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Redeliver webhook delivery
+      tags:
+      - Webhooks
+  /webhooks/events:
+    get:
+      description: Events a webhook can subscribe to
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success, data: [{event, description}]'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List webhook events
       tags:
       - Webhooks
 securityDefinitions:

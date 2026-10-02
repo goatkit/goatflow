@@ -40,9 +40,7 @@ func readTestDataFile(filename string) ([]byte, error) {
 
 func TestAdminTicketAttributeRelationsUI(t *testing.T) {
 	browser := helpers.NewBrowserHelper(t)
-	if browser.Config.AdminEmail == "" || browser.Config.AdminPassword == "" {
-		t.Skip("Admin credentials not configured")
-	}
+
 	err := browser.Setup()
 	require.NoError(t, err)
 	defer browser.TearDown()
@@ -111,9 +109,7 @@ func TestAdminTicketAttributeRelationsUI(t *testing.T) {
 
 func TestAdminTicketAttributeRelationsCSVImport(t *testing.T) {
 	browser := helpers.NewBrowserHelper(t)
-	if browser.Config.AdminEmail == "" || browser.Config.AdminPassword == "" {
-		t.Skip("Admin credentials not configured")
-	}
+
 	err := browser.Setup()
 	require.NoError(t, err)
 	defer browser.TearDown()
@@ -133,9 +129,7 @@ func TestAdminTicketAttributeRelationsCSVImport(t *testing.T) {
 
 		// Read the test data file
 		csvContent, err := readTestDataFile("queue_category.csv")
-		if err != nil {
-			t.Skipf("Test data file not found: %v", err)
-		}
+		require.NoError(t, err, "test data file")
 
 		// Find and fill the file input
 		fileInput := browser.Page.Locator("input[type='file'][name='file']")
@@ -219,9 +213,7 @@ func TestAdminTicketAttributeRelationsCSVImport(t *testing.T) {
 		// Find the row with our filename
 		relationRow := browser.Page.Locator(fmt.Sprintf("tr:has(td:has-text('%s'))", testFilename))
 
-		if tarElementCount(t, relationRow) == 0 {
-			t.Skip("Relation row not found - may have been cleaned up")
-		}
+		require.Greater(t, tarElementCount(t, relationRow), 0, "relation %s uploaded earlier in this test is missing from the list", testFilename)
 
 		// Check that Queue attribute is shown
 		queueAttr := relationRow.Locator("td:has-text('Queue')")
@@ -236,15 +228,11 @@ func TestAdminTicketAttributeRelationsCSVImport(t *testing.T) {
 		// Find the row with our filename
 		relationRow := browser.Page.Locator(fmt.Sprintf("tr:has(td:has-text('%s'))", testFilename))
 
-		if tarElementCount(t, relationRow) == 0 {
-			t.Skip("Relation row not found - may have been cleaned up")
-		}
+		require.Greater(t, tarElementCount(t, relationRow), 0, "relation %s uploaded earlier in this test is missing from the list", testFilename)
 
 		// Click edit link
 		editLink := relationRow.Locator("a[href*='/admin/ticket-attribute-relations/']")
-		if tarElementCount(t, editLink) == 0 {
-			t.Skip("Edit link not found")
-		}
+		require.Greater(t, tarElementCount(t, editLink), 0, "edit link missing on relation row")
 
 		err := editLink.First().Click()
 		require.NoError(t, err)
@@ -277,15 +265,11 @@ func TestAdminTicketAttributeRelationsCSVImport(t *testing.T) {
 		// Find the row with our filename
 		relationRow := browser.Page.Locator(fmt.Sprintf("tr:has(td:has-text('%s'))", testFilename))
 
-		if tarElementCount(t, relationRow) == 0 {
-			t.Skip("Relation row not found - may have been cleaned up")
-		}
+		require.Greater(t, tarElementCount(t, relationRow), 0, "relation %s uploaded earlier in this test is missing from the list", testFilename)
 
 		// Click edit link
 		editLink := relationRow.Locator("a[href*='/admin/ticket-attribute-relations/']")
-		if tarElementCount(t, editLink) == 0 {
-			t.Skip("Edit link not found")
-		}
+		require.Greater(t, tarElementCount(t, editLink), 0, "edit link missing on relation row")
 
 		err = editLink.First().Click()
 		require.NoError(t, err)
@@ -358,21 +342,16 @@ func TestAdminTicketAttributeRelationsCSVImport(t *testing.T) {
 		// Find the row with our filename
 		relationRow := browser.Page.Locator(fmt.Sprintf("tr:has(td:has-text('%s'))", testFilename))
 
-		if tarElementCount(t, relationRow) == 0 {
-			t.Skip("Relation row not found - nothing to delete")
-		}
+		require.Greater(t, tarElementCount(t, relationRow), 0, "relation %s uploaded earlier in this test is missing from the list", testFilename)
 
 		// Get the relation ID from the row
 		rowID, err := relationRow.GetAttribute("id")
-		if err != nil || rowID == "" {
-			t.Skip("Could not get row ID")
-		}
+		require.NoError(t, err)
+		require.NotEmpty(t, rowID, "relation row must carry its id attribute")
 
 		// Click delete button
 		deleteButton := relationRow.Locator("button[onclick*='confirmDelete']")
-		if tarElementCount(t, deleteButton) == 0 {
-			t.Skip("Delete button not found")
-		}
+		require.Greater(t, tarElementCount(t, deleteButton), 0, "delete button missing on relation row")
 
 		err = deleteButton.Click()
 		require.NoError(t, err)
@@ -411,9 +390,7 @@ func TestAdminTicketAttributeRelationsCSVImport(t *testing.T) {
 
 func TestAdminTicketAttributeRelationsStatePriorityCSV(t *testing.T) {
 	browser := helpers.NewBrowserHelper(t)
-	if browser.Config.AdminEmail == "" || browser.Config.AdminPassword == "" {
-		t.Skip("Admin credentials not configured")
-	}
+
 	err := browser.Setup()
 	require.NoError(t, err)
 	defer browser.TearDown()
@@ -431,9 +408,7 @@ func TestAdminTicketAttributeRelationsStatePriorityCSV(t *testing.T) {
 		require.NoError(t, browser.WaitForLoad())
 
 		csvContent, err := readTestDataFile("state_priority.csv")
-		if err != nil {
-			t.Skipf("Test data file not found: %v", err)
-		}
+		require.NoError(t, err, "test data file")
 
 		fileInput := browser.Page.Locator("input[type='file'][name='file']")
 		require.Greater(t, tarElementCount(t, fileInput), 0, "File input should exist")
@@ -464,9 +439,7 @@ func TestAdminTicketAttributeRelationsStatePriorityCSV(t *testing.T) {
 
 		relationRow := browser.Page.Locator(fmt.Sprintf("tr:has(td:has-text('%s'))", testFilename))
 
-		if tarElementCount(t, relationRow) == 0 {
-			t.Skip("Relation row not found")
-		}
+		require.Greater(t, tarElementCount(t, relationRow), 0, "relation %s uploaded earlier in this test is missing from the list", testFilename)
 
 		// Check that State attribute is shown
 		stateAttr := relationRow.Locator("td:has-text('State')")
@@ -502,9 +475,7 @@ func TestAdminTicketAttributeRelationsStatePriorityCSV(t *testing.T) {
 
 func TestAdminTicketAttributeRelationsQueueServiceCSV(t *testing.T) {
 	browser := helpers.NewBrowserHelper(t)
-	if browser.Config.AdminEmail == "" || browser.Config.AdminPassword == "" {
-		t.Skip("Admin credentials not configured")
-	}
+
 	err := browser.Setup()
 	require.NoError(t, err)
 	defer browser.TearDown()
@@ -522,9 +493,7 @@ func TestAdminTicketAttributeRelationsQueueServiceCSV(t *testing.T) {
 		require.NoError(t, browser.WaitForLoad())
 
 		csvContent, err := readTestDataFile("queue_service.csv")
-		if err != nil {
-			t.Skipf("Test data file not found: %v", err)
-		}
+		require.NoError(t, err, "test data file")
 
 		fileInput := browser.Page.Locator("input[type='file'][name='file']")
 		require.Greater(t, tarElementCount(t, fileInput), 0, "File input should exist")
@@ -555,9 +524,7 @@ func TestAdminTicketAttributeRelationsQueueServiceCSV(t *testing.T) {
 
 		relationRow := browser.Page.Locator(fmt.Sprintf("tr:has(td:has-text('%s'))", testFilename))
 
-		if tarElementCount(t, relationRow) == 0 {
-			t.Skip("Relation row not found")
-		}
+		require.Greater(t, tarElementCount(t, relationRow), 0, "relation %s uploaded earlier in this test is missing from the list", testFilename)
 
 		// Check that Queue attribute is shown
 		queueAttr := relationRow.Locator("td:has-text('Queue')")

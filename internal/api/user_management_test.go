@@ -55,57 +55,40 @@ func TestUserManagement(t *testing.T) {
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
-		// Create a test user first
 		db, err := database.GetDB()
-		if err != nil || db == nil {
-			t.Skip("Database not available, skipping test")
-		}
-
+		require.NoError(t, err)
 		userRepo := repository.NewUserRepository(db)
+		userID, _ := createIsolatedAgent(t, "toggle_status")
 
-		// Find a test user to toggle
-		users, err := userRepo.List()
-		if err != nil || len(users) == 0 {
-			t.Skip("No users available for testing")
-		}
-
-		testUser := users[0]
-		originalStatus := testUser.ValidID
-
-		// Toggle status to inactive
-		newStatus := 2
-		if originalStatus == 2 {
-			newStatus = 1
-		}
-
-		reqBody := map[string]int{"valid_id": newStatus}
+		reqBody := map[string]int{"valid_id": 2}
 		jsonBody, _ := json.Marshal(reqBody)
 
-		req, _ := http.NewRequest("PUT", "/admin/users/"+strconv.Itoa(int(testUser.ID))+"/status", bytes.NewBuffer(jsonBody))
+		req, _ := http.NewRequest("PUT", "/admin/users/"+strconv.Itoa(userID)+"/status", bytes.NewBuffer(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
+		AddTestAuthCookie(req, GetTestAuthToken(t))
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
+		require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 
-		t.Logf("Status toggle response: %d - %s", w.Code, w.Body.String())
-
-		// Verify the user still appears in the list
-		updatedUsers, _ := userRepo.List()
+		// The deactivated user still appears in the list, now inactive
+		updatedUsers, err := userRepo.List()
+		require.NoError(t, err)
 		found := false
 		for _, u := range updatedUsers {
-			if u.ID == testUser.ID {
+			if int(u.ID) == userID {
 				found = true
-				t.Logf("User %s status changed from %d to %d", u.Login, originalStatus, u.ValidID)
+				assert.Equal(t, 2, u.ValidID)
 				break
 			}
 		}
-
 		assert.True(t, found, "User should still appear in list after status change")
 	})
 
 	t.Run("CreateUserWithGroups", func(t *testing.T) {
 		router := gin.New()
 		SetupHTMXRoutes(router)
+		cleanupAgentByLogin(t, "testuser_groups")
 
 		// Prepare form data
 		form := url.Values{}
@@ -145,57 +128,19 @@ func TestUserManagement(t *testing.T) {
 
 	t.Run("UpdateUserGroups", func(t *testing.T) {
 		db, err := database.GetDB()
-		if err != nil || db == nil {
-			t.Skip("Database not available, skipping test")
-		}
-
-		userRepo := repository.NewUserRepository(db)
+		require.NoError(t, err)
 		groupRepo := repository.NewGroupRepository(db)
 
-		// Find a test user
-		users, err := userRepo.List()
-		if err != nil || len(users) == 0 {
-			t.Skip("No users available for testing")
-		}
+		userID, _ := createIsolatedAgent(t, "update_groups")
+		var usersGroup uint
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+			"SELECT id FROM `groups` WHERE name = 'users'")).Scan(&usersGroup))
 
-		testUser := users[0]
+		require.NoError(t, groupRepo.AddUserToGroup(uint(userID), usersGroup))
 
-		// Get current groups
-		currentGroups, _ := groupRepo.GetUserGroups(testUser.ID)
-		t.Logf("User %s currently in %d groups: %v", testUser.Login, len(currentGroups), currentGroups)
-
-		// Test adding user to a group
-		groups, _ := groupRepo.List()
-		if len(groups) > 0 {
-			// Normalize IDs to uint for SQL repo
-			var groupIDUint uint
-			switch v := groups[0].ID.(type) {
-			case int:
-				groupIDUint = uint(v)
-			case int64:
-				groupIDUint = uint(v)
-			case uint:
-				groupIDUint = v
-			case uint64:
-				groupIDUint = uint(v)
-			case string:
-				if n, convErr := strconv.Atoi(v); convErr == nil {
-					groupIDUint = uint(n)
-				}
-			default:
-				// skip if unknown type
-			}
-			err := groupRepo.AddUserToGroup(testUser.ID, groupIDUint)
-			if err != nil {
-				t.Logf("Error adding user to group: %v", err)
-			} else {
-				t.Log("Successfully added user to group")
-			}
-
-			// Verify the group was added
-			updatedGroups, _ := groupRepo.GetUserGroups(testUser.ID)
-			t.Logf("User now in %d groups: %v", len(updatedGroups), updatedGroups)
-		}
+		updatedGroups, err := groupRepo.GetUserGroups(uint(userID))
+		require.NoError(t, err)
+		assert.Contains(t, updatedGroups, "users")
 	})
 }
 
@@ -205,42 +150,19 @@ func TestUserDeletion(t *testing.T) {
 		// by setting valid_id to 2 rather than actually removing the record
 
 		db, err := database.GetDB()
-		if err != nil || db == nil {
-			t.Skip("Database not available, skipping test")
-		}
+		require.NoError(t, err)
 
 		userRepo := repository.NewUserRepository(db)
-
-		// Find a test user to "delete"
-		users, err := userRepo.List()
-		require.NoError(t, err)
-		require.NotEmpty(t, users, "Need at least one user for testing")
-
-		testUser := users[len(users)-1] // Use last user to avoid system users
-
-		// Debug: log the current title
-		t.Logf("User %s (ID: %d) has title: '%s' (length: %d)", testUser.Login, testUser.ID, testUser.Title, len(testUser.Title))
+		id, _ := createIsolatedAgent(t, "soft_delete")
 
 		// Soft delete by setting valid_id = 2
-		err = userRepo.SetValidID(testUser.ID, 2, uint(1), time.Now())
+		require.NoError(t, userRepo.SetValidID(uint(id), 2, uint(1), time.Now()))
 
-		if err != nil {
-			t.Logf("Error soft-deleting user: %v", err)
-		} else {
-			t.Log("User soft-deleted successfully")
-
-			// Verify user still exists in database but is inactive
-			allUsers, _ := userRepo.List()
-			found := false
-			for _, u := range allUsers {
-				if u.ID == testUser.ID {
-					found = true
-					assert.Equal(t, 2, u.ValidID, "User should be marked as inactive")
-					break
-				}
-			}
-			assert.True(t, found, "Soft-deleted user should still exist in database")
-		}
+		// The user still exists but is inactive
+		var validID int
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+			"SELECT valid_id FROM users WHERE id = ?"), id).Scan(&validID))
+		assert.Equal(t, 2, validID, "User should be marked as inactive")
 	})
 }
 

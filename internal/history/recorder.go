@@ -4,6 +4,7 @@ package history
 import (
 	"context"
 	"time"
+	"unicode/utf8"
 
 	"github.com/goatkit/goatflow/internal/models"
 )
@@ -128,15 +129,28 @@ func (r *Recorder) RecordByTicketID(ctx context.Context, tx interface{}, ticketI
 	return r.Record(ctx, tx, ticketID, articleID, historyType, message, userID)
 }
 
-// Excerpt returns a truncated version of the input string, suitable for history messages.
+// Excerpt returns s truncated to at most maxLen runes (including a "..." suffix), suitable for history
+// messages. Truncation happens on rune boundaries so the result is always valid UTF-8 when s is.
 func Excerpt(s string, maxLen int) string {
 	if maxLen <= 0 {
 		maxLen = 50
 	}
-	if len(s) <= maxLen {
+	if utf8.RuneCountInString(s) <= maxLen {
 		return s
 	}
-	return s[:maxLen-3] + "..."
+	suffix := "..."
+	keep := maxLen - len(suffix)
+	if keep < 0 {
+		keep, suffix = maxLen, ""
+	}
+	runes := 0
+	for i := range s {
+		if runes == keep {
+			return s[:i] + suffix
+		}
+		runes++
+	}
+	return s
 }
 
 // ChangeMessage generates a history message for a field change.

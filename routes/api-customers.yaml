@@ -11,6 +11,7 @@ spec:
   prefix: /api/customers
   middleware:
     - unified_auth
+    - agent
   routes:
     - path: /search
       method: GET

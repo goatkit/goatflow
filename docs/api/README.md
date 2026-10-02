@@ -76,7 +76,7 @@ All API responses follow this structure:
 | POST | `/api/v1/auth/login` | Authenticate and get JWT tokens |
 | POST | `/api/auth/login` | Session-based login |
 | POST | `/api/auth/logout` | End session |
-| POST | `/api/auth/refresh` | Refresh token |
+| POST | `/api/v1/auth/refresh` | Exchange a refresh token for a new token pair (body `{"refresh_token": "..."}`) |
 
 ### Tickets
 | Method | Endpoint | Description |
@@ -130,10 +130,7 @@ All API responses follow this structure:
 ### Dashboard
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/v1/dashboard/stats` | Dashboard statistics |
-| GET | `/api/v1/dashboard/activity` | Recent activity |
-| GET | `/api/v1/dashboard/my-tickets` | My assigned tickets |
-| GET | `/api/v1/dashboard/notifications` | Notifications |
+| GET | `/api/v1/statistics/dashboard` | Dashboard statistics (ticket counts, per-queue and per-priority counts, recent tickets) for the queues the caller can read |
 
 ### Admin (Requires Admin Role)
 | Method | Endpoint | Description |
@@ -146,19 +143,6 @@ All API responses follow this structure:
 | GET | `/api/v1/admin/system/config` | Get system config |
 | PUT | `/api/v1/admin/system/config` | Update system config |
 | GET | `/api/v1/admin/audit/logs` | Get audit logs |
-
-### LDAP Integration (Admin Only)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/ldap/configure` | Configure LDAP |
-| POST | `/api/v1/ldap/test` | Test connection |
-| GET | `/api/v1/ldap/config` | Get configuration |
-| POST | `/api/v1/ldap/disable` | Disable LDAP |
-| POST | `/api/v1/ldap/authenticate` | LDAP authentication |
-| GET | `/api/v1/ldap/users/:username` | Get LDAP user |
-| GET | `/api/v1/ldap/groups` | List LDAP groups |
-| POST | `/api/v1/ldap/sync/users` | Sync users |
-| GET | `/api/v1/ldap/sync/status` | Sync status |
 
 ## MCP Server (AI Integration)
 

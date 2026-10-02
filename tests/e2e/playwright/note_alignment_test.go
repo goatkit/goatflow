@@ -23,9 +23,7 @@ type ticketIdentifiers struct {
 
 func TestAgentNoteBlockquoteAlignment(t *testing.T) {
 	browser := helpers.NewBrowserHelper(t)
-	if browser.Config.AdminEmail == "" || browser.Config.AdminPassword == "" {
-		t.Skip("Admin credentials not configured")
-	}
+
 	require.NoError(t, browser.Setup())
 	defer browser.TearDown()
 

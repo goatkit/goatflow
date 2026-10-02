@@ -362,7 +362,7 @@
                             <svg id="ulengthIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
-                            <span class="pw-policy-length" style="color: var(--gk-text-muted);">{{ t("admin.password_requirement_length_initial") }}</span>
+                            <span class="pw-policy-length" style="color: var(--gk-text-muted);"></span>
                         </div>
                         <div id="umatchCheck" class="flex items-center text-sm">
                             <svg id="umatchIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -374,7 +374,7 @@
                             <svg id="ustrengthIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
-                            <span class="pw-policy-strength" style="color: var(--gk-text-muted);">{{ t("admin.password_requirement_contains_default") }}</span>
+                            <span class="pw-policy-strength" style="color: var(--gk-text-muted);"></span>
                         </div>
                     </div>
 
@@ -449,16 +449,13 @@ const i18nMessages = {
     confirmMessage: `{{ t("messages.confirm_action") }}`,
     confirmButton: `{{ t("buttons.confirm") }}`,
     cancelButton: `{{ t("buttons.cancel") }}`,
-    lengthTemplate: `{{ t("admin.password_requirement_length_template") }}`,
-    lengthInitial: `{{ t("admin.password_requirement_length_initial") }}`,
     matchText: `{{ t("admin.password_requirement_match") }}`,
-    containsDefault: `{{ t("admin.password_requirement_contains_default") }}`,
-    containsTemplate: `{{ t("admin.password_requirement_contains_template") }}`,
     containsNone: `{{ t("admin.password_requirement_none") }}`,
-    requirementUppercase: `{{ t("admin.password_requirement_uppercase") }}`,
-    requirementLowercase: `{{ t("admin.password_requirement_lowercase") }}`,
-    requirementDigit: `{{ t("admin.password_requirement_digit") }}`,
-    requirementSpecial: `{{ t("admin.password_requirement_special") }}`
+    requirementMinSize: `{{ t("password.min_characters") }}`,
+    requirementCase: `{{ t("password.min_2_upper_2_lower") }}`,
+    requirementDigit: `{{ t("password.need_digit") }}`,
+    requirementLetters: `{{ t("password.min_2_letters") }}`,
+    requirementPattern: `{{ t("self_service.reset_password.policy_regexp") }}`
 };
 
 // Search handling
@@ -681,8 +678,8 @@ function submitUserForm(event) {
         },
         body: body
     })
-    .then(response => response.json())
-    .then(data => {
+    .then(response => response.json().then(data => ({ status: response.status, data })))
+    .then(({ status, data }) => {
         if (data.success) {
             closeUserModal();
             // Preserve search and filter values
@@ -696,21 +693,16 @@ function submitUserForm(event) {
             sessionStorage.setItem('userGroupFilter', groupValue);
 
             location.reload();
-        } else {
-            // Check if this is a duplicate username error
-            if (data.error && data.error.includes('duplicate key') && data.error.includes('users_login_key')) {
-                showError(i18nMessages.duplicateUser);
-                // Focus the login field for easy correction
-                const loginField = document.getElementById('login');
-                if (loginField) {
-                    loginField.focus();
-                    loginField.select();
-                }
-                // Keep the modal open - don't close it
-                return;
-            } else {
-                showError(data.error || i18nMessages.genericError);
+        } else if (status === 409) {
+            // The login is taken: keep the modal open and focus the login field.
+            showError(i18nMessages.duplicateUser);
+            const loginField = document.getElementById('login');
+            if (loginField) {
+                loginField.focus();
+                loginField.select();
             }
+        } else {
+            showError(data.error || i18nMessages.genericError);
         }
     })
     .catch(error => {
@@ -791,18 +783,13 @@ function closeUserModal() {
 }
 
 function showError(message) {
-    // Check if it's a duplicate key error
-    if (message.includes('duplicate key')) {
-        showGuruMeditation('Database Constraint Violation', message);
-        return;
-    }
-
     // Create error alert
     const errorDiv = document.createElement('div');
     errorDiv.className = 'mt-3 p-3 rounded-md gk-alert gk-alert-error';
-    errorDiv.innerHTML = `
-        <p class="text-sm">${message}</p>
-    `;
+    const text = document.createElement('p');
+    text.className = 'text-sm';
+    text.textContent = message;
+    errorDiv.appendChild(text);
 
     // Insert after the form fields, before the buttons
     const formContent = document.querySelector('#userForm .gk-modal-body');
@@ -818,25 +805,6 @@ function showError(message) {
             errorDiv.remove();
         }
     }, 5000);
-}
-
-function showGuruMeditation(title, message) {
-    // Create Guru Meditation screen (Amiga-style error)
-    const guru = document.createElement('div');
-    guru.className = 'fixed inset-0 z-50 flex items-center justify-center';
-    guru.style.background = 'var(--gk-bg-base)';
-    guru.innerHTML = `
-        <div class="text-center p-8 max-w-2xl" style="color: var(--gk-error); border: 4px solid var(--gk-error); background: var(--gk-bg-base);">
-            <div class="text-4xl mb-4 animate-pulse font-mono">Software Failure. Press left mouse button to continue.</div>
-            <div class="text-2xl mb-4 font-mono">Guru Meditation #00000025.65045338</div>
-            <div class="text-xl mb-4">${title}</div>
-            <div class="text-sm mb-6" style="color: var(--gk-error);">${message}</div>
-            <button onclick="this.closest('.fixed').remove()" class="gk-btn-danger px-6 py-2 font-bold">
-                LEFT MOUSE BUTTON
-            </button>
-        </div>
-    `;
-    document.body.appendChild(guru);
 }
 </script>
 
@@ -947,7 +915,7 @@ function showGuruMeditation(title, message) {
                             <svg id="lengthIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
-                            <span class="pw-policy-length" style="color: var(--gk-text-muted);">{{ t("admin.password_requirement_length_initial") }}</span>
+                            <span class="pw-policy-length" style="color: var(--gk-text-muted);"></span>
                         </div>
                         <div id="matchCheck" class="flex items-center text-sm">
                             <svg id="matchIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -959,7 +927,7 @@ function showGuruMeditation(title, message) {
                             <svg id="strengthIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
-                            <span class="pw-policy-strength" style="color: var(--gk-text-muted);">{{ t("admin.password_requirement_contains_default") }}</span>
+                            <span class="pw-policy-strength" style="color: var(--gk-text-muted);"></span>
                         </div>
                     </div>
                 </div>
@@ -1125,12 +1093,15 @@ let currentConfirmAction = null;
 let currentUserId = null;
 let currentTokenUserId = null;
 let currentTokenUsername = null;
+// Agent password policy (PreferencesGroups###Password), loaded from
+// /admin/password-policy. The server enforces the same rules on save; these
+// defaults (no requirements) only apply until the fetch completes.
 let passwordPolicy = {
-    minLength: 8,
-    requireUppercase: true,
-    requireLowercase: true,
-    requireDigit: true,
-    requireSpecial: false
+    password_min_size: 0,
+    password_min_2_lower_2_upper_characters: false,
+    password_need_digit: false,
+    password_min_2_characters: false,
+    password_reg_exp: ''
 };
 
 // Shared binding for whichever password mutation is active. validatePassword(),
@@ -1287,51 +1258,57 @@ function clearPasswordField(fieldId) {
 }
 
 function updatePasswordPolicyDisplay() {
-    // Update length requirement text on every policy checklist on the page
-    // (a shared class keeps this DRY across the add/edit and reset modals).
-    const len = i18nMessages.lengthTemplate.replace('{min}', passwordPolicy.minLength);
-    document.querySelectorAll('.pw-policy-length').forEach(span => { span.textContent = len; });
+    // Same text on every policy checklist on the page (a shared class keeps
+    // this DRY across the add/edit and reset modals).
+    const min = passwordPolicy.password_min_size;
+    document.querySelectorAll('.pw-policy-length').forEach(span => {
+        span.textContent = i18nMessages.requirementMinSize.replace('{n}', min);
+        span.parentElement.style.display = min > 0 ? '' : 'none';
+    });
 
-    // Build the strength requirement text once and apply to every checklist
     const requirements = [];
-    if (passwordPolicy.requireUppercase) requirements.push(i18nMessages.requirementUppercase);
-    if (passwordPolicy.requireLowercase) requirements.push(i18nMessages.requirementLowercase);
-    if (passwordPolicy.requireDigit) requirements.push(i18nMessages.requirementDigit);
-    if (passwordPolicy.requireSpecial) requirements.push(i18nMessages.requirementSpecial);
-    const strength = requirements.length
-        ? i18nMessages.containsTemplate.replace('{requirements}', requirements.join(', '))
-        : i18nMessages.containsNone;
+    if (passwordPolicy.password_min_2_lower_2_upper_characters) requirements.push(i18nMessages.requirementCase);
+    if (passwordPolicy.password_need_digit) requirements.push(i18nMessages.requirementDigit);
+    if (passwordPolicy.password_min_2_characters) requirements.push(i18nMessages.requirementLetters);
+    if (passwordPolicy.password_reg_exp) requirements.push(i18nMessages.requirementPattern);
+    const strength = requirements.length ? requirements.join('; ') : i18nMessages.containsNone;
     document.querySelectorAll('.pw-policy-strength').forEach(span => { span.textContent = strength; });
 }
+updatePasswordPolicyDisplay();
 
+function countMatches(text, re) {
+    return (text.match(re) || []).length;
+}
+
+// Mirrors sysconfig.PasswordPolicy.ValidatePassword (server-side check).
 function validatePassword() {
     const password = document.getElementById(pwBind.field).value;
     const confirmPassword = document.getElementById(pwBind.confirm).value;
 
-    // Check length
-    const lengthValid = password.length >= passwordPolicy.minLength;
+    // Length is counted in bytes, as the server does.
+    const lengthValid = new TextEncoder().encode(password).length >= passwordPolicy.password_min_size;
     updateValidationIcon(pwBind.lenIcon, lengthValid);
 
-    // Check if passwords match
     const matchValid = password !== '' && password === confirmPassword;
     updateValidationIcon(pwBind.matchIcon, matchValid);
 
-    // Check strength requirements based on policy
-    let strengthValid = true;
-
-    if (passwordPolicy.requireUppercase) {
-        strengthValid = strengthValid && /[A-Z]/.test(password);
+    let strengthValid = password !== '';
+    if (passwordPolicy.password_min_2_lower_2_upper_characters) {
+        strengthValid = strengthValid && countMatches(password, /\p{Ll}/gu) >= 2 && countMatches(password, /\p{Lu}/gu) >= 2;
     }
-    if (passwordPolicy.requireLowercase) {
-        strengthValid = strengthValid && /[a-z]/.test(password);
+    if (passwordPolicy.password_need_digit) {
+        strengthValid = strengthValid && /\p{Nd}/u.test(password);
     }
-    if (passwordPolicy.requireDigit) {
-        strengthValid = strengthValid && /[0-9]/.test(password);
+    if (passwordPolicy.password_min_2_characters) {
+        strengthValid = strengthValid && countMatches(password, /\p{L}/gu) >= 2;
     }
-    if (passwordPolicy.requireSpecial) {
-        strengthValid = strengthValid && /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    if (passwordPolicy.password_reg_exp) {
+        try {
+            strengthValid = strengthValid && new RegExp(passwordPolicy.password_reg_exp).test(password);
+        } catch (e) {
+            // Pattern uses Go-only syntax: leave the verdict to the server.
+        }
     }
-
     updateValidationIcon(pwBind.strIcon, strengthValid);
 
     return lengthValid && matchValid && strengthValid;

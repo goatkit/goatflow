@@ -1,0 +1,75 @@
+{% extends "layouts/auth.pongo2" %}
+
+{% block title %}{{ t("self_service.register.title")|default:"Create Account" }} - GoatFlow{% endblock %}
+
+{% block content %}
+<div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
+    <div class="absolute top-4 right-4 z-10 flex items-center gap-2">
+        {% include "partials/language_selector.pongo2" %}
+        {% include "partials/login_theme_selector.pongo2" %}
+    </div>
+
+    <div class="sm:mx-auto sm:w-full sm:max-w-sm relative z-10">
+        <div class="gk-logo-glow gk-float mx-auto w-24 h-24" style="color: var(--gk-primary);">
+            <img class="w-full h-full" src="/static/favicon.svg?v={{ assetVersion }}" alt="GoatFlow Logo">
+        </div>
+        <h2 class="mt-6 text-center text-3xl gk-heading gk-text-gradient">
+            {{ t("self_service.register.title")|default:"Create Account" }}
+        </h2>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        <div class="gk-login-card">
+            {% if Sent %}
+            <div id="selfservice-message" class="rounded-md p-4 mb-4 text-sm" role="status" style="background: var(--gk-success-subtle); color: var(--gk-success); border: 1px solid var(--gk-success);">
+                {{ t("self_service.register.success")|default:"Registration submitted. Check your email." }}
+            </div>
+            {% else %}
+            <p class="mb-5 text-sm" style="color: var(--gk-text-secondary);">
+                {{ t("self_service.register.intro")|default:"Enter your details. We will email you a link to confirm your address and choose your password." }}
+            </p>
+
+            {% if Error %}
+            <div id="selfservice-error" class="rounded-md p-4 mb-4 text-sm" role="alert" style="background: var(--gk-error-subtle); color: var(--gk-error); border: 1px solid var(--gk-error);">
+                {{ Error }}
+            </div>
+            {% endif %}
+
+            <form class="space-y-5" action="{{ Portal.RegisterURL }}" method="POST">
+                <div>
+                    <label for="first_name" class="form-label">{{ t("self_service.register.first_name")|default:"First Name" }}</label>
+                    <div class="mt-2">
+                        <input id="first_name" name="first_name" type="text" autocomplete="given-name" required autofocus maxlength="100"
+                               class="gk-input-neon" value="{{ FirstName }}">
+                    </div>
+                </div>
+                <div>
+                    <label for="last_name" class="form-label">{{ t("self_service.register.last_name")|default:"Last Name" }}</label>
+                    <div class="mt-2">
+                        <input id="last_name" name="last_name" type="text" autocomplete="family-name" required maxlength="100"
+                               class="gk-input-neon" value="{{ LastName }}">
+                    </div>
+                </div>
+                <div>
+                    <label for="email" class="form-label">{{ t("self_service.register.email")|default:"Email" }}</label>
+                    <div class="mt-2">
+                        <input id="email" name="email" type="email" autocomplete="email" required maxlength="150"
+                               class="gk-input-neon" value="{{ Email }}">
+                    </div>
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="gk-btn-neon w-full">
+                        {{ t("self_service.register.submit")|default:"Register" }}
+                    </button>
+                </div>
+            </form>
+            {% endif %}
+
+            <p class="mt-6 text-center text-sm" style="color: var(--gk-text-muted);">
+                {{ t("auth.already_member")|default:"Already have an account?" }}
+                <a href="{{ Portal.LoginURL }}" class="gk-link-neon ml-1">{{ t("auth.sign_in")|default:"Sign In" }}</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

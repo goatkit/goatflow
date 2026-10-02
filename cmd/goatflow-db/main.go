@@ -9,14 +9,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/goatkit/goatflow/internal/platform/dbconfig"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/dbconfig"
 )
 
 func main() {
 	var (
 		command  = flag.String("cmd", "", "Command to execute: export-xml, import-xml, test-connection, migrate")
-		dbType   = flag.String("db-type", "postgresql", "Database type: postgresql, mysql, oracle, sqlserver")
+		dbType   = flag.String("db-type", "postgresql", "Database type: postgresql, mysql")
 		host     = flag.String("host", "localhost", "Database host")
 		port     = flag.String("port", "", "Database port (auto-detected based on db-type)")
 		username = flag.String("user", "", "Database username")
@@ -40,10 +40,6 @@ func main() {
 			*port = "5432"
 		case database.MySQL:
 			*port = "3306"
-		case database.Oracle:
-			*port = "1521"
-		case database.SQLServer:
-			*port = "1433"
 		}
 	}
 

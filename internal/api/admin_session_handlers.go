@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"net/http"
 	"strconv"
 	"strings"
@@ -212,24 +211,3 @@ func handleKillAllSessions(c *gin.Context) {
 		"count":   count,
 	})
 }
-
-// Helper to check if session service is available (for tests).
-func sessionServiceAvailable() bool {
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		return false
-	}
-	// Check if sessions table exists
-	var exists bool
-	query := "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = 'sessions')"
-	if database.IsMySQL() {
-		query = "SELECT COUNT(*) > 0 FROM information_schema.tables WHERE table_name = 'sessions' AND table_schema = DATABASE()"
-	}
-	if err := db.QueryRow(database.ConvertPlaceholders(query)).Scan(&exists); err != nil {
-		return false
-	}
-	return exists
-}
-
-// Ensure the import is used
-var _ = sql.ErrNoRows

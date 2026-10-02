@@ -302,7 +302,9 @@
         "test_success": "تست پیکربندی موفق",
         "title": "پیکربندی سرویس وب",
         "webservice": "سرویس وب",
-        "webservice_hint": "سرویس وب را برای دریافت داده‌ها انتخاب کنید"
+        "webservice_hint": "سرویس وب را برای دریافت داده‌ها انتخاب کنید",
+        "test_save_first": "ابتدا فیلد را ذخیره کنید تا پیکربندی سرویس وب آن را آزمایش کنید.",
+        "test_saved_hint": "پیکربندی ذخیره‌شده را آزمایش می‌کند؛ ابتدا تغییرات خود را ذخیره کنید."
       },
       "years_in_future": "سال‌های آینده",
       "years_in_past": "سال‌های گذشته"
@@ -1162,16 +1164,8 @@
     "no_plugins": "افزونه‌ای نصب نشده",
     "no_plugins_match": "هیچ افزونه‌ای با معیارهای جستجوی شما مطابقت ندارد.",
     "password": "رمز عبور",
-    "password_requirement_contains_default": "شامل حروف بزرگ، کوچک و عدد",
-    "password_requirement_contains_template": "شامل {requirements}",
-    "password_requirement_digit": "عدد",
-    "password_requirement_length_initial": "حداقل 8 کاراکتر",
-    "password_requirement_length_template": "حداقل {min} کاراکتر",
-    "password_requirement_lowercase": "حرف کوچک",
     "password_requirement_match": "رمزهای عبور مطابقت دارند",
     "password_requirement_none": "بدون نیاز اضافی",
-    "password_requirement_special": "کاراکتر خاص (!@#$%^&*)",
-    "password_requirement_uppercase": "حرف بزرگ",
     "password_requirements_incomplete": "لطفاً اطمینان حاصل کنید که تمام نیازمندی‌های رمز عبور رعایت شده‌اند",
     "password_reset_error": "بازنشانی رمز عبور ناموفق بود",
     "password_reset_success": "رمز عبور با موفقیت بازنشانی شد",
@@ -1474,7 +1468,110 @@
         "delete": "آیا مطمئن هستید که می‌خواهید {name} را حذف کنید؟"
       }
     },
-    "search_groups": "جستجوی گروهها..."
+    "search_groups": "جستجوی گروهها...",
+    "webhooks": {
+      "actions": {
+        "activate": "فعال‌سازی",
+        "deactivate": "غیرفعال‌سازی",
+        "deliveries": "تحویل‌ها",
+        "test": "ارسال آزمایشی"
+      },
+      "active": "فعال",
+      "add": "افزودن وب‌هوک",
+      "columns": {
+        "events": "رویدادها",
+        "last_delivery": "آخرین تحویل",
+        "url": "نشانی URL"
+      },
+      "deliveries": {
+        "attempts": "تلاش‌ها",
+        "details": "جزئیات",
+        "duration": "مدت",
+        "empty": "هنوز تحویلی انجام نشده است.",
+        "event": "رویداد",
+        "status_code": "وضعیت HTTP",
+        "time": "زمان",
+        "title": "تحویل‌ها: {name}"
+      },
+      "delivery": {
+        "created_at": "زمان ایجاد",
+        "delivered_at": "زمان تحویل",
+        "duration_ms": "{ms} میلی‌ثانیه",
+        "error": "خطا",
+        "next_attempt": "تلاش بعدی",
+        "no_response": "پاسخ بدنه‌ای ندارد.",
+        "payload": "محتوای ارسالی",
+        "redeliver": "تحویل مجدد",
+        "response": "پاسخ",
+        "title": "تحویل شمارهٔ {id}"
+      },
+      "description": "ارسال رویدادهای تیکت و مقاله به سامانه‌های خارجی به‌صورت درخواست‌های HTTP POST امضاشده.",
+      "empty": "هنوز هیچ وب‌هوکی پیکربندی نشده است.",
+      "events": {
+        "article_created": "یک مقاله (یادداشت، پاسخ، ایمیل، تماس تلفنی، درخواست وب) به تیکت افزوده شد.",
+        "ticket_assigned": "مالک تیکت تغییر کرد.",
+        "ticket_closed": "وضعیت تیکت به وضعیت بسته تغییر کرد.",
+        "ticket_created": "یک تیکت ایجاد شد (هر کانالی).",
+        "ticket_escalated": "تشدید زمان پاسخ، به‌روزرسانی یا حل آغاز شد.",
+        "ticket_merged": "تیکت ادغام شد.",
+        "ticket_priority_changed": "اولویت تیکت تغییر کرد.",
+        "ticket_queue_moved": "تیکت به صف دیگری منتقل شد.",
+        "ticket_state_changed": "وضعیت تیکت به وضعیتی غیر از بسته تغییر کرد.",
+        "ticket_updated": "عنوان، مشتری، نوع، سرویس، SLA، مسئول، قفل، زمان انتظار یا یک فیلد پویای تیکت تغییر کرد."
+      },
+      "form": {
+        "active_help": "وب‌هوک‌های غیرفعال هیچ رویدادی دریافت نمی‌کنند.",
+        "add_header": "افزودن سرآیند",
+        "create_title": "افزودن وب‌هوک",
+        "edit_title": "ویرایش وب‌هوک",
+        "events": "رویدادها",
+        "events_help": "وب‌هوک برای رویدادهای انتخاب‌شده فراخوانی می‌شود.",
+        "events_required": "دست‌کم یک رویداد را انتخاب کنید.",
+        "header_name": "نام سرآیند",
+        "header_value": "مقدار",
+        "headers": "سرآیندهای سفارشی",
+        "headers_help": "همراه هر تحویل ارسال می‌شوند. Content-Type، User-Agent و سرآیندهای X-Webhook-* را خود GoatFlow تنظیم می‌کند.",
+        "remove_header": "حذف سرآیند",
+        "remove_secret": "حذف رمز (تحویل‌ها امضا نخواهند شد)",
+        "retry_count": "تعداد تلاش مجدد",
+        "retry_count_help": "تلاش‌های اضافی پس از تحویل ناموفق.",
+        "secret": "رمز امضا",
+        "secret_help": "۱۶ تا ۵۱۲ نویسه. هر تحویل در سرآیند X-Webhook-Signature امضا می‌شود (sha256=HMAC بدنه). رمز ذخیره‌شده دوباره نمایش داده نمی‌شود.",
+        "secret_none": "رمزی تنظیم نشده است: تحویل‌ها امضا نمی‌شوند.",
+        "secret_placeholder_keep": "برای حفظ رمز فعلی خالی بگذارید",
+        "secret_placeholder_new": "رمز امضای اختیاری",
+        "secret_set": "رمز تنظیم شده است ({hint}).",
+        "timeout": "مهلت پاسخ (ثانیه)",
+        "timeout_help": "مدت انتظار برای پاسخ نقطهٔ پایانی.",
+        "url": "نشانی URL مقصد",
+        "url_help": "نشانی URL مطلق با http:// یا https://. GoatFlow برای هر رویداد یک درخواست POST با JSON به آن می‌فرستد."
+      },
+      "inactive": "غیرفعال",
+      "load_failed": "بارگیری وب‌هوک‌ها ممکن نشد.",
+      "messages": {
+        "activated": "وب‌هوک فعال شد.",
+        "confirm_delete": "وب‌هوک «{name}» و گزارش تحویل‌های آن حذف شود؟",
+        "created": "وب‌هوک ایجاد شد.",
+        "deactivated": "وب‌هوک غیرفعال شد.",
+        "deleted": "وب‌هوک حذف شد.",
+        "network_error": "دسترسی به سرور ممکن نشد.",
+        "redeliver_failed": "تحویل مجدد ناموفق بود.",
+        "redelivered": "تحویل با موفقیت دوباره ارسال شد.",
+        "request_failed": "درخواست ناموفق بود: {error}",
+        "test_failed": "تحویل آزمایشی ناموفق بود.",
+        "test_succeeded": "تحویل آزمایشی موفق بود.",
+        "updated": "وب‌هوک ذخیره شد."
+      },
+      "never": "هرگز",
+      "retry": "تلاش دوباره",
+      "status": {
+        "delivered": "تحویل شده",
+        "delivering": "در حال تحویل",
+        "failed": "ناموفق",
+        "pending": "در انتظار"
+      },
+      "title": "وب‌هوک‌ها"
+    }
   },
   "admin_dashboard": {
     "acl": "لیست‌های کنترل دسترسی",
@@ -1566,7 +1663,55 @@
     "tickets_open": "تیکت‌های باز",
     "uptime_this_month": "زمان کار این ماه",
     "user_management": "مدیریت کاربران",
-    "user_management_desc": "مدیریت حساب‌های کارگزاران و مشتریان"
+    "user_management_desc": "مدیریت حساب‌های کارگزاران و مشتریان",
+    "webhooks": "وب‌هوک‌ها",
+    "webhooks_desc": "ارسال رویدادهای تیکت به سامانه‌های خارجی"
+  },
+  "admin_reports": {
+    "title": "گزارش‌ها و تحلیل‌ها",
+    "description": "آمار تیکت‌ها برای صف‌هایی که می‌توانید بخوانید.",
+    "period_label": "بازه",
+    "period_24h": "۲۴ ساعت گذشته",
+    "period_7d": "۷ روز گذشته",
+    "period_30d": "۳۰ روز گذشته",
+    "trend_label": "روند",
+    "trend_daily_7": "روزانه، ۷ روز گذشته",
+    "trend_daily_30": "روزانه، ۳۰ روز گذشته",
+    "trend_monthly_12": "ماهانه، ۱۲ ماه گذشته",
+    "error_forbidden": "برای دیدن گزارش‌ها به دسترسی خواندن دست‌کم یک صف نیاز دارید.",
+    "error_generic": "برخی از داده‌های گزارش بارگیری نشد. دوباره تلاش کنید.",
+    "scope_note": "ارقام فقط شامل تیکت‌های صف‌هایی است که می‌توانید بخوانید. تاریخ‌ها به وقت UTC هستند.",
+    "overview_heading": "نمای کلی",
+    "total_tickets": "کل تیکت‌ها",
+    "open_tickets": "باز",
+    "pending_tickets": "در انتظار",
+    "closed_tickets": "بسته",
+    "trends_heading": "ایجادشده در برابر بسته‌شده",
+    "created": "ایجادشده",
+    "closed": "بسته‌شده",
+    "closure_rate": "نرخ بستن",
+    "queues_heading": "صف‌ها",
+    "backlog_hint": "انباشته: تیکت‌های باز قدیمی‌تر از ۲۴ ساعت.",
+    "queue": "صف",
+    "backlog": "انباشته",
+    "agents_heading": "فعالیت کارشناسان",
+    "agents_hint": "تیکت‌های ایجادشده و بسته‌شده به‌عنوان کارشناس مسئول و مقاله‌های نوشته‌شده در بازه انتخابی.",
+    "agent": "کارشناس",
+    "assigned": "واگذارشده",
+    "articles": "مقاله‌ها",
+    "customers_heading": "مشتریان برتر",
+    "total_customers": "مشتریان",
+    "active_customers": "فعال (۳۰ روز)",
+    "new_customers": "جدید در این ماه",
+    "customer": "مشتری",
+    "email": "ایمیل",
+    "last_activity": "آخرین تیکت",
+    "export_heading": "خروجی",
+    "export_description": "ارقام بازه انتخابی را دانلود کنید.",
+    "export_summary_csv": "خلاصه (CSV)",
+    "export_tickets_csv": "تیکت‌ها (CSV)",
+    "export_summary_json": "خلاصه (JSON)",
+    "no_data": "برای این انتخاب داده‌ای وجود ندارد."
   },
   "admin_queues": {
     "add_queue": "افزودن صف",
@@ -1959,6 +2104,23 @@
       "required": "*"
     },
     "company": "شرکت",
+    "company_page": {
+      "address": "نشانی",
+      "columns": {
+        "email": "ایمیل",
+        "name": "نام",
+        "title": "عنوان"
+      },
+      "customer_id": "شناسه مشتری",
+      "info_title": "اطلاعات شرکت",
+      "no_company": "حساب شما به هیچ شرکتی متصل نیست.",
+      "no_users": "کاربری یافت نشد.",
+      "not_set": "ارائه نشده",
+      "user_count": "مشاهده کاربران (%d)",
+      "users_description": "افرادی از شرکت شما که از پرتال مشتری استفاده می‌کنند.",
+      "website": "وب‌سایت",
+      "you": "شما"
+    },
     "dashboard": {
       "announcements": "اطلاعیه‌ها",
       "closed_tickets": "تیکت‌های بسته",
@@ -2020,16 +2182,6 @@
       "title": "ایجاد تیکت پشتیبانی جدید"
     },
     "phone": "تلفن",
-    "placeholder_pages": {
-      "company_info_title": "اطلاعات شرکت",
-      "company_users_title": "کاربران شرکت",
-      "knowledge_base_article": "مقاله پایگاه دانش",
-      "knowledge_base_search": "جستجوی پایگاه دانش",
-      "knowledge_base_title": "پایگاه دانش",
-      "password_title": "تغییر رمز عبور",
-      "profile_title": "پروفایل مشتری",
-      "under_construction": "این صفحه در حال ساخت است."
-    },
     "portal": {
       "login_title": "ورود پشتیبانی مشتری",
       "title": "پورتال مشتری"
@@ -2097,7 +2249,6 @@
     }
   },
   "customer_company_form": {
-    "assigned_services": "Assigned Services",
     "branding": "Branding",
     "company_details": "شرکت جزئیات",
     "features": "Features",
@@ -2106,17 +2257,56 @@
     "save_capture_setting": "ذخیره تنظیم گرفتن",
     "save_portal_settings": "ذخیره تنظیمات پورتال"
   },
+  "customer_company_pages": {
+    "customer_id": "شناسه مشتری",
+    "sections": "بخش‌های شرکت",
+    "nav": {
+      "details": "جزئیات",
+      "users": "کاربران مشتری",
+      "tickets": "تیکت‌ها",
+      "services": "سرویس‌ها"
+    }
+  },
   "customer_company_services": {
-    "heading": "مشتری شرکت Services",
-    "title": "مشتری شرکت Services"
+    "heading": "سرویس‌ها",
+    "title": "سرویس‌های شرکت مشتری",
+    "description": "سرویس‌ها به کاربران مشتری اختصاص داده می‌شوند. کاربران این شرکت را که مجاز به استفاده از هر سرویس هستند علامت بزنید.",
+    "saved": "تخصیص سرویس‌ها ذخیره شد.",
+    "no_services": "هیچ سرویس معتبری وجود ندارد.",
+    "manage_services": "مدیریت سرویس‌ها",
+    "no_users": "این شرکت کاربر مشتری ندارد، پس کسی برای تخصیص سرویس وجود ندارد.",
+    "all_users": "همه کاربران",
+    "save": "ذخیره تخصیص‌ها",
+    "columns": {
+      "service": "سرویس",
+      "assigned": "اختصاص‌یافته",
+      "customer_users": "کاربران مشتری"
+    }
   },
   "customer_company_tickets": {
-    "heading": "مشتری شرکت تیکت‌ها",
-    "title": "مشتری شرکت تیکت‌ها"
+    "heading": "تیکت‌ها",
+    "title": "تیکت‌های شرکت مشتری",
+    "description": "تیکت‌های این شرکت در صف‌هایی که به آن‌ها دسترسی دارید، جدیدترین اول.",
+    "empty": "این شرکت در صف‌هایی که به آن‌ها دسترسی دارید تیکتی ندارد.",
+    "columns": {
+      "title": "عنوان",
+      "customer_user": "کاربر مشتری"
+    }
   },
   "customer_company_users": {
-    "heading": "مشتری شرکت کاربران",
-    "title": "مشتری شرکت کاربران"
+    "heading": "کاربران مشتری",
+    "title": "کاربران شرکت مشتری",
+    "description": "کاربران مشتری که به این شرکت تعلق دارند.",
+    "manage_users": "مدیریت کاربران مشتری",
+    "empty": "این شرکت هنوز کاربر مشتری ندارد.",
+    "columns": {
+      "login": "نام کاربری",
+      "name": "نام",
+      "email": "ایمیل",
+      "phone": "تلفن",
+      "tickets": "تیکت‌ها",
+      "status": "وضعیت"
+    }
   },
   "customer_group": {
     "by_group_heading": "مشتری Permissions by گروه",
@@ -2142,7 +2332,8 @@
   },
   "customer_portal_settings": {
     "heading": "مشتری Portal تنظیمات",
-    "title": "مشتری Portal تنظیمات"
+    "title": "مشتری Portal تنظیمات",
+    "per_company_note": "هر شرکت مشتری می‌تواند این پیش‌فرض‌ها را در زبانه تنظیمات پورتال صفحه ویرایش خود تغییر دهد."
   },
   "customer_user_services": {
     "title": "مشتری کاربر Services"
@@ -2188,27 +2379,16 @@
     "performance": "عملکرد",
     "quick_actions": "عملیات سریع",
     "quick_stats": "آمار سریع",
-    "realtime": {
-      "title": "داشبورد بلادرنگ"
-    },
     "recent_activity": "فعالیت اخیر",
     "recent_tickets": "تیکت‌های اخیر",
     "statistics": "آمار",
-    "stats": {
-      "closed_today": "بسته شده امروز",
-      "my_open": "باز من",
-      "my_pending": "در انتظار من",
-      "new_today": "جدید امروز",
-      "open_tickets": "تیکت‌های باز",
-      "total_assigned": "مجموع تخصیص داده شده",
-      "unassigned": "تخصیص نیافته"
-    },
     "tickets_count": "تیکت‌ها",
     "title": "داشبورد",
     "unassigned_count": "unassigned",
     "welcome_back": "خوش آمدید",
     "welcome_message": "این اتفاقاتی است که امروز با تیکت‌هایتان می‌افتد",
-    "widget_config_desc": "انتخاب کنید کدام ابزارک‌ها در داشبورد نمایش داده شوند. برای مرتب‌سازی بکشید."
+    "widget_config_desc": "انتخاب کنید کدام ابزارک‌ها در داشبورد نمایش داده شوند. برای مرتب‌سازی بکشید.",
+    "widget_unavailable": "این ابزارک در حال حاضر در دسترس نیست. لطفاً بعداً دوباره تلاش کنید."
   },
   "demo": {
     "security_disabled": "تغییر رمز عبور و احراز هویت دو مرحله‌ای در حالت نمایشی غیرفعال است."
@@ -2241,11 +2421,6 @@
       "delete": "حذف field",
       "edit": "ویرایش field"
     }
-  },
-  "dynamic_test": {
-    "heading": "Dynamic Module Testing",
-    "testing_instructions": "Testing Instructions",
-    "title": "Dynamic Module Testing"
   },
   "editor": {
     "insert_image_prompt": "آدرس تصویر را وارد کنید (یا خالی بگذارید تا یک فایل انتخاب کنید):",
@@ -2330,29 +2505,18 @@
     "mandatory_note": "تمام فیلدهای علامت‌گذاری شده با ستاره (*) الزامی هستند.",
     "select": "انتخاب"
   },
-  "group_form": {
-    "heading": "گروه Form",
-    "title": "گروه Form"
-  },
-  "group_members": {
-    "heading": "گروه Members",
-    "title": "گروه Members"
-  },
   "group_permissions": {
     "permission_matrix": "Permission Matrix",
     "queue_permissions": "صف Permissions",
     "queues": "صف‌ها",
     "title": "گروه Permissions"
   },
-  "group_view": {
-    "heading": "گروه جزئیات",
-    "title": "گروه"
-  },
   "groups": {
     "add_group": "افزودن گروه",
     "add_user": "افزودن کاربر to گروه",
     "add_user_btn": "افزودن کاربر",
     "confirm_delete": "Are you sure you want to delete this group?",
+    "delete_keeps_group": "گروه غیرفعال می‌شود. این گروه با اعضا و مجوزهایش در فهرست باقی می‌ماند و با ویرایش آن می‌توان دوباره فعالش کرد.",
     "current_members": "اعضای فعلی",
     "delete_success": "گروه deleted successfully",
     "group": "گروه",
@@ -2580,7 +2744,6 @@
       "delete_item": "آیا مطمئن هستید که می‌خواهید این مورد را حذف کنید؟",
       "delete_lookup": "آیا مطمئن هستید که می‌خواهید این مورد را حذف کنید؟ این عمل قابل بازگشت نیست.",
       "delete_priority": "آیا مطمئن هستید که می‌خواهید این اولویت را حذف کنید؟ این عمل قابل بازگشت نیست.",
-      "delete_queue": "آیا مطمئن هستید که می‌خواهید این صف را حذف کنید؟ همه تیکت‌های این صف باید مجدداً تخصیص یابند. این عمل قابل بازگشت نیست.",
       "delete_queue_simple": "آیا مطمئن هستید که می‌خواهید این صف را حذف کنید؟",
       "delete_queues_bulk": "آیا مطمئن هستید که می‌خواهید صف(های) انتخاب شده را حذف کنید؟",
       "delete_state": "آیا مطمئن هستید که می‌خواهید این وضعیت را حذف کنید؟",
@@ -2623,7 +2786,6 @@
     "failed_remove_user": "Failed to remove user",
     "failed_save_field": "Failed to save field",
     "failed_update_screen_config": "Failed to update screen configuration",
-    "failed_update_services": "Failed to update services",
     "groups": {
       "select_user": "Please select a user to add"
     },
@@ -2632,7 +2794,6 @@
     "item_deleted": "مورد با موفقیت حذف شد",
     "item_updated": "مورد با موفقیت به‌روزرسانی شد",
     "loading": "در حال بارگیری...",
-    "loading_customer_users": "در حال بارگذاری customer users...",
     "network_error": "خطای شبکه",
     "no_agents_available": "خیر agents available",
     "no_data": "هیچ داده‌ای در دسترس نیست",
@@ -2653,15 +2814,11 @@
     "please_wait": "لطفاً صبر کنید...",
     "processing": "در حال پردازش...",
     "required_fields": "لطفاً تمام فیلدهای الزامی را پر کنید",
-    "save_company_before_services": "ذخیره the company before assigning services.",
-    "save_company_first": "ذخیره the company before assigning services.",
     "saving": "در حال ذخیره...",
     "select_at_least_one_queue": "Please select at least one queue",
     "select_template_type": "Please select at least one template type.",
     "select_two_to_merge": "Please select at least two tickets to merge",
     "server_error": "خطای سرور",
-    "services_updated": "Services updated successfully",
-    "services_updated_success": "Services updated successfully",
     "session_expired": "جلسه شما منقضی شده است",
     "success": "موفقیت",
     "unauthorized": "غیرمجاز",
@@ -2828,9 +2985,7 @@
     "title": "Permission Management"
   },
   "placeholders": {
-    "contains": "Contains...",
-    "note_subject": "خیرte subject",
-    "separate_emails": "Separate multiple emails with commas"
+    "contains": "Contains..."
   },
   "priorities": {
     "heading": "اولویت Management",
@@ -2947,20 +3102,6 @@
     },
     "total_count": "total"
   },
-  "realtime": {
-    "active_alerts": "فعال Alerts",
-    "heading": "Real-زمان داشبورد",
-    "no_tickets": "خیر tickets",
-    "queue_distribution": "صف Distribution",
-    "queue_status": "صف وضعیت",
-    "recent_tickets": "Recent تیکت‌ها",
-    "stats": {
-      "active_agents": "فعال نمایندگان",
-      "avg_response_time": "Avg Response زمان",
-      "open_tickets": "باز کردن تیکت‌ها"
-    },
-    "ticket_volume": "تیکت Volume (24h)"
-  },
   "realtime_dashboard": {
     "title": "داشبورد بلادرنگ"
   },
@@ -3075,29 +3216,51 @@
     "search_results": "نتایج جستجو"
   },
   "self_service": {
+    "email": {
+      "register_body": "سلام %s،\n\nاز ثبت‌نام شما سپاسگزاریم. این پیوند را ظرف %d ساعت باز کنید تا نشانی ایمیل خود را تأیید و گذرواژه‌تان را انتخاب کنید:\n%s\n\nاگر ثبت‌نام نکرده‌اید، این ایمیل را نادیده بگیرید.",
+      "register_exists_body": "سلام،\n\nکسی تلاش کرد با این نشانی ایمیل حسابی بسازد، اما برای آن از قبل حسابی وجود دارد.\n\nاگر گذرواژه خود را فراموش کرده‌اید، می‌توانید گذرواژه جدیدی را اینجا انتخاب کنید:\n%s\n\nاگر شما نبودید، این ایمیل را نادیده بگیرید.",
+      "register_exists_subject": "حساب شما",
+      "register_subject": "نشانی ایمیل خود را تأیید کنید",
+      "reset_body": "سلام %s،\n\nبرای حساب شما «%s» درخواست بازنشانی گذرواژه ثبت شده است.\n\nاین پیوند را ظرف %d دقیقه باز کنید تا گذرواژه جدیدی انتخاب کنید:\n%s\n\nاگر این درخواست را نداده‌اید، این ایمیل را نادیده بگیرید. گذرواژه شما تغییر نکرده است.",
+      "reset_subject": "بازنشانی گذرواژه"
+    },
+    "error": "مشکلی پیش آمد. لطفاً دوباره تلاش کنید.",
     "forgot_password": {
-      "email_label": "آدرس ایمیل",
+      "identifier_label": "نام کاربری یا نشانی ایمیل",
+      "identifier_required": "نام کاربری یا نشانی ایمیل خود را وارد کنید.",
+      "intro": "نام کاربری یا نشانی ایمیل خود را وارد کنید. اگر با حسابی مطابقت داشته باشد، پیوندی برای انتخاب گذرواژه جدید برایتان ایمیل می‌کنیم.",
       "submit": "ارسال لینک",
       "success": "در صورت وجود حساب، لینک ارسال شد.",
       "title": "فراموشی رمز عبور"
     },
+    "rate_limited": "درخواست‌ها بیش از حد است. لطفاً بعداً دوباره تلاش کنید.",
     "register": {
+      "account_exists": "حسابی با این نشانی ایمیل از قبل وجود دارد. برای ورود از «فراموشی گذرواژه» استفاده کنید.",
+      "complete_submit": "ایجاد حساب",
+      "complete_success": "حساب شما ایجاد شد. اکنون می‌توانید وارد شوید.",
+      "complete_title": "گذرواژه خود را انتخاب کنید",
       "email": "ایمیل",
+      "fields_required": "نام، نام خانوادگی و نشانی ایمیل الزامی است.",
       "first_name": "نام",
+      "intro": "مشخصات خود را وارد کنید. پیوندی برای تأیید نشانی و انتخاب گذرواژه برایتان ایمیل می‌کنیم.",
+      "invalid_input": "یک نشانی ایمیل معتبر و نام‌هایی با حداکثر ۱۰۰ نویسه وارد کنید.",
       "last_name": "نام خانوادگی",
+      "start_again": "ثبت‌نام دوباره",
       "submit": "ثبت نام",
       "success": "ثبت نام ارسال شد.",
       "title": "ایجاد حساب"
     },
     "reset_password": {
       "confirm": "تأیید",
+      "invalid_link": "این پیوند نامعتبر است یا منقضی شده است.",
       "new_password": "رمز عبور جدید",
+      "policy_regexp": "گذرواژه با الگوی لازم مطابقت ندارد",
+      "request_new": "درخواست پیوند جدید",
+      "required": "یک گذرواژه جدید وارد کنید.",
       "submit": "بازنشانی",
       "success": "رمز عبور بازنشانی شد.",
-      "title": "بازنشانی رمز عبور"
-    },
-    "verify_email": {
-      "success": "ایمیل تأیید شد."
+      "title": "بازنشانی رمز عبور",
+      "too_long": "گذرواژه بیش از حد طولانی است."
     }
   },
   "service_catalog": {
@@ -3214,7 +3377,6 @@
     "last_used": "آخرین استفاده",
     "leave_empty_full_access": "برای دسترسی کامل خالی بگذارید",
     "light_theme": "روشن",
-    "more_coming": "تنظیمات بیشتر به زودی",
     "never_expires": "هرگز منقضی نمی‌شود",
     "never_used": "هرگز استفاده نشده",
     "no_tokens": "توکن API یافت نشد",
@@ -3359,7 +3521,6 @@
   "tickets": {
     "actions": "عملیات",
     "add_comment": "افزودن نظر",
-    "add_internal_note": "افزودن Internal خیرte",
     "add_note": "افزودن یادداشت",
     "additional_fields": "فیلدهای اضافی",
     "additional_info_placeholder": "هرگونه اطلاعات یا زمینه اضافی...",
@@ -3381,11 +3542,7 @@
     "attachments": "پیوست‌ها",
     "auto_close": {
       "at": "در",
-      "minus_help": "تیکت در زمان مشخص شده بدون توجه به فعالیت به صورت خودکار بسته خواهد شد.",
-      "minus_title": "بسته شدن خودکار در انتظار-",
       "overdue": "بسته شدن خودکار سررسید شده",
-      "plus_help": "تیکت به صورت خودکار بسته خواهد شد اگر تا زمان مشخص شده پاسخی از مشتری دریافت نشود.",
-      "plus_title": "بسته شدن خودکار در انتظار+",
       "scheduled": "بسته شدن خودکار برنامه‌ریزی شده",
       "should_have_closed_at": "تیکت باید در زمان زیر به صورت خودکار بسته می‌شد",
       "while_pending": "در حالت انتظار بسته شدن خودکار",
@@ -3406,7 +3563,6 @@
     "comment_placeholder": "نظر خود را اینجا بنویسید...",
     "comments": "نظرات",
     "communication": "ارتباطات",
-    "compose_reply": "Compose Reply",
     "created_at": "ایجاد شده در",
     "created_by": "ایجاد شده توسط",
     "created_on": "ایجاد شده در",
@@ -3417,7 +3573,6 @@
     "customer_visible_badge": "مشتری این را می‌بیند",
     "customer_wrote_badge": "مشتری این را نوشت",
     "description": "توضیحات",
-    "details": "جزئیات",
     "due_date": "تاریخ سررسید",
     "dynamic_field_filters": "Dynamic Field فیلترs",
     "email": "ایمیل",
@@ -3471,13 +3626,11 @@
     "owner": "مالک",
     "pending_reminder": {
       "ago": "پیش",
-      "help": "تیکت در زمان مشخص شده به وضعیت \"باز\" برمی‌گردد.",
       "in": "در",
       "no_time_scheduled": "زمان یادآوری برنامه‌ریزی نشده است.",
       "not_scheduled": "یادآوری برنامه‌ریزی نشده",
       "overdue": "یادآوری سررسید شده",
       "scheduled": "یادآوری برنامه‌ریزی شده",
-      "title": "یادآوری در انتظار",
       "was_scheduled_for": "یادآوری برای زمان زیر برنامه‌ریزی شده بود",
       "will_reopen_at": "تیکت در زمان زیر بازگشایی خواهد شد"
     },
@@ -3824,7 +3977,7 @@
       "org_support": "تیم پشتیبانی فناوری اطلاعات",
       "org_type_heading": "این چه نوع سازمانی است؟",
       "queue_name_ph": "نام صف (مثلاً صندوق پشتیبانی)",
-      "queues_desc": "صف یک صندوق ورودی است که تیکت‌ها به آن می‌رسند. هر صف را به یک یا چند تیم اختصاص دهید.",
+      "queues_desc": "صف یک صندوق ورودی است که تیکت‌ها به آن می‌رسند. هر صف به یک تیم تعلق دارد و اعضای همان تیم تیکت‌های آن را رسیدگی می‌کنند.",
       "queues_heading": "ایجاد صف‌های تیکت",
       "remove": "حذف",
       "review_agents": "کارگزاران",

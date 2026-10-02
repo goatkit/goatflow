@@ -1,376 +1,521 @@
-"""Data models for the GoatFlow API."""
+"""Request and response models of the GoatFlow REST API (/api/v1).
+
+Field sets mirror what the handlers send; where two endpoints describe the
+same resource differently (ticket list rows vs. a single ticket) they get
+separate models. Response models keep fields the SDK does not know yet
+(``extra="allow"``); request models reject unknown fields.
+"""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BaseGoatflowModel(BaseModel):
-    """Base model for all GoatFlow API models."""
-    
-    model_config = ConfigDict(
-        use_enum_values=True,
-        validate_assignment=True,
-        extra="forbid",
-        populate_by_name=True,
-    )
+    """Base for response models."""
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class RequestModel(BaseModel):
+    """Base for request bodies; unset fields are not sent."""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+
+class Pagination(BaseGoatflowModel):
+    page: int
+    per_page: int
+    total: int
+    total_pages: int
+    has_next: bool
+    has_prev: bool
+
+
+class GroupRef(BaseGoatflowModel):
+    id: int
+    name: str
+
+
+# Tickets
+
+
+class LastArticle(BaseGoatflowModel):
+    subject: str
+    created_at: datetime
+
+
+class TicketSummary(BaseGoatflowModel):
+    """One row of GET /api/v1/tickets."""
+
+    id: int
+    tn: str
+    ticket_number: str
+    title: str
+    queue_id: int
+    queue_name: str
+    state_id: int
+    state_name: str
+    priority_id: int
+    priority_name: str
+    customer_user_id: str
+    customer_id: str
+    user_id: int  # owner
+    responsible_user_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+    article_count: Optional[int] = None  # with include=["article_count"]
+    last_article: Optional[LastArticle] = None  # with include=["last_article"]
+
+
+class TicketList(BaseGoatflowModel):
+    tickets: List[TicketSummary]
+    pagination: Pagination
 
 
 class Ticket(BaseGoatflowModel):
-    """Represents a support ticket."""
-    
+    """GET /api/v1/tickets/{id}."""
+
     id: int
     ticket_number: str
     title: str
-    description: str
-    status: str
+    state_id: int
+    state: str
+    priority_id: int
     priority: str
-    type: str
     queue_id: int
-    customer_id: int
-    assigned_to: Optional[int] = None
-    created_at: datetime
-    updated_at: datetime
-    closed_at: Optional[datetime] = None
-    tags: Optional[List[str]] = None
-    custom_fields: Optional[Dict[str, Any]] = None
-    customer: Optional["User"] = None
-    assigned_user: Optional["User"] = None
-    queue: Optional["Queue"] = None
-    messages: Optional[List["TicketMessage"]] = None
-    attachments: Optional[List["Attachment"]] = None
+    queue: str
+    type_id: Optional[int] = None
+    customer_id: Optional[str] = None
+    customer_user_id: Optional[str] = None
+    owner_user_id: int
+    responsible_user_id: Optional[int] = None
+    article_count: int = 0
+    create_time: datetime
+    change_time: datetime
 
 
-class TicketMessage(BaseGoatflowModel):
-    """Represents a message in a ticket."""
-    
-    id: int
-    ticket_id: int
-    content: str
-    message_type: str
-    is_internal: bool
-    author_id: int
-    created_at: datetime
-    updated_at: datetime
-    author: Optional["User"] = None
-    attachments: Optional[List["Attachment"]] = None
-    custom_fields: Optional[Dict[str, Any]] = None
+class TicketCreateRequest(RequestModel):
+    """Body of POST /api/v1/tickets; ``body`` becomes the first article."""
 
-
-class User(BaseGoatflowModel):
-    """Represents a user in the system."""
-    
-    id: int
-    email: str
-    first_name: str
-    last_name: str
-    login: str
     title: str
-    role: str
-    is_active: bool
-    created_at: datetime
-    updated_at: datetime
-    last_login_at: datetime
+    queue_id: int
+    body: Optional[str] = None
+    priority_id: Optional[int] = None
+    state_id: Optional[int] = None
+    type_id: Optional[int] = None
+    customer_email: Optional[str] = None
+    customer_id: Optional[str] = None
+    customer_user_id: Optional[str] = None
 
 
-class Queue(BaseGoatflowModel):
-    """Represents a ticket queue."""
-    
+class CreatedTicket(BaseGoatflowModel):
+    """Data of POST /api/v1/tickets."""
+
     id: int
-    name: str
-    description: str
-    is_active: bool
-    created_at: datetime
-    updated_at: datetime
+    tn: str
+    title: str
+    queue_id: int
+    ticket_state_id: int
+    ticket_priority_id: int
 
 
-class Attachment(BaseGoatflowModel):
-    """Represents a file attachment."""
-    
+class TicketUpdateRequest(RequestModel):
+    """Body of PUT /api/v1/tickets/{id}; unset fields are unchanged."""
+
+    title: Optional[str] = None
+    queue_id: Optional[int] = None
+    type_id: Optional[int] = None
+    state_id: Optional[int] = None
+    priority_id: Optional[int] = None
+    customer_user_id: Optional[str] = None
+    customer_id: Optional[str] = None
+    user_id: Optional[int] = None  # owner
+    responsible_user_id: Optional[int] = None
+    ticket_lock_id: Optional[int] = None
+
+
+class TicketRecord(BaseGoatflowModel):
+    """Data of PUT /api/v1/tickets/{id}: the ticket row after the update."""
+
+    id: int
+    tn: str
+    title: str
+    queue_id: int
+    type_id: int
+    state_id: int
+    priority_id: int
+    user_id: int
+    responsible_user_id: Optional[int] = None
+    ticket_lock_id: int
+    customer_user_id: str
+    customer_id: str
+    create_time: datetime
+    create_by: int
+    change_time: datetime
+    change_by: int
+
+
+class ReopenResult(BaseGoatflowModel):
+    """Response of POST /api/v1/tickets/{id}/reopen."""
+
+    id: int
+    state_id: int
+    state: str
+    reason: str
+    reopened_at: datetime
+
+
+# Articles
+
+
+class ArticleAttachment(BaseGoatflowModel):
     id: int
     filename: str
     content_type: str
     size: int
+    disposition: str
+
+
+class Article(BaseGoatflowModel):
+    id: int
     ticket_id: int
-    message_id: Optional[int] = None
-    uploaded_by: int
-    created_at: datetime
+    article_sender_type_id: int
+    sender_type: Optional[str] = None
+    communication_channel_id: int
+    is_visible_for_customer: bool
+    article_type: str  # e.g. email-external, note-internal, phone
+    from_: Optional[str] = Field(default=None, alias="from")
+    to: Optional[str] = None
+    cc: Optional[str] = None
+    subject: str
+    body: str
+    content_type: str
+    message_id: Optional[str] = None
+    create_time: Optional[datetime] = None
+    create_by: int
+    change_time: Optional[datetime] = None
+    change_by: Optional[int] = None
+    attachments: Optional[List[ArticleAttachment]] = None  # with include_attachments
 
 
-class Group(BaseGoatflowModel):
-    """Represents a user group."""
-    
+class ArticleList(BaseGoatflowModel):
+    """GET /api/v1/tickets/{id}/articles, newest first."""
+
+    articles: List[Article]
+    total: int
+
+
+class ArticleCreateRequest(RequestModel):
+    """Body of POST /api/v1/tickets/{id}/articles; ``body`` is required."""
+
+    body: str
+    subject: Optional[str] = None
+    content_type: Optional[str] = None
+    article_type: Optional[str] = None  # note-internal (note), note-external, email-external (email), phone
+    sender_type: Optional[Literal["agent", "customer", "system"]] = None
+    is_visible_for_customer: Optional[bool] = None
+    from_: Optional[str] = Field(default=None, alias="from")
+    to: Optional[str] = None
+    cc: Optional[str] = None
+    time_unit: Optional[float] = None
+
+
+class ArticleUpdateRequest(RequestModel):
+    """Body of PUT /api/v1/tickets/{id}/articles/{aid}; at least one field."""
+
+    subject: Optional[str] = None
+    body: Optional[str] = None
+
+
+class ArticleUpdate(BaseGoatflowModel):
+    id: int
+    ticket_id: int
+    subject: str
+    body: str
+
+
+# Users
+
+
+class UserGroup(BaseGoatflowModel):
+    """Group membership with permission keys (ro, move_into, create, note, owner, priority, rw)."""
+
     id: int
     name: str
-    description: str
-    type: str
-    is_active: bool
+    permissions: List[str] = []
+
+
+class User(BaseGoatflowModel):
+    """An agent from GET /api/v1/users or /api/v1/users/{id}."""
+
+    id: int
+    login: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    valid_id: int
+    valid: bool
+    create_time: Optional[datetime] = None
+    change_time: Optional[datetime] = None
+    groups: List[UserGroup] = []
+    email: Optional[str] = None  # only GET /api/v1/users/{id}
+    preferences: Optional[Dict[str, str]] = None  # only GET /api/v1/users/{id}
+
+
+class UserList(BaseGoatflowModel):
+    users: List[User]
+    pagination: Pagination
+
+
+class CurrentUser(BaseGoatflowModel):
+    """GET /api/v1/users/me."""
+
+    id: int
+    login: str
+    email: str
+    first_name: str
+    last_name: str
+    active: bool
+    groups: List[GroupRef] = []
+
+
+class UserCreateRequest(RequestModel):
+    """Body of POST /api/v1/users; password needs 8+ characters."""
+
+    login: str
+    email: str
+    password: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    valid_id: Optional[int] = None
+    groups: Optional[List[int]] = None  # group IDs
+
+
+class CreatedUser(BaseGoatflowModel):
+    """Data of POST /api/v1/users."""
+
+    id: int
+    login: str
+    email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    valid_id: int
+    valid: bool
+    groups: List[int] = []
     created_at: datetime
-    updated_at: datetime
 
 
-class DashboardStats(BaseGoatflowModel):
-    """Represents dashboard statistics."""
-    
+class UserUpdateRequest(RequestModel):
+    """Body of PUT /api/v1/users/{id}; unset fields are unchanged."""
+
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    password: Optional[str] = None
+    valid_id: Optional[int] = None
+
+
+# Queues
+
+
+class Queue(BaseGoatflowModel):
+    """A ticket queue.
+
+    ``valid``, ``comment``, ``create_time``, ``change_time`` and the ticket
+    counts are only sent by GET /api/v1/queues; ``comments``,
+    ``salutation_id`` and ``signature_id`` only by GET /api/v1/queues/{id}.
+    """
+
+    id: int
+    name: str
+    valid_id: int
+    valid: Optional[bool] = None
+    group_id: Optional[int] = None
+    group_name: Optional[str] = None
+    groups: List[GroupRef] = []
+    system_address_id: Optional[int] = None
+    salutation_id: Optional[int] = None
+    signature_id: Optional[int] = None
+    unlock_timeout: Optional[int] = None
+    follow_up_id: Optional[int] = None
+    follow_up_lock: Optional[int] = None
+    comment: Optional[str] = None
+    comments: Optional[str] = None
+    create_time: Optional[datetime] = None
+    change_time: Optional[datetime] = None
+    ticket_count: Optional[int] = None
+    open_tickets: Optional[int] = None
+    closed_tickets: Optional[int] = None
+    pending_tickets: Optional[int] = None
+
+
+# Statistics
+
+
+class StatisticsOverview(BaseGoatflowModel):
     total_tickets: int
     open_tickets: int
     closed_tickets: int
     pending_tickets: int
-    overdue_tickets: int
-    unassigned_tickets: int
-    my_tickets: int
-    tickets_by_status: Dict[str, int]
-    tickets_by_priority: Dict[str, int]
-    tickets_by_queue: Dict[str, int]
 
 
-class SearchResult(BaseGoatflowModel):
-    """Represents search results."""
-    
-    total_count: int
-    page: int
-    page_size: int
-    tickets: List[Ticket]
+class QueueCount(BaseGoatflowModel):
+    queue_id: int
+    queue_name: str
+    count: int
 
 
-class InternalNote(BaseGoatflowModel):
-    """Represents an internal note."""
-    
-    id: int
+class PriorityCount(BaseGoatflowModel):
+    priority_id: int
+    priority_name: str
+    count: int
+
+
+class RecentActivity(BaseGoatflowModel):
+    type: str
     ticket_id: int
-    content: str
-    category: str
-    is_important: bool
-    is_pinned: bool
-    tags: List[str]
-    author_id: int
-    author_name: str
-    author_email: str
-    created_at: datetime
-    updated_at: datetime
-    edited_at: datetime
-    edited_by: int
+    ticket_tn: str
+    timestamp: datetime
 
 
-class NoteTemplate(BaseGoatflowModel):
-    """Represents a note template."""
-    
-    id: int
-    name: str
-    content: str
-    category: str
-    tags: List[str]
-    is_important: bool
-    created_by: int
-    created_at: datetime
-    updated_at: datetime
+class DashboardStatistics(BaseGoatflowModel):
+    """GET /api/v1/statistics/dashboard, limited to the caller's readable queues."""
+
+    overview: StatisticsOverview
+    by_queue: List[QueueCount]
+    by_priority: List[PriorityCount]
+    recent_activity: List[RecentActivity]  # the ten newest tickets
 
 
-class LDAPUser(BaseGoatflowModel):
-    """Represents a user from LDAP."""
-    
-    dn: str
-    username: str
-    email: str
-    first_name: str
-    last_name: str
-    display_name: str
-    phone: str
-    department: str
+# Search
+
+
+class SearchQuery(RequestModel):
+    """Body of POST /api/v1/search."""
+
+    query: str
+    types: Optional[List[str]] = None  # default ticket, article, customer
+    filters: Optional[Dict[str, str]] = None
+    offset: Optional[int] = None
+    limit: Optional[int] = None  # default 20, max 100
+    sort_by: Optional[str] = None
+    sort_order: Optional[Literal["asc", "desc"]] = None
+    highlight: Optional[bool] = None
+    facets: Optional[List[str]] = None
+
+
+class SearchHit(BaseGoatflowModel):
+    id: str
+    type: str
+    score: float
     title: str
-    manager: str
-    groups: List[str]
-    attributes: Dict[str, str]
-    object_guid: str
-    object_sid: str
-    last_login: datetime
-    is_active: bool
+    content: str
+    highlights: Optional[Dict[str, List[str]]] = None
+    metadata: Dict[str, Any] = {}
 
 
-class LDAPSyncResult(BaseGoatflowModel):
-    """Represents the result of an LDAP sync operation."""
-    
-    users_found: int
-    users_created: int
-    users_updated: int
-    users_disabled: int
-    groups_found: int
-    groups_created: int
-    groups_updated: int
-    errors: List[str]
-    start_time: datetime
-    end_time: datetime
-    duration: str
-    dry_run: bool
+class SearchFacet(BaseGoatflowModel):
+    value: str
+    count: int
+
+
+class SearchResults(BaseGoatflowModel):
+    """Response of POST /api/v1/search; ``warning`` is set when the backend is unavailable."""
+
+    query: Optional[str] = None
+    total_hits: int
+    took_ms: int
+    hits: List[SearchHit]
+    facets: Optional[Dict[str, List[SearchFacet]]] = None
+    suggestions: Optional[List[str]] = None
+    warning: Optional[str] = None
+
+
+# Webhooks
 
 
 class Webhook(BaseGoatflowModel):
-    """Represents a webhook configuration."""
-    
+    """Represents an outbound webhook. The secret is write-only."""
+
     id: int
     name: str
     url: str
     events: List[str]
-    secret: Optional[str] = None
-    is_active: bool
+    headers: Dict[str, str] = {}
+    has_secret: bool = False
+    secret_hint: Optional[str] = None
     retry_count: int
-    timeout: int
-    headers: Optional[Dict[str, str]] = None
+    timeout_seconds: int
+    is_active: bool
     created_at: datetime
+    created_by: int
     updated_at: datetime
-    last_fired_at: Optional[datetime] = None
+    updated_by: int
 
 
-class WebhookDelivery(BaseGoatflowModel):
-    """Represents a webhook delivery attempt."""
-    
-    id: int
-    webhook_id: int
-    event: str
-    payload: str
-    status_code: int
-    response: str
-    success: bool
-    attempt: int
-    delivered_at: datetime
+class WebhookRequest(RequestModel):
+    """Body of POST and PUT /api/v1/webhooks; on update, unset fields are unchanged."""
 
-
-# Request/Response models
-
-class TicketCreateRequest(BaseGoatflowModel):
-    """Request model for creating a ticket."""
-    
-    title: str
-    description: str
-    priority: Optional[str] = "normal"
-    type: Optional[str] = "incident"
-    queue_id: Optional[int] = None
-    customer_id: Optional[int] = None
-    assigned_to: Optional[int] = None
-    tags: Optional[List[str]] = None
-    custom_fields: Optional[Dict[str, Any]] = None
-
-
-class TicketUpdateRequest(BaseGoatflowModel):
-    """Request model for updating a ticket."""
-    
-    title: Optional[str] = None
-    description: Optional[str] = None
-    status: Optional[str] = None
-    priority: Optional[str] = None
-    type: Optional[str] = None
-    queue_id: Optional[int] = None
-    assigned_to: Optional[int] = None
-    tags: Optional[List[str]] = None
-    custom_fields: Optional[Dict[str, Any]] = None
-
-
-class TicketListOptions(BaseGoatflowModel):
-    """Options for listing tickets."""
-    
-    page: Optional[int] = 1
-    page_size: Optional[int] = 50
-    status: Optional[List[str]] = None
-    priority: Optional[List[str]] = None
-    queue_id: Optional[List[int]] = None
-    assigned_to: Optional[int] = None
-    customer_id: Optional[int] = None
-    search: Optional[str] = None
-    tags: Optional[List[str]] = None
-    created_after: Optional[datetime] = None
-    created_before: Optional[datetime] = None
-    sort_by: Optional[str] = "created_at"
-    sort_order: Optional[str] = "desc"
-
-
-class TicketListResponse(BaseGoatflowModel):
-    """Response model for listing tickets."""
-    
-    tickets: List[Ticket]
-    total_count: int
-    page: int
-    page_size: int
-    total_pages: int
-
-
-class MessageCreateRequest(BaseGoatflowModel):
-    """Request model for creating a message."""
-    
-    content: str
-    message_type: Optional[str] = "note"
-    is_internal: Optional[bool] = False
-    custom_fields: Optional[Dict[str, Any]] = None
-
-
-class UserCreateRequest(BaseGoatflowModel):
-    """Request model for creating a user."""
-    
-    email: str
-    first_name: str
-    last_name: str
-    login: str
-    title: Optional[str] = ""
-    role: Optional[str] = "user"
-    password: str = Field(min_length=8)
-
-
-class UserUpdateRequest(BaseGoatflowModel):
-    """Request model for updating a user."""
-    
-    email: Optional[str] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    title: Optional[str] = None
-    role: Optional[str] = None
+    name: Optional[str] = None
+    url: Optional[str] = None
+    events: Optional[List[str]] = None
+    secret: Optional[str] = None  # 16-512 characters; "" removes the secret
+    headers: Optional[Dict[str, str]] = None
+    retry_count: Optional[int] = None
+    timeout_seconds: Optional[int] = None
     is_active: Optional[bool] = None
 
 
-class AuthLoginRequest(BaseGoatflowModel):
-    """Request model for authentication."""
-    
-    email: str
-    password: str
+class WebhookDelivery(BaseGoatflowModel):
+    """Represents one event sent (or scheduled) to one webhook."""
 
-
-class AuthLoginResponse(BaseGoatflowModel):
-    """Response model for authentication."""
-    
-    token: str
-    refresh_token: str
-    expires_at: datetime
-    user: User
-
-
-class APIResponse(BaseGoatflowModel):
-    """Standard API response wrapper."""
-    
+    id: int
+    webhook_id: int
+    event: str
+    status: str  # pending, delivering, delivered, failed
     success: bool
-    data: Optional[Any] = None
+    attempts: int
+    status_code: Optional[int] = None
     error: Optional[str] = None
-    message: Optional[str] = None
+    duration_ms: Optional[int] = None
+    next_attempt_at: Optional[datetime] = None
+    delivered_at: Optional[datetime] = None
+    payload: Optional[str] = None
+    response: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
 
 
-class ErrorResponse(BaseGoatflowModel):
-    """API error response."""
-    
-    error: str
-    message: str
-    code: int
+# Auth
 
 
-# Update forward references
-Ticket.model_rebuild()
-TicketMessage.model_rebuild()
-User.model_rebuild()
-Queue.model_rebuild()
-Attachment.model_rebuild()
-Group.model_rebuild()
-DashboardStats.model_rebuild()
-SearchResult.model_rebuild()
-InternalNote.model_rebuild()
-NoteTemplate.model_rebuild()
-LDAPUser.model_rebuild()
-LDAPSyncResult.model_rebuild()
-Webhook.model_rebuild()
-WebhookDelivery.model_rebuild()
+class LoginUser(BaseGoatflowModel):
+    id: int
+    login: str
+    email: str
+    first_name: str
+    last_name: str
+    role: str
+
+
+class TokenPair(BaseGoatflowModel):
+    """Response of POST /api/v1/auth/login and POST /api/v1/auth/refresh.
+
+    Every refresh rotates the refresh token.
+    """
+
+    user: LoginUser
+    access_token: str
+    refresh_token: str
+    token_type: str
+    expires_in: int  # access token lifetime, seconds
+    refresh_expires_in: int  # refresh token lifetime, seconds
+
+
+class Health(BaseGoatflowModel):
+    """GET /health."""
+
+    status: str
+    components: Dict[str, str] = {}
+    version: str

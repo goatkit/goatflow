@@ -88,7 +88,7 @@ func TestAllPagesSSR(t *testing.T) {
 
 	// Spin up server
 	r := gin.New()
-	setupHTMXRoutesWithAuth(r, nil, nil, nil)
+	setupHTMXRoutesWithAuth(r, nil, nil)
 	srv := httptest.NewServer(r)
 	defer srv.Close()
 

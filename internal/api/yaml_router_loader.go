@@ -210,10 +210,12 @@ func loadYAMLRouteGroups(dir string) ([]topRouteDoc, error) {
 	return docs, nil
 }
 
-// registerYAMLRoutes registers routes onto router r using handler registry
-// registerYAMLRoutes registers YAML routes. authMW may be nil (tests/dev). When provided,
-// 'auth' token maps to authMW.RequireAuth(); 'admin' token adds checkAdmin().
-func registerYAMLRoutes(r *gin.Engine, authMW interface{}) {
+// registerYAMLRoutes registers YAML routes onto a throwaway engine and writes
+// generated/routes-manifest.json. Only GenerateRoutesManifest calls it; the
+// engine is never served, so no auth middleware is attached (the server wires
+// auth through routing.LoadYAMLRoutes*). The manifest records each route's
+// middleware tokens as declared in YAML.
+func registerYAMLRoutes(r *gin.Engine) {
 	docs, err := loadYAMLRouteGroups("./routes")
 	if err != nil {
 		log.Printf("yaml route load error: %v", err)
@@ -236,26 +238,7 @@ func registerYAMLRoutes(r *gin.Engine, authMW interface{}) {
 
 	for _, doc := range docs {
 		prefix := doc.Spec.Prefix
-		// Build middleware chain from tokens
-		groupHandlers := []gin.HandlerFunc{}
-		tokenSet := map[string]bool{}
-		for _, mw := range doc.Spec.Middleware {
-			tokenSet[mw] = true
-		}
-		// auth token -> RequireAuth if jwtManager present in context (try to find via global?) fallback to test stub
-		// We don't have direct jwtManager here; rely on context injection already performed earlier for protected routes.
-		// Minimal approach: if auth token present and no existing user in context, wrap a guard that enforces login cookie.
-		if tokenSet["auth"] {
-			if mw, ok := authMW.(interface{ RequireAuth() gin.HandlerFunc }); ok {
-				groupHandlers = append(groupHandlers, mw.RequireAuth())
-			} else {
-				groupHandlers = append(groupHandlers, fallbackAuthGuard())
-			}
-		}
-		if tokenSet["admin"] {
-			groupHandlers = append(groupHandlers, checkAdmin())
-		}
-		base := r.Group(prefix, groupHandlers...)
+		base := r.Group(prefix)
 
 		for _, rt := range doc.Spec.Routes {
 			if rt.Path == "" || rt.Method == "" {
@@ -263,21 +246,6 @@ func registerYAMLRoutes(r *gin.Engine, authMW interface{}) {
 			}
 			method := strings.ToUpper(rt.Method)
 			fullPath := combineRoutePath(prefix, rt.Path)
-
-			// Build route-level middleware tokens
-			routeMws := []gin.HandlerFunc{}
-			for _, mw := range rt.Middleware {
-				switch mw {
-				case "auth":
-					if real, ok := authMW.(interface{ RequireAuth() gin.HandlerFunc }); ok {
-						routeMws = append(routeMws, real.RequireAuth())
-					} else {
-						routeMws = append(routeMws, fallbackAuthGuard())
-					}
-				case "admin":
-					routeMws = append(routeMws, checkAdmin())
-				}
-			}
 
 			cleanRoutePath := strings.TrimPrefix(rt.Path, "/")
 			if rt.RedirectTo != "" {
@@ -292,7 +260,7 @@ func registerYAMLRoutes(r *gin.Engine, authMW interface{}) {
 				if routeAlreadyRegistered(r, method, fullPath) {
 					log.Printf("duplicate route detected, skipping registration: %s %s (redirect)", method, fullPath)
 				} else {
-					registerOneWithChain(base, method, cleanRoutePath, append(routeMws, h)...)
+					registerOneWithChain(base, method, cleanRoutePath, h)
 				}
 				manifest = append(manifest, manifestRoute{
 					Group:      doc.Metadata.Name,
@@ -309,7 +277,7 @@ func registerYAMLRoutes(r *gin.Engine, authMW interface{}) {
 					if routeAlreadyRegistered(r, method, fullPath) {
 						log.Printf("duplicate route detected, skipping registration: %s %s (websocket)", method, fullPath)
 					} else {
-						registerOneWithChain(base, method, cleanRoutePath, append(routeMws, h)...)
+						registerOneWithChain(base, method, cleanRoutePath, h)
 					}
 					manifest = append(manifest, manifestRoute{
 						Group:      doc.Metadata.Name,
@@ -328,7 +296,7 @@ func registerYAMLRoutes(r *gin.Engine, authMW interface{}) {
 				if routeAlreadyRegistered(r, method, fullPath) {
 					log.Printf("duplicate route detected, skipping registration: %s %s", method, fullPath)
 				} else {
-					registerOneWithChain(base, method, cleanRoutePath, append(routeMws, h)...)
+					registerOneWithChain(base, method, cleanRoutePath, h)
 				}
 				manifest = append(manifest, manifestRoute{
 					Group:      doc.Metadata.Name,
@@ -423,7 +391,7 @@ func GenerateRoutesManifest() error {
 			log.Printf("generated dir ready for manifest output")
 		}
 	}
-	registerYAMLRoutes(r, nil)
+	registerYAMLRoutes(r)
 	if _, err := os.Stat("generated/routes-manifest.json"); err != nil {
 		return err
 	}
@@ -447,14 +415,3 @@ func registerOneWithChain(g *gin.RouterGroup, method, path string, handlers ...g
 		log.Printf("unsupported method %s for %s", method, path)
 	}
 }
-
-// fallbackAuthGuard is a no-op placeholder used only for manifest generation.
-// Actual auth is handled by the routing package's RegisterExistingHandlers.
-func fallbackAuthGuard() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Next()
-	}
-}
-
-// Integrate with existing setup in setupHTMXRoutesWithAuth AFTER static/auth/basic have been initialized.
-// We'll call registerYAMLRoutes at the end of setupHTMXRoutesWithAuth so new groups override legacy gaps.

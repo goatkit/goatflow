@@ -14,8 +14,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/goatkit/goatflow/internal/api"
-	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -255,7 +255,7 @@ func TestGroupsCRUDAPI(t *testing.T) {
 }
 
 func TestGroupValidation(t *testing.T) {
-	router, _ := setupTestRouter(t)
+	router, groupRepo := setupTestRouter(t)
 
 	t.Run("Cannot Create Group Without Name", func(t *testing.T) {
 		// Create request without name
@@ -276,9 +276,10 @@ func TestGroupValidation(t *testing.T) {
 	})
 
 	t.Run("Invalid Valid ID", func(t *testing.T) {
+		name := fmt.Sprintf("TestInvalid_%d", time.Now().Unix())
 		// Create request with invalid valid_id
 		reqBody := map[string]interface{}{
-			"name":     fmt.Sprintf("TestInvalid_%d", time.Now().Unix()),
+			"name":     name,
 			"comments": "Test invalid status",
 			"valid_id": 999, // Invalid ID
 		}
@@ -293,6 +294,11 @@ func TestGroupValidation(t *testing.T) {
 		// Depending on validation, this might fail or succeed with a default
 		// Log the response for debugging
 		t.Logf("Response: %d - %s", w.Code, w.Body.String())
+		// A group created anyway must not outlive the test: tests/integration
+		// creates groups with the same name pattern.
+		if group, err := groupRepo.GetByName(name); err == nil {
+			require.NoError(t, groupRepo.Delete(uintFromID(t, group.ID)))
+		}
 	})
 }
 

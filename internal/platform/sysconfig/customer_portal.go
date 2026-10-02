@@ -157,7 +157,7 @@ func DeleteCustomerPortalConfigKeyForCompany(db *sql.DB, customerID, key string)
 		return fmt.Errorf("database connection unavailable")
 	}
 	if _, err := db.Exec(database.ConvertPlaceholders(
-		`DELETE FROM sysconfig WHERE name = ?`), fullName); err != nil {
+		`DELETE FROM sysconfig_modified WHERE name = ?`), fullName); err != nil {
 		return err
 	}
 	if _, err := db.Exec(database.ConvertPlaceholders(

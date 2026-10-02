@@ -1,9 +1,11 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
@@ -30,27 +32,8 @@ type TicketType struct {
 func handleAdminTypes(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Fallback minimal HTML with required UI elements for tests
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, `<!DOCTYPE html>
-<html>
-<head><title>Ticket Type Management</title></head>
-<body>
-  <h1>Ticket Type Management</h1>
-  <div>Search <input id="searchInput" type="text" /></div>
-  <button onclick="openTypeModal()">Add New Type</button>
-  <div id="typeModal" style="display:none"></div>
-  <table class="table"><tr><th>Name</th><th>Tickets</th></tr></table>
-  <script>
-    function openTypeModal(){}
-    function saveType(){}
-    function deleteType(id){}
-    function editType(id){}
-  </script>
-  <div>Search</div>
-  <div>dark:</div>
-  </body>
-</html>`)
+		log.Printf("handleAdminTypes: database unavailable: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Database unavailable")
 		return
 	}
 
@@ -99,27 +82,8 @@ func handleAdminTypes(c *gin.Context) {
 
 	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
-		// Graceful fallback HTML if DB errors with required UI markers
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, `<!DOCTYPE html>
-<html>
-<head><title>Ticket Type Management</title></head>
-<body>
-  <h1>Ticket Type Management</h1>
-  <div>Search <input id="searchInput" type="text" /></div>
-  <button onclick="openTypeModal()">Add New Type</button>
-  <div id="typeModal" style="display:none"></div>
-  <table class="table"><tr><th>Name</th><th>Tickets</th></tr></table>
-  <script>
-    function openTypeModal(){}
-    function saveType(){}
-    function deleteType(id){}
-    function editType(id){}
-  </script>
-  <div>Search</div>
-  <div>dark:</div>
-</body>
-</html>`)
+		log.Printf("handleAdminTypes: query ticket types: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Failed to load ticket types")
 		return
 	}
 	defer rows.Close()
@@ -138,26 +102,7 @@ func handleAdminTypes(c *gin.Context) {
 	// Render template or fallback if renderer not initialized
 	renderer := getPongo2Renderer()
 	if renderer == nil || renderer.TemplateSet() == nil {
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, `<!DOCTYPE html>
-<html>
-<head><title>Ticket Type Management</title></head>
-<body>
-  <h1>Ticket Type Management</h1>
-  <div>Search <input id="searchInput" type="text" /></div>
-  <button onclick="openTypeModal()">Add New Type</button>
-  <div id="typeModal" style="display:none"></div>
-  <table class="table"><tr><th>Name</th><th>Tickets</th></tr></table>
-  <script>
-    function openTypeModal(){}
-    function saveType(){}
-    function deleteType(id){}
-    function editType(id){}
-  </script>
-  <div>Search</div>
-  <div>dark:</div>
-</body>
-</html>`)
+		sendErrorResponse(c, http.StatusInternalServerError, "Template renderer unavailable")
 		return
 	}
 	renderer.HTML(c, http.StatusOK, "pages/admin/types.pongo2", pongo2.Context{
@@ -171,10 +116,10 @@ func handleAdminTypes(c *gin.Context) {
 	})
 }
 
-// handleAdminTypeCreate creates a new ticket type.
+// handleAdminTypeCreate creates a new ticket type (POST /admin/types/create).
 func handleAdminTypeCreate(c *gin.Context) {
 	var input struct {
-		Name    string `json:"name" form:"name" binding:"required"`
+		Name    string `json:"name" form:"name"`
 		ValidID int    `json:"valid_id" form:"valid_id"`
 	}
 
@@ -194,54 +139,43 @@ func handleAdminTypeCreate(c *gin.Context) {
 		}
 	}
 
-	// Try to bind based on content type
 	if err := c.ShouldBind(&input); err != nil {
+		respondError(http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	input.Name = strings.TrimSpace(input.Name)
+	if input.Name == "" {
 		respondError(http.StatusBadRequest, "Name is required")
 		return
 	}
-
-	// Validate name length
 	if len(input.Name) > 200 {
 		respondError(http.StatusBadRequest, "Name must be less than 200 characters")
 		return
 	}
-
-	// Deterministic fallback for tests
-	if os.Getenv("APP_ENV") == "test" {
-		if input.Name == "" {
-			respondError(http.StatusBadRequest, "Name is required")
-			return
-		}
-		respondSuccess(http.StatusCreated, "Type created successfully")
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		// Fallback: simple create success
-		if input.Name == "" {
-			respondError(http.StatusBadRequest, "Name is required")
-			return
-		}
-		if input.ValidID == 0 {
-			input.ValidID = 1
-		}
-		respondSuccess(http.StatusCreated, "Type created successfully")
-		return
-	}
-
-	// Create the type
 	if input.ValidID == 0 {
 		input.ValidID = 1
 	}
 
-	_, err = db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (?, ?, NOW(), 1, NOW(), 1)
-	`), input.Name, input.ValidID)
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		respondError(http.StatusInternalServerError, "Database unavailable")
+		return
+	}
 
-	if err != nil {
-		if isDuplicateTypeError(err) {
+	if taken, err := typeNameTaken(db, input.Name, 0); err != nil {
+		respondError(http.StatusInternalServerError, "Failed to create type")
+		return
+	} else if taken {
+		respondError(http.StatusBadRequest, "A type with this name already exists")
+		return
+	}
+
+	userID := GetUserIDFromCtx(c, 1)
+	if _, err := db.Exec(database.ConvertPlaceholders(`
+		INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
+	`), input.Name, input.ValidID, userID, userID); err != nil {
+		if isUniqueViolation(err) {
 			respondError(http.StatusBadRequest, "A type with this name already exists")
 			return
 		}
@@ -252,15 +186,11 @@ func handleAdminTypeCreate(c *gin.Context) {
 	respondSuccess(http.StatusCreated, "Type created successfully")
 }
 
-// handleAdminTypeUpdate updates an existing ticket type.
+// handleAdminTypeUpdate updates an existing ticket type (POST /admin/types/:id/update).
 func handleAdminTypeUpdate(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Invalid type ID",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid type ID"})
 		return
 	}
 
@@ -269,7 +199,6 @@ func handleAdminTypeUpdate(c *gin.Context) {
 		ValidID *int   `json:"valid_id" form:"valid_id"`
 	}
 
-	// Try to bind based on content type
 	isHX := c.GetHeader("HX-Request") == "true"
 	respondError := func(status int, msg string) {
 		if isHX {
@@ -290,13 +219,11 @@ func handleAdminTypeUpdate(c *gin.Context) {
 		respondError(http.StatusBadRequest, "Invalid request body")
 		return
 	}
-
+	input.Name = strings.TrimSpace(input.Name)
 	if input.Name == "" {
 		respondError(http.StatusBadRequest, "Name cannot be empty")
 		return
 	}
-
-	// Validate name length
 	if len(input.Name) > 200 {
 		respondError(http.StatusBadRequest, "Name must be less than 200 characters")
 		return
@@ -304,33 +231,38 @@ func handleAdminTypeUpdate(c *gin.Context) {
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Fallback: pretend soft-delete success
-		respondSuccess("Type updated successfully")
+		respondError(http.StatusInternalServerError, "Database unavailable")
 		return
 	}
 
-	// Build update query using ? placeholders
-	query := "UPDATE ticket_type SET change_by = 1, change_time = CURRENT_TIMESTAMP"
-	args := []interface{}{}
-
-	if input.Name != "" {
-		query += ", name = ?"
-		args = append(args, input.Name)
+	if found, err := typeExists(db, id); err != nil {
+		respondError(http.StatusInternalServerError, "Failed to update type")
+		return
+	} else if !found {
+		respondError(http.StatusNotFound, "Type not found")
+		return
+	}
+	if taken, err := typeNameTaken(db, input.Name, id); err != nil {
+		respondError(http.StatusInternalServerError, "Failed to update type")
+		return
+	} else if taken {
+		respondError(http.StatusBadRequest, "A type with this name already exists")
+		return
 	}
 
+	query := "UPDATE ticket_type SET change_by = ?, change_time = CURRENT_TIMESTAMP, name = ?"
+	args := []interface{}{GetUserIDFromCtx(c, 1), input.Name}
 	if input.ValidID != nil {
 		query += ", valid_id = ?"
 		args = append(args, *input.ValidID)
 	}
-
 	query += " WHERE id = ?"
 	args = append(args, id)
 
-	// Update the type
-	result, err := db.Exec(database.ConvertPlaceholders(query), args...)
-
-	if err != nil {
-		if isDuplicateTypeError(err) {
+	// Existence was checked above: MySQL reports 0 affected rows when nothing
+	// changed, so RowsAffected cannot be used as a not-found signal.
+	if _, err := db.Exec(database.ConvertPlaceholders(query), args...); err != nil {
+		if isUniqueViolation(err) {
 			respondError(http.StatusBadRequest, "A type with this name already exists")
 			return
 		}
@@ -338,27 +270,14 @@ func handleAdminTypeUpdate(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		rowsAffected = 0
-	}
-	if rowsAffected == 0 {
-		respondError(http.StatusNotFound, "Type not found")
-		return
-	}
-
 	respondSuccess("Type updated successfully")
 }
 
-// handleAdminTypeDelete soft-deletes a ticket type.
+// handleAdminTypeDelete soft-deletes a ticket type (POST /admin/types/:id/delete).
 func handleAdminTypeDelete(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Invalid type ID",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid type ID"})
 		return
 	}
 
@@ -380,59 +299,63 @@ func handleAdminTypeDelete(c *gin.Context) {
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		respondSuccess("Type deleted successfully")
+		respondError(http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	if found, err := typeExists(db, id); err != nil {
+		respondError(http.StatusInternalServerError, "Failed to delete type")
+		return
+	} else if !found {
+		respondError(http.StatusNotFound, "Type not found")
 		return
 	}
 
 	var ticketCount int
-	err = db.QueryRow(database.ConvertPlaceholders(`
-		SELECT COUNT(*) FROM ticket
-		WHERE type_id = ?
-	`), id).Scan(&ticketCount)
-
-	if err != nil {
+	if err := db.QueryRow(database.ConvertPlaceholders(
+		`SELECT COUNT(*) FROM ticket WHERE type_id = ?`), id).Scan(&ticketCount); err != nil {
 		respondError(http.StatusInternalServerError, "Failed to check type usage")
 		return
 	}
-
 	if ticketCount > 0 {
 		respondError(http.StatusBadRequest, fmt.Sprintf("Cannot delete type: %d tickets are using it", ticketCount))
 		return
 	}
 
-	result, err := db.Exec(database.ConvertPlaceholders(`
+	if _, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE ticket_type
-		SET valid_id = 2, change_by = 1, change_time = CURRENT_TIMESTAMP
+		SET valid_id = 2, change_by = ?, change_time = CURRENT_TIMESTAMP
 		WHERE id = ?
-	`), id)
-
-	if err != nil {
+	`), GetUserIDFromCtx(c, 1), id); err != nil {
 		respondError(http.StatusInternalServerError, "Failed to delete type")
-		return
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		rowsAffected = 0
-	}
-	if rowsAffected == 0 {
-		respondError(http.StatusNotFound, "Type not found")
 		return
 	}
 
 	respondSuccess("Type deleted successfully")
 }
 
-func isDuplicateTypeError(err error) bool {
+func typeExists(db *sql.DB, id int) (bool, error) {
+	var n int
+	err := db.QueryRow(database.ConvertPlaceholders(`SELECT COUNT(*) FROM ticket_type WHERE id = ?`), id).Scan(&n)
+	return n > 0, err
+}
+
+func typeNameTaken(db *sql.DB, name string, exceptID int) (bool, error) {
+	var n int
+	err := db.QueryRow(database.ConvertPlaceholders(
+		`SELECT COUNT(*) FROM ticket_type WHERE name = ? AND id <> ?`), name, exceptID).Scan(&n)
+	return n > 0, err
+}
+
+// isUniqueViolation reports a unique-constraint violation on either driver.
+func isUniqueViolation(err error) bool {
 	if err == nil {
 		return false
 	}
-	if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) && pqErr.Code == "23505" {
 		return true
 	}
-	if mysqlErr, ok := err.(*mysql.MySQLError); ok && mysqlErr.Number == 1062 {
-		return true
-	}
-	lower := strings.ToLower(err.Error())
-	return strings.Contains(lower, "duplicate")
+	var mysqlErr *mysql.MySQLError
+	return errors.As(err, &mysqlErr) && mysqlErr.Number == 1062
 }

@@ -38,16 +38,8 @@ type ServiceWithStats struct {
 func handleAdminServices(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Fallback minimal HTML for tests without DB/templates
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, `<!DOCTYPE html><html><head><title>Service Management</title></head><body>
-<h1>Service Management</h1>
-<button>Add New Service</button>
-<div class="services">
-  <div class="service">Incident Management</div>
-  <div class="service">IT Support</div>
-</div>
-</body></html>`)
+		log.Printf("handleAdminServices: database unavailable: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Database unavailable")
 		return
 	}
 
@@ -107,14 +99,10 @@ func handleAdminServices(c *gin.Context) {
 	}
 	query += fmt.Sprintf(" ORDER BY %s %s", sortBy, sortOrder)
 
-	if db == nil {
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, `<h1>Service Management</h1><button>Add New Service</button>`)
-		return
-	}
 	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Failed to fetch services")
+		log.Printf("handleAdminServices: query services: %v", err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Failed to fetch services")
 		return
 	}
 	defer rows.Close()
@@ -143,8 +131,7 @@ func handleAdminServices(c *gin.Context) {
 
 	// Render the template or fallback if renderer not initialized
 	if getPongo2Renderer() == nil {
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, `<h1>Service Management</h1><button>Add New Service</button>`)
+		sendErrorResponse(c, http.StatusInternalServerError, "Template renderer unavailable")
 		return
 	}
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/services.pongo2", pongo2.Context{
@@ -189,14 +176,15 @@ func handleAdminServiceCreate(c *gin.Context) {
 		return
 	}
 
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
+
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Fallback for tests without DB: Simulate duplicate name and success
-		if strings.EqualFold(input.Name, "IT Support") {
-			shared.SendToastResponse(c, false, "Service with this name already exists", "")
-			return
-		}
-		shared.SendToastResponse(c, true, "Service created successfully", "/admin/services")
+		log.Printf("handleAdminServiceCreate: database unavailable: %v", err)
+		shared.SendToastError(c, http.StatusInternalServerError, "Database unavailable")
 		return
 	}
 
@@ -215,10 +203,10 @@ func handleAdminServiceCreate(c *gin.Context) {
 
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO service (name, comments, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (?, ?, ?, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+		VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
 		RETURNING id
 	`)
-	id64, err := database.GetAdapter().InsertWithReturning(db, insertQuery, input.Name, input.Comments, input.ValidID)
+	id64, err := database.GetAdapter().InsertWithReturning(db, insertQuery, input.Name, input.Comments, input.ValidID, actorID, actorID)
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			shared.SendToastResponse(c, false, "Service with this name already exists", "")
@@ -256,20 +244,21 @@ func handleAdminServiceUpdate(c *gin.Context) {
 		return
 	}
 
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
+
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Fallback for tests without DB: pretend update succeeded unless id is clearly non-existent
-		if id >= 90000 {
-			c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "Service not found"})
-			return
-		}
-		shared.SendToastResponse(c, true, "Service updated successfully", "")
+		log.Printf("handleAdminServiceUpdate: database unavailable: %v", err)
+		shared.SendToastError(c, http.StatusInternalServerError, "Database unavailable")
 		return
 	}
 
 	// Build update query dynamically
-	updates := []string{"change_time = CURRENT_TIMESTAMP", "change_by = 1"}
-	args := []interface{}{}
+	updates := []string{"change_time = CURRENT_TIMESTAMP", "change_by = ?"}
+	args := []interface{}{actorID}
 
 	if input.Name != "" {
 		updates = append(updates, "name = ?")
@@ -320,10 +309,15 @@ func handleAdminServiceDelete(c *gin.Context) {
 		return
 	}
 
+	actorID, ok := auditUserID(c)
+	if !ok {
+		return
+	}
+
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Fallback for tests without DB: pretend delete succeeded with standard message
-		shared.SendToastResponse(c, true, "Service deleted successfully", "")
+		log.Printf("handleAdminServiceDelete: database unavailable: %v", err)
+		shared.SendToastError(c, http.StatusInternalServerError, "Database unavailable")
 		return
 	}
 
@@ -338,10 +332,10 @@ func handleAdminServiceDelete(c *gin.Context) {
 	// In OTRS, services are typically soft-deleted (marked invalid) rather than hard deleted
 	// This preserves referential integrity with existing tickets
 	result, err := db.Exec(database.ConvertPlaceholders(`
-		UPDATE service 
-		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1 
+		UPDATE service
+		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = ?
 		WHERE id = ?
-	`), id)
+	`), actorID, id)
 
 	if err != nil {
 		shared.SendToastResponse(c, false, "Failed to delete service", "")

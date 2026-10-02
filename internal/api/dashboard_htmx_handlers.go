@@ -3,10 +3,13 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +19,7 @@ import (
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/notifications"
 	"github.com/goatkit/goatflow/internal/platform/routing"
@@ -23,20 +27,14 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/repository"
 
-	"github.com/xeonx/timeago"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
 
 func init() {
 	routing.RegisterHandler("handleDashboard", handleDashboard)
-	routing.RegisterHandler("handleDashboardStats", handleDashboardStats)
 	routing.RegisterHandler("handleRecentTickets", handleRecentTickets)
-	routing.RegisterHandler("handleNotifications", handleNotifications)
 	routing.RegisterHandler("handlePendingReminderFeed", handlePendingReminderFeed)
-	routing.RegisterHandler("handleQuickActions", handleQuickActions)
-	routing.RegisterHandler("handleActivity", handleActivity)
-	routing.RegisterHandler("handlePerformance", handlePerformance)
 	routing.RegisterHandler("handleActivityStream", handleActivityStream)
 }
 
@@ -51,148 +49,15 @@ func handleDashboard(c *gin.Context) {
 		return
 	}
 
-	// Get database connection through repository pattern (graceful fallback if unavailable)
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		getPongo2Renderer().HTML(c, http.StatusOK, "pages/dashboard.pongo2", pongo2.Context{
-			"Title":         "Dashboard - GoatFlow",
-			"Stats":         gin.H{"openTickets": 0, "pendingTickets": 0, "closedToday": 0},
-			"RecentTickets": []gin.H{},
-			"User":          getUserMapForTemplate(c),
-			"ActivePage":    "dashboard",
-		})
+		log.Printf("handleDashboard: database unavailable: %v", err)
+		c.String(http.StatusInternalServerError, "Database unavailable")
 		return
 	}
 
-	// Use repository for database operations
-	ticketRepo := repository.NewTicketRepository(db)
-
-	// RBAC: Queue permission filtering - use context values from middleware
-	var queueFilter string
-	var queueArgs []interface{}
-
-	isQueueAdmin := false
-	if val, exists := c.Get("is_queue_admin"); exists {
-		if admin, ok := val.(bool); ok {
-			isQueueAdmin = admin
-		}
-	}
-
-	if !isQueueAdmin {
-		if accessibleQueueIDs, exists := c.Get("accessible_queue_ids"); exists {
-			if queueIDs, ok := accessibleQueueIDs.([]uint); ok && len(queueIDs) > 0 {
-				placeholders := make([]string, len(queueIDs))
-				for i, qid := range queueIDs {
-					placeholders[i] = "?"
-					queueArgs = append(queueArgs, qid)
-				}
-				queueFilter = " AND queue_id IN (" + strings.Join(placeholders, ",") + ")"
-			}
-		}
-	}
-
-	// Get ticket statistics - RBAC filtered
-	var openTickets, pendingTickets, closedToday int
-
-	// Get actual ticket state IDs from database
-	var openStateID, pendingStateID, closedStateID int
-	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = 'open'")).Scan(&openStateID)       //nolint:errcheck
-	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = 'pending'")).Scan(&pendingStateID) //nolint:errcheck
-	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = 'closed'")).Scan(&closedStateID)   //nolint:errcheck
-
-	// Count open tickets (with RBAC queue filter)
-	if openStateID > 0 {
-		query := "SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?" + queueFilter
-		args := append([]interface{}{openStateID}, queueArgs...)
-		_ = db.QueryRow(database.ConvertPlaceholders(query), args...).Scan(&openTickets) //nolint:errcheck
-	}
-
-	// Count pending tickets (with RBAC queue filter)
-	if pendingStateID > 0 {
-		query := "SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?" + queueFilter
-		args := append([]interface{}{pendingStateID}, queueArgs...)
-		_ = db.QueryRow(database.ConvertPlaceholders(query), args...).Scan(&pendingTickets) //nolint:errcheck
-	}
-
-	// Count tickets closed today (with RBAC queue filter)
-	if closedStateID > 0 {
-		query := `SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ? AND DATE(change_time) = CURDATE()` + queueFilter
-		args := append([]interface{}{closedStateID}, queueArgs...)
-		_ = db.QueryRow(database.ConvertPlaceholders(query), args...).Scan(&closedToday) //nolint:errcheck
-	}
-
-	stats := gin.H{
-		"openTickets":     openTickets,
-		"pendingTickets":  pendingTickets,
-		"closedToday":     closedToday,
-		"avgResponseTime": "N/A", // Would require more complex calculation
-	}
-
-	// Get recent tickets from database (filtered by queue permissions)
-	// ticketRepo already created above
-	listReq := &models.TicketListRequest{
-		Page:      1,
-		PerPage:   5,
-		SortBy:    "create_time",
-		SortOrder: "desc",
-	}
-
-	// Queue permission filtering for recent tickets - reuse isQueueAdmin from above
-	if !isQueueAdmin {
-		if accessibleQueueIDs, exists := c.Get("accessible_queue_ids"); exists {
-			if queueIDs, ok := accessibleQueueIDs.([]uint); ok {
-				listReq.AccessibleQueueIDs = queueIDs
-			}
-		}
-	}
-
-	ticketResponse, err := ticketRepo.List(listReq)
-	tickets := []models.Ticket{}
-	if err == nil && ticketResponse != nil {
-		tickets = ticketResponse.Tickets
-	}
-
-	recentTickets := []gin.H{}
-	if err == nil && tickets != nil {
-		for _, ticket := range tickets {
-			// Get status label from database
-			statusLabel := "unknown"
-			var statusRow struct {
-				Name string
-			}
-			query := database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = ?")
-			err = db.QueryRow(query, ticket.TicketStateID).Scan(&statusRow.Name)
-			if err == nil {
-				statusLabel = statusRow.Name
-			}
-
-			// Get priority label from database
-			priorityLabel := "normal"
-			var priorityRow struct {
-				Name string
-			}
-			query = database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = ?")
-			err = db.QueryRow(query, ticket.TicketPriorityID).Scan(&priorityRow.Name)
-			if err == nil {
-				priorityLabel = priorityRow.Name
-			}
-
-			// Calculate time ago
-			timeAgo := timeago.English.Format(ticket.ChangeTime)
-
-			recentTickets = append(recentTickets, gin.H{
-				"id":       ticket.TicketNumber,
-				"subject":  ticket.Title,
-				"status":   statusLabel,
-				"priority": priorityLabel,
-				"customer": ticket.CustomerUserID,
-				"updated":  timeAgo,
-			})
-		}
-	}
-
 	// Get plugin widgets for dashboard - filtered by user preferences
-	allPluginWidgets := GetPluginWidgets(c.Request.Context(), "dashboard", c)
+	allPluginWidgets := GetPluginWidgets(pluginContextWithLanguage(c), "dashboard", c)
 
 	// Get user's widget config to filter
 	var dashboardUserID int
@@ -201,11 +66,16 @@ func handleDashboard(c *gin.Context) {
 	}
 
 	pluginWidgets := allPluginWidgets
-	if dashboardUserID > 0 && db != nil {
+	if dashboardUserID > 0 {
 		prefService := service.NewUserPreferencesService(db)
-		widgetConfig, _ := prefService.GetDashboardWidgets(dashboardUserID)
+		widgetConfig, err := prefService.GetDashboardWidgets(dashboardUserID)
+		if err != nil {
+			log.Printf("handleDashboard: widget config for user %d: %v", dashboardUserID, err)
+			c.String(http.StatusInternalServerError, "Failed to load dashboard")
+			return
+		}
 
-		if widgetConfig != nil && len(widgetConfig) > 0 {
+		if len(widgetConfig) > 0 {
 			// Build map of widget configs (enabled + position + grid)
 			configMap := make(map[string]service.DashboardWidgetConfig)
 			for _, cfg := range widgetConfig {
@@ -284,182 +154,56 @@ func handleDashboard(c *gin.Context) {
 	fmt.Printf("🔌 Dashboard: showing %d of %d plugin widgets\n", len(pluginWidgets), len(allPluginWidgets))
 
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/dashboard.pongo2", pongo2.Context{
-		"Stats":         stats,
-		"RecentTickets": recentTickets,
 		"User":          getUserMapForTemplate(c),
 		"ActivePage":    "dashboard",
 		"PluginWidgets": pluginWidgets,
 	})
 }
 
-func buildTicketStatusOptions(db *sql.DB) ([]gin.H, bool) {
-	titleCaser := cases.Title(language.English)
-	options := []gin.H{}
-	hasClosed := false
-	appendDefaults := func() {
-		options = append(options,
-			gin.H{"Value": "1", "Param": "new", "Label": titleCaser.String("new")},
-			gin.H{"Value": "2", "Param": "open", "Label": titleCaser.String("open")},
-			gin.H{"Value": "3", "Param": "pending", "Label": titleCaser.String("pending")},
-			gin.H{"Value": "4", "Param": "closed", "Label": titleCaser.String("closed")},
-		)
-		hasClosed = true
-	}
-
+// buildTicketStatusOptions returns the valid ticket states as filter options
+// (Value = state id, Param = slug, Label = display name) and whether any of
+// them is of the closed state type. The states come only from the database.
+func buildTicketStatusOptions(db *sql.DB) ([]gin.H, bool, error) {
 	if db == nil {
-		appendDefaults()
-		return options, hasClosed
+		return nil, false, errors.New("ticket states: database unavailable")
 	}
-
-	query := `
-		SELECT ts.id, ts.name, tst.id AS type_id, tst.name AS type_name
+	rows, err := db.Query(database.ConvertPlaceholders(`
+		SELECT ts.id, ts.name, tst.name AS type_name
 		FROM ticket_state ts
 		JOIN ticket_state_type tst ON ts.type_id = tst.id
 		WHERE ts.valid_id = 1
-		ORDER BY ts.name
-	`
-	rows, err := db.Query(database.ConvertPlaceholders(query))
+		ORDER BY ts.name`))
 	if err != nil {
-		log.Printf("failed to load ticket states: %v", err)
-		appendDefaults()
-		return options, hasClosed
+		return nil, false, fmt.Errorf("ticket states: %w", err)
 	}
 	defer rows.Close()
 
+	titleCaser := cases.Title(language.English)
+	options := []gin.H{}
+	hasClosed := false
 	for rows.Next() {
 		var (
-			stateID   uint
+			stateID   int
 			stateName string
-			typeID    uint
 			typeName  string
 		)
-		if scanErr := rows.Scan(&stateID, &stateName, &typeID, &typeName); scanErr != nil {
-			continue
+		if err := rows.Scan(&stateID, &stateName, &typeName); err != nil {
+			return nil, false, fmt.Errorf("ticket states: %w", err)
 		}
 		cleanName := strings.ReplaceAll(strings.TrimSpace(stateName), "_", " ")
-		slug := strings.ReplaceAll(strings.ToLower(cleanName), " ", "_")
 		options = append(options, gin.H{
-			"Value": fmt.Sprintf("%d", stateID),
-			"Param": slug,
+			"Value": strconv.Itoa(stateID),
+			"Param": strings.ReplaceAll(strings.ToLower(cleanName), " ", "_"),
 			"Label": titleCaser.String(cleanName),
 		})
-		if strings.EqualFold(strings.TrimSpace(typeName), "closed") || typeID == uint(models.TicketStateClosed) {
+		if strings.EqualFold(strings.TrimSpace(typeName), lookups.StateTypeClosed) {
 			hasClosed = true
 		}
 	}
 	if err := rows.Err(); err != nil {
-		log.Printf("failed iterating ticket states: %v", err)
+		return nil, false, fmt.Errorf("ticket states: %w", err)
 	}
-
-	if len(options) == 1 {
-		appendDefaults()
-	}
-
-	return options, hasClosed
-}
-
-// handleDashboardStats returns dashboard statistics.
-func handleDashboardStats(c *gin.Context) {
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		// Return JSON error when database is unavailable
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Database unavailable",
-		})
-		return
-	}
-
-	// Queue permission filtering - use context values from middleware
-	var queueFilter string
-	var queueArgs []interface{}
-
-	isQueueAdmin := false
-	if val, exists := c.Get("is_queue_admin"); exists {
-		if admin, ok := val.(bool); ok {
-			isQueueAdmin = admin
-		}
-	}
-
-	if !isQueueAdmin {
-		if accessibleQueueIDs, exists := c.Get("accessible_queue_ids"); exists {
-			if queueIDs, ok := accessibleQueueIDs.([]uint); ok && len(queueIDs) > 0 {
-				placeholders := make([]string, len(queueIDs))
-				for i, qid := range queueIDs {
-					placeholders[i] = "?"
-					queueArgs = append(queueArgs, qid)
-				}
-				queueFilter = " AND queue_id IN (" + strings.Join(placeholders, ",") + ")"
-			}
-		}
-	}
-
-	var openTickets, pendingTickets, closedToday int
-
-	// Get actual ticket state IDs from database instead of hardcoded values
-	var openStateID, pendingStateID, closedStateID int
-	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = 'open'")).Scan(&openStateID)       //nolint:errcheck // Defaults to 0
-	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = 'pending'")).Scan(&pendingStateID) //nolint:errcheck // Defaults to 0
-	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = 'closed'")).Scan(&closedStateID)   //nolint:errcheck // Defaults to 0
-
-	// Count open tickets (with queue filter)
-	if openStateID > 0 {
-		query := "SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?" + queueFilter
-		args := append([]interface{}{openStateID}, queueArgs...)
-		_ = db.QueryRow(database.ConvertPlaceholders(query), args...).Scan(&openTickets) //nolint:errcheck // Defaults to 0
-	}
-
-	// Count pending tickets (with queue filter)
-	if pendingStateID > 0 {
-		query := "SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?" + queueFilter
-		args := append([]interface{}{pendingStateID}, queueArgs...)
-		_ = db.QueryRow(database.ConvertPlaceholders(query), args...).Scan(&pendingTickets) //nolint:errcheck // Defaults to 0
-	}
-
-	// Count tickets closed today (with queue filter)
-	if closedStateID > 0 {
-		query := `SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ? AND DATE(change_time) = CURDATE()` + queueFilter
-		args := append([]interface{}{closedStateID}, queueArgs...)
-		_ = db.QueryRow(database.ConvertPlaceholders(query), args...).Scan(&closedToday) //nolint:errcheck // Defaults to 0
-	}
-
-	// Get user language for i18n
-	lang := "en"
-	if l, exists := c.Get(middleware.LanguageContextKey); exists {
-		if langStr, ok := l.(string); ok {
-			lang = langStr
-		}
-	}
-	i18nInstance := i18n.GetInstance()
-	t := func(key string) string {
-		return i18nInstance.T(lang, key)
-	}
-
-	// Return HTML for HTMX with Synthwave styling
-	c.Header("Content-Type", "text/html")
-	html := fmt.Sprintf(`
-        <div class="gk-stat-card">
-            <dt class="gk-stat-label">%s</dt>
-            <dd class="gk-stat-value mt-1">%d</dd>
-        </div>
-        <div class="gk-stat-card success">
-            <dt class="gk-stat-label">%s</dt>
-            <dd class="gk-stat-value mt-1">%d</dd>
-        </div>
-        <div class="gk-stat-card warning">
-            <dt class="gk-stat-label">%s</dt>
-            <dd class="gk-stat-value mt-1">%d</dd>
-        </div>
-        <div class="gk-stat-card error">
-            <dt class="gk-stat-label">%s</dt>
-            <dd class="gk-stat-value mt-1">%d</dd>
-        </div>`,
-		t("dashboard.stats.open_tickets"), openTickets,
-		t("dashboard.stats.new_today"), closedToday,
-		t("dashboard.stats.pending"), pendingTickets,
-		t("dashboard.stats.overdue"), 0) // Note: Overdue calculation not implemented yet
-
-	c.String(http.StatusOK, html)
+	return options, hasClosed, nil
 }
 
 // handleRecentTickets returns recent tickets for dashboard.
@@ -494,26 +238,17 @@ func handleRecentTickets(c *gin.Context) {
 		SortOrder: "desc",
 	}
 
-	// SECURITY: Queue permission filtering - use context values from middleware
-	isQueueAdmin := false
-	if val, exists := c.Get("is_queue_admin"); exists {
-		if admin, ok := val.(bool); ok {
-			isQueueAdmin = admin
-		}
+	// Only tickets in queues the agent can read; this route has no queue_ro
+	// middleware, so the scope is resolved here.
+	scope, ok := resolveTicketReadScope(c, db, false)
+	if !ok {
+		return
 	}
-
-	if !isQueueAdmin {
-		if accessibleQueueIDs, exists := c.Get("accessible_queue_ids"); exists {
-			if queueIDs, ok := accessibleQueueIDs.([]uint); ok {
-				listReq.AccessibleQueueIDs = queueIDs
-			}
-		}
-	}
-
-	ticketResponse, err := ticketRepo.List(listReq)
-	tickets := []models.Ticket{}
-	if err == nil && ticketResponse != nil {
-		tickets = ticketResponse.Tickets
+	tickets, err := scope.listTickets(ticketRepo, listReq)
+	if err != nil {
+		log.Printf("handleRecentTickets: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to load recent tickets"})
+		return
 	}
 
 	// Build HTML response with Synthwave styling
@@ -533,25 +268,17 @@ func handleRecentTickets(c *gin.Context) {
 	} else {
 		for _, ticket := range tickets {
 			// Get status label from database
-			statusLabel := "unknown"
-			var statusRow struct {
-				Name string
+			statusLabel, err := lookups.Name(c.Request.Context(), db, lookups.StateLookup, ticket.TicketStateID)
+			if err != nil {
+				log.Printf("handleRecentTickets: ticket %d state: %v", ticket.ID, err)
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to load recent tickets"})
+				return
 			}
-			query := database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = ?")
-			err = db.QueryRow(query, ticket.TicketStateID).Scan(&statusRow.Name)
-			if err == nil {
-				statusLabel = statusRow.Name
-			}
-
-			// Get priority name and determine CSS class
-			priorityName := "normal"
-			var priorityRow struct {
-				Name string
-			}
-			query = database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = ?")
-			err = db.QueryRow(query, ticket.TicketPriorityID).Scan(&priorityRow.Name)
-			if err == nil {
-				priorityName = priorityRow.Name
+			priorityName, err := lookups.Name(c.Request.Context(), db, lookups.PriorityTable, ticket.TicketPriorityID)
+			if err != nil {
+				log.Printf("handleRecentTickets: ticket %d priority: %v", ticket.ID, err)
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to load recent tickets"})
+				return
 			}
 
 			// Badge styles using theme variables
@@ -602,18 +329,18 @@ func handleRecentTickets(c *gin.Context) {
 					</div>
 				</div>
 			</li>`,
-				ticket.TicketNumber,
-				ticket.TicketNumber,
-				ticket.Title,
+				template.HTMLEscapeString(ticket.TicketNumber),
+				template.HTMLEscapeString(ticket.TicketNumber),
+				template.HTMLEscapeString(ticket.Title),
 				priorityStyle,
-				priorityName,
+				template.HTMLEscapeString(priorityName),
 				statusStyle,
-				statusLabel,
+				template.HTMLEscapeString(statusLabel),
 				func() string {
 					if ticket.CustomerUserID != nil {
-						return fmt.Sprintf("%s: %s", t("labels.customer"), *ticket.CustomerUserID)
+						return template.HTMLEscapeString(fmt.Sprintf("%s: %s", t("labels.customer"), *ticket.CustomerUserID))
 					}
-					return fmt.Sprintf("%s: %s", t("labels.customer"), t("labels.unknown"))
+					return template.HTMLEscapeString(fmt.Sprintf("%s: %s", t("labels.customer"), t("labels.unknown")))
 				}()))
 		}
 	}
@@ -622,14 +349,6 @@ func handleRecentTickets(c *gin.Context) {
 
 	c.Header("Content-Type", "text/html")
 	c.String(http.StatusOK, html.String())
-}
-
-// handleNotifications returns user notifications.
-func handleNotifications(c *gin.Context) {
-	// TODO: Implement actual notifications from database
-	// For now, return empty list
-	notifications := []gin.H{}
-	c.JSON(http.StatusOK, gin.H{"notifications": notifications})
 }
 
 func handlePendingReminderFeed(c *gin.Context) {
@@ -646,18 +365,25 @@ func handlePendingReminderFeed(c *gin.Context) {
 	}
 
 	// Check if reminders are enabled for this user
-	db, dbErr := database.GetDB()
-	if dbErr == nil {
-		prefService := service.NewUserPreferencesService(db)
-		if !prefService.GetRemindersEnabled(userID) {
-			c.JSON(http.StatusOK, gin.H{
-				"success": true,
-				"data": gin.H{
-					"reminders": []gin.H{},
-				},
-			})
-			return
-		}
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database unavailable"})
+		return
+	}
+	enabled, err := service.NewUserPreferencesService(db).GetRemindersEnabled(userID)
+	if err != nil {
+		log.Printf("handlePendingReminderFeed: user %d: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to load reminder preference"})
+		return
+	}
+	if !enabled {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data": gin.H{
+				"reminders": []gin.H{},
+			},
+		})
+		return
 	}
 
 	hub := notifications.GetHub()
@@ -688,184 +414,104 @@ func normalizeUserID(value interface{}) int {
 	return shared.ToInt(value, 0)
 }
 
-// handleQuickActions returns quick action items.
-func handleQuickActions(c *gin.Context) {
-	actions := []gin.H{
-		{"id": "new_ticket", "label": "New Ticket", "icon": "plus", "url": "/ticket/new"},
-		{"id": "my_tickets", "label": "My Tickets", "icon": "list", "url": "/tickets?assigned=me"},
-		{"id": "reports", "label": "Reports", "icon": "chart", "url": "/reports"},
-	}
-	c.JSON(http.StatusOK, gin.H{"actions": actions})
-}
-
-// handleActivity returns recent activity.
-func handleActivity(c *gin.Context) {
-	activities := []gin.H{
-		{
-			"id":     "1",
-			"type":   "ticket_created",
-			"user":   "John Doe",
-			"action": "created ticket T-2024-001",
-			"time":   "5 minutes ago",
-		},
-		{
-			"id":     "2",
-			"type":   "ticket_updated",
-			"user":   "Alice Agent",
-			"action": "updated ticket T-2024-002",
-			"time":   "10 minutes ago",
-		},
-	}
-	c.JSON(http.StatusOK, gin.H{"activities": activities})
-}
-
-// handlePerformance returns performance metrics.
-func handlePerformance(c *gin.Context) {
-	metrics := gin.H{
-		"responseTime": []gin.H{
-			{"time": "00:00", "value": 2.1},
-			{"time": "04:00", "value": 1.8},
-			{"time": "08:00", "value": 3.2},
-			{"time": "12:00", "value": 2.5},
-			{"time": "16:00", "value": 2.8},
-			{"time": "20:00", "value": 2.0},
-		},
-		"ticketVolume": []gin.H{
-			{"day": "Mon", "created": 45, "closed": 42},
-			{"day": "Tue", "created": 52, "closed": 48},
-			{"day": "Wed", "created": 38, "closed": 40},
-			{"day": "Thu", "created": 61, "closed": 55},
-			{"day": "Fri", "created": 43, "closed": 45},
-		},
-	}
-	c.JSON(http.StatusOK, metrics)
-}
-
-// handleActivityStream provides real-time activity updates.
+// handleActivityStream streams recent ticket activity (server-sent events):
+// one event on connect, then one every 30 seconds. Only tickets in queues the
+// agent can read are reported.
 func handleActivityStream(c *gin.Context) {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database unavailable"})
+		return
+	}
+	scope, ok := resolveTicketReadScope(c, db, false)
+	if !ok {
+		return
+	}
+
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
 
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		// If no database, send a simple heartbeat
-		ticker := time.NewTicker(30 * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				activity := gin.H{
-					"type":   "system",
-					"user":   "System",
-					"action": "Heartbeat - Database unavailable",
-					"time":   time.Now().Format("15:04:05"),
-				}
-				data, _ := json.Marshal(activity)                                   //nolint:errcheck // Best effort
-				_, _ = fmt.Fprintf(c.Writer, "event: activity\ndata: %s\n\n", data) //nolint:errcheck // Best effort streaming
-				c.Writer.Flush()
-			case <-c.Request.Context().Done():
-				return
-			}
+	send := func() {
+		activity, err := latestTicketActivity(c, db, scope)
+		if err != nil {
+			log.Printf("handleActivityStream: %v", err)
+			return
 		}
+		data, _ := json.Marshal(activity)                                   //nolint:errcheck // Best effort
+		_, _ = fmt.Fprintf(c.Writer, "event: activity\ndata: %s\n\n", data) //nolint:errcheck // Best effort streaming
+		c.Writer.Flush()
 	}
 
-	// Send real activity updates from ticket_history
+	send()
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-
 	for {
 		select {
 		case <-ticker.C:
-			// Query recent ticket activity (last 24 hours)
-			rows, err := db.Query(database.ConvertPlaceholders(`
-				SELECT
-					th.name,
-					tht.name as history_type,
-					t.tn as ticket_number,
-					u.login as user_name,
-					th.create_time
-				FROM ticket_history th
-				JOIN ticket_history_type tht ON th.history_type_id = tht.id
-				JOIN ticket t ON th.ticket_id = t.id
-				LEFT JOIN users u ON th.create_by = u.id
-				WHERE th.create_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-				ORDER BY th.create_time DESC
-				LIMIT 5
-			`))
-
-			if err == nil && rows != nil {
-				activities := make([]gin.H, 0, 5) // Preallocate for expected LIMIT 5
-				for rows.Next() {
-					var name, historyType, ticketNumber, userName sql.NullString
-					var createTime time.Time
-
-					err := rows.Scan(&name, &historyType, &ticketNumber, &userName, &createTime)
-					if err != nil {
-						continue
-					}
-
-					// Format activity message
-					action := "Unknown activity"
-					if historyType.Valid {
-						switch historyType.String {
-						case "NewTicket":
-							action = fmt.Sprintf("created ticket %s", ticketNumber.String)
-						case "TicketStateUpdate":
-							action = fmt.Sprintf("updated ticket %s", ticketNumber.String)
-						case "AddNote":
-							action = fmt.Sprintf("added note to ticket %s", ticketNumber.String)
-						case "SendAnswer":
-							action = fmt.Sprintf("replied to ticket %s", ticketNumber.String)
-						case "Close":
-							action = fmt.Sprintf("closed ticket %s", ticketNumber.String)
-						default:
-							if name.Valid && name.String != "" {
-								action = fmt.Sprintf("%s on ticket %s", name.String, ticketNumber.String)
-							} else {
-								action = fmt.Sprintf("%s on ticket %s", historyType.String, ticketNumber.String)
-							}
-						}
-					}
-
-					user := "System"
-					if userName.Valid && userName.String != "" {
-						user = userName.String
-					}
-
-					activities = append(activities, gin.H{
-						"type":   "ticket_activity",
-						"user":   user,
-						"action": action,
-						"time":   createTime.Format("15:04:05"),
-					})
-				}
-				rows.Close() //nolint:sqlclosecheck // Intentionally not using defer - inside infinite loop
-				if err := rows.Err(); err != nil {
-					log.Printf("error iterating activity rows: %v", err)
-				}
-
-				// Send the most recent activity
-				if len(activities) > 0 {
-					data, _ := json.Marshal(activities[0])                              //nolint:errcheck // Best effort
-					_, _ = fmt.Fprintf(c.Writer, "event: activity\ndata: %s\n\n", data) //nolint:errcheck // Best effort streaming
-					c.Writer.Flush()
-				} else {
-					// No recent activity
-					activity := gin.H{
-						"type":   "system",
-						"user":   "System",
-						"action": "No recent activity",
-						"time":   time.Now().Format("15:04:05"),
-					}
-					data, _ := json.Marshal(activity)                                   //nolint:errcheck // Best effort
-					_, _ = fmt.Fprintf(c.Writer, "event: activity\ndata: %s\n\n", data) //nolint:errcheck // Best effort streaming
-					c.Writer.Flush()
-				}
-			}
+			send()
 		case <-c.Request.Context().Done():
 			return
 		}
 	}
+}
+
+// latestTicketActivity returns the most recent ticket_history entry of the last
+// 24 hours on a ticket the scope can read, or a "No recent activity" event.
+func latestTicketActivity(c *gin.Context, db *sql.DB, scope ticketReadScope) (gin.H, error) {
+	cond, args := scope.filter("t")
+	args = append([]interface{}{time.Now().Add(-24 * time.Hour)}, args...)
+	var name, historyType, ticketNumber, userName sql.NullString
+	var createTime time.Time
+	err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`
+		SELECT th.name, tht.name, t.tn, u.login, th.create_time
+		FROM ticket_history th
+		JOIN ticket_history_type tht ON th.history_type_id = tht.id
+		JOIN ticket t ON th.ticket_id = t.id
+		LEFT JOIN users u ON th.create_by = u.id
+		WHERE th.create_time >= ? AND `+cond+`
+		ORDER BY th.create_time DESC, th.id DESC
+		LIMIT 1`), args...).Scan(&name, &historyType, &ticketNumber, &userName, &createTime)
+	if err == sql.ErrNoRows {
+		return gin.H{
+			"type":   "system",
+			"user":   "System",
+			"action": "No recent activity",
+			"time":   time.Now().Format("15:04:05"),
+		}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	tn := ticketNumber.String
+	var action string
+	switch historyType.String {
+	case "NewTicket":
+		action = fmt.Sprintf("created ticket %s", tn)
+	case "TicketStateUpdate":
+		action = fmt.Sprintf("updated ticket %s", tn)
+	case "AddNote":
+		action = fmt.Sprintf("added note to ticket %s", tn)
+	case "SendAnswer":
+		action = fmt.Sprintf("replied to ticket %s", tn)
+	case "Close":
+		action = fmt.Sprintf("closed ticket %s", tn)
+	default:
+		if name.String != "" {
+			action = fmt.Sprintf("%s on ticket %s", name.String, tn)
+		} else {
+			action = fmt.Sprintf("%s on ticket %s", historyType.String, tn)
+		}
+	}
+	user := "System"
+	if userName.String != "" {
+		user = userName.String
+	}
+	return gin.H{
+		"type":   "ticket_activity",
+		"user":   user,
+		"action": action,
+		"time":   createTime.Format("15:04:05"),
+	}, nil
 }

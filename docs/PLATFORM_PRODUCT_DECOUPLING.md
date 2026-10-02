@@ -99,7 +99,7 @@ the `goatkit` module ceremony.
 `services/{escalation,genericagent,acl,ticket,ticketattributerelations}`,
 `service/genericinterface`, `service/ticket_number`,
 `components/{dashboard,dynamic,handlers}`, `webhooks`, `mailaccountmeta`,
-`mailqueue`, `api/{graphql,shared,v1}`, `api/` (product handler files)
+`mailqueue`, `api/{graphql,v1}`, `api/` (product handler files)
 
 ## 5. Phases
 
@@ -403,7 +403,7 @@ Move platform-flavored files to `internal/platform/api/` and
 `org_plugin_access_handlers.go`, `lookup_*`, and product handlers (`ticket_*`,
 `queue_*`, `article_*`, `sla_*`, `priority_*`, `state_*`, `type_*`,
 `service_*`, `canned_response_*`, `admin_*`, `customer_*`, `agent_*`,
-`graphql/`, `shared/`, `v1/`) stay in `internal/api/`.
+`graphql/`, `v1/`) stay in `internal/api/`.
 
 #### Platform service files moved
 
@@ -432,7 +432,7 @@ Files for: `ticket`, `sla`, `escalation`, `generic_agent`, etc.
 | # | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|---|
 | 5.1 | **Misclassification** — a file appears platform but actually imports product types, or vice versa | Medium | High | For each file, run `grep 'goatflow/internal/\(repository\|ticketnumber\|ticketutil\|history\|models\)' <file>` before moving. If it imports product packages, it is product. Document the classification in `PLATFORM_PACKAGES.md` for review. |
-| 5.2 | **Shared helpers in `internal/api/shared/`** — some helpers are used by both platform and product handlers | High | Medium | Audit `shared/*.go` (1456 lines, 4 files). Split into `internal/platform/api/shared/` (generic response helpers) and keep article-creation helpers in `internal/api/shared/`. If a single file has both concerns, split the file. |
+| 5.2 | **Shared helpers in `internal/api/shared/`** — some helpers looked shared between platform and product handlers | High | Medium | Resolved by removal: the package was imported by nothing (its handlers duplicated the routed `internal/api` ones), so it was deleted rather than split. |
 | 5.3 | **Package name collision** — `internal/platform/api` and `internal/api` both named `api` | Certain | Low | Use import aliases where both are imported in the same file: `platformapi "goatflow/internal/platform/api"`. This is the same pattern as Phase 3. |
 | 5.4 | **40 files import `internal/service`** — large mechanical change with merge conflict risk | High | Medium | Same mitigation as Phase 3: dedicated commit, off-peak, scripted import updates, `go build` after each batch. |
 | 5.5 | **Some API handlers may be registered in route YAML files by package-qualified name** — moving a handler to `platform/api` could break route resolution | Low | High | Route YAML references handlers by *name* (string), not by Go package path (Phase 4's resolver handles this). Verify by cross-referencing the handler registry with route YAML files. |

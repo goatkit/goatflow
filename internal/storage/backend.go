@@ -1,303 +1,169 @@
-// Package storage provides article attachment storage backends.
+// Package storage stores article attachments and raw (plain) emails, following
+// OTRS/Znuny's Ticket::Article::Backend::MIMEBase::ArticleStorage semantics.
+//
+// Two backends exist:
+//   - DB (ArticleStorageDB): article_data_mime_attachment / article_data_mime_plain.
+//   - FS (ArticleStorageFS): <article dir>/<content_path>/<article_id>/<file>, with
+//     <file>.content_type, .content_id, .content_alternative and .disposition
+//     sidecar files and plain.txt for the raw email. An existing OTRS/Znuny
+//     var/article tree can be mounted and read as-is.
+//
+// The article body stays in article_data_mime.a_body for both backends, exactly
+// as in OTRS; it is not handled here.
 package storage
 
 import (
 	"context"
-	"fmt"
-	"io"
+	"database/sql"
+	"errors"
+	"strconv"
+	"strings"
 	"time"
 )
 
-// Backend defines the interface for article storage backends.
-type Backend interface {
-	// Store saves article content and returns a storage reference
-	Store(ctx context.Context, articleID int64, content *ArticleContent) (*StorageReference, error)
+// Backend names.
+const (
+	BackendDB = "DB"
+	BackendFS = "FS"
+)
 
-	// Retrieve gets article content by reference
-	Retrieve(ctx context.Context, ref *StorageReference) (*ArticleContent, error)
+// ErrNotFound is returned when an article, attachment or plain email does not exist.
+var ErrNotFound = errors.New("not found")
 
-	// Delete removes article content
-	Delete(ctx context.Context, ref *StorageReference) error
-
-	// Exists checks if article content exists
-	Exists(ctx context.Context, ref *StorageReference) (bool, error)
-
-	// List returns all storage references for an article
-	List(ctx context.Context, articleID int64) ([]*StorageReference, error)
-
-	// Migrate moves content between backends
-	Migrate(ctx context.Context, ref *StorageReference, target Backend) (*StorageReference, error)
-
-	// GetInfo returns backend information
-	GetInfo() *BackendInfo
-
-	// HealthCheck verifies backend is operational
-	HealthCheck(ctx context.Context) error
+// Attachment describes one attachment of an article (an OTRS attachment index entry).
+type Attachment struct {
+	ArticleID int64
+	// FileID addresses the attachment within its article: the
+	// article_data_mime_attachment id for DB, the 1-based OTRS index (position
+	// in the sorted file list) for FS.
+	FileID             int64
+	Filename           string
+	ContentType        string
+	ContentID          string
+	ContentAlternative string
+	Disposition        string
+	Size               int64
+	// CreateTime is the row's create_time (DB) or the file's modification time (FS).
+	CreateTime time.Time
+	// CreateBy is the creating user (DB); 0 for FS, which does not record it.
+	CreateBy int
 }
 
-// ArticleContent represents the content to be stored.
-type ArticleContent struct {
-	ArticleID   int64
-	ContentType string
-	FileName    string
-	FileSize    int64
-	Content     []byte
-	Metadata    map[string]string
-	CreatedTime time.Time
-	CreatedBy   int
+// NewAttachment is an attachment to be written.
+type NewAttachment struct {
+	Filename           string
+	ContentType        string
+	ContentID          string
+	ContentAlternative string
+	Disposition        string
+	Content            []byte
+	CreateBy           int
 }
 
-// StorageReference points to stored content.
-type StorageReference struct {
-	ID           int64
-	ArticleID    int64
-	Backend      string
-	Location     string
-	ContentType  string
-	FileName     string
-	FileSize     int64
-	Checksum     string
-	CreatedTime  time.Time
-	AccessedTime time.Time
+// ArticleStore reads and writes article attachments and raw emails.
+type ArticleStore interface {
+	// Backend returns BackendDB or BackendFS.
+	Backend() string
+
+	// ListAttachments returns the article's attachments in index order.
+	ListAttachments(ctx context.Context, articleID int64) ([]Attachment, error)
+
+	// GetAttachment returns one attachment and its content, or ErrNotFound.
+	GetAttachment(ctx context.Context, articleID, fileID int64) (Attachment, []byte, error)
+
+	// WriteAttachment stores an attachment. A filename already used by the
+	// article gets an OTRS-style "-N" suffix.
+	WriteAttachment(ctx context.Context, articleID int64, a NewAttachment) (Attachment, error)
+
+	// DeleteAttachment removes one attachment, or returns ErrNotFound.
+	DeleteAttachment(ctx context.Context, articleID, fileID int64) error
+
+	// WritePlain stores the raw email of an article, replacing any previous one.
+	WritePlain(ctx context.Context, articleID int64, raw []byte, createBy int) error
+
+	// ReadPlain returns the raw email of an article, or ErrNotFound.
+	ReadPlain(ctx context.Context, articleID int64) ([]byte, error)
+
+	// DeleteArticle removes every attachment and the raw email of an article.
+	DeleteArticle(ctx context.Context, articleID int64) error
+
+	// WithTx returns a store whose database work runs on tx.
+	WithTx(tx *sql.Tx) ArticleStore
 }
 
-// BackendInfo provides information about a storage backend.
-type BackendInfo struct {
-	Name         string
-	Type         string
-	Capabilities []string
-	Status       string
-	Statistics   *BackendStats
+// querier is the subset of *sql.DB / *sql.Tx used by the backends.
+type querier interface {
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 }
 
-// BackendStats contains usage statistics.
-type BackendStats struct {
-	TotalFiles   int64
-	TotalSize    int64
-	FreeSpace    int64
-	ReadLatency  time.Duration
-	WriteLatency time.Duration
+// ContentPath returns the OTRS article content path ("YYYY/MM/DD") for t.
+func ContentPath(t time.Time) string {
+	return t.Format("2006/01/02")
 }
 
-// Factory creates storage backends based on configuration.
-type Factory interface {
-	// Create instantiates a storage backend
-	Create(backendType string, config map[string]interface{}) (Backend, error)
-
-	// Register adds a new backend type
-	Register(backendType string, constructor BackendConstructor)
-
-	// List returns available backend types
-	List() []string
+// normalizeAttachment applies the OTRS write-time rules shared by both backends.
+func normalizeAttachment(a NewAttachment) NewAttachment {
+	// Content-ID in angle brackets.
+	if id := a.ContentID; id != "" && !strings.HasPrefix(id, "<") && !strings.HasSuffix(id, ">") {
+		a.ContentID = "<" + id + ">"
+	}
+	// Only the disposition type is kept ("inline; filename=x" -> "inline").
+	if i := strings.IndexByte(a.Disposition, ';'); i >= 0 {
+		a.Disposition = a.Disposition[:i]
+	}
+	a.Disposition = strings.TrimSpace(a.Disposition)
+	if a.ContentType == "" {
+		a.ContentType = "application/octet-stream"
+	}
+	if a.CreateBy == 0 {
+		a.CreateBy = systemUserID
+	}
+	return a
 }
 
-// BackendConstructor creates a new backend instance.
-type BackendConstructor func(config map[string]interface{}) (Backend, error)
+// systemUserID is the OTRS system user (root@localhost), used when no creator is given.
+const systemUserID = 1
 
-// DefaultFactory is the global storage backend factory.
-var DefaultFactory Factory = NewStorageFactory()
-
-// StorageFactory implements the Factory interface.
-type StorageFactory struct {
-	constructors map[string]BackendConstructor
-}
-
-// NewStorageFactory creates a new storage factory.
-func NewStorageFactory() *StorageFactory {
-	return &StorageFactory{
-		constructors: make(map[string]BackendConstructor),
+// defaultDisposition is OTRS's read-time default when no disposition is stored.
+func defaultDisposition(filename, contentType, contentID string) string {
+	switch {
+	case contentID != "" && strings.Contains(strings.ToLower(contentType), "image"):
+		return "inline"
+	case strings.Contains(filename, "file-1") || strings.Contains(filename, "file-2"):
+		return "inline"
+	default:
+		return "attachment"
 	}
 }
 
-// Create instantiates a storage backend.
-func (f *StorageFactory) Create(backendType string, config map[string]interface{}) (Backend, error) {
-	constructor, exists := f.constructors[backendType]
-	if !exists {
-		return nil, fmt.Errorf("unknown storage backend type: %s", backendType)
+// uniqueFilename returns name, or the first OTRS-style "name-N.ext" variant not in used.
+func uniqueFilename(name string, used map[string]bool) string {
+	if !used[name] {
+		return name
 	}
-
-	return constructor(config)
-}
-
-// Register adds a new backend type.
-func (f *StorageFactory) Register(backendType string, constructor BackendConstructor) {
-	f.constructors[backendType] = constructor
-}
-
-// List returns available backend types.
-func (f *StorageFactory) List() []string {
-	types := make([]string, 0, len(f.constructors))
-	for t := range f.constructors {
-		types = append(types, t)
+	base, ext := name, ""
+	if i := strings.LastIndexByte(name, '.'); i > 0 && i < len(name)-1 {
+		base, ext = name[:i], name[i:]
 	}
-	return types
-}
-
-// MixedModeBackend supports reading from multiple backends.
-type MixedModeBackend struct {
-	primary   Backend
-	fallbacks []Backend
-}
-
-// NewMixedModeBackend creates a backend that checks multiple storage locations.
-func NewMixedModeBackend(primary Backend, fallbacks ...Backend) *MixedModeBackend {
-	return &MixedModeBackend{
-		primary:   primary,
-		fallbacks: fallbacks,
-	}
-}
-
-// Store saves to the primary backend.
-func (m *MixedModeBackend) Store(ctx context.Context, articleID int64, content *ArticleContent) (*StorageReference, error) {
-	return m.primary.Store(ctx, articleID, content)
-}
-
-// Retrieve tries primary first, then fallbacks.
-func (m *MixedModeBackend) Retrieve(ctx context.Context, ref *StorageReference) (*ArticleContent, error) {
-	// Try primary backend first
-	content, err := m.primary.Retrieve(ctx, ref)
-	if err == nil {
-		return content, nil
-	}
-
-	// Try fallback backends
-	for _, backend := range m.fallbacks {
-		content, err = backend.Retrieve(ctx, ref)
-		if err == nil {
-			return content, nil
+	for n := 1; ; n++ {
+		candidate := base + "-" + strconv.Itoa(n) + ext
+		if !used[candidate] {
+			return candidate
 		}
 	}
-
-	return nil, fmt.Errorf("content not found in any backend")
 }
 
-// Delete removes from all backends.
-func (m *MixedModeBackend) Delete(ctx context.Context, ref *StorageReference) error {
-	var lastErr error
+// HTMLBodyFilename is the attachment name GoatFlow uses for an article's HTML
+// body (OTRS uses "file-2").
+const HTMLBodyFilename = "html-body.html"
 
-	// Try to delete from primary
-	if err := m.primary.Delete(ctx, ref); err != nil {
-		lastErr = err
-	}
-
-	// Try to delete from fallbacks
-	for _, backend := range m.fallbacks {
-		if err := backend.Delete(ctx, ref); err != nil {
-			lastErr = err
-		}
-	}
-
-	return lastErr
-}
-
-// Exists checks all backends.
-func (m *MixedModeBackend) Exists(ctx context.Context, ref *StorageReference) (bool, error) {
-	// Check primary
-	if exists, err := m.primary.Exists(ctx, ref); err == nil && exists {
-		return true, nil
-	}
-
-	// Check fallbacks
-	for _, backend := range m.fallbacks {
-		if exists, err := backend.Exists(ctx, ref); err == nil && exists {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
-// List combines results from all backends.
-func (m *MixedModeBackend) List(ctx context.Context, articleID int64) ([]*StorageReference, error) {
-	refs := make([]*StorageReference, 0)
-	seen := make(map[string]bool)
-
-	// Get from primary
-	if primaryRefs, err := m.primary.List(ctx, articleID); err == nil {
-		for _, ref := range primaryRefs {
-			key := fmt.Sprintf("%s:%s", ref.Backend, ref.Location)
-			if !seen[key] {
-				refs = append(refs, ref)
-				seen[key] = true
-			}
-		}
-	}
-
-	// Get from fallbacks
-	for _, backend := range m.fallbacks {
-		if fallbackRefs, err := backend.List(ctx, articleID); err == nil {
-			for _, ref := range fallbackRefs {
-				key := fmt.Sprintf("%s:%s", ref.Backend, ref.Location)
-				if !seen[key] {
-					refs = append(refs, ref)
-					seen[key] = true
-				}
-			}
-		}
-	}
-
-	return refs, nil
-}
-
-// Migrate moves content to target backend.
-func (m *MixedModeBackend) Migrate(ctx context.Context, ref *StorageReference, target Backend) (*StorageReference, error) {
-	// Retrieve from any backend
-	content, err := m.Retrieve(ctx, ref)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve content for migration: %w", err)
-	}
-
-	// Store in target
-	newRef, err := target.Store(ctx, ref.ArticleID, content)
-	if err != nil {
-		return nil, fmt.Errorf("failed to store content in target backend: %w", err)
-	}
-
-	// Delete from source (optional, depends on migration strategy)
-	// m.Delete(ctx, ref)
-
-	return newRef, nil
-}
-
-// GetInfo returns mixed mode backend information.
-func (m *MixedModeBackend) GetInfo() *BackendInfo {
-	return &BackendInfo{
-		Name: "MixedMode",
-		Type: "mixed",
-		Capabilities: []string{
-			"read-multiple",
-			"write-primary",
-			"fallback-support",
-		},
-		Status: "active",
-	}
-}
-
-// HealthCheck verifies all backends are operational.
-func (m *MixedModeBackend) HealthCheck(ctx context.Context) error {
-	// Check primary
-	if err := m.primary.HealthCheck(ctx); err != nil {
-		return fmt.Errorf("primary backend unhealthy: %w", err)
-	}
-
-	// Check fallbacks (don't fail if fallback is down)
-	for i, backend := range m.fallbacks {
-		if err := backend.HealthCheck(ctx); err != nil {
-			// Log warning but don't fail
-			fmt.Printf("Warning: fallback backend %d unhealthy: %v\n", i, err)
-		}
-	}
-
-	return nil
-}
-
-// StreamingBackend extends Backend with streaming capabilities.
-type StreamingBackend interface {
-	Backend
-
-	// StoreStream saves content from a reader
-	StoreStream(ctx context.Context, articleID int64, reader io.Reader, metadata *ArticleContent) (*StorageReference, error)
-
-	// RetrieveStream gets content as a reader
-	RetrieveStream(ctx context.Context, ref *StorageReference) (io.ReadCloser, error)
+// IsHTMLBody reports whether an attachment is the article's HTML body rather
+// than a user-visible attachment (OTRS ExcludeHTMLBody: an inline text/html
+// part named file-2, or GoatFlow's html-body.html).
+func IsHTMLBody(a Attachment) bool {
+	return strings.EqualFold(a.Disposition, "inline") &&
+		strings.HasPrefix(strings.ToLower(a.ContentType), "text/html") &&
+		(a.Filename == HTMLBodyFilename || a.Filename == "file-2" || a.Filename == "")
 }

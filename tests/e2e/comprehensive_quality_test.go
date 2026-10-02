@@ -4,6 +4,8 @@ package e2e
 
 import (
 	"fmt"
+	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -15,539 +17,244 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestComprehensiveQuality ensures all features work correctly
-// with both positive and negative test cases
-func TestComprehensiveQuality(t *testing.T) {
-	browser := helpers.NewBrowserHelper(t)
-	err := browser.Setup()
-	require.NoError(t, err, "Failed to setup browser")
-	defer browser.TearDown()
+// browserErrors collects console errors, uncaught page errors and 5xx
+// responses seen by a page.
+type browserErrors struct {
+	mu                    sync.Mutex
+	console, page, server []string
+}
 
-	auth := helpers.NewAuthHelper(browser)
-
-	// Track all console messages and errors
-	var consoleMessages []string
-	var consoleErrors []string
-	var networkErrors []string
-	var mu sync.Mutex
-
-	browser.Page.OnConsole(func(msg playwright.ConsoleMessage) {
-		mu.Lock()
-		defer mu.Unlock()
-
-		text := msg.Text()
-		consoleMessages = append(consoleMessages, fmt.Sprintf("[%s] %s", msg.Type(), text))
-
+func watchBrowserErrors(page playwright.Page) *browserErrors {
+	e := &browserErrors{}
+	page.OnConsole(func(msg playwright.ConsoleMessage) {
 		if msg.Type() == "error" {
-			consoleErrors = append(consoleErrors, text)
-			t.Logf("Console ERROR: %s", text)
+			e.mu.Lock()
+			e.console = append(e.console, msg.Text())
+			e.mu.Unlock()
 		}
 	})
-
-	browser.Page.OnResponse(func(response playwright.Response) {
-		if response.Status() >= 500 {
-			mu.Lock()
-			networkErrors = append(networkErrors, fmt.Sprintf("%d %s", response.Status(), response.URL()))
-			mu.Unlock()
-			t.Logf("HTTP %d error: %s", response.Status(), response.URL())
+	page.OnPageError(func(err error) {
+		e.mu.Lock()
+		e.page = append(e.page, err.Error())
+		e.mu.Unlock()
+	})
+	page.OnResponse(func(r playwright.Response) {
+		if r.Status() >= 500 {
+			e.mu.Lock()
+			e.server = append(e.server, fmt.Sprintf("%d %s %s", r.Status(), r.Request().Method(), r.URL()))
+			e.mu.Unlock()
 		}
 	})
+	return e
+}
 
-	browser.Page.OnPageError(func(err error) {
-		mu.Lock()
-		consoleErrors = append(consoleErrors, err.Error())
-		mu.Unlock()
-		t.Logf("Page error: %v", err)
-	})
+func (e *browserErrors) reset() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.console, e.page, e.server = nil, nil, nil
+}
 
-	t.Run("Authentication Tests", func(t *testing.T) {
-		t.Run("Positive: Valid login", func(t *testing.T) {
-			err := browser.NavigateTo("/login")
-			require.NoError(t, err)
-			time.Sleep(1 * time.Second)
+func (e *browserErrors) assertNone(t *testing.T) {
+	t.Helper()
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	assert.Empty(t, e.console, "console errors")
+	assert.Empty(t, e.page, "uncaught page errors")
+	assert.Empty(t, e.server, "5xx responses")
+}
 
-			err = browser.Page.Fill("input[name='email']", "admin@demo.com")
-			require.NoError(t, err)
+// TestComprehensiveQuality drives the login and group management with hostile
+// input and checks that nothing executes, leaks or errors.
+func TestComprehensiveQuality(t *testing.T) {
+	b := newGroupsBrowser(t)
+	expect := groupsExpect()
+	errs := watchBrowserErrors(b.Page)
+	top := t
 
-			err = browser.Page.Fill("input[name='password']", "demo123")
-			require.NoError(t, err)
-
-			err = browser.Page.Press("input[name='password']", "Enter")
-			require.NoError(t, err)
-			time.Sleep(2 * time.Second)
-
-			// Should redirect to dashboard
-			url := browser.Page.URL()
-			assert.Contains(t, url, "/dashboard", "Should redirect to dashboard after login")
+	t.Run("Login rejects SQL injection", func(t *testing.T) {
+		require.NoError(t, b.NavigateTo("/login"))
+		require.NoError(t, b.Page.Locator("input#email").Fill("' OR '1'='1' -- "))
+		require.NoError(t, b.Page.Locator("input#password").Fill("' OR '1'='1"))
+		resp := expectResponse(t, b, http.MethodPost, regexp.MustCompile(`/api/auth/login$`), func() error {
+			return b.Page.Locator("form[action='/api/auth/login'] button[type='submit']").Click()
 		})
+		assert.Equal(t, http.StatusUnauthorized, resp.Status())
+		assert.NoError(t, expect.Locator(b.Page.Locator("#error-message")).ToContainText("Invalid username or password"))
+		assert.NoError(t, expect.Page(b.Page).ToHaveURL(regexp.MustCompile(`/login$`)))
 
-		t.Run("Negative: Invalid credentials", func(t *testing.T) {
-			// Logout first
-			browser.NavigateTo("/logout")
-			time.Sleep(1 * time.Second)
-
-			err := browser.NavigateTo("/login")
-			require.NoError(t, err)
-
-			err = browser.Page.Fill("input[name='email']", "admin@demo.com")
-			require.NoError(t, err)
-
-			err = browser.Page.Fill("input[name='password']", "wrongpassword")
-			require.NoError(t, err)
-
-			err = browser.Page.Press("input[name='password']", "Enter")
-			require.NoError(t, err)
-			time.Sleep(2 * time.Second)
-
-			// Should show error
-			errorVisible, _ := browser.Page.Locator(".error, .alert-danger, [role='alert']").IsVisible()
-			assert.True(t, errorVisible, "Should show error message for invalid login")
-
-			// Should stay on login page
-			url := browser.Page.URL()
-			assert.Contains(t, url, "/login", "Should stay on login page")
-		})
-
-		t.Run("Edge: SQL injection attempt", func(t *testing.T) {
-			err := browser.Page.Fill("input[name='email']", "admin'--")
-			require.NoError(t, err)
-
-			err = browser.Page.Fill("input[name='password']", "x")
-			require.NoError(t, err)
-
-			err = browser.Page.Press("input[name='password']", "Enter")
-			require.NoError(t, err)
-			time.Sleep(2 * time.Second)
-
-			// Should not log in
-			url := browser.Page.URL()
-			assert.Contains(t, url, "/login", "SQL injection should not succeed")
-		})
-	})
-
-	// Login for remaining tests
-	err = auth.LoginAsAdmin()
-	require.NoError(t, err, "Should login as admin")
-
-	t.Run("Groups CRUD Tests", func(t *testing.T) {
-		err := browser.NavigateTo("/admin/groups")
+		cookies, err := b.Context.Cookies()
 		require.NoError(t, err)
-		time.Sleep(2 * time.Second)
-
-		// Clear previous errors before groups tests
-		mu.Lock()
-		consoleErrors = []string{}
-		networkErrors = []string{}
-		mu.Unlock()
-
-		groupName := fmt.Sprintf("QualityTest_%d", time.Now().Unix())
-
-		t.Run("Positive: Create valid group", func(t *testing.T) {
-			// Open modal
-			err := browser.Page.Click("button:has-text('Add Group')")
-			require.NoError(t, err)
-			time.Sleep(1 * time.Second)
-
-			// Fill form
-			err = browser.Page.Fill("input#groupName", groupName)
-			require.NoError(t, err)
-
-			err = browser.Page.Fill("textarea#groupComments", "Quality test group")
-			require.NoError(t, err)
-
-			// Submit
-			err = browser.Page.Click("button[type='submit']:has-text('Save')")
-			require.NoError(t, err)
-			time.Sleep(3 * time.Second)
-
-			// Check no errors occurred
-			mu.Lock()
-			errorCount := len(consoleErrors)
-			networkErrorCount := len(networkErrors)
-			mu.Unlock()
-
-			assert.Equal(t, 0, errorCount, "No console errors should occur")
-			assert.Equal(t, 0, networkErrorCount, "No network errors should occur")
-
-			// Verify group appears
-			groupVisible, _ := browser.Page.Locator(fmt.Sprintf("tr:has-text('%s')", groupName)).IsVisible()
-			assert.True(t, groupVisible, "Created group should appear in list")
-		})
-
-		t.Run("Negative: Create duplicate group", func(t *testing.T) {
-			// Open modal
-			err := browser.Page.Click("button:has-text('Add Group')")
-			require.NoError(t, err)
-			time.Sleep(1 * time.Second)
-
-			// Try same name
-			err = browser.Page.Fill("input#groupName", groupName)
-			require.NoError(t, err)
-
-			err = browser.Page.Fill("textarea#groupComments", "Duplicate attempt")
-			require.NoError(t, err)
-
-			// Submit
-			err = browser.Page.Click("button[type='submit']:has-text('Save')")
-			require.NoError(t, err)
-			time.Sleep(2 * time.Second)
-
-			// Should show error
-			formError, _ := browser.Page.Locator("#formError").IsVisible()
-			assert.True(t, formError, "Should show error for duplicate group")
-
-			// Modal should stay open
-			modalVisible, _ := browser.Page.Locator("#groupModal").IsVisible()
-			assert.True(t, modalVisible, "Modal should remain open on error")
-
-			// Close modal
-			browser.Page.Click("button:has-text('Cancel')")
-			time.Sleep(1 * time.Second)
-		})
-
-		t.Run("Negative: Create without required field", func(t *testing.T) {
-			// Open modal
-			err := browser.Page.Click("button:has-text('Add Group')")
-			require.NoError(t, err)
-			time.Sleep(1 * time.Second)
-
-			// Don't fill name
-			err = browser.Page.Fill("textarea#groupComments", "No name test")
-			require.NoError(t, err)
-
-			// Try to submit
-			err = browser.Page.Click("button[type='submit']:has-text('Save')")
-			require.NoError(t, err)
-			time.Sleep(1 * time.Second)
-
-			// HTML5 validation should prevent submission
-			modalVisible, _ := browser.Page.Locator("#groupModal").IsVisible()
-			assert.True(t, modalVisible, "Modal should remain open when validation fails")
-
-			// Close modal
-			browser.Page.Click("button:has-text('Cancel')")
-			time.Sleep(1 * time.Second)
-		})
-
-		t.Run("Positive: Create inactive group", func(t *testing.T) {
-			inactiveName := fmt.Sprintf("Inactive_%d", time.Now().Unix())
-
-			// Open modal
-			err := browser.Page.Click("button:has-text('Add Group')")
-			require.NoError(t, err)
-			time.Sleep(1 * time.Second)
-
-			// Fill form with inactive status
-			err = browser.Page.Fill("input#groupName", inactiveName)
-			require.NoError(t, err)
-
-			err = browser.Page.Fill("textarea#groupComments", "Inactive group test")
-			require.NoError(t, err)
-
-			_, err = browser.Page.Locator("select#groupStatus").SelectOption(playwright.SelectOptionValues{Values: &[]string{"2"}})
-			require.NoError(t, err)
-
-			// Submit
-			err = browser.Page.Click("button[type='submit']:has-text('Save')")
-			require.NoError(t, err)
-			time.Sleep(3 * time.Second)
-
-			// Check no 500 errors
-			mu.Lock()
-			hasServerError := false
-			for _, err := range networkErrors {
-				if strings.Contains(err, "500") {
-					hasServerError = true
-					break
-				}
-			}
-			mu.Unlock()
-			assert.False(t, hasServerError, "No 500 errors should occur when creating inactive group")
-
-			// Verify group appears
-			groupVisible, _ := browser.Page.Locator(fmt.Sprintf("tr:has-text('%s')", inactiveName)).IsVisible()
-			assert.True(t, groupVisible, "Inactive group should appear in list")
-		})
-
-		t.Run("Edge: XSS attempt in group name", func(t *testing.T) {
-			xssName := fmt.Sprintf("XSS_%d", time.Now().Unix())
-			xssPayload := "<script>alert('XSS')</script>"
-
-			// Open modal
-			err := browser.Page.Click("button:has-text('Add Group')")
-			require.NoError(t, err)
-			time.Sleep(1 * time.Second)
-
-			// Try XSS in comments
-			err = browser.Page.Fill("input#groupName", xssName)
-			require.NoError(t, err)
-
-			err = browser.Page.Fill("textarea#groupComments", xssPayload)
-			require.NoError(t, err)
-
-			// Submit
-			err = browser.Page.Click("button[type='submit']:has-text('Save')")
-			require.NoError(t, err)
-			time.Sleep(3 * time.Second)
-
-			// Check no script execution
-			mu.Lock()
-			hasXSSAlert := false
-			for _, msg := range consoleMessages {
-				if strings.Contains(msg, "XSS") {
-					hasXSSAlert = true
-					break
-				}
-			}
-			mu.Unlock()
-			assert.False(t, hasXSSAlert, "XSS payload should not execute")
-
-			// Check if properly escaped in DOM
-			pageContent, _ := browser.Page.Content()
-			assert.NotContains(t, pageContent, "<script>alert", "Script tags should be escaped")
-		})
-
-		t.Run("Performance: Page load time", func(t *testing.T) {
-			start := time.Now()
-			err := browser.NavigateTo("/admin/groups")
-			require.NoError(t, err)
-			time.Sleep(2 * time.Second)
-
-			loadTime := time.Since(start)
-			assert.Less(t, loadTime, 3*time.Second, "Page should load within 3 seconds")
-
-			if loadTime < 1*time.Second {
-				t.Logf("✓ Excellent: Page loaded in %v", loadTime)
-			} else if loadTime < 2*time.Second {
-				t.Logf("✓ Good: Page loaded in %v", loadTime)
-			} else {
-				t.Logf("⚠ Slow: Page loaded in %v", loadTime)
-			}
-		})
-
-		t.Run("Cleanup: Delete test groups", func(t *testing.T) {
-			// Find and delete test groups
-			groupRow := browser.Page.Locator(fmt.Sprintf("tr:has-text('%s')", groupName))
-			if visible, _ := groupRow.IsVisible(); visible {
-				deleteBtn := groupRow.Locator("button[title='Delete']")
-				if btnVisible, _ := deleteBtn.IsVisible(); btnVisible {
-					deleteBtn.Click()
-					time.Sleep(500 * time.Millisecond)
-
-					// Handle confirmation
-					browser.Page.OnDialog(func(dialog playwright.Dialog) {
-						dialog.Accept()
-					})
-
-					// Check for custom confirm modal
-					confirmBtn := browser.Page.Locator("button:has-text('Delete')").Last()
-					if confirmVisible, _ := confirmBtn.IsVisible(); confirmVisible {
-						confirmBtn.Click()
-					}
-					time.Sleep(2 * time.Second)
-				}
-			}
-		})
+		for _, c := range cookies {
+			assert.NotContains(t, []string{"auth_token", "access_token"}, c.Name, "no session after a failed login")
+		}
 	})
 
-	t.Run("Error Handling Tests", func(t *testing.T) {
-		t.Run("Guru Meditation component present", func(t *testing.T) {
-			err := browser.NavigateTo("/admin/groups")
-			require.NoError(t, err)
-			time.Sleep(2 * time.Second)
+	require.NoError(t, helpers.NewAuthHelper(b).LoginAsAdmin(), "admin login")
+	errs.reset()
 
-			// Check component exists
-			guruElement := browser.Page.Locator("#guru-meditation")
-			elementCount, _ := guruElement.Count()
-			assert.Equal(t, 1, elementCount, "Guru Meditation component should exist")
+	t.Run("Group name and description are rendered as text", func(t *testing.T) {
+		// The name breaks out of a quoted JS string and both fields carry HTML.
+		name := fmt.Sprintf("E2EXss_%d');window.__xss='name';('<img src=x onerror=window.__xss='img'>", time.Now().UnixNano())
+		comments := `<script>window.__xss='script'</script><img src=x onerror="window.__xss='comment'">`
+		row := groupRow(b, name)
 
-			// Check functions exist
-			hasShowFunc, _ := browser.Page.Evaluate(`() => typeof showGuruMeditation === 'function'`)
-			assert.True(t, hasShowFunc.(bool), "showGuruMeditation function should exist")
-
-			hasDismissFunc, _ := browser.Page.Evaluate(`() => typeof dismissGuruMeditation === 'function'`)
-			assert.True(t, hasDismissFunc.(bool), "dismissGuruMeditation function should exist")
+		openGroupsPage(t, b)
+		require.NoError(t, b.Page.Locator("button:has-text('Add Group')").Click())
+		modal := b.Page.Locator("#groupModal")
+		require.NoError(t, expect.Locator(modal).ToBeVisible())
+		require.NoError(t, b.Page.Locator("#groupName").Fill(name))
+		require.NoError(t, b.Page.Locator("#groupComments").Fill(comments))
+		resp := submitGroupRequest(t, b, http.MethodPost, 0, func() error {
+			return modal.Locator("button[type='submit']").Click()
 		})
+		require.Equal(t, http.StatusCreated, resp.Status())
 
-		t.Run("Guru Meditation triggers on error", func(t *testing.T) {
-			// Manually trigger an error
-			browser.Page.Evaluate(`() => {
-				if (typeof showGuruMeditation === 'function') {
-					showGuruMeditation('TEST.ERROR', 'Test error message');
-				}
-			}`)
-			time.Sleep(1 * time.Second)
+		require.NoError(t, expect.Locator(row).ToBeVisible())
+		id := rowGroupID(t, row)
+		cleanupGroupAtEnd(top, b, id)
+		assert.NoError(t, expect.Locator(row).ToContainText(name))
+		assert.NoError(t, expect.Locator(row).ToContainText(comments))
+		assert.NoError(t, expect.Locator(row.Locator("img, script")).ToHaveCount(0))
 
-			// Check it's visible
-			guruVisible, _ := browser.Page.Locator("#guru-meditation").IsVisible()
-			assert.True(t, guruVisible, "Guru Meditation should be visible after error")
-
-			// Dismiss it
-			browser.Page.Evaluate(`() => {
-				if (typeof dismissGuruMeditation === 'function') {
-					dismissGuruMeditation();
-				}
-			}`)
-			time.Sleep(500 * time.Millisecond)
-
-			// Check it's hidden
-			guruVisible, _ = browser.Page.Locator("#guru-meditation").IsVisible()
-			assert.False(t, guruVisible, "Guru Meditation should be hidden after dismiss")
+		// Delete passes the name to the confirmation and the toast.
+		require.NoError(t, row.Locator("button[title='Delete group']").Click())
+		deleteModal := b.Page.Locator("#deleteModal")
+		require.NoError(t, expect.Locator(deleteModal).ToBeVisible())
+		resp = submitGroupRequest(t, b, http.MethodDelete, id, func() error {
+			return deleteModal.Locator("button:has-text('Delete Group')").Click()
 		})
+		require.Equal(t, http.StatusOK, resp.Status())
+		toast := b.Page.Locator("#toast-container")
+		assert.NoError(t, expect.Locator(toast).ToContainText(name))
+		assert.NoError(t, expect.Locator(toast.Locator("img")).ToHaveCount(0))
+
+		injected, err := b.Page.Evaluate("() => window.__xss === undefined ? '' : String(window.__xss)")
+		require.NoError(t, err)
+		assert.Equal(t, "", injected, "injected script ran")
 	})
 
-	t.Run("Final Quality Report", func(t *testing.T) {
-		mu.Lock()
-		defer mu.Unlock()
+	t.Run("No browser or server errors while managing groups", func(t *testing.T) {
+		errs.assertNone(t)
+	})
 
-		t.Logf("=== QUALITY REPORT ===")
-		t.Logf("Console Errors: %d", len(consoleErrors))
-		for i, err := range consoleErrors {
-			if i < 5 { // Show first 5 errors
-				t.Logf("  - %s", err)
+	t.Run("Groups page is ready within 3 seconds", func(t *testing.T) {
+		openGroupsPage(t, b)
+		ready, err := b.Page.Evaluate("() => performance.getEntriesByType('navigation')[0].domContentLoadedEventEnd")
+		require.NoError(t, err)
+		var ms float64
+		switch v := ready.(type) {
+		case int:
+			ms = float64(v)
+		case float64:
+			ms = v
+		default:
+			t.Fatalf("domContentLoadedEventEnd = %v", ready)
+		}
+		assert.Positive(t, ms)
+		assert.Less(t, ms, 3000.0, "DOMContentLoaded after %.0f ms", ms)
+	})
+
+	t.Run("Failure to load a group shows Guru Meditation", func(t *testing.T) {
+		name := uniqueGroupName("E2EGuru")
+		id := createGroupViaAPI(top, b, name, "guru meditation e2e group", 1)
+		openGroupsPage(t, b)
+
+		endpoint := groupEndpoint(id)
+		require.NoError(t, b.Page.Route(endpoint, func(route playwright.Route) {
+			if route.Request().Method() == http.MethodGet {
+				_ = route.Abort()
+				return
 			}
-		}
+			_ = route.Continue()
+		}))
+		t.Cleanup(func() { _ = b.Page.Unroute(endpoint) })
 
-		t.Logf("Network Errors (5xx): %d", len(networkErrors))
-		for i, err := range networkErrors {
-			if i < 5 { // Show first 5 errors
-				t.Logf("  - %s", err)
-			}
-		}
-
-		// Quality assertions
-		assert.LessOrEqual(t, len(consoleErrors), 0, "Should have no console errors")
-		assert.LessOrEqual(t, len(networkErrors), 0, "Should have no server errors")
-
-		if len(consoleErrors) == 0 && len(networkErrors) == 0 {
-			t.Log("✓ EXCELLENT: No errors detected during testing")
-		}
+		require.NoError(t, groupRow(b, name).Locator("button[title='Edit group']").Click())
+		guru := b.Page.Locator("#guru-meditation")
+		require.NoError(t, expect.Locator(guru).ToBeVisible())
+		assert.NoError(t, expect.Locator(b.Page.Locator("#guru-code")).ToHaveText("00000005.GRPLOAD0"))
+		assert.NoError(t, expect.Locator(b.Page.Locator("#guru-message")).ToContainText("UNABLE TO FETCH GROUP DETAILS"))
+		assert.NoError(t, expect.Locator(b.Page.Locator("#guru-location")).ToHaveText(fmt.Sprintf("/admin/groups/%d", id)))
+		assert.NoError(t, expect.Locator(b.Page.Locator("#groupModal")).ToBeHidden())
 	})
 }
 
-// TestConcurrentAccess tests the system under concurrent load
+// TestConcurrentAccess has three admins create groups at the same moment;
+// every create succeeds and every group is listed afterwards.
 func TestConcurrentAccess(t *testing.T) {
-	// Create multiple browser instances
-	numBrowsers := 3
+	const admins = 3
+	expect := groupsExpect()
+	browsers := make([]*helpers.BrowserHelper, admins)
+	names := make([]string, admins)
+	for i := range browsers {
+		b := newGroupsAdminBrowser(t)
+		browsers[i] = b
+		names[i] = uniqueGroupName(fmt.Sprintf("E2EConcurrent%d", i))
+		openGroupsPage(t, b)
+		require.NoError(t, b.Page.Locator("button:has-text('Add Group')").Click())
+		require.NoError(t, expect.Locator(b.Page.Locator("#groupModal")).ToBeVisible())
+		require.NoError(t, b.Page.Locator("#groupName").Fill(names[i]))
+		require.NoError(t, b.Page.Locator("#groupComments").Fill(fmt.Sprintf("concurrent create %d", i)))
+	}
+
+	create := groupEndpoint(0)
+	statuses := make([]int, admins)
+	failures := make([]error, admins)
 	var wg sync.WaitGroup
-	errors := make(chan error, numBrowsers)
-
-	for i := 0; i < numBrowsers; i++ {
+	for i, b := range browsers {
 		wg.Add(1)
-		go func(browserNum int) {
+		go func(i int, b *helpers.BrowserHelper) {
 			defer wg.Done()
-
-			browser := helpers.NewBrowserHelper(t)
-			err := browser.Setup()
-			if err != nil {
-				errors <- fmt.Errorf("browser %d setup failed: %v", browserNum, err)
-				return
-			}
-			defer browser.TearDown()
-
-			auth := helpers.NewAuthHelper(browser)
-			err = auth.LoginAsAdmin()
-			if err != nil {
-				errors <- fmt.Errorf("browser %d login failed: %v", browserNum, err)
-				return
-			}
-
-			// Create a group
-			groupName := fmt.Sprintf("Concurrent_%d_%d", browserNum, time.Now().Unix())
-
-			err = browser.NavigateTo("/admin/groups")
-			if err != nil {
-				errors <- fmt.Errorf("browser %d navigation failed: %v", browserNum, err)
-				return
-			}
-			time.Sleep(2 * time.Second)
-
-			// Open modal
-			err = browser.Page.Click("button:has-text('Add Group')")
-			if err != nil {
-				errors <- fmt.Errorf("browser %d open modal failed: %v", browserNum, err)
-				return
-			}
-			time.Sleep(1 * time.Second)
-
-			// Fill and submit
-			browser.Page.Fill("input#groupName", groupName)
-			browser.Page.Fill("textarea#groupComments", fmt.Sprintf("Concurrent test from browser %d", browserNum))
-			browser.Page.Click("button[type='submit']:has-text('Save')")
-			time.Sleep(3 * time.Second)
-
-			// Verify creation
-			groupVisible, _ := browser.Page.Locator(fmt.Sprintf("tr:has-text('%s')", groupName)).IsVisible()
-			if !groupVisible {
-				errors <- fmt.Errorf("browser %d: group not created", browserNum)
-				return
-			}
-
-			t.Logf("Browser %d: Successfully created group %s", browserNum, groupName)
-		}(i)
+			// A successful create reloads the page; wait for that reload so
+			// the later navigation does not interrupt it.
+			_, err := b.Page.ExpectEvent("load", func() error {
+				ev, err := b.Page.ExpectEvent("response", func() error {
+					return b.Page.Locator("#groupModal button[type='submit']").Click()
+				}, playwright.PageExpectEventOptions{Predicate: func(r playwright.Response) bool {
+					return r.Request().Method() == http.MethodPost && create.MatchString(r.URL())
+				}})
+				if err != nil {
+					return err
+				}
+				statuses[i] = ev.(playwright.Response).Status()
+				return nil
+			})
+			failures[i] = err
+		}(i, b)
 	}
-
 	wg.Wait()
-	close(errors)
 
-	// Check for errors
-	var allErrors []error
-	for err := range errors {
-		allErrors = append(allErrors, err)
+	for i := range browsers {
+		assert.Equal(t, http.StatusCreated, statuses[i], "admin %d", i)
+		require.NoError(t, failures[i], "admin %d", i)
 	}
-
-	assert.Empty(t, allErrors, "Concurrent access should not produce errors")
-	if len(allErrors) == 0 {
-		t.Logf("✓ SUCCESS: All %d concurrent browsers completed successfully", numBrowsers)
+	first := browsers[0]
+	openGroupsPage(t, first)
+	for _, name := range names {
+		row := groupRow(first, name)
+		require.NoError(t, expect.Locator(row).ToBeVisible(), name)
+		cleanupGroupAtEnd(t, first, rowGroupID(t, row))
 	}
 }
 
-// TestNegativeScenarios focuses on error conditions
+// TestNegativeScenarios covers access the server must refuse.
 func TestNegativeScenarios(t *testing.T) {
-	browser := helpers.NewBrowserHelper(t)
-	err := browser.Setup()
-	require.NoError(t, err)
-	defer browser.TearDown()
+	b := newGroupsBrowser(t)
+	expect := groupsExpect()
 
-	auth := helpers.NewAuthHelper(browser)
-
-	t.Run("Access without authentication", func(t *testing.T) {
-		// Try to access protected page
-		err := browser.NavigateTo("/admin/groups")
-		require.NoError(t, err)
-		time.Sleep(2 * time.Second)
-
-		// Should redirect to login
-		url := browser.Page.URL()
-		assert.Contains(t, url, "/login", "Should redirect to login when not authenticated")
+	t.Run("Access without authentication redirects to login", func(t *testing.T) {
+		require.NoError(t, b.NavigateTo("/admin/groups"))
+		assert.NoError(t, expect.Page(b.Page).ToHaveURL(regexp.MustCompile(`/login$`)))
+		assert.NoError(t, expect.Locator(b.Page.Locator("input#email")).ToBeVisible())
 	})
 
-	t.Run("Invalid URL handling", func(t *testing.T) {
-		err := auth.LoginAsAdmin()
+	t.Run("Unknown admin page returns 404", func(t *testing.T) {
+		require.NoError(t, helpers.NewAuthHelper(b).LoginAsAdmin())
+		resp, err := b.Page.Goto(b.Config.BaseURL + "/admin/nonexistent")
 		require.NoError(t, err)
-
-		// Try non-existent page
-		err = browser.NavigateTo("/admin/nonexistent")
+		assert.Equal(t, http.StatusNotFound, resp.Status())
+		body, err := b.Page.Locator("body").InnerText()
 		require.NoError(t, err)
-		time.Sleep(2 * time.Second)
-
-		// Should show 404 or redirect
-		pageContent, _ := browser.Page.Content()
-		has404 := strings.Contains(pageContent, "404") || strings.Contains(pageContent, "not found")
-		assert.True(t, has404, "Should handle non-existent pages properly")
-	})
-
-	t.Run("Session timeout simulation", func(t *testing.T) {
-		// Clear cookies to simulate session timeout
-		browser.Page.Context().ClearCookies()
-
-		// Try to access protected page
-		err := browser.NavigateTo("/admin/groups")
-		require.NoError(t, err)
-		time.Sleep(2 * time.Second)
-
-		// Should redirect to login
-		url := browser.Page.URL()
-		assert.Contains(t, url, "/login", "Should redirect to login after session timeout")
+		assert.Contains(t, strings.ToLower(body), "not found")
 	})
 }

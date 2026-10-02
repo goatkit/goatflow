@@ -11,13 +11,18 @@ spec:
   prefix: /api
   middleware:
     - unified_auth
+    - agent
   routes:
     - path: /tickets/:id/messages
       method: GET
       handler: handleGetTicketMessages
+      middleware:
+        - ticket_access_ro
       description: "List ticket messages including attachments"
 
     - path: /tickets/:id/messages
       method: POST
       handler: handleAddTicketMessage
+      middleware:
+        - ticket_access_note
       description: "Create a new message for a ticket"

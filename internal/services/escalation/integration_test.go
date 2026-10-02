@@ -117,21 +117,21 @@ func TestEscalationServiceIntegration(t *testing.T) {
 		svc := NewService(db, nil)
 		require.NoError(t, svc.Initialize(ctx))
 
-		// Ensure we have a queue with escalation settings
-		ensureTestQueueWithEscalation(t, db)
+		// A queue owned by this test carries the escalation settings.
+		queueID := ensureTestQueueWithEscalation(t, db)
 
 		ticket := &TicketInfo{
 			ID:        1,
-			QueueID:   1,
+			QueueID:   queueID,
 			StateType: "new",
 		}
 
 		prefs, err := svc.getEscalationPreferences(ctx, ticket)
 		require.NoError(t, err)
-		assert.NotNil(t, prefs)
-
-		t.Logf("Queue preferences: FirstResponse=%d, Update=%d, Solution=%d",
-			prefs.FirstResponseTime, prefs.UpdateTime, prefs.SolutionTime)
+		require.NotNil(t, prefs)
+		assert.Equal(t, 60, prefs.FirstResponseTime, "Should get FirstResponseTime from queue")
+		assert.Equal(t, 120, prefs.UpdateTime, "Should get UpdateTime from queue")
+		assert.Equal(t, 480, prefs.SolutionTime, "Should get SolutionTime from queue")
 	})
 
 	t.Run("GetEscalationPreferencesFromSLA", func(t *testing.T) {
@@ -263,40 +263,45 @@ func TestCheckServiceIntegration(t *testing.T) {
 
 // Helper functions using database.ConvertPlaceholders
 
-func ensureTestQueueWithEscalation(t *testing.T, db *sql.DB) {
+// ensureTestQueueWithEscalation creates a queue with escalation times that is
+// deleted again when the test ends, so the seeded queues keep their settings.
+func ensureTestQueueWithEscalation(t *testing.T, db *sql.DB) int {
 	t.Helper()
 
-	query := database.ConvertPlaceholders(`
-		UPDATE queue SET
-			first_response_time = 60,
-			update_time = 120,
-			solution_time = 480
-		WHERE id = 1
-	`)
-	_, err := db.Exec(query)
+	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+		INSERT INTO queue (name, group_id, system_address_id, salutation_id, signature_id, unlock_timeout,
+			first_response_time, update_time, solution_time,
+			follow_up_id, follow_up_lock, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, 1, 1, 1, 1, 0, 60, 120, 480, 1, 0, 1, NOW(), 1, NOW(), 1)
+		RETURNING id
+	`), fmt.Sprintf("Escalation Test Queue %d", time.Now().UnixNano()))
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		if _, err := db.Exec(database.ConvertPlaceholders(`DELETE FROM queue WHERE id = ?`), id); err != nil {
+			t.Errorf("cleanup queue %d: %v", id, err)
+		}
+	})
+	return int(id)
 }
 
+// ensureTestSLAWithEscalation creates an SLA with escalation times that is
+// deleted again when the test ends.
 func ensureTestSLAWithEscalation(t *testing.T, db *sql.DB) int {
 	t.Helper()
 
-	// Check if test SLA exists
-	var slaID int
-	query := database.ConvertPlaceholders(`SELECT id FROM sla WHERE name = ?`)
-	err := db.QueryRow(query, "Test Escalation SLA").Scan(&slaID)
-	if err == nil {
-		return slaID
-	}
-
-	// Create test SLA
 	id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 		INSERT INTO sla (name, first_response_time, first_response_notify,
 			update_time, update_notify, solution_time, solution_notify,
 			valid_id, create_time, create_by, change_time, change_by)
 		VALUES (?, 60, 80, 120, 80, 480, 80, 1, NOW(), 1, NOW(), 1)
 		RETURNING id
-	`), "Test Escalation SLA")
+	`), fmt.Sprintf("Test Escalation SLA %d", time.Now().UnixNano()))
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		if _, err := db.Exec(database.ConvertPlaceholders(`DELETE FROM sla WHERE id = ?`), id); err != nil {
+			t.Errorf("cleanup sla %d: %v", id, err)
+		}
+	})
 	return int(id)
 }
 
@@ -306,7 +311,7 @@ func ensureTestTicket(t *testing.T, db *sql.DB) int {
 	// Always create a fresh ticket to avoid flaky tests from shared state
 	var queueID, stateID, priorityID, typeID int
 	db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM queue WHERE valid_id = 1 LIMIT 1`)).Scan(&queueID)
-	db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket_state WHERE type_id = 1 LIMIT 1`)).Scan(&stateID)
+	db.QueryRow(database.ConvertPlaceholders(`SELECT s.id FROM ticket_state s JOIN ticket_state_type st ON st.id = s.type_id WHERE st.name = 'new' ORDER BY s.id LIMIT 1`)).Scan(&stateID)
 	db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket_priority WHERE valid_id = 1 LIMIT 1`)).Scan(&priorityID)
 	db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket_type WHERE valid_id = 1 LIMIT 1`)).Scan(&typeID)
 
@@ -334,26 +339,26 @@ func ensureTestTicket(t *testing.T, db *sql.DB) int {
 		RETURNING id
 	`), tn, "Test Escalation Ticket", queueID, stateID, priorityID, typeID)
 	require.NoError(t, err)
+	t.Cleanup(func() { cleanupTestTicket(t, db, int(id)) })
 	return int(id)
 }
 
 func ensureClosedTestTicket(t *testing.T, db *sql.DB) int {
 	t.Helper()
 
-	// Find a closed state ID (type_id = 3)
+	// Find a state of the 'closed' state type (ids differ per database)
 	var closedStateID int
-	query := database.ConvertPlaceholders(`SELECT id FROM ticket_state WHERE type_id = 3 LIMIT 1`)
-	err := db.QueryRow(query).Scan(&closedStateID)
-	if err != nil {
-		closedStateID = 2 // fallback
-	}
+	query := database.ConvertPlaceholders(`
+		SELECT s.id FROM ticket_state s JOIN ticket_state_type st ON st.id = s.type_id
+		WHERE st.name = 'closed' ORDER BY s.id LIMIT 1`)
+	require.NoError(t, db.QueryRow(query).Scan(&closedStateID))
 
 	// Create a closed ticket
 	ticketID := ensureTestTicket(t, db)
 
 	// Update to closed state
 	updateQuery := database.ConvertPlaceholders(`UPDATE ticket SET ticket_state_id = ? WHERE id = ?`)
-	_, err = db.Exec(updateQuery, closedStateID, ticketID)
+	_, err := db.Exec(updateQuery, closedStateID, ticketID)
 	require.NoError(t, err)
 
 	return ticketID
@@ -471,7 +476,7 @@ func createTestTicketForEscalation(t *testing.T, db *sql.DB) int {
 	// Find required IDs first
 	var queueID, stateID, priorityID, typeID int
 	db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM queue WHERE valid_id = 1 LIMIT 1`)).Scan(&queueID)
-	db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket_state WHERE type_id = 1 LIMIT 1`)).Scan(&stateID)
+	db.QueryRow(database.ConvertPlaceholders(`SELECT s.id FROM ticket_state s JOIN ticket_state_type st ON st.id = s.type_id WHERE st.name = 'new' ORDER BY s.id LIMIT 1`)).Scan(&stateID)
 	db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket_priority WHERE valid_id = 1 LIMIT 1`)).Scan(&priorityID)
 	db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket_type WHERE valid_id = 1 LIMIT 1`)).Scan(&typeID)
 
@@ -511,15 +516,14 @@ func createTestTicketForEscalation(t *testing.T, db *sql.DB) int {
 func cleanupTestTicket(t *testing.T, db *sql.DB, ticketID int) {
 	t.Helper()
 
-	// Delete ticket history first (foreign key constraint)
-	deleteHistoryQuery := database.ConvertPlaceholders(`DELETE FROM ticket_history WHERE ticket_id = ?`)
-	_, _ = db.Exec(deleteHistoryQuery, ticketID) // Ignore errors - history may not exist
-
-	// Delete the ticket
-	deleteTicketQuery := database.ConvertPlaceholders(`DELETE FROM ticket WHERE id = ?`)
-	_, err := db.Exec(deleteTicketQuery, ticketID)
-	if err != nil {
-		t.Logf("Warning: could not clean up test ticket %d: %v", ticketID, err)
+	// Children before the ticket (foreign key constraints).
+	for _, q := range []string{
+		`DELETE FROM ticket_history WHERE ticket_id = ?`,
+		`DELETE FROM ticket WHERE id = ?`,
+	} {
+		if _, err := db.Exec(database.ConvertPlaceholders(q), ticketID); err != nil {
+			t.Errorf("cleanup ticket %d: %s: %v", ticketID, q, err)
+		}
 	}
 }
 

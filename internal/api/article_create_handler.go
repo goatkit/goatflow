@@ -14,6 +14,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/services"
+	"github.com/goatkit/goatflow/internal/storage"
 )
 
 // HandleCreateArticleAPI handles POST /api/v1/tickets/:ticket_id/articles.
@@ -47,27 +48,9 @@ func HandleCreateArticleAPI(c *gin.Context) {
 	}
 
 	// Check authentication
-	userIDVal, exists := c.Get("user_id")
-	if !exists {
-		if _, authExists := c.Get("is_authenticated"); !authExists {
-			// For testing without auth middleware
-			if c.GetHeader("X-Test-Mode") != "true" {
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"success": false,
-					"error":   "Authentication required",
-				})
-				return
-			}
-			userIDVal = 1 // Default for testing
-		} else {
-			userIDVal = 1
-		}
-	}
-	// Normalize userID to int using helper (fallback to value from above if context missing)
-	userID := GetUserIDFromCtx(c, 1)
-	if userIDVal != nil {
-		// If we got a non-nil value above, the helper should have found it
-		_ = userIDVal // satisfies linter; helper already handled conversion
+	userID, ok := auditUserID(c)
+	if !ok {
+		return
 	}
 
 	// Parse request body
@@ -192,93 +175,33 @@ func HandleCreateArticleAPI(c *gin.Context) {
 		req.ContentType = "text/plain"
 	}
 
-	// Determine article type ID using constants (replaces magic numbers)
-	var articleTypeID int
-	switch strings.ToLower(req.ArticleType) {
-	case "note", "note-internal":
-		articleTypeID = constants.ArticleTypeNoteInternal
-	case "phone":
-		articleTypeID = constants.ArticleTypePhone
-	case "email", "email-external":
-		articleTypeID = constants.ArticleTypeEmailExternal
-	case "email-internal":
-		articleTypeID = constants.ArticleTypeEmailInternal
-	case "note-external":
-		articleTypeID = constants.ArticleTypeNoteExternal
-	case "note-report":
-		articleTypeID = constants.ArticleTypeNoteReport
-	case "webrequest":
-		articleTypeID = constants.ArticleTypeWebRequest
-	default:
-		// Default based on requested visibility (if provided) otherwise internal note for safety
-		var vptr *bool
-		if req.IsVisible != nil {
-			vptr = req.IsVisible
-		} else if req.IsVisibleToCustomer != nil {
-			vptr = req.IsVisibleToCustomer
-		} else if req.IsVisibleForCustomer != nil {
-			vptr = req.IsVisibleForCustomer
-		}
-		if vptr != nil && *vptr {
-			articleTypeID = constants.ArticleTypeNoteExternal
-		} else {
-			articleTypeID = constants.ArticleTypeNoteInternal
-		}
+	if req.From == "" {
+		req.From = req.FromEmail
+	}
+	if req.To == "" {
+		req.To = req.ToEmail
 	}
 
-	// Channel derived via centralized mapper, but allow explicit override
-	communicationChannelID := req.CommunicationChannelID
-	if communicationChannelID == 0 {
-		communicationChannelID = core.MapCommunicationChannel(articleTypeID)
-	}
-
-	// Determine is_visible_for_customer based on metadata if not explicitly set
-	var isVisibleForCustomer int
-	var visiblePtr *bool
-	if req.IsVisible != nil {
-		visiblePtr = req.IsVisible
-	} else if req.IsVisibleToCustomer != nil {
-		visiblePtr = req.IsVisibleToCustomer
-	} else if req.IsVisibleForCustomer != nil {
-		visiblePtr = req.IsVisibleForCustomer
-	}
-	if visiblePtr != nil {
-		if *visiblePtr {
-			isVisibleForCustomer = 1
-		} else {
-			isVisibleForCustomer = 0
-		}
-	} else {
-		// Use metadata defaults
-		if meta, ok := constants.ArticleTypesMetadata[articleTypeID]; ok && meta.CustomerVisible {
-			isVisibleForCustomer = 1
-		} else {
-			isVisibleForCustomer = 0
-		}
-	}
-
-	// Determine sender type (prefer payload id, then string, else role)
+	// Sender type: customers always write as customer; agents may pick one by
+	// id or name and default to agent.
 	senderTypeID := req.ArticleSenderTypeID
 	if senderTypeID == 0 && req.SenderType != "" {
 		switch strings.ToLower(req.SenderType) {
 		case "agent":
-			senderTypeID = 1
+			senderTypeID = constants.ArticleSenderAgent
 		case "system":
-			senderTypeID = 2
+			senderTypeID = constants.ArticleSenderSystem
 		case "customer":
-			senderTypeID = 3
+			senderTypeID = constants.ArticleSenderCustomer
 		}
 	}
-	if senderTypeID == 0 {
-		if isCustomer, _ := c.Get("is_customer"); isCustomer == true {
-			senderTypeID = 3 // customer
-		} else {
-			senderTypeID = 1 // agent
-		}
+	if isCustomer {
+		senderTypeID = constants.ArticleSenderCustomer
+	} else if senderTypeID == 0 {
+		senderTypeID = constants.ArticleSenderAgent
 	}
 
-	// Validate sender_type_id exists
-	if req.ArticleSenderTypeID != 0 {
+	if req.ArticleSenderTypeID != 0 && !isCustomer {
 		var senderTypeExists bool
 		senderTypeQuery := "SELECT EXISTS(SELECT 1 FROM article_sender_type WHERE id = ?)"
 		err = db.QueryRow(database.ConvertPlaceholders(senderTypeQuery), req.ArticleSenderTypeID).Scan(&senderTypeExists)
@@ -291,11 +214,48 @@ func HandleCreateArticleAPI(c *gin.Context) {
 		}
 	}
 
-	// Validate communication_channel_id exists
-	if req.CommunicationChannelID != 0 {
+	// Article type → channel + customer visibility (internal/core/channel_mapping.go).
+	// Without an explicit type, a requested visibility picks external/internal note.
+	var visiblePtr *bool
+	if req.IsVisible != nil {
+		visiblePtr = req.IsVisible
+	} else if req.IsVisibleToCustomer != nil {
+		visiblePtr = req.IsVisibleToCustomer
+	} else if req.IsVisibleForCustomer != nil {
+		visiblePtr = req.IsVisibleForCustomer
+	}
+	intent := core.ArticleIntent{SenderTypeID: senderTypeID, ForceVisible: visiblePtr}
+	if strings.TrimSpace(req.ArticleType) != "" {
+		typeID, ok := core.ArticleTypeByName(req.ArticleType)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid article type"})
+			return
+		}
+		intent.ExplicitArticleTypeID = typeID
+	} else if visiblePtr != nil {
+		intent.ExplicitArticleTypeID = constants.ArticleTypeNoteInternal
+		if *visiblePtr {
+			intent.ExplicitArticleTypeID = constants.ArticleTypeNoteExternal
+		}
+	}
+	resolved, err := core.DetermineArticleType(intent)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Article type not allowed for this sender"})
+		return
+	}
+	isVisibleForCustomer := 0
+	if resolved.CustomerVisible {
+		isVisibleForCustomer = 1
+	}
+
+	// Channel derived from the article type unless explicitly overridden.
+	communicationChannelID := req.CommunicationChannelID
+	if communicationChannelID == 0 {
+		communicationChannelID = core.MapCommunicationChannel(resolved.ArticleTypeID)
+	} else {
 		var channelExists bool
 		channelQuery := "SELECT EXISTS(SELECT 1 FROM communication_channel WHERE id = ?)"
-		err = db.QueryRow(database.ConvertPlaceholders(channelQuery), req.CommunicationChannelID).Scan(&channelExists)
+		err = db.QueryRow(database.ConvertPlaceholders(channelQuery), communicationChannelID).Scan(&channelExists)
 		if err != nil || !channelExists {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -373,13 +333,14 @@ func HandleCreateArticleAPI(c *gin.Context) {
 			a_in_reply_to,
 			a_references,
 			a_message_id,
+			content_path,
 			incoming_time,
 			create_time,
 			create_by,
 			change_time,
 			change_by
 		) VALUES (
-			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 		)`)
 
 	_, err = tx.Exec(
@@ -395,6 +356,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
 		req.InReplyTo,
 		req.References,
 		req.MessageID,
+		storage.ContentPath(now),
 		int(incomingTime),
 		now,
 		userID,
@@ -520,6 +482,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
 			"article_sender_type_id":   senderTypeID,
 			"communication_channel_id": communicationChannelID,
 			"is_visible_for_customer":  isVisibleForCustomer == 1,
+			"article_type":             core.ArticleTypeName(core.ArticleTypeFromStorage(communicationChannelID, isVisibleForCustomer == 1)),
 			"create_by":                userID,
 			"ticket_updated":           true,
 		}
@@ -534,6 +497,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
 		"ticket_id":                article.TicketID,
 		"communication_channel_id": article.CommunicationChannelID,
 		"is_visible_for_customer":  article.IsVisibleForCustomer == 1,
+		"article_type":             core.ArticleTypeName(core.ArticleTypeFromStorage(article.CommunicationChannelID, article.IsVisibleForCustomer == 1)),
 		"article_sender_type_id":   article.SenderTypeID,
 		"subject":                  article.Subject,
 		"body":                     article.Body,

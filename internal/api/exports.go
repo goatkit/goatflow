@@ -16,7 +16,6 @@ var (
 	HandleCustomerLoginPage   = handleCustomerLoginPage
 	HandleLogout              = handleLogout
 	HandleDashboard           = handleDashboard
-	HandleDashboardStats      = handleDashboardStats
 	HandleRecentTickets       = handleRecentTickets
 	HandleActivityStream      = handleActivityStream
 	HandlePendingReminderFeed = handlePendingReminderFeed
@@ -178,14 +177,6 @@ var (
 			return
 		}
 		handleAdminActivateCustomerCompany(dbService.GetDB())(c)
-	}
-	HandleAdminUploadCustomerPortalLogo = func(c *gin.Context) {
-		dbService, err := adapter.GetDatabase()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-			return
-		}
-		handleAdminUploadCustomerPortalLogo(dbService.GetDB())(c)
 	}
 
 	// Customer user ↔ services management.

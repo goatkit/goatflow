@@ -1,13 +1,17 @@
 package api
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/config"
+	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/repository"
 )
 
@@ -122,7 +126,17 @@ func isPendingState(state *models.TicketState) bool {
 	if state == nil {
 		return false
 	}
-	return state.TypeID == 4 || state.TypeID == 5
+	db, err := database.GetDB()
+	if err != nil {
+		log.Printf("isPendingState: database unavailable: %v", err)
+		return false
+	}
+	typeName, err := lookups.Name(context.Background(), db, lookups.StateType, state.TypeID)
+	if err != nil {
+		log.Printf("isPendingState: resolve state type %d: %v", state.TypeID, err)
+		return false
+	}
+	return lookups.IsPendingStateType(typeName)
 }
 
 func loadTicketState(repo *repository.TicketRepository, stateID int) (*models.TicketState, error) {

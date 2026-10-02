@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
+	"github.com/goatkit/goatflow/internal/platform/auth"
 )
 
 // TestCredential represents a test user credential.
@@ -129,13 +129,9 @@ func (g *TestDataGenerator) generatePassword() string {
 	return password + "!1"
 }
 
-// hashPassword creates a bcrypt hash of the password.
+// hashPassword hashes the password with the configured auth.PasswordHasher.
 func (g *TestDataGenerator) hashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
-	if err != nil {
-		return "", err
-	}
-	return string(hash), nil
+	return auth.NewPasswordHasher().HashPassword(password)
 }
 
 // generateSQL creates the SQL migration file.
@@ -236,11 +232,11 @@ ON CONFLICT DO NOTHING;
 
 -- Sample tickets (use subqueries for user_id references)
 INSERT INTO ticket (tn, title, queue_id, ticket_lock_id, user_id, ticket_priority_id, ticket_state_id, customer_id, customer_user_id, create_by, change_by) VALUES
-('2025010000001', 'Cannot login to system', 4, 1, (SELECT id FROM users WHERE login = 'agent.smith'), 3, 1, 'COMP1', 'john.customer', 1, 1),
-('2025010000002', 'Request for new feature', 4, 1, (SELECT id FROM users WHERE login = 'agent.jones'), 2, 2, 'COMP2', 'jane.customer', 1, 1),
-('2025010000003', 'System running slow', 4, 1, (SELECT id FROM users WHERE login = 'agent.smith'), 4, 2, 'COMP1', 'john.customer', 1, 1),
-('2025010000004', 'Password reset needed', 4, 1, (SELECT id FROM users WHERE login = 'agent.jones'), 3, 1, 'COMP3', 'bob.customer', 1, 1),
-('2025010000005', 'API documentation request', 4, 1, (SELECT id FROM users WHERE login = 'agent.smith'), 2, 3, 'COMP2', 'jane.customer', 1, 1)
+('2025010000001', 'Cannot login to system', 4, 1, (SELECT id FROM users WHERE login = 'agent.smith'), 3, (SELECT id FROM ticket_state WHERE name = 'new'), 'COMP1', 'john.customer', 1, 1),
+('2025010000002', 'Request for new feature', 4, 1, (SELECT id FROM users WHERE login = 'agent.jones'), 2, (SELECT id FROM ticket_state WHERE name = 'open'), 'COMP2', 'jane.customer', 1, 1),
+('2025010000003', 'System running slow', 4, 1, (SELECT id FROM users WHERE login = 'agent.smith'), 4, (SELECT id FROM ticket_state WHERE name = 'open'), 'COMP1', 'john.customer', 1, 1),
+('2025010000004', 'Password reset needed', 4, 1, (SELECT id FROM users WHERE login = 'agent.jones'), 3, (SELECT id FROM ticket_state WHERE name = 'new'), 'COMP3', 'bob.customer', 1, 1),
+('2025010000005', 'API documentation request', 4, 1, (SELECT id FROM users WHERE login = 'agent.smith'), 2, (SELECT id FROM ticket_state WHERE name = 'closed successful'), 'COMP2', 'jane.customer', 1, 1)
 ON CONFLICT (tn) DO NOTHING;
 
 -- Sample articles for tickets
