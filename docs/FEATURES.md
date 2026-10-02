@@ -203,7 +203,7 @@ See [HIGH_AVAILABILITY.md](HIGH_AVAILABILITY.md).
 - ❌ Geographic distribution
 
 ### Multi-Tenancy
-- ⚠️ Organisations: members, per-organisation settings, plugin access, captive plugin and identity providers (`/api/v1/organisations`). Plugin calls run in the caller's organisation: plugin secrets and files are kept per organisation, and plugin queries on organisation-owned tables (`gk_org_plugin_access`, `gk_user_organisation`, `sysconfig_org`, `gk_identity_provider_org`) are scoped to it. Core tickets, queues and customers are not separated by organisation, and plugin-owned tables are not scoped by the platform
+- ⚠️ Organisations: members, per-organisation settings, plugin access, captive plugin and identity providers (`/api/v1/organisations`). Plugin calls run in the caller's organisation: plugin secrets and files are kept per organisation, and plugin queries on organisation-owned tables (`gk_org_plugin_access`, `gk_user_organisation`, `sysconfig_org`, `gk_identity_provider_org`) are scoped to it. Core tickets, queues and customers are not separated by organisation, and plugin-owned tables are not scoped by the platform. Separate departments with queue/group permissions; give each client its own instance (see [Admin guide](admin-guide/README.md#separating-departments-and-clients))
 - ❌ Resource quotas
 - ❌ Billing integration
 - ❌ White-labeling

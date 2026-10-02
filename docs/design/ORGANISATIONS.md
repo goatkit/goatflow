@@ -2,7 +2,7 @@
 
 ## Overview
 
-Core `gk_organisation` entity with user membership, data isolation, and per-org settings. Provides the organisational backbone that plugins (and GoatFlow itself) use to scope data, permissions, and configuration.
+Core `gk_organisation` entity with user membership and per-org settings. In 0.10.0 it does not isolate tickets, queues or customers (see Status below); those are separated by queue/group permissions, or by running one instance per client. Provides the organisational backbone that plugins (and GoatFlow itself) use to scope data, permissions, and configuration.
 
 The existing `customer_company` table remains for OTRS-compatible customer management. `gk_organisation` is the new GoatKit-native entity that supports hierarchy, user membership (agents AND customers), and platform-wide data scoping.
 

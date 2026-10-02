@@ -14,7 +14,7 @@ GoatFlow is an ITSM and helpdesk system built on the GoatKit platform. It is wri
 - **Plugin Sandbox & Security** — Per-plugin isolation, resource policies, SQL whitelisting, namespace isolation, blue-green reload
 - **Custom Fields** — Universal EAV on all entities, 15 field types including GIS, plugin registration, admin UI, REST API, MCP tools
 - **Plugin UI System** — Independent plugin UIs with 3 shell types, PWA manifests, per-UI branding, auth, and navigation
-- **Organisations & Multi-Tenancy** — Org entity with hierarchy, user membership, per-org sysconfig; plugin calls run in the caller's organisation (per-org plugin secrets and files, sandbox scoping of org-owned tables). Core tickets, queues and customers are not separated by organisation
+- **Organisations & Multi-Tenancy** — Org entity with hierarchy, user membership, per-org sysconfig; plugin calls run in the caller's organisation (per-org plugin secrets and files, sandbox scoping of org-owned tables). Core tickets, queues and customers are not separated by organisation: separate departments with queue/group permissions and separate clients with their own instance, as in Znuny (see docs/admin-guide/README.md). Organisation-scoped queues and tickets are planned under L211
 - **Secure Settings** — AES-256-GCM encrypted plugin secrets via HostAPI, org-scoped, platform-managed key
 - **Entity Deletion** — Soft delete with recycle bin, PII anonymisation, hard delete with cascade, tombstone logging, auto-purge
 - **Plugin Marketplace** — `gk install/update/search` CLI, GitHub Releases backend, dependency resolution, theme-as-plugin
@@ -56,7 +56,7 @@ GoatFlow is an ITSM and helpdesk system built on the GoatKit platform. It is wri
 - Deployment: Docker Compose, TrueNAS SCALE app and a Kubernetes Helm chart (backend, background runner, MariaDB or PostgreSQL, Valkey; see [charts/goatflow/README.md](charts/goatflow/README.md)); multi-arch images, **demo mode**, **K8s pod isolation for plugins**
 - Admin Modules: 30+ admin interfaces including ticket attribute relations, dynamic fields, templates, **custom fields**, **recycle bin**, **organisation management**
 - **Plugins**: Dual-runtime (WASM + gRPC) plugin system with admin UI, sandbox isolation, signed verification, state persistence, **custom fields**, **plugin UIs**, **marketplace**, **dependency resolution**, **theme-as-plugin**
-- **PaaS Core**: Universal custom fields, plugin UI system, organisations with multi-tenancy, secure settings, entity deletion with GDPR anonymisation
+- **PaaS Core**: Universal custom fields, plugin UI system, organisations (per-organisation settings, plugins and sign-in; tickets are separated by queue permissions, not by organisation), secure settings, entity deletion with GDPR anonymisation
 - **API Documentation**: OpenAPI 3.0 spec with Swagger UI, regenerated from `routes/*.yaml` with `make api-docs`
 - **RBAC**: Granular permission service, route authorization matrix test, **entity.hard_delete permission**
 - **Accessibility**: WCAG 2.1 AA keyboard navigation, skip-to-content, focus management, screen reader announcements

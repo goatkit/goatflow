@@ -165,6 +165,21 @@ runner. Without a runner, outgoing email stays in the queue, ticket notification
 evaluated and webhooks are not delivered.
 Inbound mail (Admin -> Inbound Mail Accounts) is fetched by the web server, not the runner.
 
+## Separating departments and clients
+
+GoatFlow follows Znuny here: one install has no ticket separation by tenant.
+
+- **Departments in one install:** every queue belongs to one group. Agents see
+  and work only the tickets in queues whose group they hold `ro` or `rw` on,
+  directly or through a role (Admin -> Groups, Roles, Queues).
+- **Customers:** a customer user sees the tickets of their own customer company
+  (plus any extra companies assigned to them).
+- **Separate clients:** run one GoatFlow install, with its own database, per
+  client.
+- **Organisations** (Admin -> Organisations) hold per-organisation settings,
+  plugin access, identity providers and plugin data. Switching organisation does
+  not change which tickets, queues or customers an agent sees.
+
 ## Moving from OTRS or Znuny
 
 `goatflow-migrate` imports an OTRS 6 / Znuny 6.x database. See
