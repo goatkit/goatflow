@@ -242,6 +242,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
   unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **Identity provider secrets are encrypted at rest.** The OIDC client secret and the SAML SP
+  private key were stored in plain text, and the edit form sent both back to the browser. They are
+  now encrypted with `GOATFLOW_SECURE_KEY` (as webhook secrets are) and never rendered. Existing
+  plain-text values keep working and are encrypted the first time the provider is used. If
+  `GOATFLOW_SECURE_KEY` is not set they stay unencrypted (with a warning), because a per-process
+  key would lock everyone out of SSO after a restart.
+- **New OIDC providers lost their client secret.** Creating a provider did not save the client
+  secret, so the first SSO login failed until the provider was edited and the secret entered again.
 - **Killed sessions and logouts did not revoke the token.** Deleting a session (Admin → Sessions, logout)
   only took effect on UI pages, and only when the browser sent the `session_id` cookie; every `/api/v1` route
   kept accepting the token until it expired. Access and refresh tokens now carry the session id (`sid`) and

@@ -28,12 +28,12 @@ func NewIdentityProviderRepository(db *sql.DB) *IdentityProviderRepository {
 func (r *IdentityProviderRepository) CreateProvider(p *models.IdentityProvider) error {
 	query := database.ConvertPlaceholders(
 		`INSERT INTO gk_identity_provider
-		(name, provider_type, client_id, discovery_url, scopes,
+		(name, provider_type, client_id, client_secret, discovery_url, scopes,
 		 user_claim_email, user_claim_name, user_claim_groups,
 		 org_id, enabled, auto_provision, user_table, auto_add_to_group,
 		 signing_cert, private_key, entity_id, acs_url, idp_metadata_xml,
 		 create_time, create_by, change_time, change_by)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		RETURNING id`,
 	)
 	var orgIDVal *int64
@@ -44,12 +44,21 @@ func (r *IdentityProviderRepository) CreateProvider(p *models.IdentityProvider) 
 		v := int64(*p.OrgID)
 		orgIDVal = &v
 	}
+	clientSecret, err := sealProviderSecret(p.ClientSecret)
+	if err != nil {
+		return fmt.Errorf("create identity provider: %w", err)
+	}
+	privateKey, err := sealProviderSecret(p.PrivateKey)
+	if err != nil {
+		return fmt.Errorf("create identity provider: %w", err)
+	}
 	id, err := database.GetAdapter().InsertWithReturning(
 		r.db,
 		query,
 		p.Name,
 		p.ProviderType,
 		p.ClientID,
+		clientSecret,
 		p.DiscoveryURL,
 		p.Scopes,
 		p.UserClaimEmail,
@@ -61,7 +70,7 @@ func (r *IdentityProviderRepository) CreateProvider(p *models.IdentityProvider) 
 		p.UserTable,
 		p.AutoAddToGroup,
 		p.SigningCert,
-		p.PrivateKey,
+		privateKey,
 		p.EntityID,
 		p.ACSURL,
 		p.IdPMetadataXML,
@@ -107,15 +116,16 @@ func (r *IdentityProviderRepository) GetProvider(id uint) (*models.IdentityProvi
 		v := uint(orgID.Int64) // #nosec G115 -- gk_identity_provider.org_id references a positive gk_organisation.id
 		p.OrgID = &v
 	}
-	p.ClientSecret = clientSecret.String
 	p.SigningCert = signingCert.String
-	p.PrivateKey = privateKey.String
 	p.EntityID = entityID.String
 	p.ACSURL = acsURL.String
 	p.IdPMetadataXML = idpMetadataXML.String
 	p.AutoAddToGroup = autoAddToGroup.String
 	if claimGroups.Valid {
 		p.UserClaimGroups = claimGroups.String
+	}
+	if err := r.openProviderSecrets(&p, clientSecret.String, privateKey.String); err != nil {
+		return nil, fmt.Errorf("identity provider %d: %w", p.ID, err)
 	}
 	return &p, nil
 }
@@ -168,9 +178,17 @@ func (r *IdentityProviderRepository) UpdateProvider(p *models.IdentityProvider) 
 		 change_time = ?, change_by = ?
 		WHERE id = ?`,
 	)
-	_, err := r.db.Exec(
+	clientSecret, err := sealProviderSecret(p.ClientSecret)
+	if err != nil {
+		return fmt.Errorf("update identity provider: %w", err)
+	}
+	privateKey, err := sealProviderSecret(p.PrivateKey)
+	if err != nil {
+		return fmt.Errorf("update identity provider: %w", err)
+	}
+	_, err = r.db.Exec(
 		query,
-		p.Name, p.ProviderType, p.ClientID, p.ClientSecret, p.SigningCert, p.PrivateKey, p.EntityID, p.ACSURL, p.IdPMetadataXML, p.DiscoveryURL, p.Scopes,
+		p.Name, p.ProviderType, p.ClientID, clientSecret, p.SigningCert, privateKey, p.EntityID, p.ACSURL, p.IdPMetadataXML, p.DiscoveryURL, p.Scopes,
 		p.UserClaimEmail, p.UserClaimName, p.UserClaimGroups,
 		p.Enabled, p.AutoProvision, p.UserTable, p.AutoAddToGroup,
 		p.ChangeTime, p.ChangeBy, p.ID,
@@ -225,15 +243,16 @@ func (r *IdentityProviderRepository) GetProviderByOrgAndType(orgID uint, provide
 		v := uint(orgIDNull.Int64) // #nosec G115 -- gk_identity_provider.org_id references a positive gk_organisation.id
 		p.OrgID = &v
 	}
-	p.ClientSecret = clientSecret.String
 	p.SigningCert = signingCert.String
-	p.PrivateKey = privateKey.String
 	p.EntityID = entityID.String
 	p.ACSURL = acsURL.String
 	p.IdPMetadataXML = idpMetadataXML.String
 	p.AutoAddToGroup = autoAddToGroup.String
 	if claimGroups.Valid {
 		p.UserClaimGroups = claimGroups.String
+	}
+	if err := r.openProviderSecrets(&p, clientSecret.String, privateKey.String); err != nil {
+		return nil, fmt.Errorf("identity provider %d: %w", p.ID, err)
 	}
 	return &p, nil
 }
@@ -281,7 +300,7 @@ func scanProviders(rows *sql.Rows) ([]*models.IdentityProvider, error) {
 			p.UserClaimGroups = claimGroups.String
 		}
 		p.SigningCert = signingCert.String
-		p.PrivateKey = privateKey.String
+		p.PrivateKey = "" // list views never need it; GetProvider decrypts it
 		p.EntityID = entityID.String
 		p.ACSURL = acsURL.String
 		p.IdPMetadataXML = idpMetadataXML.String

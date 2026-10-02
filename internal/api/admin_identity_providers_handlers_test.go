@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -307,10 +308,10 @@ func TestHandleAdminIdentityProviderUpdate(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code)
-		var secret string
-		err := db.QueryRow(database.ConvertPlaceholders(`SELECT client_secret FROM gk_identity_provider WHERE id = ?`), providerID).Scan(&secret)
+		// Stored sealed; read it back through the repository.
+		got, err := repository.NewIdentityProviderRepository(db).GetProvider(uint(providerID))
 		require.NoError(t, err)
-		assert.Equal(t, "old-secret", secret)
+		assert.Equal(t, "old-secret", got.ClientSecret)
 	})
 	t.Run("PUT rejects invalid provider type", func(t *testing.T) {
 		db := getTestDB(t)
