@@ -16,6 +16,9 @@ type StateData struct {
 	OrgID        uint
 	// CodeVerifier is the PKCE verifier (OIDC only).
 	CodeVerifier string
+	// RequestID is the ID of the SAML AuthnRequest sent for this login (SAML
+	// only). The ACS accepts only a response whose InResponseTo matches it.
+	RequestID string
 	// BrowserBinding is the hash of the nonce cookie set in the browser that
 	// started the login. The callback must come from the same browser, so a
 	// callback URL captured from another login cannot be replayed (login CSRF).

@@ -242,6 +242,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
   unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **SP-initiated SAML login now works.** The ACS rejected every response because the ID of the
+  AuthnRequest GoatFlow sent was never kept, so the response's `InResponseTo` could not match it.
+  The request ID is now stored with the login's RelayState and browser binding. The ACS accepts only
+  the response to the request issued to that browser, and refuses replayed responses, responses to
+  other or unknown requests, and responses posted from another browser. Unsolicited (IdP-initiated)
+  responses are still refused. Providers with no SP entity ID now use the SP metadata URL
+  (`/auth/:id/metadata`) at login, at the ACS and in the metadata; before, login and ACS used a
+  different ID from the one the metadata advertised, so IdPs set up from that metadata refused the
+  login.
 - **Identity provider secrets are encrypted at rest.** The OIDC client secret and the SAML SP
   private key were stored in plain text, and the edit form sent both back to the browser. They are
   now encrypted with `GOATFLOW_SECURE_KEY` (as webhook secrets are) and never rendered. Existing

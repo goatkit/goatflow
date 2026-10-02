@@ -11,6 +11,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
+	"github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/repository"
 )
@@ -43,26 +44,58 @@ func handleSAMLRedirect(c *gin.Context) {
 		return
 	}
 
-	state := generateState()
-
 	stateStore := auth.GetStateStore()
-	if stateStore != nil {
-		entry := auth.StateData{
-			ProviderID:     uint(providerID),
-			ProviderType:   provider.ProviderType,
-			BrowserBinding: bindSSOToBrowser(c, true),
-		}
-		if err := stateStore.StoreState(state, entry); err != nil {
-			c.Redirect(http.StatusFound, "/login?error=server_error")
-			return
-		}
+	if stateStore == nil {
+		c.Redirect(http.StatusFound, "/login?error=server_error")
+		return
 	}
 
-	acsURL := shared.BuildRedirectURL(c, "/auth/"+idStr+"/acs")
+	prov, err := auth.NewSAML2Provider(samlConfig(c, idStr, provider), auth.ProviderDependencies{
+		DB:         db,
+		UserRepo:   repository.NewUserRepository(db),
+		StateStore: stateStore,
+	})
+	if err != nil {
+		c.Redirect(http.StatusFound, "/login?error=saml_config_error")
+		return
+	}
 
-	cfg := &auth.SAMLConfig{
-		EntityID:        provider.EntityID,
-		AcsURL:          acsURL,
+	state := generateState()
+	authURL, requestID, err := prov.StartAuthFlow(c.Request.Context(), state)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/login?error=auth_failed")
+		return
+	}
+
+	// The RelayState carries the AuthnRequest ID and the browser binding to
+	// the ACS, which accepts only the response to this request from this browser.
+	entry := auth.StateData{
+		ProviderID:     uint(providerID),
+		ProviderType:   provider.ProviderType,
+		RequestID:      requestID,
+		BrowserBinding: bindSSOToBrowser(c, true),
+	}
+	if err := stateStore.StoreState(state, entry); err != nil {
+		c.Redirect(http.StatusFound, "/login?error=server_error")
+		return
+	}
+
+	c.Redirect(http.StatusFound, authURL)
+}
+
+// samlConfig builds the SP configuration for a provider. The login, ACS and
+// metadata endpoints must agree on it: the IdP is configured from the
+// metadata and checks the AuthnRequest issuer against it, and the ACS checks
+// the assertion audience against the entity ID. Without an explicit entity ID
+// the SP's metadata URL is used.
+func samlConfig(c *gin.Context, idStr string, provider *models.IdentityProvider) *auth.SAMLConfig {
+	entityID := provider.EntityID
+	if entityID == "" {
+		entityID = shared.BuildRedirectURL(c, "/auth/"+idStr+"/metadata")
+	}
+	return &auth.SAMLConfig{
+		EntityID:        entityID,
+		AcsURL:          shared.BuildRedirectURL(c, "/auth/"+idStr+"/acs"),
 		IdPMetadataURL:  provider.DiscoveryURL,
 		IdPMetadataXML:  provider.IdPMetadataXML,
 		SigningCert:     provider.SigningCert,
@@ -73,24 +106,6 @@ func handleSAMLRedirect(c *gin.Context) {
 		AutoProvision:   provider.AutoProvision,
 		UserTable:       provider.UserTable,
 	}
-
-	prov, err := auth.NewSAML2Provider(cfg, auth.ProviderDependencies{
-		DB:         db,
-		UserRepo:   repository.NewUserRepository(db),
-		StateStore: stateStore,
-	})
-	if err != nil {
-		c.Redirect(http.StatusFound, "/login?error=saml_config_error")
-		return
-	}
-
-	authURL, err := prov.StartAuthFlow(c.Request.Context(), state, acsURL)
-	if err != nil {
-		c.Redirect(http.StatusFound, "/login?error=auth_failed")
-		return
-	}
-
-	c.Redirect(http.StatusFound, authURL)
 }
 
 // handleSAMLCallback processes the SAML2 POST response from the IdP at the ACS endpoint.
@@ -137,7 +152,9 @@ func handleSAMLCallback(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/login?error=missing_state")
 		return
 	}
-	// The RelayState must come back from the browser that started the login.
+	// The RelayState must come back from the browser that started the login,
+	// and the response must answer the AuthnRequest issued for it. The state
+	// is consumed, so a response cannot be replayed.
 	entry, ok := stateStore.ConsumeState(token)
 	if !ok || entry.ProviderID != uint(providerID) || entry.ProviderType != provider.ProviderType ||
 		!ssoBrowserMatches(c, entry.BrowserBinding) {
@@ -145,22 +162,7 @@ func handleSAMLCallback(c *gin.Context) {
 		return
 	}
 
-	acsURL := shared.BuildRedirectURL(c, "/auth/"+idStr+"/acs")
-	cfg := &auth.SAMLConfig{
-		EntityID:        provider.EntityID,
-		AcsURL:          acsURL,
-		IdPMetadataURL:  provider.DiscoveryURL,
-		IdPMetadataXML:  provider.IdPMetadataXML,
-		SigningCert:     provider.SigningCert,
-		PrivateKey:      provider.PrivateKey,
-		UserClaimEmail:  provider.UserClaimEmail,
-		UserClaimName:   provider.UserClaimName,
-		UserClaimGroups: provider.UserClaimGroups,
-		AutoProvision:   provider.AutoProvision,
-		UserTable:       provider.UserTable,
-	}
-
-	prov, err := auth.NewSAML2Provider(cfg, auth.ProviderDependencies{
+	prov, err := auth.NewSAML2Provider(samlConfig(c, idStr, provider), auth.ProviderDependencies{
 		DB:         db,
 		UserRepo:   repository.NewUserRepository(db),
 		StateStore: stateStore,
@@ -170,10 +172,9 @@ func handleSAMLCallback(c *gin.Context) {
 		return
 	}
 
-	user, err := prov.CompleteAuthFlow(c.Request.Context(), "", map[string]interface{}{
-		"request": c.Request,
-	})
+	user, err := prov.CompleteAuthFlow(c.Request.Context(), c.Request, entry.RequestID)
 	if err != nil {
+		log.Printf("SAML login for provider %d refused: %v", providerID, err)
 		c.Redirect(http.StatusFound, "/login?error=auth_failed")
 		return
 	}
@@ -223,22 +224,8 @@ func handleSAMLMetadata(c *gin.Context) {
 		return
 	}
 
-	entityID := provider.EntityID
-	if entityID == "" {
-		entityID = shared.BuildRedirectURL(c, "/auth/"+idStr+"/metadata")
-	}
-	acsURL := shared.BuildRedirectURL(c, "/auth/"+idStr+"/acs")
-
-	cfg := &auth.SAMLConfig{
-		EntityID:       entityID,
-		AcsURL:         acsURL,
-		SigningCert:    provider.SigningCert,
-		PrivateKey:     provider.PrivateKey,
-		IdPMetadataURL: provider.DiscoveryURL,
-	}
-
 	// Generate SP metadata XML from config
-	xmlBytes, err := auth.GenerateSPMetadata(cfg)
+	xmlBytes, err := auth.GenerateSPMetadata(samlConfig(c, idStr, provider))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to generate metadata: %v", err)})
 		return

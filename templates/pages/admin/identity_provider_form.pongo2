@@ -147,7 +147,7 @@
                             </label>
                             <input type="text" name="entity_id" id="entity_id" value="{{ Provider.EntityID }}"
                                 class="gk-input-neon font-mono text-sm"
-                                placeholder="Auto-derived from ACS URL if left blank">
+                                placeholder="Defaults to this provider's SP metadata URL if left blank">
                         </div>
 
                         <!-- IdP Metadata XML -->

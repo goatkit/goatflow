@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/pem"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -28,7 +29,7 @@ const (
 
 // SAMLConfig holds SAML2 service provider configuration derived from an IdentityProvider row.
 type SAMLConfig struct {
-	EntityID        string // SP entity ID
+	EntityID        string // SP entity ID (required)
 	AcsURL          string // Assertion Consumer Service URL on this host
 	IdPMetadataURL  string // IdP metadata endpoint URL
 	IdPMetadataXML  string // raw IdP metadata XML (alternative to URL)
@@ -65,24 +66,22 @@ func NewSAML2Provider(cfg *SAMLConfig, deps ProviderDependencies) (*samlProvider
 		return nil, err
 	}
 
-	entityID := cfg.EntityID
-	if entityID == "" {
-		entityID = cfg.AcsURL + "/saml/metadata"
+	if cfg.EntityID == "" {
+		return nil, fmt.Errorf("SP entity ID required")
 	}
 	acsURL, err := parseURL(cfg.AcsURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse ACS URL: %w", err)
 	}
-	metadataURL, err := parseURL(entityID + "/metadata")
-	if err != nil {
-		return nil, fmt.Errorf("parse metadata URL: %w", err)
-	}
 
 	sp := &saml.ServiceProvider{
-		EntityID:    entityID,
-		MetadataURL: *metadataURL,
+		EntityID:    cfg.EntityID,
 		AcsURL:      *acsURL,
 		IDPMetadata: metadata,
+		// Only SP-initiated logins: a response must answer an AuthnRequest
+		// this SP issued to the browser posting it. Unsolicited responses
+		// cannot be tied to a browser and are refused.
+		AllowIDPInitiated: false,
 	}
 
 	if cfg.PrivateKey != "" && cfg.SigningCert != "" {
@@ -150,23 +149,17 @@ func GenerateSPMetadata(cfg *SAMLConfig) ([]byte, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("saml config required")
 	}
-	entityID := cfg.EntityID
-	if entityID == "" {
-		entityID = cfg.AcsURL + "/saml/metadata"
+	if cfg.EntityID == "" {
+		return nil, fmt.Errorf("SP entity ID required")
 	}
 	acsURL, err := parseURL(cfg.AcsURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse ACS URL: %w", err)
 	}
-	metadataURL, err := parseURL(entityID + "/metadata")
-	if err != nil {
-		return nil, fmt.Errorf("parse metadata URL: %w", err)
-	}
 
 	sp := &saml.ServiceProvider{
-		EntityID:    entityID,
-		MetadataURL: *metadataURL,
-		AcsURL:      *acsURL,
+		EntityID: cfg.EntityID,
+		AcsURL:   *acsURL,
 	}
 
 	if cfg.PrivateKey != "" && cfg.SigningCert != "" {
@@ -218,27 +211,40 @@ func (p *samlProvider) ValidateToken(_ context.Context, _ string) (*models.User,
 	return nil, fmt.Errorf("ValidateToken not supported for SAML")
 }
 
-// StartAuthFlow initiates the SAML2 SP-initiated login by generating an AuthnRequest
-// and returning the IdP redirect URL. relayState is stored in StateStore for CSRF validation.
-func (p *samlProvider) StartAuthFlow(_ context.Context, state string, _ string) (string, error) {
-	authURL, err := p.sp.MakeRedirectAuthenticationRequest(state)
+// StartAuthFlow initiates the SAML2 SP-initiated login. It returns the IdP
+// redirect URL carrying a new AuthnRequest and relayState, and the ID of that
+// request, which the caller must keep with relayState and hand back to
+// CompleteAuthFlow.
+func (p *samlProvider) StartAuthFlow(_ context.Context, relayState string) (authURL, requestID string, err error) {
+	req, err := p.sp.MakeAuthenticationRequest(p.sp.GetSSOBindingLocation(saml.HTTPRedirectBinding), saml.HTTPRedirectBinding, saml.HTTPPostBinding)
 	if err != nil {
-		return "", fmt.Errorf("create SAML auth request: %w", err)
+		return "", "", fmt.Errorf("create SAML auth request: %w", err)
 	}
-	return authURL.String(), nil
+	u, err := req.Redirect(relayState, p.sp)
+	if err != nil {
+		return "", "", fmt.Errorf("encode SAML auth request: %w", err)
+	}
+	return u.String(), req.ID, nil
 }
 
-// CompleteAuthFlow completes the SAML2 authentication by parsing and validating the
-// IdP POST response from the ACS endpoint. The data map must contain a *http.Request
-// under the key "request".
-func (p *samlProvider) CompleteAuthFlow(ctx context.Context, _ string, data map[string]interface{}) (*models.User, error) {
-	req, ok := data["request"].(*http.Request)
-	if !ok || req == nil {
-		return nil, fmt.Errorf("missing *http.Request in auth data")
+// CompleteAuthFlow completes the SAML2 authentication by parsing and
+// validating the IdP POST response received at the ACS endpoint. requestID is
+// the AuthnRequest ID StartAuthFlow returned for this login; the response must
+// be in reply to it.
+func (p *samlProvider) CompleteAuthFlow(ctx context.Context, req *http.Request, requestID string) (*models.User, error) {
+	if req == nil {
+		return nil, fmt.Errorf("missing SAML response request")
+	}
+	if requestID == "" {
+		return nil, fmt.Errorf("no AuthnRequest issued for this login")
 	}
 
-	assertion, err := p.sp.ParseResponse(req, nil)
+	assertion, err := p.sp.ParseResponse(req, []string{requestID})
 	if err != nil {
+		var invalid *saml.InvalidResponseError
+		if errors.As(err, &invalid) && invalid.PrivateErr != nil {
+			err = invalid.PrivateErr
+		}
 		return nil, fmt.Errorf("parse SAML response: %w", err)
 	}
 
