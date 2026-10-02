@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -38,6 +39,7 @@ func getJWTManager() *auth.JWTManager {
 //	@Success		200			{object}	map[string]interface{}	"JWT tokens (access_token, refresh_token)"
 //	@Failure		400			{object}	map[string]interface{}	"Invalid request"
 //	@Failure		401			{object}	map[string]interface{}	"Invalid credentials"
+//	@Failure		403			{object}	map[string]interface{}	"Account disabled, or a second factor is enabled (use an API token)"
 //	@Router			/auth/login [post]
 func HandleLoginAPI(c *gin.Context) {
 	var loginRequest struct {
@@ -103,7 +105,54 @@ func HandleLoginAPI(c *gin.Context) {
 	// Clear rate limit on successful login
 	auth.DefaultLoginRateLimiter.RecordSuccess(clientIP, loginRequest.Login)
 
+	// The web login completes the second factor on /login/2fa before it
+	// issues cookies; this endpoint has no second step, so a password alone
+	// must not turn into tokens for an account that enrolled one. A failed
+	// lookup refuses the login rather than skipping the factor.
+	mfaRequired, err := secondFactorRequired(db, user)
+	if err != nil {
+		log.Printf("api login: second-factor status for %s unavailable: %v", loginRequest.Login, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Login temporarily unavailable",
+		})
+		return
+	}
+	if mfaRequired {
+		c.JSON(http.StatusForbidden, gin.H{
+			"success": false,
+			"error":   "This account requires a second factor. Sign in through the web UI, or use an API token.",
+			"code":    "mfa_required",
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, tokenPairResponse(user, accessToken, refreshToken))
+}
+
+// secondFactorRequired reports whether the account has TOTP or a passkey
+// enrolled (the same status the web login gates on). Accounts with no users
+// row (ID 0, static providers) cannot enrol one.
+func secondFactorRequired(db *sql.DB, user *platformmodels.User) (bool, error) {
+	totp := service.NewTOTPService(db, "GoatFlow")
+	if user.Role == "Customer" {
+		enabled, _, err := totp.LoginStatusForCustomer(user.Login)
+		if err != nil || enabled {
+			return enabled, err
+		}
+		n, err := service.CountWebAuthnCredentials(db, service.WebAuthnUserTypeCustomer, user.Login)
+		return n > 0, err
+	}
+	if user.ID == 0 {
+		return false, nil
+	}
+	userID := int(user.ID) // #nosec G115 -- users.id is a positive auto-increment key
+	enabled, _, err := totp.LoginStatus(userID)
+	if err != nil || enabled {
+		return enabled, err
+	}
+	n, err := service.CountWebAuthnCredentials(db, service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(userID))
+	return n > 0, err
 }
 
 // tokenPairResponse is the body returned by login and refresh.
