@@ -126,8 +126,11 @@ pass it through, and `make test-ldap-integration` always sets it.
    must not overlap.
 
 `tests/e2e`, `tests/integration`, `internal/email/integration` and the template package are left
-out of steps 2 and 3. Tests run with `APP_ENV=test`. All three steps always run; the script
-fails if any step failed.
+out of steps 2 and 3. Packages are listed from the top-level directories a clean checkout has:
+git-ignored ones such as `tmp/` (the toolbox `TMPDIR`, which collects `go-build*` work
+directories) are not walked. Tests run with `APP_ENV=test`. All three steps always run; the
+script fails if any step failed, and stops before steps 2 and 3 if the package list cannot be
+built.
 
 `make test-unit` uses `-count=1`. `make test-fast` is the same without `-count=1`, so Go skips
 packages that have not changed.

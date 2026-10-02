@@ -242,6 +242,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
   unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **`make test-unit` could pass after running almost nothing.** If any package failed to load (for
+  example a leftover `tmp/go-build*` folder), the package list came back empty and the script
+  skipped every phase but the template tests, then exited 0. The script now skips git-ignored
+  directories, keeps packages that fail to load so `go test` reports them, runs every phase, and
+  exits 1 naming the failed phases.
 - **SP-initiated SAML login now works.** The ACS rejected every response because the ID of the
   AuthnRequest GoatFlow sent was never kept, so the response's `InResponseTo` could not match it.
   The request ID is now stored with the login's RelayState and browser binding. The ACS accepts only
