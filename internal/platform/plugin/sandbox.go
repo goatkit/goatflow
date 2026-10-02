@@ -301,8 +301,13 @@ func (s *SandboxedHostAPI) DBQuery(ctx context.Context, query string, args ...an
 	}
 	s.stats.DBQueries.Add(1)
 	s.stats.LastCallAt.Store(time.Now().UnixMilli())
-	// Auto-scope query by active organisation if applicable.
-	query, args = organisation.ScopeQuery(query, args, s.inner.OrgID(ctx))
+	// Scope the statement to the active organisation; shapes that cannot
+	// be scoped are refused.
+	query, args, err := organisation.ScopeQuery(query, args, s.inner.OrgID(ctx))
+	if err != nil {
+		s.stats.Errors.Add(1)
+		return nil, fmt.Errorf("plugin %q: %w", s.pluginName, err)
+	}
 	return s.inner.DBQuery(ctx, query, args...)
 }
 
@@ -321,8 +326,13 @@ func (s *SandboxedHostAPI) DBExec(ctx context.Context, query string, args ...any
 	}
 	s.stats.DBExecs.Add(1)
 	s.stats.LastCallAt.Store(time.Now().UnixMilli())
-	// Auto-scope query by active organisation if applicable.
-	query, args = organisation.ScopeQuery(query, args, s.inner.OrgID(ctx))
+	// Scope the statement to the active organisation; shapes that cannot
+	// be scoped are refused.
+	query, args, err := organisation.ScopeQuery(query, args, s.inner.OrgID(ctx))
+	if err != nil {
+		s.stats.Errors.Add(1)
+		return 0, fmt.Errorf("plugin %q: %w", s.pluginName, err)
+	}
 	return s.inner.DBExec(ctx, query, args...)
 }
 

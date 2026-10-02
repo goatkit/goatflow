@@ -176,9 +176,16 @@ With it:
 - `HostAPI.OrgID(ctx)` returns the organisation.
 - Secure config keys and plugin files are kept per organisation.
 - The `SandboxedHostAPI` scopes `DBQuery`/`DBExec` on organisation-owned
-  tables (`organisation.OrgAwareTables`): it finds the statement's main table
-  and appends `AND org_id = ?` (or `WHERE org_id = ?`). Statements that already
-  mention `org_id`, INSERTs and DDL pass through.
+  tables (`organisation.OrgAwareTables`, rewrite in
+  `organisation.ScopeQuery`): every reference to such a table — main table,
+  comma list, JOIN, subquery, CTE body, UNION branch — gets
+  `<table or alias>.org_id = ?` in its block's WHERE, and the plugin's own
+  predicate is wrapped in parentheses so `... OR 1=1` cannot escape it. A
+  plugin's own `org_id` predicate is kept but not trusted. UPDATE may not
+  assign `org_id`. INSERT/REPLACE must list `org_id` and set it to the
+  caller's org in every VALUES row; otherwise it is refused. Shapes the
+  rewriter cannot scope (DDL, `TABLE t`, parenthesised table references,
+  `$N` placeholders, several statements, `INSERT ... SELECT`) are refused.
 
 ### Org-Aware Tables
 
