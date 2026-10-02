@@ -352,30 +352,28 @@ func handleTicketDetail(c *gin.Context) {
 	if len(articles) > 0 {
 		// debug removed: first article body dump
 
-		// First try to get HTML body content from attachment
+		// The description is rendered with |safe whenever it contains a tag
+		// (description_is_html), so every HTML path is sanitised: the first
+		// article comes from customers (portal, email, API) as often as from
+		// an agent's editor.
+		descriptionSanitizer := utils.NewHTMLSanitizer()
 		htmlContent, err := articleRepo.GetHTMLBodyContent(uint(articles[0].ID))
 		if err != nil {
 			log.Printf("Error getting HTML body content: %v", err)
 		} else if htmlContent != "" {
-			description = htmlContent
-			// debug removed: html description
+			description = descriptionSanitizer.Sanitize(htmlContent)
 		} else {
 			// Fall back to plain text body
 			if body, ok := articles[0].Body.(string); ok {
 				// Check content type and render appropriately
 				contentType := articles[0].MimeType
-				// preview logic removed (debug)
 
 				// Handle different content types
 				if strings.Contains(contentType, "text/html") || (strings.Contains(body, "<") && strings.Contains(body, ">")) {
-					// debug removed: rendering HTML description
-					// For HTML content, use it directly (assuming it's from a trusted editor like Tiptap)
-					description = body
+					description = descriptionSanitizer.Sanitize(body)
 				} else if strings.Contains(contentType, "text/markdown") || isMarkdownContent(body) || ticketID == "20250924194013" {
-					// debug removed: rendering markdown description
 					description = RenderMarkdown(body)
 				} else {
-					// debug removed: using plain text description
 					description = body
 				}
 				// debug removed: processed description

@@ -826,9 +826,11 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 					author = article.Author.String
 				}
 
-				// Sanitise article body to prevent stored XSS (defence in depth).
+				// Sanitise article body to prevent stored XSS: the template
+				// renders it with |safe, so anything carrying a tag goes
+				// through the sanitiser, not only the tags IsHTML knows.
 				articleBody := article.Body.String
-				if utils.IsHTML(articleBody) {
+				if utils.IsHTML(articleBody) || (strings.Contains(articleBody, "<") && strings.Contains(articleBody, ">")) {
 					articleSanitizer := utils.NewHTMLSanitizer()
 					articleBody = articleSanitizer.Sanitize(articleBody)
 				} else if strings.Contains(article.ContentType.String, "text/markdown") || isMarkdownContent(articleBody) {
