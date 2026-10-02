@@ -242,6 +242,18 @@ project adheres to [Semantic Versioning](https://semver.org/).
   unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **The container image builds from a clean checkout.** The WASM plugin build stage created
+  `/plugins` as root and then could not create its `tmp` directory as the tinygo user, so `docker
+  build` failed on any checkout without a leftover `plugins/tmp`.
+- **Upgrades install the new versions of the bundled plugins.** Docker Compose (and the TrueNAS
+  app) keep `config/plugins` on a volume, so after an image upgrade the bundled WASM plugins stayed
+  at the versions of the release that first filled the volume; a 0.9.0 install upgraded to 0.10.0
+  kept running the old `stats` plugin without its queue-permission fixes. The image now carries a
+  pristine copy in `/app/bundled-plugins`, and at startup GoatFlow installs each bundled file that
+  is missing or still an untouched bundled copy (tracked in `config/plugins/.bundled-manifest.json`;
+  for directories filled by 0.9.x and older, by the hashes those releases shipped). A bundled file
+  an admin changed or replaced is kept and logged as a warning; delete it to get the bundled
+  version back.
 - **Helm: uninstalling and reinstalling the chart broke the installation.** The database and
   storage volumes survived `helm uninstall` but the generated Secrets did not, so a reinstall made a
   new database password (GoatFlow could no longer log in to its own database) and a new

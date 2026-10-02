@@ -98,8 +98,11 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # ============================================
 FROM docker.io/tinygo/tinygo:0.32.0 AS wasm-builder
 
+# COPY creates /plugins owned by tinygo (the image's build user). A WORKDIR
+# first would create it root-owned, and the mkdir below then fails on a clean
+# checkout that has no plugins/tmp directory.
+COPY --chown=tinygo:tinygo plugins/ /plugins/
 WORKDIR /plugins
-COPY --chown=tinygo:tinygo plugins/ ./
 
 # Create tmp directory with proper permissions (in workspace, not system /tmp)
 RUN mkdir -p /plugins/tmp && chmod 777 /plugins/tmp
@@ -126,6 +129,9 @@ RUN set -e; failed=0; \
     echo "Total WASM plugins built: ${wasm_count}"; \
     if [ "$wasm_count" -eq 0 ]; then echo "ERROR: No WASM plugins built!" && exit 1; fi; \
     if [ "$failed" -eq 1 ]; then echo "ERROR: One or more WASM plugins failed to build" && exit 1; fi
+
+# Drop the build's scratch/cache dir: it is not part of any plugin.
+RUN rm -rf /plugins/tmp
 
 # ============================================
 # Stage 3: Build application
@@ -256,6 +262,9 @@ COPY --chown=appuser:appgroup migrations ./migrations/
 COPY --chown=appuser:appgroup config ./config/
 COPY --chown=appuser:appgroup plugins ./config/plugins/
 COPY --from=wasm-builder --chown=appuser:appgroup /plugins/ ./config/plugins/
+# Pristine copy of the bundled plugins: at startup goats installs them into
+# config/plugins, which a volume may hold from an older release.
+COPY --from=wasm-builder /plugins/ ./bundled-plugins/
 
 # Overlay downloaded third-party assets
 COPY --from=assets --chown=appuser:appgroup /assets/js/*.js ./static/js/

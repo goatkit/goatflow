@@ -28,6 +28,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -482,6 +483,23 @@ func main() {
 	pluginDir := os.Getenv("PLUGIN_DIR")
 	if pluginDir == "" {
 		pluginDir = filepath.Join(configDir, "plugins")
+	}
+	// A plugin dir on a volume outlives the image: bring the bundled plugins
+	// in it up to this release's versions before loading anything.
+	bundledDir := os.Getenv(pluginloader.BundledPluginDirEnv)
+	if bundledDir == "" {
+		bundledDir = "bundled-plugins"
+	}
+	bundledSync, err := pluginloader.SyncBundledPlugins(bundledDir, pluginDir)
+	if err != nil {
+		slog.Warn("bundled plugin sync failed", "error", err)
+	}
+	if len(bundledSync.Updated) > 0 {
+		slog.Info("installed bundled plugin files from this release", "files", bundledSync.Updated)
+	}
+	if len(bundledSync.Kept) > 0 {
+		slog.Warn("kept locally changed bundled plugin files; this release ships other versions (delete a file to get the bundled one)",
+			"plugin_dir", pluginDir, "files", bundledSync.Kept)
 	}
 	api.SetPluginDir(pluginDir) // Enable plugin uploads
 
