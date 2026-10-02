@@ -246,6 +246,12 @@ func TestSandbox_DBTableScopes(t *testing.T) {
 		"SELECT id FROM ticket ORDER BY id LIMIT 1 OFFSET 2":                                      query,
 		"SELECT id FROM ticket GROUP BY id HAVING COUNT(*) > 1":                                   query,
 		"SELECT id FROM gk_coach_x x WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.id = x.uid)": query,
+		"SELECT * FROM (ticket) t":                                                                query,
+		"SELECT * FROM (gk_coach_a JOIN gk_coach_b ON gk_coach_b.a_id = gk_coach_a.id)":           query,
+		"SELECT t.id FROM ticket t JOIN (gk_coach_x) x ON x.id = t.id":                            query,
+		"SELECT id FROM ticket ORDER BY id DESC":                                                  query,
+		"EXPLAIN SELECT id FROM ticket":                                                           query,
+		"DESCRIBE gk_coach_x":                                                                     query,
 	}
 	for q, run := range allowed {
 		if err := run(q); err != nil {
@@ -272,6 +278,29 @@ func TestSandbox_DBTableScopes(t *testing.T) {
 		"DROP TABLE users":                                                    exec,
 		"ALTER TABLE users ADD COLUMN x INT":                                  exec,
 		"SELECT id FROM gk_coach_x WHERE 1=1 /* */ UNION SELECT pw FROM auth": query,
+		// Parenthesised table references (MySQL/MariaDB: FROM (t); both
+		// dialects: FROM (a JOIN b ...)) name the table without a FROM or
+		// JOIN directly in front of it.
+		"SELECT * FROM (sessions)":                                        query,
+		"SELECT * FROM (sessions) s":                                      query,
+		"SELECT * FROM ((sessions))":                                      query,
+		"SELECT * FROM ticket t JOIN (sessions) s ON s.id = t.id":         query,
+		"SELECT * FROM (ticket JOIN sessions ON sessions.id = ticket.id)": query,
+		"SELECT * FROM gk_coach_x, (sessions)":                            query,
+		// Reads without FROM.
+		"TABLE sessions":              query, // PostgreSQL, MySQL 8.0.19+
+		"HANDLER sessions OPEN":       query, // MySQL/MariaDB
+		"HANDLER sessions READ FIRST": query,
+		"DESCRIBE sessions":           query,
+		"DESC sessions":               query,
+		"COPY sessions TO STDOUT":     query, // PostgreSQL
+		// SQL the lexer cannot see.
+		"CALL dump_sessions()":                    query,
+		"PREPARE s FROM 'SELECT * FROM sessions'": query,
+		"EXECUTE s": query,
+		"LOAD DATA INFILE '/etc/passwd' INTO TABLE gk_coach_x": exec,
+		// Vertical tab is whitespace to MySQL/MariaDB.
+		"SELECT * FROM\vsessions": query,
 	}
 	for q, run := range denied {
 		if err := run(q); err == nil {
