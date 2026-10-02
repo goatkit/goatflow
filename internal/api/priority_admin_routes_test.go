@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // The admin priorities page (pages/admin/priorities.pongo2) and the lookups
@@ -96,8 +95,7 @@ func TestPriorityWriteRoutes(t *testing.T) {
 	})
 
 	t.Run("non-admin agent is rejected", func(t *testing.T) {
-		agentToken, err := shared.GetJWTManager().GenerateTokenWithAdmin(GetTestAuthConfig().UserID, "agent@localhost", "Agent", false, 0)
-		require.NoError(t, err)
+		agentToken := testSessionToken(t, GetTestAuthConfig().UserID, "agent@localhost", "agent@localhost", "Agent", false, 0)
 		w := send(t, agentToken, http.MethodDelete, fmt.Sprintf("/api/v1/priorities/%d", id), nil)
 		require.Equal(t, http.StatusForbidden, w.Code, w.Body.String())
 

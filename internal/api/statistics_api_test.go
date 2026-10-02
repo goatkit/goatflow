@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // statsFixtureTicket is one ticket row inserted by the statistics fixture.
@@ -211,9 +210,7 @@ func newStatsFixture(t *testing.T) *statsFixture {
 
 func statsToken(t *testing.T, userID int, login, role string) string {
 	t.Helper()
-	token, err := shared.GetJWTManager().GenerateTokenWithAdmin(uint(userID), login, role, false, 0)
-	require.NoError(t, err)
-	return token
+	return testSessionToken(t, uint(userID), login, login, role, false, 0)
 }
 
 func statsGet(t *testing.T, router http.Handler, path, token string) *httptest.ResponseRecorder {

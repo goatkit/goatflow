@@ -183,7 +183,7 @@ func authenticateJWT(c *gin.Context, token string, jwtManager interface {
 	ValidateToken(string) (*auth.Claims, error)
 }) {
 	claims, err := jwtManager.ValidateToken(token)
-	if err != nil {
+	if err != nil || !VerifySession(c, claims) {
 		apierrors.Error(c, apierrors.CodeInvalidToken)
 		c.Abort()
 		return

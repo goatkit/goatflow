@@ -1,21 +1,10 @@
 import { test, expect } from '@playwright/test';
-
-const BASE_URL = process.env.BASE_URL || 'http://localhost:8080';
-
-const login = async (page) => {
-  await page.context().addCookies([
-    {
-      name: 'access_token',
-      value: 'demo_session_admin',
-      domain: 'localhost',
-      path: '/',
-    },
-  ]);
-};
+import { BASE_URL } from './base-url.js';
+import { loginAdmin } from './login.js';
 
 test.describe('Admin Users', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page);
+    await loginAdmin(page);
   });
 
   test('loads users management page', async ({ page }) => {

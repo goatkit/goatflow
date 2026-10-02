@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
+	"github.com/goatkit/goatflow/internal/platform/webhook"
 )
 
 // UserLookup is the subset of user repository methods auth providers need.
@@ -83,6 +85,13 @@ var (
 	globalOIDCClient *http.Client
 	globalStateStore StateStore
 )
+
+// idpHTTPClient fetches admin-supplied identity-provider URLs (OIDC discovery,
+// JWKS and token endpoints, SAML metadata) when no OIDC client was injected.
+// It goes through the webhook address guard because those URLs are set in the
+// admin UI and fetched on unauthenticated /auth/:id requests: without the
+// guard an admin account could make the server call internal services.
+var idpHTTPClient = webhook.NewHTTPClient(30 * time.Second)
 
 // GetOIDCClient returns the globally-configured OIDC HTTP client.
 func GetOIDCClient() *http.Client {

@@ -2,27 +2,18 @@
 // Side-by-side comparison of static vs dynamic modules
 
 import { test, expect } from '@playwright/test';
+import { BASE_URL } from './base-url.js';
+import { loginAdmin } from './login.js';
 
 // Configuration
-const BASE_URL = process.env.BASE_URL || 'http://localhost:8080';
-const DEMO_COOKIE = 'access_token=demo_session_admin';
 const MODULES_BASE = `${BASE_URL}/admin/modules`;
 
 // Test Suite: Dynamic Module System Acceptance Tests
 test.describe('Dynamic Module System - Side by Side Comparison', () => {
   
-  // Test Setup: Login helper
-  const login = async (page) => {
-    await page.context().addCookies([{
-      name: 'access_token',
-      value: 'demo_session_admin',
-      domain: 'localhost',
-      path: '/'
-    }]);
-  };
-
+  // Test Setup: real admin login; page.request shares the context's cookie jar
   test.beforeEach(async ({ page }) => {
-    await login(page);
+    await loginAdmin(page);
   });
 
   // 1. Page Loading & Basic Structure Tests
@@ -134,7 +125,6 @@ test.describe('Dynamic Module System - Side by Side Comparison', () => {
     test('Dynamic API returns JSON data', async ({ page }) => {
       const response = await page.request.get(`${BASE_URL}/admin/modules/users`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -160,7 +150,6 @@ test.describe('Dynamic Module System - Side by Side Comparison', () => {
     test('Dynamic API handles non-existent module', async ({ page }) => {
       const response = await page.request.get(`${BASE_URL}/admin/modules/nonexistent`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -638,7 +627,6 @@ test.describe('Dynamic Module System - Side by Side Comparison', () => {
       // First get list to get a user ID
       const listResponse = await page.request.get(`${BASE_URL}/admin/modules/users`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -653,7 +641,6 @@ test.describe('Dynamic Module System - Side by Side Comparison', () => {
       // Get single user
       const singleResponse = await page.request.get(`${BASE_URL}/admin/modules/users/${firstUserId}`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -699,9 +686,8 @@ test.describe('Dynamic Module System - Side by Side Comparison', () => {
 test.describe('Utility & Helper Tests', () => {
   
   test('Multiple modules are available in dynamic system', async ({ page }) => {
-    const response = await page.request.get(`${BASE_URL}/admin/modules/`, {
-      headers: { 'Cookie': DEMO_COOKIE }
-    });
+    await loginAdmin(page);
+    const response = await page.request.get(`${BASE_URL}/admin/modules/`);
     
     expect(response.status()).toBe(200);
     const content = await response.text();

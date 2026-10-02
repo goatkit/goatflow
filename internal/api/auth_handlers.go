@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -111,7 +112,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 	// Use the real auth service for production-grade authentication
 	// NOTE: provider ordering currently controlled via config Auth::Providers.
 	// Explicit provider field is advisory; future: route to single-provider auth path.
-	user, accessToken, refreshToken, err := authService.Login(ctx, username, password)
+	user, err := authService.Login(ctx, username, password)
 	if err != nil {
 		auth.DefaultLoginRateLimiter.RecordFailure(clientIP, username)
 		if strings.Contains(contentType, "application/json") {
@@ -196,47 +197,33 @@ var HandleAuthLogin = func(c *gin.Context) {
 		sessionTimeout = constants.DefaultSessionTimeout
 	}
 
-	// Regenerate JWT with user's session duration so the token itself
-	// expires at the same time as the cookie, not at the system default.
-	{
-		jwtMgr := shared.GetJWTManager()
-		if tok, tokErr := jwtMgr.GenerateTokenWithDuration(
-			user.ID, user.Login, user.Email, user.Role, user.Role == "Admin", 0,
-			time.Duration(sessionTimeout)*time.Second); tokErr == nil {
-			accessToken = tok
+	// The session row is what makes the tokens revocable (admin "kill
+	// session", logout); the JWT expires with the cookie, at the user's
+	// session duration rather than the system default.
+	sessionID, accessToken, refreshToken, err := authService.IssueTokens(user, c.ClientIP(), c.Request.UserAgent(),
+		time.Duration(sessionTimeout)*time.Second)
+	if err != nil {
+		log.Printf("login: issue tokens for %s: %v", username, err)
+		if strings.Contains(contentType, "application/json") {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Login temporarily unavailable"})
 		} else {
-			log.Printf("Failed to regenerate JWT with user duration: %v", tokErr)
+			c.Redirect(http.StatusSeeOther, "/login?error=server_error")
 		}
+		return
 	}
 
 	// Set cookies for tokens - set both names for compatibility across middlewares.
 	httpcookie.SetAuth(c, "auth_token", accessToken, sessionTimeout)
 	httpcookie.SetAuth(c, "access_token", accessToken, sessionTimeout)
 	httpcookie.SetAuth(c, "refresh_token", refreshToken, constants.RefreshTokenTimeout)
+	// Session ID cookie for logout cleanup
+	httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
 
 	// Store user in session (use "user_id" to match middleware)
 	c.Set("user", user)
 	c.Set("user_id", user.ID)
 	if provider != "" {
 		c.Set("auth_provider", provider)
-	}
-
-	// Create session record in database for admin session management
-	if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
-		sessionID, err := sessionSvc.CreateSession(
-			int(user.ID),
-			username,
-			user.Role,
-			c.ClientIP(),
-			c.Request.UserAgent(),
-		)
-		if err != nil {
-			// Log error but don't fail login - session tracking is non-critical
-			log.Printf("Failed to create session record: %v", err)
-		} else {
-			// Store session ID in a cookie for logout cleanup
-			httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
-		}
 	}
 
 	// Set a non-httpOnly indicator so JavaScript can detect authentication
@@ -275,4 +262,16 @@ func getEnvDefault(key, def string) string {
 		return def
 	}
 	return v
+}
+
+// newLoginSession creates the sessions row for a login that completed outside
+// AuthService.IssueTokens (second factor, passkey, SSO, customer portal) and
+// returns its id for the access token's sid claim. Access tokens are only valid
+// while their session row exists, so a failure here must fail the login.
+func newLoginSession(c *gin.Context, userID int, login, userType string) (string, error) {
+	sessionSvc := shared.GetSessionService()
+	if sessionSvc == nil {
+		return "", errors.New("session service unavailable")
+	}
+	return sessionSvc.CreateSession(userID, login, userType, c.ClientIP(), c.Request.UserAgent())
 }

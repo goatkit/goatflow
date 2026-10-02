@@ -15,7 +15,14 @@ BOLD='\033[1m'
 
 # Configuration
 BASE_URL="${BASE_URL:-http://localhost:8080}"
-AUTH="${AUTH_TOKEN:-Cookie: access_token=demo_session_admin}"
+# shellcheck source=../lib/admin-login.sh
+source "$(dirname "$0")/../lib/admin-login.sh"
+# AUTH_TOKEN may carry a ready-made header (e.g. "Cookie: access_token=..."); otherwise log in.
+if [ -n "$AUTH_TOKEN" ]; then
+    AUTH="$AUTH_TOKEN"
+else
+    AUTH=$(admin_login_cookie "$BASE_URL") || exit 1
+fi
 
 # ASCII Art Header
 show_header() {

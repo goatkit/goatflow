@@ -122,25 +122,37 @@ func GetTestAuthConfig() TestAuthConfig {
 // This is the single source of truth for test authentication - all tests should use this.
 func GetTestAuthToken(t *testing.T) string {
 	t.Helper()
-
-	jwtManager := shared.GetJWTManager()
-	if jwtManager == nil {
-		t.Fatal("JWT manager not available - ensure shared.InitJWTManager() was called")
-	}
-
 	config := GetTestAuthConfig()
-	token, err := jwtManager.GenerateTokenWithAdmin(
-		config.UserID,
-		config.Email,
-		config.Role,
-		config.IsAdmin,
-		0, // tenantID
-	)
+	return testSessionToken(t, config.UserID, config.Email, config.Email, config.Role, config.IsAdmin, 0)
+}
+
+// testSessionToken creates a sessions row for the identity and returns an
+// access token bound to it (the sid claim); the row is killed at cleanup.
+// Access tokens are only accepted while their session exists, so every test
+// token must come from here or from a login handler.
+func testSessionToken(t *testing.T, userID uint, login, email, role string, isAdmin bool, tenantID uint) string {
+	t.Helper()
+	sessionID := testSession(t, int(userID), login, role)
+	token, err := shared.GetJWTManager().GenerateTokenWithLogin(sessionID, userID, login, email, role, isAdmin, tenantID)
 	if err != nil {
 		t.Fatalf("Failed to generate test auth token: %v", err)
 	}
-
 	return token
+}
+
+// testSession creates a sessions row and returns its id; killed at cleanup.
+func testSession(t *testing.T, userID int, login, userType string) string {
+	t.Helper()
+	sessions := shared.GetSessionService()
+	if sessions == nil {
+		t.Fatal("session service not available - ensure the database is up")
+	}
+	sessionID, err := sessions.CreateSession(userID, login, userType, "127.0.0.1", "go-test")
+	if err != nil {
+		t.Fatalf("Failed to create test session: %v", err)
+	}
+	t.Cleanup(func() { _ = sessions.KillSession(sessionID) })
+	return sessionID
 }
 
 // AddTestAuthCookie adds the authentication cookie to a request.

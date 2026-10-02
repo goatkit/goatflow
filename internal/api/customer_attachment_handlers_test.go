@@ -30,7 +30,6 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/routing"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/storage"
 )
 
@@ -152,8 +151,7 @@ func newCustAttFixture(t *testing.T, router *gin.Engine) custAttFixture {
 	f.internalArt, f.internalAtt = custAttInsertArticle(t, db, f.ticketID, false, "internal-secret.txt", []byte("agents only"))
 	f.foreignArt, f.foreignAtt = custAttInsertArticle(t, db, f.foreignID, true, "foreign.txt", []byte("other customer"))
 
-	f.token, err = shared.GetJWTManager().GenerateTokenWithLogin(uint(custID), login, login, "Customer", false, 0)
-	require.NoError(t, err)
+	f.token = testSessionToken(t, uint(custID), login, login, "Customer", false, 0)
 	return f
 }
 

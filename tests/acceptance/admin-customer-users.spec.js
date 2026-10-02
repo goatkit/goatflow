@@ -1,16 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { BASE_URL, BASE_HOST } from './base-url.js';
-
-const adminCookie = {
-  name: 'access_token',
-  value: 'demo_session_admin',
-  domain: BASE_HOST,
-  path: '/',
-};
+import { BASE_URL } from './base-url.js';
+import { loginAdmin } from './login.js';
 
 test.describe('Admin Customer Users CRUD', () => {
   test.beforeEach(async ({ page }) => {
-    await page.context().addCookies([adminCookie]);
+    await loginAdmin(page);
   });
 
   test('displays customer users list page', async ({ page }) => {

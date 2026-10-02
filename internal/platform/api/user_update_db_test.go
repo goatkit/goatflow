@@ -2,12 +2,15 @@ package api
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,9 +19,48 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/middleware"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 )
+
+// testSessions is an in-memory session checker: platform packages may not
+// import the product session service. Access tokens are only accepted while
+// their session is live.
+type testSessions struct {
+	mu   sync.Mutex
+	live map[string]bool
+}
+
+var liveSessions = &testSessions{live: map[string]bool{}}
+
+func (s *testSessions) add(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.live[id] = true
+}
+
+func (s *testSessions) remove(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.live, id)
+}
+
+func (s *testSessions) GetSession(id string) (*platformmodels.Session, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.live[id] {
+		return &platformmodels.Session{SessionID: id}, nil
+	}
+	return nil, errors.New("session not found")
+}
+
+func (s *testSessions) TouchSession(string) error { return nil }
+
+func init() {
+	middleware.SetSessionServiceFactory(func(*sql.DB) middleware.SessionChecker { return liveSessions })
+}
 
 func createUpdateTestUser(t *testing.T) (int, string) {
 	t.Helper()
@@ -149,13 +191,16 @@ func TestUserMutationRoutesRequireAdmin(t *testing.T) {
 	id, _ := createUpdateTestUser(t)
 	r := userRoutesEngine(t)
 	jwt := shared.GetJWTManager()
+	db, err := database.GetDB()
+	require.NoError(t, err)
 	token := func(userID uint, role string, admin bool) string {
-		tok, err := jwt.GenerateTokenWithAdmin(userID, "authz@example.test", role, admin, 0)
+		sessionID := fmt.Sprintf("authz-%d-%d", userID, time.Now().UnixNano())
+		liveSessions.add(sessionID)
+		t.Cleanup(func() { liveSessions.remove(sessionID) })
+		tok, err := jwt.GenerateTokenWithLogin(sessionID, userID, "authz@example.test", "authz@example.test", role, admin, 0)
 		require.NoError(t, err)
 		return tok
 	}
-	db, err := database.GetDB()
-	require.NoError(t, err)
 
 	_, _, pwBefore, _ := userRow(t, id)
 	for name, tok := range map[string]string{

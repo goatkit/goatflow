@@ -18,7 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // listingScopeFixture extends the RBAC fixtures (AgentAlpha reads the Alpha and
@@ -123,9 +122,7 @@ func listingScopeArticle(t *testing.T, db *sql.DB, ticketID int64, subject, body
 
 func (f *listingScopeFixture) agentToken(t *testing.T, userID int) string {
 	t.Helper()
-	tok, err := shared.GetJWTManager().GenerateTokenWithLogin(uint(userID), "agent", "agent@example.com", "Agent", false, 0)
-	require.NoError(t, err)
-	return tok
+	return testSessionToken(t, uint(userID), "agent", "agent@example.com", "Agent", false, 0)
 }
 
 func (f *listingScopeFixture) do(t *testing.T, token, method, url string, body interface{}) *httptest.ResponseRecorder {
@@ -271,8 +268,7 @@ func TestTicketListingScope_CustomerTicketList(t *testing.T) {
 	}
 
 	t.Run("JWT whose email differs from the login", func(t *testing.T) {
-		tok, err := shared.GetJWTManager().GenerateTokenWithLogin(uint(f.customerID), f.customerLogin, "other-address@example.com", "Customer", false, 0)
-		require.NoError(t, err)
+		tok := testSessionToken(t, uint(f.customerID), f.customerLogin, "other-address@example.com", "Customer", false, 0)
 		body := list(t, tok)
 		assert.Contains(t, body, f.customerTN)
 		assert.NotContains(t, body, f.foreignTN)
@@ -280,8 +276,7 @@ func TestTicketListingScope_CustomerTicketList(t *testing.T) {
 	})
 
 	t.Run("JWT without an email", func(t *testing.T) {
-		tok, err := shared.GetJWTManager().GenerateTokenWithLogin(uint(f.customerID), f.customerLogin, "", "Customer", false, 0)
-		require.NoError(t, err)
+		tok := testSessionToken(t, uint(f.customerID), f.customerLogin, "", "Customer", false, 0)
 		body := list(t, tok)
 		assert.Contains(t, body, f.customerTN)
 		assert.NotContains(t, body, f.foreignTN)
@@ -289,8 +284,7 @@ func TestTicketListingScope_CustomerTicketList(t *testing.T) {
 	})
 
 	t.Run("JWT with no resolvable customer login is refused", func(t *testing.T) {
-		tok, err := shared.GetJWTManager().GenerateTokenWithLogin(999999999, "", "", "Customer", false, 0)
-		require.NoError(t, err)
+		tok := testSessionToken(t, 999999999, "", "", "Customer", false, 0)
 		w := f.do(t, tok, http.MethodGet, "/api/v1/tickets?per_page=100&search="+f.suffix, nil)
 		assert.Equal(t, http.StatusForbidden, w.Code, w.Body.String())
 		assert.False(t, strings.Contains(w.Body.String(), f.foreignTN))

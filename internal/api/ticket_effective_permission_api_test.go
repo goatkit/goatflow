@@ -16,7 +16,6 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/routing"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // eppFixture: a queue in its own group, an agent holding rw on that group
@@ -109,9 +108,7 @@ func newEPPFixture(t *testing.T) *eppFixture {
 		return id, login
 	}
 	token := func(id int, login, role string, isAdmin bool) string {
-		tok, err := shared.GetJWTManager().GenerateTokenWithLogin(uint(id), login, login, role, isAdmin, 0)
-		require.NoError(t, err)
-		return tok
+		return testSessionToken(t, uint(id), login, login, role, isAdmin, 0)
 	}
 
 	roleAgent, roleLogin := newAgent("role")

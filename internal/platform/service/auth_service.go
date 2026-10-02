@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
@@ -17,15 +18,25 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/yamlmgmt"
 )
 
+// SessionStore is the session persistence AuthService needs: every token pair
+// names a sessions row, and refresh refuses tokens whose row was killed.
+type SessionStore interface {
+	CreateSession(userID int, userLogin, userType, remoteAddr, userAgent string) (string, error)
+	GetSession(sessionID string) (*platformmodels.Session, error)
+}
+
 // AuthService handles authentication and authorization.
 type AuthService struct {
 	authenticator *auth.Authenticator
 	jwtManager    *auth.JWTManager
 	db            *sql.DB
+	sessions      SessionStore
 }
 
 // NewAuthService creates a new authentication service with a JWT manager.
-func NewAuthService(db *sql.DB, jwtManager *auth.JWTManager, oidcClient *http.Client, stateStore auth.StateStore) *AuthService {
+// sessions may be nil (no session tracking): then no token pair can be issued
+// or refreshed.
+func NewAuthService(db *sql.DB, jwtManager *auth.JWTManager, oidcClient *http.Client, stateStore auth.StateStore, sessions SessionStore) *AuthService {
 	order := getConfiguredProviderOrder()
 	providerDeps := auth.ProviderDependencies{
 		DB:         db,
@@ -48,7 +59,7 @@ func NewAuthService(db *sql.DB, jwtManager *auth.JWTManager, oidcClient *http.Cl
 		}
 	}
 	authenticator := auth.NewAuthenticator(providers...)
-	return &AuthService{authenticator: authenticator, jwtManager: jwtManager, db: db}
+	return &AuthService{authenticator: authenticator, jwtManager: jwtManager, db: db, sessions: sessions}
 }
 
 // global accessor injected from main to avoid import cycles.
@@ -102,32 +113,54 @@ func getConfiguredProviderOrder() []string {
 }
 
 // ErrRefreshRejected is returned by Refresh for any refresh token that cannot be
-// exchanged: malformed, wrongly signed, expired, an access token, or belonging to
-// an account that no longer exists or is no longer valid.
+// exchanged: malformed, wrongly signed, expired, an access token, bound to a
+// killed session, or belonging to an account that no longer exists or is no
+// longer valid.
 var ErrRefreshRejected = errors.New("refresh token rejected")
 
-// Login authenticates a user and returns the user, an access token and a refresh token.
-func (s *AuthService) Login(ctx context.Context, username, password string) (*platformmodels.User, string, string, error) {
-	user, err := s.authenticator.Authenticate(ctx, username, password)
-	if err != nil {
-		return nil, "", "", err
+// Login authenticates a user. It issues no tokens: callers decide whether a
+// second factor is still due, then call IssueTokens.
+func (s *AuthService) Login(ctx context.Context, username, password string) (*platformmodels.User, error) {
+	return s.authenticator.Authenticate(ctx, username, password)
+}
+
+// IssueTokens creates a sessions row for the authenticated user (remoteAddr and
+// userAgent are shown in the admin session list) and returns its id with an
+// access token of accessDuration (0 = default) and a refresh token, both bound
+// to that session.
+func (s *AuthService) IssueTokens(user *platformmodels.User, remoteAddr, userAgent string, accessDuration time.Duration) (sessionID, accessToken, refreshToken string, err error) {
+	if s.sessions == nil {
+		return "", "", "", errors.New("issue tokens: session store unavailable")
 	}
-	accessToken, refreshToken, err := s.issueTokens(user)
+	sessionID, err = s.sessions.CreateSession(int(user.ID), user.Login, user.Role, remoteAddr, userAgent) // #nosec G115 -- users/customer_user ids fit int
 	if err != nil {
-		return nil, "", "", err
+		return "", "", "", fmt.Errorf("create session: %w", err)
 	}
-	return user, accessToken, refreshToken, nil
+	accessToken, refreshToken, err = s.issueTokens(user, sessionID, accessDuration)
+	if err != nil {
+		return "", "", "", err
+	}
+	return sessionID, accessToken, refreshToken, nil
 }
 
 // Refresh exchanges a refresh token for a new access token and a new refresh
-// token. The account is reloaded from the database (users for agents,
-// customer_user for customers), so the new access token carries the current id,
-// role and admin-group membership, and accounts that were renamed, deleted or
-// set invalid (valid_id != 1) are rejected with ErrRefreshRejected. JWTs are not
-// tracked server-side, so the presented refresh token stays valid until it expires.
+// token, both bound to the session of the presented token. The session must
+// still exist (a killed session ends the refresh chain) and the account is
+// reloaded from the database (users for agents, customer_user for customers),
+// so the new access token carries the current id, role and admin-group
+// membership, and accounts that were renamed, deleted or set invalid
+// (valid_id != 1) are rejected with ErrRefreshRejected. Refresh tokens are not
+// tracked server-side, so the presented one stays valid until it expires or
+// its session is killed.
 func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*platformmodels.User, string, string, error) {
 	claims, err := s.jwtManager.ValidateRefreshToken(refreshToken)
 	if err != nil {
+		return nil, "", "", ErrRefreshRejected
+	}
+	if s.sessions == nil {
+		return nil, "", "", errors.New("refresh: session store unavailable")
+	}
+	if session, err := s.sessions.GetSession(claims.SessionID); err != nil || session == nil {
 		return nil, "", "", ErrRefreshRejected
 	}
 	if s.db == nil {
@@ -169,7 +202,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*platfo
 		return nil, "", "", ErrRefreshRejected
 	}
 
-	accessToken, newRefreshToken, err := s.issueTokens(user)
+	accessToken, newRefreshToken, err := s.issueTokens(user, claims.SessionID, 0)
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -177,9 +210,10 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*platfo
 }
 
 // issueTokens creates the access and refresh token pair for an authenticated
-// user. Customers (Role "Customer") are customer_user rows: they never carry the
-// admin flag, because their ids overlap with agent ids in group_user.
-func (s *AuthService) issueTokens(user *platformmodels.User) (string, string, error) {
+// user, bound to sessionID. Customers (Role "Customer") are customer_user rows:
+// they never carry the admin flag, because their ids overlap with agent ids in
+// group_user.
+func (s *AuthService) issueTokens(user *platformmodels.User, sessionID string, accessDuration time.Duration) (string, string, error) {
 	kind, isAdmin := auth.AccountKindAgent, false
 	if user.Role == "Customer" {
 		kind = auth.AccountKindCustomer
@@ -192,11 +226,15 @@ func (s *AuthService) issueTokens(user *platformmodels.User) (string, string, er
 		}
 		isAdmin = admin
 	}
-	accessToken, err := s.jwtManager.GenerateTokenWithAdmin(user.ID, user.Email, user.Role, isAdmin, 0)
+	login := user.Login
+	if login == "" {
+		login = user.Email
+	}
+	accessToken, err := s.jwtManager.GenerateTokenWithDuration(sessionID, user.ID, login, user.Email, user.Role, isAdmin, 0, accessDuration)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to generate access token: %w", err)
 	}
-	refreshToken, err := s.jwtManager.GenerateRefreshToken(kind, user.ID, user.Login)
+	refreshToken, err := s.jwtManager.GenerateRefreshToken(kind, user.ID, user.Login, sessionID)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to generate refresh token: %w", err)
 	}

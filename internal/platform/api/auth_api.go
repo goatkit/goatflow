@@ -77,10 +77,10 @@ func HandleLoginAPI(c *gin.Context) {
 	}
 
 	// Create auth service
-	authService := service.NewAuthService(db, getJWTManager(), auth.GetOIDCClient(), auth.GetStateStore())
+	authService := service.NewAuthService(db, getJWTManager(), auth.GetOIDCClient(), auth.GetStateStore(), shared.GetSessionService())
 
 	// Authenticate user
-	user, accessToken, refreshToken, err := authService.Login(context.Background(), loginRequest.Login, loginRequest.Password)
+	user, err := authService.Login(context.Background(), loginRequest.Login, loginRequest.Password)
 	if err != nil {
 		auth.DefaultLoginRateLimiter.RecordFailure(clientIP, loginRequest.Login)
 		if err == auth.ErrInvalidCredentials {
@@ -123,6 +123,18 @@ func HandleLoginAPI(c *gin.Context) {
 			"success": false,
 			"error":   "This account requires a second factor. Sign in through the web UI, or use an API token.",
 			"code":    "mfa_required",
+		})
+		return
+	}
+
+	// The session row is what makes the tokens revocable (admin "kill
+	// session"); without it no token is issued.
+	_, accessToken, refreshToken, err := authService.IssueTokens(user, c.ClientIP(), c.Request.UserAgent(), 0)
+	if err != nil {
+		log.Printf("api login: issue tokens for %s: %v", loginRequest.Login, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Login temporarily unavailable",
 		})
 		return
 	}
@@ -211,7 +223,7 @@ func HandleRefreshTokenAPI(c *gin.Context) {
 		return
 	}
 
-	authService := service.NewAuthService(db, getJWTManager(), auth.GetOIDCClient(), auth.GetStateStore())
+	authService := service.NewAuthService(db, getJWTManager(), auth.GetOIDCClient(), auth.GetStateStore(), shared.GetSessionService())
 	user, accessToken, refreshToken, err := authService.Refresh(c.Request.Context(), refreshRequest.RefreshToken)
 	if err != nil {
 		if errors.Is(err, service.ErrRefreshRejected) {
@@ -262,9 +274,9 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Validate the token
+		// Validate the token and the session it names
 		claims, err := getJWTManager().ValidateToken(token)
-		if err != nil {
+		if err != nil || !middleware.VerifySession(c, claims) {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"error":   "Invalid or expired token",

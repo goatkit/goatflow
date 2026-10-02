@@ -71,11 +71,11 @@ func (e *BlockedTargetError) Error() string {
 		e.Host, AllowPrivateTargetsEnv)
 }
 
-// checkTargetHost validates the host of a webhook URL when it is saved. Only
-// IP literals and the always-loopback name "localhost" (RFC 6761) can be
-// judged without DNS; other names are checked on every delivery, after
-// resolution, by targetDialer.
-func checkTargetHost(host string) error {
+// CheckTargetHost validates the host of an admin-supplied URL (webhook,
+// identity-provider metadata) when it is saved. Only IP literals and the
+// always-loopback name "localhost" (RFC 6761) can be judged without DNS; other
+// names are checked on every connection, after resolution, by targetDialer.
+func CheckTargetHost(host string) error {
 	if AllowPrivateTargets() {
 		return nil
 	}
@@ -141,10 +141,10 @@ func (d *targetDialer) DialContext(ctx context.Context, network, address string)
 	return nil, firstErr
 }
 
-// newHTTPClient returns the delivery client. It does not follow redirects (a
-// webhook URL must point at the receiving endpoint) and does not use
-// HTTP(S)_PROXY: a proxy would resolve the host itself, out of reach of the
-// address check.
+// newHTTPClient returns a client that connects through targetDialer. It does
+// not follow redirects (the URL must point at the endpoint itself) and does
+// not use HTTP(S)_PROXY: a proxy would resolve the host itself, out of reach
+// of the address check.
 func newHTTPClient(resolver ipResolver) *http.Client {
 	d := &targetDialer{
 		resolver: resolver,
@@ -163,6 +163,16 @@ func newHTTPClient(resolver ipResolver) *http.Client {
 		},
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
+}
+
+// NewHTTPClient returns a client with the delivery address guard (every
+// resolved address checked and pinned, no redirects, no proxy) for other
+// admin-supplied URLs the server fetches, such as identity-provider metadata
+// and OIDC discovery documents. Requests give up after timeout.
+func NewHTTPClient(timeout time.Duration) *http.Client {
+	c := newHTTPClient(net.DefaultResolver)
+	c.Timeout = timeout
+	return c
 }
 
 // deliveryClient is shared by every Dispatcher so idle connections are

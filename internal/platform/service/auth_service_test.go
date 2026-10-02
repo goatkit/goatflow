@@ -49,10 +49,10 @@ func TestAuthService_UsesStaticProviderFirst(t *testing.T) {
 
 	ca := testConfigAdapter(t, []string{"static", "database"})
 	SetConfigAdapter(ca)
-	svc := NewAuthService(nil, testJWTManager(t), nil, nil)
+	svc := NewAuthService(nil, testJWTManager(t), nil, nil, nil)
 
 	// Should authenticate via static provider; db provider skipped (nil DB)
-	user, _, _, err := svc.Login(context.Background(), "alpha", "pw")
+	user, err := svc.Login(context.Background(), "alpha", "pw")
 	if err != nil {
 		t.Fatalf("expected static auth success, got %v", err)
 	}
@@ -64,8 +64,8 @@ func TestAuthService_UsesStaticProviderFirst(t *testing.T) {
 func TestAuthService_FallbackNoProviders(t *testing.T) {
 	ca := testConfigAdapter(t, []string{"bogus1", "bogus2"})
 	SetConfigAdapter(ca)
-	svc := NewAuthService(nil, testJWTManager(t), nil, nil)
-	_, _, _, err := svc.Login(context.Background(), "any", "x")
+	svc := NewAuthService(nil, testJWTManager(t), nil, nil, nil)
+	_, err := svc.Login(context.Background(), "any", "x")
 	if err == nil {
 		t.Fatalf("expected failure with no providers")
 	}

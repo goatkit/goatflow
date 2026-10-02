@@ -692,7 +692,13 @@ func completeAgentSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth.Pe
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to generate token"})
 		return
 	}
-	token, err := jwtManager.GenerateTokenWithLogin(uint(session.UserID), session.Username, session.Username, role, isAdmin, 1)
+	sessionID, err := newLoginSession(c, session.UserID, session.Username, "User")
+	if err != nil {
+		log.Printf("passkey login: create session for user %d: %v", session.UserID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "authentication unavailable"})
+		return
+	}
+	token, err := jwtManager.GenerateTokenWithLogin(sessionID, uint(session.UserID), session.Username, session.Username, role, isAdmin, 1)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to generate token"})
 		return
@@ -716,14 +722,7 @@ func completeAgentSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth.Pe
 	if userThemeMode := prefService.GetThemeMode(session.UserID); userThemeMode != "" {
 		c.SetCookie("goatflow_mode", userThemeMode, sessionTimeout, "/", "", false, false)
 	}
-	if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
-		sessionID, err := sessionSvc.CreateSession(session.UserID, session.Username, "User", c.ClientIP(), c.Request.UserAgent())
-		if err != nil {
-			log.Printf("Failed to create session record: %v", err)
-		} else {
-			httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
-		}
-	}
+	httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
 	c.JSON(http.StatusOK, gin.H{"success": true, "redirect": "/dashboard"})
 }
 
@@ -742,7 +741,13 @@ func completeCustomerSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth
 	}
 	_ = firstName
 	_ = lastName
-	jwtToken, err := jwtManager.GenerateTokenWithLogin(userID, session.UserLogin, email, "Customer", false, 0)
+	sessionID, err := newLoginSession(c, int(userID), session.UserLogin, "Customer")
+	if err != nil {
+		log.Printf("customer passkey login: create session for %s: %v", session.UserLogin, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "authentication unavailable"})
+		return
+	}
+	jwtToken, err := jwtManager.GenerateTokenWithLogin(sessionID, userID, session.UserLogin, email, "Customer", false, 0)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to generate token"})
 		return
@@ -755,5 +760,6 @@ func completeCustomerSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth
 	httpcookie.SetAuth(c, "customer_access_token", jwtToken, sessionTimeout)
 	httpcookie.SetAuth(c, "customer_auth_token", jwtToken, sessionTimeout)
 	httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "1", sessionTimeout)
+	httpcookie.SetAuth(c, "customer_session_id", sessionID, sessionTimeout)
 	c.JSON(http.StatusOK, gin.H{"success": true, "access_token": jwtToken, "redirect": customerLandingRedirect(session.UserLogin)})
 }

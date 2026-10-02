@@ -2,23 +2,18 @@
 // Tests the automatic schema discovery and module generation
 
 import { test, expect } from '@playwright/test';
+import { BASE_URL } from './base-url.js';
+import { loginAdmin } from './login.js';
 
 // Configuration
-const BASE_URL = process.env.BASE_URL || 'http://localhost:8080';
-const DEMO_COOKIE = 'access_token=demo_session_admin';
 const MODULES_BASE = `${BASE_URL}/admin/modules`;
 const SCHEMA_API = `${MODULES_BASE}/_schema`;
 
 test.describe('Schema Discovery - Database Introspection', () => {
   
-  // Test Setup
+  // Test Setup: real admin login; page.request shares the context's cookie jar
   test.beforeEach(async ({ page }) => {
-    await page.context().addCookies([{
-      name: 'access_token',
-      value: 'demo_session_admin',
-      domain: 'localhost',
-      path: '/'
-    }]);
+    await loginAdmin(page);
   });
 
   test.describe('API Endpoints', () => {
@@ -26,7 +21,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
     test('Can list all database tables', async ({ page }) => {
       const response = await page.request.get(`${SCHEMA_API}?action=tables`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -57,7 +51,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
     test('Can get columns for a specific table', async ({ page }) => {
       const response = await page.request.get(`${SCHEMA_API}?action=columns&table=users`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -90,7 +83,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
     test('Returns error when table parameter missing for columns', async ({ page }) => {
       const response = await page.request.get(`${SCHEMA_API}?action=columns`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -105,7 +97,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
     test('Can generate module config for a table', async ({ page }) => {
       const response = await page.request.get(`${SCHEMA_API}?action=generate&table=ticket`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -146,7 +137,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
     test('Can generate YAML format module config', async ({ page }) => {
       const response = await page.request.get(`${SCHEMA_API}?action=generate&table=queue&format=yaml`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'text/yaml'
         }
@@ -168,7 +158,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
       
       const response = await page.request.get(`${SCHEMA_API}?action=save&table=${testTable}`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -186,7 +175,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
       
       const modulesResponse = await page.request.get(`${BASE_URL}/admin/modules/${testTable}`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -199,7 +187,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
     test('Returns error for invalid action', async ({ page }) => {
       const response = await page.request.get(`${SCHEMA_API}?action=invalid`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -217,7 +204,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
     test('Correctly infers field types from column names and data types', async ({ page }) => {
       const response = await page.request.get(`${SCHEMA_API}?action=generate&table=users`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -252,7 +238,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
     test('Sets appropriate display settings for different field types', async ({ page }) => {
       const response = await page.request.get(`${SCHEMA_API}?action=generate&table=ticket`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -291,7 +276,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
       // Save the generated config
       const saveResponse = await page.request.get(`${SCHEMA_API}?action=save&table=${testTable}`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -305,7 +289,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
       // Try to access the module
       const moduleResponse = await page.request.get(`${BASE_URL}/admin/modules/${testTable}`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -324,7 +307,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
       // Get list of existing modules
       const existingResponse = await page.request.get(`${BASE_URL}/admin/modules/users`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -335,7 +317,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
       // Generate config for the same table
       const generateResponse = await page.request.get(`${SCHEMA_API}?action=generate&table=users`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -355,7 +336,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
     test('Handles non-existent table gracefully', async ({ page }) => {
       const response = await page.request.get(`${SCHEMA_API}?action=columns&table=nonexistent_table`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }
@@ -371,7 +351,6 @@ test.describe('Schema Discovery - Database Introspection', () => {
     test('Handles missing parameters correctly', async ({ page }) => {
       const response = await page.request.get(`${SCHEMA_API}?action=generate`, {
         headers: {
-          'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json'
         }

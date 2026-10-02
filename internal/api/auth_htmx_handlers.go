@@ -15,6 +15,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
+	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 )
@@ -121,7 +122,7 @@ func handleCustomerLoginPage(c *gin.Context) {
 	jwtManager := shared.GetJWTManager()
 	// A customer who is already signed in goes straight to their landing page.
 	if cookie, err := c.Cookie("customer_access_token"); err == nil && cookie != "" && jwtManager != nil {
-		if claims, err := jwtManager.ValidateToken(cookie); err == nil && claims.Role == "Customer" {
+		if claims, err := jwtManager.ValidateToken(cookie); err == nil && claims.Role == "Customer" && middleware.VerifySession(c, claims) {
 			c.Redirect(http.StatusFound, customerLandingRedirect(claims.Login))
 			return
 		}
@@ -144,18 +145,26 @@ func handleCustomerLoginPage(c *gin.Context) {
 
 // handleLogout handles logout requests.
 func handleLogout(c *gin.Context) {
-	// Delete session record from database (check both agent and customer session cookies)
-	if sessionID, err := c.Cookie("session_id"); err == nil && sessionID != "" {
-		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
-			if err := sessionSvc.KillSession(sessionID); err != nil {
-				log.Printf("Failed to delete session record: %v", err)
+	// Delete the session rows: the ones named by the session cookies and the
+	// one bound to the presented token (the same row, unless cookies were
+	// tampered with). Killing the row revokes every token carrying its id.
+	sessionIDs := map[string]bool{}
+	for _, name := range []string{"session_id", "customer_session_id"} {
+		if sessionID, err := c.Cookie(name); err == nil && sessionID != "" {
+			sessionIDs[sessionID] = true
+		}
+	}
+	if token := middleware.ExtractToken(c); token != "" && !middleware.IsAPIToken(token) {
+		if jwtManager := shared.GetJWTManager(); jwtManager != nil {
+			if claims, err := jwtManager.ValidateToken(token); err == nil {
+				sessionIDs[claims.SessionID] = true
 			}
 		}
 	}
-	if sessionID, err := c.Cookie("customer_session_id"); err == nil && sessionID != "" {
-		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
+	if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
+		for sessionID := range sessionIDs {
 			if err := sessionSvc.KillSession(sessionID); err != nil {
-				log.Printf("Failed to delete customer session record: %v", err)
+				log.Printf("Failed to delete session record: %v", err)
 			}
 		}
 	}
@@ -342,7 +351,13 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to generate token"})
 			return
 		}
-		token, err := jwtManager.GenerateTokenWithLogin(uint(userID), username, username, role, isAdmin, 1)
+		sessionID, err := newLoginSession(c, userID, username, "User")
+		if err != nil {
+			log.Printf("2FA login: create session for user %d: %v", userID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Authentication unavailable"})
+			return
+		}
+		token, err := jwtManager.GenerateTokenWithLogin(sessionID, uint(userID), username, username, role, isAdmin, 1)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
@@ -379,21 +394,7 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			c.SetCookie("goatflow_mode", userThemeMode, sessionTimeout, "/", "", false, false)
 		}
 
-		// Create session record
-		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
-			sessionID, err := sessionSvc.CreateSession(
-				userID,
-				username,
-				"User",
-				c.ClientIP(),
-				c.Request.UserAgent(),
-			)
-			if err != nil {
-				log.Printf("Failed to create session record: %v", err)
-			} else {
-				httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
-			}
-		}
+		httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
 
 		// Respond based on request type
 		contentType := c.GetHeader("Content-Type")

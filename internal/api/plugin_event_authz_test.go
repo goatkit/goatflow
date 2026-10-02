@@ -16,7 +16,6 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // eventAuthzPlugin declares an EventAuthorizer that allows the "public"
@@ -102,11 +101,8 @@ func TestPluginEventSubscriptionAuthorizedByPlugin(t *testing.T) {
 		SetPluginSSEBroker(prevBroker)
 	})
 
-	jwt := shared.GetJWTManager()
-	agentTok, err := jwt.GenerateTokenWithLogin(4242, "ev.agent", "ev.agent", "Agent", false, 0)
-	require.NoError(t, err)
-	adminTok, err := jwt.GenerateTokenWithLogin(4243, "ev.admin", "ev.admin", "Admin", true, 0)
-	require.NoError(t, err)
+	agentTok := testSessionToken(t, 4242, "ev.agent", "ev.agent", "Agent", false, 0)
+	adminTok := testSessionToken(t, 4243, "ev.admin", "ev.admin", "Admin", true, 0)
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()

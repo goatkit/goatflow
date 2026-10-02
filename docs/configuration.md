@@ -137,7 +137,7 @@ Use the `goatflow-storage` command to move attachments between `db` and `fs`.
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| `GOATFLOW_WEBHOOK_ALLOW_PRIVATE_TARGETS` | unset (deny) | `true` lets webhooks reach loopback, private, link-local and other internal addresses (for example on-premises services). Unset, such URLs are rejected when saved and every delivery refuses hosts that resolve to them. Set the same value on the backend and the runner. See [WEBHOOKS.md](WEBHOOKS.md#internal-and-private-addresses). |
+| `GOATFLOW_WEBHOOK_ALLOW_PRIVATE_TARGETS` | unset (deny) | `true` lets webhooks and identity-provider fetches (OIDC discovery, SAML metadata URLs set under Admin → Identity Providers) reach loopback, private, link-local and other internal addresses (for example on-premises services). Unset, such URLs are rejected when saved and every delivery or fetch refuses hosts that resolve to them. Set the same value on the backend and the runner. See [WEBHOOKS.md](WEBHOOKS.md#internal-and-private-addresses). |
 | `GOATFLOW_WEBHOOK_DELIVERY_RETENTION_DAYS` | `30` | The runner deletes delivered and failed webhook deliveries older than this many days. `0` keeps them forever. |
 
 ### Logging

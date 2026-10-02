@@ -21,7 +21,6 @@ import (
 	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/plugin/core"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/service"
 )
 
@@ -227,11 +226,8 @@ func newAuthzFixture(t *testing.T) *authzFixture {
 		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM users WHERE id = ?`), agentID)
 	})
 
-	jwt := shared.GetJWTManager()
-	custJWT, err := jwt.GenerateTokenWithLogin(uint(custID), custLogin, custLogin, "Customer", false, 0)
-	require.NoError(t, err)
-	agentJWT, err := jwt.GenerateTokenWithLogin(uint(agentID), agentLogin, agentLogin, "Agent", false, 0)
-	require.NoError(t, err)
+	custJWT := testSessionToken(t, uint(custID), custLogin, custLogin, "Customer", false, 0)
+	agentJWT := testSessionToken(t, uint(agentID), agentLogin, agentLogin, "Agent", false, 0)
 
 	svc := service.NewAPITokenService(db)
 	middleware.SetAPITokenVerifier(svc)

@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/routing"
+	"github.com/goatkit/goatflow/internal/platform/webhook"
 	"github.com/goatkit/goatflow/internal/repository"
 )
 
@@ -128,10 +130,11 @@ func handleAdminIdentityProviderCreate(c *gin.Context) {
 		}
 	}
 
-	// Validate discovery URL for OIDC providers
+	// The server fetches these URLs on every /auth/:id request, so they
+	// must not point at internal services.
 	if providerType == "oidc" && discoveryURL != "" {
-		if !isValidURL(discoveryURL) {
-			sendErrorResponse(c, http.StatusBadRequest, "Invalid discovery URL format")
+		if err := validateIdPURL(discoveryURL); err != nil {
+			sendErrorResponse(c, http.StatusBadRequest, "Invalid discovery URL: "+err.Error())
 			return
 		}
 	}
@@ -141,9 +144,11 @@ func handleAdminIdentityProviderCreate(c *gin.Context) {
 			sendErrorResponse(c, http.StatusBadRequest, "Metadata URL or XML is required for SAML2 providers")
 			return
 		}
-		if discoveryURL != "" && !isValidURL(discoveryURL) {
-			sendErrorResponse(c, http.StatusBadRequest, "Invalid metadata URL format")
-			return
+		if discoveryURL != "" {
+			if err := validateIdPURL(discoveryURL); err != nil {
+				sendErrorResponse(c, http.StatusBadRequest, "Invalid metadata URL: "+err.Error())
+				return
+			}
 		}
 		if signingCert == "" {
 			sendErrorResponse(c, http.StatusBadRequest, "Signing certificate is required for SAML2 providers")
@@ -297,10 +302,9 @@ func handleAdminIdentityProviderUpdate(c *gin.Context) {
 		}
 	}
 
-	// Validate discovery URL for OIDC providers
 	if providerType == "oidc" && discoveryURL != "" {
-		if !isValidURL(discoveryURL) {
-			sendErrorResponse(c, http.StatusBadRequest, "Invalid discovery URL format")
+		if err := validateIdPURL(discoveryURL); err != nil {
+			sendErrorResponse(c, http.StatusBadRequest, "Invalid discovery URL: "+err.Error())
 			return
 		}
 	}
@@ -310,9 +314,11 @@ func handleAdminIdentityProviderUpdate(c *gin.Context) {
 			sendErrorResponse(c, http.StatusBadRequest, "Metadata URL or XML is required for SAML2 providers")
 			return
 		}
-		if discoveryURL != "" && !isValidURL(discoveryURL) {
-			sendErrorResponse(c, http.StatusBadRequest, "Invalid metadata URL format")
-			return
+		if discoveryURL != "" {
+			if err := validateIdPURL(discoveryURL); err != nil {
+				sendErrorResponse(c, http.StatusBadRequest, "Invalid metadata URL: "+err.Error())
+				return
+			}
 		}
 		if signingCert == "" || privateKey == "" {
 			genCert, genKey, err := generateSAMLKeyPair()
@@ -442,10 +448,16 @@ func handleAdminIdentityProviderToggle(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "enabled": p.Enabled})
 }
 
-// isValidURL checks if a string is a valid URL.
-func isValidURL(u string) bool {
-	_, err := url.ParseRequestURI(u)
-	return err == nil
+// validateIdPURL checks an admin-supplied URL the server will fetch (OIDC
+// discovery, SAML metadata): it must be an absolute http(s) URL whose host is
+// not an internal address, unless GOATFLOW_WEBHOOK_ALLOW_PRIVATE_TARGETS
+// allows it. Names that need DNS are checked again on every fetch.
+func validateIdPURL(raw string) error {
+	u, err := url.ParseRequestURI(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" {
+		return errors.New("must be an absolute http or https URL")
+	}
+	return webhook.CheckTargetHost(u.Hostname())
 }
 
 // generateSAMLKeyPair generates a self-signed X.509 certificate and RSA private key for SAML SP signing.

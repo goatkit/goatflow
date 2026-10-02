@@ -22,7 +22,6 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/platform/secureconfig"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/platform/webhook"
 )
 
@@ -584,11 +583,8 @@ func TestWebhookRoutes(t *testing.T) {
 	router := gin.New()
 	require.NoError(t, routing.LoadYAMLRoutesForTesting(router))
 
-	jwt := shared.GetJWTManager()
-	adminToken, err := jwt.GenerateToken(1, "root@localhost", "Admin", 0)
-	require.NoError(t, err)
-	agentToken, err := jwt.GenerateToken(1, "root@localhost", "Agent", 0)
-	require.NoError(t, err)
+	adminToken := testSessionToken(t, 1, "root@localhost", "root@localhost", "Admin", false, 0)
+	agentToken := testSessionToken(t, 1, "root@localhost", "root@localhost", "Agent", false, 0)
 
 	code, _ := doWebhookRequest(t, router, http.MethodGet, "/api/v1/webhooks", nil)
 	assert.Equal(t, http.StatusUnauthorized, code)

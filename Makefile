@@ -1018,6 +1018,7 @@ test-oidc-integration: toolbox-build
 		--group-add "$$(stat -c '%g' /var/run/docker.sock)" \
 		-e TMPDIR=/workspace/tmp -e GOCACHE=/workspace/.go-build -e GOMODCACHE=/workspace/.gomodcache \
 		-e GOFLAGS=-buildvcs=false \
+		-e GOATFLOW_WEBHOOK_ALLOW_PRIVATE_TARGETS=true \
 		$(TOOLBOX_IMAGE) \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; echo "Running OIDC integration tests..."; go test -tags=integration -buildvcs=false -count=1 -timeout=10m -v ./internal/platform/auth/...'
 

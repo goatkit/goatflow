@@ -702,6 +702,13 @@ func ticketAPIRouter() *gin.Engine {
 	middleware.SetQueueAccessCheckerFactory(func(db *sql.DB) middleware.QueueAccessChecker {
 		return service.NewQueueAccessService(db)
 	})
+	// Logins create a sessions row and tokens are only accepted while it exists.
+	middleware.SetSessionServiceFactory(func(db *sql.DB) middleware.SessionChecker {
+		return service.NewSessionService(repository.NewSessionRepository(db))
+	})
+	shared.SetSessionManagerFactory(func(db *sql.DB) shared.SessionManager {
+		return service.NewSessionService(repository.NewSessionRepository(db))
+	})
 	r := gin.New()
 	r.POST("/api/v1/auth/login", api.HandleAPIv1AuthLogin)
 	v1 := r.Group("/api/v1", middleware.UnifiedAuthMiddleware(shared.GetJWTManager()))

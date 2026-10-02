@@ -64,6 +64,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/services/k8s"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/platform/template"
+	"github.com/goatkit/goatflow/internal/platform/webhook"
 	"github.com/goatkit/goatflow/internal/platform/yamlmgmt"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/runner/tasks"
@@ -317,9 +318,11 @@ func main() {
 		}
 	}
 
-	// Initialize OIDC state store (in-memory) and HTTP client for IdP token exchanges
+	// Initialize OIDC state store (in-memory) and the HTTP client for IdP
+	// discovery/token exchanges; IdP URLs are admin-set, so the client carries
+	// the webhook address guard.
 	auth.SetStateStore(auth.NewMemoryStateStore())
-	auth.SetOIDCClient(&http.Client{Timeout: 30 * time.Second})
+	auth.SetOIDCClient(webhook.NewHTTPClient(30 * time.Second))
 
 	// Create router for YAML routes
 	r := gin.New()

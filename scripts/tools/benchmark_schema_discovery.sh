@@ -16,7 +16,9 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 BASE_URL="http://localhost:8080"
-AUTH="Cookie: access_token=demo_session_admin"
+# shellcheck source=../lib/admin-login.sh
+source "$(dirname "$0")/../lib/admin-login.sh"
+AUTH=$(admin_login_cookie "$BASE_URL") || exit 1
 
 # Tables to test
 TEST_TABLES="

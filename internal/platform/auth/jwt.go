@@ -32,6 +32,9 @@ const (
 	AccountKindCustomer = "customer"
 )
 
+// Claims are the claims of an access token. SessionID names the sessions row
+// the login created; an access token is only as alive as that row, so killing
+// the session (admin, logout) revokes every token that carries its id.
 type Claims struct {
 	UserID    uint   `json:"user_id"`
 	Email     string `json:"email"`
@@ -39,14 +42,17 @@ type Claims struct {
 	Role      string `json:"role"`
 	IsAdmin   bool   `json:"is_admin,omitempty"` // User is in admin group (for nav display)
 	TenantID  uint   `json:"tenant_id,omitempty"`
+	SessionID string `json:"sid"`
 	TokenType string `json:"typ"`
 	jwt.RegisteredClaims
 }
 
-// RefreshClaims are the claims of a refresh token. Subject is the account login.
+// RefreshClaims are the claims of a refresh token. Subject is the account login;
+// SessionID is the session the refreshed access tokens stay bound to.
 type RefreshClaims struct {
 	UserID    uint   `json:"user_id"`
 	Kind      string `json:"kind"` // AccountKindAgent or AccountKindCustomer
+	SessionID string `json:"sid"`
 	TokenType string `json:"typ"`
 	jwt.RegisteredClaims
 }
@@ -91,23 +97,19 @@ func (m *JWTManager) SetRefreshTokenDuration(d time.Duration) {
 	}
 }
 
-func (m *JWTManager) GenerateToken(userID uint, email, role string, tenantID uint) (string, error) {
-	return m.GenerateTokenWithLogin(userID, email, email, role, false, tenantID)
+// GenerateTokenWithLogin creates an access token bound to sessionID with the
+// default duration.
+func (m *JWTManager) GenerateTokenWithLogin(sessionID string, userID uint, login, email, role string, isAdmin bool, tenantID uint) (string, error) {
+	return m.GenerateTokenWithDuration(sessionID, userID, login, email, role, isAdmin, tenantID, m.tokenDuration)
 }
 
-// GenerateTokenWithAdmin creates a JWT with explicit isAdmin flag.
-func (m *JWTManager) GenerateTokenWithAdmin(userID uint, email, role string, isAdmin bool, tenantID uint) (string, error) {
-	return m.GenerateTokenWithLogin(userID, email, email, role, isAdmin, tenantID)
-}
-
-// GenerateTokenWithLogin creates a JWT with explicit login and email values.
-func (m *JWTManager) GenerateTokenWithLogin(userID uint, login, email, role string, isAdmin bool, tenantID uint) (string, error) {
-	return m.GenerateTokenWithDuration(userID, login, email, role, isAdmin, tenantID, m.tokenDuration)
-}
-
-// GenerateTokenWithDuration creates a JWT with a specific duration.
-// If duration is 0, the system default is used.
-func (m *JWTManager) GenerateTokenWithDuration(userID uint, login, email, role string, isAdmin bool, tenantID uint, duration time.Duration) (string, error) {
+// GenerateTokenWithDuration creates an access token bound to sessionID with a
+// specific duration. If duration is 0, the system default is used. A token
+// without a session cannot be revoked, so an empty sessionID is an error.
+func (m *JWTManager) GenerateTokenWithDuration(sessionID string, userID uint, login, email, role string, isAdmin bool, tenantID uint, duration time.Duration) (string, error) {
+	if sessionID == "" {
+		return "", errors.New("access token requires a session id")
+	}
 	if duration <= 0 {
 		duration = m.tokenDuration
 	}
@@ -118,6 +120,7 @@ func (m *JWTManager) GenerateTokenWithDuration(userID uint, login, email, role s
 		Role:      role,
 		IsAdmin:   isAdmin,
 		TenantID:  tenantID,
+		SessionID: sessionID,
 		TokenType: TokenTypeAccess,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
@@ -132,7 +135,9 @@ func (m *JWTManager) GenerateTokenWithDuration(userID uint, login, email, role s
 	return token.SignedString(m.secretKey)
 }
 
-// ValidateToken validates an access token. Refresh tokens are rejected.
+// ValidateToken validates an access token. Refresh tokens and tokens that name
+// no session (issued before sessions were bound to tokens) are rejected; the
+// caller still has to check that the session row exists.
 func (m *JWTManager) ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, m.keyFunc)
 
@@ -141,7 +146,7 @@ func (m *JWTManager) ValidateToken(tokenString string) (*Claims, error) {
 	}
 
 	claims, ok := token.Claims.(*Claims)
-	if !ok || !token.Valid || claims.TokenType != TokenTypeAccess {
+	if !ok || !token.Valid || claims.TokenType != TokenTypeAccess || claims.SessionID == "" {
 		return nil, ErrInvalidToken
 	}
 
@@ -153,11 +158,14 @@ func (m *JWTManager) ValidateToken(tokenString string) (*Claims, error) {
 }
 
 // GenerateRefreshToken creates a refresh token for the account (kind, userID,
-// login), valid for the refresh token TTL. Each token gets a random id (jti), so
-// two tokens issued in the same second differ.
-func (m *JWTManager) GenerateRefreshToken(kind string, userID uint, login string) (string, error) {
+// login) and session, valid for the refresh token TTL. Each token gets a random
+// id (jti), so two tokens issued in the same second differ.
+func (m *JWTManager) GenerateRefreshToken(kind string, userID uint, login, sessionID string) (string, error) {
 	if kind != AccountKindAgent && kind != AccountKindCustomer {
 		return "", fmt.Errorf("unknown account kind %q", kind)
+	}
+	if sessionID == "" {
+		return "", errors.New("refresh token requires a session id")
 	}
 	jti := make([]byte, 16)
 	if _, err := rand.Read(jti); err != nil {
@@ -167,6 +175,7 @@ func (m *JWTManager) GenerateRefreshToken(kind string, userID uint, login string
 	claims := RefreshClaims{
 		UserID:    userID,
 		Kind:      kind,
+		SessionID: sessionID,
 		TokenType: TokenTypeRefresh,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(m.refreshTokenDuration)),
@@ -193,7 +202,7 @@ func (m *JWTManager) ValidateRefreshToken(tokenString string) (*RefreshClaims, e
 	}
 
 	claims, ok := token.Claims.(*RefreshClaims)
-	if !ok || !token.Valid || claims.TokenType != TokenTypeRefresh || claims.UserID == 0 || claims.Subject == "" ||
+	if !ok || !token.Valid || claims.TokenType != TokenTypeRefresh || claims.UserID == 0 || claims.Subject == "" || claims.SessionID == "" ||
 		(claims.Kind != AccountKindAgent && claims.Kind != AccountKindCustomer) || claims.ExpiresAt == nil {
 		return nil, ErrInvalidToken
 	}

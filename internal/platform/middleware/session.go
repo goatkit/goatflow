@@ -1,168 +1,15 @@
 package middleware
 
 import (
-	"context"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/convert"
-	"github.com/goatkit/goatflow/internal/platform/httpcookie"
 	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
-
-// contextKey is a private type to avoid key collisions in context.
-type contextKey string
-
-// SessionMiddleware validates JWT tokens from cookies or Authorization header.
-func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		token := ExtractToken(c)
-
-		// If no token found, redirect to the appropriate login page
-		if token == "" {
-			if isAPIRequest(c) {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
-				c.Abort()
-				return
-			}
-
-			path := c.Request.URL.Path
-			if strings.HasPrefix(path, "/customer") {
-				c.Redirect(http.StatusSeeOther, "/auth/customer")
-			} else {
-				c.Redirect(http.StatusSeeOther, "/login")
-			}
-			c.Abort()
-			return
-		}
-
-		// Check for demo token (only in demo mode)
-		if strings.HasPrefix(token, "demo_session_") || strings.HasPrefix(token, "demo_customer_") {
-			// In demo mode, accept demo tokens
-			// Token formats:
-			//   - demo_session_{userID}_{timestamp} for agents
-			//   - demo_customer_{username} for customers
-
-			if strings.HasPrefix(token, "demo_customer_") {
-				// Customer demo session
-				parts := strings.Split(token, "_")
-				username := "john.customer" // default customer
-				if len(parts) >= 3 {
-					username = parts[2]
-				}
-
-				// Set customer context
-				c.Set("is_customer", true)
-				c.Set("username", username)
-				c.Set("userID", 1001) // Demo customer ID
-				c.Set("user_email", "john@acme.com")
-				c.Set("user_role", "Customer")
-				c.Set("user_name", "John Customer")
-				c.Set("is_demo", true)
-			} else {
-				// Agent demo session
-				parts := strings.Split(token, "_")
-				userID := uint(1) // default to admin
-				if len(parts) >= 3 {
-					// Try to parse the user ID from the token
-					if id, err := strconv.Atoi(parts[2]); err == nil {
-						userID = uint(id)
-					}
-				}
-
-				// Set agent context
-				c.Set("user_id", userID)
-				c.Set("user_email", "demo@example.com")
-				c.Set("user_role", "Admin")
-				c.Set("user_name", "Demo User")
-				c.Set("is_demo", true)
-			}
-
-			c.Next()
-			return
-		}
-
-		// Validate real JWT token (if JWT manager is available)
-		if jwtManager == nil {
-			// No JWT manager configured and not a demo token
-			httpcookie.SetAuth(c, "access_token", "", -1)
-			httpcookie.SetAuth(c, "auth_token", "", -1)
-			if isAPIRequest(c) {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication not configured"})
-				c.Abort()
-				return
-			}
-			c.Redirect(http.StatusSeeOther, "/login")
-			c.Abort()
-			return
-		}
-
-		claims, err := jwtManager.ValidateToken(token)
-		if err != nil {
-			// Clear invalid cookie
-			httpcookie.SetAuth(c, "access_token", "", -1)
-			httpcookie.SetAuth(c, "auth_token", "", -1)
-
-			if isAPIRequest(c) {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
-				c.Abort()
-				return
-			}
-			c.Redirect(http.StatusSeeOther, "/login")
-			c.Abort()
-			return
-		}
-
-		// Sliding expiry: if the token is more than halfway through its lifetime,
-		// issue a fresh one so active users don't get logged out mid-session.
-		// Only applies to real JWTs (not demo tokens) and cookie-based sessions.
-		if claims.ExpiresAt != nil && claims.IssuedAt != nil {
-			lifetime := claims.ExpiresAt.Time.Sub(claims.IssuedAt.Time)
-			elapsed := time.Since(claims.IssuedAt.Time)
-			if lifetime > 0 && elapsed > lifetime/2 {
-				newToken, err := jwtManager.GenerateTokenWithLogin(
-					claims.UserID, claims.Login, claims.Email, claims.Role, claims.IsAdmin, claims.TenantID,
-				)
-				if err == nil {
-					secs := int(lifetime.Seconds())
-					httpcookie.SetAuth(c, "access_token", newToken, secs)
-					httpcookie.SetAuth(c, "auth_token", newToken, secs)
-					httpcookie.SetAuthState(c, "goatflow_logged_in", "1", secs)
-				}
-			}
-		}
-
-		// Store user info in context
-		c.Set("user_id", claims.UserID)
-		c.Set("user_email", claims.Email)
-		c.Set("user_role", claims.Role)
-		c.Set("user_name", claims.Email) // Use email as name for now
-		c.Set("userID", int(claims.UserID))
-		c.Set("username", claims.Login)
-		c.Set("tenant_id", claims.TenantID)
-		c.Set("tenant_host", c.Request.Host)
-
-		// Set is_customer based on role
-		if claims.Role == "Customer" {
-			c.Set("is_customer", true)
-		} else {
-			c.Set("is_customer", false)
-		}
-
-		// Add user info to request context for services using typed keys
-		ctx := context.WithValue(c.Request.Context(), contextKey("user_id"), claims.UserID)
-		ctx = context.WithValue(ctx, contextKey("user_email"), claims.Email)
-		ctx = context.WithValue(ctx, contextKey("user_role"), claims.Role)
-		c.Request = c.Request.WithContext(ctx)
-
-		c.Next()
-	}
-}
 
 // RequireRole checks if the user has the required role.
 func RequireRole(roles ...string) gin.HandlerFunc {
@@ -252,7 +99,7 @@ func OptionalAuth(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		// If token found, validate it
 		if token != "" {
 			claims, err := jwtManager.ValidateToken(token)
-			if err == nil {
+			if err == nil && VerifySession(c, claims) {
 				// Store user info in context
 				c.Set("user_id", claims.UserID)
 				c.Set("user_email", claims.Email)

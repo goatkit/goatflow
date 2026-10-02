@@ -148,8 +148,8 @@ func TestAuthRefreshAPI(t *testing.T) {
 		assert.Equal(t, "Customer", claims.Role)
 		assert.False(t, claims.IsAdmin)
 
-		// An agent refresh token naming the customer's id and login does not reach the customer.
-		forged, err := jwtManager.GenerateRefreshToken(auth.AccountKindAgent, uint(customerID), customerLogin)
+		// An agent refresh token naming the customer's id, login and live session does not reach the customer.
+		forged, err := jwtManager.GenerateRefreshToken(auth.AccountKindAgent, uint(customerID), customerLogin, claims.SessionID)
 		require.NoError(t, err)
 		code, _ = refresh(forged)
 		assert.Equal(t, http.StatusUnauthorized, code)

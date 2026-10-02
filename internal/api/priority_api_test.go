@@ -9,13 +9,11 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -45,11 +43,8 @@ func TestPriorityAPI(t *testing.T) {
 	}
 	defer database.CloseTestDB()
 
-	// Create test JWT manager
-	jwtManager := auth.NewJWTManager("test-secret", time.Hour)
-
 	// Create test token
-	token, _ := jwtManager.GenerateToken(1, "testuser@example.com", "Agent", 0)
+	token := testSessionToken(t, 1, "testuser@example.com", "testuser@example.com", "Agent", false, 0)
 
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)

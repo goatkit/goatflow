@@ -201,9 +201,12 @@ Generate modules for multiple tables:
 
 ```bash
 #!/bin/bash
+# Logs in with DEMO_ADMIN_EMAIL / DEMO_ADMIN_PASSWORD (see .env)
+source scripts/lib/admin-login.sh
+AUTH=$(admin_login_cookie http://localhost:8080) || exit 1
 TABLES="salutation signature standard_template"
 for table in $TABLES; do
-    curl -s -H "Cookie: access_token=demo_session_admin" \
+    curl -s -H "$AUTH" \
          "http://localhost:8080/admin/dynamic/_schema?action=save&table=$table"
     echo "Generated module for $table"
     sleep 1

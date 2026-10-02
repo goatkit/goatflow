@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // companyPagesFixture is a customer company with customer users, tickets and
@@ -245,8 +244,7 @@ func TestAdminCustomerCompanyTicketsPage(t *testing.T) {
 			VALUES (?, ?, 'ro', CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)`), agentID, f.visibleGroup)
 		require.NoError(t, err)
 		// An admin-scoped credential for an agent who is not in the admin group.
-		token, err := shared.GetJWTManager().GenerateTokenWithAdmin(uint(agentID), login, "Admin", true, 0)
-		require.NoError(t, err)
+		token := testSessionToken(t, uint(agentID), login, login, "Admin", true, 0)
 
 		w := companyPageGet(t, router, token, "/admin/customer/companies/"+f.company+"/tickets")
 		require.Equal(t, http.StatusOK, w.Code, w.Body.String())

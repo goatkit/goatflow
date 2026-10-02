@@ -86,9 +86,7 @@ func portalGet(t *testing.T, r http.Handler, url, bearer string) *httptest.Respo
 
 func portalCustomerToken(t *testing.T, id int64, login string) string {
 	t.Helper()
-	token, err := shared.GetJWTManager().GenerateTokenWithLogin(uint(id), login, login, "Customer", false, 0)
-	require.NoError(t, err)
-	return token
+	return testSessionToken(t, uint(id), login, login, "Customer", false, 0)
 }
 
 func TestCustomerCompanyPagesShowOnlyOwnCompany(t *testing.T) {

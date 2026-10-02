@@ -61,6 +61,10 @@ func NewOidcProvider(cfg *OidcConfig, deps ProviderDependencies) *oidcProvider {
 	}
 	discoveryURL := strings.TrimSuffix(cfg.DiscoveryURL, "/.well-known/openid-configuration")
 	discoveryURL = strings.TrimSuffix(discoveryURL, "/")
+	client := deps.OIDCClient
+	if client == nil {
+		client = idpHTTPClient
+	}
 	return &oidcProvider{
 		discoveryURL:  discoveryURL,
 		clientID:      cfg.ClientID,
@@ -74,7 +78,7 @@ func NewOidcProvider(cfg *OidcConfig, deps ProviderDependencies) *oidcProvider {
 		userTable:     cfg.UserTable,
 		db:            deps.DB,
 		stateStore:    deps.StateStore,
-		oidcClient:    deps.OIDCClient,
+		oidcClient:    client,
 		userRepo:      deps.UserRepo,
 		name:          "oidc",
 	}
@@ -123,6 +127,9 @@ func (p *oidcProvider) StartAuthFlow(ctx context.Context, state, codeVerifier st
 		return "", fmt.Errorf("discovery URL required")
 	}
 
+	// Discovery, JWKS and token requests all use the client carried by ctx
+	// (oauth2.HTTPClient), so the address guard applies to every IdP URL.
+	ctx = oidc.ClientContext(ctx, p.oidcClient)
 	provider, err := oidc.NewProvider(ctx, p.discoveryURL)
 	if err != nil {
 		return "", fmt.Errorf("discover OIDC provider: %w", err)
@@ -142,10 +149,12 @@ func (p *oidcProvider) StartAuthFlow(ctx context.Context, state, codeVerifier st
 
 // CompleteAuthFlow exchanges an authorization code for a user.
 func (p *oidcProvider) CompleteAuthFlow(ctx context.Context, code, state string) (*models.User, error) {
-	_, _, _, codeVerifier, ok := p.stateStore.ConsumeState(state)
+	entry, ok := p.stateStore.ConsumeState(state)
 	if !ok {
 		return nil, fmt.Errorf("invalid or expired state token")
 	}
+	codeVerifier := entry.CodeVerifier
+	ctx = oidc.ClientContext(ctx, p.oidcClient)
 
 	if p.provider == nil {
 		var err error

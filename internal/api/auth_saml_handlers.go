@@ -47,7 +47,12 @@ func handleSAMLRedirect(c *gin.Context) {
 
 	stateStore := auth.GetStateStore()
 	if stateStore != nil {
-		if err := stateStore.StoreState(uint(providerID), provider.ProviderType, state, 0, ""); err != nil {
+		entry := auth.StateData{
+			ProviderID:     uint(providerID),
+			ProviderType:   provider.ProviderType,
+			BrowserBinding: bindSSOToBrowser(c, true),
+		}
+		if err := stateStore.StoreState(state, entry); err != nil {
 			c.Redirect(http.StatusFound, "/login?error=server_error")
 			return
 		}
@@ -123,17 +128,21 @@ func handleSAMLCallback(c *gin.Context) {
 	}
 
 	stateStore := auth.GetStateStore()
-	if stateStore != nil {
-		token := c.PostForm("RelayState")
-		if token == "" {
-			c.Redirect(http.StatusFound, "/login?error=missing_state")
-			return
-		}
-		storedProviderID, storedType, _, _, ok := stateStore.ConsumeState(token)
-		if !ok || storedProviderID != uint(providerID) || storedType != provider.ProviderType {
-			c.Redirect(http.StatusFound, "/login?error=invalid_state")
-			return
-		}
+	if stateStore == nil {
+		c.Redirect(http.StatusFound, "/login?error=server_error")
+		return
+	}
+	token := c.PostForm("RelayState")
+	if token == "" {
+		c.Redirect(http.StatusFound, "/login?error=missing_state")
+		return
+	}
+	// The RelayState must come back from the browser that started the login.
+	entry, ok := stateStore.ConsumeState(token)
+	if !ok || entry.ProviderID != uint(providerID) || entry.ProviderType != provider.ProviderType ||
+		!ssoBrowserMatches(c, entry.BrowserBinding) {
+		c.Redirect(http.StatusFound, "/login?error=invalid_state")
+		return
 	}
 
 	acsURL := shared.BuildRedirectURL(c, "/auth/"+idStr+"/acs")

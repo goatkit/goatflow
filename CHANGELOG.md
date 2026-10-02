@@ -242,6 +242,34 @@ project adheres to [Semantic Versioning](https://semver.org/).
   unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **Killed sessions and logouts did not revoke the token.** Deleting a session (Admin → Sessions, logout)
+  only took effect on UI pages, and only when the browser sent the `session_id` cookie; every `/api/v1` route
+  kept accepting the token until it expired. Access and refresh tokens now carry the session id (`sid`) and
+  are refused on every route (API, plugin, customer) once the session is gone; refresh stops too.
+  **Tokens issued before this release are no longer accepted: everyone signs in again once after upgrading.**
+- **SSO and API logins had no session.** OIDC, SAML and `POST /api/v1/auth/login` logins now create a session,
+  so they appear under Admin → Sessions and can be ended there.
+- **SSO login CSRF.** OIDC `state` and SAML `RelayState` are now bound to the browser that started the login
+  by a short-lived HttpOnly cookie; a callback completed in another browser is refused.
+- **Identity-provider URLs reached internal addresses.** OIDC discovery and SAML metadata URLs are checked
+  with the webhook address guard when saved and fetched through it (DNS pinning, no redirects, no proxy).
+  Loopback, private and cloud-metadata addresses are refused unless `GOATFLOW_WEBHOOK_ALLOW_PRIVATE_TARGETS=true`.
+- **Plugin org scoping could be bypassed by the plugin's own SQL.** A query mentioning `org_id`, an
+  `... OR 1=1` predicate, a JOIN or subquery reaching an org-aware table, or an INSERT for another
+  organisation escaped the scoping. Every org-aware table reference is now scoped with the plugin's predicate
+  in parentheses, UPDATE may not change `org_id`, INSERT must target the caller's organisation, and shapes
+  that cannot be scoped are refused.
+- **Stored XSS in the ticket view.** The first article of a ticket (the "description" card) was rendered
+  with `|safe` without sanitising it, although customers and inbound e-mail write it. It now goes through the
+  same HTML sanitiser as every other article; the customer ticket view sanitises any body that carries a tag.
+- **`POST /api/v1/auth/login` ignored the second factor.** A password alone returned access and refresh
+  tokens for accounts that had enrolled TOTP or a passkey. It now answers `403 mfa_required`; API clients
+  should use API tokens.
+- **Plugin sandbox DB table scope.** The SQL lexer missed parenthesised table references (`FROM (users)`),
+  `TABLE t`, `HANDLER`, `DESCRIBE`, `COPY`, `CALL`/`PREPARE`/`EXECUTE`, `LOAD DATA` and vertical-tab whitespace,
+  so a plugin scoped to its own tables could read any table. All of these are now named or fail closed.
+- **Plugin sandbox HTTP scope.** `https://evil.com?x=.vendor.com` matched a `*.vendor.com` scope because the
+  host was cut at the first `/`. The scope is now checked against the parsed URL host.
 - **Webhook deliveries cut short by the end of a dispatch run.** When the run ended while an endpoint still had
   time to answer, the delivery was recorded as failed with "no response within N seconds" and used up a retry
   (or failed for good with no retries left). It now goes back to pending, due at once, with its attempt count
@@ -996,6 +1024,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
   outputs are that regeneration.
 
 ### Removed
+- **`SessionMiddleware` and its demo tokens.** The unused middleware accepted any `demo_session_*` value as an
+  admin and `demo_customer_*` as a customer. Docs, scripts and acceptance tests now sign in for real
+  (`scripts/lib/admin-login.sh`, `tests/acceptance/login.js`).
 - **`cmd/generator`.** The admin-module code generator had no callers and emitted handlers with
   PostgreSQL-only SQL (`$1`, `ILIKE`), raw database errors and unfinished scan code; it is deleted.
 - **GraphQL scaffold.** `internal/api/graphql` never compiled, had no route and no generated code;

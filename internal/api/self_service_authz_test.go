@@ -18,7 +18,6 @@ import (
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/service"
 )
 
@@ -38,9 +37,7 @@ func selfAuthzAgent(t *testing.T, db *sql.DB, login string, isAdmin bool) (int, 
 	if isAdmin {
 		role = "Admin"
 	}
-	tok, err := shared.GetJWTManager().GenerateTokenWithLogin(uint(id), login, login, role, isAdmin, 0)
-	require.NoError(t, err)
-	return int(id), tok
+	return int(id), testSessionToken(t, uint(id), login, login, role, isAdmin, 0)
 }
 
 func selfAuthzDo(t *testing.T, r *gin.Engine, method, url, bearer string, body any) (int, map[string]any) {

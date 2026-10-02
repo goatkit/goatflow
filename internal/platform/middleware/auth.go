@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -31,6 +30,43 @@ func getMiddlewareSessionService() SessionChecker {
 		}
 	})
 	return middlewareSessionService
+}
+
+// sessionVerifiedKey caches the VerifySession result on the gin context so a
+// request that passes through several auth middlewares does one lookup.
+const sessionVerifiedKey = "session_verified"
+
+// VerifySession reports whether the session an access token names still
+// exists, touching its last-request time when it does. Every auth middleware
+// that accepts a JWT must call it: a killed session revokes the token
+// regardless of which cookies or headers the client sends. Without a session
+// checker nothing can vouch for the token, so the answer is no.
+func VerifySession(c *gin.Context, claims *auth.Claims) bool {
+	if v, ok := c.Get(sessionVerifiedKey); ok {
+		return v == claims.SessionID
+	}
+	sessionSvc := getMiddlewareSessionService()
+	if sessionSvc == nil || claims.SessionID == "" {
+		return false
+	}
+	session, err := sessionSvc.GetSession(claims.SessionID)
+	if err != nil || session == nil {
+		return false
+	}
+	_ = sessionSvc.TouchSession(claims.SessionID)
+	c.Set(sessionVerifiedKey, claims.SessionID)
+	return true
+}
+
+// clearAuthCookies expires every auth cookie, agent and customer, so a browser
+// whose session was killed does not keep presenting the dead token.
+func clearAuthCookies(c *gin.Context) {
+	for _, name := range []string{
+		"auth_token", "access_token", "session_id",
+		"customer_auth_token", "customer_access_token", "customer_session_id",
+	} {
+		httpcookie.SetAuth(c, name, "", -1)
+	}
 }
 
 type AuthMiddleware struct {
@@ -64,38 +100,10 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 			return
 		}
 
-		// Validate session exists in database (session was not killed)
-		// Check for customer-specific session cookie first for /customer paths
-		isCustomerPath := strings.HasPrefix(c.Request.URL.Path, "/customer")
-		sessionID, cookieErr := c.Cookie("session_id")
-		if isCustomerPath {
-			if custSessionID, err := c.Cookie("customer_session_id"); err == nil && custSessionID != "" {
-				sessionID = custSessionID
-				cookieErr = nil
-			}
-		}
-		if cookieErr == nil && sessionID != "" {
-			sessionSvc := getMiddlewareSessionService()
-			log.Printf("DEBUG: auth middleware - sessionSvc nil? %v", sessionSvc == nil)
-			if sessionSvc != nil {
-				session, err := sessionSvc.GetSession(sessionID)
-				log.Printf("DEBUG: auth middleware - GetSession result: session=%v, err=%v", session != nil, err)
-				if err != nil || session == nil {
-					// Session was killed or doesn't exist - clear cookies and reject
-					log.Printf("DEBUG: auth middleware - session terminated, rejecting request")
-					httpcookie.SetAuth(c, "auth_token", "", -1)
-					httpcookie.SetAuth(c, "access_token", "", -1)
-					httpcookie.SetAuth(c, "session_id", "", -1)
-					// Also clear customer-specific cookies
-					httpcookie.SetAuth(c, "customer_auth_token", "", -1)
-					httpcookie.SetAuth(c, "customer_access_token", "", -1)
-					httpcookie.SetAuth(c, "customer_session_id", "", -1)
-					m.unauthorizedResponse(c, "Session has been terminated")
-					return
-				}
-				// Update last request time for session activity tracking
-				_ = sessionSvc.TouchSession(sessionID)
-			}
+		if !VerifySession(c, claims) {
+			clearAuthCookies(c)
+			m.unauthorizedResponse(c, "Session has been terminated")
+			return
 		}
 
 		// Set user information in context
@@ -183,7 +191,7 @@ func (m *AuthMiddleware) identify(c *gin.Context) {
 		return
 	}
 	claims, err := m.jwtManager.ValidateToken(token)
-	if err != nil {
+	if err != nil || !VerifySession(c, claims) {
 		return
 	}
 	c.Set("user_id", claims.UserID)

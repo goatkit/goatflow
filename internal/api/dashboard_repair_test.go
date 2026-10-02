@@ -17,7 +17,6 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/plugin/core"
 	platformservice "github.com/goatkit/goatflow/internal/platform/service"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // dashboardBrokenDB returns a closed handle of the current driver: every query
@@ -36,8 +35,7 @@ func dashboardBrokenDB(t *testing.T) *sql.DB {
 
 func dashboardAgentGet(t *testing.T, userID int, url string) *httptest.ResponseRecorder {
 	t.Helper()
-	tok, err := shared.GetJWTManager().GenerateTokenWithLogin(uint(userID), "agent", "agent@example.com", "Agent", false, 0)
-	require.NoError(t, err)
+	tok := testSessionToken(t, uint(userID), "agent", "agent@example.com", "Agent", false, 0)
 	req := httptest.NewRequest(http.MethodGet, url, nil)
 	req.Header.Set("Authorization", "Bearer "+tok)
 	w := httptest.NewRecorder()

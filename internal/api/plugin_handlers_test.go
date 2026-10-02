@@ -20,7 +20,6 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/organisation"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/plugin/example"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 func init() {
@@ -44,8 +43,7 @@ func setupPluginTestRouter(t *testing.T) (*gin.Engine, *plugin.Manager) {
 	mgr.Enable("hello")
 
 	// Generate a valid admin test token
-	jwtManager := shared.GetJWTManager()
-	testJWTToken, _ = jwtManager.GenerateTokenWithAdmin(1, "admin@test.com", "Admin", true, 0)
+	testJWTToken = testSessionToken(t, 1, "admin@test.com", "admin@test.com", "Admin", true, 0)
 
 	r := gin.New()
 	api := r.Group("/api/v1")

@@ -19,7 +19,6 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/routing"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // cannedRoutesEngine serves routes/api-canned-responses.yaml exactly as
@@ -38,9 +37,7 @@ func cannedRoutesEngine(t *testing.T) *gin.Engine {
 
 func cannedToken(t *testing.T, userID uint, role string, isAdmin bool) string {
 	t.Helper()
-	tok, err := shared.GetJWTManager().GenerateTokenWithAdmin(userID, "cr-test@example.com", role, isAdmin, 0)
-	require.NoError(t, err)
-	return tok
+	return testSessionToken(t, userID, "cr-test@example.com", "cr-test@example.com", role, isAdmin, 0)
 }
 
 func cannedRequest(t *testing.T, r *gin.Engine, method, path, token string, body any) (int, map[string]any) {

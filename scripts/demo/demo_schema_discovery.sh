@@ -15,7 +15,9 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 BASE_URL="http://localhost:8080"
-AUTH="Cookie: access_token=demo_session_admin"
+# shellcheck source=../lib/admin-login.sh
+source "$(dirname "$0")/../lib/admin-login.sh"
+AUTH=$(admin_login_cookie "$BASE_URL") || exit 1
 
 echo -e "${BLUE}Step 1: Discover Available Tables${NC}"
 echo "Finding tables that don't have modules yet..."

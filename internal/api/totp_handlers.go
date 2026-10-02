@@ -891,8 +891,14 @@ func handleCustomer2FAVerify(c *gin.Context) {
 		return
 	}
 
-	// Generate token
-	jwtToken, err := jwtManager.GenerateTokenWithLogin(userID, session.UserLogin, email, "Customer", false, 0)
+	// Session row first: the token is only valid while the row exists.
+	sessionID, err := newLoginSession(c, int(userID), session.UserLogin, "Customer")
+	if err != nil {
+		log.Printf("customer 2FA login: create session for %s: %v", session.UserLogin, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "authentication unavailable"})
+		return
+	}
+	jwtToken, err := jwtManager.GenerateTokenWithLogin(sessionID, userID, session.UserLogin, email, "Customer", false, 0)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to generate token"})
 		return
@@ -909,6 +915,7 @@ func handleCustomer2FAVerify(c *gin.Context) {
 	httpcookie.SetAuth(c, "customer_access_token", jwtToken, sessionTimeout)
 	httpcookie.SetAuth(c, "customer_auth_token", jwtToken, sessionTimeout)
 	httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "1", sessionTimeout)
+	httpcookie.SetAuth(c, "customer_session_id", sessionID, sessionTimeout)
 
 	redirectTarget := customerLandingRedirect(session.UserLogin)
 	c.Header("HX-Redirect", redirectTarget)

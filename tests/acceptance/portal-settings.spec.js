@@ -1,12 +1,6 @@
 import { test, expect, request as playwrightRequest } from '@playwright/test';
-import { BASE_URL, BASE_HOST } from './base-url.js';
-
-const adminCookie = {
-  name: 'access_token',
-  value: 'demo_session_admin',
-  domain: BASE_HOST,
-  path: '/',
-};
+import { BASE_URL } from './base-url.js';
+import { loginAdmin } from './login.js';
 
 const defaultPortal = {
   enabled: true,
@@ -27,7 +21,7 @@ const setToggle = async (checkbox, target) => {
 
 test.describe('Admin Portal Settings', () => {
   test.beforeEach(async ({ page }) => {
-    await page.context().addCookies([adminCookie]);
+    await loginAdmin(page);
   });
 
   test('updates and restores global portal settings via UI', async ({ page }) => {
@@ -85,11 +79,12 @@ test.describe('Admin Portal Settings', () => {
     }
   });
 
-  test('updates and resets company portal overrides via API', async () => {
+  test('updates and resets company portal overrides via API', async ({ page }) => {
+    const token = await loginAdmin(page);
     const api = await playwrightRequest.newContext({
       baseURL: BASE_URL,
       extraHTTPHeaders: {
-        Cookie: `access_token=${adminCookie.value}; Path=/; Domain=${adminCookie.domain}`,
+        Cookie: `access_token=${token}`,
       },
     });
 

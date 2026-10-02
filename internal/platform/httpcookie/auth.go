@@ -31,6 +31,37 @@ func ClearAuthState(c *gin.Context, name string) {
 	SetAuthState(c, name, "", -1)
 }
 
+// SetIdPReturn stores a sensitive cookie that must come back on the request
+// an identity provider sends the browser to after login, whatever
+// session.same_site is configured: SameSite=Lax for a redirect (OIDC
+// callback, a top-level GET). A SAML assertion arrives as a cross-site POST,
+// which Lax cookies are not sent on, so post=true uses SameSite=None when the
+// cookie is Secure; over plain HTTP, where browsers refuse SameSite=None, the
+// attribute is left unset and the browser default applies.
+func SetIdPReturn(c *gin.Context, name, value string, maxAge int, post bool) {
+	if c == nil || c.Writer == nil {
+		return
+	}
+	secure := secureCookieRequired()
+	sameSite := http.SameSiteLaxMode
+	if post {
+		sameSite = http.SameSiteDefaultMode
+		if secure {
+			sameSite = http.SameSiteNoneMode
+		}
+	}
+	// #nosec G124 -- Secure follows production/session.secure config (plain-HTTP dev must work)
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     name,
+		Value:    value,
+		Path:     "/",
+		MaxAge:   maxAge,
+		Secure:   secure,
+		HttpOnly: true,
+		SameSite: sameSite,
+	})
+}
+
 func set(c *gin.Context, name, value string, maxAge int, httpOnly bool) {
 	if c == nil || c.Writer == nil {
 		return

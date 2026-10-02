@@ -369,10 +369,10 @@ func parseCertificate(pemBytes []byte) (*x509.Certificate, error) {
 	return x509.ParseCertificate(block.Bytes)
 }
 
-// fetchIdPMetadata downloads and parses the IdP XML metadata from the given URL.
+// fetchIdPMetadata downloads and parses the IdP XML metadata from the given
+// URL through the address-guarded client (the URL is admin-supplied).
 func fetchIdPMetadata(metadataURL string) (*saml.EntityDescriptor, error) {
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Get(metadataURL)
+	resp, err := idpHTTPClient.Get(metadataURL)
 	if err != nil {
 		return nil, fmt.Errorf("http GET: %w", err)
 	}

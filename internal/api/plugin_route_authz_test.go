@@ -20,7 +20,6 @@ import (
 	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/routing"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // authzEchoPlugin echoes the args it receives so tests can see what the host
@@ -104,11 +103,8 @@ func newPluginAuthzFixture(t *testing.T) *pluginAuthzFixture {
 	addToGroup(f.adminID, adminGroupID)
 	f.otherID = insertUser("authz-other-" + suffix)
 
-	jwtMgr := shared.GetJWTManager()
 	f.jwtMaker = func(id int, login, role string, isAdmin bool) string {
-		tok, err := jwtMgr.GenerateTokenWithLogin(uint(id), login, login, role, isAdmin, 0)
-		require.NoError(t, err)
-		return tok
+		return testSessionToken(t, uint(id), login, login, role, isAdmin, 0)
 	}
 	f.agentJWT = f.jwtMaker(f.agentID, "authz-agent-"+suffix, "Agent", false)
 	f.otherJWT = f.jwtMaker(f.otherID, "authz-other-"+suffix, "Agent", false)

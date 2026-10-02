@@ -4,8 +4,12 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"net/netip"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -88,4 +92,35 @@ func TestTargetDialerDialsTheCheckedAddress(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, ln.Addr().String(), conn.RemoteAddr().String())
 	conn.Close()
+}
+
+// NewHTTPClient carries the guard to other admin-supplied URLs: an internal
+// target fails with BlockedTargetError and is not contacted; redirects are
+// not followed.
+func TestNewHTTPClientGuardsTargets(t *testing.T) {
+	var hits int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		if r.URL.Path == "/redirect" {
+			http.Redirect(w, r, "/elsewhere", http.StatusFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	client := NewHTTPClient(5 * time.Second)
+
+	t.Setenv(AllowPrivateTargetsEnv, "")
+	_, err := client.Get(srv.URL + "/")
+	require.Error(t, err)
+	var blocked *BlockedTargetError
+	assert.True(t, errors.As(err, &blocked), "got %v", err)
+	assert.Equal(t, int32(0), atomic.LoadInt32(&hits))
+
+	t.Setenv(AllowPrivateTargetsEnv, "true")
+	resp, err := client.Get(srv.URL + "/redirect")
+	require.NoError(t, err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusFound, resp.StatusCode, "redirects are not followed")
+	assert.Equal(t, int32(1), atomic.LoadInt32(&hits))
 }

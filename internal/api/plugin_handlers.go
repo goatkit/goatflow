@@ -643,7 +643,7 @@ func SessionOrJWTAuth() gin.HandlerFunc {
 		}
 
 		claims, err := jwtMgr.ValidateToken(token)
-		if err != nil {
+		if err != nil || !middleware.VerifySession(c, claims) {
 			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Invalid or expired token"})
 			c.Abort()
 			return

@@ -19,7 +19,6 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/customfields"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/routing"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // tbaFixture is a non-admin agent with explicit queue permissions and tickets
@@ -146,8 +145,7 @@ func newTBAFixture(t *testing.T) *tbaFixture {
 	f.articleRO = newArticle(f.ticketRO)
 	f.articleNone = newArticle(f.ticketNone)
 
-	f.token, err = shared.GetJWTManager().GenerateTokenWithLogin(uint(f.agent), login, login, "Agent", false, 0)
-	require.NoError(t, err)
+	f.token = testSessionToken(t, uint(f.agent), login, login, "Agent", false, 0)
 
 	gin.SetMode(gin.TestMode)
 	f.router = gin.New()

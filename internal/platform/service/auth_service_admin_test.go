@@ -18,8 +18,8 @@ func TestIssueTokensFailsWhenAdminLookupFails(t *testing.T) {
 	}
 	_ = db.Close() // every query now fails with "sql: database is closed"
 
-	svc := NewAuthService(db, testJWTManager(t), nil, nil)
-	access, refresh, err := svc.issueTokens(&platformmodels.User{ID: 7, Login: "agent7", Role: "Agent"})
+	svc := NewAuthService(db, testJWTManager(t), nil, nil, nil)
+	access, refresh, err := svc.issueTokens(&platformmodels.User{ID: 7, Login: "agent7", Role: "Agent"}, "sess-1", 0)
 	if err == nil {
 		t.Fatalf("expected error, got tokens %q / %q", access, refresh)
 	}
@@ -27,8 +27,8 @@ func TestIssueTokensFailsWhenAdminLookupFails(t *testing.T) {
 		t.Fatalf("no tokens may be issued on lookup failure, got %q / %q", access, refresh)
 	}
 
-	svc = NewAuthService(nil, testJWTManager(t), nil, nil)
-	if _, _, err := svc.issueTokens(&platformmodels.User{ID: 7, Login: "agent7", Role: "Agent"}); err == nil {
+	svc = NewAuthService(nil, testJWTManager(t), nil, nil, nil)
+	if _, _, err := svc.issueTokens(&platformmodels.User{ID: 7, Login: "agent7", Role: "Agent"}, "sess-1", 0); err == nil {
 		t.Fatal("expected error without a database")
 	}
 }

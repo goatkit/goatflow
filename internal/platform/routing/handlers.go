@@ -132,42 +132,23 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 				return
 			}
 
-			// Validate session exists in database (session was not killed)
-			// Check for customer-specific session cookie first for /customer paths
-			isCustomerPath := strings.HasPrefix(path, "/customer")
-			sessionID, cookieErr := c.Cookie("session_id")
-			if isCustomerPath {
-				if custSessionID, err := c.Cookie("customer_session_id"); err == nil && custSessionID != "" {
-					sessionID = custSessionID
-					cookieErr = nil
+			// A killed session revokes the token, whatever the client sends.
+			if !middleware.VerifySession(c, claims) {
+				for _, name := range []string{"auth_token", "access_token", "session_id",
+					"customer_auth_token", "customer_access_token", "customer_session_id"} {
+					httpcookie.SetAuth(c, name, "", -1)
 				}
-			}
-			if cookieErr == nil && sessionID != "" {
-				if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
-					session, sessionErr := sessionSvc.GetSession(sessionID)
-					if sessionErr != nil || session == nil {
-						// Session was killed - clear all cookies and reject
-						httpcookie.SetAuth(c, "auth_token", "", -1)
-						httpcookie.SetAuth(c, "access_token", "", -1)
-						httpcookie.SetAuth(c, "session_id", "", -1)
-						httpcookie.SetAuth(c, "customer_auth_token", "", -1)
-						httpcookie.SetAuth(c, "customer_access_token", "", -1)
-						httpcookie.SetAuth(c, "customer_session_id", "", -1)
-						if wantsHTMLResponse(c) {
-							loginPath := "/login"
-							if strings.HasPrefix(path, "/customer") {
-								loginPath = "/customer/login"
-							}
-							c.Redirect(http.StatusSeeOther, loginPath)
-						} else {
-							c.JSON(http.StatusUnauthorized, gin.H{"error": "Session has been terminated"})
-						}
-						c.Abort()
-						return
+				if wantsHTMLResponse(c) {
+					loginPath := "/login"
+					if strings.HasPrefix(path, "/customer") {
+						loginPath = "/customer/login"
 					}
-					// Update last request time for session activity tracking
-					_ = sessionSvc.TouchSession(sessionID)
+					c.Redirect(http.StatusSeeOther, loginPath)
+				} else {
+					c.JSON(http.StatusUnauthorized, gin.H{"error": "Session has been terminated"})
 				}
+				c.Abort()
+				return
 			}
 
 			// Store user info in context (normalize and enrich)

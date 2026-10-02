@@ -56,21 +56,22 @@ make toolbox-exec ARGS="go build ./cmd/goats" && make restart
 # 2. Check health
 curl -s http://localhost:8080/health
 
-# 3. Test page loads (should return 200)
-curl -s "http://localhost:8080/admin/MODULE" -H "Cookie: access_token=demo_session_1755839704" -o /dev/null -w "%{http_code}"
+# 3. Log in (DEMO_ADMIN_EMAIL / DEMO_ADMIN_PASSWORD from .env) and test page loads (should return 200)
+source scripts/lib/admin-login.sh && AUTH=$(admin_login_cookie http://localhost:8080)
+curl -s "http://localhost:8080/admin/MODULE" -H "$AUTH" -o /dev/null -w "%{http_code}"
 
 # 4. Check logs for template errors
 make logs | grep -i "error\|template"
 
 # 5. Test CREATE with all validity states
 curl -X POST "http://localhost:8080/admin/MODULE/create" \
-  -H "Cookie: access_token=demo_session_1755839704" \
+  -H "$AUTH" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "name=Test&valid_id=1"
 
 # 6. Test UPDATE
 curl -X POST "http://localhost:8080/admin/MODULE/ID/update" \
-  -H "Cookie: access_token=demo_session_1755839704" \
+  -H "$AUTH" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "name=Updated&valid_id=3"
 

@@ -28,7 +28,6 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/routing"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/storage"
 )
 
@@ -45,8 +44,7 @@ func newAttachmentAPI(t *testing.T) *attachmentAPI {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	require.NoError(t, routing.LoadYAMLRoutesForTesting(router))
-	token, err := shared.GetJWTManager().GenerateToken(1, "root@localhost", "Agent", 0)
-	require.NoError(t, err)
+	token := testSessionToken(t, 1, "root@localhost", "root@localhost", "Agent", false, 0)
 	return &attachmentAPI{t: t, router: router, auth: "Bearer " + token}
 }
 

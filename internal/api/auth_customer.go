@@ -126,8 +126,15 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			return
 		}
 
+		// The session row is what makes the token revocable; no row, no login.
+		sessionID, err := newLoginSession(c, int(user.ID), user.Login, "Customer")
+		if err != nil {
+			log.Printf("customer login: create session for %s: %v", user.Login, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Login temporarily unavailable"})
+			return
+		}
 		tenantID := middleware.ResolveTenantFromHost(c.Request.Host)
-		token, err := jwtManager.GenerateTokenWithLogin(user.ID, user.Login, user.Email, "Customer", false, tenantID)
+		token, err := jwtManager.GenerateTokenWithLogin(sessionID, user.ID, user.Login, user.Email, "Customer", false, tenantID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to generate token"})
 			return
@@ -167,23 +174,8 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			c.SetCookie("goatflow_mode", userThemeMode, sessionTimeout, "/", "", false, false)
 		}
 
-		// Create session record in database for admin session management
-		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
-			sessionID, err := sessionSvc.CreateSession(
-				int(user.ID),
-				user.Login,
-				"Customer",
-				c.ClientIP(),
-				c.Request.UserAgent(),
-			)
-			if err != nil {
-				// Log error but don't fail login - session tracking is non-critical
-				log.Printf("Failed to create customer session record: %v", err)
-			} else {
-				// Store session ID in a customer-specific cookie for logout cleanup
-				httpcookie.SetAuth(c, "customer_session_id", sessionID, sessionTimeout)
-			}
-		}
+		// Customer-specific session cookie for logout cleanup
+		httpcookie.SetAuth(c, "customer_session_id", sessionID, sessionTimeout)
 
 		redirectTarget := customerLandingRedirect(user.Login)
 

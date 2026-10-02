@@ -73,7 +73,7 @@ func CustomerCaptiveRedirect(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			return
 		}
 		claims, err := jwtManager.ValidateToken(token)
-		if err != nil || claims == nil || claims.Role != "Customer" {
+		if err != nil || claims == nil || claims.Role != "Customer" || !VerifySession(c, claims) {
 			c.Next()
 			return
 		}

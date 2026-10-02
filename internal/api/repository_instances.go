@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"sync"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 	platformservice "github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/platform/shared"
+	"github.com/goatkit/goatflow/internal/platform/webhook"
 	"github.com/goatkit/goatflow/internal/repository"
 	"github.com/goatkit/goatflow/internal/service"
 )
@@ -157,10 +157,12 @@ func initDatabaseServicesLocked(db *sql.DB) {
 
 	// Initialize OIDC support
 	auth.SetStateStore(auth.NewMemoryStateStore())
-	oidcClient := &http.Client{Timeout: 30 * time.Second}
+	// IdP URLs are admin-set and fetched on unauthenticated requests: guard
+	// them like webhook targets.
+	oidcClient := webhook.NewHTTPClient(30 * time.Second)
 	auth.SetOIDCClient(oidcClient)
 
 	jwtManager := shared.GetJWTManager()
-	authService = platformservice.NewAuthService(db, jwtManager, oidcClient, auth.GetStateStore())
+	authService = platformservice.NewAuthService(db, jwtManager, oidcClient, auth.GetStateStore(), shared.GetSessionService())
 	log.Printf("Successfully connected to database")
 }

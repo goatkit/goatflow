@@ -127,7 +127,7 @@ func (w *Webhook) Normalize(knownEvent func(string) bool) error {
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return invalid("url must be an absolute http or https URL")
 	}
-	if err := checkTargetHost(u.Hostname()); err != nil {
+	if err := CheckTargetHost(u.Hostname()); err != nil {
 		return invalid("%s", err.Error())
 	}
 	if len(w.Events) == 0 {

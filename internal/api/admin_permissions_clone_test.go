@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
 // The "Clone Permissions" modal on /admin/permissions posts multipart form
@@ -83,8 +82,7 @@ func TestAdminPermissionsCloneRoute(t *testing.T) {
 	grant(t, target, groupB, "owner") // must disappear: clone replaces
 
 	t.Run("agent outside the admin group is rejected", func(t *testing.T) {
-		agentToken, err := shared.GetJWTManager().GenerateTokenWithAdmin(uint(source), sourceLogin, "Agent", false, 0)
-		require.NoError(t, err)
+		agentToken := testSessionToken(t, uint(source), sourceLogin, sourceLogin, "Agent", false, 0)
 		w := post(t, agentToken, source, target)
 		require.Equal(t, http.StatusForbidden, w.Code, w.Body.String())
 		assert.Equal(t, []string{fmt.Sprintf("%d:owner", groupB)}, permsOf(t, target))

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,7 +12,43 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
+	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
+
+// fakeSessions is a SessionChecker over an in-memory set of live session ids.
+type fakeSessions struct{ live map[string]bool }
+
+func (f *fakeSessions) GetSession(id string) (*platformmodels.Session, error) {
+	if f.live[id] {
+		return &platformmodels.Session{SessionID: id}, nil
+	}
+	return nil, errors.New("session not found")
+}
+
+func (f *fakeSessions) TouchSession(string) error { return nil }
+
+// useFakeSessions installs an in-memory session checker for the test; the
+// returned set is what VerifySession consults.
+func useFakeSessions(t *testing.T, live ...string) *fakeSessions {
+	t.Helper()
+	f := &fakeSessions{live: map[string]bool{}}
+	for _, id := range live {
+		f.live[id] = true
+	}
+	prev := middlewareSessionService
+	middlewareSessionOnce.Do(func() {})
+	middlewareSessionService = f
+	t.Cleanup(func() { middlewareSessionService = prev })
+	return f
+}
+
+// sessionToken mints an access token bound to session "live".
+func sessionToken(t *testing.T, m *auth.JWTManager, userID uint, email, role string) string {
+	t.Helper()
+	token, err := m.GenerateTokenWithLogin("live", userID, email, email, role, false, 1)
+	require.NoError(t, err)
+	return token
+}
 
 func TestAuthMiddleware(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -20,6 +57,55 @@ func TestAuthMiddleware(t *testing.T) {
 	// Production rejects short/placeholder secrets, so use a real-length key.
 	jwtManager := auth.NewJWTManager("middleware-auth-suite-signing-key-0123456789", 1*time.Hour)
 	authMiddleware := NewAuthMiddleware(jwtManager)
+	sessions := useFakeSessions(t, "live")
+
+	t.Run("RequireAuth rejects a token whose session was killed", func(t *testing.T) {
+		router := gin.New()
+		router.Use(authMiddleware.RequireAuth())
+		router.GET("/protected", func(c *gin.Context) { c.JSON(200, gin.H{"ok": true}) })
+
+		killed, err := jwtManager.GenerateTokenWithLogin("killed", 123, "test@example.com", "test@example.com", "Admin", false, 1)
+		require.NoError(t, err)
+		for _, send := range map[string]func(*http.Request){
+			"bearer": func(r *http.Request) { r.Header.Set("Authorization", "Bearer "+killed) },
+			"cookie": func(r *http.Request) { r.AddCookie(&http.Cookie{Name: "auth_token", Value: killed}) },
+		} {
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", "/protected", nil)
+			send(req)
+			router.ServeHTTP(w, req)
+			assert.Equal(t, http.StatusUnauthorized, w.Code)
+			assert.Contains(t, w.Body.String(), "Session has been terminated")
+		}
+
+		// Same token once the session exists again: accepted, and a later
+		// kill is seen on the next request (nothing is cached across requests).
+		sessions.live["killed"] = true
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+killed)
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+		delete(sessions.live, "killed")
+		w = httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("OptionalAuth ignores a token whose session was killed", func(t *testing.T) {
+		router := gin.New()
+		router.Use(authMiddleware.OptionalAuth())
+		router.GET("/public", func(c *gin.Context) { c.JSON(200, gin.H{"authenticated": authMiddleware.IsAuthenticated(c)}) })
+
+		killed, err := jwtManager.GenerateTokenWithLogin("killed", 123, "test@example.com", "test@example.com", "Admin", false, 1)
+		require.NoError(t, err)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/public", nil)
+		req.Header.Set("Authorization", "Bearer "+killed)
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), `"authenticated":false`)
+	})
 
 	t.Run("RequireAuth blocks unauthenticated requests", func(t *testing.T) {
 		router := gin.New()
@@ -45,8 +131,7 @@ func TestAuthMiddleware(t *testing.T) {
 		})
 
 		// Generate valid token
-		token, err := jwtManager.GenerateToken(123, "test@example.com", "Admin", 1)
-		require.NoError(t, err)
+		token := sessionToken(t, jwtManager, 123, "test@example.com", "Admin")
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/protected", nil)
@@ -86,8 +171,7 @@ func TestAuthMiddleware(t *testing.T) {
 		})
 
 		// Create token with Agent role
-		token, err := jwtManager.GenerateToken(1, "agent@example.com", "Agent", 1)
-		require.NoError(t, err)
+		token := sessionToken(t, jwtManager, 1, "agent@example.com", "Agent")
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/admin", nil)
@@ -107,8 +191,7 @@ func TestAuthMiddleware(t *testing.T) {
 		})
 
 		// Create token with Agent role
-		token, err := jwtManager.GenerateToken(1, "agent@example.com", "Agent", 1)
-		require.NoError(t, err)
+		token := sessionToken(t, jwtManager, 1, "agent@example.com", "Agent")
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/resource", nil)
@@ -127,8 +210,7 @@ func TestAuthMiddleware(t *testing.T) {
 		})
 
 		// Admin should have ticket create permission
-		adminToken, err := jwtManager.GenerateToken(1, "admin@example.com", "Admin", 1)
-		require.NoError(t, err)
+		adminToken := sessionToken(t, jwtManager, 1, "admin@example.com", "Admin")
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/tickets", nil)
@@ -138,8 +220,7 @@ func TestAuthMiddleware(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		// Customer should not have ticket create permission
-		customerToken, err := jwtManager.GenerateToken(2, "customer@example.com", "Customer", 1)
-		require.NoError(t, err)
+		customerToken := sessionToken(t, jwtManager, 2, "customer@example.com", "Customer")
 
 		w2 := httptest.NewRecorder()
 		req2, _ := http.NewRequest("GET", "/tickets", nil)
@@ -185,8 +266,7 @@ func TestAuthMiddleware(t *testing.T) {
 		})
 
 		// Generate valid token
-		token, err := jwtManager.GenerateToken(456, "test@example.com", "User", 1)
-		require.NoError(t, err)
+		token := sessionToken(t, jwtManager, 456, "test@example.com", "User")
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/public", nil)
@@ -331,7 +411,7 @@ func TestAuthMiddleware(t *testing.T) {
 		assert.Contains(t, w1.Body.String(), `"authenticated":false`)
 
 		// With token
-		token, _ := jwtManager.GenerateToken(1, "test@example.com", "User", 1)
+		token := sessionToken(t, jwtManager, 1, "test@example.com", "User")
 		w2 := httptest.NewRecorder()
 		req2, _ := http.NewRequest("GET", "/check", nil)
 		req2.Header.Set("Authorization", "Bearer "+token)
@@ -348,7 +428,7 @@ func TestAuthMiddleware(t *testing.T) {
 			c.JSON(200, gin.H{"user_id": userID, "exists": exists})
 		})
 
-		token, _ := jwtManager.GenerateToken(999, "test@example.com", "User", 1)
+		token := sessionToken(t, jwtManager, 999, "test@example.com", "User")
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/userid", nil)
 		req.Header.Set("Authorization", "Bearer "+token)
@@ -367,7 +447,7 @@ func TestAuthMiddleware(t *testing.T) {
 			c.JSON(200, gin.H{"role": role, "exists": exists})
 		})
 
-		token, _ := jwtManager.GenerateToken(1, "test@example.com", "Agent", 1)
+		token := sessionToken(t, jwtManager, 1, "test@example.com", "Agent")
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/role", nil)
 		req.Header.Set("Authorization", "Bearer "+token)
@@ -389,7 +469,7 @@ func TestAuthMiddleware(t *testing.T) {
 		})
 
 		// Test with Admin (should have access)
-		adminToken, _ := jwtManager.GenerateToken(1, "admin@example.com", "Admin", 1)
+		adminToken := sessionToken(t, jwtManager, 1, "admin@example.com", "Admin")
 		w1 := httptest.NewRecorder()
 		req1, _ := http.NewRequest("GET", "/ticket/1", nil)
 		req1.Header.Set("Authorization", "Bearer "+adminToken)
@@ -397,7 +477,7 @@ func TestAuthMiddleware(t *testing.T) {
 		assert.Contains(t, w1.Body.String(), `"can_access":true`)
 
 		// Test with Customer who owns the ticket
-		customerToken, _ := jwtManager.GenerateToken(100, "customer@example.com", "Customer", 1)
+		customerToken := sessionToken(t, jwtManager, 100, "customer@example.com", "Customer")
 		w2 := httptest.NewRecorder()
 		req2, _ := http.NewRequest("GET", "/ticket/1", nil)
 		req2.Header.Set("Authorization", "Bearer "+customerToken)
@@ -405,7 +485,7 @@ func TestAuthMiddleware(t *testing.T) {
 		assert.Contains(t, w2.Body.String(), `"can_access":true`)
 
 		// Test with Customer who doesn't own the ticket
-		otherCustomerToken, _ := jwtManager.GenerateToken(200, "other@example.com", "Customer", 1)
+		otherCustomerToken := sessionToken(t, jwtManager, 200, "other@example.com", "Customer")
 		w3 := httptest.NewRecorder()
 		req3, _ := http.NewRequest("GET", "/ticket/1", nil)
 		req3.Header.Set("Authorization", "Bearer "+otherCustomerToken)

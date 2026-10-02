@@ -11,7 +11,9 @@ NC='\033[0m' # No Color
 
 # Base URL and auth
 BASE_URL="http://localhost:8080"
-AUTH_HEADER="Cookie: access_token=demo_session_admin"
+# shellcheck source=../scripts/lib/admin-login.sh
+source "$(dirname "$0")/../scripts/lib/admin-login.sh"
+AUTH_HEADER=$(admin_login_cookie "$BASE_URL") || exit 1
 MODULE_BASE_URL="$BASE_URL/admin/modules"
 SCHEMA_API="$MODULE_BASE_URL/_schema"
 
