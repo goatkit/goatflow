@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -261,24 +262,18 @@ func (s *SandboxedHostAPI) requirePermission(permType, access string) error {
 
 // matchURLPattern checks if a URL matches a scope pattern.
 // Patterns: "*" matches every host, "*.example.com" matches the domain and
-// its subdomains, "api.example.com" matches exact host.
-func matchURLPattern(pattern, url string) bool {
+// its subdomains, "api.example.com" matches exact host. The host is the one
+// net/http will connect to (url.Parse, then Hostname), so a query string,
+// fragment or userinfo placed before the first "/" cannot pose as the host.
+func matchURLPattern(pattern, rawURL string) bool {
 	if pattern == "*" {
 		return true
 	}
-	// Extract host from URL
-	host := url
-	if idx := strings.Index(host, "://"); idx >= 0 {
-		host = host[idx+3:]
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Host == "" {
+		return false
 	}
-	if idx := strings.Index(host, "/"); idx >= 0 {
-		host = host[:idx]
-	}
-	if idx := strings.Index(host, ":"); idx >= 0 {
-		host = host[:idx]
-	}
-
-	host = strings.ToLower(host)
+	host := strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
 	pattern = strings.ToLower(pattern)
 
 	if strings.HasPrefix(pattern, "*.") {

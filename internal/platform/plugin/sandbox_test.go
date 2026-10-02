@@ -626,6 +626,16 @@ func TestMatchURLPattern(t *testing.T) {
 		{"api.giphy.com", "https://api.giphy.com/v1/gifs", true},
 		{"api.giphy.com", "https://cdn.giphy.com/media/abc.gif", false},
 		{"*.bbc.co.uk", "https://feeds.bbc.co.uk/rss", true},
+		// The host is what the HTTP client connects to: a query string,
+		// fragment or userinfo before the first "/" must not pass as it.
+		{"*.tenor.com", "https://evil.com?x=.tenor.com", false},
+		{"*.tenor.com", "https://evil.com#.tenor.com", false},
+		{"*.tenor.com", "https://evil.com?.tenor.com/v2/search", false},
+		{"api.tenor.com", "https://api.tenor.com@evil.com/v2/search", false},
+		{"*.tenor.com", "https://api.tenor.com@evil.com/v2/search", false},
+		{"api.tenor.com", "https://api.tenor.com./v2/search", true},
+		{"api.tenor.com", "not a url", false},
+		{"api.tenor.com", "", false},
 	}
 
 	for _, tt := range tests {
