@@ -62,11 +62,16 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libvips-dev
 
       - name: Run gosec security scanner
+        # Fails the job on any finding. Version comes from Dockerfile.toolbox
+        # (GOSEC_VERSION) so CI and `make gosec` run the same gosec; flags come
+        # from GOSEC_FLAGS in the Makefile. False positives are annotated in
+        # code with `// #nosec G<rule> -- <reason>`.
         run: |
-          go install github.com/securego/gosec/v2/cmd/gosec@v2.22.4
+          GOSEC_VERSION=$(sed -n 's/^ARG GOSEC_VERSION=//p' Dockerfile.toolbox)
+          test -n "$GOSEC_VERSION"
+          go install "github.com/securego/gosec/v2/cmd/gosec@${GOSEC_VERSION}"
           mkdir -p security-artifacts
-          gosec -fmt=json -out=security-artifacts/gosec-report.json ./... || true
-          gosec -fmt=text ./... || echo "Security issues found - see gosec-report.json"
+          make gosec-host GOSEC_EXTRA="-fmt=json -out=security-artifacts/gosec-report.json -stdout -verbose=text"
 
       - name: Run go vet
         run: go vet ./...
@@ -144,8 +149,8 @@ jobs:
           name: test-artifacts
           path: |
             /tmp/goatflow-test-*/
-            tests/e2e/playwright/screenshots/
-            tests/e2e/playwright/videos/
+            tests/e2e/test-results/
+            tests/e2e/playwright/test-results/
           retention-days: 7
 
   # ─────────────────────────────────────────────

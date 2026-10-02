@@ -22,25 +22,7 @@ import (
 // extractUserIDForRBAC extracts user ID from gin context for RBAC checks
 // Returns 0 if not authenticated
 func extractUserIDForRBAC(c *gin.Context) int {
-	userIDVal, exists := c.Get("user_id")
-	if !exists {
-		return 0
-	}
-
-	switch v := userIDVal.(type) {
-	case int:
-		return v
-	case int64:
-		return int(v)
-	case uint:
-		return int(v)
-	case uint64:
-		return int(v)
-	case float64:
-		return int(v)
-	default:
-		return 0
-	}
+	return GetUserIDFromCtx(c, 0)
 }
 
 // buildQueueFilterClause creates SQL WHERE clause fragment for RBAC queue filtering
@@ -59,15 +41,18 @@ func buildQueueFilterClause(queueIDs []int, queueIDColumn string) (string, []int
 }
 
 // statsScope is the set of queues whose tickets a statistics caller may count.
+// Only valid queues are ever counted: for agents the queue access service
+// returns valid queues only, and admins get every valid queue, so totals
+// always match the per-queue lists (which list valid queues).
 type statsScope struct {
-	all      bool // admin: every queue
+	all      bool // admin: every valid queue
 	queueIDs []int
 }
 
 // filter returns the SQL fragment restricting queueIDColumn to the scope.
 func (s statsScope) filter(queueIDColumn string) (string, []interface{}) {
 	if s.all {
-		return "1 = 1", nil
+		return queueIDColumn + " IN (SELECT id FROM queue WHERE valid_id = 1)", nil
 	}
 	return buildQueueFilterClause(s.queueIDs, queueIDColumn)
 }
@@ -179,6 +164,9 @@ func statsLookback(c *gin.Context) (string, time.Duration, bool) {
 	return "", 0, false
 }
 
+// maxTopCustomers bounds the top parameter of /statistics/customers.
+const maxTopCustomers = 100
+
 // Statistics state buckets, derived from ticket_state_type.name. State type IDs
 // differ between GoatFlow's seed data and OTRS imports, so only names are used.
 const (
@@ -264,6 +252,29 @@ func (t statsTicket) closedAt() (time.Time, bool) {
 	return t.changed, t.category == statsClosed
 }
 
+// endedAt reports when a ticket stopped being unresolved: tickets now in a
+// state type outside the open and pending buckets (closed, merged, removed)
+// ended at their last change.
+func (t statsTicket) endedAt() (time.Time, bool) {
+	return t.changed, t.category != statsOpen && t.category != statsPending
+}
+
+// countUnresolvedAt counts the tickets in scope created before at that had not
+// ended (see endedAt) by then.
+func countUnresolvedAt(db *sql.DB, scope statsScope, at time.Time) (int, error) {
+	filter, args := scope.filter("t.queue_id")
+	var n int
+	err := db.QueryRow(database.ConvertPlaceholders(`
+		SELECT COUNT(t.id)
+		FROM ticket t
+		JOIN ticket_state ts ON ts.id = t.ticket_state_id
+		JOIN ticket_state_type tst ON tst.id = ts.type_id
+		WHERE `+filter+` AND t.create_time < ?
+			AND (tst.name IN ('new', 'open') OR tst.name LIKE 'pending%' OR t.change_time >= ?)`),
+		append(args, at, at)...).Scan(&n)
+	return n, err
+}
+
 // loadStatsTickets loads the tickets in scope. With since set, only tickets
 // created or changed at or after since are returned.
 func loadStatsTickets(db *sql.DB, scope statsScope, since *time.Time) ([]statsTicket, error) {
@@ -307,12 +318,14 @@ func loadStatsTickets(db *sql.DB, scope statsScope, since *time.Time) ([]statsTi
 // HandleDashboardStatisticsAPI handles GET /api/v1/statistics/dashboard.
 //
 //	@Summary		Get dashboard statistics
-//	@Description	Retrieve dashboard statistics (ticket counts, trends) - RBAC filtered
+//	@Description	All-time ticket counts by state bucket, valid queue and valid priority, plus the 10 newest tickets (RBAC filtered)
 //	@Tags			Statistics
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	map[string]interface{}	"Dashboard statistics"
+//	@Success		200	{object}	map[string]interface{}	"overview, by_queue[], by_priority[], recent_activity[]"
 //	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		403	{object}	map[string]interface{}	"Customer caller or no readable queue"
+//	@Failure		500	{object}	map[string]interface{}	"Database error"
 //	@Security		BearerAuth
 //	@Router			/statistics/dashboard [get]
 func HandleDashboardStatisticsAPI(c *gin.Context) {
@@ -437,13 +450,18 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 // HandleTicketTrendsAPI handles GET /api/v1/statistics/trends.
 //
 //	@Summary		Get ticket trends
-//	@Description	Retrieve ticket creation/resolution trends over time
+//	@Description	Tickets created, closed and still open per UTC day or month (RBAC filtered)
 //	@Tags			Statistics
 //	@Accept			json
 //	@Produce		json
-//	@Param			period	query		string	false	"Time period (day, week, month)"
-//	@Success		200		{object}	map[string]interface{}	"Trend data"
+//	@Param			period	query		string	false	"Bucket size"	Enums(daily, monthly)	default(daily)
+//	@Param			days	query		int		false	"Number of daily buckets (period=daily)"	minimum(1)	maximum(366)	default(7)
+//	@Param			months	query		int		false	"Number of monthly buckets (period=monthly)"	minimum(1)	maximum(24)	default(3)
+//	@Success		200		{object}	map[string]interface{}	"period, days|months, trends[] {date, created, closed, open}, summary"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid parameter"
 //	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		403		{object}	map[string]interface{}	"Customer caller or no readable queue"
+//	@Failure		500		{object}	map[string]interface{}	"Database error"
 //	@Security		BearerAuth
 //	@Router			/statistics/trends [get]
 func HandleTicketTrendsAPI(c *gin.Context) {
@@ -494,26 +512,37 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 		statsDBError(c, "trends", err)
 		return
 	}
+	open, err := countUnresolvedAt(db, scope, start)
+	if err != nil {
+		statsDBError(c, "trends", err)
+		return
+	}
 
 	createdCounts := map[string]int{}
 	closedCounts := map[string]int{}
+	endedCounts := map[string]int{}
 	for _, tk := range tickets {
-		createdCounts[tk.created.Format(keyFmt)]++
+		if !tk.created.Before(start) {
+			createdCounts[tk.created.Format(keyFmt)]++
+		}
 		if closedAt, closed := tk.closedAt(); closed {
 			closedCounts[closedAt.Format(keyFmt)]++
 		}
+		if endedAt, ended := tk.endedAt(); ended && !endedAt.Before(start) {
+			endedCounts[endedAt.Format(keyFmt)]++
+		}
 	}
 
+	// open is the number of tickets created by the end of each bucket and not
+	// closed, merged or removed by then: the tickets still unresolved before
+	// the window, plus those created, minus those resolved up to the bucket.
 	trends := make([]gin.H, 0, len(buckets))
-	var totalCreated, totalClosed, open int
+	var totalCreated, totalClosed int
 	for _, key := range buckets {
 		created, closed := createdCounts[key], closedCounts[key]
 		totalCreated += created
 		totalClosed += closed
-		open += created - closed
-		if open < 0 {
-			open = 0
-		}
+		open += created - endedCounts[key]
 		trends = append(trends, gin.H{"date": key, "created": created, "closed": closed, "open": open})
 	}
 
@@ -541,13 +570,22 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 
 // HandleAgentPerformanceAPI handles GET /api/v1/statistics/agents.
 //
+// Admins get every valid agent, including agents with no activity. Other
+// agents get only the agents with activity (assigned, closed or articles) on
+// tickets in the queues they can read: those agents are already visible on
+// those tickets, while the full roster is not.
+//
 //	@Summary		Get agent performance
-//	@Description	Get agent performance statistics
+//	@Description	Per-agent tickets assigned, tickets closed and articles created in the period (RBAC filtered). Admins see every valid agent; other agents see only agents with activity on tickets in queues they can read.
 //	@Tags			Statistics
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	map[string]interface{}	"Agent performance data"
-//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Param			period	query		string	false	"Rolling window ending now"	Enums(24h, 7d, 30d)	default(7d)
+//	@Success		200		{object}	map[string]interface{}	"period, agents[], top_performers[]"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid parameter"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		403		{object}	map[string]interface{}	"Customer caller or no readable queue"
+//	@Failure		500		{object}	map[string]interface{}	"Database error"
 //	@Security		BearerAuth
 //	@Router			/statistics/agents [get]
 func HandleAgentPerformanceAPI(c *gin.Context) {
@@ -636,6 +674,9 @@ func HandleAgentPerformanceAPI(c *gin.Context) {
 
 	agentList := make([]agentStats, 0, len(agentMap))
 	for _, stats := range agentMap {
+		if !scope.all && stats.assigned == 0 && stats.closed == 0 && stats.articles == 0 {
+			continue
+		}
 		agentList = append(agentList, *stats)
 	}
 	sort.Slice(agentList, func(i, j int) bool {
@@ -678,12 +719,14 @@ func HandleAgentPerformanceAPI(c *gin.Context) {
 // HandleQueueMetricsAPI handles GET /api/v1/statistics/queues.
 //
 //	@Summary		Get queue metrics
-//	@Description	Get queue performance metrics
+//	@Description	All-time per-queue total, open and backlog counts for valid queues (RBAC filtered)
 //	@Tags			Statistics
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	map[string]interface{}	"Queue metrics"
+//	@Success		200	{object}	map[string]interface{}	"queues[], totals"
 //	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		403	{object}	map[string]interface{}	"Customer caller or no readable queue"
+//	@Failure		500	{object}	map[string]interface{}	"Database error"
 //	@Security		BearerAuth
 //	@Router			/statistics/queues [get]
 func HandleQueueMetricsAPI(c *gin.Context) {
@@ -780,13 +823,17 @@ func HandleQueueMetricsAPI(c *gin.Context) {
 // HandleTimeBasedAnalyticsAPI handles GET /api/v1/statistics/analytics.
 //
 //	@Summary		Get time-based analytics
-//	@Description	Get time-based ticket analytics
+//	@Description	Tickets created and closed in the last days, by UTC hour of day or by weekday (RBAC filtered)
 //	@Tags			Statistics
 //	@Accept			json
 //	@Produce		json
-//	@Param			period	query		string	false	"Time period"
-//	@Success		200		{object}	map[string]interface{}	"Analytics data"
+//	@Param			type	query		string	false	"Bucketing"	Enums(hourly, day_of_week)	default(hourly)
+//	@Param			days	query		int		false	"Window in days ending now"	minimum(1)	maximum(366)	default(30)
+//	@Success		200		{object}	map[string]interface{}	"type, days, data[], peak_hours[] (hourly) or busiest_days[] (day_of_week)"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid parameter"
 //	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		403		{object}	map[string]interface{}	"Customer caller or no readable queue"
+//	@Failure		500		{object}	map[string]interface{}	"Database error"
 //	@Security		BearerAuth
 //	@Router			/statistics/analytics [get]
 func HandleTimeBasedAnalyticsAPI(c *gin.Context) {
@@ -864,12 +911,16 @@ func HandleTimeBasedAnalyticsAPI(c *gin.Context) {
 // HandleCustomerStatisticsAPI handles GET /api/v1/statistics/customers.
 //
 //	@Summary		Get customer statistics
-//	@Description	Get customer-related statistics
+//	@Description	All-time top customers by ticket count and customer totals (RBAC filtered)
 //	@Tags			Statistics
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	map[string]interface{}	"Customer statistics"
+//	@Param			top	query		int	false	"Number of top customers returned"	minimum(1)	maximum(100)	default(10)
+//	@Success		200	{object}	map[string]interface{}	"top_customers[], customer_metrics"
+//	@Failure		400	{object}	map[string]interface{}	"Invalid parameter"
 //	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		403	{object}	map[string]interface{}	"Customer caller or no readable queue"
+//	@Failure		500	{object}	map[string]interface{}	"Database error"
 //	@Security		BearerAuth
 //	@Router			/statistics/customers [get]
 func HandleCustomerStatisticsAPI(c *gin.Context) {
@@ -878,14 +929,9 @@ func HandleCustomerStatisticsAPI(c *gin.Context) {
 		return
 	}
 
-	topInt := 10
-	if raw := c.Query("top"); raw != "" {
-		n, err := strconv.Atoi(raw)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "top must be an integer"})
-			return
-		}
-		topInt = n
+	topInt, ok := statsIntParam(c, "top", 10, maxTopCustomers)
+	if !ok {
+		return
 	}
 
 	tickets, err := loadStatsTickets(db, scope, nil)
@@ -948,7 +994,7 @@ func HandleCustomerStatisticsAPI(c *gin.Context) {
 	})
 
 	limit := topInt
-	if limit <= 0 || limit > len(customerList) {
+	if limit > len(customerList) {
 		limit = len(customerList)
 	}
 	top := customerList[:limit]
@@ -1012,13 +1058,19 @@ func HandleCustomerStatisticsAPI(c *gin.Context) {
 // HandleExportStatisticsAPI handles GET /api/v1/statistics/export.
 //
 //	@Summary		Export statistics
-//	@Description	Export statistics data
+//	@Description	Download a summary or the ticket list for tickets created in the period, as JSON or CSV (RBAC filtered)
 //	@Tags			Statistics
 //	@Accept			json
 //	@Produce		json
-//	@Param			format	query		string	false	"Export format (csv, json)"
-//	@Success		200		{object}	map[string]interface{}	"Exported data"
+//	@Produce		text/csv
+//	@Param			format	query		string	false	"File format"	Enums(json, csv)	default(json)
+//	@Param			type	query		string	false	"Export content"	Enums(summary, tickets)	default(summary)
+//	@Param			period	query		string	false	"Rolling window ending now"	Enums(24h, 7d, 30d)	default(7d)
+//	@Success		200		{file}		file	"statistics_<YYYYMMDD_HHMMSS>.json or .csv attachment"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid parameter"
 //	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		403		{object}	map[string]interface{}	"Customer caller or no readable queue"
+//	@Failure		500		{object}	map[string]interface{}	"Database error"
 //	@Security		BearerAuth
 //	@Router			/statistics/export [get]
 func HandleExportStatisticsAPI(c *gin.Context) {
@@ -1149,12 +1201,14 @@ func HandleExportStatisticsAPI(c *gin.Context) {
 // HandleTicketStateStatisticsAPI handles GET /api/v1/ticket-states/statistics.
 //
 //	@Summary		Get state statistics
-//	@Description	Get ticket counts by state
+//	@Description	All-time ticket count per valid ticket state (RBAC filtered)
 //	@Tags			States
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	map[string]interface{}	"State statistics"
+//	@Success		200	{object}	map[string]interface{}	"statistics[], total_tickets"
 //	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		403	{object}	map[string]interface{}	"Customer caller or no readable queue"
+//	@Failure		500	{object}	map[string]interface{}	"Database error"
 //	@Security		BearerAuth
 //	@Router			/ticket-states/statistics [get]
 func HandleTicketStateStatisticsAPI(c *gin.Context) {

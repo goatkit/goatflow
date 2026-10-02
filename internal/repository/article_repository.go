@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"mime"
 	"strings"
 	"time"
@@ -237,9 +238,13 @@ func (r *ArticleRepository) GetByID(id uint) (*models.Article, error) {
 // GetHTMLBodyContent returns the article's HTML body (its last HTML body part,
 // see storage.IsHTMLBody), or "" when it has none.
 func (r *ArticleRepository) GetHTMLBodyContent(articleID uint) (string, error) {
+	if articleID > math.MaxInt64 {
+		return "", fmt.Errorf("article id %d out of range", articleID)
+	}
+	aid := int64(articleID)
 	ctx := context.Background()
 	store := storage.ForDB(r.db)
-	atts, err := store.ListAttachments(ctx, int64(articleID))
+	atts, err := store.ListAttachments(ctx, aid)
 	if err != nil {
 		return "", err
 	}
@@ -247,7 +252,7 @@ func (r *ArticleRepository) GetHTMLBodyContent(articleID uint) (string, error) {
 		if !storage.IsHTMLBody(atts[i]) {
 			continue
 		}
-		_, content, err := store.GetAttachment(ctx, int64(articleID), atts[i].FileID)
+		_, content, err := store.GetAttachment(ctx, aid, atts[i].FileID)
 		if err != nil {
 			return "", err
 		}

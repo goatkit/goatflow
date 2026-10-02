@@ -155,7 +155,11 @@ func (h *BaseCRUDHandler) Get(c *gin.Context) {
 
 // Create handles POST requests to create a new entity.
 func (h *BaseCRUDHandler) Create(c *gin.Context) {
-	data := h.parseFormData(c)
+	data, err := h.parseFormData(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+		return
+	}
 
 	if err := h.validateData(data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -183,7 +187,11 @@ func (h *BaseCRUDHandler) Create(c *gin.Context) {
 // Update handles PUT requests to update an entity.
 func (h *BaseCRUDHandler) Update(c *gin.Context) {
 	id := c.Param("id")
-	data := h.parseFormData(c)
+	data, err := h.parseFormData(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+		return
+	}
 
 	if err := h.validateData(data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -195,7 +203,7 @@ func (h *BaseCRUDHandler) Update(c *gin.Context) {
 
 	args := h.buildUpdateArgs(data, id)
 
-	_, err := h.DB.Exec(database.ConvertPlaceholders(h.buildUpdateQuery()), args...)
+	_, err = h.DB.Exec(database.ConvertPlaceholders(h.buildUpdateQuery()), args...)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -370,36 +378,40 @@ func (h *BaseCRUDHandler) getSelectColumns() string {
 	return joinStrings(columns, ", ")
 }
 
-func (h *BaseCRUDHandler) parseFormData(c *gin.Context) map[string]interface{} {
+// parseFormData reads the request body as JSON or as typed form fields; a
+// malformed body or field value is an error, not silently empty/zero data.
+func (h *BaseCRUDHandler) parseFormData(c *gin.Context) (map[string]interface{}, error) {
 	data := make(map[string]interface{})
 
 	if c.ContentType() == "application/json" {
-		c.ShouldBindJSON(&data)
-	} else {
-		// Parse form data
-		for _, field := range h.Config.Fields {
-			value := c.PostForm(field.Name)
-			if value != "" {
-				data[field.Name] = h.convertValue(value, field.Type)
+		if err := c.ShouldBindJSON(&data); err != nil {
+			return nil, fmt.Errorf("invalid JSON body: %w", err)
+		}
+		return data, nil
+	}
+	for _, field := range h.Config.Fields {
+		value := c.PostForm(field.Name)
+		if value != "" {
+			v, err := h.convertValue(value, field.Type)
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for %s: %w", field.Name, err)
 			}
+			data[field.Name] = v
 		}
 	}
-
-	return data
+	return data, nil
 }
 
-func (h *BaseCRUDHandler) convertValue(value string, fieldType FieldType) interface{} {
+func (h *BaseCRUDHandler) convertValue(value string, fieldType FieldType) (interface{}, error) {
 	switch fieldType {
 	case FieldTypeInt:
-		i, _ := strconv.Atoi(value)
-		return i
+		return strconv.Atoi(value)
 	case FieldTypeFloat:
-		f, _ := strconv.ParseFloat(value, 64)
-		return f
+		return strconv.ParseFloat(value, 64)
 	case FieldTypeBool:
-		return value == "true" || value == "1"
+		return value == "true" || value == "1", nil
 	default:
-		return value
+		return value, nil
 	}
 }
 

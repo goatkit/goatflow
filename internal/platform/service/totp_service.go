@@ -88,7 +88,7 @@ func (b *UserPreferencesBackend) SetAndDelete(sets map[string]string, deletes []
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback() // the error that triggered the rollback is returned
 		}
 	}()
 
@@ -152,7 +152,7 @@ func (b *CustomerPreferencesBackend) Set(key, value string) error {
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback() // the error that triggered the rollback is returned
 		}
 	}()
 
@@ -189,7 +189,7 @@ func (b *CustomerPreferencesBackend) SetAndDelete(sets map[string]string, delete
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback() // the error that triggered the rollback is returned
 		}
 	}()
 

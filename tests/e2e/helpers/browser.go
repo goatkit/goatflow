@@ -68,16 +68,20 @@ func (b *BrowserHelper) Setup() error {
 	}
 	b.Browser = browser
 
-	// Create context with viewport and other settings
-	context, err := browser.NewContext(playwright.BrowserNewContextOptions{
+	// Create context with viewport and other settings. Video is recorded only
+	// when VIDEOS=true (Config.Videos).
+	contextOpts := playwright.BrowserNewContextOptions{
 		Viewport: &playwright.Size{
 			Width:  1280,
 			Height: 720,
 		},
-		RecordVideo: &playwright.RecordVideo{
+	}
+	if b.Config.Videos {
+		contextOpts.RecordVideo = &playwright.RecordVideo{
 			Dir: stringPtr("./test-results/videos"),
-		},
-	})
+		}
+	}
+	context, err := browser.NewContext(contextOpts)
 	if err != nil {
 		return fmt.Errorf("could not create context: %w", err)
 	}
@@ -132,23 +136,33 @@ func (b *BrowserHelper) TearDown() {
 	if b.t.Failed() && b.Config.Screenshots && b.Page != nil {
 		screenshotPath := fmt.Sprintf("./test-results/screenshots/%s_%d.png",
 			b.t.Name(), time.Now().Unix())
-		b.Page.Screenshot(playwright.PageScreenshotOptions{
+		if _, err := b.Page.Screenshot(playwright.PageScreenshotOptions{
 			Path: playwright.String(screenshotPath),
-		})
+		}); err != nil {
+			b.t.Logf("failure screenshot not saved: %v", err)
+		}
 	}
 
 	// Close resources
 	if b.Page != nil {
-		b.Page.Close()
+		if err := b.Page.Close(); err != nil {
+			b.t.Logf("closing page: %v", err)
+		}
 	}
 	if b.Context != nil {
-		b.Context.Close()
+		if err := b.Context.Close(); err != nil {
+			b.t.Logf("closing browser context: %v", err)
+		}
 	}
 	if b.Browser != nil {
-		b.Browser.Close()
+		if err := b.Browser.Close(); err != nil {
+			b.t.Logf("closing browser: %v", err)
+		}
 	}
 	if b.Playwright != nil {
-		b.Playwright.Stop()
+		if err := b.Playwright.Stop(); err != nil {
+			b.t.Logf("stopping playwright: %v", err)
+		}
 	}
 }
 

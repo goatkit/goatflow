@@ -1,8624 +1,1171 @@
-# 🌐 GoatFlow API Documentation
-
-Generated from YAML route definitions
-
-## 📋 Route Groups
-
-
-### Default: admin-dynamic-aliases
-
-**Description:** Friendly URLs for dynamic admin modules  
-**Prefix:** `/admin`  
-**Middleware:** `auth` `admin` 
-
-
-#### 
-
-- **Path:** `/mail-accounts`
-- **Method:** `GET`
-- **Description:** List mail accounts
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/export`
-- **Method:** `GET`
-- **Description:** Export mail accounts
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/new`
-- **Method:** `GET`
-- **Description:** Render mail account creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id`
-- **Method:** `GET`
-- **Description:** Show mail account details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id/edit`
-- **Method:** `GET`
-- **Description:** Render mail account edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts`
-- **Method:** `POST`
-- **Description:** Create a mail account
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id`
-- **Method:** `PUT`
-- **Description:** Update a mail account
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id`
-- **Method:** `POST`
-- **Description:** Update a mail account via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a mail account
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle mail account status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle mail account status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom mail account action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mail-accounts/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom mail account action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels`
-- **Method:** `GET`
-- **Description:** List communication channels
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/export`
-- **Method:** `GET`
-- **Description:** Export communication channels
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/new`
-- **Method:** `GET`
-- **Description:** Render communication channel creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id`
-- **Method:** `GET`
-- **Description:** Show communication channel details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id/edit`
-- **Method:** `GET`
-- **Description:** Render communication channel edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels`
-- **Method:** `POST`
-- **Description:** Create a communication channel
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id`
-- **Method:** `PUT`
-- **Description:** Update a communication channel
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id`
-- **Method:** `POST`
-- **Description:** Update a communication channel via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a communication channel
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle communication channel status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle communication channel status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom communication channel action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/communication-channels/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom communication channel action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories`
-- **Method:** `GET`
-- **Description:** List package repositories
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/export`
-- **Method:** `GET`
-- **Description:** Export package repositories
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/new`
-- **Method:** `GET`
-- **Description:** Render package repository creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id`
-- **Method:** `GET`
-- **Description:** Show package repository details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id/edit`
-- **Method:** `GET`
-- **Description:** Render package repository edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories`
-- **Method:** `POST`
-- **Description:** Create a package repository
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id`
-- **Method:** `PUT`
-- **Description:** Update a package repository
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id`
-- **Method:** `POST`
-- **Description:** Update a package repository via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a package repository
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle package repository status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle package repository status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom package repository action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/package-repositories/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom package repository action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses`
-- **Method:** `GET`
-- **Description:** List auto responses
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/export`
-- **Method:** `GET`
-- **Description:** Export auto responses
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/new`
-- **Method:** `GET`
-- **Description:** Render auto response creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id`
-- **Method:** `GET`
-- **Description:** Show auto response details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id/edit`
-- **Method:** `GET`
-- **Description:** Render auto response edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses`
-- **Method:** `POST`
-- **Description:** Create an auto response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id`
-- **Method:** `PUT`
-- **Description:** Update an auto response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id`
-- **Method:** `POST`
-- **Description:** Update an auto response via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id`
-- **Method:** `DELETE`
-- **Description:** Delete an auto response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle auto response status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle auto response status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom auto response action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-responses/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom auto response action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types`
-- **Method:** `GET`
-- **Description:** List auto response types
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/export`
-- **Method:** `GET`
-- **Description:** Export auto response types
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/new`
-- **Method:** `GET`
-- **Description:** Render auto response type creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id`
-- **Method:** `GET`
-- **Description:** Show auto response type details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id/edit`
-- **Method:** `GET`
-- **Description:** Render auto response type edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types`
-- **Method:** `POST`
-- **Description:** Create an auto response type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id`
-- **Method:** `PUT`
-- **Description:** Update an auto response type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id`
-- **Method:** `POST`
-- **Description:** Update an auto response type via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id`
-- **Method:** `DELETE`
-- **Description:** Delete an auto response type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle auto response type status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle auto response type status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom auto response type action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auto-response-types/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom auto response type action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options`
-- **Method:** `GET`
-- **Description:** List follow up options
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/export`
-- **Method:** `GET`
-- **Description:** Export follow up options
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/new`
-- **Method:** `GET`
-- **Description:** Render follow up option creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id`
-- **Method:** `GET`
-- **Description:** Show follow up option details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id/edit`
-- **Method:** `GET`
-- **Description:** Render follow up option edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options`
-- **Method:** `POST`
-- **Description:** Create a follow up option
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id`
-- **Method:** `PUT`
-- **Description:** Update a follow up option
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id`
-- **Method:** `POST`
-- **Description:** Update a follow up option via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a follow up option
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle follow up option status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle follow up option status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom follow up option action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/follow-up-options/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom follow up option action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states`
-- **Method:** `GET`
-- **Description:** List link states
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/export`
-- **Method:** `GET`
-- **Description:** Export link states
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/new`
-- **Method:** `GET`
-- **Description:** Render link state creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id`
-- **Method:** `GET`
-- **Description:** Show link state details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id/edit`
-- **Method:** `GET`
-- **Description:** Render link state edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states`
-- **Method:** `POST`
-- **Description:** Create a link state
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id`
-- **Method:** `PUT`
-- **Description:** Update a link state
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id`
-- **Method:** `POST`
-- **Description:** Update a link state via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a link state
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle link state status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle link state status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom link state action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-states/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom link state action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types`
-- **Method:** `GET`
-- **Description:** List link types
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/export`
-- **Method:** `GET`
-- **Description:** Export link types
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/new`
-- **Method:** `GET`
-- **Description:** Render link type creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id`
-- **Method:** `GET`
-- **Description:** Show link type details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id/edit`
-- **Method:** `GET`
-- **Description:** Render link type edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types`
-- **Method:** `POST`
-- **Description:** Create a link type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id`
-- **Method:** `PUT`
-- **Description:** Update a link type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id`
-- **Method:** `POST`
-- **Description:** Update a link type via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a link type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle link type status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle link type status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom link type action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/link-types/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom link type action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses`
-- **Method:** `GET`
-- **Description:** List queue auto responses
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/export`
-- **Method:** `GET`
-- **Description:** Export queue auto responses
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/new`
-- **Method:** `GET`
-- **Description:** Render queue auto response creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id`
-- **Method:** `GET`
-- **Description:** Show queue auto response details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id/edit`
-- **Method:** `GET`
-- **Description:** Render queue auto response edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses`
-- **Method:** `POST`
-- **Description:** Create a queue auto response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id`
-- **Method:** `PUT`
-- **Description:** Update a queue auto response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id`
-- **Method:** `POST`
-- **Description:** Update a queue auto response via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a queue auto response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id/status`
-- **Method:** `PUT`
-- **Description:** Toggle queue auto response status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id/status`
-- **Method:** `POST`
-- **Description:** Toggle queue auto response status via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom queue auto response action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-auto-responses/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom queue auto response action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors`
-- **Method:** `GET`
-- **Description:** List article colors
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/export`
-- **Method:** `GET`
-- **Description:** Export article colors
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/new`
-- **Method:** `GET`
-- **Description:** Render article color creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/:id`
-- **Method:** `GET`
-- **Description:** Show article color details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/:id/edit`
-- **Method:** `GET`
-- **Description:** Render article color edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors`
-- **Method:** `POST`
-- **Description:** Create an article color
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/:id`
-- **Method:** `PUT`
-- **Description:** Update an article color
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/:id`
-- **Method:** `POST`
-- **Description:** Update an article color via form submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/:id`
-- **Method:** `DELETE`
-- **Description:** Delete an article color
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/:id/:action`
-- **Method:** `GET`
-- **Description:** Execute custom article color action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/article-colors/:id/:action`
-- **Method:** `POST`
-- **Description:** Execute custom article color action
-
-
-
-
----
-
-
-
-### Default: admin-mail-account-status
-
-**Description:** Mail account poll status endpoints  
-**Prefix:** `/admin`  
-**Middleware:** `auth` `admin` 
-
-
-#### 
-
-- **Path:** `/mail-accounts/:id/poll-status`
-- **Method:** `GET`
-- **Description:** Fetch poll status for a mail account
-
-
-
-
----
-
-#### 
-
-- **Path:** `/dynamic/mail_account/:id/poll-status`
-- **Method:** `GET`
-- **Description:** Fetch poll status for a mail account (dynamic path)
-
-
-
-
----
-
-
-
-### Default: admin
-
-**Description:** Administrative routes for system management  
-**Prefix:** `/admin`  
-**Middleware:** `auth` `admin` 
-
-
-#### 
-
-- **Path:** `/`
-- **Method:** `GET`
-- **Description:** Display admin dashboard with system overview
-
-
-
-
----
-
-#### 
-
-- **Path:** `/debug/ticket-number`
-- **Method:** `GET`
-- **Description:** Current ticket number generator
-
-
-
-
----
-
-#### 
-
-- **Path:** `/debug/config-sources`
-- **Method:** `GET`
-- **Description:** Configuration settings with their source
-
-
-
-
----
-
-#### 
-
-- **Path:** `/setup`
-- **Method:** `GET`
-- **Description:** First-run setup wizard
-
-
-
-
----
-
-#### 
-
-- **Path:** `/setup`
-- **Method:** `POST`
-- **Description:** Process setup wizard submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/setup/assistant`
-- **Method:** `GET`
-- **Description:** Setup assistant task catalog
-
-
-
-
----
-
-#### 
-
-- **Path:** `/setup/task/:plugin/:task_id`
-- **Method:** `GET`
-- **Description:** Run a setup task (core or plugin)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/setup/task/:plugin/:task_id`
-- **Method:** `POST`
-- **Description:** Process a setup task submission
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users`
-- **Method:** `GET`
-- **Description:** Display user management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/:id`
-- **Method:** `GET`
-- **Description:** Display user details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/:id/edit`
-- **Method:** `GET`
-- **Description:** Display user edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/:id`
-- **Method:** `PUT`
-- **Description:** Update user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/:id`
-- **Method:** `DELETE`
-- **Description:** Delete user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users`
-- **Method:** `POST`
-- **Description:** Create new user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/:id/groups`
-- **Method:** `GET`
-- **Description:** List user groups
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/:id/status`
-- **Method:** ``
-- **Description:** Toggle user activation status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/:id/reset-password`
-- **Method:** `POST`
-- **Description:** Reset user password
-
-
-
-
----
-
-#### 
-
-- **Path:** `/password-policy`
-- **Method:** `GET`
-- **Description:** Get password policy configuration
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/list`
-- **Method:** `GET`
-- **Description:** Get all users (JSON API)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups`
-- **Method:** `GET`
-- **Description:** Display group management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups`
-- **Method:** `POST`
-- **Description:** Create new group
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups/:id`
-- **Method:** `GET`
-- **Description:** Display group details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups/:id`
-- **Method:** `PUT`
-- **Description:** Update existing group
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups/:id`
-- **Method:** `DELETE`
-- **Description:** Delete group
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups/:id/members`
-- **Method:** `GET`
-- **Description:** Display group members
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups/:id/members`
-- **Method:** `POST`
-- **Description:** Add user to group
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups/:id/members/:userId`
-- **Method:** `DELETE`
-- **Description:** Remove user from group
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups/:id/permissions`
-- **Method:** `GET`
-- **Description:** Get queue-centric permissions for a group
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups/:id/permissions`
-- **Method:** `POST`
-- **Description:** Update queue-centric permissions for a group
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups/:id/users`
-- **Method:** `GET`
-- **Description:** Get group users
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups/:id/users`
-- **Method:** `POST`
-- **Description:** Add user to group
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups/:id/users/:userId`
-- **Method:** `DELETE`
-- **Description:** Remove user from group
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues`
-- **Method:** `GET`
-- **Description:** Display queue management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/email-identities`
-- **Method:** `GET`
-- **Description:** Manage system addresses, salutations, and signatures
-
-
-
-
----
-
-#### 
-
-- **Path:** `/email-queue`
-- **Method:** `GET`
-- **Description:** Display email queue management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/email-queue/retry/:id`
-- **Method:** `POST`
-- **Description:** Retry sending a specific email from the queue
-
-
-
-
----
-
-#### 
-
-- **Path:** `/email-queue/delete/:id`
-- **Method:** `POST`
-- **Description:** Delete a specific email from the queue
-
-
-
-
----
-
-#### 
-
-- **Path:** `/email-queue/retry-all`
-- **Method:** `POST`
-- **Description:** Retry all failed emails in the queue
-
-
-
-
----
-
-#### 
-
-- **Path:** `/priorities`
-- **Method:** `GET`
-- **Description:** Display priority management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/permissions`
-- **Method:** `GET`
-- **Description:** Display permission management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/permissions/user/:userId`
-- **Method:** `GET`
-- **Description:** Get user permission matrix
-
-
-
-
----
-
-#### 
-
-- **Path:** `/permissions/user/:userId`
-- **Method:** `PUT`
-- **Description:** Update user permissions
-
-
-
-
----
-
-#### 
-
-- **Path:** `/permissions/clone`
-- **Method:** `POST`
-- **Description:** Replace a user&#39;s permissions with a copy of another user&#39;s
-
-
-
-
----
-
-#### 
-
-- **Path:** `/roles`
-- **Method:** `GET`
-- **Description:** Display role management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/roles`
-- **Method:** `POST`
-- **Description:** Create a new role
-
-
-
-
----
-
-#### 
-
-- **Path:** `/roles/:id`
-- **Method:** `GET`
-- **Description:** Get role details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/roles/:id`
-- **Method:** `PUT`
-- **Description:** Update an existing role
-
-
-
-
----
-
-#### 
-
-- **Path:** `/roles/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a role
-
-
-
-
----
-
-#### 
-
-- **Path:** `/roles/:id/users`
-- **Method:** `GET`
-- **Description:** Display users assigned to a role
-
-
-
-
----
-
-#### 
-
-- **Path:** `/roles/:id/users/search`
-- **Method:** `GET`
-- **Description:** Search for users to add to a role (scalable typeahead)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/roles/:id/users`
-- **Method:** `POST`
-- **Description:** Add a user to a role
-
-
-
-
----
-
-#### 
-
-- **Path:** `/roles/:id/users/:userId`
-- **Method:** `DELETE`
-- **Description:** Remove a user from a role
-
-
-
-
----
-
-#### 
-
-- **Path:** `/roles/:id/permissions`
-- **Method:** `GET`
-- **Description:** Display and manage role-group permissions
-
-
-
-
----
-
-#### 
-
-- **Path:** `/roles/:id/permissions`
-- **Method:** `POST`
-- **Description:** Update role-group permissions
-
-
-
-
----
-
-#### 
-
-- **Path:** `/states`
-- **Method:** `GET`
-- **Description:** Display state management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/states/create`
-- **Method:** `POST`
-- **Description:** Create a ticket state
-
-
-
-
----
-
-#### 
-
-- **Path:** `/states/:id/update`
-- **Method:** `PUT`
-- **Description:** Update a ticket state
-
-
-
-
----
-
-#### 
-
-- **Path:** `/states/:id/delete`
-- **Method:** `DELETE`
-- **Description:** Soft-delete a ticket state
-
-
-
-
----
-
-#### 
-
-- **Path:** `/types`
-- **Method:** `GET`
-- **Description:** Display type management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/types/create`
-- **Method:** `POST`
-- **Description:** Create a ticket type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/types/:id/update`
-- **Method:** `POST`
-- **Description:** Update a ticket type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/types/:id/delete`
-- **Method:** `POST`
-- **Description:** Soft-delete a ticket type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/services`
-- **Method:** `GET`
-- **Description:** Display service management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/services/create`
-- **Method:** `POST`
-- **Description:** Create a new service
-
-
-
-
----
-
-#### 
-
-- **Path:** `/services/:id/update`
-- **Method:** `PUT`
-- **Description:** Update an existing service
-
-
-
-
----
-
-#### 
-
-- **Path:** `/services/:id/delete`
-- **Method:** `DELETE`
-- **Description:** Delete a service
-
-
-
-
----
-
-#### 
-
-- **Path:** `/sla`
-- **Method:** `GET`
-- **Description:** Display SLA management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/sla/create`
-- **Method:** `POST`
-- **Description:** Create a new SLA
-
-
-
-
----
-
-#### 
-
-- **Path:** `/sla/:id/update`
-- **Method:** `PUT`
-- **Description:** Update an existing SLA
-
-
-
-
----
-
-#### 
-
-- **Path:** `/sla/:id/delete`
-- **Method:** `DELETE`
-- **Description:** Delete an SLA
-
-
-
-
----
-
-#### 
-
-- **Path:** `/lookups`
-- **Method:** `GET`
-- **Description:** Display lookup management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies`
-- **Method:** `GET`
-- **Description:** Display customer companies management
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies/new`
-- **Method:** `GET`
-- **Description:** Display new customer company form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies/new`
-- **Method:** `POST`
-- **Description:** Create new customer company
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies`
-- **Method:** `POST`
-- **Description:** Create new customer company
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies/:id/edit`
-- **Method:** `GET`
-- **Description:** Display customer company edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies/:id/edit`
-- **Method:** `POST`
-- **Description:** Update customer company
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies/:id`
-- **Method:** `DELETE`
-- **Description:** Delete customer company
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies/:id/delete`
-- **Method:** `POST`
-- **Description:** Delete customer company (legacy POST route)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies/:id/activate`
-- **Method:** `POST`
-- **Description:** Activate customer company
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies/:id/users`
-- **Method:** `GET`
-- **Description:** Display customer company users
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies/:id/tickets`
-- **Method:** `GET`
-- **Description:** Display customer company tickets
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies/:id/services`
-- **Method:** `GET`
-- **Description:** Display customer company services
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies/:id/services`
-- **Method:** `POST`
-- **Description:** Update customer company services
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies/:id/portal-settings`
-- **Method:** `GET`
-- **Description:** Display customer portal settings for a company
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/companies/:id/portal-settings`
-- **Method:** `POST`
-- **Description:** Update customer portal settings for a company
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/portal/settings`
-- **Method:** ``
-- **Description:** Display and update global customer portal settings
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-users`
-- **Method:** `GET`
-- **Description:** Display customer user management
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-users/:id`
-- **Method:** `GET`
-- **Description:** Get customer user details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-users`
-- **Method:** `POST`
-- **Description:** Create customer user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-users/:id`
-- **Method:** `PUT`
-- **Description:** Update customer user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-users/:id`
-- **Method:** `DELETE`
-- **Description:** Delete customer user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-users/:id/tickets`
-- **Method:** `GET`
-- **Description:** Get customer user tickets
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-users/import`
-- **Method:** `GET`
-- **Description:** Display customer user import form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-users/import`
-- **Method:** `POST`
-- **Description:** Import customer users
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-users/export`
-- **Method:** `GET`
-- **Description:** Export customer users
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-users/bulk-action`
-- **Method:** `POST`
-- **Description:** Perform customer user bulk action
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-user-services`
-- **Method:** `GET`
-- **Description:** Customer user ↔ service relations management
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-user-services/customer/:login`
-- **Method:** `GET`
-- **Description:** Get services for a customer user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-user-services/customer/:login`
-- **Method:** `POST`
-- **Description:** Update services for a customer user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-user-services/service/:id`
-- **Method:** `GET`
-- **Description:** Get customer users for a service
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-user-services/service/:id`
-- **Method:** `POST`
-- **Description:** Update customer users for a service
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-user-services/default`
-- **Method:** `GET`
-- **Description:** Get default service assignments
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-user-services/default`
-- **Method:** `POST`
-- **Description:** Update default service assignments
-
-
-
-
----
-
-#### 
-
-- **Path:** `/reports`
-- **Method:** `GET`
-- **Description:** Display ticket reports (queue-scoped statistics, trends, CSV export)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/dynamic-fields`
-- **Method:** `GET`
-- **Description:** List all dynamic fields
-
-
-
-
----
-
-#### 
-
-- **Path:** `/dynamic-fields/new`
-- **Method:** `GET`
-- **Description:** Create new dynamic field form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/dynamic-fields/screens`
-- **Method:** `GET`
-- **Description:** Dynamic field screen configuration
-
-
-
-
----
-
-#### 
-
-- **Path:** `/dynamic-fields/export`
-- **Method:** `GET`
-- **Description:** Export dynamic fields page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/dynamic-fields/export`
-- **Method:** `POST`
-- **Description:** Export selected dynamic fields to YAML
-
-
-
-
----
-
-#### 
-
-- **Path:** `/dynamic-fields/import`
-- **Method:** `GET`
-- **Description:** Import dynamic fields page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/dynamic-fields/import`
-- **Method:** `POST`
-- **Description:** Upload and preview YAML file for import
-
-
-
-
----
-
-#### 
-
-- **Path:** `/dynamic-fields/import/confirm`
-- **Method:** `POST`
-- **Description:** Confirm and execute dynamic fields import
-
-
-
-
----
-
-#### 
-
-- **Path:** `/dynamic-fields/:id`
-- **Method:** `GET`
-- **Description:** Edit dynamic field form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/dynamic-fields`
-- **Method:** `POST`
-- **Description:** Create new dynamic field
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/dynamic-fields/:id`
-- **Method:** `PUT`
-- **Description:** Update existing dynamic field
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/dynamic-fields/:id`
-- **Method:** `DELETE`
-- **Description:** Delete dynamic field
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/dynamic-fields/:id/screens`
-- **Method:** `PUT`
-- **Description:** Save all screen configurations for a field
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/dynamic-fields/:id/screen`
-- **Method:** `POST`
-- **Description:** Toggle single screen configuration for a field
-
-
-
-
----
-
-#### 
-
-- **Path:** `/custom-fields`
-- **Method:** `GET`
-- **Description:** Custom fields management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/custom-fields/new`
-- **Method:** `GET`
-- **Description:** New custom field form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/custom-fields/:id`
-- **Method:** `GET`
-- **Description:** Edit custom field form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/custom-fields`
-- **Method:** `POST`
-- **Description:** Create new custom field
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/custom-fields/:id`
-- **Method:** `PUT`
-- **Description:** Update existing custom field
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/custom-fields/:id`
-- **Method:** `DELETE`
-- **Description:** Soft-delete custom field
-
-
-
-
----
-
-#### 
-
-- **Path:** `/recycle-bin`
-- **Method:** `GET`
-- **Description:** List recycle bin entries
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/recycle-bin/restore`
-- **Method:** `POST`
-- **Description:** Restore entity from recycle bin
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/recycle-bin/purge`
-- **Method:** `POST`
-- **Description:** Permanently delete entity from recycle bin
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/recycle-bin/batch-delete`
-- **Method:** `POST`
-- **Description:** Batch soft-delete multiple entities
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/recycle-bin/batch-purge`
-- **Method:** `POST`
-- **Description:** Batch permanently delete multiple entities
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/recycle-bin/log/:entity_type/:entity_id`
-- **Method:** `GET`
-- **Description:** View deletion audit log for an entity
-
-
-
-
----
-
-#### 
-
-- **Path:** `/templates`
-- **Method:** `GET`
-- **Description:** Display response templates management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/templates/new`
-- **Method:** `GET`
-- **Description:** Display new template creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/templates/:id/edit`
-- **Method:** `GET`
-- **Description:** Display template edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/templates/:id/queues`
-- **Method:** `GET`
-- **Description:** Display template queue assignment page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/templates`
-- **Method:** `POST`
-- **Description:** Create new response template
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/templates/:id`
-- **Method:** `PUT`
-- **Description:** Update existing response template
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/templates/:id`
-- **Method:** `DELETE`
-- **Description:** Delete response template
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/templates/:id/queues`
-- **Method:** `PUT`
-- **Description:** Update template queue assignments
-
-
-
-
----
-
-#### 
-
-- **Path:** `/templates/:id/attachments`
-- **Method:** `GET`
-- **Description:** Display template attachment assignment page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/templates/:id/attachments`
-- **Method:** `PUT`
-- **Description:** Update template attachment assignments
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queue-templates`
-- **Method:** `GET`
-- **Description:** Queue-Template relations overview
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues/:id/templates`
-- **Method:** `GET`
-- **Description:** Assign templates to a queue
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/queues/:id/templates`
-- **Method:** `PUT`
-- **Description:** Update queue template assignments
-
-
-
-
----
-
-#### 
-
-- **Path:** `/templates/import`
-- **Method:** `GET`
-- **Description:** Display template import page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/templates/import`
-- **Method:** `POST`
-- **Description:** Import templates from YAML file
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/templates/export`
-- **Method:** `GET`
-- **Description:** Export all templates as YAML
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/templates/:id/export`
-- **Method:** `GET`
-- **Description:** Export single template as YAML
-
-
-
-
----
-
-#### 
-
-- **Path:** `/template-attachments`
-- **Method:** `GET`
-- **Description:** Template-Attachment relations overview
-
-
-
-
----
-
-#### 
-
-- **Path:** `/attachments/:id/templates`
-- **Method:** `GET`
-- **Description:** Assign templates to an attachment
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/attachments/:id/templates`
-- **Method:** `PUT`
-- **Description:** Update attachment template assignments
-
-
-
-
----
-
-#### 
-
-- **Path:** `/attachments`
-- **Method:** `GET`
-- **Description:** Display standard attachments management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/attachments`
-- **Method:** `POST`
-- **Description:** Upload/create a new standard attachment
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/attachments/:id`
-- **Method:** `PUT`
-- **Description:** Update an existing standard attachment
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/attachments/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a standard attachment
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/attachments/:id/download`
-- **Method:** `GET`
-- **Description:** Download a standard attachment file
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/attachments/:id/preview`
-- **Method:** `GET`
-- **Description:** Preview a standard attachment inline
-
-
-
-
----
-
-#### 
-
-- **Path:** `/modules/:module`
-- **Method:** ``
-- **Description:** Serve dynamic module pages and handle record creation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/modules/:module/:id`
-- **Method:** ``
-- **Description:** Handle dynamic module record operations
-
-
-
-
----
-
-#### 
-
-- **Path:** `/modules/:module/:id/:action`
-- **Method:** ``
-- **Description:** Execute dynamic module actions
-
-
-
-
----
-
-#### 
-
-- **Path:** `/signatures`
-- **Method:** `GET`
-- **Description:** Display email signatures management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/signatures/new`
-- **Method:** `GET`
-- **Description:** Display new signature form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/signatures/:id`
-- **Method:** `GET`
-- **Description:** Display edit signature form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/signatures`
-- **Method:** `POST`
-- **Description:** Create a new signature
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/signatures/:id`
-- **Method:** `PUT`
-- **Description:** Update an existing signature
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/signatures/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a signature
-
-
-
-
----
-
-#### 
-
-- **Path:** `/signatures/export`
-- **Method:** `GET`
-- **Description:** Export all signatures as YAML
-
-
-
-
----
-
-#### 
-
-- **Path:** `/signatures/:id/export`
-- **Method:** `GET`
-- **Description:** Export single signature as YAML
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/signatures/import`
-- **Method:** `POST`
-- **Description:** Import signatures from YAML file
-
-
-
-
----
-
-#### 
-
-- **Path:** `/postmaster-filters`
-- **Method:** `GET`
-- **Description:** Display postmaster filters management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/postmaster-filters/new`
-- **Method:** `GET`
-- **Description:** Display new postmaster filter form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/postmaster-filters/:name`
-- **Method:** `GET`
-- **Description:** Display postmaster filter edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/postmaster-filters`
-- **Method:** `POST`
-- **Description:** Create a new postmaster filter
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/postmaster-filters/:name`
-- **Method:** `GET`
-- **Description:** Get postmaster filter details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/postmaster-filters/:name`
-- **Method:** `PUT`
-- **Description:** Update an existing postmaster filter
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/postmaster-filters/:name`
-- **Method:** `DELETE`
-- **Description:** Delete a postmaster filter
-
-
-
-
----
-
-#### 
-
-- **Path:** `/notification-events`
-- **Method:** `GET`
-- **Description:** Display notification events management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/notification-events/new`
-- **Method:** `GET`
-- **Description:** Display new notification event form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/notification-events/:id`
-- **Method:** `GET`
-- **Description:** Display notification event edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/notification-events`
-- **Method:** `POST`
-- **Description:** Create a new notification event
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/notification-events/:id`
-- **Method:** `GET`
-- **Description:** Get notification event details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/notification-events/:id`
-- **Method:** `PUT`
-- **Description:** Update an existing notification event
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/notification-events/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a notification event
-
-
-
-
----
-
-#### 
-
-- **Path:** `/acl`
-- **Method:** `GET`
-- **Description:** Display ACL management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/acl`
-- **Method:** `POST`
-- **Description:** Create a new ACL
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/acl/:id`
-- **Method:** `GET`
-- **Description:** Get ACL details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/acl/:id`
-- **Method:** `PUT`
-- **Description:** Update an existing ACL
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/acl/:id`
-- **Method:** `DELETE`
-- **Description:** Delete an ACL
-
-
-
-
----
-
-#### 
-
-- **Path:** `/ticket-attribute-relations`
-- **Method:** `GET`
-- **Description:** Display ticket attribute relations management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/ticket-attribute-relations/new`
-- **Method:** `GET`
-- **Description:** Display new ticket attribute relation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/ticket-attribute-relations/:id`
-- **Method:** `GET`
-- **Description:** Display ticket attribute relation edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/ticket-attribute-relations/:id/download`
-- **Method:** `GET`
-- **Description:** Download ticket attribute relation file
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/ticket-attribute-relations`
-- **Method:** `POST`
-- **Description:** Create a new ticket attribute relation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/ticket-attribute-relations/:id`
-- **Method:** `PUT`
-- **Description:** Update an existing ticket attribute relation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/ticket-attribute-relations/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a ticket attribute relation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/ticket-attribute-relations/reorder`
-- **Method:** `POST`
-- **Description:** Reorder ticket attribute relations via drag-and-drop
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/ticket-attribute-relations/evaluate`
-- **Method:** `GET`
-- **Description:** Evaluate ticket attribute relations for filtering
-
-
-
-
----
-
-#### 
-
-- **Path:** `/generic-agent`
-- **Method:** `GET`
-- **Description:** Display generic agent jobs management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/generic-agent`
-- **Method:** `POST`
-- **Description:** Create a new generic agent job
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/generic-agent/:name`
-- **Method:** `GET`
-- **Description:** Get generic agent job details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/generic-agent/:name`
-- **Method:** `PUT`
-- **Description:** Update an existing generic agent job
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/generic-agent/:name`
-- **Method:** `DELETE`
-- **Description:** Delete a generic agent job
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-groups`
-- **Method:** `GET`
-- **Description:** Display customer groups management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-groups/customer/:id`
-- **Method:** `GET`
-- **Description:** Edit group permissions for a customer company
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-groups/customer/:id`
-- **Method:** `POST`
-- **Description:** Update group permissions for a customer company
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-groups/group/:id`
-- **Method:** `GET`
-- **Description:** Edit customer permissions for a group
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-groups/group/:id`
-- **Method:** `POST`
-- **Description:** Update customer permissions for a group
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/customer-groups/permissions`
-- **Method:** `GET`
-- **Description:** Get customer group permissions
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-user-groups`
-- **Method:** `GET`
-- **Description:** Display customer user groups management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-user-groups/user/:id`
-- **Method:** `GET`
-- **Description:** Edit group permissions for a customer user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-user-groups/user/:id`
-- **Method:** `POST`
-- **Description:** Update group permissions for a customer user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-user-groups/group/:id`
-- **Method:** `GET`
-- **Description:** Edit customer user permissions for a group
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-user-groups/group/:id`
-- **Method:** `POST`
-- **Description:** Update customer user permissions for a group
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/customer-user-groups/permissions`
-- **Method:** `GET`
-- **Description:** Get customer user group permissions
-
-
-
-
----
-
-#### 
-
-- **Path:** `/webhooks`
-- **Method:** `GET`
-- **Description:** Manage outbound webhooks, test sends and the delivery log
-
-
-
-
----
-
-#### 
-
-- **Path:** `/webservices`
-- **Method:** `GET`
-- **Description:** Display web services management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/webservices/new`
-- **Method:** `GET`
-- **Description:** Display new web service form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/webservices/:id`
-- **Method:** `GET`
-- **Description:** Display web service edit form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/webservices/:id/history`
-- **Method:** `GET`
-- **Description:** Display web service configuration history
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/webservices`
-- **Method:** `POST`
-- **Description:** Create a new web service
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/webservices/:id`
-- **Method:** `GET`
-- **Description:** Get web service details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/webservices/:id`
-- **Method:** `PUT`
-- **Description:** Update an existing web service
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/webservices/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a web service
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/webservices/:id/test`
-- **Method:** `POST`
-- **Description:** Test web service connection
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/webservices/:id/history/:historyId/restore`
-- **Method:** `POST`
-- **Description:** Restore web service from history
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/dynamic-fields/:id/autocomplete`
-- **Method:** `GET`
-- **Description:** Autocomplete for webservice-backed dynamic fields
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/dynamic-fields/:id/webservice-test`
-- **Method:** `POST`
-- **Description:** Test webservice configuration for a dynamic field
-
-
-
-
----
-
-#### 
-
-- **Path:** `/sessions`
-- **Method:** `GET`
-- **Description:** Display session management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/sessions/:id`
-- **Method:** `DELETE`
-- **Description:** Terminate a specific session
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/sessions/user/:user_id`
-- **Method:** `DELETE`
-- **Description:** Terminate all sessions for a user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/sessions`
-- **Method:** `DELETE`
-- **Description:** Terminate all sessions (emergency)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/system-maintenance`
-- **Method:** `GET`
-- **Description:** Display system maintenance list
-
-
-
-
----
-
-#### 
-
-- **Path:** `/system-maintenance/new`
-- **Method:** `GET`
-- **Description:** Display create maintenance form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/system-maintenance/:id/edit`
-- **Method:** `GET`
-- **Description:** Display edit maintenance form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/system-maintenance`
-- **Method:** `POST`
-- **Description:** Create new maintenance record
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/system-maintenance/:id`
-- **Method:** `GET`
-- **Description:** Get maintenance record details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/system-maintenance/:id`
-- **Method:** `PUT`
-- **Description:** Update maintenance record
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/system-maintenance/:id`
-- **Method:** `DELETE`
-- **Description:** Delete maintenance record
-
-
-
-
----
-
-#### 
-
-- **Path:** `/plugins`
-- **Method:** `GET`
-- **Description:** Display plugin management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/plugins/logs`
-- **Method:** `GET`
-- **Description:** 
-
-
-
-
----
-
-#### 
-
-- **Path:** `/marketplace`
-- **Method:** `GET`
-- **Description:** Browse and install plugins from the marketplace
-
-
-
-
----
-
-#### 
-
-- **Path:** `/plugin-uis`
-- **Method:** `GET`
-- **Description:** Display plugin UI management page
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/users/:id/2fa/disable`
-- **Method:** `POST`
-- **Description:** Admin override: disable 2FA for a user (requires reason)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/customers/:login/2fa/disable`
-- **Method:** `POST`
-- **Description:** Admin override: disable 2FA for a customer (requires reason)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/admin/identity-providers`
-- **Method:** `GET`
-- **Description:** 
-
-
-
-
----
-
-#### 
-
-- **Path:** `/admin/identity-providers/new`
-- **Method:** `GET`
-- **Description:** 
-
-
-
-
----
-
-#### 
-
-- **Path:** `/admin/identity-providers`
-- **Method:** `POST`
-- **Description:** Create a new identity provider
-
-
-
-
----
-
-#### 
-
-- **Path:** `/admin/identity-providers/:id/edit`
-- **Method:** `GET`
-- **Description:** 
-
-
-
-
----
-
-#### 
-
-- **Path:** `/admin/identity-providers/:id`
-- **Method:** `PUT`
-- **Description:** Update an existing identity provider
-
-
-
-
----
-
-#### 
-
-- **Path:** `/admin/identity-providers/:id`
-- **Method:** `DELETE`
-- **Description:** Delete an identity provider
-
-
-
-
----
-
-#### 
-
-- **Path:** `/admin/identity-providers/:id/:action`
-- **Method:** `POST`
-- **Description:** Enable or disable an identity provider (action: enable|disable)
-
-
-
-
----
-
-
-
-### Default: agent
-
-**Description:** Agent-specific routes for ticket management  
-**Prefix:** `/agent`  
-**Middleware:** `auth` `agent` `queue_ro` 
-
-
-#### 
-
-- **Path:** `/tickets`
-- **Method:** `GET`
-- **Description:** Display agent tickets list with full functionality
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/reply`
-- **Method:** `POST`
-- **Description:** Process customer reply to ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/note`
-- **Method:** `POST`
-- **Description:** Add internal note to ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/phone`
-- **Method:** `POST`
-- **Description:** Record phone call for ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/status`
-- **Method:** `POST`
-- **Description:** Update ticket status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/assign`
-- **Method:** `POST`
-- **Description:** Assign ticket to specific agent
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/priority`
-- **Method:** `POST`
-- **Description:** Update ticket priority
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/queue`
-- **Method:** `POST`
-- **Description:** Move ticket to different queue
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/merge`
-- **Method:** `POST`
-- **Description:** Merge ticket with another ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/split`
-- **Method:** `POST`
-- **Description:** Split ticket into multiple tickets (temporary)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/customer-users`
-- **Method:** `GET`
-- **Description:** Get customer users associated with ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/history`
-- **Method:** `GET`
-- **Description:** HTMX fragment: ticket history
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/links`
-- **Method:** `GET`
-- **Description:** HTMX fragment: ticket links
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/bulk/status`
-- **Method:** `POST`
-- **Description:** Bulk update ticket status
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/bulk/priority`
-- **Method:** `POST`
-- **Description:** Bulk update ticket priority
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/bulk/queue`
-- **Method:** `POST`
-- **Description:** Bulk move tickets to queue
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/bulk/assign`
-- **Method:** `POST`
-- **Description:** Bulk assign tickets to agent
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/bulk/lock`
-- **Method:** `POST`
-- **Description:** Bulk lock/unlock tickets
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/bulk/merge`
-- **Method:** `POST`
-- **Description:** Bulk merge tickets into target
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/bulk-options`
-- **Method:** `GET`
-- **Description:** Get options for bulk action modals
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/tickets/ids`
-- **Method:** `GET`
-- **Description:** Get all ticket IDs matching current filter for bulk selection
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues`
-- **Method:** `GET`
-- **Description:** Display agent queues
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/templates`
-- **Method:** `GET`
-- **Description:** Get templates for a queue (query params: queue_id, type)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/templates/:id`
-- **Method:** `GET`
-- **Description:** Get a single template with variable substitution
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/signatures/queue/:queue_id`
-- **Method:** `GET`
-- **Description:** Get a queue signature with variable substitution
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/session-timeout`
-- **Method:** `GET`
-- **Description:** Get current session timeout preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/session-timeout`
-- **Method:** `POST`
-- **Description:** Update session timeout preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/language`
-- **Method:** `GET`
-- **Description:** Get current language preference and available languages
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/language`
-- **Method:** `POST`
-- **Description:** Update language preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/theme`
-- **Method:** `GET`
-- **Description:** Get current theme preference and available themes
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/theme`
-- **Method:** `POST`
-- **Description:** Update theme preference (persists to database)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/reminders-enabled`
-- **Method:** `GET`
-- **Description:** Get ticket reminders enabled preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/reminders-enabled`
-- **Method:** `POST`
-- **Description:** Update ticket reminders enabled preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/profile`
-- **Method:** `GET`
-- **Description:** Get current user&#39;s profile information
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/profile`
-- **Method:** `POST`
-- **Description:** Update current user&#39;s profile information
-
-
-
-
----
-
-#### 
-
-- **Path:** `/password`
-- **Method:** `GET`
-- **Description:** Display password change form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/password/change`
-- **Method:** `POST`
-- **Description:** Process password change
-
-
-
-
----
-
-
-
-### Default: api-aliases-protected
-
-**Description:** Legacy /api alias routes - most moved to dedicated files  
-**Prefix:** `/api`  
-**Middleware:** `unified_auth` `agent` 
-
-
-
-
-### Default: api-attachments
-
-**Description:** Ticket attachment API endpoints  
-**Prefix:** `/api`  
-**Middleware:** `unified_auth` `agent` 
-
-
-#### 
-
-- **Path:** `/tickets/:id/attachments`
-- **Method:** `GET`
-- **Description:** List attachments for a ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/attachments`
-- **Method:** `POST`
-- **Description:** Upload attachment to a ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/articles/:article_id/attachments/:file_id`
-- **Method:** `GET`
-- **Description:** Download an attachment of one of the ticket&#39;s articles
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/articles/:article_id/attachments/:file_id`
-- **Method:** `DELETE`
-- **Description:** Delete an attachment of one of the ticket&#39;s articles
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/articles/:article_id/attachments/:file_id/thumbnail`
-- **Method:** `GET`
-- **Description:** PNG preview of an attachment (images, PDF page 1, type placeholder otherwise)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/articles/:article_id/attachments/:file_id/view`
-- **Method:** `GET`
-- **Description:** Attachment viewer page; ?raw=1 serves the content for the viewer frame
-
-
-
-
----
-
-
-
-### Default: api-canned-responses-protected
-
-**Description:** Canned response management API endpoints (protected, agents only)  
-**Prefix:** `/api/canned-responses`  
-**Middleware:** `unified_auth` `agent` 
-
-
-#### 
-
-- **Path:** `/`
-- **Method:** `GET`
-- **Description:** List canned responses visible to the caller (filters: category, scope, search, tags, sort_by, sort_order, limit)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/`
-- **Method:** `POST`
-- **Description:** Create a canned response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/popular`
-- **Method:** `GET`
-- **Description:** Most used responses first (limit)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/categories`
-- **Method:** `GET`
-- **Description:** List response categories
-
-
-
-
----
-
-#### 
-
-- **Path:** `/category/:category`
-- **Method:** `GET`
-- **Description:** Get responses by category
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search`
-- **Method:** `GET`
-- **Description:** Search canned responses by name or content (q)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/user`
-- **Method:** `GET`
-- **Description:** Get responses for current user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/statistics`
-- **Method:** `GET`
-- **Description:** Usage statistics for the caller&#39;s responses
-
-
-
-
----
-
-#### 
-
-- **Path:** `/export`
-- **Method:** `GET`
-- **Description:** Export responses as JSON or CSV (format=csv)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/import`
-- **Method:** `POST`
-- **Description:** Import personal responses from a CSV upload (field: file)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id`
-- **Method:** `GET`
-- **Description:** Get response by ID
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id`
-- **Method:** `PUT`
-- **Description:** Update a canned response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id`
-- **Method:** `DELETE`
-- **Description:** Delete a canned response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/use`
-- **Method:** `POST`
-- **Description:** Render a response with placeholder context and count the use
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/share`
-- **Method:** `POST`
-- **Description:** Change a response&#39;s scope (global requires admin)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/copy`
-- **Method:** `POST`
-- **Description:** Copy a response into the caller&#39;s personal scope
-
-
-
-
----
-
-
-
-### Default: api-customers-protected
-
-**Description:** Customer management API endpoints (protected)  
-**Prefix:** `/api/customers`  
-**Middleware:** `unified_auth` `agent` 
-
-
-#### 
-
-- **Path:** `/search`
-- **Method:** `GET`
-- **Description:** Search customers (autocomplete)
-
-
-
-
----
-
-
-
-### Default: api-dashboard-protected
-
-**Description:** Dashboard widget endpoints (protected)  
-**Prefix:** `/api/dashboard`  
-**Middleware:** `unified_auth` `agent` 
-
-
-#### 
-
-- **Path:** `/recent-tickets`
-- **Method:** `GET`
-- **Description:** Recent tickets widget
-
-
-
-
----
-
-#### 
-
-- **Path:** `/activity-stream`
-- **Method:** `GET`
-- **Description:** Activity stream endpoint
-
-
-
-
----
-
-#### 
-
-- **Path:** `/widgets`
-- **Method:** `GET`
-- **Description:** List all available dashboard widgets with config
-
-
-
-
----
-
-#### 
-
-- **Path:** `/widgets/config`
-- **Method:** `GET`
-- **Description:** Get user&#39;s dashboard widget configuration
-
-
-
-
----
-
-#### 
-
-- **Path:** `/widgets/config`
-- **Method:** `POST`
-- **Description:** Update user&#39;s dashboard widget configuration
-
-
-
-
----
-
-
-
-### Default: api-groups-protected
-
-**Description:** Group management API endpoints (protected)  
-**Prefix:** `/api/groups`  
-**Middleware:** `unified_auth` `agent` 
-
-
-#### 
-
-- **Path:** `/`
-- **Method:** `GET`
-- **Description:** List all groups
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id`
-- **Method:** `GET`
-- **Description:** Get group by ID
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/members`
-- **Method:** `GET`
-- **Description:** Get group members
-
-
-
-
----
-
-
-
-### Default: api-lookups
-
-**Description:** Lookup API endpoints  
-**Prefix:** `/api`  
-**Middleware:** `unified_auth` `agent` 
-
-
-#### 
-
-- **Path:** `/lookups/queues`
-- **Method:** `GET`
-- **Description:** Get list of queues
-
-
-
-
----
-
-#### 
-
-- **Path:** `/lookups/priorities`
-- **Method:** `GET`
-- **Description:** Get list of priorities
-
-
-
-
----
-
-#### 
-
-- **Path:** `/lookups/types`
-- **Method:** `GET`
-- **Description:** Get list of ticket types
-
-
-
-
----
-
-#### 
-
-- **Path:** `/lookups/statuses`
-- **Method:** `GET`
-- **Description:** Get list of ticket statuses
-
-
-
-
----
-
-#### 
-
-- **Path:** `/lookups/form-data`
-- **Method:** `GET`
-- **Description:** Get form data for ticket creation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/lookups/cache/invalidate`
-- **Method:** `POST`
-- **Description:** Invalidate lookup cache
-
-
-
-
----
-
-
-
-### Default: api-mcp
-
-**Description:** Model Context Protocol endpoint for AI assistant integration  
-**Prefix:** `/api`  
-**Middleware:** 
-
-
-#### 
-
-- **Path:** `/mcp`
-- **Method:** `POST`
-- **Description:** MCP JSON-RPC endpoint
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mcp`
-- **Method:** `GET`
-- **Description:** MCP endpoint info
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mcp/sse`
-- **Method:** `POST`
-- **Description:** MCP Streamable HTTP endpoint (client-to-server)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mcp/sse`
-- **Method:** `GET`
-- **Description:** MCP SSE notification stream (server-to-client)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/mcp/sse`
-- **Method:** `DELETE`
-- **Description:** MCP session termination
-
-
-
-
----
-
-
-
-### Default: api-notifications
-
-**Description:** Notification API endpoints  
-**Prefix:** `/api`  
-**Middleware:** `unified_auth` `agent` 
-
-
-#### 
-
-- **Path:** `/notifications/pending`
-- **Method:** `GET`
-- **Description:** Fetch pending reminder notifications for current agent
-
-
-
-
----
-
-
-
-### Default: api-push
-
-**Description:** Push notification API endpoints  
-**Prefix:** `/api`  
-**Middleware:** `unified_auth` `agent` 
-
-
-#### 
-
-- **Path:** `/push/vapid-key`
-- **Method:** `GET`
-- **Description:** Get VAPID public key for push subscription
-
-
-
-
----
-
-#### 
-
-- **Path:** `/push/subscribe`
-- **Method:** `POST`
-- **Description:** Register a push subscription
-
-
-
-
----
-
-#### 
-
-- **Path:** `/push/unsubscribe`
-- **Method:** `DELETE`
-- **Description:** Remove a push subscription
-
-
-
-
----
-
-
-
-### Default: api-queues
-
-**Description:** Queue API endpoints for frontend  
-**Prefix:** `/api/queues`  
-**Middleware:** `unified_auth` `agent` `queue_ro` 
-
-
-#### 
-
-- **Path:** `/`
-- **Method:** `GET`
-- **Description:** List all queues
-
-
-
-
----
-
-#### 
-
-- **Path:** `/`
-- **Method:** `POST`
-- **Description:** Create new queue
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id`
-- **Method:** `GET`
-- **Description:** Get queue by ID
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/details`
-- **Method:** `GET`
-- **Description:** Get queue details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/status`
-- **Method:** `PUT`
-- **Description:** Update queue status
-
-
-
-
----
-
-
-
-### Default: api-v1-search
-
-**Description:** REST API v1 ticket search and saved searches (agents only)  
-**Prefix:** `/api/v1/search`  
-**Middleware:** `unified_auth` `scope_tickets_read` `queue_ro` 
-
-
-#### 
-
-- **Path:** `/tickets`
-- **Method:** `GET`
-- **Description:** Search tickets (ticket, article and customer fields)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/saved`
-- **Method:** `GET`
-- **Description:** List the caller&#39;s saved ticket searches
-
-
-
-
----
-
-#### 
-
-- **Path:** `/saved`
-- **Method:** `POST`
-- **Description:** Save a ticket search
-
-
-
-
----
-
-#### 
-
-- **Path:** `/saved/:name`
-- **Method:** `GET`
-- **Description:** Get a saved ticket search
-
-
-
-
----
-
-#### 
-
-- **Path:** `/saved/:name`
-- **Method:** `PUT`
-- **Description:** Replace the parameters of a saved ticket search
-
-
-
-
----
-
-#### 
-
-- **Path:** `/saved/:name`
-- **Method:** `DELETE`
-- **Description:** Delete a saved ticket search
-
-
-
-
----
-
-#### 
-
-- **Path:** `/saved/:name/execute`
-- **Method:** `POST`
-- **Description:** Run a saved ticket search
-
-
-
-
----
-
-
-
-### Default: api-setup-admin
-
-**Description:** Setup assistant admin API (recce, wizard, task catalog)  
-**Prefix:** `/api/v1/admin/setup`  
-**Middleware:** `unified_auth` `admin` 
-
-
-#### 
-
-- **Path:** `/recce`
-- **Method:** `GET`
-- **Description:** Return system snapshot (entity counts &#43; setup status)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/wizard`
-- **Method:** `POST`
-- **Description:** Execute the first-run wizard from a single JSON payload
-
-
-
-
----
-
-#### 
-
-- **Path:** `/onboard-customer`
-- **Method:** `POST`
-- **Description:** Provision a customer company &#43; portal users in one shot
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tasks`
-- **Method:** `GET`
-- **Description:** Return the combined core &#43; plugin setup task catalog
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tasks/:plugin/:task_id`
-- **Method:** `POST`
-- **Description:** Dispatch a plugin setup task
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customers/search/:query`
-- **Method:** `GET`
-- **Description:** Search customers for dropdown type-ahead (supports name and ID)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customers/:customer_id`
-- **Method:** `GET`
-- **Description:** Return full customer configuration for form auto-population
-
-
-
-
----
-
-
-
-### Default: api-ticket-messages
-
-**Description:** Ticket message retrieval and creation endpoints  
-**Prefix:** `/api`  
-**Middleware:** `unified_auth` `agent` 
-
-
-#### 
-
-- **Path:** `/tickets/:id/messages`
-- **Method:** `GET`
-- **Description:** List ticket messages including attachments
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/messages`
-- **Method:** `POST`
-- **Description:** Create a new message for a ticket
-
-
-
-
----
-
-
-
-### Default: api-tickets-protected
-
-**Description:** Ticket management API endpoints (protected)  
-**Prefix:** `/api/tickets`  
-**Middleware:** `unified_auth` `agent` `scope_tickets_read` `queue_ro` 
-
-
-#### 
-
-- **Path:** `/`
-- **Method:** `GET`
-- **Description:** List tickets with filtering
-
-
-
-
----
-
-#### 
-
-- **Path:** `/`
-- **Method:** `POST`
-- **Description:** Create new ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id`
-- **Method:** `GET`
-- **Description:** Get ticket by ID
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id`
-- **Method:** `PUT`
-- **Description:** Update ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id`
-- **Method:** `DELETE`
-- **Description:** Delete ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/notes`
-- **Method:** `POST`
-- **Description:** Add note to ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/history`
-- **Method:** `GET`
-- **Description:** Get ticket history
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/available-agents`
-- **Method:** `GET`
-- **Description:** Get available agents for assignment
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/assign`
-- **Method:** `POST`
-- **Description:** Assign ticket to agent
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/close`
-- **Method:** `POST`
-- **Description:** Close ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/reopen`
-- **Method:** `POST`
-- **Description:** Reopen closed ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/status`
-- **Method:** `POST`
-- **Description:** Update ticket status (supports pending reminders)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/time`
-- **Method:** `POST`
-- **Description:** Add time accounting entry
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/reply`
-- **Method:** `POST`
-- **Description:** Reply to ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/priority`
-- **Method:** `POST`
-- **Description:** Update ticket priority
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/queue`
-- **Method:** `POST`
-- **Description:** Update ticket queue
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search`
-- **Method:** `GET`
-- **Description:** Search tickets
-
-
-
-
----
-
-#### 
-
-- **Path:** `/filter`
-- **Method:** `GET`
-- **Description:** Filter tickets
-
-
-
-
----
-
-
-
-### Default: api-tokens-agent
-
-**Description:** API token management for agents  
-**Prefix:** `/api/v1/tokens`  
-**Middleware:** `unified_auth` `agent` 
-
-
-#### 
-
-- **Path:** `/`
-- **Method:** `GET`
-- **Description:** List my API tokens
-
-
-
-
----
-
-#### 
-
-- **Path:** `/`
-- **Method:** `POST`
-- **Description:** Create a new API token
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id`
-- **Method:** `DELETE`
-- **Description:** Revoke an API token
-
-
-
-
----
-
-#### 
-
-- **Path:** `/scopes`
-- **Method:** `GET`
-- **Description:** List available token scopes
-
-
-
-
----
-
-
-
-### Default: api-tokens-admin
-
-**Description:** API token admin management  
-**Prefix:** `/api/v1/admin`  
-**Middleware:** `unified_auth` `admin` 
-
-
-#### 
-
-- **Path:** `/tokens`
-- **Method:** `GET`
-- **Description:** List all API tokens (admin)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tokens/:id`
-- **Method:** `DELETE`
-- **Description:** Revoke any API token (admin)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/:userId/tokens`
-- **Method:** `GET`
-- **Description:** List a specific user&#39;s API tokens
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/:userId/tokens`
-- **Method:** `POST`
-- **Description:** Create API token for a user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/:userId/tokens/:tokenId`
-- **Method:** `DELETE`
-- **Description:** Revoke a specific user&#39;s token
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-users/:customerId/tokens`
-- **Method:** `GET`
-- **Description:** List a specific customer&#39;s API tokens
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-users/:customerId/tokens`
-- **Method:** `POST`
-- **Description:** Create API token for a customer
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-users/:customerId/tokens/:tokenId`
-- **Method:** `DELETE`
-- **Description:** Revoke a specific customer&#39;s token
-
-
-
-
----
-
-
-
-### Default: api-tokens-customer
-
-**Description:** API token management for customers  
-**Prefix:** `/customer/api/v1/tokens`  
-**Middleware:** `unified_auth` `customer` 
-
-
-#### 
-
-- **Path:** `/`
-- **Method:** `GET`
-- **Description:** List my API tokens (customer)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/`
-- **Method:** `POST`
-- **Description:** Create a new API token (customer)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id`
-- **Method:** `DELETE`
-- **Description:** Revoke an API token (customer)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/scopes`
-- **Method:** `GET`
-- **Description:** List available token scopes (customer)
-
-
-
-
----
-
-
-
-### Default: api-types-protected
-
-**Description:** Ticket type management API endpoints (protected)  
-**Prefix:** `/api/types`  
-**Middleware:** `unified_auth` `admin` 
-
-
-#### 
-
-- **Path:** `/`
-- **Method:** `POST`
-- **Description:** Create new ticket type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id`
-- **Method:** `PUT`
-- **Description:** Update ticket type
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id`
-- **Method:** `DELETE`
-- **Description:** Delete ticket type
-
-
-
-
----
-
-
-
-### Default: api-v1-public
-
-**Description:** REST API v1 public endpoints  
-**Prefix:** `/api/v1`  
-**Middleware:** 
-
-
-#### 
-
-- **Path:** `/auth/login`
-- **Method:** `POST`
-- **Description:** Authenticate user and return JWT tokens
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auth/refresh`
-- **Method:** `POST`
-- **Description:** Exchange a refresh token for a new access token and a rotated refresh token
-
-
-
-
----
-
-
-
-### Default: api-v1-customer-readable
-
-**Description:** REST API v1 ticket reads shared by agents and customers  
-**Prefix:** `/api/v1`  
-**Middleware:** `unified_auth` 
-
-
-#### 
-
-- **Path:** `/tickets`
-- **Method:** `GET`
-- **Description:** List tickets
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id`
-- **Method:** `GET`
-- **Description:** Get ticket by ID
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/articles`
-- **Method:** `GET`
-- **Description:** Get ticket articles
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/articles/:article_id`
-- **Method:** `GET`
-- **Description:** Get specific article
-
-
-
-
----
-
-
-
-### Default: api-v1-protected
-
-**Description:** REST API v1 protected endpoints  
-**Prefix:** `/api/v1`  
-**Middleware:** `unified_auth` `agent` 
-
-
-#### 
-
-- **Path:** `/tickets`
-- **Method:** `POST`
-- **Description:** Create ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id`
-- **Method:** `PUT`
-- **Description:** Update ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id`
-- **Method:** `DELETE`
-- **Description:** Delete ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/reopen`
-- **Method:** `POST`
-- **Description:** Reopen ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/time`
-- **Method:** `POST`
-- **Description:** Add time accounting entry to ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/articles`
-- **Method:** `POST`
-- **Description:** Add article to ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/internal-notes`
-- **Method:** `GET`
-- **Description:** Get internal notes for a ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/internal-notes`
-- **Method:** `POST`
-- **Description:** Create internal note for a ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/internal-notes/:note_id`
-- **Method:** `PUT`
-- **Description:** Update internal note
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/internal-notes/:note_id`
-- **Method:** `DELETE`
-- **Description:** Delete internal note
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users`
-- **Method:** `GET`
-- **Description:** List users
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/:id`
-- **Method:** `GET`
-- **Description:** Get user by ID
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/me`
-- **Method:** `GET`
-- **Description:** Get current user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/groups`
-- **Method:** `GET`
-- **Description:** List groups
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues`
-- **Method:** `GET`
-- **Description:** List queues
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues/:id`
-- **Method:** `GET`
-- **Description:** Get queue by ID
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues/:id/agents`
-- **Method:** `GET`
-- **Description:** Get agents with permissions for queue
-
-
-
-
----
-
-#### 
-
-- **Path:** `/priorities`
-- **Method:** `GET`
-- **Description:** List priorities
-
-
-
-
----
-
-#### 
-
-- **Path:** `/priorities/:id`
-- **Method:** `GET`
-- **Description:** Get priority by ID
-
-
-
-
----
-
-#### 
-
-- **Path:** `/priorities`
-- **Method:** `POST`
-- **Description:** Create priority (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/priorities/:id`
-- **Method:** `PUT`
-- **Description:** Update priority (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/priorities/:id`
-- **Method:** `DELETE`
-- **Description:** Invalidate priority (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/types`
-- **Method:** `GET`
-- **Description:** List ticket types
-
-
-
-
----
-
-#### 
-
-- **Path:** `/states`
-- **Method:** `GET`
-- **Description:** List ticket states
-
-
-
-
----
-
-#### 
-
-- **Path:** `/services`
-- **Method:** `GET`
-- **Description:** List services
-
-
-
-
----
-
-#### 
-
-- **Path:** `/statistics/dashboard`
-- **Method:** `GET`
-- **Description:** Dashboard statistics (ticket counts by state, queue, priority; recent tickets)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/statistics/trends`
-- **Method:** `GET`
-- **Description:** Ticket created/closed trends (daily or monthly)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/statistics/agents`
-- **Method:** `GET`
-- **Description:** Agent performance (tickets assigned/closed, articles written)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/statistics/queues`
-- **Method:** `GET`
-- **Description:** Queue metrics (total, open, backlog)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/statistics/analytics`
-- **Method:** `GET`
-- **Description:** Ticket distribution by hour of day or day of week
-
-
-
-
----
-
-#### 
-
-- **Path:** `/statistics/customers`
-- **Method:** `GET`
-- **Description:** Customer statistics (top customers, activity)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/statistics/export`
-- **Method:** `GET`
-- **Description:** Export statistics summary or ticket list as JSON or CSV
-
-
-
-
----
-
-#### 
-
-- **Path:** `/ticket-states/statistics`
-- **Method:** `GET`
-- **Description:** Ticket counts per ticket state
-
-
-
-
----
-
-#### 
-
-- **Path:** `/ticket-attribute-relations/evaluate`
-- **Method:** `GET`
-- **Description:** Evaluate ticket attribute relations for filtering dropdowns
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search`
-- **Method:** `POST`
-- **Description:** Search tickets
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search/reindex`
-- **Method:** `POST`
-- **Description:** Trigger search reindex (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/search/health`
-- **Method:** `GET`
-- **Description:** Search health
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users`
-- **Method:** `POST`
-- **Description:** Create user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/:id`
-- **Method:** `PUT`
-- **Description:** Update user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/users/:id`
-- **Method:** `DELETE`
-- **Description:** Delete user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/articles/:article_id`
-- **Method:** `PUT`
-- **Description:** Update article
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/articles/:article_id`
-- **Method:** `DELETE`
-- **Description:** Delete article
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues`
-- **Method:** `POST`
-- **Description:** Create queue (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues/:id`
-- **Method:** `PUT`
-- **Description:** Update queue, including its group (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues/:id`
-- **Method:** `DELETE`
-- **Description:** Delete queue (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues/:id/stats`
-- **Method:** `GET`
-- **Description:** Queue ticket statistics
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues/:id/groups`
-- **Method:** `POST`
-- **Description:** Set the queue&#39;s group (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues/:id/groups/:group_id`
-- **Method:** `DELETE`
-- **Description:** Remove the queue&#39;s group: always rejected, a queue must have a group (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/system-addresses`
-- **Method:** `GET`
-- **Description:** List system addresses
-
-
-
-
----
-
-#### 
-
-- **Path:** `/system-addresses`
-- **Method:** `POST`
-- **Description:** Create system address (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/system-addresses/:id`
-- **Method:** `PUT`
-- **Description:** Update system address (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/salutations`
-- **Method:** `GET`
-- **Description:** List salutations
-
-
-
-
----
-
-#### 
-
-- **Path:** `/salutations`
-- **Method:** `POST`
-- **Description:** Create salutation (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/salutations/:id`
-- **Method:** `PUT`
-- **Description:** Update salutation (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/signatures`
-- **Method:** `GET`
-- **Description:** List signatures
-
-
-
-
----
-
-#### 
-
-- **Path:** `/signatures`
-- **Method:** `POST`
-- **Description:** Create signature (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/signatures/:id`
-- **Method:** `PUT`
-- **Description:** Update signature (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/markdown/render`
-- **Method:** `POST`
-- **Description:** Render markdown to sanitized HTML
-
-
-
-
----
-
-#### 
-
-- **Path:** `/custom-fields/definitions`
-- **Method:** `GET`
-- **Description:** List custom field definitions
-
-
-
-
----
-
-#### 
-
-- **Path:** `/custom-fields/definitions/:id`
-- **Method:** `GET`
-- **Description:** Get custom field definition
-
-
-
-
----
-
-#### 
-
-- **Path:** `/custom-fields/definitions`
-- **Method:** `POST`
-- **Description:** Create custom field definition (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/custom-fields/definitions/:id`
-- **Method:** `PUT`
-- **Description:** Update custom field definition (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/custom-fields/definitions/:id`
-- **Method:** `DELETE`
-- **Description:** Soft-delete custom field definition (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/custom-fields/values/:entity_type/:id`
-- **Method:** `GET`
-- **Description:** Get custom field values for entity
-
-
-
-
----
-
-#### 
-
-- **Path:** `/custom-fields/values/:entity_type/:id`
-- **Method:** `PUT`
-- **Description:** Set custom field values for entity
-
-
-
-
----
-
-#### 
-
-- **Path:** `/custom-fields/query`
-- **Method:** `POST`
-- **Description:** Query entities by custom field values
-
-
-
-
----
-
-#### 
-
-- **Path:** `/session/orgs`
-- **Method:** `GET`
-- **Description:** List current user&#39;s organisations
-
-
-
-
----
-
-#### 
-
-- **Path:** `/session/org`
-- **Method:** `POST`
-- **Description:** Switch active organisation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/organisations`
-- **Method:** `GET`
-- **Description:** List all organisations (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/organisations`
-- **Method:** `POST`
-- **Description:** Create organisation (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/organisations/:id`
-- **Method:** `PUT`
-- **Description:** Update organisation (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/organisations/:id`
-- **Method:** `DELETE`
-- **Description:** Delete organisation (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/organisations/:id/members`
-- **Method:** `GET`
-- **Description:** List organisation members
-
-
-
-
----
-
-#### 
-
-- **Path:** `/organisations/:id/members`
-- **Method:** `POST`
-- **Description:** Add member to organisation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/organisations/:id/members/:member_id`
-- **Method:** `DELETE`
-- **Description:** Remove member from organisation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/organisations/:id/plugin-access`
-- **Method:** `GET`
-- **Description:** List plugin-access bindings for an organisation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/organisations/:id/plugin-access`
-- **Method:** `POST`
-- **Description:** Set or replace plugin-access binding for an organisation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/organisations/:id/plugin-access/:plugin`
-- **Method:** `DELETE`
-- **Description:** Disable a plugin for an organisation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/organisations/:id/captive-plugin`
-- **Method:** `POST`
-- **Description:** Set or clear the captive plugin for an organisation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/organisations/:id/config`
-- **Method:** `GET`
-- **Description:** List per-org config overrides
-
-
-
-
----
-
-#### 
-
-- **Path:** `/organisations/:id/config`
-- **Method:** `PUT`
-- **Description:** Set per-org config override
-
-
-
-
----
-
-#### 
-
-- **Path:** `/organisations/:id/config/:name`
-- **Method:** `DELETE`
-- **Description:** Remove per-org config override
-
-
-
-
----
-
-#### 
-
-- **Path:** `/admin/sql`
-- **Method:** `POST`
-- **Description:** Execute read-only SQL query (SELECT, DESCRIBE, EXPLAIN, SHOW TABLES/COLUMNS — admin only)
-
-
-
-
----
-
-
-
-### Default: api-webhooks
-
-**Description:** Outbound webhook configuration, delivery log, test and redelivery (admin only)  
-**Prefix:** `/api/v1`  
-**Middleware:** `unified_auth` `admin` 
-
-
-#### 
-
-- **Path:** `/webhooks`
-- **Method:** `GET`
-- **Description:** List webhooks (optional ?active=true|false)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/webhooks`
-- **Method:** `POST`
-- **Description:** Create webhook
-
-
-
-
----
-
-#### 
-
-- **Path:** `/webhooks/events`
-- **Method:** `GET`
-- **Description:** List subscribable webhook events
-
-
-
-
----
-
-#### 
-
-- **Path:** `/webhooks/deliveries/:id`
-- **Method:** `GET`
-- **Description:** Get delivery including payload and response
-
-
-
-
----
-
-#### 
-
-- **Path:** `/webhooks/deliveries/:id/redeliver`
-- **Method:** `POST`
-- **Description:** Send a delivery&#39;s payload again as a new delivery
-
-
-
-
----
-
-#### 
-
-- **Path:** `/webhooks/:id`
-- **Method:** `GET`
-- **Description:** Get webhook
-
-
-
-
----
-
-#### 
-
-- **Path:** `/webhooks/:id`
-- **Method:** `PUT`
-- **Description:** Update webhook (partial)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/webhooks/:id`
-- **Method:** `DELETE`
-- **Description:** Delete webhook and its delivery log
-
-
-
-
----
-
-#### 
-
-- **Path:** `/webhooks/:id/test`
-- **Method:** `POST`
-- **Description:** Send a webhook.test event now
-
-
-
-
----
-
-#### 
-
-- **Path:** `/webhooks/:id/deliveries`
-- **Method:** `GET`
-- **Description:** List recent deliveries (optional ?limit=1..200)
-
-
-
-
----
-
-
-
-### Default: auth
-
-**Description:** Authentication routes for login/logout  
-**Prefix:** ``  
-**Middleware:** 
-
-
-#### 
-
-- **Path:** `/login`
-- **Method:** `GET`
-- **Description:** Display login page with HTMX form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/login`
-- **Method:** `POST`
-- **Description:** Process login form submission via HTMX
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/passkey/begin`
-- **Method:** `POST`
-- **Description:** Begin agent passkey login
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/passkey/finish`
-- **Method:** `POST`
-- **Description:** Finish agent passkey login
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/logout`
-- **Method:** `POST`
-- **Description:** Process logout request
-
-
-
-
----
-
-#### 
-
-- **Path:** `/logout`
-- **Method:** `GET`
-- **Description:** GET logout route that redirects to login
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auth/customer`
-- **Method:** `GET`
-- **Description:** Customer login portal
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/login`
-- **Method:** `GET`
-- **Description:** Alias customer login path
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/login`
-- **Method:** `POST`
-- **Description:** Process customer login form (alias)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/customer/login`
-- **Method:** `POST`
-- **Description:** Process customer login form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/customer/passkey/begin`
-- **Method:** `POST`
-- **Description:** Begin customer passkey login
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/customer/passkey/finish`
-- **Method:** `POST`
-- **Description:** Finish customer passkey login
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/logout`
-- **Method:** `GET`
-- **Description:** Customer logout - clears cookies and redirects
-
-
-
-
----
-
-#### 
-
-- **Path:** `/login/2fa`
-- **Method:** `GET`
-- **Description:** Display 2FA verification page during login
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/2fa/verify`
-- **Method:** `POST`
-- **Description:** Verify 2FA code and complete login
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/2fa/webauthn/begin`
-- **Method:** `POST`
-- **Description:** Begin security key login verification
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/2fa/webauthn/finish`
-- **Method:** `POST`
-- **Description:** Finish security key login verification
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/login/2fa`
-- **Method:** `GET`
-- **Description:** Display customer 2FA verification page during login
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/customer/2fa/verify`
-- **Method:** `POST`
-- **Description:** Verify customer 2FA code and complete login
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/customer/2fa/webauthn/begin`
-- **Method:** `POST`
-- **Description:** Begin customer security key login verification
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/auth/customer/2fa/webauthn/finish`
-- **Method:** `POST`
-- **Description:** Finish customer security key login verification
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auth/:id`
-- **Method:** `GET`
-- **Description:** Redirect to IdP for OIDC/OAuth2 authentication
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auth/:id/callback`
-- **Method:** `GET`
-- **Description:** Handle OIDC/OAuth2 callback from IdP
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auth/:id/saml`
-- **Method:** `GET`
-- **Description:** Initiate SAML2 SP-initiated login flow
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auth/:id/acs`
-- **Method:** `POST`
-- **Description:** Handle SAML2 ACS POST response from IdP
-
-
-
-
----
-
-#### 
-
-- **Path:** `/auth/:id/metadata`
-- **Method:** `GET`
-- **Description:** Serve SAML2 SP metadata XML for IdP auto-configuration
-
-
-
-
----
-
-
-
-### Default: basic
-
-**Description:** Basic system routes (root, health, metrics, etc.)  
-**Prefix:** ``  
-**Middleware:** 
-
-
-#### 
-
-- **Path:** `/`
-- **Method:** `GET`
-- **Description:** Root path redirects to login
-
-
-
-
----
-
-#### 
-
-- **Path:** `/health`
-- **Method:** `GET`
-- **Description:** Basic health check endpoint
-
-
-
-
----
-
-#### 
-
-- **Path:** `/health/detailed`
-- **Method:** `GET`
-- **Description:** Detailed health check with component status (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/metrics`
-- **Method:** `GET`
-- **Description:** Prometheus metrics endpoint (admin only)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues`
-- **Method:** `GET`
-- **Description:** Role-aware redirect/render for queues
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues/:id`
-- **Method:** `GET`
-- **Description:** Display tickets filtered by specific queue
-
-
-
-
----
-
-#### 
-
-- **Path:** `/queues/:id/meta`
-- **Method:** `GET`
-- **Description:** Render queue metadata panel or JSON payload
-
-
-
-
----
-
-#### 
-
-- **Path:** `/ticket/:id`
-- **Method:** `GET`
-- **Description:** Display ticket detail using the unified handler
-
-
-
-
----
-
-#### 
-
-- **Path:** `/ticket/new`
-- **Method:** `GET`
-- **Description:** Redirect to email ticket creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/ticket/new/email`
-- **Method:** `GET`
-- **Description:** Display email ticket creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/ticket/new/phone`
-- **Method:** `GET`
-- **Description:** Display phone ticket creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/healthz`
-- **Method:** `GET`
-- **Description:** Quick liveness probe
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/languages`
-- **Method:** `GET`
-- **Description:** Get available languages and current preference (no auth required)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/languages`
-- **Method:** `POST`
-- **Description:** Set language preference cookie (no auth required)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/themes`
-- **Method:** `GET`
-- **Description:** Get available themes and current preference (no auth required)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/themes`
-- **Method:** `POST`
-- **Description:** Set theme and mode preference cookies (no auth required)
-
-
-
-
----
-
-
-
-### Default: compatibility
-
-**Description:** Compatibility routes for legacy URLs  
-**Prefix:** ``  
-**Middleware:** 
-
-
-#### 
-
-- **Path:** `/agent/tickets/:id`
-- **Method:** `GET`
-- **Description:** Redirect legacy agent ticket URL to unified /ticket/:tn
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id`
-- **Method:** `GET`
-- **Description:** Redirect legacy tickets URL to unified /ticket/:tn
-
-
-
-
----
-
-
-
-### Default: customer
-
-**Description:** Customer routes for ticket management and self-service  
-**Prefix:** `/customer`  
-**Middleware:** `customer-captive-redirect` `customer-portal` 
-
-
-#### 
-
-- **Path:** `/`
-- **Method:** `GET`
-- **Description:** Display customer dashboard with their tickets
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets`
-- **Method:** `GET`
-- **Description:** Display customer&#39;s ticket list
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/new`
-- **Method:** `GET`
-- **Description:** Display new ticket creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/create`
-- **Method:** `POST`
-- **Description:** Process new ticket creation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id`
-- **Method:** `GET`
-- **Description:** Display customer ticket details and conversation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/reply`
-- **Method:** `POST`
-- **Description:** Process customer reply to ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/close`
-- **Method:** `POST`
-- **Description:** Close customer ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/profile`
-- **Method:** `GET`
-- **Description:** Display customer profile information
-
-
-
-
----
-
-#### 
-
-- **Path:** `/profile/update`
-- **Method:** `POST`
-- **Description:** Update customer profile information
-
-
-
-
----
-
-#### 
-
-- **Path:** `/company`
-- **Method:** `GET`
-- **Description:** Display the logged-in customer&#39;s own company details
-
-
-
-
----
-
-#### 
-
-- **Path:** `/company/users`
-- **Method:** `GET`
-- **Description:** List the valid customer users of the logged-in customer&#39;s own company
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/language`
-- **Method:** `GET`
-- **Description:** Get customer language preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/language`
-- **Method:** `POST`
-- **Description:** Set customer language preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/session-timeout`
-- **Method:** `GET`
-- **Description:** Get customer session timeout preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/session-timeout`
-- **Method:** `POST`
-- **Description:** Set customer session timeout preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/theme`
-- **Method:** `GET`
-- **Description:** Get customer theme preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/theme`
-- **Method:** `POST`
-- **Description:** Set customer theme preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/wallpaper`
-- **Method:** `POST`
-- **Description:** Set wallpaper on/off preference for customer
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/coachmarks/dismiss`
-- **Method:** `POST`
-- **Description:** Dismiss a coachmark tip for current customer
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/status`
-- **Method:** `GET`
-- **Description:** Get 2FA status for current customer
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/setup`
-- **Method:** `POST`
-- **Description:** Initiate 2FA setup for customer - returns secret and QR code
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/confirm`
-- **Method:** `POST`
-- **Description:** Confirm 2FA setup with verification code
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/disable`
-- **Method:** `POST`
-- **Description:** Disable 2FA for customer (requires valid code)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/recovery-codes`
-- **Method:** `POST`
-- **Description:** Replace customer recovery codes (password required)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/webauthn/register/begin`
-- **Method:** `POST`
-- **Description:** Begin customer hardware security key registration
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/webauthn/register/finish`
-- **Method:** `POST`
-- **Description:** Finish customer hardware security key registration
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/webauthn/credentials`
-- **Method:** `GET`
-- **Description:** List customer hardware security keys
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/webauthn/credentials/:id`
-- **Method:** `PATCH`
-- **Description:** Rename a customer hardware security key
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/webauthn/credentials/:id`
-- **Method:** `DELETE`
-- **Description:** Remove a customer hardware security key
-
-
-
-
----
-
-#### 
-
-- **Path:** `/password/form`
-- **Method:** `GET`
-- **Description:** Display password change form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/password/change`
-- **Method:** `POST`
-- **Description:** Process password change
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/attachments`
-- **Method:** `GET`
-- **Description:** Get attachments for a customer ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/attachments`
-- **Method:** `POST`
-- **Description:** Upload attachment to a customer ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/articles/:article_id/attachments/:file_id`
-- **Method:** `GET`
-- **Description:** Download an attachment of a customer-visible article (?download=1 forces a download)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/articles/:article_id/attachments/:file_id/thumbnail`
-- **Method:** `GET`
-- **Description:** Get a PNG thumbnail of an attachment
-
-
-
-
----
-
-#### 
-
-- **Path:** `/tickets/:id/articles/:article_id/attachments/:file_id/view`
-- **Method:** `GET`
-- **Description:** View attachment in a viewer page (?raw=1 serves the embeddable content)
-
-
-
-
----
-
-
-
-### Default: dashboard
-
-**Description:** Dashboard routes for main application  
-**Prefix:** `/dashboard`  
-**Middleware:** `auth` `agent` `queue_ro` 
-
-
-#### 
-
-- **Path:** `/`
-- **Method:** `GET`
-- **Description:** Display main dashboard with tickets overview and activity
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/activity-stream`
-- **Method:** `GET`
-- **Description:** Server-sent events for dashboard activity updates
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/recent-tickets`
-- **Method:** `GET`
-- **Description:** Get recent ticket activity for dashboard widget
-
-
-
-
----
-
-
-
-### Default: profile
-
-**Description:** User profile routes  
-**Prefix:** `/profile`  
-**Middleware:** `auth` `agent` 
-
-
-#### 
-
-- **Path:** `/`
-- **Method:** `GET`
-- **Description:** Display user profile page
-
-
-
-
----
-
-
-
-### Default: selfservice
-
-**Description:** Password reset and customer self-registration  
-**Prefix:** ``  
-**Middleware:** 
-
-
-#### 
-
-- **Path:** `/forgot-password`
-- **Method:** `GET`
-- **Description:** Agent forgot-password form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/forgot-password`
-- **Method:** `POST`
-- **Description:** Email an agent a password reset link (same answer for unknown accounts)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/reset-password`
-- **Method:** `GET`
-- **Description:** Agent choose-new-password form (token from email)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/reset-password`
-- **Method:** `POST`
-- **Description:** Set a new agent password with a reset token
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/forgot-password`
-- **Method:** `GET`
-- **Description:** Customer forgot-password form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/forgot-password`
-- **Method:** `POST`
-- **Description:** Email a customer a password reset link (same answer for unknown accounts)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/reset-password`
-- **Method:** `GET`
-- **Description:** Customer choose-new-password form (token from email)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/reset-password`
-- **Method:** `POST`
-- **Description:** Set a new customer password with a reset token
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/register`
-- **Method:** `GET`
-- **Description:** Customer sign-up form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/register`
-- **Method:** `POST`
-- **Description:** Email a sign-up confirmation link
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/register/complete`
-- **Method:** `GET`
-- **Description:** Confirm email address and choose a password (token from email)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer/register/complete`
-- **Method:** `POST`
-- **Description:** Create the customer account
-
-
-
-
----
-
-
-
-### Default: settings
-
-**Description:** User preferences API routes (used by profile page)  
-**Prefix:** ``  
-**Middleware:** `auth` `agent` 
-
-
-#### 
-
-- **Path:** `/api/preferences/session-timeout`
-- **Method:** `GET`
-- **Description:** Get current session timeout preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/session-timeout`
-- **Method:** `POST`
-- **Description:** Update session timeout preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/language`
-- **Method:** `GET`
-- **Description:** Get current language preference and available languages
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/language`
-- **Method:** `POST`
-- **Description:** Update language preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/theme`
-- **Method:** `GET`
-- **Description:** Get current theme preference and available themes
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/theme`
-- **Method:** `POST`
-- **Description:** Update theme preference (persists to database)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/settings/tokens`
-- **Method:** `GET`
-- **Description:** Manage personal API tokens
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/wallpaper`
-- **Method:** `POST`
-- **Description:** Set wallpaper on/off preference
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/coachmarks/dismiss`
-- **Method:** `POST`
-- **Description:** Dismiss a coachmark tip for current user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/status`
-- **Method:** `GET`
-- **Description:** Get 2FA status for current user
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/setup`
-- **Method:** `POST`
-- **Description:** Initiate 2FA setup - returns secret and QR code
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/confirm`
-- **Method:** `POST`
-- **Description:** Confirm 2FA setup with verification code
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/disable`
-- **Method:** `POST`
-- **Description:** Disable 2FA (requires valid code)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/recovery-codes`
-- **Method:** `POST`
-- **Description:** Replace recovery codes (password required)
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/webauthn/register/begin`
-- **Method:** `POST`
-- **Description:** Begin hardware security key registration
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/webauthn/register/finish`
-- **Method:** `POST`
-- **Description:** Finish hardware security key registration
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/webauthn/credentials`
-- **Method:** `GET`
-- **Description:** List hardware security keys
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/webauthn/credentials/:id`
-- **Method:** `PATCH`
-- **Description:** Rename a hardware security key
-
-
-
-
----
-
-#### 
-
-- **Path:** `/api/preferences/2fa/webauthn/credentials/:id`
-- **Method:** `DELETE`
-- **Description:** Remove a hardware security key
-
-
-
-
----
-
-
-
-### Default: static
-
-**Description:** Static routes for CSS, JS, images, and web assets  
-**Prefix:** ``  
-**Middleware:** 
-
-
-#### 
-
-- **Path:** `/manifest.json`
-- **Method:** `GET`
-- **Description:** Serve PWA web app manifest
-
-
-
-
----
-
-#### 
-
-- **Path:** `/sw.js`
-- **Method:** `GET`
-- **Description:** Serve service worker
-
-
-
-
----
-
-#### 
-
-- **Path:** `/sw-config.json`
-- **Method:** `GET`
-- **Description:** Serve service worker cache configuration
-
-
-
-
----
-
-#### 
-
-- **Path:** `/favicon.ico`
-- **Method:** `GET`
-- **Description:** Serve favicon.ico file
-
-
-
-
----
-
-#### 
-
-- **Path:** `/favicon.svg`
-- **Method:** `GET`
-- **Description:** Serve favicon.svg file
-
-
-
-
----
-
-#### 
-
-- **Path:** `/static/*filepath`
-- **Method:** `GET`
-- **Description:** Serve all static files including css, js, images, webfonts
-
-
-
-
----
-
-
-
-### Default: swagger-ui
-
-**Description:** Swagger UI API documentation  
-**Prefix:** `/swagger`  
-**Middleware:** 
-
-
-#### 
-
-- **Path:** `/*any`
-- **Method:** `GET`
-- **Description:** Serve Swagger UI for API documentation (dark mode)
-
-
-
-
----
-
-
-
-### Default: tickets
-
-**Description:** Ticket management routes  
-**Prefix:** `/tickets`  
-**Middleware:** `auth` `agent` `queue_ro` 
-
-
-#### 
-
-- **Path:** `/`
-- **Method:** `GET`
-- **Description:** Display tickets list with search, filtering, and bulk actions
-
-
-
-
----
-
-#### 
-
-- **Path:** `/new`
-- **Method:** `GET`
-- **Description:** Display new ticket creation form
-
-
-
-
----
-
-#### 
-
-- **Path:** `/`
-- **Method:** `POST`
-- **Description:** Process new ticket creation
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/status`
-- **Method:** `PUT`
-- **Description:** Update ticket status via HTMX
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/comments`
-- **Method:** `POST`
-- **Description:** Add new comment/reply to ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/attachments`
-- **Method:** `POST`
-- **Description:** Upload file attachment to ticket
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/priority`
-- **Method:** `PUT`
-- **Description:** Update ticket priority
-
-
-
-
----
-
-#### 
-
-- **Path:** `/:id/assign`
-- **Method:** `PUT`
-- **Description:** Assign ticket to agent
-
-
-
-
----
-
-#### 
-
-- **Path:** `/customer-info/:login`
-- **Method:** `GET`
-- **Description:** Return customer info panel partial for selected login
-
-
-
-
----
-
-
-
-
----
-*Generated by GoatFlow Route Documentation Generator*
+# GoatFlow route reference
+
+Generated by `make generate-route-docs` from `routes/*.yaml`. Paths are the
+absolute paths the server registers. The curated REST API contract is
+`api/openapi.yaml`.
+
+## admin-dynamic-aliases
+
+Friendly URLs for dynamic admin modules
+
+- **File:** `routes/admin-dynamic-aliases.yaml`
+- **Prefix:** `/admin`
+- **Group middleware:** `auth`, `admin`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/admin/mail-accounts` | `handleAdminModuleMailAccounts` |  | List mail accounts |
+| GET | `/admin/mail-accounts/export` | `handleAdminModuleMailAccounts` |  | Export mail accounts |
+| GET | `/admin/mail-accounts/new` | `handleAdminModuleMailAccounts` |  | Render mail account creation form |
+| GET | `/admin/mail-accounts/:id` | `handleAdminModuleMailAccounts` |  | Show mail account details |
+| GET | `/admin/mail-accounts/:id/edit` | `handleAdminModuleMailAccounts` |  | Render mail account edit form |
+| POST | `/admin/mail-accounts` | `handleAdminModuleMailAccounts` |  | Create a mail account |
+| PUT | `/admin/mail-accounts/:id` | `handleAdminModuleMailAccounts` |  | Update a mail account |
+| POST | `/admin/mail-accounts/:id` | `handleAdminModuleMailAccounts` |  | Update a mail account via form submission |
+| DELETE | `/admin/mail-accounts/:id` | `handleAdminModuleMailAccounts` |  | Delete a mail account |
+| PUT | `/admin/mail-accounts/:id/status` | `handleAdminModuleMailAccounts` |  | Toggle mail account status |
+| POST | `/admin/mail-accounts/:id/status` | `handleAdminModuleMailAccounts` |  | Toggle mail account status via form submission |
+| GET | `/admin/mail-accounts/:id/:action` | `handleAdminModuleMailAccounts` |  | Execute custom mail account action |
+| POST | `/admin/mail-accounts/:id/:action` | `handleAdminModuleMailAccounts` |  | Execute custom mail account action |
+| GET | `/admin/communication-channels` | `handleAdminModuleCommunication` |  | List communication channels |
+| GET | `/admin/communication-channels/export` | `handleAdminModuleCommunication` |  | Export communication channels |
+| GET | `/admin/communication-channels/new` | `handleAdminModuleCommunication` |  | Render communication channel creation form |
+| GET | `/admin/communication-channels/:id` | `handleAdminModuleCommunication` |  | Show communication channel details |
+| GET | `/admin/communication-channels/:id/edit` | `handleAdminModuleCommunication` |  | Render communication channel edit form |
+| POST | `/admin/communication-channels` | `handleAdminModuleCommunication` |  | Create a communication channel |
+| PUT | `/admin/communication-channels/:id` | `handleAdminModuleCommunication` |  | Update a communication channel |
+| POST | `/admin/communication-channels/:id` | `handleAdminModuleCommunication` |  | Update a communication channel via form submission |
+| DELETE | `/admin/communication-channels/:id` | `handleAdminModuleCommunication` |  | Delete a communication channel |
+| PUT | `/admin/communication-channels/:id/status` | `handleAdminModuleCommunication` |  | Toggle communication channel status |
+| POST | `/admin/communication-channels/:id/status` | `handleAdminModuleCommunication` |  | Toggle communication channel status via form submission |
+| GET | `/admin/communication-channels/:id/:action` | `handleAdminModuleCommunication` |  | Execute custom communication channel action |
+| POST | `/admin/communication-channels/:id/:action` | `handleAdminModuleCommunication` |  | Execute custom communication channel action |
+| GET | `/admin/package-repositories` | `handleAdminModulePackageRepos` |  | List package repositories |
+| GET | `/admin/package-repositories/export` | `handleAdminModulePackageRepos` |  | Export package repositories |
+| GET | `/admin/package-repositories/new` | `handleAdminModulePackageRepos` |  | Render package repository creation form |
+| GET | `/admin/package-repositories/:id` | `handleAdminModulePackageRepos` |  | Show package repository details |
+| GET | `/admin/package-repositories/:id/edit` | `handleAdminModulePackageRepos` |  | Render package repository edit form |
+| POST | `/admin/package-repositories` | `handleAdminModulePackageRepos` |  | Create a package repository |
+| PUT | `/admin/package-repositories/:id` | `handleAdminModulePackageRepos` |  | Update a package repository |
+| POST | `/admin/package-repositories/:id` | `handleAdminModulePackageRepos` |  | Update a package repository via form submission |
+| DELETE | `/admin/package-repositories/:id` | `handleAdminModulePackageRepos` |  | Delete a package repository |
+| PUT | `/admin/package-repositories/:id/status` | `handleAdminModulePackageRepos` |  | Toggle package repository status |
+| POST | `/admin/package-repositories/:id/status` | `handleAdminModulePackageRepos` |  | Toggle package repository status via form submission |
+| GET | `/admin/package-repositories/:id/:action` | `handleAdminModulePackageRepos` |  | Execute custom package repository action |
+| POST | `/admin/package-repositories/:id/:action` | `handleAdminModulePackageRepos` |  | Execute custom package repository action |
+| GET | `/admin/auto-responses` | `handleAdminModuleAutoResponses` |  | List auto responses |
+| GET | `/admin/auto-responses/export` | `handleAdminModuleAutoResponses` |  | Export auto responses |
+| GET | `/admin/auto-responses/new` | `handleAdminModuleAutoResponses` |  | Render auto response creation form |
+| GET | `/admin/auto-responses/:id` | `handleAdminModuleAutoResponses` |  | Show auto response details |
+| GET | `/admin/auto-responses/:id/edit` | `handleAdminModuleAutoResponses` |  | Render auto response edit form |
+| POST | `/admin/auto-responses` | `handleAdminModuleAutoResponses` |  | Create an auto response |
+| PUT | `/admin/auto-responses/:id` | `handleAdminModuleAutoResponses` |  | Update an auto response |
+| POST | `/admin/auto-responses/:id` | `handleAdminModuleAutoResponses` |  | Update an auto response via form submission |
+| DELETE | `/admin/auto-responses/:id` | `handleAdminModuleAutoResponses` |  | Delete an auto response |
+| PUT | `/admin/auto-responses/:id/status` | `handleAdminModuleAutoResponses` |  | Toggle auto response status |
+| POST | `/admin/auto-responses/:id/status` | `handleAdminModuleAutoResponses` |  | Toggle auto response status via form submission |
+| GET | `/admin/auto-responses/:id/:action` | `handleAdminModuleAutoResponses` |  | Execute custom auto response action |
+| POST | `/admin/auto-responses/:id/:action` | `handleAdminModuleAutoResponses` |  | Execute custom auto response action |
+| GET | `/admin/auto-response-types` | `handleAdminModuleAutoResponseTypes` |  | List auto response types |
+| GET | `/admin/auto-response-types/export` | `handleAdminModuleAutoResponseTypes` |  | Export auto response types |
+| GET | `/admin/auto-response-types/new` | `handleAdminModuleAutoResponseTypes` |  | Render auto response type creation form |
+| GET | `/admin/auto-response-types/:id` | `handleAdminModuleAutoResponseTypes` |  | Show auto response type details |
+| GET | `/admin/auto-response-types/:id/edit` | `handleAdminModuleAutoResponseTypes` |  | Render auto response type edit form |
+| POST | `/admin/auto-response-types` | `handleAdminModuleAutoResponseTypes` |  | Create an auto response type |
+| PUT | `/admin/auto-response-types/:id` | `handleAdminModuleAutoResponseTypes` |  | Update an auto response type |
+| POST | `/admin/auto-response-types/:id` | `handleAdminModuleAutoResponseTypes` |  | Update an auto response type via form submission |
+| DELETE | `/admin/auto-response-types/:id` | `handleAdminModuleAutoResponseTypes` |  | Delete an auto response type |
+| PUT | `/admin/auto-response-types/:id/status` | `handleAdminModuleAutoResponseTypes` |  | Toggle auto response type status |
+| POST | `/admin/auto-response-types/:id/status` | `handleAdminModuleAutoResponseTypes` |  | Toggle auto response type status via form submission |
+| GET | `/admin/auto-response-types/:id/:action` | `handleAdminModuleAutoResponseTypes` |  | Execute custom auto response type action |
+| POST | `/admin/auto-response-types/:id/:action` | `handleAdminModuleAutoResponseTypes` |  | Execute custom auto response type action |
+| GET | `/admin/follow-up-options` | `handleAdminModuleFollowUps` |  | List follow up options |
+| GET | `/admin/follow-up-options/export` | `handleAdminModuleFollowUps` |  | Export follow up options |
+| GET | `/admin/follow-up-options/new` | `handleAdminModuleFollowUps` |  | Render follow up option creation form |
+| GET | `/admin/follow-up-options/:id` | `handleAdminModuleFollowUps` |  | Show follow up option details |
+| GET | `/admin/follow-up-options/:id/edit` | `handleAdminModuleFollowUps` |  | Render follow up option edit form |
+| POST | `/admin/follow-up-options` | `handleAdminModuleFollowUps` |  | Create a follow up option |
+| PUT | `/admin/follow-up-options/:id` | `handleAdminModuleFollowUps` |  | Update a follow up option |
+| POST | `/admin/follow-up-options/:id` | `handleAdminModuleFollowUps` |  | Update a follow up option via form submission |
+| DELETE | `/admin/follow-up-options/:id` | `handleAdminModuleFollowUps` |  | Delete a follow up option |
+| PUT | `/admin/follow-up-options/:id/status` | `handleAdminModuleFollowUps` |  | Toggle follow up option status |
+| POST | `/admin/follow-up-options/:id/status` | `handleAdminModuleFollowUps` |  | Toggle follow up option status via form submission |
+| GET | `/admin/follow-up-options/:id/:action` | `handleAdminModuleFollowUps` |  | Execute custom follow up option action |
+| POST | `/admin/follow-up-options/:id/:action` | `handleAdminModuleFollowUps` |  | Execute custom follow up option action |
+| GET | `/admin/link-states` | `handleAdminModuleLinkStates` |  | List link states |
+| GET | `/admin/link-states/export` | `handleAdminModuleLinkStates` |  | Export link states |
+| GET | `/admin/link-states/new` | `handleAdminModuleLinkStates` |  | Render link state creation form |
+| GET | `/admin/link-states/:id` | `handleAdminModuleLinkStates` |  | Show link state details |
+| GET | `/admin/link-states/:id/edit` | `handleAdminModuleLinkStates` |  | Render link state edit form |
+| POST | `/admin/link-states` | `handleAdminModuleLinkStates` |  | Create a link state |
+| PUT | `/admin/link-states/:id` | `handleAdminModuleLinkStates` |  | Update a link state |
+| POST | `/admin/link-states/:id` | `handleAdminModuleLinkStates` |  | Update a link state via form submission |
+| DELETE | `/admin/link-states/:id` | `handleAdminModuleLinkStates` |  | Delete a link state |
+| PUT | `/admin/link-states/:id/status` | `handleAdminModuleLinkStates` |  | Toggle link state status |
+| POST | `/admin/link-states/:id/status` | `handleAdminModuleLinkStates` |  | Toggle link state status via form submission |
+| GET | `/admin/link-states/:id/:action` | `handleAdminModuleLinkStates` |  | Execute custom link state action |
+| POST | `/admin/link-states/:id/:action` | `handleAdminModuleLinkStates` |  | Execute custom link state action |
+| GET | `/admin/link-types` | `handleAdminModuleLinkTypes` |  | List link types |
+| GET | `/admin/link-types/export` | `handleAdminModuleLinkTypes` |  | Export link types |
+| GET | `/admin/link-types/new` | `handleAdminModuleLinkTypes` |  | Render link type creation form |
+| GET | `/admin/link-types/:id` | `handleAdminModuleLinkTypes` |  | Show link type details |
+| GET | `/admin/link-types/:id/edit` | `handleAdminModuleLinkTypes` |  | Render link type edit form |
+| POST | `/admin/link-types` | `handleAdminModuleLinkTypes` |  | Create a link type |
+| PUT | `/admin/link-types/:id` | `handleAdminModuleLinkTypes` |  | Update a link type |
+| POST | `/admin/link-types/:id` | `handleAdminModuleLinkTypes` |  | Update a link type via form submission |
+| DELETE | `/admin/link-types/:id` | `handleAdminModuleLinkTypes` |  | Delete a link type |
+| PUT | `/admin/link-types/:id/status` | `handleAdminModuleLinkTypes` |  | Toggle link type status |
+| POST | `/admin/link-types/:id/status` | `handleAdminModuleLinkTypes` |  | Toggle link type status via form submission |
+| GET | `/admin/link-types/:id/:action` | `handleAdminModuleLinkTypes` |  | Execute custom link type action |
+| POST | `/admin/link-types/:id/:action` | `handleAdminModuleLinkTypes` |  | Execute custom link type action |
+| GET | `/admin/queue-auto-responses` | `handleAdminModuleQueueAutoResponses` |  | List queue auto responses |
+| GET | `/admin/queue-auto-responses/export` | `handleAdminModuleQueueAutoResponses` |  | Export queue auto responses |
+| GET | `/admin/queue-auto-responses/new` | `handleAdminModuleQueueAutoResponses` |  | Render queue auto response creation form |
+| GET | `/admin/queue-auto-responses/:id` | `handleAdminModuleQueueAutoResponses` |  | Show queue auto response details |
+| GET | `/admin/queue-auto-responses/:id/edit` | `handleAdminModuleQueueAutoResponses` |  | Render queue auto response edit form |
+| POST | `/admin/queue-auto-responses` | `handleAdminModuleQueueAutoResponses` |  | Create a queue auto response |
+| PUT | `/admin/queue-auto-responses/:id` | `handleAdminModuleQueueAutoResponses` |  | Update a queue auto response |
+| POST | `/admin/queue-auto-responses/:id` | `handleAdminModuleQueueAutoResponses` |  | Update a queue auto response via form submission |
+| DELETE | `/admin/queue-auto-responses/:id` | `handleAdminModuleQueueAutoResponses` |  | Delete a queue auto response |
+| PUT | `/admin/queue-auto-responses/:id/status` | `handleAdminModuleQueueAutoResponses` |  | Toggle queue auto response status |
+| POST | `/admin/queue-auto-responses/:id/status` | `handleAdminModuleQueueAutoResponses` |  | Toggle queue auto response status via form submission |
+| GET | `/admin/queue-auto-responses/:id/:action` | `handleAdminModuleQueueAutoResponses` |  | Execute custom queue auto response action |
+| POST | `/admin/queue-auto-responses/:id/:action` | `handleAdminModuleQueueAutoResponses` |  | Execute custom queue auto response action |
+| GET | `/admin/article-colors` | `handleAdminModuleArticleColors` |  | List article colors |
+| GET | `/admin/article-colors/export` | `handleAdminModuleArticleColors` |  | Export article colors |
+| GET | `/admin/article-colors/new` | `handleAdminModuleArticleColors` |  | Render article color creation form |
+| GET | `/admin/article-colors/:id` | `handleAdminModuleArticleColors` |  | Show article color details |
+| GET | `/admin/article-colors/:id/edit` | `handleAdminModuleArticleColors` |  | Render article color edit form |
+| POST | `/admin/article-colors` | `handleAdminModuleArticleColors` |  | Create an article color |
+| PUT | `/admin/article-colors/:id` | `handleAdminModuleArticleColors` |  | Update an article color |
+| POST | `/admin/article-colors/:id` | `handleAdminModuleArticleColors` |  | Update an article color via form submission |
+| DELETE | `/admin/article-colors/:id` | `handleAdminModuleArticleColors` |  | Delete an article color |
+| GET | `/admin/article-colors/:id/:action` | `handleAdminModuleArticleColors` |  | Execute custom article color action |
+| POST | `/admin/article-colors/:id/:action` | `handleAdminModuleArticleColors` |  | Execute custom article color action |
+
+## admin-mail-account-status
+
+Mail account poll status endpoints
+
+- **File:** `routes/admin-mail-account-status.yaml`
+- **Prefix:** `/admin`
+- **Group middleware:** `auth`, `admin`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/admin/mail-accounts/:id/poll-status` | `HandleMailAccountPollStatus` |  | Fetch poll status for a mail account |
+| GET | `/admin/dynamic/mail_account/:id/poll-status` | `HandleMailAccountPollStatus` |  | Fetch poll status for a mail account (dynamic path) |
+
+## admin
+
+Administrative routes for system management
+
+- **File:** `routes/admin.yaml`
+- **Prefix:** `/admin`
+- **Group middleware:** `auth`, `admin`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/admin` | `handleAdminDashboard` |  | Display admin dashboard with system overview |
+| GET | `/admin/debug/ticket-number` | `HandleDebugTicketNumber` |  | Current ticket number generator |
+| GET | `/admin/debug/config-sources` | `HandleDebugConfigSources` |  | Configuration settings with their source |
+| GET | `/admin/setup` | `handleAdminSetupWizard` |  | First-run setup wizard |
+| POST | `/admin/setup` | `handleAdminSetupWizardSubmit` |  | Process setup wizard submission |
+| GET | `/admin/setup/assistant` | `handleAdminSetupAssistant` |  | Setup assistant task catalog |
+| GET | `/admin/setup/task/:plugin/:task_id` | `handleAdminSetupTask` |  | Run a setup task (core or plugin) |
+| POST | `/admin/setup/task/:plugin/:task_id` | `handleAdminSetupTask` |  | Process a setup task submission |
+| GET | `/admin/users` | `handleAdminUsers` |  | Display user management page |
+| GET | `/admin/users/:id` | `handleAdminUserGet` |  | Display user details |
+| GET | `/admin/users/:id/edit` | `handleAdminUserEdit` |  | Display user edit form |
+| PUT | `/admin/users/:id` | `handleAdminUserUpdate` |  | Update user |
+| DELETE | `/admin/users/:id` | `handleAdminUserDelete` |  | Delete user |
+| POST | `/admin/users` | `handleAdminUserCreate` |  | Create new user |
+| GET | `/admin/users/:id/groups` | `handleAdminUserGroups` |  | List user groups |
+| POST | `/admin/users/:id/status` | `handleAdminUsersStatus` |  | Toggle user activation status |
+| PUT | `/admin/users/:id/status` | `handleAdminUsersStatus` |  | Toggle user activation status |
+| POST | `/admin/users/:id/reset-password` | `HandleAdminUserResetPassword` |  | Reset user password |
+| GET | `/admin/password-policy` | `handleAdminPasswordPolicy` |  | Get password policy configuration |
+| GET | `/admin/users/list` | `HandleAdminUsersList` |  | Get all users (JSON API) |
+| GET | `/admin/groups` | `handleAdminGroups` |  | Display group management page |
+| POST | `/admin/groups` | `handleCreateGroup` |  | Create new group |
+| GET | `/admin/groups/:id` | `handleGetGroup` |  | Display group details |
+| PUT | `/admin/groups/:id` | `handleUpdateGroup` |  | Update existing group |
+| DELETE | `/admin/groups/:id` | `handleDeleteGroup` |  | Delete group |
+| GET | `/admin/groups/:id/members` | `handleGroupMembers` |  | Display group members |
+| POST | `/admin/groups/:id/members` | `handleAddUserToGroup` |  | Add user to group |
+| DELETE | `/admin/groups/:id/members/:userId` | `handleRemoveUserFromGroup` |  | Remove user from group |
+| GET | `/admin/groups/:id/permissions` | `handleGroupPermissions` |  | Get queue-centric permissions for a group |
+| POST | `/admin/groups/:id/permissions` | `handleSaveGroupPermissions` |  | Update queue-centric permissions for a group |
+| GET | `/admin/groups/:id/users` | `HandleAdminGroupsUsers` |  | Get group users |
+| POST | `/admin/groups/:id/users` | `HandleAdminGroupsAddUser` |  | Add user to group |
+| DELETE | `/admin/groups/:id/users/:userId` | `HandleAdminGroupsRemoveUser` |  | Remove user from group |
+| GET | `/admin/queues` | `handleAdminQueues` |  | Display queue management page |
+| GET | `/admin/email-identities` | `handleAdminEmailIdentities` |  | Manage system addresses, salutations, and signatures |
+| GET | `/admin/email-queue` | `handleAdminEmailQueue` |  | Display email queue management page |
+| POST | `/admin/email-queue/retry/:id` | `handleAdminEmailQueueRetry` |  | Retry sending a specific email from the queue |
+| POST | `/admin/email-queue/delete/:id` | `handleAdminEmailQueueDelete` |  | Delete a specific email from the queue |
+| POST | `/admin/email-queue/retry-all` | `handleAdminEmailQueueRetryAll` |  | Retry all failed emails in the queue |
+| GET | `/admin/priorities` | `handleAdminPriorities` |  | Display priority management page |
+| GET | `/admin/permissions` | `handleAdminPermissions` |  | Display permission management page |
+| GET | `/admin/permissions/user/:userId` | `handleGetUserPermissionMatrix` |  | Get user permission matrix |
+| PUT | `/admin/permissions/user/:userId` | `handleUpdateUserPermissions` |  | Update user permissions |
+| POST | `/admin/permissions/clone` | `handleClonePermissions` |  | Replace a user's permissions with a copy of another user's |
+| GET | `/admin/roles` | `handleAdminRoles` |  | Display role management page |
+| POST | `/admin/roles` | `handleAdminRoleCreate` |  | Create a new role |
+| GET | `/admin/roles/:id` | `handleAdminRoleGet` |  | Get role details |
+| PUT | `/admin/roles/:id` | `handleAdminRoleUpdate` |  | Update an existing role |
+| DELETE | `/admin/roles/:id` | `handleAdminRoleDelete` |  | Delete a role |
+| GET | `/admin/roles/:id/users` | `handleAdminRoleUsers` |  | Display users assigned to a role |
+| GET | `/admin/roles/:id/users/search` | `handleAdminRoleUsersSearch` |  | Search for users to add to a role (scalable typeahead) |
+| POST | `/admin/roles/:id/users` | `handleAdminRoleUserAdd` |  | Add a user to a role |
+| DELETE | `/admin/roles/:id/users/:userId` | `handleAdminRoleUserRemove` |  | Remove a user from a role |
+| GET | `/admin/roles/:id/permissions` | `handleAdminRolePermissions` |  | Display and manage role-group permissions |
+| POST | `/admin/roles/:id/permissions` | `handleAdminRolePermissionsUpdate` |  | Update role-group permissions |
+| GET | `/admin/states` | `handleAdminStates` |  | Display state management page |
+| POST | `/admin/states/create` | `handleAdminStateCreate` |  | Create a ticket state |
+| PUT | `/admin/states/:id/update` | `handleAdminStateUpdate` |  | Update a ticket state |
+| DELETE | `/admin/states/:id/delete` | `handleAdminStateDelete` |  | Soft-delete a ticket state |
+| GET | `/admin/types` | `handleAdminTypes` |  | Display type management page |
+| POST | `/admin/types/create` | `handleAdminTypeCreate` |  | Create a ticket type |
+| POST | `/admin/types/:id/update` | `handleAdminTypeUpdate` |  | Update a ticket type |
+| POST | `/admin/types/:id/delete` | `handleAdminTypeDelete` |  | Soft-delete a ticket type |
+| GET | `/admin/services` | `handleAdminServices` |  | Display service management page |
+| POST | `/admin/services/create` | `handleAdminServiceCreate` |  | Create a new service |
+| PUT | `/admin/services/:id/update` | `handleAdminServiceUpdate` |  | Update an existing service |
+| DELETE | `/admin/services/:id/delete` | `handleAdminServiceDelete` |  | Delete a service |
+| GET | `/admin/sla` | `handleAdminSLA` |  | Display SLA management page |
+| POST | `/admin/sla/create` | `handleAdminSLACreate` |  | Create a new SLA |
+| PUT | `/admin/sla/:id/update` | `handleAdminSLAUpdate` |  | Update an existing SLA |
+| DELETE | `/admin/sla/:id/delete` | `handleAdminSLADelete` |  | Delete an SLA |
+| GET | `/admin/lookups` | `handleAdminLookups` |  | Display lookup management page |
+| GET | `/admin/customer/companies` | `handleAdminCustomerCompanies` |  | Display customer companies management |
+| GET | `/admin/customer/companies/new` | `handleAdminNewCustomerCompany` |  | Display new customer company form |
+| POST | `/admin/customer/companies/new` | `handleAdminCreateCustomerCompany` |  | Create new customer company |
+| POST | `/admin/customer/companies` | `handleAdminCreateCustomerCompany` |  | Create new customer company |
+| GET | `/admin/customer/companies/:id/edit` | `handleAdminEditCustomerCompany` |  | Display customer company edit form |
+| POST | `/admin/customer/companies/:id/edit` | `handleAdminUpdateCustomerCompany` |  | Update customer company |
+| DELETE | `/admin/customer/companies/:id` | `handleAdminDeleteCustomerCompany` |  | Delete customer company |
+| POST | `/admin/customer/companies/:id/delete` | `handleAdminDeleteCustomerCompany` |  | Delete customer company (legacy POST route) |
+| POST | `/admin/customer/companies/:id/activate` | `handleAdminActivateCustomerCompany` |  | Activate customer company |
+| GET | `/admin/customer/companies/:id/users` | `handleAdminCustomerCompanyUsers` |  | Display customer company users |
+| GET | `/admin/customer/companies/:id/tickets` | `handleAdminCustomerCompanyTickets` |  | Display customer company tickets |
+| GET | `/admin/customer/companies/:id/services` | `handleAdminCustomerCompanyServices` |  | Display customer company services |
+| POST | `/admin/customer/companies/:id/services` | `handleAdminUpdateCustomerCompanyServices` |  | Update customer company services |
+| GET | `/admin/customer/companies/:id/portal-settings` | `handleAdminCustomerPortalSettings` |  | Display customer portal settings for a company |
+| POST | `/admin/customer/companies/:id/portal-settings` | `handleAdminUpdateCustomerPortalSettings` |  | Update customer portal settings for a company |
+| GET | `/admin/customer/portal/settings` | `handleAdminCustomerPortalSettings` |  | Display and update global customer portal settings |
+| POST | `/admin/customer/portal/settings` | `handleAdminUpdateCustomerPortalSettings` |  | Display and update global customer portal settings |
+| PUT | `/admin/customer/portal/settings` | `handleAdminUpdateCustomerPortalSettings` |  | Display and update global customer portal settings |
+| GET | `/admin/customer-users` | `HandleAdminCustomerUsersList` |  | Display customer user management |
+| GET | `/admin/customer-users/:id` | `HandleAdminCustomerUsersGet` |  | Get customer user details |
+| POST | `/admin/customer-users` | `HandleAdminCustomerUsersCreate` |  | Create customer user |
+| PUT | `/admin/customer-users/:id` | `HandleAdminCustomerUsersUpdate` |  | Update customer user |
+| DELETE | `/admin/customer-users/:id` | `HandleAdminCustomerUsersDelete` |  | Delete customer user |
+| GET | `/admin/customer-users/:id/tickets` | `HandleAdminCustomerUsersTickets` |  | Get customer user tickets |
+| GET | `/admin/customer-users/import` | `HandleAdminCustomerUsersImportForm` |  | Display customer user import form |
+| POST | `/admin/customer-users/import` | `HandleAdminCustomerUsersImport` |  | Import customer users |
+| GET | `/admin/customer-users/export` | `HandleAdminCustomerUsersExport` |  | Export customer users |
+| POST | `/admin/customer-users/bulk-action` | `HandleAdminCustomerUsersBulkAction` |  | Perform customer user bulk action |
+| GET | `/admin/customer-user-services` | `handleAdminCustomerUserServices` |  | Customer user ↔ service relations management |
+| GET | `/admin/customer-user-services/customer/:login` | `handleAdminCustomerUserServicesAllocate` |  | Get services for a customer user |
+| POST | `/admin/customer-user-services/customer/:login` | `handleAdminCustomerUserServicesUpdate` |  | Update services for a customer user |
+| GET | `/admin/customer-user-services/service/:id` | `handleAdminServiceCustomerUsersAllocate` |  | Get customer users for a service |
+| POST | `/admin/customer-user-services/service/:id` | `handleAdminServiceCustomerUsersUpdate` |  | Update customer users for a service |
+| GET | `/admin/customer-user-services/default` | `handleAdminDefaultServices` |  | Get default service assignments |
+| POST | `/admin/customer-user-services/default` | `handleAdminDefaultServicesUpdate` |  | Update default service assignments |
+| GET | `/admin/reports` | `handleAdminReports` |  | Display ticket reports (queue-scoped statistics, trends, CSV export) |
+| GET | `/admin/dynamic-fields` | `handleAdminDynamicFields` |  | List all dynamic fields |
+| GET | `/admin/dynamic-fields/new` | `handleAdminDynamicFieldNew` |  | Create new dynamic field form |
+| GET | `/admin/dynamic-fields/screens` | `handleAdminDynamicFieldScreenConfig` |  | Dynamic field screen configuration |
+| GET | `/admin/dynamic-fields/export` | `handleAdminDynamicFieldExportPage` |  | Export dynamic fields page |
+| POST | `/admin/dynamic-fields/export` | `handleAdminDynamicFieldExportAction` |  | Export selected dynamic fields to YAML |
+| GET | `/admin/dynamic-fields/import` | `handleAdminDynamicFieldImportPage` |  | Import dynamic fields page |
+| POST | `/admin/dynamic-fields/import` | `handleAdminDynamicFieldImportAction` |  | Upload and preview YAML file for import |
+| POST | `/admin/dynamic-fields/import/confirm` | `handleAdminDynamicFieldImportConfirm` |  | Confirm and execute dynamic fields import |
+| GET | `/admin/dynamic-fields/:id` | `handleAdminDynamicFieldEdit` |  | Edit dynamic field form |
+| POST | `/admin/api/dynamic-fields` | `handleCreateDynamicField` |  | Create new dynamic field |
+| PUT | `/admin/api/dynamic-fields/:id` | `handleUpdateDynamicField` |  | Update existing dynamic field |
+| DELETE | `/admin/api/dynamic-fields/:id` | `handleDeleteDynamicField` |  | Delete dynamic field |
+| PUT | `/admin/api/dynamic-fields/:id/screens` | `handleAdminDynamicFieldScreenConfigSave` |  | Save all screen configurations for a field |
+| POST | `/admin/api/dynamic-fields/:id/screen` | `handleAdminDynamicFieldScreenConfigSingle` |  | Toggle single screen configuration for a field |
+| GET | `/admin/custom-fields` | `handleAdminCustomFields` |  | Custom fields management page |
+| GET | `/admin/custom-fields/new` | `handleAdminCustomFieldNew` |  | New custom field form |
+| GET | `/admin/custom-fields/:id` | `handleAdminCustomFieldEdit` |  | Edit custom field form |
+| POST | `/admin/api/custom-fields` | `handleCreateCustomField` |  | Create new custom field |
+| PUT | `/admin/api/custom-fields/:id` | `handleUpdateCustomField` |  | Update existing custom field |
+| DELETE | `/admin/api/custom-fields/:id` | `handleDeleteCustomField` |  | Soft-delete custom field |
+| GET | `/admin/recycle-bin` | `handleAdminRecycleBinList` |  | List recycle bin entries |
+| POST | `/admin/api/recycle-bin/restore` | `handleAdminRestore` |  | Restore entity from recycle bin |
+| POST | `/admin/api/recycle-bin/purge` | `handleAdminHardDelete` |  | Permanently delete entity from recycle bin |
+| POST | `/admin/api/recycle-bin/batch-delete` | `handleAdminBatchSoftDelete` |  | Batch soft-delete multiple entities |
+| POST | `/admin/api/recycle-bin/batch-purge` | `handleAdminBatchHardDelete` |  | Batch permanently delete multiple entities |
+| GET | `/admin/api/recycle-bin/log/:entity_type/:entity_id` | `handleAdminDeletionLog` |  | View deletion audit log for an entity |
+| GET | `/admin/templates` | `handleAdminStandardTemplates` |  | Display response templates management page |
+| GET | `/admin/templates/new` | `handleAdminStandardTemplateNew` |  | Display new template creation form |
+| GET | `/admin/templates/:id/edit` | `handleAdminStandardTemplateEdit` |  | Display template edit form |
+| GET | `/admin/templates/:id/queues` | `handleAdminStandardTemplateQueues` |  | Display template queue assignment page |
+| POST | `/admin/api/templates` | `handleCreateStandardTemplate` |  | Create new response template |
+| PUT | `/admin/api/templates/:id` | `handleUpdateStandardTemplate` |  | Update existing response template |
+| DELETE | `/admin/api/templates/:id` | `handleDeleteStandardTemplate` |  | Delete response template |
+| PUT | `/admin/api/templates/:id/queues` | `handleUpdateStandardTemplateQueues` |  | Update template queue assignments |
+| GET | `/admin/templates/:id/attachments` | `handleAdminStandardTemplateAttachments` |  | Display template attachment assignment page |
+| PUT | `/admin/api/templates/:id/attachments` | `handleUpdateStandardTemplateAttachments` |  | Update template attachment assignments |
+| GET | `/admin/queue-templates` | `handleAdminQueueTemplates` |  | Queue-Template relations overview |
+| GET | `/admin/queues/:id/templates` | `handleAdminQueueTemplatesEdit` |  | Assign templates to a queue |
+| PUT | `/admin/api/queues/:id/templates` | `handleUpdateQueueTemplates` |  | Update queue template assignments |
+| GET | `/admin/templates/import` | `handleAdminStandardTemplateImport` |  | Display template import page |
+| POST | `/admin/api/templates/import` | `handleImportStandardTemplates` |  | Import templates from YAML file |
+| GET | `/admin/api/templates/export` | `handleExportAllStandardTemplates` |  | Export all templates as YAML |
+| GET | `/admin/api/templates/:id/export` | `handleExportStandardTemplate` |  | Export single template as YAML |
+| GET | `/admin/template-attachments` | `handleAdminTemplateAttachments` |  | Template-Attachment relations overview |
+| GET | `/admin/attachments/:id/templates` | `handleAdminAttachmentTemplatesEdit` |  | Assign templates to an attachment |
+| PUT | `/admin/api/attachments/:id/templates` | `handleUpdateAttachmentTemplates` |  | Update attachment template assignments |
+| GET | `/admin/attachments` | `handleAdminAttachment` |  | Display standard attachments management page |
+| POST | `/admin/api/attachments` | `handleAdminAttachmentCreate` |  | Upload/create a new standard attachment |
+| PUT | `/admin/api/attachments/:id` | `handleAdminAttachmentUpdate` |  | Update an existing standard attachment |
+| DELETE | `/admin/api/attachments/:id` | `handleAdminAttachmentDelete` |  | Delete a standard attachment |
+| GET | `/admin/api/attachments/:id/download` | `handleAdminAttachmentDownload` |  | Download a standard attachment file |
+| GET | `/admin/api/attachments/:id/preview` | `handleAdminAttachmentPreview` |  | Preview a standard attachment inline |
+| GET | `/admin/modules/:module` | `handleAdminDynamicModule` |  | Serve dynamic module pages and handle record creation |
+| POST | `/admin/modules/:module` | `handleAdminDynamicModule` |  | Serve dynamic module pages and handle record creation |
+| DELETE | `/admin/modules/:module/:id` | `handleAdminDynamicModule` |  | Handle dynamic module record operations |
+| GET | `/admin/modules/:module/:id` | `handleAdminDynamicModule` |  | Handle dynamic module record operations |
+| POST | `/admin/modules/:module/:id` | `handleAdminDynamicModule` |  | Handle dynamic module record operations |
+| PUT | `/admin/modules/:module/:id` | `handleAdminDynamicModule` |  | Handle dynamic module record operations |
+| GET | `/admin/modules/:module/:id/:action` | `handleAdminDynamicModule` |  | Execute dynamic module actions |
+| POST | `/admin/modules/:module/:id/:action` | `handleAdminDynamicModule` |  | Execute dynamic module actions |
+| GET | `/admin/signatures` | `handleAdminSignatures` |  | Display email signatures management page |
+| GET | `/admin/signatures/new` | `handleAdminSignatureNew` |  | Display new signature form |
+| GET | `/admin/signatures/:id` | `handleAdminSignatureEdit` |  | Display edit signature form |
+| POST | `/admin/api/signatures` | `handleCreateSignature` |  | Create a new signature |
+| PUT | `/admin/api/signatures/:id` | `handleUpdateSignature` |  | Update an existing signature |
+| DELETE | `/admin/api/signatures/:id` | `handleDeleteSignature` |  | Delete a signature |
+| GET | `/admin/signatures/export` | `handleExportSignatures` |  | Export all signatures as YAML |
+| GET | `/admin/signatures/:id/export` | `handleExportSignature` |  | Export single signature as YAML |
+| POST | `/admin/api/signatures/import` | `handleImportSignatures` |  | Import signatures from YAML file |
+| GET | `/admin/postmaster-filters` | `handleAdminPostmasterFilters` |  | Display postmaster filters management page |
+| GET | `/admin/postmaster-filters/new` | `handleAdminPostmasterFilterNew` |  | Display new postmaster filter form |
+| GET | `/admin/postmaster-filters/:name` | `handleAdminPostmasterFilterEdit` |  | Display postmaster filter edit form |
+| POST | `/admin/api/postmaster-filters` | `handleCreatePostmasterFilter` |  | Create a new postmaster filter |
+| GET | `/admin/api/postmaster-filters/:name` | `handleAdminPostmasterFilterGet` |  | Get postmaster filter details |
+| PUT | `/admin/api/postmaster-filters/:name` | `handleUpdatePostmasterFilter` |  | Update an existing postmaster filter |
+| DELETE | `/admin/api/postmaster-filters/:name` | `handleDeletePostmasterFilter` |  | Delete a postmaster filter |
+| GET | `/admin/notification-events` | `handleAdminNotificationEvents` |  | Display notification events management page |
+| GET | `/admin/notification-events/new` | `handleAdminNotificationEventNew` |  | Display new notification event form |
+| GET | `/admin/notification-events/:id` | `handleAdminNotificationEventEdit` |  | Display notification event edit form |
+| POST | `/admin/api/notification-events` | `handleCreateNotificationEvent` |  | Create a new notification event |
+| GET | `/admin/api/notification-events/:id` | `handleAdminNotificationEventGet` |  | Get notification event details |
+| PUT | `/admin/api/notification-events/:id` | `handleUpdateNotificationEvent` |  | Update an existing notification event |
+| DELETE | `/admin/api/notification-events/:id` | `handleDeleteNotificationEvent` |  | Delete a notification event |
+| GET | `/admin/acl` | `handleAdminACL` |  | Display ACL management page |
+| POST | `/admin/api/acl` | `handleAdminACLCreate` |  | Create a new ACL |
+| GET | `/admin/api/acl/:id` | `handleAdminACLGet` |  | Get ACL details |
+| PUT | `/admin/api/acl/:id` | `handleAdminACLUpdate` |  | Update an existing ACL |
+| DELETE | `/admin/api/acl/:id` | `handleAdminACLDelete` |  | Delete an ACL |
+| GET | `/admin/ticket-attribute-relations` | `handleAdminTicketAttributeRelations` |  | Display ticket attribute relations management page |
+| GET | `/admin/ticket-attribute-relations/new` | `handleAdminTicketAttributeRelationsNew` |  | Display new ticket attribute relation form |
+| GET | `/admin/ticket-attribute-relations/:id` | `handleAdminTicketAttributeRelationsEdit` |  | Display ticket attribute relation edit form |
+| GET | `/admin/ticket-attribute-relations/:id/download` | `handleAdminTicketAttributeRelationsDownload` |  | Download ticket attribute relation file |
+| POST | `/admin/api/ticket-attribute-relations` | `handleAdminTicketAttributeRelationsCreate` |  | Create a new ticket attribute relation |
+| PUT | `/admin/api/ticket-attribute-relations/:id` | `handleAdminTicketAttributeRelationsUpdate` |  | Update an existing ticket attribute relation |
+| DELETE | `/admin/api/ticket-attribute-relations/:id` | `handleAdminTicketAttributeRelationsDelete` |  | Delete a ticket attribute relation |
+| POST | `/admin/api/ticket-attribute-relations/reorder` | `handleAdminTicketAttributeRelationsReorder` |  | Reorder ticket attribute relations via drag-and-drop |
+| GET | `/admin/api/ticket-attribute-relations/evaluate` | `handleAPITicketAttributeRelationsEvaluate` |  | Evaluate ticket attribute relations for filtering |
+| GET | `/admin/generic-agent` | `handleAdminGenericAgent` |  | Display generic agent jobs management page |
+| POST | `/admin/api/generic-agent` | `handleAdminGenericAgentCreate` |  | Create a new generic agent job |
+| GET | `/admin/api/generic-agent/:name` | `handleAdminGenericAgentGet` |  | Get generic agent job details |
+| PUT | `/admin/api/generic-agent/:name` | `handleAdminGenericAgentUpdate` |  | Update an existing generic agent job |
+| DELETE | `/admin/api/generic-agent/:name` | `handleAdminGenericAgentDelete` |  | Delete a generic agent job |
+| GET | `/admin/customer-groups` | `handleAdminCustomerGroups` |  | Display customer groups management page |
+| GET | `/admin/customer-groups/customer/:id` | `handleAdminCustomerGroupEdit` |  | Edit group permissions for a customer company |
+| POST | `/admin/customer-groups/customer/:id` | `handleAdminCustomerGroupUpdate` |  | Update group permissions for a customer company |
+| GET | `/admin/customer-groups/group/:id` | `handleAdminCustomerGroupByGroup` |  | Edit customer permissions for a group |
+| POST | `/admin/customer-groups/group/:id` | `handleAdminCustomerGroupByGroupUpdate` |  | Update customer permissions for a group |
+| GET | `/admin/api/customer-groups/permissions` | `handleGetCustomerGroupPermissions` |  | Get customer group permissions |
+| GET | `/admin/customer-user-groups` | `handleAdminCustomerUserGroups` |  | Display customer user groups management page |
+| GET | `/admin/customer-user-groups/user/:id` | `handleAdminCustomerUserGroupEdit` |  | Edit group permissions for a customer user |
+| POST | `/admin/customer-user-groups/user/:id` | `handleAdminCustomerUserGroupUpdate` |  | Update group permissions for a customer user |
+| GET | `/admin/customer-user-groups/group/:id` | `handleAdminCustomerUserGroupByGroup` |  | Edit customer user permissions for a group |
+| POST | `/admin/customer-user-groups/group/:id` | `handleAdminCustomerUserGroupByGroupUpdate` |  | Update customer user permissions for a group |
+| GET | `/admin/api/customer-user-groups/permissions` | `handleGetCustomerUserGroupPermissions` |  | Get customer user group permissions |
+| GET | `/admin/webhooks` | `handleAdminWebhooks` |  | Manage outbound webhooks, test sends and the delivery log |
+| GET | `/admin/webservices` | `handleAdminWebservices` |  | Display web services management page |
+| GET | `/admin/webservices/new` | `handleAdminWebserviceNew` |  | Display new web service form |
+| GET | `/admin/webservices/:id` | `handleAdminWebserviceEdit` |  | Display web service edit form |
+| GET | `/admin/webservices/:id/history` | `handleAdminWebserviceHistory` |  | Display web service configuration history |
+| POST | `/admin/api/webservices` | `handleCreateWebservice` |  | Create a new web service |
+| GET | `/admin/api/webservices/:id` | `handleAdminWebserviceGet` |  | Get web service details |
+| PUT | `/admin/api/webservices/:id` | `handleUpdateWebservice` |  | Update an existing web service |
+| DELETE | `/admin/api/webservices/:id` | `handleDeleteWebservice` |  | Delete a web service |
+| POST | `/admin/api/webservices/:id/test` | `handleTestWebservice` |  | Test web service connection |
+| POST | `/admin/api/webservices/:id/history/:historyId/restore` | `handleRestoreWebserviceHistory` |  | Restore web service from history |
+| GET | `/admin/api/dynamic-fields/:id/autocomplete` | `handleDynamicFieldAutocomplete` |  | Autocomplete for webservice-backed dynamic fields |
+| POST | `/admin/api/dynamic-fields/:id/webservice-test` | `handleDynamicFieldWebserviceTest` |  | Test webservice configuration for a dynamic field |
+| GET | `/admin/sessions` | `handleAdminSessions` |  | Display session management page |
+| DELETE | `/admin/api/sessions/:id` | `handleKillSession` |  | Terminate a specific session |
+| DELETE | `/admin/api/sessions/user/:user_id` | `handleKillUserSessions` |  | Terminate all sessions for a user |
+| DELETE | `/admin/api/sessions` | `handleKillAllSessions` |  | Terminate all sessions (emergency) |
+| GET | `/admin/system-maintenance` | `handleAdminSystemMaintenance` |  | Display system maintenance list |
+| GET | `/admin/system-maintenance/new` | `handleAdminSystemMaintenanceNew` |  | Display create maintenance form |
+| GET | `/admin/system-maintenance/:id/edit` | `handleAdminSystemMaintenanceEdit` |  | Display edit maintenance form |
+| POST | `/admin/api/system-maintenance` | `handleCreateSystemMaintenance` |  | Create new maintenance record |
+| GET | `/admin/api/system-maintenance/:id` | `handleGetSystemMaintenance` |  | Get maintenance record details |
+| PUT | `/admin/api/system-maintenance/:id` | `handleUpdateSystemMaintenance` |  | Update maintenance record |
+| DELETE | `/admin/api/system-maintenance/:id` | `handleDeleteSystemMaintenance` |  | Delete maintenance record |
+| GET | `/admin/plugins` | `HandleAdminPlugins` |  | Display plugin management page |
+| GET | `/admin/plugins/logs` | `HandleAdminPluginLogs` |  |  |
+| GET | `/admin/marketplace` | `HandleAdminMarketplace` |  | Browse and install plugins from the marketplace |
+| GET | `/admin/plugin-uis` | `HandleAdminPluginUIs` |  | Display plugin UI management page |
+| POST | `/admin/api/users/:id/2fa/disable` | `handleAdmin2FAOverride` |  | Admin override: disable 2FA for a user (requires reason) |
+| POST | `/admin/api/customers/:login/2fa/disable` | `handleAdminCustomer2FAOverride` |  | Admin override: disable 2FA for a customer (requires reason) |
+| GET | `/admin/identity-providers` | `handleAdminIdentityProviders` |  |  |
+| GET | `/admin/identity-providers/new` | `handleAdminIdentityProviderNew` |  |  |
+| POST | `/admin/identity-providers` | `handleAdminIdentityProviderCreate` |  | Create a new identity provider |
+| GET | `/admin/identity-providers/:id/edit` | `handleAdminIdentityProviderEdit` |  |  |
+| PUT | `/admin/identity-providers/:id` | `handleAdminIdentityProviderUpdate` |  | Update an existing identity provider |
+| DELETE | `/admin/identity-providers/:id` | `handleAdminIdentityProviderDelete` |  | Delete an identity provider |
+| POST | `/admin/identity-providers/:id/:action` | `handleAdminIdentityProviderToggle` |  | Enable or disable an identity provider (action: enable\|disable) |
+
+## agent
+
+Agent-specific routes for ticket management
+
+- **File:** `routes/agent.yaml`
+- **Prefix:** `/agent`
+- **Group middleware:** `auth`, `agent`, `queue_ro`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/agent/tickets` | `handleAgentTickets` |  | Display agent tickets list with full functionality |
+| POST | `/agent/tickets/:id/reply` | `handleAgentTicketReply` | `auth`, `ticket_access_note` | Process customer reply to ticket |
+| POST | `/agent/tickets/:id/note` | `handleAgentTicketNote` | `auth`, `ticket_access_note` | Add internal note to ticket |
+| POST | `/agent/tickets/:id/phone` | `handleAgentTicketPhone` | `auth`, `ticket_access_note` | Record phone call for ticket |
+| POST | `/agent/tickets/:id/status` | `handleAgentTicketStatus` | `auth`, `ticket_access_rw` | Update ticket status |
+| POST | `/agent/tickets/:id/assign` | `handleAgentTicketAssign` | `auth`, `ticket_access_owner` | Assign ticket to specific agent |
+| POST | `/agent/tickets/:id/priority` | `handleAgentTicketPriority` | `auth`, `ticket_access_priority` | Update ticket priority |
+| POST | `/agent/tickets/:id/queue` | `handleAgentTicketQueue` | `auth`, `ticket_access_move_into` | Move ticket to different queue |
+| POST | `/agent/tickets/:id/merge` | `handleAgentTicketMerge` | `auth`, `ticket_access_rw` | Merge ticket with another ticket |
+| GET | `/agent/tickets/:id/customer-users` | `handleTicketCustomerUsers` | `auth`, `ticket_access_ro` | Get customer users associated with ticket |
+| GET | `/agent/tickets/:id/history` | `handleTicketHistoryFragment` | `auth`, `ticket_access_ro` | HTMX fragment: ticket history |
+| GET | `/agent/tickets/:id/links` | `handleTicketLinksFragment` | `auth`, `ticket_access_ro` | HTMX fragment: ticket links |
+| POST | `/agent/tickets/bulk/status` | `handleBulkTicketStatus` | `auth`, `queue_rw` | Bulk update ticket status |
+| POST | `/agent/tickets/bulk/priority` | `handleBulkTicketPriority` | `auth`, `queue_rw` | Bulk update ticket priority |
+| POST | `/agent/tickets/bulk/queue` | `handleBulkTicketQueue` | `auth`, `queue_rw` | Bulk move tickets to queue |
+| POST | `/agent/tickets/bulk/assign` | `handleBulkTicketAssign` | `auth`, `queue_rw` | Bulk assign tickets to agent |
+| POST | `/agent/tickets/bulk/lock` | `handleBulkTicketLock` | `auth`, `queue_rw` | Bulk lock/unlock tickets |
+| POST | `/agent/tickets/bulk/merge` | `handleBulkTicketMerge` | `auth`, `queue_rw` | Bulk merge tickets into target |
+| GET | `/agent/api/bulk-options` | `handleGetBulkActionOptions` |  | Get options for bulk action modals |
+| GET | `/agent/api/tickets/ids` | `handleGetFilteredTicketIds` |  | Get all ticket IDs matching current filter for bulk selection |
+| GET | `/agent/queues` | `handleAgentQueues` |  | Display agent queues |
+| GET | `/agent/api/templates` | `handleGetAgentTemplates` |  | Get templates for a queue (query params: queue_id, type) |
+| GET | `/agent/api/templates/:id` | `handleGetAgentTemplate` |  | Get a single template with variable substitution |
+| GET | `/agent/api/signatures/queue/:queue_id` | `handleGetQueueSignature` |  | Get a queue signature with variable substitution |
+| GET | `/agent/api/preferences/session-timeout` | `HandleGetSessionTimeout` |  | Get current session timeout preference |
+| POST | `/agent/api/preferences/session-timeout` | `HandleSetSessionTimeout` |  | Update session timeout preference |
+| GET | `/agent/api/preferences/language` | `HandleGetLanguage` |  | Get current language preference and available languages |
+| POST | `/agent/api/preferences/language` | `HandleSetLanguage` |  | Update language preference |
+| GET | `/agent/api/preferences/theme` | `HandleGetTheme` |  | Get current theme preference and available themes |
+| POST | `/agent/api/preferences/theme` | `HandleSetTheme` |  | Update theme preference (persists to database) |
+| GET | `/agent/api/preferences/reminders-enabled` | `HandleGetRemindersEnabled` |  | Get ticket reminders enabled preference |
+| POST | `/agent/api/preferences/reminders-enabled` | `HandleSetRemindersEnabled` |  | Update ticket reminders enabled preference |
+| GET | `/agent/api/profile` | `HandleGetProfile` |  | Get current user's profile information |
+| POST | `/agent/api/profile` | `HandleUpdateProfile` |  | Update current user's profile information |
+| GET | `/agent/password` | `HandleAgentPasswordForm` | `demo-guard` | Display password change form |
+| POST | `/agent/password/change` | `HandleAgentChangePassword` | `demo-guard` | Process password change |
+
+## api-attachments
+
+Ticket attachment API endpoints
+
+- **File:** `routes/api-attachments.yaml`
+- **Prefix:** `/api`
+- **Group middleware:** `unified_auth`, `agent`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/tickets/:id/attachments` | `HandleGetAttachments` | `scope_tickets_read`, `ticket_access_ro` | List attachments for a ticket |
+| POST | `/api/tickets/:id/attachments` | `HandleUploadAttachment` | `scope_tickets_write`, `ticket_access_note` | Upload attachment to a ticket |
+| GET | `/api/tickets/:id/articles/:article_id/attachments/:file_id` | `HandleDownloadAttachment` | `scope_tickets_read`, `ticket_access_ro` | Download an attachment of one of the ticket's articles |
+| DELETE | `/api/tickets/:id/articles/:article_id/attachments/:file_id` | `HandleDeleteAttachment` | `scope_tickets_write`, `ticket_access_rw` | Delete an attachment of one of the ticket's articles |
+| GET | `/api/tickets/:id/articles/:article_id/attachments/:file_id/thumbnail` | `HandleGetThumbnail` | `scope_tickets_read`, `ticket_access_ro` | PNG preview of an attachment (images, PDF page 1, type placeholder otherwise) |
+| GET | `/api/tickets/:id/articles/:article_id/attachments/:file_id/view` | `HandleViewAttachment` | `scope_tickets_read`, `ticket_access_ro` | Attachment viewer page; ?raw=1 serves the content for the viewer frame |
+
+## api-canned-responses-protected
+
+Canned response management API endpoints (protected, agents only)
+
+- **File:** `routes/api-canned-responses.yaml`
+- **Prefix:** `/api/canned-responses`
+- **Group middleware:** `unified_auth`, `agent`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/canned-responses` | `cannedResponses_GetResponses` |  | List canned responses visible to the caller (filters: category, scope, search, tags, sort_by, sort_order, limit) |
+| POST | `/api/canned-responses` | `cannedResponses_CreateResponse` |  | Create a canned response |
+| GET | `/api/canned-responses/popular` | `cannedResponses_GetPopularResponses` |  | Most used responses first (limit) |
+| GET | `/api/canned-responses/categories` | `cannedResponses_GetCategories` |  | List response categories |
+| GET | `/api/canned-responses/category/:category` | `cannedResponses_GetResponsesByCategory` |  | Get responses by category |
+| GET | `/api/canned-responses/search` | `cannedResponses_SearchResponses` |  | Search canned responses by name or content (q) |
+| GET | `/api/canned-responses/user` | `cannedResponses_GetResponsesForUser` |  | Get responses for current user |
+| GET | `/api/canned-responses/statistics` | `cannedResponses_GetStatistics` |  | Usage statistics for the caller's responses |
+| GET | `/api/canned-responses/export` | `cannedResponses_ExportResponses` |  | Export responses as JSON or CSV (format=csv) |
+| POST | `/api/canned-responses/import` | `cannedResponses_ImportResponses` |  | Import personal responses from a CSV upload (field: file) |
+| GET | `/api/canned-responses/:id` | `cannedResponses_GetResponseByID` |  | Get response by ID |
+| PUT | `/api/canned-responses/:id` | `cannedResponses_UpdateResponse` |  | Update a canned response |
+| DELETE | `/api/canned-responses/:id` | `cannedResponses_DeleteResponse` |  | Delete a canned response |
+| POST | `/api/canned-responses/:id/use` | `cannedResponses_UseResponse` |  | Render a response with placeholder context and count the use |
+| POST | `/api/canned-responses/:id/share` | `cannedResponses_ShareResponse` |  | Change a response's scope (global requires admin) |
+| POST | `/api/canned-responses/:id/copy` | `cannedResponses_CopyResponse` |  | Copy a response into the caller's personal scope |
+
+## api-customers-protected
+
+Customer management API endpoints (protected)
+
+- **File:** `routes/api-customers.yaml`
+- **Prefix:** `/api/customers`
+- **Group middleware:** `unified_auth`, `agent`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/customers/search` | `handleCustomerSearch` |  | Search customers (autocomplete) |
+
+## api-dashboard-protected
+
+Dashboard widget endpoints (protected)
+
+- **File:** `routes/api-dashboard.yaml`
+- **Prefix:** `/api/dashboard`
+- **Group middleware:** `unified_auth`, `agent`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/dashboard/recent-tickets` | `handleRecentTickets` |  | Recent tickets widget |
+| GET | `/api/dashboard/activity-stream` | `handleActivityStream` |  | Activity stream endpoint |
+| GET | `/api/dashboard/widgets` | `handleDashboardWidgetsList` |  | List all available dashboard widgets with config |
+| GET | `/api/dashboard/widgets/config` | `handleDashboardWidgetsConfig` |  | Get user's dashboard widget configuration |
+| POST | `/api/dashboard/widgets/config` | `handleDashboardWidgetsUpdate` |  | Update user's dashboard widget configuration |
+
+## api-groups-protected
+
+Group management API endpoints (protected)
+
+- **File:** `routes/api-groups.yaml`
+- **Prefix:** `/api/groups`
+- **Group middleware:** `unified_auth`, `agent`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/groups` | `handleGetGroups` |  | List all groups |
+| GET | `/api/groups/:id` | `handleGetGroupAPI` |  | Get group by ID |
+| GET | `/api/groups/:id/members` | `handleGetGroupMembers` |  | Get group members |
+
+## api-lookups
+
+Lookup API endpoints
+
+- **File:** `routes/api-lookups.yaml`
+- **Prefix:** `/api`
+- **Group middleware:** `unified_auth`, `agent`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/lookups/queues` | `HandleGetQueues` |  | Get list of queues |
+| GET | `/api/lookups/priorities` | `HandleGetPriorities` |  | Get list of priorities |
+| GET | `/api/lookups/types` | `HandleGetTypes` |  | Get list of ticket types |
+| GET | `/api/lookups/statuses` | `HandleGetStatuses` |  | Get list of ticket statuses |
+| GET | `/api/lookups/form-data` | `HandleGetFormData` |  | Get form data for ticket creation |
+| POST | `/api/lookups/cache/invalidate` | `HandleInvalidateLookupCache` | `admin` | Invalidate lookup cache |
+
+## api-mcp
+
+Model Context Protocol endpoint for AI assistant integration
+
+- **File:** `routes/api-mcp.yaml`
+- **Prefix:** `/api`
+- **Group middleware:** none
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| POST | `/api/mcp` | `HandleMCP` | `api_token`, `agent` | MCP JSON-RPC endpoint |
+| GET | `/api/mcp` | `HandleMCPInfo` |  | MCP endpoint info |
+| POST | `/api/mcp/sse` | `HandleMCPSSE` | `unified_auth`, `agent` | MCP Streamable HTTP endpoint (client-to-server) |
+| GET | `/api/mcp/sse` | `HandleMCPSSEStream` | `unified_auth`, `agent` | MCP SSE notification stream (server-to-client) |
+| DELETE | `/api/mcp/sse` | `HandleMCPSSEDelete` | `unified_auth`, `agent` | MCP session termination |
+
+## api-notifications
+
+Notification API endpoints
+
+- **File:** `routes/api-notifications.yaml`
+- **Prefix:** `/api`
+- **Group middleware:** `unified_auth`, `agent`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/notifications/pending` | `handlePendingReminderFeed` |  | Fetch pending reminder notifications for current agent |
+
+## api-push
+
+Push notification API endpoints
+
+- **File:** `routes/api-push.yaml`
+- **Prefix:** `/api`
+- **Group middleware:** `unified_auth`, `agent`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/push/vapid-key` | `handleGetVAPIDKey` |  | Get VAPID public key for push subscription |
+| POST | `/api/push/subscribe` | `handlePushSubscribe` |  | Register a push subscription |
+| DELETE | `/api/push/unsubscribe` | `handlePushUnsubscribe` |  | Remove a push subscription |
+
+## api-queues
+
+Queue API endpoints for frontend
+
+- **File:** `routes/api-queues.yaml`
+- **Prefix:** `/api/queues`
+- **Group middleware:** `unified_auth`, `agent`, `queue_ro`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/queues` | `handleGetQueuesAPI` |  | List all queues |
+| POST | `/api/queues` | `handleCreateQueueWrapper` | `unified_auth`, `admin` | Create new queue |
+| GET | `/api/queues/:id` | `HandleAPIQueueGet` | `unified_auth`, `queue_access_ro` | Get queue by ID |
+| GET | `/api/queues/:id/details` | `HandleAPIQueueDetails` | `unified_auth`, `queue_access_ro` | Get queue details |
+| PUT | `/api/queues/:id/status` | `HandleAPIQueueStatus` | `unified_auth`, `admin` | Update queue status |
+
+## api-v1-search
+
+REST API v1 ticket search and saved searches (agents only)
+
+- **File:** `routes/api-search.yaml`
+- **Prefix:** `/api/v1/search`
+- **Group middleware:** `unified_auth`, `scope_tickets_read`, `queue_ro`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/v1/search/tickets` | `HandleTicketSearchAPI` |  | Search tickets (ticket, article and customer fields) |
+| GET | `/api/v1/search/saved` | `HandleListSavedSearchesAPI` |  | List the caller's saved ticket searches |
+| POST | `/api/v1/search/saved` | `HandleCreateSavedSearchAPI` |  | Save a ticket search |
+| GET | `/api/v1/search/saved/:name` | `HandleGetSavedSearchAPI` |  | Get a saved ticket search |
+| PUT | `/api/v1/search/saved/:name` | `HandleUpdateSavedSearchAPI` |  | Replace the parameters of a saved ticket search |
+| DELETE | `/api/v1/search/saved/:name` | `HandleDeleteSavedSearchAPI` |  | Delete a saved ticket search |
+| POST | `/api/v1/search/saved/:name/execute` | `HandleExecuteSavedSearchAPI` |  | Run a saved ticket search |
+
+## api-setup-admin
+
+Setup assistant admin API (recce, wizard, task catalog)
+
+- **File:** `routes/api-setup.yaml`
+- **Prefix:** `/api/v1/admin/setup`
+- **Group middleware:** `unified_auth`, `admin`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/v1/admin/setup/recce` | `HandleAPISetupRecce` |  | Return system snapshot (entity counts + setup status) |
+| POST | `/api/v1/admin/setup/wizard` | `HandleAPISetupWizard` |  | Execute the first-run wizard from a single JSON payload |
+| POST | `/api/v1/admin/setup/onboard-customer` | `HandleAPISetupOnboardCustomer` |  | Provision a customer company + portal users in one shot |
+| GET | `/api/v1/admin/setup/tasks` | `HandleAPISetupTasks` |  | Return the combined core + plugin setup task catalog |
+| POST | `/api/v1/admin/setup/tasks/:plugin/:task_id` | `HandleAPISetupTask` |  | Dispatch a plugin setup task |
+| GET | `/api/v1/admin/setup/customers/search/:query` | `handleAdminSetupCustomerSearch` |  | Search customers for dropdown type-ahead (supports name and ID) |
+| GET | `/api/v1/admin/setup/customers/:customer_id` | `handleAdminSetupCustomerConfig` |  | Return full customer configuration for form auto-population |
+
+## api-ticket-messages
+
+Ticket message retrieval and creation endpoints
+
+- **File:** `routes/api-ticket-messages.yaml`
+- **Prefix:** `/api`
+- **Group middleware:** `unified_auth`, `agent`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/tickets/:id/messages` | `handleGetTicketMessages` | `ticket_access_ro` | List ticket messages including attachments |
+| POST | `/api/tickets/:id/messages` | `handleAddTicketMessage` | `ticket_access_note` | Create a new message for a ticket |
+
+## api-tickets-protected
+
+Ticket management API endpoints (protected)
+
+- **File:** `routes/api-tickets.yaml`
+- **Prefix:** `/api/tickets`
+- **Group middleware:** `unified_auth`, `agent`, `scope_tickets_read`, `queue_ro`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/tickets` | `HandleListTicketsAPI` |  | List tickets with filtering |
+| POST | `/api/tickets` | `handleCreateTicket` | `unified_auth`, `scope_tickets_write`, `queue_access_create` | Create new ticket |
+| GET | `/api/tickets/:id` | `handleGetTicket` | `unified_auth`, `scope_tickets_read`, `ticket_access_ro` | Get ticket by ID |
+| PUT | `/api/tickets/:id` | `HandleUpdateTicketAPI` | `unified_auth`, `scope_tickets_write`, `ticket_access_rw` | Update ticket |
+| DELETE | `/api/tickets/:id` | `handleDeleteTicket` | `unified_auth`, `scope_tickets_delete`, `ticket_access_rw` | Delete ticket |
+| POST | `/api/tickets/:id/notes` | `handleAddTicketNote` | `unified_auth`, `scope_articles_write`, `ticket_access_note` | Add note to ticket |
+| GET | `/api/tickets/:id/history` | `handleGetTicketHistory` | `unified_auth`, `scope_tickets_read`, `ticket_access_ro` | Get ticket history |
+| GET | `/api/tickets/:id/available-agents` | `handleGetAvailableAgents` | `unified_auth`, `scope_users_read`, `ticket_access_ro` | Get available agents for assignment |
+| POST | `/api/tickets/:id/assign` | `handleAssignTicket` | `unified_auth`, `scope_tickets_write`, `ticket_access_owner` | Assign ticket to agent |
+| POST | `/api/tickets/:id/close` | `handleCloseTicket` | `unified_auth`, `scope_tickets_write`, `ticket_access_rw` | Close ticket |
+| POST | `/api/tickets/:id/reopen` | `handleReopenTicket` | `unified_auth`, `scope_tickets_write`, `ticket_access_rw` | Reopen closed ticket |
+| POST | `/api/tickets/:id/status` | `handleUpdateTicketStatus` | `unified_auth`, `scope_tickets_write`, `ticket_access_rw` | Update ticket status (supports pending reminders) |
+| POST | `/api/tickets/:id/time` | `handleAddTicketTime` | `unified_auth`, `scope_articles_write`, `ticket_access_note` | Add time accounting entry |
+| POST | `/api/tickets/:id/reply` | `handleTicketReply` | `unified_auth`, `scope_articles_write`, `ticket_access_note` | Reply to ticket |
+| POST | `/api/tickets/:id/priority` | `handleUpdateTicketPriority` | `unified_auth`, `scope_tickets_write`, `ticket_access_priority` | Update ticket priority |
+| POST | `/api/tickets/:id/queue` | `handleUpdateTicketQueue` | `unified_auth`, `scope_tickets_write`, `ticket_access_move_into` | Update ticket queue |
+| GET | `/api/tickets/search` | `handleSearchTickets` |  | Search tickets |
+| GET | `/api/tickets/filter` | `handleFilterTickets` |  | Filter tickets |
+
+## api-tokens-agent
+
+API token management for agents
+
+- **File:** `routes/api-tokens-global.yaml`
+- **Prefix:** `/api/v1/tokens`
+- **Group middleware:** `unified_auth`, `agent`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/v1/tokens` | `HandleListTokens` |  | List my API tokens |
+| POST | `/api/v1/tokens` | `HandleCreateToken` |  | Create a new API token |
+| DELETE | `/api/v1/tokens/:id` | `HandleRevokeToken` |  | Revoke an API token |
+| GET | `/api/v1/tokens/scopes` | `HandleGetScopes` |  | List available token scopes |
+
+## api-tokens-admin
+
+API token admin management
+
+- **File:** `routes/api-tokens-global.yaml`
+- **Prefix:** `/api/v1/admin`
+- **Group middleware:** `unified_auth`, `admin`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/v1/admin/tokens` | `HandleAdminListAllTokens` |  | List all API tokens (admin) |
+| DELETE | `/api/v1/admin/tokens/:id` | `HandleAdminRevokeToken` |  | Revoke any API token (admin) |
+| GET | `/api/v1/admin/users/:userId/tokens` | `HandleAdminListUserTokens` |  | List a specific user's API tokens |
+| POST | `/api/v1/admin/users/:userId/tokens` | `HandleAdminCreateUserToken` |  | Create API token for a user |
+| DELETE | `/api/v1/admin/users/:userId/tokens/:tokenId` | `HandleAdminRevokeUserToken` |  | Revoke a specific user's token |
+| GET | `/api/v1/admin/customer-users/:customerId/tokens` | `HandleAdminListCustomerTokens` |  | List a specific customer's API tokens |
+| POST | `/api/v1/admin/customer-users/:customerId/tokens` | `HandleAdminCreateCustomerToken` |  | Create API token for a customer |
+| DELETE | `/api/v1/admin/customer-users/:customerId/tokens/:tokenId` | `HandleAdminRevokeCustomerToken` |  | Revoke a specific customer's token |
+
+## api-tokens-customer
+
+API token management for customers
+
+- **File:** `routes/api-tokens-global.yaml`
+- **Prefix:** `/customer/api/v1/tokens`
+- **Group middleware:** `unified_auth`, `customer`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/customer/api/v1/tokens` | `HandleCustomerListTokens` |  | List my API tokens (customer) |
+| POST | `/customer/api/v1/tokens` | `HandleCustomerCreateToken` |  | Create a new API token (customer) |
+| DELETE | `/customer/api/v1/tokens/:id` | `HandleCustomerRevokeToken` |  | Revoke an API token (customer) |
+| GET | `/customer/api/v1/tokens/scopes` | `HandleGetScopes` |  | List available token scopes (customer) |
+
+## api-types-protected
+
+Ticket type management API endpoints (protected)
+
+- **File:** `routes/api-types.yaml`
+- **Prefix:** `/api/types`
+- **Group middleware:** `unified_auth`, `admin`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| POST | `/api/types` | `handleCreateType` |  | Create new ticket type |
+| PUT | `/api/types/:id` | `handleUpdateType` |  | Update ticket type |
+| DELETE | `/api/types/:id` | `handleDeleteType` |  | Delete ticket type |
+
+## api-v1-public
+
+REST API v1 public endpoints
+
+- **File:** `routes/api-v1-global.yaml`
+- **Prefix:** `/api/v1`
+- **Group middleware:** none
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| POST | `/api/v1/auth/login` | `HandleLoginAPI` |  | Authenticate user and return JWT tokens |
+| POST | `/api/v1/auth/refresh` | `HandleRefreshTokenAPI` |  | Exchange a refresh token for a new access token and a rotated refresh token |
+
+## api-v1-customer-readable
+
+REST API v1 ticket reads shared by agents and customers
+
+- **File:** `routes/api-v1-global.yaml`
+- **Prefix:** `/api/v1`
+- **Group middleware:** `unified_auth`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/v1/tickets` | `HandleListTicketsAPI` | `customer_or_queue_ro` | List tickets |
+| GET | `/api/v1/tickets/:id` | `HandleGetTicketAPI` | `ticket_access_customer_ro` | Get ticket by ID |
+| GET | `/api/v1/tickets/:id/articles` | `HandleListArticlesAPI` | `ticket_access_customer_ro` | Get ticket articles |
+| GET | `/api/v1/tickets/:id/articles/:article_id` | `HandleGetArticleAPI` | `ticket_access_customer_ro` | Get specific article |
+
+## api-v1-protected
+
+REST API v1 protected endpoints
+
+- **File:** `routes/api-v1-global.yaml`
+- **Prefix:** `/api/v1`
+- **Group middleware:** `unified_auth`, `agent`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| POST | `/api/v1/tickets` | `HandleCreateTicketAPI` | `queue_access_create` | Create ticket |
+| PUT | `/api/v1/tickets/:id` | `HandleUpdateTicketAPI` | `ticket_access_rw` | Update ticket |
+| DELETE | `/api/v1/tickets/:id` | `HandleDeleteTicketAPI` | `ticket_access_rw` | Delete ticket |
+| POST | `/api/v1/tickets/:id/reopen` | `HandleReopenTicketAPI` | `ticket_access_rw` | Reopen ticket |
+| POST | `/api/v1/tickets/:id/time` | `handleAddTicketTime` | `ticket_access_note` | Add time accounting entry to ticket |
+| POST | `/api/v1/tickets/:id/articles` | `HandleCreateArticleAPI` | `ticket_access_note` | Add article to ticket |
+| GET | `/api/v1/tickets/:id/internal-notes` | `HandleGetInternalNotes` | `ticket_access_ro` | Get internal notes for a ticket |
+| POST | `/api/v1/tickets/:id/internal-notes` | `HandleCreateInternalNote` | `ticket_access_note` | Create internal note for a ticket |
+| PUT | `/api/v1/tickets/:id/internal-notes/:note_id` | `HandleUpdateInternalNote` | `ticket_access_note` | Update internal note |
+| DELETE | `/api/v1/tickets/:id/internal-notes/:note_id` | `HandleDeleteInternalNote` | `ticket_access_note` | Delete internal note |
+| GET | `/api/v1/users` | `HandleListUsersAPI` |  | List users |
+| GET | `/api/v1/users/:id` | `HandleGetUserAPI` |  | Get user by ID |
+| GET | `/api/v1/users/me` | `HandleUserMeAPI` |  | Get current user |
+| GET | `/api/v1/groups` | `HandleListGroupsAPI` |  | List groups |
+| GET | `/api/v1/queues` | `HandleListQueuesAPI` | `queue_ro` | List queues |
+| GET | `/api/v1/queues/:id` | `HandleGetQueueAPI` | `queue_access_ro` | Get queue by ID |
+| GET | `/api/v1/queues/:id/agents` | `HandleGetQueueAgentsAPI` | `queue_access_ro` | Get agents with permissions for queue |
+| GET | `/api/v1/priorities` | `HandleListPrioritiesAPI` |  | List priorities |
+| GET | `/api/v1/priorities/:id` | `HandleGetPriorityAPI` |  | Get priority by ID |
+| POST | `/api/v1/priorities` | `HandleCreatePriorityAPI` | `admin` | Create priority (admin only) |
+| PUT | `/api/v1/priorities/:id` | `HandleUpdatePriorityAPI` | `admin` | Update priority (admin only) |
+| DELETE | `/api/v1/priorities/:id` | `HandleDeletePriorityAPI` | `admin` | Invalidate priority (admin only) |
+| GET | `/api/v1/types` | `HandleListTypesAPI` |  | List ticket types |
+| GET | `/api/v1/states` | `HandleListStatesAPI` |  | List ticket states |
+| GET | `/api/v1/services` | `HandleListServicesAPI` |  | List services |
+| GET | `/api/v1/statistics/dashboard` | `HandleDashboardStatisticsAPI` | `queue_ro` | Dashboard statistics (ticket counts by state, queue, priority; recent tickets) |
+| GET | `/api/v1/statistics/trends` | `HandleTicketTrendsAPI` | `queue_ro` | Ticket created/closed trends (daily or monthly) |
+| GET | `/api/v1/statistics/agents` | `HandleAgentPerformanceAPI` | `queue_ro` | Agent performance (tickets assigned/closed, articles written) |
+| GET | `/api/v1/statistics/queues` | `HandleQueueMetricsAPI` | `queue_ro` | Queue metrics (total, open, backlog) |
+| GET | `/api/v1/statistics/analytics` | `HandleTimeBasedAnalyticsAPI` | `queue_ro` | Ticket distribution by hour of day or day of week |
+| GET | `/api/v1/statistics/customers` | `HandleCustomerStatisticsAPI` | `queue_ro` | Customer statistics (top customers, activity) |
+| GET | `/api/v1/statistics/export` | `HandleExportStatisticsAPI` | `queue_ro` | Export statistics summary or ticket list as JSON or CSV |
+| GET | `/api/v1/ticket-states/statistics` | `HandleTicketStateStatisticsAPI` | `queue_ro` | Ticket counts per ticket state |
+| GET | `/api/v1/ticket-attribute-relations/evaluate` | `handleAPITicketAttributeRelationsEvaluate` |  | Evaluate ticket attribute relations for filtering dropdowns |
+| POST | `/api/v1/search` | `HandleSearchAPI` |  | Search tickets |
+| POST | `/api/v1/search/reindex` | `HandleReindexAPI` | `admin` | Trigger search reindex (admin only) |
+| GET | `/api/v1/search/health` | `HandleSearchHealthAPI` |  | Search health |
+| POST | `/api/v1/users` | `HandleCreateUserAPI` | `admin` | Create user |
+| PUT | `/api/v1/users/:id` | `HandleUpdateUserAPI` | `admin` | Update user |
+| DELETE | `/api/v1/users/:id` | `HandleDeleteUserAPI` | `admin` | Delete user |
+| PUT | `/api/v1/tickets/:id/articles/:article_id` | `HandleUpdateArticleAPI` | `ticket_access_rw` | Update article |
+| DELETE | `/api/v1/tickets/:id/articles/:article_id` | `HandleDeleteArticleAPI` | `ticket_access_rw` | Delete article |
+| POST | `/api/v1/queues` | `HandleCreateQueueAPI` | `admin` | Create queue (admin only) |
+| PUT | `/api/v1/queues/:id` | `HandleUpdateQueueAPI` | `admin` | Update queue, including its group (admin only) |
+| DELETE | `/api/v1/queues/:id` | `HandleDeleteQueueAPI` | `admin` | Delete queue (admin only) |
+| GET | `/api/v1/queues/:id/stats` | `HandleGetQueueStatsAPI` | `queue_access_ro` | Queue ticket statistics |
+| POST | `/api/v1/queues/:id/groups` | `HandleAssignQueueGroupAPI` | `admin` | Set the queue's group (admin only) |
+| DELETE | `/api/v1/queues/:id/groups/:group_id` | `HandleRemoveQueueGroupAPI` | `admin` | Remove the queue's group: always rejected, a queue must have a group (admin only) |
+| GET | `/api/v1/system-addresses` | `HandleListSystemAddressesAPI` |  | List system addresses |
+| POST | `/api/v1/system-addresses` | `HandleCreateSystemAddressAPI` | `admin` | Create system address (admin only) |
+| PUT | `/api/v1/system-addresses/:id` | `HandleUpdateSystemAddressAPI` | `admin` | Update system address (admin only) |
+| GET | `/api/v1/salutations` | `HandleListSalutationsAPI` |  | List salutations |
+| POST | `/api/v1/salutations` | `HandleCreateSalutationAPI` | `admin` | Create salutation (admin only) |
+| PUT | `/api/v1/salutations/:id` | `HandleUpdateSalutationAPI` | `admin` | Update salutation (admin only) |
+| GET | `/api/v1/signatures` | `HandleListSignaturesAPI` |  | List signatures |
+| POST | `/api/v1/signatures` | `HandleCreateSignatureAPI` | `admin` | Create signature (admin only) |
+| PUT | `/api/v1/signatures/:id` | `HandleUpdateSignatureAPI` | `admin` | Update signature (admin only) |
+| POST | `/api/v1/markdown/render` | `HandleMarkdownRenderAPI` |  | Render markdown to sanitized HTML |
+| GET | `/api/v1/custom-fields/definitions` | `handleAPIListCustomFieldDefs` |  | List custom field definitions |
+| GET | `/api/v1/custom-fields/definitions/:id` | `handleAPIGetCustomFieldDef` |  | Get custom field definition |
+| POST | `/api/v1/custom-fields/definitions` | `handleCreateCustomField` | `admin` | Create custom field definition (admin only) |
+| PUT | `/api/v1/custom-fields/definitions/:id` | `handleUpdateCustomField` | `admin` | Update custom field definition (admin only) |
+| DELETE | `/api/v1/custom-fields/definitions/:id` | `handleDeleteCustomField` | `admin` | Soft-delete custom field definition (admin only) |
+| GET | `/api/v1/custom-fields/values/:entity_type/:id` | `handleAPIGetCustomFieldValues` |  | Get custom field values for entity |
+| PUT | `/api/v1/custom-fields/values/:entity_type/:id` | `handleAPISetCustomFieldValues` |  | Set custom field values for entity |
+| POST | `/api/v1/custom-fields/query` | `handleAPIQueryCustomFields` |  | Query entities by custom field values |
+| GET | `/api/v1/session/orgs` | `handleListUserOrgs` |  | List current user's organisations |
+| POST | `/api/v1/session/org` | `handleSwitchOrg` |  | Switch active organisation |
+| GET | `/api/v1/organisations` | `handleAPIListOrgs` | `admin` | List all organisations (admin only) |
+| POST | `/api/v1/organisations` | `handleAPICreateOrg` | `admin` | Create organisation (admin only) |
+| PUT | `/api/v1/organisations/:id` | `handleAPIUpdateOrg` | `admin` | Update organisation (admin only) |
+| DELETE | `/api/v1/organisations/:id` | `handleAPIDeleteOrg` | `admin` | Delete organisation (admin only) |
+| GET | `/api/v1/organisations/:id/members` | `handleAPIListMembers` | `admin` | List organisation members |
+| POST | `/api/v1/organisations/:id/members` | `handleAPIAddMember` | `admin` | Add member to organisation |
+| DELETE | `/api/v1/organisations/:id/members/:member_id` | `handleAPIRemoveMember` | `admin` | Remove member from organisation |
+| GET | `/api/v1/organisations/:id/plugin-access` | `handleAPIListOrgPluginAccess` | `admin` | List plugin-access bindings for an organisation |
+| POST | `/api/v1/organisations/:id/plugin-access` | `handleAPISetOrgPluginAccess` | `admin` | Set or replace plugin-access binding for an organisation |
+| DELETE | `/api/v1/organisations/:id/plugin-access/:plugin` | `handleAPIDeleteOrgPluginAccess` | `admin` | Disable a plugin for an organisation |
+| POST | `/api/v1/organisations/:id/captive-plugin` | `handleAPISetCaptivePlugin` | `admin` | Set or clear the captive plugin for an organisation |
+| GET | `/api/v1/organisations/:id/config` | `handleAPIListOrgConfigs` | `admin` | List per-org config overrides |
+| PUT | `/api/v1/organisations/:id/config` | `handleAPISetOrgConfig` | `admin` | Set per-org config override |
+| DELETE | `/api/v1/organisations/:id/config/:name` | `handleAPIDeleteOrgConfig` | `admin` | Remove per-org config override |
+| POST | `/api/v1/admin/sql` | `HandleAdminExecuteSQL` | `admin` | Execute read-only SQL query (SELECT, DESCRIBE, EXPLAIN, SHOW TABLES/COLUMNS — admin only) |
+
+## api-webhooks
+
+Outbound webhook configuration, delivery log, test and redelivery (admin only)
+
+- **File:** `routes/api-webhooks.yaml`
+- **Prefix:** `/api/v1`
+- **Group middleware:** `unified_auth`, `admin`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/v1/webhooks` | `handleWebhookList` |  | List webhooks (optional ?active=true\|false) |
+| POST | `/api/v1/webhooks` | `handleWebhookCreate` |  | Create webhook |
+| GET | `/api/v1/webhooks/events` | `handleWebhookEvents` |  | List subscribable webhook events |
+| GET | `/api/v1/webhook-deliveries/:id` | `handleWebhookDeliveryGet` |  | Get delivery including payload and response |
+| POST | `/api/v1/webhook-deliveries/:id/redeliver` | `handleWebhookRedeliver` |  | Send a delivery's payload again as a new delivery |
+| GET | `/api/v1/webhooks/:id` | `handleWebhookGet` |  | Get webhook |
+| PUT | `/api/v1/webhooks/:id` | `handleWebhookUpdate` |  | Update webhook (partial) |
+| DELETE | `/api/v1/webhooks/:id` | `handleWebhookDelete` |  | Delete webhook and its delivery log |
+| POST | `/api/v1/webhooks/:id/test` | `handleWebhookTest` |  | Send a webhook.test event now |
+| GET | `/api/v1/webhooks/:id/deliveries` | `handleWebhookDeliveries` |  | List recent deliveries (optional ?limit=1..200) |
+
+## auth
+
+Authentication routes for login/logout
+
+- **File:** `routes/auth.yaml`
+- **Prefix:** ``
+- **Group middleware:** none
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/login` | `handleLoginPage` |  | Display login page with HTMX form |
+| POST | `/api/auth/login` | `handleAuthLogin` |  | Process login form submission via HTMX |
+| POST | `/api/auth/passkey/begin` | `handlePasskeyLoginBegin` |  | Begin agent passkey login |
+| POST | `/api/auth/passkey/finish` | `handlePasskeyLoginFinish` |  | Finish agent passkey login |
+| POST | `/api/auth/logout` | `handleLogout` | `auth` | Process logout request |
+| GET | `/logout` | `handleLogout` |  | GET logout route that redirects to login |
+| GET | `/auth/customer` | `handleCustomerLoginPage` |  | Customer login portal |
+| GET | `/customer/login` | `handleCustomerLoginPage` |  | Alias customer login path |
+| POST | `/customer/login` | `handleCustomerLogin` |  | Process customer login form (alias) |
+| POST | `/api/auth/customer/login` | `handleCustomerLogin` |  | Process customer login form |
+| POST | `/api/auth/customer/passkey/begin` | `handleCustomerPasskeyLoginBegin` |  | Begin customer passkey login |
+| POST | `/api/auth/customer/passkey/finish` | `handleCustomerPasskeyLoginFinish` |  | Finish customer passkey login |
+| GET | `/customer/logout` | `handleCustomerLogout` |  | Customer logout - clears cookies and redirects |
+| GET | `/login/2fa` | `handle2FAPage` |  | Display 2FA verification page during login |
+| POST | `/api/auth/2fa/verify` | `handle2FAVerify` |  | Verify 2FA code and complete login |
+| POST | `/api/auth/2fa/webauthn/begin` | `handleWebAuthnLoginBegin` |  | Begin security key login verification |
+| POST | `/api/auth/2fa/webauthn/finish` | `handleWebAuthnLoginFinish` |  | Finish security key login verification |
+| GET | `/customer/login/2fa` | `handleCustomer2FAPage` |  | Display customer 2FA verification page during login |
+| POST | `/api/auth/customer/2fa/verify` | `handleCustomer2FAVerify` |  | Verify customer 2FA code and complete login |
+| POST | `/api/auth/customer/2fa/webauthn/begin` | `handleCustomerWebAuthnLoginBegin` |  | Begin customer security key login verification |
+| POST | `/api/auth/customer/2fa/webauthn/finish` | `handleCustomerWebAuthnLoginFinish` |  | Finish customer security key login verification |
+| GET | `/auth/:id` | `handleOIDCRedirect` |  | Redirect to IdP for OIDC/OAuth2 authentication |
+| GET | `/auth/:id/callback` | `handleOIDCCallback` |  | Handle OIDC/OAuth2 callback from IdP |
+| GET | `/auth/:id/saml` | `handleSAMLRedirect` |  | Initiate SAML2 SP-initiated login flow |
+| POST | `/auth/:id/acs` | `handleSAMLCallback` |  | Handle SAML2 ACS POST response from IdP |
+| GET | `/auth/:id/metadata` | `handleSAMLMetadata` |  | Serve SAML2 SP metadata XML for IdP auto-configuration |
+
+## basic
+
+Basic system routes (root, health, metrics, etc.)
+
+- **File:** `routes/basic.yaml`
+- **Prefix:** ``
+- **Group middleware:** none
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/` | `handleRoot` |  | Root path redirects to login |
+| GET | `/health` | `handleHealthCheck` |  | Basic health check endpoint |
+| GET | `/health/detailed` | `handleDetailedHealthCheck` | `auth`, `admin` | Detailed health check with component status (admin only) |
+| GET | `/metrics` | `handleMetrics` | `auth`, `admin` | Prometheus metrics endpoint (admin only) |
+| GET | `/queues` | `handleQueuesRedirect` | `auth`, `agent`, `queue_ro` | Role-aware redirect/render for queues |
+| GET | `/queues/:id` | `HandleQueueDetail` | `auth`, `agent`, `queue_access_ro` | Display tickets filtered by specific queue |
+| GET | `/queues/:id/meta` | `handleQueueMetaPartial` | `auth`, `agent`, `queue_access_ro` | Render queue metadata panel or JSON payload |
+| GET | `/ticket/:id` | `handleTicketDetail` | `auth`, `agent`, `ticket_access_ro` | Display ticket detail using the unified handler |
+| GET | `/ticket/new` | `handleNewTicket` | `auth`, `agent`, `queue_create` | Redirect to email ticket creation form |
+| GET | `/ticket/new/email` | `handleNewEmailTicket` | `auth`, `agent`, `queue_create` | Display email ticket creation form |
+| GET | `/ticket/new/phone` | `handleNewPhoneTicket` | `auth`, `agent`, `queue_create` | Display phone ticket creation form |
+| GET | `/healthz` | `handleHealthCheck` |  | Quick liveness probe |
+| GET | `/api/languages` | `HandleGetAvailableLanguages` |  | Get available languages and current preference (no auth required) |
+| POST | `/api/languages` | `HandleSetPreLoginLanguage` |  | Set language preference cookie (no auth required) |
+| GET | `/api/themes` | `HandleGetAvailableThemes` |  | Get available themes and current preference (no auth required) |
+| POST | `/api/themes` | `HandleSetPreLoginTheme` |  | Set theme and mode preference cookies (no auth required) |
+
+## compatibility
+
+Compatibility routes for legacy URLs
+
+- **File:** `routes/compatibility.yaml`
+- **Prefix:** ``
+- **Group middleware:** none
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/agent/tickets/:id` | `HandleLegacyAgentTicketViewRedirect` | `auth`, `agent`, `ticket_access_ro` | Redirect legacy agent ticket URL to unified /ticket/:tn |
+| GET | `/tickets/:id` | `HandleLegacyTicketsViewRedirect` | `auth`, `agent`, `ticket_access_ro` | Redirect legacy tickets URL to unified /ticket/:tn |
+
+## customer
+
+Customer routes for ticket management and self-service
+
+- **File:** `routes/customer.yaml`
+- **Prefix:** `/customer`
+- **Group middleware:** `customer-captive-redirect`, `customer-portal`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/customer` | `handleCustomerDashboard` |  | Display customer dashboard with their tickets |
+| GET | `/customer/tickets` | `handleCustomerTickets` |  | Display customer's ticket list |
+| GET | `/customer/tickets/new` | `handleCustomerNewTicket` |  | Display new ticket creation form |
+| POST | `/customer/tickets/create` | `handleCustomerCreateTicket` |  | Process new ticket creation |
+| GET | `/customer/tickets/:id` | `handleCustomerTicketView` |  | Display customer ticket details and conversation |
+| POST | `/customer/tickets/:id/reply` | `handleCustomerTicketReply` |  | Process customer reply to ticket |
+| POST | `/customer/tickets/:id/close` | `handleCustomerCloseTicket` |  | Close customer ticket |
+| GET | `/customer/profile` | `handleCustomerProfile` |  | Display customer profile information |
+| POST | `/customer/profile/update` | `handleCustomerUpdateProfile` |  | Update customer profile information |
+| GET | `/customer/company` | `handleCustomerCompanyInfo` |  | Display the logged-in customer's own company details |
+| GET | `/customer/company/users` | `handleCustomerCompanyUsers` |  | List the valid customer users of the logged-in customer's own company |
+| GET | `/customer/api/preferences/language` | `handleCustomerGetLanguage` |  | Get customer language preference |
+| POST | `/customer/api/preferences/language` | `handleCustomerSetLanguage` |  | Set customer language preference |
+| GET | `/customer/api/preferences/session-timeout` | `handleCustomerGetSessionTimeout` |  | Get customer session timeout preference |
+| POST | `/customer/api/preferences/session-timeout` | `handleCustomerSetSessionTimeout` |  | Set customer session timeout preference |
+| GET | `/customer/api/preferences/theme` | `HandleGetTheme` |  | Get customer theme preference |
+| POST | `/customer/api/preferences/theme` | `HandleSetTheme` |  | Set customer theme preference |
+| POST | `/customer/api/preferences/wallpaper` | `HandleSetWallpaper` |  | Set wallpaper on/off preference for customer |
+| POST | `/customer/api/preferences/coachmarks/dismiss` | `HandleDismissCoachmark` |  | Dismiss a coachmark tip for current customer |
+| GET | `/customer/api/preferences/2fa/status` | `handleCustomerTOTPStatus` |  | Get 2FA status for current customer |
+| POST | `/customer/api/preferences/2fa/setup` | `handleCustomerTOTPSetup` | `demo-guard` | Initiate 2FA setup for customer - returns secret and QR code |
+| POST | `/customer/api/preferences/2fa/confirm` | `handleCustomerTOTPConfirm` | `demo-guard` | Confirm 2FA setup with verification code |
+| POST | `/customer/api/preferences/2fa/disable` | `handleCustomerTOTPDisable` | `demo-guard` | Disable 2FA for customer (requires valid code) |
+| POST | `/customer/api/preferences/2fa/recovery-codes` | `handleCustomerRecoveryCodesRegenerate` | `demo-guard` | Replace customer recovery codes (password required) |
+| POST | `/customer/api/preferences/2fa/webauthn/register/begin` | `handleCustomerWebAuthnRegisterBegin` | `demo-guard` | Begin customer hardware security key registration |
+| POST | `/customer/api/preferences/2fa/webauthn/register/finish` | `handleCustomerWebAuthnRegisterFinish` | `demo-guard` | Finish customer hardware security key registration |
+| GET | `/customer/api/preferences/2fa/webauthn/credentials` | `handleCustomerWebAuthnCredentials` |  | List customer hardware security keys |
+| PATCH | `/customer/api/preferences/2fa/webauthn/credentials/:id` | `handleCustomerWebAuthnCredentialRename` | `demo-guard` | Rename a customer hardware security key |
+| DELETE | `/customer/api/preferences/2fa/webauthn/credentials/:id` | `handleCustomerWebAuthnCredentialDelete` | `demo-guard` | Remove a customer hardware security key |
+| GET | `/customer/password/form` | `handleCustomerPasswordForm` | `demo-guard` | Display password change form |
+| POST | `/customer/password/change` | `handleCustomerChangePassword` | `demo-guard` | Process password change |
+| GET | `/customer/tickets/:id/attachments` | `handleCustomerGetAttachments` |  | Get attachments for a customer ticket |
+| POST | `/customer/tickets/:id/attachments` | `handleCustomerUploadAttachment` |  | Upload attachment to a customer ticket |
+| GET | `/customer/tickets/:id/articles/:article_id/attachments/:file_id` | `handleCustomerDownloadAttachment` |  | Download an attachment of a customer-visible article (?download=1 forces a download) |
+| GET | `/customer/tickets/:id/articles/:article_id/attachments/:file_id/thumbnail` | `handleCustomerGetThumbnail` |  | Get a PNG thumbnail of an attachment |
+| GET | `/customer/tickets/:id/articles/:article_id/attachments/:file_id/view` | `handleCustomerViewAttachment` |  | View attachment in a viewer page (?raw=1 serves the embeddable content) |
+
+## dashboard
+
+Dashboard routes for main application
+
+- **File:** `routes/dashboard.yaml`
+- **Prefix:** `/dashboard`
+- **Group middleware:** `auth`, `agent`, `queue_ro`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/dashboard` | `handleDashboard` |  | Display main dashboard with tickets overview and activity |
+| GET | `/dashboard/api/activity-stream` | `dashboard_activity_stream` |  | Server-sent events for dashboard activity updates |
+| GET | `/dashboard/api/recent-tickets` | `dashboard_recent_tickets` |  | Get recent ticket activity for dashboard widget |
+
+## profile
+
+User profile routes
+
+- **File:** `routes/profile.yaml`
+- **Prefix:** `/profile`
+- **Group middleware:** `auth`, `agent`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/profile` | `handleProfile` |  | Display user profile page |
+
+## selfservice
+
+Password reset and customer self-registration
+
+- **File:** `routes/selfservice.yaml`
+- **Prefix:** ``
+- **Group middleware:** none
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/forgot-password` | `handleAgentForgotPasswordPage` |  | Agent forgot-password form |
+| POST | `/forgot-password` | `handleAgentForgotPasswordSubmit` |  | Email an agent a password reset link (same answer for unknown accounts) |
+| GET | `/reset-password` | `handleAgentResetPasswordPage` |  | Agent choose-new-password form (token from email) |
+| POST | `/reset-password` | `handleAgentResetPasswordSubmit` |  | Set a new agent password with a reset token |
+| GET | `/customer/forgot-password` | `handleCustomerForgotPasswordPage` |  | Customer forgot-password form |
+| POST | `/customer/forgot-password` | `handleCustomerForgotPasswordSubmit` |  | Email a customer a password reset link (same answer for unknown accounts) |
+| GET | `/customer/reset-password` | `handleCustomerResetPasswordPage` |  | Customer choose-new-password form (token from email) |
+| POST | `/customer/reset-password` | `handleCustomerResetPasswordSubmit` |  | Set a new customer password with a reset token |
+| GET | `/customer/register` | `handleCustomerRegisterPage` |  | Customer sign-up form |
+| POST | `/customer/register` | `handleCustomerRegisterSubmit` |  | Email a sign-up confirmation link |
+| GET | `/customer/register/complete` | `handleCustomerRegisterCompletePage` |  | Confirm email address and choose a password (token from email) |
+| POST | `/customer/register/complete` | `handleCustomerRegisterCompleteSubmit` |  | Create the customer account |
+
+## settings
+
+User preferences API routes (used by profile page)
+
+- **File:** `routes/settings.yaml`
+- **Prefix:** ``
+- **Group middleware:** `auth`, `agent`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/api/preferences/session-timeout` | `HandleGetSessionTimeout` |  | Get current session timeout preference |
+| POST | `/api/preferences/session-timeout` | `HandleSetSessionTimeout` |  | Update session timeout preference |
+| GET | `/api/preferences/language` | `HandleGetLanguage` |  | Get current language preference and available languages |
+| POST | `/api/preferences/language` | `HandleSetLanguage` |  | Update language preference |
+| GET | `/api/preferences/theme` | `HandleGetTheme` |  | Get current theme preference and available themes |
+| POST | `/api/preferences/theme` | `HandleSetTheme` |  | Update theme preference (persists to database) |
+| GET | `/settings/tokens` | `handleApiTokensPage` |  | Manage personal API tokens |
+| POST | `/api/preferences/wallpaper` | `HandleSetWallpaper` |  | Set wallpaper on/off preference |
+| POST | `/api/preferences/coachmarks/dismiss` | `HandleDismissCoachmark` |  | Dismiss a coachmark tip for current user |
+| GET | `/api/preferences/2fa/status` | `handleTOTPStatus` |  | Get 2FA status for current user |
+| POST | `/api/preferences/2fa/setup` | `handleTOTPSetup` | `demo-guard` | Initiate 2FA setup - returns secret and QR code |
+| POST | `/api/preferences/2fa/confirm` | `handleTOTPConfirm` | `demo-guard` | Confirm 2FA setup with verification code |
+| POST | `/api/preferences/2fa/disable` | `handleTOTPDisable` | `demo-guard` | Disable 2FA (requires valid code) |
+| POST | `/api/preferences/2fa/recovery-codes` | `handleRecoveryCodesRegenerate` | `demo-guard` | Replace recovery codes (password required) |
+| POST | `/api/preferences/2fa/webauthn/register/begin` | `handleWebAuthnRegisterBegin` | `demo-guard` | Begin hardware security key registration |
+| POST | `/api/preferences/2fa/webauthn/register/finish` | `handleWebAuthnRegisterFinish` | `demo-guard` | Finish hardware security key registration |
+| GET | `/api/preferences/2fa/webauthn/credentials` | `handleWebAuthnCredentials` |  | List hardware security keys |
+| PATCH | `/api/preferences/2fa/webauthn/credentials/:id` | `handleWebAuthnCredentialRename` | `demo-guard` | Rename a hardware security key |
+| DELETE | `/api/preferences/2fa/webauthn/credentials/:id` | `handleWebAuthnCredentialDelete` | `demo-guard` | Remove a hardware security key |
+
+## static
+
+Static routes for CSS, JS, images, and web assets
+
+- **File:** `routes/static.yaml`
+- **Prefix:** ``
+- **Group middleware:** none
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/manifest.json` | `handleStaticFiles` |  | Serve PWA web app manifest |
+| GET | `/sw.js` | `handleStaticFiles` |  | Serve service worker |
+| GET | `/sw-config.json` | `handleServiceWorkerConfig` |  | Serve service worker cache configuration |
+| GET | `/favicon.ico` | `handleStaticFiles` |  | Serve favicon.ico file |
+| GET | `/favicon.svg` | `handleStaticFiles` |  | Serve favicon.svg file |
+| GET | `/static/*filepath` | `handleStaticFiles` |  | Serve all static files including css, js, images, webfonts |
+
+## swagger-ui
+
+Swagger UI API documentation
+
+- **File:** `routes/swagger.yaml`
+- **Prefix:** `/swagger`
+- **Group middleware:** none
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/swagger/*any` | `handleSwaggerDark` |  | Serve Swagger UI for API documentation (dark mode) (only when `${GOATFLOW_SWAGGER_ENABLED:true}`) |
+
+## tickets
+
+Ticket management routes
+
+- **File:** `routes/tickets.yaml`
+- **Prefix:** `/tickets`
+- **Group middleware:** `auth`, `agent`, `queue_ro`
+
+| Method | Path | Handler | Route middleware | Description |
+|--------|------|---------|------------------|-------------|
+| GET | `/tickets` | `handleAgentTickets` |  | Display tickets list with search, filtering, and bulk actions |
+| GET | `/tickets/new` | `HandleAgentNewTicket` | `auth`, `queue_create` | Display new ticket creation form |
+| POST | `/tickets` | `HandleAgentCreateTicket` | `auth`, `queue_access_create` | Process new ticket creation |
+| PUT | `/tickets/:id/status` | `handleAgentTicketStatus` | `auth`, `ticket_access_rw` | Update ticket status via HTMX |
+| POST | `/tickets/:id/comments` | `handleAgentTicketNote` | `auth`, `ticket_access_note` | Add new comment/reply to ticket |
+| POST | `/tickets/:id/attachments` | `handleAgentTicketReply` | `auth`, `ticket_access_note` | Upload file attachment to ticket |
+| PUT | `/tickets/:id/priority` | `handleAgentTicketPriority` | `auth`, `ticket_access_priority` | Update ticket priority |
+| PUT | `/tickets/:id/assign` | `handleAgentTicketAssign` | `auth`, `ticket_access_owner` | Assign ticket to agent |
+| GET | `/tickets/customer-info/:login` | `HandleCustomerInfoPanel` |  | Return customer info panel partial for selected login |

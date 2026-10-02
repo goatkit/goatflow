@@ -516,35 +516,34 @@ func (h *ProdHostAPI) CallPlugin(ctx context.Context, pluginName, fn string, arg
 	return h.PluginManager.Call(ctx, pluginName, fn, args)
 }
 
-// EntitySoftDelete soft-deletes an entity.
+// EntitySoftDelete soft-deletes an entity, recorded as the call's acting
+// agent (SystemUserID when the call has none).
 func (h *ProdHostAPI) EntitySoftDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
 	svc, err := deletion.NewService()
 	if err != nil {
 		return err
 	}
-	userID := 1
-	if caller, ok := ctx.Value(PluginCallerKey).(string); ok {
-		_ = caller
-	}
-	return svc.SoftDelete(ctx, entityType, entityID, userID, reason)
+	return svc.SoftDelete(ctx, entityType, entityID, int(actingUserOrSystem(ctx)), reason)
 }
 
-// EntityRestore restores a soft-deleted entity.
+// EntityRestore restores a soft-deleted entity, recorded as the call's
+// acting agent (SystemUserID when the call has none).
 func (h *ProdHostAPI) EntityRestore(ctx context.Context, entityType string, entityID int64) error {
 	svc, err := deletion.NewService()
 	if err != nil {
 		return err
 	}
-	return svc.Restore(ctx, entityType, entityID, 1)
+	return svc.Restore(ctx, entityType, entityID, int(actingUserOrSystem(ctx)))
 }
 
-// EntityHardDelete permanently removes an entity.
+// EntityHardDelete permanently removes an entity, recorded as the call's
+// acting agent (SystemUserID when the call has none).
 func (h *ProdHostAPI) EntityHardDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
 	svc, err := deletion.NewService()
 	if err != nil {
 		return err
 	}
-	return svc.HardDelete(ctx, entityType, entityID, 1, reason)
+	return svc.HardDelete(ctx, entityType, entityID, int(actingUserOrSystem(ctx)), reason)
 }
 
 // RecycleBinList lists soft-deleted entities.
@@ -609,7 +608,7 @@ func (h *ProdHostAPI) SecureConfigSet(ctx context.Context, key string, value str
 		return fmt.Errorf("secure config: %w", err)
 	}
 	orgID := organisation.OrgIDFromContext(ctx)
-	return repo.Set(pluginName, key, encrypted, hint, orgID, 1)
+	return repo.Set(pluginName, key, encrypted, hint, orgID, int(actingUserOrSystem(ctx)))
 }
 
 // OrgID returns the active organisation ID from the request context.

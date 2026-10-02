@@ -128,7 +128,10 @@ func (a *customFieldAccess) check(entityType string, objectID int64, write bool)
 		}
 		return 0, nil
 	case customfields.EntityQueue:
-		canRead, err := a.queuePerm(uint(objectID), "ro")
+		if objectID <= 0 {
+			return http.StatusNotFound, nil
+		}
+		canRead, err := a.queuePerm(uint(objectID), "ro") // #nosec G115 -- objectID > 0 checked above
 		if err != nil || !canRead {
 			return http.StatusNotFound, err
 		}

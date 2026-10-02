@@ -14,13 +14,13 @@ This page covers how each one works, how to set it up with environment variables
 | `GOATFLOW_PLUGIN_LOG_ECHO` | off | `1`, `true`, `yes`, `on` | Also writes plugin log calls as plain log lines (see [Plugin logs](#plugin-logs)). |
 | `METRICS_ENABLED` | off | `true` (any case) or `1` | Starts a separate metrics listener. |
 | `METRICS_PORT` | `9090` | a port number | Port for the separate metrics listener. |
-| `DRAIN_TIMEOUT` | `10s` | a Go duration, for example `10s`, `30s`, `1m` | How long shutdown waits for open HTTP requests. |
+| `DRAIN_TIMEOUT` | `5s` | a positive Go duration, for example `5s`, `30s`, `1m` | How long shutdown waits for open HTTP requests (server) or cancelled tasks (runner). |
 | `APP_PORT` | `8080` | a port number | Main HTTP port. `/health` and `/metrics` are served here. |
-| `CUSTOMER_FE_ONLY` | off | `true` (any case) or `1` | Customer-only instance. Changes which paths answer (see [Customer-only instances](#customer-only-instances)). |
+| `CUSTOMER_FE_ONLY` | off | `true`, `1`, `yes` or `on` (any case) | Customer-only instance. Changes which paths answer (see [Customer-only instances](#customer-only-instances)). |
 
 Notes:
 
-- These are read from the environment only. The `logging:` and `metrics:` blocks in `config/default.yaml` are not read by the code that does this work. Changing them has no effect.
+- These are read from the environment only. `config/default.yaml` has no logging or metrics section.
 - `.env.example` sets `LOG_FORMAT=json`, `LOG_OUTPUT=stdout` and `METRICS_ENABLED=true`. These differ from the code defaults above. If you copy that file, you get JSON logs and the metrics listener.
 
 ## Health checks
@@ -191,13 +191,12 @@ GoatFlow metrics:
 | `cache_sets_total` | counter | When a Valkey cache is set up. |
 | `cache_deletes_total` | counter | When a Valkey cache is set up. |
 | `cache_operation_duration_seconds` | histogram | When a Valkey cache is set up. |
-| `cache_size_bytes` | gauge | When a Valkey cache is set up. The code never updates it, so it stays `0`. |
 | `goatflow_scheduler_email_poll_runs_total` | counter | When the scheduler runs (main app only). |
 | `goatflow_scheduler_email_poll_active_accounts` | gauge | When the scheduler runs. |
 | `goatflow_scheduler_email_poll_accounts_total` | counter, labels `status` (`success`, `failure`) and `connector` | When the scheduler runs. |
 | `goatflow_scheduler_email_poll_duration_seconds` | histogram | When the scheduler runs. |
 
-The scheduler does not run on customer-only instances or when the database is unavailable at startup.
+The scheduler does not run on customer-only instances or when the database is unavailable at startup. With several backend replicas, each job tick runs on one replica only (see [HIGH_AVAILABILITY.md](HIGH_AVAILABILITY.md#things-to-know-before-running-more-than-one-replica)), so the email poll metrics of one replica cover only the ticks it ran. Sum them across replicas.
 
 The default registry also includes the standard collectors from the Prometheus Go client:
 
@@ -211,13 +210,13 @@ The runner (`goats -mode runner`) exposes no metrics. It returns before any HTTP
 
 ## Customer-only instances
 
-An instance with `CUSTOMER_FE_ONLY=true` answers only an allowlist of path prefixes. Other paths get `404`.
+An instance with `CUSTOMER_FE_ONLY=true` answers only an allowlist of paths (see [docs/CUSTOMER_PORTAL.md](CUSTOMER_PORTAL.md)). Other paths get `404`.
 
 | Path | On a customer-only instance |
 |------|-----------------------------|
 | `/health`, `/healthz` | Work as normal. |
 | `/metrics` on the app port | `404`. |
-| `/health/detailed` | Not blocked. The allowlist entry `/health` is a prefix, so it also matches `/health/detailed`. The admin login check still applies. |
+| `/health/detailed` | `404`. Only the exact `/health` and `/healthz` paths are allowed. |
 | Separate listener on `METRICS_PORT` | Works if `METRICS_ENABLED` is set. It is a separate server and the allowlist does not apply to it. |
 
 ## Logging
@@ -230,33 +229,33 @@ GoatFlow code writes logs in two ways. Both go to the same place and use the sam
 
 | Kind | Used by | Filtered by `LOG_LEVEL`? |
 |------|---------|--------------------------|
-| `slog` lines | Newer code, for example plugin health and plugin log calls. These have a level and extra fields. | Yes. |
-| Standard `log` lines | Most of the code base (`log.Printf`). These have no level. | No. Always written. |
+| `slog` lines | Newer code, for example plugin health, plugin log calls and the runner. These have a level and extra fields. | Yes. |
+| Standard `log` lines | Most of the code base (`log.Printf`). These have no level; they are written as `INFO`. | No. Always written. |
 
 So `LOG_LEVEL=warn` hides `slog` info and debug lines only. Standard `log` lines still appear.
 
 ### `LOG_FORMAT=json`
 
-`slog` lines use the Go `slog` JSON layout. The level is upper case:
+Both kinds use the Go `slog` JSON layout: `time` (RFC 3339 with nanoseconds), `level` (upper case: `DEBUG`, `INFO`, `WARN`, `ERROR`), `msg`, then any extra fields.
 
 ```json
 {"time":"2026-10-02T14:40:02.192173466Z","level":"WARN","msg":"auto-restarting unhealthy plugin","plugin":"example","attempt":1}
 ```
 
-Standard `log` lines are wrapped into JSON with three fields: `level` (always lower-case `info`), `msg` and `time` (RFC 3339 with nanoseconds):
+Standard `log` lines have level `INFO` and no extra fields:
 
 ```json
-{"level":"info","msg":"Shutting down: received terminated — draining connections (timeout 10s)","time":"2026-10-02T14:40:02.192234316Z"}
+{"time":"2026-10-02T14:40:02.192234316Z","level":"INFO","msg":"Shutting down: received terminated — draining connections (timeout 5s)"}
 ```
-
-Note that the two kinds use different case for `level` (`WARN` against `info`). Match levels without case in your log tool.
 
 ### `LOG_FORMAT=text` (default)
 
 ```text
 time=2026-10-02T14:40:02.192Z level=WARN msg="auto-restarting unhealthy plugin" plugin=example attempt=1
-2026/10/02 14:40:02 Shutting down: received terminated — draining connections (timeout 10s)
+2026/10/02 14:40:02 Shutting down: received terminated — draining connections (timeout 5s)
 ```
+
+Runner lines are `slog` lines with `component=runner`, for example `level=INFO msg="executing task" component=runner task=email_queue`.
 
 ### Lines that do not follow `LOG_FORMAT`
 
@@ -264,7 +263,6 @@ Some output is written straight to stdout and is never JSON:
 
 - The startup route list printed by `cmd/goats/main.go` (`Starting GoatFlow HTMX server on port ...`).
 - Gin's own debug output when `APP_ENV` is not `production`.
-- Runner task lines with the `[RUNNER]` prefix.
 
 ### `LOG_OUTPUT` and `LOG_FILE_PATH`
 
@@ -283,14 +281,14 @@ Which destination is used:
 For a file path:
 
 - A relative path is joined to the working directory.
-- Missing directories are created (mode `0755`).
-- The file is opened for append and created if missing (mode `0644`).
-- If the directory or file cannot be created, logs go to **stderr**. GoatFlow keeps running.
+- Missing directories are created (mode `0750`).
+- The file is opened for append and created if missing (mode `0600`, owner only: logs can hold user and ticket data). An existing file keeps its mode.
+- If the directory or file cannot be created, logs go to **stdout** and one line saying why is printed to stderr (`logging: cannot open log file ...`). GoatFlow keeps running.
 - The file is closed when the process exits normally.
 
 GoatFlow does not rotate log files.
 
-The Helm chart runs the backend with a read-only root file system, with only `/tmp` writable. A file path outside `/tmp` falls back to stderr there. Keep `LOG_OUTPUT=stdout` on Kubernetes.
+The Helm chart runs the backend with a read-only root file system, with only `/tmp` writable. A file path outside `/tmp` falls back to stdout there. Keep `LOG_OUTPUT=stdout` on Kubernetes.
 
 ### Shipped defaults
 
@@ -316,43 +314,43 @@ This applies to the server (the default mode).
 
 On `SIGTERM` or `SIGINT`:
 
-1. GoatFlow logs `Shutting down: received terminated — draining connections (timeout 10s)`. For `SIGINT` the text is `received interrupt`.
-2. It stops accepting new connections and waits for open HTTP requests to finish, for up to `DRAIN_TIMEOUT`.
+1. GoatFlow logs `Shutting down: received terminated — draining connections (timeout 5s)`. For `SIGINT` the text is `received interrupt`.
+2. It stops accepting new connections and waits for open HTTP requests to finish, for up to `DRAIN_TIMEOUT`. The separate metrics listener, if running, is drained at the same time with the same limit.
 3. If requests are still open after that, it logs `Connection drain incomplete` and closes them.
-4. It stops the scheduler.
+4. In parallel with steps 2-3 it stops the scheduler: running jobs are cancelled and get up to 5 seconds to return. Shutdown waits for this before going on.
 5. It stops the plugin hot-reload watcher.
 6. It shuts down plugins. Each plugin has its own limit from its resource policy. The whole plugin step is capped at 30 seconds.
-7. It stops the separate metrics listener, if running. This waits up to `DRAIN_TIMEOUT` for open scrapes.
-8. It closes the log file, if one is open, and exits.
+7. It closes the log file, if one is open, and exits.
 
-If the main port cannot be opened at startup (for example it is already in use), GoatFlow stops plugins and exits with an error straight away.
+If the main port cannot be opened at startup (for example it is already in use), GoatFlow stops the scheduler and plugins and exits with an error straight away.
 
 ### `DRAIN_TIMEOUT`
 
-- Parsed as a Go duration: a number with a unit, for example `500ms`, `10s`, `1m`.
-- A plain number such as `10` has no unit. It is not valid and is ignored.
-- Invalid, zero or negative values are ignored without a warning. The default `10s` is used.
+- Parsed as a Go duration: a number with a unit, for example `500ms`, `5s`, `1m`.
+- Unset means the default, `5s`.
+- A value that is not a positive duration (a plain number such as `10`, `0s`, `-1s`, a typo) is an error: GoatFlow logs `invalid DRAIN_TIMEOUT "10": want a positive Go duration such as 5s or 1m; using the default 5s` at startup and uses `5s`.
+- The server and the runner both use it.
 
 ### Stop time to allow
 
-The longest shutdown is about `DRAIN_TIMEOUT` + 30 seconds (plugins) + `DRAIN_TIMEOUT` (metrics listener, only if requests to it are still open).
+The longest server shutdown is about `max(DRAIN_TIMEOUT, 5s)` (HTTP drain and scheduler stop, in parallel) + 30 seconds (plugins). With the defaults that is 35 seconds.
 
-None of the shipped deployment files set a stop grace period:
+The shipped deployment files give the container 45 seconds:
 
-- `deploy/docker-compose.yml` and the TrueNAS template do not set `stop_grace_period`. Docker's default applies (10 seconds).
-- The Helm chart does not set `terminationGracePeriodSeconds`. The Kubernetes default applies (30 seconds). The chart has no value for it.
+- `docker-compose.yml`, `deploy/docker-compose.yml` and the TrueNAS template set `stop_grace_period: 45s` (Docker's own default is 10 seconds).
+- The Helm chart sets `terminationGracePeriodSeconds: 45` (Kubernetes' own default is 30 seconds).
 
-With the defaults, a full 10-second drain uses all of Docker's 10 seconds, and Docker then kills the process before plugins shut down. If you need plugins to stop cleanly, raise the stop grace period above `DRAIN_TIMEOUT` plus the time your plugins need, or lower `DRAIN_TIMEOUT`.
+If you raise `DRAIN_TIMEOUT`, raise the stop grace period to at least `DRAIN_TIMEOUT` + 40 seconds, or the container runtime kills GoatFlow before plugins have shut down.
 
 ### Runner
 
-The runner (`goats -mode runner`) does not use `DRAIN_TIMEOUT`. On `SIGTERM` or `SIGINT` it:
+On `SIGTERM` or `SIGINT` the runner (`goats -mode runner`):
 
-1. Logs `Received signal: terminated` (with the `[RUNNER]` prefix).
-2. Stops starting new tasks.
-3. Waits for running tasks to finish. There is no overall limit. Each task has its own timeout: email queue 5 minutes, session cleanup 2 minutes, webhook dispatch 5 minutes.
+1. Logs `stopping task runner` (`component=runner`).
+2. Stops starting new tasks and cancels the context of every running task (email queue, session cleanup, webhook dispatch).
+3. Waits up to `DRAIN_TIMEOUT` for the running tasks to return, logs `task runner stopped` and exits. A task that does not return in time is abandoned: the runner logs `tasks still running at stop timeout; exiting without them` at `ERROR` and exits.
 
-If a task is still running when the container stop grace period ends, the container runtime kills the runner.
+Mail the email queue task had not sent yet stays in `mail_queue`: a row is deleted only after it was sent, so the next run picks it up.
 
 ## Related docs
 

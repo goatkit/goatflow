@@ -463,6 +463,12 @@ func handleTicketDetail(c *gin.Context) {
 	}
 	autoCloseMeta := computeAutoCloseMeta(ticket, stateName, stateTypeName, time.Now().UTC())
 	pendingReminderMeta := computePendingReminderMeta(ticket, stateName, stateTypeName, time.Now().UTC())
+	serviceName, slaName, err := ticketServiceSLANames(db, ticket)
+	if err != nil {
+		log.Printf("handleTicketDetail: service/SLA of ticket %d: %v", ticket.ID, err)
+		sendErrorResponse(c, http.StatusInternalServerError, "Failed to load ticket")
+		return
+	}
 	ticketData := gin.H{
 		"id":                 ticket.ID,
 		"tn":                 ticket.TicketNumber,
@@ -487,8 +493,9 @@ func handleTicketDetail(c *gin.Context) {
 		"assigned_to":                        assignedTo,
 		"owner":                              ownerName,
 		"type":                               typeName,
-		"service":                            "-", // TODO: Get from service table
-		"sla":                                "-", // TODO: Get from SLA table
+		"service":                            serviceName,
+		"sla":                                slaName,
+		"escalations":                        ticketEscalationView(ticket, time.Now().UTC()),
 		"created":                            ticket.CreateTime.Format("2006-01-02 15:04"),
 		"created_iso":                        ticket.CreateTime.UTC().Format(time.RFC3339),
 		"updated":                            ticket.ChangeTime.Format("2006-01-02 15:04"),

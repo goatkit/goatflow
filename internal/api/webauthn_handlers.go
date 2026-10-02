@@ -59,8 +59,12 @@ func handleWebAuthnRegisterBegin(c *gin.Context) {
 	if !ok {
 		return
 	}
+	recheckKey := passwordRecheckKey(agentMFAAccount(userID))
+	if rejectIfLoginBlocked(c, recheckKey) {
+		return
+	}
 	displayName, err := verifyAgentPasswordAndDisplayName(db, userID, req.Password)
-	if err != nil {
+	if !countPasswordRecheck(c, recheckKey, err == nil) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": err.Error()})
 		return
 	}
@@ -139,7 +143,11 @@ func handleWebAuthnCredentialDelete(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if _, err := verifyAgentPasswordAndDisplayName(db, userID, req.Password); err != nil {
+	recheckKey := passwordRecheckKey(agentMFAAccount(userID))
+	if rejectIfLoginBlocked(c, recheckKey) {
+		return
+	}
+	if _, err := verifyAgentPasswordAndDisplayName(db, userID, req.Password); !countPasswordRecheck(c, recheckKey, err == nil) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": err.Error()})
 		return
 	}
@@ -222,7 +230,11 @@ func handleCustomerWebAuthnRegisterBegin(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if !verifyCustomerPassword(db, customerLogin, req.Password) {
+	recheckKey := passwordRecheckKey(customerMFAAccount(customerLogin))
+	if rejectIfLoginBlocked(c, recheckKey) {
+		return
+	}
+	if !countPasswordRecheck(c, recheckKey, verifyCustomerPassword(db, customerLogin, req.Password)) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -299,7 +311,11 @@ func handleCustomerWebAuthnCredentialDelete(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if !verifyCustomerPassword(db, customerLogin, req.Password) {
+	recheckKey := passwordRecheckKey(customerMFAAccount(customerLogin))
+	if rejectIfLoginBlocked(c, recheckKey) {
+		return
+	}
+	if !countPasswordRecheck(c, recheckKey, verifyCustomerPassword(db, customerLogin, req.Password)) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -739,5 +755,5 @@ func completeCustomerSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth
 	httpcookie.SetAuth(c, "customer_access_token", jwtToken, sessionTimeout)
 	httpcookie.SetAuth(c, "customer_auth_token", jwtToken, sessionTimeout)
 	httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "1", sessionTimeout)
-	c.JSON(http.StatusOK, gin.H{"success": true, "access_token": jwtToken, "redirect": "/customer"})
+	c.JSON(http.StatusOK, gin.H{"success": true, "access_token": jwtToken, "redirect": customerLandingRedirect(session.UserLogin)})
 }

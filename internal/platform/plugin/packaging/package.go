@@ -39,7 +39,7 @@ type PluginPackage struct {
 func PackagePlugin(pluginDir, outputPath string) error {
 	// Read manifest
 	manifestPath := filepath.Join(pluginDir, "plugin.yaml")
-	manifestData, err := os.ReadFile(manifestPath)
+	manifestData, err := os.ReadFile(manifestPath) // #nosec G304 -- pluginDir is the gk CLI operator's own source dir argument
 	if err != nil {
 		return fmt.Errorf("failed to read plugin.yaml: %w", err)
 	}
@@ -54,7 +54,7 @@ func PackagePlugin(pluginDir, outputPath string) error {
 	}
 
 	// Create output file
-	outFile, err := os.Create(outputPath)
+	outFile, err := os.Create(outputPath) // #nosec G304 -- outputPath is the gk CLI operator's chosen output file
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)
 	}
@@ -135,7 +135,7 @@ func ExtractPlugin(packagePath, targetDir string) (*PluginPackage, error) {
 		return nil, fmt.Errorf("failed to read manifest: %w", err)
 	}
 	manifestData, err := io.ReadAll(rc)
-	rc.Close()
+	_ = rc.Close()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read manifest: %w", err)
 	}
@@ -163,7 +163,7 @@ func ExtractPlugin(packagePath, targetDir string) (*PluginPackage, error) {
 
 	// Create plugin directory
 	pluginDir := filepath.Join(targetDir, pkg.Manifest.Name)
-	if err := os.MkdirAll(pluginDir, 0755); err != nil {
+	if err := os.MkdirAll(pluginDir, 0o750); err != nil {
 		return nil, fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
@@ -209,7 +209,7 @@ func ExtractPlugin(packagePath, targetDir string) (*PluginPackage, error) {
 		}
 
 		// Create parent directories
-		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(destPath), 0o750); err != nil {
 			return nil, fmt.Errorf("failed to create directory: %w", err)
 		}
 
@@ -252,7 +252,9 @@ func ExtractPlugin(packagePath, targetDir string) (*PluginPackage, error) {
 		binaryPath := filepath.Join(pluginDir, binaryName)
 		if _, err := os.Stat(binaryPath); err == nil {
 			// Make binary executable
-			os.Chmod(binaryPath, 0755)
+			if err := os.Chmod(binaryPath, 0o750); err != nil { // #nosec G302 -- plugin binary must be executable by the host process; no world access
+				return nil, fmt.Errorf("failed to make plugin binary executable: %w", err)
+			}
 			pkg.BinaryPath = binaryPath
 		}
 	}
@@ -286,7 +288,7 @@ func ValidatePackage(packagePath string) (*pkgplugin.PluginManifest, error) {
 				return nil, fmt.Errorf("failed to read manifest: %w", err)
 			}
 			data, err := io.ReadAll(rc)
-			rc.Close()
+			_ = rc.Close()
 			if err != nil {
 				return nil, fmt.Errorf("failed to read manifest: %w", err)
 			}
@@ -318,7 +320,7 @@ func ValidatePackage(packagePath string) (*pkgplugin.PluginManifest, error) {
 }
 
 func addFileToZip(w *zip.Writer, srcPath, zipPath string) error {
-	file, err := os.Open(srcPath)
+	file, err := os.Open(srcPath) // #nosec G304 -- srcPath comes from walking the operator's plugin source dir
 	if err != nil {
 		return err
 	}
@@ -368,7 +370,10 @@ func extractZipFileWithLimits(f *zip.File, destPath string) error {
 		return fmt.Errorf("remove existing %s: %w", destPath, err)
 	}
 
-	outFile, err := os.OpenFile(destPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+	// Never trust archive permission bits: drop setuid/setgid/sticky and any
+	// world access, keeping owner/group read+exec (plugin binaries).
+	mode := f.Mode().Perm() & 0o750
+	outFile, err := os.OpenFile(destPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode) // #nosec G304 -- destPath is containment-checked against pluginDir by the caller
 	if err != nil {
 		return err
 	}
@@ -383,7 +388,7 @@ func extractZipFileWithLimits(f *zip.File, destPath string) error {
 	}
 
 	// Verify that the extracted size matches the expected size
-	if written != int64(f.UncompressedSize64) {
+	if f.UncompressedSize64 > MaxFileSize || written != int64(f.UncompressedSize64) {
 		return fmt.Errorf("extracted size mismatch for %s: expected %d, got %d",
 			f.Name, f.UncompressedSize64, written)
 	}

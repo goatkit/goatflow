@@ -436,13 +436,14 @@ class SearchResults(BaseGoatflowModel):
 
 
 class Webhook(BaseGoatflowModel):
-    """Represents an outbound webhook. The secret is write-only."""
+    """Represents an outbound webhook. The secret and header values are write-only:
+    header_hints maps each custom header name to a masked hint of its value."""
 
     id: int
     name: str
     url: str
     events: List[str]
-    headers: Dict[str, str] = {}
+    header_hints: Dict[str, str] = {}
     has_secret: bool = False
     secret_hint: Optional[str] = None
     retry_count: int
@@ -461,7 +462,8 @@ class WebhookRequest(RequestModel):
     url: Optional[str] = None
     events: Optional[List[str]] = None
     secret: Optional[str] = None  # 16-512 characters; "" removes the secret
-    headers: Optional[Dict[str, str]] = None
+    # Replaces the custom headers; on update a None value keeps the stored value.
+    headers: Optional[Dict[str, Optional[str]]] = None
     retry_count: Optional[int] = None
     timeout_seconds: Optional[int] = None
     is_active: Optional[bool] = None

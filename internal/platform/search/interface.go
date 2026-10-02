@@ -1,42 +1,33 @@
+// Package search implements GoatFlow's search backends: the application
+// database (default) and an Elasticsearch-compatible index (Zinc or
+// Elasticsearch) kept in sync with the database.
 package search
 
 import (
 	"context"
-	"time"
+	"errors"
 )
 
-// SearchBackend defines the interface for pluggable search implementations.
+// SearchBackend searches tickets, articles and customers.
 type SearchBackend interface {
-	// Search performs a search across specified entities
+	// Search performs a search across the requested entity types.
 	Search(ctx context.Context, query SearchQuery) (*SearchResults, error)
 
-	// Index adds or updates a document in the search index
-	Index(ctx context.Context, doc Document) error
-
-	// Delete removes a document from the search index
-	Delete(ctx context.Context, docType string, id string) error
-
-	// BulkIndex indexes multiple documents at once
-	BulkIndex(ctx context.Context, docs []Document) error
-
-	// HealthCheck verifies the search backend is operational
+	// HealthCheck reports whether the backend can serve searches.
 	HealthCheck(ctx context.Context) error
 
-	// GetBackendName returns the name of the search backend
+	// GetBackendName returns the name of the search backend.
 	GetBackendName() string
 }
 
 // SearchQuery represents a search request.
 type SearchQuery struct {
-	Query     string            `json:"query"`      // The search query string
-	Types     []string          `json:"types"`      // Entity types to search (ticket, article, customer)
-	Filters   map[string]string `json:"filters"`    // Additional filters
-	Offset    int               `json:"offset"`     // Pagination offset
-	Limit     int               `json:"limit"`      // Results per page
-	SortBy    string            `json:"sort_by"`    // Sort field
-	SortOrder string            `json:"sort_order"` // asc or desc
-	Highlight bool              `json:"highlight"`  // Enable result highlighting
-	Facets    []string          `json:"facets"`     // Fields to generate facets for
+	Query     string            `json:"query"`     // The search query string
+	Types     []string          `json:"types"`     // Entity types to search (ticket, article, customer)
+	Filters   map[string]string `json:"filters"`   // Ticket filters: queue_id, state_id
+	Offset    int               `json:"offset"`    // Pagination offset
+	Limit     int               `json:"limit"`     // Results per page
+	Highlight bool              `json:"highlight"` // Enable result highlighting
 
 	// RestrictQueues limits ticket and article hits to tickets in QueueIDs (an
 	// empty QueueIDs then matches none). Set by the server from the caller's
@@ -45,25 +36,12 @@ type SearchQuery struct {
 	QueueIDs       []int `json:"-"`
 }
 
-// Document represents a searchable document.
-type Document struct {
-	ID         string                 `json:"id"`
-	Type       string                 `json:"type"` // ticket, article, customer, etc.
-	Title      string                 `json:"title"`
-	Content    string                 `json:"content"`
-	Metadata   map[string]interface{} `json:"metadata"`
-	CreatedAt  time.Time              `json:"created_at"`
-	ModifiedAt time.Time              `json:"modified_at"`
-}
-
 // SearchResults contains search results.
 type SearchResults struct {
-	Query       string             `json:"query"`
-	TotalHits   int                `json:"total_hits"`
-	Took        int64              `json:"took_ms"` // Time taken in milliseconds
-	Hits        []SearchHit        `json:"hits"`
-	Facets      map[string][]Facet `json:"facets,omitempty"`
-	Suggestions []string           `json:"suggestions,omitempty"`
+	Query     string      `json:"query"`
+	TotalHits int         `json:"total_hits"`
+	Took      int64       `json:"took_ms"` // Time taken in milliseconds
+	Hits      []SearchHit `json:"hits"`
 }
 
 // SearchHit represents a single search result.
@@ -77,72 +55,24 @@ type SearchHit struct {
 	Metadata   map[string]interface{} `json:"metadata"`
 }
 
-// Facet represents a search facet.
-type Facet struct {
-	Value string `json:"value"`
-	Count int    `json:"count"`
-}
-
-// SearchManager manages different search backend implementations.
-type SearchManager struct {
-	backends map[string]SearchBackend
-	primary  SearchBackend
-}
-
-// NewSearchManager creates a new search manager.
-func NewSearchManager() *SearchManager {
-	return &SearchManager{
-		backends: make(map[string]SearchBackend),
-	}
-}
-
-// RegisterBackend registers a search backend.
-func (sm *SearchManager) RegisterBackend(name string, backend SearchBackend, isPrimary bool) {
-	sm.backends[name] = backend
-	if isPrimary {
-		sm.primary = backend
-	}
-}
-
-// GetBackend returns a specific backend by name.
-func (sm *SearchManager) GetBackend(name string) (SearchBackend, bool) {
-	backend, exists := sm.backends[name]
-	return backend, exists
-}
-
-// GetPrimaryBackend returns the primary search backend.
-func (sm *SearchManager) GetPrimaryBackend() SearchBackend {
-	return sm.primary
-}
-
-// Search performs a search using the primary backend.
-func (sm *SearchManager) Search(ctx context.Context, query SearchQuery) (*SearchResults, error) {
-	if sm.primary == nil {
-		// Fallback to first available backend
-		for _, backend := range sm.backends {
-			return backend.Search(ctx, query)
-		}
-		return nil, ErrNoBackendAvailable
-	}
-	return sm.primary.Search(ctx, query)
-}
-
-// Common errors.
 var (
-	ErrNoBackendAvailable = &SearchError{Code: "NO_BACKEND", Message: "No search backend available"}
-	ErrInvalidQuery       = &SearchError{Code: "INVALID_QUERY", Message: "Invalid search query"}
-	ErrIndexingFailed     = &SearchError{Code: "INDEXING_FAILED", Message: "Failed to index document"}
-	// ErrQueueRestrictionUnsupported: the backend cannot limit hits to the
-	// caller's readable queues.
-	ErrQueueRestrictionUnsupported = &SearchError{Code: "QUEUE_RESTRICTION_UNSUPPORTED", Message: "Search backend cannot restrict results to permitted queues"}
+	// ErrInvalidQuery: the query or one of its filters is malformed.
+	ErrInvalidQuery = errors.New("invalid search query")
+	// ErrIndexNotReady: the external index has not been built yet (or was
+	// removed); searching it would return incomplete results.
+	ErrIndexNotReady = errors.New("search index has not been built yet")
 )
 
-// SearchError represents a search-related error.
-type SearchError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+// ServiceError reports that the external search service could not serve a
+// request. Reason is safe to show to users; Err carries the detail.
+type ServiceError struct {
+	Backend string
+	Reason  string
+	Err     error
 }
 
-func (e *SearchError) Error() string {
-	return e.Message
+func (e *ServiceError) Error() string {
+	return e.Backend + ": " + e.Reason + ": " + e.Err.Error()
 }
+
+func (e *ServiceError) Unwrap() error { return e.Err }

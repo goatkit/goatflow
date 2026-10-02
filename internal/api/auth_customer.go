@@ -185,10 +185,7 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			}
 		}
 
-		redirectTarget := "/customer"
-		if target := resolveCustomerCaptiveRedirect(user.Login); target != "" {
-			redirectTarget = target
-		}
+		redirectTarget := customerLandingRedirect(user.Login)
 
 		c.Header("HX-Redirect", redirectTarget)
 		c.JSON(http.StatusOK, gin.H{

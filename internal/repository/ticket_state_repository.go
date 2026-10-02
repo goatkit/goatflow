@@ -184,7 +184,7 @@ func (r *TicketStateRepository) Create(state *models.TicketState) error {
 	if err != nil {
 		return err
 	}
-	state.ID = uint(id)
+	state.ID = uint(id) // #nosec G115 -- ticket_state.id auto-increment key, never negative
 	return nil
 }
 

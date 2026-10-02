@@ -114,56 +114,31 @@ func (rl *RateLimiter) cleanupLoop() {
 	}
 }
 
-// RateLimitMiddleware applies rate limiting based on API token or IP
-func RateLimitMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var key string
-		var limit int
+// apiTokenRateLimiter holds the per-token buckets. It is separate from the
+// global limiter so other callers' keys can never collide with token keys.
+var apiTokenRateLimiter = NewRateLimiter()
 
-		// Check if using API token (has custom rate limit)
-		if apiToken, exists := c.Get("api_token"); exists {
-			token := apiToken.(*platformmodels.APIToken)
-			key = "token:" + token.Prefix
-			limit = token.RateLimit
-			if limit <= 0 {
-				limit = platformmodels.DefaultRateLimit
-			}
-		} else {
-			// Fall back to IP-based limiting
-			key = "ip:" + c.ClientIP()
-			limit = platformmodels.DefaultRateLimit
-		}
-
-		if !globalRateLimiter.Allow(key, limit) {
-			remaining := globalRateLimiter.Remaining(key)
-			c.Header("X-RateLimit-Limit", strconv.Itoa(limit))
-			c.Header("X-RateLimit-Remaining", strconv.Itoa(remaining))
-			c.Header("Retry-After", "60")
-			apierrors.Error(c, apierrors.CodeRateLimited)
-			c.Abort()
-			return
-		}
-
-		// Add rate limit headers
-		c.Header("X-RateLimit-Limit", strconv.Itoa(limit))
-		c.Header("X-RateLimit-Remaining", strconv.Itoa(globalRateLimiter.Remaining(key)))
-
-		c.Next()
+// allowAPITokenRequest enforces user_api_tokens.rate_limit (requests per hour,
+// DefaultRateLimit when unset) for a request authenticated by apiToken. It
+// sets the X-RateLimit-* headers and, when the budget is spent, answers 429
+// with Retry-After, aborts the request and returns false.
+func allowAPITokenRequest(c *gin.Context, apiToken *platformmodels.APIToken) bool {
+	limit := apiToken.RateLimit
+	if limit <= 0 {
+		limit = platformmodels.DefaultRateLimit
 	}
-}
+	key := "token:" + strconv.FormatInt(apiToken.ID, 10)
+	allowed := apiTokenRateLimiter.Allow(key, limit)
 
-// RateLimitByIP applies IP-based rate limiting with a custom limit
-func RateLimitByIP(requestsPerHour int) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		key := "ip:" + c.ClientIP()
-
-		if !globalRateLimiter.Allow(key, requestsPerHour) {
-			c.Header("Retry-After", "60")
-			apierrors.Error(c, apierrors.CodeRateLimited)
-			c.Abort()
-			return
-		}
-
-		c.Next()
+	c.Header("X-RateLimit-Limit", strconv.Itoa(limit))
+	c.Header("X-RateLimit-Remaining", strconv.Itoa(apiTokenRateLimiter.Remaining(key)))
+	if allowed {
+		return true
 	}
+	// One token refills every hour/limit; round up to whole seconds.
+	retryAfter := (3600 + limit - 1) / limit
+	c.Header("Retry-After", strconv.Itoa(retryAfter))
+	apierrors.Error(c, apierrors.CodeRateLimited)
+	c.Abort()
+	return false
 }

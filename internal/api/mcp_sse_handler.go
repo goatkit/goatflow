@@ -22,19 +22,8 @@ func ensureMCPSessions() *mcp.SessionManager {
 }
 
 // HandleMCPSSE handles POST /api/mcp/sse for MCP Streamable HTTP transport.
-// Creates sessions on "initialize", processes JSON-RPC messages on subsequent requests.
-//
-//	@Summary		MCP Streamable HTTP endpoint
-//	@Description	MCP 2025-03-26 Streamable HTTP transport for AI assistant integration
-//	@Tags			MCP
-//	@Accept			json
-//	@Produce		json
-//	@Param			Mcp-Session-Id	header	string	false	"MCP Session ID (required after initialize)"
-//	@Param			request			body	object	true	"JSON-RPC 2.0 request"
-//	@Success		200				{object}	object	"JSON-RPC 2.0 response"
-//	@Failure		401				{object}	map[string]interface{}	"Unauthorized"
-//	@Security		BearerAuth
-//	@Router			/mcp/sse [post]
+// Creates sessions on "initialize", processes JSON-RPC messages on subsequent
+// requests. Documented in docs/api/MCP.md (outside the /api/v1 Swagger base path).
 func HandleMCPSSE(c *gin.Context) {
 	ensureMCPInit()
 	if mcpBridge == nil {
@@ -52,16 +41,6 @@ func HandleMCPSSE(c *gin.Context) {
 }
 
 // HandleMCPSSEStream handles GET /api/mcp/sse for server→client SSE notification stream.
-//
-//	@Summary		MCP SSE notification stream
-//	@Description	Server-sent events stream for MCP server-initiated notifications
-//	@Tags			MCP
-//	@Produce		text/event-stream
-//	@Param			Mcp-Session-Id	header	string	true	"MCP Session ID"
-//	@Success		200				{string}	string	"SSE event stream"
-//	@Failure		401				{object}	map[string]interface{}	"Unauthorized"
-//	@Security		BearerAuth
-//	@Router			/mcp/sse [get]
 func HandleMCPSSEStream(c *gin.Context) {
 	sessions := ensureMCPSessions()
 
@@ -74,15 +53,6 @@ func HandleMCPSSEStream(c *gin.Context) {
 }
 
 // HandleMCPSSEDelete handles DELETE /api/mcp/sse for session termination.
-//
-//	@Summary		Terminate MCP session
-//	@Description	Terminate an MCP Streamable HTTP session
-//	@Tags			MCP
-//	@Param			Mcp-Session-Id	header	string	true	"MCP Session ID"
-//	@Success		204				"Session terminated"
-//	@Failure		401				{object}	map[string]interface{}	"Unauthorized"
-//	@Security		BearerAuth
-//	@Router			/mcp/sse [delete]
 func HandleMCPSSEDelete(c *gin.Context) {
 	sessions := ensureMCPSessions()
 

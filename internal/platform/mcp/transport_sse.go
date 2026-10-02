@@ -76,7 +76,7 @@ func HandleStreamableHTTPPost(
 		w.Header().Set(SessionHeader, session.ID)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write(response)
+		_, _ = w.Write(response) // headers already sent; a write error means the client went away
 		return
 	}
 
@@ -114,7 +114,7 @@ func HandleStreamableHTTPPost(
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(response)
+	_, _ = w.Write(response) // headers already sent; a write error means the client went away
 }
 
 // HandleStreamableHTTPGet handles GET requests for the MCP SSE notification stream.
@@ -219,5 +219,5 @@ func readBody(r *http.Request) ([]byte, error) {
 func writeJSONError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(map[string]string{"error": message})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": message}) // headers already sent; nothing left to report to
 }

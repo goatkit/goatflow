@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -47,15 +48,11 @@ type Dispatcher struct {
 	client *http.Client
 }
 
-// NewDispatcher returns a dispatcher using repo. The HTTP client does not
-// follow redirects: a webhook URL must point at the receiving endpoint.
+// NewDispatcher returns a dispatcher using repo. Deliveries do not follow
+// redirects and only reach internal addresses when AllowPrivateTargetsEnv
+// allows it (see target.go).
 func NewDispatcher(repo *Repository) *Dispatcher {
-	return &Dispatcher{
-		repo: repo,
-		client: &http.Client{
-			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
-		},
-	}
+	return &Dispatcher{repo: repo, client: deliveryClient}
 }
 
 func marshalEnvelope(event string, occurredAt time.Time, data interface{}) (string, error) {
@@ -92,19 +89,73 @@ func (d *Dispatcher) Enqueue(ctx context.Context, tx *sql.Tx, hooks []*Webhook, 
 	return queued, nil
 }
 
-// ProcessDue sends up to limit deliveries that are due, applying the retry
-// policy of each webhook. It returns the number of deliveries attempted.
-func (d *Dispatcher) ProcessDue(ctx context.Context, limit int) (int, error) {
-	ids, err := d.repo.claimDue(ctx, limit)
-	for i, id := range ids {
-		if ctx.Err() != nil {
-			return i, ctx.Err()
+// MaxParallelWebhooks bounds how many webhooks one ProcessDue call sends to
+// at the same time. Deliveries to one webhook are sent one at a time, oldest
+// first, so a slow or unreachable endpoint only delays its own deliveries.
+const MaxParallelWebhooks = 8
+
+// ProcessDue sends the due deliveries of every webhook, applying the retry
+// policy of each, until none is due or ctx ends. Up to MaxParallelWebhooks
+// webhooks are served concurrently. Deliveries still due when ctx ends stay
+// pending for the next call; that is not an error. It returns the number of
+// delivery attempts made.
+func (d *Dispatcher) ProcessDue(ctx context.Context) (int, error) {
+	hooks, err := d.repo.dueWebhooks(ctx)
+	if err != nil {
+		return 0, err
+	}
+	var (
+		wg        sync.WaitGroup
+		mu        sync.Mutex
+		attempted int
+		firstErr  error
+	)
+	slots := make(chan struct{}, MaxParallelWebhooks)
+	for _, id := range hooks {
+		select {
+		case slots <- struct{}{}:
+		case <-ctx.Done():
 		}
-		if _, serr := d.send(ctx, id, true); serr != nil && err == nil {
-			err = serr
+		if ctx.Err() != nil {
+			break
+		}
+		wg.Add(1)
+		go func(webhookID int64) {
+			defer func() { <-slots; wg.Done() }()
+			n, err := d.drain(ctx, webhookID)
+			mu.Lock()
+			attempted += n
+			if err != nil && firstErr == nil {
+				firstErr = err
+			}
+			mu.Unlock()
+		}(id)
+	}
+	wg.Wait()
+	return attempted, firstErr
+}
+
+// drain sends the due deliveries of one webhook in order until none is due or
+// ctx ends.
+func (d *Dispatcher) drain(ctx context.Context, webhookID int64) (int, error) {
+	n := 0
+	for ctx.Err() == nil {
+		id, ok, err := d.repo.claimNext(ctx, webhookID)
+		if err != nil {
+			if ctx.Err() != nil {
+				return n, nil
+			}
+			return n, err
+		}
+		if !ok {
+			return n, nil
+		}
+		n++
+		if _, err := d.send(ctx, id, true); err != nil {
+			return n, err
 		}
 	}
-	return len(ids), err
+	return n, nil
 }
 
 // Test sends a webhook.test event to the webhook immediately, records it as
@@ -143,6 +194,12 @@ func (d *Dispatcher) Redeliver(ctx context.Context, deliveryID int64) (*Delivery
 	return d.send(ctx, id, false)
 }
 
+// recordTimeout bounds the database writes that record an attempt. They run
+// detached from the caller's context: a send that used up the run's deadline
+// must still be recorded, or the delivery would sit in "delivering" until
+// another worker takes it over.
+const recordTimeout = 30 * time.Second
+
 // send performs one HTTP attempt for a delivery already in "delivering" state
 // and records the outcome. With retry, a failed attempt is rescheduled while
 // the webhook's retry budget lasts; otherwise it is final.
@@ -151,7 +208,7 @@ func (d *Dispatcher) send(ctx context.Context, id int64, retry bool) (*Delivery,
 	if err != nil {
 		return nil, err
 	}
-	w, encSecret, err := d.repo.getWithSecret(ctx, del.WebhookID)
+	w, enc, err := d.repo.getWithSecrets(ctx, del.WebhookID)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +218,10 @@ func (d *Dispatcher) send(ctx context.Context, id int64, retry bool) (*Delivery,
 		}
 		return d.repo.GetDelivery(ctx, id)
 	}
-	secret, err := decryptSecret(encSecret)
+	secret, err := decryptSecret(enc.secret)
+	if err == nil {
+		w.Headers, err = decryptHeaders(enc.headers)
+	}
 	if err != nil {
 		if ferr := d.repo.failDelivery(ctx, id, err.Error()); ferr != nil {
 			return nil, ferr
@@ -173,15 +233,17 @@ func (d *Dispatcher) send(ctx context.Context, id int64, retry bool) (*Delivery,
 	attempts := del.Attempts + 1
 	if res.status != StatusDelivered {
 		res.status = StatusFailed
-		if retry && attempts <= w.RetryCount {
+		if retry && !res.permanent && attempts <= w.RetryCount {
 			res.status = StatusPending
 			res.retryAfter = backoff(attempts)
 		}
 	}
-	if err := d.repo.recordAttempt(ctx, id, res); err != nil {
+	rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), recordTimeout)
+	defer cancel()
+	if err := d.repo.recordAttempt(rctx, id, res); err != nil {
 		return nil, err
 	}
-	return d.repo.GetDelivery(ctx, id)
+	return d.repo.GetDelivery(rctx, id)
 }
 
 // post sends the delivery's payload and classifies the response: any 2xx is
@@ -216,6 +278,8 @@ func (d *Dispatcher) post(ctx context.Context, w *Webhook, secret string, del *D
 		if errors.Is(err, context.DeadlineExceeded) {
 			res.errMsg = fmt.Sprintf("no response within %d seconds", w.TimeoutSeconds)
 		}
+		// A blocked address will not become reachable by retrying.
+		res.permanent = isBlockedTarget(err)
 		return res
 	}
 	defer resp.Body.Close()

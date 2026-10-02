@@ -13,14 +13,14 @@ the right containers and pass the right environment.
 | One package (start the test DB first if it needs one) | `make toolbox-test-pkg PKG=./internal/api` |
 | One test in one package | `make toolbox-test-pkg PKG=./internal/api TEST=TestRouteAuthorizationMatrix` |
 | Template tests | `make test-templates` |
-| Integration-tagged tests | `make toolbox-test-integration INT_PKGS="./internal/repository ./tests/integration"` |
+| Integration-tagged tests | `make toolbox-test-integration` (all packages) or `INT_PKGS="./internal/repository"` |
 | LDAP integration | `make test-db-up` then `make test-ldap-integration` |
 | OIDC integration | `make test-oidc-integration` |
 | Browser E2E | `make test-stack-up` then `make test-e2e-go` / `make test-e2e-playwright-go` |
 | Go SDK | `make test-sdk-go` |
 | API contract tests | `make test-contracts` |
 | Coverage | `make test-coverage` |
-| Benchmarks | `make bench BENCH_PACKAGES="./internal/api ./internal/service"` |
+| Benchmarks | `make bench` (all) or `make bench BENCH_PACKAGES="./internal/api"` |
 | k6 load smoke test | `make load-test` |
 | SQL portability and platform boundary lint | `make lint-platform` |
 | All linters | `make lint` |
@@ -126,7 +126,8 @@ pass it through, and `make test-ldap-integration` always sets it.
    must not overlap.
 
 `tests/e2e`, `tests/integration`, `internal/email/integration` and the template package are left
-out of steps 2 and 3. Tests run with `APP_ENV=test`.
+out of steps 2 and 3. Tests run with `APP_ENV=test`. All three steps always run; the script
+fails if any step failed.
 
 `make test-unit` uses `-count=1`. `make test-fast` is the same without `-count=1`, so Go skips
 packages that have not changed.
@@ -144,7 +145,7 @@ Plain `go test ./...` (and so `make test-unit`) does not build files with these 
 
 | Target | What it runs | Needs |
 |--------|--------------|-------|
-| `make toolbox-test-integration INT_PKGS="..."` | `go test -tags=integration` on the packages you list. It starts the test stack first. Always set `INT_PKGS`: the default, `./internal/middleware`, no longer exists. | Test stack |
+| `make toolbox-test-integration [INT_PKGS="..."]` | `go test -tags=integration -p 1`. Without `INT_PKGS` it runs every package that has `//go:build integration` test files. It starts the test stack first and mounts the Docker socket (the LDAP and OIDC tests start testcontainers). | Test stack, Docker |
 | `make test-ldap-integration` | `^TestLDAP` tests in `./internal/api`, against an OpenLDAP container started by testcontainers. Logs in through `/api/auth/login`. | Docker socket, `make test-db-up` |
 | `make test-oidc-integration` | `-tags=integration` tests in `./internal/platform/auth/...`, against a Keycloak container started by testcontainers. | Docker socket |
 | `make test-integration` | `scripts/integration-test.sh`: curl checks against the test backend. | Test stack (started for you) |
@@ -169,7 +170,7 @@ make test-e2e-go TEST='Groups|Queues'      # go test -run pattern
 | `make test-sdk-go` | `go vet`, `go test` and `go build` in `sdk/go` (a separate Go module) |
 | `make test-coverage` | `scripts/run_coverage.sh`: `go test -race -coverprofile=generated/coverage.out`. It leaves out `internal/api` and `tests/`. |
 | `make test-coverage-html` | HTML coverage report |
-| `make bench` | `scripts/perf/run_benchmarks.sh`. Tune with `BENCH_COUNT`, `BENCH_TIME`, `BENCH_REGEX`, `BENCH_PACKAGES`. Output goes to `generated/benchmarks/`. Set `BENCH_PACKAGES`: the default list includes packages that no longer exist (`./internal/utils`, `./internal/config`, `./internal/routing`, `./internal/middleware`), and `go test` stops on them. |
+| `make bench` | `scripts/perf/run_benchmarks.sh`. By default it runs every benchmark in every package that has one. Narrow it with `BENCH_PACKAGES` and `BENCH_REGEX`; tune with `BENCH_COUNT`, `BENCH_TIME`. Output goes to `generated/benchmarks/`. |
 | `make bench-compare BASE=... CANDIDATE=...` | Compares two benchmark result files. |
 | `make load-test` | k6 smoke profile (`tests/load/k6/goatflow_smoke.js`) against the test backend. Output goes to `generated/load-tests/`. |
 
@@ -181,6 +182,7 @@ make test-e2e-go TEST='Groups|Queues'      # go test -run pattern
 | `make toolbox-lint` | `golangci-lint run ./...` |
 | `make yaml-lint`, `make openapi-lint`, `make helm-lint` | YAML, OpenAPI spec, Helm chart |
 | `make lint` | All of the above |
+| `make gosec` | `gosec ./...` in the toolbox (version pinned by `GOSEC_VERSION` in `Dockerfile.toolbox`, flags in `GOSEC_FLAGS`). Test files are not scanned. CI runs the same version and flags (`make gosec-host`) and fails on any finding. Mark a false positive on the flagged line with `// #nosec G<rule> -- <why it is safe>`. |
 
 The gk-lint rules are listed in
 [DATABASE_ACCESS_PATTERNS.md](DATABASE_ACCESS_PATTERNS.md#enforcement). The import boundary is

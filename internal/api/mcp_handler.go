@@ -47,7 +47,7 @@ func ensureMCPInit() {
 			}
 		}
 
-		if err := mcp.InitDynamicTools(routes, "./docs/api/openapi.yaml"); err != nil {
+		if err := mcp.InitDynamicTools(routes, "./api/openapi.yaml"); err != nil {
 			log.Printf("mcp init: failed to generate dynamic tools: %v", err)
 		}
 
@@ -82,8 +82,7 @@ func (pluginMCPGate) Authorize(pluginName string, middleware []string) ([]gin.Ha
 }
 
 func (pluginMCPGate) Envelope(c *gin.Context, args map[string]any, pluginName string) {
-	stripPluginEnvelope(args)
-	addPluginEnvelope(c, args, pluginName)
+	setPluginEnvelope(c, args, pluginName)
 }
 
 func refreshPluginMCPTools(mgr *plugin.Manager) {
@@ -117,18 +116,8 @@ func refreshPluginMCPTools(mgr *plugin.Manager) {
 }
 
 // HandleMCP handles POST /api/mcp for MCP JSON-RPC messages.
-// Requires Bearer token authentication via API token.
-//
-//	@Summary		MCP JSON-RPC endpoint
-//	@Description	Model Context Protocol endpoint for AI assistant integration
-//	@Tags			MCP
-//	@Accept			json
-//	@Produce		json
-//	@Param			request	body		object	true	"JSON-RPC 2.0 request"
-//	@Success		200		{object}	object	"JSON-RPC 2.0 response"
-//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
-//	@Security		BearerAuth
-//	@Router			/mcp [post]
+// Requires Bearer token authentication via API token. Documented in
+// docs/api/MCP.md (the route is outside the /api/v1 Swagger base path).
 func HandleMCP(c *gin.Context) {
 	ensureMCPInit()
 	if mcpBridge == nil {
@@ -168,13 +157,6 @@ func HandleMCP(c *gin.Context) {
 }
 
 // HandleMCPInfo returns information about the MCP endpoint.
-//
-//	@Summary		MCP endpoint info
-//	@Description	Get information about the MCP endpoint and available tools
-//	@Tags			MCP
-//	@Produce		json
-//	@Success		200	{object}	map[string]interface{}	"MCP info"
-//	@Router			/mcp [get]
 func HandleMCPInfo(c *gin.Context) {
 	ensureMCPInit()
 

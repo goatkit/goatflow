@@ -657,7 +657,13 @@
           "responsible": "工单责任人",
           "roles": "角色",
           "special": "特殊收件人",
-          "watcher": "工单关注者"
+          "watcher": "工单关注者",
+          "my_queues": "将该队列加入“我的队列”的服务人员",
+          "creator": "工单创建人",
+          "read_permissions": "对该队列有读取权限的所有服务人员",
+          "write_permissions": "对该队列有写入权限的所有服务人员",
+          "emails": "其他收件人电子邮件地址",
+          "emails_help": "多个地址用逗号分隔，最多 200 个字符。"
         },
         "sections": {
           "basic": "基本信息",
@@ -1529,6 +1535,7 @@
         "events_required": "请至少选择一个事件。",
         "header_name": "请求头名称",
         "header_value": "值",
+        "header_value_keep": "已保存值（{hint}）。留空以保留",
         "headers": "自定义请求头",
         "headers_help": "随每次投递一起发送。Content-Type、User-Agent 和 X-Webhook-* 请求头由 GoatFlow 设置。",
         "remove_header": "移除请求头",
@@ -2331,9 +2338,18 @@
     }
   },
   "customer_portal_settings": {
+    "description": "适用于所有客户公司的默认值。每个公司都可以在其编辑页面中覆盖这些值。",
+    "enable": "启用客户门户",
+    "enable_help": "开启或关闭客户门户。有自己设置的公司保留其设置。",
+    "footer_text": "页脚文本",
     "heading": "客户门户 设置",
+    "landing_page": "登录后页面",
+    "landing_page_help": "客户登录后看到的页面，例如 /customer/tickets。不以 / 开头的路径相对于 /customer。",
+    "per_company_note": "每个客户公司都可以在其编辑页面的“门户设置”选项卡中覆盖这些默认值。",
+    "require_login": "要求登录",
+    "require_login_help": "客户必须先登录才能访问门户",
     "title": "客户门户 设置",
-    "per_company_note": "每个客户公司都可以在其编辑页面的“门户设置”选项卡中覆盖这些默认值。"
+    "title_field": "门户标题"
   },
   "customer_user_services": {
     "title": "客户 用户 服务"
@@ -3675,7 +3691,6 @@
     "showing_of_total": "Showing %d of %d tickets",
     "sla": "SLA",
     "spam": "垃圾",
-    "split": "拆分",
     "state": "状态",
     "status": "状态",
     "subject": "主题",
@@ -3714,7 +3729,15 @@
     "view_in_queue": "查看此队列中的工单",
     "visible_for_customer": "对客户可见",
     "visible_for_customer_help": "标记以在客户门户中显示此更新。",
-    "watch": "关注"
+    "watch": "关注",
+    "escalation": {
+      "first_response": "首次响应期限",
+      "update": "更新期限",
+      "solution": "解决期限",
+      "due_in": "剩余",
+      "overdue_by": "已超时",
+      "escalated": "已升级"
+    }
   },
   "tickets_form": {
     "attachments": "附件",

@@ -92,7 +92,7 @@ func main() {
 		return
 	}
 
-	if err := os.WriteFile(enFile, output, 0644); err != nil {
+	if err := os.WriteFile(enFile, output, 0644); err != nil { // #nosec G306 -- checked-in translation JSON, must stay readable by build/app containers like other repo files
 		fmt.Printf("Error writing file: %v\n", err)
 		return
 	}
@@ -183,7 +183,7 @@ func main() {
 		return
 	}
 
-	if err := os.WriteFile(deFile, output, 0644); err != nil {
+	if err := os.WriteFile(deFile, output, 0644); err != nil { // #nosec G306 -- checked-in translation JSON, must stay readable by build/app containers like other repo files
 		fmt.Printf("Error writing German file: %v\n", err)
 		return
 	}

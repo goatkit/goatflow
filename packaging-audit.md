@@ -15,7 +15,7 @@ multiple roles, plus supporting data services.
 | `mariadb` | `mariadb:11` | — | Default DB (OTRS-compatible). Postgres 15 supported via `DB_DRIVER=postgres`. |
 | `valkey` | `valkey/valkey:7-alpine` | — | Redis-compatible cache; app degrades gracefully if absent. |
 | `smtp4dev` | `rnwood/smtp4dev` | — | Dev-only mail sandbox. |
-| `caddy` | `caddy:2-alpine` | — | Prod-only reverse proxy with ACME TLS (docker-compose.prod.yml). |
+| `caddy` | `caddy:2-alpine` | — | Production reverse proxy with ACME TLS (deploy/docker-compose.yml). |
 
 The application itself is a **single static binary** (`goats`) — templates
 (Pongo2), static assets, YAML routes, migrations and WASM plugins are all
@@ -48,23 +48,22 @@ Required (no usable default):
 - `GOATFLOW_ADMIN_PASSWORD` — for initial admin bootstrap (db-init targets)
 
 Key configuration (with defaults):
-- `APP_ENV` (development|test|production), `APP_PORT` (8080), `GOATFLOW_SECURE_KEY`
-- `DB_DRIVER` (mariadb), `DB_MAX_CONNECTIONS=100`, `DB_MAX_IDLE_CONNECTIONS=10`, `DB_CONNECTION_MAX_LIFETIME=30m`
-- `VALKEY_HOST`/`VALKEY_PORT`/`VALKEY_PASSWORD`/`VALKEY_DB` (Redis aliases `REDIS_*` also accepted)
-- `STORAGE_PATH` (/app/storage), `MAX_UPLOAD_SIZE` (10MB), `ALLOWED_FILE_TYPES`
-- `ENABLE_YAML_ROUTING` (true), `ROUTES_DIR` (/app/routes), `CONFIG_DIR` (/app/config), `PLUGIN_DIR` (<CONFIG_DIR>/plugins), `TEMPLATES_DIR`
+- `APP_ENV` (development|test|production), `APP_PORT` (8080), `GOATFLOW_SECURE_KEY` (64 hex chars; the compose files refuse to start without it)
+- `DB_DRIVER` (mariadb). Connection pool sizes are set in code; there are no `DB_MAX_CONNECTIONS` / `DB_MAX_IDLE_CONNECTIONS` / `DB_CONNECTION_MAX_LIFETIME` variables
+- Valkey: `GOATFLOW_VALKEY_HOST`/`GOATFLOW_VALKEY_PORT`/`GOATFLOW_VALKEY_PASSWORD`/`GOATFLOW_VALKEY_DB` (viper `GOATFLOW_` prefix over `valkey.*` in config/default.yaml). Plain `VALKEY_*` / `REDIS_*` are not read; `VALKEY_PORT` in compose is only the host port mapping
+- Storage: `STORAGE_TYPE` (`db` default, or `fs`), `STORAGE_PATH` (/app/storage). Attachment limits are `storage.attachments.max_size` (10MB) and `storage.attachments.allowed_types` in the config (`GOATFLOW_STORAGE_ATTACHMENTS_MAX_SIZE` overrides the size); there is no `MAX_UPLOAD_SIZE` / `ALLOWED_FILE_TYPES`
+- Paths: `ROUTES_DIR` (/app/routes), `CONFIG_DIR` (/app/config), `PLUGIN_DIR` (<CONFIG_DIR>/plugins), `TEMPLATES_DIR`. YAML routing is always on (no `ENABLE_YAML_ROUTING` switch)
 - `PASSWORD_HASH_TYPE` (bcrypt; `sha256` = OTRS sha2, only when an OTRS shares the user tables), `MIGRATE_PASSWORD_HASHES` (false)
 - `GOATFLOW_PLUGIN_LAZY_LOAD` (true), `GOATFLOW_PLUGIN_HOT_RELOAD` (false in prod image), `GOATFLOW_PLUGIN_HEALTH_CHECK`, `GOATFLOW_PLUGIN_AUTO_RESTART`; per-plugin config via `GOATFLOW_PLUGIN_<NAME>_<KEY>`
-- Runner: `GOATFLOW_EMAIL_SMTP_*`, `GOATFLOW_EMAIL_FROM`, `GOATFLOW_EMAIL_ENABLED`
-- TLS: `TLS_CERT_FILE`, `TLS_KEY_FILE` (compose auto-generates self-signed certs if absent)
+- Email (backend, customer-fe and runner all send mail): `GOATFLOW_EMAIL_SMTP_*`, `GOATFLOW_EMAIL_FROM`, `GOATFLOW_EMAIL_ENABLED`
+- TLS: the app serves plain HTTP only (no `TLS_CERT_FILE` / `TLS_KEY_FILE`); terminate TLS in a reverse proxy (Caddy in deploy/docker-compose.yml, Ingress in the Helm chart)
 - Identity: OIDC (coreos/go-oidc), SAML (crewjam/saml), LDAP, WebAuthn support — all optional, config-driven
 
 ## 4. Persistent data
 
 | Path / volume | Content | Persistence requirement |
 |---|---|---|
-| `./storage` → `/app/storage` | Ticket attachments (local storage backend; DB-backed or S3 optional via `STORAGE_BACKEND`) | **Must persist** |
-| `goatflow_certs` volume → `/app/certs` | Self-signed TLS certs | Persist or accept regeneration |
+| `./storage` → `/app/storage` (`STORAGE_PATH`) | fs article storage (`<path>/var/article`, when `STORAGE_TYPE=fs`) and plugin files (`<path>/plugins`) | **Must persist** |
 | `goatflow_plugins` volume → `/app/config/plugins` | Uploaded WASM plugins | Persist; **needs chown fix** (plugin-init sidecar, UID 1000:1000) |
 | `mariadb_data` / `postgres_data` | Database | Must persist |
 | `valkey_data` | Cache | Optional |

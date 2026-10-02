@@ -118,8 +118,6 @@ func (r *UserRepository) GetByLogin(login string) (*models.User, error) {
 		return nil, err
 	}
 
-	fmt.Printf("UserRepository.GetByLogin: Found user ID=%d, login='%s', pw starts with='%.20s'\n", user.ID, user.Login, user.Password)
-
 	// Note: IsActive is now a method based on ValidID
 	user.Email = user.Login // In OTRS, login can be email
 
@@ -187,7 +185,7 @@ func (r *UserRepository) Create(user *models.User) error {
 	if err != nil {
 		return err
 	}
-	user.ID = uint(id)
+	user.ID = uint(id) // #nosec G115 -- users.id auto-increment key, never negative
 	return nil
 }
 

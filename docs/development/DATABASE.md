@@ -63,6 +63,7 @@ Each version has an `.up.sql` and a `.down.sql` file. Both folders hold versions
 | 000027 | `postgres_mysql_parity` | PostgreSQL only: matches MySQL column types, defaults and keys, and adds the missing foreign keys. No change on MySQL. |
 | 000028 | `webhooks` | `gk_webhook`, `gk_webhook_delivery`, `gk_webhook_event_cursor` |
 | 000029 | `otrs_default_lookups` | OTRS/Znuny default lookup rows a fresh install lacked (ticket states, lock types, history types, link types, auto response types) |
+| 000031 | `scheduler_job_lock` | `gk_scheduler_job_lock`: one row per scheduled job; replicas claim each run there so a job tick runs once |
 
 To check that both folders still match:
 
@@ -75,14 +76,21 @@ diff <(ls migrations/mysql/*.up.sql | xargs -n1 basename) \
 
 The backend applies all pending migrations when it starts (`cmd/goats/main.go` calls
 `database.RunMigrations`). It picks `migrations/mysql` or `migrations/postgres` from
-`DB_DRIVER`. A migration error is logged and does not stop the server.
+`DB_DRIVER`. A migration error is logged and does not stop the server. Every goats process
+(backend replicas, runner, customer frontend) does this, so `RunMigrations` first takes a
+database lock (`GET_LOCK('goatflow_schema_migrations')` on MariaDB, a PostgreSQL advisory
+lock): one process migrates, the others wait for it (up to 15 minutes) and then find nothing
+to do. Only a process holding the lock clears a dirty `schema_migrations` flag.
 
 | Command | What it does |
 |---------|--------------|
 | `make db-migrate` | Runs `migrate up` inside the `backend` container, for `DB_DRIVER`. |
-| `make gen-migration` | Asks for a name and creates an empty `<timestamp>_<name>` up/down pair in the folder for `DB_DRIVER`. Rename both files to the next six-digit version, and add the same version to the other folder. |
+| `make db-status` | Prints the migration version of the dev database, for `DB_DRIVER`. |
+| `make db-rollback` | Rolls back the last migration (`migrate down 1`), for `DB_DRIVER`. |
+| `make gen-migration NAME=add_foo` | Creates the next six-digit `NNNNNN_add_foo` up/down pair in **both** `migrations/mysql` and `migrations/postgres`. Without `NAME` it asks for one. |
 
-`make db-status` and `make db-rollback` always use the PostgreSQL URL and `migrations/postgres`.
+These targets run golang-migrate inside the running `backend` container with the backend's own
+credentials, so the dev stack must be up (`make up-d`).
 
 ### Adding a migration
 
@@ -124,15 +132,16 @@ Some GoatFlow features use OTRS tables and need no new table:
 
 ## Working with the dev database
 
-The dev stack in `docker-compose.yml` runs **MariaDB** (`mariadb` service, volume
-`mariadb_data`). Its `postgres` service is commented out, so the dev targets below only work
-with `DB_DRIVER=postgres` if you add a `postgres` service yourself. PostgreSQL is tested
-through the `postgres-test` container (see [Test databases](#test-databases)).
+The dev stack in `docker-compose.yml` runs **MariaDB** by default (`mariadb` service, volume
+`mariadb_data`). For a PostgreSQL dev database set `DB_DRIVER=postgres` (and the `DB_PGSQL_*`
+variables) in `.env`: the `postgres` service (volume `postgres_data`) is in the `postgres` compose
+profile, and the Makefile enables that profile when `DB_DRIVER=postgres`. The `mariadb` service
+still starts, because the app services depend on it.
 
 | Command | What it does |
 |---------|--------------|
 | `make db-query QUERY="SELECT 1"` | Runs one query against the dev database for `DB_DRIVER`. `QUERY_FILE=path` or stdin also work. |
-| `make db-shell` | Interactive shell: the `mariadb` client in the `mariadb` container, or `psql` in a `postgres` container when `DB_DRIVER=postgres`. |
+| `make db-shell` | Interactive shell: the `mariadb` client in the `mariadb` container, or `psql` in the `postgres` container when `DB_DRIVER=postgres`. |
 | `make db-shell-test` | Shell on the test database for `TEST_DB_DRIVER` (starts it first). |
 | `make db-query-test` | Query against the test database. |
 
@@ -148,7 +157,7 @@ Set a password and enable it with:
 | `make test-mysql-reset-password` | MariaDB test database |
 
 These run `scripts/reset-user-password.sh`. It calls `scripts/db/postgres/reset-user-password.sh`
-or `scripts/db/mysql/reset-user-password.sh`, which run the `goats reset-user` command in the
+or `scripts/db/mysql/reset-user-password.sh`, which run the `goatflow reset-user` command in the
 toolbox container.
 
 When the backend container gets `GOATFLOW_ADMIN_PASSWORD`, it enables `root@localhost` with
@@ -159,35 +168,25 @@ in dev.
 ### Generated test credentials
 
 ```bash
-make synthesize        # writes .env secrets (only when .env does not exist yet) and test_credentials.csv
+make synthesize        # writes .env secrets (only when .env does not exist yet) and the test data SQL
 make show-dev-creds    # prints the generated users
 ```
 
-When it creates a new `.env`, `make synthesize` also writes
-`migrations/postgres/000004_generated_test_data.up.sql` (gitignored). This file is not a real
-migration. `make db-apply-test-data` loads it on PostgreSQL. On MariaDB, `db-apply-test-data`
-only enables `root@localhost` when `ADMIN_PASSWORD` is set.
+`make synthesize` (when it creates a new `.env`) and `make gen-test-data` write
+`schema/seed/generated_test_data.postgres.sql` (gitignored, readable by its owner only). It is
+PostgreSQL SQL, not a migration. With `DB_DRIVER=postgres`, `make db-apply-test-data` loads it:
+three customer companies, two agents (`agent.smith`, `agent.jones`), three customer users, five
+tickets with one article each, and the generated password for `root@localhost`, which it enables.
+Running it again is safe. On MariaDB, `db-apply-test-data` only enables `ADMIN_USER`
+(default `root@localhost`) when `ADMIN_PASSWORD` is set.
 
-**Delete that file before you run PostgreSQL migrations or start `postgres-test`.** Version
-000004 already exists (`000004_dynamic_field_screen_config`), and golang-migrate stops with
-"duplicate migration file". The `postgres-test` init script applies every `*.up.sql` in the
-folder, so it would load the file too.
+### Recreating the dev database
 
-### Baseline loaders
-
-`make db-init` and `make db-reset` come from before the numbered migrations:
-
-- With `DB_DRIVER=postgres`, `make db-init` drops the `public` schema and loads
-  `schema/baseline/otrs_complete.sql` and `schema/baseline/required_lookups.sql`. This does not
-  create the GoatFlow tables and does not record a migration version.
-- With MariaDB, `make db-init` only starts `mariadb` and enables `root@localhost` with
-  `GOATFLOW_ADMIN_PASSWORD`.
-- `make db-reset` runs `db-init` and then loads `schema/seed/minimal.sql` into the `postgres`
-  container.
-
-To get a clean, fully migrated MariaDB dev database: `make down`, remove the `mariadb_data`
-volume, then `make up`. The backend applies all migrations at start-up. Then set the admin
-password with `make reset-password`.
+`make db-init` (alias `make db-reset`) deletes all data in the dev database for `DB_DRIVER`
+(PostgreSQL: drops and recreates the `public` schema; MariaDB: drops and recreates the
+database), applies every migration, empties `storage/`, and restarts `backend`, `customer-fe`
+and `runner`. When `GOATFLOW_ADMIN_PASSWORD` is set it enables `root@localhost` with that
+password; otherwise run `make reset-password`. The dev stack must be running.
 
 ## Test databases
 

@@ -108,7 +108,7 @@ func (l *Loader) DiscoverAll() (int, error) {
 	// Ensure plugin directory exists
 	if _, err := os.Stat(l.pluginDir); os.IsNotExist(err) {
 		l.logger.Info("plugin directory does not exist, creating", "path", l.pluginDir)
-		if err := os.MkdirAll(l.pluginDir, 0755); err != nil {
+		if err := os.MkdirAll(l.pluginDir, 0o750); err != nil {
 			return 0, fmt.Errorf("create plugin dir: %w", err)
 		}
 		return 0, nil
@@ -215,7 +215,7 @@ func (l *Loader) discoverGRPCPlugins() (int, error) {
 
 // loadManifest reads and parses a plugin.yaml file.
 func loadManifest(path string) (*PluginManifest, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- manifest path is plugin.yaml under the host-configured plugin dir (discovery walk / fsnotify event), not request input
 	if err != nil {
 		return nil, err
 	}
@@ -465,7 +465,7 @@ func (l *Loader) LoadAll(ctx context.Context) (int, []error) {
 	// Ensure plugin directory exists
 	if _, err := os.Stat(l.pluginDir); os.IsNotExist(err) {
 		l.logger.Info("plugin directory does not exist, creating", "path", l.pluginDir)
-		if err := os.MkdirAll(l.pluginDir, 0755); err != nil {
+		if err := os.MkdirAll(l.pluginDir, 0o750); err != nil {
 			return 0, []error{fmt.Errorf("create plugin dir: %w", err)}
 		}
 		return 0, nil
@@ -616,13 +616,15 @@ func (l *Loader) loadGRPCPlugin(ctx context.Context, pluginDir string, manifest 
 		policy = plugin.DefaultResourcePolicy(manifest.Name)
 	}
 
-	gp, err := grpc.LoadGRPCPlugin(binaryPath, manifest.Name, l.manager.Host(), policy)
+	gp, err := grpc.LoadGRPCPlugin(binaryPath, manifest.Name, policy)
 	if err != nil {
 		return fmt.Errorf("load gRPC plugin: %w", err)
 	}
 
 	if err := l.manager.Register(ctx, gp); err != nil {
-		gp.Shutdown(ctx)
+		if shutdownErr := gp.Shutdown(ctx); shutdownErr != nil {
+			l.logger.Warn("failed to shut down gRPC plugin after register error", "name", manifest.Name, "error", shutdownErr)
+		}
 		return fmt.Errorf("register gRPC plugin: %w", err)
 	}
 
@@ -673,7 +675,9 @@ func (l *Loader) loadWASMPlugin(ctx context.Context, path string) (string, error
 	// Register with the manager
 	if err := l.manager.Register(ctx, wp); err != nil {
 		// Shutdown the plugin if registration fails
-		wp.Shutdown(ctx)
+		if shutdownErr := wp.Shutdown(ctx); shutdownErr != nil {
+			l.logger.Warn("failed to shut down WASM plugin after register error", "name", manifest.Name, "error", shutdownErr)
+		}
 		return "", fmt.Errorf("register: %w", err)
 	}
 
@@ -745,7 +749,7 @@ func (l *Loader) Reload(ctx context.Context, name string) error {
 			binaryPath = filepath.Join(d.Path, binaryPath)
 		}
 
-		newPlugin, err = grpc.LoadGRPCPlugin(binaryPath, manifest.Name, l.manager.Host(), policy)
+		newPlugin, err = grpc.LoadGRPCPlugin(binaryPath, manifest.Name, policy)
 		if err != nil {
 			return fmt.Errorf("failed to load new gRPC plugin: %w", err)
 		}
@@ -758,13 +762,17 @@ func (l *Loader) Reload(ctx context.Context, name string) error {
 		// Use atomic replacement to avoid race conditions
 		if err := l.manager.ReplacePlugin(ctx, name, newPlugin); err != nil {
 			// Shutdown the new plugin since replacement failed
-			newPlugin.Shutdown(ctx)
+			if shutdownErr := newPlugin.Shutdown(ctx); shutdownErr != nil {
+				l.logger.Warn("failed to shut down replacement plugin", "name", name, "error", shutdownErr)
+			}
 			return fmt.Errorf("atomic replacement failed: %w", err)
 		}
 	} else {
 		// Plugin not currently registered, just register the new one
 		if err := l.manager.Register(ctx, newPlugin); err != nil {
-			newPlugin.Shutdown(ctx)
+			if shutdownErr := newPlugin.Shutdown(ctx); shutdownErr != nil {
+				l.logger.Warn("failed to shut down new plugin after register error", "name", name, "error", shutdownErr)
+			}
 			return fmt.Errorf("register new plugin: %w", err)
 		}
 	}
@@ -788,7 +796,9 @@ func (l *Loader) LoadOrReload(ctx context.Context, name string) error {
 	if watcher != nil {
 		pluginSubDir := filepath.Join(l.pluginDir, name)
 		if info, err := os.Stat(pluginSubDir); err == nil && info.IsDir() {
-			watcher.Add(pluginSubDir)
+			if err := watcher.Add(pluginSubDir); err != nil {
+				l.logger.Warn("failed to watch plugin dir", "path", pluginSubDir, "error", err)
+			}
 		}
 	}
 
@@ -829,16 +839,19 @@ func (l *Loader) WatchDir(ctx context.Context) error {
 
 	// Watch the main plugin directory
 	if err := watcher.Add(l.pluginDir); err != nil {
-		watcher.Close()
+		_ = watcher.Close()
 		return fmt.Errorf("watch plugin dir: %w", err)
 	}
 
 	// Also watch subdirectories (for gRPC plugin binaries and WASM in folders)
-	filepath.WalkDir(l.pluginDir, func(path string, d fs.DirEntry, err error) error {
+	// Callback never returns an error, so WalkDir cannot fail.
+	_ = filepath.WalkDir(l.pluginDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || !d.IsDir() {
 			return nil
 		}
-		watcher.Add(path)
+		if err := watcher.Add(path); err != nil {
+			l.logger.Warn("failed to watch plugin subdir", "path", path, "error", err)
+		}
 		return nil
 	})
 
@@ -857,7 +870,7 @@ func (l *Loader) StopWatch() {
 		l.watchCancel()
 	}
 	if l.watcher != nil {
-		l.watcher.Close()
+		_ = l.watcher.Close()
 		l.watcher = nil
 	}
 }
@@ -903,7 +916,9 @@ func (l *Loader) handleFSEvent(watcher *fsnotify.Watcher, event fsnotify.Event) 
 	if event.Op&fsnotify.Create != 0 {
 		if info, err := os.Stat(path); err == nil && info.IsDir() {
 			if watcher != nil {
-				watcher.Add(path)
+				if err := watcher.Add(path); err != nil {
+					l.logger.Warn("failed to watch new plugin subdir", "path", path, "error", err)
+				}
 			}
 			// Check if the new directory already contains a plugin.yaml
 			manifestPath := filepath.Join(path, "plugin.yaml")
@@ -1056,7 +1071,9 @@ func (l *Loader) processManifestChange(watcher *fsnotify.Watcher, event fsnotify
 
 		// Watch the plugin subdirectory for binary changes
 		if watcher != nil {
-			watcher.Add(pluginDir)
+			if err := watcher.Add(pluginDir); err != nil {
+				l.logger.Warn("failed to watch plugin dir", "path", pluginDir, "error", err)
+			}
 		}
 
 	case event.Op&fsnotify.Remove != 0:
@@ -1170,7 +1187,9 @@ func (l *Loader) processFileChange(event fsnotify.Event) {
 	case event.Op&fsnotify.Rename == fsnotify.Rename:
 		// Treat rename as remove (the new name will trigger a Create)
 		l.logger.Info("🔄 plugin renamed/moved", "name", name)
-		l.manager.Unregister(l.watchCtx, name)
+		if err := l.manager.Unregister(l.watchCtx, name); err != nil {
+			l.logger.Warn("failed to unregister renamed plugin", "name", name, "error", err)
+		}
 	}
 
 	// Clean up debounce timer

@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -105,32 +104,24 @@ func (s *APITokenService) GenerateToken(ctx context.Context, req *models.APIToke
 
 // VerifyToken verifies an API token and returns the token record if valid
 func (s *APITokenService) VerifyToken(ctx context.Context, rawToken string) (*models.APIToken, error) {
-	log.Printf("DEBUG VerifyToken: rawToken length=%d, starts=%q", len(rawToken), rawToken[:min(20, len(rawToken))])
-
 	// Validate format: gf_<prefix>_<random>
 	if !strings.HasPrefix(rawToken, models.TokenPrefix) {
-		log.Printf("DEBUG VerifyToken: missing gf_ prefix")
 		return nil, fmt.Errorf("invalid token format")
 	}
 
 	// Extract prefix (8 chars after "gf_")
 	tokenPart := rawToken[len(models.TokenPrefix):]
 	if len(tokenPart) < models.TokenPrefixLength+1 {
-		log.Printf("DEBUG VerifyToken: token too short")
 		return nil, fmt.Errorf("invalid token format")
 	}
 
 	prefix := tokenPart[:models.TokenPrefixLength]
-	log.Printf("DEBUG VerifyToken: prefix=%s", prefix)
 
 	// Look up tokens by prefix
 	tokens, err := s.repo.GetByPrefix(ctx, prefix)
 	if err != nil {
-		log.Printf("DEBUG VerifyToken: lookup error: %v", err)
 		return nil, fmt.Errorf("lookup token: %w", err)
 	}
-
-	log.Printf("DEBUG VerifyToken: found %d tokens with prefix %s", len(tokens), prefix)
 
 	if len(tokens) == 0 {
 		return nil, fmt.Errorf("token not found")
@@ -138,9 +129,7 @@ func (s *APITokenService) VerifyToken(ctx context.Context, rawToken string) (*mo
 
 	// Verify against each matching token (usually just one)
 	for _, token := range tokens {
-		log.Printf("DEBUG VerifyToken: comparing against token ID=%d, hash length=%d", token.ID, len(token.TokenHash))
 		if err := bcrypt.CompareHashAndPassword([]byte(token.TokenHash), []byte(rawToken)); err == nil {
-			log.Printf("DEBUG VerifyToken: bcrypt match for token ID=%d", token.ID)
 			// Check if active
 			if !token.IsActive() {
 				if token.IsRevoked() {
@@ -151,8 +140,6 @@ func (s *APITokenService) VerifyToken(ctx context.Context, rawToken string) (*mo
 				}
 			}
 			return token, nil
-		} else {
-			log.Printf("DEBUG VerifyToken: bcrypt mismatch for token ID=%d: %v", token.ID, err)
 		}
 	}
 
@@ -261,18 +248,20 @@ func parseExpiration(exp string) (time.Duration, error) {
 	}
 
 	var multiplier time.Duration
-	var value int
+	var format string
+	switch {
+	case strings.HasSuffix(exp, "d"):
+		multiplier, format = 24*time.Hour, "%dd"
+	case strings.HasSuffix(exp, "y"):
+		multiplier, format = 365*24*time.Hour, "%dy"
+	case strings.HasSuffix(exp, "m"):
+		multiplier, format = 30*24*time.Hour, "%dm" // Approximate month
+	default:
+		return 0, fmt.Errorf("invalid expiration format: %s (use 30d, 90d, 1y, etc.)", exp)
+	}
 
-	if strings.HasSuffix(exp, "d") {
-		multiplier = 24 * time.Hour
-		fmt.Sscanf(exp, "%dd", &value)
-	} else if strings.HasSuffix(exp, "y") {
-		multiplier = 365 * 24 * time.Hour
-		fmt.Sscanf(exp, "%dy", &value)
-	} else if strings.HasSuffix(exp, "m") {
-		multiplier = 30 * 24 * time.Hour // Approximate month
-		fmt.Sscanf(exp, "%dm", &value)
-	} else {
+	var value int
+	if _, err := fmt.Sscanf(exp, format, &value); err != nil {
 		return 0, fmt.Errorf("invalid expiration format: %s (use 30d, 90d, 1y, etc.)", exp)
 	}
 

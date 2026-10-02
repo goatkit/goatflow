@@ -12,7 +12,7 @@ curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/.env.exam
 # Configure
 cp .env.example .env
 # Edit .env - set DOMAIN, ACME_EMAIL, DB_ROOT_PASSWORD, DB_PASSWORD, JWT_SECRET,
-# GOATFLOW_SECURE_KEY and BASE_URL
+# GOATFLOW_SECURE_KEY, GOATFLOW_ADMIN_PASSWORD and the SMTP_* settings
 
 # Start
 docker compose up -d
@@ -32,8 +32,16 @@ All configuration is via environment variables in `.env`:
 | `DB_PASSWORD` | **Yes** | MariaDB user password | - |
 | `DB_NAME` | No | Database name | `goatflow` |
 | `JWT_SECRET` | **Yes** | JWT signing secret (32+ chars) | - |
-| `GOATFLOW_SECURE_KEY` | Strongly recommended | Encrypts stored secrets (plugin secure settings, webhook signing secrets); 64 hex characters (`openssl rand -hex 32`). App and runner get the same value. If empty, each container makes its own random key at start, so stored secrets cannot be read after a restart and webhooks fail. Never change it once set. | empty |
-| `BASE_URL` | Recommended | Public URL for the application; password-reset and customer sign-up email links are built from it (they are not sent while it is unset) | `http://localhost:8080` |
+| `GOATFLOW_SECURE_KEY` | **Yes** | Encrypts stored secrets (plugin secure settings, webhook signing secrets); exactly 64 hex characters (`openssl rand -hex 32`). App, customer portal and runner get the same value, so the runner can decrypt webhook signing secrets. Compose refuses to start without it. Never change it once set. | - |
+| `GOATFLOW_ADMIN_PASSWORD` | Recommended | First-boot password for the admin account `root@localhost`. Applied once, while the seeded account is still disabled; change it in GoatFlow afterwards | empty (admin stays disabled) |
+| `BASE_URL` | No | Public URL for the application; password-reset and customer sign-up email links are built from it | `https://$DOMAIN` |
+| `EMAIL_ENABLED` | No | Send outgoing email; `false` keeps it in the queue | `true` |
+| `EMAIL_FROM` | No | Sender address | `noreply@example.com` |
+| `SMTP_HOST` | **Yes** | SMTP server | - |
+| `SMTP_PORT` | No | SMTP port | `587` |
+| `SMTP_USER` / `SMTP_PASSWORD` | No | SMTP login (no login when empty) | empty |
+| `SMTP_TLS` | No | STARTTLS (`true`/`false`) | `true` |
+| `SMTP_AUTH_TYPE` | No | `plain` or `login` | `plain` |
 | `APP_ENV` | No | Application environment | `production` |
 | `GIN_MODE` | No | Web framework mode | `release` |
 | `LOG_LEVEL` | No | Log level | `warn` |
@@ -55,17 +63,15 @@ All configuration is via environment variables in `.env`:
 
 ## Outgoing Email
 
-All outgoing email (ticket emails to customers, password-reset and sign-up links) is put in the
-`mail_queue` table and sent by the `runner`. The runner reads its SMTP settings from the
-`email.*` config, which you can set with environment variables. This compose file passes none,
-so add them to the `runner` service:
+Ticket emails to customers and password-reset and sign-up links are put in the `mail_queue`
+table and sent by the `runner`; a few messages (for example two-factor codes) are sent by the
+app directly. Both get the `SMTP_*` / `EMAIL_*` settings from `.env` (passed as
+`GOATFLOW_EMAIL_*`).
 
-| Variable | Meaning |
-|----------|---------|
-| `GOATFLOW_EMAIL_SMTP_HOST` / `GOATFLOW_EMAIL_SMTP_PORT` | SMTP server |
-| `GOATFLOW_EMAIL_SMTP_USER` / `GOATFLOW_EMAIL_SMTP_PASSWORD` | SMTP login |
-| `GOATFLOW_EMAIL_SMTP_TLS` | Use TLS (`true`/`false`) |
-| `GOATFLOW_EMAIL_FROM` | Sender address |
+## URLs
+
+Caddy sends `/customer/*` and the customer login API to `customer-fe` and everything else to
+`app`. `/c/<path>` redirects to `/customer/<path>`.
 
 ## Services
 

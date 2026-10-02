@@ -2,33 +2,27 @@ package database
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
+
+	"github.com/goatkit/goatflow/internal/platform/dbconfig"
 )
 
-// GetDBDriver returns the current database driver.
+// GetDBDriver returns the active, normalized database driver ("postgres" for
+// any PostgreSQL alias); see dbconfig.Driver.
 func GetDBDriver() string {
-	// In test mode, prefer TEST_ prefixed environment variables
-	driver := os.Getenv("TEST_DB_DRIVER")
-	if driver == "" {
-		driver = os.Getenv("DB_DRIVER")
-	}
-	if driver == "" {
-		driver = "mysql"
-	}
-	return strings.ToLower(driver)
+	return dbconfig.Driver()
 }
 
 // IsMySQL returns true if using MySQL/MariaDB.
 func IsMySQL() bool {
 	driver := GetDBDriver()
-	return driver == "mysql" || driver == "mariadb"
+	return driver == dbconfig.DriverMySQL || driver == dbconfig.DriverMariaDB
 }
 
 // IsPostgreSQL returns true if using PostgreSQL.
 func IsPostgreSQL() bool {
-	return GetDBDriver() == "postgres"
+	return GetDBDriver() == dbconfig.DriverPostgres
 }
 
 // TicketTypeColumn returns the ticket type column name for the active driver.

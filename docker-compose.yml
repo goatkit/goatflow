@@ -1,6 +1,19 @@
 # Podman-compatible compose file (also works with Docker)
 # No version specified for better Podman compatibility
 
+# Outgoing email settings for every GoatFlow process that can send mail: the
+# runner (mail queue), backend and customer-fe (TOTP codes, plugin mail and
+# other direct sends). Merged into each service's environment with <<.
+x-email-env: &email-env
+  GOATFLOW_EMAIL_SMTP_HOST: ${SMTP_HOST:-smtp4dev}
+  GOATFLOW_EMAIL_SMTP_PORT: ${SMTP_PORT:-25}
+  GOATFLOW_EMAIL_SMTP_USER: ${SMTP_USER:-}
+  GOATFLOW_EMAIL_SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  GOATFLOW_EMAIL_SMTP_TLS: ${SMTP_TLS:-false}
+  GOATFLOW_EMAIL_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-true}
+  GOATFLOW_EMAIL_FROM: ${EMAIL_FROM:-noreply@goatflow.local}
+  GOATFLOW_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+
 services:
   # MariaDB Database - Secure non-root container for OTRS compatibility
   mariadb:
@@ -32,28 +45,31 @@ services:
       retries: 5
     networks:
       - goatflow-network
-  # postgres:
-  #   image: postgres:15-alpine
-  #   container_name: goatflow-postgres
-  #   environment:
-  #     POSTGRES_DB: ${DB_PGSQL_NAME}
-  #     POSTGRES_USER: ${DB_PGSQL_USER}
-  #     POSTGRES_PASSWORD: ${DB_PGSQL_PASSWORD}
-  #     # Pass APP_ENV to prevent test database creation in production
-  #     APP_ENV: ${APP_ENV:-development}
-  #   ports:
-  #     - "${DB_PGSQL_PORT:-5432}:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #     # Init script handles any username and creates test database safely
-  #     - ./docker/postgres/01-init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro,Z
-  #   healthcheck:
-  #     test: ["CMD", "pg_isready", "-U", "${DB_PGSQL_USER}"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #   networks:
-  #     - goatflow-network
+  # PostgreSQL dev database (optional). Only starts with the `postgres` profile;
+  # the Makefile enables it when DB_DRIVER=postgres (COMPOSE_PROFILES=postgres).
+  postgres:
+    image: docker.io/postgres:15-alpine
+    container_name: goatflow-postgres
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_DB: ${DB_PGSQL_NAME}
+      POSTGRES_USER: ${DB_PGSQL_USER}
+      POSTGRES_PASSWORD: ${DB_PGSQL_PASSWORD}
+      # Pass APP_ENV to prevent test database creation in production
+      APP_ENV: ${APP_ENV:-development}
+    ports:
+      - "${DB_PGSQL_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Init script handles any username and creates test database safely
+      - ./docker/postgres/01-init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro,Z
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${DB_PGSQL_USER}", "-d", "${DB_PGSQL_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - goatflow-network
 
   # Valkey Cache - High-performance Redis-compatible cache
   valkey:
@@ -95,13 +111,6 @@ services:
     image: ghcr.io/goatkit/goatflow:${GOATFLOW_VERSION:-latest}
     command: >
       sh -c "
-        # Generate self-signed certificates if they don't exist
-        if [ ! -f /app/certs/server.crt ] || [ ! -f /app/certs/server.key ]; then
-          echo '🔐 Generating self-signed TLS certificates...'
-          mkdir -p /app/certs
-          openssl req -x509 -newkey rsa:4096 -keyout /app/certs/server.key -out /app/certs/server.crt -days 365 -nodes -subj '/CN=goatflow-backend'
-          echo '✅ TLS certificates generated'
-        fi
         # Run database migrations automatically
         echo '📦 Running database migrations...'
         if [ \"$${DB_DRIVER}\" = 'postgres' ]; then
@@ -114,13 +123,13 @@ services:
         ./goats
       "
     environment:
-      # Enable YAML-based routing by default
-      ENABLE_YAML_ROUTING: ${ENABLE_YAML_ROUTING:-true}
       ROUTES_DIR: /app/routes
       APP_ENV: ${APP_ENV:-development}
       APP_PORT: ${APP_PORT:-8080}
       # Public URL of this instance; self-service (password reset / sign-up) email links use it.
-      BASE_URL: ${APP_URL:-http://localhost:${BACKEND_PORT:-8080}}
+      BASE_URL: ${APP_URL:-http://localhost:${BACKEND_PORT:-8081}}
+      # First-boot password for root@localhost (applied once, while the seeded admin is disabled)
+      GOATFLOW_ADMIN_PASSWORD: ${GOATFLOW_ADMIN_PASSWORD:-}
       DB_DRIVER: ${DB_DRIVER:-mariadb}
       DB_MYSQL_HOST: ${DB_MYSQL_HOST:-mariadb}
       DB_MYSQL_PORT: ${DB_MYSQL_PORT:-3306}
@@ -132,31 +141,39 @@ services:
       DB_PGSQL_NAME: ${DB_PGSQL_NAME}
       DB_PGSQL_USER: ${DB_PGSQL_USER}
       DB_PGSQL_PASSWORD: ${DB_PGSQL_PASSWORD}
-      VALKEY_HOST: valkey
-      VALKEY_PORT: 6379
+      GOATFLOW_VALKEY_HOST: valkey
+      GOATFLOW_VALKEY_PORT: 6379
       # JWT configuration; must be provided via environment (.env or shell)
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY:-15m}
       JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY:-7d}
       PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-bcrypt}
       MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
-      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:-}
+      # Encrypts stored secrets; the backend and the runner must use the same key
+      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY must be set to 64 hex characters (openssl rand -hex 32), shared by backend and runner}
+      # Search backend: database (default), zinc or elasticsearch (docs/ZINC_SEARCH.md).
+      # The runner needs the same settings: it keeps the index in sync.
+      SEARCH_BACKEND: ${SEARCH_BACKEND:-}
+      SEARCH_INDEX_PREFIX: ${SEARCH_INDEX_PREFIX:-}
+      ZINC_ENDPOINT: ${ZINC_ENDPOINT:-}
+      ZINC_USER: ${ZINC_USER:-}
+      ZINC_PASSWORD: ${ZINC_PASSWORD:-}
+      ELASTICSEARCH_ENDPOINT: ${ELASTICSEARCH_ENDPOINT:-}
+      ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME:-}
+      ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD:-}
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
-      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}
-      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-pdf,doc,docx,txt,png,jpg,jpeg,gif,zip}
+      # Outgoing email (TOTP / plugin mail is sent directly by the backend)
+      <<: *email-env
       # Plugin system (defaults set in Dockerfile, override here if needed)
       # GOATFLOW_PLUGIN_LAZY_LOAD: ${GOATFLOW_PLUGIN_LAZY_LOAD:-true}
       # GOATFLOW_PLUGIN_HOT_RELOAD: ${GOATFLOW_PLUGIN_HOT_RELOAD:-false}
       # Plugin-specific config: set GOATFLOW_PLUGIN_<NAME>_<KEY> env vars as needed
       # e.g. GOATFLOW_PLUGIN_MYPLUGIN_LLM_URL=http://host.docker.internal:11434
-      # TLS configuration
-      TLS_CERT_FILE: /app/certs/server.crt
-      TLS_KEY_FILE: /app/certs/server.key
+    stop_grace_period: 45s
     ports:
       - "${BACKEND_PORT:-8081}:8080"
     volumes:
       - ./storage:${STORAGE_PATH:-/app/storage}:Z
-      - goatflow_certs:/app/certs
       - goatflow_plugins:/app/config/plugins
     depends_on:
       plugin-init:
@@ -181,22 +198,11 @@ services:
         GID: ${HOST_GID:-1000}
     image: ghcr.io/goatkit/goatflow:${GOATFLOW_VERSION:-latest}
     container_name: goatflow-customer-fe
-    command: >
-      sh -c "
-        if [ ! -f /app/certs/server.crt ] || [ ! -f /app/certs/server.key ]; then
-          echo '🔐 Generating self-signed TLS certificates...'
-          mkdir -p /app/certs
-          openssl req -x509 -newkey rsa:4096 -keyout /app/certs/server.key -out /app/certs/server.crt -days 365 -nodes -subj '/CN=goatflow-customer-fe'
-          echo '✅ TLS certificates generated'
-        fi
-        ./goats
-      "
     environment:
-      ENABLE_YAML_ROUTING: ${ENABLE_YAML_ROUTING:-true}
       ROUTES_DIR: /app/routes
       APP_ENV: ${APP_ENV:-development}
       APP_PORT: ${CUSTOMER_FE_APP_PORT:-8080}
-      BASE_URL: http://localhost:${CUSTOMER_FE_PORT:-8083}
+      BASE_URL: ${APP_URL:-http://localhost:${CUSTOMER_FE_PORT:-8083}}
       ROOT_REDIRECT_PATH: /customer
       CUSTOMER_FE_ONLY: "true"
       DB_DRIVER: ${DB_DRIVER:-mariadb}
@@ -210,22 +216,21 @@ services:
       DB_PGSQL_NAME: ${DB_PGSQL_NAME}
       DB_PGSQL_USER: ${DB_PGSQL_USER}
       DB_PGSQL_PASSWORD: ${DB_PGSQL_PASSWORD}
-      VALKEY_HOST: valkey
-      VALKEY_PORT: 6379
+      GOATFLOW_VALKEY_HOST: valkey
+      GOATFLOW_VALKEY_PORT: 6379
       JWT_SECRET: ${JWT_SECRET}
       PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-bcrypt}
       MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
+      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY must be set to 64 hex characters (openssl rand -hex 32), shared by backend and runner}
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
-      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}
-      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-pdf,doc,docx,txt,png,jpg,jpeg,gif,zip}
-      TLS_CERT_FILE: /app/certs/server.crt
-      TLS_KEY_FILE: /app/certs/server.key
+      # Outgoing email (customer-side direct sends)
+      <<: *email-env
+    stop_grace_period: 45s
     ports:
       - "${CUSTOMER_FE_PORT:-8083}:${CUSTOMER_FE_APP_PORT:-8080}"
     volumes:
       - ./storage:${STORAGE_PATH:-/app/storage}:Z
       - ./docker/frontend/healthcheck.sh:/usr/local/bin/healthcheck.sh:ro,Z
-      - goatflow_certs:/app/certs
       - goatflow_plugins:/app/config/plugins
     depends_on:
       plugin-init:
@@ -261,16 +266,19 @@ services:
       DB_PGSQL_USER: ${DB_PGSQL_USER}
       DB_PGSQL_PASSWORD: ${DB_PGSQL_PASSWORD}
       # Email configuration for queue processing
-      GOATFLOW_EMAIL_SMTP_HOST: ${SMTP_HOST:-smtp4dev}
-      GOATFLOW_EMAIL_SMTP_PORT: ${SMTP_PORT:-25}
-      GOATFLOW_EMAIL_SMTP_USER: ${SMTP_USER}
-      GOATFLOW_EMAIL_SMTP_PASSWORD: ${SMTP_PASSWORD}
-      GOATFLOW_EMAIL_SMTP_TLS: ${SMTP_TLS:-false}
-      GOATFLOW_EMAIL_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-true}
-      GOATFLOW_EMAIL_FROM: ${EMAIL_FROM:-noreply@goatflow.local}
-      GOATFLOW_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+      <<: *email-env
       # Must match the backend: the runner decrypts webhook signing secrets
-      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:-}
+      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY must be set to 64 hex characters (openssl rand -hex 32), shared by backend and runner}
+      # Same search settings as the backend: the runner keeps the index in sync
+      SEARCH_BACKEND: ${SEARCH_BACKEND:-}
+      SEARCH_INDEX_PREFIX: ${SEARCH_INDEX_PREFIX:-}
+      ZINC_ENDPOINT: ${ZINC_ENDPOINT:-}
+      ZINC_USER: ${ZINC_USER:-}
+      ZINC_PASSWORD: ${ZINC_PASSWORD:-}
+      ELASTICSEARCH_ENDPOINT: ${ELASTICSEARCH_ENDPOINT:-}
+      ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME:-}
+      ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD:-}
+    stop_grace_period: 45s
     volumes:
       - goatflow_plugins:/app/config/plugins
     depends_on:
@@ -357,21 +365,7 @@ services:
         GID: ${HOST_GID:-1000}
     image: ghcr.io/goatkit/goatflow:${GOATFLOW_VERSION:-latest}
     container_name: goatflow-backend-test
-    command: >
-      sh -c "
-        # Generate self-signed certificates if they don't exist
-        if [ ! -f /app/certs/server.crt ] || [ ! -f /app/certs/server.key ]; then
-          echo '🔐 Generating self-signed TLS certificates...'
-          mkdir -p /app/certs
-          openssl req -x509 -newkey rsa:4096 -keyout /app/certs/server.key -out /app/certs/server.crt -days 365 -nodes -subj '/CN=goatflow-backend-test'
-          echo '✅ TLS certificates generated'
-        fi
-        # Start the application
-        ./goats
-      "
     environment:
-      # Enable YAML-based routing by default
-      ENABLE_YAML_ROUTING: ${ENABLE_YAML_ROUTING:-true}
       ROUTES_DIR: /app/routes
       APP_ENV: test
       APP_PORT: ${APP_PORT:-8080}
@@ -384,23 +378,20 @@ services:
       DB_USER: ${TEST_DB_MYSQL_USER}
       DB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD}
       # Test cache configuration
-      VALKEY_HOST: valkey-test
-      VALKEY_PORT: 6379
+      GOATFLOW_VALKEY_HOST: valkey-test
+      GOATFLOW_VALKEY_PORT: 6379
       # JWT secret must be provided via environment (.env or shell)
       JWT_SECRET: ${JWT_SECRET}
       PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-bcrypt}
       MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
-      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}
-      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-pdf,doc,docx,txt,png,jpg,jpeg,gif,zip}
-      # TLS configuration
-      TLS_CERT_FILE: /app/certs/server.crt
-      TLS_KEY_FILE: /app/certs/server.key
+      <<: *email-env
+      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY must be set to 64 hex characters (openssl rand -hex 32), shared by backend and runner}
+    stop_grace_period: 45s
     ports:
       - "${BACKEND_TEST_PORT:-8082}:8080"
     volumes:
       - ./storage:${STORAGE_PATH:-/app/storage}:Z
-      - goatflow_certs:/app/certs
     depends_on:
       mariadb-test:
         condition: service_healthy
@@ -412,7 +403,7 @@ services:
       - goatflow-network
     profiles: ["testdb"]
     healthcheck:
-      test: ["CMD-SHELL", "tr '\\0' ' ' < /proc/1/cmdline | grep -q -- './goats -mode runner'"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1"]
       start_period: 10s
       interval: 30s
       timeout: 3s
@@ -433,14 +424,10 @@ services:
       DB_USER: ${TEST_DB_MYSQL_USER}
       DB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD}
       # Email configuration for queue processing
-      GOATFLOW_EMAIL_SMTP_HOST: ${SMTP_HOST:-smtp4dev}
-      GOATFLOW_EMAIL_SMTP_PORT: ${SMTP_PORT:-25}
-      GOATFLOW_EMAIL_SMTP_USER: ${SMTP_USER}
-      GOATFLOW_EMAIL_SMTP_PASSWORD: ${SMTP_PASSWORD}
-      GOATFLOW_EMAIL_SMTP_TLS: ${SMTP_TLS:-false}
-      GOATFLOW_EMAIL_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-true}
-      GOATFLOW_EMAIL_FROM: ${EMAIL_FROM:-noreply@goatflow.local}
-      GOATFLOW_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+      <<: *email-env
+      # Must match backend-test: the runner decrypts webhook signing secrets
+      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY must be set to 64 hex characters (openssl rand -hex 32), shared by backend and runner}
+    stop_grace_period: 45s
     depends_on:
       mariadb-test:
         condition: service_healthy
@@ -460,18 +447,7 @@ services:
         GID: ${HOST_GID:-1000}
     image: ghcr.io/goatkit/goatflow:${GOATFLOW_VERSION:-latest}
     container_name: goatflow-customer-fe-test
-    command: >
-      sh -c "
-        if [ ! -f /app/certs/server.crt ] || [ ! -f /app/certs/server.key ]; then
-          echo '🔐 Generating self-signed TLS certificates...'
-          mkdir -p /app/certs
-          openssl req -x509 -newkey rsa:4096 -keyout /app/certs/server.key -out /app/certs/server.crt -days 365 -nodes -subj '/CN=goatflow-customer-fe-test'
-          echo '✅ TLS certificates generated'
-        fi
-        ./goats
-      "
     environment:
-      ENABLE_YAML_ROUTING: ${ENABLE_YAML_ROUTING:-true}
       ROUTES_DIR: /app/routes
       APP_ENV: test
       APP_PORT: ${CUSTOMER_FE_TEST_APP_PORT:-8080}
@@ -485,21 +461,19 @@ services:
       DB_NAME: ${TEST_DB_MYSQL_NAME}
       DB_USER: ${TEST_DB_MYSQL_USER}
       DB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD}
-      VALKEY_HOST: valkey-test
-      VALKEY_PORT: 6379
+      GOATFLOW_VALKEY_HOST: valkey-test
+      GOATFLOW_VALKEY_PORT: 6379
       JWT_SECRET: ${JWT_SECRET}
       PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-bcrypt}
       MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
-      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}
-      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-pdf,doc,docx,txt,png,jpg,jpeg,gif,zip}
-      TLS_CERT_FILE: /app/certs/server.crt
-      TLS_KEY_FILE: /app/certs/server.key
+      <<: *email-env
+      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY must be set to 64 hex characters (openssl rand -hex 32), shared by backend and runner}
+    stop_grace_period: 45s
     ports:
       - "${CUSTOMER_FE_TEST_PORT:-8084}:${CUSTOMER_FE_TEST_APP_PORT:-8080}"
     volumes:
       - ./storage:${STORAGE_PATH:-/app/storage}:Z
-      - goatflow_certs:/app/certs
     depends_on:
       valkey-test:
         condition: service_healthy
@@ -543,25 +517,25 @@ services:
   #   networks:
   #     - goatflow-network
 
-  # Zinc Search Engine (Elasticsearch compatible) - COMMENTED OUT until code is implemented
-  # zinc:
-  #   image: public.ecr.aws/zinclabs/zincsearch:latest
-  #   container_name: goatflow-zinc
-  #   environment:
-  #     - ZINC_FIRST_ADMIN_USER=${ZINC_USER}
-  #     - ZINC_FIRST_ADMIN_PASSWORD=${ZINC_PASSWORD}
-  #     - ZINC_DATA_PATH=/data
-  #   ports:
-  #     - "${ZINC_PORT:-4080}:4080"
-  #   volumes:
-  #     - zinc_data:/data
-  #   networks:
-  #     - goatflow-network
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:4080/health"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
+  # Zinc search engine for SEARCH_BACKEND=zinc (docs/ZINC_SEARCH.md).
+  # Start with `docker compose --profile search up -d zinc` and set
+  # SEARCH_BACKEND=zinc and ZINC_ENDPOINT=http://zinc:4080 in .env.
+  zinc:
+    image: public.ecr.aws/zinclabs/zincsearch:0.4.10
+    container_name: goatflow-zinc
+    profiles: ["search"]
+    environment:
+      # Zinc refuses to start without both (set them in .env)
+      ZINC_FIRST_ADMIN_USER: ${ZINC_USER:-}
+      ZINC_FIRST_ADMIN_PASSWORD: ${ZINC_PASSWORD:-}
+      ZINC_DATA_PATH: /data
+    ports:
+      - "${ZINC_PORT:-4080}:4080"
+    volumes:
+      - zinc_data:/data
+    networks:
+      - goatflow-network
+    restart: unless-stopped
 
   # OpenLDAP Server for Testing - COMMENTED OUT until code is implemented
   # openldap:
@@ -711,14 +685,13 @@ networks:
 
 volumes:
   mariadb_data:
-  # postgres_data:     # Commented out - using MariaDB instead
+  postgres_data:
   valkey_data:
   valkey_test_data:
   # goatflow_cache:      # REMOVED - now using workspace-local cache paths (/workspace/.go-build, etc.)
-  goatflow_certs:
   goatflow_plugins:
   smtp4dev_data:
-  # zinc_data:         # Commented out - zinc service disabled
+  zinc_data:
   # temporal_data:     # Commented out - temporal service disabled
   # ldap_data:         # Commented out - openldap service disabled
   # ldap_config:       # Commented out - openldap service disabled

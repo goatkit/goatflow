@@ -58,6 +58,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/plugin/core"
 	pluginloader "github.com/goatkit/goatflow/internal/platform/plugin/loader"
 	"github.com/goatkit/goatflow/internal/platform/runner"
+	"github.com/goatkit/goatflow/internal/platform/search"
 	platformservice "github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/platform/services/adapter"
 	"github.com/goatkit/goatflow/internal/platform/services/k8s"
@@ -125,6 +126,13 @@ func main() {
 		log.Printf("Warning: Failed to load config: %v", err)
 		// Continue with defaults
 	}
+	// The server signs and verifies login tokens: refuse to start in production
+	// with a missing, placeholder or weak secret. The runner serves no HTTP.
+	if *mode != "runner" {
+		if err := config.ValidateSecrets(config.Get()); err != nil {
+			log.Fatalf("FATAL: %v", err)
+		}
+	}
 	if err := lookups.LoadCountries(configDir); err != nil {
 		log.Printf("Warning: falling back to embedded country list: %v", err)
 	}
@@ -182,7 +190,7 @@ func main() {
 	bootstrapAdminFromEnv(db)
 
 	// Set Gin mode
-	if os.Getenv("APP_ENV") == "production" {
+	if config.IsProductionEnv(config.Get()) {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		gin.SetMode(gin.DebugMode)
@@ -316,7 +324,7 @@ func main() {
 	// Create router for YAML routes
 	r := gin.New()
 
-	customerOnly := strings.EqualFold(os.Getenv("CUSTOMER_FE_ONLY"), "true") || os.Getenv("CUSTOMER_FE_ONLY") == "1"
+	customerOnly := config.CustomerFEOnly()
 	if customerOnly {
 		r.Use(api.CustomerOnlyGuard(true))
 		log.Println("🔒 Customer FE mode: admin routes disabled")
@@ -360,10 +368,10 @@ func main() {
 	}
 	renderer, err := shared.NewTemplateRenderer(templateDir)
 	if err != nil {
-		log.Fatalf("FATAL: failed to initialize template renderer (dir=%s): %v", templateDir, err)
+		log.Fatalf("FATAL: failed to initialize template renderer (dir=%s): %v", templateDir, err) // #nosec G706 -- TEMPLATES_DIR is operator config, not request input
 	}
 	shared.SetGlobalRenderer(renderer)
-	log.Printf("✅ Template renderer initialized (dir=%s)", templateDir)
+	log.Printf("✅ Template renderer initialized (dir=%s)", templateDir) // #nosec G706 -- TEMPLATES_DIR is operator config, not request input
 
 	// Initialize plugin system
 	log.Println("🔌 Initializing plugin system...")
@@ -489,9 +497,9 @@ func main() {
 	api.SetPluginUnloader(pluginLoader.Unload)       // Enable stop before binary replacement
 
 	if os.Getenv("GOATFLOW_PLUGIN_LAZY_LOAD") == "true" {
-		log.Printf("🔌 Discovered %d WASM plugin(s) (lazy loading enabled)", loadedCount)
+		log.Printf("🔌 Discovered %d WASM plugin(s) (lazy loading enabled)", loadedCount) // #nosec G706 -- integer count, no log-injection surface
 	} else if loadedCount > 0 {
-		log.Printf("✅ Loaded %d WASM plugin(s) from %s", loadedCount, pluginDir)
+		log.Printf("✅ Loaded %d WASM plugin(s) from %s", loadedCount, pluginDir) // #nosec G706 -- plugin dir is operator config, not request input
 	}
 	for _, err := range loadErrs {
 		log.Printf("⚠️  Plugin load error: %v", err)
@@ -549,25 +557,12 @@ func main() {
 		log.Printf("⚠️  Skipping dynamic modules (db unavailable: %v)", dbErr)
 	}
 
-	// Runtime audit: verify critical API endpoints were registered (multi-doc safety)
-	func() {
-		needed := []string{"/api/v1/states", "/api/lookups/statuses", "/api/lookups/queues"}
-		present := make(map[string]bool)
-		for _, ri := range r.Routes() { // gin.RouteInfo
-			present[ri.Path] = true
-		}
-		missing := []string{}
-		for _, p := range needed {
-			if !present[p] {
-				missing = append(missing, p)
-			}
-		}
-		if len(missing) > 0 {
-			log.Printf("⚠️  Route audit: missing expected routes: %v (check multi-doc YAML parsing)", missing)
-		} else {
-			log.Printf("✅ Route audit passed: core endpoints present")
-		}
-	}()
+	// Runtime audit: verify the core YAML API endpoints were registered
+	if missing := api.MissingCoreRoutes(r); len(missing) > 0 {
+		log.Printf("⚠️  Route audit: missing expected routes: %v (check the routes/*.yaml files loaded)", missing)
+	} else {
+		log.Printf("✅ Route audit passed: core endpoints present")
+	}
 
 	// Initialize real DB-backed ticket number store (OTRS-compatible)
 	if db, dbErr := database.GetDB(); dbErr == nil && db != nil && ticketNumGen != nil {
@@ -617,7 +612,9 @@ func main() {
 	// the scheduler there duplicates cron jobs against the main app (built-in
 	// and plugin-registered alike) — same-DB races, wasted CPU, and silent
 	// row loss when a plugin uses `INSERT IGNORE` to dedupe composite keys.
-	var schedulerCancel context.CancelFunc
+	// stopScheduler cancels the scheduler and waits until its running jobs
+	// have returned (bounded inside Service.Run). Nil when it never started.
+	var stopScheduler func()
 	switch {
 	case customerOnly:
 		log.Println("scheduler: disabled (CUSTOMER_FE_ONLY)")
@@ -652,12 +649,17 @@ func main() {
 		}
 
 		ctx, cancel := context.WithCancel(context.Background())
-		schedulerCancel = cancel
+		schedDone := make(chan struct{})
 		go func() {
+			defer close(schedDone)
 			if err := sched.Run(ctx); err != nil {
 				log.Printf("scheduler: stopped: %v", err)
 			}
 		}()
+		stopScheduler = func() {
+			cancel()
+			<-schedDone
+		}
 		log.Println("scheduler: background job runner started")
 	}
 	// Main-engine API routes (i18n, plugin management, plugin SSE stream).
@@ -683,11 +685,15 @@ func main() {
 
 	// Serve via http.Server so SIGTERM can drain in-flight connections
 	// (connection draining) instead of killing requests mid-flight.
-	// TrueNAS/Docker send SIGTERM with a default 10s grace period; the
-	// DrainTimeout below is bounded well under that.
+	// Worst-case stop time is max(DRAIN_TIMEOUT, scheduler stop 5s) +
+	// gracefulShutdownTimeout for plugins; the shipped compose files and
+	// Helm chart give the container a stop grace period above that.
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: r,
+		// Bound header reads so slow-header clients (Slowloris) cannot hold
+		// connections open; bodies stay unbounded for large uploads/SSE.
+		ReadHeaderTimeout: serverReadHeaderTimeout,
 		// IdleTimeout must exceed ReadTimeout (default 0) to avoid the
 		// "http: Server.ReadTimeout is shorter than KeepAlive" warning;
 		// we rely on the default idle behaviour and cap it conservatively.
@@ -696,12 +702,7 @@ func main() {
 
 	// Graceful shutdown on SIGTERM/SIGINT: stop accepting new connections,
 	// drain in-flight requests up to DrainTimeout, then shut down plugins.
-	drainTimeout := 10 * time.Second
-	if v := os.Getenv("DRAIN_TIMEOUT"); v != "" {
-		if d, err := time.ParseDuration(v); err == nil && d > 0 {
-			drainTimeout = d
-		}
-	}
+	drainTimeout := drainTimeoutFromEnv()
 
 	done := make(chan error, 1)
 	go func() {
@@ -723,28 +724,24 @@ func main() {
 	// enabled when METRICS_ENABLED=true. This lets a monitoring stack scrape
 	// metrics without routing through the app port. When disabled/unset the
 	// /metrics route on the app port is still available.
+	var metricsSrv *http.Server
 	if strings.EqualFold(os.Getenv("METRICS_ENABLED"), "true") || os.Getenv("METRICS_ENABLED") == "1" {
 		metricsPort := os.Getenv("METRICS_PORT")
 		if metricsPort == "" {
 			metricsPort = "9090"
 		}
-		metricsSrv := &http.Server{
-			Addr:        ":" + metricsPort,
-			Handler:     promhttp.Handler(),
-			IdleTimeout: 120 * time.Second,
+		metricsSrv = &http.Server{
+			Addr:              ":" + metricsPort,
+			Handler:           promhttp.Handler(),
+			ReadHeaderTimeout: serverReadHeaderTimeout,
+			IdleTimeout:       120 * time.Second,
 		}
 		go func() {
 			if err := metricsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Printf("⚠️  metrics listener on %s stopped: %v", metricsPort, err)
+				log.Printf("⚠️  metrics listener on %s stopped: %v", metricsPort, err) // #nosec G706 -- METRICS_PORT is operator config, not request input
 			}
 		}()
-		log.Printf("Prometheus metrics exposed on :%s (METRICS_ENABLED)", metricsPort)
-		// Drain the metrics listener on shutdown as well.
-		defer func() {
-			mctx, mcancel := context.WithTimeout(context.Background(), drainTimeout)
-			defer mcancel()
-			_ = metricsSrv.Shutdown(mctx)
-		}()
+		log.Printf("Prometheus metrics exposed on :%s (METRICS_ENABLED)", metricsPort) // #nosec G706 -- METRICS_PORT is operator config, not request input
 	}
 
 	// Signal watcher: on SIGTERM/SIGINT, shut the server down gracefully.
@@ -758,11 +755,13 @@ func main() {
 	case err := <-done:
 		if err != nil {
 			// Bind or runtime error: tear down plugins and exit non-zero.
-			if schedulerCancel != nil {
-				schedulerCancel()
+			if stopScheduler != nil {
+				stopScheduler()
 			}
 			pluginLoader.StopWatch()
-			pluginMgr.ShutdownAll(context.Background())
+			if err := pluginMgr.ShutdownAll(context.Background()); err != nil {
+				log.Printf("⚠️  Plugin shutdown error: %v", err)
+			}
 			log.Fatalf("server failed: %v", err)
 		}
 		stopReason = "server stopped"
@@ -770,17 +769,34 @@ func main() {
 
 	log.Printf("Shutting down: %s — draining connections (timeout %s)\n", stopReason, drainTimeout)
 
-	// Drain in-flight HTTP connections.
+	// Stop the scheduler while HTTP drains: cancelling it aborts running
+	// jobs, and stopScheduler returns once they have (at most 5s).
+	schedStopped := make(chan struct{})
+	go func() {
+		defer close(schedStopped)
+		if stopScheduler != nil {
+			stopScheduler()
+		}
+	}()
+
+	// Drain in-flight HTTP connections on the app port and the metrics
+	// listener together, both bounded by DRAIN_TIMEOUT.
 	drainCtx, drainCancel := context.WithTimeout(context.Background(), drainTimeout)
+	metricsDrained := make(chan struct{})
+	go func() {
+		defer close(metricsDrained)
+		if metricsSrv != nil && metricsSrv.Shutdown(drainCtx) != nil {
+			_ = metricsSrv.Close()
+		}
+	}()
 	if err := srv.Shutdown(drainCtx); err != nil {
 		log.Printf("⚠️  Connection drain incomplete: %v (forcing close)", err)
 		_ = srv.Close()
 	}
+	<-metricsDrained
 	drainCancel()
+	<-schedStopped
 
-	if schedulerCancel != nil {
-		schedulerCancel()
-	}
 	// Stop plugin hot reload watcher
 	pluginLoader.StopWatch()
 	// Shutdown plugins gracefully — bounded so one hung plugin can't delay
@@ -799,6 +815,43 @@ func main() {
 // deadlines are shorter (from each plugin's ResourcePolicy) and are
 // applied inside Manager.ShutdownAll; this value just bounds the total.
 const gracefulShutdownTimeout = 30 * time.Second
+
+// serverReadHeaderTimeout bounds how long the HTTP listeners wait for a
+// client's request headers, so slow-header (Slowloris) clients cannot pin
+// connections open. Request bodies are not covered: large uploads and SSE
+// streams keep working.
+const serverReadHeaderTimeout = 10 * time.Second
+
+// defaultDrainTimeout is how long shutdown waits for in-flight HTTP
+// requests when DRAIN_TIMEOUT is unset or invalid. With the scheduler
+// stop (5s, in parallel) and the plugin cap above, a server stops within
+// 35s; the runner uses the same value to wait for cancelled tasks.
+const defaultDrainTimeout = 5 * time.Second
+
+// drainTimeoutFromEnv reads DRAIN_TIMEOUT. An unusable value is logged as
+// an error and the default is used, so a typo never blocks a restart.
+func drainTimeoutFromEnv() time.Duration {
+	d, err := parseDrainTimeout(os.Getenv("DRAIN_TIMEOUT"))
+	if err != nil {
+		log.Printf("❌ %v; using the default %s", err, defaultDrainTimeout)
+	}
+	return d
+}
+
+// parseDrainTimeout parses a DRAIN_TIMEOUT value. Empty means the default;
+// anything that is not a positive Go duration returns the default and an
+// error naming the bad value.
+func parseDrainTimeout(v string) (time.Duration, error) {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return defaultDrainTimeout, nil
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil || d <= 0 {
+		return defaultDrainTimeout, fmt.Errorf("invalid DRAIN_TIMEOUT %q: want a positive Go duration such as 5s or 1m", v)
+	}
+	return d, nil
+}
 
 func initValkeyCache(cfg *config.Config) *cache.RedisCache {
 	if cfg == nil {
@@ -859,14 +912,29 @@ func runRunner(db *sql.DB) {
 	// Register outbound webhook dispatch task
 	registry.Register(tasks.NewWebhookDispatchTask(db))
 
+	// Register ticket notification rule evaluation (Admin -> Ticket Notifications)
+	registry.Register(tasks.NewNotificationEventsTask(db))
+
+	// Keep the Zinc/Elasticsearch index in sync (SEARCH_BACKEND=zinc|elasticsearch)
+	if searchCfg, err := search.ConfigFromEnv(); err != nil {
+		log.Printf("search-index task not registered: %v", err)
+	} else if searchCfg != nil {
+		registry.Register(tasks.NewSearchIndexTask(db, search.NewExternalBackend(*searchCfg)))
+	}
+
 	log.Printf("Registered %d background tasks", len(registry.All()))
 
-	// Create and start runner
-	taskRunner := runner.NewRunner(registry)
-
-	// Start the runner
-	ctx := context.Background()
+	// SIGTERM/SIGINT cancel ctx: the runner stops scheduling, cancels its
+	// running tasks and waits up to DRAIN_TIMEOUT for them to return.
+	taskRunner := runner.NewRunner(registry, drainTimeoutFromEnv())
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
 	if err := taskRunner.Start(ctx); err != nil {
+		if ctx.Err() != nil {
+			// Stopping: tasks outlived DRAIN_TIMEOUT and are abandoned.
+			log.Printf("Runner stopped: %v", err)
+			return
+		}
 		log.Fatalf("Runner failed: %v", err)
 	}
 }

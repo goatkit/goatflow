@@ -123,7 +123,9 @@ func listVersions(vm *routing.RouteVersionManager) {
 			v.Version, v.Hash[:8], v.Author, date, routes, message)
 	}
 
-	w.Flush()
+	if err := w.Flush(); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to write version list: %v\n", err)
+	}
 }
 
 func showVersion(vm *routing.RouteVersionManager, versionOrHash string) {
@@ -247,7 +249,10 @@ func rollbackVersion(vm *routing.RouteVersionManager, versionOrHash string) {
 	fmt.Printf("Type 'yes' to confirm: ")
 
 	var confirm string
-	fmt.Scanln(&confirm)
+	if _, err := fmt.Scanln(&confirm); err != nil {
+		// No readable answer (EOF, empty line) is not a confirmation.
+		confirm = ""
+	}
 
 	if confirm != "yes" {
 		fmt.Println("Rollback cancelled")
@@ -328,7 +333,7 @@ func validateRoutes(routesDir string) {
 	warningCount := 0
 	validCount := 0
 
-	err := filepath.Walk(routesDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(routesDir, func(path string, info os.FileInfo, err error) error { // #nosec G703 -- routes dir is the operator's CLI flag
 		if err != nil {
 			return err
 		}
@@ -340,7 +345,7 @@ func validateRoutes(routesDir string) {
 		relPath, _ := filepath.Rel(routesDir, path)
 
 		// Read and parse file
-		data, err := os.ReadFile(path) //nolint:gosec // G304 CLI tool
+		data, err := os.ReadFile(path) // #nosec G304 G122 -- dev CLI reading the operator-named routes tree; no privilege boundary for a symlink swap
 		if err != nil {
 			fmt.Printf("❌ %s: Failed to read file\n", relPath)
 			errorCount++
@@ -439,7 +444,7 @@ func showVersionGraph(vm *routing.RouteVersionManager) {
 func loadRoutesFromDir(dir string) (map[string]*routing.RouteConfig, error) {
 	routes := make(map[string]*routing.RouteConfig)
 
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error { // #nosec G703 -- dir is the operator's routes dir CLI flag
 		if err != nil {
 			return err
 		}
@@ -448,7 +453,7 @@ func loadRoutesFromDir(dir string) (map[string]*routing.RouteConfig, error) {
 			return nil
 		}
 
-		data, err := os.ReadFile(path) //nolint:gosec // G304 CLI tool
+		data, err := os.ReadFile(path) // #nosec G304 G122 -- dev CLI reading the operator-named routes tree; no privilege boundary for a symlink swap
 		if err != nil {
 			return err
 		}

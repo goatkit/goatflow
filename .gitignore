@@ -8,7 +8,7 @@ k8s/secrets.yaml
 *.key
 *.pem
 *.crt
-migrations/postgres/000004_generated_test_data.up.sql
+schema/seed/generated_test_data.postgres.sql
 test_credentials.csv
 
 # ============================================
@@ -536,3 +536,7 @@ public/
 # Go toolchain telemetry (created when containers run go with the repo as HOME)
 .config/go/
 .config/pulse/
+
+# Python bytecode (SDK tests, TrueNAS template rendering)
+__pycache__/
+*.pyc

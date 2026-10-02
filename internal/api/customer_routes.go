@@ -54,16 +54,16 @@ func RegisterCustomerRoutes(r *gin.RouterGroup, db *sql.DB) {
 	// }
 }
 
+// customerPortalConfigFromContext returns the portal settings CustomerPortalGate
+// resolved for this request, or loads them for the signed-in customer's company
+// (global settings when nobody is signed in).
 func customerPortalConfigFromContext(c *gin.Context, db *sql.DB) sysconfig.CustomerPortalConfig {
 	if cfg, ok := c.Get("customer_portal_config"); ok {
 		if typed, ok := cfg.(sysconfig.CustomerPortalConfig); ok {
 			return typed
 		}
 	}
-	if cfg, err := sysconfig.LoadCustomerPortalConfig(db); err == nil {
-		return cfg
-	}
-	return sysconfig.DefaultCustomerPortalConfig()
+	return loadCustomerPortalConfigForLogin(db, c.GetString("customer_login"))
 }
 
 // requireCustomerAuth checks if the customer is authenticated and redirects to login if not.
@@ -332,11 +332,14 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 		// Add ordering
 		sortBy := c.DefaultQuery("sort", "create_time")
 		sortOrder := c.DefaultQuery("order", "desc")
+		if sortOrder != "asc" {
+			sortOrder = "desc"
+		}
 		query += fmt.Sprintf(" ORDER BY t.%s %s", sanitizeSortColumn(sortBy), sortOrder)
 
 		rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": internalDBError(c, "list customer tickets", err)})
 			return
 		}
 		defer rows.Close()
@@ -769,7 +772,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			if err == sql.ErrNoRows {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found or access denied"})
 			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": internalDBError(c, "load customer ticket", err)})
 			}
 			return
 		}
@@ -985,10 +988,12 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 		// Process attachments from reply form
 		if err := c.Request.ParseMultipartForm(10 << 20); err == nil && c.Request.MultipartForm != nil {
 			files := getFormFiles(c.Request.MultipartForm)
-			if len(files) > 0 {
-				// Convert ticketID string to int for attachment processing
-				var ticketIDInt int
-				fmt.Sscanf(ticketID, "%d", &ticketIDInt)
+			// The ticket id already matched a row above; a failed parse here
+			// would file the attachments under ticket 0, so skip them instead.
+			var ticketIDInt int
+			if _, scanErr := fmt.Sscanf(ticketID, "%d", &ticketIDInt); scanErr != nil {
+				log.Printf("Customer reply: skipping attachments, unparsable ticket id: %v", scanErr)
+			} else if len(files) > 0 {
 				processFormAttachments(files, attachmentProcessParams{
 					ctx:       context.Background(),
 					db:        db,
@@ -1042,14 +1047,14 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 			if err == sql.ErrNoRows {
 				c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": internalDBError(c, "load ticket state", err)})
 			}
 			return
 		}
 
 		stateTypeName, err := lookups.StateTypeNameOfState(c.Request.Context(), db, stateID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": internalDBError(c, "load state type", err)})
 			return
 		}
 		if lookups.IsClosedStateType(stateTypeName) {
@@ -1058,7 +1063,7 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 		}
 		closedStateID, err := lookups.ID(c.Request.Context(), db, lookups.StateLookup, lookups.StateClosedSuccessful)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": internalDBError(c, "look up closed state", err)})
 			return
 		}
 
@@ -1070,8 +1075,7 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 		`), closedStateID, systemUserID, ticketID)
 
 		if err != nil {
-			log.Printf("Failed to close ticket %s: %v", ticketID, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to close ticket: " + err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": internalDBError(c, "close ticket "+ticketID, err)})
 			return
 		}
 
@@ -1477,8 +1481,13 @@ func handleCustomerChangePassword(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Verify current password using auth package
+		recheckKey := passwordRecheckKey(customerMFAAccount(username))
+		if rejectIfLoginBlocked(c, recheckKey) {
+			return
+		}
 		hasher := auth.NewPasswordHasher()
-		if currentHash.String == "" || !hasher.VerifyPassword(request.CurrentPassword, currentHash.String) {
+		currentOK := currentHash.String != "" && hasher.VerifyPassword(request.CurrentPassword, currentHash.String)
+		if !countPasswordRecheck(c, recheckKey, currentOK) {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"error":   "Current password is incorrect",

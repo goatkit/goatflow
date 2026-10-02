@@ -51,7 +51,7 @@ func (s *UserPreferencesService) SetPreference(userID int, key string, value str
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback() // the error that triggered the rollback is returned
 		}
 	}()
 

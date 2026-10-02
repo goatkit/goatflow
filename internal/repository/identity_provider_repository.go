@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/models"
@@ -37,6 +38,9 @@ func (r *IdentityProviderRepository) CreateProvider(p *models.IdentityProvider) 
 	)
 	var orgIDVal *int64
 	if p.OrgID != nil {
+		if *p.OrgID > math.MaxInt64 {
+			return fmt.Errorf("create identity provider: org id %d out of range", *p.OrgID)
+		}
 		v := int64(*p.OrgID)
 		orgIDVal = &v
 	}
@@ -69,7 +73,7 @@ func (r *IdentityProviderRepository) CreateProvider(p *models.IdentityProvider) 
 	if err != nil {
 		return fmt.Errorf("create identity provider: %w", err)
 	}
-	p.ID = uint(id)
+	p.ID = uint(id) // #nosec G115 -- gk_identity_provider.id auto-increment key, never negative
 	return nil
 }
 
@@ -100,7 +104,7 @@ func (r *IdentityProviderRepository) GetProvider(id uint) (*models.IdentityProvi
 		return nil, fmt.Errorf("get identity provider: %w", err)
 	}
 	if orgID.Valid {
-		v := uint(orgID.Int64)
+		v := uint(orgID.Int64) // #nosec G115 -- gk_identity_provider.org_id references a positive gk_organisation.id
 		p.OrgID = &v
 	}
 	p.ClientSecret = clientSecret.String
@@ -218,7 +222,7 @@ func (r *IdentityProviderRepository) GetProviderByOrgAndType(orgID uint, provide
 		return nil, fmt.Errorf("get identity provider by org and type: %w", err)
 	}
 	if orgIDNull.Valid {
-		v := uint(orgIDNull.Int64)
+		v := uint(orgIDNull.Int64) // #nosec G115 -- gk_identity_provider.org_id references a positive gk_organisation.id
 		p.OrgID = &v
 	}
 	p.ClientSecret = clientSecret.String
@@ -270,7 +274,7 @@ func scanProviders(rows *sql.Rows) ([]*models.IdentityProvider, error) {
 			return nil, fmt.Errorf("scan identity provider: %w", err)
 		}
 		if orgID.Valid {
-			v := uint(orgID.Int64)
+			v := uint(orgID.Int64) // #nosec G115 -- gk_identity_provider.org_id references a positive gk_organisation.id
 			p.OrgID = &v
 		}
 		if claimGroups.Valid {

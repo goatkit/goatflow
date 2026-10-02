@@ -14,7 +14,7 @@ GoatFlow is an ITSM and helpdesk system built on the GoatKit platform. It is wri
 - **Plugin Sandbox & Security** — Per-plugin isolation, resource policies, SQL whitelisting, namespace isolation, blue-green reload
 - **Custom Fields** — Universal EAV on all entities, 15 field types including GIS, plugin registration, admin UI, REST API, MCP tools
 - **Plugin UI System** — Independent plugin UIs with 3 shell types, PWA manifests, per-UI branding, auth, and navigation
-- **Organisations & Multi-Tenancy** — Org entity with hierarchy, user membership, per-org sysconfig, automatic HostAPI query scoping
+- **Organisations & Multi-Tenancy** — Org entity with hierarchy, user membership, per-org sysconfig; plugin calls run in the caller's organisation (per-org plugin secrets and files, sandbox scoping of org-owned tables). Core tickets, queues and customers are not separated by organisation
 - **Secure Settings** — AES-256-GCM encrypted plugin secrets via HostAPI, org-scoped, platform-managed key
 - **Entity Deletion** — Soft delete with recycle bin, PII anonymisation, hard delete with cascade, tombstone logging, auto-purge
 - **Plugin Marketplace** — `gk install/update/search` CLI, GitHub Releases backend, dependency resolution, theme-as-plugin
@@ -53,7 +53,7 @@ GoatFlow is an ITSM and helpdesk system built on the GoatKit platform. It is wri
 - Integration: GenericInterface with outbound REST/SOAP invokers, webservice dynamic fields, **outbound webhooks**
 - Security: Group-based queue permissions, session management, auth middleware, **LDAP login**, **API tokens**, **RBAC-filtered statistics**, **TOTP and passkey 2FA**, **CSP headers**, **secure plugin secrets**
 - i18n: 15 languages including RTL support (ar, he, fa, ur)
-- Deployment: Docker Compose and TrueNAS SCALE app; a Kubernetes Helm chart exists but has known limitations in 0.10.0 (see [charts/goatflow/README.md](charts/goatflow/README.md#known-limitations-0100-chart)); multi-arch images, **demo mode**, **K8s pod isolation for plugins**
+- Deployment: Docker Compose, TrueNAS SCALE app and a Kubernetes Helm chart (backend, background runner, MariaDB or PostgreSQL, Valkey; see [charts/goatflow/README.md](charts/goatflow/README.md)); multi-arch images, **demo mode**, **K8s pod isolation for plugins**
 - Admin Modules: 30+ admin interfaces including ticket attribute relations, dynamic fields, templates, **custom fields**, **recycle bin**, **organisation management**
 - **Plugins**: Dual-runtime (WASM + gRPC) plugin system with admin UI, sandbox isolation, signed verification, state persistence, **custom fields**, **plugin UIs**, **marketplace**, **dependency resolution**, **theme-as-plugin**
 - **PaaS Core**: Universal custom fields, plugin UI system, organisations with multi-tenancy, secure settings, entity deletion with GDPR anonymisation
@@ -210,7 +210,8 @@ First release since the platform/product split. Full list of changes:
 - [x] Prometheus metrics endpoint with custom metrics — real exposition format on `/metrics` (default registerer; cache metrics via `promauto`) + `goatflow_up` / `goatflow_process_start_time_seconds` gauges; optional dedicated listener on `METRICS_PORT` when `METRICS_ENABLED=true`
 - [x] Structured JSON logging (configurable levels) — `internal/platform/logging` drives both `slog` and legacy stdlib `log` from `LOG_FORMAT` / `LOG_LEVEL` / `LOG_OUTPUT` (`LOG_FILE_PATH` legacy alias)
 - [x] Health probes — `GET /health` (and `/healthz`, same handler) does a short-timeout database ping and answers 503 when the database is unreachable; used for liveness and readiness. Admin-only `GET /health/detailed` adds the cache check, version and uptime. Wired to the Dockerfile `HEALTHCHECK`, the TrueNAS app and the Helm probes
-- [x] Graceful shutdown handling with connection draining — `http.Server` + SIGTERM/SIGINT: stop accepting, drain in-flight requests up to `DRAIN_TIMEOUT` (default 10 s), then the existing bounded plugin shutdown
+- [x] Graceful shutdown handling with connection draining — `http.Server` + SIGTERM/SIGINT: stop accepting, drain in-flight requests up to `DRAIN_TIMEOUT` (default 5 s) while the scheduler stops, then the existing bounded plugin shutdown; the runner cancels running tasks and waits up to `DRAIN_TIMEOUT`
+- [x] Scheduled jobs run once per tick across backend replicas (per-job database lock, `gk_scheduler_job_lock`); startup migrations run under a cross-process database lock
 - [x] First-boot admin bootstrap honours `GOATFLOW_ADMIN_PASSWORD` (one-shot,
       race-safe; a later password change makes it a permanent no-op)
 - [x] Health/metrics endpoints de-fingerprinted and admin-gated on the app
@@ -241,13 +242,11 @@ First release since the platform/product split. Full list of changes:
 - [x] E2E make targets `test-e2e-go` and `test-e2e-playwright-go` (own
       tmpfs for `/tmp`); MariaDB and PostgreSQL test DB init scripts apply
       every migration
-
-**Not in 0.10.0 (known gaps)**
-- [ ] Helm chart does not give a working install yet: no background runner
-      (no outgoing email, webhook delivery or session cleanup), the Ingress
-      only reaches the backend for `/api/` and `/ws`, `GOATFLOW_SECURE_KEY`
-      is not set, and several environment names are ones GoatFlow does not
-      read. See [Known limitations (0.10.0 chart)](charts/goatflow/README.md#known-limitations-0100-chart)
+- [x] Helm chart gives a working install: background runner (outgoing
+      email, webhook delivery, session cleanup), Ingress for the whole agent
+      UI, shared `GOATFLOW_SECURE_KEY`, environment names GoatFlow reads, and
+      a persistent `storage` volume for fs attachments and plugin files. See
+      [charts/goatflow/README.md](charts/goatflow/README.md)
 
 ---
 
@@ -269,7 +268,7 @@ First release since the platform/product split. Full list of changes:
 - Automated dependency vulnerability scanning — *partial: Dependabot is active (all open alerts cleared in 0.10.0); Snyk is not set up*
 - Security hardening guide and best practices
 - OWASP Top 10 compliance verification
-- Rate limiting and DDoS protection — *partial: login, passkey, self-service forms, plugin webhooks and public plugin UIs are rate limited; there is no general API rate limit*
+- Rate limiting and DDoS protection — *partial: login, second-factor codes, passkey, self-service forms, API tokens (per-token hourly limit), plugin webhooks and public plugin UIs are rate limited; JWT/session API calls have no general limit*
 - Security response policy and CVE process
 
 *Performance*
@@ -282,7 +281,7 @@ First release since the platform/product split. Full list of changes:
 
 *Documentation*
 - Administrator guide with best practices
-- API reference (OpenAPI 3.0) with interactive docs — *partial: Swagger UI and `make api-docs` exist; the hand-written `api/openapi.yaml` still lists some routes that do not exist*
+- API reference (OpenAPI 3.0) with interactive docs — *partial: `api/openapi.yaml` documents tickets, articles, queues, priorities, the current user, webhooks and search from the handlers and is checked against the router (`TestOpenAPISpecMatchesRoutes`, `make openapi-lint`); Swagger UI at `/swagger/` covers the swag-annotated handlers; other v1 endpoints are not in the OpenAPI spec yet*
 - Deployment guides (Docker, Kubernetes, cloud providers) — *partial: Docker Compose, Helm and TrueNAS guides exist; no cloud provider guides*
 - Migration guide from OTRS 6.x with automation scripts — *done in 0.10.0: [docs/OTRS_MIGRATION_GUIDE.md](docs/OTRS_MIGRATION_GUIDE.md), `goatflow-migrate`, `make migrate-analyze` / `migrate-import` / `otrs-import`*
 - Plugin development guide (custom fields, UIs, enterprise plugin patterns)

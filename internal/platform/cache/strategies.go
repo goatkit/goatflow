@@ -272,12 +272,11 @@ func (s *WriteBehindStrategy) Start(ctx context.Context) {
 		for {
 			select {
 			case item := <-s.queue:
+				// Write-behind is best effort by design: there is no caller left to report to.
 				if item.Value == nil {
-					// Delete operation
-					s.redis.Delete(ctx, item.Key)
+					_ = s.redis.Delete(ctx, item.Key)
 				} else {
-					// Set operation
-					s.redis.Set(ctx, item.Key, item.Value, item.TTL)
+					_ = s.redis.Set(ctx, item.Key, item.Value, item.TTL)
 				}
 			case <-ctx.Done():
 				return
@@ -330,9 +329,9 @@ func (s *ReadThroughStrategy) Get(ctx context.Context, key string) (interface{},
 			return nil, err
 		}
 
-		// Cache the loaded value
+		// Cache the loaded value; best effort, the caller gets val either way.
 		if val != nil {
-			s.Set(ctx, key, val, 5*time.Minute)
+			_ = s.Set(ctx, key, val, 5*time.Minute)
 		}
 
 		return val, nil
@@ -427,11 +426,11 @@ func (s *ReadThroughStrategy) GetMulti(ctx context.Context, keys []string) (map[
 			return result, err
 		}
 
-		// Cache loaded values
+		// Cache loaded values; best effort, the caller gets them either way.
 		for key, val := range sourceVals {
 			result[key] = val
 			if val != nil {
-				s.Set(ctx, key, val, 5*time.Minute)
+				_ = s.Set(ctx, key, val, 5*time.Minute)
 			}
 		}
 	}

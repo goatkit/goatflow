@@ -3,13 +3,15 @@ package plugin
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestNewProdHostAPI(t *testing.T) {
@@ -31,86 +33,94 @@ func TestNewProdHostAPI(t *testing.T) {
 	}
 }
 
-func TestWithDB(t *testing.T) {
-	// Create an in-memory SQLite database for testing
-	db, err := sql.Open("sqlite3", ":memory:")
+// routingDBs returns the real test database and a second, closed handle of
+// the same driver. Queries routed to the closed handle fail with "sql:
+// database is closed", so a test can tell from the result which handle a
+// database name resolved to.
+func routingDBs(t *testing.T) (live, closed *sql.DB) {
+	t.Helper()
+	live = requireHostTestDB(t)
+	driver := "postgres"
+	if database.IsMySQL() {
+		driver = "mysql"
+	}
+	closed, err := sql.Open(driver, "")
 	if err != nil {
-		t.Fatalf("failed to open sqlite: %v", err)
+		t.Fatalf("open second %s handle: %v", driver, err)
 	}
-	defer db.Close()
+	if err := closed.Close(); err != nil {
+		t.Fatalf("close second handle: %v", err)
+	}
+	return live, closed
+}
 
-	h := NewProdHostAPI(WithDB("test", db))
+// expectRoute runs an unprefixed or "@name:"-prefixed SELECT through DBQuery
+// and checks it reached the live database (wantErr == "") or failed with an
+// error containing wantErr.
+func expectRoute(t *testing.T, h *ProdHostAPI, prefix, wantErr string) {
+	t.Helper()
+	rows, err := h.DBQuery(context.Background(), prefix+"SELECT 1 AS one")
+	if wantErr == "" {
+		if err != nil {
+			t.Fatalf("DBQuery %q: %v", prefix, err)
+		}
+		if len(rows) != 1 || fmt.Sprint(rows[0]["one"]) != "1" {
+			t.Fatalf("DBQuery %q rows = %v", prefix, rows)
+		}
+		return
+	}
+	if err == nil || !strings.Contains(err.Error(), wantErr) {
+		t.Fatalf("DBQuery %q error = %v, want %q", prefix, err, wantErr)
+	}
+}
 
-	if h.databases["test"] != db {
-		t.Error("database not set correctly")
-	}
-	// Default is "default" unless explicitly changed
-	if h.defaultDB != "default" {
-		t.Errorf("expected default db 'default', got %s", h.defaultDB)
-	}
+func TestWithDB(t *testing.T) {
+	live, _ := routingDBs(t)
+	h := NewProdHostAPI(WithDB("test", live))
+
+	expectRoute(t, h, "@test:", "")
+	// On a constructed host the default name stays "default", which is not
+	// configured here, so an unprefixed query fails instead of guessing.
+	expectRoute(t, h, "", `database "default" not found`)
 }
 
 func TestWithDBOnEmptyHost(t *testing.T) {
-	// Test WithDB on a zero-value ProdHostAPI to hit defensive branches
-	db, _ := sql.Open("sqlite3", ":memory:")
-	defer db.Close()
-
-	// Create a zero-value host (not via NewProdHostAPI)
+	live, _ := routingDBs(t)
+	// Zero-value host (not via NewProdHostAPI): the first WithDB creates the
+	// map and becomes the default.
 	h := &ProdHostAPI{}
+	WithDB("first", live)(h)
 
-	// Apply WithDB option directly
-	opt := WithDB("first", db)
-	opt(h)
-
-	if h.databases == nil {
-		t.Error("databases map should be initialized")
-	}
-	if h.databases["first"] != db {
-		t.Error("database not set correctly")
-	}
-	if h.defaultDB != "first" {
-		t.Errorf("expected 'first' as default, got %s", h.defaultDB)
-	}
+	expectRoute(t, h, "", "")
+	expectRoute(t, h, "@first:", "")
 }
 
 func TestWithMultipleDBs(t *testing.T) {
-	db1, _ := sql.Open("sqlite3", ":memory:")
-	defer db1.Close()
-	db2, _ := sql.Open("sqlite3", ":memory:")
-	defer db2.Close()
-
+	live, closed := routingDBs(t)
 	h := NewProdHostAPI(
-		WithDB("primary", db1),
-		WithDB("secondary", db2),
+		WithDB("primary", live),
+		WithDB("secondary", closed),
 	)
 
-	if h.databases["primary"] != db1 {
-		t.Error("primary db not set")
-	}
-	if h.databases["secondary"] != db2 {
-		t.Error("secondary db not set")
-	}
-	// Default is still "default" unless WithDefaultDB is used
-	if h.defaultDB != "default" {
-		t.Errorf("expected default 'default', got %s", h.defaultDB)
-	}
+	expectRoute(t, h, "@primary:", "")
+	expectRoute(t, h, "@secondary:", "database is closed")
+	// Default is still "default" unless WithDefaultDB is used.
+	expectRoute(t, h, "", `database "default" not found`)
 }
 
 func TestWithDefaultDB(t *testing.T) {
-	db1, _ := sql.Open("sqlite3", ":memory:")
-	defer db1.Close()
-	db2, _ := sql.Open("sqlite3", ":memory:")
-	defer db2.Close()
+	live, closed := routingDBs(t)
+	opts := []ProdHostAPIOption{WithDB("primary", live), WithDB("secondary", closed)}
 
-	h := NewProdHostAPI(
-		WithDB("primary", db1),
-		WithDB("secondary", db2),
-		WithDefaultDB("secondary"),
-	)
-
-	if h.defaultDB != "secondary" {
-		t.Errorf("expected default 'secondary', got %s", h.defaultDB)
+	toSecondary := NewProdHostAPI(append(opts, WithDefaultDB("secondary"))...)
+	expectRoute(t, toSecondary, "", "database is closed")
+	if _, err := toSecondary.DBExec(context.Background(), "UPDATE ticket SET title = title WHERE id = 0"); err == nil || !strings.Contains(err.Error(), "database is closed") {
+		t.Fatalf("DBExec on default secondary: %v, want database is closed", err)
 	}
+
+	toPrimary := NewProdHostAPI(append(opts, WithDefaultDB("primary"))...)
+	expectRoute(t, toPrimary, "", "")
+	expectRoute(t, toPrimary, "@secondary:", "database is closed")
 }
 
 func TestWithCache(t *testing.T) {
@@ -166,10 +176,7 @@ func TestParseDBPrefix(t *testing.T) {
 }
 
 func TestGetDB(t *testing.T) {
-	db1, _ := sql.Open("sqlite3", ":memory:")
-	defer db1.Close()
-	db2, _ := sql.Open("sqlite3", ":memory:")
-	defer db2.Close()
+	db1, db2 := routingDBs(t)
 
 	h := NewProdHostAPI(
 		WithDB("primary", db1),
@@ -234,57 +241,79 @@ func TestIndexByte(t *testing.T) {
 	}
 }
 
-func TestProdHostAPI_DBQuery(t *testing.T) {
-	// Use SQLite for testing
-	db, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("failed to open sqlite: %v", err)
-	}
-	defer db.Close()
+// hostTestTicketTypes returns a unique ticket_type name prefix and deletes
+// every ticket_type row carrying it on cleanup. ticket_type is a plain OTRS
+// lookup table (name, valid_id, audit columns) a plugin may read and write.
+func hostTestTicketTypes(t *testing.T, db *sql.DB) string {
+	t.Helper()
+	prefix := fmt.Sprintf("hostapi-%d-", time.Now().UnixNano())
+	t.Cleanup(func() {
+		if _, err := db.Exec(database.ConvertPlaceholders(`DELETE FROM ticket_type WHERE name LIKE ?`), prefix+"%"); err != nil {
+			t.Errorf("cleanup ticket_type %s*: %v", prefix, err)
+		}
+	})
+	return prefix
+}
 
-	// Create test table (sql-schema: in-memory SQLite scratch table for the HostAPI pass-through tests)
-	_, err = db.Exec(database.ConvertPlaceholders("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)"))
-	if err != nil {
-		t.Fatalf("failed to create table: %v", err)
+func countTicketTypes(t *testing.T, db *sql.DB, name string) int {
+	t.Helper()
+	var n int
+	if err := db.QueryRow(database.ConvertPlaceholders(`SELECT COUNT(*) FROM ticket_type WHERE name = ?`), name).Scan(&n); err != nil {
+		t.Fatalf("count ticket_type %q: %v", name, err)
 	}
-	_, err = db.Exec(database.ConvertPlaceholders("INSERT INTO test (name) VALUES ('Alice'), ('Bob')")) // sql-schema: SQLite scratch table
-	if err != nil {
-		t.Fatalf("failed to insert: %v", err)
+	return n
+}
+
+func TestProdHostAPI_DBQuery(t *testing.T) {
+	db := requireHostTestDB(t)
+	prefix := hostTestTicketTypes(t, db)
+	var aliceID int64
+	for _, n := range []string{"Alice", "Bob"} {
+		now := time.Now()
+		id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(
+			`INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
+			 VALUES (?, 1, ?, 1, ?, 1) RETURNING id`), prefix+n, now, now)
+		if err != nil {
+			t.Fatalf("insert ticket_type %s: %v", n, err)
+		}
+		if n == "Alice" {
+			aliceID = id
+		}
 	}
 
 	h := NewProdHostAPI(WithDB("default", db))
 	ctx := context.Background()
 
 	t.Run("basic query", func(t *testing.T) {
-		rows, err := h.DBQuery(ctx, "SELECT id, name FROM test ORDER BY id")
+		rows, err := h.DBQuery(ctx, "SELECT id, name FROM ticket_type WHERE name LIKE ? ORDER BY id", prefix+"%")
 		if err != nil {
 			t.Fatalf("DBQuery error: %v", err)
 		}
 		if len(rows) != 2 {
-			t.Errorf("expected 2 rows, got %d", len(rows))
+			t.Fatalf("expected 2 rows, got %d", len(rows))
 		}
-		if rows[0]["name"] != "Alice" {
-			t.Errorf("expected Alice, got %v", rows[0]["name"])
+		if rows[0]["name"] != prefix+"Alice" || rows[1]["name"] != prefix+"Bob" {
+			t.Errorf("expected Alice then Bob as strings, got %#v, %#v", rows[0]["name"], rows[1]["name"])
 		}
 	})
 
 	t.Run("query with parameters", func(t *testing.T) {
-		rows, err := h.DBQuery(ctx, "SELECT name FROM test WHERE id = ?", 1)
+		rows, err := h.DBQuery(ctx, "SELECT name FROM ticket_type WHERE id = ?", aliceID)
 		if err != nil {
 			t.Fatalf("DBQuery error: %v", err)
 		}
-		if len(rows) != 1 {
-			t.Errorf("expected 1 row, got %d", len(rows))
+		if len(rows) != 1 || rows[0]["name"] != prefix+"Alice" {
+			t.Errorf("expected only Alice, got %v", rows)
 		}
 	})
 
 	t.Run("query with named db prefix", func(t *testing.T) {
-		rows, err := h.DBQuery(ctx, "@default:SELECT COUNT(*) as cnt FROM test")
+		rows, err := h.DBQuery(ctx, "@default:SELECT COUNT(*) AS cnt FROM ticket_type WHERE name LIKE ?", prefix+"%")
 		if err != nil {
 			t.Fatalf("DBQuery error: %v", err)
 		}
-		if len(rows) != 1 {
-			t.Errorf("expected 1 row, got %d", len(rows))
+		if len(rows) != 1 || fmt.Sprint(rows[0]["cnt"]) != "2" {
+			t.Errorf("expected cnt=2, got %v", rows)
 		}
 	})
 
@@ -297,59 +326,66 @@ func TestProdHostAPI_DBQuery(t *testing.T) {
 }
 
 func TestProdHostAPI_DBExec(t *testing.T) {
-	db, _ := sql.Open("sqlite3", ":memory:")
-	defer db.Close()
-	db.Exec(database.ConvertPlaceholders("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")) // sql-schema: in-memory SQLite scratch table
-
+	db := requireHostTestDB(t)
+	prefix := hostTestTicketTypes(t, db)
 	h := NewProdHostAPI(WithDB("default", db))
 	ctx := context.Background()
+	const insert = `INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)`
 
 	t.Run("insert", func(t *testing.T) {
-		affected, err := h.DBExec(ctx, "INSERT INTO test (name) VALUES (?)", "Charlie")
+		affected, err := h.DBExec(ctx, insert, prefix+"Charlie")
 		if err != nil {
 			t.Fatalf("DBExec error: %v", err)
 		}
-		if affected != 1 {
-			t.Errorf("expected 1 affected, got %d", affected)
+		if affected != 1 || countTicketTypes(t, db, prefix+"Charlie") != 1 {
+			t.Errorf("expected Charlie inserted (1 affected), got %d affected", affected)
 		}
 	})
 
 	t.Run("update", func(t *testing.T) {
-		h.DBExec(ctx, "INSERT INTO test (name) VALUES ('Dave')")
-		affected, err := h.DBExec(ctx, "UPDATE test SET name = 'Updated' WHERE name = 'Dave'")
+		if _, err := h.DBExec(ctx, insert, prefix+"Dave"); err != nil {
+			t.Fatalf("seed Dave: %v", err)
+		}
+		affected, err := h.DBExec(ctx, "UPDATE ticket_type SET name = ? WHERE name = ?", prefix+"Updated", prefix+"Dave")
 		if err != nil {
 			t.Fatalf("DBExec error: %v", err)
 		}
-		if affected != 1 {
-			t.Errorf("expected 1 affected, got %d", affected)
+		if affected != 1 || countTicketTypes(t, db, prefix+"Updated") != 1 || countTicketTypes(t, db, prefix+"Dave") != 0 {
+			t.Errorf("expected Dave renamed (1 affected), got %d affected", affected)
 		}
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		h.DBExec(ctx, "INSERT INTO test (name) VALUES ('ToDelete')")
-		affected, err := h.DBExec(ctx, "DELETE FROM test WHERE name = 'ToDelete'")
+		if _, err := h.DBExec(ctx, insert, prefix+"ToDelete"); err != nil {
+			t.Fatalf("seed ToDelete: %v", err)
+		}
+		affected, err := h.DBExec(ctx, "DELETE FROM ticket_type WHERE name = ?", prefix+"ToDelete")
 		if err != nil {
 			t.Fatalf("DBExec error: %v", err)
 		}
-		if affected != 1 {
-			t.Errorf("expected 1 affected, got %d", affected)
+		if affected != 1 || countTicketTypes(t, db, prefix+"ToDelete") != 0 {
+			t.Errorf("expected ToDelete removed (1 affected), got %d affected", affected)
 		}
 	})
 
 	t.Run("with named db prefix", func(t *testing.T) {
-		affected, err := h.DBExec(ctx, "@default:INSERT INTO test (name) VALUES (?)", "Prefixed")
+		affected, err := h.DBExec(ctx, "@default:"+insert, prefix+"Prefixed")
 		if err != nil {
 			t.Fatalf("DBExec error: %v", err)
 		}
-		if affected != 1 {
-			t.Errorf("expected 1 affected, got %d", affected)
+		if affected != 1 || countTicketTypes(t, db, prefix+"Prefixed") != 1 {
+			t.Errorf("expected Prefixed inserted (1 affected), got %d affected", affected)
 		}
 	})
 
 	t.Run("nonexistent db returns error", func(t *testing.T) {
-		_, err := h.DBExec(ctx, "@nonexistent:INSERT INTO test (name) VALUES (?)", "Test")
+		_, err := h.DBExec(ctx, "@nonexistent:"+insert, prefix+"Test")
 		if err == nil {
 			t.Error("expected error for nonexistent db")
+		}
+		if countTicketTypes(t, db, prefix+"Test") != 0 {
+			t.Error("row written although the named db does not exist")
 		}
 	})
 }

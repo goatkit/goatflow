@@ -48,7 +48,7 @@ func (r *SessionSQLRepository) Create(session *models.Session) error {
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 		}
 	}()
 

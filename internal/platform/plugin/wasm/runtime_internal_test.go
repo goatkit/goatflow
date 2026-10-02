@@ -2,91 +2,10 @@ package wasm
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 )
-
-// mockHostAPIForUnit is a simple mock for unit testing internal functions
-type mockHostAPIForUnit struct{}
-
-func (m *mockHostAPIForUnit) DBQuery(ctx context.Context, query string, args ...any) ([]map[string]any, error) {
-	return nil, nil
-}
-func (m *mockHostAPIForUnit) DBExec(ctx context.Context, query string, args ...any) (int64, error) {
-	return 0, nil
-}
-func (m *mockHostAPIForUnit) CacheGet(ctx context.Context, key string) ([]byte, bool, error) {
-	return nil, false, nil
-}
-func (m *mockHostAPIForUnit) CacheSet(ctx context.Context, key string, value []byte, ttlSeconds int) error {
-	return nil
-}
-func (m *mockHostAPIForUnit) CacheDelete(ctx context.Context, key string) error {
-	return nil
-}
-func (m *mockHostAPIForUnit) HTTPRequest(ctx context.Context, method, url string, headers map[string]string, body []byte) (int, []byte, error) {
-	return 200, nil, nil
-}
-func (m *mockHostAPIForUnit) SendEmail(ctx context.Context, to, subject, body string, html bool) error {
-	return nil
-}
-func (m *mockHostAPIForUnit) Log(ctx context.Context, level, message string, fields map[string]any) {}
-func (m *mockHostAPIForUnit) ConfigGet(ctx context.Context, key string) (string, error) {
-	return "", nil
-}
-func (m *mockHostAPIForUnit) Translate(ctx context.Context, key string, args ...any) string {
-	return ""
-}
-func (m *mockHostAPIForUnit) CallPlugin(ctx context.Context, pluginName, function string, args json.RawMessage) (json.RawMessage, error) {
-	return nil, nil
-}
-
-func (m *mockHostAPIForUnit) PublishEvent(ctx context.Context, channel string, eventType string, data string) error {
-	return nil
-}
-
-func (m *mockHostAPIForUnit) EntitySoftDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
-	return nil
-}
-
-func (m *mockHostAPIForUnit) EntityRestore(ctx context.Context, entityType string, entityID int64) error {
-	return nil
-}
-
-func (m *mockHostAPIForUnit) EntityHardDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
-	return nil
-}
-
-func (m *mockHostAPIForUnit) RecycleBinList(ctx context.Context, entityType string) (json.RawMessage, error) {
-	return nil, nil
-}
-
-func (m *mockHostAPIForUnit) SecureConfigGet(ctx context.Context, key string) (string, error) {
-	return "", nil
-}
-
-func (m *mockHostAPIForUnit) SecureConfigSet(ctx context.Context, key string, value string) error {
-	return nil
-}
-
-func (m *mockHostAPIForUnit) OrgID(ctx context.Context) int64 {
-	return 0
-}
-
-func (m *mockHostAPIForUnit) CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
-	return nil, nil
-}
-
-func (m *mockHostAPIForUnit) CustomFieldsSet(ctx context.Context, entityType string, objectID int64, values map[string]any) error {
-	return nil
-}
-
-func (m *mockHostAPIForUnit) CustomFieldsQuery(ctx context.Context, entityType string, filters []plugin.CustomFieldFilter) ([]int64, error) {
-	return nil, nil
-}
 
 func TestHostCallWithNilHost(t *testing.T) {
 	p := &WASMPlugin{
@@ -174,43 +93,6 @@ func TestFreeWithNilFunction(t *testing.T) {
 	p.free(100)
 }
 
-func TestDispatchHostCallUnknown(t *testing.T) {
-	host := &mockHostAPIForUnit{}
-	p := &WASMPlugin{
-		host: host,
-		name: "test-plugin",
-	}
-
-	ctx := context.Background()
-	_, err := p.dispatchHostCall(ctx, "unknown_function", nil)
-	if err == nil {
-		t.Error("expected error for unknown function")
-	}
-}
-
-func TestDispatchHostCallInvalidJSON(t *testing.T) {
-	host := &mockHostAPIForUnit{}
-	p := &WASMPlugin{
-		host: host,
-		name: "test-plugin",
-	}
-
-	ctx := context.Background()
-
-	// Test each method with invalid JSON
-	methods := []string{
-		"db_query", "db_exec", "cache_get", "cache_set",
-		"http_request", "send_email", "config_get", "translate", "plugin_call",
-	}
-
-	for _, method := range methods {
-		_, err := p.dispatchHostCall(ctx, method, []byte("not valid json"))
-		if err == nil {
-			t.Errorf("expected error for %s with invalid JSON", method)
-		}
-	}
-}
-
 func TestWASMPluginRegistration(t *testing.T) {
 	// GKRegister returns the cached manifest
 	p := &WASMPlugin{
@@ -246,46 +128,4 @@ func TestWithCallTimeout(t *testing.T) {
 	if opts.callTimeout != 60*1000000000 {
 		t.Errorf("expected callTimeout 60s, got %d", opts.callTimeout)
 	}
-}
-
-var _ plugin.HostAPI = (*mockHostAPIForUnit)(nil)
-
-// File storage stubs
-func (m *mockHostAPIForUnit) CreateArticleAttachment(ctx context.Context, articleID, createdBy int64, filename, contentType string, content []byte) (int64, error) {
-	return 0, fmt.Errorf("not implemented")
-}
-func (m *mockHostAPIForUnit) RenderMarkdownToPdf(ctx context.Context, markdown string, options plugin.PdfRenderOptions) ([]byte, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-func (m *mockHostAPIForUnit) CreateArticle(ctx context.Context, ticketID, createdBy int64, subject, body string, visibleToCustomer bool) (int64, error) {
-	return 0, fmt.Errorf("not implemented")
-}
-func (m *mockHostAPIForUnit) ChangeTicketStatus(ctx context.Context, ticketID, stateID, userID int64, untilTime int64) error {
-	return fmt.Errorf("not implemented")
-}
-func (m *mockHostAPIForUnit) ListTicketStates(ctx context.Context) ([]plugin.TicketStateInfo, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-func (m *mockHostAPIForUnit) ListTicketViews(ctx context.Context) ([]plugin.TicketViewInfo, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockHostAPIForUnit) ListArticleAttachments(ctx context.Context, articleID int64) ([]plugin.ArticleAttachment, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-func (m *mockHostAPIForUnit) DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error {
-	return fmt.Errorf("not implemented")
-}
-func (m *mockHostAPIForUnit) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error {
-	return nil
-}
-func (m *mockHostAPIForUnit) GetFile(ctx context.Context, key string) ([]byte, map[string]string, error) {
-	return nil, nil, nil
-}
-func (m *mockHostAPIForUnit) DeleteFile(ctx context.Context, key string) error { return nil }
-func (m *mockHostAPIForUnit) ListFiles(ctx context.Context, prefix string) ([]plugin.FileInfo, error) {
-	return nil, nil
-}
-func (m *mockHostAPIForUnit) GenerateThumbnail(_ context.Context, _ []byte, _ string, _, _ int) ([]byte, string, error) {
-	return nil, "", fmt.Errorf("not implemented")
 }

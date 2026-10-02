@@ -6,20 +6,19 @@ import (
 	"strings"
 )
 
-// OrgAwareTables is the registry of tables that have an org_id column.
-// Queries against these tables are automatically scoped to the active org.
+// OrgAwareTables is the set of tables the plugin sandbox scopes to the
+// caller's active organisation. It lists only tables whose rows each belong to
+// exactly one organisation (org_id NOT NULL in both migration sets). Core
+// tables such as ticket, queue and customer_user have no org_id column, so
+// they are not scoped; tables with a nullable org_id (NULL = global row:
+// gk_secure_config, gk_identity_provider, gk_recycle_bin, gk_deletion_log)
+// are not scoped either, because "org_id = ?" would hide the global rows.
 // Tables not in this set pass through unmodified.
 var OrgAwareTables = map[string]bool{
-	"ticket":                true,
-	"queue":                 true,
-	"customer_user":         true,
-	"gk_custom_field_value": true,
-}
-
-// RegisterOrgAwareTable adds a table to the org-scoping registry.
-// Plugins can call this for their own tables that have an org_id column.
-func RegisterOrgAwareTable(table string) {
-	OrgAwareTables[strings.ToLower(table)] = true
+	"gk_identity_provider_org": true,
+	"gk_org_plugin_access":     true,
+	"gk_user_organisation":     true,
+	"sysconfig_org":            true,
 }
 
 // ScopeQuery rewrites a SQL query to include org_id filtering.

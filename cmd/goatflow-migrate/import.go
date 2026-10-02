@@ -723,12 +723,12 @@ func (im *importer) importSysconfig(r *tableReport) error {
 		var id int64
 		var name string
 		if err := rows.Scan(&id, &name); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return err
 		}
 		defIDs[name] = id
 	}
-	rows.Close()
+	_ = rows.Close() // iteration errors surface via rows.Err below
 	if err := rows.Err(); err != nil {
 		return err
 	}

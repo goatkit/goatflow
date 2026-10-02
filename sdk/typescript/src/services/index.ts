@@ -127,12 +127,12 @@ export class WebhooksService {
 
   /** One delivery including payload and response body. */
   async getDelivery(deliveryId: number): Promise<WebhookDelivery> {
-    return this.client.get<WebhookDelivery>(`/api/v1/webhooks/deliveries/${deliveryId}`);
+    return this.client.get<WebhookDelivery>(`/api/v1/webhook-deliveries/${deliveryId}`);
   }
 
   /** Sends a delivery's payload again and returns the new delivery. */
   async redeliver(deliveryId: number): Promise<WebhookDelivery> {
-    return this.client.post<WebhookDelivery>(`/api/v1/webhooks/deliveries/${deliveryId}/redeliver`);
+    return this.client.post<WebhookDelivery>(`/api/v1/webhook-deliveries/${deliveryId}/redeliver`);
   }
 }
 

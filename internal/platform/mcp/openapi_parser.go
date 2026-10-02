@@ -47,7 +47,7 @@ type OpenAPIProp struct {
 
 // ParseOpenAPIFile loads and parses an OpenAPI YAML file.
 func ParseOpenAPIFile(path string) (*OpenAPISpec, error) {
-	data, err := os.ReadFile(path) //nolint:gosec // G304 - path from config
+	data, err := os.ReadFile(path) // #nosec G304 -- OpenAPI spec path set at server boot by InitDynamicTools, not request input
 	if err != nil {
 		return nil, fmt.Errorf("read openapi spec: %w", err)
 	}

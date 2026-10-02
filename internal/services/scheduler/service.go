@@ -59,6 +59,10 @@ type Service struct {
 	emailPollState   emailPollState
 	metrics          *emailPollMetrics
 	valkey           *cache.RedisCache
+	// lock makes each run happen on one replica only; nil without a DB.
+	lock *jobLock
+	// escalation is the escalation engine, kept between runs (see handlers.go).
+	escalation escalationEngine
 }
 
 type emailPollState struct {
@@ -139,6 +143,9 @@ func NewService(db *sql.DB, opts ...Option) *Service {
 		pushConfig:       options.PushConfig,
 		metrics:          globalEmailPollMetrics(),
 		valkey:           options.Cache,
+	}
+	if db != nil {
+		s.lock = newJobLock(db)
 	}
 
 	// The following line initializes emailPollState with nextIdx set to 0
@@ -249,6 +256,20 @@ func (s *Service) executeJob(slug string, entryID cron.EntryID) {
 		finish := start
 		s.finalizeRun(job, slug, entryID, start, finish, statusFailed, fmt.Errorf("handler %s not registered", job.Handler))
 		return
+	}
+
+	// Every replica fires the same schedule; only the one that claims the
+	// run in the database executes it.
+	if s.lock != nil {
+		claimed, err := s.claimRun(job)
+		if err != nil {
+			now := s.now()
+			s.finalizeRun(job, slug, entryID, now, now, statusFailed, fmt.Errorf("scheduler lock: %w", err))
+			return
+		}
+		if !claimed {
+			return
+		}
 	}
 
 	ctx := s.rootCtx

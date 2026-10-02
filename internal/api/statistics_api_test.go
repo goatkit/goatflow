@@ -42,11 +42,17 @@ type statsFixture struct {
 	now time.Time
 
 	queueA, queueB                             int
+	groupA                                     int
 	agentA, agentAll, agentNone, agentAdmin    int
 	loginA, loginAll, loginNone, loginAdmin    string
 	customer1, customer2, customer3, customer4 string
 	tickets                                    []statsFixtureTicket
 	stateIDs                                   map[string]int
+
+	// addQueue creates a queue in groupID with the given valid_id; addTicket
+	// inserts a ticket and returns its id. Both are cleaned up with the fixture.
+	addQueue  func(groupID, validID int) int
+	addTicket func(tk statsFixtureTicket) int64
 }
 
 func newStatsFixture(t *testing.T) *statsFixture {
@@ -98,12 +104,12 @@ func newStatsFixture(t *testing.T) *statsFixture {
 		groupIDs = append(groupIDs, id)
 		return id
 	}
-	newQueue := func(name string, groupID int) int {
+	newQueue := func(name string, groupID, validID int) int {
 		id := mustID(database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 			INSERT INTO queue (name, group_id, system_address_id, salutation_id, signature_id,
 				follow_up_id, follow_up_lock, comments, valid_id, create_time, create_by, change_time, change_by)
-			VALUES (?, ?, 1, 1, 1, 1, 0, 'statistics test', 1, ?, 1, ?, 1) RETURNING id`),
-			name, groupID, f.now, f.now))
+			VALUES (?, ?, 1, 1, 1, 1, 0, 'statistics test', ?, ?, 1, ?, 1) RETURNING id`),
+			name, groupID, validID, f.now, f.now))
 		queueIDs = append(queueIDs, id)
 		return id
 	}
@@ -124,8 +130,12 @@ func newStatsFixture(t *testing.T) *statsFixture {
 
 	groupA := newGroup("stats_a_" + sfx)
 	groupB := newGroup("stats_b_" + sfx)
-	f.queueA = newQueue("stats_qa_"+sfx, groupA)
-	f.queueB = newQueue("stats_qb_"+sfx, groupB)
+	f.groupA = groupA
+	f.queueA = newQueue("stats_qa_"+sfx, groupA, 1)
+	f.queueB = newQueue("stats_qb_"+sfx, groupB, 1)
+	f.addQueue = func(groupID, validID int) int {
+		return newQueue(fmt.Sprintf("stats_q%d_%s", len(queueIDs), sfx), groupID, validID)
+	}
 
 	f.loginA, f.loginAll, f.loginNone, f.loginAdmin = "stats_a_"+sfx, "stats_all_"+sfx, "stats_none_"+sfx, "stats_admin_"+sfx
 	f.agentA = newAgent(f.loginA)
@@ -164,18 +174,26 @@ func newStatsFixture(t *testing.T) *statsFixture {
 		{queueID: f.queueB, state: "open", priorityID: 5, customer: f.customer3, responsible: f.agentAll, created: f.now.Add(-1 * h), changed: f.now.Add(-1 * h)},
 		{queueID: f.queueB, state: "closed unsuccessful", priorityID: 5, customer: f.customer3, responsible: f.agentAll, created: f.now.Add(-2 * d), changed: f.now.Add(-2 * d)},
 	}
-	for i := range f.tickets {
-		tk := &f.tickets[i]
+	f.addTicket = func(tk statsFixtureTicket) int64 {
+		t.Helper()
 		stateID, ok := f.stateIDs[tk.state]
 		require.True(t, ok, "seed state %q missing", tk.state)
+		n := len(f.tickets)
 		tk.id = int64(mustID(database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
 			INSERT INTO ticket (tn, title, queue_id, ticket_lock_id, type_id, user_id, responsible_user_id,
 				ticket_priority_id, ticket_state_id, customer_id, customer_user_id, timeout, until_time,
 				escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time,
 				archive_flag, create_time, create_by, change_time, change_by)
 			VALUES (?, ?, ?, 1, 1, 1, ?, ?, ?, 'stats-co', ?, 0, 0, 0, 0, 0, 0, 0, ?, 1, ?, 1) RETURNING id`),
-			fmt.Sprintf("ST%s%d", sfx[len(sfx)-9:], i), fmt.Sprintf("stats ticket %d", i), tk.queueID,
+			fmt.Sprintf("ST%s%d", sfx[len(sfx)-9:], n), fmt.Sprintf("stats ticket %d", n), tk.queueID,
 			tk.responsible, tk.priorityID, stateID, tk.customer, tk.created, tk.changed)))
+		f.tickets = append(f.tickets, tk)
+		return tk.id
+	}
+	initial := f.tickets
+	f.tickets = nil
+	for _, tk := range initial {
+		f.addTicket(tk)
 	}
 
 	// Articles written by agentA: one on a queueA ticket, one on a queueB ticket.
@@ -260,6 +278,10 @@ func TestStatisticsRoutesAuth(t *testing.T) {
 		"/api/v1/statistics/export?format=xml",
 		"/api/v1/statistics/export?type=everything",
 		"/api/v1/statistics/export?period=1y",
+		"/api/v1/statistics/customers?top=0",
+		"/api/v1/statistics/customers?top=-5",
+		"/api/v1/statistics/customers?top=101",
+		"/api/v1/statistics/customers?top=lots",
 	} {
 		w := statsGet(t, router, path, agentToken)
 		assert.Equal(t, http.StatusBadRequest, w.Code, "%s: %s", path, w.Body.String())
@@ -270,6 +292,10 @@ func TestStatisticsDashboard(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	f := newStatsFixture(t)
 	router := NewSimpleRouter()
+	// A ticket in an invalid queue: listed nowhere, so counted nowhere.
+	invalidQueue := f.addQueue(f.groupA, 2)
+	f.addTicket(statsFixtureTicket{queueID: invalidQueue, state: "open", priorityID: 3, customer: f.customer1,
+		responsible: f.agentA, created: f.now.Add(-time.Hour), changed: f.now.Add(-time.Hour)})
 
 	type dashboard struct {
 		Overview struct {
@@ -333,21 +359,72 @@ func TestStatisticsDashboard(t *testing.T) {
 		assert.Equal(t, map[int]int{f.queueA: 5, f.queueB: 2}, byQueue)
 	})
 
-	t.Run("admin counts every queue", func(t *testing.T) {
+	t.Run("admin counts every valid queue, consistently with by_queue", func(t *testing.T) {
 		var resp dashboard
 		statsGetJSON(t, router, "/api/v1/statistics/dashboard", statsToken(t, f.agentAdmin, f.loginAdmin, "Agent"), &resp)
 
 		byQueue := map[int]int{}
+		sum := 0
 		for _, q := range resp.ByQueue {
 			byQueue[q.QueueID] = q.Count
+			sum += q.Count
 		}
 		assert.Equal(t, 5, byQueue[f.queueA])
 		assert.Equal(t, 2, byQueue[f.queueB])
+		_, listed := byQueue[invalidQueue]
+		assert.False(t, listed, "invalid queues are not listed")
 
 		var total int
-		require.NoError(t, f.db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket")).Scan(&total))
-		assert.Equal(t, total, resp.Overview.Total)
+		require.NoError(t, f.db.QueryRow(database.ConvertPlaceholders(
+			"SELECT COUNT(*) FROM ticket t JOIN queue q ON q.id = t.queue_id WHERE q.valid_id = 1")).Scan(&total))
+		assert.Equal(t, total, resp.Overview.Total, "tickets in invalid queues are not counted")
+		assert.Equal(t, sum, resp.Overview.Total, "overview total equals the sum of by_queue")
 	})
+}
+
+// TestStatisticsTrendsOpen: trends[].open is the number of tickets open at the
+// end of each bucket, including tickets created before the window that are
+// still open, not a running sum of created minus closed inside the window.
+func TestStatisticsTrendsOpen(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	f := newStatsFixture(t)
+	router := NewSimpleRouter()
+	d := 24 * time.Hour
+	// Open since before the window, and closed inside the window after being
+	// created before it.
+	f.addTicket(statsFixtureTicket{queueID: f.queueA, state: "open", priorityID: 3, customer: f.customer1,
+		responsible: f.agentA, created: f.now.Add(-20 * d), changed: f.now.Add(-20 * d)})
+	f.addTicket(statsFixtureTicket{queueID: f.queueA, state: "closed successful", priorityID: 3, customer: f.customer1,
+		responsible: f.agentA, created: f.now.Add(-15 * d), changed: f.now.Add(-2 * d)})
+
+	var resp struct {
+		Trends []struct {
+			Date string `json:"date"`
+			Open int    `json:"open"`
+		} `json:"trends"`
+	}
+	statsGetJSON(t, router, "/api/v1/statistics/trends?period=daily&days=7", statsToken(t, f.agentA, f.loginA, "Agent"), &resp)
+	require.Len(t, resp.Trends, 7)
+
+	// Expected: queueA tickets created before the end of the day that were
+	// not closed before the end of the day (close time = last change).
+	for _, bucket := range resp.Trends {
+		day, err := time.Parse("2006-01-02", bucket.Date)
+		require.NoError(t, err)
+		end := day.Add(d)
+		want := 0
+		for _, tk := range f.tickets {
+			if tk.queueID != f.queueA || !tk.created.Before(end) {
+				continue
+			}
+			if strings.HasPrefix(tk.state, "closed") && tk.changed.Before(end) {
+				continue
+			}
+			want++
+		}
+		assert.Equal(t, want, bucket.Open, "open at the end of %s", bucket.Date)
+	}
+	assert.Equal(t, 4, resp.Trends[6].Open, "today: new, open, pending and the 20-day-old open ticket")
 }
 
 func TestStatisticsTrends(t *testing.T) {
@@ -428,12 +505,20 @@ func TestStatisticsAgents(t *testing.T) {
 	}
 
 	viewA := get(statsToken(t, f.agentA, f.loginA, "Agent"))
-	assert.Equal(t, agentRow{AgentID: f.agentA, Assigned: 3, Closed: 1, Articles: 1}, viewA[f.agentA])
-	assert.Equal(t, agentRow{AgentID: f.agentAll, Assigned: 1, Closed: 0, Articles: 0}, viewA[f.agentAll])
+	assert.Equal(t, map[int]agentRow{
+		f.agentA:   {AgentID: f.agentA, Assigned: 3, Closed: 1, Articles: 1},
+		f.agentAll: {AgentID: f.agentAll, Assigned: 1, Closed: 0, Articles: 0},
+	}, viewA, "an agent sees only agents active on tickets in queues they can read, not the roster")
 
 	viewAll := get(statsToken(t, f.agentAll, f.loginAll, "Agent"))
-	assert.Equal(t, agentRow{AgentID: f.agentA, Assigned: 3, Closed: 1, Articles: 2}, viewAll[f.agentA])
-	assert.Equal(t, agentRow{AgentID: f.agentAll, Assigned: 3, Closed: 1, Articles: 0}, viewAll[f.agentAll])
+	assert.Equal(t, map[int]agentRow{
+		f.agentA:   {AgentID: f.agentA, Assigned: 3, Closed: 1, Articles: 2},
+		f.agentAll: {AgentID: f.agentAll, Assigned: 3, Closed: 1, Articles: 0},
+	}, viewAll)
+
+	viewAdmin := get(statsToken(t, f.agentAdmin, f.loginAdmin, "Agent"))
+	assert.Equal(t, agentRow{AgentID: f.agentNone}, viewAdmin[f.agentNone], "admins see every valid agent, also without activity")
+	assert.Equal(t, agentRow{AgentID: f.agentA, Assigned: 3, Closed: 1, Articles: 2}, viewAdmin[f.agentA])
 }
 
 func TestStatisticsQueues(t *testing.T) {

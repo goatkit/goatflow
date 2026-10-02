@@ -3,6 +3,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -17,24 +18,21 @@ var (
 	mu   sync.RWMutex
 )
 
-// Config represents the application configuration.
+// Config represents the application configuration. The database
+// connection, logging and metrics are configured by environment variables
+// (DB_*, LOG_*, METRICS_*), not by this file.
 type Config struct {
-	App          AppConfig          `mapstructure:"app"`
-	Server       ServerConfig       `mapstructure:"server"`
-	Database     DatabaseConfig     `mapstructure:"database"`
-	Valkey       ValkeyConfig       `mapstructure:"valkey"`
-	Auth         AuthConfig         `mapstructure:"auth"`
-	Email        EmailConfig        `mapstructure:"email"`
-	Storage      StorageConfig      `mapstructure:"storage"`
-	Ticket       TicketConfig       `mapstructure:"ticket"`
-	Logging      LoggingConfig      `mapstructure:"logging"`
-	Metrics      MetricsConfig      `mapstructure:"metrics"`
-	RateLimiting RateLimitingConfig `mapstructure:"rate_limiting"`
-	Features     FeaturesConfig     `mapstructure:"features"`
-	Maintenance  MaintenanceConfig  `mapstructure:"maintenance"`
-	Integrations IntegrationsConfig `mapstructure:"integrations"`
-	Runner       RunnerConfig       `mapstructure:"runner"`
-	Push         PushConfig         `mapstructure:"push"`
+	App         AppConfig         `mapstructure:"app"`
+	Server      ServerConfig      `mapstructure:"server"`
+	Valkey      ValkeyConfig      `mapstructure:"valkey"`
+	Auth        AuthConfig        `mapstructure:"auth"`
+	Email       EmailConfig       `mapstructure:"email"`
+	Storage     StorageConfig     `mapstructure:"storage"`
+	Ticket      TicketConfig      `mapstructure:"ticket"`
+	Features    FeaturesConfig    `mapstructure:"features"`
+	Maintenance MaintenanceConfig `mapstructure:"maintenance"`
+	Runner      RunnerConfig      `mapstructure:"runner"`
+	Push        PushConfig        `mapstructure:"push"`
 }
 
 type PushConfig struct {
@@ -74,23 +72,6 @@ type CORSConfig struct {
 	Origins []string `mapstructure:"origins"`
 	Methods []string `mapstructure:"methods"`
 	Headers []string `mapstructure:"headers"`
-}
-
-type DatabaseConfig struct {
-	Host            string        `mapstructure:"host"`
-	Port            int           `mapstructure:"port"`
-	Name            string        `mapstructure:"name"`
-	User            string        `mapstructure:"user"`
-	Password        string        `mapstructure:"password"`
-	SSLMode         string        `mapstructure:"ssl_mode"`
-	MaxOpenConns    int           `mapstructure:"max_open_conns"`
-	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
-	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
-	LogQueries      bool          `mapstructure:"log_queries"`
-	Migrations      struct {
-		AutoMigrate bool   `mapstructure:"auto_migrate"`
-		Path        string `mapstructure:"path"`
-	} `mapstructure:"migrations"`
 }
 
 type ValkeyConfig struct {
@@ -219,54 +200,10 @@ type TicketConfig struct {
 	} `mapstructure:"bulk_actions"`
 }
 
-type LoggingConfig struct {
-	Level  string   `mapstructure:"level"`
-	Format string   `mapstructure:"format"`
-	Output string   `mapstructure:"output"`
-	Fields []string `mapstructure:"fields"`
-	File   struct {
-		Path       string `mapstructure:"path"`
-		Filename   string `mapstructure:"filename"`
-		MaxSize    int    `mapstructure:"max_size"`
-		MaxBackups int    `mapstructure:"max_backups"`
-		MaxAge     int    `mapstructure:"max_age"`
-		Compress   bool   `mapstructure:"compress"`
-	} `mapstructure:"file"`
-}
-
-type MetricsConfig struct {
-	Enabled    bool `mapstructure:"enabled"`
-	Prometheus struct {
-		Enabled bool   `mapstructure:"enabled"`
-		Port    int    `mapstructure:"port"`
-		Path    string `mapstructure:"path"`
-	} `mapstructure:"prometheus"`
-	OpenTelemetry struct {
-		Enabled     bool    `mapstructure:"enabled"`
-		Endpoint    string  `mapstructure:"endpoint"`
-		ServiceName string  `mapstructure:"service_name"`
-		TraceRatio  float64 `mapstructure:"trace_ratio"`
-	} `mapstructure:"opentelemetry"`
-}
-
-type RateLimitingConfig struct {
-	Enabled           bool     `mapstructure:"enabled"`
-	RequestsPerMinute int      `mapstructure:"requests_per_minute"`
-	Burst             int      `mapstructure:"burst"`
-	ExcludePaths      []string `mapstructure:"exclude_paths"`
-}
-
+// FeaturesConfig holds the feature switches GoatFlow reads.
 type FeaturesConfig struct {
-	Registration            bool `mapstructure:"registration"`
-	LostPassword            bool `mapstructure:"lost_password"`
-	SocialLogin             bool `mapstructure:"social_login"`
-	TwoFactorAuth           bool `mapstructure:"two_factor_auth"`
-	APIKeys                 bool `mapstructure:"api_keys"`
-	LDAP                    bool `mapstructure:"ldap"`
-	SAML                    bool `mapstructure:"saml"`
-	KnowledgeBase           bool `mapstructure:"knowledge_base"`
-	CustomerPortal          bool `mapstructure:"customer_portal"`
-	AgentCollisionDetection bool `mapstructure:"agent_collision_detection"`
+	Registration bool `mapstructure:"registration"`
+	LostPassword bool `mapstructure:"lost_password"`
 }
 
 type MaintenanceConfig struct {
@@ -276,17 +213,6 @@ type MaintenanceConfig struct {
 	TimeNotifyUpcomingMinutes int      `mapstructure:"time_notify_upcoming_minutes"` // Minutes before maintenance to show notification
 	DefaultNotifyMessage      string   `mapstructure:"default_notify_message"`       // Default notification message
 	DefaultLoginMessage       string   `mapstructure:"default_login_message"`        // Default login page message
-}
-
-type IntegrationsConfig struct {
-	Slack struct {
-		Enabled    bool   `mapstructure:"enabled"`
-		WebhookURL string `mapstructure:"webhook_url"`
-	} `mapstructure:"slack"`
-	Teams struct {
-		Enabled    bool   `mapstructure:"enabled"`
-		WebhookURL string `mapstructure:"webhook_url"`
-	} `mapstructure:"teams"`
 }
 
 // RunnerConfig contains configuration for background task runner.
@@ -335,6 +261,7 @@ func Load(configPath string) error {
 			err = fmt.Errorf("failed to unmarshal config: %w", err)
 			return
 		}
+		cfg.App.Env = AppEnv(cfg)
 
 		// Watch for config changes
 		v.WatchConfig()
@@ -349,6 +276,7 @@ func Load(configPath string) error {
 				fmt.Printf("Failed to reload config: %v\n", err)
 				return
 			}
+			newCfg.App.Env = AppEnv(newCfg)
 
 			// Atomic swap
 			cfg = newCfg
@@ -366,14 +294,6 @@ func Get() *Config {
 	return cfg
 }
 
-// GetDSN returns the PostgreSQL connection string.
-func (c *DatabaseConfig) GetDSN() string {
-	return fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		c.Host, c.Port, c.User, c.Password, c.Name, c.SSLMode,
-	)
-}
-
 // GetValkeyAddr returns the Valkey server address.
 func (c *ValkeyConfig) GetValkeyAddr() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
@@ -386,12 +306,64 @@ func (c *ServerConfig) GetServerAddr() string {
 
 // IsProduction returns true if running in production mode.
 func (c *AppConfig) IsProduction() bool {
-	return c.Env == "production"
+	return c.Env == EnvProduction
 }
 
 // IsDevelopment returns true if running in development mode.
 func (c *AppConfig) IsDevelopment() bool {
-	return c.Env == "development"
+	return c.Env == EnvDevelopment
+}
+
+// Deployment environment names returned by AppEnv.
+const (
+	EnvProduction  = "production"
+	EnvDevelopment = "development"
+)
+
+// AppEnv is the single source of the deployment environment. The APP_ENV
+// environment variable wins over app.env from the config files (whose shipped
+// default is "development"), so APP_ENV=production can never be downgraded by
+// config. "prod" is an alias for "production". Empty means development.
+func AppEnv(c *Config) string {
+	env := os.Getenv("APP_ENV")
+	if env == "" && c != nil {
+		env = c.App.Env
+	}
+	env = strings.ToLower(strings.TrimSpace(env))
+	switch env {
+	case "", "dev":
+		return EnvDevelopment
+	case "prod":
+		return EnvProduction
+	}
+	return env
+}
+
+// IsProductionEnv reports whether AppEnv(c) is production.
+func IsProductionEnv(c *Config) bool {
+	return AppEnv(c) == EnvProduction
+}
+
+// JWTPlaceholderSecret is a well-known value that must never sign tokens.
+// Older config/default.yaml files shipped it as auth.jwt.secret.
+const JWTPlaceholderSecret = "development-placeholder-not-for-production"
+
+// JWTSecret resolves the token signing secret: JWT_SECRET, then auth.jwt.secret
+// (settable via GOATFLOW_AUTH_JWT_SECRET or config.yaml). Known placeholder
+// values resolve to "" so callers treat them as unset.
+func JWTSecret(c *Config) string {
+	secret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	if secret == "" && c != nil {
+		secret = strings.TrimSpace(c.Auth.JWT.Secret)
+	}
+	if isPlaceholderJWTSecret(secret) {
+		return ""
+	}
+	return secret
+}
+
+func isPlaceholderJWTSecret(s string) bool {
+	return s == JWTPlaceholderSecret || s == "CHANGE_THIS_SECRET_KEY_BEFORE_USE"
 }
 
 // LoadFromFile loads configuration from a specific file (useful for testing).
@@ -411,6 +383,7 @@ func LoadFromFile(configFile string) error {
 	if err := v.Unmarshal(cfg); err != nil {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
+	cfg.App.Env = AppEnv(cfg)
 
 	return nil
 }

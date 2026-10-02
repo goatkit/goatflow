@@ -103,17 +103,66 @@ Admin pages added by installed plugins appear in this section.
 | Encryption key for stored secrets | `GOATFLOW_SECURE_KEY` (64 hex characters). Use the same value for the backend and the runner. | [WEBHOOKS.md](../WEBHOOKS.md) |
 | Health checks, metrics, logging, shutdown | `METRICS_*`, `LOG_*`, `DRAIN_TIMEOUT` | [OBSERVABILITY.md](../OBSERVABILITY.md) |
 
+## Ticket notifications
+
+Admin -> Ticket Notifications (`/admin/notification-events`) holds OTRS-style notification
+rules. The runner checks new tickets, articles and ticket history every 10 seconds and,
+for each valid rule subscribed to the event, sends one email per recipient through
+`mail_queue`. Each event is evaluated once, even with several runners. Rules apply only to
+events after the runner first started; older tickets are not notified retroactively.
+
+**Events.** TicketCreate, ticket title/queue/type/customer/pending time/lock/state/owner/
+responsible/priority updates, TicketMerge (sent for the ticket merged away), the nine
+Escalation*Start/NotifyBefore/Stop events written by the escalation check, and ArticleCreate.
+Rules imported from OTRS may also use NotificationNewTicket, NotificationAddNote,
+NotificationMove, NotificationOwnerUpdate, NotificationResponsibleUpdate,
+NotificationEscalation and NotificationEscalationNotifyBefore; the two escalation ones fire
+once per ticket and escalation check. An event fires only when GoatFlow writes the matching
+`ticket_history` row; changes made by the Generic Agent write none today.
+
+**Filters.** Queue, state, priority and type in the form. Rules imported from OTRS can also
+filter on ServiceID, SLAID, LockID, OwnerID, ResponsibleID, CustomerID, CustomerUserID and
+the article filters ArticleSenderTypeID, ArticleCommunicationChannelID,
+ArticleIsVisibleForCustomer, ArticleSubjectMatch and ArticleBodyMatch (case-insensitive
+substring); a rule with an article filter only fires for events that carry an article. The
+edit form keeps filters it does not show. A rule with a filter GoatFlow cannot apply (for
+example a dynamic field) is skipped and logged by the runner.
+
+**Recipients.** Ticket owner, responsible, creator, watchers, agents with the queue in My
+Queues, all agents with read or write access to the queue, chosen agents, members of chosen
+groups (read access) or roles, the ticket's customer user, and extra addresses. Agents must
+be valid, have an email address and read access to the ticket's queue. The agent who caused
+the event is not notified about it (OTRS `AgentSelfNotifyOnAction` off). Each address gets
+one email per rule and event. OTRS options `SkipRecipients`, `OncePerDay` and `Transports`
+(email only) are honoured. GoatFlow has no per-agent notification opt-out screen.
+
+**Message.** The recipient's language (user preference, else the system default, else
+English, else any stored language) picks the message. Tags: `<OTRS_TICKET_*>` (TicketID,
+TicketNumber, Title, Queue, State, StateType, Priority, Type, Lock, Service, SLA, Owner,
+Responsible, CustomerID, CustomerUserID, Created, Changed and the matching *ID fields),
+`<OTRS_OWNER_*>`, `<OTRS_RESPONSIBLE_*>`, `<OTRS_CURRENT_*>` (the acting agent),
+`<OTRS_NOTIFICATION_RECIPIENT_*>` and `<OTRS_CUSTOMER_DATA_*>` with UserFirstname,
+UserLastname, UserFullname, UserLogin, UserEmail, UserTitle; `<OTRS_CUSTOMER_User*>`,
+`<OTRS_CUSTOMER_REALNAME>`; `<OTRS_CUSTOMER_SUBJECT>`, `<OTRS_CUSTOMER_BODY[n]>`,
+`<OTRS_CUSTOMER_EMAIL[n]>` (quoted) and the same `AGENT_` tags for the newest customer or
+agent article; `<OTRS_EVENT>`. Other tags become `-`. Values are HTML-escaped in text/html
+messages. Mail is sent from `email.from` with `Auto-Submitted: auto-generated`, without
+attachments or signing. Every email adds a `SendAgentNotification` or
+`SendCustomerNotification` entry to the ticket history.
+
 ## The background runner
 
 Some work does not happen in the web server. It runs in a separate process started
-with `goats -mode runner`. The runner does three things:
+with `goats -mode runner`. The runner does four things:
 
 - sends outgoing email from `mail_queue` (for example ticket replies and password-reset emails)
 - cleans up expired sessions
 - delivers webhooks
+- evaluates ticket notification rules and queues their emails (see Ticket notifications above)
 
-Docker Compose and the TrueNAS app run a runner. The Helm chart does not include one
-today. Without a runner, outgoing email stays in the queue and webhooks are not delivered.
+Docker Compose, the TrueNAS app and the Helm chart (`<fullname>-runner` Deployment) run a
+runner. Without a runner, outgoing email stays in the queue, ticket notifications are not
+evaluated and webhooks are not delivered.
 Inbound mail (Admin -> Inbound Mail Accounts) is fetched by the web server, not the runner.
 
 ## Moving from OTRS or Znuny

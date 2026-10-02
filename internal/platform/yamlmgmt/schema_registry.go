@@ -105,10 +105,18 @@ func (sr *SchemaRegistry) Validate(doc *YAMLDocument) (*ValidationResult, error)
 	return validationResult, nil
 }
 
+// mustRegisterSchema registers a built-in schema; a failure is a programming
+// error in the schema literal, so it panics instead of silently dropping it.
+func (sr *SchemaRegistry) mustRegisterSchema(kind YAMLKind, schema *Schema) {
+	if err := sr.RegisterSchema(kind, schema); err != nil {
+		panic(fmt.Sprintf("yamlmgmt: built-in %s schema: %v", kind, err))
+	}
+}
+
 // registerDefaultSchemas registers built-in schemas.
 func (sr *SchemaRegistry) registerDefaultSchemas() {
 	// Route schema
-	sr.RegisterSchema(KindRoute, &Schema{
+	sr.mustRegisterSchema(KindRoute, &Schema{
 		Schema: "http://json-schema.org/draft-07/schema#",
 		Title:  "Route Configuration",
 		Type:   "object",
@@ -193,7 +201,7 @@ func (sr *SchemaRegistry) registerDefaultSchemas() {
 	})
 
 	// Config schema
-	sr.RegisterSchema(KindConfig, &Schema{
+	sr.mustRegisterSchema(KindConfig, &Schema{
 		Schema: "http://json-schema.org/draft-07/schema#",
 		Title:  "System Configuration",
 		Type:   "object",
@@ -249,7 +257,7 @@ func (sr *SchemaRegistry) registerDefaultSchemas() {
 	})
 
 	// Dashboard schema
-	sr.RegisterSchema(KindDashboard, &Schema{
+	sr.mustRegisterSchema(KindDashboard, &Schema{
 		Schema: "http://json-schema.org/draft-07/schema#",
 		Title:  "Dashboard Configuration",
 		Type:   "object",

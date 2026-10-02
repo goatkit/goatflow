@@ -308,7 +308,7 @@ Avoid `FormData` for checkbox matrices when the backend expects `application/x-w
 | Run SQL from stdin | `echo "SELECT * FROM users;" \| make db-shell` |
 | Single query | `make db-query QUERY="SELECT COUNT(*) FROM ticket"` |
 | Apply all migrations | `make db-migrate` (runs `./migrate ... up` in the backend container) |
-| Apply only migrations 000001–000003 | `make db-migrate-schema-only` (schema, minimal data, customer portal sysconfig) |
+| Recreate the dev database from migrations | `make db-init` (drops all dev data) |
 | Fix sequences | `make db-fix-sequences` (PostgreSQL only, after data imports; `make db-migrate` runs it for you) |
 | Test database shell | `make db-shell-test` |
 

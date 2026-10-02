@@ -16,8 +16,9 @@ func main() {
 	}
 	// Fallback: build JSON and print to stdout (CI can redirect)
 	if b, err := api.BuildRoutesManifest(); err == nil {
-		os.Stdout.Write(b)
-		os.Stdout.Write([]byte("\n"))
+		if _, err := os.Stdout.Write(append(b, '\n')); err != nil {
+			log.Fatalf("failed to write routes manifest to stdout: %v", err)
+		}
 		log.Println("(stdout fallback) routes manifest emitted")
 		return
 	} else {

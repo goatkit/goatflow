@@ -65,19 +65,19 @@ app.kubernetes.io/component: backend
 {{- end }}
 
 {{/*
-Frontend labels
+Runner labels
 */}}
-{{- define "goatflow.frontend.labels" -}}
+{{- define "goatflow.runner.labels" -}}
 {{ include "goatflow.labels" . }}
-app.kubernetes.io/component: frontend
+app.kubernetes.io/component: runner
 {{- end }}
 
 {{/*
-Frontend selector labels
+Runner selector labels
 */}}
-{{- define "goatflow.frontend.selectorLabels" -}}
+{{- define "goatflow.runner.selectorLabels" -}}
 {{ include "goatflow.selectorLabels" . }}
-app.kubernetes.io/component: frontend
+app.kubernetes.io/component: runner
 {{- end }}
 
 {{/*
@@ -108,21 +108,11 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
-Return the appropriate storage class
-*/}}
-{{- define "goatflow.storageClass" -}}
-{{- $storageClass := .Values.global.storageClass -}}
-{{- if $storageClass -}}
-storageClassName: {{ $storageClass | quote }}
-{{- end -}}
-{{- end }}
-
-{{/*
 Database host
 */}}
 {{- define "goatflow.database.host" -}}
 {{- if .Values.database.external.enabled }}
-{{- .Values.database.external.host }}
+{{- required "database.external.host is required when database.external.enabled is true" .Values.database.external.host }}
 {{- else }}
 {{- printf "%s-database" (include "goatflow.fullname" .) }}
 {{- end }}
@@ -155,24 +145,11 @@ Database name
 {{- end }}
 
 {{/*
-Database user
-*/}}
-{{- define "goatflow.database.user" -}}
-{{- if .Values.database.external.enabled }}
-{{- "external" }}
-{{- else if eq .Values.database.type "mysql" }}
-{{- .Values.database.mysql.user }}
-{{- else }}
-{{- .Values.database.postgresql.user }}
-{{- end }}
-{{- end }}
-
-{{/*
 Database secret name
 */}}
 {{- define "goatflow.database.secretName" -}}
 {{- if .Values.database.external.enabled }}
-{{- .Values.database.external.existingSecret | default (printf "%s-database-external" (include "goatflow.fullname" .)) }}
+{{- required "database.external.existingSecret is required when database.external.enabled is true" .Values.database.external.existingSecret }}
 {{- else if eq .Values.database.type "mysql" }}
 {{- .Values.database.mysql.existingSecret | default (printf "%s-database" (include "goatflow.fullname" .)) }}
 {{- else }}
@@ -181,13 +158,49 @@ Database secret name
 {{- end }}
 
 {{/*
+DB_DRIVER value GoatFlow reads (mysql or postgres)
+*/}}
+{{- define "goatflow.database.driver" -}}
+{{- if eq .Values.database.type "mysql" }}
+{{- "mysql" }}
+{{- else if eq .Values.database.type "postgresql" }}
+{{- "postgres" }}
+{{- else }}
+{{- fail (printf "database.type must be mysql or postgresql, got %q" .Values.database.type) }}
+{{- end }}
+{{- end }}
+
+{{/*
+Prefix of the driver-scoped connection variables (internal/platform/dbconfig)
+*/}}
+{{- define "goatflow.database.envPrefix" -}}
+{{- eq .Values.database.type "mysql" | ternary "DB_MYSQL_" "DB_PGSQL_" }}
+{{- end }}
+
+{{/*
+Full name of the bundled Valkey subchart (mirrors valkey.fullname)
+*/}}
+{{- define "goatflow.valkey.fullname" -}}
+{{- if .Values.valkey.fullnameOverride }}
+{{- .Values.valkey.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default "valkey" .Values.valkey.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
 Valkey/Redis host
 */}}
 {{- define "goatflow.valkey.host" -}}
 {{- if .Values.externalValkey.enabled }}
-{{- .Values.externalValkey.host }}
+{{- required "externalValkey.host is required when externalValkey.enabled is true" .Values.externalValkey.host }}
 {{- else if .Values.valkey.enabled }}
-{{- printf "%s-valkey-master" .Release.Name }}
+{{- include "goatflow.valkey.fullname" . }}
 {{- end }}
 {{- end }}
 
@@ -203,15 +216,27 @@ Valkey/Redis port
 {{- end }}
 
 {{/*
-Valkey secret name
+Valkey password source as "<secret name>/<key>"; empty when no password is used.
+External: externalValkey.existingSecret, or the chart Secret holding externalValkey.password.
+Bundled with auth: the subchart's user Secret for the "default" ACL user.
 */}}
-{{- define "goatflow.valkey.secretName" -}}
+{{- define "goatflow.valkey.passwordRef" -}}
 {{- if .Values.externalValkey.enabled }}
-{{- .Values.externalValkey.existingSecret | default (printf "%s-valkey-external" (include "goatflow.fullname" .)) }}
-{{- else if .Values.valkey.auth.existingSecret }}
-{{- .Values.valkey.auth.existingSecret }}
+{{- if .Values.externalValkey.existingSecret }}
+{{- printf "%s/%s" .Values.externalValkey.existingSecret (.Values.externalValkey.existingSecretPasswordKey | default "valkey-password") }}
+{{- else if .Values.externalValkey.password }}
+{{- printf "%s-valkey-external/valkey-password" (include "goatflow.fullname" .) }}
+{{- end }}
+{{- else if and .Values.valkey.enabled .Values.valkey.auth.enabled }}
+{{- $default := index (.Values.valkey.auth.aclUsers | default dict) "default" }}
+{{- if not $default }}
+{{- fail "valkey.auth.enabled needs valkey.auth.aclUsers.default: GoatFlow logs in as the default user (aclConfig alone is not supported)" }}
+{{- end }}
+{{- if .Values.valkey.auth.usersExistingSecret }}
+{{- printf "%s/%s" .Values.valkey.auth.usersExistingSecret ($default.passwordKey | default "default") }}
 {{- else }}
-{{- printf "%s-valkey" .Release.Name }}
+{{- printf "%s-auth/default-password" (include "goatflow.valkey.fullname" .) }}
+{{- end }}
 {{- end }}
 {{- end }}
 
@@ -219,7 +244,25 @@ Valkey secret name
 App secret name
 */}}
 {{- define "goatflow.appSecretName" -}}
-{{- printf "%s-app" (include "goatflow.fullname" .) }}
+{{- .Values.secrets.existingSecret | default (printf "%s-app" (include "goatflow.fullname" .)) }}
+{{- end }}
+
+{{/*
+Secret value that survives upgrades: the user-supplied value, else the value stored in
+the live Secret (lookup), else a newly generated one. Returns the base64-encoded value.
+Usage: include "goatflow.secretValue" (dict "ctx" . "secret" <name> "key" <key> "value" <user value> "generate" <fresh value>)
+*/}}
+{{- define "goatflow.secretValue" -}}
+{{- if .value }}
+{{- .value | toString | b64enc }}
+{{- else }}
+{{- $existing := lookup "v1" "Secret" .ctx.Release.Namespace .secret }}
+{{- if and $existing $existing.data (hasKey $existing.data .key) }}
+{{- index $existing.data .key }}
+{{- else }}
+{{- .generate | b64enc }}
+{{- end }}
+{{- end }}
 {{- end }}
 
 {{/*
@@ -238,36 +281,142 @@ Backend image
 {{- end }}
 
 {{/*
-Check if we should create database
+Runner image
 */}}
-{{- define "goatflow.database.create" -}}
-{{- if and (not .Values.database.external.enabled) (or (eq .Values.database.type "mysql") (eq .Values.database.type "postgresql")) }}
-{{- true }}
+{{- define "goatflow.runner.image" -}}
+{{- $tag := .Values.runner.image.tag | default .Chart.AppVersion -}}
+{{- printf "%s:%s" .Values.runner.image.repository $tag }}
+{{- end }}
+
+{{/*
+Wait for the bundled database before GoatFlow starts: its headless Service has no DNS
+record until the database pod is Ready, and GoatFlow connects only once at start.
+*/}}
+{{- define "goatflow.waitForDatabase" -}}
+{{- if not .Values.database.external.enabled }}
+initContainers:
+  - name: wait-for-database
+    image: {{ printf "%s:%s" .Values.waitForDatabase.image.repository .Values.waitForDatabase.image.tag | quote }}
+    imagePullPolicy: {{ .Values.waitForDatabase.image.pullPolicy }}
+    command:
+      - sh
+      - -c
+      - until nc -z -w 2 {{ include "goatflow.database.host" . }} {{ include "goatflow.database.port" . }}; do echo "waiting for database"; sleep 2; done
+    securityContext:
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        cpu: 100m
+        memory: 32Mi
 {{- end }}
 {{- end }}
 
 {{/*
-Common annotations - merges global.commonAnnotations with component-specific annotations
-Usage: {{ include "goatflow.annotations" (dict "annotations" .Values.backend.podAnnotations "context" .) }}
+Environment shared by the backend and the runner. Names are the ones GoatFlow reads:
+internal/platform/dbconfig (DB_DRIVER + DB_MYSQL_* / DB_PGSQL_*), config/default.yaml keys
+through the GOATFLOW_ prefix, and plain os.Getenv names.
 */}}
-{{- define "goatflow.annotations" -}}
-{{- $common := .context.Values.global.commonAnnotations | default dict -}}
-{{- $specific := .annotations | default dict -}}
-{{- $merged := merge $specific $common -}}
-{{- if $merged }}
-{{- toYaml $merged }}
+{{- define "goatflow.commonEnv" -}}
+{{- $prefix := include "goatflow.database.envPrefix" . }}
+# Database: DB_DRIVER selects the DB_MYSQL_* or DB_PGSQL_* set
+- name: DB_DRIVER
+  value: {{ include "goatflow.database.driver" . | quote }}
+- name: {{ $prefix }}HOST
+  value: {{ include "goatflow.database.host" . | quote }}
+- name: {{ $prefix }}PORT
+  value: {{ include "goatflow.database.port" . | quote }}
+- name: {{ $prefix }}NAME
+  value: {{ include "goatflow.database.name" . | quote }}
+- name: {{ $prefix }}USER
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "goatflow.database.secretName" . }}
+      key: {{ eq .Values.database.type "mysql" | ternary "mysql-user" "postgres-user" }}
+- name: {{ $prefix }}PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "goatflow.database.secretName" . }}
+      key: {{ eq .Values.database.type "mysql" | ternary "mysql-password" "postgres-password" }}
+{{- if or .Values.valkey.enabled .Values.externalValkey.enabled }}
+# Cache (Valkey/Redis)
+- name: GOATFLOW_VALKEY_HOST
+  value: {{ include "goatflow.valkey.host" . | quote }}
+- name: GOATFLOW_VALKEY_PORT
+  value: {{ include "goatflow.valkey.port" . | quote }}
+{{- with include "goatflow.valkey.passwordRef" . }}
+{{- $ref := splitList "/" . }}
+- name: GOATFLOW_VALKEY_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ index $ref 0 }}
+      key: {{ index $ref 1 }}
 {{- end }}
 {{- end }}
-
-{{/*
-Common labels - merges global.commonLabels with standard labels and component-specific labels
-Usage: {{ include "goatflow.mergedLabels" (dict "labels" .Values.backend.podLabels "context" .) }}
-*/}}
-{{- define "goatflow.mergedLabels" -}}
-{{- $common := .context.Values.global.commonLabels | default dict -}}
-{{- $specific := .labels | default dict -}}
-{{- $merged := merge $specific $common -}}
-{{- if $merged }}
-{{- toYaml $merged }}
+# Application
+- name: APP_ENV
+  value: "production"
+- name: LOG_LEVEL
+  value: {{ .Values.config.logLevel | quote }}
+- name: GOATFLOW_AUTH_SESSION_SESSIONMAXTIME
+  value: {{ .Values.config.session.lifetime | quote }}
+{{- with .Values.config.baseUrl }}
+- name: BASE_URL
+  value: {{ . | quote }}
+{{- end }}
+- name: STORAGE_TYPE
+  value: {{ .Values.config.storage.type | quote }}
+- name: STORAGE_PATH
+  value: {{ .Values.config.storage.path | quote }}
+# JWT signing key and the key that encrypts stored secrets (webhook signing secrets,
+# plugin secure settings); the backend and the runner must share both
+- name: JWT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "goatflow.appSecretName" . }}
+      key: app-secret-key
+- name: GOATFLOW_SECURE_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "goatflow.appSecretName" . }}
+      key: secure-key
+# Outgoing email
+{{- $email := .Values.config.email }}
+- name: GOATFLOW_EMAIL_ENABLED
+  value: {{ $email.enabled | quote }}
+{{- if $email.enabled }}
+- name: GOATFLOW_EMAIL_FROM
+  value: {{ $email.from | quote }}
+{{- with $email.fromName }}
+- name: GOATFLOW_EMAIL_FROM_NAME
+  value: {{ . | quote }}
+{{- end }}
+- name: GOATFLOW_EMAIL_SMTP_HOST
+  value: {{ required "config.email.smtp.host is required when config.email.enabled is true" $email.smtp.host | quote }}
+- name: GOATFLOW_EMAIL_SMTP_PORT
+  value: {{ $email.smtp.port | quote }}
+- name: GOATFLOW_EMAIL_SMTP_TLS
+  value: {{ $email.smtp.startTLS | quote }}
+- name: GOATFLOW_EMAIL_SMTP_SKIP_VERIFY
+  value: {{ $email.smtp.skipVerify | quote }}
+- name: GOATFLOW_EMAIL_SMTP_AUTH_TYPE
+  value: {{ $email.smtp.authType | quote }}
+{{- with $email.smtp.username }}
+- name: GOATFLOW_EMAIL_SMTP_USER
+  value: {{ . | quote }}
+{{- end }}
+{{- if or $email.smtp.password $email.smtp.existingSecret }}
+- name: GOATFLOW_EMAIL_SMTP_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ $email.smtp.existingSecret | default (include "goatflow.appSecretName" .) }}
+      key: {{ ternary $email.smtp.existingSecretKey "smtp-password" (not (empty $email.smtp.existingSecret)) }}
+{{- end }}
 {{- end }}
 {{- end }}

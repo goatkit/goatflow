@@ -56,7 +56,7 @@ func init() {
 	synthesizeCmd.Flags().BoolVar(&rotateSecretsFlag, "rotate-secrets", false, "Rotate only secret values, keeping other settings")
 	synthesizeCmd.Flags().StringVar(&outputPathFlag, "output", ".env", "Output path for the generated .env file")
 	synthesizeCmd.Flags().BoolVar(&forceFlag, "force", false, "Overwrite existing .env without prompting")
-	synthesizeCmd.Flags().BoolVar(&testDataOnlyFlag, "test-data-only", false, "Generate only test data SQL and CSV files")
+	synthesizeCmd.Flags().BoolVar(&testDataOnlyFlag, "test-data-only", false, "Generate only the development test data SQL (schema/seed/generated_test_data.postgres.sql)")
 
 	rootCmd.AddCommand(synthesizeCmd)
 	rootCmd.AddCommand(versionCmd)
@@ -91,8 +91,8 @@ func init() {
 	resetUserCmd.Flags().StringVar(&usernameFlag, "username", "", "Username to reset (required)")
 	resetUserCmd.Flags().StringVar(&passwordFlag, "password", "", "New password (required)")
 	resetUserCmd.Flags().BoolVar(&enableFlag, "enable", false, "Enable the user account (set valid_id = 1)")
-	resetUserCmd.MarkFlagRequired("username")
-	resetUserCmd.MarkFlagRequired("password")
+	cobra.CheckErr(resetUserCmd.MarkFlagRequired("username"))
+	cobra.CheckErr(resetUserCmd.MarkFlagRequired("password"))
 }
 
 func runSynthesize(cmd *cobra.Command, args []string) error {
@@ -210,8 +210,7 @@ echo "✅ No secrets detected"
 exit 0
 `
 
-	//nolint:gosec // G306 git hook must be executable
-	if err := os.WriteFile(preCommitPath, []byte(preCommitContent), 0750); err != nil {
+	if err := os.WriteFile(preCommitPath, []byte(preCommitContent), 0750); err != nil { // #nosec G306 -- git hook must be executable by the repo owner/group
 		return fmt.Errorf("failed to write pre-commit hook: %w", err)
 	}
 
@@ -231,12 +230,15 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 	// Sync the resolver: dbconfig.Env() keys off DB_DRIVER, so make sure it
 	// reflects the normalized driver (DB_ENGINE fallback included).
 	if os.Getenv("DB_DRIVER") == "" {
-		os.Setenv("DB_DRIVER", dbDriver)
+		if err := os.Setenv("DB_DRIVER", dbDriver); err != nil {
+			return fmt.Errorf("failed to set DB_DRIVER: %w", err)
+		}
 	}
+	dbDriver = dbconfig.NormalizeDriver(dbDriver)
 	dbHost := dbconfig.Env("HOST")
 	if dbHost == "" {
 		// Prefer service names inside compose network
-		if dbDriver == "postgres" || dbDriver == "postgresql" {
+		if dbDriver == dbconfig.DriverPostgres {
 			dbHost = "postgres"
 		} else {
 			dbHost = "mariadb"
@@ -244,7 +246,7 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 	}
 	dbPort := dbconfig.Env("PORT")
 	if dbPort == "" {
-		if dbDriver == "postgres" || dbDriver == "postgresql" {
+		if dbDriver == dbconfig.DriverPostgres {
 			dbPort = "5432"
 		} else {
 			dbPort = "3306"
@@ -256,7 +258,7 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 	}
 	dbUser := dbconfig.Env("USER")
 	if dbUser == "" {
-		if dbDriver == "postgres" || dbDriver == "postgresql" {
+		if dbDriver == dbconfig.DriverPostgres {
 			dbUser = "goatflow_user"
 		} else {
 			dbUser = "otrs"
@@ -276,7 +278,7 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 		dsn        string
 	)
 	switch dbDriver {
-	case "postgres", "postgresql":
+	case dbconfig.DriverPostgres:
 		driverName = "postgres"
 		dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 			dbHost, dbPort, dbUser, dbPassword, dbName)

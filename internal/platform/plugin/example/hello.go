@@ -157,7 +157,9 @@ func (p *HelloPlugin) handleHello(ctx context.Context, args json.RawMessage) (js
 		Name string `json:"name"`
 	}
 	if len(args) > 0 {
-		json.Unmarshal(args, &req)
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, fmt.Errorf("invalid hello args: %w", err)
+		}
 	}
 
 	name := req.Name

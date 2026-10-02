@@ -78,6 +78,8 @@ func gk_call(fnPtr, fnLen, argsPtr, argsLen uint32) uint64 {
 		result = testLog()
 	case "test_clock":
 		result = testClock()
+	case "host":
+		result = hostPassthrough(readString(argsPtr, argsLen))
 	case "__health_ping__":
 		result = healthPing()
 	default:
@@ -207,6 +209,24 @@ func runTests() string {
 
 	data, _ := json.Marshal(map[string]any{"results": results})
 	return string(data)
+}
+
+// hostPassthrough makes the host call named in args ({"fn": ..., "args": {...}})
+// and returns the host's raw answer, or {"host_error":true} when the host
+// call failed (host_call returns no result on error).
+func hostPassthrough(args string) string {
+	var req struct {
+		Fn   string          `json:"fn"`
+		Args json.RawMessage `json:"args"`
+	}
+	if err := json.Unmarshal([]byte(args), &req); err != nil {
+		return `{"host_error":true}`
+	}
+	out := callHost(req.Fn, string(req.Args))
+	if out == "" {
+		return `{"host_error":true}`
+	}
+	return out
 }
 
 func main() {}

@@ -1,6 +1,9 @@
 package convert
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 func TestToInt(t *testing.T) {
 	tests := []struct {
@@ -19,6 +22,9 @@ func TestToInt(t *testing.T) {
 		{"uint16", uint16(42), 0, 42},
 		{"uint32", uint32(42), 0, 42},
 		{"uint64", uint64(42), 0, 42},
+		{"uint above MaxInt", uint(math.MaxUint), 7, 7},
+		{"uint64 above MaxInt", uint64(math.MaxUint64), 7, 7},
+		{"uint64 MaxInt", uint64(math.MaxInt), 7, math.MaxInt},
 		{"float32", float32(42.9), 0, 42},
 		{"float64", float64(42.9), 0, 42},
 		{"string valid", "42", 0, 42},

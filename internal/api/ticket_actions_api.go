@@ -15,20 +15,8 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/lookups"
 )
 
-// HandleCloseTicketAPI handles ticket closure via API.
-//
-//	@Summary		Close ticket
-//	@Description	Close a ticket with a specific close state
-//	@Tags			Ticket Actions
-//	@Accept			json
-//	@Produce		json
-//	@Param			id		path		int		true	"Ticket ID"
-//	@Param			close	body		object	false	"Close data (state_id, note)"
-//	@Success		200		{object}	map[string]interface{}	"Ticket closed"
-//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
-//	@Failure		404		{object}	map[string]interface{}	"Ticket not found"
-//	@Security		BearerAuth
-//	@Router			/tickets/{id}/close [post]
+// HandleCloseTicketAPI handles ticket closure via API. No production route
+// serves it.
 func HandleCloseTicketAPI(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {
@@ -429,21 +417,8 @@ func HandleReopenTicketAPI(c *gin.Context) {
 	})
 }
 
-// HandleAssignTicketAPI handles ticket assignment via API.
-//
-//	@Summary		Assign ticket
-//	@Description	Assign a ticket to an agent
-//	@Tags			Ticket Actions
-//	@Accept			json
-//	@Produce		json
-//	@Param			id		path		int		true	"Ticket ID"
-//	@Param			assign	body		object	true	"Assignment data (user_id)"
-//	@Success		200		{object}	map[string]interface{}	"Ticket assigned"
-//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
-//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
-//	@Failure		404		{object}	map[string]interface{}	"Ticket not found"
-//	@Security		BearerAuth
-//	@Router			/tickets/{id}/assign [post]
+// HandleAssignTicketAPI handles ticket assignment via API. No production route
+// serves it.
 func HandleAssignTicketAPI(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {

@@ -111,10 +111,6 @@ This document lists all default data that is included in GoatFlow migrations to 
 - Normal, ParentChild, DependsOn, RelevantTo
 - AlternativeTo, ConnectedTo, DuplicateOf
 
-**Notification Events (16)**
-- Complete set of ticket and article notification triggers
-- Includes state changes, owner updates, escalations, etc.
-
 ## Tables Without Defaults
 
 These tables are populated dynamically during system use:
@@ -123,6 +119,8 @@ These tables are populated dynamically during system use:
 - customer_user (no default customer users)
 - ticket (no default tickets)
 - article (no default articles)
+- notification_event, notification_event_item, notification_event_message (no default
+  ticket notifications: create them in Admin -> Ticket Notifications or import them from OTRS)
 
 ## OTRS Compatibility Notes
 

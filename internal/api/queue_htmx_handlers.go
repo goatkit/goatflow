@@ -43,19 +43,7 @@ func handleQueues(c *gin.Context) {
 	searchLower := strings.ToLower(search)
 
 	// Get user ID and check if admin
-	userID := uint(0)
-	if val, exists := c.Get("user_id"); exists {
-		switch v := val.(type) {
-		case uint:
-			userID = v
-		case int:
-			userID = uint(v)
-		case int64:
-			userID = uint(v)
-		case uint64:
-			userID = uint(v)
-		}
-	}
+	userID := GetUserIDFromCtxUint(c, 0)
 
 	// Check if user is admin (admins see all queues)
 	isAdmin := false

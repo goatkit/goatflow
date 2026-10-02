@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -30,17 +31,6 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/repository"
 )
-
-// pluginContextWithLanguage adds the request language to the context for i18n support.
-func pluginContextWithLanguage(c *gin.Context) context.Context {
-	ctx := c.Request.Context()
-	if lang, exists := c.Get(middleware.LanguageContextKey); exists {
-		if langStr, ok := lang.(string); ok {
-			ctx = context.WithValue(ctx, plugin.PluginLanguageKey, langStr)
-		}
-	}
-	return ctx
-}
 
 // pluginManager is the global plugin manager instance.
 // Set via SetPluginManager during app initialization.
@@ -131,32 +121,13 @@ func HandlePluginCall(c *gin.Context) {
 	pluginName := c.Param("name")
 	fnName := c.Param("fn")
 
-	// The request body (a JSON object, optional) carries the function args.
-	raw, err := io.ReadAll(io.LimitReader(c.Request.Body, maxPluginBodySize+1))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
-		return
-	}
-	if int64(len(raw)) > maxPluginBodySize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "plugin request body too large"})
-		return
-	}
-	args := make(map[string]any)
-	if len(bytes.TrimSpace(raw)) > 0 {
-		if err := json.Unmarshal(raw, &args); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "request body must be a JSON object"})
-			return
-		}
-	}
-	stripPluginEnvelope(args)
-	addPluginEnvelope(c, args, pluginName)
-	argsJSON, err := json.Marshal(args)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	argsJSON, status, msg := pluginJSONBodyArgs(c, pluginName)
+	if argsJSON == nil {
+		c.JSON(status, gin.H{"error": msg})
 		return
 	}
 
-	result, err := pluginManager.Call(pluginContextWithLanguage(c), pluginName, fnName, argsJSON)
+	result, err := pluginManager.Call(c.Request.Context(), pluginName, fnName, argsJSON)
 	if err != nil {
 		writePluginCallError(c, err, http.StatusBadRequest)
 		return
@@ -164,6 +135,33 @@ func HandlePluginCall(c *gin.Context) {
 
 	// Return raw JSON result
 	c.Data(http.StatusOK, "application/json", result)
+}
+
+// pluginJSONBodyArgs builds the args of a plugin call whose request body is
+// the function's args as an optional JSON object: the body's keys minus any
+// client-supplied envelope key, plus the host envelope (caller identity,
+// language, organisation). For an unreadable or non-object body it returns
+// nil args with the HTTP status and message to answer with.
+func pluginJSONBodyArgs(c *gin.Context, pluginName string) (json.RawMessage, int, string) {
+	raw, err := io.ReadAll(io.LimitReader(c.Request.Body, maxPluginBodySize+1))
+	if err != nil {
+		return nil, http.StatusBadRequest, "failed to read request body"
+	}
+	if int64(len(raw)) > maxPluginBodySize {
+		return nil, http.StatusRequestEntityTooLarge, "plugin request body too large"
+	}
+	args := make(map[string]any)
+	if len(bytes.TrimSpace(raw)) > 0 {
+		if err := json.Unmarshal(raw, &args); err != nil {
+			return nil, http.StatusBadRequest, "request body must be a JSON object"
+		}
+	}
+	setPluginEnvelope(c, args, pluginName)
+	argsJSON, err := json.Marshal(args)
+	if err != nil {
+		return nil, http.StatusBadRequest, err.Error()
+	}
+	return argsJSON, 0, ""
 }
 
 // writePluginCallError maps a plugin manager Call error to an HTTP response:
@@ -337,10 +335,9 @@ func HandlePluginWidget(c *gin.Context) {
 		return
 	}
 
-	// Call the widget handler with request context (org, user, etc.)
-	ctx := pluginContextWithLanguage(c)
+	// Call the widget handler; the envelope carries the caller (user, org, language).
 	widgetArgs := buildPluginArgs(c, pluginName)
-	result, err := pluginManager.Call(ctx, pluginName, widgetHandler, widgetArgs)
+	result, err := pluginManager.Call(c.Request.Context(), pluginName, widgetHandler, widgetArgs)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Widget error: %v", err)
 		return
@@ -367,16 +364,19 @@ func HandlePluginWidget(c *gin.Context) {
 
 // GetPluginWidgets returns rendered widgets for a dashboard location.
 // Used by dashboard handlers to include plugin widgets.
-// Pass a gin.Context to enable i18n and RBAC support in widgets.
+// Pass a gin.Context so each widget call carries the caller's envelope
+// (identity, organisation, language) for i18n, RBAC and org scoping.
 func GetPluginWidgets(ctx context.Context, location string, ginCtx ...*gin.Context) []PluginWidgetData {
 	if pluginManager == nil {
 		log.Printf("🔌 GetPluginWidgets: pluginManager is nil!")
 		return nil
 	}
 
-	widgetArgs := []byte("{}")
-	if len(ginCtx) > 0 && ginCtx[0] != nil {
-		widgetArgs = buildPluginArgs(ginCtx[0])
+	widgetArgs := func(pluginName string) []byte {
+		if len(ginCtx) > 0 && ginCtx[0] != nil {
+			return buildPluginArgs(ginCtx[0], pluginName)
+		}
+		return []byte("{}")
 	}
 
 	// Use AllWidgets to trigger lazy loading of discovered plugins
@@ -393,8 +393,7 @@ func GetPluginWidgets(ctx context.Context, location string, ginCtx ...*gin.Conte
 			Refreshable: w.Refreshable,
 			RefreshSec:  w.RefreshSec,
 		}
-		// Call the widget handler to get HTML (ctx should already have language if from gin)
-		result, err := pluginManager.Call(ctx, w.PluginName, w.Handler, widgetArgs)
+		result, err := pluginManager.Call(ctx, w.PluginName, w.Handler, widgetArgs(w.PluginName))
 		if err != nil {
 			log.Printf("🔌 Widget %s:%s call failed: %v", w.PluginName, w.Handler, err)
 			widget.Unavailable = true
@@ -491,7 +490,11 @@ func buildPluginArgs(c *gin.Context, pluginName ...string) json.RawMessage {
 			} else if strings.Contains(strings.ToLower(contentType), "application/x-www-form-urlencoded") {
 				// Parse form-encoded data into top-level args so plugins
 				// receive {"title": "Hello"} not {"_body": "title=Hello"}.
-				c.Request.ParseForm()
+				// ParseForm keeps the pairs decoded before a malformed one, so
+				// the partial form still reaches the plugin.
+				if err := c.Request.ParseForm(); err != nil {
+					log.Printf("plugin call: malformed form body: %v", err)
+				}
 				for key, values := range c.Request.PostForm {
 					if len(values) == 1 {
 						args[key] = values[0]
@@ -539,6 +542,14 @@ func stripPluginEnvelope(args map[string]any) {
 	}
 }
 
+// setPluginEnvelope replaces any client-supplied envelope key in args with the
+// host envelope for the authenticated caller. Every plugin call built from
+// client data goes through it (or buildPluginArgs).
+func setPluginEnvelope(c *gin.Context, args map[string]any, pluginName string) {
+	stripPluginEnvelope(args)
+	addPluginEnvelope(c, args, pluginName)
+}
+
 // addPluginEnvelope writes the authenticated caller's identity, language and
 // organisation into args. _is_admin is always present so plugins never fall
 // back to a client-controlled value.
@@ -570,17 +581,19 @@ func addPluginEnvelope(c *gin.Context, args map[string]any, pluginName ...string
 	args["_is_admin"] = inAdminGroup == true || role == "Admin"
 	// The user's resolved UI language (i18n middleware: ?lang=, cookie, user
 	// preference, Accept-Language). Plugins that ship their own translations
-	// look strings up locally with it; HostAPI callbacks carry no request
-	// context, so the language must travel with the call.
+	// look strings up locally with it, and the Manager puts it into the call
+	// context for HostAPI Translate.
 	if lang, exists := c.Get(middleware.LanguageContextKey); exists {
 		args["_lang"] = lang
 	}
 
-	// Inject org context from the authenticated session unless the plugin opts out.
-	// Use the cookie-aware helper rather than OrgIDFromContext(ctx) because
-	// no middleware currently calls WithOrgID on the request context for plugin
-	// routes. _org_id keeps the legacy key; org_id matches the JSON field name
-	// plugins already unmarshal, so plain-request-struct handlers get it for free.
+	// Inject org context from the authenticated session unless the plugin opts
+	// out. orgIDFromContext checks the auth keys, the request context and the
+	// membership-checked active-org cookie. The Manager puts _org_id into the
+	// call context (HostAPI OrgID, sandbox org scoping), so a plugin that opts
+	// out runs without an org. _org_id keeps the legacy key; org_id matches the
+	// JSON field name plugins already unmarshal, so plain-request-struct
+	// handlers get it for free.
 	skipOrg := len(pluginName) > 0 && pluginManager != nil && pluginManager.SkipsOrgInjection(pluginName[0])
 	if !skipOrg {
 		if orgID := orgIDFromContext(c); orgID != 0 {
@@ -721,7 +734,7 @@ func HandlePluginSSEChannel(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "subscription check failed"})
 			return
 		}
-		result, err := pluginManager.Call(pluginContextWithLanguage(c), pluginName, authorizer, argsJSON)
+		result, err := pluginManager.Call(c.Request.Context(), pluginName, authorizer, argsJSON)
 		if err != nil {
 			log.Printf("plugin %s: event authorizer %s failed for channel %q: %v", pluginName, authorizer, channel, err)
 			c.JSON(http.StatusBadGateway, gin.H{"error": "subscription check failed"})
@@ -880,18 +893,8 @@ func RequireGroup(groupName string) gin.HandlerFunc {
 			return
 		}
 
-		// Convert user_id to uint (may be stored as int, uint, float64, or string).
-		var userID uint
-		switch v := userIDRaw.(type) {
-		case uint:
-			userID = v
-		case int:
-			userID = uint(v)
-		case int64:
-			userID = uint(v)
-		case float64:
-			userID = uint(v)
-		default:
+		userID, ok := userIDUintFromValue(userIDRaw)
+		if !ok {
 			c.JSON(http.StatusForbidden, gin.H{"error": "invalid user identity"})
 			c.Abort()
 			return
@@ -995,17 +998,8 @@ func RequirePluginAccess(pluginName, agentGroup string) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		var userID uint
-		switch v := userIDRaw.(type) {
-		case uint:
-			userID = v
-		case int:
-			userID = uint(v)
-		case int64:
-			userID = uint(v)
-		case float64:
-			userID = uint(v)
-		default:
+		userID, ok := userIDUintFromValue(userIDRaw)
+		if !ok {
 			c.JSON(http.StatusForbidden, gin.H{"error": "invalid user identity"})
 			c.Abort()
 			return
@@ -1085,7 +1079,9 @@ func orgIDFromContext(c *gin.Context) int64 {
 			case int:
 				return int64(n)
 			case uint:
-				return int64(n)
+				if n <= math.MaxInt64 {
+					return int64(n)
+				}
 			case float64:
 				return int64(n)
 			}
@@ -1433,14 +1429,14 @@ func HandlePluginUpload(c *gin.Context) {
 	}
 
 	// Ensure plugin directory exists
-	if err := os.MkdirAll(pluginDir, 0755); err != nil {
+	if err := os.MkdirAll(pluginDir, 0o750); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create plugin directory"})
 		return
 	}
 
 	// Save uploaded file to temp location first
 	tempPath := filepath.Join(pluginDir, ".upload_"+filename)
-	dest, err := os.Create(tempPath)
+	dest, err := os.Create(tempPath) // #nosec G304 -- pluginDir is server config; filename reduced to filepath.Base and rejected if "." or ".."
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create temp file"})
 		return
@@ -1448,12 +1444,16 @@ func HandlePluginUpload(c *gin.Context) {
 
 	// Copy file content
 	if _, err := io.Copy(dest, file); err != nil {
-		dest.Close()
-		os.Remove(tempPath)
+		_ = dest.Close()
+		_ = os.Remove(tempPath)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save plugin file"})
 		return
 	}
-	dest.Close()
+	if err := dest.Close(); err != nil {
+		_ = os.Remove(tempPath)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save plugin file"})
+		return
+	}
 
 	var pluginName string
 	var destPath string
@@ -1462,7 +1462,7 @@ func HandlePluginUpload(c *gin.Context) {
 		// Validate the package first without extracting to the live directory.
 		manifest, err := packaging.ValidatePackage(tempPath)
 		if err != nil {
-			os.Remove(tempPath)
+			_ = os.Remove(tempPath)
 			plugin.GetLogBuffer().Log("system", "error", fmt.Sprintf("Plugin upload failed: invalid package: %s", err.Error()), nil)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plugin package: " + err.Error()})
 			return
@@ -1484,7 +1484,7 @@ func HandlePluginUpload(c *gin.Context) {
 
 		// Now extract — the binary file should no longer be locked.
 		pkg, err := packaging.ExtractPlugin(tempPath, pluginDir)
-		os.Remove(tempPath)
+		_ = os.Remove(tempPath)
 		if err != nil {
 			plugin.GetLogBuffer().Log("system", "error", fmt.Sprintf("Plugin upload failed: %s", err.Error()), nil)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plugin package: " + err.Error()})
@@ -1522,7 +1522,7 @@ func HandlePluginUpload(c *gin.Context) {
 		// Direct WASM upload
 		destPath = filepath.Join(pluginDir, filename)
 		if err := os.Rename(tempPath, destPath); err != nil {
-			os.Remove(tempPath)
+			_ = os.Remove(tempPath)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save plugin file"})
 			return
 		}

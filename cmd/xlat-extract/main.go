@@ -113,7 +113,7 @@ func findTemplateFiles(dir string) ([]string, error) {
 
 // extractKeysFromFile extracts translation keys from a single template file.
 func extractKeysFromFile(filename string, moduleMode bool) ([]*TranslationKey, error) {
-	file, err := os.Open(filename) //nolint:gosec // G304 CLI tool
+	file, err := os.Open(filename) // #nosec G304 -- template file found under the operator-named scan dir
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +249,7 @@ func generateTranslationFile(outputDir, lang string, grouped map[string]map[stri
 
 	// Load existing translations if file exists
 	existing := make(TranslationMap)
-	if data, err := os.ReadFile(filename); err == nil { //nolint:gosec // G304 CLI tool
+	if data, err := os.ReadFile(filename); err == nil { // #nosec G304 -- translation file under the operator's output-dir flag
 		if err := json.Unmarshal(data, &existing); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: could not parse existing %s: %v\n", filename, err)
 		}
@@ -269,7 +269,7 @@ func generateTranslationFile(outputDir, lang string, grouped map[string]map[stri
 		return err
 	}
 
-	if err := os.WriteFile(filename, data, 0644); err != nil {
+	if err := os.WriteFile(filename, data, 0644); err != nil { // #nosec G306 -- checked-in translation JSON, must stay readable by build/app containers like other repo files
 		return err
 	}
 
@@ -341,7 +341,7 @@ func getTranslationValue(tk *TranslationKey, lang string) string {
 	if len(parts) > 0 {
 		lastPart := parts[len(parts)-1]
 		// Convert snake_case or camelCase to Title Case
-		words := regexp.MustCompile(`[_\-]|([a-z])([A-Z])`).ReplaceAllString(lastPart, "$1 $2")
+		words := regexp.MustCompile(`[_\-]|([a-z])([A-Z])`).ReplaceAllString(lastPart, "$1 $2") // sql-ok: regex replacement groups, not SQL
 		title := cases.Title(language.English)
 		words = title.String(strings.ToLower(words))
 

@@ -58,18 +58,22 @@ func (s *PermissionService) GetUserPermissionMatrix(userID uint) (*PermissionMat
 
 	// Get permissions for each group
 	for _, group := range groups {
-		// Convert group.ID to uint
+		// Convert group.ID to uint; string IDs (LDAP groups) and negative
+		// ids are not group table rows.
 		var groupID uint
 		switch v := group.ID.(type) {
 		case int:
+			if v < 0 {
+				continue
+			}
 			groupID = uint(v)
 		case uint:
 			groupID = v
 		case int64:
+			if v < 0 {
+				continue
+			}
 			groupID = uint(v)
-		case string:
-			// Skip string IDs (LDAP groups)
-			continue
 		default:
 			continue
 		}

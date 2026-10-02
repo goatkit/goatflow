@@ -102,7 +102,9 @@ func (hrm *HotReloadManager) Events() <-chan ConfigEvent {
 // Stop stops the hot reload manager.
 func (hrm *HotReloadManager) Stop() {
 	hrm.cancel()
-	hrm.watcher.Close()
+	if err := hrm.watcher.Close(); err != nil {
+		log.Printf("HotReloadManager: closing file watcher: %v", err)
+	}
 	close(hrm.eventChan)
 }
 
@@ -272,7 +274,7 @@ func (hrm *HotReloadManager) reloadFile(filename string) {
 }
 
 func (hrm *HotReloadManager) loadYAMLFile(filename string) (*YAMLDocument, error) {
-	data, err := os.ReadFile(filename) //nolint:gosec // G304 false positive - fsnotify event path
+	data, err := os.ReadFile(filename) // #nosec G304 -- fsnotify/walk path inside a directory the operator registered with Watch, not request input
 	if err != nil {
 		return nil, err
 	}
@@ -365,8 +367,9 @@ func (hrm *HotReloadManager) sendEvent(event ConfigEvent) {
 }
 
 func (hrm *HotReloadManager) loadExistingFiles(dir string, kind YAMLKind) {
-	// Walk directory and load existing YAML files
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	// Walk directory and load existing YAML files; the callback skips
+	// unreadable entries and never returns an error.
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return nil //nolint:nilerr // continue walking on error
 		}

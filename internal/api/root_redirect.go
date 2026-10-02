@@ -3,17 +3,25 @@ package api
 import (
 	"os"
 	"strings"
+
+	"github.com/goatkit/goatflow/internal/platform/config"
+	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
+// resolveRootRedirect returns where "/" redirects: ROOT_REDIRECT_PATH when set,
+// otherwise the customer portal landing page on a customer-only instance
+// (CUSTOMER_FE_ONLY) and /login everywhere else. "/" carries no customer
+// session, so the global CustomerPortal::LandingPage applies.
 func resolveRootRedirect() string {
 	v := strings.TrimSpace(os.Getenv("ROOT_REDIRECT_PATH"))
 	if v == "" {
-		flag := strings.ToLower(strings.TrimSpace(os.Getenv("CUSTOMER_FE_ONLY")))
-		if flag == "1" || flag == "true" {
-			return "/customer"
+		if config.CustomerFEOnly() {
+			db, err := database.GetDB()
+			if err != nil {
+				db = nil
+			}
+			return loadCustomerPortalConfig(db).LandingPath()
 		}
-	}
-	if v == "" {
 		return "/login"
 	}
 	if !strings.HasPrefix(v, "/") {

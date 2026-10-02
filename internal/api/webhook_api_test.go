@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -38,7 +40,8 @@ func webhookTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
-// webhookReceiver is an HTTP endpoint that records what it receives.
+// webhookReceiver is an HTTP endpoint that records what it receives. It
+// listens on 127.0.0.1, so tests that deliver to it opt in to private targets.
 type webhookReceiver struct {
 	mu     sync.Mutex
 	status int
@@ -52,6 +55,7 @@ type receivedRequest struct {
 }
 
 func newWebhookReceiver(t *testing.T) *webhookReceiver {
+	t.Setenv(webhook.AllowPrivateTargetsEnv, "true")
 	r := &webhookReceiver{status: http.StatusOK}
 	r.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		body, _ := io.ReadAll(req.Body)
@@ -88,8 +92,8 @@ func webhookAdminRouter() *gin.Engine {
 	g.GET("/webhooks", handleWebhookList)
 	g.POST("/webhooks", handleWebhookCreate)
 	g.GET("/webhooks/events", handleWebhookEvents)
-	g.GET("/webhooks/deliveries/:id", handleWebhookDeliveryGet)
-	g.POST("/webhooks/deliveries/:id/redeliver", handleWebhookRedeliver)
+	g.GET("/webhook-deliveries/:id", handleWebhookDeliveryGet)
+	g.POST("/webhook-deliveries/:id/redeliver", handleWebhookRedeliver)
 	g.GET("/webhooks/:id", handleWebhookGet)
 	g.PUT("/webhooks/:id", handleWebhookUpdate)
 	g.DELETE("/webhooks/:id", handleWebhookDelete)
@@ -138,8 +142,26 @@ func decodeDelivery(t *testing.T, raw json.RawMessage) webhook.Delivery {
 	return d
 }
 
+// headerHintsOf returns the header_hints object of a webhook response.
+func headerHintsOf(t *testing.T, raw json.RawMessage) map[string]string {
+	t.Helper()
+	var w struct {
+		HeaderHints map[string]string `json:"header_hints"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &w), string(raw))
+	return w.HeaderHints
+}
+
 func uniqueWebhookName(t *testing.T) string {
 	return fmt.Sprintf("%s-%d", t.Name(), time.Now().UnixNano())
+}
+
+// cleanupIfCreated deletes a webhook a create request made, also when the
+// test expected the request to be rejected, so failures leave no rows behind.
+func cleanupIfCreated(t *testing.T, db *sql.DB, code int, env apiEnvelope) {
+	if code == http.StatusCreated {
+		deleteWebhookOnCleanup(t, db, decodeWebhook(t, env.Data).ID)
+	}
 }
 
 func deleteWebhookOnCleanup(t *testing.T, db *sql.DB, id int64) {
@@ -149,7 +171,7 @@ func deleteWebhookOnCleanup(t *testing.T, db *sql.DB, id int64) {
 }
 
 func TestWebhookAPI_CreateValidatesInput(t *testing.T) {
-	webhookTestDB(t)
+	db := webhookTestDB(t)
 	r := webhookAdminRouter()
 	valid := func() map[string]interface{} {
 		return map[string]interface{}{
@@ -171,6 +193,10 @@ func TestWebhookAPI_CreateValidatesInput(t *testing.T) {
 		{"short secret", func(b map[string]interface{}) { b["secret"] = "tooshort" }, "secret must be between 16 and 512 characters"},
 		{"reserved header", func(b map[string]interface{}) { b["headers"] = map[string]string{"X-Webhook-Signature": "x"} },
 			`header "X-Webhook-Signature" is set by GoatFlow and cannot be overridden`},
+		{"header value with line break", func(b map[string]interface{}) { b["headers"] = map[string]string{"X-Team": "a\r\nX-Evil: 1"} },
+			`value of header "X-Team" contains a control character`},
+		{"header without value", func(b map[string]interface{}) { b["headers"] = map[string]interface{}{"X-Team": nil} },
+			`header "X-Team" has no stored value to keep; send a value`},
 		{"timeout too long", func(b map[string]interface{}) { b["timeout_seconds"] = 61 }, "timeout_seconds must be between 1 and 60"},
 		{"too many retries", func(b map[string]interface{}) { b["retry_count"] = 11 }, "retry_count must be between 0 and 10"},
 	}
@@ -179,6 +205,7 @@ func TestWebhookAPI_CreateValidatesInput(t *testing.T) {
 			body := valid()
 			tc.mutate(body)
 			code, env := doWebhookRequest(t, r, http.MethodPost, "/api/v1/webhooks", body)
+			cleanupIfCreated(t, db, code, env)
 			assert.Equal(t, http.StatusBadRequest, code)
 			assert.False(t, env.Success)
 			assert.Equal(t, tc.want, env.Error)
@@ -190,6 +217,7 @@ func TestWebhookAPI_CRUD(t *testing.T) {
 	db := webhookTestDB(t)
 	r := webhookAdminRouter()
 	const secret = "s3cret-signing-key-0123"
+	const apiKey = "key-0123456789-abcd"
 	name := uniqueWebhookName(t)
 
 	code, env := doWebhookRequest(t, r, http.MethodPost, "/api/v1/webhooks", map[string]interface{}{
@@ -197,7 +225,7 @@ func TestWebhookAPI_CRUD(t *testing.T) {
 		"url":     "https://example.com/hook",
 		"secret":  secret,
 		"events":  []string{"ticket.created", "article.created", "ticket.created"},
-		"headers": map[string]string{"X-Team": "support"},
+		"headers": map[string]string{"X-Team": "support", "X-Api-Key": apiKey},
 	})
 	require.Equal(t, http.StatusCreated, code, env.Error)
 	created := decodeWebhook(t, env.Data)
@@ -205,7 +233,10 @@ func TestWebhookAPI_CRUD(t *testing.T) {
 
 	assert.Equal(t, name, created.Name)
 	assert.Equal(t, []string{"ticket.created", "article.created"}, created.Events, "duplicates removed, order kept")
-	assert.Equal(t, map[string]string{"X-Team": "support"}, created.Headers)
+	// Header values are write-only: short values get no hint, long ones their last 4 characters.
+	assert.Equal(t, map[string]string{"X-Team": "••••••••", "X-Api-Key": "••••••••abcd"}, headerHintsOf(t, env.Data))
+	assert.NotContains(t, string(env.Data), apiKey, "header values must never be returned")
+	assert.NotContains(t, string(env.Data), "support", "header values must never be returned")
 	assert.Equal(t, webhook.DefaultRetryCount, created.RetryCount)
 	assert.Equal(t, webhook.DefaultTimeoutSeconds, created.TimeoutSeconds)
 	assert.True(t, created.IsActive)
@@ -214,17 +245,32 @@ func TestWebhookAPI_CRUD(t *testing.T) {
 	assert.NotContains(t, string(env.Data), secret, "secret must never be returned")
 	assert.Equal(t, 1, created.CreatedBy)
 
-	// The secret is stored encrypted, not in clear text.
-	var stored []byte
-	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
-		`SELECT secret_encrypted FROM gk_webhook WHERE id = ?`), created.ID).Scan(&stored))
-	assert.NotContains(t, string(stored), secret)
 	key, err := secureconfig.GetKey()
 	require.NoError(t, err)
+	// The secret and the header values are stored encrypted, not in clear text.
+	var stored, storedHeaders []byte
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		`SELECT secret_encrypted, headers_encrypted FROM gk_webhook WHERE id = ?`), created.ID).Scan(&stored, &storedHeaders))
+	assert.NotContains(t, string(stored), secret)
 	plain, err := secureconfig.Decrypt(stored, key)
 	require.NoError(t, err)
 	assert.Equal(t, secret, string(plain))
-
+	assert.NotContains(t, string(storedHeaders), apiKey)
+	storedHeaderValues := func() map[string]string {
+		t.Helper()
+		var enc []byte
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+			`SELECT headers_encrypted FROM gk_webhook WHERE id = ?`), created.ID).Scan(&enc))
+		if len(enc) == 0 {
+			return map[string]string{}
+		}
+		plain, err := secureconfig.Decrypt(enc, key)
+		require.NoError(t, err)
+		var values map[string]string
+		require.NoError(t, json.Unmarshal(plain, &values))
+		return values
+	}
+	assert.Equal(t, map[string]string{"X-Team": "support", "X-Api-Key": apiKey}, storedHeaderValues())
 	t.Run("duplicate name is a conflict", func(t *testing.T) {
 		code, env := doWebhookRequest(t, r, http.MethodPost, "/api/v1/webhooks", map[string]interface{}{
 			"name": name, "url": "https://example.com/other", "events": []string{"ticket.closed"},
@@ -253,7 +299,31 @@ func TestWebhookAPI_CRUD(t *testing.T) {
 		assert.Empty(t, updated.SecretHint)
 		assert.Equal(t, created.URL, updated.URL)
 		assert.Equal(t, created.Events, updated.Events)
-		assert.Equal(t, created.Headers, updated.Headers)
+		assert.Equal(t, map[string]string{"X-Team": "••••••••", "X-Api-Key": "••••••••abcd"}, headerHintsOf(t, env.Data))
+		assert.Equal(t, map[string]string{"X-Team": "support", "X-Api-Key": apiKey}, storedHeaderValues())
+	})
+
+	t.Run("header update: null keeps, value replaces, omitted name removes", func(t *testing.T) {
+		code, env := doWebhookRequest(t, r, http.MethodPut, fmt.Sprintf("/api/v1/webhooks/%d", created.ID), map[string]interface{}{
+			"headers": map[string]interface{}{"X-Api-Key": nil, "X-Region": "eu-west-1-primary"},
+		})
+		require.Equal(t, http.StatusOK, code, env.Error)
+		assert.Equal(t, map[string]string{"X-Api-Key": "••••••••abcd", "X-Region": "••••••••mary"}, headerHintsOf(t, env.Data))
+		assert.Equal(t, map[string]string{"X-Api-Key": apiKey, "X-Region": "eu-west-1-primary"}, storedHeaderValues())
+
+		code, env = doWebhookRequest(t, r, http.MethodPut, fmt.Sprintf("/api/v1/webhooks/%d", created.ID), map[string]interface{}{
+			"headers": map[string]interface{}{"X-Unknown": nil},
+		})
+		assert.Equal(t, http.StatusBadRequest, code)
+		assert.Equal(t, `header "X-Unknown" has no stored value to keep; send a value`, env.Error)
+		assert.Equal(t, map[string]string{"X-Api-Key": apiKey, "X-Region": "eu-west-1-primary"}, storedHeaderValues(), "a rejected update changes nothing")
+
+		code, env = doWebhookRequest(t, r, http.MethodPut, fmt.Sprintf("/api/v1/webhooks/%d", created.ID), map[string]interface{}{
+			"headers": map[string]interface{}{},
+		})
+		require.Equal(t, http.StatusOK, code, env.Error)
+		assert.Equal(t, map[string]string{}, headerHintsOf(t, env.Data))
+		assert.Empty(t, storedHeaderValues())
 	})
 
 	t.Run("update validates", func(t *testing.T) {
@@ -359,7 +429,7 @@ func TestWebhookAPI_TestDeliveryAndRedeliver(t *testing.T) {
 	assert.Nil(t, failed.NextAttemptAt)
 
 	// Delivery detail carries payload and response.
-	code, env = doWebhookRequest(t, r, http.MethodGet, fmt.Sprintf("/api/v1/webhooks/deliveries/%d", failed.ID), nil)
+	code, env = doWebhookRequest(t, r, http.MethodGet, fmt.Sprintf("/api/v1/webhook-deliveries/%d", failed.ID), nil)
 	require.Equal(t, http.StatusOK, code)
 	detail := decodeDelivery(t, env.Data)
 	assert.Equal(t, string(recv.requests()[1].body), detail.Payload)
@@ -367,7 +437,7 @@ func TestWebhookAPI_TestDeliveryAndRedeliver(t *testing.T) {
 
 	// Redeliver once the endpoint recovers: new delivery, same payload.
 	recv.setStatus(http.StatusNoContent)
-	code, env = doWebhookRequest(t, r, http.MethodPost, fmt.Sprintf("/api/v1/webhooks/deliveries/%d/redeliver", failed.ID), nil)
+	code, env = doWebhookRequest(t, r, http.MethodPost, fmt.Sprintf("/api/v1/webhook-deliveries/%d/redeliver", failed.ID), nil)
 	require.Equal(t, http.StatusOK, code, env.Error)
 	redelivered := decodeDelivery(t, env.Data)
 	assert.NotEqual(t, failed.ID, redelivered.ID)
@@ -401,7 +471,7 @@ func TestWebhookAPI_TestDeliveryAndRedeliver(t *testing.T) {
 	require.NoError(t, json.Unmarshal(env.Data, &list))
 	assert.Len(t, list, 1)
 
-	code, _ = doWebhookRequest(t, r, http.MethodPost, "/api/v1/webhooks/deliveries/999999999/redeliver", nil)
+	code, _ = doWebhookRequest(t, r, http.MethodPost, "/api/v1/webhook-deliveries/999999999/redeliver", nil)
 	assert.Equal(t, http.StatusNotFound, code)
 	code, _ = doWebhookRequest(t, r, http.MethodPost, "/api/v1/webhooks/999999999/test", nil)
 	assert.Equal(t, http.StatusNotFound, code)
@@ -412,6 +482,7 @@ func TestWebhookAPI_TestDeliveryAndRedeliver(t *testing.T) {
 func TestWebhookAPI_UnreachableEndpointIsRecorded(t *testing.T) {
 	db := webhookTestDB(t)
 	r := webhookAdminRouter()
+	t.Setenv(webhook.AllowPrivateTargetsEnv, "true")
 	closed := httptest.NewServer(http.NotFoundHandler())
 	url := closed.URL
 	closed.Close()
@@ -430,6 +501,79 @@ func TestWebhookAPI_UnreachableEndpointIsRecorded(t *testing.T) {
 	assert.Nil(t, d.StatusCode)
 	assert.Contains(t, d.Error, "connection refused")
 	assert.Equal(t, 1, d.Attempts)
+}
+
+// TestWebhookAPI_RejectsInternalTargets: without the operator opt-in a webhook
+// cannot point at loopback, private, link-local (cloud metadata) or other
+// internal addresses, neither when saved nor when delivered.
+func TestWebhookAPI_RejectsInternalTargets(t *testing.T) {
+	db := webhookTestDB(t)
+	r := webhookAdminRouter()
+	t.Setenv(webhook.AllowPrivateTargetsEnv, "")
+
+	create := func(url string) (int, apiEnvelope) {
+		code, env := doWebhookRequest(t, r, http.MethodPost, "/api/v1/webhooks", map[string]interface{}{
+			"name": uniqueWebhookName(t), "url": url, "events": []string{"ticket.created"},
+		})
+		cleanupIfCreated(t, db, code, env)
+		return code, env
+	}
+	for _, url := range []string{
+		"http://169.254.169.254/latest/meta-data/",
+		"http://127.0.0.1:8080/hook",
+		"http://10.1.2.3/hook",
+		"http://172.16.0.1/hook",
+		"http://192.168.1.10/hook",
+		"http://[::1]/hook",
+		"http://[fd00:ec2::254]/hook",
+		"http://[::ffff:127.0.0.1]/hook",
+		"http://0.0.0.0:9000/hook",
+		"http://100.100.100.200/hook",
+		"http://localhost:8080/hook",
+		"http://api.localhost/hook",
+	} {
+		code, env := create(url)
+		assert.Equal(t, http.StatusBadRequest, code, "%s: %s", url, env.Error)
+		assert.Contains(t, env.Error, "GOATFLOW_WEBHOOK_ALLOW_PRIVATE_TARGETS", url)
+	}
+	for _, url := range []string{"http://172.32.0.1/hook", "http://8.8.8.8/hook", "https://example.com/hook"} {
+		code, env := create(url)
+		require.Equal(t, http.StatusCreated, code, "%s: %s", url, env.Error)
+	}
+
+	// Updating a webhook to an internal address is rejected too.
+	code, env := create("https://example.com/other")
+	require.Equal(t, http.StatusCreated, code, env.Error)
+	public := decodeWebhook(t, env.Data)
+	code, env = doWebhookRequest(t, r, http.MethodPut, fmt.Sprintf("/api/v1/webhooks/%d", public.ID),
+		map[string]interface{}{"url": "http://169.254.169.254/latest/meta-data/"})
+	assert.Equal(t, http.StatusBadRequest, code, env.Error)
+
+	// A host name is checked after DNS resolution on every delivery: a
+	// webhook saved while internal targets were allowed is refused once they
+	// are not, the endpoint receives nothing and the failure is not retried.
+	recv := newWebhookReceiver(t) // allows internal targets
+	_, port, err := net.SplitHostPort(strings.TrimPrefix(recv.server.URL, "http://"))
+	require.NoError(t, err)
+	code, env = create("http://localhost:" + port + "/hook")
+	require.Equal(t, http.StatusCreated, code, env.Error)
+	internal := decodeWebhook(t, env.Data)
+
+	t.Setenv(webhook.AllowPrivateTargetsEnv, "false")
+	code, env = doWebhookRequest(t, r, http.MethodPost, fmt.Sprintf("/api/v1/webhooks/%d/test", internal.ID), nil)
+	require.Equal(t, http.StatusOK, code, env.Error)
+	d := decodeDelivery(t, env.Data)
+	assert.Equal(t, webhook.StatusFailed, d.Status)
+	assert.Nil(t, d.StatusCode)
+	assert.Contains(t, d.Error, "webhook host localhost resolves to")
+	assert.Contains(t, d.Error, "GOATFLOW_WEBHOOK_ALLOW_PRIVATE_TARGETS")
+	assert.Empty(t, recv.requests(), "the internal endpoint must not be called")
+
+	t.Setenv(webhook.AllowPrivateTargetsEnv, "true")
+	code, env = doWebhookRequest(t, r, http.MethodPost, fmt.Sprintf("/api/v1/webhooks/%d/test", internal.ID), nil)
+	require.Equal(t, http.StatusOK, code, env.Error)
+	assert.Equal(t, webhook.StatusDelivered, decodeDelivery(t, env.Data).Status, "the opt-in allows internal targets")
+	assert.Len(t, recv.requests(), 1)
 }
 
 // TestWebhookRoutes exercises the YAML routes with the real auth and admin

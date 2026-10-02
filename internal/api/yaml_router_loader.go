@@ -174,7 +174,7 @@ func loadYAMLRouteGroups(dir string) ([]topRouteDoc, error) {
 	})
 	sort.Strings(entries)
 	for _, p := range entries {
-		b, err := os.ReadFile(p) //nolint:gosec // G304 false positive - path from WalkDir
+		b, err := os.ReadFile(p) // #nosec G304 -- p is a .yaml file found by WalkDir under the resolved routes directory
 		if err != nil {
 			log.Printf("route loader read error %s: %v", p, err)
 			continue
@@ -322,7 +322,7 @@ func registerYAMLRoutes(r *gin.Engine) {
 			Routes      []manifestRoute `json:"routes"`
 		}{GeneratedAt: time.Now().UTC(), Routes: manifest}
 		if b, err := json.MarshalIndent(mf, "", "  "); err == nil {
-			if err := os.WriteFile("generated/routes-manifest.json", b, 0o644); err != nil {
+			if err := os.WriteFile("generated/routes-manifest.json", b, 0o644); err != nil { // #nosec G306 -- non-secret dev artifact read by host-side make/scripts that may run as another UID
 				log.Printf("failed writing routes manifest: %v", err)
 			}
 		} else {
@@ -359,7 +359,7 @@ func resolveRoutesDir(initial string) (string, error) {
 			continue
 		}
 		seen[path] = struct{}{}
-		if st, err := os.Stat(path); err == nil && st.IsDir() {
+		if st, err := os.Stat(path); err == nil && st.IsDir() { // #nosec G703 -- candidates come from GOATFLOW_ROUTES_DIR, the caller, or the working directory, not request input
 			return path, nil
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"time"
 
@@ -114,7 +115,9 @@ func (s *TicketService) CreateTicket(ctx context.Context, req *CreateTicketReque
 	}
 
 	// Invalidate cache
-	s.cache.Invalidate(ctx, "tickets:*")
+	if err := s.cache.Invalidate(ctx, "tickets:*"); err != nil {
+		log.Printf("Failed to invalidate ticket list cache: %v", err)
+	}
 
 	// Publish event
 	event := Event{
@@ -176,7 +179,9 @@ func (s *TicketService) GetTicket(ctx context.Context, req *GetTicketRequest) (*
 
 	// Cache the result
 	if data, err := json.Marshal(ticket); err == nil {
-		s.cache.Set(ctx, cacheKey, data, 5*time.Minute)
+		if err := s.cache.Set(ctx, cacheKey, data, 5*time.Minute); err != nil {
+			log.Printf("Failed to cache ticket %s: %v", req.Id, err)
+		}
 	}
 
 	return &GetTicketResponse{
@@ -223,8 +228,12 @@ func (s *TicketService) UpdateTicket(ctx context.Context, req *UpdateTicketReque
 
 	// Invalidate cache
 	cacheKey := fmt.Sprintf("ticket:%s", req.Id)
-	s.cache.Delete(ctx, cacheKey)
-	s.cache.Invalidate(ctx, "tickets:*")
+	if err := s.cache.Delete(ctx, cacheKey); err != nil {
+		log.Printf("Failed to evict cached ticket %s: %v", req.Id, err)
+	}
+	if err := s.cache.Invalidate(ctx, "tickets:*"); err != nil {
+		log.Printf("Failed to invalidate ticket list cache: %v", err)
+	}
 
 	// Publish event
 	event := Event{
@@ -290,7 +299,9 @@ func (s *TicketService) ListTickets(ctx context.Context, req *ListTicketsRequest
 
 	// Cache the result
 	if data, err := json.Marshal(tickets); err == nil {
-		s.cache.Set(ctx, cacheKey, data, 1*time.Minute)
+		if err := s.cache.Set(ctx, cacheKey, data, 1*time.Minute); err != nil {
+			log.Printf("Failed to cache ticket list: %v", err)
+		}
 	}
 
 	s.metrics.IncrementCounter("ticket.list.success", map[string]string{
@@ -319,7 +330,7 @@ func (s *TicketService) SearchTickets(ctx context.Context, req *SearchTicketsReq
 
 	return &SearchTicketsResponse{
 		Tickets: s.ticketsToProto(tickets),
-		Total:   int32(len(tickets)),
+		Total:   protoCount(len(tickets)),
 	}, nil
 }
 
@@ -406,8 +417,20 @@ func (s *TicketService) detectChanges(old, new *Ticket) map[string]interface{} {
 func (s *TicketService) buildListResponse(tickets []*Ticket) *ListTicketsResponse {
 	return &ListTicketsResponse{
 		Tickets: s.ticketsToProto(tickets),
-		Total:   int32(len(tickets)),
+		Total:   protoCount(len(tickets)),
 	}
+}
+
+// protoCount narrows a slice length to the proto's int32 count field,
+// saturating rather than wrapping.
+func protoCount(n int) int32 {
+	if n < 0 {
+		return 0
+	}
+	if n > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	return int32(n)
 }
 
 func (s *TicketService) ticketsToProto(tickets []*Ticket) []*TicketProto {

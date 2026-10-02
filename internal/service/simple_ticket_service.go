@@ -180,7 +180,7 @@ func (s *SimpleTicketService) AddMessage(ticketID uint, message *SimpleTicketMes
 		return fmt.Errorf("commit add message: %w", err)
 	}
 
-	message.ID = uint(articleID)
+	message.ID = uint(articleID) // #nosec G115 -- article.id auto-increment value just returned by INSERT, always positive
 	message.TicketID = ticketID
 	message.CreatedAt = now
 	message.SenderTypeID = senderTypeID
@@ -276,7 +276,7 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 	// are not attachments. Each one is addressed by ticket, article and file id.
 	store := storage.ForDB(db)
 	for _, msg := range dbMessages {
-		atts, err := store.ListAttachments(context.Background(), int64(msg.ID))
+		atts, err := store.ListAttachments(context.Background(), int64(msg.ID)) // #nosec G115 -- msg.ID was scanned from article.id (a positive BIGINT)
 		if err != nil {
 			return nil, fmt.Errorf("list attachments of article %d: %w", msg.ID, err)
 		}
@@ -285,7 +285,7 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 				continue
 			}
 			msg.Attachments = append(msg.Attachments, &SimpleAttachment{
-				ID:          uint(a.FileID),
+				ID:          uint(a.FileID), // #nosec G115 -- FileID is a 1-based attachment index within the article
 				MessageID:   msg.ID,
 				Filename:    a.Filename,
 				ContentType: a.ContentType,

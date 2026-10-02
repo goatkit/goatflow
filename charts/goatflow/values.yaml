@@ -20,6 +20,9 @@ global:
 # =============================================================================
 # BACKEND APPLICATION
 # =============================================================================
+# Serves the agent UI, the customer portal (/customer), the REST API and
+# /health on port 8080, runs migrations at start and runs the in-process
+# scheduler. The Ingress sends every path here.
 backend:
   enabled: true
 
@@ -63,6 +66,10 @@ backend:
       periodSeconds: 5
       timeoutSeconds: 3
 
+  # Graceful stop: HTTP drain (DRAIN_TIMEOUT, default 5s) + plugin shutdown
+  # (up to 30s). Keep >= DRAIN_TIMEOUT + 40s.
+  terminationGracePeriodSeconds: 45
+
   # Extra environment variables
   extraEnv: []
 
@@ -75,10 +82,8 @@ backend:
   # Affinity rules
   affinity: {}
 
-  # Pod annotations (e.g., prometheus.io/scrape, sidecar.istio.io/inject)
+  # Pod annotations (e.g., sidecar.istio.io/inject)
   podAnnotations: {}
-  #  prometheus.io/scrape: "true"
-  #  prometheus.io/port: "9090"
 
   # Additional pod labels
   podLabels: {}
@@ -88,42 +93,59 @@ backend:
   #  service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 
 # =============================================================================
-# FRONTEND (NGINX)
+# BACKGROUND RUNNER
 # =============================================================================
-frontend:
+# `goats -mode runner`: sends the outgoing email queue (mail_queue), delivers
+# webhooks and cleans up expired sessions. Gets the same database, secrets and
+# email settings as the backend; no Service. Keep one replica.
+runner:
   enabled: true
 
   image:
-    repository: nginx
-    tag: "1.25-alpine"
+    repository: ghcr.io/goatkit/goatflow-runner
+    tag: ""  # Defaults to appVersion
     pullPolicy: IfNotPresent
 
-  replicaCount: 2
-
-  service:
-    type: ClusterIP
-    port: 80
+  replicaCount: 1
 
   resources:
     requests:
       cpu: "50m"
       memory: "64Mi"
     limits:
-      cpu: "200m"
-      memory: "128Mi"
+      cpu: "500m"
+      memory: "256Mi"
 
+  # Running tasks are cancelled on SIGTERM and given DRAIN_TIMEOUT (default 5s)
+  terminationGracePeriodSeconds: 45
+
+  extraEnv: []
   nodeSelector: {}
   tolerations: []
   affinity: {}
-
-  # Pod annotations
   podAnnotations: {}
-
-  # Additional pod labels
   podLabels: {}
 
-  # Service annotations
-  serviceAnnotations: {}
+# =============================================================================
+# METRICS
+# =============================================================================
+# Unauthenticated Prometheus listener on its own port (METRICS_ENABLED /
+# METRICS_PORT on the backend) and a <fullname>-metrics Service. /metrics on
+# the app port always exists but needs an admin login.
+metrics:
+  enabled: false
+  port: 9090
+  service:
+    annotations: {}
+    #  prometheus.io/scrape: "true"
+    #  prometheus.io/port: "9090"
+
+# Init container that waits until the bundled database accepts connections
+waitForDatabase:
+  image:
+    repository: busybox
+    tag: "1.36"
+    pullPolicy: IfNotPresent
 
 # =============================================================================
 # DATABASE
@@ -138,7 +160,9 @@ database:
     host: ""
     port: ""
     database: "goatflow"
-    # Reference to existing secret with keys: username, password
+    # Existing Secret with the user name and password. Keys:
+    #   type mysql:      mysql-user, mysql-password
+    #   type postgresql: postgres-user, postgres-password
     existingSecret: ""
 
   # MySQL/MariaDB settings (when type=mysql and external.enabled=false)
@@ -148,13 +172,14 @@ database:
       tag: "11"
       pullPolicy: IfNotPresent
 
-    # Root password - use existingSecret in production
+    # Passwords: generated once and kept across upgrades when empty
     rootPassword: ""
-    existingSecret: ""  # Secret with key: mysql-root-password
+    # Existing Secret with keys mysql-root-password, mysql-user, mysql-password
+    existingSecret: ""
 
     database: goatflow
     user: goatflow
-    password: ""  # Use existingSecret in production
+    password: ""
 
     storage:
       size: 10Gi
@@ -192,8 +217,10 @@ database:
 
     database: goatflow
     user: goatflow
-    password: ""  # Use existingSecret in production
-    existingSecret: ""  # Secret with key: postgres-password
+    # Generated once and kept across upgrades when empty
+    password: ""
+    # Existing Secret with keys postgres-user, postgres-password
+    existingSecret: ""
 
     storage:
       size: 10Gi
@@ -225,38 +252,40 @@ database:
 # =============================================================================
 # VALKEY (Redis-compatible cache)
 # =============================================================================
+# Values below are passed to the valkey subchart
+# (https://github.com/valkey-io/valkey-helm). GoatFlow connects to the
+# <release>-valkey Service through GOATFLOW_VALKEY_HOST / _PORT / _PASSWORD.
 valkey:
   enabled: true
 
-  # External Valkey/Redis (if using ElastiCache, etc.)
-  # Set enabled=false and configure externalValkey below
-
-  # Values passed to valkey subchart
-  # See https://github.com/valkey-io/valkey-helm for all options
-
-  # Authentication via ACL
+  # Off by default: Valkey is only reachable inside the cluster (ClusterIP).
+  # To require a password, define the "default" ACL user; GoatFlow reads its
+  # password from the subchart Secret <release>-valkey-auth (key
+  # default-password), or from usersExistingSecret (key passwordKey):
+  #   auth:
+  #     enabled: true
+  #     aclUsers:
+  #       default:
+  #         permissions: "~* &* +@all"
+  #         password: "a-long-random-password"
   auth:
-    enabled: true
-    # ACL configuration for default user
-    # Password should be set via --set valkey.auth.aclConfig in production
-    # Format: user <username> on ><password> ~* &* +@all
-    aclConfig: "user default on >changeme ~* &* +@all"
+    enabled: false
 
-  persistence:
-    enabled: true
-    size: 1Gi
-
-# External Valkey/Redis configuration
+# External Valkey/Redis instead of the subchart (set valkey.enabled=false)
 externalValkey:
   enabled: false
   host: ""
   port: 6379
+  # Password: existingSecret (key existingSecretPasswordKey), or password to
+  # let the chart create a Secret (secrets.create)
   password: ""
   existingSecret: ""
+  existingSecretPasswordKey: valkey-password
 
 # =============================================================================
 # INGRESS
 # =============================================================================
+# Every path goes to the backend Service (agent UI, customer portal, API).
 ingress:
   enabled: false
   className: nginx
@@ -288,18 +317,38 @@ serviceAccount:
 # SECRETS
 # =============================================================================
 secrets:
-  # Create secrets from values (NOT recommended for production)
-  # In production, create secrets manually or use external-secrets
+  # Create the database and app Secrets. Values left empty are generated on
+  # install and kept on every upgrade. With create=false, provide the Secrets
+  # yourself (database.*.existingSecret and secrets.existingSecret).
   create: true
 
-  # Application secret key for sessions/JWT
-  appSecretKey: ""  # Auto-generated if empty
+  # Existing app Secret (instead of <fullname>-app). Keys: app-secret-key
+  # (JWT_SECRET, at least 32 characters), secure-key (GOATFLOW_SECURE_KEY,
+  # 64 hex characters), optional admin-password, and smtp-password when
+  # config.email.smtp.password is used.
+  existingSecret: ""
+
+  # JWT signing secret (JWT_SECRET), at least 32 characters
+  appSecretKey: ""
+
+  # Key that encrypts stored secrets (GOATFLOW_SECURE_KEY): exactly 64 hex
+  # characters (openssl rand -hex 32). Shared by the backend and the runner.
+  # Never change it after install: stored webhook signing secrets and plugin
+  # secure settings could no longer be decrypted.
+  secureKey: ""
+
+  # First-boot password of the admin account root@localhost
+  # (GOATFLOW_ADMIN_PASSWORD). Generated when empty; read it with
+  #   kubectl get secret <fullname>-app -o jsonpath='{.data.admin-password}' | base64 -d
+  # Applied once, while the seeded account is still disabled. Change it in
+  # GoatFlow afterwards; later values here are ignored.
+  adminPassword: ""
 
 # =============================================================================
 # GoatFlow APPLICATION CONFIG
 # =============================================================================
 config:
-  # Log level: debug, info, warn, error
+  # Log level (LOG_LEVEL): debug, info, warn, error
   logLevel: info
 
   # Public URL users reach GoatFlow at, e.g. https://helpdesk.example.com
@@ -309,25 +358,50 @@ config:
 
   # Session configuration
   session:
-    lifetime: 28800  # 8 hours in seconds
+    # Maximum session lifetime in seconds (auth.session.SessionMaxTime)
+    lifetime: 28800  # 8 hours
 
-  # Article attachment storage (STORAGE_TYPE / STORAGE_PATH)
+  # File storage (STORAGE_TYPE / STORAGE_PATH): fs article attachments
+  # (<path>/var/article) and plugin files (<path>/plugins)
   storage:
-    # db (ArticleStorageDB) keeps attachments in the database. fs
-    # (ArticleStorageFS) needs a persistent volume at <path>/var/article,
-    # which this chart does not provision, so keep db unless you add one.
+    # db (ArticleStorageDB) keeps attachments in the database; fs
+    # (ArticleStorageFS) keeps them on the storage volume below.
     type: db
     path: /data/storage
+    # Volume mounted at path on the backend (the runner does not read it).
+    # Disabled: an emptyDir that is lost when the pod restarts, refused with
+    # type fs. With more than one backend replica on several nodes the volume
+    # must be ReadWriteMany (an RWX storage class such as NFS or CephFS):
+    # a ReadWriteOnce volume attaches to one node only.
+    persistence:
+      enabled: true
+      # Use this PVC instead of creating <fullname>-storage
+      existingClaim: ""
+      size: 10Gi
+      storageClass: ""  # Uses global.storageClass if empty
+      accessModes:
+        - ReadWriteOnce
 
-  # Email configuration
+  # Outgoing email (GOATFLOW_EMAIL_*), used by the backend and the runner.
+  # While disabled, mail stays in the mail_queue table.
   email:
     enabled: false
+    from: "goatflow@example.com"
+    fromName: ""
     smtp:
       host: ""
       port: 587
       username: ""
+      # Password: existingSecret (key existingSecretKey), or password to store
+      # it in the app Secret (secrets.create)
       password: ""
-      from: "goatflow@example.com"
+      existingSecret: ""
+      existingSecretKey: smtp-password
+      # STARTTLS
+      startTLS: true
+      skipVerify: false
+      # plain or login
+      authType: plain
 
   # Authentication provider order (AUTH_PROVIDERS). Empty keeps the image's
   # Config.yaml Auth::Providers (database only). With LDAP: ["ldap", "database"].

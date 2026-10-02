@@ -2,11 +2,15 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
 	"github.com/goatkit/goatflow/internal/platform/dbconfig"
 )
+
+// MinJWTSecretLength is the shortest JWT signing secret accepted in production.
+const MinJWTSecretLength = 32
 
 type SecretValidator struct {
 	config   *Config
@@ -22,51 +26,51 @@ func NewSecretValidator(cfg *Config) *SecretValidator {
 	}
 }
 
+// Validate checks secrets. In production a missing, placeholder or weak
+// secret is an error; elsewhere it is logged as a warning.
 func (v *SecretValidator) Validate() error {
-	appEnv := os.Getenv("APP_ENV")
-	isProduction := appEnv == "production" || appEnv == "prod"
+	isProduction := IsProductionEnv(v.config)
 
 	v.validateJWTSecret(isProduction)
 	v.validateDatabasePassword(isProduction)
 	v.validateSessionSecret(isProduction)
 	v.validateAPIKeys(isProduction)
 	v.validateZincPassword(isProduction)
-	v.validateLDAPPassword(isProduction)
 
 	if len(v.errors) > 0 {
 		return fmt.Errorf("secret validation failed:\n%s", strings.Join(v.errors, "\n"))
 	}
 
-	if len(v.warnings) > 0 && isProduction {
-		fmt.Printf("⚠️  Security warnings:\n%s\n", strings.Join(v.warnings, "\n"))
+	if len(v.warnings) > 0 {
+		log.Printf("Security warnings:\n%s", strings.Join(v.warnings, "\n"))
 	}
 
 	return nil
 }
 
 func (v *SecretValidator) validateJWTSecret(isProduction bool) {
-	secret := os.Getenv("JWT_SECRET")
-
-	if secret == "" {
-		v.addError("JWT_SECRET is not set", isProduction)
+	raw := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	if raw == "" && v.config != nil {
+		raw = strings.TrimSpace(v.config.Auth.JWT.Secret)
+	}
+	if raw != "" && isPlaceholderJWTSecret(raw) {
+		v.addError("JWT_SECRET is a published placeholder value; set a random secret of at least 32 characters", isProduction)
 		return
 	}
 
-	// Check if it matches the example value
-	if secret == "CHANGE_THIS_SECRET_KEY_BEFORE_USE" {
-		v.addError("JWT_SECRET is using the default example value", isProduction)
+	secret := JWTSecret(v.config)
+	if secret == "" {
+		v.addError("JWT_SECRET is not set (or set GOATFLOW_AUTH_JWT_SECRET / auth.jwt.secret)", isProduction)
 		return
 	}
 
 	// In development/test, allow prefixed secrets
 	if !isProduction && (strings.HasPrefix(secret, "dev-") || strings.HasPrefix(secret, "test-")) {
-		// These are fine for non-production
 		return
 	}
 
-	if len(secret) < 32 {
-		v.addError("JWT_SECRET must be at least 32 characters long", isProduction)
-		return
+	if len(secret) < MinJWTSecretLength {
+		v.addError(fmt.Sprintf("JWT_SECRET must be at least %d characters long", MinJWTSecretLength), isProduction)
 	}
 }
 
@@ -154,34 +158,20 @@ func (v *SecretValidator) validateZincPassword(isProduction bool) {
 	}
 }
 
-func (v *SecretValidator) validateLDAPPassword(isProduction bool) {
-	passwords := []string{
-		"LDAP_BIND_PASSWORD",
-		"LDAP_ADMIN_PASSWORD",
-	}
-
-	for _, key := range passwords {
-		value := os.Getenv(key)
-		if value == "" {
-			continue
-		}
-
-		// Todo add check for weak passwords here
-	}
-}
-
 func (v *SecretValidator) addError(message string, isProduction bool) {
 	if isProduction {
-		v.errors = append(v.errors, "   ❌ "+message)
+		v.errors = append(v.errors, "   "+message)
 	} else {
-		v.warnings = append(v.warnings, "   ⚠️  "+message)
+		v.warnings = append(v.warnings, "   "+message)
 	}
 }
 
 func (v *SecretValidator) addWarning(message string) {
-	v.warnings = append(v.warnings, "   ⚠️  "+message)
+	v.warnings = append(v.warnings, "   "+message)
 }
 
+// ValidateSecrets fails in production when a required secret is missing,
+// a published placeholder, or too weak. Call it at startup before serving.
 func ValidateSecrets(cfg *Config) error {
 	validator := NewSecretValidator(cfg)
 	return validator.Validate()

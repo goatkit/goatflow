@@ -10,8 +10,8 @@ const (
 	CodeUnauthorized = "core:unauthorized"
 	CodeForbidden    = "core:forbidden"
 	CodeInvalidToken = "core:invalid_token"
-	CodeTokenExpired = "core:token_expired"
-	CodeTokenRevoked = "core:token_revoked"
+	CodeTokenExpired = "core:token_expired" // #nosec G101 -- API error code identifier, not a credential
+	CodeTokenRevoked = "core:token_revoked" // #nosec G101 -- API error code identifier, not a credential
 
 	// Request errors
 	CodeInvalidRequest    = "core:invalid_request"
@@ -22,7 +22,7 @@ const (
 
 	// Resource errors
 	CodeNotFound      = "core:not_found"
-	CodeTokenNotFound = "core:token_not_found"
+	CodeTokenNotFound = "core:token_not_found" // #nosec G101 -- API error code identifier, not a credential
 	CodeConflict      = "core:conflict"
 
 	// Rate limiting

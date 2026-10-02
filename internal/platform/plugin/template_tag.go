@@ -160,5 +160,7 @@ func (pc *PluginCaller) Translate(key string, args ...interface{}) string {
 
 func init() {
 	// Register the {% use %} tag with pongo2
-	pongo2.RegisterTag("use", tagUseParser)
+	if err := pongo2.RegisterTag("use", tagUseParser); err != nil {
+		panic(fmt.Sprintf("plugin: register pongo2 {%% use %%} tag: %v", err))
+	}
 }

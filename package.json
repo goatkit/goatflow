@@ -4,12 +4,6 @@
   "description": "Modern Open Source Ticketing System",
   "private": true,
   "scripts": {
-    "generate-types": "node scripts/generate-types.js",
-    "generate-docs": "node scripts/generate-docs.js",
-    "validate-api": "swagger-codegen validate -i api/openapi.yaml",
-    "serve-docs": "echo 'Open docs/api/index.html in your browser'",
-    "test:contract": "bun run generate-types && bun run validate-api && bun run generate-docs",
-    "contracts:all": "bun run generate-types && bun run generate-docs && cd web && bun run test:contracts",
     "build-css": "BROWSERSLIST_IGNORE_OLD_DATA=1 ./node_modules/.bin/tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify",
     "watch-css": "BROWSERSLIST_IGNORE_OLD_DATA=1 ./node_modules/.bin/tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch",
     "build-tiptap": "esbuild static/js/tiptap-bundle.js --bundle --minify --format=iife --global-name=TiptapBundle --outfile=static/js/tiptap.min.js",
@@ -20,7 +14,6 @@
     "browserslist": "^4.28.4",
     "caniuse-lite": "^1.0.30001799",
     "esbuild": "^0.28.1",
-    "js-yaml": "^4.3.0",
     "wrangler": "^4.124.0"
   },
   "keywords": [

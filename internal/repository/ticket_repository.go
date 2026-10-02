@@ -1272,7 +1272,7 @@ func (r *TicketRepository) GetTicketHistoryEntries(ticketID uint, limit int) ([]
 		}
 
 		entry := models.TicketHistoryEntry{
-			ID:              uint(id),
+			ID:              uint(id), // #nosec G115 -- ticket_history.id auto-increment key, never negative
 			HistoryType:     typeName,
 			Name:            name,
 			CreatorLogin:    login,

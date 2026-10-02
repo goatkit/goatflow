@@ -8,7 +8,7 @@ GoatFlow has three API layers:
 2. **MCP server** (`/api/mcp`) - JSON-RPC for AI assistants. See [MCP.md](MCP.md).
 3. **Internal API** (`/api/*`) - used by the web interface (HTMX). Not covered here.
 
-This page lists the main endpoints. The full, generated list is in [api.md](api.md) (built from `routes/*.yaml` by `make api-docs`).
+This page lists the main endpoints. The full, generated list is in [api.md](api.md) (built from `routes/*.yaml` by `make generate-route-docs`).
 
 ## Quick Start
 
@@ -52,7 +52,7 @@ List endpoints such as `GET /api/v1/tickets` answer like this:
 }
 ```
 
-Errors:
+Errors from handlers:
 
 ```json
 {
@@ -61,12 +61,23 @@ Errors:
 }
 ```
 
+Authentication and API-token scope checks answer with a code instead:
+
+```json
+{
+  "error": { "code": "core:unauthorized", "message": "Authentication required" }
+}
+```
+
 ## API Documentation
 
-- **OpenAPI YAML**: [openapi.yaml](openapi.yaml)
-- **OpenAPI JSON**: [openapi.json](openapi.json)
-- **Interactive docs**: `http://localhost:8080/swagger` (on by default; `GOATFLOW_SWAGGER_ENABLED`)
-- **All routes**: [api.md](api.md) (generated)
+- **OpenAPI 3 spec of the v1 REST API**: [api/openapi.yaml](../../api/openapi.yaml). Request and response
+  shapes, auth and status codes, checked against the router by `go test ./internal/api -run TestOpenAPISpecMatchesRoutes`
+  and linted by `make openapi-lint`.
+- **Interactive docs**: `http://localhost:8080/swagger` (on by default; `GOATFLOW_SWAGGER_ENABLED`), served from
+  the swag annotations ([swagger.yaml](swagger.yaml), `make openapi-generate`).
+- **All routes**: [api.md](api.md), [openapi.json](openapi.json) (route map) and [index.html](index.html), generated
+  from `routes/*.yaml` by `make generate-route-docs`.
 
 ## Who can call what
 
@@ -229,8 +240,8 @@ Admin only (`routes/api-webhooks.yaml`). The same settings are in the UI at **Ad
 | DELETE | `/api/v1/webhooks/:id` | Delete webhook |
 | POST | `/api/v1/webhooks/:id/test` | Send a `webhook.test` delivery |
 | GET | `/api/v1/webhooks/:id/deliveries` | Delivery log |
-| GET | `/api/v1/webhooks/deliveries/:id` | One delivery |
-| POST | `/api/v1/webhooks/deliveries/:id/redeliver` | Send a delivery again |
+| GET | `/api/v1/webhook-deliveries/:id` | One delivery |
+| POST | `/api/v1/webhook-deliveries/:id/redeliver` | Send a delivery again |
 
 Create body: `name`, `url`, `events` (required); `secret`, `headers`, `retry_count`, `timeout_seconds`, `is_active` (optional).
 
@@ -239,7 +250,8 @@ Create body: `name`, `url`, `events` (required); `secret`, `headers`, `retry_cou
 | `secret` | 16 to 512 characters. Stored encrypted with `GOATFLOW_SECURE_KEY`. Never returned; responses show `has_secret` and `secret_hint` |
 | `retry_count` | 0 to 10, default 3 |
 | `timeout_seconds` | 1 to 60, default 10 |
-| `headers` | Extra headers. You cannot override the `X-Webhook-*` headers |
+| `headers` | Extra headers (name -> value). You cannot override the `X-Webhook-*` headers. Values are stored encrypted and never returned; responses show `header_hints`. On update a `null` value keeps the stored value |
+| `url` | Hosts that are or resolve to loopback, private, link-local or other internal addresses are refused unless `GOATFLOW_WEBHOOK_ALLOW_PRIVATE_TARGETS=true` (see [WEBHOOKS.md](../WEBHOOKS.md#internal-and-private-addresses)) |
 
 Events:
 
@@ -410,11 +422,13 @@ To scrape metrics without a login, set `METRICS_ENABLED=true`. GoatFlow then ser
 
 | What | Limit | Source |
 |------|-------|--------|
-| Login: `/api/v1/auth/login`, customer portal login, passkey login | 5 failed attempts in 5 minutes for the same IP and login name, then a growing wait (2 s up to 60 s) | `internal/platform/auth/login_ratelimit.go` |
+| Login: `/api/v1/auth/login`, agent web login `/api/auth/login`, customer portal login, passkey login | 5 failed attempts in 5 minutes for the same IP and login name, then a growing wait (2 s up to 60 s). Answer: `429` with `Retry-After` | `internal/platform/auth/login_ratelimit.go` |
+| Second-factor codes: `/api/auth/2fa/verify`, `/api/auth/customer/2fa/verify` | Same rule, counted per IP and account separately from the password, so a correct password does not reset it | `internal/api/login_throttle.go` |
 | Forgot-password and sign-up forms | 10 posts per IP per hour; 3 emails per account or address per hour | `internal/selfservice/types.go` |
 | Public plugin UIs | 60 requests per minute per IP by default (plugin can set `rate_limit`) | `internal/platform/pluginui/router.go` |
+| Requests with an API token (`gf_*`) | The token's `rate_limit` (column `user_api_tokens.rate_limit`, default 1000) requests per hour, token bucket. Every answer has `X-RateLimit-Limit` and `X-RateLimit-Remaining`; over the limit: `429` with `Retry-After`. Counted per process, so each replica has its own budget | `internal/platform/middleware/rate_limit.go` |
 
-There is no general rate limit on the REST API.
+Requests authenticated with a JWT or session cookie have no general rate limit.
 
 ## See Also
 

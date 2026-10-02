@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/goatkit/goatflow/internal/platform/services/registry"
@@ -233,9 +234,11 @@ func (d *Detector) WatchServices(ctx context.Context, callback func(*registry.Se
 	return fmt.Errorf("service watching not yet implemented")
 }
 
-// Helper function to convert string to int.
+// atoi converts a port string to int; anything unparsable yields 0.
 func atoi(s string) int {
-	var result int
-	fmt.Sscanf(s, "%d", &result)
-	return result
+	n, err := strconv.Atoi(strings.TrimSpace(s))
+	if err != nil {
+		return 0
+	}
+	return n
 }

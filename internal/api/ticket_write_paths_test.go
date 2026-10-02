@@ -82,6 +82,16 @@ func TestUpdateTicketAPI_RealPath(t *testing.T) {
 		"application/json", `{"title":"x"}`, agent, HandleUpdateTicketAPI)
 	assert.Equal(t, http.StatusNotFound, w.Code, w.Body.String())
 
+	// An owner change on a missing ticket must not check owner rights
+	// against queue 0; it reports the ticket as missing.
+	w = serveWriteTest(http.MethodPut, "/api/v1/tickets/:id", fmt.Sprintf("/api/v1/tickets/%d", missingTicketID),
+		"application/json", `{"user_id":1}`, agent, HandleUpdateTicketAPI)
+	assert.Equal(t, http.StatusNotFound, w.Code, w.Body.String())
+
+	w = serveWriteTest(http.MethodPut, "/api/v1/tickets/:id", "/api/v1/tickets/-1",
+		"application/json", `{"title":"x"}`, agent, HandleUpdateTicketAPI)
+	assert.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
+
 	w = serveWriteTest(http.MethodPut, "/api/v1/tickets/:id", fmt.Sprintf("/api/v1/tickets/%d", ticketID),
 		"application/json", `{"title":"Renamed by test"}`, agent, HandleUpdateTicketAPI)
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())

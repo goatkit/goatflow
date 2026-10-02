@@ -663,7 +663,13 @@
           "responsible": "Ticket-Verantwortlicher",
           "roles": "Rollen",
           "special": "Besondere Empfänger",
-          "watcher": "Ticket-Beobachter"
+          "watcher": "Ticket-Beobachter",
+          "my_queues": "Agenten mit der Queue in „Meine Queues“",
+          "creator": "Ticket-Ersteller",
+          "read_permissions": "Alle Agenten mit Lesezugriff auf die Queue",
+          "write_permissions": "Alle Agenten mit Schreibzugriff auf die Queue",
+          "emails": "Zusätzliche Empfänger-E-Mail-Adressen",
+          "emails_help": "Adressen durch Kommas trennen. Höchstens 200 Zeichen."
         },
         "sections": {
           "basic": "Grundinformationen",
@@ -1548,6 +1554,7 @@
         "events_required": "Wählen Sie mindestens ein Ereignis aus.",
         "header_name": "Header-Name",
         "header_value": "Wert",
+        "header_value_keep": "Wert gespeichert ({hint}). Leer lassen, um ihn beizubehalten",
         "headers": "Eigene Header",
         "headers_help": "Werden bei jeder Zustellung mitgesendet. Content-Type, User-Agent und die X-Webhook-*-Header setzt GoatFlow selbst.",
         "remove_header": "Header entfernen",
@@ -2352,9 +2359,18 @@
     }
   },
   "customer_portal_settings": {
+    "description": "Systemweite Standardwerte für alle Kundenfirmen. Jede Firma kann sie auf ihrer Bearbeitungsseite überschreiben.",
+    "enable": "Kundenportal aktivieren",
+    "enable_help": "Schaltet das Kundenportal ein oder aus. Firmen mit eigener Einstellung behalten diese.",
+    "footer_text": "Fußzeilentext",
     "heading": "Kundenportal-Einstellungen",
+    "landing_page": "Startseite",
+    "landing_page_help": "Seite, die Kunden nach der Anmeldung sehen, zum Beispiel /customer/tickets. Ein Pfad ohne führendes / gilt relativ zu /customer.",
+    "per_company_note": "Jede Kundenfirma kann diese Standardwerte im Tab „Portal-Einstellungen“ ihrer Bearbeitungsseite überschreiben.",
+    "require_login": "Anmeldung erforderlich",
+    "require_login_help": "Kunden müssen sich anmelden, bevor sie das Portal nutzen können",
     "title": "Kundenportal-Einstellungen",
-    "per_company_note": "Jede Kundenfirma kann diese Standardwerte im Tab „Portal-Einstellungen“ ihrer Bearbeitungsseite überschreiben."
+    "title_field": "Portaltitel"
   },
   "customer_user_services": {
     "title": "Kundenbenutzer Services"
@@ -3697,7 +3713,6 @@
     "showing_of_total": "Zeige %d von %d Tickets",
     "sla": "SLA",
     "spam": "Spam",
-    "split": "Teilen",
     "state": "Status",
     "status": "Status",
     "subject": "Betreff",
@@ -3736,7 +3751,15 @@
     "view_in_queue": "Tickets in dieser Queue anzeigen",
     "visible_for_customer": "Für Kunden sichtbar",
     "visible_for_customer_help": "Markieren, um diese Aktualisierung im Kundenportal anzuzeigen.",
-    "watch": "Beobachten"
+    "watch": "Beobachten",
+    "escalation": {
+      "first_response": "Erste Reaktion fällig",
+      "update": "Aktualisierung fällig",
+      "solution": "Lösung fällig",
+      "due_in": "Fällig in",
+      "overdue_by": "Überfällig seit",
+      "escalated": "Eskaliert"
+    }
   },
   "tickets_form": {
     "attachments": "Anhänge",

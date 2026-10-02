@@ -37,9 +37,10 @@ plugin system, with MariaDB and Valkey bundled in the app.
   build args).
 - Ports: backend `30484` (default), optional customer portal `30483`.
 - Secrets (`JWT_SECRET`, `GOATFLOW_SECURE_KEY`, DB/SMTP passwords) are required and
-  have no safe defaults.
-- **No public URL setting.** The template does not set `BASE_URL`, so password-reset
-  and customer sign-up emails are not sent (the "Forgot password" link is shown,
-  because `features.lost_password` is on by default, but no email goes out). To send
-  them, add `BASE_URL` (for example `https://helpdesk.example.com`) under
-  Additional Environment Variables.
+  have no safe defaults. The Application Secure Key must be exactly 64 hex characters
+  (`openssl rand -hex 32`); backend, runner and customer portal share it, and it must
+  never change after install.
+- **Public URL** (`BASE_URL`): set it (for example `https://helpdesk.example.com`) so
+  password-reset and customer sign-up emails are sent; while it is empty they are not.
+- Backend, runner and customer portal get the same SMTP settings: the runner sends the
+  mail queue, the backend sends some mail (for example two-factor codes) directly.

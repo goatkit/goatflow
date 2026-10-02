@@ -98,7 +98,7 @@ func AuthenticateAPIToken(c *gin.Context, token string) {
 
 // authenticateAPIToken handles gf_* token authentication
 func authenticateAPIToken(c *gin.Context, token string) {
-	debugLog("DEBUG api_token: authenticating gf_* token (prefix: %s...)", token[:min(15, len(token))])
+	debugLog("DEBUG api_token: authenticating gf_* token")
 
 	if tokenVerifier == nil {
 		debugLog("DEBUG api_token: tokenVerifier is nil!")
@@ -123,6 +123,11 @@ func authenticateAPIToken(c *gin.Context, token string) {
 		return
 	}
 	debugLog("DEBUG api_token: verified token id=%d user_id=%d", apiToken.ID, apiToken.UserID)
+
+	// Enforce the token's own request budget (user_api_tokens.rate_limit).
+	if !allowAPITokenRequest(c, apiToken) {
+		return
+	}
 
 	go func() {
 		_ = tokenVerifier.UpdateLastUsed(c.Request.Context(), apiToken.ID, c.ClientIP())

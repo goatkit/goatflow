@@ -231,12 +231,49 @@
                                 <span style="color: var(--gk-text-secondary);">{{ t("admin.modules.notification_event.recipients.watcher") }}</span>
                             </label>
                             <label class="flex items-center space-x-2 text-sm cursor-pointer">
+                                <input type="checkbox" name="recipient_Recipients" value="AgentMyQueues"
+                                       {% if Event and "AgentMyQueues" in Event.Recipients.Recipients %}checked{% endif %}
+                                       class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border-default);">
+                                <span style="color: var(--gk-text-secondary);">{{ t("admin.modules.notification_event.recipients.my_queues") }}</span>
+                            </label>
+                            <label class="flex items-center space-x-2 text-sm cursor-pointer">
+                                <input type="checkbox" name="recipient_Recipients" value="AgentCreateBy"
+                                       {% if Event and "AgentCreateBy" in Event.Recipients.Recipients %}checked{% endif %}
+                                       class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border-default);">
+                                <span style="color: var(--gk-text-secondary);">{{ t("admin.modules.notification_event.recipients.creator") }}</span>
+                            </label>
+                            <label class="flex items-center space-x-2 text-sm cursor-pointer">
+                                <input type="checkbox" name="recipient_Recipients" value="AgentReadPermissions"
+                                       {% if Event and "AgentReadPermissions" in Event.Recipients.Recipients %}checked{% endif %}
+                                       class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border-default);">
+                                <span style="color: var(--gk-text-secondary);">{{ t("admin.modules.notification_event.recipients.read_permissions") }}</span>
+                            </label>
+                            <label class="flex items-center space-x-2 text-sm cursor-pointer">
+                                <input type="checkbox" name="recipient_Recipients" value="AgentWritePermissions"
+                                       {% if Event and "AgentWritePermissions" in Event.Recipients.Recipients %}checked{% endif %}
+                                       class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border-default);">
+                                <span style="color: var(--gk-text-secondary);">{{ t("admin.modules.notification_event.recipients.write_permissions") }}</span>
+                            </label>
+                            <label class="flex items-center space-x-2 text-sm cursor-pointer">
                                 <input type="checkbox" name="recipient_Recipients" value="Customer"
                                        {% if Event and "Customer" in Event.Recipients.Recipients %}checked{% endif %}
                                        class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border-default);">
                                 <span style="color: var(--gk-text-secondary);">{{ t("admin.modules.notification_event.recipients.customer") }}</span>
                             </label>
                         </div>
+                    </div>
+
+                    <!-- Additional addresses (OTRS RecipientEmail) -->
+                    <div class="md:col-span-2">
+                        <label for="recipient_RecipientEmail" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.modules.notification_event.recipients.emails") }}
+                        </label>
+                        <input type="text" id="recipient_RecipientEmail" name="recipient_RecipientEmail" maxlength="200"
+                               value="{% if Event %}{{ Event.Recipients.RecipientEmail.0 }}{% endif %}"
+                               class="gk-input-neon w-full" placeholder="support-leads@example.com, oncall@example.com">
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">
+                            {{ t("admin.modules.notification_event.recipients.emails_help") }}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -312,6 +349,12 @@
                         <code class="px-2 py-1 rounded" style="background: var(--gk-bg-surface); color: var(--gk-primary);">&lt;OTRS_CUSTOMER_UserFirstname&gt;</code>
                         <code class="px-2 py-1 rounded" style="background: var(--gk-bg-surface); color: var(--gk-primary);">&lt;OTRS_CUSTOMER_UserLastname&gt;</code>
                         <code class="px-2 py-1 rounded" style="background: var(--gk-bg-surface); color: var(--gk-primary);">&lt;OTRS_CUSTOMER_UserEmail&gt;</code>
+                        <code class="px-2 py-1 rounded" style="background: var(--gk-bg-surface); color: var(--gk-primary);">&lt;OTRS_CUSTOMER_SUBJECT&gt;</code>
+                        <code class="px-2 py-1 rounded" style="background: var(--gk-bg-surface); color: var(--gk-primary);">&lt;OTRS_CUSTOMER_BODY[5]&gt;</code>
+                        <code class="px-2 py-1 rounded" style="background: var(--gk-bg-surface); color: var(--gk-primary);">&lt;OTRS_AGENT_BODY[5]&gt;</code>
+                        <code class="px-2 py-1 rounded" style="background: var(--gk-bg-surface); color: var(--gk-primary);">&lt;OTRS_OWNER_UserFullname&gt;</code>
+                        <code class="px-2 py-1 rounded" style="background: var(--gk-bg-surface); color: var(--gk-primary);">&lt;OTRS_CURRENT_UserFullname&gt;</code>
+                        <code class="px-2 py-1 rounded" style="background: var(--gk-bg-surface); color: var(--gk-primary);">&lt;OTRS_NOTIFICATION_RECIPIENT_UserFirstname&gt;</code>
                     </div>
                 </div>
             </div>
@@ -353,40 +396,66 @@ function showLanguageTab(lang) {
     tab.style.borderColor = 'var(--gk-primary)';
 }
 
+// The stored notification (edit form) as JSON, or null for a new one.
+const storedEvent = {% if EventJSON %}{{ EventJSON|safe }}{% else %}null{% endif %};
+
 document.getElementById('notificationForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const formData = new FormData(this);
+    const stored = storedEvent || {events: [], filters: {}, recipients: {}};
+    // Stored values the form has no control for (rules imported from OTRS:
+    // legacy events, other filters, delivery options) are kept as they are.
+    const controlValues = name => new Set(Array.from(this.querySelectorAll('[name="' + name + '"]'))
+        .flatMap(el => el.tagName === 'SELECT' ? Array.from(el.options).map(o => o.value) : [el.value]));
+    const keepUnknown = (values, name) => {
+        const known = controlValues(name);
+        return (values || []).filter(v => !known.has(v));
+    };
 
     // Build the request payload
     const payload = {
         name: formData.get('name'),
         valid_id: parseInt(formData.get('valid_id')),
         comments: formData.get('comments'),
-        events: formData.getAll('events'),
+        events: keepUnknown(stored.events, 'events').concat(formData.getAll('events')),
         filters: {},
         recipients: {},
         messages: {}
     };
 
-    // Collect filters
-    ['QueueID', 'StateID', 'PriorityID', 'TypeID'].forEach(key => {
+    const formFilters = ['QueueID', 'StateID', 'PriorityID', 'TypeID'];
+    for (const [key, values] of Object.entries(stored.filters || {})) {
+        if (!formFilters.includes(key)) payload.filters[key] = values;
+    }
+    formFilters.forEach(key => {
         const values = formData.getAll('filter_' + key);
         if (values.length > 0) {
             payload.filters[key] = values;
         }
     });
 
-    // Collect recipients
-    ['RecipientAgents', 'RecipientGroups', 'RecipientRoles', 'Recipients'].forEach(key => {
-        const values = formData.getAll('recipient_' + key);
+    const formRecipients = ['RecipientAgents', 'RecipientGroups', 'RecipientRoles', 'Recipients'];
+    for (const [key, values] of Object.entries(stored.recipients || {})) {
+        if (!formRecipients.includes(key) && key !== 'RecipientEmail') payload.recipients[key] = values;
+    }
+    formRecipients.forEach(key => {
+        let values = formData.getAll('recipient_' + key);
+        if (key === 'Recipients') {
+            values = keepUnknown((stored.recipients || {}).Recipients, 'recipient_Recipients').concat(values);
+        }
         if (values.length > 0) {
             payload.recipients[key] = values;
         }
     });
+    const extraEmails = (formData.get('recipient_RecipientEmail') || '').trim();
+    if (extraEmails) {
+        payload.recipients.RecipientEmail = [extraEmails];
+    }
 
-    // Collect messages per language
-    ['en', 'de', 'es', 'fr', 'ar'].forEach(lang => {
+    // Collect messages for every language the form shows
+    this.querySelectorAll('input[name^="message_"][name$="_subject"]').forEach(field => {
+        const lang = field.name.slice('message_'.length, -'_subject'.length);
         const subject = formData.get('message_' + lang + '_subject');
         const body = formData.get('message_' + lang + '_body');
         const contentType = formData.get('message_' + lang + '_content_type');
@@ -400,6 +469,10 @@ document.getElementById('notificationForm').addEventListener('submit', async fun
             };
         }
     });
+    // Messages in languages the form does not show are kept.
+    for (const [lang, msg] of Object.entries((storedEvent && storedEvent.messages) || {})) {
+        if (!document.getElementById('message_' + lang + '_subject')) payload.messages[lang] = msg;
+    }
 
     const isNew = {% if IsNew %}true{% else %}false{% endif %};
     const eventId = {% if Event %}{{ Event.ID }}{% else %}0{% endif %};
@@ -433,29 +506,17 @@ document.getElementById('notificationForm').addEventListener('submit', async fun
     }
 });
 
-// Populate message fields when editing existing notification
-{% if Event and Event.Messages %}
-const existingMessages = {{ Event.Messages|safe }};
-document.addEventListener('DOMContentLoaded', function() {
-    if (existingMessages) {
-        for (const [lang, msg] of Object.entries(existingMessages)) {
-            const subjectField = document.getElementById('message_' + lang + '_subject');
-            const bodyField = document.getElementById('message_' + lang + '_body');
-            const contentTypeField = document.getElementById('message_' + lang + '_content_type');
-
-            if (subjectField && msg.Subject) {
-                subjectField.value = msg.Subject;
-            }
-            if (bodyField && msg.Text) {
-                bodyField.value = msg.Text;
-            }
-            if (contentTypeField && msg.ContentType) {
-                contentTypeField.value = msg.ContentType;
-            }
-        }
+// Populate message fields when editing an existing notification
+if (storedEvent && storedEvent.messages) {
+    for (const [lang, msg] of Object.entries(storedEvent.messages)) {
+        const subjectField = document.getElementById('message_' + lang + '_subject');
+        const bodyField = document.getElementById('message_' + lang + '_body');
+        const contentTypeField = document.getElementById('message_' + lang + '_content_type');
+        if (subjectField) subjectField.value = msg.subject || '';
+        if (bodyField) bodyField.value = msg.text || '';
+        if (contentTypeField && msg.content_type) contentTypeField.value = msg.content_type;
     }
-});
-{% endif %}
+}
 
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');

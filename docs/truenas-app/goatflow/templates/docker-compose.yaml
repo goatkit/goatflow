@@ -1,5 +1,10 @@
 {% set tpl = ix_lib.base.render.Render(values) %}
 
+{# GOATFLOW_SECURE_KEY is decoded as 32 bytes of hex (internal/platform/secureconfig) #}
+{% if not tpl.funcs.match_regex(values.goatflow.secure_key, "^[0-9a-fA-F]{64}\\Z") %}
+  {% do tpl.funcs.fail("Application Secure Key must be exactly 64 hex characters (openssl rand -hex 32)") %}
+{% endif %}
+
 {% set goatflow_net = tpl.networks.create_internal("goatflow-net") %}
 {% set perm_container = tpl.deps.perms(values.consts.perms_container_name) %}
 
@@ -28,29 +33,22 @@
   {% do perm_container.add_or_skip_action(store.mount_path, store, perms_config) %}
 {% endfor %}
 
-{#
-  0.10.0 (the pinned image) reads flat DB_* env; later images read namespaced
-  DB_MYSQL_* and fall back to flat DB_*. Emitting the flat set works for both.
-  Namespaced-only would break 0.10.0: it would dial localhost:3306.
-#}
+{# Driver-scoped connection variables read by internal/platform/dbconfig (DB_DRIVER selects DB_MYSQL_*) #}
 {% set db_env = {
-  "DB_HOST": values.consts.mariadb_container_name,
-  "DB_PORT": "3306",
-  "DB_NAME": values.consts.db_name,
-  "DB_USER": values.consts.db_user,
-  "DB_PASSWORD": values.goatflow.db_password,
+  "DB_DRIVER": "mariadb",
+  "DB_MYSQL_HOST": values.consts.mariadb_container_name,
+  "DB_MYSQL_PORT": "3306",
+  "DB_MYSQL_NAME": values.consts.db_name,
+  "DB_MYSQL_USER": values.consts.db_user,
+  "DB_MYSQL_PASSWORD": values.goatflow.db_password,
 } %}
 
+{# Shared by backend, runner and customer portal; GOATFLOW_SECURE_KEY must be identical in all of them #}
 {% set app_env = {
   "APP_ENV": "production",
   "APP_PORT": "8080",
-  "ENABLE_YAML_ROUTING": "true",
-  "DB_DRIVER": "mariadb",
-  "DB_MAX_CONNECTIONS": "100",
-  "DB_MAX_IDLE_CONNECTIONS": "10",
-  "DB_CONNECTION_MAX_LIFETIME": "30m",
-  "VALKEY_HOST": values.consts.valkey_container_name,
-  "VALKEY_PORT": "6379",
+  "GOATFLOW_VALKEY_HOST": values.consts.valkey_container_name,
+  "GOATFLOW_VALKEY_PORT": "6379",
   "GOATFLOW_VALKEY_PASSWORD": values.goatflow.valkey_password,
   "JWT_SECRET": values.goatflow.jwt_secret,
   "JWT_ACCESS_TOKEN_EXPIRY": "15m",
@@ -60,16 +58,26 @@
   "PASSWORD_HASH_TYPE": "bcrypt",
   "MIGRATE_PASSWORD_HASHES": "false",
   "STORAGE_PATH": "/app/storage",
-  "MAX_UPLOAD_SIZE": "10MB",
-  "ALLOWED_FILE_TYPES": "pdf,doc,docx,txt,png,jpg,jpeg,gif,zip",
   "GOATFLOW_PLUGIN_LAZY_LOAD": "true",
   "GOATFLOW_PLUGIN_HOT_RELOAD": "false",
+  "GOATFLOW_EMAIL_ENABLED": values.goatflow.email_enabled,
+  "GOATFLOW_EMAIL_FROM": values.goatflow.email_from,
+  "GOATFLOW_EMAIL_SMTP_HOST": values.goatflow.smtp_host,
+  "GOATFLOW_EMAIL_SMTP_PORT": values.goatflow.smtp_port,
+  "GOATFLOW_EMAIL_SMTP_USER": values.goatflow.smtp_user,
+  "GOATFLOW_EMAIL_SMTP_PASSWORD": values.goatflow.smtp_password,
+  "GOATFLOW_EMAIL_SMTP_TLS": values.goatflow.smtp_tls,
 } %}
+{% if values.goatflow.base_url %}
+  {% do app_env.update({"BASE_URL": values.goatflow.base_url}) %}
+{% endif %}
 {% do app_env.update(db_env) %}
 
 {% set c1 = tpl.add_container(values.consts.goatflow_container_name, "image") %}
 {% do c1.add_network(goatflow_net) %}
 {% do c1.set_user(values.run_as.user, values.run_as.group) %}
+{# HTTP drain (DRAIN_TIMEOUT, 5s) + plugin shutdown (up to 30s) #}
+{% do c1.set_grace_period(45) %}
 {% do c1.depends.add_dependency(values.consts.mariadb_container_name, "service_healthy") %}
 {% do c1.depends.add_dependency(values.consts.valkey_container_name, "service_healthy") %}
 {# alpine image ships busybox wget (no curl) - mirrors the Dockerfile HEALTHCHECK #}
@@ -91,6 +99,7 @@
 {% set runner = tpl.add_container(values.consts.runner_container_name, "image") %}
 {% do runner.add_network(goatflow_net) %}
 {% do runner.set_user(values.run_as.user, values.run_as.group) %}
+{% do runner.set_grace_period(45) %}
 {% do runner.depends.add_dependency(values.consts.mariadb_container_name, "service_healthy") %}
 {% do runner.set_command(["./goats", "-mode", "runner"]) %}
 {# runner has no HTTP endpoint - verify the goats binary is running as PID 1 #}
@@ -101,13 +110,6 @@
 {% for env_name, env_value in app_env.items() %}
   {% do runner.environment.add_env(env_name, env_value) %}
 {% endfor %}
-{% do runner.environment.add_env("GOATFLOW_EMAIL_ENABLED", values.goatflow.email_enabled) %}
-{% do runner.environment.add_env("GOATFLOW_EMAIL_FROM", values.goatflow.email_from) %}
-{% do runner.environment.add_env("GOATFLOW_EMAIL_SMTP_HOST", values.goatflow.smtp_host) %}
-{% do runner.environment.add_env("GOATFLOW_EMAIL_SMTP_PORT", values.goatflow.smtp_port) %}
-{% do runner.environment.add_env("GOATFLOW_EMAIL_SMTP_USER", values.goatflow.smtp_user) %}
-{% do runner.environment.add_env("GOATFLOW_EMAIL_SMTP_PASSWORD", values.goatflow.smtp_password) %}
-{% do runner.environment.add_env("GOATFLOW_EMAIL_SMTP_TLS", values.goatflow.smtp_tls) %}
 {% do runner.environment.add_user_envs(values.goatflow.additional_envs) %}
 {% do runner.add_storage("/app/config/plugins", values.storage.plugins) %}
 
@@ -116,6 +118,7 @@
   {% set fe = tpl.add_container(values.consts.customer_fe_container_name, "image") %}
   {% do fe.add_network(goatflow_net) %}
   {% do fe.set_user(values.run_as.user, values.run_as.group) %}
+  {% do fe.set_grace_period(45) %}
   {% do fe.depends.add_dependency(values.consts.mariadb_container_name, "service_healthy") %}
   {% do fe.depends.add_dependency(values.consts.valkey_container_name, "service_healthy") %}
   {% do fe.healthcheck.set_test("wget", {"port": values.consts.internal_app_port, "path": "/health"}) %}

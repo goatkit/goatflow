@@ -219,7 +219,7 @@ func HandleListUsersAPI(c *gin.Context) {
 		})
 		return
 	}
-	rows.Close()
+	_ = rows.Close() // fully read and rows.Err() checked; only frees the connection
 
 	// Groups are loaded after the user cursor is closed: one open result set per
 	// connection keeps this safe on MySQL as well as PostgreSQL.

@@ -401,6 +401,27 @@ func TestPasswordReset_ExpiredTokenRejected(t *testing.T) {
 	assert.Equal(t, http.StatusOK, customerLogin(t, a.login, a.password), "password must be unchanged")
 }
 
+// Reset submissions share the per-IP budget: after 10 guesses an address is
+// refused even with a valid token, while other addresses are unaffected.
+func TestPasswordReset_PerIPBudget(t *testing.T) {
+	a := newCustomer(t)
+	token := requestReset(t, newIP(), "/customer/forgot-password", a)
+
+	guesser := newIP()
+	for i := range 10 {
+		w := reset(t, guesser, "/customer/reset-password", uniq("guess"), "New-Passw0rd!", "New-Passw0rd!")
+		require.Equal(t, http.StatusBadRequest, w.Code, "guess %d", i+1)
+	}
+	w := reset(t, guesser, "/customer/reset-password", token, "New-Passw0rd!", "New-Passw0rd!")
+	assert.Equal(t, http.StatusTooManyRequests, w.Code)
+	assert.Equal(t, "3600", w.Header().Get("Retry-After"))
+	assert.Equal(t, http.StatusOK, customerLogin(t, a.login, a.password), "password must be unchanged")
+
+	w = reset(t, newIP(), "/customer/reset-password", token, "New-Passw0rd!", "New-Passw0rd!")
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Equal(t, http.StatusOK, customerLogin(t, a.login, "New-Passw0rd!"))
+}
+
 func TestPasswordReset_TokenBoundToItsAccount(t *testing.T) {
 	ip := newIP()
 	cust := newCustomer(t)

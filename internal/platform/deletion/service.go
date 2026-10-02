@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -188,10 +189,12 @@ func (s *Service) SoftDelete(ctx context.Context, entityType string, entityID in
 	if reason != "" {
 		reasonPtr = &reason
 	}
-	s.repo.LogDeletion(&DeletionLog{
+	if err := s.repo.LogDeletion(&DeletionLog{
 		EntityType: entityType, EntityID: entityID, Action: ActionSoftDelete,
 		DeletedBy: userID, DeletedAt: time.Now(), OrgID: orgIDPtr, Reason: reasonPtr,
-	})
+	}); err != nil {
+		slog.Warn("deletion tombstone log failed", "action", ActionSoftDelete, "entity", entityType, "id", entityID, "error", err)
+	}
 
 	// Plugin cascades (soft delete).
 	s.runCascades(ctx, entityType, entityID, "soft")
@@ -226,10 +229,12 @@ func (s *Service) Restore(ctx context.Context, entityType string, entityID int64
 	if orgID > 0 {
 		orgIDPtr = &orgID
 	}
-	s.repo.LogDeletion(&DeletionLog{
+	if err := s.repo.LogDeletion(&DeletionLog{
 		EntityType: entityType, EntityID: entityID, Action: ActionRestore,
 		DeletedBy: userID, DeletedAt: time.Now(), OrgID: orgIDPtr,
-	})
+	}); err != nil {
+		slog.Warn("deletion tombstone log failed", "action", ActionRestore, "entity", entityType, "id", entityID, "error", err)
+	}
 
 	return nil
 }
@@ -244,8 +249,11 @@ func (s *Service) HardDelete(ctx context.Context, entityType string, entityID in
 		return fmt.Errorf("hard delete %s/%d: %w", entityType, entityID, err)
 	}
 
-	// Remove from recycle bin if present.
-	s.repo.RemoveFromRecycleBin(entityType, entityID)
+	// Remove from recycle bin if present. The entity is already gone, so a
+	// failure here only leaves a stale bin entry that the next purge retries.
+	if err := s.repo.RemoveFromRecycleBin(entityType, entityID); err != nil {
+		slog.Warn("recycle bin cleanup after hard delete failed", "entity", entityType, "id", entityID, "error", err)
+	}
 
 	// Tombstone log.
 	orgID := organisation.OrgIDFromContext(ctx)
@@ -257,10 +265,12 @@ func (s *Service) HardDelete(ctx context.Context, entityType string, entityID in
 	if reason != "" {
 		reasonPtr = &reason
 	}
-	s.repo.LogDeletion(&DeletionLog{
+	if err := s.repo.LogDeletion(&DeletionLog{
 		EntityType: entityType, EntityID: entityID, Action: ActionHardDelete,
 		DeletedBy: userID, DeletedAt: time.Now(), OrgID: orgIDPtr, Reason: reasonPtr,
-	})
+	}); err != nil {
+		slog.Warn("deletion tombstone log failed", "action", ActionHardDelete, "entity", entityType, "id", entityID, "error", err)
+	}
 
 	return nil
 }
@@ -328,9 +338,10 @@ func (s *Service) softDeleteEntity(entityType string, entityID int64, userID int
 	now := time.Now()
 	switch entityType {
 	case EntityTicket:
-		var title string
-		database.ConvertPlaceholders("SELECT title FROM ticket WHERE id = ?")
-		db.QueryRow(database.ConvertPlaceholders("SELECT title FROM ticket WHERE id = ?"), entityID).Scan(&title)
+		title, err := lookupEntityName(db, "SELECT title FROM ticket WHERE id = ?", entityID)
+		if err != nil {
+			return "", err
+		}
 		closedStateID, err := lookups.ID(context.Background(), db, lookups.StateLookup, lookups.StateClosedSuccessful)
 		if err != nil {
 			return title, err
@@ -341,41 +352,51 @@ func (s *Service) softDeleteEntity(entityType string, entityID int64, userID int
 		return title, err
 
 	case EntityContact:
-		var name string
-		db.QueryRow(database.ConvertPlaceholders("SELECT CONCAT(first_name, ' ', last_name) FROM customer_user WHERE id = ?"), entityID).Scan(&name)
-		_, err := db.Exec(database.ConvertPlaceholders(
+		name, err := lookupEntityName(db, "SELECT CONCAT(first_name, ' ', last_name) FROM customer_user WHERE id = ?", entityID)
+		if err != nil {
+			return "", err
+		}
+		_, err = db.Exec(database.ConvertPlaceholders(
 			"UPDATE customer_user SET valid_id = 2, change_time = ?, change_by = ? WHERE id = ?"),
 			now, userID, entityID)
 		return name, err
 
 	case EntityAgent:
-		var login string
-		db.QueryRow(database.ConvertPlaceholders("SELECT login FROM users WHERE id = ?"), entityID).Scan(&login)
-		_, err := db.Exec(database.ConvertPlaceholders(
+		login, err := lookupEntityName(db, "SELECT login FROM users WHERE id = ?", entityID)
+		if err != nil {
+			return "", err
+		}
+		_, err = db.Exec(database.ConvertPlaceholders(
 			"UPDATE users SET valid_id = 2, change_time = ?, change_by = ? WHERE id = ?"),
 			now, userID, entityID)
 		return login, err
 
 	case EntityQueue:
-		var name string
-		db.QueryRow(database.ConvertPlaceholders("SELECT name FROM queue WHERE id = ?"), entityID).Scan(&name)
-		_, err := db.Exec(database.ConvertPlaceholders(
+		name, err := lookupEntityName(db, "SELECT name FROM queue WHERE id = ?", entityID)
+		if err != nil {
+			return "", err
+		}
+		_, err = db.Exec(database.ConvertPlaceholders(
 			"UPDATE queue SET valid_id = 2, change_time = ?, change_by = ? WHERE id = ?"),
 			now, userID, entityID)
 		return name, err
 
 	case EntityOrganisation:
-		var name string
-		db.QueryRow(database.ConvertPlaceholders("SELECT name FROM gk_organisation WHERE id = ?"), entityID).Scan(&name)
-		_, err := db.Exec(database.ConvertPlaceholders(
+		name, err := lookupEntityName(db, "SELECT name FROM gk_organisation WHERE id = ?", entityID)
+		if err != nil {
+			return "", err
+		}
+		_, err = db.Exec(database.ConvertPlaceholders(
 			"UPDATE gk_organisation SET status = 'archived', change_time = ?, change_by = ? WHERE id = ?"),
 			now, userID, entityID)
 		return name, err
 
 	case EntityCustomerGroup:
-		var name string
-		db.QueryRow(database.ConvertPlaceholders("SELECT name FROM customer_company WHERE customer_id = ?"), entityID).Scan(&name)
-		_, err := db.Exec(database.ConvertPlaceholders(
+		name, err := lookupEntityName(db, "SELECT name FROM customer_company WHERE customer_id = ?", entityID)
+		if err != nil {
+			return "", err
+		}
+		_, err = db.Exec(database.ConvertPlaceholders(
 			"UPDATE customer_company SET valid_id = 2, change_time = ?, change_by = ? WHERE customer_id = ?"),
 			now, userID, entityID)
 		return name, err
@@ -383,6 +404,21 @@ func (s *Service) softDeleteEntity(entityType string, entityID int64, userID int
 	default:
 		return "", fmt.Errorf("unsupported entity type for soft delete: %s", entityType)
 	}
+}
+
+// lookupEntityName reads the display name of the entity being deleted. A
+// missing row is an error: otherwise the UPDATE below would touch nothing and
+// a phantom entry would land in the recycle bin.
+func lookupEntityName(db *sql.DB, query string, entityID int64) (string, error) {
+	var name string
+	err := db.QueryRow(database.ConvertPlaceholders(query), entityID).Scan(&name)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", fmt.Errorf("entity %d not found", entityID)
+	}
+	if err != nil {
+		return "", fmt.Errorf("look up entity %d: %w", entityID, err)
+	}
+	return name, nil
 }
 
 func (s *Service) restoreEntity(entityType string, entityID int64, userID int) error {
@@ -440,20 +476,22 @@ func (s *Service) hardDeleteEntity(entityType string, entityID int64) error {
 
 	switch entityType {
 	case EntityTicket:
-		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_history WHERE ticket_id = ?"), entityID)
-		db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime WHERE article_id IN (SELECT id FROM article WHERE ticket_id = ?)"), entityID)
-		db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE ticket_id = ?"), entityID)
-		_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id = ?"), entityID)
-		return err
+		return execInTx(db, entityID,
+			"DELETE FROM ticket_history WHERE ticket_id = ?",
+			"DELETE FROM article_data_mime WHERE article_id IN (SELECT id FROM article WHERE ticket_id = ?)",
+			"DELETE FROM article WHERE ticket_id = ?",
+			"DELETE FROM ticket WHERE id = ?",
+		)
 
 	case EntityContact:
 		_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM customer_user WHERE id = ?"), entityID)
 		return err
 
 	case EntityAgent:
-		db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = ?"), entityID)
-		_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), entityID)
-		return err
+		return execInTx(db, entityID,
+			"DELETE FROM group_user WHERE user_id = ?",
+			"DELETE FROM users WHERE id = ?",
+		)
 
 	case EntityQueue:
 		_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM queue WHERE id = ?"), entityID)
@@ -466,6 +504,22 @@ func (s *Service) hardDeleteEntity(entityType string, entityID int64) error {
 	default:
 		return fmt.Errorf("unsupported entity type for hard delete: %s", entityType)
 	}
+}
+
+// execInTx runs each statement with entityID as its only argument in one
+// transaction, so a failing child delete leaves the entity fully intact.
+func execInTx(db *sql.DB, entityID int64, stmts ...string) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	for _, stmt := range stmts {
+		if _, err := tx.Exec(database.ConvertPlaceholders(stmt), entityID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (s *Service) runCascades(ctx context.Context, entityType string, entityID int64, mode string) {

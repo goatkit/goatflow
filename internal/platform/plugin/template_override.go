@@ -125,7 +125,7 @@ func sanitizeTemplateName(name string) string {
 	result := make([]byte, 0, len(name))
 	for _, c := range name {
 		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') {
-			result = append(result, byte(c))
+			result = append(result, byte(c)) // #nosec G115 -- c is ASCII [a-zA-Z0-9], fits in a byte
 		} else {
 			result = append(result, '_')
 		}

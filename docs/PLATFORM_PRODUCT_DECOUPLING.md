@@ -515,8 +515,7 @@ internal/platform/
 ├── template/         (from Phase 6 — decoupled from repository/models via MaintenanceChecker interface)
 ├── utils/
 ├── webhook/
-├── yamlmgmt/
-└── zinc/
+└── yamlmgmt/
 ```
 
 #### Decoupling work (Phase 6)

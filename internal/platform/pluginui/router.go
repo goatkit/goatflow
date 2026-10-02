@@ -28,8 +28,8 @@ type TemplateRenderer interface {
 	HTML(c *gin.Context, code int, name string, data interface{})
 }
 
-// UIAuth carries the API layer's auth middlewares into UI registration (this
-// package cannot import internal/api).
+// UIAuth carries the API layer's auth middlewares and call envelope into UI
+// registration (this package cannot import internal/api).
 type UIAuth struct {
 	// Authenticate identifies the caller from a session cookie, JWT or API
 	// token and rejects anonymous requests.
@@ -37,6 +37,11 @@ type UIAuth struct {
 	// RequireGroup returns middleware admitting admins and members of the
 	// named agent group.
 	RequireGroup func(name string) gin.HandlerFunc
+	// Envelope replaces any client-supplied envelope key in args with the
+	// host's call envelope for the request's caller (identity, admin flag,
+	// organisation, language), the same envelope every API plugin call
+	// carries. The plugin Manager turns it into the call context. Required.
+	Envelope func(c *gin.Context, args map[string]any, pluginName string)
 }
 
 // RegisterUIRoutes registers all active plugin UI routes on the given gin engine.
@@ -69,6 +74,9 @@ func registerOneUI(eng *gin.Engine, ui PluginUI, repo *Repository, caller Plugin
 	if err != nil {
 		return fmt.Errorf("parse config: %w", err)
 	}
+	if auth.Envelope == nil {
+		return fmt.Errorf("no call envelope builder: plugin calls would carry no caller identity")
+	}
 
 	basePath := "/ui/" + ui.FullID
 	group := eng.Group(basePath)
@@ -89,7 +97,7 @@ func registerOneUI(eng *gin.Engine, ui PluginUI, repo *Repository, caller Plugin
 			method = "GET"
 		}
 
-		handler := buildUIHandler(ui, cfg, route, repo, caller, renderer)
+		handler := buildUIHandler(ui, cfg, route, repo, caller, renderer, auth.Envelope)
 
 		path := route.Path
 		if path == "" {
@@ -127,7 +135,7 @@ type UIInfoLookup interface {
 }
 
 // buildUIHandler creates a gin handler that calls the plugin and wraps the response in the correct shell.
-func buildUIHandler(ui PluginUI, cfg *UIConfig, route UIRouteConfig, repo UIInfoLookup, caller PluginCaller, renderer TemplateRenderer) gin.HandlerFunc {
+func buildUIHandler(ui PluginUI, cfg *UIConfig, route UIRouteConfig, repo UIInfoLookup, caller PluginCaller, renderer TemplateRenderer, envelope func(*gin.Context, map[string]any, string)) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Build args for plugin call.
 		args := map[string]any{
@@ -145,48 +153,15 @@ func buildUIHandler(ui PluginUI, cfg *UIConfig, route UIRouteConfig, repo UIInfo
 			}
 		}
 
-		// Forward the authenticated user's identity so plugins can resolve the
-		// acting user on UI page calls (same keys as the API buildPluginArgs).
-		// Without this, UI page handlers can only guess who is calling.
-		if userID, exists := c.Get("user_id"); exists {
-			args["_user_id"] = userID
-		}
-		if email, exists := c.Get("user_email"); exists {
-			args["_user_email"] = email
-		}
-		if login, exists := c.Get("user_login"); exists {
-			args["_user_login"] = login
-		} else if username, exists := c.Get("username"); exists {
-			args["_user_login"] = username
-		} else if email, exists := c.Get("user_email"); exists {
-			args["_user_login"] = email
-		}
-		if customerLogin, exists := c.Get("customer_login"); exists {
-			args["_customer_login"] = customerLogin
-		}
-		// _is_admin is always set: plugins merge these keys over the
-		// client-supplied form body, so an absent key would let a body
-		// value such as "_is_admin": true stand.
-		role, hasRole := c.Get("user_role")
-		if hasRole {
-			args["_user_role"] = role
-		}
-		inAdminGroup, _ := c.Get("isInAdminGroup")
-		args["_is_admin"] = inAdminGroup == true || role == "Admin"
-		if orgID, exists := c.Get("org_id"); exists {
-			args["_org_id"] = orgID
-			args["org_id"] = orgID
-		}
-		// The user's resolved UI language, for plugins that ship their own
-		// translations (same key as the API buildPluginArgs).
-		if lang, exists := c.Get(middleware.LanguageContextKey); exists {
-			args["_lang"] = lang
-		}
+		// The host envelope: the authenticated caller's identity (acting user),
+		// admin flag, organisation and language, under the same keys as API
+		// plugin calls. _is_admin is always set, so a plugin that merges these
+		// keys over the client-supplied form body never keeps a body value.
+		envelope(c, args, ui.PluginName)
 
 		argsJSON, _ := json.Marshal(args)
-		ctx := c.Request.Context()
 
-		result, err := caller.Call(ctx, ui.PluginName, route.Handler, argsJSON)
+		result, err := caller.Call(c.Request.Context(), ui.PluginName, route.Handler, argsJSON)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -212,7 +187,7 @@ func buildUIHandler(ui PluginUI, cfg *UIConfig, route UIRouteConfig, repo UIInfo
 		}
 
 		// Build nav items with active state and badge counts.
-		navItems := buildNavItems(c, ui, cfg, caller, currentPath, repo)
+		navItems := buildNavItems(c, ui, cfg, caller, currentPath, repo, envelope)
 
 		// Build template data.
 		branding := &UIBrandingConfig{}
@@ -311,7 +286,7 @@ func buildManifestHandler(ui PluginUI, cfg *UIConfig) gin.HandlerFunc {
 // hrefs. An item Path that is an absolute "/ui/..." path links into another
 // plugin's UI; such items are only kept when the target UI is enabled and
 // its plugin is enabled.
-func buildNavItems(c *gin.Context, ui PluginUI, cfg *UIConfig, caller PluginCaller, currentPath string, repo UIInfoLookup) []map[string]any {
+func buildNavItems(c *gin.Context, ui PluginUI, cfg *UIConfig, caller PluginCaller, currentPath string, repo UIInfoLookup, envelope func(*gin.Context, map[string]any, string)) []map[string]any {
 	if cfg.Nav == nil || len(cfg.Nav.Items) == 0 {
 		return nil
 	}
@@ -337,8 +312,10 @@ func buildNavItems(c *gin.Context, ui PluginUI, cfg *UIConfig, caller PluginCall
 
 		// Resolve badge count if badge function is specified.
 		if item.Badge != "" && caller != nil {
-			badgeArgs, _ := json.Marshal(map[string]any{"ui_id": ui.FullID})
-			if result, err := caller.Call(c.Request.Context(), ui.PluginName, item.Badge, badgeArgs); err == nil {
+			badgeArgs := map[string]any{"ui_id": ui.FullID}
+			envelope(c, badgeArgs, ui.PluginName)
+			badgeJSON, _ := json.Marshal(badgeArgs)
+			if result, err := caller.Call(c.Request.Context(), ui.PluginName, item.Badge, badgeJSON); err == nil {
 				var badgeResp map[string]any
 				if json.Unmarshal(result, &badgeResp) == nil {
 					if count, ok := badgeResp["count"]; ok {

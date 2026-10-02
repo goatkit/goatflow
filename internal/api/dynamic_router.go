@@ -78,8 +78,7 @@ func RebuildDynamicEngine() {
 	if pluginManager != nil {
 		if db, err := database.GetDB(); err == nil && db != nil {
 			repo := pluginui.NewRepositoryWithDB(db)
-			uiAuth := pluginui.UIAuth{Authenticate: SessionOrJWTAuth(), RequireGroup: RequireGroup}
-			if err := pluginui.RegisterUIRoutes(eng, repo, pluginManager, getPongo2Renderer(), uiAuth, slog.Default()); err != nil {
+			if err := pluginui.RegisterUIRoutes(eng, repo, pluginManager, getPongo2Renderer(), pluginUIAuth(), slog.Default()); err != nil {
 				log.Printf("⚠️  Dynamic engine: failed to load plugin UI routes: %v", err)
 			}
 		}
@@ -104,8 +103,7 @@ func RebuildDynamicEngine() {
 				if c.IsAborted() {
 					return
 				}
-				ctx := pluginContextWithLanguage(c)
-				result, err := pluginManager.Call(ctx, pluginName, handlerName, args)
+				result, err := pluginManager.Call(c.Request.Context(), pluginName, handlerName, args)
 				if err != nil {
 					writePluginCallError(c, err, http.StatusInternalServerError)
 					return
@@ -210,6 +208,11 @@ func RebuildDynamicEngine() {
 	dynMu.Unlock()
 
 	log.Println("🔄 Dynamic engine rebuilt")
+}
+
+// pluginUIAuth is the API layer's auth and call envelope for plugin UI routes.
+func pluginUIAuth() pluginui.UIAuth {
+	return pluginui.UIAuth{Authenticate: SessionOrJWTAuth(), RequireGroup: RequireGroup, Envelope: setPluginEnvelope}
 }
 
 // pluginRouteMiddleware turns a plugin RouteSpec middleware list into the gin

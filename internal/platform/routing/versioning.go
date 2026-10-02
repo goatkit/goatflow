@@ -4,7 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -65,7 +68,9 @@ func NewRouteVersionManager(storageDir string) *RouteVersionManager {
 
 	// Ensure storage directory exists
 	versionsDir := filepath.Join(storageDir, ".versions")
-	os.MkdirAll(versionsDir, 0750)
+	if err := os.MkdirAll(versionsDir, 0750); err != nil {
+		log.Printf("routing: cannot create route versions directory %s: %v", versionsDir, err)
+	}
 
 	// Load existing versions
 	vm.loadVersions()
@@ -368,7 +373,7 @@ func (vm *RouteVersionManager) saveVersion(v *RouteVersion) error {
 		return err
 	}
 
-	return os.WriteFile(filename, data, 0644)
+	return os.WriteFile(filename, data, 0600)
 }
 
 func (vm *RouteVersionManager) loadVersions() {
@@ -386,7 +391,7 @@ func (vm *RouteVersionManager) loadVersions() {
 			continue
 		}
 
-		data, err := os.ReadFile(filepath.Join(versionsDir, file.Name())) //nolint:gosec // G304 false positive - ReadDir path
+		data, err := os.ReadFile(filepath.Join(versionsDir, file.Name())) // #nosec G304 -- name listed by ReadDir of the app-owned .versions directory
 		if err != nil {
 			continue
 		}
@@ -417,7 +422,9 @@ func (vm *RouteVersionManager) applyVersion(v *RouteVersion) error {
 		}
 
 		dir := filepath.Join(vm.storageDir, namespace)
-		os.MkdirAll(dir, 0750)
+		if err := os.MkdirAll(dir, 0750); err != nil {
+			return fmt.Errorf("failed to create route directory %s: %w", dir, err)
+		}
 
 		filename := filepath.Join(dir, name+".yaml")
 
@@ -427,7 +434,7 @@ func (vm *RouteVersionManager) applyVersion(v *RouteVersion) error {
 			return fmt.Errorf("failed to marshal route %s: %w", name, err)
 		}
 
-		if err := os.WriteFile(filename, data, 0644); err != nil {
+		if err := os.WriteFile(filename, data, 0644); err != nil { // #nosec G306 -- non-secret route definition, same mode as the tracked routes/*.yaml the server reads
 			return fmt.Errorf("failed to write route %s: %w", name, err)
 		}
 	}
@@ -451,7 +458,9 @@ func (vm *RouteVersionManager) cleanupOldVersions() {
 		// Delete file
 		versionsDir := filepath.Join(vm.storageDir, ".versions")
 		filename := filepath.Join(versionsDir, fmt.Sprintf("%s_%s.json", v.Version, v.Hash))
-		os.Remove(filename)
+		if err := os.Remove(filename); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			log.Printf("routing: cannot remove old route version %s: %v", filename, err)
+		}
 	}
 }
 

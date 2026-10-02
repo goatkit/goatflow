@@ -34,29 +34,43 @@ var (
 	jwtOnce          sync.Once
 )
 
+// signingSecret returns the JWT signing key for cfg. In production it is the
+// configured secret or an error (never a placeholder, never generated). Outside
+// production an unset or short secret is completed with random bytes.
+func signingSecret(cfg *config.Config) (string, error) {
+	jwtSecret := config.JWTSecret(cfg)
+	if config.IsProductionEnv(cfg) {
+		if len(jwtSecret) < config.MinJWTSecretLength {
+			return "", fmt.Errorf("JWT_SECRET must be set to a random value of at least %d characters in production", config.MinJWTSecretLength)
+		}
+		return jwtSecret, nil
+	}
+	if jwtSecret == "" {
+		b := make([]byte, 32)
+		if _, err := rand.Read(b); err != nil {
+			return "", err
+		}
+		jwtSecret = hex.EncodeToString(b)
+	}
+	if len(jwtSecret) < config.MinJWTSecretLength {
+		pad := make([]byte, 16)
+		if _, err := rand.Read(pad); err != nil {
+			return "", err
+		}
+		jwtSecret += hex.EncodeToString(pad)
+	}
+	return jwtSecret, nil
+}
+
 // This ensures auth service and middleware use the same JWT configuration.
 func GetJWTManager() *auth.JWTManager {
 	jwtOnce.Do(func() {
 		cfg := config.Get()
-		env := strings.ToLower(os.Getenv("APP_ENV"))
-		if cfg != nil && cfg.App.Env != "" {
-			env = strings.ToLower(cfg.App.Env)
-		}
-
-		jwtSecret := os.Getenv("JWT_SECRET")
-		if jwtSecret == "" && cfg != nil {
-			jwtSecret = cfg.Auth.JWT.Secret
-		}
-		if jwtSecret == "" && env != "production" {
-			b := make([]byte, 32)
-			if _, err := rand.Read(b); err == nil {
-				jwtSecret = hex.EncodeToString(b)
-			}
-		}
-		if len(jwtSecret) < 32 && env != "production" {
-			pad := make([]byte, 16)
-			rand.Read(pad)
-			jwtSecret += hex.EncodeToString(pad)
+		jwtSecret, err := signingSecret(cfg)
+		if err != nil {
+			// config.ValidateSecrets refuses to start the server first; this
+			// guard keeps any other entry point from signing with a weak key.
+			log.Fatalf("FATAL: %v", err)
 		}
 
 		// Determine token duration. Priority:
@@ -70,7 +84,7 @@ func GetJWTManager() *auth.JWTManager {
 		if envTTL := os.Getenv("JWT_ACCESS_TOKEN_EXPIRY"); envTTL != "" {
 			if d, err := parseDuration(envTTL); err == nil && d > 0 {
 				tokenDuration = d
-				log.Printf("JWT access token TTL from env: %s", d)
+				log.Printf("JWT access token TTL from env: %s", d) // #nosec G706 -- d is a parsed time.Duration; its String() cannot carry newlines or control characters
 			}
 		}
 
@@ -104,7 +118,7 @@ func GetJWTManager() *auth.JWTManager {
 		if envRefresh := os.Getenv("JWT_REFRESH_TOKEN_EXPIRY"); envRefresh != "" {
 			if d, err := parseDuration(envRefresh); err == nil && d > 0 {
 				globalJWTManager.SetRefreshTokenDuration(d)
-				log.Printf("JWT refresh token TTL from env: %s", d)
+				log.Printf("JWT refresh token TTL from env: %s", d) // #nosec G706 -- d is a parsed time.Duration; its String() cannot carry newlines or control characters
 			}
 		} else if cfg != nil && cfg.Auth.JWT.RefreshTokenTTL > 0 {
 			globalJWTManager.SetRefreshTokenDuration(cfg.Auth.JWT.RefreshTokenTTL)

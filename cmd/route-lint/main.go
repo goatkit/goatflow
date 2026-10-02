@@ -176,7 +176,7 @@ func main() {
 	fileCount := 0
 
 	// Walk through route files
-	err := filepath.Walk(routesDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(routesDir, func(path string, info os.FileInfo, err error) error { // #nosec G703 -- routes dir is the operator's CLI flag
 		if err != nil {
 			return err
 		}
@@ -212,7 +212,7 @@ func lintFile(path string) []LintIssue {
 	issues := []LintIssue{}
 
 	// Read file
-	data, err := os.ReadFile(path) //nolint:gosec // G304 CLI tool
+	data, err := os.ReadFile(path) // #nosec G304 -- route file found under the operator-named routes dir
 	if err != nil {
 		issues = append(issues, LintIssue{
 			Rule:     "file-read",

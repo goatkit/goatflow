@@ -657,7 +657,13 @@
           "responsible": "Responsable del Ticket",
           "roles": "Roles",
           "special": "Destinatarios Especiales",
-          "watcher": "Observadores del Ticket"
+          "watcher": "Observadores del Ticket",
+          "my_queues": "Agentes que tienen la cola en Mis colas",
+          "creator": "Creador del ticket",
+          "read_permissions": "Todos los agentes con acceso de lectura a la cola",
+          "write_permissions": "Todos los agentes con acceso de escritura a la cola",
+          "emails": "Direcciones de correo de destinatarios adicionales",
+          "emails_help": "Separe las direcciones con comas. Hasta 200 caracteres."
         },
         "sections": {
           "basic": "Información Básica",
@@ -1529,6 +1535,7 @@
         "events_required": "Seleccione al menos un evento.",
         "header_name": "Nombre de la cabecera",
         "header_value": "Valor",
+        "header_value_keep": "Valor guardado ({hint}). Déjelo vacío para conservarlo",
         "headers": "Cabeceras personalizadas",
         "headers_help": "Se envían con cada entrega. GoatFlow establece Content-Type, User-Agent y las cabeceras X-Webhook-*.",
         "remove_header": "Quitar cabecera",
@@ -2331,9 +2338,18 @@
     }
   },
   "customer_portal_settings": {
+    "description": "Valores predeterminados para todas las empresas cliente. Cada empresa puede anularlos en su página de edición.",
+    "enable": "Activar el portal del cliente",
+    "enable_help": "Activa o desactiva el portal del cliente. Las empresas con su propia configuración la conservan.",
+    "footer_text": "Texto del pie de página",
     "heading": "Potal del cliente Configuración",
+    "landing_page": "Página de inicio",
+    "landing_page_help": "Página que ven los clientes al iniciar sesión, por ejemplo /customer/tickets. Una ruta sin / inicial es relativa a /customer.",
+    "per_company_note": "Cada empresa cliente puede anular estos valores predeterminados en la pestaña Configuración del portal de su página de edición.",
+    "require_login": "Requerir inicio de sesión",
+    "require_login_help": "Los clientes deben iniciar sesión antes de acceder al portal",
     "title": "Potal del cliente Configuración",
-    "per_company_note": "Cada empresa cliente puede anular estos valores predeterminados en la pestaña Configuración del portal de su página de edición."
+    "title_field": "Título del portal"
   },
   "customer_user_services": {
     "title": "Cliente Usuario Servicios"
@@ -3674,7 +3690,6 @@
     "showing_of_total": "Mostraring %d de %d tickets",
     "sla": "SLA",
     "spam": "Spam",
-    "split": "Dividir",
     "state": "Estado",
     "status": "Estado",
     "subject": "Asunto",
@@ -3713,7 +3728,15 @@
     "view_in_queue": "Ver tickets en esta cola",
     "visible_for_customer": "Visible para el cliente",
     "visible_for_customer_help": "Marque para mostrar esta actualización en el portal del cliente.",
-    "watch": "Observar"
+    "watch": "Observar",
+    "escalation": {
+      "first_response": "Primera respuesta vence",
+      "update": "Actualización vence",
+      "solution": "Solución vence",
+      "due_in": "Vence en",
+      "overdue_by": "Vencido hace",
+      "escalated": "Escalado"
+    }
   },
   "tickets_form": {
     "attachments": "Adjuntos",

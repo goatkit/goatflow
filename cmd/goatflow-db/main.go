@@ -145,7 +145,9 @@ func testConnection(db database.IDatabase) {
 	quoted := db.Quote("table_name")
 	fmt.Printf("  Quoted identifier: %s\n", quoted)
 
-	db.Close()
+	if err := db.Close(); err != nil {
+		log.Printf("Warning: failed to close database connection: %v", err)
+	}
 }
 
 func exportXML(db database.IDatabase, xmlFile string) {

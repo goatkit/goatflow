@@ -7,11 +7,12 @@
 # Example local override (config/config.yaml):
 #   app:
 #     timezone: Europe/London
-#   database:
-#     password: ${DEV_DB_PASSWORD}
-#   auth:
-#     jwt:
-#       secret: ${DEV_JWT_SECRET}
+#   features:
+#     registration: true
+# config.yaml is plain YAML (no ${VAR} expansion). Secrets come from the
+# environment: JWT_SECRET, DB_MYSQL_PASSWORD / DB_PGSQL_PASSWORD, ...
+# The database connection, logging (LOG_*) and metrics (METRICS_*) are
+# configured by environment variables only; see docs/configuration.md.
 
 app:
     name: GoatFlow
@@ -47,21 +48,6 @@ server:
         enabled: true   # Serve Swagger UI at /swagger/
         public: true    # If false, requires login to view API docs
 
-database:
-    host: postgres
-    port: 5432
-    name: goatflow
-    user: goatflow # Non-secret default username
-    password: "" # Blank; set in config/config.yaml or via DB_PASSWORD env
-    ssl_mode: disable
-    max_open_conns: 25
-    max_idle_conns: 25
-    conn_max_lifetime: 5m
-    log_queries: true
-    migrations:
-        auto_migrate: true
-        path: /app/migrations
-
 valkey:
     host: valkey
     port: 6379
@@ -79,8 +65,10 @@ valkey:
 
 auth:
     jwt:
-        # Placeholder only; override with GOATFLOW_JWT_SECRET or config/config.yaml
-        secret: "development-placeholder-not-for-production"
+        # No default. Set JWT_SECRET (or GOATFLOW_AUTH_JWT_SECRET / config/config.yaml),
+        # 32+ random characters. Production refuses to start without it; development
+        # generates a random per-process secret when unset.
+        secret: ""
         issuer: goatflow
         audience: goatflow-api
         access_token_ttl: 15m
@@ -195,59 +183,12 @@ ticket:
     bulk_actions:
         max_select_all: 1000 # Maximum tickets that can be selected via "Select all matching"
 
-logging:
-    level: debug # debug, info, warn, error
-    format: json # json, text
-    output: stdout # stdout, file, both
-    file:
-        path: /app/logs
-        filename: goatflow.log
-        max_size: 100 # MB
-        max_backups: 7
-        max_age: 30 # days
-        compress: true
-    fields:
-        - timestamp
-        - level
-        - message
-        - request_id
-        - user_id
-        - ip
-
-metrics:
-    enabled: true
-    prometheus:
-        enabled: true
-        port: 9090
-        path: /metrics
-    opentelemetry:
-        enabled: false
-        endpoint: ""
-        service_name: goatflow
-        trace_ratio: 0.1
-
-rate_limiting:
-    enabled: true
-    requests_per_minute: 60
-    burst: 10
-    exclude_paths:
-        - /health
-        - /metrics
-
 features:
     # Customer self-registration (/customer/register) with email confirmation.
     registration: false
     # Forgotten-password reset for agents (/forgot-password) and customers
     # (/customer/forgot-password). Reset links use BASE_URL.
     lost_password: true
-    social_login: false
-    two_factor_auth: false
-    api_keys: true
-    ldap: false
-    saml: false
-    knowledge_base: false
-    customer_portal: true
-    agent_collision_detection: true
 
 maintenance:
     mode: false
@@ -258,15 +199,6 @@ maintenance:
     time_notify_upcoming_minutes: 30 # Show notification X minutes before scheduled maintenance
     default_notify_message: "We are performing scheduled maintenance."
     default_login_message: "The system is currently undergoing maintenance."
-
-# Integration settings
-integrations:
-    slack:
-        enabled: false
-        webhook_url: ""
-    teams:
-        enabled: false
-        webhook_url: ""
 
 # Background task runner settings
 runner:

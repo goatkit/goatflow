@@ -100,6 +100,9 @@
                         {% else %}gk-badge-muted{% endif %}">
                         {{ ticket.state }}
                     </span>
+                    {% if ticket.escalated %}
+                    <span class="gk-badge gk-badge-error text-xs" data-escalated="true">{{ t("tickets.escalation.escalated") }}</span>
+                    {% endif %}
                 </td>
                 <td class="px-2 py-2 whitespace-nowrap">
                     <span class="text-xs font-medium" {% if ticket.priority_color %}style="color: {{ ticket.priority_color }}"{% else %}style="color: var(--gk-text-secondary);"{% endif %}>

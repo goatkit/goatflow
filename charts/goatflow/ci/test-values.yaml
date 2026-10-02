@@ -11,15 +11,14 @@ backend:
       cpu: "200m"
       memory: "256Mi"
 
-frontend:
-  replicaCount: 1
+runner:
   resources:
     requests:
       cpu: "50m"
-      memory: "32Mi"
+      memory: "64Mi"
     limits:
       cpu: "100m"
-      memory: "64Mi"
+      memory: "128Mi"
 
 database:
   type: mysql
@@ -36,9 +35,6 @@ database:
 
 valkey:
   enabled: true
-  master:
-    persistence:
-      size: 256Mi
 
 ingress:
   enabled: true

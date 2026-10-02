@@ -4,6 +4,7 @@ package auth
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -41,7 +42,7 @@ func LogTOTPAuditEvent(event TOTPAuditEvent) {
 
 	userIdentifier := event.UserLogin
 	if userIdentifier == "" && event.UserID > 0 {
-		userIdentifier = string(rune(event.UserID))
+		userIdentifier = strconv.Itoa(event.UserID)
 	}
 
 	userType := "agent"

@@ -215,7 +215,7 @@ func (h *DynamicModuleHandler) loadAllConfigs() error {
 
 // loadConfig loads a single YAML config.
 func (h *DynamicModuleHandler) loadConfig(path string) error {
-	data, err := os.ReadFile(path) //nolint:gosec // G304 false positive - config path
+	data, err := os.ReadFile(path) // #nosec G304 -- .yaml file listed or fsnotify-reported inside the operator-configured modules directory
 	if err != nil {
 		return err
 	}
@@ -265,7 +265,9 @@ func (h *DynamicModuleHandler) watchFiles() {
 			if strings.HasSuffix(event.Name, ".yaml") {
 				if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
 					fmt.Printf("Module config changed: %s\n", event.Name)
-					h.loadConfig(event.Name)
+					if err := h.loadConfig(event.Name); err != nil {
+						fmt.Printf("Warning: Failed to reload %s: %v\n", event.Name, err)
+					}
 				} else if event.Op&fsnotify.Remove == fsnotify.Remove {
 					// Remove config
 					moduleName := strings.TrimSuffix(filepath.Base(event.Name), ".yaml")
@@ -873,7 +875,10 @@ func (h *DynamicModuleHandler) handleExport(c *gin.Context, config *ModuleConfig
 			headers = append(headers, field.Label)
 		}
 	}
-	csvWriter.Write(headers)
+	if err := csvWriter.Write(headers); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+		return
+	}
 
 	// Write data rows
 	for _, item := range items {
@@ -891,7 +896,10 @@ func (h *DynamicModuleHandler) handleExport(c *gin.Context, config *ModuleConfig
 				row = append(row, value)
 			}
 		}
-		csvWriter.Write(row)
+		if err := csvWriter.Write(row); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+			return
+		}
 	}
 
 	csvWriter.Flush()
@@ -965,7 +973,11 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 	lang := middleware.GetLanguage(c)
 	config = h.resolveConfigTranslations(config, lang)
 
-	data := h.parseFormData(c, config)
+	data, err := h.parseFormData(c, config)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+		return
+	}
 	h.applyModuleWriteTransforms(config, data)
 
 	// Get current user ID for audit fields
@@ -1070,8 +1082,9 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 
 	newID, err := database.GetAdapter().InsertWithReturning(h.db, database.ConvertPlaceholders(insertSQL), values...)
 	if err != nil {
-		fmt.Printf("Dynamic module insert failed: %s (args=%v): %v\n", insertSQL, values, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// Never log the values: they can include password hashes.
+		fmt.Printf("Dynamic module insert into %s (%s) failed: %v\n", config.Module.Table, strings.Join(columns, ", "), err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create record"})
 		return
 	}
 
@@ -1102,7 +1115,11 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 	lang := middleware.GetLanguage(c)
 	config = h.resolveConfigTranslations(config, lang)
 
-	data := h.parseFormData(c, config)
+	data, err := h.parseFormData(c, config)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+		return
+	}
 	h.applyModuleWriteTransforms(config, data)
 
 	// Get current user ID for audit fields
@@ -1171,7 +1188,7 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 		config.Module.Table,
 		strings.Join(sets, ", ")) //nolint:gk-sql-sprintf // trusted schema identifier from validated field config; values bound via ?
 
-	_, err := h.exec(query, values...)
+	_, err = h.exec(query, values...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -1308,21 +1325,27 @@ func (h *DynamicModuleHandler) scanRow(row *sql.Row, config *ModuleConfig) map[s
 	return item
 }
 
-func (h *DynamicModuleHandler) parseFormData(c *gin.Context, config *ModuleConfig) map[string]interface{} {
+// parseFormData reads the request body as JSON or as form fields typed by the
+// module config; a malformed body or field value is an error, not empty data.
+func (h *DynamicModuleHandler) parseFormData(c *gin.Context, config *ModuleConfig) (map[string]interface{}, error) {
 	data := make(map[string]interface{})
 
 	if c.ContentType() == "application/json" {
-		c.ShouldBindJSON(&data)
-	} else {
-		// Parse form data
-		for _, field := range config.Fields {
-			if value := c.PostForm(field.Name); value != "" {
-				data[field.Name] = h.convertValue(value, field.Type)
+		if err := c.ShouldBindJSON(&data); err != nil {
+			return nil, fmt.Errorf("invalid JSON body: %w", err)
+		}
+		return data, nil
+	}
+	for _, field := range config.Fields {
+		if value := c.PostForm(field.Name); value != "" {
+			v, err := h.convertValue(value, field.Type)
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for %s: %w", field.Name, err)
 			}
+			data[field.Name] = v
 		}
 	}
-
-	return data
+	return data, nil
 }
 
 func (h *DynamicModuleHandler) applyModuleWriteTransforms(config *ModuleConfig, data map[string]interface{}) {
@@ -1347,21 +1370,24 @@ func (h *DynamicModuleHandler) applyModuleReadTransforms(config *ModuleConfig, i
 	}
 }
 
-func (h *DynamicModuleHandler) convertValue(value string, fieldType string) interface{} {
-	// Type conversion logic
+func (h *DynamicModuleHandler) convertValue(value string, fieldType string) (interface{}, error) {
 	switch fieldType {
 	case "int", "integer":
 		var i int
-		fmt.Sscanf(value, "%d", &i)
-		return i
+		if _, err := fmt.Sscanf(value, "%d", &i); err != nil {
+			return nil, err
+		}
+		return i, nil
 	case "float", "decimal":
 		var f float64
-		fmt.Sscanf(value, "%f", &f)
-		return f
+		if _, err := fmt.Sscanf(value, "%f", &f); err != nil {
+			return nil, err
+		}
+		return f, nil
 	case "bool", "boolean":
-		return value == "true" || value == "1"
+		return value == "true" || value == "1", nil
 	default:
-		return value
+		return value, nil
 	}
 }
 
@@ -1620,7 +1646,7 @@ func (h *DynamicModuleHandler) handleSchemaDiscovery(c *gin.Context) {
 			return
 		}
 
-		if err := os.WriteFile(filename, yamlData, 0644); err != nil {
+		if err := os.WriteFile(filename, yamlData, 0o600); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -1683,8 +1709,10 @@ func (h *DynamicModuleHandler) populateLookupOptions(config *ModuleConfig) {
 					})
 				}
 			}
-			_ = rows.Err() // Check for iteration errors
-			rows.Close()
+			if err := rows.Err(); err != nil {
+				fmt.Printf("Error reading lookup options for %s: %v\n", field.Name, err)
+			}
+			_ = rows.Close()
 
 			config.Fields[i].Options = options
 			config.Fields[i].Type = "select"
@@ -1990,7 +2018,11 @@ func (h *DynamicModuleHandler) handleSysconfigDetails(c *gin.Context, config *Mo
 	// Parse XML content to get additional metadata
 	var configData map[string]interface{}
 	if details.XMLContentParsed != "" {
-		json.Unmarshal([]byte(details.XMLContentParsed), &configData)
+		if err := json.Unmarshal([]byte(details.XMLContentParsed), &configData); err != nil {
+			// Metadata is optional decoration; serve the core details without it.
+			fmt.Printf("Warning: sysconfig %s has unparsable metadata: %v\n", details.Name, err)
+			configData = nil
+		}
 	}
 
 	// Prepare response data
@@ -2070,7 +2102,10 @@ func (h *DynamicModuleHandler) generateCSVResponse(c *gin.Context, config *Modul
 			headers = append(headers, field.Label)
 		}
 	}
-	csvWriter.Write(headers)
+	if err := csvWriter.Write(headers); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+		return
+	}
 
 	// Write data rows
 	for _, item := range items {
@@ -2155,7 +2190,10 @@ func (h *DynamicModuleHandler) generateCSVResponse(c *gin.Context, config *Modul
 				row = append(row, value)
 			}
 		}
-		csvWriter.Write(row)
+		if err := csvWriter.Write(row); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+			return
+		}
 	}
 
 	csvWriter.Flush()
@@ -2171,7 +2209,7 @@ func (h *DynamicModuleHandler) generateCSVResponse(c *gin.Context, config *Modul
 func (h *DynamicModuleHandler) query(query string, args ...interface{}) (*sql.Rows, error) {
 	rows, err := h.db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
-		fmt.Printf("Dynamic module query failed: %s (args=%v): %v\n", query, args, err)
+		fmt.Printf("Dynamic module query failed: %s: %v\n", query, err)
 	}
 	return rows, err
 }
@@ -2229,7 +2267,7 @@ func (h *DynamicModuleHandler) insertUserGroups(userID interface{}, groupIDs []i
 func (h *DynamicModuleHandler) exec(query string, args ...interface{}) (sql.Result, error) {
 	res, err := h.db.Exec(database.ConvertPlaceholders(query), args...)
 	if err != nil {
-		fmt.Printf("Dynamic module exec failed: %s (args=%v): %v\n", query, args, err)
+		fmt.Printf("Dynamic module exec failed: %s: %v\n", query, err)
 	}
 	return res, err
 }

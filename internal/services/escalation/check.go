@@ -3,349 +3,217 @@ package escalation
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
-	"log"
+	"strconv"
 	"time"
 
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 )
 
-// CheckService handles escalation event triggering, matching OTRS EscalationCheck.
-type CheckService struct {
-	db              *sql.DB
-	calendarService *CalendarService
-	logger          *log.Logger
-	decayTime       int // Minutes between repeat notifications (0 = no decay)
-}
+// DefaultDecayTime is OTRS's OTRSEscalationEvents::DecayTime default: an
+// escalation event is raised again for the same ticket only after this long.
+const DefaultDecayTime = 24 * time.Hour
 
-// EscalationEvent represents an escalation event to trigger.
-type EscalationEvent struct {
-	TicketID  int
-	EventName string
-}
-
-// NewCheckService creates a new escalation check service.
-func NewCheckService(db *sql.DB, calendarService *CalendarService, logger *log.Logger) *CheckService {
-	if logger == nil {
-		logger = log.Default()
+// DecayTime returns the OTRS setting OTRSEscalationEvents::DecayTime
+// (minutes; 0 repeats events on every check), DefaultDecayTime when unset.
+func DecayTime(db *sql.DB) (time.Duration, error) {
+	v, ok := sysconfig.Value(db, "OTRSEscalationEvents::DecayTime")
+	if !ok {
+		return DefaultDecayTime, nil
 	}
-	return &CheckService{
-		db:              db,
-		calendarService: calendarService,
-		logger:          logger,
-		decayTime:       0, // Can be configured via sysconfig
+	minutes, err := strconv.Atoi(scalarSetting(v))
+	if err != nil || minutes < 0 {
+		return 0, fmt.Errorf("OTRSEscalationEvents::DecayTime: invalid value %q", v)
 	}
+	return time.Duration(minutes) * time.Minute, nil
 }
 
-// SetDecayTime sets the decay time (minutes between repeat notifications).
-func (s *CheckService) SetDecayTime(minutes int) {
-	s.decayTime = minutes
+// State is a ticket's escalation state at one moment (OTRS
+// TicketEscalationDateCalculation) for one kind.
+type State struct {
+	Kind        string
+	Destination int64 // unix seconds
+	Escalated   bool  // the destination time has passed
+	Notify      bool  // the notify-before percentage of the working time is used up
+	WorkingTime int64 // working seconds left (negative: overdue)
 }
 
-// CheckEscalations finds tickets that are escalating and triggers events.
-// This matches OTRS Maint::Ticket::EscalationCheck.
-func (s *CheckService) CheckEscalations(ctx context.Context) ([]EscalationEvent, error) {
-	// Find tickets escalating within next 5 days
-	fiveDaysMinutes := 5 * 24 * 60
-	tickets, err := s.findEscalatingTickets(ctx, fiveDaysMinutes)
+// escalationStates returns the escalation states of t at now, using the
+// calendar of its escalation preferences. Finished tickets and tickets
+// without escalation settings have none.
+func (s *Service) escalationStates(ctx context.Context, t *ticket, now time.Time) ([]State, error) {
+	if finished(t.stateType) {
+		return nil, nil
+	}
+	prefs, err := s.preferences(ctx, t)
+	if err != nil || !prefs.any() {
+		return nil, err
+	}
+	cal, err := s.calendar(ctx, prefs.Calendar)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find escalating tickets: %w", err)
+		return nil, err
 	}
-
-	var events []EscalationEvent
-
-	for _, ticket := range tickets {
-		// Check if we're in business hours for this ticket's calendar
-		calendar := s.getTicketCalendar(ctx, ticket.ID)
-		if !s.isInBusinessHours(calendar) {
+	var states []State
+	for _, kind := range Kinds {
+		dest := t.index.Of(kind)
+		if dest == 0 {
 			continue
 		}
+		st := State{Kind: kind, Destination: dest}
+		destTime := time.Unix(dest, 0)
+		if dest-now.Unix() > 0 {
+			if st.WorkingTime, err = cal.WorkingTime(now, destTime); err != nil {
+				return nil, err
+			}
+			minutes, notify := prefs.timeOf(kind)
+			if notify > 0 && minutes > 0 {
+				reached := 100 - float64(st.WorkingTime)/(float64(minutes)*60/100)
+				st.Notify = reached >= float64(notify)
+			}
+		} else {
+			overdue, err := cal.WorkingTime(destTime, now)
+			if err != nil {
+				return nil, err
+			}
+			st.WorkingTime = -overdue
+			st.Escalated = true
+		}
+		states = append(states, st)
+	}
+	return states, nil
+}
 
-		// Get escalation info for this ticket
-		escalationInfo, err := s.getTicketEscalationInfo(ctx, ticket.ID)
+// Event is one escalation event raised by CheckEscalations.
+type Event struct {
+	TicketID int
+	Name     string // ticket_history_type name, e.g. EscalationResponseTimeStart
+}
+
+// CheckEscalations is OTRS Maint::Ticket::EscalationCheck: for up to 1000
+// tickets escalating within five days it raises Escalation*TimeStart for
+// every started escalation and Escalation*TimeNotifyBefore for every one past
+// its notify percentage, by writing the ticket_history row of that type
+// (webhooks and notification events read those). Tickets whose calendar had
+// no working time in the last ten minutes are skipped, and an event is not
+// repeated for a ticket within decay (0 = every run).
+func (s *Service) CheckEscalations(ctx context.Context, decay time.Duration) ([]Event, error) {
+	now := s.now()
+	rows, err := s.db.QueryContext(ctx, database.ConvertPlaceholders(`
+		SELECT id FROM ticket
+		WHERE escalation_time <> 0 AND escalation_time <= ?
+		ORDER BY escalation_time, id
+		LIMIT 1000`), now.Add(5*24*time.Hour).Unix())
+	if err != nil {
+		return nil, fmt.Errorf("find escalating tickets: %w", err)
+	}
+	var ids []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+
+	var events []Event
+	for _, id := range ids {
+		if err := ctx.Err(); err != nil {
+			return events, err
+		}
+		ev, err := s.checkTicket(ctx, id, now, decay)
 		if err != nil {
-			s.logger.Printf("Error getting escalation info for ticket %d: %v", ticket.ID, err)
+			s.logger.Printf("escalation: check ticket %d: %v", id, err)
 			continue
 		}
-
-		// Check each escalation type
-		ticketEvents := s.checkTicketEscalations(ctx, ticket.ID, escalationInfo)
-		events = append(events, ticketEvents...)
+		events = append(events, ev...)
 	}
-
 	return events, nil
 }
 
-// EscalatingTicket holds basic ticket info for escalation check.
-type EscalatingTicket struct {
-	ID           int
-	TicketNumber string
-}
-
-// findEscalatingTickets finds tickets that will escalate within the given minutes.
-func (s *CheckService) findEscalatingTickets(ctx context.Context, withinMinutes int) ([]EscalatingTicket, error) {
-	// Calculate cutoff time (now + withinMinutes)
-	cutoff := time.Now().Add(time.Duration(withinMinutes) * time.Minute).Unix()
-
-	query := database.ConvertPlaceholders(`
-		SELECT id, tn FROM ticket
-		WHERE escalation_time > 0 AND escalation_time < ?
-		ORDER BY escalation_time ASC
-		LIMIT 1000
-	`)
-
-	rows, err := s.db.QueryContext(ctx, query, cutoff)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var tickets []EscalatingTicket
-	for rows.Next() {
-		var t EscalatingTicket
-		if err := rows.Scan(&t.ID, &t.TicketNumber); err != nil {
-			return nil, err
-		}
-		tickets = append(tickets, t)
-	}
-
-	return tickets, nil
-}
-
-// getTicketCalendar gets the calendar name for a ticket (from SLA or Queue).
-func (s *CheckService) getTicketCalendar(ctx context.Context, ticketID int) string {
-	// Try SLA first
-	query := database.ConvertPlaceholders(`
-		SELECT COALESCE(sla.calendar_name, '')
-		FROM ticket t
-		LEFT JOIN sla ON t.sla_id = sla.id
-		WHERE t.id = ?
-	`)
-	var calendar string
-	if err := s.db.QueryRowContext(ctx, query, ticketID).Scan(&calendar); err == nil && calendar != "" {
-		return calendar
-	}
-
-	// Fall back to queue
-	query = database.ConvertPlaceholders(`
-		SELECT COALESCE(q.calendar_name, '')
-		FROM ticket t
-		JOIN queue q ON t.queue_id = q.id
-		WHERE t.id = ?
-	`)
-	if err := s.db.QueryRowContext(ctx, query, ticketID).Scan(&calendar); err == nil {
-		return calendar
-	}
-
-	return "" // Default calendar
-}
-
-// isInBusinessHours checks if current time is within business hours.
-func (s *CheckService) isInBusinessHours(calendarName string) bool {
-	if s.calendarService == nil {
-		return true // No calendar service, assume always working
-	}
-	return s.calendarService.IsWorkingTime(calendarName, time.Now())
-}
-
-// EscalationInfo holds ticket escalation state.
-type EscalationInfo struct {
-	FirstResponseTimeEscalation   bool
-	FirstResponseTimeNotification bool
-	UpdateTimeEscalation          bool
-	UpdateTimeNotification        bool
-	SolutionTimeEscalation        bool
-	SolutionTimeNotification      bool
-}
-
-// getTicketEscalationInfo calculates current escalation state for a ticket.
-func (s *CheckService) getTicketEscalationInfo(ctx context.Context, ticketID int) (*EscalationInfo, error) {
-	// Get escalation times and preferences
-	query := database.ConvertPlaceholders(`
-		SELECT t.escalation_response_time, t.escalation_update_time, t.escalation_solution_time,
-		       COALESCE(sla.first_response_notify, q.first_response_notify, 0),
-		       COALESCE(sla.update_notify, q.update_notify, 0),
-		       COALESCE(sla.solution_notify, q.solution_notify, 0)
-		FROM ticket t
-		LEFT JOIN sla ON t.sla_id = sla.id
-		JOIN queue q ON t.queue_id = q.id
-		WHERE t.id = ?
-	`)
-
-	var responseTime, updateTime, solutionTime int64
-	var responseNotify, updateNotify, solutionNotify int
-	err := s.db.QueryRowContext(ctx, query, ticketID).Scan(
-		&responseTime, &updateTime, &solutionTime,
-		&responseNotify, &updateNotify, &solutionNotify,
-	)
-	if err != nil {
+func (s *Service) checkTicket(ctx context.Context, ticketID int, now time.Time, decay time.Duration) ([]Event, error) {
+	t, err := s.loadTicket(ctx, s.db, ticketID)
+	if err != nil || t == nil {
 		return nil, err
 	}
 
-	now := time.Now().Unix()
-	info := &EscalationInfo{}
+	// OTRS TicketCalendarGet: the SLA's calendar, else the queue's.
+	var calName string
+	err = s.db.QueryRowContext(ctx, database.ConvertPlaceholders(`
+		SELECT COALESCE(NULLIF(sla.calendar_name, ''), q.calendar_name, '')
+		FROM ticket t
+		JOIN queue q ON q.id = t.queue_id
+		LEFT JOIN sla ON sla.id = t.sla_id
+		WHERE t.id = ?`), ticketID).Scan(&calName)
+	if err != nil {
+		return nil, fmt.Errorf("calendar: %w", err)
+	}
+	cal, err := s.calendar(ctx, calName)
+	if err != nil {
+		return nil, err
+	}
+	counted, err := cal.WorkingTime(now.Add(-10*time.Minute), now)
+	if err != nil {
+		return nil, err
+	}
+	if counted == 0 {
+		return nil, nil // outside business hours
+	}
 
-	// Check first response escalation
-	if responseTime > 0 {
-		if now >= responseTime {
-			info.FirstResponseTimeEscalation = true
-		} else if responseNotify > 0 {
-			// Check if we're past the notify threshold
-			info.FirstResponseTimeNotification = s.isPastNotifyThreshold(responseTime, responseNotify)
+	states, err := s.escalationStates(ctx, t, now)
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for _, st := range states {
+		if st.Escalated {
+			names = append(names, startEvent[st.Kind])
+		}
+	}
+	for _, st := range states {
+		if st.Notify {
+			names = append(names, notifyBeforeEvent[st.Kind])
 		}
 	}
 
-	// Check update escalation
-	if updateTime > 0 {
-		if now >= updateTime {
-			info.UpdateTimeEscalation = true
-		} else if updateNotify > 0 {
-			info.UpdateTimeNotification = s.isPastNotifyThreshold(updateTime, updateNotify)
+	var events []Event
+	for _, name := range names {
+		if decay > 0 {
+			recent, err := s.triggeredSince(ctx, ticketID, name, now.Add(-decay))
+			if err != nil {
+				return events, err
+			}
+			if recent {
+				continue
+			}
 		}
-	}
-
-	// Check solution escalation
-	if solutionTime > 0 {
-		if now >= solutionTime {
-			info.SolutionTimeEscalation = true
-		} else if solutionNotify > 0 {
-			info.SolutionTimeNotification = s.isPastNotifyThreshold(solutionTime, solutionNotify)
+		if err := s.addHistory(ctx, nil, t, name, 1); err != nil {
+			return events, err
 		}
+		events = append(events, Event{TicketID: ticketID, Name: name})
 	}
-
-	return info, nil
+	return events, nil
 }
 
-// isPastNotifyThreshold checks if we're past the notification threshold percentage.
-func (s *CheckService) isPastNotifyThreshold(destTime int64, notifyPercent int) bool {
-	now := time.Now().Unix()
-
-	// If already escalated, no notification needed
-	if now >= destTime {
-		return false
+// triggeredSince reports whether the ticket has a history row of the event
+// type created at or after since.
+func (s *Service) triggeredSince(ctx context.Context, ticketID int, event string, since time.Time) (bool, error) {
+	var last sql.NullTime
+	err := s.db.QueryRowContext(ctx, database.ConvertPlaceholders(`
+		SELECT MAX(th.create_time) FROM ticket_history th
+		JOIN ticket_history_type tht ON tht.id = th.history_type_id
+		WHERE th.ticket_id = ? AND tht.name = ?`), ticketID, event).Scan(&last)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return false, fmt.Errorf("last %s: %w", event, err)
 	}
-
-	// Calculate time elapsed vs total time
-	// We don't have the start time here, so we check if remaining time is less than (100-notify)%
-	// This is a simplification - OTRS calculates from ticket creation
-	remaining := destTime - now
-
-	// If less than (100-notifyPercent)% of time remaining, notify
-	// E.g., if notify=80, we notify when 20% or less time remains
-	thresholdPercent := 100 - notifyPercent
-
-	// We estimate total time as 2x remaining (rough estimate when 50% done)
-	// Better implementation would store/calculate actual total time
-	return remaining > 0 && float64(remaining)/float64(destTime-now+remaining)*100 <= float64(thresholdPercent)
-}
-
-// checkTicketEscalations checks escalation conditions and returns events to trigger.
-func (s *CheckService) checkTicketEscalations(ctx context.Context, ticketID int, info *EscalationInfo) []EscalationEvent {
-	var events []EscalationEvent
-
-	// Map escalation types to event names
-	type escalationType struct {
-		condition bool
-		eventName string
-	}
-
-	escalations := []escalationType{
-		{info.FirstResponseTimeEscalation, "EscalationResponseTimeStart"},
-		{info.UpdateTimeEscalation, "EscalationUpdateTimeStart"},
-		{info.SolutionTimeEscalation, "EscalationSolutionTimeStart"},
-		{info.FirstResponseTimeNotification, "EscalationResponseTimeNotifyBefore"},
-		{info.UpdateTimeNotification, "EscalationUpdateTimeNotifyBefore"},
-		{info.SolutionTimeNotification, "EscalationSolutionTimeNotifyBefore"},
-	}
-
-	for _, esc := range escalations {
-		if !esc.condition {
-			continue
-		}
-
-		// Check decay time - don't repeat events too frequently
-		if s.decayTime > 0 && s.wasEventTriggeredRecently(ctx, ticketID, esc.eventName) {
-			continue
-		}
-
-		events = append(events, EscalationEvent{
-			TicketID:  ticketID,
-			EventName: esc.eventName,
-		})
-
-		// Record event in history
-		s.recordEscalationEvent(ctx, ticketID, esc.eventName)
-	}
-
-	// Add notification meta-events (for notification system)
-	hasEscalation := info.FirstResponseTimeEscalation || info.UpdateTimeEscalation || info.SolutionTimeEscalation
-	hasNotification := info.FirstResponseTimeNotification || info.UpdateTimeNotification || info.SolutionTimeNotification
-
-	if hasEscalation {
-		events = append(events, EscalationEvent{
-			TicketID:  ticketID,
-			EventName: "NotificationEscalation",
-		})
-	} else if hasNotification {
-		events = append(events, EscalationEvent{
-			TicketID:  ticketID,
-			EventName: "NotificationEscalationNotifyBefore",
-		})
-	}
-
-	return events
-}
-
-// wasEventTriggeredRecently checks if event was triggered within decay time.
-func (s *CheckService) wasEventTriggeredRecently(ctx context.Context, ticketID int, eventName string) bool {
-	if s.decayTime <= 0 {
-		return false
-	}
-
-	cutoff := time.Now().Add(-time.Duration(s.decayTime) * time.Minute)
-
-	query := database.ConvertPlaceholders(`
-		SELECT 1 FROM ticket_history th
-		JOIN ticket_history_type tht ON th.history_type_id = tht.id
-		WHERE th.ticket_id = ? AND tht.name = ? AND th.create_time > ?
-		LIMIT 1
-	`)
-
-	var exists int
-	err := s.db.QueryRowContext(ctx, query, ticketID, eventName, cutoff).Scan(&exists)
-	return err == nil
-}
-
-// recordEscalationEvent records an escalation event in ticket history.
-func (s *CheckService) recordEscalationEvent(ctx context.Context, ticketID int, eventName string) {
-	// Get history type ID
-	query := database.ConvertPlaceholders(`
-		SELECT id FROM ticket_history_type WHERE name = ?
-	`)
-	var historyTypeID int
-	if err := s.db.QueryRowContext(ctx, query, eventName).Scan(&historyTypeID); err != nil {
-		s.logger.Printf("History type not found: %s", eventName)
-		return
-	}
-
-	// Get ticket's current state for required history fields
-	query = database.ConvertPlaceholders(`
-		SELECT type_id, queue_id, user_id, ticket_priority_id, ticket_state_id
-		FROM ticket WHERE id = ?
-	`)
-	var typeID, queueID, ownerID, priorityID, stateID int
-	if err := s.db.QueryRowContext(ctx, query, ticketID).Scan(&typeID, &queueID, &ownerID, &priorityID, &stateID); err != nil {
-		s.logger.Printf("Failed to get ticket %d for history: %v", ticketID, err)
-		return
-	}
-
-	// Insert history record with all required fields
-	query = database.ConvertPlaceholders(`
-		INSERT INTO ticket_history (ticket_id, article_id, history_type_id, name, type_id, queue_id, owner_id, priority_id, state_id, create_time, create_by, change_time, change_by)
-		VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW(), 1)
-	`)
-	historyName := fmt.Sprintf("%%%%%s%%%%triggered", eventName)
-	if _, err := s.db.ExecContext(ctx, query, ticketID, historyTypeID, historyName, typeID, queueID, ownerID, priorityID, stateID); err != nil {
-		s.logger.Printf("Failed to record history for ticket %d: %v", ticketID, err)
-	}
+	return last.Valid && !last.Time.Before(since), nil
 }

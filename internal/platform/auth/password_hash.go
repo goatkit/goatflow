@@ -70,7 +70,7 @@ func ConfiguredPasswordHashType() PasswordHashType {
 		return HashTypeSHA256
 	default:
 		if _, seen := unknownHashTypeWarned.LoadOrStore(raw, true); !seen {
-			log.Printf("auth: unknown %s=%q, using bcrypt (supported: bcrypt, sha256)", EnvPasswordHashType, raw)
+			log.Printf("auth: unknown %s=%q, using bcrypt (supported: bcrypt, sha256)", EnvPasswordHashType, raw) // #nosec G706 -- operator-set env var, %q-quoted so it cannot forge log lines
 		}
 		return HashTypeBcrypt
 	}

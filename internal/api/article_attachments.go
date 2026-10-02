@@ -49,12 +49,12 @@ func listTicketAttachments(ctx context.Context, db *sql.DB, ticketID int, custom
 	for rows.Next() {
 		var id int64
 		if err := rows.Scan(&id); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, fmt.Errorf("list articles of ticket %d: %w", ticketID, err)
 		}
 		articleIDs = append(articleIDs, id)
 	}
-	rows.Close()
+	_ = rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("list articles of ticket %d: %w", ticketID, err)
 	}

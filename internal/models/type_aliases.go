@@ -26,11 +26,6 @@ type Permission = platformmodels.Permission
 type ScopeDefinition = platformmodels.ScopeDefinition
 type ScopeRegistry = platformmodels.ScopeRegistry
 
-type SearchRequest = platformmodels.SearchRequest
-type SearchResult = platformmodels.SearchResult
-type SearchHit = platformmodels.SearchHit
-type Facet = platformmodels.Facet
-
 type Session = platformmodels.Session
 type SessionData = platformmodels.SessionData
 

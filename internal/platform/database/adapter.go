@@ -4,7 +4,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -293,11 +292,7 @@ func ConvertQuery(query string) string {
 	query = ConvertPlaceholders(query)
 
 	// Then handle ILIKE conversion for MySQL
-	driver := os.Getenv("TEST_DB_DRIVER")
-	if driver == "" {
-		driver = os.Getenv("DB_DRIVER")
-	}
-	if driver == "mysql" || driver == "mariadb" {
+	if IsMySQL() {
 		query = convertILIKE(query)
 		query = convertTypeCasting(query)
 	}

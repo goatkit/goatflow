@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -120,7 +121,7 @@ func (l *RouteLoader) LoadRoutes() error {
 
 // loadRouteFile loads a single route configuration file.
 func (l *RouteLoader) loadRouteFile(path string) error {
-	data, err := os.ReadFile(path) //nolint:gosec // G304 false positive - path from WalkDir
+	data, err := os.ReadFile(path) // #nosec G304 -- path enumerated from the operator-configured routes directory, not request input
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)
 	}
@@ -176,7 +177,9 @@ func (l *RouteLoader) loadRouteFile(path string) error {
 	}
 
 	if l.watcher != nil {
-		l.watcher.Add(path)
+		if err := l.watcher.Add(path); err != nil {
+			log.Printf("Warning: cannot watch route file %s for changes: %v", path, err)
+		}
 	}
 
 	return nil
@@ -373,6 +376,27 @@ func (l *RouteLoader) registerMethodRoute(group *gin.RouterGroup, method, path s
 	default:
 		log.Printf("Warning: Unknown HTTP method '%s' for route %s", method, path)
 	}
+}
+
+// FullRoutePath returns the absolute path registerMethodRoute gives a route
+// declared under a group prefix. A route path that repeats the prefix
+// (prefix /admin, path /admin/users) is not doubled. Documentation and
+// tooling must use this so they describe the paths the server serves.
+func FullRoutePath(prefix, routePath string) string {
+	base := joinRoutePath("/", strings.TrimSpace(prefix))
+	return joinRoutePath(base, normalizeRoutePath(base, routePath))
+}
+
+// joinRoutePath joins like gin's RouterGroup: a trailing slash on rel is kept.
+func joinRoutePath(abs, rel string) string {
+	if rel == "" {
+		return abs
+	}
+	joined := path.Join(abs, rel)
+	if strings.HasSuffix(rel, "/") && !strings.HasSuffix(joined, "/") {
+		joined += "/"
+	}
+	return joined
 }
 
 func normalizeRoutePath(prefix, routePath string) string {
@@ -612,7 +636,7 @@ func resolveRoutesDir(initial string) (string, error) {
 			continue
 		}
 		seen[path] = struct{}{}
-		if st, err := os.Stat(path); err == nil && st.IsDir() {
+		if st, err := os.Stat(path); err == nil && st.IsDir() { // #nosec G703 -- candidates are GOATFLOW_ROUTES_DIR, ./routes and cwd ancestors; only stat'd
 			return path, nil
 		}
 	}

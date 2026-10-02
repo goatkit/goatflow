@@ -154,7 +154,7 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "Failed to archive ticket: " + err.Error(),
+			"error":   internalDBError(c, "archive ticket", err),
 		})
 		return
 	}

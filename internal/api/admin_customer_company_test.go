@@ -266,6 +266,70 @@ func TestAdminCustomerCompanyCreate(t *testing.T) {
 	})
 }
 
+// A rejected create from the browser form shows the error on the New Company
+// form with the entered values kept; API callers still get JSON.
+func TestAdminCustomerCompanyCreateRejectionShowsForm(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
+	db := getTestDB(t)
+	router := NewSimpleRouterWithDB(db)
+
+	existing := "TEST_FORMDUP_" + fmt.Sprint(time.Now().UnixNano())
+	createTestCustomerCompany(t, db, existing)
+	t.Cleanup(func() { cleanupTestCustomerCompany(t, db, existing) })
+	existingName := "Test Company " + existing
+	fresh := "TEST_FORMNEW_" + fmt.Sprint(time.Now().UnixNano())
+	t.Cleanup(func() { cleanupTestCustomerCompany(t, db, fresh) })
+
+	post := func(accept string, form url.Values) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies", bytes.NewBufferString(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Accept", accept)
+		AddTestAuthCookie(req, token)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		return w
+	}
+	const browserAccept = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+
+	cases := []struct {
+		name    string
+		form    url.Values
+		message string
+	}{
+		{"duplicate customer ID", url.Values{"customer_id": {existing}, "name": {"Another Name " + fresh}, "city": {"Kept City"}}, "Customer ID already exists"},
+		{"duplicate name", url.Values{"customer_id": {fresh}, "name": {existingName}, "city": {"Kept City"}}, "A company with this name already exists"},
+		{"missing name", url.Values{"customer_id": {fresh}, "city": {"Kept City"}}, "Customer ID and Name are required"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := post(browserAccept, tc.form)
+			require.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
+			assert.Contains(t, w.Header().Get("Content-Type"), "text/html")
+			body := w.Body.String()
+			assert.Contains(t, body, `id="form-error"`)
+			assert.Contains(t, body, tc.message)
+			assert.Contains(t, body, `action="/admin/customer/companies"`, "the New Company form is shown again")
+			assert.Contains(t, body, `value="Kept City"`, "entered values are kept")
+
+			w = post("application/json", tc.form)
+			require.Equal(t, http.StatusBadRequest, w.Code)
+			var resp map[string]any
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp), w.Body.String())
+			assert.Equal(t, tc.message, resp["error"])
+		})
+	}
+
+	var name string
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		`SELECT name FROM customer_company WHERE customer_id = ?`), existing).Scan(&name))
+	assert.Equal(t, existingName, name, "a rejected create must not touch the existing company")
+	var n int
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		`SELECT COUNT(*) FROM customer_company WHERE customer_id = ?`), fresh).Scan(&n))
+	assert.Zero(t, n, "nothing is created when the name is taken")
+}
+
 func TestAdminCustomerCompanyEdit(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	token := GetTestAuthToken(t)

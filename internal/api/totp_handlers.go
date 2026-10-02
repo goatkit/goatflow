@@ -30,7 +30,6 @@ func init() {
 	routing.RegisterHandler("handleTOTPSetup", handleTOTPSetup)
 	routing.RegisterHandler("handleTOTPConfirm", handleTOTPConfirm)
 	routing.RegisterHandler("handleTOTPDisable", handleTOTPDisable)
-	routing.RegisterHandler("handleTOTPVerify", handleTOTPVerify)
 	routing.RegisterHandler("handleRecoveryCodesRegenerate", handleRecoveryCodesRegenerate)
 
 	// Customer 2FA handlers
@@ -106,7 +105,11 @@ func handleTOTPSetup(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "user not found"})
 		return
 	}
-	if !auth.NewPasswordHasher().VerifyPassword(req.Password, user.Password) {
+	recheckKey := passwordRecheckKey(agentMFAAccount(userID))
+	if rejectIfLoginBlocked(c, recheckKey) {
+		return
+	}
+	if !countPasswordRecheck(c, recheckKey, auth.NewPasswordHasher().VerifyPassword(req.Password, user.Password)) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -192,7 +195,11 @@ func handleTOTPConfirm(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "user not found"})
 		return
 	}
-	if !auth.NewPasswordHasher().VerifyPassword(req.Password, user.Password) {
+	recheckKey := passwordRecheckKey(agentMFAAccount(userID))
+	if rejectIfLoginBlocked(c, recheckKey) {
+		return
+	}
+	if !countPasswordRecheck(c, recheckKey, auth.NewPasswordHasher().VerifyPassword(req.Password, user.Password)) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -246,7 +253,11 @@ func handleTOTPDisable(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "user not found"})
 		return
 	}
-	if !auth.NewPasswordHasher().VerifyPassword(req.Password, user.Password) {
+	recheckKey := passwordRecheckKey(agentMFAAccount(userID))
+	if rejectIfLoginBlocked(c, recheckKey) {
+		return
+	}
+	if !countPasswordRecheck(c, recheckKey, auth.NewPasswordHasher().VerifyPassword(req.Password, user.Password)) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -410,7 +421,11 @@ func regenerateRecoveryCodes(c *gin.Context, account mfaAccount, passwordOK func
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "database unavailable"})
 		return
 	}
-	if !passwordOK(db, req.Password) {
+	recheckKey := passwordRecheckKey(account)
+	if rejectIfLoginBlocked(c, recheckKey) {
+		return
+	}
+	if !countPasswordRecheck(c, recheckKey, passwordOK(db, req.Password)) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -425,111 +440,6 @@ func regenerateRecoveryCodes(c *gin.Context, account mfaAccount, passwordOK func
 	}
 	auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "RECOVERY_CODES_REGENERATED", UserID: account.userID, UserLogin: account.webAuthnKey(), IsCustomer: account.isCustomer(), ClientIP: c.ClientIP(), Success: true, Details: "recovery codes replaced"})
 	c.JSON(http.StatusOK, gin.H{"success": true, "recovery_codes": codes})
-}
-
-// handleTOTPVerify verifies a TOTP code during login (called after password verification).
-// SECURITY: User data is retrieved from server-side session manager, NOT from cookies.
-func handleTOTPVerify(c *gin.Context) {
-	// Get token from cookie
-	token, err := c.Cookie("2fa_pending")
-	if err != nil || token == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "no pending 2FA session"})
-		return
-	}
-
-	// SECURITY FIX (V3/V5/V7): Validate session and get user data from server-side session manager
-	sessionMgr := auth.GetTOTPSessionManager()
-	session := sessionMgr.ValidateAndGetSession(token, c.ClientIP(), c.Request.UserAgent())
-	if session == nil {
-		httpcookie.SetAuth(c, "2fa_pending", "", -1)
-		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "invalid or expired 2FA session"})
-		return
-	}
-
-	// Get code from request body
-	var req struct {
-		Code string `json:"code" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil || req.Code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "verification code is required"})
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "database unavailable"})
-		return
-	}
-
-	totpService := service.NewTOTPService(db, "GoatFlow")
-	valid, err := totpService.ValidateCode(session.UserID, req.Code)
-
-	if err != nil || !valid {
-		// SECURITY FIX (V3/V7): Record failed attempt and check if session should be invalidated
-		remaining := sessionMgr.RecordFailedAttempt(token)
-		if remaining <= 0 {
-			httpcookie.SetAuth(c, "2fa_pending", "", -1)
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"error":   "too many failed attempts, please login again",
-			})
-			return
-		}
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"success":            false,
-			"error":              "invalid code",
-			"attempts_remaining": remaining,
-		})
-		return
-	}
-
-	// Success! Invalidate the pending session
-	sessionMgr.InvalidateSession(token)
-	httpcookie.SetAuth(c, "2fa_pending", "", -1)
-
-	// Complete login - issue JWT token
-	jwtManager := shared.GetJWTManager()
-	if jwtManager == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "authentication not configured"})
-		return
-	}
-
-	// Determine role and admin status from group membership
-	totpRole := "Agent"
-	totpIsAdmin := false
-	if db != nil {
-		var cnt int
-		_ = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(
-			`SELECT COUNT(*) FROM group_user gu JOIN `+"`groups`"+` g ON gu.group_id = g.id WHERE gu.user_id = ? AND LOWER(g.name) = 'admin'`), session.UserID).Scan(&cnt)
-		if cnt > 0 {
-			totpRole = "Admin"
-			totpIsAdmin = true
-		}
-	}
-	jwtToken, err := jwtManager.GenerateTokenWithLogin(uint(session.UserID), session.Username, session.Username, totpRole, totpIsAdmin, 1)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to generate token"})
-		return
-	}
-
-	// Set auth cookies. SECURITY: wipe customer session cookies on agent 2FA
-	// completion — same rationale as the primary agent login. One identity
-	// at a time.
-	sessionTimeout := 86400 // 24 hours
-	httpcookie.SetAuth(c, "customer_access_token", "", -1)
-	httpcookie.SetAuth(c, "customer_auth_token", "", -1)
-	httpcookie.SetAuth(c, "customer_session_id", "", -1)
-	httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "", -1)
-	httpcookie.SetAuth(c, "access_token", jwtToken, sessionTimeout)
-	httpcookie.SetAuth(c, "auth_token", jwtToken, sessionTimeout)
-	httpcookie.SetAuthState(c, "goatflow_logged_in", "1", sessionTimeout)
-
-	c.Header("HX-Redirect", "/dashboard")
-	c.JSON(http.StatusOK, gin.H{
-		"success":  true,
-		"redirect": "/dashboard",
-		"message":  "Code verified successfully.",
-	})
 }
 
 // Helper to get user ID from context for TOTP handlers
@@ -630,7 +540,11 @@ func handleCustomerTOTPSetup(c *gin.Context) {
 	}
 
 	// Verify password before allowing 2FA setup
-	if !verifyCustomerPassword(db, customerLogin, req.Password) {
+	recheckKey := passwordRecheckKey(customerMFAAccount(customerLogin))
+	if rejectIfLoginBlocked(c, recheckKey) {
+		return
+	}
+	if !countPasswordRecheck(c, recheckKey, verifyCustomerPassword(db, customerLogin, req.Password)) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -717,7 +631,11 @@ func handleCustomerTOTPConfirm(c *gin.Context) {
 	}
 
 	// V9: Verify password before allowing 2FA setup
-	if !verifyCustomerPassword(db, customerLogin, req.Password) {
+	recheckKey := passwordRecheckKey(customerMFAAccount(customerLogin))
+	if rejectIfLoginBlocked(c, recheckKey) {
+		return
+	}
+	if !countPasswordRecheck(c, recheckKey, verifyCustomerPassword(db, customerLogin, req.Password)) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -763,7 +681,11 @@ func handleCustomerTOTPDisable(c *gin.Context) {
 	}
 
 	// V9: Verify password before allowing 2FA disable
-	if !verifyCustomerPassword(db, customerLogin, req.Password) {
+	recheckKey := passwordRecheckKey(customerMFAAccount(customerLogin))
+	if rejectIfLoginBlocked(c, recheckKey) {
+		return
+	}
+	if !countPasswordRecheck(c, recheckKey, verifyCustomerPassword(db, customerLogin, req.Password)) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -896,6 +818,10 @@ func handleCustomer2FAVerify(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "invalid or expired 2FA session"})
 		return
 	}
+	limiterKey := twoFactorLimiterKey(true, session.UserLogin)
+	if rejectIfLoginBlocked(c, limiterKey) {
+		return
+	}
 
 	// Get the code from request
 	var code string
@@ -926,7 +852,7 @@ func handleCustomer2FAVerify(c *gin.Context) {
 	valid, err := totpService.ValidateCodeForCustomer(session.UserLogin, code)
 
 	if err != nil || !valid {
-		// SECURITY FIX (V3/V7): Record failed attempt
+		auth.DefaultLoginRateLimiter.RecordFailure(c.ClientIP(), limiterKey)
 		remaining := sessionMgr.RecordFailedAttempt(token)
 		if remaining <= 0 {
 			httpcookie.SetAuth(c, "customer_2fa_pending", "", -1)
@@ -944,6 +870,7 @@ func handleCustomer2FAVerify(c *gin.Context) {
 		return
 	}
 
+	auth.DefaultLoginRateLimiter.RecordSuccess(c.ClientIP(), limiterKey)
 	// Success! Invalidate the pending session
 	sessionMgr.InvalidateSession(token)
 	httpcookie.SetAuth(c, "customer_2fa_pending", "", -1)
@@ -983,12 +910,12 @@ func handleCustomer2FAVerify(c *gin.Context) {
 	httpcookie.SetAuth(c, "customer_auth_token", jwtToken, sessionTimeout)
 	httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "1", sessionTimeout)
 
-	// Redirect to customer dashboard
-	c.Header("HX-Redirect", "/customer")
+	redirectTarget := customerLandingRedirect(session.UserLogin)
+	c.Header("HX-Redirect", redirectTarget)
 	c.JSON(http.StatusOK, gin.H{
 		"success":      true,
 		"access_token": jwtToken,
-		"redirect":     "/customer",
+		"redirect":     redirectTarget,
 	})
 }
 
@@ -1142,19 +1069,11 @@ func getAdminUserID(c *gin.Context) int {
 		return 0
 	}
 
-	switch id := userID.(type) {
-	case float64:
-		return int(id)
-	case int:
-		return id
-	case uint:
-		return int(id)
-	case int64:
-		return int(id)
-	case uint64:
-		return int(id)
+	id, ok := userIDFromValue(userID)
+	if !ok {
+		return 0
 	}
-	return 0
+	return id
 }
 
 // logAdminAction records an admin action to the audit log.

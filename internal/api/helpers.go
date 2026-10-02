@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -12,6 +13,50 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/shared"
 )
 
+// userIDFromValue converts a user_id stored in the gin context by any auth
+// middleware (int, int64, uint, uint64, float64 or string) to an int. ok is
+// false for unknown types and for values int cannot hold, so a forged or
+// corrupt id can never wrap around into another user's id.
+func userIDFromValue(v any) (int, bool) {
+	switch id := v.(type) {
+	case int:
+		return id, true
+	case int64:
+		if id < math.MinInt || id > math.MaxInt {
+			return 0, false
+		}
+		return int(id), true
+	case uint:
+		if id > math.MaxInt {
+			return 0, false
+		}
+		return int(id), true
+	case uint64:
+		if id > math.MaxInt {
+			return 0, false
+		}
+		return int(id), true
+	case float64:
+		if id < math.MinInt || id > math.MaxInt {
+			return 0, false
+		}
+		return int(id), true
+	case string:
+		n, err := strconv.Atoi(id)
+		return n, err == nil
+	}
+	return 0, false
+}
+
+// userIDUintFromValue is userIDFromValue for uint ids; negative ids fail.
+func userIDUintFromValue(v any) (uint, bool) {
+	id, ok := userIDFromValue(v)
+	if !ok || id < 0 {
+		return 0, false
+	}
+	return uint(id), true
+}
+
 // GetUserIDFromCtx extracts the authenticated user's ID from gin context.
 // Handles multiple types since different auth middleware may set different types.
 // Returns the fallback value if user_id is not found or cannot be converted.
@@ -20,21 +65,8 @@ func GetUserIDFromCtx(c *gin.Context, fallback int) int {
 	if !ok {
 		return fallback
 	}
-	switch id := v.(type) {
-	case int:
+	if id, ok := userIDFromValue(v); ok {
 		return id
-	case int64:
-		return int(id)
-	case uint:
-		return int(id)
-	case uint64:
-		return int(id)
-	case float64:
-		return int(id)
-	case string:
-		if n, err := strconv.Atoi(id); err == nil {
-			return n
-		}
 	}
 	return fallback
 }
@@ -57,21 +89,8 @@ func GetUserIDFromCtxUint(c *gin.Context, fallback uint) uint {
 	if !ok {
 		return fallback
 	}
-	switch id := v.(type) {
-	case int:
-		return uint(id)
-	case int64:
-		return uint(id)
-	case uint:
+	if id, ok := userIDUintFromValue(v); ok {
 		return id
-	case uint64:
-		return uint(id)
-	case float64:
-		return uint(id)
-	case string:
-		if n, err := strconv.Atoi(id); err == nil {
-			return uint(n)
-		}
 	}
 	return fallback
 }

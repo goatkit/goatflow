@@ -183,16 +183,8 @@ func HandleRefreshTokenAPI(c *gin.Context) {
 	c.JSON(http.StatusOK, tokenPairResponse(user, accessToken, refreshToken))
 }
 
-// HandleLogoutAPI logs out a user (client-side token removal).
-//
-//	@Summary		Logout
-//	@Description	Logout user (invalidates session, client should discard tokens)
-//	@Tags			Authentication
-//	@Accept			json
-//	@Produce		json
-//	@Success		200	{object}	map[string]interface{}	"Logout successful"
-//	@Security		BearerAuth
-//	@Router			/auth/logout [post]
+// HandleLogoutAPI logs out a user (client-side token removal). No YAML route
+// uses it.
 func HandleLogoutAPI(c *gin.Context) {
 	// In a JWT-based system, logout is typically handled client-side
 	// We could implement token blacklisting here if needed

@@ -5,6 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
+	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -35,9 +39,35 @@ type sourceEvent struct {
 	change     map[string]interface{}
 }
 
-// Service turns ticket, article and history rows into webhook deliveries and
-// sends due deliveries. Run it periodically from a single goroutine per
-// process (the runner task does); several processes may run it concurrently.
+// Delivery log retention. Delivered and failed deliveries older than the
+// retention are deleted by the dispatcher at most once per pruneInterval.
+const (
+	// RetentionDaysEnv sets the retention in days; 0 keeps deliveries forever.
+	RetentionDaysEnv     = "GOATFLOW_WEBHOOK_DELIVERY_RETENTION_DAYS"
+	DefaultRetentionDays = 30
+	pruneInterval        = time.Hour
+)
+
+// retention returns the configured delivery log retention; 0 disables pruning.
+// An invalid value is logged and the default is used.
+func retention() time.Duration {
+	raw := strings.TrimSpace(os.Getenv(RetentionDaysEnv))
+	if raw == "" {
+		return DefaultRetentionDays * 24 * time.Hour
+	}
+	days, err := strconv.Atoi(raw)
+	if err != nil || days < 0 {
+		log.Printf("webhook-dispatch: invalid %s=%q (want a whole number of days, 0 = keep forever); using %d", // #nosec G706 -- operator env var, %q-quoted so it cannot forge log lines
+			RetentionDaysEnv, raw, DefaultRetentionDays)
+		days = DefaultRetentionDays
+	}
+	return time.Duration(days) * 24 * time.Hour
+}
+
+// Service turns ticket, article and history rows into webhook deliveries,
+// sends due deliveries and prunes the delivery log. Run it periodically from
+// a single goroutine per process (the runner task does); several processes
+// may run it concurrently.
 type Service struct {
 	db         *sql.DB
 	repo       *webhook.Repository
@@ -50,6 +80,8 @@ type Service struct {
 	// id can become visible after a higher one. Waiting one poll interval lets
 	// such transactions commit before the cursor moves past them.
 	horizon map[string]int64
+	// lastPrune is when the delivery log was last pruned.
+	lastPrune time.Time
 }
 
 // NewService returns a service on db.
@@ -63,9 +95,9 @@ func NewService(db *sql.DB) *Service {
 	}
 }
 
-// RunOnce publishes new events and then sends due deliveries until none are
-// left or ctx expires. It returns how many events were queued and how many
-// delivery attempts were made.
+// RunOnce publishes new events, sends due deliveries until none are left or
+// ctx expires, and prunes the delivery log when it is due. It returns how many
+// events were queued and how many delivery attempts were made.
 func (s *Service) RunOnce(ctx context.Context) (queued, attempted int, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -74,18 +106,28 @@ func (s *Service) RunOnce(ctx context.Context) (queued, attempted int, err error
 	if err != nil {
 		return queued, 0, err
 	}
-	const sendBatch = 50
-	for ctx.Err() == nil {
-		n, err := s.dispatcher.ProcessDue(ctx, sendBatch)
-		attempted += n
-		if err != nil {
-			return queued, attempted, err
-		}
-		if n < sendBatch {
-			break
-		}
+	attempted, err = s.dispatcher.ProcessDue(ctx)
+	if err != nil {
+		return queued, attempted, err
 	}
-	return queued, attempted, nil
+	return queued, attempted, s.prune(ctx)
+}
+
+// prune deletes delivered and failed deliveries older than the retention.
+func (s *Service) prune(ctx context.Context) error {
+	keep := retention()
+	if keep == 0 || ctx.Err() != nil || time.Since(s.lastPrune) < pruneInterval {
+		return nil
+	}
+	n, err := s.repo.PruneDeliveries(ctx, time.Now().UTC().Add(-keep))
+	if err != nil {
+		return fmt.Errorf("prune webhook deliveries: %w", err)
+	}
+	s.lastPrune = time.Now()
+	if n > 0 {
+		log.Printf("webhook-dispatch: deleted %d deliveries older than %d days", n, int(keep.Hours()/24))
+	}
+	return nil
 }
 
 func (s *Service) publish(ctx context.Context) (int, error) {

@@ -187,8 +187,7 @@ func postNote(t *testing.T, browser *helpers.BrowserHelper, ticketID, html strin
 		const response = await fetch('/agent/tickets/' + ticketId + '/note', {
 			method: 'POST',
 			headers: {
-				'Accept': 'application/json',
-				'X-Test-Mode': 'true'
+				'Accept': 'application/json'
 			},
 			body: formData
 		});
@@ -222,8 +221,7 @@ const createTicketScript = `async ({subject, body, queueID, typeID, customerEmai
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
-			'Accept': 'application/json',
-			'X-Test-Mode': 'true'
+			'Accept': 'application/json'
 		},
 		body: JSON.stringify(requestBody)
 	});

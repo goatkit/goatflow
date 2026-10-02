@@ -15,6 +15,8 @@
 # both phases' explicit sets (it stays in the parallel set, running zero
 # tests).
 #
+# Every phase runs; the script exits non-zero if any phase failed.
+#
 # Args: extra `go test` flags, e.g. -count=1 (test-unit); omitted for
 #       test-fast so Go's result cache applies.
 
@@ -25,8 +27,10 @@ EXTRA_FLAGS="$*"
 CORE_EXCLUDE='tests/e2e|tests/integration|internal/email/integration|internal/platform/template'
 DB_SYMBOLS='database\.(GetDB|InitTestDB|SetDB|ResetDB|CloseTestDB)'
 
+status=0
+
 echo "Running template tests..."
-go test -timeout=1m -buildvcs=false -v -p "$(nproc)" ./internal/platform/template/... $EXTRA_FLAGS || true
+go test -timeout=1m -buildvcs=false -v -p "$(nproc)" ./internal/platform/template/... $EXTRA_FLAGS || status=1
 
 CORE_PKGS=$(go list ./... | rg -v "$CORE_EXCLUDE")
 
@@ -35,8 +39,8 @@ DB_DIRS=$(git grep -lE "$DB_SYMBOLS" -- '*_test.go' | xargs -rn1 dirname | sort 
 
 if [ -z "$DB_DIRS" ]; then
 	echo "Running core packages"
-	go test -timeout=15m -buildvcs=false -v -p "$(nproc)" $CORE_PKGS $EXTRA_FLAGS
-	exit $?
+	go test -timeout=15m -buildvcs=false -v -p "$(nproc)" $CORE_PKGS $EXTRA_FLAGS || status=1
+	exit $status
 fi
 
 # Import paths of DB packages that build in the default context (per-dir so
@@ -48,17 +52,19 @@ for d in $DB_DIRS; do
 done
 DB_PKGS=$(echo $DB_PKGS | tr ' ' '\n' | grep -Fx -f <(echo "$CORE_PKGS" | tr ' ' '\n' | sort -u) | sort -u | tr '\n' ' ')
 
-NON_DB_PKGS=""
+NON_DB_PKGS="$CORE_PKGS"
 if [ -n "$DB_PKGS" ]; then
 	NON_DB_PKGS=$(echo "$CORE_PKGS" | tr ' ' '\n' | grep -Fxv -f <(echo "$DB_PKGS" | tr ' ' '\n' | sort -u) | tr '\n' ' ')
 fi
 
 if [ -n "$NON_DB_PKGS" ]; then
 	echo "Running non-DB core packages (parallel)"
-	go test -timeout=15m -buildvcs=false -v -p "$(nproc)" $NON_DB_PKGS $EXTRA_FLAGS
+	go test -timeout=15m -buildvcs=false -v -p "$(nproc)" $NON_DB_PKGS $EXTRA_FLAGS || status=1
 fi
 
 if [ -n "$DB_PKGS" ]; then
 	echo "Running DB core packages (serialized -p 1: shared test DB)"
-	go test -timeout=15m -buildvcs=false -v -p 1 $DB_PKGS $EXTRA_FLAGS
+	go test -timeout=15m -buildvcs=false -v -p 1 $DB_PKGS $EXTRA_FLAGS || status=1
 fi
+
+exit $status

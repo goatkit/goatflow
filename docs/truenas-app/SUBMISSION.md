@@ -26,7 +26,7 @@ on a synced checkout. One change since the first pass: `dbrepairs` claimed port
 | `app.yaml` | metadata | steady-state (generate_metadata.py no-op) |
 | `ix_values.yaml` | static defaults | pinned `ghcr.io/goatkit/goatflow:0.10.0` |
 | `questions.yaml` | wizard form | ports 30484/30483, secrets, storage, run_as |
-| `templates/docker-compose.yaml` | Jinja2 render-lib template | flat `DB_*` + `GOATFLOW_VALKEY_PASSWORD` (0.10.0 reads namespaced `DB_MYSQL_*` first and falls back to flat `DB_*`); no `BASE_URL` (see step 6 below) |
+| `templates/docker-compose.yaml` | Jinja2 render-lib template | namespaced `DB_MYSQL_*` (read by `internal/platform/dbconfig`), `GOATFLOW_VALKEY_*`, `GOATFLOW_EMAIL_*`; `BASE_URL` from the Public URL question |
 | `templates/test_values/basic-values.yaml` | CI fixture | secrets filled, host paths under `/opt/tests` |
 | `templates/library/base_v2_3_11/` | render library | byte-identical to catalog `library/2.3.11` |
 | `README.md` | services + upgrade/rollback | present |
@@ -82,10 +82,8 @@ added — after which `generate_metadata.py` is a no-op, which is what the CI
    add `hello@goatflow.io` as an upstream maintainer.
 5. **Post-merge**: catalog updates daily on apps.truenas.com; renovate bot tracks
    the `0.10.0` tag — bump `app_version` + image tag on upstream releases.
-6. **Decide `BASE_URL`**: the template sets no `BASE_URL` and the wizard has no
-   public-URL question, so password-reset and sign-up emails are not sent. Users can
-   add `BASE_URL` under Additional Environment Variables (documented in the app
-   README); a wizard question would need a template change.
+6. **`BASE_URL`**: the wizard asks for the Public URL; leave a note that password-reset
+   and sign-up emails need it.
 
 ## PR description (paste into the truenas/apps PR)
 

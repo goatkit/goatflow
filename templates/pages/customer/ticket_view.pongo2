@@ -14,7 +14,7 @@
         <nav class="mb-4" aria-label="Breadcrumb">
             <ol class="flex items-center space-x-2 text-sm">
                 <li>
-                    <a href="/customer/dashboard" class="gk-link-neon">
+                    <a href="/customer" class="gk-link-neon">
                         {{ t("customer.nav.dashboard") }}
                     </a>
                 </li>

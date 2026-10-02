@@ -1,0 +1,29 @@
+{{- $persistence := .Values.config.storage.persistence }}
+{{- if and .Values.backend.enabled $persistence.enabled (not $persistence.existingClaim) }}
+# STORAGE_PATH volume: fs article attachments and plugin files. Kept on
+# helm uninstall, like the database volumes; delete the PVC to drop the data.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "goatflow.fullname" . }}-storage
+  labels:
+    {{- include "goatflow.backend.labels" . | nindent 4 }}
+    {{- with .Values.global.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    helm.sh/resource-policy: keep
+    {{- with .Values.global.commonAnnotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  accessModes:
+    {{- toYaml $persistence.accessModes | nindent 4 }}
+  {{- $storageClass := $persistence.storageClass | default .Values.global.storageClass }}
+  {{- if $storageClass }}
+  storageClassName: {{ $storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $persistence.size }}
+{{- end }}

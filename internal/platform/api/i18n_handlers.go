@@ -23,7 +23,7 @@ func NewI18nHandlers() *I18nHandlers {
 	}
 }
 
-// @Router /api/v1/i18n/languages [get].
+// @Router /i18n/languages [get].
 func (h *I18nHandlers) GetSupportedLanguages(c *gin.Context) {
 	languages := h.i18n.GetSupportedLanguages()
 	currentLang := middleware.GetLanguage(c)
@@ -47,7 +47,7 @@ func (h *I18nHandlers) GetSupportedLanguages(c *gin.Context) {
 	})
 }
 
-// @Router /api/v1/i18n/language [post].
+// @Router /i18n/language [post].
 func (h *I18nHandlers) SetLanguage(c *gin.Context) {
 	var req SetLanguageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -90,7 +90,7 @@ func (h *I18nHandlers) SetLanguage(c *gin.Context) {
 	})
 }
 
-// @Router /api/v1/i18n/translations/{lang} [get].
+// @Router /i18n/translations/{lang} [get].
 func (h *I18nHandlers) GetTranslations(c *gin.Context) {
 	lang := c.Param("lang")
 
@@ -119,7 +119,7 @@ func (h *I18nHandlers) GetTranslations(c *gin.Context) {
 	})
 }
 
-// @Router /api/v1/i18n/translations [get].
+// @Router /i18n/translations [get].
 func (h *I18nHandlers) GetCurrentTranslations(c *gin.Context) {
 	lang := middleware.GetLanguage(c)
 	translations := h.i18n.GetTranslations(lang)
@@ -130,7 +130,7 @@ func (h *I18nHandlers) GetCurrentTranslations(c *gin.Context) {
 	})
 }
 
-// @Router /api/v1/i18n/translate [post].
+// @Router /i18n/translate [post].
 func (h *I18nHandlers) Translate(c *gin.Context) {
 	var req TranslateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -158,7 +158,7 @@ func (h *I18nHandlers) Translate(c *gin.Context) {
 	})
 }
 
-// @Router /api/v1/i18n/stats [get].
+// @Router /i18n/stats [get].
 func (h *I18nHandlers) GetLanguageStats(c *gin.Context) {
 	// In a real implementation, this would fetch from database
 	stats := LanguageStatsResponse{
@@ -178,7 +178,7 @@ func (h *I18nHandlers) GetLanguageStats(c *gin.Context) {
 	c.JSON(http.StatusOK, stats)
 }
 
-// @Router /api/v1/i18n/coverage [get].
+// @Router /i18n/coverage [get].
 func (h *I18nHandlers) GetTranslationCoverage(c *gin.Context) {
 	baseKeys := h.i18n.GetAllKeys("en")
 	totalKeys := len(baseKeys)
@@ -214,7 +214,7 @@ func (h *I18nHandlers) GetTranslationCoverage(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// @Router /api/v1/i18n/missing/{lang} [get].
+// @Router /i18n/missing/{lang} [get].
 func (h *I18nHandlers) GetMissingTranslations(c *gin.Context) {
 	lang := c.Param("lang")
 
@@ -272,7 +272,7 @@ func (h *I18nHandlers) GetMissingTranslations(c *gin.Context) {
 	})
 }
 
-// @Router /api/v1/i18n/export/{lang} [get].
+// @Router /i18n/export/{lang} [get].
 func (h *I18nHandlers) ExportTranslations(c *gin.Context) {
 	lang := c.Param("lang")
 	format := c.DefaultQuery("format", "json")
@@ -335,7 +335,7 @@ func (h *I18nHandlers) flattenTranslations(m map[string]interface{}, prefix stri
 	}
 }
 
-// @Router /api/v1/i18n/validate/{lang} [get].
+// @Router /i18n/validate/{lang} [get].
 func (h *I18nHandlers) ValidateTranslations(c *gin.Context) {
 	lang := c.Param("lang")
 

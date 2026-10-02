@@ -53,7 +53,7 @@ func isAllowedStatement(query string) bool {
 //	@Failure		400		{object}	map[string]interface{}	"Bad request"
 //	@Failure		403		{object}	map[string]interface{}	"Forbidden"
 //	@Security		BearerAuth
-//	@Router			/api/v1/admin/sql [post]
+//	@Router			/admin/sql [post]
 func HandleAdminExecuteSQL(c *gin.Context) {
 	var req adminSQLRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

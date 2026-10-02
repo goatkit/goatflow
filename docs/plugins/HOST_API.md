@@ -2,59 +2,75 @@
 
 The Host API is how plugins talk to GoatFlow. The Go interface is `HostAPI` in `pkg/plugin/plugin.go`.
 
-Not every method works in every runtime:
+Both runtimes support every method with the same host function names and the same JSON arguments and results. One dispatcher (`DispatchHostCall` in `internal/platform/plugin/hostcall.go`) serves both:
 
-- **gRPC plugins** call the host through the RPC dispatch in `internal/platform/plugin/grpc/host_api.go`.
-- **WASM plugins** call the `gk.host_call` host function. Only the names in `internal/platform/plugin/wasm/runtime.go` (`hostCall`) are handled. Any other name returns `unknown host function`.
+- **gRPC plugins** call the host through `pkg/plugin/grpcutil.HostAPIClient`, which sends the host function name and JSON arguments over RPC.
+- **WASM plugins** call the `gk.host_call` host function with the same name and JSON arguments. An unknown name returns no result (the host logs `unknown host API method`).
 
-Every plugin gets a **SandboxedHostAPI** that adds permission checks and rate limits to some methods. See [Sandboxing & Permissions](#sandboxing--permissions).
+Every plugin call reaches the host through the plugin's **SandboxedHostAPI**, which checks permissions and applies rate limits. See [Sandboxing & Permissions](#sandboxing--permissions).
 
 ## Runtime support
 
 | Method | Host function name | gRPC | WASM | Permission check |
 |--------|-------------------|------|------|------------------|
-| `DBQuery` | `db_query` | yes | yes | `db` read |
+| `DBQuery` | `db_query` | yes | yes | `db` read (tables written by the statement need `db` write) |
 | `DBExec` | `db_exec` | yes | yes | `db` write |
 | `CacheGet` | `cache_get` | yes | yes | `cache` read |
 | `CacheSet` | `cache_set` | yes | yes | `cache` write |
-| `CacheDelete` | `cache_delete` | no (see note) | no | `cache` write |
+| `CacheDelete` | `cache_delete` | yes | yes | `cache` write |
 | `HTTPRequest` | `http_request` | yes | yes | `http` |
 | `SendEmail` | `send_email` | yes | yes | `email` |
-| `Log` | `log` (WASM: separate `gk.log` export) | yes | yes | none |
+| `Log` | `log` (WASM also: separate `gk.log` export) | yes | yes | none |
 | `ConfigGet` | `config_get` | yes | yes | `config` read |
-| `Translate` | `translate` | yes (no request language, see [Translate](#translate)) | yes | none |
+| `Translate` | `translate` | yes | yes | none |
 | `CallPlugin` | `plugin_call` | yes | yes | `plugin_call` |
-| `PublishEvent` | `publish_event` | yes | yes | none |
-| `EntitySoftDelete` | `entity_soft_delete` | yes | yes | none |
-| `EntityRestore` | `entity_restore` | yes | yes | none |
-| `EntityHardDelete` | `entity_hard_delete` | yes | yes | none |
-| `RecycleBinList` | `recycle_bin_list` | yes | yes | none |
+| `PublishEvent` | `publish_event` | yes | yes | none (own plugin's channels only) |
+| `EntitySoftDelete` | `entity_soft_delete` | yes | yes | `entity` write |
+| `EntityRestore` | `entity_restore` | yes | yes | `entity` write |
+| `EntityHardDelete` | `entity_hard_delete` | yes | yes | `entity` `hard_delete` (admin policy only) |
+| `RecycleBinList` | `recycle_bin_list` | yes | yes | `entity` read |
 | `SecureConfigGet` | `secure_config_get` | yes | yes | none (own plugin's keys only) |
 | `SecureConfigSet` | `secure_config_set` | yes | yes | none (own plugin's keys only) |
 | `OrgID` | `org_id` | yes | yes | none |
 | `CustomFieldsGet` | `custom_fields_get` | yes | yes | DB rate limit |
-| `CustomFieldsSet` | `custom_fields_set` | yes | yes | DB rate limit |
+| `CustomFieldsSet` | `custom_fields_set` | yes | yes | DB rate limit (own plugin's fields only) |
 | `CustomFieldsQuery` | `custom_fields_query` | yes | yes | DB rate limit |
-| `StoreFile` | `store_file` | yes | no | none (own plugin's files only) |
-| `GetFile` | `get_file` | yes | no | none (own plugin's files only) |
-| `DeleteFile` | `delete_file` | yes | no | none (own plugin's files only) |
-| `ListFiles` | `list_files` | yes | no | none (own plugin's files only) |
-| `GenerateThumbnail` | `generate_thumbnail` | yes | no | none |
-| `CreateArticleAttachment` | `create_article_attachment` | yes | no | none |
-| `ListArticleAttachments` | `list_article_attachments` | yes | no | none |
-| `DeleteArticleAttachment` | `delete_article_attachment` | yes | no | none |
-| `CreateArticle` | `create_article` | yes | no | none |
-| `ChangeTicketStatus` | `change_ticket_status` | yes | no | none |
-| `ListTicketStates` | `list_ticket_states` | yes | no | none |
-| `ListTicketViews` | `list_ticket_views` | yes | no | none |
-| `RenderMarkdownToPdf` | `render_markdown_to_pdf` | yes | no | none |
-| (no Go method) | `time_now` | no | yes | none |
+| `StoreFile` | `store_file` | yes | yes | `file` write (own plugin's files only) |
+| `GetFile` | `get_file` | yes | yes | `file` read (own plugin's files only) |
+| `DeleteFile` | `delete_file` | yes | yes | `file` write (own plugin's files only) |
+| `ListFiles` | `list_files` | yes | yes | `file` read (own plugin's files only) |
+| `GenerateThumbnail` | `generate_thumbnail` | yes | yes | none |
+| `CreateArticleAttachment` | `create_article_attachment` | yes | yes | `article` write |
+| `ListArticleAttachments` | `list_article_attachments` | yes | yes | `article` read |
+| `DeleteArticleAttachment` | `delete_article_attachment` | yes | yes | `article` write |
+| `CreateArticle` | `create_article` | yes | yes | `article` write |
+| `ChangeTicketStatus` | `change_ticket_status` | yes | yes | `ticket` write |
+| `ListTicketStates` | `list_ticket_states` | yes | yes | `ticket` read |
+| `ListTicketViews` | `list_ticket_views` | yes | yes | `ticket` read |
+| `RenderMarkdownToPdf` | `render_markdown_to_pdf` | yes | yes | none |
+| (no Go method) | `time_now` | yes | yes | none |
 
 Notes:
 
-- **CacheDelete on gRPC:** the Go client (`pkg/plugin/grpcutil`) sends `cache_delete`, but the host dispatch has no case for it, so the call fails with an unknown-method error. Use `CacheSet` with a short TTL instead.
-- **time_now (WASM only):** returns `{"now": "<RFC 3339 time>"}` in the server's local time zone, offset included. TinyGo has no time zone data, and ticket times are stored in server-local time.
+- **time_now:** returns `{"now": "<RFC 3339 time>"}` in the server's local time zone, offset included. Meant for WASM plugins: TinyGo has no time zone data, and ticket times are stored in server-local time.
 - "none" in the last column means the sandbox adds no permission check. The host still records the calling plugin.
+
+## Call context and acting user
+
+Every plugin call the host makes for a request (API routes, admin `call`, widgets, plugin UI pages and their nav badges, setup tasks, MCP tools, event authorizers) carries the host's call envelope in its arguments: `_user_id`, `_user_login`, `_user_email`, `_customer_login`, `_user_role`, `_is_admin`, `_org_id` / `org_id` and `_lang`. The host builds these from the authenticated session and drops any client-supplied value under the same names first, so a request body cannot name another user, role, organisation or language.
+
+While the call runs, the host puts three envelope values into the call context:
+
+- `_user_id` is the **acting user**: `EntitySoftDelete`, `EntityRestore`, `EntityHardDelete` and `SecureConfigSet` are recorded as that agent (recycle bin, deletion log, `change_by`).
+- `_org_id` is the call's **organisation**: `OrgID` returns it, secure config and plugin files are kept per organisation, and the sandbox scopes queries on organisation-owned tables to it (see [Organisation](#organisation)). A plugin that sets `SkipOrgInjection` gets no `_org_id` and runs without an organisation.
+- `_lang` is the call's **language** for `Translate`.
+
+When a call has no acting agent, the host records the action as the system user (`users.id` 1, `plugin.SystemUserID`). That is the case for scheduled jobs, plugin `Init` and migrations, calls made for a customer (`_customer_login` set or role `Customer`) and gRPC callbacks made without the call context. Scheduled jobs, `Init` and migrations also run without an organisation (they serve every organisation). Plugin-to-plugin calls run in the calling plugin's call context; the host never reads envelope keys from arguments one plugin passes to another.
+
+Methods that take the user as an argument (`CreateArticle`, `CreateArticleAttachment`, `ChangeTicketStatus`) record the user you pass. Pass the call's `_user_id`.
+
+- **WASM plugins** always run their host calls in the call context.
+- **gRPC plugins** get it by implementing `grpcutil.GKPluginWithContext`. The host then calls `CallWithContext(ctx, fn, args)` instead of `Call`. Pass that `ctx` (or a context derived from it) to the HostAPI methods: the host then runs them with the call's acting user, organisation, language and deadline. A HostAPI call made with another context (for example `context.Background()`) has no call context (system user, no organisation, `en`), and one made after the plugin call returned is refused.
 
 ## Database
 
@@ -89,6 +105,8 @@ rows, err := host.DBQuery(ctx,
 ```
 
 **Permission required:** `db` with `read` (or `readwrite`) access
+
+**Organisation scoping:** see [Organisation](#organisation). `DBExec` is scoped the same way.
 
 ---
 
@@ -349,9 +367,9 @@ Translate a key to the current locale. **Always allowed** — no permission chec
 Translate(ctx context.Context, key string, args ...any) string
 ```
 
-**WASM plugins:** the host reads the language from the request context (`PluginLanguageKey`, set from the request's `lang` value). Falls back to `en`.
+The host reads the language from the call context (`PluginLanguageKey`, set from the call's `_lang` for every request-driven call: API routes, widgets, plugin UI pages, setup tasks, MCP tools) and falls back to `en`. WASM plugins always have the call context; gRPC plugins have it when they pass the `ctx` from `CallWithContext` (see [Call context and acting user](#call-context-and-acting-user)), otherwise the host uses `en`.
 
-**gRPC plugins:** the callback crosses the RPC boundary without the request context, so the host always uses `en`. Every plugin call from a route or UI page carries the user's language in `args["_lang"]` (from `?lang=`, cookie, user preference or Accept-Language). Look strings up in your own maps with `_lang` instead. Declaring the maps in `I18nSpec` still registers them with the host catalogue. See [AUTHOR_GUIDE.md](AUTHOR_GUIDE.md).
+Every plugin call from a route or UI page also carries the user's language in `args["_lang"]` (from `?lang=`, cookie, user preference or Accept-Language). Plugins that ship their own translations can look strings up with `_lang`. Declaring the maps in `I18nSpec` still registers them with the host catalogue. See [AUTHOR_GUIDE.md](AUTHOR_GUIDE.md).
 
 **Example:**
 ```go
@@ -421,7 +439,9 @@ Entity types with a delete handler (`internal/platform/deletion/types.go`): `tic
 | `EntityHardDelete(ctx, entityType, entityID, reason) error` | Remove the entity and its linked data for good |
 | `RecycleBinList(ctx, entityType) (json.RawMessage, error)` | List soft-deleted entities as JSON |
 
-The host records these actions as user ID 1. The sandbox applies no permission check, so only call these when your plugin's own logic has checked the user.
+The host records these actions as the call's acting agent, or as the system user when the call has none (see [Call context and acting user](#call-context-and-acting-user)).
+
+Permissions: `RecycleBinList` needs `entity` read; `EntitySoftDelete` and `EntityRestore` need `entity` write; `EntityHardDelete` needs `entity` with access `hard_delete`. `readwrite` does not include `hard_delete`, and the host never grants `hard_delete` from a plugin's own declarations: an admin must store a policy that grants it. The `entity` scope lists the entity types the plugin may touch (for example `["ticket"]`); no scope means all types.
 
 ---
 
@@ -447,7 +467,17 @@ Encrypted key/value storage for secrets such as API keys.
 OrgID(ctx context.Context) int64
 ```
 
-Returns the active organisation ID for the current request, or `0` when there is none (single-organisation mode).
+Returns the call's organisation (the caller's active organisation, from the call envelope's `_org_id`), or `0` when there is none: single-organisation mode, a caller with no active organisation, a scheduled job, or a plugin with `SkipOrgInjection`.
+
+### What is scoped to the organisation
+
+When the call has an organisation, the host keeps these apart per organisation:
+
+- **Secure config** keys (`SecureConfigGet` / `SecureConfigSet`).
+- **Plugin files** (`<plugin>/org-<id>/<key>`).
+- **Queries on organisation-owned tables.** `DBQuery` and `DBExec` on `gk_org_plugin_access`, `gk_user_organisation`, `sysconfig_org` and `gk_identity_provider_org` get `AND org_id = ?` added (`WHERE org_id = ?` when there is no `WHERE`). Statements that already mention `org_id`, `INSERT`s and DDL are left alone.
+
+Nothing else is scoped. Core tables such as `ticket`, `queue`, `article` and `customer_user` have no `org_id` column, so plugin queries on them return every organisation's rows. Plugin-owned tables are not scoped either: a plugin that keeps data per organisation stores `org_id` itself and filters on the call's `_org_id` / `OrgID`.
 
 ---
 
@@ -479,7 +509,7 @@ These calls count against the plugin's DB query rate limit.
 
 ## Plugin Files
 
-gRPC only. Files are stored under the plugin's own namespace (`<plugin>/<key>`, or `<plugin>/org-<id>/<key>` inside an organisation).
+Files are stored under the plugin's own namespace (`<plugin>/<key>`, or `<plugin>/org-<id>/<key>` inside an organisation). `StoreFile` and `DeleteFile` need `file` write; `GetFile` and `ListFiles` need `file` read.
 
 | Method | What it does |
 |--------|--------------|
@@ -496,8 +526,6 @@ gRPC only. Files are stored under the plugin's own namespace (`<plugin>/<key>`, 
 
 ## Articles and Attachments
 
-gRPC only.
-
 | Method | What it does |
 |--------|--------------|
 | `CreateArticle(ctx, ticketID, createdBy, subject, body, visibleToCustomer) (int64, error)` | Add an article (internal channel, agent sender) to a ticket. Returns the article ID. Use this instead of writing article rows with SQL |
@@ -508,13 +536,11 @@ gRPC only.
 - `createdBy` is a `users.id`.
 - Attachments can be at most `storage.attachments.max_size` bytes (default 10 MB).
 - `ArticleAttachment` fields: `ID`, `ArticleID`, `Filename`, `ContentType`, `Size`, `URL`. Use the `URL` the host gives you; add `/view` for the viewer or `/thumbnail` for a preview. Do not build the URL yourself.
-- The sandbox applies no permission check to these calls.
+- `CreateArticle`, `CreateArticleAttachment` and `DeleteArticleAttachment` need `article` write; `ListArticleAttachments` needs `article` read.
 
 ---
 
 ## Ticket States and Views
-
-gRPC only.
 
 | Method | What it does |
 |--------|--------------|
@@ -522,13 +548,15 @@ gRPC only.
 | `ListTicketStates(ctx) ([]TicketStateInfo, error)` | All valid states, ordered by ID. Fields: `ID`, `Name`, `Color`, `TypeID`, `TypeName` |
 | `ListTicketViews(ctx) ([]TicketViewInfo, error)` | Ticket views declared by enabled plugin UIs. Fields: `PluginName`, `UIID`, `Label`, `URL` (contains `{ticket_id}`) |
 
+`ChangeTicketStatus` needs `ticket` write; `ListTicketStates` and `ListTicketViews` need `ticket` read.
+
 ---
 
 ## PDF Rendering
 
 ### RenderMarkdownToPdf
 
-gRPC only. Turns Markdown into PDF bytes using the headless Chromium sidecar (Browserless).
+Turns Markdown into PDF bytes using the headless Chromium sidecar (Browserless).
 
 ```go
 RenderMarkdownToPdf(ctx context.Context, markdown string, options PdfRenderOptions) ([]byte, error)
@@ -543,7 +571,9 @@ RenderMarkdownToPdf(ctx context.Context, markdown string, options PdfRenderOptio
 | `Title` | Shown in the PDF header when set |
 | `BrandName` | Name shown in the running header |
 | `BrandColor` | `#RRGGBB` colour for headings and table headers. Other values are ignored |
-| `BrandLogoURL` | `https` URL of a logo for the header. Non-https values are ignored |
+| `BrandLogoURL` | Logo for the header as an inline `data:image/png`, `jpeg`, `gif` or `webp` base64 URI. Any other value (including `https` URLs) is ignored |
+
+The Markdown is sanitized (bluemonday UGC policy) before printing, and the renderer never fetches anything remote: images print only from inline `data:` URIs (png, jpeg, gif, webp). Any other image source, whether `https`, `http`, protocol-relative or relative, is replaced by an empty image. To print a remote image, fetch it with `HTTPRequest` (your `http` grant applies) and embed the bytes as a `data:` URI. Links stay links.
 
 The sidecar address comes from `BROWSERLESS_URL` (default `http://127.0.0.1:3000`) and `BROWSERLESS_TOKEN`.
 
@@ -551,7 +581,7 @@ The sidecar address comes from `BROWSERLESS_URL` (default `http://127.0.0.1:3000
 
 ## Sandboxing & Permissions
 
-Every plugin receives a `SandboxedHostAPI` that wraps the real HostAPI with enforcement:
+Every plugin receives a `SandboxedHostAPI` that wraps the real HostAPI with enforcement. The Manager hands it to the plugin's `Init`; for gRPC plugins every host callback from the plugin process goes through it (callbacks before `Init` are refused).
 
 ### Permission Enforcement
 
@@ -584,22 +614,32 @@ All operations are counted via atomic counters:
 
 Admins can view these stats via the plugin management API.
 
+### Permissions in a policy
+
+A permission is `{type, access, scope}` (see `Permission` in `pkg/plugin/plugin.go`). Access is `read`, `write` or `readwrite`. Several entries of the same type add up: each entry grants its access on its own scope, so a plugin can have `db` readwrite on `["gk_coach_*"]` and `db` read on `["users"]`. No scope means no restriction for that type and access.
+
+For `db`, the sandbox reads the tables out of the SQL (FROM/JOIN/USING lists, INSERT/UPDATE/DELETE targets, DDL targets, quoted and schema-qualified names; CTE names and string literals are ignored). Tables the statement writes need a `db` write grant, also when sent through `DBQuery`; every other table needs a `db` read grant. `information_schema` is readable with any `db` read grant. Scope patterns match the whole name; `*` matches any run of characters.
+
+For `http`, a scope entry is an exact host, `*.example.com` (the domain and its subdomains) or `*` (any host).
+
+### Effective policy
+
+| Situation | Permissions the plugin gets |
+|-----------|-----------------------------|
+| An admin stored a policy (`Plugin::<name>::Policy` in sysconfig, `Manager.SetPolicy`) | Exactly that policy |
+| No stored policy, the plugin declares permissions in `GKRegister` → `Resources.Permissions` | Exactly the declared permissions, except `entity` `hard_delete` |
+| No stored policy, nothing declared | `DefaultResourcePolicy`: `db` read, `cache` readwrite, `file` readwrite |
+
+Without a stored policy the declarations are read again on every plugin (re)load, so a new plugin version's declarations take effect when it is deployed. Rate limits and timeouts come from the stored policy, or from `DefaultResourcePolicy` (256 MB memory, 30s call timeout, 100 calls/sec, 600 DB queries/min, 60 HTTP requests/min).
+
 ### Policy Status
 
 | Status | Effect |
 |--------|--------|
-| `pending_review` | Default for new plugins — restrictive permissions |
+| `pending_review` | No admin decision yet (the status of policies built from declarations or defaults) |
 | `approved` | Admin-granted permissions |
 | `restricted` | Limited by admin |
-| `blocked` | All HostAPI calls denied |
-
-### Default Policy
-
-New plugins receive `DefaultResourcePolicy`:
-- DB read-only + cache read/write
-- 256 MB memory, 30s call timeout
-- 100 calls/sec, 600 DB queries/min, 60 HTTP requests/min
-- Status: `pending_review`
+| `blocked` | All permission-checked HostAPI calls denied |
 
 ---
 
@@ -638,5 +678,7 @@ if err != nil {
 The `context.Context` passed to handlers carries:
 
 - Request timeout/deadline
-- Language preference (via `PluginLanguageKey`; WASM and in-process calls only, gRPC plugins use `args["_lang"]`)
+- Language preference (via `PluginLanguageKey`, from the call's `_lang`)
+- Acting user (`plugin.ActingUserID(ctx)`, from the call's `_user_id`)
+- Organisation (`OrgID(ctx)`, from the call's `_org_id`)
 - Caller plugin name (via `PluginCallerKey`, for plugin-to-plugin calls)

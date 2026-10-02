@@ -105,7 +105,7 @@ func (s *SMTPProvider) dialSMTPClient() (*smtp.Client, error) {
 	addr := s.cfg.SMTP.Host + ":" + strconv.Itoa(s.cfg.SMTP.Port)
 	tlsConfig := &tls.Config{
 		ServerName:         s.cfg.SMTP.Host,
-		InsecureSkipVerify: s.cfg.SMTP.SkipVerify,
+		InsecureSkipVerify: s.cfg.SMTP.SkipVerify, // #nosec G402 -- explicit operator opt-out (email.smtp.skip_verify, default false) for self-signed relays
 	}
 
 	switch mode {
@@ -126,7 +126,7 @@ func (s *SMTPProvider) dialSMTPClient() (*smtp.Client, error) {
 		}
 		if mode == "starttls" {
 			if err := client.StartTLS(tlsConfig); err != nil {
-				client.Close()
+				_ = client.Close() // the StartTLS error is what gets reported
 				return nil, fmt.Errorf("failed to start TLS: %w", err)
 			}
 		}

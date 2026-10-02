@@ -42,10 +42,14 @@ manifest and its baseline exist only on your machine.
 | Target | Output |
 |--------|--------|
 | `generate-route-map` | `scripts/api_map.sh` scans `templates/` and `static/js/` for `/api/` calls and writes `generated/api-map/api-map.json`, `.dot`, `.mmd`, and `.svg` when Graphviz is installed. |
-| `generate-route-docs` | `cmd/route-docs` writes `docs/api/api.md` from `routes/`. |
+| `generate-route-docs` | `cmd/route-docs` writes `docs/api/api.md`, `docs/api/openapi.json` (route map) and `docs/api/index.html` from the enabled groups in `routes/`, with the same absolute paths the server registers. |
 | `validate-routes` | See [Checks](#checks). |
 
-`make api-docs` regenerates the OpenAPI and Swagger files in `generated-docs/` from `routes/`.
+`make api-docs` writes the same three files to `generated-docs/` from a `Dockerfile.route-tools` container.
+`make openapi-generate` rebuilds the Swagger files in `docs/api/` (`swagger.json`, `swagger.yaml`, `docs.go`) from
+the swag annotations; `TestSwaggerAnnotationsMatchRoutes` fails when an `@Router` names a path the server does not
+route. The REST API contract is the hand-written `api/openapi.yaml`, checked by `TestOpenAPISpecMatchesRoutes` and
+`make openapi-lint`.
 
 ## Common problems
 

@@ -33,9 +33,9 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "goatflow.fullname" $ }}-frontend
+                name: {{ include "goatflow.fullname" $ }}-backend
                 port:
-                  number: {{ $.Values.frontend.service.port }}
+                  number: {{ $.Values.backend.service.port }}
           {{- end }}
     {{- end }}
 {{- end }}

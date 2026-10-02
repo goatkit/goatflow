@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/notificationevents"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
 )
@@ -65,45 +67,15 @@ type NotificationEventInput struct {
 	Messages   map[string]NotificationEventMessage `json:"messages"`
 }
 
-// Available ticket events that can trigger notifications.
-var TicketEvents = []string{
-	"TicketCreate",
-	"TicketDelete",
-	"TicketTitleUpdate",
-	"TicketQueueUpdate",
-	"TicketTypeUpdate",
-	"TicketServiceUpdate",
-	"TicketSLAUpdate",
-	"TicketCustomerUpdate",
-	"TicketPendingTimeUpdate",
-	"TicketLockUpdate",
-	"TicketStateUpdate",
-	"TicketOwnerUpdate",
-	"TicketResponsibleUpdate",
-	"TicketPriorityUpdate",
-	"TicketSubscribe",
-	"TicketUnsubscribe",
-	"TicketFlagSet",
-	"TicketFlagDelete",
-	"TicketMerge",
-	"EscalationResponseTimeNotifyBefore",
-	"EscalationResponseTimeStart",
-	"EscalationResponseTimeStop",
-	"EscalationUpdateTimeNotifyBefore",
-	"EscalationUpdateTimeStart",
-	"EscalationUpdateTimeStop",
-	"EscalationSolutionTimeNotifyBefore",
-	"EscalationSolutionTimeStart",
-	"EscalationSolutionTimeStop",
-}
-
-// Article events that can trigger notifications.
-var ArticleEvents = []string{
-	"ArticleCreate",
-	"ArticleSend",
-	"ArticleBounce",
-	"ArticleAgentNotification",
-	"ArticleCustomerNotification",
+// validateNotificationEventInput returns an error message for input the
+// evaluator could not use, or "".
+func validateNotificationEventInput(input *NotificationEventInput) string {
+	for _, v := range input.Recipients["RecipientEmail"] {
+		if err := notificationevents.ValidateRecipientEmail(v); err != nil {
+			return err.Error()
+		}
+	}
+	return ""
 }
 
 // loadNotificationEvents loads all notification events from the database.
@@ -164,7 +136,7 @@ func loadNotificationEventByID(ctx context.Context, db *sql.DB, id int) (*Notifi
 				switch key {
 				case "Events":
 					e.Events = append(e.Events, value)
-				case "Recipients", "RecipientAgents", "RecipientRoles", "RecipientGroups":
+				case "Recipients", "RecipientAgents", "RecipientRoles", "RecipientGroups", "RecipientEmail":
 					e.Recipients[key] = append(e.Recipients[key], value)
 				default:
 					// Filter conditions (StateID, QueueID, PriorityID, etc.)
@@ -256,8 +228,8 @@ func HandleAdminNotificationEventNew(c *gin.Context) {
 		"Title":         "New Ticket Notification",
 		"IsNew":         true,
 		"Event":         nil,
-		"TicketEvents":  TicketEvents,
-		"ArticleEvents": ArticleEvents,
+		"TicketEvents":  notificationevents.TicketEvents,
+		"ArticleEvents": notificationevents.ArticleEvents,
 		"Languages":     loadLanguagesForForm(),
 		"User":          getUserMapForTemplate(c),
 		"ActivePage":    "admin",
@@ -298,12 +270,22 @@ func HandleAdminNotificationEventEdit(c *gin.Context) {
 		return
 	}
 
+	// The form's script starts from the stored rule, so items the form has
+	// no control for (OTRS imports) survive an edit. json.Marshal escapes
+	// <, > and &, which keeps the value inert inside <script>.
+	eventJSON, err := json.Marshal(event)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encode notification"})
+		return
+	}
+
 	tplCtx := pongo2.Context{
 		"Title":         "Edit Ticket Notification",
 		"IsNew":         false,
 		"Event":         event,
-		"TicketEvents":  TicketEvents,
-		"ArticleEvents": ArticleEvents,
+		"EventJSON":     string(eventJSON),
+		"TicketEvents":  notificationevents.TicketEvents,
+		"ArticleEvents": notificationevents.ArticleEvents,
 		"Languages":     loadLanguagesForForm(),
 		"User":          getUserMapForTemplate(c),
 		"ActivePage":    "admin",
@@ -353,6 +335,10 @@ func HandleCreateNotificationEvent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Notification name is required"})
 		return
 	}
+	if msg := validateNotificationEventInput(&input); msg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": msg})
+		return
+	}
 
 	if input.ValidID == 0 {
 		input.ValidID = 1
@@ -384,7 +370,7 @@ func HandleCreateNotificationEvent(c *gin.Context) {
 
 	notificationID, err := database.GetAdapter().InsertWithReturningTx(tx, insertQuery, input.Name, input.ValidID, input.Comments, now, userID, now, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create notification: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": internalDBError(c, "create notification event", err)})
 		return
 	}
 
@@ -465,6 +451,10 @@ func HandleUpdateNotificationEvent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Notification name is required"})
 		return
 	}
+	if msg := validateNotificationEventInput(&input); msg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": msg})
+		return
+	}
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -492,7 +482,7 @@ func HandleUpdateNotificationEvent(c *gin.Context) {
 
 	result, err := tx.ExecContext(ctx, updateQuery, input.Name, input.ValidID, input.Comments, now, userID, id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update notification: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": internalDBError(c, "update notification event", err)})
 		return
 	}
 

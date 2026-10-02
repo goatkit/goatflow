@@ -375,7 +375,7 @@ func exportTranslations(i18n *i18n.I18n, lang string, filePath string, format st
 		os.Exit(1)
 	}
 
-	file, err := os.Create(filePath) //nolint:gosec // G304 CLI tool
+	file, err := os.Create(filePath) // #nosec G304 -- export path is the operator's CLI argument, not request input
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating file: %v\n", err)
 		os.Exit(1)
@@ -435,7 +435,7 @@ func exportToCSV(m map[string]interface{}, prefix string, w *csv.Writer) error {
 }
 
 func importTranslations(i18n *i18n.I18n, lang string, filePath string, format string) {
-	file, err := os.Open(filePath) //nolint:gosec // G304 CLI tool
+	file, err := os.Open(filePath) // #nosec G304 -- import path is the operator's CLI argument, not request input
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening file: %v\n", err)
 		os.Exit(1)
@@ -505,7 +505,7 @@ func setNestedValue(m map[string]interface{}, key string, value string) {
 }
 
 func saveTranslations(translations map[string]interface{}, path string) {
-	file, err := os.Create(path) //nolint:gosec // G304 CLI tool
+	file, err := os.Create(path) // #nosec G304 -- translation file path from the operator's CLI arguments, not request input
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating file: %v\n", err)
 		os.Exit(1)

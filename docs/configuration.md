@@ -55,19 +55,17 @@ features:
 |---------|--------------------------|-------|
 | `app` | Yes: `env`, `timezone`, `demo_mode`, `name` | `app.env` defaults to `development`. |
 | `server` | Partly | The listen port is `APP_PORT` (default `8080`), not `server.port`. |
-| `database` | No (connection) | The connection comes from `DB_*` variables. See [Database](#database). |
+| `database` | Removed | The connection comes from `DB_*` variables only. See [Database](#database). A `database:` block in an old `config.yaml` is ignored. |
 | `valkey` | Yes | Cache host, port, password, pool and TTL. |
 | `auth` | Yes: `jwt.*`, `session.*` | `JWT_SECRET` and the `JWT_*_EXPIRY` variables win over `auth.jwt.*`. |
 | `email` | Yes | SMTP sending (`email.enabled` and `email.smtp.host` must be set) and inbound mail polling. |
 | `storage` | Yes | `type`, `local.path`, `attachments.max_size` (10 MiB), `attachments.allowed_types`. |
 | `ticket` | Yes: `frontend.agent_ticket_note.required_time_units`, `bulk_actions.max_select_all`, `service.default_unknown_customer` | |
-| `logging` | No | Logging is set by `LOG_FORMAT`, `LOG_LEVEL`, `LOG_OUTPUT`. |
-| `metrics` | No | Metrics are set by `METRICS_ENABLED`, `METRICS_PORT`. |
-| `rate_limiting` | No | |
-| `features` | Only `registration` and `lost_password` | The other `features.*` keys are not read. |
+| `features` | Yes: `registration`, `lost_password` | The only two keys. |
 | `maintenance` | Yes: `time_notify_upcoming_minutes`, `default_notify_message` | |
-| `integrations` | No | |
 | `runner` | Yes: `session_cleanup.interval` | |
+
+0.10.0 removed the `logging`, `metrics`, `rate_limiting`, `integrations` and `database` sections and the unused `features.*` keys (`social_login`, `two_factor_auth`, `api_keys`, `ldap`, `saml`, `knowledge_base`, `customer_portal`, `agent_collision_detection`): nothing read them. Logging is set by `LOG_*` and metrics by `METRICS_*` variables (below). Leftover keys in your `config.yaml` are ignored.
 
 ## Settings table (0.10.0)
 
@@ -114,7 +112,7 @@ Use the `goatflow-storage` command to move attachments between `db` and `fs`.
 | `AUTH_PROVIDERS` | unset | Comma-separated password login providers, tried in order: `database`, `ldap`, `static`. Example: `AUTH_PROVIDERS=ldap,database`. When unset, the `Auth::Providers` setting in `Config.yaml` is used, and then `database`. Read at startup. |
 | `LDAP_ENABLED` and `LDAP_*` | `LDAP_ENABLED` off | LDAP / Active Directory agent login. All variables are in [LDAP.md](LDAP.md). Invalid `LDAP_*` values stop the server at startup. |
 | `GOATFLOW_STATIC_USERS` | unset | Demo/test users for the `static` provider. See the README. |
-| `JWT_SECRET` | unset | Key that signs login tokens. **Always set it** (32+ characters). When it is unset, GoatFlow uses `auth.jwt.secret` from `default.yaml`, which is a public placeholder. |
+| `JWT_SECRET` | unset | Key that signs login tokens. **Always set it** (32+ random characters, e.g. `openssl rand -hex 32`). `auth.jwt.secret` (or `GOATFLOW_AUTH_JWT_SECRET`) is used when it is unset; `default.yaml` ships no value. With `APP_ENV=production` the server refuses to start when the secret is missing, shorter than 32 characters or a published placeholder. In other environments a missing secret is replaced by a random one per process (tokens stop working after a restart). |
 | `JWT_ACCESS_TOKEN_EXPIRY` | `auth.jwt.access_token_ttl` (`15m`) | Access token lifetime, e.g. `30m`, `4h`. |
 | `JWT_REFRESH_TOKEN_EXPIRY` | `auth.jwt.refresh_token_ttl` (`168h`) | Refresh token lifetime. |
 | `PASSWORD_HASH_TYPE` | `bcrypt` | Hash for new passwords: `bcrypt` or `sha256`. Unknown values fall back to `bcrypt` with a warning. Logins accept bcrypt, salted sha256 and the OTRS/Znuny formats whatever this is set to. |
@@ -133,7 +131,14 @@ Use the `goatflow-storage` command to move attachments between `db` and `fs`.
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| `GOATFLOW_SECURE_KEY` | generated at startup | AES-256 key (64 hex characters = 32 bytes) that encrypts stored secrets: plugin secure settings and webhook signing secrets. When unset, a random key is generated and logged with a warning, so secrets saved under it cannot be read after a restart. Set it in production, and give the same value to the backend and the runner. A value that is not 64 hex characters is rejected with an error. |
+| `GOATFLOW_SECURE_KEY` | generated at startup | AES-256 key (64 hex characters = 32 bytes) that encrypts stored secrets: plugin secure settings, webhook signing secrets and webhook custom header values. When unset, a random key is generated and logged with a warning, so secrets saved under it cannot be read after a restart. Set it in production, and give the same value to the backend and the runner. A value that is not 64 hex characters is rejected with an error. |
+
+### Outbound webhooks
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| `GOATFLOW_WEBHOOK_ALLOW_PRIVATE_TARGETS` | unset (deny) | `true` lets webhooks reach loopback, private, link-local and other internal addresses (for example on-premises services). Unset, such URLs are rejected when saved and every delivery refuses hosts that resolve to them. Set the same value on the backend and the runner. See [WEBHOOKS.md](WEBHOOKS.md#internal-and-private-addresses). |
+| `GOATFLOW_WEBHOOK_DELIVERY_RETENTION_DAYS` | `30` | The runner deletes delivered and failed webhook deliveries older than this many days. `0` keeps them forever. |
 
 ### Logging
 
@@ -141,10 +146,8 @@ Use the `goatflow-storage` command to move attachments between `db` and `fs`.
 |---------|---------|--------------|
 | `LOG_FORMAT` | `text` | `text` or `json`. In `json` mode, old-style `log` lines are also written as JSON records. |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`. Applies to structured (`slog`) lines. |
-| `LOG_OUTPUT` | `stdout` | `stdout` or a file path. Missing directories are created. Falls back to `stdout` if the file cannot be opened. |
+| `LOG_OUTPUT` | `stdout` | `stdout`, `stderr` or a file path. Missing directories are created. If the file cannot be opened, logs go to `stdout` and the reason is printed to stderr. |
 | `LOG_FILE_PATH` | unset | Old name for the log file. Used only when `LOG_OUTPUT` is unset. |
-
-The `logging:` section of `default.yaml` is not used.
 
 ### Metrics, health and shutdown
 
@@ -154,9 +157,9 @@ See [OBSERVABILITY.md](OBSERVABILITY.md) for details.
 |---------|---------|--------------|
 | `METRICS_ENABLED` | off | `true` (or `1`) starts a separate Prometheus listener with no login. |
 | `METRICS_PORT` | `9090` | Port of that listener. Keep it on the internal network. `/metrics` on the main port needs an admin login. |
-| `DRAIN_TIMEOUT` | `10s` | On SIGTERM/SIGINT, how long to let in-flight requests finish before closing them. Go duration format (`30s`, `1m`). A plain number such as `30` is ignored. |
+| `DRAIN_TIMEOUT` | `5s` | On SIGTERM/SIGINT, how long the server lets in-flight requests finish before closing them, and how long the runner waits for its cancelled tasks. Positive Go duration (`5s`, `1m`). Anything else (for example a plain `30`) logs an error at startup and the default is used. |
 | `APP_PORT` | `8080` | Main HTTP port. |
-| `APP_ENV` | unset | `production` turns on Secure cookies and Gin release mode. |
+| `APP_ENV` | unset | `production` (or `prod`) turns on Secure cookies, Gin release mode and the startup secret check: the server exits when `JWT_SECRET` is missing, short or a placeholder, or when the database, `SESSION_SECRET` or `ZINC_PASSWORD` is the example value. `APP_ENV` always wins over `app.env` in the config files. The runner (`-mode runner`) does not run the check. |
 
 ## SysConfig settings (`Config.yaml`)
 
@@ -185,7 +188,7 @@ Some features read OTRS-style settings from the `sysconfig_modified` table (newe
 
 - Password policy: `PreferencesGroups###Password::*` for agents (shown at `/admin/password-policy`) and `CustomerPreferencesGroups###Password::*` for customers.
 - Customer portal settings (`CustomerPortal::*`), edited at `/admin/customer/portal/settings` and on each company's Portal Settings tab.
-- Business hours for escalations (`TimeWorkingHours`).
+- SLA escalation calendars, as in OTRS: `TimeWorkingHours`, `TimeVacationDays`, `TimeVacationDaysOneTime` (default calendar, read in `app.timezone`) and their `::Calendar1`..`::Calendar9` variants with `TimeZone::CalendarN` (a numbered calendar is used when its working hours are set and `TimeZone::CalendarNName` is not empty). A weekday missing from the working hours is not a working day. `OTRSEscalationEvents::DecayTime` (minutes, default 1440) sets how often an escalation event repeats.
 
 `goatflow-migrate` copies OTRS's changed settings into `sysconfig_modified`. GoatFlow uses the ones whose names it reads, such as those above.
 

@@ -876,6 +876,7 @@ func TestToLowerSnake(t *testing.T) {
 		{"HTMLParser", "h_t_m_l_parser"},
 		{"a", "a"},
 		{"", ""},
+		{"KundenGröße", "kunden_größe"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {

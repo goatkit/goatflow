@@ -38,19 +38,8 @@ func HandleListQueuesAPI(c *gin.Context) {
 	}
 
 	// Get user ID for RBAC filtering
-	var userID int
-	switch v := userIDVal.(type) {
-	case int:
-		userID = v
-	case int64:
-		userID = int(v)
-	case uint:
-		userID = int(v)
-	case uint64:
-		userID = int(v)
-	case float64:
-		userID = int(v)
-	default:
+	userID, ok := userIDFromValue(userIDVal)
+	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   "Invalid user context",

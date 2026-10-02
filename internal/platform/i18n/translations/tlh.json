@@ -677,7 +677,13 @@
           "responsible": "chaw' 'oy'naQ",
           "roles": "pathmey",
           "special": "Hevwl' le'mey",
-          "watcher": "chaw' bejwl'mey"
+          "watcher": "chaw' bejwl'mey",
+          "my_queues": "ra'wI'pu' 'Iv ghaj DIr 'e' DIrwIjDaq",
+          "creator": "chaw' chenmoHwI'",
+          "read_permissions": "Hoch ra'wI'pu' DIr laD chaw' ghajbogh",
+          "write_permissions": "Hoch ra'wI'pu' DIr ghItlh chaw' ghajbogh",
+          "emails": "latlh HevwI' QIn Daq",
+          "emails_help": "Daqmey SoQmoHmeH ',' yIlo'. 200 tu'lu'chugh nI'qu'."
         },
         "sections": {
           "basic": "ngoD DaH",
@@ -1549,6 +1555,7 @@
         "events_required": "wa' wanI' wIv.",
         "header_name": "Header pong",
         "header_value": "lo'laHghach",
+        "header_value_keep": "lo'laHghach pollu'pu' ({hint}). DapolmeH chIm yIpol",
         "headers": "Header mobmey",
         "headers_help": "ngeHmeH Hoch ngeHlu'. Content-Type, User-Agent X-Webhook-* Header je GoatFlow cher.",
         "remove_header": "Header teq",
@@ -2351,9 +2358,18 @@
     }
   },
   "customer_portal_settings": {
+    "description": "Hoch customer kompanI' DuH motlh. Hoch kompanI' choHlaH ghItlhmeH Daq.",
+    "enable": "customer Portal chu'",
+    "enable_help": "customer Portal chu' pagh chu'Ha'. kompanI' ghaj DuH'e' pol.",
+    "footer_text": "bIng ghItlh",
     "heading": "je'wI' Portal Qap",
+    "landing_page": "Daq wa'DIch",
+    "landing_page_help": "'el customer vaj Daq legh, /customer/tickets rur. / wa'DIch ghajbe'chugh He, /customer Daq tagh.",
+    "per_company_note": "Hoch customer kompanI' choHlaH: ghItlh ghItlhmeH Daq Portal Settings ghItlh.",
+    "require_login": "'elmeH poQ",
+    "require_login_help": "Portal 'el qaSpa' customer 'el",
     "title": "je'wI' Portal Qap",
-    "per_company_note": "Hoch customer kompanI' choHlaH: ghItlh ghItlhmeH Daq Portal Settings ghItlh."
+    "title_field": "Portal pong"
   },
   "customer_user_services": {
     "title": "je'wI' lo'wI' Services"
@@ -3693,7 +3709,6 @@
     "showing_of_total": "Showing %d of %d tickets",
     "sla": "SLA",
     "spam": "veQ",
-    "split": "wav",
     "state": "Dotlh",
     "status": "Dotlh",
     "subject": "Subject",
@@ -3732,7 +3747,15 @@
     "view_in_queue": "tlheghvam chaw'mey legh",
     "visible_for_customer": "machvaD leghlaH",
     "visible_for_customer_help": "mach lojmItDaq Dubvam cha'meH per.",
-    "watch": "bej"
+    "watch": "bej",
+    "escalation": {
+      "first_response": "wa'DIch jangmeH poH",
+      "update": "chu'moHmeH poH",
+      "solution": "rarmeH poH",
+      "due_in": "poH ratlh",
+      "overdue_by": "poH Qaw'",
+      "escalated": "Dun law'moHlu'pu'"
+    }
   },
   "tickets_form": {
     "attachments": "rarlu'bogh",

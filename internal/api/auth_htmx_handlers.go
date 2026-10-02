@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/flosch/pongo2/v6"
@@ -50,7 +49,7 @@ func handleLoginPage(c *gin.Context) {
 		return
 	}
 
-	if strings.EqualFold(strings.TrimSpace(os.Getenv("CUSTOMER_FE_ONLY")), "true") {
+	if config.CustomerFEOnly() {
 		c.Redirect(http.StatusFound, "/customer/login")
 		return
 	}
@@ -119,12 +118,16 @@ func handleLoginPage(c *gin.Context) {
 }
 
 func handleCustomerLoginPage(c *gin.Context) {
-	if cookie, err := c.Cookie("access_token"); err == nil && cookie != "" {
-		jwtManager := shared.GetJWTManager()
+	jwtManager := shared.GetJWTManager()
+	// A customer who is already signed in goes straight to their landing page.
+	if cookie, err := c.Cookie("customer_access_token"); err == nil && cookie != "" && jwtManager != nil {
 		if claims, err := jwtManager.ValidateToken(cookie); err == nil && claims.Role == "Customer" {
-			c.Redirect(http.StatusFound, "/customer")
+			c.Redirect(http.StatusFound, customerLandingRedirect(claims.Login))
 			return
 		}
+	}
+	// An agent session must not linger next to a customer sign-in.
+	if cookie, err := c.Cookie("access_token"); err == nil && cookie != "" {
 		httpcookie.SetAuth(c, "access_token", "", -1)
 		httpcookie.SetAuth(c, "auth_token", "", -1)
 	}
@@ -204,8 +207,7 @@ func loginRedirectPath(c *gin.Context) string {
 		return "/customer/login"
 	}
 
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("CUSTOMER_FE_ONLY"))) {
-	case "1", "true":
+	if config.CustomerFEOnly() {
 		return "/customer/login"
 	}
 
@@ -267,6 +269,10 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 
 		userID := session.UserID
 		username := session.Username
+		limiterKey := twoFactorLimiterKey(false, username)
+		if rejectIfLoginBlocked(c, limiterKey) {
+			return
+		}
 
 		// Get the TOTP code from request
 		code := c.PostForm("code")
@@ -300,7 +306,7 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		totpService := service.NewTOTPService(db, "GoatFlow")
 		valid, err := totpService.ValidateCode(userID, code)
 		if err != nil || !valid {
-			// Record failed attempt
+			auth.DefaultLoginRateLimiter.RecordFailure(c.ClientIP(), limiterKey)
 			remaining := sessionMgr.RecordFailedAttempt(pendingToken)
 			if remaining <= 0 {
 				sessionMgr.InvalidateSession(pendingToken)
@@ -319,6 +325,7 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			return
 		}
 
+		auth.DefaultLoginRateLimiter.RecordSuccess(c.ClientIP(), limiterKey)
 		// 2FA verified - clear session and cookie
 		sessionMgr.InvalidateSession(pendingToken)
 		httpcookie.SetAuth(c, "2fa_pending", "", -1)

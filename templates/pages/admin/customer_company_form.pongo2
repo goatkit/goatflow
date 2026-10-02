@@ -66,6 +66,11 @@
 
     <!-- General Tab -->
     <div id="content-general" class="tab-content p-6">
+      {% if ErrorMessage %}
+      <div id="form-error" role="alert" class="mb-6 rounded-md p-4 text-sm" style="background: rgba(var(--gk-error-rgb), 0.1); border: 1px solid var(--gk-error); color: var(--gk-error);">
+        {{ ErrorMessage }}
+      </div>
+      {% endif %}
       <form method="post" action="{% if IsNew %}/admin/customer/companies{% else %}/admin/customer/companies/{{ Company.customer_id|default:'' }}/edit{% endif %}">
         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>

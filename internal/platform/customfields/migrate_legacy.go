@@ -346,18 +346,21 @@ func convertLegacyConfig(legacyFieldType string, yamlBytes []byte) (*json.RawMes
 
 // toLowerSnake converts PascalCase/camelCase to lower_snake_case.
 func toLowerSnake(s string) string {
-	var result []byte
+	var b strings.Builder
+	b.Grow(len(s) + len(s)/2)
 	for i, c := range s {
 		if c >= 'A' && c <= 'Z' {
 			if i > 0 {
-				result = append(result, '_')
+				b.WriteByte('_')
 			}
-			result = append(result, byte(c+'a'-'A'))
+			b.WriteRune(c + 'a' - 'A')
 		} else {
-			result = append(result, byte(c))
+			// WriteRune keeps non-ASCII characters intact instead of
+			// truncating each rune to its low byte.
+			b.WriteRune(c)
 		}
 	}
-	return string(result)
+	return b.String()
 }
 
 // tableExists checks if a table exists in the database.

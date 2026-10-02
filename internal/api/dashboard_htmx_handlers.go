@@ -57,7 +57,7 @@ func handleDashboard(c *gin.Context) {
 	}
 
 	// Get plugin widgets for dashboard - filtered by user preferences
-	allPluginWidgets := GetPluginWidgets(pluginContextWithLanguage(c), "dashboard", c)
+	allPluginWidgets := GetPluginWidgets(c.Request.Context(), "dashboard", c)
 
 	// Get user's widget config to filter
 	var dashboardUserID int

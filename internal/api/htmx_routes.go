@@ -81,19 +81,19 @@ func initTemplateRenderer(templateDir string) {
 		return
 	}
 
-	if _, err := os.Stat(templateDir); err != nil {
+	if _, err := os.Stat(templateDir); err != nil { // #nosec G703 G706 -- templateDir comes from TEMPLATES_DIR/operator config, not request input
 		log.Printf("⚠️ Templates directory resolved but not accessible (%s): %v", templateDir, err)
 		return
 	}
 
 	renderer, err := shared.NewTemplateRenderer(templateDir)
 	if err != nil {
-		log.Printf("⚠️ Failed to initialize template renderer from %s: %v (continuing without templates)", templateDir, err)
+		log.Printf("⚠️ Failed to initialize template renderer from %s: %v (continuing without templates)", templateDir, err) // #nosec G706 -- operator-configured path, not request input
 		return
 	}
 
 	shared.SetGlobalRenderer(renderer)
-	log.Printf("Template renderer initialized successfully from %s", templateDir)
+	log.Printf("Template renderer initialized successfully from %s", templateDir) // #nosec G706 -- operator-configured path, not request input
 }
 
 // initDynamicModules initializes the dynamic module system with database connection.

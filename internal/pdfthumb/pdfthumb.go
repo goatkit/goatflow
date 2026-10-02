@@ -47,7 +47,7 @@ func RenderPage1(content []byte) ([]byte, error) {
 	outRoot := strings.TrimSuffix(tmpPath, ".pdf") // pdftoppm appends .png
 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "pdftoppm",
+	cmd := exec.CommandContext(ctx, "pdftoppm", // #nosec G204 -- fixed binary and flags; only operands are our own os.CreateTemp paths
 		"-png", "-f", "1", "-l", "1", "-singlefile",
 		"-scale-to", fmt.Sprintf("%d", pdfThumbScaleTo),
 		tmpPath, outRoot)
@@ -55,7 +55,7 @@ func RenderPage1(content []byte) ([]byte, error) {
 		return nil, fmt.Errorf("pdftoppm: %w: %s", err, firstLine(out))
 	}
 
-	thumb, err := os.ReadFile(outRoot + ".png")
+	thumb, err := os.ReadFile(outRoot + ".png") // #nosec G304 -- outRoot derives from our own os.CreateTemp path
 	if err != nil {
 		return nil, fmt.Errorf("read pdf thumbnail: %w", err)
 	}

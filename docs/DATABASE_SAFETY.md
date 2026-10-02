@@ -49,12 +49,15 @@ When running tests with `make test`:
 
 ### 3. Production Safety
 
-The `docker-compose.prod.yml` file provides additional production safeguards:
+Deploy production from [`deploy/docker-compose.yml`](../deploy/docker-compose.yml), not from the
+development `docker-compose.yml`. The deploy file:
 
-- Forces `APP_ENV=production`
-- Removes init script mounting
-- Disables development tools (mailhog, adminer)
-- Uses specific production data directories
+- Sets `APP_ENV=production` (and `GIN_MODE=release`) by default
+- Runs released images, with no source mounts or database init scripts
+- Has no development tools (smtp4dev, adminer, test databases)
+- Puts Caddy with automatic TLS in front of the app and customer portal
+
+See [deploy/README.md](../deploy/README.md).
 
 ### 4. Username Flexibility
 
@@ -84,11 +87,8 @@ make test-clean            # Clean test database (with confirmation)
 
 ### Production Deployment
 ```bash
-# Use production compose file
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up
-
-# Or set environment
-APP_ENV=production docker compose up
+# Production compose file (see deploy/README.md)
+cd deploy && docker compose up -d
 ```
 
 ## Safety Checklist
@@ -101,7 +101,7 @@ Before running tests:
 
 Before deploying to production:
 - ✅ Set `APP_ENV=production`
-- ✅ Use `docker-compose.prod.yml`
+- ✅ Use `deploy/docker-compose.yml`
 - ✅ Remove test databases
 - ✅ Disable development tools
 
@@ -171,7 +171,7 @@ APP_ENV=production docker compose up
 
 1. **Always use make commands** - They include safety checks
 2. **Never manually set DB_NAME to production values during tests**
-3. **Use docker-compose.prod.yml for production deployments**
+3. **Use deploy/docker-compose.yml for production deployments**
 4. **Keep test data separate from development data**
 5. **Run `make test-clean` periodically to reset test database**
 

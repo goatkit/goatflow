@@ -17,6 +17,7 @@ type HostAPIRPCRequest struct {
 	Method       string          `json:"method"`
 	Args         json.RawMessage `json:"args"`
 	CallerPlugin string          `json:"caller_plugin"`
+	CallToken    string          `json:"call_token"`
 }
 
 // HostAPIRPCResponse is a generic host API response.
@@ -27,6 +28,8 @@ type HostAPIRPCResponse struct {
 
 // HostAPIClient implements plugin.HostAPI by making RPC calls back to the host.
 // Plugins use this to access database, cache, HTTP, email, config, and i18n.
+// A ctx received in GKPluginWithContext.CallWithContext (or derived from it)
+// ties each call to the host call it belongs to; see GKPluginWithContext.
 type HostAPIClient struct {
 	client     *rpc.Client
 	pluginName string
@@ -37,7 +40,7 @@ func NewHostAPIClient(client *rpc.Client, pluginName string) *HostAPIClient {
 	return &HostAPIClient{client: client, pluginName: pluginName}
 }
 
-func (c *HostAPIClient) call(method string, args any) (json.RawMessage, error) {
+func (c *HostAPIClient) call(ctx context.Context, method string, args any) (json.RawMessage, error) {
 	argsJSON, err := json.Marshal(args)
 	if err != nil {
 		return nil, fmt.Errorf("marshal args: %w", err)
@@ -47,6 +50,7 @@ func (c *HostAPIClient) call(method string, args any) (json.RawMessage, error) {
 		Method:       method,
 		Args:         argsJSON,
 		CallerPlugin: c.pluginName,
+		CallToken:    callTokenFrom(ctx),
 	}
 	var resp HostAPIRPCResponse
 
@@ -60,8 +64,8 @@ func (c *HostAPIClient) call(method string, args any) (json.RawMessage, error) {
 }
 
 // DBQuery executes a read query via the host's database.
-func (c *HostAPIClient) DBQuery(_ context.Context, query string, args ...any) ([]map[string]any, error) {
-	result, err := c.call("db_query", map[string]any{"query": query, "args": args})
+func (c *HostAPIClient) DBQuery(ctx context.Context, query string, args ...any) ([]map[string]any, error) {
+	result, err := c.call(ctx, "db_query", map[string]any{"query": query, "args": args})
 	if err != nil {
 		return nil, err
 	}
@@ -73,8 +77,8 @@ func (c *HostAPIClient) DBQuery(_ context.Context, query string, args ...any) ([
 }
 
 // DBExec executes a write query via the host's database.
-func (c *HostAPIClient) DBExec(_ context.Context, query string, args ...any) (int64, error) {
-	result, err := c.call("db_exec", map[string]any{"query": query, "args": args})
+func (c *HostAPIClient) DBExec(ctx context.Context, query string, args ...any) (int64, error) {
+	result, err := c.call(ctx, "db_exec", map[string]any{"query": query, "args": args})
 	if err != nil {
 		return 0, err
 	}
@@ -88,8 +92,8 @@ func (c *HostAPIClient) DBExec(_ context.Context, query string, args ...any) (in
 }
 
 // CacheGet retrieves a cached value.
-func (c *HostAPIClient) CacheGet(_ context.Context, key string) ([]byte, bool, error) {
-	result, err := c.call("cache_get", map[string]any{"key": key})
+func (c *HostAPIClient) CacheGet(ctx context.Context, key string) ([]byte, bool, error) {
+	result, err := c.call(ctx, "cache_get", map[string]any{"key": key})
 	if err != nil {
 		return nil, false, err
 	}
@@ -104,20 +108,20 @@ func (c *HostAPIClient) CacheGet(_ context.Context, key string) ([]byte, bool, e
 }
 
 // CacheSet stores a cached value with TTL.
-func (c *HostAPIClient) CacheSet(_ context.Context, key string, value []byte, ttlSeconds int) error {
-	_, err := c.call("cache_set", map[string]any{"key": key, "value": value, "ttl": ttlSeconds})
+func (c *HostAPIClient) CacheSet(ctx context.Context, key string, value []byte, ttlSeconds int) error {
+	_, err := c.call(ctx, "cache_set", map[string]any{"key": key, "value": value, "ttl": ttlSeconds})
 	return err
 }
 
 // CacheDelete removes a cached value.
-func (c *HostAPIClient) CacheDelete(_ context.Context, key string) error {
-	_, err := c.call("cache_delete", map[string]any{"key": key})
+func (c *HostAPIClient) CacheDelete(ctx context.Context, key string) error {
+	_, err := c.call(ctx, "cache_delete", map[string]any{"key": key})
 	return err
 }
 
 // HTTPRequest makes an HTTP request via the host.
-func (c *HostAPIClient) HTTPRequest(_ context.Context, method, url string, headers map[string]string, body []byte) (int, []byte, error) {
-	result, err := c.call("http_request", map[string]any{
+func (c *HostAPIClient) HTTPRequest(ctx context.Context, method, url string, headers map[string]string, body []byte) (int, []byte, error) {
+	result, err := c.call(ctx, "http_request", map[string]any{
 		"method":  method,
 		"url":     url,
 		"headers": headers,
@@ -137,8 +141,8 @@ func (c *HostAPIClient) HTTPRequest(_ context.Context, method, url string, heade
 }
 
 // SendEmail sends email via the host.
-func (c *HostAPIClient) SendEmail(_ context.Context, to, subject, body string, html bool) error {
-	_, err := c.call("send_email", map[string]any{
+func (c *HostAPIClient) SendEmail(ctx context.Context, to, subject, body string, html bool) error {
+	_, err := c.call(ctx, "send_email", map[string]any{
 		"to":      to,
 		"subject": subject,
 		"body":    body,
@@ -148,39 +152,44 @@ func (c *HostAPIClient) SendEmail(_ context.Context, to, subject, body string, h
 }
 
 // Log writes a log entry via the host.
-func (c *HostAPIClient) Log(_ context.Context, level, message string, fields map[string]any) {
-	c.call("log", map[string]any{"level": level, "message": message, "fields": fields}) //nolint:errcheck
+func (c *HostAPIClient) Log(ctx context.Context, level, message string, fields map[string]any) {
+	// Log has no error return by interface contract; a failed host log call is dropped.
+	_, _ = c.call(ctx, "log", map[string]any{"level": level, "message": message, "fields": fields})
 }
 
 // ConfigGet retrieves a configuration value.
-func (c *HostAPIClient) ConfigGet(_ context.Context, key string) (string, error) {
-	result, err := c.call("config_get", map[string]any{"key": key})
+func (c *HostAPIClient) ConfigGet(ctx context.Context, key string) (string, error) {
+	result, err := c.call(ctx, "config_get", map[string]any{"key": key})
 	if err != nil {
 		return "", err
 	}
-	var val string
-	if err := json.Unmarshal(result, &val); err != nil {
+	var resp struct {
+		Value string `json:"value"`
+	}
+	if err := json.Unmarshal(result, &resp); err != nil {
 		return "", err
 	}
-	return val, nil
+	return resp.Value, nil
 }
 
 // Translate returns a translated string for the given key.
-func (c *HostAPIClient) Translate(_ context.Context, key string, args ...any) string {
-	result, err := c.call("translate", map[string]any{"key": key, "args": args})
+func (c *HostAPIClient) Translate(ctx context.Context, key string, args ...any) string {
+	result, err := c.call(ctx, "translate", map[string]any{"key": key, "args": args})
 	if err != nil {
 		return key // Fallback to key
 	}
-	var val string
-	if err := json.Unmarshal(result, &val); err != nil {
+	var resp struct {
+		Value string `json:"value"`
+	}
+	if err := json.Unmarshal(result, &resp); err != nil {
 		return key
 	}
-	return val
+	return resp.Value
 }
 
 // CallPlugin calls another plugin.
-func (c *HostAPIClient) CallPlugin(_ context.Context, pluginName, fn string, args json.RawMessage) (json.RawMessage, error) {
-	return c.call("plugin_call", map[string]any{
+func (c *HostAPIClient) CallPlugin(ctx context.Context, pluginName, fn string, args json.RawMessage) (json.RawMessage, error) {
+	return c.call(ctx, "plugin_call", map[string]any{
 		"plugin":   pluginName,
 		"function": fn,
 		"args":     args,
@@ -188,8 +197,8 @@ func (c *HostAPIClient) CallPlugin(_ context.Context, pluginName, fn string, arg
 }
 
 // PublishEvent sends an SSE event to a named channel for connected browser clients.
-func (c *HostAPIClient) PublishEvent(_ context.Context, channel string, eventType string, data string) error {
-	_, err := c.call("publish_event", map[string]any{
+func (c *HostAPIClient) PublishEvent(ctx context.Context, channel string, eventType string, data string) error {
+	_, err := c.call(ctx, "publish_event", map[string]any{
 		"channel":    channel,
 		"event_type": eventType,
 		"data":       data,
@@ -199,7 +208,7 @@ func (c *HostAPIClient) PublishEvent(_ context.Context, channel string, eventTyp
 
 // CreateArticleAttachment attaches a file to an article's thread.
 func (c *HostAPIClient) CreateArticleAttachment(ctx context.Context, articleID, createdBy int64, filename, contentType string, content []byte) (int64, error) {
-	raw, err := c.call("create_article_attachment", map[string]any{
+	raw, err := c.call(ctx, "create_article_attachment", map[string]any{
 		"article_id":   articleID,
 		"created_by":   createdBy,
 		"filename":     filename,
@@ -220,7 +229,7 @@ func (c *HostAPIClient) CreateArticleAttachment(ctx context.Context, articleID, 
 
 // CreateArticle creates an article (note/transcript/deliverable) on a ticket.
 func (c *HostAPIClient) CreateArticle(ctx context.Context, ticketID, createdBy int64, subject, body string, visibleToCustomer bool) (int64, error) {
-	result, err := c.call("create_article", map[string]any{
+	result, err := c.call(ctx, "create_article", map[string]any{
 		"ticket_id":           ticketID,
 		"created_by":          createdBy,
 		"subject":             subject,
@@ -241,7 +250,7 @@ func (c *HostAPIClient) CreateArticle(ctx context.Context, ticketID, createdBy i
 
 // ListArticleAttachments returns metadata for an article's attachments.
 func (c *HostAPIClient) ListArticleAttachments(ctx context.Context, articleID int64) ([]plugin.ArticleAttachment, error) {
-	raw, err := c.call("list_article_attachments", map[string]any{"article_id": articleID})
+	raw, err := c.call(ctx, "list_article_attachments", map[string]any{"article_id": articleID})
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +265,7 @@ func (c *HostAPIClient) ListArticleAttachments(ctx context.Context, articleID in
 
 // DeleteArticleAttachment removes one attachment from an article.
 func (c *HostAPIClient) DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error {
-	_, err := c.call("delete_article_attachment", map[string]any{
+	_, err := c.call(ctx, "delete_article_attachment", map[string]any{
 		"article_id":    articleID,
 		"attachment_id": attachmentID,
 	})
@@ -265,7 +274,7 @@ func (c *HostAPIClient) DeleteArticleAttachment(ctx context.Context, articleID, 
 
 // RenderMarkdownToPdf renders a markdown document to PDF bytes via the host.
 func (c *HostAPIClient) RenderMarkdownToPdf(ctx context.Context, markdown string, options plugin.PdfRenderOptions) ([]byte, error) {
-	result, err := c.call("render_markdown_to_pdf", map[string]any{
+	result, err := c.call(ctx, "render_markdown_to_pdf", map[string]any{
 		"markdown": markdown,
 		"options":  options,
 	})
@@ -283,7 +292,7 @@ func (c *HostAPIClient) RenderMarkdownToPdf(ctx context.Context, markdown string
 
 // ChangeTicketStatus changes a ticket's state with core semantics.
 func (c *HostAPIClient) ChangeTicketStatus(ctx context.Context, ticketID, stateID, userID int64, untilTime int64) error {
-	_, err := c.call("change_ticket_status", map[string]any{
+	_, err := c.call(ctx, "change_ticket_status", map[string]any{
 		"ticket_id":  ticketID,
 		"state_id":   stateID,
 		"user_id":    userID,
@@ -294,7 +303,7 @@ func (c *HostAPIClient) ChangeTicketStatus(ctx context.Context, ticketID, stateI
 
 // ListTicketStates returns all valid ticket states with type info.
 func (c *HostAPIClient) ListTicketStates(ctx context.Context) ([]plugin.TicketStateInfo, error) {
-	result, err := c.call("list_ticket_states", map[string]any{})
+	result, err := c.call(ctx, "list_ticket_states", map[string]any{})
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +319,7 @@ func (c *HostAPIClient) ListTicketStates(ctx context.Context) ([]plugin.TicketSt
 // ListTicketViews returns the ticket-view URL templates declared by the
 // enabled plugins.
 func (c *HostAPIClient) ListTicketViews(ctx context.Context) ([]plugin.TicketViewInfo, error) {
-	result, err := c.call("list_ticket_views", map[string]any{})
+	result, err := c.call(ctx, "list_ticket_views", map[string]any{})
 	if err != nil {
 		return nil, err
 	}
@@ -324,31 +333,31 @@ func (c *HostAPIClient) ListTicketViews(ctx context.Context) ([]plugin.TicketVie
 }
 
 // EntitySoftDelete soft-deletes an entity.
-func (c *HostAPIClient) EntitySoftDelete(_ context.Context, entityType string, entityID int64, reason string) error {
-	_, err := c.call("entity_soft_delete", map[string]any{"entity_type": entityType, "entity_id": entityID, "reason": reason})
+func (c *HostAPIClient) EntitySoftDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	_, err := c.call(ctx, "entity_soft_delete", map[string]any{"entity_type": entityType, "entity_id": entityID, "reason": reason})
 	return err
 }
 
 // EntityRestore restores a soft-deleted entity.
-func (c *HostAPIClient) EntityRestore(_ context.Context, entityType string, entityID int64) error {
-	_, err := c.call("entity_restore", map[string]any{"entity_type": entityType, "entity_id": entityID})
+func (c *HostAPIClient) EntityRestore(ctx context.Context, entityType string, entityID int64) error {
+	_, err := c.call(ctx, "entity_restore", map[string]any{"entity_type": entityType, "entity_id": entityID})
 	return err
 }
 
 // EntityHardDelete permanently removes an entity.
-func (c *HostAPIClient) EntityHardDelete(_ context.Context, entityType string, entityID int64, reason string) error {
-	_, err := c.call("entity_hard_delete", map[string]any{"entity_type": entityType, "entity_id": entityID, "reason": reason})
+func (c *HostAPIClient) EntityHardDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	_, err := c.call(ctx, "entity_hard_delete", map[string]any{"entity_type": entityType, "entity_id": entityID, "reason": reason})
 	return err
 }
 
 // RecycleBinList lists soft-deleted entities.
-func (c *HostAPIClient) RecycleBinList(_ context.Context, entityType string) (json.RawMessage, error) {
-	return c.call("recycle_bin_list", map[string]any{"entity_type": entityType})
+func (c *HostAPIClient) RecycleBinList(ctx context.Context, entityType string) (json.RawMessage, error) {
+	return c.call(ctx, "recycle_bin_list", map[string]any{"entity_type": entityType})
 }
 
 // SecureConfigGet retrieves a decrypted secret.
-func (c *HostAPIClient) SecureConfigGet(_ context.Context, key string) (string, error) {
-	result, err := c.call("secure_config_get", map[string]any{"key": key})
+func (c *HostAPIClient) SecureConfigGet(ctx context.Context, key string) (string, error) {
+	result, err := c.call(ctx, "secure_config_get", map[string]any{"key": key})
 	if err != nil {
 		return "", err
 	}
@@ -362,14 +371,14 @@ func (c *HostAPIClient) SecureConfigGet(_ context.Context, key string) (string, 
 }
 
 // SecureConfigSet stores an encrypted secret.
-func (c *HostAPIClient) SecureConfigSet(_ context.Context, key string, value string) error {
-	_, err := c.call("secure_config_set", map[string]any{"key": key, "value": value})
+func (c *HostAPIClient) SecureConfigSet(ctx context.Context, key string, value string) error {
+	_, err := c.call(ctx, "secure_config_set", map[string]any{"key": key, "value": value})
 	return err
 }
 
 // OrgID returns the active organisation ID.
-func (c *HostAPIClient) OrgID(_ context.Context) int64 {
-	result, err := c.call("org_id", map[string]any{})
+func (c *HostAPIClient) OrgID(ctx context.Context) int64 {
+	result, err := c.call(ctx, "org_id", map[string]any{})
 	if err != nil {
 		return 0
 	}
@@ -381,8 +390,8 @@ func (c *HostAPIClient) OrgID(_ context.Context) int64 {
 }
 
 // CustomFieldsGet retrieves custom field values for an entity.
-func (c *HostAPIClient) CustomFieldsGet(_ context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
-	result, err := c.call("custom_fields_get", map[string]any{
+func (c *HostAPIClient) CustomFieldsGet(ctx context.Context, entityType string, objectID int64, fields []string) (map[string]any, error) {
+	result, err := c.call(ctx, "custom_fields_get", map[string]any{
 		"entity_type": entityType,
 		"object_id":   objectID,
 		"fields":      fields,
@@ -398,8 +407,8 @@ func (c *HostAPIClient) CustomFieldsGet(_ context.Context, entityType string, ob
 }
 
 // CustomFieldsSet stores custom field values for an entity.
-func (c *HostAPIClient) CustomFieldsSet(_ context.Context, entityType string, objectID int64, values map[string]any) error {
-	_, err := c.call("custom_fields_set", map[string]any{
+func (c *HostAPIClient) CustomFieldsSet(ctx context.Context, entityType string, objectID int64, values map[string]any) error {
+	_, err := c.call(ctx, "custom_fields_set", map[string]any{
 		"entity_type": entityType,
 		"object_id":   objectID,
 		"values":      values,
@@ -408,8 +417,8 @@ func (c *HostAPIClient) CustomFieldsSet(_ context.Context, entityType string, ob
 }
 
 // CustomFieldsQuery finds entities by custom field values.
-func (c *HostAPIClient) CustomFieldsQuery(_ context.Context, entityType string, filters []plugin.CustomFieldFilter) ([]int64, error) {
-	result, err := c.call("custom_fields_query", map[string]any{
+func (c *HostAPIClient) CustomFieldsQuery(ctx context.Context, entityType string, filters []plugin.CustomFieldFilter) ([]int64, error) {
+	result, err := c.call(ctx, "custom_fields_query", map[string]any{
 		"entity_type": entityType,
 		"filters":     filters,
 	})
@@ -426,7 +435,7 @@ func (c *HostAPIClient) CustomFieldsQuery(_ context.Context, entityType string, 
 // ---- File Storage ----
 
 func (c *HostAPIClient) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error {
-	_, err := c.call("store_file", map[string]any{
+	_, err := c.call(ctx, "store_file", map[string]any{
 		"key":      key,
 		"data":     data,
 		"metadata": metadata,
@@ -435,7 +444,7 @@ func (c *HostAPIClient) StoreFile(ctx context.Context, key string, data []byte, 
 }
 
 func (c *HostAPIClient) GetFile(ctx context.Context, key string) ([]byte, map[string]string, error) {
-	result, err := c.call("get_file", map[string]any{"key": key})
+	result, err := c.call(ctx, "get_file", map[string]any{"key": key})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -450,12 +459,12 @@ func (c *HostAPIClient) GetFile(ctx context.Context, key string) ([]byte, map[st
 }
 
 func (c *HostAPIClient) DeleteFile(ctx context.Context, key string) error {
-	_, err := c.call("delete_file", map[string]any{"key": key})
+	_, err := c.call(ctx, "delete_file", map[string]any{"key": key})
 	return err
 }
 
 func (c *HostAPIClient) ListFiles(ctx context.Context, prefix string) ([]plugin.FileInfo, error) {
-	result, err := c.call("list_files", map[string]any{"prefix": prefix})
+	result, err := c.call(ctx, "list_files", map[string]any{"prefix": prefix})
 	if err != nil {
 		return nil, err
 	}
@@ -467,7 +476,7 @@ func (c *HostAPIClient) ListFiles(ctx context.Context, prefix string) ([]plugin.
 }
 
 func (c *HostAPIClient) GenerateThumbnail(ctx context.Context, data []byte, contentType string, maxWidth, maxHeight int) ([]byte, string, error) {
-	result, err := c.call("generate_thumbnail", map[string]any{
+	result, err := c.call(ctx, "generate_thumbnail", map[string]any{
 		"data":         data,
 		"content_type": contentType,
 		"max_width":    maxWidth,

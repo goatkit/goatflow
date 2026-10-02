@@ -1,8 +1,9 @@
 package dynamic
 
 import (
-	// "encoding/json".
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"strings"
 	"time"
@@ -93,7 +94,9 @@ func (we *WorkflowEngine) RegisterWorkflow(workflow *Workflow) error {
 	for _, trigger := range workflow.Triggers {
 		if trigger.Type == "schedule" && trigger.Schedule != "" {
 			_, err := we.cron.AddFunc(trigger.Schedule, func() {
-				we.ExecuteWorkflow(workflow.ID, nil)
+				if err := we.ExecuteWorkflow(workflow.ID, nil); err != nil {
+					log.Printf("scheduled workflow %s failed: %v", workflow.ID, err)
+				}
 			})
 			if err != nil {
 				return fmt.Errorf("failed to schedule workflow %s: %v", workflow.ID, err)
@@ -380,7 +383,11 @@ func (we *WorkflowEngine) HandleWorkflowExecute(c *gin.Context) {
 	workflowID := c.Param("id")
 
 	var record map[string]interface{}
-	c.ShouldBindJSON(&record)
+	// The record body is optional; an empty body runs the workflow without one.
+	if err := c.ShouldBindJSON(&record); err != nil && !errors.Is(err, io.EOF) {
+		c.JSON(400, gin.H{"error": "invalid JSON body"})
+		return
+	}
 
 	if err := we.ExecuteWorkflow(workflowID, record); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})

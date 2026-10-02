@@ -95,7 +95,7 @@ func handleAdminRoles(c *gin.Context) {
 
 	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Failed to fetch roles: "+err.Error())
+		c.String(http.StatusInternalServerError, internalDBError(c, "list roles", err))
 		return
 	}
 	defer rows.Close()
@@ -129,7 +129,7 @@ func handleAdminRoles(c *gin.Context) {
 		roles = append(roles, r)
 	}
 	if err := rows.Err(); err != nil {
-		c.String(http.StatusInternalServerError, "Error iterating roles: "+err.Error())
+		c.String(http.StatusInternalServerError, internalDBError(c, "iterate roles", err))
 		return
 	}
 
@@ -223,7 +223,7 @@ func handleAdminRoleCreate(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "Failed to create role: " + err.Error(),
+			"error":   internalDBError(c, "create role", err),
 		})
 		return
 	}
@@ -235,7 +235,7 @@ func handleAdminRoleCreate(c *gin.Context) {
 		if err := saveRolePermissions(db, roleID, input.Permissions, actorID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
-				"error":   "Failed to save permissions: " + err.Error(),
+				"error":   internalDBError(c, "save role permissions", err),
 			})
 			return
 		}
@@ -393,7 +393,7 @@ func handleAdminRoleUpdate(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "Failed to update role: " + err.Error(),
+			"error":   internalDBError(c, "update role", err),
 		})
 		return
 	}
@@ -415,7 +415,7 @@ func handleAdminRoleUpdate(c *gin.Context) {
 		if err := saveRolePermissions(db, id, input.Permissions, actorID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
-				"error":   "Failed to update permissions: " + err.Error(),
+				"error":   internalDBError(c, "update role permissions", err),
 			})
 			return
 		}
@@ -842,7 +842,7 @@ func handleAdminRoleUsersSearch(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "Search failed: " + err.Error(),
+			"error":   internalDBError(c, "search role users", err),
 		})
 		return
 	}
@@ -852,10 +852,21 @@ func handleAdminRoleUsersSearch(c *gin.Context) {
 	for rows.Next() {
 		var u RoleUser
 		if err := rows.Scan(&u.UserID, &u.Login, &u.FirstName, &u.LastName); err != nil {
-			continue
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   internalDBError(c, "scan role user search row", err),
+			})
+			return
 		}
 		u.Email = u.Login
 		users = append(users, u)
+	}
+	if err := rows.Err(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   internalDBError(c, "search role users", err),
+		})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -1157,7 +1168,7 @@ func handleAdminRolePermissionsUpdate(c *gin.Context) {
 				if err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{
 						"success": false,
-						"error":   "Failed to save permissions: " + err.Error(),
+						"error":   internalDBError(c, "save role permissions", err),
 					})
 					return
 				}

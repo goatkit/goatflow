@@ -110,7 +110,8 @@ func handleAddTicketMessage(c *gin.Context) {
 		return
 	}
 
-	ticketID, err := strconv.ParseUint(ticketIDStr, 10, 64)
+	// 31-bit range so the id fits the int TicketID below on every platform.
+	ticketID, err := strconv.ParseUint(ticketIDStr, 10, 31)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket ID"})
 		return

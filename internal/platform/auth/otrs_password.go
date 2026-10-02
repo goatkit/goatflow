@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"crypto/md5"  //nolint:gosec // verifying legacy OTRS md5-crypt hashes, never creating them
-	"crypto/sha1" //nolint:gosec // verifying legacy OTRS sha1 hashes, never creating them
+	"crypto/md5"  // #nosec G501 -- verifying legacy OTRS md5-crypt hashes, never creating them
+	"crypto/sha1" // #nosec G505 -- verifying legacy OTRS sha1 hashes, never creating them
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
@@ -58,7 +58,7 @@ func verifyOTRSHash(password, stored string) bool {
 		sum := sha512.Sum512([]byte(password))
 		return constantTimeEqual(hex.EncodeToString(sum[:]), stored)
 	case len(stored) == 40:
-		sum := sha1.Sum([]byte(password)) //nolint:gosec // legacy OTRS verification
+		sum := sha1.Sum([]byte(password)) // #nosec G401 -- verifying legacy OTRS sha1 password hash, never creating one
 		return constantTimeEqual(hex.EncodeToString(sum[:]), stored)
 	default:
 		return false
@@ -92,13 +92,13 @@ func md5Crypt(password, stored, magic string) string {
 	}
 	pw := []byte(password)
 
-	alt := md5.New() //nolint:gosec // legacy OTRS verification
+	alt := md5.New() // #nosec G401 -- md5-crypt verification of legacy OTRS hashes, never creating them
 	alt.Write(pw)
 	alt.Write([]byte(salt))
 	alt.Write(pw)
 	altSum := alt.Sum(nil)
 
-	d := md5.New() //nolint:gosec // legacy OTRS verification
+	d := md5.New() // #nosec G401 -- md5-crypt verification of legacy OTRS hashes, never creating them
 	d.Write(pw)
 	d.Write([]byte(magic))
 	d.Write([]byte(salt))
@@ -115,7 +115,7 @@ func md5Crypt(password, stored, magic string) string {
 	final := d.Sum(nil)
 
 	for i := range 1000 {
-		r := md5.New() //nolint:gosec // legacy OTRS verification
+		r := md5.New() // #nosec G401 -- md5-crypt verification of legacy OTRS hashes, never creating them
 		if i&1 != 0 {
 			r.Write(pw)
 		} else {

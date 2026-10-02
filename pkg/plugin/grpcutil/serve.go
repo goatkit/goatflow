@@ -11,6 +11,7 @@
 package grpcutil
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -44,6 +45,36 @@ type GKPluginInterface interface {
 type GKPluginWithHost interface {
 	GKPluginInterface
 	InitWithHost(config map[string]string, host plugin.HostAPI) error
+}
+
+// GKPluginWithContext is an optional interface. When a plugin implements it,
+// the host calls CallWithContext instead of Call. ctx carries the host call's
+// identity: HostAPI calls made with ctx (or a context derived from it) run
+// in the host with the call's context, so the host records the acting user
+// (the caller's _user_id) for actions such as EntitySoftDelete, applies the
+// request language to Translate and enforces the call's deadline. HostAPI
+// calls made with an unrelated context run as system actions.
+type GKPluginWithContext interface {
+	CallWithContext(ctx context.Context, fn string, args json.RawMessage) (json.RawMessage, error)
+}
+
+type callTokenKey struct{}
+
+// withCallToken returns ctx carrying the host call token.
+func withCallToken(ctx context.Context, token string) context.Context {
+	if token == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, callTokenKey{}, token)
+}
+
+// callTokenFrom returns the host call token carried by ctx.
+func callTokenFrom(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	token, _ := ctx.Value(callTokenKey{}).(string)
+	return token
 }
 
 // ServePlugin is called by plugin executables to serve the plugin.
@@ -122,10 +153,12 @@ type InitRequest struct {
 	HostAPIID uint32
 }
 
-// CallRequest is the RPC request for Call.
+// CallRequest is the RPC request for Call. CallToken identifies the host
+// call; HostAPI callbacks send it back to run in the call's context.
 type CallRequest struct {
-	Function string
-	Args     json.RawMessage
+	Function  string
+	Args      json.RawMessage
+	CallToken string
 }
 
 // CallResponse is the RPC response for Call.
@@ -171,7 +204,14 @@ func (s *GKPluginRPCServer) Init(req InitRequest, resp *interface{}) error {
 }
 
 func (s *GKPluginRPCServer) Call(req CallRequest, resp *CallResponse) error {
-	result, err := s.Impl.Call(req.Function, req.Args)
+	var result json.RawMessage
+	var err error
+	if withCtx, ok := s.Impl.(GKPluginWithContext); ok {
+		ctx := withCallToken(context.Background(), req.CallToken)
+		result, err = withCtx.CallWithContext(ctx, req.Function, req.Args)
+	} else {
+		result, err = s.Impl.Call(req.Function, req.Args)
+	}
 	if err != nil {
 		resp.Error = err.Error()
 		return nil

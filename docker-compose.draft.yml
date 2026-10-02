@@ -1,10 +1,21 @@
 # Draft: canonical GoatFlow service definition (from packaging audit t_fc3c623e)
 # Minimal production-shaped stack: mariadb + valkey + backend + runner.
 # Drop-in replacement for the default services in docker-compose.yml;
-# customer-fe / caddy are optional add-ons (see docker-compose.prod.yml).
+# customer-fe / caddy are optional add-ons (see deploy/docker-compose.yml).
 #
 # Usage: docker compose -f docker-compose.draft.yml up -d
 # Prereq: .env with DB + JWT + SMTP values (see .env.example)
+
+# Outgoing email for every process that sends mail: the runner (mail queue)
+# and the backend (TOTP codes, plugin mail and other direct sends).
+x-email-env: &email-env
+  GOATFLOW_EMAIL_SMTP_HOST: ${SMTP_HOST:?SMTP_HOST is required}
+  GOATFLOW_EMAIL_SMTP_PORT: ${SMTP_PORT:-25}
+  GOATFLOW_EMAIL_SMTP_USER: ${SMTP_USER:-}
+  GOATFLOW_EMAIL_SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  GOATFLOW_EMAIL_SMTP_TLS: ${SMTP_TLS:-false}
+  GOATFLOW_EMAIL_FROM: ${EMAIL_FROM:-}
+  GOATFLOW_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
 
 services:
   mariadb:
@@ -62,13 +73,9 @@ services:
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
     container_name: goatflow-backend
-    # Self-signed TLS bootstrap + schema migration, then start server.
+    # Schema migration, then start server.
     command: >
       sh -c "
-        if [ ! -f /app/certs/server.crt ] || [ ! -f /app/certs/server.key ]; then
-          mkdir -p /app/certs
-          openssl req -x509 -newkey rsa:4096 -keyout /app/certs/server.key -out /app/certs/server.crt -days 365 -nodes -subj '/CN=goatflow-backend'
-        fi
         if [ \"$$DB_DRIVER\" = 'postgres' ]; then
           ./migrate -path /app/migrations/postgres -database \"postgres://$${DB_PGSQL_USER}:$${DB_PGSQL_PASSWORD}@$${DB_PGSQL_HOST}:$${DB_PGSQL_PORT}/$${DB_PGSQL_NAME}?sslmode=disable\" up
         else
@@ -79,7 +86,6 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-production}
       APP_PORT: "8080"
-      ENABLE_YAML_ROUTING: "true"
       ROUTES_DIR: /app/routes
       DB_DRIVER: ${DB_DRIVER:-mariadb}
       DB_MYSQL_HOST: ${DB_MYSQL_HOST:-mariadb}
@@ -92,28 +98,26 @@ services:
       DB_PGSQL_NAME: ${DB_PGSQL_NAME}
       DB_PGSQL_USER: ${DB_PGSQL_USER}
       DB_PGSQL_PASSWORD: ${DB_PGSQL_PASSWORD}
-      VALKEY_HOST: valkey
-      VALKEY_PORT: "6379"
+      GOATFLOW_VALKEY_HOST: valkey
+      GOATFLOW_VALKEY_PORT: "6379"
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY:-15m}
       JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY:-7d}
-      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY}
+      # Encrypts stored secrets; must be the same in backend and runner
+      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY must be set to 64 hex characters (openssl rand -hex 32), shared by backend and runner}
       # bcrypt for new passwords; OTRS sha2 hashes still verify. sha256 only
       # when an OTRS must read the same user tables (see .env.example).
       PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-bcrypt}
       MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
       STORAGE_PATH: /app/storage
-      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}
-      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-pdf,doc,docx,txt,png,jpg,jpeg,gif,zip}
       GOATFLOW_PLUGIN_LAZY_LOAD: "true"
       GOATFLOW_PLUGIN_HOT_RELOAD: "false"
-      TLS_CERT_FILE: /app/certs/server.crt
-      TLS_KEY_FILE: /app/certs/server.key
+      <<: *email-env
+    stop_grace_period: 45s
     ports:
       - "${BACKEND_PORT:-8081}:8080"
     volumes:
       - ./storage:/app/storage
-      - goatflow_certs:/app/certs
       - goatflow_plugins:/app/config/plugins
     depends_on:
       plugin-init:
@@ -148,13 +152,9 @@ services:
       DB_PGSQL_NAME: ${DB_PGSQL_NAME}
       DB_PGSQL_USER: ${DB_PGSQL_USER}
       DB_PGSQL_PASSWORD: ${DB_PGSQL_PASSWORD}
-      GOATFLOW_EMAIL_SMTP_HOST: ${SMTP_HOST}
-      GOATFLOW_EMAIL_SMTP_PORT: ${SMTP_PORT:-25}
-      GOATFLOW_EMAIL_SMTP_USER: ${SMTP_USER}
-      GOATFLOW_EMAIL_SMTP_PASSWORD: ${SMTP_PASSWORD}
-      GOATFLOW_EMAIL_SMTP_TLS: ${SMTP_TLS:-false}
-      GOATFLOW_EMAIL_FROM: ${EMAIL_FROM}
-      GOATFLOW_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+      <<: *email-env
+      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY must be set to 64 hex characters (openssl rand -hex 32), shared by backend and runner}
+    stop_grace_period: 45s
     volumes:
       - goatflow_plugins:/app/config/plugins
     depends_on:
@@ -178,5 +178,4 @@ networks:
 volumes:
   mariadb_data:
   valkey_data:
-  goatflow_certs:
   goatflow_plugins:

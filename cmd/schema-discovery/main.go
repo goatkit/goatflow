@@ -108,7 +108,7 @@ func main() {
 
 		// Write to file
 		filename := filepath.Join(*outputDir, fmt.Sprintf("%s.yaml", table.Name))
-		if err := os.WriteFile(filename, yamlContent, 0644); err != nil {
+		if err := os.WriteFile(filename, yamlContent, 0644); err != nil { // #nosec G306 -- generated module YAML lands in the repo and is loaded by the app container like other checked-in modules
 			log.Printf("  ❌ Failed to write file for %s: %v", table.Name, err)
 			failCount++
 			continue

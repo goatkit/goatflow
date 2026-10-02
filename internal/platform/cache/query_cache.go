@@ -65,7 +65,8 @@ func (qc *QueryCache) Get(ctx context.Context, query string, args ...interface{}
 
 	// Check if still valid
 	if time.Now().After(result.ExpiresAt) {
-		qc.cache.Delete(ctx, key)
+		// Best effort: an expired entry left behind is ignored on read and overwritten on Set.
+		_ = qc.cache.Delete(ctx, key)
 		return nil, nil //nolint:nilnil
 	}
 
@@ -134,8 +135,8 @@ func (qc *QueryCache) GetOrSet(ctx context.Context, query string, args []interfa
 		return nil, err
 	}
 
-	// Cache the result
-	qc.Set(ctx, query, result, args...)
+	// Cache the result; best effort, the caller already has the fresh value.
+	_ = qc.Set(ctx, query, result, args...)
 
 	return result, nil
 }

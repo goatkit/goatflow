@@ -279,6 +279,14 @@ When the platform routes an HTTP request to a plugin handler, it builds the
 - **Org context** — `_org_id` and `org_id` (int64) from the active session, unless the plugin sets `SkipOrgInjection: true`
 - **Language** — `_lang`, the user's resolved UI language code (e.g. `de`); also sent to plugin UI page handlers
 
+Client-supplied values under the underscore keys above are dropped before the
+host writes its own, and the same envelope goes with every request-driven
+plugin call (widgets, plugin UI pages, setup tasks, MCP tools, event
+authorizers). The host runs the call with `_user_id` as the acting user,
+`_org_id` as the organisation (HostAPI `OrgID`, per-org secrets and files,
+sandbox scoping of organisation-owned tables) and `_lang` as the `Translate`
+language. See [HOST_API.md](plugins/HOST_API.md#call-context-and-acting-user).
+
 The handler returns `(json.RawMessage, error)`. The dynamic router
 (`internal/api/dynamic_router.go`) interprets the JSON response as follows:
 
@@ -337,7 +345,7 @@ Optional ed25519 signature verification for plugin binaries (`internal/platform/
 
 ### Permission System
 
-Plugins declare what they need via `ResourceRequest` with `Permission` entries. The platform enforces what they get via `ResourcePolicy` (set by admin).
+Plugins declare what they need via `ResourceRequest` with `Permission` entries. Without an admin-stored `ResourcePolicy` the host grants exactly the declared permissions (never entity `hard_delete`); a stored policy replaces them. Full method-to-permission table: [plugins/HOST_API.md](plugins/HOST_API.md#runtime-support).
 
 Permission types:
 
@@ -349,12 +357,16 @@ Permission types:
 | `email` | (any) | Domain allowlist, e.g. `["@example.com"]` |
 | `config` | `read` | Key patterns (sensitive keys blocked) |
 | `plugin_call` | (any) | Plugin name allowlist |
+| `file` | `read`, `write`, `readwrite` | Own plugin's files |
+| `article` | `read`, `write`, `readwrite` | — |
+| `ticket` | `read`, `write`, `readwrite` | — |
+| `entity` | `read`, `write`, `readwrite`, `hard_delete` | Entity types |
 
 ### Enforcement
 
-- **Permission checks** — every HostAPI call checks the plugin's granted permissions
+- **Permission checks** — every HostAPI call from either runtime goes through the plugin's `SandboxedHostAPI` (gRPC callbacks are bound to it at `Init`)
 - **DDL blocking** — plugins without write access cannot execute DROP, ALTER, TRUNCATE, CREATE, GRANT, REVOKE
-- **SQL table whitelisting** — `extractTableNames()` parses SQL queries and validates each table against the `db` permission scope. Queries touching unallowed tables are rejected
+- **SQL table scoping** — `sqlTables()` lexes the SQL (joins, comma lists, quoted and schema-qualified names, CTEs); written tables need a `db` write grant, all others a `db` read grant
 - **HTTP URL filtering** — outbound requests checked against allowed URL patterns (wildcard subdomain matching)
 - **Cache namespacing** — keys auto-prefixed with `plugin:<name>:` to prevent cross-plugin collisions
 - **Plugin call scoping** — CallPlugin checks which target plugins are in the caller's allowed scope
@@ -378,7 +390,7 @@ Default policy (`DefaultResourcePolicy`):
 - Status: `pending_review`
 - Memory: 256 MB
 - Call timeout: 30s
-- Permissions: DB read-only + cache read/write
+- Permissions: DB read-only + cache read/write + own files read/write (used only when the plugin declares no permissions)
 - Rate limits: 100 calls/sec, 600 DB queries/min, 60 HTTP requests/min
 
 ### Resource Accounting
@@ -402,7 +414,7 @@ Policies are serialized as JSON and stored in the `sysconfig_modified` table (ke
 
 ### Policy Lifecycle
 
-1. Plugin registers → gets `DefaultResourcePolicy` (restrictive)
+1. Plugin registers → gets its declared permissions (or `DefaultResourcePolicy` when it declares none); declared `hard_delete` is dropped
 2. Admin reviews plugin's `ResourceRequest`
 3. Admin sets `ResourcePolicy` via `Manager.SetPolicy()` — approving, restricting, or blocking
 4. Policy persisted to database and sandbox updated immediately via `UpdatePolicy()`

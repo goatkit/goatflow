@@ -49,6 +49,12 @@ Tests use `-count=1`, so results are never cached.
 | `TEST_USERNAME`, `TEST_PASSWORD` | from `.env` | Admin login. `DEMO_ADMIN_EMAIL` / `DEMO_ADMIN_PASSWORD` are used when these are empty. |
 | `E2E_TIMEOUT` | `30m` | `go test -timeout` for the whole run. Go's default of 10m is too short. |
 | `E2E_TMPFS_SIZE` | `4g` | Size of the container's `/tmp` tmpfs. See below. |
+| `SLOW_MO` | unset (0) | Milliseconds Playwright waits after each browser action. |
+| `SCREENSHOTS` | on | A screenshot is saved when a test fails. `SCREENSHOTS=false` turns this off. |
+| `VIDEOS` | off | `VIDEOS=true` records a video of every browser test. |
+
+`SLOW_MO`, `SCREENSHOTS` and `VIDEOS` are passed through from your environment or the make
+command line, for example `make test-e2e-go TEST='Groups' VIDEOS=true SLOW_MO=250`.
 
 A `localhost` or `127.0.0.1` `BASE_URL` switches the container to the host network. The customer
 portal URL then becomes `http://localhost:$(TEST_CUSTOMER_FE_PORT)` (default 18082). Example:
@@ -68,23 +74,12 @@ also builds its test binaries there. Keeping this off the bind-mounted repositor
 failing with `net::ERR_INSUFFICIENT_RESOURCES` or "Page crashed" when the repository disk is
 nearly full.
 
-### Settings the Makefile does not pass
-
-`tests/e2e/config/config.go` also reads `SLOW_MO`, `SCREENSHOTS` and `VIDEOS`. The make
-targets above do not pass them into the container, so the defaults always apply:
-
-| Setting | Default |
-|---------|---------|
-| `SLOW_MO` | 0 (no slow motion) |
-| `SCREENSHOTS` | on: a screenshot is saved when a test fails |
-| `VIDEOS` | off, but `helpers/browser.go` records video for every test that uses `NewBrowserHelper` anyway |
-
 ## Test output
 
 Paths are relative to the package directory, because `go test` runs each package in its own
 directory:
 
-| Suite | Screenshots on failure | Videos |
+| Suite | Screenshots on failure | Videos (`VIDEOS=true`) |
 |-------|------------------------|--------|
 | `tests/e2e` | `tests/e2e/test-results/screenshots/` | `tests/e2e/test-results/videos/` |
 | `tests/e2e/playwright` | `tests/e2e/playwright/test-results/screenshots/` | `tests/e2e/playwright/test-results/videos/` |

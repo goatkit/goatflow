@@ -19,6 +19,7 @@
                     <option value="open" {% if CurrentFilters.status == "open" %}selected{% endif %}>{{ t("status.open") }}</option>
                     <option value="pending" {% if CurrentFilters.status == "pending" %}selected{% endif %}>{{ t("status.pending") }}</option>
                     <option value="closed" {% if CurrentFilters.status == "closed" %}selected{% endif %}>{{ t("status.closed") }}</option>
+                    <option value="escalated" {% if CurrentFilters.status == "escalated" %}selected{% endif %}>{{ t("tickets.escalation.escalated") }}</option>
                 </select>
             </div>
 

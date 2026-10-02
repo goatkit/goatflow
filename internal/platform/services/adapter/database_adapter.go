@@ -163,19 +163,8 @@ func ensureDatabaseConnection(dbSvc database.DatabaseService) error {
 
 // buildDatabaseConfig builds database configuration from environment.
 func buildDatabaseConfig() *registry.ServiceConfig {
-	// In test mode, prefer TEST_ prefixed environment variables
-	driver := os.Getenv("TEST_DB_DRIVER")
-	if driver == "" {
-		driver = os.Getenv("DB_DRIVER")
-	}
-	if driver == "" {
-		driver = "mysql"
-	}
-	driver = strings.ToLower(driver)
-
 	provider := registry.ProviderMySQL
-	switch driver {
-	case "postgres", "postgresql":
+	if dbconfig.IsPostgres() {
 		provider = registry.ProviderPostgres
 	}
 
@@ -337,7 +326,7 @@ func openAndPing(driver, dsn string) *sql.DB {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := db.PingContext(ctx); err != nil {
-		db.Close()
+		_ = db.Close() // unreachable server; the ping error decides the result
 		return nil
 	}
 	return db

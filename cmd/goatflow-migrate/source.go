@@ -120,11 +120,14 @@ func (s *dbSource) Close() error { return s.db.Close() }
 
 func (s *dbSource) tables() map[string]*sourceTable { return s.tabs }
 
+// ident quotes a source-catalogue table or column name for the source
+// dialect, doubling any embedded quote character so the name can never
+// terminate the quoted identifier early.
 func (s *dbSource) ident(name string) string {
 	if s.driver == "postgres" {
-		return `"` + name + `"`
+		return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
 	}
-	return "`" + name + "`"
+	return "`" + strings.ReplaceAll(name, "`", "``") + "`"
 }
 
 func (s *dbSource) count(table string) (int, error) {
@@ -142,7 +145,8 @@ func (s *dbSource) rows(table string, fn func(columns []string, row []dumpValue)
 	for i, c := range t.columns {
 		cols[i] = s.ident(c)
 	}
-	query := "SELECT " + strings.Join(cols, ", ") + " FROM " + s.ident(table)
+	query := "SELECT " + strings.Join(cols, ", ") + " FROM " + s.ident(table) // #nosec G202 -- identifiers from the source catalogue, quoted and escaped by ident(); no values concatenated
+
 	rows, err := s.db.Query(query) // sql-converted: source-database dialect, no parameters
 	if err != nil {
 		return fmt.Errorf("read source table %s: %w", table, err)

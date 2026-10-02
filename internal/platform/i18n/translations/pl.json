@@ -657,7 +657,13 @@
           "responsible": "Odpowiedzialny za zgłoszenie",
           "roles": "Role",
           "special": "Specjalni odbiorcy",
-          "watcher": "Obserwatorzy zgłoszenia"
+          "watcher": "Obserwatorzy zgłoszenia",
+          "my_queues": "Agenci, którzy mają kolejkę w Moich kolejkach",
+          "creator": "Twórca zgłoszenia",
+          "read_permissions": "Wszyscy agenci z prawem odczytu kolejki",
+          "write_permissions": "Wszyscy agenci z prawem zapisu w kolejce",
+          "emails": "Dodatkowe adresy e-mail odbiorców",
+          "emails_help": "Oddziel adresy przecinkami. Maksymalnie 200 znaków."
         },
         "sections": {
           "basic": "Podstawowe informacje",
@@ -1529,6 +1535,7 @@
         "events_required": "Wybierz co najmniej jedno zdarzenie.",
         "header_name": "Nazwa nagłówka",
         "header_value": "Wartość",
+        "header_value_keep": "Wartość zapisana ({hint}). Pozostaw puste, aby ją zachować",
         "headers": "Własne nagłówki",
         "headers_help": "Wysyłane z każdym doręczeniem. Content-Type, User-Agent i nagłówki X-Webhook-* ustawia GoatFlow.",
         "remove_header": "Usuń nagłówek",
@@ -2331,9 +2338,18 @@
     }
   },
   "customer_portal_settings": {
+    "description": "Ustawienia domyślne dla wszystkich firm klientów. Każda firma może je nadpisać na swojej stronie edycji.",
+    "enable": "Włącz portal klienta",
+    "enable_help": "Włącza lub wyłącza portal klienta. Firmy z własnym ustawieniem zachowują je.",
+    "footer_text": "Tekst stopki",
     "heading": "Ustawienia portalu klienta",
+    "landing_page": "Strona startowa",
+    "landing_page_help": "Strona, którą klienci widzą po zalogowaniu, np. /customer/tickets. Ścieżka bez początkowego / jest względna wobec /customer.",
+    "per_company_note": "Każda firma klienta może nadpisać te wartości domyślne na karcie Ustawienia portalu na swojej stronie edycji.",
+    "require_login": "Wymagaj logowania",
+    "require_login_help": "Klienci muszą się zalogować, zanim wejdą do portalu",
     "title": "Ustawienia portalu klienta",
-    "per_company_note": "Każda firma klienta może nadpisać te wartości domyślne na karcie Ustawienia portalu na swojej stronie edycji."
+    "title_field": "Tytuł portalu"
   },
   "customer_user_services": {
     "title": "Usługi użytkownika klienta"
@@ -4180,7 +4196,6 @@
     "showing_of_total": "Wyświetlanie %d z %d zgłoszeń",
     "sla": "SLA",
     "spam": "Spam",
-    "split": "Podziel",
     "state": "Stan",
     "status": "Status",
     "subject": "Temat",
@@ -4219,7 +4234,15 @@
     "view_in_queue": "Zobacz zgłoszenia w tej kolejce",
     "visible_for_customer": "Widoczne dla klienta",
     "visible_for_customer_help": "Zaznacz, aby pokazać tę aktualizację w portalu klienta.",
-    "watch": "Obserwuj"
+    "watch": "Obserwuj",
+    "escalation": {
+      "first_response": "Termin pierwszej odpowiedzi",
+      "update": "Termin aktualizacji",
+      "solution": "Termin rozwiązania",
+      "due_in": "Termin za",
+      "overdue_by": "Opóźnienie",
+      "escalated": "Eskalowane"
+    }
   },
   "tickets_form": {
     "attachments": "Załączniki",

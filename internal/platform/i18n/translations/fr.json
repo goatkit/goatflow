@@ -657,7 +657,13 @@
           "responsible": "Responsable du Ticket",
           "roles": "Rôles",
           "special": "Destinataires Spéciaux",
-          "watcher": "Observateurs du Ticket"
+          "watcher": "Observateurs du Ticket",
+          "my_queues": "Agents ayant la file dans Mes files",
+          "creator": "Créateur du ticket",
+          "read_permissions": "Tous les agents ayant un accès en lecture à la file",
+          "write_permissions": "Tous les agents ayant un accès en écriture à la file",
+          "emails": "Adresses e-mail de destinataires supplémentaires",
+          "emails_help": "Séparez les adresses par des virgules. 200 caractères maximum."
         },
         "sections": {
           "basic": "Informations de Base",
@@ -1529,6 +1535,7 @@
         "events_required": "Sélectionnez au moins un événement.",
         "header_name": "Nom de l'en-tête",
         "header_value": "Valeur",
+        "header_value_keep": "Valeur enregistrée ({hint}). Laisser vide pour la conserver",
         "headers": "En-têtes personnalisés",
         "headers_help": "Envoyés avec chaque livraison. Content-Type, User-Agent et les en-têtes X-Webhook-* sont définis par GoatFlow.",
         "remove_header": "Supprimer l'en-tête",
@@ -2331,9 +2338,18 @@
     }
   },
   "customer_portal_settings": {
+    "description": "Valeurs par défaut pour toutes les entreprises clientes. Chaque entreprise peut les remplacer depuis sa page de modification.",
+    "enable": "Activer le portail client",
+    "enable_help": "Active ou désactive le portail client. Les entreprises ayant leur propre réglage le conservent.",
+    "footer_text": "Texte du pied de page",
     "heading": "Poutail client Paramètres",
+    "landing_page": "Page d’accueil",
+    "landing_page_help": "Page affichée aux clients après connexion, par exemple /customer/tickets. Un chemin sans / initial est relatif à /customer.",
+    "per_company_note": "Chaque entreprise cliente peut remplacer ces valeurs par défaut dans l’onglet Paramètres du portail de sa page de modification.",
+    "require_login": "Connexion obligatoire",
+    "require_login_help": "Les clients doivent se connecter avant d’accéder au portail",
     "title": "Poutail client Paramètres",
-    "per_company_note": "Chaque entreprise cliente peut remplacer ces valeurs par défaut dans l’onglet Paramètres du portail de sa page de modification."
+    "title_field": "Titre du portail"
   },
   "customer_user_services": {
     "title": "Client Utilisateur Services"
@@ -3675,7 +3691,6 @@
     "showing_of_total": "Affichering %d de %d tickets",
     "sla": "SLA",
     "spam": "Spam",
-    "split": "Diviser",
     "state": "État",
     "status": "Statut",
     "subject": "Sujet",
@@ -3714,7 +3729,15 @@
     "view_in_queue": "Voir les tickets dans cette file d'attente",
     "visible_for_customer": "Visible pour le client",
     "visible_for_customer_help": "Cocher pour afficher cette mise à jour dans le portail client.",
-    "watch": "Surveiller"
+    "watch": "Surveiller",
+    "escalation": {
+      "first_response": "Première réponse attendue",
+      "update": "Mise à jour attendue",
+      "solution": "Résolution attendue",
+      "due_in": "Échéance dans",
+      "overdue_by": "En retard de",
+      "escalated": "Escaladé"
+    }
   },
   "tickets_form": {
     "attachments": "Pièces jointes",

@@ -108,7 +108,8 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 				   u.login as assigned_to,
 				   t.create_time,
 				   t.change_time,
-				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id) as article_count
+				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id) as article_count,
+				   t.escalation_time
 			FROM ticket t
 			LEFT JOIN customer_user c ON t.customer_user_id = c.login
 			LEFT JOIN customer_company cc ON t.customer_id = cc.customer_id
@@ -134,6 +135,10 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 		} else if status == "not_closed" {
 			// Exclude closed state types (type_id 3)
 			query += " AND t.ticket_state_id NOT IN (" + lookups.ClosedStateIDsSQL + ")"
+		} else if status == "escalated" {
+			// OTRS escalated tickets: the earliest escalation destination has passed.
+			query += " AND t.escalation_time > 0 AND t.escalation_time <= ?"
+			args = append(args, time.Now().Unix())
 		}
 
 		// Only tickets in queues the agent can read (admins: all); a queue
@@ -246,7 +251,7 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 		// Execute query
 		rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": internalDBError(c, "list agent tickets", err)})
 			return
 		}
 		defer rows.Close()
@@ -267,12 +272,13 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 				CreateTime    time.Time
 				ChangeTime    time.Time
 				ArticleCount  int
+				Escalation    int64
 			}
 
 			err := rows.Scan(&ticket.ID, &ticket.TN, &ticket.Title, &ticket.Customer,
 				&ticket.Company, &ticket.Queue, &ticket.State, &ticket.Priority,
 				&ticket.PriorityColor, &ticket.AssignedTo, &ticket.CreateTime,
-				&ticket.ChangeTime, &ticket.ArticleCount)
+				&ticket.ChangeTime, &ticket.ArticleCount, &ticket.Escalation)
 
 			if err != nil {
 				continue
@@ -294,6 +300,7 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 				"last_changed":   formatAge(ticket.ChangeTime),
 				"updated_at_iso": ticket.ChangeTime.UTC().Format(time.RFC3339),
 				"article_count":  ticket.ArticleCount,
+				"escalated":      ticket.Escalation > 0 && ticket.Escalation <= time.Now().Unix(),
 			})
 		}
 		_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
@@ -540,8 +547,7 @@ func handleAgentQueues(db *sql.DB) gin.HandlerFunc {
 
 		rows, err := db.Query(database.ConvertPlaceholders(query), queueArgs...)
 		if err != nil {
-			log.Printf("handleAgentQueues: error querying queues: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": internalDBError(c, "list agent queues", err)})
 			return
 		}
 		defer rows.Close()

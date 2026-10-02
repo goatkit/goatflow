@@ -1,7 +1,6 @@
 package api
 
 import (
-	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -95,7 +94,8 @@ func HandleAPISetupTasks(c *gin.Context) {
 }
 
 // HandleAPISetupTask dispatches a plugin setup task, forwarding the JSON body
-// to the plugin handler. Core tasks use the HTML route (handleAdminSetupTask).
+// (minus client-supplied envelope keys, plus the host envelope) to the plugin
+// handler. Core tasks use the HTML route (handleAdminSetupTask).
 // POST /api/v1/admin/setup/tasks/:plugin/:task_id
 func HandleAPISetupTask(c *gin.Context) {
 	svc := getSetupAssistantService()
@@ -116,12 +116,12 @@ func HandleAPISetupTask(c *gin.Context) {
 		return
 	}
 
-	body, err := io.ReadAll(c.Request.Body)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Could not read request body"})
+	args, status, msg := pluginJSONBodyArgs(c, pluginName)
+	if args == nil {
+		c.JSON(status, gin.H{"success": false, "error": msg})
 		return
 	}
-	out, err := svc.CallPluginTask(c.Request.Context(), pluginName, taskID, body)
+	out, err := svc.CallPluginTask(c.Request.Context(), pluginName, taskID, args)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
 		return

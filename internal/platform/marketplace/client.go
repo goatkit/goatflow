@@ -120,7 +120,7 @@ func (c *Client) ListInstalled() ([]InstalledPlugin, error) {
 		}
 
 		manifestPath := filepath.Join(c.pluginsDir, entry.Name(), "plugin.yaml")
-		data, err := os.ReadFile(manifestPath)
+		data, err := os.ReadFile(manifestPath) // #nosec G304 -- entry under the operator-configured plugins dir, name from os.ReadDir
 		if err != nil {
 			continue // Not a plugin directory
 		}
@@ -243,21 +243,23 @@ func (c *Client) fetchAndExtract(entry *PluginEntry) error {
 
 	resp, err := c.httpClient.Get(zipURL)
 	if err != nil {
-		zipFile.Close()
+		_ = zipFile.Close()
 		return fmt.Errorf("download plugin: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		zipFile.Close()
+		_ = zipFile.Close()
 		return fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
 	}
 
 	if _, err := io.Copy(zipFile, resp.Body); err != nil {
-		zipFile.Close()
+		_ = zipFile.Close()
 		return fmt.Errorf("write plugin zip: %w", err)
 	}
-	zipFile.Close()
+	if err := zipFile.Close(); err != nil {
+		return fmt.Errorf("write plugin zip: %w", err)
+	}
 
 	// Verify signature if a .sig file is available.
 	sigURL := SignatureURL(entry.Repo, entry.LatestVersion, entry.Name)
@@ -265,7 +267,7 @@ func (c *Client) fetchAndExtract(entry *PluginEntry) error {
 	hasSig := sigErr == nil && sigResp != nil && sigResp.StatusCode == http.StatusOK
 	if !hasSig {
 		if sigResp != nil {
-			sigResp.Body.Close()
+			_ = sigResp.Body.Close()
 		}
 		if signing.IsSignatureRequired() {
 			return fmt.Errorf("plugin %q is not signed but signatures are required (GOATFLOW_REQUIRE_SIGNATURES=1)", entry.Name)
@@ -273,19 +275,21 @@ func (c *Client) fetchAndExtract(entry *PluginEntry) error {
 	} else {
 		sigFile, err := os.CreateTemp("", "gk-plugin-*.sig")
 		if err != nil {
-			sigResp.Body.Close()
+			_ = sigResp.Body.Close()
 			return fmt.Errorf("create temp sig file: %w", err)
 		}
 		sigPath := sigFile.Name()
 		defer os.Remove(sigPath)
 
 		if _, err := io.Copy(sigFile, sigResp.Body); err != nil {
-			sigFile.Close()
-			sigResp.Body.Close()
+			_ = sigFile.Close()
+			_ = sigResp.Body.Close()
 			return fmt.Errorf("write signature: %w", err)
 		}
-		sigFile.Close()
-		sigResp.Body.Close()
+		_ = sigResp.Body.Close()
+		if err := sigFile.Close(); err != nil {
+			return fmt.Errorf("write signature: %w", err)
+		}
 
 		keys, err := LoadTrustedKeys()
 		if err != nil {

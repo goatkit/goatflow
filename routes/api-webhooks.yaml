@@ -25,11 +25,11 @@ spec:
           method: GET
           handler: handleWebhookEvents
           description: "List subscribable webhook events"
-        - path: /webhooks/deliveries/:id
+        - path: /webhook-deliveries/:id
           method: GET
           handler: handleWebhookDeliveryGet
           description: "Get delivery including payload and response"
-        - path: /webhooks/deliveries/:id/redeliver
+        - path: /webhook-deliveries/:id/redeliver
           method: POST
           handler: handleWebhookRedeliver
           description: "Send a delivery's payload again as a new delivery"

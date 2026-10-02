@@ -267,17 +267,23 @@ Resources: &plugin.ResourceRequest{
 |------|--------|-------|
 | `db` | `read`, `write`, `readwrite` | Table patterns (e.g. `["tickets", "queue"]`) |
 | `cache` | `read`, `write`, `readwrite` | Auto-namespaced |
-| `http` | — | URL patterns (`*.example.com`) |
+| `http` | — | Hosts (`api.example.com`, `*.example.com`, or `*` for any host) |
 | `email` | — | Domain patterns (e.g. `["@example.com"]`) |
-| `config` | `read` | — |
+| `config` | `read` | Key patterns |
 | `plugin_call` | — | Plugin names (`["stats", "analytics"]`) |
+| `file` | `read`, `write`, `readwrite` | — (own plugin's files only) |
+| `article` | `read`, `write`, `readwrite` | — |
+| `ticket` | `read`, `write`, `readwrite` | — |
+| `entity` | `read`, `write`, `readwrite`, `hard_delete` | Entity types (`["ticket"]`) |
+
+Several entries of the same type add up, each on its own scope. Which HostAPI method needs which permission: [HOST_API.md](HOST_API.md#runtime-support).
 
 ### What Happens at Registration
 
-1. Plugin registers → gets `DefaultResourcePolicy` (restrictive: DB read-only, cache RW, rate limited)
-2. Status is `pending_review` until an admin approves
-3. Admin can grant more (or fewer) permissions via `ResourcePolicy`
-4. The `SandboxedHostAPI` enforces the granted policy on every call
+1. Without an admin-stored policy, the plugin gets exactly the permissions it declares (with the default rate limits below). A plugin that declares nothing gets `DefaultResourcePolicy` (DB read-only, cache and own files read/write).
+2. `entity` `hard_delete` is never granted from a declaration; an admin must store a policy that grants it.
+3. An admin-stored policy (`Plugin::<name>::Policy`) replaces the declarations: it can grant more, grant less, or block the plugin.
+4. The `SandboxedHostAPI` enforces the effective policy on every HostAPI call, in both runtimes. Declare everything your plugin uses: an undeclared call fails with `... access not granted`.
 
 ### Rate Limits
 

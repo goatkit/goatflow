@@ -53,13 +53,27 @@ questions:
             min_length: 32
         - variable: secure_key
           label: Application Secure Key
-          description: Used to encrypt secrets at rest. Minimum 32 characters.
+          description: >-
+            Encrypts stored secrets (webhook signing secrets, plugin secure settings).
+            Exactly 64 hex characters; generate with `openssl rand -hex 32`.
+            Never change it after install.
           schema:
             type: string
             default: ""
             required: true
             private: true
-            min_length: 32
+            min_length: 64
+            max_length: 64
+            valid_chars: "^[0-9a-fA-F]{64}$"
+            valid_chars_error: "Must be exactly 64 hex characters (openssl rand -hex 32)."
+        - variable: base_url
+          label: Public URL
+          description: >-
+            URL users reach GoatFlow at, e.g. https://helpdesk.example.com (BASE_URL).
+            Password-reset and customer sign-up emails link to it and are not sent while it is empty.
+          schema:
+            type: string
+            default: ""
         - variable: admin_password
           label: Admin Password
           description: Initial password for the admin account.

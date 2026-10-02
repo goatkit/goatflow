@@ -141,7 +141,7 @@ func (r *TicketPriorityRepository) Create(priority *models.TicketPriority) error
 	if err != nil {
 		return err
 	}
-	priority.ID = uint(id)
+	priority.ID = uint(id) // #nosec G115 -- ticket_priority.id auto-increment key, never negative
 	return nil
 }
 

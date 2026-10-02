@@ -215,6 +215,12 @@ func TestHelloPlugin(t *testing.T) {
 		}
 	})
 
+	t.Run("Call_hello_invalid_args", func(t *testing.T) {
+		if _, err := p.Call(ctx, "hello", json.RawMessage(`{"name":`)); err == nil {
+			t.Error("expected error for malformed hello args")
+		}
+	})
+
 	t.Run("Shutdown", func(t *testing.T) {
 		err := p.Shutdown(ctx)
 		if err != nil {

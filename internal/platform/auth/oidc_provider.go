@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -278,12 +279,16 @@ func (p *oidcProvider) lookupOrProvisionUser(_ context.Context, email, givenName
 	if honorific != "" && user.Title != honorific {
 		user.Title = honorific
 		if p.db != nil {
-			p.db.Exec(database.ConvertPlaceholders("UPDATE users SET title = ?, change_time = NOW() WHERE id = ?"), honorific, int(user.ID))
+			if _, err := p.db.Exec(database.ConvertPlaceholders("UPDATE users SET title = ?, change_time = NOW() WHERE id = ?"), honorific, int(user.ID)); err != nil {
+				log.Printf("oidc: update title for user %d: %v", user.ID, err)
+			}
 		}
 	}
 
 	if len(groups) > 0 && p.userRepo != nil {
-		p.userRepo.SyncGroups(user.ID, groups)
+		if err := p.userRepo.SyncGroups(user.ID, groups); err != nil {
+			log.Printf("oidc: sync groups for user %d: %v", user.ID, err)
+		}
 	}
 
 	return user, nil
@@ -324,7 +329,9 @@ func (p *oidcProvider) provisionAgent(email, givenName, familyName string) (*mod
 		var gid int64
 		err := p.db.QueryRow(database.ConvertPlaceholders("SELECT id FROM `groups` WHERE name = ?"), groupName).Scan(&gid)
 		if err == nil && gid > 0 {
-			p.db.Exec(database.ConvertPlaceholders("INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by) VALUES (?, ?, 'rw', NOW(), 1, NOW(), 1)"), int(user.ID), gid)
+			if _, err := p.db.Exec(database.ConvertPlaceholders("INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by) VALUES (?, ?, 'rw', NOW(), 1, NOW(), 1)"), int(user.ID), gid); err != nil {
+				log.Printf("oidc: add provisioned user %d to group %q: %v", user.ID, groupName, err)
+			}
 		}
 	}
 
@@ -353,7 +360,7 @@ func (p *oidcProvider) provisionCustomer(login, name, email string) (*models.Use
 
 // Register OIDC provider factory.
 func init() {
-	RegisterProvider("oidc", func(deps ProviderDependencies) (AuthProvider, error) {
+	_ = RegisterProvider("oidc", func(deps ProviderDependencies) (AuthProvider, error) {
 		return NewOidcProvider(&OidcConfig{}, deps), nil
 	})
 }

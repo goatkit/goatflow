@@ -8,6 +8,43 @@
 #   # Edit .env with your values
 #   docker compose up -d
 
+# Settings shared by app, customer-fe and runner
+x-goatflow-env: &goatflow-env
+  APP_ENV: ${APP_ENV:-production}
+  GIN_MODE: ${GIN_MODE:-release}
+  LOG_LEVEL: ${LOG_LEVEL:-warn}
+  DB_DRIVER: mysql
+  DB_MYSQL_HOST: mariadb
+  DB_MYSQL_PORT: 3306
+  DB_MYSQL_USER: ${DB_USER:-goatflow}
+  DB_MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+  DB_MYSQL_NAME: ${DB_NAME:-goatflow}
+  GOATFLOW_VALKEY_HOST: valkey
+  GOATFLOW_VALKEY_PORT: 6379
+  JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+  # Encrypts stored secrets (webhook signing secrets, plugin secure settings).
+  # Every process must use the same key or the runner cannot decrypt them.
+  GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY is required - 64 hex characters, generate with openssl rand -hex 32}
+  BASE_URL: ${BASE_URL:-https://${DOMAIN}}
+  # Outgoing email: the runner sends the mail queue, the app sends some mail directly
+  GOATFLOW_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+  GOATFLOW_EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
+  GOATFLOW_EMAIL_SMTP_HOST: ${SMTP_HOST:?SMTP_HOST is required}
+  GOATFLOW_EMAIL_SMTP_PORT: ${SMTP_PORT:-587}
+  GOATFLOW_EMAIL_SMTP_USER: ${SMTP_USER:-}
+  GOATFLOW_EMAIL_SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  GOATFLOW_EMAIL_SMTP_TLS: ${SMTP_TLS:-true}
+  GOATFLOW_EMAIL_SMTP_AUTH_TYPE: ${SMTP_AUTH_TYPE:-plain}
+  # Optional external search (docs/ZINC_SEARCH.md); empty = built-in database search
+  SEARCH_BACKEND: ${SEARCH_BACKEND:-}
+  SEARCH_INDEX_PREFIX: ${SEARCH_INDEX_PREFIX:-}
+  ZINC_ENDPOINT: ${ZINC_ENDPOINT:-}
+  ZINC_USER: ${ZINC_USER:-}
+  ZINC_PASSWORD: ${ZINC_PASSWORD:-}
+  ELASTICSEARCH_ENDPOINT: ${ELASTICSEARCH_ENDPOINT:-}
+  ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME:-}
+  ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD:-}
+
 services:
   caddy:
     image: docker.io/caddy:2-alpine
@@ -58,19 +95,9 @@ services:
   app:
     image: ghcr.io/goatkit/goatflow:${GOATFLOW_TAG:-latest}
     environment:
-      APP_ENV: ${APP_ENV:-production}
-      GIN_MODE: ${GIN_MODE:-release}
-      LOG_LEVEL: ${LOG_LEVEL:-warn}
-      DB_DRIVER: mysql
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_USER: ${DB_USER:-goatflow}
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-      DB_NAME: ${DB_NAME:-goatflow}
-      REDIS_HOST: valkey:6379
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
-      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:-}
-      BASE_URL: ${BASE_URL:-http://localhost:8080}
+      <<: *goatflow-env
+      # First-boot password for root@localhost; applied once, ignored afterwards
+      GOATFLOW_ADMIN_PASSWORD: ${GOATFLOW_ADMIN_PASSWORD:-}
     depends_on:
       mariadb:
         condition: service_healthy
@@ -78,23 +105,13 @@ services:
         condition: service_healthy
     expose:
       - "8080"
+    stop_grace_period: 45s
     restart: unless-stopped
 
   customer-fe:
     image: ghcr.io/goatkit/goatflow:${GOATFLOW_TAG:-latest}
     environment:
-      APP_ENV: ${APP_ENV:-production}
-      GIN_MODE: ${GIN_MODE:-release}
-      LOG_LEVEL: ${LOG_LEVEL:-warn}
-      DB_DRIVER: mysql
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_USER: ${DB_USER:-goatflow}
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-      DB_NAME: ${DB_NAME:-goatflow}
-      REDIS_HOST: valkey:6379
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
-      BASE_URL: ${BASE_URL:-http://localhost:8080}
+      <<: *goatflow-env
       CUSTOMER_FE_ONLY: "true"
       ROOT_REDIRECT_PATH: /customer
     depends_on:
@@ -104,27 +121,20 @@ services:
         condition: service_healthy
     expose:
       - "8080"
+    stop_grace_period: 45s
     restart: unless-stopped
 
   runner:
     image: ghcr.io/goatkit/goatflow-runner:${GOATFLOW_TAG:-latest}
     command: ["./goats", "-mode", "runner"]
     environment:
-      APP_ENV: ${APP_ENV:-production}
-      DB_DRIVER: mysql
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_USER: ${DB_USER:-goatflow}
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-      DB_NAME: ${DB_NAME:-goatflow}
-      # Must match the app: the runner decrypts webhook signing secrets
-      GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:-}
-      REDIS_HOST: valkey:6379
+      <<: *goatflow-env
     depends_on:
       mariadb:
         condition: service_healthy
       valkey:
         condition: service_healthy
+    stop_grace_period: 45s
     restart: unless-stopped
 
 volumes:
@@ -148,9 +158,9 @@ configs:
               reverse_proxy customer-fe:8080
           }
 
-          # Redirect /c/ to /customer/ for short URL
-          handle /c/* {
-              redir /customer{uri} permanent
+          # Short URL: /c/<path> -> /customer/<path> (handle_path strips /c)
+          handle_path /c/* {
+              redir * /customer{uri} permanent
           }
 
           # Agent/main app (default) - handles everything else

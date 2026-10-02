@@ -229,19 +229,5 @@ func defaultWidgetLayout(fullID string) (x, y, w, h int, ok bool) {
 
 // getDashboardUserID extracts user ID from context for dashboard widgets.
 func getDashboardUserID(c *gin.Context) int {
-	if val, ok := c.Get("user_id"); ok {
-		switch v := val.(type) {
-		case int:
-			return v
-		case int64:
-			return int(v)
-		case uint:
-			return int(v)
-		case uint64:
-			return int(v)
-		case float64:
-			return int(v)
-		}
-	}
-	return 0
+	return GetUserIDFromCtx(c, 0)
 }

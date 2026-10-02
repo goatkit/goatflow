@@ -6,8 +6,8 @@ import (
 )
 
 func TestScopeQuery_SelectWithWhere(t *testing.T) {
-	query := "SELECT * FROM ticket WHERE queue_id = ? AND state_id = ?"
-	args := []any{1, 2}
+	query := "SELECT * FROM gk_org_plugin_access WHERE plugin_name = ? AND group_id = ?"
+	args := []any{"p", 2}
 
 	scoped, newArgs := ScopeQuery(query, args, 42)
 
@@ -21,13 +21,13 @@ func TestScopeQuery_SelectWithWhere(t *testing.T) {
 	if newArgs[0] != int64(42) {
 		t.Errorf("first arg should be org_id=42, got %v", newArgs[0])
 	}
-	if newArgs[1] != 1 || newArgs[2] != 2 {
+	if newArgs[1] != "p" || newArgs[2] != 2 {
 		t.Errorf("original args should follow: %v", newArgs)
 	}
 }
 
 func TestScopeQuery_SelectWithoutWhere(t *testing.T) {
-	query := "SELECT * FROM ticket ORDER BY create_time DESC"
+	query := "SELECT * FROM gk_org_plugin_access ORDER BY create_time DESC"
 	args := []any{}
 
 	scoped, newArgs := ScopeQuery(query, args, 42)
@@ -44,13 +44,13 @@ func TestScopeQuery_SelectWithoutWhere(t *testing.T) {
 }
 
 func TestScopeQuery_SelectWithAlias(t *testing.T) {
-	query := "SELECT t.id, t.title FROM ticket t WHERE t.queue_id = ?"
+	query := "SELECT a.id, a.plugin_name FROM gk_org_plugin_access a WHERE a.group_id = ?"
 	args := []any{5}
 
 	scoped, newArgs := ScopeQuery(query, args, 10)
 
-	if !strings.Contains(scoped, "t.org_id = ?") {
-		t.Errorf("expected aliased t.org_id, got: %s", scoped)
+	if !strings.Contains(scoped, "a.org_id = ?") {
+		t.Errorf("expected aliased a.org_id, got: %s", scoped)
 	}
 	if len(newArgs) != 2 {
 		t.Fatalf("expected 2 args, got %d", len(newArgs))
@@ -58,8 +58,8 @@ func TestScopeQuery_SelectWithAlias(t *testing.T) {
 }
 
 func TestScopeQuery_UpdateWithWhere(t *testing.T) {
-	query := "UPDATE ticket SET title = ? WHERE id = ?"
-	args := []any{"new title", 99}
+	query := "UPDATE sysconfig_org SET effective_value = ? WHERE name = ?"
+	args := []any{"v", "Key"}
 
 	scoped, newArgs := ScopeQuery(query, args, 42)
 
@@ -72,7 +72,7 @@ func TestScopeQuery_UpdateWithWhere(t *testing.T) {
 }
 
 func TestScopeQuery_DeleteWithWhere(t *testing.T) {
-	query := "DELETE FROM ticket WHERE id = ?"
+	query := "DELETE FROM gk_user_organisation WHERE user_id = ?"
 	args := []any{99}
 
 	scoped, newArgs := ScopeQuery(query, args, 42)
@@ -86,8 +86,8 @@ func TestScopeQuery_DeleteWithWhere(t *testing.T) {
 }
 
 func TestScopeQuery_InsertNotModified(t *testing.T) {
-	query := "INSERT INTO ticket (title, queue_id, org_id) VALUES (?, ?, ?)"
-	args := []any{"test", 1, 42}
+	query := "INSERT INTO gk_org_plugin_access (org_id, plugin_name, group_id) VALUES (?, ?, ?)"
+	args := []any{42, "p", 1}
 
 	scoped, newArgs := ScopeQuery(query, args, 42)
 
@@ -113,8 +113,24 @@ func TestScopeQuery_NonOrgTable(t *testing.T) {
 	}
 }
 
+// TestScopeQuery_CoreTablesWithoutOrgColumn: ticket, queue, customer_user and
+// gk_custom_field_value have no org_id column in the schema, so scoping them
+// would turn every plugin query on them into an SQL error.
+func TestScopeQuery_CoreTablesWithoutOrgColumn(t *testing.T) {
+	for _, query := range []string{
+		"SELECT * FROM ticket WHERE queue_id = ?",
+		"UPDATE queue SET name = ? WHERE id = ?",
+		"SELECT * FROM customer_user WHERE login = ?",
+		"SELECT * FROM gk_custom_field_value WHERE field_id = ?",
+	} {
+		if scoped, _ := ScopeQuery(query, []any{1}, 42); scoped != query {
+			t.Errorf("table without org_id scoped: %s", scoped)
+		}
+	}
+}
+
 func TestScopeQuery_ZeroOrgID(t *testing.T) {
-	query := "SELECT * FROM ticket WHERE id = ?"
+	query := "SELECT * FROM gk_org_plugin_access WHERE id = ?"
 	args := []any{1}
 
 	scoped, newArgs := ScopeQuery(query, args, 0)
@@ -128,7 +144,7 @@ func TestScopeQuery_ZeroOrgID(t *testing.T) {
 }
 
 func TestScopeQuery_AlreadyHasOrgID(t *testing.T) {
-	query := "SELECT * FROM ticket WHERE org_id = ? AND queue_id = ?"
+	query := "SELECT * FROM gk_org_plugin_access WHERE org_id = ? AND group_id = ?"
 	args := []any{42, 1}
 
 	scoped, newArgs := ScopeQuery(query, args, 42)
@@ -143,10 +159,10 @@ func TestScopeQuery_AlreadyHasOrgID(t *testing.T) {
 
 func TestScopeQuery_DDLNotModified(t *testing.T) {
 	queries := []string{
-		"CREATE TABLE ticket (id INT)",
-		"DROP TABLE ticket",
-		"ALTER TABLE ticket ADD COLUMN x INT",
-		"TRUNCATE TABLE ticket",
+		"CREATE TABLE sysconfig_org (id INT)",
+		"DROP TABLE sysconfig_org",
+		"ALTER TABLE sysconfig_org ADD COLUMN x INT",
+		"TRUNCATE TABLE sysconfig_org",
 	}
 	for _, query := range queries {
 		t.Run(query[:10], func(t *testing.T) {
@@ -159,7 +175,7 @@ func TestScopeQuery_DDLNotModified(t *testing.T) {
 }
 
 func TestScopeQuery_WithGroupByAndLimit(t *testing.T) {
-	query := "SELECT queue_id, COUNT(*) FROM ticket GROUP BY queue_id LIMIT 10"
+	query := "SELECT plugin_name, COUNT(*) FROM gk_org_plugin_access GROUP BY plugin_name LIMIT 10"
 	args := []any{}
 
 	scoped, newArgs := ScopeQuery(query, args, 42)
@@ -176,54 +192,6 @@ func TestScopeQuery_WithGroupByAndLimit(t *testing.T) {
 	if len(newArgs) != 1 {
 		t.Errorf("expected 1 arg, got %d", len(newArgs))
 	}
-}
-
-func TestScopeQuery_CustomerUserTable(t *testing.T) {
-	query := "SELECT * FROM customer_user WHERE login = ?"
-	args := []any{"alice@example.com"}
-
-	scoped, newArgs := ScopeQuery(query, args, 99)
-
-	if !strings.Contains(scoped, "org_id = ?") {
-		t.Errorf("customer_user should be scoped, got: %s", scoped)
-	}
-	if len(newArgs) != 2 {
-		t.Fatalf("expected 2 args, got %d", len(newArgs))
-	}
-}
-
-func TestScopeQuery_CustomFieldValueTable(t *testing.T) {
-	query := "SELECT * FROM gk_custom_field_value WHERE field_id = ?"
-	args := []any{5}
-
-	scoped, newArgs := ScopeQuery(query, args, 7)
-
-	if !strings.Contains(scoped, "org_id = ?") {
-		t.Errorf("gk_custom_field_value should be scoped, got: %s", scoped)
-	}
-	if len(newArgs) != 2 {
-		t.Fatalf("expected 2 args, got %d", len(newArgs))
-	}
-}
-
-func TestRegisterOrgAwareTable(t *testing.T) {
-	tableName := "test_custom_table_xyz"
-	// Should not be org-aware before registration.
-	query := "SELECT * FROM test_custom_table_xyz WHERE id = ?"
-	scoped, _ := ScopeQuery(query, []any{1}, 42)
-	if scoped != query {
-		t.Error("unregistered table should not be scoped")
-	}
-
-	// Register and verify.
-	RegisterOrgAwareTable(tableName)
-	scoped, _ = ScopeQuery(query, []any{1}, 42)
-	if !strings.Contains(scoped, "org_id = ?") {
-		t.Error("registered table should now be scoped")
-	}
-
-	// Clean up.
-	delete(OrgAwareTables, tableName)
 }
 
 func TestExtractMainTable(t *testing.T) {

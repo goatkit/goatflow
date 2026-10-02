@@ -26,7 +26,7 @@ func NewConfigAdapter(vm *VersionManager) *ConfigAdapter {
 
 // ImportConfigYAML imports a Config.yaml file and stores its settings.
 func (ca *ConfigAdapter) ImportConfigYAML(path string) error {
-	data, err := os.ReadFile(path) //nolint:gosec // G304 false positive - config file path
+	data, err := os.ReadFile(path) // #nosec G304 -- Config.yaml under the operator-configured config dir, not request input
 	if err != nil {
 		return fmt.Errorf("read config file: %w", err)
 	}

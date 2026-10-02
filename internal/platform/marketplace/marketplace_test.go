@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/goatkit/goatflow/internal/platform/plugin/packaging"
 	"github.com/goatkit/goatflow/internal/platform/plugin/signing"
+	"github.com/goatkit/goatflow/pkg/plugin"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -209,6 +210,41 @@ func TestIsThemePlugin(t *testing.T) {
 				t.Errorf("got %v, want %v", isTheme, tt.want)
 			}
 		})
+	}
+}
+
+// A theme name from a downloaded manifest must not escape ThemeCacheDir.
+func TestThemeNameTraversalRejected(t *testing.T) {
+	t.Chdir(t.TempDir())
+	pluginDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(pluginDir, "theme.css"), []byte("body{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	victim := filepath.Join("static", "victim")
+	if err := os.MkdirAll(victim, 0o750); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, name := range []string{"../../escape", "..", "a/b", `a\b`, ""} {
+		if err := InstallTheme(pluginDir, &plugin.PluginManifest{Name: name, PluginType: "theme"}); err == nil {
+			t.Errorf("InstallTheme(%q) should be rejected", name)
+		}
+	}
+	if _, err := os.Stat(filepath.Join("static", "escape")); !os.IsNotExist(err) {
+		t.Fatalf("theme escaped the cache dir: %v", err)
+	}
+	if err := UninstallTheme("../../victim"); err == nil {
+		t.Error("UninstallTheme with traversal should be rejected")
+	}
+	if _, err := os.Stat(victim); err != nil {
+		t.Fatalf("UninstallTheme removed a directory outside the cache: %v", err)
+	}
+
+	if err := InstallTheme(pluginDir, &plugin.PluginManifest{Name: "ok-theme", PluginType: "theme"}); err != nil {
+		t.Fatalf("valid theme: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(ThemeCacheDir, "ok-theme", "theme.css")); err != nil {
+		t.Fatalf("valid theme not installed: %v", err)
 	}
 }
 

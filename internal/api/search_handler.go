@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,47 +13,42 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/search"
 )
 
-var searchManager *search.SearchManager
+// External search backend selected by SEARCH_BACKEND (nil: database backend).
+// externalSearchErr holds a configuration error; searches then fail instead of
+// silently falling back to another backend.
+var (
+	externalSearch    *search.ExternalBackend
+	externalSearchErr error
+)
 
 func init() {
-	// Initialize search manager. Without an explicitly configured primary
-	// backend, requests search the application database (see primarySearchBackend).
-	searchManager = search.NewSearchManager()
-
-	// Register Elasticsearch/Zinc backend if configured
-	if esEndpoint := os.Getenv("ELASTICSEARCH_ENDPOINT"); esEndpoint != "" {
-		esBackend := search.NewElasticBackend(
-			esEndpoint,
-			os.Getenv("ELASTICSEARCH_USERNAME"),
-			os.Getenv("ELASTICSEARCH_PASSWORD"),
-		)
-		// Make Elasticsearch primary if explicitly configured
-		if os.Getenv("SEARCH_BACKEND") == "elasticsearch" {
-			searchManager.RegisterBackend("elasticsearch", esBackend, true)
-		} else {
-			searchManager.RegisterBackend("elasticsearch", esBackend, false)
-		}
+	cfg, err := search.ConfigFromEnv()
+	if err != nil {
+		externalSearchErr = err
+		log.Printf("search: %v", err)
+		return
 	}
-
-	// Register Zinc backend if configured (alternative to Elasticsearch)
-	if zincEndpoint := os.Getenv("ZINC_ENDPOINT"); zincEndpoint != "" {
-		zincBackend := search.NewElasticBackend(
-			zincEndpoint,
-			os.Getenv("ZINC_USERNAME"),
-			os.Getenv("ZINC_PASSWORD"),
-		)
-		if os.Getenv("SEARCH_BACKEND") == "zinc" {
-			searchManager.RegisterBackend("zinc", zincBackend, true)
-		} else {
-			searchManager.RegisterBackend("zinc", zincBackend, false)
-		}
+	if cfg != nil {
+		externalSearch = search.NewExternalBackend(*cfg)
 	}
+}
+
+// primarySearchBackend returns the configured external backend (Zinc or
+// Elasticsearch), or a database backend bound to the current connection.
+func primarySearchBackend() (search.SearchBackend, error) {
+	if externalSearchErr != nil {
+		return nil, externalSearchErr
+	}
+	if externalSearch != nil {
+		return externalSearch, nil
+	}
+	return search.NewDatabaseBackend()
 }
 
 // HandleSearchAPI handles POST /api/v1/search.
 //
 //	@Summary		Search tickets
-//	@Description	Full-text search across tickets
+//	@Description	Full-text search across tickets, articles and customers. Ticket and article hits are limited to queues the caller can read.
 //	@Tags			Search
 //	@Accept			json
 //	@Produce		json
@@ -61,10 +56,10 @@ func init() {
 //	@Success		200		{object}	map[string]interface{}	"Search results"
 //	@Failure		400		{object}	map[string]interface{}	"Invalid request"
 //	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		503		{object}	map[string]interface{}	"Search backend unavailable or index not built"
 //	@Security		BearerAuth
 //	@Router			/search [post]
 func HandleSearchAPI(c *gin.Context) {
-	// Check authentication
 	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
@@ -75,14 +70,10 @@ func HandleSearchAPI(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	// Validate query
 	if req.Query == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Search query cannot be empty"})
 		return
 	}
-
-	// Set defaults
 	if len(req.Types) == 0 {
 		req.Types = []string{"ticket", "article", "customer"}
 	}
@@ -90,7 +81,7 @@ func HandleSearchAPI(c *gin.Context) {
 		req.Limit = 20
 	}
 	if req.Limit > 100 {
-		req.Limit = 100 // Max limit
+		req.Limit = 100
 	}
 
 	// Tickets and articles only from queues the agent can read (admins: all).
@@ -108,133 +99,161 @@ func HandleSearchAPI(c *gin.Context) {
 		req.QueueIDs = scope.queues.queueIDs
 	}
 
-	// Create context with timeout
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
 	backend, err := primarySearchBackend()
 	if err != nil {
 		log.Printf("HandleSearchAPI: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Search backend unavailable"})
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Search backend is misconfigured: " + err.Error()})
 		return
 	}
 
 	results, err := backend.Search(ctx, req)
 	if err != nil {
+		status, body := searchErrorResponse(backend.GetBackendName(), err)
 		log.Printf("HandleSearchAPI: %s search failed: %v", backend.GetBackendName(), err)
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Search backend unavailable"})
+		c.JSON(status, body)
 		return
 	}
-
 	c.JSON(http.StatusOK, results)
 }
 
-// primarySearchBackend returns the configured primary backend (Elasticsearch
-// or Zinc), or a database backend bound to the current connection.
-func primarySearchBackend() (search.SearchBackend, error) {
-	if backend := searchManager.GetPrimaryBackend(); backend != nil {
-		return backend, nil
+// searchErrorResponse maps a backend error to the HTTP answer.
+func searchErrorResponse(backend string, err error) (int, gin.H) {
+	var svcErr *search.ServiceError
+	switch {
+	case errors.Is(err, search.ErrInvalidQuery):
+		return http.StatusBadRequest, gin.H{"error": err.Error()}
+	case errors.Is(err, search.ErrIndexNotReady):
+		return http.StatusServiceUnavailable, gin.H{"backend": backend,
+			"error": "The " + backend + " search index has not been built yet. It is built automatically by the runner; an administrator can also start a reindex."}
+	case errors.As(err, &svcErr):
+		return http.StatusServiceUnavailable, gin.H{"backend": backend,
+			"error": "Search backend " + backend + " is unavailable: " + svcErr.Reason}
 	}
-	return search.NewDatabaseBackend()
+	return http.StatusServiceUnavailable, gin.H{"backend": backend, "error": "Search backend unavailable"}
 }
 
 // HandleReindexAPI handles POST /api/v1/search/reindex.
 //
 //	@Summary		Reindex search
-//	@Description	Trigger a search index rebuild
+//	@Description	Start a full rebuild of the Zinc or Elasticsearch index in the background (admin only). Progress is reported by GET /search/health. The database backend needs no index.
 //	@Tags			Search
-//	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	map[string]interface{}	"Reindex started"
+//	@Success		200	{object}	map[string]interface{}	"Database backend: nothing to do"
+//	@Success		202	{object}	map[string]interface{}	"Reindex started"
 //	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		403	{object}	map[string]interface{}	"Admin access required"
+//	@Failure		409	{object}	map[string]interface{}	"A reindex is already running"
+//	@Failure		503	{object}	map[string]interface{}	"Search backend misconfigured"
 //	@Security		BearerAuth
 //	@Router			/search/reindex [post]
 func HandleReindexAPI(c *gin.Context) {
-	// Check authentication and admin permissions
-	userID, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	_ = userID // TODO: Check for admin permissions
-
-	var req struct {
-		Types []string `json:"types"`
-		Force bool     `json:"force"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		// Default to all types
-		req.Types = []string{"ticket", "article", "customer"}
-	}
-
-	backend, err := primarySearchBackend()
-	if err != nil {
-		log.Printf("HandleReindexAPI: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Search backend unavailable"})
+	if !isAdminCaller(c) {
+		c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "Admin access required"})
 		return
 	}
-
-	// The database backend searches the live tables, so reindexing is not needed
-	if backend.GetBackendName() == "database" {
+	if externalSearchErr != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Search backend is misconfigured: " + externalSearchErr.Error()})
+		return
+	}
+	if externalSearch == nil {
+		// The database backend searches the live tables.
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Database backend does not require reindexing",
 			"backend": "database",
 		})
 		return
 	}
-
-	c.JSON(http.StatusNotImplemented, gin.H{
-		"error":   "Reindexing is not supported for this search backend",
-		"types":   req.Types,
-		"backend": backend.GetBackendName(),
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database unavailable"})
+		return
+	}
+	if !externalSearch.StartRebuild(db) {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":   "A reindex is already running",
+			"backend": externalSearch.GetBackendName(),
+			"reindex": externalSearch.RebuildStatus(),
+		})
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{
+		"message": "Reindex started",
+		"backend": externalSearch.GetBackendName(),
+		"reindex": externalSearch.RebuildStatus(),
 	})
 }
 
 // HandleSearchHealthAPI handles GET /api/v1/search/health.
 //
 //	@Summary		Search health
-//	@Description	Check search engine health status
+//	@Description	Report whether the search backend can serve searches; for Zinc and Elasticsearch also the index state, document counts and the latest reindex started by this server.
 //	@Tags			Search
-//	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	map[string]interface{}	"Search health status"
 //	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		503	{object}	map[string]interface{}	"Backend unreachable, misconfigured or index not built"
 //	@Security		BearerAuth
 //	@Router			/search/health [get]
 func HandleSearchHealthAPI(c *gin.Context) {
-	// Check authentication
-	userID, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	_ = userID
 
 	backend, err := primarySearchBackend()
 	if err != nil {
 		log.Printf("HandleSearchHealthAPI: %v", err)
 		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"status":  "unhealthy",
-			"message": "No search backend available",
+			"status": "unhealthy",
+			"error":  "Search backend is misconfigured: " + err.Error(),
 		})
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := backend.HealthCheck(ctx); err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"status":  "unhealthy",
-			"backend": backend.GetBackendName(),
-			"error":   err.Error(),
-		})
+	if externalSearch == nil {
+		if err := backend.HealthCheck(ctx); err != nil {
+			log.Printf("HandleSearchHealthAPI: database: %v", err)
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unhealthy", "backend": "database",
+				"error": "Database unavailable"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "healthy", "backend": "database"})
 		return
 	}
 
+	name := externalSearch.GetBackendName()
+	reindex := externalSearch.RebuildStatus()
+	index, err := externalSearch.Status(ctx)
+	if err != nil {
+		log.Printf("HandleSearchHealthAPI: %s: %v", name, err)
+		_, body := searchErrorResponse(name, err)
+		body["status"] = "unhealthy"
+		body["reindex"] = reindex
+		c.JSON(http.StatusServiceUnavailable, body)
+		return
+	}
+	if !index.Ready {
+		_, body := searchErrorResponse(name, search.ErrIndexNotReady)
+		body["status"] = "indexing"
+		body["index"] = index
+		body["reindex"] = reindex
+		c.JSON(http.StatusServiceUnavailable, body)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "healthy",
-		"backend": backend.GetBackendName(),
+		"backend": name,
+		"index":   index,
+		"reindex": reindex,
 	})
 }

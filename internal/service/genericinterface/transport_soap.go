@@ -310,7 +310,7 @@ func (t *SOAPTransport) parseXMLToMap(data []byte) (map[string]interface{}, *SOA
 // escapeXML escapes special characters for XML.
 func (t *SOAPTransport) escapeXML(s string) string {
 	var buf bytes.Buffer
-	xml.EscapeText(&buf, []byte(s))
+	_ = xml.EscapeText(&buf, []byte(s)) // bytes.Buffer writes cannot fail
 	return buf.String()
 }
 

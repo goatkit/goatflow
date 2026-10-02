@@ -212,7 +212,8 @@ if (req.url ~ "^/api/v1/" && beresp.status == 200) {
 - `cache_misses_total` - Total cache misses  
 - `cache_errors_total` - Cache operation errors
 - `cache_operation_duration_seconds` - Operation latency
-- `cache_size_bytes` - Current cache size
+- `cache_sets_total` - Total cache writes
+- `cache_deletes_total` - Total cache deletes
 
 ### Query Cache Metrics
 

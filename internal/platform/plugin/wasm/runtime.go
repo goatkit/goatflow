@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"sync"
 	"time"
@@ -81,7 +82,7 @@ func WithCallTimeout(d time.Duration) LoadOption {
 
 // LoadFromFile loads a WASM plugin from a file path.
 func LoadFromFile(ctx context.Context, path string, opts ...LoadOption) (*WASMPlugin, error) {
-	wasmBytes, err := os.ReadFile(path)
+	wasmBytes, err := os.ReadFile(path) // #nosec G304 -- .wasm path discovered under the host-configured plugin dir, not request input
 	if err != nil {
 		return nil, fmt.Errorf("read wasm file: %w", err)
 	}
@@ -110,7 +111,7 @@ func Load(ctx context.Context, wasmBytes []byte, opts ...LoadOption) (*WASMPlugi
 
 	// Define host functions before compiling the module
 	if err := p.defineHostFunctions(ctx); err != nil {
-		r.Close(ctx)
+		_ = r.Close(ctx)
 		return nil, fmt.Errorf("define host functions: %w", err)
 	}
 
@@ -120,7 +121,7 @@ func Load(ctx context.Context, wasmBytes []byte, opts ...LoadOption) (*WASMPlugi
 	moduleConfig := wazero.NewModuleConfig().WithSysWalltime().WithSysNanotime()
 	module, err := r.InstantiateWithConfig(ctx, wasmBytes, moduleConfig)
 	if err != nil {
-		r.Close(ctx)
+		_ = r.Close(ctx)
 		return nil, fmt.Errorf("instantiate wasm: %w", err)
 	}
 	p.module = module
@@ -144,7 +145,7 @@ func Load(ctx context.Context, wasmBytes []byte, opts ...LoadOption) (*WASMPlugi
 	// Call gk_register to get manifest
 	manifest, err := p.callRegister(ctx)
 	if err != nil {
-		r.Close(ctx)
+		_ = r.Close(ctx)
 		return nil, fmt.Errorf("gk_register failed: %w", err)
 	}
 	p.manifest = manifest
@@ -188,8 +189,10 @@ func (p *WASMPlugin) hostCall(ctx context.Context, fnPtr, fnLen, argsPtr, argsLe
 	// Set caller plugin name in context for better error messages
 	ctx = context.WithValue(ctx, plugin.PluginCallerKey, p.name)
 
-	// Dispatch to host API
-	result, err := p.dispatchHostCall(ctx, fnName, args)
+	// Dispatch through the shared dispatcher. p.host is the plugin's
+	// SandboxedHostAPI (set by the Manager in Init), so WASM plugins get the
+	// same methods, wire format and permission checks as gRPC plugins.
+	result, err := plugin.DispatchHostCall(ctx, p.host, fnName, args)
 	if err != nil {
 		// Log with caller context for debugging
 		p.host.Log(ctx, "error", fmt.Sprintf("host_call %s failed: %v", fnName, err), map[string]any{
@@ -227,292 +230,6 @@ func (p *WASMPlugin) hostLog(ctx context.Context, level uint32, msgPtr, msgLen u
 	}
 
 	p.host.Log(ctx, levelStr, msg, map[string]any{"plugin": p.name})
-}
-
-// dispatchHostCall routes host API calls to the appropriate method.
-// SECURITY: This function calls through p.host, which is set during Init()
-// to a SandboxedHostAPI instance. This ensures that WASM plugins are subject
-// to the same permission checks, rate limiting, and resource accounting as
-// gRPC plugins. The sandbox is applied at the Manager level during registration.
-func (p *WASMPlugin) dispatchHostCall(ctx context.Context, fn string, args []byte) ([]byte, error) {
-	switch fn {
-	case "db_query":
-		var req struct {
-			Query string `json:"query"`
-			Args  []any  `json:"args"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		rows, err := p.host.DBQuery(ctx, req.Query, req.Args...)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(rows)
-
-	case "db_exec":
-		var req struct {
-			Query string `json:"query"`
-			Args  []any  `json:"args"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		affected, err := p.host.DBExec(ctx, req.Query, req.Args...)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(map[string]int64{"affected": affected})
-
-	case "cache_get":
-		var req struct {
-			Key string `json:"key"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		val, found, err := p.host.CacheGet(ctx, req.Key)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(map[string]any{"value": val, "found": found})
-
-	case "cache_set":
-		var req struct {
-			Key   string `json:"key"`
-			Value []byte `json:"value"`
-			TTL   int    `json:"ttl"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		err := p.host.CacheSet(ctx, req.Key, req.Value, req.TTL)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(map[string]bool{"ok": true})
-
-	case "http_request":
-		var req struct {
-			Method  string            `json:"method"`
-			URL     string            `json:"url"`
-			Headers map[string]string `json:"headers"`
-			Body    []byte            `json:"body"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		status, body, err := p.host.HTTPRequest(ctx, req.Method, req.URL, req.Headers, req.Body)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(map[string]any{"status": status, "body": body})
-
-	case "send_email":
-		var req struct {
-			To      string `json:"to"`
-			Subject string `json:"subject"`
-			Body    string `json:"body"`
-			HTML    bool   `json:"html"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		err := p.host.SendEmail(ctx, req.To, req.Subject, req.Body, req.HTML)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(map[string]bool{"ok": true})
-
-	case "config_get":
-		var req struct {
-			Key string `json:"key"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		val, err := p.host.ConfigGet(ctx, req.Key)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(map[string]string{"value": val})
-
-	case "time_now":
-		// The server's local time, offset included. TinyGo guests have no
-		// timezone data, and ticket timestamps are stored as server-local wall
-		// clock, so plugins need the host's offset to compute "today" etc.
-		return json.Marshal(map[string]string{"now": time.Now().Format(time.RFC3339Nano)})
-
-	case "translate":
-		var req struct {
-			Key  string `json:"key"`
-			Args []any  `json:"args"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		val := p.host.Translate(ctx, req.Key, req.Args...)
-		return json.Marshal(map[string]string{"value": val})
-
-	case "plugin_call":
-		var req struct {
-			Plugin   string          `json:"plugin"`
-			Function string          `json:"function"`
-			Args     json.RawMessage `json:"args"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		result, err := p.host.CallPlugin(ctx, req.Plugin, req.Function, req.Args)
-		if err != nil {
-			return nil, err
-		}
-		return result, nil
-
-	case "publish_event":
-		var req struct {
-			Channel   string `json:"channel"`
-			EventType string `json:"event_type"`
-			Data      string `json:"data"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		if err := p.host.PublishEvent(ctx, req.Channel, req.EventType, req.Data); err != nil {
-			return nil, err
-		}
-		return json.Marshal(map[string]string{"status": "ok"})
-
-	case "entity_soft_delete":
-		var req struct {
-			EntityType string `json:"entity_type"`
-			EntityID   int64  `json:"entity_id"`
-			Reason     string `json:"reason"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		if err := p.host.EntitySoftDelete(ctx, req.EntityType, req.EntityID, req.Reason); err != nil {
-			return nil, err
-		}
-		return json.Marshal(map[string]string{"status": "ok"})
-
-	case "entity_restore":
-		var req struct {
-			EntityType string `json:"entity_type"`
-			EntityID   int64  `json:"entity_id"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		if err := p.host.EntityRestore(ctx, req.EntityType, req.EntityID); err != nil {
-			return nil, err
-		}
-		return json.Marshal(map[string]string{"status": "ok"})
-
-	case "entity_hard_delete":
-		var req struct {
-			EntityType string `json:"entity_type"`
-			EntityID   int64  `json:"entity_id"`
-			Reason     string `json:"reason"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		if err := p.host.EntityHardDelete(ctx, req.EntityType, req.EntityID, req.Reason); err != nil {
-			return nil, err
-		}
-		return json.Marshal(map[string]string{"status": "ok"})
-
-	case "recycle_bin_list":
-		var req struct {
-			EntityType string `json:"entity_type"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		result, err := p.host.RecycleBinList(ctx, req.EntityType)
-		if err != nil {
-			return nil, err
-		}
-		return result, nil
-
-	case "secure_config_get":
-		var req struct {
-			Key string `json:"key"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		val, err := p.host.SecureConfigGet(ctx, req.Key)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(map[string]string{"value": val})
-
-	case "secure_config_set":
-		var req struct {
-			Key   string `json:"key"`
-			Value string `json:"value"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		if err := p.host.SecureConfigSet(ctx, req.Key, req.Value); err != nil {
-			return nil, err
-		}
-		return json.Marshal(map[string]string{"status": "ok"})
-
-	case "org_id":
-		id := p.host.OrgID(ctx)
-		return json.Marshal(id)
-
-	case "custom_fields_get":
-		var req struct {
-			EntityType string   `json:"entity_type"`
-			ObjectID   int64    `json:"object_id"`
-			Fields     []string `json:"fields"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		result, err := p.host.CustomFieldsGet(ctx, req.EntityType, req.ObjectID, req.Fields)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(result)
-
-	case "custom_fields_set":
-		var req struct {
-			EntityType string         `json:"entity_type"`
-			ObjectID   int64          `json:"object_id"`
-			Values     map[string]any `json:"values"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		if err := p.host.CustomFieldsSet(ctx, req.EntityType, req.ObjectID, req.Values); err != nil {
-			return nil, err
-		}
-		return json.Marshal(map[string]string{"status": "ok"})
-
-	case "custom_fields_query":
-		var req struct {
-			EntityType string                     `json:"entity_type"`
-			Filters    []plugin.CustomFieldFilter `json:"filters"`
-		}
-		if err := json.Unmarshal(args, &req); err != nil {
-			return nil, err
-		}
-		ids, err := p.host.CustomFieldsQuery(ctx, req.EntityType, req.Filters)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(ids)
-
-	default:
-		return nil, fmt.Errorf("unknown host function: %s", fn)
-	}
 }
 
 // callRegister calls gk_register and parses the manifest.
@@ -622,13 +339,16 @@ func (p *WASMPlugin) Shutdown(ctx context.Context) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	var moduleErr error
 	if p.module != nil {
-		p.module.Close(ctx)
+		moduleErr = p.module.Close(ctx)
 	}
 	if p.runtime != nil {
-		return p.runtime.Close(ctx)
+		if err := p.runtime.Close(ctx); err != nil {
+			return err
+		}
 	}
-	return nil
+	return moduleErr
 }
 
 // Memory helpers
@@ -666,7 +386,13 @@ func (p *WASMPlugin) writeBytes(data []byte) uint64 {
 	if err != nil || len(results) == 0 {
 		return 0
 	}
-	ptr := uint32(results[0])
+	// wasm32 pointers are 32-bit; reject anything a misbehaving guest
+	// returns outside that range instead of silently truncating it.
+	raw := results[0]
+	if raw > math.MaxUint32 {
+		return 0
+	}
+	ptr := uint32(raw)
 	if ptr == 0 {
 		return 0
 	}
@@ -686,6 +412,7 @@ func (p *WASMPlugin) writeBytes(data []byte) uint64 {
 
 func (p *WASMPlugin) free(ptr uint32) {
 	if p.gkFree != nil && ptr != 0 {
-		p.gkFree.Call(context.Background(), uint64(ptr))
+		// Best-effort: a failing guest free only leaks guest memory.
+		_, _ = p.gkFree.Call(context.Background(), uint64(ptr))
 	}
 }

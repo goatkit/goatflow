@@ -187,12 +187,11 @@ func TestAuthMiddlewareSetsIsCustomerFlag(t *testing.T) {
 
 		assert.Equal(t, "Invalid or expired token", response["error"])
 	})
- }
+}
 
-func TestAuthMiddlewareHonorsBypassDisable(t *testing.T) {
+func TestAuthMiddlewareRejectsUnauthenticatedAdminRequest(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 	t.Setenv("APP_ENV", "test")
-	t.Setenv("GOATFLOW_DISABLE_TEST_AUTH_BYPASS", "1")
 
 	registry := NewHandlerRegistry()
 	RegisterExistingHandlers(registry)
@@ -215,11 +214,10 @@ func TestAuthMiddlewareHonorsBypassDisable(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusUnauthorized, resp.Code)
- }
+}
 
 func TestAuthMiddlewareAllowsPublicAuthCeremonyRoutes(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
-	t.Setenv("GOATFLOW_DISABLE_TEST_AUTH_BYPASS", "1")
 
 	registry := NewHandlerRegistry()
 	RegisterExistingHandlers(registry)
@@ -257,4 +255,4 @@ func TestAuthMiddlewareAllowsPublicAuthCeremonyRoutes(t *testing.T) {
 			assert.Equal(t, http.StatusNoContent, resp.Code)
 		})
 	}
- }
+}

@@ -406,7 +406,8 @@ export interface Webhook {
   name: string;
   url: string;
   events: string[];
-  headers: Record<string, string>;
+  /** Header name -> masked hint; header values are write-only. */
+  header_hints: Record<string, string>;
   has_secret: boolean;
   secret_hint?: string;
   retry_count: number;
@@ -424,7 +425,8 @@ export interface WebhookRequest {
   events?: string[];
   /** 16-512 characters; empty string removes the secret. */
   secret?: string;
-  headers?: Record<string, string>;
+  /** Replaces the custom headers; on update a null value keeps the stored value. */
+  headers?: Record<string, string | null>;
   retry_count?: number;
   timeout_seconds?: number;
   is_active?: boolean;

@@ -282,5 +282,5 @@ func saveReport(report ContractReport) error {
 		return err
 	}
 
-	return os.WriteFile("contract-test-report.json", data, 0644)
+	return os.WriteFile("contract-test-report.json", data, 0600)
 }

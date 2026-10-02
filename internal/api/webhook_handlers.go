@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -36,18 +37,20 @@ const (
 
 // webhookRequest is the body of create (all of name, url, events required)
 // and update (only the fields present change). An empty secret removes it.
+// Header values are write-only: on update a null value keeps the stored value
+// of that header, and headers left out of the object are removed.
 type webhookRequest struct {
-	Name           *string            `json:"name"`
-	URL            *string            `json:"url"`
-	Secret         *string            `json:"secret"`
-	Events         *[]string          `json:"events"`
-	Headers        *map[string]string `json:"headers"`
-	RetryCount     *int               `json:"retry_count"`
-	TimeoutSeconds *int               `json:"timeout_seconds"`
-	IsActive       *bool              `json:"is_active"`
+	Name           *string             `json:"name"`
+	URL            *string             `json:"url"`
+	Secret         *string             `json:"secret"`
+	Events         *[]string           `json:"events"`
+	Headers        *map[string]*string `json:"headers"`
+	RetryCount     *int                `json:"retry_count"`
+	TimeoutSeconds *int                `json:"timeout_seconds"`
+	IsActive       *bool               `json:"is_active"`
 }
 
-// apply copies the fields present in the request onto w.
+// apply copies the fields present in the request, except headers, onto w.
 func (r *webhookRequest) apply(w *webhook.Webhook) {
 	if r.Name != nil {
 		w.Name = *r.Name
@@ -58,9 +61,6 @@ func (r *webhookRequest) apply(w *webhook.Webhook) {
 	if r.Events != nil {
 		w.Events = *r.Events
 	}
-	if r.Headers != nil {
-		w.Headers = *r.Headers
-	}
 	if r.RetryCount != nil {
 		w.RetryCount = *r.RetryCount
 	}
@@ -70,6 +70,37 @@ func (r *webhookRequest) apply(w *webhook.Webhook) {
 	if r.IsActive != nil {
 		w.IsActive = *r.IsActive
 	}
+}
+
+// keepsHeader reports whether the request keeps any stored header value.
+func (r *webhookRequest) keepsHeader() bool {
+	if r.Headers == nil {
+		return false
+	}
+	for _, v := range *r.Headers {
+		if v == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// headerValues resolves the request's headers into the complete new set:
+// a null value takes the value stored under the same name.
+func (r *webhookRequest) headerValues(stored map[string]string) (map[string]string, error) {
+	out := make(map[string]string, len(*r.Headers))
+	for name, v := range *r.Headers {
+		if v != nil {
+			out[name] = *v
+			continue
+		}
+		old, ok := stored[name]
+		if !ok {
+			return nil, &webhook.ValidationError{Message: fmt.Sprintf("header %q has no stored value to keep; send a value", name)}
+		}
+		out[name] = old
+	}
+	return out, nil
 }
 
 func webhookFail(c *gin.Context, status int, msg string) {
@@ -176,11 +207,11 @@ func handleWebhookEvents(c *gin.Context) {
 // handleWebhookCreate handles POST /api/v1/webhooks.
 //
 //	@Summary		Create webhook
-//	@Description	Create an outbound webhook; deliveries are signed with X-Webhook-Signature (sha256=HMAC of the body) when a secret is set
+//	@Description	Create an outbound webhook; deliveries are signed with X-Webhook-Signature (sha256=HMAC of the body) when a secret is set. The secret and custom header values are stored encrypted and never returned (responses carry secret_hint and header_hints). URLs whose host is a loopback, private, link-local or other internal IP address (or localhost) are rejected unless GOATFLOW_WEBHOOK_ALLOW_PRIVATE_TARGETS=true.
 //	@Tags			Webhooks
 //	@Accept			json
 //	@Produce		json
-//	@Param			webhook	body		object	true	"name, url, events (required); secret, headers, retry_count, timeout_seconds, is_active"
+//	@Param			webhook	body		object	true	"name, url, events (required); secret, headers (object name -> value), retry_count, timeout_seconds, is_active"
 //	@Success		201		{object}	map[string]interface{}	"success, data: Webhook"
 //	@Failure		400		{object}	map[string]interface{}	"Validation error"
 //	@Failure		409		{object}	map[string]interface{}	"Name already used"
@@ -202,6 +233,14 @@ func handleWebhookCreate(c *gin.Context) {
 		IsActive:       true,
 	}
 	req.apply(w)
+	if req.Headers != nil {
+		values, err := req.headerValues(nil)
+		if err != nil {
+			webhookError(c, "create webhook", err)
+			return
+		}
+		w.Headers = values
+	}
 	if err := w.Normalize(webhooks.IsEvent); err != nil {
 		webhookError(c, "create webhook", err)
 		return
@@ -256,7 +295,7 @@ func handleWebhookGet(c *gin.Context) {
 // handleWebhookUpdate handles PUT /api/v1/webhooks/:id (partial update).
 //
 //	@Summary		Update webhook
-//	@Description	Partial update: only fields present change; an empty secret removes it
+//	@Description	Partial update: only fields present change; an empty secret removes it. headers replaces the custom headers: a null value keeps the stored value of that header, headers left out are removed; omit headers to keep them all.
 //	@Tags			Webhooks
 //	@Accept			json
 //	@Produce		json
@@ -292,6 +331,19 @@ func handleWebhookUpdate(c *gin.Context) {
 		return
 	}
 	req.apply(w)
+	if req.Headers != nil {
+		var stored map[string]string
+		if req.keepsHeader() {
+			if stored, err = repo.HeaderValues(c.Request.Context(), id); err != nil {
+				webhookError(c, "update webhook", err)
+				return
+			}
+		}
+		if w.Headers, err = req.headerValues(stored); err != nil {
+			webhookError(c, "update webhook", err)
+			return
+		}
+	}
 	if err := w.Normalize(webhooks.IsEvent); err != nil {
 		webhookError(c, "update webhook", err)
 		return
@@ -410,7 +462,7 @@ func handleWebhookDeliveries(c *gin.Context) {
 	webhookOK(c, http.StatusOK, list)
 }
 
-// handleWebhookDeliveryGet handles GET /api/v1/webhooks/deliveries/:id
+// handleWebhookDeliveryGet handles GET /api/v1/webhook-deliveries/:id
 // (includes payload and response body).
 //
 //	@Summary		Get webhook delivery
@@ -421,7 +473,7 @@ func handleWebhookDeliveries(c *gin.Context) {
 //	@Success		200	{object}	map[string]interface{}	"success, data: WebhookDelivery"
 //	@Failure		404	{object}	map[string]interface{}	"Not found"
 //	@Security		BearerAuth
-//	@Router			/webhooks/deliveries/{id} [get]
+//	@Router			/webhook-deliveries/{id} [get]
 func handleWebhookDeliveryGet(c *gin.Context) {
 	id, ok := pathID(c, "id")
 	if !ok {
@@ -439,7 +491,7 @@ func handleWebhookDeliveryGet(c *gin.Context) {
 	webhookOK(c, http.StatusOK, d)
 }
 
-// handleWebhookRedeliver handles POST /api/v1/webhooks/deliveries/:id/redeliver:
+// handleWebhookRedeliver handles POST /api/v1/webhook-deliveries/:id/redeliver:
 // sends the delivery's payload again now and returns the new delivery.
 //
 //	@Summary		Redeliver webhook delivery
@@ -450,7 +502,7 @@ func handleWebhookDeliveryGet(c *gin.Context) {
 //	@Success		200	{object}	map[string]interface{}	"success, data: WebhookDelivery"
 //	@Failure		404	{object}	map[string]interface{}	"Not found"
 //	@Security		BearerAuth
-//	@Router			/webhooks/deliveries/{id}/redeliver [post]
+//	@Router			/webhook-deliveries/{id}/redeliver [post]
 func handleWebhookRedeliver(c *gin.Context) {
 	id, ok := pathID(c, "id")
 	if !ok {

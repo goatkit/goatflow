@@ -32,6 +32,27 @@
         <div class="text-xs uppercase" style="color: var(--gk-text-muted);">{{ t("tickets.customer_id")|default:"CustomerID" }}</div>
         <div class="text-sm" style="color: var(--gk-text-primary);">{{ Ticket.customer_id|default:"-" }}</div>
     </div>
+    {% if Ticket.service and Ticket.service != "-" %}
+    <div class="gk-card p-3 sm:p-4">
+        <div class="text-xs uppercase" style="color: var(--gk-text-muted);">{{ t("tickets.service") }}</div>
+        <div class="text-sm" style="color: var(--gk-text-primary);">{{ Ticket.service }}</div>
+    </div>
+    {% endif %}
+    {% if Ticket.sla and Ticket.sla != "-" %}
+    <div class="gk-card p-3 sm:p-4">
+        <div class="text-xs uppercase" style="color: var(--gk-text-muted);">{{ t("tickets.sla") }}</div>
+        <div class="text-sm" style="color: var(--gk-text-primary);">{{ Ticket.sla }}</div>
+    </div>
+    {% endif %}
+    {% for esc in Ticket.escalations %}
+    <div class="gk-card p-3 sm:p-4" data-escalation="{{ esc.kind }}"{% if esc.overdue %} data-escalated="true" style="border-color: var(--gk-error); background: var(--gk-error-subtle);"{% endif %}>
+        <div class="text-xs uppercase" style="color: var(--gk-text-muted);">{% if esc.kind == "first_response" %}{{ t("tickets.escalation.first_response") }}{% elif esc.kind == "update" %}{{ t("tickets.escalation.update") }}{% else %}{{ t("tickets.escalation.solution") }}{% endif %}</div>
+        <div class="text-sm" style="color: var(--gk-text-primary);">{{ esc.at }}</div>
+        <div class="text-xs" style="color: {% if esc.overdue %}var(--gk-error){% else %}var(--gk-text-muted){% endif %};">
+            {% if esc.overdue %}{{ t("tickets.escalation.overdue_by") }} <span data-relative-time data-mode="duration" data-direction="past" data-timestamp="{{ esc.at_iso }}">{{ esc.relative }}</span>{% else %}{{ t("tickets.escalation.due_in") }} <span data-relative-time data-mode="duration" data-direction="future" data-timestamp="{{ esc.at_iso }}">{{ esc.relative }}</span>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
     {% if DynamicFields %}
     {% for df in DynamicFields %}
     <div class="gk-card p-3 sm:p-4">

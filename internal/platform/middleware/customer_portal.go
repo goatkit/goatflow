@@ -4,12 +4,12 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
+	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 )
@@ -148,6 +148,8 @@ func pathMatchesCustomerPrefix(path, prefix string) bool {
 }
 
 // CustomerPortalGate loads portal config, enforces enable/disable, and applies optional login rules.
+// A signed-in customer gets their company's settings (per-company overrides on
+// top of the global values); anonymous visitors get the global settings.
 func CustomerPortalGate(jwtManager *auth.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		log.Printf("[CUST-PORTAL] path=%s jwtManager=%v", c.Request.URL.Path, jwtManager != nil)
@@ -158,7 +160,20 @@ func CustomerPortalGate(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			return
 		}
 
-		cfg, err := sysconfig.LoadCustomerPortalConfig(db)
+		// identify only reads the token; OptionalAuth would run the route
+		// handler (c.Next) before the checks below.
+		if jwtManager != nil {
+			NewAuthMiddleware(jwtManager).identify(c)
+		}
+		role, identified := c.Get("user_role")
+		isCustomer := identified && role == "Customer"
+
+		var cfg sysconfig.CustomerPortalConfig
+		if isCustomer {
+			cfg, err = sysconfig.LoadCustomerPortalConfigForCustomerUser(db, c.GetString("customer_login"))
+		} else {
+			cfg, err = sysconfig.LoadCustomerPortalConfig(db)
+		}
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load portal configuration"})
 			c.Abort()
@@ -173,45 +188,21 @@ func CustomerPortalGate(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		}
 
 		loginRequired := cfg.LoginRequired
-		if strings.EqualFold(strings.TrimSpace(os.Getenv("CUSTOMER_FE_ONLY")), "true") || strings.TrimSpace(os.Getenv("CUSTOMER_FE_ONLY")) == "1" {
+		if config.CustomerFEOnly() {
 			loginRequired = true
 		}
 
-		if loginRequired {
-			// identify only reads the token; OptionalAuth would run the
-			// route handler (c.Next) before the role check below.
-			if jwtManager != nil {
-				NewAuthMiddleware(jwtManager).identify(c)
-			}
-
-			if role, ok := c.Get("user_role"); !ok || role != "Customer" {
-				if wantsHTML(c) {
-					c.Redirect(http.StatusFound, "/customer/login")
-					c.Abort()
-					return
-				}
-				c.JSON(http.StatusForbidden, gin.H{"error": "customer access required"})
+		// Agents are never let into the portal; anonymous visitors only when
+		// login is not required.
+		if (identified && !isCustomer) || (loginRequired && !isCustomer) {
+			if wantsHTML(c) {
+				c.Redirect(http.StatusFound, "/customer/login")
 				c.Abort()
 				return
 			}
-			c.Next()
+			c.JSON(http.StatusForbidden, gin.H{"error": "customer access required"})
+			c.Abort()
 			return
-		}
-
-		// Login not required: attempt optional auth to enrich context, but allow anonymous users through.
-		if jwtManager != nil {
-			NewAuthMiddleware(jwtManager).identify(c)
-
-			if role, ok := c.Get("user_role"); ok && role != "Customer" {
-				if wantsHTML(c) {
-					c.Redirect(http.StatusFound, "/customer/login")
-					c.Abort()
-					return
-				}
-				c.JSON(http.StatusForbidden, gin.H{"error": "customer access required"})
-				c.Abort()
-				return
-			}
 		}
 		c.Next()
 	}

@@ -2,10 +2,14 @@
 // This package has no dependencies on other internal packages to avoid circular imports.
 package convert
 
-import "strconv"
+import (
+	"math"
+	"strconv"
+)
 
 // ToInt converts various types to int with a fallback value.
 // Handles all integer, unsigned, float, and string types.
+// Returns fallback for unsigned values above math.MaxInt.
 func ToInt(v interface{}, fallback int) int {
 	switch val := v.(type) {
 	case int:
@@ -19,6 +23,9 @@ func ToInt(v interface{}, fallback int) int {
 	case int64:
 		return int(val)
 	case uint:
+		if val > math.MaxInt {
+			return fallback
+		}
 		return int(val)
 	case uint8:
 		return int(val)
@@ -27,7 +34,10 @@ func ToInt(v interface{}, fallback int) int {
 	case uint32:
 		return int(val)
 	case uint64:
-		return int(val)
+		if val > math.MaxInt {
+			return fallback
+		}
+		return int(val) // #nosec G115 -- val <= math.MaxInt checked above
 	case float32:
 		return int(val)
 	case float64:

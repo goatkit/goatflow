@@ -173,7 +173,7 @@ func (s *FileRouteStore) Apply(ctx context.Context, config *RouteConfig) error {
 		return fmt.Errorf("failed to marshal config to YAML: %w", err)
 	}
 
-	if err := os.WriteFile(filePath, yamlData, 0644); err != nil {
+	if err := os.WriteFile(filePath, yamlData, 0644); err != nil { // #nosec G306 -- non-secret route definition, same mode as the tracked routes/*.yaml the server reads
 		return fmt.Errorf("failed to write route file: %w", err)
 	}
 

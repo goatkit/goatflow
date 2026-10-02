@@ -3,7 +3,6 @@ package api
 import (
 	"database/sql"
 	"errors"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -204,7 +203,7 @@ func handleAdminSetupCustomerSearch(c *gin.Context) {
 		"SELECT customer_id, name FROM customer_company WHERE LOWER(name) LIKE LOWER(?) OR LOWER(customer_id) LIKE LOWER(?) LIMIT 50"),
 		likeQuery, likeQuery)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database error: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": internalDBError(c, "search customer companies", err)})
 		return
 	}
 	defer rows.Close()
@@ -265,14 +264,14 @@ func handleAdminSetupTask(c *gin.Context) {
 		return
 	}
 
-	// Plugin task: forward the request body to the plugin handler.
+	// Plugin task: forward the JSON body, with the host envelope, to the plugin handler.
 	if c.Request.Method == http.MethodPost {
-		body, err := io.ReadAll(c.Request.Body)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Could not read request body"})
+		args, status, msg := pluginJSONBodyArgs(c, pluginName)
+		if args == nil {
+			c.JSON(status, gin.H{"success": false, "error": msg})
 			return
 		}
-		out, err := svc.CallPluginTask(c.Request.Context(), pluginName, taskID, body)
+		out, err := svc.CallPluginTask(c.Request.Context(), pluginName, taskID, args)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
 			return

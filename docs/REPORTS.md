@@ -72,11 +72,17 @@ Pending tickets are not in the backlog.
   current month.
 - A ticket counts as "created" in the bucket of its create time, and as "closed" in the bucket of
   its close time (see above).
+- "Open" is the number of tickets still unresolved at the end of the bucket (for today: now):
+  tickets created by then that were not yet closed, merged or removed. Tickets created before the
+  window that are still unresolved count too. A ticket now in a `closed`, `merged`, `removed` or
+  other non-open, non-pending state type counts as resolved from its last change time; pending
+  tickets count as unresolved.
 - Closure rate = closed / created x 100 over the whole window. It is 0 when nothing was created.
 
 ### Agent activity
 
-For each valid agent (`users.valid_id = 1`), within the selected period:
+For each valid agent (`users.valid_id = 1`), within the selected period (see
+[Permission scoping](#permission-scoping) for which agents are listed):
 
 | Column | Counts |
 |--------|--------|
@@ -104,17 +110,22 @@ Every statistics endpoint counts only tickets the caller may read.
 
 | Caller | Tickets counted |
 |--------|-----------------|
-| Member of the `admin` group | All tickets |
+| Member of the `admin` group | All tickets in valid queues |
 | Other agent | Tickets in valid queues whose group the agent holds `ro` or `rw` on, directly (`group_user`) or through a role (`role_user` -> `group_role`) |
 | Agent with no such queue | Request refused with 403 "You do not have access to any queues" |
 | Customer (customer JWT or customer API token) | Request refused with 403 |
 
 The check uses the queue access service (`QueueAccessService.IsAdmin` and
 `GetAccessibleQueueIDs` with permission `ro`), the same rules as the `queue_ro` route middleware.
-Because `/admin/reports` is admin-only, everyone who opens the page sees all tickets. Non-admin
-agents only get scoped figures when they call the API directly.
+Tickets in invalid queues are counted for nobody, so admin totals always equal the sum of the
+per-queue lists (which list valid queues only). Because `/admin/reports` is admin-only, everyone
+who opens the page sees all tickets in valid queues. Non-admin agents only get scoped figures when
+they call the API directly.
 
-The agent list in `/statistics/agents` contains every valid agent. Only the counts are scoped.
+The agent list in `/statistics/agents` depends on the caller. Admins get every valid agent,
+including agents with all counts at 0. Other agents get only the agents with at least one assigned
+ticket, closed ticket or article on tickets in the queues they can read: those agents are already
+visible on those tickets, while the full agent roster is not exposed.
 
 ## Exports
 
@@ -183,11 +194,11 @@ tokens.
 | Path | Query parameters | Returns |
 |------|------------------|---------|
 | `/statistics/dashboard` | none | Counts by bucket, queue and priority; 10 newest tickets |
-| `/statistics/trends` | `period` = `daily` (default) or `monthly`; `days` 1-366, default 7 (daily only); `months` 1-24, default 3 (monthly only) | Created/closed per day or month |
-| `/statistics/agents` | `period` = `24h`, `7d` (default) or `30d` | Per-agent activity |
+| `/statistics/trends` | `period` = `daily` (default) or `monthly`; `days` 1-366, default 7 (daily only); `months` 1-24, default 3 (monthly only) | Created, closed and open per day or month |
+| `/statistics/agents` | `period` = `24h`, `7d` (default) or `30d` | Per-agent activity (which agents: see [Permission scoping](#permission-scoping)) |
 | `/statistics/queues` | none | Per-queue total, open and backlog |
 | `/statistics/analytics` | `type` = `hourly` (default) or `day_of_week`; `days` 1-366, default 30 | Created/closed by UTC hour of day or weekday |
-| `/statistics/customers` | `top` integer, default 10; 0 or less returns every customer | Top customers and customer totals |
+| `/statistics/customers` | `top` 1-100, default 10 | Top customers and customer totals |
 | `/statistics/export` | `format` = `json` (default) or `csv`; `type` = `summary` (default) or `tickets`; `period` = `24h`, `7d` (default) or `30d` | File download (see [Exports](#exports)) |
 | `/ticket-states/statistics` | none | Ticket count per ticket state |
 
@@ -211,9 +222,9 @@ tokens.
 | `trends[]` | `date` (`YYYY-MM-DD` daily, `YYYY-MM` monthly), `created`, `closed`, `open` |
 | `summary` | `total_created`, `total_closed`, `average_per_day`, `closure_rate` (percent) |
 
-`trends[].open` is a running total of created minus closed since the start of the window, never
-below 0. It is not the number of open tickets. `average_per_day` is `total_created` divided by the
-number of days in the window, also for `monthly`.
+`trends[].open` is the number of tickets still unresolved at the end of the bucket (see
+[Trend buckets](#trend-buckets)). `average_per_day` is `total_created` divided by the number of
+days in the window, also for `monthly`.
 
 **`/statistics/agents`**
 

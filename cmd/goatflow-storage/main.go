@@ -174,7 +174,7 @@ func openDB(host, port, user, password, name string) (*sql.DB, error) {
 		return nil, err
 	}
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close() // best-effort cleanup; the ping error is what the caller needs
 		return nil, err
 	}
 	return db, nil

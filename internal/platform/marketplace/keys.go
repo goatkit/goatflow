@@ -20,7 +20,7 @@ func LoadTrustedKeys() ([]ed25519.PublicKey, error) {
 	}
 
 	if keyFile := os.Getenv("GOATFLOW_TRUSTED_KEYS_FILE"); keyFile != "" {
-		data, err := os.ReadFile(keyFile)
+		data, err := os.ReadFile(keyFile) // #nosec G304 G703 -- path from operator-set GOATFLOW_TRUSTED_KEYS_FILE env var, not request input
 		if err != nil {
 			return nil, fmt.Errorf("read trusted keys file: %w", err)
 		}

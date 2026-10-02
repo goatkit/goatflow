@@ -10,7 +10,7 @@ The existing `customer_company` table remains for OTRS-compatible customer manag
 
 - **Admin**: "I want to create organisations and assign users to them so data is isolated between clients"
 - **Agent**: "I want to switch between organisations to manage tickets for different clients"
-- **Plugin author**: "I want my plugin data automatically scoped to the user's organisation without writing scoping logic"
+- **Plugin author**: "I want my plugin to know the caller's organisation and have platform data that belongs to an organisation kept apart for me" (0.10.0: see HostAPI Enforcement for what is kept apart)
 - **Customer**: "I only see my organisation's data — tickets, devices, invoices — nothing from other orgs"
 - **Admin**: "I want different configuration per organisation — different SLA rules, different branding, different feature flags"
 
@@ -163,39 +163,39 @@ If no organisations exist in the database, the system operates in "single-org" m
 
 ## HostAPI Enforcement
 
-All HostAPI database methods automatically filter by the caller's active org:
+**Status (0.10.0):** only what is listed here is enforced. The original plan
+(add `org_id` to `ticket`, `queue`, `customer_user`, `gk_custom_field_value`
+and `gk_plugin_ui`, scope every plugin query and fill `org_id` on INSERT) was
+not built: those tables have no `org_id` column, and core data is not
+separated by organisation.
 
-```go
-// Before (no org scoping):
-host.DBQuery(ctx, "SELECT * FROM ticket WHERE queue_id = ?", queueID)
+Every request-driven plugin call carries the caller's active organisation in
+its envelope (`_org_id`); the plugin Manager puts it into the call context.
+With it:
 
-// After (platform adds org filter transparently):
-// The sandbox injects: AND org_id = ? (from session context)
-// Plugin code doesn't change.
-```
-
-### Implementation
-
-The `SandboxedHostAPI` (or a new `OrgScopedHostAPI` wrapper) intercepts `DBQuery`/`DBExec` calls and:
-
-1. Parses the SQL to find the primary table
-2. If the table has an `org_id` column, appends `AND org_id = ?` to WHERE clause
-3. For INSERT, sets `org_id` to the active org automatically
-4. Tables without `org_id` pass through unmodified
-
-This is opt-in per table — only tables that have been migrated to include `org_id` get scoped.
+- `HostAPI.OrgID(ctx)` returns the organisation.
+- Secure config keys and plugin files are kept per organisation.
+- The `SandboxedHostAPI` scopes `DBQuery`/`DBExec` on organisation-owned
+  tables (`organisation.OrgAwareTables`): it finds the statement's main table
+  and appends `AND org_id = ?` (or `WHERE org_id = ?`). Statements that already
+  mention `org_id`, INSERTs and DDL pass through.
 
 ### Org-Aware Tables
 
-Tables that gain an `org_id` column:
+Tables whose rows each belong to one organisation (`org_id NOT NULL`):
 
 | Table | Scoping Behaviour |
 |-------|-------------------|
-| `ticket` | Tickets visible only within the org |
-| `queue` | Queues can be org-specific or global |
-| `customer_user` | Customers scoped to their org |
-| `gk_custom_field_value` | Custom field values scoped per org |
-| `gk_plugin_ui` | Plugin UIs can be org-specific |
+| `gk_org_plugin_access` | Plugin grants of the caller's org only |
+| `gk_user_organisation` | Memberships of the caller's org only |
+| `sysconfig_org` | The caller's org's setting overrides only |
+| `gk_identity_provider_org` | Identity-provider links of the caller's org only |
+
+Tables with a nullable `org_id` (NULL = global: `gk_secure_config`,
+`gk_identity_provider`, `gk_recycle_bin`, `gk_deletion_log`) are not scoped,
+because the filter would hide the global rows. Plugin-owned tables are not
+scoped; a plugin that keeps data per organisation stores `org_id` and filters
+on `_org_id` / `OrgID` itself.
 
 ### HostAPI Addition
 
@@ -275,7 +275,7 @@ Org admins access org settings via **Admin → Organisations → [Org Name] → 
 
 ## Security Considerations
 
-1. **Org isolation is server-side** — scoping happens in the HostAPI, not in plugin code; plugins can't bypass it
+1. **Org isolation is server-side** — the org comes from the authenticated session (client-supplied `_org_id` is dropped) and the host applies it to OrgID, secure config, plugin files and org-owned tables; anything else a plugin reads (core tables, its own tables) is only as isolated as the plugin's own filtering
 2. **Cross-org access** — users can only access orgs they're members of; the session stores the active org
 3. **Org admin != system admin** — org admins manage their org's settings and users, not the platform
 4. **Slug uniqueness** — slugs are unique and URL-safe for subdomain routing
@@ -293,7 +293,7 @@ Org admins access org settings via **Admin → Organisations → [Org Name] → 
 8. [ ] Org switcher UI component — dropdown in navigation
 9. [ ] Per-org settings — extend sysconfig.Manager with org-scoped resolution via `sysconfig_org`
 10. [ ] Admin UI — organisation CRUD, membership management, settings
-11. [ ] HostAPI query scoping — auto-inject org_id filters (opt-in per table)
+11. [~] HostAPI query scoping — org-owned platform tables only (see HostAPI Enforcement); core tables have no `org_id`
 12. [ ] i18n — translations for all 15 languages
 13. [ ] Tests — unit, integration, E2E
 

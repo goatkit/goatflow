@@ -2,9 +2,6 @@
 
 Helm chart for deploying GoatFlow on Kubernetes.
 
-> **Read [Known limitations (0.10.0 chart)](#known-limitations-0100-chart) before you install.**
-> A default install of this chart does not give a working GoatFlow yet.
-
 ## Prerequisites
 
 - Kubernetes 1.25+
@@ -84,60 +81,45 @@ make helm ARGS="dependency update charts/goatflow"
 
 | Component | Image | Notes |
 |-----------|-------|-------|
-| Backend Deployment | `ghcr.io/goatkit/goatflow` | Agent UI, customer portal, REST API. Runs migrations at start. Also runs the in-process scheduler (email polling, escalation checks, pending reminders, auto close, GenericAgent jobs). Probes use `GET /health`, which pings the database. |
-| Frontend Deployment | `nginx:1.25-alpine` | The Ingress sends traffic here. It is not a separate customer portal. |
-| Database StatefulSet | `mariadb:11` or `postgres:16-alpine` | Skipped when `database.external.enabled` is true. |
-| Valkey | valkey-helm subchart | Redis-compatible cache. |
-| Ingress | — | Optional (`ingress.enabled`). |
+| Backend Deployment | `ghcr.io/goatkit/goatflow` | Agent UI, customer portal (`/customer`), REST API. Runs migrations at start (replicas take turns through a database lock). Also runs the in-process scheduler (email polling, escalation checks, pending reminders, auto close, GenericAgent jobs). Probes use `GET /health`, which pings the database. |
+| Runner Deployment | `ghcr.io/goatkit/goatflow-runner` | `./goats -mode runner`: sends the outgoing email queue, delivers webhooks, evaluates ticket notification rules, cleans up expired sessions. Same database, secrets and email settings as the backend; no Service. `runner.enabled`, one replica. |
+| Database StatefulSet | `mariadb:11` or `postgres:16-alpine` | Skipped when `database.external.enabled` is true. Backend and runner wait for it (`busybox` init container). |
+| Valkey | valkey-helm subchart | Redis-compatible cache, Service `<release>-valkey`. |
+| Ingress | — | Optional (`ingress.enabled`). Every path goes to the backend Service. |
+| Metrics Service | — | Optional (`metrics.enabled`): `<fullname>-metrics` on port 9090. |
+| Storage PVC | — | `<fullname>-storage`, mounted on the backend at `config.storage.path`: fs attachments and plugin files. Kept on `helm uninstall`. |
 
-## Known limitations (0.10.0 chart)
+The chart has no separate customer-only instance (Docker Compose and TrueNAS can run one with
+`CUSTOMER_FE_ONLY=true`); the backend serves the customer portal at `/customer`.
 
-The 0.10.0 chart does not yet match the Docker Compose stack (`deploy/docker-compose.yml`) or
-the TrueNAS app. Each row below was checked against `charts/goatflow/templates/` and the
-GoatFlow code.
+### Secrets
 
-### What does not work
+With `secrets.create: true` (default) the chart creates two Secrets. Values left empty are
+generated on install and kept on every `helm upgrade` (the chart reads the live Secret):
 
-| Limitation | What happens | Work-around |
-|------------|--------------|-------------|
-| **No background runner** | The runner (`./goats -mode runner`, image `ghcr.io/goatkit/goatflow-runner`) is the only process that runs the email queue, webhook dispatch and session cleanup tasks. On a Helm install no outgoing email is sent (customer ticket emails, password-reset and sign-up links stay in the `mail_queue` table), webhooks are never delivered, and expired sessions are not cleaned up. | Run a runner Deployment yourself, for example through `extraResources`. Give it the same database settings, `JWT_SECRET` and `GOATFLOW_SECURE_KEY` as the backend, plus SMTP settings (`GOATFLOW_EMAIL_SMTP_HOST`, `GOATFLOW_EMAIL_SMTP_PORT`, `GOATFLOW_EMAIL_SMTP_USER`, `GOATFLOW_EMAIL_SMTP_PASSWORD`, `GOATFLOW_EMAIL_FROM`). |
-| **Ingress does not reach the UI** | The Ingress sends every path to the frontend nginx. That nginx proxies only `/api/` and `/ws` to the backend and answers everything else from its own files. `/login`, `/customer`, `/admin` and the other pages never reach the backend. nginx also answers `/health` itself with a fixed 200. | Set `ingress.enabled: false` and create your own Ingress to the Service `<fullname>-backend`, port 8080 (for example through `extraResources`). |
-| **`GOATFLOW_SECURE_KEY` is not set** | Each backend pod makes its own random key at start and writes it to the log. Encrypted values (plugin secure settings, webhook signing secrets) cannot be read after a restart or by another replica. | Create a Secret with 64 hex characters (`openssl rand -hex 32`) and set `GOATFLOW_SECURE_KEY` from it in `backend.extraEnv`. Never change it later. |
-| **Environment names GoatFlow does not read** | The backend gets `DB_TYPE` (GoatFlow reads `DB_DRIVER`, default `mysql`), `APP_SECRET` (GoatFlow reads `JWT_SECRET`), `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` and `CACHE_ENABLED` (GoatFlow reads `GOATFLOW_VALKEY_HOST`, `GOATFLOW_VALKEY_PORT`, `GOATFLOW_VALKEY_PASSWORD`), `SERVER_PORT` (GoatFlow reads `APP_PORT`, default 8080) and `SESSION_TIMEOUT` (not read). Results: PostgreSQL installs try to connect as MySQL; login tokens are signed with the placeholder secret from `config/default.yaml`; the cache is turned off. | Set `DB_DRIVER`, `JWT_SECRET` and the `GOATFLOW_VALKEY_*` variables in `backend.extraEnv` (example below). |
-| **`backend-config` ConfigMap is not mounted** | The chart writes `STORAGE_TYPE`, `STORAGE_PATH` and the values above into the `<fullname>-backend-config` ConfigMap, but the Deployment does not load it. `config.storage.*` has no effect; attachments stay in the database (`db`). `config.email.*` is not used anywhere. | Keep `db` storage. Email needs the runner (first row). |
-| **Bundled MariaDB never becomes ready** | The MariaDB probes run `mysqladmin`, which the `mariadb:11` image does not include. | Use PostgreSQL (with `DB_DRIVER`) or an external database. |
-| **Valkey password Secret is missing** | With `valkey.enabled: true` the backend reads `REDIS_PASSWORD` from the Secret `<release>-valkey`, key `valkey-password`. The Valkey subchart does not create that Secret, so the backend pod cannot start. | Create that Secret yourself (the password is the one in `valkey.auth.aclConfig`, default `changeme`), or set `valkey.auth.existingSecret`. |
-| **Secrets change on upgrade** | Database and app secrets left empty in values are generated again on every `helm upgrade`. The database volume keeps the old password, so the backend can no longer log in. | Set `database.*.password` and `secrets.appSecretKey`, or use existing Secrets with `secrets.create: false`. |
-| **No customer-only instance** | Docker Compose and TrueNAS can run a second, customer-only instance (`CUSTOMER_FE_ONLY=true`). The chart does not. | The backend serves the customer portal at `/customer`. |
-| **Metrics listener off** | `/metrics` on the app port needs an admin login. The unauthenticated listener on `METRICS_PORT` (default 9090) only starts with `METRICS_ENABLED=true`. | Set `METRICS_ENABLED=true` in `backend.extraEnv` before using the scrape annotations below. |
+| Secret | Keys |
+|--------|------|
+| `<fullname>-database` | `mysql-root-password`, `mysql-user`, `mysql-password` (or `postgres-user`, `postgres-password`) |
+| `<fullname>-app` | `app-secret-key` (`JWT_SECRET`), `secure-key` (`GOATFLOW_SECURE_KEY`, 64 hex characters), `admin-password` (`GOATFLOW_ADMIN_PASSWORD`), `smtp-password` when `config.email.smtp.password` is set |
 
-### Example work-around values
+`GOATFLOW_SECURE_KEY` encrypts stored webhook signing secrets and plugin secure settings. The
+backend and the runner read the same key. Back it up and never change it: stored secrets
+cannot be decrypted with a different key. To bring your own, set `secrets.secureKey`
+(`openssl rand -hex 32`) or point `secrets.existingSecret` at a Secret with the keys above.
 
-For a release named `goatflow` (the chart's app Secret is then `goatflow-app` and the Valkey
-Service is `goatflow-valkey`):
+### First login
 
-```yaml
-ingress:
-  enabled: false            # add your own Ingress to goatflow-backend:8080
-backend:
-  extraEnv:
-    - name: JWT_SECRET
-      valueFrom:
-        secretKeyRef:
-          name: goatflow-app
-          key: app-secret-key
-    - name: GOATFLOW_SECURE_KEY
-      valueFrom:
-        secretKeyRef:
-          name: goatflow-secure-key   # create this Secret yourself
-          key: key
-    - name: GOATFLOW_VALKEY_HOST
-      value: goatflow-valkey
-    - name: GOATFLOW_VALKEY_PASSWORD
-      value: changeme                 # match valkey.auth.aclConfig
-    - name: DB_DRIVER                 # PostgreSQL only
-      value: postgres
+The seeded admin account `root@localhost` is disabled until the first backend start applies
+`admin-password` to it (once; later changes to the Secret are ignored). Read it with:
+
+```bash
+kubectl get secret <fullname>-app -o jsonpath='{.data.admin-password}' | base64 -d
 ```
+
+Set `secrets.adminPassword` to choose it yourself. Change it in GoatFlow after the first login.
+
+The backend runs with `APP_ENV=production`, so its login cookies are `Secure`: serve GoatFlow
+over HTTPS (Ingress TLS or a TLS-terminating proxy), or browsers drop the session cookie.
 
 ## Configuration
 
@@ -174,7 +156,7 @@ The backend reads the user name and password from `existingSecret` with these ke
 | `mysql` | `mysql-user` | `mysql-password` |
 | `postgresql` | `postgres-user` | `postgres-password` |
 
-### Public URL and Attachment Storage
+### Public URL and File Storage
 
 ```yaml
 config:
@@ -183,26 +165,51 @@ config:
   baseUrl: "https://helpdesk.example.com"
   storage:
     type: db            # db (attachments in the database) or fs
-    path: /data/storage
+    path: /data/storage # STORAGE_PATH
+    persistence:
+      enabled: true
+      existingClaim: "" # use your own PVC instead of <fullname>-storage
+      size: 10Gi
+      storageClass: ""  # global.storageClass when empty
+      accessModes: [ReadWriteOnce]
 ```
 
-`config.storage.type: fs` needs a persistent volume at `<path>/var/article`, which the chart does
-not create. Keep `db` unless you add one. See [docs/ARTICLE_STORAGE.md](../../docs/ARTICLE_STORAGE.md).
+The backend's root filesystem is read-only, so `config.storage.path` is a volume: a PVC
+(`<fullname>-storage`, 10Gi, ReadWriteOnce) by default. It holds plugin files (`<path>/plugins`)
+and, with `type: fs`, article attachments (`<path>/var/article`, see
+[docs/ARTICLE_STORAGE.md](../../docs/ARTICLE_STORAGE.md)). The runner does not use it.
+
+- The PVC carries `helm.sh/resource-policy: keep`, like the database volume, so `helm uninstall`
+  leaves it; delete it yourself to drop the files.
+- A ReadWriteOnce volume attaches to one node. With more than one backend replica
+  (`backend.replicaCount`, default 2, or autoscaling) on several nodes, use a ReadWriteMany
+  storage class (NFS, CephFS, EFS, Azure Files) and set `accessModes: [ReadWriteMany]`;
+  otherwise pods on other nodes stay in `ContainerCreating` (Multi-Attach error).
+- `persistence.enabled: false` mounts an emptyDir instead: plugin files are lost when the pod
+  restarts, and `type: fs` is refused.
 
 ### Valkey (Redis-compatible Cache)
 
-The chart uses the official [valkey-helm](https://github.com/valkey-io/valkey-helm) subchart:
+The chart uses the official [valkey-helm](https://github.com/valkey-io/valkey-helm) subchart.
+GoatFlow connects to the `<release>-valkey` Service (`GOATFLOW_VALKEY_HOST`, `GOATFLOW_VALKEY_PORT`).
+Authentication is off by default (Valkey is only reachable inside the cluster). To require a
+password, define the `default` ACL user; the backend and runner read its password from the
+subchart Secret `<release>-valkey-auth` (key `default-password`):
 
 ```yaml
 valkey:
   enabled: true
   auth:
     enabled: true
-    aclConfig: "user default on >your-secure-password ~* &* +@all"
-  persistence:
-    enabled: true
-    size: 1Gi
+    aclUsers:
+      default:
+        permissions: "~* &* +@all"
+        password: "a-long-random-password"
+    # Or keep the password in your own Secret:
+    # usersExistingSecret: valkey-users     # key: aclUsers.default.passwordKey (default "default")
 ```
+
+`auth.aclConfig` alone is not supported: GoatFlow needs the `default` user's password.
 
 For external Redis/Valkey (ElastiCache, etc.):
 
@@ -214,8 +221,49 @@ externalValkey:
   enabled: true
   host: "your-elasticache-endpoint"
   port: 6379
-  existingSecret: "goatflow-valkey-credentials"
+  existingSecret: "goatflow-valkey-credentials"   # key: existingSecretPasswordKey (valkey-password)
+  # or: password: "..." (the chart stores it in <fullname>-valkey-external)
 ```
+
+### Outgoing Email
+
+The runner sends the `mail_queue` (ticket emails, password-reset and sign-up links); the backend
+sends a few messages (for example two-factor codes) directly. Both get these settings as
+`GOATFLOW_EMAIL_*`:
+
+```yaml
+config:
+  baseUrl: "https://helpdesk.example.com"   # links in reset / sign-up emails
+  email:
+    enabled: true
+    from: helpdesk@example.com
+    fromName: "Example Helpdesk"
+    smtp:
+      host: smtp.example.com
+      port: 587
+      username: helpdesk@example.com
+      existingSecret: goatflow-smtp       # key: existingSecretKey (smtp-password)
+      # or: password: "..." (stored in the app Secret)
+      startTLS: true
+      authType: plain                     # plain or login
+```
+
+While `config.email.enabled` is false, mail stays in the `mail_queue` table.
+
+### Metrics
+
+```yaml
+metrics:
+  enabled: true      # METRICS_ENABLED=true, METRICS_PORT=9090 on the backend
+  port: 9090
+  service:
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9090"
+```
+
+This adds an unauthenticated `/metrics` listener on its own port and the Service
+`<fullname>-metrics`. `/metrics` on the app port always exists but needs an admin login.
 
 ### Ingress
 
@@ -283,7 +331,7 @@ serviceAccount:
   annotations:
     iam.gke.io/gcp-service-account: "goatflow@project.iam.gserviceaccount.com"
 
-# Prometheus scraping
+# Prometheus scraping (pod annotations; needs metrics.enabled)
 backend:
   podAnnotations:
     prometheus.io/scrape: "true"
@@ -380,20 +428,30 @@ extraResources:
 | `backend.podAnnotations` | Annotations for backend pods | `{}` |
 | `backend.podLabels` | Labels for backend pods | `{}` |
 | `backend.serviceAnnotations` | Annotations for backend service | `{}` |
-| `frontend.enabled` | Enable frontend deployment | `true` |
-| `frontend.replicaCount` | Number of frontend replicas | `2` |
-| `frontend.podAnnotations` | Annotations for frontend pods | `{}` |
-| `frontend.serviceAnnotations` | Annotations for frontend service | `{}` |
+| `backend.terminationGracePeriodSeconds` | Stop grace period (keep >= `DRAIN_TIMEOUT` + 40s) | `45` |
+| `runner.enabled` | Deploy the background runner | `true` |
+| `runner.image.repository` | Runner image repository | `ghcr.io/goatkit/goatflow-runner` |
+| `runner.image.tag` | Runner image tag | `""` (uses appVersion) |
+| `runner.extraEnv` | Extra environment variables for the runner | `[]` |
+| `metrics.enabled` | Prometheus listener + `<fullname>-metrics` Service | `false` |
+| `metrics.port` | Metrics port (`METRICS_PORT`) | `9090` |
 | `database.type` | Database type: `mysql` or `postgresql` | `mysql` |
 | `database.external.enabled` | Use external database | `false` |
 | `database.external.existingSecret` | Secret with the database user and password (keys in [Using External Database](#using-external-database)) | `""` |
 | `serviceAccount.annotations` | ServiceAccount annotations (IRSA, WI) | `{}` |
 | `valkey.enabled` | Deploy Valkey subchart | `true` |
 | `ingress.enabled` | Enable ingress | `false` |
-| `secrets.create` | Create database and app secrets from values | `true` |
+| `secrets.create` | Create database and app secrets (empty values generated once, kept on upgrade) | `true` |
+| `secrets.existingSecret` | Existing app Secret (keys in [Secrets](#secrets)) | `""` |
+| `secrets.appSecretKey` | `JWT_SECRET`, at least 32 characters | generated |
+| `secrets.secureKey` | `GOATFLOW_SECURE_KEY`, exactly 64 hex characters | generated |
+| `secrets.adminPassword` | First-boot password of `root@localhost` | generated |
+| `valkey.auth.enabled` | Valkey ACL auth (needs `valkey.auth.aclUsers.default`) | `false` |
+| `externalValkey.*` | External Valkey/Redis host, port, password or `existingSecret` | disabled |
+| `config.email.*` | Outgoing email (`GOATFLOW_EMAIL_*`), see [Outgoing Email](#outgoing-email) | disabled |
 | `config.logLevel` | Application log level (`LOG_LEVEL`) | `info` |
 | `config.baseUrl` | Public URL (`BASE_URL`); reset and sign-up emails are not sent while empty | `""` |
-| `config.session.lifetime` | Session lifetime in seconds (`SESSION_TIMEOUT`) | `28800` |
+| `config.session.lifetime` | Maximum session lifetime in seconds (`GOATFLOW_AUTH_SESSION_SESSIONMAXTIME`) | `28800` |
 | `config.storage.type` | Attachment storage: `db` or `fs` (`STORAGE_TYPE`) | `db` |
 | `config.storage.path` | Storage root for `fs` (`STORAGE_PATH`) | `/data/storage` |
 | `config.authProviders` | Auth provider order (`AUTH_PROVIDERS`), e.g. `["ldap", "database"]` | `[]` (Config.yaml) |
@@ -442,8 +500,8 @@ The chart does not include NetworkPolicies by default. Add them based on your cl
 
 ### Pod Security
 
-The backend runs as UID 1000, the nginx frontend as UID 101 and MariaDB as UID 999, all with
-`runAsNonRoot: true`. The PostgreSQL StatefulSet sets only `fsGroup: 999` and runs as the image's
+The backend and runner run as UID 1000 with a read-only root filesystem, MariaDB as UID 999,
+all with `runAsNonRoot: true`. The PostgreSQL StatefulSet sets only `fsGroup: 999` and runs as the image's
 default user.
 
 ## Upgrading
@@ -451,6 +509,9 @@ default user.
 ```bash
 helm upgrade goatflow ./charts/goatflow
 ```
+
+Generated passwords and keys are read back from the existing Secrets, so an upgrade does not
+change them.
 
 ## Uninstalling
 

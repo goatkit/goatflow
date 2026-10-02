@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"log"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -51,10 +52,12 @@ func Initialize(config *Config) error {
 func GetInstance() *I18n {
 	if Instance == nil {
 		// Initialize with defaults if not already done
-		Initialize(&Config{
+		if err := Initialize(&Config{
 			DefaultLanguage:    "en",
 			SupportedLanguages: []string{"en", "es", "fr", "de", "pt", "ja", "zh", "ar", "ru", "it", "nl", "tlh"},
-		})
+		}); err != nil {
+			log.Printf("i18n: loading embedded translations: %v", err)
+		}
 	}
 	return Instance
 }

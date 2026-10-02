@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -136,45 +137,54 @@ func (s *SandboxedHostAPI) UpdatePolicy(policy ResourcePolicy) {
 
 // --- Permission checks ---
 
-// hasPermission checks if the policy grants a specific permission type and access level.
-func (s *SandboxedHostAPI) hasPermission(permType, access string) bool {
-	s.policyMu.RLock()
-	defer s.policyMu.RUnlock()
-
-	if s.policy.Status == "blocked" {
-		return false
-	}
-	for _, p := range s.policy.Permissions {
-		if p.Type == permType {
-			if access == "" {
-				return true
-			}
-			switch p.Access {
-			case "readwrite":
-				return true
-			case access:
-				return true
-			}
-		}
+// accessGranted reports whether a permission entry's access level covers the
+// wanted access. "readwrite" covers read and write; "hard_delete" is only
+// granted by an entry that names it.
+func accessGranted(have, want string) bool {
+	switch {
+	case want == "", have == want:
+		return true
+	case have == "readwrite":
+		return want == "read" || want == "write"
 	}
 	return false
 }
 
-// permissionScope returns the scope for a given permission type, or nil if not granted.
-func (s *SandboxedHostAPI) permissionScope(permType string) []string {
+// grant unions every policy entry of permType that grants access. ok is false
+// when no entry grants it (or the plugin is blocked); all is true when one of
+// the granting entries has no scope; patterns holds the scopes of the others.
+func (s *SandboxedHostAPI) grant(permType, access string) (patterns []string, all, ok bool) {
 	s.policyMu.RLock()
 	defer s.policyMu.RUnlock()
 
+	if s.policy.Status == "blocked" {
+		return nil, false, false
+	}
 	for _, p := range s.policy.Permissions {
-		if p.Type == permType {
-			return p.Scope
+		if p.Type != permType || !accessGranted(p.Access, access) {
+			continue
+		}
+		ok = true
+		if len(p.Scope) == 0 {
+			all = true
+		} else {
+			patterns = append(patterns, p.Scope...)
 		}
 	}
-	return nil
+	return patterns, all, ok
 }
 
-// checkDBTableAccess validates that a query only touches allowed tables
-// and blocks DDL statements for plugins without write access.
+// hasPermission checks if the policy grants a specific permission type and access level.
+func (s *SandboxedHostAPI) hasPermission(permType, access string) bool {
+	_, _, ok := s.grant(permType, access)
+	return ok
+}
+
+// checkDBTableAccess validates the tables a statement touches against the
+// db grants and blocks DDL for plugins without write access. Tables the
+// statement writes need a write grant (also through DBQuery); every other
+// table needs a read grant. information_schema is readable with any read
+// grant: plugin migrations probe it for existing columns.
 func (s *SandboxedHostAPI) checkDBTableAccess(query string) error {
 	upper := strings.ToUpper(strings.TrimSpace(query))
 
@@ -187,24 +197,32 @@ func (s *SandboxedHostAPI) checkDBTableAccess(query string) error {
 		}
 	}
 
-	// Check table access scope if specified
-	scope := s.permissionScope("db")
-	if len(scope) > 0 {
-		tables := extractTableNames(query)
-		for _, table := range tables {
-			if !isTableAllowed(table, scope) {
-				return fmt.Errorf("plugin %q: access to table %q not permitted (allowed: %v)", s.pluginName, table, scope)
-			}
+	readScope, readAll, readOK := s.grant("db", "read")
+	writeScope, writeAll, writeOK := s.grant("db", "write")
+	read, write := sqlTables(query)
+	written := make(map[string]bool, len(write))
+	for _, table := range write {
+		if !writeOK || !(writeAll || isTableAllowed(table, writeScope)) {
+			return fmt.Errorf("plugin %q: write access to table %q not permitted", s.pluginName, table)
 		}
+		written[table] = true
 	}
-
+	for _, table := range read {
+		if written[table] {
+			continue
+		}
+		if readOK && (readAll || strings.HasPrefix(table, "information_schema.") || isTableAllowed(table, readScope)) {
+			continue
+		}
+		return fmt.Errorf("plugin %q: access to table %q not permitted", s.pluginName, table)
+	}
 	return nil
 }
 
 // checkHTTPAccess validates that the URL matches the allowed patterns.
 func (s *SandboxedHostAPI) checkHTTPAccess(url string) error {
-	scope := s.permissionScope("http")
-	if len(scope) == 0 {
+	scope, all, _ := s.grant("http", "")
+	if all {
 		return nil // No URL restrictions
 	}
 
@@ -217,9 +235,37 @@ func (s *SandboxedHostAPI) checkHTTPAccess(url string) error {
 	return fmt.Errorf("plugin %q: HTTP access to %q not permitted (allowed: %v)", s.pluginName, url, scope)
 }
 
+// checkEntityAccess gates the entity deletion methods. Scope lists the
+// entity types the plugin may touch; an empty scope allows every type.
+func (s *SandboxedHostAPI) checkEntityAccess(access, entityType string) error {
+	scope, all, ok := s.grant("entity", access)
+	if !ok {
+		return fmt.Errorf("plugin %q: entity %s access not granted", s.pluginName, access)
+	}
+	if all || slices.Contains(scope, entityType) {
+		return nil
+	}
+	return fmt.Errorf("plugin %q: entity %s access to %q not permitted (allowed: %v)", s.pluginName, access, entityType, scope)
+}
+
+// requirePermission counts a denial and returns the error when the policy
+// does not grant permType with access.
+func (s *SandboxedHostAPI) requirePermission(permType, access string) error {
+	if s.hasPermission(permType, access) {
+		s.stats.LastCallAt.Store(time.Now().UnixMilli())
+		return nil
+	}
+	s.stats.Errors.Add(1)
+	return fmt.Errorf("plugin %q: %s %s access not granted", s.pluginName, permType, access)
+}
+
 // matchURLPattern checks if a URL matches a scope pattern.
-// Patterns: "*.example.com" matches subdomains, "api.example.com" matches exact host.
+// Patterns: "*" matches every host, "*.example.com" matches the domain and
+// its subdomains, "api.example.com" matches exact host.
 func matchURLPattern(pattern, url string) bool {
+	if pattern == "*" {
+		return true
+	}
 	// Extract host from URL
 	host := url
 	if idx := strings.Index(host, "://"); idx >= 0 {
@@ -387,25 +433,15 @@ func (s *SandboxedHostAPI) Translate(ctx context.Context, key string, args ...an
 }
 
 func (s *SandboxedHostAPI) CallPlugin(ctx context.Context, pluginName, fn string, args json.RawMessage) (json.RawMessage, error) {
-	if !s.hasPermission("plugin_call", "") {
+	// Check scope: which plugins are we allowed to call?
+	scope, all, ok := s.grant("plugin_call", "")
+	if !ok {
 		s.stats.Errors.Add(1)
 		return nil, fmt.Errorf("plugin %q: plugin-to-plugin calls not granted", s.pluginName)
 	}
-
-	// Check scope: which plugins are we allowed to call?
-	scope := s.permissionScope("plugin_call")
-	if len(scope) > 0 {
-		allowed := false
-		for _, name := range scope {
-			if name == pluginName || name == "*" {
-				allowed = true
-				break
-			}
-		}
-		if !allowed {
-			s.stats.Errors.Add(1)
-			return nil, fmt.Errorf("plugin %q: not permitted to call plugin %q (allowed: %v)", s.pluginName, pluginName, scope)
-		}
+	if !all && !slices.Contains(scope, pluginName) && !slices.Contains(scope, "*") {
+		s.stats.Errors.Add(1)
+		return nil, fmt.Errorf("plugin %q: not permitted to call plugin %q (allowed: %v)", s.pluginName, pluginName, scope)
 	}
 
 	// Prevent infinite plugin-to-plugin call loops
@@ -416,6 +452,9 @@ func (s *SandboxedHostAPI) CallPlugin(ctx context.Context, pluginName, fn string
 		return nil, fmt.Errorf("plugin call depth exceeded (max %d): %s -> %s", maxCallDepth, s.pluginName, pluginName)
 	}
 	ctx = contextWithCallDepth(ctx, depth)
+	// Stamp the caller: the host then routes through Manager.CallFrom, which
+	// never reads caller identity from the plugin-built args.
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 
 	s.stats.Calls.Add(1)
 	s.stats.LastCallAt.Store(time.Now().UnixMilli())
@@ -477,73 +516,27 @@ func (r *rateLimiter) allow() bool {
 	return true
 }
 
-// extractTableNames extracts table names from SQL queries.
-// This is a simple parser that handles common SQL patterns but isn't foolproof.
-// It's designed as defense-in-depth, not the only security layer.
-func extractTableNames(query string) []string {
-	// Normalize the query - remove extra whitespace and convert to uppercase
-	normalized := regexp.MustCompile(`\s+`).ReplaceAllString(strings.TrimSpace(strings.ToUpper(query)), " ")
-
-	tables := make(map[string]bool)
-
-	// Patterns to match table names after key SQL keywords
-	patterns := []*regexp.Regexp{
-		// FROM clause: SELECT ... FROM table1
-		regexp.MustCompile(`\bFROM\s+([a-zA-Z_][a-zA-Z0-9_]*)`),
-		// JOIN clauses: ... JOIN table2 ON ...
-		regexp.MustCompile(`\b(?:INNER\s+|LEFT\s+|RIGHT\s+|FULL\s+|CROSS\s+)?JOIN\s+([a-zA-Z_][a-zA-Z0-9_]*)`),
-		// INSERT INTO: INSERT INTO table_name
-		regexp.MustCompile(`\bINSERT\s+INTO\s+([a-zA-Z_][a-zA-Z0-9_]*)`),
-		// UPDATE: UPDATE table_name SET
-		regexp.MustCompile(`\bUPDATE\s+([a-zA-Z_][a-zA-Z0-9_]*)`),
-		// DELETE FROM: DELETE FROM table_name
-		regexp.MustCompile(`\bDELETE\s+FROM\s+([a-zA-Z_][a-zA-Z0-9_]*)`),
-		// CREATE/DROP/ALTER TABLE
-		regexp.MustCompile(`\b(?:CREATE|DROP|ALTER)\s+TABLE\s+([a-zA-Z_][a-zA-Z0-9_]*)`),
-		// TRUNCATE TABLE
-		regexp.MustCompile(`\bTRUNCATE\s+(?:TABLE\s+)?([a-zA-Z_][a-zA-Z0-9_]*)`),
-	}
-
-	for _, pattern := range patterns {
-		matches := pattern.FindAllStringSubmatch(normalized, -1)
-		for _, match := range matches {
-			if len(match) > 1 {
-				tableName := strings.ToLower(match[1]) // Store in lowercase for consistency
-				tables[tableName] = true
-			}
-		}
-	}
-
-	// Convert map to slice
-	result := make([]string, 0, len(tables))
-	for table := range tables {
-		result = append(result, table)
-	}
-
-	return result
-}
-
 // isTableAllowed checks if a table name is allowed by the scope patterns.
 func isTableAllowed(table string, scope []string) bool {
-	table = strings.ToLower(table)
-
 	for _, pattern := range scope {
-		pattern = strings.ToLower(pattern)
-
-		// Exact match
-		if pattern == table {
+		if matchWildcard(pattern, table) {
 			return true
 		}
-
-		// Wildcard pattern (e.g., "user_*" matches "user_profiles")
-		if strings.Contains(pattern, "*") {
-			if matched, _ := regexp.MatchString(strings.ReplaceAll(regexp.QuoteMeta(pattern), `\*`, `.*`), table); matched {
-				return true
-			}
-		}
 	}
-
 	return false
+}
+
+// matchWildcard matches name against pattern case-insensitively. "*" in the
+// pattern matches any run of characters; the match covers the whole name, so
+// "gk_coach_*" matches "gk_coach_session" but not "xgk_coach_session".
+func matchWildcard(pattern, name string) bool {
+	pattern, name = strings.ToLower(pattern), strings.ToLower(name)
+	if !strings.Contains(pattern, "*") {
+		return pattern == name
+	}
+	re := "^" + strings.ReplaceAll(regexp.QuoteMeta(pattern), `\*`, `.*`) + "$"
+	matched, _ := regexp.MatchString(re, name)
+	return matched
 }
 
 // Context keys and helpers for plugin call depth tracking
@@ -575,27 +568,20 @@ var sensitiveConfigPatterns = []string{
 }
 
 // isConfigKeyAllowed checks if a configuration key is allowed for plugin access.
+// Keys matching a scope pattern are allowed. When a config grant has no
+// scope, any other key that matches no sensitive pattern is allowed too.
 func (s *SandboxedHostAPI) isConfigKeyAllowed(key string) bool {
-	keyLower := strings.ToLower(key)
-
-	// If plugin has a config scope, only allow keys that match scope patterns
-	scope := s.permissionScope("config")
-	if len(scope) > 0 {
-		for _, pattern := range scope {
-			if strings.Contains(pattern, "*") {
-				// Wildcard pattern matching
-				if matched, _ := regexp.MatchString(strings.ReplaceAll(regexp.QuoteMeta(strings.ToLower(pattern)), `\*`, `.*`), keyLower); matched {
-					return true
-				}
-			} else if strings.ToLower(pattern) == keyLower {
-				// Exact match
-				return true
-			}
+	scope, all, _ := s.grant("config", "read")
+	for _, pattern := range scope {
+		if matchWildcard(pattern, key) {
+			return true
 		}
+	}
+	if !all {
 		return false // Not in scope
 	}
 
-	// No scope specified - check against sensitive patterns
+	keyLower := strings.ToLower(key)
 	for _, pattern := range sensitiveConfigPatterns {
 		if strings.Contains(keyLower, pattern) {
 			return false
@@ -605,23 +591,48 @@ func (s *SandboxedHostAPI) isConfigKeyAllowed(key string) bool {
 	return true
 }
 
-// EntitySoftDelete soft-deletes an entity.
+// EntitySoftDelete soft-deletes an entity. Needs entity write.
 func (s *SandboxedHostAPI) EntitySoftDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	if err := s.checkEntityAccess("write", entityType); err != nil {
+		s.stats.Errors.Add(1)
+		return err
+	}
+	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 	return s.inner.EntitySoftDelete(ctx, entityType, entityID, reason)
 }
 
-// EntityRestore restores a soft-deleted entity.
+// EntityRestore restores a soft-deleted entity. Needs entity write.
 func (s *SandboxedHostAPI) EntityRestore(ctx context.Context, entityType string, entityID int64) error {
+	if err := s.checkEntityAccess("write", entityType); err != nil {
+		s.stats.Errors.Add(1)
+		return err
+	}
+	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 	return s.inner.EntityRestore(ctx, entityType, entityID)
 }
 
-// EntityHardDelete permanently removes an entity.
+// EntityHardDelete permanently removes an entity. Needs an explicit entity
+// "hard_delete" grant: "readwrite" does not cover it, and the host never
+// grants it from a plugin's own declarations.
 func (s *SandboxedHostAPI) EntityHardDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	if err := s.checkEntityAccess("hard_delete", entityType); err != nil {
+		s.stats.Errors.Add(1)
+		return err
+	}
+	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 	return s.inner.EntityHardDelete(ctx, entityType, entityID, reason)
 }
 
-// RecycleBinList lists soft-deleted entities.
+// RecycleBinList lists soft-deleted entities. Needs entity read.
 func (s *SandboxedHostAPI) RecycleBinList(ctx context.Context, entityType string) (json.RawMessage, error) {
+	if err := s.checkEntityAccess("read", entityType); err != nil {
+		s.stats.Errors.Add(1)
+		return nil, err
+	}
+	s.stats.LastCallAt.Store(time.Now().UnixMilli())
 	return s.inner.RecycleBinList(ctx, entityType)
 }
 
@@ -711,20 +722,32 @@ func (s *SandboxedHostAPI) CustomFieldsQuery(ctx context.Context, entityType str
 	return result, nil
 }
 
-// ---- File Storage (sandboxed — plugin name injected into context) ----
+// ---- Articles, tickets and plugin files (plugin name injected into context) ----
 
-// CreateArticleAttachment forwards to the inner host.
+// CreateArticleAttachment attaches a file to an article. Needs article write.
 func (s *SandboxedHostAPI) CreateArticleAttachment(ctx context.Context, articleID, createdBy int64, filename, contentType string, content []byte) (int64, error) {
+	if err := s.requirePermission("article", "write"); err != nil {
+		return 0, err
+	}
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 	return s.inner.CreateArticleAttachment(ctx, articleID, createdBy, filename, contentType, content)
 }
 
-// ListArticleAttachments forwards to the inner host.
+// ListArticleAttachments lists an article's attachments. Needs article read.
 func (s *SandboxedHostAPI) ListArticleAttachments(ctx context.Context, articleID int64) ([]plugin.ArticleAttachment, error) {
+	if err := s.requirePermission("article", "read"); err != nil {
+		return nil, err
+	}
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 	return s.inner.ListArticleAttachments(ctx, articleID)
 }
 
-// DeleteArticleAttachment forwards to the inner host.
+// DeleteArticleAttachment removes an attachment. Needs article write.
 func (s *SandboxedHostAPI) DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error {
+	if err := s.requirePermission("article", "write"); err != nil {
+		return err
+	}
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 	return s.inner.DeleteArticleAttachment(ctx, articleID, attachmentID)
 }
 
@@ -735,58 +758,80 @@ func (s *SandboxedHostAPI) RenderMarkdownToPdf(ctx context.Context, markdown str
 	return s.inner.RenderMarkdownToPdf(ctx, markdown, options)
 }
 
-// CreateArticle forwards to the inner host.
+// CreateArticle adds an article to a ticket. Needs article write.
 func (s *SandboxedHostAPI) CreateArticle(ctx context.Context, ticketID, createdBy int64, subject, body string, visibleToCustomer bool) (int64, error) {
-	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	if err := s.requirePermission("article", "write"); err != nil {
+		return 0, err
+	}
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 	return s.inner.CreateArticle(ctx, ticketID, createdBy, subject, body, visibleToCustomer)
 }
 
-// ChangeTicketStatus forwards to the inner host.
+// ChangeTicketStatus changes a ticket's state. Needs ticket write.
 func (s *SandboxedHostAPI) ChangeTicketStatus(ctx context.Context, ticketID, stateID, userID int64, untilTime int64) error {
-	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	if err := s.requirePermission("ticket", "write"); err != nil {
+		return err
+	}
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 	return s.inner.ChangeTicketStatus(ctx, ticketID, stateID, userID, untilTime)
 }
 
-// ListTicketStates forwards to the inner host.
+// ListTicketStates lists the valid ticket states. Needs ticket read.
 func (s *SandboxedHostAPI) ListTicketStates(ctx context.Context) ([]plugin.TicketStateInfo, error) {
-	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	if err := s.requirePermission("ticket", "read"); err != nil {
+		return nil, err
+	}
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 	return s.inner.ListTicketStates(ctx)
 }
 
-// ListTicketViews forwards to the inner host.
+// ListTicketViews lists the plugin ticket views. Needs ticket read.
 func (s *SandboxedHostAPI) ListTicketViews(ctx context.Context) ([]plugin.TicketViewInfo, error) {
-	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	if err := s.requirePermission("ticket", "read"); err != nil {
+		return nil, err
+	}
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 	return s.inner.ListTicketViews(ctx)
 }
 
+// StoreFile stores a file in the plugin's namespace. Needs file write.
 func (s *SandboxedHostAPI) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error {
-	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	if err := s.requirePermission("file", "write"); err != nil {
+		return err
+	}
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 	return s.inner.StoreFile(ctx, key, data, metadata)
 }
 
+// GetFile reads a file from the plugin's namespace. Needs file read.
 func (s *SandboxedHostAPI) GetFile(ctx context.Context, key string) ([]byte, map[string]string, error) {
-	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	if err := s.requirePermission("file", "read"); err != nil {
+		return nil, nil, err
+	}
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 	return s.inner.GetFile(ctx, key)
 }
 
+// DeleteFile removes a file from the plugin's namespace. Needs file write.
 func (s *SandboxedHostAPI) DeleteFile(ctx context.Context, key string) error {
-	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	if err := s.requirePermission("file", "write"); err != nil {
+		return err
+	}
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 	return s.inner.DeleteFile(ctx, key)
 }
 
+// ListFiles lists files in the plugin's namespace. Needs file read.
 func (s *SandboxedHostAPI) ListFiles(ctx context.Context, prefix string) ([]FileInfo, error) {
-	s.stats.LastCallAt.Store(time.Now().UnixMilli())
+	if err := s.requirePermission("file", "read"); err != nil {
+		return nil, err
+	}
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
 	return s.inner.ListFiles(ctx, prefix)
 }
 
+// GenerateThumbnail is pure image processing on bytes the plugin already
+// holds, so it needs no permission.
 func (s *SandboxedHostAPI) GenerateThumbnail(ctx context.Context, data []byte, contentType string, maxWidth, maxHeight int) ([]byte, string, error) {
 	s.stats.LastCallAt.Store(time.Now().UnixMilli())
 	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
@@ -836,8 +881,8 @@ func (s *SandboxedHostAPI) stripPrefixFromResults(m map[string]any) map[string]a
 
 // isEmailRecipientAllowed checks if an email recipient is allowed based on the email permission scope.
 func (s *SandboxedHostAPI) isEmailRecipientAllowed(recipient string) bool {
-	scope := s.permissionScope("email")
-	if len(scope) == 0 {
+	scope, all, _ := s.grant("email", "")
+	if all {
 		return true // No restrictions
 	}
 

@@ -154,7 +154,7 @@ func (s *Synthesizer) SynthesizeEnv(rotateOnly bool) error {
 	return nil
 }
 
-// SynthesizeTestData generates test data SQL and CSV files.
+// SynthesizeTestData generates the development test data SQL (GeneratedTestDataPath).
 func (s *Synthesizer) SynthesizeTestData() error {
 	generator := NewTestDataGenerator(s)
 
@@ -162,8 +162,8 @@ func (s *Synthesizer) SynthesizeTestData() error {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "✅ Generated test data SQL: migrations/postgres/000004_generated_test_data.up.sql\n")
-	fmt.Fprintf(os.Stderr, "📝 Credentials CSV written to stdout (redirect to save: make synthesize > credentials.csv)\n")
+	fmt.Fprintf(os.Stderr, "✅ Generated test data SQL: %s\n", GeneratedTestDataPath)
+	fmt.Fprintf(os.Stderr, "📝 Credentials are in its \"-- ||\" comments: make show-dev-creds\n")
 
 	return nil
 }
@@ -219,7 +219,7 @@ func (s *Synthesizer) generateVariables(existing map[string]string, rotateOnly b
 		{Key: "# Application", Value: "", Type: "section"},
 		{Key: "APP_ENV", Value: appEnv, Type: "static"},
 		{Key: "APP_PORT", Value: s.getOrDefault(existing, "APP_PORT", "8080"), Type: "static"},
-		{Key: "APP_URL", Value: s.getOrDefault(existing, "APP_URL", "http://localhost:8080"), Type: "static"},
+		{Key: "APP_URL", Value: s.getOrDefault(existing, "APP_URL", "http://localhost:8081"), Type: "static"},
 		{Key: "", Value: "", Type: "blank"},
 
 		{Key: "# Security Tokens (Auto-generated)", Value: "", Type: "section"},
@@ -245,6 +245,18 @@ func (s *Synthesizer) generateVariables(existing map[string]string, rotateOnly b
 		Value:     s.getOrGenerate(existing, "SESSION_SECRET", sessionSecret, rotateOnly),
 		Type:      "secret",
 		Generated: true,
+	})
+
+	// GOATFLOW_SECURE_KEY encrypts stored secrets (plugin secure config, connector
+	// credentials). It is kept on --rotate-secrets: a new key would leave every
+	// value encrypted with the old one undecryptable.
+	secureKey, _ := s.GenerateSecret(SecretTypeHex, 64, "", "")
+	secureKeyValue := s.getOrGenerate(existing, "GOATFLOW_SECURE_KEY", secureKey, false)
+	s.variables = append(s.variables, EnvVariable{
+		Key:       "GOATFLOW_SECURE_KEY",
+		Value:     secureKeyValue,
+		Type:      "secret",
+		Generated: secureKeyValue == secureKey,
 	})
 
 	s.variables = append(s.variables, EnvVariable{Key: "", Value: "", Type: "blank"})
@@ -320,16 +332,16 @@ func (s *Synthesizer) generateVariables(existing map[string]string, rotateOnly b
 		Key: "# Email Configuration", Value: "", Type: "section",
 	})
 	s.variables = append(s.variables, EnvVariable{
-		Key: "# MailHog (development) doesn't require authentication - leave USER/PASSWORD empty", Value: "", Type: "comment",
+		Key: "# docker-compose.yml passes these to backend, customer-fe and runner as GOATFLOW_EMAIL_*.", Value: "", Type: "comment",
 	})
 	s.variables = append(s.variables, EnvVariable{
-		Key: "# For production, update SMTP_HOST and add real credentials", Value: "", Type: "comment",
+		Key: "# smtp4dev (development) needs no login. For production set a real SMTP_HOST and credentials.", Value: "", Type: "comment",
 	})
 	s.variables = append(s.variables, EnvVariable{
-		Key: "SMTP_HOST", Value: s.getOrDefault(existing, "SMTP_HOST", "mailhog"), Type: "static",
+		Key: "SMTP_HOST", Value: s.getOrDefault(existing, "SMTP_HOST", "smtp4dev"), Type: "static",
 	})
 	s.variables = append(s.variables, EnvVariable{
-		Key: "SMTP_PORT", Value: s.getOrDefault(existing, "SMTP_PORT", "1025"), Type: "static",
+		Key: "SMTP_PORT", Value: s.getOrDefault(existing, "SMTP_PORT", "25"), Type: "static",
 	})
 	s.variables = append(s.variables, EnvVariable{
 		Key: "SMTP_USER", Value: s.getOrDefault(existing, "SMTP_USER", ""), Type: "static",
@@ -338,10 +350,7 @@ func (s *Synthesizer) generateVariables(existing map[string]string, rotateOnly b
 		Key: "SMTP_PASSWORD", Value: s.getOrDefault(existing, "SMTP_PASSWORD", ""), Type: "static",
 	})
 	s.variables = append(s.variables, EnvVariable{
-		Key: "SMTP_FROM_EMAIL", Value: s.getOrDefault(existing, "SMTP_FROM_EMAIL", "noreply@goatflow.local"), Type: "static",
-	})
-	s.variables = append(s.variables, EnvVariable{
-		Key: "SMTP_FROM_NAME", Value: s.getOrDefault(existing, "SMTP_FROM_NAME", "GoatFlow Support"), Type: "static",
+		Key: "EMAIL_FROM", Value: s.getOrDefault(existing, "EMAIL_FROM", "noreply@goatflow.local"), Type: "static",
 	})
 	s.variables = append(s.variables, EnvVariable{Key: "", Value: "", Type: "blank"})
 
@@ -477,7 +486,7 @@ func (s *Synthesizer) writeEnvFile() error {
 }
 
 func (s *Synthesizer) copyFile(src, dst string) error {
-	sourceFile, err := os.ReadFile(src) //nolint:gosec // G304 false positive - config copy
+	sourceFile, err := os.ReadFile(src) // #nosec G304 -- src is the synthesizer's own .env output path from CLI/config
 	if err != nil {
 		return err
 	}
@@ -487,7 +496,8 @@ func (s *Synthesizer) copyFile(src, dst string) error {
 		return err
 	}
 
-	return os.WriteFile(dst, sourceFile, 0644)
+	// Backups of the generated .env hold secrets: owner-only.
+	return os.WriteFile(dst, sourceFile, 0600) // #nosec G703 -- dst is derived from the synthesizer's own .env output path
 }
 
 func (s *Synthesizer) GetGeneratedCount() int {

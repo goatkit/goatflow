@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -39,7 +40,7 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 	// Get ticket ID from URL
 	ticketIDStr := c.Param("id")
 	ticketID, err := strconv.ParseInt(ticketIDStr, 10, 64)
-	if err != nil {
+	if err != nil || ticketID <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "Invalid ticket ID",
@@ -160,7 +161,15 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 		if _, hasOwner := updateRequest["user_id"]; hasOwner {
 			// Get current queue to check owner permission
 			var queueID int
-			db.QueryRow(database.ConvertPlaceholders("SELECT queue_id FROM ticket WHERE id = ?"), ticketID).Scan(&queueID)
+			if err := db.QueryRow(database.ConvertPlaceholders("SELECT queue_id FROM ticket WHERE id = ?"), ticketID).Scan(&queueID); err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Ticket not found"})
+					return
+				}
+				log.Printf("HandleUpdateTicketAPI: load queue of ticket %d: %v", ticketID, err)
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to check permissions"})
+				return
+			}
 			canOwn, err := permSvc.CanBeOwner(userID, queueID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to check permissions"})

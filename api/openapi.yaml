@@ -1,7 +1,28 @@
+# Hand-maintained contract of the GoatFlow REST API v1, written from the handlers.
+# When you change a documented route, its middleware or its JSON, update this file.
+# Checks: `make openapi-lint` (Redocly, must stay at 0 errors / 0 warnings) and
+# `go test ./internal/api -run TestOpenAPISpecMatchesRoutes` (every path/method is
+# routed, public routes say `security: []`). Path parameter names match the gin
+# route (`{id}` for `:id`) because the MCP tool generator looks operations up by path.
 openapi: 3.0.3
 info:
   title: GoatFlow API
-  description: Modern Open Source Ticketing System API
+  description: |
+    REST API v1 of GoatFlow, an OTRS/Znuny-compatible helpdesk.
+
+    Authenticate with `Authorization: Bearer <token>`, where the token is either a
+    JWT from `POST /api/v1/auth/login` or a personal API token (`gf_...`) created
+    under Settings -> API Tokens (`/settings/tokens`). Browser sessions
+    authenticate with the `auth_token` cookie set at login.
+
+    API tokens carry scopes. A token without the scope an endpoint needs gets
+    `403`. Agent tokens pass admin checks only when they carry `admin:*` (or
+    `*`, or no scopes) and their owner is an admin.
+
+    Every path here is checked against the router by
+    `TestOpenAPISpecMatchesRoutes` (internal/api). The liveness probe
+    `GET /health` and the MCP endpoint (`/api/mcp`, see docs/api/MCP.md) are
+    not part of this API.
   version: 0.10.0
   contact:
     name: GoatFlow Team
@@ -9,728 +30,1176 @@ info:
   license:
     name: Apache-2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
-
 servers:
-  - url: http://localhost:8080
-    description: Local development server
+- url: /
+  description: The GoatFlow server that serves this document
+tags:
+- name: Tickets
+  description: Tickets (OTRS `ticket` table)
+- name: Articles
+  description: Messages and notes on a ticket
+- name: Queues
+  description: Ticket queues
+- name: Priorities
+  description: Ticket priorities
+- name: Users
+  description: The calling user
+- name: Webhooks
+  description: Outbound webhooks and their delivery log (admin only)
+- name: Search
+  description: Ticket search and saved searches
+security:
+- bearerAuth: []
+- cookieAuth: []
 paths:
-  /health:
-    get:
-      summary: Health check endpoint
-      description: Returns the health status of the API server
-      operationId: getHealth
-      tags:
-        - System
-      security: []
-      responses:
-        '200':
-          description: Server is healthy
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthResponse'
-              example:
-                status: "healthy"
-                service: "goatflow-backend"
-        '500':
-          description: Server is unhealthy
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
   /api/v1/tickets:
     get:
-      summary: List tickets
-      description: Retrieve a list of tickets with optional filtering
       operationId: listTickets
+      summary: List tickets
+      description: |
+        Paginated ticket list. Callable by agents and customers (JWT, session
+        cookie or API token; no API-token scope is checked).
+
+        - Agents need `ro` permission on at least one queue (admins bypass);
+          results are limited to tickets in queues the agent can read.
+        - Customers pass the queue check and only ever see tickets whose
+          `customer_user_id` is their own login.
+
+        Invalid or out-of-range numeric query values are ignored (defaults
+        apply). `status` values other than `open`, `closed` and `pending`
+        are accepted but have no effect.
       tags:
-        - Tickets
+      - Tickets
       parameters:
-        - name: page
-          in: query
-          description: Page number for pagination
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: limit
-          in: query
-          description: Number of tickets per page
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 25
-        - name: status
-          in: query
-          description: Filter by ticket status
-          required: false
-          schema:
-            type: string
-            enum: [new, open, pending, resolved, closed]
-        - name: priority
-          in: query
-          description: Filter by ticket priority
-          required: false
-          schema:
-            type: string
-            enum: [low, normal, high, critical]
-        - name: queue
-          in: query
-          description: Filter by queue ID
-          required: false
-          schema:
-            type: integer
-      security:
-        - bearerAuth: []
+      - name: page
+        in: query
+        description: Page number (values < 1 or non-numeric are ignored).
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: per_page
+        in: query
+        description: Page size; values above 100 are capped at 100.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: limit
+        in: query
+        description: Alias for `per_page`; overrides it when both are given. Capped at 100.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - name: offset
+        in: query
+        description: Row offset; converted to `page = offset / per_page + 1` and overrides `page`.
+        schema:
+          type: integer
+          minimum: 0
+      - name: status
+        in: query
+        description: |
+          State category filter. `open` = new/open state types, `closed` =
+          closed state types, `pending` = pending state types. Any other
+          value is ignored.
+        schema:
+          type: string
+          enum:
+          - open
+          - closed
+          - pending
+      - name: queue_id
+        in: query
+        description: Only tickets in this queue.
+        schema:
+          type: integer
+      - name: priority_id
+        in: query
+        description: Only tickets with this priority.
+        schema:
+          type: integer
+      - name: customer_user_id
+        in: query
+        description: Only tickets of this customer login (`ticket.customer_user_id`).
+        schema:
+          type: string
+      - name: assigned_user_id
+        in: query
+        description: Only tickets whose responsible user is this user ID.
+        schema:
+          type: integer
+      - name: search
+        in: query
+        description: Case-insensitive substring match on the title, or exact ticket number.
+        schema:
+          type: string
+      - name: sort
+        in: query
+        description: Sort field; unknown values sort by creation time.
+        schema:
+          type: string
+          enum:
+          - created
+          - updated
+          - priority
+          - tn
+          - title
+          default: created
+      - name: order
+        in: query
+        description: Sort direction; any other value means `desc`.
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+          default: desc
+      - name: include
+        in: query
+        description: |
+          Comma-separated extras per ticket: `article_count` adds
+          `article_count`, `last_article` adds `last_article`. Unknown
+          entries are ignored.
+        schema:
+          type: string
+        example: article_count,last_article
       responses:
         '200':
-          description: List of tickets
+          description: One page of tickets
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TicketListResponse'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: |
+            Agent without `ro` on any queue ("You do not have access to any
+            queues"), or a customer whose login cannot be resolved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/InternalServerError'
-
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     post:
-      summary: Create a new ticket
-      description: Create a new ticket in the system
       operationId: createTicket
+      summary: Create a ticket
+      description: |
+        Agents only (customers get 403). The caller needs `create` permission
+        on the target queue (admins bypass). No API-token scope is checked.
+
+        The queue is read from `queue_id` in the JSON body (or the
+        `queue_id` query/form parameter); all given values must agree.
+        An initial customer-visible article with the ticket title as
+        subject and `body` as content is created. When `customer_email` is
+        given, a "Ticket Created" email is queued to it asynchronously.
+        Form-encoded bodies (`application/x-www-form-urlencoded`,
+        `multipart/form-data`) with the same field names are accepted as
+        well; there `subject` and `description` are fallbacks for `title`
+        and `body`.
       tags:
-        - Tickets
-      security:
-        - bearerAuth: []
+      - Tickets
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateTicketRequest'
+              $ref: '#/components/schemas/TicketCreateRequest'
       responses:
         '201':
-          description: Ticket created successfully
+          description: Ticket created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TicketResponse'
+                $ref: '#/components/schemas/TicketCreateResponse'
         '400':
-          $ref: '#/components/responses/BadRequestError'
+          description: |
+            Missing/invalid/conflicting `queue_id` ("Queue ID is required",
+            "Invalid queue ID", "Conflicting queue IDs in request"), body not
+            parseable, missing `title` or `queue_id`, or the ticket service
+            rejected the input (message passed through).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Caller is a customer, or lacks `create` permission on the queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /api/v1/tickets/{ticketId}:
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/tickets/{id}:
     get:
-      summary: Get ticket by ID
-      description: Retrieve a specific ticket by its ID
       operationId: getTicket
+      summary: Get a ticket
+      description: |
+        Agents need `ro` permission on the ticket's queue (admins bypass);
+        without it the response is 403 from the access check, or 404.
+        Customers may read only tickets whose `customer_user_id` is their
+        login and whose `customer_id` equals their own company; other
+        tickets answer 404. No API-token scope is checked.
+
+        The identifier must be the numeric ticket ID (a ticket number is
+        rejected with 400).
       tags:
-        - Tickets
+      - Tickets
       parameters:
-        - name: ticketId
-          in: path
-          required: true
-          description: The ID of the ticket
-          schema:
-            type: integer
-      security:
-        - bearerAuth: []
+      - $ref: '#/components/parameters/TicketIdPath'
       responses:
         '200':
-          description: Ticket details
+          description: The ticket
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TicketResponse'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: '#/components/schemas/TicketGetResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: |
+            Agent lacks `ro` on the ticket's queue, or the customer's
+            `customer_user` record was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
-          $ref: '#/components/responses/InternalServerError'
-
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     put:
-      summary: Update ticket
-      description: Update an existing ticket's details
       operationId: updateTicket
+      summary: Update a ticket
+      description: |
+        Agents only, with `rw` permission on the ticket's queue (admins
+        bypass). No API-token scope is checked. Additionally:
+        changing `priority_id` needs `priority` (or `rw`), changing
+        `user_id` needs `owner` (or `rw`) on the current queue, and changing
+        `queue_id` needs `move_into` on the new queue.
+
+        Only the given fields change. Unknown fields are rejected. One
+        history entry is written per changed field, in the same
+        transaction as the update. Returns the updated ticket.
       tags:
-        - Tickets
+      - Tickets
       parameters:
-        - name: ticketId
-          in: path
-          required: true
-          schema:
-            type: integer
-      security:
-        - bearerAuth: []
+      - $ref: '#/components/parameters/TicketIdPath'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateTicketRequest'
+              $ref: '#/components/schemas/TicketUpdateRequest'
       responses:
         '200':
-          description: Ticket updated successfully
+          description: Updated ticket
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TicketResponse'
+                $ref: '#/components/schemas/TicketUpdateResponse'
         '400':
-          $ref: '#/components/responses/BadRequestError'
+          description: |
+            Non-numeric ticket ID, invalid JSON, empty object ("No fields to
+            update"), unknown field, wrong type/length, empty title, or a
+            referenced ID that does not exist or is not valid (e.g.
+            "Invalid queue_id").
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          description: Caller is a customer, or lacks the queue permission for the change
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
-          $ref: '#/components/responses/NotFoundError'
+          $ref: '#/components/responses/NotFound'
         '500':
-          $ref: '#/components/responses/InternalServerError'
-
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     delete:
-      summary: Delete (archive) ticket
-      description: Archive a ticket. Requires rw permission on the ticket's queue.
       operationId: deleteTicket
+      summary: Archive a ticket
+      description: |
+        Agents only, with `rw` permission on the ticket's queue (admins
+        bypass). No API-token scope is checked. Tickets are never hard
+        deleted: the state is set to `closed successful`, `archive_flag` to
+        1, and an internal "Ticket Archived" article is added.
       tags:
-        - Tickets
+      - Tickets
       parameters:
-        - name: ticketId
-          in: path
-          required: true
-          schema:
-            type: integer
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Ticket archived successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /api/v1/tickets/{ticketId}/reopen:
-    post:
-      summary: Reopen ticket
-      description: Reopen a closed ticket
-      operationId: reopenTicket
-      tags:
-        - Tickets
-      parameters:
-        - name: ticketId
-          in: path
-          required: true
-          schema:
-            type: integer
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Ticket reopened successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TicketResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/tickets/{ticketId}/articles:
-    get:
-      summary: List ticket articles
-      description: Retrieve all articles (messages/notes) for a ticket
-      operationId: listTicketArticles
-      tags:
-        - Articles
-      parameters:
-        - name: ticketId
-          in: path
-          required: true
-          schema:
-            type: integer
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of articles
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ArticleListResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-    post:
-      summary: Add article to ticket
-      description: Add a new article (reply/note) to a ticket
-      operationId: createTicketArticle
-      tags:
-        - Articles
-      parameters:
-        - name: ticketId
-          in: path
-          required: true
-          schema:
-            type: integer
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateArticleRequest'
-      responses:
-        '201':
-          description: Article created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ArticleResponse'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/tickets/{ticketId}/articles/{articleId}:
-    get:
-      summary: Get article
-      description: Get a specific article by ID
-      operationId: getTicketArticle
-      tags:
-        - Articles
-      parameters:
-        - name: ticketId
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: articleId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Article details
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      id:
-                        type: integer
-                      ticket_id:
-                        type: integer
-                      from:
-                        type: string
-                      to:
-                        type: string
-                      subject:
-                        type: string
-                      body:
-                        type: string
-                      sender_type:
-                        type: string
-                      visible:
-                        type: boolean
-                      created_at:
-                        type: string
-                        format: date-time
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/queues:
-    get:
-      summary: List queues
-      description: Retrieve all available queues the user has access to
-      operationId: listQueues
-      tags:
-        - Queues
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of queues
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/QueueListResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-    post:
-      summary: Create queue
-      description: Create a new queue (admin only)
-      operationId: createQueue
-      tags:
-        - Queues
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - name
-              properties:
-                name:
-                  type: string
-                parent_id:
-                  type: integer
-                system_address_id:
-                  type: integer
-                comment:
-                  type: string
-      responses:
-        '201':
-          description: Queue created
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-
-  /api/v1/queues/{queueId}:
-    get:
-      summary: Get queue
-      description: Get a specific queue by ID
-      operationId: getQueue
-      tags:
-        - Queues
-      parameters:
-        - name: queueId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Queue details
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-    put:
-      summary: Update queue
-      description: Update a queue (admin only)
-      operationId: updateQueue
-      tags:
-        - Queues
-      parameters:
-        - name: queueId
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                comment:
-                  type: string
-      responses:
-        '200':
-          description: Queue updated
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-    delete:
-      summary: Delete queue
-      description: Delete a queue (admin only)
-      operationId: deleteQueue
-      tags:
-        - Queues
-      parameters:
-        - name: queueId
-          in: path
-          required: true
-          schema:
-            type: integer
+      - $ref: '#/components/parameters/TicketIdPath'
       responses:
         '204':
-          description: Queue deleted
+          description: Ticket archived
+        '400':
+          description: Non-numeric ticket ID, or the ticket is already in a closed state type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/queues/{queueId}/stats:
-    get:
-      summary: Get queue statistics
-      description: Get statistics for a specific queue
-      operationId: getQueueStats
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/tickets/{id}/reopen:
+    post:
+      operationId: reopenTicket
+      summary: Reopen a closed ticket
+      description: |
+        Agents only, with `rw` permission on the ticket's queue (admins
+        bypass). No API-token scope is checked. Only tickets whose state
+        type is `closed` can be reopened; the state becomes `open`,
+        `archive_flag` is cleared and a customer-visible "Ticket Reopened"
+        article containing the reason is added.
       tags:
-        - Queues
+      - Tickets
       parameters:
-        - name: queueId
-          in: path
-          required: true
-          schema:
-            type: integer
+      - $ref: '#/components/parameters/TicketIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketReopenRequest'
       responses:
         '200':
-          description: Queue statistics
+          description: Ticket reopened
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      total_tickets:
-                        type: integer
-                      open_tickets:
-                        type: integer
-                      pending_tickets:
-                        type: integer
-                      avg_resolution_time:
-                        type: string
+                $ref: '#/components/schemas/TicketReopenResponse'
+        '400':
+          description: Non-numeric ticket ID, missing `reason`, or the ticket is not closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/priorities:
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/tickets/{id}/articles:
     get:
-      summary: List priorities
-      description: Retrieve all ticket priorities
-      operationId: listPriorities
+      operationId: listTicketArticles
+      summary: List ticket articles
+      description: |
+        Returns all articles of a ticket, newest first (`create_time DESC, id DESC`), without pagination.
+
+        Callable by agents with `ro` permission on the ticket's queue (admins bypass the queue check)
+        and by customers who own the ticket (`customer_user_id` equals their login). Customers only
+        see articles with `is_visible_for_customer = true`. Tickets the caller cannot see, including
+        other customers' tickets, return 404. Agents without `ro` on the queue get 403.
       tags:
-        - Priorities
+      - Articles
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Numeric ticket ID.
+        schema:
+          type: integer
+          minimum: 1
+      - name: include_attachments
+        in: query
+        required: false
+        description: When exactly `true`, each article gets an `attachments` array (HTML body parts are
+          excluded). Any other value is ignored.
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
       responses:
         '200':
-          description: List of priorities
+          description: Articles of the ticket.
           content:
             application/json:
               schema:
                 type: object
+                required:
+                - articles
+                - total
+                properties:
+                  articles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ArticleDetail'
+                  total:
+                    type: integer
+                    description: Number of returned articles.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    post:
+      operationId: createTicketArticle
+      summary: Add an article to a ticket
+      description: |
+        Creates an article (reply or note) on a ticket and updates the ticket's `change_time`.
+
+        Agents only (customers get 403 `Agent access required`); the agent needs `note` permission
+        on the ticket's queue (403 from middleware otherwise; admins bypass). The handler re-checks
+        `note`/`rw` and answers 404 if that fails.
+
+        Behaviour:
+        - `body` is required (non-blank); `content_type` defaults to `text/plain`.
+        - `from`/`to` fall back to `from_email`/`to_email`.
+        - Sender: `article_sender_type_id` (must exist, else 400), else `sender_type` name, else agent.
+        - Visibility key precedence: `is_visible`, `is_visible_to_customer`, `is_visible_for_customer`.
+        - `article_type` picks channel and visibility; without it, a visibility flag picks
+          `note-external`/`note-internal`. Unknown type -> 400 `Invalid article type`; type not
+          allowed for the sender -> 400.
+        - `communication_channel_id` overrides the derived channel and must exist.
+        - `time_unit` > 0 adds a time accounting row (failure is ignored).
+        - Customer-visible articles on tickets with a customer queue a notification email.
+      tags:
+      - Articles
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Numeric ticket ID.
+        schema:
+          type: integer
+          minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleCreateRequest'
+      responses:
+        '201':
+          description: Article created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
                 properties:
                   success:
                     type: boolean
+                    enum:
+                    - true
+                  data:
+                    $ref: '#/components/schemas/ArticleCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/tickets/{id}/articles/{article_id}:
+    get:
+      operationId: getTicketArticle
+      summary: Get a ticket article
+      description: |
+        Returns one article of a ticket. Same access rules as listing: agents with `ro` on the
+        ticket's queue (admins bypass), or the customer owning the ticket. Articles not on this
+        ticket, and internal articles requested by a customer, return 404 `Article not found`.
+      tags:
+      - Articles
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Numeric ticket ID.
+        schema:
+          type: integer
+          minimum: 1
+      - name: article_id
+        in: path
+        required: true
+        description: Numeric article ID; must belong to the ticket.
+        schema:
+          type: integer
+      - name: include_attachments
+        in: query
+        required: false
+        description: When exactly `true`, the article gets an `attachments` array (HTML body parts are
+          excluded).
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
+      responses:
+        '200':
+          description: The article.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/queues:
+    get:
+      operationId: listQueues
+      summary: List queues
+      description: |
+        Agents only (customers get 403). Requires read (`ro`) permission on at
+        least one queue (`queue_ro` middleware); admins bypass that check.
+        Returns the queues on which the caller holds any queue permission,
+        ordered by name. Optional keys are omitted when the column is NULL.
+        Ticket counters are added only with `include_stats=true` and only for
+        queues the caller can read.
+      tags:
+      - Queues
+      parameters:
+      - name: valid
+        in: query
+        required: false
+        description: '`1` = valid queues only, `2` = invalid only; any other value is ignored (all queues).'
+        schema:
+          type: string
+      - name: include_stats
+        in: query
+        required: false
+        description: '`true` adds ticket_count/open_tickets/closed_tickets/pending_tickets.'
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
+      - name: filter_attribute
+        in: query
+        required: false
+        description: Ticket attribute (e.g. `Type`) whose ticket-attribute-relations restrict the list.
+          Used only together with `filter_value`.
+        schema:
+          type: string
+      - name: filter_value
+        in: query
+        required: false
+        description: Value of `filter_attribute`.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Queues visible to the caller
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                    - true
                   data:
                     type: array
                     items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        name:
-                          type: string
-                        color:
-                          type: string
-                        valid_id:
-                          type: integer
+                      $ref: '#/components/schemas/QueueListItem'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     post:
-      summary: Create priority
-      description: Create a new ticket priority (admin only)
-      operationId: createPriority
+      operationId: createQueue
+      summary: Create queue
+      description: |
+        Admins only (`admin` middleware). The handler additionally requires
+        `user_role == "Admin"`, so admin-scoped API tokens (role `User`) pass
+        the middleware but are refused with 403 "Admin role required".
+        The queue is created valid (`valid_id` 1). Defaults:
+        system_address_id/salutation_id/signature_id 1, follow_up_id 1,
+        negative unlock_timeout becomes 0.
       tags:
-        - Priorities
+      - Queues
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - name
-              properties:
-                name:
-                  type: string
-                color:
-                  type: string
+              $ref: '#/components/schemas/QueueCreateRequest'
       responses:
         '201':
-          description: Priority created
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-
-  /api/v1/priorities/{priorityId}:
-    get:
-      summary: Get priority
-      description: Get a specific priority by ID
-      operationId: getPriority
-      tags:
-        - Priorities
-      parameters:
-        - name: priorityId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Priority details
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-    put:
-      summary: Update priority
-      description: Update a priority (admin only)
-      operationId: updatePriority
-      tags:
-        - Priorities
-      parameters:
-        - name: priorityId
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                color:
-                  type: string
-      responses:
-        '200':
-          description: Priority updated
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-    delete:
-      summary: Delete priority
-      description: Delete a priority (admin only)
-      operationId: deletePriority
-      tags:
-        - Priorities
-      parameters:
-        - name: priorityId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '204':
-          description: Priority deleted
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/users/me:
-    get:
-      summary: Get current user profile
-      description: Returns the profile of the authenticated user
-      operationId: getCurrentUser
-      tags:
-        - Users
-      responses:
-        '200':
-          description: User profile
+          description: Queue created
           content:
             application/json:
               schema:
                 type: object
+                required:
+                - success
+                - data
                 properties:
                   success:
                     type: boolean
+                    enum:
+                    - true
                   data:
-                    type: object
-                    properties:
-                      id:
-                        type: integer
-                      login:
-                        type: string
-                      first_name:
-                        type: string
-                      last_name:
-                        type: string
-                      email:
-                        type: string
-                      is_admin:
-                        type: boolean
+                    $ref: '#/components/schemas/QueueCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
-  /api/v1/webhooks:
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/queues/{id}:
     get:
-      summary: List webhooks
-      description: List all outbound webhooks (admin only), ordered by name.
-      operationId: listWebhooks
+      operationId: getQueue
+      summary: Get queue
+      description: |
+        Agents only. Requires `ro` permission on this queue (`queue_access_ro`
+        middleware; admins bypass; otherwise 403). Any lookup failure,
+        including a missing queue, answers 404. Optional keys are omitted
+        when NULL.
       tags:
-        - Webhooks
-      security:
-        - bearerAuth: []
+      - Queues
       parameters:
-        - name: active
-          in: query
-          required: false
-          schema:
-            type: boolean
-          description: Only active (true) or inactive (false) webhooks
+      - name: id
+        in: path
+        required: true
+        description: Queue ID
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 4294967295
       responses:
         '200':
-          description: List of webhooks
+          description: The queue
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                    - true
+                  data:
+                    $ref: '#/components/schemas/QueueDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    put:
+      operationId: updateQueue
+      summary: Update queue
+      description: |
+        Admins only (`admin` middleware). Partial update: only keys present in
+        the body change. `name` must be non-blank and unique
+        (case-insensitive, 409 otherwise); `group_id` must reference an
+        existing valid group; `system_address_id`, `salutation_id`,
+        `signature_id` and `comments` may be set to null. A body without any
+        known key changes nothing and returns the current values. Errors from
+        this handler carry only `error` (no `success`) except group errors.
+      tags:
+      - Queues
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Queue ID
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 4294967295
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueueUpdateRequest'
+      responses:
+        '200':
+          description: Queue after the update
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                    - true
+                  data:
+                    $ref: '#/components/schemas/QueueUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    delete:
+      operationId: deleteQueue
+      summary: Invalidate queue
+      description: |
+        Admins only (`admin` middleware). Soft delete: sets `valid_id` to 2.
+        Queues 1-3 are system queues (403). A queue that still has tickets
+        cannot be deleted (409).
+      tags:
+      - Queues
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Queue ID
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 4294967295
+      responses:
+        '200':
+          description: Queue invalidated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueMessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/queues/{id}/stats:
+    get:
+      operationId: getQueueStats
+      summary: Get queue ticket statistics
+      description: |
+        Agents only. Requires `ro` permission on this queue (`queue_access_ro`
+        middleware, admins bypass). The handler re-checks read permission via
+        the permission service and answers 404 (not 403) when it fails or the
+        queue does not exist.
+      tags:
+      - Queues
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Queue ID
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 4294967295
+      responses:
+        '200':
+          description: Ticket counters of the queue
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                    - true
+                  data:
+                    $ref: '#/components/schemas/QueueStats'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/priorities:
+    get:
+      operationId: listPriorities
+      summary: List priorities
+      description: |
+        Any agent (customers get 403). Ordered by id. On 500 the response also
+        carries an `X-Guru-Error` header.
+      tags:
+      - Priorities
+      parameters:
+      - name: valid
+        in: query
+        required: false
+        description: |
+          `true`/`1`/empty = valid only (default), `false`/`0` = invalid
+          only, `all` = no filter. Case-insensitive; unknown values act as
+          `true`.
+        schema:
+          type: string
+          default: 'true'
+      - name: filter_attribute
+        in: query
+        required: false
+        description: Ticket attribute whose ticket-attribute-relations restrict the list. Used only together
+          with `filter_value`.
+        schema:
+          type: string
+      - name: filter_value
+        in: query
+        required: false
+        description: Value of `filter_attribute`.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Priorities
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                    - true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Priority'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    post:
+      operationId: createPriority
+      summary: Create priority
+      description: |
+        Admins only (`admin` middleware). Created valid; `color` defaults to
+        `#cdcdcd`. A valid priority with the same name gives 409. Any bind
+        error answers 400 "Name is required".
+      tags:
+      - Priorities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriorityCreateRequest'
+      responses:
+        '201':
+          description: Priority created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriorityEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/priorities/{id}:
+    get:
+      operationId: getPriority
+      summary: Get priority
+      description: |
+        Any agent. Returns the priority object itself (no `success`/`data`
+        envelope), valid or not. Any lookup failure answers 404.
+      tags:
+      - Priorities
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Priority ID
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: The priority (not enveloped)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Priority'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    put:
+      operationId: updatePriority
+      summary: Update priority
+      description: |
+        Admins only (`admin` middleware). `name` is always written, so an
+        omitted name sets it to the empty string. Empty or omitted `color`
+        keeps the current color. The response always reports `valid_id` 1.
+        IDs outside the smallint range answer 404.
+      tags:
+      - Priorities
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Priority ID
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriorityUpdateRequest'
+      responses:
+        '200':
+          description: Priority after the update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriorityEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    delete:
+      operationId: deletePriority
+      summary: Invalidate priority
+      description: |
+        Admins only (`admin` middleware). Soft delete: sets `valid_id` to 2.
+        Priority 1 is a system priority (403). IDs outside the smallint range
+        or unknown IDs answer 404.
+      tags:
+      - Priorities
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Priority ID
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Priority invalidated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriorityMessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/users/me:
+    get:
+      operationId: getCurrentUser
+      summary: Get current user
+      description: |
+        Any agent (customers get 403). Returns the calling agent's `users`
+        row. `email` is the login (the users table has no email column).
+        `groups` lists valid groups the agent is a member of; it is `null`
+        when the agent has no group and `[]` when the group query fails.
+      tags:
+      - Users
+      responses:
+        '200':
+          description: The calling agent
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                    - true
+                  data:
+                    $ref: '#/components/schemas/UserMe'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/webhooks:
+    get:
+      operationId: listWebhooks
+      summary: List webhooks
+      description: |
+        Admins only (`unified_auth` + `admin`; API tokens need `admin:*`, `*`
+        or no scopes and an admin owner). Returns all webhooks ordered by name,
+        optionally filtered by state. Secrets are never returned.
+      tags:
+      - Webhooks
+      parameters:
+      - name: active
+        in: query
+        required: false
+        description: |
+          `true` = only active, `false` = only inactive. Parsed with Go
+          `strconv.ParseBool`, so `1`, `0`, `t`, `f`, `TRUE`, `False` etc. are
+          accepted too; anything else is 400.
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Webhooks ordered by name (empty array when none)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/WebhookListResponse'
         '400':
-          $ref: '#/components/responses/BadRequestError'
+          $ref: '#/components/responses/BadRequest'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
-
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     post:
+      operationId: createWebhook
       summary: Create webhook
       description: |
-        Create an outbound webhook. Subscribed events are POSTed as JSON
-        (`{"event", "occurred_at", "data"}`) with headers `X-Webhook-Event`,
-        `X-Webhook-Delivery` and, when a secret is set,
-        `X-Webhook-Signature: sha256=<hex HMAC-SHA256 of the raw body>`.
-        Any 2xx response counts as delivered; failures are retried
-        `retry_count` times with exponential backoff (30s, 1m, 2m, ... max 1h).
-      operationId: createWebhook
+        Admins only. Creates an outbound webhook. Deliveries are POSTed as JSON
+        `{event, occurred_at, data}` and signed with
+        `X-Webhook-Signature: sha256=<hex HMAC-SHA256 of body>` when a secret is
+        set. Defaults: `retry_count` 3, `timeout_seconds` 10, `is_active` true.
+        Name and url are trimmed; duplicate events are removed.
       tags:
-        - Webhooks
-      security:
-        - bearerAuth: []
+      - Webhooks
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WebhookRequest'
+              $ref: '#/components/schemas/WebhookCreateRequest'
       responses:
         '201':
           description: Webhook created
@@ -739,23 +1208,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/WebhookResponse'
         '400':
-          $ref: '#/components/responses/BadRequestError'
+          $ref: '#/components/responses/BadRequest'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/Forbidden'
         '409':
-          description: A webhook with this name already exists
-
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /api/v1/webhooks/events:
     get:
-      summary: List webhook events
-      description: Events a webhook can subscribe to.
       operationId: listWebhookEvents
+      summary: List subscribable webhook events
+      description: Admins only. The catalogue of events a webhook can subscribe to, in display order.
       tags:
-        - Webhooks
-      security:
-        - bearerAuth: []
+      - Webhooks
       responses:
         '200':
           description: Event catalogue
@@ -763,721 +1233,1400 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - success
+                - data
                 properties:
                   success:
                     type: boolean
+                    enum:
+                    - true
                   data:
                     type: array
                     items:
                       type: object
+                      required:
+                      - event
+                      - description
                       properties:
                         event:
-                          $ref: '#/components/schemas/WebhookEvent'
+                          $ref: '#/components/schemas/WebhookEventName'
                         description:
                           type: string
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
-
-  /api/v1/webhooks/{webhookId}:
-    parameters:
-      - name: webhookId
-        in: path
-        required: true
-        schema:
-          type: integer
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/webhook-deliveries/{id}:
     get:
-      summary: Get webhook
-      operationId: getWebhook
+      operationId: getWebhookDelivery
+      summary: Get webhook delivery
+      description: Admins only. One delivery including its payload and the (truncated) response body.
       tags:
-        - Webhooks
-      security:
-        - bearerAuth: []
+      - Webhooks
+      parameters:
+      - $ref: '#/components/parameters/WebhookDeliveryId'
       responses:
         '200':
-          description: Webhook
+          description: The delivery
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebhookResponse'
+                $ref: '#/components/schemas/WebhookDeliveryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFoundError'
-    put:
-      summary: Update webhook
-      description: 'Partial update; only fields present in the body change. An empty "secret" removes the secret.'
-      operationId: updateWebhook
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/webhook-deliveries/{id}/redeliver:
+    post:
+      operationId: redeliverWebhookDelivery
+      summary: Redeliver webhook delivery
+      description: |
+        Admins only. Sends the payload of an earlier delivery again now as a
+        new delivery (one attempt, no retries, also when the webhook is
+        inactive) and returns the new delivery. A failed HTTP attempt is still
+        200 with `success: false` in the delivery. No request body.
       tags:
-        - Webhooks
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WebhookRequest'
+      - Webhooks
+      parameters:
+      - $ref: '#/components/parameters/WebhookDeliveryId'
       responses:
         '200':
-          description: Updated webhook
+          description: The new delivery
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeliveryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/webhooks/{id}:
+    get:
+      operationId: getWebhook
+      summary: Get webhook
+      description: Admins only.
+      tags:
+      - Webhooks
+      parameters:
+      - $ref: '#/components/parameters/WebhookId'
+      responses:
+        '200':
+          description: The webhook
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/WebhookResponse'
         '400':
-          $ref: '#/components/responses/BadRequestError'
+          $ref: '#/components/responses/BadRequest'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
-          description: A webhook with this name already exists
-    delete:
-      summary: Delete webhook
-      description: Deletes the webhook and its delivery log.
-      operationId: deleteWebhook
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    put:
+      operationId: updateWebhook
+      summary: Update webhook
+      description: |
+        Admins only. Partial update: only fields present in the body change
+        (`{}` is valid and only bumps `updated_at`/`updated_by`). The result is
+        re-validated as on create. `secret: ""` removes the secret.
       tags:
-        - Webhooks
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Webhook deleted
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/webhooks/{webhookId}/test:
-    post:
-      summary: Send test delivery
-      description: Sends a `webhook.test` event now (one attempt, no retries) and returns the recorded delivery.
-      operationId: testWebhook
-      tags:
-        - Webhooks
-      security:
-        - bearerAuth: []
+      - Webhooks
       parameters:
-        - name: webhookId
-          in: path
-          required: true
-          schema:
-            type: integer
+      - $ref: '#/components/parameters/WebhookId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookUpdateRequest'
       responses:
         '200':
-          description: Delivery result (check `data.success`)
+          description: The updated webhook
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebhookDeliveryResponse'
+                $ref: '#/components/schemas/WebhookResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/webhooks/{webhookId}/deliveries:
-    get:
-      summary: List deliveries
-      description: Newest deliveries first, without payload and response bodies.
-      operationId: getWebhookDeliveries
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    delete:
+      operationId: deleteWebhook
+      summary: Delete webhook
+      description: Admins only. Deletes the webhook and its delivery log.
       tags:
-        - Webhooks
-      security:
-        - bearerAuth: []
+      - Webhooks
       parameters:
-        - name: webhookId
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 200
-            default: 50
+      - $ref: '#/components/parameters/WebhookId'
       responses:
         '200':
-          description: Deliveries
+          description: Deleted
           content:
             application/json:
               schema:
                 type: object
+                required:
+                - success
+                - data
                 properties:
                   success:
                     type: boolean
+                    enum:
+                    - true
+                  data:
+                    type: object
+                    required:
+                    - id
+                    properties:
+                      id:
+                        type: integer
+                        format: int64
+                        description: ID of the deleted webhook
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/webhooks/{id}/test:
+    post:
+      operationId: testWebhook
+      summary: Send test delivery
+      description: |
+        Admins only. Sends a `webhook.test` event now (one attempt, no retries,
+        also when the webhook is inactive) with data
+        `{webhook_id, name, message}` and returns the recorded delivery. A
+        failed HTTP attempt is still 200 with `success: false` in the delivery.
+        No request body.
+      tags:
+      - Webhooks
+      parameters:
+      - $ref: '#/components/parameters/WebhookId'
+      responses:
+        '200':
+          description: The recorded delivery
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeliveryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/webhooks/{id}/deliveries:
+    get:
+      operationId: getWebhookDeliveries
+      summary: List webhook deliveries
+      description: |
+        Admins only. Newest deliveries first (by id), without `payload` and
+        `response` (fetch a single delivery for those).
+      tags:
+      - Webhooks
+      parameters:
+      - $ref: '#/components/parameters/WebhookId'
+      - name: limit
+        in: query
+        required: false
+        description: Maximum number of deliveries; outside 1-200 or non-integer is 400.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+      responses:
+        '200':
+          description: Deliveries (empty array when none)
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                    - true
                   data:
                     type: array
                     items:
                       $ref: '#/components/schemas/WebhookDelivery'
         '400':
-          $ref: '#/components/responses/BadRequestError'
+          $ref: '#/components/responses/BadRequest'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/webhooks/deliveries/{deliveryId}:
-    get:
-      summary: Get delivery
-      description: One delivery including the payload sent and the (truncated) response body.
-      operationId: getWebhookDelivery
-      tags:
-        - Webhooks
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: deliveryId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Delivery
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WebhookDeliveryResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/webhooks/deliveries/{deliveryId}/redeliver:
-    post:
-      summary: Redeliver
-      description: Sends the payload of an earlier delivery again now, as a new delivery (one attempt, no retries).
-      operationId: redeliverWebhookDelivery
-      tags:
-        - Webhooks
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: deliveryId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: The new delivery (check `data.success`)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WebhookDeliveryResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /api/v1/search/tickets:
     get:
-      summary: Search tickets
-      description: Search for tickets matching a query
       operationId: searchTickets
-      tags:
-        - Search
-      parameters:
-        - name: q
-          in: query
-          required: true
-          description: Search query string
-          schema:
-            type: string
-            minLength: 1
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Ticket search results
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TicketListResponse'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
+      summary: Search tickets
+      description: |
+        Agent ticket search over ticket, article and customer data. Agents only
+        (customers get 403); API tokens need the `tickets:read` scope (or higher);
+        the caller must have `ro` access to at least one queue, and results are
+        limited to the queues the agent may read.
 
-  /api/v1/search/saved:
-    get:
-      summary: List saved searches
-      description: Get all saved search profiles for the current user
-      operationId: listSavedSearches
+        Text parameters match case-insensitively anywhere in the column; `*` is a
+        wildcard (then the pattern is anchored), `%`, `_` and `\` match literally.
+        Text and date parameters accept one value only. ID and `state_type`
+        parameters accept comma-separated and/or repeated values (any-of). Empty
+        values are ignored. Any query parameter not listed here is rejected with 400.
+        Date parameters take `YYYY-MM-DD`, `YYYY-MM-DD HH:MM:SS` (UTC) or RFC 3339;
+        a bare date for `*_before` includes that whole day.
       tags:
-        - Search
+      - Search
+      parameters:
+      - $ref: '#/components/parameters/SearchQ'
+      - $ref: '#/components/parameters/SearchTn'
+      - $ref: '#/components/parameters/SearchTitle'
+      - $ref: '#/components/parameters/SearchCustomerId'
+      - $ref: '#/components/parameters/SearchCustomerUserLogin'
+      - $ref: '#/components/parameters/SearchFrom'
+      - $ref: '#/components/parameters/SearchTo'
+      - $ref: '#/components/parameters/SearchSubject'
+      - $ref: '#/components/parameters/SearchBody'
+      - $ref: '#/components/parameters/SearchStateType'
+      - $ref: '#/components/parameters/SearchStateId'
+      - $ref: '#/components/parameters/SearchQueueId'
+      - $ref: '#/components/parameters/SearchPriorityId'
+      - $ref: '#/components/parameters/SearchTypeId'
+      - $ref: '#/components/parameters/SearchOwnerId'
+      - $ref: '#/components/parameters/SearchResponsibleId'
+      - $ref: '#/components/parameters/SearchLockId'
+      - $ref: '#/components/parameters/SearchCreatedAfter'
+      - $ref: '#/components/parameters/SearchCreatedBefore'
+      - $ref: '#/components/parameters/SearchChangedAfter'
+      - $ref: '#/components/parameters/SearchChangedBefore'
+      - $ref: '#/components/parameters/SearchSort'
+      - $ref: '#/components/parameters/SearchOrder'
+      - $ref: '#/components/parameters/SearchPage'
+      - $ref: '#/components/parameters/SearchLimit'
       responses:
         '200':
-          description: List of saved searches
+          description: One page of matching tickets
           content:
             application/json:
               schema:
                 type: object
+                required:
+                - success
+                - data
                 properties:
                   success:
                     type: boolean
+                    enum:
+                    - true
+                  data:
+                    $ref: '#/components/schemas/SearchResultPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/search/saved:
+    get:
+      operationId: listSavedSearches
+      summary: List saved searches
+      description: |
+        Lists the calling agent's saved ticket searches (names only), sorted by
+        name. Saved searches live in the OTRS `search_profile` table under login
+        `TicketSearch::<agent login>`, so they are private to the agent and
+        shared with OTRS/Znuny ticket search profiles of the same agent.
+        Agents only; API tokens need `tickets:read`; caller needs `ro` access to
+        at least one queue.
+      tags:
+      - Search
+      responses:
+        '200':
+          description: The caller's saved searches
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                    - true
                   data:
                     type: object
+                    required:
+                    - searches
+                    - total
                     properties:
                       searches:
                         type: array
                         items:
-                          type: object
-                          properties:
-                            name:
-                              type: string
-                            type:
-                              type: string
+                          $ref: '#/components/schemas/SearchSavedSummary'
                       total:
                         type: integer
+                        description: Number of entries in `searches`
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     post:
-      summary: Create saved search
-      description: Create a new saved search profile
       operationId: createSavedSearch
+      summary: Create saved search
+      description: |
+        Saves a ticket search for the calling agent under a new name. Stored as
+        one `search_profile` row per value (login `TicketSearch::<agent login>`,
+        `profile_type` SCALAR for text/date parameters, ARRAY for ID/list
+        parameters, `profile_key` the OTRS attribute name, e.g. `QueueIDs`).
+        Parameters are validated exactly like the query parameters of
+        `GET /api/v1/search/tickets`; paging parameters (`page`, `limit`, `sort`,
+        `order`) are not search parameters and are rejected.
+        Agents only; API tokens need `tickets:read`; caller needs `ro` access to
+        at least one queue.
       tags:
-        - Search
+      - Search
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - name
-              properties:
-                name:
-                  type: string
-                type:
-                  type: string
-                  default: TicketSearch
-                parameters:
-                  type: object
-                  additionalProperties:
-                    type: string
+              $ref: '#/components/schemas/SearchSavedCreateRequest'
       responses:
         '201':
           description: Saved search created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchSavedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
-  /api/v1/search/saved/{searchName}:
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/search/saved/{name}:
     get:
-      summary: Get saved search
-      description: Get details of a specific saved search
       operationId: getSavedSearch
+      summary: Get saved search
+      description: |
+        Returns one of the calling agent's saved searches (looked up by
+        `search_profile.login = TicketSearch::<agent login>` and
+        `profile_name`). Stored attributes this API does not search on (e.g.
+        OTRS result-form settings) or whose values do not validate are listed
+        in `ignored_parameters` instead of `parameters`.
+        Agents only; API tokens need `tickets:read`; caller needs `ro` access to
+        at least one queue.
       tags:
-        - Search
+      - Search
       parameters:
-        - name: searchName
-          in: path
-          required: true
-          schema:
-            type: string
+      - $ref: '#/components/parameters/SearchName'
       responses:
         '200':
-          description: Saved search details
+          description: The saved search
           content:
             application/json:
               schema:
                 type: object
+                required:
+                - success
+                - data
                 properties:
                   success:
                     type: boolean
+                    enum:
+                    - true
                   data:
-                    type: object
-                    properties:
-                      name:
-                        type: string
-                      type:
-                        type: string
-                      parameters:
-                        type: object
-                        additionalProperties:
-                          type: string
+                    $ref: '#/components/schemas/SearchSavedDetail'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFoundError'
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     put:
-      summary: Update saved search
-      description: Update parameters of a saved search
       operationId: updateSavedSearch
+      summary: Update saved search
+      description: |
+        Replaces all stored parameters of one of the calling agent's saved
+        searches (all its `search_profile` rows are deleted and rewritten,
+        including attributes previously reported as ignored). The search cannot
+        be renamed: `name` and `type` in the body are ignored. The body is
+        parsed before the search is looked up, so malformed JSON gives 400 even
+        for an unknown name.
+        Agents only; API tokens need `tickets:read`; caller needs `ro` access to
+        at least one queue.
       tags:
-        - Search
+      - Search
       parameters:
-        - name: searchName
-          in: path
-          required: true
-          schema:
-            type: string
+      - $ref: '#/components/parameters/SearchName'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                parameters:
-                  type: object
-                  additionalProperties:
-                    type: string
+              $ref: '#/components/schemas/SearchSavedUpdateRequest'
       responses:
         '200':
           description: Saved search updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchSavedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFoundError'
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     delete:
-      summary: Delete saved search
-      description: Delete a saved search profile
       operationId: deleteSavedSearch
+      summary: Delete saved search
+      description: |
+        Deletes all `search_profile` rows of one of the calling agent's saved
+        searches. Agents only; API tokens need `tickets:read`; caller needs `ro`
+        access to at least one queue.
       tags:
-        - Search
+      - Search
       parameters:
-        - name: searchName
-          in: path
-          required: true
-          schema:
-            type: string
+      - $ref: '#/components/parameters/SearchName'
       responses:
         '204':
           description: Saved search deleted
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/v1/search/saved/{searchName}/execute:
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/search/saved/{name}/execute:
     post:
-      summary: Execute saved search
-      description: Run a saved search and return matching tickets
       operationId: executeSavedSearch
+      summary: Execute saved search
+      description: |
+        Runs one of the calling agent's saved searches, limited to the queues
+        the agent may read. Paging and ordering come from the query string;
+        other query parameters are ignored and no request body is read. Paging
+        parameters are validated before the search is looked up. If every
+        stored attribute is ignored, the search has no criteria and returns all
+        tickets in the agent's readable queues.
+        Agents only; API tokens need `tickets:read`; caller needs `ro` access to
+        at least one queue.
       tags:
-        - Search
+      - Search
       parameters:
-        - name: searchName
-          in: path
-          required: true
-          schema:
-            type: string
+      - $ref: '#/components/parameters/SearchName'
+      - $ref: '#/components/parameters/SearchSort'
+      - $ref: '#/components/parameters/SearchOrder'
+      - $ref: '#/components/parameters/SearchPage'
+      - $ref: '#/components/parameters/SearchLimit'
       responses:
         '200':
-          description: Search results
+          description: One page of matching tickets plus the saved search used
           content:
             application/json:
               schema:
                 type: object
+                required:
+                - success
+                - data
                 properties:
                   success:
                     type: boolean
+                    enum:
+                    - true
                   data:
-                    type: object
-                    properties:
-                      parameters:
-                        type: object
-                        additionalProperties:
+                    allOf:
+                    - $ref: '#/components/schemas/SearchResultPage'
+                    - type: object
+                      required:
+                      - name
+                      - parameters
+                      - ignored_parameters
+                      properties:
+                        name:
                           type: string
+                        parameters:
+                          $ref: '#/components/schemas/SearchParameters'
+                        ignored_parameters:
+                          $ref: '#/components/schemas/SearchIgnoredParameters'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFoundError'
-
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
-
+      description: JWT from login, or a `gf_...` API token
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: auth_token
+      description: Session cookie set by the web login
   responses:
-    UnauthorizedError:
-      description: Authentication required
+    BadRequest:
+      description: The request is malformed or fails validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: No credentials, or the token is invalid, expired or revoked
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
-            success: false
-            error: "Authentication required"
-
-    BadRequestError:
-      description: Invalid request data
+            error:
+              code: core:unauthorized
+              message: Authentication required
+    Forbidden:
+      description: The caller is authenticated but not allowed to do this
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-          example:
-            success: false
-            error: "Invalid request data"
-
-    NotFoundError:
-      description: Resource not found
+    NotFound:
+      description: The resource does not exist (or the caller may not see it)
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-          example:
-            success: false
-            error: "Resource not found"
-
-    ForbiddenError:
-      description: Access denied
+    Conflict:
+      description: The request conflicts with existing data
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-          example:
-            success: false
-            error: "Access denied"
-
-    InternalServerError:
-      description: Internal server error
+    InternalError:
+      description: Unexpected server or database error
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-          example:
-            success: false
-            error: "Internal server error"
-
+    ServiceUnavailable:
+      description: A required backend (database, token verifier) is unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   schemas:
-    HealthResponse:
-      type: object
-      required:
-        - status
-        - service
-      properties:
-        status:
-          type: string
-          enum: [healthy, unhealthy]
-        service:
-          type: string
-          example: "goatflow-backend"
-
-    ApiStatusResponse:
-      type: object
-      required:
-        - success
-        - data
-      properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          properties:
-            message:
-              type: string
-            version:
-              type: string
-
     ErrorResponse:
       type: object
+      description: |
+        Error body. Authentication and scope middleware send `error` as an
+        object with a namespaced `code`; handlers send `error` as a message
+        string, usually with `success: false`.
       required:
-        - success
-        - error
+      - error
       properties:
         success:
           type: boolean
-          example: false
+          enum:
+          - false
         error:
-          type: string
-          description: Error message
-
-    Ticket:
+          oneOf:
+          - type: string
+          - $ref: '#/components/schemas/ApiErrorDetail'
+    ApiErrorDetail:
       type: object
       required:
-        - id
-        - title
-        - status
-        - priority
-        - created_at
-        - updated_at
+      - code
+      - message
+      properties:
+        code:
+          type: string
+          example: core:unauthorized
+        message:
+          type: string
+    TicketListItem:
+      type: object
+      required:
+      - id
+      - tn
+      - ticket_number
+      - title
+      - queue_id
+      - queue_name
+      - state_id
+      - state_name
+      - priority_id
+      - priority_name
+      - customer_user_id
+      - customer_id
+      - user_id
+      - responsible_user_id
+      - created_at
+      - updated_at
+      - create_time
+      - update_time
       properties:
         id:
           type: integer
-          description: Unique ticket identifier
-          example: 12345
+          format: int64
+        tn:
+          type: string
+          description: Ticket number
+        ticket_number:
+          type: string
+          description: Same as `tn`
         title:
           type: string
-          description: Ticket title
-          example: "Unable to login to system"
-          maxLength: 255
-        description:
-          type: string
-          description: Detailed ticket description
-          example: "User reports they cannot login with correct credentials"
-        status:
-          type: string
-          enum: [new, open, pending, resolved, closed]
-          description: Current ticket status
-        priority:
-          type: string
-          enum: [low, normal, high, critical]
-          description: Ticket priority level
         queue_id:
           type: integer
-          description: ID of the queue this ticket belongs to
-        customer_id:
+        queue_name:
+          type: string
+        state_id:
           type: integer
-          description: ID of the customer who created the ticket
-        assignee_id:
+        state_name:
+          type: string
+        priority_id:
+          type: integer
+        priority_name:
+          type: string
+        customer_user_id:
+          type: string
+          description: Customer login; empty string when unset
+        customer_id:
+          type: string
+          description: Customer company ID; empty string when unset
+        user_id:
+          type: integer
+          description: Owner user ID
+        responsible_user_id:
           type: integer
           nullable: true
-          description: ID of the agent assigned to this ticket
         created_at:
           type: string
-          format: date-time
-          description: Ticket creation timestamp
+          description: Creation time as returned by the database driver
         updated_at:
           type: string
-          format: date-time
-          description: Last update timestamp
-        resolved_at:
+          description: Last change time as returned by the database driver
+        create_time:
           type: string
-          format: date-time
+          description: Same as `created_at`
+        update_time:
+          type: string
+          description: Same as `updated_at`
+        article_count:
+          type: integer
+          description: Only with `include=article_count`
+        last_article:
+          type: object
           nullable: true
-          description: Ticket resolution timestamp
-
-    CreateTicketRequest:
+          description: Only with `include=last_article`; null when the ticket has no article
+          required:
+          - subject
+          - created_at
+          properties:
+            subject:
+              type: string
+            created_at:
+              type: string
+    TicketListResponse:
       type: object
       required:
-        - title
-        - queue_id
+      - success
+      - data
+      - pagination
+      properties:
+        success:
+          type: boolean
+          enum:
+          - true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketListItem'
+        pagination:
+          type: object
+          required:
+          - page
+          - per_page
+          - total
+          - total_pages
+          - has_next
+          - has_prev
+          properties:
+            page:
+              type: integer
+            per_page:
+              type: integer
+            total:
+              type: integer
+            total_pages:
+              type: integer
+            has_next:
+              type: boolean
+            has_prev:
+              type: boolean
+    TicketCreateRequest:
+      type: object
+      required:
+      - title
+      - queue_id
       properties:
         title:
           type: string
-          maxLength: 255
-          example: "Unable to login to system"
-        description:
-          type: string
-          example: "User reports they cannot login with correct credentials"
-        priority:
-          type: string
-          enum: [low, normal, high, critical]
-          default: normal
+          minLength: 1
         queue_id:
           type: integer
-          description: Queue to create ticket in
-
-    UpdateTicketRequest:
+          minimum: 1
+          description: Target queue; caller needs `create` permission on it
+        priority_id:
+          type: integer
+          description: Omitted or 0 = service default
+        state_id:
+          type: integer
+          description: Omitted or 0 = service default
+        type_id:
+          type: integer
+          description: Omitted or 0 = none/default
+        body:
+          type: string
+          description: Body of the initial article; HTML is sanitised
+        customer_email:
+          type: string
+          description: When set, a "Ticket Created" email is queued to this address
+        customer_id:
+          type: string
+          description: Customer company ID
+        customer_user_id:
+          type: string
+          description: Customer login
+    TicketCreateResponse:
       type: object
+      required:
+      - success
+      - data
+      properties:
+        success:
+          type: boolean
+          enum:
+          - true
+        data:
+          type: object
+          required:
+          - id
+          - tn
+          - title
+          - queue_id
+          - ticket_state_id
+          - ticket_priority_id
+          properties:
+            id:
+              type: integer
+              format: int64
+            tn:
+              type: string
+            title:
+              type: string
+            queue_id:
+              type: integer
+            ticket_state_id:
+              type: integer
+            ticket_priority_id:
+              type: integer
+    TicketGetResponse:
+      type: object
+      required:
+      - success
+      - data
+      properties:
+        success:
+          type: boolean
+          enum:
+          - true
+        data:
+          type: object
+          required:
+          - id
+          - ticket_number
+          - title
+          - state_id
+          - state
+          - priority_id
+          - priority
+          - queue_id
+          - queue
+          - owner_user_id
+          - create_time
+          - change_time
+          - article_count
+          properties:
+            id:
+              type: integer
+              format: int64
+            ticket_number:
+              type: string
+            title:
+              type: string
+            state_id:
+              type: integer
+            state:
+              type: string
+              description: State name (empty if the state row is missing)
+            priority_id:
+              type: integer
+            priority:
+              type: string
+              description: Priority name
+            queue_id:
+              type: integer
+            queue:
+              type: string
+              description: Queue name
+            owner_user_id:
+              type: integer
+            type_id:
+              type: integer
+              description: Omitted when unset
+            customer_id:
+              type: string
+              description: Omitted when NULL
+            customer_user_id:
+              type: string
+              description: Omitted when NULL
+            responsible_user_id:
+              type: integer
+              description: Omitted when NULL
+            create_time:
+              type: string
+              format: date-time
+            change_time:
+              type: string
+              format: date-time
+            article_count:
+              type: integer
+    TicketUpdateRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: At least one field. Integer fields must be positive whole numbers.
       properties:
         title:
           type: string
+          minLength: 1
           maxLength: 255
-        priority:
-          type: string
-          enum: [low, normal, high, critical]
-        status:
-          type: string
-          enum: [new, open, pending, resolved, closed]
-        assignee_id:
+          description: Must not be blank
+        queue_id:
           type: integer
-          nullable: true
-
-    Article:
+          minimum: 1
+          description: Valid queue; needs `move_into` on it
+        type_id:
+          type: integer
+          minimum: 1
+        state_id:
+          type: integer
+          minimum: 1
+        priority_id:
+          type: integer
+          minimum: 1
+          description: Needs `priority` permission
+        user_id:
+          type: integer
+          minimum: 1
+          description: New owner (valid user); needs `owner` permission
+        responsible_user_id:
+          type: integer
+          minimum: 1
+        ticket_lock_id:
+          type: integer
+          minimum: 1
+          description: 1 = unlock, 2 = lock, 3 = tmp_lock
+        customer_id:
+          type: string
+          maxLength: 150
+        customer_user_id:
+          type: string
+          maxLength: 250
+    TicketRecord:
       type: object
       required:
-        - id
-        - ticket_id
-        - body
-        - created_at
+      - id
+      - tn
+      - title
+      - queue_id
+      - type_id
+      - state_id
+      - priority_id
+      - user_id
+      - responsible_user_id
+      - ticket_lock_id
+      - customer_user_id
+      - customer_id
+      - create_time
+      - create_by
+      - change_time
+      - change_by
+      properties:
+        id:
+          type: integer
+          format: int64
+        tn:
+          type: string
+        title:
+          type: string
+        queue_id:
+          type: integer
+        type_id:
+          type: integer
+          description: 0 when unset
+        state_id:
+          type: integer
+        priority_id:
+          type: integer
+        user_id:
+          type: integer
+          description: Owner; 0 when unset
+        responsible_user_id:
+          type: integer
+          description: 0 when unset
+        ticket_lock_id:
+          type: integer
+        customer_user_id:
+          type: string
+          description: Empty string when unset
+        customer_id:
+          type: string
+          description: Empty string when unset
+        create_time:
+          type: string
+          format: date-time
+        create_by:
+          type: integer
+        change_time:
+          type: string
+          format: date-time
+        change_by:
+          type: integer
+    TicketUpdateResponse:
+      type: object
+      required:
+      - success
+      - data
+      properties:
+        success:
+          type: boolean
+          enum:
+          - true
+        data:
+          $ref: '#/components/schemas/TicketRecord'
+    TicketReopenRequest:
+      type: object
+      required:
+      - reason
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          description: Stored in the "Ticket Reopened" article
+    TicketReopenResponse:
+      type: object
+      required:
+      - success
+      - id
+      - state_id
+      - state
+      - reason
+      - reopened_at
+      properties:
+        success:
+          type: boolean
+          enum:
+          - true
+        id:
+          type: integer
+        state_id:
+          type: integer
+        state:
+          type: string
+          enum:
+          - open
+        reason:
+          type: string
+        reopened_at:
+          type: string
+          format: date-time
+    ArticleType:
+      type: string
+      description: Article type derived from communication channel and customer visibility.
+      enum:
+      - email-external
+      - email-internal
+      - email-notification-ext
+      - email-notification-int
+      - phone
+      - fax
+      - sms
+      - note-internal
+      - note-external
+      - note-report
+      - chat-external
+      - chat-internal
+    ArticleAttachment:
+      type: object
+      required:
+      - id
+      - filename
+      - content_type
+      - size
+      - disposition
+      properties:
+        id:
+          type: integer
+          description: File ID of the attachment within the article.
+        filename:
+          type: string
+        content_type:
+          type: string
+        size:
+          type: integer
+          format: int64
+        disposition:
+          type: string
+    ArticleDetail:
+      type: object
+      required:
+      - id
+      - ticket_id
+      - article_sender_type_id
+      - sender_type
+      - communication_channel_id
+      - is_visible_for_customer
+      - article_type
+      - from
+      - to
+      - cc
+      - subject
+      - body
+      - content_type
+      - create_time
+      - create_by
+      - change_time
+      - change_by
       properties:
         id:
           type: integer
         ticket_id:
           type: integer
-        subject:
-          type: string
-        body:
-          type: string
-        content_type:
-          type: string
-          enum: [text/plain, text/html]
-          default: text/plain
+        article_sender_type_id:
+          type: integer
         sender_type:
           type: string
-          enum: [agent, customer, system]
+          description: Sender type name (e.g. agent, system, customer); empty if unknown.
+        communication_channel_id:
+          type: integer
         is_visible_for_customer:
           type: boolean
-          default: true
-        created_by:
-          type: integer
-        created_at:
+        article_type:
+          $ref: '#/components/schemas/ArticleType'
+        from:
+          type: string
+          description: Empty string when no MIME data.
+        to:
+          type: string
+        cc:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+        content_type:
+          type: string
+        create_time:
           type: string
           format: date-time
-
-    CreateArticleRequest:
+        create_by:
+          type: integer
+        change_time:
+          type: string
+          format: date-time
+        change_by:
+          type: integer
+        attachments:
+          type: array
+          description: Present only with `include_attachments=true`.
+          items:
+            $ref: '#/components/schemas/ArticleAttachment'
+    ArticleCreateRequest:
       type: object
       required:
-        - body
+      - body
       properties:
         subject:
           type: string
-          maxLength: 255
         body:
           type: string
-          description: Article content
+          description: Required; blank -> 400 `Article body is required`.
         content_type:
           type: string
-          enum: [text/plain, text/html]
           default: text/plain
+        article_type:
+          type: string
+          description: Article type name (case-insensitive); aliases `note` = note-internal, `email` =
+            email-external.
+        is_visible:
+          type: boolean
+        is_visible_to_customer:
+          type: boolean
         is_visible_for_customer:
           type: boolean
-          default: true
-          description: Whether the customer can see this article
-
-    ArticleResponse:
+        article_sender_type_id:
+          type: integer
+          description: Must exist in article_sender_type.
+        sender_type:
+          type: string
+          description: Used when article_sender_type_id is 0/absent (case-insensitive; unknown names fall
+            back to agent).
+        communication_channel_id:
+          type: integer
+          description: Must exist in communication_channel; 0/absent derives from article type.
+        time_unit:
+          type: number
+        from:
+          type: string
+        from_email:
+          type: string
+        to:
+          type: string
+        to_email:
+          type: string
+        cc:
+          type: string
+        reply_to:
+          type: string
+        in_reply_to:
+          type: string
+        references:
+          type: string
+        message_id:
+          type: string
+        incoming_time:
+          type: integer
+          format: int64
+          description: Unix seconds; defaults to now.
+    ArticleCreated:
       type: object
       required:
-        - success
-        - data
+      - id
+      - ticket_id
+      - communication_channel_id
+      - is_visible_for_customer
+      - article_type
+      - article_sender_type_id
+      - subject
+      - body
+      - content_type
+      - create_by
+      - ticket_updated
+      description: |
+        Created article. `create_time`, `from`, `to`, `cc`, `message_id` are absent when the
+        re-read after commit fails (fallback payload) or the column is NULL.
       properties:
-        success:
+        id:
+          type: integer
+          format: int64
+        ticket_id:
+          type: integer
+          format: int64
+        communication_channel_id:
+          type: integer
+        is_visible_for_customer:
           type: boolean
-        data:
-          $ref: '#/components/schemas/Article'
-
-    ArticleListResponse:
+        article_type:
+          $ref: '#/components/schemas/ArticleType'
+        article_sender_type_id:
+          type: integer
+        subject:
+          type: string
+          nullable: true
+        body:
+          type: string
+        content_type:
+          type: string
+        create_time:
+          type: string
+          format: date-time
+        create_by:
+          type: integer
+        from:
+          type: string
+        to:
+          type: string
+        cc:
+          type: string
+        message_id:
+          type: string
+        ticket_updated:
+          type: boolean
+          enum:
+          - true
+    QueueGroupRef:
+      type: object
+      description: The queue's single permission group (queue.group_id)
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    QueueListItem:
       type: object
       required:
-        - success
-        - data
+      - id
+      - name
+      - valid_id
+      - valid
+      - groups
       properties:
-        success:
+        id:
+          type: integer
+        name:
+          type: string
+        valid_id:
+          type: integer
+        valid:
           type: boolean
-        data:
+          description: valid_id == 1
+        group_id:
+          type: integer
+        group_name:
+          type: string
+        system_address_id:
+          type: integer
+        unlock_timeout:
+          type: integer
+        follow_up_id:
+          type: integer
+        follow_up_lock:
+          type: integer
+        comment:
+          type: string
+          description: queue.comments (note the singular key in this endpoint)
+        create_time:
+          type: string
+          format: date-time
+        change_time:
+          type: string
+          format: date-time
+        ticket_count:
+          type: integer
+        open_tickets:
+          type: integer
+        closed_tickets:
+          type: integer
+        pending_tickets:
+          type: integer
+        groups:
           type: array
+          description: Empty when the queue has no group
           items:
-            $ref: '#/components/schemas/Article'
-
-    Queue:
+            $ref: '#/components/schemas/QueueGroupRef'
+    QueueDetail:
       type: object
       required:
-        - id
-        - name
+      - id
+      - name
+      - group_id
+      - group_name
+      - valid_id
+      - groups
       properties:
         id:
           type: integer
@@ -1485,532 +2634,458 @@ components:
           type: string
         group_id:
           type: integer
-        comment:
+        group_name:
           type: string
-        valid:
-          type: boolean
-
-    QueueListResponse:
-      type: object
-      required:
-        - success
-        - data
-      properties:
-        success:
-          type: boolean
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Queue'
-
-    Attachment:
-      type: object
-      required:
-        - id
-        - article_id
-        - filename
-        - content_type
-        - content_size
-      properties:
-        id:
-          type: integer
-        article_id:
-          type: integer
-        filename:
-          type: string
-        content_type:
-          type: string
-          example: "application/pdf"
-        content_size:
-          type: integer
-          description: File size in bytes
-        disposition:
-          type: string
-          enum: [inline, attachment]
-          default: attachment
-        create_time:
-          type: string
-          format: date-time
-        create_by:
-          type: integer
-
-    AttachmentResponse:
-      type: object
-      required:
-        - success
-        - data
-      properties:
-        success:
-          type: boolean
-        data:
-          $ref: '#/components/schemas/Attachment'
-
-    TicketHistoryEntry:
-      type: object
-      properties:
-        id:
-          type: integer
-        history_type:
-          type: string
-          description: Type of history entry (e.g., StateUpdate, OwnerUpdate)
-        name:
-          type: string
-          description: Human-readable description of the change
-        creator_login:
-          type: string
-        creator_full_name:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-        article_subject:
-          type: string
-        queue_name:
-          type: string
-        state_name:
-          type: string
-        priority_name:
-          type: string
-
-    TicketHistoryResponse:
-      type: object
-      required:
-        - success
-        - data
-      properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          properties:
-            ticket_id:
-              type: integer
-            count:
-              type: integer
-            history:
-              type: array
-              items:
-                $ref: '#/components/schemas/TicketHistoryEntry'
-
-    TicketLink:
-      type: object
-      properties:
-        related_ticket_id:
-          type: integer
-        related_ticket_tn:
-          type: string
-        related_ticket_title:
-          type: string
-        link_type:
-          type: string
-          description: Type of link (e.g., Parent, Child, Normal)
-        link_state:
-          type: string
-        direction:
-          type: string
-          enum: [source, target]
-        creator_login:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-
-    TicketLinksResponse:
-      type: object
-      required:
-        - success
-        - data
-      properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          properties:
-            ticket_id:
-              type: integer
-            count:
-              type: integer
-            links:
-              type: array
-              items:
-                $ref: '#/components/schemas/TicketLink'
-
-    BulkOperationResponse:
-      type: object
-      required:
-        - success
-        - data
-      properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          properties:
-            ticket_ids:
-              type: array
-              items:
-                type: integer
-            count:
-              type: integer
-
-    MergeTicketsRequest:
-      type: object
-      required:
-        - child_ticket_ids
-        - reason
-      properties:
-        child_ticket_ids:
-          type: array
-          items:
-            type: integer
-          minItems: 1
-          description: IDs of tickets to merge into the parent
-        reason:
-          type: string
-          description: Reason for the merge
-        notes:
-          type: string
-        merge_messages:
-          type: boolean
-          default: true
-        merge_attachments:
-          type: boolean
-          default: true
-        close_children:
-          type: boolean
-          default: true
-          description: Whether to close the child tickets after merging
-
-    MergeTicketsResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          properties:
-            parent_ticket_id:
-              type: integer
-            merged_tickets:
-              type: array
-              items:
-                type: integer
-            merged_count:
-              type: integer
-            reason:
-              type: string
-            merged_at:
-              type: string
-              format: date-time
-            merged_by:
-              type: integer
-
-    SplitTicketRequest:
-      type: object
-      required:
-        - article_ids
-        - new_ticket_title
-        - new_ticket_queue
-      properties:
-        article_ids:
-          type: array
-          items:
-            type: integer
-          minItems: 1
-          description: IDs of articles to move to the new ticket
-        new_ticket_title:
-          type: string
-          description: Title for the new ticket
-        new_ticket_queue:
-          type: integer
-          description: Queue ID for the new ticket
-        copy_attachments:
-          type: boolean
-          default: true
-        link_tickets:
-          type: boolean
-          default: true
-          description: Whether to link the new ticket to the source
-
-    SplitTicketResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          properties:
-            source_ticket_id:
-              type: integer
-            new_ticket_id:
-              type: integer
-            new_ticket_tn:
-              type: string
-            articles_moved:
-              type: integer
-            created_at:
-              type: string
-              format: date-time
-            created_by:
-              type: integer
-
-    CannedResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        template_type:
-          type: string
-          enum: [Answer, Create, Email, Note, Forward, PhoneCall]
-        content:
-          type: string
-        content_type:
-          type: string
-          enum: [text/plain, text/html]
+          description: Empty string when the group row is missing
         valid_id:
           type: integer
-        created_at:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueueGroupRef'
+        system_address_id:
+          type: integer
+        salutation_id:
+          type: integer
+        signature_id:
+          type: integer
+        comments:
           type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    CreateCannedResponseRequest:
+        unlock_timeout:
+          type: integer
+        follow_up_id:
+          type: integer
+        follow_up_lock:
+          type: integer
+    QueueCreateRequest:
       type: object
       required:
-        - name
-        - content
+      - name
+      - group_id
       properties:
         name:
           type: string
-          maxLength: 255
-        content:
-          type: string
-        template_type:
-          type: string
-          default: Answer
-        content_type:
-          type: string
-          default: text/plain
-
-    CannedResponseResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          $ref: '#/components/schemas/CannedResponse'
-
-    CannedResponseListResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          properties:
-            responses:
-              type: array
-              items:
-                $ref: '#/components/schemas/CannedResponse'
-            total:
-              type: integer
-
-    TicketTemplate:
-      type: object
-      properties:
-        id:
+          minLength: 1
+          description: Must be unique among all queues (valid or not)
+        group_id:
           type: integer
-        name:
-          type: string
-        content:
-          type: string
-        content_type:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    CreateTicketTemplateRequest:
-      type: object
-      required:
-        - name
-        - content
-      properties:
-        name:
-          type: string
-        content:
-          type: string
-        content_type:
-          type: string
-          default: text/plain
-
-    TicketTemplateListResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          properties:
-            templates:
-              type: array
-              items:
-                $ref: '#/components/schemas/TicketTemplate'
-            total:
-              type: integer
-
-    TicketSLAStatus:
-      type: object
-      properties:
-        ticket_id:
-          type: integer
-        sla_status:
-          type: string
-          enum: [ok, warning, breached, not_applicable]
-        sla_active:
-          type: boolean
-        deadline:
-          type: string
-          format: date-time
-          nullable: true
-        time_remaining_secs:
-          type: integer
-          description: Seconds remaining until SLA breach (negative if breached)
-        percent_used:
-          type: integer
-          description: Percentage of SLA time used (0-100)
-        priority_id:
-          type: integer
-        target_hours:
-          type: integer
-        reason:
-          type: string
-          description: Reason if SLA not applicable
-
-    TicketSLAResponse:
-      type: object
-      required:
-        - success
-        - data
-      properties:
-        success:
-          type: boolean
-        data:
-          $ref: '#/components/schemas/TicketSLAStatus'
-
-    SLADefinition:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        calendar_name:
-          type: string
-          nullable: true
-        first_response_time:
+          minimum: 1
+          description: Existing, valid group
+        system_address_id:
           type: integer
           nullable: true
-          description: Minutes for first response
-        first_response_notify:
+          description: Default 1
+        salutation_id:
           type: integer
           nullable: true
-          description: Minutes before first response to notify
-        update_time:
+          description: Default 1
+        signature_id:
           type: integer
           nullable: true
-          description: Minutes between updates
-        update_notify:
+          description: Default 1
+        unlock_timeout:
           type: integer
-          nullable: true
-        solution_time:
+          description: Negative values become 0
+        follow_up_id:
           type: integer
-          nullable: true
-          description: Minutes to solution
-        solution_notify:
-          type: integer
-          nullable: true
-        valid_id:
+          description: 0/omitted becomes 1
+        follow_up_lock:
           type: integer
         comments:
           type: string
           nullable: true
-
-    SLAResponse:
+    QueueCreated:
       type: object
       required:
-        - success
-        - data
-      properties:
-        success:
-          type: boolean
-        data:
-          $ref: '#/components/schemas/SLADefinition'
-
-    SLAListResponse:
-      type: object
-      required:
-        - success
-        - data
-      properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          properties:
-            slas:
-              type: array
-              items:
-                $ref: '#/components/schemas/SLADefinition'
-            total:
-              type: integer
-
-    WebhookEvent:
-      type: string
-      enum:
-        - ticket.created
-        - ticket.updated
-        - ticket.state_changed
-        - ticket.closed
-        - ticket.queue_moved
-        - ticket.assigned
-        - ticket.priority_changed
-        - ticket.merged
-        - ticket.escalated
-        - article.created
-
-    Webhook:
-      type: object
+      - id
+      - name
+      - group_id
+      - group_name
+      - groups
+      - comments
+      - valid_id
       properties:
         id:
           type: integer
         name:
           type: string
+        group_id:
+          type: integer
+        group_name:
+          type: string
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueueGroupRef'
+        comments:
+          type: string
+          nullable: true
+        valid_id:
+          type: integer
+          enum:
+          - 1
+    QueueUpdateRequest:
+      type: object
+      minProperties: 1
+      description: Partial update; at least one key (an empty body is 400)
+      properties:
+        name:
+          type: string
+          minLength: 1
+        group_id:
+          type: integer
+          minimum: 1
+        system_address_id:
+          type: integer
+          nullable: true
+        salutation_id:
+          type: integer
+          minimum: 1
+          nullable: true
+        signature_id:
+          type: integer
+          minimum: 1
+          nullable: true
+        unlock_timeout:
+          type: integer
+          description: Negative values become 0
+        follow_up_id:
+          type: integer
+        follow_up_lock:
+          type: integer
+          enum:
+          - 0
+          - 1
+        comments:
+          type: string
+          nullable: true
+        valid_id:
+          type: integer
+          enum:
+          - 1
+          - 2
+    QueueUpdated:
+      type: object
+      required:
+      - id
+      - name
+      - group_id
+      - group_name
+      - groups
+      - unlock_timeout
+      - follow_up_id
+      - follow_up_lock
+      - valid_id
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        group_id:
+          type: integer
+        group_name:
+          type: string
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueueGroupRef'
+        unlock_timeout:
+          type: integer
+        follow_up_id:
+          type: integer
+        follow_up_lock:
+          type: integer
+        valid_id:
+          type: integer
+        system_address_id:
+          type: integer
+        salutation_id:
+          type: integer
+        signature_id:
+          type: integer
+        comments:
+          type: string
+    QueueStats:
+      type: object
+      required:
+      - total_tickets
+      - open_tickets
+      - closed_tickets
+      - pending_tickets
+      properties:
+        total_tickets:
+          type: integer
+        open_tickets:
+          type: integer
+        closed_tickets:
+          type: integer
+        pending_tickets:
+          type: integer
+    QueueMessageResponse:
+      type: object
+      required:
+      - success
+      - message
+      properties:
+        success:
+          type: boolean
+          enum:
+          - true
+        message:
+          type: string
+          example: Queue deleted successfully
+    Priority:
+      type: object
+      required:
+      - id
+      - name
+      - color
+      - valid_id
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        color:
+          type: string
+          example: '#cdcdcd'
+        valid_id:
+          type: integer
+    PriorityEnvelope:
+      type: object
+      required:
+      - success
+      - data
+      properties:
+        success:
+          type: boolean
+          enum:
+          - true
+        data:
+          $ref: '#/components/schemas/Priority'
+    PriorityCreateRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+        color:
+          type: string
+          description: Default `#cdcdcd`
+    PriorityUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Always written; omitting it blanks the name
+        color:
+          type: string
+          description: Empty/omitted keeps the current color
+    PriorityMessageResponse:
+      type: object
+      required:
+      - success
+      - message
+      properties:
+        success:
+          type: boolean
+          enum:
+          - true
+        message:
+          type: string
+          example: Priority deleted successfully
+    UserMe:
+      type: object
+      required:
+      - id
+      - login
+      - email
+      - first_name
+      - last_name
+      - active
+      - groups
+      properties:
+        id:
+          type: integer
+        login:
+          type: string
+        email:
+          type: string
+          description: Same as login
+        first_name:
+          type: string
+        last_name:
+          type: string
+        active:
+          type: boolean
+          description: valid_id == 1
+        groups:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/UserGroupRef'
+    UserGroupRef:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    WebhookEventName:
+      type: string
+      enum:
+      - ticket.created
+      - ticket.updated
+      - ticket.state_changed
+      - ticket.closed
+      - ticket.queue_moved
+      - ticket.assigned
+      - ticket.priority_changed
+      - ticket.merged
+      - ticket.escalated
+      - article.created
+    WebhookHeadersInput:
+      type: object
+      maxProperties: 20
+      description: |
+        Complete set of extra HTTP headers sent with every delivery, name ->
+        value; replaces the stored set (names left out are removed, `{}`
+        removes all). Values are write-only (stored encrypted, never returned).
+        Names: valid HTTP tokens up to 256 characters, case-insensitively
+        unique; Content-Type, Content-Length, Host, User-Agent,
+        X-Webhook-Signature, X-Webhook-Event and X-Webhook-Delivery are
+        reserved. Values: up to 1024 characters, no control characters.
+        A `null` value keeps the value currently stored under that name (400
+        when none is stored, so always 400 on create).
+      additionalProperties:
+        type: string
+        nullable: true
+        maxLength: 1024
+    WebhookCreateRequest:
+      type: object
+      required:
+      - name
+      - url
+      - events
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          description: Unique name (trimmed, non-empty); duplicate is 409
         url:
           type: string
-          format: uri
+          maxLength: 2000
+          description: |
+            Absolute http or https URL. 400 when the host is `localhost`
+            (or `*.localhost`) or a loopback, private, link-local, multicast,
+            unspecified, 0.0.0.0/8, 100.64.0.0/10 or 240.0.0.0/4 IP literal,
+            unless the server runs with GOATFLOW_WEBHOOK_ALLOW_PRIVATE_TARGETS=true.
+            Host names are checked after DNS resolution on every delivery instead
+            (a blocked address fails that delivery, not this request).
+        secret:
+          type: string
+          description: HMAC signing secret, 16-512 characters; empty or omitted = unsigned
+        events:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/WebhookEventName'
+        headers:
+          $ref: '#/components/schemas/WebhookHeadersInput'
+        retry_count:
+          type: integer
+          minimum: 0
+          maximum: 10
+          default: 3
+        timeout_seconds:
+          type: integer
+          minimum: 1
+          maximum: 60
+          default: 10
+        is_active:
+          type: boolean
+          default: true
+    WebhookUpdateRequest:
+      type: object
+      description: Any subset of the create fields; same constraints. `secret` "" removes the secret.
+        Omitting `headers` keeps all stored headers.
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        url:
+          type: string
+          maxLength: 2000
+          description: |
+            Same rules as on create: absolute http or https URL. 400 when the host is `localhost`
+            (or `*.localhost`) or a loopback, private, link-local, multicast,
+            unspecified, 0.0.0.0/8, 100.64.0.0/10 or 240.0.0.0/4 IP literal,
+            unless the server runs with GOATFLOW_WEBHOOK_ALLOW_PRIVATE_TARGETS=true.
+            Host names are checked after DNS resolution on every delivery instead
+            (a blocked address fails that delivery, not this request).
+        secret:
+          type: string
+        events:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/WebhookEventName'
+        headers:
+          $ref: '#/components/schemas/WebhookHeadersInput'
+        retry_count:
+          type: integer
+          minimum: 0
+          maximum: 10
+        timeout_seconds:
+          type: integer
+          minimum: 1
+          maximum: 60
+        is_active:
+          type: boolean
+    Webhook:
+      type: object
+      required:
+      - id
+      - name
+      - url
+      - events
+      - header_hints
+      - has_secret
+      - retry_count
+      - timeout_seconds
+      - is_active
+      - created_at
+      - created_by
+      - updated_at
+      - updated_by
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        url:
+          type: string
         events:
           type: array
           items:
-            $ref: '#/components/schemas/WebhookEvent'
-        headers:
+            $ref: '#/components/schemas/WebhookEventName'
+        header_hints:
           type: object
+          description: Custom header name -> masked hint of its value (`{}` when none). Values are never
+            returned.
           additionalProperties:
             type: string
-          description: Extra headers sent with every delivery
         has_secret:
           type: boolean
-          description: Deliveries are signed (X-Webhook-Signature). The secret itself is never returned.
         secret_hint:
           type: string
-          description: Masked secret, e.g. "••••••••abcd"
+          description: Masked hint of the secret; omitted when there is none
         retry_count:
           type: integer
         timeout_seconds:
@@ -2027,82 +3102,65 @@ components:
           format: date-time
         updated_by:
           type: integer
-
-    WebhookRequest:
-      type: object
-      description: On create, name, url and events are required.
-      properties:
-        name:
-          type: string
-          maxLength: 200
-        url:
-          type: string
-          format: uri
-          maxLength: 2000
-          description: Absolute http or https URL
-        events:
-          type: array
-          minItems: 1
-          items:
-            $ref: '#/components/schemas/WebhookEvent'
-        secret:
-          type: string
-          description: HMAC signing secret (16-512 characters); stored encrypted. Empty string removes it.
-        headers:
-          type: object
-          additionalProperties:
-            type: string
-          description: Extra headers; Content-Type, User-Agent and X-Webhook-* cannot be overridden
-        retry_count:
-          type: integer
-          minimum: 0
-          maximum: 10
-          default: 3
-        timeout_seconds:
-          type: integer
-          minimum: 1
-          maximum: 60
-          default: 10
-        is_active:
-          type: boolean
-          default: true
-
     WebhookResponse:
       type: object
       required:
-        - success
-        - data
+      - success
+      - data
       properties:
         success:
           type: boolean
+          enum:
+          - true
         data:
           $ref: '#/components/schemas/Webhook'
-
     WebhookListResponse:
       type: object
       required:
-        - success
-        - data
+      - success
+      - data
       properties:
         success:
           type: boolean
+          enum:
+          - true
         data:
           type: array
           items:
             $ref: '#/components/schemas/Webhook'
-
     WebhookDelivery:
       type: object
+      required:
+      - id
+      - webhook_id
+      - event
+      - status
+      - success
+      - attempts
+      - status_code
+      - duration_ms
+      - created_at
+      - updated_at
       properties:
         id:
           type: integer
+          format: int64
         webhook_id:
           type: integer
+          format: int64
         event:
           type: string
+          description: Event name (one of the subscribable events, or `webhook.test`)
+        payload:
+          type: string
+          description: JSON envelope sent; omitted in delivery lists and when empty
         status:
           type: string
-          enum: [pending, delivering, delivered, failed]
+          enum:
+          - pending
+          - delivering
+          - delivered
+          - failed
         success:
           type: boolean
         attempts:
@@ -2110,178 +3168,521 @@ components:
         status_code:
           type: integer
           nullable: true
-          description: HTTP status of the last attempt; null when no response was received
+          description: HTTP status of the last attempt; null if no response
+        response:
+          type: string
+          description: Response body of the last attempt (truncated to 4096 bytes); omitted in lists and
+            when empty
         error:
           type: string
+          description: Error of the last attempt; omitted when empty
         duration_ms:
           type: integer
           nullable: true
         next_attempt_at:
           type: string
           format: date-time
-          description: Set while a retry is scheduled
+          description: Next retry time; omitted when none
         delivered_at:
           type: string
           format: date-time
-        payload:
-          type: string
-          description: JSON body sent (single-delivery endpoint only)
-        response:
-          type: string
-          description: First 4 KiB of the response body (single-delivery endpoint only)
+          description: Omitted until delivered
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
-
     WebhookDeliveryResponse:
       type: object
       required:
-        - success
-        - data
+      - success
+      - data
       properties:
         success:
           type: boolean
+          enum:
+          - true
         data:
           $ref: '#/components/schemas/WebhookDelivery'
-
-    GlobalSearchResponse:
+    SearchTicket:
       type: object
       required:
-        - success
-        - data
+      - id
+      - tn
+      - title
+      - queue_id
+      - queue
+      - state_id
+      - state
+      - state_type
+      - priority_id
+      - priority
+      - type_id
+      - owner_id
+      - responsible_id
+      - lock_id
+      - customer_id
+      - customer_user_login
+      - created_at
+      - updated_at
       properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          properties:
-            tickets:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  title:
-                    type: string
-                  type:
-                    type: string
-            users:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  name:
-                    type: string
-                  type:
-                    type: string
-            articles:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  subject:
-                    type: string
-                  type:
-                    type: string
-
-    AttachmentListResponse:
+        id:
+          type: integer
+          format: int64
+        tn:
+          type: string
+          description: Ticket number
+        title:
+          type: string
+        queue_id:
+          type: integer
+          format: int64
+        queue:
+          type: string
+          description: Queue name
+        state_id:
+          type: integer
+          format: int64
+        state:
+          type: string
+          description: State name
+        state_type:
+          type: string
+          description: State type name
+        priority_id:
+          type: integer
+          format: int64
+        priority:
+          type: string
+          description: Priority name
+        type_id:
+          type: integer
+          format: int64
+          nullable: true
+        owner_id:
+          type: integer
+          format: int64
+        responsible_id:
+          type: integer
+          format: int64
+        lock_id:
+          type: integer
+          format: int64
+        customer_id:
+          type: string
+          description: Empty string when NULL
+        customer_user_login:
+          type: string
+          description: Empty string when NULL
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    SearchResultPage:
       type: object
       required:
-        - success
-        - data
+      - tickets
+      - pagination
       properties:
-        success:
-          type: boolean
-        data:
+        tickets:
           type: array
           items:
-            $ref: '#/components/schemas/Attachment'
-
-    TicketResponse:
+            $ref: '#/components/schemas/SearchTicket'
+        pagination:
+          type: object
+          required:
+          - page
+          - limit
+          - total
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+              description: Total matching tickets
+    SearchParameterValues:
+      description: Search parameter value; text/date parameters are a single string, ID/list parameters
+        an array of strings
+      oneOf:
+      - type: string
+      - type: array
+        items:
+          type: string
+    SearchParameters:
+      type: object
+      description: Search parameters keyed by query parameter name (same names as `GET /api/v1/search/tickets`);
+        ID and `state_type` values are arrays of strings, others strings
+      additionalProperties:
+        $ref: '#/components/schemas/SearchParameterValues'
+    SearchIgnoredParameters:
+      type: array
+      description: OTRS `profile_key`s stored for this search that are not applied (unknown to this API
+        or with invalid values); never null
+      items:
+        type: string
+    SearchSavedSummary:
       type: object
       required:
-        - success
-        - data
+      - name
+      - type
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+          - TicketSearch
+    SearchSavedCreateRequest:
+      type: object
+      required:
+      - name
+      - parameters
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Must not be blank; must not already be used by the caller (409)
+        type:
+          type: string
+          enum:
+          - TicketSearch
+          description: Optional; any other non-empty value is 400
+        parameters:
+          $ref: '#/components/schemas/SearchInputParameters'
+    SearchSavedUpdateRequest:
+      type: object
+      required:
+      - parameters
+      properties:
+        parameters:
+          $ref: '#/components/schemas/SearchInputParameters'
+    SearchInputParameters:
+      type: object
+      minProperties: 1
+      description: |
+        Search parameters keyed by the query parameter names of
+        `GET /api/v1/search/tickets` (not page/limit/sort/order). Each value is a
+        string, a number, or an array of strings/numbers; ID and `state_type`
+        strings may be comma-separated. Same validation as the query; at least
+        one non-empty parameter is required.
+      additionalProperties:
+        oneOf:
+        - type: string
+        - type: number
+        - type: array
+          items:
+            oneOf:
+            - type: string
+            - type: number
+    SearchSavedResponse:
+      type: object
+      required:
+      - success
+      - data
       properties:
         success:
           type: boolean
-          example: true
-        data:
-          $ref: '#/components/schemas/Ticket'
-
-    TicketListResponse:
-      type: object
-      required:
-        - success
-        - data
-      properties:
-        success:
-          type: boolean
-          example: true
+          enum:
+          - true
         data:
           type: object
+          required:
+          - name
+          - type
+          - parameters
           properties:
-            tickets:
-              type: array
-              items:
-                $ref: '#/components/schemas/Ticket'
-            pagination:
-              $ref: '#/components/schemas/Pagination'
-
-    Pagination:
+            name:
+              type: string
+            type:
+              type: string
+              enum:
+              - TicketSearch
+            parameters:
+              $ref: '#/components/schemas/SearchParameters'
+    SearchSavedDetail:
       type: object
+      required:
+      - name
+      - type
+      - parameters
+      - ignored_parameters
       properties:
-        page:
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+          - TicketSearch
+        parameters:
+          $ref: '#/components/schemas/SearchParameters'
+        ignored_parameters:
+          $ref: '#/components/schemas/SearchIgnoredParameters'
+  parameters:
+    TicketIdPath:
+      name: id
+      in: path
+      required: true
+      description: |
+        Numeric ticket ID. (The queue-access check also resolves a ticket
+        number, but the handlers accept only the numeric ID.)
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    WebhookId:
+      name: id
+      in: path
+      required: true
+      description: Webhook ID (positive integer; otherwise 400 `invalid id`)
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    WebhookDeliveryId:
+      name: id
+      in: path
+      required: true
+      description: Delivery ID (positive integer; otherwise 400 `invalid id`)
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    SearchName:
+      name: name
+      in: path
+      required: true
+      description: Saved search name (`search_profile.profile_name`, exact match)
+      schema:
+        type: string
+    SearchQ:
+      name: q
+      in: query
+      description: Whitespace-separated words; each must match ticket number, title, customer ID, customer
+        user login, customer user email/first/last name, customer company name, or an article's subject,
+        body, From or To
+      schema:
+        type: string
+        maxLength: 200
+    SearchTn:
+      name: tn
+      in: query
+      description: Ticket number
+      schema:
+        type: string
+        maxLength: 200
+    SearchTitle:
+      name: title
+      in: query
+      description: Ticket title
+      schema:
+        type: string
+        maxLength: 200
+    SearchCustomerId:
+      name: customer_id
+      in: query
+      description: Customer (company) ID
+      schema:
+        type: string
+        maxLength: 200
+    SearchCustomerUserLogin:
+      name: customer_user_login
+      in: query
+      description: Customer user login
+      schema:
+        type: string
+        maxLength: 200
+    SearchFrom:
+      name: from
+      in: query
+      description: Any article's From
+      schema:
+        type: string
+        maxLength: 200
+    SearchTo:
+      name: to
+      in: query
+      description: Any article's To or Cc
+      schema:
+        type: string
+        maxLength: 200
+    SearchSubject:
+      name: subject
+      in: query
+      description: Any article's subject
+      schema:
+        type: string
+        maxLength: 200
+    SearchBody:
+      name: body
+      in: query
+      description: Any article's body
+      schema:
+        type: string
+        maxLength: 200
+    SearchStateType:
+      name: state_type
+      in: query
+      description: State type names, matched lower-cased (e.g. new, open, closed, merged, removed, "pending
+        reminder", "pending auto"); `pending` means both pending types. Comma-separated or repeated.
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+          maxLength: 200
+    SearchStateId:
+      name: state_id
+      in: query
+      description: State IDs (positive integers), comma-separated or repeated
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
           type: integer
-          example: 1
-        limit:
+          format: int64
+          minimum: 1
+    SearchQueueId:
+      name: queue_id
+      in: query
+      description: Queue IDs (positive integers), comma-separated or repeated; still limited to readable
+        queues
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
           type: integer
-          example: 25
-        total:
+          format: int64
+          minimum: 1
+    SearchPriorityId:
+      name: priority_id
+      in: query
+      description: Priority IDs (positive integers), comma-separated or repeated
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
           type: integer
-          example: 150
-        total_pages:
+          format: int64
+          minimum: 1
+    SearchTypeId:
+      name: type_id
+      in: query
+      description: Ticket type IDs (positive integers), comma-separated or repeated
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
           type: integer
-          example: 6
-
-tags:
-  - name: System
-    description: System health and status endpoints
-  - name: Tickets
-    description: Ticket management operations
-  - name: Articles
-    description: Ticket article (message/note) operations
-  - name: Attachments
-    description: File attachment operations
-  - name: SLA
-    description: Service Level Agreement management
-  - name: Templates
-    description: Canned responses and ticket templates
-  - name: Search
-    description: Search operations
-  - name: Webhooks
-    description: Webhook management (admin)
-  - name: Queues
-    description: Queue management operations
-  - name: Admin
-    description: System administration endpoints
-  - name: Reports
-    description: Analytics and reporting endpoints
-  - name: Dashboard
-    description: Dashboard widgets and statistics
-  - name: Agent
-    description: Agent-specific endpoints and statistics
-  - name: Users
-    description: User profile and session management
-  - name: Priorities
-    description: Ticket priority management
-  - name: Files
-    description: File download and info endpoints
+          format: int64
+          minimum: 1
+    SearchOwnerId:
+      name: owner_id
+      in: query
+      description: Owner agent IDs (positive integers), comma-separated or repeated
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: integer
+          format: int64
+          minimum: 1
+    SearchResponsibleId:
+      name: responsible_id
+      in: query
+      description: Responsible agent IDs (positive integers), comma-separated or repeated
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: integer
+          format: int64
+          minimum: 1
+    SearchLockId:
+      name: lock_id
+      in: query
+      description: Lock IDs (positive integers), comma-separated or repeated
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: integer
+          format: int64
+          minimum: 1
+    SearchCreatedAfter:
+      name: created_after
+      in: query
+      description: Created at or after (YYYY-MM-DD, "YYYY-MM-DD HH:MM:SS" or RFC 3339)
+      schema:
+        type: string
+    SearchCreatedBefore:
+      name: created_before
+      in: query
+      description: Created at or before; a bare date includes the whole day
+      schema:
+        type: string
+    SearchChangedAfter:
+      name: changed_after
+      in: query
+      description: Changed at or after (YYYY-MM-DD, "YYYY-MM-DD HH:MM:SS" or RFC 3339)
+      schema:
+        type: string
+    SearchChangedBefore:
+      name: changed_before
+      in: query
+      description: Changed at or before; a bare date includes the whole day
+      schema:
+        type: string
+    SearchSort:
+      name: sort
+      in: query
+      description: Sort column (ties broken by ticket ID in the same direction)
+      schema:
+        type: string
+        enum:
+        - created
+        - changed
+        - priority
+        - tn
+        - title
+        default: created
+    SearchOrder:
+      name: order
+      in: query
+      description: Sort direction (case-insensitive)
+      schema:
+        type: string
+        enum:
+        - asc
+        - desc
+        default: desc
+    SearchPage:
+      name: page
+      in: query
+      description: Page number
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    SearchLimit:
+      name: limit
+      in: query
+      description: Page size
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25

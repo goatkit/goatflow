@@ -54,6 +54,14 @@ It applies to admin user forms, profile password changes and password reset.
 username: 5 failures in 300 seconds trigger a backoff that starts at 2 seconds
 and doubles up to 60 seconds.
 
+The same limiter, with separate counters, covers:
+
+- second-factor codes on the 2FA login step, counted per login name, so logging
+  in again with the right password does not give fresh guesses;
+- every password re-check by a signed-in agent or customer (password change,
+  2FA setup/confirm/disable, new recovery codes, adding or removing a passkey),
+  counted per account and IP.
+
 ### Two-factor authentication
 
 Agents and customers can turn on 2FA from their profile.
@@ -78,7 +86,8 @@ There is no SMS or email one-time code.
   account's open sessions.
 - `/customer/register` (only with `features.registration: true`) sends a
   24-hour confirmation link.
-- Both forms allow 10 posts per IP per hour and 3 emails per recipient per hour.
+- The forgot-password, reset-password and registration forms share one budget
+  of 10 posts per IP per hour. Each recipient gets at most 3 emails per hour.
 - Switches: `features.lost_password` (on by default) and `features.registration` (off by default).
 
 ### API tokens and JWT
@@ -173,7 +182,7 @@ From `.github/workflows/test.yml`:
 | Job | Tool |
 |-----|------|
 | Secret Scanning | Gitleaks |
-| Security Analysis | gosec (report uploaded, does not fail the build), `go vet` |
+| Security Analysis | gosec (fails the build on any finding; same pinned version and flags as `make gosec`; JSON report uploaded; false positives carry a `// #nosec G<rule> -- <reason>` annotation), `go vet` |
 | Tests | Route authorization matrix test, platform boundary lint |
 
 ## Security changes in 0.10.0

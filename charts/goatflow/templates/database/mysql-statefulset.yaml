@@ -73,7 +73,7 @@ spec:
               command:
                 - sh
                 - -c
-                - mysqladmin ping -u root -p${MARIADB_ROOT_PASSWORD}
+                - MYSQL_PWD="${MARIADB_ROOT_PASSWORD}" mariadb-admin ping -h 127.0.0.1 --protocol=tcp -u root
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
@@ -82,7 +82,7 @@ spec:
               command:
                 - sh
                 - -c
-                - mysqladmin ping -u root -p${MARIADB_ROOT_PASSWORD}
+                - MYSQL_PWD="${MARIADB_ROOT_PASSWORD}" mariadb-admin ping -h 127.0.0.1 --protocol=tcp -u root
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 3

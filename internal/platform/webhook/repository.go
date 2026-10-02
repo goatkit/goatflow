@@ -47,54 +47,81 @@ func now() time.Time {
 	return time.Now().UTC().Truncate(time.Second)
 }
 
-const webhookColumns = `id, name, url, secret_encrypted, secret_hint, events, headers,
+const webhookColumns = `id, name, url, secret_encrypted, secret_hint, events, header_hints, headers_encrypted,
 	retry_count, timeout_seconds, valid_id, create_time, create_by, change_time, change_by`
 
 type rowScanner interface {
 	Scan(dest ...interface{}) error
 }
 
-// scanWebhook reads one gk_webhook row; the encrypted secret is returned
-// separately so it never travels inside the JSON-serialisable struct.
-func scanWebhook(s rowScanner) (*Webhook, []byte, error) {
+// storedSecrets are the encrypted columns of a gk_webhook row. They are kept
+// out of the JSON-serialisable Webhook struct.
+type storedSecrets struct {
+	secret  []byte
+	headers []byte
+}
+
+// scanWebhook reads one gk_webhook row.
+func scanWebhook(s rowScanner) (*Webhook, storedSecrets, error) {
 	var (
 		w          Webhook
-		secret     []byte
+		enc        storedSecrets
 		hint       sql.NullString
 		eventsJSON string
-		headers    sql.NullString
+		hintsJSON  sql.NullString
 		validID    int
 	)
-	if err := s.Scan(&w.ID, &w.Name, &w.URL, &secret, &hint, &eventsJSON, &headers,
+	if err := s.Scan(&w.ID, &w.Name, &w.URL, &enc.secret, &hint, &eventsJSON, &hintsJSON, &enc.headers,
 		&w.RetryCount, &w.TimeoutSeconds, &validID, &w.CreatedAt, &w.CreatedBy, &w.UpdatedAt, &w.UpdatedBy); err != nil {
-		return nil, nil, err
+		return nil, storedSecrets{}, err
 	}
 	if err := json.Unmarshal([]byte(eventsJSON), &w.Events); err != nil {
-		return nil, nil, fmt.Errorf("webhook %d: corrupt events column: %w", w.ID, err)
+		return nil, storedSecrets{}, fmt.Errorf("webhook %d: corrupt events column: %w", w.ID, err)
 	}
-	w.Headers = map[string]string{}
-	if headers.Valid && headers.String != "" {
-		if err := json.Unmarshal([]byte(headers.String), &w.Headers); err != nil {
-			return nil, nil, fmt.Errorf("webhook %d: corrupt headers column: %w", w.ID, err)
+	w.HeaderHints = map[string]string{}
+	if hintsJSON.Valid && hintsJSON.String != "" {
+		var raw map[string]string
+		if err := json.Unmarshal([]byte(hintsJSON.String), &raw); err != nil {
+			return nil, storedSecrets{}, fmt.Errorf("webhook %d: corrupt header_hints column: %w", w.ID, err)
+		}
+		for name, h := range raw {
+			w.HeaderHints[name] = secureconfig.MaskedDisplay(h)
 		}
 	}
-	w.HasSecret = len(secret) > 0
+	w.HasSecret = len(enc.secret) > 0
 	if w.HasSecret {
 		w.SecretHint = secureconfig.MaskedDisplay(hint.String)
 	}
 	w.IsActive = validID == validActive
-	return &w, secret, nil
+	return &w, enc, nil
+}
+
+func encryptValue(plain []byte) ([]byte, error) {
+	key, err := secureconfig.GetKey()
+	if err != nil {
+		return nil, fmt.Errorf("secure config key: %w", err)
+	}
+	return secureconfig.Encrypt(plain, key)
+}
+
+func decryptValue(enc []byte, what string) ([]byte, error) {
+	key, err := secureconfig.GetKey()
+	if err != nil {
+		return nil, fmt.Errorf("secure config key: %w", err)
+	}
+	plain, err := secureconfig.Decrypt(enc, key)
+	if err != nil {
+		return nil, fmt.Errorf("cannot decrypt webhook %s (is %s the same for every GoatFlow process?): %w",
+			what, secureconfig.KeyEnvVar, err)
+	}
+	return plain, nil
 }
 
 func encryptSecret(secret string) ([]byte, interface{}, error) {
 	if secret == "" {
 		return nil, nil, nil
 	}
-	key, err := secureconfig.GetKey()
-	if err != nil {
-		return nil, nil, fmt.Errorf("secure config key: %w", err)
-	}
-	enc, err := secureconfig.Encrypt([]byte(secret), key)
+	enc, err := encryptValue([]byte(secret))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -105,16 +132,59 @@ func decryptSecret(enc []byte) (string, error) {
 	if len(enc) == 0 {
 		return "", nil
 	}
-	key, err := secureconfig.GetKey()
-	if err != nil {
-		return "", fmt.Errorf("secure config key: %w", err)
+	plain, err := decryptValue(enc, "secret")
+	return string(plain), err
+}
+
+// headerHint is the part of a header value shown to admins: its last four
+// characters, and nothing for values shorter than 12 characters, where four
+// characters would give away too much of the value.
+func headerHint(value string) string {
+	r := []rune(value)
+	if len(r) < 12 {
+		return ""
 	}
-	plain, err := secureconfig.Decrypt(enc, key)
-	if err != nil {
-		return "", fmt.Errorf("cannot decrypt webhook secret (is %s the same for every GoatFlow process?): %w",
-			secureconfig.KeyEnvVar, err)
+	return string(r[len(r)-4:])
+}
+
+// encryptHeaders returns the encrypted JSON of the header values and the JSON
+// of their hints; both are NULL when there are no headers.
+func encryptHeaders(headers map[string]string) (interface{}, interface{}, error) {
+	if len(headers) == 0 {
+		return nil, nil, nil
 	}
-	return string(plain), nil
+	plain, err := json.Marshal(headers)
+	if err != nil {
+		return nil, nil, err
+	}
+	enc, err := encryptValue(plain)
+	if err != nil {
+		return nil, nil, err
+	}
+	hints := make(map[string]string, len(headers))
+	for name, v := range headers {
+		hints[name] = headerHint(v)
+	}
+	hintsJSON, err := json.Marshal(hints)
+	if err != nil {
+		return nil, nil, err
+	}
+	return enc, string(hintsJSON), nil
+}
+
+func decryptHeaders(enc []byte) (map[string]string, error) {
+	headers := map[string]string{}
+	if len(enc) == 0 {
+		return headers, nil
+	}
+	plain, err := decryptValue(enc, "header values")
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(plain, &headers); err != nil {
+		return nil, fmt.Errorf("corrupt webhook header values: %w", err)
+	}
+	return headers, nil
 }
 
 func validID(active bool) int {
@@ -145,20 +215,20 @@ func (r *Repository) Create(ctx context.Context, w *Webhook, secret string, user
 	if err != nil {
 		return nil, err
 	}
-	events, err := json.Marshal(w.Events)
+	headersEnc, headerHints, err := encryptHeaders(w.Headers)
 	if err != nil {
 		return nil, err
 	}
-	headers, err := json.Marshal(w.Headers)
+	events, err := json.Marshal(w.Events)
 	if err != nil {
 		return nil, err
 	}
 	ts := now()
 	id, err := database.GetAdapter().InsertWithReturning(r.db, database.ConvertPlaceholders(`
-		INSERT INTO gk_webhook (name, url, secret_encrypted, secret_hint, events, headers,
+		INSERT INTO gk_webhook (name, url, secret_encrypted, secret_hint, events, header_hints, headers_encrypted,
 			retry_count, timeout_seconds, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`),
-		w.Name, w.URL, enc, hint, string(events), string(headers),
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`),
+		w.Name, w.URL, enc, hint, string(events), headerHints, headersEnc,
 		w.RetryCount, w.TimeoutSeconds, validID(w.IsActive), ts, userID, ts, userID)
 	if err != nil {
 		return nil, err
@@ -166,20 +236,30 @@ func (r *Repository) Create(ctx context.Context, w *Webhook, secret string, user
 	return r.Get(ctx, id)
 }
 
-// Get returns one webhook or ErrNotFound.
+// Get returns one webhook (without header values) or ErrNotFound.
 func (r *Repository) Get(ctx context.Context, id int64) (*Webhook, error) {
-	w, _, err := r.getWithSecret(ctx, id)
+	w, _, err := r.getWithSecrets(ctx, id)
 	return w, err
 }
 
-func (r *Repository) getWithSecret(ctx context.Context, id int64) (*Webhook, []byte, error) {
+func (r *Repository) getWithSecrets(ctx context.Context, id int64) (*Webhook, storedSecrets, error) {
 	row := r.db.QueryRowContext(ctx, database.ConvertPlaceholders(
 		`SELECT `+webhookColumns+` FROM gk_webhook WHERE id = ?`), id)
-	w, secret, err := scanWebhook(row)
+	w, enc, err := scanWebhook(row)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil, ErrNotFound
+		return nil, storedSecrets{}, ErrNotFound
 	}
-	return w, secret, err
+	return w, enc, err
+}
+
+// HeaderValues returns the decrypted custom header values of a webhook, for
+// updates that keep some stored values.
+func (r *Repository) HeaderValues(ctx context.Context, id int64) (map[string]string, error) {
+	_, enc, err := r.getWithSecrets(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return decryptHeaders(enc.headers)
 }
 
 // List returns all webhooks ordered by name; active filters by state when set.
@@ -213,7 +293,8 @@ type SecretChange struct {
 	Value string // new secret when Set
 }
 
-// Update stores a modified (already normalised) webhook.
+// Update stores a modified (already normalised) webhook. The custom headers
+// are replaced when w.Headers is non-nil and kept otherwise.
 func (r *Repository) Update(ctx context.Context, w *Webhook, secret SecretChange, userID int) (*Webhook, error) {
 	if taken, err := r.nameTaken(ctx, w.Name, w.ID); err != nil {
 		return nil, err
@@ -224,14 +305,18 @@ func (r *Repository) Update(ctx context.Context, w *Webhook, secret SecretChange
 	if err != nil {
 		return nil, err
 	}
-	headers, err := json.Marshal(w.Headers)
-	if err != nil {
-		return nil, err
-	}
-	query := `UPDATE gk_webhook SET name = ?, url = ?, events = ?, headers = ?, retry_count = ?,
+	query := `UPDATE gk_webhook SET name = ?, url = ?, events = ?, retry_count = ?,
 		timeout_seconds = ?, valid_id = ?, change_time = ?, change_by = ?`
-	args := []interface{}{w.Name, w.URL, string(events), string(headers), w.RetryCount,
+	args := []interface{}{w.Name, w.URL, string(events), w.RetryCount,
 		w.TimeoutSeconds, validID(w.IsActive), now(), userID}
+	if w.Headers != nil {
+		headersEnc, headerHints, err := encryptHeaders(w.Headers)
+		if err != nil {
+			return nil, err
+		}
+		query += `, header_hints = ?, headers_encrypted = ?`
+		args = append(args, headerHints, headersEnc)
+	}
 	if secret.Set {
 		enc, hint, err := encryptSecret(secret.Value)
 		if err != nil {
@@ -242,13 +327,11 @@ func (r *Repository) Update(ctx context.Context, w *Webhook, secret SecretChange
 	}
 	query += ` WHERE id = ?`
 	args = append(args, w.ID)
-	res, err := r.db.ExecContext(ctx, database.ConvertPlaceholders(query), args...)
-	if err != nil {
+	if _, err := r.db.ExecContext(ctx, database.ConvertPlaceholders(query), args...); err != nil {
 		return nil, err
 	}
-	if n, err := res.RowsAffected(); err == nil && n == 0 {
-		return nil, ErrNotFound
-	}
+	// MySQL reports 0 affected rows when nothing changed, so existence is
+	// checked by reading the row back (ErrNotFound when it is gone).
 	return r.Get(ctx, w.ID)
 }
 
@@ -356,46 +439,113 @@ func (r *Repository) ListDeliveries(ctx context.Context, webhookID int64, limit 
 // MaxTimeoutSeconds so a live send is never duplicated.
 const staleDeliveringAfter = 10 * time.Minute
 
-// claimDue atomically moves up to limit due deliveries to "delivering" and
-// returns their ids. Each row is claimed with a conditional UPDATE, so
-// concurrent workers never send the same delivery twice.
-func (r *Repository) claimDue(ctx context.Context, limit int) ([]int64, error) {
-	ts := now()
-	stale := ts.Add(-staleDeliveringAfter)
+// dueCondition selects deliveries that may be sent now: pending ones whose
+// next attempt is due, and "delivering" ones whose sender has gone stale.
+const dueCondition = `((status = ? AND next_attempt_time <= ?) OR (status = ? AND change_time < ?))`
+
+func dueArgs(ts time.Time) []interface{} {
+	return []interface{}{StatusPending, ts, StatusDelivering, ts.Add(-staleDeliveringAfter)}
+}
+
+// dueWebhooks returns the ids of webhooks with due deliveries, the webhook
+// with the oldest due delivery first.
+func (r *Repository) dueWebhooks(ctx context.Context) ([]int64, error) {
 	rows, err := r.db.QueryContext(ctx, database.ConvertPlaceholders(`
-		SELECT id FROM gk_webhook_delivery
-		WHERE (status = ? AND next_attempt_time <= ?) OR (status = ? AND change_time < ?)
-		ORDER BY id LIMIT ?`), StatusPending, ts, StatusDelivering, stale, limit)
+		SELECT webhook_id, MIN(id) AS oldest FROM gk_webhook_delivery
+		WHERE `+dueCondition+`
+		GROUP BY webhook_id
+		ORDER BY oldest`), dueArgs(now())...)
 	if err != nil {
 		return nil, err
 	}
-	var candidates []int64
+	defer rows.Close()
+	var ids []int64
 	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
+		var id, oldest int64
+		if err := rows.Scan(&id, &oldest); err != nil {
 			return nil, err
 		}
-		candidates = append(candidates, id)
+		ids = append(ids, id)
 	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	claimed := make([]int64, 0, len(candidates))
-	for _, id := range candidates {
+	return ids, rows.Err()
+}
+
+// claimNext atomically moves the oldest due delivery of a webhook to
+// "delivering" and returns its id; ok is false when none is due. The claim is
+// a conditional UPDATE, so concurrent workers never send the same delivery
+// twice.
+func (r *Repository) claimNext(ctx context.Context, webhookID int64) (id int64, ok bool, err error) {
+	for {
+		ts := now()
+		args := append([]interface{}{webhookID}, dueArgs(ts)...)
+		err := r.db.QueryRowContext(ctx, database.ConvertPlaceholders(`
+			SELECT id FROM gk_webhook_delivery
+			WHERE webhook_id = ? AND `+dueCondition+`
+			ORDER BY id LIMIT 1`), args...).Scan(&id)
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, false, nil
+		}
+		if err != nil {
+			return 0, false, err
+		}
 		res, err := r.db.ExecContext(ctx, database.ConvertPlaceholders(`
 			UPDATE gk_webhook_delivery SET status = ?, change_time = ?
-			WHERE id = ? AND ((status = ? AND next_attempt_time <= ?) OR (status = ? AND change_time < ?))`),
-			StatusDelivering, ts, id, StatusPending, ts, StatusDelivering, stale)
+			WHERE id = ? AND `+dueCondition),
+			append([]interface{}{StatusDelivering, ts, id}, dueArgs(ts)...)...)
 		if err != nil {
-			return claimed, err
+			return 0, false, err
 		}
 		if n, _ := res.RowsAffected(); n == 1 {
-			claimed = append(claimed, id)
+			return id, true, nil
+		}
+		// Another worker claimed it first; look for the next one.
+	}
+}
+
+// pruneBatch bounds the rows deleted per statement.
+const pruneBatch = 1000
+
+// PruneDeliveries deletes delivered and failed deliveries created before
+// cutoff and returns how many were deleted. Pending and in-flight deliveries
+// are kept whatever their age.
+func (r *Repository) PruneDeliveries(ctx context.Context, cutoff time.Time) (int, error) {
+	total := 0
+	for {
+		rows, err := r.db.QueryContext(ctx, database.ConvertPlaceholders(`
+			SELECT id FROM gk_webhook_delivery
+			WHERE create_time < ? AND status IN (?, ?)
+			ORDER BY id LIMIT ?`), cutoff, StatusDelivered, StatusFailed, pruneBatch)
+		if err != nil {
+			return total, err
+		}
+		var ids []interface{}
+		for rows.Next() {
+			var id int64
+			if err := rows.Scan(&id); err != nil {
+				_ = rows.Close() // the Scan error is returned
+				return total, err
+			}
+			ids = append(ids, id)
+		}
+		_ = rows.Close() // read-only cursor fully consumed; rows.Err() below reports failures
+		if err := rows.Err(); err != nil {
+			return total, err
+		}
+		if len(ids) == 0 {
+			return total, nil
+		}
+		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+		res, err := r.db.ExecContext(ctx, database.ConvertPlaceholders(
+			`DELETE FROM gk_webhook_delivery WHERE id IN (`+placeholders+`)`), ids...)
+		if err != nil {
+			return total, err
+		}
+		n, _ := res.RowsAffected()
+		total += int(n)
+		if len(ids) < pruneBatch {
+			return total, nil
 		}
 	}
-	return claimed, nil
 }
 
 // attemptResult is the outcome of one HTTP attempt.
@@ -406,6 +556,7 @@ type attemptResult struct {
 	errMsg     string
 	durationMS int
 	retryAfter time.Duration // with status pending: wait before the next attempt
+	permanent  bool          // the failure cannot be fixed by retrying
 }
 
 func (r *Repository) recordAttempt(ctx context.Context, id int64, res attemptResult) error {

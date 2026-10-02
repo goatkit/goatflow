@@ -28,6 +28,7 @@ func (s *Service) registerBuiltinHandlers() {
 	s.RegisterHandler("email.poll", s.handleEmailPoll)
 	s.RegisterHandler("scheduler.housekeeping", s.handleHousekeeping)
 	s.RegisterHandler("genericAgent.execute", s.handleGenericAgentExecute)
+	s.RegisterHandler("escalation.index", s.handleEscalationIndex)
 	s.RegisterHandler("escalation.check", s.handleEscalationCheck)
 	s.RegisterHandler("metrics.ticketActivity", s.handleMetricsTicketActivity)
 }
@@ -272,47 +273,50 @@ func (s *Service) handleGenericAgentExecute(ctx context.Context, job *models.Sch
 	return svc.ExecuteAllDueJobs(ctx)
 }
 
+// escalationEngine is the escalation service and index state shared by the
+// escalation jobs; the indexer remembers between runs which rows it has seen.
+type escalationEngine struct {
+	once    sync.Once
+	svc     *escalation.Service
+	indexer *escalation.Indexer
+}
+
+func (s *Service) escalationEngine() *escalationEngine {
+	e := &s.escalation
+	e.once.Do(func() {
+		e.svc = escalation.NewService(s.db, escalation.WithLocation(s.location), escalation.WithLogger(s.logger))
+		e.indexer = escalation.NewIndexer(e.svc)
+	})
+	return e
+}
+
+// handleEscalationIndex keeps ticket.escalation_* current for every ticket
+// changed since the previous run (and for all tickets after SLA, queue or
+// calendar changes).
+func (s *Service) handleEscalationIndex(ctx context.Context, job *models.ScheduledJob) error {
+	if s.db == nil {
+		return errSchedulerNoDatabase
+	}
+	_, err := s.escalationEngine().indexer.RunOnce(ctx)
+	return err
+}
+
+// handleEscalationCheck raises the OTRS escalation events. The repeat
+// interval is the OTRS setting OTRSEscalationEvents::DecayTime (minutes,
+// default 1440; 0 repeats every run).
 func (s *Service) handleEscalationCheck(ctx context.Context, job *models.ScheduledJob) error {
 	if s.db == nil {
 		return errSchedulerNoDatabase
 	}
-
-	// Initialize escalation service
-	escService := escalation.NewService(s.db, s.logger)
-	if err := escService.Initialize(ctx); err != nil {
-		s.logger.Printf("scheduler: failed to initialize escalation service: %v", err)
-		return err
-	}
-
-	// Create check service using the calendar service from escalation service
-	calService := escalation.NewCalendarService(s.db)
-	if err := calService.LoadCalendars(ctx); err != nil {
-		s.logger.Printf("scheduler: failed to load calendars: %v", err)
-		return err
-	}
-
-	checkService := escalation.NewCheckService(s.db, calService, s.logger)
-
-	// Set decay time from config if provided
-	if decayTime := intFromConfig(job.Config, "decay_time_minutes", 0); decayTime > 0 {
-		checkService.SetDecayTime(decayTime)
-	}
-
-	// Check escalations and trigger events
-	events, err := checkService.CheckEscalations(ctx)
+	decay, err := escalation.DecayTime(s.db)
 	if err != nil {
 		return err
 	}
-
-	if len(events) > 0 {
-		s.logger.Printf("scheduler: escalation check triggered %d event(s)", len(events))
-		for _, evt := range events {
-			s.logger.Printf("scheduler: escalation event %s for ticket %d", evt.EventName, evt.TicketID)
-			// TODO: Integrate with event/notification system when available
-		}
+	events, err := s.escalationEngine().svc.CheckEscalations(ctx, decay)
+	for _, evt := range events {
+		s.logger.Printf("scheduler: escalation event %s for ticket %d", evt.Name, evt.TicketID)
 	}
-
-	return nil
+	return err
 }
 
 // handleMetricsTicketActivity calculates ticket activity counts
@@ -449,14 +453,21 @@ func defaultJobs() []*models.ScheduledJob {
 			Config:         map[string]any{},
 		},
 		{
+			Name:           "Escalation Index",
+			Slug:           "escalation-index",
+			Handler:        "escalation.index",
+			Schedule:       "@every 15s",
+			TimeoutSeconds: 3600, // the first run rebuilds every open ticket
+			RunOnStartup:   true,
+			Config:         map[string]any{},
+		},
+		{
 			Name:           "Escalation Check",
 			Slug:           "escalation-check",
 			Handler:        "escalation.check",
 			Schedule:       "* * * * *",
 			TimeoutSeconds: 120,
-			Config: map[string]any{
-				"decay_time_minutes": 0, // 0 = no decay, events triggered every run
-			},
+			Config:         map[string]any{},
 		},
 		{
 			Name:           "Ticket Activity Metrics",

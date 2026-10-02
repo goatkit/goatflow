@@ -49,15 +49,15 @@ if cfg != nil && cfg.Features.Registration {
 
 ## Values that do not come from `Config`
 
-Some sections of `default.yaml` exist but are not used for the real value. Do not read these
-from `Config` in new code:
+Some values are not in `Config` at all, or are in it only as a fallback. Do not read these from
+`Config` in new code:
 
 | Value | Read it from | Not from |
 |-------|--------------|----------|
-| Database connection | `dbconfig.Env("HOST")` etc. (`DB_MYSQL_*` or `DB_PGSQL_*` by `DB_DRIVER`, then flat `DB_*`) | `cfg.Database.*` |
+| Database connection | `dbconfig.Env("HOST")` etc. (`DB_MYSQL_*` or `DB_PGSQL_*` by `DB_DRIVER`, then flat `DB_*`) | `Config` has no database section |
 | JWT signing key | `JWT_SECRET` (`internal/platform/shared/jwt_manager.go`; `cfg.Auth.JWT.Secret` is only a fallback) | `cfg.Auth.JWT.Secret` alone |
 | Listen port | `APP_PORT` | `cfg.Server.Port` |
-| Logging, metrics | `LOG_*`, `METRICS_*` variables | `cfg.Logging`, `cfg.Metrics` |
+| Logging, metrics | `LOG_*`, `METRICS_*` variables (`internal/platform/logging`, `cmd/goats`) | `Config` has no logging or metrics section |
 
 The full list is the "`default.yaml` sections" table in
 [docs/configuration.md](../configuration.md#defaultyaml-sections).

@@ -291,12 +291,12 @@ func loadCompanyServiceMatrix(db *sql.DB, customerID string, users []companyCust
 	for rows.Next() {
 		var serviceID, userID int
 		if err := rows.Scan(&serviceID, &userID); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, err
 		}
 		assigned[[2]int{serviceID, userID}] = true
 	}
-	rows.Close()
+	_ = rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}

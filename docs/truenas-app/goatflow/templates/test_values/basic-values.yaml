@@ -8,7 +8,8 @@ goatflow:
   db_root_password: goatflow-root-password
   valkey_password: goatflow-valkey-password
   jwt_secret: test-jwt-secret-minimum-32-characters
-  secure_key: test-secure-key-minimum-32-characters
+  secure_key: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+  base_url: https://helpdesk.example.com
   admin_password: goatflow-admin-password
   email_enabled: false
   email_from: support@example.com

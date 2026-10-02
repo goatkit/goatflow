@@ -23,7 +23,7 @@ func GenerateKeyPair() (ed25519.PublicKey, ed25519.PrivateKey, error) {
 // the ed25519 signature of the binary's SHA-256 hash.
 func SignBinary(binaryPath, outputSigPath string, privateKey ed25519.PrivateKey) error {
 	// Read and hash the binary
-	binaryData, err := os.ReadFile(binaryPath)
+	binaryData, err := os.ReadFile(binaryPath) // #nosec G304 -- binaryPath is the gk CLI operator's file argument
 	if err != nil {
 		return fmt.Errorf("failed to read binary: %w", err)
 	}
@@ -35,7 +35,7 @@ func SignBinary(binaryPath, outputSigPath string, privateKey ed25519.PrivateKey)
 
 	// Write signature to file (hex encoded for readability)
 	sigHex := hex.EncodeToString(signature)
-	if err := os.WriteFile(outputSigPath, []byte(sigHex), 0644); err != nil {
+	if err := os.WriteFile(outputSigPath, []byte(sigHex), 0o644); err != nil { // #nosec G306 G703 -- detached signature is public and shipped with the binary; path is the CLI file argument + ".sig"
 		return fmt.Errorf("failed to write signature: %w", err)
 	}
 
@@ -46,7 +46,7 @@ func SignBinary(binaryPath, outputSigPath string, privateKey ed25519.PrivateKey)
 // Returns nil if the signature is valid and from a trusted key.
 func VerifyBinary(binaryPath, signaturePath string, trustedKeys []ed25519.PublicKey) error {
 	// Read binary and compute hash
-	binaryData, err := os.ReadFile(binaryPath)
+	binaryData, err := os.ReadFile(binaryPath) // #nosec G304 -- host-chosen path (plugin dir binary or marketplace temp download), not request input
 	if err != nil {
 		return fmt.Errorf("failed to read binary: %w", err)
 	}
@@ -54,7 +54,7 @@ func VerifyBinary(binaryPath, signaturePath string, trustedKeys []ed25519.Public
 	hash := sha256.Sum256(binaryData)
 
 	// Read signature file
-	sigData, err := os.ReadFile(signaturePath)
+	sigData, err := os.ReadFile(signaturePath) // #nosec G304 -- host-chosen path (plugin dir .sig or marketplace temp download), not request input
 	if err != nil {
 		return fmt.Errorf("failed to read signature file: %w", err)
 	}

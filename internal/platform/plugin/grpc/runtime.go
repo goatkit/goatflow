@@ -43,18 +43,13 @@ var ServePlugin = grpcutil.ServePlugin
 // Handshake re-exports the shared handshake config.
 var Handshake = grpcutil.Handshake
 
-// PluginMap is the map of plugin types we support.
-var PluginMap = map[string]goplugin.Plugin{
-	"gkplugin": &GKPluginPluginHost{},
-}
-
 // GRPCPlugin wraps a go-plugin client to implement plugin.Plugin.
 type GRPCPlugin struct {
 	client       *goplugin.Client
 	rpcClient    goplugin.ClientProtocol
-	impl         GKPluginInterface
+	impl         *GKPluginRPCClientHost
 	registration plugin.GKRegistration
-	host         plugin.HostAPI
+	binding      *hostBinding  // routes the plugin's host callbacks to its sandbox
 	callTimeout  time.Duration // Per-call deadline (0 = no timeout)
 }
 
@@ -62,20 +57,20 @@ type GRPCPlugin struct {
 // It extends the base plugin with HostAPI bidirectional call support.
 type GKPluginPluginHost struct {
 	goplugin.Plugin
-	Impl       GKPluginInterface
-	Host       plugin.HostAPI // For bidirectional calls
-	PluginName string         // Plugin name for caller authentication
+	binding    *hostBinding // host the plugin's callbacks reach (bound at Init)
+	PluginName string       // Plugin name for caller authentication
 }
 
-// Server returns the RPC server for the plugin (plugin side).
-func (p *GKPluginPluginHost) Server(b *goplugin.MuxBroker) (interface{}, error) {
-	return &GKPluginRPCServerHost{Impl: p.Impl, broker: b}, nil
+// Server is the plugin-side half of go-plugin; plugins serve themselves with
+// grpcutil.ServePlugin, so the host never builds one.
+func (p *GKPluginPluginHost) Server(*goplugin.MuxBroker) (interface{}, error) {
+	return nil, fmt.Errorf("gkplugin: host-side plugin type cannot serve")
 }
 
 // Client returns the RPC client for the plugin (host side).
 func (p *GKPluginPluginHost) Client(b *goplugin.MuxBroker, c *rpc.Client) (interface{}, error) {
 	// Start a server for the host API that the plugin can call back to
-	hostAPIServer := &HostAPIRPCServer{Host: p.Host, CallerName: p.PluginName}
+	hostAPIServer := &HostAPIRPCServer{binding: p.binding, CallerName: p.PluginName}
 
 	// Get an ID for the host API server
 	id := b.NextId()
@@ -114,8 +109,10 @@ func (c *GKPluginRPCClientHost) Init(config map[string]string) error {
 	return c.client.Call("Plugin.Init", req, &resp)
 }
 
-func (c *GKPluginRPCClientHost) Call(fn string, args json.RawMessage) (json.RawMessage, error) {
-	req := CallRequest{Function: fn, Args: args}
+// call runs a plugin function. token identifies the host call so the
+// plugin's callbacks can be tied to its context.
+func (c *GKPluginRPCClientHost) call(token, fn string, args json.RawMessage) (json.RawMessage, error) {
+	req := CallRequest{Function: fn, Args: args, CallToken: token}
 	var resp CallResponse
 	err := c.client.Call("Plugin.Call", req, &resp)
 	if err != nil {
@@ -132,53 +129,10 @@ func (c *GKPluginRPCClientHost) Shutdown() error {
 	return c.client.Call("Plugin.Shutdown", new(interface{}), &resp)
 }
 
-// GKPluginRPCServerHost is the host-side RPC server with HostAPI bridging.
-type GKPluginRPCServerHost struct {
-	Impl    GKPluginInterface
-	broker  *goplugin.MuxBroker
-	hostAPI *HostAPIRPCClient // Set after Init connects back to host
-}
-
-func (s *GKPluginRPCServerHost) GKRegister(args interface{}, resp *[]byte) error {
-	reg, err := s.Impl.GKRegister()
-	if err != nil {
-		return err
-	}
-	data, err := json.Marshal(reg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal registration: %w", err)
-	}
-	*resp = data
-	return nil
-}
-
-func (s *GKPluginRPCServerHost) Init(req InitRequest, resp *interface{}) error {
-	// Connect back to the host's HostAPI server
-	if req.HostAPIID > 0 && s.broker != nil {
-		conn, err := s.broker.Dial(req.HostAPIID)
-		if err == nil {
-			s.hostAPI = NewHostAPIRPCClient(rpc.NewClient(conn))
-		}
-	}
-	return s.Impl.Init(req.Config)
-}
-
-func (s *GKPluginRPCServerHost) Call(req CallRequest, resp *CallResponse) error {
-	result, err := s.Impl.Call(req.Function, req.Args)
-	if err != nil {
-		resp.Error = err.Error()
-		return nil
-	}
-	resp.Result = result
-	return nil
-}
-
-func (s *GKPluginRPCServerHost) Shutdown(args interface{}, resp *interface{}) error {
-	return s.Impl.Shutdown()
-}
-
-// LoadGRPCPlugin loads a gRPC plugin from an executable path with OS-level sandboxing.
-func LoadGRPCPlugin(execPath, pluginName string, host plugin.HostAPI, policy plugin.ResourcePolicy) (*GRPCPlugin, error) {
+// LoadGRPCPlugin loads a gRPC plugin from an executable path with OS-level
+// sandboxing. The plugin's host callbacks are refused until Init binds the
+// host the Manager gives the plugin (its SandboxedHostAPI).
+func LoadGRPCPlugin(execPath, pluginName string, policy plugin.ResourcePolicy) (*GRPCPlugin, error) {
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:   "plugin",
 		Output: os.Stdout,
@@ -186,8 +140,9 @@ func LoadGRPCPlugin(execPath, pluginName string, host plugin.HostAPI, policy plu
 	})
 
 	// Create plugin map with host API for bidirectional calls
+	binding := newHostBinding()
 	pluginMap := map[string]goplugin.Plugin{
-		"gkplugin": &GKPluginPluginHost{Host: host, PluginName: pluginName},
+		"gkplugin": &GKPluginPluginHost{binding: binding, PluginName: pluginName},
 	}
 
 	// Create command with OS-level sandboxing
@@ -222,7 +177,7 @@ func LoadGRPCPlugin(execPath, pluginName string, host plugin.HostAPI, policy plu
 		return nil, fmt.Errorf("failed to dispense plugin: %w", err)
 	}
 
-	impl, ok := raw.(GKPluginInterface)
+	impl, ok := raw.(*GKPluginRPCClientHost)
 	if !ok {
 		client.Kill()
 		return nil, fmt.Errorf("plugin does not implement GKPluginInterface")
@@ -242,7 +197,7 @@ func LoadGRPCPlugin(execPath, pluginName string, host plugin.HostAPI, policy plu
 		rpcClient:    rpcClient,
 		impl:         impl,
 		registration: *reg,
-		host:         host,
+		binding:      binding,
 	}, nil
 }
 
@@ -251,9 +206,10 @@ func (p *GRPCPlugin) GKRegister() plugin.GKRegistration {
 	return p.registration
 }
 
-// Init implements plugin.Plugin.
+// Init implements plugin.Plugin. host is the plugin's SandboxedHostAPI: from
+// here on every host callback from the plugin process goes through it.
 func (p *GRPCPlugin) Init(ctx context.Context, host plugin.HostAPI) error {
-	p.host = host
+	p.binding.setHost(host)
 	config := buildPluginConfig(p.registration.Name)
 	return p.impl.Init(config)
 }
@@ -269,7 +225,9 @@ func buildPluginConfig(pluginName string) map[string]string {
 	workDir := filepath.Join("data", "plugins", pluginName)
 
 	// Ensure work_dir exists.
-	os.MkdirAll(workDir, 0755)
+	if err := os.MkdirAll(workDir, 0o750); err != nil {
+		log.Printf("plugin %s: create work_dir %s: %v", pluginName, workDir, err)
+	}
 
 	config := map[string]string{
 		"host_version": "0.6.4",
@@ -295,13 +253,17 @@ func buildPluginConfig(pluginName string) map[string]string {
 	return config
 }
 
-// Call implements plugin.Plugin.
+// Call implements plugin.Plugin. ctx stays registered under the call's token
+// until Call returns, so the plugin's callbacks that carry the token run with
+// it (acting user, language, call depth, deadline).
 func (p *GRPCPlugin) Call(ctx context.Context, fn string, args json.RawMessage) (json.RawMessage, error) {
 	if p.callTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, p.callTimeout)
 		defer cancel()
 	}
+	token, end := p.binding.begin(ctx)
+	defer end()
 
 	// Run the call in a goroutine so we can respect context cancellation
 	type result struct {
@@ -310,7 +272,7 @@ func (p *GRPCPlugin) Call(ctx context.Context, fn string, args json.RawMessage) 
 	}
 	ch := make(chan result, 1)
 	go func() {
-		data, err := p.impl.Call(fn, args)
+		data, err := p.impl.call(token, fn, args)
 		ch <- result{data, err}
 	}()
 

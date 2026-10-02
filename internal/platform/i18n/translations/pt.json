@@ -657,7 +657,13 @@
           "responsible": "Responsável pelo Chamado",
           "roles": "Funções",
           "special": "Destinatários Especiais",
-          "watcher": "Observadores do Chamado"
+          "watcher": "Observadores do Chamado",
+          "my_queues": "Agentes que têm a fila em Minhas filas",
+          "creator": "Criador do chamado",
+          "read_permissions": "Todos os agentes com acesso de leitura à fila",
+          "write_permissions": "Todos os agentes com acesso de escrita à fila",
+          "emails": "Endereços de e-mail de destinatários adicionais",
+          "emails_help": "Separe os endereços com vírgulas. Até 200 caracteres."
         },
         "sections": {
           "basic": "Informações Básicas",
@@ -1529,6 +1535,7 @@
         "events_required": "Selecione pelo menos um evento.",
         "header_name": "Nome do cabeçalho",
         "header_value": "Valor",
+        "header_value_keep": "Valor guardado ({hint}). Deixe vazio para o manter",
         "headers": "Cabeçalhos personalizados",
         "headers_help": "Enviados em cada entrega. Content-Type, User-Agent e os cabeçalhos X-Webhook-* são definidos pelo GoatFlow.",
         "remove_header": "Remover cabeçalho",
@@ -2331,9 +2338,18 @@
     }
   },
   "customer_portal_settings": {
+    "description": "Padrões para todas as empresas clientes. Cada empresa pode substituí-los na sua página de edição.",
+    "enable": "Ativar o portal do cliente",
+    "enable_help": "Liga ou desliga o portal do cliente. Empresas com configuração própria mantêm-na.",
+    "footer_text": "Texto do rodapé",
     "heading": "Portal do Cliente Configurações",
+    "landing_page": "Página inicial",
+    "landing_page_help": "Página que os clientes veem após entrar, por exemplo /customer/tickets. Um caminho sem / inicial é relativo a /customer.",
+    "per_company_note": "Cada empresa cliente pode substituir esses padrões na aba Configurações do portal da sua página de edição.",
+    "require_login": "Exigir login",
+    "require_login_help": "Os clientes precisam entrar antes de acessar o portal",
     "title": "Portal do Cliente Configurações",
-    "per_company_note": "Cada empresa cliente pode substituir esses padrões na aba Configurações do portal da sua página de edição."
+    "title_field": "Título do portal"
   },
   "customer_user_services": {
     "title": "Cliente Usuário Serviços"
@@ -4179,7 +4195,6 @@
     "showing_of_total": "Showing %d of %d tickets",
     "sla": "SLA",
     "spam": "Spam",
-    "split": "Dividir",
     "state": "Estado",
     "status": "Status",
     "subject": "Assunto",
@@ -4218,7 +4233,15 @@
     "view_in_queue": "Ver chamados nesta fila",
     "visible_for_customer": "Visível para cliente",
     "visible_for_customer_help": "Marque para mostrar esta atualização no portal do cliente.",
-    "watch": "Observar"
+    "watch": "Observar",
+    "escalation": {
+      "first_response": "Prazo da primeira resposta",
+      "update": "Prazo da atualização",
+      "solution": "Prazo da solução",
+      "due_in": "Vence em",
+      "overdue_by": "Atrasado há",
+      "escalated": "Escalado"
+    }
   },
   "tickets_form": {
     "attachments": "Anexos",

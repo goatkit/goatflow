@@ -3,22 +3,9 @@
 GoatFlow ships a Helm chart at `charts/goatflow/`. Full settings:
 [charts/goatflow/README.md](../../charts/goatflow/README.md).
 
-## Known limitations (0.10.0 chart)
-
-A default install of the 0.10.0 chart does not give a working GoatFlow. Read the
-[full list with work-arounds](../../charts/goatflow/README.md#known-limitations-0100-chart)
-first. In short:
-
-| Limitation | Effect |
-|------------|--------|
-| No background runner | No outgoing email (the `mail_queue` is never sent), no webhook delivery, no session cleanup. |
-| Ingress goes to the nginx frontend | nginx proxies only `/api/` and `/ws` to the backend, so `/login`, `/customer` and `/admin` do not work through the Ingress. |
-| `GOATFLOW_SECURE_KEY` not set | Each pod makes its own random key; encrypted plugin and webhook secrets cannot be read after a restart or by another replica. |
-| Environment names GoatFlow does not read | `DB_TYPE` (needs `DB_DRIVER`), `APP_SECRET` (needs `JWT_SECRET`), `REDIS_*` / `CACHE_ENABLED` (needs `GOATFLOW_VALKEY_*`), `SERVER_PORT`, `SESSION_TIMEOUT`. |
-| `backend-config` ConfigMap not mounted | `config.storage.*` has no effect. |
-
-For a working install today, use Docker Compose ([docker.md](docker.md)) or the TrueNAS app,
-which both run the runner.
+The chart deploys the backend (agent UI, customer portal, API), the background runner
+(outgoing email, webhooks, notification rules, session cleanup), MariaDB or PostgreSQL, Valkey,
+and optionally an Ingress and a metrics Service.
 
 ## Install
 
@@ -46,15 +33,29 @@ helm install goatflow ./charts/goatflow --namespace goatflow --create-namespace
 # PostgreSQL: add -f charts/goatflow/values-postgresql.yaml
 ```
 
-The image is `ghcr.io/goatkit/goatflow`. By default its tag is the chart's `appVersion`
-(`0.10.0`); set `backend.image.tag` to override it.
+The images are `ghcr.io/goatkit/goatflow` (backend) and `ghcr.io/goatkit/goatflow-runner`
+(runner). By default their tag is the chart's `appVersion` (`0.10.0`); set `backend.image.tag`
+and `runner.image.tag` to override it.
+
+## First login
+
+Log in as `root@localhost`. The chart generates the first-boot password (or uses
+`secrets.adminPassword`):
+
+```bash
+kubectl -n goatflow get secret goatflow-app -o jsonpath='{.data.admin-password}' | base64 -d
+```
+
+The backend sets `Secure` login cookies, so serve it over HTTPS (Ingress with TLS).
 
 ## Settings to check
 
 | Value | Why |
 |-------|-----|
+| `ingress.*` | Every path goes to the backend Service. Add `tls` for HTTPS. |
 | `config.baseUrl` | Public URL (`BASE_URL`). Password-reset and customer sign-up emails are not sent while it is empty. |
-| `database.*.password`, `secrets.appSecretKey` | Empty values are generated again on every `helm upgrade`. Set them, or use existing Secrets. |
+| `config.email.*` | SMTP for the runner and the backend. While disabled, mail stays in the `mail_queue` table. |
+| `secrets.*` | Database passwords, `JWT_SECRET`, `GOATFLOW_SECURE_KEY` and the admin password are generated on install and kept on upgrade. Back up the `<fullname>-app` Secret: stored webhook and plugin secrets cannot be decrypted without its `secure-key`. |
 | `config.ldap.*`, `config.authProviders` | LDAP / Active Directory agent login. See [docs/LDAP.md](../LDAP.md). |
 
 ## Health and metrics
@@ -62,8 +63,8 @@ The image is `ghcr.io/goatkit/goatflow`. By default its tag is the chart's `appV
 - Liveness and readiness probes call `GET /health` on port 8080. It pings the database and
   answers 503 when the database is unreachable.
 - `GET /health/detailed` and `GET /metrics` on port 8080 need an admin login.
-- For Prometheus, set `METRICS_ENABLED=true` (with `backend.extraEnv`). The backend then serves
-  `/metrics` without login on `METRICS_PORT` (default 9090).
+- For Prometheus, set `metrics.enabled=true`. The backend then serves `/metrics` without login
+  on port 9090 (`metrics.port`), exposed by the Service `<fullname>-metrics`.
 
 ## See Also
 

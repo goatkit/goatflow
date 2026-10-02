@@ -1,0 +1,25 @@
+{{- if and .Values.backend.enabled .Values.metrics.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "goatflow.fullname" . }}-metrics
+  labels:
+    {{- include "goatflow.backend.labels" . | nindent 4 }}
+    {{- with .Values.global.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- $annotations := merge (.Values.metrics.service.annotations | default dict) (.Values.global.commonAnnotations | default dict) }}
+  {{- with $annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.metrics.port }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "goatflow.backend.selectorLabels" . | nindent 4 }}
+{{- end }}

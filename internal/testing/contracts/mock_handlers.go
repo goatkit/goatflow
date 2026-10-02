@@ -35,7 +35,7 @@ func (m *MockHandlers) HandleLogin(c *gin.Context) {
 
 	// Check credentials
 	if loginRequest.Login == "testuser" && loginRequest.Password == "testpass123" {
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusOK, gin.H{ // #nosec G101 -- fixed fake tokens returned by a contract-test mock, not real credentials
 			"success":       true,
 			"access_token":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test_access_token",
 			"refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test_refresh_token",
@@ -73,7 +73,7 @@ func (m *MockHandlers) HandleRefresh(c *gin.Context) {
 	}
 
 	if refreshRequest.RefreshToken == "valid_refresh_token_here" {
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusOK, gin.H{ // #nosec G101 -- fixed fake token returned by a contract-test mock, not a real credential
 			"success":      true,
 			"access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.new_access_token",
 			"token_type":   "Bearer",

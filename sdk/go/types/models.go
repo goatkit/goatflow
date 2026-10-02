@@ -452,26 +452,30 @@ type SearchFacet struct {
 
 // Webhooks
 
-// Webhook represents an outbound webhook. Secret is write-only: responses
-// carry HasSecret and the masked SecretHint instead. RetryCount,
+// Webhook represents an outbound webhook. Secret and header values are
+// write-only: responses carry HasSecret and the masked SecretHint, and
+// HeaderHints (header name -> masked value) instead of Headers. In a request,
+// Headers replaces the custom headers; a nil value keeps the stored value of
+// that header, and leaving Headers nil keeps them all. RetryCount,
 // TimeoutSeconds and IsActive are pointers so requests can leave them unset
 // (server defaults 3, 10 and true; on update, unchanged).
 type Webhook struct {
-	ID             uint              `json:"id,omitempty"`
-	Name           string            `json:"name,omitempty"`
-	URL            string            `json:"url,omitempty"`
-	Events         []string          `json:"events,omitempty"`
-	Secret         *string           `json:"secret,omitempty"`
-	HasSecret      bool              `json:"has_secret,omitempty"`
-	SecretHint     string            `json:"secret_hint,omitempty"`
-	Headers        map[string]string `json:"headers,omitempty"`
-	RetryCount     *int              `json:"retry_count,omitempty"`
-	TimeoutSeconds *int              `json:"timeout_seconds,omitempty"`
-	IsActive       *bool             `json:"is_active,omitempty"`
-	CreatedAt      *time.Time        `json:"created_at,omitempty"`
-	CreatedBy      int               `json:"created_by,omitempty"`
-	UpdatedAt      *time.Time        `json:"updated_at,omitempty"`
-	UpdatedBy      int               `json:"updated_by,omitempty"`
+	ID             uint               `json:"id,omitempty"`
+	Name           string             `json:"name,omitempty"`
+	URL            string             `json:"url,omitempty"`
+	Events         []string           `json:"events,omitempty"`
+	Secret         *string            `json:"secret,omitempty"`
+	HasSecret      bool               `json:"has_secret,omitempty"`
+	SecretHint     string             `json:"secret_hint,omitempty"`
+	Headers        map[string]*string `json:"headers,omitempty"`
+	HeaderHints    map[string]string  `json:"header_hints,omitempty"`
+	RetryCount     *int               `json:"retry_count,omitempty"`
+	TimeoutSeconds *int               `json:"timeout_seconds,omitempty"`
+	IsActive       *bool              `json:"is_active,omitempty"`
+	CreatedAt      *time.Time         `json:"created_at,omitempty"`
+	CreatedBy      int                `json:"created_by,omitempty"`
+	UpdatedAt      *time.Time         `json:"updated_at,omitempty"`
+	UpdatedBy      int                `json:"updated_by,omitempty"`
 }
 
 // WebhookDelivery is one event sent (or scheduled) to one webhook.

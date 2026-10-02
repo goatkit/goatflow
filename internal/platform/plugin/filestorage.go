@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/goatkit/goatflow/internal/platform/organisation"
 	pkgplugin "github.com/goatkit/goatflow/pkg/plugin"
 )
 
@@ -74,7 +75,7 @@ func (h *ProdHostAPI) StoreFile(ctx context.Context, key string, data []byte, me
 		return fmt.Errorf("no plugin context for StoreFile")
 	}
 
-	orgID := orgIDFromCtx(ctx)
+	orgID := organisation.OrgIDFromContext(ctx)
 
 	// Check size limit from resource policy.
 	if err := checkFileStorageLimit(pluginName, orgID, int64(len(data))); err != nil {
@@ -101,7 +102,7 @@ func (h *ProdHostAPI) GetFile(ctx context.Context, key string) ([]byte, map[stri
 		return nil, nil, fmt.Errorf("no plugin context for GetFile")
 	}
 
-	path, err := pluginFilePath(pluginName, orgIDFromCtx(ctx), key)
+	path, err := pluginFilePath(pluginName, organisation.OrgIDFromContext(ctx), key)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -115,7 +116,7 @@ func (h *ProdHostAPI) DeleteFile(ctx context.Context, key string) error {
 		return fmt.Errorf("no plugin context for DeleteFile")
 	}
 
-	path, err := pluginFilePath(pluginName, orgIDFromCtx(ctx), key)
+	path, err := pluginFilePath(pluginName, organisation.OrgIDFromContext(ctx), key)
 	if err != nil {
 		return err
 	}
@@ -129,7 +130,7 @@ func (h *ProdHostAPI) ListFiles(ctx context.Context, prefix string) ([]pkgplugin
 		return nil, fmt.Errorf("no plugin context for ListFiles")
 	}
 
-	path, err := pluginFilePath(pluginName, orgIDFromCtx(ctx), prefix)
+	path, err := pluginFilePath(pluginName, organisation.OrgIDFromContext(ctx), prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -196,19 +197,6 @@ func pluginNameFromCtx(ctx context.Context) string {
 	return ""
 }
 
-func orgIDFromCtx(ctx context.Context) int64 {
-	// Try the organisation context key used by the org middleware.
-	if v := ctx.Value("org_id"); v != nil {
-		switch id := v.(type) {
-		case int64:
-			return id
-		case int:
-			return int64(id)
-		}
-	}
-	return 0
-}
-
 // ==== Local Disk Backend ====
 
 type localBackend struct {
@@ -223,35 +211,48 @@ func newLocalBackend() *localBackend {
 	return &localBackend{base: filepath.Join(base, "plugins")}
 }
 
+// Paths passed to localBackend methods are built by pluginFilePath /
+// pluginPrefix, which reject absolute keys and any ".." component, so every
+// fullPath below stays inside b.base.
 func (b *localBackend) Store(path string, data []byte, metadata map[string]string) error {
 	fullPath := filepath.Join(b.base, path)
-	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0o750); err != nil {
 		return fmt.Errorf("create directory: %w", err)
 	}
-	if err := os.WriteFile(fullPath, data, 0644); err != nil {
+	if err := os.WriteFile(fullPath, data, 0o600); err != nil {
 		return fmt.Errorf("write file: %w", err)
 	}
-	metaJSON, _ := json.Marshal(metadata)
-	os.WriteFile(fullPath+".meta.json", metaJSON, 0644)
+	metaJSON, err := json.Marshal(metadata)
+	if err != nil {
+		return fmt.Errorf("encode metadata: %w", err)
+	}
+	if err := os.WriteFile(fullPath+".meta.json", metaJSON, 0o600); err != nil {
+		return fmt.Errorf("write metadata: %w", err)
+	}
 	return nil
 }
 
 func (b *localBackend) Get(path string) ([]byte, map[string]string, error) {
 	fullPath := filepath.Join(b.base, path)
-	data, err := os.ReadFile(fullPath)
+	data, err := os.ReadFile(fullPath) // #nosec G304 -- fullPath is b.base + pluginFilePath-validated key (no "..", not absolute)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read file: %w", err)
 	}
 	var metadata map[string]string
-	if metaJSON, err := os.ReadFile(fullPath + ".meta.json"); err == nil {
-		json.Unmarshal(metaJSON, &metadata)
+	if metaJSON, err := os.ReadFile(fullPath + ".meta.json"); err == nil { // #nosec G304 -- sidecar of validated fullPath inside b.base
+		if err := json.Unmarshal(metaJSON, &metadata); err != nil {
+			log.Printf("plugin file storage: corrupt metadata for %s: %v", path, err)
+			metadata = nil
+		}
 	}
 	return data, metadata, nil
 }
 
 func (b *localBackend) Delete(path string) error {
 	fullPath := filepath.Join(b.base, path)
-	os.Remove(fullPath + ".meta.json")
+	if err := os.Remove(fullPath + ".meta.json"); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("delete metadata: %w", err)
+	}
 	return os.Remove(fullPath)
 }
 
@@ -269,11 +270,14 @@ func (b *localBackend) List(prefix string) ([]pkgplugin.FileInfo, error) {
 			Size:       info.Size(),
 			ModifiedAt: info.ModTime().UTC().Format(time.RFC3339),
 		}
-		if metaJSON, err := os.ReadFile(path + ".meta.json"); err == nil {
+		if metaJSON, err := os.ReadFile(path + ".meta.json"); err == nil { // #nosec G304 G122 -- walk root is inside host-owned b.base; plugins cannot create symlinks there (StoreFile writes regular files only)
 			var meta map[string]string
-			json.Unmarshal(metaJSON, &meta)
-			fi.Metadata = meta
-			fi.ContentType = meta["content-type"]
+			if err := json.Unmarshal(metaJSON, &meta); err != nil {
+				log.Printf("plugin file storage: corrupt metadata for %s: %v", relKey, err)
+			} else {
+				fi.Metadata = meta
+				fi.ContentType = meta["content-type"]
+			}
 		}
 		files = append(files, fi)
 		return nil
@@ -288,13 +292,16 @@ func (b *localBackend) List(prefix string) ([]pkgplugin.FileInfo, error) {
 func (b *localBackend) Usage(prefix string) (int64, error) {
 	fullPath := filepath.Join(b.base, prefix)
 	var total int64
-	filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || strings.HasSuffix(path, ".meta.json") {
 			return nil
 		}
 		total += info.Size()
 		return nil
 	})
+	if err != nil && !os.IsNotExist(err) {
+		return 0, err
+	}
 	return total, nil
 }
 
@@ -322,7 +329,7 @@ func newS3Backend() *s3Backend {
 	if b.region == "" {
 		b.region = "us-east-1"
 	}
-	log.Printf("📦 S3 file storage: endpoint=%s bucket=%s", b.endpoint, b.bucket)
+	log.Printf("📦 S3 file storage: endpoint=%s bucket=%s", b.endpoint, b.bucket) // #nosec G706 -- values from operator-set env vars, not request input
 	return b
 }
 
@@ -360,7 +367,7 @@ func (b *s3Backend) Store(path string, data []byte, metadata map[string]string) 
 		b.sign(metaReq)
 		metaResp, err := http.DefaultClient.Do(metaReq)
 		if err == nil {
-			metaResp.Body.Close()
+			_ = metaResp.Body.Close()
 		}
 	}
 
@@ -393,7 +400,10 @@ func (b *s3Backend) Get(path string) ([]byte, map[string]string, error) {
 		defer metaResp.Body.Close()
 		if metaResp.StatusCode == 200 {
 			metaBody, _ := io.ReadAll(metaResp.Body)
-			json.Unmarshal(metaBody, &metadata)
+			if err := json.Unmarshal(metaBody, &metadata); err != nil {
+				log.Printf("plugin file storage: corrupt S3 metadata for %s: %v", path, err)
+				metadata = nil
+			}
 		}
 	}
 
@@ -407,13 +417,13 @@ func (b *s3Backend) Delete(path string) error {
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	// Delete metadata too.
 	metaReq, _ := http.NewRequest("DELETE", b.objectURL(path+".meta.json"), nil)
 	b.sign(metaReq)
 	if metaResp, err := http.DefaultClient.Do(metaReq); err == nil {
-		metaResp.Body.Close()
+		_ = metaResp.Body.Close()
 	}
 
 	return nil

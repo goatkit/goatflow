@@ -166,7 +166,7 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 	if err := rows.Err(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "Error iterating customer users: " + err.Error(),
+			"error":   internalDBError(c, "iterate customer users", err),
 		})
 		return
 	}
@@ -544,7 +544,7 @@ func HandleAdminCustomerUsersUpdate(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "Failed to update customer user: " + err.Error(),
+			"error":   internalDBError(c, "update customer user", err),
 		})
 		return
 	}
@@ -612,7 +612,7 @@ func HandleAdminCustomerUsersDelete(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "Failed to delete customer user: " + err.Error(),
+			"error":   internalDBError(c, "delete customer user", err),
 		})
 		return
 	}
@@ -683,7 +683,7 @@ func HandleAdminCustomerUsersTickets(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "Failed to fetch tickets: " + err.Error(),
+			"error":   internalDBError(c, "list customer user tickets", err),
 		})
 		return
 	}
@@ -724,7 +724,7 @@ func HandleAdminCustomerUsersTickets(c *gin.Context) {
 	if err := rows.Err(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "Error iterating tickets: " + err.Error(),
+			"error":   internalDBError(c, "iterate customer user tickets", err),
 		})
 		return
 	}
@@ -892,7 +892,7 @@ func HandleAdminCustomerUsersExport(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "Failed to fetch customer users: " + err.Error(),
+			"error":   internalDBError(c, "list customer users", err),
 		})
 		return
 	}

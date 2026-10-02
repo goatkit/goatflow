@@ -657,7 +657,13 @@
           "responsible": "チケット責任者",
           "roles": "ロール",
           "special": "特別な受信者",
-          "watcher": "チケット監視者"
+          "watcher": "チケット監視者",
+          "my_queues": "マイキューにこのキューを登録している担当者",
+          "creator": "チケット作成者",
+          "read_permissions": "キューの読み取り権限を持つすべての担当者",
+          "write_permissions": "キューの書き込み権限を持つすべての担当者",
+          "emails": "追加の受信者メールアドレス",
+          "emails_help": "アドレスはカンマで区切ってください。最大200文字です。"
         },
         "sections": {
           "basic": "基本情報",
@@ -1529,6 +1535,7 @@
         "events_required": "イベントを 1 つ以上選択してください。",
         "header_name": "ヘッダー名",
         "header_value": "値",
+        "header_value_keep": "値は保存済みです（{hint}）。維持する場合は空欄のままにします",
         "headers": "カスタムヘッダー",
         "headers_help": "すべての配信に付加されます。Content-Type、User-Agent、X-Webhook-* ヘッダーは GoatFlow が設定します。",
         "remove_header": "ヘッダーを削除",
@@ -2331,9 +2338,18 @@
     }
   },
   "customer_portal_settings": {
+    "description": "すべての顧客企業に適用される既定値です。各企業は編集ページで上書きできます。",
+    "enable": "顧客ポータルを有効にする",
+    "enable_help": "顧客ポータルをオンまたはオフにします。独自の設定を持つ企業はその設定を維持します。",
+    "footer_text": "フッターテキスト",
     "heading": "顧客ポータル設定",
+    "landing_page": "ランディングページ",
+    "landing_page_help": "サインイン後に顧客に表示されるページ（例: /customer/tickets）。先頭に / がないパスは /customer からの相対パスです。",
+    "per_company_note": "各顧客企業は、編集ページの「ポータル設定」タブでこれらの既定値を上書きできます。",
+    "require_login": "ログインを必須にする",
+    "require_login_help": "顧客はポータルを利用する前にログインする必要があります",
     "title": "顧客ポータル設定",
-    "per_company_note": "各顧客企業は、編集ページの「ポータル設定」タブでこれらの既定値を上書きできます。"
+    "title_field": "ポータルのタイトル"
   },
   "customer_user_services": {
     "title": "顧客ユーザーサービス"
@@ -3675,7 +3691,6 @@
     "showing_of_total": "Showing %d of %d tickets",
     "sla": "SLA",
     "spam": "スパム",
-    "split": "分割",
     "state": "ステート",
     "status": "ステータス",
     "subject": "件名",
@@ -3714,7 +3729,15 @@
     "view_in_queue": "このキューのチケットを表示",
     "visible_for_customer": "顧客に表示",
     "visible_for_customer_help": "カスタマーポータルでこの更新を表示するにはチェック",
-    "watch": "監視"
+    "watch": "監視",
+    "escalation": {
+      "first_response": "初回応答期限",
+      "update": "更新期限",
+      "solution": "解決期限",
+      "due_in": "期限まで",
+      "overdue_by": "期限超過",
+      "escalated": "エスカレーション済み"
+    }
   },
   "tickets_form": {
     "attachments": "添付ファイル",

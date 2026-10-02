@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"encoding/xml"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -285,7 +286,9 @@ func (p *samlProvider) lookupOrProvisionUser(_ context.Context, email, givenName
 	}
 
 	if len(groups) > 0 && p.userRepo != nil {
-		p.userRepo.SyncGroups(user.ID, groups)
+		if err := p.userRepo.SyncGroups(user.ID, groups); err != nil {
+			log.Printf("saml2: sync groups for user %d: %v", user.ID, err)
+		}
 	}
 
 	return user, nil
@@ -315,7 +318,9 @@ func (p *samlProvider) createOAuthUser(email, givenName, familyName string) (*mo
 		var gid int64
 		err := p.db.QueryRow(database.ConvertPlaceholders("SELECT id FROM `groups` WHERE name = ?"), groupName).Scan(&gid)
 		if err == nil && gid > 0 {
-			p.db.Exec(database.ConvertPlaceholders("INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by) VALUES (?, ?, 'rw', NOW(), 1, NOW(), 1)"), int(user.ID), gid)
+			if _, err := p.db.Exec(database.ConvertPlaceholders("INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by) VALUES (?, ?, 'rw', NOW(), 1, NOW(), 1)"), int(user.ID), gid); err != nil {
+				log.Printf("saml2: add provisioned user %d to group %q: %v", user.ID, groupName, err)
+			}
 		}
 	}
 
@@ -366,11 +371,12 @@ func parseCertificate(pemBytes []byte) (*x509.Certificate, error) {
 
 // fetchIdPMetadata downloads and parses the IdP XML metadata from the given URL.
 func fetchIdPMetadata(metadataURL string) (*saml.EntityDescriptor, error) {
-	resp, err := http.Get(metadataURL)
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(metadataURL)
 	if err != nil {
 		return nil, fmt.Errorf("http GET: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code %d fetching IdP metadata", resp.StatusCode)
@@ -461,7 +467,7 @@ func extractAttributeValues(assertion *saml.Assertion, attrName string) []string
 
 // Register SAML2 provider factory.
 func init() {
-	RegisterProvider("saml2", func(deps ProviderDependencies) (AuthProvider, error) {
+	_ = RegisterProvider("saml2", func(deps ProviderDependencies) (AuthProvider, error) {
 		return NewSAML2Provider(&SAMLConfig{}, deps)
 	})
 }

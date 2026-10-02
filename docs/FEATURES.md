@@ -20,7 +20,7 @@ Legend:
 - ✅ Customer association
 - ✅ Ticket history (`ticket_history`, one entry per changed field)
 - ✅ Internal notes (not visible to customers)
-- ⚠️ Email notifications (customers get emails on ticket create, reply and note; rules saved in Admin -> Notification Events are not evaluated yet)
+- ✅ Email notifications (customers get emails on ticket create, reply and note; Admin -> Ticket Notifications rules send OTRS-style notifications on ticket, article and escalation events, see [admin guide](admin-guide/README.md#ticket-notifications))
 
 ### User Management
 - ✅ Login for agents and customers
@@ -53,7 +53,7 @@ Legend:
 - ✅ Ticket templates (Admin -> Templates, import/export)
 - ✅ Canned responses (create, edit, share, import/export, statistics)
 - ✅ Ticket merging (single and bulk)
-- ❌ Ticket splitting (the route only adds a note)
+- ❌ Ticket splitting (not available)
 - ⚠️ Ticket linking (existing links are shown; links cannot be created or removed in the UI)
 - ✅ Bulk operations (status, priority, queue, assign, lock, merge)
 - ✅ Custom fields (dynamic fields, including web service fields)
@@ -64,7 +64,7 @@ Legend:
 - ✅ Time tracking (`time_accounting`)
 
 ### Search & Filters
-- ⚠️ Search across tickets, articles and customers (every word must match; uses `LIKE`, no full-text index). Optional Zinc or Elasticsearch backend
+- ✅ Search across tickets, articles and customers, limited to readable queues. Default: database (every word must match as a substring, `LIKE`). Optional Zinc or Elasticsearch full-text index kept in sync by the runner (see [ZINC_SEARCH.md](ZINC_SEARCH.md))
 - ✅ Ticket filters
 - ✅ Saved searches
 - ❌ Search templates
@@ -73,10 +73,11 @@ Legend:
 
 ### SLA Management
 - ✅ SLA definitions (Admin -> SLA)
-- ⚠️ Response and resolution targets (the calculation exists, but ticket escalation times are not filled in yet)
-- ⚠️ Escalation checks (the job runs every minute, but finds nothing while escalation times are empty; events are only logged)
-- ⚠️ Business hours (read from the `TimeWorkingHours` setting; no admin page)
-- ⚠️ Holiday calendars (read from `TimeVacationDays` settings; no admin page)
+- ✅ OTRS escalation index: first response, update and solution times are computed from the ticket's SLA (else its queue) in working time and stored in `ticket.escalation_*`. The scheduler job `escalation-index` (every 15 seconds) rebuilds every ticket changed since its last run, and all tickets after an SLA, queue or calendar change
+- ✅ Escalation shown in the ticket view (due time, overdue) and in the agent ticket list (Escalated badge and filter)
+- ✅ Escalation events: the `escalation-check` job (every minute) writes `Escalation*TimeStart` / `Escalation*TimeNotifyBefore` history events (repeat interval `OTRSEscalationEvents::DecayTime`, default 1440 minutes); a change that ends a started escalation writes `Escalation*TimeStop`. Webhooks and ticket notifications use these events
+- ⚠️ Business hours (OTRS `TimeWorkingHours` and `TimeWorkingHours::Calendar1`..`9` settings with `TimeZone::CalendarN`; default calendar in `app.timezone`; no admin page)
+- ⚠️ Holiday calendars (read from `TimeVacationDays` / `TimeVacationDaysOneTime` settings; no admin page)
 - ❌ SLA reporting
 - ❌ Breach notifications
 
@@ -129,11 +130,11 @@ The knowledge base is not part of core. It comes from the **goat-kb** plugin. Wh
 - ✅ Multi-factor authentication: TOTP, passkeys/security keys (WebAuthn), recovery codes, admin override; users list and remove their own passkeys
 - ✅ Passkey login (without a password)
 - ✅ Refresh tokens (`POST /api/v1/auth/refresh`)
-- ⚠️ API tokens (scopes and expiry work; the per-token rate limit is stored but not enforced)
+- ✅ API tokens (scopes, expiry and a per-token hourly rate limit)
 
 ### Collaboration
 - ❌ Team inbox
-- ❌ Collision detection (a `features.agent_collision_detection` setting exists but nothing reads it)
+- ❌ Collision detection
 - ⚠️ Real-time updates (Server-Sent Events for plugin events; no WebSocket)
 - ❌ Agent chat
 - ❌ Screen sharing
@@ -193,7 +194,7 @@ The knowledge base is not part of core. It comes from the **goat-kb** plugin. Wh
 
 ### High Availability
 See [HIGH_AVAILABILITY.md](HIGH_AVAILABILITY.md).
-- ❌ Active-active clustering (Valkey is a shared cache only; the scheduler runs on every replica)
+- ❌ Active-active clustering (Valkey is a shared cache only; scheduled jobs are coordinated through a database lock so each tick runs on one replica)
 - ❌ Database replication (use a managed database)
 - ❌ Failover mechanisms
 - ❌ Disaster recovery
@@ -202,7 +203,7 @@ See [HIGH_AVAILABILITY.md](HIGH_AVAILABILITY.md).
 - ❌ Geographic distribution
 
 ### Multi-Tenancy
-- ⚠️ Organisations: members, per-organisation settings, plugin access, captive plugin and identity providers (`/api/v1/organisations`). Plugin database calls are scoped to the organisation. Core tickets and queues are not separated by organisation
+- ⚠️ Organisations: members, per-organisation settings, plugin access, captive plugin and identity providers (`/api/v1/organisations`). Plugin calls run in the caller's organisation: plugin secrets and files are kept per organisation, and plugin queries on organisation-owned tables (`gk_org_plugin_access`, `gk_user_organisation`, `sysconfig_org`, `gk_identity_provider_org`) are scoped to it. Core tickets, queues and customers are not separated by organisation, and plugin-owned tables are not scoped by the platform
 - ❌ Resource quotas
 - ❌ Billing integration
 - ❌ White-labeling
@@ -363,7 +364,7 @@ See [OBSERVABILITY.md](OBSERVABILITY.md).
 - ❌ Database sharding
 - ❌ Read replicas
 - ✅ Connection pooling
-- ✅ Rate limiting (login, passkey login, password reset and sign-up, public plugin pages, plugin webhooks)
+- ✅ Rate limiting (login, second-factor codes, passkey login, password re-checks in profile/2FA settings, password reset and sign-up, API tokens, public plugin pages, plugin webhooks)
 - ❌ Circuit breakers
 
 ## Comparison Matrix (GoatFlow 0.10.0)

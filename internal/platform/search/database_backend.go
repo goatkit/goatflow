@@ -416,21 +416,6 @@ func (db *DatabaseBackend) searchCustomers(ctx context.Context, query SearchQuer
 	return hits, total, nil
 }
 
-// Index is a no-op: the database backend searches the live tables.
-func (db *DatabaseBackend) Index(ctx context.Context, doc Document) error {
-	return nil
-}
-
-// Delete is a no-op: the database backend searches the live tables.
-func (db *DatabaseBackend) Delete(ctx context.Context, docType string, id string) error {
-	return nil
-}
-
-// BulkIndex is a no-op: the database backend searches the live tables.
-func (db *DatabaseBackend) BulkIndex(ctx context.Context, docs []Document) error {
-	return nil
-}
-
 // HealthCheck verifies the database connection.
 func (db *DatabaseBackend) HealthCheck(ctx context.Context) error {
 	return db.db.PingContext(ctx)

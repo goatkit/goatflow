@@ -37,52 +37,17 @@ GoatFlow supports production deployments via Docker Compose (single-node) and Ku
 | Multiple app replicas | ✅ | Helm default: 2 backend pods (`backend.replicaCount`) |
 | Horizontal Pod Autoscaler | ✅ | Off by default (`backend.autoscaling.enabled`). CPU 70% / memory 80% targets, 2-10 pods |
 | Health checks (liveness/readiness) | ✅ | `GET /health` pings the database and returns 503 when it is down. The chart probes use it |
-| Graceful shutdown | ✅ | On SIGTERM the server stops taking new connections and drains in-flight requests (`DRAIN_TIMEOUT`, default `10s`) |
-| Prometheus metrics | ✅ | Separate listener on `METRICS_PORT` when `METRICS_ENABLED=true` |
+| Graceful shutdown | ✅ | On SIGTERM the server stops taking new connections and drains in-flight requests (`DRAIN_TIMEOUT`, default `5s`), then stops the scheduler and plugins |
+| Scheduled jobs across replicas | ✅ | Each job tick runs on one replica only (database lock, table `gk_scheduler_job_lock`) |
+| Prometheus metrics | ✅ | Separate listener on `METRICS_PORT` when `METRICS_ENABLED=true` (chart: `metrics.enabled`, Service `<fullname>-metrics`) |
 | Rolling updates | ✅ | Via Kubernetes Deployments |
 | Valkey cache | ✅ | Shared cache. `GET /health/detailed` reports its state |
 | External database support | ✅ | RDS, Cloud SQL, managed MariaDB, etc. |
-| External cache support | ✅ | ElastiCache, Memorystore, etc. (set `GOATFLOW_VALKEY_HOST`, see below) |
+| External cache support | ✅ | ElastiCache, Memorystore, etc. (`GOATFLOW_VALKEY_*`; chart: `externalValkey.*`, see below) |
 | Multi-arch images | ✅ | amd64 + arm64 |
 | TLS/Ingress | ✅ | TLS ends at the ingress or proxy. GoatFlow itself serves plain HTTP |
 | Connection pooling | ✅ | `database/sql` pool |
 | Rate limiting | ✅ | Login, forgotten-password and sign-up forms, public plugin pages |
-
-## Helm chart: environment variables to add (0.10.0)
-
-Some variables that the chart sets are not read by GoatFlow 0.10.0. Add the real ones with `backend.extraEnv` until the chart is fixed.
-
-| Chart sets | GoatFlow reads | What happens without a fix |
-|---|---|---|
-| `DB_TYPE` | `DB_DRIVER` (`mysql`, `mariadb` or `postgres`) | GoatFlow always uses the MySQL driver. PostgreSQL installs do not connect. |
-| `APP_SECRET` | `JWT_SECRET` | Login tokens are signed with the public placeholder in `default.yaml`. |
-| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `GOATFLOW_VALKEY_HOST`, `GOATFLOW_VALKEY_PORT`, `GOATFLOW_VALKEY_PASSWORD` | GoatFlow looks for Valkey at host `valkey`. |
-| `SERVER_PORT`, `SESSION_TIMEOUT`, `CACHE_ENABLED` | not read | Nothing. The port is `APP_PORT` (default `8080`). |
-
-The `-backend-config` ConfigMap (`STORAGE_TYPE`, `STORAGE_PATH`) is not mounted into the pod, so the storage values do not reach GoatFlow either. The default (`db`) works without it.
-
-Example values file:
-
-```yaml
-backend:
-  extraEnv:
-    - name: DB_DRIVER
-      value: postgres            # or mysql
-    - name: JWT_SECRET
-      valueFrom:
-        secretKeyRef:
-          name: goatflow-jwt     # a Secret you create, 32+ characters
-          key: jwt-secret
-    - name: GOATFLOW_VALKEY_HOST
-      value: my-valkey.example.internal
-    - name: GOATFLOW_SECURE_KEY
-      valueFrom:
-        secretKeyRef:
-          name: goatflow-secure-key   # 64 hex characters
-          key: key
-```
-
-See [configuration.md](configuration.md) for every variable.
 
 ## What's NOT Implemented
 
@@ -100,9 +65,11 @@ For database HA, use a managed service (RDS Multi-AZ, Cloud SQL HA, etc.) rather
 
 ## Things to know before running more than one replica
 
-- **Scheduled jobs run on every replica.** Each backend process starts the built-in scheduler: email account polling, GenericAgent jobs, escalation checks, pending reminders, auto-close of pending tickets, and plugin jobs. There is no lock between replicas, so with 3 replicas each job runs 3 times. The customer-only frontend (`CUSTOMER_FE_ONLY=true`) does not run the scheduler.
-- **The runner is a separate process.** `goats -mode runner` sends queued email, cleans up sessions and delivers webhooks. docker-compose runs it as the `runner` service. The Helm chart has no runner Deployment, so on Kubernetes you must add one yourself (same image and environment, command `./goats -mode runner`). Give it the same `GOATFLOW_SECURE_KEY` as the backend, or it cannot decrypt webhook signing secrets.
-- **Attachments on disk need shared storage.** With `STORAGE_TYPE=fs`, every replica must see the same `<STORAGE_PATH>/var/article` (a ReadWriteMany volume). The chart does not provision one. The default `STORAGE_TYPE=db` keeps attachments in the database and needs nothing extra.
+- **Scheduled jobs run once per tick, on one replica.** Each backend process starts the built-in scheduler: email account polling, GenericAgent jobs, escalation checks, pending reminders, auto-close of pending tickets, and plugin jobs. When a job is due, every replica tries to claim that run in the `gk_scheduler_job_lock` table; one wins and runs it, the others skip it. The claim lasts until halfway to the job's next run, so replica clocks may differ by up to half the job interval (30 seconds for a job that runs every minute). Keep the clocks in sync (NTP). Which replica runs a given tick is not fixed. The customer-only frontend (`CUSTOMER_FE_ONLY=true`) does not run the scheduler.
+- **Email poll intervals are tracked per replica.** The email poll job runs once per minute across all replicas, but the per-account poll interval (`PollIntervalSeconds`) is remembered by the replica that polled. With several replicas an account can be polled more often than its interval, at most once per minute.
+- **The runner is a separate process.** `goats -mode runner` sends queued email, delivers webhooks, evaluates ticket notification rules and cleans up sessions. docker-compose runs it as the `runner` service; the Helm chart as the `<fullname>-runner` Deployment (one replica, `runner.*` values). It gets the same database settings, `JWT_SECRET` and `GOATFLOW_SECURE_KEY` as the backend (the chart keeps the key in the `<fullname>-app` Secret), so it can decrypt webhook signing secrets.
+- **Migrations run once.** Every backend replica and the runner run migrations at start; a database lock lets one process migrate while the others wait and then find the schema up to date.
+- **Files on disk need shared storage.** `STORAGE_PATH` holds plugin files (`<STORAGE_PATH>/plugins`) and, with `STORAGE_TYPE=fs`, attachments (`<STORAGE_PATH>/var/article`); every backend replica must see the same directory. The Helm chart mounts the `<fullname>-storage` PVC there (ReadWriteOnce by default): with replicas on several nodes, set `config.storage.persistence.accessModes` to `[ReadWriteMany]` and use an RWX storage class. The default `STORAGE_TYPE=db` keeps attachments in the database.
 
 ## Deployment Options
 
@@ -125,7 +92,6 @@ Best for: larger deployments, auto-scaling, cloud-native environments.
 helm install goatflow ./charts/goatflow
 
 # With PostgreSQL instead of MySQL
-# (also set DB_DRIVER=postgres in backend.extraEnv, see the table above)
 helm install goatflow ./charts/goatflow -f charts/goatflow/values-postgresql.yaml
 
 # Production with autoscaling
@@ -149,16 +115,15 @@ helm install goatflow ./charts/goatflow \
 
 ### External Cache (Optional)
 
-The chart's `externalValkey.*` values only set `REDIS_*` variables, which GoatFlow does not read. Set the host with `backend.extraEnv` as well:
-
 ```bash
 helm install goatflow ./charts/goatflow \
   --set valkey.enabled=false \
   --set externalValkey.enabled=true \
   --set externalValkey.host=your-elasticache-endpoint \
-  --set 'backend.extraEnv[0].name=GOATFLOW_VALKEY_HOST' \
-  --set 'backend.extraEnv[0].value=your-elasticache-endpoint'
+  --set externalValkey.existingSecret=goatflow-valkey   # key valkey-password; omit when no password
 ```
+
+The chart passes these to the backend and the runner as `GOATFLOW_VALKEY_HOST`, `GOATFLOW_VALKEY_PORT` and `GOATFLOW_VALKEY_PASSWORD`.
 
 ## Resource Sizing
 
@@ -236,10 +201,12 @@ Metrics include `goatflow_up`, `goatflow_process_start_time_seconds`, the Valkey
 On SIGTERM or SIGINT, GoatFlow:
 
 1. Stops accepting new connections.
-2. Lets in-flight requests finish, for up to `DRAIN_TIMEOUT` (default `10s`, Go duration format).
-3. Stops the scheduler and plugins (plugin shutdown is capped at 30 seconds).
+2. Lets in-flight requests finish, for up to `DRAIN_TIMEOUT` (default `5s`, Go duration format). At the same time it stops the scheduler: running jobs are cancelled and get up to 5 seconds to return.
+3. Shuts down plugins (capped at 30 seconds).
 
-Give the pod enough stop time for both steps. Kubernetes waits `terminationGracePeriodSeconds` (30 seconds unless you change it) before it kills the container.
+The longest stop is about `max(DRAIN_TIMEOUT, 5s)` + 30 seconds = 35 seconds with the defaults. The Helm chart and the compose files give the container a 45-second stop grace period (`terminationGracePeriodSeconds` / `stop_grace_period`). If you raise `DRAIN_TIMEOUT`, raise the grace period to at least `DRAIN_TIMEOUT` + 40 seconds.
+
+The runner (`goats -mode runner`) cancels its running tasks on SIGTERM and waits up to `DRAIN_TIMEOUT` for them.
 
 ### Logs
 

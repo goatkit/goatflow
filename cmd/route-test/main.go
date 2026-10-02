@@ -194,7 +194,7 @@ func main() {
 }
 
 func (tr *TestRunner) LoadRoutes(routesDir string) error {
-	return filepath.Walk(routesDir, func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(routesDir, func(path string, info os.FileInfo, err error) error { // #nosec G703 -- routes dir is the operator's CLI flag
 		if err != nil {
 			return err
 		}
@@ -203,7 +203,7 @@ func (tr *TestRunner) LoadRoutes(routesDir string) error {
 			return nil
 		}
 
-		data, err := os.ReadFile(path) //nolint:gosec // G304 CLI tool
+		data, err := os.ReadFile(path) // #nosec G304 G122 -- dev CLI reading the operator-named routes tree; no privilege boundary for a symlink swap
 		if err != nil {
 			return fmt.Errorf("reading %s: %w", path, err)
 		}

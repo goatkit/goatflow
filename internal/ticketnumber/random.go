@@ -21,10 +21,10 @@ func NewRandom(cfg Config, seed int64) *Random {
 	} else {
 		var b [8]byte
 		_, _ = rand.Read(b[:])
-		seeded = int64(binary.LittleEndian.Uint64(b[:]))
+		seeded = int64(binary.LittleEndian.Uint64(b[:])) // #nosec G115 -- reinterpreting 64 random bits as a seed; wraparound is harmless
 	}
-	//nolint:gosec // G404 math/rand is fine for ticket numbers, seeded from crypto/rand
-	return &Random{cfg: cfg, src: mrand.New(mrand.NewSource(seeded))}
+	// Ticket numbers are identifiers, not secrets (other generators are sequential); access is checked per ticket.
+	return &Random{cfg: cfg, src: mrand.New(mrand.NewSource(seeded))} // #nosec G404 -- non-secret ticket number digits, seeded from crypto/rand
 }
 func (g *Random) Name() string      { return "Random" }
 func (g *Random) IsDateBased() bool { return false }

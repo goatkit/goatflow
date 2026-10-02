@@ -197,7 +197,7 @@ func (s *WebhooksService) GetDeliveries(ctx context.Context, id uint) ([]types.W
 
 // GetDelivery retrieves one delivery including payload and response body
 func (s *WebhooksService) GetDelivery(ctx context.Context, deliveryID uint) (*types.WebhookDelivery, error) {
-	path := fmt.Sprintf("/api/v1/webhooks/deliveries/%d", deliveryID)
+	path := fmt.Sprintf("/api/v1/webhook-deliveries/%d", deliveryID)
 	var result types.WebhookDelivery
 	err := s.client.Get(ctx, path, &result)
 	return &result, err
@@ -205,7 +205,7 @@ func (s *WebhooksService) GetDelivery(ctx context.Context, deliveryID uint) (*ty
 
 // Redeliver sends a delivery's payload again and returns the new delivery
 func (s *WebhooksService) Redeliver(ctx context.Context, deliveryID uint) (*types.WebhookDelivery, error) {
-	path := fmt.Sprintf("/api/v1/webhooks/deliveries/%d/redeliver", deliveryID)
+	path := fmt.Sprintf("/api/v1/webhook-deliveries/%d/redeliver", deliveryID)
 	var result types.WebhookDelivery
 	err := s.client.Post(ctx, path, nil, &result)
 	return &result, err

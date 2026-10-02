@@ -86,6 +86,7 @@
                             class="gk-input-neon mt-1">
                         <option value="all" {% if FilterStatusRaw == 'all' %}selected{% endif %}>{{ t('tickets.all_statuses')|default:'All statuses' }}</option>
                         <option value="not_closed" {% if FilterStatusRaw == 'not_closed' or (not FilterStatusRaw and FilterStatus == 'not_closed') %}selected{% endif %}>{{ t('common.not_closed')|default:'Not closed' }}</option>
+                        <option value="escalated" {% if FilterStatusRaw == 'escalated' %}selected{% endif %}>{{ t('tickets.escalation.escalated') }}</option>
                 {% for status in Statuses %}
                 <option value="{{ status.Param|default:status.Value }}" {% if FilterStatus == status.Value or (status.Param and FilterStatusRaw and FilterStatusRaw|lower == status.Param|lower) or (FilterStatusRaw and FilterStatusRaw|lower == status.Label|lower) %}selected{% endif %}>{{ status.Label }}</option>
                 {% endfor %}

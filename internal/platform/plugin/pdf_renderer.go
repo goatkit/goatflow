@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -52,14 +53,34 @@ func newDefaultPdfRenderer() *browserlessPdfRenderer {
 			goldmark.WithParserOptions(parser.WithAttribute()),
 			goldmark.WithRendererOptions(html.WithUnsafe()),
 		),
-		san: bluemonday.UGCPolicy(),
+		san: newPdfSanitizer(),
 	}
+}
+
+// newPdfSanitizer is the bluemonday UGC policy with one change: images print
+// only from inline data: URIs (png, jpeg, gif, webp). Every other <img src>
+// (https, http, protocol-relative, relative) is rewritten to the empty
+// "data:," image. Otherwise the Browserless Chromium would fetch any URL a
+// plugin put in its markdown, outbound traffic that no `http` grant and no
+// private-address guard covers. A plugin that wants a remote image fetches it
+// with HTTPRequest (its http scope and the guard apply) and passes the bytes
+// as a data: URI. img src is the only fetching attribute UGC lets through.
+func newPdfSanitizer() *bluemonday.Policy {
+	p := bluemonday.UGCPolicy()
+	p.AllowDataURIImages()
+	p.RewriteSrc(func(u *url.URL) {
+		if u.Scheme != "data" {
+			*u = url.URL{Scheme: "data", Opaque: ","}
+		}
+	})
+	return p
 }
 
 // RenderMarkdownToPdf converts markdown to a styled HTML document and prints it
 // to a PDF via the Browserless headless-Chromium /pdf endpoint. Output is
 // sanitized with bluemonday before printing, so arbitrary plugin-generated
-// markdown cannot inject scripts into the rendered page.
+// markdown cannot inject scripts into the rendered page or make Chromium
+// fetch remote resources (see newPdfSanitizer).
 func (r *browserlessPdfRenderer) RenderMarkdownToPdf(ctx context.Context, markdown string, options PdfRenderOptions) ([]byte, error) {
 	var html bytes.Buffer
 	if err := r.md.Convert([]byte(markdown), &html); err != nil {
@@ -182,13 +203,18 @@ func brandingCSS(options PdfRenderOptions) string {
 		options.BrandColor, r, g, b)
 }
 
+// brandLogoRe accepts an inline base64 png/jpeg/gif/webp data: URI, the only
+// logo form the renderer prints (see newPdfSanitizer for why nothing remote is
+// fetched). The character set also keeps the value attribute-safe.
+var brandLogoRe = regexp.MustCompile(`^data:image/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/]+={0,2}$`)
+
 // brandHeader builds the running header's leading identity fragment
-// (https logo + bold name). Non-https or attribute-unsafe logo URLs are
-// dropped; the name is HTML-escaped.
+// (data: URI logo + bold name). Any other logo value is dropped; the name is
+// HTML-escaped.
 func brandHeader(options PdfRenderOptions) string {
 	out := ""
-	if strings.HasPrefix(options.BrandLogoURL, "https://") && !strings.ContainsAny(options.BrandLogoURL, "\"'<> \t\n") {
-		out += `<img src="` + escapeHTML(options.BrandLogoURL) + `" style="height:10px;vertical-align:middle;margin-right:4px;">`
+	if brandLogoRe.MatchString(options.BrandLogoURL) {
+		out += `<img src="` + options.BrandLogoURL + `" style="height:10px;vertical-align:middle;margin-right:4px;">`
 	}
 	if options.BrandName != "" {
 		out += `<span style="font-weight:600;vertical-align:middle;">` + escapeHTML(options.BrandName) + `</span>`

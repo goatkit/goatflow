@@ -119,3 +119,23 @@ func TestRenderSidecars_Empty(t *testing.T) {
 		t.Errorf("expected empty string, got: %s", result)
 	}
 }
+
+func TestRenderSidecars_HealthcheckInterval(t *testing.T) {
+	cases := map[string]string{
+		"":      "periodSeconds: 10\n",
+		"10s":   "periodSeconds: 10\n",
+		"1m30s": "periodSeconds: 90\n",
+		"bogus": "periodSeconds: 10\n",
+		"500ms": "periodSeconds: 10\n",
+	}
+	for interval, want := range cases {
+		out := renderSidecars([]plugin.SidecarSpec{{
+			Name:        "probe",
+			Image:       "busybox",
+			Healthcheck: &plugin.SidecarHealth{Command: []string{"true"}, Interval: interval},
+		}})
+		if !strings.Contains(out, want) {
+			t.Errorf("interval %q: want %q in:\n%s", interval, want, out)
+		}
+	}
+}

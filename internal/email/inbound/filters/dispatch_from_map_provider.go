@@ -23,7 +23,7 @@ func NewFileDispatchRuleProvider(path string) (*FileDispatchRuleProvider, error)
 	if path == "" {
 		return nil, nil //nolint:nilnil
 	}
-	data, err := os.ReadFile(path) //nolint:gosec // G304 false positive - config file
+	data, err := os.ReadFile(path) // #nosec G304 -- dispatch-map path comes from operator config, not request input
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, nil //nolint:nilnil

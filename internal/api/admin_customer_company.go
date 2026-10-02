@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -156,17 +157,26 @@ func handleAdminNewCustomerCompany(db *sql.DB) gin.HandlerFunc {
 // handleAdminCreateCustomerCompany creates a new customer company.
 func handleAdminCreateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		customerID := c.PostForm("customer_id")
-		name := c.PostForm("name")
+		customerID := strings.TrimSpace(c.PostForm("customer_id"))
+		name := strings.TrimSpace(c.PostForm("name"))
 		street := c.PostForm("street")
 		zip := c.PostForm("zip")
 		city := c.PostForm("city")
 		country := c.PostForm("country")
 		url := c.PostForm("url")
 		comments := c.PostForm("comments")
+		validID := 1
+		if raw := strings.TrimSpace(c.PostForm("valid_id")); raw != "" {
+			v, err := strconv.Atoi(raw)
+			if err != nil || v < 1 {
+				rejectCustomerCompanyCreate(c, http.StatusBadRequest, "Invalid status")
+				return
+			}
+			validID = v
+		}
 
 		if customerID == "" || name == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Customer ID and Name are required"})
+			rejectCustomerCompanyCreate(c, http.StatusBadRequest, "Customer ID and Name are required")
 			return
 		}
 		actorID, ok := auditUserID(c)
@@ -174,14 +184,20 @@ func handleAdminCreateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Check if customer ID already exists
-		var exists bool
-		if err := db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM customer_company WHERE customer_id = ?)"), customerID).Scan(&exists); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		// customer_id is the primary key and name is UNIQUE: report either clash on the form.
+		var idTaken, nameTaken bool
+		if err := db.QueryRow(database.ConvertPlaceholders(
+			"SELECT EXISTS(SELECT 1 FROM customer_company WHERE customer_id = ?), EXISTS(SELECT 1 FROM customer_company WHERE name = ?)"),
+			customerID, name).Scan(&idTaken, &nameTaken); err != nil {
+			rejectCustomerCompanyCreate(c, http.StatusInternalServerError, "Database error")
 			return
 		}
-		if exists {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Customer ID already exists"})
+		if idTaken {
+			rejectCustomerCompanyCreate(c, http.StatusBadRequest, "Customer ID already exists")
+			return
+		}
+		if nameTaken {
+			rejectCustomerCompanyCreate(c, http.StatusBadRequest, "A company with this name already exists")
 			return
 		}
 
@@ -193,18 +209,51 @@ func handleAdminCreateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			) VALUES (
 				?, ?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), 
 				NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''),
-				1, NOW(), ?, NOW(), ?
+				?, NOW(), ?, NOW(), ?
 			)
-		`), customerID, name, street, zip, city, country, url, comments, actorID, actorID)
+		`), customerID, name, street, zip, city, country, url, comments, validID, actorID, actorID)
 
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create customer company"})
+			rejectCustomerCompanyCreate(c, http.StatusInternalServerError, "Failed to create customer company")
 			return
 		}
 
 		redirectURL := fmt.Sprintf("/admin/customer/companies/%s/edit", customerID)
 		shared.SendToastResponse(c, true, "Customer company created successfully", redirectURL)
 	}
+}
+
+// rejectCustomerCompanyCreate answers a failed create. API, fetch and HTMX
+// callers get {"error": message}; a browser form post gets the New Company
+// form back with the error shown and the entered values kept.
+func rejectCustomerCompanyCreate(c *gin.Context, status int, message string) {
+	if wantsJSONResponse(c) {
+		c.JSON(status, gin.H{"error": message})
+		return
+	}
+	validID, err := strconv.Atoi(strings.TrimSpace(c.PostForm("valid_id")))
+	if err != nil {
+		validID = 1
+	}
+	getPongo2Renderer().HTML(c, status, "pages/admin/customer_company_form.pongo2", pongo2.Context{
+		"Title":           "New Customer Company",
+		"ActivePage":      "admin",
+		"ActiveAdminPage": "customer-companies",
+		"User":            getUserMapForTemplate(c),
+		"IsNew":           true,
+		"ErrorMessage":    message,
+		"Company": map[string]interface{}{
+			"customer_id": c.PostForm("customer_id"),
+			"name":        c.PostForm("name"),
+			"street":      c.PostForm("street"),
+			"zip":         c.PostForm("zip"),
+			"city":        c.PostForm("city"),
+			"country":     c.PostForm("country"),
+			"url":         c.PostForm("url"),
+			"comments":    c.PostForm("comments"),
+			"valid_id":    validID,
+		},
+	})
 }
 
 // handleAdminEditCustomerCompany shows the edit customer company form with portal customization.

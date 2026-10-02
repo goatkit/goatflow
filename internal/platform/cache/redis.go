@@ -31,7 +31,6 @@ type CacheMetrics struct {
 	sets    prometheus.Counter
 	deletes prometheus.Counter
 	latency prometheus.Histogram
-	size    prometheus.Gauge
 }
 
 // CacheConfig defines cache configuration.
@@ -97,10 +96,6 @@ func NewRedisCache(config *CacheConfig) (*RedisCache, error) {
 			Name:    "cache_operation_duration_seconds",
 			Help:    "Cache operation latency",
 			Buckets: prometheus.DefBuckets,
-		}),
-		size: promauto.NewGauge(prometheus.GaugeOpts{
-			Name: "cache_size_bytes",
-			Help: "Current cache size in bytes",
 		}),
 	}
 

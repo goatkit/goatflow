@@ -657,7 +657,13 @@
           "responsible": "האחראי לכרטיס",
           "roles": "תפקידים",
           "special": "נמענים מיוחדים",
-          "watcher": "צופי הכרטיס"
+          "watcher": "צופי הכרטיס",
+          "my_queues": "סוכנים שהתור נמצא אצלם ב'התורים שלי'",
+          "creator": "יוצר הכרטיס",
+          "read_permissions": "כל הסוכנים עם הרשאת קריאה לתור",
+          "write_permissions": "כל הסוכנים עם הרשאת כתיבה לתור",
+          "emails": "כתובות דוא\"ל של נמענים נוספים",
+          "emails_help": "הפרידו בין הכתובות בפסיקים. עד 200 תווים."
         },
         "sections": {
           "basic": "מידע בסיסי",
@@ -1529,6 +1535,7 @@
         "events_required": "בחר לפחות אירוע אחד.",
         "header_name": "שם הכותרת",
         "header_value": "ערך",
+        "header_value_keep": "הערך נשמר ({hint}). השאר ריק כדי לשמור עליו",
         "headers": "כותרות מותאמות אישית",
         "headers_help": "נשלחות עם כל מסירה. את Content-Type,‏ User-Agent וכותרות X-Webhook-* מגדיר GoatFlow בעצמו.",
         "remove_header": "הסר כותרת",
@@ -2331,9 +2338,18 @@
     }
   },
   "customer_portal_settings": {
+    "description": "ברירות מחדל לכל חברות הלקוח. כל חברה יכולה לעקוף אותן בדף העריכה שלה.",
+    "enable": "הפעלת פורטל הלקוחות",
+    "enable_help": "מפעיל או מכבה את פורטל הלקוחות. חברות עם הגדרה משלהן שומרות עליה.",
+    "footer_text": "טקסט כותרת תחתונה",
     "heading": "לקוח Portal הגדרות",
+    "landing_page": "דף נחיתה",
+    "landing_page_help": "הדף שלקוחות רואים אחרי הכניסה, למשל /customer/tickets. נתיב שאינו מתחיל ב-/ הוא יחסי ל-/customer.",
+    "per_company_note": "כל חברת לקוח יכולה לעקוף את ברירות המחדל האלה בלשונית הגדרות הפורטל בדף העריכה שלה.",
+    "require_login": "דרוש כניסה",
+    "require_login_help": "לקוחות חייבים להתחבר לפני הגישה לפורטל",
     "title": "לקוח Portal הגדרות",
-    "per_company_note": "כל חברת לקוח יכולה לעקוף את ברירות המחדל האלה בלשונית הגדרות הפורטל בדף העריכה שלה."
+    "title_field": "כותרת הפורטל"
   },
   "customer_user_services": {
     "title": "לקוח משתמש Services"
@@ -3721,7 +3737,6 @@
     "showing_of_total": "Showing %d of %d tickets",
     "sla": "SLA",
     "spam": "ספאם",
-    "split": "פצל",
     "state": "מצב",
     "status": "סטטוס",
     "subject": "נושא",
@@ -3760,7 +3775,15 @@
     "view_in_queue": "צפה בכרטיסים בתור זה",
     "visible_for_customer": "גלוי ללקוח",
     "visible_for_customer_help": "סמן כדי להראות עדכון זה בפורטל הלקוחות.",
-    "watch": "צפה"
+    "watch": "צפה",
+    "escalation": {
+      "first_response": "מועד תגובה ראשונה",
+      "update": "מועד עדכון",
+      "solution": "מועד פתרון",
+      "due_in": "בעוד",
+      "overdue_by": "באיחור של",
+      "escalated": "הוסלם"
+    }
   },
   "tickets_form": {
     "attachments": "קבצים מצורפים",

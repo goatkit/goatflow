@@ -18,7 +18,7 @@ import (
 const (
 	githubOAuthBaseURL = "https://github.com"
 	githubAuthorizeURL = "https://github.com/login/oauth/authorize"
-	githubTokenURL     = "https://github.com/login/oauth/access_token"
+	githubTokenURL     = "https://github.com/login/oauth/access_token" // #nosec G101 -- public GitHub OAuth endpoint URL, not a credential
 	githubAPIBaseURL   = "https://api.github.com"
 )
 
@@ -32,11 +32,11 @@ type GithubConfig struct {
 // githubProvider implements both AuthProvider and OIDCProvider interfaces.
 // It uses plain OAuth2 (no OIDC discovery, no id_token) but satisfies the interface contract.
 type githubProvider struct {
-	config       *GithubConfig
-	oauthCfg     *oauth2.Config
-	httpClient   *http.Client
-	userRepo     UserLookup
-	oidcClient   *http.Client
+	config     *GithubConfig
+	oauthCfg   *oauth2.Config
+	httpClient *http.Client
+	userRepo   UserLookup
+	oidcClient *http.Client
 }
 
 // generateCSRFToken creates a random CSRF token for OAuth2 state protection.
@@ -212,10 +212,10 @@ func (p *githubProvider) createOAuthUser(email, name string) (*models.User, erro
 
 	// Create new user
 	newUser := &models.User{
-		FirstName: name,
-		LastName:  "",
-		Email:     email,
-		Role:      "Customer", // default role
+		FirstName:  name,
+		LastName:   "",
+		Email:      email,
+		Role:       "Customer", // default role
 		CreateTime: time.Now(),
 	}
 
@@ -226,7 +226,7 @@ func (p *githubProvider) createOAuthUser(email, name string) (*models.User, erro
 
 // Register GitHub provider factory.
 func init() {
-	RegisterProvider("github", func(deps ProviderDependencies) (AuthProvider, error) {
+	_ = RegisterProvider("github", func(deps ProviderDependencies) (AuthProvider, error) {
 		return NewGithubProvider(&GithubConfig{}, deps), nil
 	})
 }

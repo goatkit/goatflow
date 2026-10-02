@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -32,7 +33,7 @@ var loadOnce sync.Once
 func loadDotEnv() {
 	paths := []string{".env"}
 	for _, p := range paths {
-		f, err := os.Open(p)
+		f, err := os.Open(p) // #nosec G304 -- fixed ".env" path from the constant list above
 		if err != nil {
 			continue
 		}
@@ -73,7 +74,7 @@ func GetConfig() *TestConfig {
 	}
 	// No auto-detection: probing alternative hosts could silently aim the suite at
 	// the wrong stack (e.g. the dev backend instead of backend-test).
-	log.Printf("[e2e-config] BaseURL=%s", baseURL)
+	log.Printf("[e2e-config] BaseURL=%s", baseURL) // #nosec G706 -- operator-set test env var logged to the test runner's own output
 
 	adminEmail := firstNonEmpty(
 		os.Getenv("TEST_USERNAME"),
@@ -92,9 +93,12 @@ func GetConfig() *TestConfig {
 
 	headless := os.Getenv("HEADLESS") != "false"
 	slowMo := 0
-	if os.Getenv("SLOW_MO") != "" {
-		// Parse slow mo if needed
-		slowMo = 100 // Default to 100ms for debugging
+	if v := os.Getenv("SLOW_MO"); v != "" {
+		ms, err := strconv.Atoi(v)
+		if err != nil || ms < 0 {
+			log.Fatalf("[e2e-config] ERROR: SLOW_MO must be a non-negative number of milliseconds, got %q", v) // #nosec G706 -- operator-set test env var, %q-quoted
+		}
+		slowMo = ms
 	}
 
 	// Customer portal runs in a separate container on a different port

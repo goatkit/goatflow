@@ -4,7 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -245,7 +248,9 @@ func (vm *VersionManager) ensureDirectories() {
 	}
 
 	for _, dir := range dirs {
-		os.MkdirAll(dir, 0750)
+		if err := os.MkdirAll(dir, 0750); err != nil {
+			log.Printf("yamlmgmt: cannot create versions directory %s: %v", dir, err)
+		}
 	}
 }
 
@@ -363,7 +368,9 @@ func (vm *VersionManager) calculateChanges(oldDoc, newDoc *YAMLDocument) []Chang
 
 func (vm *VersionManager) saveVersion(version *Version) error {
 	kindDir := filepath.Join(vm.storageDir, ".versions", string(version.Kind))
-	os.MkdirAll(kindDir, 0750)
+	if err := os.MkdirAll(kindDir, 0750); err != nil {
+		return fmt.Errorf("failed to create versions directory: %w", err)
+	}
 
 	filename := filepath.Join(kindDir, fmt.Sprintf("%s_%s_%s.json",
 		version.Name, version.Number, version.Hash[:8]))
@@ -373,7 +380,7 @@ func (vm *VersionManager) saveVersion(version *Version) error {
 		return err
 	}
 
-	return os.WriteFile(filename, data, 0644)
+	return os.WriteFile(filename, data, 0600)
 }
 
 func (vm *VersionManager) applyVersion(version *Version) error {
@@ -405,10 +412,12 @@ func (vm *VersionManager) applyVersion(version *Version) error {
 	}
 
 	// Ensure directory exists
-	os.MkdirAll(filepath.Dir(targetPath), 0750)
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0750); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
 
-	// Write file
-	return os.WriteFile(targetPath, data, 0644)
+	// Write file; config documents may carry credentials, so owner-only.
+	return os.WriteFile(targetPath, data, 0600)
 }
 
 func (vm *VersionManager) getVersionsForDocument(kind, name string) []*Version {
@@ -479,7 +488,9 @@ func (vm *VersionManager) cleanupOldVersions(kind, name string) {
 		kindDir := filepath.Join(vm.storageDir, ".versions", kind)
 		filename := filepath.Join(kindDir, fmt.Sprintf("%s_%s_%s.json",
 			v.Name, v.Number, v.Hash[:8]))
-		os.Remove(filename)
+		if err := os.Remove(filename); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			log.Printf("yamlmgmt: cannot remove old version %s: %v", filename, err)
+		}
 	}
 
 	// Update in-memory list
@@ -487,16 +498,23 @@ func (vm *VersionManager) cleanupOldVersions(kind, name string) {
 }
 
 func (vm *VersionManager) loadAllVersions() {
-	versionsDir := filepath.Join(vm.storageDir, ".versions")
+	// Read through an os.Root so a symlink planted under .versions cannot
+	// make the loader read files outside it.
+	root, err := os.OpenRoot(filepath.Join(vm.storageDir, ".versions"))
+	if err != nil {
+		return // nothing versioned yet
+	}
+	defer func() { _ = root.Close() }()
+	fsys := root.FS()
 
-	// Walk through all version directories
-	filepath.Walk(versionsDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() || filepath.Ext(path) != ".json" {
+	// The callback skips unreadable entries and never returns an error.
+	_ = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || filepath.Ext(path) != ".json" {
 			return nil //nolint:nilerr // continue walking on error
 		}
 
 		// Load version file
-		data, err := os.ReadFile(path) //nolint:gosec // G304 false positive - path from WalkDir
+		data, err := fs.ReadFile(fsys, path)
 		if err != nil {
 			return nil //nolint:nilerr // continue walking on error
 		}

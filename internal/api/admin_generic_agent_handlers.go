@@ -200,10 +200,10 @@ func handleAdminGenericAgentCreate(c *gin.Context) {
 	for key, value := range input.Config {
 		_, err := tx.Exec(insertQuery, input.Name, key, value)
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
-				"error":   "Failed to create job: " + err.Error(),
+				"error":   internalDBError(c, "create generic agent job", err),
 			})
 			return
 		}
@@ -295,7 +295,7 @@ func handleAdminGenericAgentUpdate(c *gin.Context) {
 		// Check if new name already exists
 		err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM generic_agent_jobs WHERE job_name = ? LIMIT 1)"), *input.Name).Scan(&exists)
 		if err == nil && exists {
-			tx.Rollback()
+			_ = tx.Rollback()
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
 				"error":   "A job with this name already exists",
@@ -305,7 +305,7 @@ func handleAdminGenericAgentUpdate(c *gin.Context) {
 
 		_, err := tx.Exec(database.ConvertPlaceholders("UPDATE generic_agent_jobs SET job_name = ? WHERE job_name = ?"), *input.Name, jobName)
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
 				"error":   "Failed to rename job",
@@ -323,10 +323,17 @@ func handleAdminGenericAgentUpdate(c *gin.Context) {
 		}
 
 		// Delete existing Valid key and insert new one
-		tx.Exec(database.ConvertPlaceholders("DELETE FROM generic_agent_jobs WHERE job_name = ? AND job_key = 'Valid'"), newName)
+		if _, err := tx.Exec(database.ConvertPlaceholders("DELETE FROM generic_agent_jobs WHERE job_name = ? AND job_key = 'Valid'"), newName); err != nil {
+			_ = tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to update job status",
+			})
+			return
+		}
 		_, err := tx.Exec(database.ConvertPlaceholders("INSERT INTO generic_agent_jobs (job_name, job_key, job_value) VALUES (?, 'Valid', ?)"), newName, validValue)
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
 				"error":   "Failed to update job status",
@@ -339,10 +346,17 @@ func handleAdminGenericAgentUpdate(c *gin.Context) {
 	if input.Config != nil {
 		for key, value := range input.Config {
 			// Delete existing key and insert new one (upsert pattern)
-			tx.Exec(database.ConvertPlaceholders("DELETE FROM generic_agent_jobs WHERE job_name = ? AND job_key = ?"), newName, key)
+			if _, err := tx.Exec(database.ConvertPlaceholders("DELETE FROM generic_agent_jobs WHERE job_name = ? AND job_key = ?"), newName, key); err != nil {
+				_ = tx.Rollback()
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"success": false,
+					"error":   "Failed to update job config",
+				})
+				return
+			}
 			_, err := tx.Exec(database.ConvertPlaceholders("INSERT INTO generic_agent_jobs (job_name, job_key, job_value) VALUES (?, ?, ?)"), newName, key, value)
 			if err != nil {
-				tx.Rollback()
+				_ = tx.Rollback()
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"success": false,
 					"error":   "Failed to update job config",

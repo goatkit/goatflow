@@ -133,10 +133,6 @@ issues:
         - gosec
         - funlen
         - lll
-    # Template generators contain inline HTML/CSS - line length is acceptable
-    - path: cmd/generator/template_gen\.go
-      linters:
-        - lll
     # Files with inline HTML/CSS templates
     - path: internal/api/ticket_attachment_handler\.go
       linters:

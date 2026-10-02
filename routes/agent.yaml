@@ -98,15 +98,6 @@ spec:
               - ticket_access_rw # Require read-write access
           description: "Merge ticket with another ticket"
 
-        # Split ticket - using existing handler for now
-        - path: /tickets/:id/split
-          method: POST
-          handler: handleAgentTicketNote
-          middleware:
-              - auth
-              - ticket_access_rw # Require read-write access
-          description: "Split ticket into multiple tickets (temporary)"
-
         # Customer users for ticket
         - path: /tickets/:id/customer-users
           method: GET

@@ -49,7 +49,7 @@ func NewClient(cfg *Config) (*Client, error) {
 		tc := &tls.Config{
 			ServerName:         cfg.Host,
 			MinVersion:         tls.VersionTLS12,
-			InsecureSkipVerify: cfg.SkipTLSVerify, //nolint:gosec // explicit LDAP_SKIP_TLS_VERIFY opt-out
+			InsecureSkipVerify: cfg.SkipTLSVerify, // #nosec G402 -- explicit operator opt-out LDAP_SKIP_TLS_VERIFY (default false), warned at startup by WarnInsecure
 		}
 		if cfg.CACertFile != "" {
 			pem, err := os.ReadFile(cfg.CACertFile)

@@ -248,12 +248,12 @@ func (r *PermissionRepository) ReplaceUserPermissionsFrom(sourceUserID, targetUs
 	for rows.Next() {
 		var g grant
 		if err := rows.Scan(&g.groupID, &g.key); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return fmt.Errorf("failed to scan source permission: %w", err)
 		}
 		grants = append(grants, g)
 	}
-	rows.Close()
+	_ = rows.Close()
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("failed to read source permissions: %w", err)
 	}

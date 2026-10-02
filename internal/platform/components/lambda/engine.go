@@ -102,7 +102,9 @@ func (e *Engine) ExecuteLambda(code string, execCtx ExecutionContext, config Lam
 	defer cancel()
 
 	// Inject safe global objects
-	e.injectGlobals(runtime, execCtx)
+	if err := e.injectGlobals(runtime, execCtx); err != nil {
+		return "", fmt.Errorf("lambda setup error: %w", err)
+	}
 
 	// Wrap the code in a function to ensure return value
 	wrappedCode := fmt.Sprintf(`
@@ -146,33 +148,41 @@ func (e *Engine) ExecuteLambda(code string, execCtx ExecutionContext, config Lam
 }
 
 // injectGlobals provides safe access to data and utilities in the JavaScript context.
-func (e *Engine) injectGlobals(runtime *goja.Runtime, execCtx ExecutionContext) {
+func (e *Engine) injectGlobals(runtime *goja.Runtime, execCtx ExecutionContext) error {
 	// Set item data directly as JavaScript object
-	runtime.Set("item", execCtx.Item)
+	if err := runtime.Set("item", execCtx.Item); err != nil {
+		return err
+	}
 
 	// Create database interface object
 	dbObj := runtime.NewObject()
 
 	// Add queryRow method
-	dbObj.Set("queryRow", func(call goja.FunctionCall) goja.Value {
+	if err := dbObj.Set("queryRow", func(call goja.FunctionCall) goja.Value {
 		return e.handleQueryRow(runtime, call, execCtx.DB)
-	})
+	}); err != nil {
+		return err
+	}
 
 	// Add query method
-	dbObj.Set("query", func(call goja.FunctionCall) goja.Value {
+	if err := dbObj.Set("query", func(call goja.FunctionCall) goja.Value {
 		return e.handleQuery(runtime, call, execCtx.DB)
-	})
+	}); err != nil {
+		return err
+	}
 
-	runtime.Set("db", dbObj)
+	if err := runtime.Set("db", dbObj); err != nil {
+		return err
+	}
 
 	// Inject safe utility functions
-	e.injectUtilities(runtime)
+	return e.injectUtilities(runtime)
 }
 
 // injectUtilities provides safe utility functions.
-func (e *Engine) injectUtilities(runtime *goja.Runtime) {
+func (e *Engine) injectUtilities(runtime *goja.Runtime) error {
 	// Add formatDate utility
-	runtime.Set("formatDate", func(call goja.FunctionCall) goja.Value {
+	return runtime.Set("formatDate", func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) < 1 {
 			return runtime.ToValue("")
 		}

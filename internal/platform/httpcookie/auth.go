@@ -35,6 +35,7 @@ func set(c *gin.Context, name, value string, maxAge int, httpOnly bool) {
 	if c == nil || c.Writer == nil {
 		return
 	}
+	// #nosec G124 -- Secure follows production/session.secure config (plain-HTTP dev must work); HttpOnly is false only for the documented JS-readable auth state cookies
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     name,
 		Value:    value,

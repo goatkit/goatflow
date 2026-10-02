@@ -48,7 +48,6 @@ This document lists the canonical division of packages between the GoatKit platf
 - version
 - webhook
 - yamlmgmt
-- zinc
 
 ## Product Packages (`internal/` excluding `platform/`)
 

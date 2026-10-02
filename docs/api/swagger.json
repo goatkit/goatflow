@@ -18,7 +18,7 @@
     "host": "localhost:8080",
     "basePath": "/api/v1",
     "paths": {
-        "/api/v1/admin/sql": {
+        "/admin/sql": {
             "post": {
                 "security": [
                     {
@@ -72,56 +72,6 @@
                 }
             }
         },
-        "/api/v1/i18n/coverage": {
-            "get": {
-                "responses": {}
-            }
-        },
-        "/api/v1/i18n/export/{lang}": {
-            "get": {
-                "responses": {}
-            }
-        },
-        "/api/v1/i18n/language": {
-            "post": {
-                "responses": {}
-            }
-        },
-        "/api/v1/i18n/languages": {
-            "get": {
-                "responses": {}
-            }
-        },
-        "/api/v1/i18n/missing/{lang}": {
-            "get": {
-                "responses": {}
-            }
-        },
-        "/api/v1/i18n/stats": {
-            "get": {
-                "responses": {}
-            }
-        },
-        "/api/v1/i18n/translate": {
-            "post": {
-                "responses": {}
-            }
-        },
-        "/api/v1/i18n/translations": {
-            "get": {
-                "responses": {}
-            }
-        },
-        "/api/v1/i18n/translations/{lang}": {
-            "get": {
-                "responses": {}
-            }
-        },
-        "/api/v1/i18n/validate/{lang}": {
-            "get": {
-                "responses": {}
-            }
-        },
         "/auth/login": {
             "post": {
                 "description": "Authenticate user with login/password and return JWT tokens",
@@ -163,35 +113,6 @@
                     },
                     "401": {
                         "description": "Invalid credentials",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/logout": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Logout user (invalidates session, client should discard tokens)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "Logout",
-                "responses": {
-                    "200": {
-                        "description": "Logout successful",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -285,193 +206,54 @@
                 }
             }
         },
-        "/mcp": {
+        "/i18n/coverage": {
             "get": {
-                "description": "Get information about the MCP endpoint and available tools",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "MCP"
-                ],
-                "summary": "MCP endpoint info",
-                "responses": {
-                    "200": {
-                        "description": "MCP info",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Model Context Protocol endpoint for AI assistant integration",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "MCP"
-                ],
-                "summary": "MCP JSON-RPC endpoint",
-                "parameters": [
-                    {
-                        "description": "JSON-RPC 2.0 request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "JSON-RPC 2.0 response",
-                        "schema": {
-                            "type": "object"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
+                "responses": {}
             }
         },
-        "/mcp/sse": {
+        "/i18n/export/{lang}": {
             "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Server-sent events stream for MCP server-initiated notifications",
-                "produces": [
-                    "text/event-stream"
-                ],
-                "tags": [
-                    "MCP"
-                ],
-                "summary": "MCP SSE notification stream",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "MCP Session ID",
-                        "name": "Mcp-Session-Id",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "SSE event stream",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
+                "responses": {}
+            }
+        },
+        "/i18n/language": {
             "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "MCP 2025-03-26 Streamable HTTP transport for AI assistant integration",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "MCP"
-                ],
-                "summary": "MCP Streamable HTTP endpoint",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "MCP Session ID (required after initialize)",
-                        "name": "Mcp-Session-Id",
-                        "in": "header"
-                    },
-                    {
-                        "description": "JSON-RPC 2.0 request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "JSON-RPC 2.0 response",
-                        "schema": {
-                            "type": "object"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Terminate an MCP Streamable HTTP session",
-                "tags": [
-                    "MCP"
-                ],
-                "summary": "Terminate MCP session",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "MCP Session ID",
-                        "name": "Mcp-Session-Id",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Session terminated"
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
+                "responses": {}
+            }
+        },
+        "/i18n/languages": {
+            "get": {
+                "responses": {}
+            }
+        },
+        "/i18n/missing/{lang}": {
+            "get": {
+                "responses": {}
+            }
+        },
+        "/i18n/stats": {
+            "get": {
+                "responses": {}
+            }
+        },
+        "/i18n/translate": {
+            "post": {
+                "responses": {}
+            }
+        },
+        "/i18n/translations": {
+            "get": {
+                "responses": {}
+            }
+        },
+        "/i18n/translations/{lang}": {
+            "get": {
+                "responses": {}
+            }
+        },
+        "/i18n/validate/{lang}": {
+            "get": {
+                "responses": {}
             }
         },
         "/priorities": {
@@ -1054,58 +836,6 @@
                 }
             }
         },
-        "/queues/{id}/details": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get detailed queue information including ticket counts",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Queues"
-                ],
-                "summary": "Get queue details",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Queue ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Queue details with stats",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Queue not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/queues/{id}/groups": {
             "post": {
                 "security": [
@@ -1285,58 +1015,6 @@
                 }
             }
         },
-        "/queues/{id}/status": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get queue status and metrics",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Queues"
-                ],
-                "summary": "Get queue status",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Queue ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Queue status",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Queue not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/salutations": {
             "get": {
                 "security": [
@@ -1493,7 +1171,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Full-text search across tickets",
+                "description": "Full-text search across tickets, articles and customers. Ticket and article hits are limited to queues the caller can read.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1536,6 +1214,13 @@
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "503": {
+                        "description": "Search backend unavailable or index not built",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 }
             }
@@ -1547,10 +1232,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Check search engine health status",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Report whether the search backend can serve searches; for Zinc and Elasticsearch also the index state, document counts and the latest reindex started by this server.",
                 "produces": [
                     "application/json"
                 ],
@@ -1572,6 +1254,13 @@
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "503": {
+                        "description": "Backend unreachable, misconfigured or index not built",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 }
             }
@@ -1583,10 +1272,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Trigger a search index rebuild",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Start a full rebuild of the Zinc or Elasticsearch index in the background (admin only). Progress is reported by GET /search/health. The database backend needs no index.",
                 "produces": [
                     "application/json"
                 ],
@@ -1596,6 +1282,13 @@
                 "summary": "Reindex search",
                 "responses": {
                     "200": {
+                        "description": "Database backend: nothing to do",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "202": {
                         "description": "Reindex started",
                         "schema": {
                             "type": "object",
@@ -1604,6 +1297,27 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Admin access required",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "A reindex is already running",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "503": {
+                        "description": "Search backend misconfigured",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2299,7 +2013,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get agent performance statistics",
+                "description": "Per-agent tickets assigned, tickets closed and articles created in the period (RBAC filtered). Admins see every valid agent; other agents see only agents with activity on tickets in queues they can read.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2310,9 +2024,30 @@
                     "Statistics"
                 ],
                 "summary": "Get agent performance",
+                "parameters": [
+                    {
+                        "enum": [
+                            "24h",
+                            "7d",
+                            "30d"
+                        ],
+                        "type": "string",
+                        "default": "7d",
+                        "description": "Rolling window ending now",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Agent performance data",
+                        "description": "period, agents[], top_performers[]",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameter",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2320,6 +2055,20 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Customer caller or no readable queue",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Database error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2335,7 +2084,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get time-based ticket analytics",
+                "description": "Tickets created and closed in the last days, by UTC hour of day or by weekday (RBAC filtered)",
                 "consumes": [
                     "application/json"
                 ],
@@ -2348,15 +2097,36 @@
                 "summary": "Get time-based analytics",
                 "parameters": [
                     {
+                        "enum": [
+                            "hourly",
+                            "day_of_week"
+                        ],
                         "type": "string",
-                        "description": "Time period",
-                        "name": "period",
+                        "default": "hourly",
+                        "description": "Bucketing",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 366,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 30,
+                        "description": "Window in days ending now",
+                        "name": "days",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Analytics data",
+                        "description": "type, days, data[], peak_hours[] (hourly) or busiest_days[] (day_of_week)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameter",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2364,6 +2134,20 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Customer caller or no readable queue",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Database error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2379,7 +2163,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get customer-related statistics",
+                "description": "All-time top customers by ticket count and customer totals (RBAC filtered)",
                 "consumes": [
                     "application/json"
                 ],
@@ -2390,9 +2174,27 @@
                     "Statistics"
                 ],
                 "summary": "Get customer statistics",
+                "parameters": [
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Number of top customers returned",
+                        "name": "top",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Customer statistics",
+                        "description": "top_customers[], customer_metrics",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameter",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2400,6 +2202,20 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Customer caller or no readable queue",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Database error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2415,7 +2231,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve dashboard statistics (ticket counts, trends) - RBAC filtered",
+                "description": "All-time ticket counts by state bucket, valid queue and valid priority, plus the 10 newest tickets (RBAC filtered)",
                 "consumes": [
                     "application/json"
                 ],
@@ -2428,7 +2244,7 @@
                 "summary": "Get dashboard statistics",
                 "responses": {
                     "200": {
-                        "description": "Dashboard statistics",
+                        "description": "overview, by_queue[], by_priority[], recent_activity[]",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2436,6 +2252,20 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Customer caller or no readable queue",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Database error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2451,12 +2281,13 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Export statistics data",
+                "description": "Download a summary or the ticket list for tickets created in the period, as JSON or CSV (RBAC filtered)",
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
-                    "application/json"
+                    "application/json",
+                    "text/csv"
                 ],
                 "tags": [
                     "Statistics"
@@ -2464,15 +2295,49 @@
                 "summary": "Export statistics",
                 "parameters": [
                     {
+                        "enum": [
+                            "json",
+                            "csv"
+                        ],
                         "type": "string",
-                        "description": "Export format (csv, json)",
+                        "default": "json",
+                        "description": "File format",
                         "name": "format",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "summary",
+                            "tickets"
+                        ],
+                        "type": "string",
+                        "default": "summary",
+                        "description": "Export content",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "24h",
+                            "7d",
+                            "30d"
+                        ],
+                        "type": "string",
+                        "default": "7d",
+                        "description": "Rolling window ending now",
+                        "name": "period",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Exported data",
+                        "description": "statistics_\u003cYYYYMMDD_HHMMSS\u003e.json or .csv attachment",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameter",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2480,6 +2345,20 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Customer caller or no readable queue",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Database error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2495,7 +2374,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get queue performance metrics",
+                "description": "All-time per-queue total, open and backlog counts for valid queues (RBAC filtered)",
                 "consumes": [
                     "application/json"
                 ],
@@ -2508,7 +2387,7 @@
                 "summary": "Get queue metrics",
                 "responses": {
                     "200": {
-                        "description": "Queue metrics",
+                        "description": "queues[], totals",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2516,6 +2395,20 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Customer caller or no readable queue",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Database error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2531,7 +2424,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve ticket creation/resolution trends over time",
+                "description": "Tickets created, closed and still open per UTC day or month (RBAC filtered)",
                 "consumes": [
                     "application/json"
                 ],
@@ -2544,15 +2437,45 @@
                 "summary": "Get ticket trends",
                 "parameters": [
                     {
+                        "enum": [
+                            "daily",
+                            "monthly"
+                        ],
                         "type": "string",
-                        "description": "Time period (day, week, month)",
+                        "default": "daily",
+                        "description": "Bucket size",
                         "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 366,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 7,
+                        "description": "Number of daily buckets (period=daily)",
+                        "name": "days",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 24,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 3,
+                        "description": "Number of monthly buckets (period=monthly)",
+                        "name": "months",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Trend data",
+                        "description": "period, days|months, trends[] {date, created, closed, open}, summary",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameter",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2560,6 +2483,20 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Customer caller or no readable queue",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Database error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2731,7 +2668,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get ticket counts by state",
+                "description": "All-time ticket count per valid ticket state (RBAC filtered)",
                 "consumes": [
                     "application/json"
                 ],
@@ -2744,7 +2681,7 @@
                 "summary": "Get state statistics",
                 "responses": {
                     "200": {
-                        "description": "State statistics",
+                        "description": "statistics[], total_tickets",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2752,6 +2689,20 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Customer caller or no readable queue",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Database error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -3107,134 +3058,6 @@
                 "responses": {
                     "200": {
                         "description": "Ticket archived",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Ticket not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/tickets/{id}/assign": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Assign a ticket to an agent",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Ticket Actions"
-                ],
-                "summary": "Assign ticket",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Ticket ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Assignment data (user_id)",
-                        "name": "assign",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Ticket assigned",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Ticket not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/tickets/{id}/close": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Close a ticket with a specific close state",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Ticket Actions"
-                ],
-                "summary": "Close ticket",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Ticket ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Close data (state_id, note)",
-                        "name": "close",
-                        "in": "body",
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Ticket closed",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4175,6 +3998,90 @@
                 }
             }
         },
+        "/webhook-deliveries/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "One delivery including payload and response body",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Get webhook delivery",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Delivery ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "success, data: WebhookDelivery",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/webhook-deliveries/{id}/redeliver": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Sends the payload of an earlier delivery again now as a new delivery (one attempt)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Redeliver webhook delivery",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Delivery ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "success, data: WebhookDelivery",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/webhooks": {
             "get": {
                 "security": [
@@ -4235,7 +4142,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create an outbound webhook; deliveries are signed with X-Webhook-Signature (sha256=HMAC of the body) when a secret is set",
+                "description": "Create an outbound webhook; deliveries are signed with X-Webhook-Signature (sha256=HMAC of the body) when a secret is set. The secret and custom header values are stored encrypted and never returned (responses carry secret_hint and header_hints). URLs whose host is a loopback, private, link-local or other internal IP address (or localhost) are rejected unless GOATFLOW_WEBHOOK_ALLOW_PRIVATE_TARGETS=true.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4248,7 +4155,7 @@
                 "summary": "Create webhook",
                 "parameters": [
                     {
-                        "description": "name, url, events (required); secret, headers, retry_count, timeout_seconds, is_active",
+                        "description": "name, url, events (required); secret, headers (object name -\u003e value), retry_count, timeout_seconds, is_active",
                         "name": "webhook",
                         "in": "body",
                         "required": true,
@@ -4274,90 +4181,6 @@
                     },
                     "409": {
                         "description": "Name already used",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/webhooks/deliveries/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "One delivery including payload and response body",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Webhooks"
-                ],
-                "summary": "Get webhook delivery",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Delivery ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "success, data: WebhookDelivery",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/webhooks/deliveries/{id}/redeliver": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Sends the payload of an earlier delivery again now as a new delivery (one attempt)",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Webhooks"
-                ],
-                "summary": "Redeliver webhook delivery",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Delivery ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "success, data: WebhookDelivery",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4438,7 +4261,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Partial update: only fields present change; an empty secret removes it",
+                "description": "Partial update: only fields present change; an empty secret removes it. headers replaces the custom headers: a null value keeps the stored value of that header, headers left out are removed; omit headers to keep them all.",
                 "consumes": [
                     "application/json"
                 ],

@@ -1,295 +1,325 @@
-// Package escalation provides SLA escalation calculation and management.
+// Package escalation keeps the OTRS ticket escalation index (ticket.escalation_*
+// columns) up to date and raises the OTRS escalation events.
 package escalation
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/bits"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/platform/shared"
-	"github.com/rickar/cal/v2"
 	"gopkg.in/yaml.v3"
+
+	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 )
 
-// CalendarService manages business calendars, wrapping rickar/cal with OTRS sysconfig.
-type CalendarService struct {
-	db        *sql.DB
-	calendars map[string]*cal.BusinessCalendar // "" = default, "1"-"9" = named calendars
+// maxCalendarSteps bounds the hour-by-hour walks below. A configured calendar
+// has at least one working hour a week, so even a year-long SLA finishes in
+// far fewer steps; the bound only stops a pathological configuration (every
+// working day a one-time vacation day for years) from spinning forever, like
+// OTRS's five-second loop protection.
+const maxCalendarSteps = 2_000_000
+
+// Calendar is one OTRS business calendar: the working hours of each weekday,
+// the recurring and one-time vacation days, and the time zone in which they
+// are read. It mirrors Kernel::System::DateTime's AsWorkingTime/ForWorkingTime
+// arithmetic.
+type Calendar struct {
+	location *time.Location
+	hours    [7]uint32 // indexed by time.Weekday; bit h set = clock hour h is working time
+	vacation map[[2]int]bool
+	oneTime  map[[3]int]bool
 }
 
-// NewCalendarService creates a new calendar service.
-func NewCalendarService(db *sql.DB) *CalendarService {
-	return &CalendarService{
-		db:        db,
-		calendars: make(map[string]*cal.BusinessCalendar),
+// ParseCalendar builds a calendar from the OTRS setting values: TimeWorkingHours
+// ({Mon: ['8', '9', ...], ...}), TimeVacationDays ({'12': {'25': 'Christmas'}})
+// and TimeVacationDaysOneTime ({'2026': {'1': {'2': 'Bridge day'}}}). Empty
+// strings mean "not set". A weekday missing from the working hours is not a
+// working day.
+func ParseCalendar(loc *time.Location, workingHours, vacationDays, vacationDaysOneTime string) (*Calendar, error) {
+	if loc == nil {
+		loc = time.UTC
 	}
-}
+	c := &Calendar{location: loc, vacation: map[[2]int]bool{}, oneTime: map[[3]int]bool{}}
 
-// LoadCalendars loads all calendars from sysconfig.
-func (s *CalendarService) LoadCalendars(ctx context.Context) error {
-	// Load default calendar
-	defaultCal, err := s.loadCalendar(ctx, "")
-	if err != nil {
-		return fmt.Errorf("failed to load default calendar: %w", err)
-	}
-	s.calendars[""] = defaultCal
-
-	// Load calendars 1-9
-	for i := 1; i <= 9; i++ {
-		suffix := strconv.Itoa(i)
-		c, err := s.loadCalendar(ctx, suffix)
-		if err != nil {
-			// Use default if specific calendar not configured
-			s.calendars[suffix] = defaultCal
-		} else {
-			s.calendars[suffix] = c
+	if strings.TrimSpace(workingHours) != "" {
+		var days map[string][]interface{}
+		if err := yaml.Unmarshal([]byte(workingHours), &days); err != nil {
+			return nil, fmt.Errorf("working hours: %w", err)
+		}
+		for name, hours := range days {
+			wd, ok := weekdays[name]
+			if !ok {
+				return nil, fmt.Errorf("working hours: unknown day %q", name)
+			}
+			for _, h := range hours {
+				hour, err := settingInt(h)
+				if err != nil || hour < 0 || hour > 23 {
+					return nil, fmt.Errorf("working hours: %s: invalid hour %v", name, h)
+				}
+				c.hours[wd] |= 1 << uint(hour)
+			}
 		}
 	}
 
-	return nil
-}
-
-// loadCalendar loads a single calendar configuration from sysconfig.
-func (s *CalendarService) loadCalendar(ctx context.Context, suffix string) (*cal.BusinessCalendar, error) {
-	c := cal.NewBusinessCalendar()
-
-	// Build config key names
-	workingHoursKey := "TimeWorkingHours"
-	vacationDaysKey := "TimeVacationDays"
-	vacationDaysOneTimeKey := "TimeVacationDaysOneTime"
-	if suffix != "" {
-		workingHoursKey += "::Calendar" + suffix
-		vacationDaysKey += "::Calendar" + suffix
-		vacationDaysOneTimeKey += "::Calendar" + suffix
+	if strings.TrimSpace(vacationDays) != "" {
+		var months map[interface{}]map[interface{}]interface{}
+		if err := yaml.Unmarshal([]byte(vacationDays), &months); err != nil {
+			return nil, fmt.Errorf("vacation days: %w", err)
+		}
+		for m, days := range months {
+			month, err := settingInt(m)
+			if err != nil {
+				return nil, fmt.Errorf("vacation days: invalid month %v", m)
+			}
+			for d := range days {
+				day, err := settingInt(d)
+				if err != nil {
+					return nil, fmt.Errorf("vacation days: invalid day %v", d)
+				}
+				c.vacation[[2]int{month, day}] = true
+			}
+		}
 	}
 
-	// Load and apply working hours
-	workingHoursYAML, err := s.getSysconfigValue(ctx, workingHoursKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get %s: %w", workingHoursKey, err)
+	if strings.TrimSpace(vacationDaysOneTime) != "" {
+		var years map[interface{}]map[interface{}]map[interface{}]interface{}
+		if err := yaml.Unmarshal([]byte(vacationDaysOneTime), &years); err != nil {
+			return nil, fmt.Errorf("one-time vacation days: %w", err)
+		}
+		for y, months := range years {
+			year, err := settingInt(y)
+			if err != nil {
+				return nil, fmt.Errorf("one-time vacation days: invalid year %v", y)
+			}
+			for m, days := range months {
+				month, err := settingInt(m)
+				if err != nil {
+					return nil, fmt.Errorf("one-time vacation days: invalid month %v", m)
+				}
+				for d := range days {
+					day, err := settingInt(d)
+					if err != nil {
+						return nil, fmt.Errorf("one-time vacation days: invalid day %v", d)
+					}
+					c.oneTime[[3]int{year, month, day}] = true
+				}
+			}
+		}
 	}
-	if err := s.applyWorkingHours(workingHoursYAML, c); err != nil {
-		return nil, fmt.Errorf("failed to apply %s: %w", workingHoursKey, err)
-	}
-
-	// Load vacation days (optional) - add as holidays
-	vacationDaysYAML, err := s.getSysconfigValue(ctx, vacationDaysKey)
-	if err == nil && vacationDaysYAML != "" {
-		s.applyVacationDays(vacationDaysYAML, c)
-	}
-
-	// Load one-time vacation days (optional)
-	vacationDaysOneTimeYAML, err := s.getSysconfigValue(ctx, vacationDaysOneTimeKey)
-	if err == nil && vacationDaysOneTimeYAML != "" {
-		s.applyVacationDaysOneTime(vacationDaysOneTimeYAML, c)
-	}
-
 	return c, nil
 }
 
-// getSysconfigValue retrieves a sysconfig value, checking modified first, then default.
-func (s *CalendarService) getSysconfigValue(ctx context.Context, name string) (string, error) {
-	// First check sysconfig_modified for overrides
-	query := database.ConvertPlaceholders(`
-		SELECT effective_value FROM sysconfig_modified
-		WHERE name = ? AND is_valid = 1
-		ORDER BY id DESC LIMIT 1
-	`)
-	var value string
-	err := s.db.QueryRowContext(ctx, query, name).Scan(&value)
-	if err == nil {
-		return value, nil
-	}
-
-	// Fall back to sysconfig_default
-	query = database.ConvertPlaceholders(`
-		SELECT effective_value FROM sysconfig_default
-		WHERE name = ?
-	`)
-	err = s.db.QueryRowContext(ctx, query, name).Scan(&value)
-	if err != nil {
-		return "", err
-	}
-	return value, nil
+var weekdays = map[string]time.Weekday{
+	"Mon": time.Monday, "Tue": time.Tuesday, "Wed": time.Wednesday, "Thu": time.Thursday,
+	"Fri": time.Friday, "Sat": time.Saturday, "Sun": time.Sunday,
 }
 
-// applyWorkingHours parses OTRS YAML working hours and configures the calendar.
-// OTRS format: { Mon: [8,9,10,...], Tue: [...], ... }
-func (s *CalendarService) applyWorkingHours(yamlStr string, c *cal.BusinessCalendar) error {
-	var hours map[string][]interface{}
-	if err := yaml.Unmarshal([]byte(yamlStr), &hours); err != nil {
-		return err
-	}
-
-	// Map day names to time.Weekday
-	dayMap := map[string]time.Weekday{
-		"Mon": time.Monday,
-		"Tue": time.Tuesday,
-		"Wed": time.Wednesday,
-		"Thu": time.Thursday,
-		"Fri": time.Friday,
-		"Sat": time.Saturday,
-		"Sun": time.Sunday,
-	}
-
-	// Determine work hours range and which days are workdays
-	var minHour, maxHour int = 24, 0
-
-	for dayName, hourList := range hours {
-		weekday, ok := dayMap[dayName]
-		if !ok {
-			continue
-		}
-
-		// If no hours, it's not a workday
-		if len(hourList) == 0 {
-			c.SetWorkday(weekday, false)
-			continue
-		}
-
-		c.SetWorkday(weekday, true)
-
-		// Find min/max hours for work hours range
-		for _, h := range hourList {
-			hour := toInt(h)
-			if hour < minHour {
-				minHour = hour
-			}
-			if hour > maxHour {
-				maxHour = hour
-			}
-		}
-	}
-
-	// Set work hours (rickar/cal uses contiguous range)
-	// OTRS default is 8-20, so end time is maxHour + 1 (end of that hour)
-	if minHour < 24 && maxHour >= 0 {
-		startTime := time.Duration(minHour) * time.Hour
-		endTime := time.Duration(maxHour+1) * time.Hour // End of the last working hour
-		c.SetWorkHours(startTime, endTime)
-	}
-
-	return nil
+func settingInt(v interface{}) (int, error) {
+	return strconv.Atoi(strings.TrimSpace(fmt.Sprint(v)))
 }
 
-// applyVacationDays adds recurring holidays from OTRS VacationDays config.
-// OTRS format: { 1: { 1: "New Year" }, 12: { 25: "Christmas" } }
-func (s *CalendarService) applyVacationDays(yamlStr string, c *cal.BusinessCalendar) {
-	var days map[interface{}]map[interface{}]string
-	if err := yaml.Unmarshal([]byte(yamlStr), &days); err != nil {
-		return
-	}
-
-	for monthKey, dayMap := range days {
-		month := time.Month(toInt(monthKey))
-		if month < 1 || month > 12 {
-			continue
+// configured reports whether any working hour is set. OTRS does no working
+// time arithmetic at all without one.
+func (c *Calendar) configured() bool {
+	for _, h := range c.hours {
+		if h != 0 {
+			return true
 		}
-		for dayKey, name := range dayMap {
-			day := toInt(dayKey)
-			if day < 1 || day > 31 {
+	}
+	return false
+}
+
+// workingDayHours returns the working-hour bitmap of the day t falls on, or 0
+// for vacation days.
+func (c *Calendar) workingDayHours(t time.Time) uint32 {
+	y, m, d := t.Date()
+	if c.vacation[[2]int{int(m), d}] || c.oneTime[[3]int{y, int(m), d}] {
+		return 0
+	}
+	return c.hours[t.Weekday()]
+}
+
+// fullDay returns the start of the next day when t is a midnight that starts
+// a 24-hour day (OTRS skips such days in one step).
+func (c *Calendar) fullDay(t time.Time) (time.Time, bool) {
+	if t.Hour() != 0 || t.Minute() != 0 || t.Second() != 0 {
+		return time.Time{}, false
+	}
+	next := time.Unix(t.Unix()+86400, 0).In(c.location)
+	if next.Hour() != 0 || next.Minute() != 0 || next.Second() != 0 || next.Day() == t.Day() {
+		return time.Time{}, false
+	}
+	return next, true
+}
+
+// AddWorkingTime returns the moment at which seconds of working time have
+// passed after start (OTRS DateTime->Add(AsWorkingTime => 1)). Without any
+// configured working hour, or for seconds <= 0, start is returned unchanged,
+// as in OTRS.
+func (c *Calendar) AddWorkingTime(start time.Time, seconds int64) (time.Time, error) {
+	if seconds <= 0 || !c.configured() {
+		return start, nil
+	}
+	t := time.Unix(start.Unix(), 0).In(c.location)
+	remaining := seconds
+	for step := 0; remaining > 0; step++ {
+		if step > maxCalendarSteps {
+			return start, fmt.Errorf("adding %ds of working time to %s found no working time", seconds, start.Format(time.RFC3339))
+		}
+		hours := c.workingDayHours(t)
+		if next, ok := c.fullDay(t); ok {
+			whole := true
+			if hours != 0 {
+				dayWorking := int64(bits.OnesCount32(hours)) * 3600
+				if remaining > dayWorking {
+					remaining -= dayWorking
+				} else {
+					whole = false
+				}
+			}
+			if whole {
+				t = next
 				continue
 			}
-			// Create a recurring holiday using rickar/cal
-			holiday := &cal.Holiday{
-				Name:  name,
-				Type:  cal.ObservancePublic,
-				Month: month,
-				Day:   day,
-				Func:  cal.CalcDayOfMonth,
-			}
-			c.AddHoliday(holiday)
 		}
+		add := int64(3600 - t.Minute()*60 - t.Second())
+		if hours&(1<<uint(t.Hour())) != 0 {
+			if add > remaining {
+				add = remaining
+			}
+			remaining -= add
+		}
+		t = time.Unix(t.Unix()+add, 0).In(c.location)
 	}
+	return t.In(start.Location()), nil
 }
 
-// applyVacationDaysOneTime adds one-time holidays from OTRS config.
-// OTRS format: { 2025: { 1: { 1: "Special Day" } } }
-func (s *CalendarService) applyVacationDaysOneTime(yamlStr string, c *cal.BusinessCalendar) {
-	var days map[interface{}]map[interface{}]map[interface{}]string
-	if err := yaml.Unmarshal([]byte(yamlStr), &days); err != nil {
-		return
+// WorkingTime returns the seconds of working time between start and stop
+// (OTRS DateTime->Delta(ForWorkingTime => 1)); 0 when stop is not after start
+// or no working hour is configured.
+func (c *Calendar) WorkingTime(start, stop time.Time) (int64, error) {
+	if !c.configured() {
+		return 0, nil
 	}
-
-	for yearKey, monthMap := range days {
-		year := toInt(yearKey)
-		if year == 0 {
-			continue
+	t := time.Unix(start.Unix(), 0).In(c.location)
+	end := stop.Unix()
+	var working int64
+	for step := 0; t.Unix() < end; step++ {
+		if step > maxCalendarSteps {
+			return 0, fmt.Errorf("working time between %s and %s: too many steps", start.Format(time.RFC3339), stop.Format(time.RFC3339))
 		}
-		for monthKey, dayMap := range monthMap {
-			month := time.Month(toInt(monthKey))
-			if month < 1 || month > 12 {
+		remaining := end - t.Unix()
+		hours := c.workingDayHours(t)
+		if next, ok := c.fullDay(t); ok && remaining > 86400 {
+			whole := true
+			if hours != 0 {
+				dayWorking := int64(bits.OnesCount32(hours)) * 3600
+				if remaining > dayWorking {
+					working += dayWorking
+				} else {
+					whole = false
+				}
+			}
+			if whole {
+				t = next
 				continue
 			}
-			for dayKey, name := range dayMap {
-				day := toInt(dayKey)
-				if day < 1 || day > 31 {
-					continue
-				}
-				// Create a one-time holiday with year range
-				holiday := &cal.Holiday{
-					Name:      name,
-					Type:      cal.ObservancePublic,
-					Month:     month,
-					Day:       day,
-					Func:      cal.CalcDayOfMonth,
-					StartYear: year,
-					EndYear:   year,
-				}
-				c.AddHoliday(holiday)
-			}
 		}
+		add := int64(3600 - t.Minute()*60 - t.Second())
+		if hours&(1<<uint(t.Hour())) != 0 {
+			if add > remaining {
+				add = remaining
+			}
+			working += add
+		}
+		t = time.Unix(t.Unix()+add, 0).In(c.location)
 	}
+	return working, nil
 }
 
-// GetCalendar returns a calendar by name.
-// Name can be empty (default), "1"-"9", or "Calendar1"-"Calendar9".
-func (s *CalendarService) GetCalendar(name string) *cal.BusinessCalendar {
-	// Normalize calendar name - strip "Calendar" prefix if present
-	name = strings.TrimPrefix(name, "Calendar")
+// Calendars holds the default calendar and the named calendars "1".."9".
+type Calendars struct {
+	byName map[string]*Calendar
+}
 
-	if c, ok := s.calendars[name]; ok {
+// Get returns the calendar an SLA or queue calendar_name refers to ("" or
+// "1".."9", optionally "Calendar1"); unknown or inactive names get the
+// default calendar, as in OTRS.
+func (cs *Calendars) Get(name string) *Calendar {
+	name = strings.TrimPrefix(strings.TrimSpace(name), "Calendar")
+	if c, ok := cs.byName[name]; ok {
 		return c
 	}
-	// Return default calendar if not found
-	return s.calendars[""]
+	return cs.byName[""]
 }
 
-// AddWorkingTime adds working time (in minutes) to a start time and returns the destination time.
-// This wraps rickar/cal's AddWorkHours for OTRS compatibility (minutes instead of Duration).
-func (s *CalendarService) AddWorkingTime(calendarName string, start time.Time, minutes int) time.Time {
-	c := s.GetCalendar(calendarName)
-	if c == nil {
-		// No calendar - just add absolute time
-		return start.Add(time.Duration(minutes) * time.Minute)
+// LoadCalendars reads the OTRS calendar settings: TimeWorkingHours,
+// TimeVacationDays and TimeVacationDaysOneTime for the default calendar, and
+// their ::CalendarN variants with TimeZone::CalendarN for calendars 1-9. A
+// numbered calendar is used when its working hours are set and its
+// TimeZone::CalendarNName is not blanked out; otherwise its tickets use the
+// default calendar. loc is the time zone of the default calendar and of
+// numbered calendars without their own TimeZone::CalendarN.
+func LoadCalendars(ctx context.Context, db *sql.DB, loc *time.Location) (*Calendars, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
-	return c.AddWorkHours(start, time.Duration(minutes)*time.Minute)
-}
-
-// WorkingTimeBetween calculates working time in seconds between two times.
-func (s *CalendarService) WorkingTimeBetween(calendarName string, start, end time.Time) int64 {
-	c := s.GetCalendar(calendarName)
-	if c == nil {
-		return int64(end.Sub(start).Seconds())
+	if loc == nil {
+		loc = time.UTC
 	}
-	hours := c.WorkHoursInRange(start, end)
-	return int64(hours.Seconds())
-}
+	setting := func(name string) (string, bool) { return sysconfig.Value(db, name) }
 
-// IsWorkingTime checks if a given time is within working hours.
-func (s *CalendarService) IsWorkingTime(calendarName string, t time.Time) bool {
-	c := s.GetCalendar(calendarName)
-	if c == nil {
-		return true // No calendar means always working
+	def, err := loadCalendar(setting, "", loc)
+	if err != nil {
+		return nil, err
 	}
-	return c.IsWorkTime(t)
+	cs := &Calendars{byName: map[string]*Calendar{"": def}}
+	for i := 1; i <= 9; i++ {
+		suffix := "::Calendar" + strconv.Itoa(i)
+		if name, ok := setting("TimeZone::Calendar" + strconv.Itoa(i) + "Name"); ok && scalarSetting(name) == "" {
+			continue
+		}
+		if _, ok := setting("TimeWorkingHours" + suffix); !ok {
+			continue
+		}
+		calLoc := loc
+		if tz, ok := setting("TimeZone::Calendar" + strconv.Itoa(i)); ok && scalarSetting(tz) != "" {
+			l, err := time.LoadLocation(scalarSetting(tz))
+			if err != nil {
+				return nil, fmt.Errorf("TimeZone::Calendar%d: %w", i, err)
+			}
+			calLoc = l
+		}
+		c, err := loadCalendar(setting, suffix, calLoc)
+		if err != nil {
+			return nil, err
+		}
+		cs.byName[strconv.Itoa(i)] = c
+	}
+	return cs, nil
 }
 
-// toInt converts various types to int.
-func toInt(v interface{}) int {
-	return shared.ToInt(v, 0)
+func loadCalendar(setting func(string) (string, bool), suffix string, loc *time.Location) (*Calendar, error) {
+	hours, _ := setting("TimeWorkingHours" + suffix)
+	vacation, _ := setting("TimeVacationDays" + suffix)
+	oneTime, _ := setting("TimeVacationDaysOneTime" + suffix)
+	c, err := ParseCalendar(loc, hours, vacation, oneTime)
+	if err != nil {
+		return nil, fmt.Errorf("calendar settings%s: %w", suffix, err)
+	}
+	return c, nil
+}
+
+// scalarSetting decodes a scalar sysconfig value, stored either plain or as a
+// YAML document ("--- Europe/Berlin\n").
+func scalarSetting(v string) string {
+	var s string
+	if err := yaml.Unmarshal([]byte(v), &s); err == nil {
+		return strings.TrimSpace(s)
+	}
+	return strings.TrimSpace(v)
 }

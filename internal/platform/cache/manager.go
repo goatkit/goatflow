@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -200,12 +201,15 @@ func (m *Manager) InvalidateTicket(ctx context.Context, ticketID int64) error {
 		return err
 	}
 
-	// Delete related keys
+	// Delete related keys; attempt all so one failure doesn't leave the rest stale
+	var errs []error
 	for _, relKey := range relatedKeys {
-		strategy.Delete(ctx, relKey)
+		if err := strategy.Delete(ctx, relKey); err != nil {
+			errs = append(errs, fmt.Errorf("invalidate %s: %w", relKey, err))
+		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // Queue caching methods

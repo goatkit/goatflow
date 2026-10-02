@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"math"
 
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/database"
@@ -244,18 +245,12 @@ func (r *QueueRepository) Create(queue *models.Queue) error {
 			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 		) RETURNING id`
 
-	var systemAddressID, salutationID, signatureID sql.NullInt32
+	systemAddressID, salutationID, signatureID, err := queueRefIDs(queue)
+	if err != nil {
+		return err
+	}
 	var comments sql.NullString
 
-	if queue.SystemAddressID > 0 {
-		systemAddressID = sql.NullInt32{Int32: int32(queue.SystemAddressID), Valid: true}
-	}
-	if queue.SalutationID > 0 {
-		salutationID = sql.NullInt32{Int32: int32(queue.SalutationID), Valid: true}
-	}
-	if queue.SignatureID > 0 {
-		signatureID = sql.NullInt32{Int32: int32(queue.SignatureID), Valid: true}
-	}
 	if queue.Comment != "" {
 		comments = sql.NullString{String: queue.Comment, Valid: true}
 	}
@@ -281,8 +276,33 @@ func (r *QueueRepository) Create(queue *models.Queue) error {
 	if err != nil {
 		return err
 	}
-	queue.ID = uint(id)
+	queue.ID = uint(id) // #nosec G115 -- queue.id auto-increment key, never negative
 	return nil
+}
+
+// queueRefIDs converts the optional system address, salutation and signature
+// references to the INT columns' type. Zero means unset; anything beyond
+// int32 is rejected instead of silently wrapping onto another row's id.
+func queueRefIDs(queue *models.Queue) (systemAddressID, salutationID, signatureID sql.NullInt32, err error) {
+	refs := []struct {
+		name string
+		v    int
+		out  *sql.NullInt32
+	}{
+		{"system_address_id", queue.SystemAddressID, &systemAddressID},
+		{"salutation_id", queue.SalutationID, &salutationID},
+		{"signature_id", queue.SignatureID, &signatureID},
+	}
+	for _, ref := range refs {
+		if ref.v <= 0 {
+			continue
+		}
+		if ref.v > math.MaxInt32 {
+			return systemAddressID, salutationID, signatureID, fmt.Errorf("queue %s %d out of range", ref.name, ref.v)
+		}
+		*ref.out = sql.NullInt32{Int32: int32(ref.v), Valid: true}
+	}
+	return systemAddressID, salutationID, signatureID, nil
 }
 
 // Update updates a queue.
@@ -303,25 +323,18 @@ func (r *QueueRepository) Update(queue *models.Queue) error {
 			change_by = ?
 		WHERE id = ?`
 
-	var systemAddressID, salutationID, signatureID sql.NullInt32
+	systemAddressID, salutationID, signatureID, err := queueRefIDs(queue)
+	if err != nil {
+		return err
+	}
 	var comments sql.NullString
 
-	if queue.SystemAddressID > 0 {
-		systemAddressID = sql.NullInt32{Int32: int32(queue.SystemAddressID), Valid: true}
-	}
-	if queue.SalutationID > 0 {
-		salutationID = sql.NullInt32{Int32: int32(queue.SalutationID), Valid: true}
-	}
-	if queue.SignatureID > 0 {
-		signatureID = sql.NullInt32{Int32: int32(queue.SignatureID), Valid: true}
-	}
 	if queue.Comment != "" {
 		comments = sql.NullString{String: queue.Comment, Valid: true}
 	}
 
 	result, err := r.db.Exec(
 		database.ConvertPlaceholders(query),
-		queue.ID,
 		queue.Name,
 		systemAddressID,
 		salutationID,
@@ -334,6 +347,7 @@ func (r *QueueRepository) Update(queue *models.Queue) error {
 		queue.ValidID,
 		queue.ChangeTime,
 		queue.ChangeBy,
+		queue.ID,
 	)
 
 	if err != nil {

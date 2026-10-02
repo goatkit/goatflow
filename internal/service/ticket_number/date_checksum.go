@@ -136,6 +136,8 @@ func (g *DateChecksumGenerator) getCounterUID(t time.Time) string {
 // atoi converts string to int, returns 0 on error.
 func atoi(s string) int {
 	var result int
-	fmt.Sscanf(s, "%d", &result)
+	if _, err := fmt.Sscanf(s, "%d", &result); err != nil {
+		return 0
+	}
 	return result
 }

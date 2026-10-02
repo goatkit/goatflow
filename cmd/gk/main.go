@@ -6,12 +6,22 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 )
 
 //go:embed templates/*
 var templateFS embed.FS
+
+// pluginNamePattern restricts plugin names to a single safe path segment:
+// the name becomes the directory plugins/<name>, so separators or ".." would
+// let it escape the plugins directory.
+var pluginNamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
+
+func validPluginName(name string) bool {
+	return pluginNamePattern.MatchString(name)
+}
 
 func main() {
 	if len(os.Args) < 2 {
@@ -109,7 +119,9 @@ func pluginInit() {
 		name = os.Args[3]
 	} else {
 		fmt.Print("Plugin name: ")
-		fmt.Scanln(&name)
+		// Scanln reports "unexpected newline" on an empty line; the empty
+		// name is rejected below, so the error carries no extra information.
+		_, _ = fmt.Scanln(&name)
 	}
 
 	if name == "" {
@@ -119,13 +131,18 @@ func pluginInit() {
 
 	// Sanitize name
 	name = strings.ToLower(strings.ReplaceAll(name, " ", "-"))
+	if !validPluginName(name) {
+		fmt.Printf("Error: invalid plugin name %q (use lowercase letters, digits, '-' and '_')\n", name)
+		os.Exit(1)
+	}
 
 	// Get runtime type
 	if len(os.Args) > 4 {
 		runtime = os.Args[4]
 	} else {
 		fmt.Print("Runtime (wasm/grpc) [wasm]: ")
-		fmt.Scanln(&runtime)
+		// An empty line ("unexpected newline") selects the default below.
+		_, _ = fmt.Scanln(&runtime)
 		if runtime == "" {
 			runtime = "wasm"
 		}
@@ -144,7 +161,7 @@ func pluginInit() {
 
 func createWASMPlugin(name string) {
 	dir := filepath.Join("plugins", name)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil { // #nosec G703 -- name checked by validPluginName, dir stays under plugins/
 		fmt.Printf("Error creating directory: %v\n", err)
 		os.Exit(1)
 	}
@@ -161,7 +178,10 @@ func createWASMPlugin(name string) {
 
 	// Create build.sh
 	writeTemplate(filepath.Join(dir, "build.sh"), "templates/wasm_build.sh.tmpl", data)
-	os.Chmod(filepath.Join(dir, "build.sh"), 0755)
+	if err := os.Chmod(filepath.Join(dir, "build.sh"), 0750); err != nil { // #nosec G302 G703 -- build script must be executable; name checked by validPluginName
+		fmt.Printf("Error making build.sh executable: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Create README.md
 	writeTemplate(filepath.Join(dir, "README.md"), "templates/wasm_readme.md.tmpl", data)
@@ -177,7 +197,7 @@ func createWASMPlugin(name string) {
 
 func createGRPCPlugin(name string) {
 	dir := filepath.Join("plugins", name)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil { // #nosec G703 -- name checked by validPluginName, dir stays under plugins/
 		fmt.Printf("Error creating directory: %v\n", err)
 		os.Exit(1)
 	}
@@ -194,7 +214,10 @@ func createGRPCPlugin(name string) {
 
 	// Create build.sh
 	writeTemplate(filepath.Join(dir, "build.sh"), "templates/grpc_build.sh.tmpl", data)
-	os.Chmod(filepath.Join(dir, "build.sh"), 0755)
+	if err := os.Chmod(filepath.Join(dir, "build.sh"), 0750); err != nil { // #nosec G302 G703 -- build script must be executable; name checked by validPluginName
+		fmt.Printf("Error making build.sh executable: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Create README.md
 	writeTemplate(filepath.Join(dir, "README.md"), "templates/grpc_readme.md.tmpl", data)
@@ -221,7 +244,7 @@ func writeTemplate(path, tmplPath string, data any) {
 		os.Exit(1)
 	}
 
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304 G703 -- path is plugins/<validated name>/<fixed file name>
 	if err != nil {
 		fmt.Printf("Error creating file %s: %v\n", path, err)
 		os.Exit(1)

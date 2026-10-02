@@ -97,7 +97,7 @@ var authzAdminResources = []string{
 
 // authzAdminPrefixes are admin only for every method.
 var authzAdminPrefixes = []string{
-	"/admin", "/api/v1/admin", "/api/v1/webhooks", "/api/v1/organisations", "/api/v1/plugin-uis",
+	"/admin", "/api/v1/admin", "/api/v1/webhooks", "/api/v1/webhook-deliveries", "/api/v1/organisations", "/api/v1/plugin-uis",
 	"/api/v1/plugins/logs", "/api/v1/plugins/marketplace", "/api/v1/plugins/upload",
 }
 

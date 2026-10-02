@@ -67,22 +67,20 @@ func (h *ProdHostAPI) CreateArticle(ctx context.Context, ticketID, createdBy int
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	// Do NOT call ConvertPlaceholders here — GetAdapter's InsertWithReturningTx
-	// expands repeated ? placeholders (create_by/change_by) per driver.
-	id, err := database.GetAdapter().InsertWithReturningTx(tx, `
+	id, err := database.GetAdapter().InsertWithReturningTx(tx, database.ConvertPlaceholders(`
 		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id,
 			is_visible_for_customer, create_time, create_by, change_time, change_by)
 		VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
-		RETURNING id`,
+		RETURNING id`),
 		ticketID, constants.ArticleSenderAgent, constants.CommunicationChannelInternal, visible, createdBy, createdBy)
 	if err != nil {
 		return 0, fmt.Errorf("insert article: %w", err)
 	}
 
-	if _, err := database.GetAdapter().ExecTx(tx, `
+	if _, err := database.GetAdapter().ExecTx(tx, database.ConvertPlaceholders(`
 		INSERT INTO article_data_mime (article_id, a_from, a_subject, a_body, a_content_type,
 			incoming_time, create_time, create_by, change_time, change_by)
-		VALUES (?, '', ?, ?, 'text/plain', 0, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)`,
+		VALUES (?, '', ?, ?, 'text/plain', 0, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)`),
 		id, subject, body, createdBy, createdBy); err != nil {
 		return 0, fmt.Errorf("insert article mime data: %w", err)
 	}

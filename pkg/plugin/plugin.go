@@ -359,7 +359,7 @@ type PdfRenderOptions struct {
 	// Zero values render exactly as before.
 	BrandName    string // practice/coach name; shown in the running header
 	BrandColor   string // "#RRGGBB" accent for headings/table headers; anything else ignored
-	BrandLogoURL string // https URL for a logo in the header; non-https ignored
+	BrandLogoURL string // inline data:image/(png|jpeg|gif|webp);base64 URI for a header logo; anything else (https too) ignored
 }
 
 // ArticleAttachment describes a file attached to an article. ID addresses the
@@ -555,11 +555,23 @@ type ResourceRequest struct {
 }
 
 // Permission declares a specific capability a plugin requests.
+//
+// Plugins declare permissions in ResourceRequest. Until an admin stores a
+// ResourcePolicy for the plugin, the host grants the declared permissions
+// (except entity "hard_delete", which only an admin policy can grant).
 type Permission struct {
-	// Type is the permission category: "db", "cache", "http", "email", "config", "plugin_call"
+	// Type is the permission category:
+	//   db, cache, http, email, config, plugin_call,
+	//   file    (StoreFile/DeleteFile = write, GetFile/ListFiles = read),
+	//   article (CreateArticle and attachment create/delete = write, ListArticleAttachments = read),
+	//   ticket  (ChangeTicketStatus = write, ListTicketStates/ListTicketViews = read),
+	//   entity  (EntitySoftDelete/EntityRestore = write, RecycleBinList = read,
+	//            EntityHardDelete = "hard_delete").
 	Type string `json:"type" yaml:"type"`
 
-	// Access level: "read", "write", "readwrite" (for db/cache)
+	// Access level: "read", "write" or "readwrite". "readwrite" grants read
+	// and write. Type "entity" also knows "hard_delete", which must be granted
+	// on its own: "readwrite" does not include it.
 	Access string `json:"access,omitempty" yaml:"access,omitempty"`
 
 	// Scope constrains the permission. Meaning depends on type:
@@ -567,6 +579,8 @@ type Permission struct {
 	//   http:   URL patterns, e.g. ["*.tenor.com", "api.giphy.com"]
 	//   cache:  key prefix (auto-namespaced if empty)
 	//   plugin_call: plugin names allowed to call, e.g. ["stats"]
+	//   entity: entity types, e.g. ["ticket"]
+	// An empty scope allows everything the type and access cover.
 	Scope []string `json:"scope,omitempty" yaml:"scope,omitempty"`
 }
 
@@ -610,6 +624,7 @@ func DefaultResourcePolicy(pluginName string) ResourcePolicy {
 		Permissions: []Permission{
 			{Type: "db", Access: "read"},
 			{Type: "cache", Access: "readwrite"},
+			{Type: "file", Access: "readwrite"},
 		},
 		MaxCallsPerSecond:  100,
 		MaxDBQueriesPerMin: 600,

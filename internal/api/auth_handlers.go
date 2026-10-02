@@ -69,6 +69,23 @@ var HandleAuthLogin = func(c *gin.Context) {
 		return
 	}
 
+	// Fail2ban-style throttle shared with /api/v1/auth/login and customer login.
+	clientIP := c.ClientIP()
+	if blocked, remaining := auth.DefaultLoginRateLimiter.IsBlocked(clientIP, username); blocked {
+		switch {
+		case strings.Contains(contentType, "application/json"):
+			tooManyAttemptsJSON(c, remaining)
+		case c.GetHeader("HX-Request") == "true":
+			html := `<div class="rounded-md bg-red-50 dark:bg-red-900/20 p-4 mt-4">` +
+				`<div class="text-sm text-red-800 dark:text-red-200">` +
+				`Too many failed attempts. Try again later.</div></div>`
+			c.Data(http.StatusTooManyRequests, "text/html; charset=utf-8", []byte(html))
+		default:
+			c.Redirect(http.StatusSeeOther, "/login?error=Too+many+failed+attempts.+Try+again+later")
+		}
+		return
+	}
+
 	// Get auth service
 	authService := GetAuthService()
 	if authService == nil {
@@ -96,6 +113,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 	// Explicit provider field is advisory; future: route to single-provider auth path.
 	user, accessToken, refreshToken, err := authService.Login(ctx, username, password)
 	if err != nil {
+		auth.DefaultLoginRateLimiter.RecordFailure(clientIP, username)
 		if strings.Contains(contentType, "application/json") {
 			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "invalid credentials"})
 			return
@@ -110,6 +128,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 		}
 		return
 	}
+	auth.DefaultLoginRateLimiter.RecordSuccess(clientIP, username)
 
 	// Check if 2FA is enabled for this user. A failed lookup aborts the
 	// login: skipping the second factor on an error would bypass it.

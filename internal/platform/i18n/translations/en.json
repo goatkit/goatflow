@@ -759,7 +759,13 @@
           "responsible": "Ticket Responsible",
           "roles": "Roles",
           "special": "Special Recipients",
-          "watcher": "Ticket Watchers"
+          "watcher": "Ticket Watchers",
+          "my_queues": "Agents who have the queue in My Queues",
+          "creator": "Ticket Creator",
+          "read_permissions": "All Agents with Read Access to the Queue",
+          "write_permissions": "All Agents with Write Access to the Queue",
+          "emails": "Additional Recipient Email Addresses",
+          "emails_help": "Separate addresses with commas. Up to 200 characters."
         },
         "sections": {
           "basic": "Basic Information",
@@ -1600,6 +1606,7 @@
         "events_required": "Select at least one event.",
         "header_name": "Header name",
         "header_value": "Value",
+        "header_value_keep": "Value saved ({hint}). Leave empty to keep it",
         "headers": "Custom headers",
         "headers_help": "Sent with every delivery. Content-Type, User-Agent and the X-Webhook-* headers are set by GoatFlow.",
         "remove_header": "Remove header",
@@ -2488,12 +2495,12 @@
   },
   "customer_portal_settings": {
     "description": "System-wide defaults for every customer company. Individual companies can override any of these from their company edit page.",
-    "enable": "Enable",
-    "enable_help": "Enable Help Link",
+    "enable": "Enable Customer Portal",
+    "enable_help": "Turn the customer portal on or off. Companies with their own setting keep it.",
     "footer_text": "Footer Text",
     "heading": "Default Customer Portal Settings",
     "landing_page": "Landing Page",
-    "landing_page_help": "The default page shown when customers access the portal",
+    "landing_page_help": "Page customers see after signing in, for example /customer/tickets. A path without a leading / is relative to /customer.",
     "per_company_note": "Each customer company can override these defaults on the Portal Settings tab of its edit page.",
     "require_login": "Require Login",
     "require_login_help": "Require customers to login before accessing the portal",
@@ -4171,7 +4178,6 @@
     "showing_of_total": "Showing %d of %d tickets",
     "sla": "SLA",
     "spam": "Spam",
-    "split": "Split",
     "state": "State",
     "status": "Status",
     "subject": "Subject",
@@ -4211,7 +4217,15 @@
     "view_in_queue": "View tickets in this queue",
     "visible_for_customer": "Visible for customer",
     "visible_for_customer_help": "Mark to show this update in the customer portal.",
-    "watch": "Watch"
+    "watch": "Watch",
+    "escalation": {
+      "first_response": "First response due",
+      "update": "Update due",
+      "solution": "Solution due",
+      "due_in": "Due in",
+      "overdue_by": "Overdue by",
+      "escalated": "Escalated"
+    }
   },
   "tickets_form": {
     "attachments": "Attachments",

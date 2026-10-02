@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -92,18 +94,25 @@ func (m *mockHostAPI) CustomFieldsQuery(ctx context.Context, entityType string, 
 
 func buildGRPCPlugin(t *testing.T) string {
 	t.Helper()
+	return buildPluginBinary(t, "./internal/platform/plugin/grpc/example", "hello-grpc-plugin")
+}
+
+// buildPluginBinary builds the plugin main package pkg (relative to the repo
+// root) into a temp dir and returns the binary path.
+func buildPluginBinary(t *testing.T, pkg, name string) string {
+	t.Helper()
 
 	// Find repo root
 	_, filename, _, _ := runtime.Caller(0)
 	repoRoot := filepath.Join(filepath.Dir(filename), "..", "..", "..", "..")
 
 	// Build to temp location
-	pluginPath := filepath.Join(t.TempDir(), "hello-grpc-plugin")
+	pluginPath := filepath.Join(t.TempDir(), name)
 	if runtime.GOOS == "windows" {
 		pluginPath += ".exe"
 	}
 
-	cmd := exec.Command("go", "build", "-o", pluginPath, "./internal/platform/plugin/grpc/example")
+	cmd := exec.Command("go", "build", "-o", pluginPath, pkg)
 	cmd.Dir = repoRoot
 	cmd.Env = os.Environ()
 
@@ -115,12 +124,104 @@ func buildGRPCPlugin(t *testing.T) string {
 	return pluginPath
 }
 
+// sandboxProbeHost records the host methods a plugin process reached and the
+// acting user they ran for.
+type sandboxProbeHost struct {
+	mockHostAPI
+	mu      sync.Mutex
+	reached map[string]int64 // method -> acting user (0 = none)
+}
+
+func (h *sandboxProbeHost) record(ctx context.Context, method string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	actor, _ := plugin.ActingUserID(ctx)
+	h.reached[method] = actor
+}
+
+func (h *sandboxProbeHost) seen(method string) (int64, bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	actor, ok := h.reached[method]
+	return actor, ok
+}
+
+func (h *sandboxProbeHost) DBQuery(ctx context.Context, query string, args ...any) ([]map[string]any, error) {
+	h.record(ctx, "DBQuery")
+	return nil, nil
+}
+
+func (h *sandboxProbeHost) EntitySoftDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	h.record(ctx, "EntitySoftDelete")
+	return nil
+}
+
+func (h *sandboxProbeHost) EntityHardDelete(ctx context.Context, entityType string, entityID int64, reason string) error {
+	h.record(ctx, "EntityHardDelete")
+	return nil
+}
+
+// TestGRPCHostCallsGoThroughSandbox runs a real plugin process and checks its
+// HostAPI callbacks reach the host only through the SandboxedHostAPI the
+// Manager hands to Init: ungranted calls are refused before the host runs
+// them, and calls made with the call's context carry the acting user.
+func TestGRPCHostCallsGoThroughSandbox(t *testing.T) {
+	pluginPath := buildPluginBinary(t, "./internal/platform/plugin/grpc/testdata/hostcaller", "hostcaller")
+	inner := &sandboxProbeHost{reached: map[string]int64{}}
+	policy := plugin.ResourcePolicy{
+		PluginName: "hostcaller",
+		Status:     "approved",
+		Permissions: []plugin.Permission{
+			{Type: "db", Access: "read"},
+			{Type: "entity", Access: "readwrite"},
+		},
+	}
+	ctx := context.Background()
+
+	p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "hostcaller", policy)
+	if err != nil {
+		t.Fatalf("LoadGRPCPlugin failed: %v", err)
+	}
+	defer p.Shutdown(ctx)
+	if err := p.Init(ctx, plugin.NewSandboxedHostAPI(inner, "hostcaller", policy)); err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	if _, err := p.Call(ctx, "db_query", nil); err != nil {
+		t.Fatalf("granted db_query failed: %v", err)
+	}
+	if _, ok := inner.seen("DBQuery"); !ok {
+		t.Fatal("granted DBQuery did not reach the host")
+	}
+
+	_, err = p.Call(ctx, "entity_hard_delete", nil)
+	if err == nil || !strings.Contains(err.Error(), "hard_delete access not granted") {
+		t.Errorf("hard delete without grant: err = %v, want sandbox refusal", err)
+	}
+	if _, ok := inner.seen("EntityHardDelete"); ok {
+		t.Error("EntityHardDelete reached the host without a hard_delete grant")
+	}
+
+	if _, err := p.Call(plugin.WithActingUser(ctx, 42), "entity_soft_delete", nil); err != nil {
+		t.Fatalf("granted soft delete failed: %v", err)
+	}
+	if actor, _ := inner.seen("EntitySoftDelete"); actor != 42 {
+		t.Errorf("soft delete with call context ran for user %d, want 42", actor)
+	}
+	if _, err := p.Call(plugin.WithActingUser(ctx, 42), "entity_soft_delete_no_ctx", nil); err != nil {
+		t.Fatalf("soft delete without call context failed: %v", err)
+	}
+	if actor, _ := inner.seen("EntitySoftDelete"); actor != 0 {
+		t.Errorf("soft delete without call context ran for user %d, want none (system)", actor)
+	}
+}
+
 func TestLoadGRPCPlugin(t *testing.T) {
 	pluginPath := buildGRPCPlugin(t)
 	host := &mockHostAPI{}
 
 	t.Run("load and register", func(t *testing.T) {
-		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
+		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", plugin.DefaultResourcePolicy("test-plugin"))
 		if err != nil {
 			t.Fatalf("LoadGRPCPlugin failed: %v", err)
 		}
@@ -136,7 +237,7 @@ func TestLoadGRPCPlugin(t *testing.T) {
 	})
 
 	t.Run("init", func(t *testing.T) {
-		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
+		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", plugin.DefaultResourcePolicy("test-plugin"))
 		if err != nil {
 			t.Fatalf("LoadGRPCPlugin failed: %v", err)
 		}
@@ -150,7 +251,7 @@ func TestLoadGRPCPlugin(t *testing.T) {
 	})
 
 	t.Run("call function", func(t *testing.T) {
-		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
+		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", plugin.DefaultResourcePolicy("test-plugin"))
 		if err != nil {
 			t.Fatalf("LoadGRPCPlugin failed: %v", err)
 		}
@@ -175,7 +276,7 @@ func TestLoadGRPCPlugin(t *testing.T) {
 	})
 
 	t.Run("call render_widget", func(t *testing.T) {
-		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
+		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", plugin.DefaultResourcePolicy("test-plugin"))
 		if err != nil {
 			t.Fatalf("LoadGRPCPlugin failed: %v", err)
 		}
@@ -198,7 +299,7 @@ func TestLoadGRPCPlugin(t *testing.T) {
 	})
 
 	t.Run("call unknown function", func(t *testing.T) {
-		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
+		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", plugin.DefaultResourcePolicy("test-plugin"))
 		if err != nil {
 			t.Fatalf("LoadGRPCPlugin failed: %v", err)
 		}
@@ -212,7 +313,7 @@ func TestLoadGRPCPlugin(t *testing.T) {
 	})
 
 	t.Run("shutdown", func(t *testing.T) {
-		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
+		p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", plugin.DefaultResourcePolicy("test-plugin"))
 		if err != nil {
 			t.Fatalf("LoadGRPCPlugin failed: %v", err)
 		}
@@ -226,22 +327,18 @@ func TestLoadGRPCPlugin(t *testing.T) {
 }
 
 func TestLoadGRPCPlugin_InvalidPath(t *testing.T) {
-	host := &mockHostAPI{}
-
-	_, err := grpcplugin.LoadGRPCPlugin("/nonexistent/plugin", "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
+	_, err := grpcplugin.LoadGRPCPlugin("/nonexistent/plugin", "test-plugin", plugin.DefaultResourcePolicy("test-plugin"))
 	if err == nil {
 		t.Error("expected error for nonexistent plugin")
 	}
 }
 
 func TestLoadGRPCPlugin_NotExecutable(t *testing.T) {
-	host := &mockHostAPI{}
-
 	// Create a non-executable file
 	tmpFile := filepath.Join(t.TempDir(), "not-a-plugin")
 	os.WriteFile(tmpFile, []byte("not executable"), 0644)
 
-	_, err := grpcplugin.LoadGRPCPlugin(tmpFile, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
+	_, err := grpcplugin.LoadGRPCPlugin(tmpFile, "test-plugin", plugin.DefaultResourcePolicy("test-plugin"))
 	if err == nil {
 		t.Error("expected error for non-executable file")
 	}
@@ -254,7 +351,7 @@ func TestGRPCPluginWithManager(t *testing.T) {
 
 	ctx := context.Background()
 
-	p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
+	p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", plugin.DefaultResourcePolicy("test-plugin"))
 	if err != nil {
 		t.Fatalf("LoadGRPCPlugin failed: %v", err)
 	}
@@ -297,7 +394,7 @@ func TestGRPCPluginConcurrent(t *testing.T) {
 	pluginPath := buildGRPCPlugin(t)
 	host := &mockHostAPI{}
 
-	p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", host, plugin.DefaultResourcePolicy("test-plugin"))
+	p, err := grpcplugin.LoadGRPCPlugin(pluginPath, "test-plugin", plugin.DefaultResourcePolicy("test-plugin"))
 	if err != nil {
 		t.Fatalf("LoadGRPCPlugin failed: %v", err)
 	}

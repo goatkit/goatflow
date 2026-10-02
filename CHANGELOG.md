@@ -10,6 +10,13 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.10.0] - Unreleased
 
 ### Added
+- **ICS calendar attachments render as event cards.** `.ics` attachments show title, time, location
+  and description as a structured card in the inline viewer instead of raw text.
+- **Customer portal renders markdown articles.** Articles stored as markdown are shown as sanitised
+  HTML in the customer portal, using the same rule as the agent ticket view.
+- **gk-lint checks SQL against the schema.** New rules `sql-unknown-table` and `sql-unknown-column`
+  read `migrations/mysql` and `migrations/postgres` and reject SQL that names a table, or an
+  `INSERT`/`UPDATE` column, that does not exist on both databases.
 - **LDAP / Active Directory agent login works.** The `ldap` auth provider used to return "not yet
   implemented"; it now searches the directory with a read-only service account (or anonymously),
   binds as the user to check the password, and maps the entry to the GoatFlow agent with the same
@@ -235,6 +242,265 @@ project adheres to [Semantic Versioning](https://semver.org/).
   unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **`CUSTOMER_FE_ONLY` is read the same way everywhere.** `true`, `1`, `yes` and `on` (any case) now
+  enable it in every place; before, `1` was ignored by the login page redirect.
+- **`DB_DRIVER=pgsql` and `postgresql` work fully.** All PostgreSQL driver names now switch SQL
+  generation and the database connection to PostgreSQL, not only the connection settings.
+- **Plugin deletions record the acting agent.** Entity soft delete, restore, hard delete and secure
+  config writes were recorded as user 1. They now record the agent the plugin call runs for
+  (`_user_id`), and the system user only when there is none (jobs, customers, init).
+- **gRPC CacheDelete, ConfigGet and Translate work.** CacheDelete always failed with an
+  unknown-method error; ConfigGet always failed and Translate always returned the key because the
+  client misread the host's answer.
+- **WASM plugins support the full HostAPI.** cache_delete, plugin files, thumbnails, articles and
+  attachments, ticket states and views and PDF rendering now work from WASM, through the same
+  dispatcher as gRPC.
+- **Plugin calls run in the caller's organisation and language**: API routes, widgets, plugin UI
+  pages and their nav badges, setup tasks, MCP tools and event authorizers now pass the caller's
+  active organisation (`_org_id`) and language (`_lang`) into the call context, in both runtimes. As
+  a result `OrgID` returns the organisation, secure config and plugin files are kept per
+  organisation, and `Translate` uses the caller's language. Before, plugin UI pages always
+  translated to English, and plugin calls always ran without an organisation.
+- **Plugin files kept per organisation**: plugin file storage read the organisation from a context
+  key that nothing set, so all organisations shared one file namespace. Files are now stored under
+  `<plugin>/org-<id>/` when the call has an organisation.
+- **Organisation scoping only on tables that have `org_id`**: the sandbox's org-aware table list
+  named `ticket`, `queue`, `customer_user` and `gk_custom_field_value`, none of which has an
+  `org_id` column. Scoping them would have made every plugin query on them fail. Now only tables
+  whose rows each belong to one organisation are scoped: `gk_org_plugin_access`,
+  `gk_user_organisation`, `sysconfig_org` and `gk_identity_provider_org`. Core tickets, queues and
+  customers are not separated by organisation. The docs no longer claim they are.
+- **Plugin articles on PostgreSQL**: the plugin host call that adds an article to a ticket
+  (`CreateArticle`) failed on PostgreSQL with a SQL syntax error. It now works on both MySQL and
+  PostgreSQL.
+- **A slow webhook endpoint no longer holds up the others.** The runner sends to up to 8 webhooks at
+  once, one delivery at a time per webhook. Deliveries still due when a run ends stay pending
+  instead of being stuck as "delivering" for 10 minutes, and an attempt that used up the run's time
+  is still recorded.
+- **Statistics trends report real open counts.** `trends[].open` is now the number of tickets still
+  unresolved at the end of each day or month, including older tickets that are still open. It used
+  to be a running sum of created minus closed inside the window.
+- **Admin statistics count only valid queues.** Admin totals included tickets in invalid queues that
+  no per-queue list showed. Now every caller counts valid queues only, so totals match the queue
+  lists.
+- **`/api/v1/statistics/customers` limits `top`.** `top` must be between 1 and 100; other values
+  return 400 instead of returning every customer.
+- **Statistics API documentation matches the real parameters** for trends, agents, analytics,
+  customers and export.
+- Soft-deleting an entity that doesn't exist returns an error. Before, it left a phantom recycle-bin
+  entry. Ticket and agent hard deletes run in one transaction.
+- Dynamic-module and generic CRUD create/update endpoints answer 400 on malformed JSON or
+  non-numeric values in numeric fields. Before, they stored empty or zero values.
+- An owner change on a ticket that doesn't exist answers 404 and a non-positive ticket id answers
+  400. Generic-agent job updates roll back when replacing a key fails.
+- Plugin uploads fail cleanly when the file can't be fully written. Plugin file storage reports
+  metadata write failures.
+- The 2FA audit log shows the numeric user id; it used to show a garbled character. Legacy
+  custom-field migration keeps non-ASCII characters in field names. Kubernetes sidecar probe
+  intervals such as `1m30s` are parsed correctly.
+- SAML IdP metadata fetch times out after 30s. goatflow-migrate escapes quote characters in source
+  identifiers.
+- Many errors that were ignored before are now returned or logged: cache invalidation, OIDC/SAML
+  group sync, lambda setup, route and plugin watchers, CLI flush/mkdir/chmod, and `goatflow-config
+  watch`.
+- **Helm chart works out of the box**: new runner Deployment (`runner.*`, image
+  `ghcr.io/goatkit/goatflow-runner`) so outgoing email, webhooks, notification rules and session
+  cleanup run on Kubernetes. The chart now sets the variables GoatFlow reads (`DB_DRIVER` +
+  `DB_MYSQL_*`/`DB_PGSQL_*`, `JWT_SECRET`, `GOATFLOW_SECURE_KEY`, `GOATFLOW_VALKEY_*`,
+  `GOATFLOW_EMAIL_*`, `STORAGE_*`, `LOG_LEVEL`, session lifetime) instead of `DB_TYPE`,
+  `APP_SECRET`, `REDIS_*`, `SERVER_PORT` and `SESSION_TIMEOUT`. PostgreSQL installs now connect.
+- **Helm: Ingress reaches the app**: the Ingress now sends every path to the backend; the nginx
+  frontend that only proxied `/api/` and `/ws` is removed.
+- **Helm: MariaDB becomes ready**: probes use `mariadb-admin` (the `mariadb:11` image has no
+  `mysqladmin`); backend and runner wait for the database before starting.
+- **Helm: Valkey**: the backend now finds the subchart Service (`<release>-valkey`); auth is off by
+  default, and with auth on the password comes from the subchart's `default` user Secret (before: a
+  Secret that never existed, `CreateContainerConfigError`).
+- **Helm: first login**: the chart sets a first-boot admin password (`secrets.adminPassword`,
+  generated when empty) for `root@localhost`.
+- **Helm: metrics**: `metrics.enabled` turns on the unauthenticated listener and a
+  `<fullname>-metrics` Service.
+- **Compose: unread settings removed or renamed**: `VALKEY_HOST/PORT` → `GOATFLOW_VALKEY_HOST/PORT`;
+  `TLS_CERT_FILE/TLS_KEY_FILE` (and the self-signed certificate generation), `MAX_UPLOAD_SIZE`,
+  `ALLOWED_FILE_TYPES`, `ENABLE_YAML_ROUTING` removed.
+- **Dev compose**: backend `BASE_URL` defaults to the published port 8081, customer-fe `BASE_URL`
+  follows `APP_URL`, backend passes `GOATFLOW_ADMIN_PASSWORD` and the SMTP settings, `backend-test`
+  health check tests `/health` instead of the runner command line.
+- **Reference deployment**: runner, app and customer portal get the SMTP settings from `.env`
+  (before the runner used `mailhog:1025` and no mail left the server); `BASE_URL` defaults to
+  `https://$DOMAIN`; `GOATFLOW_ADMIN_PASSWORD` added; Caddy `/c/<path>` now redirects to
+  `/customer/<path>` instead of `/customer/c/<path>` (also in `docker-compose.prod.yml`).
+- **TrueNAS app**: new Public URL question (`BASE_URL`); `GOATFLOW_VALKEY_*` and `DB_MYSQL_*` names;
+  SMTP settings for the backend too; unread variables removed.
+- **Graceful stop**: 45 s stop grace period for backend, customer portal and runner in compose,
+  TrueNAS and Helm (`terminationGracePeriodSeconds`).
+- **Helm: writable, persistent file storage**: the backend mounts a `<fullname>-storage` PVC at
+  `config.storage.path` (`config.storage.persistence.*`: size, storage class, access modes,
+  `existingClaim`). Plugin files (`<path>/plugins`) and `fs` attachments (`<path>/var/article`) used
+  to fail on the read-only root filesystem. The PVC is kept on `helm uninstall`. With persistence
+  off the chart mounts an emptyDir and refuses `config.storage.type: fs`. Several backend replicas
+  on several nodes need a ReadWriteMany class.
+- **Mail settings for every sending process**: in `docker-compose.yml` the customer portal,
+  `backend-test` and `customer-fe-test` now get the same `GOATFLOW_EMAIL_*` settings as the backend
+  and runner (one shared block). Customer-side direct sends used to go to the built-in `mailhog`
+  default. `docker-compose.draft.yml` now gives its backend the runner's SMTP settings too.
+- **`make synthesize` mail settings reach the dev mail sandbox**: it writes `SMTP_HOST=smtp4dev`,
+  `SMTP_PORT=25` and `EMAIL_FROM`, which the compose files pass on. Before it wrote `mailhog:1025`
+  (no such service) and `SMTP_FROM_*` names nothing read. `APP_URL` defaults to
+  `http://localhost:8081`, the backend's published port (also in `.env.example`).
+- **No false route-audit warning at startup**: the backend no longer logs "missing expected routes:
+  [/api/v1/states /api/lookups/statuses /api/lookups/queues]" on a correct build. The audit looked
+  only at the main router, but these are YAML routes on the dynamic engine; it now checks both.
+- **Air-gapped bundle has every image the chart needs**: the release bundle now also contains the
+  chart's `busybox` (wait-for-database), `mariadb`, `postgres` and `valkey` images, read from the
+  packaged chart. `load-images.sh` loads all of them, and the bundle README shows how to push them
+  to a local registry and point the chart at it. The release notes no longer call the runner image
+  the "Temporal runner".
+- **Docs**: ROADMAP no longer links to the removed "Known limitations (0.10.0 chart)" section;
+  `packaging-audit.md` lists the environment variables GoatFlow actually reads (`GOATFLOW_VALKEY_*`,
+  `STORAGE_TYPE`, attachment limits from the config) instead of `VALKEY_*`, `MAX_UPLOAD_SIZE`,
+  `ALLOWED_FILE_TYPES`, `ENABLE_YAML_ROUTING` and `TLS_*`; the admin guide no longer says the chart
+  has no runner.
+- **Scheduled jobs run once across replicas.** Email polling, GenericAgent, escalation checks,
+  reminders, auto-close and plugin jobs ran on every backend replica. Each run is now claimed in the
+  new `gk_scheduler_job_lock` table (migration 000031), so one replica runs each tick.
+- **Startup migrations no longer race.** Every goats process runs migrations at start. A second
+  process could see the first one's in-progress (dirty) migration, force it and leave the schema
+  dirty. Migrations now run under a database lock (`GET_LOCK` on MariaDB, an advisory lock on
+  PostgreSQL); the other processes wait and then find nothing to do.
+- **Runner stops on SIGTERM.** The runner kept running tasks for up to 5 minutes after SIGTERM. It
+  now cancels running tasks and waits at most `DRAIN_TIMEOUT` for them.
+- **Shutdown fits the stop grace period.** `DRAIN_TIMEOUT` now defaults to `5s` (was `10s`, the
+  whole Docker grace period). The scheduler stops while HTTP drains, and the metrics listener drains
+  at the same time instead of after plugin shutdown. The compose files and Helm chart give 45
+  seconds.
+- **Invalid `DRAIN_TIMEOUT` is reported.** A value that is not a positive Go duration (for example
+  `30`) was ignored silently. It is now logged as an error at startup and the default is used.
+- **Log fallback goes to stdout.** When the `LOG_OUTPUT` file cannot be opened, logs now go to
+  stdout as documented (they went to stderr), and the reason is printed to stderr.
+- **One JSON log layout.** In `LOG_FORMAT=json`, old-style `log` lines used `"level":"info"` while
+  `slog` lines used `"INFO"`/`"WARN"`. Both now use the `slog` layout with upper-case levels.
+- **Runner logs follow `LOG_FORMAT` and `LOG_OUTPUT`.** Runner lines were plain `[RUNNER]` text on
+  stdout. They are now `slog` lines with `component=runner`.
+- **Zinc and Elasticsearch search work.** With `SEARCH_BACKEND=zinc` or `elasticsearch`, GoatFlow
+  searched an index nothing wrote to. The runner now builds the index on first start and keeps it in
+  sync every 30 seconds: new and changed tickets, articles (including edits), queue moves and other
+  history changes, and customer users. Documents of deleted rows are removed.
+- **Reindex works for Zinc and Elasticsearch.** `POST /api/v1/search/reindex` used to answer 501. It
+  now starts a full rebuild in the background (202, or 409 while one runs); progress and errors show
+  in `GET /api/v1/search/health`.
+- **External search honours queue permissions.** Agents who may not read every queue got 503 from
+  Zinc/Elasticsearch search. Ticket and article hits are now limited to readable queues, like the
+  database backend, and every hit is re-checked against the database, so a moved or deleted ticket
+  never shows up even before the index catches up.
+- **Search outages are errors, not empty results.** An unreachable service, wrong credentials or an
+  index that is not built yet answer 503 with the reason and the backend name. An unknown
+  `SEARCH_BACKEND` or a missing endpoint is reported as a configuration error instead of silently
+  using another backend.
+- **SLA escalation works.** Ticket escalation times (first response, update, solution) are now
+  computed the OTRS way from the ticket's SLA, or its queue, in working time, and stored in
+  `ticket.escalation_*`. A new scheduler job (`escalation-index`, every 15 seconds) rebuilds every
+  ticket changed since its last run, and all tickets after an SLA, queue or calendar setting
+  changes. Before, nothing filled these columns, so no ticket ever escalated.
+- **Escalation events are raised.** The escalation check now writes `Escalation*TimeStart` and
+  `Escalation*TimeNotifyBefore` history events, repeated at most every
+  `OTRSEscalationEvents::DecayTime` minutes (default 1440, as in OTRS; it used to repeat every
+  minute). A reply or state change that ends a started escalation writes `Escalation*TimeStop`.
+  Webhooks and ticket notifications act on these events.
+- **Business calendars follow OTRS.** Working hours are read per weekday (non-contiguous hours and
+  days missing from the setting work), with recurring and one-time vacation days, numbered calendars
+  1–9 and their `TimeZone::CalendarN`.
+- **Ticket notifications are sent.** Rules in Admin -> Ticket Notifications were saved but never
+  evaluated. The runner now checks new tickets, articles and ticket history every 10 seconds. For
+  each valid rule subscribed to the event and matching its filters, it renders the subject and body
+  in the recipient's language, with OTRS tags such as `<OTRS_TICKET_Title>` and
+  `<OTRS_CUSTOMER_BODY[5]>`, and queues one email per recipient on `mail_queue`. Each event is
+  evaluated once, even with several runners. Every email adds a `SendAgentNotification` or
+  `SendCustomerNotification` ticket history entry, as in OTRS.
+- **Notification recipients follow OTRS rules.** Agents must be valid, have an email address and
+  read access to the ticket's queue. The agent who caused the event is not notified.
+  `SkipRecipients`, `OncePerDay` and `Transports` from OTRS imports are honoured. A rule with a
+  filter GoatFlow cannot apply (for example a dynamic field) is skipped and logged instead of
+  notifying everyone.
+- **Editing a ticket notification no longer breaks or loses data.** The edit form printed the stored
+  messages as a Go map, which stopped the form's script. Messages in languages other than en, de,
+  es, fr and ar were dropped on save. Filters, events and recipients the form has no control for
+  (OTRS imports) were deleted on save. All of these are now kept.
+- **Escalation notifications fire once per check.** `NotificationEscalation` and
+  `NotificationEscalationNotifyBefore` rules send one email per ticket and escalation check, not one
+  per escalation type.
+- **Per-company portal settings now apply.** The overrides on a company's Portal Settings tab
+  (Enable, Require Login, Title, Footer Text, Landing Page) were stored but the portal only read the
+  global values. A signed-in customer now gets their company's settings, with the global value for
+  every field the company does not override. Visitors who are not signed in get the global settings.
+  A company with Enable off is refused while other companies keep the portal, and a company with
+  Enable on keeps the portal while it is off globally.
+- **The portal Landing Page setting is used.** `CustomerPortal::LandingPage` was stored but never
+  read, and its built-in default (`/customer`) did not match the seeded value (`/customer/tickets`).
+  Customers now go to their company's landing page after signing in with a password, an
+  authenticator code or a passkey, and when a signed-in customer opens `/customer/login`. On a
+  customer-only instance without `ROOT_REDIRECT_PATH`, `/` redirects there too. The one default is
+  `/customer/tickets`. Values that are not local paths are ignored.
+- **Duplicate customer company shows a form error.** Creating a customer company with a customer ID
+  or name that is already used, or without a name, answered the browser form with raw JSON. The New
+  Company form now comes back with the error and the values you entered. API callers still get JSON.
+  The Status chosen on the New Company form is now saved (it was always Active).
+- **Customer portal toggle label.** The help text under "Enable" on the Customer Portal settings
+  page said "Enable Help Link". It now describes the portal switch, and the page is translated in
+  all 15 languages.
+- **Broken Dashboard link in the portal.** The breadcrumb on the customer New Ticket and ticket
+  pages pointed at `/customer/dashboard`, which does not exist; it now points at `/customer`.
+- **`api/openapi.yaml` matches the API again.** The REST API v1 spec was rewritten from the
+  handlers: every documented path, method, parameter, request body, status code and JSON field now
+  comes from the code, and every operation states who may call it. Errors are documented in both
+  shapes the server sends (`{"error":"..."}` from handlers, `{"error":{"code","message"}}` from auth
+  and scope checks). Unused schemas, invented enums and the made-up `/health` response are gone.
+  `make openapi-lint` and `make openapi-bundle` now pass with 0 errors and 0 warnings; the Redocly
+  CLI version is pinned (2.57.0) and the targets use the same `oven/bun:1.3-alpine` image as the
+  Dockerfile.
+- **Generated route docs listed `/admin/admin/identity-providers`.** `make generate-route-docs` and
+  `make api-docs` joined the group prefix and the route path naively, while the server does not
+  double a prefix the path already contains. The generator now uses the server's own path rule
+  (`routing.FullRoutePath`), skips disabled route groups, reads per-method `handlers:` maps, lists
+  route middleware, and writes the Markdown with a text template (no more `&#39;` in `api.md`). The
+  identity provider routes in `routes/admin.yaml` are now written relative to the `/admin` prefix.
+- **Swagger UI advertised endpoints that do not exist.** Swag annotations produced
+  `/api/v1/api/v1/i18n/...` and `/api/v1/api/v1/admin/sql`, and listed unrouted `POST
+  /api/v1/tickets/{id}/close`, `.../assign`, `POST /api/v1/auth/logout`, plus MCP and
+  `/api/queues/...` routes under the wrong base path. The annotations are fixed or removed and
+  `docs/api/swagger.*` regenerated.
+- **`make synthesize` no longer breaks migrations.** The generated test data used to be written to
+  `migrations/postgres/000004_generated_test_data.up.sql`, a duplicate migration version. It now
+  goes to `schema/seed/generated_test_data.postgres.sql` (gitignored, owner-only). The SQL now loads
+  on the migrated schema, can be re-run, and the listed logins work.
+- **The `synthesize` targets run the right binary.** `make synthesize`, `rotate-secrets`,
+  `synthesize-force`, `gen-test-data` and `synthesize-credentials` called the server binary
+  (`goats`), which started a server. They now call `goatflow`.
+- **Dev database targets follow `DB_DRIVER`.** `db-status`, `db-rollback`, `db-force`, `db-migrate`
+  and `db-shell` work on MariaDB and PostgreSQL. `db-init` (and `db-reset`) recreates the dev
+  database from all migrations on the selected driver.
+- **PostgreSQL dev database.** The `postgres` service in `docker-compose.yml` is back, in the
+  `postgres` profile. The Makefile enables it when `DB_DRIVER=postgres`.
+- **`make gen-migration`** creates the next six-digit version in both migration folders.
+- **`make bench`** runs every benchmark in every package that has one. The old default listed
+  packages that do not exist.
+- **`make toolbox-test-integration`** runs every integration-tagged package by default. The old
+  default package did not exist.
+- **`make toolbox-test-run`** uses the test database settings from `.env`.
+- **`make toolbox-run`** opens a shell in the toolbox.
+- **Unit test failures are no longer hidden.** `scripts/unit-test-phases.sh` ignored template test
+  failures and failures in the parallel phase. It now fails when any phase fails.
+- **`make prepare-release`** checks versions only in the toolbox. `make verify-container-first` now
+  finds host `go` commands.
+- **E2E video and slow motion.** Videos are recorded only with `VIDEOS=true`. `SLOW_MO` sets the
+  delay in milliseconds. The E2E targets pass `SLOW_MO`, `SCREENSHOTS` and `VIDEOS` into the
+  container.
+- **CI uploads E2E screenshots and videos** from `tests/e2e/test-results/` and
+  `tests/e2e/playwright/test-results/`.
+- **Admin role user search reports database errors** instead of returning a partial list.
+- **Plugin articles on PostgreSQL**: the plugin host call that adds an article to a ticket
+  (`CreateArticle`) failed on PostgreSQL with a SQL syntax error. It now works on both MySQL and
+  PostgreSQL.
 - **Customer portal tickets get proper ticket numbers.** Tickets created at
   `/customer/tickets/new` took a `YYYYMMDDHHMMSS` timestamp as their number instead of the
   configured generator (e.g. DateChecksum), so two customers submitting in the same second got
@@ -598,6 +864,38 @@ project adheres to [Semantic Versioning](https://semver.org/).
   never block a commit; it now does.
 
 ### Changed
+- **Declared plugin permissions take effect.** Without an admin-stored policy a plugin gets exactly
+  the permissions it declares (re-read on reload), instead of the fixed default. `http` scope `*`
+  allows any host. gRPC plugins can implement `grpcutil.GKPluginWithContext` to run host calls in
+  the call's context (acting user, language, deadline).
+- **Webhook delivery log is cleaned up.** The runner deletes delivered and failed deliveries older
+  than 30 days. Change this with `GOATFLOW_WEBHOOK_DELIVERY_RETENTION_DAYS` (0 keeps them forever).
+- **Webhook delivery routes moved** to `GET /api/v1/webhook-deliveries/:id` and `POST
+  /api/v1/webhook-deliveries/:id/redeliver` (were under `/api/v1/webhooks/deliveries/`). The Go,
+  Python and TypeScript SDKs use the new paths.
+- **Zinc credentials use `ZINC_USER`.** GoatFlow now reads `ZINC_USER` (as Docker Compose and the
+  config generator already did) instead of `ZINC_USERNAME`. New optional `SEARCH_INDEX_PREFIX`
+  (default `goatflow_`). The backend and the runner need the same search settings.
+- **Docker Compose has a `zinc` service** in the `search` profile, and passes the search settings to
+  the backend and the runner.
+- **Migration 000034** adds `change_time` indexes on `ticket`, `article` and `customer_user` for the
+  search sync.
+- **Ticket view and list show escalation.** The ticket view shows the ticket's service, SLA and each
+  escalation due time, highlighted when overdue. The agent ticket list marks escalated tickets and
+  has an "Escalated" status filter.
+- **More notification recipients and OTRS events in the form.** The form adds ticket creator, agents
+  with the queue in My Queues, all agents with read or write access to the queue, and additional
+  email addresses (checked on save). It also lists the OTRS events used by imported notifications
+  (NotificationNewTicket, NotificationMove, ...).
+- **New migration 000033** adds `gk_notification_event_cursor`, the position of the notification
+  evaluator.
+- **Spec drift now fails the test suite.** `TestOpenAPISpecMatchesRoutes` checks that every
+  operation in `api/openapi.yaml` is served by the production router (path, parameter names, method)
+  and that only public routes are documented without authentication.
+  `TestSwaggerAnnotationsMatchRoutes` does the same for the swag `@Router` annotations behind
+  `/swagger/`.
+- **MCP tools read their input schemas from `api/openapi.yaml`.** Path parameters in the spec use
+  the route names (`{id}`, `{article_id}`, `{name}`) so the MCP tool generator finds the operations.
 - **Documentation brought in line with 0.10.0.** ROADMAP, README, FEATURES, configuration,
   security, architecture, deployment (Docker, Helm, TrueNAS), API, HostAPI, testing and
   database docs were checked against the code; claims about features that do not exist (for
@@ -689,7 +987,161 @@ project adheres to [Semantic Versioning](https://semver.org/).
   (OpenAPI + Swagger) from `routes/*.yaml`; the checked-in `docs/api/` and `generated-docs/`
   outputs are that regeneration.
 
+### Removed
+- **GraphQL scaffold.** `internal/api/graphql` never compiled, had no route and no generated code;
+  it is deleted.
+- **Oracle and SQL Server backends.** They were never usable. Selecting either now fails with
+  `ErrDatabaseNotImplemented`; supported databases are MySQL/MariaDB and PostgreSQL.
+- **Unused `handleTOTPVerify` handler.** It had no route; 2FA login uses `/api/auth/2fa/verify`.
+- **`organisation.RegisterOrgAwareTable`**: nothing called it, and plugins could not reach it.
+- **Helm**: nginx frontend Deployment/Service/ConfigMap and the unused `backend-config` ConfigMap.
+- **`docker-compose.prod.yml`**: it overlaid services that no longer exist (`frontend`, `mailhog`,
+  an unprofiled `postgres`), so `docker compose -f docker-compose.yml -f docker-compose.prod.yml`
+  failed ("service \"frontend\" has neither an image nor a build context"). Use
+  `deploy/docker-compose.yml` (Caddy with automatic TLS, released images, no dev tools);
+  docs/DATABASE_SAFETY.md now points there.
+- **Dead `default.yaml` sections.** `logging`, `metrics`, `rate_limiting`, `integrations` and
+  `database` and the unused `features.*` keys (`social_login`, `two_factor_auth`, `api_keys`,
+  `ldap`, `saml`, `knowledge_base`, `customer_portal`, `agent_collision_detection`) were read by
+  nothing. Logging and metrics are set by `LOG_*` and `METRICS_*`, the database by `DB_*`. Old keys
+  in `config.yaml` are ignored.
+- **`cache_size_bytes` metric.** It was registered but never set, so it always read 0.
+- **Unused Go modules.** `github.com/gorilla/websocket` and `github.com/xeonx/timeago` were dropped
+  from `go.mod`.
+- **Unused `internal/platform/zinc` package** (a second Zinc client with no callers) and its search
+  request/result models.
+- **Mock SLA endpoints.** The unrouted `ticket_sla_handler.go` handlers (priority-based fake SLA
+  status, escalate, SLA report and SLA config) and their `sla_status` template are gone.
+- **`rickar/cal` dependency.** Replaced by the OTRS-compatible calendar code.
+- **Notification events that never fire.** TicketDelete, TicketServiceUpdate, TicketSLAUpdate,
+  TicketSubscribe, TicketUnsubscribe, TicketFlagSet, TicketFlagDelete, ArticleSend, ArticleBounce,
+  ArticleAgentNotification and ArticleCustomerNotification are no longer offered. Nothing in
+  GoatFlow records these events.
+- **Fake ticket split route.** `POST /agent/tickets/:id/split` added a note to the ticket instead of
+  splitting it, and nothing in the UI called it. The route and its API doc entries are gone.
+  GoatFlow has no ticket split.
+- **`docs/api/openapi.yaml`**, a second hand-written spec in which 61 of 97 operations were not
+  routed.
+- **The unused OpenAPI response validator** (`internal/platform/middleware/openapi.go`); nothing
+  installed it.
+- **`scripts/generate-docs.js`, `scripts/generate-types.js`** and the `generate-types`,
+  `generate-docs`, `validate-api`, `serve-docs`, `test:contract` and `contracts:all` npm scripts.
+  They wrote into a `web/` directory that does not exist and would have overwritten
+  `docs/api/README.md`. The `js-yaml` dev dependency they needed is gone too.
+- **Broken make targets:** `test-legacy`, `test-specific`, `test-frontend`, `toolbox-test-all`,
+  `toolbox-test-email-integration`, `playwright-build`, `test-e2e-playwright`,
+  `test-e2e-playwright-watch`, `test-e2e-playwright-debug`, `test-e2e-playwright-report`,
+  `test-acceptance-playwright`, `api-call-test`, `api-call-form-test`, `reset-db`, `frontend-logs`,
+  `frontend-logs-follow`, `db-migrate-schema-only`, `db-migrate-schema-only-test`, `db-seed-dev`,
+  `db-reset-dev`, `db-refresh`, `db-init-dev` and `db-init-import`, and
+  `docker-compose.playwright.yml`. Use `test-e2e-playwright-go` / `test-e2e-go` for browser tests
+  and `db-init` to recreate the dev database. `make test-all` now runs `make test` and `make
+  test-contracts`.
+- **Unused files** `migrations/0024_user_table_for_idp_routing.sql` and
+  `migrations/0025_saml2_idp_columns.sql`.
+- **Mock-router tests** in `internal/api/htmx_routes_test.go`, and the leftover `TEST_AUTH_*` /
+  `GOATFLOW_DISABLE_TEST_AUTH_BYPASS` settings in tests.
+
 ### Security
+- **Customer ticket list SQL injection fixed.** The `order` parameter of the customer portal ticket
+  list was put into the SQL `ORDER BY` as given. It now only accepts `asc` or `desc`.
+- **Database errors no longer reach the client.** Handlers that sent the raw database error text in
+  the response (customer portal tickets, agent ticket and queue lists, roles, customer users,
+  notification events, generic agent jobs, ticket archive, setup assistant customer search, dynamic
+  modules) now log it and answer with a generic message.
+- **Production needs a real JWT secret.** `config/default.yaml` no longer ships a placeholder JWT
+  secret. With `APP_ENV=production` the server refuses to start when `JWT_SECRET` is missing,
+  shorter than 32 characters or a known placeholder, and when the database password,
+  `SESSION_SECRET` or `ZINC_PASSWORD` is the example value. `APP_ENV` from the environment now
+  always wins over `app.env` from the config files.
+- **Secure settings key is never logged.** When `GOATFLOW_SECURE_KEY` is unset, the generated key is
+  no longer written to the log.
+- **Agent web login is rate limited.** `/api/auth/login` uses the same lockout as the other logins
+  (5 failures in 5 minutes per IP and login name, then `429`).
+- **Second-factor codes are rate limited.** Agent and customer 2FA code checks count failures per IP
+  and account, so logging in again with the right password no longer gives fresh guesses.
+- **API token rate limit is enforced.** Requests with a `gf_*` token are limited to the token's
+  `rate_limit` per hour (default 1000) and get `X-RateLimit-*` headers; over the limit they get
+  `429` with `Retry-After`.
+- **Customer-only instances expose less.** With `CUSTOMER_FE_ONLY` set, `/health/detailed`, the
+  agent login, agent 2FA and agent passkey APIs and `/login/2fa` now answer `404`.
+- **Password re-checks are rate limited.** Agents and customers who are already signed in must enter
+  their password to change it, set up or turn off 2FA, get new recovery codes, or add or remove a
+  passkey. Wrong passwords now count per account and IP, with the same backoff as login. A stolen
+  session can no longer be used to guess the password quickly.
+- **Reset links are rate limited.** Posting a new password with a reset link now counts toward the
+  same budget of 10 posts per IP per hour as the forgot-password and sign-up forms, so reset tokens
+  cannot be guessed at an unlimited rate.
+- **Secrets no longer appear in logs.** A failed dynamic-module insert, query or update logged the
+  values, which could include password hashes. It now logs only the table and column names, or the
+  SQL with placeholders. Every API token check logged the first 20 characters of the raw token. The
+  auth middleware logged the session ID on every request. The user lookup logged the start of the
+  password hash. All of these are removed.
+- **gRPC plugins now go through the plugin sandbox.** Host callbacks from gRPC plugin processes used
+  the raw host API, so no gRPC plugin ever had a permission check or rate limit. Every callback now
+  runs through the plugin's SandboxedHostAPI; callbacks before Init are refused.
+- **Permission checks for all privileged HostAPI methods.** Entity soft delete, restore and recycle
+  bin need `entity` permissions; permanent deletion needs an explicit `entity` `hard_delete` grant
+  in an admin-stored policy. Articles, attachments, ticket status/states/views and plugin files need
+  the new `article`, `ticket` and `file` permissions.
+- **Stricter SQL table scoping.** The sandbox now reads tables from comma joins, quoted and
+  schema-qualified names, subqueries and DDL targets, requires a write grant for every table a
+  statement writes (also via DBQuery), anchors wildcard scopes and unions several db entries.
+- **Plugin setup tasks use the host's caller envelope**: both setup-task routes used to pass the
+  request body to the plugin unchanged, so a body with `_user_id`, `_user_role`, `_org_id` or
+  `_lang` chose the acting user, organisation and language of the call. They now drop those keys and
+  send the host envelope, like every other plugin call. A body that is not a JSON object is refused
+  with 400.
+- **PDF rendering fetches nothing remote**: `RenderMarkdownToPdf` used to let the headless Chromium
+  load any `https` image a plugin put in its Markdown or `BrandLogoURL`. That was outbound traffic
+  outside the plugin's `http` grant. Images now print only from inline `data:` URIs (png, jpeg, gif,
+  webp). Other image sources are replaced by an empty image. `BrandLogoURL` must be a `data:` URI.
+  Plugins that want a remote image fetch it with `HTTPRequest` and embed it.
+- **Webhooks no longer reach internal addresses.** Webhook URLs that point at loopback, private,
+  link-local (including the cloud metadata address 169.254.169.254), multicast, unspecified or other
+  internal addresses are rejected when saved. Every delivery resolves the host itself, refuses it if
+  any address is internal, and connects only to the checked address, so DNS rebinding cannot get
+  around the check. Set `GOATFLOW_WEBHOOK_ALLOW_PRIVATE_TARGETS=true` on the backend and runner to
+  allow internal targets on purpose. Webhook deliveries no longer use `HTTP_PROXY`/`HTTPS_PROXY`.
+- **Webhook custom header values are encrypted and write-only.** They are stored encrypted with
+  `GOATFLOW_SECURE_KEY`, like the signing secret, and are never returned again: the API returns
+  `header_hints` instead of `headers`. On update, a `null` header value keeps the stored value.
+  Migration 000030 drops the old plain-text column, so header values saved by pre-release builds
+  must be entered again. Header values with line breaks or other control characters are rejected.
+- **`/api/v1/statistics/agents` no longer lists every agent.** Admins still see every valid agent.
+  Other agents see only the agents with activity on tickets in queues they can read.
+- gosec now fails the CI build on any finding. CI and the new `make gosec` (toolbox) target use the
+  same pinned version (`GOSEC_VERSION` in Dockerfile.toolbox, now v2.29.0; CI used v2.22.4 before)
+  and the same flags (`GOSEC_FLAGS`). All 478 findings were fixed or annotated with `// #nosec
+  G<rule> -- <reason>`.
+- The HTTP server and the Prometheus metrics listener set a 10s ReadHeaderTimeout, which blocks
+  Slowloris-style slow-header connections.
+- User ids taken from the request context go through one range check, so an out-of-range id can't
+  wrap around into another user's id. Custom-field access checks reject non-positive queue ids with
+  404.
+- Theme plugin install and uninstall reject theme names that would escape the theme cache directory.
+- `gk plugin init` validates plugin names. `goatflow-config import` reads through a root-scoped
+  handle and `goatflow-config export` rejects names that would escape the output directory. The YAML
+  version store doesn't follow symlinks out of `.versions`.
+- Plugin package extraction drops setuid, setgid, sticky and world-access bits from archive modes.
+- Files that can hold secrets are created owner-only (0600): `.env` backups, the sysconfig deployed
+  config, YAML version snapshots, restored config documents, plugin file storage and new log files.
+- **Shared secure key everywhere**: `GOATFLOW_SECURE_KEY` is now required by `docker-compose.yml`,
+  `docker-compose.draft.yml` and `deploy/docker-compose.yml` (they refuse to start without it) and
+  is given to every GoatFlow container. Before, an empty default made each process generate its own
+  key, so the runner could not decrypt webhook signing secrets.
+- **Helm: generated secrets survive upgrades**: database passwords, `JWT_SECRET`,
+  `GOATFLOW_SECURE_KEY` and the admin password are generated once and read back from the live
+  Secrets on `helm upgrade`. Before, every upgrade re-rolled them and the database volume kept the
+  old password.
+- **TrueNAS: secure key must be 64 hex characters**: the wizard and the template now reject anything
+  else (before: "minimum 32 characters", which GoatFlow cannot use).
+- **`make synthesize` generates `GOATFLOW_SECURE_KEY`**: the synthesized `.env` now contains a
+  64-hex-character secure key, which the compose files require. `--rotate-secrets` keeps an existing
+  key (a new one would make every stored secret unreadable) and adds one when it is missing.
+  `.env.example` documents the key and how to generate it.
+- **Search reindex is admin-only in the handler too.** `POST /api/v1/search/reindex` now answers 403
+  "Admin access required" to callers who are not admins, even if the route middleware is bypassed.
 - **Admin status comes only from admin-group membership.** The template user map treated any agent
   whose login contained "admin" (or user id 1) as an admin, and helpers that build the current user
   fell back to user 1 with role `Admin` when the request carried no identity. Admin now comes only

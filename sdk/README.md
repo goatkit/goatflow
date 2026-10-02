@@ -46,7 +46,7 @@ Most endpoints answer `{"success": true, "data": ...}` (paginated lists add `"pa
 | Queues | `GET /queues`, `GET /queues/:id` |
 | Statistics | `GET /statistics/dashboard` |
 | Search | `POST /search` |
-| Webhooks (admin) | `GET/POST /webhooks`, `GET/PUT/DELETE /webhooks/:id`, `POST /webhooks/:id/test`, `GET /webhooks/:id/deliveries`, `GET /webhooks/deliveries/:id`, `POST /webhooks/deliveries/:id/redeliver` |
+| Webhooks (admin) | `GET/POST /webhooks`, `GET/PUT/DELETE /webhooks/:id`, `POST /webhooks/:id/test`, `GET /webhooks/:id/deliveries`, `GET /webhook-deliveries/:id`, `POST /webhook-deliveries/:id/redeliver` |
 | Auth | `POST /auth/login`, `POST /auth/refresh` |
 | Health | `GET /health` (outside `/api/v1`) |
 

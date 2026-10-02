@@ -35,7 +35,8 @@ const (
 	// VerifyTokenTTL is how long a registration confirmation link stays valid.
 	VerifyTokenTTL = 24 * time.Hour
 
-	// ipRequestsPerHour caps forgot-password and registration submissions per client IP.
+	// ipRequestsPerHour caps forgot-password, reset-password and registration
+	// submissions per client IP (one shared budget).
 	ipRequestsPerHour = 10
 	// mailsPerTargetPerHour caps emails sent to one account or address, so the
 	// public forms cannot be used to flood someone's inbox.

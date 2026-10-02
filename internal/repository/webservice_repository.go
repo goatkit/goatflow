@@ -2,7 +2,7 @@ package repository
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/md5" // #nosec G501 -- OTRS-compatible config_md5 dedup checksum, not a security use
 	"database/sql"
 	"encoding/hex"
 	"fmt"
@@ -371,7 +371,7 @@ func (r *WebserviceRepository) parseConfig(ws *models.WebserviceConfig) error {
 // createHistoryEntry creates a history entry for config changes.
 func (r *WebserviceRepository) createHistoryEntry(ctx context.Context, configID int, configYAML []byte, userID int) error {
 	// Calculate MD5 hash
-	hash := md5.Sum(configYAML)
+	hash := md5.Sum(configYAML) // #nosec G401 -- OTRS-compatible config_md5 dedup checksum, not a security use
 	configMD5 := hex.EncodeToString(hash[:])
 
 	// Check if this exact config already exists in history (avoid duplicates)

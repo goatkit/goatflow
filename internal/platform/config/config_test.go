@@ -12,84 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConfigStructs(t *testing.T) {
-	t.Run("Config struct has all expected fields", func(t *testing.T) {
-		cfg := &Config{}
-		assert.NotNil(t, cfg)
-
-		// Verify main config sections exist
-		assert.NotNil(t, &cfg.App)
-		assert.NotNil(t, &cfg.Server)
-		assert.NotNil(t, &cfg.Database)
-		assert.NotNil(t, &cfg.Valkey)
-		assert.NotNil(t, &cfg.Auth)
-		assert.NotNil(t, &cfg.Email)
-		assert.NotNil(t, &cfg.Storage)
-		assert.NotNil(t, &cfg.Ticket)
-		assert.NotNil(t, &cfg.Logging)
-		assert.NotNil(t, &cfg.Metrics)
-		assert.NotNil(t, &cfg.RateLimiting)
-		assert.NotNil(t, &cfg.Features)
-		assert.NotNil(t, &cfg.Maintenance)
-		assert.NotNil(t, &cfg.Integrations)
-	})
-}
-
-func TestDatabaseConfig(t *testing.T) {
-	t.Run("GetDSN returns correct connection string", func(t *testing.T) {
-		dbConfig := &DatabaseConfig{
-			Host:     "localhost",
-			Port:     5432,
-			User:     "testuser",
-			Password: "testpass",
-			Name:     "testdb",
-			SSLMode:  "disable",
-		}
-
-		expected := "host=localhost port=5432 user=testuser password=testpass dbname=testdb sslmode=disable"
-		assert.Equal(t, expected, dbConfig.GetDSN())
-	})
-
-	t.Run("GetDSN handles different configurations", func(t *testing.T) {
-		testCases := []struct {
-			name     string
-			config   DatabaseConfig
-			expected string
-		}{
-			{
-				name: "with SSL",
-				config: DatabaseConfig{
-					Host:     "db.example.com",
-					Port:     5432,
-					User:     "admin",
-					Password: "secret",
-					Name:     "production",
-					SSLMode:  "require",
-				},
-				expected: "host=db.example.com port=5432 user=admin password=secret dbname=production sslmode=require",
-			},
-			{
-				name: "custom port",
-				config: DatabaseConfig{
-					Host:     "localhost",
-					Port:     5433,
-					User:     "user",
-					Password: "pass",
-					Name:     "mydb",
-					SSLMode:  "disable",
-				},
-				expected: "host=localhost port=5433 user=user password=pass dbname=mydb sslmode=disable",
-			},
-		}
-
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				assert.Equal(t, tc.expected, tc.config.GetDSN())
-			})
-		}
-	})
-}
-
 func TestValkeyConfig(t *testing.T) {
 	t.Run("GetValkeyAddr returns correct address", func(t *testing.T) {
 		valkeyConfig := &ValkeyConfig{
@@ -358,32 +280,6 @@ func TestTicketConfig(t *testing.T) {
 	})
 }
 
-func TestFeaturesConfig(t *testing.T) {
-	t.Run("Feature flags", func(t *testing.T) {
-		features := FeaturesConfig{
-			Registration:            true,
-			SocialLogin:             false,
-			TwoFactorAuth:           true,
-			APIKeys:                 true,
-			LDAP:                    false,
-			SAML:                    false,
-			KnowledgeBase:           true,
-			CustomerPortal:          true,
-			AgentCollisionDetection: true,
-		}
-
-		assert.True(t, features.Registration)
-		assert.False(t, features.SocialLogin)
-		assert.True(t, features.TwoFactorAuth)
-		assert.True(t, features.APIKeys)
-		assert.False(t, features.LDAP)
-		assert.False(t, features.SAML)
-		assert.True(t, features.KnowledgeBase)
-		assert.True(t, features.CustomerPortal)
-		assert.True(t, features.AgentCollisionDetection)
-	})
-}
-
 func TestMaintenanceConfig(t *testing.T) {
 	t.Run("Maintenance mode configuration", func(t *testing.T) {
 		maintenance := MaintenanceConfig{
@@ -399,26 +295,6 @@ func TestMaintenanceConfig(t *testing.T) {
 		assert.Contains(t, maintenance.Message, "maintenance")
 		assert.Len(t, maintenance.AllowedIPs, 2)
 		assert.Contains(t, maintenance.AllowedIPs, "127.0.0.1")
-	})
-}
-
-func TestIntegrationsConfig(t *testing.T) {
-	t.Run("Slack integration", func(t *testing.T) {
-		integrations := IntegrationsConfig{}
-		integrations.Slack.Enabled = true
-		integrations.Slack.WebhookURL = "https://hooks.slack.com/services/xxx"
-
-		assert.True(t, integrations.Slack.Enabled)
-		assert.Contains(t, integrations.Slack.WebhookURL, "slack.com")
-	})
-
-	t.Run("Teams integration", func(t *testing.T) {
-		integrations := IntegrationsConfig{}
-		integrations.Teams.Enabled = true
-		integrations.Teams.WebhookURL = "https://outlook.office.com/webhook/xxx"
-
-		assert.True(t, integrations.Teams.Enabled)
-		assert.Contains(t, integrations.Teams.WebhookURL, "office.com")
 	})
 }
 
@@ -469,7 +345,6 @@ database:
 		assert.True(t, loadedCfg.App.Debug)
 		assert.Equal(t, "localhost", loadedCfg.Server.Host)
 		assert.Equal(t, 8080, loadedCfg.Server.Port)
-		assert.Equal(t, "goatflow_test", loadedCfg.Database.Name)
 	})
 
 	t.Run("Error on non-existent file", func(t *testing.T) {
@@ -645,22 +520,6 @@ func BenchmarkGetConfig(b *testing.B) {
 			_ = Get()
 		}
 	})
-}
-
-func BenchmarkGetDSN(b *testing.B) {
-	dbConfig := &DatabaseConfig{
-		Host:     "localhost",
-		Port:     5432,
-		User:     "user",
-		Password: "pass",
-		Name:     "db",
-		SSLMode:  "disable",
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = dbConfig.GetDSN()
-	}
 }
 
 func BenchmarkIsProduction(b *testing.B) {

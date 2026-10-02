@@ -13,13 +13,38 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
-// CustomerPortalConfig holds global portal settings stored in sysconfig tables.
+// DefaultCustomerPortalLandingPage is where customers go after signing in when
+// CustomerPortal::LandingPage is unset or unusable. Migration 000003 and
+// defaults.yaml seed the same value.
+const DefaultCustomerPortalLandingPage = "/customer/tickets"
+
+// customerPortalRoot is the prefix a relative LandingPage value is resolved against.
+const customerPortalRoot = "/customer"
+
+// CustomerPortalConfig holds portal settings stored in sysconfig tables, either
+// the global values or a company's values with its overrides applied.
 type CustomerPortalConfig struct {
 	Enabled       bool
 	LoginRequired bool
 	Title         string
 	FooterText    string
 	LandingPage   string
+}
+
+// LandingPath returns the local path customers are sent to when they enter
+// the portal. An absolute path ("/customer/tickets") is used as is, a
+// relative one ("tickets") is resolved against /customer. Anything that is
+// not a plain local path (a URL, "//host", backslashes) falls back to
+// DefaultCustomerPortalLandingPage so the setting cannot redirect off-site.
+func (cfg CustomerPortalConfig) LandingPath() string {
+	p := strings.TrimSpace(cfg.LandingPage)
+	if p == "" || strings.ContainsAny(p, "\\\r\n\t") || strings.Contains(p, "://") || strings.HasPrefix(p, "//") {
+		return DefaultCustomerPortalLandingPage
+	}
+	if !strings.HasPrefix(p, "/") {
+		p = customerPortalRoot + "/" + strings.TrimLeft(p, "./")
+	}
+	return p
 }
 
 type portalKeyDef struct {
@@ -35,7 +60,7 @@ func portalKeyDefs() []portalKeyDef {
 		{"CustomerPortal::LoginRequired", "Require customer authentication before accessing the portal.", `{"type":"boolean","default":true}`, "true"},
 		{"CustomerPortal::Title", "Portal title shown in header and HTML title.", `{"type":"string","default":"Customer Portal"}`, "Customer Portal"},
 		{"CustomerPortal::FooterText", "Footer text displayed on customer portal pages.", `{"type":"string","default":"Powered by GoatFlow"}`, "Powered by GoatFlow"},
-		{"CustomerPortal::LandingPage", "Relative path used after login (or on portal entry).", `{"type":"string","default":"/customer"}`, "/customer"},
+		{"CustomerPortal::LandingPage", "Relative path used after login (or on portal entry).", `{"type":"string","default":"` + DefaultCustomerPortalLandingPage + `"}`, DefaultCustomerPortalLandingPage},
 	}
 }
 
@@ -46,7 +71,7 @@ func DefaultCustomerPortalConfig() CustomerPortalConfig {
 		LoginRequired: true,
 		Title:         "Customer Portal",
 		FooterText:    "Powered by GoatFlow",
-		LandingPage:   "/customer/tickets",
+		LandingPage:   DefaultCustomerPortalLandingPage,
 	}
 }
 
@@ -122,6 +147,23 @@ func LoadCustomerPortalConfigForCompany(db *sql.DB, customerID string) (Customer
 	}
 
 	return cfg, nil
+}
+
+// LoadCustomerPortalConfigForCustomerUser returns the portal settings that apply
+// to a signed-in customer: their company's (customer_user.customer_id)
+// overrides on top of the global values. An unknown login gets the global values.
+func LoadCustomerPortalConfigForCustomerUser(db *sql.DB, login string) (CustomerPortalConfig, error) {
+	login = strings.TrimSpace(login)
+	if login == "" || db == nil {
+		return LoadCustomerPortalConfig(db)
+	}
+	var customerID sql.NullString
+	err := db.QueryRow(database.ConvertPlaceholders(
+		`SELECT customer_id FROM customer_user WHERE login = ?`), login).Scan(&customerID)
+	if err != nil && err != sql.ErrNoRows {
+		return DefaultCustomerPortalConfig(), fmt.Errorf("customer company lookup: %w", err)
+	}
+	return LoadCustomerPortalConfigForCompany(db, customerID.String)
 }
 
 // CustomerPortalOverrides reports which of a company's portal fields

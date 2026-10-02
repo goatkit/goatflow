@@ -164,6 +164,18 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 			map[string]string{"customer_id": customerID, "name": "Duplicate"})
 		assert.Equal(t, http.StatusBadRequest, status, "duplicate customer_id must be rejected: %s", body)
 		assert.Contains(t, body, "already exists")
+
+		// The same clash submitted through the browser form shows the error on the form.
+		require.NoError(t, browser.NavigateTo("/admin/customer/companies/new"))
+		require.NoError(t, page.Locator("#customer_id").Fill(customerID))
+		require.NoError(t, page.Locator("#name").Fill("Duplicate via form"))
+		require.NoError(t, page.Locator("#city").Fill("Kept City"))
+		require.NoError(t, page.Locator("button[type='submit']:has-text('Create Company')").Click())
+		require.NoError(t, page.Locator("#form-error:has-text('Customer ID already exists')").WaitFor())
+		city, err := page.Locator("#city").InputValue()
+		require.NoError(t, err)
+		assert.Equal(t, "Kept City", city, "entered values are kept after the error")
+		assert.Equal(t, 1, count(t, page.Locator("button[type='submit']:has-text('Create Company')")), "the New Company form is shown again")
 	})
 
 	t.Run("Edit company", func(t *testing.T) {

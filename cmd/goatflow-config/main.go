@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -175,7 +176,10 @@ func handleList(versionMgr *yamlmgmt.VersionManager) {
 					modified,
 					description)
 			}
-			w.Flush()
+			if err := w.Flush(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error writing output: %v\n", err)
+				os.Exit(1)
+			}
 			fmt.Println()
 
 			totalCount += len(documents)
@@ -221,7 +225,7 @@ func handleValidate(schemaRegistry *yamlmgmt.SchemaRegistry, linter *yamlmgmt.Un
 	filename := os.Args[2]
 
 	// Load file
-	data, err := os.ReadFile(filename) //nolint:gosec // G304 CLI tool
+	data, err := os.ReadFile(filename) // #nosec G304 G703 -- file named on the operator's own command line
 	if err != nil {
 		fmt.Printf("Error reading file: %v\n", err)
 		os.Exit(1)
@@ -291,7 +295,7 @@ func handleLint(linter *yamlmgmt.UniversalLinter) {
 	files := []string{}
 
 	// Check if path is file or directory
-	info, err := os.Stat(path)
+	info, err := os.Stat(path) // #nosec G703 -- path named on the operator's own command line
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
@@ -299,7 +303,7 @@ func handleLint(linter *yamlmgmt.UniversalLinter) {
 
 	if info.IsDir() {
 		// Walk directory
-		filepath.Walk(path, func(p string, i os.FileInfo, err error) error {
+		walkErr := filepath.Walk(path, func(p string, i os.FileInfo, err error) error { // #nosec G703 -- directory named on the operator's own command line
 			if err != nil {
 				return nil //nolint:nilerr // continue walking on error
 			}
@@ -308,6 +312,10 @@ func handleLint(linter *yamlmgmt.UniversalLinter) {
 			}
 			return nil
 		})
+		if walkErr != nil {
+			fmt.Printf("Error: %v\n", walkErr)
+			os.Exit(1)
+		}
 	} else {
 		files = append(files, path)
 	}
@@ -322,7 +330,7 @@ func handleLint(linter *yamlmgmt.UniversalLinter) {
 
 	for _, file := range files {
 		// Load and parse file
-		data, err := os.ReadFile(file) //nolint:gosec // G304 CLI tool
+		data, err := os.ReadFile(file) // #nosec G304 G703 -- file named on, or found under a directory named on, the operator's command line
 		if err != nil {
 			fmt.Printf("❌ %s: Failed to read file\n", file)
 			continue
@@ -426,7 +434,10 @@ func handleVersion(versionMgr *yamlmgmt.VersionManager) {
 					v.Timestamp.Format("2006-01-02 15:04"),
 					message)
 			}
-			w.Flush()
+			if err := w.Flush(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error writing output: %v\n", err)
+				os.Exit(1)
+			}
 		}
 
 	case "show":
@@ -498,7 +509,8 @@ func handleRollback(versionMgr *yamlmgmt.VersionManager) {
 	fmt.Printf("Are you sure? (yes/no): ")
 
 	var confirm string
-	fmt.Scanln(&confirm)
+	// An empty or unreadable answer leaves confirm != "yes" and cancels.
+	_, _ = fmt.Scanln(&confirm)
 
 	if confirm != "yes" {
 		fmt.Println("Rollback cancelled")
@@ -591,7 +603,7 @@ func handleApply(versionMgr *yamlmgmt.VersionManager, schemaRegistry *yamlmgmt.S
 	filename := os.Args[2]
 
 	// Load file
-	data, err := os.ReadFile(filename) //nolint:gosec // G304 CLI tool
+	data, err := os.ReadFile(filename) // #nosec G304 G703 -- file named on the operator's own command line
 	if err != nil {
 		fmt.Printf("Error reading file: %v\n", err)
 		os.Exit(1)
@@ -660,9 +672,20 @@ func handleWatch(versionMgr *yamlmgmt.VersionManager, schemaRegistry *yamlmgmt.S
 	}
 
 	// Watch directories
-	hotReload.WatchDirectory("./routes", yamlmgmt.KindRoute)
-	hotReload.WatchDirectory("./config", yamlmgmt.KindConfig)
-	hotReload.WatchDirectory("./dashboards", yamlmgmt.KindDashboard)
+	watchDirs := []struct {
+		dir  string
+		kind yamlmgmt.YAMLKind
+	}{
+		{"./routes", yamlmgmt.KindRoute},
+		{"./config", yamlmgmt.KindConfig},
+		{"./dashboards", yamlmgmt.KindDashboard},
+	}
+	for _, wd := range watchDirs {
+		if err := hotReload.WatchDirectory(wd.dir, wd.kind); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	}
 
 	fmt.Println("👁️  Watching for configuration changes...")
 	fmt.Println("Press Ctrl+C to stop")
@@ -714,7 +737,10 @@ func handleExport(versionMgr *yamlmgmt.VersionManager) {
 	}
 
 	// Create output directory
-	os.MkdirAll(outputDir, 0750)
+	if err := os.MkdirAll(outputDir, 0750); err != nil { // #nosec G703 -- output dir named on the operator's own command line
+		fmt.Printf("Error creating %s: %v\n", outputDir, err)
+		os.Exit(1)
+	}
 
 	// Get all documents
 	documents, err := versionMgr.ListAll(kind)
@@ -726,7 +752,11 @@ func handleExport(versionMgr *yamlmgmt.VersionManager) {
 	fmt.Printf("📤 Exporting %d %s configurations to %s\n", len(documents), kind, outputDir)
 
 	for _, doc := range documents {
-		filename := filepath.Join(outputDir, fmt.Sprintf("%s.yaml", doc.Metadata.Name))
+		filename, err := exportFilename(outputDir, doc.Metadata.Name)
+		if err != nil {
+			fmt.Printf("❌ Skipping %q: %v\n", doc.Metadata.Name, err)
+			continue
+		}
 
 		data, err := yaml.Marshal(doc)
 		if err != nil {
@@ -734,7 +764,7 @@ func handleExport(versionMgr *yamlmgmt.VersionManager) {
 			continue
 		}
 
-		if err := os.WriteFile(filename, data, 0644); err != nil {
+		if err := os.WriteFile(filename, data, 0600); err != nil { // #nosec G703 -- exportFilename keeps the file directly inside outputDir
 			fmt.Printf("❌ Failed to write %s: %v\n", filename, err)
 			continue
 		}
@@ -743,6 +773,42 @@ func handleExport(versionMgr *yamlmgmt.VersionManager) {
 	}
 
 	fmt.Printf("\nExport complete: %d files written to %s\n", len(documents), outputDir)
+}
+
+// exportFilename returns the export path for a document name, rejecting
+// names that would place the file outside outputDir.
+func exportFilename(outputDir, name string) (string, error) {
+	if name == "" || name == "." || name == ".." || strings.ContainsAny(name, `/\`) {
+		return "", fmt.Errorf("invalid document name %q", name)
+	}
+	return filepath.Join(outputDir, name+".yaml"), nil
+}
+
+// walkYAMLFiles calls visit with the path, content and read error of every
+// .yaml/.yml file under dir. Files are read through an os.Root, so a symlink
+// or a path swapped during the walk cannot pull in a file outside dir.
+func walkYAMLFiles(dir string, visit func(path string, data []byte, err error)) error {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
+	return fs.WalkDir(root.FS(), ".", func(rel string, d fs.DirEntry, err error) error {
+		if err != nil {
+			if rel == "." {
+				return err
+			}
+			return nil //nolint:nilerr // continue walking past unreadable entries
+		}
+		if d.IsDir() || (!strings.HasSuffix(rel, ".yaml") && !strings.HasSuffix(rel, ".yml")) {
+			return nil
+		}
+		local := filepath.FromSlash(rel)
+		data, err := root.ReadFile(local)
+		visit(filepath.Join(dir, local), data, err)
+		return nil
+	})
 }
 
 func handleImport(versionMgr *yamlmgmt.VersionManager) {
@@ -759,21 +825,11 @@ func handleImport(versionMgr *yamlmgmt.VersionManager) {
 	imported := 0
 	failed := 0
 
-	filepath.Walk(importDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
-			return nil //nolint:nilerr // continue walking on error
-		}
-
-		if !strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") {
-			return nil
-		}
-
-		// Load file
-		data, err := os.ReadFile(path) //nolint:gosec // G304 CLI tool
+	walkErr := walkYAMLFiles(importDir, func(path string, data []byte, err error) {
 		if err != nil {
 			fmt.Printf("❌ Failed to read %s: %v\n", path, err)
 			failed++
-			return nil
+			return
 		}
 
 		// Parse YAML
@@ -781,7 +837,7 @@ func handleImport(versionMgr *yamlmgmt.VersionManager) {
 		if err := yaml.Unmarshal(data, &doc); err != nil {
 			fmt.Printf("❌ Failed to parse %s: %v\n", path, err)
 			failed++
-			return nil
+			return
 		}
 
 		// Create version
@@ -796,9 +852,11 @@ func handleImport(versionMgr *yamlmgmt.VersionManager) {
 			fmt.Printf("✅ Imported %s/%s\n", kind, name)
 			imported++
 		}
-
-		return nil
 	})
+	if walkErr != nil {
+		fmt.Printf("❌ Failed to read %s: %v\n", importDir, walkErr)
+		os.Exit(1)
+	}
 
 	fmt.Printf("\nImport complete: %d succeeded, %d failed\n", imported, failed)
 

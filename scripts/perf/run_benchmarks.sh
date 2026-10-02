@@ -3,9 +3,13 @@ set -euo pipefail
 
 BENCH_COUNT="${BENCH_COUNT:-3}"
 BENCH_TIME="${BENCH_TIME:-1s}"
-BENCH_REGEX="${BENCH_REGEX:-Benchmark(Sanitize|StripHTML|GetConfig|GetDSN|IsProduction|IsBusinessDay|IsWithinBusinessHours|SetPassword|CheckPassword|RecordRequest|GetStats|ValidateResponse|ValidateJSONSchema|Routing|TemplateLoading|DashboardPage|LinkChecker|LDAPService_ValidateConfig|LDAPService_GetUserAttributes)}"
+# Defaults: every benchmark in every package that defines one (derived from the
+# tracked *_test.go files, so the list cannot go stale).
+BENCH_REGEX="${BENCH_REGEX:-.}"
 BENCH_OUT="${BENCH_OUT:-generated/benchmarks/go-$(date -u +%Y%m%dT%H%M%SZ).txt}"
-BENCH_PACKAGES="${BENCH_PACKAGES:-./internal/utils ./internal/config ./internal/models ./internal/routing ./internal/middleware ./internal/api ./internal/service}"
+if [ -z "${BENCH_PACKAGES:-}" ]; then
+	BENCH_PACKAGES=$(git grep -lE '^func Benchmark' -- '*_test.go' | xargs -rn1 dirname | sort -u | sed 's|^|./|' | tr '\n' ' ')
+fi
 
 mkdir -p "$(dirname "$BENCH_OUT")"
 

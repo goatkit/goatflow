@@ -144,7 +144,7 @@ func marketplaceSearch(query string) {
 
 func marketplaceBuild(pluginDir string) {
 	manifestPath := filepath.Join(pluginDir, "plugin.yaml")
-	manifestData, err := os.ReadFile(manifestPath)
+	manifestData, err := os.ReadFile(manifestPath) // #nosec G304 G703 -- plugin dir given on the developer's own command line
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading plugin.yaml: %v\n", err)
 		os.Exit(1)
@@ -156,7 +156,7 @@ func marketplaceBuild(pluginDir string) {
 		os.Exit(1)
 	}
 
-	if err := os.MkdirAll("dist", 0755); err != nil {
+	if err := os.MkdirAll("dist", 0750); err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating dist/: %v\n", err)
 		os.Exit(1)
 	}
@@ -177,7 +177,7 @@ func marketplaceSign(filePath string, args []string) {
 			keyHex = args[i+1]
 			i++
 		} else if args[i] == "--key-file" && i+1 < len(args) {
-			data, err := os.ReadFile(args[i+1])
+			data, err := os.ReadFile(args[i+1]) // #nosec G304 G703 -- --key-file path given on the developer's own command line
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error reading key file: %v\n", err)
 				os.Exit(1)

@@ -179,7 +179,7 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			// Try to resolve numeric user_id and set full user object for parity with non-YAML routes
 			var resolvedID int64
 			// claims.UserID is uint in our JWT implementation; convert directly
-			resolvedID = int64(claims.UserID)
+			resolvedID = int64(claims.UserID) // #nosec G115 -- UserID is a users/customer_user primary key we signed into the JWT; never above MaxInt64
 
 			// SECURITY: the agent `users` and `customer_user` tables share
 			// an id space (both auto-increment from 1). If we naively look
@@ -206,7 +206,7 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 					query := `SELECT id, login, first_name, last_name FROM customer_user WHERE login = ? LIMIT 1`
 					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(query), resolveLogin).Scan(&cuID, &login, &firstName, &lastName); err == nil {
 						resolvedID = cuID
-						userObj = &platformmodels.User{ID: uint(cuID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Email: login.String, Role: "Customer", ValidID: 1}
+						userObj = &platformmodels.User{ID: uint(cuID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Email: login.String, Role: "Customer", ValidID: 1} // #nosec G115 -- customer_user.id is a positive auto-increment key
 						c.Set("customer_login", login.String)
 					}
 				} else if resolvedID == 0 {
@@ -215,12 +215,12 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 					// Our schema doesn't have users.email; login acts as email. Lookup by login.
 					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT id, login, first_name, last_name, title FROM users WHERE login = ? LIMIT 1`), claims.Email).Scan(&id, &login, &firstName, &lastName, &title); err == nil {
 						resolvedID = id
-						userObj = &platformmodels.User{ID: uint(id), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Title: title.String, Email: login.String, ValidID: 1}
+						userObj = &platformmodels.User{ID: uint(id), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Title: title.String, Email: login.String, ValidID: 1} // #nosec G115 -- users.id is a positive auto-increment key
 					}
 				} else {
 					var login, firstName, lastName, title sql.NullString
 					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT login, first_name, last_name, title FROM users WHERE id = ?`), resolvedID).Scan(&login, &firstName, &lastName, &title); err == nil {
-						userObj = &platformmodels.User{ID: uint(resolvedID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Title: title.String, Email: login.String, ValidID: 1}
+						userObj = &platformmodels.User{ID: uint(resolvedID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Title: title.String, Email: login.String, ValidID: 1} // #nosec G115 -- resolvedID came from a uint claim and matched an existing users.id row
 					}
 				}
 			}
@@ -361,7 +361,9 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 
 	// Register all middleware
 	for name, handler := range middlewares {
-		registry.RegisterMiddleware(name, handler)
+		if err := registry.RegisterMiddleware(name, handler); err != nil {
+			log.Printf("routing: %v", err)
+		}
 	}
 
 	// Register non-API handlers referenced by YAML

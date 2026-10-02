@@ -180,7 +180,7 @@ func isSidecar(name string) bool {
 }
 
 func readSidecar(path string) (string, bool, error) {
-	b, err := os.ReadFile(path) //nolint:gosec // path built from the article directory and an index entry
+	b, err := os.ReadFile(path) // #nosec G304 -- ArticleDir (contained under the storage root) plus a name listed from it
 	if errors.Is(err, fs.ErrNotExist) {
 		return "", false, nil
 	}
@@ -191,7 +191,7 @@ func readSidecar(path string) (string, bool, error) {
 }
 
 func readFirstLine(path string) (string, error) {
-	f, err := os.Open(path) //nolint:gosec // path built from the article directory and an index entry
+	f, err := os.Open(path) // #nosec G304 -- ArticleDir (contained under the storage root) plus a name listed from it
 	if err != nil {
 		return "", fmt.Errorf("open %s: %w", filepath.Base(path), err)
 	}
@@ -351,7 +351,7 @@ func (s *FilesystemStore) ReadPlain(ctx context.Context, articleID int64) ([]byt
 	if err != nil {
 		return nil, err
 	}
-	raw, err := os.ReadFile(filepath.Join(dir, plainFile)) //nolint:gosec // path built from the article directory
+	raw, err := os.ReadFile(filepath.Join(dir, plainFile)) // #nosec G304 -- ArticleDir (contained under the storage root) plus a constant filename
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, ErrNotFound
 	}

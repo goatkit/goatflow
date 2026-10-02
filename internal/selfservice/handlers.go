@@ -315,6 +315,16 @@ func resetPasswordSubmit(p portal) gin.HandlerFunc {
 		ctx := passwordPage(lang, p, "reset", policy)
 		raw := c.PostForm("token")
 
+		// Same per-IP budget as the forgot-password form, so reset tokens
+		// cannot be guessed at an unlimited rate.
+		if !allowIP(c) {
+			ctx["Token"] = raw
+			ctx["Error"] = translate(lang, "self_service.rate_limited")
+			c.Header("Retry-After", "3600")
+			render(c, http.StatusTooManyRequests, "pages/reset_password.pongo2", ctx)
+			return
+		}
+
 		tok, err := s.lookupToken(reqCtx, raw, TokenPasswordReset, p.Type)
 		var acct *Account
 		if err == nil {

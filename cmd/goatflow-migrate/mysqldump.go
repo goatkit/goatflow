@@ -46,7 +46,7 @@ var (
 // line); string values never contain a raw newline in mysqldump output, but a
 // quote-aware scan finds the terminating ';' either way.
 func openMySQLDump(path string) (*mysqlDump, error) {
-	f, err := os.Open(path) //nolint:gosec // G304 CLI tool reads the dump the operator names
+	f, err := os.Open(path) // #nosec G304 -- operator-named dump file from the migrate CLI arguments, not request input
 	if err != nil {
 		return nil, fmt.Errorf("open SQL dump: %w", err)
 	}

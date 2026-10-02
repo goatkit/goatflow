@@ -71,8 +71,9 @@ func loadOrGenerateKey() ([]byte, error) {
 	if _, err := io.ReadFull(rand.Reader, key); err != nil {
 		return nil, fmt.Errorf("failed to generate encryption key: %w", err)
 	}
-	slog.Warn("generated secure settings key — set "+KeyEnvVar+" in production",
-		"key_hex", hex.EncodeToString(key))
+	// Never log the key itself: logs are shipped and retained far more widely
+	// than the secrets they would expose.
+	slog.Warn("generated an ephemeral secure settings key: values encrypted now cannot be decrypted after a restart; set " + KeyEnvVar + " (64 hex chars, e.g. openssl rand -hex 32)")
 	return key, nil
 }
 

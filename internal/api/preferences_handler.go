@@ -1054,8 +1054,12 @@ func HandleAgentChangePassword(c *gin.Context) {
 	}
 
 	// Verify current password
+	recheckKey := passwordRecheckKey(agentMFAAccount(int(userID)))
+	if rejectIfLoginBlocked(c, recheckKey) {
+		return
+	}
 	hasher := auth.NewPasswordHasher()
-	if !hasher.VerifyPassword(request.CurrentPassword, currentHash) {
+	if !countPasswordRecheck(c, recheckKey, hasher.VerifyPassword(request.CurrentPassword, currentHash)) {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "Current password is incorrect",

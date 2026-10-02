@@ -46,7 +46,10 @@ type receiver struct {
 	url    string
 }
 
+// newReceiver starts an endpoint on 127.0.0.1; delivering to it needs the
+// private-target opt-in, which it sets for the test.
 func newReceiver(t *testing.T) *receiver {
+	t.Setenv(webhook.AllowPrivateTargetsEnv, "true")
 	r := &receiver{status: http.StatusOK}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		body, _ := io.ReadAll(req.Body)
@@ -377,4 +380,118 @@ func TestService_PendingDeliveryOfDeactivatedWebhookFails(t *testing.T) {
 	assert.Equal(t, webhook.StatusFailed, d.Status)
 	assert.Equal(t, "webhook is inactive", d.Error)
 	assert.Len(t, recv.received(), 1)
+}
+
+// insertDeliveries queues n deliveries for a webhook, created at createdAt
+// with the given status, and returns their ids. Pending ones are due now.
+func insertDeliveries(t *testing.T, db *sql.DB, webhookID int64, n int, status string, createdAt time.Time) []int64 {
+	t.Helper()
+	next := time.Now().UTC().Add(-time.Minute)
+	ids := make([]int64, n)
+	for i := range ids {
+		id, err := database.GetAdapter().InsertWithReturning(db, database.ConvertPlaceholders(`
+			INSERT INTO gk_webhook_delivery (webhook_id, event_type, payload, status, attempts,
+				next_attempt_time, create_time, change_time)
+			VALUES (?, ?, ?, ?, 0, ?, ?, ?) RETURNING id`),
+			webhookID, EventTicketCreated, `{"event":"ticket.created"}`, status, next, createdAt, createdAt)
+		require.NoError(t, err)
+		ids[i] = id
+	}
+	return ids
+}
+
+func deliveryStatuses(t *testing.T, db *sql.DB, webhookID int64) map[string]int {
+	t.Helper()
+	rows, err := db.Query(database.ConvertPlaceholders(
+		`SELECT status, COUNT(*) FROM gk_webhook_delivery WHERE webhook_id = ? GROUP BY status`), webhookID)
+	require.NoError(t, err)
+	defer rows.Close()
+	out := map[string]int{}
+	for rows.Next() {
+		var status string
+		var n int
+		require.NoError(t, rows.Scan(&status, &n))
+		out[status] = n
+	}
+	require.NoError(t, rows.Err())
+	return out
+}
+
+// TestService_SlowEndpointDoesNotStarveOthers: a webhook whose endpoint never
+// answers in time must not hold up other webhooks' deliveries, even when its
+// deliveries are older, and a run that ends must leave unsent deliveries
+// pending rather than claimed.
+func TestService_SlowEndpointDoesNotStarveOthers(t *testing.T) {
+	db := testDB(t)
+	svc := caughtUpService(t, db)
+	release := make(chan struct{})
+	slow := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+		case <-release:
+		}
+	}))
+	t.Cleanup(func() { close(release); slow.Close() })
+	fast := newReceiver(t)
+
+	slowHook := createWebhook(t, db, slow.URL, "", 0, EventTicketCreated)
+	_, err := db.Exec(database.ConvertPlaceholders(`UPDATE gk_webhook SET timeout_seconds = 1 WHERE id = ?`), slowHook.ID)
+	require.NoError(t, err)
+	fastHook := createWebhook(t, db, fast.url, "", 0, EventTicketCreated)
+	insertDeliveries(t, db, slowHook.ID, 4, webhook.StatusPending, time.Now().UTC())
+	insertDeliveries(t, db, fastHook.ID, 4, webhook.StatusPending, time.Now().UTC())
+
+	// Four 1-second timeouts do not fit in 2.5 seconds.
+	ctx, cancel := context.WithTimeout(context.Background(), 2500*time.Millisecond)
+	defer cancel()
+	_, _, runErr := svc.RunOnce(ctx)
+
+	assert.Len(t, fast.received(), 4, "the fast endpoint gets all its deliveries")
+	assert.Equal(t, map[string]int{webhook.StatusDelivered: 4}, deliveryStatuses(t, db, fastHook.ID))
+	slowStatuses := deliveryStatuses(t, db, slowHook.ID)
+	assert.Zero(t, slowStatuses[webhook.StatusDelivering], "no delivery is left claimed: %v", slowStatuses)
+	assert.Positive(t, slowStatuses[webhook.StatusFailed], "slow deliveries were attempted: %v", slowStatuses)
+	assert.Positive(t, slowStatuses[webhook.StatusPending], "deliveries not reached stay pending: %v", slowStatuses)
+	assert.Equal(t, 4, slowStatuses[webhook.StatusFailed]+slowStatuses[webhook.StatusPending])
+	assert.NoError(t, runErr, "a run that runs out of time is not an error")
+}
+
+// TestService_PrunesOldDeliveries: delivered and failed deliveries older than
+// the retention (default 30 days) are deleted; pending ones are kept, and a
+// retention of 0 keeps everything.
+func TestService_PrunesOldDeliveries(t *testing.T) {
+	db := testDB(t)
+	recv := newReceiver(t)
+	wh := createWebhook(t, db, recv.url, "", 3, EventTicketCreated)
+	now := time.Now().UTC()
+	old, recent := now.Add(-40*24*time.Hour), now.Add(-2*24*time.Hour)
+
+	oldDelivered := insertDeliveries(t, db, wh.ID, 2, webhook.StatusDelivered, old)
+	oldFailed := insertDeliveries(t, db, wh.ID, 1, webhook.StatusFailed, old)
+	oldPending := insertDeliveries(t, db, wh.ID, 1, webhook.StatusPending, old)
+	_, err := db.Exec(database.ConvertPlaceholders(
+		`UPDATE gk_webhook_delivery SET next_attempt_time = ? WHERE id = ?`), now.Add(time.Hour), oldPending[0])
+	require.NoError(t, err)
+	recentDelivered := insertDeliveries(t, db, wh.ID, 1, webhook.StatusDelivered, recent)
+	ids := func() []int64 {
+		var out []int64
+		for _, d := range deliveriesOf(t, db, wh.ID) {
+			out = append(out, d.ID)
+		}
+		return out
+	}
+	require.Len(t, ids(), len(oldDelivered)+len(oldFailed)+1+1)
+
+	t.Setenv(RetentionDaysEnv, "")
+	runOnce(t, NewService(db))
+	assert.ElementsMatch(t, []int64{oldPending[0], recentDelivered[0]}, ids(), "default retention is 30 days")
+
+	t.Setenv(RetentionDaysEnv, "0")
+	keptOld := insertDeliveries(t, db, wh.ID, 1, webhook.StatusDelivered, old)
+	runOnce(t, NewService(db))
+	assert.ElementsMatch(t, []int64{oldPending[0], recentDelivered[0], keptOld[0]}, ids(), "0 keeps deliveries forever")
+
+	t.Setenv(RetentionDaysEnv, "1")
+	runOnce(t, NewService(db))
+	assert.ElementsMatch(t, []int64{oldPending[0]}, ids(), "pending deliveries are never pruned")
 }

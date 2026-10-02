@@ -263,6 +263,7 @@
     data-deliveries="{{ t('admin.webhooks.actions.deliveries') }}"
     data-header-name="{{ t('admin.webhooks.form.header_name') }}"
     data-header-value="{{ t('admin.webhooks.form.header_value') }}"
+    data-header-value-keep="{{ t('admin.webhooks.form.header_value_keep') }}"
     data-remove-header="{{ t('admin.webhooks.form.remove_header') }}"
     data-secret-set="{{ t('admin.webhooks.form.secret_set') }}"
     data-secret-none="{{ t('admin.webhooks.form.secret_none') }}"
@@ -310,6 +311,7 @@
     'use strict';
 
     var API = '/api/v1/webhooks';
+    var DELIVERY_API = '/api/v1/webhook-deliveries';
     var I18N = document.getElementById('wh-i18n').dataset;
     var LOCALE = document.documentElement.lang || undefined;
     var EVENT_LABELS = {};
@@ -576,10 +578,13 @@
         formError.classList.toggle('hidden', !message);
     }
 
-    function addHeaderRow(name, value) {
-        var row = el('div', { className: 'flex items-center gap-2', dataset: { role: 'header-row' } }, [
+    // Header values are write-only: rows for stored headers start empty and
+    // keep the stored value (sent as null) unless a new value is typed.
+    function addHeaderRow(name, hint) {
+        var stored = hint !== undefined;
+        var row = el('div', { className: 'flex items-center gap-2', dataset: { role: 'header-row', stored: stored ? name : '' } }, [
             el('input', { type: 'text', className: 'gk-input-neon w-full font-mono', dir: 'ltr', placeholder: I18N.headerName, 'aria-label': I18N.headerName, value: name || '', maxLength: 256, autocomplete: 'off', dataset: { role: 'header-name' } }),
-            el('input', { type: 'text', className: 'gk-input-neon w-full font-mono', dir: 'ltr', placeholder: I18N.headerValue, 'aria-label': I18N.headerValue, value: value || '', autocomplete: 'off', dataset: { role: 'header-value' } })
+            el('input', { type: 'text', className: 'gk-input-neon w-full font-mono', dir: 'ltr', placeholder: stored ? fmt(I18N.headerValueKeep, { hint: hint }) : I18N.headerValue, 'aria-label': I18N.headerValue, value: '', maxLength: 1024, autocomplete: 'off', dataset: { role: 'header-value' } })
         ]);
         row.appendChild(iconButton('fa-trash', I18N.removeHeader, function () { row.remove(); }, true));
         headersEl.appendChild(row);
@@ -619,7 +624,8 @@
         document.getElementById('wh-timeout').value = hook ? hook.timeout_seconds : I18N.defaultTimeout;
         document.getElementById('wh-active').checked = hook ? !!hook.is_active : true;
         renderEventChoices(hook ? hook.events : []);
-        Object.keys((hook && hook.headers) || {}).sort().forEach(function (k) { addHeaderRow(k, hook.headers[k]); });
+        var hints = (hook && hook.header_hints) || {};
+        Object.keys(hints).sort().forEach(function (k) { addHeaderRow(k, hints[k]); });
 
         var hasSecret = !!(hook && hook.has_secret);
         document.getElementById('wh-secret-status').textContent = hasSecret
@@ -636,7 +642,7 @@
 
     document.getElementById('wh-add').addEventListener('click', function (e) { openForm(null, e.currentTarget); });
     document.getElementById('wh-add-header').addEventListener('click', function () {
-        addHeaderRow('', '').querySelector('input').focus();
+        addHeaderRow('').querySelector('input').focus();
     });
 
     form.addEventListener('submit', async function (e) {
@@ -654,7 +660,9 @@
         var headers = {};
         headersEl.querySelectorAll('[data-role="header-row"]').forEach(function (row) {
             var name = row.querySelector('[data-role="header-name"]').value.trim();
-            if (name) headers[name] = row.querySelector('[data-role="header-value"]').value;
+            var value = row.querySelector('[data-role="header-value"]').value;
+            if (!name) return;
+            headers[name] = (value === '' && row.dataset.stored === name) ? null : value;
         });
         var body = {
             name: document.getElementById('wh-name').value.trim(),
@@ -764,7 +772,7 @@
 
     async function openDelivery(id, opener) {
         try {
-            showDelivery(await api('GET', API + '/deliveries/' + encodeURIComponent(id)), opener);
+            showDelivery(await api('GET', DELIVERY_API + '/' + encodeURIComponent(id)), opener);
         } catch (err) {
             toast(failMessage(err), 'error');
         }
@@ -776,7 +784,7 @@
         var button = e.currentTarget;
         button.disabled = true;
         try {
-            var d = await api('POST', API + '/deliveries/' + encodeURIComponent(current.id) + '/redeliver');
+            var d = await api('POST', DELIVERY_API + '/' + encodeURIComponent(current.id) + '/redeliver');
             toast(d.success ? I18N.redelivered : I18N.redeliverFailed, d.success ? 'success' : 'error');
             showDelivery(d);
             refreshLastDelivery(d.webhook_id);

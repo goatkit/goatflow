@@ -42,6 +42,18 @@ func NewMailQueueRepository(db *sql.DB) *MailQueueRepository {
 
 // Insert adds a new email to the queue.
 func (r *MailQueueRepository) Insert(ctx context.Context, item *MailQueueItem) error {
+	return insertItem(ctx, r.db, item)
+}
+
+// InsertTx adds a new email to the queue inside tx, so the email is queued
+// only if the caller's transaction commits.
+func InsertTx(ctx context.Context, tx *sql.Tx, item *MailQueueItem) error {
+	return insertItem(ctx, tx, item)
+}
+
+func insertItem(ctx context.Context, exec interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}, item *MailQueueItem) error {
 	query := database.ConvertPlaceholders(`
 		INSERT INTO mail_queue (
 			insert_fingerprint, article_id, attempts, sender, recipient,
@@ -49,7 +61,7 @@ func (r *MailQueueRepository) Insert(ctx context.Context, item *MailQueueItem) e
 		) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
 	`)
 
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := exec.ExecContext(ctx, query,
 		item.InsertFingerprint,
 		item.ArticleID,
 		item.Attempts,

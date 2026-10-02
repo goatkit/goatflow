@@ -474,7 +474,8 @@ func (m *Manager) Deploy(outputPath string) error {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, data, 0644); err != nil {
+	// Effective settings include credentials (SMTP, LDAP, ...): owner-only.
+	if err := os.WriteFile(outputPath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 

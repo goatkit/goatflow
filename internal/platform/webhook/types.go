@@ -43,6 +43,9 @@ const (
 	maxURLLength          = 2000
 	maxResponseBodyBytes  = 4096
 	maxErrorLength        = 1000
+	maxHeaders            = 20
+	maxHeaderNameLength   = 256
+	maxHeaderValueLength  = 1024
 )
 
 // validActive and validInactive are the OTRS valid table ids used for valid_id.
@@ -68,14 +71,19 @@ func invalid(format string, args ...interface{}) error {
 	return &ValidationError{Message: fmt.Sprintf(format, args...)}
 }
 
-// Webhook is a configured outbound endpoint. The secret is write-only: it is
-// stored encrypted and only the masked hint is ever returned.
+// Webhook is a configured outbound endpoint. The secret and the custom header
+// values are write-only: they are stored encrypted and only masked hints are
+// ever returned.
 type Webhook struct {
-	ID             int64             `json:"id"`
-	Name           string            `json:"name"`
-	URL            string            `json:"url"`
-	Events         []string          `json:"events"`
-	Headers        map[string]string `json:"headers"`
+	ID     int64    `json:"id"`
+	Name   string   `json:"name"`
+	URL    string   `json:"url"`
+	Events []string `json:"events"`
+	// Headers holds custom header values. It is only filled when values are
+	// being saved or sent, never serialised.
+	Headers map[string]string `json:"-"`
+	// HeaderHints maps each custom header name to a masked hint of its value.
+	HeaderHints    map[string]string `json:"header_hints"`
 	HasSecret      bool              `json:"has_secret"`
 	SecretHint     string            `json:"secret_hint,omitempty"`
 	RetryCount     int               `json:"retry_count"`
@@ -98,7 +106,8 @@ func (w *Webhook) Subscribes(event string) bool {
 }
 
 // Normalize trims input, applies defaults and validates the configuration.
-// knownEvent reports whether an event name may be subscribed to.
+// knownEvent reports whether an event name may be subscribed to. Headers are
+// validated when set (nil means "not being changed").
 func (w *Webhook) Normalize(knownEvent func(string) bool) error {
 	w.Name = strings.TrimSpace(w.Name)
 	w.URL = strings.TrimSpace(w.URL)
@@ -118,6 +127,9 @@ func (w *Webhook) Normalize(knownEvent func(string) bool) error {
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return invalid("url must be an absolute http or https URL")
 	}
+	if err := checkTargetHost(u.Hostname()); err != nil {
+		return invalid("%s", err.Error())
+	}
 	if len(w.Events) == 0 {
 		return invalid("at least one event is required")
 	}
@@ -134,16 +146,8 @@ func (w *Webhook) Normalize(knownEvent func(string) bool) error {
 		}
 	}
 	w.Events = events
-	for k := range w.Headers {
-		if !validHeaderName(k) {
-			return invalid("invalid header name %q", k)
-		}
-		if isReservedHeader(k) {
-			return invalid("header %q is set by GoatFlow and cannot be overridden", k)
-		}
-	}
-	if w.Headers == nil {
-		w.Headers = map[string]string{}
+	if err := validateHeaders(w.Headers); err != nil {
+		return err
 	}
 	if w.RetryCount < 0 || w.RetryCount > MaxRetryCount {
 		return invalid("retry_count must be between 0 and %d", MaxRetryCount)
@@ -154,12 +158,49 @@ func (w *Webhook) Normalize(knownEvent func(string) bool) error {
 	return nil
 }
 
+func validateHeaders(headers map[string]string) error {
+	if len(headers) > maxHeaders {
+		return invalid("at most %d custom headers are allowed", maxHeaders)
+	}
+	lower := make(map[string]bool, len(headers))
+	for k, v := range headers {
+		if !validHeaderName(k) {
+			return invalid("invalid header name %q", k)
+		}
+		if isReservedHeader(k) {
+			return invalid("header %q is set by GoatFlow and cannot be overridden", k)
+		}
+		if lower[strings.ToLower(k)] {
+			return invalid("header %q is given more than once", k)
+		}
+		lower[strings.ToLower(k)] = true
+		if len(v) > maxHeaderValueLength {
+			return invalid("value of header %q must be at most %d characters", k, maxHeaderValueLength)
+		}
+		if !validHeaderValue(v) {
+			return invalid("value of header %q contains a control character", k)
+		}
+	}
+	return nil
+}
+
 func validHeaderName(name string) bool {
-	if name == "" {
+	if name == "" || len(name) > maxHeaderNameLength {
 		return false
 	}
 	for _, r := range name {
 		if r > 126 || r <= 32 || strings.ContainsRune("()<>@,;:\\\"/[]?={}", r) {
+			return false
+		}
+	}
+	return true
+}
+
+// validHeaderValue rejects control characters (CR and LF would split the
+// header); horizontal tab is allowed.
+func validHeaderValue(v string) bool {
+	for _, r := range v {
+		if (r < 0x20 && r != '\t') || r == 0x7f {
 			return false
 		}
 	}

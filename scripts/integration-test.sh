@@ -4,9 +4,9 @@
 # Tests HTTP API functionality with positive and negative cases
 # IMPORTANT: Only runs against the dedicated TEST backend (port 18081)
 #
-# NOTE: Test backend runs with GOATFLOW_DISABLE_TEST_AUTH_BYPASS=0
-# This auto-authenticates requests as user_id=1 (Admin), so login
-# tests verify endpoint behavior but auth isn't required for API access.
+# Authenticated requests log in through /api/auth/login with
+# DEMO_ADMIN_EMAIL/DEMO_ADMIN_PASSWORD and reuse the session cookie.
+# There is no test auth bypass.
 #
 
 set -e

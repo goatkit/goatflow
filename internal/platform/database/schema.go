@@ -103,13 +103,13 @@ func (c *SchemaConverter) ExportToXML(outputPath string) error {
 	xmlContent := []byte(xml.Header + string(xmlData))
 
 	// Write to file
-	return os.WriteFile(outputPath, xmlContent, 0644)
+	return os.WriteFile(outputPath, xmlContent, 0o644) // #nosec G306 -- goatflow-db CLI export of table definitions only (no data), meant to be shared
 }
 
 // ImportFromXML creates database tables from XML schema definition.
 func (c *SchemaConverter) ImportFromXML(xmlPath string) error {
 	// Read XML file
-	xmlData, err := os.ReadFile(xmlPath) //nolint:gosec // G304 false positive - schema file
+	xmlData, err := os.ReadFile(xmlPath) // #nosec G304 -- schema file path is a goatflow-db CLI argument, not request input
 	if err != nil {
 		return fmt.Errorf("failed to read XML file: %w", err)
 	}

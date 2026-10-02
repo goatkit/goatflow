@@ -15,7 +15,7 @@
         <nav class="mb-4" aria-label="Breadcrumb">
             <ol class="flex items-center space-x-2 text-sm">
                 <li>
-                    <a href="/customer/dashboard" class="transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
+                    <a href="/customer" class="transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
                         {{ t("customer.nav.dashboard") }}
                     </a>
                 </li>

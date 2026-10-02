@@ -86,7 +86,7 @@ func loadSQLSchema(migrationsDir string) (sqlSchema, error) {
 		sort.Strings(files)
 		schema := make(sqlSchema)
 		for _, f := range files {
-			b, err := os.ReadFile(f)
+			b, err := os.ReadFile(f) // #nosec G304 -- migration file globbed from the repo's own migrations directory
 			if err != nil {
 				return nil, err
 			}

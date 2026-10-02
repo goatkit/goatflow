@@ -2,32 +2,29 @@
 # Copy this file to config.yaml for local development overrides
 # These values override default.yaml
 # DO NOT commit config.yaml to version control
-# Typical local uses: set secrets, adjust timezone, tweak logging.
+# Typical local uses: adjust timezone, feature switches, local hosts.
+#
+# config.yaml is plain YAML: ${VAR} is not expanded.
+# The database connection comes from environment variables only
+# (DB_DRIVER, DB_MYSQL_* or DB_PGSQL_*), as do logging (LOG_*) and
+# metrics (METRICS_*). See docs/configuration.md.
 
 # Example overrides:
 # app:
 #   timezone: Europe/London
-# database:
-#   password: my_secure_password   # or rely on DB_PASSWORD env var
-# auth:
-#   jwt:
-#     secret: my-local-dev-secret-key
+# features:
+#   registration: true
 
 app:
   debug: true
   env: development
-
-database:
-  host: localhost
-  # Provide local dev password here OR export DB_PASSWORD; leave blank to force env usage.
-  password: my_secure_password
 
 valkey:
   host: localhost
 
 auth:
   jwt:
-    # Local-only secret; production should set GOATFLOW_JWT_SECRET env var.
+    # Local-only secret; production should set JWT_SECRET or GOATFLOW_AUTH_JWT_SECRET.
     secret: "my-local-development-secret-key-change-in-production"
 
 email:

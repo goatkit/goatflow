@@ -51,6 +51,9 @@ paths = [
     '''internal/api/webhook_api_test\.go''',
     # SDK tests use fake JWT-shaped tokens ("e30" = {}) as mock responses
     '''sdk/typescript/test/.*\.test\.ts''',
+    # Synthesizer test and TrueNAS CI test values use fixed fake 64-hex secure keys
+    '''internal/platform/config/synthesizer_test\.go''',
+    '''docs/truenas-app/goatflow/templates/test_values/.*\.yaml''',
 ]
 
 # Stop words to prevent false positives

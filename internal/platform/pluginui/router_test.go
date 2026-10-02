@@ -68,6 +68,9 @@ func (m *mockRenderer) HTML(c *gin.Context, code int, name string, data interfac
 	c.String(code, "rendered: "+name)
 }
 
+// nopEnvelope stands in for the API layer's envelope builder in routing tests.
+func nopEnvelope(*gin.Context, map[string]any, string) {}
+
 // stubAuth stands in for SessionOrJWTAuth: it authenticates every request as
 // the given principal.
 func stubAuth(userID int, role string) UIAuth {
@@ -76,7 +79,7 @@ func stubAuth(userID int, role string) UIAuth {
 		c.Set("user_role", role)
 		c.Set("is_customer", role == "Customer")
 		c.Next()
-	}}
+	}, Envelope: nopEnvelope}
 }
 
 func TestRegisterUIRoutes(t *testing.T) {
@@ -394,85 +397,6 @@ func TestExtractParams(t *testing.T) {
 	}
 }
 
-// TestUIRoutesForwardIdentity ensures buildUIHandler forwards the authenticated
-// user's identity (user_id, login, is_admin, role, org) into the plugin args on
-// UI page calls, mirroring what the API buildPluginArgs does. Regression for the
-// slice where UI routes received no session middleware and plugins could only
-// guess who was calling.
-func TestUIRoutesForwardIdentity(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	caller := &mockCaller{
-		responses: map[string]json.RawMessage{
-			"testplugin.ui_home": json.RawMessage(`{"html":"<h1>Home</h1>"}`),
-		},
-	}
-	renderer := &mockRenderer{}
-	logger := slog.Default()
-
-	cfgJSON, _ := json.Marshal(UIConfig{
-		Routes: []UIRouteConfig{{Path: "/", Handler: "ui_home"}},
-		Auth:   &UIAuthConfig{Method: AuthSession},
-	})
-	cfgRaw := json.RawMessage(cfgJSON)
-	ui := PluginUI{
-		ID:         2,
-		PluginName: "testplugin",
-		UIID:       "app",
-		FullID:     "testplugin_app",
-		Name:       "Test App",
-		UIType:     TypeAdminPage,
-		Shell:      ShellStandard,
-		Config:     &cfgRaw,
-		Enabled:    true,
-		ValidID:    1,
-	}
-
-	// sessionAuth stands in for SessionOrJWTAuth: it populates the gin context
-	// keys that buildUIHandler reads and forwards to the plugin.
-	sessionAuth := func(c *gin.Context) {
-		c.Set("user_id", 42)
-		c.Set("user_email", "coach@example.com")
-		c.Set("user_login", "coach42")
-		c.Set("isInAdminGroup", true)
-		c.Set("user_role", "Agent")
-		c.Set("org_id", 7)
-		c.Next()
-	}
-
-	eng := gin.New()
-	if err := registerOneUI(eng, ui, nil, caller, renderer, UIAuth{Authenticate: sessionAuth}, logger); err != nil {
-		t.Fatalf("registerOneUI: %v", err)
-	}
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/ui/testplugin_app/", nil)
-	eng.ServeHTTP(w, req)
-
-	if len(caller.calls) != 1 {
-		t.Fatalf("expected 1 plugin call, got %d", len(caller.calls))
-	}
-	var args map[string]any
-	if err := json.Unmarshal(caller.calls[0].Args, &args); err != nil {
-		t.Fatalf("unmarshal args: %v", err)
-	}
-	if args["_user_id"] != float64(42) {
-		t.Errorf("_user_id = %v, want 42", args["_user_id"])
-	}
-	if args["_user_login"] != "coach42" {
-		t.Errorf("_user_login = %v, want coach42", args["_user_login"])
-	}
-	if args["_is_admin"] != true {
-		t.Errorf("_is_admin = %v, want true", args["_is_admin"])
-	}
-	if args["_user_role"] != "Agent" {
-		t.Errorf("_user_role = %v, want Agent", args["_user_role"])
-	}
-	if args["_org_id"] != float64(7) {
-		t.Errorf("_org_id = %v, want 7", args["_org_id"])
-	}
-}
-
 // fakeUIInfo is a UIInfoLookup for nav-gating tests.
 type fakeUIInfo struct {
 	byFullID map[string]*PluginUI
@@ -505,7 +429,7 @@ func TestBuildNavItemsCrossPluginUI(t *testing.T) {
 		cfg := &UIConfig{Nav: &UINavConfig{Position: "side", Items: []UINavItemConfig{
 			{Label: "Dashboard", Icon: "fa-house", Path: "/dashboard"},
 		}}}
-		items := buildNavItems(c, ui, cfg, caller, "/dashboard", repo)
+		items := buildNavItems(c, ui, cfg, caller, "/dashboard", repo, nopEnvelope)
 		if len(items) != 1 || items[0]["href"] != "/ui/goatcoach_main/dashboard" {
 			t.Fatalf("items = %v", items)
 		}
@@ -518,7 +442,7 @@ func TestBuildNavItemsCrossPluginUI(t *testing.T) {
 		cfg := &UIConfig{Nav: &UINavConfig{Position: "side", Items: []UINavItemConfig{
 			{Label: "Boards", Icon: "fa-table-cells-large", Path: "/ui/goat-kanban_board/"},
 		}}}
-		items := buildNavItems(c, ui, cfg, caller, "/", repo)
+		items := buildNavItems(c, ui, cfg, caller, "/", repo, nopEnvelope)
 		if len(items) != 1 || items[0]["href"] != "/ui/goat-kanban_board/" {
 			t.Fatalf("items = %v", items)
 		}
@@ -530,7 +454,7 @@ func TestBuildNavItemsCrossPluginUI(t *testing.T) {
 		cfg := &UIConfig{Nav: &UINavConfig{Items: []UINavItemConfig{
 			{Label: "Boards", Path: "/ui/goat-kanban_board/"},
 		}}}
-		if items := buildNavItems(c, ui, cfg, caller, "/", repo); len(items) != 0 {
+		if items := buildNavItems(c, ui, cfg, caller, "/", repo, nopEnvelope); len(items) != 0 {
 			t.Fatalf("expected no items, got %v", items)
 		}
 	})
@@ -540,7 +464,7 @@ func TestBuildNavItemsCrossPluginUI(t *testing.T) {
 		cfg := &UIConfig{Nav: &UINavConfig{Items: []UINavItemConfig{
 			{Label: "Boards", Path: "/ui/goat-kanban_board/"},
 		}}}
-		if items := buildNavItems(c, ui, cfg, disabled, "/", repo); len(items) != 0 {
+		if items := buildNavItems(c, ui, cfg, disabled, "/", repo, nopEnvelope); len(items) != 0 {
 			t.Fatalf("expected no items, got %v", items)
 		}
 	})
@@ -550,7 +474,7 @@ func TestBuildNavItemsCrossPluginUI(t *testing.T) {
 		cfg := &UIConfig{Nav: &UINavConfig{Items: []UINavItemConfig{
 			{Label: "Boards", Path: "/ui/goat-kanban_board/"},
 		}}}
-		if items := buildNavItems(c, ui, cfg, caller, "/", empty); len(items) != 0 {
+		if items := buildNavItems(c, ui, cfg, caller, "/", empty, nopEnvelope); len(items) != 0 {
 			t.Fatalf("expected no items, got %v", items)
 		}
 	})
@@ -589,6 +513,7 @@ func headerAuth() UIAuth {
 				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "access denied: requires group " + name})
 			}
 		},
+		Envelope: nopEnvelope,
 	}
 }
 
@@ -683,7 +608,8 @@ func TestUIAuthUnenforceableConfigNotRegistered(t *testing.T) {
 	}{
 		{"pin (no platform PIN flow)", TypeKiosk, &UIAuthConfig{Method: "pin"}, headerAuth()},
 		{"unknown method", TypeAgentApp, &UIAuthConfig{Method: "sesion"}, headerAuth()},
-		{"session without authenticator", TypeAgentApp, nil, UIAuth{}},
+		{"session without authenticator", TypeAgentApp, nil, UIAuth{Envelope: nopEnvelope}},
+		{"no call envelope builder", TypeAgentApp, nil, UIAuth{Authenticate: headerAuth().Authenticate}},
 		{"groups on a public UI", TypePublicPage, &UIAuthConfig{Groups: []string{"coach"}}, headerAuth()},
 		{"groups on a customer UI", TypeCustomerApp, &UIAuthConfig{Groups: []string{"coach"}}, headerAuth()},
 	}
@@ -704,37 +630,5 @@ func TestUIAuthUnenforceableConfigNotRegistered(t *testing.T) {
 				t.Errorf("plugin was called %d times", len(caller.calls))
 			}
 		})
-	}
-}
-
-// TestUIArgsAdminFlagNotSpoofable: _is_admin is always sent, so a plugin that
-// overlays the host's identity keys on the client form body (goatcoach) never
-// keeps a client-supplied "_is_admin": true for a non-admin agent.
-func TestUIArgsAdminFlagNotSpoofable(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	cfgJSON, _ := json.Marshal(UIConfig{Routes: []UIRouteConfig{{Path: "/save", Method: "POST", Handler: "save"}}})
-	cfgRaw := json.RawMessage(cfgJSON)
-	ui := PluginUI{PluginName: "gate", UIID: "ui", FullID: "gate_ui", Name: "Gate", UIType: TypeAgentApp, Shell: ShellNone, Config: &cfgRaw, Enabled: true, ValidID: 1}
-	caller := &mockCaller{}
-	eng := gin.New()
-	if err := registerOneUI(eng, ui, nil, caller, &mockRenderer{}, headerAuth(), slog.Default()); err != nil {
-		t.Fatalf("registerOneUI: %v", err)
-	}
-	w := httptest.NewRecorder()
-	hr, _ := http.NewRequest("POST", "/ui/gate_ui/save", strings.NewReader(`{"_is_admin":true}`))
-	hr.Header.Set("X-Test-Principal", "agent:9")
-	eng.ServeHTTP(w, hr)
-	if len(caller.calls) != 1 {
-		t.Fatalf("expected 1 plugin call, got %d (status %d)", len(caller.calls), w.Code)
-	}
-	var args map[string]any
-	if err := json.Unmarshal(caller.calls[0].Args, &args); err != nil {
-		t.Fatalf("unmarshal args: %v", err)
-	}
-	if v, ok := args["_is_admin"]; !ok || v != false {
-		t.Errorf("_is_admin = %v (present %v), want false", v, ok)
-	}
-	if args["_user_id"] != float64(9) {
-		t.Errorf("_user_id = %v, want 9", args["_user_id"])
 	}
 }

@@ -3,13 +3,13 @@ package middleware
 import (
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
+	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/convert"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
@@ -74,7 +74,6 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 				cookieErr = nil
 			}
 		}
-		log.Printf("DEBUG: auth middleware - session_id cookie: '%s', err: %v", sessionID, cookieErr)
 		if cookieErr == nil && sessionID != "" {
 			sessionSvc := getMiddlewareSessionService()
 			log.Printf("DEBUG: auth middleware - sessionSvc nil? %v", sessionSvc == nil)
@@ -212,11 +211,8 @@ func (m *AuthMiddleware) unauthorizedResponse(c *gin.Context, message string) {
 		loginPath := "/login"
 		if strings.HasPrefix(c.Request.URL.Path, "/customer") {
 			loginPath = "/customer/login"
-		} else {
-			flag := strings.ToLower(os.Getenv("CUSTOMER_FE_ONLY"))
-			if flag == "1" || flag == "true" {
-				loginPath = "/customer/login"
-			}
+		} else if config.CustomerFEOnly() {
+			loginPath = "/customer/login"
 		}
 		c.Redirect(http.StatusFound, loginPath)
 		c.Abort()

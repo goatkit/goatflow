@@ -47,6 +47,9 @@ From the ticket page you can:
 
 Your administrator may make time recording required on notes.
 
+GoatFlow has no ticket split (OTRS "Split"). For a separate request inside a ticket, create a new
+ticket for it.
+
 ### Many tickets at once
 
 In the ticket list, select tickets and use the bulk actions to change state, priority

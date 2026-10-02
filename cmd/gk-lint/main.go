@@ -89,7 +89,7 @@ func moduleRoot() (string, string, error) {
 
 	for dir := cwd; ; dir = filepath.Dir(dir) {
 		goMod := filepath.Join(dir, "go.mod")
-		data, err := os.ReadFile(goMod)
+		data, err := os.ReadFile(goMod) // #nosec G304 -- go.mod in an ancestor of the working directory, located by this dev tool
 		if err == nil {
 			modulePath, err := parseModulePath(data)
 			if err != nil {

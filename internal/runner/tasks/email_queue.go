@@ -298,7 +298,7 @@ func dialSMTPClient(cfg *config.EmailConfig) (*smtp.Client, error) {
 	addr := cfg.SMTP.Host + ":" + strconv.Itoa(cfg.SMTP.Port)
 	tlsConfig := &tls.Config{
 		ServerName:         cfg.SMTP.Host,
-		InsecureSkipVerify: cfg.SMTP.SkipVerify,
+		InsecureSkipVerify: cfg.SMTP.SkipVerify, // #nosec G402 -- opt-in operator setting (email SMTP skip_verify) for self-signed relays; defaults to false
 	}
 
 	switch mode {
@@ -319,7 +319,7 @@ func dialSMTPClient(cfg *config.EmailConfig) (*smtp.Client, error) {
 		}
 		if mode == "starttls" {
 			if err := client.StartTLS(tlsConfig); err != nil {
-				client.Close()
+				_ = client.Close()
 				return nil, err
 			}
 		}

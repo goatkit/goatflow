@@ -351,7 +351,7 @@ jobs:
           # Main application
           docker pull ${{ needs.build.outputs.image }}:${{ steps.version.outputs.VERSION_NUM }}
 
-          # Temporal runner
+          # Background runner (email, webhooks, scheduled jobs)
           docker pull ${{ needs.build-runner.outputs.image }}:${{ steps.version.outputs.VERSION_NUM }}
           ```
 
@@ -452,18 +452,36 @@ jobs:
           IMAGE: ${{ needs.build.outputs.image }}
           RUNNER_IMAGE: ${{ needs.build-runner.outputs.image }}
           VERSION: ${{ steps.version.outputs.VERSION_NUM }}
+          CHART: bundle/helm/goatflow-helm-chart-${{ needs.helm-chart.outputs.chart_version }}.tgz
         run: |
           mkdir -p bundle/images
+
+          # Third-party images the chart deploys (wait-for-db init container,
+          # MariaDB, PostgreSQL, Valkey), read from the packaged chart so the
+          # bundle cannot drift from its values.
+          DEPS=$(for DB in mysql postgresql; do
+                   helm template goatflow "$CHART" --set database.type=$DB
+                 done | sed -nE 's/^[[:space:]]+image:[[:space:]]*"?([^"[:space:]]+)"?[[:space:]]*$/\1/p' \
+                      | grep -v -e "^$IMAGE:" -e "^$RUNNER_IMAGE:" | sort -u)
+          [ -n "$DEPS" ] || { echo "no third-party images found in $CHART"; exit 1; }
+          echo "$DEPS" > bundle/images/third-party-images.txt
+          echo "Third-party images:"; cat bundle/images/third-party-images.txt
 
           # Pull and save images for each architecture
           for ARCH in amd64 arm64; do
             echo "Pulling $IMAGE:$VERSION for $ARCH..."
             docker pull --platform linux/$ARCH $IMAGE:$VERSION
-            docker save $IMAGE:$VERSION | gzip > bundle/images/goatflow-${{ steps.version.outputs.VERSION_NUM }}-${ARCH}.tar.gz
+            docker save $IMAGE:$VERSION | gzip > bundle/images/goatflow-${VERSION}-${ARCH}.tar.gz
 
             echo "Pulling $RUNNER_IMAGE:$VERSION for $ARCH..."
             docker pull --platform linux/$ARCH $RUNNER_IMAGE:$VERSION
-            docker save $RUNNER_IMAGE:$VERSION | gzip > bundle/images/goatflow-runner-${{ steps.version.outputs.VERSION_NUM }}-${ARCH}.tar.gz
+            docker save $RUNNER_IMAGE:$VERSION | gzip > bundle/images/goatflow-runner-${VERSION}-${ARCH}.tar.gz
+
+            for DEP in $DEPS; do
+              echo "Pulling $DEP for $ARCH..."
+              docker pull --platform linux/$ARCH "$DEP"
+              docker save "$DEP" | gzip > "bundle/images/$(echo "$DEP" | tr '/:' '__')-${ARCH}.tar.gz"
+            done
           done
 
           ls -lh bundle/images/
@@ -509,20 +527,22 @@ jobs:
           echo "Using $RUNTIME on $ARCH architecture"
           echo ""
 
-          # Load images
-          for IMAGE in goatflow goatflow-runner; do
-              FILE="$SCRIPT_DIR/images/${IMAGE}-${VERSION}-${ARCH}.tar.gz"
-              if [[ -f "$FILE" ]]; then
-                  echo "Loading $IMAGE..."
-                  gunzip -c "$FILE" | $RUNTIME load
-              else
-                  echo "Warning: $FILE not found, skipping"
-              fi
+          # Load every image saved for this architecture: GoatFlow, the
+          # runner and the third-party images the chart deploys
+          shopt -s nullglob
+          FILES=("$SCRIPT_DIR"/images/*-"${ARCH}".tar.gz)
+          if [[ ${#FILES[@]} -eq 0 ]]; then
+              echo "Error: no images for $ARCH in $SCRIPT_DIR/images"
+              exit 1
+          fi
+          for FILE in "${FILES[@]}"; do
+              echo "Loading $(basename "$FILE")..."
+              gunzip -c "$FILE" | $RUNTIME load
           done
 
           echo ""
           echo "Done. Loaded images:"
-          $RUNTIME images | grep -E "goatflow|REPOSITORY" | head -5
+          $RUNTIME images | grep -E "REPOSITORY|goatflow|busybox|mariadb|postgres|valkey"
           SCRIPT
 
           sed -i "s/__VERSION__/$VERSION/" bundle/load-images.sh
@@ -534,6 +554,7 @@ jobs:
           VERSION_NUM: ${{ steps.version.outputs.VERSION_NUM }}
           IMAGE: ${{ needs.build.outputs.image }}
           RUNNER_IMAGE: ${{ needs.build-runner.outputs.image }}
+          CHART_VERSION: ${{ needs.helm-chart.outputs.chart_version }}
         run: |
           cat > bundle/README.md << EOF
           # GoatFlow Air-Gapped Container Bundle
@@ -547,12 +568,12 @@ jobs:
           \`\`\`
           goatflow-airgap-container-bundle-${VERSION#v}/
           ├── images/
-          │   ├── goatflow-${VERSION#v}-amd64.tar.gz
-          │   ├── goatflow-${VERSION#v}-arm64.tar.gz
-          │   ├── goatflow-runner-${VERSION#v}-amd64.tar.gz
-          │   └── goatflow-runner-${VERSION#v}-arm64.tar.gz
+          │   ├── goatflow-${VERSION#v}-{amd64,arm64}.tar.gz
+          │   ├── goatflow-runner-${VERSION#v}-{amd64,arm64}.tar.gz
+          │   ├── busybox_*, mariadb_*, postgres_*, docker.io_valkey_valkey_*-{amd64,arm64}.tar.gz
+          │   └── third-party-images.txt   (the chart's wait-for-db, database and Valkey images)
           ├── helm/
-          │   └── goatflow-helm-chart-*.tgz
+          │   └── goatflow-helm-chart-${CHART_VERSION}.tgz
           ├── load-images.sh
           ├── SHA256SUMS
           └── README.md
@@ -562,7 +583,8 @@ jobs:
 
           ### 1. Load Container Images
 
-          The \`load-images.sh\` script auto-detects your container runtime and architecture:
+          The \`load-images.sh\` script auto-detects your container runtime and architecture
+          and loads every image for it:
 
           \`\`\`bash
           ./load-images.sh
@@ -573,36 +595,39 @@ jobs:
           ### 2. Manual Loading (Alternative)
 
           \`\`\`bash
-          # Docker
-          gunzip -c images/goatflow-${VERSION#v}-amd64.tar.gz | docker load
-          gunzip -c images/goatflow-runner-${VERSION#v}-amd64.tar.gz | docker load
-
-          # Podman
-          gunzip -c images/goatflow-${VERSION#v}-amd64.tar.gz | podman load
-
-          # containerd (k3s, etc.)
-          gunzip -c images/goatflow-${VERSION#v}-amd64.tar.gz | nerdctl load
+          # Docker (use podman or nerdctl the same way)
+          for f in images/*-amd64.tar.gz; do gunzip -c "\$f" | docker load; done
           \`\`\`
 
           ### 3. Push to Local Registry (Kubernetes)
 
           \`\`\`bash
-          # Tag and push to your local registry
-          docker tag $IMAGE:$VERSION_NUM my-registry.local/goatflow:$VERSION_NUM
-          docker push my-registry.local/goatflow:$VERSION_NUM
+          REGISTRY=my-registry.local
+          docker tag $IMAGE:$VERSION_NUM \$REGISTRY/goatflow:$VERSION_NUM
+          docker push \$REGISTRY/goatflow:$VERSION_NUM
+          docker tag $RUNNER_IMAGE:$VERSION_NUM \$REGISTRY/goatflow-runner:$VERSION_NUM
+          docker push \$REGISTRY/goatflow-runner:$VERSION_NUM
 
-          docker tag $RUNNER_IMAGE:$VERSION_NUM my-registry.local/goatflow-runner:$VERSION_NUM
-          docker push my-registry.local/goatflow-runner:$VERSION_NUM
+          # Third-party images keep their path: busybox:1.36 -> \$REGISTRY/busybox:1.36,
+          # docker.io/valkey/valkey:<tag> -> \$REGISTRY/valkey/valkey:<tag>
+          while read -r img; do
+            docker tag "\$img" "\$REGISTRY/\${img#docker.io/}"
+            docker push "\$REGISTRY/\${img#docker.io/}"
+          done < images/third-party-images.txt
           \`\`\`
 
           ### 4. Install with Helm
 
           \`\`\`bash
-          helm install goatflow helm/goatflow-helm-chart-*.tgz \\
-            --set image.repository=my-registry.local/goatflow \\
-            --set image.tag=$VERSION_NUM \\
-            --set runner.image.repository=my-registry.local/goatflow-runner \\
-            --set runner.image.tag=$VERSION_NUM
+          helm install goatflow helm/goatflow-helm-chart-${CHART_VERSION}.tgz \\
+            --set backend.image.repository=\$REGISTRY/goatflow \\
+            --set backend.image.tag=$VERSION_NUM \\
+            --set runner.image.repository=\$REGISTRY/goatflow-runner \\
+            --set runner.image.tag=$VERSION_NUM \\
+            --set waitForDatabase.image.repository=\$REGISTRY/busybox \\
+            --set database.mysql.image.repository=\$REGISTRY/mariadb \\
+            --set database.postgresql.image.repository=\$REGISTRY/postgres \\
+            --set valkey.image.registry=\$REGISTRY
           \`\`\`
 
           ## Verification

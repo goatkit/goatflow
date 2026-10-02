@@ -102,6 +102,26 @@ func TestService_PurgeExpired(t *testing.T) {
 	_ = fmt.Sprintf("purged %d", purged)
 }
 
+// Soft-deleting an entity that doesn't exist must fail instead of putting a
+// phantom entry into the recycle bin.
+func TestService_SoftDeleteMissingEntity(t *testing.T) {
+	db := getTestDB(t)
+	svc := NewServiceWithDB(db)
+	const missingID = int64(2147000123)
+	t.Cleanup(func() { cleanupTestDeletions(t, db, EntityQueue, missingID) })
+
+	if err := svc.SoftDelete(context.Background(), EntityQueue, missingID, 1, "test"); err == nil {
+		t.Fatal("expected error soft-deleting a queue that does not exist")
+	}
+	entry, err := svc.repo.GetRecycleBinEntry(EntityQueue, missingID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry != nil {
+		t.Fatalf("missing queue must not be added to the recycle bin, got %+v", entry)
+	}
+}
+
 func TestService_CascadeRegistration(t *testing.T) {
 	db := getTestDB(t)
 	svc := NewServiceWithDB(db)

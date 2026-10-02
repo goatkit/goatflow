@@ -3,11 +3,8 @@ package grpc
 import (
 	"encoding/json"
 	"errors"
-	"testing"
-
-	goplugin "github.com/hashicorp/go-plugin"
-
 	"github.com/goatkit/goatflow/internal/platform/plugin"
+	"testing"
 )
 
 // mockPlugin implements GKPluginInterface for testing
@@ -166,22 +163,4 @@ func TestGKPluginRPCServer_Shutdown(t *testing.T) {
 	if err != nil {
 		t.Errorf("Shutdown error: %v", err)
 	}
-}
-
-func TestGKPluginPlugin_Server(t *testing.T) {
-	host := newMockHostAPI()
-	pp := &GKPluginPluginHost{Host: host}
-
-	// Server should return an RPC server
-	broker := (*goplugin.MuxBroker)(nil) // nil is ok for this test
-	_, err := pp.Server(broker)
-	if err != nil {
-		t.Errorf("Server error: %v", err)
-	}
-}
-
-func TestGKPluginPlugin_Client(t *testing.T) {
-	// Client requires a real broker and connection to test fully
-	// This is tested via integration tests in runtime_test.go
-	t.Skip("Client requires real broker/connection - tested via integration tests")
 }

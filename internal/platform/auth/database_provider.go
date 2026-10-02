@@ -69,7 +69,7 @@ func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, passw
 		if !hasher.VerifyPassword(password, user.Password) {
 			return nil, ErrInvalidCredentials
 		}
-		p.upgradeHash(ctx, hasher, upgradeAgentHashSQL, int64(user.ID), password, user.Password)
+		p.upgradeHash(ctx, hasher, upgradeAgentHashSQL, int64(user.ID), password, user.Password) // #nosec G115 -- user.ID is a users.id auto-increment key read from the DB, far below MaxInt64
 	}
 
 	// Clear password from user object before returning
@@ -163,7 +163,7 @@ func (p *DatabaseAuthProvider) authenticateCustomerUser(ctx context.Context, has
 
 	// Convert to models.User format
 	user := &platformmodels.User{
-		ID:        uint(id),
+		ID:        uint(id), // #nosec G115 -- customer_user.id auto-increment key, never negative
 		Login:     login,
 		Email:     email,
 		FirstName: firstName,

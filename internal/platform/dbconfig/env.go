@@ -12,14 +12,41 @@ import (
 	"strings"
 )
 
-// IsPostgres reports whether DB_DRIVER selects PostgreSQL.
-func IsPostgres() bool {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("DB_DRIVER"))) {
+// Canonical driver names returned by NormalizeDriver and Driver.
+const (
+	DriverMySQL    = "mysql"
+	DriverMariaDB  = "mariadb"
+	DriverPostgres = "postgres"
+)
+
+// NormalizeDriver maps a configured driver name to its canonical form: every
+// PostgreSQL alias ("postgres", "postgresql", "pgsql") becomes "postgres";
+// other values are lower-cased and trimmed ("mysql", "mariadb", ...). An
+// empty value means MySQL. This is the only place driver aliases are known.
+func NormalizeDriver(raw string) string {
+	d := strings.ToLower(strings.TrimSpace(raw))
+	switch d {
+	case "":
+		return DriverMySQL
 	case "postgres", "postgresql", "pgsql":
-		return true
-	default:
-		return false
+		return DriverPostgres
 	}
+	return d
+}
+
+// Driver returns the active, normalized driver: TEST_DB_DRIVER when set (test
+// runs), else DB_DRIVER, else MySQL.
+func Driver() string {
+	raw := os.Getenv("TEST_DB_DRIVER")
+	if strings.TrimSpace(raw) == "" {
+		raw = os.Getenv("DB_DRIVER")
+	}
+	return NormalizeDriver(raw)
+}
+
+// IsPostgres reports whether the active driver is PostgreSQL.
+func IsPostgres() bool {
+	return Driver() == DriverPostgres
 }
 
 // Env returns the driver-scoped value of DB_<key>: DB_MYSQL_<key> when the

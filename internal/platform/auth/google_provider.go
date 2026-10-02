@@ -54,7 +54,7 @@ func (p *googleProvider) Authenticate(ctx context.Context, _ string, _ string) (
 
 // Register Google provider factory.
 func init() {
-	RegisterProvider("google", func(deps ProviderDependencies) (AuthProvider, error) {
+	_ = RegisterProvider("google", func(deps ProviderDependencies) (AuthProvider, error) {
 		return NewGoogleProvider(&GoogleConfig{}, deps), nil
 	})
 }

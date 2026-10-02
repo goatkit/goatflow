@@ -10,14 +10,13 @@ Access GoatFlow at:
 {{- else }}
 
 Get the application URL by running:
-  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "goatflow.name" . }},app.kubernetes.io/instance={{ .Release.Name }},app.kubernetes.io/component=frontend" -o jsonpath="{.items[0].metadata.name}")
-  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:80
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "goatflow.fullname" . }}-backend 8080:{{ .Values.backend.service.port }}
 
   Then open http://localhost:8080 in your browser.
 
 {{- end }}
 
-Database: {{ .Values.database.type }}
+Database: {{ .Values.database.type }} (DB_DRIVER={{ include "goatflow.database.driver" . }})
 {{- if .Values.database.external.enabled }}
   Host: {{ .Values.database.external.host }}
 {{- else }}
@@ -29,5 +28,23 @@ Database: {{ .Values.database.type }}
 Cache: Valkey
   Host: {{ include "goatflow.valkey.host" . }}
 {{- end }}
+{{- if .Values.runner.enabled }}
+
+Background runner: {{ include "goatflow.fullname" . }}-runner (email queue, webhook dispatch, session cleanup)
+{{- end }}
+{{- if not .Values.config.email.enabled }}
+
+Outgoing email is off (config.email.enabled=false): mail stays in the mail_queue table.
+{{- end }}
+{{- if not .Values.config.baseUrl }}
+
+config.baseUrl is empty: password-reset and customer sign-up emails are not sent.
+{{- end }}
+
+Log in as root@localhost. First-boot password:
+  kubectl get secret --namespace {{ .Release.Namespace }} {{ include "goatflow.appSecretName" . }} -o jsonpath='{.data.admin-password}' | base64 -d
+
+GOATFLOW_SECURE_KEY is stored in the Secret {{ include "goatflow.appSecretName" . }} (key secure-key).
+Back it up; stored webhook and plugin secrets cannot be decrypted without it.
 
 For more information, visit: https://goatflow.io/docs

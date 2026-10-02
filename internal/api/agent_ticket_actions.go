@@ -264,7 +264,7 @@ func handleAgentTicketReply(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Get user info
-		userID := c.GetUint("user_id")
+		userID := GetUserIDFromCtx(c, 0)
 		userName := c.GetString("user_name")
 		if userName == "" {
 			userName = "Agent"
@@ -464,7 +464,7 @@ func handleAgentTicketNote(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Get user info
-		userID := c.GetUint("user_id")
+		userID := GetUserIDFromCtx(c, 0)
 
 		// Sanitize HTML content if detected
 		contentType := "text/plain"
@@ -658,7 +658,7 @@ func handleAgentTicketNote(db *sql.DB) gin.HandlerFunc {
 					DB:        db,
 					Ticket:    ticket,
 					ArticleID: articleID,
-					UserID:    userID,
+					UserID:    GetUserIDFromCtxUint(c, 0),
 					Subject:   subject,
 					Body:      body,
 				})
@@ -698,7 +698,7 @@ func handleAgentTicketPhone(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Get user info
-		userID := c.GetUint("user_id")
+		userID := GetUserIDFromCtx(c, 0)
 
 		// Sanitize HTML content if detected
 		contentType := "text/plain"
@@ -817,7 +817,7 @@ func handleAgentTicketStatus(db *sql.DB) gin.HandlerFunc {
 			}
 		}
 
-		if err := ticketstate.ChangeTicketStatus(c.Request.Context(), db, ticketNum, int64(stateID), int64(c.GetUint("user_id")), untilTime); err != nil {
+		if err := ticketstate.ChangeTicketStatus(c.Request.Context(), db, ticketNum, int64(stateID), int64(GetUserIDFromCtx(c, 0)), untilTime); err != nil {
 			log.Printf("Error updating ticket status: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status"})
 			return

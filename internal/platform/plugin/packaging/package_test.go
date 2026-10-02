@@ -315,6 +315,52 @@ func TestExtractPluginPathTraversal(t *testing.T) {
 	}
 }
 
+func TestExtractPluginStripsDangerousModeBits(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	zipPath := filepath.Join(tmpDir, "modes.zip")
+	zipFile, err := os.Create(zipPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := zip.NewWriter(zipFile)
+
+	manifest := pkgplugin.PluginManifest{Name: "modes", Runtime: "template"}
+	mw, _ := w.Create("plugin.yaml")
+	mw.Write(createManifestYAML(t, manifest))
+
+	// Archive entry claims setuid + world-writable permissions.
+	hdr := &zip.FileHeader{Name: "assets/tool.sh", Method: zip.Deflate}
+	hdr.SetMode(os.ModeSetuid | 0o777)
+	fw, err := w.CreateHeader(hdr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fw.Write([]byte("#!/bin/sh\n"))
+
+	w.Close()
+	zipFile.Close()
+
+	pkg, err := ExtractPlugin(zipPath, filepath.Join(tmpDir, "extracted"))
+	if err != nil {
+		t.Fatalf("ExtractPlugin: %v", err)
+	}
+
+	info, err := os.Stat(pkg.Assets["tool.sh"])
+	if err != nil {
+		t.Fatalf("stat extracted asset: %v", err)
+	}
+	if info.Mode()&os.ModeSetuid != 0 {
+		t.Error("setuid bit survived extraction")
+	}
+	if perm := info.Mode().Perm(); perm&0o007 != 0 {
+		t.Errorf("world permission bits survived extraction: %o", perm)
+	}
+	if info.Mode().Perm()&0o100 == 0 {
+		t.Error("owner exec bit from archive should be preserved")
+	}
+}
+
 func TestValidatePackage(t *testing.T) {
 	tmpDir := t.TempDir()
 

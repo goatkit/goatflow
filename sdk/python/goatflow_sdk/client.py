@@ -276,11 +276,11 @@ class WebhooksService:
 
     async def get_delivery(self, delivery_id: int) -> WebhookDelivery:
         """One delivery including payload and response body."""
-        return _parse(WebhookDelivery, await self._http.get(f"/api/v1/webhooks/deliveries/{delivery_id}"))
+        return _parse(WebhookDelivery, await self._http.get(f"/api/v1/webhook-deliveries/{delivery_id}"))
 
     async def redeliver(self, delivery_id: int) -> WebhookDelivery:
         """Send a delivery's payload again and return the new delivery."""
-        data = await self._http.post(f"/api/v1/webhooks/deliveries/{delivery_id}/redeliver")
+        data = await self._http.post(f"/api/v1/webhook-deliveries/{delivery_id}/redeliver")
         return _parse(WebhookDelivery, data)
 
 

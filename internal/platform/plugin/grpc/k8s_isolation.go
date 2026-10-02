@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/goatkit/goatflow/pkg/plugin"
 )
@@ -230,9 +231,12 @@ func renderSidecars(sidecars []plugin.SidecarSpec) string {
 			if interval == "" {
 				interval = "10s"
 			}
-			// Parse interval to seconds for K8s periodSeconds.
-			periodSec := 10
-			fmt.Sscanf(interval, "%ds", &periodSec)
+			// Parse interval (compose duration, e.g. "10s", "1m30s") to whole
+			// seconds for K8s periodSeconds; fall back to 10s when unparsable.
+			periodSec := int64(10)
+			if d, err := time.ParseDuration(interval); err == nil && d >= time.Second {
+				periodSec = int64(d / time.Second)
+			}
 
 			b.WriteString("        readinessProbe:\n          exec:\n            command:\n")
 			for _, c := range sc.Healthcheck.Command {

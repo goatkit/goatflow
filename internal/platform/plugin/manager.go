@@ -38,6 +38,11 @@ type Manager struct {
 	// Per-plugin resource policies (name -> policy)
 	policies map[string]*ResourcePolicy
 
+	// declaredPolicy marks policies built from the plugin's own declarations
+	// (no admin-stored policy). They are rebuilt on every (re)load so a new
+	// plugin version's declarations take effect.
+	declaredPolicy map[string]bool
+
 	// Per-plugin sandboxed HostAPIs (name -> sandbox)
 	sandboxes map[string]*SandboxedHostAPI
 
@@ -115,11 +120,14 @@ func (m *Manager) Host() HostAPI {
 
 // --- Policy management ---
 
-// getOrCreatePolicy returns the existing policy for a plugin, or creates a default one.
-// If the plugin declares resources, they're used as the initial request (but
-// platform defaults still apply as the effective policy until admin approves).
+// getOrCreatePolicy returns the existing policy for a plugin, or creates one.
+// An admin-stored policy always wins. Without one, the plugin gets the
+// platform default limits and exactly the permissions it declares in its
+// ResourceRequest (the default permissions when it declares none). A
+// declared entity "hard_delete" is dropped: permanent deletion needs an
+// explicit admin grant in a stored policy.
 func (m *Manager) getOrCreatePolicy(name string, requested *ResourceRequest) *ResourcePolicy {
-	if p, ok := m.policies[name]; ok {
+	if p, ok := m.policies[name]; ok && !m.declaredPolicy[name] {
 		return p
 	}
 
@@ -130,13 +138,36 @@ func (m *Manager) getOrCreatePolicy(name string, requested *ResourceRequest) *Re
 		return policy
 	}
 
-	// Create default policy if not found in database
+	policy := policyFromDeclarations(name, requested)
+	m.policies[name] = &policy
+	if m.declaredPolicy == nil {
+		m.declaredPolicy = make(map[string]bool)
+	}
+	m.declaredPolicy[name] = true
+	return &policy
+}
+
+// policyFromDeclarations builds the effective policy for a plugin that has
+// no admin-stored policy: default limits plus the declared permissions.
+func policyFromDeclarations(name string, requested *ResourceRequest) ResourcePolicy {
 	policy := DefaultResourcePolicy(name)
-	if requested != nil && requested.MaxFileStorageBytes > 0 {
+	if requested == nil {
+		return policy
+	}
+	if requested.MaxFileStorageBytes > 0 {
 		policy.MaxFileStorageBytes = requested.MaxFileStorageBytes
 	}
-	m.policies[name] = &policy
-	return &policy
+	if len(requested.Permissions) > 0 {
+		perms := make([]Permission, 0, len(requested.Permissions))
+		for _, p := range requested.Permissions {
+			if p.Type == "entity" && p.Access == "hard_delete" {
+				continue
+			}
+			perms = append(perms, p)
+		}
+		policy.Permissions = perms
+	}
+	return policy
 }
 
 // SetPolicy sets the resource policy for a plugin (admin override).
@@ -146,6 +177,7 @@ func (m *Manager) SetPolicy(name string, policy ResourcePolicy) {
 	defer m.mu.Unlock()
 	policy.PluginName = name
 	m.policies[name] = &policy
+	delete(m.declaredPolicy, name)
 
 	// Persist policy to database
 	ctx := context.Background()
@@ -289,7 +321,7 @@ func (m *Manager) seedDefaultDisabled(ctx context.Context, name string) {
 	}
 
 	// Seed disabled state — fill all NOT NULL columns
-	m.host.DBExec(ctx, `
+	if _, err := m.host.DBExec(ctx, `
 		INSERT INTO sysconfig_default 
 		(name, description, navigation, is_invisible, is_readonly, is_required, is_valid, 
 		 has_configlevel, user_modification_possible, user_modification_active,
@@ -299,7 +331,9 @@ func (m *Manager) seedDefaultDisabled(ctx context.Context, name string) {
 		 0, 1, 0,
 		 '', '', '', '0',
 		 0, '', 1, 1, NOW(), NOW())
-	`, key, "Admin::Plugins")
+	`, key, "Admin::Plugins"); err != nil {
+		slog.Warn("failed to seed default-disabled plugin state", "plugin", name, "error", err)
+	}
 }
 
 // savePluginEnabled persists a plugin's enabled state to sysconfig_modified.
@@ -419,6 +453,7 @@ func (m *Manager) Unload(name string) {
 	delete(m.plugins, name)
 	delete(m.sandboxes, name)
 	delete(m.policies, name)
+	delete(m.declaredPolicy, name)
 }
 
 // applyManifestSideEffectsPreInit runs every side effect that the
@@ -783,6 +818,10 @@ func (e *PluginDisabledError) Error() string {
 
 // Call invokes a function on a specific plugin.
 // If lazy loading is enabled and the plugin isn't loaded yet, it will be loaded first.
+// args is the host-built call envelope: its _user_id (acting user), _org_id
+// (active organisation) and _lang (UI language) go into the call's context,
+// so the plugin's HostAPI callbacks made with that context run for the
+// caller (see withCallEnvelope).
 func (m *Manager) Call(ctx context.Context, pluginName, fn string, args []byte) ([]byte, error) {
 	m.mu.RLock()
 	rp, exists := m.plugins[pluginName]
@@ -812,11 +851,13 @@ func (m *Manager) Call(ctx context.Context, pluginName, fn string, args []byte) 
 		return nil, &PluginDisabledError{PluginName: pluginName}
 	}
 
-	return rp.plugin.Call(ctx, fn, args)
+	return rp.plugin.Call(withCallEnvelope(ctx, args), fn, args)
 }
 
 // CallFrom invokes a function on a plugin, with caller context for better errors.
 // If lazy loading is enabled and the plugin isn't loaded yet, it will be loaded first.
+// The args come from the calling plugin, so the acting user is not read from
+// them: the target runs for the caller's acting user carried in ctx.
 func (m *Manager) CallFrom(ctx context.Context, callerPlugin, targetPlugin, fn string, args []byte) ([]byte, error) {
 	m.mu.RLock()
 	rp, exists := m.plugins[targetPlugin]

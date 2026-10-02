@@ -219,14 +219,16 @@ func TestCreateNotificationEvent(t *testing.T) {
 		router := gin.New()
 		router.POST("/admin/api/notification-events", HandleCreateNotificationEvent)
 
+		name := fmt.Sprintf("TestCreateNotification%d", time.Now().UnixNano())
 		input := NotificationEventInput{
-			Name:     "TestCreateNotification",
+			Name:     name,
 			ValidID:  1,
 			Comments: "Created by test",
 			Events:   []string{"TicketCreate"},
-			Filters:  map[string][]string{},
+			Filters:  map[string][]string{"QueueID": {"1"}},
 			Recipients: map[string][]string{
-				"agent_owner": {"1"},
+				"Recipients":     {"AgentOwner"},
+				"RecipientEmail": {"leads@example.com"},
 			},
 			Messages: map[string]NotificationEventMessage{
 				"en": {
@@ -244,21 +246,23 @@ func TestCreateNotificationEvent(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		if w.Code == http.StatusOK {
-			var response map[string]interface{}
-			err := json.Unmarshal(w.Body.Bytes(), &response)
-			require.NoError(t, err)
-			assert.True(t, response["success"].(bool))
+		require.Equal(t, http.StatusCreated, w.Code, w.Body.String())
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+		assert.Equal(t, true, response["success"])
+		id := int(response["id"].(float64))
+		t.Cleanup(func() {
+			_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event_message WHERE notification_id = ?`), id)
+			_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event_item WHERE notification_id = ?`), id)
+			_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event WHERE id = ?`), id)
+		})
 
-			// Clean up created notification
-			if id, ok := response["id"].(float64); ok {
-				t.Cleanup(func() {
-					_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event_message WHERE notification_id = ?`), int64(id))
-					_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event_item WHERE notification_id = ?`), int64(id))
-					_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event WHERE id = ?`), int64(id))
-				})
-			}
-		}
+		stored, err := loadNotificationEventByID(req.Context(), db, id)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"TicketCreate"}, stored.Events)
+		assert.Equal(t, map[string][]string{"QueueID": {"1"}}, stored.Filters)
+		assert.Equal(t, input.Recipients, stored.Recipients)
+		assert.Equal(t, "Test Subject", stored.Messages["en"].Subject)
 	})
 
 	t.Run("POST /admin/api/notification-events validates required fields", func(t *testing.T) {
@@ -446,4 +450,85 @@ func TestNotificationEventTranslations(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The edit form's script starts from the stored rule; it must be a valid JS
+// object literal (it was a Go map dump, which broke the whole script) that
+// carries every stored item and cannot close the <script> element.
+func TestAdminNotificationEventEditEmbedsStoredRuleAsJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	setupTemplateRenderer(t)
+	id, ok := createTestNotificationEvent(t, fmt.Sprintf("TestEditJSON%d", time.Now().UnixNano()))
+	if !ok {
+		t.Skip("Database not available")
+	}
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	for _, item := range [][2]string{
+		{"Events", "NotificationNewTicket"}, {"ArticleSenderTypeID", "3"},
+		{"Recipients", "AgentMyServices"}, {"RecipientEmail", "leads@example.com"},
+	} {
+		_, err := db.Exec(database.ConvertPlaceholders(`INSERT INTO notification_event_item (notification_id, event_key, event_value)
+			VALUES (?, ?, ?)`), id, item[0], item[1])
+		require.NoError(t, err)
+	}
+	_, err = db.Exec(database.ConvertPlaceholders(`INSERT INTO notification_event_message (notification_id, subject, text, content_type, language)
+		VALUES (?, ?, ?, 'text/plain', 'de')`), id, "Neu: <OTRS_TICKET_Title>", "</script><b>x</b>")
+	require.NoError(t, err)
+
+	router := gin.New()
+	router.GET("/admin/notification-events/:id", HandleAdminNotificationEventEdit)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/admin/notification-events/"+itoa(id), nil))
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	body := w.Body.String()
+
+	const prefix = "const storedEvent = "
+	start := strings.Index(body, prefix)
+	require.GreaterOrEqual(t, start, 0, "edit form embeds the stored rule")
+	line := body[start+len(prefix):]
+	line = line[:strings.Index(line, ";\n")]
+	assert.NotContains(t, line, "</script>")
+	var stored NotificationEventFull
+	require.NoError(t, json.Unmarshal([]byte(line), &stored), "storedEvent is JSON: %s", line)
+	assert.Equal(t, []string{"NotificationNewTicket"}, stored.Events)
+	assert.Equal(t, []string{"3"}, stored.Filters["ArticleSenderTypeID"])
+	assert.Equal(t, []string{"AgentMyServices"}, stored.Recipients["Recipients"])
+	assert.Equal(t, "</script><b>x</b>", stored.Messages["de"].Text)
+	assert.Contains(t, body, `value="leads@example.com"`, "additional addresses are prefilled")
+	assert.Contains(t, body, `value="NotificationNewTicket"`, "imported OTRS event is offered and checked")
+}
+
+func TestNotificationEventRejectsInvalidRecipientEmail(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		t.Skip("Database not available")
+	}
+	name := fmt.Sprintf("TestBadEmail%d", time.Now().UnixNano())
+	id, ok := createTestNotificationEvent(t, name+"Existing")
+	require.True(t, ok)
+	router := gin.New()
+	router.POST("/admin/api/notification-events", HandleCreateNotificationEvent)
+	router.PUT("/admin/api/notification-events/:id", HandleUpdateNotificationEvent)
+
+	for _, tc := range []struct{ method, path string }{
+		{http.MethodPost, "/admin/api/notification-events"},
+		{http.MethodPut, "/admin/api/notification-events/" + itoa(id)},
+	} {
+		body, _ := json.Marshal(NotificationEventInput{
+			Name: name, ValidID: 1, Events: []string{"TicketCreate"},
+			Recipients: map[string][]string{"RecipientEmail": {"ok@example.com, not-an-address"}},
+		})
+		req := httptest.NewRequest(tc.method, tc.path, bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code, tc.method)
+		assert.Contains(t, w.Body.String(), "not-an-address", tc.method)
+	}
+	var n int
+	require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+		`SELECT COUNT(*) FROM notification_event WHERE name = ?`), name).Scan(&n))
+	assert.Zero(t, n, "nothing created, existing rule not renamed")
 }

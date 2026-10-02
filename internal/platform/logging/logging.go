@@ -14,14 +14,15 @@
 //  1. slog — a level-aware JSON or Text handler becomes the default logger
 //     (slog.SetDefault), so every slog.* call in the codebase is structured.
 //  2. stdlib log — legacy log.Printf call sites are routed through a
-//     level- and format-aware writer, so they respect the same LOG_FORMAT
-//     and LOG_OUTPUT. stdlib log carries no level metadata, so its lines are
-//     always emitted (tagged "info" in JSON mode); only slog lines are
-//     filtered by LOG_LEVEL.
+//     format-aware writer, so they respect the same LOG_FORMAT and
+//     LOG_OUTPUT. In JSON mode each line goes through the slog JSON handler,
+//     so both kinds of record share one layout ("level":"INFO" etc.).
+//     stdlib log carries no level metadata, so its lines are always
+//     emitted at INFO; only slog lines are filtered by LOG_LEVEL.
 package logging
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -55,8 +56,12 @@ func Configure() *slog.Logger {
 	if closeFn != nil {
 		registerCleanup(closeFn)
 	}
+	return install(format, level, out)
+}
 
-	// --- slog ---------------------------------------------------------
+// install makes a handler for format/level writing to out the slog default
+// and routes the stdlib log package to the same destination and format.
+func install(format string, level slog.Level, out io.Writer) *slog.Logger {
 	var h slog.Handler
 	opts := &slog.HandlerOptions{Level: level}
 	if format == FormatJSON {
@@ -67,43 +72,34 @@ func Configure() *slog.Logger {
 	logger := slog.New(h)
 	slog.SetDefault(logger)
 
-	// --- stdlib log ---------------------------------------------------
-	var stdFlags int
+	// slog.SetDefault already points the stdlib log package at the slog
+	// handler; set it explicitly so legacy lines skip the LOG_LEVEL filter
+	// (they have no level) and keep their classic text layout in text mode.
 	if format == FormatJSON {
-		// No stdlib prefix: the JSON writer adds time/level itself.
-		stdFlags = 0
+		// No stdlib prefix: the slog handler adds time/level itself.
+		log.SetOutput(&jsonStdlibWriter{h: h})
+		log.SetFlags(0)
 	} else {
-		stdFlags = log.LstdFlags
+		log.SetOutput(out)
+		log.SetFlags(log.LstdFlags)
 	}
-	var w io.Writer = out
-	if format == FormatJSON {
-		w = &jsonStdlibWriter{w: out}
-	}
-	log.SetOutput(w)
-	log.SetFlags(stdFlags)
-
 	return logger
 }
 
-// jsonStdlibWriter converts plain stdlib log lines into JSON records with
-// time + level so they parse alongside slog JSON output.
+// jsonStdlibWriter turns plain stdlib log lines into INFO records of the
+// slog JSON handler, so legacy and slog lines share one JSON layout.
 type jsonStdlibWriter struct {
-	w io.Writer
+	h slog.Handler
 }
 
 func (j *jsonStdlibWriter) Write(p []byte) (int, error) {
 	msg := strings.TrimRight(string(p), "\n")
-	rec := map[string]any{
-		"time":  time.Now().Format(time.RFC3339Nano),
-		"level": "info",
-		"msg":   msg,
+	// Handle (not Enabled+Handle): stdlib lines carry no level, so the
+	// LOG_LEVEL filter must not drop them.
+	if err := j.h.Handle(context.Background(), slog.NewRecord(time.Now(), slog.LevelInfo, msg, 0)); err != nil {
+		return 0, err
 	}
-	b, err := json.Marshal(rec)
-	if err != nil {
-		// Extremely unlikely; fall back to raw so we never lose the line.
-		return j.w.Write(p)
-	}
-	return j.w.Write(append(b, '\n'))
+	return len(p), nil
 }
 
 // closeHooks lets tests observe that the log file gets closed.
@@ -124,12 +120,15 @@ func RunCleanupHooks() {
 	closeHooks = nil
 }
 
+// openOutput resolves LOG_OUTPUT. When a log file cannot be opened the
+// logs go to stdout (the container log stream) and the reason is printed
+// once to stderr, so a bad path never stops the process.
 func openOutput(path string) (io.Writer, func()) {
-	if path == "" || strings.EqualFold(path, "stdout") || strings.EqualFold(path, "stderr") {
-		if strings.EqualFold(path, "stderr") {
-			return os.Stderr, nil
-		}
+	if path == "" || strings.EqualFold(path, "stdout") {
 		return os.Stdout, nil
+	}
+	if strings.EqualFold(path, "stderr") {
+		return os.Stderr, nil
 	}
 	// Relative paths are anchored to the working directory
 	// (e.g. ./logs/goatflow.log).
@@ -138,14 +137,15 @@ func openOutput(path string) (io.Writer, func()) {
 			path = filepath.Join(cwd, path)
 		}
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		// Can't create the log directory — fall back to stdout rather than
-		// crashing the process over logging.
-		return os.Stderr, nil
+	// The path is operator configuration (LOG_OUTPUT/LOG_FILE_PATH), never request input.
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil { // #nosec G703 -- operator-configured log path
+		fmt.Fprintf(os.Stderr, "logging: cannot create log directory for %q, writing logs to stdout: %v\n", path, err)
+		return os.Stdout, nil
 	}
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600) // #nosec G304 G703 -- operator-configured log path
 	if err != nil {
-		return os.Stderr, nil
+		fmt.Fprintf(os.Stderr, "logging: cannot open log file %q, writing logs to stdout: %v\n", path, err)
+		return os.Stdout, nil
 	}
 	return f, func() { _ = f.Close() }
 }
@@ -179,16 +179,8 @@ func ParseLevel(v string) slog.Level {
 	}
 }
 
-// TestConfigure is exported for unit tests that need a deterministic sink.
+// TestConfigure installs a deterministic sink for unit tests: slog and the
+// stdlib log package write to w exactly as Configure would.
 func TestConfigure(format string, level slog.Level, w io.Writer) *slog.Logger {
-	var h slog.Handler
-	opts := &slog.HandlerOptions{Level: level}
-	if format == FormatJSON {
-		h = slog.NewJSONHandler(w, opts)
-	} else {
-		h = slog.NewTextHandler(w, opts)
-	}
-	logger := slog.New(h)
-	slog.SetDefault(logger)
-	return logger
+	return install(format, level, w)
 }

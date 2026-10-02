@@ -15,7 +15,7 @@ const (
 	// Seed2FAAgentLogin / Seed2FAAgentPassword: agent in group users (rw) with
 	// 2FA disabled, dedicated to the TOTP flow so it never touches the admin.
 	Seed2FAAgentLogin    = "e2e-2fa-agent"
-	Seed2FAAgentPassword = "E2eTwoFactor!Seed1"
+	Seed2FAAgentPassword = "E2eTwoFactor!Seed1" // #nosec G101 -- throwaway e2e seed password, only in the test-integration seed SQL
 
 	// SeedDynamicFieldName is the Ticket Text dynamic field with id 1.
 	SeedDynamicFieldName = "TestTextField"
