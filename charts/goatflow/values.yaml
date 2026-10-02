@@ -97,7 +97,8 @@ backend:
 # =============================================================================
 # `goats -mode runner`: sends the outgoing email queue (mail_queue), delivers
 # webhooks and cleans up expired sessions. Gets the same database, secrets and
-# email settings as the backend; no Service. Keep one replica.
+# email settings as the backend; no Service. One replica at most: runner tasks
+# take no lock, so the chart refuses replicaCount above 1.
 runner:
   enabled: true
 
@@ -318,8 +319,11 @@ serviceAccount:
 # =============================================================================
 secrets:
   # Create the database and app Secrets. Values left empty are generated on
-  # install and kept on every upgrade. With create=false, provide the Secrets
-  # yourself (database.*.existingSecret and secrets.existingSecret).
+  # install and kept on every upgrade; the Secrets are also kept on helm
+  # uninstall (with the volumes), so a reinstall reuses them. With
+  # create=false, provide the Secrets yourself (database.*.existingSecret and
+  # secrets.existingSecret). Use those too with helm template / Argo CD: they
+  # cannot read back generated values.
   create: true
 
   # Existing app Secret (instead of <fullname>-app). Keys: app-secret-key

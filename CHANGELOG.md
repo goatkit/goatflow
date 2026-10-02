@@ -242,6 +242,12 @@ project adheres to [Semantic Versioning](https://semver.org/).
   unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **Helm: uninstalling and reinstalling the chart broke the installation.** The database and
+  storage volumes survived `helm uninstall` but the generated Secrets did not, so a reinstall made a
+  new database password (GoatFlow could no longer log in to its own database) and a new
+  `GOATFLOW_SECURE_KEY` (stored webhook and identity-provider secrets could no longer be decrypted).
+  The generated Secrets are now kept on uninstall like the volumes. The chart also refuses
+  `runner.replicaCount` above 1, because a second runner would send queued email twice.
 - **API requests no longer write the session's last-request time on every call.** Every
   JWT-authenticated request checks that its session still exists, and that check also updated the
   session row each time, adding an UPDATE and row-lock contention on busy tokens. The existence

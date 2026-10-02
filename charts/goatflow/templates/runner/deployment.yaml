@@ -1,5 +1,8 @@
 {{- if .Values.runner.enabled }}
 {{- /* Background runner: email queue, webhook dispatch, session cleanup. No Service. */ -}}
+{{- if gt (int .Values.runner.replicaCount) 1 }}
+{{- fail "runner.replicaCount must be 0 or 1: runner tasks take no lock across processes, so a second runner sends queued email twice" }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

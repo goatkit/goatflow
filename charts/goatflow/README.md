@@ -95,17 +95,26 @@ The chart has no separate customer-only instance (Docker Compose and TrueNAS can
 ### Secrets
 
 With `secrets.create: true` (default) the chart creates two Secrets. Values left empty are
-generated on install and kept on every `helm upgrade` (the chart reads the live Secret):
+generated on install and kept on every `helm upgrade` (the chart reads the live Secret). Both
+carry `helm.sh/resource-policy: keep`, so `helm uninstall` leaves them in place with the
+volumes, and a reinstall under the same release name and namespace reuses them:
 
 | Secret | Keys |
 |--------|------|
 | `<fullname>-database` | `mysql-root-password`, `mysql-user`, `mysql-password` (or `postgres-user`, `postgres-password`) |
 | `<fullname>-app` | `app-secret-key` (`JWT_SECRET`), `secure-key` (`GOATFLOW_SECURE_KEY`, 64 hex characters), `admin-password` (`GOATFLOW_ADMIN_PASSWORD`), `smtp-password` when `config.email.smtp.password` is set |
 
-`GOATFLOW_SECURE_KEY` encrypts stored webhook signing secrets and plugin secure settings. The
-backend and the runner read the same key. Back it up and never change it: stored secrets
-cannot be decrypted with a different key. To bring your own, set `secrets.secureKey`
-(`openssl rand -hex 32`) or point `secrets.existingSecret` at a Secret with the keys above.
+`GOATFLOW_SECURE_KEY` encrypts stored webhook signing secrets, identity provider secrets (OIDC
+client secret, SAML private key) and plugin secure settings. The backend and the runner read
+the same key. Back it up and never change it: stored secrets cannot be decrypted with a
+different key. To bring your own, set `secrets.secureKey` (`openssl rand -hex 32`) or point
+`secrets.existingSecret` at a Secret with the keys above.
+
+Generated values need a live cluster to read back: `helm template` (and GitOps tools that
+render with it, such as Argo CD) cannot look up the existing Secret and would generate new
+values on every render. In that setup set `secrets.existingSecret`,
+`database.mysql.existingSecret` / `database.postgresql.existingSecret`, or the values
+themselves.
 
 ### First login
 
@@ -432,6 +441,7 @@ extraResources:
 | `runner.enabled` | Deploy the background runner | `true` |
 | `runner.image.repository` | Runner image repository | `ghcr.io/goatkit/goatflow-runner` |
 | `runner.image.tag` | Runner image tag | `""` (uses appVersion) |
+| `runner.replicaCount` | Runner replicas: 0 or 1 (runner tasks take no lock; more is refused) | `1` |
 | `runner.extraEnv` | Extra environment variables for the runner | `[]` |
 | `metrics.enabled` | Prometheus listener + `<fullname>-metrics` Service | `false` |
 | `metrics.port` | Metrics port (`METRICS_PORT`) | `9090` |
@@ -519,10 +529,13 @@ change them.
 helm uninstall goatflow
 ```
 
-**Note**: PVCs are not deleted by default. To remove persistent data:
+**Note**: the PVCs and the generated Secrets (`<fullname>-database`, `<fullname>-app`) are kept
+(`helm.sh/resource-policy: keep`): a reinstall finds its data and the passwords and keys that
+open it. To remove everything, including the data:
 
 ```bash
 kubectl delete pvc -l app.kubernetes.io/instance=goatflow
+kubectl delete secret goatflow-database goatflow-app
 ```
 
 ## Troubleshooting
