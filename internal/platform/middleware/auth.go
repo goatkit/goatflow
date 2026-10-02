@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -36,6 +37,12 @@ func getMiddlewareSessionService() SessionChecker {
 // request that passes through several auth middlewares does one lookup.
 const sessionVerifiedKey = "session_verified"
 
+// sessionTouchInterval bounds how often a busy session's last-request time is
+// written. The existence check still runs on every request, so revocation is
+// immediate; only the idle clock is coarser, by at most this much against a
+// minimum idle timeout of constants.MinSessionIdleTimeout (300s).
+const sessionTouchInterval = time.Minute
+
 // VerifySession reports whether the session an access token names still
 // exists, touching its last-request time when it does. Every auth middleware
 // that accepts a JWT must call it: a killed session revokes the token
@@ -53,7 +60,9 @@ func VerifySession(c *gin.Context, claims *auth.Claims) bool {
 	if err != nil || session == nil {
 		return false
 	}
-	_ = sessionSvc.TouchSession(claims.SessionID)
+	if time.Since(session.LastRequest) >= sessionTouchInterval {
+		_ = sessionSvc.TouchSession(claims.SessionID)
+	}
 	c.Set(sessionVerifiedKey, claims.SessionID)
 	return true
 }

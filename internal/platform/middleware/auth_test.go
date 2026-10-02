@@ -16,22 +16,31 @@ import (
 )
 
 // fakeSessions is a SessionChecker over an in-memory set of live session ids.
-type fakeSessions struct{ live map[string]bool }
+// lastRequest optionally sets a session's last-request time; touches counts
+// TouchSession calls per id.
+type fakeSessions struct {
+	live        map[string]bool
+	lastRequest map[string]time.Time
+	touches     map[string]int
+}
 
 func (f *fakeSessions) GetSession(id string) (*platformmodels.Session, error) {
 	if f.live[id] {
-		return &platformmodels.Session{SessionID: id}, nil
+		return &platformmodels.Session{SessionID: id, LastRequest: f.lastRequest[id]}, nil
 	}
 	return nil, errors.New("session not found")
 }
 
-func (f *fakeSessions) TouchSession(string) error { return nil }
+func (f *fakeSessions) TouchSession(id string) error {
+	f.touches[id]++
+	return nil
+}
 
 // useFakeSessions installs an in-memory session checker for the test; the
 // returned set is what VerifySession consults.
 func useFakeSessions(t *testing.T, live ...string) *fakeSessions {
 	t.Helper()
-	f := &fakeSessions{live: map[string]bool{}}
+	f := &fakeSessions{live: map[string]bool{}, lastRequest: map[string]time.Time{}, touches: map[string]int{}}
 	for _, id := range live {
 		f.live[id] = true
 	}
@@ -556,4 +565,29 @@ func TestAuthMiddleware(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 		assert.Contains(t, w.Header().Get("Content-Type"), "application/json")
 	})
+}
+
+// TestVerifySessionThrottlesTouch: every request checks the session exists
+// (so a kill revokes at once), but the last-request write happens only once
+// the stored time is older than sessionTouchInterval.
+func TestVerifySessionThrottlesTouch(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	sessions := useFakeSessions(t, "fresh", "stale")
+	sessions.lastRequest["fresh"] = time.Now().Add(-sessionTouchInterval / 2)
+	sessions.lastRequest["stale"] = time.Now().Add(-2 * sessionTouchInterval)
+
+	verify := func(sid string) bool {
+		c, _ := gin.CreateTestContext(httptest.NewRecorder())
+		return VerifySession(c, &auth.Claims{SessionID: sid})
+	}
+
+	for range 3 {
+		assert.True(t, verify("fresh"))
+		assert.True(t, verify("stale"))
+	}
+	assert.Zero(t, sessions.touches["fresh"], "a recently touched session is not rewritten")
+	assert.Equal(t, 3, sessions.touches["stale"], "a session past the interval is touched")
+
+	delete(sessions.live, "fresh")
+	assert.False(t, verify("fresh"), "a killed session is refused on the very next request")
 }
