@@ -14,7 +14,7 @@ This guide gets you from `git clone` → running GoatFlow locally → creating y
 git clone https://github.com/goatkit/goatflow.git
 cd goatflow
 
-# Local dev (safe demo credentials; matches compose defaults)
+# Local dev settings (matches the compose defaults)
 cp .env.development .env
 
 make up-d
@@ -30,24 +30,40 @@ make down
 
 ## 2) Where to access things
 
-- Agent/admin UI (HTMX, served by the backend): `http://localhost:8080`
-- API (same origin): `http://localhost:8080/api`
-- Customer portal (React frontend): `http://localhost:8083/customer`
-- smtp4dev (email sandbox UI): `http://localhost:8025`
-- Adminer (DB UI, if enabled): `http://localhost:8090`
+| What | URL |
+|------|-----|
+| Agent and admin UI (HTMX, served by the backend) | `http://localhost:8080` |
+| API (same origin) | `http://localhost:8080/api` |
+| Customer portal (a second backend container with `CUSTOMER_FE_ONLY=true`) | `http://localhost:8083/customer` |
+| smtp4dev (email sandbox UI) | `http://localhost:8025` |
+| Adminer (database UI, compose profile `tools`) | `http://localhost:8090` |
+
+`make` picks host port 18080 for the backend when 8080 is already in use, unless you set
+`BACKEND_PORT`. The customer portal port is `CUSTOMER_FE_PORT` (default 8083).
 
 ## 3) Login
 
-- For local dev, demo credentials come from `.env.development` (copied into `.env`).
-- Demo mode (`app.demo_mode: true` or `GOATFLOW_APP_DEMO_MODE=true`) only stops non-admin users changing passwords/MFA and keeps preference changes session-only; it never logs anyone in automatically.
-- To use **real database users** instead of demo mode, run `make synthesize` to generate secure test credentials (see [DATABASE.md](../development/DATABASE.md#test-data-generation)).
+The seeded admin `root@localhost` starts **disabled** (`valid_id = 2`) with a random password
+nobody knows. `.env.development` does not change this. After the stack is up, run:
+
+```bash
+make reset-password
+```
+
+It asks for a username (`root@localhost`) and a new password, and enables the user.
+
+`make synthesize` writes a new `.env` with generated secrets when no `.env` exists yet (see
+[DATABASE.md](../development/DATABASE.md#generated-test-credentials)).
+
+Demo mode (`app.demo_mode: true` or `GOATFLOW_APP_DEMO_MODE=true`) only stops non-admin users
+changing passwords/MFA and keeps preference changes session-only. It never logs anyone in.
 
 ## 4) Create your first ticket (UI)
 
-1. Login as an agent/admin.
-2. Navigate to ticket creation.
+1. Log in as `root@localhost`.
+2. Go to `/ticket/new` (or the new ticket button on the ticket list, `/tickets`).
 3. Submit a new ticket.
-4. Confirm it redirects to the ticket zoom and the number is shown.
+4. Check that it opens the ticket zoom page and shows the ticket number.
 
 ## 5) Check the API is up
 
@@ -59,7 +75,8 @@ make api-call ENDPOINT=/health
 
 ## 6) Sanity checks
 
-Run the curated Go tests inside the toolbox container:
+Run the full test run (static checks, test stack, unit tests and browser tests, all in
+containers). See [TESTING.md](../development/TESTING.md) for smaller targets.
 
 ```bash
 make test

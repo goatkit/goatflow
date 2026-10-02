@@ -13,6 +13,14 @@ GoatFlow is container-first and primarily server-rendered (HTMX). This guide is 
 
 ## Helpful references
 
-- Architecture: [ARCHITECTURE.md](../ARCHITECTURE.md)
-- Contributing: [CONTRIBUTING.md](../../CONTRIBUTING.md)
-- MVP status: [docs/development/MVP.md](../development/MVP.md)
+| Topic | Document |
+|-------|----------|
+| Operating manual (build, test, deploy commands) | [docs/development/AGENT_GUIDE.md](../development/AGENT_GUIDE.md) |
+| Testing | [docs/development/TESTING.md](../development/TESTING.md) |
+| Database and migrations | [docs/development/DATABASE.md](../development/DATABASE.md) |
+| Writing SQL that works on MySQL and PostgreSQL | [docs/development/DATABASE_ACCESS_PATTERNS.md](../development/DATABASE_ACCESS_PATTERNS.md) |
+| Configuration | [docs/development/CONFIGURATION.md](../development/CONFIGURATION.md) |
+| Platform vs product packages | [docs/development/PLATFORM_BOUNDARY.md](../development/PLATFORM_BOUNDARY.md) |
+| Architecture | [ARCHITECTURE.md](../ARCHITECTURE.md) |
+| Contributing | [CONTRIBUTING.md](../../CONTRIBUTING.md) |
+| Roadmap and status | [ROADMAP.md](../../ROADMAP.md) |

@@ -1,261 +1,74 @@
-# Configuration Management
+# Configuration (for developers)
 
-GoatFlow uses a layered YAML configuration system with Viper for flexible configuration management with hot reload support.
+This page is about reading configuration in Go code. The list of settings, and which ones
+GoatFlow 0.10.0 really reads, is in [docs/configuration.md](../configuration.md). Use that page
+for any setting name or default.
 
-## Configuration Hierarchy
+## Where the code lives
 
-Configuration is loaded in the following order (later sources override earlier ones):
+| Path | What it is |
+|------|------------|
+| `internal/platform/config/config.go` | The `Config` struct, `Load`, `MustLoad`, `Get`, `LoadFromFile` |
+| `config/default.yaml` | Defaults for every key in `Config` (shipped with the image) |
+| `config/config.yaml.example` | Example local override file |
+| `config/Config.yaml` | The SysConfig registry (a different system, see [docs/configuration.md](../configuration.md)) |
+| `internal/platform/dbconfig/env.go` | Database connection variables (`DB_DRIVER`, `DB_MYSQL_*`, `DB_PGSQL_*`) |
 
-1. **default.yaml** - Base configuration with all default values (committed to repo)
-2. **config.yaml** - Local environment overrides (gitignored)
-3. **Environment variables** - Runtime overrides with `GOATFLOW_` prefix
-4. **Command-line flags** - Highest priority (when implemented)
+## How loading works
 
-## File Structure
+`config.Load(configDir)` runs once per process (it uses `sync.Once`):
 
-```
-config/
-├── default.yaml           # Default configuration (version controlled)
-├── config.yaml.example    # Example local override (version controlled)
-└── config.yaml           # Local overrides (gitignored)
-```
+1. Read `default.yaml` from `configDir`.
+2. Merge `config.yaml` from the same directory, if it exists.
+3. Apply environment variables with the prefix `GOATFLOW_`. The variable name is the YAML path in
+   upper case with `.` replaced by `_`. Example: `email.smtp.host` is `GOATFLOW_EMAIL_SMTP_HOST`.
+4. Unmarshal into `Config`.
+5. Watch the config files. When one changes, the whole `Config` is unmarshalled again and
+   swapped in. Code that kept an old `*Config` keeps the old values.
 
-## Configuration Files
+`cmd/goats/main.go` calls `config.Load` with `CONFIG_DIR`, or `/app/config` when `CONFIG_DIR`
+is unset. If loading fails it logs a warning and carries on.
 
-### default.yaml
-Contains all configuration options with sensible defaults. This file is committed to version control and serves as the single source of truth for available configuration options.
+There are no command-line flags for configuration.
 
-### config.yaml
-Local override file for development. Copy `config.yaml.example` to `config.yaml` and modify as needed. This file is gitignored to prevent committing secrets.
-
-## Environment Variables
-
-All configuration values can be overridden using environment variables with the `GOATFLOW_` prefix. Nested keys use underscores:
-
-```bash
-# Override app.debug
-export GOATFLOW_APP_DEBUG=false
-
-# Override database.host
-export GOATFLOW_DATABASE_HOST=postgres.example.com
-
-# Override auth.jwt.secret
-export GOATFLOW_AUTH_JWT_SECRET="production-secret-key"
-```
-
-## Hot Reload
-
-The configuration system supports hot reload without restarting the application:
-
-1. Edit `config.yaml` or `default.yaml`
-2. The application detects changes automatically
-3. New configuration is loaded and applied
-4. Console logs confirm successful reload
-
-**Note**: Some configuration changes (like port binding) require a restart.
-
-## Usage in Code
+## Using it in code
 
 ```go
-import "github.com/goatkit/goatflow/internal/config"
+import "github.com/goatkit/goatflow/internal/platform/config"
 
-// Load configuration on startup
-config.MustLoad("./config")
-
-// Get configuration anywhere in the app
-cfg := config.Get()
-
-// Access specific values
-dbHost := cfg.Database.Host
-jwtSecret := cfg.Auth.JWT.Secret
-isDebug := cfg.App.Debug
+cfg := config.Get() // nil until config.Load has run
+if cfg != nil && cfg.Features.Registration {
+    // ...
+}
 ```
 
-## Configuration Sections
+- `config.Get()` returns `nil` when `Load` has not run (for example in many unit tests). Check
+  for `nil`.
+- In tests, `config.LoadFromFile(path)` loads one YAML file. It does not apply `GOATFLOW_*`
+  variables and does not watch the file.
 
-### App Configuration
-- Application metadata (name, version)
-- Environment (development, staging, production)
-- Debug mode toggle
-- Timezone settings
+## Values that do not come from `Config`
 
-### Server Configuration
-- Host and port binding
-- Timeout settings
-- CORS configuration
+Some sections of `default.yaml` exist but are not used for the real value. Do not read these
+from `Config` in new code:
 
-### Database Configuration
-- PostgreSQL connection settings
-- Connection pool configuration
-- Migration settings
+| Value | Read it from | Not from |
+|-------|--------------|----------|
+| Database connection | `dbconfig.Env("HOST")` etc. (`DB_MYSQL_*` or `DB_PGSQL_*` by `DB_DRIVER`, then flat `DB_*`) | `cfg.Database.*` |
+| JWT signing key | `JWT_SECRET` (`internal/platform/shared/jwt_manager.go`; `cfg.Auth.JWT.Secret` is only a fallback) | `cfg.Auth.JWT.Secret` alone |
+| Listen port | `APP_PORT` | `cfg.Server.Port` |
+| Logging, metrics | `LOG_*`, `METRICS_*` variables | `cfg.Logging`, `cfg.Metrics` |
 
-### Valkey Configuration
-- Connection settings
-- Session storage configuration
-- Cache settings
+The full list is the "`default.yaml` sections" table in
+[docs/configuration.md](../configuration.md#defaultyaml-sections).
 
-### Authentication
-- JWT token configuration
-- Session settings
-- Password requirements
+## Adding a setting
 
-### Email Configuration
-- SMTP settings
-- Template paths
-- Queue configuration
+1. Add the field to the right struct in `internal/platform/config/config.go`, with a
+   `mapstructure:"..."` tag.
+2. Add the key and its default to `config/default.yaml`. A key that is missing from the YAML
+   files cannot be set with a `GOATFLOW_*` variable.
+3. Read it with `config.Get()` and handle `nil`.
+4. Document it in [docs/configuration.md](../configuration.md).
 
-### Storage Configuration
-- Article attachment backend: database (`db`, default) or OTRS-layout filesystem (`fs`);
-  see [Article Storage](../ARTICLE_STORAGE.md)
-- Attachment settings
-- File size limits
-
-### Ticket System
-- ID generation format
-- Default values
-- SLA settings
-- Notification preferences
-
-### Logging
-- Log levels and formats
-- Output destinations
-- File rotation settings
-
-### Metrics & Monitoring
-- Prometheus endpoint
-- OpenTelemetry configuration
-
-### Rate Limiting
-- Request limits
-- Burst settings
-- Path exclusions
-
-### Feature Flags
-- Enable/disable features
-- Integration toggles
-
-## Kubernetes/OpenShift Integration
-
-The YAML configuration integrates seamlessly with Kubernetes:
-
-### ConfigMaps
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: goatflow-config
-data:
-  config.yaml: |
-    app:
-      env: production
-      debug: false
-    database:
-      host: postgres-service
-```
-
-### Secrets
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: goatflow-secrets
-stringData:
-  GOATFLOW_DATABASE_PASSWORD: "secure-password"
-  GOATFLOW_AUTH_JWT_SECRET: "production-secret"
-```
-
-### Deployment
-```yaml
-spec:
-  containers:
-  - name: goatflow
-    envFrom:
-    - secretRef:
-        name: goatflow-secrets
-    volumeMounts:
-    - name: config
-      mountPath: /app/config
-  volumes:
-  - name: config
-    configMap:
-      name: goatflow-config
-```
-
-## Security Best Practices
-
-1. **Never commit secrets** - Use config.yaml or environment variables
-2. **Use strong JWT secrets** - Generate with `openssl rand -base64 32`
-3. **Rotate secrets regularly** - Especially in production
-4. **Limit config file permissions** - chmod 600 for config.yaml
-5. **Use Kubernetes Secrets** - For production deployments
-
-## Development Tips
-
-1. **Copy the example file**: `cp config/config.yaml.example config/config.yaml`
-2. **Use meaningful overrides**: Only override what you need
-3. **Test hot reload**: Edit config.yaml and watch the console
-4. **Environment-specific files**: Consider config.dev.yaml, config.prod.yaml patterns
-5. **Validate configuration**: Implement validation in config.go
-
-## Troubleshooting
-
-### Configuration not loading
-- Check file paths and permissions
-- Verify YAML syntax with a linter
-- Check console for error messages
-
-### Environment variables not working
-- Ensure `GOATFLOW_` prefix is used
-- Use underscores for nested keys
-- Check for typos in variable names
-
-### Hot reload not working
-- Verify fsnotify is working on your OS
-- Check file system events aren't blocked
-- Ensure config files aren't symlinks
-
-## Example: Local Development Setup
-
-```yaml
-# config/config.yaml (local overrides)
-app:
-  debug: true
-  env: development
-
-database:
-  host: localhost
-  password: localpassword
-
-valkey:
-  host: localhost
-
-email:
-  enabled: false  # Disable for local dev
-
-auth:
-  jwt:
-    secret: "local-development-secret-key"
-  session:
-    secure: false  # Allow HTTP in development
-
-logging:
-  level: debug
-  format: text  # Human-readable logs
-```
-
-## Example: Production Setup
-
-```bash
-# Production environment variables
-export GOATFLOW_APP_ENV=production
-export GOATFLOW_APP_DEBUG=false
-export GOATFLOW_DATABASE_HOST=postgres.internal
-export GOATFLOW_DATABASE_PASSWORD="${DB_PASSWORD}"
-export GOATFLOW_VALKEY_HOST=valkey.internal
-export GOATFLOW_VALKEY_PASSWORD="${VALKEY_PASSWORD}"
-export GOATFLOW_AUTH_JWT_SECRET="${JWT_SECRET}"
-export GOATFLOW_AUTH_SESSION_SECURE=true
-export GOATFLOW_EMAIL_SMTP_HOST=smtp.sendgrid.net
-export GOATFLOW_EMAIL_SMTP_USER=apikey
-export GOATFLOW_EMAIL_SMTP_PASSWORD="${SENDGRID_API_KEY}"
-```
+Never put a secret in `default.yaml`. Secrets come from environment variables.

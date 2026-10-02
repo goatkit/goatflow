@@ -244,10 +244,11 @@ Example field configuration:
   sortable: true
 ```
 
-### Schema Discovery (Coming Soon)
+### Schema Discovery
 ```bash
-# Generate YAML from existing table
-goatflow discover-schema --table=my_table > modules/my_table.yaml
+# Generate module YAML from existing tables (see SCHEMA_DISCOVERY.md)
+make schema-discovery
+make schema-table TABLE=ticket_priority
 ```
 
 ### Computed Fields

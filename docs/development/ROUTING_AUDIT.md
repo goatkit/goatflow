@@ -1,81 +1,56 @@
-# Routing Audit & YAML Enforcement
+# Routes: YAML Only
 
-Status: Active
+All HTTP routes are declared in YAML files under `routes/`. Go code does not register routes
+with a literal path.
 
-## Manifest & Drift Governance (Added)
-We generate `generated/routes-manifest.json` from YAML definitions. A baseline `generated/routes-manifest.baseline.json` is auto-created if missing. Drift detection now classifies:
-* Added routes (method|path newly present)
-* Removed routes
-* Changed attributes per stable key (handler, redirectTo, status, middleware set, websocket flag)
+## Rules
 
-Script: `scripts/check_routes_manifest.sh` (invoked by governance targets) prints structured sections. Update baseline after intentional changes.
+- Add a route to the right file in `routes/` (for example `routes/admin.yaml`,
+  `routes/api-v1-global.yaml`). Give it `path`, `method` and `handler` (or `handlers:` with one
+  handler per method).
+- The handler name must be registered in `internal/api/handler_registry.go`.
+- Files can hold several YAML documents separated by `---`. All of them are loaded
+  (`routing.ParseYAMLDocuments` in `internal/platform/routing/parse.go`).
+- Every route needs the right access middleware. `TestRouteAuthorizationMatrix`
+  (`internal/api/route_authz_test.go`) fails for a new route that anonymous users or the wrong
+  kind of user can reach. See [TESTING.md](TESTING.md).
 
-Machine-friendly diff: `cmd/routes-diff` outputs JSON object `{added, removed, changed}` for CI or tooling.
+## Checks
 
-The manifest is generated into the repository `generated/` directory; `generated/routes-manifest.json` is produced by the build/tests and compared against the committed baseline `generated/routes-manifest.baseline.json`.
+| Check | Command | Runs in |
+|-------|---------|---------|
+| No literal routes in `internal/api/htmx_routes.go` (`.GET("/...")` etc.) | `make validate-routes` (`scripts/validate_routes.sh`) | `make build` (pre-build) and the first step of `make test` |
+| Route manifest drift against a local baseline | `make routes-verify` | Run by hand |
 
-## Single Source of Truth
-All business and API routes must be defined in YAML route files under `routes/`.
-Code (`htmx_routes.go`) may only register:
-* `/health`
-* Static asset handlers (`/static/*`, favicon)
-* Error / fallback handlers
-* Bootstrapping middleware
+### Route manifest
 
-## Why
-* Eliminates drift between code + YAML
-* Enables multi-document YAML loading (already implemented)
-* Simplifies auditing + visualization (`generated/api-map/api-map.*`)
-* Makes versioning (`/api/v1/...`) consistent
+The manifest is a JSON list of every YAML route. The `generated/` folder is gitignored, so the
+manifest and its baseline exist only on your machine.
 
-## Enforcement Mechanisms
-1. **Pre-build hook** (`make build`):
-   * `generate-route-map` – static scan of templates & JS → `generated/api-map/api-map.json|dot|mmd`
-   * `validate-routes` – compares generated route manifest against baseline (`generated/routes-manifest.baseline.json`).
-2. **Route Manifest Baseline**: `generated/routes-manifest.baseline.json`
-   * Machine-readable JSON of all YAML-defined routes.
-   * Update with `make routes-baseline-update` after intentional changes.
-3. **Failure Condition**: Route drift (added/removed/changed routes vs baseline) fails the build unless baseline is updated.
+| Command | What it does |
+|---------|--------------|
+| `make routes-generate` | Writes `generated/routes-manifest.json` (`cmd/routes-manifest`). |
+| `make routes-verify` | Generates the manifest if missing, then runs `scripts/check_routes_manifest.sh`. The first run copies the manifest to `generated/routes-manifest.baseline.json`. Later runs print added, removed and changed routes. |
+| `make routes-baseline-update` | Copies the current manifest over the baseline. |
 
-## Migration Status: ✅ Complete
-All business routes have been migrated to YAML. The migration workflow below is preserved for reference.
+`go run ./cmd/routes-diff` prints the same difference as JSON (`added`, `removed`, `changed`).
 
-### Historical Migration Workflow
-1. Identify a hard-coded route in `htmx_routes.go`.
-2. Create / update appropriate YAML file in `routes/` with method, path, handler name.
-3. Remove the code registration.
-4. Run `make build`.
+## Generated files
 
-## Visual Map Generation
-Artifacts generated each build:
-* `generated/api-map/api-map.json` – canonical machine-friendly reference.
-* `generated/api-map/api-map.dot` / `generated/api-map/api-map.svg` – Graphviz graph (if graphviz available).
-* `generated/api-map/api-map.mmd` – Mermaid graph for docs.
+`make build` runs `pre-build`, which is:
 
-## Acceptable Code Routes
-If a non-business route must remain in code (e.g. temporary diagnostics), prefix it with `/dev/` and ensure it is protected; avoid adding it to baseline unless absolutely required.
+| Target | Output |
+|--------|--------|
+| `generate-route-map` | `scripts/api_map.sh` scans `templates/` and `static/js/` for `/api/` calls and writes `generated/api-map/api-map.json`, `.dot`, `.mmd`, and `.svg` when Graphviz is installed. |
+| `generate-route-docs` | `cmd/route-docs` writes `docs/api/api.md` from `routes/`. |
+| `validate-routes` | See [Checks](#checks). |
 
-## Adding New API Features
-1. Define route in YAML.
-2. Implement handler function referenced by `handler:` field.
-3. Add tests (HTMX / API as appropriate).
-4. Run `make build` (should pass without modifying baseline).
+`make api-docs` regenerates the OpenAPI and Swagger files in `generated-docs/` from `routes/`.
 
-## Common Failure Scenarios
-| Symptom | Cause | Resolution |
-|---------|-------|------------|
-| Build fails: new static routes detected | Added code route | Move to YAML or intentionally append to baseline (last resort) |
-| API returns 404 though handler exists | Multi-doc YAML second document not loaded (pre-fix) or path mismatch | Confirm file delim `---` and method/path spelling |
-| Route map empty | No `/api/` references in templates/JS or grep pattern too strict | Adjust `scripts/api_map.sh` regex |
+## Common problems
 
-## Scripts Overview
-* `scripts/api_map.sh` – scans `templates` + `static/js` for `/api/` references; builds graphs.
-* `scripts/validate_routes.sh` – audits `htmx_routes.go` for code-defined routes vs baseline.
-
-## Future Enhancements (Optional)
-* Live usage overlay (middleware + weight in DOT).
-* Unused YAML route detector (YAML-defined but never referenced in templates/JS nor hit in logs).
-* CI badge summarizing used vs total endpoints.
-
-## Owner
-Routing policy owned by platform / architecture maintainers. Changes require updating this document.
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `make validate-routes` fails | A route was added in `htmx_routes.go` | Move it to a file in `routes/`. |
+| A route answers 404 although the handler exists | Path or method spelled wrong in YAML, or the handler name is not in the handler registry | Check the YAML entry and `handler_registry.go`. |
+| `TestRouteAuthorizationMatrix` fails | The new route has no or the wrong access middleware | Add the middleware in the YAML group, or add a public route to `authzPublicRoutes`. |

@@ -97,7 +97,7 @@ computed_fields:
     lambda: |
       try {
         var result = db.queryRow(
-          "SELECT COUNT(*) as count FROM ticket WHERE priority_id = $1 AND state_id IN (1,2,3)", 
+          "SELECT COUNT(*) as count FROM ticket WHERE ticket_priority_id = ? AND ticket_state_id IN (1,2,3)",
           item.id.toString()
         );
         
@@ -148,7 +148,7 @@ computed_fields:
     lambda: |
       try {
         var activities = db.query(
-          "SELECT action, created_at FROM activity_log WHERE user_id = $1 ORDER BY created_at DESC LIMIT 3",
+          "SELECT name, create_time FROM ticket_history WHERE create_by = ? ORDER BY create_time DESC LIMIT 3",
           item.id.toString()
         );
         
@@ -156,7 +156,7 @@ computed_fields:
           var html = '<ul class="text-sm space-y-1">';
           for (var i = 0; i < activities.length; i++) {
             var activity = activities[i];
-            html += '<li class="text-gray-600">' + activity.action + '</li>';
+            html += '<li class="text-gray-600">' + activity.name + '</li>';
           }
           html += '</ul>';
           return html;
@@ -283,7 +283,7 @@ computed_fields:
 
 1. **Always handle errors**: Use try/catch blocks for database queries
 2. **Validate data**: Check if fields exist before using them
-3. **Use parameterized queries**: Always use $1, $2, etc. for query parameters
+3. **Use parameterized queries**: Always use `?` placeholders; `$1`-style placeholders are rejected
 4. **Keep it simple**: Complex logic should be in the backend
 5. **Test thoroughly**: Verify lambda functions work with various data
 6. **Optimize performance**: Avoid expensive operations in tight loops

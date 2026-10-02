@@ -104,10 +104,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
   contract as image attachments, so any surface (agent ticket grid, customer list, plugins) can
   render document previews with a plain `<img src="…/thumbnail">`. Rendering uses poppler's
   `pdftoppm` (`poppler-utils` added to the runtime image) via `internal/pdfthumb.RenderPage1`
-  (page 1 at ≤400 px wide, aspect-preserved); agent-side thumbnails share the existing
-  `storage/thumbs/<ticketID>/<attID>.png` cache. When `pdftoppm` is unavailable or a PDF can't
-  be rasterized, the endpoint keeps its previous redirect-to-raw fallback (customer portal:
-  400). First consumer: GoatCoach E5 deliverable exports.
+  (page 1, aspect-preserved). Thumbnails are validated by an ETag of the content instead of a
+  disk cache. When a PDF can't be rasterized (or `pdftoppm` is missing), the endpoint returns
+  a file-type placeholder image. First consumer: GoatCoach E5 deliverable exports.
 - **HostAPI `RenderMarkdownToPdf`.** Plugins render a markdown document to PDF bytes
   (`pkg/plugin/plugin.go`). The platform converts markdown to styled, sanitised HTML (goldmark +
   bluemonday) and prints it via a Browserless headless-Chromium sidecar (`internal/platform/plugin/
@@ -177,8 +176,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
   intentional. Failures are logged and never block startup
   (`cmd/goats/admin_bootstrap.go`). Verified end-to-end in a live Docker
   stack: fresh MariaDB → migrations → bootstrap → successful login with the
-  wizard password, and a second boot is a no-op. Note: requires the next
-  image build; the pinned `0.9.0` image predates it.
+  wizard password, and a second boot is a no-op.
 - **Real health probes.** `GET /health` now performs a 500 ms-timeout
   database ping and returns 503 when the DB is unreachable, instead of the
   previous static 200 that ignored the database. The Dockerfile `HEALTHCHECK`,
@@ -191,8 +189,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
   default registerer (previously a hardcoded three-line stub), which brings
   the Valkey cache metrics already recorded via `promauto`
   (`cache_hits_total`, `cache_misses_total`, `cache_errors_total`,
-  `cache_set_total`, `cache_delete_total`, `cache_latency_seconds`,
-  `cache_size`) into the scrape for the first time. New process gauges:
+  `cache_sets_total`, `cache_deletes_total`, `cache_operation_duration_seconds`,
+  `cache_size_bytes`) into the scrape for the first time. New process gauges:
   `goatflow_up` and `goatflow_process_start_time_seconds`
   (`internal/api/metrics.go`). When `METRICS_ENABLED=true` the server also
   exposes a dedicated listener on `METRICS_PORT` (default 9090) — the
@@ -512,7 +510,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
   (`000005_customer_portal_sysconfig`, `000024_saml_fields`, `000025_user_table_for_idp_routing`), so
   golang-migrate stopped with "duplicate migration file". The stale copies are removed (the
   customer-portal down migration moves to `000003`); the PostgreSQL and MySQL migration sets now have
-  the same 26 versions and `migrate up` runs 1–26 on an empty PostgreSQL database. The PostgreSQL
+  the same versions and `migrate up` runs them all on an empty PostgreSQL database. The PostgreSQL
   test DB init script (`docker/postgres/testdb/10-apply-migrations.sh`) applied only migration 1; it
   now applies every `*.up.sql` in order, like the MariaDB one.
 - **MariaDB test DB came up without most of its schema.** `docker/mariadb/testdb/10-apply-migrations.sh`
@@ -523,6 +521,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
   now restores `/tmp` to the standard mode 1777: the base image ships `/tmp` as
   `0755 root:root`, and apt's unprivileged `_apt` signature-verification user
   cannot create its queue/config temp files there.
+- **`make openapi-lint` and `make openapi-bundle` work again.** Both read `/spec/openapi.yaml`,
+  a path that is not mounted in the container, so they always failed. They now use
+  `api/openapi.yaml`, and the bundle (`api/openapi.bundle.yaml`) is regenerated.
 - **Browser e2e pages crashed after a handful of navigations.** In the `make test-e2e-go` /
   `test-e2e-playwright-go` container an authenticated page failed after 7-9 navigations with
   `net::ERR_INSUFFICIENT_RESOURCES` or "Page crashed". Playwright starts Chromium with
@@ -597,6 +598,16 @@ project adheres to [Semantic Versioning](https://semver.org/).
   never block a commit; it now does.
 
 ### Changed
+- **Documentation brought in line with 0.10.0.** ROADMAP, README, FEATURES, configuration,
+  security, architecture, deployment (Docker, Helm, TrueNAS), API, HostAPI, testing and
+  database docs were checked against the code; claims about features that do not exist (for
+  example Excel export, WebSocket, SMS MFA, sign-up approval/CAPTCHA, OTRS 5.x import) are gone.
+  New guides: `docs/WEBHOOKS.md`, `docs/REPORTS.md`, `docs/OBSERVABILITY.md` and
+  `docs/CUSTOMER_PORTAL.md`; the admin guide and agent manual are real guides now. The hand-written
+  `api/openapi.yaml` lists only routed endpoints. Obsolete status pages removed
+  (`docs/development/MVP.md`, `docs/MYSQL_COMPATIBILITY_ISSUES.md`,
+  `docs/development/TICKET_NUMBER_CONFIG.md`, `docs/development/TICKET_REOPEN_CONFIG.md`).
+  The Helm chart README lists the chart's known limitations for this release.
 - **Placeholder pages removed.** The `pages/under_construction.pongo2` template and its helper,
   the never-routed customer placeholder templates' `customer.placeholder_pages` i18n block, the
   unused customer KB keys (`customer.knowledge_base`, `customer.kb_search`,
@@ -649,12 +660,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
   catalog package is ready in `docs/truenas-app/` (PR in submission); until it
   merges, "Install via YAML" in the Apps Market works with the standard Compose stack.
 - **Helm chart version metadata fixed.** `charts/goatflow/Chart.yaml` declared
-  `appVersion: "1.0.0"` (no such app release exists — the real version is 0.9.0)
-  and had no `kubeVersion` gate; it now declares `appVersion: "0.9.0"` and
-  `kubeVersion: ">=1.25.0"`, matching the declared support floor in
-  `charts/goatflow/README.md` and the system requirements. The install-from-release
-  example in the chart README now points at `v0.9.0`. Chart `version` stays
-  `0.1.0` (bump when the first chart release ships). Verified with `helm lint`
+  `appVersion: "1.0.0"` (no such app release exists) and had no `kubeVersion` gate; it now
+  declares `appVersion: "0.10.0"` and `kubeVersion: ">=1.25.0"`, matching the declared support
+  floor in `charts/goatflow/README.md` and the system requirements. The install examples in the
+  chart README now point at `0.10.0`. Chart `version` in `Chart.yaml` stays `0.1.0`; on a release
+  tag, CI publishes the chart with the tag's version (e.g. `0.10.0`). Verified with `helm lint`
   (0 failures) and `helm template` render.
 - **Helm chart now references the real container image.** `charts/goatflow/values.yaml`
   defaulted `backend.image.repository` to `goatflow/backend` — an image that never existed
@@ -664,7 +674,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
   step (`.github/workflows/build.yml`) wrote `appVersion` with a `v` prefix (`v0.9.0`) while the
   container image tags have no `v` (`ghcr.io/goatkit/goatflow:0.9.0`), so the rendered image tag
   never matched a real tag; it now strips the `v`. Verified: `helm template` renders
-  `image: ghcr.io/goatkit/goatflow:0.9.0`, which is pullable from ghcr.
+  `image: ghcr.io/goatkit/goatflow:<appVersion>`, which is pullable from ghcr once that release is
+  published.
 - **Route YAML schema normalised and API-doc generation wired into the build.** All 33 route
   groups now declare the fully-qualified `apiVersion: goatflow.io/v1` (previously bare `v1`),
   and the multi-document route files were renamed to unambiguous names

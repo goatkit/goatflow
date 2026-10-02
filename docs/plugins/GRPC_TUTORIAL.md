@@ -199,7 +199,7 @@ GoatFlow discovers `plugin.yaml` during startup (or immediately via hot reload) 
 ```bash
 # Check plugin status
 curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8080/api/v1/plugins | jq '.[] | select(.Name=="my-plugin")'
+  http://localhost:8080/api/v1/plugins | jq '.plugins[] | select(.name=="my-plugin")'
 
 # Call your route
 curl -H "Authorization: Bearer $TOKEN" \

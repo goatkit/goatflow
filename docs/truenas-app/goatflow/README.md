@@ -9,7 +9,7 @@ plugin system, with MariaDB and Valkey bundled in the app.
 | Container | Role |
 | --- | --- |
 | `goatflow-backend` | Main server (agent UI + customer portal + REST API) |
-| `goatflow-runner` | Background task processor (email queue, session cleanup) |
+| `goatflow-runner` | Background task processor: sends queued outgoing email, delivers webhooks, cleans up expired sessions |
 | `goatflow-customer-fe` | Optional standalone customer portal (`Enable Customer Portal`) |
 | `mariadb` | Database (library-provided) |
 | `valkey` | Cache (library-provided, temporary volume) |
@@ -17,10 +17,9 @@ plugin system, with MariaDB and Valkey bundled in the app.
 
 ## Upgrade / rollback
 
-- **Upgrade**: bump the app version. Schema migrations run automatically and are
-  idempotent on every start (compose `./migrate up` + in-app `RunMigrations`), so no
-  manual migration step is needed. State (attachments, plugins, database) lives in
-  the ixVolumes and is untouched by image upgrades.
+- **Upgrade**: bump the app version. The backend applies any pending schema migrations
+  when it starts, so no manual migration step is needed. State (attachments, plugins,
+  database) lives in the ixVolumes and is untouched by image upgrades.
 - **Rollback**: downgrade the image tag. Down migrations exist (`*.down.sql`) but are
   untested — **take a database backup before upgrading** (TrueNAS → Applications →
   back up the app, or `mariadb-dump` the `mariadb` volume). A schema-only rollback
@@ -39,3 +38,8 @@ plugin system, with MariaDB and Valkey bundled in the app.
 - Ports: backend `30484` (default), optional customer portal `30483`.
 - Secrets (`JWT_SECRET`, `GOATFLOW_SECURE_KEY`, DB/SMTP passwords) are required and
   have no safe defaults.
+- **No public URL setting.** The template does not set `BASE_URL`, so password-reset
+  and customer sign-up emails are not sent (the "Forgot password" link is shown,
+  because `features.lost_password` is on by default, but no email goes out). To send
+  them, add `BASE_URL` (for example `https://helpdesk.example.com`) under
+  Additional Environment Variables.

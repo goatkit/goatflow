@@ -15,18 +15,19 @@ This document lists the canonical division of packages between the GoatKit platf
 - customfields
 - data
 - database
+- dbconfig
 - deletion
 - email
 - httpcookie
 - i18n
 - ldap
+- logging
 - lookups
 - marketplace
 - mcp
 - middleware
 - models
 - notifications
-- oauth2
 - organisation
 - plugin
 - pluginui
@@ -41,6 +42,7 @@ This document lists the canonical division of packages between the GoatKit platf
 - shared
 - swconfig
 - sysconfig
+- ticketstate
 - template
 - utils
 - version
@@ -58,6 +60,7 @@ This document lists the canonical division of packages between the GoatKit platf
 - mailaccountmeta
 - mailqueue
 - models
+- pdfthumb
 - repository
 - runner
 - selfservice

@@ -1,6 +1,9 @@
 # GoatFlow Helm Chart
 
-Helm chart for deploying GoatFlow (Go Ticket Request System) on Kubernetes.
+Helm chart for deploying GoatFlow on Kubernetes.
+
+> **Read [Known limitations (0.10.0 chart)](#known-limitations-0100-chart) before you install.**
+> A default install of this chart does not give a working GoatFlow yet.
 
 ## Prerequisites
 
@@ -13,29 +16,35 @@ Helm chart for deploying GoatFlow (Go Ticket Request System) on Kubernetes.
 
 ### Install from OCI Registry
 
-The chart is published with tags that mirror the container image tags:
+CI publishes the chart to `oci://ghcr.io/goatkit/charts/goatflow`
+(`.github/workflows/build.yml`):
+
+| Chart version | Published when | Deploys image tag |
+|---------------|----------------|-------------------|
+| `0.10.0` | the `v0.10.0` release tag is pushed | `0.10.0` |
+| `0.1.0-main` | a commit is pushed to `main` | `main` |
 
 ```bash
-# Install latest release
-helm install goatflow oci://ghcr.io/goatkit/charts/goatflow --version latest
+# Release (recommended)
+helm install goatflow oci://ghcr.io/goatkit/charts/goatflow --version 0.10.0
 
-# Install specific version (deploys matching container images)
-helm install goatflow oci://ghcr.io/goatkit/charts/goatflow --version 0.9.0
-
-# Install from main branch (latest development)
+# Latest build of the main branch
 helm install goatflow oci://ghcr.io/goatkit/charts/goatflow --version 0.1.0-main
-
-# Install from dev branch
-helm install goatflow oci://ghcr.io/goatkit/charts/goatflow --version 0.1.0-dev
 ```
 
-**Tag Mirroring:** The chart's `appVersion` matches the tag, so `--version 0.9.0` automatically deploys the `:0.9.0` container images.
+The chart's `appVersion` is set to the image tag, so `--version 0.10.0` deploys
+`ghcr.io/goatkit/goatflow:0.10.0`. Helm chart versions must be semantic versions, so there is
+no `latest` chart version.
 
 ### Install from GitHub Release
 
+Each release has the packaged chart attached:
+
 ```bash
-# Download and install from release assets
-helm install goatflow https://github.com/goatkit/goatflow/releases/download/v0.9.0/goatflow-helm-chart-0.9.0.tgz
+helm install goatflow https://github.com/goatkit/goatflow/releases/download/v0.10.0/goatflow-helm-chart-0.10.0.tgz
+
+# Always the newest release
+curl -LO https://github.com/goatkit/goatflow/releases/latest/download/goatflow-helm-chart-latest.tgz
 ```
 
 ### Install from Cloned Repository
@@ -71,11 +80,70 @@ make helm ARGS="template goatflow charts/goatflow"
 make helm ARGS="dependency update charts/goatflow"
 ```
 
+## What the Chart Deploys
+
+| Component | Image | Notes |
+|-----------|-------|-------|
+| Backend Deployment | `ghcr.io/goatkit/goatflow` | Agent UI, customer portal, REST API. Runs migrations at start. Also runs the in-process scheduler (email polling, escalation checks, pending reminders, auto close, GenericAgent jobs). Probes use `GET /health`, which pings the database. |
+| Frontend Deployment | `nginx:1.25-alpine` | The Ingress sends traffic here. It is not a separate customer portal. |
+| Database StatefulSet | `mariadb:11` or `postgres:16-alpine` | Skipped when `database.external.enabled` is true. |
+| Valkey | valkey-helm subchart | Redis-compatible cache. |
+| Ingress | — | Optional (`ingress.enabled`). |
+
+## Known limitations (0.10.0 chart)
+
+The 0.10.0 chart does not yet match the Docker Compose stack (`deploy/docker-compose.yml`) or
+the TrueNAS app. Each row below was checked against `charts/goatflow/templates/` and the
+GoatFlow code.
+
+### What does not work
+
+| Limitation | What happens | Work-around |
+|------------|--------------|-------------|
+| **No background runner** | The runner (`./goats -mode runner`, image `ghcr.io/goatkit/goatflow-runner`) is the only process that runs the email queue, webhook dispatch and session cleanup tasks. On a Helm install no outgoing email is sent (customer ticket emails, password-reset and sign-up links stay in the `mail_queue` table), webhooks are never delivered, and expired sessions are not cleaned up. | Run a runner Deployment yourself, for example through `extraResources`. Give it the same database settings, `JWT_SECRET` and `GOATFLOW_SECURE_KEY` as the backend, plus SMTP settings (`GOATFLOW_EMAIL_SMTP_HOST`, `GOATFLOW_EMAIL_SMTP_PORT`, `GOATFLOW_EMAIL_SMTP_USER`, `GOATFLOW_EMAIL_SMTP_PASSWORD`, `GOATFLOW_EMAIL_FROM`). |
+| **Ingress does not reach the UI** | The Ingress sends every path to the frontend nginx. That nginx proxies only `/api/` and `/ws` to the backend and answers everything else from its own files. `/login`, `/customer`, `/admin` and the other pages never reach the backend. nginx also answers `/health` itself with a fixed 200. | Set `ingress.enabled: false` and create your own Ingress to the Service `<fullname>-backend`, port 8080 (for example through `extraResources`). |
+| **`GOATFLOW_SECURE_KEY` is not set** | Each backend pod makes its own random key at start and writes it to the log. Encrypted values (plugin secure settings, webhook signing secrets) cannot be read after a restart or by another replica. | Create a Secret with 64 hex characters (`openssl rand -hex 32`) and set `GOATFLOW_SECURE_KEY` from it in `backend.extraEnv`. Never change it later. |
+| **Environment names GoatFlow does not read** | The backend gets `DB_TYPE` (GoatFlow reads `DB_DRIVER`, default `mysql`), `APP_SECRET` (GoatFlow reads `JWT_SECRET`), `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` and `CACHE_ENABLED` (GoatFlow reads `GOATFLOW_VALKEY_HOST`, `GOATFLOW_VALKEY_PORT`, `GOATFLOW_VALKEY_PASSWORD`), `SERVER_PORT` (GoatFlow reads `APP_PORT`, default 8080) and `SESSION_TIMEOUT` (not read). Results: PostgreSQL installs try to connect as MySQL; login tokens are signed with the placeholder secret from `config/default.yaml`; the cache is turned off. | Set `DB_DRIVER`, `JWT_SECRET` and the `GOATFLOW_VALKEY_*` variables in `backend.extraEnv` (example below). |
+| **`backend-config` ConfigMap is not mounted** | The chart writes `STORAGE_TYPE`, `STORAGE_PATH` and the values above into the `<fullname>-backend-config` ConfigMap, but the Deployment does not load it. `config.storage.*` has no effect; attachments stay in the database (`db`). `config.email.*` is not used anywhere. | Keep `db` storage. Email needs the runner (first row). |
+| **Bundled MariaDB never becomes ready** | The MariaDB probes run `mysqladmin`, which the `mariadb:11` image does not include. | Use PostgreSQL (with `DB_DRIVER`) or an external database. |
+| **Valkey password Secret is missing** | With `valkey.enabled: true` the backend reads `REDIS_PASSWORD` from the Secret `<release>-valkey`, key `valkey-password`. The Valkey subchart does not create that Secret, so the backend pod cannot start. | Create that Secret yourself (the password is the one in `valkey.auth.aclConfig`, default `changeme`), or set `valkey.auth.existingSecret`. |
+| **Secrets change on upgrade** | Database and app secrets left empty in values are generated again on every `helm upgrade`. The database volume keeps the old password, so the backend can no longer log in. | Set `database.*.password` and `secrets.appSecretKey`, or use existing Secrets with `secrets.create: false`. |
+| **No customer-only instance** | Docker Compose and TrueNAS can run a second, customer-only instance (`CUSTOMER_FE_ONLY=true`). The chart does not. | The backend serves the customer portal at `/customer`. |
+| **Metrics listener off** | `/metrics` on the app port needs an admin login. The unauthenticated listener on `METRICS_PORT` (default 9090) only starts with `METRICS_ENABLED=true`. | Set `METRICS_ENABLED=true` in `backend.extraEnv` before using the scrape annotations below. |
+
+### Example work-around values
+
+For a release named `goatflow` (the chart's app Secret is then `goatflow-app` and the Valkey
+Service is `goatflow-valkey`):
+
+```yaml
+ingress:
+  enabled: false            # add your own Ingress to goatflow-backend:8080
+backend:
+  extraEnv:
+    - name: JWT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: goatflow-app
+          key: app-secret-key
+    - name: GOATFLOW_SECURE_KEY
+      valueFrom:
+        secretKeyRef:
+          name: goatflow-secure-key   # create this Secret yourself
+          key: key
+    - name: GOATFLOW_VALKEY_HOST
+      value: goatflow-valkey
+    - name: GOATFLOW_VALKEY_PASSWORD
+      value: changeme                 # match valkey.auth.aclConfig
+    - name: DB_DRIVER                 # PostgreSQL only
+      value: postgres
+```
+
 ## Configuration
 
 ### Database Selection
 
-The chart supports MySQL (default) or PostgreSQL:
+The chart supports MySQL/MariaDB (default) or PostgreSQL:
 
 ```yaml
 # MySQL (default)
@@ -96,8 +164,30 @@ database:
     host: "your-rds-endpoint.amazonaws.com"
     port: "3306"
     database: "goatflow"
-    existingSecret: "goatflow-db-credentials"  # Secret with keys: username, password
+    existingSecret: "goatflow-db-credentials"
 ```
+
+The backend reads the user name and password from `existingSecret` with these keys:
+
+| `database.type` | User key | Password key |
+|-----------------|----------|--------------|
+| `mysql` | `mysql-user` | `mysql-password` |
+| `postgresql` | `postgres-user` | `postgres-password` |
+
+### Public URL and Attachment Storage
+
+```yaml
+config:
+  # BASE_URL. Password-reset and customer sign-up emails link to it.
+  # While it is empty, those emails are not sent.
+  baseUrl: "https://helpdesk.example.com"
+  storage:
+    type: db            # db (attachments in the database) or fs
+    path: /data/storage
+```
+
+`config.storage.type: fs` needs a persistent volume at `<path>/var/article`, which the chart does
+not create. Keep `db` unless you add one. See [docs/ARTICLE_STORAGE.md](../../docs/ARTICLE_STORAGE.md).
 
 ### Valkey (Redis-compatible Cache)
 
@@ -273,23 +363,6 @@ extraResources:
         matchLabels:
           app.kubernetes.io/name: goatflow
           app.kubernetes.io/component: backend
-
-  # CronJob for scheduled tasks
-  - apiVersion: batch/v1
-    kind: CronJob
-    metadata:
-      name: "{{ .Release.Name }}-cleanup"
-    spec:
-      schedule: "0 2 * * *"
-      jobTemplate:
-        spec:
-          template:
-            spec:
-              containers:
-                - name: cleanup
-                  image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag | default .Chart.AppVersion }}"
-                  command: ["/app/goatflow", "cleanup"]
-              restartPolicy: OnFailure
 ```
 
 **Note:** Strings containing `{{` must be quoted in YAML.
@@ -311,15 +384,39 @@ extraResources:
 | `frontend.replicaCount` | Number of frontend replicas | `2` |
 | `frontend.podAnnotations` | Annotations for frontend pods | `{}` |
 | `frontend.serviceAnnotations` | Annotations for frontend service | `{}` |
-| `database.type` | Database type: mysql or postgresql | `mysql` |
+| `database.type` | Database type: `mysql` or `postgresql` | `mysql` |
 | `database.external.enabled` | Use external database | `false` |
+| `database.external.existingSecret` | Secret with the database user and password (keys in [Using External Database](#using-external-database)) | `""` |
 | `serviceAccount.annotations` | ServiceAccount annotations (IRSA, WI) | `{}` |
 | `valkey.enabled` | Deploy Valkey subchart | `true` |
 | `ingress.enabled` | Enable ingress | `false` |
-| `config.logLevel` | Application log level | `info` |
+| `secrets.create` | Create database and app secrets from values | `true` |
+| `config.logLevel` | Application log level (`LOG_LEVEL`) | `info` |
+| `config.baseUrl` | Public URL (`BASE_URL`); reset and sign-up emails are not sent while empty | `""` |
+| `config.session.lifetime` | Session lifetime in seconds (`SESSION_TIMEOUT`) | `28800` |
+| `config.storage.type` | Attachment storage: `db` or `fs` (`STORAGE_TYPE`) | `db` |
+| `config.storage.path` | Storage root for `fs` (`STORAGE_PATH`) | `/data/storage` |
 | `config.authProviders` | Auth provider order (`AUTH_PROVIDERS`), e.g. `["ldap", "database"]` | `[]` (Config.yaml) |
-| `config.ldap.enabled` | Enable LDAP agent login (see `config.ldap.*` in `values.yaml`) | `false` |
-| `config.ldap.existingSecret` | Secret holding the LDAP bind password | `""` |
+| `config.ldap.enabled` | Enable LDAP agent login (`LDAP_ENABLED`) | `false` |
+| `config.ldap.type` | `openldap`, `389ds` or `active_directory` (`LDAP_TYPE`) | `""` |
+| `config.ldap.host` / `port` | Directory server (`LDAP_HOST`, `LDAP_PORT`); host is required when LDAP is enabled | `""` |
+| `config.ldap.useTLS` / `useSSL` | StartTLS or LDAPS (`LDAP_USE_TLS`, `LDAP_USE_SSL`) | `true` / `false` |
+| `config.ldap.caCert` | PEM CA certificate, mounted and passed as `LDAP_TLS_CA_FILE` | `""` |
+| `config.ldap.skipTLSVerify` | Testing only: skip server certificate check | `false` |
+| `config.ldap.timeout` | Seconds per connect or LDAP operation (`LDAP_TIMEOUT`) | `""` |
+| `config.ldap.bindDN` | Service account for searches; empty = anonymous search | `""` |
+| `config.ldap.bindPassword` | Bind password; the chart creates a Secret when `secrets.create` is true | `""` |
+| `config.ldap.existingSecret` / `existingSecretKey` | Existing Secret and key holding the bind password | `""` / `ldap-bind-password` |
+| `config.ldap.baseDN` | Search base (`LDAP_BASE_DN`); required when LDAP is enabled | `""` |
+| `config.ldap.userBaseDN` / `userFilter` | User search base and filter (filter has exactly one `%s`) | `""` |
+| `config.ldap.isActiveDirectory` / `domain` | Active Directory mode and `<login>@<domain>` matching | `""` |
+| `config.ldap.*Attribute` | Attribute names: `usernameAttribute`, `emailAttribute`, `firstNameAttribute`, `lastNameAttribute`, `displayNameAttribute`, `groupAttribute` | `""` |
+| `config.ldap.groupBaseDN` / `groupFilter` / `groupMemberValue` | Group search (`groupMemberValue`: `dn` or `username`) | `""` |
+| `config.ldap.agentGroups` | Only members of these groups (or `adminGroups`) may log in | `[]` |
+| `config.ldap.adminGroups` | GoatFlow `admin` group membership follows these groups | `[]` |
+| `config.ldap.autoCreateUsers` / `autoUpdateUsers` | Create the agent on first login / sync name and email on each login | `false` |
+| `config.ldap.initialGroups` | GoatFlow groups for auto-created agents | `[]` |
+| `backend.extraEnv` | Extra environment variables for the backend container | `[]` |
 | `extraResources` | Additional K8s resources (templated) | `[]` |
 
 See `values.yaml` for full configuration options.
@@ -345,7 +442,9 @@ The chart does not include NetworkPolicies by default. Add them based on your cl
 
 ### Pod Security
 
-All pods run as non-root (UID 1000) by default.
+The backend runs as UID 1000, the nginx frontend as UID 101 and MariaDB as UID 999, all with
+`runAsNonRoot: true`. The PostgreSQL StatefulSet sets only `fsGroup: 999` and runs as the image's
+default user.
 
 ## Upgrading
 

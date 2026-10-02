@@ -4,7 +4,7 @@
 
 ## Overview
 
-GoatFlow uses Temporal for orchestrating complex business processes, particularly around ticket lifecycle management, SLA enforcement, and automated notifications. Temporal provides durable execution, automatic retries, and visibility into long-running processes.
+In this design, GoatFlow would use Temporal to orchestrate business processes such as ticket lifecycle management, SLA enforcement and notifications. None of the code below exists in GoatFlow today.
 
 ## Architecture
 

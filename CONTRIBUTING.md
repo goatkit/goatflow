@@ -10,19 +10,20 @@ Contributions to GoatFlow are welcome.
 - **Development guide**: [docs/development/AGENT_GUIDE.md](docs/development/AGENT_GUIDE.md) - the canonical operating manual: container-first workflow, build, test, and deploy commands
 - **Pull requests**: [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md)
 - **Reporting issues**: [.github/ISSUE_TEMPLATE/](.github/ISSUE_TEMPLATE/)
-- **Testing**: `make test` (container-first - see the development guide)
+- **Testing**: [docs/development/TESTING.md](docs/development/TESTING.md). CI runs `make lint-platform` and `make test`, all in containers.
 - **Contributor License Agreement**: [CLA.md](CLA.md)
 - **Legal information**: [LEGAL.md](LEGAL.md)
 
 ## Quick Start
 
-While we prepare comprehensive contribution guidelines, here are the basics:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Ensure tests pass
-5. Submit a pull request
+1. Fork the repository.
+2. Turn on the pre-commit hook once: `make setup-hooks`. It scans for secrets, blocks binary
+   files and checks SQL portability (`gk-lint`).
+3. Create a feature branch.
+4. Make your changes.
+5. Run `make lint-platform` and `make test`. For database changes, also run the Go tests on
+   PostgreSQL (see [TESTING.md](docs/development/TESTING.md#running-tests-on-postgresql)).
+6. Submit a pull request.
 
 ## Contact
 
@@ -30,16 +31,18 @@ While we prepare comprehensive contribution guidelines, here are the basics:
 - GitHub Discussions: [Ask questions and share ideas](https://github.com/goatkit/goatflow/discussions)
 - Email: hello@goatflow.io
 
----
+## Critical Standards
 
-*This document is under development. Check back soon for complete contribution guidelines.*
-
-## Temporary Critical Standards
-
-- Database access: use `database.ConvertPlaceholders` for every SQL string (no exceptions).
+- Databases: code must work on MySQL/MariaDB and PostgreSQL. Write SQL with `?` placeholders and
+  pass every SQL string through `database.ConvertPlaceholders` (or another `database.Convert*`
+  function). Never write `$1`. See
+  [docs/development/DATABASE_ACCESS_PATTERNS.md](docs/development/DATABASE_ACCESS_PATTERNS.md).
 - **Dynamic SQL**: use `database.QueryBuilder` for any dynamic WHERE/column construction (mandatory for gosec compliance).
 - No ORM: use `database/sql` with small repositories.
 - Keep SQL in repositories, not handlers.
+- Schema: do not change OTRS tables. Add migrations to both `migrations/mysql` and
+  `migrations/postgres` with the same version number. See
+  [docs/development/DATABASE.md](docs/development/DATABASE.md).
 - Templating: Pongo2 only. Do not use Go's `html/template`. Render user-facing views via Pongo2 with `layouts/base.pongo2` and proper context (`User`, `ActivePage`).
 - Routing: All routes defined in YAML under `routes/*.yaml` using the YAML router. Do not register routes directly in Go code.
 - Tests: add/update tests for any DB-affecting change; run `make test`.

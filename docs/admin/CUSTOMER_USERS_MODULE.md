@@ -1,114 +1,89 @@
-# AdminCustomerUser Module Documentation
+# Customer Users and Companies (Admin)
 
-## Overview
-The AdminCustomerUser module provides comprehensive customer user management functionality for GoatFlow-CE. This module follows OTRS schema compatibility and implements full CRUD operations with professional UI/UX standards.
+Admins manage customer users and customer companies from the admin dashboard, section
+**Customer Administration**: cards **Customer Users** (`/admin/customer-users`) and
+**Customer Organizations** (`/admin/customer/companies`). The pages use the OTRS tables as they
+are.
 
-## Status: ✅ Complete (Implementation Only)
-- Template: **Complete** 
-- Backend Handlers: **Complete**
-- Tests: **Complete**
-- Integration: **Blocked by unrelated compilation errors**
+## Tables
 
-## Components Implemented
+| Table | Used for |
+|-------|----------|
+| `customer_user` | Customer user accounts. `customer_id` links the user to a company. |
+| `customer_company` | Companies. `customer_id` is the company key. |
+| `service_customer_user` | Which services each customer user may pick. |
+| `group_customer_user` | Customer user group permissions. |
+| `ticket` | Ticket counts per customer user and per company. |
+| `sysconfig_modified` | Customer portal settings, global and per company. |
 
-### 1. Frontend Template (`templates/pages/admin/customer_users.pongo2`)
-- **Search & Filtering**: Real-time search with company, status, and country filters
-- **Tabbed Modal Forms**: Professional create/edit forms with Personal, Contact, and Company tabs
-- **CSV Import**: Bulk import with drag-and-drop support
-- **Customer Details Modal**: Shows contact info, company details, and ticket statistics
-- **Session Persistence**: Filters preserved across page operations
-- **Dark Mode**: Full dark theme support
-- **Professional Dialogs**: Branded delete confirmations (no browser alerts)
+"Delete" on a customer user or a company never removes the row. It sets `valid_id = 2`
+(invalid), as OTRS does.
 
-### 2. Backend Handlers (`internal/api/admin_customer_users_handlers.go`)
-- `HandleAdminCustomerUsersList` - List with search/filter support
-- `HandleAdminCustomerUsersGet` - Detail view with stats
-- `HandleAdminCustomerUsersCreate` - Create with duplicate detection
-- `HandleAdminCustomerUsersUpdate` - Update all customer fields
-- `HandleAdminCustomerUsersDelete` - Soft delete (valid_id = 2)
-- `HandleAdminCustomerUsersTickets` - Per-customer ticket stats
-- `HandleAdminCustomerUsersImportForm` / `HandleAdminCustomerUsersImport` - CSV bulk import
-- `HandleAdminCustomerUsersExport` - CSV export
-- `HandleAdminCustomerUsersBulkAction` - Bulk operations
+## Customer users
 
-Supporting code: `internal/api/admin_customer_user_services.go` (service layer),
-`internal/api/admin_customer_user_groups_handlers.go` (customer-user group permissions).
-Routes are declared in `routes/admin.yaml` under `/admin/customer-users`.
+Routes are in `routes/admin.yaml`. Handlers are in `internal/api/admin_customer_users_handlers.go`.
 
-### 3. Test Coverage
-- `internal/api/admin_customer_user_groups_test.go` - customer user group permission CRUD
-- `internal/api/admin_customer_user_services_test.go` - service-layer behaviour
-- TestGetAvailableCompanies - Company list
+| Method | Path | Handler | What it does |
+|--------|------|---------|--------------|
+| GET | `/admin/customer-users` | `HandleAdminCustomerUsersList` | List page. Query filters: `search`, `valid`, `customer`. |
+| GET | `/admin/customer-users/:id` | `HandleAdminCustomerUsersGet` | One customer user, with company details. |
+| POST | `/admin/customer-users` | `HandleAdminCustomerUsersCreate` | Create. Rejects a duplicate login. |
+| PUT | `/admin/customer-users/:id` | `HandleAdminCustomerUsersUpdate` | Update all fields. |
+| DELETE | `/admin/customer-users/:id` | `HandleAdminCustomerUsersDelete` | Set `valid_id = 2`. |
+| GET | `/admin/customer-users/:id/tickets` | `HandleAdminCustomerUsersTickets` | Tickets for this customer user. |
+| GET | `/admin/customer-users/import` | `HandleAdminCustomerUsersImportForm` | Import form. |
+| POST | `/admin/customer-users/import` | `HandleAdminCustomerUsersImport` | CSV import (form field `csv_file`). |
+| GET | `/admin/customer-users/export` | `HandleAdminCustomerUsersExport` | CSV download (`customer_users.csv`). |
+| POST | `/admin/customer-users/bulk-action` | `HandleAdminCustomerUsersBulkAction` | `action` = `enable`, `disable` or `delete` for a list of `ids`. |
 
-### 4. API Routes (Added to `htmx_routes.go`)
-```go
-// Customer User CRUD endpoints
-protectedAPI.GET("/customer-users", handleGetCustomerUsers(db))
-protectedAPI.POST("/customer-users", handleCreateCustomerUser(db))
-protectedAPI.PUT("/customer-users/:login", handleUpdateCustomerUser(db))
-protectedAPI.DELETE("/customer-users/:login", handleDeleteCustomerUser(db))
-protectedAPI.GET("/customer-users/:login/details", handleGetCustomerUserDetails(db))
-protectedAPI.POST("/customer-users/import", handleImportCustomerUsers(db))
-protectedAPI.GET("/customer-companies", handleGetAvailableCompanies(db))
-```
+### CSV import
 
-## Database Schema (OTRS Compatible)
-The module works with existing OTRS tables:
-- `customer_user` - Main customer user table
-- `customer_company` - Company associations
-- `ticket` - For ticket count statistics
+- The first row is the header. Column names are not case-sensitive.
+- Required columns: `login`, `email`, `customer_id`. A row missing one of them fails.
+- Optional columns: `title`, `first_name`, `last_name`, `phone`, `fax`, `mobile`, `street`,
+  `zip`, `city`, `country`, `comments`.
+- A row whose `login` already exists fails. Other rows are still imported.
+- The response reports how many rows were imported and how many failed, with a reason per row.
 
-## Features
-- **CRUD Operations**: Full create, read, update, delete functionality
-- **Soft Deletes**: Sets valid_id = 2 instead of hard deletion
-- **Company Integration**: Associates customers with companies
-- **Ticket Statistics**: Shows open/closed ticket counts per customer
-- **Bulk Import**: CSV upload for mass customer creation
-- **Professional UI**: Matches AdminUser quality standards
+### CSV export
 
-## Testing
-Standalone tests pass successfully:
+Columns, in order: `login`, `email`, `customer_id`, `title`, `first_name`, `last_name`, `phone`,
+`fax`, `mobile`, `street`, `zip`, `city`, `country`, `comments`, `valid_id`, `company_name`.
+
+### Related pages
+
+| Path | What it does |
+|------|--------------|
+| `/admin/customer-user-services` | Assign services to customer users (`service_customer_user`), and the default services. |
+| `/admin/customer-user-groups` | Customer user group permissions. Handlers: `internal/api/admin_customer_user_groups_handlers.go`. |
+
+## Customer companies
+
+| Method | Path | What it does |
+|--------|------|--------------|
+| GET | `/admin/customer/companies` | Company list. |
+| GET/POST | `/admin/customer/companies/new` | New company form and create. |
+| GET/POST | `/admin/customer/companies/:id/edit` | Edit form and update. |
+| POST | `/admin/customer/companies/:id/delete` | Deactivate (also `DELETE /admin/customer/companies/:id`). |
+| POST | `/admin/customer/companies/:id/activate` | Activate again. |
+| GET | `/admin/customer/companies/:id/users` | The company's customer users, with ticket counts and status. |
+| GET | `/admin/customer/companies/:id/tickets` | Tickets with this `ticket.customer_id`, newest first, 50 per page. Only queues the admin can read, unless they are in the `admin` group. |
+| GET/POST | `/admin/customer/companies/:id/services` | Matrix of valid services against the company's customer users, saved in `service_customer_user`. |
+| GET/POST | `/admin/customer/companies/:id/portal-settings` | Customer portal settings for this company. |
+| GET/PUT/POST | `/admin/customer/portal/settings` | Global customer portal settings. |
+
+OTRS has no company-level service table. That is why the company services page writes one row
+per customer user.
+
+## Tests
+
+Run in the toolbox container:
+
 ```bash
-✅ TestGetCustomerUsers: Got 2 active users (expected 2)
-✅ TestCreateCustomerUser: Create endpoint configured
-🎉 All AdminCustomerUser handler tests passed!
-```
-
-## Known Issues
-The main codebase has compilation errors in unrelated files that prevent full integration:
-- Missing ldap.Service and service.I18nService types
-- Undefined functions in other modules (SetupAPIv1Routes, sendGuruMeditation, etc.)
-- These are **not** related to the CustomerUser module implementation
-
-## Container-First Development
-All development and testing should be done in containers:
-```bash
-# Run tests in container
 make toolbox-exec ARGS="go test ./internal/api -run CustomerUser"
-
-# Development workflow
-make up                    # Start containers
-make logs                  # View logs
-make db-shell             # Database access
 ```
 
-Host Go installation is available for quick testing but should not be relied upon in production or other environments.
+Test files:
 
-## Quality Standards Met
-✅ Search with clear button  
-✅ Sortable columns  
-✅ Status/company/country filters  
-✅ Modal dialogs with dark mode  
-✅ Form validation with field highlighting  
-✅ Loading states and success feedback  
-✅ Tooltips on all actions  
-✅ Session state preservation  
-✅ Professional delete confirmations  
-✅ CSV import functionality  
-
-## Next Steps
-Once the unrelated compilation errors in the main codebase are resolved:
-1. The module will be fully accessible at `/admin/customer-users`
-2. Integration tests can be run
-3. The CSV import feature can be tested with real data
-4. Performance optimization for large customer databases can be considered
+- `internal/api/admin_customer_user_groups_test.go` - customer user group permissions.
+- `internal/api/admin_customer_user_services_test.go` - service assignments.

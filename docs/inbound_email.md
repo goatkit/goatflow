@@ -35,8 +35,8 @@ surfaces via metrics so operators can act.
 
 ### 3.1 Email Account Repository
   - Existing fields: SMTP/IMAP host, port, username, encrypted password, queue ID, `is_active`.
-  - Planned additions: trusted flag (`AllowXHeaders`), dispatching mode (`queue` vs `from`),
-    OAuth2 token reference, optional IMAP folder, polling cadence.
+  - Also present (`internal/email/inbound/adapter/account.go`): trusted flag, dispatching mode
+    (`queue` vs `from`), IMAP folder, poll interval. Still planned: OAuth2 token reference.
 - Admin UI mirrors these fields so operators can manage ingestion without SQL:
   - `Login`, `Host`, and `Account Type` inputs replace the previous SMTP/IMAP split.
   - `Dispatching Mode` radio (`Queue` vs `From`) writes `queue_id` (0 means from-based routing).

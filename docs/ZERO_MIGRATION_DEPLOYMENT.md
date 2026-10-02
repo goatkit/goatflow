@@ -1,28 +1,48 @@
-# Zero-Migration OTRS to GoatFlow Deployment
+# Running GoatFlow on an Existing OTRS Database
 
-## 🎯 The Game-Changing Feature
+GoatFlow uses the OTRS 6 / Znuny 6 table layout. It can connect to an
+existing OTRS MySQL/MariaDB database and work with the same tickets,
+users and articles. There is no data conversion step.
 
-GoatFlow can connect directly to your existing OTRS MySQL/MariaDB database without any migration, data conversion, or downtime. This is possible thanks to our thin database access compatibility wrapper (ConvertPlaceholders) and strict OTRS schema alignment.
+It is not "zero change". Read the next section before you point GoatFlow
+at a live OTRS database.
 
-## 🚀 What This Means
+## What GoatFlow changes in the database
 
-### For Organizations
-- **Zero Risk**: Keep your existing OTRS database untouched
-- **Instant Rollback**: Switch back to OTRS anytime
-- **No Downtime**: Run both systems in parallel during evaluation
-- **Gradual Migration**: Move at your own pace, or never migrate at all
+Every time it starts, `goats` runs its own migrations
+(`database.RunMigrations` in `cmd/goats/main.go`). On an OTRS database this:
 
-### For IT Teams
-- **No Data Migration**: Connect GoatFlow directly to OTRS database
-- **No Schema Changes**: GoatFlow respects OTRS table structure 100%
-- **No Learning Curve**: Same database, same data, modern interface
-- **Easy Testing**: Try GoatFlow in read-only mode first
+- Creates a `schema_migrations` table to track the migration version.
+- Creates GoatFlow tables. Most start with `gk_` (for example `gk_identity_provider`,
+  `gk_webhook`, `gk_webauthn_credential`); API tokens use `user_api_tokens`.
+- Adds a `color` column to `ticket_priority` and `ticket_state` if it is
+  missing (as Znuny 6.5.1 does), and sets default colours.
 
-## 📋 Deployment Options
+OTRS ignores the extra tables and columns. They are still schema changes.
+Your database backup and change process should treat them as such.
 
-### Option 1: Direct Database Connection (Recommended for Testing)
-```yaml
-# GoatFlow configuration (.env)
+## Recommended approach
+
+1. Back up the OTRS database.
+2. Try GoatFlow first against a **copy** of the OTRS database.
+3. When you are ready to move, either:
+   - point GoatFlow at the live database, or
+   - import into a fresh GoatFlow database with `goatflow-migrate`
+     (see [MIGRATION.md](MIGRATION.md) and [OTRS_MIGRATION_GUIDE.md](OTRS_MIGRATION_GUIDE.md)).
+
+Backup:
+
+```bash
+mysqldump -h localhost -u otrs -p otrs > otrs-backup.sql
+```
+
+There is no read-only mode.
+
+## Configuration
+
+Database connection variables are per driver (`internal/platform/dbconfig/env.go`).
+
+```bash
 DB_DRIVER=mysql
 DB_MYSQL_HOST=your-otrs-db.example.com
 DB_MYSQL_PORT=3306
@@ -31,156 +51,37 @@ DB_MYSQL_USER=otrs
 DB_MYSQL_PASSWORD=your-password
 ```
 
-No migration. No conversion. Just point and run.
+The old flat names (`DB_HOST`, `DB_NAME`, ...) still work as a fallback,
+but use the `DB_MYSQL_*` names.
 
-### Option 2: Side-by-Side Deployment
-1. Keep OTRS running on port 80
-2. Run GoatFlow on port 8080
-3. Both use the same MySQL database
-4. Users can access either system
-5. Gradually move users to GoatFlow
+### Article storage
 
-### Option 3: Blue-Green Deployment
-1. Set up GoatFlow with read-only access first
-2. Verify all functionality works
-3. Switch write access from OTRS to GoatFlow
-4. Keep OTRS as fallback
+If OTRS stored articles on disk (`ArticleStorageFS`), mount that tree and set
+`STORAGE_TYPE=fs`. See [ARTICLE_STORAGE.md](ARTICLE_STORAGE.md).
 
-## 🔧 Quick Start
+## Run GoatFlow
 
-### Step 1: Expose OTRS Database Port
-Edit your OTRS `docker-compose.yml`:
-```yaml
-mariadb:
-  ports:
-    - "3306:3306"  # Expose MariaDB port
-```
-
-### Step 2: Configure GoatFlow
-Create `.env` file for GoatFlow:
-```bash
-DB_DRIVER=mysql
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=otrs
-DB_USER=otrs
-DB_PASSWORD=your-otrs-password
-```
-
-### Step 3: Run GoatFlow
 ```bash
 docker run -d \
   --name goatflow \
   --env-file .env \
   -p 8080:8080 \
-  goatflow:latest
+  ghcr.io/goatkit/goatflow:0.10.0
 ```
 
-### Step 4: Access Both Systems
-- OTRS: http://localhost (existing)
-- GoatFlow: http://localhost:8080 (new)
-- Same database, same tickets, modern interface!
+If your OTRS database runs in Docker, it must be reachable from the
+GoatFlow container (same network, or an exposed port).
 
-## ✅ Tested and Verified
+## Running OTRS and GoatFlow side by side
 
-We've successfully tested GoatFlow with:
-- **Live OTRS 6.0.x** with MariaDB
-- **116 OTRS tables** recognized and accessible
-- **Real production data** (tickets, users, articles)
-- **Zero schema modifications** required
+Both can run against the same database. For example, OTRS on port 80 and
+GoatFlow on port 8080. Keep these points in mind:
 
-### Test Results
-```
-✅ Successfully connected to OTRS MySQL database!
-✅ Found 116 tables in OTRS database
-✅ users: 4 records
-✅ groups: 4 records  
-✅ ticket: 8 records
-✅ article: 11 records
-✅ queue: 5 records
-✅ customer_company: 1 records
-✅ customer_user: 2 records
-```
+- Passwords: GoatFlow reads OTRS password hashes. If OTRS must also read
+  passwords that GoatFlow sets, use `PASSWORD_HASH_TYPE=sha256`
+  (see [SECURITY.md](SECURITY.md)).
+- Switching back to OTRS leaves the GoatFlow tables and columns in place.
 
-## 🛡️ Safety Features
+## Support
 
-### Read-Only Mode (planned)
-Start with GoatFlow in read-only mode to verify compatibility. Not yet implemented -
-until it ships, run GoatFlow against a copy of the OTRS database.
-
-### Audit Logging (planned)
-Track all GoatFlow operations without affecting OTRS. Not yet implemented.
-
-### Database Backup
-Always backup before testing (though no changes are made):
-```bash
-mysqldump -h localhost -u otrs -p otrs > otrs-backup.sql
-```
-
-## 📊 Migration Strategies
-
-### Strategy 1: Never Migrate
-- Run GoatFlow permanently against OTRS database
-- Get modern UI without data migration
-- Keep existing OTRS as fallback
-
-### Strategy 2: Gradual Migration
-1. Run both systems for 30 days
-2. Monitor performance and user feedback
-3. Gradually move workflows to GoatFlow
-4. Decommission OTRS when ready
-
-### Strategy 3: Instant Switch
-1. Test GoatFlow thoroughly in staging
-2. Schedule maintenance window
-3. Update DNS/proxy to point to GoatFlow
-4. Keep OTRS container stopped but ready
-
-## 🎯 Benefits Summary
-
-| Aspect | Traditional Migration | GoatFlow Zero-Migration |
-|--------|---------------------|---------------------|
-| Downtime | Hours to Days | **Zero** |
-| Risk | High | **Zero** |
-| Rollback Time | Hours | **Instant** |
-| Data Migration | Required | **None** |
-| Testing Period | Limited | **Unlimited** |
-| Database Changes | Many | **None** |
-| Staff Training | Extensive | **Minimal** |
-
-## 🚦 Decision Matrix
-
-Use GoatFlow Zero-Migration when you:
-- ✅ Want to evaluate GoatFlow without risk
-- ✅ Need to maintain 24/7 operations
-- ✅ Have compliance requirements preventing data migration
-- ✅ Want gradual user transition
-- ✅ Need instant rollback capability
-
-## 💡 Pro Tips
-
-1. **Start Small**: Test with read-only access first
-2. **Monitor Performance**: Compare query times between OTRS and GoatFlow
-3. **User Feedback**: Run A/B testing with select users
-4. **Backup Always**: Even though we don't modify data
-5. **Document Everything**: Keep notes for your team
-
-## 🔗 Technical Details
-
-GoatFlow achieves this through:
-- **Database Access Compatibility**: Thin wrapper over database/sql (ConvertPlaceholders) supporting MySQL and PostgreSQL
-- **OTRS Schema Compatibility**: 100% compatible table structure
-- **Smart Query Generation**: Database-specific SQL generation
-- **Type Mapping**: Automatic type conversion between databases
-- **Feature Detection**: Adapts to database capabilities
-
-## 📞 Support
-
-This is a game-changing feature for OTRS migration. If you need help:
-- GitHub Issues: [github.com/goatkit/goatflow/issues](https://github.com/goatkit/goatflow/issues)
-- Documentation: [docs.goatflow.io](https://docs.goatflow.io)
-- Community: [community.goatflow.io](https://community.goatflow.io)
-
----
-
-*Zero-Migration Deployment: Because the best migration is no migration at all.*
+GitHub Issues: [github.com/goatkit/goatflow/issues](https://github.com/goatkit/goatflow/issues)

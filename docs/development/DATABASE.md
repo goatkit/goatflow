@@ -1,435 +1,235 @@
-# GoatFlow Database Schema Documentation
+# GoatFlow Database
 
-## Overview
+GoatFlow runs on **MySQL/MariaDB** or **PostgreSQL**. `DB_DRIVER` picks one (`mysql` or
+`postgres`). Oracle and SQL Server are not implemented: they return
+`ErrDatabaseNotImplemented`.
 
-GoatFlow's database schema is **rooted in OTRS compatibility** — the baseline 116 tables match OTRS Community Edition exactly, enabling direct migration from OTRS to GoatFlow. As GoatFlow adds features beyond OTRS's scope, new tables are added alongside the original schema without modifying it.
+The schema starts from the OTRS 6 / Znuny schema. GoatFlow features that OTRS does not have use
+their own tables, most of them named `gk_*`.
 
-**Compatibility status:** OTRS baseline tables are frozen and unmodified. GoatFlow extensions use separate tables (see [Schema Extensions](#schema-extensions) below).
+## Writing SQL
 
-## Database Access Policy
+Write every query with `?` placeholders and pass it through the conversion layer
+(`database.ConvertPlaceholders`, `database.ConvertQuery`, ...). The layer turns `?` into `$1`,
+`$2`, ... on PostgreSQL. Never write `$1` yourself. `gk-lint` and the pre-commit hook reject SQL
+that skips the layer.
 
-All SQL must use the mandatory `database.ConvertPlaceholders` wrapper to support both PostgreSQL and MySQL. See [DATABASE_ACCESS_PATTERNS.md](DATABASE_ACCESS_PATTERNS.md).
+```go
+query := database.ConvertPlaceholders(
+    "SELECT id, login FROM customer_user WHERE customer_id = ? AND valid_id = ?")
+rows, err := db.QueryContext(ctx, query, customerID, 1)
+```
 
-## Password Reset Utilities
+The full rules are in [DATABASE_ACCESS_PATTERNS.md](DATABASE_ACCESS_PATTERNS.md).
 
-Use the provided make targets instead of connecting directly to the databases:
+## Migrations
+
+Migrations live in two folders with the **same version numbers**:
+
+- `migrations/mysql/`
+- `migrations/postgres/`
+
+Each version has an `.up.sql` and a `.down.sql` file. Both folders hold versions 000001 to
+000029.
+
+| Version | Name | What it does |
+|---------|------|--------------|
+| 000001 | `schema_alignment` | OTRS/Znuny base schema (126 tables) |
+| 000002 | `minimal_data` | Essential lookup rows |
+| 000003 | `customer_portal_sysconfig` | Customer portal settings in `sysconfig_default` |
+| 000004 | `dynamic_field_screen_config` | `dynamic_field_screen_config` |
+| 000005 | `canned_response` | `canned_response`, `canned_response_category` |
+| 000006 | `znuny_color_columns` | `color` column on `ticket_priority` and `ticket_state` (as in Znuny) |
+| 000007 | `api_tokens` | `user_api_tokens` |
+| 000008 | `admin_audit_log` | `admin_action_type`, `admin_action_log` |
+| 000009 | `custom_fields` | `gk_custom_field_def`, `gk_custom_field_value` |
+| 000010 | `plugin_uis` | `gk_plugin_ui` |
+| 000011 | `organisations` | `gk_organisation`, `gk_user_organisation`, `sysconfig_org` |
+| 000012 | `secure_settings` | `gk_secure_config` |
+| 000013 | `entity_deletion` | `gk_deletion_log`, `gk_recycle_bin` |
+| 000014 | `self_service_auth` | `gk_auth_token`, `gk_registration_request` (password reset and customer sign-up) |
+| 000015 | `push_subscriptions` | `gk_push_subscription` |
+| 000016 | `escalation_calendar_defaults` | Default business calendar row in `sysconfig_default` |
+| 000017 | `org_plugin_access` | `gk_org_plugin_access` |
+| 000018 | `captive_plugin` | `captive_plugin` column on `gk_organisation` |
+| 000019 | `service_worker_cache_config` | Service worker cache settings in `sysconfig_default` |
+| 000020 | `webauthn_credentials` | `gk_webauthn_credential` (passkeys) |
+| 000021 | `webauthn_ceremonies` | `gk_webauthn_ceremony` |
+| 000022 | `totp_pending_sessions` | `gk_totp_pending_session` |
+| 000023 | `identity_providers` | `gk_identity_provider`, `gk_identity_provider_org` (OIDC/SAML) |
+| 000024 | `user_table_for_idp_routing` | `user_table` column on `gk_identity_provider` |
+| 000025 | `saml_fields` | SAML columns on `gk_identity_provider` |
+| 000026 | `setup_assistant_sysconfig` | `setup.assistant.completed` flag in `sysconfig_default` |
+| 000027 | `postgres_mysql_parity` | PostgreSQL only: matches MySQL column types, defaults and keys, and adds the missing foreign keys. No change on MySQL. |
+| 000028 | `webhooks` | `gk_webhook`, `gk_webhook_delivery`, `gk_webhook_event_cursor` |
+| 000029 | `otrs_default_lookups` | OTRS/Znuny default lookup rows a fresh install lacked (ticket states, lock types, history types, link types, auto response types) |
+
+To check that both folders still match:
 
 ```bash
-make reset-password             # Primary scope (defaults to DB_DRIVER)
-make test-pg-reset-password     # PostgreSQL test scope
-make test-mysql-reset-password  # MariaDB test scope
+diff <(ls migrations/mysql/*.up.sql | xargs -n1 basename) \
+     <(ls migrations/postgres/*.up.sql | xargs -n1 basename)
 ```
 
-The targets route through `scripts/reset-user-password.sh`, which dispatches to `scripts/db/postgres/reset-user-password.sh` or `scripts/db/mysql/reset-user-password.sh` based on `DB_CONN_DRIVER`. Both helpers invoke the toolbox CLI inside the compose network, so no direct `mysql`/`psql` usage is required and `.env` credentials stay in sync.
+### Running migrations
 
-## Schema Management Approach
+The backend applies all pending migrations when it starts (`cmd/goats/main.go` calls
+`database.RunMigrations`). It picks `migrations/mysql` or `migrations/postgres` from
+`DB_DRIVER`. A migration error is logged and does not stop the server.
 
-### Baseline Schema (Current)
-As of August 2025, GoatFlow uses a baseline schema initialization approach instead of sequential migrations:
+| Command | What it does |
+|---------|--------------|
+| `make db-migrate` | Runs `migrate up` inside the `backend` container, for `DB_DRIVER`. |
+| `make gen-migration` | Asks for a name and creates an empty `<timestamp>_<name>` up/down pair in the folder for `DB_DRIVER`. Rename both files to the next six-digit version, and add the same version to the other folder. |
+
+`make db-status` and `make db-rollback` always use the PostgreSQL URL and `migrations/postgres`.
+
+### Adding a migration
+
+1. Add `NNNNNN_name.up.sql` and `NNNNNN_name.down.sql` to **both** `migrations/mysql` and
+   `migrations/postgres`, with the next free number.
+2. Do not change OTRS tables. Add a new `gk_*` table instead (see
+   [SCHEMA_FREEZE.md](../architecture/SCHEMA_FREEZE.md)).
+3. Run the Go tests on both databases (see [TESTING.md](TESTING.md#running-tests-on-postgresql)).
+   The test databases apply every migration when they start, so a broken migration shows up
+   there.
+
+`gk-lint` reads `CREATE TABLE` and `ALTER TABLE` from both folders. SQL that names a table or
+column that does not exist on both drivers fails the lint.
+
+## OTRS schema rules
+
+The OTRS tables are frozen. See [SCHEMA_FREEZE.md](../architecture/SCHEMA_FREEZE.md).
+
+- Keep the OTRS names: `ticket`, `article`, `users`, `customer_user`, `customer_company`,
+  `queue`, `ticket_state`, ... (not `tickets`).
+- Keep the OTRS column names, for example `pw` (not `password`), `tn` for the ticket number.
+- Primary keys are integers (`SERIAL`/`BIGSERIAL` on PostgreSQL, `AUTO_INCREMENT` on MySQL).
+  `customer_company` is keyed by its `customer_id` string.
+- `valid_id`: 1 = valid, 2 = invalid, 3 = invalid-temporarily. "Delete" in the admin UI
+  usually sets `valid_id = 2`.
+- Most tables have `create_time`, `create_by`, `change_time`, `change_by`.
+- Some times are Unix timestamps in integer columns, for example `article_data_mime.incoming_time`.
+
+The real definitions are in `migrations/mysql/000001_schema_alignment.up.sql` and
+`migrations/postgres/000001_schema_alignment.up.sql`. Read them, not a copy.
+
+Some GoatFlow features use OTRS tables and need no new table:
+
+| Feature | Tables |
+|---------|--------|
+| TOTP two-factor login | `user_preferences` / `customer_preferences` (for example `UserTOTPEnabled`) |
+| SLAs | `sla`, `sla_preferences`, `service_sla` |
+| Settings | `sysconfig_default`, `sysconfig_modified` |
+
+## Working with the dev database
+
+The dev stack in `docker-compose.yml` runs **MariaDB** (`mariadb` service, volume
+`mariadb_data`). Its `postgres` service is commented out, so the dev targets below only work
+with `DB_DRIVER=postgres` if you add a `postgres` service yourself. PostgreSQL is tested
+through the `postgres-test` container (see [Test databases](#test-databases)).
+
+| Command | What it does |
+|---------|--------------|
+| `make db-query QUERY="SELECT 1"` | Runs one query against the dev database for `DB_DRIVER`. `QUERY_FILE=path` or stdin also work. |
+| `make db-shell` | Interactive shell: the `mariadb` client in the `mariadb` container, or `psql` in a `postgres` container when `DB_DRIVER=postgres`. |
+| `make db-shell-test` | Shell on the test database for `TEST_DB_DRIVER` (starts it first). |
+| `make db-query-test` | Query against the test database. |
+
+### Passwords
+
+Migration 000002 creates `root@localhost` disabled (`valid_id = 2`) with a random password.
+Set a password and enable it with:
+
+| Command | Database |
+|---------|----------|
+| `make reset-password` | Dev database (`DB_DRIVER`) |
+| `make test-pg-reset-password` | PostgreSQL test database |
+| `make test-mysql-reset-password` | MariaDB test database |
+
+These run `scripts/reset-user-password.sh`. It calls `scripts/db/postgres/reset-user-password.sh`
+or `scripts/db/mysql/reset-user-password.sh`, which run the `goats reset-user` command in the
+toolbox container.
+
+When the backend container gets `GOATFLOW_ADMIN_PASSWORD`, it enables `root@localhost` with
+that password on first boot (see [docs/configuration.md](../configuration.md)). The dev
+`docker-compose.yml` does not pass this variable to the backend, so use `make reset-password`
+in dev.
+
+### Generated test credentials
 
 ```bash
-# Fast initialization (<1 second)
-make db-init        # Apply baseline schema + required lookups
-make synthesize     # Generate secure test credentials
-make db-apply-test-data  # Apply generated test data
+make synthesize        # writes .env secrets (only when .env does not exist yet) and test_credentials.csv
+make show-dev-creds    # prints the generated users
 ```
 
-### Migration Files Structure
-```
-migrations/
-├── mysql/      # 000001..000026 (up + down), e.g.:
-│   ├── 000001_schema_alignment.up.sql   # OTRS baseline schema + alignment
-│   ├── 000002_minimal_data.up.sql       # Essential lookup data
-│   ├── 000003_customer_portal_sysconfig.up.sql
-│   ├── 000004_dynamic_field_screen_config.up.sql
-│   ├── 000005_canned_response.up.sql    # GoatFlow extension tables
-│   ├── 000006_znuny_color_columns.up.sql # Znuny-compatible additions
-│   ├── 000007_api_tokens.up.sql         # GoatFlow extension: API tokens
-│   ├── 000008_admin_audit_log.up.sql    # GoatFlow extension: audit logging
-│   ├── 000009_custom_fields.up.sql      # Custom field definitions
-│   ├── 000010_plugin_uis.up.sql         # Plugin UI registration
-│   ├── 000011_organisations.up.sql      # Multi-tenancy
-│   ├── 000012_secure_settings.up.sql
-│   ├── 000013_entity_deletion.up.sql
-│   ├── 000014_self_service_auth.up.sql
-│   ├── 000015_push_subscriptions.up.sql
-│   ├── 000016_escalation_calendar_defaults.up.sql
-│   ├── 000017_org_plugin_access.up.sql
-│   ├── 000018_captive_plugin.up.sql
-│   ├── 000019_service_worker_cache_config.up.sql
-│   ├── 000020_webauthn_credentials.up.sql
-│   ├── 000021_webauthn_ceremonies.up.sql
-│   ├── 000022_totp_pending_sessions.up.sql
-│   ├── 000023_identity_providers.up.sql # OIDC/SAML IdP support
-│   ├── 000024_saml_fields.up.sql
-│   └── 000026_setup_assistant_sysconfig.up.sql
-└── postgres/   # Same numbered set (000001..000026)
+When it creates a new `.env`, `make synthesize` also writes
+`migrations/postgres/000004_generated_test_data.up.sql` (gitignored). This file is not a real
+migration. `make db-apply-test-data` loads it on PostgreSQL. On MariaDB, `db-apply-test-data`
+only enables `root@localhost` when `ADMIN_PASSWORD` is set.
 
-schema/
-├── baseline/
-│   ├── otrs_complete.sql      # Complete OTRS schema (116 tables)
-│   └── required_lookups.sql   # Essential lookup data
-└── seed/
-    └── minimal.sql             # Minimal seed data for development
-```
+**Delete that file before you run PostgreSQL migrations or start `postgres-test`.** Version
+000004 already exists (`000004_dynamic_field_screen_config`), and golang-migrate stops with
+"duplicate migration file". The `postgres-test` init script applies every `*.up.sql` in the
+folder, so it would load the file too.
 
-## Schema Architecture
+### Baseline loaders
 
-### OTRS Baseline (Frozen)
+`make db-init` and `make db-reset` come from before the numbered migrations:
 
-The 116 original OTRS tables are **frozen** — no modifications to structure, column types, or field names. See [SCHEMA_FREEZE.md](../architecture/SCHEMA_FREEZE.md) for the full policy.
+- With `DB_DRIVER=postgres`, `make db-init` drops the `public` schema and loads
+  `schema/baseline/otrs_complete.sql` and `schema/baseline/required_lookups.sql`. This does not
+  create the GoatFlow tables and does not record a migration version.
+- With MariaDB, `make db-init` only starts `mariadb` and enables `root@localhost` with
+  `GOATFLOW_ADMIN_PASSWORD`.
+- `make db-reset` runs `db-init` and then loads `schema/seed/minimal.sql` into the `postgres`
+  container.
 
-This means:
-- ✅ An OTRS database dump can be imported directly into GoatFlow
-- ✅ SQL queries written for OTRS work unchanged against GoatFlow
-- ✅ Third-party OTRS tools and reporting continue to work
+To get a clean, fully migrated MariaDB dev database: `make down`, remove the `mariadb_data`
+volume, then `make up`. The backend applies all migrations at start-up. Then set the admin
+password with `make reset-password`.
 
-### Schema Extensions
+## Test databases
 
-GoatFlow adds new tables for features that go beyond OTRS. These **never modify** existing OTRS tables:
+The test databases are defined in `docker-compose.testdb.yml` (profile `testdb`):
 
-| Table | Migration | Purpose |
-|---|---|---|
-| `dynamic_field_screen_config` | 000004 | Dynamic field screen assignments |
-| `canned_response` | 000005 | Canned response templates |
-| `canned_response_category` | 000005 | Canned response categorisation |
-| `user_api_tokens` | 000007 | Personal access tokens for API auth |
-| `admin_action_type` | 000008 | Audit log action type definitions |
-| `admin_action_log` | 000008 | Admin action audit trail |
+| Service | Driver | Host port |
+|---------|--------|-----------|
+| `mariadb-test` | MariaDB 11 | `TEST_DB_MYSQL_PORT` |
+| `postgres-test` | PostgreSQL 15 | `TEST_DB_POSTGRES_PORT` |
 
-**Column additions to existing tables** (Znuny-compatible):
+Start one with `make test-db-up` (MariaDB by default) or
+`make test-db-up TEST_DB_DRIVER=postgres`.
 
-| Table | Column | Migration | Notes |
-|---|---|---|---|
-| `ticket_priority` | `color VARCHAR(25)` | 000006 | Znuny extension, not breaking |
-| `ticket_state` | `color VARCHAR(25)` | 000006 | Znuny extension, not breaking |
+Their data is on tmpfs, so each container start begins empty. The container init scripts run
+in this order:
 
-### Features Using Existing OTRS Tables
+| Step | MariaDB (`mariadb-test`) | PostgreSQL (`postgres-test`) |
+|------|--------------------------|------------------------------|
+| 01 | | `docker/postgres/01-init-databases.sql` |
+| 10 | `docker/mariadb/testdb/10-apply-migrations.sh`: every `migrations/mysql/*.up.sql` in order | `docker/postgres/testdb/10-apply-migrations.sh`: every `migrations/postgres/*.up.sql` in order |
+| 30 | | `schema/baseline/required_lookups.sql` |
+| 40 | | `schema/seed/minimal.sql` |
+| 50 | `schema/seed/test_integration_mysql.sql` | `schema/seed/test_integration.sql` |
+| 60 | `docker/mariadb/testdb/60-set-admin-password.sh` | `docker/postgres/testdb/60-set-admin-password.sh` |
 
-Some GoatFlow features are built entirely on existing OTRS infrastructure:
+How to run the Go tests on each driver is in [TESTING.md](TESTING.md).
 
-- **Two-Factor Auth (TOTP):** Secrets and recovery codes stored in `user_preferences` / `customer_preferences`
-- **SLA Management:** Uses existing `sla`, `sla_preferences`, `service_sla` tables
-- **Knowledge Base:** Shipped via the goat-kb plugin (`gk_kb_*` tables created by the plugin); Znuny `faq_*` import via `goatflow-migrate`.
-- **GenericAgent:** Uses existing `generic_agent_jobs` table
-- **Plugin state:** Uses existing `sysconfig_default` / `sysconfig_modified` tables
+## Importing from OTRS or Znuny
 
-## Core Tables (OTRS-Compatible)
+Use `goatflow-migrate`. The full guide is [OTRS_MIGRATION_GUIDE.md](../OTRS_MIGRATION_GUIDE.md).
+The make targets take the OTRS source as **one** of:
 
-### User Management
+- `SQL=<path to a mysqldump file>`
+- `SOURCE=<OTRS database DSN>`, for example `'user:pass@tcp(host:3306)/otrs'` (MySQL) or
+  `'postgres://user:pass@host:5432/otrs?sslmode=disable'` (PostgreSQL)
 
-```sql
--- Users table (OTRS-compatible with integer IDs)
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,              -- Integer, not UUID
-    login varchar(200) NOT NULL,
-    pw varchar(150) DEFAULT NULL,       -- OTRS legacy password field
-    title varchar(50) DEFAULT NULL,
-    first_name varchar(100) DEFAULT NULL,
-    last_name varchar(100) DEFAULT NULL,
-    email varchar(150) DEFAULT NULL,
-    valid_id SMALLINT NOT NULL,         -- 1=valid, 2=invalid
-    create_time TIMESTAMP NOT NULL,
-    create_by INTEGER NOT NULL,
-    change_time TIMESTAMP NOT NULL,
-    change_by INTEGER NOT NULL,
-    UNIQUE (login)
-);
+| Command | What it does |
+|---------|--------------|
+| `make migrate-analyze SQL=...` | Lists the source tables, row counts and what the import does with each. |
+| `make migrate-import SQL=...` | Dry run by default. `DRY_RUN=false` writes. |
+| `make migrate-import-force SQL=...` | Deletes the existing tickets, articles and customers first. Destructive. |
+| `make otrs-import SQL=...` | Writes by default. `DRY_RUN=1` plans only. `FORCE=1` clears existing data first. |
+| `make migrate-validate` | Checks the imported data. |
 
--- Group management
-CREATE TABLE groups (
-    id SERIAL PRIMARY KEY,
-    name varchar(200) NOT NULL,
-    comments varchar(250) DEFAULT NULL,
-    valid_id SMALLINT NOT NULL,
-    create_time TIMESTAMP NOT NULL,
-    create_by INTEGER NOT NULL,
-    change_time TIMESTAMP NOT NULL,
-    change_by INTEGER NOT NULL,
-    UNIQUE (name)
-);
-
--- User to group mapping with permissions
-CREATE TABLE group_user (
-    user_id INTEGER NOT NULL,
-    group_id INTEGER NOT NULL,
-    permission_key varchar(20) NOT NULL,  -- rw, move_into, create, owner, priority, note
-    permission_value SMALLINT NOT NULL,   -- 0 or 1
-    create_time TIMESTAMP NOT NULL,
-    create_by INTEGER NOT NULL,
-    change_time TIMESTAMP NOT NULL,
-    change_by INTEGER NOT NULL
-);
-```
-
-### Ticket System
-
-```sql
--- Main ticket table
-CREATE TABLE ticket (
-    id BIGSERIAL PRIMARY KEY,           -- BIGINT for tickets
-    tn varchar(50) NOT NULL,            -- Ticket number
-    title varchar(255) DEFAULT NULL,
-    queue_id INTEGER NOT NULL,
-    ticket_state_id SMALLINT NOT NULL,
-    ticket_priority_id SMALLINT NOT NULL,
-    ticket_lock_id SMALLINT NOT NULL,
-    type_id SMALLINT NOT NULL,          -- Ticket type
-    service_id INTEGER DEFAULT NULL,
-    sla_id INTEGER DEFAULT NULL,
-    user_id INTEGER NOT NULL,           -- Owner
-    responsible_user_id INTEGER DEFAULT NULL,  -- Responsible agent
-    group_id INTEGER DEFAULT NULL,
-    customer_id varchar(150) DEFAULT NULL,     -- Company ID
-    customer_user_id varchar(250) DEFAULT NULL, -- Customer email/login
-    timeout INTEGER NOT NULL DEFAULT '0',
-    until_time INTEGER NOT NULL DEFAULT '0',
-    escalation_time INTEGER NOT NULL DEFAULT '0',
-    escalation_update_time INTEGER NOT NULL DEFAULT '0',
-    escalation_response_time INTEGER NOT NULL DEFAULT '0',
-    escalation_solution_time INTEGER NOT NULL DEFAULT '0',
-    archive_flag SMALLINT NOT NULL DEFAULT '0',
-    create_time TIMESTAMP NOT NULL,
-    create_by INTEGER NOT NULL,
-    change_time TIMESTAMP NOT NULL,
-    change_by INTEGER NOT NULL,
-    UNIQUE (tn)
-);
-
--- Article (ticket messages)
-CREATE TABLE article (
-    id BIGSERIAL PRIMARY KEY,
-    ticket_id BIGINT NOT NULL,
-    article_sender_type_id SMALLINT NOT NULL,
-    communication_channel_id BIGINT NOT NULL,
-    is_visible_for_customer SMALLINT NOT NULL,
-    search_index_needs_rebuild SMALLINT NOT NULL DEFAULT '1',
-    create_time TIMESTAMP NOT NULL,
-    create_by INTEGER NOT NULL,
-    change_time TIMESTAMP NOT NULL,
-    change_by INTEGER NOT NULL
-);
-
--- Article content (MIME format)
-CREATE TABLE article_data_mime (
-    id BIGSERIAL PRIMARY KEY,
-    article_id BIGINT NOT NULL,
-    a_from TEXT,
-    a_to TEXT,
-    a_cc TEXT,
-    a_subject TEXT,
-    a_body BYTEA,                       -- Body stored as bytea
-    incoming_time INTEGER NOT NULL,     -- Unix timestamp
-    create_time TIMESTAMP NOT NULL,
-    create_by INTEGER NOT NULL,
-    change_time TIMESTAMP NOT NULL,
-    change_by INTEGER NOT NULL
-);
-```
-
-### Customer Management
-
-```sql
--- Customer companies
-CREATE TABLE customer_company (
-    customer_id varchar(150) PRIMARY KEY,  -- Company ID (not integer)
-    name varchar(200) NOT NULL,
-    street varchar(200) DEFAULT NULL,
-    zip varchar(200) DEFAULT NULL,
-    city varchar(200) DEFAULT NULL,
-    country varchar(200) DEFAULT NULL,
-    url varchar(200) DEFAULT NULL,
-    comments varchar(250) DEFAULT NULL,
-    valid_id SMALLINT NOT NULL,
-    create_time TIMESTAMP NOT NULL,
-    create_by INTEGER NOT NULL,
-    change_time TIMESTAMP NOT NULL,
-    change_by INTEGER NOT NULL
-);
-
--- Customer users
-CREATE TABLE customer_user (
-    login varchar(200) PRIMARY KEY,     -- Email/login (not integer)
-    email varchar(150) NOT NULL,
-    customer_id varchar(150) NOT NULL,  -- Links to customer_company
-    pw varchar(150) DEFAULT NULL,
-    title varchar(50) DEFAULT NULL,
-    first_name varchar(100) NOT NULL,
-    last_name varchar(100) NOT NULL,
-    phone varchar(150) DEFAULT NULL,
-    mobile varchar(150) DEFAULT NULL,
-    valid_id SMALLINT NOT NULL,
-    create_time TIMESTAMP NOT NULL,
-    create_by INTEGER NOT NULL,
-    change_time TIMESTAMP NOT NULL,
-    change_by INTEGER NOT NULL
-);
-```
-
-### Lookup Tables
-
-```sql
--- Ticket states
-CREATE TABLE ticket_state (
-    id SMALLSERIAL PRIMARY KEY,
-    name varchar(200) NOT NULL,
-    comments varchar(250) DEFAULT NULL,
-    type_id SMALLINT NOT NULL,          -- Links to ticket_state_type
-    valid_id SMALLINT NOT NULL,
-    create_time TIMESTAMP NOT NULL,
-    create_by INTEGER NOT NULL,
-    change_time TIMESTAMP NOT NULL,
-    change_by INTEGER NOT NULL,
-    UNIQUE (name)
-);
-
--- Ticket priorities
-CREATE TABLE ticket_priority (
-    id SMALLSERIAL PRIMARY KEY,
-    name varchar(200) NOT NULL,
-    valid_id SMALLINT NOT NULL,
-    color varchar(25) NOT NULL,         -- Znuny extension
-    create_time TIMESTAMP NOT NULL,
-    create_by INTEGER NOT NULL,
-    change_time TIMESTAMP NOT NULL,
-    change_by INTEGER NOT NULL,
-    UNIQUE (name)
-);
-
--- Queues
-CREATE TABLE queue (
-    id SERIAL PRIMARY KEY,
-    name varchar(200) NOT NULL,
-    group_id INTEGER NOT NULL,
-    system_address_id SMALLINT NOT NULL DEFAULT '0',
-    salutation_id SMALLINT NOT NULL DEFAULT '0',
-    signature_id SMALLINT NOT NULL DEFAULT '0',
-    valid_id SMALLINT NOT NULL,
-    create_time TIMESTAMP NOT NULL,
-    create_by INTEGER NOT NULL,
-    change_time TIMESTAMP NOT NULL,
-    change_by INTEGER NOT NULL,
-    UNIQUE (name)
-);
-```
-
-## Important Schema Constraints
-
-1. **Integer Primary Keys**: All OTRS tables use SERIAL/BIGSERIAL, not UUIDs
-2. **OTRS Field Names**: Exact field names preserved (e.g., `pw` not `password`)
-3. **Valid ID Pattern**: `valid_id` field where 1=valid, 2=invalid, 3=invalid-temporarily
-4. **Audit Fields**: All tables include `create_time`, `create_by`, `change_time`, `change_by`
-5. **Bytea Storage**: Article bodies stored as BYTEA, not TEXT
-6. **Unix Timestamps**: Some fields use integer Unix timestamps (e.g., `incoming_time`)
-
-## Database Operations
-
-### Initialize Database
-```bash
-# Complete reset with baseline schema
-make db-reset       # Drops and recreates database
-make db-init        # Applies baseline schema (<1 second)
-make synthesize     # Generates secure credentials
-make db-apply-test-data  # Applies test data
-```
-
-### Connect to Database
-```bash
-# PostgreSQL shell
-make db-shell
-
-# Direct connection
-PGPASSWORD=$YOUR_PASSWORD psql -h localhost -p 5432 -U goatflow_user -d goatflow
-```
-
-### View Schema
-```sql
--- List all tables
-\dt
-
--- View table structure
-\d ticket
-\d users
-\d customer_user
-
--- Count tables
-SELECT COUNT(*) FROM information_schema.tables 
-WHERE table_schema = 'public';
-```
-
-## Test Data Generation
-
-The minimal seed only creates a disabled `root@localhost` placeholder (no password, `valid_id=2`). Run `make synthesize` or `make reset-password` to provision credentials before attempting to sign in.
-
-The system uses dynamic test data generation to avoid hardcoded passwords:
-
-```bash
-# Generate new test data with secure passwords
-make synthesize
-
-# View generated credentials
-make show-dev-creds
-
-# Output format:
-# root@localhost / <generated via make synthesize>
-# agent.smith / TRCzvGXJyGZJUf9s!1
-# john.customer / Yq2PuMbRjW4JLQQK!1
-```
-
-## Test Database Containers
-
-Both database engines can be brought up for integration testing via the container-first targets:
-
-```bash
-# Default (MariaDB) test stack
-make test-db-up
-
-# Force PostgreSQL
-TEST_DB_DRIVER=postgres make test-db-up
-```
-
-The compose file (`docker-compose.testdb.yml`) mounts the same OTRS-aligned fixtures into both services:
-
-- `schema/seed/test_integration.sql` for PostgreSQL (`postgres-test`)
-- `schema/seed/test_integration_mysql.sql` for MariaDB (`mariadb-test`)
-
-Each container runs its respective init script (`docker/postgres/testdb/10-apply-migrations.sh` or `docker/mariadb/testdb/10-apply-migrations.sh`) which applies `000001_schema_alignment.up.sql`, the minimal lookup data, and the integration fixtures. This keeps the API and HTMX suites database-agnostic—if it passes against one driver, it should pass against the other.
-
-## Migration from OTRS
-
-GoatFlow's OTRS baseline tables are structurally identical, so migration is straightforward:
-
-1. **Direct Import**: OTRS database dumps can be imported directly — the baseline tables match
-2. **No Schema Translation**: Core table structures are compatible
-3. **Data Preservation**: All OTRS data relationships maintained
-4. **Extension tables**: GoatFlow's additional tables (`user_api_tokens`, `canned_response`, etc.) are created by running migrations after import
-
-```bash
-# Import OTRS dump
-psql -U goatflow_user -d goatflow < otrs_backup.sql
-
-# Apply GoatFlow extension migrations
-make db-migrate
-
-# Or use the migration tool
-make otrs-import DUMP=path/to/otrs_backup.sql
-```
-
-**Note:** GoatFlow features that use extension tables (API tokens, canned responses, audit logging) will initialise with empty data after migration. Features built on existing OTRS tables (TOTP via `user_preferences`, SLA, queues, etc.) will work immediately with migrated data.
-
-## Performance Considerations
-
-1. **Indexes**: All foreign keys and commonly queried fields are indexed
-2. **Partitioning**: Large tables (ticket, article) can be partitioned by date
-3. **Vacuum**: Regular VACUUM ANALYZE recommended for PostgreSQL
-4. **Connection Pooling**: Use PgBouncer for high-traffic deployments
-
-## Schema Freeze Policy
-
-The OTRS baseline schema is **frozen** for compatibility:
-- NO modifications to existing OTRS table structures
-- NO renaming fields or changing data types
-- New GoatFlow features use **separate extension tables** or existing infrastructure (e.g., `user_preferences`)
-- Column additions only where Znuny-compatible (e.g., `color` on priority/state)
-
-See [SCHEMA_FREEZE.md](../architecture/SCHEMA_FREEZE.md) for the detailed policy.
+The import writes into the GoatFlow database for `DB_DRIVER`. It keeps the OTRS ids.

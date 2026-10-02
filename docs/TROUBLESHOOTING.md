@@ -36,7 +36,7 @@ FATAL: database "goatflow_user" does not exist
 
 3. **Verify the fix:**
    - Check `.env`: the user and database names match for the active driver
-     (`DB_DRIVER=mariadb` default with `DB_MYSQL_*`, or `DB_DRIVER=pgsql` with `DB_PGSQL_*`)
+     (`DB_DRIVER=mariadb` default with `DB_MYSQL_*`, or `DB_DRIVER=postgres` with `DB_PGSQL_*`)
 
 ### 2. Compose Command Not Found
 

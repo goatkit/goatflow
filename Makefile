@@ -907,7 +907,7 @@ openapi-lint:
 		-w /workspace \
 		-e TMPDIR=/workspace/tmp -e BUN_INSTALL_CACHE_DIR=/workspace/.bun \
 		oven/bun:1.1-alpine \
-		sh -lc 'bun add -g @redocly/cli >/dev/null 2>&1 && redocly lint /spec/openapi.yaml'
+		sh -lc 'HOME=/workspace/tmp bunx @redocly/cli lint api/openapi.yaml'
 
 .PHONY: openapi-bundle
 openapi-bundle:
@@ -919,7 +919,7 @@ openapi-bundle:
 		-w /workspace \
 		-e TMPDIR=/workspace/tmp -e BUN_INSTALL_CACHE_DIR=/workspace/.bun \
 		oven/bun:1.1-alpine \
-		sh -lc 'bun add -g @redocly/cli >/dev/null 2>&1 && redocly bundle /spec/openapi.yaml -o /spec/openapi.bundle.yaml'
+		sh -lc 'HOME=/workspace/tmp bunx @redocly/cli bundle api/openapi.yaml --output /workspace/api/openapi.bundle.yaml'
 
 .PHONY: openapi-generate
 openapi-generate: toolbox-build

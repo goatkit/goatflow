@@ -1,8 +1,60 @@
 # Host API Reference
 
-The Host API is how plugins interact with GoatFlow. All functions are available to both WASM and gRPC plugins. The interface is defined in `pkg/plugin/plugin.go`.
+The Host API is how plugins talk to GoatFlow. The Go interface is `HostAPI` in `pkg/plugin/plugin.go`.
 
-Every plugin receives a **SandboxedHostAPI** that enforces per-plugin permissions and rate limits. See the [Sandboxing & Permissions](#sandboxing--permissions) section for details.
+Not every method works in every runtime:
+
+- **gRPC plugins** call the host through the RPC dispatch in `internal/platform/plugin/grpc/host_api.go`.
+- **WASM plugins** call the `gk.host_call` host function. Only the names in `internal/platform/plugin/wasm/runtime.go` (`hostCall`) are handled. Any other name returns `unknown host function`.
+
+Every plugin gets a **SandboxedHostAPI** that adds permission checks and rate limits to some methods. See [Sandboxing & Permissions](#sandboxing--permissions).
+
+## Runtime support
+
+| Method | Host function name | gRPC | WASM | Permission check |
+|--------|-------------------|------|------|------------------|
+| `DBQuery` | `db_query` | yes | yes | `db` read |
+| `DBExec` | `db_exec` | yes | yes | `db` write |
+| `CacheGet` | `cache_get` | yes | yes | `cache` read |
+| `CacheSet` | `cache_set` | yes | yes | `cache` write |
+| `CacheDelete` | `cache_delete` | no (see note) | no | `cache` write |
+| `HTTPRequest` | `http_request` | yes | yes | `http` |
+| `SendEmail` | `send_email` | yes | yes | `email` |
+| `Log` | `log` (WASM: separate `gk.log` export) | yes | yes | none |
+| `ConfigGet` | `config_get` | yes | yes | `config` read |
+| `Translate` | `translate` | yes (no request language, see [Translate](#translate)) | yes | none |
+| `CallPlugin` | `plugin_call` | yes | yes | `plugin_call` |
+| `PublishEvent` | `publish_event` | yes | yes | none |
+| `EntitySoftDelete` | `entity_soft_delete` | yes | yes | none |
+| `EntityRestore` | `entity_restore` | yes | yes | none |
+| `EntityHardDelete` | `entity_hard_delete` | yes | yes | none |
+| `RecycleBinList` | `recycle_bin_list` | yes | yes | none |
+| `SecureConfigGet` | `secure_config_get` | yes | yes | none (own plugin's keys only) |
+| `SecureConfigSet` | `secure_config_set` | yes | yes | none (own plugin's keys only) |
+| `OrgID` | `org_id` | yes | yes | none |
+| `CustomFieldsGet` | `custom_fields_get` | yes | yes | DB rate limit |
+| `CustomFieldsSet` | `custom_fields_set` | yes | yes | DB rate limit |
+| `CustomFieldsQuery` | `custom_fields_query` | yes | yes | DB rate limit |
+| `StoreFile` | `store_file` | yes | no | none (own plugin's files only) |
+| `GetFile` | `get_file` | yes | no | none (own plugin's files only) |
+| `DeleteFile` | `delete_file` | yes | no | none (own plugin's files only) |
+| `ListFiles` | `list_files` | yes | no | none (own plugin's files only) |
+| `GenerateThumbnail` | `generate_thumbnail` | yes | no | none |
+| `CreateArticleAttachment` | `create_article_attachment` | yes | no | none |
+| `ListArticleAttachments` | `list_article_attachments` | yes | no | none |
+| `DeleteArticleAttachment` | `delete_article_attachment` | yes | no | none |
+| `CreateArticle` | `create_article` | yes | no | none |
+| `ChangeTicketStatus` | `change_ticket_status` | yes | no | none |
+| `ListTicketStates` | `list_ticket_states` | yes | no | none |
+| `ListTicketViews` | `list_ticket_views` | yes | no | none |
+| `RenderMarkdownToPdf` | `render_markdown_to_pdf` | yes | no | none |
+| (no Go method) | `time_now` | no | yes | none |
+
+Notes:
+
+- **CacheDelete on gRPC:** the Go client (`pkg/plugin/grpcutil`) sends `cache_delete`, but the host dispatch has no case for it, so the call fails with an unknown-method error. Use `CacheSet` with a short TTL instead.
+- **time_now (WASM only):** returns `{"now": "<RFC 3339 time>"}` in the server's local time zone, offset included. TinyGo has no time zone data, and ticket times are stored in server-local time.
+- "none" in the last column means the sandbox adds no permission check. The host still records the calling plugin.
 
 ## Database
 
@@ -297,7 +349,9 @@ Translate a key to the current locale. **Always allowed** — no permission chec
 Translate(ctx context.Context, key string, args ...any) string
 ```
 
-The language is determined from the request context (set via `PluginLanguageKey`). Falls back to `"en"` if not set.
+**WASM plugins:** the host reads the language from the request context (`PluginLanguageKey`, set from the request's `lang` value). Falls back to `en`.
+
+**gRPC plugins:** the callback crosses the RPC boundary without the request context, so the host always uses `en`. Every plugin call from a route or UI page carries the user's language in `args["_lang"]` (from `?lang=`, cookie, user preference or Accept-Language). Look strings up in your own maps with `_lang` instead. Declaring the maps in `I18nSpec` still registers them with the host catalogue. See [AUTHOR_GUIDE.md](AUTHOR_GUIDE.md).
 
 **Example:**
 ```go
@@ -333,6 +387,167 @@ result, err := host.CallPlugin(ctx, "stats", "get_ticket_stats", args)
 - Lazy loading is attempted if the target isn't loaded yet
 - Caller plugin name is tracked for better error messages and stamped by the host (plugins can't impersonate each other)
 
+
+---
+
+## Events (SSE)
+
+### PublishEvent
+
+Send an event to browsers that are listening on one of your plugin's channels.
+
+```go
+PublishEvent(ctx context.Context, channel string, eventType string, data string) error
+```
+
+- `channel` - your channel name, for example `"status"`.
+- `eventType` - the SSE event name, for example `"device-table"`.
+- `data` - the payload, usually an HTML fragment.
+
+Browsers subscribe at `GET /api/v1/plugins/<plugin>/events/<channel>` (agents only). Returns `SSE broker not available` when the host has no broker.
+
+By default every logged-in agent can subscribe to every channel of your plugin. To limit this, set `EventAuthorizer` in your `GKRegistration` to the name of a plugin function. The host calls it with `{"channel": "<channel>"}` plus the caller fields (`_user_id`, `_user_role`, `_is_admin`, `_org_id`, ...). Return `{"allow": true}` to allow. Any other answer is a `403`; an error is a `502`. Details: [AUTHOR_GUIDE.md](AUTHOR_GUIDE.md).
+
+---
+
+## Entity Deletion
+
+Entity types with a delete handler (`internal/platform/deletion/types.go`): `ticket`, `contact`, `agent`, `customer_group`.
+
+| Method | What it does |
+|--------|--------------|
+| `EntitySoftDelete(ctx, entityType, entityID, reason) error` | Move to the recycle bin and anonymise personal data |
+| `EntityRestore(ctx, entityType, entityID) error` | Restore from the recycle bin |
+| `EntityHardDelete(ctx, entityType, entityID, reason) error` | Remove the entity and its linked data for good |
+| `RecycleBinList(ctx, entityType) (json.RawMessage, error)` | List soft-deleted entities as JSON |
+
+The host records these actions as user ID 1. The sandbox applies no permission check, so only call these when your plugin's own logic has checked the user.
+
+---
+
+## Secure Config
+
+Encrypted key/value storage for secrets such as API keys.
+
+| Method | What it does |
+|--------|--------------|
+| `SecureConfigGet(ctx, key) (string, error)` | Read and decrypt a value. Error if the key is not set |
+| `SecureConfigSet(ctx, key, value) error` | Encrypt and store a value |
+
+- Keys belong to the calling plugin and to the current organisation. A plugin cannot read another plugin's keys.
+- Values are encrypted with the key in `GOATFLOW_SECURE_KEY` (hex).
+
+---
+
+## Organisation
+
+### OrgID
+
+```go
+OrgID(ctx context.Context) int64
+```
+
+Returns the active organisation ID for the current request, or `0` when there is none (single-organisation mode).
+
+---
+
+## Custom Fields
+
+Read and write custom field values on GoatKit entities. Field names are prefixed with your plugin name by the host; you use the short name.
+
+| Method | What it does |
+|--------|--------------|
+| `CustomFieldsGet(ctx, entityType, objectID, fields []string) (map[string]any, error)` | Get values. `nil` fields means all fields |
+| `CustomFieldsSet(ctx, entityType, objectID, values map[string]any) error` | Set values. Types and rules are checked first |
+| `CustomFieldsQuery(ctx, entityType, filters []CustomFieldFilter) ([]int64, error)` | Find object IDs by field values |
+
+`CustomFieldsSet` accepts a `plugin.FieldOp` as a value for an atomic change:
+
+| `Op` | Effect |
+|------|--------|
+| `increment` | Add `Value` to a number. Optional `Floor` / `Ceiling`; the update is rejected if it would pass them |
+| `append` | Add `Value` to a `multi_select` field |
+| `remove` | Remove `Value` from a `multi_select` field |
+| `cas` | Set to `Value` only if the current value equals `Expect` |
+| `toggle` | Flip a boolean |
+
+`CustomFieldFilter` fields: `Field`, `Operator` (`eq`, `neq`, `gt`, `lt`, `gte`, `lte`, `like`, `in`, `between`, `near`), `Value`, `Value2` (upper bound for `between`, radius in km for `near`).
+
+These calls count against the plugin's DB query rate limit.
+
+---
+
+## Plugin Files
+
+gRPC only. Files are stored under the plugin's own namespace (`<plugin>/<key>`, or `<plugin>/org-<id>/<key>` inside an organisation).
+
+| Method | What it does |
+|--------|--------------|
+| `StoreFile(ctx, key, data, metadata) error` | Store a file. `metadata` is optional |
+| `GetFile(ctx, key) ([]byte, map[string]string, error)` | Read a file and its metadata |
+| `DeleteFile(ctx, key) error` | Delete a file |
+| `ListFiles(ctx, prefix) ([]FileInfo, error)` | List files under a prefix, for example `"backups/"` |
+
+- `FileInfo` fields: `Key`, `Size`, `ContentType`, `Metadata`, `ModifiedAt`.
+- Storage limit: 500 MB per plugin by default. An admin can change it with `MaxFileStorageBytes` in the plugin's resource policy.
+- By default files are stored on disk under `$STORAGE_PATH/plugins` (`STORAGE_PATH` defaults to `/app/storage`).
+
+---
+
+## Articles and Attachments
+
+gRPC only.
+
+| Method | What it does |
+|--------|--------------|
+| `CreateArticle(ctx, ticketID, createdBy, subject, body, visibleToCustomer) (int64, error)` | Add an article (internal channel, agent sender) to a ticket. Returns the article ID. Use this instead of writing article rows with SQL |
+| `CreateArticleAttachment(ctx, articleID, createdBy, filename, contentType, content) (int64, error)` | Attach a file to an article. Returns the attachment ID |
+| `ListArticleAttachments(ctx, articleID) ([]ArticleAttachment, error)` | List attachments (metadata only) |
+| `DeleteArticleAttachment(ctx, articleID, attachmentID) error` | Remove one attachment |
+
+- `createdBy` is a `users.id`.
+- Attachments can be at most `storage.attachments.max_size` bytes (default 10 MB).
+- `ArticleAttachment` fields: `ID`, `ArticleID`, `Filename`, `ContentType`, `Size`, `URL`. Use the `URL` the host gives you; add `/view` for the viewer or `/thumbnail` for a preview. Do not build the URL yourself.
+- The sandbox applies no permission check to these calls.
+
+---
+
+## Ticket States and Views
+
+gRPC only.
+
+| Method | What it does |
+|--------|--------------|
+| `ChangeTicketStatus(ctx, ticketID, stateID, userID, untilTime) error` | Change a ticket's state. Pending states need `untilTime > 0` (Unix seconds); other states clear the pending time |
+| `ListTicketStates(ctx) ([]TicketStateInfo, error)` | All valid states, ordered by ID. Fields: `ID`, `Name`, `Color`, `TypeID`, `TypeName` |
+| `ListTicketViews(ctx) ([]TicketViewInfo, error)` | Ticket views declared by enabled plugin UIs. Fields: `PluginName`, `UIID`, `Label`, `URL` (contains `{ticket_id}`) |
+
+---
+
+## PDF Rendering
+
+### RenderMarkdownToPdf
+
+gRPC only. Turns Markdown into PDF bytes using the headless Chromium sidecar (Browserless).
+
+```go
+RenderMarkdownToPdf(ctx context.Context, markdown string, options PdfRenderOptions) ([]byte, error)
+```
+
+`PdfRenderOptions`:
+
+| Field | Meaning |
+|-------|---------|
+| `PageSize` | `"A4"` (default) or `"Letter"` |
+| `MarginMM` | Page margin in mm (default 15) |
+| `Title` | Shown in the PDF header when set |
+| `BrandName` | Name shown in the running header |
+| `BrandColor` | `#RRGGBB` colour for headings and table headers. Other values are ignored |
+| `BrandLogoURL` | `https` URL of a logo for the header. Non-https values are ignored |
+
+The sidecar address comes from `BROWSERLESS_URL` (default `http://127.0.0.1:3000`) and `BROWSERLESS_TOKEN`.
+
+---
 
 ## Sandboxing & Permissions
 
@@ -423,5 +638,5 @@ if err != nil {
 The `context.Context` passed to handlers carries:
 
 - Request timeout/deadline
-- Language preference (via `PluginLanguageKey`)
+- Language preference (via `PluginLanguageKey`; WASM and in-process calls only, gRPC plugins use `args["_lang"]`)
 - Caller plugin name (via `PluginCallerKey`, for plugin-to-plugin calls)

@@ -1,345 +1,334 @@
 # GoatFlow Features
 
-## Core Features (Targetted for v0.1.0)
+Status of each feature in GoatFlow 0.10.0.
+
+Legend:
+- ✅ Works
+- ⚠️ Partly works (the note says what is missing)
+- ⏳ In progress outside the code (for example, a store submission)
+- ❌ Not available
+
+## Core Features
 
 ### Ticket Management
 - ✅ Create, read, update, delete tickets
-- ✅ Ticket numbering system
-- ✅ Priority levels (Low, Normal, High, Critical)
-- ✅ Status workflow (New → Open → Pending → Resolved → Closed)
-- ✅ Queue/Department assignment
-- ✅ Agent assignment
+- ✅ Ticket numbering (Increment, Date, DateChecksum, Random generators)
+- ✅ Priority levels (OTRS set: 1 very low, 2 low, 3 normal, 4 high, 5 very high)
+- ✅ Ticket states (OTRS set: new, open, pending reminder, pending auto close+/-, closed successful, closed unsuccessful, merged, removed)
+- ✅ Queue assignment
+- ✅ Agent assignment (owner and responsible)
 - ✅ Customer association
-- ✅ Ticket history tracking
-- ✅ Internal notes
-- ✅ Email notifications
+- ✅ Ticket history (`ticket_history`, one entry per changed field)
+- ✅ Internal notes (not visible to customers)
+- ⚠️ Email notifications (customers get emails on ticket create, reply and note; rules saved in Admin -> Notification Events are not evaluated yet)
 
 ### User Management
-- ✅ Login; customer self-registration with email confirmation (`features.registration`, off by default)
-- ✅ Role-based access control (Admin, Agent, Customer)
+- ✅ Login for agents and customers
+- ✅ Customer self-registration with email confirmation (`features.registration`, off by default)
+- ✅ Role-based access control (Admin, Agent, Customer); admin rights come only from admin-group membership
 - ✅ User profiles
 - ✅ User preferences (language, theme, session timeout, reminder notifications)
-- ✅ Password reset by email for agents and customers (`features.lost_password`; links use `BASE_URL`)
+- ✅ Password reset by email for agents and customers (`features.lost_password`, on by default; links use `BASE_URL`)
 - ✅ Session management
-- ✅ Basic permissions
+- ✅ Queue permissions through groups and roles
 
 ### Communication
-- ✅ Email integration (SMTP/IMAP)
+- ✅ Email integration (SMTP sending; IMAP and POP3 mail accounts in Admin -> Mail Accounts)
 - ✅ Email-to-ticket conversion
 - ✅ Reply by email
-- ❌ CC/BCC support
+- ❌ CC/BCC (the article API stores a Cc value, but mail is sent to one recipient)
 - ✅ HTML email support
 
 ### Basic UI
 - ✅ Agent dashboard
-- ✅ Customer portal
+- ✅ Customer portal (tickets, company pages, profile, 2FA)
 - ✅ Ticket list view
 - ✅ Ticket detail view
-- ✅ Search functionality
+- ✅ Search
 - ✅ Responsive design
 
-## Standard Features (v0.2.0 - v0.7.0)
+## Standard Features
 
 ### Enhanced Ticket Management
-- ✅ Ticket templates (canned responses)
-- ✅ Canned responses/Macros
-- ✅ Ticket merging
-- ⚠️ Ticket splitting (models + routes defined, handler TODO)
-- ⚠️ Ticket linking/relationships (models complete, UI TODO)
-- ⚠️ Bulk operations (UI framework exists, execution logic TODO)
-- ✅ Custom fields (dynamic fields system)
-- ✅ File attachments
+- ✅ Ticket templates (Admin -> Templates, import/export)
+- ✅ Canned responses (create, edit, share, import/export, statistics)
+- ✅ Ticket merging (single and bulk)
+- ❌ Ticket splitting (the route only adds a note)
+- ⚠️ Ticket linking (existing links are shown; links cannot be created or removed in the UI)
+- ✅ Bulk operations (status, priority, queue, assign, lock, merge)
+- ✅ Custom fields (dynamic fields, including web service fields)
+- ✅ File attachments (stored in the database or an OTRS-compatible filesystem tree; PDF and image thumbnails)
 - ✅ Ticket locking
-- ❌ Watch/Follow tickets (TODO)
-- ✅ Ticket tags
-- ✅ Time tracking (time_accounting table + API)
+- ❌ Watch/Follow tickets
+- ❌ Ticket tags
+- ✅ Time tracking (`time_accounting`)
 
-### Advanced Search & Filters
-- ✅ Full-text search
-- ✅ Advanced search filters (SearchFilter model)
-- ✅ Saved searches (CRUD handlers implemented)
-- ❌ Search templates (TODO)
-- ❌ Quick filters (TODO)
-- ✅ Search history (tracking implemented)
+### Search & Filters
+- ⚠️ Search across tickets, articles and customers (every word must match; uses `LIKE`, no full-text index). Optional Zinc or Elasticsearch backend
+- ✅ Ticket filters
+- ✅ Saved searches
+- ❌ Search templates
+- ❌ Quick filters
+- ❌ Search history
 
 ### SLA Management
-- ✅ SLA definitions (models + CRUD handlers)
-- ✅ Response time targets (SLA calculation implemented)
-- ✅ Resolution time targets (SLA calculation implemented)
-- ✅ Escalation rules (manual + auto-escalation handlers)
-- ⚠️ Business hours (model exists, enforcement TODO)
-- ❌ Holiday calendars (TODO)
-- ❌ SLA reporting (TODO)
-- ❌ Breach notifications (TODO)
+- ✅ SLA definitions (Admin -> SLA)
+- ⚠️ Response and resolution targets (the calculation exists, but ticket escalation times are not filled in yet)
+- ⚠️ Escalation checks (the job runs every minute, but finds nothing while escalation times are empty; events are only logged)
+- ⚠️ Business hours (read from the `TimeWorkingHours` setting; no admin page)
+- ⚠️ Holiday calendars (read from `TimeVacationDays` settings; no admin page)
+- ❌ SLA reporting
+- ❌ Breach notifications
 
 ### Workflow Automation
-- ✅ GenericAgent execution engine (scheduled ticket processing)
-- ✅ Time-based triggers (via GenericAgent schedules)
-- ✅ Event-based triggers (via GenericAgent conditions)
+- ✅ GenericAgent execution engine (Admin -> Generic Agent, runs every minute)
+- ✅ Time-based triggers (GenericAgent schedules)
+- ✅ Event-based triggers (GenericAgent conditions)
 - ✅ Automated actions (GenericAgent actions)
 - ✅ Conditional logic (GenericAgent conditions)
-- ⚠️ Workflow templates (models exist, UI TODO)
-- ❌ Round-robin assignment (TODO)
-- ❌ Load balancing (TODO)
+- ❌ Workflow templates
+- ❌ Round-robin assignment
+- ❌ Load balancing
 
 ### Reporting & Analytics
-- ✅ Dashboard widgets (statistics via WASM plugin, drag/resize via gridstack.js)
-- ⚠️ Standard reports (basic stats, full reports TODO)
-- ❌ Custom report builder (TODO)
-- ✅ Real-time metrics (WebSocket dashboard)
-- ❌ Historical analytics (TODO)
-- ✅ Export (CSV, Excel) (PDF TODO)
-- ❌ Scheduled reports (TODO)
-- ❌ Report sharing (TODO)
+- ✅ Dashboard widgets (statistics plugin, drag and resize with gridstack.js)
+- ✅ Reports page (Admin -> Reports): ticket totals, created-vs-closed trend (7 days, 30 days, 12 months), open/backlog per queue, agent activity, top customers. See [REPORTS.md](REPORTS.md)
+- ❌ Custom report builder
+- ⚠️ Export (CSV and JSON from Admin -> Reports; no Excel or PDF)
+- ❌ Scheduled reports
+- ❌ Report sharing
 
 ### Customer Management
-- ⚠️ Customer organizations (basic model exists)
-- ❌ Customer hierarchies (TODO)
-- ✅ Contact management (customer user CRUD)
-- ❌ Customer history (TODO)
-- ❌ Customer notes (TODO)
-- ❌ Customer custom fields (TODO)
-- ❌ VIP customer flags (TODO)
+- ✅ Customer companies (Admin -> Customer Companies: users, tickets, services and portal settings per company; customers see their own company at `/customer/company`)
+- ❌ Customer hierarchies
+- ✅ Customer users (create, edit, import, export, bulk actions)
+- ❌ Customer history
+- ❌ Customer notes
+- ❌ VIP customer flags
 
 ### Knowledge Base
-- ✅ Article creation (full CRUD handlers)
-- ✅ Categories and tags (category hierarchy + tags)
-- ✅ Article versioning (version tracking)
-- ✅ Article approval workflow (reviewer/approver fields)
-- ✅ Search functionality (integrated search)
-- ⚠️ Related articles (model exists, UI TODO)
-- ✅ Article ratings (helpful count + feedback)
-- ⚠️ FAQ section (can use KB articles, dedicated FAQ TODO)
+The knowledge base is not part of core. It comes from the **goat-kb** plugin. When the plugin is installed it adds the customer knowledge base at `/customer/kb`.
 
-## Advanced Features (v0.8.0 - v1.0.0)
+## Advanced Features
 
 ### Multi-Channel Support
-- ✅ Web forms (ticket creation forms)
-- ✅ API integration (REST API + webhooks)
-- ❌ Chat integration (TODO)
-- ❌ Social media (Twitter, Facebook) (TODO)
-- ❌ Phone integration (VoIP) (TODO)
-- ❌ SMS support (TODO)
-- ❌ WhatsApp Business (TODO)
+- ⚠️ Web forms (agent email and phone ticket forms, customer portal form; no public embeddable form)
+- ✅ API integration (REST API and outbound webhooks)
+- ❌ Chat integration
+- ❌ Social media
+- ❌ Phone integration (VoIP)
+- ❌ SMS
+- ❌ WhatsApp Business
 
-### Advanced Authentication
-- ❌ Single Sign-On (SSO) (TODO)
-- ❌ SAML 2.0 (TODO)
-- ✅ OAuth 2.0 (OAuth2 provider implemented)
-- ❌ OpenID Connect (TODO)
+### Authentication
+- ✅ Single sign-on (Admin -> Identity Providers)
+- ✅ SAML 2.0
+- ✅ OpenID Connect (PKCE, JWKS verification, auto-provisioning)
+- ✅ OAuth 2.0 login with Google and GitHub (GoatFlow is the client, not an OAuth server)
 - ✅ LDAP/Active Directory agent login (bind + search, StartTLS/LDAPS with certificate verification, optional account creation, name/email sync and admin-group mapping; see [LDAP.md](LDAP.md))
-- ✅ Multi-factor authentication — TOTP QR setup, recovery codes, WebAuthn/FIDO2 security keys, passkey login, admin override, audit logging
-- ❌ Biometric authentication (TODO)
-- ✅ API key management (personal access tokens with scoped permissions, expiration, rate limiting)
+- ✅ Multi-factor authentication: TOTP, passkeys/security keys (WebAuthn), recovery codes, admin override; users list and remove their own passkeys
+- ✅ Passkey login (without a password)
+- ✅ Refresh tokens (`POST /api/v1/auth/refresh`)
+- ⚠️ API tokens (scopes and expiry work; the per-token rate limit is stored but not enforced)
 
-### Collaboration Features
-- ❌ Team inbox (TODO)
-- ✅ Collision detection (agent collision detection config)
-- ✅ Real-time updates (WebSocket for dashboard metrics)
-- ❌ Agent chat (TODO)
-- ❌ Screen sharing (TODO)
-- ❌ Co-browsing (TODO)
-- ❌ Presence indicators (TODO)
+### Collaboration
+- ❌ Team inbox
+- ❌ Collision detection (a `features.agent_collision_detection` setting exists but nothing reads it)
+- ⚠️ Real-time updates (Server-Sent Events for plugin events; no WebSocket)
+- ❌ Agent chat
+- ❌ Screen sharing
+- ❌ Co-browsing
+- ❌ Presence indicators
 
 ### Process Management
-- ❌ Visual workflow designer (TODO)
-- ❌ BPMN 2.0 support (TODO)
-- ❌ Process templates (TODO)
-- ❌ Approval workflows (escalation models exist, no handlers)
-- ❌ Parallel processes (TODO)
-- ❌ Process versioning (TODO)
-- ❌ Process analytics (TODO)
+- ❌ Visual workflow designer
+- ❌ BPMN 2.0 support
+- ❌ Process templates
+- ❌ Approval workflows
+- ❌ Parallel processes
+- ❌ Process versioning
+- ❌ Process analytics
 
 ### Asset Management
-- ❌ Configuration items (CI) (CMDB models exist, no handlers)
-- ❌ Asset relationships (TODO)
-- ❌ Asset lifecycle (TODO)
-- ❌ Software license management (TODO)
-- ❌ Hardware inventory (TODO)
-- ❌ Warranty tracking (TODO)
-- ❌ Depreciation calculation (TODO)
+- ❌ Configuration items (CMDB)
+- ❌ Asset relationships
+- ❌ Asset lifecycle
+- ❌ Software license management
+- ❌ Hardware inventory
+- ❌ Warranty tracking
+- ❌ Depreciation calculation
 
 ### Project Management
-- ❌ Project tickets (TODO)
-- ❌ Gantt charts (TODO)
-- ❌ Resource allocation (TODO)
-- ❌ Time tracking (already in Standard Features)
-- ❌ Milestone tracking (TODO)
-- ❌ Budget management (TODO)
-- ❌ Project templates (TODO)
+- ❌ Project tickets
+- ❌ Gantt charts
+- ❌ Resource allocation
+- ❌ Milestone tracking
+- ❌ Budget management
+- ❌ Project templates
 
-## Enterprise Features (v1.1+)
+### Migration & Storage
+- ✅ OTRS 6 / Znuny 6.x import with `goatflow-migrate` (from a dump file or a live MySQL/MariaDB or PostgreSQL database; one transaction; keeps OTRS ids). See [MIGRATION.md](MIGRATION.md)
+- ✅ OTRS-compatible attachment storage: database (`db`) or ArticleStorageFS tree (`fs`), with the `goatflow-storage` command to move between them. See [ARTICLE_STORAGE.md](ARTICLE_STORAGE.md)
+- ✅ MySQL/MariaDB and PostgreSQL (Oracle and SQL Server are not implemented)
+
+## Enterprise Features
 
 ### ITSM Suite
-- ❌ Incident Management (models exist, no implementation)
-- ❌ Problem Management (models exist, no implementation)
-- ❌ Change Management (TODO)
-- ❌ Release Management (TODO)
-- ❌ Service Catalog (models exist, no implementation)
-- ❌ Service Level Management (SLA tables exist, handlers TODO)
-- ❌ Capacity Management (TODO)
-- ❌ Availability Management (TODO)
+- ❌ Incident Management
+- ❌ Problem Management
+- ❌ Change Management
+- ❌ Release Management
+- ⚠️ Service Catalog (services can be defined and assigned to customer users; no catalog page)
+- ⚠️ Service Level Management (SLA definitions only; see SLA Management)
+- ❌ Capacity Management
+- ❌ Availability Management
 
 ### Advanced Security
-- ❌ Field-level encryption (TODO)
-- ❌ Data loss prevention (DLP) (TODO)
-- ⚠️ Advanced audit logging (2FA audit events implemented, full audit TODO)
-- ❌ Session recording (TODO)
-- ❌ Compliance reporting (GDPR, HIPAA) (TODO)
-- ❌ Security incident response (TODO)
-- ❌ Vulnerability scanning (TODO)
-- ❌ Penetration testing support (TODO)
+- ❌ Field-level encryption (only plugin secure settings and webhook signing secrets are encrypted)
+- ❌ Data loss prevention (DLP)
+- ⚠️ Audit logging (ticket history; admin changes record the acting admin; admin 2FA overrides are logged)
+- ❌ Session recording
+- ❌ Compliance reporting (GDPR, HIPAA)
+- ❌ Security incident response
 
 ### High Availability
-- ❌ Active-active clustering (Redis cluster for cache only)
-- ❌ Database replication (TODO)
-- ❌ Load balancing (TODO)
-- ❌ Failover mechanisms (TODO)
-- ❌ Disaster recovery (TODO)
-- ❌ Backup automation (TODO)
-- ❌ Point-in-time recovery (TODO)
-- ❌ Geographic distribution (TODO)
+See [HIGH_AVAILABILITY.md](HIGH_AVAILABILITY.md).
+- ❌ Active-active clustering (Valkey is a shared cache only; the scheduler runs on every replica)
+- ❌ Database replication (use a managed database)
+- ❌ Failover mechanisms
+- ❌ Disaster recovery
+- ❌ Backup automation
+- ❌ Point-in-time recovery
+- ❌ Geographic distribution
 
 ### Multi-Tenancy
-- ❌ Isolated environments (tenant ID in JWT, no isolation)
-- ❌ Tenant management (TODO)
-- ❌ Resource quotas (TODO)
-- ❌ Billing integration (TODO)
-- ❌ White-labeling (TODO)
-- ❌ Custom domains (TODO)
-- ❌ Tenant-specific customization (TODO)
+- ⚠️ Organisations: members, per-organisation settings, plugin access, captive plugin and identity providers (`/api/v1/organisations`). Plugin database calls are scoped to the organisation. Core tickets and queues are not separated by organisation
+- ❌ Resource quotas
+- ❌ Billing integration
+- ❌ White-labeling
+- ❌ Custom domains
 
 ### Advanced Integrations
-- ❌ ERP systems (SAP, Oracle) (TODO)
-- ❌ CRM systems (Salesforce, HubSpot) (TODO)
-- ❌ DevOps tools (Jira, GitLab, Jenkins) (TODO)
-- ❌ Monitoring tools (Nagios, Zabbix, Prometheus) (TODO)
-- ❌ Communication platforms (Slack, Teams, Discord) (TODO)
-- ❌ Payment gateways (TODO)
-- ❌ Shipping providers (TODO)
-- ❌ Cloud storage (S3, Azure Blob, GCS) (TODO)
+- ❌ ERP systems (SAP, Oracle)
+- ❌ CRM systems (Salesforce, HubSpot)
+- ❌ DevOps tools (Jira, GitLab, Jenkins)
+- ✅ Prometheus metrics (`/metrics`, optional separate `METRICS_PORT` listener)
+- ❌ Communication platforms (Slack, Teams, Discord)
+- ❌ Payment gateways
+- ❌ Shipping providers
+- ❌ Cloud storage (S3, Azure Blob, GCS)
 
-## AI/ML Features (v2.0+)
+## AI/ML Features
 
 ### Intelligent Automation
-- ❌ Smart ticket categorization (TODO)
-- ❌ Auto-tagging (TODO)
-- ❌ Priority prediction (TODO)
-- ❌ Agent recommendation (TODO)
-- ❌ Response time prediction (TODO)
-- ❌ Sentiment analysis (TODO)
-- ❌ Language detection (TODO)
-- ❌ Translation services (TODO)
+- ❌ Smart ticket categorization
+- ❌ Auto-tagging
+- ❌ Priority prediction
+- ❌ Agent recommendation
+- ❌ Response time prediction
+- ❌ Sentiment analysis
+- ❌ Language detection in tickets
+- ❌ Translation services
 
 ### Predictive Analytics
-- ❌ Ticket volume forecasting (TODO)
-- ❌ Resource planning (TODO)
-- ❌ Customer churn prediction (TODO)
-- ❌ Issue trend analysis (TODO)
-- ❌ Performance prediction (TODO)
-- ❌ Anomaly detection (TODO)
-- ❌ Root cause analysis (TODO)
+- ❌ Ticket volume forecasting
+- ❌ Resource planning
+- ❌ Customer churn prediction
+- ❌ Issue trend analysis
+- ❌ Performance prediction
+- ❌ Anomaly detection
+- ❌ Root cause analysis
 
 ### AI Assistant
-- ❌ Suggested responses (TODO)
-- ❌ Answer recommendations (TODO)
-- ❌ Knowledge base suggestions (TODO)
-- ❌ Similar ticket detection (TODO)
-- ❌ Chatbot integration (TODO)
-- ❌ Voice assistant (TODO)
-- ❌ Natural language processing (TODO)
-- ❌ Intent recognition (TODO)
+- ✅ MCP server for AI assistants (`/api/mcp`, runs with the caller's permissions)
+- ❌ Suggested responses
+- ❌ Answer recommendations
+- ❌ Knowledge base suggestions
+- ❌ Similar ticket detection
+- ❌ Chatbot integration
+- ❌ Voice assistant
 
 ## Platform Features
 
 ### Developer Tools
-- ✅ REST API v1 (OpenAPI 3.0 spec, 94 endpoints, Swagger UI)
-- ✅ WebSocket support (dashboard metrics)
-- ✅ Webhook system
-- ✅ SDK (Go, Python, TypeScript)
-- ✅ CLI tools (multiple commands available, `gk init` plugin scaffolding)
-- ✅ API documentation (OpenAPI 3.0 + Swagger UI at `/swagger/`)
-- ✅ MCP Server (AI assistant integration via JSON-RPC with multi-user RBAC proxy)
-- ❌ Postman collections (TODO)
+- ✅ REST API v1 (OpenAPI 3.0 spec in `api/openapi.yaml`, Swagger UI at `/swagger/`)
+- ✅ Webhooks (Admin -> Webhooks: ten ticket and article events, HMAC-SHA256 signature, retries, delivery log and redeliver). See [WEBHOOKS.md](WEBHOOKS.md)
+- ✅ SDKs (Go, Python, TypeScript in `sdk/`)
+- ✅ CLI tools (`gk plugin init`, `gk install/update/search/build/sign`, `goatflow-migrate`, `goatflow-storage`)
+- ✅ API documentation (`make api-docs` regenerates it from `routes/*.yaml`)
+- ✅ Markdown rendering API (`POST /api/v1/markdown/render`)
+- ❌ WebSocket API (real-time uses Server-Sent Events)
+- ❌ Postman collections
 
 ### Extension Framework
-- ✅ Plugin architecture (dual-runtime: WASM via wazero + gRPC via go-plugin)
-- ✅ Plugin marketplace (admin UI at /admin/marketplace, gk marketplace CLI)
-- ✅ Theme system (4 built-in themes, package structure, dark/light modes)
-- ✅ Custom widgets (plugin-provided widgets via HostAPI, RBAC-filtered)
-- ✅ Widget drag/resize (gridstack.js, 12-column grid, per-user layout persistence)
-- ✅ Plugin navigation control (hide built-in nav items, custom landing page)
-- ❌ Hook system (TODO)
-- ❌ Event bus (TODO)
-- ⚠️ Sandboxed execution (WASM sandboxed, isolation limits TODO)
-- ❌ Hot reload (TODO)
+- ✅ Plugin architecture (WASM via wazero + gRPC via go-plugin)
+- ✅ Plugin marketplace (Admin -> Marketplace, `gk install/update/search`)
+- ✅ Theme system (4 built-in themes, dark/light modes)
+- ✅ Custom widgets (plugin widgets, filtered by permissions)
+- ✅ Widget drag/resize (gridstack.js, 12-column grid, per-user layout)
+- ✅ Plugin navigation control (hide built-in nav items, custom landing page, Profile menu location)
+- ⚠️ Hooks (plugins can register scheduled jobs and deletion cascades; no ticket-event hooks)
+- ⚠️ Plugin events (plugins publish events to browsers over SSE, with an optional EventAuthorizer; plugins cannot subscribe to platform events)
+- ⚠️ Sandboxed execution (WASM memory and call-time limits; gRPC plugins get mount and PID namespaces when GoatFlow runs as root outside a container; no CPU or memory limits)
+- ✅ Hot reload (on unless `GOATFLOW_PLUGIN_HOT_RELOAD=false`; the container image sets it to `false`)
 
 ### Monitoring & Observability
-- ✅ Health checks
-- ✅ Metrics (internal collection system)
-- ✅ Logging (structured) (JSON)
-- ❌ Tracing (OpenTelemetry) (TODO)
-- ❌ Performance monitoring (TODO)
-- ❌ Error tracking (TODO)
-- ❌ Usage analytics (TODO)
-- ❌ Custom dashboards (TODO)
+See [OBSERVABILITY.md](OBSERVABILITY.md).
+- ✅ Health checks (`/health` pings the database and returns 503 when it is down; `/health/detailed` for admins)
+- ✅ Prometheus metrics
+- ✅ Structured logging (`LOG_FORMAT=json|text`, `LOG_LEVEL`, `LOG_OUTPUT`)
+- ✅ Graceful shutdown with connection draining (`DRAIN_TIMEOUT`)
+- ❌ Tracing (OpenTelemetry)
+- ❌ Error tracking
+- ❌ Usage analytics
 
 ### Deployment Options
-- ✅ Docker support
-- ✅ Kubernetes support (Helm chart with K8s 1.25+)
-- ✅ Helm charts (OCI registry + GitHub releases)
-- ✅ Terraform modules (infrastructure repo)
+- ✅ Docker / Podman Compose
+- ⚠️ Kubernetes Helm chart (K8s 1.25+; in 0.10.0 some variables must be added with `backend.extraEnv`, see [HIGH_AVAILABILITY.md](HIGH_AVAILABILITY.md))
 - ⏳ TrueNAS SCALE app catalog (package ready in `docs/truenas-app/`, PR in submission)
-- ❌ Ansible playbooks (TODO)
-- ❌ Cloud marketplace (AWS, Azure, GCP) (TODO)
-- ❌ One-click installers (TODO)
-- ✅ Auto-scaling (HPA with CPU/memory targets)
+- ✅ Auto-scaling (Helm HPA with CPU/memory targets)
+- ❌ Ansible playbooks
+- ❌ Cloud marketplace (AWS, Azure, GCP)
+- ❌ One-click installers
 
 ## Mobile Features
 
 ### Mobile Apps (Native)
-- ❌ iOS app (TODO)
-- ❌ Android app (TODO)
-- ❌ Push notifications (TODO)
-- ❌ Offline support (TODO)
-- ❌ Biometric login (TODO)
-- ❌ Voice input (TODO)
-- ❌ Camera integration (TODO)
-- ❌ Location services (TODO)
+- ❌ iOS app
+- ❌ Android app
 
 ### Progressive Web App (PWA)
-- ❌ Install to home screen (TODO)
-- ❌ Offline functionality (TODO)
-- ❌ Push notifications (TODO)
-- ❌ Background sync (TODO)
-- ❌ App-like experience (TODO)
+- ✅ Install to home screen (`/manifest.json`)
+- ✅ Offline page (service worker `/sw.js`)
+- ✅ Web push notifications (VAPID)
+- ❌ Background sync
+- ✅ App-like (standalone) display
 - ✅ Responsive design
-- ❌ Touch optimized (TODO)
 
 ## Accessibility Features
 
-### WCAG 2.1 Compliance
-- ⚠️ Screen reader support (ARIA labels present, full audit TODO)
-- ⚠️ Keyboard navigation (basic support, full audit TODO)
-- ❌ High contrast mode (TODO)
-- ❌ Font size adjustment (TODO)
-- ❌ Color blind modes (TODO)
-- ✅ Focus indicators (Tailwind focus: styles throughout)
-- ✅ ARIA labels (129+ aria-* attributes across templates)
-- ❌ Skip navigation (TODO)
+### WCAG 2.1
+- ⚠️ Screen reader support (ARIA labels present, no full audit)
+- ⚠️ Keyboard navigation (basic support, no full audit)
+- ❌ High contrast mode
+- ❌ Font size adjustment
+- ❌ Color blind modes
+- ✅ Focus indicators
+- ✅ ARIA labels
+- ✅ Skip-to-content link
 
 ## Localization
 
 ### Multi-Language Support
-- ✅ Interface translation (15 languages with RTL support)
+- ✅ Interface translation (15 languages)
 - ✅ Right-to-left (RTL) support (Arabic, Hebrew, Persian, Urdu)
-- ✅ Date/time localization (per-language formats in rtl.go)
-- ✅ Number formatting (decimal/thousands separators, locale digits)
-- ✅ Currency support (symbol, position, decimal places per locale)
-- ❌ Timezone handling (TODO)
-- ❌ Custom translations (TODO)
-- ❌ Language detection (TODO)
-- ✅ User language preference (stored in user_preferences table)
+- ✅ Date/time localization
+- ✅ Number formatting
+- ✅ Currency formatting
+- ❌ Per-user time zones
+- ❌ Custom translations
+- ✅ Language detection (`?lang=`, cookie, user preference, browser `Accept-Language`)
+- ✅ User language preference
 
 ### Supported Languages
 - ✅ English (en) - Base language
@@ -356,37 +345,34 @@
 - ✅ Hebrew (he) - RTL
 - ✅ Chinese (zh)
 - ✅ Persian (fa) - RTL, Persian numerals
-- ✅ Klingon (tlh) (Qapla'!)
+- ✅ Klingon (tlh)
 
 ## Performance Features
 
 ### Optimization
-- ⚠️ Query optimization (basic optimization, ongoing)
-- ✅ Database indexing (270+ indexes defined in schema)
-- ✅ Caching (Valkey/Redis)
-- ❌ CDN support (TODO)
-- ❌ Lazy loading (TODO)
-- ✅ Image optimization (govips/libvips - WebP, AVIF, HEIC support)
-- ❌ Code splitting (TODO)
-- ❌ Compression (TODO)
+- ✅ Database indexes (OTRS schema plus GoatFlow tables)
+- ✅ Caching (Valkey)
+- ❌ CDN support
+- ❌ Lazy loading
+- ✅ Image processing (libvips: WebP, AVIF, HEIC)
+- ❌ HTTP compression
 
 ### Scalability
-- ✅ Horizontal scaling (Helm HPA with CPU/memory targets)
-- ✅ Vertical scaling (resource limits configurable)
-- ❌ Database sharding (TODO)
-- ❌ Read replicas (TODO)
-- ✅ Connection pooling (MaxOpenConns/MaxIdleConns)
-- ❌ Queue management (TODO)
-- ✅ Rate limiting (login rate limiter implemented)
-- ❌ Circuit breakers (TODO)
+- ✅ Horizontal scaling (Helm HPA)
+- ✅ Vertical scaling (resource limits)
+- ❌ Database sharding
+- ❌ Read replicas
+- ✅ Connection pooling
+- ✅ Rate limiting (login, passkey login, password reset and sign-up, public plugin pages, plugin webhooks)
+- ❌ Circuit breakers
 
-## Comparison Matrix as of v0.6.5
+## Comparison Matrix (GoatFlow 0.10.0)
 
 | Feature Category | GoatFlow | OTRS | Zendesk | ServiceNow |
 |-----------------|-------|------|---------|------------|
 | Core Ticketing | ✅ | ✅ | ✅ | ✅ |
 | Email Integration | ✅ | ✅ | ✅ | ✅ |
-| Knowledge Base | ✅ | ✅ | ✅ | ✅ |
+| Knowledge Base | ⚠️ (goat-kb plugin) | ✅ | ✅ | ✅ |
 | SLA Management | ⚠️ | ✅ | ✅ | ✅ |
 | Workflow Automation | ⚠️ | ✅ | ✅ | ✅ |
 | Plugin Platform | ✅ | ❌ | ⚠️ | ✅ |
@@ -398,7 +384,7 @@
 | Multi-Channel | ⚠️ | ⚠️ | ✅ | ✅ |
 | ITSM Suite | ❌ | ✅ | ❌ | ✅ |
 | AI/ML Features | ⚠️ | ❌ | ✅ | ✅ |
-| Multi-Tenancy | ❌ | ❌ | ✅ | ✅ |
+| Multi-Tenancy | ⚠️ | ❌ | ✅ | ✅ |
 | High Availability | ❌ | ⚠️ | ✅ | ✅ |
 | Source Code Access | ✅ | ✅ | ❌ | ❌ |
 | Self-Hosted | ✅ | ✅ | ❌ | ✅ |
@@ -406,8 +392,3 @@
 | Air-Gapped Deploy | ✅ | ⚠️ | ❌ | ⚠️ |
 | Modern UI | ✅ | ❌ | ✅ | ✅ |
 | Localization | ✅ | ✅ | ✅ | ✅ |
-
-Legend:
-- ✅ Full support
-- ⚠️ Partial support
-- ❌ Not available

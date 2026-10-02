@@ -1,71 +1,105 @@
 # E2E Testing with Playwright
 
-This directory contains end-to-end tests for GoatFlow using Playwright with Go bindings.
+This directory holds the browser end-to-end tests for GoatFlow. They use
+[playwright-go](https://github.com/playwright-community/playwright-go) and Chromium.
+Every test file has the `e2e` build tag, so normal `go test ./...` runs skip them.
 
-## Overview
-
-Our E2E tests provide comprehensive UI testing capabilities that allow us to:
-- Verify UI elements are correctly populated
-- Test user workflows end-to-end
-- Catch regressions before they reach production
-- Debug UI issues with screenshots and videos
-
-## Architecture
+## Layout
 
 ```
 tests/e2e/
-├── config/        # Test configuration
-├── helpers/       # Test utilities and helpers
-├── playwright/    # Playwright test runner
-├── auth_test.go   # Authentication tests
-├── api_test.go    # API tests
-├── queues_test.go # Queue management tests
-├── smoke_test.go  # Basic smoke test
-└── ...            # 20+ more test files (admin, customer, groups, 2FA, ...)
+├── config/        # config.go: reads BASE_URL, credentials, HEADLESS etc. from the environment
+├── helpers/       # browser.go, auth.go, fixtures.go: browser setup, login, HTMX waits
+├── playwright/    # second suite: 17 test files (admin pages, customer portal, ticket search, ...)
+├── auth_test.go   # authentication
+├── api_test.go    # API checks
+├── queues_test.go # queue management
+├── smoke_test.go  # basic smoke test
+└── ...            # 14 more test files (admin groups, plugins, 2FA, customer tickets, ...)
 ```
 
-## Running Tests
+## Running the tests
 
-### Quick Start
-
-Both suites run in the `goatflow-playwright-go` container against the **test stack**
-(never the dev backend). Credentials come from `.env` (`TEST_USERNAME` / `TEST_PASSWORD`).
+Both suites run in the `goatflow-playwright-go` container (built from
+`Dockerfile.playwright-go`). They run against the **test stack**, never the dev backend.
 
 ```bash
-make test-stack-up                                   # build + start backend-test, customer-fe-test
-make test-e2e-playwright-go                          # tests/e2e/playwright
-make test-e2e-go                                     # tests/e2e (all tests)
-make test-e2e-go TEST='Groups|Queues'                # go test -run pattern
-make test-e2e TEST='Login'                           # same as test-e2e-go TEST=...
+make test-stack-up                                # build and start backend-test, runner-test, customer-fe-test
+make test-e2e-playwright-go                       # tests/e2e/playwright
+make test-e2e-go                                  # tests/e2e (all tests)
+make test-e2e-go TEST='Groups|Queues'             # go test -run pattern
+make test-e2e TEST='Login'                        # same as test-e2e-go; TEST is required
 make test-e2e-playwright-go ARGS='-run TestAdminGroupsUI'
 ```
 
-### Defaults and overrides (Makefile)
+`make test` also runs `make test-e2e-playwright-go` after the unit tests.
 
-- `BASE_URL`: `http://backend-test:8080` on the compose network `goatflow_goatflow-network`
-  (customer portal `http://customer-fe-test:8080`). The `.env` `BASE_URL` (dev backend) is ignored;
-  pass `BASE_URL=...` on the make command line to override. A localhost URL such as
-  `BASE_URL=http://localhost:8082` switches to the host network and the published customer-fe-test
-  port (`TEST_CUSTOMER_FE_PORT`).
-- `PLAYWRIGHT_NETWORK`: force a docker network (e.g. `host`).
-- `CUSTOMER_PORTAL_URL`: override the customer portal URL.
-- `E2E_TIMEOUT`: `go test -timeout` for the whole run (default `30m`; go's default 10m is too short).
-- `E2E_TMPFS_SIZE`: size of the container's `/tmp` tmpfs (default `4g`), which is `TMPDIR` for
-  `go test` and Chromium. Playwright runs Chromium with `--disable-dev-shm-usage`, so the browser's
-  shared memory lives there; keep it off the bind-mounted repository, whose free space a page
-  otherwise exhausts within a few navigations (`net::ERR_INSUFFICIENT_RESOURCES` / "Page crashed").
-- `HEADLESS` (default true), `SLOW_MO`, `SCREENSHOTS` (default true), `VIDEOS` (default false).
+Each run rebuilds the image first (`make e2e-image`). The image does not contain the source
+tree. The repository is bind-mounted at `/workspace`, so source changes never need a rebuild.
+Tests use `-count=1`, so results are never cached.
 
-The image does not contain the source tree: the repository is bind-mounted at `/workspace`, so
-source changes never rebuild the image. Tests use `-count=1` (results are never cached).
+## Settings the Makefile passes to the container
 
-## Writing Tests
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| `BASE_URL` | `http://backend-test:8080` | Backend under test. The `BASE_URL` in `.env` (dev backend) is ignored. Set it on the make command line to override. |
+| `CUSTOMER_PORTAL_URL` | `http://customer-fe-test:8080` | Customer portal under test. Make command line only. |
+| `PLAYWRIGHT_NETWORK` | `goatflow_goatflow-network` | Docker network for the container. |
+| `HEADLESS` | `true` | `false` opens a visible browser. That needs a display, which the container does not have. |
+| `TEST_USERNAME`, `TEST_PASSWORD` | from `.env` | Admin login. `DEMO_ADMIN_EMAIL` / `DEMO_ADMIN_PASSWORD` are used when these are empty. |
+| `E2E_TIMEOUT` | `30m` | `go test -timeout` for the whole run. Go's default of 10m is too short. |
+| `E2E_TMPFS_SIZE` | `4g` | Size of the container's `/tmp` tmpfs. See below. |
 
-### Basic Test Structure
+A `localhost` or `127.0.0.1` `BASE_URL` switches the container to the host network. The customer
+portal URL then becomes `http://localhost:$(TEST_CUSTOMER_FE_PORT)` (default 18082). Example:
+
+```bash
+make test-e2e-go BASE_URL=http://localhost:18081
+```
+
+Port 18081 is `TEST_BACKEND_PORT`, the host port `docker-compose.test.yaml` publishes for
+backend-test.
+
+### Why `/tmp` is a tmpfs
+
+`TMPDIR` is `/tmp` inside the container, a tmpfs of `E2E_TMPFS_SIZE`. Playwright runs Chromium
+with `--disable-dev-shm-usage`, so the browser keeps its shared memory there as files. `go test`
+also builds its test binaries there. Keeping this off the bind-mounted repository stops pages
+failing with `net::ERR_INSUFFICIENT_RESOURCES` or "Page crashed" when the repository disk is
+nearly full.
+
+### Settings the Makefile does not pass
+
+`tests/e2e/config/config.go` also reads `SLOW_MO`, `SCREENSHOTS` and `VIDEOS`. The make
+targets above do not pass them into the container, so the defaults always apply:
+
+| Setting | Default |
+|---------|---------|
+| `SLOW_MO` | 0 (no slow motion) |
+| `SCREENSHOTS` | on: a screenshot is saved when a test fails |
+| `VIDEOS` | off, but `helpers/browser.go` records video for every test that uses `NewBrowserHelper` anyway |
+
+## Test output
+
+Paths are relative to the package directory, because `go test` runs each package in its own
+directory:
+
+| Suite | Screenshots on failure | Videos |
+|-------|------------------------|--------|
+| `tests/e2e` | `tests/e2e/test-results/screenshots/` | `tests/e2e/test-results/videos/` |
+| `tests/e2e/playwright` | `tests/e2e/playwright/test-results/screenshots/` | `tests/e2e/playwright/test-results/videos/` |
+
+`test-results/` is in `.gitignore`.
+
+## Writing tests
+
+### Basic test structure
 
 ```go
+//go:build e2e
+
 func TestFeature(t *testing.T) {
-    // Setup browser
+    // Setup browser. NewBrowserHelper fails the test if BASE_URL/login does not answer.
     browser := helpers.NewBrowserHelper(t)
     err := browser.Setup()
     require.NoError(t, err)
@@ -76,17 +110,14 @@ func TestFeature(t *testing.T) {
     err = auth.LoginAsAdmin()
     require.NoError(t, err)
 
-    // Test your feature
     t.Run("Subtest", func(t *testing.T) {
         err := browser.NavigateTo("/page")
         require.NoError(t, err)
-        
-        // Find elements and interact
+
         button := browser.Page.Locator("button#submit")
         err = button.Click()
         require.NoError(t, err)
-        
-        // Assert results
+
         result := browser.Page.Locator(".result")
         text, _ := result.TextContent()
         assert.Contains(t, text, "Success")
@@ -94,78 +125,31 @@ func TestFeature(t *testing.T) {
 }
 ```
 
-### Best Practices
+### Good practice
 
-1. **Use data attributes for testing**: Add `data-testid` attributes to elements for reliable selection
-2. **Wait for HTMX**: Use `browser.WaitForHTMX()` after actions that trigger HTMX requests
-3. **Clean up test data**: Delete any test data created during tests
-4. **Use subtests**: Organize related tests using `t.Run()`
-5. **Capture screenshots**: On failure, screenshots are automatically captured
+1. Add `data-testid` attributes to elements you need to select.
+2. Call `browser.WaitForHTMX()` after actions that send an HTMX request.
+3. Delete any test data your test creates.
+4. Group related checks with `t.Run()`.
 
-## Debugging Failed Tests
+## CI
 
-### View Screenshots
-Screenshots are saved to `test-results/screenshots/` when tests fail.
+`.github/workflows/test.yml` runs `make lint-platform` and then `make test`. `make test` starts
+the test stack and runs `make test-e2e-playwright-go` as one of its steps. To run the same E2E
+steps by hand:
 
-### Run with Visible Browser
 ```bash
-make test-e2e-playwright-debug
-```
-
-### Enable Slow Motion
-```bash
-SLOW_MO=500 make test-e2e-playwright-debug
-```
-
-### View Videos
-```bash
-VIDEOS=true make test-e2e
-```
-Videos are saved to `test-results/videos/`
-
-## Container Setup
-
-The tests run in a Docker container with:
-- Playwright browsers (Chromium, Firefox, WebKit)
-- Go 1.25
-- All necessary dependencies
-
-To rebuild the container:
-```bash
-make playwright-build
-```
-
-## CI/CD Integration
-
-The E2E tests can be integrated into CI/CD pipelines:
-
-```yaml
-# GitHub Actions example
-- name: Run E2E Tests
-  run: |
-    make up
-    make test-e2e
-  env:
-    HEADLESS: true
-    SCREENSHOTS: true
+make test-stack-up
+make test-e2e-playwright-go
+make test-e2e-go
 ```
 
 ## Troubleshooting
 
-### Tests fail with "browser not found"
-Run `make playwright-build` to build the container with browsers.
-
-### Tests timeout
-Increase the timeout in `config/config.go` or check if the backend is running.
-
-### Can't see what's happening
-Run `make test-e2e-playwright-debug` to see the browser or check screenshots in `test-results/`.
-
-## Benefits
-
-With this E2E testing setup, we can now:
-1. **See exactly what users see** - No more guessing if the UI works
-2. **Catch bugs early** - Tests run on every PR
-3. **Debug visually** - Screenshots and videos show exactly what went wrong
-4. **Test complex workflows** - Multi-step operations are fully tested
-5. **Ensure consistency** - Same tests run locally and in CI
+| Problem | What to check |
+|---------|---------------|
+| `backend under test not reachable at .../login` | The test stack is not running. Run `make test-stack-up`, or set `BASE_URL`. |
+| `TEST_PASSWORD (or DEMO_ADMIN_PASSWORD) must be set in .env` | Set `TEST_PASSWORD` in `.env`. |
+| A single test times out | Each page action waits up to 30 seconds (`Timeout` in `config/config.go`). |
+| The whole run is killed | Raise `E2E_TIMEOUT`, e.g. `make test-e2e-go E2E_TIMEOUT=60m`. |
+| Pages crash after a few navigations | Raise `E2E_TMPFS_SIZE`, e.g. `E2E_TMPFS_SIZE=8g`. |

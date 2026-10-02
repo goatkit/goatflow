@@ -17,6 +17,6 @@
   - Type safety
 
 ## Implementation Status
-**IMPLEMENTED** - The Viper-based configuration system ships in `internal/platform/config/`
-(`config.go`): structured, type-safe config structs with defaults, environment variable
-override support, and validation (`validator.go`).
+**IMPLEMENTED** in `internal/platform/config/config.go`: typed config structs, defaults in
+`config/default.yaml`, an optional `config/config.yaml` override, `GOATFLOW_*` environment
+overrides and file watching. See [CONFIGURATION.md](CONFIGURATION.md).

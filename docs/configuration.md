@@ -1,24 +1,167 @@
-# Configuration System
+# Configuration
 
-This document explains how GoatFlow configuration is structured, how precedence works, and how to inspect and change settings (including ticket number generators).
+This page explains where GoatFlow reads its settings from, which settings win, and which environment variables matter in 0.10.0.
 
-## Layers & Precedence (Current)
-1. default.yaml (static operational defaults shipped with the binary/container; contains no real secrets)
-2. Config.yaml (SysConfig registry: settings array with name, group, description, default, value)
-   - Each setting may define `default` and optionally a concrete `value` override.
-3. (Planned) Dynamic overrides (DB persisted edits via UI or API)
-4. (Planned) Environment / runtime ephemeral overrides
+## Where settings come from
 
-Effective value resolution today:
-- If a setting has a non-nil `value`, that is used (empty string counts as intentional override)
-- Else if it has `default`, that is used
-- Else unresolved (treated as error when fetched)
+GoatFlow reads settings from five places.
 
-## File Roles
-- default.yaml: Not user edited at runtime. Provides stable fallback values the code expects. Credential fields are blank/placeholders—real secrets come from env or local override.
-- Config.yaml: Canonical registry of configurable settings plus human metadata.
+| Source | What it holds | How to change it |
+|--------|---------------|------------------|
+| `config/default.yaml` | Operational defaults (server, email, storage, features, maintenance, ...). Shipped with the image. No secrets. | Do not edit. Override it (see below). |
+| `config/config.yaml` | Your local overrides of `default.yaml`. Optional and gitignored. | Create the file next to `default.yaml`. |
+| Environment variables | Secrets, deployment values, and overrides of any `default.yaml` key. | Set them in `.env`, docker-compose, or Helm `backend.extraEnv`. |
+| `config/Config.yaml` | The SysConfig registry: named settings such as `SystemID`, `Ticket::NumberGenerator` and `Auth::Providers`, each with a `default` and an optional `value`. | Edit the `value` and restart. |
+| Database (`sysconfig_default` / `sysconfig_modified`) | OTRS-style settings changed in the admin UI or imported from OTRS. | Admin pages, for example the customer portal settings at `/admin/customer/portal/settings`. |
 
-## Example Setting Shape (Config.yaml)
+The config directory is `/app/config` in the container. Change it with `CONFIG_DIR`.
+
+## `default.yaml`, `config.yaml` and `GOATFLOW_*` variables
+
+The loader (`internal/platform/config/config.go`) works like this:
+
+1. Read `default.yaml` from the config directory.
+2. Merge `config.yaml` from the same directory, if it exists.
+3. Apply environment variables named `GOATFLOW_<SECTION>_<KEY>`.
+
+The variable name is the YAML path in upper case, with `.` replaced by `_`. Examples:
+
+| YAML key | Environment variable |
+|----------|---------------------|
+| `features.registration` | `GOATFLOW_FEATURES_REGISTRATION=true` |
+| `features.lost_password` | `GOATFLOW_FEATURES_LOST_PASSWORD=false` |
+| `email.smtp.host` | `GOATFLOW_EMAIL_SMTP_HOST=mail.example.com` |
+| `valkey.host` | `GOATFLOW_VALKEY_HOST=valkey.internal` |
+| `app.timezone` | `GOATFLOW_APP_TIMEZONE=Europe/London` |
+
+Rules:
+
+- Only keys that exist in `default.yaml` (or in your `config.yaml`) can be overridden this way.
+- `config.yaml` is plain YAML. `${VAR}` is **not** expanded. Use a `GOATFLOW_*` variable for secrets instead.
+- Some values are not read from `default.yaml` at all. They come only from their own environment variables (see the tables below).
+
+Example `config/config.yaml`:
+
+```yaml
+app:
+  timezone: Europe/London
+features:
+  registration: true
+```
+
+### `default.yaml` sections
+
+| Section | Read by GoatFlow 0.10.0? | Notes |
+|---------|--------------------------|-------|
+| `app` | Yes: `env`, `timezone`, `demo_mode`, `name` | `app.env` defaults to `development`. |
+| `server` | Partly | The listen port is `APP_PORT` (default `8080`), not `server.port`. |
+| `database` | No (connection) | The connection comes from `DB_*` variables. See [Database](#database). |
+| `valkey` | Yes | Cache host, port, password, pool and TTL. |
+| `auth` | Yes: `jwt.*`, `session.*` | `JWT_SECRET` and the `JWT_*_EXPIRY` variables win over `auth.jwt.*`. |
+| `email` | Yes | SMTP sending (`email.enabled` and `email.smtp.host` must be set) and inbound mail polling. |
+| `storage` | Yes | `type`, `local.path`, `attachments.max_size` (10 MiB), `attachments.allowed_types`. |
+| `ticket` | Yes: `frontend.agent_ticket_note.required_time_units`, `bulk_actions.max_select_all`, `service.default_unknown_customer` | |
+| `logging` | No | Logging is set by `LOG_FORMAT`, `LOG_LEVEL`, `LOG_OUTPUT`. |
+| `metrics` | No | Metrics are set by `METRICS_ENABLED`, `METRICS_PORT`. |
+| `rate_limiting` | No | |
+| `features` | Only `registration` and `lost_password` | The other `features.*` keys are not read. |
+| `maintenance` | Yes: `time_notify_upcoming_minutes`, `default_notify_message` | |
+| `integrations` | No | |
+| `runner` | Yes: `session_cleanup.interval` | |
+
+## Settings table (0.10.0)
+
+Defaults below are the values in the code or in `config/default.yaml`.
+
+### Public URL and self-service
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| `BASE_URL` | unset | Public URL of this instance, e.g. `https://helpdesk.example.com`. Password-reset and sign-up emails link to it. While it is unset (or not an absolute `http(s)` URL) those emails are **not sent**. The request Host header is never used. |
+| `APP_URL` | `http://localhost:8080` | docker-compose only: compose passes `APP_URL` into the backend as `BASE_URL`. The Helm chart uses `config.baseUrl`. |
+| `features.lost_password` | `true` | "Forgot password" for agents (`/forgot-password`) and customers (`/customer/forgot-password`). |
+| `features.registration` | `false` | Customer self-registration at `/customer/register`, with a 24-hour email confirmation link. |
+
+### Database
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| `DB_DRIVER` | `mysql` | `mysql` or `mariadb` for MySQL/MariaDB, `postgres` for PostgreSQL. Use exactly `postgres`: other spellings are not recognised by the SQL layer. Oracle and SQL Server are not implemented. |
+| `DB_MYSQL_HOST`, `_PORT`, `_NAME`, `_USER`, `_PASSWORD` | port `3306` | Connection when the driver is MySQL/MariaDB. |
+| `DB_PGSQL_HOST`, `_PORT`, `_NAME`, `_USER`, `_PASSWORD`, `_SSLMODE` | port `5432`, sslmode `disable` | Connection when the driver is PostgreSQL. |
+| `DB_HOST`, `DB_PORT`, ... | | Legacy names. Used only when the driver-specific variable is unset. |
+| `DATABASE_URL` | unset | A full connection URL. Used instead of the variables above when set. |
+
+GoatFlow runs its own database migrations at startup.
+
+### Article storage
+
+See [ARTICLE_STORAGE.md](ARTICLE_STORAGE.md) for the full guide.
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| `STORAGE_TYPE` / `storage.type` | `db` | `db` stores attachments in the database (OTRS ArticleStorageDB). `fs` stores them on disk in the OTRS ArticleStorageFS layout. The variable wins over the YAML key. |
+| `STORAGE_PATH` / `storage.local.path` | `/app/storage` | Storage root. The `fs` backend uses `<STORAGE_PATH>/var/article`. |
+| `storage.attachments.max_size` | `10485760` (10 MiB) | Upload size limit. |
+| `storage.attachments.allowed_types` | images, PDF, text, Word, Excel | Allowed MIME types for uploads. |
+
+Use the `goatflow-storage` command to move attachments between `db` and `fs`.
+
+### Authentication
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| `AUTH_PROVIDERS` | unset | Comma-separated password login providers, tried in order: `database`, `ldap`, `static`. Example: `AUTH_PROVIDERS=ldap,database`. When unset, the `Auth::Providers` setting in `Config.yaml` is used, and then `database`. Read at startup. |
+| `LDAP_ENABLED` and `LDAP_*` | `LDAP_ENABLED` off | LDAP / Active Directory agent login. All variables are in [LDAP.md](LDAP.md). Invalid `LDAP_*` values stop the server at startup. |
+| `GOATFLOW_STATIC_USERS` | unset | Demo/test users for the `static` provider. See the README. |
+| `JWT_SECRET` | unset | Key that signs login tokens. **Always set it** (32+ characters). When it is unset, GoatFlow uses `auth.jwt.secret` from `default.yaml`, which is a public placeholder. |
+| `JWT_ACCESS_TOKEN_EXPIRY` | `auth.jwt.access_token_ttl` (`15m`) | Access token lifetime, e.g. `30m`, `4h`. |
+| `JWT_REFRESH_TOKEN_EXPIRY` | `auth.jwt.refresh_token_ttl` (`168h`) | Refresh token lifetime. |
+| `PASSWORD_HASH_TYPE` | `bcrypt` | Hash for new passwords: `bcrypt` or `sha256`. Unknown values fall back to `bcrypt` with a warning. Logins accept bcrypt, salted sha256 and the OTRS/Znuny formats whatever this is set to. |
+| `MIGRATE_PASSWORD_HASHES` | `false` | When `true`, a password stored in another format is re-hashed with `PASSWORD_HASH_TYPE` after a successful login. |
+| `GOATFLOW_ADMIN_PASSWORD` | unset | First boot only. If the seeded admin `root@localhost` is still in its factory-disabled state, GoatFlow sets this password and enables the account, then records `admin.bootstrap.applied` in `sysconfig_modified`. Later boots do nothing. Failures are logged and do not stop startup. |
+
+### Passkeys (WebAuthn)
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| `GOATFLOW_WEBAUTHN_RP_ID` | host name of the request | Relying party ID. Passkeys are bound to it. Set it when users reach GoatFlow under more than one host name. |
+| `GOATFLOW_WEBAUTHN_RP_NAME` | `GoatFlow` | Name shown by the browser or authenticator. |
+| `GOATFLOW_WEBAUTHN_ORIGINS` | origin of the request | Comma-separated allowed origins, e.g. `https://helpdesk.example.com`. The request origin honours `X-Forwarded-Proto` and `X-Forwarded-Host`. |
+
+### Secrets for stored settings
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| `GOATFLOW_SECURE_KEY` | generated at startup | AES-256 key (64 hex characters = 32 bytes) that encrypts stored secrets: plugin secure settings and webhook signing secrets. When unset, a random key is generated and logged with a warning, so secrets saved under it cannot be read after a restart. Set it in production, and give the same value to the backend and the runner. A value that is not 64 hex characters is rejected with an error. |
+
+### Logging
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| `LOG_FORMAT` | `text` | `text` or `json`. In `json` mode, old-style `log` lines are also written as JSON records. |
+| `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`. Applies to structured (`slog`) lines. |
+| `LOG_OUTPUT` | `stdout` | `stdout` or a file path. Missing directories are created. Falls back to `stdout` if the file cannot be opened. |
+| `LOG_FILE_PATH` | unset | Old name for the log file. Used only when `LOG_OUTPUT` is unset. |
+
+The `logging:` section of `default.yaml` is not used.
+
+### Metrics, health and shutdown
+
+See [OBSERVABILITY.md](OBSERVABILITY.md) for details.
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| `METRICS_ENABLED` | off | `true` (or `1`) starts a separate Prometheus listener with no login. |
+| `METRICS_PORT` | `9090` | Port of that listener. Keep it on the internal network. `/metrics` on the main port needs an admin login. |
+| `DRAIN_TIMEOUT` | `10s` | On SIGTERM/SIGINT, how long to let in-flight requests finish before closing them. Go duration format (`30s`, `1m`). A plain number such as `30` is ignored. |
+| `APP_PORT` | `8080` | Main HTTP port. |
+| `APP_ENV` | unset | `production` turns on Secure cookies and Gin release mode. |
+
+## SysConfig settings (`Config.yaml`)
+
+`config/Config.yaml` lists named settings with metadata. Each setting has a `default` and may have a `value`:
+
 ```yaml
 settings:
   - name: Ticket::NumberGenerator
@@ -28,70 +171,54 @@ settings:
     value: Increment
 ```
 
-## Ticket Number Generators
-For full operational guidance (selection matrix, regex formats, migration notes) see `docs/ticket_number_generators.md`.
+Effective value:
 
-Available generators (select via `Ticket::NumberGenerator`) quick reference:
+- If `value` is set (even to an empty string), it is used.
+- Otherwise `default` is used.
+- If neither exists, reading the setting returns an error.
 
-| Name | Core Idea | When To Use |
+At startup GoatFlow logs a warning if two settings have the same name. The first one wins.
+
+## Settings stored in the database
+
+Some features read OTRS-style settings from the `sysconfig_modified` table (newest valid row), falling back to `sysconfig_default`. Examples:
+
+- Password policy: `PreferencesGroups###Password::*` for agents (shown at `/admin/password-policy`) and `CustomerPreferencesGroups###Password::*` for customers.
+- Customer portal settings (`CustomerPortal::*`), edited at `/admin/customer/portal/settings` and on each company's Portal Settings tab.
+- Business hours for escalations (`TimeWorkingHours`).
+
+`goatflow-migrate` copies OTRS's changed settings into `sysconfig_modified`. GoatFlow uses the ones whose names it reads, such as those above.
+
+## Ticket number generators
+
+Full guide: [ticket_number_generators.md](ticket_number_generators.md).
+
+| Name | Core idea | When to use |
 |------|-----------|-------------|
-| Increment | Global monotonic counter | Audits, sortable identifiers |
-| Date | Date + daily counter | Operational grouping by day |
-| DateChecksum | Date + checksum | Date grouping with light integrity check |
-| Random | SystemID + 10 random digits | Obfuscate volume / privacy |
+| Increment | Global counter | Audits, sortable numbers |
+| Date | Date + daily counter | Grouping by day |
+| DateChecksum | Date + checksum | Grouping by day with a light integrity check |
+| Random | SystemID + 10 random digits | Hide ticket volume |
 
-(Actual Increment visual depends on configured formatting; above is illustrative.)
+To switch:
 
-## Switching Generators
-1. Edit `Config.yaml` setting `Ticket::NumberGenerator` and set `value` to desired generator name.
-2. Restart service (`make restart` in container workflow) so startup selects the new generator.
-3. Verify via: `GET /admin/debug/ticket-number` (admin login required; returns current generator and dateBased flag).
+1. In `config/Config.yaml`, set `value` of `Ticket::NumberGenerator` to the generator name.
+2. Restart GoatFlow (`make restart` in the container workflow).
+3. Check with `GET /admin/debug/ticket-number` (admin login required).
 
-## Introspection
-Endpoint: `GET /admin/debug/config-sources` (admin login required)
-Returns JSON: each setting with its name, default, value, effective, and source (`value` or `default`).
+If the name is unknown, GoatFlow logs a warning and uses `DateChecksum`.
 
-## Collision Handling (Random)
-Random generator composes SystemID + 10 random digits. Collisions are improbable but possible. A retry loop (up to 5 attempts on unique `tn` constraint violation) will be added alongside a metric counter.
+The Random generator retries up to 5 times when a new number collides with an existing one.
 
-## Duplicate Settings
-At startup a scan will log a warning if duplicate setting names are detected in Config.yaml to prevent shadowing.
+## Checking the effective configuration
 
-## Future Enhancements
-- Persist runtime edits (UI) into versioned config history
-- Env var injection (e.g. GOATFLOW__Ticket__NumberGenerator)
-- Hot reload with audit log of changes
+Both endpoints need an admin login.
 
-## Operational Verification (admin login required)
-- List current generator: `GET /admin/debug/ticket-number`
-- List all settings with sources: `GET /admin/debug/config-sources`
+- `GET /admin/debug/ticket-number` - current generator and whether it is date based.
+- `GET /admin/debug/config-sources` - every `Config.yaml` setting with its default, value, effective value and source (`value` or `default`).
 
-## Failure Modes
-- Missing setting fetch → error returned to caller
-- Duplicate names → startup warning only (first wins)
-- Invalid generator name → falls back to default defined in setting (currently Date if unresolved)
+## Safety notes
 
-## Safety Notes
-- Avoid editing default.yaml; changes are overwritten on upgrade and must stay secret-free.
-- Keep Config.yaml under version control for auditable changes.
-- Place developer-only tweaks (e.g. timezone) in `config/config.yaml` which is gitignored.
-
-### Secrets & Local Overrides
-Secrets must be injected via environment or `config/config.yaml` (gitignored). Example:
-
-`config/config.yaml`:
-```yaml
-app:
-  timezone: Europe/London
-database:
-  password: ${DEV_DB_PASSWORD}
-auth:
-  jwt:
-    secret: ${DEV_JWT_SECRET}
-```
-
-Shell before starting:
-```sh
-export DEV_DB_PASSWORD=supersecret
-export DEV_JWT_SECRET=change-this-local
-```
+- Do not edit `default.yaml`. It is replaced on upgrade and must stay free of secrets.
+- Put local changes in `config/config.yaml` or in `GOATFLOW_*` variables.
+- Put secrets (`JWT_SECRET`, `GOATFLOW_SECURE_KEY`, database passwords) in environment variables, not in YAML files under version control.

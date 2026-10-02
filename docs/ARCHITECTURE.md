@@ -28,7 +28,7 @@ This separation enables:
 - **Unified Binary**: Single `goats` binary runs everything
 - **Template Engine**: Pongo2 (Django-like syntax)
 - **Plugin Runtime**: WASM (wazero) + gRPC (go-plugin)
-- **Container Optimization**: Multi-stage builds (~45MB images)
+- **Container Optimization**: Multi-stage Docker builds
 
 ## System Architecture
 
@@ -80,29 +80,34 @@ This separation enables:
 - **Language**: Go 1.25
 - **Framework**: Gin
 - **Template Engine**: Pongo2
-- **Image Size**: ~45MB
 - **Build**: Multi-stage Docker build with Go compiler
 
 ### Database Access Pattern (CRITICAL)
 
-All database access MUST use `ConvertPlaceholders` for MySQL compatibility:
+Write SQL with `?` placeholders and pass it through `database.ConvertPlaceholders`
+(or `ConvertQuery`). On PostgreSQL it rewrites `?` to `$1, $2, ...`.
+`$N` placeholders in the input make it panic.
 
 ```go
-// ✅ CORRECT - Works on PostgreSQL and MySQL
+// ✅ CORRECT - works on MySQL/MariaDB and PostgreSQL
 rows, err := db.Query(database.ConvertPlaceholders(
-    "SELECT * FROM ticket WHERE queue_id = $1", queueID))
+    "SELECT id, tn FROM ticket WHERE queue_id = ?"), queueID)
 
-// ❌ WRONG - "$1" placeholders fail on MySQL
-rows, err := db.Query("SELECT * FROM ticket WHERE id = $1", id)
+// ❌ WRONG - "$1" panics in ConvertPlaceholders and fails on MySQL
+rows, err := db.Query("SELECT id, tn FROM ticket WHERE id = $1", id)
 ```
+
+For upserts use `database.ConvertUpsert`; for inserts that need the new ID use
+the database adapter's `InsertWithReturning`. The gk-lint SQL rules enforce this.
+See [development/DATABASE_ACCESS_PATTERNS.md](development/DATABASE_ACCESS_PATTERNS.md).
 
 ### Container Images
 
-| Image | Size | Purpose |
-|-------|------|---------|
-| goatflow | ~45MB | Main application |
-| goatflow-toolbox | ~136MB | Development tools |
-| goatflow-tests | ~29MB | Test runner |
+| Image | Purpose |
+|-------|---------|
+| goatflow | Main application |
+| goatflow-toolbox | Development tools |
+| goatflow-tests | Test runner |
 
 ## Implemented Features
 
@@ -119,6 +124,10 @@ rows, err := db.Query("SELECT * FROM ticket WHERE id = $1", id)
 - Ticket submission with rich text
 - View own tickets with filtering
 - Reply to and close tickets
+- Forgotten-password reset (`/customer/forgot-password`)
+- Self-registration (`/customer/register`, when `features.registration: true`)
+- Company pages (`/customer/company`, `/customer/company/users`)
+- 2FA: TOTP, passkeys, recovery codes
 - Full i18n (15 languages)
 
 ### Admin Modules
@@ -137,6 +146,10 @@ rows, err := db.Query("SELECT * FROM ticket WHERE id = $1", id)
 | Roles | ✅ Complete |
 | Dynamic Fields (7 types) | ✅ Complete |
 | Templates (8 types) | ✅ Complete |
+| Webhooks (`/admin/webhooks`) | ✅ Complete |
+| Reports & Analytics (`/admin/reports`) | ✅ Complete |
+| Identity Providers (`/admin/identity-providers`) | ✅ Complete |
+| Password Policy (`/admin/password-policy`) | ✅ Complete |
 
 ### Email Integration
 - RFC-compliant threading (Message-ID, In-Reply-To, References)
@@ -145,16 +158,20 @@ rows, err := db.Query("SELECT * FROM ticket WHERE id = $1", id)
 - IMAP connector with folder metadata
 
 ### Authentication
-- JWT with refresh tokens
+- JWT with rotating refresh tokens
 - LDAP / Active Directory auth provider for agents (`internal/platform/auth/ldap_provider.go` on the `internal/platform/ldap` client)
 - Database auth provider
-- External identity providers (OIDC client — Google, GitHub, Keycloak, Azure AD, generic OIDC)
+- External identity providers: OIDC, SAML 2.0, GitHub, Google
+- Forgotten-password reset for agents and customers
+- 2FA: TOTP, passkeys (WebAuthn), recovery codes
+
+See [SECURITY.md](SECURITY.md).
 
 ### CI/CD
-- Security scanning (gosec, govulncheck, Semgrep, GitLeaks)
+- Security scanning (gosec, Gitleaks)
 - Containerized tests via `make test`
 - Codecov integration
-- SLSA Level 2 supply chain security
+- Build provenance attestation (`actions/attest-build-provenance`)
 
 ## Technology Stack
 
@@ -180,7 +197,7 @@ rows, err := db.Query("SELECT * FROM ticket WHERE id = $1", id)
 
 ### Infrastructure
 - Docker/Podman with multi-stage builds
-- PostgreSQL 15+ / MySQL 8+
+- MySQL/MariaDB or PostgreSQL (dev compose uses MariaDB 11 and PostgreSQL 15)
 - Valkey 7+ (Redis-compatible cache)
 - GitHub Actions CI/CD
 
@@ -220,9 +237,9 @@ if errors.Is(err, sql.ErrNoRows) {
 
 ### Database Access
 ```go
-// Use sqlx or sql.Rows with ConvertPlaceholders
+// Use sqlx or sql.Rows with ConvertPlaceholders and ? placeholders
 rows, err := db.QueryContext(ctx, database.ConvertPlaceholders(
-    "SELECT id, title FROM ticket WHERE queue_id = $1", queueID))
+    "SELECT id, title FROM ticket WHERE queue_id = ?"), queueID)
 
 // Scan into structs via sqlx or manual mapping
 var tickets []model.Ticket

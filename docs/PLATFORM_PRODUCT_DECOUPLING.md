@@ -99,7 +99,8 @@ the `goatkit` module ceremony.
 `services/{escalation,genericagent,acl,ticket,ticketattributerelations}`,
 `service/genericinterface`, `service/ticket_number`,
 `components/{dashboard,dynamic,handlers}`, `webhooks`, `mailaccountmeta`,
-`mailqueue`, `api/{graphql,v1}`, `api/` (product handler files)
+`mailqueue`, `api/` (product handler files). (`api/graphql` and `api/v1` were
+listed here; both have since been deleted.)
 
 ## 5. Phases
 
@@ -402,8 +403,9 @@ Move platform-flavored files to `internal/platform/api/` and
 `push_*`, `webauthn_*`, `totp_*`, `mcp_*`, `plugin_*`, `plugin_ui_admin_*`,
 `org_plugin_access_handlers.go`, `lookup_*`, and product handlers (`ticket_*`,
 `queue_*`, `article_*`, `sla_*`, `priority_*`, `state_*`, `type_*`,
-`service_*`, `canned_response_*`, `admin_*`, `customer_*`, `agent_*`,
-`graphql/`, `v1/`) stay in `internal/api/`.
+`service_*`, `canned_response_*`, `admin_*`, `customer_*`, `agent_*`)
+stay in `internal/api/`. (The `graphql/` and `v1/` subpackages listed in earlier
+versions of this plan have since been deleted.)
 
 #### Platform service files moved
 
@@ -535,7 +537,7 @@ All factories are wired in `cmd/goats/main.go` (production) and `internal/api/te
 | # | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|---|
 | 6.1 | **Large-scale `git mv` + import update is the most merge-conflict-prone step** — every package move changes import paths for all importers | High | Medium | Do moves in batched commits (one per package or small group). Run `go build` after each batch. Communicate timing. Consider a scripted approach: `go fmt -s` + `goimports` after path updates. |
-| 6.2 | **Some "clean" packages may have hidden product imports not caught by the investigation** | Low | Medium | Run `grep -rn 'goatflow/internal/\(repository\|ticketnumber\|ticketutil\|history\|core\|tickets\|selfservice\|storage\|mailqueue\|mailaccountmeta\|webhooks\|email/inbound\|runner/tasks\|services/escalation\|services/genericagent\|services/acl\|services/ticket\|service/genericinterface\|service/ticket_number\|api/graphql\|api/v1\|api/shared\|components/dashboard\|components/dynamic\|components/handlers\|models"' internal/<package>/` for each package before moving. |
+| 6.2 | **Some "clean" packages may have hidden product imports not caught by the investigation** | Low | Medium | Run `grep -rn 'goatflow/internal/\(repository\|ticketnumber\|ticketutil\|history\|core\|tickets\|selfservice\|storage\|mailqueue\|mailaccountmeta\|webhooks\|email/inbound\|runner/tasks\|services/escalation\|services/genericagent\|services/acl\|services/ticket\|service/genericinterface\|service/ticket_number\|api/shared\|components/dashboard\|components/dynamic\|components/handlers\|models"' internal/<package>/` for each package before moving. |
 | 6.3 | **`internal/storage` (1436 lines) is classified as MIXED** — "article attachment storage" is product-flavored but storage infra is platform | Medium | Medium | Audit `storage/*.go` before moving. If it references `article` or `ticket` types, it is product. If it is generic file storage (S3, local FS), it is platform. Split if needed. |
 | 6.4 | **`internal/components/lambda` (386 lines) uses goja (JS execution)** — verify it does not execute product-specific JS | Low | Low | Audit `lambda/*.go`. If it is a generic JS runtime, it is platform. If scripts reference ticket/queue types, those are product concerns loaded at runtime, not compile-time. |
 | 6.5 | **`internal/email/inbound/connector` is platform (IMAP/POP3) but `email/inbound/postmaster` and `email/inbound/filters` are product** — the `email/inbound/` parent dir is mixed | Medium | Medium | Move only `email/inbound/connector` to `internal/platform/email/inbound/connector/`. Leave `postmaster`, `filters`, `adapter` in `internal/email/inbound/` (product). The parent `internal/email/` directory stays as product. |
@@ -546,7 +548,7 @@ All factories are wired in `cmd/goats/main.go` (production) and `internal/api/te
 
 | # | Check | Command | Pass criteria |
 |---|---|---|---|
-| V6.1 | Every package under `internal/platform/` imports no product packages | `grep -rn 'goatflow/internal/\(repository\|ticketnumber\|ticketutil\|history\|core\|tickets\|selfservice\|storage\|mailqueue\|mailaccountmeta\|webhooks\|email/inbound/postmaster\|email/inbound/filters\|email/inbound/adapter\|runner/tasks\|services/escalation\|services/genericagent\|services/acl\|services/ticket\|services/ticketattributerelations\|service/genericinterface\|service/ticket_number\|api/graphql\|api/v1\|api/shared\|components/dashboard\|components/dynamic\|components/handlers\)' internal/platform/` | Zero matches |
+| V6.1 | Every package under `internal/platform/` imports no product packages | `grep -rn 'goatflow/internal/\(repository\|ticketnumber\|ticketutil\|history\|core\|tickets\|selfservice\|storage\|mailqueue\|mailaccountmeta\|webhooks\|email/inbound/postmaster\|email/inbound/filters\|email/inbound/adapter\|runner/tasks\|services/escalation\|services/genericagent\|services/acl\|services/ticket\|services/ticketattributerelations\|service/genericinterface\|service/ticket_number\|api/shared\|components/dashboard\|components/dynamic\|components/handlers\)' internal/platform/` | Zero matches |
 | V6.2 | Full build compiles | `go build ./...` | Clean |
 | V6.3 | All tests pass | `go test ./...` | All pass |
 | V6.4 | `go vet` clean | `go vet ./...` | No warnings |

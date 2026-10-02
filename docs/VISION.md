@@ -146,10 +146,10 @@ GoatKit is a **platform**, not just an application framework. GoatFlow is the fi
 │  • Scheduler & background jobs                      │
 │  • Admin UI framework                               │
 │  • Plugin runtime (WASM + gRPC)                     │
+│  • Reports and statistics (Admin -> Reports)        │
 ├─────────────────────────────────────────────────────┤
 │  Modules (pluggable features)                       │
-│  • Statistics & Reporting                           │
-│  • FAQ & Knowledge Base                             │
+│  • FAQ & Knowledge Base (goat-kb plugin)            │
 │  • Calendar & Scheduling                            │
 │  • Process Management                               │
 │  • Third-party plugins                              │
@@ -165,9 +165,9 @@ GoatKit is a **platform**, not just an application framework. GoatFlow is the fi
 ### Evolution Roadmap
 ```
 2025-2026:  Modular Monolith (Core Platform)
-2026:       GoatKit Plugin Platform (WASM + gRPC)
-2026-2027:  First-Party Plugins (Stats, FAQ, Calendar, Process)
-2027:       Plugin Marketplace + Third-Party Ecosystem
+2026:       GoatKit Plugin Platform (WASM + gRPC) + Plugin Marketplace (shipped in 0.8.0)
+2026-2027:  First-Party Plugins (FAQ/Knowledge Base, Calendar, Process)
+2027:       Third-Party Plugin Ecosystem
 2028+:      Multi-Product Platform + Enterprise Scale
 ```
 
@@ -182,9 +182,9 @@ The GoatKit Plugin Platform transforms GoatFlow from an application into an exte
 
 ### Platform Capabilities
 - **2025-2026**: Core ticketing system + Dynamic modules
-- **2026**: GoatKit Plugin Platform + Statistics & Reporting
+- **2026**: GoatKit Plugin Platform + Plugin Marketplace (0.8.0) + Reports in core (0.10.0, Admin -> Reports)
 - **2026-2027**: FAQ, Calendar, Process Management plugins
-- **2027**: 1.0 GA + Plugin Marketplace
+- **2027**: 1.0 GA
 - **2028+**: AI-powered automation, enterprise integrations
 
 ## Community Vision

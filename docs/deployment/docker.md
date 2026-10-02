@@ -15,24 +15,44 @@ curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/docker-co
 curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/.env.example
 
 # Configure environment
-cp deploy/.env.example .env
-# Edit .env with your values (DOMAIN, DB_PASSWORD, JWT_SECRET, etc.)
+cp .env.example .env
+# Edit .env with your values (DOMAIN, ACME_EMAIL, DB passwords, JWT_SECRET, GOATFLOW_SECURE_KEY, BASE_URL)
 
 # Start GoatFlow
 docker compose up -d
 ```
 
-### Required Environment Variables
+### Environment Variables
 
-Edit `.env` before starting:
+Edit `.env` before starting. The compose file refuses to start without the variables marked
+"Yes".
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DOMAIN` | Your domain name | `tickets.example.com` |
-| `ACME_EMAIL` | Email for Let's Encrypt | `admin@example.com` |
-| `DB_PASSWORD` | Database password | (generate a secure password) |
-| `DB_ROOT_PASSWORD` | MariaDB root password | (generate a secure password) |
-| `JWT_SECRET` | JWT signing secret | (generate with `openssl rand -hex 32`) |
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `DOMAIN` | Yes | Your domain name (Caddy gets a certificate for it) | `tickets.example.com` |
+| `ACME_EMAIL` | Yes | Email for Let's Encrypt | `admin@example.com` |
+| `DB_PASSWORD` | Yes | Database password | (generate a secure password) |
+| `DB_ROOT_PASSWORD` | Yes | MariaDB root password | (generate a secure password) |
+| `JWT_SECRET` | Yes | JWT signing secret, at least 32 characters | (generate with `openssl rand -hex 32`) |
+| `GOATFLOW_SECURE_KEY` | Strongly recommended | Encrypts stored secrets (plugin secure settings, webhook signing secrets). 64 hex characters. The app and the runner must use the same value. If it is empty, each container makes its own random key at start, so those secrets cannot be read after a restart and webhooks fail. Never change it once set. | (generate with `openssl rand -hex 32`) |
+| `BASE_URL` | Recommended | Public URL, e.g. `https://tickets.example.com`. Password-reset and sign-up email links are built from it. Default `http://localhost:8080`. | `https://tickets.example.com` |
+| `GOATFLOW_TAG` | No | Image tag for app, customer portal and runner. Default `latest`. | `0.10.0` |
+
+### Image Tags
+
+Images are published to `ghcr.io/goatkit/goatflow` (app and customer portal) and
+`ghcr.io/goatkit/goatflow-runner` (runner).
+
+| Tag | Meaning | Runner image too? |
+|-----|---------|-------------------|
+| `0.10.0` | That release (recommended for production) | Yes |
+| `0.10`, `0` | Newest release in that minor / major line | Yes |
+| `latest` | Newest build of the `main` branch | Yes |
+| `main` | Newest build of the `main` branch | Yes |
+| `dev` | Newest build of the `dev` branch (unstable, amd64 only) | No |
+
+Tags have no `v` prefix. `GOATFLOW_TAG` sets the tag for both images, so use a tag that exists
+for the runner as well.
 
 ### What's Included
 
@@ -42,7 +62,7 @@ The deployment stack includes:
 - **Valkey** - Cache server (Redis-compatible)
 - **GoatFlow App** - Main application (agent interface)
 - **GoatFlow Customer-FE** - Customer portal
-- **GoatFlow Runner** - Background job processor
+- **GoatFlow Runner** - Background tasks: sends queued outgoing email, delivers webhooks, cleans up expired sessions
 
 All services are configured with `restart: unless-stopped` so they automatically start on boot.
 
@@ -95,20 +115,18 @@ make down
 | `make up` | Start services (attached) |
 | `make up-d` | Start services (detached) |
 | `make down` | Stop all services |
-| `make restart` | Rebuild and restart |
+| `make restart` | Stop and start all services (`down` then `up-d`) |
 | `make logs` | Follow container logs |
 | `make ps` | Show running containers |
 | `make build` | Build all containers |
 
 ### Development Features
 
-The development setup includes:
-- Hot reload for development
 - Toolbox container for running Go commands
 - Test database support
 - Migration tools
 
-See [Development Guide](../development/MVP.md) for more details.
+See the [Developer Guide](../developer-guide/README.md) for more details.
 
 ---
 
@@ -135,7 +153,7 @@ curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/docker-co
 curl -O https://raw.githubusercontent.com/goatkit/goatflow/main/deploy/.env.example
 
 # Configure environment
-cp deploy/.env.example .env
+cp .env.example .env
 # Edit .env with your values
 
 # Start with Podman Compose

@@ -332,8 +332,11 @@ go get github.com/goatkit/goatkit-sdk@latest
 
 ### 1. Check Plugin Loaded
 
+The plugin list needs an agent login. Use a JWT from `POST /api/v1/auth/login` or an API token (`gf_...`):
+
 ```bash
-curl http://localhost:8080/api/v1/plugins | jq '.[] | select(.Name=="ticket-counter")'
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/plugins \
+  | jq '.plugins[] | select(.name=="ticket-counter")'
 ```
 
 ### 2. Enable Debug Logs
@@ -346,9 +349,10 @@ host.Log(ctx, "debug", "Starting query", map[string]any{
 
 ### 3. Test Locally
 
+Hot reload is on by default. Turn it off with `GOATFLOW_PLUGIN_HOT_RELOAD=false`.
+
 ```bash
-# Run GoatFlow with hot reload
-GOATFLOW_PLUGIN_HOT_RELOAD=true ./goats serve
+./goats
 ```
 
 ### 4. Check WASM Size

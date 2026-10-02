@@ -23,12 +23,12 @@ To add or improve translations:
 Before starting, check the current translation coverage for a language:
 
 ```bash
-# Check missing keys for any language (requires authentication)
+# Check missing keys for any language (public endpoint, no login needed)
 make http-call ENDPOINT=/api/v1/i18n/missing/xx
 
-# Example: check German coverage
+# Example: check German
 make http-call ENDPOINT=/api/v1/i18n/missing/de
-# {"language":"de","missing_keys":null,"count":0}  # 0 = complete
+# {"language":"de","missing_keys":[...],"count":N}  # count 0 = no missing keys
 ```
 
 ## Translation Structure
@@ -112,7 +112,7 @@ make toolbox-exec ARGS="go test ./internal/platform/i18n/... -v"
 To verify the language is now complete via the API:
 
 ```bash
-# Verify no missing keys (requires authentication)
+# Verify no missing keys (public endpoint)
 make http-call ENDPOINT=/api/v1/i18n/missing/xx
 
 # Expected output for a complete language:
@@ -143,18 +143,24 @@ make toolbox-exec ARGS="go test ./internal/platform/i18n/..."
 docker compose run --rm toolbox go test ./internal/platform/i18n/... -run TestTranslationCompleteness -v
 ```
 
-### Coverage Requirements
+### What the tests check
 
-- **100% coverage required** - All English keys must have translations
-- **Extra keys allowed** - Languages may have additional keys for locale-specific content
-- **Format consistency** - Maintain placeholder formatting (%s, %d, {{variable}})
+- **English must be 100% complete.** The test fails if `en.json` is missing a key.
+- **Other languages do not fail the test.** Their coverage is printed in a summary table. A key counts as untranslated when it is missing or has the same text as English.
+- **Extra keys allowed** - languages may have additional keys for locale-specific content.
+- **Format consistency** - keep placeholder formatting (%s, %d, {{variable}}).
+
+New and changed languages should still aim for 100%.
 
 ### Test Output Example
 
+Run with `-v` to see the summary table:
+
 ```
-=== RUN   TestTranslationCompleteness/pl
-    validation_test.go:105: Language pl coverage: 100.0% (1587/1587 keys)
---- PASS: TestTranslationCompleteness/pl (0.00s)
+│ Code │ Name         │ Native           │ Keys  │ Coverage    │
+│ en   │ English      │ English          │  3689 │  100.0% ✓  │
+│ pl   │ Polish       │ Polski           │  3179 │   86.2%    │
+Total: 15/15 languages with JSON files, 3689 base keys
 ```
 
 ## Best Practices
@@ -245,7 +251,7 @@ Some terms may remain in English depending on locale conventions:
 ### PR Checklist
 - [ ] Translation file created with all keys from `en.json`
 - [ ] Language config added to `rtl.go` with correct metadata
-- [ ] `make toolbox-exec ARGS="go test ./internal/platform/i18n/..."` passes with 100% coverage
+- [ ] `make toolbox-exec ARGS="go test ./internal/platform/i18n/..."` passes, and the summary shows 100% for your language
 - [ ] `make build` succeeds
 - [ ] UI tested with new language
 - [ ] Native speaker review (preferred)
@@ -277,25 +283,25 @@ internal/platform/i18n/
 
 ## Language Status
 
-Current language support (15 languages, 12 complete):
+15 languages ship. Coverage below is from `TestTranslationCompleteness` at 0.10.0 (3689 English keys). Only English is complete. To see current numbers, run the test with `-v`.
 
-| Language | Code | Direction | Status |
-|----------|------|-----------|--------|
-| English | en | LTR | ✅ Base Language |
-| Arabic | ar | RTL | ✅ Complete |
-| German | de | LTR | ✅ Complete |
-| Spanish | es | LTR | ✅ Complete |
-| French | fr | LTR | ✅ Complete |
-| Japanese | ja | LTR | ✅ Complete |
-| Polish | pl | LTR | ✅ Complete |
-| Portuguese | pt | LTR | ✅ Complete |
-| Russian | ru | LTR | ✅ Complete |
-| Ukrainian | uk | LTR | ✅ Complete |
-| Urdu | ur | RTL | ✅ Complete |
-| Klingon | tlh | LTR | ✅ Complete |
-| Hebrew | he | RTL | ⚠️ 99.4% |
-| Chinese | zh | LTR | ⚠️ 98.4% |
-| Persian | fa | RTL | ⚠️ 91.3% |
+| Language | Code | Direction | Coverage |
+|----------|------|-----------|----------|
+| English | en | LTR | 100% (base language) |
+| Ukrainian | uk | LTR | 87.0% |
+| Arabic | ar | RTL | 86.9% |
+| Japanese | ja | LTR | 86.9% |
+| Russian | ru | LTR | 86.4% |
+| Polish | pl | LTR | 86.2% |
+| Chinese | zh | LTR | 86.0% |
+| Hebrew | he | RTL | 85.7% |
+| Spanish | es | LTR | 85.5% |
+| Portuguese | pt | LTR | 85.5% |
+| Persian | fa | RTL | 85.4% |
+| Urdu | ur | RTL | 85.3% |
+| German | de | LTR | 84.9% |
+| French | fr | LTR | 82.6% |
+| Klingon | tlh | LTR | 81.9% |
 
 ## Getting Help
 

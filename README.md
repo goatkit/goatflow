@@ -11,17 +11,17 @@ GoatFlow is a GoatKit based ITSM system. It is a modern, secure, cloud-native ti
 
 ## Key Features
 
-- 🔒 **Security-First Design** - Built with zero-trust principles, comprehensive audit logging, enterprise security standards, and hardened plugin sandbox (OS-level isolation, ed25519 signing, SQL table whitelisting)
-- 🔑 **External Identity Providers** - OIDC client support for Google, Keycloak, Azure AD (Entra ID), and generic OIDC providers; PKCE (S256) mandatory, JWKS verification, auto-provisioning, post-auth TOTP
+- 🔒 **Security** - Every route is checked by an authorization test in CI, admin rights come only from admin-group membership, two-factor login (TOTP, passkeys/security keys, recovery codes), and a hardened plugin sandbox (OS-level isolation, ed25519 signing, SQL table whitelisting)
+- 🔑 **Login Options** - Database passwords, LDAP / Active Directory, single sign-on through OIDC / OAuth2 (any OIDC provider such as Keycloak or Azure AD / Entra ID, plus Google and GitHub) and SAML 2.0, and passkey login; OIDC uses PKCE (S256) and JWKS verification, with auto-provisioning and post-login 2FA
 - 🚀 **High Performance** - Go-based backend with optimized database queries and caching
 - 🌐 **Cloud Native** - Containerized deployment supporting Docker, Podman, and Kubernetes
 - 📱 **Responsive UI** - Modern HTMX-powered interface with progressive enhancement
-- 🔄 **OTRS Compatible** - Database schema superset enables seamless migration from OTRS 5.x and 6.x
+- 🔄 **OTRS Compatible** - Database schema superset; `goatflow-migrate` imports OTRS 6 and Znuny 6.x databases, and the filesystem attachment store reads an OTRS `var/article` tree as-is
 - 🧭 **Setup Assistant** — First-run wizard auto-launches on clean installs and guides admins through teams, queues, agents, customers, and SLAs; re-runnable task catalog for ongoing operations with plugin-extensible tasks
 - 🌍 **Multi-Language** - Full i18n with 15 languages at 100% coverage including RTL support, even supports Klingon! 🖖
 - 🎨 **Theme Engine** - 4 distinct themes (Synthwave, Classic, 70s Vibes, 90s Vibe) with dark/light modes and custom fonts
 - 🔌 **Plugin Platform** - Dual-runtime (WASM + gRPC) plugin system with sandboxed execution, hot reload, admin UI, ed25519 plugin signing, OS-level process isolation, SQL table whitelisting, live policy updates, periodic health monitoring, and bounded graceful shutdown
-- 🔗 **Extensible** - REST/SOAP APIs, webhooks, and theme customization
+- 🔗 **Extensible** - REST API, signed outbound webhooks (Admin -> Webhooks), outbound REST/SOAP web-service calls (Admin -> Web Services), and theme customization
 
 ## Screenshot
 
@@ -139,7 +139,7 @@ make toolbox-test
 # Full browser E2E tests (Ubuntu + Chromium, ~3-5 minutes)
 make test-e2e-playwright-go
 
-# Run all 1,200+ tests (5-8 minutes)
+# Run the full Go test suite (2,000+ test functions)
 make test
 ```
 
@@ -157,28 +157,46 @@ GoatFlow uses a modern, hypermedia-driven architecture that scales from single-s
 
 See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed technical documentation.
 
-### Pluggable Authentication
+### Authentication
 
-Authentication supports an ordered provider list configured via the `Auth::Providers` setting in `Config.yaml` (default: `[database]`). Implemented providers:
+GoatFlow has these ways to sign in:
 
-- `database` (agents + customer users from the database)
-- `ldap` (agents from an LDAP / Active Directory server; also set `LDAP_ENABLED=true` and the `LDAP_*` settings in [docs/LDAP.md](docs/LDAP.md))
-- `static` (in-memory users for demos/tests)
+| Method | Who | Where to set it up |
+|--------|-----|--------------------|
+| Database password | Agents and customers | Default; always available |
+| LDAP / Active Directory | Agents | `AUTH_PROVIDERS` + `LDAP_*` env vars, see [docs/LDAP.md](docs/LDAP.md) |
+| OIDC / OAuth2 (generic OIDC, Google, GitHub) | Agents and customers | Admin -> Identity Providers (`/admin/identity-providers`) |
+| SAML 2.0 | Agents and customers | Admin -> Identity Providers |
+| Passkey (WebAuthn) | Agents and customers | Each user adds passkeys in their profile |
+| Second factor: TOTP app, passkey/security key, recovery codes | Agents and customers | Each user turns on 2FA in their profile |
 
-Static users are enabled by setting the environment variable `GOATFLOW_STATIC_USERS` at runtime (NOT committed). Format:
+#### Password provider order (`AUTH_PROVIDERS`)
+
+Password logins try an ordered list of providers. The first one that accepts the login wins.
+
+- `database` - agents and customer users stored in the database
+- `ldap` - agents from an LDAP / Active Directory server (also set `LDAP_ENABLED=true`, see [docs/LDAP.md](docs/LDAP.md))
+- `static` - in-memory users for demos and tests (see below)
+
+The list is read once at startup, in this order:
+
+1. The `AUTH_PROVIDERS` environment variable, comma separated, e.g. `AUTH_PROVIDERS=ldap,database`.
+2. The `Auth::Providers` setting in `config/Config.yaml`.
+3. If neither is set: `database` only.
+
+A provider that cannot be created is skipped with a log line. If none can be created, `database` is used. Restart GoatFlow after changing the list.
+
+#### Static users (demos and tests only)
+
+Add `static` to the provider list and set `GOATFLOW_STATIC_USERS` at runtime. Format:
 
 ```
 GOATFLOW_STATIC_USERS="alice:password:Agent,bob:secret:Customer,carol:adminpass:Admin"
 ```
 
-Notes:
-- Do not add this variable (or sample secrets) to committed `.env` files to avoid GitLeaks false positives.
-- Passwords may be plain or pre-hashed (bcrypt / legacy SHA from OTRS). The verifier auto-detects.
-- Omit the variable entirely to disable the static provider silently.
-
-Provider resolution order: the system attempts each provider in the configured list until one authenticates or all fail.
-
-Implementation note: the `Auth::Providers` list is read at startup via the unified configuration adapter; the main process wires this adapter into the auth service so changes to the list (after a restart) alter provider selection order without code changes.
+- Do not put this variable (or sample secrets) in committed `.env` files. GitLeaks will flag them.
+- Passwords may be plain text or pre-hashed (bcrypt, or the OTRS SHA formats). The format is detected automatically.
+- Without the variable, the static provider is skipped.
 
 ### Development Policies
 
@@ -258,12 +276,19 @@ For production deployments, see our comprehensive guides:
 - [Getting Started Guide](docs/getting-started/quickstart.md)
 - [Administrator Manual](docs/admin-guide/README.md)
 - [Agent Manual](docs/agent-manual/README.md)
+- [Customer Portal](docs/CUSTOMER_PORTAL.md)
+- [Reports & Analytics](docs/REPORTS.md)
+- [Webhooks](docs/WEBHOOKS.md)
 
 ### Technical Documentation
 - [Architecture Overview](docs/ARCHITECTURE.md)
 - [API Reference](docs/api/README.md)
 - [Developer Guide](docs/developer-guide/README.md)
-- [Configuration System](docs/configuration.md)
+- [Configuration](docs/configuration.md)
+- [LDAP / Active Directory](docs/LDAP.md)
+- [Article Storage](docs/ARTICLE_STORAGE.md)
+- [Observability (health, metrics, logging, shutdown)](docs/OBSERVABILITY.md)
+- [High Availability](docs/HIGH_AVAILABILITY.md)
 - [YAML Platform](docs/YAML_PLATFORM.md)
 - [Ticket Number Generators](docs/ticket_number_generators.md)
 
@@ -275,23 +300,33 @@ For production deployments, see our comprehensive guides:
 
 ## Migration from OTRS
 
-GoatFlow maintains database schema compatibility with OTRS, enabling migration from existing installations. The `goatflow-migrate` tool handles database import from OTRS 5.x and 6.x SQL dumps.
+GoatFlow's database schema is a superset of the OTRS schema. The `goatflow-migrate` tool imports an **OTRS 6 or Znuny 6.x** database. Older OTRS versions (for example 5.x) are refused: upgrade them to OTRS 6 first.
+
+The OTRS source can be either:
+
+- `SQL=` a mysqldump / mariadb-dump file, or
+- `SOURCE=` a live OTRS database: MySQL/MariaDB (`user:pass@tcp(host:3306)/otrs`) or PostgreSQL (`postgres://user:pass@host:5432/otrs?sslmode=disable`).
 
 ```bash
-# Analyze your OTRS dump
+# List the source tables, row counts and what the import does with each
 make migrate-analyze SQL=/path/to/otrs_dump.sql
 
-# Test import (dry run)
-make migrate-import SQL=/path/to/otrs_dump.sql DRY_RUN=true
+# Dry run: print the import plan without writing (DRY_RUN=true is the default)
+make migrate-import SQL=/path/to/otrs_dump.sql
 
-# Execute import
+# Import for real
 make migrate-import SQL=/path/to/otrs_dump.sql DRY_RUN=false
 
 # Validate migrated data
 make migrate-validate
 ```
 
-The migration tool imports tickets, articles, users, customers, queues, and configuration data. Article attachments require a separate filesystem copy.
+The import covers tickets, articles, agents, customers, queues, permissions, preferences, dynamic fields and changed settings, and runs in one transaction. It also resets id sequences and the ticket number counters.
+
+Attachments:
+
+- Attachments stored in the OTRS database (ArticleStorageDB) are imported with the rest of the data.
+- Attachments stored on disk (ArticleStorageFS) are not copied by the import. Mount or copy the OTRS `var/article` tree to `<STORAGE_PATH>/var/article` and set `STORAGE_TYPE=fs`. See [docs/ARTICLE_STORAGE.md](docs/ARTICLE_STORAGE.md).
 
 See [docs/MIGRATION.md](docs/MIGRATION.md) for the complete migration guide.
 
@@ -337,9 +372,9 @@ See [i18n Contributing Guide](docs/i18n/CONTRIBUTING.md) for detailed instructio
 
 ## Features Comparison
 
-See [FEATURES.md](docs/FEATURES.md) for a comprehensive comparison matrix of GoatFlow vs OTRS, Zendesk, and ServiceNow across 19 feature categories including:
+See [FEATURES.md](docs/FEATURES.md) for the status of every feature in 0.10.0 and a comparison matrix of GoatFlow vs OTRS, Zendesk, and ServiceNow across 22 feature categories, including:
 
-- ✅ Core ticketing, email integration, knowledge base
+- ✅ Core ticketing, email integration, reports
 - ✅ Theme engine with 4 built-in themes and dark mode
 - ✅ Cloud native, air-gapped deployment, 15 languages
 - ✅ REST API, source code access, self-hosted
