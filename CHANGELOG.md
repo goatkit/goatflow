@@ -988,6 +988,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
   outputs are that regeneration.
 
 ### Removed
+- **`cmd/generator`.** The admin-module code generator had no callers and emitted handlers with
+  PostgreSQL-only SQL (`$1`, `ILIKE`), raw database errors and unfinished scan code; it is deleted.
 - **GraphQL scaffold.** `internal/api/graphql` never compiled, had no route and no generated code;
   it is deleted.
 - **Oracle and SQL Server backends.** They were never usable. Selecting either now fails with
