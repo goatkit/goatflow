@@ -242,6 +242,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
   unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **`make test` / `make test-unit` flaky webhook test.** The test stack's runner (`goatflow-runner-test`)
+  shares the unit tests' database, and every 10 seconds its webhook dispatch claimed the deliveries a test
+  had just queued (`TestService_SlowEndpointDoesNotStarveOthers` failed about 1 run in 4). `test-unit` and
+  `test-fast` now stop the runner for the run and start it again afterwards.
 - **`CUSTOMER_FE_ONLY` is read the same way everywhere.** `true`, `1`, `yes` and `on` (any case) now
   enable it in every place; before, `1` was ignored by the login page redirect.
 - **`DB_DRIVER=pgsql` and `postgresql` work fully.** All PostgreSQL driver names now switch SQL

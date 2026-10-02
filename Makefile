@@ -322,6 +322,10 @@ test-sdk-go:
 test-unit: toolbox-build test-stack-up
 	@printf "\n🧪 Running unit tests...\n"
 	@$(CONTAINER_CMD) run --rm -v "$$PWD:/workspace" alpine sh -c "chmod -R 777 /workspace/.go-build /workspace/.gomodcache /workspace/.golangci-lint /workspace/.bun /workspace/.xdg-cache /workspace/tmp" 2>/dev/null || true
+	@# runner-test shares the unit tests' database: its scheduled tasks (webhook
+	@# dispatch, email queue, escalations) would claim and change rows the tests
+	@# create. Pause it for the run and start it again whatever the result.
+	@$(CONTAINER_CMD) stop goatflow-runner-test >/dev/null 2>&1 || true
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		$(CONTAINER_USER) \
@@ -348,13 +352,16 @@ test-unit: toolbox-build test-stack-up
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
 		$(TOOLBOX_IMAGE) \
-		bash /workspace/scripts/unit-test-phases.sh -count=1
+		bash /workspace/scripts/unit-test-phases.sh -count=1; \
+	rc=$$?; $(CONTAINER_CMD) start goatflow-runner-test >/dev/null 2>&1 || true; exit $$rc
 
 
 # Run unit tests with Go's result caching enabled (skips unchanged packages).
 # Drops -count=1 for fast local iteration. Keeps -timeout for safety.
 test-fast: toolbox-build test-stack-up
 	@printf "\n🧪 Running unit tests (cache-enabled)...\n"
+	@# Same runner-test pause as test-unit.
+	@$(CONTAINER_CMD) stop goatflow-runner-test >/dev/null 2>&1 || true
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		$(CONTAINER_USER) \
@@ -381,7 +388,8 @@ test-fast: toolbox-build test-stack-up
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		-e GOATFLOW_TEST_DB_READY=$(GOATFLOW_TEST_DB_READY) \
 		$(TOOLBOX_IMAGE) \
-		bash /workspace/scripts/unit-test-phases.sh
+		bash /workspace/scripts/unit-test-phases.sh; \
+	rc=$$?; $(CONTAINER_CMD) start goatflow-runner-test >/dev/null 2>&1 || true; exit $$rc
 
 # Debug environment detection
 debug-env:
