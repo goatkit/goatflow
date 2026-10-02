@@ -9,15 +9,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 )
 
 // Every goats process (backend replicas, runner, customer frontend) runs
-// RunMigrations at startup. The dirty check, the force and the `migrate up`
-// run under one database lock so a process never sees another process's
-// in-progress (dirty) migration and "repairs" it with a force.
+// RunMigrations at startup. The dirty check and the `migrate up` run under
+// one database lock so a process never mistakes another process's
+// in-progress (dirty) migration for a failed one.
 // The lock differs from golang-migrate's own lock (keyed by the database
 // name), which the migrate subprocess takes while we hold ours.
 const (
@@ -137,17 +136,15 @@ func RunMigrations(db *sql.DB) (int, error) {
 		versionBefore = 0
 	}
 
-	// Handle dirty state: with the lock held no GoatFlow process is
-	// migrating, so a dirty flag is left over from a migration that died.
+	// A dirty flag means a migration failed or was interrupted, possibly
+	// part-way. Never mark it applied (that would skip it for good, leaving
+	// the schema half-upgraded) nor re-run it blindly (most migrations are not
+	// safe to re-run once partly applied): stop, and let an operator decide.
 	if dirty {
-		log.Printf("migrations: WARNING - database is in dirty state at version %d, attempting to fix", versionBefore)
-		cmd := exec.Command(migrateBin, "-path", migrationsPath, "-database", dbURL, "force", strconv.Itoa(versionBefore)) // #nosec G204 -- binary from findMigrateBinary, args from server DB config; no shell, no request input
-		var stderr bytes.Buffer
-		cmd.Stderr = &stderr
-		if err := cmd.Run(); err != nil {
-			return 0, fmt.Errorf("failed to fix dirty state: %s", stderr.String())
-		}
-		log.Printf("migrations: cleared dirty state at version %d", versionBefore)
+		return 0, fmt.Errorf("database schema is dirty at version %d: that migration failed or was "+
+			"interrupted and may be partly applied, so no further migrations were run; fix the schema, "+
+			"then run `migrate force %d` if the migration is now fully applied, or `migrate force <previous "+
+			"version>` to have it run again, and restart", versionBefore, versionBefore)
 	}
 
 	// Run migrations

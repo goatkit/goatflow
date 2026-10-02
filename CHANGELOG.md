@@ -242,6 +242,12 @@ project adheres to [Semantic Versioning](https://semver.org/).
   unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **A failed migration no longer gets marked as applied.** When `schema_migrations` was left dirty
+  (a migration failed or was interrupted), every GoatFlow process forced that version as done at
+  startup and went on migrating, so the failed migration was skipped for good and an upgrade could
+  come up with a half-migrated schema without saying so. GoatFlow now stops migrating, logs which
+  version is dirty and how to recover (`migrate force <version>` once it is fully applied, or the
+  previous version to run it again), and leaves the flag for an operator.
 - **The container image builds from a clean checkout.** The WASM plugin build stage created
   `/plugins` as root and then could not create its `tmp` directory as the tinygo user, so `docker
   build` failed on any checkout without a leftover `plugins/tmp`.
