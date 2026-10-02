@@ -242,6 +242,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
   unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **Compose stacks migrate the database once, under the migration lock.** The backend service ran
+  `migrate up` in its start command before GoatFlow itself, outside the lock that the backend,
+  runner and customer frontend share; a runner starting at the same time saw that in-progress
+  migration as a failed one. The step is gone: GoatFlow runs the migrations at startup, under the
+  lock.
 - **A failed migration no longer gets marked as applied.** When `schema_migrations` was left dirty
   (a migration failed or was interrupted), every GoatFlow process forced that version as done at
   startup and went on migrating, so the failed migration was skipped for good and an upgrade could

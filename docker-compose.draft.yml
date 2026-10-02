@@ -73,16 +73,8 @@ services:
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
     container_name: goatflow-backend
-    # Schema migration, then start server.
-    command: >
-      sh -c "
-        if [ \"$$DB_DRIVER\" = 'postgres' ]; then
-          ./migrate -path /app/migrations/postgres -database \"postgres://$${DB_PGSQL_USER}:$${DB_PGSQL_PASSWORD}@$${DB_PGSQL_HOST}:$${DB_PGSQL_PORT}/$${DB_PGSQL_NAME}?sslmode=disable\" up
-        else
-          ./migrate -path /app/migrations/mysql -database \"mysql://$${DB_MYSQL_USER}:$${DB_MYSQL_PASSWORD}@tcp($${DB_MYSQL_HOST}:$${DB_MYSQL_PORT})/$${DB_MYSQL_NAME}?multiStatements=true\" up
-        fi
-        exec ./goats
-      "
+    # No command override: goats runs the migrations at startup, under a
+    # database lock shared with the runner.
     environment:
       APP_ENV: ${APP_ENV:-production}
       APP_PORT: "8080"

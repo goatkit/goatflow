@@ -109,19 +109,10 @@ services:
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
     image: ghcr.io/goatkit/goatflow:${GOATFLOW_VERSION:-latest}
-    command: >
-      sh -c "
-        # Run database migrations automatically
-        echo '📦 Running database migrations...'
-        if [ \"$${DB_DRIVER}\" = 'postgres' ]; then
-          ./migrate -path /app/migrations/postgres -database \"postgres://$${DB_PGSQL_USER}:$${DB_PGSQL_PASSWORD}@$${DB_PGSQL_HOST}:$${DB_PGSQL_PORT}/$${DB_PGSQL_NAME}?sslmode=disable\" up
-        else
-          ./migrate -path /app/migrations/mysql -database \"mysql://$${DB_MYSQL_USER}:$${DB_MYSQL_PASSWORD}@tcp($${DB_MYSQL_HOST}:$${DB_MYSQL_PORT})/$${DB_MYSQL_NAME}?multiStatements=true\" up
-        fi
-        echo '✅ Database migrations complete'
-        # Start the application
-        ./goats
-      "
+    # No command override: goats runs the migrations at startup, under a
+    # database lock shared with the runner and customer-fe. A `migrate up`
+    # here ran outside that lock, and the other processes saw its in-progress
+    # migration as a failed (dirty) one.
     environment:
       ROUTES_DIR: /app/routes
       APP_ENV: ${APP_ENV:-development}
