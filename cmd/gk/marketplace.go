@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/ed25519"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/marketplace"
 	"github.com/goatkit/goatflow/internal/platform/plugin/packaging"
 	"github.com/goatkit/goatflow/internal/platform/plugin/signing"
+	"github.com/goatkit/goatflow/internal/platform/version"
 	"github.com/goatkit/goatflow/pkg/plugin"
 )
 
@@ -24,7 +26,14 @@ func getPluginsDir() string {
 	return dir
 }
 
-func marketplaceInstall(name string) {
+// parsePluginRef splits "name@1.2.3" into name and version ("" when absent).
+func parsePluginRef(ref string) (name, ver string) {
+	name, ver, _ = strings.Cut(ref, "@")
+	return name, strings.TrimPrefix(ver, "v")
+}
+
+func marketplaceInstall(ref string) {
+	name, want := parsePluginRef(ref)
 	client := marketplace.NewClient(getPluginsDir())
 
 	fmt.Println("Fetching marketplace index...")
@@ -34,13 +43,27 @@ func marketplaceInstall(name string) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Found: %s v%s by %s (%s)\n", entry.Name, entry.LatestVersion, entry.Author, entry.Licence)
+	var target marketplace.VersionEntry
+	if want != "" {
+		target, err = entry.ResolveVersion(want)
+	} else {
+		target, err = entry.ResolveInstall()
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Found: %s v%s by %s (%s)\n", entry.Name, target.Version, entry.Author, entry.Licence)
 	fmt.Printf("  Runtime: %s\n", entry.Runtime)
 	if entry.Verified {
 		fmt.Println("  Verified: ✓ (signed)")
 	}
-	if entry.MinHostVersion != "" {
-		fmt.Printf("  Requires GoatFlow >= %s\n", entry.MinHostVersion)
+	if target.MinHostVersion != "" {
+		fmt.Printf("  Requires GoatFlow >= %s\n", target.MinHostVersion)
+	}
+	if want == "" && marketplace.CompareVersions(target.Version, entry.LatestVersion) != 0 {
+		fmt.Printf("  (v%s is the newest this GoatFlow %s can run; latest is v%s)\n", target.Version, version.Short(), entry.LatestVersion)
 	}
 
 	// Check dependencies.
@@ -52,26 +75,30 @@ func marketplaceInstall(name string) {
 		os.Exit(1)
 	}
 
-	// Check if already installed.
+	// Check if already installed. An explicit name@version replaces any
+	// installed version; a bare name leaves an existing install to 'gk update'.
 	for _, inst := range installed {
-		if inst.Name == name {
-			if inst.Version == entry.LatestVersion {
-				fmt.Printf("\n  Already installed at v%s — up to date.\n", inst.Version)
-				return
-			}
-			fmt.Printf("\n  Already installed at v%s (marketplace has v%s)\n", inst.Version, entry.LatestVersion)
-			fmt.Println("  Use 'gk update' to upgrade.")
+		if inst.Name != name {
+			continue
+		}
+		if marketplace.CompareVersions(inst.Version, target.Version) == 0 {
+			fmt.Printf("\n  Already installed at v%s.\n", inst.Version)
+			return
+		}
+		if want == "" {
+			fmt.Printf("\n  Already installed at v%s (marketplace offers v%s)\n", inst.Version, target.Version)
+			fmt.Println("  Use 'gk update' to upgrade, or 'gk install name@version' for a specific version.")
 			return
 		}
 	}
 
 	// Install: download, verify, extract.
-	fmt.Printf("\nInstalling %s v%s...\n", entry.Name, entry.LatestVersion)
-	if err := client.Install(entry); err != nil {
+	fmt.Printf("\nInstalling %s v%s...\n", entry.Name, target.Version)
+	if _, err := client.Install(entry, target.Version); err != nil {
 		fmt.Fprintf(os.Stderr, "Install failed: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Installed %s v%s to %s/%s/\n", entry.Name, entry.LatestVersion, getPluginsDir(), entry.Name)
+	fmt.Printf("Installed %s v%s to %s/%s/\n", entry.Name, target.Version, getPluginsDir(), entry.Name)
 	fmt.Println("Restart GoatFlow to activate.")
 }
 
@@ -98,6 +125,9 @@ func marketplaceUpdate(name string) {
 
 	if len(updates) == 0 {
 		fmt.Println("All plugins are up to date.")
+		if name != "" {
+			explainNoUpdate(client, name)
+		}
 		return
 	}
 
@@ -108,13 +138,71 @@ func marketplaceUpdate(name string) {
 			fmt.Fprintf(os.Stderr, "    Error: %v\n", err)
 			continue
 		}
-		if err := client.Update(entry); err != nil {
+		if _, err := client.Update(entry, u.LatestVersion); err != nil {
 			fmt.Fprintf(os.Stderr, "    Update failed: %v\n", err)
 			continue
 		}
 		fmt.Printf("    Updated to v%s\n", u.LatestVersion)
 	}
 	fmt.Println("\nRestart GoatFlow to activate updates.")
+}
+
+// explainNoUpdate prints why an installed plugin has no update, e.g. when
+// newer releases need a newer GoatFlow.
+func explainNoUpdate(client *marketplace.Client, name string) {
+	entry, err := client.FindPlugin(name)
+	if err != nil {
+		return
+	}
+	installed, _ := client.ListInstalled()
+	for _, inst := range installed {
+		if inst.Name != name {
+			continue
+		}
+		if _, err := entry.ResolveUpdate(inst.Version); err != nil && !errors.Is(err, marketplace.ErrNoUpdate) {
+			fmt.Printf("  Newer release not installable: %v\n", err)
+		}
+	}
+}
+
+func marketplaceInfo(name string) {
+	client := marketplace.NewClient(getPluginsDir())
+	entry, err := client.FindPlugin(name)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("%s — %s\n", entry.Name, entry.Description)
+	fmt.Printf("  Author:  %s (%s)\n", entry.Author, entry.Licence)
+	fmt.Printf("  Repo:    %s\n", entry.Repo)
+	fmt.Printf("  Runtime: %s\n", entry.Runtime)
+	installedVer := "not installed"
+	installed, _ := client.ListInstalled()
+	for _, inst := range installed {
+		if inst.Name == entry.Name {
+			installedVer = "v" + inst.Version
+		}
+	}
+	fmt.Printf("  Installed: %s\n", installedVer)
+
+	fmt.Printf("\n  Versions (this GoatFlow is %s):\n", version.Short())
+	for _, v := range entry.AllVersions() {
+		req := "any GoatFlow"
+		if v.MinHostVersion != "" {
+			req = "GoatFlow >= " + v.MinHostVersion
+		}
+		mark := "✓ compatible"
+		if !v.Compatible() {
+			mark = "✗ needs newer GoatFlow"
+		}
+		fmt.Printf("    v%-12s %-22s %s\n", v.Version, req, mark)
+	}
+	if target, err := entry.ResolveInstall(); err == nil {
+		fmt.Printf("\n  'gk install %s' installs v%s\n", entry.Name, target.Version)
+	} else {
+		fmt.Printf("\n  Not installable: %v\n", err)
+	}
 }
 
 func marketplaceSearch(query string) {

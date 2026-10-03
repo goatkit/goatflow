@@ -45,10 +45,16 @@ func main() {
 		}
 	case "install":
 		if len(os.Args) < 3 {
-			fmt.Println("Usage: gk install <plugin-name>")
+			fmt.Println("Usage: gk install <plugin-name>[@version]")
 			os.Exit(1)
 		}
 		marketplaceInstall(os.Args[2])
+	case "info":
+		if len(os.Args) < 3 {
+			fmt.Println("Usage: gk info <plugin-name>")
+			os.Exit(1)
+		}
+		marketplaceInfo(os.Args[2])
 	case "update":
 		pluginName := ""
 		if len(os.Args) >= 3 {
@@ -102,8 +108,9 @@ func printUsage() {
 	fmt.Println("  keys generate  Generate a new ed25519 key pair")
 	fmt.Println()
 	fmt.Println("Marketplace:")
-	fmt.Println("  install <name> Install a plugin from the marketplace")
-	fmt.Println("  update [name]  Check for and apply plugin updates")
+	fmt.Println("  install <name>[@version]  Install a plugin (newest compatible, or a listed version)")
+	fmt.Println("  info <name>    Show a plugin's versions and GoatFlow compatibility")
+	fmt.Println("  update [name]  Check for and apply compatible plugin updates")
 	fmt.Println("  search <query> Search the marketplace for plugins")
 	fmt.Println()
 	fmt.Println("Other:")

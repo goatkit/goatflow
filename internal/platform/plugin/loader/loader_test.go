@@ -292,6 +292,24 @@ func TestLoaderDiscoverAll_Variants(t *testing.T) {
 			t.Errorf("expected 3 plugins (case-insensitive), got %d", count)
 		}
 	})
+
+	t.Run("skips hidden staging directories", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		// A marketplace update mid-extraction: never a loadable plugin.
+		staged := filepath.Join(tmpDir, ".gk-staging-123", "new", "demo")
+		os.MkdirAll(staged, 0755)
+		os.WriteFile(filepath.Join(staged, "demo.wasm"), []byte("fake"), 0644)
+		os.WriteFile(filepath.Join(tmpDir, "live.wasm"), []byte("fake"), 0644)
+
+		l := loader.NewLoader(tmpDir, mgr, nil)
+		count, err := l.DiscoverAll()
+		if err != nil {
+			t.Fatalf("DiscoverAll failed: %v", err)
+		}
+		if count != 1 {
+			t.Errorf("expected only live.wasm discovered, got %d: %v", count, l.Discovered())
+		}
+	})
 }
 
 func TestLoaderEnsureLoaded(t *testing.T) {

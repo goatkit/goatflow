@@ -19,6 +19,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
   keeps outgoing mail in the queue if you have no mail server.
 
 ### Added
+- **Older GoatFlow versions can install older compatible plugin releases.** A marketplace entry may
+  list `versions`, each with its own `min_host_version`; entries without it still work as a single
+  version. Install picks the newest version this GoatFlow can run, update picks the newest
+  compatible version newer than the installed one, and `gk install name@1.2.3` or the install API's
+  optional `version` pins a listed one. `gk info <name>` lists every version with its
+  compatibility. The admin marketplace shows "Requires GoatFlow ≥ X" and disables Install/Update
+  when no version is compatible, and offers a version picker when several are listed. The index API
+  adds `compatible`, `min_host_version`, `install_version` and per-version `compatible` flags.
 - **ICS calendar attachments render as event cards.** `.ics` attachments show title, time, location
   and description as a structured card in the inline viewer instead of raw text.
 - **Customer portal renders markdown articles.** Articles stored as markdown are shown as sanitised
@@ -251,6 +259,19 @@ project adheres to [Semantic Versioning](https://semver.org/).
   unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **Plugins that need a newer GoatFlow are refused at load.** `GKRegistration.MinHostVersion` was
+  never checked; a gRPC or WASM plugin declaring a newer minimum is now refused before `Init` at
+  boot, hot reload, upload and marketplace install, shut down, and the reason is written to the
+  plugin log. A refused hot reload leaves the running version in place.
+- **A failed marketplace update no longer deletes the installed plugin.** Update removed the
+  plugin directory before downloading, so a failed download or signature check left nothing
+  installed. The new version is now downloaded, verified and staged first, then swapped in, and the
+  old version is restored if the swap fails.
+- **Marketplace update ignored `min_host_version`.** Only install checked it, so update could
+  install a release the running GoatFlow cannot run. Update and the update check now offer only
+  compatible versions.
+- **gRPC plugins were told they run on GoatFlow 0.6.4.** `host_version` in the plugin `Init` config
+  was hardcoded; it is now the running GoatFlow version.
 - **Demo mode crashed on short `Accept` headers and could redirect a page to itself.** On a demo
   instance, a non-admin request to a guarded page (password change, MFA setup) with an `Accept`
   header shorter than 16 characters, such as curl's `*/*`, panicked and returned 500, and a blocked

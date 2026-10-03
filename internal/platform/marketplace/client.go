@@ -16,7 +16,6 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/plugin/packaging"
 	"github.com/goatkit/goatflow/internal/platform/plugin/signing"
-	"github.com/goatkit/goatflow/internal/platform/version"
 	"github.com/goatkit/goatflow/pkg/plugin"
 )
 
@@ -140,7 +139,9 @@ func (c *Client) ListInstalled() ([]InstalledPlugin, error) {
 	return installed, nil
 }
 
-// CheckUpdates compares installed plugins against the marketplace index.
+// CheckUpdates compares installed plugins against the marketplace index and
+// reports, per plugin, the newest version this GoatFlow can run that is newer
+// than the installed one. Newer releases needing a newer GoatFlow are skipped.
 func (c *Client) CheckUpdates() ([]UpdateAvailable, error) {
 	installed, err := c.ListInstalled()
 	if err != nil {
@@ -164,14 +165,16 @@ func (c *Client) CheckUpdates() ([]UpdateAvailable, error) {
 		if !ok {
 			continue
 		}
-		if versionCompare(entry.LatestVersion, inst.Version) > 0 {
-			updates = append(updates, UpdateAvailable{
-				Name:           inst.Name,
-				CurrentVersion: inst.Version,
-				LatestVersion:  entry.LatestVersion,
-				Repo:           entry.Repo,
-			})
+		next, err := entry.ResolveUpdate(inst.Version)
+		if err != nil {
+			continue
 		}
+		updates = append(updates, UpdateAvailable{
+			Name:           inst.Name,
+			CurrentVersion: inst.Version,
+			LatestVersion:  next.Version,
+			Repo:           entry.Repo,
+		})
 	}
 	return updates, nil
 }
@@ -199,71 +202,166 @@ func CompareVersions(a, b string) int {
 	return versionCompare(a, b)
 }
 
-// Install downloads, verifies, and extracts a plugin from the marketplace.
-// Returns ErrAlreadyInstalled if the plugin is already at the requested version.
-func (c *Client) Install(entry *PluginEntry) error {
-	if entry.MinHostVersion != "" {
-		hostVer := version.Short()
-		if hostVer != "dev" && hostVer != "" {
-			if versionCompare(hostVer, entry.MinHostVersion) < 0 {
-				return fmt.Errorf("plugin requires GoatFlow >= %s, you have %s", entry.MinHostVersion, hostVer)
-			}
-		}
-	}
-
+// installedVersion returns the installed version of name, or "" if absent.
+func (c *Client) installedVersion(name string) string {
 	installed, _ := c.ListInstalled()
 	for _, inst := range installed {
-		if inst.Name == entry.Name && versionCompare(inst.Version, entry.LatestVersion) == 0 {
-			return ErrAlreadyInstalled
+		if inst.Name == name {
+			return inst.Version
 		}
 	}
-
-	return c.fetchAndExtract(entry)
+	return ""
 }
 
-// Update replaces an installed plugin with the marketplace version.
-// The existing plugin directory is removed before extraction for a clean replacement.
-func (c *Client) Update(entry *PluginEntry) error {
+// Install downloads, verifies, and extracts a plugin from the marketplace.
+// want selects a listed version; "" picks the newest version this GoatFlow
+// can run. Returns the version installed, or ErrAlreadyInstalled if the plugin
+// is already at that version.
+func (c *Client) Install(entry *PluginEntry, want string) (string, error) {
+	v, err := resolveWanted(entry, want)
+	if err != nil {
+		return "", err
+	}
+	if cur := c.installedVersion(entry.Name); cur != "" && versionCompare(cur, v.Version) == 0 {
+		return v.Version, ErrAlreadyInstalled
+	}
+	return v.Version, c.installVersion(entry, v.Version)
+}
+
+// Update replaces an installed plugin with another marketplace version. want
+// selects a listed version; "" picks the newest compatible version newer than
+// the installed one (ErrNoUpdate if there is none). The new version is
+// downloaded and verified before the installed one is touched, so a failed
+// update leaves the existing plugin in place.
+func (c *Client) Update(entry *PluginEntry, want string) (string, error) {
+	var v VersionEntry
+	var err error
+	if want == "" {
+		v, err = entry.ResolveUpdate(c.installedVersion(entry.Name))
+	} else {
+		v, err = entry.ResolveVersion(want)
+	}
+	if err != nil {
+		return "", err
+	}
+	return v.Version, c.installVersion(entry, v.Version)
+}
+
+func resolveWanted(entry *PluginEntry, want string) (VersionEntry, error) {
+	if want == "" {
+		return entry.ResolveInstall()
+	}
+	return entry.ResolveVersion(want)
+}
+
+// installVersion downloads and verifies ver, extracts it into a staging
+// directory inside the plugins dir, then swaps it into place. Any existing
+// install is only moved aside once the new one is fully staged, and is put
+// back if the swap fails.
+func (c *Client) installVersion(entry *PluginEntry, ver string) error {
+	zipPath, cleanup, err := c.download(entry, ver)
+	defer cleanup()
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(c.pluginsDir, 0o750); err != nil {
+		return fmt.Errorf("create plugins dir: %w", err)
+	}
+	// Dot-prefixed so the loaders' directory scans skip it.
+	staging, err := os.MkdirTemp(c.pluginsDir, ".gk-staging-*")
+	if err != nil {
+		return fmt.Errorf("create staging dir: %w", err)
+	}
+	defer os.RemoveAll(staging)
+
+	pkg, err := packaging.ExtractPlugin(zipPath, filepath.Join(staging, "new"))
+	if err != nil {
+		return fmt.Errorf("extract plugin: %w", err)
+	}
+	if pkg.Manifest.Name != entry.Name {
+		return fmt.Errorf("package is plugin %q, marketplace entry is %q", pkg.Manifest.Name, entry.Name)
+	}
+
 	pluginDir := filepath.Join(c.pluginsDir, entry.Name)
-	_ = os.RemoveAll(pluginDir)
+	if err := swapDir(filepath.Join(staging, "new", entry.Name), pluginDir, filepath.Join(staging, "old")); err != nil {
+		return err
+	}
 
-	return c.fetchAndExtract(entry)
+	// Install theme assets if applicable.
+	if IsThemePlugin(&pkg.Manifest) {
+		if err := InstallTheme(pluginDir, &pkg.Manifest); err != nil {
+			return fmt.Errorf("install theme: %w", err)
+		}
+	}
+	return nil
 }
 
-// fetchAndExtract downloads a plugin ZIP, verifies its signature if available,
-// and extracts it to the plugins directory.
-func (c *Client) fetchAndExtract(entry *PluginEntry) error {
-	zipURL := DownloadURL(entry.Repo, entry.LatestVersion, entry.Name)
+// swapDir moves src to dst. An existing dst is first renamed to aside and is
+// restored if moving src in fails; the caller removes aside afterwards.
+func swapDir(src, dst, aside string) error {
+	hadOld := false
+	if _, err := os.Lstat(dst); err == nil {
+		if err := os.Rename(dst, aside); err != nil {
+			return fmt.Errorf("move installed plugin aside: %w", err)
+		}
+		hadOld = true
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("stat installed plugin: %w", err)
+	}
+	if err := os.Rename(src, dst); err != nil {
+		if hadOld {
+			if rerr := os.Rename(aside, dst); rerr != nil {
+				return fmt.Errorf("move new plugin into place: %w (restoring previous version failed: %v)", err, rerr)
+			}
+		}
+		return fmt.Errorf("move new plugin into place: %w", err)
+	}
+	return nil
+}
+
+// download fetches the plugin ZIP for ver into a temp file and verifies its
+// signature when one is published. cleanup removes the temp file and is safe
+// to call even when err is non-nil.
+func (c *Client) download(entry *PluginEntry, ver string) (zipPath string, cleanup func(), err error) {
+	cleanup = func() {}
 	zipFile, err := os.CreateTemp("", "gk-plugin-*.zip")
 	if err != nil {
-		return fmt.Errorf("create temp file: %w", err)
+		return "", cleanup, fmt.Errorf("create temp file: %w", err)
 	}
-	zipPath := zipFile.Name()
-	defer os.Remove(zipPath)
+	zipPath = zipFile.Name()
+	cleanup = func() { _ = os.Remove(zipPath) }
 
-	resp, err := c.httpClient.Get(zipURL)
+	resp, err := c.httpClient.Get(DownloadURL(entry.Repo, ver, entry.Name))
 	if err != nil {
 		_ = zipFile.Close()
-		return fmt.Errorf("download plugin: %w", err)
+		return "", cleanup, fmt.Errorf("download plugin: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		_ = zipFile.Close()
-		return fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
+		return "", cleanup, fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
 	}
 
 	if _, err := io.Copy(zipFile, resp.Body); err != nil {
 		_ = zipFile.Close()
-		return fmt.Errorf("write plugin zip: %w", err)
+		return "", cleanup, fmt.Errorf("write plugin zip: %w", err)
 	}
 	if err := zipFile.Close(); err != nil {
-		return fmt.Errorf("write plugin zip: %w", err)
+		return "", cleanup, fmt.Errorf("write plugin zip: %w", err)
 	}
 
-	// Verify signature if a .sig file is available.
-	sigURL := SignatureURL(entry.Repo, entry.LatestVersion, entry.Name)
-	sigResp, sigErr := c.httpClient.Get(sigURL)
+	if err := c.verifySignature(entry, ver, zipPath); err != nil {
+		return "", cleanup, err
+	}
+	return zipPath, cleanup, nil
+}
+
+// verifySignature checks zipPath against the published .sig for ver if one
+// exists; an unsigned plugin is refused when signatures are required.
+func (c *Client) verifySignature(entry *PluginEntry, ver, zipPath string) error {
+	sigResp, sigErr := c.httpClient.Get(SignatureURL(entry.Repo, ver, entry.Name))
 	hasSig := sigErr == nil && sigResp != nil && sigResp.StatusCode == http.StatusOK
 	if !hasSig {
 		if sigResp != nil {
@@ -272,59 +370,45 @@ func (c *Client) fetchAndExtract(entry *PluginEntry) error {
 		if signing.IsSignatureRequired() {
 			return fmt.Errorf("plugin %q is not signed but signatures are required (GOATFLOW_REQUIRE_SIGNATURES=1)", entry.Name)
 		}
-	} else {
-		sigFile, err := os.CreateTemp("", "gk-plugin-*.sig")
-		if err != nil {
-			_ = sigResp.Body.Close()
-			return fmt.Errorf("create temp sig file: %w", err)
-		}
-		sigPath := sigFile.Name()
-		defer os.Remove(sigPath)
-
-		if _, err := io.Copy(sigFile, sigResp.Body); err != nil {
-			_ = sigFile.Close()
-			_ = sigResp.Body.Close()
-			return fmt.Errorf("write signature: %w", err)
-		}
-		_ = sigResp.Body.Close()
-		if err := sigFile.Close(); err != nil {
-			return fmt.Errorf("write signature: %w", err)
-		}
-
-		keys, err := LoadTrustedKeys()
-		if err != nil {
-			return fmt.Errorf("load trusted keys: %w", err)
-		}
-		if entry.PublicKey != "" {
-			indexKey, err := parsePublicKey(entry.PublicKey)
-			if err != nil {
-				return fmt.Errorf("invalid public key in marketplace index: %w", err)
-			}
-			keys = append(keys, indexKey)
-		}
-		if len(keys) > 0 {
-			if err := signing.VerifyBinary(zipPath, sigPath, keys); err != nil {
-				return fmt.Errorf("signature verification failed: %w", err)
-			}
-		} else {
-			fmt.Fprintln(os.Stderr, "Warning: signature file exists but no trusted keys configured — skipping verification")
-		}
+		return nil
 	}
 
-	// Extract plugin package.
-	pkg, err := packaging.ExtractPlugin(zipPath, c.pluginsDir)
+	sigFile, err := os.CreateTemp("", "gk-plugin-*.sig")
 	if err != nil {
-		return fmt.Errorf("extract plugin: %w", err)
+		_ = sigResp.Body.Close()
+		return fmt.Errorf("create temp sig file: %w", err)
+	}
+	sigPath := sigFile.Name()
+	defer os.Remove(sigPath)
+
+	if _, err := io.Copy(sigFile, sigResp.Body); err != nil {
+		_ = sigFile.Close()
+		_ = sigResp.Body.Close()
+		return fmt.Errorf("write signature: %w", err)
+	}
+	_ = sigResp.Body.Close()
+	if err := sigFile.Close(); err != nil {
+		return fmt.Errorf("write signature: %w", err)
 	}
 
-	// Install theme assets if applicable.
-	pluginDir := filepath.Join(c.pluginsDir, pkg.Manifest.Name)
-	if IsThemePlugin(&pkg.Manifest) {
-		if err := InstallTheme(pluginDir, &pkg.Manifest); err != nil {
-			return fmt.Errorf("install theme: %w", err)
+	keys, err := LoadTrustedKeys()
+	if err != nil {
+		return fmt.Errorf("load trusted keys: %w", err)
+	}
+	if entry.PublicKey != "" {
+		indexKey, err := parsePublicKey(entry.PublicKey)
+		if err != nil {
+			return fmt.Errorf("invalid public key in marketplace index: %w", err)
 		}
+		keys = append(keys, indexKey)
 	}
-
+	if len(keys) == 0 {
+		fmt.Fprintln(os.Stderr, "Warning: signature file exists but no trusted keys configured — skipping verification")
+		return nil
+	}
+	if err := signing.VerifyBinary(zipPath, sigPath, keys); err != nil {
+		return fmt.Errorf("signature verification failed: %w", err)
+	}
 	return nil
 }
 

@@ -131,7 +131,7 @@ func (l *Loader) DiscoverAll() (int, error) {
 			return err
 		}
 		if d.IsDir() {
-			return nil
+			return skipHiddenDir(l.pluginDir, path, d)
 		}
 
 		ext := strings.ToLower(filepath.Ext(path))
@@ -477,9 +477,9 @@ func (l *Loader) LoadAll(ctx context.Context) (int, []error) {
 			return err
 		}
 
-		// Skip directories (but descend into them)
+		// Skip hidden directories (but descend into the rest)
 		if d.IsDir() {
-			return nil
+			return skipHiddenDir(l.pluginDir, path, d)
 		}
 
 		// Load based on file extension
@@ -849,6 +849,9 @@ func (l *Loader) WatchDir(ctx context.Context) error {
 		if err != nil || !d.IsDir() {
 			return nil
 		}
+		if skip := skipHiddenDir(l.pluginDir, path, d); skip != nil {
+			return skip
+		}
 		if err := watcher.Add(path); err != nil {
 			l.logger.Warn("failed to watch plugin subdir", "path", path, "error", err)
 		}
@@ -911,6 +914,10 @@ func (l *Loader) watchLoop(watcher *fsnotify.Watcher, watchCtx context.Context) 
 func (l *Loader) handleFSEvent(watcher *fsnotify.Watcher, event fsnotify.Event) {
 	path := event.Name
 	baseName := filepath.Base(path)
+
+	if inHiddenDir(l.pluginDir, path) {
+		return
+	}
 
 	// New subdirectory created — watch it and check for plugin.yaml
 	if event.Op&fsnotify.Create != 0 {
@@ -1196,4 +1203,29 @@ func (l *Loader) processFileChange(event fsnotify.Event) {
 	l.watchMu.Lock()
 	delete(l.debounce, path)
 	l.watchMu.Unlock()
+}
+
+// skipHiddenDir returns fs.SkipDir for a dot-prefixed directory below root,
+// such as the marketplace's .gk-staging-* dirs, which hold half-installed
+// plugin versions the loader must not pick up. Other directories return nil.
+func skipHiddenDir(root, path string, d fs.DirEntry) error {
+	if path != root && strings.HasPrefix(d.Name(), ".") {
+		return fs.SkipDir
+	}
+	return nil
+}
+
+// inHiddenDir reports whether path is, or lies under, a dot-prefixed entry
+// below root (see skipHiddenDir).
+func inHiddenDir(root, path string) bool {
+	rel, err := filepath.Rel(root, path)
+	if err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+		return false
+	}
+	for _, part := range strings.Split(rel, string(filepath.Separator)) {
+		if strings.HasPrefix(part, ".") {
+			return true
+		}
+	}
+	return false
 }

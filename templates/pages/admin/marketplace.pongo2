@@ -103,6 +103,10 @@ const i18n = {
     verified: '{{ t("admin.verified_signed")|default:"Verified" }}',
     noResults: '{{ t("admin.no_marketplace_results")|default:"No plugins found" }}',
     loadFailed: '{{ t("admin.marketplace_load_failed")|default:"Failed to load marketplace" }}',
+    requiresHost: '{{ t("admin.marketplace_requires_host")|default:"Requires GoatFlow ≥ {version}" }}',
+    incompatible: '{{ t("admin.marketplace_incompatible")|default:"Incompatible" }}',
+    selectVersion: '{{ t("admin.marketplace_select_version")|default:"Version to install" }}',
+    versionIncompatible: '{{ t("admin.marketplace_version_incompatible")|default:"needs newer GoatFlow" }}',
 };
 
 function escapeHtml(text) {
@@ -173,16 +177,23 @@ function renderPlugins(plugins) {
     }
 
     grid.innerHTML = plugins.map(p => {
+        const offered = p.install_version || p.latest_version;
         let badge, button;
-        if (p.update_available) {
-            badge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background: rgba(245,158,11,0.15); color: var(--gk-warning);">${i18n.update} v${p.latest_version}</span>`;
-            button = `<button onclick="installPlugin('${p.name}')" class="gk-btn-neon text-sm px-3 py-1.5" style="background: var(--gk-warning); border-color: var(--gk-warning);">${i18n.update}</button>`;
+        if (!p.compatible) {
+            badge = `<span class="gk-badge gk-badge-warning">${escapeHtml(i18n.requiresHost.replace('{version}', p.min_host_version || ''))}</span>`;
+            button = `<button class="gk-btn-secondary text-sm px-3 py-1.5" disabled>${i18n.incompatible}</button>`;
+            if (p.installed_version) {
+                badge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background: rgba(34,197,94,0.15); color: var(--gk-success);">${i18n.installed} v${escapeHtml(p.installed_version)}</span> ` + badge;
+            }
+        } else if (p.update_available) {
+            badge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background: rgba(245,158,11,0.15); color: var(--gk-warning);">${i18n.update} v${escapeHtml(offered)}</span>`;
+            button = versionSelect(p) + `<button onclick="installPlugin('${p.name}')" class="gk-btn-neon text-sm px-3 py-1.5" style="background: var(--gk-warning); border-color: var(--gk-warning);">${i18n.update}</button>`;
         } else if (p.installed_version) {
-            badge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background: rgba(34,197,94,0.15); color: var(--gk-success);">${i18n.installed} v${p.installed_version}</span>`;
+            badge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background: rgba(34,197,94,0.15); color: var(--gk-success);">${i18n.installed} v${escapeHtml(p.installed_version)}</span>`;
             button = `<span class="text-sm" style="color: var(--gk-text-muted);">${i18n.upToDate}</span>`;
         } else {
-            badge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background: rgba(99,102,241,0.15); color: var(--gk-primary);">v${p.latest_version}</span>`;
-            button = `<button onclick="installPlugin('${p.name}')" class="gk-btn-neon text-sm px-3 py-1.5">${i18n.install}</button>`;
+            badge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background: rgba(99,102,241,0.15); color: var(--gk-primary);">v${escapeHtml(offered)}</span>`;
+            button = versionSelect(p) + `<button onclick="installPlugin('${p.name}')" class="gk-btn-neon text-sm px-3 py-1.5">${i18n.install}</button>`;
         }
 
         const verifiedIcon = p.verified
@@ -212,23 +223,39 @@ function renderPlugins(plugins) {
                 </div>
             </div>
             <p class="text-sm flex-1 mb-3" style="color: var(--gk-text-secondary);">${p.description || ''}</p>
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-2">
                 <div class="flex flex-wrap gap-1">${tags}</div>
-                ${button}
+                <div class="flex items-center gap-2 flex-shrink-0">${button}</div>
             </div>
         </div>`;
     }).join('');
 }
 
+// versionSelect renders a version picker when a plugin lists several versions;
+// versions this GoatFlow cannot run are shown but disabled.
+function versionSelect(p) {
+    const versions = p.versions || [];
+    if (versions.length < 2) return '';
+    const options = versions.map(v => {
+        const label = v.compatible ? `v${escapeHtml(v.version)}` : `v${escapeHtml(v.version)} (${i18n.versionIncompatible})`;
+        const selected = v.version === p.install_version ? ' selected' : '';
+        const disabled = v.compatible ? '' : ' disabled';
+        return `<option value="${escapeHtml(v.version)}"${selected}${disabled}>${label}</option>`;
+    }).join('');
+    return `<label for="ver-${p.name}" class="sr-only">${i18n.selectVersion}</label><select id="ver-${p.name}" class="gk-select-neon text-sm w-32">${options}</select>`;
+}
+
 async function installPlugin(name) {
     const buttons = document.querySelectorAll(`button[onclick="installPlugin('${name}')"]`);
+    const select = document.getElementById(`ver-${name}`);
+    const version = select ? select.value : '';
     buttons.forEach(b => { b.disabled = true; b.textContent = i18n.installing; });
 
     try {
         const resp = await fetch('/api/v1/plugins/marketplace/install', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name }),
+            body: JSON.stringify(version ? { name, version } : { name }),
         });
         const data = await resp.json();
 

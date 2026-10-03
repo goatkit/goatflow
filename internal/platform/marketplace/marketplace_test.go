@@ -315,7 +315,7 @@ func TestInstall(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FindPlugin failed: %v", err)
 	}
-	if err := client.Install(entry); err != nil {
+	if _, err := client.Install(entry, ""); err != nil {
 		t.Fatalf("Install failed: %v", err)
 	}
 
@@ -337,7 +337,7 @@ func TestInstall(t *testing.T) {
 		t.Errorf("hello.txt content = %q, want %q", string(helloData), "hello world")
 	}
 
-	if err := client.Install(entry); err != ErrAlreadyInstalled {
+	if _, err := client.Install(entry, ""); err != ErrAlreadyInstalled {
 		t.Errorf("second install: got error %v, want ErrAlreadyInstalled", err)
 	}
 }
@@ -461,7 +461,7 @@ func TestInstallSigned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FindPlugin failed: %v", err)
 	}
-	if err := client.Install(entry); err != nil {
+	if _, err := client.Install(entry, ""); err != nil {
 		t.Fatalf("Install with signature failed: %v", err)
 	}
 

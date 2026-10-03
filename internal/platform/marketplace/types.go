@@ -26,16 +26,27 @@ type PluginEntry struct {
 	Author         string   `json:"author"`
 	Licence        string   `json:"licence"`
 	Homepage       string   `json:"homepage"`
-	Repo           string   `json:"repo"`     // GitHub owner/repo
+	Repo           string   `json:"repo"`           // GitHub owner/repo
 	IconURL        string   `json:"icon,omitempty"` // URL to plugin icon image (SVG or PNG, recommended 64×64)
-	Category       string   `json:"category"` // business, integration, theme, utility
+	Category       string   `json:"category"`       // business, integration, theme, utility
 	Tags           []string `json:"tags"`
 	LatestVersion  string   `json:"latest_version"`
-	MinHostVersion string   `json:"min_host_version"`
-	Runtime        string   `json:"runtime"`                // wasm, grpc
-	Verified       bool     `json:"verified"`               // has ed25519 signature
-	Dependencies   []string `json:"dependencies,omitempty"` // plugin names this depends on
-	PublicKey      string   `json:"public_key,omitempty"`   // ed25519 public key (hex) for signature verification
+	MinHostVersion string   `json:"min_host_version"` // minimum GoatFlow for LatestVersion
+	// Versions lists every installable release with its own minimum GoatFlow
+	// version, so older hosts can pick an older compatible release. Optional:
+	// an entry without it offers only LatestVersion (see AllVersions).
+	Versions     []VersionEntry `json:"versions,omitempty"`
+	Runtime      string         `json:"runtime"`                // wasm, grpc
+	Verified     bool           `json:"verified"`               // has ed25519 signature
+	Dependencies []string       `json:"dependencies,omitempty"` // plugin names this depends on
+	PublicKey    string         `json:"public_key,omitempty"`   // ed25519 public key (hex) for signature verification
+}
+
+// VersionEntry is one installable release of a plugin.
+type VersionEntry struct {
+	Version        string    `json:"version"`
+	MinHostVersion string    `json:"min_host_version,omitempty"` // empty = no minimum
+	ReleasedAt     time.Time `json:"released_at,omitzero"`
 }
 
 // InstalledPlugin represents a locally installed plugin read from its manifest.
