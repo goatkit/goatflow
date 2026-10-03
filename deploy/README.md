@@ -35,6 +35,7 @@ All configuration is via environment variables in `.env`:
 | `GOATFLOW_SECURE_KEY` | **Yes** | Encrypts stored secrets (plugin secure settings, webhook signing secrets); exactly 64 hex characters (`openssl rand -hex 32`). App, customer portal and runner get the same value, so the runner can decrypt webhook signing secrets. Compose refuses to start without it. Never change it once set. | - |
 | `GOATFLOW_ADMIN_PASSWORD` | Recommended | First-boot password for the admin account `root@localhost`. Applied once, while the seeded account is still disabled; change it in GoatFlow afterwards | empty (admin stays disabled) |
 | `BASE_URL` | No | Public URL for the application; password-reset and customer sign-up email links are built from it | `https://$DOMAIN` |
+| `GOATFLOW_APP_DEMO_MODE` | No | For public demo sites: `true` stops non-admin users changing passwords and MFA | `false` |
 | `EMAIL_ENABLED` | No | Send outgoing email; `false` keeps it in the queue | `true` |
 | `EMAIL_FROM` | No | Sender address | `noreply@example.com` |
 | `SMTP_HOST` | **Yes** | SMTP server | - |

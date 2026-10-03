@@ -672,20 +672,47 @@ jobs:
     steps:
       - name: Deploy to demo server
         uses: appleboy/ssh-action@v1
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
         with:
           host: goatflow-demo.gibbsoft.com
           username: ubuntu
           key: ${{ secrets.DEMO_SSH_KEY }}
+          envs: RELEASE_TAG
           script: |
+            set -euo pipefail
             cd ~/goatflow
+            raw="https://raw.githubusercontent.com/goatkit/goatflow/${RELEASE_TAG}/deploy"
+            stamp=$(date +%Y%m%d-%H%M%S)
+
+            # Keep the previous configuration for a manual rollback
+            cp -p .env ".env.bak.${stamp}"
+            cp -p docker-compose.yml "docker-compose.yml.bak.${stamp}"
+
+            # Compose file and reset script from the release being deployed
+            curl -fsSL -o docker-compose.yml.new "${raw}/docker-compose.yml"
+            curl -fsSL -o reset-demo-db.sh.new "${raw}/demo/reset-demo-db.sh"
+
+            # Demo settings the compose file needs. Existing values are kept:
+            # the secure key is generated once here and must never change.
+            grep -q '^GOATFLOW_SECURE_KEY=' .env || echo "GOATFLOW_SECURE_KEY=$(openssl rand -hex 32)" >> .env
+            grep -q '^GOATFLOW_APP_DEMO_MODE=' .env || echo "GOATFLOW_APP_DEMO_MODE=true" >> .env
+            grep -q '^EMAIL_ENABLED=' .env || echo "EMAIL_ENABLED=false" >> .env
+            # Run the images this tag built, not whatever :latest points at
+            sed -i '/^GOATFLOW_TAG=/d' .env
+            echo "GOATFLOW_TAG=${RELEASE_TAG#v}" >> .env
+
+            # Validate before stopping anything
+            docker compose -f docker-compose.yml.new config -q
+            mv docker-compose.yml.new docker-compose.yml
+            install -m 0755 reset-demo-db.sh.new reset-demo-db.sh
+            rm reset-demo-db.sh.new
+
             docker compose pull
-            docker compose down
-            docker compose up -d --force-recreate
-            source .env
-            # Restore full dump using root (dump includes all databases)
-            # Skip line 1 (MariaDB sandbox comment that breaks import)
-            zcat goatflow_demo.sql.gz | tail -n +2 | docker compose exec -T mariadb \
-              mariadb -uroot -p"$DB_ROOT_PASSWORD"
+            docker compose up -d --remove-orphans --wait --wait-timeout 300
+            # Load the demo seed data, then wait for the migrated services
+            ./reset-demo-db.sh
+            docker compose up -d --wait --wait-timeout 300
 
       - name: Checkout for smoke test
         uses: actions/checkout@v5

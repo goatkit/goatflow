@@ -9,6 +9,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [0.10.0] - Unreleased
 
+**Upgrading from 0.9.0**
+- **Everyone signs in again once.** Tokens issued before 0.10.0 carry no session id and are refused.
+- **PostgreSQL: install 0.10.0 fresh.** 0.9.0 could not run its migrations on PostgreSQL ("duplicate
+  migration file"), so there is no 0.9.0 PostgreSQL database to upgrade.
+- **Docker Compose (`deploy/docker-compose.yml`): add two settings to `.env` first.**
+  `GOATFLOW_SECURE_KEY` (64 hex characters, `openssl rand -hex 32`; never change it afterwards) and
+  `SMTP_HOST` are now required, and compose refuses to start without them. `EMAIL_ENABLED=false`
+  keeps outgoing mail in the queue if you have no mail server.
+
 ### Added
 - **ICS calendar attachments render as event cards.** `.ics` attachments show title, time, location
   and description as a structured card in the inline viewer instead of raw text.
@@ -242,6 +251,24 @@ project adheres to [Semantic Versioning](https://semver.org/).
   unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **Demo mode crashed on short `Accept` headers and could redirect a page to itself.** On a demo
+  instance, a non-admin request to a guarded page (password change, MFA setup) with an `Accept`
+  header shorter than 16 characters, such as curl's `*/*`, panicked and returned 500, and a blocked
+  page opened without a `Referer` redirected to itself. Browsers now go back to the page they came
+  from, or to `/`.
+- **Docker Compose deployments could not turn on demo mode.** `deploy/docker-compose.yml` did not
+  pass `GOATFLOW_APP_DEMO_MODE` to the containers, so a demo instance ran without the demo guard. It
+  is passed now (default `false`).
+- **The public demo deploy.** The release job (`build.yml`, `deploy-demo`) kept the demo server's
+  compose file from an older release, pulled `:latest`, ran without `GOATFLOW_SECURE_KEY`, and
+  loaded the seed dump over the running database. Tables created by newer migrations were left
+  next to the seed's older `schema_migrations` version, so the next migration run failed
+  (`Duplicate column name 'captive_plugin'`), and the dump's `mysql` database replaced the database
+  users. The job now installs `deploy/docker-compose.yml` and `deploy/demo/reset-demo-db.sh` from
+  the tag, pins `GOATFLOW_TAG` to it, generates the secure key once on the server and keeps it,
+  and checks the configuration before stopping anything. `reset-demo-db.sh`, which also runs
+  nightly, drops each seeded database before loading it, skips the `mysql` database, and restarts
+  the GoatFlow services so their migrations bring the seed up to the running release.
 - **Compose stacks migrate the database once, under the migration lock.** The backend service ran
   `migrate up` in its start command before GoatFlow itself, outside the lock that the backend,
   runner and customer frontend share; a runner starting at the same time saw that in-progress
