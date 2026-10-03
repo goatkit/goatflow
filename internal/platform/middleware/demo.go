@@ -43,17 +43,28 @@ func DemoGuard() gin.HandlerFunc {
 			return
 		}
 
-		// Block the request
-		if wantsJSON(c) {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error":   "This action is disabled in demo mode",
-				"message": "Password and MFA changes are not available on the demo instance. Feel free to explore everything else!",
-			})
-		} else {
-			c.Redirect(http.StatusSeeOther, c.Request.Referer())
-		}
-		c.Abort()
+		blockDemoChange(c)
 	}
+}
+
+// blockDemoChange answers a blocked request: JSON clients get a 403 with a
+// friendly message, browsers go back to the page they came from (the site
+// root when there is no Referer, so a guarded page never redirects to
+// itself).
+func blockDemoChange(c *gin.Context) {
+	if wantsJSON(c) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error":   "This action is disabled in demo mode",
+			"message": "Password and MFA changes are not available on the demo instance. Feel free to explore everything else!",
+		})
+	} else {
+		back := c.Request.Referer()
+		if back == "" {
+			back = "/"
+		}
+		c.Redirect(http.StatusSeeOther, back)
+	}
+	c.Abort()
 }
 
 // isAdmin reports whether the auth middleware marked the user as a member of
@@ -74,9 +85,7 @@ func isAdmin(c *gin.Context) bool {
 
 // wantsJSON returns true if the request expects a JSON response.
 func wantsJSON(c *gin.Context) bool {
-	accept := c.GetHeader("Accept")
-	return accept == "application/json" ||
+	return strings.HasPrefix(c.GetHeader("Accept"), "application/json") ||
 		c.GetHeader("X-Requested-With") == "XMLHttpRequest" ||
-		c.ContentType() == "application/json" ||
-		len(accept) > 0 && accept[:16] == "application/json"
+		c.ContentType() == "application/json"
 }
