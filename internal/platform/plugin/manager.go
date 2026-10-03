@@ -15,6 +15,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/deletion"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
 	"github.com/goatkit/goatflow/internal/platform/pluginui"
+	"github.com/goatkit/goatflow/internal/platform/version"
 )
 
 // LazyLoader is the interface for lazy-loading plugins on demand.
@@ -395,7 +396,8 @@ func (m *Manager) Forget(name string) {
 	}
 }
 
-// Register loads and initializes a plugin.
+// Register loads and initializes a plugin. A plugin whose MinHostVersion is
+// newer than the running GoatFlow is refused before Init.
 func (m *Manager) Register(ctx context.Context, p Plugin) error {
 	manifest := p.GKRegister()
 
@@ -404,6 +406,9 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 
 	if _, exists := m.plugins[manifest.Name]; exists {
 		return fmt.Errorf("plugin %q already registered", manifest.Name)
+	}
+	if err := checkHostVersion(manifest); err != nil {
+		return err
 	}
 
 	// Create sandboxed HostAPI for this plugin
@@ -440,6 +445,17 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 	m.applyManifestSideEffectsPostInit(ctx, manifest)
 
 	return nil
+}
+
+// checkHostVersion refuses a plugin that declares a MinHostVersion newer than
+// the running GoatFlow, recording why in the log and the plugin log buffer.
+func checkHostVersion(manifest GKRegistration) error {
+	err := version.RequireHost(manifest.Name, manifest.Version, manifest.MinHostVersion)
+	if err != nil {
+		slog.Error("plugin refused: incompatible GoatFlow version", "plugin", manifest.Name, "error", err)
+		GetLogBuffer().Log(manifest.Name, "error", "Plugin not loaded: "+err.Error(), nil)
+	}
+	return err
 }
 
 // Unload removes a plugin from the manager's in-memory state.
@@ -911,6 +927,9 @@ func (m *Manager) ReplacePlugin(ctx context.Context, oldName string, newPlugin P
 	newManifest := newPlugin.GKRegister()
 	if newManifest.Name != oldName {
 		return fmt.Errorf("new plugin name %q doesn't match old name %q", newManifest.Name, oldName)
+	}
+	if err := checkHostVersion(newManifest); err != nil {
+		return err
 	}
 
 	// Initialize new plugin with existing policy and settings

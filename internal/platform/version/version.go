@@ -5,6 +5,9 @@ package version
 import (
 	"fmt"
 	"runtime"
+	"strings"
+
+	"golang.org/x/mod/semver"
 )
 
 // Build-time variables set via ldflags
@@ -56,4 +59,59 @@ func Short() string {
 // Full returns the full version string with all details.
 func Full() string {
 	return fmt.Sprintf("%s (%s) built %s with %s", Version, GitCommit, BuildDate, runtime.Version())
+}
+
+// HostCompatible reports whether the running GoatFlow satisfies a plugin's
+// minimum host version. An empty minimum always matches. A development build
+// (Version "dev", empty, or any non-semver branch name) matches everything, so
+// untagged builds never lock plugins out.
+func HostCompatible(minVersion string) bool {
+	if minVersion == "" {
+		return true
+	}
+	host := canonical(Version)
+	if !semver.IsValid(host) {
+		return true
+	}
+	return semver.Compare(host, canonical(minVersion)) >= 0
+}
+
+// IncompatibleError reports a plugin version whose minimum GoatFlow version is
+// newer than the running host.
+type IncompatibleError struct {
+	Plugin         string
+	PluginVersion  string
+	MinHostVersion string
+	HostVersion    string
+}
+
+func (e *IncompatibleError) Error() string {
+	name := e.Plugin
+	if e.PluginVersion != "" {
+		name += " v" + strings.TrimPrefix(e.PluginVersion, "v")
+	}
+	return fmt.Sprintf("%s requires GoatFlow >= %s, you have %s",
+		name, strings.TrimPrefix(e.MinHostVersion, "v"), e.HostVersion)
+}
+
+// RequireHost returns an *IncompatibleError when the running GoatFlow does not
+// satisfy minVersion (see HostCompatible), nil otherwise.
+func RequireHost(plugin, pluginVersion, minVersion string) error {
+	if HostCompatible(minVersion) {
+		return nil
+	}
+	return &IncompatibleError{
+		Plugin:         plugin,
+		PluginVersion:  pluginVersion,
+		MinHostVersion: minVersion,
+		HostVersion:    Version,
+	}
+}
+
+// canonical adds the "v" prefix golang.org/x/mod/semver requires.
+func canonical(v string) string {
+	if v == "" || strings.HasPrefix(v, "v") {
+		return v
+	}
+	return "v" + v
 }

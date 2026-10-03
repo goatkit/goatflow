@@ -25,6 +25,7 @@ import (
 	goplugin "github.com/hashicorp/go-plugin"
 
 	"github.com/goatkit/goatflow/internal/platform/plugin"
+	"github.com/goatkit/goatflow/internal/platform/version"
 	"github.com/goatkit/goatflow/pkg/plugin/grpcutil"
 )
 
@@ -230,7 +231,7 @@ func buildPluginConfig(pluginName string) map[string]string {
 	}
 
 	config := map[string]string{
-		"host_version": "0.6.4",
+		"host_version": version.Short(),
 		"plugin_name":  pluginName,
 		"plugin_dir":   pluginDir,
 		"work_dir":     workDir,
