@@ -293,7 +293,7 @@ func (p *samlProvider) lookupOrProvisionUser(_ context.Context, email, givenName
 
 	if len(groups) > 0 && p.userRepo != nil {
 		if err := p.userRepo.SyncGroups(user.ID, groups); err != nil {
-			log.Printf("saml2: sync groups for user %d: %v", user.ID, err)
+			log.Printf("saml2: sync groups for user %d: %q", user.ID, err.Error()) // #nosec G706 -- the error may carry IdP group names; %q-quoted so it cannot forge log lines
 		}
 	}
 

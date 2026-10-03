@@ -173,3 +173,22 @@ func TestSyncBundledPlugins_MissingBundleIsNoOp(t *testing.T) {
 	assert.Empty(t, res.Updated)
 	assert.NoDirExists(t, plugins)
 }
+
+func TestSyncBundledPlugins_DoesNotWriteThroughSymlinkLeavingPluginDir(t *testing.T) {
+	// A plugin directory in the (operator-writable) volume that is a symlink
+	// to somewhere outside it must not be written through.
+	bundled, plugins := newBundle(t, "stats v2")
+	outside := filepath.Join(t.TempDir(), "elsewhere")
+	require.NoError(t, os.MkdirAll(outside, 0o750))
+	require.NoError(t, os.MkdirAll(plugins, 0o750))
+	require.NoError(t, os.Symlink(outside, filepath.Join(plugins, "stats")))
+
+	res, err := syncBundledPlugins(bundled, plugins, nil)
+
+	require.Error(t, err)
+	assert.Empty(t, res.Updated)
+	assert.NoFileExists(t, filepath.Join(outside, "stats.wasm"))
+	entries, err := os.ReadDir(outside)
+	require.NoError(t, err)
+	assert.Empty(t, entries, "no temp or plugin file may land outside the plugin dir")
+}

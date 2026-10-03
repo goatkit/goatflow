@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -49,22 +50,39 @@ type bundledManifest struct {
 // is known to have shipped. Any other differing file is an admin's change
 // and is kept (reported in Kept). Plugins under other names are not touched.
 // Writes go through a temp file and rename, so readers never see a partial
-// file. A missing bundledDir is not an error (non-container runs have none).
+// file. All file access is scoped to the two directories (os.Root), so a
+// symlink in the plugin directory cannot redirect a write outside it. A
+// missing bundledDir is not an error (non-container runs have none).
 func SyncBundledPlugins(bundledDir, pluginDir string) (BundledSyncResult, error) {
 	return syncBundledPlugins(bundledDir, pluginDir, knownShippedBundledHashes)
 }
 
 func syncBundledPlugins(bundledDir, pluginDir string, known map[string][]string) (BundledSyncResult, error) {
 	var res BundledSyncResult
-	entries, err := os.ReadDir(bundledDir)
+	src, err := os.OpenRoot(bundledDir)
 	if errors.Is(err, fs.ErrNotExist) {
 		return res, nil
 	}
 	if err != nil {
+		return res, fmt.Errorf("open bundled plugins: %w", err)
+	}
+	defer src.Close()
+	bundled := src.FS()
+	entries, err := fs.ReadDir(bundled, ".")
+	if err != nil {
 		return res, fmt.Errorf("read bundled plugins: %w", err)
 	}
 
-	manifest := readBundledManifest(filepath.Join(pluginDir, BundledManifestName))
+	if err := os.MkdirAll(pluginDir, 0o750); err != nil {
+		return res, fmt.Errorf("create plugin dir: %w", err)
+	}
+	dst, err := os.OpenRoot(pluginDir)
+	if err != nil {
+		return res, fmt.Errorf("open plugin dir: %w", err)
+	}
+	defer dst.Close()
+
+	manifest := readBundledManifest(dst)
 	recorded := make(map[string]string, len(manifest.Files))
 	for rel, sum := range manifest.Files {
 		recorded[rel] = sum
@@ -75,26 +93,21 @@ func syncBundledPlugins(bundledDir, pluginDir string, known map[string][]string)
 		if !entry.IsDir() || entry.Name() == "tmp" {
 			continue
 		}
-		err := filepath.WalkDir(filepath.Join(bundledDir, entry.Name()), func(path string, d fs.DirEntry, walkErr error) error {
+		err := fs.WalkDir(bundled, entry.Name(), func(key string, d fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}
 			if !d.Type().IsRegular() {
 				return nil
 			}
-			rel, err := filepath.Rel(bundledDir, path)
-			if err != nil {
-				return err
-			}
-			key := filepath.ToSlash(rel)
-			want, err := os.ReadFile(path) // #nosec G304 -- path comes from the image's bundled plugin tree
+			want, err := fs.ReadFile(bundled, key)
 			if err != nil {
 				return err
 			}
 			wantSum := sha256Hex(want)
-			dst := filepath.Join(pluginDir, rel)
+			rel := filepath.FromSlash(key)
 
-			have, err := os.ReadFile(dst) // #nosec G304 -- same relative path under the operator's plugin dir
+			have, err := dst.ReadFile(rel)
 			switch {
 			case errors.Is(err, fs.ErrNotExist):
 				// Missing: install.
@@ -116,7 +129,7 @@ func syncBundledPlugins(bundledDir, pluginDir string, known map[string][]string)
 			if err != nil {
 				return err
 			}
-			if err := writeFileAtomic(dst, want, info.Mode().Perm()); err != nil {
+			if err := writeFileAtomic(dst, rel, want, info.Mode().Perm()); err != nil {
 				return err
 			}
 			recorded[key] = wantSum
@@ -135,7 +148,7 @@ func syncBundledPlugins(bundledDir, pluginDir string, known map[string][]string)
 		if err != nil {
 			return res, err
 		}
-		if err := writeFileAtomic(filepath.Join(pluginDir, BundledManifestName), append(data, '\n'), 0o640); err != nil {
+		if err := writeFileAtomic(dst, BundledManifestName, append(data, '\n'), 0o640); err != nil {
 			return res, fmt.Errorf("write bundled plugin manifest: %w", err)
 		}
 	}
@@ -158,9 +171,9 @@ func isUntouchedBundledCopy(key, haveSum string, recorded map[string]string, kno
 
 // readBundledManifest returns the recorded manifest; a missing or unreadable
 // one counts as empty, which only makes the sync more conservative.
-func readBundledManifest(path string) bundledManifest {
+func readBundledManifest(dir *os.Root) bundledManifest {
 	var m bundledManifest
-	data, err := os.ReadFile(path) // #nosec G304 -- fixed name inside the operator's plugin dir
+	data, err := dir.ReadFile(BundledManifestName)
 	if err == nil {
 		if json.Unmarshal(data, &m) != nil {
 			m = bundledManifest{}
@@ -189,27 +202,28 @@ func sha256Hex(b []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// writeFileAtomic writes data to a temp file beside path and renames it over
-// path.
-func writeFileAtomic(path string, data []byte, perm fs.FileMode) error {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o750); err != nil {
+// writeFileAtomic writes data to a temp file beside name (relative to dir)
+// and renames it over name.
+func writeFileAtomic(dir *os.Root, name string, data []byte, perm fs.FileMode) error {
+	parent := filepath.Dir(name)
+	if err := dir.MkdirAll(parent, 0o750); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(dir, ".bundled-*")
+	tmp := filepath.Join(parent, ".bundled-"+rand.Text())
+	f, err := dir.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tmp.Name()) // no-op once renamed
-	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+	defer func() { _ = dir.Remove(tmp) }() // fails harmlessly once renamed
+	if _, err := f.Write(data); err != nil {
+		_ = f.Close()
 		return err
 	}
-	if err := tmp.Close(); err != nil {
+	if err := f.Close(); err != nil {
 		return err
 	}
-	if err := os.Chmod(tmp.Name(), perm); err != nil {
+	if err := dir.Chmod(tmp, perm); err != nil {
 		return err
 	}
-	return os.Rename(tmp.Name(), path)
+	return dir.Rename(tmp, name)
 }

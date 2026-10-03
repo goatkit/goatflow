@@ -264,7 +264,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
   is missing or still an untouched bundled copy (tracked in `config/plugins/.bundled-manifest.json`;
   for directories filled by 0.9.x and older, by the hashes those releases shipped). A bundled file
   an admin changed or replaced is kept and logged as a warning; delete it to get the bundled
-  version back.
+  version back. The sync never writes outside `config/plugins`: a plugin directory there that is a
+  symlink to somewhere else stops the sync with a warning instead of being written through.
 - **Helm: uninstalling and reinstalling the chart broke the installation.** The database and
   storage volumes survived `helm uninstall` but the generated Secrets did not, so a reinstall made a
   new database password (GoatFlow could no longer log in to its own database) and a new

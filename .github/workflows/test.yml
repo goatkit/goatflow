@@ -111,6 +111,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Generate per-run secure key
+        # docker-compose.yml requires GOATFLOW_SECURE_KEY (backend and runner must
+        # share it) and interpolates it for every compose command, including the
+        # toolbox build. The test databases live only for this run, so a random key
+        # is enough.
+        run: |
+          k=$(openssl rand -hex 32)
+          echo "::add-mask::$k"
+          echo "GOATFLOW_SECURE_KEY=$k" >> "$GITHUB_ENV"
+
       - name: Prepare directories and volumes
         run: |
           mkdir -p .cache tmp generated/api-map .go-build .gomodcache .golangci-lint .bun .xdg-cache

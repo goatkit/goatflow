@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -468,7 +469,7 @@ func isOrgID(v any, orgID int64) bool {
 	case int64:
 		return x == orgID
 	case uint:
-		return uint64(x) == uint64(orgID) && orgID >= 0
+		return uint64(x) <= math.MaxInt64 && int64(x) == orgID // #nosec G115 -- bounded by the MaxInt64 check
 	case uint8:
 		return int64(x) == orgID
 	case uint16:
@@ -476,7 +477,7 @@ func isOrgID(v any, orgID int64) bool {
 	case uint32:
 		return int64(x) == orgID
 	case uint64:
-		return x == uint64(orgID) && orgID >= 0
+		return x <= math.MaxInt64 && int64(x) == orgID // #nosec G115 -- bounded by the MaxInt64 check
 	case float32:
 		return float64(x) == float64(orgID)
 	case float64:
