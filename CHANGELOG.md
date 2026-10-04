@@ -7,7 +7,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.10.0] - Unreleased
+## [0.10.0] - 2026-10-04
 
 **Upgrading from 0.9.0**
 - **Everyone signs in again once.** Tokens issued before 0.10.0 carry no session id and are refused.

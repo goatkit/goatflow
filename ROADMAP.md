@@ -4,7 +4,7 @@ Current status, upcoming releases, and future plans for GoatFlow. Full release h
 
 ## 🚀 Current Status
 
-**Version**: 0.10.0 — release candidate, not yet tagged. Last release: 0.9.0 (2026-08-06).
+**Version**: 0.10.0 (released 2026-10-04). Previous release: 0.9.0 (2026-08-06).
 
 0.10.0 theme: sign-in and self-service (LDAP, password reset, customer sign-up, passkey management), full PostgreSQL support, OTRS article storage and import, outbound webhooks, admin reports, route-level authorization, plugin platform expansion, ops hardening.
 
@@ -67,7 +67,7 @@ GoatFlow is an ITSM and helpdesk system built on the GoatKit platform. It is wri
 
 ## 🔮 Future Roadmap
 
-### 0.10.0 - Release candidate (not yet tagged)
+### 0.10.0 - Released 2026-10-04
 
 **Sign-in and self-service, PostgreSQL, OTRS storage and import, webhooks, reports, route-level authorization, plugin platform, ops hardening**
 
@@ -365,8 +365,8 @@ Enterprise plugins are paid, reusable horizontal capabilities built on GoatKit c
 | Version | Date | Status | Theme |
 |---------|------|--------|-------|
 | 1.0.0 | Nov 2026 | 🔮 Future | Production Release |
-| 0.10.0 | Unreleased | 🚧 Release candidate | Sign-in and self-service, PostgreSQL, OTRS storage and import, webhooks, reports, route-level authorization |
-| 0.9.0 | Aug 2026 | 🚀 Current | Setup Assistant, SAML2 + OIDC identity providers, platform/product decoupling, customer KB pages |
+| 0.10.0 | Oct 2026 | 🚀 Current | Sign-in and self-service, PostgreSQL, OTRS storage and import, webhooks, reports, route-level authorization |
+| 0.9.0 | Aug 2026 | ✅ Released | Setup Assistant, SAML2 + OIDC identity providers, platform/product decoupling, customer KB pages |
 | 0.8.3 | May 2026 | ✅ Released | Plugin Auto-Restart, Plugin UI Offline, WebAuthn, Quality |
 | 0.8.2 | Apr 2026 | ✅ Released | **MCP v2** + Plugin Manager Resilience (health checks, bounded shutdown) |
 | 0.8.1 | Apr 2026 | ✅ Released | Mobile, PWA & Security |

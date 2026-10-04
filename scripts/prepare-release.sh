@@ -12,8 +12,8 @@
 #                     If the changelog has no [Unreleased] section AND X.Y.Z
 #                     already exists in the changelog, the rename is skipped
 #                     and all other edits still run (per release policy).
-#   2. version.go     default version constant -> X.Y.Z (dev-build fallback;
-#                     CI builds always override via -ldflags from the tag)
+#   2. version.go     version constant -> X.Y.Z (the version every build
+#                     reports; CI fails a release tag that does not match it)
 #   3. Chart.yaml     appVersion -> X.Y.Z
 #   4. TrueNAS        app.yaml app_version + ix_values.yaml image tag -> X.Y.Z
 #   5. README.md      TrueNAS pin line -> X.Y.Z
