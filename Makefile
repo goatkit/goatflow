@@ -46,7 +46,7 @@ BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 # Use tag if available, otherwise use branch name
 VERSION := $(if $(GIT_TAG),$(GIT_TAG),$(GIT_BRANCH))
 # Build args for version injection
-VERSION_BUILD_ARGS := --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg GIT_BRANCH=$(GIT_BRANCH) --build-arg BUILD_DATE=$(BUILD_DATE)
+VERSION_BUILD_ARGS := --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg GIT_BRANCH=$(GIT_BRANCH) --build-arg BUILD_DATE=$(BUILD_DATE)
 
 # Route manifest governance
 .PHONY: routes-verify routes-baseline-update routes-generate

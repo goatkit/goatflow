@@ -10,9 +10,11 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// Build-time variables set via ldflags
+// Version is set in source by scripts/prepare-release.sh (never via ldflags)
+// and checked against the release tag in CI. The other three are injected by
+// the Dockerfile with -ldflags -X.
 var (
-	// Version is the semantic version (e.g., "v0.5.1") or branch name if not a tagged build
+	// Version is the GoatFlow release this source tree is (e.g. "0.10.0").
 	Version = "0.10.0"
 
 	// GitCommit is the short git commit SHA

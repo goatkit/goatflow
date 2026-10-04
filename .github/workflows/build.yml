@@ -64,6 +64,17 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
+      - name: Check release tag matches the version constant
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          # The binary reports the constant in version.go, not the tag, so a
+          # tag cut without scripts/prepare-release.sh must not ship.
+          want="v$(sed -nE 's/^[[:space:]]*Version = "([^"]+)"/\1/p' internal/platform/version/version.go)"
+          if [[ "${GITHUB_REF_NAME}" != "$want" ]]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match version.go ($want). Run make prepare-release VERSION=${GITHUB_REF_NAME#v} first."
+            exit 1
+          fi
+
       - name: Determine version for build
         id: version
         run: |
@@ -98,7 +109,6 @@ jobs:
           provenance: true
           sbom: true
           build-args: |
-            VERSION=${{ steps.version.outputs.version }}
             GIT_COMMIT=${{ steps.version.outputs.commit }}
             GIT_BRANCH=${{ steps.version.outputs.branch }}
             BUILD_DATE=${{ steps.version.outputs.date }}
@@ -178,7 +188,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
           build-args: |
-            VERSION=${{ steps.version.outputs.version }}
             GIT_COMMIT=${{ steps.version.outputs.commit }}
             GIT_BRANCH=${{ steps.version.outputs.branch }}
             BUILD_DATE=${{ steps.version.outputs.date }}

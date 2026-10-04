@@ -259,6 +259,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
   unused `PUT /admin/customer/companies/:id/services` route are gone.
 
 ### Fixed
+- **Images record their commit, branch and build date.** The Dockerfile's `-X` flags pointed at a
+  package path that no longer exists, so all three said `unknown`. The version itself now comes only
+  from `internal/platform/version/version.go` (set by `make prepare-release`); the build no longer
+  overrides it with a branch name, which would have turned the plugin host-version check off on
+  `main` and `dev` images. A tag that does not match the constant now fails the release build.
 - **Plugins that need a newer GoatFlow are refused at load.** `GKRegistration.MinHostVersion` was
   never checked; a gRPC or WASM plugin declaring a newer minimum is now refused before `Init` at
   boot, hot reload, upload and marketplace install, shut down, and the reason is written to the

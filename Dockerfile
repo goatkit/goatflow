@@ -142,21 +142,21 @@ FROM deps AS builder
 COPY . ./
 
 # Version information - set at build time via --build-arg or defaults to git info
-ARG VERSION=dev
 ARG GIT_COMMIT=unknown
 ARG GIT_BRANCH=unknown
 ARG BUILD_DATE=unknown
 
 # Build with optimizations
-# -ldflags injects version info and strips debug info for smaller binary
+# -ldflags injects build info (commit, branch, date) and strips debug info.
+# The version itself is the constant in internal/platform/version/version.go
+# (set by scripts/prepare-release.sh); plugin host-compatibility checks use it.
 # -p uses all available cores for parallel compilation
 RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=1 GOOS=linux \
     go build -p "$(nproc)" -ldflags="-w -s \
-        -X github.com/goatkit/goatflow/internal/version.Version=${VERSION} \
-        -X github.com/goatkit/goatflow/internal/version.GitCommit=${GIT_COMMIT} \
-        -X github.com/goatkit/goatflow/internal/version.GitBranch=${GIT_BRANCH} \
-        -X github.com/goatkit/goatflow/internal/version.BuildDate=${BUILD_DATE}" \
+        -X github.com/goatkit/goatflow/internal/platform/version.GitCommit=${GIT_COMMIT} \
+        -X github.com/goatkit/goatflow/internal/platform/version.GitBranch=${GIT_BRANCH} \
+        -X github.com/goatkit/goatflow/internal/platform/version.BuildDate=${BUILD_DATE}" \
     -installsuffix cgo -o goats ./cmd/goats && \
     CGO_ENABLED=0 go build -ldflags="-w -s" -o goatflow-storage ./cmd/goatflow-storage
 
