@@ -250,77 +250,110 @@ First release since the platform/product split. Full list of changes:
 
 ---
 
-### 1.0.0 - Target: November 2026
+### The road to 1.0.0
 
-**Production Release**
+1.0.0 is the production release. We get there in small releases, each one shipped, tested and deployed to the demo on its own, so that 1.0.0 itself adds almost nothing new: it is the release candidate once it has held up. Each release below takes over the 1.0.0 items that fit its theme. Sizes and order may change as we learn; nothing on this list has a date until its release is next.
 
-*Feature Complete*
-- GoatKit PaaS platform GA (WASM + gRPC runtimes, custom fields, plugin UIs, multi-tenancy)
-- All OTRS core modules operational
-- First-party open source plugins shipped:
-  - FAQ/Knowledge Base (articles, search, portal) — *done: goat-kb (`github.com/goatkit/goat-kb`, Apache-2.0) serves the customer portal KB pages*
-  - Calendar & Appointments (scheduling, iCal) — *not started. The enterprise goatkit-calendar plugin covers one-way push to Google and Microsoft 365 calendars only*
-  - Process Management (workflows, designer)
-- Statistics & Reporting — *done in core, not as a plugin: Admin → Reports & Analytics (`/admin/reports`) and `/api/v1/statistics/*` (0.10.0)*
+Already done towards 1.0.0:
+- [x] FAQ / Knowledge Base plugin — goat-kb (`github.com/goatkit/goat-kb`, Apache-2.0) serves the customer portal KB pages
+- [x] Statistics & Reporting — in core, not as a plugin: Admin → Reports & Analytics (`/admin/reports`) and `/api/v1/statistics/*` (0.10.0)
+- [x] Migration guide from OTRS 6.x with automation scripts — [docs/OTRS_MIGRATION_GUIDE.md](docs/OTRS_MIGRATION_GUIDE.md), `goatflow-migrate`, `make migrate-analyze` / `migrate-import` / `otrs-import` (0.10.0)
+- [x] Automated smoke test on the production demo after every release deploy (`build.yml`, job `deploy-demo`)
 
-*Security*
-- Third-party security audit completed
-- Automated dependency vulnerability scanning — *partial: Dependabot is active (all open alerts cleared in 0.10.0); Snyk is not set up*
-- Security hardening guide and best practices
-- OWASP Top 10 compliance verification
-- Rate limiting and DDoS protection — *partial: login, second-factor codes, passkey, self-service forms, API tokens (per-token hourly limit), plugin webhooks and public plugin UIs are rate limited; JWT/session API calls have no general limit*
-- Security response policy and CVE process
+#### 0.11.0 - Security basics
 
-*Performance*
-- 1000+ concurrent users verified under load
-- Sub-100ms response times (p95) for all endpoints
-- Database query optimization with indexes
-- Caching layer tuning (Valkey cache already in place)
-- Connection pooling tuning
-- CDN integration for static assets
+- Security response policy and CVE process (`SECURITY.md`, private reporting, advisory flow)
+- General rate limit for JWT/session API calls — *login, second-factor codes, passkey, self-service forms, API tokens (per-token hourly limit), plugin webhooks and public plugin UIs are already rate limited*
+- Dependency vulnerability scanning in CI (`govulncheck`, failing the build on known-exploitable findings) — *Dependabot is already active; all open alerts were cleared in 0.10.0*
+- OWASP Top 10 review, with findings fixed or recorded
+- Security hardening guide (deployment, secrets, TLS, headers, backups)
+- Book the third-party security audit for the 1.0.0 release candidate
 
-*Documentation*
+#### 0.12.0 - Performance and observability
+
+- Load-test harness in the repo, with a baseline for 1000+ concurrent users and p95 per endpoint
+- Database index, Valkey cache and connection pool tuning, driven by the baseline
+- Performance regression check in CI against the baseline
+- Distributed tracing (OpenTelemetry)
+- Circuit breakers for external dependencies (mail, LDAP, identity providers, search backends, webhooks)
+
+#### 0.13.0 - Documentation and quality
+
+- API reference (OpenAPI 3.0) for every v1 endpoint — *today `api/openapi.yaml` covers tickets, articles, queues, priorities, the current user, webhooks and search, and is checked against the router (`TestOpenAPISpecMatchesRoutes`, `make openapi-lint`); Swagger UI at `/swagger/` covers the swag-annotated handlers*
 - Administrator guide with best practices
-- API reference (OpenAPI 3.0) with interactive docs — *partial: `api/openapi.yaml` documents tickets, articles, queues, priorities, the current user, webhooks and search from the handlers and is checked against the router (`TestOpenAPISpecMatchesRoutes`, `make openapi-lint`); Swagger UI at `/swagger/` covers the swag-annotated handlers; other v1 endpoints are not in the OpenAPI spec yet*
-- Deployment guides (Docker, Kubernetes, cloud providers) — *partial: Docker Compose, Helm and TrueNAS guides exist; no cloud provider guides*
-- Migration guide from OTRS 6.x with automation scripts — *done in 0.10.0: [docs/OTRS_MIGRATION_GUIDE.md](docs/OTRS_MIGRATION_GUIDE.md), `goatflow-migrate`, `make migrate-analyze` / `migrate-import` / `otrs-import`*
-- Plugin development guide (custom fields, UIs, enterprise plugin patterns)
 - Troubleshooting guide with common issues
-- Video tutorials and screencasts
+- Plugin development guide (custom fields, UIs, enterprise plugin patterns)
+- Cloud provider deployment guide — *Docker Compose, Helm and TrueNAS guides already exist*
+- Measure unit + integration test coverage in CI and set the per-release steps to 85% by the release candidate
+- Playwright E2E coverage of every agent and customer page — *Go Playwright suites already run with `make test-e2e-go` / `test-e2e-playwright-go`*
 
-*Quality*
-- 85% test coverage (unit + integration)
-- Comprehensive Playwright E2E test suite — *partial: Go Playwright suites in `tests/e2e/` run with `make test-e2e-go` / `test-e2e-playwright-go`*
-- Chaos engineering tests for resilience
-- Performance regression testing in CI
-- Automated smoke tests on production deployments
+#### 0.14.0 - Calendar & Appointments plugin
 
-*Calendar & Appointments Plugin* (not started)
-- Agent calendar view (day/week/month)
+A first-party open source plugin. The enterprise goatkit-calendar plugin stays separate: it only pushes events one way into Google and Microsoft 365 calendars.
+
+- Agent calendar view (day / week / month)
 - Ticket-linked appointments with reminders
 - Recurring events (daily, weekly, monthly)
 - Calendar sharing between agents and teams
-- iCal export/subscription
-- Integration with ticket escalations
-- Resource scheduling (meeting rooms, equipment)
+- iCal export and subscription
+- Appointments tied to ticket escalations
 
-*Process Management Plugin*
-- Visual process designer with drag-and-drop
-- Multi-step ticket workflows with validation
+#### 0.15.0 - Process engine (core)
+
+Process management is part of core, using the OTRS data model whose tables (`pm_process`, `pm_activity`, `pm_activity_dialog`, `pm_transition`, `pm_transition_action`) are already in the schema. The designer is a community plugin (0.19.0 / 0.20.0).
+
+- Load process definitions from the `pm_*` tables
+- Start a process on a ticket; track its current activity in ticket fields and record each step in ticket history
+- Agents step through a process with plain buttons
+- Import OTRS process exports (YAML)
+
+#### 0.16.0 - Activity dialogs
+
+- One form per process step, built from the dialog definition: ticket fields and custom fields
+- Required fields and validation
+- Agent interface first, then the customer portal
+
+#### 0.17.0 - Transitions, actions and pipelines
+
 - Conditional transitions based on ticket data
-- Custom activity dialogs with dynamic forms
+- Transition actions: set state, queue, owner or field, add a note
+- goatkit-workflows moves into core: its multi-stage pipelines and progress tracking become part of the process engine, and the enterprise plugin is retired. Its only user was the mothballed goatfictus vertical; goatkit-poo's design also references it
+
+#### 0.18.0 - Process SLAs and templates
+
+- Per-step deadlines tied to ticket escalation
 - Process ticket templates with pre-filled data
-- SLA integration with process steps and deadlines
-- Process analytics and bottleneck identification
 
-*Theme & UX Enhancements*
-- Sound event support (notifications, alerts, ticket actions)
-- Custom CSS injection per theme
-- Theme preview in admin
+#### 0.19.0 - Process designer plugin, basic
 
-*Observability & Resilience*
-- Distributed tracing (OpenTelemetry)
-- Circuit breakers for external dependencies
+A first-party open source plugin.
+
+- Admin screens to list, create and edit processes, activities, dialogs and transitions as forms, with validation
+- Read-only process diagram drawn from the definition
+
+#### 0.20.0 - Process designer plugin, visual
+
+- Drag-and-drop editing on the process diagram
+
+#### 1.0.0-rc - Release candidate
+
+- Every OTRS core module checked one by one and working
+- GoatKit PaaS platform GA (WASM + gRPC runtimes, custom fields, plugin UIs, multi-tenancy) — multi-tenancy as shipped: organisation separation by queue permissions; one organisation per queue comes later (L211)
+- Third-party security audit run, and its findings fixed
+- 85% test coverage reached
+- Chaos engineering tests for resilience
+- Theme & UX: sound events (notifications, alerts, ticket actions), custom CSS per theme, theme preview in admin
+
+#### 1.0.0 - Production release
+
+- No new features: the release candidate, once it has held up on the demo and in real installs
+
+#### After 1.0.0
+
+- Process analytics and bottleneck reports
+- Resource scheduling in the calendar plugin (meeting rooms, equipment)
+- CDN integration for static assets
+- Video tutorials and screencasts
 
 ---
 
@@ -337,7 +370,7 @@ Enterprise plugins are paid, reusable horizontal capabilities built on GoatKit c
 | goatkit-media | Universal media management — file storage, GIF search, thumbnails |
 | goatkit-llm | LLM provider management, prompt templates, completion API |
 | goatkit-devices | Physical device fleet management, provisioning pipeline |
-| goatkit-workflows | Multi-stage job orchestration, DAG pipelines, progress tracking |
+| goatkit-workflows | Multi-stage job orchestration, DAG pipelines, progress tracking — *moving into core with the process engine in 0.17.0, then retired* |
 | goatkit-audit | Immutable audit logging, compliance, tamper-evident records |
 | goatkit-content-feeds | RSS/scraping/API content ingestion, caching, RAG feeds |
 | goatkit-maps | Geocoding, route optimisation, area/territory management |
@@ -353,7 +386,8 @@ Enterprise plugins are paid, reusable horizontal capabilities built on GoatKit c
 | Status | Plugins |
 |--------|---------|
 | Released (v1.0.0) | goatkit-llm, goatkit-chat, goatkit-rag |
-| In development | goatkit-media, goatkit-billing, goatkit-devices, goatkit-workflows, goatkit-audit, goatkit-content-feeds, goatkit-notify, goatkit-memory, goatkit-tts, goatkit-calendar |
+| In development | goatkit-media, goatkit-billing, goatkit-devices, goatkit-audit, goatkit-content-feeds, goatkit-notify, goatkit-memory, goatkit-tts, goatkit-calendar |
+| Moving into core | goatkit-workflows (0.17.0) |
 | In planning | goatkit-subscriptions, goatkit-invoicing, goatkit-payments, goatkit-maps |
 
 **Enterprise enquiries:** Enterprise plugins are available as paid add-ons. Contact us at [hello@goatflow.io](mailto:hello@goatflow.io) for enterprise enquiries, licensing, and support.
@@ -364,7 +398,18 @@ Enterprise plugins are paid, reusable horizontal capabilities built on GoatKit c
 
 | Version | Date | Status | Theme |
 |---------|------|--------|-------|
-| 1.0.0 | Nov 2026 | 🔮 Future | Production Release |
+| 1.0.0 | — | 🔮 Future | Production Release (the 1.0.0-rc, once it has held up) |
+| 1.0.0-rc | — | 🔮 Future | Release candidate: OTRS module check, third-party audit fixes, 85% coverage, chaos tests |
+| 0.20.0 | — | 🔮 Future | Process designer plugin, visual |
+| 0.19.0 | — | 🔮 Future | Process designer plugin, basic |
+| 0.18.0 | — | 🔮 Future | Process SLAs and templates |
+| 0.17.0 | — | 🔮 Future | Process transitions and actions; goatkit-workflows into core |
+| 0.16.0 | — | 🔮 Future | Process activity dialogs |
+| 0.15.0 | — | 🔮 Future | Process engine (core), OTRS process import |
+| 0.14.0 | — | 🔮 Future | Calendar & Appointments plugin |
+| 0.13.0 | — | 🔮 Future | Documentation and quality |
+| 0.12.0 | — | 🔮 Future | Performance and observability |
+| 0.11.0 | — | 🔮 Future | Security basics |
 | 0.10.0 | Oct 2026 | 🚀 Current | Sign-in and self-service, PostgreSQL, OTRS storage and import, webhooks, reports, route-level authorization |
 | 0.9.0 | Aug 2026 | ✅ Released | Setup Assistant, SAML2 + OIDC identity providers, platform/product decoupling, customer KB pages |
 | 0.8.3 | May 2026 | ✅ Released | Plugin Auto-Restart, Plugin UI Offline, WebAuthn, Quality |

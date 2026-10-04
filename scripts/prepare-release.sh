@@ -17,8 +17,9 @@
 #   3. Chart.yaml     appVersion -> X.Y.Z
 #   4. TrueNAS        app.yaml app_version + ix_values.yaml image tag -> X.Y.Z
 #   5. README.md      TrueNAS pin line -> X.Y.Z
-#   6. ROADMAP.md     **Version** header -> X.Y.Z (theme kept) + adds a
-#                     '🚧 In review' row to the Version Summary table
+#   6. ROADMAP.md     **Version** header -> 'X.Y.Z (released <date>).
+#                     Previous release: <old>'; the planned Version Summary
+#                     row is marked '🚧 In review' (or added below 1.0.0)
 #
 # It NEVER commits or tags. Review the diff, commit, then tag vX.Y.Z and
 # let CI build. A Go test (internal/platform/version/version_consistency_test.go)
@@ -163,34 +164,50 @@ PY
 
 # ------------------------------------------------------------- roadmap
 say "ROADMAP.md"
-python3 - "$VERSION" <<'PY'
+python3 - "$VERSION" "$DATE" <<'PY'
 import sys, re
-version = sys.argv[1]
+version, date = sys.argv[1], sys.argv[2]
 p = "ROADMAP.md"
 lines = open(p).read().split("\n")
-out, header_bumped, row_added = [], False, False
+out, header, row_added = [], None, False
+# Header line, as the release cut leaves it:
+#   **Version**: 0.10.0 (released 2026-10-04). Previous release: 0.9.0 (2026-08-06).
+header_re = re.compile(r"\*\*Version\*\*: ([0-9]+\.[0-9]+\.[0-9]+) \(released ([0-9-]+)\)\. Previous release: .*$")
 for l in lines:
-    # Header: bump the version number, mark the date 'Unreleased'.
-    m = re.match(r"(\*\*Version\*\*:\s*)([0-9.]+)(\s*\([^)]*\)\s*-\s*)(.+)$", l)
-    if m and not header_bumped:
-        out.append(f"{m.group(1)}{version} (Unreleased) - {m.group(4).strip()}")
-        header_bumped = True
+    m = header_re.match(l)
+    if m and header is None:
+        if m.group(1) == version:
+            header = "already"
+            out.append(l)
+        else:
+            header = "bumped"
+            out.append(f"**Version**: {version} (released {date}). Previous release: {m.group(1)} ({m.group(2)}).")
         continue
-    # Version Summary table: the 1.0.0 'Future' row sits at the top; new
-    # in-development rows go directly BELOW it — unless one already exists.
+    # Version Summary table: the 1.0.0 'Future' row sits at the top. A
+    # planned row for this version ('| — | 🔮 Future |') is marked in review;
+    # with no row yet, one goes directly BELOW the 1.0.0 row.
+    if l.startswith(f"| {version} |") and "| 🔮 Future |" in l:
+        out.append(re.sub(r"^\| [^|]+ \| [^|]+ \| 🔮 Future \|", f"| {version} | Unreleased | 🚧 In review |", l))
+        print(f"  Version Summary row for {version} marked in review")
+        continue
     if not row_added and l.startswith("| 1.0.0 |"):
         out.append(l)
         if not any(x.startswith(f"| {version} |") for x in lines):
             out.append(f"| {version} | Unreleased | 🚧 In review | — |")
             print(f"  added Version Summary row for {version}")
-        else:
-            print(f"  Version Summary row for {version} already present")
         row_added = True
         continue
     out.append(l)
 open(p, "w").write("\n".join(out))
-if header_bumped:
-    print(f"  header -> {version} (Unreleased) — review the theme text, it was kept from the previous release")
+if header == "bumped":
+    print(f"  header -> {version} (released {date})")
+elif header == "already":
+    print(f"  header already at {version}")
+else:
+    print(f"  WARNING: no '**Version**: X.Y.Z (released YYYY-MM-DD). Previous release: ...' line found — update the header to {version} manually")
+theme = next((l for l in lines if re.match(r"[0-9]+\.[0-9]+\.[0-9]+ theme: ", l)), None)
+if theme and not theme.startswith(f"{version} theme: "):
+    print(f"  review the theme line: it still describes {theme.split(' ', 1)[0]}")
 if not row_added:
     print(f"  WARNING: no '| 1.0.0 |' row found in Version Summary table — add the {version} row manually")
 PY
