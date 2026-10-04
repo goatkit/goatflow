@@ -7,6 +7,17 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **The toolbox image builds without public keyservers.** `Dockerfile.toolbox` fetched Bun's release
+  signing key from keys.openpgp.org (falling back to keyserver.ubuntu.com, which does not have it), so
+  CI failed whenever that keyserver was down. The key is now kept in `scripts/keys/bun-release.asc`
+  (fingerprint `F3DCC08A8572C0749B3E18888EAB4D40A7B22B59`) and imported from there; the Bun download is
+  still checked against the signed `SHASUMS256.txt.asc`.
+- **`vX.Y.Z-wip` tags no longer run the release workflow.** `build.yml` triggered on `v*.*.*`, which
+  also matched the `-wip` marker tag (placed on the previous release commit), so pushing
+  `v0.10.0-wip` built and published images, a Helm chart and a GitHub pre-release from 0.9.0 code and
+  deployed them to the demo. `-wip` tags are now excluded.
+
 ## [0.10.0] - 2026-10-04
 
 **Upgrading from 0.9.0**

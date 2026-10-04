@@ -16,6 +16,9 @@ on:
       - main
     tags:
       - 'v*.*.*'
+      # vX.Y.Z-wip marks where a release's dev cycle began (on the previous
+      # release commit); it is not a release and must not build or deploy.
+      - '!v*.*.*-wip'
 
 permissions:
   contents: read
