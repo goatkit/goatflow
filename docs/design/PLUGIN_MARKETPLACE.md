@@ -271,7 +271,8 @@ Needed for marketplace:
 - [x] `gk update` command — version comparison and update
 - [x] `gk search` command — index search
 - [x] `marketplace.json` schema and initial index
-- [ ] Admin UI marketplace tab (deferred — CLI-first)
+- [x] Admin UI marketplace tab (`/admin/marketplace`: version picker, host-compatibility badges)
+- [x] Per-version index (`versions`) and host-version checks on install, update and load (0.10.0)
 - [x] GitHub Actions template for plugin publishing
 
 ## Hosting Costs
