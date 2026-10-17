@@ -35,8 +35,8 @@ make scan-secrets-precommit
 # Or manually run the script:
 bash scripts/install-git-hooks.sh
 
-# Test the hook without committing:
-.git/hooks/pre-commit
+# Test the hook without committing (checks what is staged):
+.githooks/pre-commit
 ```
 
 This will automatically scan for secrets before every commit using Docker/Podman.

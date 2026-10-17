@@ -1,0 +1,40 @@
+#!/bin/bash
+# GoatFlow commit-msg hook - rejects assistant/AI attribution in the commit message.
+# Tracked under .githooks/ and activated with the other hooks by `make setup-hooks`.
+#
+# Git passes the message file as $1 and runs this hook before cleaning the message up, so the
+# file can still hold the editor template's comment lines (they list the staged paths) and,
+# with `git commit -v`, the diff below the scissors line. Both are dropped before matching,
+# as git drops them from the commit.
+
+set -euo pipefail
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+ATTRIBUTION='(Claude|Anthropic|Co-Authored-By.*Claude|Generated.*Claude|🤖.*Claude|AI.*generated|claude\.ai)'
+
+echo -e "${BLUE}🤖 Checking for attribution...${NC}"
+
+MESSAGE=$(sed '/ -\{24\} >8 -\{24\}$/,$d' "$1" | git stripspace --strip-comments)
+
+if FOUND=$(printf '%s\n' "$MESSAGE" | grep -i -E "$ATTRIBUTION"); then
+    echo -e "${RED}❌ COMMIT REJECTED: Attribution detected!${NC}"
+    echo -e "${RED}Found forbidden patterns:${NC}"
+    printf '%s\n' "$FOUND" | sed 's/^/  - /'
+    echo ""
+    echo -e "${YELLOW}Your commit message contains attribution which is not allowed.${NC}"
+    echo -e "${YELLOW}Please remove all attribution lines from your commit message.${NC}"
+    echo ""
+    echo -e "${YELLOW}Common attribution patterns to remove:${NC}"
+    echo "  - Co-Authored-By: ..."
+    echo "  - Generated with ..."
+    echo "  - 🤖 symbols"
+    echo "  - References to AI/Claude/Anthropic"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ No attribution detected${NC}"

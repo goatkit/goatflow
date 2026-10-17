@@ -31,7 +31,17 @@ else
     # Try with Docker/Podman
     CONTAINER_CMD=$(command -v podman 2> /dev/null || command -v docker 2> /dev/null)
     if [ -n "$CONTAINER_CMD" ]; then
-        $CONTAINER_CMD run --rm -v "$(pwd):/workspace" -w /workspace \
+        # Mount the work tree, git dir and index at their own paths and pass GIT_INDEX_FILE,
+        # so the scan sees what is being committed: `git commit -a` and `git commit <path>`
+        # stage into a temporary index, and a linked worktree's git dir lies outside the work
+        # tree. git reads an index it can't see as empty, which would pass the commit unscanned.
+        REPO_TOP=$(git rev-parse --show-toplevel)
+        REPO_GIT_DIR=$(git rev-parse --path-format=absolute --git-common-dir)
+        INDEX_DIR=$(dirname "$(git rev-parse --path-format=absolute --git-path index)")
+        case $INDEX_DIR/ in "$REPO_TOP"/* | "$REPO_GIT_DIR"/*) INDEX_DIR= ;; esac
+        [ -d "$INDEX_DIR" ] || INDEX_DIR=
+        $CONTAINER_CMD run --rm -v "$REPO_TOP:$REPO_TOP:ro" -v "$REPO_GIT_DIR:$REPO_GIT_DIR:ro" \
+            ${INDEX_DIR:+-v "$INDEX_DIR:$INDEX_DIR:ro"} -w "$REPO_TOP" -e GIT_INDEX_FILE \
             zricethezav/gitleaks:latest protect --staged --verbose --config .gitleaks.toml
         if [ $? -ne 0 ]; then
             echo -e "${RED}❌ Secrets detected! Commit aborted.${NC}"
@@ -157,44 +167,7 @@ fi
 
 echo -e "${GREEN}✅ No prohibited binary files detected${NC}"
 
-# Check 3: Attribution detection
-echo -e "${BLUE}🤖 Checking for attribution...${NC}"
-
-# Get the commit message from stdin or from file
-if [ -t 0 ]; then
-    # If stdin is a terminal, read from git's commit message file
-    COMMIT_MSG_FILE="$1"
-    if [ -n "$COMMIT_MSG_FILE" ] && [ -f "$COMMIT_MSG_FILE" ]; then
-        COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
-    else
-        # Fallback: check if there's a temporary commit message
-        COMMIT_MSG=$(git log --format=%B -n 1 HEAD 2>/dev/null || echo "")
-    fi
-else
-    # Read from stdin
-    COMMIT_MSG=$(cat)
-fi
-
-# Check for attribution patterns in commit message
-if echo "$COMMIT_MSG" | grep -qi -E "(Claude|Anthropic|Co-Authored-By.*Claude|Generated.*Claude|🤖.*Claude|AI.*generated|claude\.ai)"; then
-    echo -e "${RED}❌ COMMIT REJECTED: Attribution detected!${NC}"
-    echo -e "${RED}Found forbidden patterns:${NC}"
-    echo "$COMMIT_MSG" | grep -i -E "(Claude|Anthropic|Co-Authored-By.*Claude|Generated.*Claude|🤖.*Claude|AI.*generated|claude\.ai)" | sed 's/^/  - /'
-    echo ""
-    echo -e "${YELLOW}Your commit message contains attribution which is not allowed.${NC}"
-    echo -e "${YELLOW}Please remove all attribution lines from your commit message.${NC}"
-    echo ""
-    echo -e "${YELLOW}Common attribution patterns to remove:${NC}"
-    echo "  - Co-Authored-By: ..."
-    echo "  - Generated with ..."
-    echo "  - 🤖 symbols"
-    echo "  - References to AI/Claude/Anthropic"
-    exit 1
-fi
-
-echo -e "${GREEN}✅ No attribution detected${NC}"
-
-# Check 4: SQL guard
+# Check 3: SQL guard
 echo -e "${BLUE}🧯 Running SQL guard...${NC}"
 
 if [ -x scripts/tools/check-sql.sh ]; then
@@ -204,7 +177,7 @@ else
     echo -e "${YELLOW}   Skipping (recommended to run scripts/tools/check-sql.sh manually)${NC}"
 fi
 
-# Check 5: SQL portability + platform boundary (cmd/gk-lint). Every statement
+# Check 4: SQL portability + platform boundary (cmd/gk-lint). Every statement
 # must go through the database conversion layer so it runs on MySQL and
 # PostgreSQL. Type-checks without cgo for speed; CI (make lint-platform) runs
 # the same rules with cgo in the toolbox.

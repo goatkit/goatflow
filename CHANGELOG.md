@@ -17,6 +17,16 @@ project adheres to [Semantic Versioning](https://semver.org/).
   also matched the `-wip` marker tag (placed on the previous release commit), so pushing
   `v0.10.0-wip` built and published images, a Helm chart and a GitHub pre-release from 0.9.0 code and
   deployed them to the demo. `-wip` tags are now excluded.
+- **The pre-commit secret scan missed commits when gitleaks ran in a container.** The container
+  saw the repository at `/workspace` and read `.git/index`, so changes committed with
+  `git commit -a` or `git commit <path>` (staged in a temporary index) were not scanned, and in a
+  linked worktree git failed inside the container while gitleaks still reported "no leaks found".
+  The hook now mounts the work tree, git directory and index at their own paths and passes
+  `GIT_INDEX_FILE` in. Installed gitleaks was not affected.
+- **The attribution check never saw the commit message.** It ran in `pre-commit`, which git calls
+  before the message exists, so every message passed. It now runs in the new `commit-msg` hook,
+  which ignores git's comment lines and the `git commit -v` diff. `make setup-hooks` (or an
+  existing `core.hooksPath=.githooks`) activates it.
 
 ## [0.10.0] - 2026-10-04
 

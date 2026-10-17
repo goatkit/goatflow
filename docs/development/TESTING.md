@@ -191,21 +191,22 @@ The gk-lint rules are listed in
 [DATABASE_ACCESS_PATTERNS.md](DATABASE_ACCESS_PATTERNS.md#enforcement). The import boundary is
 described in [PLATFORM_BOUNDARY.md](PLATFORM_BOUNDARY.md).
 
-## Pre-commit hook
+## Git hooks
 
-The hook lives in `.githooks/pre-commit`. Turn it on once after cloning:
+The hooks live in `.githooks/`. Turn them on once after cloning:
 
 ```bash
 make setup-hooks          # runs: git config core.hooksPath .githooks
 ```
 
-On every commit it checks:
+On every commit `pre-commit` runs these checks on the staged changes, and `commit-msg` runs the
+Attribution check on the message:
 
 | Check | Fails the commit when |
 |-------|-----------------------|
 | Secret scan | `gitleaks protect --staged` finds a secret. Uses a gitleaks container when gitleaks is not installed. If neither is available, the check is skipped with a warning. |
 | Binary files | A staged file is an executable, archive, package, database, dump, media or disk image, or git sees it as binary (images and fonts are allowed). Files over 10 MB give a warning only. |
-| Attribution | The commit message mentions Claude, Anthropic, `Co-Authored-By: ... Claude` or "AI generated". |
+| Attribution | The commit message mentions Claude, Anthropic, `Co-Authored-By: ... Claude` or "AI generated". Git's comment lines (the editor template lists the staged paths) and the `git commit -v` diff are not checked. |
 | SQL guard | `scripts/tools/check-sql.sh --staged` finds a raw `$N` placeholder or a direct `.Rebind()` call. `ILIKE` gives a warning only. Add `// sql-ok` to the line for a false positive. |
 | gk-lint | Go files are staged and `CGO_ENABLED=0 go run ./cmd/gk-lint/` fails. Skipped when Go is not installed on the host. CI still runs `make lint-platform`. |
 

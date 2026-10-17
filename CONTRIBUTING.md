@@ -17,8 +17,8 @@ Contributions to GoatFlow are welcome.
 ## Quick Start
 
 1. Fork the repository.
-2. Turn on the pre-commit hook once: `make setup-hooks`. It scans for secrets, blocks binary
-   files and checks SQL portability (`gk-lint`).
+2. Turn on the git hooks once: `make setup-hooks`. They scan for secrets, block binary files,
+   check SQL portability (`gk-lint`) and reject AI attribution in commit messages.
 3. Create a feature branch.
 4. Make your changes.
 5. Run `make lint-platform` and `make test`. For database changes, also run the Go tests on
