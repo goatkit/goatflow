@@ -3457,7 +3457,9 @@
     "two_factor_auth": "cha' mIw to'",
     "webhooks": "web HIvje'mey",
     "your_token": "pat lI",
-    "your_tokens": "pat lI"
+    "your_tokens": "pat lI",
+    "timezone_help": "jaj veHmey lo' Plugin, 'e' jaj qaSpu' Session. chIm = Instance default.",
+    "timezone_detected": "HaSta'lIjvo' tu'lu'"
   },
   "severity": {
     "critical": "Qob'a'",

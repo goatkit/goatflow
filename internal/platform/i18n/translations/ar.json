@@ -3438,7 +3438,9 @@
     "two_factor_auth": "المصادقة الثنائية",
     "webhooks": "Webhooks",
     "your_token": "رمزك",
-    "your_tokens": "رموزك"
+    "your_tokens": "رموزك",
+    "timezone_help": "تستخدمها الإضافات لحدود اليوم، مثل اليوم الذي جرت فيه جلسة. الفراغ يعني الإعداد الافتراضي للمثيل.",
+    "timezone_detected": "تم اكتشافها من متصفحك"
   },
   "severity": {
     "critical": "حرج",

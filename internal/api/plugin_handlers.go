@@ -28,6 +28,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/organisation"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/plugin/packaging"
+	platformservice "github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/repository"
 )
@@ -533,7 +534,7 @@ func buildPluginArgs(c *gin.Context, pluginName ...string) json.RawMessage {
 // not set the matching context key.
 var pluginEnvelopeKeys = []string{
 	"_user_id", "_user_email", "_user_login", "_customer_login", "_user_role", "_is_admin",
-	"_org_id", "_lang", "_method", "_path", "_body", "_content_type",
+	"_org_id", "_lang", "_user_timezone", "_method", "_path", "_body", "_content_type",
 }
 
 func stripPluginEnvelope(args map[string]any) {
@@ -586,6 +587,13 @@ func addPluginEnvelope(c *gin.Context, args map[string]any, pluginName ...string
 	if lang, exists := c.Get(middleware.LanguageContextKey); exists {
 		args["_lang"] = lang
 	}
+	// The agent's IANA time zone preference (profile page). Absent when the
+	// agent follows the instance default, so plugins fall back to
+	// ConfigGet("app.timezone") for day arithmetic; never a browser value,
+	// which background work could not reproduce.
+	if tz := agentTimezone(c); tz != "" {
+		args["_user_timezone"] = tz
+	}
 
 	// Inject org context from the authenticated session unless the plugin opts
 	// out. orgIDFromContext checks the auth keys, the request context and the
@@ -601,6 +609,23 @@ func addPluginEnvelope(c *gin.Context, args map[string]any, pluginName ...string
 			args["org_id"] = orgID
 		}
 	}
+}
+
+// agentTimezone is the authenticated agent's stored time zone preference,
+// "" for customers, unauthenticated calls and agents without one.
+func agentTimezone(c *gin.Context) string {
+	if isCustomer, _ := c.Get("is_customer"); isCustomer == true {
+		return ""
+	}
+	userID := GetUserIDFromCtx(c, 0)
+	if userID == 0 {
+		return ""
+	}
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		return ""
+	}
+	return platformservice.NewUserPreferencesService(db).GetTimezone(userID)
 }
 
 // SessionOrJWTAuth middleware accepts either session-based auth (cookie) or JWT token auth.

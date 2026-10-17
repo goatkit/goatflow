@@ -3552,7 +3552,9 @@
     "valid_to": "Obowiązuje do",
     "webhooks": "Webhooki",
     "your_token": "Twój token",
-    "your_tokens": "Twoje tokeny"
+    "your_tokens": "Twoje tokeny",
+    "timezone_help": "Wtyczki używają jej do granic dnia, na przykład dnia, w którym odbyła się sesja. Puste oznacza domyślne ustawienie instancji.",
+    "timezone_detected": "Wykryta z Twojej przeglądarki"
   },
   "severity": {
     "critical": "Krytyczny",

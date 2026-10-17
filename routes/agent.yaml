@@ -248,6 +248,16 @@ spec:
           handler: HandleSetRemindersEnabled
           description: "Update ticket reminders enabled preference"
 
+        - path: /api/preferences/timezone
+          method: GET
+          handler: HandleGetTimezone
+          description: "Get the user's IANA time zone preference and the instance default"
+
+        - path: /api/preferences/timezone
+          method: POST
+          handler: HandleSetTimezone
+          description: "Update the user's IANA time zone preference (empty clears it)"
+
         # User profile API
         - path: /api/profile
           method: GET

@@ -3437,7 +3437,9 @@
     "two_factor_auth": "Autenticación de Dos Factores",
     "webhooks": "Webhooks",
     "your_token": "Tu Token",
-    "your_tokens": "Tus Tokens"
+    "your_tokens": "Tus Tokens",
+    "timezone_help": "Los plugins la usan para los límites del día, por ejemplo el día en que tuvo lugar una sesión. Vacío significa el valor predeterminado de la instancia.",
+    "timezone_detected": "Detectada desde su navegador"
   },
   "severity": {
     "critical": "Crítica",

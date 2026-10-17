@@ -5,12 +5,14 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/auth"
+	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/i18n"
 	platformservice "github.com/goatkit/goatflow/internal/platform/service"
@@ -351,6 +353,112 @@ func HandleSetLanguage(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Language preference saved successfully",
+	})
+}
+
+// HandleGetTimezone returns the user's IANA time zone preference ("" when
+// they follow the instance default) and the instance default itself, so
+// the profile page can show what an empty preference means.
+func HandleGetTimezone(c *gin.Context) {
+	if _, exists := c.Get("user_id"); !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "User not authenticated",
+		})
+		return
+	}
+
+	userID := GetUserIDFromCtx(c, 0)
+	if userID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid user ID",
+		})
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database connection error",
+		})
+		return
+	}
+
+	instanceDefault := "UTC"
+	if cfg := config.Get(); cfg != nil && cfg.App.Timezone != "" {
+		instanceDefault = cfg.App.Timezone
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"value":   platformservice.NewUserPreferencesService(db).GetTimezone(userID),
+		"default": instanceDefault,
+	})
+}
+
+// HandleSetTimezone stores the user's IANA time zone; an empty value clears
+// the preference. A name the host cannot load is a 400.
+func HandleSetTimezone(c *gin.Context) {
+	if _, exists := c.Get("user_id"); !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "User not authenticated",
+		})
+		return
+	}
+
+	userID := GetUserIDFromCtx(c, 0)
+	if userID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid user ID",
+		})
+		return
+	}
+
+	var request struct {
+		Value string `json:"value"`
+	}
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid request format",
+		})
+		return
+	}
+	request.Value = strings.TrimSpace(request.Value)
+	if request.Value != "" {
+		if err := platformservice.ValidateTimezone(request.Value); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   err.Error(),
+			})
+			return
+		}
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database connection error",
+		})
+		return
+	}
+
+	if err := platformservice.NewUserPreferencesService(db).SetTimezone(userID, request.Value); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to save preference",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"value":   request.Value,
 	})
 }
 

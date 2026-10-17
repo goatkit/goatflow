@@ -3447,7 +3447,9 @@
     "two_factor_auth": "אימות דו-שלבי",
     "webhooks": "Webhooks",
     "your_token": "הטוקן שלך",
-    "your_tokens": "הטוקנים שלך"
+    "your_tokens": "הטוקנים שלך",
+    "timezone_help": "תוספים משתמשים בו לגבולות היום, למשל היום שבו התקיימה פגישה. ריק פירושו ברירת המחדל של המופע.",
+    "timezone_detected": "זוהה מהדפדפן שלך"
   },
   "severity": {
     "critical": "קריטי",

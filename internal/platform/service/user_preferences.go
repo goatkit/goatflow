@@ -3,8 +3,10 @@ package service
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
@@ -190,6 +192,49 @@ func (s *UserPreferencesService) SetThemeMode(userID int, mode string) error {
 		return s.DeletePreference(userID, "ThemeMode")
 	}
 	return s.SetPreference(userID, "ThemeMode", mode)
+}
+
+// TimezonePreferenceKey is the user_preferences key holding the user's IANA
+// time zone (the OTRS name, so imported preference rows keep working).
+const TimezonePreferenceKey = "UserTimeZone"
+
+// ErrInvalidTimezone is returned by SetTimezone for a name that is not an
+// IANA zone the host can load.
+var ErrInvalidTimezone = errors.New("time zone must be an IANA name such as Europe/London")
+
+// ValidateTimezone reports whether name is an IANA zone the host can load.
+// "Local" is refused: it names the server process's zone, not the user's.
+func ValidateTimezone(name string) error {
+	if name == "" || name == "Local" || len(name) > 64 {
+		return ErrInvalidTimezone
+	}
+	if _, err := time.LoadLocation(name); err != nil {
+		return ErrInvalidTimezone
+	}
+	return nil
+}
+
+// GetTimezone returns the user's IANA time zone preference, or "" when the
+// user follows the instance default (app.timezone). A stored value the host
+// can no longer load is treated as unset rather than passed on.
+func (s *UserPreferencesService) GetTimezone(userID int) string {
+	value, err := s.GetPreference(userID, TimezonePreferenceKey)
+	if err != nil || ValidateTimezone(value) != nil {
+		return ""
+	}
+	return value
+}
+
+// SetTimezone stores the user's IANA time zone; "" clears the preference so
+// the user follows the instance default again.
+func (s *UserPreferencesService) SetTimezone(userID int, name string) error {
+	if name == "" {
+		return s.DeletePreference(userID, TimezonePreferenceKey)
+	}
+	if err := ValidateTimezone(name); err != nil {
+		return err
+	}
+	return s.SetPreference(userID, TimezonePreferenceKey, name)
 }
 
 // GetRemindersEnabled returns whether pending reminders are enabled for the user.

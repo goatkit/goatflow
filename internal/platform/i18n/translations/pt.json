@@ -3551,7 +3551,9 @@
     "valid_to": "Válido até",
     "webhooks": "Webhooks",
     "your_token": "Seu Token",
-    "your_tokens": "Seus Tokens"
+    "your_tokens": "Seus Tokens",
+    "timezone_help": "Os plugins usam-no para os limites do dia, como o dia em que uma sessão ocorreu. Vazio significa o padrão da instância.",
+    "timezone_detected": "Detetado a partir do seu navegador"
   },
   "severity": {
     "critical": "Crítico",

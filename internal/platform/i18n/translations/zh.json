@@ -3438,7 +3438,9 @@
     "two_factor_auth": "双因素认证",
     "webhooks": "Webhooks",
     "your_token": "您的令牌",
-    "your_tokens": "您的令牌"
+    "your_tokens": "您的令牌",
+    "timezone_help": "插件用它来确定日期边界，例如会话发生的日期。留空表示使用实例默认值。",
+    "timezone_detected": "从您的浏览器检测到"
   },
   "severity": {
     "critical": "紧急",

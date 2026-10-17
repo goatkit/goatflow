@@ -3826,7 +3826,9 @@
     "two_factor_auth": "Two-Factor Authentication",
     "webhooks": "Webhooks",
     "your_token": "Your Token",
-    "your_tokens": "Your Tokens"
+    "your_tokens": "Your Tokens",
+    "timezone_help": "Plugins use it for day boundaries, such as the day a session took place. Empty means the instance default.",
+    "timezone_detected": "Detected from your browser"
   },
   "setup": {
     "assistant": {

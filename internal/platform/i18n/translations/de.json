@@ -3460,7 +3460,9 @@
     "two_factor_auth": "Zwei-Faktor-Authentifizierung",
     "webhooks": "Webhooks",
     "your_token": "Ihr Token",
-    "your_tokens": "Ihre Token"
+    "your_tokens": "Ihre Token",
+    "timezone_help": "Plugins verwenden sie für Tagesgrenzen, etwa den Tag, an dem eine Sitzung stattfand. Leer bedeutet die Standardeinstellung der Instanz.",
+    "timezone_detected": "Von Ihrem Browser erkannt"
   },
   "severity": {
     "critical": "Kritisch",

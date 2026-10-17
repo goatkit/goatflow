@@ -3438,7 +3438,9 @@
     "two_factor_auth": "二要素認証",
     "webhooks": "Webhook",
     "your_token": "あなたのトークン",
-    "your_tokens": "あなたのトークン"
+    "your_tokens": "あなたのトークン",
+    "timezone_help": "プラグインがセッションの実施日などの日付の区切りに使用します。空欄の場合はインスタンスの既定値を使用します。",
+    "timezone_detected": "ブラウザから検出"
   },
   "severity": {
     "critical": "重大",

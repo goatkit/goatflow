@@ -3438,7 +3438,9 @@
     "two_factor_auth": "Authentification à deux facteurs",
     "webhooks": "Webhooks",
     "your_token": "Votre Jeton",
-    "your_tokens": "Vos Jetons"
+    "your_tokens": "Vos Jetons",
+    "timezone_help": "Les plugins l'utilisent pour les limites de journée, par exemple le jour où une session a eu lieu. Vide signifie la valeur par défaut de l'instance.",
+    "timezone_detected": "Détecté depuis votre navigateur"
   },
   "severity": {
     "critical": "Critique",

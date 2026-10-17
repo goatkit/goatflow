@@ -220,6 +220,8 @@ func ensureCoreHandlers() {
 		"HandleSetTheme":              HandleSetTheme,
 		"HandleGetRemindersEnabled":   HandleGetRemindersEnabled,
 		"HandleSetRemindersEnabled":   HandleSetRemindersEnabled,
+		"HandleGetTimezone":           HandleGetTimezone,
+		"HandleSetTimezone":           HandleSetTimezone,
 		"HandleDismissCoachmark":      HandleDismissCoachmark,
 		"HandleSetWallpaper":          HandleSetWallpaper,
 		"HandleGetProfile":            HandleGetProfile,

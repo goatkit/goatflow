@@ -95,6 +95,14 @@
                         <option value="604800">7 {{ t("time.days")|default:"days" }}</option>
                     </select>
                 </div>
+                <div>
+                    <label for="timezone" class="gk-form-label">{{ t("settings.timezone")|default:"Timezone" }}</label>
+                    <input type="text" id="timezone" name="timezone" list="timezone-list"
+                           class="gk-input-neon mt-1" autocomplete="off" spellcheck="false"
+                           placeholder="Europe/London">
+                    <datalist id="timezone-list"></datalist>
+                    <p class="text-xs mt-1" style="color: var(--gk-text-muted);"><span id="timezone-note"></span> {{ t("settings.timezone_help")|default:"Plugins use it for day boundaries, such as the day a session took place. Empty means the instance default." }}</p>
+                </div>
             </div>
 
             <!-- Ticket Reminders Toggle -->
@@ -328,7 +336,8 @@ document.addEventListener('DOMContentLoaded', function() {
             last_name: form.querySelector('[name="last_name"]').value,
             title: form.querySelector('[name="title"]').value,
             language: form.querySelector('[name="language"]').value,
-            session_timeout: form.querySelector('[name="session_timeout"]').value
+            session_timeout: form.querySelector('[name="session_timeout"]').value,
+            timezone: form.querySelector('[name="timezone"]').value.trim()
         };
     }
 
@@ -386,6 +395,39 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(e => console.error('Error loading session timeout:', e));
 
+    // Time zone: the IANA list and the browser's own zone come from Intl; a
+    // stored preference wins, otherwise the browser's zone is pre-filled so
+    // saving the form keeps it. The note says which case the field shows.
+    (function() {
+        const input = document.getElementById('timezone');
+        const list = document.getElementById('timezone-list');
+        const note = document.getElementById('timezone-note');
+        let browserZone = '';
+        try { browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
+        try {
+            if (typeof Intl.supportedValuesOf === 'function') {
+                Intl.supportedValuesOf('timeZone').forEach(function(z) {
+                    const o = document.createElement('option');
+                    o.value = z;
+                    list.appendChild(o);
+                });
+            }
+        } catch (e) {}
+        apiFetch('/agent/api/preferences/timezone')
+            .then(data => {
+                if (!data.success) return;
+                originalValues.timezone = data.value || '';
+                if (data.value) {
+                    input.value = data.value;
+                } else if (browserZone) {
+                    input.value = browserZone;
+                    note.textContent = '{{ t("settings.timezone_detected")|default:"Detected from your browser" }}: ' + browserZone + '.';
+                }
+                input.placeholder = data.default || 'UTC';
+            })
+            .catch(e => console.error('Error loading time zone preference:', e));
+    })();
+
     // Load reminders enabled preference
     apiFetch('/agent/api/preferences/reminders-enabled')
         .then(data => {
@@ -395,9 +437,11 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(e => console.error('Error loading reminders preference:', e));
 
-    // Store original profile values
+    // Store original profile values. Preferences fetched above keep their
+    // stored value: the time zone field may already show the browser's zone,
+    // which must still count as a change to save.
     setTimeout(() => {
-        originalValues = { ...originalValues, ...getFormValues() };
+        originalValues = { ...getFormValues(), ...originalValues };
     }, 100);
 
     // Track language changes
@@ -458,6 +502,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (!sessionRes.success) {
                     showError(sessionRes.error || '{{ t("messages.error_saving_preferences")|default:"Error saving preferences" }}');
+                    hasError = true;
+                }
+            }
+
+            // Save time zone if changed (empty clears it)
+            if (values.timezone !== originalValues.timezone) {
+                const tzRes = await apiFetch('/agent/api/preferences/timezone', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ value: values.timezone })
+                });
+
+                if (!tzRes.success) {
+                    showError(tzRes.error || '{{ t("messages.error_saving_preferences")|default:"Error saving preferences" }}');
                     hasError = true;
                 }
             }
