@@ -57,7 +57,9 @@ Notes:
 
 ## Call context and acting user
 
-Every plugin call the host makes for a request (API routes, admin `call`, widgets, plugin UI pages and their nav badges, setup tasks, MCP tools, event authorizers) carries the host's call envelope in its arguments: `_user_id`, `_user_login`, `_user_email`, `_customer_login`, `_user_role`, `_is_admin`, `_org_id` / `org_id` and `_lang`. The host builds these from the authenticated session and drops any client-supplied value under the same names first, so a request body cannot name another user, role, organisation or language.
+Every plugin call the host makes for a request (API routes, admin `call`, widgets, plugin UI pages and their nav badges, setup tasks, MCP tools, event authorizers) carries the host's call envelope in its arguments: `_user_id`, `_user_login`, `_user_email`, `_customer_login`, `_user_role`, `_is_admin`, `_org_id` / `org_id`, `_lang` and `_user_timezone`. The host builds these from the authenticated session and drops any client-supplied value under the same names first, so a request body cannot name another user, role, organisation, language or time zone.
+
+`_user_timezone` is the agent's IANA time zone preference (Profile → Preferences → Timezone). It is absent when the agent has not set one, for customer calls and for calls without a request (scheduled jobs, `Init`): fall back to `ConfigGet("app.timezone")`, the instance zone. Use it for day arithmetic - "today", which day a timestamp falls on, "tomorrow 09:00" - never for storing instants. Background work cannot ask a browser, which is why the host sends a stored preference and not the browser's zone.
 
 While the call runs, the host puts three envelope values into the call context:
 

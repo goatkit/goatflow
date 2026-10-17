@@ -7,6 +7,16 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Agents can set their time zone.** Profile → Preferences has a Timezone field (IANA name,
+  with the browser's zone pre-filled until one is saved; empty follows the instance
+  `app.timezone`), stored as the `UserTimeZone` preference and served by `GET`/`POST
+  /agent/api/preferences/timezone`. Every plugin call now carries it as `_user_timezone` in the
+  host envelope (absent when the agent has none), so plugins anchor day boundaries - "today",
+  which day a file was recorded, "tomorrow 09:00" - on the person rather than the server. The key
+  is unspoofable like `_user_id`; a stored name the host cannot load is treated as unset. Platform
+  pages still display times in the browser's zone, as before.
+
 ### Fixed
 - **The toolbox image builds without public keyservers.** `Dockerfile.toolbox` fetched Bun's release
   signing key from keys.openpgp.org (falling back to keyserver.ubuntu.com, which does not have it), so

@@ -235,6 +235,15 @@ server's local time with its offset (`{"now": "2026-10-01T14:03:00.123+02:00"}`)
 and compute day boundaries from that. Bind them as `?` parameters rather than
 using SQL date functions, whose results depend on the database time zone.
 
+### Whose day is it?
+
+Day boundaries belong to a person, not the server. Requests carry the caller's
+time zone preference as `args["_user_timezone"]` (an IANA name; absent when
+unset) - resolve `_user_timezone` → `ConfigGet("app.timezone")` → UTC and do
+your "today" / "which day was this file recorded" arithmetic in that zone. Store
+calendar days as plain `YYYY-MM-DD` strings and instants in UTC; convert
+between the two only at these edges.
+
 ### Plugin-to-Plugin Calls
 
 ```go

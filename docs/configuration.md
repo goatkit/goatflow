@@ -53,7 +53,7 @@ features:
 
 | Section | Read by GoatFlow 0.10.0? | Notes |
 |---------|--------------------------|-------|
-| `app` | Yes: `env`, `timezone`, `demo_mode`, `name` | `app.env` defaults to `development`. |
+| `app` | Yes: `env`, `timezone`, `demo_mode`, `name` | `app.env` defaults to `development`. `app.timezone` is the instance zone (scheduler, business hours, SLA calendars) and the fallback for plugins when an agent has not set their own time zone in Profile → Preferences. |
 | `server` | Partly | The listen port is `APP_PORT` (default `8080`), not `server.port`. |
 | `database` | Removed | The connection comes from `DB_*` variables only. See [Database](#database). A `database:` block in an old `config.yaml` is ignored. |
 | `valkey` | Yes | Cache host, port, password, pool and TTL. |
